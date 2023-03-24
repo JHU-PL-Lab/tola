@@ -1,0 +1,11 @@
+(library
+ (name interp)
+ (public_name tola.interp)
+ (libraries fmt lang)
+ (preprocess
+  (pps ppx_deriving.eq ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

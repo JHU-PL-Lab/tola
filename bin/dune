@@ -1,0 +1,10 @@
+(executables
+ (names arith_fix compose adder cl)
+ (libraries fix fmt lang interp ainterp example)
+ (preprocess
+  (pps ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

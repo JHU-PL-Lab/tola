@@ -1,0 +1,35 @@
+*~
+*.annot
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+*.out
+*.opam
+
+# ocamlbuild working directory
+_build/
+.vscode
+
+# ocamlbuild targets
+*.byte
+*.native
+
+# Merlin configuring file for Vim and Emacs
+.merlin
+
+# ppx_expect temp file
+*.processed.ml
+
+# Dune generated files
+*.install
+
+# Local OPAM switch
+_opam/
+
+# System files
+.DS_Store

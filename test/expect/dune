@@ -1,0 +1,6 @@
+(library
+ (name for_inline_test)
+ (inline_tests)
+ (libraries abstract)
+ (preprocess
+  (pps ppx_jane)))

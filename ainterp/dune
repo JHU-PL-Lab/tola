@@ -1,0 +1,11 @@
+(library
+ (name ainterp)
+ (public_name tola.ainterp)
+ (libraries fmt fix core std lang)
+ (preprocess
+  (pps ppx_jane ppx_deriving.eq ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))
