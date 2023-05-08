@@ -1,9 +1,11 @@
+(include_subdirs unqualified)
+
 (library
  (name interp)
  (public_name tola.interp)
- (libraries fmt lang)
+ (libraries fmt fix langs std ocamlgraph color-brewery)
  (preprocess
-  (pps ppx_deriving.eq ppx_deriving.show)))
+  (pps ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
 
 (env
  (dev

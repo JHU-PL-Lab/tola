@@ -1,4 +1,4 @@
-open Lang
+open Langs
 
 let ainterp eval e =
   let open Arith in

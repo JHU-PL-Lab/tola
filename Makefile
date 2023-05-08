@@ -1,5 +1,11 @@
 all: a
 
+s:
+	dune exec ./bin/enum.exe
+
+d:
+	dune exec ./bin/dd.exe
+
 a:
 	dune exec ./bin/arith_fix.exe
 

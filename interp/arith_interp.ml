@@ -1,4 +1,4 @@
-open Lang.Arith
+open Langs.Arith
 
 let interp eval e =
   match e with

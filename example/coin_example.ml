@@ -1,4 +1,4 @@
-open Lang
+open Langs
 open Coin
 
 let tt = True

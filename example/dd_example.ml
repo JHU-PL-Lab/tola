@@ -1,14 +1,10 @@
-open Lang
+open Langs
 open Dd
 open Id
-(*
-   type exp =
-     Input | Int of int | Plus of exp * exp | If0 of exp * exp * exp
-     | Fun of exp * exp | App of exp * exp
-     [@@deriving eq, show { with_path = false }]
-*)
 
 let n0 = Int 0
+let n1 = Int 1
+let n2 = Int 2
 let n3 = Int 3
 let n4 = Int 4
 let ne3 = Int (-3)
@@ -26,9 +22,35 @@ let z = Ident "z"
 let id = Fun (x, Var x)
 let const = Fun (x, Fun (y, Var x))
 let sum = Fun (x, Fun (y, Plus (Var x, Var y)))
-let sum_3 = App (sum, n3)
-let sum_3_4 = App (App (sum, n3), n4)
-let sum_3_x = App (App (sum, n3), Input)
+
+open Tagless
+
+let sum_3 = app sum n3
+let sum_3_4 = app (app sum n3) n4
+let sum_3_x = app (app sum n3) Input
+let aid e = app id e
+let id1 = app (app (aid sum) n3) n4
+let id2 = app (app (aid sum) n3) (aid n4)
+let id3 = app (aid (app (aid sum) (aid n3))) (aid n4)
+let ap_f = fun_ "f" (fun_ "e" (app (var "f") (var "e")))
+let ap e1 e2 = (app (app (var "ap") e1)) e2
+let with_ap e = app (fun_ "ap" e) ap_f
+let e7 = with_ap (ap id n0)
+
+let count =
+  fun_ "f"
+    (fun_ "n"
+       (if0 (var "n") n0
+          (plus n1 (app (app (var "f") (var "f")) (minus (var "n") n1)))))
+
+let countcount0 = app (app count count) n0
+let countcount1 = app (app count count) n1
+let countcount2 = app (app count count) n2
+let countcount3 = app (app count count) n3
+
+(* 
+   
+*)
 let all_e = [ e1; e2; e3; e4; e5; e6 ]
 let all_f = [ id; const; sum ]
 let all_apps = [ sum_3; sum_3_4; sum_3_x ]

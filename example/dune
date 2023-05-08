@@ -3,7 +3,7 @@
 (library
  (name example)
  ;  (public_name tola.example)
- (libraries fmt lang)
+ (libraries fmt langs)
  (preprocess
   (pps ppx_deriving.eq ppx_deriving.show)))
 

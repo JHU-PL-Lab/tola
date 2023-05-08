@@ -8,6 +8,7 @@ let set_of_bool b = Set.singleton (module Bool) b
 let just_true = set_of_bool true
 let just_false = set_of_bool false
 let true_or_false = Set.of_list (module Bool) [ true; false ]
+let rec naive_fix step e = step (naive_fix step) e
 
 (* let pp_of_to_string to_string oc = Fmt.using to_string Fmt.string oc *)
 

@@ -1,10 +1,11 @@
-open Core
-open Abstract
+open Ainterp
 open Just_sign
 open Std
 
-let just_sign_set = Alcotest.testable (Std.pp_set Just_sign.pp_sign) Set.equal
-let bool_set = Alcotest.testable (Std.pp_set Bool.pp) Set.equal
+let just_sign_set =
+  Alcotest.testable (Std.pp_set Just_sign.pp_sign) Core.Set.equal
+
+let bool_set = Alcotest.testable (Std.pp_set Core.Bool.pp) Core.Set.equal
 
 let mk_same_signs expected actual =
   Alcotest.test_case "plus" `Quick (fun () ->

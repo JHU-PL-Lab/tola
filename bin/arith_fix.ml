@@ -1,4 +1,4 @@
-open Lang
+open Langs
 open Example
 open Interp
 open Ainterp
@@ -16,7 +16,7 @@ let _ =
         pr "@[%a => %a@]@." Arith.pp e Just_sign.pp_set (arun e)))
     Arith_example.all;
   F.Table.iter
-    (fun k v -> Fmt.(pr "@[%a -> %a@]@." Lang.Arith.pp k Just_sign.pp_set v))
+    (fun k v -> Fmt.(pr "@[%a -> %a@]@." Arith.pp k Just_sign.pp_set v))
     table2;
   Fmt.pr "Table size = %d\n" (F.table_size table1);
   Fmt.pr "Table size = %d\n" (F.table_size table2)

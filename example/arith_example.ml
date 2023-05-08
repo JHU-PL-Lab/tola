@@ -1,4 +1,4 @@
-open Lang.Arith
+open Langs.Arith
 
 let n0 = Int 0
 let n3 = Int 3

@@ -1,6 +1,6 @@
 (executables
- (names arith_fix compose adder cl)
- (libraries fix fmt lang interp ainterp example)
+ (names dd arith_fix enum)
+ (libraries fix fmt langs ocamlgraph interp ainterp example)
  (preprocess
   (pps ppx_deriving.show)))
 
