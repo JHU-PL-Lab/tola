@@ -1,6 +1,6 @@
 (executables
  (names dd arith_fix enum)
- (libraries fix fmt langs ocamlgraph interp ainterp example)
+ (libraries fix fmt langs std ocamlgraph interp ainterp example)
  (preprocess
   (pps ppx_deriving.show)))
 
