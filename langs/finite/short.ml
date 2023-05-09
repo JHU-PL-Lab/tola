@@ -49,20 +49,6 @@ module Short_lang_maker (Id : FIN_ID) = struct
     let bin v1 v2 = max v1 v2 + 1 in
     fold_post ~id ~bin e
 
-  (*
-     T(k,0) = Lam (1, T(k-1,0))
-            | App (T(k-1,0), T(k-1,0))
-            | ...
-
-     if T(k) means exactly height k,
-         then case App should cover non-exact cases
-         just use one form may have missing terms
-     if T(k) means at-most at height k,
-         then the result may contain duplicate cases
-
-     let's tentatively treat T(k,0) means exactly at height k.
-  *)
-
   let gen () =
     let rec loop d fvs bvs : t list =
       let group_var = List.map (fun x -> Var x) bvs in
