@@ -21,6 +21,8 @@ end
 module type FINITE = sig
   type t
 
+  val size : int
+  val nth : int -> t
   val domain : t list
   val dump_domain : unit -> unit
 end

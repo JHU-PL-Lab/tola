@@ -1,6 +1,6 @@
 open Sigs
 
-module Short_id = struct
+module Short_id_fake = struct
   type t = X | Y | Z | W [@@deriving eq, ord]
 
   let show = function X -> "x" | Y -> "y" | Z -> "z" | W -> "w"
@@ -12,29 +12,31 @@ end
 module De_bruijin_id_maker (N : N) = struct
   type t = int [@@deriving eq, ord]
 
+  let size = N.n
+  let nth i = i
+
   let show = function
     | 0 -> "x"
     | 1 -> "y"
     | 2 -> "z"
     | 3 -> "w"
-    | n -> "a" ^ string_of_int n
+    | n -> "a" ^ string_of_int (n - 4)
 
   let pp = Fmt.of_to_string show
   let domain = List.init N.n (fun i -> i)
   let dump_domain () = Std.dump_list domain pp
-  let x = 1
+  let x = 0
 end
 
-(* module Short_lang_maker (Id : ID) : LANG = struct *)
-module Short_lang_maker (Id : FIN_ID) = struct
-  let max_depth = 4
+module Short_lang_maker (N : N) (Id : FIN_ID) = struct
+  let max_depth = N.n
 
   type t = Var of Id.t | Lam of (Id.t * t) | App of (t * t)
   [@@deriving eq, ord]
 
   let rec pp oc = function
     | Var x -> Id.pp oc x
-    | Lam (x, e) -> Fmt.pf oc "(%a -> %a)" Id.pp x pp e
+    | Lam (x, e) -> Fmt.pf oc "(\\%a. %a)" Id.pp x pp e
     | App (e1, e2) -> Fmt.pf oc "(%a %a)" pp e1 pp e2
 
   let show = Fmt.to_to_string pp
@@ -49,45 +51,87 @@ module Short_lang_maker (Id : FIN_ID) = struct
     let bin v1 v2 = max v1 v2 + 1 in
     fold_post ~id ~bin e
 
-  let gen () =
-    let rec loop d fvs bvs : t list =
-      let group_var = List.map (fun x -> Var x) bvs in
-      if d <= 1 then group_var
-      else
-        let group_lam : t list =
-          if List.length fvs > 0 then
-            let bv = List.hd fvs in
-            let f_bodies = loop (d - 1) (List.tl fvs) (bvs @ [ bv ]) in
-            List.map (fun e -> Lam (bv, e)) f_bodies
-          else []
-        in
-        let group_app : t list =
-          let two_parts = Std.list_split fvs in
-          List.concat_map
-            (fun (fvs1, fvs2) ->
-              let es1 : t list = loop (d - 1) fvs1 bvs in
-              let es2 : t list = loop (d - 1) fvs2 bvs in
-              List.concat_map
-                (fun e2 -> List.map (fun e1 -> App (e1, e2)) es1)
-                es2)
-            two_parts
-        in
-        group_var @ group_lam @ group_app
-    in
-    loop max_depth Id.domain []
+  let size = 0
 
-  let domain = gen ()
+  module Term_table = Hashtbl.Make (struct
+    type t = int * int * int [@@deriving eq]
+
+    let hash = Hashtbl.hash
+  end)
+
+  let domain =
+    let table = Term_table.create (max_depth * Id.size * Id.size) in
+
+    (* let free_vs bv c = List.init (c - bv) (fun i -> i + bv) in *)
+    let range a b = List.init (b - a) (fun i -> i + a) in
+    let bound_vs bv = List.init bv (fun i -> i) in
+
+    let bound_vs' bv = bound_vs bv |> List.map (fun i -> Var (Id.nth i)) in
+
+    let join e1s e2s =
+      Seq.map_product
+        (fun e1 e2 -> App (e1, e2))
+        (List.to_seq e1s) (List.to_seq e2s)
+      |> List.of_seq
+    in
+
+    (* use better memoization *)
+    let rec g d bv c =
+      match Term_table.find_opt table (d, bv, c) with
+      | Some es -> es
+      | None ->
+          let es =
+            if d <= 1 then bound_vs' bv
+            else
+              (* case lam, height (d-1) *)
+              let lams =
+                if bv < c then
+                  let lam_body = g (d - 1) (bv + 1) c in
+                  List.map (fun e -> Lam (Id.nth bv, e)) lam_body
+                else []
+              in
+              (* case app, one of e1 or e2 is height (d-1) *)
+              let apps =
+                let e' = g (d - 1) bv c in
+                let e1_d_1 =
+                  range 1 d
+                  |> List.concat_map (fun d' ->
+                         let e2s = g d' bv c in
+                         join e' e2s)
+                in
+                let e2_d_1 =
+                  range 1 (d - 1)
+                  |> List.concat_map (fun d' ->
+                         let e1s = g d' bv c in
+                         join e1s e')
+                in
+                e1_d_1 @ e2_d_1
+              in
+
+              lams @ apps
+          in
+          Term_table.add table (d, bv, c) es;
+          es
+    in
+
+    g max_depth 0 Id.size
+
   let dump_domain () = Std.dump_list domain pp
 end
 
-module Short4_id = De_bruijin_id_maker (struct
-  let n = 4
+module Short_id = De_bruijin_id_maker (struct
+  let n = 10
 end)
 
-module Short_lang = Short_lang_maker (Short4_id)
+module Short_lang =
+  Short_lang_maker
+    (struct
+      let n = 3
+    end)
+    (Short_id)
 
 module Examples = struct
-  let x = Short4_id.x
+  let x = Short_id.x
 
   open Short_lang
 

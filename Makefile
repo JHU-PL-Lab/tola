@@ -1,7 +1,13 @@
 all: a
 
-s:
+f:
+	dune exec ./bin/ff.exe
+
+bs:
 	dune exec ./bin/enum.exe
+
+s:
+	./bin/enum.exe
 
 d:
 	dune exec ./bin/dd.exe

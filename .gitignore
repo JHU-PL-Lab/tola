@@ -18,6 +18,7 @@ _build/
 # ocamlbuild targets
 *.byte
 *.native
+*.exe
 
 # Merlin configuring file for Vim and Emacs
 .merlin
@@ -33,3 +34,5 @@ _opam/
 
 # System files
 .DS_Store
+
+_draft

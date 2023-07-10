@@ -1,8 +1,20 @@
 (executables
- (names dd arith_fix enum)
- (libraries fix fmt langs std ocamlgraph interp ainterp example)
+ (names dd arith_fix ff enum text text_interp pkgm)
+ (libraries
+  fix
+  fmt
+  cmdliner
+  langs
+  parser
+  feat
+  std
+  ocamlgraph
+  interp
+  ainterp
+  example)
  (preprocess
-  (pps ppx_deriving.show)))
+  (pps ppx_deriving.show))
+ (promote (until-clean)))
 
 (env
  (dev
