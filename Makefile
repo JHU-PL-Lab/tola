@@ -1,5 +1,16 @@
 all: a
 
+# For pkgm and lang text
+
+pi:
+	dune exec bin/pkgm.exe -- info
+
+pt:
+	echo I love @ac@. | dune exec bin/text_interp.exe
+
+tt:
+	dune exec bin/text.exe
+
 f:
 	dune exec ./bin/ff.exe
 
