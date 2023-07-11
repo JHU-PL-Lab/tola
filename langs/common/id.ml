@@ -1,3 +1,3 @@
-type t = Ident of string [@@deriving eq, ord]
+type t = Id of string [@@deriving eq, ord]
 
-let pp oc (Ident x) = Fmt.string oc x
+let pp oc (Id x) = Fmt.string oc x

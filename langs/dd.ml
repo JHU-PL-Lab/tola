@@ -18,7 +18,7 @@ let assign_labal e =
     | Plus (e1, e2) -> Plus (loop e1, loop e2)
     | Minus (e1, e2) -> Minus (loop e1, loop e2)
     | If0 (e0, e1, e2) -> If0 (loop e0, loop e1, loop e2)
-    | Fun (Ident x, e) -> Fun (Ident x, loop e)
+    | Fun (Id x, e) -> Fun (Id x, loop e)
     | App (e1, e2, _) ->
         let e1' = loop e1 in
         let e2' = loop e2 in
@@ -35,8 +35,8 @@ module Tagless = struct
   let plus e1 e2 = Plus (e1, e2)
   let minus e1 e2 = Minus (e1, e2)
   let if0 e1 e2 e3 = If0 (e1, e2, e3)
-  let var x = Var (Ident x)
-  let fun_ x e = Fun (Ident x, e)
+  let var x = Var (Id x)
+  let fun_ x e = Fun (Id x, e)
   let app e1 e2 = App (e1, e2, 0)
 end
 
@@ -59,7 +59,7 @@ let rec pp_exp ~compact oc e =
   | If0 (e0, e1, e2) ->
       Fmt.pf oc "if0 %a then %a else %a" pp_exp e0 pp_exp e1 pp_exp e2
   | Var x -> Id.pp oc x
-  | Fun (Ident x, e) ->
+  | Fun (Id x, e) ->
       if compact then Fmt.pf oc "(fun %s -> ...)" x
       else Fmt.pf oc "(fun %s -> %a)" x pp_exp e
   | App (e1, e2, lab) -> Fmt.pf oc "(%a %a)_[%d]" pp_exp e1 pp_exp e2 lab

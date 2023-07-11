@@ -36,5 +36,5 @@ let () =
 let parse_then_interp s = Parser.Text_with_pkg.parse s |> dump_with_pkg
 
 let () =
-  parse_then_interp "I believe @zfc@ and @ac@";
-  parse_then_interp "I believe @zfc@ but not @ac@"
+  parse_then_interp "I believe @zfc@ and @ac@.";
+  parse_then_interp "I believe @zfc@ but not @ac@."
