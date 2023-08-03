@@ -1,6 +1,6 @@
 open Langs.Short
 
-let usage_msg = "enum -l <N> -i <N>"
+let usage_msg = "enum -l <N> -d <N>"
 let id_size = ref 0
 let lang_size = ref 0
 let anon_fun _ = ()

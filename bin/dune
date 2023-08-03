@@ -1,5 +1,5 @@
 (executables
- (names dd arith_fix ff enum text text_interp pkgm)
+ (names dd arith_fix enum1 enum2 text text_interp pkgm)
  (libraries
   fix
   fmt

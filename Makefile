@@ -11,26 +11,23 @@ pt:
 tt:
 	dune exec bin/text.exe
 
-f:
-	dune exec ./bin/ff.exe
+# Enum 
 
-bs:
-	dune exec ./bin/enum.exe
+en1:
+	dune exec ./bin/enum1.exe
 
-s:
-	./bin/enum.exe
+en2:
+	dune exec ./bin/enum2.exe -- -l 3 -d 2
+
+# Lambda Core
 
 d:
 	dune exec ./bin/dd.exe
 
-a:
+# Program analysis via fix
+
+af:
 	dune exec ./bin/arith_fix.exe
-
-b:
-	dune exec bin/dd_concrete.exe
-
-c:
-	dune exec bin/dd_abstract.exe
 
 t:
 	dune runtest
