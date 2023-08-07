@@ -150,3 +150,58 @@ let () =
   Fmt.pr "@.%a\n" pp_int_set_list (sum_6 []);
   Fmt.pr "%a\n" pp_int_set_list (sum_6 [ 1 ]);
   Fmt.pr "%a\n" pp_int_set_list (sum_6 [ 1; 2; 10 ])
+
+type my_list = Nil | Cons of int * my_list
+
+module F7 =
+  Fix.ForType
+    (struct
+      type t = my_list
+    end)
+    (Int_set_list_prop)
+
+(* Guessing:
+   sum is the lazy and memoized version of `mk_sum_7`.
+*)
+
+let rec mk_sum_7 (xs : my_list) (sum : my_list -> int_set_list) : int_set_list =
+  match xs with
+  | Cons (x, Nil) -> mk_sum_one x sum
+  | Cons (x, xs) ->
+      (* let a1 = mk_sum_one x sum in *)
+      let a1 = sum (Cons (x, Nil)) in
+      (* let a2 = mk_sum_7 xs sum in *)
+      let a2 = sum xs in
+      a1 @ a2
+  | Nil -> []
+
+and mk_sum_one x sum =
+  if x = 0 then [ basic ]
+  else
+    match sum (Cons (x - 1, Nil)) with
+    | [ vset ] -> [ Int_set.map (fun t -> t + x) vset ]
+    | _ -> failwith "why"
+
+let sum_7 = F7.lfp mk_sum_7
+
+let () =
+  Fmt.pr "@.%a\n" pp_int_set_list (sum_7 Nil);
+  Fmt.pr "%a\n" pp_int_set_list (sum_7 (Cons (1, Nil)));
+  Fmt.pr "%a\n" pp_int_set_list (sum_7 (Cons (1, Cons (2, Cons (10, Nil)))))
+
+let rec mk_sum_8 (xs : int list) (sum : int list -> int list) : int list =
+  match xs with
+  | [ x ] -> mk_sum_one x sum
+  | x :: xs -> sum [ x ] @ sum xs
+  | [] -> failwith "why"
+
+and mk_sum_one x sum =
+  if x = 0 then [ 0 ]
+  else
+    match sum [ x - 1 ] with v :: vs -> (x + v) :: vs | [] -> failwith "why"
+
+let sum_8 = F3.lfp mk_sum_8
+
+let () =
+  Fmt.pr "@.%a\n" pp_int_list (sum_8 [ 1 ]);
+  Fmt.pr "%a\n" pp_int_list (sum_8 [ 1; 2; 10 ])
