@@ -205,3 +205,21 @@ let sum_8 = F3.lfp mk_sum_8
 let () =
   Fmt.pr "@.%a\n" pp_int_list (sum_8 [ 1 ]);
   Fmt.pr "%a\n" pp_int_list (sum_8 [ 1; 2; 10 ])
+
+let mk_sum_9 x sum =
+  Fmt.pr "mk_sum %d\n" x;
+  if x = 0 then 0
+  else
+    let v =
+      if x / 2 = 0 then (
+        Fmt.pr "sum %d\n" (x - 1);
+        sum (x - 1))
+      else sum (x - 1)
+    in
+    v + x
+
+let sum_9 = F.lfp mk_sum_9
+
+let () =
+  Fmt.pr "@.%d\n" (sum_9 3);
+  Fmt.pr "%d\n@." (sum_9 10)
