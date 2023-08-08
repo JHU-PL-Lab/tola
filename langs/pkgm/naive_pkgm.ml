@@ -83,7 +83,7 @@ module Pkgm_persisted :
 
   let info () =
     Fmt.str "#pkg = %d@." (Pkg_table.length !table)
-    ^ Fmt.str "%a" (Std.pp_table Pkg_table.iter Fmt.nop) !table
+    ^ Fmt.str "%a" (Std.pp_std_table Pkg_table.iter Fmt.nop) !table
 
   (* ;
      Fmt.(pr "" list ~sep:cut  ) *)
