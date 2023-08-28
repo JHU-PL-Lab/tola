@@ -1,3 +1,5 @@
+(* A naive pkgm is a local-only manager *)
+
 module type PACKAGE_MANAGER = sig
   type t
   type pid
