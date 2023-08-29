@@ -1,4 +1,6 @@
-(* a basic pkgm is with a local store and a remote store  *)
+(* A basic pkgm is with a local store and a remote store.
+   The store is a toml-file based package as `<pid>.toml`.
+*)
 
 module type STORE = sig
   type t

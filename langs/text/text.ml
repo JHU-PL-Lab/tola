@@ -19,4 +19,4 @@ module Text_pkgm_config : Naive.NAIVE_CONFIG = struct
 end
 
 module Pkgm_persisted =
-  Naive_pkgm.Make (Package.String_pkg) (Shared.Pkg_table) (Text_pkgm_config)
+  Naive_manager.Make (Package.String_pkg) (Shared.Pkg_table) (Text_pkgm_config)
