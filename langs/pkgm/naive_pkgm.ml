@@ -1,11 +1,6 @@
 open Package.Naive
 open Package_manager.Naive
 
-module Pkg : PACKAGE with type pid = string and type pkg = string = struct
-  type pid = string
-  type pkg = string
-end
-
 module Pkg_table = Hashtbl.Make (struct
   type t = string
 
@@ -13,37 +8,15 @@ module Pkg_table = Hashtbl.Make (struct
   let hash = Hashtbl.hash
 end)
 
-(* simple pkmg without persistency *)
-
-module Pkgm_ephemeral :
-  PACKAGE_MANAGER
-    with type pid = Pkg.pid
-     and type pkg = Pkg.pkg
-     and type t = Pkg.pkg Pkg_table.t = struct
-  type pid = Pkg.pid
-  type pkg = Pkg.pkg
-  type t = pkg Pkg_table.t
-
-  let table = ref (Pkg_table.create 64)
-  let init () = ()
-  let reset () = table := Pkg_table.create 64
-  let set_store table' = table := table'
-  let get_store () = !table
-  let install pid pkg = Pkg_table.add !table pid pkg
-  let uninstall pid = Pkg_table.remove !table pid
-  let lookup pid = Pkg_table.find !table pid
-  let info () = ""
-end
-
-(* simple pkmg with persistency *)
+(* simple pkgm with persistency *)
 
 module Pkgm_persisted :
   PACKAGE_MANAGER
-    with type pid = Pkg.pid
-     and type pkg = Pkg.pkg
-     and type t = Pkg.pkg Pkg_table.t = struct
-  type pid = Pkg.pid
-  type pkg = Pkg.pkg
+    with type pid = String_pkg.pid
+     and type pkg = String_pkg.pkg
+     and type t = String_pkg.pkg Pkg_table.t = struct
+  type pid = String_pkg.pid
+  type pkg = String_pkg.pkg
   type t = pkg Pkg_table.t
 
   let home = Sys.getenv "HOME"
@@ -85,8 +58,27 @@ module Pkgm_persisted :
     Fmt.str "#pkg = %d@." (Pkg_table.length !table)
     ^ Fmt.str "%a" (Std.pp_std_table Pkg_table.iter Fmt.nop) !table
 
-  (* ;
-     Fmt.(pr "" list ~sep:cut  ) *)
-
   let () = init ()
 end
+
+(* simple pkgm without persistency *)
+
+(* module Pkgm_ephemeral :
+     PACKAGE_MANAGER
+       with type pid = String_pkg.pid
+        and type pkg = String_pkg.pkg
+        and type t = String_pkg.pkg Pkg_table.t = struct
+     type pid = String_pkg.pid
+     type pkg = String_pkg.pkg
+     type t = pkg Pkg_table.t
+
+     let table = ref (Pkg_table.create 64)
+     let init () = ()
+     let reset () = table := Pkg_table.create 64
+     let set_store table' = table := table'
+     let get_store () = !table
+     let install pid pkg = Pkg_table.add !table pid pkg
+     let uninstall pid = Pkg_table.remove !table pid
+     let lookup pid = Pkg_table.find !table pid
+     let info () = ""
+   end *)

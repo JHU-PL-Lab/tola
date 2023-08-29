@@ -1,4 +1,4 @@
-open Langs.Text_with_pkg
+open Langs.Text.With_string_pkg
 open Langs.Naive_pkgm
 
 let rec interp e =

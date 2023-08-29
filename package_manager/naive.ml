@@ -1,4 +1,4 @@
-(* A naive pkgm is a local-only manager *)
+(* A naive pkgm is with local store only *)
 
 module type PACKAGE_MANAGER = sig
   type t
