@@ -7,7 +7,10 @@ open Naive
 
 (* simple pkgm with persistency *)
 
-module Make (P : PACKAGE) (Table : Hashtbl.S with type key = P.pid) :
+module Make
+    (P : PACKAGE)
+    (Table : Hashtbl.S with type key = P.pid)
+    (C : NAIVE_CONFIG) :
   NAIVE_MANAGER
     with type pid = P.pid
      and type pkg = P.pkg
@@ -16,10 +19,8 @@ module Make (P : PACKAGE) (Table : Hashtbl.S with type key = P.pid) :
   type pkg = P.pkg
   type t = pkg Table.t
 
-  let home = Sys.getenv "HOME"
-  let pkgm_root = home ^ "/.pkgm"
-  let text_pkgm_id = "text"
-  let text_pkgm_root = pkgm_root ^ "/" ^ text_pkgm_id
+  let pkgm_root = C.pkgm_root
+  let text_pkgm_root = pkgm_root ^ "/" ^ C.pkgm_id
   let text_pkgm_store = text_pkgm_root ^ "/" ^ "data"
   let table = ref (Table.create 64)
 
