@@ -1,6 +1,6 @@
 (* A naive pkgm is with local store only *)
 
-module type PACKAGE_MANAGER = sig
+module type NAIVE_MANAGER = sig
   type t
   type pid
   type pkg
@@ -13,4 +13,9 @@ module type PACKAGE_MANAGER = sig
   val uninstall : pid -> unit
   val lookup : pid -> pkg
   val info : unit -> string
+end
+
+module type NAIVE_CONFIG = sig
+  val pkgm_root : string
+  val pkgm_id : string
 end

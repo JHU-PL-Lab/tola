@@ -1,5 +1,4 @@
-open Langs.Naive_pkgm
-module PM = Pkgm_persisted
+module PM = Langs.Text.Pkgm_persisted
 
 let info_ _ = Printf.printf "%s\n" (PM.info ())
 

@@ -1,4 +1,4 @@
-(* Version: 0.1 *)
+(* Version: 0.1.1 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 open! Core
@@ -143,9 +143,8 @@ end
 include For_core
 
 module For_vanilla = struct
-  let pp_std_table table_iter pp_elem oc s =
-    Fmt.(vbox @@ iter_bindings ~sep:nop table_iter (pair string pp_elem)) oc s
-
+  let pp_std_table table_iter pp_key pp_elem oc s =
+    Fmt.(vbox @@ iter_bindings ~sep:nop table_iter (pair pp_key pp_elem)) oc s
   (* let pp_dump_std_table ?(name = "set") iter pp_elem oc s =
      let pp_name oc _ = Fmt.string oc name in
      (Fmt.Dump.iter_bindings iter pp_name Fmt.(string ++ cut) pp_elem) oc s *)

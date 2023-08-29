@@ -1,30 +1,27 @@
-open Package.Naive
-open Package_manager.Naive
+(* A naive pkgm maintains pkg with local marshalled store.
+   It's language-agnostic.
+*)
 
-module Pkg_table = Hashtbl.Make (struct
-  type t = string
-
-  let equal = String.equal
-  let hash = Hashtbl.hash
-end)
+open Package
+open Naive
 
 (* simple pkgm with persistency *)
 
-module Pkgm_persisted :
-  PACKAGE_MANAGER
-    with type pid = String_pkg.pid
-     and type pkg = String_pkg.pkg
-     and type t = String_pkg.pkg Pkg_table.t = struct
-  type pid = String_pkg.pid
-  type pkg = String_pkg.pkg
-  type t = pkg Pkg_table.t
+module Make (P : PACKAGE) (Table : Hashtbl.S with type key = P.pid) :
+  NAIVE_MANAGER
+    with type pid = P.pid
+     and type pkg = P.pkg
+     and type t = P.pkg Table.t = struct
+  type pid = P.pid
+  type pkg = P.pkg
+  type t = pkg Table.t
 
   let home = Sys.getenv "HOME"
   let pkgm_root = home ^ "/.pkgm"
   let text_pkgm_id = "text"
   let text_pkgm_root = pkgm_root ^ "/" ^ text_pkgm_id
   let text_pkgm_store = text_pkgm_root ^ "/" ^ "data"
-  let table = ref (Pkg_table.create 64)
+  let table = ref (Table.create 64)
 
   let reset () =
     if Sys.file_exists text_pkgm_store then Sys.remove text_pkgm_store
@@ -45,18 +42,18 @@ module Pkgm_persisted :
     ()
 
   let install pid pkg =
-    Pkg_table.add !table pid pkg;
+    Table.add !table pid pkg;
     save_store ()
 
   let uninstall pid =
-    Pkg_table.remove !table pid;
+    Table.remove !table pid;
     save_store ()
 
-  let lookup pid = Pkg_table.find !table pid
+  let lookup pid = Table.find !table pid
 
   let info () =
-    Fmt.str "#pkg = %d@." (Pkg_table.length !table)
-    ^ Fmt.str "%a" (Std.pp_std_table Pkg_table.iter Fmt.nop) !table
+    Fmt.str "#pkg = %d@." (Table.length !table)
+    ^ Fmt.str "%a" (Std.pp_std_table Table.iter P.pp_pid Fmt.nop) !table
 
   let () = init ()
 end
@@ -64,7 +61,7 @@ end
 (* simple pkgm without persistency *)
 
 (* module Pkgm_ephemeral :
-     PACKAGE_MANAGER
+     NAIVE_MANAGER
        with type pid = String_pkg.pid
         and type pkg = String_pkg.pkg
         and type t = String_pkg.pkg Pkg_table.t = struct
