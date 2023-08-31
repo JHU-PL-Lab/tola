@@ -1,4 +1,4 @@
-(* Version: 0.1.1 *)
+(* Version: 0.1.2 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 open! Core
@@ -52,6 +52,12 @@ module For_core = struct
       @@ List.map
            ~f:(function Some i -> string_of_int i | None -> none)
            inputs
+
+    let iter_core_set f set = Set.iter set ~f
+
+    let iteri_core_map f map =
+      let core_f ~key ~data = f key data in
+      Core.Map.iteri map ~f:core_f
   end
 
   include Printing
