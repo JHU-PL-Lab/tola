@@ -58,6 +58,10 @@ module For_core = struct
     let iteri_core_map f map =
       let core_f ~key ~data = f key data in
       Core.Map.iteri map ~f:core_f
+
+    let iteri_core_hashtbl f map =
+      let core_f ~key ~data = f key data in
+      Core.Hashtbl.iteri map ~f:core_f
   end
 
   include Printing
