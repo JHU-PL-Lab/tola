@@ -1,7 +1,7 @@
 (library
  (name packaging)
  (public_name tola.packaging)
- (libraries fmt fix std)
+ (libraries fmt fix std cmdliner)
  (preprocess
   (pps ppx_jane ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
 

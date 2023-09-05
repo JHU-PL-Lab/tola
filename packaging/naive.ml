@@ -5,6 +5,8 @@ module type NAIVE_MANAGER = sig
   type pid
   type pkg
 
+  module P : Package.PACKAGE with type pid = pid and type pkg = pkg
+
   val init : unit -> unit
   val reset : unit -> unit
   val set_store : t -> unit

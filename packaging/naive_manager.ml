@@ -1,11 +1,5 @@
-(* A naive pkgm maintains pkg with local marshalled store.
-   It's language-agnostic.
-*)
-
 open Package
 open Naive
-
-(* simple pkgm with persistency *)
 
 module Make
     (P : PACKAGE)
@@ -19,64 +13,60 @@ module Make
   type pkg = P.pkg
   type t = pkg Table.t
 
+  module P = P
+
   let pkgm_root = C.pkgm_root
   let text_pkgm_root = pkgm_root ^ "/" ^ C.pkgm_id
-  let text_pkgm_store = text_pkgm_root ^ "/" ^ "data"
+  let path_of_pid pid = Filename.concat text_pkgm_root (P.pid_to_str pid)
+  let path_of_pid_s pid_s = Filename.concat text_pkgm_root pid_s
+
+  let load_pkg_content pkg_path =
+    In_channel.with_open_text
+      (Filename.concat pkg_path "main.md")
+      In_channel.input_all
+
+  let save_pkg_content pkg_path pkg =
+    Std.remove_dir pkg_path;
+    Out_channel.with_open_text pkg_path (fun c ->
+        Out_channel.output_string c (P.pkg_to_str pkg))
+
   let table = ref (Table.create 64)
-
-  let reset () =
-    if Sys.file_exists text_pkgm_store then Sys.remove text_pkgm_store
-
   let set_store table' = table := table'
   let get_store () = !table
 
   let load_store () =
-    let (table : t) = Std.read_marshal text_pkgm_store in
+    let pid_and_pkgs =
+      Sys.readdir text_pkgm_root |> Array.to_list
+      |> List.filter_map (fun pid_s ->
+             let pkg_path = path_of_pid_s pid_s in
+             if Sys.is_directory pkg_path then
+               let pkg_content = load_pkg_content pkg_path in
+               Some (P.str_to_pid pid_s, P.str_to_pkg pkg_content)
+             else None)
+    in
+    let table = pid_and_pkgs |> List.to_seq |> Table.of_seq in
     set_store table
 
-  let save_store () = Std.write_marshal text_pkgm_store !table
+  let install pid pkg =
+    Table.add !table pid pkg;
+    let pkg_path = path_of_pid pid in
+    save_pkg_content pkg_path pkg
+
+  let reset () = ()
+  let uninstall _pig = ()
+  let lookup pid = Table.find !table pid
+  let set_store _ = ()
+
+  let info () =
+    let pp_pid = Fmt.using P.pid_to_str Fmt.string in
+
+    Fmt.str "#pkg = %d@." (Table.length !table)
+    ^ Fmt.str "%a" (Std.pp_std_table Table.iter pp_pid Fmt.nop) !table
 
   let init () =
     if not (Sys.file_exists pkgm_root) then Sys.mkdir pkgm_root 0o755;
     if not (Sys.file_exists text_pkgm_root) then Sys.mkdir text_pkgm_root 0o755;
-    if Sys.file_exists text_pkgm_store then load_store () else save_store ();
-    ()
-
-  let install pid pkg =
-    Table.add !table pid pkg;
-    save_store ()
-
-  let uninstall pid =
-    Table.remove !table pid;
-    save_store ()
-
-  let lookup pid = Table.find !table pid
-
-  let info () =
-    Fmt.str "#pkg = %d@." (Table.length !table)
-    ^ Fmt.str "%a" (Std.pp_std_table Table.iter P.pp_pid Fmt.nop) !table
+    load_store ()
 
   let () = init ()
 end
-
-(* simple pkgm without persistency *)
-
-(* module Pkgm_ephemeral :
-     NAIVE_MANAGER
-       with type pid = String_pkg.pid
-        and type pkg = String_pkg.pkg
-        and type t = String_pkg.pkg Pkg_table.t = struct
-     type pid = String_pkg.pid
-     type pkg = String_pkg.pkg
-     type t = pkg Pkg_table.t
-
-     let table = ref (Pkg_table.create 64)
-     let init () = ()
-     let reset () = table := Pkg_table.create 64
-     let set_store table' = table := table'
-     let get_store () = !table
-     let install pid pkg = Pkg_table.add !table pid pkg
-     let uninstall pid = Pkg_table.remove !table pid
-     let lookup pid = Pkg_table.find !table pid
-     let info () = ""
-   end *)

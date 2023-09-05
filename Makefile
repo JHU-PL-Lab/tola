@@ -2,8 +2,11 @@ all: pi
 
 # For pkgm and lang text
 
+pm:
+	dune exec bin/pm.exe -- info
+
 pi:
-	dune exec bin/pkgm.exe -- info
+	dune exec bin/pmm.exe -- info
 
 pt:
 	echo I love @ac@. | dune exec bin/text_interp.exe

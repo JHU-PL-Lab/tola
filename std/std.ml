@@ -1,11 +1,11 @@
-(* Version: 0.1.2 *)
+(* Version: 0.1.3 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
-
-open! Core
 
 [@@@warning "-32"]
 
 module For_core = struct
+  open! Core
+
   module Printing = struct
     let pp_b = Fmt.(using (function true -> "t" | false -> "f") string)
     let pp_bo = Fmt.(using (function true -> "#t" | false -> "#f") string)
@@ -65,23 +65,6 @@ module For_core = struct
   end
 
   include Printing
-
-  module File_util = struct
-    open Stdlib
-
-    let write_marshal file v =
-      let oc = open_out file in
-      Marshal.to_channel oc v [];
-      close_out oc
-
-    let read_marshal file =
-      let ic = open_in file in
-      let v = Marshal.from_channel ic in
-      close_in ic;
-      v
-  end
-
-  include File_util
 
   module More_bool = struct
     (*
@@ -158,6 +141,30 @@ module For_vanilla = struct
   (* let pp_dump_std_table ?(name = "set") iter pp_elem oc s =
      let pp_name oc _ = Fmt.string oc name in
      (Fmt.Dump.iter_bindings iter pp_name Fmt.(string ++ cut) pp_elem) oc s *)
+
+  module File_util = struct
+    open Stdlib
+
+    let write_marshal file v =
+      let oc = open_out file in
+      Marshal.to_channel oc v [];
+      close_out oc
+
+    let read_marshal file =
+      let ic = open_in file in
+      let v = Marshal.from_channel ic in
+      close_in ic;
+      v
+
+    let rec remove_dir path =
+      Sys.readdir path
+      |> Array.iter (fun sub ->
+             let subpath = Filename.concat path sub in
+             if Sys.is_directory path then remove_dir subpath
+             else Sys.remove subpath)
+  end
+
+  include File_util
 end
 
 include For_vanilla
