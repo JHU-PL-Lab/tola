@@ -9,10 +9,10 @@ pi:
 	dune exec bin/pmm.exe -- info
 
 pt:
-	echo I love @ac@. | dune exec bin/text_interp.exe
+	echo I love @ac@. | dune exec bin/text.exe
 
-tt:
-	dune exec bin/text.exe
+te:
+	dune exec bin/text_example.exe
 
 # Enum 
 

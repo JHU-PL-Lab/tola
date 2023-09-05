@@ -156,12 +156,16 @@ module For_vanilla = struct
       close_in ic;
       v
 
-    let rec remove_dir path =
-      Sys.readdir path
-      |> Array.iter (fun sub ->
-             let subpath = Filename.concat path sub in
-             if Sys.is_directory path then remove_dir subpath
-             else Sys.remove subpath)
+    let remove_dir path =
+      let rec loop path =
+        Sys.readdir path
+        |> Array.iter (fun sub ->
+               let subpath = Filename.concat path sub in
+               if Sys.is_directory subpath then loop subpath
+               else Sys.remove subpath);
+        Sys.rmdir path
+      in
+      if Sys.file_exists path && Sys.is_directory path then loop path
   end
 
   include File_util

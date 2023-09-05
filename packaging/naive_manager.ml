@@ -26,8 +26,10 @@ module Make
       In_channel.input_all
 
   let save_pkg_content pkg_path pkg =
-    Std.remove_dir pkg_path;
-    Out_channel.with_open_text pkg_path (fun c ->
+    if not (Sys.file_exists pkg_path) then Sys.mkdir pkg_path 0o755;
+    let pkg_content_path = Filename.concat pkg_path "main.md" in
+
+    Out_channel.with_open_text pkg_content_path (fun c ->
         Out_channel.output_string c (P.pkg_to_str pkg))
 
   let table = ref (Table.create 64)
@@ -50,10 +52,16 @@ module Make
   let install pid pkg =
     Table.add !table pid pkg;
     let pkg_path = path_of_pid pid in
+    Std.remove_dir pkg_path;
+
     save_pkg_content pkg_path pkg
 
+  let uninstall pid =
+    Table.remove !table pid;
+    let pkg_path = path_of_pid pid in
+    Std.remove_dir pkg_path
+
   let reset () = ()
-  let uninstall _pig = ()
   let lookup pid = Table.find !table pid
   let set_store _ = ()
 
