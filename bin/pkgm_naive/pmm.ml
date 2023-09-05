@@ -1,7 +1,6 @@
 (* Package manager by marshaling *)
 
-module PM = Langs.Text.Pkgm_marshal
-module PM_cmd = Packaging.Cmd.Make (PM)
+module PM_cmd = Packaging.Cmd.Make (Interp.Text_with_pkgm.Pkgm_marshal)
 
 let () = PM_cmd.main ()
 

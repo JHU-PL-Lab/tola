@@ -11,13 +11,3 @@ module Make (P : Package.PACKAGE) = struct
 end
 
 module With_string_pkg = Make (Package.String_pkg)
-
-module Global_config : Naive.NAIVE_CONFIG = struct
-  let home = Sys.getenv "HOME"
-  let pkgm_root = home ^ "/.pkgm"
-  let pkgm_id = "text"
-end
-
-module Pkgm_marshal =
-  Naive_manager_marshal.Make (Package.String_pkg) (Shared.Pkg_table)
-    (Global_config)

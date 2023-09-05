@@ -1,9 +1,9 @@
-open Langs.Text_plain
-open Interp
+open Langs.Text.Plain
 
+let interp = Interp.Text_plain_interp.interp
 (* for naive text *)
 
-let dump e = Fmt.pr "%s@." (Text_plain_interp.interp e)
+let dump e = Fmt.pr "%s@." (interp e)
 
 let () =
   dump (Lit "Hi");
@@ -11,12 +11,14 @@ let () =
 
 (* for text with package *)
 
-open Langs.Text_with_pkg
+open Langs.Text.With_string_pkg
+
+let interp = Interp.Text_with_pkgm.Interp.interp
 
 (* Pkgm.install "zfc" "Zermelo-Fraenkel set theory";;
    Pkgm.install "ac" "Axiom of Choices" *)
 
-let dump_with_pkg e = Fmt.pr "%s@." (Text_with_pkgm_interp.interp e)
+let dump_with_pkg e = Fmt.pr "%s@." (interp e)
 let e1 = Con (Con (Lit "I believe ", Pid "zfc"), Con (Lit " and ", Pid "ac"))
 let e2 = Con (Con (Lit "I believe ", Pid "zfc"), Con (Lit " but not ", Pid "ac"))
 
