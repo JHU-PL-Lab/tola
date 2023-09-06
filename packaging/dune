@@ -1,3 +1,5 @@
+(include_subdirs unqualified)
+
 (library
  (name packaging)
  (public_name tola.packaging)

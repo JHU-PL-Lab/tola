@@ -11,20 +11,20 @@ end
 
 module Global_config : Naive.NAIVE_CONFIG = struct
   let home = Sys.getenv "HOME"
-  let pkgm_root = home ^ "/.pkgm"
+  let super_root = home ^ "/.pkgm"
   let pkgm_id = "text"
 end
 
-module Pkgm_marshal =
-  Naive_manager_marshal.Make (Package.String_pkg) (Shared.Pkg_table)
-    (Global_config)
+module Naive_pkgm =
+  Naive_manager.Make (Package.String_pkg) (Shared.Pkg_table) (Global_config)
 
-module Local_demo_config : Packaging.Naive.NAIVE_CONFIG = struct
-  let pkgm_root = Filename.concat (Sys.getcwd ()) "demo"
+module Demo_config : Packaging.Basic.BASIC_CONFIG = struct
   let pkgm_id = "text"
+  let local_root = Filename.concat (Sys.getcwd ()) ("_local_root_" ^ pkgm_id)
+  let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_root_" ^ pkgm_id)
 end
 
 module Pkgm =
-  Naive_manager.Make (Package.String_pkg) (Shared.Pkg_table) (Local_demo_config)
+  Basic_manager.Make (Package.String_pkg) (Shared.Pkg_table) (Demo_config)
 
 module Interp = Make (Pkgm)

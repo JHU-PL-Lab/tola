@@ -35,5 +35,4 @@ _opam/
 # System files
 .DS_Store
 
-_draft
-reference
+_*

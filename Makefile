@@ -1,4 +1,4 @@
-all: pi
+all: pm
 
 # For pkgm and lang text
 
