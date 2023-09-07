@@ -1,12 +1,11 @@
 (include_subdirs unqualified)
 
 (executables
- (names dd arith_fix enum1 enum2 text text_example pm pmm try_fix)
+ (names dd arith_fix enum1 enum2 text text_example bpm npm try_fix)
  (libraries
   fix
   fmt
   cmdliner
-  langs
   parser
   feat
   std

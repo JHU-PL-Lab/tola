@@ -1,18 +1,26 @@
-all: pm
+all: bi
 
 # For pkgm and lang text
 
-pm:
-	dune exec bin/pm.exe -- info
+bi:
+	dune exec bin/bpm.exe -- info
 
-pi:
-	dune exec bin/pmm.exe -- info
+ni:
+	dune exec bin/npm.exe -- info
 
 pt:
 	echo I love @ac@. | dune exec bin/text.exe
 
 te:
 	dune exec bin/text_example.exe
+
+pkg_init:
+	mkdir -p _local_root_text
+	rm -rf _local_root_text/*
+	mkdir -p _remote_root_text
+	rm -rf _remote_root_text/*
+	cp -r vendor/text/ac _local_root_text
+	cp -r vendor/text/zfc _remote_root_text
 
 # Enum 
 

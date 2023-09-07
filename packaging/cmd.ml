@@ -1,6 +1,6 @@
 open Cmdliner
 
-module Make (PM : Naive.NAIVE_MANAGER) = struct
+module Make (PM : Naive_manager.NAIVE_MANAGER) = struct
   let dummy = Arg.(value & opt string "dummy" & info [ "dummy" ])
   let pid = Arg.(value & pos 0 string "" & info [])
   let pkg = Arg.(value & pos 1 string "" & info [])
@@ -53,7 +53,7 @@ module Make (PM : Naive.NAIVE_MANAGER) = struct
   let main () = exit (Cmd.eval main_cmd)
 end
 
-module Make_basic (PM : Basic.BASIC_MANAGER) = struct
+module Make_basic (PM : Basic_manager.BASIC_MANAGER) = struct
   include Make (PM)
 
   let publish pid pkg =
