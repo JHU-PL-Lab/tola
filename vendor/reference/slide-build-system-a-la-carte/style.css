@@ -1,0 +1,27 @@
+.reveal p {
+  text-align: left;
+}
+
+.reveal ul {
+  display: block;
+  text-align: left;
+}
+
+.reveal ol {
+  display: block;
+  text-align: left;
+}
+
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  text-transform: none;
+  text-align: left;
+}
+
+.reveal .slides>section>section {
+  text-align: left;
+}
