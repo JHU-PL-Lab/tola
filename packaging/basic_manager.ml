@@ -1,72 +1,15 @@
 (* A basic pkgm is with a local store and a remote store.
    The store is a toml-file based package as `<pid>.toml`.
 *)
-
 open Package
-
-module type STORE = sig
-  type t
-  type pid
-  type pkg
-end
-
-module type LOCAL_STORE = sig
-  type t
-  type pid
-  type pkg
-  type store
-end
-
-module type REMOTE_STORE = sig
-  type t
-  type pid
-  type pkg
-  type store
-end
-
-module type BASIC_MANAGER = sig
-  type t
-  type pid
-  type pkg
-
-  module P : Package.PACKAGE with type pid = pid and type pkg = pkg
-
-  (* for local *)
-  val init : unit -> unit
-  val reset : unit -> unit
-  val install : pid -> pkg -> unit (* system_state may be changed *)
-
-  (* val install : pid * system_state -> system_state *)
-  val uninstall : pid -> unit
-  val lookup : pid -> pkg
-  val info : unit -> string
-
-  (* for remote *)
-  val publish : pid -> pkg -> unit
-  val unpublish : pid -> unit
-  val fetch : pid -> unit
-  val remote_info : unit -> string
-end
-
-module type BASIC_CONFIG = sig
-  val pkgm_id : string
-  val local_root : string
-  val remote_root : string
-end
 
 module Make
     (P : PACKAGE)
     (Table : Hashtbl.S with type key = P.pid)
-    (C : BASIC_CONFIG) :
-  BASIC_MANAGER
-    with type pid = P.pid
-     and type pkg = P.pkg
-     and type t = P.pkg Table.t = struct
-  type pid = P.pid
-  type pkg = P.pkg
-  type t = pkg Table.t
-
+    (C : Manager.CONFIG) : Manager.S with type t = P.pkg Table.t = struct
   module P = P
+
+  type t = P.pkg Table.t
 
   let path_of_pid pid = Filename.concat C.local_root (P.pid_to_str pid)
   let remote_path_of_pid pid = Filename.concat C.remote_root (P.pid_to_str pid)

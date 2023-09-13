@@ -1,1 +1,1 @@
-(data_only_dirs "reference")
+(data_only_dirs reference vendor)

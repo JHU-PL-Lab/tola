@@ -2,22 +2,23 @@
    It's language-agnostic.
 *)
 
+open Sigs
 open Package
 
 (* A naive pkgm is with local store only *)
 
 module type NAIVE_MANAGER = sig
   type t
-  type pid
-  type pkg
 
-  module P : Package.PACKAGE with type pid = pid and type pkg = pkg
+  module P : Package.PACKAGE
 
   val init : unit -> unit
   val reset : unit -> unit
-  val install : pid -> pkg -> unit
-  val uninstall : pid -> unit
-  val lookup : pid -> pkg
+  val install : P.pid -> P.pkg -> unit
+  val uninstall : P.pid -> unit
+
+  include LOOKUPABLE with type pid := P.pid and type pkg := P.pkg
+
   val info : unit -> string
 end
 
@@ -29,16 +30,10 @@ end
 module Make
     (P : PACKAGE)
     (Table : Hashtbl.S with type key = P.pid)
-    (C : NAIVE_CONFIG) :
-  NAIVE_MANAGER
-    with type pid = P.pid
-     and type pkg = P.pkg
-     and type t = P.pkg Table.t = struct
-  type pid = P.pid
-  type pkg = P.pkg
-  type t = pkg Table.t
-
+    (C : NAIVE_CONFIG) : NAIVE_MANAGER with type t = P.pkg Table.t = struct
   module P = P
+
+  type t = P.pkg Table.t
 
   let super_root = C.super_root
   let text_pkgm_root = Filename.concat super_root C.pkgm_id

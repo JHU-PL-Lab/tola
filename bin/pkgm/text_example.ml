@@ -13,7 +13,7 @@ let () =
 
 open Langs.Text.With_string_pkg
 
-let interp = Interp.Text_with_pkgm.Interp.interp
+let interp = Interp.Text_with_pkgm.Basic_interp.interp
 
 (* Pkgm.install "zfc" "Zermelo-Fraenkel set theory";;
    Pkgm.install "ac" "Axiom of Choices" *)

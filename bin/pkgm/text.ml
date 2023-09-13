@@ -1,4 +1,4 @@
-module Interp = Interp.Text_with_pkgm.Interp
+module Interp = Interp.Text_with_pkgm.Basic_interp
 
 let main () =
   In_channel.input_all In_channel.stdin

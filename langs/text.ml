@@ -10,4 +10,4 @@ module Make (P : Package.PACKAGE) = struct
   type exp = Lit of string | Con of exp * exp | Pid of pid
 end
 
-module With_string_pkg = Make (Package.String_pkg)
+module With_string_pkg = Make (Package.String_no_dep_pkg)
