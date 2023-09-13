@@ -2,7 +2,6 @@
 
 (library
  (name lattice)
- (public_name lattice)
  (synopsis "Lattice library")
  (inline_tests)
  (preprocess

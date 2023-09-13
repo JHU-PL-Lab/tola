@@ -1,18 +1,28 @@
-(lang dune 3.6)
+(lang dune 3.10)
 
 (generate_opam_files true)
 
-(authors "Shiwei Weng <shiwei@prover.me>")
+(maintainers "Shiwei Weng <dota@jhu.edu>")
 
 (package
  (name tola)
  (synopsis "thousands of languages")
  (description "I shall better \nwrite a better description.")
- (depends core fix))
-
-(package
- (name lattice)
- (synopsis "lattice library")
- (description "I shall better \nwrite a better description.")
  (depends
-  (alcotest :with-test)))
+  core
+  fmt
+  fix
+  ppx_jane
+  ; dev-dependency
+  utop
+  ocaml-lsp-server
+  ocamlformat
+  (alcotest :with-test)
+  ; The followings are obviously not related to this project but I have short time to clean them out yet.
+  ppx_deriving
+  cmdliner
+  feat
+  ocamlgraph
+  color-brewery))
+
+(license MIT)
