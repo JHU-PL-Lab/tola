@@ -104,12 +104,10 @@ The project is written in OCaml. Therefore, unavoidably, you need to have ocaml 
 To build everything:
 
 ```shell
-$ opam install core fmt fix ppx_jane alcotest
-
-# This is obviously not related to this project but I have short time to clean them out yet.
-$ opam install ppx_deriving cmdliner feat ocamlgraph color-brewery
-
+# This will fail but generate a `tola.opam` file with dependencies
 $ dune build
+
+$ opam install . --deps-only --with-test
 ```
 
 To prepare sample packages for playing around:
