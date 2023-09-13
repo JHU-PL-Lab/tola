@@ -22,6 +22,11 @@ pkg_init:
 	cp -r vendor/text/ac _local_root_text
 	cp -r vendor/text/zfc _remote_root_text
 
+# OCaml IR zoo
+
+ir:
+	dune exec bin/ocaml_ir/oir.exe
+
 # Enum 
 
 en1:

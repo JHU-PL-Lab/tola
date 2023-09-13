@@ -1,0 +1,13 @@
+(include_subdirs unqualified)
+
+(executables
+ (names oir)
+ (libraries compiler-libs.common compiler-libs.optcomp langs)
+ (preprocess
+  (pps ppx_deriving.show))
+ (promote (until-clean)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

@@ -3,7 +3,7 @@
 (library
  (name langs)
  (public_name tola.langs)
- (libraries fmt fix std packaging)
+ (libraries fmt fix std packaging compiler-libs.common compiler-libs.optcomp)
  (preprocess
   (pps ppx_jane ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
 
