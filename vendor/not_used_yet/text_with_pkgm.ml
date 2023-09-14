@@ -1,5 +1,6 @@
 open Packaging
 open Langs.Text.With_string_pkg
+open Std.File_infix
 
 module Make (PM : Naive_manager.NAIVE_MANAGER) = struct
   let rec interp e =
@@ -20,8 +21,8 @@ module Naive_pkgm =
 
 module Demo_config : Basic_manager.BASIC_CONFIG = struct
   let pkgm_id = "text"
-  let local_root = Filename.concat (Sys.getcwd ()) ("_local_root_" ^ pkgm_id)
-  let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_root_" ^ pkgm_id)
+  let local_root = Sys.getcwd () $/ "_local_root_" ^ pkgm_id
+  let remote_root = Sys.getcwd () $/ "_remote_root_" ^ pkgm_id
 end
 
 module Basic_pkgm =

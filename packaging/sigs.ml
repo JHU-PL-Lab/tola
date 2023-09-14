@@ -1,10 +1,3 @@
-module type LOOKUPABLE = sig
-  type pid
-  type pkg
-
-  val lookup : pid -> pkg
-end
-
 module type STORE = sig
   type t
   type pid

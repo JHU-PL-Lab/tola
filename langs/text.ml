@@ -5,9 +5,7 @@ end
 open Packaging
 
 module Make (P : Package.PACKAGE) = struct
-  type pid = P.pid
-  type pkg = P.pkg
-  type exp = Lit of string | Con of exp * exp | Pid of pid
+  type exp = Lit of string | Con of exp * exp | Pid of P.pid
 end
 
 module With_string_pkg = Make (Package.String_no_dep_pkg)

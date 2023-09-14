@@ -4,6 +4,7 @@
 
 open Sigs
 open Package
+open Std.File_infix
 
 (* A naive pkgm is with local store only *)
 
@@ -36,8 +37,8 @@ module Make
   type t = P.pkg Table.t
 
   let super_root = C.super_root
-  let text_pkgm_root = Filename.concat super_root C.pkgm_id
-  let text_pkgm_store = Filename.concat text_pkgm_root "data"
+  let text_pkgm_root = super_root $/ C.pkgm_id
+  let text_pkgm_store = text_pkgm_root $/ "data"
   let table = ref (Table.create 64)
   let set_store table' = table := table'
 

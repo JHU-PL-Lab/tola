@@ -2,6 +2,7 @@
    The store is a toml-file based package as `<pid>.toml`.
 *)
 open Package
+open Std.File_infix
 
 module Make
     (P : PACKAGE)
@@ -11,21 +12,14 @@ module Make
 
   type t = P.pkg Table.t
 
-  let path_of_pid pid = Filename.concat C.local_root (P.pid_to_str pid)
-  let remote_path_of_pid pid = Filename.concat C.remote_root (P.pid_to_str pid)
-  let path_of_pid_s pid_s = Filename.concat C.local_root pid_s
-
-  let load_pkg_content pkg_path =
-    In_channel.with_open_text
-      (Filename.concat pkg_path "main.md")
-      In_channel.input_all
+  let path_of_pid pid = C.local_root $/ P.pid_to_str pid
+  let remote_path_of_pid pid = C.remote_root $/ P.pid_to_str pid
+  let path_of_pid_s pid_s = C.local_root $/ pid_s
+  let load_pkg_content pkg_path = Std.read_file_all (pkg_path $/ "main.md")
 
   let save_pkg_content pkg_path pkg =
     if not (Sys.file_exists pkg_path) then Sys.mkdir pkg_path 0o755;
-    let pkg_content_path = Filename.concat pkg_path "main.md" in
-
-    Out_channel.with_open_text pkg_content_path (fun c ->
-        Out_channel.output_string c (P.pkg_to_str pkg))
+    Std.write_file_all (pkg_path $/ "main.md") (P.pkg_to_str pkg)
 
   (* A table is just a cache for the directory status *)
   let local_table = ref (Table.create 64)

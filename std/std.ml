@@ -1,4 +1,4 @@
-(* Version: 0.1.3 *)
+(* Version: 0.1.4 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
@@ -145,6 +145,30 @@ module For_vanilla = struct
   module File_util = struct
     open Stdlib
 
+    module File_infix = struct
+      (* The precedence in OCaml is (See https://v2.ocaml.org/manual/expr.html#ss:precedence-and-associativity for full):
+         (functio application) > `/...` > `@...` > `^...` > `$/`.
+         Therefore, if we have
+         "1" ^ "a" // "a" ^ "2";;
+         "1" ^ "b" @/ "b" ^ "2";;
+         "1" ^ "b" $/ "b" ^ "2";;
+
+         It should be equivalent to
+         "1" ^ ("a" // "a") ^ "2";;
+         "1" ^ ("b" @/ "b") ^ "2";;
+         ("1" ^ "b") $/ ("b" ^ "2");;
+      *)
+      let ( $/ ) a b = Filename.concat a b
+    end
+
+    open File_infix
+
+    let read_file_all path = In_channel.with_open_text path In_channel.input_all
+
+    let write_file_all path content =
+      Out_channel.with_open_text path (fun c ->
+          Out_channel.output_string c content)
+
     let write_marshal file v =
       let oc = open_out file in
       Marshal.to_channel oc v [];
@@ -160,7 +184,7 @@ module For_vanilla = struct
       let rec loop path =
         Sys.readdir path
         |> Array.iter (fun sub ->
-               let subpath = Filename.concat path sub in
+               let subpath = path $/ sub in
                if Sys.is_directory subpath then loop subpath
                else Sys.remove subpath);
         Sys.rmdir path

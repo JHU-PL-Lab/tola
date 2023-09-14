@@ -1,4 +1,3 @@
-open Sigs
 open Package
 
 module type S = sig
@@ -10,12 +9,8 @@ module type S = sig
   val init : unit -> unit
   val reset : unit -> unit
   val install : P.pid -> P.pkg -> unit (* system_state may be changed *)
-
-  (* val install : pid * system_state -> system_state *)
   val uninstall : P.pid -> unit
-
-  include LOOKUPABLE with type pid := P.pid and type pkg := P.pkg
-
+  val lookup : P.pid -> P.pkg
   val info : unit -> string
 
   (* for remote *)
