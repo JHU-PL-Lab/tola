@@ -7,8 +7,11 @@ open Std.File_infix
 module Make
     (P : PACKAGE)
     (Table : Hashtbl.S with type key = P.pid)
-    (C : Manager.CONFIG) : Manager.S with type t = P.pkg Table.t = struct
+    (C : Manager.CONFIG) :
+  Manager.S with type t = P.pkg Table.t and module P = P = struct
   module P = P
+
+  module type PT = PACKAGE
 
   type t = P.pkg Table.t
 

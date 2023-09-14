@@ -28,14 +28,18 @@ module String_no_dep_pkg = struct
   let str_to_pkg payload = { payload; meta = () }
 end
 
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
+
 module String_static_dep_pkg = struct
-  type pid = string
-  type payload = string
-  type meta = string list
-  type pkg = { payload : payload; meta : meta }
+  type pid = string [@@deriving yojson]
+  type payload = string [@@deriving yojson]
+  type meta = string list [@@deriving yojson]
+  type pkg = { payload : payload; meta : meta } [@@deriving yojson]
 
   let pid_to_str s = s
   let str_to_pid s = s
-  let pkg_to_str { payload; _ } = payload
-  let str_to_pkg payload = { payload; meta = [] }
+  let payload_of_pkg { payload; _ } = payload
+  let meta_of_pkg { meta; _ } = meta
+  let pkg_to_str pkg = Yojson.Safe.to_string (yojson_of_pkg pkg)
+  let str_to_pkg raw = pkg_of_yojson (Yojson.Safe.from_string raw)
 end
