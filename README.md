@@ -107,6 +107,7 @@ To build everything:
 # This will fail but generate a `tola.opam` file with dependencies
 $ dune build
 
+# Ignore the warnings and press _y_ when prompted
 $ opam install . --deps-only --with-test
 ```
 

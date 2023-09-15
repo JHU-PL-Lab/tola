@@ -13,6 +13,7 @@
   fmt
   fix
   ppx_jane
+  ppx_yojson_conv
   ; dev-dependency
   utop
   ocaml-lsp-server
