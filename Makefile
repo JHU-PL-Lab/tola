@@ -11,6 +11,13 @@ ni:
 pt:
 	echo I love @ac@. | dune exec bin/text.exe
 
+sd:
+	echo @p1@. | dune exec bin/stext.exe
+	echo @p2@. | dune exec bin/stext.exe
+
+loop:
+	echo @loop@. | dune exec bin/stext.exe
+
 te:
 	dune exec bin/text_example.exe
 

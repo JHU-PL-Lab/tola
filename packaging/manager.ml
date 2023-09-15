@@ -24,4 +24,5 @@ module type CONFIG = sig
   val pkgm_id : string
   val local_root : string
   val remote_root : string
+  val store_name : string
 end

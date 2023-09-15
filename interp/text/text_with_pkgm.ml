@@ -8,17 +8,32 @@ module Make (PM : Manager.S with type P.payload = string) = struct
   let rec interp e =
     match e with
     | Lit s -> s
-    | Pid pid -> get_string_payload pid
+    | Pid pid -> get_string_payload pid |> Parser.Text_with_pkg.parse |> interp
     | Con (e1, e2) -> interp e1 ^ interp e2
 end
 
-module Demo_config : Manager.CONFIG = struct
+module Basic_config : Manager.CONFIG = struct
   let pkgm_id = "text"
   let local_root = Filename.concat (Sys.getcwd ()) ("_local_root_" ^ pkgm_id)
   let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_root_" ^ pkgm_id)
+  let store_name = "main.md"
 end
 
 module Basic_pkgm =
-  Basic_manager.Make (Package.String_no_dep_pkg) (Store.Pkg_table) (Demo_config)
+  Basic_manager.Make (Package.String_no_dep_pkg) (Store.Pkg_table)
+    (Basic_config)
 
 module Basic_interp = Make (Basic_pkgm)
+
+module Static_dep_config : Manager.CONFIG = struct
+  let pkgm_id = "text"
+  let local_root = Filename.concat (Sys.getcwd ()) ("_local_sd_" ^ pkgm_id)
+  let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_sd_" ^ pkgm_id)
+  let store_name = "main.json"
+end
+
+module Static_dep_pkgm =
+  Basic_manager.Make (Package.String_static_dep_pkg) (Store.Pkg_table)
+    (Static_dep_config)
+
+module Static_dep_interp = Make (Static_dep_pkgm)
