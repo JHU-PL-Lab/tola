@@ -1,12 +1,12 @@
-all: bi
+all: pi
 
 # For pkgm and lang text
 
-bi:
-	dune exec bin/bpm.exe -- info
+pi:
+	dune exec bin/pm.exe -- info
 
-ni:
-	dune exec bin/npm.exe -- info
+spi:
+	dune exec bin/spm.exe -- info
 
 pt:
 	echo I love @ac@. | dune exec bin/text.exe
@@ -16,18 +16,35 @@ sd:
 	echo @p2@. | dune exec bin/stext.exe
 
 loop:
+	# echo looping forever
 	echo @loop@. | dune exec bin/stext.exe
 
 te:
 	dune exec bin/text_example.exe
 
+DEMO_ROOT = _pm_root
+NO_DEP_TEXT = $(DEMO_ROOT)/_no_dep_lt
+NO_DEP_TEXT_LOCAL = $(NO_DEP_TEXT)_local
+NO_DEP_TEXT_REMOTE = $(NO_DEP_TEXT)_remote
+
+STATIC_DEP_TEXT = $(DEMO_ROOT)/_static_dep_lt
+STATIC_TEXT_LOCAL = $(STATIC_DEP_TEXT)_local
+STATIC_TEXT_REMOTE = $(STATIC_DEP_TEXT)_remote
+
 pkg_init:
-	mkdir -p _local_root_text
-	rm -rf _local_root_text/*
-	mkdir -p _remote_root_text
-	rm -rf _remote_root_text/*
-	cp -r vendor/text/ac _local_root_text
-	cp -r vendor/text/zfc _remote_root_text
+	rm -rf $(NO_DEP_TEXT_LOCAL)
+	mkdir -p $(NO_DEP_TEXT_LOCAL)
+	rm -rf $(NO_DEP_TEXT_REMOTE)
+	mkdir -p $(NO_DEP_TEXT_REMOTE)
+	cp -r vendor/text/ac $(NO_DEP_TEXT_LOCAL)
+	cp -r vendor/text/zfc $(NO_DEP_TEXT_REMOTE)
+
+	rm -rf $(STATIC_TEXT_LOCAL)
+	mkdir -p $(STATIC_TEXT_LOCAL)
+	rm -rf $(STATIC_TEXT_REMOTE)
+	mkdir -p $(STATIC_TEXT_REMOTE)
+	cp -r vendor/stext/* $(STATIC_TEXT_LOCAL)
+	cp -r vendor/stext/* $(STATIC_TEXT_REMOTE)
 
 # Enum 
 

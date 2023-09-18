@@ -1,5 +1,6 @@
 open Packaging
 open Langs.Text.With_string_pkg
+open Std.File_infix
 
 module Make (PM : Manager.S with type P.payload = string) = struct
   let get_string_payload pid =
@@ -13,9 +14,9 @@ module Make (PM : Manager.S with type P.payload = string) = struct
 end
 
 module Basic_config : Manager.CONFIG = struct
-  let pkgm_id = "text"
-  let local_root = Filename.concat (Sys.getcwd ()) ("_local_root_" ^ pkgm_id)
-  let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_root_" ^ pkgm_id)
+  let pkgm_id = "_no_dep_lt"
+  let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
+  let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
   let store_name = "main.md"
 end
 
@@ -26,9 +27,9 @@ module Basic_pkgm =
 module Basic_interp = Make (Basic_pkgm)
 
 module Static_dep_config : Manager.CONFIG = struct
-  let pkgm_id = "text"
-  let local_root = Filename.concat (Sys.getcwd ()) ("_local_sd_" ^ pkgm_id)
-  let remote_root = Filename.concat (Sys.getcwd ()) ("_remote_sd_" ^ pkgm_id)
+  let pkgm_id = "_static_dep_lt"
+  let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
+  let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
   let store_name = "main.json"
 end
 
