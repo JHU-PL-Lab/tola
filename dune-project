@@ -1,5 +1,7 @@
 (lang dune 3.10)
 
+(name tola)
+
 (generate_opam_files true)
 
 (maintainers "Shiwei Weng <dota@jhu.edu>")

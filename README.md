@@ -104,8 +104,13 @@ The project is written in OCaml. Therefore, unavoidably, you need to have ocaml 
 To build everything:
 
 ```shell
+$ opam install dune
+
 # This will fail but generate a `tola.opam` file with dependencies
 $ dune build
+
+# The bash parser `morbig` fixed non-exist bug in the dev repo
+$ opam pin morbig git+https://github.com/colis-anr/morbig.git
 
 # Ignore the warnings and press _y_ when prompted
 $ opam install . --deps-only --with-test
