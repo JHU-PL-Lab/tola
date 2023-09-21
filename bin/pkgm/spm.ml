@@ -1,3 +1,6 @@
-module PM_cmd = Packaging.Cmd.Make (Interp.Text_with_pkgm.Static_dep_pkgm)
+module P = Interp.Text_with_pkgm.Static_dep_pkgm
+module PM_cmd = Packaging.Cmd.Make (P)
 
-let () = PM_cmd.main ()
+let () =
+  P.init ();
+  PM_cmd.main ()

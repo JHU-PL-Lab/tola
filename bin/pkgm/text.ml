@@ -1,7 +1,10 @@
-module Interp = Interp.Text_with_pkgm.Basic_interp
+module P = Interp.Text_with_pkgm.Basic_pkgm
+module I = Interp.Text_with_pkgm.Basic_interp
 
 let main () =
+  P.init ();
+
   In_channel.input_all In_channel.stdin
-  |> Parser.Text_with_pkg.parse |> Interp.interp |> Fmt.pr "%s@."
+  |> Parser.Text_with_pkg.parse |> I.interp |> Fmt.pr "%s@."
 
 let () = main ()

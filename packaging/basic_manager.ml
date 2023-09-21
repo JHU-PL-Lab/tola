@@ -91,6 +91,4 @@ module Make
     else Sys.mkdir C.local_root 0o755;
 
     if not (Sys.file_exists C.remote_root) then Sys.mkdir C.remote_root 0o755
-
-  let () = init ()
 end
