@@ -1,4 +1,4 @@
 (library
  (name tola)
  (public_name tola)
- (libraries ainterp interp langs packaging parser std tianxia))
+ (libraries ainterp interp langs packaging parser std tianxia versioning))
