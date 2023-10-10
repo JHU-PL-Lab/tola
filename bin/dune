@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 
 (executables
- (names dd arith_fix enum1 enum2 text stext text_example pm spm try_fix)
+ (names dd arith_fix enum1 enum2 text stext text_example pm spm try_fix shell)
  (libraries
   fix
   fmt
