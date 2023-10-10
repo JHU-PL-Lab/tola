@@ -1,7 +1,7 @@
 (include_subdirs unqualified)
 
 (executables
- (names pm spm mdpm md dd arith_fix try_fix text stext text_example)
+ (names pm spm mdpm md dd arith_fix try_fix text stext text_example shell)
  (libraries fix fmt cmdliner parser std ocamlgraph interp ainterp example)
  (preprocess
   (pps ppx_deriving.show))

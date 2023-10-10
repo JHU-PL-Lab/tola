@@ -3,7 +3,7 @@
 (library
  (name interp)
  (public_name tola.interp)
- (libraries fmt fix cmarkit ocamlgraph color-brewery langs parser std)
+ (libraries fmt fix cmarkit ocamlgraph color-brewery langs parser std str)
  (preprocess
   (pps ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
 
