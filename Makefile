@@ -28,7 +28,7 @@ md:
 	cat test/blog.md | dune exec bin/md.exe | tee $(OUT)/blog.html
 
 shell:
-	cat test/test.sh | dune exec bin/shell.exe | /bin/bash
+	cat test/test.sh | dune exec bin/shell.exe
 
 # Pkgm vars
 
