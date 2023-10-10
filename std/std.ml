@@ -1,4 +1,4 @@
-(* Version: 0.1.5 *)
+(* Version: 0.1.6 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
@@ -141,6 +141,41 @@ module For_core = struct
   end
 
   include More_fn
+
+  module File_utils = struct
+    let group_dir ~filter dir =
+      let rec loop dir =
+        let acc_f, acc_p =
+          Sys_unix.fold_dir ~init:([], [])
+            ~f:(fun (acc_f, acc_p) path ->
+              match String.get path 0 with
+              | '.' (* including "." ".." *) | '_' -> (acc_f, acc_p)
+              | _ -> (
+                  let fullpath = Filename.concat dir path in
+                  match Sys_unix.is_directory fullpath with
+                  | `Yes -> (acc_f, loop fullpath @ acc_p)
+                  | `No when filter fullpath -> (fullpath :: acc_f, acc_p)
+                  | `No -> (acc_f, acc_p)
+                  | `Unknown -> (acc_f, acc_p)))
+            dir
+        in
+        (dir, List.sort acc_f ~compare:String.compare) :: acc_p
+      in
+      loop dir
+  end
+
+  module More_Command = struct
+    let param_of_command (all_params : 't Command.Param.t) summary : 't =
+      let store = ref None in
+      let save_param : (unit -> unit) Command.Param.t =
+        Command.Param.(all_params >>| fun params () -> store := Some params)
+      in
+      let command = Command.basic ~summary save_param in
+      Command_unix.run command;
+      Option.value_exn !store
+  end
+
+  include More_Command
 end
 
 include For_core

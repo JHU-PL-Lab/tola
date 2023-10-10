@@ -1,18 +1,8 @@
 (include_subdirs unqualified)
 
 (executables
- (names dd arith_fix enum1 enum2 text stext text_example pm spm try_fix)
- (libraries
-  fix
-  fmt
-  cmdliner
-  parser
-  feat
-  std
-  ocamlgraph
-  interp
-  ainterp
-  example)
+ (names pm spm mdpm md dd arith_fix try_fix text stext text_example)
+ (libraries fix fmt cmdliner parser std ocamlgraph interp ainterp example)
  (preprocess
   (pps ppx_deriving.show))
  (promote (until-clean)))

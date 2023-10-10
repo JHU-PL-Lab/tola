@@ -24,7 +24,7 @@
   ; The followings are obviously not related to this project but I have short time to clean them out yet.
   ppx_deriving
   cmdliner
-  feat
+  cmarkit
   ocamlgraph
   color-brewery))
 
