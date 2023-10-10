@@ -27,6 +27,9 @@ te:
 md:
 	cat test/blog.md | dune exec bin/md.exe | tee $(OUT)/blog.html
 
+shell:
+	cat test/test.sh | dune exec bin/shell.exe | /bin/bash
+
 # Pkgm vars
 
 DEMO_ROOT = _pm_root
@@ -41,6 +44,10 @@ STATIC_DEP_TEXT_REMOTE = $(STATIC_DEP_TEXT)_remote
 STATIC_MARKDOWN = $(DEMO_ROOT)/_static_md
 STATIC_MARKDOWN_LOCAL = $(STATIC_MARKDOWN)_local
 STATIC_MARKDOWN_REMOTE = $(STATIC_MARKDOWN)_remote
+
+STATIC_SHELL = $(DEMO_ROOT)/_static_shell
+STATIC_SHELL_LOCAL = $(STATIC_SHELL)_local
+STATIC_SHELL_REMOTE = $(STATIC_SHELL)_remote
 
 # Initialization
 pkg_init_out:
@@ -67,8 +74,14 @@ pkg_init_md:
 	@cp -r vendor/md/* $(STATIC_MARKDOWN_LOCAL)
 	@echo 'init static_markdown'
 
+pkg_init_shell:
+	@rm -rf $(STATIC_SHELL_LOCAL) $(STATIC_SHELL_REMOTE)
+	@mkdir -p $(STATIC_SHELL_LOCAL) $(STATIC_SHELL_REMOTE)
+	@cp -r vendor/shell/* $(STATIC_SHELL_LOCAL)
+	@echo 'init static_shell'
+
 .PHONY: pkg_init
-pkg_init: pkg_init_out pkg_init_no_dep_text pkg_init_static_text pkg_init_md
+pkg_init: pkg_init_out pkg_init_no_dep_text pkg_init_static_text pkg_init_md pkg_init_shell
 
 # Lambda Core
 

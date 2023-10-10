@@ -40,10 +40,10 @@ module Make (PM : Manager.S with type P.payload = string) = struct
 end    
 
 module Basic_config : Manager.CONFIG = struct
-  let pkgm_id = "_no_dep_shell"
+  let pkgm_id = "_static_shell"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.shell"
+  let store_name = "main.sh"
 end
 
 module Basic_pkgm =
