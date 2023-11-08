@@ -9,7 +9,6 @@
 *.cmxs
 *.cmxa
 *.out
-*.opam
 
 # ocamlbuild working directory
 _build/
