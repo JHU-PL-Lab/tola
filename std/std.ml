@@ -1,4 +1,4 @@
-(* Version: 0.1.6 *)
+(* Version: 0.1.8 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
@@ -102,16 +102,7 @@ module For_core = struct
   end
 
   include More_bool
-
-  module Cool_strict = struct
-    type t = Gt | Eq | Lt
-    type cool = t
-  end
-
-  module Cool_eq = struct
-    type t = Gt | Eq | Ls | Ge | Le
-    type coole = t
-  end
+  module Ordering = Core.Ordering
 
   module More_list = struct
     let list_split lst =
@@ -124,6 +115,8 @@ module For_core = struct
             (part1', part2') :: loop part1' part2'
       in
       ([], lst) :: loop [] lst
+
+    let list_sum = List.sum (module Int) ~f:Fn.id
   end
 
   include More_list
