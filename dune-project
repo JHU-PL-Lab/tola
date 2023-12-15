@@ -12,11 +12,13 @@
  (description "I shall better \nwrite a better description.")
  (depends
   core
+  core_unix
   fmt
   fix
   ppx_jane
   ppx_yojson_conv
   ; dev-dependency
+  dune
   utop
   ocaml-lsp-server
   ocamlformat

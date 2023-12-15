@@ -1,10 +1,10 @@
 open Versioning.Algebra
-open Std.Cool_strict
 
 let total_order_compare s1 s2 = Total_ordering.(compare (of_str s1) (of_str s2))
 
 let total_order_less s1 s2 =
-  match total_order_compare s1 s2 with Lt -> true | _ -> false
+  let open Std.Ordering in
+  match total_order_compare s1 s2 with Less -> true | _ -> false
 
 let mk_lt_version s1 s2 =
   Alcotest.test_case "total-order cmp" `Quick (fun () ->
