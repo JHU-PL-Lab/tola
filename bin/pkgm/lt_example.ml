@@ -1,4 +1,4 @@
-open Langs.Text.Plain
+open Langs.Lang_text.Plain
 
 let interp = Interp.Text_plain_interp.interp
 (* for naive text *)
@@ -11,9 +11,9 @@ let () =
 
 (* for text with package *)
 
-open Langs.Text.With_string_pkg
+open Langs.Lang_text.With_string_pid
 
-let interp = Interp.Text_with_pkgm.Basic_interp.interp
+let interp = Interp.Text_with_pkgm.Naive_interp.interp
 
 (* Pkgm.install "zfc" "Zermelo-Fraenkel set theory";;
    Pkgm.install "ac" "Axiom of Choices" *)

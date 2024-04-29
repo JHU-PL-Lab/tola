@@ -1,4 +1,4 @@
-open Langs.Text.With_string_pkg
+open Langs.Lang_text.With_string_pid
 
 type state = Accu_lit | Accu_pid | Escaped_lit
 type event = Char of char | At | Escape

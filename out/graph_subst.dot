@@ -1,0 +1,15 @@
+digraph G {
+  rankdir=BT;
+  "f[1_5]" [color="#A3C8DE", ];
+  "f[4]" [color="#A3C8DE", ];
+  "f[2_1_5]" [color="#A3C8DE", ];
+  "f[5]" [color="#A3C8DE", ];
+  "f[0_5]" [color="#A3C8DE", ];
+  "f[3_1_5]" [color="#A3C8DE", ];
+  
+  
+  "f[1_5]" -> "f[0_5]";
+  "f[5]" -> "f[4]";
+  "f[3_1_5]" -> "f[2_1_5]";
+  
+  }

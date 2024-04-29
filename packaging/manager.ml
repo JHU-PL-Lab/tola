@@ -1,5 +1,16 @@
 open Package
 
+(* The PACKAGE is a bundled abstract definition for pid, payload, and meta.
+   It doesn't say anything about versioning.
+
+   Who needs a version-equipped package definition?
+   Who needs a no-version pre-package? No one unless for programming flexibility.
+
+   A Manager.S should provided a version-equipped package. All the managers op are also based on the version-equipped package.
+*)
+
+(* id = {name, version} *)
+
 module type S = sig
   type t
 
@@ -11,6 +22,7 @@ module type S = sig
   val install : P.pid -> P.pkg -> unit (* system_state may be changed *)
   val uninstall : P.pid -> unit
   val lookup : P.pid -> P.pkg
+  val lookup_pname : string -> P.pkg
   val info : unit -> string
 
   (* for remote *)

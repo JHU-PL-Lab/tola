@@ -6,12 +6,12 @@ open Std.File_infix
 
 module Make
     (P : PACKAGE)
+    (V : Versioning.Version_logic.V_str)
     (Table : Hashtbl.S with type key = P.pid)
     (C : Manager.CONFIG) :
   Manager.S with type t = P.pkg Table.t and module P = P = struct
   module P = P
-
-  module type PT = PACKAGE
+  module VL = Versioning.Version_logic.Make (P) (V)
 
   type t = P.pkg Table.t
 
@@ -64,6 +64,22 @@ module Make
 
   let reset () = Std.remove_dir C.local_root
   let lookup pid = Table.find !local_table pid
+
+  let lookup_pname pname =
+    let matching_pids =
+      Table.fold
+        (fun pid _ pids ->
+          if String.starts_with ~prefix:pname (P.pid_to_str pid) then
+            pid :: pids
+          else pids)
+        !local_table []
+    in
+    (* Fmt.pr "can %d" (List.length pids); *)
+    let pid = List.hd matching_pids in
+    match Table.find_opt !local_table pid with
+    | Some pkg -> pkg
+    | None -> failwith "not found"
+
   let info () = info_of_table !local_table
 
   (* remote api *)

@@ -1,5 +1,5 @@
-module P = Interp.Text_with_pkgm.Basic_pkgm
-module I = Interp.Text_with_pkgm.Basic_interp
+module P = Interp.Text_with_pkgm.Naive_pkgm
+module I = Interp.Text_with_pkgm.Naive_interp
 
 let main () =
   P.init ();

@@ -12,7 +12,9 @@ module Config = struct
 end
 
 module Pkgm =
-  Basic_manager.Make (Package.String_static_dep_pkg) (Store.Pkg_table) (Config)
+  Basic_manager.Make (Package.Basic_pkg) (Versioning.Multi_part)
+    (Store.Pkg_table)
+    (Config)
 
 module Make (PM : Manager.S with type P.payload = string) = struct
   open Cmarkit

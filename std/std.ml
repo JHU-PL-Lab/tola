@@ -1,7 +1,22 @@
-(* Version: 0.1.8 *)
+(* Version: 0.1.11 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
+
+module Id = struct
+  type t = Id of string [@@deriving eq, ord]
+
+  let pp oc (Id x) = Fmt.string oc x
+
+  module With_compare = struct
+    type nonrec t = t
+
+    let compare = compare
+  end
+
+  module Set = Set.Make (With_compare)
+  module Map = Map.Make (With_compare)
+end
 
 module For_core = struct
   open! Core
@@ -104,6 +119,13 @@ module For_core = struct
   include More_bool
   module Ordering = Core.Ordering
 
+  module PartialOrdering = struct
+    type t = Less | Equal | Greater | Unknown
+  end
+
+  let compose_compare r1 th2 =
+    match r1 with Less | Greater -> r1 | Equal -> th2 ()
+
   module More_list = struct
     let list_split lst =
       let rec loop part1 part2 =
@@ -120,20 +142,6 @@ module For_core = struct
   end
 
   include More_list
-
-  module More_fn = struct
-    let rec naive_fix step e = step (naive_fix step) e
-
-    (* let chain_compare f1 f2 =
-         let r1 = f1 () in
-         if r1 = 0 then f2 () else r1
-
-       let just_side_effect = ignore
-
-       let ignore2 _ _ = () *)
-  end
-
-  include More_fn
 
   module File_utils = struct
     let group_dir ~filter dir =
@@ -174,6 +182,40 @@ end
 include For_core
 
 module For_vanilla = struct
+  module More_fn = struct
+    let rec naive_fix step e = step (naive_fix step) e
+
+    (* let chain_compare f1 f2 =
+         let r1 = f1 () in
+         if r1 = 0 then f2 () else r1
+
+       let just_side_effect = ignore
+
+       let ignore2 _ _ = () *)
+
+    let fn_lift2 f fl a b = f (fl a) (fl b)
+  end
+
+  include More_fn
+
+  module type OrderedTypePp = sig
+    include Map.OrderedType
+
+    val pp : t Fmt.t
+  end
+
+  module IntPp = struct
+    include Int
+
+    let pp = Fmt.int
+  end
+
+  module StringPp = struct
+    include String
+
+    let pp = Fmt.string
+  end
+
   let pp_std_table table_iter pp_key pp_elem oc s =
     Fmt.(vbox @@ iter_bindings ~sep:nop table_iter (pair pp_key pp_elem)) oc s
   (* let pp_dump_std_table ?(name = "set") iter pp_elem oc s =
@@ -231,6 +273,39 @@ module For_vanilla = struct
   end
 
   include File_util
+
+  module Make_compares (S : sig
+    type t
+
+    val compare : t -> t -> Ordering.t
+  end) =
+  struct
+    open S
+
+    let eq v1 v2 =
+      match compare v1 v2 with
+      | Less -> false
+      | Equal -> true
+      | Greater -> false
+
+    let lt v1 v2 =
+      match compare v1 v2 with
+      | Less -> true
+      | Equal -> false
+      | Greater -> false
+
+    let le v1 v2 =
+      match compare v1 v2 with Less -> true | Equal -> true | Greater -> false
+
+    let gt v1 v2 =
+      match compare v1 v2 with
+      | Less -> false
+      | Equal -> false
+      | Greater -> true
+
+    let ge v1 v2 =
+      match compare v1 v2 with Less -> false | Equal -> true | Greater -> true
+  end
 end
 
 include For_vanilla

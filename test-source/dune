@@ -1,3 +1,8 @@
+(rule
+ (alias cur)
+ (action
+  (run ./test_portrait.exe)))
+
 (tests
- (names test_versioning test_fix test_just_sign test_dd_interp)
+ (names test_versioning test_fix test_just_sign test_dd_interp test_portrait)
  (libraries alcotest fix std example versioning interp ainterp))

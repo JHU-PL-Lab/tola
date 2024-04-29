@@ -2,27 +2,26 @@ OUT = _out
 
 all: pi
 
-# For pkgm and lang text
+# For pkgm e.g. make lt.pm, make md.pm
 
-pi:
-	dune exec bin/pm.exe -- info
+%.pm: LANG = $(basename $@)
+%.pm:
+	dune exec bin/$(LANG)pm.exe -- info
 
-spi:
-	dune exec bin/spm.exe -- info
+# Examples
 
-pt:
-	echo I love @ac@. | dune exec bin/text.exe
+e1:
+	echo I love @ac@. | dune exec bin/lt.exe
 
-sd:
-	echo @p1@. | dune exec bin/stext.exe
-	echo @p2@. | dune exec bin/stext.exe
+e2:
+	echo @p1@. | dune exec bin/lts.exe
+	echo @p2@. | dune exec bin/lts.exe
 
 loop:
-	# echo looping forever
-	echo @loop@. | dune exec bin/stext.exe
+	echo @loop@. | dune exec bin/lts.exe
 
 te:
-	dune exec bin/text_example.exe
+	dune exec bin/lt_example.exe
 
 md:
 	cat test/blog.md | dune exec bin/md.exe | tee $(OUT)/blog.html
@@ -88,10 +87,11 @@ pkg_init: pkg_init_out pkg_init_no_dep_text pkg_init_static_text pkg_init_md pkg
 d:
 	dune exec ./bin/dd.exe
 
-# Program analysis via fix
-
 af:
 	dune exec ./bin/arith_fix.exe
 
 t:
 	dune runtest
+
+pyp:
+	python3 vendor/python/dump_syspath.py

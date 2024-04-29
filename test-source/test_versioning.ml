@@ -1,6 +1,7 @@
-open Versioning.Algebra
+open Versioning
 
-let total_order_compare s1 s2 = Total_ordering.(compare (of_str s1) (of_str s2))
+let total_order_compare s1 s2 =
+  Version_logic.Version_int.(compare (of_str s1) (of_str s2))
 
 let total_order_less s1 s2 =
   let open Std.Ordering in

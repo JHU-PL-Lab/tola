@@ -1,4 +1,4 @@
-module P = Interp.Text_with_pkgm.Basic_pkgm
+module P = Interp.Text_with_pkgm.Naive_pkgm
 module PM_cmd = Packaging.Cmd.Make (P)
 
 let () =
