@@ -173,3 +173,13 @@ $ ./bin/bpm.exe f nick
 $ echo My nickname is @nick@. | ./bin/text.exe
 # My nickname is Songsong.
 ```
+
+## To-do
+
+Interesting backends:
+
+- File system
+- Git repo
+- GitHub Packages
+- In-memory db
+- S3

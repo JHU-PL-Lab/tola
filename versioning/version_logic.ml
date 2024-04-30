@@ -241,26 +241,14 @@ module Version_int : Algebra.S_tot = struct
   let to_str = Int.to_string
 end
 
-(* type t = int
+module Singleton_version = struct
+  type t = unit
+  type version = t
 
-   let compare v1 v2 = Int.compare v1 v2 |> Std.Ordering.of_int
-
-   module Version_logic = struct
-     type v = t
-
-     type clause =
-       | Eq of v * v
-       | Lt of v * v
-       | Le of v * v
-       | Gt of v * v
-       | Ge of v * v
-
-     include Helper.Compare_helper (struct
-       type t = int
-
-       let compare = compare
-     end)
-   end *)
+  let of_str = function "" -> () | _ -> failwith "of_str"
+  let to_str () = ""
+  let compare () () = (Std.Ordering.Equal, 0)
+end
 
 module Multi_part_logic =
   Make

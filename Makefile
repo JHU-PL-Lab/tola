@@ -95,3 +95,6 @@ t:
 
 pyp:
 	python3 vendor/python/dump_syspath.py
+
+p:
+	python3 vendor/python/run_numpy.py

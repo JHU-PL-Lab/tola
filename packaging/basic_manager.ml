@@ -1,5 +1,5 @@
 (* A basic pkgm is with a local store and a remote store.
-   The store is a toml-file based package as `<pid>.toml`.
+   The store is a json-file based package as `<pid>.json`.
 *)
 open Package
 open Std.File_infix

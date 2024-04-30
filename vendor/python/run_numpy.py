@@ -7,12 +7,15 @@ class TolaMetaPathFinder(importlib.machinery.PathFinder):
     # print(fullname)
     if fullname:
       print('find_spec:', fullname, path, target)
-      tola_path = '/home/ex/code/tola/ventor/tola_pkgm'
+      tola_path = '/home/ex/code/tola/vendor/tola_pkgm'
+      tola_path = '/Users/ex/code/tola/tola/vendor/tola_pkgm'
+      path = tola_path
       # spec = importlib.machinery.PathFinder.find_spec(fullname, path=tola_path, target=target)
       
       if path is None:
           path = sys.path
       spec = cls._get_spec(fullname, path, target)
+      print('spec:', spec)
       if spec is None:
           return None
       elif spec.loader is None:

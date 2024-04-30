@@ -22,9 +22,10 @@ module Basic_config : Manager.CONFIG = struct
   let store_name = "main.md"
 end
 
-(* TODO: should have a Versioning.Dummy *)
 module Naive_pkgm =
-  Basic_manager.Make (Package.Naive_pkg) (Versioning.Multi_part)
+  Basic_manager.Make
+    (Package.Naive_pkg)
+    (Versioning.Version_logic.Singleton_version)
     (Store.Pkg_table)
     (Basic_config)
 
@@ -40,7 +41,9 @@ module Static_dep_config : Manager.CONFIG = struct
 end
 
 module Static_dep_pkgm =
-  Basic_manager.Make (Package.Basic_pkg) (Versioning.Multi_part)
+  Basic_manager.Make
+    (Package.Basic_pkg)
+    (Versioning.Version_logic.Singleton_version)
     (Store.Pkg_table)
     (Static_dep_config)
 
