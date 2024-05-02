@@ -12,7 +12,6 @@
 
 # ocamlbuild working directory
 _build/
-.vscode
 
 # ocamlbuild targets
 *.byte
