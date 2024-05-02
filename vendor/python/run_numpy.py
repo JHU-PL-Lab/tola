@@ -9,11 +9,12 @@ class TolaMetaPathFinder(importlib.machinery.PathFinder):
       print('find_spec:', fullname, path, target)
       tola_path = '/home/ex/code/tola/vendor/tola_pkgm'
       tola_path = '/Users/ex/code/tola/tola/vendor/tola_pkgm'
-      path = tola_path
-      # spec = importlib.machinery.PathFinder.find_spec(fullname, path=tola_path, target=target)
       
-      if path is None:
-          path = sys.path
+      # spec = importlib.machinery.PathFinder.find_spec(fullname, path=tola_path, target=target)
+      path = [tola_path] + sys.path
+    #   if path is None:
+    #       path = sys.path
+
       spec = cls._get_spec(fullname, path, target)
       print('spec:', spec)
       if spec is None:
@@ -51,7 +52,18 @@ sys.meta_path.append(TolaMetaPathFinder)
 # of priority.
 sys.path_hooks.append(SpamPathEntryFinder.path_hook(loader_details))
 
-import tola_pkgm
+# import numpy
+import importlib
+
+t = importlib.import_module("numpy")
+
+print(t)
+
+import tola_cool
+
+# import tola_cool.foo 
+
+print(tola_cool.foo.bar)
 
 if __name__ == "__main__":
   import numpy as np
