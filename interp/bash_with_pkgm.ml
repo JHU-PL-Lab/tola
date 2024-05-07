@@ -42,12 +42,14 @@ module Basic_config : Manager.CONFIG = struct
   let pkgm_id = "_static_shell"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.sh"
+end
+
+module Pkg_file_config = struct
+  let file_name = "main.sh"
 end
 
 module Basic_pkgm =
-  Basic_manager.Make (Package.Naive_pkg) (Versioning.Multi_part)
-    (Store.Pkg_table)
-    (Basic_config)
+  Basic_manager.Make (Package.Naive_pkg) (Versioning.Multi_part) (Basic_config)
+    (Pkg_file_config)
 
 module Basic_interp = Make (Basic_pkgm)

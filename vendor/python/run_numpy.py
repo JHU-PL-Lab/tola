@@ -1,20 +1,31 @@
 import importlib.machinery
 import sys
 
+
 class TolaMetaPathFinder(importlib.machinery.PathFinder):
+  def make_tola_path():
+    if sys.platform == 'darwin':
+      return '/Users/ex/code/tola/tola/vendor/tola_pkgm'
+    else:
+      return '/home/ex/code/tola/vendor/tola_pkgm'
+  tola_path = make_tola_path()
+
+  def make_ignored_modules():
+     return {'backports_abc', '_winapi', 'nt', 'pickle5', '_wmi'}
+  ignored_modules = make_ignored_modules()
+
   @classmethod
   def find_spec(cls, fullname, path=None, target=None):
-    # print(fullname)
+    if fullname in TolaMetaPathFinder.ignored_modules:
+       return None
+
     if fullname:
       print('find_spec:', fullname, path, target)
-      tola_path = '/home/ex/code/tola/vendor/tola_pkgm'
-      tola_path = '/Users/ex/code/tola/tola/vendor/tola_pkgm'
-      
-      # spec = importlib.machinery.PathFinder.find_spec(fullname, path=tola_path, target=target)
-      path = [tola_path] + sys.path
-    #   if path is None:
-    #       path = sys.path
+      # if path is None:
+      #   path = sys.path
+      path = [TolaMetaPathFinder.tola_path] + sys.path
 
+      # spec = importlib.machinery.PathFinder.find_spec(fullname, path=tola_path, target=target)
       spec = cls._get_spec(fullname, path, target)
       print('spec:', spec)
       if spec is None:
@@ -31,10 +42,6 @@ class TolaMetaPathFinder(importlib.machinery.PathFinder):
               return None
       else:
           return spec
-        
-      print(spec)
-      return spec
-      
 
 # For illustrative purposes only.
 # TolaMetaPathFinder = importlib.machinery.PathFinder

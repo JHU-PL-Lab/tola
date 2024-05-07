@@ -19,15 +19,16 @@ module Basic_config : Manager.CONFIG = struct
   let pkgm_id = "_no_dep_lt"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.md"
 end
 
 module Naive_pkgm =
   Basic_manager.Make
     (Package.Naive_pkg)
     (Versioning.Version_logic.Singleton_version)
-    (Store.Pkg_table)
     (Basic_config)
+    (struct
+      let file_name = "main.md"
+    end)
 
 module Naive_interp = Make_interp (Naive_pkgm)
 
@@ -37,15 +38,14 @@ module Static_dep_config : Manager.CONFIG = struct
   let pkgm_id = "_static_dep_lt"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.json"
 end
 
 module Static_dep_pkgm =
   Basic_manager.Make
     (Package.Basic_pkg)
     (Versioning.Version_logic.Singleton_version)
-    (Store.Pkg_table)
     (Static_dep_config)
+    (Manager.Pkg_in_json)
 
 module Static_dep_interp = Make_interp (Static_dep_pkgm)
 
@@ -55,7 +55,6 @@ module Multipart_config = struct
   let pkgm_id = "lt_multipart"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.json"
 end
 
 module Versioned_pkg = Package.Extend_version (Package.Basic_pkg)
@@ -80,7 +79,7 @@ struct
 end
 
 module Versioned_pkgm =
-  Basic_manager.Make (Versioned_pkg) (Versioning.Multi_part) (This_table)
-    (Multipart_config)
+  Basic_manager.Make (Versioned_pkg) (Versioning.Multi_part) (Multipart_config)
+    (Manager.Pkg_in_json)
 
 module Dyn_interp = Make_interp_via_pname (Versioned_pkgm)

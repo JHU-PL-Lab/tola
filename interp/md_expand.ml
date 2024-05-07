@@ -8,13 +8,11 @@ module Config = struct
   let pkgm_id = "_static_md"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
-  let store_name = "main.json"
 end
 
 module Pkgm =
-  Basic_manager.Make (Package.Basic_pkg) (Versioning.Multi_part)
-    (Store.Pkg_table)
-    (Config)
+  Basic_manager.Make (Package.Basic_pkg) (Versioning.Multi_part) (Config)
+    (Manager.Pkg_in_json)
 
 module Make (PM : Manager.S with type P.payload = string) = struct
   open Cmarkit

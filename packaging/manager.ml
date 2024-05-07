@@ -36,5 +36,12 @@ module type CONFIG = sig
   val pkgm_id : string
   val local_root : string
   val remote_root : string
-  val store_name : string
+end
+
+module type PKG_FILE_CONFIG = sig
+  val file_name : string
+end
+
+module Pkg_in_json = struct
+  let file_name = "main.json"
 end
