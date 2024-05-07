@@ -20,7 +20,8 @@ end
 module type S = sig
   type lit
   type var
-  type answer = (var * lit) list
+  type answer = (var * lit) list (* map *)
+  type multi_answer = (var * lit) list (* multimap *)
   type exp
   type dependencies = exp list
 
@@ -30,6 +31,7 @@ module type S = sig
   val solve : exp list -> answer option
   val solve_exn : exp list -> answer
   val pp_answer : answer Fmt.t
+  val resolve : answer -> multi_answer -> dependencies -> answer option
 end
 
 module Make (P : P_str) (V : V_str) : S = struct
@@ -58,6 +60,7 @@ module Make (P : P_str) (V : V_str) : S = struct
     | In of var * lit list
 
   type answer = (var * lit) list
+  type multi_answer = (var * lit) list
   type dependencies = exp list
   type ops = Eq_op | Lt_op | Le_op | Gt_op | Ge_op | Same_depth_op | In_op
 
@@ -216,6 +219,7 @@ module Make (P : P_str) (V : V_str) : S = struct
         List.zip_exn pids ver_choice)
 
   let solve_exn exps = Option.value_exn (solve exps)
+  let resolve _local _remote _deps = None
 
   let pp_answer fmt answer =
     Fmt.pf fmt "%a"
