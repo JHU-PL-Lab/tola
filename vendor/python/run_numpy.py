@@ -1,7 +1,9 @@
 import importlib.machinery
 import sys
 
-
+# hack; it's a hacky code to one line to run on python3.10
+is_python3_12 = sys.version_info.major == 3 and sys.version_info.minor == 12
+             
 class TolaMetaPathFinder(importlib.machinery.PathFinder):
   def make_tola_path():
     if sys.platform == 'darwin':
@@ -11,7 +13,10 @@ class TolaMetaPathFinder(importlib.machinery.PathFinder):
   tola_path = make_tola_path()
 
   def make_ignored_modules():
-     return {'backports_abc', '_winapi', 'nt', 'pickle5', '_wmi'}
+    set1 = {'backports_abc', '_winapi', 'nt', 'pickle5', '_wmi'}
+    set2 = {'org', 'msvcrt', 'cStringIO', 'cPickle'}
+    return set.union(set1, set2)
+      
   ignored_modules = make_ignored_modules()
 
   @classmethod
@@ -36,7 +41,10 @@ class TolaMetaPathFinder(importlib.machinery.PathFinder):
               # We found at least one namespace path.  Return a spec which
               # can create the namespace package.
               spec.origin = None
-              spec.submodule_search_locations = importlib.machinery.PathFinder._NamespacePath(fullname, namespace_path, cls._get_spec)
+
+              # spec.submodule_search_locations = importlib.machinery._NamespacePath(fullname, namespace_path, cls._get_spec)              
+              _NamespacePath = importlib.machinery._NamespacePathif if is_python3_12 else importlib._bootstrap_external._NamespacePath
+              spec.submodule_search_locations = _NamespacePath(fullname, namespace_path, cls._get_spec)
               return spec
           else:
               return None
@@ -69,8 +77,13 @@ print(t)
 import tola_cool
 
 # import tola_cool.foo 
-
+print(tola_cool)
+print(tola_cool.u)
+print(tola_cool.foo)
 print(tola_cool.foo.bar)
+print(tola_cool.foo2)
+print(tola_cool.bar2)
+print(tola_cool.foo2.bar2)
 
 if __name__ == "__main__":
   import numpy as np
