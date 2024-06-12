@@ -7,8 +7,23 @@
 type permissions = string list
 type directory = string
 type path = string
+type file = path
 type id = string
+type target = Target
+type source = Source
+type test = Test
+type policy = Policy
+type var = Var of string
+type var_name = Var_name of string
+type value = Value
+type cache_entry = Cache_entry
+type version = Version
+type doc = string
+type option_ = string
+type definition = Def_var of var | Def_var_kv of { var : var; value : value }
+type property = { prop : string; value : value }
 type include_guard_scope = Ig_directory | Ig_global
+type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
 
 (* Argument Caveats *)
 type pseudo_var = Argn | Argc | Argv | Argv0
@@ -16,16 +31,19 @@ type math_output_format = Decical | Hexdecimal
 type message_mode = Mm_fatal_error | Mm_verbose
 type message_reporting_state = Mr_check_start | Mr_check_pass | Mr_check_fail
 
+type define_property_mode =
+  | Dp_global
+  | Dp_directory
+  | Dp_target
+  | Dp_source
+  | Dp_test
+  | Dp_variable
+  | Dp_cached_variable
+
 type cmake_var =
   | Get_os_release_fallback_scripts
   | Get_os_release_fallback_result_of of var
   | Get_os_release_fallback_result
-
-type policy = Policy
-type var = Var of string
-type var_name = Var_name of string
-type value = Value
-type version = Version
 
 type variable_watch_access =
   | Vw_read_access
@@ -63,6 +81,8 @@ type newline_style =
   | Newline_crlf
 
 type dep_provider_cmd = Dp_find_package | Dp_fetch_content
+type target_kind = Interface | Public | Private
+type target_definition = { kind : target_kind; item : string }
 type scope = Function_scope | Directory_scope
 
 type query_key =
@@ -107,7 +127,7 @@ type cond_check =
 (* Scripting Commands *)
 type scripting_cmd = exp
 
-type exp =
+and exp =
   (* Constant and basic *)
   | Int of int
   | Bool of bool
@@ -157,7 +177,6 @@ type exp =
       mode : bool;
       cache : bool;
     }
-  | Get_property
   | Set of { var_value_pairs : (var_name * value) list; parent_scope : scope }
   | Set_cache of {
       var_value_pairs : (var_name * value) list;
@@ -165,10 +184,39 @@ type exp =
     }
   | Set_env of { var : var; value : value }
   | Set_directory_properties of { prop_value_pairs : (var * value) list }
-  (* https://cmake.org/cmake/help/latest/command/set_property.html *)
-  | Set_property
+    (* https://cmake.org/cmake/help/latest/command/set_property.html *)
   | Unset of { var : var; cache : bool; parent_scope : scope }
   | Unset_env of { var : var }
+  (* property *)
+  | Get_property of {
+      var : var;
+      global : bool;
+      directory : directory;
+      source : source;
+      source_directory : directory;
+      source_target_directory : target;
+      install : file;
+      test : test;
+      test_directory : directory;
+      variable : bool;
+      property_name : string;
+      set : bool;
+    }
+  | Set_property of {
+      global : bool;
+      directory : directory list;
+      target : target list;
+      source : source list;
+      source_directory : directory list;
+      source_target_directory : target list;
+      install : file list;
+      test : test list;
+      test_directory : directory list;
+      cache : cache_entry list;
+      append : bool;
+      append_string : string;
+      property : property list;
+    }
   (* Info and debug *)
   | Site_name of { var : var }
   | Variable_watch of {
@@ -262,17 +310,47 @@ and cmake_meta_lang =
 
 and code = string
 
+type gs_directory = Gs_directory of directory | Gs_target_directory of target
+
 type project_cmd =
   (* Property *)
-  | Get_source_file_property
-  | Get_target_property
-  | Get_test_property
-  | Set_source_files_properties
-  | Set_target_properties
-  | Set_tests_properties
-  (* Adding *)
-  | Add_compile_definitions
-  | Add_compile_options
+  | Get_source_file_property of { var : var; file : file; property : property }
+  | Set_source_files_properties of {
+      files : file list;
+      directories : directory list;
+      target_directories : target list;
+    }
+  | Get_target_property of { var : var; target : target; property : property }
+  | Set_target_properties of {
+      targets : target list;
+      properties : property list;
+    }
+  | Get_test_property of {
+      test : test;
+      property : property;
+      directory : directory option;
+      var : var;
+    }
+  | Set_tests_properties of {
+      tests : test list;
+      directory : directory option;
+      properties : property list;
+    }
+  | Define_property of {
+      mode : define_property_mode;
+      property_name : string;
+      inherited : bool;
+      brief_docs : doc list;
+      full_docs : doc list;
+      initialize_from : var;
+    }
+  | Add_compile_definitions of { defs : definition list }
+  (* Any leading -D on an item will be removed *)
+  | Target_compile_definitions of {
+      target : target;
+      target_definitions : target_definition list;
+    }
+  | Add_compile_options of { option_ : option_ }
   | Add_custom_command
   | Add_custom_target
   | Add_definitions
@@ -283,7 +361,6 @@ type project_cmd =
   | Add_subdirectory
   | Add_test
   (* Target *)
-  | Target_compile_definitions
   | Target_compile_features
   | Target_compile_options
   | Target_include_directories
@@ -304,7 +381,6 @@ type project_cmd =
   | Build_command
   | Cmake_file_api
   | Create_test_sourcelist
-  | Define_property
   | Enable_language
   | Enable_testing
   | Export
