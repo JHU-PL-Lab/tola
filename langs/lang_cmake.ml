@@ -9,21 +9,60 @@ type directory = string
 type path = string
 type file = path
 type id = string
-type target = Target
+
+(* source *)
 type source = Source
 type test = Test
 type policy = Policy
 type var = Var of string
+type output = string
 type var_name = Var_name of string
 type value = Value
 type cache_entry = Cache_entry
+type before_or_after = Before | After
 type version = Version
+type depend = string
+type comment = string
 type doc = string
 type option_ = string
+type job_pool = string list
+
+(* target *)
+type target = Target of string
+type feature = Feature of string
+type target_kind = Interface | Public | Private
+type target_definition = { kind : target_kind; item : string }
+type target_option = { kind : target_kind; item : option_ }
+type target_feature = { kind : target_kind; feature : feature }
+type set = Set
+type file_set_type = Fs_headers | Fs_cxxmodules
+
+type target_file_set = {
+  kind : target_kind;
+  file_set : set;
+  type_ : file_set_type;
+  base_dirs : directory list;
+  files : file list;
+}
+
+type link_library_kind = Ll_debug | Ll_optimized | Ll_general
+
+type link_library_group = {
+  item : string;
+  items : string list;
+  kind : link_library_kind;
+}
+
+type land_dep = { lang : string; depend : depend }
 type definition = Def_var of var | Def_var_kv of { var : var; value : value }
 type property = { prop : string; value : value }
 type include_guard_scope = Ig_directory | Ig_global
 type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
+type add_executable_option = Ae_win32 | Ae_macos_bundle | Ae_exclude_from_all
+type add_library_type = Al_static | Al_shared | Al_module
+
+type custom_command =
+  | Custom_command of { command : string; args : string list }
 
 (* Argument Caveats *)
 type pseudo_var = Argn | Argc | Argv | Argv0
@@ -81,8 +120,6 @@ type newline_style =
   | Newline_crlf
 
 type dep_provider_cmd = Dp_find_package | Dp_fetch_content
-type target_kind = Interface | Public | Private
-type target_definition = { kind : target_kind; item : string }
 type scope = Function_scope | Directory_scope
 
 type query_key =
@@ -123,6 +160,23 @@ type cond_check =
   | Exist_target of var
   | Exist_test of var
   | Exist_defined of var
+
+type supported_lang =
+  | Lang_c
+  | Lang_cxx
+  | Lang_csharp
+  | Lang_cuda
+  | Lang_objc
+  | Lang_objcxx
+  | Lang_fortran
+  | Lang_hipy
+  | Lang_ispc
+  | Lang_swift
+  | Lang_asm
+  | Lang_asm_nasm
+  | Lang_asm_marmasm
+  | Lang_asm_masm
+  | Lang_asm_att
 
 (* Scripting Commands *)
 type scripting_cmd = exp
@@ -350,46 +404,174 @@ type project_cmd =
       target : target;
       target_definitions : target_definition list;
     }
-  | Add_compile_options of { option_ : option_ }
-  | Add_custom_command
-  | Add_custom_target
-  | Add_definitions
-  | Add_dependencies
-  | Add_executable
-  | Add_library
-  | Add_link_options
-  | Add_subdirectory
+  | Add_compile_options of { options_ : option_ list }
+  | Add_definitions of { defs : definition list }
+  | Remove_definitions of { defs : definition list }
+  | Add_dependencies of { target : target; dep : depend }
+  | Add_executable of {
+      name : string;
+      options : add_executable_option list;
+      sources : source list;
+    }
+  | Add_executable_imported of { name : string; global : bool }
+  | Add_executable_alias of { name : string; target : target }
+  | Add_library of {
+      name : string;
+      exclude_from_all : bool;
+      sources : file list;
+    }
+  | Add_library_object of { name : string; sources : file list }
+  | Add_library_interface of { name : string }
+  | Add_library_alias of { name : string; target : target }
+  | Add_link_options of { options : option_ list }
+  | Add_subdirectory of {
+      source_dir : directory;
+      binary_dir : directory option;
+      exclude_from_all : bool;
+      system : bool;
+    }
   | Add_test
   (* Target *)
-  | Target_compile_features
-  | Target_compile_options
-  | Target_include_directories
-  | Target_link_directories
+  | Target_compile_features of {
+      target : target;
+      features : target_feature list;
+    }
+  | Target_compile_options of {
+      target : target;
+      before : bool;
+      items : target_definition list;
+    }
+  | Target_include_directories of {
+      target : target;
+      system : bool;
+      before_or_after : before_or_after;
+      items : target_definition list;
+    }
+  | Target_link_directories of {
+      target : target;
+      before : bool;
+      items : target_definition list;
+    }
   | Target_link_libraries
-  | Target_link_options
-  | Target_precompile_headers
-  | Target_sources
+      (* https://cmake.org/cmake/help/latest/command/target_link_libraries.html *) of {
+      targets : target list;
+      item : string;
+    }
+  | Target_link_options of {
+      target : target;
+      before : bool;
+      items : target_option list;
+    }
+  | Target_precompile_headers of { target : target; items : target_option list }
+  | Target_sources of { target : target; items : target_definition list }
+  | Target_sources_file_set of {
+      target : target;
+      items : target_definition list;
+    }
+  (* custom *)
+  | Add_custom_command of {
+      output : string list;
+      custom_commands : custom_command list;
+      main_dependency : depend option;
+      depends : depend list;
+      byproducts : file list;
+      implicit_depends : land_dep list;
+      working_directory : directory option;
+      comment : comment option;
+      depfile : file option;
+      job_pool : job_pool;
+      job_server_aware : bool;
+      verbatim : bool;
+      append : bool;
+      uses_terminal : bool;
+      command_expand_list : string list;
+      depends_explicit_only : bool;
+    }
+  | Add_custom_target of {
+      all : bool;
+      commands : custom_command list;
+      depends : depend list;
+      byproducts : file list;
+      working_directory : directory option;
+      comment : comment option;
+      job_pool : job_pool;
+      job_server_aware : bool;
+      verbatim : bool;
+      uses_terminal : bool;
+      command_expand_list : string list;
+      sources : file list;
+    }
   (* Include *)
-  | Include_directories
-  | Include_external_msproject
-  | Include_regular_expression
+  | Include_directories of {
+      before_or_after : before_or_after;
+      system : bool;
+      dir : directory;
+      dirs : directory list;
+    }
+  | Include_external_msproject of {
+      projectname : string;
+      location : directory;
+      type_ : string option;
+      guid : string option;
+      platform : string option;
+      deps : depend list;
+    }
+  | Include_regular_expression of {
+      regex_match : string;
+      regex_complain : string option;
+    }
   (* Link *)
-  | Link_directories
-  | Link_libraries
+  | Link_directories of {
+      before_or_after : before_or_after;
+      directory : directory;
+      directories : directory list;
+    }
+  | Link_libraries of { groups : link_library_group list }
   (*  *)
-  | Aux_source_directory
-  | Build_command
-  | Cmake_file_api
-  | Create_test_sourcelist
-  | Enable_language
+  | Aux_source_directory of { dir : directory; var : var }
+  | Build_command of {
+      var : var;
+      configuration : string option;
+      parallel_level : int option;
+      target : target option;
+      project_name : string option;
+    }
+  | Cmake_file_api of { api_version : version; code_model : version list }
+  | Create_test_sourcelist of {
+      name : string;
+      drive_name : string;
+      tests : test list;
+      options : option_ list;
+      extra_include : string;
+      function_ : string;
+    }
+  | Enable_language of { langs : supported_lang list; optional : bool }
   | Enable_testing
-  | Export
-  | Fltk_wrap_ui
-  | Install
-  | Load_cache
-  | Project
-  | Remove_definitions
-  | Source_group
+  | Export of { name : string }
+  | Export_target of { targets : target list }
+  | Export_package of { name : string }
+  | Export_setup of { name : string }
+  | Fltk_wrap_ui of { resulting_library_name : string; sources : source list }
+  | Install (* https://cmake.org/cmake/help/latest/command/install.html *)
+  | Load_cache_read of {
+      directory : directory;
+      prefix : string;
+      entries : string list;
+    }
+  | Load_cache of {
+      directory : directory;
+      exclude : string list;
+      include_internals : string list;
+    }
+  | Project of {
+      name : string;
+      version : version option;
+      description : string option;
+      homepage_url : string;
+      languages : string list;
+    }
+  | Source_group of { name : string; files : string list; regular_exp : string }
+  | Source_group_tree of { root : string; prefix : string; files : file list }
   | Try_compile
   | Try_run
 (* Project Commands *)
