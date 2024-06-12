@@ -10,6 +10,7 @@
 *.cmxa
 *.out
 *.log
+*.pyc
 
 # ocamlbuild working directory
 _build/
@@ -35,3 +36,4 @@ _opam/
 .DS_Store
 
 _*
+!__init__.py
