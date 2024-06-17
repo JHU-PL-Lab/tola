@@ -9,9 +9,10 @@ type directory = string
 type path = string
 type file = path
 type id = string
+type version = { major : int; minor : int; patch : string }
 
 (* source *)
-type source = Source
+type source = string
 type test = Test
 type policy = Policy
 type var = Var of string
@@ -20,7 +21,6 @@ type var_name = Var_name of string
 type value = Value
 type cache_entry = Cache_entry
 type before_or_after = Before | After
-type version = Version
 type depend = string
 type comment = string
 type doc = string
@@ -161,6 +161,9 @@ type cond_check =
   | Exist_test of var
   | Exist_defined of var
 
+type code = string
+type gs_directory = Gs_directory of directory | Gs_target_directory of target
+
 type supported_lang =
   | Lang_c
   | Lang_cxx
@@ -178,10 +181,11 @@ type supported_lang =
   | Lang_asm_masm
   | Lang_asm_att
 
-(* Scripting Commands *)
 type scripting_cmd = exp
 
 and exp =
+  (* Scripting Commands *)
+  (* *)
   (* Constant and basic *)
   | Int of int
   | Bool of bool
@@ -301,6 +305,7 @@ and exp =
   | Message_config_log of { texts : string list }
   | Option of { var : var; help_text : string list; value : exp }
   | Separete_arguments of { var : var; mode : separate_arguments_mode }
+  | Project_cmd of project_cmd
 
 (* File Operations *)
 and cmd = exp
@@ -321,7 +326,7 @@ and cmake_cmd =
       error_var : var option;
     }
   | Cmake_meta_lang of cmake_meta_lang
-  | Cmake_minimum_required of { min : version; max : version }
+  | Cmake_minimum_required of { min : version; max : version option }
   | Cmake_parse_argument of {
       prefix : string;
       one_keyword : string list;
@@ -362,11 +367,8 @@ and cmake_meta_lang =
   | Meta_get_msg_log_level of { var : var }
   | Meta_exit of { exit_code : int }
 
-and code = string
-
-type gs_directory = Gs_directory of directory | Gs_target_directory of target
-
-type project_cmd =
+and project_cmd =
+  (* Project Commands *)
   (* Property *)
   | Get_source_file_property of { var : var; file : file; property : property }
   | Set_source_files_properties of {
@@ -567,14 +569,18 @@ type project_cmd =
       name : string;
       version : version option;
       description : string option;
-      homepage_url : string;
+      homepage_url : string option;
       languages : string list;
     }
   | Source_group of { name : string; files : string list; regular_exp : string }
   | Source_group_tree of { root : string; prefix : string; files : file list }
   | Try_compile
   | Try_run
-(* Project Commands *)
 
 (* CTest Commands *)
 (* Deprecated Commands *)
+
+type special_dir = {
+  source_dir : directory; (* for source code and CMakeLists files*)
+  binary_dir : directory; (* also build directory *)
+}
