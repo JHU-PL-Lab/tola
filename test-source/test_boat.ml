@@ -1,8 +1,8 @@
 open Interp
-open Interp.Portrait_interp
-open Example.Portrait_example
+open Interp.Boat_interp
+open Example.Boat_example
 
-let same_value = Alcotest.testable Portrait_interp.pp Portrait_val.equal
+let same_value = Alcotest.testable Boat_interp.pp Boat_val.equal
 
 (* let mk_same_value expected actual =
    Alcotest.test_case "same value" `Quick (fun () ->
@@ -18,7 +18,7 @@ let same_result ?(prompt = "same result") e1 e2 =
            ignore @@ interp e)) *)
 
 let () =
-  Alcotest.run "Portrait_interp"
+  Alcotest.run "Boat_interp"
     [
       ("basic", [ same_result n1 n1; same_result p12 n3 ]);
       ( "app",

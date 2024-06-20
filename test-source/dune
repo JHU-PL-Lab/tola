@@ -1,8 +1,8 @@
 (rule
  (alias cur)
  (action
-  (run ./test_portrait.exe)))
+  (run ./test_boat.exe)))
 
 (tests
- (names test_versioning test_fix test_just_sign test_dd_interp test_portrait)
+ (names test_versioning test_fix test_just_sign test_dd_interp test_boat)
  (libraries alcotest fix std example versioning interp ainterp))

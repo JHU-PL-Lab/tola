@@ -1,5 +1,5 @@
 open Langs
-open Portrait
+open Lang_boat
 open Tagless
 
 let n1 = int 1
@@ -16,13 +16,13 @@ let thaw t = app t (int 0)
 let dyn_ap_x = let_ "x" n2 ap_x
 let plus_x_y = fun_ "x" (fun_ "y" (plus (var "x") (var "y")))
 let plus_1_2 = app (app plus_x_y n1) n2
-let plus_dyn_err_1_2 = app (app (dyn plus_x_y) n1) n2
+let plus_dyn_err_1_2 = app (app (later plus_x_y) n1) n2
 
-(* let x = 2 in (\x -> \y -> dyn (x+y)) 1 x *)
-let outer_let_x = let_ "x" n2 (app (app (dyn plus_x_y) n1) (var "x"))
+(* let x = 2 in (\x -> \y -> later (x+y)) 1 x *)
+let outer_let_x = let_ "x" n2 (app (app (later plus_x_y) n1) (var "x"))
 
 (*
-   let f = (\x -> \y -> dyn (x+y)) 1 in
+   let f = (\x -> \y -> later (x+y)) 1 in
    let x = 2 in
    f x
 *)
@@ -36,13 +36,13 @@ let get_x_1 = let_ "lib" (let_ "x" n1 (freeze (var "x"))) (thaw (var "lib"))
 
 (*
   let lib = \x -> \() -> x in 
-    dyn let x = 2 in lib 0
+    later let x = 2 in lib 0
 *)
 
 let rebind_x_2 =
   let_ "lib"
     (let_ "x" n1 (freeze (var "x")))
-    (dyn (let_ "x" n2 (thaw (var "lib"))))
+    (later (let_ "x" n2 (thaw (var "lib"))))
 (*
 
    let lib_host = ... in
