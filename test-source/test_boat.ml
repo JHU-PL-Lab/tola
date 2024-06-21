@@ -2,7 +2,9 @@ open Interp
 open Interp.Boat_interp
 open Example.Boat_example
 
-let same_value = Alcotest.testable Boat_interp.pp Boat_val.equal
+(* let same_value = Alcotest.testable Boat_interp.pp Boat_val.equal *)
+
+let same_value = Alcotest.testable Boat_interp.pp ( = )
 
 (* let mk_same_value expected actual =
    Alcotest.test_case "same value" `Quick (fun () ->

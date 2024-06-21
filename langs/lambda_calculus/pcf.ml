@@ -1,5 +1,7 @@
 (* reference: PFPL 2nd, C19 *)
 
+module Id = Std.Id
+
 type typ = Nat | TArrow of typ * typ [@@deriving show { with_path = false }]
 
 type exp =

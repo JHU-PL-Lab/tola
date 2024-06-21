@@ -1,3 +1,5 @@
+module Id = Std.Id
+
 type exp =
   | Input
   | Int of int

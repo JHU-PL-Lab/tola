@@ -1,22 +1,7 @@
-(* Version: 0.1.11 *)
+(* Version: 0.1.12 *)
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
-
-module Id = struct
-  type t = Id of string [@@deriving eq, ord]
-
-  let pp oc (Id x) = Fmt.string oc x
-
-  module With_compare = struct
-    type nonrec t = t
-
-    let compare = compare
-  end
-
-  module Set = Set.Make (With_compare)
-  module Map = Map.Make (With_compare)
-end
 
 module For_core = struct
   open! Core
@@ -309,3 +294,23 @@ module For_vanilla = struct
 end
 
 include For_vanilla
+
+module Id = struct
+  type t = Id of string [@@deriving eq, ord]
+
+  let pp oc (Id x) = Fmt.string oc x
+
+  module With_compare = struct
+    type nonrec t = t
+
+    let compare = compare
+  end
+
+  module Set = Set.Make (With_compare)
+
+  module Map = struct
+    include Map.Make (With_compare)
+
+    let pp pp_ele = pp_std_table iter pp pp_ele
+  end
+end

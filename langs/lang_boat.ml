@@ -41,35 +41,45 @@
    Another point is the term is not totally open. It's open but bounded. It means we cannot provide arbitrary open terms. It can be either defined at the lang level or at the interpreter level. The checking for valid open terms can be post-stage. It means we just need a simple lambda calculus that respect open terms, and a standlone separate step to check open variables.
 *)
 
+(* not unsed
+        (* string *)
+        | Str of string
+        | Cat of exp * exp
+   | Sad of Id.t * exp
+        | Bind_later of exp
+      | Bind_now of exp
+
+
+     let str s = Str s
+     let cat e1 e2 = Cat (e1, e2)
+
+     let later e = Bind_later e
+     let now e = Bind_now e
+*)
+
+module Id = Std.Id
+
 type exp =
   (* integer *)
   | Input
   | Int of int
   | Plus of exp * exp
-  (* string *)
-  | Str of string
-  | Cat of exp * exp
   | If0 of exp * exp * exp
   | Var of Id.t
   | Fun of Id.t * exp
-  (* | Sad of Id.t * exp *)
   | Let of Id.t * exp * exp
   | App of exp * exp
-  | Bind_later of exp
-  | Bind_now of exp
-[@@deriving eq, show { with_path = false }]
+  | Clopen of env * exp
+
+and env = exp Id.Map.t [@@deriving eq, show { with_path = false }]
 
 module Tagless = struct
   let input = Input
   let int n = Int n
   let plus e1 e2 = Plus (e1, e2)
-  let str s = Str s
-  let cat e1 e2 = Cat (e1, e2)
   let if0 e1 e2 e3 = If0 (e1, e2, e3)
   let var x = Var (Id x)
   let fun_ x e = Fun (Id x, e)
   let let_ x e1 e2 = Let (Id x, e1, e2)
   let app e1 e2 = App (e1, e2)
-  let later e = Bind_later e
-  let now e = Bind_now e
 end
