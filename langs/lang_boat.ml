@@ -59,8 +59,13 @@
 
 module Id = Std.Id
 
+(* If we need to make a _value_ for this language
+   only `Int` and `Clopen` are normal values.
+
+   The rest can be open terms except for `Input` and `Fun`.
+*)
+
 type exp =
-  (* integer *)
   | Input
   | Int of int
   | Plus of exp * exp
@@ -69,7 +74,7 @@ type exp =
   | Fun of Id.t * exp
   | Let of Id.t * exp * exp
   | App of exp * exp
-  | Clopen of env * exp
+  | Clopen of env * Id.t * exp
 
 and env = exp Id.Map.t [@@deriving eq, show { with_path = false }]
 

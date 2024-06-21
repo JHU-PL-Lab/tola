@@ -1,10 +1,11 @@
+open Langs
 open Interp
 open Interp.Boat_interp
 open Example.Boat_example
 
 (* let same_value = Alcotest.testable Boat_interp.pp Boat_val.equal *)
 
-let same_value = Alcotest.testable Boat_interp.pp ( = )
+let same_value = Alcotest.testable Boat_interp.pp Lang_boat.equal_exp
 
 (* let mk_same_value expected actual =
    Alcotest.test_case "same value" `Quick (fun () ->
@@ -29,7 +30,9 @@ let () =
           same_result plus_1_2 n3;
           (* same_result post_let_x n4; *)
           same_result ~prompt:"get x" get_x_1 n1;
-          same_result ~prompt:"rebind x" rebind_x_2 n2;
+          same_result open_x open_x;
+          same_result use_open_x n1;
+          (* same_result ~prompt:"rebind x" rebind_x_2 n2; *)
         ] );
       (* ("fail", [ expect_fail plus_dyn_err_1_2 ]); *)
     ]

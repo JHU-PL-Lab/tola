@@ -11,7 +11,7 @@ let n6 = int 6
 let p12 = plus n1 n2
 let id_x = fun_ "x" (var "x")
 let ap_x = app id_x n1
-let freeze e = fun_ "()" e
+let freeze e = fun_ "_" e
 let thaw t = app t (int 0)
 let dyn_ap_x = let_ "x" n2 ap_x
 let plus_x_y = fun_ "x" (fun_ "y" (plus (var "x") (var "y")))
@@ -23,6 +23,9 @@ let plus_dyn_err_1_2 = app (app plus_x_y n1) n2
 (* let x = 2 in (\x -> \y -> later (x+y)) 1 x *)
 let outer_let_x = let_ "x" n2 (app (app plus_x_y n1) (var "x"))
 (* let outer_let_x = let_ "x" n2 (app (app (later plus_x_y) n1) (var "x")) *)
+
+let open_x = var "x"
+let use_open_x = let_ "x" n1 open_x
 
 (*
    let f = (\x -> \y -> later (x+y)) 1 in
