@@ -13,8 +13,16 @@ let id_x = fun_ "x" (var "x")
 let ap_x = app id_x n1
 let freeze e = fun_ "_" e
 let thaw t = app t (int 0)
+let open_x = var "x"
+let use_open_x = let_ "x" n1 open_x
 let dyn_ap_x = let_ "x" n2 ap_x
-let plus_x_y = fun_ "x" (fun_ "y" (plus (var "x") (var "y")))
+let plus_x_y_body = plus (var "x") (var "y")
+let plus_x_y = fun_ "x" (fun_ "y" plus_x_y_body)
+
+(* x + y + z *)
+let plus_x_y_z_body = plus (plus (var "x") (var "y")) (var "z")
+let bind_x_xyz = let_ "x" n1 plus_x_y_z_body
+let dynamic_y = let_ "f" bind_x_xyz (let_ "y" n2 (var "f"))
 let plus_1_2 = app (app plus_x_y n1) n2
 
 (* let plus_dyn_err_1_2 = app (app (later plus_x_y) n1) n2 *)
@@ -23,9 +31,6 @@ let plus_dyn_err_1_2 = app (app plus_x_y n1) n2
 (* let x = 2 in (\x -> \y -> later (x+y)) 1 x *)
 let outer_let_x = let_ "x" n2 (app (app plus_x_y n1) (var "x"))
 (* let outer_let_x = let_ "x" n2 (app (app (later plus_x_y) n1) (var "x")) *)
-
-let open_x = var "x"
-let use_open_x = let_ "x" n1 open_x
 
 (*
    let f = (\x -> \y -> later (x+y)) 1 in
@@ -37,16 +42,14 @@ let use_open_x = let_ "x" n1 open_x
 
 (*
   let lib = \x -> \() -> x in lib 0
-*)
-let get_x_1 = let_ "lib" (let_ "x" n1 (freeze (var "x"))) (thaw (var "lib"))
-
-(*
+  let get_x_1 = let_ "lib" (let_ "x" n1 (freeze (var "x"))) (thaw (var "lib"))
   let lib = \x -> \() -> x in 
     later let x = 2 in lib 0
+
+  let rebind_x_2 =
+    let_ "lib" (let_ "x" n1 (freeze (var "x"))) (let_ "x" n2 (thaw (var "lib")))
 *)
 
-let rebind_x_2 =
-  let_ "lib" (let_ "x" n1 (freeze (var "x"))) (let_ "x" n2 (thaw (var "lib")))
 (* (later (let_ "x" n2 (thaw (var "lib")))) *)
 (*
 

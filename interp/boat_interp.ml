@@ -39,4 +39,24 @@ let interp e =
   in
   loop empty_env e
 
+let free_vars e =
+  let rec loop bvars e =
+    match e with
+    | Input -> Id.Set.empty
+    | Int _n -> Id.Set.empty
+    | Plus (e1, e2) -> Id.Set.union (loop bvars e1) (loop bvars e2)
+    | If0 (e1, e2, e3) ->
+        Id.Set.union
+          (Id.Set.union (loop bvars e1) (loop bvars e2))
+          (loop bvars e3)
+    | Var x -> if Id.Set.mem x bvars then Id.Set.empty else Id.Set.singleton x
+    | Fun (x, e) -> loop (Id.Set.add x bvars) e
+    | Let (x, e1, e2) ->
+        Id.Set.union (loop bvars e1) (loop (Id.Set.add x bvars) e2)
+    | App (e1, e2) -> Id.Set.union (loop bvars e1) (loop bvars e2)
+    | Clopen (env, x, e) ->
+        loop Id.Set.(add x (union bvars (Id.Map.keys env))) e
+  in
+  loop Id.Set.empty e
+
 let pp = pp_exp
