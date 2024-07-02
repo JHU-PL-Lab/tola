@@ -1,7 +1,11 @@
 open Langs
 open Lang_boat
 
-let empty_env : exp Std.Id.Map.t = Id.Map.empty
+module Boat_project = struct
+  type t = { later_vars : Id.Set.t; exp : exp }
+end
+
+let empty_env : exp Id.Map.t = Id.Map.empty
 
 let interp e =
   let rec loop env e =
@@ -60,3 +64,7 @@ let free_vars e =
   loop Id.Set.empty e
 
 let pp = pp_exp
+
+let free_vars_in e later_vars =
+  let fvars = free_vars e in
+  Id.Set.subset fvars later_vars

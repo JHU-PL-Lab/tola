@@ -8,6 +8,7 @@ let n3 = int 3
 let n4 = int 4
 let n5 = int 5
 let n6 = int 6
+let n42 = int 42
 let p12 = plus n1 n2
 let id_x = fun_ "x" (var "x")
 let ap_x = app id_x n1
@@ -22,14 +23,17 @@ let plus_x_y = fun_ "x" (fun_ "y" plus_x_y_body)
 (* x + y + z *)
 let plus_x_y_z_body = plus (plus (var "x") (var "y")) (var "z")
 let bind_x_xyz = let_ "x" n1 plus_x_y_z_body
-let dynamic_y = let_ "f" bind_x_xyz (let_ "y" n2 (var "f"))
+let dynamic_yz = let_ "f" bind_x_xyz (let_ "y" n2 (var "f"))
+let lib_y use_y = let_ "y" n42 use_y
+let lib_z use_z = let_ "z" n6 use_z
 let plus_1_2 = app (app plus_x_y n1) n2
+let plus_dyn_err_1_2 = app (app plus_x_y n1) n2
+let outer_let_x = let_ "x" n2 (app (app plus_x_y n1) (var "x"))
 
 (* let plus_dyn_err_1_2 = app (app (later plus_x_y) n1) n2 *)
-let plus_dyn_err_1_2 = app (app plus_x_y n1) n2
 
 (* let x = 2 in (\x -> \y -> later (x+y)) 1 x *)
-let outer_let_x = let_ "x" n2 (app (app plus_x_y n1) (var "x"))
+
 (* let outer_let_x = let_ "x" n2 (app (app (later plus_x_y) n1) (var "x")) *)
 
 (*
