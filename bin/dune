@@ -1,9 +1,27 @@
 (include_subdirs unqualified)
 
 (executables
- (names cmake_see)
- (modules cmake_see)
- (modes byte)
+ (names
+  lt
+  ltpm
+  lt_example
+  lts
+  ltspm
+  ltmp
+  ltmppm
+  md
+  mdpm
+  shell
+  dump_mm
+  dump_mp
+  dd
+  radix
+  superego
+  arith_fix
+  boat
+  cmake_see
+  try_fix)
+ ; (modes byte)
  (libraries
   fix
   fmt
@@ -16,46 +34,11 @@
   ainterp
   versioned_maps
   example
-  langs)
+  langs
+  boat_parse)
  (preprocess
   (pps ppx_deriving.show))
  (promote (until-clean)))
-
-; (executables
-;  (names
-;   lt
-;   ltpm
-;   lt_example
-;   lts
-;   ltspm
-;   ltmp
-;   ltmppm
-;   md
-;   mdpm
-;   shell
-;   dump_mm
-;   dump_mp
-;   dd
-;   radix
-;   superego
-;   arith_fix
-;   try_fix)
-;  (libraries
-;   fix
-;   fmt
-;   sexplib
-;   cmdliner
-;   parser
-;   std
-;   ocamlgraph
-;   interp
-;   ainterp
-;   versioned_maps
-;   example
-;   langs)
-;  (preprocess
-;   (pps ppx_deriving.show))
-;  (promote (until-clean)))
 
 (env
  (dev

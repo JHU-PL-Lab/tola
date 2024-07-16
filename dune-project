@@ -2,9 +2,11 @@
 
 (name tola)
 
+(using menhir 2.1)
+
 (generate_opam_files true)
 
-(maintainers "Shiwei Weng <dota@jhu.edu>")
+(maintainers "Shiwei Weng <weng@cs.jhu.edu>")
 
 (package
  (name tola)

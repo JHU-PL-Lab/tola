@@ -1,0 +1,10 @@
+(library
+ (name boat_parse)
+ (libraries langs))
+
+(ocamllex
+ (modules boat_lexer))
+
+(menhir
+ (flags --explain)
+ (modules boat_parser))

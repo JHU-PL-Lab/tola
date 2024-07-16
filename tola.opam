@@ -4,7 +4,7 @@ synopsis: "thousands of languages"
 description: """
 I shall better 
 write a better description."""
-maintainer: ["Shiwei Weng <dota@jhu.edu>"]
+maintainer: ["Shiwei Weng <weng@cs.jhu.edu>"]
 license: "MIT"
 depends: [
   "core"
