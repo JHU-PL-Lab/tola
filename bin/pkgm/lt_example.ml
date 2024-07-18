@@ -1,6 +1,6 @@
 open Langs.Lang_text.Plain
 
-let interp = Interp.Text_plain_interp.interp
+let interp = Interp.Text_interp.interp
 (* for naive text *)
 
 let dump e = Fmt.pr "%s@." (interp e)

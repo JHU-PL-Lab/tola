@@ -122,6 +122,7 @@ module Id = struct
 
   let str s = Id s
   let pp oc (Id x) = Fmt.string oc x
+  let str_of (Id s) = s
 
   module With_compare = struct
     type nonrec t = t

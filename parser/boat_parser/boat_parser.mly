@@ -1,7 +1,7 @@
 %token <int> INT
 %token INPUT
 %token <string> ID
-%token PLUS
+%token PLUS MINUS
 %token LPAREN RPAREN
 %token IF0 THEN ELSE
 %token FUN GOESTO
@@ -17,7 +17,7 @@
 %left  PLUS                             /* + - */
 // See https://stackoverflow.com/questions/27630269/parsing-function-application-with-happy
 // This is the Start(expr), but why can't it be computed auto
-%nonassoc LPAREN INPUT INT ID
+%nonassoc LPAREN INPUT INT ID MINUS
 %nonassoc prec_app
 
 %{ open Langs.Lang_boat %}
@@ -26,7 +26,7 @@
 %%
 
 let main :=
-  ~ = expr; EOL; <>
+  | ~ = expr; EOL; <>
 
 let id :=
   // | ~ = ID; <Id>
@@ -36,6 +36,7 @@ let expr :=
   | LPAREN; ~ = expr; RPAREN; <>
   | INPUT; { Input }
   | ~ = INT; <Int>
+  | MINUS; i = INT; { Int (-i) }
   | e1 = expr; PLUS; e2 = expr; <Plus>
   | IF0; e1 = expr; THEN; e2 = expr; ELSE; e3 = expr; %prec prec_if0 <If0>
   | ~ = id; <Var>

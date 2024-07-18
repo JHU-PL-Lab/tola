@@ -23,7 +23,7 @@ let parse file =
   |> parse_aux
 
 module Make (PM : Manager.S with type P.payload = string) = struct
-  let get_string_payload pid =
+  let lookup_pkg_payload pid =
     pid |> PM.P.str_to_pid |> PM.lookup |> PM.P.payload_of_pkg
 
   let rec expander ?(ret = "") e =
@@ -33,7 +33,7 @@ module Make (PM : Manager.S with type P.payload = string) = struct
         let x =
           match hd with
           | String s -> s
-          | Pid pid -> get_string_payload pid |> parse |> expander
+          | Pid pid -> lookup_pkg_payload pid |> parse |> expander
         in
         expander ~ret:(ret ^ x ^ "\n") tl
 end

@@ -17,7 +17,7 @@ module Pkgm =
 module Make (PM : Manager.S with type P.payload = string) = struct
   open Cmarkit
 
-  let get_string_payload pid =
+  let lookup_pkg_payload pid =
     pid |> PM.P.str_to_pid |> PM.lookup |> PM.P.payload_of_pkg
 
   let get_import_pid s =
@@ -32,7 +32,7 @@ module Make (PM : Manager.S with type P.payload = string) = struct
           let b, _m = List.hd bs in
           let b' =
             match get_import_pid b with
-            | Some pid -> get_string_payload pid
+            | Some pid -> lookup_pkg_payload pid
             | _ -> b
           in
           let db = Doc.block (parse b') in

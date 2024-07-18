@@ -3,9 +3,19 @@
 (library
  (name interp)
  (public_name tola.interp)
- (libraries fmt fix cmarkit ocamlgraph color-brewery langs parser std str)
+ (libraries
+  fmt
+  fix
+  cmarkit
+  ocamlgraph
+  color-brewery
+  langs
+  parser
+  boat_parse
+  std
+  str)
  (preprocess
-  (pps ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
+  (pps ppx_yojson_conv ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
 
 (env
  (dev

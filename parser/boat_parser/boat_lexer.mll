@@ -37,6 +37,8 @@ and token = parse
     { INT (int_of_string i) }
 | '+'
     { PLUS }
+| '-'
+    { MINUS }
 | '('
     { LPAREN }
 | ')'
@@ -60,6 +62,6 @@ and token = parse
 | '='
     { EQUAL }
 | lowercase identchar* { ID (Lexing.lexeme lexbuf) }
-| _
-    { raise (Error (Printf.sprintf "At offset %d: unexpected character.\n" (Lexing.lexeme_start lexbuf))) }
+| _ as c
+    { raise (Error (Printf.sprintf "At offset %d: unexpected character %c.\n" (Lexing.lexeme_start lexbuf) c)) }
 

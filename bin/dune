@@ -18,7 +18,9 @@
   radix
   superego
   arith_fix
+  boat_parser
   boat
+  boat_pm
   cmake_see
   try_fix)
  ; (modes byte)
@@ -27,7 +29,6 @@
   fmt
   sexplib
   cmdliner
-  parser
   std
   ocamlgraph
   interp
@@ -35,7 +36,7 @@
   versioned_maps
   example
   langs
-  boat_parse)
+  parser)
  (preprocess
   (pps ppx_deriving.show))
  (promote (until-clean)))

@@ -3,13 +3,13 @@ open Langs.Lang_text.With_string_pid
 open Std.File_infix
 
 module Make_interp (PM : Manager.S with type P.payload = string) = struct
-  let get_string_payload pid =
+  let lookup_pkg_payload pid =
     pid |> PM.P.str_to_pid |> PM.lookup |> PM.P.payload_of_pkg
 
   let rec interp e =
     match e with
     | Lit s -> s
-    | Pid pid -> get_string_payload pid |> Parser.Text_with_pkg.parse |> interp
+    | Pid pid -> lookup_pkg_payload pid |> Parser.Text_with_pkg.parse |> interp
     | Con (e1, e2) -> interp e1 ^ interp e2
 end
 
@@ -69,12 +69,12 @@ end)
 
 module Make_interp_via_pname (PM : Manager.S with type P.payload = string) =
 struct
-  let get_string_payload pid = pid |> PM.lookup_pname |> PM.P.payload_of_pkg
+  let lookup_pkg_payload pid = pid |> PM.lookup_pname |> PM.P.payload_of_pkg
 
   let rec interp e =
     match e with
     | Lit s -> s
-    | Pid pid -> get_string_payload pid |> Parser.Text_with_pkg.parse |> interp
+    | Pid pid -> lookup_pkg_payload pid |> Parser.Text_with_pkg.parse |> interp
     | Con (e1, e2) -> interp e1 ^ interp e2
 end
 
