@@ -45,7 +45,21 @@ and token = parse
     { INPUT }
 | "if0"
     { IF0 }
-| lowercase identchar* { IDENT (Lexing.lexeme lexbuf) }
+| "then"
+    { THEN }
+| "else"
+    { ELSE }
+| "fun"
+    { FUN }
+| "->"
+    { GOESTO }
+| "let"
+    { LET }
+| "in"
+    { IN }
+| '='
+    { EQUAL }
+| lowercase identchar* { ID (Lexing.lexeme lexbuf) }
 | _
     { raise (Error (Printf.sprintf "At offset %d: unexpected character.\n" (Lexing.lexeme_start lexbuf))) }
 
