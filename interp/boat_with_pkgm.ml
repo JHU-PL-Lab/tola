@@ -84,7 +84,7 @@ module Boat_pkg = struct
 end
 
 module Static_dep_config : Manager.CONFIG = struct
-  let pkgm_id = "_static_dep_boat"
+  let pkgm_id = "boat_one_ver"
   let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
 end
@@ -95,3 +95,12 @@ module Static_dep_pkgm =
     (Manager.Pkg_in_json)
 
 module Static_dep_interp = Make_interp (Static_dep_pkgm)
+
+module Multipart_config = struct
+  let pkgm_id = "boat_multipart"
+  let local_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_local"
+  let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
+end
+
+module Boat_versioned_pkg = Package.Extend_version (Boat_pkg)
+module With_string_versioned_pkg = Langs.Lang_text.Make (Boat_versioned_pkg)
