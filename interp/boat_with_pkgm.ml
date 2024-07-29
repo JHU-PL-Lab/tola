@@ -59,16 +59,11 @@ module Boat_pkg = struct
   type pid = string [@@deriving yojson]
 
   let exp_of_yojson json =
-    json |> Yojson.Safe.to_basic
-    |> Yojson.Basic.Util.member "src"
-    |> Yojson.Basic.Util.to_string |> Boat_parse.of_string_no_eol_opt
-    |> Option.get
+    json |> Yojson.Safe.to_basic |> Yojson.Basic.Util.to_string
+    |> Boat_parse.of_string_no_eol_opt |> Option.get
 
   let payload_of_yojson = exp_of_yojson
-
-  let yojson_of_exp exp =
-    `Assoc [ ("src", `String (Fmt.to_to_string Lang_boat.pp_exp exp)) ]
-
+  let yojson_of_exp exp = `String (Fmt.to_to_string Lang_boat.pp_exp exp)
   let yojson_of_payload = yojson_of_exp
 
   type payload = exp
@@ -104,3 +99,60 @@ end
 
 module Boat_versioned_pkg = Package.Extend_version (Boat_pkg)
 module With_string_versioned_pkg = Langs.Lang_text.Make (Boat_versioned_pkg)
+
+module Versioned_pkgm =
+  Basic_manager.Make (Boat_versioned_pkg) (Versioning.Multi_part)
+    (Multipart_config)
+    (Manager.Pkg_in_json)
+
+module Make_interp_via_pname
+    (PM : Manager.S with type P.payload = Lang_boat.exp) =
+struct
+  let lookup_pkg_payload pid = pid |> PM.lookup_pname |> PM.P.payload_of_pkg
+
+  let interp e =
+    let rec loop env e =
+      match e with
+      | Input -> Int 42
+      | Int n -> Int n
+      | Plus (e1, e2) -> (
+          let v1 = loop env e1 in
+          let v2 = loop env e2 in
+          match (v1, v2) with
+          | Int n1, Int n2 -> Int (n1 + n2)
+          | Clopen _, _ | _, Clopen _ -> failwith "clopen cannot be int"
+          | _ -> Plus (v1, v2))
+      | If0 (e1, e2, e3) -> (
+          let v1 = loop env e1 in
+          match v1 with
+          | Int 0 -> loop env e2
+          | Int _ -> loop env e3
+          | Clopen _ -> failwith "clopen cannot be int"
+          | _ -> If0 (v1, e2, e3))
+      | Var x -> (
+          match Id.Map.find_opt x env with
+          (* if x is bounded locally, retrieve it *)
+          | Some v -> v
+          | None -> (
+              (* if x is bounded package-wise, lookup it *)
+              try lookup_pkg_payload (Id.str_of x)
+              with (* if x is free, leave it *)
+              | Not_found -> Var x))
+      | Fun (x, e) -> Clopen (env, x, e)
+      | Let (x, e1, e2) -> (
+          let v1 = loop env e1 in
+          match v1 with
+          | Int _ | Clopen _ -> loop (Id.Map.add x v1 env) e2
+          | _ -> Let (x, v1, e2))
+      | App (e1, e2) -> (
+          let v1 = loop env e1 in
+          match v1 with
+          | Clopen (env', x, e) -> loop (Id.Map.add x (loop env e2) env') e
+          | Int _ -> failwith "clopen cannot be int"
+          | _ -> App (v1, e2))
+      | Clopen _ -> failwith "clopen cannot be re-evaluated"
+    in
+    loop empty_env e
+end
+
+module Dyn_interp = Make_interp_via_pname (Versioned_pkgm)

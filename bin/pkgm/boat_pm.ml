@@ -1,4 +1,4 @@
-module P = Interp.Boat_with_pkgm.Static_dep_pkgm
+module P = Interp.Boat_with_pkgm.Versioned_pkgm
 module PM_cmd = Packaging.Cmd.Make (P)
 
 let () =
