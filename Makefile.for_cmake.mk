@@ -16,4 +16,17 @@ step2:
 	mkdir -p _build_cmake/step2
 	cd _build_cmake/step2 && cmake ../../vendor/cmake/step2
 	cd _build_cmake/step2 && cmake --build .
-	cd _build_cmake/step1 && ./Tutorial 4294967296
+	cd _build_cmake/step2 && ./Tutorial 4294967296
+
+step3:
+	dune exec bin/step3.exe > vendor/cmake/step3/CMakeLists.txt
+	dune exec bin/step3_math.exe > vendor/cmake/step3/MathFunctions/CMakeLists.txt
+	rm -rf _build_cmake/step3
+	mkdir -p _build_cmake/step3
+	cd _build_cmake/step3 && cmake ../../vendor/cmake/step3
+	cd _build_cmake/step3 && cmake --build .
+	cd _build_cmake/step3 && ./Tutorial 4294967296
+
+step4:
+	dune exec bin/step4.exe > vendor/cmake/step4/CMakeLists.txt
+	dune exec bin/step4_math.exe > vendor/cmake/step4/MathFunctions/CMakeLists.txt

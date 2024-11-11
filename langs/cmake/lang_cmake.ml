@@ -19,7 +19,7 @@ type test = Test
 type policy = Policy
 type var = Var of string
 type output = string
-type value = Val_str of string | Val_bool of bool
+type value = Val_var of string | Val_str of string | Val_bool of bool
 type item = Item_var of string | Item_str of string
 type cache_entry = Cache_entry
 type before_or_after = Before | After
@@ -32,7 +32,7 @@ type job_pool = string list
 (* target *)
 type target = Target of string
 type feature = Feature of string
-type target_kind = Interface | Public | Private
+type target_kind = Public | Private | Interface
 type items_with_kind = { kind : target_kind; items : item list }
 type target_feature = { kind : target_kind; feature : feature }
 type set = SSet
@@ -60,7 +60,15 @@ type property = { prop : string; value : value }
 type include_guard_scope = Ig_directory | Ig_global
 type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
 type add_executable_option = Ae_win32 | Ae_macos_bundle | Ae_exclude_from_all
-type library_type = Lib_static | Lib_shared | Lib_module
+
+type library_type =
+  | Lib_static
+  | Lib_shared
+  | Lib_module
+  | Lib_unknown
+  | Lib_object
+  | Lib_interface
+  | Lib_global
 
 type custom_command =
   | Custom_command of { command : string; args : string list }

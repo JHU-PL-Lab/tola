@@ -7,12 +7,22 @@ let string_of_version ver =
   let str_patch = if String.length ver.patch = 0 then "" else "." ^ ver.patch in
   Fmt.str "%d.%d%s" ver.major ver.minor str_patch
 
-let str_ s = Val_str s
+let str_ s = Val_var s
+let quote s = Val_str s
 let bool_ b = Val_bool b
 let ivar v = Item_var v
 let istr s = Item_str s
 let target_def ?(kind = Public) items = { kind; items }
+let target_feature ?(kind = Public) feature = { kind; feature }
 let cmd_of_list cmds = Exp_list cmds
+
+let ite cond then_ ?else_ () =
+  match else_ with
+  | None -> If { cond; then_; else_ = None }
+  | Some else_ -> If { cond; then_; else_ = Some else_ }
+
+let ifthen cond then_ = ite cond then_ ()
+let if_ cond then_ else_ = ite cond then_ ~else_ ()
 
 let minimum_required_s ?max min =
   Cmake_cmd
@@ -54,6 +64,12 @@ let add_subdirectory ?binary_dir ?(exclude_from_all = false) ?(system = false)
 
 let target_compile_definitions target items =
   Project_cmd (Target_compile_definitions { target; items })
+
+let target_compile_features target features =
+  Project_cmd (Target_compile_features { target; features })
+
+let target_compile_options ?(before = false) target items =
+  Project_cmd (Target_compile_options { target; before; items })
 
 let target_include_directories ?system ?before_or_after target items =
   Project_cmd

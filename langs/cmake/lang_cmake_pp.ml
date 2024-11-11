@@ -2,6 +2,7 @@ open Lang_cmake
 open Lang_cmake_utils
 
 let list_sp pp = Fmt.list ~sep:Fmt.sp pp
+let quoted s = "\"" ^ s ^ "\""
 
 let pp_version_opt ff = function
   | None -> ()
@@ -10,7 +11,7 @@ let pp_version_opt ff = function
 let pp_target ff (Target s) = Fmt.string ff s
 let pp_source ff s = Fmt.string ff s
 let pp_var ff (Var s) = Fmt.string ff s
-let pp_string_quoted ff msg = Fmt.string ff ("\"" ^ msg ^ "\"")
+let pp_string_quoted ff msg = Fmt.string ff (quoted msg)
 let pp_message = pp_string_quoted
 
 let pp_item ff = function
@@ -18,14 +19,16 @@ let pp_item ff = function
   | Item_str s -> pp_string_quoted ff s
 
 let string_of_value = function
-  | Val_str s -> s
+  | Val_var s -> s
+  | Val_str s -> quoted s
   | Val_bool true -> "True"
   | Val_bool false -> "False"
 
 let pp_val = Fmt.using string_of_value Fmt.string
 
 let string_on_of_value = function
-  | Val_str s -> s
+  | Val_var s -> s
+  | Val_str s -> quoted s
   | Val_bool true -> "ON"
   | Val_bool false -> "OFF"
 
@@ -35,6 +38,10 @@ let string_of_library_type = function
   | Lib_shared -> "SHARED"
   | Lib_static -> "STATIC"
   | Lib_module -> "MODULE"
+  | Lib_unknown -> "UNKNOWN"
+  | Lib_object -> "OBJECT"
+  | Lib_interface -> "INTERFACE"
+  | Lib_global -> "GLOBAL"
 
 let pp_lib_type = Fmt.using string_of_library_type Fmt.string
 
@@ -49,14 +56,19 @@ let string_of_kind = function
 let pp_target_kind = Fmt.using string_of_kind Fmt.string
 
 let pp_items_with_kind ff ({ kind; items } : items_with_kind) =
-  Fmt.pf ff "%a %a" pp_target_kind kind (Fmt.list pp_item) items
+  Fmt.pf ff "%a %a" pp_target_kind kind (list_sp pp_item) items
+
+let pp_feature ff (Feature s) = Fmt.string ff s
+
+let pp_target_feature ff ({ kind; feature } : target_feature) =
+  Fmt.pf ff "%a %a" pp_target_kind kind pp_feature feature
 
 let rec pp ff e =
   match e with
   (* syntactic *)
   | Int i -> Fmt.int ff i
   | Var_exp s -> Fmt.string ff s
-  | Exp_list exps -> (Fmt.list pp) ff exps
+  | Exp_list exps -> (list_sp pp) ff exps
   | If { cond; then_; else_ } ->
       Fmt.(
         pf ff "if (%a)@.@[<2>  %a@]@.else()@.@[<2>  %a@]@.endif()" pp cond pp
@@ -96,6 +108,17 @@ and pp_project_cmd ff cmd =
   | Target_compile_definitions { target; items } ->
       Fmt.(
         pf ff "target_compile_definitions(%a %a)" pp_target target
+          (list_sp pp_items_with_kind)
+          items)
+  | Target_compile_features { target; features } ->
+      Fmt.(
+        pf ff "target_compile_features(%a %a)" pp_target target
+          (list_sp pp_target_feature)
+          features)
+  | Target_compile_options { target; items; before } ->
+      Fmt.(
+        pf ff "target_compile_options(%a%s@[<2>%a@])" pp_target target
+          (if before then "BEFORE" else " ")
           (list_sp pp_items_with_kind)
           items)
   | Target_link_libraries { targets; items } ->
