@@ -1,3 +1,5 @@
+(* CMake 3.31.0 *)
+
 (* An AST of cmake-command
 
    When the block() is inside a foreach() or while() command, the break() and continue() commands can be used inside the block.
@@ -17,8 +19,8 @@ type test = Test
 type policy = Policy
 type var = Var of string
 type output = string
-type var_name = Var_name of string
-type value = Value
+type value = Val_str of string | Val_bool of bool
+type item = Item_var of string | Item_str of string
 type cache_entry = Cache_entry
 type before_or_after = Before | After
 type depend = string
@@ -31,10 +33,9 @@ type job_pool = string list
 type target = Target of string
 type feature = Feature of string
 type target_kind = Interface | Public | Private
-type target_definition = { kind : target_kind; item : string }
-type target_option = { kind : target_kind; item : option_ }
+type items_with_kind = { kind : target_kind; items : item list }
 type target_feature = { kind : target_kind; feature : feature }
-type set = Set
+type set = SSet
 type file_set_type = Fs_headers | Fs_cxxmodules
 
 type target_file_set = {
@@ -59,7 +60,7 @@ type property = { prop : string; value : value }
 type include_guard_scope = Ig_directory | Ig_global
 type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
 type add_executable_option = Ae_win32 | Ae_macos_bundle | Ae_exclude_from_all
-type add_library_type = Al_static | Al_shared | Al_module
+type library_type = Lib_static | Lib_shared | Lib_module
 
 type custom_command =
   | Custom_command of { command : string; args : string list }
@@ -189,7 +190,7 @@ and exp =
   (* Constant and basic *)
   | Int of int
   | Bool of bool
-  | String of string
+  | Var_exp of string
   | Not of exp
   | And of exp * exp
   | Or of exp * exp
@@ -203,7 +204,7 @@ and exp =
   | Return of { propogate_vars : var list }
   | Function of { name : var } (* endfunction *)
   | Macro of { name : var; args : var list; commands : exp } (* endmacro *)
-  | If of { then_ : exp; else_ : exp option }
+  | If of { cond : exp; then_ : exp; else_ : exp option }
   (* elseif *)
   (* endif *)
   | Foreach of { loop_var : var }
@@ -223,6 +224,7 @@ and exp =
     }
   | Include_guard of { scope : include_guard_scope }
   (* State *)
+  | Cmake_option of { var : var; msg : string; value : value }
   | Get_cmake_property of { var : var; property : string }
   | Get_directory_property of {
       var : var;
@@ -235,15 +237,13 @@ and exp =
       mode : bool;
       cache : bool;
     }
-  | Set of { var_value_pairs : (var_name * value) list; parent_scope : scope }
-  | Set_cache of {
-      var_value_pairs : (var_name * value) list;
-      parent_scope : scope;
-    }
+  (* | Set of { var_value_pairs : (var * value) list; parent_scope : bool } *)
+  | Set of { var : var; values : value list; parent_scope : bool }
+  | Set_cache of { var_value_pairs : (var * value) list; parent_scope : bool }
   | Set_env of { var : var; value : value }
   | Set_directory_properties of { prop_value_pairs : (var * value) list }
     (* https://cmake.org/cmake/help/latest/command/set_property.html *)
-  | Unset of { var : var; cache : bool; parent_scope : scope }
+  | Unset of { var : var; cache : bool; parent_scope : bool }
   | Unset_env of { var : var }
   (* property *)
   | Get_property of {
@@ -313,7 +313,7 @@ and cmd = exp
 and block_exp = {
   scope_policy : policy list;
   scope_var : var list;
-  propagate : var_name;
+  propagate : var;
 }
 
 and cmake_cmd =
@@ -349,12 +349,12 @@ and cmake_cmd =
   | Configure_file of {
       input : path;
       output : path;
-      permission_level : configure_file_permission;
+      permission_level : configure_file_permission option;
       permissions : permissions;
-      copy_only : bool;
-      escape_quotes : bool;
-      only : bool;
-      newline_style : newline_style;
+      copy_only : bool option;
+      escape_quotes : bool option;
+      only : bool option;
+      newline_style : newline_style option;
     }
 
 and cmake_meta_lang =
@@ -401,11 +401,6 @@ and project_cmd =
       initialize_from : var;
     }
   | Add_compile_definitions of { defs : definition list }
-  (* Any leading -D on an item will be removed *)
-  | Target_compile_definitions of {
-      target : target;
-      target_definitions : target_definition list;
-    }
   | Add_compile_options of { options_ : option_ list }
   | Add_definitions of { defs : definition list }
   | Remove_definitions of { defs : definition list }
@@ -420,6 +415,7 @@ and project_cmd =
   | Add_library of {
       name : string;
       exclude_from_all : bool;
+      type_ : library_type option;
       sources : file list;
     }
   | Add_library_object of { name : string; sources : file list }
@@ -438,38 +434,42 @@ and project_cmd =
       target : target;
       features : target_feature list;
     }
+    (* Any leading -D on an item will be removed *)
+  | Target_compile_definitions of {
+      target : target;
+      items : items_with_kind list;
+    }
   | Target_compile_options of {
       target : target;
       before : bool;
-      items : target_definition list;
+      items : items_with_kind list;
     }
   | Target_include_directories of {
       target : target;
-      system : bool;
-      before_or_after : before_or_after;
-      items : target_definition list;
+      system : bool option;
+      before_or_after : before_or_after option;
+      items : items_with_kind list;
     }
   | Target_link_directories of {
       target : target;
       before : bool;
-      items : target_definition list;
+      items : items_with_kind list;
     }
-  | Target_link_libraries
-      (* https://cmake.org/cmake/help/latest/command/target_link_libraries.html *) of {
+  | Target_link_libraries of {
       targets : target list;
-      item : string;
+      items : items_with_kind list;
     }
   | Target_link_options of {
       target : target;
       before : bool;
-      items : target_option list;
+      items : items_with_kind list;
     }
-  | Target_precompile_headers of { target : target; items : target_option list }
-  | Target_sources of { target : target; items : target_definition list }
-  | Target_sources_file_set of {
+  | Target_precompile_headers of {
       target : target;
-      items : target_definition list;
+      items : items_with_kind list;
     }
+  | Target_sources of { target : target; items : items_with_kind list }
+  | Target_sources_file_set of { target : target; items : items_with_kind list }
   (* custom *)
   | Add_custom_command of {
       output : string list;

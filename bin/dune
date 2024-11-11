@@ -21,7 +21,9 @@
   boat_parser
   boat
   boat_pm
-  cmake_see
+  step1
+  step2
+  step2_math
   try_fix)
  ; (modes byte)
  (libraries

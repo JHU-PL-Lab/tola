@@ -1,0 +1,63 @@
+open Lang_cmake
+
+let version_of_string s =
+  Scanf.sscanf s "%d.%d.%s" (fun major minor patch -> { major; minor; patch })
+
+let string_of_version ver =
+  let str_patch = if String.length ver.patch = 0 then "" else "." ^ ver.patch in
+  Fmt.str "%d.%d%s" ver.major ver.minor str_patch
+
+let str_ s = Val_str s
+let bool_ b = Val_bool b
+let ivar v = Item_var v
+let istr s = Item_str s
+let target_def ?(kind = Public) items = { kind; items }
+let cmd_of_list cmds = Exp_list cmds
+
+let minimum_required_s ?max min =
+  Cmake_cmd
+    (Cmake_minimum_required
+       { min = version_of_string min; max = Option.map version_of_string max })
+
+let project ?version ?description ?homepage_url ?(languages = []) name =
+  Project_cmd (Project { name; version; description; homepage_url; languages })
+
+let option_ ?(value = bool_ false) ~msg var = Cmake_option { var; msg; value }
+
+let add_library ?(exclude_from_all = false) ?type_ ?(sources = []) name =
+  Project_cmd (Add_library { name; type_; exclude_from_all; sources })
+
+let add_executable ?(options = []) ?(sources = []) name =
+  Project_cmd (Add_executable { name; options; sources })
+
+let configure_file ?(permissions = []) ?permission_level ?copy_only
+    ?escape_quotes ?only ?newline_style ~input output =
+  Cmake_cmd
+    (Configure_file
+       {
+         input;
+         output;
+         permission_level;
+         permissions;
+         copy_only;
+         escape_quotes;
+         only;
+         newline_style;
+       })
+
+let set ?(parent_scope = false) var values = Set { var; values; parent_scope }
+
+let add_subdirectory ?binary_dir ?(exclude_from_all = false) ?(system = false)
+    source_dir =
+  Project_cmd
+    (Add_subdirectory { source_dir; binary_dir; exclude_from_all; system })
+
+let target_compile_definitions target items =
+  Project_cmd (Target_compile_definitions { target; items })
+
+let target_include_directories ?system ?before_or_after target items =
+  Project_cmd
+    (Target_include_directories { target; system; before_or_after; items })
+
+let target_link_libraries targets items =
+  Project_cmd (Target_link_libraries { targets; items })

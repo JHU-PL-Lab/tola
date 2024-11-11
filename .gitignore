@@ -38,3 +38,5 @@ _opam/
 
 _*
 !__init__.py
+
+CMakeLists.txt

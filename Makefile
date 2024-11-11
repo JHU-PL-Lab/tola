@@ -98,3 +98,5 @@ pyp:
 
 p:
 	python3 vendor/python/run_numpy.py
+
+include Makefile.for_cmake.mk
