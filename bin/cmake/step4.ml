@@ -43,33 +43,3 @@ let cmd =
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd
-
-(*
-   
-
-   # TODO 4: With nested generator expressions, only use the flags for the
-   # build-tree
-   # Hint: Use BUILD_INTERFACE
-   target_compile_options(tutorial_compiler_flags INTERFACE
-     "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>"
-     "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>"
-   )
-
-   # configure a header file to pass some of the CMake settings
-   # to the source code
-   configure_file(TutorialConfig.h.in TutorialConfig.h)
-
-   # add the MathFunctions library
-   add_subdirectory(MathFunctions)
-
-   # add the executable
-   add_executable(Tutorial tutorial.cxx)
-
-   target_link_libraries(Tutorial PUBLIC MathFunctions tutorial_compiler_flags)
-
-   # add the binary tree to the search path for include files
-   # so that we will find TutorialConfig.h
-   target_include_directories(Tutorial PUBLIC
-                              "${PROJECT_BINARY_DIR}"
-                              )
-*)

@@ -30,3 +30,8 @@ step3:
 step4:
 	dune exec bin/step4.exe > vendor/cmake/step4/CMakeLists.txt
 	dune exec bin/step4_math.exe > vendor/cmake/step4/MathFunctions/CMakeLists.txt
+	rm -rf _build_cmake/step4
+	mkdir -p _build_cmake/step4
+	cd _build_cmake/step4 && cmake ../../vendor/cmake/step4
+	cd _build_cmake/step4 && cmake --build .
+	cd _build_cmake/step4 && ./Tutorial 4294967296
