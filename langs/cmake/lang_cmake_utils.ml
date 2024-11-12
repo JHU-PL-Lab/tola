@@ -23,6 +23,8 @@ let ite cond then_ ?else_ () =
 
 let ifthen cond then_ = ite cond then_ ()
 let if_ cond then_ else_ = ite cond then_ ~else_ ()
+let function_ name args cmds = Function { name; args; cmds }
+let apply name args = Apply { name; args }
 
 let minimum_required_s ?max min =
   Cmake_cmd
@@ -77,3 +79,25 @@ let target_include_directories ?system ?before_or_after target items =
 
 let target_link_libraries targets items =
   Project_cmd (Target_link_libraries { targets; items })
+
+let install_targets ?component ?rename ?export_name ?(permissions = []) targets
+    destination =
+  Project_cmd
+    (Install_targets
+       { targets; destination; permissions; component; rename; export_name })
+
+let install_files ?component ?rename ?(permissions = []) files destination =
+  Project_cmd
+    (Install_files { files; destination; permissions; component; rename })
+
+(* testing *)
+let enable_testing = Project_cmd Enable_testing
+
+let add_test ?dir name command args =
+  Project_cmd (Add_test { name; command; args; dir })
+
+let set_tests_properties ?dir tests prop_value_pairs =
+  let properties =
+    List.map (fun (prop, value) -> { prop; value }) prop_value_pairs
+  in
+  Project_cmd (Set_tests_properties { tests; dir; properties })

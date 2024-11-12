@@ -35,3 +35,7 @@ step4:
 	cd _build_cmake/step4 && cmake ../../vendor/cmake/step4
 	cd _build_cmake/step4 && cmake --build .
 	cd _build_cmake/step4 && ./Tutorial 4294967296
+
+step5:
+	dune exec bin/step5.exe > vendor/cmake/step5/CMakeLists.txt
+	dune exec bin/step5_math.exe > vendor/cmake/step5/MathFunctions/CMakeLists.txt

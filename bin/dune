@@ -28,6 +28,8 @@
   step3_math
   step4
   step4_math
+  step5
+  step5_math
   try_fix)
  ; (modes byte)
  (libraries

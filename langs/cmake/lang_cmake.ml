@@ -15,12 +15,13 @@ type version = { major : int; minor : int; patch : string }
 
 (* source *)
 type source = string
-type test = Test
+type test = string
 type policy = Policy
 type var = Var of string
 type output = string
 type value = Val_var of string | Val_str of string | Val_bool of bool
 type item = Item_var of string | Item_str of string
+type description = item
 type cache_entry = Cache_entry
 type before_or_after = Before | After
 type depend = string
@@ -192,6 +193,20 @@ type supported_lang =
 
 type scripting_cmd = exp
 
+and cond =
+  | Cond_const of string
+  | Cond_var of string
+  | Cond_str of string
+  | Not of cond
+  | And of cond * cond
+  | Or of cond * cond
+  | Is_command of string
+  | Is_policy of string
+  | Is_target of string
+  | Is_test of string
+  | Is_defined of string
+  | In_list of { var : var; lvar : var }
+
 and exp =
   (* Scripting Commands *)
   (* *)
@@ -199,22 +214,18 @@ and exp =
   | Int of int
   | Bool of bool
   | Var_exp of string
-  | Not of exp
-  | And of exp * exp
-  | Or of exp * exp
   (* Expansion *)
   | Dollar of exp
   (* Structure *)
   | Block of block_exp (* endblock *)
-  | While of { cond : exp; commands : exp } (* endwhile *)
+  | While of { cond : cond; commands : exp } (* endwhile *)
   | Break
   | Continue
   | Return of { propogate_vars : var list }
-  | Function of { name : var } (* endfunction *)
+  | Function of { name : var; args : string list; cmds : cmd list }
+  | Apply of { name : var; args : value list }
   | Macro of { name : var; args : var list; commands : exp } (* endmacro *)
-  | If of { cond : exp; then_ : exp; else_ : exp option }
-  (* elseif *)
-  (* endif *)
+  | If of { cond : cond; then_ : exp; else_ : exp option }
   | Foreach of { loop_var : var }
   | Foreach_range of {
       loop_var : var;
@@ -223,7 +234,6 @@ and exp =
       step : var option;
     }
   | Foreach_in of { loop_var : var; lists : var list; step : var option }
-  (* endforeach *)
   | Exp_list of exp list
   | Include of {
       optional : bool;
@@ -389,6 +399,13 @@ and project_cmd =
       targets : target list;
       properties : property list;
     }
+  | Enable_testing
+  | Add_test of {
+      name : string;
+      command : string;
+      args : string list;
+      dir : directory option;
+    }
   | Get_test_property of {
       test : test;
       property : property;
@@ -397,7 +414,7 @@ and project_cmd =
     }
   | Set_tests_properties of {
       tests : test list;
-      directory : directory option;
+      dir : directory option;
       properties : property list;
     }
   | Define_property of {
@@ -436,7 +453,6 @@ and project_cmd =
       exclude_from_all : bool;
       system : bool;
     }
-  | Add_test
   (* Target *)
   | Target_compile_features of {
       target : target;
@@ -556,13 +572,27 @@ and project_cmd =
       function_ : string;
     }
   | Enable_language of { langs : supported_lang list; optional : bool }
-  | Enable_testing
   | Export of { name : string }
   | Export_target of { targets : target list }
   | Export_package of { name : string }
   | Export_setup of { name : string }
   | Fltk_wrap_ui of { resulting_library_name : string; sources : source list }
-  | Install (* https://cmake.org/cmake/help/latest/command/install.html *)
+  | Install_targets of {
+      targets : target list;
+      (* target_type : string; *)
+      destination : item;
+      component : string option;
+      rename : string option;
+      export_name : string option;
+      permissions : permissions;
+    }
+  | Install_files of {
+      files : item list;
+      destination : item;
+      component : string option;
+      rename : string option;
+      permissions : permissions;
+    }
   | Load_cache_read of {
       directory : directory;
       prefix : string;
@@ -586,6 +616,7 @@ and project_cmd =
   | Try_run
 
 (* CTest Commands *)
+
 (* Deprecated Commands *)
 
 type special_dir = {

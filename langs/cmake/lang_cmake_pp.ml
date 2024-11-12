@@ -2,11 +2,23 @@ open Lang_cmake
 open Lang_cmake_utils
 
 let list_sp pp = Fmt.list ~sep:Fmt.sp pp
+let list_br pp = Fmt.list ~sep:Fmt.cut pp
 let quoted s = "\"" ^ s ^ "\""
+let pp_quoted = Fmt.using quoted Fmt.string
+
+let pp_with_key key pp_ele ff = function
+  | None -> ()
+  | Some ele -> Fmt.pf ff "%s %a " key pp_ele ele
 
 let pp_version_opt ff = function
   | None -> ()
   | Some ver -> Fmt.pf ff "VERSION %s" (string_of_version ver)
+
+let pp_cond ff = function
+  | Cond_var s -> Fmt.string ff s
+  | Cond_str s -> pp_quoted ff s
+  | Is_target t -> Fmt.pf ff "TARGET %a" Fmt.string t
+  | _ -> Fmt.string ff "not yet (cond)"
 
 let pp_target ff (Target s) = Fmt.string ff s
 let pp_source ff s = Fmt.string ff s
@@ -33,6 +45,9 @@ let string_on_of_value = function
   | Val_bool false -> "OFF"
 
 let pp_val_on = Fmt.using string_on_of_value Fmt.string
+
+let pp_property ff { prop; value } =
+  Fmt.(pf ff "%a %a" string prop pp_val value)
 
 let string_of_library_type = function
   | Lib_shared -> "SHARED"
@@ -71,8 +86,17 @@ let rec pp ff e =
   | Exp_list exps -> (list_sp pp) ff exps
   | If { cond; then_; else_ } ->
       Fmt.(
-        pf ff "if (%a)@.@[<2>  %a@]@.else()@.@[<2>  %a@]@.endif()" pp cond pp
-          then_ (option pp) else_)
+        pf ff "if (%a)@.@[<2>  %a@]@.else()@.@[<2>  %a@]@.endif()@." pp_cond
+          cond pp then_ (option pp) else_)
+  | Function { name; args; cmds } ->
+      Fmt.(
+        pf ff "function(%a %a)@.@[<2>  %a@]@.endfunction()@." pp_var name
+          (list_sp string) args
+          (list ~sep:(sps 0) pp)
+          cmds)
+  | Apply { name; args } ->
+      Fmt.(pf ff "%a(%a)@." pp_var name (list_sp pp_val) args)
+  (* cmake commands *)
   (* primitives *)
   | Cmake_option { var; msg; value } ->
       Fmt.(pf ff "option(%a %a %a)" pp_var var pp_message msg pp_val_on value)
@@ -131,4 +155,24 @@ and pp_project_cmd ff cmd =
         pf ff "target_include_directories(%a @[<2>%a@])" pp_target target
           (list_sp pp_items_with_kind)
           items)
+  | Enable_testing -> Fmt.(pf ff "enable_testing()")
+  | Add_test { name; command; args; dir } ->
+      Fmt.(
+        pf ff "add_test(NAME %a COMMAND %a %a%a)" string name string command
+          (list_sp string) args
+          (pp_with_key "WORKING_DIRECTORY" string)
+          dir)
+  | Set_tests_properties { tests; dir; properties } ->
+      Fmt.(
+        pf ff "set_tests_properties(%a%a PROPERTIES %a)" (list_sp string) tests
+          (pp_with_key "WORKING_DIRECTORY" string)
+          dir (list_sp pp_property) properties)
+  | Install_targets { targets; destination; _ } ->
+      Fmt.(
+        pf ff "install(TARGETS %a@[<2>@;DESTINATION %a@])" (list_sp pp_target)
+          targets pp_item destination)
+  | Install_files { files; destination; _ } ->
+      Fmt.(
+        pf ff "install(FILES %a@[<2>@;DESTINATION %a@])" (list_sp pp_item) files
+          pp_item destination)
   | _ -> Fmt.string ff "// not yet@."
