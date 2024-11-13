@@ -39,3 +39,12 @@ step4:
 step5:
 	dune exec bin/step5.exe > vendor/cmake/step5/CMakeLists.txt
 	dune exec bin/step5_math.exe > vendor/cmake/step5/MathFunctions/CMakeLists.txt
+	rm -rf _build_cmake/step5
+	mkdir -p _build_cmake/step5
+	cd _build_cmake/step5 && cmake ../../vendor/cmake/step5
+	cd _build_cmake/step5 && cmake --build . --config Release
+	cd _build_cmake/step5 && cmake --install . --config Release --prefix "Release"
+	cd _build_cmake/step5/Release/bin && ./Tutorial 4294967296
+
+step5_test:
+	cd _build_cmake/step5 && make test

@@ -96,6 +96,8 @@ let rec pp ff e =
           cmds)
   | Apply { name; args } ->
       Fmt.(pf ff "%a(%a)@." pp_var name (list_sp pp_val) args)
+  | List_append { var; values } ->
+      Fmt.(pf ff "list(APPEND %a %a)@." pp_var var (list_sp pp_val) values)
   (* cmake commands *)
   (* primitives *)
   | Cmake_option { var; msg; value } ->

@@ -25,6 +25,7 @@ let ifthen cond then_ = ite cond then_ ()
 let if_ cond then_ else_ = ite cond then_ ~else_ ()
 let function_ name args cmds = Function { name; args; cmds }
 let apply name args = Apply { name; args }
+let list_append var values = List_append { var; values }
 
 let minimum_required_s ?max min =
   Cmake_cmd

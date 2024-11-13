@@ -26,18 +26,11 @@ let cmd =
         [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
       set (Var "installable_libs")
         [ str_ "MathFunctions"; str_ "tutorial_compiler_flags" ];
-      ifthen (Is_target "SqrtLibrary") (cmd_of_list []);
+      ifthen (Is_target "SqrtLibrary")
+        (cmd_of_list
+           [ list_append (Var "installable_libs") [ str_ "SqrtLibrary" ] ]);
+      install_targets [ Target "${installable_libs}" ] (istr "lib");
+      install_files [ istr "MathFunctions.h" ] (istr "include");
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd
-
-(*
-   if (TARGET SqrtLibrary)
-     list(APPEND installable_libs SqrtLibrary)
-   endif()
-   install(TARGETS ${installable_libs} DESTINATION lib)
-
-   # TODO 2: Install the library headers to the include folder.
-   # Hint: Use the FILES and DESTINATION parameters
-   install(FILES MathFunctions.h DESTINATION include)
-*)

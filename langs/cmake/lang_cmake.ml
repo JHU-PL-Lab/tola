@@ -310,8 +310,8 @@ and exp =
   | Find_package
   | Find_path
   | Find_program
-  | Cmake_cmd of cmake_cmd
-  | List_lib
+  (* List lib *)
+  | List_append of { var : var; values : value list }
   | String_lib
   | Mark_as_advanced of { clear : bool; force : bool; vars : var list }
   | Math_lib of { var : var; exp : exp; output_format : math_output_format }
@@ -323,6 +323,7 @@ and exp =
   | Message_config_log of { texts : string list }
   | Option of { var : var; help_text : string list; value : exp }
   | Separete_arguments of { var : var; mode : separate_arguments_mode }
+  | Cmake_cmd of cmake_cmd
   | Project_cmd of project_cmd
 
 (* File Operations *)
