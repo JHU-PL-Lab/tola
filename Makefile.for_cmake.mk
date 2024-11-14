@@ -45,6 +45,34 @@ step5:
 	cd _build_cmake/step5 && cmake --build . --config Release
 	cd _build_cmake/step5 && cmake --install . --config Release --prefix "Release"
 	cd _build_cmake/step5/Release/bin && ./Tutorial 4294967296
-
-step5_test:
 	cd _build_cmake/step5 && make test
+
+step6:
+	dune exec bin/step6.exe > vendor/cmake/step6/CMakeLists.txt
+	dune exec bin/step6_math.exe > vendor/cmake/step6/MathFunctions/CMakeLists.txt
+	dune exec bin/step6_ctest.exe > vendor/cmake/step6/CTestConfig.cmake
+	rm -rf _build_cmake/step6
+	mkdir -p _build_cmake/step6
+	cd _build_cmake/step6 && cmake ../../vendor/cmake/step6
+	cd _build_cmake/step6 && cmake --build . 
+	cd _build_cmake/step6 && ctest -VV -D Experimental
+
+step7:
+	dune exec bin/step7.exe > vendor/cmake/step7/CMakeLists.txt
+	dune exec bin/step7_math.exe > vendor/cmake/step7/MathFunctions/CMakeLists.txt
+	rm -rf _build_cmake/step7
+	mkdir -p _build_cmake/step7
+	cd _build_cmake/step7 && cmake ../../vendor/cmake/step7
+	cd _build_cmake/step7 && cmake --build .
+	cd _build_cmake/step7 && ./Tutorial 4294967296
+
+step8:
+# use step7.exe here
+	dune exec bin/step7.exe > vendor/cmake/step8/CMakeLists.txt
+	dune exec bin/step8_math.exe > vendor/cmake/step8/MathFunctions/CMakeLists.txt
+	dune exec bin/step8_table.exe > vendor/cmake/step8/MathFunctions/MakeTable.cmake
+	rm -rf _build_cmake/step8
+	mkdir -p _build_cmake/step8
+	cd _build_cmake/step8 && cmake ../../vendor/cmake/step8
+	cd _build_cmake/step8 && cmake --build .
+	cd _build_cmake/step8 && ./Tutorial 8

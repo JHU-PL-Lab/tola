@@ -236,9 +236,10 @@ and exp =
   | Foreach_in of { loop_var : var; lists : var list; step : var option }
   | Exp_list of exp list
   | Include of {
+      file : item;
       optional : bool;
       result_var : var option;
-      no_policy_scope : scope;
+      no_policy_scope : scope option;
     }
   | Include_guard of { scope : include_guard_scope }
   (* State *)
@@ -497,8 +498,8 @@ and project_cmd =
   | Target_sources_file_set of { target : target; items : items_with_kind list }
   (* custom *)
   | Add_custom_command of {
-      output : string list;
-      custom_commands : custom_command list;
+      outputs : string list;
+      commands : custom_command list;
       main_dependency : depend option;
       depends : depend list;
       byproducts : file list;
@@ -506,11 +507,12 @@ and project_cmd =
       working_directory : directory option;
       comment : comment option;
       depfile : file option;
-      job_pool : job_pool;
+      job_pool : job_pool option;
       job_server_aware : bool;
       verbatim : bool;
       append : bool;
       uses_terminal : bool;
+      codegen : bool;
       command_expand_list : string list;
       depends_explicit_only : bool;
     }

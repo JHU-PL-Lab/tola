@@ -8,7 +8,7 @@ let cmd =
       add_library "MathFunctions" ~sources:[ "MathFunctions.cxx" ];
       option_ ~value:(bool_ true)
         ~msg:"Use tutorial provided math implementation" (Var "USE_MYMATH");
-      ifthen (Var_exp "USE_MYMATH")
+      ifthen (Cond_var "USE_MYMATH")
         (cmd_of_list
            [
              target_compile_definitions (Target "MathFunctions")

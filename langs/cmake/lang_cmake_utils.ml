@@ -16,6 +16,10 @@ let target_def ?(kind = Public) items = { kind; items }
 let target_feature ?(kind = Public) feature = { kind; feature }
 let cmd_of_list cmds = Exp_list cmds
 
+let include_ ?(optional = false) ?(result_var = None) ?(no_policy_scope = None)
+    file =
+  Include { file; optional; result_var; no_policy_scope }
+
 let ite cond then_ ?else_ () =
   match else_ with
   | None -> If { cond; then_; else_ = None }
@@ -25,6 +29,7 @@ let ifthen cond then_ = ite cond then_ ()
 let if_ cond then_ else_ = ite cond then_ ~else_ ()
 let function_ name args cmds = Function { name; args; cmds }
 let apply name args = Apply { name; args }
+let custom_command command args = Custom_command { command; args }
 let list_append var values = List_append { var; values }
 
 let minimum_required_s ?max min =
@@ -64,6 +69,33 @@ let add_subdirectory ?binary_dir ?(exclude_from_all = false) ?(system = false)
     source_dir =
   Project_cmd
     (Add_subdirectory { source_dir; binary_dir; exclude_from_all; system })
+
+let add_custom_command ~outputs ?main_dependency ?(depends = [])
+    ?(byproducts = []) ?(implicit_depends = []) ?working_directory ?comment
+    ?depfile ?job_pool ?(job_server_aware = false) ?(verbatim = false)
+    ?(append = false) ?(uses_terminal = false) ?(codegen = false)
+    ?(command_expand_list = []) ?(depends_explicit_only = false) commands =
+  Project_cmd
+    (Add_custom_command
+       {
+         outputs;
+         commands;
+         main_dependency;
+         depends;
+         byproducts;
+         implicit_depends;
+         working_directory;
+         comment;
+         depfile;
+         job_pool;
+         job_server_aware;
+         verbatim;
+         append;
+         uses_terminal;
+         codegen;
+         command_expand_list;
+         depends_explicit_only;
+       })
 
 let target_compile_definitions target items =
   Project_cmd (Target_compile_definitions { target; items })

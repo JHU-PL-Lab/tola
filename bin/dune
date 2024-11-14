@@ -21,6 +21,7 @@
   boat_parser
   boat
   boat_pm
+  try_fix
   step1
   step2
   step2_math
@@ -30,7 +31,13 @@
   step4_math
   step5
   step5_math
-  try_fix)
+  step6
+  step6_math
+  step6_ctest
+  step7
+  step7_math
+  step8_math
+  step8_table)
  ; (modes byte)
  (libraries
   fix

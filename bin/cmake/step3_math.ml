@@ -10,7 +10,7 @@ let cmd =
         [ target_def ~kind:Interface [ ivar "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
       option_ ~value:(bool_ true)
         ~msg:"Use tutorial provided math implementation" (Var "USE_MYMATH");
-      ifthen (Var_exp "USE_MYMATH")
+      ifthen (Cond_var "USE_MYMATH")
         (cmd_of_list
            [
              target_compile_definitions (Target "MathFunctions")

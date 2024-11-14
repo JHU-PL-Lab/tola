@@ -10,14 +10,19 @@ let pp_with_key key pp_ele ff = function
   | None -> ()
   | Some ele -> Fmt.pf ff "%s %a " key pp_ele ele
 
+let pp_list_with_key key pp_ele ff = function
+  | [] -> ()
+  | xs -> Fmt.pf ff "%s %a " key (list_sp pp_ele) xs
+
 let pp_version_opt ff = function
   | None -> ()
   | Some ver -> Fmt.pf ff "VERSION %s" (string_of_version ver)
 
-let pp_cond ff = function
+let rec pp_cond ff = function
   | Cond_var s -> Fmt.string ff s
   | Cond_str s -> pp_quoted ff s
   | Is_target t -> Fmt.pf ff "TARGET %a" Fmt.string t
+  | And (c1, c2) -> Fmt.pf ff "%a AND %a" pp_cond c1 pp_cond c2
   | _ -> Fmt.string ff "not yet (cond)"
 
 let pp_target ff (Target s) = Fmt.string ff s
@@ -45,6 +50,12 @@ let string_on_of_value = function
   | Val_bool false -> "OFF"
 
 let pp_val_on = Fmt.using string_on_of_value Fmt.string
+
+let string_of_scope = function
+  | Function_scope -> "//TODO Function_scope"
+  | Directory_scope -> "//TODO Directory_scope"
+
+let pp_scope = Fmt.using string_of_scope Fmt.string
 
 let pp_property ff { prop; value } =
   Fmt.(pf ff "%a %a" string prop pp_val value)
@@ -78,6 +89,9 @@ let pp_feature ff (Feature s) = Fmt.string ff s
 let pp_target_feature ff ({ kind; feature } : target_feature) =
   Fmt.pf ff "%a %a" pp_target_kind kind pp_feature feature
 
+let pp_custom_command ff (Custom_command { command; args }) =
+  Fmt.(pf ff "%a %a" string command (list_sp string) args)
+
 let rec pp ff e =
   match e with
   (* syntactic *)
@@ -96,6 +110,11 @@ let rec pp ff e =
           cmds)
   | Apply { name; args } ->
       Fmt.(pf ff "%a(%a)@." pp_var name (list_sp pp_val) args)
+  | Include { file; optional; result_var; no_policy_scope } ->
+      Fmt.(
+        pf ff "include(%a%s%a%a)" pp_item file
+          (if optional then " OPTIONAL " else "")
+          (option pp_var) result_var (option pp_scope) no_policy_scope)
   | List_append { var; values } ->
       Fmt.(pf ff "list(APPEND %a %a)@." pp_var var (list_sp pp_val) values)
   (* cmake commands *)
@@ -157,6 +176,14 @@ and pp_project_cmd ff cmd =
         pf ff "target_include_directories(%a @[<2>%a@])" pp_target target
           (list_sp pp_items_with_kind)
           items)
+  | Add_custom_command { outputs; commands; depends; _ } ->
+      Fmt.(
+        pf ff "add_custom_command(OUTPUT %a@;COMMAND %a@.%a)@." (list_sp string)
+          outputs
+          (list_sp pp_custom_command)
+          commands
+          (pp_list_with_key "DEPENDS" string)
+          depends)
   | Enable_testing -> Fmt.(pf ff "enable_testing()")
   | Add_test { name; command; args; dir } ->
       Fmt.(

@@ -19,6 +19,36 @@ let cmd =
                ~sources:[ "mysqrt.cxx" ];
              target_link_libraries [ Target "SqrtLibrary" ]
                [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
+             include_ (ivar "CheckCXXSourceCompiles");
+             apply (Var "check_cxx_source_compiles")
+               [
+                 quote
+                   "\n\
+                   \  #include <cmath>\n\
+                   \  int main() {\n\
+                   \    std::log(1.0);\n\
+                   \    return 0;\n\
+                   \  }";
+                 str_ "HAVE_LOG";
+               ];
+             apply (Var "check_cxx_source_compiles")
+               [
+                 quote
+                   "\n\
+                   \  #include <cmath>\n\
+                   \  int main() {\n\
+                   \    std::exp(1.0);\n\
+                   \    return 0;\n\
+                   \  }";
+                 str_ "HAVE_EXP";
+               ];
+             ifthen
+               (And (Cond_var "HAVE_LOG", Cond_var "HAVE_EXP"))
+               (target_compile_definitions (Target "SqrtLibrary")
+                  [
+                    target_def ~kind:Private
+                      [ istr "HAVE_LOG"; istr "HAVE_EXP" ];
+                  ]);
              target_link_libraries [ Target "MathFunctions" ]
                [ target_def ~kind:Private [ ivar "SqrtLibrary" ] ];
            ]);
