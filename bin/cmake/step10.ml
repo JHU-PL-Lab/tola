@@ -7,6 +7,14 @@ let cmd =
     [
       minimum_required_s ~max:"3.20." "3.20.";
       project ~version:(version_of_string "1.0.") "Tutorial";
+      set (Var "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
+        [ quote "${PROJECT_BINARY_DIR}" ];
+      set (Var "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
+        [ quote "${PROJECT_BINARY_DIR}" ];
+      set (Var "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
+        [ quote "${PROJECT_BINARY_DIR}" ];
+      option_ ~value:(bool_ true) ~msg:"Build using shared libraries"
+        (Var "BUILD_SHARED_LIBS");
       add_library "tutorial_compiler_flags" ~type_:Lib_interface;
       target_compile_features (Target "tutorial_compiler_flags")
         [ target_feature ~kind:Interface (Feature "cxx_std_11") ];
@@ -66,6 +74,16 @@ let cmd =
         [ str_ "Tutorial"; str_ "-25"; quote "-25 is (-nan|nan|0)" ];
       apply (Var "do_test")
         [ str_ "Tutorial"; str_ "0.0001"; quote "0.0001 is 0.01" ];
+      include_ (ivar "InstallRequiredSystemLibraries");
+      set (Var "CPACK_RESOURCE_FILE_LICENSE")
+        [ quote "${CMAKE_CURRENT_SOURCE_DIR}/License.txt" ];
+      set (Var "CPACK_PACKAGE_VERSION_MAJOR")
+        [ quote "${Tutorial_VERSION_MAJOR}" ];
+      set (Var "CPACK_PACKAGE_VERSION_MINOR")
+        [ quote "${Tutorial_VERSION_MINOR}" ];
+      set (Var "CPACK_GENERATOR") [ quote "TGZ" ];
+      set (Var "CPACK_SOURCE_GENERATOR") [ quote "TGZ" ];
+      include_ (ivar "CPack");
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd

@@ -8,7 +8,13 @@ let cmd =
       include_ (ivar "MakeTable.cmake");
       add_library "MathFunctions" ~sources:[ "MathFunctions.cxx" ];
       target_include_directories (Target "MathFunctions")
-        [ target_def ~kind:Interface [ ivar "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
+        [
+          target_def ~kind:Interface
+            [
+              ivar "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>";
+              ivar "$<INSTALL_INTERFACE:include>";
+            ];
+        ];
       option_ ~value:(bool_ true)
         ~msg:"Use tutorial provided math implementation" (Var "USE_MYMATH");
       ifthen (Cond_var "USE_MYMATH")
@@ -22,6 +28,8 @@ let cmd =
                [
                  target_def ~kind:Private [ ivar "${CMAKE_CURRENT_BINARY_DIR}" ];
                ];
+             set_target_properties (Target "SqrtLibrary")
+               [ ("POSITION_INDEPENDENT_CODE", str_ "${BUILD_SHARED_LIBS}") ];
              target_link_libraries [ Target "SqrtLibrary" ]
                [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
              include_ (ivar "CheckCXXSourceCompiles");
@@ -56,6 +64,8 @@ let cmd =
                   ]);
              target_link_libraries [ Target "MathFunctions" ]
                [ target_def ~kind:Private [ ivar "SqrtLibrary" ] ];
+             target_compile_definitions (Target "MathFunctions")
+               [ target_def ~kind:Private [ istr "EXPORTING_MYMATH" ] ];
            ]);
       target_link_libraries [ Target "MathFunctions" ]
         [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
@@ -64,7 +74,9 @@ let cmd =
       ifthen (Is_target "SqrtLibrary")
         (cmd_of_list
            [ list_append (Var "installable_libs") [ str_ "SqrtLibrary" ] ]);
-      install_targets [ Target "${installable_libs}" ] (ivar "lib");
+      install_targets ~export:"MathFunctionsTargets"
+        [ Target "${installable_libs}" ]
+        (ivar "lib");
       install_files [ istr "MathFunctions.h" ] (ivar "include");
     ]
 

@@ -2,7 +2,7 @@ open Lang_cmake
 open Lang_cmake_utils
 
 let list_sp pp = Fmt.list ~sep:Fmt.sp pp
-let list_br pp = Fmt.list ~sep:Fmt.cut pp
+let list_br pp = Fmt.list ~sep:Format.pp_force_newline pp
 let quoted s = "\"" ^ s ^ "\""
 let pp_quoted = Fmt.using quoted Fmt.string
 
@@ -13,6 +13,8 @@ let pp_with_key key pp_ele ff = function
 let pp_list_with_key key pp_ele ff = function
   | [] -> ()
   | xs -> Fmt.pf ff "%s %a " key (list_sp pp_ele) xs
+
+let pp_flag key ff flag = if flag then Fmt.pf ff "@;%s " key else ()
 
 let pp_version_opt ff = function
   | None -> ()
@@ -86,6 +88,14 @@ let pp_items_with_kind ff ({ kind; items } : items_with_kind) =
 
 let pp_feature ff (Feature s) = Fmt.string ff s
 
+let string_of_compatiblity = function
+  | Any_newer_version -> "AnyNewerVersion"
+  | Same_major_version -> "SameMajorVersion"
+  | Same_minor_version -> "SameMinorVersion"
+  | Exact_version -> "ExactVersion"
+
+let pp_compatiblity = Fmt.using string_of_compatiblity Fmt.string
+
 let pp_target_feature ff ({ kind; feature } : target_feature) =
   Fmt.pf ff "%a %a" pp_target_kind kind pp_feature feature
 
@@ -97,7 +107,8 @@ let rec pp ff e =
   (* syntactic *)
   | Int i -> Fmt.int ff i
   | Var_exp s -> Fmt.string ff s
-  | Exp_list exps -> (list_sp pp) ff exps
+  | Exp_list exps -> (list_br pp) ff exps
+  | Quote s -> Fmt.string ff s
   | If { cond; then_; else_ } ->
       Fmt.(
         pf ff "if (%a)@.@[<2>  %a@]@.else()@.@[<2>  %a@]@.endif()@." pp_cond
@@ -125,9 +136,14 @@ let rec pp ff e =
       Fmt.(
         pf ff "set(%a %a %a)" pp_var var (list_sp pp_val) values pp_parent_scope
           parent_scope)
-  | Cmake_cmd cmd -> (Fmt.box pp_cmake_cmd) ff cmd
-  | Project_cmd cmd -> (Fmt.box pp_project_cmd) ff cmd
-  | _ -> Fmt.string ff "// not yet@."
+  | Set_property { targets; properties; _ } ->
+      Fmt.(
+        pf ff "set_property(TARGET %a@;PROPERTY %a)" (list_sp pp_target) targets
+          (list_sp pp_property) properties)
+  | Cmake_cmd cmd -> (Fmt.vbox pp_cmake_cmd) ff cmd
+  | Project_cmd cmd -> (Fmt.vbox pp_project_cmd) ff cmd
+  | Module_cmd cmd -> (Fmt.vbox pp_module_cmd) ff cmd
+  | _ -> failwith "not yet in top pp"
 
 and pp_cmake_cmd ff cmd =
   match cmd with
@@ -135,7 +151,7 @@ and pp_cmake_cmd ff cmd =
       Fmt.pf ff "cmake_minimum_required(VERSION %s)" (string_of_version min)
   | Configure_file { input; output; _ } ->
       Fmt.pf ff "configure_file(%a %a)" Fmt.string input Fmt.string output
-  | _ -> Fmt.string ff "// not yet@."
+  | _ -> failwith "not yet in pp_cmake_cmd"
 
 and pp_project_cmd ff cmd =
   match cmd with
@@ -191,17 +207,65 @@ and pp_project_cmd ff cmd =
           (list_sp string) args
           (pp_with_key "WORKING_DIRECTORY" string)
           dir)
+  | Set_target_properties { target; properties } ->
+      Fmt.(
+        pf ff "set_target_properties(%a PROPERTIES %a)" pp_target target
+          (list_sp pp_property) properties)
   | Set_tests_properties { tests; dir; properties } ->
       Fmt.(
         pf ff "set_tests_properties(%a%a PROPERTIES %a)" (list_sp string) tests
           (pp_with_key "WORKING_DIRECTORY" string)
           dir (list_sp pp_property) properties)
-  | Install_targets { targets; destination; _ } ->
+  | Export_targets { targets } ->
+      Fmt.(pf ff "export(TARGETS %a)" (list_sp pp_target) targets)
+  | Export_export { name; file } ->
       Fmt.(
-        pf ff "install(TARGETS %a@[<2>@;DESTINATION %a@])" (list_sp pp_target)
-          targets pp_item destination)
+        pf ff "export(EXPORT %a@;%a)" string name
+          (pp_with_key "FILE" pp_item)
+          file)
+  | Install_targets { targets; destination; export; _ } ->
+      Fmt.(
+        pf ff "install(TARGETS %a@[<2>@;%a@;DESTINATION %a@])"
+          (list_sp pp_target) targets
+          (pp_with_key "EXPORT" string)
+          export pp_item destination)
   | Install_files { files; destination; _ } ->
       Fmt.(
         pf ff "install(FILES %a@[<2>@;DESTINATION %a@])" (list_sp pp_item) files
           pp_item destination)
-  | _ -> Fmt.string ff "// not yet@."
+  | Install_export { file; export; destination; _ } ->
+      Fmt.(
+        pf ff "install(EXPORT %a@[<2>@;%a@;DESTINATION %a@])" pp_item export
+          (pp_with_key "FILE" pp_item)
+          file pp_item destination)
+  | _ -> failwith "not yet in pp_project_cmd"
+
+and pp_module_cmd ff = function
+  | Configure_package_config_file
+      {
+        input;
+        output;
+        install_dest;
+        path_vars;
+        no_set_and_check_macro;
+        no_check_required_components_macro;
+      } ->
+      Fmt.(
+        pf ff
+          "configure_package_config_file(%a@;%a@;INSTALL_DESTINATION %a%a%a%a)"
+          pp_item input pp_item output pp_item install_dest
+          (pp_list_with_key "PATH_VARS " pp_var)
+          path_vars
+          (pp_flag "NO_SET_AND_CHECK_MACRO")
+          no_set_and_check_macro
+          (pp_flag "NO_CHECK_REQUIRED_COMPONENTS_MACRO")
+          no_check_required_components_macro)
+  | Write_basic_package_version_file
+      { file; version; compatibility; arch_independent } ->
+      Fmt.(
+        pf ff "write_basic_package_version_file(%a@;%a@;COMPATIBILITY %a@;%a)"
+          pp_item file
+          (pp_with_key "VERSION" pp_item)
+          version pp_compatiblity compatibility
+          (pp_flag "ARCH_INDEPENDENT")
+          arch_independent)

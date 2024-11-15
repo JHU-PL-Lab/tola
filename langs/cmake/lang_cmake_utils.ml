@@ -16,8 +16,7 @@ let target_def ?(kind = Public) items = { kind; items }
 let target_feature ?(kind = Public) feature = { kind; feature }
 let cmd_of_list cmds = Exp_list cmds
 
-let include_ ?(optional = false) ?(result_var = None) ?(no_policy_scope = None)
-    file =
+let include_ ?(optional = false) ?result_var ?no_policy_scope file =
   Include { file; optional; result_var; no_policy_scope }
 
 let ite cond then_ ?else_ () =
@@ -41,6 +40,11 @@ let project ?version ?description ?homepage_url ?(languages = []) name =
   Project_cmd (Project { name; version; description; homepage_url; languages })
 
 let option_ ?(value = bool_ false) ~msg var = Cmake_option { var; msg; value }
+let export_targets targets = Project_cmd (Export_targets { targets })
+let export_export ?file name = Project_cmd (Export_export { file; name })
+let export_package name = Project_cmd (Export_package { name })
+let export_setup name = Project_cmd (Export_setup { name })
+let quote_cmd s = Quote s
 
 let add_library ?(exclude_from_all = false) ?type_ ?(sources = []) name =
   Project_cmd (Add_library { name; type_; exclude_from_all; sources })
@@ -113,11 +117,17 @@ let target_include_directories ?system ?before_or_after target items =
 let target_link_libraries targets items =
   Project_cmd (Target_link_libraries { targets; items })
 
-let install_targets ?component ?rename ?export_name ?(permissions = []) targets
+let install_targets ?component ?rename ?export ?(permissions = []) targets
     destination =
   Project_cmd
     (Install_targets
-       { targets; destination; permissions; component; rename; export_name })
+       { targets; destination; permissions; component; rename; export })
+
+let install_export ?file ?component ?rename ?(permissions = []) export
+    destination =
+  Project_cmd
+    (Install_export
+       { file; destination; permissions; component; rename; export })
 
 let install_files ?component ?rename ?(permissions = []) files destination =
   Project_cmd
@@ -129,8 +139,58 @@ let enable_testing = Project_cmd Enable_testing
 let add_test ?dir name command args =
   Project_cmd (Add_test { name; command; args; dir })
 
+let set_property ?(global = false) ?(directory = []) ?(targets = [])
+    ?(sources = []) ?(source_directories = []) ?(source_target_directories = [])
+    ?(installs = []) ?(tests = []) ?(test_directories = []) ?(caches = [])
+    ?(append = false) ?(append_string = false) prop_value_pairs =
+  let properties =
+    List.map (fun (prop, value) -> { prop; value }) prop_value_pairs
+  in
+  Set_property
+    {
+      global;
+      directory;
+      targets;
+      sources;
+      source_directories;
+      source_target_directories;
+      installs;
+      tests;
+      test_directories;
+      caches;
+      append;
+      append_string;
+      properties;
+    }
+
+let set_target_properties target prop_value_pairs =
+  let properties =
+    List.map (fun (prop, value) -> { prop; value }) prop_value_pairs
+  in
+  Project_cmd (Set_target_properties { target; properties })
+
 let set_tests_properties ?dir tests prop_value_pairs =
   let properties =
     List.map (fun (prop, value) -> { prop; value }) prop_value_pairs
   in
   Project_cmd (Set_tests_properties { tests; dir; properties })
+
+let configure_package_config_file ?(path_vars = [])
+    ?(no_set_and_check_macro = false)
+    ?(no_check_required_components_macro = false) install_dest input output =
+  Module_cmd
+    (Configure_package_config_file
+       {
+         input;
+         output;
+         install_dest;
+         path_vars;
+         no_set_and_check_macro;
+         no_check_required_components_macro;
+       })
+
+let write_basic_package_version_file ~compatibility ?(arch_independent = false)
+    ?version file =
+  Module_cmd
+    (Write_basic_package_version_file
+       { file; version; compatibility; arch_independent })

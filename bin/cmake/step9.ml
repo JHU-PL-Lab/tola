@@ -66,6 +66,16 @@ let cmd =
         [ str_ "Tutorial"; str_ "-25"; quote "-25 is (-nan|nan|0)" ];
       apply (Var "do_test")
         [ str_ "Tutorial"; str_ "0.0001"; quote "0.0001 is 0.01" ];
+      include_ (ivar "InstallRequiredSystemLibraries");
+      set (Var "CPACK_RESOURCE_FILE_LICENSE")
+        [ quote "${CMAKE_CURRENT_SOURCE_DIR}/License.txt" ];
+      set (Var "CPACK_PACKAGE_VERSION_MAJOR")
+        [ quote "${Tutorial_VERSION_MAJOR}" ];
+      set (Var "CPACK_PACKAGE_VERSION_MINOR")
+        [ quote "${Tutorial_VERSION_MINOR}" ];
+      set (Var "CPACK_GENERATOR") [ quote "TGZ" ];
+      set (Var "CPACK_SOURCE_GENERATOR") [ quote "TGZ" ];
+      include_ (ivar "CPack");
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd

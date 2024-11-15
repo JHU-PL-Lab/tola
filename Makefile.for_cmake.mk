@@ -76,3 +76,55 @@ step8:
 	cd _build_cmake/step8 && cmake ../../vendor/cmake/step8
 	cd _build_cmake/step8 && cmake --build .
 	cd _build_cmake/step8 && ./Tutorial 8
+
+step9:
+# use step8_<math|table>.exe here
+	dune exec bin/step9.exe > vendor/cmake/step9/CMakeLists.txt
+	dune exec bin/step8_math.exe > vendor/cmake/step9/MathFunctions/CMakeLists.txt
+	dune exec bin/step8_table.exe > vendor/cmake/step9/MathFunctions/MakeTable.cmake
+	rm -rf _build_cmake/step9
+	mkdir -p _build_cmake/step9
+	cd _build_cmake/step9 && cmake ../../vendor/cmake/step9
+	cd _build_cmake/step9 && cmake --build .
+	cd _build_cmake/step9 && cpack -G ZIP -C Debug
+	cd _build_cmake/step9 && cpack --config CPackSourceConfig.cmake
+
+step10:
+	dune exec bin/step10.exe > vendor/cmake/step10/CMakeLists.txt
+	dune exec bin/step10_math.exe > vendor/cmake/step10/MathFunctions/CMakeLists.txt
+	dune exec bin/step8_table.exe > vendor/cmake/step10/MathFunctions/MakeTable.cmake
+	rm -rf _build_cmake/step10
+	mkdir -p _build_cmake/step10
+	cd _build_cmake/step10 && cmake ../../vendor/cmake/step10
+	cd _build_cmake/step10 && cmake --build .
+	cd _build_cmake/step10 && ./Tutorial 8
+
+step11:
+	dune exec bin/step11.exe > vendor/cmake/step11/CMakeLists.txt
+	dune exec bin/step11_config.exe > vendor/cmake/step11/Config.cmake.in
+	dune exec bin/step11_math.exe > vendor/cmake/step11/MathFunctions/CMakeLists.txt
+	dune exec bin/step8_table.exe > vendor/cmake/step11/MathFunctions/MakeTable.cmake
+	rm -rf _build_cmake/step11
+	mkdir -p _build_cmake/step11
+	cd _build_cmake/step11 && cmake ../../vendor/cmake/step11
+	cd _build_cmake/step11 && cmake --build .
+	cd _build_cmake/step11 && ./Tutorial 8
+
+step12:
+	dune exec bin/step12_multi.exe > vendor/cmake/step12/MultiCPackConfig.cmake
+	dune exec bin/step12.exe > vendor/cmake/step12/CMakeLists.txt
+	dune exec bin/step12_math.exe > vendor/cmake/step12/MathFunctions/CMakeLists.txt
+	dune exec bin/step11_math.exe > vendor/cmake/step12/MathFunctions/CMakeLists.txt
+	dune exec bin/step8_table.exe > vendor/cmake/step12/MathFunctions/MakeTable.cmake
+	rm -rf _build_cmake/step12
+	mkdir -p _build_cmake/step12
+	mkdir -p _build_cmake/step12/debug
+	cd _build_cmake/step12/debug && cmake -DCMAKE_BUILD_TYPE=Debug ../../../vendor/cmake/step12
+	cd _build_cmake/step12/debug && cmake --build .
+	cd _build_cmake/step12/debug && ./Tutoriald 8
+	mkdir -p _build_cmake/step12/release
+	cd _build_cmake/step12/release && cmake -DCMAKE_BUILD_TYPE=Release ../../../vendor/cmake/step12
+	cd _build_cmake/step12/release && cmake --build .
+	cd _build_cmake/step12/release && ./Tutorial 9
+	mkdir -p _build_cmake/step12/cpack
+	cd _build_cmake/step12 && cpack --config ../../vendor/cmake/step12/MultiCPackConfig.cmake

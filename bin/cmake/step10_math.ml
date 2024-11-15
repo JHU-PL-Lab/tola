@@ -22,6 +22,8 @@ let cmd =
                [
                  target_def ~kind:Private [ ivar "${CMAKE_CURRENT_BINARY_DIR}" ];
                ];
+             set_target_properties (Target "SqrtLibrary")
+               [ ("POSITION_INDEPENDENT_CODE", str_ "${BUILD_SHARED_LIBS}") ];
              target_link_libraries [ Target "SqrtLibrary" ]
                [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
              include_ (ivar "CheckCXXSourceCompiles");
@@ -56,6 +58,8 @@ let cmd =
                   ]);
              target_link_libraries [ Target "MathFunctions" ]
                [ target_def ~kind:Private [ ivar "SqrtLibrary" ] ];
+             target_compile_definitions (Target "MathFunctions")
+               [ target_def ~kind:Private [ istr "EXPORTING_MYMATH" ] ];
            ]);
       target_link_libraries [ Target "MathFunctions" ]
         [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];

@@ -174,6 +174,12 @@ type cond_check =
 type code = string
 type gs_directory = Gs_directory of directory | Gs_target_directory of target
 
+type compatibility =
+  | Any_newer_version
+  | Same_major_version
+  | Same_minor_version
+  | Exact_version
+
 type supported_lang =
   | Lang_c
   | Lang_cxx
@@ -221,6 +227,7 @@ and exp =
   | While of { cond : cond; commands : exp } (* endwhile *)
   | Break
   | Continue
+  | Quote of string
   | Return of { propogate_vars : var list }
   | Function of { name : var; args : string list; cmds : cmd list }
   | Apply of { name : var; args : value list }
@@ -282,17 +289,17 @@ and exp =
   | Set_property of {
       global : bool;
       directory : directory list;
-      target : target list;
-      source : source list;
-      source_directory : directory list;
-      source_target_directory : target list;
-      install : file list;
-      test : test list;
-      test_directory : directory list;
-      cache : cache_entry list;
+      targets : target list;
+      sources : source list;
+      source_directories : directory list;
+      source_target_directories : target list;
+      installs : file list;
+      tests : test list;
+      test_directories : directory list;
+      caches : cache_entry list;
       append : bool;
-      append_string : string;
-      property : property list;
+      append_string : bool;
+      properties : property list;
     }
   (* Info and debug *)
   | Site_name of { var : var }
@@ -326,6 +333,7 @@ and exp =
   | Separete_arguments of { var : var; mode : separate_arguments_mode }
   | Cmake_cmd of cmake_cmd
   | Project_cmd of project_cmd
+  | Module_cmd of module_cmd
 
 (* File Operations *)
 and cmd = exp
@@ -397,10 +405,7 @@ and project_cmd =
       target_directories : target list;
     }
   | Get_target_property of { var : var; target : target; property : property }
-  | Set_target_properties of {
-      targets : target list;
-      properties : property list;
-    }
+  | Set_target_properties of { target : target; properties : property list }
   | Enable_testing
   | Add_test of {
       name : string;
@@ -575,8 +580,8 @@ and project_cmd =
       function_ : string;
     }
   | Enable_language of { langs : supported_lang list; optional : bool }
-  | Export of { name : string }
-  | Export_target of { targets : target list }
+  | Export_targets of { targets : target list }
+  | Export_export of { name : string; file : item option }
   | Export_package of { name : string }
   | Export_setup of { name : string }
   | Fltk_wrap_ui of { resulting_library_name : string; sources : source list }
@@ -586,11 +591,19 @@ and project_cmd =
       destination : item;
       component : string option;
       rename : string option;
-      export_name : string option;
+      export : string option;
       permissions : permissions;
     }
   | Install_files of {
       files : item list;
+      destination : item;
+      component : string option;
+      rename : string option;
+      permissions : permissions;
+    }
+  | Install_export of {
+      file : item option;
+      export : item;
       destination : item;
       component : string option;
       rename : string option;
@@ -618,6 +631,22 @@ and project_cmd =
   | Try_compile
   | Try_run
 
+and module_cmd =
+  (* CMakePackageConfigHelpers *)
+  | Configure_package_config_file of {
+      input : item;
+      output : item;
+      install_dest : item;
+      path_vars : var list;
+      no_set_and_check_macro : bool;
+      no_check_required_components_macro : bool;
+    }
+  | Write_basic_package_version_file of {
+      file : item;
+      version : item option;
+      compatibility : compatibility;
+      arch_independent : bool;
+    }
 (* CTest Commands *)
 
 (* Deprecated Commands *)
