@@ -1,0 +1,10 @@
+(library
+ (name repl)
+ (public_name tola.repl)
+ (synopsis "Lang Develop Toolkit")
+ (libraries core core_unix.sys_unix lwt lambda-term react))
+
+(env
+ (dev
+  (flags
+   (:standard -w -33 -w -26))))
