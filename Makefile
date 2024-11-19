@@ -84,12 +84,6 @@ pkg_init: pkg_init_out pkg_init_no_dep_text pkg_init_static_text pkg_init_md pkg
 
 # Lambda Core
 
-d:
-	dune exec ./bin/dd.exe
-
-af:
-	dune exec ./bin/arith_fix.exe
-
 t:
 	dune runtest
 
@@ -99,4 +93,5 @@ pyp:
 p:
 	python3 vendor/python/run_numpy.py
 
-include Makefile.for_cmake.mk
+include Makefile.cmake.mk
+include Makefile.misc.mk
