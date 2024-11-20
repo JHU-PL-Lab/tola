@@ -6,7 +6,7 @@ all: pi
 
 %.pm: LANG = $(basename $@)
 %.pm:
-	dune exec bin/$(LANG)pm.exe -- info
+	dune exec bin/$(LANG)_pm.exe -- info
 
 # Examples
 
