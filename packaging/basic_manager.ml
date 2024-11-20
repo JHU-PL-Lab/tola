@@ -4,7 +4,9 @@
    A basic pkgm is with a local store and a remote store.
    The store is a json-file based package as `<pid>.json`.
 
-   Now the question is using a file system and the structure of the file system is not bundled. The structure of a package and the structure of a store should be able in configurated.
+   Now the question is using a file system and the structure of the file system
+   is not bundled. The structure of a package and the structure of a store should
+   be able in configurated.
 *)
 open Package
 
@@ -34,25 +36,15 @@ module Make
   let init () = Local_store.init ()
 
   (* local api *)
-  let install pid pkg =
-    Local_store.add_table pid pkg;
-    Local_store.remove_pkg pid;
-    Local_store.save_pkg pid pkg
-
-  let uninstall pid =
-    Local_store.remove_table pid;
-    Local_store.remove_pkg pid
-
+  let install pid pkg = Local_store.save_pkg ~remove_first:true pid pkg
+  let uninstall pid = Local_store.remove_pkg pid
   let reset () = Local_store.reset ()
   let lookup pid = Local_store.lookup pid
   let lookup_pname pname = Local_store.lookup_pname pname
   let info () = Local_store.info ()
 
   (* remote api *)
-  let publish pid pkg =
-    Remote_store.remove_pkg pid;
-    Remote_store.save_pkg pid pkg
-
+  let publish pid pkg = Remote_store.save_pkg ~remove_first:true pid pkg
   let unpublish pid = Remote_store.remove_pkg pid
 
   let fetch pid =

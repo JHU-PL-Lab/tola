@@ -21,6 +21,8 @@ module Basic_config : Manager.CONFIG = struct
   let remote_root = Sys.getcwd () $/ "_pm_root" $/ pkgm_id ^ "_remote"
 end
 
+let config = Packaging.Store.Store_spec.mk_demo_config "text" "_no_dep_lt"
+
 module Naive_pkgm =
   Basic_manager.Make
     (Package.Naive_pkg)
