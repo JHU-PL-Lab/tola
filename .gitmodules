@@ -1,0 +1,3 @@
+[submodule "vendor/multiverse/arbipher"]
+	path = vendor/multiverse/arbipher
+	url = https://github.com/arbipher/multiverse

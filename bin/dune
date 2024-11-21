@@ -61,7 +61,9 @@
   versioned_maps
   example
   langs
-  parser)
+  parser
+  lwt
+  lwt.unix)
  (preprocess
   (pps ppx_deriving.show))
  (promote (until-clean)))
