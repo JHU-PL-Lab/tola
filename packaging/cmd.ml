@@ -1,7 +1,6 @@
 open Cmdliner
 
 module Make (PM : Manager.S) = struct
-  let dummy = Arg.(value & opt string "dummy" & info [ "dummy" ])
   let pid = Arg.(value & pos 0 string "" & info [])
   let pkg = Arg.(value & pos 1 string "" & info [])
 
@@ -28,14 +27,14 @@ module Make (PM : Manager.S) = struct
   let reset_cmd name =
     let doc = "doc" in
     let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const reset_store $ dummy)
+    Cmd.v info Term.(const reset_store $ const ())
 
   let info_ _ = Printf.printf "%s\n" (PM.info ())
 
   let info_cmd name =
     let doc = "doc" in
     let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const info_ $ dummy)
+    Cmd.v info Term.(const info_ $ const ())
 
   let publish pid pkg =
     PM.publish (PM.P.str_to_pid pid) (PM.P.str_to_pkg pkg);
@@ -69,7 +68,7 @@ module Make (PM : Manager.S) = struct
   let remote_info_cmd name =
     let doc = "doc" in
     let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const remote_info $ dummy)
+    Cmd.v info Term.(const remote_info $ const ())
 
   let main_cmd =
     let doc = "doc" in

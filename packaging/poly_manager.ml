@@ -19,7 +19,21 @@ struct
     config : Store.Store_spec.config;
     local_store : Pkg_store.t;
     remote_stores : Pkg_store.t list;
+    cypher : string;
+    include_regex_map : (string, string) Hashtbl.t;
   }
+
+  (*
+     include(foo)
+     include(\\([^)]*\\))
+
+     #include foo\n
+     #include \\([^)]*\\)\n
+  *)
+
+  let mk_include_regex_map =
+    let include_spaced = "; ?include(\\([^)]*\\))" in
+    [ ("z3", include_spaced) ] |> List.to_seq |> Hashtbl.of_seq
 
   (* init *)
   let init (pkgm_config : Store.Store_spec.config) =
@@ -33,6 +47,8 @@ struct
           (fun (store : Store.Store_spec.store_detail) ->
             Pkg_store.init store pkgm_config.pkgm_id pkgm_config.meta_file)
           pkgm_config.remote_stores;
+      cypher = "tola";
+      include_regex_map = mk_include_regex_map;
     }
 
   (* local api *)
