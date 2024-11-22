@@ -30,6 +30,8 @@ module Store_spec = struct
   let remote_dir_store name root =
     { name; kind = Directory; position = Remote; root }
 
+  let git_store name root = { name; kind = Git_repo; position = Remote; root }
+
   let mk_config lang_id pkgm_id meta_file local_store remote_stores =
     { lang_id; pkgm_id; meta_file; local_store; remote_stores }
 
@@ -42,6 +44,7 @@ module Store_spec = struct
       [
         remote_dir_store "remote" remote_root;
         remote_dir_store "remote2" remote_root2;
+        git_store "arbipher/multiverse" "https://github.com/arbipher/multiverse";
       ]
     in
     mk_config lang_id pkgm_id meta_file local_store remote_stores
@@ -142,93 +145,4 @@ struct
     ()
 
   let reset () = Std.remove_dir R.root
-end
-
-module Poly_file_store_make (P : Package.PACKAGE) = struct
-  (* The table is the cached view of the store.
-      We may not need this. *)
-  (* (Table : Hashtbl.S with type key = P.pid) *)
-  module Table = Table_make (P)
-
-  type t = {
-    (* state *)
-    table : P.pkg Table.t ref;
-    (* config *)
-    root : string;
-    file_name : string;
-  }
-
-  (* let table : P.pkg Table.t ref = ref (Table.create 64) *)
-  let set_table state table' = state.table := table'
-  let add_table state pid pkg = Table.add !(state.table) pid pkg
-  let remove_table state pid = Table.remove !(state.table) pid
-  let lookup state pid = Table.find !(state.table) pid
-
-  let lookup_pname state pname =
-    let matching_pids =
-      Table.fold
-        (fun pid _ pids ->
-          if String.starts_with ~prefix:pname (P.pid_to_str pid) then
-            pid :: pids
-          else pids)
-        !(state.table) []
-    in
-    (* Fmt.pr "can %d" (List.length pids); *)
-    let pid = List.hd matching_pids in
-    match Table.find_opt !(state.table) pid with
-    | Some pkg -> pkg
-    | None -> failwith "not found"
-
-  let info state =
-    let pp_pid = Fmt.using P.pid_to_str Fmt.string in
-    Fmt.str "#pkg = %d@." (Table.length !(state.table))
-    ^ Fmt.str "%a" (Std.pp_std_table Table.iter pp_pid Fmt.nop) !(state.table)
-
-  let path_of_pid state pid = state.root $/ P.pid_to_str pid
-
-  let remove_pkg state pid =
-    let pkg_path = path_of_pid state pid in
-    Std.remove_dir pkg_path;
-    remove_table state pid
-
-  let save_pkg ?(remove_first = false) state pid pkg =
-    if remove_first then remove_pkg state pid;
-    let pkg_path = path_of_pid state pid in
-    if not (Sys.file_exists pkg_path) then Sys.mkdir pkg_path 0o755;
-    Std.write_file_all (pkg_path $/ state.file_name) (P.pkg_to_str pkg);
-    add_table state pid pkg
-
-  let load_pkg state pid =
-    let pkg_path = path_of_pid state pid in
-    let pkg_raw = Std.read_file_all (pkg_path $/ state.file_name) in
-    P.str_to_pkg pkg_raw
-
-  let load_pkg_content state pkg_path =
-    Std.read_file_all (pkg_path $/ state.file_name)
-
-  let load_store state =
-    let pid_and_pkgs =
-      Sys.readdir state.root |> Array.to_list
-      |> List.filter_map (fun pid_s ->
-             let pkg_path = path_of_pid state (P.str_to_pid pid_s) in
-             if Sys.is_directory pkg_path then
-               let pkg_content = load_pkg_content state pkg_path in
-               Some (P.str_to_pid pid_s, P.str_to_pkg pkg_content)
-             else None)
-    in
-    pid_and_pkgs |> List.to_seq |> Table.of_seq
-
-  let reset state = Std.remove_dir state.root
-
-  let init_state root file_name : t =
-    { table = ref (Table.create 64); root; file_name }
-
-  let init root file_name =
-    let state = init_state root file_name in
-    if Sys.file_exists state.root then
-      let table = load_store state in
-      set_table state table
-    else Sys.mkdir state.root 0o755;
-    (* if not (Sys.file_exists C.remote_root) then Sys.mkdir C.remote_root 0o755 *)
-    state
 end

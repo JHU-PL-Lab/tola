@@ -13,7 +13,7 @@ module Make
 struct
   module P = P
   module VL = Versioning.Version_logic.Make (P) (V)
-  module Pkg_store = Store.Poly_file_store_make (P)
+  module Pkg_store = Store_v2.Poly_file_store_make (P)
 
   type t = {
     config : Store.Store_spec.config;
@@ -26,11 +26,12 @@ struct
     {
       config = pkgm_config;
       local_store =
-        Pkg_store.init pkgm_config.local_store.root pkgm_config.meta_file;
+        Pkg_store.init pkgm_config.local_store pkgm_config.pkgm_id
+          pkgm_config.meta_file;
       remote_stores =
         List.map
           (fun (store : Store.Store_spec.store_detail) ->
-            Pkg_store.init store.root pkgm_config.meta_file)
+            Pkg_store.init store pkgm_config.pkgm_id pkgm_config.meta_file)
           pkgm_config.remote_stores;
     }
 

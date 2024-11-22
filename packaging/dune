@@ -3,7 +3,7 @@
 (library
  (name packaging)
  (public_name tola.packaging)
- (libraries fmt fix std cmdliner versioning)
+ (libraries fmt fix std cmdliner versioning lwt lwt.unix)
  (preprocess
   (pps
    ppx_jane
