@@ -48,7 +48,9 @@ struct
       str "--local--@.%s@.--remote--@.%a@."
         (Pkg_store.info state.local_store)
         (list ~sep:sp string)
-        (List.map Pkg_store.info state.remote_stores))
+        (List.mapi
+           (fun k store -> Pkg_store.info ~i:(k + 1) store)
+           state.remote_stores))
 
   (* remote api *)
   (* let publish pid pkg = Remote_store.save_pkg ~remove_first:true pid pkg

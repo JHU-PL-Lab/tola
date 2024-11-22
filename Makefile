@@ -8,6 +8,12 @@ all: pi
 %.pm:
 	dune exec bin/$(LANG)_pm.exe -- info
 
+tola:
+	dune exec bin/tola.exe -- info
+
+tola-z3:
+	dune exec bin/tola.exe -- run "z3 --version"
+
 # Examples
 
 e1:
@@ -79,7 +85,7 @@ pkg_init_shell:
 	@cp -r vendor/shell/* $(STATIC_SHELL_LOCAL)
 	@echo 'init static_shell'
 
-.PHONY: pkg_init
+.PHONY: pkg_init tola
 pkg_init: pkg_init_out pkg_init_no_dep_text pkg_init_static_text pkg_init_md pkg_init_shell
 
 # Lambda Core

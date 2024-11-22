@@ -11,6 +11,7 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     (* state *)
     table : P.pkg Table.t ref;
     (* config *)
+    spec : Store_spec.store_detail;
     root : string;
     meta_file : string;
   }
@@ -35,9 +36,10 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     | Some pkg -> pkg
     | None -> failwith "not found"
 
-  let info state =
+  let info ?(i = 0) state =
     let pp_pid = Fmt.using P.pid_to_str Fmt.string in
-    Fmt.str "#pkg = %d; %s@." (Table.length !(state.table)) state.root
+    let name = state.spec.root in
+    Fmt.str "[%d] #pkg = %d @@ %s@." i (Table.length !(state.table)) name
     ^ Fmt.str "%a" (Std.pp_std_table Table.iter pp_pid Fmt.nop) !(state.table)
 
   let path_of_pid state pid = state.root $/ P.pid_to_str pid
@@ -76,8 +78,15 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     in
     pid_and_pkgs |> List.to_seq |> Table.of_seq
 
-  let init_directory_state root meta_file =
-    let state = { table = ref (Table.create 64); root; meta_file } in
+  let init_directory_state (store_detail : Store_spec.store_detail) meta_file =
+    let state =
+      {
+        table = ref (Table.create 64);
+        spec = store_detail;
+        root = store_detail.root;
+        meta_file;
+      }
+    in
     if Sys.file_exists state.root then state.table := load_directory_store state
     else Sys.mkdir state.root 0o755;
     (* if not (Sys.file_exists C.remote_root) then Sys.mkdir C.remote_root 0o755 *)
@@ -92,17 +101,19 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     (if not exist then Sys_utils.(complete (clone_repo repo_url dest_dir)));
 
     let root = dest_dir $/ lang_id in
-    let state = { table = ref (Table.create 64); root; meta_file } in
+    let state =
+      { table = ref (Table.create 64); spec = store_detail; root; meta_file }
+    in
     (* Fmt.pr "debug %s" root; *)
     if Sys.file_exists state.root then state.table := load_directory_store state;
     state
 
   let init (store_detail : Store_spec.store_detail) pkgm_id meta_file =
     match store_detail with
-    | { kind = Directory; position = Local; root; _ } ->
-        init_directory_state root meta_file
-    | { kind = Directory; position = Remote; root; _ } ->
-        init_directory_state root meta_file
+    | { kind = Directory; position = Local; _ } ->
+        init_directory_state store_detail meta_file
+    | { kind = Directory; position = Remote; _ } ->
+        init_directory_state store_detail meta_file
     | { kind = Git_repo; position = Remote; _ } ->
         init_repository_state store_detail pkgm_id meta_file
     | _ -> failwith "store not implemented"

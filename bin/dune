@@ -2,6 +2,7 @@
 
 (executables
  (names
+  tola
   lt
   ltpm
   lt_example
@@ -21,7 +22,6 @@
   boat_parser
   boat
   boat_pm
-  poly_pm
   try_fix
   step1
   step2
