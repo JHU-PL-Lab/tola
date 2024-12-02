@@ -17,6 +17,7 @@ module Poly_cmd = struct
   let bin = Arg.(value & pos 0 string "bin" & info [])
   let input = Arg.(value & pos 1 string "input" & info [])
   let output = Arg.(opt (some string) None & info [ "output" ])
+  let local_path = Arg.(opt (some string) None & info [ "local_path" ])
   let info_ _ = Printf.printf "%s\n" (Poly.info pkgm_state)
 
   let info_cmd name =
@@ -24,21 +25,30 @@ module Poly_cmd = struct
     let info = Cmd.info name ~doc in
     Cmd.v info Term.(const info_ $ const ())
 
-  let run bin input _output =
-    let cmd = String.concat " " [ bin; input ] in
-    let raw_source = Std.read_file_all input in
-    let source = raw_source in
-    let expanded_filename = input ^ ".expanded" in
-    Std.write_file_all expanded_filename source;
-    Printf.printf "CMD: %s\n" cmd
-  (* ;
-     let status = Sys.command cmd in
-     if status <> 0 then Printf.printf "Error: %d\n" status *)
+  let run bin _input _output local_path =
+    (* let cmd = String.concat " " [ bin; input ] in
+       let raw_source = Std.read_file_all input in
+       let source = raw_source in
+       let expanded_filename = input ^ ".expanded" in
+       Std.write_file_all expanded_filename source; *)
+    let cmd = Printf.sprintf "%s --version > /dev/null 2>&1" bin in
+    let env_path = Sys.getenv "PATH" in
+    (match local_path with
+    | Some local_path ->
+        Printf.printf "[LOCAL_PATH] %s\n" local_path
+        (* Sys.putenv "PATH" (local_path ^ ":" ^ env_path) *)
+    | None -> ());
+
+    Printf.printf "[PATH] %s\n" env_path;
+    Printf.printf "[CMD] %s\n" cmd;
+    let status = Sys.command cmd in
+    if status <> 0 then Printf.printf "Error: %d\n" status
 
   let run_cmd name =
     let doc = "run" in
     let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const run $ bin $ input $ Arg.value output)
+    Cmd.v info
+      Term.(const run $ bin $ input $ Arg.value output $ Arg.value local_path)
 
   let main_cmd =
     let doc = "doc" in
