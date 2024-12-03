@@ -2,8 +2,7 @@ open Std.File_infix
 open Store
 
 module Poly_file_store_make (P : Package.PACKAGE) = struct
-  (* The table is the cached view of the store.
-      We may not need this. *)
+  (* The table is the cached view of the store. We may not need this. *)
   (* (Table : Hashtbl.S with type key = P.pid) *)
   module Table = Table_make (P)
 
@@ -11,12 +10,11 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     (* state *)
     table : P.pkg Table.t ref;
     (* config *)
-    spec : Store_spec.store_detail;
+    spec : Spec.store_spec;
     root : string;
     meta_file : string;
   }
 
-  (* let table : P.pkg Table.t ref = ref (Table.create 64) *)
   let add_table state pid pkg = Table.add !(state.table) pid pkg
   let remove_table state pid = Table.remove !(state.table) pid
   let lookup state pid = Table.find !(state.table) pid
@@ -78,43 +76,42 @@ module Poly_file_store_make (P : Package.PACKAGE) = struct
     in
     pid_and_pkgs |> List.to_seq |> Table.of_seq
 
-  let init_directory_state (store_detail : Store_spec.store_detail) meta_file =
+  let init_directory_state (store_spec : Spec.store_spec) meta_file =
     let state =
       {
         table = ref (Table.create 64);
-        spec = store_detail;
-        root = store_detail.root;
+        spec = store_spec;
+        root = store_spec.root;
         meta_file;
       }
     in
     if Sys.file_exists state.root then state.table := load_directory_store state
     else Sys.mkdir state.root 0o755;
-    (* if not (Sys.file_exists C.remote_root) then Sys.mkdir C.remote_root 0o755 *)
     state
 
   let init_repository_state ?(cache_path = "_cache")
-      (store_detail : Store_spec.store_detail) lang_id meta_file =
-    let repo_url = store_detail.root in
-    let dest_dir = cache_path $/ store_detail.name in
+      (store_spec : Spec.store_spec) lang_id meta_file =
+    let repo_url = store_spec.root in
+    let dest_dir = cache_path $/ store_spec.name in
 
     let exist = Sys.file_exists dest_dir && Sys.is_directory dest_dir in
     (if not exist then Sys_utils.(complete (clone_repo repo_url dest_dir)));
 
     let root = dest_dir $/ lang_id in
     let state =
-      { table = ref (Table.create 64); spec = store_detail; root; meta_file }
+      { table = ref (Table.create 64); spec = store_spec; root; meta_file }
     in
     (* Fmt.pr "debug %s" root; *)
     if Sys.file_exists state.root then state.table := load_directory_store state;
     state
 
-  let init (store_detail : Store_spec.store_detail) pkgm_id meta_file =
-    match store_detail with
+  let init (store_spec : Spec.store_spec) pkgm_id meta_file =
+    match store_spec with
     | { kind = Directory; position = Local; _ } ->
-        init_directory_state store_detail meta_file
+        init_directory_state store_spec meta_file
     | { kind = Directory; position = Remote; _ } ->
-        init_directory_state store_detail meta_file
+        init_directory_state store_spec meta_file
     | { kind = Git_repo; position = Remote; _ } ->
-        init_repository_state store_detail pkgm_id meta_file
+        init_repository_state store_spec pkgm_id meta_file
     | _ -> failwith "store not implemented"
 end

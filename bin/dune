@@ -50,6 +50,7 @@
   step12_multi)
  ; (modes byte)
  (libraries
+  unix
   fix
   fmt
   sexplib

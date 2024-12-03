@@ -1,9 +1,7 @@
 open Package
 
-(* (C : Manager.CONFIG) *)
-
 module type PKGM_CONFIG = sig
-  val t : Store.Store_spec.config
+  val t : Spec.config
 end
 
 module Make
@@ -16,7 +14,7 @@ struct
   module Pkg_store = Store_v2.Poly_file_store_make (P)
 
   type t = {
-    config : Store.Store_spec.config;
+    config : Spec.config;
     local_store : Pkg_store.t;
     remote_stores : Pkg_store.t list;
     cypher : string;
@@ -36,7 +34,7 @@ struct
     [ ("z3", include_spaced) ] |> List.to_seq |> Hashtbl.of_seq
 
   (* init *)
-  let init (pkgm_config : Store.Store_spec.config) =
+  let init (pkgm_config : Spec.config) =
     {
       config = pkgm_config;
       local_store =
@@ -44,7 +42,7 @@ struct
           pkgm_config.meta_file;
       remote_stores =
         List.map
-          (fun (store : Store.Store_spec.store_detail) ->
+          (fun (store : Spec.store_spec) ->
             Pkg_store.init store pkgm_config.pkgm_id pkgm_config.meta_file)
           pkgm_config.remote_stores;
       cypher = "tola";

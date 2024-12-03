@@ -27,3 +27,24 @@ let _list_directory path =
   run_command cmd >>= fun _ -> Lwt_io.printl ("Listing directory: " ^ path)
 
 let complete cmd = Lwt_main.run cmd
+
+let extension_of filename =
+  try
+    let idx = String.rindex filename '.' in
+    String.sub filename (idx + 1) (String.length filename - idx - 1)
+  with Not_found -> ""
+
+let split_extension filename =
+  try
+    let idx = String.rindex filename '.' in
+    Some
+      ( String.sub filename 0 idx,
+        String.sub filename (idx + 1) (String.length filename - idx - 1) )
+  with Not_found -> None
+
+let expand_middle_name filename middle ext0 =
+  match split_extension filename with
+  | Some (name, ext) ->
+      if ext = ext0 then String.concat "." [ name; middle; ext ]
+      else filename ^ ".gen"
+  | None -> filename ^ ".gen"

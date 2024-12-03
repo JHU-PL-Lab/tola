@@ -14,6 +14,10 @@ tola:
 tola-z3:
 	dune exec bin/tola.exe -- run "z3 --version"
 
+tola-run:
+# dune exec bin/tola.exe -- run cvc5 --local_path=/home/ex/bin/hidden
+	dune exec bin/tola.exe -- run z3 --o="_cache/foo.smt"
+
 # Examples
 
 e1:
