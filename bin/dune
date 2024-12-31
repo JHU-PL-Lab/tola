@@ -47,7 +47,8 @@
   step11_config
   step12
   step12_math
-  step12_multi)
+  step12_multi
+  mantle)
  ; (modes byte)
  (libraries
   unix

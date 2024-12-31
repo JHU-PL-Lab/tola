@@ -93,6 +93,30 @@ end
 
 include File_util
 
+module Sys_util = struct
+  let run_command_output cmd =
+    let ic = Unix.open_process_in cmd in
+    let result = In_channel.input_all ic |> String.trim in
+    close_in ic;
+    result
+
+  let run_command_output_full cmd pipe_in bds =
+    let ic, oc, ec = Unix.open_process_full cmd bds in
+    close_in ec;
+    output_string oc pipe_in;
+    close_out oc;
+    let result = In_channel.input_all ic |> String.trim in
+    close_in ic;
+    result
+
+  let run_command_unix cmd =
+    let status = Unix.system cmd in
+    match status with
+    | Unix.WEXITED code -> code
+    | Unix.WSIGNALED signal -> -signal
+    | Unix.WSTOPPED signal -> -signal
+end
+
 module Make_compares (S : sig
   type t
 
