@@ -10,94 +10,80 @@
    Or maybe I can intergrate Syntax with Lambda. The point is to avoid seeing the internals of Fish.
 *)
 
-module Variable = struct
-  type name = string
-  type value = string
-  type binding = name * value
-  type bindings = binding list
+open Langs.Lang_mantle
+module Binding = Two_scoped_binding
+open Two_scoped_binding
 
-  let array_of_bindings (bds : bindings) : string array =
-    Array.of_list @@ List.map (fun (k, v) -> Printf.sprintf "%s=%s" k v) bds
-
-  let string_of_bindings (bds : bindings) : string =
-    String.concat " " @@ List.map (fun (k, v) -> Printf.sprintf "%s=%s" k v) bds
-
-  let dump_bindings (bds : bindings) : unit =
-    Printf.printf "[Binding]:\n";
-    List.iter (fun (k, v) -> Printf.printf "  %s = %s\n" k v) bds
-end
-
-open Variable
-
-type external_cmd = string
-
-module Mantle = struct
-  (* InheritEnv is the normal lexical scoping
-    CustomEnv is like the dynamic scoping but with an explicit rebinding
-  *)
-  type env_type = InheritEnv | CustomEnv of bindings
-
-  (* 
-  The language seems a subset of a full lambda calculus as there is no lambda abstraction 
-  a.k.a making a reusable function.
-  It's like `App (Fun, ())`, a first-order
-
-  letfun f1 = ... in
-  f1 () ...
-
-  *)
-  type exp =
-    | Set of binding
-    | Export of binding
-    | RunExp of env_type * exp
-    | RunProcess of env_type * external_cmd
-    | ExpList of exp list
-end
-
-open Mantle
-
-let rec interpret (bds : bindings) (command : exp) : bindings =
-  let open Printf in
-  let bds' =
-    match command with
-    | Set (key, value) ->
-        printf "[Set] %s = %s\n" key value;
-        (key, value) :: bds
-    | Export (key, value) ->
-        printf "[Export] %s = %s\n" key value;
-        (key, value) :: bds
-    | RunExp (_, exp) ->
-        printf "[RunExp]\n";
-        let _ = interpret bds exp in
-        bds
-    | RunProcess (InheritEnv, _cmd) ->
-        dump_bindings bds;
-        bds
-    | RunProcess (CustomEnv custom_env, _cmd) ->
-        dump_bindings custom_env;
-        bds
-    | ExpList exps -> List.fold_left interpret bds exps
+let run_prefill_cmd bds name =
+  let script = Printf.sprintf Mantle_example.script_template name in
+  Printf.printf "{{%s}} [%s]\n" script name;
+  let command_out =
+    Std.Sys_util.run_command_output_full "cat | sh" script
+      (array_of_variables bds)
   in
-  bds'
+  (* Printf.printf "{%s}\n" command_out; *)
+  command_out
 
-let interpret0 bds cmd = ignore @@ interpret bds cmd
+let run_cmd bds cmd =
+  let command_out =
+    Std.Sys_util.run_command_output_full "cat | sh" cmd (array_of_variables bds)
+  in
+  (* Printf.printf "{%s}\n" command_out; *)
+  command_out
 
-[@@@ocamlformat "disable"]
-(* https://ocaml.org/p/ocamlformat/0.26.2/doc/manpage_ocamlformat.html *)
-let script_content = "
-#!/bin/sh
-printenv;
-echo aaa$MY_VAR
-"
-[@@@ocamlformat "enable"]
+let rec interpret ?(debug = false) (bds : bindings) (command : exp) :
+    bindings * exp =
+  let open Printf in
+  let bds', v =
+    match command with
+    | Unit -> (bds, Unit)
+    | Str s -> (bds, Str s)
+    | Get name -> (
+        match Binding.get name bds with
+        | Some bd -> (bds, Str bd.value)
+        | None -> (bds, Unit))
+    | Set (key, value) ->
+        if debug then printf "[Set] %s = %s\n" key value;
+        (set key value Controlled bds, Unit)
+    | Export (key, value) ->
+        if debug then printf "[Export] %s = %s\n" key value;
+        (set key value Exported bds, Unit)
+    | RunExp (_, exp) ->
+        if debug then printf "[RunExp]\n";
+        let _, v = interpret bds exp in
+        (bds, v)
+    | RunProcess (Inherit, cmd) ->
+        dump_bindings bds;
+        let command_out = run_cmd bds cmd in
+        (bds, Str command_out)
+    | RunProcess (Custom custom_env, cmd) ->
+        dump_namevalue_list custom_env;
+        let bds = from_namevalue_list custom_env Controlled in
+        let command_out = run_cmd bds cmd in
+        (bds, Str command_out)
+    | ExpList exps ->
+        List.fold_left (fun (bds, _) exp -> interpret bds exp) (bds, Unit) exps
+  in
+  (bds', v)
 
-(* let cmd = Printf.sprintf "echo foo$%s" name in *)
+let interp_to_str exp =
+  let _, v = interpret [] exp in
+  str_of_exp v
 
 let () =
+  List.iter
+    (fun e -> Fmt.pr "Interpreted: %s\n" @@ interp_to_str e)
+    Mantle_example.all
+
+(* let interpret0 bds exp = ignore @@ interpret bds exp *)
+
+(* 
+let test_shell () =
   let bds = [ ("MY_VAR", "12345"); ("OTHER_VAR", "test") ] in
-  let bds_arr = array_of_bindings bds in
+  let bds_arr = Naive_binding.array_of_bindings bds in
   let cmd =
-    Printf.sprintf "%s sh -c \"echo foobar$%s\"" (string_of_bindings bds)
+    Printf.sprintf "%s sh -c \"echo foobar$%s\""
+      (Naive_binding.string_of_bindings bds)
       "MY_VAR"
   in
   let s = Std.Sys_util.run_command_output cmd in
@@ -116,23 +102,9 @@ let () =
     Std.Sys_util.run_command_output_full "cat | sh" script_content bds_arr
   in
   Printf.printf "{%s}\n" var_value
+*)
 
-let () =
-  let script =
-    ExpList
-      [
-        Set ("x", "42");
-        Set ("PATH", "/usr/bin");
-        Set ("MY_VAR", "hello");
-        Export ("MY_VAR2", "hello");
-        RunProcess (InheritEnv, "echo $MY_VAR");
-        RunProcess (CustomEnv [ ("CUSTOM_VAR", "custom_value") ], "printenv");
-        RunExp (InheritEnv, Set ("x", "42"));
-      ]
-  in
-  interpret0 [] script
-
-(* let () =
+(* let () =s
   let env = [| "MY_VAR=123"; "OTHER_VAR=test" |] in
   match Unix.fork () with
   | 0 ->

@@ -100,7 +100,9 @@ module Sys_util = struct
     close_in ic;
     result
 
+  (* BUGGY: buffer *)
   let run_command_output_full cmd pipe_in bds =
+    (* "oc | (cat | sh)" *)
     let ic, oc, ec = Unix.open_process_full cmd bds in
     close_in ec;
     output_string oc pipe_in;
