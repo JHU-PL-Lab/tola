@@ -1,0 +1,20 @@
+(include_subdirs unqualified)
+
+(ocamllex
+ (modules boat_lexer))
+
+(menhir
+ (flags --explain)
+ (modules boat_parser))
+
+(library
+ (name langs)
+ (public_name tola.langs)
+ (libraries fmt fix cmarkit tola_std packaging)
+ (preprocess
+  (pps ppx_jane ppx_yojson_conv ppx_deriving.ord ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32 -w -37))))

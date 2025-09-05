@@ -1,0 +1,44 @@
+(executables
+ (names
+  realizer
+  tola
+  example_version
+  example_lt
+  example_sp
+  example_radix
+  example_dd
+  example_cur
+  example_record
+  mantle)
+ (libraries
+  unix
+  fix
+  fmt
+  sexplib
+  cmdliner
+  tola_std
+  ocamlgraph
+  interp
+  ainterp
+  versioned_maps
+  example
+  langs
+  opam-client
+  opam-core
+  opam-format
+  ; for example_cur
+  current
+  current_web
+  fpath
+  logs
+  logs.lwt
+  lwt)
+ (preprocess
+  (pps ppx_yojson_conv ppx_deriving.show))
+ (promote (until-clean)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32)
+   (:standard -w -37))))

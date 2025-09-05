@@ -1,0 +1,6 @@
+{
+  "payload": "P1 doesn't believe only @ac@ at 1.1.",
+  "meta": [
+    "(>= ac 1.1)"
+  ]
+}

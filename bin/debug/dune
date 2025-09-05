@@ -1,0 +1,4 @@
+(executables
+ (names cmd_demo1 cmd_demo2 arith_fix try_fix)
+ (libraries unix fix fmt langs example interp ainterp)
+ (promote (until-clean)))

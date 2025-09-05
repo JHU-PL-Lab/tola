@@ -1,0 +1,18 @@
+(include_subdirs unqualified)
+
+(library
+ (name packaging)
+ (public_name tola.packaging)
+ (libraries fmt fix tola_std cmdliner lwt lwt.unix versioning)
+ (preprocess
+  (pps
+   ppx_jane
+   ppx_yojson_conv
+   ppx_deriving.eq
+   ppx_deriving.ord
+   ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32 -w -37 -w -69))))

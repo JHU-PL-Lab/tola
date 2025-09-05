@@ -1,0 +1,24 @@
+(include_subdirs unqualified)
+
+(library
+ (name interp)
+ (public_name tola.interp)
+ (libraries
+  base
+  fmt
+  fix
+  cmarkit
+  ocamlgraph
+  color-brewery
+  langs
+  packaging
+  versioning
+  tola_std
+  str)
+ (preprocess
+  (pps ppx_yojson_conv ppx_deriving.eq ppx_deriving.ord ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

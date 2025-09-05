@@ -1,0 +1,30 @@
+*~
+*.annot
+*.bc
+*.cmo
+*.cma
+*.cmi
+*.a
+*.o
+*.cmx
+*.cmxs
+*.cmxa
+*.out
+*.log
+*.pyc
+*.byte
+*.native
+*.exe
+# System files
+.DS_Store
+
+_*
+
+!__init__.py
+
+CMakeLists.txt
+
+# quarto build
+pkgm_files
+/.luarc.json
+doc

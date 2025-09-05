@@ -1,0 +1,12 @@
+(lang dune 3.10)
+
+(generate_opam_files true)
+
+(package
+ (name song_foo)
+ (depends (song_std (= 1.0)))
+ )
+
+ (path
+ (source-ext
+  (dirs ../song_std_1_0)))

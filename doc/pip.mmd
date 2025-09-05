@@ -1,0 +1,60 @@
+```mermaid
+%%{ init: {
+  'sequence': { 'showSequenceNumbers': true },
+  'fontSize': '28px',
+  'themeVariables': {
+    'fontSize': '28px',
+    'fontFamily': 'monospace',
+    'textAlign': 'center',
+    'wrap': true
+  }
+} }%%
+sequenceDiagram
+    box Package Author
+      participant AuthorFile as File Stage (Author)
+      participant AuthorStaticCheck as Static Check Stage (Author)
+      participant AuthorRuntime as Runtime Stage (Author)
+    end
+
+    box Package User
+      participant UserFileExternal as File External Stage (User)
+      participant UserStore as Store Stage (User)
+      participant UserStaticCheck as Static Check Stage (User)
+      participant UserRuntime as Runtime Stage (User)
+    end
+
+    rect pink
+      Note over AuthorFile: [Package Create]
+      Note over AuthorFile: 🧾 source code (std 1.1)
+      AuthorFile->>AuthorFile: prepare source, metadata (setup.py, requirements.txt)
+      Note over AuthorFile: 📦 std 1.1
+    end
+
+    rect pink
+      Note over AuthorFile, UserFileExternal: [Package Deliver]
+      Note over AuthorFile: 📦 std 1.1
+      AuthorFile->>UserFileExternal: transfer wheel/sdist
+      Note over UserFileExternal: 📦 std 1.1
+    end
+
+    rect pink
+      Note over UserFileExternal, UserStore: [Package Install]
+      Note over UserFileExternal: 📦 std 1.1
+      UserFileExternal->>UserStore: install wheel -> `site-packages/std`
+      Note over UserStore: 📦 std 1.1
+    end
+
+    rect pink
+      Note over UserStore, UserRuntime: [Package Load]
+      Note over UserRuntime: 🧾🔖 user code
+      Note over UserStore: 📦 std 1.1
+      Note over UserStore, UserRuntime: [Package LUse]
+      UserRuntime->>UserStore: load module `std`
+      activate UserRuntime
+      Note over UserStore: 📘 module std (1.1)
+      UserStore->>UserRuntime: provide module `std`
+      Note over UserRuntime: 📖 module std (1.1)
+      deactivate UserRuntime
+    end
+
+```

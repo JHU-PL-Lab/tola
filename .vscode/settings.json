@@ -1,0 +1,9 @@
+{
+  "files.exclude": {
+    "**/*.exe": true
+  },
+  "ocaml.sandbox": {
+    "kind": "opam",
+    "switch": "5.3.0"
+  }
+}

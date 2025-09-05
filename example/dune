@@ -1,0 +1,13 @@
+(include_subdirs unqualified)
+
+(library
+ (name example)
+ ;  (public_name tola.example)
+ (libraries fmt langs interp packaging versioning)
+ (preprocess
+  (pps ppx_yojson_conv ppx_jane ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

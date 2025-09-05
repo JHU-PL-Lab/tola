@@ -1,0 +1,6 @@
+(library
+ (name song_foo)
+ (public_name song_foo)
+ (libraries song_std))
+
+; (vendored_dirs "../song_std_1_0")

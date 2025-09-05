@@ -1,0 +1,3 @@
+(library
+ (name song_std)
+ (public_name song_std))
