@@ -10,6 +10,13 @@ This repo is the code for projects studying package managers and programming lan
 
 - **Programming Language Ecology (Projectg E)**: currently the project focuses a DSL $λ_{sandpiper}$ having primitives for package management and resolving. The DSL is a thin wrapper over existing package managers and command-line tools including shell and binutils etc. The DSL can be translated (compiled) to shell scripts. With the modeling of package managers and resolving, the DSL can convert the pre-and-post conditions of their actions into checkable assertions along with the generated scripts.
 
+# Environment Init
+
+```console
+opam install . --deps-only --with-test
+dune build
+```
+
 # Glossary (t.b.c.)
 
 **Below are legacy README. A new one is being written.**
