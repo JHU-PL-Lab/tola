@@ -26,5 +26,3 @@ CMakeLists.txt
 
 # quarto build
 pkgm_files
-/.luarc.json
-doc

@@ -7,7 +7,6 @@
   example_sp
   example_radix
   example_dd
-  example_cur
   example_record
   mantle)
  (libraries
@@ -26,9 +25,6 @@
   opam-client
   opam-core
   opam-format
-  ; for example_cur
-  current
-  current_web
   fpath
   logs
   logs.lwt

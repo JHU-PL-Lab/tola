@@ -1,51 +1,56 @@
-.PHONY: pm_init tola
+.PHONY: tola
 
 PM_ROOT = _pm_root
 OUT = _out
-MAIN = dune exec bin/tola.exe --
+TOLA = dune exec src/bin/tola.exe --
 
-all: pi
+all: tola
 
-# For pkgm e.g. make lt.pm, make md.pm
+demo_langs:
+	@echo "Demo languages: lt, md, shell" # dd
 
-# %.pm: LANG = $(basename $@)
-# %.pm:
-# 	dune exec bin/$(LANG)_pm.exe -- info
+# Run language-specific examples
 
-# make lt.eg, make dd.eg
 %.eg: LANG = $(basename $@)
 %.eg:
-	dune exec bin/example_$(LANG).exe
+	dune exec src/bin/example_$(LANG).exe
 
-# tola:
-# 	dune exec bin/tola.exe -- info
+# Universal pkgm cmd `tola`
 
-tola-z3:
-	dune exec bin/tola.exe -- run "z3 --version"
+tola:
+	$(TOLA)
 
-tola-run:
-	dune exec bin/tola.exe -- run z3 --o="$(OUT)/foo.smt"
+## use `tola` to manage packages
 
 lt:
-	echo @p1@ | $(MAIN) lt info
+	echo @p1@ | $(TOLA) lt info
 
 e1:
-	echo I love @ac@. | $(MAIN) lti
+	echo I love @ac@. | $(TOLA) lti
 
 e2:
-	echo @p1@. | $(MAIN) lti
-#	echo @p2@. | $(MAIN) lti
+	echo @p1@. | $(TOLA) lti
+#	echo @p2@. | $(TOLA) lti
+
+## use `tola` to enhance interpreters
+
+tola-z3:
+	$(TOLA) run "z3 --version"
+
+tola-run:
+	$(TOLA) run z3 --o="$(OUT)/foo.smt"
 
 # loop:
-# 	echo @loop@. | $(MAIN) lti
+# 	echo @loop@. | $(TOLA) lti
 
 md:
-	cat test/blog.md | $(MAIN) mdi | tee $(OUT)/blog.html
+	cat test/blog.md | $(TOLA) mdi | tee $(OUT)/blog.html
 
 shell:
-	cat test/test.sh | $(MAIN) shelli
+	cat test/test.sh | $(TOLA) shelli
 
-# Initialization
+# Initialization for tola
+
 %.init: LANG = $(basename $@)
 %.init:
 	@if [ -d "$(PM_ROOT)/$(LANG)_local" ] || [ -d "$(PM_ROOT)/$(LANG)_remote" ]; then \
@@ -56,6 +61,8 @@ shell:
 		cp -r vendor/$(LANG)_local $(PM_ROOT)/$(LANG)_local; \
 		cp -r vendor/$(LANG)_remote $(PM_ROOT)/$(LANG)_remote; \
 	fi
+
+# Other
 
 t:
 	dune runtest

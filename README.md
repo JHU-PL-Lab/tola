@@ -1,5 +1,21 @@
 # Intro
 
+This repo is the code for projects studying package managers and programming languages. It includes code and examples for these topics:
+
+- **Package Managers a la Carte (Project P)**: provide building blocks a.k.a. module and modules functors for common package managers, including packages, package managers, storage backends, versioning, and commandline interfaces. With designed configurations, one can derive either full-fledged complete package managers, or drop-in replacement to intergrate with existing package managers.
+
+  - **Language Enhancing (Project L)**: demonstrate how to enhance toy language e.g. $λ_{text}$, a naive plaintext language, $λ_{md}$, markdown with packaging, and $λ_{boat}$, a lambda calculus like language. The project target to enhance practical languages to get benefit from packaging support.
+
+- **Resolving a la Carte (Project R)**: a formal specification and mechanism to interpret resolving in system and package management. The project argues that all resolving phenomena can described in a unified way with a few basic concepts, which happens to be a lambda calculus with record variants. The project also ships with a $λ_{record}$ to demonstrate the concepts.
+
+- **Programming Language Ecology (Projectg E)**: currently the project focuses a DSL $λ_{sandpiper}$ having primitives for package management and resolving. The DSL is a thin wrapper over existing package managers and command-line tools including shell and binutils etc. The DSL can be translated (compiled) to shell scripts. With the modeling of package managers and resolving, the DSL can convert the pre-and-post conditions of their actions into checkable assertions along with the generated scripts.
+
+# Glossary (t.b.c.)
+
+**Below are legacy README. A new one is being written.**
+
+# Intro 
+
 This is an ambitious repo as a Programming Language (PL) framework to study and experiment for common concepts and constructs. 
 
 The repo is original created to provide basic demos and interfaces for tools and definitions in PL eco-system.
@@ -8,7 +24,7 @@ The code favors a (module) functor-based approach and components used in it can 
 
 The code is also intended to provided pure interfaces to be applied in other projects.
 
-Currently, the repo is for modelling the design space of package managers.
+Currently, the repo is for modeling the design space of package managers.
 
 # Project Structure
 
