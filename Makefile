@@ -1,6 +1,6 @@
 .PHONY: tola
 
-PM_ROOT = _pm_root
+PM_ROOT = _pm
 OUT = _out
 TOLA = dune exec src/bin/tola.exe --
 
@@ -30,7 +30,12 @@ e1:
 
 e2:
 	echo @p1@. | $(TOLA) lti
-#	echo @p2@. | $(TOLA) lti
+
+# case for 
+# 	echo @p2@. | $(TOLA) lti
+
+# loop:
+# 	echo @loop@. | $(TOLA) lti
 
 ## use `tola` to enhance interpreters
 
@@ -39,9 +44,6 @@ tola-z3:
 
 tola-run:
 	$(TOLA) run z3 --o="$(OUT)/foo.smt"
-
-# loop:
-# 	echo @loop@. | $(TOLA) lti
 
 md:
 	cat test/blog.md | $(TOLA) mdi | tee $(OUT)/blog.html

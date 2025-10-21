@@ -31,14 +31,17 @@ struct
   let lookup_pkg_payload pname =
     pname |> PM.lookup_local M.manager |> PM.P.payload_of_pkg
 
-  let rec expander ?(ret = "") e =
+  let rec expander ?(acc = "") e =
     match e with
-    | [] -> ret
+    | [] -> acc
     | hd :: tl ->
         let x =
           match hd with
           | String s -> s
-          | Pid pid -> lookup_pkg_payload pid |> parse |> expander
+          | Pid pid ->
+              let payload_raw = lookup_pkg_payload pid in
+              let payload = Fmt.str "%s=\"%s\"\n" pid payload_raw in
+              payload |> parse |> expander
         in
-        expander ~ret:(ret ^ x ^ "\n") tl
+        expander ~acc:(acc ^ x ^ "\n") tl
 end

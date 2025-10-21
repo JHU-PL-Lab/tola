@@ -2,10 +2,10 @@
 # mainly for other tola stuff.
 
 dd:
-	dune exec ./bin/dd.exe
+	dune exec ./src/bin/dd.exe
 
 af:
-	dune exec ./bin/arith_fix.exe
+	dune exec ./src/bin/arith_fix.exe
 
 tf:
-	dune exec ./bin/test_fix.exe
+	dune exec ./src/bin/test_fix.exe

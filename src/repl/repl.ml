@@ -21,8 +21,6 @@ let make_output state out =
   let output = Printf.sprintf "Out [%d]: %s" state.n out in
   eval [ LTerm_text.S output ]
 
-open Core
-
 class read_line ~term ~history ~state =
   object (self)
     inherit LTerm_read_line.read_line ~history ()

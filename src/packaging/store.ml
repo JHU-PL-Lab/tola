@@ -1,8 +1,9 @@
+open Base
 open Tola_std
 open Tola_std.Std.File_infix
 (* open Store *)
 
-module Table_make (P : Package.PACKAGE) = Hashtbl.Make (struct
+module Table_make (P : Package.PACKAGE) = Stdlib.Hashtbl.Make (struct
   type t = P.pid
 
   let equal = Std.fn_lift2 String.equal P.pid_to_str
@@ -32,16 +33,17 @@ module File_store_make (P : Package.PACKAGE) = struct
     let matching_pids =
       Table.fold
         (fun pid _ pids ->
-          if String.starts_with ~prefix:pname (P.pid_to_str pid) then
-            pid :: pids
+          if String.is_prefix ~prefix:pname (P.pid_to_str pid) then pid :: pids
           else pids)
         !(state.table) []
     in
     (* Fmt.pr "can %d" (List.length pids); *)
-    let pid = List.hd matching_pids in
-    match Table.find_opt !(state.table) pid with
-    | Some pkg -> pkg
-    | None -> failwith "not found"
+    match List.hd matching_pids with
+    | Some pid -> (
+        match Table.find_opt !(state.table) pid with
+        | Some pkg -> pkg
+        | None -> failwith (Fmt.str "no package with id %s" (P.pid_to_str pid)))
+    | None -> failwith (Fmt.str "no package id with name %s" pname)
 
   let info ?(i = 0) state =
     let pp_pid = Fmt.using P.pid_to_str Fmt.string in
@@ -59,7 +61,8 @@ module File_store_make (P : Package.PACKAGE) = struct
   let save_pkg ?(remove_first = false) state pid pkg =
     if remove_first then remove_pkg state pid;
     let pkg_path = path_of_pid state pid in
-    if not (Sys.file_exists pkg_path) then Sys.mkdir pkg_path 0o755;
+    if not (Stdlib.Sys.file_exists pkg_path) then
+      Stdlib.Sys.mkdir pkg_path 0o755;
     Std.write_file_all (pkg_path $/ state.meta_file) (P.pkg_to_str pkg);
     add_table state pid pkg
 
@@ -75,16 +78,17 @@ module File_store_make (P : Package.PACKAGE) = struct
 
   let load_directory_store state =
     let pid_and_pkgs =
-      Sys.readdir state.root |> Array.to_list
-      |> List.filter_map (fun pid_s ->
+      Stdlib.Sys.readdir state.root
+      |> Array.to_list
+      |> List.filter_map ~f:(fun pid_s ->
              (* Fmt.pr "pid_s %s@." pid_s; *)
              let pkg_path = path_of_pid state (P.str_to_pid pid_s) in
-             if Sys.is_directory pkg_path then
+             if Stdlib.Sys.is_directory pkg_path then
                let pkg_content = load_pkg_content state pkg_path in
                Some (P.str_to_pid pid_s, P.str_to_pkg pkg_content)
              else None)
     in
-    pid_and_pkgs |> List.to_seq |> Table.of_seq
+    pid_and_pkgs |> Stdlib.List.to_seq |> Table.of_seq
 
   let init_directory_state (store_spec : Spec.store_spec) meta_file =
     let state =
@@ -95,8 +99,9 @@ module File_store_make (P : Package.PACKAGE) = struct
         meta_file;
       }
     in
-    if Sys.file_exists state.root then state.table := load_directory_store state
-    else Sys.mkdir state.root 0o755;
+    if Stdlib.Sys.file_exists state.root then
+      state.table := load_directory_store state
+    else Stdlib.Sys.mkdir state.root 0o755;
     state
 
   let init_repository_state ?(cache_path = "_cache")
@@ -104,7 +109,9 @@ module File_store_make (P : Package.PACKAGE) = struct
     let repo_url = store_spec.root in
     let dest_dir = cache_path $/ store_spec.name in
 
-    let exist = Sys.file_exists dest_dir && Sys.is_directory dest_dir in
+    let exist =
+      Stdlib.Sys.file_exists dest_dir && Stdlib.Sys.is_directory dest_dir
+    in
     (if not exist then Sys_utils.(complete (clone_repo repo_url dest_dir)));
 
     let root = dest_dir $/ lang_id in
@@ -112,7 +119,8 @@ module File_store_make (P : Package.PACKAGE) = struct
       { table = ref (Table.create 64); spec = store_spec; root; meta_file }
     in
     (* Fmt.pr "debug %s" root; *)
-    if Sys.file_exists state.root then state.table := load_directory_store state;
+    if Stdlib.Sys.file_exists state.root then
+      state.table := load_directory_store state;
     state
 
   let init (store_spec : Spec.store_spec) pkgm_id meta_file =

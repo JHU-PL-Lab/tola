@@ -17,6 +17,41 @@ opam install . --deps-only --with-test
 dune build
 ```
 
+# Project Structure
+
+The top-level directories follows the common structure for source code `src`, tests `test` , document `doc`, and prepared examples and external resources `vendor`.
+
+```
+project_root/
+├── src/
+├── test/
+├── doc/
+├── vendor/
+│
+├── _build/              # dune build default
+├── _out/                # tola build and output
+└── _pm/                 # package manager stores
+    ├── root/
+    └── cache/
+```
+
+The directories that are related to package manager and resolving machanism studies:
+
+- `packaging`: definitions for packages and package managers
+- `langs` : language ASTs
+- `interp` : interpreters and concrete package managers
+- `bin` : executables.
+- `std` : project-level standard library
+- `test` : tests
+
+The directories that are less relevant recently:
+
+- `ainterp`: abstract interpretation
+- `examples`: some language expressions
+
+
+
+
 # Glossary (t.b.c.)
 
 **Below are legacy README. A new one is being written.**
@@ -52,21 +87,6 @@ graph LR;
   end
     
 ```
-
-The directories that are related to package manager studies:
-
-- `packaging`: definitions for packages and package managers
-- `langs` : language ASTs
-- `interp` : interpreters and concrete package managers
-- `bin` : executables.
-- `std` : project-level standard library
-- `test` : tests
-
-The directories that are less relevant recently:
-
-- `ainterp`: abstract interpretation
-- `examples`: some language expressions
-
 
 # Some Code Explanation
 
