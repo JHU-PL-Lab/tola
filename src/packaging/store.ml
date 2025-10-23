@@ -119,7 +119,7 @@ module File_store_make (P : Package.PACKAGE) = struct
         table = ref (Table.create 64);
         spec = store_spec;
         root;
-        meta_file = cfg.meta_file;
+        meta_file = cfg.pkg_spec.meta_file;
       }
     in
     (* Fmt.pr "debug %s" root; *)
@@ -130,9 +130,9 @@ module File_store_make (P : Package.PACKAGE) = struct
   let init (cfg : Spec.config) (store_spec : Spec.store_spec) =
     match store_spec with
     | { kind = Directory; position = Local; _ } ->
-        init_directory_state store_spec cfg.meta_file
+        init_directory_state store_spec cfg.pkg_spec.meta_file
     | { kind = Directory; position = Remote; _ } ->
-        init_directory_state store_spec cfg.meta_file
+        init_directory_state store_spec cfg.pkg_spec.meta_file
     | { kind = Git_repo; position = Remote; _ } ->
         init_repository_state cfg store_spec
     | _ -> failwith "store not implemented"

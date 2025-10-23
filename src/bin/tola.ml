@@ -2,12 +2,11 @@ open Packaging
 open Interp
 
 (* we first make *)
-let pm_config = Spec.mk_config "_pm/root" "_pm/cache"
 
 module The_lt_manager = struct
   type t = Common.Lt_pkgm.t
 
-  let manager = Common.Lt_pkgm.init (pm_config "lt" "lt" "main.json")
+  let manager = Common.Lt_pkgm.init (Spec.mk_config "lt" "lt" "main.json")
 end
 
 module Lt_P_Cmd = Pkgm_cmd.Make (Common.Lt_pkgm) (The_lt_manager)
@@ -18,7 +17,8 @@ module Lt_interp =
 module The_md_manager = struct
   type t = Common.String_pkgm.t
 
-  let manager = Common.String_pkgm.init (pm_config "markdown" "md" "main.json")
+  let manager =
+    Common.String_pkgm.init (Spec.mk_config "markdown" "md" "main.json")
 end
 
 module Md_P_Cmd = Pkgm_cmd.Make (Common.String_pkgm) (The_md_manager)
@@ -27,7 +27,7 @@ module Expand = Md_expand.Make (Common.String_pkgm) (The_md_manager)
 module The_boat_manager = struct
   type t = Common.Boat_pkgm.t
 
-  let manager = Common.Boat_pkgm.init (pm_config "boat" "boat" "main.json")
+  let manager = Common.Boat_pkgm.init (Spec.mk_config "boat" "boat" "main.json")
 end
 
 module Boat_interp =
@@ -39,7 +39,7 @@ module Boat_P_Cmd = Pkgm_cmd.Make (Common.Boat_pkgm) (The_boat_manager)
 module The_bash_manager = struct
   type t = Common.String_pkgm.t
 
-  let manager = Common.String_pkgm.init (pm_config "bash" "sh" "main.json")
+  let manager = Common.String_pkgm.init (Spec.mk_config "bash" "sh" "main.json")
 end
 
 module Sh_P_cmd = Pkgm_cmd.Make (Common.String_pkgm) (The_bash_manager)

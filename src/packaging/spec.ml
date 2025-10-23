@@ -5,25 +5,51 @@ open Tola_std.Std.File_infix
   Here we should think about the store visibility and activeness.
 *)
 
-type store_kind = Directory | Git_repo
-type store_position = Local | Remote
+open Ppx_yojson_conv_lib.Yojson_conv.Primitives
 
-type store_spec = {
+type store_kind = Directory | Git_repo
+and store_position = Local | Remote
+
+and store_spec = {
   name : string;
   kind : store_kind;
   position : store_position;
   root : string;
 }
+[@@deriving yojson]
+
+type pkg_spec = { meta_file : string } [@@deriving yojson]
 
 type config = {
   root : string;
   cache_path : string;
   lang_id : string;
   pkgm_id : string;
-  meta_file : string;
+  pkg_spec : pkg_spec;
+  include_regex : string option;
+  cypher : string;
   local_store : store_spec;
   remote_stores : store_spec list;
 }
+[@@deriving yojson]
+
+(* TODO:
+include is a 2nd-class value that we just expand the text
+at_rounded should be extented to 1nd-class value
+*)
+
+(*
+  include(foo)
+  include(\\([^)]*\\))
+
+  #include foo\n
+  #include \\([^)]*\\)\n
+*)
+
+let inclusion_alist =
+  let at_rounded = "@@\\([^@ \t\r\n]+\\)@@" in
+  let include_spaced = "; ?include(\\([^)]*\\))" in
+  [ ("lt", at_rounded); ("z3", include_spaced) ]
 
 let local_dir_store name root =
   { name; kind = Directory; position = Local; root }
@@ -33,11 +59,8 @@ let remote_dir_store name root =
 
 let git_store name root = { name; kind = Git_repo; position = Remote; root }
 
-let config_of root cache_path lang_id pkgm_id meta_file local_store
-    remote_stores =
-  { root; cache_path; lang_id; pkgm_id; meta_file; local_store; remote_stores }
-
-let mk_config root cache_path lang_id pkgm_id meta_file =
+let mk_config ?(root = "_pm/root") ?(cache_path = "_pm/cache")
+    ?(cypher = "tola") lang_id pkgm_id meta_file =
   let local_root = Unix.getcwd () $/ root $/ pkgm_id $/ "local" in
   let local_store = local_dir_store "local0" local_root in
   let remote_stores =
@@ -49,4 +72,15 @@ let mk_config root cache_path lang_id pkgm_id meta_file =
       git_store "arbipher/multiverse" "https://github.com/arbipher/multiverse";
     ]
   in
-  config_of root cache_path lang_id pkgm_id meta_file local_store remote_stores
+  let pkg_spec = { meta_file } in
+  {
+    root;
+    cache_path;
+    lang_id;
+    pkgm_id;
+    pkg_spec;
+    include_regex = List.Assoc.find ~equal:String.equal inclusion_alist lang_id;
+    cypher;
+    local_store;
+    remote_stores;
+  }

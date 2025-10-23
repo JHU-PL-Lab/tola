@@ -1,5 +1,7 @@
 open Base
 open Package
+open Tola_std
+open Tola_std.Std.File_infix
 
 (* The PACKAGE is a bundled abstract definition for pid, payload, and meta.
    It doesn't say anything about versioning.
@@ -98,24 +100,16 @@ module Make (P : PACKAGE) : S with module P = P and module VL = P.VL
     config : Spec.config;
     local_store : Pkg_store.t;
     remote_stores : Pkg_store.t list;
-    cypher : string;
-    include_regex_map : (string, string) Hashtbl.t;
   }
 
-  (*
-     include(foo)
-     include(\\([^)]*\\))
-
-     #include foo\n
-     #include \\([^)]*\\)\n
-  *)
-
-  let mk_include_regex_map =
-    let include_spaced = "; ?include(\\([^)]*\\))" in
-    [ ("z3", include_spaced) ] |> Hashtbl.of_alist_exn (module String)
+  let save_config (cfg : Spec.config) =
+    Std.write_file_all
+      (cfg.root $/ cfg.pkgm_id $/ "config.json")
+      (cfg |> Spec.yojson_of_config |> Yojson.Safe.pretty_to_string)
 
   (* init *)
   let init (pkgm_config : Spec.config) =
+    save_config pkgm_config;
     {
       config = pkgm_config;
       local_store = Pkg_store.init pkgm_config pkgm_config.local_store;
@@ -123,8 +117,6 @@ module Make (P : PACKAGE) : S with module P = P and module VL = P.VL
         List.map
           ~f:(fun (store : Spec.store_spec) -> Pkg_store.init pkgm_config store)
           pkgm_config.remote_stores;
-      cypher = "tola";
-      include_regex_map = mk_include_regex_map;
     }
 
   let config state = state.config

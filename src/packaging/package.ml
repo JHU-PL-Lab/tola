@@ -57,6 +57,7 @@ end
 module String_payload = struct
   type payload = string
 
+  (* TODO: checking why converting to basic *)
   let payload_of_yojson json =
     json |> Yojson.Safe.to_basic |> Yojson.Basic.Util.to_string
 
