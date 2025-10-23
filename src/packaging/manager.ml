@@ -118,13 +118,10 @@ module Make (P : PACKAGE) : S with module P = P and module VL = P.VL
   let init (pkgm_config : Spec.config) =
     {
       config = pkgm_config;
-      local_store =
-        Pkg_store.init pkgm_config.local_store pkgm_config.pkgm_id
-          pkgm_config.meta_file;
+      local_store = Pkg_store.init pkgm_config pkgm_config.local_store;
       remote_stores =
         List.map
-          ~f:(fun (store : Spec.store_spec) ->
-            Pkg_store.init store pkgm_config.pkgm_id pkgm_config.meta_file)
+          ~f:(fun (store : Spec.store_spec) -> Pkg_store.init pkgm_config store)
           pkgm_config.remote_stores;
       cypher = "tola";
       include_regex_map = mk_include_regex_map;

@@ -104,32 +104,36 @@ module File_store_make (P : Package.PACKAGE) = struct
     else Stdlib.Sys.mkdir state.root 0o755;
     state
 
-  let init_repository_state ?(cache_path = "_cache")
-      (store_spec : Spec.store_spec) lang_id meta_file =
+  let init_repository_state (cfg : Spec.config) (store_spec : Spec.store_spec) =
     let repo_url = store_spec.root in
-    let dest_dir = cache_path $/ store_spec.name in
+    let dest_dir = cfg.cache_path $/ store_spec.name in
 
     let exist =
       Stdlib.Sys.file_exists dest_dir && Stdlib.Sys.is_directory dest_dir
     in
     (if not exist then Sys_utils.(complete (clone_repo repo_url dest_dir)));
 
-    let root = dest_dir $/ lang_id in
+    let root = dest_dir $/ cfg.lang_id in
     let state =
-      { table = ref (Table.create 64); spec = store_spec; root; meta_file }
+      {
+        table = ref (Table.create 64);
+        spec = store_spec;
+        root;
+        meta_file = cfg.meta_file;
+      }
     in
     (* Fmt.pr "debug %s" root; *)
     if Stdlib.Sys.file_exists state.root then
       state.table := load_directory_store state;
     state
 
-  let init (store_spec : Spec.store_spec) pkgm_id meta_file =
+  let init (cfg : Spec.config) (store_spec : Spec.store_spec) =
     match store_spec with
     | { kind = Directory; position = Local; _ } ->
-        init_directory_state store_spec meta_file
+        init_directory_state store_spec cfg.meta_file
     | { kind = Directory; position = Remote; _ } ->
-        init_directory_state store_spec meta_file
+        init_directory_state store_spec cfg.meta_file
     | { kind = Git_repo; position = Remote; _ } ->
-        init_repository_state store_spec pkgm_id meta_file
+        init_repository_state cfg store_spec
     | _ -> failwith "store not implemented"
 end

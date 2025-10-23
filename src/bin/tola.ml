@@ -1,6 +1,7 @@
 open Packaging
 open Interp
 
+(* we first make *)
 let pm_config = Spec.mk_config "_pm/root" "_pm/cache"
 
 module The_lt_manager = struct
@@ -59,6 +60,30 @@ module Main_cmd = struct
   let pkgm = Arg.(opt (some string) None & info [ "pkgm" ])
   (* let info_ _ = Printf.printf "%s\n" (Poly.info pkgm_state) *)
 
+  let all_args =
+    let doc = "Capture all argument" in
+    Arg.(value & pos_all string [] & info [] ~docv:"ARGS" ~doc)
+
+  let all_flags =
+    let doc = "Capture all options" in
+    Arg.(value & flag_all & info [ "--al" ] ~docv:"OPTS" ~doc)
+
+  let run_raw _ _ =
+    let args = Array.to_list Sys.argv in
+    Fmt.pr "[DEBUG] args=%a@." (Fmt.Dump.list Fmt.string) args;
+    match args with
+    | _tola :: _run :: cmd :: argv ->
+        let argv = Array.of_list argv in
+        Unix.execvp cmd argv
+    | _ ->
+        prerr_endline "Usage: my_bin <command> [args...]";
+        exit 1
+
+  let run_cmd =
+    let doc = "Run with all arguments." in
+    let info = Cmd.info "run" ~doc in
+    Cmd.v info Term.(const run_raw $ all_args $ all_flags)
+
   (* cmds *)
   let make_cmd name doc f =
     let open Cmdliner in
@@ -91,8 +116,8 @@ module Main_cmd = struct
     let status = Sys.command cmd in
     if status <> 0 then Fmt.pr "[Error] %d@." status
 
-  let run_cmd name =
-    let doc = "run with poly package managing" in
+  let run_norm_cmd name =
+    let doc = "run normalized with poly package managing" in
     let info = Cmd.info name ~doc in
     Cmd.v info
       Term.(
@@ -132,8 +157,9 @@ module Main_cmd = struct
         make_cmd "boati" "interpreter boat" run_boat;
         Sh_P_cmd.main_cmd;
         make_cmd "shelli" "interpreter boat" run_shell;
-        (* run *)
-        run_cmd "run";
+        run_norm_cmd "norm";
+        run_cmd;
+        (* self *)
       ]
 
   let main () = exit (Cmd.eval main_cmd)

@@ -49,8 +49,13 @@ The directories that are less relevant recently:
 - `ainterp`: abstract interpretation
 - `examples`: some language expressions
 
+# Extending a Language with Packaging Support
 
+We are interested not only in studying existing package managers, but also enhancing languages with packaging support.
 
+The user should be able to specify their choices à la carte with a config file (pure dynamic), or with code (pure static). The choices should also cover the combination of the features and the toolchain of the target language.
+
+# `tola` Commandline Tool Usage
 
 # Glossary (t.b.c.)
 

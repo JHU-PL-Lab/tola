@@ -51,7 +51,7 @@ md:
 shell:
 	cat test/test.sh | $(TOLA) shelli
 
-# Initialization for tola
+# Initialization for tola package manager root
 
 %.init: LANG = $(basename $@)
 %.init:

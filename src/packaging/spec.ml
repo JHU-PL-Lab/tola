@@ -16,17 +16,14 @@ type store_spec = {
 }
 
 type config = {
+  root : string;
+  cache_path : string;
   lang_id : string;
   pkgm_id : string;
   meta_file : string;
   local_store : store_spec;
   remote_stores : store_spec list;
-  cache_path : string;
 }
-
-(* module type SPEC_CONFIG = sig
-  val t : config
-end *)
 
 let local_dir_store name root =
   { name; kind = Directory; position = Local; root }
@@ -36,14 +33,15 @@ let remote_dir_store name root =
 
 let git_store name root = { name; kind = Git_repo; position = Remote; root }
 
-let config_of lang_id pkgm_id meta_file local_store remote_stores cache_path =
-  { lang_id; pkgm_id; meta_file; local_store; remote_stores; cache_path }
+let config_of root cache_path lang_id pkgm_id meta_file local_store
+    remote_stores =
+  { root; cache_path; lang_id; pkgm_id; meta_file; local_store; remote_stores }
 
 let mk_config root cache_path lang_id pkgm_id meta_file =
-  let local_root = Unix.getcwd () $/ root $/ pkgm_id ^ "_local" in
+  let local_root = Unix.getcwd () $/ root $/ pkgm_id $/ "local" in
   let local_store = local_dir_store "local0" local_root in
   let remote_stores =
-    let remote_root = Unix.getcwd () $/ root $/ pkgm_id ^ "_remote" in
+    let remote_root = Unix.getcwd () $/ root $/ pkgm_id $/ "remote" in
     (* let remote_root2 = Sys.getcwd () $/ demo_root $/ pkgm_id ^ "_remote2" in *)
     [
       remote_dir_store "remote1" remote_root;
@@ -51,4 +49,4 @@ let mk_config root cache_path lang_id pkgm_id meta_file =
       git_store "arbipher/multiverse" "https://github.com/arbipher/multiverse";
     ]
   in
-  config_of lang_id pkgm_id meta_file local_store remote_stores cache_path
+  config_of root cache_path lang_id pkgm_id meta_file local_store remote_stores
