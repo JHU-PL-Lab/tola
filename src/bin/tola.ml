@@ -60,30 +60,6 @@ module Main_cmd = struct
   let pkgm = Arg.(opt (some string) None & info [ "pkgm" ])
   (* let info_ _ = Printf.printf "%s\n" (Poly.info pkgm_state) *)
 
-  let all_args =
-    let doc = "Capture all argument" in
-    Arg.(value & pos_all string [] & info [] ~docv:"ARGS" ~doc)
-
-  let all_flags =
-    let doc = "Capture all options" in
-    Arg.(value & flag_all & info [ "--al" ] ~docv:"OPTS" ~doc)
-
-  let run_raw _ _ =
-    let args = Array.to_list Sys.argv in
-    Fmt.pr "[DEBUG] args=%a@." (Fmt.Dump.list Fmt.string) args;
-    match args with
-    | _tola :: _run :: cmd :: argv ->
-        let argv = Array.of_list argv in
-        Unix.execvp cmd argv
-    | _ ->
-        prerr_endline "Usage: my_bin <command> [args...]";
-        exit 1
-
-  let run_cmd =
-    let doc = "Run with all arguments." in
-    let info = Cmd.info "run" ~doc in
-    Cmd.v info Term.(const run_raw $ all_args $ all_flags)
-
   (* cmds *)
   let make_cmd name doc f =
     let open Cmdliner in
@@ -116,9 +92,9 @@ module Main_cmd = struct
     let status = Sys.command cmd in
     if status <> 0 then Fmt.pr "[Error] %d@." status
 
-  let run_norm_cmd name =
+  let run_norm_cmd =
     let doc = "run normalized with poly package managing" in
-    let info = Cmd.info name ~doc in
+    let info = Cmd.info "norm" ~doc in
     Cmd.v info
       Term.(
         const run_file $ bin $ input $ Arg.value output $ Arg.value local_path
@@ -141,7 +117,6 @@ module Main_cmd = struct
       In_channel.input_all In_channel.stdin
       |> Bash_interp.parse |> Sh_interp.expander
     in
-    (* Fmt.pr "%s@." src; *)
     src |> Sys.command |> ignore
 
   let main_cmd =
@@ -157,13 +132,45 @@ module Main_cmd = struct
         make_cmd "boati" "interpreter boat" run_boat;
         Sh_P_cmd.main_cmd;
         make_cmd "shelli" "interpreter boat" run_shell;
-        run_norm_cmd "norm";
-        run_cmd;
+        run_norm_cmd;
         (* self *)
       ]
 
-  let main () = exit (Cmd.eval main_cmd)
+  let main () =
+    (* Fmt.pr "[DEBUG] args=%a@." (Fmt.Dump.list Fmt.string)
+      (Array.to_list Sys.argv); *)
+    match Array.to_list Sys.argv with
+    | _tola :: "run" :: cmd :: cmd_argv ->
+        let cmd' = String.concat " " (cmd :: cmd_argv) in
+        Fmt.pr "[DEBUG] run cmd: %s@." cmd';
+        (* Fmt.pr "[DEBUG] run_raw mode@. %s" (String.concat " " (cmd :: argv')); *)
+        let argv = Array.of_list cmd_argv in
+        Unix.execvp cmd argv
+    | _ -> exit (Cmd.eval main_cmd)
 end
+
+(* I cannot use Cmdliner to forward artibrary commands since I
+    cannot know the syntax in advance.
+
+  let all_args =
+    let doc = "Capture all argument" in
+    Arg.(value & pos_all string [] & info [] ~docv:"ARGS" ~doc)
+
+  let all_flags =
+    let doc = "Capture all options" in
+    Arg.(value & flag & info [ "flags" ] ~docv:"OPTS" ~doc)
+
+  let run_raw _ _ =
+    let args = Array.to_list Sys.argv in
+    Fmt.pr "[DEBUG] args=%a@." (Fmt.Dump.list Fmt.string) args;
+    match args with
+    | _tola :: _run :: cmd :: argv ->
+        let argv = Array.of_list argv in
+        Unix.execvp cmd argv
+    | _ ->
+        prerr_endline "Usage: run_raw <command> [args...]";
+        exit 1
+*)
 
 (* 
 let expand_file input =
