@@ -1,55 +1,16 @@
-open Packaging
+open Base
 open Interp
+open Common
 
-(* we first make *)
+(* let verbose = true *)
 
-module The_lt_manager = struct
-  type t = Common.Lt_pkgm.t
-
-  let manager = Common.Lt_pkgm.init (Spec.mk_config "lt" "lt" "main.json")
-end
-
-module Lt_P_Cmd = Pkgm_cmd.Make (Common.Lt_pkgm) (The_lt_manager)
-
-module Lt_interp =
-  Text_interp.Make_interp_via_pname (Common.Lt_pkgm) (The_lt_manager)
-
-module The_md_manager = struct
-  type t = Common.String_pkgm.t
-
-  let manager =
-    Common.String_pkgm.init (Spec.mk_config "markdown" "md" "main.json")
-end
-
-module Md_P_Cmd = Pkgm_cmd.Make (Common.String_pkgm) (The_md_manager)
-module Expand = Md_expand.Make (Common.String_pkgm) (The_md_manager)
-
-module The_boat_manager = struct
-  type t = Common.Boat_pkgm.t
-
-  let manager = Common.Boat_pkgm.init (Spec.mk_config "boat" "boat" "main.json")
-end
-
-module Boat_interp =
-  Boat_interp.Make_interp (Common.Boat_pkgm) (The_boat_manager)
-    (Manager.Default_options)
-
-module Boat_P_Cmd = Pkgm_cmd.Make (Common.Boat_pkgm) (The_boat_manager)
-
-module The_bash_manager = struct
-  type t = Common.String_pkgm.t
-
-  let manager = Common.String_pkgm.init (Spec.mk_config "bash" "sh" "main.json")
-end
-
-module Sh_P_cmd = Pkgm_cmd.Make (Common.String_pkgm) (The_bash_manager)
-module Sh_interp = Bash_interp.Make (Common.String_pkgm) (The_bash_manager)
-
+(* let managers = Hashtbl.create (module String) 
+    Hashtbl.set managers ~key:"lt" ~data:pm;
+*)
 module Main_cmd = struct
   open Cmdliner
 
-  (* terms ingridients *)
-
+  (* terms ingredients *)
   let _pid = Arg.(value & pos 1 string "pid" & info [])
   let _pkg = Arg.(value & pos 2 string "pkg" & info [])
   let bin = Arg.(value & pos 0 string "bin" & info [])
@@ -61,20 +22,8 @@ module Main_cmd = struct
   (* let info_ _ = Printf.printf "%s\n" (Poly.info pkgm_state) *)
 
   (* cmds *)
-  let make_cmd name doc f =
-    let open Cmdliner in
-    let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const f $ const ())
-  (* let info_cmd name =
-    let doc = "info" in
-    let info = Cmd.info name ~doc in
-    Cmd.v info Term.(const info_ $ const ()) *)
-
-  (* `lang` is used to find the _including_ syntax
-     `pkgm` is used to find the correct pkgm root path *)
   let run_file bin input output local_path lang pkgm =
-    (* let cmd = String.concat " " [ bin; input ] in
-       ; *)
+    (* let cmd = String.concat " " [ bin; input ] in *)
     Fmt.(
       pr "[DEBUG]@.input=%s@.output=%a@.local_path=%a@.lang=%a@.pkgm=%a@." input
         (option string) output (option string) local_path (option string) lang
@@ -85,11 +34,13 @@ module Main_cmd = struct
     let env_path = Sys.getenv "PATH" in
     (* Printf.printf "[PATH] %s\n" env_path; *)
     (match local_path with
-    | Some local_path when not (Filename.is_relative local_path) ->
-        Unix.putenv "PATH" (local_path ^ ":" ^ env_path)
+    | Some local_path when not (Stdlib.Filename.is_relative local_path) ->
+        Option.iter env_path ~f:(fun env_path ->
+            Unix.putenv "PATH" (local_path ^ ":" ^ env_path))
         (* Printf.printf "[PATH] %s\n" (Sys.getenv "PATH") *)
     | _ -> ());
-    let status = Sys.command cmd in
+    (* TODO: use less Stdlib *)
+    let status = Stdlib.Sys.command cmd in
     if status <> 0 then Fmt.pr "[Error] %d@." status
 
   let run_norm_cmd =
@@ -100,54 +51,37 @@ module Main_cmd = struct
         const run_file $ bin $ input $ Arg.value output $ Arg.value local_path
         $ Arg.value lang $ Arg.value pkgm)
 
-  let run_lt () =
-    In_channel.input_all In_channel.stdin
-    |> Langs.Lang_text.Parse.parse |> Lt_interp.interp |> Fmt.pr "%s@."
-
-  let _run_md () =
-    In_channel.input_all In_channel.stdin |> Expand.expand |> Fmt.pr "%s@."
-
-  let run_boat () =
-    In_channel.input_all In_channel.stdin
-    |> Langs.Boat_parse.of_string_no_eol_opt |> Option.get |> Boat_interp.interp
-    |> Fmt.pr "%a@." Langs.Lang_boat.pp_exp
-
-  let run_shell () =
-    let src =
-      In_channel.input_all In_channel.stdin
-      |> Bash_interp.parse |> Sh_interp.expander
-    in
-    src |> Sys.command |> ignore
+  let version =
+    let doc = "show tola version" in
+    let info = Cmd.info "version" ~doc in
+    let version_f () = Fmt.pr "tola version %s\n" Tola_std.Std.version in
+    Cmd.v info Term.(const version_f $ const ())
 
   let main_cmd =
     let doc = "doc" in
     let info = Cmd.info "tola" ~doc in
     Cmd.group info
-      [
-        Lt_P_Cmd.main_cmd;
-        make_cmd "lti" "interpreter lambda_text" run_lt;
-        Md_P_Cmd.main_cmd;
-        make_cmd "mdi" "interpreter markdown" run_lt;
-        Boat_P_Cmd.main_cmd;
-        make_cmd "boati" "interpreter boat" run_boat;
-        Sh_P_cmd.main_cmd;
-        make_cmd "shelli" "interpreter boat" run_shell;
-        run_norm_cmd;
-        (* self *)
-      ]
+      (Lt_P_Cmd.init_to_cmds ~interp:Lt_interp.interp_s lt_pm_config
+      @ Md_P_Cmd.init_to_cmds ~interp:Md_expand.expand md_pm_config
+      @ Boat_P_Cmd.init_to_cmds ~interp:Boat_interp.interp_s boat_pm_config
+      @ Sh_P_cmd.init_to_cmds ~interp:Sh_interp.interp_s sh_pm_config
+      (* self *)
+      @ [ run_norm_cmd; version ])
 
   let main () =
     (* Fmt.pr "[DEBUG] args=%a@." (Fmt.Dump.list Fmt.string)
       (Array.to_list Sys.argv); *)
-    match Array.to_list Sys.argv with
+    match Array.to_list Stdlib.Sys.argv with
     | _tola :: "run" :: cmd :: cmd_argv ->
-        let cmd' = String.concat " " (cmd :: cmd_argv) in
+        let cmd' = String.concat ~sep:" " (cmd :: cmd_argv) in
         Fmt.pr "[DEBUG] run cmd: %s@." cmd';
         (* Fmt.pr "[DEBUG] run_raw mode@. %s" (String.concat " " (cmd :: argv')); *)
         let argv = Array.of_list cmd_argv in
         Unix.execvp cmd argv
-    | _ -> exit (Cmd.eval main_cmd)
+    | _ -> Stdlib.exit (Cmd.eval main_cmd)
 end
+
+let () = Main_cmd.main ()
 
 (* I cannot use Cmdliner to forward artibrary commands since I
     cannot know the syntax in advance.
@@ -199,5 +133,3 @@ let () =
      | None -> Printf.printf "No match\n"
    in
    () *)
-
-let () = Main_cmd.main ()

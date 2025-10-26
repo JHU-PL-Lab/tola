@@ -21,6 +21,8 @@ open Tola_std.Std.File_infix
   val file_name : string
 end *)
 
+let debug = ref true
+
 module type OPTIONS = sig
   val use_pname : bool
 end
@@ -39,8 +41,7 @@ module type S = sig
   (* init *)
 
   (* for local *)
-
-  val init : Spec.config -> t
+  val init : Spec.config -> t option
   val config : t -> Spec.config
   val reset : t -> unit
   val install : t -> P.pid -> P.pkg -> unit
@@ -55,11 +56,11 @@ module type S = sig
   val fetch : t -> P.pid -> unit
 end
 
-module type One = sig
+(* module type One = sig
   type t
 
   val manager : t
-end
+end *)
 
 open Package
 
@@ -108,16 +109,26 @@ module Make (P : PACKAGE) : S with module P = P and module VL = P.VL
       (cfg |> Spec.yojson_of_config |> Yojson.Safe.pretty_to_string)
 
   (* init *)
-  let init (pkgm_config : Spec.config) =
-    save_config pkgm_config;
-    {
-      config = pkgm_config;
-      local_store = Pkg_store.init pkgm_config pkgm_config.local_store;
-      remote_stores =
-        List.map
-          ~f:(fun (store : Spec.store_spec) -> Pkg_store.init pkgm_config store)
-          pkgm_config.remote_stores;
-    }
+  let init (cfg : Spec.config) =
+    try
+      save_config cfg;
+      let state =
+        {
+          config = cfg;
+          local_store = Pkg_store.init cfg cfg.local_store;
+          remote_stores =
+            List.map
+              ~f:(fun (store : Spec.store_spec) -> Pkg_store.init cfg store)
+              cfg.remote_stores;
+        }
+      in
+      Some state
+    with e ->
+      if !debug then
+        Stdio.printf "[Debug][Fail][Init][Pm %s][lang %s] %s\n" cfg.pkgm_id
+          cfg.lang_id (Exn.to_string e);
+
+      None
 
   let config state = state.config
 

@@ -73,16 +73,15 @@ let free_vars_in e later_vars =
 
 module Make_interp
     (PM : Manager.S with type P.payload = Langs.Lang_boat.exp)
-    (M : Manager.One with type t = PM.t)
     (Options : Manager.OPTIONS) =
 struct
-  let lookup_pkg pid =
-    if Options.use_pname then PM.lookup_local M.manager pid
-    else pid |> PM.P.str_to_pid |> PM.lookup M.manager
+  let lookup_pkg pm pid =
+    if Options.use_pname then PM.lookup_local pm pid
+    else pid |> PM.P.str_to_pid |> PM.lookup pm
 
-  let lookup_pkg_payload pids = pids |> lookup_pkg |> PM.P.payload_of_pkg
+  let lookup_pkg_payload pm pids = pids |> lookup_pkg pm |> PM.P.payload_of_pkg
 
-  let interp e =
+  let interp pm e =
     let rec loop env e =
       match e with
       | Input -> Int 42
@@ -109,7 +108,7 @@ struct
           | Some v -> v
           | None -> (
               (* if x is bounded package-wise, lookup it *)
-              try lookup_pkg_payload (Id.str_of x)
+              try lookup_pkg_payload pm (Id.str_of x)
               with
               (* if x is free, leave it *)
               (* Not_found *)
@@ -130,4 +129,8 @@ struct
       | Clopen _ -> failwith "clopen cannot be re-evaluated"
     in
     loop empty_env e
+
+  let interp_s pm s =
+    s |> Boat_parse.of_string_no_eol_opt |> Option.value_exn |> interp pm
+    |> Lang_boat.show_exp
 end

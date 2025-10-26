@@ -19,19 +19,30 @@ and store_spec = {
 [@@deriving yojson]
 
 type pkg_spec = { meta_file : string } [@@deriving yojson]
+type pm_spec = { versioning : string } [@@deriving yojson]
+
+type ext_spec = {
+  (* TODO: should be regex *)
+  src_import_regex : string option;
+  src_pid_regex : string option;
+}
+[@@deriving yojson]
 
 type config = {
+  pkgm_id : string;
+  lang_id : string;
+  pkg_spec : pkg_spec;
+  pm_spec : pm_spec;
+  ext_spec : ext_spec;
+  cypher : string;
   root : string;
   cache_path : string;
-  lang_id : string;
-  pkgm_id : string;
-  pkg_spec : pkg_spec;
-  include_regex : string option;
-  cypher : string;
   local_store : store_spec;
   remote_stores : store_spec list;
 }
 [@@deriving yojson]
+(* `lang` is used to find the _including_ syntax
+     `pkgm` is used to find the correct pkgm root path *)
 
 (* TODO:
 include is a 2nd-class value that we just expand the text
@@ -73,14 +84,26 @@ let mk_config ?(root = "_pm/root") ?(cache_path = "_pm/cache")
     ]
   in
   let pkg_spec = { meta_file } in
+
+  (* TODO: I shall use version to init a pkgm, not the other way around *)
+  let pm_spec = { versioning = "semver" } in
+  let ext_spec =
+    {
+      (* regex *)
+      src_import_regex =
+        List.Assoc.find ~equal:String.equal inclusion_alist lang_id;
+      src_pid_regex = None;
+    }
+  in
   {
+    pkgm_id;
+    lang_id;
+    pkg_spec;
+    pm_spec;
+    ext_spec;
+    cypher;
     root;
     cache_path;
-    lang_id;
-    pkgm_id;
-    pkg_spec;
-    include_regex = List.Assoc.find ~equal:String.equal inclusion_alist lang_id;
-    cypher;
     local_store;
     remote_stores;
   }

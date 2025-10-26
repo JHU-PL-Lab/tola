@@ -24,14 +24,11 @@ let parse file =
   |> List.filter ~f:(fun s -> not (String.is_empty s))
   |> parse_aux
 
-module Make
-    (PM : Manager.S with type P.payload = string)
-    (M : Manager.One with type t = PM.t) =
-struct
-  let lookup_pkg_payload pname =
-    pname |> PM.lookup_local M.manager |> PM.P.payload_of_pkg
+module Make (PM : Manager.S with type P.payload = string) = struct
+  let lookup_pkg_payload pm pname =
+    pname |> PM.lookup_local pm |> PM.P.payload_of_pkg
 
-  let rec expander ?(acc = "") e =
+  let rec expander ?(acc = "") pm e =
     match e with
     | [] -> acc
     | hd :: tl ->
@@ -39,9 +36,14 @@ struct
           match hd with
           | String s -> s
           | Pid pid ->
-              let payload_raw = lookup_pkg_payload pid in
+              let payload_raw = lookup_pkg_payload pm pid in
               let payload = Fmt.str "%s=\"%s\"\n" pid payload_raw in
-              payload |> parse |> expander
+              payload |> parse |> expander pm
         in
-        expander ~acc:(acc ^ x ^ "\n") tl
+        expander ~acc:(acc ^ x ^ "\n") pm tl
+
+  let interp_s pm s =
+    let src = s |> parse |> expander pm in
+    src |> Stdlib.Sys.command |> ignore;
+    src
 end

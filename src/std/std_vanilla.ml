@@ -10,6 +10,9 @@ module More_fn = struct
      let ignore2 _ _ = () *)
 
   let fn_lift2 f fl a b = f (fl a) (fl b)
+
+  let run_stdin f_str =
+    In_channel.input_all In_channel.stdin |> f_str |> Fmt.pr "%s@."
 end
 
 include More_fn

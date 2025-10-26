@@ -1,4 +1,4 @@
-(* Version: 0.1.14 *)
+let version = "0.1.14"
 (* Caution: DO NOT EDIT! The file is copied from outside. *)
 
 [@@@warning "-32"]
