@@ -16,6 +16,7 @@
   sexplib
   cmdliner
   tola_std
+  binding
   ocamlgraph
   interp
   ainterp

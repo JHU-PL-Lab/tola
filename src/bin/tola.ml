@@ -7,6 +7,28 @@ open Common
 (* let managers = Hashtbl.create (module String) 
     Hashtbl.set managers ~key:"lt" ~data:pm;
 *)
+
+open Binding.Common
+
+let _ = the_os
+
+let _lang_world =
+  [
+    (* examples for extending pkgm *)
+    "lambda_text";
+    "markdown";
+    "boat";
+    "sh";
+    (* for better enginnering *)
+    (* * lang for envar *)
+    "mantle";
+    "cmake";
+    (* for high-level ecology *)
+    "sandpiper";
+    (* for low-level binding study *)
+    "land_record";
+  ]
+
 module Main_cmd = struct
   open Cmdliner
 

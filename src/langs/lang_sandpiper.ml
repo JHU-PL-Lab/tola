@@ -15,25 +15,7 @@ which means they can have other forms.
 
 type path = string
 
-module Target_triple = struct
-  type os = Linux | MacOS | Windows | BSD | Other_os of string
-
-  type distro =
-    | Debian
-    | Ubuntu
-    | Fedora
-    | Arch
-    | Alpine
-    | MacOS_Brew
-    | MacOS_Macports
-    | Windows_MSYS
-    | Windows_Mingw
-    | Windows_Msvc
-    | Unknown_distro of string
-
-  type arch = X86_64 | Aarch64 | Armv7 | Riscv64 | Other_arch of string
-  type t = { os : os; distro : distro; arch : arch }
-end
+open Binding.Common
 
 let this_machine = Target_triple.{ os = Linux; distro = Ubuntu; arch = X86_64 }
 

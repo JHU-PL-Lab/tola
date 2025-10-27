@@ -1,0 +1,11 @@
+(library
+ (name binding)
+ (public_name tola.binding)
+ (libraries fmt core tola_std opam-core str)
+ (preprocess
+  (pps ppx_deriving.eq ppx_yojson_conv ppx_deriving.show)))
+
+(env
+ (dev
+  (flags
+   (:standard -w -32))))

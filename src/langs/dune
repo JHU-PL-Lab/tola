@@ -10,7 +10,7 @@
 (library
  (name langs)
  (public_name tola.langs)
- (libraries fmt fix cmarkit tola_std packaging)
+ (libraries fmt fix cmarkit tola_std packaging binding)
  (preprocess
   (pps ppx_jane ppx_yojson_conv ppx_deriving.ord ppx_deriving.show)))
 
