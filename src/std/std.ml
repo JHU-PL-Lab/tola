@@ -150,6 +150,17 @@ end
 module Sys_util = struct
   open Core_unix
 
+  let home_dir : string =
+    match Sys.getenv "HOME" with
+    | Some dir -> dir
+    | None -> (Passwd.getbyuid_exn (Core_unix.getuid ())).dir
+
+  let expand_home path =
+    if String.is_prefix path ~prefix:"~/" then
+      let home = home_dir in
+      home ^ String.sub path ~pos:1 ~len:(String.length path - 1)
+    else path
+
   module Naive_binding = struct
     module Variable = struct
       type name = string
@@ -232,7 +243,7 @@ module Sys_util = struct
 
   let run_and_capture ?(env = []) cmd =
     let cmd_out, cmd_err, errno = run_command_full ~env cmd in
-    Fmt.pr "[Stdout]%s" cmd_err;
+    if String.length cmd_err > 0 then Fmt.pr "[Stdout]%s" cmd_err;
     dump_err_or_signal errno;
     String.strip cmd_out
 

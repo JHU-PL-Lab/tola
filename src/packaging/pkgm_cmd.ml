@@ -83,10 +83,10 @@ module Make (PM : Manager.S) = struct
     let info = Cmd.info name ~doc in
     Cmd.v info Term.(const remote_info $ const ()) *)
 
-  let interp_cmd pm interp =
+  let interp_cmd ?(name = "interp") pm interp =
     let cfg = PM.config pm in
     let interp_stdin () = Std.run_stdin (interp pm) in
-    make_cmd "interp" ("interpreter " ^ cfg.lang_id) interp_stdin
+    make_cmd name ("interpreter " ^ cfg.lang_id) interp_stdin
 
   let main_cmd ?interp pm =
     let doc = "doc" in
@@ -116,5 +116,14 @@ module Make (PM : Manager.S) = struct
   let main pm = exit (Cmd.eval (main_cmd pm))
 
   let init_to_cmds ?interp cfg =
-    match PM.init cfg with Some pm -> [ main_cmd ?interp pm ] | None -> []
+    match PM.init cfg with
+    | Some pm ->
+        let interp_cmds =
+          let name = cfg.lang_id ^ "i" in
+          match interp with
+          | Some interp -> [ interp_cmd ~name pm interp ]
+          | None -> []
+        in
+        [ main_cmd ?interp pm ] @ interp_cmds
+    | None -> []
 end

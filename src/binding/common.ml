@@ -1,10 +1,14 @@
 open Base
+open Tola_std
+open Tola_std.Std.File_infix
 
 (* See https://github.com/ocaml/opam/blob/master/src/state/opamSysPoll.ml 
 For ELF parser: see
 https://github.com/let-def/owee
 https://github.com/ashay/owl
 
+For more glob files
+https://ocaml.org/p/path_glob/0.3/doc/index.html#path_glob:-checking-glob-patterns-on-paths.
 *)
 
 module Target_triple = struct
@@ -27,118 +31,157 @@ module Target_triple = struct
   type t = { os : os; distro : distro; arch : arch }
 end
 
-module Shared_library = struct
-  open OpamStd.Sys
+open OpamStd.Sys
 
-  type t = { tag : string; path : string } [@@deriving show]
-
-  let detect_os os =
-    let name =
-      match os with
-      | Linux -> "Linux"
-      | Unix -> "Unix"
-      | Darwin -> "Darwin"
-      | _ -> "Others"
-    in
-    Fmt.pr "Detected OS: %s@." name
-
-  let ext os =
+let detect_os os =
+  let name =
     match os with
-    | Linux -> "so"
-    | Darwin -> "dylib"
-    | Win32 -> "dll"
-    | _ -> raise (Failure "Unsupported OS for shared library")
+    | Linux -> "Linux"
+    | Unix -> "Unix"
+    | Darwin -> "Darwin"
+    | _ -> "Others"
+  in
+  Fmt.pr "Detected OS: %s@." name
 
-  let tool_dep os =
-    match os with
-    | Linux -> "ldd"
-    | Darwin -> "otool -L"
-    | _ -> failwith "Unsupported OS for dependency tool"
+let ext os =
+  match os with
+  | Linux -> "so"
+  | Darwin -> "dylib"
+  | Win32 -> "dll"
+  | _ -> raise (Failure "Unsupported OS for shared library")
 
-  type dep = {
-    name : string option;
-    path : string option;
-    addr : string option;
-  }
-
-  let parse_ldd_line (line : string) : dep option =
-    (* New logic: detect arrows first. If line contains => it's case2 (name => path(addr)).
-       Otherwise it's case1 or case3: token(addr), where token is either absolute path (case1) or a vdso/name (case3).
-       We also print Fmt-based debug markers: case1/case2/case3. *)
-    let line = String.strip line in
-    if String.is_empty line then None
-    else
-      let extract_addr_and_before s =
-        match (String.rindex s '(', String.rindex s ')') with
-        | None, None -> (None, String.strip s)
-        | Some lparen, Some rparen when rparen > lparen ->
-            let addr =
-              String.sub s ~pos:(lparen + 1) ~len:(rparen - lparen - 1)
-              |> String.strip
-            in
-            let before = String.sub s ~pos:0 ~len:lparen |> String.strip in
-            (Some addr, before)
-        | _, _ -> raise (Failure "Malformed line: unmatched parentheses")
-      in
-      match String.substr_index line ~pattern:"=>" with
-      | Some idx ->
-          (* case2: name => path(addr) *)
-          let left = String.sub line ~pos:0 ~len:idx |> String.strip in
-          let right =
-            String.sub line ~pos:(idx + 2) ~len:(String.length line - idx - 2)
-            |> String.strip
-          in
-          let addr_opt, right_before = extract_addr_and_before right in
-          let path =
-            let p = right_before in
-            if String.( = ) (String.strip p) "not found" then None else Some p
-          in
-          (* Fmt.pr "case2: name=%s path=%s addr=%s@." left
-            (Option.value path ~default:"<none>")
-            (Option.value addr_opt ~default:"<none>"); *)
-          Some { name = Some left; path; addr = addr_opt }
-      | None ->
-          (* case1 or case3: token(addr) *)
-          let addr_opt, token = extract_addr_and_before line in
-          if String.is_prefix token ~prefix:"/" then
-            (* Fmt.pr "case1: path=%s addr=%s@." token
-              (Option.value addr_opt ~default:"<none>"); *)
-            Some { name = None; path = Some token; addr = addr_opt }
-          else
-            (* Fmt.pr "case3: name=%s addr=%s@." token
-              (Option.value addr_opt ~default:"<none>"); *)
-            Some { name = Some token; path = None; addr = addr_opt }
-
-  let parse_otool_output (s : string) : dep list =
-    s |> String.split_on_chars ~on:[ '\n' ] |> List.filter_map ~f:parse_ldd_line
-
-  let tool_symbol os =
-    match os with
-    | Linux -> "nm -D"
-    | Darwin -> "nm -gU"
-    | _ -> failwith "Unsupported OS for symbol tool"
-end
+let tool_symbol os =
+  match os with
+  | Linux -> "nm -D"
+  | Darwin -> "nm -gU"
+  | _ -> failwith "Unsupported OS for symbol tool"
 
 let the_os = OpamStd.Sys.os ()
 
-let run_tool target =
-  let open Shared_library in
-  let tool = Shared_library.tool_dep the_os in
-  let cmd = Fmt.str "%s %s" tool target in
-  let result = Tola_std.Std.Sys_util.run_and_capture cmd in
-  Fmt.pr "Running command: %s@.Result:@.%s@." cmd result;
-  let ldd_lines = Shared_library.parse_otool_output result in
-  List.iteri
-    ~f:(fun i dep ->
-      Fmt.pr "[Dep %d]name=%a; path=%a; addr=%a@." i (Fmt.option Fmt.string)
-        dep.name (Fmt.option Fmt.string) dep.path (Fmt.option Fmt.string)
-        dep.addr)
-    ldd_lines
+let entity_name_of_ext ext =
+  match ext with
+  (* native (binary) *)
+  | "o" -> "object file"
+  | "so" -> "shared library (linux)"
+  | "dylib" -> "shared library (macos)"
+  | "dll" -> "shared library (windows)"
+  | "lib" -> "static library"
+  | "a" -> "static library"
+  | "exe" -> "executable"
+  (* ocaml src and interface *)
+  | "ml" -> "ocaml source file"
+  | "mli" -> "ocaml interface source file"
+  | "cmi" -> "ocaml interface"
+  (* ocaml bytecode *)
+  | "cmo" -> "ocaml bytecode object"
+  | "cma" -> "ocaml bytecode library"
+  (* ocaml native *)
+  | "cmx" -> "ocaml native object"
+  | "cmxs" -> "ocaml native shared object"
+  | "cmxa" -> "ocaml native library"
+  | _ -> "binary"
+
+let tools_of_ext ext =
+  match ext with
+  | "so" | "dylib" | "dll" -> [ Shared_library.tool_dep the_os ]
+  | "exe" -> [ "file" ]
+  (* | "o" -> "nm" *)
+  | "a" -> [ "ar t"; "objdump -t" ]
+  | "lib" -> [ "ar t" ]
+  (* | "ml" | "mli" -> "ocamlc -c" *)
+  | "cmi" -> [ "ocamlobjinfo" ]
+  | "cmo" -> [ "ocamlobjinfo" ]
+  | "cma" -> [ "ocamlobjinfo" ]
+  | "cmx" -> [ "ocamlobjinfo" ]
+  | "cmxs" -> [ "ocamlobjinfo"; "objdump -t" ]
+  | "cmxa" -> [ "ocamlobjinfo" ]
+  | _ -> [ "file" ]
+
+let cmd_and_handler_pairs_of_ext ext : (_ format4 * _) list =
+  let _dump result = Fmt.pr "[Result]%s@." result in
+  let dump _ = () in
+  let elf_pair =
+    ( ("readelf -d %s | grep -E 'RPATH|RUNPATH|SONAME|NEEDED'" : _ format4),
+      Shared_library.dump_readelf )
+  in
+  let ldd_pair = (("ldd %s " : _ format4), Shared_library.dump_ldd) in
+  match ext with
+  | "so" | "dylib" | "dll" -> [ elf_pair; ldd_pair ]
+  | "a" -> ("ar t %s", dump) :: []
+  | "lib" -> ("ar t %s ", dump) :: []
+  | "cma" -> ("ocamlobjinfo %s | grep -E 'Extra'", Ocamls.dump_extras) :: []
+  | "cmxs" -> [ elf_pair; ldd_pair ]
+  | "cmxa" -> [ ("ocamlobjinfo %s | grep -E 'Extra'", Ocamls.dump_extras) ]
+  | "owner" | _ -> ("file %s", dump) :: []
+(* | "exe" -> [ "file %s" ] *)
+(* | "o" -> [ "nm %s" ] *)
+(* | "ml" | "mli" ->  *)
+(* | "cmi" -> 
+  | "cmo" ->  *)
+(* | "cmx" -> [] *)
+
+(* TODO:
+should handle multiple-dots e.g.
+../stublibs/dllz3ml.so*       ../stublibs/libz3.so.4.15*           ../stublibs/libz3.so.4.15.owner
+../stublibs/dllz3ml.so.owner  ../stublibs/libz3.so.4.15.4.0*       ../stublibs/libz3.so.owner
+../stublibs/libz3.so*         ../stublibs/libz3.so.4.15.4.0.owner
+*)
+
+(* 
+ocamlobjinfo z3ml.cma | grep -E 'Extra'
+Extra C object files: -lz3ml -L/home/ex/.opam/5.3.0/lib/stublibs -L/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build -lz3 -lstdc++ -lpthread
+Extra C options: -Wl,-rpath,/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build:$ORIGIN/../libz3.so:/home/ex/.opam/5.3.0/lib/stublibs:@rpath/dllz3ml.so
+Extra dynamically-loaded libraries: -lz3ml
+
+ocamlobjinfo z3ml.cmxa | grep -E 'Extra'
+Extra C object files: -lz3ml -L/home/ex/.opam/5.3.0/lib/stublibs -L/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build -lz3 -lstdc++ -lpthread
+Extra C options: -Wl,-rpath,/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build:$ORIGIN/../libz3.so:/home/ex/.opam/5.3.0/lib/stublibs:@rpath/dllz3ml.so
+*)
+
+let simple_glob pat s =
+  let re = Re.Glob.glob pat |> Re.compile in
+  Re.execp re s
+
+let inspect_dir ?pat dir0 =
+  let dir = Std.Sys_util.expand_home dir0 in
+  let handle_file fullpath file ext =
+    let entity_name = entity_name_of_ext ext in
+    Fmt.pr "[File] %s@.[Ext][%s] %s@." file ext entity_name;
+    List.iter (cmd_and_handler_pairs_of_ext ext) ~f:(fun (cmd0, handle) ->
+        let cmd = Fmt.str cmd0 fullpath in
+        (* Fmt.pr "[Tool] %s@." cmd; *)
+        Tola_std.Std.Sys_util.run_and_capture cmd |> handle)
+  in
+  let handle_file_no_ext fullpath file =
+    Fmt.pr "[File] %s@.[No Ext] %s@." fullpath file;
+    match file with
+    | "META" ->
+        In_channel.open_text fullpath
+        |> Fl_metascanner.parse
+        |> Fl_metascanner.print Out_channel.stdout
+    | _ -> ()
+  in
+  Sys_unix.ls_dir dir
+  |> List.iter ~f:(fun file ->
+         let matched =
+           match pat with Some pat -> simple_glob pat file | None -> true
+         in
+         if matched then (
+           let fullpath = dir $/ file in
+           (* Fmt.pr "[Dir] %s + %s = %s@." dir file filepath; *)
+           let _base, ext0 = Filename_base.split_extension file in
+           (match ext0 with
+           | Some ext -> handle_file fullpath file ext
+           | None -> handle_file_no_ext fullpath file);
+           Fmt.pr "@."))
 
 let () =
-  run_tool "~/.opam/5.3.0/lib/stublibs/libz3.so";
-  run_tool "~/.opam/5.3.0/lib/stublibs/dllz3ml.so";
+  inspect_dir "~/.opam/5.3.0/lib/z3";
+  inspect_dir ~pat:"*z3*" "~/.opam/5.3.0/lib/stublibs";
   ()
+(* run_tool "~/.opam/5.3.0/lib/z3" "~/.opam/5.3.0/lib/stublibs/dllz3ml.so";
+  run_tool "~/.opam/5.3.0/lib/z3" "~/.opam/5.3.0/lib/z3/z3.o"; *)
+
 (* 
   let un = OpamStd.Sys.uname () in
   Fmt.pr "machine: %s; release: %s; sysname: %s@.\n" un.machine un.release

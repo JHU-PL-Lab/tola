@@ -61,6 +61,8 @@ module File_util = struct
        ("1" ^ "b") $/ ("b" ^ "2");;
     *)
     let ( $/ ) a b = Filename.concat a b
+    (* TODO *)
+    (* let ( $/ ) a b = Filename_base.concat a b *)
   end
 
   open File_infix
