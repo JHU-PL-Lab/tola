@@ -118,3 +118,99 @@ let print_ldd deps =
     deps
 
 let dump_ldd result = parse_ldd result |> print_ldd
+
+(* ---------- Types ---------- *)
+
+(* One dependency line from `otool -L` *)
+type otool_dep = {
+  path : string; (* dylib path: e.g. /usr/lib/libSystem.B.dylib or @rpath/xxx *)
+  compat_version : string option;
+      (* "compatibility version X.Y.Z" Interesting to find this *)
+  current_version : string option; (* "current version A.B.C" *)
+}
+
+(* ---------- Parsing ---------- *)
+
+open Core
+
+let is_header_line (line : string) : bool =
+  (* First line is "<file>:"; `otool -L` also echoes the file path with a trailing colon. *)
+  let line = String.strip line in
+  String.is_suffix line ~suffix:":"
+
+let extract_between (s : string) (start_idx : int) (delims : char list) : string
+    =
+  (* Take substring starting at start_idx until the first delimiter in [delims] or end *)
+  let len = String.length s in
+  let rec find_stop i =
+    if i >= len then len
+    else if List.exists delims ~f:(Char.equal s.[i]) then i
+    else find_stop (i + 1)
+  in
+  let stop = find_stop start_idx in
+  String.sub s ~pos:start_idx ~len:(stop - start_idx) |> String.strip
+
+let parse_versions_inside_parens (inside : string) :
+    string option * string option =
+  (* inside looks like: "compatibility version 1.0.0, current version 1292.60.1" *)
+  let compat_pat = "compatibility version " in
+  let current_pat = "current version " in
+  let compat =
+    match String.substr_index inside ~pattern:compat_pat with
+    | None -> None
+    | Some i ->
+        let start = i + String.length compat_pat in
+        Some (extract_between inside start [ ','; ')' ])
+  in
+  let current =
+    match String.substr_index inside ~pattern:current_pat with
+    | None -> None
+    | Some i ->
+        let start = i + String.length current_pat in
+        Some (extract_between inside start [ ','; ')' ])
+  in
+  (compat, current)
+
+let parse_otool_L_line (line : string) : otool_dep option =
+  let line = String.strip line in
+  if String.is_empty line || is_header_line line then None
+  else
+    (* Typical line:
+         "/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1292.60.1)"
+       or
+         "@rpath/libfoo.dylib (compatibility version 1.2.3, current version 1.2.3)"
+       Occasionally there might be no parens (rare); we handle that too. *)
+    match String.index line '(' with
+    | None ->
+        Some { path = line; compat_version = None; current_version = None }
+    | Some lp ->
+        let rp =
+          match String.rindex line ')' with
+          | Some idx -> idx
+          | None -> String.length line - 1
+        in
+        let path = String.sub line ~pos:0 ~len:lp |> String.strip in
+        let inside =
+          let pos = lp + 1 in
+          let len = Int.max 0 (rp - pos) in
+          String.sub line ~pos ~len |> String.strip
+        in
+        let compat_version, current_version =
+          parse_versions_inside_parens inside
+        in
+        Some { path; compat_version; current_version }
+
+let parse_otool_L_output (s : string) : otool_dep list =
+  s |> String.split_lines |> List.filter_map ~f:parse_otool_L_line
+
+(* ---------- Pretty printer (optional) ---------- *)
+
+let pp_otool_dep (d : otool_dep) : unit =
+  let cv = Option.value d.compat_version ~default:"<none>" in
+  let cur = Option.value d.current_version ~default:"<none>" in
+  Fmt.pr "path=%s; compat=%s; current=%s@." d.path cv cur
+
+let print_otool_deps (deps : otool_dep list) : unit =
+  List.iter deps ~f:pp_otool_dep
+
+let dump_otool_L s = parse_otool_L_output s |> print_otool_deps

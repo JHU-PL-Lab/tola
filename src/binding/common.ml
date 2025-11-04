@@ -4,6 +4,7 @@ open Tola_std.Std.File_infix
 
 (* See https://github.com/ocaml/opam/blob/master/src/state/opamSysPoll.ml 
 For ELF parser: see
+https://opam.ocaml.org/packages/bap-elf/
 https://github.com/let-def/owee
 https://github.com/ashay/owl
 
@@ -33,16 +34,6 @@ end
 
 open OpamStd.Sys
 
-let detect_os os =
-  let name =
-    match os with
-    | Linux -> "Linux"
-    | Unix -> "Unix"
-    | Darwin -> "Darwin"
-    | _ -> "Others"
-  in
-  Fmt.pr "Detected OS: %s@." name
-
 let ext os =
   match os with
   | Linux -> "so"
@@ -55,8 +46,6 @@ let tool_symbol os =
   | Linux -> "nm -D"
   | Darwin -> "nm -gU"
   | _ -> failwith "Unsupported OS for symbol tool"
-
-let the_os = OpamStd.Sys.os ()
 
 let entity_name_of_ext ext =
   match ext with
@@ -83,7 +72,7 @@ let entity_name_of_ext ext =
 
 let tools_of_ext ext =
   match ext with
-  | "so" | "dylib" | "dll" -> [ Shared_library.tool_dep the_os ]
+  | "so" | "dylib" | "dll" -> [ Shared_library.tool_dep Std.the_os ]
   | "exe" -> [ "file" ]
   (* | "o" -> "nm" *)
   | "a" -> [ "ar t"; "objdump -t" ]
@@ -105,13 +94,18 @@ let cmd_and_handler_pairs_of_ext ext : (_ format4 * _) list =
       Shared_library.dump_readelf )
   in
   let ldd_pair = (("ldd %s " : _ format4), Shared_library.dump_ldd) in
+  let otool_pair = (("otool -L %s" : _ format4), Shared_library.dump_otool_L) in
+  let ocamlc_library_pair =
+    (("ocamlobjinfo %s | grep -E 'Extra'" : _ format4), Ocamls.dump_extras)
+  in
   match ext with
-  | "so" | "dylib" | "dll" -> [ elf_pair; ldd_pair ]
+  | "so" -> [ elf_pair; ldd_pair ]
+  | "dylib" -> [ otool_pair ]
   | "a" -> ("ar t %s", dump) :: []
   | "lib" -> ("ar t %s ", dump) :: []
-  | "cma" -> ("ocamlobjinfo %s | grep -E 'Extra'", Ocamls.dump_extras) :: []
+  | "cma" -> [ ocamlc_library_pair ]
   | "cmxs" -> [ elf_pair; ldd_pair ]
-  | "cmxa" -> [ ("ocamlobjinfo %s | grep -E 'Extra'", Ocamls.dump_extras) ]
+  | "cmxa" -> [ ocamlc_library_pair ]
   | "owner" | _ -> ("file %s", dump) :: []
 (* | "exe" -> [ "file %s" ] *)
 (* | "o" -> [ "nm %s" ] *)
@@ -149,7 +143,7 @@ let inspect_dir ?pat dir0 =
     Fmt.pr "[File] %s@.[Ext][%s] %s@." file ext entity_name;
     List.iter (cmd_and_handler_pairs_of_ext ext) ~f:(fun (cmd0, handle) ->
         let cmd = Fmt.str cmd0 fullpath in
-        (* Fmt.pr "[Tool] %s@." cmd; *)
+        Fmt.pr "[Tool] %s@." cmd;
         Tola_std.Std.Sys_util.run_and_capture cmd |> handle)
   in
   let handle_file_no_ext fullpath file =
@@ -189,4 +183,21 @@ let () =
   detect_os () ; *)
 (* machine: x86_64; release: 5.15.167.4-microsoft-standard-WSL2; sysname: Linux 
   Detected OS: Linux
+  *)
+
+(* 
+
+  # artifact files
+  ...
+
+  # pkgms
+  opam 
+  debian/homebrew : record-with-get-and-set
+  
+  path-related : env...
+  *)
+
+(* 
+  '~'
+  '*'
   *)

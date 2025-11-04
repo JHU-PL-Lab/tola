@@ -13,7 +13,12 @@ demo_langs:
 
 %.eg: LANG = $(basename $@)
 %.eg:
-	dune exec src/bin/example_$(LANG).exe
+	dune exec src/bin/example_$(LANG).exe -- $(ARGS)
+
+# you can use 
+#   make sp.eg to run the example for SP language
+# you can even use
+#   make sp.eg ARGS="foo --bar" to pass arguments to `example_$(LANG).exe`
 
 # Universal pkgm cmd `tola`
 

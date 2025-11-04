@@ -147,6 +147,24 @@ module File_utils = struct
     loop dir
 end
 
+module More_sys = struct
+  open OpamStd.Sys
+
+  let the_os = OpamStd.Sys.os ()
+
+  let detect_os os =
+    let name =
+      match os with
+      | Linux -> "Linux"
+      | Unix -> "Unix"
+      | Darwin -> "Darwin"
+      | _ -> "Others"
+    in
+    Fmt.pr "Detected OS: %s@." name
+end
+
+include More_sys
+
 module Sys_util = struct
   open Core_unix
 
