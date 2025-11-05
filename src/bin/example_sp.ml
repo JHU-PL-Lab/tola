@@ -101,15 +101,15 @@ let dune_example = List []
 let () =
   let example =
     match Stdlib.Sys.argv.(1) with
-    | "c" -> Some link_example
-    | "opam" -> Some opam_example
-    | "ocamlc" -> Some ocamlc_example
-    | "dune" -> Some dune_example
+    | "c" -> link_example
+    | "opam" -> opam_example
+    | "ocamlc" -> ocamlc_example
+    | "dune" -> dune_example
     | _ ->
         Fmt.pr "No example selected.@.";
-        None
+        dummy
   in
-  Option.iter example ~f:interp
+  interp example
 
 (* dune *)
 

@@ -12,26 +12,6 @@ For more glob files
 https://ocaml.org/p/path_glob/0.3/doc/index.html#path_glob:-checking-glob-patterns-on-paths.
 *)
 
-module Target_triple = struct
-  type os = Linux | MacOS | Windows | Bsd | Other_os of string
-
-  type distro =
-    | Debian
-    | Ubuntu
-    | Fedora
-    | Arch
-    | Alpine
-    | MacOS_Brew
-    | MacOS_Macports
-    | Windows_MSYS
-    | Windows_Mingw
-    | Windows_Msvc
-    | Unknown_distro of string
-
-  type arch = X86_64 | Aarch64 | Armv7 | Riscv64 | Other_arch of string
-  type t = { os : os; distro : distro; arch : arch }
-end
-
 open OpamStd.Sys
 
 let ext os =

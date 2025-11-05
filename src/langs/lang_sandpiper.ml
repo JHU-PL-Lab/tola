@@ -15,9 +15,9 @@ which means they can have other forms.
 
 type path = string
 
-open Binding.Common
+open Binding
 
-let this_machine = Target_triple.{ os = Linux; distro = Ubuntu; arch = X86_64 }
+let this_machine = Platform.{ os = Linux; distro = Ubuntu; arch = X86_64 }
 
 (* language essentials *)
 type language = OCaml | Binary | Placeholder_fs
@@ -27,7 +27,7 @@ type project = {
   path : path;
   name : name;
   language : language;
-  triple : Target_triple.t option;
+  platform : Platform.t option;
 }
 
 open Resolve
@@ -37,7 +37,7 @@ type library = {
   name : name;
   version : version;
   language : language;
-  triple : Target_triple.t option;
+  platform : Platform.t option;
   bind_spec : Resolve_strategy.t;
 }
 
@@ -53,7 +53,7 @@ type package = {
   name : name;
   version : version;
   library : library;
-  triple : Target_triple.t option;
+  platform : Platform.t option;
 }
 
 (* three models
@@ -122,6 +122,7 @@ let hr = ML (fun () -> Fmt.pr "------------------------------------@.")
 let hrt sec =
   ML (fun () -> Fmt.pr "------------------%s------------------@." sec)
 
+let dummy = List []
 let cmd ?(env = []) ?(capture = true) cmd_str = Cmd { cmd_str; env; capture }
 let cmd0 ?(env = []) cmd_str = cmd ~env ~capture:false cmd_str
 
