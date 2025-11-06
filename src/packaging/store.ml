@@ -1,6 +1,5 @@
 open Base
 open Tola_std
-open Tola_std.Std.File_infix
 (* open Store *)
 
 module Table_make (P : Package.PACKAGE) = Stdlib.Hashtbl.Make (struct
@@ -63,16 +62,16 @@ module File_store_make (P : Package.PACKAGE) = struct
     let pkg_path = path_of_pid state pid in
     if not (Stdlib.Sys.file_exists pkg_path) then
       Stdlib.Sys.mkdir pkg_path 0o755;
-    Std.write_file_all (pkg_path $/ state.meta_file) (P.pkg_to_str pkg);
+    Std.write_file (pkg_path $/ state.meta_file) (P.pkg_to_str pkg);
     add_table state pid pkg
 
   let load_pkg state pid =
     let pkg_path = path_of_pid state pid in
-    let pkg_raw = Std.read_file_all (pkg_path $/ state.meta_file) in
+    let pkg_raw = Std.read_file (pkg_path $/ state.meta_file) in
     P.str_to_pkg pkg_raw
 
   let load_pkg_content state pkg_path =
-    Std.read_file_all (pkg_path $/ state.meta_file)
+    Std.read_file (pkg_path $/ state.meta_file)
 
   let reset state = Std.remove_dir state.root
 

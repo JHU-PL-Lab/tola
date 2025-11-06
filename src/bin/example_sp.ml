@@ -5,7 +5,6 @@
 open Base
 open Langs.Lang_sandpiper
 open Tola_std
-open Tola_std.Std.File_infix
 open OpamStd.Sys
 open With_OCaml_switch
 open With_OCaml_dune
@@ -90,6 +89,8 @@ let ocamlc_example =
       cmd (exec "ocamlc -where");
     ]
 
+let br = List [ hr ]
+
 (* let z3_opam_example1 = List []
 let z3_opam_example2 = List []
 let z3_each_for_ocaml_example = List []
@@ -109,6 +110,7 @@ let () =
     | "opam" -> opam_example
     | "ocamlc" -> ocamlc_example
     | "dune" -> dune_example
+    | "br" -> br
     | _ ->
         Fmt.pr "No example selected.@.";
         dummy

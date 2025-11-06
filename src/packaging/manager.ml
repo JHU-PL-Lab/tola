@@ -1,7 +1,6 @@
 open Base
 open Package
 open Tola_std
-open Tola_std.Std.File_infix
 
 (* The PACKAGE is a bundled abstract definition for pid, payload, and meta.
    It doesn't say anything about versioning.
@@ -104,7 +103,7 @@ module Make (P : PACKAGE) : S with module P = P and module VL = P.VL
   }
 
   let save_config (cfg : Spec.config) =
-    Std.write_file_all
+    Std.write_file
       (cfg.root $/ cfg.pkgm_id $/ "config.json")
       (cfg |> Spec.yojson_of_config |> Yojson.Safe.pretty_to_string)
 

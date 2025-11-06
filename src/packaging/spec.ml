@@ -1,5 +1,5 @@
 open Base
-open Tola_std.Std.File_infix
+open Tola_std
 (*
   How many stores should a pkgm have?
   Here we should think about the store visibility and activeness.

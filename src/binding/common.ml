@@ -1,6 +1,5 @@
 open Base
 open Tola_std
-open Tola_std.Std.File_infix
 
 (* See https://github.com/ocaml/opam/blob/master/src/state/opamSysPoll.ml 
 For ELF parser: see

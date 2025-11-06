@@ -1,22 +1,3 @@
-module More_fn = struct
-  let rec naive_fix step e = step (naive_fix step) e
-
-  (* let chain_compare f1 f2 =
-       let r1 = f1 () in
-       if r1 = 0 then f2 () else r1
-
-     let just_side_effect = ignore
-
-     let ignore2 _ _ = () *)
-
-  let fn_lift2 f fl a b = f (fl a) (fl b)
-
-  let run_stdin f_str =
-    In_channel.input_all In_channel.stdin |> f_str |> Fmt.pr "%s@."
-end
-
-include More_fn
-
 module type OrderedTypePp = sig
   include Map.OrderedType
 
@@ -44,59 +25,6 @@ let pp_std_table table_iter pp_key pp_elem oc s =
    let pp_name oc _ = Fmt.string oc name in
    (Fmt.Dump.iter_bindings iter pp_name Fmt.(string ++ cut) pp_elem) oc s *)
 
-module File_util = struct
-  open Stdlib
-
-  module File_infix = struct
-    (* The precedence in OCaml is (See https://v2.ocaml.org/manual/expr.html#ss:precedence-and-associativity for full):
-       (functio application) > `/...` > `@...` > `^...` > `$/`.
-       Therefore, if we have
-       "1" ^ "a" // "a" ^ "2";;
-       "1" ^ "b" @/ "b" ^ "2";;
-       "1" ^ "b" $/ "b" ^ "2";;
-
-       It should be equivalent to
-       "1" ^ ("a" // "a") ^ "2";;
-       "1" ^ ("b" @/ "b") ^ "2";;
-       ("1" ^ "b") $/ ("b" ^ "2");;
-    *)
-    let ( $/ ) a b = Filename.concat a b
-    (* TODO *)
-    (* let ( $/ ) a b = Filename_base.concat a b *)
-  end
-
-  open File_infix
-
-  let read_file_all path = In_channel.with_open_text path In_channel.input_all
-
-  let write_file_all path content =
-    Out_channel.with_open_text path (fun c ->
-        Out_channel.output_string c content)
-
-  let write_marshal file v =
-    let oc = open_out file in
-    Marshal.to_channel oc v [];
-    close_out oc
-
-  let read_marshal file =
-    let ic = open_in file in
-    let v = Marshal.from_channel ic in
-    close_in ic;
-    v
-
-  let remove_dir path =
-    let rec loop path =
-      Sys.readdir path
-      |> Array.iter (fun sub ->
-             let subpath = path $/ sub in
-             if Sys.is_directory subpath then loop subpath
-             else Sys.remove subpath);
-      Sys.rmdir path
-    in
-    if Sys.file_exists path && Sys.is_directory path then loop path
-end
-
-include File_util
 (* 
 module Sys_util_not_used = struct
   let run_command_output cmd =

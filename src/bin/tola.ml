@@ -130,10 +130,10 @@ let () = Main_cmd.main ()
 
 (* 
 let expand_file input =
-  let raw_source = Std.read_file_all input in
+  let raw_source = In_channel.read_all input in
   let source = raw_source in
   let expanded_filename = input ^ ".expanded" in
-  Std.write_file_all expanded_filename source
+  Std.write_file expanded_filename source
 
 let () =
    let extract_include str =

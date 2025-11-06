@@ -20,7 +20,6 @@ which means they can have other forms.
 
 open Base
 open Tola_std
-open Tola_std.Std.File_infix
 
 type cmd = { cmd_str : string; env : (string * string) list; capture : bool }
 type name = string

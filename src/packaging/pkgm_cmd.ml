@@ -85,8 +85,8 @@ module Make (PM : Manager.S) = struct
 
   let interp_cmd ?(name = "interp") pm interp =
     let cfg = PM.config pm in
-    let interp_stdin () = Std.run_stdin (interp pm) in
-    make_cmd name ("interpreter " ^ cfg.lang_id) interp_stdin
+    make_cmd name ("interpreter " ^ cfg.lang_id) (fun () ->
+        Std.stdin_iter_print (interp pm))
 
   let main_cmd ?interp pm =
     let doc = "doc" in

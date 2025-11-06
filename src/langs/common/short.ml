@@ -1,5 +1,6 @@
 open Base
 open Sigs
+open Tola_std
 
 module Short_id_fake = struct
   type t = X | Y | Z | W [@@deriving equal, ord]
@@ -7,7 +8,7 @@ module Short_id_fake = struct
   let show = function X -> "x" | Y -> "y" | Z -> "z" | W -> "w"
   let pp = Fmt.of_to_string show
   let domain = [ X; Y; Z; W ]
-  let dump_domain () = Tola_std.Std.dump_list domain pp
+  let dump_domain () = Std.dump_list domain pp
 end
 
 module De_bruijin_id_maker (N : N) = struct
