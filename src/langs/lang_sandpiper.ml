@@ -1,10 +1,15 @@
-open Base
-open Tola_std
-open Tola_std.Std.File_infix
+(* 
+Sandpiper ia a language to describe the essense of entities used in programming 
+languages and systems tools. It's a high-level representation for all conceptual
+low-level constructs, including files, directories, libraries, executables.
 
-type cmd = { cmd_str : string; env : (string * string) list; capture : bool }
-type name = string
-type version = string
+Sandpiper doesn't implement any low-level functionality including compiling a source
+file or installing a package. Instead, all functionalities are translated to their real
+commands or tool invokings.
+
+real-world thing -> sandpipier -> shell-that-run
+
+*)
 
 (* Filetree essentials
 Usually, a path is an entity usually identified by a string
@@ -13,6 +18,13 @@ We can also use the reversed concept that a file, a dir, or a filetress locating
 which means they can have other forms.
 *)
 
+open Base
+open Tola_std
+open Tola_std.Std.File_infix
+
+type cmd = { cmd_str : string; env : (string * string) list; capture : bool }
+type name = string
+type version = string
 type path = string
 
 open Binding
@@ -73,6 +85,23 @@ type entity =
   (* system-or-c-or-abi eco *)
   | BinaryExecutable of binary_exe
   | BinaryLibrary of binary_lib
+
+(* *)
+
+(* envir...entity *)
+(* 
+  | Upstream_project
+  | C_binding of library
+
+FFI...
+  z3_lib c++ (datatype)
+  header_c (api_datatype) (v1, v2, v3)
+  ocaml_binding(ocaml code) , python_binding(), java_binding
+
+  symbol exist or not
+*)
+
+(* ocaml lib / pac *)
 
 (* Language constructs *)
 

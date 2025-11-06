@@ -90,6 +90,10 @@ let ocamlc_example =
       cmd (exec "ocamlc -where");
     ]
 
+(* let z3_opam_example1 = List []
+let z3_opam_example2 = List []
+let z3_each_for_ocaml_example = List []
+let z3_system_ocaml_example = List [] *)
 let dune_example = List []
 (* cmd ~env:[ ("OCAMLPATH", abs_project_path) ] (echo "OCAMLPATH");
          cmd (build_project "song_std_1_0"); *)
