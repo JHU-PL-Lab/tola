@@ -12,17 +12,6 @@ let dump_list s pp = Fmt.pr "@.@[<v>%a@]@;@." (Fmt.list pp) s
 let dump_list domain pp =
   Fmt.(pr "@.%d@.@[<v>%a@]@;@." (List.length domain) (list pp) domain)
 
-let list_split es =
-  let rec loop p1 p2 =
-    match p2 with
-    | [] -> []
-    | e :: es ->
-        let p1' = p1 @ [ e ] in
-        let p2' = es in
-        (p1', p2') :: loop p1' p2'
-  in
-  ([], es) :: loop [] es
-
 (* let pp_set ?(name = "set") pp_elem oc s =
      let pp_name oc _ = Fmt.string oc name in
      let set_iter f set = Set.iter set ~f in

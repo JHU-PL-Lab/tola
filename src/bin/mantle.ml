@@ -18,14 +18,14 @@ open Two_scoped_binding
 let _run_prefill_cmd env name =
   let script = Printf.sprintf Mantle_example.script_template name in
   Printf.printf "{{%s}} [%s]\n" script name;
-  let command_out = Std.Sys_util.run_command_out ~env "cat | sh" script in
+  let command_out = Cmd.run_s ~env "cat | sh" script in
   (* Printf.printf "{%s}\n" command_out; *)
   command_out
 
 let run_cmd bds cmd =
   let command_out =
     let _ = array_of_variables bds in
-    Std.Sys_util.run_command_out ~env:[] "cat | sh" cmd
+    Cmd.run_s ~env:[] "cat | sh" cmd
   in
   (* Printf.printf "{%s}\n" command_out; *)
   command_out
@@ -85,18 +85,18 @@ let test_shell () =
       (Naive_binding.string_of_bindings bds)
       "MY_VAR"
   in
-  let s = Std.Sys_util.run_command_output cmd in
+  let s = Cmd.run_s cmd in
   Printf.printf "{%s}\n" s;
   let var_value =
-    Std.Sys_util.run_command_out ~env:bds_arr "/bin/echo $MY_VAR" script_content
+    Cmd.run_s ~env:bds_arr "/bin/echo $MY_VAR" script_content
   in
   Printf.printf "{%s}\n" var_value;
   let var_value =
-    Std.Sys_util.run_command_out ~env:bds_arr "/bin/echo $MY_VAR" script_content
+    Cmd.run_s ~env:bds_arr "/bin/echo $MY_VAR" script_content
   in
   Printf.printf "{%s}\n" var_value;
   let var_value =
-    Std.Sys_util.run_command_out ~env:bds_arr "cat | sh" script_content
+    Cmd.run_s ~env:bds_arr "cat | sh" script_content
   in
   Printf.printf "{%s}\n" var_value
 *)

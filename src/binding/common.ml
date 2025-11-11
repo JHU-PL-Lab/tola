@@ -116,14 +116,14 @@ let simple_glob pat s =
   Re.execp re s
 
 let inspect_dir ?pat dir0 =
-  let dir = Std.Sys_util.expand_home dir0 in
+  let dir = expand_home_dir dir0 in
   let handle_file fullpath file ext =
     let entity_name = entity_name_of_ext ext in
     Fmt.pr "[File] %s@.[Ext][%s] %s@." file ext entity_name;
     List.iter (cmd_and_handler_pairs_of_ext ext) ~f:(fun (cmd0, handle) ->
         let cmd = Fmt.str cmd0 fullpath in
         Fmt.pr "[Tool] %s@." cmd;
-        Tola_std.Std.Sys_util.run_and_capture cmd |> handle)
+        Cmd.run_s cmd |> handle)
   in
   let handle_file_no_ext fullpath file =
     Fmt.pr "[File] %s@.[No Ext] %s@." fullpath file;

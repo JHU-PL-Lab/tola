@@ -1,6 +1,8 @@
 open Base
 open Compilers
 
+(* let translate_to_shell  *)
+
 type extras = {
   c_object_files : link_spec list; (* From "Extra C object files:" *)
   c_options : link_opt list; (* From "Extra C options:" *)

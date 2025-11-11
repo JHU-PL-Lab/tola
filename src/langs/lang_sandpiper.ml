@@ -123,9 +123,9 @@ let rec interp exp : unit =
       if Sys_unix.file_exists_exn path then Fmt.pr "File %s exists.\n" path
       else Fmt.pr "File %s does not exist.\n" path
   | Cmd cmd ->
-      (* | Cmd_unit cmd -> Std.Sys_util.run ~env:cmd.env cmd.cmd_str *)
+      (* | Cmd_unit cmd -> Cmd.run0 ~env:cmd.env cmd.cmd_str *)
       Fmt.pr "[Command] %s\n" cmd.cmd_str;
-      let output = Std.Sys_util.run_and_capture ~env:cmd.env cmd.cmd_str in
+      let output = Cmd.run_s ~env:cmd.env cmd.cmd_str in
       Fmt.pr "[Command][Output] [%d]%s\n" (String.length output) output
       (* Fmt.pr "[Command][Result] %B\n" (String.length output <> 0) *)
   | Check_exists entity ->

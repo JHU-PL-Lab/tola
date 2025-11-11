@@ -25,33 +25,6 @@ let pp_std_table table_iter pp_key pp_elem oc s =
    let pp_name oc _ = Fmt.string oc name in
    (Fmt.Dump.iter_bindings iter pp_name Fmt.(string ++ cut) pp_elem) oc s *)
 
-(* 
-module Sys_util_not_used = struct
-  let run_command_output cmd =
-    let ic = Unix.open_process_in cmd in
-    let result = In_channel.input_all ic |> String.trim in
-    close_in ic;
-    result
-
-  (* BUGGY: buffer *)
-  let run_command_out cmd pipe_in bds =
-    (* "oc | (cat | sh)" *)
-    let ic, oc, ec = Unix.open_process_full cmd bds in
-    close_in ec;
-    output_string oc pipe_in;
-    close_out oc;
-    let result = In_channel.input_all ic |> String.trim in
-    close_in ic;
-    result
-
-  let run_command_unix cmd =
-    let status = Unix.system cmd in
-    match status with
-    | Unix.WEXITED code -> code
-    | Unix.WSIGNALED signal -> -signal
-    | Unix.WSTOPPED signal -> -signal
-end *)
-
 module Make_compares (S : sig
   type t
 
