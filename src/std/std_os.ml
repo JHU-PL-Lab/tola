@@ -1,6 +1,7 @@
 open! Core
 open OpamStd.Sys
 open Std_datatype
+open Std_fn
 
 let the_os = OpamStd.Sys.os ()
 
@@ -25,6 +26,8 @@ module Tola_cmd = struct
     | Error (`Signal signal) ->
         Fmt.pr "Command was killed by signal: %s@." (Signal.to_string signal)
     | Ok () -> ()
+
+  let bool_of_err errsig = match errsig with Ok () -> true | Error _ -> false
 
   (* 
   let run_command_output cmd =
@@ -66,7 +69,9 @@ module Tola_cmd = struct
     dump_err errno;
     String.strip cmd_out
 
+  let run_ss ?(env = []) cmd = run_s ~env cmd |> String.split_lines
   let run0 ?(env = []) cmd = ignore @@ run_full ~env cmd
+  let run_b ?(env = []) cmd = bool_of_err (thd3 (run_full ~env cmd))
 
   let run_command_unix cmd =
     (match Core_unix.system cmd with

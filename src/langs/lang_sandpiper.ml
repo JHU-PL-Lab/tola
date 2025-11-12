@@ -49,25 +49,12 @@ type library = {
 (* Binary is a language/system format *)
 type binary_exe = Binary_executable of path
 type binary_lib = Binary_library of { path : path; shared : bool }
-type package_kind = Opam | Tola_ml | Placeholder_fs
-
-(* package name *)
-
-(* package managers *)
-type package = {
-  name : name;
-  version : version;
-  library : library;
-  platform : Platform.t option;
-}
 
 (* three models
 1. Placeholder files
 2. OCaml (containing opam package and tola-ml-package)
 3. Binary
 *)
-
-(* *)
 
 (* envir...entity *)
 (* 
@@ -82,13 +69,12 @@ FFI...
   symbol exist or not
 *)
 
-(* ocaml lib / pac *)
-
 type entity =
   (* filesystem *)
   | File of File.t
   | Dir of Dir.t
   (* language eco *)
+  | Pkg of Package.t
   | Library of library
   | Project of project
   (* system-or-c-or-abi eco *)
@@ -132,6 +118,7 @@ let rec interp exp : unit =
             let b = Dir.exists dir in
             print_exists b dir.abs_path;
             b
+        | Pkg pkg -> Package.exists pkg
         | Library lib -> Sys_unix.file_exists_exn lib.path
         | Project prj -> Sys_unix.file_exists_exn prj.path
         | BinaryExecutable (Binary_executable path) ->

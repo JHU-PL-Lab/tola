@@ -6,6 +6,9 @@ let nop _ = ()
 let nop2 _ _ = ()
 let yes _ = true
 let no _ = false
+let fst3 (a, _, _) = a
+let snd3 (_, b, _) = b
+let thd3 (_, _, c) = c
 
 (* let chain_compare f1 f2 =
        let r1 = f1 () in

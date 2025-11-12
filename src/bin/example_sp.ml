@@ -6,11 +6,12 @@ open Base
 open Langs.Lang_sandpiper
 open Tola_std
 open OpamStd.Sys
-open Binding.Fs
 open With_OCaml_switch
 open With_OCaml_dune
 open With_shell
 open With_filesystem
+open Binding
+open Binding.Fs
 
 (* file and dir examples *)
 let file_a = the_file "a.txt"
@@ -98,8 +99,11 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
 let z3_example1 =
-  List
-    [ hrt "z3 example 1"; cmd "z3 --version"; cmd "z3 -in <<< '(check-sat)'" ]
+  (* cmd "z3 --version"; cmd "z3 -in <<< '(check-sat)'"  *)
+  let z3_pkg =
+    Package.{ name = "z3"; version = "dev"; platform = None; kind = Opam }
+  in
+  List [ hrt "z3 example 1"; Check_exists (Pkg z3_pkg) ]
 
 let () =
   let example =
