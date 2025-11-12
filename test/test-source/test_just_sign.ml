@@ -27,8 +27,8 @@ let test_groups =
       ] );
     ( "all_bool",
       [
-        mk_same_bools Std.just_false (fun () -> eq Neg Zero);
-        mk_same_bools Std.true_or_false (fun () -> eq Neg Neg);
+        mk_same_bools BoolSet.just_false (fun () -> eq Neg Zero);
+        mk_same_bools BoolSet.true_or_false (fun () -> eq Neg Neg);
       ] );
   ]
 

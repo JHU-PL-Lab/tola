@@ -14,7 +14,7 @@ let detect_os os =
   in
   Fmt.pr "Detected OS: %s@." name
 
-module Cmd = struct
+module Tola_cmd = struct
   open Core_unix
 
   let dump_err errsig =
@@ -60,8 +60,8 @@ module Cmd = struct
   (* let run_command_out ~env pipe_in cmd =
     run_full ~env ~pipe_in cmd |> Tuple3.get1 *)
 
-  let run_s ?(env = []) cmd =
-    let cmd_out, cmd_err, errno = run_full ~env cmd in
+  let run_s ?(env = []) ?pipe_in cmd =
+    let cmd_out, cmd_err, errno = run_full ~env ?pipe_in cmd in
     if String.length cmd_err > 0 then Fmt.pr "[Stdout]%s" cmd_err;
     dump_err errno;
     String.strip cmd_out

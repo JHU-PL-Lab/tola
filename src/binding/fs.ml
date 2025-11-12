@@ -1,14 +1,35 @@
 open Tola_std
 
-(* Filesystem *)
+(* Files  *)
+
+type rel_path = string
+type abs_path = string
+
+module File = struct
+  type t = { rel_path : rel_path; abs_path : abs_path; kind : [ `File_raw ] }
+
+  let v root rel_path =
+    let abs_path = root $/ rel_path in
+    { rel_path; abs_path; kind = `File_raw }
+
+  let s r = r.abs_path
+  let dirname r = Filename.dirname r.abs_path
+
+  (* Sys_unix.file_exists_exn path *)
+  let exists r = Sys.file_exists r.abs_path
+end
 
 module Dir = struct
-  type rel_path = string
-  type t = { rel_path : string; abs_path : rel_path; kind : [ `Dir_raw ] }
+  type t = { rel_path : rel_path; abs_path : abs_path; kind : [ `Dir_raw ] }
 
-  let make root rel_path =
+  (* TODO: no guarantee the root is rel_path *)
+  let v root rel_path =
     let abs_path = root $/ rel_path in
     { rel_path; abs_path; kind = `Dir_raw }
+
+  let s r = r.abs_path
+  let cons_file r sub = File.v r.abs_path sub
+  let exists r = Sys_unix.is_directory_exn r.abs_path
 
   let pp fmt dir =
     Fmt.pf fmt "Dir: rel_path=%s abs_path=%s kind=%s" dir.rel_path dir.abs_path

@@ -1,6 +1,7 @@
 open Base
 open Interp
 open Common
+open Tola_std
 
 (* let verbose = true *)
 
@@ -8,7 +9,7 @@ open Common
     Hashtbl.set managers ~key:"lt" ~data:pm;
 *)
 
-open Binding.Common
+(* open Binding.Common *)
 
 let _ = the_os
 

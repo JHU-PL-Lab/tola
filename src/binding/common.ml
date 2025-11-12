@@ -1,6 +1,19 @@
 open Base
 open Tola_std
 
+(* 
+For the binding and resolving perspective, a value in the language is either
+a key, an artifact, or a map.
+For a key, it should support key namespace operations.
+For an artifact, it should check for existence, and external tools to change the artifact.
+For a map, it should support map operations.
+
+File, file path and key are key, file content is the arficat.
+
+Since resolving is a compositional steps, 
+
+*)
+
 (* See https://github.com/ocaml/opam/blob/master/src/state/opamSysPoll.ml 
 For ELF parser: see
 https://opam.ocaml.org/packages/bap-elf/
@@ -123,7 +136,7 @@ let inspect_dir ?pat dir0 =
     List.iter (cmd_and_handler_pairs_of_ext ext) ~f:(fun (cmd0, handle) ->
         let cmd = Fmt.str cmd0 fullpath in
         Fmt.pr "[Tool] %s@." cmd;
-        Cmd.run_s cmd |> handle)
+        Tola_cmd.run_s cmd |> handle)
   in
   let handle_file_no_ext fullpath file =
     Fmt.pr "[File] %s@.[No Ext] %s@." fullpath file;

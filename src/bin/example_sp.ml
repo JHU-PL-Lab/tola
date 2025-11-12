@@ -6,39 +6,35 @@ open Base
 open Langs.Lang_sandpiper
 open Tola_std
 open OpamStd.Sys
+open Binding.Fs
 open With_OCaml_switch
 open With_OCaml_dune
 open With_shell
 open With_filesystem
 
-(* opam *)
-let opam_root_str = "OPAMROOT=_pm/opam_root"
-let _ = "opam switch create _pm/ocaml_local ocaml-base-compiler.5.3.0"
-let local_switch_env = "opam env --switch=/home/ex/code/tola/_pm/ocaml_local"
+(* file and dir examples *)
 let file_a = the_file "a.txt"
 let dir_a = the_dir "a_dir"
 
-(* let () =
-  interp
-    (List
-       [
-         hrt "files";
-         Check_exists (File file_a);
-         touch_file file_a;
-         Check_exists (File file_a);
-         remove_dir file_a;
-       ])
+let file_example =
+  List
+    [
+      hrt "files";
+      Check_exists (File file_a);
+      touch_file file_a;
+      Check_exists (File file_a);
+      remove_file file_a;
+    ]
 
-let () =
-  interp
-    (List
-       [
-         hrt "directory";
-         Check_exists (Directory dir_a);
-         touch_dir dir_a;
-         Check_exists (Directory dir_a);
-         remove_dir dir_a;
-       ]) *)
+let dir_example =
+  List
+    [
+      hrt "directory";
+      Check_exists (Dir dir_a);
+      touch_dir dir_a;
+      Check_exists (Dir dir_a);
+      remove_dir dir_a;
+    ]
 
 let link_example =
   let open With_compiler in
@@ -48,28 +44,36 @@ let link_example =
   let sum_so = c_to_so sum_c in
   let main_c = "bin/main.c" in
   let main_exe = c_to_exe main_c in
+
+  let abs_build =
+    Dir.v working_dir "build"
+    (* (working_dir $/ "build") *)
+  in
   List
     [
       hrt "linking";
       remove_dir abs_build;
       touch_dir abs_build;
-      Check_file (working_dir $/ add_c);
-      Check_file (abs_build $/ add_so);
+      Check_exists (File (File.v working_dir add_c));
+      Check_exists (File (Dir.cons_file abs_build add_so));
       compile ~srcs:[ add_c ] ~out:add_so ~flags:"-shared";
       compile ~srcs:[ sum_c ] ~out:sum_so ~flags:"-shared";
-      Check_file (abs_build $/ add_so);
+      Check_exists (File (Dir.cons_file abs_build add_so));
       (* for gnu/ld: -Wl,-verbose; for mold: -Wl,--trace *)
       compile ~srcs:[ main_c ] ~out:main_exe
         ~flags:"-Lbuild/libadd -ladd -Lbuild/libsum -lsum";
-      cmd (abs_build $/ main_exe);
+      cmd (Dir.s abs_build $/ main_exe);
     ]
+
+(* opam *)
+
+let _ = "opam switch create _out/ocaml_local 5.3.0"
+let local_switch_env = "opam env --switch=/home/ex/code/tola/_out/ocaml_local"
 
 let opam_example =
   List
     [
-      cmd "echo $0";
-      Check_file "example.txt";
-      (* cmd0 "ls -l"; *)
+      Check_exists (File (File.v "." "example.txt"));
       cmd "opam var prefix";
       cmd prefix;
       (* cmd (install_dryrun_json "irmin"); *)
@@ -77,16 +81,6 @@ let opam_example =
       cmd0 (is_installed "hashcons");
       cmd (uninstall "hashcons");
       cmd0 (is_installed "hashcons");
-    ]
-
-let ocamlc_example =
-  (* cmd (create_local_switch switch_path); *)
-  List
-    [
-      cmd "opam var prefix";
-      cmd prefix;
-      cmd (install "hashcons");
-      cmd (exec "ocamlc -where");
     ]
 
 let br = List [ hr ]
@@ -103,12 +97,18 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_vendored"); *)
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
+let z3_example1 =
+  List
+    [ hrt "z3 example 1"; cmd "z3 --version"; cmd "z3 -in <<< '(check-sat)'" ]
+
 let () =
   let example =
     match Stdlib.Sys.argv.(1) with
-    | "c" -> link_example
+    | "z3_1" -> z3_example1
+    | "file" -> file_example
+    | "dir" -> dir_example
+    | "link" -> link_example
     | "opam" -> opam_example
-    | "ocamlc" -> ocamlc_example
     | "dune" -> dune_example
     | "br" -> br
     | _ ->
@@ -120,22 +120,22 @@ let () =
 (* dune *)
 
 (* 
-OPAMSWITCH=/home/ex/code/tola/_pm/ocaml_local opam install ansi
+OPAMSWITCH=/home/ex/code/tola/_out/ocaml_local opam install ansi
 
-eval $(opam env --switch=/home/ex/code/tola/_pm/ocaml_local) && ocamlc -where
+eval $(opam env --switch=/home/ex/code/tola/_out/ocaml_local) && ocamlc -where
 
 [lint]
-opam lint --strict _pm/ocaml_remote/repo
+opam lint --strict _out/ocaml_remote/repo
 
 [[remote]]
 opam remote = opam repository 
 [list]
-opam remote --switch=_pm/ocaml_local list
+opam remote --switch=_out/ocaml_local list
 opam remote --all list
 
 [add/remove]
 
-opam remote add --short --switch=_pm/ocaml_local --kind=local opam_local_store _pm/ocaml_remote
-opam remote remove --short --switch=_pm/ocaml_local opam_local_store
+opam remote add --short --switch=_out/ocaml_local --kind=local opam_local_store _out/ocaml_remote
+opam remote remove --short --switch=_out/ocaml_local opam_local_store
 opam remote remove --short --all opam_local_store
 *)

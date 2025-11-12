@@ -11,13 +11,6 @@ real-world thing -> sandpipier -> shell-that-run
 
 *)
 
-(* Filetree essentials
-Usually, a path is an entity usually identified by a string
-while its property can be is_file, is_dir, or filetrees
-We can also use the reversed concept that a file, a dir, or a filetress locating as a path,
-which means they can have other forms.
-*)
-
 open Base
 open Tola_std
 
@@ -27,6 +20,7 @@ type version = string
 type path = string
 
 open Binding
+open Binding.Fs
 
 let this_machine = Platform.{ os = Linux; distro = Ubuntu; arch = X86_64 }
 
@@ -73,18 +67,6 @@ type package = {
 3. Binary
 *)
 
-type entity =
-  (* filesystem *)
-  | File of path
-  | Directory of path
-  | FileTree of path
-  (* language eco *)
-  | Library of library
-  | Project of project
-  (* system-or-c-or-abi eco *)
-  | BinaryExecutable of binary_exe
-  | BinaryLibrary of binary_lib
-
 (* *)
 
 (* envir...entity *)
@@ -102,38 +84,54 @@ FFI...
 
 (* ocaml lib / pac *)
 
+type entity =
+  (* filesystem *)
+  | File of File.t
+  | Dir of Dir.t
+  (* language eco *)
+  | Library of library
+  | Project of project
+  (* system-or-c-or-abi eco *)
+  | BinaryExecutable of binary_exe
+  | BinaryLibrary of binary_lib
+
 (* Language constructs *)
 
 type exp =
   (* structural *)
   | List of exp list
   | ML of (unit -> unit)
-  (* File *)
-  | Check_file of string
   (* Command *)
   | Cmd of cmd
   (* Checking *)
   | Check_exists of entity
 
 let rec interp exp : unit =
+  let print_exists b path =
+    if b then Fmt.pr "File %s exists.\n" path
+    else Fmt.pr "File %s does not exist.\n" path
+  in
+
   match exp with
   | List exps -> List.iter exps ~f:(fun e -> interp e)
   | ML f -> f ()
-  | Check_file path ->
-      if Sys_unix.file_exists_exn path then Fmt.pr "File %s exists.\n" path
-      else Fmt.pr "File %s does not exist.\n" path
   | Cmd cmd ->
       (* | Cmd_unit cmd -> Cmd.run0 ~env:cmd.env cmd.cmd_str *)
       Fmt.pr "[Command] %s\n" cmd.cmd_str;
-      let output = Cmd.run_s ~env:cmd.env cmd.cmd_str in
+      let output = Tola_cmd.run_s ~env:cmd.env cmd.cmd_str in
       Fmt.pr "[Command][Output] [%d]%s\n" (String.length output) output
       (* Fmt.pr "[Command][Result] %B\n" (String.length output <> 0) *)
   | Check_exists entity ->
       let is_existing =
         match entity with
-        | File path -> Sys_unix.file_exists_exn path
-        | Directory path -> Sys_unix.is_directory_exn path
-        | FileTree path -> Sys_unix.is_directory_exn path
+        | File file ->
+            let b = File.exists file in
+            print_exists b file.abs_path;
+            b
+        | Dir dir ->
+            let b = Dir.exists dir in
+            print_exists b dir.abs_path;
+            b
         | Library lib -> Sys_unix.file_exists_exn lib.path
         | Project prj -> Sys_unix.file_exists_exn prj.path
         | BinaryExecutable (Binary_executable path) ->
@@ -176,6 +174,7 @@ let mk_rt ?root () =
 let rt = mk_rt ()
 
 module With_OCaml_switch = struct
+  (* let opam_root_str = "OPAMROOT=_pm/opam_root" *)
   let abs_switch_path = rt "ocaml_local"
   let abs_project_path = rt "ocaml_projects"
   let _prefix = Fmt.str "OPAMSWITCH=%s opam var prefix" abs_switch_path
@@ -213,7 +212,7 @@ module With_OCaml_switch = struct
 end
 
 module With_OCaml_dune = struct
-  let project_root = "_pm/ocaml_projects"
+  let project_root = "_out/ocaml_projects"
   let build_project pid = Fmt.str "dune build --root %s/%s" project_root pid
 
   let check_project_library pid =
@@ -225,31 +224,30 @@ module With_shell = struct
 end
 
 module With_filesystem = struct
-  let working_dir = "_pm/fs"
-  let the_file name = working_dir $/ name
-  let the_dir name = working_dir $/ name
-  (* let touch_file file = cmd0 (Fmt.str "touch %s" file) *)
+  let working_dir = "_out/fs"
+  let the_file name = File.v working_dir name
+  let the_dir name = Dir.v working_dir name
 
-  let touch_file file =
-    let dir = Filename_base.dirname file in
-    cmd0 (Fmt.str "mkdir -p %s && touch %s" dir file)
-
+  (* 
   let touch_dir_for_file file =
     let dir = Filename_base.dirname file in
     cmd0 (Fmt.str "mkdir -p %s" dir)
+*)
 
-  let remove_file file = cmd0 (Fmt.str "rm %s" file)
-  let remove_dir dir = cmd0 (Fmt.str "rm -r %s" dir)
-  let touch_dir dir = cmd0 (Fmt.str "mkdir -p %s" dir)
+  let touch_file file =
+    cmd0 (Fmt.str "mkdir -p %s && touch %s" (File.dirname file) (File.s file))
+
+  let remove_file file = cmd0 (Fmt.str "rm %s" (File.s file))
+  let remove_dir dir = cmd0 (Fmt.str "rm -r %s" (Dir.s dir))
+  let touch_dir dir = cmd0 (Fmt.str "mkdir -p %s" (Dir.s dir))
 end
 
 module With_compiler = struct
   (* or CC or gcc or clang *)
   let cc = "cc"
   let ld = "ld"
-  let working_dir = "_pm/linkings"
+  let working_dir = "_out/linkings"
   let build = "build"
-  let abs_build = working_dir $/ "build"
 
   let compile ~srcs ~out ~flags =
     let srcs_str = String.concat ~sep:" " srcs in

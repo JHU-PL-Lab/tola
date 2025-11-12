@@ -18,14 +18,14 @@ open Two_scoped_binding
 let _run_prefill_cmd env name =
   let script = Printf.sprintf Mantle_example.script_template name in
   Printf.printf "{{%s}} [%s]\n" script name;
-  let command_out = Cmd.run_s ~env "cat | sh" script in
+  let command_out = Tola_cmd.run_s ~env ~pipe_in:"cat | sh" script in
   (* Printf.printf "{%s}\n" command_out; *)
   command_out
 
 let run_cmd bds cmd =
   let command_out =
     let _ = array_of_variables bds in
-    Cmd.run_s ~env:[] "cat | sh" cmd
+    Tola_cmd.run_s ~env:[] ~pipe_in:"cat | sh" cmd
   in
   (* Printf.printf "{%s}\n" command_out; *)
   command_out
