@@ -69,12 +69,32 @@ FFI...
   symbol exist or not
 *)
 
+(* EDSL *)
+
+(* owl ... macOS ...
+
+pkgconfig .... homebrew ... ..-fopenmp
+clang in apple, doesn't support -fopenmp
+
+let pkg_openblas = Pkgm_brew.get in
+(* post_condition/pre_condtion *)
+let result = check_compatilibity pkg_openblas ~os:mac in
+
+(* support_flags_list = {
+ mac_os_ 'clang':
+
+} *)
+
+*)
+
 type entity =
   (* filesystem *)
   | File of File.t
   | Dir of Dir.t
   (* language eco *)
   | Pkg of Package.t
+  (* Pkgm_brew *)
+  (* check_compatilibity ... Pkgm_brew ...   *)
   | Library of library
   | Project of project
   (* system-or-c-or-abi eco *)

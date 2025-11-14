@@ -1,12 +1,6 @@
 open Base
 open OpamStd.Sys
 
-let tool_dep os =
-  match os with
-  | Linux -> "ldd"
-  | Darwin -> "otool -L"
-  | _ -> failwith "Unsupported OS for dependency tool"
-
 (* ldd output *)
 type linked_dep = {
   name : string option;
@@ -14,12 +8,69 @@ type linked_dep = {
   addr : string option;
 }
 
+(* readelf output *)
 type declared_dep = {
   needed : string list;
   rpath : string list;
   runpath : string list;
   soname : string option;
 }
+
+(* One dependency line from `otool -L` *)
+type otool_dep = {
+  path : string; (* dylib path: e.g. /usr/lib/libSystem.B.dylib or @rpath/xxx *)
+  compat_version : string option;
+  (* "compatibility version X.Y.Z" Interesting to find this *)
+  current_version : string option; (* "current version A.B.C" *)
+}
+
+type otool_deps = otool_dep list
+
+type binary_deps =
+  | Elf of { declared_dep : declared_dep }
+  | Macho of { otool_deps : otool_deps }
+
+let elf_inspect_cmd : _ format4 =
+  "readelf -d %s | grep -E 'RPATH|RUNPATH|SONAME|NEEDED'"
+
+let otool_inspect_cmd : _ format4 = "otool -L %s"
+
+(* let ldd_inspect_cmd = ("ldd %s " : _ format4) *)
+
+let shared_ext = function
+  | Linux -> "so"
+  | Darwin -> "dylib"
+  | Win32 -> "dll"
+  | _ -> raise (Failure "Unsupported OS for shared library")
+
+let is_shared_ext ext =
+  match ext with "so" | "dylib" | "dll" -> true | _ -> false
+
+let static_ext = function
+  | Linux | Darwin -> "a"
+  | Win32 -> "lib"
+  | _ -> raise (Failure "Unsupported OS for static library")
+
+let is_static_ext ext = match ext with "a" | "lib" -> true | _ -> false
+
+(* TODO: only windows or dune forced an exe *)
+let exe_ext = function Win32 -> "exe" | _ -> "out"
+let is_exe_ext ext = match ext with "exe" | "out" -> true | _ -> false
+
+(* ) 
+  
+let tool_symbol os =
+  match os with
+  | Linux -> "nm -D"
+  | Darwin -> "nm -gU"
+  | _ -> failwith "Unsupported OS for symbol tool" 
+  *)
+
+let tool_dep os =
+  match os with
+  | Linux -> "ldd"
+  | Darwin -> "otool -L"
+  | _ -> failwith "Unsupported OS for dependency tool"
 
 let parse_readelf (s : string) : declared_dep =
   let lines = String.split_lines s in
@@ -118,16 +169,6 @@ let print_ldd deps =
     deps
 
 let dump_ldd result = parse_ldd result |> print_ldd
-
-(* ---------- Types ---------- *)
-
-(* One dependency line from `otool -L` *)
-type otool_dep = {
-  path : string; (* dylib path: e.g. /usr/lib/libSystem.B.dylib or @rpath/xxx *)
-  compat_version : string option;
-      (* "compatibility version X.Y.Z" Interesting to find this *)
-  current_version : string option; (* "current version A.B.C" *)
-}
 
 (* ---------- Parsing ---------- *)
 

@@ -7,6 +7,10 @@ let pp_set pp_val oc =
   let set_iter f set = Set.iter set ~f in
   Fmt.pf oc "{%a}" Fmt.(iter ~sep:(any ",") set_iter pp_val)
 
+let pp_indexed_list (pp : 'a Fmt.t) : 'a list Fmt.t =
+ fun fmt lst ->
+  lst |> List.iteri ~f:(fun i x -> Fmt.pf fmt "%d. %a@." (i + 1) pp x)
+
 let dump_list s pp = Fmt.pr "@.@[<v>%a@]@;@." (Fmt.list pp) s
 
 let dump_list domain pp =

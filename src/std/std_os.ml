@@ -3,6 +3,22 @@ open OpamStd.Sys
 open Std_datatype
 open Std_fn
 
+(* In OpamStd
+
+type os =
+  | Darwin
+  | Linux
+  | FreeBSD
+  | OpenBSD
+  | NetBSD
+  | DragonFly
+  | Cygwin
+  | Win32
+  | Unix
+  | Other of string
+
+*)
+
 let the_os = OpamStd.Sys.os ()
 
 let detect_os os =

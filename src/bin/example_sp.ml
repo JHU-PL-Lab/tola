@@ -37,6 +37,21 @@ let dir_example =
       remove_dir dir_a;
     ]
 
+(* ocaml_prj 
+ dune build ocaml_prj : input ocaml_prj, output findlib_library + dot_opam_spec
+
+let project = ocaml_prj in
+let build_result = Build_dune project in
+let _ = check build_result
+
+*)
+
+(* pay attention of abstract
+
+dryrun
+
+ocamlmklib -custom -dynamic
+*)
 let link_example =
   let open With_compiler in
   let add_c = "libadd/libadd.c" in
@@ -99,7 +114,6 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
 let z3_example1 =
-  (* cmd "z3 --version"; cmd "z3 -in <<< '(check-sat)'"  *)
   let z3_pkg =
     Package.{ name = "z3"; version = "dev"; platform = None; kind = Opam }
   in
