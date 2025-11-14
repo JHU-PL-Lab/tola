@@ -120,6 +120,7 @@ let z3_example1 =
   List [ hrt "z3 example 1"; Check_exists (Pkg z3_pkg) ]
 
 let () =
+  Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   let example =
     match Stdlib.Sys.argv.(1) with
     | "z3_1" -> z3_example1

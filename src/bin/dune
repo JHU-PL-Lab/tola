@@ -8,6 +8,7 @@
   example_radix
   example_dd
   example_record
+  example_fmt
   mantle)
  (libraries
   unix

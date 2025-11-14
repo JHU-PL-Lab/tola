@@ -19,7 +19,8 @@ let exists p =
       let file_with_infos = List.zip_exn files file_infos in
       let pp_fi fmt (file, fi) =
         match fi.Common.content with
-        | Common.Unknown -> Fmt.pf fmt "[ignored] %s" file
+        | Common.Unknown ->
+            Fmt.pf fmt "%a %s" Fmt.(styled `Red Fmt.string) "[Ignore]" file
         | _ -> Common.pp_file_info_short fmt fi
       in
       Fmt.(pr "%a@." (pp_indexed_list pp_fi) file_with_infos);

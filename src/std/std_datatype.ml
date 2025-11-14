@@ -1,6 +1,22 @@
 open! Core
 module Ordering = Core.Ordering
 
+let rec sub_list k = function
+  | [] -> if k = 0 then [ [] ] else []
+  | x :: xs ->
+      if k = 0 then [ [] ]
+      else
+        let with_x =
+          List.map ~f:(fun tail -> x :: tail) (sub_list (k - 1) xs)
+        in
+        let without_x = sub_list k xs in
+        with_x @ without_x
+
+let all_sub_lists ?(start = 0) ?stop xs =
+  let n = List.length xs in
+  let stop = (match stop with None -> n | Some k -> min k n) + 1 in
+  List.range start stop |> List.concat_map ~f:(fun k -> sub_list k xs)
+
 module Naive_binding = struct
   module Variable = struct
     type name = string
