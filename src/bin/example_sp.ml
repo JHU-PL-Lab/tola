@@ -21,9 +21,9 @@ let file_example =
   List
     [
       hrt "files";
-      Check_exists (File file_a);
+      Have (File file_a);
       touch_file file_a;
-      Check_exists (File file_a);
+      Have (File file_a);
       remove_file file_a;
     ]
 
@@ -31,9 +31,9 @@ let dir_example =
   List
     [
       hrt "directory";
-      Check_exists (Dir dir_a);
+      Have (Dir dir_a);
       touch_dir dir_a;
-      Check_exists (Dir dir_a);
+      Have (Dir dir_a);
       remove_dir dir_a;
     ]
 
@@ -70,11 +70,11 @@ let link_example =
       hrt "linking";
       remove_dir abs_build;
       touch_dir abs_build;
-      Check_exists (File (File.v working_dir add_c));
-      Check_exists (File (Dir.cons_file abs_build add_so));
+      Have (File (File.v working_dir add_c));
+      Have (File (Dir.cons_file abs_build add_so));
       compile ~srcs:[ add_c ] ~out:add_so ~flags:"-shared";
       compile ~srcs:[ sum_c ] ~out:sum_so ~flags:"-shared";
-      Check_exists (File (Dir.cons_file abs_build add_so));
+      Have (File (Dir.cons_file abs_build add_so));
       (* for gnu/ld: -Wl,-verbose; for mold: -Wl,--trace *)
       compile ~srcs:[ main_c ] ~out:main_exe
         ~flags:"-Lbuild/libadd -ladd -Lbuild/libsum -lsum";
@@ -89,7 +89,7 @@ let local_switch_env = "opam env --switch=/home/ex/code/tola/_out/ocaml_local"
 let opam_example =
   List
     [
-      Check_exists (File (File.v "." "example.txt"));
+      Have (File (File.v "." "example.txt"));
       cmd "opam var prefix";
       cmd prefix;
       (* cmd (install_dryrun_json "irmin"); *)
@@ -114,10 +114,14 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
 let z3_example1 =
-  let z3_pkg =
-    Package.{ name = "z3"; version = "dev"; platform = None; kind = Opam }
-  in
-  List [ hrt "z3 example 1"; Check_exists (Pkg z3_pkg) ]
+  let z3_pkg = Package.{ name = "z3"; version = "dev"; kind = Opam } in
+  List
+    [
+      hrt "z3 example 1";
+      Have (Package z3_pkg);
+      Inspect (Package z3_pkg);
+      hrt "All Succeed";
+    ]
 
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;

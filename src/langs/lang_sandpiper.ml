@@ -14,140 +14,85 @@ real-world thing -> sandpipier -> shell-that-run
 open Base
 open Tola_std
 
-type cmd = { cmd_str : string; env : (string * string) list; capture : bool }
-type name = string
-type version = string
-type path = string
+type cmd = {
+  cmd_str : string;
+  env : (string * string) list;
+  capture : bool;
+  expected_ok : bool;
+}
 
 open Binding
 open Binding.Fs
-
-let this_machine = Platform.{ os = Linux; distro = Ubuntu; arch = X86_64 }
-
-(* language essentials *)
-type language = OCaml | Binary | Placeholder_fs
-
-(* language optionals *)
-type project = {
-  path : path;
-  name : name;
-  language : language;
-  platform : Platform.t option;
-}
-
-open Resolve
-
-type library = {
-  path : path;
-  name : name;
-  version : version;
-  language : language;
-  platform : Platform.t option;
-  bind_spec : Resolve_strategy.t;
-}
-
-(* Binary is a language/system format *)
-type binary_exe = Binary_executable of path
-type binary_lib = Binary_library of { path : path; shared : bool }
-
-(* three models
-1. Placeholder files
-2. OCaml (containing opam package and tola-ml-package)
-3. Binary
-*)
-
-(* envir...entity *)
-(* 
-  | Upstream_project
-  | C_binding of library
-
-FFI...
-  z3_lib c++ (datatype)
-  header_c (api_datatype) (v1, v2, v3)
-  ocaml_binding(ocaml code) , python_binding(), java_binding
-
-  symbol exist or not
-*)
-
-(* EDSL *)
-
-(* owl ... macOS ...
-
-pkgconfig .... homebrew ... ..-fopenmp
-clang in apple, doesn't support -fopenmp
-
-let pkg_openblas = Pkgm_brew.get in
-(* post_condition/pre_condtion *)
-let result = check_compatilibity pkg_openblas ~os:mac in
-
-(* support_flags_list = {
- mac_os_ 'clang':
-
-} *)
-
-*)
 
 type entity =
   (* filesystem *)
   | File of File.t
   | Dir of Dir.t
   (* language eco *)
-  | Pkg of Package.t
+  | Package of Package.t
   (* Pkgm_brew *)
   (* check_compatilibity ... Pkgm_brew ...   *)
-  | Library of library
-  | Project of project
+  | Library of Structures.library
+  | Project of Structures.project
   (* system-or-c-or-abi eco *)
-  | BinaryExecutable of binary_exe
-  | BinaryLibrary of binary_lib
+  | BinaryExecutable of Structures.binary_exe
+  | BinaryLibrary of Structures.binary_lib
 
 (* Language constructs *)
 
 type exp =
+  (* Primitives *)
+  | Have of entity
+  | Inspect of entity
   (* structural *)
   | List of exp list
+  (* Foreign magic *)
   | ML of (unit -> unit)
-  (* Command *)
   | Cmd of cmd
-  (* Checking *)
-  | Check_exists of entity
 
-let rec interp exp : unit =
+let is_existing entity =
   let print_exists b path =
     if b then Fmt.pr "File %s exists.\n" path
     else Fmt.pr "File %s does not exist.\n" path
   in
+  match entity with
+  | File file ->
+      let b = File.exists file in
+      print_exists b file.abs_path;
+      b
+  | Dir dir ->
+      let b = Dir.exists dir in
+      print_exists b dir.abs_path;
+      b
+  | Package pkg -> Package.exists pkg
+  | Library lib -> Sys_unix.file_exists_exn lib.path
+  | Project prj -> Sys_unix.file_exists_exn prj.path
+  | BinaryExecutable (Binary_executable path) -> Sys_unix.file_exists_exn path
+  | BinaryLibrary (Binary_library { path; _ }) -> Sys_unix.file_exists_exn path
+(* | _ -> failwith "Unsupported entity type for existence check" *)
 
+let inspect entity =
+  match entity with Package pkg -> ignore @@ Package.inspect pkg | _ -> ()
+
+let rec interp ?(stop_on_error = true) exp : unit =
   match exp with
+  | Have entity ->
+      let is_existing = is_existing entity in
+      Fmt.pr "[Check_exists] %B\n" is_existing;
+      if stop_on_error && not is_existing then failwith "Entity does not exist."
+  | Inspect entity -> inspect entity
   | List exps -> List.iter exps ~f:(fun e -> interp e)
   | ML f -> f ()
   | Cmd cmd ->
       (* | Cmd_unit cmd -> Cmd.run0 ~env:cmd.env cmd.cmd_str *)
       Fmt.pr "[Command] %s\n" cmd.cmd_str;
-      let output = Tola_cmd.run_s ~env:cmd.env cmd.cmd_str in
-      Fmt.pr "[Command][Output] [%d]%s\n" (String.length output) output
-      (* Fmt.pr "[Command][Result] %B\n" (String.length output <> 0) *)
-  | Check_exists entity ->
-      let is_existing =
-        match entity with
-        | File file ->
-            let b = File.exists file in
-            print_exists b file.abs_path;
-            b
-        | Dir dir ->
-            let b = Dir.exists dir in
-            print_exists b dir.abs_path;
-            b
-        | Pkg pkg -> Package.exists pkg
-        | Library lib -> Sys_unix.file_exists_exn lib.path
-        | Project prj -> Sys_unix.file_exists_exn prj.path
-        | BinaryExecutable (Binary_executable path) ->
-            Sys_unix.file_exists_exn path
-        | BinaryLibrary (Binary_library { path; _ }) ->
-            Sys_unix.file_exists_exn path
-        (* | _ -> failwith "Unsupported entity type for existence check" *)
-      in
-      Fmt.pr "[Check_exists] %B\n" is_existing
+      let output, ok = Tola_cmd.run_sb ~env:cmd.env cmd.cmd_str in
+      Fmt.pr "[Command][Output] [%d]%s\n" (String.length output) output;
+      if stop_on_error then
+        if Bool.(cmd.expected_ok <> ok) then
+          failwith
+            (Fmt.str "Command should %B but not: %s" cmd.expected_ok cmd.cmd_str)
+(* Fmt.pr "[Command][Result] %B\n" (String.length output <> 0) *)
 
 (* helper constructors *)
 let hr = ML (fun () -> Fmt.pr "------------------------------------@.")
@@ -156,7 +101,10 @@ let hrt sec =
   ML (fun () -> Fmt.pr "------------------%s------------------@." sec)
 
 let dummy = List []
-let cmd ?(env = []) ?(capture = true) cmd_str = Cmd { cmd_str; env; capture }
+
+let cmd ?(env = []) ?(capture = true) ?(expected_ok = true) cmd_str =
+  Cmd { cmd_str; env; capture; expected_ok }
+
 let cmd0 ?(env = []) cmd_str = cmd ~env ~capture:false cmd_str
 
 (* Check if the opam root is uninitialized *)

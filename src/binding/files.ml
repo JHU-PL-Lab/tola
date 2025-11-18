@@ -1,5 +1,6 @@
 open Base
 open Tola_std
+open Ocamls
 
 (* 
 For the binding and resolving perspective, a value in the language is either
@@ -22,8 +23,6 @@ https://github.com/ashay/owl
 For more glob files
 https://ocaml.org/p/path_glob/0.3/doc/index.html#path_glob:-checking-glob-patterns-on-paths.
 *)
-
-open Ocamls
 
 (* 
 build tools: dune, cmake, ocamlc, makefile (dryrun),...
@@ -107,38 +106,41 @@ let simple_glob pat s =
   let re = Re.Glob.glob pat |> Re.compile in
   Re.execp re s
 
-let inspect_file_with_ext abs_path _file ext =
+let inspect_file_with_ext inspect_config abs_path _file ext =
+  let open Config in
   let run0 cmd0 =
     let cmd = Fmt.str cmd0 abs_path in
     (* Fmt.pr "[Tool] %s@." cmd; *)
     Tola_cmd.run_s cmd
+  in
+  let parse_macho () =
+    Shared_library.Macho
+      {
+        otool_deps =
+          run0 Shared_library.otool_inspect_cmd
+          |> Shared_library.parse_otool_L_output;
+      }
+  in
+  let parse_elf () =
+    Shared_library.Elf
+      {
+        declared_dep =
+          run0 Shared_library.elf_inspect_cmd |> Shared_library.parse_readelf;
+      }
   in
   let content =
     match ext with
     | "so" ->
         Shared_library
           {
-            os = Linux;
+            os = Std.the_os;
             object_deps =
-              Elf
-                {
-                  declared_dep =
-                    run0 Shared_library.elf_inspect_cmd
-                    |> Shared_library.parse_readelf;
-                };
+              (* TODO: should be a matching instead of bool *)
+              (if inspect_config.so_as_dylib then parse_macho ()
+               else parse_elf ());
           }
     | "dylib" ->
-        Shared_library
-          {
-            os = Darwin;
-            object_deps =
-              Macho
-                {
-                  otool_deps =
-                    run0 Shared_library.otool_inspect_cmd
-                    |> Shared_library.parse_otool_L_output;
-                };
-          }
+        Shared_library { os = Std.the_os; object_deps = parse_macho () }
     | "a" -> run0 "ar t %s" |> Fn.const Unknown
     | "lib" -> run0 "ar t %s " |> Fn.const Unknown
     | "cma" ->
@@ -148,12 +150,7 @@ let inspect_file_with_ext abs_path _file ext =
         Ocaml_native_shared_object
           {
             object_deps =
-              Elf
-                {
-                  declared_dep =
-                    run0 Shared_library.elf_inspect_cmd
-                    |> Shared_library.parse_readelf;
-                };
+              (if Std.is_macos then parse_macho () else parse_elf ());
           }
     | "cmxa" ->
         Ocaml_native_library
@@ -166,6 +163,7 @@ let inspect_file_with_ext abs_path _file ext =
   | "cmo" ->  *)
     (* | "cmx" -> [] *)
   in
+
   { path = abs_path; ext = Some ext; content }
 
 let inspect_file_no_ext path base_name =
@@ -176,24 +174,29 @@ let inspect_file_no_ext path base_name =
       (* |> Ocamls.dump_file_fl_meta *)
   | _ -> { path; ext = None; content = Unknown }
 
-let inspect_file abs_path : file_info =
+let inspect_file ?(inspect_config = Config.default_inspect_config) abs_path :
+    file_info =
   let base_name = Filename_base.basename abs_path in
   let _base, ext0 = Filename_base.split_extension base_name in
   match (Sys_unix.is_file abs_path, ext0) with
-  | `Yes, Some ext -> inspect_file_with_ext abs_path base_name ext
+  | `Yes, Some ext ->
+      inspect_file_with_ext inspect_config abs_path base_name ext
   | `Yes, None -> inspect_file_no_ext abs_path base_name
-  | _ ->
-      (* Fmt.pr "[Skip] %s is not a file.@." abs_path; *)
-      { path = abs_path; ext = None; content = Unknown }
+  | _ -> { path = abs_path; ext = None; content = Unknown }
 
 let inspect_dir ?pat dir0 =
   let dir = expand_home_dir dir0 in
   Sys_unix.ls_dir dir
   |> List.filter_map ~f:(fun file ->
-         let matched =
-           match pat with Some pat -> simple_glob pat file | None -> true
-         in
-         if matched then Some (inspect_file (dir $/ file)) else None)
+      let matched =
+        match pat with Some pat -> simple_glob pat file | None -> true
+      in
+      if matched then Some (inspect_file (dir $/ file)) else None)
+
+let check_content = function
+  | Ocaml_bytecode_library bclib -> Ocamls.check_extra bclib.extra
+  | Ocaml_native_library nlib -> Ocamls.check_extra nlib.extra
+  | _ -> true
 
 let () =
   (* ignore @@ inspect_dir "~/.opam/5.3.0/lib/z3";

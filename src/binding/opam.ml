@@ -24,11 +24,15 @@ opam package (installed)
 
 *)
 
+(* let this_prefix = "opam var prefix" |> Tola_cmd.run_s *)
+
+(* let this_prefix = Sys.getenv_exn "OPAMSWITCH"
+let () = Fmt.pr "Current opam switch: %s@." this_prefix *)
+
 let files_of_package pname =
   Fmt.str "opam show --list-files --color=never %s" pname
   |> Tola_cmd.run_ss
   |> List.map ~f:parse_opam_list_file
 
 let exists pname =
-  (* opam show --field=package *)
   Fmt.str "opam show --field=package %s" pname |> Tola_cmd.run_b

@@ -20,6 +20,10 @@ type os =
 *)
 
 let the_os = OpamStd.Sys.os ()
+let is_macos = match the_os with Darwin -> true | _ -> false
+
+(* TODO: distro is incorrect *)
+(* let this_machine = Platform.{ os = the_os; distro = the_os; arch = X86_64 } *)
 
 let detect_os os =
   let name =
@@ -84,6 +88,12 @@ module Tola_cmd = struct
     if String.length cmd_err > 0 then Fmt.pr "[Stdout]%s" cmd_err;
     dump_err errno;
     String.strip cmd_out
+
+  let run_sb ?(env = []) ?pipe_in cmd =
+    let cmd_out, cmd_err, errno = run_full ~env ?pipe_in cmd in
+    if String.length cmd_err > 0 then Fmt.pr "[Stdout]%s" cmd_err;
+    dump_err errno;
+    (String.strip cmd_out, bool_of_err errno)
 
   let run_ss ?(env = []) cmd = run_s ~env cmd |> String.split_lines
   let run0 ?(env = []) cmd = ignore @@ run_full ~env cmd

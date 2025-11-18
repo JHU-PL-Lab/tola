@@ -35,7 +35,7 @@ Extra C options: -Wl,-rpath,/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build
   (* For "Extra C options:" 
    recognize -Wl,-rpath,<p1:p2:...>，and convert <...> to string list。 *)
 
-  let pp_extras ?(sep = Fmt.any ": ") fmt extra =
+  let pp_extra_sep ~sep fmt extra =
     Fmt.pf fmt "Extra C object files: [%a]@."
       Fmt.(list ~sep pp_link_spec)
       extra.c_object_files;
@@ -45,6 +45,8 @@ Extra C options: -Wl,-rpath,/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build
     Fmt.pf fmt "Extra dynamically-loaded libraries: [%a]@."
       Fmt.(list ~sep pp_link_spec)
       extra.dlloader_libs
+
+  let pp_extra = pp_extra_sep ~sep:(Fmt.any "; ")
 
   let parse_extras (s : string) : extra =
     let c_object_files = ref [] in
@@ -83,7 +85,7 @@ let file_cma_of_objinfo path s : file_cma =
 
 let dump_file_cma fcmo =
   Fmt.pr "File: %s@." fcmo.path;
-  Fmt.pr "%a" (Objinfo.pp_extras ~sep:(Fmt.any "; ")) fcmo.extra
+  Fmt.pr "%a" (Objinfo.pp_extra_sep ~sep:(Fmt.any "; ")) fcmo.extra
 
 (* cmxa file *)
 type file_cmxa = { path : string; extra : Objinfo.extra }
@@ -97,3 +99,7 @@ let parse_fl_meta path = In_channel.open_text path |> Fl_metascanner.parse
 (* let dump_file_fl_meta fmeta =
   Fmt.pr "File: %s@." fmeta.path;
   Fl_metascanner.print Out_channel.stdout fmeta.findlib_meta *)
+
+let check_extra extra =
+  Fmt.pr "%a" Objinfo.pp_extra extra;
+  true
