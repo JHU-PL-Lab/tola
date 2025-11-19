@@ -81,11 +81,6 @@ let link_example =
       cmd (Dir.s abs_build $/ main_exe);
     ]
 
-(* opam *)
-
-let _ = "opam switch create _out/ocaml_local 5.3.0"
-let local_switch_env = "opam env --switch=/home/ex/code/tola/_out/ocaml_local"
-
 let opam_example =
   List
     [
@@ -106,6 +101,7 @@ let z3_opam_example2 = List []
 let z3_each_for_ocaml_example = List []
 let z3_system_ocaml_example = List [] *)
 let dune_example = List []
+
 (* cmd ~env:[ ("OCAMLPATH", abs_project_path) ] (echo "OCAMLPATH");
          cmd (build_project "song_std_1_0"); *)
 (*cmd (build_project "song_std_2_0"); *)
@@ -113,8 +109,36 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_vendored"); *)
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
+let opam_switch_example =
+  let _create = "opam switch create _out/ocaml_local 5.3.0" in
+  let _apply = "opam env --switch=/home/ex/code/tola/_out/ocaml_local" in
+  (* print and also run the real env var binding
+    It's short for `opam config env --switch=<switch>`
+    *)
+  List
+    [
+      hrt "OCaml switch example";
+      hrt "opam switch cmds";
+      cmd "opam switch show";
+      cmd "opam switch 5.4.0";
+      cmd "opam switch show";
+      cmd "opam switch 5.3.0";
+      cmd "opam switch show";
+      hrt "OPAMSWITCH env cmds";
+      cmd ~env:[ ("OPAMSWITCH", "5.3.0") ] "opam switch show";
+      cmd ~env:[ ("OPAMSWITCH", "5.3.0") ] "opam var prefix";
+      cmd ~env:[ ("OPAMSWITCH", "5.4.0") ] "opam switch show";
+    ]
+
 let z3_example1 =
-  let z3_pkg = Package.{ name = "z3"; version = "dev"; kind = Opam } in
+  let z3_pkg =
+    Package.
+      {
+        name = "z3";
+        version = "dev";
+        kind = Opam { switch = "5.3.0"; prefix = Opam.prefix "5.3.0" };
+      }
+  in
   List
     [
       hrt "z3 example 1";
@@ -128,6 +152,7 @@ let () =
   let example =
     match Stdlib.Sys.argv.(1) with
     | "z3_1" -> z3_example1
+    | "switch" -> opam_switch_example
     | "file" -> file_example
     | "dir" -> dir_example
     | "link" -> link_example

@@ -16,8 +16,12 @@ open Std_fn
 
 let ( $/ ) a b = Filename.concat a b
 
-(* Stdio *)
+let is_sub ~parent ~child =
+  if Filename.is_absolute parent && Filename.is_absolute child then
+    String.is_prefix child ~prefix:parent
+  else false
 
+(* Stdio *)
 let stdin_iter f = In_channel.input_all In_channel.stdin |> f |> Fmt.pr "%s@."
 
 let stdin_iter_print f =
@@ -84,7 +88,6 @@ let remove_dir path =
     iter_dir ~f_file:Core_unix.remove ~f_dir_post:Core_unix.rmdir path
 
 (* Shell *)
-
 let expand_home_dir path =
   if String.is_prefix path ~prefix:"~/" then
     let home = Sys_unix.home_directory () in

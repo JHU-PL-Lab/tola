@@ -22,6 +22,30 @@ Extra C options: -Wl,-rpath,/home/ex/.opam/5.3.0/.opam-switch/build/z3.dev/build
 
   let inspect_cmd : _ format4 = "ocamlobjinfo %s | grep -E 'Extra'"
 
+  let iter_path f extra =
+    List.iter extra.c_object_files ~f:(function
+      | L_Lpath dir -> f dir
+      | _ -> ());
+    List.iter extra.c_options ~f:(function
+      | O_rpath dirs -> List.iter dirs ~f
+      | _ -> ());
+    List.iter extra.dlloader_libs ~f:(function L_Lpath dir -> f dir | _ -> ())
+
+  let fold_path init f extra =
+    let acc =
+      List.fold extra.c_object_files ~init ~f:(fun acc spec ->
+          match spec with L_Lpath dir -> f acc dir | _ -> acc)
+    in
+    let acc =
+      List.fold extra.c_options ~init:acc ~f:(fun acc opt ->
+          match opt with
+          | O_rpath dirs ->
+              List.fold dirs ~init:acc ~f:(fun acc dir -> f acc dir)
+          | _ -> acc)
+    in
+    List.fold extra.dlloader_libs ~init:acc ~f:(fun acc spec ->
+        match spec with L_Lpath dir -> f acc dir | _ -> acc)
+
   let parse_libspec_token (tok : string) : link_spec =
     if String.is_prefix tok ~prefix:"-l" && String.length tok > 2 then
       L_lib (String.drop_prefix tok 2)
@@ -100,6 +124,14 @@ let parse_fl_meta path = In_channel.open_text path |> Fl_metascanner.parse
   Fmt.pr "File: %s@." fmeta.path;
   Fl_metascanner.print Out_channel.stdout fmeta.findlib_meta *)
 
-let check_extra extra =
-  Fmt.pr "%a" Objinfo.pp_extra extra;
-  true
+let check_extra unsafe_paths extra =
+  let find_unsafe_path acc path =
+    if List.exists unsafe_paths ~f:(fun up -> String.is_prefix path ~prefix:up)
+    then path :: acc
+    else acc
+  in
+  let paths =
+    List.dedup_and_sort ~compare:String.compare
+    @@ Objinfo.fold_path [] find_unsafe_path extra
+  in
+  if List.is_empty paths then Result.Ok () else Result.Error paths

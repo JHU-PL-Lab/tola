@@ -188,15 +188,16 @@ let inspect_dir ?pat dir0 =
   let dir = expand_home_dir dir0 in
   Sys_unix.ls_dir dir
   |> List.filter_map ~f:(fun file ->
-      let matched =
-        match pat with Some pat -> simple_glob pat file | None -> true
-      in
-      if matched then Some (inspect_file (dir $/ file)) else None)
+         let matched =
+           match pat with Some pat -> simple_glob pat file | None -> true
+         in
+         if matched then Some (inspect_file (dir $/ file)) else None)
 
-let check_content = function
-  | Ocaml_bytecode_library bclib -> Ocamls.check_extra bclib.extra
-  | Ocaml_native_library nlib -> Ocamls.check_extra nlib.extra
-  | _ -> true
+let check_no_internal_path internal_paths = function
+  | Ocaml_bytecode_library bclib ->
+      Ocamls.check_extra internal_paths bclib.extra
+  | Ocaml_native_library nlib -> Ocamls.check_extra internal_paths nlib.extra
+  | _ -> Result.Ok ()
 
 let () =
   (* ignore @@ inspect_dir "~/.opam/5.3.0/lib/z3";

@@ -52,8 +52,8 @@ type exp =
 
 let is_existing entity =
   let print_exists b path =
-    if b then Fmt.pr "File %s exists.\n" path
-    else Fmt.pr "File %s does not exist.\n" path
+    if b then Fmt.pr "File %s exists.@." path
+    else Fmt.pr "File %s does not exist.@." path
   in
   match entity with
   | File file ->
@@ -78,21 +78,21 @@ let rec interp ?(stop_on_error = true) exp : unit =
   match exp with
   | Have entity ->
       let is_existing = is_existing entity in
-      Fmt.pr "[Check_exists] %B\n" is_existing;
+      Fmt.pr "[Check_exists] %B@." is_existing;
       if stop_on_error && not is_existing then failwith "Entity does not exist."
   | Inspect entity -> inspect entity
   | List exps -> List.iter exps ~f:(fun e -> interp e)
   | ML f -> f ()
   | Cmd cmd ->
       (* | Cmd_unit cmd -> Cmd.run0 ~env:cmd.env cmd.cmd_str *)
-      Fmt.pr "[Command] %s\n" cmd.cmd_str;
+      Fmt.pr "[Command] %s@." cmd.cmd_str;
       let output, ok = Tola_cmd.run_sb ~env:cmd.env cmd.cmd_str in
-      Fmt.pr "[Command][Output] [%d]%s\n" (String.length output) output;
+      Fmt.pr "[Command][Output]%s@." (* (String.length output) *) output;
       if stop_on_error then
         if Bool.(cmd.expected_ok <> ok) then
           failwith
             (Fmt.str "Command should %B but not: %s" cmd.expected_ok cmd.cmd_str)
-(* Fmt.pr "[Command][Result] %B\n" (String.length output <> 0) *)
+(* Fmt.pr "[Command][Result] %B@." (String.length output <> 0) *)
 
 (* helper constructors *)
 let hr = ML (fun () -> Fmt.pr "------------------------------------@.")

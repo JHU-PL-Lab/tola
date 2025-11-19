@@ -8,6 +8,8 @@ $ opam show --list-files z3
 /home/ex/.opam/5.3.0/lib/z3/z3native.cmo
 *)
 
+type switch_info = { switch : string; prefix : string }
+
 let parse_opam_list_file (line : string) : string =
   match String.index line ' ' with
   | None -> line
@@ -36,3 +38,16 @@ let files_of_package pname =
 
 let exists pname =
   Fmt.str "opam show --field=package %s" pname |> Tola_cmd.run_b
+
+let prefix switch =
+  Fmt.str "opam var prefix --switch=%s" switch |> Tola_cmd.run_s
+
+(* TODO: opam version related *)
+let internal_build_path (info : switch_info) =
+  info.prefix $/ ".opam-switch" $/ "build"
+
+(* let switch_cmd name =
+  Fmt.str "opam switch %s && eval $(opam env --switch=%s)" name name *)
+
+(* let install_cmd pname =
+  Fmt.str "opam install -y %s" pname *)
