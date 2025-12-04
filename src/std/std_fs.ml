@@ -93,23 +93,3 @@ let expand_home_dir path =
     let home = Sys_unix.home_directory () in
     home ^ String.sub path ~pos:1 ~len:(String.length path - 1)
   else path
-
-(* let group_dir ~filter dir =
-  let rec loop dir =
-    let acc_f, acc_p =
-      Sys_unix.fold_dir ~init:([], [])
-        ~f:(fun (acc_f, acc_p) path ->
-          match String.get path 0 with
-          | '.' (* including "." ".." *) | '_' -> (acc_f, acc_p)
-          | _ -> (
-              let fullpath = dir $/ path in
-              match Sys_unix.is_directory fullpath with
-              | `Yes -> (acc_f, loop fullpath @ acc_p)
-              | `No when filter fullpath -> (fullpath :: acc_f, acc_p)
-              | `No -> (acc_f, acc_p)
-              | `Unknown -> (acc_f, acc_p)))
-        dir
-    in
-    (dir, List.sort acc_f ~compare:String.compare) :: acc_p
-  in
-  loop dir *)
