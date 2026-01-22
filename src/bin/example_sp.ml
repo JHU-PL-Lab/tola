@@ -110,7 +110,7 @@ let dune_example = List []
 (* cmd (build_project "song_foo_1_0_workspace"); *)
 
 let opam_switch_example =
-  let _create = "opam switch create _out/ocaml_local 5.3.0" in
+  let _create = "opam switch create _out/ocaml_local 5.4.0" in
   let _apply = "opam env --switch=/home/ex/code/tola/_out/ocaml_local" in
   (* print and also run the real env var binding
     It's short for `opam config env --switch=<switch>`
@@ -120,9 +120,9 @@ let opam_switch_example =
       hrt "OCaml switch example";
       hrt "opam switch cmds";
       cmd "opam switch show";
-      cmd "opam switch 5.4.0";
-      cmd "opam switch show";
       cmd "opam switch 5.3.0";
+      cmd "opam switch show";
+      cmd "opam switch 5.4.0";
       cmd "opam switch show";
       hrt "OPAMSWITCH env cmds";
       cmd ~env:[ ("OPAMSWITCH", "5.3.0") ] "opam switch show";
