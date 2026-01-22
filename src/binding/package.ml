@@ -16,7 +16,7 @@ let inspect ?(verbose = false) p =
   match p.kind with
   | Placeholder_fs -> Sys_unix.file_exists_exn p.name
   | Opam info ->
-      let open Files in
+      let open Ocaml_files in
       let files = Opam.files_of_package p.name in
       let file_infos =
         List.map
@@ -26,7 +26,7 @@ let inspect ?(verbose = false) p =
       let rs =
         List.map
           ~f:(fun fi ->
-            Files.check_no_internal_path
+            Ocaml_files.check_no_internal_path
               [ Opam.internal_build_path info ]
               fi.content)
           file_infos

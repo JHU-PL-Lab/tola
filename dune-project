@@ -17,6 +17,9 @@
   core_unix
   fmt
   fix
+  opam-client
+  opam-core
+  opam-format
   ppx_jane
   ppx_yojson_conv
   ; dev-dependency

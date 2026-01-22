@@ -15,3 +15,5 @@ type distro =
 
 type arch = X86_64 | Aarch64 | Armv7 | Riscv64 | Other_arch of string
 type t = { os : os; distro : distro; arch : arch }
+type lang = OCaml | Cpp | C | Python | Java | Text
+type build_systgem = Dune | CMake | Make | Shell | Custom of string

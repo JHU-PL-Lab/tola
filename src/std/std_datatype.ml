@@ -92,3 +92,5 @@ end
           (part1', part2') :: loop part1' part2'
     in
     ([], lst) :: loop [] lst *)
+
+let str_of_yojson json = Yojson.Safe.pretty_to_string json |> Fmt.str "%s"

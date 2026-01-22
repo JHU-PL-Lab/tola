@@ -1,7 +1,9 @@
 open Base
+open Tola_std
 
 (* open Tola_std *)
 open Resolve
+open Platform
 
 type name = string
 type version = string
@@ -13,7 +15,13 @@ type binary_exe = Binary_executable of path
 type binary_lib = Binary_library of { path : path; shared : bool }
 
 (* language optionals *)
-type project = { path : path; name : name; platform : Platform.t option }
+type project = {
+  path : path;
+  name : name;
+  platform : Platform.t option;
+  primary_lang : lang;
+  build_system : build_systgem;
+}
 
 type library = {
   path : path;
@@ -23,12 +31,28 @@ type library = {
   bind_spec : Resolve_strategy.t;
 }
 
-(* belong to which language 
+(* compile/pp : my_ocaml -> shell *)
 
-(* language essentials *)
-type language = OCaml | Binary | Placeholder_fs
+let inspect (prj : project) =
+  Fmt.pr "Project: name=%s; path=%s; lang=%s; build_system=%s@." prj.name
+    prj.path
+    (match prj.primary_lang with
+    | OCaml -> "OCaml"
+    | Cpp -> "C++"
+    | C -> "C"
+    | Python -> "Python"
+    | Java -> "Java"
+    | Text -> "Text")
+    (match prj.build_system with
+    | Dune -> "Dune"
+    | CMake -> "CMake"
+    | Make -> "Make"
+    | Shell -> "Shell"
+    | Custom s -> Fmt.str "Custom(%s)" s);
 
-*)
+  match prj.build_system with
+  | CMake -> Sys_unix.file_exists_exn (prj.path $/ "CMakeLists.txt") |> ignore
+  | _ -> ()
 
 (* 
   how to diffierentiate a package and a package at a place?

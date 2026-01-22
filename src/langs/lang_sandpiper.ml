@@ -33,6 +33,8 @@ type entity =
   (* Pkgm_brew *)
   (* check_compatilibity ... Pkgm_brew ...   *)
   | Library of Structures.library
+  | C_Json of File.t
+  | C_API of C_utils.c_api_simple
   | Project of Structures.project
   (* system-or-c-or-abi eco *)
   | BinaryExecutable of Structures.binary_exe
@@ -50,29 +52,50 @@ type exp =
   | ML of (unit -> unit)
   | Cmd of cmd
 
+let print_exists b path =
+  if b then Fmt.pr "File %s exists.@." path
+  else Fmt.pr "File %s does not exist.@." path
+
+let check_and_return file =
+  let b = File.exists file in
+  print_exists b file.abs_path;
+  b
+
+let check_dir_and_return dir =
+  let b = Dir.exists dir in
+  print_exists b dir.abs_path;
+  b
+
 let is_existing entity =
-  let print_exists b path =
-    if b then Fmt.pr "File %s exists.@." path
-    else Fmt.pr "File %s does not exist.@." path
-  in
   match entity with
-  | File file ->
-      let b = File.exists file in
-      print_exists b file.abs_path;
-      b
+  | File file -> check_and_return file
+  | C_Json file -> check_and_return file
+  | C_API _spec -> failwith "C_API existence check not implemented"
   | Dir dir ->
       let b = Dir.exists dir in
       print_exists b dir.abs_path;
       b
   | Package pkg -> Package.exists pkg
   | Library lib -> Sys_unix.file_exists_exn lib.path
-  | Project prj -> Sys_unix.file_exists_exn prj.path
+  | Project prj ->
+      Fmt.pr "Checking project at path: %s@." prj.path;
+      Sys_unix.file_exists_exn prj.path
   | BinaryExecutable (Binary_executable path) -> Sys_unix.file_exists_exn path
   | BinaryLibrary (Binary_library { path; _ }) -> Sys_unix.file_exists_exn path
 (* | _ -> failwith "Unsupported entity type for existence check" *)
 
 let inspect entity =
-  match entity with Package pkg -> ignore @@ Package.inspect pkg | _ -> ()
+  match entity with
+  | Package pkg -> ignore @@ Package.inspect pkg
+  | Project prj -> ignore @@ Structures.inspect prj
+  | C_Json file ->
+      Fmt.pr "Inspecting C JSON file at path: %s@." file.abs_path;
+      let c_api_info = C_utils.parse_c_api_simple_file file.abs_path in
+      Fmt.pr "%a" C_utils.pp_short c_api_info;
+      write_file "_out/parsed_c_api.json"
+        (C_utils.yojson_of_c_api_simple c_api_info |> str_of_yojson);
+      ()
+  | _ -> ()
 
 let rec interp ?(stop_on_error = true) exp : unit =
   match exp with
@@ -219,3 +242,13 @@ module With_compiler = struct
   let c_to_so file = change_extension file "so"
   let c_to_exe file = change_extension file "exe"
 end
+
+(* 
+clang -E -dI -P -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3_api.h > _out/z3_api_h.i
+clang -E -dI -P -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h.i
+
+clang -fsyntax-only -Xclang -ast-dump=json -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3_api.h -include z3_macros.h > _out/z3_api_h.json
+clang -fsyntax-only -Xclang -ast-dump=json -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h.json
+
+clang -fsyntax-only -Xclang -ast-dump=json -Xclang -ast-dump-filter=Z3_ -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h_z3.json
+*)

@@ -130,13 +130,13 @@ let opam_switch_example =
       cmd ~env:[ ("OPAMSWITCH", "5.4.0") ] "opam switch show";
     ]
 
-let z3_example1 =
+let z3_opam_pkg_example =
   let z3_pkg =
     Package.
       {
         name = "z3";
         version = "dev";
-        kind = Opam { switch = "5.3.0"; prefix = Opam.prefix "5.3.0" };
+        kind = Opam { switch = "5.4.0"; prefix = Opam.prefix "5.4.0" };
       }
   in
   List
@@ -147,11 +147,41 @@ let z3_example1 =
       hrt "All Succeed";
     ]
 
+let z3_src_path = "/home/ex/code/ocaml-build-examples/vendor/z3"
+
+let z3_source_project =
+  let open Binding.Structures in
+  Project
+    {
+      path = z3_src_path;
+      name = "z3_src";
+      platform = None;
+      primary_lang = Cpp;
+      build_system = CMake;
+    }
+
+let z3_c_api_raw = File (File.v z3_src_path "src/api/c")
+(* let open Binding.Structures in
+  C_API { header_path = z3_src_path $/ "src/api/c"; source = ""; defs = [] } *)
+
+let z3_c_json = C_Json (File.v "." "_out/z3_h.json")
+
+let z3_src_example =
+  List
+    [
+      hrt "z3 build";
+      Have z3_source_project;
+      Inspect z3_source_project;
+      Have z3_c_json;
+      Inspect z3_c_json;
+    ]
+
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   let example =
     match Stdlib.Sys.argv.(1) with
-    | "z3_1" -> z3_example1
+    | "z3_1" -> z3_opam_pkg_example
+    | "z3_src" -> z3_src_example
     | "switch" -> opam_switch_example
     | "file" -> file_example
     | "dir" -> dir_example
