@@ -20,6 +20,7 @@
   opam-client
   opam-core
   opam-format
+  yaml
   ppx_jane
   ppx_yojson_conv
   ; dev-dependency

@@ -15,6 +15,9 @@ demo_langs:
 %.eg:
 	dune exec src/bin/example_$(LANG).exe -- $(ARGS)
 
+# make sp.eg ARGS='yaml'
+# make sp.eg ARGS='z3_src'
+
 # you can use 
 #   make sp.eg to run the example for SP language
 # you can even use

@@ -24,6 +24,8 @@ type cmd = {
 open Binding
 open Binding.Fs
 
+type binding_lang = Python | OCaml [@@deriving show { with_path = false }]
+
 type entity =
   (* filesystem *)
   | File of File.t
@@ -35,6 +37,11 @@ type entity =
   | Library of Structures.library
   | C_Json of File.t
   | C_API of C_utils.c_api_simple
+  | Lang_binding of {
+      binding_lang : binding_lang;
+      pkg : Package.t option;
+      ver : string;
+    }
   | Project of Structures.project
   (* system-or-c-or-abi eco *)
   | BinaryExecutable of Structures.binary_exe
@@ -46,6 +53,7 @@ type exp =
   (* Primitives *)
   | Have of entity
   | Inspect of entity
+  | Ensure_file of File.t * string
   (* structural *)
   | List of exp list
   (* Foreign magic *)
@@ -58,12 +66,12 @@ let print_exists b path =
 
 let check_and_return file =
   let b = File.exists file in
-  print_exists b file.abs_path;
+  print_exists b file.full_path;
   b
 
 let check_dir_and_return dir =
   let b = Dir.exists dir in
-  print_exists b dir.abs_path;
+  print_exists b dir.full_path;
   b
 
 let is_existing entity =
@@ -73,7 +81,7 @@ let is_existing entity =
   | C_API _spec -> failwith "C_API existence check not implemented"
   | Dir dir ->
       let b = Dir.exists dir in
-      print_exists b dir.abs_path;
+      print_exists b dir.full_path;
       b
   | Package pkg -> Package.exists pkg
   | Library lib -> Sys_unix.file_exists_exn lib.path
@@ -82,6 +90,11 @@ let is_existing entity =
       Sys_unix.file_exists_exn prj.path
   | BinaryExecutable (Binary_executable path) -> Sys_unix.file_exists_exn path
   | BinaryLibrary (Binary_library { path; _ }) -> Sys_unix.file_exists_exn path
+  | Lang_binding { binding_lang; ver; _ } ->
+      Fmt.pr "Checking lang binding: %s version %s@."
+        (show_binding_lang binding_lang)
+        ver;
+      true
 (* | _ -> failwith "Unsupported entity type for existence check" *)
 
 let inspect entity =
@@ -89,13 +102,16 @@ let inspect entity =
   | Package pkg -> ignore @@ Package.inspect pkg
   | Project prj -> ignore @@ Structures.inspect prj
   | C_Json file ->
-      Fmt.pr "Inspecting C JSON file at path: %s@." file.abs_path;
-      let c_api_info = C_utils.parse_c_api_simple_file file.abs_path in
+      Fmt.pr "Inspecting C JSON file at path: %s@." file.full_path;
+      let c_api_info = C_utils.parse_c_api_simple_file file.full_path in
       Fmt.pr "%a" C_utils.pp_short c_api_info;
       write_file "_out/parsed_c_api.json"
         (C_utils.yojson_of_c_api_simple c_api_info |> str_of_yojson);
       ()
   | _ -> ()
+
+let cmd_from_src cmd_str =
+  { cmd_str; env = []; capture = true; expected_ok = true }
 
 let rec interp ?(stop_on_error = true) exp : unit =
   match exp with
@@ -104,6 +120,12 @@ let rec interp ?(stop_on_error = true) exp : unit =
       Fmt.pr "[Check_exists] %B@." is_existing;
       if stop_on_error && not is_existing then failwith "Entity does not exist."
   | Inspect entity -> inspect entity
+  | Ensure_file (file, cmd) ->
+      if not (File.exists file) then (
+        Fmt.pr "[Ensure_file] Creating file %s@. cmd:%s" file.full_path cmd;
+        Tola_cmd.run0 cmd);
+
+      assert (File.exists file)
   | List exps -> List.iter exps ~f:(fun e -> interp e)
   | ML f -> f ()
   | Cmd cmd ->
@@ -242,13 +264,3 @@ module With_compiler = struct
   let c_to_so file = change_extension file "so"
   let c_to_exe file = change_extension file "exe"
 end
-
-(* 
-clang -E -dI -P -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3_api.h > _out/z3_api_h.i
-clang -E -dI -P -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h.i
-
-clang -fsyntax-only -Xclang -ast-dump=json -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3_api.h -include z3_macros.h > _out/z3_api_h.json
-clang -fsyntax-only -Xclang -ast-dump=json -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h.json
-
-clang -fsyntax-only -Xclang -ast-dump=json -Xclang -ast-dump-filter=Z3_ -I/home/ex/code/ocaml-build-examples/vendor/z3/src/api /home/ex/code/ocaml-build-examples/vendor/z3/src/api/z3.h > _out/z3_h_z3.json
-*)

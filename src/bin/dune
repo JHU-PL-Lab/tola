@@ -16,6 +16,8 @@
   fmt
   sexplib
   cmdliner
+  yaml
+  ;
   tola_std
   binding
   ocamlgraph
