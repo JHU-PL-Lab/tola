@@ -1,4 +1,3 @@
-open Langs.Lang_cmake
 open Langs.Lang_cmake_utils
 open Langs.Lang_cmake_pp
 
@@ -6,8 +5,8 @@ let cmd =
   cmd_of_list
     [
       add_executable ~sources:[ "MakeTable.cxx" ] "MakeTable";
-      target_link_libraries [ Target "MakeTable" ]
-        [ target_def ~kind:Private [ ivar "tutorial_compiler_flags" ] ];
+      target_link_libraries [ "MakeTable" ]
+        [ target_def ~kind:"PRIVATE" [ str_ "tutorial_compiler_flags" ] ];
       add_custom_command
         ~outputs:[ "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]
         ~depends:[ "MakeTable" ]

@@ -18,11 +18,10 @@ type version = { major : int; minor : int; patch : string }
 type source = string
 type test = string
 type policy = Policy
-type var = Var of string
+type var = string
 type output = string
-type value = Val_var of string | Val_str of string | Val_bool of bool
-type item = Item_var of string | Item_str of string
-type description = item
+type arg = Bare of string | Quoted of string
+type description = arg
 type cache_entry = Cache_entry
 type before_or_after = Before | After
 type depend = string
@@ -32,16 +31,15 @@ type option_ = string
 type job_pool = string list
 
 (* target *)
-type target = Target of string
-type feature = Feature of string
-type target_kind = Public | Private | Interface
-type items_with_kind = { kind : target_kind; items : item list }
-type target_feature = { kind : target_kind; feature : feature }
+type target = string
+type feature = string
+type items_with_kind = { kind : string; items : arg list }
+type target_feature = { kind : string; feature : string }
 type set = SSet
 type file_set_type = Fs_headers | Fs_cxxmodules
 
 type target_file_set = {
-  kind : target_kind;
+  kind : string;
   file_set : set;
   type_ : file_set_type;
   base_dirs : directory list;
@@ -57,23 +55,13 @@ type link_library_group = {
 }
 
 type land_dep = { lang : string; depend : depend }
-type definition = Def_var of var | Def_var_kv of { var : var; value : value }
-type property = { prop : string; value : value }
+type definition = Def_var of var | Def_var_kv of { var : var; value : arg }
+type property = { prop : string; value : arg }
 type include_guard_scope = Ig_directory | Ig_global
 type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
 type add_executable_option = Ae_win32 | Ae_macos_bundle | Ae_exclude_from_all
 
-type library_type =
-  | Lib_static
-  | Lib_shared
-  | Lib_module
-  | Lib_unknown
-  | Lib_object
-  | Lib_interface
-  | Lib_global
-
-type custom_command =
-  | Custom_command of { command : string; args : string list }
+type custom_command = { command : string; args : string list }
 
 (* Argument Caveats *)
 type pseudo_var = Argn | Argc | Argv | Argv0
@@ -175,44 +163,10 @@ type cond_check =
 type code = string
 type gs_directory = Gs_directory of directory | Gs_target_directory of target
 
-type compatibility =
-  | Any_newer_version
-  | Same_major_version
-  | Same_minor_version
-  | Exact_version
-
-type supported_lang =
-  | Lang_c
-  | Lang_cxx
-  | Lang_csharp
-  | Lang_cuda
-  | Lang_objc
-  | Lang_objcxx
-  | Lang_fortran
-  | Lang_hipy
-  | Lang_ispc
-  | Lang_swift
-  | Lang_asm
-  | Lang_asm_nasm
-  | Lang_asm_marmasm
-  | Lang_asm_masm
-  | Lang_asm_att
 
 type scripting_cmd = exp
 
-and cond =
-  | Cond_const of string
-  | Cond_var of string
-  | Cond_str of string
-  | Not of cond
-  | And of cond * cond
-  | Or of cond * cond
-  | Is_command of string
-  | Is_policy of string
-  | Is_target of string
-  | Is_test of string
-  | Is_defined of string
-  | In_list of { var : var; lvar : var }
+and cond = string list
 
 and exp =
   (* Scripting Commands *)
@@ -231,7 +185,7 @@ and exp =
   | Quote of string
   | Return of { propogate_vars : var list }
   | Function of { name : var; args : string list; cmds : cmd list }
-  | Apply of { name : var; args : value list }
+  | Apply of { name : var; args : arg list }
   | Macro of { name : var; args : var list; commands : exp } (* endmacro *)
   | If of { cond : cond; then_ : exp; else_ : exp option }
   | Foreach of { loop_var : var }
@@ -244,14 +198,14 @@ and exp =
   | Foreach_in of { loop_var : var; lists : var list; step : var option }
   | Exp_list of exp list
   | Include of {
-      file : item;
+      file : arg;
       optional : bool;
       result_var : var option;
       no_policy_scope : scope option;
     }
   | Include_guard of { scope : include_guard_scope }
   (* State *)
-  | Cmake_option of { var : var; msg : string; value : value }
+  | Cmake_option of { var : var; msg : string; value : arg }
   | Get_cmake_property of { var : var; property : string }
   | Get_directory_property of {
       var : var;
@@ -264,11 +218,11 @@ and exp =
       mode : bool;
       cache : bool;
     }
-  (* | Set of { var_value_pairs : (var * value) list; parent_scope : bool } *)
-  | Set of { var : var; values : value list; parent_scope : bool }
-  | Set_cache of { var_value_pairs : (var * value) list; parent_scope : bool }
-  | Set_env of { var : var; value : value }
-  | Set_directory_properties of { prop_value_pairs : (var * value) list }
+  (* | Set of { var_value_pairs : (var * arg) list; parent_scope : bool } *)
+  | Set of { var : var; values : arg list; parent_scope : bool }
+  | Set_cache of { var_value_pairs : (var * arg) list; parent_scope : bool }
+  | Set_env of { var : var; value : arg }
+  | Set_directory_properties of { prop_value_pairs : (var * arg) list }
     (* https://cmake.org/cmake/help/latest/command/set_property.html *)
   | Unset of { var : var; cache : bool; parent_scope : bool }
   | Unset_env of { var : var }
@@ -320,7 +274,7 @@ and exp =
   | Find_path
   | Find_program
   (* List lib *)
-  | List_append of { var : var; values : value list }
+  | List_append of { var : var; values : arg list }
   | String_lib
   | Mark_as_advanced of { clear : bool; force : bool; vars : var list }
   | Math_lib of { var : var; exp : exp; output_format : math_output_format }
@@ -448,7 +402,7 @@ and project_cmd =
   | Add_library of {
       name : string;
       exclude_from_all : bool;
-      type_ : library_type option;
+      type_ : string option;
       sources : file list;
     }
   | Add_library_object of { name : string; sources : file list }
@@ -580,32 +534,32 @@ and project_cmd =
       extra_include : string;
       function_ : string;
     }
-  | Enable_language of { langs : supported_lang list; optional : bool }
+  | Enable_language of { langs : string list; optional : bool }
   | Export_targets of { targets : target list }
-  | Export_export of { name : string; file : item option }
+  | Export_export of { name : string; file : arg option }
   | Export_package of { name : string }
   | Export_setup of { name : string }
   | Fltk_wrap_ui of { resulting_library_name : string; sources : source list }
   | Install_targets of {
       targets : target list;
       (* target_type : string; *)
-      destination : item;
+      destination : arg;
       component : string option;
       rename : string option;
       export : string option;
       permissions : permissions;
     }
   | Install_files of {
-      files : item list;
-      destination : item;
+      files : arg list;
+      destination : arg;
       component : string option;
       rename : string option;
       permissions : permissions;
     }
   | Install_export of {
-      file : item option;
-      export : item;
-      destination : item;
+      file : arg option;
+      export : arg;
+      destination : arg;
       component : string option;
       rename : string option;
       permissions : permissions;
@@ -635,17 +589,17 @@ and project_cmd =
 and module_cmd =
   (* CMakePackageConfigHelpers *)
   | Configure_package_config_file of {
-      input : item;
-      output : item;
-      install_dest : item;
+      input : arg;
+      output : arg;
+      install_dest : arg;
       path_vars : var list;
       no_set_and_check_macro : bool;
       no_check_required_components_macro : bool;
     }
   | Write_basic_package_version_file of {
-      file : item;
-      version : item option;
-      compatibility : compatibility;
+      file : arg;
+      version : arg option;
+      compatibility : string;
       arch_independent : bool;
     }
 (* CTest Commands *)

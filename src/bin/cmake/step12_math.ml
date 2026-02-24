@@ -1,43 +1,42 @@
-open Langs.Lang_cmake
 open Langs.Lang_cmake_utils
 open Langs.Lang_cmake_pp
 
 let cmd =
   cmd_of_list
     [
-      include_ (ivar "MakeTable.cmake");
+      include_ (str_ "MakeTable.cmake");
       add_library "MathFunctions" ~sources:[ "MathFunctions.cxx" ];
-      set_property ~targets:[ Target "MathFunctions" ]
+      set_property ~targets:[ "MathFunctions" ]
         [ ("VERSION", str_ "1.0.0") ];
-      set_property ~targets:[ Target "MathFunctions" ]
+      set_property ~targets:[ "MathFunctions" ]
         [ ("SOVERSION", str_ "1") ];
-      target_include_directories (Target "MathFunctions")
+      target_include_directories "MathFunctions"
         [
-          target_def ~kind:Interface
+          target_def ~kind:"INTERFACE"
             [
-              ivar "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>";
-              ivar "$<INSTALL_INTERFACE:include>";
+              str_ "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>";
+              str_ "$<INSTALL_INTERFACE:include>";
             ];
         ];
       option_ ~value:(bool_ true)
-        ~msg:"Use tutorial provided math implementation" (Var "USE_MYMATH");
-      ifthen (Cond_var "USE_MYMATH")
+        ~msg:"Use tutorial provided math implementation" "USE_MYMATH";
+      ifthen ["USE_MYMATH"]
         (cmd_of_list
            [
-             target_compile_definitions (Target "MathFunctions")
-               [ target_def ~kind:Private [ istr "USE_MYMATH" ] ];
-             add_library "SqrtLibrary" ~type_:Lib_static
+             target_compile_definitions "MathFunctions"
+               [ target_def ~kind:"PRIVATE" [ quote "USE_MYMATH" ] ];
+             add_library "SqrtLibrary" ~type_:"STATIC"
                ~sources:[ "mysqrt.cxx"; "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ];
-             target_include_directories (Target "SqrtLibrary")
+             target_include_directories "SqrtLibrary"
                [
-                 target_def ~kind:Private [ ivar "${CMAKE_CURRENT_BINARY_DIR}" ];
+                 target_def ~kind:"PRIVATE" [ str_ "${CMAKE_CURRENT_BINARY_DIR}" ];
                ];
-             set_target_properties (Target "SqrtLibrary")
+             set_target_properties "SqrtLibrary"
                [ ("POSITION_INDEPENDENT_CODE", str_ "${BUILD_SHARED_LIBS}") ];
-             target_link_libraries [ Target "SqrtLibrary" ]
-               [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
-             include_ (ivar "CheckCXXSourceCompiles");
-             apply (Var "check_cxx_source_compiles")
+             target_link_libraries [ "SqrtLibrary" ]
+               [ target_def ~kind:"PUBLIC" [ str_ "tutorial_compiler_flags" ] ];
+             include_ (str_ "CheckCXXSourceCompiles");
+             apply "check_cxx_source_compiles"
                [
                  quote
                    "\n\
@@ -48,7 +47,7 @@ let cmd =
                    \  }";
                  str_ "HAVE_LOG";
                ];
-             apply (Var "check_cxx_source_compiles")
+             apply "check_cxx_source_compiles"
                [
                  quote
                    "\n\
@@ -60,28 +59,28 @@ let cmd =
                  str_ "HAVE_EXP";
                ];
              ifthen
-               (And (Cond_var "HAVE_LOG", Cond_var "HAVE_EXP"))
-               (target_compile_definitions (Target "SqrtLibrary")
+               ["HAVE_LOG"; "AND"; "HAVE_EXP"]
+               (target_compile_definitions "SqrtLibrary"
                   [
-                    target_def ~kind:Private
-                      [ istr "HAVE_LOG"; istr "HAVE_EXP" ];
+                    target_def ~kind:"PRIVATE"
+                      [ quote "HAVE_LOG"; quote "HAVE_EXP" ];
                   ]);
-             target_link_libraries [ Target "MathFunctions" ]
-               [ target_def ~kind:Private [ ivar "SqrtLibrary" ] ];
-             target_compile_definitions (Target "MathFunctions")
-               [ target_def ~kind:Private [ istr "EXPORTING_MYMATH" ] ];
+             target_link_libraries [ "MathFunctions" ]
+               [ target_def ~kind:"PRIVATE" [ str_ "SqrtLibrary" ] ];
+             target_compile_definitions "MathFunctions"
+               [ target_def ~kind:"PRIVATE" [ quote "EXPORTING_MYMATH" ] ];
            ]);
-      target_link_libraries [ Target "MathFunctions" ]
-        [ target_def ~kind:Public [ ivar "tutorial_compiler_flags" ] ];
-      set (Var "installable_libs")
+      target_link_libraries [ "MathFunctions" ]
+        [ target_def ~kind:"PUBLIC" [ str_ "tutorial_compiler_flags" ] ];
+      set "installable_libs"
         [ str_ "MathFunctions"; str_ "tutorial_compiler_flags" ];
-      ifthen (Is_target "SqrtLibrary")
+      ifthen ["TARGET"; "SqrtLibrary"]
         (cmd_of_list
-           [ list_append (Var "installable_libs") [ str_ "SqrtLibrary" ] ]);
+           [ list_append "installable_libs" [ str_ "SqrtLibrary" ] ]);
       install_targets ~export:"MathFunctionsTargets"
-        [ Target "${installable_libs}" ]
-        (ivar "lib");
-      install_files [ istr "MathFunctions.h" ] (ivar "include");
+        [ "${installable_libs}" ]
+        (str_ "lib");
+      install_files [ quote "MathFunctions.h" ] (str_ "include");
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd

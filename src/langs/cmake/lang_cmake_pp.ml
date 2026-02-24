@@ -21,45 +21,18 @@ let pp_version_opt ff = function
   | None -> ()
   | Some ver -> Fmt.pf ff "VERSION %s" (string_of_version ver)
 
-let pp_target ff (Target s) = Fmt.string ff s
+let pp_target ff s = Fmt.string ff s
 let pp_source ff s = Fmt.string ff s
-let pp_var ff (Var s) = Fmt.string ff s
+let pp_var ff s = Fmt.string ff s
 
-let rec pp_cond ff = function
-  | Cond_const s -> Fmt.string ff s
-  | Cond_var s -> Fmt.string ff s
-  | Cond_str s -> pp_quoted ff s
-  | Not c -> Fmt.pf ff "NOT %a" pp_cond c
-  | And (c1, c2) -> Fmt.pf ff "%a AND %a" pp_cond c1 pp_cond c2
-  | Or (c1, c2) -> Fmt.pf ff "%a OR %a" pp_cond c1 pp_cond c2
-  | Is_command s -> Fmt.pf ff "COMMAND %a" Fmt.string s
-  | Is_policy s -> Fmt.pf ff "POLICY %a" Fmt.string s
-  | Is_target t -> Fmt.pf ff "TARGET %a" Fmt.string t
-  | Is_test s -> Fmt.pf ff "TEST %a" Fmt.string s
-  | Is_defined s -> Fmt.pf ff "DEFINED %a" Fmt.string s
-  | In_list { var; lvar } -> Fmt.pf ff "%a IN_LIST %a" pp_var var pp_var lvar
+let pp_cond ff cond =
+  Fmt.string ff (String.concat ~sep:" " cond)
 let pp_string_quoted ff msg = Fmt.string ff (quoted msg)
 let pp_message = pp_string_quoted
 
-let pp_item ff = function
-  | Item_var var -> Fmt.string ff var
-  | Item_str s -> pp_string_quoted ff s
-
-let string_of_value = function
-  | Val_var s -> s
-  | Val_str s -> quoted s
-  | Val_bool true -> "True"
-  | Val_bool false -> "False"
-
-let pp_val = Fmt.using string_of_value Fmt.string
-
-let string_on_of_value = function
-  | Val_var s -> s
-  | Val_str s -> quoted s
-  | Val_bool true -> "ON"
-  | Val_bool false -> "OFF"
-
-let pp_val_on = Fmt.using string_on_of_value Fmt.string
+let pp_arg ff = function
+  | Bare s -> Fmt.string ff s
+  | Quoted s -> pp_string_quoted ff s
 
 let string_of_scope = function
   | Function_scope -> "FUNCTION"
@@ -68,46 +41,18 @@ let string_of_scope = function
 let pp_scope = Fmt.using string_of_scope Fmt.string
 
 let pp_property ff { prop; value } =
-  Fmt.(pf ff "%a %a" string prop pp_val value)
-
-let string_of_library_type = function
-  | Lib_shared -> "SHARED"
-  | Lib_static -> "STATIC"
-  | Lib_module -> "MODULE"
-  | Lib_unknown -> "UNKNOWN"
-  | Lib_object -> "OBJECT"
-  | Lib_interface -> "INTERFACE"
-  | Lib_global -> "GLOBAL"
-
-let pp_lib_type = Fmt.using string_of_library_type Fmt.string
+  Fmt.(pf ff "%a %a" string prop pp_arg value)
 
 let pp_parent_scope =
   Fmt.using (fun ps -> if ps then "PARENT_SCOPE" else "") Fmt.string
 
-let string_of_kind = function
-  | Interface -> "INTERFACE"
-  | Public -> "PUBLIC"
-  | Private -> "PRIVATE"
-
-let pp_target_kind = Fmt.using string_of_kind Fmt.string
-
-let pp_items_with_kind ff ({ kind; items } : items_with_kind) =
-  Fmt.pf ff "%a %a" pp_target_kind kind (list_sp pp_item) items
-
-let pp_feature ff (Feature s) = Fmt.string ff s
-
-let string_of_compatiblity = function
-  | Any_newer_version -> "AnyNewerVersion"
-  | Same_major_version -> "SameMajorVersion"
-  | Same_minor_version -> "SameMinorVersion"
-  | Exact_version -> "ExactVersion"
-
-let pp_compatiblity = Fmt.using string_of_compatiblity Fmt.string
+let pp_args_with_kind ff ({ kind; items } : items_with_kind) =
+  Fmt.pf ff "%s %a" kind (list_sp pp_arg) items
 
 let pp_target_feature ff ({ kind; feature } : target_feature) =
-  Fmt.pf ff "%a %a" pp_target_kind kind pp_feature feature
+  Fmt.pf ff "%s %s" kind feature
 
-let pp_custom_command ff (Custom_command { command; args }) =
+let pp_custom_command ff ({ command; args } : custom_command) =
   Fmt.(pf ff "%a %a" string command (list_sp string) args)
 
 (* New helper printers *)
@@ -152,24 +97,6 @@ let pp_separate_arguments_mode =
 let string_of_before_or_after = function Before -> "BEFORE" | After -> "AFTER"
 let pp_before_or_after = Fmt.using string_of_before_or_after Fmt.string
 
-let string_of_supported_lang = function
-  | Lang_c -> "C"
-  | Lang_cxx -> "CXX"
-  | Lang_csharp -> "CSharp"
-  | Lang_cuda -> "CUDA"
-  | Lang_objc -> "OBJC"
-  | Lang_objcxx -> "OBJCXX"
-  | Lang_fortran -> "Fortran"
-  | Lang_hipy -> "HIP"
-  | Lang_ispc -> "ISPC"
-  | Lang_swift -> "Swift"
-  | Lang_asm -> "ASM"
-  | Lang_asm_nasm -> "ASM_NASM"
-  | Lang_asm_marmasm -> "ASM_MARMASM"
-  | Lang_asm_masm -> "ASM_MASM"
-  | Lang_asm_att -> "ASM-ATT"
-
-let pp_supported_lang = Fmt.using string_of_supported_lang Fmt.string
 
 let string_of_define_property_mode = function
   | Dp_global -> "GLOBAL"
@@ -185,7 +112,7 @@ let pp_define_property_mode =
 
 let pp_definition ff = function
   | Def_var var -> pp_var ff var
-  | Def_var_kv { var; value } -> Fmt.pf ff "%a=%a" pp_var var pp_val value
+  | Def_var_kv { var; value } -> Fmt.pf ff "%a=%a" pp_var var pp_arg value
 
 let string_of_add_executable_option = function
   | Ae_win32 -> "WIN32"
@@ -215,7 +142,7 @@ let pp_file_set_type = Fmt.using string_of_file_set_type Fmt.string
 
 let pp_target_file_set ff { kind; file_set = _; type_; base_dirs; files } =
   Fmt.(
-    pf ff "%a TYPE %a%a%a" pp_target_kind kind pp_file_set_type type_
+    pf ff "%s TYPE %a%a%a" kind pp_file_set_type type_
       (pp_list_with_key "BASE_DIRS" string)
       base_dirs
       (pp_list_with_key "FILES" string)
@@ -315,7 +242,7 @@ let rec pp ff e =
         pf ff "block(SCOPE_FOR%a%a)@.endblock()"
           (pp_list_with_key " VARIABLES" pp_var)
           scope_var
-          (fun ff (Var v) ->
+          (fun ff v ->
             if String.length v > 0 then pf ff " PROPAGATE %s" v)
           propagate)
   | While { cond; commands } ->
@@ -343,7 +270,7 @@ let rec pp ff e =
         pf ff "macro(%a %a)@.@[<2>  %a@]@.endmacro()@." pp_var name
           (list_sp pp_var) args pp commands)
   | Apply { name; args } ->
-      Fmt.(pf ff "%a(%a)@." pp_var name (list_sp pp_val) args)
+      Fmt.(pf ff "%a(%a)@." pp_var name (list_sp pp_arg) args)
   | Foreach { loop_var } ->
       Fmt.(pf ff "foreach(%a)@.endforeach()" pp_var loop_var)
   | Foreach_range { loop_var; start; stop; step } ->
@@ -359,14 +286,14 @@ let rec pp ff e =
           (list_sp pp_var) lists)
   | Include { file; optional; result_var; no_policy_scope } ->
       Fmt.(
-        pf ff "include(%a%s%a%a)" pp_item file
+        pf ff "include(%a%s%a%a)" pp_arg file
           (if optional then " OPTIONAL " else "")
           (option pp_var) result_var (option pp_scope) no_policy_scope)
   | Include_guard { scope } ->
       Fmt.pf ff "include_guard(%a)" pp_include_guard_scope scope
   (* state *)
   | Cmake_option { var; msg; value } ->
-      Fmt.(pf ff "option(%a %a %a)" pp_var var pp_message msg pp_val_on value)
+      Fmt.(pf ff "option(%a %a %a)" pp_var var pp_message msg pp_arg value)
   | Get_cmake_property { var; property } ->
       Fmt.(pf ff "get_cmake_property(%a %a)" pp_var var string property)
   | Get_directory_property { var; directory; property } ->
@@ -382,18 +309,18 @@ let rec pp ff e =
           cache)
   | Set { var; values; parent_scope } ->
       Fmt.(
-        pf ff "set(%a %a %a)" pp_var var (list_sp pp_val) values pp_parent_scope
+        pf ff "set(%a %a %a)" pp_var var (list_sp pp_arg) values pp_parent_scope
           parent_scope)
   | Set_cache { var_value_pairs; parent_scope } ->
       Fmt.(
-        pf ff "set(%a CACHE %a)" (list_sp (pair ~sep:sp pp_var pp_val))
+        pf ff "set(%a CACHE %a)" (list_sp (pair ~sep:sp pp_var pp_arg))
           var_value_pairs pp_parent_scope parent_scope)
   | Set_env { var; value } ->
-      Fmt.(pf ff "set(ENV{%a} %a)" pp_var var pp_val value)
+      Fmt.(pf ff "set(ENV{%a} %a)" pp_var var pp_arg value)
   | Set_directory_properties { prop_value_pairs } ->
       Fmt.(
         pf ff "set_directory_properties(PROPERTIES %a)"
-          (list_sp (pair ~sep:sp pp_var pp_val))
+          (list_sp (pair ~sep:sp pp_var pp_arg))
           prop_value_pairs)
   | Unset { var; cache; parent_scope } ->
       Fmt.(
@@ -441,7 +368,7 @@ let rec pp ff e =
       Fmt.(pf ff "variable_watch(%a)" pp_var var)
   (* list/string/math lib *)
   | List_append { var; values } ->
-      Fmt.(pf ff "list(APPEND %a %a)@." pp_var var (list_sp pp_val) values)
+      Fmt.(pf ff "list(APPEND %a %a)@." pp_var var (list_sp pp_arg) values)
   | Mark_as_advanced { clear; force; vars } ->
       Fmt.(
         pf ff "mark_as_advanced(%a%a%a)" (pp_flag "CLEAR") clear
@@ -610,7 +537,7 @@ and pp_project_cmd ff cmd =
           exclude_from_all (pp_flag "SYSTEM") system)
   | Add_library { name; sources; type_; exclude_from_all } ->
       Fmt.(
-        pf ff "add_library(%a %a%a %a)" string name (option pp_lib_type) type_
+        pf ff "add_library(%a %a%a %a)" string name (option string) type_
           (pp_flag "EXCLUDE_FROM_ALL")
           exclude_from_all (list_sp pp_source) sources)
   | Add_library_object { name; sources } ->
@@ -625,7 +552,7 @@ and pp_project_cmd ff cmd =
   | Target_compile_definitions { target; items } ->
       Fmt.(
         pf ff "target_compile_definitions(%a %a)" pp_target target
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_compile_features { target; features } ->
       Fmt.(
@@ -636,12 +563,12 @@ and pp_project_cmd ff cmd =
       Fmt.(
         pf ff "target_compile_options(%a%s@[<2>%a@])" pp_target target
           (if before then "BEFORE" else " ")
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_link_libraries { targets; items } ->
       Fmt.(
         pf ff "target_link_libraries(%a %a)" (list_sp pp_target) targets
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_include_directories { target; items; system; before_or_after } ->
       Fmt.(
@@ -650,34 +577,34 @@ and pp_project_cmd ff cmd =
           (Option.value ~default:false system)
           (pp_with_key "" pp_before_or_after)
           before_or_after
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_link_directories { target; before; items } ->
       Fmt.(
         pf ff "target_link_directories(%a%s@[<2>%a@])" pp_target target
           (if before then " BEFORE" else "")
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_link_options { target; before; items } ->
       Fmt.(
         pf ff "target_link_options(%a%s@[<2>%a@])" pp_target target
           (if before then " BEFORE" else "")
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_precompile_headers { target; items } ->
       Fmt.(
         pf ff "target_precompile_headers(%a %a)" pp_target target
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_sources { target; items } ->
       Fmt.(
         pf ff "target_sources(%a %a)" pp_target target
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   | Target_sources_file_set { target; items } ->
       Fmt.(
         pf ff "target_sources(%a %a)" pp_target target
-          (list_sp pp_items_with_kind)
+          (list_sp pp_args_with_kind)
           items)
   (* custom *)
   | Add_custom_command { outputs; commands; depends; main_dependency;
@@ -752,7 +679,7 @@ and pp_project_cmd ff cmd =
           brief_docs
           (pp_list_with_key "FULL_DOCS" pp_string_quoted)
           full_docs
-          (fun ff (Var v) ->
+          (fun ff v ->
             if String.length v > 0 then
               pf ff "@;INITIALIZE_FROM_VARIABLE %s" v)
           initialize_from)
@@ -806,7 +733,7 @@ and pp_project_cmd ff cmd =
   | Export_export { name; file } ->
       Fmt.(
         pf ff "export(EXPORT %a@;%a)" string name
-          (pp_with_key "FILE" pp_item)
+          (pp_with_key "FILE" pp_arg)
           file)
   | Export_package { name } ->
       Fmt.(pf ff "export(PACKAGE %a)" string name)
@@ -818,16 +745,16 @@ and pp_project_cmd ff cmd =
         pf ff "install(TARGETS %a@[<2>@;%a@;DESTINATION %a@])"
           (list_sp pp_target) targets
           (pp_with_key "EXPORT" string)
-          export pp_item destination)
+          export pp_arg destination)
   | Install_files { files; destination; _ } ->
       Fmt.(
-        pf ff "install(FILES %a@[<2>@;DESTINATION %a@])" (list_sp pp_item) files
-          pp_item destination)
+        pf ff "install(FILES %a@[<2>@;DESTINATION %a@])" (list_sp pp_arg) files
+          pp_arg destination)
   | Install_export { file; export; destination; _ } ->
       Fmt.(
-        pf ff "install(EXPORT %a@[<2>@;%a@;DESTINATION %a@])" pp_item export
-          (pp_with_key "FILE" pp_item)
-          file pp_item destination)
+        pf ff "install(EXPORT %a@[<2>@;%a@;DESTINATION %a@])" pp_arg export
+          (pp_with_key "FILE" pp_arg)
+          file pp_arg destination)
   (* misc *)
   | Aux_source_directory { dir; var } ->
       Fmt.(pf ff "aux_source_directory(%a %a)" string dir pp_var var)
@@ -861,7 +788,7 @@ and pp_project_cmd ff cmd =
           function_)
   | Enable_language { langs; optional } ->
       Fmt.(
-        pf ff "enable_language(%a%a)" (list_sp pp_supported_lang) langs
+        pf ff "enable_language(%a%a)" (list_sp string) langs
           (pp_flag "OPTIONAL")
           optional)
   | Fltk_wrap_ui { resulting_library_name; sources } ->
@@ -910,7 +837,7 @@ and pp_module_cmd ff = function
       Fmt.(
         pf ff
           "configure_package_config_file(%a@;%a@;INSTALL_DESTINATION %a%a%a%a)"
-          pp_item input pp_item output pp_item install_dest
+          pp_arg input pp_arg output pp_arg install_dest
           (pp_list_with_key "PATH_VARS " pp_var)
           path_vars
           (pp_flag "NO_SET_AND_CHECK_MACRO")
@@ -921,8 +848,8 @@ and pp_module_cmd ff = function
       { file; version; compatibility; arch_independent } ->
       Fmt.(
         pf ff "write_basic_package_version_file(%a@;%a@;COMPATIBILITY %a@;%a)"
-          pp_item file
-          (pp_with_key "VERSION" pp_item)
-          version pp_compatiblity compatibility
+          pp_arg file
+          (pp_with_key "VERSION" pp_arg)
+          version Fmt.string compatibility
           (pp_flag "ARCH_INDEPENDENT")
           arch_independent)

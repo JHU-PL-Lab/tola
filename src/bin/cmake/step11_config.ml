@@ -6,7 +6,7 @@ let cmd =
   cmd_of_list
     [
       quote_cmd "@PACKAGE_INIT@";
-      include_ (istr "${CMAKE_CURRENT_LIST_DIR}/MathFunctionsTargets.cmake");
+      include_ (quote "${CMAKE_CURRENT_LIST_DIR}/MathFunctionsTargets.cmake");
     ]
 
 let () = Fmt.pr "%a" (Fmt.vbox pp) cmd

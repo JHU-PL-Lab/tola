@@ -9,13 +9,11 @@ let string_of_version ver =
   let str_patch = if String.length ver.patch = 0 then "" else "." ^ ver.patch in
   Fmt.str "%d.%d%s" ver.major ver.minor str_patch
 
-let str_ s = Val_var s
-let quote s = Val_str s
-let bool_ b = Val_bool b
-let ivar v = Item_var v
-let istr s = Item_str s
-let target_def ?(kind = Public) items = { kind; items }
-let target_feature ?(kind = Public) feature = { kind; feature }
+let str_ s = Bare s
+let quote s = Quoted s
+let bool_ b = str_ (if b then "ON" else "OFF")
+let target_def ?(kind = "PUBLIC") items = { kind; items }
+let target_feature ?(kind = "PUBLIC") feature = { kind; feature }
 let cmd_of_list cmds = Exp_list cmds
 
 let include_ ?(optional = false) ?result_var ?no_policy_scope file =
@@ -30,7 +28,7 @@ let ifthen cond then_ = ite cond then_ ()
 let if_ cond then_ else_ = ite cond then_ ~else_ ()
 let function_ name args cmds = Function { name; args; cmds }
 let apply name args = Apply { name; args }
-let custom_command command args = Custom_command { command; args }
+let custom_command command args : Lang_cmake.custom_command = { command; args }
 let list_append var values = List_append { var; values }
 
 let minimum_required_s ?max min =
