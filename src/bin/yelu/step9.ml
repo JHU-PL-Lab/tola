@@ -31,9 +31,9 @@ let cmd =
               yraw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
             ];
         ];
-      yconfigure_file ~input:"TutorialConfig.h.in" "TutorialConfig.h";
-      yadd_subdirectory "MathFunctions";
-      yadd_executable ~sources:[ "tutorial.cxx" ] (ytarget "Tutorial");
+      yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h");
+      yadd_subdirectory (ybare "MathFunctions");
+      yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial");
       ytarget_link_libraries [ ytarget "Tutorial" ]
         [ ytarget_def [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ] ];
       ytarget_include_directories (ytarget "Tutorial")
@@ -43,18 +43,18 @@ let cmd =
         [ yraw "${PROJECT_BINARY_DIR}/TutorialConfig.h" ]
         (ybare "include");
       yinclude (ybare "CTest");
-      yadd_test "Runs" "Tutorial" [ "25" ];
-      yadd_test "Usage" "Tutorial" [];
-      yset_tests_properties [ "Usage" ]
+      yadd_test (ybare "Runs") (ybare "Tutorial") [ ybare "25" ];
+      yadd_test (ybare "Usage") (ybare "Tutorial") [];
+      yset_tests_properties [ ybare "Usage" ]
         [ ("PASS_REGULAR_EXPRESSION", yraw "Usage:.*number") ];
-      yadd_test "StandardUse" "Tutorial" [ "4" ];
-      yset_tests_properties [ "Usage" ]
+      yadd_test (ybare "StandardUse") (ybare "Tutorial") [ ybare "4" ];
+      yset_tests_properties [ ybare "Usage" ]
         [ ("PASS_REGULAR_EXPRESSION", yraw "4 is 2") ];
       yfunction (yvar "do_test")
         [ "target"; "arg"; "result" ]
         [
-          yadd_test "Comp${arg}" "${target}" [ "${arg}" ];
-          yset_tests_properties [ "Comp${arg}" ]
+          yadd_test (ybare "Comp${arg}") (ybare "${target}") [ ybare "${arg}" ];
+          yset_tests_properties [ ybare "Comp${arg}" ]
             [ ("PASS_REGULAR_EXPRESSION", ybare "${result}") ];
         ];
       yapply (yvar "do_test") [ ytval "Tutorial"; ybare "4"; yraw "4 is 2" ];

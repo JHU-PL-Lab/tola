@@ -63,13 +63,13 @@ let targets =
     [
       check "add_library"
         "add_library(MathFunctions  MathFunctions.cxx)"
-        (yadd_library ~sources:[ "MathFunctions.cxx" ] (ytarget "MathFunctions"));
+        (yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions"));
       check "add_library interface"
         "add_library(flags INTERFACE )"
         (yadd_library ~type_:Lib_interface (ytarget "flags"));
       check "add_executable"
         "add_executable(Tutorial tutorial.cxx)"
-        (yadd_executable ~sources:[ "tutorial.cxx" ] (ytarget "Tutorial"));
+        (yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial"));
       check "target_link_libraries"
         "target_link_libraries(Tutorial PUBLIC MathFunctions)"
         (ytarget_link_libraries [ ytarget "Tutorial" ]
@@ -98,10 +98,10 @@ let project_level =
         (yproject "MyApp");
       check "configure_file"
         "configure_file(TutorialConfig.h.in TutorialConfig.h)"
-        (yconfigure_file ~input:"TutorialConfig.h.in" "TutorialConfig.h");
+        (yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h"));
       check "add_subdirectory"
         "add_subdirectory(MathFunctions)"
-        (yadd_subdirectory "MathFunctions");
+        (yadd_subdirectory (ybare "MathFunctions"));
     ] )
 
 let composition =

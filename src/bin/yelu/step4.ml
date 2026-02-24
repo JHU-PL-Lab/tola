@@ -31,9 +31,9 @@ let cmd =
               yraw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
             ];
         ];
-      yconfigure_file ~input:"TutorialConfig.h.in" "TutorialConfig.h";
-      yadd_subdirectory "MathFunctions";
-      yadd_executable ~sources:[ "tutorial.cxx" ] (ytarget "Tutorial");
+      yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h");
+      yadd_subdirectory (ybare "MathFunctions");
+      yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial");
       ytarget_link_libraries [ ytarget "Tutorial" ]
         [ ytarget_def [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ] ];
       ytarget_include_directories (ytarget "Tutorial")

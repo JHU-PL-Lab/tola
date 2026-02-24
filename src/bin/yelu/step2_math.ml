@@ -6,7 +6,7 @@ open Langs.Lang_cmake_pp
 let cmd =
   ycmd_of_list
     [
-      yadd_library ~sources:[ "MathFunctions.cxx" ] (ytarget "MathFunctions");
+      yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
       yoption ~value:(ybool true)
         ~msg:"Use tutorial provided math implementation" (yvar "USE_MYMATH");
       yifthen (Ycond_var (yvar "USE_MYMATH"))
@@ -14,7 +14,7 @@ let cmd =
            [
              ytarget_compile_definitions (ytarget "MathFunctions")
                [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
-             yadd_library ~type_:Lib_static ~sources:[ "mysqrt.cxx" ]
+             yadd_library ~type_:Lib_static ~sources:[ ybare "mysqrt.cxx" ]
                (ytarget "SqrtLibrary");
              ytarget_link_libraries [ ytarget "MathFunctions" ]
                [ ytarget_def ~kind:Private [ ytval "SqrtLibrary" ] ];

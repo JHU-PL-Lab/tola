@@ -42,6 +42,12 @@ let erase_arg = function
   | Yarg_raw s -> Lang_cmake.Quoted s
   | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
+(* For cmake fields that expect plain string, not arg *)
+let erase_arg_s = function
+  | Yarg_var (Yvar s) | Yarg_target (Ytarget s) | Yarg_bare s | Yarg_raw s ->
+      s
+  | Yarg_bool b -> if b then "ON" else "OFF"
+
 let string_of_kind = function
   | Interface -> "INTERFACE"
   | Public -> "PUBLIC"
@@ -150,8 +156,12 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       let env = declare_target env name in
       ( env,
         Project_cmd
-          (Add_executable { name = erase_target name; options = []; sources })
-      )
+          (Add_executable
+             {
+               name = erase_target name;
+               options = [];
+               sources = List.map ~f:erase_arg_s sources;
+             }) )
   | Yadd_library { name; type_; exclude_from_all; sources } ->
       let env = declare_target env name in
       ( env,
@@ -161,7 +171,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                name = erase_target name;
                type_ = Option.map ~f:string_of_library_type type_;
                exclude_from_all;
-               sources;
+               sources = List.map ~f:erase_arg_s sources;
              }) )
   | Ytarget_include_directories { target; items } ->
       warn_undeclared_target env target;
@@ -220,8 +230,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Cmake_cmd
           (Configure_file
              {
-               input;
-               output;
+               input = erase_arg_s input;
+               output = erase_arg_s output;
                permission_level = None;
                permissions = [];
                copy_only = None;
@@ -234,7 +244,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Add_subdirectory
              {
-               source_dir;
+               source_dir = erase_arg_s source_dir;
                binary_dir = None;
                exclude_from_all = false;
                system = false;
@@ -304,14 +314,22 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   (* testing *)
   | Yenable_testing -> (env, Project_cmd Enable_testing)
   | Yadd_test { name; command; args } ->
-      (env, Project_cmd (Add_test { name; command; args; dir = None }))
+      ( env,
+        Project_cmd
+          (Add_test
+             {
+               name = erase_arg_s name;
+               command = erase_arg_s command;
+               args = List.map ~f:erase_arg_s args;
+               dir = None;
+             }) )
   | Yset_tests_properties { tests; properties } ->
       List.iter properties ~f:(fun (_, v) -> check_arg env v);
       ( env,
         Project_cmd
           (Set_tests_properties
              {
-               tests;
+               tests = List.map ~f:erase_arg_s tests;
                dir = None;
                properties = List.map ~f:erase_property properties;
              }) )
@@ -359,7 +377,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                permissions = [];
                component = None;
                rename = None;
-               export;
+               export = Option.map ~f:erase_arg_s export;
              }) )
   | Yinstall_files { files; destination } ->
       List.iter files ~f:(check_arg env);
@@ -394,7 +412,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       Option.iter file ~f:(check_arg env);
       ( env,
         Project_cmd
-          (Export_export { name; file = Option.map ~f:erase_arg file }) )
+          (Export_export { name = erase_arg_s name; file = Option.map ~f:erase_arg file }) )
   (* module commands *)
   | Yconfigure_package_config_file
       {
@@ -436,10 +454,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Add_custom_command
              {
-               outputs;
+               outputs = List.map ~f:erase_arg_s outputs;
                commands;
                main_dependency = None;
-               depends;
+               depends = List.map ~f:erase_arg_s depends;
                byproducts = [];
                implicit_depends = [];
                working_directory = None;

@@ -5,6 +5,11 @@
 type yelu_var = Yvar of string
 type yelu_target = Ytarget of string
 
+(* Type aliases — placeholders for future typed variants *)
+type project_name = string
+type feature_name = string
+type property_key = string
+
 (* Shared structural types *)
 type version = Lang_cmake.version
 
@@ -52,7 +57,7 @@ type yarg =
   | Yarg_bool of bool
 
 type yelu_items_with_kind = { kind : target_kind; items : yarg list }
-type yelu_target_feature = { kind : target_kind; feature : string }
+type yelu_target_feature = { kind : target_kind; feature : feature_name }
 
 type yelu_cond =
   | Ycond_var of yelu_var
@@ -65,17 +70,17 @@ type yelu_cond =
 type yelu_exp =
   | Ycmake_minimum_required of { min : version; max : version option }
   | Yproject of {
-      name : string;
+      name : project_name;
       version : version option;
       languages : supported_lang list;
     }
   | Yset of { var : yelu_var; values : yarg list; parent_scope : bool }
-  | Yadd_executable of { name : yelu_target; sources : string list }
+  | Yadd_executable of { name : yelu_target; sources : yarg list }
   | Yadd_library of {
       name : yelu_target;
       type_ : library_type option;
       exclude_from_all : bool;
-      sources : string list;
+      sources : yarg list;
     }
   | Ytarget_include_directories of {
       target : yelu_target;
@@ -98,8 +103,8 @@ type yelu_exp =
       before : bool;
       items : yelu_items_with_kind list;
     }
-  | Yconfigure_file of { input : string; output : string }
-  | Yadd_subdirectory of { source_dir : string }
+  | Yconfigure_file of { input : yarg; output : yarg }
+  | Yadd_subdirectory of { source_dir : yarg }
   | Yoption of { var : yelu_var; msg : string; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
@@ -111,25 +116,25 @@ type yelu_exp =
   | Ylist_append of { var : yelu_var; values : yarg list }
   (* testing *)
   | Yenable_testing
-  | Yadd_test of { name : string; command : string; args : string list }
+  | Yadd_test of { name : yarg; command : yarg; args : yarg list }
   | Yset_tests_properties of {
-      tests : string list;
-      properties : (string * yarg) list;
+      tests : yarg list;
+      properties : (property_key * yarg) list;
     }
   (* target properties *)
   | Yset_target_properties of {
       target : yelu_target;
-      properties : (string * yarg) list;
+      properties : (property_key * yarg) list;
     }
   | Yset_property of {
       targets : yelu_target list;
-      properties : (string * yarg) list;
+      properties : (property_key * yarg) list;
     }
   (* install *)
   | Yinstall_targets of {
       targets : yelu_target list;
       destination : yarg;
-      export : string option;
+      export : yarg option;
     }
   | Yinstall_files of { files : yarg list; destination : yarg }
   | Yinstall_export of {
@@ -138,7 +143,7 @@ type yelu_exp =
       destination : yarg;
     }
   (* export *)
-  | Yexport_export of { name : string; file : yarg option }
+  | Yexport_export of { name : yarg; file : yarg option }
   (* module commands *)
   | Yconfigure_package_config_file of {
       install_dest : yarg;
@@ -154,9 +159,9 @@ type yelu_exp =
     }
   (* custom commands *)
   | Yadd_custom_command of {
-      outputs : string list;
+      outputs : yarg list;
       commands : Lang_cmake.custom_command list;
-      depends : string list;
+      depends : yarg list;
     }
   (* extern declarations — register in env without emitting cmake *)
   | Yextern_var of yelu_var

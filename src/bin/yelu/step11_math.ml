@@ -8,7 +8,7 @@ let cmd =
     [
       yextern_target "tutorial_compiler_flags";
       yinclude (ybare "MakeTable.cmake");
-      yadd_library ~sources:[ "MathFunctions.cxx" ] (ytarget "MathFunctions");
+      yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
       ytarget_include_directories (ytarget "MathFunctions")
         [
           ytarget_def ~kind:Interface
@@ -25,7 +25,7 @@ let cmd =
              ytarget_compile_definitions (ytarget "MathFunctions")
                [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
              yadd_library ~type_:Lib_static
-               ~sources:[ "mysqrt.cxx"; "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]
+               ~sources:[ ybare "mysqrt.cxx"; ybare "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]
                (ytarget "SqrtLibrary");
              ytarget_include_directories (ytarget "SqrtLibrary")
                [
@@ -77,7 +77,7 @@ let cmd =
       yifthen (Yis_target (ytarget "SqrtLibrary"))
         (ycmd_of_list
            [ ylist_append (yvar "installable_libs") [ ytval "SqrtLibrary" ] ]);
-      yinstall_targets ~export:"MathFunctionsTargets"
+      yinstall_targets ~export:(ybare "MathFunctionsTargets")
         [ ytarget "${installable_libs}" ]
         (ybare "lib");
       yinstall_files [ yraw "MathFunctions.h" ] (ybare "include");

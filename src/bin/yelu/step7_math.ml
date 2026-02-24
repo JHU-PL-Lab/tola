@@ -7,7 +7,7 @@ let cmd =
   ycmd_of_list
     [
       yextern_target "tutorial_compiler_flags";
-      yadd_library ~sources:[ "MathFunctions.cxx" ] (ytarget "MathFunctions");
+      yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
       ytarget_include_directories (ytarget "MathFunctions")
         [ ytarget_def ~kind:Interface [ ybare "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
       yoption ~value:(ybool true)
@@ -17,7 +17,7 @@ let cmd =
            [
              ytarget_compile_definitions (ytarget "MathFunctions")
                [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
-             yadd_library ~type_:Lib_static ~sources:[ "mysqrt.cxx" ]
+             yadd_library ~type_:Lib_static ~sources:[ ybare "mysqrt.cxx" ]
                (ytarget "SqrtLibrary");
              ytarget_link_libraries [ ytarget "SqrtLibrary" ]
                [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
