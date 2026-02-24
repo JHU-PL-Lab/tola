@@ -63,24 +63,24 @@ let targets =
     [
       check "add_library"
         "add_library(MathFunctions  MathFunctions.cxx)"
-        (yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions"));
+        (yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytval "MathFunctions"));
       check "add_library interface"
         "add_library(flags INTERFACE )"
-        (yc_add_library ~type_:Lib_interface (ytarget "flags"));
+        (yc_add_library ~type_:Lib_interface (ytval "flags"));
       check "add_executable"
         "add_executable(Tutorial tutorial.cxx)"
-        (yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial"));
+        (yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (ytval "Tutorial"));
       check "target_link_libraries"
         "target_link_libraries(Tutorial PUBLIC MathFunctions)"
-        (yc_target_link_libraries [ ytarget "Tutorial" ]
+        (yc_target_link_libraries [ ytval "Tutorial" ]
            [ ytarget_def [ ytval "MathFunctions" ] ]);
       check "target_compile_definitions"
         "target_compile_definitions(MathFunctions PRIVATE \"USE_MYMATH\")"
-        (yc_target_compile_definitions (ytarget "MathFunctions")
+        (yc_target_compile_definitions (ytval "MathFunctions")
            [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ]);
       check "target_include_directories"
         "target_include_directories(Tutorial PUBLIC \"${PROJECT_BINARY_DIR}\")"
-        (yc_target_include_directories (ytarget "Tutorial")
+        (yc_target_include_directories (ytval "Tutorial")
            [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ]);
     ] )
 
@@ -113,6 +113,51 @@ let composition =
            [ yc_set (ycvar "X") [ ybare "1" ]; yc_set (ycvar "Y") [ ybare "2" ] ]);
     ] )
 
+let let_bindings =
+  ( "let_bindings",
+    [
+      check "ylet basic"
+        "add_executable(Tutorial tutorial.cxx)"
+        (ycmd_of_list
+           [
+             ylet "tut" (ytval "Tutorial");
+             yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
+           ]);
+      check_vbox "ylet reuse"
+        "add_library(mylib  src.cxx)\ntarget_link_libraries(mylib PUBLIC dep)"
+        (ycmd_of_list
+           [
+             ylet "lib" (ytval "mylib");
+             yc_add_library ~sources:[ ybare "src.cxx" ] (yvar "lib");
+             yc_target_link_libraries [ yvar "lib" ]
+               [ ytarget_def [ ybare "dep" ] ];
+           ]);
+      check "ylet chain"
+        "add_executable(App main.cxx)"
+        (ycmd_of_list
+           [
+             ylet "name" (ytval "App");
+             ylet "alias" (yvar "name");
+             yc_add_executable ~sources:[ ybare "main.cxx" ] (yvar "alias");
+           ]);
+      check "ylet in target list"
+        "target_link_libraries(main PUBLIC mylib)"
+        (ycmd_of_list
+           [
+             ylet "t" (ytval "main");
+             ylet "l" (ytval "mylib");
+             yc_target_link_libraries [ yvar "t" ]
+               [ ytarget_def [ yvar "l" ] ];
+           ]);
+      check "ylet bare string in target pos"
+        "add_executable(App main.cxx)"
+        (ycmd_of_list
+           [
+             ylet "name" (ybare "App");
+             yc_add_executable ~sources:[ ybare "main.cxx" ] (yvar "name");
+           ]);
+    ] )
+
 let () =
   Alcotest.run "Yelu Compile"
-    [ primitives; conditions; targets; project_level; composition ]
+    [ primitives; conditions; targets; project_level; composition; let_bindings ]

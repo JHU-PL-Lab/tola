@@ -6,8 +6,8 @@ let cmd =
   ycmd_of_list
     [
       yc_extern_target "tutorial_compiler_flags";
-      yc_add_executable ~sources:[ ybare "MakeTable.cxx" ] (ytarget "MakeTable");
-      yc_target_link_libraries [ ytarget "MakeTable" ]
+      yc_add_executable ~sources:[ ybare "MakeTable.cxx" ] (ytval "MakeTable");
+      yc_target_link_libraries [ ytval "MakeTable" ]
         [ ytarget_def ~kind:Private [ ytval "tutorial_compiler_flags" ] ];
       yc_add_custom_command
         ~outputs:[ ybare "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]

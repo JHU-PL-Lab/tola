@@ -6,10 +6,13 @@ open Langs.Lang_cmake_pp
 let cmd =
   ycmd_of_list
     [
+      ylet "flags" (ytval "tutorial_compiler_flags");
+      ylet "math" (ytval "MathFunctions");
+      ylet "sqrt" (ytval "SqrtLibrary");
       yc_extern_target "tutorial_compiler_flags";
       yc_include (ybare "MakeTable.cmake");
-      yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
-      yc_target_include_directories (ytarget "MathFunctions")
+      yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (yvar "math");
+      yc_target_include_directories (yvar "math")
         [
           ytarget_def ~kind:Interface
             [
@@ -22,19 +25,19 @@ let cmd =
       yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
         (ycmd_of_list
            [
-             yc_target_compile_definitions (ytarget "MathFunctions")
+             yc_target_compile_definitions (yvar "math")
                [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
              yc_add_library ~type_:Lib_static
                ~sources:[ ybare "mysqrt.cxx"; ybare "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]
-               (ytarget "SqrtLibrary");
-             yc_target_include_directories (ytarget "SqrtLibrary")
+               (yvar "sqrt");
+             yc_target_include_directories (yvar "sqrt")
                [
                  ytarget_def ~kind:Private [ ybare "${CMAKE_CURRENT_BINARY_DIR}" ];
                ];
-             yc_set_target_properties (ytarget "SqrtLibrary")
+             yc_set_target_properties (yvar "sqrt")
                [ ("POSITION_INDEPENDENT_CODE", ybare "${BUILD_SHARED_LIBS}") ];
-             yc_target_link_libraries [ ytarget "SqrtLibrary" ]
-               [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
+             yc_target_link_libraries [ yvar "sqrt" ]
+               [ ytarget_def ~kind:Public [ yvar "flags" ] ];
              yc_include (ybare "CheckCXXSourceCompiles");
              yc_apply (ycvar "check_cxx_source_compiles")
                [
@@ -60,25 +63,25 @@ let cmd =
                ];
              yifthen
                (Yand (Ycond_cvar (ycvar "HAVE_LOG"), Ycond_cvar (ycvar "HAVE_EXP")))
-               (yc_target_compile_definitions (ytarget "SqrtLibrary")
+               (yc_target_compile_definitions (yvar "sqrt")
                   [
                     ytarget_def ~kind:Private
                       [ yraw "HAVE_LOG"; yraw "HAVE_EXP" ];
                   ]);
-             yc_target_link_libraries [ ytarget "MathFunctions" ]
-               [ ytarget_def ~kind:Private [ ytval "SqrtLibrary" ] ];
-             yc_target_compile_definitions (ytarget "MathFunctions")
+             yc_target_link_libraries [ yvar "math" ]
+               [ ytarget_def ~kind:Private [ yvar "sqrt" ] ];
+             yc_target_compile_definitions (yvar "math")
                [ ytarget_def ~kind:Private [ yraw "EXPORTING_MYMATH" ] ];
            ]);
-      yc_target_link_libraries [ ytarget "MathFunctions" ]
-        [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
+      yc_target_link_libraries [ yvar "math" ]
+        [ ytarget_def ~kind:Public [ yvar "flags" ] ];
       yc_set (ycvar "installable_libs")
-        [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ];
+        [ yvar "math"; yvar "flags" ];
       yifthen (Yis_target (ytarget "SqrtLibrary"))
         (ycmd_of_list
-           [ yc_list_append (ycvar "installable_libs") [ ytval "SqrtLibrary" ] ]);
+           [ yc_list_append (ycvar "installable_libs") [ yvar "sqrt" ] ]);
       yc_install_targets ~export:(ybare "MathFunctionsTargets")
-        [ ytarget "${installable_libs}" ]
+        [ ytval "${installable_libs}" ]
         (ybare "lib");
       yc_install_files [ yraw "MathFunctions.h" ] (ybare "include");
     ]

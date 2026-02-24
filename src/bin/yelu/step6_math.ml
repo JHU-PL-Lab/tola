@@ -6,32 +6,35 @@ open Langs.Lang_cmake_pp
 let cmd =
   ycmd_of_list
     [
+      ylet "flags" (ytval "tutorial_compiler_flags");
+      ylet "math" (ytval "MathFunctions");
+      ylet "sqrt" (ytval "SqrtLibrary");
       yc_extern_target "tutorial_compiler_flags";
-      yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
-      yc_target_include_directories (ytarget "MathFunctions")
+      yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (yvar "math");
+      yc_target_include_directories (yvar "math")
         [ ytarget_def ~kind:Interface [ ybare "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
       yc_option ~value:(ybool true)
         ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
       yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
         (ycmd_of_list
            [
-             yc_target_compile_definitions (ytarget "MathFunctions")
+             yc_target_compile_definitions (yvar "math")
                [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
              yc_add_library ~type_:Lib_static ~sources:[ ybare "mysqrt.cxx" ]
-               (ytarget "SqrtLibrary");
-             yc_target_link_libraries [ ytarget "SqrtLibrary" ]
-               [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
-             yc_target_link_libraries [ ytarget "MathFunctions" ]
-               [ ytarget_def ~kind:Private [ ytval "SqrtLibrary" ] ];
+               (yvar "sqrt");
+             yc_target_link_libraries [ yvar "sqrt" ]
+               [ ytarget_def ~kind:Public [ yvar "flags" ] ];
+             yc_target_link_libraries [ yvar "math" ]
+               [ ytarget_def ~kind:Private [ yvar "sqrt" ] ];
            ]);
-      yc_target_link_libraries [ ytarget "MathFunctions" ]
-        [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
+      yc_target_link_libraries [ yvar "math" ]
+        [ ytarget_def ~kind:Public [ yvar "flags" ] ];
       yc_set (ycvar "installable_libs")
-        [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ];
+        [ yvar "math"; yvar "flags" ];
       yifthen (Yis_target (ytarget "SqrtLibrary"))
         (ycmd_of_list
-           [ yc_list_append (ycvar "installable_libs") [ ytval "SqrtLibrary" ] ]);
-      yc_install_targets [ ytarget "${installable_libs}" ] (ybare "lib");
+           [ yc_list_append (ycvar "installable_libs") [ yvar "sqrt" ] ]);
+      yc_install_targets [ ytval "${installable_libs}" ] (ybare "lib");
       yc_install_files [ yraw "MathFunctions.h" ] (ybare "include");
     ]
 

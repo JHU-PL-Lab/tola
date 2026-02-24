@@ -5,10 +5,18 @@ open Lang_yelu
 
 (* --- Environment --- *)
 
-type env = { cvars : Set.M(String).t; targets : Set.M(String).t }
+type env = {
+  cvars : Set.M(String).t;
+  targets : Set.M(String).t;
+  bindings : yarg Map.M(String).t;
+}
 
 let empty_env =
-  { cvars = Set.empty (module String); targets = Set.empty (module String) }
+  {
+    cvars = Set.empty (module String);
+    targets = Set.empty (module String);
+    bindings = Map.empty (module String);
+  }
 
 let is_builtin_cvar s =
   String.is_prefix s ~prefix:"CMAKE_"
@@ -30,12 +38,29 @@ let declare_cvar env (Ycvar s) = { env with cvars = Set.add env.cvars s }
 let declare_target env (Ytarget s) =
   { env with targets = Set.add env.targets s }
 
+(* --- Variable resolution --- *)
+
+let rec resolve_arg env = function
+  | Yarg_var (Yvar name) ->
+      (match Map.find env.bindings name with
+       | Some v -> resolve_arg env v
+       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_bare name)
+  | other -> other
+
+let try_declare_target env arg =
+  match resolve_arg env arg with
+  | Yarg_target t -> declare_target env t
+  | _ -> env
+
 (* --- Erasure helpers --- *)
 
 let erase_cvar (Ycvar s) = s
-let erase_target (Ytarget s) = s
 
-let erase_arg = function
+let rec erase_arg env = function
+  | Yarg_var (Yvar name) ->
+      (match Map.find env.bindings name with
+       | Some v -> erase_arg env v
+       | None -> Lang_cmake.Bare name)
   | Yarg_cvar (Ycvar s) -> Lang_cmake.Bare s
   | Yarg_target (Ytarget s) -> Lang_cmake.Bare s
   | Yarg_bare s -> Lang_cmake.Bare s
@@ -43,7 +68,11 @@ let erase_arg = function
   | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
 (* For cmake fields that expect plain string, not arg *)
-let erase_arg_s = function
+let rec erase_arg_s env = function
+  | Yarg_var (Yvar name) ->
+      (match Map.find env.bindings name with
+       | Some v -> erase_arg_s env v
+       | None -> name)
   | Yarg_cvar (Ycvar s) | Yarg_target (Ytarget s) | Yarg_bare s | Yarg_raw s ->
       s
   | Yarg_bool b -> if b then "ON" else "OFF"
@@ -85,8 +114,8 @@ let string_of_compatibility = function
   | Same_minor_version -> "SameMinorVersion"
   | Exact_version -> "ExactVersion"
 
-let erase_items_with_kind { kind; items } : Lang_cmake.items_with_kind =
-  { kind = string_of_kind kind; items = List.map ~f:erase_arg items }
+let erase_items_with_kind env { kind; items } : Lang_cmake.items_with_kind =
+  { kind = string_of_kind kind; items = List.map ~f:(erase_arg env) items }
 
 let erase_target_feature ({ kind; feature } : yelu_target_feature) :
     Lang_cmake.target_feature =
@@ -100,8 +129,8 @@ let rec erase_cond : yelu_cond -> string list = function
   | Yis_target (Ytarget s) -> [ "TARGET"; s ]
   | Yis_defined (Ycvar s) -> [ "DEFINED"; s ]
 
-let erase_property (prop, value) : Lang_cmake.property =
-  { prop; value = erase_arg value }
+let erase_property env (prop, value) : Lang_cmake.property =
+  { prop; value = erase_arg env value }
 
 (* --- Scope checking --- *)
 
@@ -117,7 +146,11 @@ let rec check_cond env = function
   | Yis_target t -> warn_undeclared_target env t
   | Yis_defined _ -> () (* DEFINED checks existence, no warning *)
 
-let check_arg env = function
+let rec check_arg env = function
+  | Yarg_var (Yvar name) ->
+      (match Map.find env.bindings name with
+       | Some v -> check_arg env v
+       | None -> Fmt.epr "Warning: unbound variable '%s'@." name)
   | Yarg_cvar v -> warn_undeclared_cvar env v
   | Yarg_target t -> warn_undeclared_target env t
   | Yarg_bare _ | Yarg_raw _ | Yarg_bool _ -> ()
@@ -149,89 +182,89 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Set
           {
             var = erase_cvar cvar;
-            values = List.map ~f:erase_arg values;
+            values = List.map ~f:(erase_arg env) values;
             parent_scope;
           } )
   | Yc_add_executable { name; sources } ->
-      let env = declare_target env name in
+      let env = try_declare_target env name in
       ( env,
         Project_cmd
           (Add_executable
              {
-               name = erase_target name;
+               name = erase_arg_s env name;
                options = [];
-               sources = List.map ~f:erase_arg_s sources;
+               sources = List.map ~f:(erase_arg_s env) sources;
              }) )
   | Yc_add_library { name; type_; exclude_from_all; sources } ->
-      let env = declare_target env name in
+      let env = try_declare_target env name in
       ( env,
         Project_cmd
           (Add_library
              {
-               name = erase_target name;
+               name = erase_arg_s env name;
                type_ = Option.map ~f:string_of_library_type type_;
                exclude_from_all;
-               sources = List.map ~f:erase_arg_s sources;
+               sources = List.map ~f:(erase_arg_s env) sources;
              }) )
   | Yc_target_include_directories { target; items } ->
-      warn_undeclared_target env target;
+      check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
       ( env,
         Project_cmd
           (Target_include_directories
              {
-               target = erase_target target;
+               target = erase_arg_s env target;
                system = None;
                before_or_after = None;
-               items = List.map ~f:erase_items_with_kind items;
+               items = List.map ~f:(erase_items_with_kind env) items;
              }) )
   | Yc_target_link_libraries { targets; items } ->
-      List.iter targets ~f:(warn_undeclared_target env);
+      List.iter targets ~f:(check_arg env);
       List.iter items ~f:(check_items_with_kind env);
       ( env,
         Project_cmd
           (Target_link_libraries
              {
-               targets = List.map ~f:erase_target targets;
-               items = List.map ~f:erase_items_with_kind items;
+               targets = List.map ~f:(erase_arg_s env) targets;
+               items = List.map ~f:(erase_items_with_kind env) items;
              }) )
   | Yc_target_compile_definitions { target; items } ->
-      warn_undeclared_target env target;
+      check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
       ( env,
         Project_cmd
           (Target_compile_definitions
              {
-               target = erase_target target;
-               items = List.map ~f:erase_items_with_kind items;
+               target = erase_arg_s env target;
+               items = List.map ~f:(erase_items_with_kind env) items;
              }) )
   | Yc_target_compile_features { target; features } ->
-      warn_undeclared_target env target;
+      check_arg env target;
       ( env,
         Project_cmd
           (Target_compile_features
              {
-               target = erase_target target;
+               target = erase_arg_s env target;
                features = List.map ~f:erase_target_feature features;
              }) )
   | Yc_target_compile_options { target; before; items } ->
-      warn_undeclared_target env target;
+      check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
       ( env,
         Project_cmd
           (Target_compile_options
              {
-               target = erase_target target;
+               target = erase_arg_s env target;
                before;
-               items = List.map ~f:erase_items_with_kind items;
+               items = List.map ~f:(erase_items_with_kind env) items;
              }) )
   | Yc_configure_file { input; output } ->
       ( env,
         Cmake_cmd
           (Configure_file
              {
-               input = erase_arg_s input;
-               output = erase_arg_s output;
+               input = erase_arg_s env input;
+               output = erase_arg_s env output;
                permission_level = None;
                permissions = [];
                copy_only = None;
@@ -244,7 +277,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Add_subdirectory
              {
-               source_dir = erase_arg_s source_dir;
+               source_dir = erase_arg_s env source_dir;
                binary_dir = None;
                exclude_from_all = false;
                system = false;
@@ -252,7 +285,12 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_option { cvar; msg; value } ->
       check_arg env value;
       let env = declare_cvar env cvar in
-      (env, Cmake_option { var = erase_cvar cvar; msg; value = erase_arg value })
+      (env, Cmake_option { var = erase_cvar cvar; msg; value = erase_arg env value })
+  | Ylet { var = Yvar name; value } ->
+      check_arg env value;
+      let resolved = resolve_arg env value in
+      let env = { env with bindings = Map.set env.bindings ~key:name ~data:resolved } in
+      (env, Exp_list [])
   | Yif { cond; then_; else_ } ->
       check_cond env cond;
       let then_env, then_cmake = compile env then_ in
@@ -268,6 +306,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         {
           cvars = Set.union then_env.cvars else_env.cvars;
           targets = Set.union then_env.targets else_env.targets;
+          bindings = env.bindings;
         }
       in
       ( env,
@@ -277,7 +316,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         List.fold exps ~init:(env, []) ~f:(fun (env, acc) exp ->
             let env, cmd = compile env exp in
             match cmd with
-            | Exp_list [] -> (env, acc) (* drop empty nodes from externs *)
+            | Exp_list [] -> (env, acc) (* drop empty nodes from externs/ylet *)
             | _ -> (env, cmd :: acc))
       in
       (env, Exp_list (List.rev rev_cmds))
@@ -287,7 +326,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       ( env,
         Include
           {
-            file = erase_arg file;
+            file = erase_arg env file;
             optional;
             result_var = None;
             no_policy_scope = None;
@@ -303,14 +342,14 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_apply { name; args } ->
       warn_undeclared_cvar env name;
       List.iter args ~f:(check_arg env);
-      (env, Apply { name = erase_cvar name; args = List.map ~f:erase_arg args })
+      (env, Apply { name = erase_cvar name; args = List.map ~f:(erase_arg env) args })
   | Yc_quote_cmd s -> (env, Quote s)
   | Yc_list_append { cvar; values } ->
       warn_undeclared_cvar env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_append
-          { var = erase_cvar cvar; values = List.map ~f:erase_arg values } )
+          { var = erase_cvar cvar; values = List.map ~f:(erase_arg env) values } )
   (* testing *)
   | Yc_enable_testing -> (env, Project_cmd Enable_testing)
   | Yc_add_test { name; command; args } ->
@@ -318,9 +357,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Add_test
              {
-               name = erase_arg_s name;
-               command = erase_arg_s command;
-               args = List.map ~f:erase_arg_s args;
+               name = erase_arg_s env name;
+               command = erase_arg_s env command;
+               args = List.map ~f:(erase_arg_s env) args;
                dir = None;
              }) )
   | Yc_set_tests_properties { tests; properties } ->
@@ -329,30 +368,30 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Set_tests_properties
              {
-               tests = List.map ~f:erase_arg_s tests;
+               tests = List.map ~f:(erase_arg_s env) tests;
                dir = None;
-               properties = List.map ~f:erase_property properties;
+               properties = List.map ~f:(erase_property env) properties;
              }) )
   (* target properties *)
   | Yc_set_target_properties { target; properties } ->
-      warn_undeclared_target env target;
+      check_arg env target;
       List.iter properties ~f:(fun (_, v) -> check_arg env v);
       ( env,
         Project_cmd
           (Set_target_properties
              {
-               target = erase_target target;
-               properties = List.map ~f:erase_property properties;
+               target = erase_arg_s env target;
+               properties = List.map ~f:(erase_property env) properties;
              }) )
   | Yc_set_property { targets; properties } ->
-      List.iter targets ~f:(warn_undeclared_target env);
+      List.iter targets ~f:(check_arg env);
       List.iter properties ~f:(fun (_, v) -> check_arg env v);
       ( env,
         Set_property
           {
             global = false;
             directory = [];
-            targets = List.map ~f:erase_target targets;
+            targets = List.map ~f:(erase_arg_s env) targets;
             sources = [];
             source_directories = [];
             source_target_directories = [];
@@ -362,22 +401,22 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             caches = [];
             append = false;
             append_string = false;
-            properties = List.map ~f:erase_property properties;
+            properties = List.map ~f:(erase_property env) properties;
           } )
   (* install *)
   | Yc_install_targets { targets; destination; export } ->
-      List.iter targets ~f:(warn_undeclared_target env);
+      List.iter targets ~f:(check_arg env);
       check_arg env destination;
       ( env,
         Project_cmd
           (Install_targets
              {
-               targets = List.map ~f:erase_target targets;
-               destination = erase_arg destination;
+               targets = List.map ~f:(erase_arg_s env) targets;
+               destination = erase_arg env destination;
                permissions = [];
                component = None;
                rename = None;
-               export = Option.map ~f:erase_arg_s export;
+               export = Option.map ~f:(erase_arg_s env) export;
              }) )
   | Yc_install_files { files; destination } ->
       List.iter files ~f:(check_arg env);
@@ -386,8 +425,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Install_files
              {
-               files = List.map ~f:erase_arg files;
-               destination = erase_arg destination;
+               files = List.map ~f:(erase_arg env) files;
+               destination = erase_arg env destination;
                permissions = [];
                component = None;
                rename = None;
@@ -400,9 +439,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Install_export
              {
-               file = Option.map ~f:erase_arg file;
-               export = erase_arg export;
-               destination = erase_arg destination;
+               file = Option.map ~f:(erase_arg env) file;
+               export = erase_arg env export;
+               destination = erase_arg env destination;
                permissions = [];
                component = None;
                rename = None;
@@ -412,7 +451,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       Option.iter file ~f:(check_arg env);
       ( env,
         Project_cmd
-          (Export_export { name = erase_arg_s name; file = Option.map ~f:erase_arg file }) )
+          (Export_export
+             { name = erase_arg_s env name; file = Option.map ~f:(erase_arg env) file })
+      )
   (* module commands *)
   | Yc_configure_package_config_file
       {
@@ -429,9 +470,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Module_cmd
           (Configure_package_config_file
              {
-               input = erase_arg input;
-               output = erase_arg output;
-               install_dest = erase_arg install_dest;
+               input = erase_arg env input;
+               output = erase_arg env output;
+               install_dest = erase_arg env install_dest;
                path_vars = [];
                no_set_and_check_macro;
                no_check_required_components_macro;
@@ -443,8 +484,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Module_cmd
           (Write_basic_package_version_file
              {
-               file = erase_arg file;
-               version = Option.map ~f:erase_arg version;
+               file = erase_arg env file;
+               version = Option.map ~f:(erase_arg env) version;
                compatibility = string_of_compatibility compatibility;
                arch_independent = false;
              }) )
@@ -454,10 +495,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
         Project_cmd
           (Add_custom_command
              {
-               outputs = List.map ~f:erase_arg_s outputs;
+               outputs = List.map ~f:(erase_arg_s env) outputs;
                commands;
                main_dependency = None;
-               depends = List.map ~f:erase_arg_s depends;
+               depends = List.map ~f:(erase_arg_s env) depends;
                byproducts = [];
                implicit_depends = [];
                working_directory = None;

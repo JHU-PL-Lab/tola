@@ -4,6 +4,7 @@
 (* Typed wrappers — the whole point of yelu *)
 type yelu_cvar = Ycvar of string  (* cmake runtime variable *)
 type yelu_target = Ytarget of string
+type yelu_var = Yvar of string    (* compile-time variable *)
 
 (* Type aliases — placeholders for future typed variants *)
 type project_name = string
@@ -55,6 +56,7 @@ type yarg =
   | Yarg_bare of string
   | Yarg_raw of string
   | Yarg_bool of bool
+  | Yarg_var of yelu_var  (* compile-time variable reference *)
 
 type yelu_items_with_kind = { kind : target_kind; items : yarg list }
 type yelu_target_feature = { kind : target_kind; feature : feature_name }
@@ -75,37 +77,38 @@ type yelu_exp =
       languages : supported_lang list;
     }
   | Yc_set of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
-  | Yc_add_executable of { name : yelu_target; sources : yarg list }
+  | Yc_add_executable of { name : yarg; sources : yarg list }
   | Yc_add_library of {
-      name : yelu_target;
+      name : yarg;
       type_ : library_type option;
       exclude_from_all : bool;
       sources : yarg list;
     }
   | Yc_target_include_directories of {
-      target : yelu_target;
+      target : yarg;
       items : yelu_items_with_kind list;
     }
   | Yc_target_link_libraries of {
-      targets : yelu_target list;
+      targets : yarg list;
       items : yelu_items_with_kind list;
     }
   | Yc_target_compile_definitions of {
-      target : yelu_target;
+      target : yarg;
       items : yelu_items_with_kind list;
     }
   | Yc_target_compile_features of {
-      target : yelu_target;
+      target : yarg;
       features : yelu_target_feature list;
     }
   | Yc_target_compile_options of {
-      target : yelu_target;
+      target : yarg;
       before : bool;
       items : yelu_items_with_kind list;
     }
   | Yc_configure_file of { input : yarg; output : yarg }
   | Yc_add_subdirectory of { source_dir : yarg }
   | Yc_option of { cvar : yelu_cvar; msg : string; value : yarg }
+  | Ylet of { var : yelu_var; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
   (* scripting *)
@@ -123,16 +126,16 @@ type yelu_exp =
     }
   (* target properties *)
   | Yc_set_target_properties of {
-      target : yelu_target;
+      target : yarg;
       properties : (property_key * yarg) list;
     }
   | Yc_set_property of {
-      targets : yelu_target list;
+      targets : yarg list;
       properties : (property_key * yarg) list;
     }
   (* install *)
   | Yc_install_targets of {
-      targets : yelu_target list;
+      targets : yarg list;
       destination : yarg;
       export : yarg option;
     }
