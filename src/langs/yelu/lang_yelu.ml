@@ -62,12 +62,12 @@ type yelu_items_with_kind = { kind : target_kind; items : yarg list }
 type yelu_target_feature = { kind : target_kind; feature : feature_name }
 
 type yelu_cond =
-  | Ycond_cvar of yelu_cvar
+  | Ytruthy of yarg
   | Ynot of yelu_cond
   | Yand of yelu_cond * yelu_cond
   | Yor of yelu_cond * yelu_cond
-  | Yis_target of yelu_target
-  | Yis_defined of yelu_cvar
+  | Yis_target of yarg
+  | Yis_defined of yarg
 
 type yelu_exp =
   | Yc_minimum_required of { min : version; max : version option }
@@ -76,7 +76,7 @@ type yelu_exp =
       version : version option;
       languages : supported_lang list;
     }
-  | Yc_set of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
+  | Yc_set of { cvar : yarg; values : yarg list; parent_scope : bool }
   | Yc_add_executable of { name : yarg; sources : yarg list }
   | Yc_add_library of {
       name : yarg;
@@ -107,16 +107,16 @@ type yelu_exp =
     }
   | Yc_configure_file of { input : yarg; output : yarg }
   | Yc_add_subdirectory of { source_dir : yarg }
-  | Yc_option of { cvar : yelu_cvar; msg : string; value : yarg }
+  | Yc_option of { cvar : yarg; msg : string; value : yarg }
   | Ylet of { var : yelu_var; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
   (* scripting *)
   | Yc_include of { file : yarg; optional : bool }
-  | Yc_function of { name : yelu_cvar; args : string list; body : yelu_exp list }
-  | Yc_apply of { name : yelu_cvar; args : yarg list }
+  | Yc_function of { name : yarg; args : string list; body : yelu_exp list }
+  | Yc_apply of { name : yarg; args : yarg list }
   | Yc_quote_cmd of string
-  | Yc_list_append of { cvar : yelu_cvar; values : yarg list }
+  | Yc_list_append of { cvar : yarg; values : yarg list }
   (* testing *)
   | Yc_enable_testing
   | Yc_add_test of { name : yarg; command : yarg; args : yarg list }

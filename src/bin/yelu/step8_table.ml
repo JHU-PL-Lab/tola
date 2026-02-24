@@ -1,6 +1,5 @@
 open Langs.Lang_yelu_utils
-open Langs.Lang_yelu_compile
-open Langs.Lang_cmake_pp
+open Step_common
 
 let cmd =
   ycmd_of_list
@@ -15,4 +14,4 @@ let cmd =
         [ custom_command "MakeTable" [ "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ] ];
     ]
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)
+let () = print_cmake cmd

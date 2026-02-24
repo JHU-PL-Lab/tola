@@ -3,6 +3,7 @@ open Lang_yelu
 
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
+let ytruthy arg = Ytruthy arg
 let yvar s = Yarg_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
 let ycstr s = Yarg_cvar (Ycvar s)

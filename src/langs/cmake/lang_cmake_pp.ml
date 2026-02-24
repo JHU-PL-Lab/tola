@@ -3,7 +3,7 @@ open Lang_cmake
 open Lang_cmake_utils
 
 let list_sp pp = Fmt.list ~sep:Fmt.sp pp
-let list_br pp = Fmt.list ~sep:Fmt.cut (* Format.pp_force_newline *) pp
+let list_br pp = Fmt.list ~sep:Stdlib.Format.pp_force_newline pp
 let quoted s = "\"" ^ s ^ "\""
 let pp_quoted = Fmt.using quoted Fmt.string
 

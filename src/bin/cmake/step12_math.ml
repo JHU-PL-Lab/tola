@@ -6,10 +6,6 @@ let cmd =
     [
       include_ (str_ "MakeTable.cmake");
       add_library "MathFunctions" ~sources:[ "MathFunctions.cxx" ];
-      set_property ~targets:[ "MathFunctions" ]
-        [ ("VERSION", str_ "1.0.0") ];
-      set_property ~targets:[ "MathFunctions" ]
-        [ ("SOVERSION", str_ "1") ];
       target_include_directories "MathFunctions"
         [
           target_def ~kind:"INTERFACE"

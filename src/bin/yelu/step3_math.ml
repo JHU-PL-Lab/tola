@@ -1,7 +1,6 @@
 open Langs.Lang_yelu
 open Langs.Lang_yelu_utils
-open Langs.Lang_yelu_compile
-open Langs.Lang_cmake_pp
+open Step_common
 
 let cmd =
   ycmd_of_list
@@ -9,13 +8,14 @@ let cmd =
       ylet "flags" (ytval "tutorial_compiler_flags");
       ylet "math" (ytval "MathFunctions");
       ylet "sqrt" (ytval "SqrtLibrary");
+      ylet "use_mymath" (ycstr "USE_MYMATH");
       yc_extern_target "tutorial_compiler_flags";
       yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (yvar "math");
       yc_target_include_directories (yvar "math")
         [ ytarget_def ~kind:Interface [ ybare "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
       yc_option ~value:(ybool true)
-        ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
-      yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
+        ~msg:"Use tutorial provided math implementation" (yvar "use_mymath");
+      yifthen (Ytruthy (yvar "use_mymath"))
         (ycmd_of_list
            [
              yc_target_compile_definitions (yvar "math")
@@ -31,4 +31,4 @@ let cmd =
         [ ytarget_def ~kind:Public [ yvar "flags" ] ];
     ]
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)
+let () = print_cmake cmd

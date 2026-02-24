@@ -1,45 +1,24 @@
 open Langs.Lang_yelu_utils
-open Langs.Lang_yelu_compile
-open Langs.Lang_cmake_pp
+open Step_common
 
 let cmd =
   ycmd_of_list
-    [
-      ylet "tut" (ytval "Tutorial");
-      ylet "flags" (ytval "tutorial_compiler_flags");
-      yc_minimum_required_s ~max:"3.20." "3.20.";
-      yc_project ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial";
-      yc_add_library ~type_:Lib_interface (yvar "flags");
-      yc_target_compile_features (yvar "flags")
-        [ ytarget_feature ~kind:Interface "cxx_std_11" ];
-      yc_set (ycvar "gcc_like_cxx")
-        [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-      yc_set (ycvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
-      yc_target_compile_options (yvar "flags")
-        [
-          ytarget_def ~kind:Interface
-            [
-              yraw
-                "$<${gcc_like_cxx}:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>";
-              yraw "$<${msvc_cxx}:-W3>";
-            ];
-        ];
-      yc_target_compile_options (yvar "flags")
-        [
-          ytarget_def ~kind:Interface
-            [
-              yraw
-                "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>";
-              yraw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
-            ];
-        ];
-      yc_configure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h");
-      yc_add_subdirectory (ybare "MathFunctions");
-      yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
-      yc_target_link_libraries [ yvar "tut" ]
-        [ ytarget_def [ ytval "MathFunctions"; yvar "flags" ] ];
-      yc_target_include_directories (yvar "tut")
-        [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ];
-    ]
+    ([
+       ylet "tut" (ytval "Tutorial");
+       ylet "flags" (ytval "tutorial_compiler_flags");
+       yc_minimum_required_s ~max:"3.20." "3.20.";
+       yc_project ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial";
+     ]
+    @ compiler_flags_lib
+    @ compiler_warning_options
+    @ [
+        configure_tutorial_header;
+        yc_add_subdirectory (ybare "MathFunctions");
+        yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
+        yc_target_link_libraries [ yvar "tut" ]
+          [ ytarget_def [ ytval "MathFunctions"; yvar "flags" ] ];
+        yc_target_include_directories (yvar "tut")
+          [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ];
+      ])
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)
+let () = print_cmake cmd

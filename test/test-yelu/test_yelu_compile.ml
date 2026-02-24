@@ -22,15 +22,15 @@ let primitives =
   ( "primitives",
     [
       check "set var" "set(FOO bar )"
-        (yc_set (ycvar "FOO") [ ybare "bar" ]);
+        (yc_set (ycstr "FOO") [ ybare "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
-        (yc_set (ycvar "FOO") [ yraw "hello" ]);
+        (yc_set (ycstr "FOO") [ yraw "hello" ]);
       check "set bool" "set(FOO ON )"
-        (yc_set (ycvar "FOO") [ ybool true ]);
+        (yc_set (ycstr "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
-        (yc_set (ycvar "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
+        (yc_set (ycstr "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
       check "set parent_scope" "set(X val PARENT_SCOPE)"
-        (yc_set ~parent_scope:true (ycvar "X") [ ybare "val" ]);
+        (yc_set ~parent_scope:true (ycstr "X") [ ybare "val" ]);
     ] )
 
 let conditions =
@@ -38,24 +38,24 @@ let conditions =
     [
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
-        (yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
-           (yc_set (ycvar "X") [ ybare "1" ]));
+        (yifthen (Ytruthy (ycstr "USE_MYMATH"))
+           (yc_set (ycstr "X") [ ybare "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
-        (yif (Ycond_cvar (ycvar "USE_MYMATH"))
-           (yc_set (ycvar "X") [ ybare "1" ])
-           (yc_set (ycvar "X") [ ybare "0" ]));
+        (yif (Ytruthy (ycstr "USE_MYMATH"))
+           (yc_set (ycstr "X") [ ybare "1" ])
+           (yc_set (ycstr "X") [ ybare "0" ]));
       check "if and"
         "if (HAVE_LOG AND HAVE_EXP)\n  \nelse()\n  \nendif()\n"
         (yifthen
-           (Yand (Ycond_cvar (ycvar "HAVE_LOG"), Ycond_cvar (ycvar "HAVE_EXP")))
+           (Yand (Ytruthy (ycstr "HAVE_LOG"), Ytruthy (ycstr "HAVE_EXP")))
            (Yexp_list []));
       check "is_target"
         "if (TARGET SqrtLibrary)\n  \nelse()\n  \nendif()\n"
-        (yifthen (Yis_target (ytarget "SqrtLibrary")) (Yexp_list []));
+        (yifthen (Yis_target (ytval "SqrtLibrary")) (Yexp_list []));
       check "is_defined"
         "if (DEFINED MY_VAR)\n  \nelse()\n  \nendif()\n"
-        (yifthen (Yis_defined (ycvar "MY_VAR")) (Yexp_list []));
+        (yifthen (Yis_defined (ycstr "MY_VAR")) (Yexp_list []));
     ] )
 
 let targets =
@@ -110,7 +110,7 @@ let composition =
       check_vbox "exp_list two stmts"
         "set(X 1 )\nset(Y 2 )"
         (ycmd_of_list
-           [ yc_set (ycvar "X") [ ybare "1" ]; yc_set (ycvar "Y") [ ybare "2" ] ]);
+           [ yc_set (ycstr "X") [ ybare "1" ]; yc_set (ycstr "Y") [ ybare "2" ] ]);
     ] )
 
 let let_bindings =
