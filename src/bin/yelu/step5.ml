@@ -7,9 +7,8 @@ let cmd =
        ylet "tut" (ytval "Tutorial");
        ylet "flags" (ytval "tutorial_compiler_flags");
        ylet "do_test" (ycstr "do_test");
-       yc_minimum_required_s ~max:"3.20." "3.20.";
-       yc_project ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial";
      ]
+    @ project_preamble
     @ compiler_flags_lib
     @ compiler_warning_options
     @ [

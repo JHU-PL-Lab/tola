@@ -6,6 +6,16 @@ open Langs.Lang_yelu_utils
 
 (* --- Root CMakeLists blocks --- *)
 
+(** cmake_minimum_required(VERSION 3.20) + project(Tutorial VERSION 1.0).
+    Steps: 1-12. *)
+let project_preamble =
+  [
+    yc_minimum_required_s ~max:"3.20." "3.20.";
+    yc_project
+      ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.")
+      "Tutorial";
+  ]
+
 (** set CMAKE_CXX_STANDARD=11, CMAKE_CXX_STANDARD_REQUIRED=true.
     Steps: 1-3. *)
 let cxx_standard_11 =

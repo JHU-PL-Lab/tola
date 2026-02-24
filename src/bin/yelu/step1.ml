@@ -5,11 +5,8 @@ let cmd =
   ycmd_of_list
     ([
        ylet "tut" (ytval "Tutorial");
-       yc_minimum_required_s ~max:"3.20." "3.20.";
-       yc_project
-         ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.")
-         "Tutorial";
      ]
+    @ project_preamble
     @ cxx_standard_11
     @ [
         configure_tutorial_header;
