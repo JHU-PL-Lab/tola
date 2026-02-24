@@ -3,12 +3,12 @@ open Step_common
 
 let cmd =
   ycmd_of_list
-    ([
-       ylet "tut" (ytval "Tutorial");
-       ylet "flags" (ytval "tutorial_compiler_flags");
-       ylet "do_test" (ycstr "do_test");
-     ]
-    @ project_preamble
+    (project_preamble
+    @ [
+        ylet "tut" (ytval "Tutorial");
+        ylet "flags" (ytval "tutorial_compiler_flags");
+        ylet "do_test" (ycstr "do_test");
+      ]
     @ compiler_flags_lib
     @ compiler_warning_options
     @ [

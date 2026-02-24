@@ -3,12 +3,10 @@ open Step_common
 
 let cmd =
   ycmd_of_list
-    ([
-       ylet "tut" (ytval "Tutorial");
-     ]
-    @ project_preamble
+    (project_preamble
     @ cxx_standard_11
     @ [
+        ylet "tut" (ytval "Tutorial");
         configure_tutorial_header;
         yc_add_subdirectory (ybare "MathFunctions");
         yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
