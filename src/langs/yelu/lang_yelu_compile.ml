@@ -5,38 +5,38 @@ open Lang_yelu
 
 (* --- Environment --- *)
 
-type env = { vars : Set.M(String).t; targets : Set.M(String).t }
+type env = { cvars : Set.M(String).t; targets : Set.M(String).t }
 
 let empty_env =
-  { vars = Set.empty (module String); targets = Set.empty (module String) }
+  { cvars = Set.empty (module String); targets = Set.empty (module String) }
 
-let is_builtin_var s =
+let is_builtin_cvar s =
   String.is_prefix s ~prefix:"CMAKE_"
   || String.is_prefix s ~prefix:"PROJECT_"
   || String.is_prefix s ~prefix:"CPACK_"
   || String.is_prefix s ~prefix:"CTEST_"
   || String.is_prefix s ~prefix:"BUILD_"
 
-let warn_undeclared_var env (Yvar s) =
-  if not (Set.mem env.vars s || is_builtin_var s) then
+let warn_undeclared_cvar env (Ycvar s) =
+  if not (Set.mem env.cvars s || is_builtin_cvar s) then
     Fmt.epr "Warning: undeclared variable '%s'@." s
 
 let warn_undeclared_target env (Ytarget s) =
   if not (Set.mem env.targets s) then
     Fmt.epr "Warning: undeclared target '%s'@." s
 
-let declare_var env (Yvar s) = { env with vars = Set.add env.vars s }
+let declare_cvar env (Ycvar s) = { env with cvars = Set.add env.cvars s }
 
 let declare_target env (Ytarget s) =
   { env with targets = Set.add env.targets s }
 
 (* --- Erasure helpers --- *)
 
-let erase_var (Yvar s) = s
+let erase_cvar (Ycvar s) = s
 let erase_target (Ytarget s) = s
 
 let erase_arg = function
-  | Yarg_var (Yvar s) -> Lang_cmake.Bare s
+  | Yarg_cvar (Ycvar s) -> Lang_cmake.Bare s
   | Yarg_target (Ytarget s) -> Lang_cmake.Bare s
   | Yarg_bare s -> Lang_cmake.Bare s
   | Yarg_raw s -> Lang_cmake.Quoted s
@@ -44,7 +44,7 @@ let erase_arg = function
 
 (* For cmake fields that expect plain string, not arg *)
 let erase_arg_s = function
-  | Yarg_var (Yvar s) | Yarg_target (Ytarget s) | Yarg_bare s | Yarg_raw s ->
+  | Yarg_cvar (Ycvar s) | Yarg_target (Ytarget s) | Yarg_bare s | Yarg_raw s ->
       s
   | Yarg_bool b -> if b then "ON" else "OFF"
 
@@ -93,12 +93,12 @@ let erase_target_feature ({ kind; feature } : yelu_target_feature) :
   { kind = string_of_kind kind; feature }
 
 let rec erase_cond : yelu_cond -> string list = function
-  | Ycond_var (Yvar s) -> [ s ]
+  | Ycond_cvar (Ycvar s) -> [ s ]
   | Ynot c -> "NOT" :: erase_cond c
   | Yand (a, b) -> erase_cond a @ [ "AND" ] @ erase_cond b
   | Yor (a, b) -> erase_cond a @ [ "OR" ] @ erase_cond b
   | Yis_target (Ytarget s) -> [ "TARGET"; s ]
-  | Yis_defined (Yvar s) -> [ "DEFINED"; s ]
+  | Yis_defined (Ycvar s) -> [ "DEFINED"; s ]
 
 let erase_property (prop, value) : Lang_cmake.property =
   { prop; value = erase_arg value }
@@ -106,7 +106,7 @@ let erase_property (prop, value) : Lang_cmake.property =
 (* --- Scope checking --- *)
 
 let rec check_cond env = function
-  | Ycond_var v -> warn_undeclared_var env v
+  | Ycond_cvar v -> warn_undeclared_cvar env v
   | Ynot c -> check_cond env c
   | Yand (a, b) ->
       check_cond env a;
@@ -118,7 +118,7 @@ let rec check_cond env = function
   | Yis_defined _ -> () (* DEFINED checks existence, no warning *)
 
 let check_arg env = function
-  | Yarg_var v -> warn_undeclared_var env v
+  | Yarg_cvar v -> warn_undeclared_cvar env v
   | Yarg_target t -> warn_undeclared_target env t
   | Yarg_bare _ | Yarg_raw _ | Yarg_bool _ -> ()
 
@@ -142,13 +142,13 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                homepage_url = None;
                languages;
              }) )
-  | Yset { var; values; parent_scope } ->
+  | Yset { cvar; values; parent_scope } ->
       List.iter values ~f:(check_arg env);
-      let env = if parent_scope then env else declare_var env var in
+      let env = if parent_scope then env else declare_cvar env cvar in
       ( env,
         Set
           {
-            var = erase_var var;
+            var = erase_cvar cvar;
             values = List.map ~f:erase_arg values;
             parent_scope;
           } )
@@ -249,10 +249,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                exclude_from_all = false;
                system = false;
              }) )
-  | Yoption { var; msg; value } ->
+  | Yoption { cvar; msg; value } ->
       check_arg env value;
-      let env = declare_var env var in
-      (env, Cmake_option { var = erase_var var; msg; value = erase_arg value })
+      let env = declare_cvar env cvar in
+      (env, Cmake_option { var = erase_cvar cvar; msg; value = erase_arg value })
   | Yif { cond; then_; else_ } ->
       check_cond env cond;
       let then_env, then_cmake = compile env then_ in
@@ -266,7 +266,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       (* Union: anything declared in either branch is available after *)
       let env =
         {
-          vars = Set.union then_env.vars else_env.vars;
+          cvars = Set.union then_env.cvars else_env.cvars;
           targets = Set.union then_env.targets else_env.targets;
         }
       in
@@ -293,24 +293,24 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             no_policy_scope = None;
           } )
   | Yfunction { name; args; body } ->
-      let env = declare_var env name in
+      let env = declare_cvar env name in
       let body_env =
         List.fold args ~init:env ~f:(fun env arg ->
-            { env with vars = Set.add env.vars arg })
+            { env with cvars = Set.add env.cvars arg })
       in
       let _body_env, body_cmds = compile_list body_env body in
-      (env, Function { name = erase_var name; args; cmds = body_cmds })
+      (env, Function { name = erase_cvar name; args; cmds = body_cmds })
   | Yapply { name; args } ->
-      warn_undeclared_var env name;
+      warn_undeclared_cvar env name;
       List.iter args ~f:(check_arg env);
-      (env, Apply { name = erase_var name; args = List.map ~f:erase_arg args })
+      (env, Apply { name = erase_cvar name; args = List.map ~f:erase_arg args })
   | Yquote_cmd s -> (env, Quote s)
-  | Ylist_append { var; values } ->
-      warn_undeclared_var env var;
+  | Ylist_append { cvar; values } ->
+      warn_undeclared_cvar env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_append
-          { var = erase_var var; values = List.map ~f:erase_arg values } )
+          { var = erase_cvar cvar; values = List.map ~f:erase_arg values } )
   (* testing *)
   | Yenable_testing -> (env, Project_cmd Enable_testing)
   | Yadd_test { name; command; args } ->
@@ -473,7 +473,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                depends_explicit_only = false;
              }) )
   (* extern declarations — register in env, emit nothing *)
-  | Yextern_var v -> (declare_var env v, Exp_list [])
+  | Yextern_cvar v -> (declare_cvar env v, Exp_list [])
   | Yextern_target t -> (declare_target env t, Exp_list [])
 
 and compile_list env exps =

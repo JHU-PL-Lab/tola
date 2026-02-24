@@ -10,8 +10,8 @@ let cmd =
       yadd_library ~type_:Lib_interface (ytarget "tutorial_compiler_flags");
       ytarget_compile_features (ytarget "tutorial_compiler_flags")
         [ ytarget_feature ~kind:Interface "cxx_std_11" ];
-      yset (yvar "CMAKE_CXX_STANDARD") [ ybare "11" ];
-      yset (yvar "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
+      yset (ycvar "CMAKE_CXX_STANDARD") [ ybare "11" ];
+      yset (ycvar "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
       yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h");
       yadd_subdirectory (ybare "MathFunctions");
       yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial");

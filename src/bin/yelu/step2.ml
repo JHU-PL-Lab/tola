@@ -7,8 +7,8 @@ let cmd =
     [
       yminimum_required_s ~max:"3.20." "3.20.";
       yproject ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial";
-      yset (yvar "CMAKE_CXX_STANDARD") [ ybare "11" ];
-      yset (yvar "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
+      yset (ycvar "CMAKE_CXX_STANDARD") [ ybare "11" ];
+      yset (ycvar "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
       yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h");
       yadd_subdirectory (ybare "MathFunctions");
       yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial");

@@ -7,20 +7,20 @@ let cmd =
     [
       yminimum_required_s ~max:"3.20." "3.20.";
       yproject ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial";
-      yset (yvar "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
+      yset (ycvar "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
         [ yraw "${PROJECT_BINARY_DIR}" ];
-      yset (yvar "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
+      yset (ycvar "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
         [ yraw "${PROJECT_BINARY_DIR}" ];
-      yset (yvar "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
+      yset (ycvar "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
         [ yraw "${PROJECT_BINARY_DIR}" ];
       yoption ~value:(ybool true) ~msg:"Build using shared libraries"
-        (yvar "BUILD_SHARED_LIBS");
+        (ycvar "BUILD_SHARED_LIBS");
       yadd_library ~type_:Lib_interface (ytarget "tutorial_compiler_flags");
       ytarget_compile_features (ytarget "tutorial_compiler_flags")
         [ ytarget_feature ~kind:Interface "cxx_std_11" ];
-      yset (yvar "gcc_like_cxx")
+      yset (ycvar "gcc_like_cxx")
         [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-      yset (yvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
+      yset (ycvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
       ytarget_compile_options (ytarget "tutorial_compiler_flags")
         [
           ytarget_def ~kind:Interface
@@ -58,31 +58,31 @@ let cmd =
       yadd_test (ybare "StandardUse") (ybare "Tutorial") [ ybare "4" ];
       yset_tests_properties [ ybare "Usage" ]
         [ ("PASS_REGULAR_EXPRESSION", yraw "4 is 2") ];
-      yfunction (yvar "do_test")
+      yfunction (ycvar "do_test")
         [ "target"; "arg"; "result" ]
         [
           yadd_test (ybare "Comp${arg}") (ybare "${target}") [ ybare "${arg}" ];
           yset_tests_properties [ ybare "Comp${arg}" ]
             [ ("PASS_REGULAR_EXPRESSION", ybare "${result}") ];
         ];
-      yapply (yvar "do_test") [ ytval "Tutorial"; ybare "4"; yraw "4 is 2" ];
-      yapply (yvar "do_test") [ ytval "Tutorial"; ybare "9"; yraw "9 is 3" ];
-      yapply (yvar "do_test") [ ytval "Tutorial"; ybare "5"; yraw "5 is 2.236" ];
-      yapply (yvar "do_test") [ ytval "Tutorial"; ybare "7"; yraw "7 is 2.645" ];
-      yapply (yvar "do_test") [ ytval "Tutorial"; ybare "25"; yraw "25 is 5" ];
-      yapply (yvar "do_test")
+      yapply (ycvar "do_test") [ ytval "Tutorial"; ybare "4"; yraw "4 is 2" ];
+      yapply (ycvar "do_test") [ ytval "Tutorial"; ybare "9"; yraw "9 is 3" ];
+      yapply (ycvar "do_test") [ ytval "Tutorial"; ybare "5"; yraw "5 is 2.236" ];
+      yapply (ycvar "do_test") [ ytval "Tutorial"; ybare "7"; yraw "7 is 2.645" ];
+      yapply (ycvar "do_test") [ ytval "Tutorial"; ybare "25"; yraw "25 is 5" ];
+      yapply (ycvar "do_test")
         [ ytval "Tutorial"; ybare "-25"; yraw "-25 is (-nan|nan|0)" ];
-      yapply (yvar "do_test")
+      yapply (ycvar "do_test")
         [ ytval "Tutorial"; ybare "0.0001"; yraw "0.0001 is 0.01" ];
       yinclude (ybare "InstallRequiredSystemLibraries");
-      yset (yvar "CPACK_RESOURCE_FILE_LICENSE")
+      yset (ycvar "CPACK_RESOURCE_FILE_LICENSE")
         [ yraw "${CMAKE_CURRENT_SOURCE_DIR}/License.txt" ];
-      yset (yvar "CPACK_PACKAGE_VERSION_MAJOR")
+      yset (ycvar "CPACK_PACKAGE_VERSION_MAJOR")
         [ yraw "${Tutorial_VERSION_MAJOR}" ];
-      yset (yvar "CPACK_PACKAGE_VERSION_MINOR")
+      yset (ycvar "CPACK_PACKAGE_VERSION_MINOR")
         [ yraw "${Tutorial_VERSION_MINOR}" ];
-      yset (yvar "CPACK_GENERATOR") [ yraw "TGZ" ];
-      yset (yvar "CPACK_SOURCE_GENERATOR") [ yraw "TGZ" ];
+      yset (ycvar "CPACK_GENERATOR") [ yraw "TGZ" ];
+      yset (ycvar "CPACK_SOURCE_GENERATOR") [ yraw "TGZ" ];
       yinclude (ybare "CPack");
       yinstall_export
         ~file:(ybare "MathFunctionsTargets.cmake")

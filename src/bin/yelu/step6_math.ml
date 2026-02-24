@@ -11,8 +11,8 @@ let cmd =
       ytarget_include_directories (ytarget "MathFunctions")
         [ ytarget_def ~kind:Interface [ ybare "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
       yoption ~value:(ybool true)
-        ~msg:"Use tutorial provided math implementation" (yvar "USE_MYMATH");
-      yifthen (Ycond_var (yvar "USE_MYMATH"))
+        ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
+      yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
         (ycmd_of_list
            [
              ytarget_compile_definitions (ytarget "MathFunctions")
@@ -26,11 +26,11 @@ let cmd =
            ]);
       ytarget_link_libraries [ ytarget "MathFunctions" ]
         [ ytarget_def ~kind:Public [ ytval "tutorial_compiler_flags" ] ];
-      yset (yvar "installable_libs")
+      yset (ycvar "installable_libs")
         [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ];
       yifthen (Yis_target (ytarget "SqrtLibrary"))
         (ycmd_of_list
-           [ ylist_append (yvar "installable_libs") [ ytval "SqrtLibrary" ] ]);
+           [ ylist_append (ycvar "installable_libs") [ ytval "SqrtLibrary" ] ]);
       yinstall_targets [ ytarget "${installable_libs}" ] (ybare "lib");
       yinstall_files [ yraw "MathFunctions.h" ] (ybare "include");
     ]

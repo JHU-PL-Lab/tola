@@ -1,16 +1,16 @@
 open Base
 open Lang_yelu
 
-let yvar s = Yvar s
+let ycvar s = Ycvar s
 let ytarget s = Ytarget s
-let ystr s = Yarg_var (Yvar s)
+let ycstr s = Yarg_cvar (Ycvar s)
 let ytval s = Yarg_target (Ytarget s)
 let ybare s = Yarg_bare s
 let yraw s = Yarg_raw s
 let ybool b = Yarg_bool b
 
 (* Extern declarations *)
-let yextern_var s = Yextern_var (Yvar s)
+let yextern_cvar s = Yextern_cvar (Ycvar s)
 let yextern_target s = Yextern_target (Ytarget s)
 let ytarget_def ?(kind = Public) items : yelu_items_with_kind = { kind; items }
 let ytarget_feature ?(kind = Public) feature : yelu_target_feature =
@@ -28,8 +28,8 @@ let yminimum_required_s ?max min =
 let yproject ?version ?(languages = []) name =
   Yproject { name; version; languages }
 
-let yset ?(parent_scope = false) var values =
-  Yset { var; values; parent_scope }
+let yset ?(parent_scope = false) cvar values =
+  Yset { cvar; values; parent_scope }
 
 let yadd_executable ?(sources = []) name =
   Yadd_executable { name; sources }
@@ -55,7 +55,7 @@ let ytarget_compile_options ?(before = false) target items =
 let yconfigure_file ~input output = Yconfigure_file { input; output }
 let yadd_subdirectory source_dir = Yadd_subdirectory { source_dir }
 
-let yoption ?(value = ybool false) ~msg var = Yoption { var; msg; value }
+let yoption ?(value = ybool false) ~msg cvar = Yoption { cvar; msg; value }
 
 let yite cond then_ ?else_ () =
   match else_ with
@@ -70,7 +70,7 @@ let yinclude ?(optional = false) file = Yinclude { file; optional }
 let yfunction name args body = Yfunction { name; args; body }
 let yapply name args = Yapply { name; args }
 let yquote_cmd s = Yquote_cmd s
-let ylist_append var values = Ylist_append { var; values }
+let ylist_append cvar values = Ylist_append { cvar; values }
 
 (* testing *)
 let yenable_testing = Yenable_testing

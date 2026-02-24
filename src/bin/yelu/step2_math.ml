@@ -8,8 +8,8 @@ let cmd =
     [
       yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions");
       yoption ~value:(ybool true)
-        ~msg:"Use tutorial provided math implementation" (yvar "USE_MYMATH");
-      yifthen (Ycond_var (yvar "USE_MYMATH"))
+        ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
+      yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
         (ycmd_of_list
            [
              ytarget_compile_definitions (ytarget "MathFunctions")

@@ -10,9 +10,9 @@ let cmd =
       yadd_library ~type_:Lib_interface (ytarget "tutorial_compiler_flags");
       ytarget_compile_features (ytarget "tutorial_compiler_flags")
         [ ytarget_feature ~kind:Interface "cxx_std_11" ];
-      yset (yvar "gcc_like_cxx")
+      yset (ycvar "gcc_like_cxx")
         [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-      yset (yvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
+      yset (ycvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
       ytarget_compile_options (ytarget "tutorial_compiler_flags")
         [
           ytarget_def ~kind:Interface
