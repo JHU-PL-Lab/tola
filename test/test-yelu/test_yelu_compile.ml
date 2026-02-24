@@ -22,15 +22,15 @@ let primitives =
   ( "primitives",
     [
       check "set var" "set(FOO bar )"
-        (yset (ycvar "FOO") [ ybare "bar" ]);
+        (yc_set (ycvar "FOO") [ ybare "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
-        (yset (ycvar "FOO") [ yraw "hello" ]);
+        (yc_set (ycvar "FOO") [ yraw "hello" ]);
       check "set bool" "set(FOO ON )"
-        (yset (ycvar "FOO") [ ybool true ]);
+        (yc_set (ycvar "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
-        (yset (ycvar "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
+        (yc_set (ycvar "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
       check "set parent_scope" "set(X val PARENT_SCOPE)"
-        (yset ~parent_scope:true (ycvar "X") [ ybare "val" ]);
+        (yc_set ~parent_scope:true (ycvar "X") [ ybare "val" ]);
     ] )
 
 let conditions =
@@ -39,12 +39,12 @@ let conditions =
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
         (yifthen (Ycond_cvar (ycvar "USE_MYMATH"))
-           (yset (ycvar "X") [ ybare "1" ]));
+           (yc_set (ycvar "X") [ ybare "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
         (yif (Ycond_cvar (ycvar "USE_MYMATH"))
-           (yset (ycvar "X") [ ybare "1" ])
-           (yset (ycvar "X") [ ybare "0" ]));
+           (yc_set (ycvar "X") [ ybare "1" ])
+           (yc_set (ycvar "X") [ ybare "0" ]));
       check "if and"
         "if (HAVE_LOG AND HAVE_EXP)\n  \nelse()\n  \nendif()\n"
         (yifthen
@@ -63,24 +63,24 @@ let targets =
     [
       check "add_library"
         "add_library(MathFunctions  MathFunctions.cxx)"
-        (yadd_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions"));
+        (yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytarget "MathFunctions"));
       check "add_library interface"
         "add_library(flags INTERFACE )"
-        (yadd_library ~type_:Lib_interface (ytarget "flags"));
+        (yc_add_library ~type_:Lib_interface (ytarget "flags"));
       check "add_executable"
         "add_executable(Tutorial tutorial.cxx)"
-        (yadd_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial"));
+        (yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (ytarget "Tutorial"));
       check "target_link_libraries"
         "target_link_libraries(Tutorial PUBLIC MathFunctions)"
-        (ytarget_link_libraries [ ytarget "Tutorial" ]
+        (yc_target_link_libraries [ ytarget "Tutorial" ]
            [ ytarget_def [ ytval "MathFunctions" ] ]);
       check "target_compile_definitions"
         "target_compile_definitions(MathFunctions PRIVATE \"USE_MYMATH\")"
-        (ytarget_compile_definitions (ytarget "MathFunctions")
+        (yc_target_compile_definitions (ytarget "MathFunctions")
            [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ]);
       check "target_include_directories"
         "target_include_directories(Tutorial PUBLIC \"${PROJECT_BINARY_DIR}\")"
-        (ytarget_include_directories (ytarget "Tutorial")
+        (yc_target_include_directories (ytarget "Tutorial")
            [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ]);
     ] )
 
@@ -89,19 +89,19 @@ let project_level =
     [
       check "cmake_minimum_required"
         "cmake_minimum_required(VERSION 3.20)"
-        (yminimum_required_s "3.20.");
+        (yc_minimum_required_s "3.20.");
       check "project"
         "project(Tutorial VERSION 1.0)"
-        (yproject ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial");
+        (yc_project ~version:(Langs.Lang_cmake_utils.version_of_string "1.0.") "Tutorial");
       check "project no version"
         "project(MyApp )"
-        (yproject "MyApp");
+        (yc_project "MyApp");
       check "configure_file"
         "configure_file(TutorialConfig.h.in TutorialConfig.h)"
-        (yconfigure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h"));
+        (yc_configure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h"));
       check "add_subdirectory"
         "add_subdirectory(MathFunctions)"
-        (yadd_subdirectory (ybare "MathFunctions"));
+        (yc_add_subdirectory (ybare "MathFunctions"));
     ] )
 
 let composition =
@@ -110,7 +110,7 @@ let composition =
       check_vbox "exp_list two stmts"
         "set(X 1 )\nset(Y 2 )"
         (ycmd_of_list
-           [ yset (ycvar "X") [ ybare "1" ]; yset (ycvar "Y") [ ybare "2" ] ]);
+           [ yc_set (ycvar "X") [ ybare "1" ]; yc_set (ycvar "Y") [ ybare "2" ] ]);
     ] )
 
 let () =

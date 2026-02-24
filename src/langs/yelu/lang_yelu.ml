@@ -68,101 +68,101 @@ type yelu_cond =
   | Yis_defined of yelu_cvar
 
 type yelu_exp =
-  | Ycmake_minimum_required of { min : version; max : version option }
-  | Yproject of {
+  | Yc_minimum_required of { min : version; max : version option }
+  | Yc_project of {
       name : project_name;
       version : version option;
       languages : supported_lang list;
     }
-  | Yset of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
-  | Yadd_executable of { name : yelu_target; sources : yarg list }
-  | Yadd_library of {
+  | Yc_set of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
+  | Yc_add_executable of { name : yelu_target; sources : yarg list }
+  | Yc_add_library of {
       name : yelu_target;
       type_ : library_type option;
       exclude_from_all : bool;
       sources : yarg list;
     }
-  | Ytarget_include_directories of {
+  | Yc_target_include_directories of {
       target : yelu_target;
       items : yelu_items_with_kind list;
     }
-  | Ytarget_link_libraries of {
+  | Yc_target_link_libraries of {
       targets : yelu_target list;
       items : yelu_items_with_kind list;
     }
-  | Ytarget_compile_definitions of {
+  | Yc_target_compile_definitions of {
       target : yelu_target;
       items : yelu_items_with_kind list;
     }
-  | Ytarget_compile_features of {
+  | Yc_target_compile_features of {
       target : yelu_target;
       features : yelu_target_feature list;
     }
-  | Ytarget_compile_options of {
+  | Yc_target_compile_options of {
       target : yelu_target;
       before : bool;
       items : yelu_items_with_kind list;
     }
-  | Yconfigure_file of { input : yarg; output : yarg }
-  | Yadd_subdirectory of { source_dir : yarg }
-  | Yoption of { cvar : yelu_cvar; msg : string; value : yarg }
+  | Yc_configure_file of { input : yarg; output : yarg }
+  | Yc_add_subdirectory of { source_dir : yarg }
+  | Yc_option of { cvar : yelu_cvar; msg : string; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
   (* scripting *)
-  | Yinclude of { file : yarg; optional : bool }
-  | Yfunction of { name : yelu_cvar; args : string list; body : yelu_exp list }
-  | Yapply of { name : yelu_cvar; args : yarg list }
-  | Yquote_cmd of string
-  | Ylist_append of { cvar : yelu_cvar; values : yarg list }
+  | Yc_include of { file : yarg; optional : bool }
+  | Yc_function of { name : yelu_cvar; args : string list; body : yelu_exp list }
+  | Yc_apply of { name : yelu_cvar; args : yarg list }
+  | Yc_quote_cmd of string
+  | Yc_list_append of { cvar : yelu_cvar; values : yarg list }
   (* testing *)
-  | Yenable_testing
-  | Yadd_test of { name : yarg; command : yarg; args : yarg list }
-  | Yset_tests_properties of {
+  | Yc_enable_testing
+  | Yc_add_test of { name : yarg; command : yarg; args : yarg list }
+  | Yc_set_tests_properties of {
       tests : yarg list;
       properties : (property_key * yarg) list;
     }
   (* target properties *)
-  | Yset_target_properties of {
+  | Yc_set_target_properties of {
       target : yelu_target;
       properties : (property_key * yarg) list;
     }
-  | Yset_property of {
+  | Yc_set_property of {
       targets : yelu_target list;
       properties : (property_key * yarg) list;
     }
   (* install *)
-  | Yinstall_targets of {
+  | Yc_install_targets of {
       targets : yelu_target list;
       destination : yarg;
       export : yarg option;
     }
-  | Yinstall_files of { files : yarg list; destination : yarg }
-  | Yinstall_export of {
+  | Yc_install_files of { files : yarg list; destination : yarg }
+  | Yc_install_export of {
       file : yarg option;
       export : yarg;
       destination : yarg;
     }
   (* export *)
-  | Yexport_export of { name : yarg; file : yarg option }
+  | Yc_export_export of { name : yarg; file : yarg option }
   (* module commands *)
-  | Yconfigure_package_config_file of {
+  | Yc_configure_package_config_file of {
       install_dest : yarg;
       input : yarg;
       output : yarg;
       no_set_and_check_macro : bool;
       no_check_required_components_macro : bool;
     }
-  | Ywrite_basic_package_version_file of {
+  | Yc_write_basic_package_version_file of {
       file : yarg;
       version : yarg option;
       compatibility : compatibility;
     }
   (* custom commands *)
-  | Yadd_custom_command of {
+  | Yc_add_custom_command of {
       outputs : yarg list;
       commands : Lang_cmake.custom_command list;
       depends : yarg list;
     }
   (* extern declarations — register in env without emitting cmake *)
-  | Yextern_cvar of yelu_cvar
-  | Yextern_target of yelu_target
+  | Yc_extern_cvar of yelu_cvar
+  | Yc_extern_target of yelu_target
