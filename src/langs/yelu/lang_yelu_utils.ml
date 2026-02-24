@@ -3,11 +3,15 @@ open Lang_yelu
 
 let yvar s = Yvar s
 let ytarget s = Ytarget s
-let ystr s = Yval_var (Yvar s)
-let yquote s = Yval_str s
-let ybool b = Yval_bool b
-let yivar v = Yitem_var (Yvar v)
-let yistr s = Yitem_str s
+let ystr s = Yarg_var (Yvar s)
+let ytval s = Yarg_target (Ytarget s)
+let ybare s = Yarg_bare s
+let yraw s = Yarg_raw s
+let ybool b = Yarg_bool b
+
+(* Extern declarations *)
+let yextern_var s = Yextern_var (Yvar s)
+let yextern_target s = Yextern_target (Ytarget s)
 let ytarget_def ?(kind = Public) items : yelu_items_with_kind = { kind; items }
 let ytarget_feature ?(kind = Public) feature : yelu_target_feature =
   { kind; feature }

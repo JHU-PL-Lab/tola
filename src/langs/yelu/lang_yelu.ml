@@ -43,13 +43,15 @@ type compatibility =
   | Same_minor_version
   | Exact_version
 
-type yelu_value =
-  | Yval_var of yelu_var
-  | Yval_str of string
-  | Yval_bool of bool
+(* Unified arg type — replaces old yelu_value + yelu_item *)
+type yarg =
+  | Yarg_var of yelu_var
+  | Yarg_target of yelu_target
+  | Yarg_bare of string
+  | Yarg_raw of string
+  | Yarg_bool of bool
 
-type yelu_item = Yitem_var of yelu_var | Yitem_str of string
-type yelu_items_with_kind = { kind : target_kind; items : yelu_item list }
+type yelu_items_with_kind = { kind : target_kind; items : yarg list }
 type yelu_target_feature = { kind : target_kind; feature : string }
 
 type yelu_cond =
@@ -67,7 +69,7 @@ type yelu_exp =
       version : version option;
       languages : supported_lang list;
     }
-  | Yset of { var : yelu_var; values : yelu_value list; parent_scope : bool }
+  | Yset of { var : yelu_var; values : yarg list; parent_scope : bool }
   | Yadd_executable of { name : yelu_target; sources : string list }
   | Yadd_library of {
       name : yelu_target;
@@ -98,56 +100,56 @@ type yelu_exp =
     }
   | Yconfigure_file of { input : string; output : string }
   | Yadd_subdirectory of { source_dir : string }
-  | Yoption of { var : yelu_var; msg : string; value : yelu_value }
+  | Yoption of { var : yelu_var; msg : string; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
   (* scripting *)
-  | Yinclude of { file : yelu_item; optional : bool }
+  | Yinclude of { file : yarg; optional : bool }
   | Yfunction of { name : yelu_var; args : string list; body : yelu_exp list }
-  | Yapply of { name : yelu_var; args : yelu_value list }
+  | Yapply of { name : yelu_var; args : yarg list }
   | Yquote_cmd of string
-  | Ylist_append of { var : yelu_var; values : yelu_value list }
+  | Ylist_append of { var : yelu_var; values : yarg list }
   (* testing *)
   | Yenable_testing
   | Yadd_test of { name : string; command : string; args : string list }
   | Yset_tests_properties of {
       tests : string list;
-      properties : (string * yelu_value) list;
+      properties : (string * yarg) list;
     }
   (* target properties *)
   | Yset_target_properties of {
       target : yelu_target;
-      properties : (string * yelu_value) list;
+      properties : (string * yarg) list;
     }
   | Yset_property of {
       targets : yelu_target list;
-      properties : (string * yelu_value) list;
+      properties : (string * yarg) list;
     }
   (* install *)
   | Yinstall_targets of {
       targets : yelu_target list;
-      destination : yelu_item;
+      destination : yarg;
       export : string option;
     }
-  | Yinstall_files of { files : yelu_item list; destination : yelu_item }
+  | Yinstall_files of { files : yarg list; destination : yarg }
   | Yinstall_export of {
-      file : yelu_item option;
-      export : yelu_item;
-      destination : yelu_item;
+      file : yarg option;
+      export : yarg;
+      destination : yarg;
     }
   (* export *)
-  | Yexport_export of { name : string; file : yelu_item option }
+  | Yexport_export of { name : string; file : yarg option }
   (* module commands *)
   | Yconfigure_package_config_file of {
-      install_dest : yelu_item;
-      input : yelu_item;
-      output : yelu_item;
+      install_dest : yarg;
+      input : yarg;
+      output : yarg;
       no_set_and_check_macro : bool;
       no_check_required_components_macro : bool;
     }
   | Ywrite_basic_package_version_file of {
-      file : yelu_item;
-      version : yelu_item option;
+      file : yarg;
+      version : yarg option;
       compatibility : compatibility;
     }
   (* custom commands *)
@@ -156,3 +158,6 @@ type yelu_exp =
       commands : Lang_cmake.custom_command list;
       depends : string list;
     }
+  (* extern declarations — register in env without emitting cmake *)
+  | Yextern_var of yelu_var
+  | Yextern_target of yelu_target

@@ -11,33 +11,33 @@ let cmd =
       ytarget_compile_features (ytarget "tutorial_compiler_flags")
         [ ytarget_feature ~kind:Interface "cxx_std_11" ];
       yset (yvar "gcc_like_cxx")
-        [ yquote "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-      yset (yvar "msvc_cxx") [ yquote "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
+        [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
+      yset (yvar "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
       ytarget_compile_options (ytarget "tutorial_compiler_flags")
         [
           ytarget_def ~kind:Interface
             [
-              yistr
+              yraw
                 "$<${gcc_like_cxx}:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>";
-              yistr "$<${msvc_cxx}:-W3>";
+              yraw "$<${msvc_cxx}:-W3>";
             ];
         ];
       ytarget_compile_options (ytarget "tutorial_compiler_flags")
         [
           ytarget_def ~kind:Interface
             [
-              yistr
+              yraw
                 "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>";
-              yistr "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
+              yraw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
             ];
         ];
       yconfigure_file ~input:"TutorialConfig.h.in" "TutorialConfig.h";
       yadd_subdirectory "MathFunctions";
       yadd_executable ~sources:[ "tutorial.cxx" ] (ytarget "Tutorial");
       ytarget_link_libraries [ ytarget "Tutorial" ]
-        [ ytarget_def [ yivar "MathFunctions"; yivar "tutorial_compiler_flags" ] ];
+        [ ytarget_def [ ytval "MathFunctions"; ytval "tutorial_compiler_flags" ] ];
       ytarget_include_directories (ytarget "Tutorial")
-        [ ytarget_def [ yistr "${PROJECT_BINARY_DIR}" ] ];
+        [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ];
     ]
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile cmd)
+let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)

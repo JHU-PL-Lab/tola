@@ -5,9 +5,9 @@ open Langs.Lang_cmake_pp
 let cmd =
   ycmd_of_list
     [
-      yinclude (yistr "release/CPackConfig.cmake");
+      yinclude (yraw "release/CPackConfig.cmake");
       yset (yvar "CPACK_INSTALL_CMAKE_PROJECTS")
-        [ yquote "debug;Tutorial;ALL;/"; yquote "release;Tutorial;ALL;/" ];
+        [ yraw "debug;Tutorial;ALL;/"; yraw "release;Tutorial;ALL;/" ];
     ]
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile cmd)
+let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)

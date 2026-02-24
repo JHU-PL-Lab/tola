@@ -8,12 +8,12 @@ let pp_vbox_to_string ast = Fmt.str "%a" (Fmt.vbox pp) ast
 
 let check name expected yelu_ast =
   Alcotest.test_case name `Quick (fun () ->
-      let cmake_ast = compile yelu_ast in
+      let cmake_ast = compile empty_env yelu_ast |> snd in
       Alcotest.(check string) name expected (pp_to_string cmake_ast))
 
 let check_vbox name expected yelu_ast =
   Alcotest.test_case name `Quick (fun () ->
-      let cmake_ast = compile yelu_ast in
+      let cmake_ast = compile empty_env yelu_ast |> snd in
       Alcotest.(check string) name expected (pp_vbox_to_string cmake_ast))
 
 (* --- Test groups --- *)
@@ -22,15 +22,15 @@ let primitives =
   ( "primitives",
     [
       check "set var" "set(FOO bar )"
-        (yset (yvar "FOO") [ ystr "bar" ]);
+        (yset (yvar "FOO") [ ybare "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
-        (yset (yvar "FOO") [ yquote "hello" ]);
+        (yset (yvar "FOO") [ yraw "hello" ]);
       check "set bool" "set(FOO ON )"
         (yset (yvar "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
-        (yset (yvar "SRCS") [ ystr "a.cpp"; ystr "b.cpp" ]);
+        (yset (yvar "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
       check "set parent_scope" "set(X val PARENT_SCOPE)"
-        (yset ~parent_scope:true (yvar "X") [ ystr "val" ]);
+        (yset ~parent_scope:true (yvar "X") [ ybare "val" ]);
     ] )
 
 let conditions =
@@ -39,12 +39,12 @@ let conditions =
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
         (yifthen (Ycond_var (yvar "USE_MYMATH"))
-           (yset (yvar "X") [ ystr "1" ]));
+           (yset (yvar "X") [ ybare "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
         (yif (Ycond_var (yvar "USE_MYMATH"))
-           (yset (yvar "X") [ ystr "1" ])
-           (yset (yvar "X") [ ystr "0" ]));
+           (yset (yvar "X") [ ybare "1" ])
+           (yset (yvar "X") [ ybare "0" ]));
       check "if and"
         "if (HAVE_LOG AND HAVE_EXP)\n  \nelse()\n  \nendif()\n"
         (yifthen
@@ -73,15 +73,15 @@ let targets =
       check "target_link_libraries"
         "target_link_libraries(Tutorial PUBLIC MathFunctions)"
         (ytarget_link_libraries [ ytarget "Tutorial" ]
-           [ ytarget_def [ yivar "MathFunctions" ] ]);
+           [ ytarget_def [ ytval "MathFunctions" ] ]);
       check "target_compile_definitions"
         "target_compile_definitions(MathFunctions PRIVATE \"USE_MYMATH\")"
         (ytarget_compile_definitions (ytarget "MathFunctions")
-           [ ytarget_def ~kind:Private [ yistr "USE_MYMATH" ] ]);
+           [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ]);
       check "target_include_directories"
         "target_include_directories(Tutorial PUBLIC \"${PROJECT_BINARY_DIR}\")"
         (ytarget_include_directories (ytarget "Tutorial")
-           [ ytarget_def [ yistr "${PROJECT_BINARY_DIR}" ] ]);
+           [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ]);
     ] )
 
 let project_level =
@@ -110,7 +110,7 @@ let composition =
       check_vbox "exp_list two stmts"
         "set(X 1 )\nset(Y 2 )"
         (ycmd_of_list
-           [ yset (yvar "X") [ ystr "1" ]; yset (yvar "Y") [ ystr "2" ] ]);
+           [ yset (yvar "X") [ ybare "1" ]; yset (yvar "Y") [ ybare "2" ] ]);
     ] )
 
 let () =

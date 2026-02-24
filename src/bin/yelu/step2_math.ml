@@ -13,12 +13,12 @@ let cmd =
         (ycmd_of_list
            [
              ytarget_compile_definitions (ytarget "MathFunctions")
-               [ ytarget_def ~kind:Private [ yistr "USE_MYMATH" ] ];
+               [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
              yadd_library ~type_:Lib_static ~sources:[ "mysqrt.cxx" ]
                (ytarget "SqrtLibrary");
              ytarget_link_libraries [ ytarget "MathFunctions" ]
-               [ ytarget_def ~kind:Private [ yivar "SqrtLibrary" ] ];
+               [ ytarget_def ~kind:Private [ ytval "SqrtLibrary" ] ];
            ]);
     ]
 
-let () = Fmt.pr "%a" (Fmt.vbox pp) (compile cmd)
+let () = Fmt.pr "%a" (Fmt.vbox pp) (compile empty_env cmd |> snd)
