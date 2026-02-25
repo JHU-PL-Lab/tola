@@ -13,8 +13,8 @@ let cmd =
     @ compiler_warning_options
     @ [
         configure_tutorial_header;
-        yc_add_subdirectory (ybare "MathFunctions");
-        yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
+        yc_add_subdirectory (ydir "MathFunctions");
+        yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
         yc_target_link_libraries [ yvar "tut" ]
           [ ytarget_def [ ytval "MathFunctions"; yvar "flags" ] ];
         yc_target_include_directories (yvar "tut")

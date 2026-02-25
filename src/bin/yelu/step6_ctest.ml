@@ -10,7 +10,7 @@ let cmd =
       yc_set (ycstr "CTEST_DROP_SITE") [ yraw "my.cdash.org" ];
       yc_set (ycstr "CTEST_DROP_LOCATION")
         [ yraw "/submit.php?project=CMakeTutorial" ];
-      yc_set (ycstr "CTEST_DROP_SITE_CDASH") [ ybare "TRUE" ];
+      yc_set (ycstr "CTEST_DROP_SITE_CDASH") [ ystr "TRUE" ];
     ]
 
 let () = print_cmake cmd

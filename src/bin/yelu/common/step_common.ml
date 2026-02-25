@@ -20,7 +20,7 @@ let project_preamble =
     Steps: 1-3. *)
 let cxx_standard_11 =
   [
-    yc_set (ycstr "CMAKE_CXX_STANDARD") [ ybare "11" ];
+    yc_set (ycstr "CMAKE_CXX_STANDARD") [ ystr "11" ];
     yc_set (ycstr "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
   ]
 
@@ -63,16 +63,16 @@ let compiler_warning_options =
 (** configure_file TutorialConfig.h.in -> TutorialConfig.h.
     Steps: 1-12. *)
 let configure_tutorial_header =
-  yc_configure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h")
+  yc_configure_file ~input:(yfile "TutorialConfig.h.in") (yfile "TutorialConfig.h")
 
 (** Install Tutorial binary + config header.
     Requires: [yvar "tut"]. Steps: 5-12. *)
 let install_tutorial =
   [
-    yc_install_targets [ yvar "tut" ] (ybare "bin");
+    yc_install_targets [ yvar "tut" ] (ydir "bin");
     yc_install_files
       [ yraw "${PROJECT_BINARY_DIR}/TutorialConfig.h" ]
-      (ybare "include");
+      (ydir "include");
   ]
 
 (** Test suite: testing infrastructure + do_test function + invocations.
@@ -80,37 +80,37 @@ let install_tutorial =
     @param ctest if true uses include(CTest) (step6+), else enable_testing() (step5). *)
 let test_suite ~ctest =
   [
-    (if ctest then yc_include (ybare "CTest") else yc_enable_testing);
-    yc_add_test (ybare "Runs") (ybare "Tutorial") [ ybare "25" ];
-    yc_add_test (ybare "Usage") (ybare "Tutorial") [];
-    yc_set_tests_properties [ ybare "Usage" ]
+    (if ctest then yc_include (yfile "CTest") else yc_enable_testing);
+    yc_add_test (ystr "Runs") (ystr "Tutorial") [ ystr "25" ];
+    yc_add_test (ystr "Usage") (ystr "Tutorial") [];
+    yc_set_tests_properties [ ystr "Usage" ]
       [ ("PASS_REGULAR_EXPRESSION", yraw "Usage:.*number") ];
-    yc_add_test (ybare "StandardUse") (ybare "Tutorial") [ ybare "4" ];
-    yc_set_tests_properties [ ybare "Usage" ]
+    yc_add_test (ystr "StandardUse") (ystr "Tutorial") [ ystr "4" ];
+    yc_set_tests_properties [ ystr "Usage" ]
       [ ("PASS_REGULAR_EXPRESSION", yraw "4 is 2") ];
     yc_function (yvar "do_test")
       [ "target"; "arg"; "result" ]
       [
-        yc_add_test (ybare "Comp${arg}") (ybare "${target}") [ ybare "${arg}" ];
-        yc_set_tests_properties [ ybare "Comp${arg}" ]
-          [ ("PASS_REGULAR_EXPRESSION", ybare "${result}") ];
+        yc_add_test (ystr "Comp${arg}") (ystr "${target}") [ ystr "${arg}" ];
+        yc_set_tests_properties [ ystr "Comp${arg}" ]
+          [ ("PASS_REGULAR_EXPRESSION", ystr "${result}") ];
       ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ybare "4"; yraw "4 is 2" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ybare "9"; yraw "9 is 3" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ybare "5"; yraw "5 is 2.236" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ybare "7"; yraw "7 is 2.645" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ybare "25"; yraw "25 is 5" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "4"; yraw "4 is 2" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "9"; yraw "9 is 3" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "5"; yraw "5 is 2.236" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "7"; yraw "7 is 2.645" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "25"; yraw "25 is 5" ];
     yc_apply (yvar "do_test")
-      [ yvar "tut"; ybare "-25"; yraw "-25 is (-nan|nan|0)" ];
+      [ yvar "tut"; ystr "-25"; yraw "-25 is (-nan|nan|0)" ];
     yc_apply (yvar "do_test")
-      [ yvar "tut"; ybare "0.0001"; yraw "0.0001 is 0.01" ];
+      [ yvar "tut"; ystr "0.0001"; yraw "0.0001 is 0.01" ];
   ]
 
 (** CPack configuration.
     Steps: 9-12. *)
 let cpack_basic =
   [
-    yc_include (ybare "InstallRequiredSystemLibraries");
+    yc_include (yfile "InstallRequiredSystemLibraries");
     yc_set (ycstr "CPACK_RESOURCE_FILE_LICENSE")
       [ yraw "${CMAKE_CURRENT_SOURCE_DIR}/License.txt" ];
     yc_set (ycstr "CPACK_PACKAGE_VERSION_MAJOR")
@@ -119,7 +119,7 @@ let cpack_basic =
       [ yraw "${Tutorial_VERSION_MINOR}" ];
     yc_set (ycstr "CPACK_GENERATOR") [ yraw "TGZ" ];
     yc_set (ycstr "CPACK_SOURCE_GENERATOR") [ yraw "TGZ" ];
-    yc_include (ybare "CPack");
+    yc_include (yfile "CPack");
   ]
 
 (** Output directories + BUILD_SHARED_LIBS option.
@@ -143,7 +143,7 @@ let shared_libs_output_dirs =
     [yvar "sqrt"]. Steps: 7_math-12_math. *)
 let math_check_cxx_features =
   [
-    yc_include (ybare "CheckCXXSourceCompiles");
+    yc_include (yfile "CheckCXXSourceCompiles");
     yc_apply (yvar "check_cxx")
       [
         yraw
@@ -183,8 +183,8 @@ let math_install_libs ?export () =
     yc_set (yvar "inst_libs") [ yvar "math"; yvar "flags" ];
     yifthen (Yis_target (ytval "SqrtLibrary"))
       (ycmd_of_list [ yc_list_append (yvar "inst_libs") [ yvar "sqrt" ] ]);
-    yc_install_targets ?export [ ytval "${installable_libs}" ] (ybare "lib");
-    yc_install_files [ yraw "MathFunctions.h" ] (ybare "include");
+    yc_install_targets ?export [ ytval "${installable_libs}" ] (ydir "lib");
+    yc_install_files [ yraw "MathFunctions.h" ] (ydir "include");
   ]
 
 (** Compile and print a yelu command to stdout as cmake. *)

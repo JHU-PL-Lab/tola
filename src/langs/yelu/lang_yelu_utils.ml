@@ -8,7 +8,9 @@ let yvar s = Yarg_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
 let ycstr s = Yarg_cvar (Ycvar s)
 let ytval s = Yarg_target (Ytarget s)
-let ybare s = Yarg_bare s
+let yfile s = Yarg_file s
+let ydir s = Yarg_dir s
+let ystr s = Yarg_str s
 let yraw s = Yarg_raw s
 let ybool b = Yarg_bool b
 

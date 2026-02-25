@@ -53,7 +53,9 @@ type compatibility =
 type yarg =
   | Yarg_cvar of yelu_cvar
   | Yarg_target of yelu_target
-  | Yarg_bare of string
+  | Yarg_file of string  (* file path: source, config, header, cmake module *)
+  | Yarg_dir of string   (* directory path: source dir, install destination *)
+  | Yarg_str of string   (* plain string value: numbers, property values *)
   | Yarg_raw of string
   | Yarg_bool of bool
   | Yarg_var of yelu_var  (* compile-time variable reference *)

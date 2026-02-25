@@ -11,9 +11,9 @@ let cmd =
        ylet "inst_libs" (ycstr "installable_libs");
        ylet "use_mymath" (ycstr "USE_MYMATH");
        yc_extern_target "tutorial_compiler_flags";
-       yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (yvar "math");
+       yc_add_library ~sources:[ yfile "MathFunctions.cxx" ] (yvar "math");
        yc_target_include_directories (yvar "math")
-         [ ytarget_def ~kind:Interface [ ybare "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
+         [ ytarget_def ~kind:Interface [ ydir "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
        yc_option ~value:(ybool true)
          ~msg:"Use tutorial provided math implementation" (yvar "use_mymath");
        yifthen (Ytruthy (yvar "use_mymath"))
@@ -21,7 +21,7 @@ let cmd =
             [
               yc_target_compile_definitions (yvar "math")
                 [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
-              yc_add_library ~type_:Lib_static ~sources:[ ybare "mysqrt.cxx" ]
+              yc_add_library ~type_:Lib_static ~sources:[ yfile "mysqrt.cxx" ]
                 (yvar "sqrt");
               yc_target_link_libraries [ yvar "sqrt" ]
                 [ ytarget_def ~kind:Public [ yvar "flags" ] ];

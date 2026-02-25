@@ -44,7 +44,7 @@ let rec resolve_arg env = function
   | Yarg_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> resolve_arg env v
-       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_bare name)
+       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_str name)
   | other -> other
 
 let try_declare_target env arg =
@@ -68,7 +68,7 @@ let rec erase_arg env = function
        | None -> Lang_cmake.Bare name)
   | Yarg_cvar (Ycvar s) -> Lang_cmake.Bare s
   | Yarg_target (Ytarget s) -> Lang_cmake.Bare s
-  | Yarg_bare s -> Lang_cmake.Bare s
+  | Yarg_file s | Yarg_dir s | Yarg_str s -> Lang_cmake.Bare s
   | Yarg_raw s -> Lang_cmake.Quoted s
   | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
@@ -78,7 +78,8 @@ let rec erase_arg_s env = function
       (match Map.find env.bindings name with
        | Some v -> erase_arg_s env v
        | None -> name)
-  | Yarg_cvar (Ycvar s) | Yarg_target (Ytarget s) | Yarg_bare s | Yarg_raw s ->
+  | Yarg_cvar (Ycvar s) | Yarg_target (Ytarget s) | Yarg_file s | Yarg_dir s
+  | Yarg_str s | Yarg_raw s ->
       s
   | Yarg_bool b -> if b then "ON" else "OFF"
 
@@ -146,7 +147,7 @@ let rec check_arg env = function
        | None -> Fmt.epr "Warning: unbound variable '%s'@." name)
   | Yarg_cvar v -> warn_undeclared_cvar env v
   | Yarg_target t -> warn_undeclared_target env t
-  | Yarg_bare _ | Yarg_raw _ | Yarg_bool _ -> ()
+  | Yarg_file _ | Yarg_dir _ | Yarg_str _ | Yarg_raw _ | Yarg_bool _ -> ()
 
 let rec check_cond env = function
   | Ytruthy arg -> check_arg env arg

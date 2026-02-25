@@ -8,13 +8,13 @@ let cmd =
         ylet "tut" (ytval "Tutorial");
         ylet "flags" (ytval "tutorial_compiler_flags");
       ]
-    @ compiler_flags_lib
-    @ cxx_standard_11
+    @ compiler_flags_lib @ cxx_standard_11
     @ [
         configure_tutorial_header;
-        yc_add_subdirectory (ybare "MathFunctions");
-        yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
-        yc_target_link_libraries [ yvar "tut" ]
+        yc_add_subdirectory (ydir "MathFunctions");
+        yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
+        yc_target_link_libraries
+          [ yvar "tut" ]
           [ ytarget_def [ ytval "MathFunctions"; yvar "flags" ] ];
         yc_target_include_directories (yvar "tut")
           [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ];

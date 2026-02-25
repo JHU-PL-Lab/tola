@@ -22,15 +22,15 @@ let primitives =
   ( "primitives",
     [
       check "set var" "set(FOO bar )"
-        (yc_set (ycstr "FOO") [ ybare "bar" ]);
+        (yc_set (ycstr "FOO") [ ystr "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
         (yc_set (ycstr "FOO") [ yraw "hello" ]);
       check "set bool" "set(FOO ON )"
         (yc_set (ycstr "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
-        (yc_set (ycstr "SRCS") [ ybare "a.cpp"; ybare "b.cpp" ]);
+        (yc_set (ycstr "SRCS") [ yfile "a.cpp"; yfile "b.cpp" ]);
       check "set parent_scope" "set(X val PARENT_SCOPE)"
-        (yc_set ~parent_scope:true (ycstr "X") [ ybare "val" ]);
+        (yc_set ~parent_scope:true (ycstr "X") [ ystr "val" ]);
     ] )
 
 let conditions =
@@ -39,12 +39,12 @@ let conditions =
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
         (yifthen (Ytruthy (ycstr "USE_MYMATH"))
-           (yc_set (ycstr "X") [ ybare "1" ]));
+           (yc_set (ycstr "X") [ ystr "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
         (yif (Ytruthy (ycstr "USE_MYMATH"))
-           (yc_set (ycstr "X") [ ybare "1" ])
-           (yc_set (ycstr "X") [ ybare "0" ]));
+           (yc_set (ycstr "X") [ ystr "1" ])
+           (yc_set (ycstr "X") [ ystr "0" ]));
       check "if and"
         "if (HAVE_LOG AND HAVE_EXP)\n  \nelse()\n  \nendif()\n"
         (yifthen
@@ -63,13 +63,13 @@ let targets =
     [
       check "add_library"
         "add_library(MathFunctions  MathFunctions.cxx)"
-        (yc_add_library ~sources:[ ybare "MathFunctions.cxx" ] (ytval "MathFunctions"));
+        (yc_add_library ~sources:[ yfile "MathFunctions.cxx" ] (ytval "MathFunctions"));
       check "add_library interface"
         "add_library(flags INTERFACE )"
         (yc_add_library ~type_:Lib_interface (ytval "flags"));
       check "add_executable"
         "add_executable(Tutorial tutorial.cxx)"
-        (yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (ytval "Tutorial"));
+        (yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (ytval "Tutorial"));
       check "target_link_libraries"
         "target_link_libraries(Tutorial PUBLIC MathFunctions)"
         (yc_target_link_libraries [ ytval "Tutorial" ]
@@ -98,10 +98,10 @@ let project_level =
         (yc_project "MyApp");
       check "configure_file"
         "configure_file(TutorialConfig.h.in TutorialConfig.h)"
-        (yc_configure_file ~input:(ybare "TutorialConfig.h.in") (ybare "TutorialConfig.h"));
+        (yc_configure_file ~input:(yfile "TutorialConfig.h.in") (yfile "TutorialConfig.h"));
       check "add_subdirectory"
         "add_subdirectory(MathFunctions)"
-        (yc_add_subdirectory (ybare "MathFunctions"));
+        (yc_add_subdirectory (ydir "MathFunctions"));
     ] )
 
 let composition =
@@ -110,7 +110,7 @@ let composition =
       check_vbox "exp_list two stmts"
         "set(X 1 )\nset(Y 2 )"
         (ycmd_of_list
-           [ yc_set (ycstr "X") [ ybare "1" ]; yc_set (ycstr "Y") [ ybare "2" ] ]);
+           [ yc_set (ycstr "X") [ ystr "1" ]; yc_set (ycstr "Y") [ ystr "2" ] ]);
     ] )
 
 let let_bindings =
@@ -121,16 +121,16 @@ let let_bindings =
         (ycmd_of_list
            [
              ylet "tut" (ytval "Tutorial");
-             yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
+             yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
            ]);
       check_vbox "ylet reuse"
         "add_library(mylib  src.cxx)\ntarget_link_libraries(mylib PUBLIC dep)"
         (ycmd_of_list
            [
              ylet "lib" (ytval "mylib");
-             yc_add_library ~sources:[ ybare "src.cxx" ] (yvar "lib");
+             yc_add_library ~sources:[ yfile "src.cxx" ] (yvar "lib");
              yc_target_link_libraries [ yvar "lib" ]
-               [ ytarget_def [ ybare "dep" ] ];
+               [ ytarget_def [ ystr "dep" ] ];
            ]);
       check "ylet chain"
         "add_executable(App main.cxx)"
@@ -138,7 +138,7 @@ let let_bindings =
            [
              ylet "name" (ytval "App");
              ylet "alias" (yvar "name");
-             yc_add_executable ~sources:[ ybare "main.cxx" ] (yvar "alias");
+             yc_add_executable ~sources:[ yfile "main.cxx" ] (yvar "alias");
            ]);
       check "ylet in target list"
         "target_link_libraries(main PUBLIC mylib)"
@@ -153,8 +153,8 @@ let let_bindings =
         "add_executable(App main.cxx)"
         (ycmd_of_list
            [
-             ylet "name" (ybare "App");
-             yc_add_executable ~sources:[ ybare "main.cxx" ] (yvar "name");
+             ylet "name" (ystr "App");
+             yc_add_executable ~sources:[ yfile "main.cxx" ] (yvar "name");
            ]);
     ] )
 

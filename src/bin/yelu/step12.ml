@@ -15,10 +15,10 @@ let cmd =
     @ compiler_warning_options
     @ [
         configure_tutorial_header;
-        yc_add_subdirectory (ybare "MathFunctions");
-        yc_add_executable ~sources:[ ybare "tutorial.cxx" ] (yvar "tut");
+        yc_add_subdirectory (ydir "MathFunctions");
+        yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
         yc_set_target_properties (yvar "tut")
-          [ ("DEBUG_POSTFIX", ybare "${CMAKE_DEBUG_POSTFIX}") ];
+          [ ("DEBUG_POSTFIX", ystr "${CMAKE_DEBUG_POSTFIX}") ];
         yc_target_link_libraries
           [ yvar "tut" ]
           [ ytarget_def [ ytval "MathFunctions"; yvar "flags" ] ];
@@ -30,30 +30,30 @@ let cmd =
     @ cpack_basic
     @ [
         yc_install_export
-          ~file:(ybare "MathFunctionsTargets.cmake")
-          (ybare "MathFunctionsTargets")
-          (ybare "lib/cmake/MathFunctions");
-        yc_include (ybare "CMakePackageConfigHelpers");
+          ~file:(yfile "MathFunctionsTargets.cmake")
+          (ystr "MathFunctionsTargets")
+          (ydir "lib/cmake/MathFunctions");
+        yc_include (yfile "CMakePackageConfigHelpers");
         yc_configure_package_config_file ~no_set_and_check_macro:true
           ~no_check_required_components_macro:true
           (yraw "lib/cmake/MathFunctions")
-          (ybare "${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in")
+          (yfile "${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in")
           (yraw "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfig.cmake");
         yc_write_basic_package_version_file ~compatibility:Any_newer_version
           ~version:(yraw "${Tutorial_VERSION_MAJOR}.${Tutorial_VERSION_MINOR}")
           (yraw "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfigVersion.cmake");
         yc_install_files
           [
-            ybare "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfig.cmake";
-            ybare "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfigVersion.cmake";
+            yfile "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfig.cmake";
+            yfile "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsConfigVersion.cmake";
           ]
-          (ybare "lib/cmake/MathFunctions");
+          (ydir "lib/cmake/MathFunctions");
         yc_install_export
-          ~file:(ybare "MathFunctionsTargets.cmake")
-          (ybare "MathFunctionsTargets")
-          (ybare "lib/cmake/MathFunctions");
+          ~file:(yfile "MathFunctionsTargets.cmake")
+          (ystr "MathFunctionsTargets")
+          (ydir "lib/cmake/MathFunctions");
         yc_export_export
-          (ybare "MathFunctionsTargets")
+          (ystr "MathFunctionsTargets")
           ~file:(yraw "${CMAKE_CURRENT_BINARY_DIR}/MathFunctionsTargets.cmake");
       ])
 
