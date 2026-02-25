@@ -1,9 +1,20 @@
 (* Yelu AST — typed surface language compiling to CMake.
    Type discipline lives here; cmake_ast stays stringly-typed. *)
 
-(* Typed wrappers — the whole point of yelu *)
-type yelu_cvar = Ycvar of string  (* cmake runtime variable *)
-type yelu_target = Ytarget of string
+(* A cmake name — string key in cmake namespaces (TARGET, Variable, COMMAND, TEST, ...) *)
+type cmake_name = string
+
+(* String content classification — what role a string plays *)
+type yc_string =
+  | Ycs_file of string        (* file path: source, config, header, cmake module *)
+  | Ycs_dir of string         (* directory path: source dir, install destination *)
+  | Ycs_name of cmake_name    (* generic cmake name, not typed to a specific namespace *)
+  | Ycs_val of string         (* plain value: numbers, property values *)
+  | Ycs_raw of string         (* cmake expression, opaque pass-through *)
+
+(* Typed wrappers — each pins a cmake_name to a specific namespace *)
+type yelu_cvar = Ycvar of cmake_name    (* cmake Variable namespace: set(), ${}, if(DEFINED) *)
+type yelu_target = Ytarget of cmake_name  (* cmake Target namespace: add_library, if(TARGET) *)
 type yelu_var = Yvar of string    (* compile-time variable *)
 
 (* Type aliases — placeholders for future typed variants *)
@@ -53,10 +64,7 @@ type compatibility =
 type yarg =
   | Yarg_cvar of yelu_cvar
   | Yarg_target of yelu_target
-  | Yarg_file of string  (* file path: source, config, header, cmake module *)
-  | Yarg_dir of string   (* directory path: source dir, install destination *)
-  | Yarg_str of string   (* plain string value: numbers, property values *)
-  | Yarg_raw of string
+  | Yarg_string of yc_string  (* file, dir, name, value, or raw cmake expr *)
   | Yarg_bool of bool
   | Yarg_var of yelu_var  (* compile-time variable reference *)
 

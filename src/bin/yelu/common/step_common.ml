@@ -28,8 +28,8 @@ let cxx_standard_11 =
     Requires: [yvar "flags"]. Steps: 3-12. *)
 let compiler_flags_lib =
   [
-    yc_add_library ~type_:Lib_interface (yvar "flags");
-    yc_target_compile_features (yvar "flags")
+    add_lib ~type_:Lib_interface (yvar "flags");
+    compile_feats (yvar "flags")
       [ ytarget_feature ~kind:Interface "cxx_std_11" ];
   ]
 
@@ -40,7 +40,7 @@ let compiler_warning_options =
     yc_set (ycstr "gcc_like_cxx")
       [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
     yc_set (ycstr "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
-    yc_target_compile_options (yvar "flags")
+    compile_opts (yvar "flags")
       [
         ytarget_def ~kind:Interface
           [
@@ -49,7 +49,7 @@ let compiler_warning_options =
             yraw "$<${msvc_cxx}:-W3>";
           ];
       ];
-    yc_target_compile_options (yvar "flags")
+    compile_opts (yvar "flags")
       [
         ytarget_def ~kind:Interface
           [
@@ -63,7 +63,7 @@ let compiler_warning_options =
 (** configure_file TutorialConfig.h.in -> TutorialConfig.h.
     Steps: 1-12. *)
 let configure_tutorial_header =
-  yc_configure_file ~input:(yfile "TutorialConfig.h.in") (yfile "TutorialConfig.h")
+  gen_file ~input:(yfile "TutorialConfig.h.in") (yfile "TutorialConfig.h")
 
 (** Install Tutorial binary + config header.
     Requires: [yvar "tut"]. Steps: 5-12. *)
@@ -71,7 +71,7 @@ let install_tutorial =
   [
     yc_install_targets [ yvar "tut" ] (ydir "bin");
     yc_install_files
-      [ yraw "${PROJECT_BINARY_DIR}/TutorialConfig.h" ]
+      [ dir_concat output_root "TutorialConfig.h" ]
       (ydir "include");
   ]
 
@@ -112,7 +112,7 @@ let cpack_basic =
   [
     yc_include (yfile "InstallRequiredSystemLibraries");
     yc_set (ycstr "CPACK_RESOURCE_FILE_LICENSE")
-      [ yraw "${CMAKE_CURRENT_SOURCE_DIR}/License.txt" ];
+      [ dir_concat source_this "License.txt" ];
     yc_set (ycstr "CPACK_PACKAGE_VERSION_MAJOR")
       [ yraw "${Tutorial_VERSION_MAJOR}" ];
     yc_set (ycstr "CPACK_PACKAGE_VERSION_MINOR")
@@ -127,11 +127,11 @@ let cpack_basic =
 let shared_libs_output_dirs =
   [
     yc_set (ycstr "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
-      [ yraw "${PROJECT_BINARY_DIR}" ];
+      [ dir output_root ];
     yc_set (ycstr "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
-      [ yraw "${PROJECT_BINARY_DIR}" ];
+      [ dir output_root ];
     yc_set (ycstr "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
-      [ yraw "${PROJECT_BINARY_DIR}" ];
+      [ dir output_root ];
     yc_option ~value:(ybool true) ~msg:"Build using shared libraries"
       (ycstr "BUILD_SHARED_LIBS");
   ]
@@ -168,7 +168,7 @@ let math_check_cxx_features =
       ];
     yifthen
       (Yand (Ytruthy (yvar "have_log"), Ytruthy (yvar "have_exp")))
-      (yc_target_compile_definitions (yvar "sqrt")
+      (compile_defs (yvar "sqrt")
          [
            ytarget_def ~kind:Private [ yraw "HAVE_LOG"; yraw "HAVE_EXP" ];
          ]);

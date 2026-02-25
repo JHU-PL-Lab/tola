@@ -8,9 +8,9 @@ let cmd =
     @ [
         ylet "tut" (ytval "Tutorial");
         configure_tutorial_header;
-        yc_add_executable ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
-        yc_target_include_directories (yvar "tut")
-          [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ];
+        add_exe ~sources:[ yfile "tutorial.cxx" ] (yvar "tut");
+        include_dirs (yvar "tut")
+          [ ytarget_def [ dir output_root ] ];
       ])
 
 let () = print_cmake cmd

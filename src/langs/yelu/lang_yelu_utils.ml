@@ -1,6 +1,9 @@
 open Base
 open Lang_yelu
 
+let ycs_to_s = function
+  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_raw s -> s
+
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
 let ytruthy arg = Ytruthy arg
@@ -8,11 +11,26 @@ let yvar s = Yarg_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
 let ycstr s = Yarg_cvar (Ycvar s)
 let ytval s = Yarg_target (Ytarget s)
-let yfile s = Yarg_file s
-let ydir s = Yarg_dir s
-let ystr s = Yarg_str s
-let yraw s = Yarg_raw s
+let yfile s = Yarg_string (Ycs_file s)
+let ydir s = Yarg_string (Ycs_dir s)
+let ystr s = Yarg_string (Ycs_val s)
+let yraw s = Yarg_string (Ycs_raw s)
 let ybool b = Yarg_bool b
+
+(* cmake variable reference — erases to ${NAME} for cmake runtime expansion *)
+let ycref s = yraw (Fmt.str "${%s}" s)
+let ycref_path s suffix = yraw (Fmt.str "${%s}/%s" s suffix)
+
+(* cmake directory constants — friendly keys for well-known cmake dir variables *)
+let source_root = "PROJECT_SOURCE_DIR"
+let output_root = "PROJECT_BINARY_DIR"
+let source_this = "CMAKE_CURRENT_SOURCE_DIR"
+let output_this = "CMAKE_CURRENT_BINARY_DIR"
+let list_this = "CMAKE_CURRENT_LIST_DIR"
+
+(* directory accessors *)
+let dir d = ycref d
+let dir_concat d suffix = ycref_path d suffix
 
 (* Extern declarations *)
 let yc_extern_cvar s = Yc_extern_cvar (Ycvar s)
@@ -36,28 +54,29 @@ let yc_project ?version ?(languages = []) name =
 let yc_set ?(parent_scope = false) cvar values =
   Yc_set { cvar; values; parent_scope }
 
-let yc_add_executable ?(sources = []) name =
+let add_exe ?(sources = []) name =
   Yc_add_executable { name; sources }
 
-let yc_add_library ?(exclude_from_all = false) ?type_ ?(sources = []) name =
+let add_lib ?(exclude_from_all = false) ?type_ ?(sources = []) name =
   Yc_add_library { name; type_; exclude_from_all; sources }
 
-let yc_target_include_directories target items =
+let include_dirs target items =
   Yc_target_include_directories { target; items }
 
-let yc_target_link_libraries targets items =
+let link_lib targets items =
   Yc_target_link_libraries { targets; items }
 
-let yc_target_compile_definitions target items =
+let compile_defs target items =
   Yc_target_compile_definitions { target; items }
 
-let yc_target_compile_features target features =
+let compile_feats target features =
   Yc_target_compile_features { target; features }
 
-let yc_target_compile_options ?(before = false) target items =
+let compile_opts ?(before = false) target items =
   Yc_target_compile_options { target; before; items }
 
 let yc_configure_file ~input output = Yc_configure_file { input; output }
+let gen_file = yc_configure_file
 let yc_add_subdirectory source_dir = Yc_add_subdirectory { source_dir }
 
 let yc_option ?(value = ybool false) ~msg cvar = Yc_option { cvar; msg; value }

@@ -18,6 +18,9 @@ let empty_env =
     bindings = Map.empty (module String);
   }
 
+let ycs_to_s = function
+  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_raw s -> s
+
 let is_builtin_cvar s =
   String.is_prefix s ~prefix:"CMAKE_"
   || String.is_prefix s ~prefix:"PROJECT_"
@@ -25,18 +28,19 @@ let is_builtin_cvar s =
   || String.is_prefix s ~prefix:"CTEST_"
   || String.is_prefix s ~prefix:"BUILD_"
 
-let warn_undeclared_cvar env (Ycvar s) =
-  if not (Set.mem env.cvars s || is_builtin_cvar s) then
-    Fmt.epr "Warning: undeclared variable '%s'@." s
+let warn_undeclared_cvar env (Ycvar name) =
+  if not (Set.mem env.cvars name || is_builtin_cvar name) then
+    Fmt.epr "Warning: undeclared variable '%s'@." name
 
-let warn_undeclared_target env (Ytarget s) =
-  if not (Set.mem env.targets s) then
-    Fmt.epr "Warning: undeclared target '%s'@." s
+let warn_undeclared_target env (Ytarget name) =
+  if not (Set.mem env.targets name) then
+    Fmt.epr "Warning: undeclared target '%s'@." name
 
-let declare_cvar env (Ycvar s) = { env with cvars = Set.add env.cvars s }
+let declare_cvar env (Ycvar name) =
+  { env with cvars = Set.add env.cvars name }
 
-let declare_target env (Ytarget s) =
-  { env with targets = Set.add env.targets s }
+let declare_target env (Ytarget name) =
+  { env with targets = Set.add env.targets name }
 
 (* --- Variable resolution --- *)
 
@@ -44,7 +48,7 @@ let rec resolve_arg env = function
   | Yarg_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> resolve_arg env v
-       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_str name)
+       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_string (Ycs_val name))
   | other -> other
 
 let try_declare_target env arg =
@@ -59,17 +63,25 @@ let try_declare_cvar env arg =
 
 (* --- Erasure helpers --- *)
 
-let erase_cvar (Ycvar s) = s
+let erase_cvar (Ycvar name) = name
 
 let rec erase_arg env = function
   | Yarg_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> erase_arg env v
        | None -> Lang_cmake.Bare name)
-  | Yarg_cvar (Ycvar s) -> Lang_cmake.Bare s
-  | Yarg_target (Ytarget s) -> Lang_cmake.Bare s
-  | Yarg_file s | Yarg_dir s | Yarg_str s -> Lang_cmake.Bare s
-  | Yarg_raw s -> Lang_cmake.Quoted s
+  | Yarg_cvar (Ycvar name) | Yarg_target (Ytarget name) -> Lang_cmake.Bare name
+  | Yarg_string (Ycs_raw s) ->
+      let known_dirs =
+        [ "PROJECT_BINARY_DIR"; "PROJECT_SOURCE_DIR";
+          "CMAKE_CURRENT_BINARY_DIR"; "CMAKE_CURRENT_SOURCE_DIR";
+          "CMAKE_CURRENT_LIST_DIR" ]
+      in
+      List.iter known_dirs ~f:(fun var ->
+          if String.equal s (Fmt.str "${%s}" var) then
+            Fmt.epr "Hint: use typed primitive instead of yraw \"${%s}\"@." var);
+      Lang_cmake.Quoted s
+  | Yarg_string ycs -> Lang_cmake.Bare (ycs_to_s ycs)
   | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
 (* For cmake fields that expect plain string, not arg *)
@@ -78,9 +90,8 @@ let rec erase_arg_s env = function
       (match Map.find env.bindings name with
        | Some v -> erase_arg_s env v
        | None -> name)
-  | Yarg_cvar (Ycvar s) | Yarg_target (Ytarget s) | Yarg_file s | Yarg_dir s
-  | Yarg_str s | Yarg_raw s ->
-      s
+  | Yarg_cvar (Ycvar name) | Yarg_target (Ytarget name) -> name
+  | Yarg_string ycs -> ycs_to_s ycs
   | Yarg_bool b -> if b then "ON" else "OFF"
 
 let string_of_kind = function
@@ -147,7 +158,7 @@ let rec check_arg env = function
        | None -> Fmt.epr "Warning: unbound variable '%s'@." name)
   | Yarg_cvar v -> warn_undeclared_cvar env v
   | Yarg_target t -> warn_undeclared_target env t
-  | Yarg_file _ | Yarg_dir _ | Yarg_str _ | Yarg_raw _ | Yarg_bool _ -> ()
+  | Yarg_string _ | Yarg_bool _ -> ()
 
 let rec check_cond env = function
   | Ytruthy arg -> check_arg env arg
