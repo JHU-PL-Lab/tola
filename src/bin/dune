@@ -26,7 +26,6 @@
   versioned_maps
   example
   langs
-  opam-client
   opam-core
   opam-format
   fpath
@@ -34,7 +33,7 @@
   logs.lwt
   lwt)
  (preprocess
-  (pps ppx_yojson_conv ppx_deriving.show))
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show))
  (promote (until-clean)))
 
 (env

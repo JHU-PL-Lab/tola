@@ -110,7 +110,7 @@ let inspect entity =
       ()
   | _ -> ()
 
-let cmd_from_src cmd_str =
+let cmd_from_str cmd_str =
   { cmd_str; env = []; capture = true; expected_ok = true }
 
 let rec interp ?(stop_on_error = true) exp : unit =

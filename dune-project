@@ -15,11 +15,10 @@
  (depends
   core
   core_unix
-  fmt
-  fix
-  opam-client
-  opam-core
-  opam-format
+	  fmt
+	  fix
+	  opam-core
+	  opam-format
   yaml
   ppx_jane
   ppx_yojson_conv

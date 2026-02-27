@@ -1,0 +1,89 @@
+opam-version: "2.0"
+maintainer: "weng@cs.jhu.edu"
+authors: "MSR"
+homepage: "https://github.com/Z3prover/z3"
+bug-reports: "https://github.com/Z3prover/z3/issues"
+license: "MIT"
+dev-repo: "git+https://github.com/Z3prover/z3.git"
+patches: [
+  "gccstd-2a.patch" { (os-family = "opensuse" | os-family = "suse") | (os-distribution = "ubuntu" & os-version <= "20.04") }
+]
+build: [
+  [
+    "sh" "-ec"
+    "cmake \
+   -B build -G Ninja \
+  -DCMAKE_VERBOSE_MAKEFILE=ON \
+  -DZ3_BUILD_LIBZ3_SHARED=ON \
+  -DZ3_BUILD_EXECUTABLE=OFF \
+  -DZ3_BUILD_TEST_EXECUTABLES=OFF \
+  -DZ3_LINK_TIME_OPTIMIZATION=ON \
+  -DZ3_BUILD_JAVA_BINDINGS=OFF \
+  -DZ3_BUILD_LIBZ3_CORE=OFF \
+  -DZ3_ROOT=$Z3_PREFIX \
+  -DZ3_BUILD_OCAML_BINDINGS=ON \
+  -DZ3_BUILD_PYTHON_BINDINGS=OFF"
+  ]
+  [ "ninja" "-C" "build" "build_z3_ocaml_bindings" ]
+]
+
+install: [
+  [ "sh" "-c" "ocamlfind install z3 \
+    build/src/api/ml/*.mli \
+    build/src/api/ml/*.cm* \
+    build/src/api/ml/*.o \
+    build/src/api/ml/*.a \
+    build/src/api/ml/META \
+    -dll \"${Z3_LIB_DIR:-$Z3_PREFIX/lib}\"/libz3.* \
+    build/src/api/ml/dllz3ml.so"
+     ]
+  ["install_name_tool" "-id" "%{lib}%/stublibs/libz3.dylib" "%{lib}%/stublibs/libz3.dylib"] {os = "macos"}
+  [ "sh" "-c"
+    "
+    LIBZ3_KEY=$(otool -L '%{lib}%/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
+    install_name_tool -change \"$LIBZ3_KEY\" \"%{lib}%/stublibs/libz3.dylib\" \"%{lib}%/stublibs/dllz3ml.so\"
+    "
+  ] {os = "macos"}
+  # [ "sh" "-c" "ocamlfind install z3 build/src/api/ml/* -dll build/libz3.*" ]
+  # [ "sh" "-c"
+  #   "
+  #   echo '-- listing'
+  #   ls %{lib}%/z3 | grep z3
+  #   ls %{lib}%/stublibs | grep z3
+
+  #   echo '-- otool info'
+  #   otool -L '%{lib}%/stublibs/libz3.dylib'
+  #   otool -L '%{lib}%/stublibs/dllz3ml.so'
+
+  #   LIBZ3_KEY=$(otool -L '%{lib}%/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
+  #   echo \"$LIBZ3_KEY\"
+  #   install_name_tool -change \"$LIBZ3_KEY\" \"%{lib}%/stublibs/libz3.dylib\" \"%{lib}%/stublibs/dllz3ml.so\"
+  #   "
+  # ] {os = "macos"}
+]
+
+remove: ["ocamlfind" "remove" "z3"]
+
+depends: [
+  "ocaml" {>= "4.08.0"}
+  "ocamlfind" {build}
+  "zarith"
+  "conf-cmake" {build}
+  "conf-ninja" {build}
+  "conf-python-3" {build}
+  "conf-c++" {build}
+  "conf-gmp" {build}
+]
+conflicts: [
+  "ocaml-option-bytecode-only"
+]
+synopsis: "Z3 solver (development version)"
+url {
+  src: "%{CANARY_Z3_SRC}%"
+}
+extra-source "gccstd-2a.patch" {
+  src:
+    "https://raw.githubusercontent.com/ocaml/opam-source-archives/main/patches/z3/gccstd-2a.patch"
+  checksum:
+    "sha256=ae4088ff14739bcc2cadc90bc428f08277e898b832f6b859a46e23c584d513c8"
+}

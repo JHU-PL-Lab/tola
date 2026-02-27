@@ -1,4 +1,0 @@
-jobs:
-  steps:
-    - name: Build Z3 and OCaml bindings
-      run: __OCAML_BINDING_BUILDGEN__
