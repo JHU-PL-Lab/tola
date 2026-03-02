@@ -10,7 +10,6 @@ open With_OCaml_switch
 open With_OCaml_dune
 open With_shell
 open With_filesystem
-open Binding
 open Binding.Fs
 
 (* file and dir examples *)
@@ -105,11 +104,11 @@ let opam_switch_example =
 
 let z3_opam_pkg_example =
   let z3_pkg =
-    Package.
+    Binding.Package.
       {
         name = "z3";
         version = "dev";
-        kind = Opam { switch = "5.4.0"; prefix = Opam.prefix "5.4.0" };
+        kind = Opam { switch = "5.4.0"; prefix = Binding.Opam.prefix "5.4.0" };
       }
   in
   List
@@ -130,9 +129,10 @@ git -c advice.detachedHead=false checkout 745087e
 
 [@@@warning "-69"]
 
-open Canary_z3
+open Canary_project_z3
 
 let mk_z3_src_example () =
+  let open Canary_basic_ocaml in
   let z3_binding_project =
     let open Binding.Structures in
     Project
@@ -196,7 +196,8 @@ let z3_pkg_example = List (mk_z3_pkg_example ())
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   match Stdlib.Sys.argv.(1) with
-  | "canary" -> run_canary_pipeline ()
+  | "canary" -> Canary.run ()
+  | "canary_local" -> Canary.run_local ()
   | "z3_1" -> interp z3_opam_pkg_example
   | "z3_src" -> interp z3_src_example
   | "z3_pkg" -> interp z3_pkg_example
