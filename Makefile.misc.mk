@@ -79,13 +79,13 @@ canary.ci.native.link.local:
 
 canary.symcheck.cmd:
 	@printf '%s\n' \
-	'python3 "$(CURDIR)/canary/scripts/assert_z3_symbols.py" \' \
+	'python3 "$(CURDIR)/canary/scripts/assert_binary_symbols.py" \' \
 	'  --required-lib "$(CANARY_Z3_BUILD_DIR)/src/api/ml/dllz3ml.so" \' \
 	'  --required-lib "$(CANARY_Z3_BUILD_DIR)/src/api/ml/libz3ml.a" \' \
 	'  --provided-lib "$(CANARY_Z3_SYSTEM_LIB)"'
 
 canary.symcheck.local:
-	python3 "$(CURDIR)/canary/scripts/assert_z3_symbols.py" \
+	python3 "$(CURDIR)/canary/scripts/assert_binary_symbols.py" \
 	  --required-lib "$(CANARY_Z3_BUILD_DIR)/src/api/ml/dllz3ml.so" \
 	  --required-lib "$(CANARY_Z3_BUILD_DIR)/src/api/ml/libz3ml.a" \
 	  --provided-lib "$(CANARY_Z3_SYSTEM_LIB)"

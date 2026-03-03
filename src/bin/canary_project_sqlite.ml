@@ -1,6 +1,17 @@
 open Canary_basic
 open Canary_basic_ocaml
 
+let download_and_test_spec : job_spec =
+  {
+    id = "download-and-test";
+    lib_origin = Prebuilt;
+    binding_location = Lang_pm;
+    test_bindings = [ OCaml ];
+    example_name = Some "sqlite3 example";
+    build_api_path = None;
+    if_disabled = false;
+  }
+
 let config =
   {
     canary = Canary_basic.default_canary_paths;
@@ -40,30 +51,14 @@ let config =
         supports_prebuilt_packaging = false;
         supports_python_binding = false;
       };
+    job_specs = [ download_and_test_spec ];
   }
 
 let download_and_test_job =
-  let { toolchain; opam_package; system_package_linux; system_package_macos; _ }
-      =
-    Canary_basic_ocaml.prebuilt_binding_exn config.ocaml
-  in
-  let context =
-    Canary_basic_ocaml.context_of_ocaml_tool_config config.ocaml
-  in
-  let name_of_case =
-    Canary_basic_ocaml.example_name_of_case ~example_name:"sqlite3 example"
-      ~variant_suffix:""
-  in
-  Canary_basic_ocaml.mk_canary_job ~id:"download-and-test"
-    ~name:"download-and-test (${{ matrix.os }})" ~runs_on:"${{ matrix.os }}"
-    ~strategy_yaml:strategy_anchor_yaml
-    ~stages:
-      (Canary_basic_ocaml.install_system_dep_stages toolchain
-         system_package_linux system_package_macos
-      @ install_opam_package_stage ~name:"Install sqlite3 OCaml package"
-          opam_package
-      @ Canary_basic_ocaml.mk_stages ~context ~source:With_pkg ~name_of_case
-          ())
-    ()
+  let binding = Canary_basic_ocaml.prebuilt_binding_exn config.ocaml in
+  Canary_basic_ocaml.job_of_spec ~spec:download_and_test_spec
+    ~steps:
+      (Canary_basic_ocaml.prebuilt_setup_stages binding
+      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:download_and_test_spec ())
 
-let jobs = collect_some [ Some download_and_test_job ]
+let jobs = [ download_and_test_job ]

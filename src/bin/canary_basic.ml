@@ -21,6 +21,32 @@ type project_capabilities = {
   supports_python_binding : bool;
 }
 
+type origin = Source | Prebuilt
+type location = Build_tree | System_pm | Lang_pm | Wild of string
+
+type job_spec = {
+  id : string;
+  lib_origin : origin;
+  binding_location : location;
+  test_bindings : binding_lang list;
+  example_name : string option;
+  build_api_path : string option;
+  if_disabled : bool;
+}
+
+let name_of_job_spec (spec : job_spec) =
+  [%string "%{spec.id} (${{ matrix.os }})"]
+
+let is_job_enabled capabilities (spec : job_spec) =
+  match (spec.lib_origin, spec.binding_location) with
+  | Source, _ -> capabilities.supports_source_build
+  | Prebuilt, Lang_pm -> capabilities.supports_prebuilt_packaging
+  | Prebuilt, _ -> true
+
+let build_source_of_location = function
+  | Build_tree -> From_build
+  | System_pm | Lang_pm | Wild _ -> With_pkg
+
 type stage_expectation =
   | Expect_success
   | Expect_failure_contains of string list
@@ -58,7 +84,6 @@ type 'a job = {
   if_disabled : bool;
   name : string;
   runs_on : string;
-  strategy_yaml : string option;
   preamble : yaml_preamble_action list;
   steps : 'a step list;
 }
@@ -140,13 +165,7 @@ let run_stage ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
   ({ name; guard; shell; env_fields; requires; produces; action; expectation }
     : 'a step)
 
-let mk_job ?(if_disabled = false) ?strategy_yaml ?(preamble = []) ~id ~name
-    ~runs_on ~steps () =
-  ({ id; if_disabled; name; runs_on; strategy_yaml; preamble; steps }
-    : 'a job)
-
 let when_enabled enabled value = if enabled then Some value else None
-let collect_some xs = List.filter_opt xs
 
 (* utilities *)
 
@@ -175,8 +194,6 @@ let mk_assert_result_cmd ~assert_script ?expected_returncode
   %{arg_block}-- \
   %{command}|}]
 
-(* lowering: apply expectations to commands *)
-
 let apply_expectation ~(scripts : backend_scripts) expectation cmd =
   match expectation with
   | Expect_success -> cmd
@@ -191,23 +208,6 @@ let apply_expectation ~(scripts : backend_scripts) expectation cmd =
         |> String.concat ~sep:" \\\n  "
       in
       [%string "python3 %{scripts.assert_symbols_script} \\\n  %{args}"]
-
-let lower_step ~scripts (step : string step) : string step =
-  { step with action = apply_expectation ~scripts step.expectation step.action }
-
-let lower_job ~scripts (job : string job) : string job =
-  { job with steps = List.map job.steps ~f:(lower_step ~scripts) }
-
-let lower_jobs ~scripts jobs = List.map jobs ~f:(lower_job ~scripts)
-
-let strategy_anchor_yaml =
-  {|strategy: &strategy_vars
-  fail-fast: false
-  matrix:
-    os: [ubuntu-latest, macos-latest]
-    ocaml-version: ["5.4.0"]|}
-
-let strategy_ref_yaml = "strategy: *strategy_vars"
 
 let checkout_step =
   yaml_preamble_action ~name:"Checkout code" "actions/checkout@v6"

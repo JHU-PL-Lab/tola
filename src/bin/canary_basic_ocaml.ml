@@ -44,6 +44,7 @@ type project_config = {
   project : project_spec;
   ocaml : ocaml_tool_config;
   capabilities : project_capabilities;
+  job_specs : job_spec list;
 }
 
 let compiler_of_mode = function Bytecode -> "ocamlc" | Native -> "ocamlopt"
@@ -278,11 +279,6 @@ let default_ocaml_step_descs ~source =
     };
   ]
 
-let mk_ocaml_step_descs ~source ?ocaml_step_descs () =
-  match ocaml_step_descs with
-  | Some specs -> specs
-  | None -> default_ocaml_step_descs ~source
-
 let example_name_of_case ~example_name ~variant_suffix (step : ocaml_step_desc) =
   [%string
     "%{step.display_verb} \
@@ -354,15 +350,46 @@ let ocaml_step_resolved_of_spec ~(context : context)
     command = command_of_step context step;
   }
 
-let mk_stages ~(context : context) ~source ~(name_of_case : ocaml_step_desc -> string)
-    ?ocaml_step_descs () =
-  let ocaml_step_descs = mk_ocaml_step_descs ~source ?ocaml_step_descs () in
+let mk_stages ~(context : context) ~(name_of_case : ocaml_step_desc -> string)
+    ~ocaml_step_descs () =
   List.map ocaml_step_descs ~f:(fun ocaml_step_desc ->
       let step = ocaml_step_resolved_of_spec ~context ~name_of_case ocaml_step_desc in
       run_stage ~name:step.name ~requires:step.requires ~produces:step.produces
         ~expectation:step.expectation step.command)
 
-let mk_canary_job ?(if_disabled = false) ?strategy_yaml ~id ~name ~runs_on
-    ~stages () =
-  mk_job ~id ~if_disabled ?strategy_yaml ~preamble:checkout_and_setup_preamble
-    ~name ~runs_on ~steps:stages ()
+let prebuilt_setup_stages (binding : prebuilt_ocaml_binding) =
+  install_system_dep_stages binding.toolchain binding.system_package_linux
+    binding.system_package_macos
+  @ install_opam_package_stage binding.opam_package
+
+let job_of_spec ~(spec : job_spec) ~steps =
+  {
+    id = spec.id;
+    if_disabled = spec.if_disabled;
+    name = name_of_job_spec spec;
+    runs_on = "${{ matrix.os }}";
+    preamble = checkout_and_setup_preamble;
+    steps;
+  }
+
+let mk_ocaml_test_stages ~(config : project_config) ~(spec : job_spec)
+    ?ocaml_step_descs () =
+  let example_name =
+    Option.value_exn spec.example_name
+      ~message:"job_spec.example_name is required for mk_ocaml_test_stages"
+  in
+  let source = build_source_of_location spec.binding_location in
+  let variant_suffix =
+    match source with From_build -> "" | With_pkg -> "_with_pkg"
+  in
+  let context =
+    context_of_ocaml_tool_config config.ocaml ?build_api_path:spec.build_api_path
+      ~target_suffix_of_source:(suffix_of_source ~with_pkg_suffix:variant_suffix)
+  in
+  let name_of_case = example_name_of_case ~example_name ~variant_suffix in
+  let ocaml_step_descs =
+    match ocaml_step_descs with
+    | Some descs -> descs
+    | None -> default_ocaml_step_descs ~source
+  in
+  mk_stages ~context ~name_of_case ~ocaml_step_descs ()

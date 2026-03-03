@@ -22,7 +22,10 @@ let render_preamble_action { name; uses; with_fields } =
   in
   String.concat ~sep:"\n" (name_lines @ uses_line @ with_lines)
 
-let render_step (stage : string step) =
+let render_step ~scripts (stage : string step) =
+      let stage =
+        { stage with action = apply_expectation ~scripts stage.expectation stage.action }
+      in
       let base = [ "      - name: " ^ stage.name ] in
       let if_lines =
         match stage.guard with
@@ -46,7 +49,16 @@ let render_step (stage : string step) =
       String.concat ~sep:"\n"
         (base @ if_lines @ shell_lines @ env_lines @ run_lines)
 
-let render_job (job : string job) =
+let strategy_anchor_yaml =
+  {|strategy: &strategy_vars
+  fail-fast: false
+  matrix:
+    os: [ubuntu-latest, macos-latest]
+    ocaml-version: ["5.4.0"]|}
+
+let strategy_ref_yaml = "strategy: *strategy_vars"
+
+let render_job ~scripts ~strategy_yaml (job : string job) =
   let header =
     [
       "  " ^ job.id ^ ":";
@@ -57,19 +69,24 @@ let render_job (job : string job) =
     |> List.filter ~f:(fun s -> not (String.is_empty s))
   in
   let strategy_lines =
-    match job.strategy_yaml with
-    | None -> []
-    | Some s -> String.split_lines s |> List.map ~f:(fun l -> "    " ^ l)
+    String.split_lines strategy_yaml |> List.map ~f:(fun l -> "    " ^ l)
   in
   let step_lines =
     [ "    steps:" ]
     @ List.map job.preamble ~f:render_preamble_action
-    @ List.map job.steps ~f:render_step
+    @ List.map job.steps ~f:(render_step ~scripts)
   in
   String.concat ~sep:"\n" (header @ strategy_lines @ step_lines)
 
-let render_workflow ~workflow_name (jobs : string job list) =
-  let jobs_yaml = List.map jobs ~f:render_job |> String.concat ~sep:"\n\n" in
+let render_workflow ~scripts ~workflow_name (jobs : string job list) =
+  let jobs_yaml =
+    List.mapi jobs ~f:(fun i job ->
+        let strategy_yaml =
+          if i = 0 then strategy_anchor_yaml else strategy_ref_yaml
+        in
+        render_job ~scripts ~strategy_yaml job)
+    |> String.concat ~sep:"\n\n"
+  in
   [%string
     {|name: %{workflow_name}
 

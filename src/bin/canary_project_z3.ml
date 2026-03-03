@@ -55,6 +55,39 @@ let versions : z3_versions =
 let z3_dev_spec, z3_dev_instance = versions.dev
 let _z3_stable_spec, _z3_stable_instance = versions.stable
 
+let build_and_test_spec : job_spec =
+  {
+    id = "build-and-test";
+    lib_origin = Source;
+    binding_location = Build_tree;
+    test_bindings = [ OCaml ];
+    example_name = Some "ml_example";
+    build_api_path = Some "build/src/api/ml";
+    if_disabled = true;
+  }
+
+let download_and_test_spec : job_spec =
+  {
+    id = "download-and-test";
+    lib_origin = Prebuilt;
+    binding_location = Build_tree;
+    test_bindings = [ Python ];
+    example_name = None;
+    build_api_path = None;
+    if_disabled = false;
+  }
+
+let packaging_spec : job_spec =
+  {
+    id = "packaging-from-prebuilt";
+    lib_origin = Prebuilt;
+    binding_location = Lang_pm;
+    test_bindings = [ OCaml ];
+    example_name = Some "ml_example";
+    build_api_path = Some "build/src/api/ml";
+    if_disabled = false;
+  }
+
 let config =
   {
     canary;
@@ -77,6 +110,7 @@ let config =
         supports_prebuilt_packaging = true;
         supports_python_binding = true;
       };
+    job_specs = [ build_and_test_spec; download_and_test_spec; packaging_spec ];
   }
 
 let out_h_json ver = [%string "_out/z3_h_%{ver}.json"]
@@ -142,7 +176,6 @@ let run_python_binding canary missing_symbols =
     ~expected_returncode:1 ~contains_any:missing_symbols
     {|env PYTHONPATH="build/python" python3 -S -c "import z3; print(z3.__file__)"|}
 
-
 let configure_with_cmake_from_source_stages =
   [
     run_stage ~name:"Configure with CMake"
@@ -199,26 +232,11 @@ let with_pkg_expected_failure_cases =
       in
       { step_spec with expectation })
 
-let ocaml_context =
-  Canary_basic_ocaml.context_of_ocaml_tool_config config.ocaml
-    ~build_api_path:"build/src/api/ml"
-    ~target_suffix_of_source:
-      (Canary_basic_ocaml.suffix_of_source ~with_pkg_suffix:"_with_pkg")
-
 let build_and_test_job =
-  let source = From_build in
-  let name_of_case =
-    Canary_basic_ocaml.example_name_of_case ~example_name:"ml_example"
-      ~variant_suffix:""
-  in
-  Canary_basic_ocaml.mk_canary_job ~id:"build-and-test" ~if_disabled:true
-    ~name:"build-and-test (${{ matrix.os }})" ~runs_on:"${{ matrix.os }}"
-    ~strategy_yaml:strategy_anchor_yaml
-    ~stages:
+  Canary_basic_ocaml.job_of_spec ~spec:build_and_test_spec
+    ~steps:
       (configure_with_cmake_from_source_stages
-      @ Canary_basic_ocaml.mk_stages ~context:ocaml_context ~source
-          ~name_of_case ())
-    ()
+      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:build_and_test_spec ())
 
 let download_and_test_job =
   let toolchain =
@@ -228,39 +246,27 @@ let download_and_test_job =
     if config.capabilities.supports_python_binding then python_binding_stages
     else []
   in
-  Canary_basic_ocaml.mk_canary_job ~id:"download-and-test"
-    ~name:"download-and-test (${{ matrix.os }})" ~runs_on:"${{ matrix.os }}"
-    ~strategy_yaml:strategy_ref_yaml
-    ~stages:
+  Canary_basic_ocaml.job_of_spec ~spec:download_and_test_spec
+    ~steps:
       (Canary_basic_ocaml.install_system_dep_stages toolchain "z3" "z3"
-      @ configure_with_external_z3_stages
-          ~configure_name:"Configure with CMake"
+      @ configure_with_external_z3_stages ~configure_name:"Configure with CMake"
       @ post_build_stages)
-    ()
 
 let packaging_from_prebuilt_job =
-  let source = With_pkg in
   let toolchain =
     Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
   in
-  let name_of_case =
-    Canary_basic_ocaml.example_name_of_case ~example_name:"ml_example"
-      ~variant_suffix:"_with_pkg"
-  in
-  Canary_basic_ocaml.mk_canary_job ~id:"packaging-from-prebuilt"
-    ~name:"packaging-from-prebuilt (${{ matrix.os }})"
-    ~runs_on:"${{ matrix.os }}" ~strategy_yaml:strategy_ref_yaml
-    ~stages:
+  Canary_basic_ocaml.job_of_spec ~spec:packaging_spec
+    ~steps:
       (Canary_basic_ocaml.install_system_dep_stages toolchain "z3" "z3"
       @ configure_with_external_z3_stages
           ~configure_name:"Configure with CMake (external libz3)"
       @ install_local_opam_z3_dev_stages
-      @ Canary_basic_ocaml.mk_stages ~context:ocaml_context ~source
-          ~name_of_case ~ocaml_step_descs:with_pkg_expected_failure_cases ())
-    ()
+      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:packaging_spec
+          ~ocaml_step_descs:with_pkg_expected_failure_cases ())
 
 let jobs =
-  collect_some
+  List.filter_opt
     [
       when_enabled config.capabilities.supports_source_build build_and_test_job;
       Some download_and_test_job;

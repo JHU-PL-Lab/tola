@@ -11,25 +11,26 @@ let render_project ~canary ~workflow_name ~name jobs =
   let yaml_path = project_yaml_path canary name in
   let shell_path = project_shell_path canary name in
   write_file yaml_path
-    (Canary_backend_yaml.render_workflow ~workflow_name
-       (lower_jobs ~scripts:canary.yaml_scripts jobs));
+    (Canary_backend_yaml.render_workflow ~scripts:canary.yaml_scripts
+       ~workflow_name jobs);
   write_file shell_path
     (Canary_backend_shell.render_script ~preamble_lines:shell_preamble_lines
-       ~runner_os:Ubuntu
-       (lower_jobs ~scripts:canary.shell_scripts jobs));
+       ~scripts:canary.shell_scripts ~runner_os:Ubuntu jobs);
   (yaml_path, shell_path)
 
 let run_local () =
   let canary = Canary_project_z3.config.canary in
   check_file_exists_exn canary.root;
-  run_cmd_exn (Fmt.str "mkdir -p %s %s" canary.out_root canary.backend_shell_root);
+  run_cmd_exn
+    (Fmt.str "mkdir -p %s %s" canary.out_root canary.backend_shell_root);
   let _z3_yaml, z3_shell =
     render_project ~canary ~workflow_name:Canary_project_z3.config.workflow_name
       ~name:"z3" Canary_project_z3.jobs
   in
   let _sqlite_yaml, sqlite_shell =
-    render_project ~canary ~workflow_name:Canary_project_sqlite.config.workflow_name
-      ~name:"sqlite" Canary_project_sqlite.jobs
+    render_project ~canary
+      ~workflow_name:Canary_project_sqlite.config.workflow_name ~name:"sqlite"
+      Canary_project_sqlite.jobs
   in
   check_file_exists_exn z3_shell;
   check_file_exists_exn sqlite_shell;
@@ -60,8 +61,9 @@ let run () =
       ~name:"z3" Canary_project_z3.jobs
   in
   let sqlite_yaml, sqlite_shell =
-    render_project ~canary ~workflow_name:Canary_project_sqlite.config.workflow_name
-      ~name:"sqlite" Canary_project_sqlite.jobs
+    render_project ~canary
+      ~workflow_name:Canary_project_sqlite.config.workflow_name ~name:"sqlite"
+      Canary_project_sqlite.jobs
   in
   run_cmd_exn
     (Fmt.str "python -c \"import yaml,sys; yaml.safe_load(open('%s'))\"" z3_yaml);
@@ -81,8 +83,7 @@ let run () =
   run_cmd ~strict:false (Fmt.str "chmod +x %s %s" z3_shell sqlite_shell);
   run_cmd ~strict:false
     (Fmt.str "mkdir -p %s/workflows && cp -f %s %s"
-       z3_dev_instance.canary_gh_abs z3_yaml
-       z3_dev_instance.canary_yaml_output);
+       z3_dev_instance.canary_gh_abs z3_yaml z3_dev_instance.canary_yaml_output);
   run_cmd ~strict:false
     (Fmt.str "mkdir -p %s/workflows && cp -f %s %s"
        z3_dev_instance.canary_gh_abs sqlite_yaml sqlite_yaml_output)

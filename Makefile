@@ -1,4 +1,4 @@
-.PHONY: tola
+.PHONY: tola canary
 
 PM_ROOT = _pm
 OUT = _out
@@ -14,6 +14,12 @@ demo_langs:
 %.eg: LANG = $(basename $@)
 %.eg:
 	dune exec src/bin/example_$(LANG).exe -- $(ARGS)
+
+canary:
+	DUNE_SANDBOX=none dune exec src/bin/example_sp.exe -- canary
+
+canary_local:
+	DUNE_SANDBOX=none dune exec src/bin/example_sp.exe -- canary_local
 
 # make sp.eg ARGS='yaml'
 # make sp.eg ARGS='z3_src'
