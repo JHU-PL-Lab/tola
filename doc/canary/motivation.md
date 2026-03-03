@@ -100,6 +100,33 @@ The current refactoring path is therefore:
 4. keep project-specific logic close to the project until a second example proves
    the abstraction is real
 
+## Current Type Model
+
+Jobs are described by `job_spec`, which captures the role of a job in the
+development lifecycle:
+
+- `origin`: how the upstream library was produced — `Source` (built from source)
+  or `Prebuilt` (system/external package)
+- `location`: where the artifact lives — `Build_tree` (local build output),
+  `System_pm` (apt/brew), `Lang_pm` (opam/pip), or `Wild` (arbitrary path)
+- `test_bindings`: which language bindings to test (OCaml, Python)
+- `example_name`, `build_api_path`: how to find and compile test examples
+- `if_disabled`: whether the job is disabled in CI (e.g. YAML anchor trick)
+
+A `job_spec` is a declarative description. The interpreter (`job_of_spec`)
+converts it into a concrete job record. OCaml compile/run stages are generated
+by `mk_ocaml_test_stages` from the spec + project config. Setup stages
+(installing dependencies, configuring cmake) are composed at the call site.
+
+The separation is:
+- `job_of_spec`: spec → job structure
+- `mk_ocaml_test_stages`: spec + config → OCaml compile/run steps
+- `prebuilt_setup_stages`: prebuilt binding config → install/setup steps
+- Project-specific stages: cmake configuration, python bindings, etc.
+
+The goal is to grow `job_spec` until a single interpreter can derive complete
+jobs from specs alone, with zero project-specific code.
+
 ## Artifact-Oriented Future
 
 Today, many checks are still inserted manually.
