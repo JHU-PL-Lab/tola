@@ -129,9 +129,13 @@ git -c advice.detachedHead=false checkout 745087e
 
 [@@@warning "-69"]
 
+open Canary_basic
 open Canary_project_z3
 
 let mk_z3_src_example () =
+  let distro = detect_distro () in
+  let z3_dev_instance = z3_dev_instance_of_distro distro in
+  let z3_dev_spec = z3_dev_spec distro in
   let open Canary_basic_ocaml in
   let z3_binding_project =
     let open Binding.Structures in
@@ -165,9 +169,12 @@ let mk_z3_src_example () =
       (cmd_from_str (Fmt.str "cd %s && %s" z3_dev_instance.root binding_build));
   ]
 
-let z3_src_example = List (mk_z3_src_example ())
+let z3_src_example () = List (mk_z3_src_example ())
 
 let mk_z3_pkg_example () =
+  let distro = detect_distro () in
+  let z3_dev_instance = z3_dev_instance_of_distro distro in
+  let z3_dev_spec = z3_dev_spec distro in
   let z3_binding_project =
     let open Binding.Structures in
     Project
@@ -191,16 +198,16 @@ let mk_z3_pkg_example () =
       (cmd_from_str (Fmt.str "cd %s && %s" z3_dev_instance.root binding_build));
   ]
 
-let z3_pkg_example = List (mk_z3_pkg_example ())
+let z3_pkg_example () = List (mk_z3_pkg_example ())
 
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   match Stdlib.Sys.argv.(1) with
-  | "canary" -> Canary.run ()
-  | "canary_local" -> Canary.run_local ()
+  | "canary" -> Canary.run (Canary_basic.detect_distro ())
+  | "canary_local" -> Canary.run_local (detect_distro ())
   | "z3_1" -> interp z3_opam_pkg_example
-  | "z3_src" -> interp z3_src_example
-  | "z3_pkg" -> interp z3_pkg_example
+  | "z3_src" -> interp (z3_src_example ())
+  | "z3_pkg" -> interp (z3_pkg_example ())
   | "switch" -> interp opam_switch_example
   | "file" -> interp file_example
   | "dir" -> interp dir_example

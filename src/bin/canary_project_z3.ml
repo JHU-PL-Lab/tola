@@ -29,35 +29,42 @@ let mk_instance root =
     canary_z3_src = [%string "git+file://%{root}"];
   }
 
-let z3_dev_root = "/home/ex/code/ocaml-build-examples/vendor/z3"
-let z3_stable_root = "/home/ex/code/ocaml-build-examples/vendor/z3-stable"
-
-let versions : z3_versions =
+let mk_versions distro : z3_versions =
+  let dev = z3_dev_spec distro in
+  let stable = z3_stable_spec distro in
   {
-    dev =
-      ( {
-          version = "dev";
-          commit = "HEAD";
-          bindings = [ OCaml; Python ];
-          package_managers = [ Opam ];
-        },
-        mk_instance z3_dev_root );
-    stable =
-      ( {
-          version = "4.8.15";
-          commit = "745087e";
-          bindings = [ OCaml; Python ];
-          package_managers = [ Opam ];
-        },
-        mk_instance z3_stable_root );
+    dev = (dev, mk_instance dev.root);
+    stable = (stable, mk_instance stable.root);
   }
 
-let z3_dev_spec, z3_dev_instance = versions.dev
-let _z3_stable_spec, _z3_stable_instance = versions.stable
+let z3_dev_instance_of_distro distro = mk_instance (z3_dev_spec distro).root
 
-let build_and_test_spec : job_spec =
+let missing_symbols =
+  [ "Z3_solver_register_on_clause"; "Z3_mk_seq_replace_all" ]
+
+let expected_symbol_failure =
+  Expect_failure_contains
+    { contains_any = [ "undefined symbol"; "Z3_mk_u32string" ];
+      expected_returncode = None }
+
+let expected_python_failure =
+  Expect_failure_contains
+    { contains_any = missing_symbols; expected_returncode = Some 1 }
+
+let build_and_test_spec distro : job_spec =
   {
+    distro;
     id = "build-and-test";
+    phases =
+      [ { kind = Configure "Configure with CMake";
+          action = Configure; location = Build_tree;
+          requires = []; produces = [ Artifact_dir "build" ];
+          expectation = Expect_success };
+        { kind = Ocaml_test;
+          action = Test; location = Build_tree;
+          requires = [ Artifact_dir "build/src/api/ml" ]; produces = [];
+          expectation = Expect_success };
+      ];
     lib_origin = Source;
     binding_location = Build_tree;
     test_bindings = [ OCaml ];
@@ -66,9 +73,24 @@ let build_and_test_spec : job_spec =
     if_disabled = true;
   }
 
-let download_and_test_spec : job_spec =
+let download_and_test_spec distro : job_spec =
   {
+    distro;
     id = "download-and-test";
+    phases =
+      [ { kind = Install_system_deps;
+          action = Install; location = System_pm;
+          requires = []; produces = [];
+          expectation = Expect_success };
+        { kind = Configure "Configure with CMake";
+          action = Configure; location = Build_tree;
+          requires = []; produces = [ Artifact_dir "build" ];
+          expectation = Expect_success };
+        { kind = Python_binding_test;
+          action = Test; location = Build_tree;
+          requires = [ Artifact_dir "build/python" ]; produces = [];
+          expectation = expected_python_failure };
+      ];
     lib_origin = Prebuilt;
     binding_location = Build_tree;
     test_bindings = [ Python ];
@@ -77,9 +99,28 @@ let download_and_test_spec : job_spec =
     if_disabled = false;
   }
 
-let packaging_spec : job_spec =
+let packaging_spec distro : job_spec =
   {
+    distro;
     id = "packaging-from-prebuilt";
+    phases =
+      [ { kind = Install_system_deps;
+          action = Install; location = System_pm;
+          requires = []; produces = [];
+          expectation = Expect_success };
+        { kind = Configure "Configure with CMake (external libz3)";
+          action = Configure; location = Build_tree;
+          requires = []; produces = [ Artifact_dir "build" ];
+          expectation = Expect_success };
+        { kind = Install_local_opam;
+          action = Install; location = Lang_pm;
+          requires = []; produces = [ Artifact_package "z3" ];
+          expectation = Expect_success };
+        { kind = Ocaml_test;
+          action = Test; location = Lang_pm;
+          requires = [ Artifact_package "z3" ]; produces = [];
+          expectation = expected_symbol_failure };
+      ];
     lib_origin = Prebuilt;
     binding_location = Lang_pm;
     test_bindings = [ OCaml ];
@@ -88,29 +129,30 @@ let packaging_spec : job_spec =
     if_disabled = false;
   }
 
-let config =
+let z3_ocaml_config =
+  Source_binding
+    {
+      opam = Canary_basic_ocaml.default;
+      ocaml =
+        {
+          example_target = "ml_example";
+          example_file = "examples/ml/ml_example.ml";
+          binding_lib_name = "z3";
+        };
+    }
+
+let config distro =
   {
     canary;
     workflow_name = "Canary Testing for Bindings and Packages";
-    project = z3_dev_spec;
-    ocaml =
-      Source_binding
-        {
-          opam = Canary_basic_ocaml.default;
-          ocaml =
-            {
-              example_target = "ml_example";
-              example_file = "examples/ml/ml_example.ml";
-              binding_lib_name = "z3";
-            };
-        };
-    capabilities =
-      {
-        supports_source_build = true;
-        supports_prebuilt_packaging = true;
-        supports_python_binding = true;
-      };
-    job_specs = [ build_and_test_spec; download_and_test_spec; packaging_spec ];
+    project = z3_dev_spec distro;
+    ocaml = z3_ocaml_config;
+    job_specs =
+      [
+        build_and_test_spec distro;
+        download_and_test_spec distro;
+        packaging_spec distro;
+      ];
   }
 
 let out_h_json ver = [%string "_out/z3_h_%{ver}.json"]
@@ -151,7 +193,7 @@ cmake \
 
 let build_z3_in_opam =
   let toolchain =
-    Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
+    Canary_basic_ocaml.toolchain_of_ocaml_tool_config z3_ocaml_config
   in
   [%string
     {|cmake \
@@ -168,13 +210,8 @@ let binding_build =
 ninja -C build build_z3_ocaml_bindings
 ninja -C build build_z3_python_bindings|}
 
-let missing_symbols =
-  [ "Z3_solver_register_on_clause"; "Z3_mk_seq_replace_all" ]
-
-let run_python_binding canary missing_symbols =
-  mk_assert_result_cmd ~assert_script:canary.assert_result
-    ~expected_returncode:1 ~contains_any:missing_symbols
-    {|env PYTHONPATH="build/python" python3 -S -c "import z3; print(z3.__file__)"|}
+let python_binding_cmd =
+  {|env PYTHONPATH="build/python" python3 -S -c "import z3; print(z3.__file__)"|}
 
 let configure_with_cmake_from_source_stages =
   [
@@ -194,7 +231,7 @@ let configure_with_cmake_from_source_stages =
 
 let configure_with_external_z3_stages ~configure_name =
   let toolchain =
-    Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
+    Canary_basic_ocaml.toolchain_of_ocaml_tool_config z3_ocaml_config
   in
   [
     run_stage ~name:configure_name
@@ -202,77 +239,51 @@ let configure_with_external_z3_stages ~configure_name =
     run_stage ~name:"Build OCaml and Python bindings" binding_build;
   ]
 
-let python_binding_stages =
-  [
-    run_stage ~name:"Run Python binding"
-      (run_python_binding config.canary missing_symbols);
-  ]
-
 let install_local_opam_z3_dev_stages =
   let toolchain =
-    Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
+    Canary_basic_ocaml.toolchain_of_ocaml_tool_config z3_ocaml_config
   in
   [
     run_stage ~name:"Install z3.dev from contrib/canary local opam repo"
       (Canary_basic_ocaml.install_local_cmd toolchain
-         ~canary_contrib_rel:config.canary.contrib_rel);
+         ~canary_contrib_rel:canary.contrib_rel);
   ]
 
-let expected_symbol_failure =
-  Expect_failure_contains [ "undefined symbol"; "Z3_mk_u32string" ]
+let resolve_phase spec phase =
+  match phase.kind with
+  | Install_system_deps ->
+    let toolchain =
+      Canary_basic_ocaml.toolchain_of_ocaml_tool_config z3_ocaml_config
+    in
+    Canary_basic_ocaml.install_system_dep_stages toolchain "z3" "z3"
+  | Configure name -> (
+    match spec.lib_origin with
+    | Source -> configure_with_cmake_from_source_stages
+    | Prebuilt -> configure_with_external_z3_stages ~configure_name:name)
+  | Install_local_opam -> install_local_opam_z3_dev_stages
+  | Ocaml_test ->
+    let source = build_source_of_location spec.binding_location in
+    let ocaml_step_descs =
+      match phase.expectation with
+      | Expect_success -> None
+      | exp ->
+        Some (Canary_basic_ocaml.ocaml_step_descs_with_expectation ~source exp)
+    in
+    Canary_basic_ocaml.mk_ocaml_test_stages ~config:(config spec.distro) ~spec
+      ?ocaml_step_descs ()
+  | Python_binding_test ->
+    [ run_stage ~name:"Run Python binding"
+        ~expectation:phase.expectation python_binding_cmd ]
+  | Prebuilt_setup -> []
 
-let with_pkg_expected_failure_cases =
-  List.map (Canary_basic_ocaml.default_ocaml_step_descs ~source:With_pkg)
-    ~f:(fun ({ code_step; mode; _ } as step_spec) ->
-      let expectation =
-        match (code_step, mode) with
-        | Compile, Bytecode -> Expect_success
-        | Run, Bytecode | Compile, Native | Run, Native ->
-            expected_symbol_failure
-      in
-      { step_spec with expectation })
+let make_job spec = make_job ~resolve_phase spec
 
-let build_and_test_job =
-  Canary_basic_ocaml.job_of_spec ~spec:build_and_test_spec
-    ~steps:
-      (configure_with_cmake_from_source_stages
-      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:build_and_test_spec ())
-
-let download_and_test_job =
-  let toolchain =
-    Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
-  in
-  let post_build_stages =
-    if config.capabilities.supports_python_binding then python_binding_stages
-    else []
-  in
-  Canary_basic_ocaml.job_of_spec ~spec:download_and_test_spec
-    ~steps:
-      (Canary_basic_ocaml.install_system_dep_stages toolchain "z3" "z3"
-      @ configure_with_external_z3_stages ~configure_name:"Configure with CMake"
-      @ post_build_stages)
-
-let packaging_from_prebuilt_job =
-  let toolchain =
-    Canary_basic_ocaml.toolchain_of_ocaml_tool_config config.ocaml
-  in
-  Canary_basic_ocaml.job_of_spec ~spec:packaging_spec
-    ~steps:
-      (Canary_basic_ocaml.install_system_dep_stages toolchain "z3" "z3"
-      @ configure_with_external_z3_stages
-          ~configure_name:"Configure with CMake (external libz3)"
-      @ install_local_opam_z3_dev_stages
-      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:packaging_spec
-          ~ocaml_step_descs:with_pkg_expected_failure_cases ())
-
-let jobs =
-  List.filter_opt
-    [
-      when_enabled config.capabilities.supports_source_build build_and_test_job;
-      Some download_and_test_job;
-      when_enabled config.capabilities.supports_prebuilt_packaging
-        packaging_from_prebuilt_job;
-    ]
+let jobs distro =
+  [
+    make_job (build_and_test_spec distro);
+    make_job (download_and_test_spec distro);
+    make_job (packaging_spec distro);
+  ]
 
 let render_opam_templates bindings files =
   List.iter files ~f:(fun (src, dst) ->

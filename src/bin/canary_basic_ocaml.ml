@@ -43,7 +43,6 @@ type project_config = {
   workflow_name : string;
   project : project_spec;
   ocaml : ocaml_tool_config;
-  capabilities : project_capabilities;
   job_specs : job_spec list;
 }
 
@@ -279,6 +278,12 @@ let default_ocaml_step_descs ~source =
     };
   ]
 
+let ocaml_step_descs_with_expectation ~source expectation =
+  List.map (default_ocaml_step_descs ~source) ~f:(fun desc ->
+      match (desc.code_step, desc.mode) with
+      | Compile, Bytecode -> desc
+      | _ -> { desc with expectation })
+
 let example_name_of_case ~example_name ~variant_suffix (step : ocaml_step_desc) =
   [%string
     "%{step.display_verb} \
@@ -361,16 +366,6 @@ let prebuilt_setup_stages (binding : prebuilt_ocaml_binding) =
   install_system_dep_stages binding.toolchain binding.system_package_linux
     binding.system_package_macos
   @ install_opam_package_stage binding.opam_package
-
-let job_of_spec ~(spec : job_spec) ~steps =
-  {
-    id = spec.id;
-    if_disabled = spec.if_disabled;
-    name = name_of_job_spec spec;
-    runs_on = "${{ matrix.os }}";
-    preamble = checkout_and_setup_preamble;
-    steps;
-  }
 
 let mk_ocaml_test_stages ~(config : project_config) ~(spec : job_spec)
     ?ocaml_step_descs () =

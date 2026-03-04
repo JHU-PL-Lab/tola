@@ -22,10 +22,7 @@ let render_preamble_action { name; uses; with_fields } =
   in
   String.concat ~sep:"\n" (name_lines @ uses_line @ with_lines)
 
-let render_step ~scripts (stage : string step) =
-      let stage =
-        { stage with action = apply_expectation ~scripts stage.expectation stage.action }
-      in
+let render_step (stage : string step) =
       let base = [ "      - name: " ^ stage.name ] in
       let if_lines =
         match stage.guard with
@@ -58,7 +55,7 @@ let strategy_anchor_yaml =
 
 let strategy_ref_yaml = "strategy: *strategy_vars"
 
-let render_job ~scripts ~strategy_yaml (job : string job) =
+let render_job ~strategy_yaml (job : string job) =
   let header =
     [
       "  " ^ job.id ^ ":";
@@ -74,17 +71,17 @@ let render_job ~scripts ~strategy_yaml (job : string job) =
   let step_lines =
     [ "    steps:" ]
     @ List.map job.preamble ~f:render_preamble_action
-    @ List.map job.steps ~f:(render_step ~scripts)
+    @ List.map job.steps ~f:render_step
   in
   String.concat ~sep:"\n" (header @ strategy_lines @ step_lines)
 
-let render_workflow ~scripts ~workflow_name (jobs : string job list) =
+let render_workflow ~workflow_name (jobs : string job list) =
   let jobs_yaml =
     List.mapi jobs ~f:(fun i job ->
         let strategy_yaml =
           if i = 0 then strategy_anchor_yaml else strategy_ref_yaml
         in
-        render_job ~scripts ~strategy_yaml job)
+        render_job ~strategy_yaml job)
     |> String.concat ~sep:"\n\n"
   in
   [%string

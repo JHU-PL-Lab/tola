@@ -6,26 +6,87 @@ type code_step = Compile | Run
 type build_source = From_build | With_pkg
 type runner_os = Ubuntu | MacOS
 type binding_lang = OCaml | Python
-type package_manager = Apt | Brew | Opam
+type package_manager = Apt | Brew | Opam | Unsupported
+type distro = Wsl | MacOS_local
+
+let detect_distro () =
+  match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
+  | 0 -> MacOS_local
+  | _ -> Wsl
 
 type project_spec = {
+  root : string;
   version : string;
   commit : string;
-  bindings : binding_lang list;
-  package_managers : package_manager list;
+  bindings : (binding_lang * package_manager) list;
 }
 
-type project_capabilities = {
-  supports_source_build : bool;
-  supports_prebuilt_packaging : bool;
-  supports_python_binding : bool;
-}
+let z3_dev_root_of_distro : distro -> string = function
+  | Wsl -> "/home/ex/code/ocaml-build-examples/vendor/z3"
+  | MacOS_local -> "/Users/ex/code/repos/z3"
+
+let z3_stable_root_of_distro : distro -> string = function
+  | Wsl -> "/home/ex/code/ocaml-build-examples/vendor/z3-stable"
+  | MacOS_local -> "/Users/ex/code/repos/z3-stable"
+
+let z3_dev_spec distro : project_spec =
+  {
+    root = z3_dev_root_of_distro distro;
+    version = "dev";
+    commit = "HEAD";
+    bindings = [ (OCaml, Opam); (Python, Unsupported) ];
+  }
+
+let z3_stable_spec distro : project_spec =
+  {
+    root = z3_stable_root_of_distro distro;
+    version = "4.8.15";
+    commit = "745087e";
+    bindings = [ (OCaml, Opam); (Python, Unsupported) ];
+  }
 
 type origin = Source | Prebuilt
 type location = Build_tree | System_pm | Lang_pm | Wild of string
 
+type stage_artifact =
+  | Artifact_file of string
+  | Artifact_dir of string
+  | Artifact_package of string
+
+type stage_expectation =
+  | Expect_success
+  | Expect_failure_contains of {
+      contains_any : string list;
+      expected_returncode : int option;
+    }
+  | Expect_symbols_resolved of {
+      required_libs : string list;
+      provided_lib : string;
+    }
+
+type phase_kind =
+  | Install_system_deps
+  | Configure of string
+  | Install_local_opam
+  | Prebuilt_setup
+  | Ocaml_test
+  | Python_binding_test
+
+type phase_action = Install | Configure | Test
+
+type step_phase = {
+  kind : phase_kind;
+  action : phase_action;
+  location : location;
+  requires : stage_artifact list;
+  produces : stage_artifact list;
+  expectation : stage_expectation;
+}
+
 type job_spec = {
+  distro : distro;
   id : string;
+  phases : step_phase list;
   lib_origin : origin;
   binding_location : location;
   test_bindings : binding_lang list;
@@ -37,28 +98,9 @@ type job_spec = {
 let name_of_job_spec (spec : job_spec) =
   [%string "%{spec.id} (${{ matrix.os }})"]
 
-let is_job_enabled capabilities (spec : job_spec) =
-  match (spec.lib_origin, spec.binding_location) with
-  | Source, _ -> capabilities.supports_source_build
-  | Prebuilt, Lang_pm -> capabilities.supports_prebuilt_packaging
-  | Prebuilt, _ -> true
-
 let build_source_of_location = function
   | Build_tree -> From_build
   | System_pm | Lang_pm | Wild _ -> With_pkg
-
-type stage_expectation =
-  | Expect_success
-  | Expect_failure_contains of string list
-  | Expect_symbols_resolved of {
-      required_libs : string list;
-      provided_lib : string;
-    }
-
-type stage_artifact =
-  | Artifact_file of string
-  | Artifact_dir of string
-  | Artifact_package of string
 
 type stage_guard = Guard_runner_os of runner_os
 
@@ -165,8 +207,6 @@ let run_stage ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
   ({ name; guard; shell; env_fields; requires; produces; action; expectation }
     : 'a step)
 
-let when_enabled enabled value = if enabled then Some value else None
-
 (* utilities *)
 
 let multiline s = String.is_substring s ~substring:"\n"
@@ -194,12 +234,16 @@ let mk_assert_result_cmd ~assert_script ?expected_returncode
   %{arg_block}-- \
   %{command}|}]
 
-let apply_expectation ~(scripts : backend_scripts) expectation cmd =
+let assert_result_var = "%{ASSERT_RESULT_SCRIPT}%"
+let assert_symbols_var = "%{ASSERT_SYMBOLS_SCRIPT}%"
+
+let apply_expectation expectation cmd =
   match expectation with
   | Expect_success -> cmd
-  | Expect_failure_contains contains_any ->
-      mk_assert_result_cmd ~assert_script:scripts.assert_result_script
-        ~contains_any [%string "sh -ec '%{cmd}'"]
+  | Expect_failure_contains { contains_any; expected_returncode } ->
+      let wrapped = if multiline cmd then [%string "sh -ec '%{cmd}'"] else cmd in
+      mk_assert_result_cmd ~assert_script:assert_result_var
+        ?expected_returncode ~contains_any wrapped
   | Expect_symbols_resolved { required_libs; provided_lib } ->
       let args =
         List.map required_libs ~f:(fun lib ->
@@ -207,7 +251,21 @@ let apply_expectation ~(scripts : backend_scripts) expectation cmd =
         @ [ [%string "--provided-lib \"%{provided_lib}\""] ]
         |> String.concat ~sep:" \\\n  "
       in
-      [%string "python3 %{scripts.assert_symbols_script} \\\n  %{args}"]
+      [%string "python3 %{assert_symbols_var} \\\n  %{args}"]
+
+let resolve_backend_scripts ~(scripts : backend_scripts) action =
+  action
+  |> String.substr_replace_all ~pattern:assert_result_var
+       ~with_:scripts.assert_result_script
+  |> String.substr_replace_all ~pattern:assert_symbols_var
+       ~with_:scripts.assert_symbols_script
+
+let resolve_job_scripts ~scripts (job : string job) =
+  { job with
+    steps =
+      List.map job.steps ~f:(fun step ->
+          { step with action = resolve_backend_scripts ~scripts step.action })
+  }
 
 let checkout_step =
   yaml_preamble_action ~name:"Checkout code" "actions/checkout@v6"
@@ -218,6 +276,25 @@ let setup_step =
     "./.github/actions/canary-test-setup"
 
 let checkout_and_setup_preamble = [ checkout_step; setup_step ]
+
+let job_of_spec ~(spec : job_spec) =
+  {
+    id = spec.id;
+    if_disabled = spec.if_disabled;
+    name = name_of_job_spec spec;
+    runs_on = "${{ matrix.os }}";
+    preamble = checkout_and_setup_preamble;
+    steps = [];
+  }
+
+let make_job ~resolve_phase (spec : job_spec) =
+  let job = job_of_spec ~spec in
+  let steps = List.concat_map spec.phases ~f:(resolve_phase spec) in
+  let steps =
+    List.map steps ~f:(fun step ->
+        { step with action = apply_expectation step.expectation step.action })
+  in
+  { job with steps }
 
 let mk_system_dep_stages ~linux_cmd ~macos_cmd =
   [

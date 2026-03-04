@@ -1,9 +1,29 @@
 open Canary_basic
 open Canary_basic_ocaml
 
-let download_and_test_spec : job_spec =
+let download_and_test_spec distro : job_spec =
   {
+    distro;
     id = "download-and-test";
+    phases =
+      [
+        {
+          kind = Prebuilt_setup;
+          action = Install;
+          location = Lang_pm;
+          requires = [];
+          produces = [ Artifact_package "sqlite3" ];
+          expectation = Expect_success;
+        };
+        {
+          kind = Ocaml_test;
+          action = Test;
+          location = Lang_pm;
+          requires = [ Artifact_package "sqlite3" ];
+          produces = [];
+          expectation = Expect_success;
+        };
+      ];
     lib_origin = Prebuilt;
     binding_location = Lang_pm;
     test_bindings = [ OCaml ];
@@ -12,16 +32,16 @@ let download_and_test_spec : job_spec =
     if_disabled = false;
   }
 
-let config =
+let config distro =
   {
     canary = Canary_basic.default_canary_paths;
     workflow_name = "Canary Testing for SQLite3 OCaml";
     project =
       {
+        root = "";
         version = "system";
         commit = "";
-        bindings = [ OCaml ];
-        package_managers = [ Apt; Brew; Opam ];
+        bindings = [ (OCaml, Opam) ];
       };
     ocaml =
       Prebuilt_binding
@@ -45,20 +65,19 @@ let config =
           example_target = "sqlite3_example";
           binding_lib_name = "sqlite3";
         };
-    capabilities =
-      {
-        supports_source_build = false;
-        supports_prebuilt_packaging = false;
-        supports_python_binding = false;
-      };
-    job_specs = [ download_and_test_spec ];
+    job_specs = [ download_and_test_spec distro ];
   }
 
-let download_and_test_job =
-  let binding = Canary_basic_ocaml.prebuilt_binding_exn config.ocaml in
-  Canary_basic_ocaml.job_of_spec ~spec:download_and_test_spec
-    ~steps:
-      (Canary_basic_ocaml.prebuilt_setup_stages binding
-      @ Canary_basic_ocaml.mk_ocaml_test_stages ~config ~spec:download_and_test_spec ())
+let resolve_phase spec phase =
+  match phase.kind with
+  | Prebuilt_setup ->
+      let cfg = config spec.distro in
+      let binding = Canary_basic_ocaml.prebuilt_binding_exn cfg.ocaml in
+      Canary_basic_ocaml.prebuilt_setup_stages binding
+  | Ocaml_test ->
+      let cfg = config spec.distro in
+      Canary_basic_ocaml.mk_ocaml_test_stages ~config:cfg ~spec ()
+  | _ -> []
 
-let jobs = [ download_and_test_job ]
+let make_job spec = make_job ~resolve_phase spec
+let jobs distro = [ make_job (download_and_test_spec distro) ]
