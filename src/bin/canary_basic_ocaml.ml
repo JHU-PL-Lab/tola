@@ -39,7 +39,7 @@ type ocaml_tool_config =
   | Prebuilt_binding of prebuilt_ocaml_binding
 
 type project_config = {
-  canary : canary_paths;
+  canary : canary_config;
   workflow_name : string;
   project : project_spec;
   ocaml : ocaml_tool_config;

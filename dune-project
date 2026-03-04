@@ -36,3 +36,5 @@
   color-brewery))
 
 (license MIT)
+
+; pip3 install pyyaml

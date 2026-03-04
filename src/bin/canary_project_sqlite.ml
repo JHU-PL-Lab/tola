@@ -34,7 +34,7 @@ let download_and_test_spec distro : job_spec =
 
 let config distro =
   {
-    canary = Canary_basic.default_canary_paths;
+    canary = Canary_basic.default_canary_config;
     workflow_name = "Canary Testing for SQLite3 OCaml";
     project =
       {

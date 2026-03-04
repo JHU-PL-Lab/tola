@@ -10,8 +10,8 @@ let shell_preamble_lines =
 let render_project ~canary ~workflow_name ~name jobs =
   let yaml_path = project_yaml_path canary name in
   let shell_path = project_shell_path canary name in
-  let yaml_jobs = List.map (resolve_job_scripts ~scripts:canary.yaml_scripts) jobs in
-  let shell_jobs = List.map (resolve_job_scripts ~scripts:canary.shell_scripts) jobs in
+  let yaml_jobs = List.map (resolve_job_scripts ~scripts:canary.backends.yaml_scripts) jobs in
+  let shell_jobs = List.map (resolve_job_scripts ~scripts:canary.backends.shell_scripts) jobs in
   write_file yaml_path
     (Canary_backend_yaml.render_workflow ~workflow_name yaml_jobs);
   write_file shell_path
@@ -22,9 +22,9 @@ let render_project ~canary ~workflow_name ~name jobs =
 let run_local distro =
   let z3_config = Canary_project_z3.config distro in
   let canary = z3_config.canary in
-  check_file_exists_exn canary.root;
+  check_file_exists_exn canary.paths.root;
   run_cmd_exn
-    (Fmt.str "mkdir -p %s %s" canary.out_root canary.backend_shell_root);
+    (Fmt.str "mkdir -p %s %s" canary.paths.out_root canary.backends.shell_root);
   let _z3_yaml, z3_shell =
     render_project ~canary ~workflow_name:z3_config.workflow_name
       ~name:"z3" (Canary_project_z3.jobs distro)
@@ -50,14 +50,15 @@ let run (distro : Canary_basic.distro) =
     (Fmt.str
        "rm -rf %s && mkdir -p %s && cp -a %s/examples %s/ && cp -a %s/scripts \
         %s/ && cp -a %s/templates %s/ && mkdir -p %s %s"
-       canary.out_root canary.out_root canary.root canary.out_root canary.root
-       canary.out_root canary.root canary.out_root canary.backend_yaml_root
-       canary.backend_shell_root);
+       canary.paths.out_root canary.paths.out_root canary.paths.root
+       canary.paths.out_root canary.paths.root canary.paths.out_root
+       canary.paths.root canary.paths.out_root canary.backends.yaml_root
+       canary.backends.shell_root);
   Canary_project_z3.render_opam_templates
     [ ("%{BUILD_Z3_IN_OPAM}%", Canary_project_z3.build_z3_in_opam) ]
     [
-      (canary.opam_tpl_template, canary.opam_generated);
-      (canary.opam_tpl_template, canary.opam_in_generated);
+      (canary.opam.tpl_template, canary.opam.generated);
+      (canary.opam.tpl_template, canary.opam.in_generated);
     ];
   let z3_yaml, z3_shell =
     render_project ~canary ~workflow_name:z3_config.workflow_name
@@ -77,13 +78,13 @@ let run (distro : Canary_basic.distro) =
   run_cmd ~strict:false
     (Fmt.str "rm -rf %s && mkdir -p %s && cp -a %s/. %s/"
        z3_dev_instance.canary_contrib_abs z3_dev_instance.canary_contrib_abs
-       canary.out_root z3_dev_instance.canary_contrib_abs);
+       canary.paths.out_root z3_dev_instance.canary_contrib_abs);
   check_file_exists_exn z3_yaml;
   check_file_exists_exn z3_shell;
   check_file_exists_exn sqlite_yaml;
   check_file_exists_exn sqlite_shell;
-  check_file_exists_exn canary.opam_generated;
-  check_file_exists_exn canary.opam_in_generated;
+  check_file_exists_exn canary.opam.generated;
+  check_file_exists_exn canary.opam.in_generated;
   run_cmd ~strict:false (Fmt.str "chmod +x %s %s" z3_shell sqlite_shell);
   run_cmd ~strict:false
     (Fmt.str "mkdir -p %s/workflows && cp -f %s %s"

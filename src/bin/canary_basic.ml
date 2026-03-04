@@ -130,6 +130,14 @@ type 'a job = {
   steps : 'a step list;
 }
 
+type template_vars = { assert_result : string; assert_symbols : string }
+
+let default_template_vars =
+  {
+    assert_result = "%{ASSERT_RESULT_SCRIPT}%";
+    assert_symbols = "%{ASSERT_SYMBOLS_SCRIPT}%";
+  }
+
 type backend_scripts = {
   assert_result_script : string;
   assert_symbols_script : string;
@@ -140,62 +148,74 @@ type canary_paths = {
   templates_root : string;
   reference_root : string;
   out_root : string;
-  backend_yaml_root : string;
-  backend_shell_root : string;
-  opam_tpl_template : string;
-  opam_generated : string;
-  opam_in_generated : string;
   contrib_rel : string;
-  assert_result : string;
-  assert_symbols : string;
+}
+
+type canary_backends = {
+  yaml_root : string;
+  shell_root : string;
   yaml_scripts : backend_scripts;
   shell_scripts : backend_scripts;
 }
 
-let default_canary_paths =
+type canary_opam = {
+  tpl_template : string;
+  generated : string;
+  in_generated : string;
+}
+
+type canary_config = {
+  paths : canary_paths;
+  backends : canary_backends;
+  opam : canary_opam;
+  template_vars : template_vars;
+}
+
+let default_canary_config =
   let root = "canary" in
   let templates_root = root ^ "/templates" in
   let reference_root = root ^ "/reference" in
   let out_root = "_out/canary" in
-  let backend_yaml_root = out_root ^ "/backend_yaml" in
-  let backend_shell_root = out_root ^ "/backend_shell" in
+  let yaml_root = out_root ^ "/backend_yaml" in
+  let shell_root = out_root ^ "/backend_shell" in
   let contrib_rel = "contrib/canary" in
   let assert_result = contrib_rel ^ "/scripts/assert_result.py" in
   let assert_symbols = contrib_rel ^ "/scripts/assert_binary_symbols.py" in
   {
-    root;
-    templates_root;
-    reference_root;
-    out_root;
-    backend_yaml_root;
-    backend_shell_root;
-    opam_tpl_template =
-      templates_root ^ "/opam-local-repo/packages/z3/z3.dev/opam";
-    opam_generated =
-      out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam";
-    opam_in_generated =
-      out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam.in";
-    contrib_rel;
-    assert_result;
-    assert_symbols;
-    yaml_scripts =
+    paths = { root; templates_root; reference_root; out_root; contrib_rel };
+    backends =
       {
-        assert_result_script = assert_result;
-        assert_symbols_script = assert_symbols;
+        yaml_root;
+        shell_root;
+        yaml_scripts =
+          {
+            assert_result_script = assert_result;
+            assert_symbols_script = assert_symbols;
+          };
+        shell_scripts =
+          {
+            assert_result_script = "${CANARY_ROOT}/scripts/assert_result.py";
+            assert_symbols_script =
+              "${CANARY_ROOT}/scripts/assert_binary_symbols.py";
+          };
       };
-    shell_scripts =
+    opam =
       {
-        assert_result_script = "${CANARY_ROOT}/scripts/assert_result.py";
-        assert_symbols_script =
-          "${CANARY_ROOT}/scripts/assert_binary_symbols.py";
+        tpl_template =
+          templates_root ^ "/opam-local-repo/packages/z3/z3.dev/opam";
+        generated =
+          out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam";
+        in_generated =
+          out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam.in";
       };
+    template_vars = default_template_vars;
   }
 
 let project_yaml_path canary name =
-  canary.backend_yaml_root ^ "/canary_" ^ name ^ ".yml"
+  canary.backends.yaml_root ^ "/canary_" ^ name ^ ".yml"
 
 let project_shell_path canary name =
-  canary.backend_shell_root ^ "/canary_" ^ name ^ ".sh"
+  canary.backends.shell_root ^ "/canary_" ^ name ^ ".sh"
 
 (* constructor helpers *)
 
@@ -234,15 +254,15 @@ let mk_assert_result_cmd ~assert_script ?expected_returncode
   %{arg_block}-- \
   %{command}|}]
 
-let assert_result_var = "%{ASSERT_RESULT_SCRIPT}%"
-let assert_symbols_var = "%{ASSERT_SYMBOLS_SCRIPT}%"
-
 let apply_expectation expectation cmd =
+  let vars = default_template_vars in
   match expectation with
   | Expect_success -> cmd
   | Expect_failure_contains { contains_any; expected_returncode } ->
-      let wrapped = if multiline cmd then [%string "sh -ec '%{cmd}'"] else cmd in
-      mk_assert_result_cmd ~assert_script:assert_result_var
+      let wrapped =
+        if multiline cmd then [%string "sh -ec '%{cmd}'"] else cmd
+      in
+      mk_assert_result_cmd ~assert_script:vars.assert_result
         ?expected_returncode ~contains_any wrapped
   | Expect_symbols_resolved { required_libs; provided_lib } ->
       let args =
@@ -251,20 +271,22 @@ let apply_expectation expectation cmd =
         @ [ [%string "--provided-lib \"%{provided_lib}\""] ]
         |> String.concat ~sep:" \\\n  "
       in
-      [%string "python3 %{assert_symbols_var} \\\n  %{args}"]
+      [%string "python3 %{vars.assert_symbols} \\\n  %{args}"]
 
 let resolve_backend_scripts ~(scripts : backend_scripts) action =
+  let vars = default_template_vars in
   action
-  |> String.substr_replace_all ~pattern:assert_result_var
+  |> String.substr_replace_all ~pattern:vars.assert_result
        ~with_:scripts.assert_result_script
-  |> String.substr_replace_all ~pattern:assert_symbols_var
+  |> String.substr_replace_all ~pattern:vars.assert_symbols
        ~with_:scripts.assert_symbols_script
 
 let resolve_job_scripts ~scripts (job : string job) =
-  { job with
+  {
+    job with
     steps =
       List.map job.steps ~f:(fun step ->
-          { step with action = resolve_backend_scripts ~scripts step.action })
+          { step with action = resolve_backend_scripts ~scripts step.action });
   }
 
 let checkout_step =

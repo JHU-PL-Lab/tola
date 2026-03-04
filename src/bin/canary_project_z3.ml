@@ -17,13 +17,13 @@ type z3_versions = {
   stable : project_spec * z3_instance;
 }
 
-let canary = Canary_basic.default_canary_paths
+let canary = Canary_basic.default_canary_config
 
 let mk_instance root =
   {
     root;
     external_libz3 = root $/ ".helper/z3_root";
-    canary_contrib_abs = root $/ canary.contrib_rel;
+    canary_contrib_abs = root $/ canary.paths.contrib_rel;
     canary_gh_abs = root $/ ".github";
     canary_yaml_output = root $/ ".github/workflows/canary_z3.yml";
     canary_z3_src = [%string "git+file://%{root}"];
@@ -246,7 +246,7 @@ let install_local_opam_z3_dev_stages =
   [
     run_stage ~name:"Install z3.dev from contrib/canary local opam repo"
       (Canary_basic_ocaml.install_local_cmd toolchain
-         ~canary_contrib_rel:canary.contrib_rel);
+         ~canary_contrib_rel:canary.paths.contrib_rel);
   ]
 
 let resolve_phase spec phase =
