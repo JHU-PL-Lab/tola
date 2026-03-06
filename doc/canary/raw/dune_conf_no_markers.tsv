@@ -1,0 +1,43 @@
+OCanren-ppx|OCanren-ppx.0.3.0|synopsis:
+OCanren|OCanren.0.3.0|Implementation of miniKanren relational (logic) EDSL
+base|base.v0.17.1|Full standard library replacement for OCaml
+bigstringaf|bigstringaf.0.10.0|Bigstring intrinsics and fast blits based on memcpy/memmove
+binaryen|binaryen.0.24.0|OCaml bindings for Binaryen
+bls12-381-js-gen|bls12-381-js-gen.0.5.0|synopsis:
+bls12-381-unix|bls12-381-unix.2.0.1|"\
+checkseum|checkseum.0.5.2|Adler-32, CRC32 and CRC32-C implementation in C and OCaml
+configurator|configurator.v0.11.0|Helper library for gathering system configuration
+containers-thread|containers-thread.3.12|An extension of containers for threading
+containers|containers.3.15|synopsis:
+crlibm|crlibm.0.5.1|Binding to CRlibm, a correctly rounded math lib
+dkml-c-probe|dkml-c-probe.3.0.0|synopsis:
+dune-configurator|dune-configurator.3.18.1|Helper library for gathering system configuration
+dune|dune.3.18.1|Fast, portable, and opinionated build system
+eigen|eigen.0.3.3|Owl's OCaml interface to Eigen3 C++ library
+extunix|extunix.0.4.4|Collection of thin bindings to various low-level system API
+hxd|hxd.0.3.3|Hexdump in OCaml
+interval_base|interval_base.1.6|An interval library for OCaml (base package)
+io-page-xen|io-page-xen.2.3.0|Support for efficient handling of I/O memory pages on Xen
+iomux|iomux.0.3|IO Multiplexer bindings
+jst-config|jst-config.v0.17.0|Compile-time configuration for Jane Street libraries
+llama-cpp-ocaml|llama-cpp-ocaml.0.0.1|Ctypes bindings to llama.cpp
+mesh-easymesh|mesh-easymesh.0.9.5|Triangular mesh generation with EasyMesh
+mesh|mesh.0.9.5|Triangular mesh generation and manipulation
+mirage-clock-lwt|mirage-clock-lwt.2.0.0|Lwt-based implementation of the MirageOS Clock interface
+mirage-clock-unix|mirage-clock-unix.4.2.0|Unix-based implementation for the MirageOS Clock interface
+mirage-crypto-ec|mirage-crypto-ec.2.0.0|Elliptic Curve Cryptography with primitives taken from Fiat
+mirage-crypto-rng-async|mirage-crypto-rng-async.1.2.0|Feed the entropy source in an Async-friendly way
+mirage-crypto-rng|mirage-crypto-rng.2.0.0|A cryptographically secure PRNG
+mirage-crypto|mirage-crypto.2.0.0|Simple symmetric cryptography for the modern age
+multicont|multicont.1.0.3|Multi-shot continuations in OCaml
+ocaml_intrinsics|ocaml_intrinsics.v0.17.0|Intrinsics
+octez-version|octez-version.20.1|Tezos: version value generated from Git
+parmap|parmap.1.2.5|Minimalistic library allowing to exploit multicore architecture
+poll|poll.0.3.1|synopsis:
+posix-getopt|posix-getopt.2.2.0|Bindings for posix getopt/getopt_long
+ppx_monad|ppx_monad.0.2.0|A Syntax Extension for all Monadic Syntaxes
+raygui|raygui.1.4.0|OCaml bindings for raygui
+tezos-version|tezos-version.17.3|Tezos: version information generated from Git
+torch|torch.v0.17.0|Torch bindings for OCaml
+wasmtime|wasmtime.0.0.3|Wasmtime bindings for OCaml
+yaml|yaml.3.2.0|Parse and generate YAML 1.1/1.2 files

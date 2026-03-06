@@ -1,0 +1,333 @@
+conf-aclocal|conf-aclocal.2|no|no|Virtual package relying on aclocal
+conf-adwaita-icon-theme|conf-adwaita-icon-theme.2|yes|yes|Virtual package relying on adwaita-icon-theme
+conf-age|conf-age.1|no|yes|Virtual package relying on age
+conf-allegro5|conf-allegro5.1|yes|yes|Virtual package relying on Allegro 5 development libraries
+conf-alsa|conf-alsa.1|yes|yes|Virtual package relying on alsa
+conf-antic|conf-antic.1|no|yes|Virtual package relying on a Antic lib system installation
+conf-ao|conf-ao.1|yes|yes|Virtual package relying on libao
+conf-arb|conf-arb.1|no|yes|Virtual package relying on a Arb lib system installation
+conf-asciidoc|conf-asciidoc.1|no|yes|Virtual package relying on asciidoc
+conf-assimp|conf-assimp.1|no|yes|Check if assimp (Open Asset Import Library) is installed
+conf-autoconf|conf-autoconf.0.2|no|yes|Virtual package relying on autoconf installation
+conf-automake|conf-automake.1|no|yes|Virtual package relying on GNU automake
+conf-bap-llvm|conf-bap-llvm.1.8|no|yes|Checks that supported version of LLVM is installed
+conf-bash|conf-bash.1|no|yes|Virtual package to install the Bash shell
+conf-binutils|conf-binutils.0.3|no|yes|Checks that binutils are installed
+conf-bison|conf-bison.2|no|yes|Virtual package relying on GNU bison
+conf-blas|conf-blas.1|no|yes|Virtual package for BLAS configuration
+conf-bluetooth|conf-bluetooth.1|no|yes|Virtual package for Bluetooth library
+conf-bmake|conf-bmake.1.0|no|yes|Virtual package relying on a BSD Make compatible program
+conf-boost|conf-boost.1|no|yes|Virtual package relying on boost
+conf-bpftool|conf-bpftool.0.1.0|no|yes|Virtual package for system installation of bpftool
+conf-brotli|conf-brotli.0.0.1|yes|yes|Virtual package relying on a brotli system installation
+conf-c++|conf-c++.1.0|no|yes|Virtual package relying on the c++ compiler
+conf-cairo|conf-cairo.1|yes|yes|Virtual package relying on a Cairo system installation
+conf-calcium|conf-calcium.1|no|yes|Virtual package relying on a Calcium lib system installation
+conf-capnproto|conf-capnproto.2|no|yes|Virtual package relying on captnproto installation
+conf-clang|conf-clang.1|no|yes|Virtual package relying on clang
+conf-clang-format|conf-clang-format.1|no|yes|Virtual package relying on clang-format
+conf-cmake|conf-cmake.1|no|yes|Virtual package relying on cmake
+conf-cosmopolitan|conf-cosmopolitan.1|no|no|Virtual package relying on APE/Cosmopolitan
+conf-cpio|conf-cpio.1|no|yes|Virtual package relying on cpio
+conf-csdp|conf-csdp.1|no|yes|Virtual package relying on a CSDP binary system installation
+conf-cuda|conf-cuda.1|no|no|Virtual package relying on a CUDA system installation
+conf-cuda-config|conf-cuda-config.1|no|no|Preparatory steps for the conf-cuda package
+conf-dbm|conf-dbm.1.0.0|no|yes|Virtual package relying on gdbm
+conf-diffutils|conf-diffutils.2|no|yes|Virtual package relying on diffutils
+conf-dkml-cross-toolchain|conf-dkml-cross-toolchain.4.12.1|no|no|Add findlib toolchains for all installed DKML cross-compilers
+conf-dpkg|conf-dpkg.1|no|yes|Virtual package relying on dpkg
+conf-dssi|conf-dssi.1|no|yes|Virtual package relying on dssi
+conf-efl|conf-efl.1.8|yes|yes|Virtual package relying on the EFL system installation
+conf-emacs|conf-emacs.1|no|yes|Virtual package to install the Emacs editor
+conf-env-travis|conf-env-travis.1|no|no|Detect Travis CI and lift its environment to opam
+conf-expat|conf-expat.1|yes|yes|Virtual package relying on an expat system installation
+conf-faad|conf-faad.1|yes|yes|Virtual package relying on libfaad
+conf-fdkaac|conf-fdkaac.1|yes|yes|Virtual package relying on fdk-aac
+conf-ffmpeg|conf-ffmpeg.1|yes|yes|Virtual package relying on FFmpeg
+conf-fftw3|conf-fftw3.1|yes|yes|Virtual package relying on a FFTW3 lib system installation
+conf-findutils|conf-findutils.1|no|yes|Virtual package relying on findutils
+conf-flex|conf-flex.2|no|yes|Virtual package relying on GNU flex
+conf-flint|conf-flint.3.0|no|yes|Virtual package relying on a Flint lib system installation
+conf-freeglut|conf-freeglut.1|yes|yes|Virtual package relying on a FreeGLUT system installation
+conf-freetype|conf-freetype.1|yes|yes|Virtual package relying on a freetype lib system installation
+conf-frei0r|conf-frei0r.1|yes|yes|Virtual package relying on frei0r
+conf-fswatch|conf-fswatch.11-0.1.3|no|yes|Virtual package relying on libfswatch installation
+conf-ftgl|conf-ftgl.1|yes|yes|Virtual package relying on an ftgl system installation
+conf-fts|conf-fts.1|no|yes|Virtual package relying on the fts.h header
+conf-g++|conf-g++.1.0|no|yes|Virtual package relying on the g++ compiler (for C++)
+conf-gcc|conf-gcc.1.0|no|yes|Virtual package relying on the gcc compiler (for C)
+conf-gd|conf-gd.1|yes|yes|Virtual package relying on a libgd system installation
+conf-gfortran|conf-gfortran.0|no|yes|Virtual package relying on a gfortran system installation
+conf-ghostscript|conf-ghostscript.1|no|yes|Virtual package relying on ghostscript
+conf-git|conf-git.1.1|no|yes|Virtual package relying on git
+conf-glade|conf-glade.2|yes|yes|Virtual package relying on a libglade system installation
+conf-gles2|conf-gles2.1|yes|yes|Virtual package relying on a OpenGL ES 2 system installation
+conf-glew|conf-glew.1|yes|yes|Virtual package relying on a GLEW system installation
+conf-glfw3|conf-glfw3.2|yes|yes|Virtual package relying on a GLFW3 system installation
+conf-glib-2|conf-glib-2.1|yes|yes|Virtual package relying on a system GLib 2 installation
+conf-glpk|conf-glpk.1|no|yes|Virtual package for GLPK (GNU Linear Programming Kit)
+conf-gmp|conf-gmp.5|yes|yes|Virtual package relying on a GMP lib system installation
+conf-gmp-paths|conf-gmp-paths.1|no|yes|Virtual package relying on a GMP lib system installation
+conf-gmp-powm-sec|conf-gmp-powm-sec.4|yes|no|synopsis:
+conf-gnome-icon-theme3|conf-gnome-icon-theme3.0|yes|yes|Virtual package relying on gnome-icon-theme
+conf-gnomecanvas|conf-gnomecanvas.2|yes|yes|Virtual package relying on a Gnomecanvas system installation
+conf-gnuplot|conf-gnuplot.0.1|no|yes|Virtual package relying on gnuplot installation
+conf-gnustep-base|conf-gnustep-base.1|no|yes|Virtual package relying on gnustep-base lib system installation
+conf-gnustep-gui|conf-gnustep-gui.1|no|yes|Virtual package relying on gnustep-gui lib system installation
+conf-gnutls|conf-gnutls.1|yes|yes|Virtual package relying on a gnutls system installation
+conf-gobject-introspection|conf-gobject-introspection.1.0|yes|yes|Virtual package relying on a system gobject-introspection installation
+conf-goocanvas2|conf-goocanvas2.0|yes|yes|Virtual package relying on a Goocanvas-2 system installation
+conf-gpiod|conf-gpiod.1|yes|yes|C libgpiod library for GPIO on recent (>4.8) Linux kernels
+conf-graphviz|conf-graphviz.0.1|no|yes|Virtual package relying on graphviz installation
+conf-gsl|conf-gsl.2|yes|yes|Virtual package relying on a GSL lib system installation
+conf-gssapi|conf-gssapi.1|yes|yes|Virtual package relying on a krb5-gssapi system installation
+conf-gstreamer|conf-gstreamer.1|yes|yes|Virtual package relying on libgstreamer
+conf-gtk2|conf-gtk2.1|yes|yes|Virtual package relying on gtk2
+conf-gtk3|conf-gtk3.18|yes|yes|Virtual package relying on GTK+ 3
+conf-gtksourceview|conf-gtksourceview.2|yes|yes|Virtual package relying on a GtkSourceView system installation
+conf-gtksourceview3|conf-gtksourceview3.0+2|yes|yes|Virtual package relying on a GtkSourceView-3 system installation
+conf-guile|conf-guile.1|yes|yes|Virtual package relying on an GNU Guile system installation
+conf-haveged|conf-haveged.1.0.0|no|yes|Check if havaged is installed on the system
+conf-hidapi|conf-hidapi.0|yes|yes|Virtual package relying on a hidapi system installation
+conf-ida|conf-ida.0.3|no|no|Checks that IDA Pro is installed
+conf-jack|conf-jack.1|yes|yes|Virtual package relying on jack
+conf-jq|conf-jq.1|no|yes|Virtual package relying on jq
+conf-ladspa|conf-ladspa.1|no|yes|Virtual package relying on ladspa
+conf-lame|conf-lame.1|no|yes|Virtual package relying on lame
+conf-lapack|conf-lapack.1|no|yes|Virtual package for LAPACK configuration
+conf-leveldb|conf-leveldb.2|no|yes|Virtual package relying on a LevelDB lib system installation
+conf-libMagickCore|conf-libMagickCore.1|yes|yes|Virtual package relying on an ImageMagick system installation
+conf-libX11|conf-libX11.1|yes|yes|Virtual package relying on an Xlib system installation
+conf-libXft|conf-libXft.1|yes|yes|Virtual package relying on an Xft system installation
+conf-libargon2|conf-libargon2.1|no|yes|Virtual package relying on libargon2
+conf-libblake3|conf-libblake3.1.5.1|yes|yes|Virtual package relying on libblake3
+conf-libbpf|conf-libbpf.0.1.0|no|yes|Virtual package for system installation of libbpf
+conf-libbz2|conf-libbz2.1|no|yes|Virtual package relying on libbz2
+conf-libclang|conf-libclang.15|no|yes|Virtual package relying on the installation of llvm and clang libraries (<= 15.0.x)
+conf-libcorosync|conf-libcorosync.3|yes|yes|Virtual package relying on libcorosync system installation
+conf-libcurl|conf-libcurl.2|no|yes|Virtual package relying on a libcurl system installation
+conf-libdw|conf-libdw.1|yes|yes|Virtual package relying on libdw
+conf-libev|conf-libev.4-12|no|yes|High-performance event loop/event model with lots of features
+conf-libevent|conf-libevent.1|yes|yes|Virtual package relying on libevent
+conf-libffi|conf-libffi.2.0.0|yes|yes|Virtual package relying on libffi system installation
+conf-libflac|conf-libflac.1|yes|yes|Virtual package relying on libFLAC
+conf-libfontconfig|conf-libfontconfig.1|yes|yes|Virtual package relying on fontconfig
+conf-libfuse|conf-libfuse.1|yes|yes|Virtual package relying on FUSE
+conf-libgccjit|conf-libgccjit.1|no|yes|Virtual package relying on a libgccjit system installation
+conf-libgif|conf-libgif.1|no|yes|Virtual package relying on a libgif system installation
+conf-libgl|conf-libgl.1|yes|yes|Virtual package relying on a OpenGL system installation
+conf-libglu|conf-libglu.1|yes|yes|Virtual package relying on a libGLU system installation
+conf-libgsasl|conf-libgsasl.1|yes|yes|Virtual package relying on a GSASL lib system installation
+conf-libjpeg|conf-libjpeg.1|yes|yes|Virtual package relying on a libjpeg system installation
+conf-liblinear-tools|conf-liblinear-tools.1.0.0|no|yes|Virtual package relying on liblinear-{train|predict} installation
+conf-liblo|conf-liblo.1|no|yes|Virtual package relying on liblo
+conf-liblz4|conf-liblz4.1|yes|yes|Virtual package relying on liblz4 system installation
+conf-liblzma|conf-liblzma.1|yes|yes|Virtual package relying on liblzma
+conf-libmagic|conf-libmagic.1|no|yes|Virtual package relying on a libmagic system installation
+conf-libmaxminddb|conf-libmaxminddb.1|yes|yes|Virtual package relying on a libmaxminddb system installation
+conf-libmd|conf-libmd.1.0.0|yes|yes|Virtual package relying on libmd
+conf-libmosquitto|conf-libmosquitto.1|yes|yes|Virtual package relying on a libmosquitto system installation
+conf-libmpg123|conf-libmpg123.1|yes|yes|Virtual package relying on libmpg123
+conf-libnl3|conf-libnl3.1|yes|yes|Virtual package relying on a libnl system installation
+conf-libobjc2|conf-libobjc2.1|no|yes|Virtual package relying on libobjc2 lib system installation
+conf-libogg|conf-libogg.1|yes|yes|Virtual package relying on libogg
+conf-libopus|conf-libopus.1|yes|yes|Virtual package relying on libopus
+conf-libpcre|conf-libpcre.2|yes|yes|Virtual package relying on a libpcre system installation
+conf-libpcre2-8|conf-libpcre2-8.2|yes|yes|Virtual package relying on a libpcre2 system installation
+conf-libpng|conf-libpng.1|yes|yes|Virtual package relying on a libpng system installation
+conf-libportmidi|conf-libportmidi.1|yes|yes|Virtual package relying on libportmidi
+conf-librsvg2|conf-librsvg2.0|yes|yes|Virtual package relying on Librsvg2 system installation
+conf-libsamplerate|conf-libsamplerate.2|no|no|Virtual package relying on libsamplerate
+conf-libseccomp|conf-libseccomp.1|yes|yes|Virtual package relying on a libseccomp system installation
+conf-libsodium|conf-libsodium.1|yes|yes|Virtual package relying on a libsodium system installation
+conf-libspeex|conf-libspeex.1|yes|yes|Virtual package relying on libspeex
+conf-libssl|conf-libssl.4|yes|yes|Virtual package relying on an OpenSSL library system installation
+conf-libsvm|conf-libsvm.3|no|yes|Virtual package relying on libsvm library installation
+conf-libsvm-tools|conf-libsvm-tools.1.0.0|no|yes|Virtual package relying on libsvm-tools installation
+conf-libtheora|conf-libtheora.1|yes|yes|Virtual package relying on libtheora
+conf-libtool|conf-libtool.1|no|yes|Virtual package relying on libtool installation
+conf-libudev|conf-libudev.1|yes|yes|Virtual package relying on a libudev system installation
+conf-liburing|conf-liburing.0.1.0|no|yes|Virtual package for system installation of liburing
+conf-libuv|conf-libuv.1|yes|yes|Virtual package relying on a libuv system installation
+conf-libvorbis|conf-libvorbis.1|yes|yes|Virtual package relying on libvorbis
+conf-libwayland|conf-libwayland.1|yes|yes|Virtual package relying on libwayland
+conf-libxcb|conf-libxcb.1|yes|yes|Virtual package relying on xcb
+conf-libxcb-image|conf-libxcb-image.1|yes|yes|Virtual package relying on xcb-image
+conf-libxcb-keysyms|conf-libxcb-keysyms.1|yes|yes|Virtual package relying on xcb-shm
+conf-libxcb-shm|conf-libxcb-shm.1|yes|yes|Virtual package relying on xcb-shm
+conf-libxcb-xkb|conf-libxcb-xkb.1|yes|yes|Virtual package relying on xcb-xkb
+conf-libxcursor|conf-libxcursor.1|yes|yes|Virtual package relying on an libXcursor system installation
+conf-libxi|conf-libxi.1|yes|yes|Virtual package relying on an libXi system installation
+conf-libxinerama|conf-libxinerama.1|yes|yes|Virtual package relying on an libXinerama system installation
+conf-libxrandr|conf-libxrandr.1|yes|yes|Virtual package relying on an libXRandR system installation
+conf-lilv|conf-lilv.1|no|yes|Virtual package relying on lilv
+conf-linux-libc-dev|conf-linux-libc-dev.0|no|yes|synopsis:
+conf-lld|conf-lld.1|no|yes|Virtual package relying on lld installation
+conf-lldb|conf-lldb.3.5|no|yes|synopsis:
+conf-llvm|conf-llvm.17|no|yes|Virtual package relying on llvm library installation
+conf-llvm-shared|conf-llvm-shared.18|no|yes|Virtual package relying on llvm shared library installation
+conf-llvm-static|conf-llvm-static.18|no|yes|Virtual package relying on llvm static library installation
+conf-lua|conf-lua.1|yes|yes|Virtual package relying on a Lua system installation
+conf-lz4|conf-lz4.1.0.0|no|yes|Virtual package requiring the lz4 command to be available
+conf-m4|conf-m4.1|no|yes|Virtual package relying on m4
+conf-mad|conf-mad.2|yes|yes|Virtual package relying on mad
+conf-mariadb|conf-mariadb.2|yes|yes|synopsis:
+conf-mbedtls|conf-mbedtls.2|no|yes|Virtual package relying on an mbedtls system installation
+conf-mecab|conf-mecab.0.996|no|yes|Virtual package relying on MeCab library installation
+conf-mesa|conf-mesa.1|yes|yes|Virtual package relying on an mesa system installation
+conf-mingw-w64-allegro5-i686|conf-mingw-w64-allegro5-i686.1|yes|yes|allegro5 for i686 mingw-w64
+conf-mingw-w64-allegro5-x86_64|conf-mingw-w64-allegro5-x86_64.1|yes|yes|allegro5 for x86_64 mingw-w64
+conf-mingw-w64-curl-i686|conf-mingw-w64-curl-i686.1|yes|yes|libcurl for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-curl-x86_64|conf-mingw-w64-curl-x86_64.1|yes|yes|libcurl for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-g++-i686|conf-mingw-w64-g++-i686.1|no|yes|Virtual package for g++ on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-g++-x86_64|conf-mingw-w64-g++-x86_64.1|no|yes|Virtual package for g++ on x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-gcc-i686|conf-mingw-w64-gcc-i686.1|no|yes|Virtual package for GCC on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-gcc-x86_64|conf-mingw-w64-gcc-x86_64.1|no|yes|Virtual package for GCC on x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-glade-i686|conf-mingw-w64-glade-i686.1|yes|yes|glade for i686 mingw-w64
+conf-mingw-w64-glade-x86_64|conf-mingw-w64-glade-x86_64.1|yes|yes|glade for x86_64 mingw-w64
+conf-mingw-w64-gmp-i686|conf-mingw-w64-gmp-i686.1|yes|yes|Virtual package for libgmp on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-gmp-x86_64|conf-mingw-w64-gmp-x86_64.1|yes|yes|Virtual package for libgmp on x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-gnutls-i686|conf-mingw-w64-gnutls-i686.1|yes|yes|GnuTLS for i686 mingw-w64
+conf-mingw-w64-gnutls-x86_64|conf-mingw-w64-gnutls-x86_64.1|yes|yes|GnuTLS for x86_64 mingw-w64
+conf-mingw-w64-libevent-i686|conf-mingw-w64-libevent-i686.1|yes|yes|Libevent for i686 mingw-w64
+conf-mingw-w64-libevent-x86_64|conf-mingw-w64-libevent-x86_64.1|yes|yes|Libevent for x86_64 mingw-w64
+conf-mingw-w64-libffi-i686|conf-mingw-w64-libffi-i686.1|yes|yes|libffi for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-libffi-x86_64|conf-mingw-w64-libffi-x86_64.1|yes|yes|libffi for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-mbedtls-x86_64|conf-mingw-w64-mbedtls-x86_64.1|yes|yes|Libmbedtls for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-ncurses-i686|conf-mingw-w64-ncurses-i686.1|yes|yes|ncurses for i686 mingw-w64
+conf-mingw-w64-ncurses-x86_64|conf-mingw-w64-ncurses-x86_64.1|yes|yes|ncurses for x86_64 mingw-w64
+conf-mingw-w64-nettle-i686|conf-mingw-w64-nettle-i686.1|yes|yes|Nettle for i686 mingw-w64
+conf-mingw-w64-nettle-x86_64|conf-mingw-w64-nettle-x86_64.1|yes|yes|Nettle for x86_64 mingw-w64
+conf-mingw-w64-openssl-i686|conf-mingw-w64-openssl-i686.1|yes|yes|libssl for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-openssl-x86_64|conf-mingw-w64-openssl-x86_64.1|yes|yes|libssl for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-pcre-i686|conf-mingw-w64-pcre-i686.1|yes|yes|Libpcre for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-pcre-x86_64|conf-mingw-w64-pcre-x86_64.1|yes|yes|Libpcre for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-pcre2-i686|conf-mingw-w64-pcre2-i686.1|yes|yes|Libpcre2 for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-pcre2-x86_64|conf-mingw-w64-pcre2-x86_64.1|yes|yes|Libpcre2 for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-pkgconf-i686|conf-mingw-w64-pkgconf-i686.1|yes|yes|Virtual package for pkgconf on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-pkgconf-x86_64|conf-mingw-w64-pkgconf-x86_64.1|yes|yes|Virtual package for pkgconf on x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-postgresql-i686|conf-mingw-w64-postgresql-i686.1|yes|yes|Postgresql for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-postgresql-x86_64|conf-mingw-w64-postgresql-x86_64.1|yes|yes|Postgresql for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-sdl2-i686|conf-mingw-w64-sdl2-i686.1|yes|yes|sdl2 for i686 mingw-w64
+conf-mingw-w64-sdl2-x86_64|conf-mingw-w64-sdl2-x86_64.1|yes|yes|sdl2 for x86_64 mingw-w64
+conf-mingw-w64-sqlite3-i686|conf-mingw-w64-sqlite3-i686.1|yes|yes|sqlite3 for i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-sqlite3-x86_64|conf-mingw-w64-sqlite3-x86_64.1|yes|yes|sqlite3 for x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-zlib-i686|conf-mingw-w64-zlib-i686.1|yes|yes|Virtual package for zlib on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-zlib-x86_64|conf-mingw-w64-zlib-x86_64.1|yes|yes|Virtual package for zlib on x86_64 mingw-w64 (64-bit x86_64)
+conf-mingw-w64-zstd-i686|conf-mingw-w64-zstd-i686.1|yes|yes|Virtual package for libzstd on i686 mingw-w64 (32-bit x86)
+conf-mingw-w64-zstd-x86_64|conf-mingw-w64-zstd-x86_64.1|yes|yes|Virtual package for libzstd on x86_64 mingw-w64 (64-bit x86_64)
+conf-mpfr|conf-mpfr.3|yes|yes|Virtual package relying on library MPFR installation
+conf-mpfr-paths|conf-mpfr-paths.1|no|yes|Virtual package relying on library MPFR installation
+conf-mpi|conf-mpi.1|yes|yes|Virtual package relying on a mpi system installation
+conf-msvc32|conf-msvc32.1|no|no|Microsoft C Compiler Environment Settings (32-bit x86)
+conf-msvc64|conf-msvc64.1|no|no|Microsoft C Compiler Environment Settings (64-bit x86_64)
+conf-mysql|conf-mysql.1|no|yes|Virtual package relying on a libmysqlclient system installation
+conf-nanomsg|conf-nanomsg.0|yes|yes|Virtual package relying on a nanomsg system installation
+conf-nauty|conf-nauty.1.0|yes|yes|Virtual package relying on nauty
+conf-ncurses|conf-ncurses.1|yes|yes|Virtual package relying on ncurses
+conf-neko|conf-neko.1|no|yes|Virtual package relying on a Neko system installation
+conf-netsnmp|conf-netsnmp.1.0.0|no|yes|Package relying on net-snmp libs
+conf-ninja|conf-ninja.1|no|yes|Virtual package to install the Ninja build system
+conf-nlopt|conf-nlopt.1|yes|yes|Virtual package relying on nlopt
+conf-nmap|conf-nmap.1.0.0|no|yes|Virtual package relying on nmap installation
+conf-npm|conf-npm.1|no|yes|Virtual package relying on npm installation
+conf-numa|conf-numa.0.1.0|no|yes|Package relying on libnuma
+conf-ode|conf-ode.1|yes|yes|Virtual package relying on a ODE system installation
+conf-oniguruma|conf-oniguruma.1|yes|yes|Virtual package relying on an Oniguruma system installation
+conf-openbabel|conf-openbabel.0.1|yes|yes|Virtual package relying on openbabel library installation
+conf-openblas|conf-openblas.0.2.2|yes|yes|Virtual package to install OpenBLAS and LAPACKE
+conf-openblas-macOS-env|conf-openblas-macOS-env.1|yes|no|Virtual package to set the environment correctly for OpenBLAS in Homebrew
+conf-opencc0|conf-opencc0.1|no|yes|Virtual package relying on opencc v0 (libopencc.so.1) installation
+conf-opencc1|conf-opencc1.1|no|yes|Virtual package relying on opencc v1 (libopencc.so.2) installation
+conf-opencc1_1|conf-opencc1_1.1|no|yes|Virtual package relying on opencc v1.1 (libopencc.so.1.1) installation
+conf-openimageio|conf-openimageio.1|yes|yes|Virtual package relying on OpenImageIO development package installation
+conf-openjdk|conf-openjdk.1|no|yes|Virtual package relying on OpenJDK / Javac
+conf-openssl|conf-openssl.2|no|yes|Virtual package relying on an OpenSSL binary system installation
+conf-pam|conf-pam.1|no|yes|Virtual package relying on a system installation of PAM
+conf-pandoc|conf-pandoc.0.1|no|yes|Virtual package relying on pandoc installation
+conf-pango|conf-pango.1|yes|yes|Virtual package relying on a Pango system installation
+conf-perl|conf-perl.2|no|yes|Virtual package relying on perl
+conf-perl-ipc-system-simple|conf-perl-ipc-system-simple.3|no|yes|Virtual package relying on perl's IPC::System::Simple
+conf-perl-string-shellquote|conf-perl-string-shellquote.3|no|yes|Virtual package relying on perl's String::ShellQuote
+conf-pic-switch|conf-pic-switch.0.1|no|no|synopsis:
+conf-pixz|conf-pixz.1|no|yes|Virtual package relying on pixz
+conf-pkg-config|conf-pkg-config.4|yes|yes|Check if pkg-config is installed and create an opam switch local pkgconfig folder
+conf-plplot|conf-plplot.1|yes|yes|Virtual package relying on plplot
+conf-portaudio|conf-portaudio.1|yes|yes|Virtual package relying on portaudio
+conf-postgresql|conf-postgresql.2|yes|yes|Virtual package relying on a PostgreSQL system installation
+conf-ppl|conf-ppl.1|no|yes|synopsis:
+conf-protoc|conf-protoc.4.4.0|no|yes|Virtual package to install protoc compiler
+conf-protoc-dev|conf-protoc-dev.1.0.0|yes|yes|Virtual package to install protobuf cpp headers
+conf-pulseaudio|conf-pulseaudio.1|yes|yes|Virtual package relying on pulseaudio
+conf-python-2-7|conf-python-2-7.1.2|no|yes|Virtual package relying on Python-2.7 installation
+conf-python-2-7-dev|conf-python-2-7-dev.1.0|no|yes|synopsis:
+conf-python-3|conf-python-3.9.0.0|no|yes|Virtual package relying on Python-3 installation
+conf-python-3-7|conf-python-3-7.1.0.0|no|yes|Virtual package relying on Python >=3.7 installation
+conf-python-3-dev|conf-python-3-dev.1|no|yes|Virtual package relying on Python 3 development package installation
+conf-python3-pyparsing|conf-python3-pyparsing.1|no|yes|Virtual package relying on PyParsing
+conf-python3-tomli|conf-python3-tomli.1|no|yes|Virtual package relying on Tomli
+conf-python3-yaml|conf-python3-yaml.1|no|yes|Virtual package relying on PyYAML
+conf-qt|conf-qt.5.2.1|yes|yes|Installation of Qt5 using APT packages or from source
+conf-r|conf-r.1.0.0|no|yes|Virtual package relying on the R interpreter
+conf-r-mathlib|conf-r-mathlib.1|yes|yes|synopsis:
+conf-radare2|conf-radare2.0.1|no|yes|Checks that radare2 is installed
+conf-rdkit|conf-rdkit.1|no|yes|Virtual package relying on rdkit library installation
+conf-readline|conf-readline.1|no|yes|Virtual package relying on a readline system installation
+conf-rocksdb|conf-rocksdb.1|no|yes|Virtual package relying on a system installation of RocksDB
+conf-rubberband|conf-rubberband.1|yes|yes|Virtual package relying on rubberband
+conf-ruby|conf-ruby.1.0.0|no|yes|Virtual package relying on Ruby
+conf-rust|conf-rust.0.1|no|yes|Virtual package relying on cargo (rust build system)
+conf-rust-2018|conf-rust-2018.1|no|yes|Virtual package relying on cargo (rust build system)
+conf-rust-2021|conf-rust-2021.1|no|yes|Virtual package relying on cargo (rust build system)
+conf-rust-2024|conf-rust-2024.1|no|yes|Virtual package relying on cargo (rust build system)
+conf-rust-llvm|conf-rust-llvm.1|no|yes|Virtual package relying on an installation of the integration of Rust with LLVM tools
+conf-rust-wasm|conf-rust-wasm.1|no|yes|Virtual package relying on an installation of standard Rust libraries including development files, needed to cross-compile Rust programs to the wasm32-unknown-unknown and wasm32-wasip1/wasm32-wasip2 targets
+conf-samplerate|conf-samplerate.1|yes|yes|Virtual package relying on samplerate
+conf-scdoc|conf-scdoc.1|no|yes|Virtual package to install scdoc
+conf-sdl-gfx|conf-sdl-gfx.1|yes|yes|Virtual package relying on a sdl-gfx system installation
+conf-sdl-image|conf-sdl-image.1|yes|yes|Virtual package relying on a sdl-image system installation
+conf-sdl-mixer|conf-sdl-mixer.1|yes|yes|Virtual package relying on a sdl-mixer system installation
+conf-sdl-net|conf-sdl-net.1|yes|yes|Virtual package relying on a sdl-net system installation
+conf-sdl-ttf|conf-sdl-ttf.1|yes|yes|Virtual package relying on a sdl-ttf system installation
+conf-sdl2|conf-sdl2.1|yes|yes|Virtual package relying on a SDL2 system installation
+conf-sdl2-image|conf-sdl2-image.1|yes|yes|Virtual package relying on a sdl2-image system installation
+conf-sdl2-mixer|conf-sdl2-mixer.1|yes|yes|Virtual package relying on a sdl2-mixer system installation
+conf-sdl2-net|conf-sdl2-net.1|yes|yes|Virtual package relying on a sdl2-net system installation
+conf-sdl2-ttf|conf-sdl2-ttf.1|yes|yes|Virtual package relying on a sdl2-ttf system installation
+conf-sdpa|conf-sdpa.1|no|yes|Virtual package relying on a SDPA binary system installation
+conf-secp256k1|conf-secp256k1.2|no|yes|Virtual package relying on a secp256k1 lib system installation
+conf-sfml2|conf-sfml2.1|yes|yes|Virtual package relying on a SFML2 system installation
+conf-shine|conf-shine.1|yes|yes|Virtual package relying on libshine
+conf-snappy|conf-snappy.1|no|yes|Virtual package relying on snappy
+conf-sndfile|conf-sndfile.1|yes|yes|Virtual package relying on sndfile
+conf-soundtouch|conf-soundtouch.1|yes|yes|Virtual package relying on soundtouch
+conf-sqlite3|conf-sqlite3.1|yes|yes|Virtual package relying on an SQLite3 system installation
+conf-srt|conf-srt.2|yes|yes|Virtual package relying on srt
+conf-srt-gnutls|conf-srt-gnutls.1|yes|yes|Virtual package relying on srt build with gnutls
+conf-srt-openssl|conf-srt-openssl.1|yes|yes|Virtual package relying on srt compiled with openssl
+conf-sundials|conf-sundials.2|no|yes|Virtual package relying on sundials
+conf-swi-prolog|conf-swi-prolog.1|no|yes|Virtual package to install the swi-prolog interpreter
+conf-sysinfo|conf-sysinfo.1|no|yes|Virtual package relying on sysinfo
+conf-taglib|conf-taglib.1|yes|yes|Virtual package relying on taglib
+conf-tcl|conf-tcl.1|yes|yes|Virtual package relying on tcl
+conf-texlive|conf-texlive.1|no|yes|Virtual package relying on texlive / pdflatex
+conf-tidy|conf-tidy.1|no|yes|Virtual package relying on libtidy installation
+conf-time|conf-time.1|no|yes|Virtual package relying on the \"time\" command
+conf-timeout|conf-timeout.1|no|yes|Virtual package relying on the \"timeout\" command
+conf-tk|conf-tk.1|yes|yes|Virtual package relying on tk
+conf-tree-sitter|conf-tree-sitter.1|no|yes|Check if tree-sitter is installed
+conf-trexio|conf-trexio.0.1|yes|no|Virtual package relying on trexio library installation
+conf-tzdata|conf-tzdata.1|no|yes|Virtual package relying on tzdata
+conf-unwind|conf-unwind.0|yes|yes|Virtual package relying on libunwind
+conf-vim|conf-vim.1|no|yes|Virtual package to install the Vim editor
+conf-wayland-protocols|conf-wayland-protocols.1|yes|yes|Virtual package relying on wayland-protocols
+conf-wget|conf-wget.1|no|yes|Virtual package relying on wget
+conf-which|conf-which.1|no|yes|Virtual package relying on which
+conf-wxwidgets|conf-wxwidgets.3.0|no|yes|synopsis:
+conf-xen|conf-xen.1|no|yes|synopsis:
+conf-xkbcommon|conf-xkbcommon.1|yes|yes|Virtual package relying on xkbcommon
+conf-xxhash|conf-xxhash.1|yes|yes|Virtual package relying on a xxhash system installation
+conf-zig|conf-zig.1|no|yes|Virtual package relying on zig
+conf-zlib|conf-zlib.1|yes|yes|Virtual package relying on zlib
+conf-zmq|conf-zmq.0.1|yes|yes|Virtual package relying on zmq library installation
+conf-zstd|conf-zstd.1.3.8|yes|yes|Virtual package relying on zstd

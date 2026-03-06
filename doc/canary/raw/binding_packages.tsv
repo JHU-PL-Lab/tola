@@ -1,0 +1,452 @@
+FPauth-strategies|FPauth-strategies.1.0.0|conf-libargon2|no|Strategies to be used with FPauth-core authentication system
+GT|GT.0.5.4|conf-m4|no|Generic programming with extensible transformations
+General|General.0.7.0|conf-npm|no|Rich functionality for built-in and basic OCaml types
+aacplus|aacplus.0.2.2|conf-pkg-config|yes|synopsis:
+aarch64-esperanto|aarch64-esperanto.0.0.6|conf-which|no|An OCaml compiler with Cosmopolitan
+acp4|acp4.1.1.0|conf-gnuplot,conf-rdkit|no|ACP4: AutoCorrelation of Pharmacophore Features
+acpc|acpc.2.0.0|conf-autoconf,conf-gnuplot|no|Chemoinformatics tool for ligand-based virtual screening
+advi|advi.2.0.0|conf-ghostscript,conf-texlive,conf-which|no|Active DVI Dune package!
+ahrocksdb|ahrocksdb.0.2.2|conf-rocksdb|no|A binding to RocksDB
+albatross|albatross.2.4.1|conf-libnl3,conf-pkg-config|yes|Albatross - orchestrate and manage MirageOS unikernels with Solo5
+alcotest-js|alcotest-js.1.9.0|conf-npm|no|synopsis:
+allegro5|allegro5.0.2|conf-allegro5|no|OCaml Allegro 5
+alsa|alsa.0.3.0|conf-alsa,conf-pkg-config|no|synopsis:
+alt-ergo-free|alt-ergo-free.2.2.0|conf-autoconf,conf-gtksourceview|no|Alt-Ergo, an SMT Solver for Software Verification
+altgr-ergo|altgr-ergo.2.4.3|conf-gtksourceview3|no|The GUI for the Alt-Ergo SMT prover
+ao|ao.0.2.4|conf-ao,conf-pkg-config|no|synopsis:
+apron|apron.v0.9.15|conf-perl,conf-ppl|no|APRON numerical abstract domain library
+async_ssl|async_ssl.v0.17.0-1|conf-libssl|no|An Async-pipe-based interface with OpenSSL
+atdpy|atdpy.2.16.0|conf-python-3|no|Python/mypy code generation for ATD APIs
+augeas|augeas.0.6|conf-pkg-config|yes|Bindings to the Augeas configuration editing tool
+bap-cxxfilt|bap-cxxfilt.2.5.0|conf-binutils|no|A demangler that relies on a c++filt utility
+bap-ida-python|bap-ida-python.2.3.0|conf-ida|no|A BAP - IDA Pro integration library
+bap-ida|bap-ida.2.3.0|conf-ida|no|An IDA Pro integration library
+bap-llvm|bap-llvm.2.5.0|conf-bap-llvm,conf-env-travis|yes|BAP LLVM backend
+bap-objdump|bap-objdump.2.5.0|conf-binutils|no|Extract symbols from binary, using binutils objdump
+bap-radare2|bap-radare2.2.5.0|conf-radare2|no|Extract symbols from binary using radare2
+bap-std|bap-std.2.5.0|conf-binutils,conf-clang,conf-gmp,conf-m4,conf-perl,conf-which,conf-zlib|no|The Binary Analysis Platform Standard Library
+batsat|batsat.0.7|conf-rust-2018|no|OCaml bindings for batsat, a SAT solver in rust
+beluga|beluga.1.1.2|conf-timeout|no|synopsis:
+bigarray-overlap|bigarray-overlap.0.2.1|conf-pkg-config|no|Bigarray.overlap
+bimage-display|bimage-display.0.6.0|conf-glew|no|"
+bimage-io|bimage-io.0.6.0|conf-openimageio|no|"
+binaryen-bin|binaryen-bin.119|conf-c++,conf-cmake,conf-ninja|no|Compiler and toolchain infrastructure library for WebAssembly
+bitwuzla-bin|bitwuzla-bin.1.0.0|conf-cmake,conf-g++,conf-gcc,conf-git,conf-gmp|no|Bitwuzla SMT solver executable
+bitwuzla-c|bitwuzla-c.1.0.5|conf-g++,conf-gcc,conf-git,conf-gmp|no|SMT solver for AUFBVFP (C API)
+bitwuzla-cxx|bitwuzla-cxx.0.6.1|conf-g++,conf-gcc,conf-git|no|SMT solver for AUFBVFP (C++ API)
+bjack|bjack.0.1.6|conf-jack,conf-pkg-config,conf-samplerate|no|synopsis:
+blake3|blake3.0.3|conf-rust|no|Blake3 cryptography
+bls12-381-legacy|bls12-381-legacy.0.4.4|conf-rust|no|synopsis:
+bogue-tutorials|bogue-tutorials.0.2.0|conf-perl|no|Bogue Tutorials
+broken|broken.0.4.2|conf-bmake,conf-cpio|no|The Broken package is a simple testsuite framework.
+brotli|brotli.1.3.0|conf-brotli|no|Bindings to Google's Brotli compresion algorithm
+bsdowl|bsdowl.3.0.0-20150830|conf-bmake|no|This collection of BSD Make directives aims at providing a highly
+bytesrw|bytesrw.0.1.0|conf-libblake3,conf-libmd,conf-xxhash,conf-zlib,conf-zstd|no|Composable byte stream readers and writers for OCaml
+bz2|bz2.0.8.0|conf-libbz2|no|CamlBZ2 OCaml bindings for the libbz2
+cairo2-gtk|cairo2-gtk.0.6.5|conf-cairo,conf-pkg-config|no|Rendering Cairo on Gtk2 canvas
+cairo2-pango|cairo2-pango.0.6.5|conf-cairo,conf-pkg-config|no|Interface between Cairo and Pango (for Gtk2)
+cairo2|cairo2.0.6.5|conf-cairo,conf-freetype|no|Binding to Cairo, a 2D Vector Graphics Library
+caisar|caisar.2.1|conf-python-3,conf-texlive|no|synopsis:
+caml-mode|caml-mode.4.9|conf-emacs|no|Caml mode for GNU Emacs
+camlbz2|camlbz2.0.7.0|conf-aclocal,conf-autoconf,conf-libbz2|no|Bindings for bzip2
+camlimages|camlimages.5.0.5|conf-freetype,conf-ghostscript,conf-libgif,conf-libjpeg,conf-libpng|no|Image processing library
+camlkit-base|camlkit-base.0.3.0|conf-clang,conf-gnustep-base,conf-libobjc2|no|OCaml bindings to the Objective-C runtime and some base frameworks
+camlkit-gui|camlkit-gui.0.3.0|conf-gnustep-gui|no|OCaml bindings to AppKit and other gui frameworks
+camlp5-buildscripts|camlp5-buildscripts.0.06|conf-diffutils,conf-perl-ipc-system-simple,conf-perl-string-shellquote|no|Camlp5 Build scripts (written in OCaml)
+camlp5|camlp5.8.03.04|conf-bash,conf-diffutils,conf-perl|no|Preprocessor-pretty-printer of OCaml
+camltc|camltc.0.9.8|conf-bash|no|OCaml bindings for tokyo cabinet
+camlzip|camlzip.1.13|conf-zlib|no|synopsis:
+caper|caper.0.9|conf-m4|no|A tool for understanding and processing pcap (packet capture) expressions
+capnp-rpc-net|capnp-rpc-net.2.1|conf-capnproto|no|synopsis:
+capnp-rpc|capnp-rpc.2.1|conf-capnproto|no|synopsis:
+capnp|capnp.3.6.0|conf-capnproto|no|synopsis:
+catala|catala.0.10.0|conf-diffutils,conf-ninja,conf-npm,conf-pandoc,conf-python-3-dev|yes|synopsis:
+certify|certify.0.3.3|conf-openssl|no|CLI utilities for simple X509 certificate manipulation
+cfstream|cfstream.1.3.2|conf-m4|no|Stream operations in the style of Core's API
+chacha|chacha.1.1.0|conf-pkg-config|no|The Chacha functions, in OCaml
+clangml|clangml.4.8.0|conf-libclang,conf-ncurses,conf-zlib|no|OCaml bindings for Clang API
+class_group_vdf|class_group_vdf.0.0.5|conf-g++,conf-gmp,conf-pkg-config|no|Verifiable Delay Functions bindings to Chia's VDF
+coccinelle|coccinelle.1.3.0|conf-aclocal,conf-autoconf,conf-pkg-config,conf-python-3,conf-python-3-dev|no|Coccinelle is a C source code matching and transformation engine
+cohttp-lwt-jsoo|cohttp-lwt-jsoo.6.1.0|conf-npm|no|CoHTTP implementation for the Js_of_ocaml JavaScript compiler
+comby|comby.1.7.0|conf-autoconf,conf-gmp,conf-libev,conf-libpcre,conf-m4,conf-pkg-config,conf-sqlite3,conf-zlib|no|A tool for structural code search and replace that supports ~every language
+compsort|compsort.0.9.2|conf-gmp|no|Reorder files in an archive to improve its compression
+configuration|configuration.0.4.1|conf-bmake|no|Analyse configuration files
+coqide|coqide.8.20.1|conf-adwaita-icon-theme,conf-findutils|no|The Coq Proof Assistant --- GTK3 IDE
+corosync|corosync.0.1.0|conf-libcorosync|no|OCaml Corosync binding
+cpm|cpm.12.2.0|conf-gnuplot|no|The Classification and Regression Performance Metrics library
+cpu|cpu.2.0.0|conf-autoconf|no|Pin current process to given core number
+cryptokit|cryptokit.1.20|conf-gmp-powm-sec,conf-zlib|no|A library of cryptographic primitives
+cryptoverif|cryptoverif.2.11|conf-m4|no|CryptoVerif: Cryptographic protocol verifier in the computational model
+csdp|csdp.6.2.0|conf-gcc,conf-lapack,conf-openblas|yes|Solver for semidefinite programming problems
+ctypes-foreign|ctypes-foreign.0.23.0|conf-fts,conf-libffi,conf-ncurses,conf-pkg-config|no|Dynamic access to foreign C libraries using Ctypes
+ctypes-zarith|ctypes-zarith.0.2.0|conf-pkg-config|no|"
+ctypes|ctypes.0.23.0|conf-fts,conf-pkg-config|no|Combinators for binding to C libraries without writing any C
+cudajit|cudajit.0.7.0|conf-cuda|no|synopsis:
+current|current.0.7.1|conf-libev|no|Pipeline language for keeping things up-to-date
+current_git|current_git.0.7.1|conf-git|no|Git plugin for OCurrent
+current_web|current_web.0.7.1|conf-graphviz|no|Test web UI for OCurrent
+curses|curses.1.0.11|conf-ncurses,conf-pkg-config|no|Bindings to ncurses
+curve-sampling|curve-sampling.0.2.1|conf-gnuplot|no|Sampling of parametric and implicit curves
+cvc5|cvc5.1.2.0|conf-cmake,conf-g++,conf-gcc,conf-gmp,conf-python-3,conf-python-3-dev,conf-python3-pyparsing,conf-python3-tomli|no|OCaml bindings for the cvc5 SMT solver
+data-encoding|data-encoding.1.0.1|conf-npm|no|Library of JSON and binary encoding combinators
+dbm|dbm.1.4|conf-dbm|no|Binding to the NDBM/GDBM Unix \"databases\"
+delimcc|delimcc.2023.06.17|conf-which|no|synopsis:
+diffast-git|diffast-git.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|Git functions for Diff/AST API
+diffast-langs-cpp|diffast-langs-cpp.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|C++/C parser plugin for Diff/AST
+diffast-langs-fortran|diffast-langs-fortran.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|Fortran parser plugin for Diff/AST
+diffast-langs-java|diffast-langs-java.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|Java parser plugin for Diff/AST
+diffast-langs-python|diffast-langs-python.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|Python parser plugin for Diff/AST
+diffast-langs-verilog|diffast-langs-verilog.0.2|conf-gmp,conf-pkg-config,conf-zlib|no|Verilog parser plugin for Diff/AST
+dkml-component-staging-opam64|dkml-component-staging-opam64.2.2.0~dkml20220801|conf-dkml-cross-toolchain|no|DKML component for 64-bit versions of opam
+dlm|dlm.0.3.3|conf-pkg-config|yes|Libdlm bindings
+dose3-extra|dose3-extra.7.0.0|conf-dpkg,conf-python-3,conf-python3-yaml|no|Dose-extra libraries and tools (part of Mancoosi tools)
+dream|dream.1.0.0~alpha8|conf-libev|no|Tidy, feature-complete Web framework
+dssi|dssi.0.1.5|conf-dssi|no|Bindings for the DSSI API which provides audio synthesizers
+dtc-pb|dtc-pb.1.0|conf-protoc|no|DTC Protocol library autogenerated from Protobuf description
+dune-deps|dune-deps.1.4.0|conf-graphviz|no|Show dependency graph of a multi-component dune project
+efl|efl.1.24.0|conf-efl,conf-pkg-config|no|synopsis:
+eio_posix|eio_posix.1.2|conf-bash|no|Eio implementation for POSIX systems
+elina|elina.1.3.2|conf-perl|no|ETH LIBRARY FOR NUMERICAL ANALYSIS
+elpi|elpi.2.0.7|conf-time|no|ELPI - Embeddable λProlog Interpreter
+eprover|eprover.3.1|conf-gcc|no|E Theorem Prover
+errpy|errpy.0.0.10|conf-rust-2021|no|Errpy: An Error Recovering Python Parser implemented in Rust
+esperanto-cosmopolitan|esperanto-cosmopolitan.0.0.6|conf-binutils|no|Cosmopolitan toolchain for OCaml compiler
+esperanto|esperanto.0.0.4|conf-which|no|An OCaml compiler with Cosmopolitan
+ez-conf-lib|ez-conf-lib.2|conf-findutils|no|Simple generator of conf-<pkg>.config files
+ezjsonm-lwt|ezjsonm-lwt.1.3.0|conf-npm|no|Simple Lwt-based interface to the Jsonm JSON library
+ezjsonm|ezjsonm.1.3.0|conf-npm|no|Simple interface on top of the Jsonm JSON library
+faad|faad.0.5.1|conf-faad,conf-pkg-config|no|synopsis:
+facteur|facteur.0.1.0|conf-libmagic|no|Tool to send an email
+fadbadml|fadbadml.0.1.2|conf-python-3|no|FADBAD++ for OCaml
+farmhash|farmhash.0.4|conf-c++|yes|Bindings for Google's farmhash library
+fasmifra|fasmifra.2.1.0|conf-python-3,conf-rdkit|no|Molecular Generation by Fast Assembly of SMILES Fragments
+fdkaac|fdkaac.0.3.3|conf-fdkaac|no|Fraunhofer FDK AAC Codec Library
+ffmpeg-av|ffmpeg-av.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg libraries -- top-level helpers
+ffmpeg-avcodec|ffmpeg-avcodec.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg avcodec library
+ffmpeg-avdevice|ffmpeg-avdevice.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg avdevice library
+ffmpeg-avfilter|ffmpeg-avfilter.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg avfilter library
+ffmpeg-avutil|ffmpeg-avutil.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg avutil libraries
+ffmpeg-swresample|ffmpeg-swresample.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg swresample library
+ffmpeg-swscale|ffmpeg-swscale.1.2.4|conf-ffmpeg,conf-pkg-config|no|Bindings for the ffmpeg swscale library
+fftw3|fftw3.0.8.5|conf-fftw3|no|Binding to the Fast Fourier Transform library FFTW
+fiat-p256|fiat-p256.0.2.3|conf-pkg-config|no|Primitives for Elliptic Curve Cryptography taken from Fiat
+flac|flac.1.0.0|conf-libflac,conf-pkg-config|no|Bindings to libflac
+flint|flint.0.4.0|conf-flint,conf-mpfr,conf-pkg-config|no|Stub of the C library Flint3
+frama-c-metacsl|frama-c-metacsl.0.8|conf-swi-prolog|no|MetAcsl plugin of Frama-C for writing pervasives properties
+frama-c|frama-c.30.0|conf-graphviz,conf-gtksourceview3,conf-time|no|Platform dedicated to the analysis of source code written in C
+frama-clang|frama-clang.0.0.17|conf-clang,conf-cmake,conf-libclang,conf-llvm|no|Frama-C plug-in based on Clang for parsing C++ files
+frei0r|frei0r.0.1.2|conf-frei0r,conf-pkg-config|no|Bindings for the frei0r API which provides video effects
+fswatch|fswatch.11-0.1.6|conf-fswatch|no|Bindings for libfswatch -- file change monitor
+gammu|gammu.0.9.4|conf-pkg-config|yes|Cell phone and SIM card access
+gappa|gappa.1.4.1|conf-autoconf,conf-automake,conf-bison,conf-boost,conf-flex,conf-g++,conf-gmp,conf-mpfr|no|Tool intended for formally proving properties on numerical programs dealing with floating-point or fixed-point arithmetic
+gccjit|gccjit.0.3.2|conf-libgccjit|no|Bindings to libgccjit, the GCC JIT compiler
+gd|gd.1.1|conf-gd,conf-pkg-config|no|OCaml interface to the GD graphics library.
+getopts|getopts.0.4.0|conf-bmake|no|Analyse command line arguments
+git-kv|git-kv.0.1.3|conf-git|no|A Mirage_kv implementation using git
+glMLite|glMLite.0.03.53|conf-libjpeg|yes|OpenGL bindings for OCaml
+glfw-ocaml|glfw-ocaml.3.3.1-2|conf-glfw3,conf-pkg-config|no|A GLFW binding for OCaml
+gmp-ecm|gmp-ecm.7.0.3|conf-autoconf,conf-automake,conf-g++,conf-gmp,conf-libtool|no|GMP-ECM library for the Elliptic Curve Method (ECM) for integer factorization
+gmp-freestanding|gmp-freestanding.6.2.1|conf-m4|no|The GNU Multiple Precision Arithmetic Library
+gmp-xen|gmp-xen.6.0.0-1|conf-m4|no|The GNU Multiple Precision Arithmetic Library
+gmp|gmp.6.2.1-5|conf-m4|yes|The GNU Multiple Precision Arithmetic Library
+gnuplot|gnuplot.0.7|conf-gnuplot|no|synopsis: "Simple interface to Gnuplot
+gobject-introspection|gobject-introspection.0.2|conf-glib-2,conf-gobject-introspection,conf-gtk3,conf-pkg-config|no|OCaml bindings for the GObject-Introspection library (https://gi.readthedocs.io/en/latest/)
+goblint-cil|goblint-cil.2.0.6|conf-gcc,conf-perl|yes|synopsis:
+goblint|goblint.2.5.0|conf-gcc,conf-gmp,conf-ruby|yes|Static analysis framework for C
+gpiod|gpiod.0.7|conf-gpiod|no|synopsis:
+graphics|graphics.5.1.2|conf-libX11,conf-pkg-config|no|The OCaml graphics library
+graphv_gles2_native_impl|graphv_gles2_native_impl.0.1.1|conf-gles2|no|synopsis:
+gsl|gsl.1.25.1|conf-gsl,conf-pkg-config|no|GSL - Bindings to the GNU Scientific Library
+gstreamer|gstreamer.0.3.1|conf-gstreamer,conf-pkg-config|no|synopsis:
+guile|guile.1.0|conf-gmp,conf-guile|no|Bindings to GNU Guile Scheme for OCaml
+hack_parallel|hack_parallel.1.0.1|conf-pkg-config,conf-sqlite3|no|Parallel and shared memory library
+hacl-star-raw|hacl-star-raw.0.7.2|conf-cmake,conf-which|no|Auto-generated low-level OCaml bindings for EverCrypt/HACL*
+hacl_x25519|hacl_x25519.0.2.2|conf-pkg-config|no|synopsis:
+haxe|haxe.4.1.1|conf-libpcre,conf-mbedtls,conf-neko,conf-zlib|no|Multi-target universal programming language
+hdr_histogram|hdr_histogram.0.0.4|conf-cmake,conf-pkg-config,conf-zlib|no|OCaml bindings to Hdr Histogram
+herdtools7|herdtools7.7.58|conf-which|no|The herdtools suite for simulating and studying weak memory models
+hidapi-lwt|hidapi-lwt.1.2.1|conf-hidapi|no|Lwt-wrappers for hidapi library
+hidapi|hidapi.1.2.1|conf-hidapi|no|Bindings to Signal11's hidapi library
+hvsock|hvsock.3.0.1|conf-linux-libc-dev|no|Bindings for Hyper-V AF_VSOCK
+i2c|i2c.0.1.2-0|conf-linux-libc-dev|no|i2c
+imguiml|imguiml.v1.90.6|conf-cmake,conf-glew,conf-glfw3|no|ImGUI bindings to OCaml
+io-page|io-page.3.0.0|conf-pkg-config|no|Support for efficient handling of I/O memory pages
+jasmin|jasmin.2025.02.1|conf-ppl|no|Compiler for High-Assurance and High-Speed Cryptography
+javalib|javalib.3.2.2|conf-which|no|Javalib is a library written in OCaml with the aim to provide a high level representation of Java .class files
+json-data-encoding|json-data-encoding.1.0.1|conf-npm|no|Type-safe encoding to and decoding from JSON
+jsonoo|jsonoo.0.3.0|conf-npm|no|JSON library for Js_of_ocaml
+jsoo-react|jsoo-react.0.1|conf-npm|no|Bindings to ReactJS for js_of_ocaml, including JSX ppx
+kafka|kafka.0.5|conf-zlib|yes|OCaml bindings for Kafka
+kafka_lwt|kafka_lwt.0.5|conf-zlib|no|OCaml bindings for Kafka, Lwt bindings
+lablgl|lablgl.1.07|conf-freeglut,conf-libgl,conf-libglu|no|Interface to OpenGL
+lablgtk-extras|lablgtk-extras.1.6|conf-gtksourceview|no|synopsis:
+lablgtk|lablgtk.2.18.14|conf-glade,conf-gnomecanvas,conf-gtk2,conf-gtksourceview|no|OCaml interface to GTK+
+lablgtk3-goocanvas2|lablgtk3-goocanvas2.3.1.5|conf-goocanvas2|no|OCaml interface to GTK+ GooCanvas library
+lablgtk3-rsvg2|lablgtk3-rsvg2.3.1.5|conf-librsvg2|no|OCaml interface to Gnome rsvg2 library
+lablgtk3-sourceview3|lablgtk3-sourceview3.3.1.5|conf-gtksourceview3|no|OCaml interface to GTK+ gtksourceview library
+lablgtk3|lablgtk3.3.1.5|conf-gtk3|no|OCaml interface to GTK+3
+lablqml|lablqml.0.7|conf-pkg-config,conf-qt|no|synopsis:
+labltk|labltk.8.06.15|conf-tcl,conf-tk|no|OCaml interface to Tcl/Tk
+lacaml|lacaml.11.1.1|conf-blas,conf-lapack|no|Lacaml - OCaml-bindings to BLAS and LAPACK
+ladspa|ladspa.0.2.2|conf-ladspa|no|Bindings for the LADSPA API which provides audio effects
+lame|lame.0.3.7|conf-lame|no|MP3 encoding library
+lbfgs|lbfgs.0.9.5|conf-gfortran|no|Bound-constrainted optimization in many variables
+lbvs_consent|lbvs_consent.2.2.0|conf-boost,conf-openbabel,conf-pkg-config,conf-python-3,conf-rdkit|no|Chemoinformatics software for consensus fingerprint queries
+learn-ocaml|learn-ocaml.1.0.0|conf-git|no|The learn-ocaml online platform (engine)
+lem|lem.2025-03-13|conf-findutils|no|Lem is a tool for lightweight executable mathematics
+lemonade-sqlite|lemonade-sqlite.0.1.0|conf-bmake|yes|A monadic interface to sqlite
+lemonade|lemonade.0.6.0|conf-bmake|no|A monad library with bubbles
+leveldb|leveldb.1.3.0|conf-leveldb|no|OCaml bindings for Google's LevelDB library
+libbinaryen|libbinaryen.121.0.0|conf-cmake|yes|Libbinaryen packaged for OCaml
+libbpf|libbpf.0.1.0|conf-bpftool,conf-clang,conf-libbpf|no|Libbpf bindings
+libdash|libdash.0.3|conf-aclocal,conf-autoconf,conf-libtool|no|Bindings to the dash shell's parser
+libevent|libevent.0.9.0|conf-libevent|no|OCaml wrapper for the libevent API
+liblinear|liblinear.2.47|conf-g++,conf-gcc|no|User-space installer for liblinear
+libnlopt|libnlopt.2.7.1|conf-cmake|no|User-space installer for the NLopt library
+libsail|libsail.0.19|conf-gmp|no|synopsis:
+libsvm_tools|libsvm_tools.3.35|conf-g++,conf-gcc|no|User-space installer for libsvm's tools
+libudev|libudev.0.2.1|conf-libudev|no|Bindings to libudev for OCaml
+libwasmer|libwasmer.3.0.0~beta|conf-rust-2021|no|The official Wasmer library
+lilv|lilv.0.1.0|conf-lilv,conf-pkg-config|no|Bindings to lilv library for using LV2 audio plugins
+links-mysql|links-mysql.0.9.8|conf-mysql|no|MySQL database driver for the Links Programming Language
+linwrap|linwrap.9.2.0|conf-gnuplot,conf-liblinear-tools,conf-python-3,conf-rdkit|no|Wrapper on top of liblinear-tools
+llama|llama.0.1.0|conf-alsa,conf-pkg-config,conf-rust-2021|no|Language for Live Audio Module Arrangement
+llama_interactive|llama_interactive.0.1.0|conf-pkg-config|no|Visualization and live interaction for Llama synthesizer library
+llvm|llvm.18-static|conf-cmake,conf-llvm-static|no|The OCaml bindings distributed with LLVM
+llvmgraph|llvmgraph.0.2|conf-clang|no|Ocamlgraph overlay for llvm
+lo|lo.0.2.0|conf-liblo|no|synopsis:
+lp-glpk-js|lp-glpk-js.0.4.0|conf-npm|no|LP and MIP modeling in OCaml (glpk.js interface)
+lp-glpk|lp-glpk.0.4.0|conf-glpk|no|LP and MIP modeling in OCaml (GLPK interface)
+lutin|lutin.2.71.15|conf-gmp,conf-m4,conf-mpfr,conf-perl|no|Lutin: modeling stochastic reactive systems
+lwt|lwt.5.9.1|conf-libev|no|Promises and event-driven I/O
+lwt_glib|lwt_glib.1.1.1|conf-glib-2,conf-pkg-config|no|GLib integration for Lwt
+lz4|lz4.1.3.0|conf-liblz4|no|Bindings to the LZ4 compression algorithm
+lz4_chans|lz4_chans.3.0.1|conf-lz4|no|LZ4-compressed binary channels
+lzo|lzo.0.0.3|conf-pkg-config|yes|Bindings to LZO - a portable lossless data compression library
+mad|mad.0.5.3|conf-mad,conf-pkg-config|no|Mad decoding library
+mariadb|mariadb.1.2.0|conf-gcc,conf-mariadb|no|OCaml bindings for MariaDB
+maxminddb|maxminddb.0.6|conf-libmaxminddb|no|Bindings to Maxmind.com's libmaxminddb library, like geoip2
+mccs|mccs.1.1+19|conf-c++|no|"\
+mecab|mecab.0.0.0|conf-mecab|no|synopsis:
+melange-moment|melange-moment.0.4.0|conf-npm|yes|Melange bindings for Moment.js
+mem_usage|mem_usage.0.1.2|conf-sysinfo|no|Cross-platform stats about memory usage
+memcad|memcad.1.1.0|conf-graphviz|no|The MemCAD analyzer
+memgraph_kitty|memgraph_kitty.1.0|conf-graphviz|no|synopsis:
+merlin|merlin.5.4.1-503|conf-jq|no|synopsis:
+metrics-unix|metrics-unix.0.4.1|conf-gnuplot|no|Unix backend for the Metrics library
+mindstorm|mindstorm.0.8.1|conf-bluetooth|no|Drive Lego Mindstorms bricks from OCaml
+mingw-w64-shims|mingw-w64-shims.0.2.0|conf-mingw-w64-g++-i686,conf-mingw-w64-g++-x86_64,conf-mingw-w64-gcc-i686,conf-mingw-w64-gcc-x86_64,conf-pkg-config|no|Configuration for the mingw-w64 Cygwin packages in opam
+minios-xen|minios-xen.0.9|conf-findutils,conf-perl|no|A minimal OS for running under the Xen hypervisor
+mirage-block-unix|mirage-block-unix.2.14.2|conf-linux-libc-dev|no|MirageOS disk block driver for Unix
+mirage-crypto-pk|mirage-crypto-pk.2.0.0|conf-gmp-powm-sec|no|Simple public-key cryptography for the modern age
+mirage-entropy|mirage-entropy.0.5.1|conf-pkg-config|no|Entropy source for MirageOS unikernels
+mirage-xen-ocaml|mirage-xen-ocaml.3.3.3|conf-pkg-config|no|OCaml runtime compiled for the MirageOS Xen backend
+mirage-xen-posix|mirage-xen-posix.3.3.1|conf-pkg-config|no|MirageOS library for posix headers
+mixture|mixture.1.0.0|conf-bmake|no|The Mixture package is a mixin library for the module system
+mlcuddidl|mlcuddidl.3.0.8|conf-m4|no|OCaml interface to the CUDD BDD library
+mldonkey|mldonkey.3.2.1|conf-m4,conf-zlib|no|Cross-platform multi-network peer-to-peer daemon
+mlgmpidl|mlgmpidl.1.3.0|conf-gmp-paths,conf-mpfr-paths,conf-perl|no|OCaml interface to the GMP library
+mlmpfr|mlmpfr.4.2.1|conf-mpfr|no|OCaml C bindings for MPFR >= 4.2.1
+mlpost-lablgtk|mlpost-lablgtk.0.9|conf-gnomecanvas|no|Library for adding mlpost graphics in lablgtk
+mmdb|mmdb.0.3.0|conf-libmaxminddb|no|Binding to the MaxMind DB library for GeoIP lookups
+molenc|molenc.17.0.1|conf-graphviz,conf-python-3,conf-rdkit|no|Molecular encoder/featurizer using rdkit and OCaml
+morbig|morbig.0.11.0|conf-jq|no|A trustworthy parser for POSIX shell
+mosquitto|mosquitto.0.2.1-0|conf-libmosquitto|no|mosquitto
+mperf|mperf.0.5.0|conf-linux-libc-dev|no|Bindings to Linux perf's metrics
+mpg123|mpg123.0.3|conf-libmpg123,conf-pkg-config|no|MP3 decoding library
+mpi|mpi.1.06|conf-mpi|no|OCaml binding to the Message Passing Interface (MPI)
+multicore-magic|multicore-magic.2.3.1|conf-npm|no|Low-level multicore utilities for OCaml
+mutaml|mutaml.0.3|conf-diffutils,conf-timeout,conf-which|no|A mutation tester for OCaml
+mysql|mysql.1.2.4|conf-mariadb,conf-mysql|no|synopsis:
+mysql8|mysql8.1.0|conf-mysql|no|OCaml interface for mysql-connector-c
+naboris|naboris.0.1.3|conf-libev|no|Simple http server
+nanoid|nanoid.1.0.0|conf-npm|no|Nano ID implementation for OCaml
+netlink|netlink.0.3.4|conf-libnl3|no|Bindings to the Netlink Protocol Library Suite (libnl)
+netsnmp|netsnmp.v0.17.0|conf-netsnmp|yes|An interface to the Net-SNMP client library
+nlopt-ocaml|nlopt-ocaml.0.5.1|conf-nlopt|no|OCaml bindings to the NLOpt optimization library
+nlopt|nlopt.0.7.0|conf-nlopt|no|OCaml bindings to the NLOpt optimization library
+not-ocamlfind|not-ocamlfind.0.14|conf-m4,conf-which|yes|A small frontend for ocamlfind that adds a few useful commands
+numalib|numalib.0.1.0|conf-numa|no|Interface to Linux NUMA API
+obuilder|obuilder.0.6.0|conf-bash,conf-which|no|Run build scripts for CI
+ocaml-canvas|ocaml-canvas.1.0.0|conf-freetype,conf-libfontconfig,conf-libwayland,conf-libxcb,conf-libxcb-image,conf-libxcb-keysyms,conf-libxcb-shm,conf-libxcb-xkb,conf-wayland-protocols,conf-xkbcommon|no|The OCaml-Canvas library
+ocaml-env-mingw32|ocaml-env-mingw32.1|conf-mingw-w64-gcc-i686|no|GCC mingw-w64 OCaml Runtime Dependency (32-bit)
+ocaml-env-mingw64|ocaml-env-mingw64.1|conf-mingw-w64-gcc-x86_64|no|GCC mingw-w64 OCaml Runtime Dependency (64-bit)
+ocaml-env-msvc32|ocaml-env-msvc32.1|conf-msvc32|no|Microsoft C Compiler OCaml Runtime Dependency (32-bit)
+ocaml-env-msvc64|ocaml-env-msvc64.1|conf-msvc64|no|Microsoft C Compiler OCaml Runtime Dependency (64-bit)
+ocaml-expat|ocaml-expat.1.3.0|conf-expat|no|Write XML-Parsers using the SAX method
+ocaml-in-python|ocaml-in-python.0.1.0|conf-python-3-7|no|Effortless Python bindings for OCaml modules
+ocaml-option-tsan|ocaml-option-tsan.1|conf-unwind|no|Set OCaml to be compiled with ThreadSanitizer support
+ocaml-protoc-plugin|ocaml-protoc-plugin.6.1.0|conf-pkg-config,conf-protoc,conf-protoc-dev|no|Plugin for protoc protobuf compiler to generate ocaml definitions from a .proto file
+ocaml-r|ocaml-r.0.6.0|conf-r,conf-r-mathlib|no|Objective Caml bindings for the R interpreter
+ocaml-solo5-cross-aarch64|ocaml-solo5-cross-aarch64.1.1.0|conf-git,conf-pkg-config|no|OCaml cross-compiler to the freestanding 64-bit ARM Solo5 backend
+ocaml-solo5|ocaml-solo5.1.1.0|conf-git,conf-pkg-config|no|OCaml cross-compiler to the freestanding Solo5 backend
+ocaml-system|ocaml-system.5.3.0|conf-mingw-w64-gcc-i686,conf-mingw-w64-gcc-x86_64,conf-mingw-w64-zstd-i686,conf-mingw-w64-zstd-x86_64|no|The OCaml compiler (system version, from outside of opam)
+ocamlbrowser|ocamlbrowser.5.3.0|conf-tcl,conf-tk|no|OCamlBrowser Library Explorer
+ocamldot|ocamldot.1.1|conf-autoconf|no|Parsing and printing graphviz files in OCaml
+ocamldsort|ocamldsort.0.16.0|conf-autoconf|no|Sorts a set of OCaml source files according to their dependencies
+ocamlfuse|ocamlfuse.2.7.1-cvs10|conf-libfuse|no|OCaml bindings for FUSE (Filesystem in UserSpacE)
+ocamlgraph_gtk|ocamlgraph_gtk.2.2.0|conf-gnomecanvas|no|Displaying graphs using OCamlGraph and GTK
+ocamlnet|ocamlnet.4.1.9-2|conf-gnutls,conf-gssapi|no|synopsis:
+ocamlpp|ocamlpp.1.1|conf-which|no|OCaml binary files (.byte and .cmo) pretty printers.
+ocamlsdl|ocamlsdl.0.9.1|conf-sdl-gfx,conf-sdl-image,conf-sdl-mixer,conf-sdl-ttf|yes|Interface between OCaml and SDL
+ocamlsdl2-image|ocamlsdl2-image.0.01|conf-sdl2-image|no|Interface to the SDL2_image library
+ocamlsdl2-ttf|ocamlsdl2-ttf.0.02|conf-sdl2-ttf|no|Interface to the SDL2_ttf library
+ocamlsdl2|ocamlsdl2.0.04|conf-sdl2|no|Interface to the SDL2 library
+ocannl_npy|ocannl_npy.0.4.1|conf-python-3|no|Numpy file format support for ocaml
+ocluster|ocluster.0.3.0|conf-libev|no|Distribute build jobs to workers
+ocsfml|ocsfml.2.0|conf-boost,conf-cmake,conf-sfml2|no|Binding to the C++ SFML gaming library.
+octez-libs|octez-libs.20.1|conf-libev,conf-rust|no|A package that contains multiple base libraries used by the Octez suite
+ocurl|ocurl.0.9.2|conf-libcurl|no|Bindings to libcurl
+odepack|odepack.0.7.1|conf-gfortran|no|Binding to ODEPACK
+odnnr|odnnr.2.0.0|conf-gnuplot,conf-r|no|Regressor using a Deep Neural Network
+odoc|odoc.3.0.0|conf-jq|no|OCaml Documentation Generator
+ogg|ogg.1.0.0|conf-libogg,conf-pkg-config|no|Bindings to libogg
+ojs-base|ojs-base.0.6.0|conf-autoconf|no|synopsis:
+ollvm-tapir|ollvm-tapir.0.99.1|conf-autoconf|no|a fork of ollvm with added LLVM-Tapir support
+omlr|omlr.1.0.3|conf-gnuplot,conf-r|no|Multiple Linear Regression model
+oniguruma|oniguruma.0.1.2|conf-oniguruma|no|Bindings to the Oniguruma regular expression library
+opam-core|opam-core.2.4.0~alpha1|conf-mingw-w64-gcc-i686,conf-mingw-w64-gcc-x86_64,conf-msvc32,conf-msvc64|no|Core library for opam 2.4
+opam-devel|opam-devel.2.4.0~alpha1|conf-diffutils,conf-openssl|no|Bootstrapped development binary for opam 2.4
+opam-monorepo|opam-monorepo.0.4.2|conf-pkg-config|no|Assemble and manage fully vendored Dune repositories
+openai|openai.0.0.1|conf-openssl|no|OCaml OpenAI binding
+opencc0|opencc0.1.0.2|conf-opencc0|no|Bindings for OpenCC (v0) - Open Chinese Convert
+opencc1|opencc1.1.0.1|conf-opencc1|no|Bindings for OpenCC (v1) - Open Chinese Convert
+opencc1_1|opencc1_1.0.1.0|conf-opencc1_1|no|Bindings for OpenCC (v1.1) - Open Chinese Convert
+opium|opium.0.20.0|conf-libev|no|OCaml web framework
+oplsr|oplsr.8.0.1|conf-gnuplot,conf-r|no|OCaml wrapper for the R 'pls' package
+opsian|opsian.0.1|conf-automake,conf-liblzma,conf-libtool,conf-perl|no|Low overhead profiling
+opus|opus.1.0.0|conf-libogg,conf-libopus,conf-pkg-config|no|Bindings to libopus
+oranger|oranger.4.3.5|conf-cmake,conf-gnuplot|no|OCaml wrapper for the ranger (C++) random forests implementation
+orf|orf.1.0.1|conf-gnuplot|no|OCaml Random Forests
+orocksdb|orocksdb.0.4.0|conf-rocksdb|no|ctypes based bindings for rocksdb
+orrandomForest|orrandomForest.3.0.0|conf-gnuplot,conf-r|no|Classification or regression using Random Forests
+orsvm_e1071|orsvm_e1071.4.0.0|conf-r|no|OCaml wrapper to SVM R packages e1071 and svmpath
+orun|orun.0.0.1|conf-libdw|yes|Run benchmarks and measure performance
+orxgboost|orxgboost.1.2.0|conf-r|no|Gradient boosting for OCaml using the R xgboost package
+osdp|osdp.1.1.1|conf-csdp,conf-sdpa|no|OCaml Interface to SDP solvers
+owi|owi.0.2|conf-clang,conf-python-3-dev|yes|synopsis:
+owl|owl.1.2|conf-openblas|no|OCaml Scientific and Engineering Computing
+pa_ppx|pa_ppx.0.18|conf-perl|no|PPX Rewriters for Ocaml, written using Camlp5
+pa_ppx_ag|pa_ppx_ag.0.08|conf-perl,conf-perl-ipc-system-simple,conf-perl-string-shellquote|no|A PPX Rewriter that Generates Attribute Grammar Evaulators
+pa_ppx_parsetree|pa_ppx_parsetree.0.02|conf-bash,conf-diffutils,conf-perl|no|A Camlp5-based Quasi-Quotation ppx rewriter for OCaml's AST 
+pa_ppx_q_ast|pa_ppx_q_ast.0.12|conf-diffutils,conf-perl|no|A PPX Rewriter for automating generation of data-conversion code for use with Camlp5's Q_ast
+pa_ppx_string|pa_ppx_string.0.01|conf-perl,conf-perl-ipc-system-simple,conf-perl-string-shellquote|no|A Camlp5 PPX Rewriter for String Interpolation 
+pam|pam.v0.17.0|conf-pam|yes|OCaml bindings for the Linux-PAM library
+pari-bindings|pari-bindings.0.1|conf-bison,conf-gmp,conf-perl|no|OCaml bindings to the PARI library
+pari|pari.0.1|conf-bison,conf-gmp,conf-perl|no|Type-safe wrapper over the PARI library
+passage|passage.0.1.6|conf-age|no|Passage - used to store and manage access to shared secrets
+pcre|pcre.8.0.3|conf-libpcre|no|Bindings to the Perl Compatibility Regular Expressions library
+pcre2|pcre2.8.0.3|conf-libpcre2-8|no|synopsis:
+pfff|pfff.0.40.4|conf-perl|no|Tools and APIs for program analysis, code visualization, refactoring
+picos_meta|picos_meta.0.6.0|conf-npm|no|Integration tests for Picos packages
+polars|polars.0.0.1|conf-rust-2021|no|OCaml bindings to the Polars dataframe library
+polka|polka.2.71.15|conf-gmp,conf-m4,conf-mpfr,conf-perl|no|Polka: convex polyhedron library by Bertrand Jeannet (now part of apron)
+polly|polly.0.4.1|conf-linux-libc-dev|no|Bindings for the Linux epoll system call
+portaudio|portaudio.0.2.3|conf-pkg-config,conf-portaudio|no|synopsis:
+portaudio_c_bindings|portaudio_c_bindings.19.6.0|conf-portaudio|no|Bindings to the C PortAudio library
+portia|portia.1.5|conf-asciidoc|no|Literate Programming Preprocessor
+portmidi|portmidi.0.1|conf-libportmidi,conf-pkg-config|no|Bindings to libportmidi
+postgresql|postgresql.5.1.3|conf-postgresql|no|Bindings to the PostgreSQL library
+promise_jsoo|promise_jsoo.0.4.3|conf-npm|no|Js_of_ocaml bindings to JS Promises with supplemental functions
+promise_jsoo_lwt|promise_jsoo_lwt.0.4.3|conf-npm|no|Conversion functions between JS Promises and Lwt Promises
+pulseaudio|pulseaudio.0.1.5|conf-pkg-config,conf-pulseaudio|no|Bindings to Pulseaudio client library
+py|py.1.3|conf-python-3-dev|no|Ctypes bindings to Python 3.5 or greater
+pyast|pyast.0.2.0|conf-python-3-dev|no|Python AST
+pyml|pyml.20231101|conf-python-3-dev|no|OCaml bindings for Python
+pyml_bindgen|pyml_bindgen.0.4.1|conf-python-3-dev|no|Generate pyml bindings from OCaml value specifications
+qfs|qfs.0.12|conf-boost|no|Bindings to libqfs - client library to access QFS
+qocamlbrowser|qocamlbrowser.0.2.12|conf-qt|no|OCamlBrowser clone written with OCaml and QtQuick 2
+qrencode|qrencode.0.2|conf-pkg-config|yes|Binding to libqrencode (QR-code encoding library)
+radare2|radare2.0.0.7|conf-radare2|no|OCaml interface to r2
+randoml|randoml.0.1.5|conf-rust-2018|no|Generating cryptographically-secure random numbers
+rankers|rankers.2.0.9|conf-gnuplot|no|Vanishing Ranking Kernels (VRK)
+raylib|raylib.1.4.0|conf-libxcursor,conf-libxi,conf-libxinerama,conf-libxrandr,conf-mesa|no|OCaml bindings for raylib
+re2|re2.v0.17.0|conf-g++|no|OCaml bindings for RE2, Google's regular expression library
+readline|readline.0.2|conf-readline|no|OCaml bindings for GNU readline
+rocq-prover|rocq-prover.9.0.0|conf-python-3,conf-time|no|The Rocq Prover with Stdlib
+rocq-runtime|rocq-runtime.9.0.0|conf-linux-libc-dev|no|The Rocq Prover -- Core Binaries and Tools
+rocqide|rocqide.9.0.0|conf-adwaita-icon-theme,conf-findutils|no|The Rocq Prover --- GTK3 IDE
+rpc|rpc.9.0.0|conf-which|no|A library to deal with RPCs in OCaml - meta-package
+rsdd|rsdd.0.1.0|conf-rust-2021|no|Bindings for RSDD
+samplerate|samplerate.0.1.6|conf-pkg-config,conf-samplerate|no|Samplerate audio conversion library
+satyrographos|satyrographos.0.0.2.13|conf-diffutils|no|A package manager for SATySFi
+scrypt|scrypt.0.2.1|conf-libssl|no|synopsis:
+secp256k1-internal|secp256k1-internal.0.4.0|conf-gmp,conf-pkg-config|no|synopsis:
+secp256k1|secp256k1.0.4.4|conf-secp256k1|no|Elliptic curve library secp256k1 wrapper for Ocaml
+serde|serde.0.0.2|conf-jq|no|A serialization framework for OCaml
+serde_derive|serde_derive.0.0.2|conf-jq|no|Derive-macros for the Serde serialization framework
+setcore|setcore.1.0.2|conf-autoconf|no|Pin current process to given core number
+sfml|sfml.0.09.2|conf-sfml2|no|Bindings to the SFML multimedia library
+shine|shine.0.2.3|conf-shine|no|Fixed-point MP3 encoder
+snappy|snappy.0.1.2|conf-snappy|no|Bindings to snappy - fast compression/decompression library
+socketcan|socketcan.0.8.12-0|conf-linux-libc-dev|no|socketcan
+sodium|sodium.0.6.0|conf-libsodium|no|Binding to libsodium UNAUDITED
+solo5-bindings-hvt|solo5-bindings-hvt.0.6.9|conf-libseccomp,conf-pkg-config|yes|Solo5 sandboxed execution environment (hvt target)
+solo5-bindings-muen|solo5-bindings-muen.0.6.9|conf-libseccomp,conf-pkg-config|no|Solo5 sandboxed execution environment (muen target)
+solo5-bindings-spt|solo5-bindings-spt.0.6.9|conf-libseccomp,conf-pkg-config|yes|Solo5 sandboxed execution environment (spt target)
+solo5-bindings-virtio|solo5-bindings-virtio.0.6.9|conf-libseccomp,conf-pkg-config|no|Solo5 sandboxed execution environment (virtio target)
+solo5-bindings-xen|solo5-bindings-xen.0.6.9|conf-libseccomp,conf-pkg-config|no|Solo5 sandboxed execution environment (xen target)
+solo5-cross-aarch64|solo5-cross-aarch64.0.9.1|conf-libseccomp,conf-pkg-config|yes|Solo5 sandboxed execution environment
+solo5-kernel-muen|solo5-kernel-muen.0.3.1|conf-pkg-config|no|Solo5 sandboxed execution environment (muen target)
+solo5-kernel-ukvm|solo5-kernel-ukvm.0.3.1|conf-pkg-config|yes|Solo5 sandboxed execution environment (ukvm target)
+solo5-kernel-virtio|solo5-kernel-virtio.0.3.1|conf-pkg-config|no|Solo5 sandboxed execution environment (virtio target)
+solo5|solo5.0.9.1|conf-libseccomp,conf-pkg-config|yes|Solo5 sandboxed execution environment
+soundtouch|soundtouch.0.1.9|conf-pkg-config,conf-soundtouch|no|synopsis:
+spatial-shell|spatial-shell.6|conf-scdoc|no|synopsis:
+speex|speex.1.0.0|conf-libogg,conf-libspeex,conf-pkg-config|no|Bindings to libspeex
+sqlite3|sqlite3.5.3.1|conf-sqlite3|no|SQLite3 bindings for OCaml
+squirrel|squirrel.0.1|conf-which|no|The Squirrel Prover is a proof assistant for protocols, based on first-order logic and provides guarantees in the computational model
+srt|srt.0.3.3|conf-pkg-config,conf-srt|no|Binding for the Secure, Reliable, Transport protocol library
+ssl|ssl.0.7.0|conf-libssl|no|Bindings for OpenSSL
+stdcompat|stdcompat.20.1|conf-autoconf|no|Compatibility module for OCaml standard library
+styled-ppx|styled-ppx.0.59.1|conf-npm|yes|Type-safe styled components for ReScript and Melange
+sundialsml|sundialsml.6.1.1p1|conf-sundials|no|Interface to the Sundials suite of numerical solvers
+svmwrap|svmwrap.5.1.1|conf-gnuplot,conf-libsvm-tools|no|Wrapper on top of libsvm-tools
+swipl|swipl.0.5|conf-swi-prolog|no|Bindings to SWI-Prolog for OCaml
+taglib|taglib.0.3.10|conf-taglib|no|Bindings for the taglib library
+tensorflow|tensorflow.0.0.11|conf-wget|no|TensorFlow bindings for OCaml
+tezos-rust-libs|tezos-rust-libs.1.7|conf-rust-2021|no|Tezos: all rust dependencies and their dependencies
+tezos-sapling|tezos-sapling.17.3|conf-rust|no|OCaml library for the Sapling protocol, using librustzcash
+tezos-stdlib-unix|tezos-stdlib-unix.17.3|conf-libev|no|Tezos: yet-another local-extension of the OCaml standard library (unix-specific fragment)
+tezt|tezt.4.2.0|conf-npm|no|Test framework for unit tests, integration tests, and regression tests
+theora|theora.1.0.0|conf-libtheora,conf-pkg-config|no|Bindings to libtheora
+tidy|tidy.5.6-0.1|conf-tidy|no|Bindings for libtidy5 -- HTML/XML syntax checker and reformatter
+timmy-jsoo|timmy-jsoo.1.1.5|conf-npm|no|Js_of_ocaml bindings for Timmy
+timmy-unix|timmy-unix.1.1.5|conf-tzdata|no|Unix clock implementation for Timmy
+tiny_httpd|tiny_httpd.0.19|conf-libcurl|no|Minimal HTTP server using threads
+topiary|topiary.0.6.0|conf-rust-2021|no|A formatter for OCaml based on the Topiary universal formatting engine
+trexio|trexio.2.2.0|conf-pkg-config,conf-trexio|no|Binding for the TREXIO Input/Output library
+tsdl-image|tsdl-image.0.6|conf-sdl2-image|no|SDL2_Image bindings to go with Tsdl
+tsdl-mixer|tsdl-mixer.0.6|conf-sdl2-mixer|no|SDL2_Mixer bindings to go with Tsdl
+tsdl-ttf|tsdl-ttf.0.6|conf-sdl2-ttf|no|SDL2_Ttf bindings to go with Tsdl
+tsdl|tsdl.1.1.0|conf-sdl2|no|Thin bindings to SDL for OCaml
+tuareg|tuareg.3.0.1|conf-emacs|no|OCaml mode for GNU Emacs
+unisim_archisec|unisim_archisec.0.0.10|conf-g++,conf-gcc|no|UNISIM-VP DBA decoder
+uring-trace|uring-trace.0.1.0|conf-bpftool,conf-liburing|no|IO-uring tracing tool using eBPF probes
+usb|usb.1.3.1|conf-pkg-config|yes|OCaml bindings for libusb-1.0
+uwt|uwt.0.3.3|conf-pkg-config|no|libuv bindings
+voaacenc|voaacenc.0.1.1|conf-pkg-config|yes|synopsis:
+volt|volt.1.4|conf-which|no|Volt is a variant of Bolt OCaml Logging Tool
+vorbis|vorbis.1.0.0|conf-libvorbis,conf-pkg-config|no|Bindings to libvorbis
+wall|wall.0.4.1|conf-gles2|no|Realtime Vector Graphics with OpenGL
+waylaunch|waylaunch.0.3.0|conf-cairo,conf-libwayland,conf-pango,conf-pkg-config,conf-wayland-protocols,conf-xkbcommon|no|Waylaunch is a program launcher for Wayland
+why3-coq|why3-coq.1.8.0|conf-autoconf|no|Why3 environment for deductive program verification
+why3-ide|why3-ide.1.8.0|conf-autoconf|no|Why3 environment for deductive program verification
+why3|why3.1.8.0|conf-autoconf|no|Why3 environment for deductive program verification
+wxOCaml|wxOCaml.1.0.1|conf-wxwidgets|no|OCaml bindings to the wxWidgets graphical library
+wyrd|wyrd.1.4.6|conf-autoconf,conf-ncurses|no|synopsis:
+x86_64-esperanto|x86_64-esperanto.0.0.6|conf-which|no|An OCaml compiler with Cosmopolitan
+xedbindings|xedbindings.0.9|conf-python-3|no|Bindings to Intel XED
+xen-evtchn-unix|xen-evtchn-unix.2.1.0|conf-xen|no|Xen event channel interface for Linux
+xen-gnt-unix|xen-gnt-unix.4.0.2|conf-xen|no|Xen grant table bindings for OCaml
+xkbcommon|xkbcommon.0.1|conf-xkbcommon|no|OCaml bindings to libxkbcommon
+xxhash|xxhash.0.1|conf-xxhash|no|Bindings for xxHash, an extremely fast hash algorithm
+yices2|yices2.0.0.3|conf-gmp|no|Yices2 SMT solver binding
+z3|z3.4.14.1|conf-c++,conf-python-3|yes|Z3 solver
+z3_tptp|z3_tptp.4.11.2|conf-g++|no|TPTP front end for Z3 solver
+zarith-freestanding|zarith-freestanding.1.12|conf-pkg-config|no|synopsis:
+zarith|zarith.1.14|conf-gmp,conf-pkg-config|no|synopsis:
+zlib|zlib.0.8|conf-zlib|no|Bindings to the zlib compression library
+zmq|zmq.5.3.0|conf-zmq|no|OCaml bindings for ZeroMQ 4.x
+zstandard|zstandard.v0.17.0|conf-zstd|no|OCaml bindings to Zstandard
+zstd|zstd.0.4|conf-zstd|no|Bindings to zstd compression library

@@ -203,8 +203,9 @@ let z3_pkg_example () = List (mk_z3_pkg_example ())
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   match Stdlib.Sys.argv.(1) with
-  | "canary" -> Canary.run (Canary_basic.detect_distro ())
-  | "canary_local" -> Canary.run_local (detect_distro ())
+  | "canary" -> Canary_run.run (Canary_basic.detect_distro ())
+  | "canary_local" -> Canary_run.run_local (detect_distro ())
+  | "canary_dump" -> Canary_run.dump (detect_distro ())
   | "z3_1" -> interp z3_opam_pkg_example
   | "z3_src" -> interp (z3_src_example ())
   | "z3_pkg" -> interp (z3_pkg_example ())

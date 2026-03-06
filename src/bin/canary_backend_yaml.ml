@@ -1,9 +1,9 @@
 open Base
 open Canary_basic
 
-let render_stage_guard = function
-  | Guard_runner_os Ubuntu -> "runner.os == 'Linux'"
-  | Guard_runner_os MacOS -> "runner.os == 'macOS'"
+let render_step_guard = function
+  | On_runner_os Ubuntu -> "runner.os == 'Linux'"
+  | On_runner_os MacOS -> "runner.os == 'macOS'"
 
 let render_preamble_action { name; uses; with_fields } =
   let name_lines =
@@ -22,23 +22,23 @@ let render_preamble_action { name; uses; with_fields } =
   in
   String.concat ~sep:"\n" (name_lines @ uses_line @ with_lines)
 
-let render_step (stage : string step) =
-      let base = [ "      - name: " ^ stage.name ] in
+let render_step (step : string step) =
+      let base = [ "      - name: " ^ step.name ] in
       let if_lines =
-        match stage.guard with
-        | Some guard -> [ "        if: " ^ render_stage_guard guard ]
+        match step.guard with
+        | Some guard -> [ "        if: " ^ render_step_guard guard ]
         | None -> []
       in
       let shell_lines =
-        match stage.shell with Some s -> [ "        shell: " ^ s ] | None -> []
+        match step.shell with Some s -> [ "        shell: " ^ s ] | None -> []
       in
       let env_lines =
-        if List.is_empty stage.env_fields then []
+        if List.is_empty step.env_fields then []
         else
           [ "        env:" ]
-          @ List.map stage.env_fields ~f:(fun (k, v) -> "          " ^ k ^ ": " ^ v)
+          @ List.map step.env_fields ~f:(fun (k, v) -> "          " ^ k ^ ": " ^ v)
       in
-      let run = stage.action in
+      let run = step.action in
       let run_lines =
         if multiline run then [ "        run: |"; indent_block 10 run ]
         else [ "        run: " ^ run ]

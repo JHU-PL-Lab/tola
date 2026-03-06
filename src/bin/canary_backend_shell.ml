@@ -2,13 +2,13 @@ open Base
 open Canary_basic
 
 let guard_matches ~runner_os = function
-  | Guard_runner_os os -> Poly.( = ) os runner_os
+  | On_runner_os os -> Poly.( = ) os runner_os
 
-let render_step ~runner_os (stage : string step) =
-  if Option.value_map stage.guard ~default:true ~f:(guard_matches ~runner_os)
+let render_step ~runner_os (step : string step) =
+  if Option.value_map step.guard ~default:true ~f:(guard_matches ~runner_os)
   then
-    let body = stage.action in
-    let header = [%string "# Step: %{stage.name}"] in
+    let body = step.action in
+    let header = [%string "# Step: %{step.name}"] in
     Some
       (String.concat ~sep:"\n"
          [
@@ -29,11 +29,9 @@ let render_job ~runner_os (job : string job) =
   in
   String.concat ~sep:"\n\n" lines
 
-let render_script ?(preamble_lines = []) ~runner_os
-    (jobs : string job list) =
+let render_script ?(preamble_lines = []) ~runner_os (jobs : string job list) =
   let jobs_str =
-    List.map jobs ~f:(render_job ~runner_os)
-    |> String.concat ~sep:"\n\n"
+    List.map jobs ~f:(render_job ~runner_os) |> String.concat ~sep:"\n\n"
   in
   String.concat ~sep:"\n"
     ([ "#!/usr/bin/env bash"; "set -euo pipefail" ]

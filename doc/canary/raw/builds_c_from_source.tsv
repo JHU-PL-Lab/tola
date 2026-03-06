@@ -1,0 +1,30 @@
+binaryen-bin|binaryen-bin.119|conf-c++,conf-cmake,conf-ninja|Compiler and toolchain infrastructure library for WebAssembly
+bitwuzla-bin|bitwuzla-bin.1.0.0|conf-cmake,conf-g++,conf-gcc,conf-git,conf-gmp|Bitwuzla SMT solver executable
+bitwuzla-c|bitwuzla-c.1.0.5|conf-g++,conf-gcc,conf-git,conf-gmp|SMT solver for AUFBVFP (C API)
+bitwuzla-cxx|bitwuzla-cxx.0.6.1|conf-g++,conf-gcc,conf-git|SMT solver for AUFBVFP (C++ API)
+class_group_vdf|class_group_vdf.0.0.5|conf-g++,conf-gmp,conf-pkg-config|Verifiable Delay Functions bindings to Chia's VDF
+csdp|csdp.6.2.0|conf-gcc,conf-lapack,conf-openblas|Solver for semidefinite programming problems
+cvc5|cvc5.1.2.0|conf-cmake,conf-g++,conf-gcc,conf-gmp,conf-python-3,conf-python-3-dev,conf-python3-pyparsing,conf-python3-tomli|OCaml bindings for the cvc5 SMT solver
+eprover|eprover.3.1|conf-gcc|E Theorem Prover
+farmhash|farmhash.0.4|conf-c++|Bindings for Google's farmhash library
+frama-clang|frama-clang.0.0.17|conf-clang,conf-cmake,conf-libclang,conf-llvm|Frama-C plug-in based on Clang for parsing C++ files
+gappa|gappa.1.4.1|conf-autoconf,conf-automake,conf-bison,conf-boost,conf-flex,conf-g++,conf-gmp,conf-mpfr|Tool intended for formally proving properties on numerical programs dealing with floating-point or fixed-point arithmetic
+gmp-ecm|gmp-ecm.7.0.3|conf-autoconf,conf-automake,conf-g++,conf-gmp,conf-libtool|GMP-ECM library for the Elliptic Curve Method (ECM) for integer factorization
+goblint-cil|goblint-cil.2.0.6|conf-gcc,conf-perl|synopsis:
+goblint|goblint.2.5.0|conf-gcc,conf-gmp,conf-ruby|Static analysis framework for C
+hacl-star-raw|hacl-star-raw.0.7.2|conf-cmake,conf-which|Auto-generated low-level OCaml bindings for EverCrypt/HACL*
+hdr_histogram|hdr_histogram.0.0.4|conf-cmake,conf-pkg-config,conf-zlib|OCaml bindings to Hdr Histogram
+imguiml|imguiml.v1.90.6|conf-cmake,conf-glew,conf-glfw3|ImGUI bindings to OCaml
+libbinaryen|libbinaryen.121.0.0|conf-cmake|Libbinaryen packaged for OCaml
+liblinear|liblinear.2.47|conf-g++,conf-gcc|User-space installer for liblinear
+libnlopt|libnlopt.2.7.1|conf-cmake|User-space installer for the NLopt library
+libsvm_tools|libsvm_tools.3.35|conf-g++,conf-gcc|User-space installer for libsvm's tools
+llvm|llvm.18-static|conf-cmake,conf-llvm-static|The OCaml bindings distributed with LLVM
+mariadb|mariadb.1.2.0|conf-gcc,conf-mariadb|OCaml bindings for MariaDB
+mccs|mccs.1.1+19|conf-c++|"\
+ocsfml|ocsfml.2.0|conf-boost,conf-cmake,conf-sfml2|Binding to the C++ SFML gaming library.
+oranger|oranger.4.3.5|conf-cmake,conf-gnuplot|OCaml wrapper for the ranger (C++) random forests implementation
+re2|re2.v0.17.0|conf-g++|OCaml bindings for RE2, Google's regular expression library
+unisim_archisec|unisim_archisec.0.0.10|conf-g++,conf-gcc|UNISIM-VP DBA decoder
+z3|z3.4.14.1|conf-c++,conf-python-3|Z3 solver
+z3_tptp|z3_tptp.4.11.2|conf-g++|TPTP front end for Z3 solver

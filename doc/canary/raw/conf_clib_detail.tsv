@@ -1,0 +1,205 @@
+conf-allegro5|conf-allegro5.1|pkgcfg=yes|deb=|brew=allegro|Virtual package relying on Allegro 5 development libraries
+conf-alsa|conf-alsa.1|pkgcfg=yes|deb=libasound2-dev|brew=|Virtual package relying on alsa
+conf-antic|conf-antic.1|pkgcfg=no|deb=libantic-dev|brew=|Virtual package relying on a Antic lib system installation
+conf-ao|conf-ao.1|pkgcfg=yes|deb=libao-dev|brew=libao|Virtual package relying on libao
+conf-arb|conf-arb.1|pkgcfg=no|deb=libflint-arb-dev|brew=|Virtual package relying on a Arb lib system installation
+conf-assimp|conf-assimp.1|pkgcfg=no|deb=assimp-utils|brew=assimp|Check if assimp (Open Asset Import Library) is installed
+conf-automake|conf-automake.1|pkgcfg=no|deb=|brew=|Virtual package relying on GNU automake
+conf-bap-llvm|conf-bap-llvm.1.8|pkgcfg=no|deb=|brew=llvm@9|Checks that supported version of LLVM is installed
+conf-bison|conf-bison.2|pkgcfg=no|deb=|brew=bison|Virtual package relying on GNU bison
+conf-blas|conf-blas.1|pkgcfg=no|deb=libblas-dev|brew=|Virtual package for BLAS configuration
+conf-bluetooth|conf-bluetooth.1|pkgcfg=no|deb=libbluetooth-dev|brew=|Virtual package for Bluetooth library
+conf-bmake|conf-bmake.1.0|pkgcfg=no|deb=bmake|brew=bmake|Virtual package relying on a BSD Make compatible program
+conf-boost|conf-boost.1|pkgcfg=no|deb=libboost-dev|brew=boost|Virtual package relying on boost
+conf-brotli|conf-brotli.0.0.1|pkgcfg=yes|deb=libbrotli-dev|brew=brotli|Virtual package relying on a brotli system installation
+conf-cairo|conf-cairo.1|pkgcfg=yes|deb=libcairo2-dev|brew=|Virtual package relying on a Cairo system installation
+conf-calcium|conf-calcium.1|pkgcfg=no|deb=libcalcium-dev|brew=|Virtual package relying on a Calcium lib system installation
+conf-capnproto|conf-capnproto.2|pkgcfg=no|deb=capnproto|brew=capnp|Virtual package relying on captnproto installation
+conf-dbm|conf-dbm.1.0.0|pkgcfg=no|deb=libgdbm-dev|brew=|Virtual package relying on gdbm
+conf-dssi|conf-dssi.1|pkgcfg=no|deb=dssi-dev|brew=drfill/liquidsoap/libdssi|Virtual package relying on dssi
+conf-efl|conf-efl.1.8|pkgcfg=yes|deb=libefl-all-dev|brew=efl|Virtual package relying on the EFL system installation
+conf-expat|conf-expat.1|pkgcfg=yes|deb=libexpat1-dev|brew=expat|Virtual package relying on an expat system installation
+conf-faad|conf-faad.1|pkgcfg=yes|deb=libfaad-dev|brew=faad2|Virtual package relying on libfaad
+conf-fdkaac|conf-fdkaac.1|pkgcfg=yes|deb=libfdk-aac-dev|brew=fdk-aac|Virtual package relying on fdk-aac
+conf-ffmpeg|conf-ffmpeg.1|pkgcfg=yes|deb=libavutil-dev|brew=ffmpeg|Virtual package relying on FFmpeg
+conf-fftw3|conf-fftw3.1|pkgcfg=yes|deb=libfftw3-dev|brew=fftw|Virtual package relying on a FFTW3 lib system installation
+conf-flex|conf-flex.2|pkgcfg=no|deb=|brew=flex|Virtual package relying on GNU flex
+conf-flint|conf-flint.3.0|pkgcfg=no|deb=|brew=|Virtual package relying on a Flint lib system installation
+conf-freeglut|conf-freeglut.1|pkgcfg=yes|deb=freeglut3-dev|brew=|Virtual package relying on a FreeGLUT system installation
+conf-freetype|conf-freetype.1|pkgcfg=yes|deb=libfreetype6-dev|brew=freetype|Virtual package relying on a freetype lib system installation
+conf-frei0r|conf-frei0r.1|pkgcfg=yes|deb=frei0r-plugins-dev|brew=frei0r|Virtual package relying on frei0r
+conf-fswatch|conf-fswatch.11-0.1.3|pkgcfg=no|deb=libfswatch-dev|brew=sh|Virtual package relying on libfswatch installation
+conf-ftgl|conf-ftgl.1|pkgcfg=yes|deb=libftgl-dev|brew=|Virtual package relying on an ftgl system installation
+conf-fts|conf-fts.1|pkgcfg=no|deb=|brew=|Virtual package relying on the fts.h header
+conf-gd|conf-gd.1|pkgcfg=yes|deb=libgd-dev|brew=gd|Virtual package relying on a libgd system installation
+conf-glade|conf-glade.2|pkgcfg=yes|deb=libglade2-dev|brew=|Virtual package relying on a libglade system installation
+conf-gles2|conf-gles2.1|pkgcfg=yes|deb=libgles2-mesa-dev|brew=|Virtual package relying on a OpenGL ES 2 system installation
+conf-glew|conf-glew.1|pkgcfg=yes|deb=libglew-dev|brew=glew|Virtual package relying on a GLEW system installation
+conf-glfw3|conf-glfw3.2|pkgcfg=yes|deb=libglfw3-dev|brew=glfw|Virtual package relying on a GLFW3 system installation
+conf-glib-2|conf-glib-2.1|pkgcfg=yes|deb=libglib2.0-dev|brew=glib|Virtual package relying on a system GLib 2 installation
+conf-glpk|conf-glpk.1|pkgcfg=no|deb=libglpk-dev|brew=cc|Virtual package for GLPK (GNU Linear Programming Kit)
+conf-gmp|conf-gmp.5|pkgcfg=yes|deb=libgmp-dev|brew=gmp|Virtual package relying on a GMP lib system installation
+conf-gmp-paths|conf-gmp-paths.1|pkgcfg=no|deb=libgmp-dev|brew=|Virtual package relying on a GMP lib system installation
+conf-gnome-icon-theme3|conf-gnome-icon-theme3.0|pkgcfg=yes|deb=gnome-icon-theme|brew=|Virtual package relying on gnome-icon-theme
+conf-gnomecanvas|conf-gnomecanvas.2|pkgcfg=yes|deb=libgnomecanvas2-dev|brew=libgnomecanvas|Virtual package relying on a Gnomecanvas system installation
+conf-gnustep-base|conf-gnustep-base.1|pkgcfg=no|deb=|brew=|Virtual package relying on gnustep-base lib system installation
+conf-gnutls|conf-gnutls.1|pkgcfg=yes|deb=libgnutls28-dev|brew=gnutls|Virtual package relying on a gnutls system installation
+conf-gobject-introspection|conf-gobject-introspection.1.0|pkgcfg=yes|deb=libgirepository1.0-dev|brew=gobject-introspection|Virtual package relying on a system gobject-introspection installation
+conf-goocanvas2|conf-goocanvas2.0|pkgcfg=yes|deb=libgoocanvas-2.0-dev|brew=goocanvas|Virtual package relying on a Goocanvas-2 system installation
+conf-gpiod|conf-gpiod.1|pkgcfg=yes|deb=|brew=|C libgpiod library for GPIO on recent (>4.8) Linux kernels
+conf-gsl|conf-gsl.2|pkgcfg=yes|deb=libgsl-dev|brew=gsl|Virtual package relying on a GSL lib system installation
+conf-gssapi|conf-gssapi.1|pkgcfg=yes|deb=libkrb5-dev|brew=|Virtual package relying on a krb5-gssapi system installation
+conf-gstreamer|conf-gstreamer.1|pkgcfg=yes|deb=|brew=|Virtual package relying on libgstreamer
+conf-gtk2|conf-gtk2.1|pkgcfg=yes|deb=libgtk2.0-dev|brew=gtk+|Virtual package relying on gtk2
+conf-gtk3|conf-gtk3.18|pkgcfg=yes|deb=libgtk-3-dev|brew=gtk+3|Virtual package relying on GTK+ 3
+conf-gtksourceview|conf-gtksourceview.2|pkgcfg=yes|deb=libgtksourceview2.0-dev|brew=gtksourceview|Virtual package relying on a GtkSourceView system installation
+conf-gtksourceview3|conf-gtksourceview3.0+2|pkgcfg=yes|deb=libgtksourceview-3.0-dev|brew=gtksourceview3|Virtual package relying on a GtkSourceView-3 system installation
+conf-guile|conf-guile.1|pkgcfg=yes|deb=guile-3.0-dev|brew=guile|Virtual package relying on an GNU Guile system installation
+conf-hidapi|conf-hidapi.0|pkgcfg=yes|deb=libhidapi-dev|brew=hidapi|Virtual package relying on a hidapi system installation
+conf-jack|conf-jack.1|pkgcfg=yes|deb=libjack-dev|brew=jack|Virtual package relying on jack
+conf-ladspa|conf-ladspa.1|pkgcfg=no|deb=ladspa-sdk|brew=|Virtual package relying on ladspa
+conf-lame|conf-lame.1|pkgcfg=no|deb=libmp3lame-dev|brew=lame|Virtual package relying on lame
+conf-lapack|conf-lapack.1|pkgcfg=no|deb=liblapack-dev|brew=|Virtual package for LAPACK configuration
+conf-leveldb|conf-leveldb.2|pkgcfg=no|deb=libleveldb-dev|brew=leveldb|Virtual package relying on a LevelDB lib system installation
+conf-libMagickCore|conf-libMagickCore.1|pkgcfg=yes|deb=libmagickcore-dev|brew=imagemagick|Virtual package relying on an ImageMagick system installation
+conf-libX11|conf-libX11.1|pkgcfg=yes|deb=libx11-dev|brew=xquartz|Virtual package relying on an Xlib system installation
+conf-libXft|conf-libXft.1|pkgcfg=yes|deb=libxft-dev|brew=xquartz|Virtual package relying on an Xft system installation
+conf-libblake3|conf-libblake3.1.5.1|pkgcfg=yes|deb=|brew=blake3|Virtual package relying on libblake3
+conf-libbpf|conf-libbpf.0.1.0|pkgcfg=no|deb=|brew=|Virtual package for system installation of libbpf
+conf-libbz2|conf-libbz2.1|pkgcfg=no|deb=libbz2-dev|brew=bzip2|Virtual package relying on libbz2
+conf-libclang|conf-libclang.15|pkgcfg=no|deb=|brew=llvm@15|Virtual package relying on the installation of llvm and clang libraries (<= 15.0.x)
+conf-libcorosync|conf-libcorosync.3|pkgcfg=yes|deb=libcfg-dev|brew=|Virtual package relying on libcorosync system installation
+conf-libcurl|conf-libcurl.2|pkgcfg=no|deb=libcurl4-gnutls-dev|brew=curl|Virtual package relying on a libcurl system installation
+conf-libdw|conf-libdw.1|pkgcfg=yes|deb=libdw-dev|brew=|Virtual package relying on libdw
+conf-libev|conf-libev.4-12|pkgcfg=no|deb=libev-dev|brew=libev|High-performance event loop/event model with lots of features
+conf-libevent|conf-libevent.1|pkgcfg=yes|deb=libevent-dev|brew=libevent|Virtual package relying on libevent
+conf-libffi|conf-libffi.2.0.0|pkgcfg=yes|deb=libffi-dev|brew=libffi|Virtual package relying on libffi system installation
+conf-libflac|conf-libflac.1|pkgcfg=yes|deb=libflac-dev|brew=flac|Virtual package relying on libFLAC
+conf-libfontconfig|conf-libfontconfig.1|pkgcfg=yes|deb=libfontconfig1-dev|brew=fontconfig|Virtual package relying on fontconfig
+conf-libfuse|conf-libfuse.1|pkgcfg=yes|deb=libfuse-dev|brew=macfuse|Virtual package relying on FUSE
+conf-libgccjit|conf-libgccjit.1|pkgcfg=no|deb=|brew=|Virtual package relying on a libgccjit system installation
+conf-libgif|conf-libgif.1|pkgcfg=no|deb=libgif-dev|brew=giflib|Virtual package relying on a libgif system installation
+conf-libgl|conf-libgl.1|pkgcfg=yes|deb=mesa-common-dev|brew=|Virtual package relying on a OpenGL system installation
+conf-libglu|conf-libglu.1|pkgcfg=yes|deb=libglu1-mesa-dev|brew=|Virtual package relying on a libGLU system installation
+conf-libgsasl|conf-libgsasl.1|pkgcfg=yes|deb=libgsasl7-dev|brew=gsasl|Virtual package relying on a GSASL lib system installation
+conf-libjpeg|conf-libjpeg.1|pkgcfg=yes|deb=libjpeg-dev|brew=jpeg-turbo|Virtual package relying on a libjpeg system installation
+conf-liblo|conf-liblo.1|pkgcfg=no|deb=liblo-dev|brew=liblo|Virtual package relying on liblo
+conf-liblz4|conf-liblz4.1|pkgcfg=yes|deb=liblz4-dev|brew=lz4|Virtual package relying on liblz4 system installation
+conf-liblzma|conf-liblzma.1|pkgcfg=yes|deb=liblzma-dev|brew=xz|Virtual package relying on liblzma
+conf-libmagic|conf-libmagic.1|pkgcfg=no|deb=libmagic-dev|brew=libmagic|Virtual package relying on a libmagic system installation
+conf-libmaxminddb|conf-libmaxminddb.1|pkgcfg=yes|deb=libmaxminddb-dev|brew=libmaxminddb|Virtual package relying on a libmaxminddb system installation
+conf-libmd|conf-libmd.1.0.0|pkgcfg=yes|deb=libmd-dev|brew=libmd|Virtual package relying on libmd
+conf-libmosquitto|conf-libmosquitto.1|pkgcfg=yes|deb=libmosquitto-dev|brew=mosquitto|Virtual package relying on a libmosquitto system installation
+conf-libmpg123|conf-libmpg123.1|pkgcfg=yes|deb=libmpg123-dev|brew=mpg123|Virtual package relying on libmpg123
+conf-libnl3|conf-libnl3.1|pkgcfg=yes|deb=libnl-3-dev|brew=|Virtual package relying on a libnl system installation
+conf-libobjc2|conf-libobjc2.1|pkgcfg=no|deb=|brew=|Virtual package relying on libobjc2 lib system installation
+conf-libogg|conf-libogg.1|pkgcfg=yes|deb=libogg-dev|brew=libogg|Virtual package relying on libogg
+conf-libopus|conf-libopus.1|pkgcfg=yes|deb=libopus-dev|brew=libopusenc|Virtual package relying on libopus
+conf-libpcre|conf-libpcre.2|pkgcfg=yes|deb=libpcre3-dev|brew=pcre|Virtual package relying on a libpcre system installation
+conf-libpcre2-8|conf-libpcre2-8.2|pkgcfg=yes|deb=libpcre2-dev|brew=pcre2|Virtual package relying on a libpcre2 system installation
+conf-libpng|conf-libpng.1|pkgcfg=yes|deb=libpng-dev|brew=libpng|Virtual package relying on a libpng system installation
+conf-libportmidi|conf-libportmidi.1|pkgcfg=yes|deb=libportmidi-dev|brew=portmidi|Virtual package relying on libportmidi
+conf-librsvg2|conf-librsvg2.0|pkgcfg=yes|deb=librsvg2-dev|brew=librsvg|Virtual package relying on Librsvg2 system installation
+conf-libseccomp|conf-libseccomp.1|pkgcfg=yes|deb=libseccomp-dev|brew=|Virtual package relying on a libseccomp system installation
+conf-libsodium|conf-libsodium.1|pkgcfg=yes|deb=libsodium-dev|brew=libsodium|Virtual package relying on a libsodium system installation
+conf-libspeex|conf-libspeex.1|pkgcfg=yes|deb=libspeex-dev|brew=speex|Virtual package relying on libspeex
+conf-libssl|conf-libssl.4|pkgcfg=yes|deb=libssl-dev|brew=|Virtual package relying on an OpenSSL library system installation
+conf-libsvm|conf-libsvm.3|pkgcfg=no|deb=libsvm-dev|brew=sh|Virtual package relying on libsvm library installation
+conf-libtheora|conf-libtheora.1|pkgcfg=yes|deb=libtheora-dev|brew=theora|Virtual package relying on libtheora
+conf-libtool|conf-libtool.1|pkgcfg=no|deb=libtool|brew=libtool|Virtual package relying on libtool installation
+conf-libudev|conf-libudev.1|pkgcfg=yes|deb=libudev-dev|brew=|Virtual package relying on a libudev system installation
+conf-liburing|conf-liburing.0.1.0|pkgcfg=no|deb=|brew=|Virtual package for system installation of liburing
+conf-libuv|conf-libuv.1|pkgcfg=yes|deb=libuv1-dev|brew=libuv|Virtual package relying on a libuv system installation
+conf-libvorbis|conf-libvorbis.1|pkgcfg=yes|deb=libvorbis-dev|brew=libvorbis|Virtual package relying on libvorbis
+conf-libwayland|conf-libwayland.1|pkgcfg=yes|deb=libwayland-dev|brew=|Virtual package relying on libwayland
+conf-libxcb|conf-libxcb.1|pkgcfg=yes|deb=libxcb1-dev|brew=libxcb|Virtual package relying on xcb
+conf-libxcb-image|conf-libxcb-image.1|pkgcfg=yes|deb=libxcb-image0-dev|brew=xcb-util-image|Virtual package relying on xcb-image
+conf-libxcb-keysyms|conf-libxcb-keysyms.1|pkgcfg=yes|deb=libxcb-keysyms1-dev|brew=xcb-util-keysyms|Virtual package relying on xcb-shm
+conf-libxcb-shm|conf-libxcb-shm.1|pkgcfg=yes|deb=libxcb-shm0-dev|brew=libxcb|Virtual package relying on xcb-shm
+conf-libxcb-xkb|conf-libxcb-xkb.1|pkgcfg=yes|deb=libxcb-xkb-dev|brew=libxcb|Virtual package relying on xcb-xkb
+conf-libxcursor|conf-libxcursor.1|pkgcfg=yes|deb=libxcursor-dev|brew=libxcursor|Virtual package relying on an libXcursor system installation
+conf-libxi|conf-libxi.1|pkgcfg=yes|deb=libxi-dev|brew=libxi|Virtual package relying on an libXi system installation
+conf-libxinerama|conf-libxinerama.1|pkgcfg=yes|deb=libxinerama-dev|brew=libxinerama|Virtual package relying on an libXinerama system installation
+conf-libxrandr|conf-libxrandr.1|pkgcfg=yes|deb=libxrandr-dev|brew=libxrandr|Virtual package relying on an libXRandR system installation
+conf-lilv|conf-lilv.1|pkgcfg=no|deb=liblilv-dev|brew=lilv|Virtual package relying on lilv
+conf-linux-libc-dev|conf-linux-libc-dev.0|pkgcfg=no|deb=linux-libc-dev|brew=|synopsis:
+conf-lldb|conf-lldb.3.5|pkgcfg=no|deb=liblldb-3.5-dev|brew=|synopsis:
+conf-llvm|conf-llvm.17|pkgcfg=no|deb=llvm-17-dev|brew=llvm@17|Virtual package relying on llvm library installation
+conf-llvm-shared|conf-llvm-shared.18|pkgcfg=no|deb=llvm-18-dev|brew=llvm@18|Virtual package relying on llvm shared library installation
+conf-llvm-static|conf-llvm-static.18|pkgcfg=no|deb=llvm-18-dev|brew=llvm@18|Virtual package relying on llvm static library installation
+conf-lua|conf-lua.1|pkgcfg=yes|deb=liblua5.2-dev|brew=|Virtual package relying on a Lua system installation
+conf-mad|conf-mad.2|pkgcfg=yes|deb=libmad0-dev|brew=mad|Virtual package relying on mad
+conf-mariadb|conf-mariadb.2|pkgcfg=yes|deb=libmariadb-dev|brew=mariadb-connector-c|synopsis:
+conf-mbedtls|conf-mbedtls.2|pkgcfg=no|deb=libmbedtls-dev|brew=cc|Virtual package relying on an mbedtls system installation
+conf-mecab|conf-mecab.0.996|pkgcfg=no|deb=mecab|brew=mecab|Virtual package relying on MeCab library installation
+conf-mesa|conf-mesa.1|pkgcfg=yes|deb=libgl1-mesa-dev|brew=mesa|Virtual package relying on an mesa system installation
+conf-mpfr|conf-mpfr.3|pkgcfg=yes|deb=libmpfr-dev|brew=mpfr|Virtual package relying on library MPFR installation
+conf-mpfr-paths|conf-mpfr-paths.1|pkgcfg=no|deb=libmpfr-dev|brew=|Virtual package relying on library MPFR installation
+conf-mpi|conf-mpi.1|pkgcfg=yes|deb=mpi-default-dev|brew=open-mpi|Virtual package relying on a mpi system installation
+conf-mysql|conf-mysql.1|pkgcfg=no|deb=default-libmysqlclient-dev|brew=mysql|Virtual package relying on a libmysqlclient system installation
+conf-nanomsg|conf-nanomsg.0|pkgcfg=yes|deb=libnanomsg-dev|brew=nanomsg|Virtual package relying on a nanomsg system installation
+conf-nauty|conf-nauty.1.0|pkgcfg=yes|deb=libnauty2-dev|brew=nauty|Virtual package relying on nauty
+conf-ncurses|conf-ncurses.1|pkgcfg=yes|deb=ncurses-dev|brew=|Virtual package relying on ncurses
+conf-neko|conf-neko.1|pkgcfg=no|deb=neko|brew=neko|Virtual package relying on a Neko system installation
+conf-netsnmp|conf-netsnmp.1.0.0|pkgcfg=no|deb=libsnmp-dev|brew=|Package relying on net-snmp libs
+conf-nlopt|conf-nlopt.1|pkgcfg=yes|deb=libnlopt-dev|brew=nlopt|Virtual package relying on nlopt
+conf-numa|conf-numa.0.1.0|pkgcfg=no|deb=libnuma-dev|brew=|Package relying on libnuma
+conf-ode|conf-ode.1|pkgcfg=yes|deb=libode-dev|brew=ode|Virtual package relying on a ODE system installation
+conf-oniguruma|conf-oniguruma.1|pkgcfg=yes|deb=libonig-dev|brew=oniguruma|Virtual package relying on an Oniguruma system installation
+conf-openbabel|conf-openbabel.0.1|pkgcfg=yes|deb=libopenbabel-dev|brew=open-babel|Virtual package relying on openbabel library installation
+conf-openblas|conf-openblas.0.2.2|pkgcfg=yes|deb=libopenblas-dev|brew=|Virtual package to install OpenBLAS and LAPACKE
+conf-openimageio|conf-openimageio.1|pkgcfg=yes|deb=libopenimageio-dev|brew=openimageio|Virtual package relying on OpenImageIO development package installation
+conf-openjdk|conf-openjdk.1|pkgcfg=no|deb=default-jdk|brew=openjdk|Virtual package relying on OpenJDK / Javac
+conf-pam|conf-pam.1|pkgcfg=no|deb=libpam0g-dev|brew=|Virtual package relying on a system installation of PAM
+conf-pango|conf-pango.1|pkgcfg=yes|deb=libpango1.0-dev|brew=pango|Virtual package relying on a Pango system installation
+conf-plplot|conf-plplot.1|pkgcfg=yes|deb=libplplot-dev|brew=plplot|Virtual package relying on plplot
+conf-portaudio|conf-portaudio.1|pkgcfg=yes|deb=portaudio19-dev|brew=portaudio|Virtual package relying on portaudio
+conf-postgresql|conf-postgresql.2|pkgcfg=yes|deb=libpq-dev|brew=libpq|Virtual package relying on a PostgreSQL system installation
+conf-ppl|conf-ppl.1|pkgcfg=no|deb=libppl-dev|brew=|synopsis:
+conf-protoc|conf-protoc.4.4.0|pkgcfg=no|deb=libprotobuf-dev|brew=protobuf|Virtual package to install protoc compiler
+conf-protoc-dev|conf-protoc-dev.1.0.0|pkgcfg=yes|deb=libprotoc-dev|brew=protobuf|Virtual package to install protobuf cpp headers
+conf-pulseaudio|conf-pulseaudio.1|pkgcfg=yes|deb=libpulse-dev|brew=pulseaudio|Virtual package relying on pulseaudio
+conf-python-2-7-dev|conf-python-2-7-dev.1.0|pkgcfg=no|deb=python2.7-dev|brew=|synopsis:
+conf-python-3-dev|conf-python-3-dev.1|pkgcfg=no|deb=python3-dev|brew=python3|Virtual package relying on Python 3 development package installation
+conf-qt|conf-qt.5.2.1|pkgcfg=yes|deb=|brew=qt5|Installation of Qt5 using APT packages or from source
+conf-r-mathlib|conf-r-mathlib.1|pkgcfg=yes|deb=r-mathlib|brew=r|synopsis:
+conf-rdkit|conf-rdkit.1|pkgcfg=no|deb=librdkit-dev|brew=|Virtual package relying on rdkit library installation
+conf-readline|conf-readline.1|pkgcfg=no|deb=libreadline-dev|brew=readline|Virtual package relying on a readline system installation
+conf-rocksdb|conf-rocksdb.1|pkgcfg=no|deb=librocksdb-dev|brew=rocksdb|Virtual package relying on a system installation of RocksDB
+conf-rubberband|conf-rubberband.1|pkgcfg=yes|deb=librubberband-dev|brew=pkg-config|Virtual package relying on rubberband
+conf-rust-wasm|conf-rust-wasm.1|pkgcfg=no|deb=libstd-rust-dev-wasm32|brew=|Virtual package relying on an installation of standard Rust libraries including development files, needed to cross-compile Rust programs to the wasm32-unknown-unknown and wasm32-wasip1/wasm32-wasip2 targets
+conf-samplerate|conf-samplerate.1|pkgcfg=yes|deb=libsamplerate0-dev|brew=libsamplerate|Virtual package relying on samplerate
+conf-sdl-gfx|conf-sdl-gfx.1|pkgcfg=yes|deb=libsdl-gfx1.2-dev|brew=sdl_gfx|Virtual package relying on a sdl-gfx system installation
+conf-sdl-image|conf-sdl-image.1|pkgcfg=yes|deb=libsdl-image1.2-dev|brew=sdl_image|Virtual package relying on a sdl-image system installation
+conf-sdl-mixer|conf-sdl-mixer.1|pkgcfg=yes|deb=libsdl-mixer1.2-dev|brew=sdl_mixer|Virtual package relying on a sdl-mixer system installation
+conf-sdl-net|conf-sdl-net.1|pkgcfg=yes|deb=libsdl-net1.2-dev|brew=sdl_net|Virtual package relying on a sdl-net system installation
+conf-sdl-ttf|conf-sdl-ttf.1|pkgcfg=yes|deb=libsdl-ttf2.0-dev|brew=sdl_ttf|Virtual package relying on a sdl-ttf system installation
+conf-sdl2|conf-sdl2.1|pkgcfg=yes|deb=libsdl2-dev|brew=sdl2|Virtual package relying on a SDL2 system installation
+conf-sdl2-image|conf-sdl2-image.1|pkgcfg=yes|deb=libsdl2-image-dev|brew=sdl2_image|Virtual package relying on a sdl2-image system installation
+conf-sdl2-mixer|conf-sdl2-mixer.1|pkgcfg=yes|deb=libsdl2-mixer-dev|brew=sdl2_mixer|Virtual package relying on a sdl2-mixer system installation
+conf-sdl2-net|conf-sdl2-net.1|pkgcfg=yes|deb=libsdl2-net-dev|brew=sdl2_net|Virtual package relying on a sdl2-net system installation
+conf-sdl2-ttf|conf-sdl2-ttf.1|pkgcfg=yes|deb=libsdl2-ttf-dev|brew=sdl2_ttf|Virtual package relying on a sdl2-ttf system installation
+conf-secp256k1|conf-secp256k1.2|pkgcfg=no|deb=libsecp256k1-dev|brew=domt4/crypto/libsecp256k1|Virtual package relying on a secp256k1 lib system installation
+conf-sfml2|conf-sfml2.1|pkgcfg=yes|deb=libsfml-dev|brew=sfml|Virtual package relying on a SFML2 system installation
+conf-shine|conf-shine.1|pkgcfg=yes|deb=libshine-dev|brew=drfill/liquidsoap/libshine|Virtual package relying on libshine
+conf-snappy|conf-snappy.1|pkgcfg=no|deb=libsnappy-dev|brew=sh|Virtual package relying on snappy
+conf-sndfile|conf-sndfile.1|pkgcfg=yes|deb=libsndfile-dev|brew=pkg-config|Virtual package relying on sndfile
+conf-soundtouch|conf-soundtouch.1|pkgcfg=yes|deb=libsoundtouch-dev|brew=sound-touch|Virtual package relying on soundtouch
+conf-sqlite3|conf-sqlite3.1|pkgcfg=yes|deb=libsqlite3-dev|brew=sqlite|Virtual package relying on an SQLite3 system installation
+conf-srt|conf-srt.2|pkgcfg=yes|deb=|brew=|Virtual package relying on srt
+conf-srt-gnutls|conf-srt-gnutls.1|pkgcfg=yes|deb=libsrt-gnutls-dev|brew=|Virtual package relying on srt build with gnutls
+conf-srt-openssl|conf-srt-openssl.1|pkgcfg=yes|deb=libsrt-openssl-dev|brew=srt|Virtual package relying on srt compiled with openssl
+conf-sundials|conf-sundials.2|pkgcfg=no|deb=libsundials-dev|brew=sundials|Virtual package relying on sundials
+conf-taglib|conf-taglib.1|pkgcfg=yes|deb=libtag1-dev|brew=taglib|Virtual package relying on taglib
+conf-tcl|conf-tcl.1|pkgcfg=yes|deb=tcl-dev|brew=|Virtual package relying on tcl
+conf-tidy|conf-tidy.1|pkgcfg=no|deb=libtidy-dev|brew=tidy-html5|Virtual package relying on libtidy installation
+conf-tk|conf-tk.1|pkgcfg=yes|deb=tk-dev|brew=|Virtual package relying on tk
+conf-unwind|conf-unwind.0|pkgcfg=yes|deb=libunwind-dev|brew=libunwind-headers|Virtual package relying on libunwind
+conf-wayland-protocols|conf-wayland-protocols.1|pkgcfg=yes|deb=wayland-protocols|brew=|Virtual package relying on wayland-protocols
+conf-wxwidgets|conf-wxwidgets.3.0|pkgcfg=no|deb=|brew=|synopsis:
+conf-xen|conf-xen.1|pkgcfg=no|deb=libxen-dev|brew=|synopsis:
+conf-xkbcommon|conf-xkbcommon.1|pkgcfg=yes|deb=libxkbcommon-dev|brew=libxkbcommon|Virtual package relying on xkbcommon
+conf-xxhash|conf-xxhash.1|pkgcfg=yes|deb=libxxhash-dev|brew=xxhash|Virtual package relying on a xxhash system installation
+conf-zlib|conf-zlib.1|pkgcfg=yes|deb=zlib1g-dev|brew=zlib|Virtual package relying on zlib
+conf-zmq|conf-zmq.0.1|pkgcfg=yes|deb=libzmq3-dev|brew=zeromq|Virtual package relying on zmq library installation
+conf-zstd|conf-zstd.1.3.8|pkgcfg=yes|deb=libzstd-dev|brew=zstd|Virtual package relying on zstd

@@ -2,7 +2,7 @@ open Base
 open Tola_std
 open Canary_basic
 
-type ocaml_mode = Native | Bytecode
+(* ── Type definitions ── *)
 
 type ocaml_binding = {
   example_target : string;
@@ -22,29 +22,33 @@ type opam_spec = {
   canary_src_var : string;
 }
 
-type language_config = { opam : opam_spec; ocaml : ocaml_binding }
-
-type prebuilt_ocaml_binding = {
-  toolchain : opam_spec;
+type prebuilt_info = {
   opam_package : string;
   system_package_linux : string;
   system_package_macos : string;
-  example_file : string;
-  example_target : string;
-  binding_lib_name : string;
 }
 
-type ocaml_tool_config =
-  | Source_binding of language_config
-  | Prebuilt_binding of prebuilt_ocaml_binding
-
-type project_config = {
-  canary : canary_config;
-  workflow_name : string;
-  project : project_spec;
-  ocaml : ocaml_tool_config;
-  job_specs : job_spec list;
+type ocaml_tool_config = {
+  toolchain : opam_spec;
+  ocaml : ocaml_binding;
+  prebuilt : prebuilt_info option;
 }
+
+type ocaml_test_case = {
+  code_step : code_step;
+  mode : compile_mode;
+  source : origin;
+  expectation : step_expectation;
+}
+
+type ocaml_test_context = {
+  ocaml : ocaml_binding;
+  package_name : string;
+  build_api_path : string option;
+  target_suffix : string;
+}
+
+(* ── Functions ── *)
 
 let compiler_of_mode = function Bytecode -> "ocamlc" | Native -> "ocamlopt"
 let ext_of_mode = function Bytecode -> ".byte" | Native -> ""
@@ -105,7 +109,8 @@ let default =
     canary_src_var = "CANARY_Z3_SRC";
   }
 
-let pkg_full t = [%string "%{t.package_name}.%{t.package_version}"]
+let pkg_full (t : opam_spec) =
+  [%string "%{t.package_name}.%{t.package_version}"]
 
 let install_and_prefix_cmds t (os : Canary_basic.runner_os) pkg =
   let install_cmd, prefix_cmd =
@@ -145,12 +150,12 @@ opam update %{t.local_repo_name}
 opam remove -y %{pkg_full} || true
 opam install -y %{pkg_full} --verbose|}]
 
-let install_opam_package_stage ?(name = "Install OCaml package") package =
-  [ run_stage ~name [%string {|eval $(opam env)
+let install_opam_package_step ?(name = "Install OCaml package") package =
+  [ run_step ~name [%string {|eval $(opam env)
 opam install -y %{package}|}] ]
 
-let install_system_dep_stages opam_spec pkg1 pkg2 =
-  mk_system_dep_stages
+let install_system_dep_steps opam_spec pkg1 pkg2 =
+  mk_system_dep_steps
     ~linux_cmd:(install_and_prefix_cmds opam_spec Ubuntu pkg1)
     ~macos_cmd:(install_and_prefix_cmds opam_spec MacOS pkg2)
 
@@ -167,224 +172,76 @@ let run_example_native_cmd patch_dyld target =
   [%string {|%{export_dyld_envar patch_dyld}
 ./%{target}|}]
 
-type ocaml_step_desc = {
-  code_step : code_step;
-  mode : ocaml_mode;
-  source : build_source;
-  display_verb : string;
-  display_suffix : string;
-  expectation : stage_expectation;
-}
+let prebuilt_info_exn (config : ocaml_tool_config) =
+  match config.prebuilt with
+  | Some info -> info
+  | None -> failwith "Expected prebuilt OCaml binding config"
 
-type ocaml_step_resolved = {
-  name : string;
-  expectation : stage_expectation;
-  requires : stage_artifact list;
-  produces : stage_artifact list;
-  step : ocaml_step_desc;
-  command : string;
-}
+let verb_of_code_step = function Compile -> "Compile" | Run -> "Run"
 
-type context = {
-  example_file : string;
-  example_target : string;
-  package_name : string;
-  binding_lib_name : string;
-  build_api_path : string option;
-  target_suffix_of_source : build_source -> string;
-}
+let display_suffix_of_mode = function
+  | Bytecode -> ".byte"
+  | Native -> " (native)"
 
-let no_target_suffix _ = ""
-
-let suffix_of_source ?(with_pkg_suffix = "_with_pkg") = function
-  | From_build -> ""
-  | With_pkg -> with_pkg_suffix
-
-let mk_context ~example_file ~example_target ~package_name ~binding_lib_name
-    ?build_api_path ?(target_suffix_of_source = no_target_suffix) () =
-  {
-    example_file;
-    example_target;
-    package_name;
-    binding_lib_name;
-    build_api_path;
-    target_suffix_of_source;
-  }
-
-let context_of_language_config ?build_api_path ?target_suffix_of_source
-    (config : language_config) =
-  mk_context ~example_file:config.ocaml.example_file
-    ~example_target:config.ocaml.example_target
-    ~package_name:config.ocaml.binding_lib_name
-    ~binding_lib_name:config.ocaml.binding_lib_name ?build_api_path
-    ?target_suffix_of_source ()
-
-let context_of_prebuilt_ocaml_binding ?build_api_path ?target_suffix_of_source
-    (binding : prebuilt_ocaml_binding) =
-  mk_context ~example_file:binding.example_file
-    ~example_target:binding.example_target ~package_name:binding.opam_package
-    ~binding_lib_name:binding.binding_lib_name ?build_api_path
-    ?target_suffix_of_source ()
-
-let context_of_ocaml_tool_config ?build_api_path ?target_suffix_of_source =
-  function
-  | Source_binding config ->
-      context_of_language_config config ?build_api_path ?target_suffix_of_source
-  | Prebuilt_binding binding ->
-      context_of_prebuilt_ocaml_binding binding ?build_api_path
-        ?target_suffix_of_source
-
-let toolchain_of_ocaml_tool_config = function
-  | Source_binding config -> config.opam
-  | Prebuilt_binding binding -> binding.toolchain
-
-let prebuilt_binding_exn = function
-  | Prebuilt_binding binding -> binding
-  | Source_binding _ -> failwith "Expected prebuilt OCaml binding config"
-
-let default_ocaml_step_descs ~source =
-  [
-    {
-      code_step = Compile;
-      mode = Bytecode;
-      source;
-      display_verb = "Compile";
-      display_suffix = ".byte";
-      expectation = Expect_success;
-    };
-    {
-      code_step = Run;
-      mode = Bytecode;
-      source;
-      display_verb = "Run";
-      display_suffix = ".byte";
-      expectation = Expect_success;
-    };
-    {
-      code_step = Compile;
-      mode = Native;
-      source;
-      display_verb = "Compile";
-      display_suffix = " (native)";
-      expectation = Expect_success;
-    };
-    {
-      code_step = Run;
-      mode = Native;
-      source;
-      display_verb = "Run";
-      display_suffix = " (native)";
-      expectation = Expect_success;
-    };
-  ]
-
-let ocaml_step_descs_with_expectation ~source expectation =
-  List.map (default_ocaml_step_descs ~source) ~f:(fun desc ->
-      match (desc.code_step, desc.mode) with
-      | Compile, Bytecode -> desc
-      | _ -> { desc with expectation })
-
-let example_name_of_case ~example_name ~variant_suffix (step : ocaml_step_desc) =
-  [%string
-    "%{step.display_verb} \
-     %{example_name}%{variant_suffix}%{step.display_suffix}"]
-
-let example_output_artifact (ctx : context) (step : ocaml_step_desc) =
-  let suffix = ctx.target_suffix_of_source step.source in
-  Artifact_file (example_output_file ~suffix ctx.example_target step.mode)
-
-let compile_requires (ctx : context) (step : ocaml_step_desc) =
-  let source_file = Artifact_file ctx.example_file in
-  match step.source with
-  | From_build ->
-      let api_path =
-        Option.value_exn ctx.build_api_path
-          ~message:"build_api_path is required for From_build compile"
-      in
-      [
-        source_file;
-        Artifact_dir api_path;
-        Artifact_file
-          [%string
-            "%{api_path}/%{build_lib_of_mode ctx.binding_lib_name step.mode}"];
-      ]
-  | With_pkg -> [ source_file; Artifact_package ctx.package_name ]
-
-let requires_of_step (ctx : context) (step : ocaml_step_desc) =
-  match step.code_step with
-  | Compile -> compile_requires ctx step
-  | Run -> [ example_output_artifact ctx step ]
-
-let produces_of_step (ctx : context) (step : ocaml_step_desc) =
-  match step.code_step with
-  | Compile -> [ example_output_artifact ctx step ]
-  | Run -> []
-
-let command_of_step (ctx : context) = function
+let command_of_test_case (ctx : ocaml_test_context) = function
   | { code_step = Compile; mode; source; _ } -> (
-      let suffix = ctx.target_suffix_of_source source in
-      let target = example_output_file ~suffix ctx.example_target mode in
+      let target =
+        example_output_file ~suffix:ctx.target_suffix ctx.ocaml.example_target
+          mode
+      in
       match source with
-      | From_build ->
+      | Source ->
           let api_path =
             Option.value_exn ctx.build_api_path
-              ~message:"build_api_path is required for From_build compile"
+              ~message:"build_api_path is required for Source compile"
           in
-          ocaml_cc_with_obj ~binding_lib_name:ctx.binding_lib_name
-            ~example_file:ctx.example_file mode ~api_path ~target
-      | With_pkg ->
+          ocaml_cc_with_obj ~binding_lib_name:ctx.ocaml.binding_lib_name
+            ~example_file:ctx.ocaml.example_file mode ~api_path ~target
+      | Prebuilt ->
           ocaml_cc_with_pkg ~package:ctx.package_name
-            ~example_file:ctx.example_file mode ~target)
+            ~example_file:ctx.ocaml.example_file mode ~target)
   | { code_step = Run; mode; source; _ } -> (
-      let suffix = ctx.target_suffix_of_source source in
-      let target = example_output_file ~suffix ctx.example_target mode in
+      let target =
+        example_output_file ~suffix:ctx.target_suffix ctx.ocaml.example_target
+          mode
+      in
       match mode with
-      | Bytecode ->
-          run_example_bytecode_cmd (Poly.( = ) source From_build) target
-      | Native -> run_example_native_cmd (Poly.( = ) source From_build) target)
+      | Bytecode -> run_example_bytecode_cmd (Poly.( = ) source Source) target
+      | Native -> run_example_native_cmd (Poly.( = ) source Source) target)
 
-let ocaml_step_resolved_of_spec ~(context : context)
-    ~(name_of_case : ocaml_step_desc -> string) (step : ocaml_step_desc) =
-  let name = name_of_case step in
-  {
-    name;
-    expectation = step.expectation;
-    requires = requires_of_step context step;
-    produces = produces_of_step context step;
-    step;
-    command = command_of_step context step;
-  }
-
-let mk_stages ~(context : context) ~(name_of_case : ocaml_step_desc -> string)
-    ~ocaml_step_descs () =
-  List.map ocaml_step_descs ~f:(fun ocaml_step_desc ->
-      let step = ocaml_step_resolved_of_spec ~context ~name_of_case ocaml_step_desc in
-      run_stage ~name:step.name ~requires:step.requires ~produces:step.produces
-        ~expectation:step.expectation step.command)
-
-let prebuilt_setup_stages (binding : prebuilt_ocaml_binding) =
-  install_system_dep_stages binding.toolchain binding.system_package_linux
-    binding.system_package_macos
-  @ install_opam_package_stage binding.opam_package
-
-let mk_ocaml_test_stages ~(config : project_config) ~(spec : job_spec)
-    ?ocaml_step_descs () =
+let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~(spec : job_spec)
+    ?(test_expectation = Expect_success) () =
   let example_name =
     Option.value_exn spec.example_name
-      ~message:"job_spec.example_name is required for mk_ocaml_test_stages"
+      ~message:"job_spec.example_name is required for mk_ocaml_test_steps"
   in
-  let source = build_source_of_location spec.binding_location in
+  let source = origin_of_location spec.binding_location in
   let variant_suffix =
-    match source with From_build -> "" | With_pkg -> "_with_pkg"
+    match source with Source -> "" | Prebuilt -> "_with_pkg"
   in
-  let context =
-    context_of_ocaml_tool_config config.ocaml ?build_api_path:spec.build_api_path
-      ~target_suffix_of_source:(suffix_of_source ~with_pkg_suffix:variant_suffix)
+  let package_name =
+    match ocaml.prebuilt with
+    | None -> ocaml.ocaml.binding_lib_name
+    | Some info -> info.opam_package
   in
-  let name_of_case = example_name_of_case ~example_name ~variant_suffix in
-  let ocaml_step_descs =
-    match ocaml_step_descs with
-    | Some descs -> descs
-    | None -> default_ocaml_step_descs ~source
+  let ctx =
+    {
+      ocaml = ocaml.ocaml;
+      package_name;
+      build_api_path = spec.build_api_path;
+      target_suffix = variant_suffix;
+    }
   in
-  mk_stages ~context ~name_of_case ~ocaml_step_descs ()
+  List.map all_cc_and_modes ~f:(fun (mode, code_step) ->
+      let exp =
+        match (code_step, mode) with
+        | Compile, Bytecode -> Expect_success
+        | _ -> test_expectation
+      in
+      let verb = verb_of_code_step code_step in
+      let suffix = display_suffix_of_mode mode in
+      let name =
+        [%string "%{verb} %{example_name}%{variant_suffix}%{suffix}"]
+      in
+      let tc = { code_step; mode; source; expectation = exp } in
+      run_step ~name ~expectation:exp (command_of_test_case ctx tc))

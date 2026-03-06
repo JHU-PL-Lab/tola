@@ -1,0 +1,23 @@
+acp4|acp4.1.1.0|conf-gnuplot,conf-rdkit|ACP4: AutoCorrelation of Pharmacophore Features
+alt-ergo-free|alt-ergo-free.2.2.0|conf-gtksourceview|Alt-Ergo, an SMT Solver for Software Verification
+apron|apron.v0.9.15|conf-ppl|APRON numerical abstract domain library
+bytesrw|bytesrw.0.1.0|conf-xxhash,conf-zlib,conf-zstd,conf-libmd,conf-libblake3|Composable byte stream readers and writers for OCaml
+cairo2|cairo2.0.6.5|conf-freetype|Binding to Cairo, a 2D Vector Graphics Library
+camlimages|camlimages.5.0.5|conf-libpng,conf-libjpeg,conf-freetype,conf-libgif,conf-ghostscript|Image processing library
+cpm|cpm.12.2.0|conf-gnuplot|The Classification and Regression Performance Metrics library
+dkml-component-staging-opam64|dkml-component-staging-opam64.2.2.0~dkml20220801|conf-dkml-cross-toolchain|DKML component for 64-bit versions of opam
+dune-deps|dune-deps.1.4.0|conf-graphviz|Show dependency graph of a multi-component dune project
+frama-c-metacsl|frama-c-metacsl.0.8|conf-swi-prolog|MetAcsl plugin of Frama-C for writing pervasives properties
+frama-c|frama-c.30.0|conf-gtksourceview3|Platform dedicated to the analysis of source code written in C
+lablgtk|lablgtk.2.18.14|conf-gtksourceview,conf-gnomecanvas,conf-glade|OCaml interface to GTK+
+linwrap|linwrap.9.2.0|conf-gnuplot,conf-python-3,conf-rdkit|Wrapper on top of liblinear-tools
+lwt|lwt.5.9.1|conf-libev|Promises and event-driven I/O
+mingw-w64-shims|mingw-w64-shims.0.2.0|conf-mingw-w64-g++-i686,conf-mingw-w64-g++-x86_64,conf-pkg-config|Configuration for the mingw-w64 Cygwin packages in opam
+naboris|naboris.0.1.3|conf-libev|Simple http server
+ocaml-canvas|ocaml-canvas.1.0.0|conf-wayland-protocols,conf-libwayland|The OCaml-Canvas library
+ocamlnet|ocamlnet.4.1.9-2|conf-gnutls,conf-gssapi|synopsis:
+ocamlsdl|ocamlsdl.0.9.1|conf-sdl-gfx,conf-sdl-image,conf-sdl-mixer,conf-sdl-ttf|Interface between OCaml and SDL
+oranger|oranger.4.3.5|conf-gnuplot|OCaml wrapper for the ranger (C++) random forests implementation
+orf|orf.1.0.1|conf-gnuplot|OCaml Random Forests
+osdp|osdp.1.1.1|conf-sdpa|OCaml Interface to SDP solvers
+svmwrap|svmwrap.5.1.1|conf-gnuplot|Wrapper on top of libsvm-tools
