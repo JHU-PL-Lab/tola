@@ -82,19 +82,22 @@ Near-term (framework):
    existence (e.g., `libz3.dylib`, `z3.cma`), not just
    output_dir non-empty. Similar to `produces` in legacy
    `step_phase`. Can carry `expect_success` / `expect_failure`.
-2. **z3 build scripts** — fix cmake in-tree builds to write
-   markers to output_dir so caching works. Alternatively,
-   `check_post` checks in-tree artifacts directly.
-3. **Store indirection** — factor fetch/pack scripts into
+2. **z3 build_lib check_post** — cmake builds in-tree
+   (`/Users/ex/code/repos/z3/build/`), not in `output_dir`.
+   Current workaround: empty-marker file. Proper fix: check
+   actual `libz3.dylib` in the z3 source tree.
+3. **z3 fetch_binding** — `opam install z3` exits 10 because
+   it prompts for system deps. Fix: add `--assume-depexts`
+   flag (or pre-install system deps via brew).
+4. **Store indirection** — factor fetch/pack scripts into
    store templates parameterized by `pkg_name`. Project only
    provides build/probe scripts + store entries. See design.md
    "Store Config" section.
 
 Near-term (projects):
 
-1. **z3 end-to-end** — fix `opam install z3` (needs
-   `--assume-depexts` or pre-install system deps). Test all
-   8 derived steps.
+1. **z3 end-to-end** — after fixing (2) and (3) above, test
+   all 8 derived steps for z3.
 2. **LLVM / Torch** — new projects using same `script_spec`
    pattern. Validates the framework generalizes.
 
@@ -104,7 +107,6 @@ Later:
    `upload/download-artifact` from the same action graph.
 2. **Version combinations** — instantiate patterns with
    concrete versions (dev, stable) at the select step.
-3. **`run_app` action** — add to diagram (noted in motivation).
 
 ---
 
@@ -193,3 +195,41 @@ Major refactoring and new implementation. Changes in order:
 - Deploy excludes `_local` via rsync
 - SQLite project passes end-to-end: fetch_lib, fetch_binding,
   probe_binding (compile + run example)
+
+### Session 3 (2026-03-19 to 2026-03-26)
+
+Refinements to diagram, table, runner, and z3 project.
+
+**Diagram refinements**
+- Removed `run_app`; replaced by `probe_app` taking a runtime
+  lib edge (dotted) — catches version mismatch without a
+  separate run action
+- `probe_binding` also takes a runtime lib edge (same
+  motivation: test binding against a different lib version)
+- Result diagram: added `linkStyle N stroke:...` edge coloring
+  — green (Done), red (Failed), grey-dashed (Skipped /
+  Not_in_spec). Tracked via `edge_idx` counter in
+  `mermaid_of_action_rule_schema`; all edges increment counter
+  even if untagged
+- Reference diagrams committed to `canary/reference/graph/`
+  (sqlite3.mmd, z3.mmd)
+
+**Table update**
+- Pattern table updated to reflect probe_binding/probe_app
+  runtime lib edges (pattern rows with `rt:` prefix in
+  action_path)
+
+**z3 project**
+- `script_spec` defined and wired to `canary action z3`
+- Known blockers (see TODO):
+  - `build_lib` check_post uses empty-dir marker (cmake
+    builds in-tree, not in output_dir)
+  - `fetch_binding` exits 10: `opam install z3` prompts for
+    system deps — needs `--assume-depexts`
+
+**Cleanup**
+- Removed phantom project steps from `canary_basic_ocaml.ml`
+- Deleted stale `.agent/` scripts at repo root
+- Store names unified as `<artifact>_store` throughout
+- `.claude/settings.local.json` simplified to allow only
+  `make *` and `dune *`
