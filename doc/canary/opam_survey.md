@@ -331,11 +331,11 @@ is true for ALL conf packages since they install nothing. Even
 Classification must come from the **conf package's own metadata**, not from
 how it is referenced in the depending package:
 
-| Signal | C library conf | Tool conf |
-|--------|---------------|-----------|
-| Check method | `pkg-config <lib>` or compile a test `.c` file | `which python3` or run a test script |
-| depexts names | `libfoo-dev`, `foo-devel` | `python3`, `cmake`, `gcc` |
-| Synopsis | "relying on ... lib" | "relying on ... installation" |
+| Signal        | C library conf                                 | Tool conf                            |
+| ------------- | ---------------------------------------------- | ------------------------------------ |
+| Check method  | `pkg-config <lib>` or compile a test `.c` file | `which python3` or run a test script |
+| depexts names | `libfoo-dev`, `foo-devel`                      | `python3`, `cmake`, `gcc`            |
+| Synopsis      | "relying on ... lib"                           | "relying on ... installation"        |
 
 Examples:
 - `conf-gmp` compiles a `test.c` that `#include <gmp.h>` → C library
@@ -364,15 +364,15 @@ binding.
 
 **Key examples:**
 
-| Package | Optional conf deps | Effect |
-|---------|-------------------|--------|
-| `lwt` | `conf-libev` | Uses libev event loop if available, fallback to select/poll |
-| `bytesrw` | `conf-xxhash`, `conf-zlib`, `conf-zstd`, `conf-libmd`, `conf-libblake3` | Each compression/hash backend is optional |
-| `camlimages` | `conf-libpng`, `conf-libjpeg`, `conf-freetype`, `conf-libgif` | Each image format is optional |
-| `cairo2` | `conf-freetype` | Freetype text rendering is optional |
-| `torch` | `libtorch` (not conf-*) | PyTorch backend; `conflicts:` constrains version to `[2.1.0, 2.2.0)` |
-| `frama-c` | `conf-gtksourceview3` | GUI is optional |
-| `ocamlsdl` | `conf-sdl-gfx`, `conf-sdl-image`, `conf-sdl-mixer`, `conf-sdl-ttf` | Each SDL sub-library is optional |
+| Package      | Optional conf deps                                                      | Effect                                                               |
+| ------------ | ----------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `lwt`        | `conf-libev`                                                            | Uses libev event loop if available, fallback to select/poll          |
+| `bytesrw`    | `conf-xxhash`, `conf-zlib`, `conf-zstd`, `conf-libmd`, `conf-libblake3` | Each compression/hash backend is optional                            |
+| `camlimages` | `conf-libpng`, `conf-libjpeg`, `conf-freetype`, `conf-libgif`           | Each image format is optional                                        |
+| `cairo2`     | `conf-freetype`                                                         | Freetype text rendering is optional                                  |
+| `torch`      | `libtorch` (not conf-*)                                                 | PyTorch backend; `conflicts:` constrains version to `[2.1.0, 2.2.0)` |
+| `frama-c`    | `conf-gtksourceview3`                                                   | GUI is optional                                                      |
+| `ocamlsdl`   | `conf-sdl-gfx`, `conf-sdl-image`, `conf-sdl-mixer`, `conf-sdl-ttf`      | Each SDL sub-library is optional                                     |
 
 **Canary implication**: The same package can be installed with or without a
 C library, producing different functionality. For canary testing, both

@@ -4,7 +4,7 @@
   },
   "ocaml.sandbox": {
     "kind": "opam",
-    "switch": "5.4.0"
+    "switch": "default"
   },
-  "cmake.ignoreCMakeListsMissing": true
+  "makefile.configureOnOpen": false
 }
