@@ -22,7 +22,7 @@ let render_preamble_action { name; uses; with_fields } =
   in
   String.concat ~sep:"\n" (name_lines @ uses_line @ with_lines)
 
-let render_step (step : string step) =
+let render_step (step : step) =
       let base = [ "      - name: " ^ step.name ] in
       let if_lines =
         match step.guard with
@@ -55,12 +55,14 @@ let strategy_anchor_yaml =
 
 let strategy_ref_yaml = "strategy: *strategy_vars"
 
-let render_job ~strategy_yaml (job : string job) =
+let render_job ~strategy_yaml (job : job) =
   let header =
     [
       "  " ^ job.id ^ ":";
       (if job.if_disabled then "    if: false" else "");
       "    name: " ^ job.name;
+      (if String.is_empty job.description then ""
+       else "    description: " ^ job.description);
       "    runs-on: " ^ job.runs_on;
     ]
     |> List.filter ~f:(fun s -> not (String.is_empty s))
@@ -75,7 +77,7 @@ let render_job ~strategy_yaml (job : string job) =
   in
   String.concat ~sep:"\n" (header @ strategy_lines @ step_lines)
 
-let render_workflow ~workflow_name (jobs : string job list) =
+let render_workflow ~workflow_name (jobs : job list) =
   let jobs_yaml =
     List.mapi jobs ~f:(fun i job ->
         let strategy_yaml =

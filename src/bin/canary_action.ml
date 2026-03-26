@@ -1,0 +1,340 @@
+open Base
+open Canary_basic
+open Canary
+
+(* ── Script spec ──
+   A project provides shell commands per action kind.
+   None = project doesn't support this action (also determines capabilities).
+   Commands are templates that receive output_dir at runtime.
+
+   Scripts for fetch/pack come from the store (uniform per PM).
+   Scripts for build/probe come from the project (project-specific). *)
+
+type script_spec = {
+  fetch_source : (output_dir:string -> string) option;
+  build_lib : (output_dir:string -> string) option;
+  build_binding : (output_dir:string -> string) option;
+  build_app : (output_dir:string -> string) option;
+  fetch_lib : (output_dir:string -> string) option;
+  fetch_binding : (output_dir:string -> string) option;
+  fetch_app : (output_dir:string -> string) option;
+  pack_lib : (output_dir:string -> string) option;
+  pack_binding : (output_dir:string -> string) option;
+  pack_app : (output_dir:string -> string) option;
+  probe_lib : (output_dir:string -> string) option;
+  probe_binding : (output_dir:string -> string) option;
+  probe_app : (output_dir:string -> string) option;
+}
+
+let empty_script_spec = {
+  fetch_source = None;
+  build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
+  pack_lib = None; pack_binding = None; pack_app = None;
+  probe_lib = None; probe_binding = None; probe_app = None;
+}
+
+(* Remove build-from-source actions. Keeps fetch + probe only. *)
+let no_source spec =
+  { spec with fetch_source = None;
+    build_lib = None; build_binding = None; build_app = None;     pack_lib = None; pack_binding = None; pack_app = None }
+
+(* Remove packing actions *)
+let no_pack spec =
+  { spec with pack_lib = None; pack_binding = None; pack_app = None }
+
+(* Look up the script for a rule *)
+let script_of_rule spec = function
+  | Fetch Source -> spec.fetch_source
+  | Fetch Lib -> spec.fetch_lib
+  | Fetch Binding -> spec.fetch_binding
+  | Fetch App -> spec.fetch_app
+  | Build_lib -> spec.build_lib
+  | Build_binding -> spec.build_binding
+  | Build_app -> spec.build_app
+  | Publish Lib -> spec.pack_lib
+  | Publish Binding -> spec.pack_binding
+  | Publish App -> spec.pack_app
+  | Probe Lib -> spec.probe_lib
+  | Probe Binding -> spec.probe_binding
+  | Probe App -> spec.probe_app
+  | Publish Source | Probe Source -> None
+
+(* ── Action step protocol ── *)
+
+type action_step = {
+  tag : string;                      (* unique id: e.g., "build_lib" *)
+  rule : rule;
+  deps : string list;                (* tags of upstream steps *)
+  cmd : output_dir:string -> string; (* shell command to execute *)
+  check_pre : unit -> bool;          (* inputs available? *)
+  check_post : output_dir:string -> bool; (* output valid? *)
+}
+
+(* ── Logging (plain text file + console) ── *)
+
+let now () =
+  let t = Unix.gettimeofday () in
+  let tm = Unix.localtime t in
+  let frac = t -. Float.round_down t in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d.%03d"
+    (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+    tm.tm_hour tm.tm_min tm.tm_sec
+    (Float.to_int (frac *. 1000.0))
+
+type logger = {
+  log : tag:string -> event:string -> detail:string option -> unit;
+  close : unit -> unit;
+}
+
+let create_logger ~log_path =
+  let oc = Stdlib.open_out_gen
+      [Open_creat; Open_append; Open_wronly] 0o644 log_path in
+  let log ~tag ~event ~detail =
+    let ts = now () in
+    let detail_str = match detail with
+      | Some d -> [%string "  (%{d})"]
+      | None -> ""
+    in
+    let padded_tag =
+      if String.length tag < 25 then
+        tag ^ String.make (25 - String.length tag) ' '
+      else tag
+    in
+    let line = [%string "[%{ts}] %{padded_tag}  %{event}%{detail_str}"] in
+    Fmt.pr "%s@." line;
+    Stdlib.output_string oc (line ^ "\n");
+    Stdlib.flush oc
+  in
+  let close () = Stdlib.close_out oc in
+  { log; close }
+
+let run_cmd_logged logger ~tag cmd =
+  logger.log ~tag ~event:"cmd" ~detail:(Some cmd);
+  let rc = Stdlib.Sys.command cmd in
+  if rc <> 0 then
+    logger.log ~tag ~event:"cmd_fail" ~detail:(Some [%string "exit %{Int.to_string rc}"]);
+  rc = 0
+
+(* ── Runner ── *)
+
+let output_dir_for ~root ~project ~tag =
+  let base = [%string "%{root}/canary/_local/%{project}/%{tag}"] in
+  if Stdlib.Filename.is_relative base then
+    Stdlib.Filename.concat (Unix.getcwd ()) base
+  else base
+
+(* Execute a step's shell command, ensuring output_dir exists. *)
+let exec_step logger ~tag ~output_dir (step : action_step) =
+  ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}"] : int);
+  let shell_cmd = step.cmd ~output_dir in
+  run_cmd_logged logger ~tag shell_cmd
+
+(* Run a single action step. Cache = check_post on existing output_dir. *)
+let run_step logger ~root ~project (step : action_step) =
+  let tag = step.tag in
+  let out = output_dir_for ~root ~project ~tag in
+  let log = logger.log ~tag in
+  (* Cache: if postcondition already passes, skip *)
+  if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out then (
+    log ~event:"skip" ~detail:(Some "postcondition ok");
+    true)
+  else (
+    let pre_ok = step.check_pre () in
+    log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
+    if not pre_ok then (
+      log ~event:"blocked" ~detail:(Some "precondition failed");
+      false)
+    else
+      try
+        let cmd_ok = exec_step logger ~tag ~output_dir:out step in
+        let ok = cmd_ok && step.check_post ~output_dir:out in
+        log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
+        log ~event:(if ok then "done" else "failed")
+          ~detail:(if ok then None else Some "postcondition failed");
+        ok
+      with exn ->
+        let msg = Exn.to_string exn in
+        log ~event:"error" ~detail:(Some msg);
+        false)
+
+type step_status = Step_done | Step_failed | Step_skipped
+
+(* Run all steps in dependency order. Returns status per tag. *)
+let run_graph logger ~project ~root (steps : action_step list) =
+  logger.log ~tag:"*" ~event:"graph_start"
+    ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
+  let status = Hashtbl.create (module String) in
+  (* Seed with already-done steps (postcondition passes) *)
+  List.iter steps ~f:(fun s ->
+      let out = output_dir_for ~root ~project ~tag:s.tag in
+      if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out then
+        Hashtbl.set status ~key:s.tag ~data:Step_done);
+  (* Iterate until no progress *)
+  let changed = ref true in
+  while !changed do
+    changed := false;
+    List.iter steps ~f:(fun s ->
+        if not (Hashtbl.mem status s.tag) then
+          let deps_ok =
+            List.for_all s.deps ~f:(fun dep ->
+                match Hashtbl.find status dep with
+                | Some Step_done -> true
+                | _ -> false)
+          in
+          if deps_ok then (
+            let ok = run_step logger ~project ~root s in
+            Hashtbl.set status ~key:s.tag
+              ~data:(if ok then Step_done else Step_failed);
+            if ok then changed := true))
+  done;
+  (* Mark unreached as skipped *)
+  List.iter steps ~f:(fun s ->
+      if not (Hashtbl.mem status s.tag) then
+        Hashtbl.set status ~key:s.tag ~data:Step_skipped);
+  (* Report *)
+  let total = List.length steps in
+  let done_count =
+    Hashtbl.count status ~f:(fun v -> Poly.equal v Step_done)
+  in
+  logger.log ~tag:"*" ~event:"graph_end"
+    ~detail:(Some [%string "%{Int.to_string done_count}/%{Int.to_string total} completed"]);
+  if done_count < total then
+    List.iter steps ~f:(fun s ->
+        match Hashtbl.find status s.tag with
+        | Some Step_failed ->
+            logger.log ~tag:s.tag ~event:"failed" ~detail:None
+        | Some Step_skipped ->
+            logger.log ~tag:s.tag ~event:"skipped" ~detail:None
+        | _ -> ());
+  status
+
+(* ── Result diagram ──
+   Reuses the action_rule schema diagram, colored by run status. *)
+
+let result_status_of_run (steps : action_step list)
+    (run_status : (string, step_status) Hashtbl.t) =
+  let open Canary in
+  let tbl = Hashtbl.create (module String) in
+  (* Mark all store_rules actions as Not_in_spec initially *)
+  List.iter store_rules ~f:(fun r ->
+      Hashtbl.set tbl ~key:(string_of_rule r) ~data:Not_in_spec);
+  (* Override with actual run results *)
+  List.iter steps ~f:(fun s ->
+      let ns = match Hashtbl.find run_status s.tag with
+        | Some Step_done -> Done
+        | Some Step_failed -> Failed
+        | Some Step_skipped -> Skipped
+        | None -> Skipped
+      in
+      Hashtbl.set tbl ~key:s.tag ~data:ns);
+  tbl
+
+(* ── Convenience helpers for building steps ── *)
+
+let rec ensure_dir path =
+  if not (Stdlib.Sys.file_exists path) then (
+    ensure_dir (Stdlib.Filename.dirname path);
+    Unix.mkdir path 0o755)
+
+let has_file ~output_dir name =
+  Stdlib.Sys.file_exists [%string "%{output_dir}/%{name}"]
+
+let out_of ~root ~project ~tag =
+  output_dir_for ~root ~project ~tag
+
+let mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post =
+  { tag; rule; deps;
+    check_pre = (fun () ->
+      List.for_all deps ~f:(fun dep ->
+          let out = output_dir_for ~root ~project ~tag:dep in
+          Stdlib.Sys.file_exists out));
+    cmd;
+    check_post;
+  }
+
+(* ── Derive action steps from store_rules + script_spec ── *)
+
+let deps_of_rule spec rule =
+  let has r = Option.is_some (script_of_rule spec r) in
+  let tag r = string_of_rule r in
+  match rule with
+  | Fetch _ -> []
+  | Build_lib ->
+      List.filter_opt [
+        if has (Fetch Source) then Some (tag (Fetch Source)) else None
+      ]
+  | Build_binding ->
+      let lib_dep =
+        if has Build_lib then Some (tag Build_lib)
+        else if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else None
+      in
+      List.filter_opt [
+        if has (Fetch Source) then Some (tag (Fetch Source)) else None;
+        lib_dep;
+      ]
+  | Build_app ->
+      let binding_dep =
+        if has Build_binding then Some (tag Build_binding)
+        else if has (Fetch Binding) then Some (tag (Fetch Binding))
+        else None
+      in
+      let lib_dep =
+        if has Build_lib then Some (tag Build_lib)
+        else if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else None
+      in
+      List.filter_opt [ binding_dep; lib_dep ]
+  | Publish kind | Probe kind ->
+      let produce_rule = match kind with
+        | Lib -> if has Build_lib then Some Build_lib else Some (Fetch Lib)
+        | Binding -> if has Build_binding then Some Build_binding else Some (Fetch Binding)
+        | App -> if has Build_app then Some Build_app else Some (Fetch App)
+        | Source -> Some (Fetch Source)
+      in
+      let produce_dep =
+        Option.bind produce_rule ~f:(fun r ->
+            if has r then Some (tag r) else None)
+      in
+      (* probe_binding and probe_app also need a runtime lib *)
+      let runtime_lib_dep = match rule with
+        | Probe (Binding | App) ->
+            if has (Fetch Lib) then Some (tag (Fetch Lib))
+            else if has Build_lib then Some (tag Build_lib)
+            else None
+        | _ -> None
+      in
+      List.filter_opt [ produce_dep; runtime_lib_dep ]
+
+let derive_steps ~root ~project (spec : script_spec) : action_step list =
+  let seen = Hashtbl.create (module String) in
+  List.filter_map store_rules ~f:(fun rule ->
+      let tag = string_of_rule rule in
+      if Hashtbl.mem seen tag then None
+      else
+        match script_of_rule spec rule with
+        | None -> None
+        | Some cmd ->
+            Hashtbl.set seen ~key:tag ~data:true;
+            let deps = deps_of_rule spec rule in
+            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd
+                    ~check_post:(fun ~output_dir ->
+                      (* Default postcondition: output_dir is non-empty *)
+                      Stdlib.Sys.file_exists output_dir &&
+                      Array.length (Stdlib.Sys.readdir output_dir) > 0)))
+
+let run_project ~root ~project steps =
+  let dir = [%string "%{root}/canary/_local/%{project}"] in
+  ensure_dir dir;
+  let log_path = [%string "%{dir}/actions.log"] in
+  let logger = create_logger ~log_path in
+  let status = run_graph logger ~project ~root steps in
+  (* Write result diagram — same schema as action_rule.mmd, colored by status *)
+  let mmd_path = [%string "%{dir}/result.mmd"] in
+  let node_status = result_status_of_run steps status in
+  let oc = Stdlib.open_out mmd_path in
+  Stdlib.output_string oc
+    (Canary.mermaid_of_action_rule_schema ~status:node_status store_rules);
+  Stdlib.close_out oc;
+  logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
+  logger.close ()

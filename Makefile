@@ -15,11 +15,13 @@ demo_langs:
 %.eg:
 	dune exec src/bin/example_$(LANG).exe -- $(ARGS)
 
+CANARY = dune exec src/bin/canary_main.exe --
+
 canary:
-	DUNE_SANDBOX=none dune exec src/bin/example_sp.exe -- canary
+	$(CANARY) run
 
 canary_local:
-	DUNE_SANDBOX=none dune exec src/bin/example_sp.exe -- canary_local
+	$(CANARY) local
 
 # make sp.eg ARGS='yaml'
 # make sp.eg ARGS='z3_src'

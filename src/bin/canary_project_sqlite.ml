@@ -1,3 +1,4 @@
+open Base
 open Canary_basic
 open Canary_basic_ocaml
 open Canary
@@ -20,7 +21,9 @@ let sqlite_ocaml_config : ocaml_tool_config =
       {
         example_file = "canary/examples/sqlite3/sqlite3_example.ml";
         example_target = "sqlite3_example";
+        example_name = "sqlite3 example";
         binding_lib_name = "sqlite3";
+        build_api_path = None;
       };
     prebuilt =
       Some
@@ -31,15 +34,16 @@ let sqlite_ocaml_config : ocaml_tool_config =
         };
   }
 
-let download_and_test_spec distro : job_spec =
+let prebuilt_prebuilt_spec distro : job_spec =
   {
     distro;
-    id = "download-and-test";
+    id = "prebuilt-prebuilt";
+    description = "Install system sqlite, install opam sqlite3 binding, probe";
     phases =
       [
         {
           kind =
-            Install_pkg
+            Pm_install
               (Some
                  {
                    linux_pkg =
@@ -49,40 +53,32 @@ let download_and_test_spec distro : job_spec =
                      (prebuilt_info_exn sqlite_ocaml_config)
                        .system_package_macos;
                  });
-          action = Install;
           location = System_pm;
           requires = [];
-          produces = [];
+          produces = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
           expectation = Expect_success;
         };
         {
-          kind = Install_pkg None;
-          action = Install;
+          kind = Pm_install None;
           location = Lang_pm;
-          requires = [];
-          produces = [ Artifact_package "sqlite3" ];
+          requires = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
+          produces = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
           expectation = Expect_success;
         };
         {
-          kind = Test_binding;
-          action = Test;
+          kind = Probe_test { lang = OCaml };
           location = Lang_pm;
-          requires = [ Artifact_package "sqlite3" ];
+          requires = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
           produces = [];
           expectation = Expect_success;
         };
       ];
-    lib_origin = Prebuilt;
-    binding_location = Lang_pm;
-    test_bindings = [ OCaml ];
-    example_name = Some "sqlite3 example";
-    build_api_path = None;
     if_disabled = false;
   }
 
 let config distro =
   {
-    canary = Canary_basic.default_canary_config;
+    canary = Canary_basic.mk_canary_config ();
     workflow_name = "Canary Testing for SQLite3 OCaml";
     name = "sqlite";
     project =
@@ -91,9 +87,43 @@ let config distro =
         version = "system";
         commit = "";
         bindings = [ (OCaml, Opam) ];
+        system_pm = Brew;
+        has_source = false;
+        has_system_pkg = true;
+        has_lang_pkg = true;
+        can_package = false;
       };
     ocaml = sqlite_ocaml_config;
-    job_specs = [ download_and_test_spec distro ];
+    job_specs = [ prebuilt_prebuilt_spec distro ];
     deploy = None;
     opam_template_bindings = [];
   }
+
+(* ── Action steps ── *)
+
+let detect_pm () =
+  if Stdlib.Sys.command "which brew > /dev/null 2>&1" = 0 then "brew"
+  else "apt-get"
+
+let prebuilt = prebuilt_info_exn sqlite_ocaml_config
+
+let script_spec : Canary_action.script_spec =
+  let pm = detect_pm () in
+  let sys_pkg = if String.equal pm "brew"
+    then prebuilt.system_package_macos
+    else prebuilt.system_package_linux in
+  let opam_pkg = prebuilt.opam_package in
+  let example = sqlite_ocaml_config.ocaml.example_file in
+  let target = sqlite_ocaml_config.ocaml.example_target in
+  let binding_lib = sqlite_ocaml_config.ocaml.binding_lib_name in
+  { Canary_action.empty_script_spec with
+    fetch_lib = Some (fun ~output_dir ->
+      [%string "%{pm} install %{sys_pkg} && echo 'installed' > %{output_dir}/lib.ok"]);
+    fetch_binding = Some (fun ~output_dir ->
+      [%string "eval $(opam env) && opam install %{opam_pkg} -y && echo 'installed' > %{output_dir}/binding.ok"]);
+    probe_binding = Some (fun ~output_dir ->
+      [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} && %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log"]);
+  }
+
+let action_steps ~root ~project =
+  Canary_action.derive_steps ~root ~project script_spec

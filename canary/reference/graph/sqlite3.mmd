@@ -1,0 +1,31 @@
+graph TD
+    lib_bt["lib sqlite3<br/>origin=build tree<br/>location=build tree"]
+    lib_spm["lib sqlite3<br/>origin=system PM<br/>location=system PM"]
+    binding_bt__lib_bt["binding sqlite3<br/>origin=build tree<br/>location=build tree<br/>built_from=lib@build tree"]
+    binding_bt__lib_spm["binding sqlite3<br/>origin=build tree<br/>location=build tree<br/>built_from=lib@system PM"]
+    package_lpm__binding_bt__lib_bt["package sqlite3<br/>origin=build tree<br/>location=lang PM<br/>built_from=binding@build tree(lib@build tree)"]
+    package_lpm__binding_bt__lib_spm["package sqlite3<br/>origin=build tree<br/>location=lang PM<br/>built_from=binding@build tree(lib@system PM)"]
+    package_lpm["package sqlite3<br/>origin=lang PM<br/>location=lang PM"]
+
+    SRC -->|compile| lib_bt
+    system_pm -->|fetch| lib_spm
+    SRC -->|compile| binding_bt__lib_bt
+    lib_bt -->|link| binding_bt__lib_bt
+    SRC -->|compile| binding_bt__lib_spm
+    lib_spm -->|link| binding_bt__lib_spm
+    binding_bt__lib_bt -->|package| package_lpm__binding_bt__lib_bt
+    binding_bt__lib_spm -->|package| package_lpm__binding_bt__lib_spm
+    lang_pm -->|fetch| package_lpm
+    binding_bt__lib_bt -->|probe| P_binding_bt__lib_bt((test))
+    binding_bt__lib_spm -->|probe| P_binding_bt__lib_spm((test))
+    package_lpm__binding_bt__lib_bt -->|probe| P_package_lpm__binding_bt__lib_bt((test))
+    package_lpm__binding_bt__lib_spm -->|probe| P_package_lpm__binding_bt__lib_spm((test))
+    package_lpm -->|probe| P_package_lpm((test))
+
+    classDef lib fill:#e8f5e9,stroke:#4caf50
+    classDef binding fill:#e3f2fd,stroke:#2196f3
+    classDef pkg fill:#fff3e0,stroke:#ff9800
+    classDef probe fill:#fce4ec,stroke:#e91e63
+    class lib_bt,lib_spm lib
+    class binding_bt__lib_bt,binding_bt__lib_spm binding
+    class package_lpm__binding_bt__lib_bt,package_lpm__binding_bt__lib_spm,package_lpm pkg

@@ -9,7 +9,8 @@
   example_dd
   example_record
   example_fmt
-  mantle)
+  mantle
+  canary_main)
  (libraries
   unix
   fix

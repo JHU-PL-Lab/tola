@@ -26,3 +26,4 @@ CMakeLists.txt
 
 # quarto build
 pkgm_files
+build

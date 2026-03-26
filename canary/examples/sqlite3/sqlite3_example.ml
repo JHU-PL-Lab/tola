@@ -1,7 +1,6 @@
 open Sqlite3
 
-let assert_ok rc =
-  if rc <> Rc.OK then failwith "sqlite3 command failed"
+let assert_ok rc = if rc <> Rc.OK then failwith "sqlite3 command failed"
 
 let () =
   let db = db_open ":memory:" in

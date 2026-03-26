@@ -205,7 +205,15 @@ let () =
   match Stdlib.Sys.argv.(1) with
   | "canary" -> Canary_run.run (Canary_basic.detect_distro ())
   | "canary_local" -> Canary_run.run_local (detect_distro ())
+  | "canary_exec" -> Canary_run.run_local ~exec:true (detect_distro ())
+  | s when String.is_prefix s ~prefix:"canary_exec:" ->
+      let project = String.chop_prefix_exn s ~prefix:"canary_exec:" in
+      Canary_run.run_local ~exec:true ~project (detect_distro ())
   | "canary_dump" -> Canary_run.dump (detect_distro ())
+  | "canary_graph" -> Canary_run.dump_graph (detect_distro ())
+  | "canary_paths" -> Canary_run.dump_job_paths ()
+  | "canary_paths_md" -> Canary_run.dump_job_paths_md ()
+  | "canary_action" -> Canary_run.run_action_demo ()
   | "z3_1" -> interp z3_opam_pkg_example
   | "z3_src" -> interp (z3_src_example ())
   | "z3_pkg" -> interp (z3_pkg_example ())

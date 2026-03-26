@@ -1,13 +1,16 @@
 open Base
 open Tola_std
+open Canary_basic_store
 open Canary_basic
 
 (* ── Type definitions ── *)
 
 type ocaml_binding = {
   example_target : string;
+  example_name : string;
   example_file : string;
   binding_lib_name : string;
+  build_api_path : string option;
 }
 
 type opam_spec = {
@@ -35,9 +38,9 @@ type ocaml_tool_config = {
 }
 
 type ocaml_test_case = {
-  code_step : code_step;
+  probe_action : probe_action;
   mode : compile_mode;
-  source : origin;
+  binding_location : location;
   expectation : step_expectation;
 }
 
@@ -129,8 +132,10 @@ let install_and_prefix_cmds t (os : Canary_basic.runner_os) pkg =
   [
     install_cmd;
     prefix_cmd;
-    [%string "echo \"%{t.prefix_name}=$(%{prefix_cmd})\" >> \"$GITHUB_ENV\""];
-    [%string "echo \"%{t.libdir_name}=$(%{libdir_cmd})\" >> \"$GITHUB_ENV\""];
+    [%string "export %{t.prefix_name}=$(%{prefix_cmd})"];
+    [%string "export %{t.libdir_name}=$(%{libdir_cmd})"];
+    [%string "echo \"%{t.prefix_name}=%{t.prefix_var}\" >> \"$GITHUB_ENV\""];
+    [%string "echo \"%{t.libdir_name}=%{t.libdir_var}\" >> \"$GITHUB_ENV\""];
     [%string "echo \"Detected %{t.prefix_name}=%{t.prefix_var}\""];
     [%string "echo \"Detected %{t.libdir_name}=%{t.libdir_var}\""];
   ]
@@ -150,14 +155,26 @@ opam update %{t.local_repo_name}
 opam remove -y %{pkg_full} || true
 opam install -y %{pkg_full} --verbose|}]
 
-let install_opam_package_step ?(name = "Install OCaml package") package =
+let install_opam_package_step ~name package =
   [ run_step ~name [%string {|eval $(opam env)
 opam install -y %{package}|}] ]
 
-let install_system_dep_steps opam_spec pkg1 pkg2 =
-  mk_system_dep_steps
+let install_system_dep_steps ~name opam_spec pkg1 pkg2 =
+  mk_system_dep_steps ~name
     ~linux_cmd:(install_and_prefix_cmds opam_spec Ubuntu pkg1)
     ~macos_cmd:(install_and_prefix_cmds opam_spec MacOS pkg2)
+
+let verify_system_install_steps ~name ~expectation pkg1 pkg2 =
+  [
+    run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
+      ~shell:"bash" ~expectation [%string "dpkg -s %{pkg1}"];
+    run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
+      ~shell:"bash" ~expectation [%string "brew list %{pkg2}"];
+  ]
+
+let verify_opam_install_step ~name ~expectation package =
+  [ run_step ~name ~expectation [%string {|eval $(opam env)
+opam list %{package} --short|}] ]
 
 let export_dyld_envar on =
   if on then "export DYLD_LIBRARY_PATH=$(pwd)/build" else ""
@@ -177,47 +194,47 @@ let prebuilt_info_exn (config : ocaml_tool_config) =
   | Some info -> info
   | None -> failwith "Expected prebuilt OCaml binding config"
 
-let verb_of_code_step = function Compile -> "Compile" | Run -> "Run"
+let verb_of_probe_action = function
+  | Compile_example -> "Compile"
+  | Run_example -> "Run"
 
 let display_suffix_of_mode = function
   | Bytecode -> ".byte"
   | Native -> " (native)"
 
 let command_of_test_case (ctx : ocaml_test_context) = function
-  | { code_step = Compile; mode; source; _ } -> (
+  | { probe_action = Compile_example; mode; binding_location; _ } -> (
       let target =
         example_output_file ~suffix:ctx.target_suffix ctx.ocaml.example_target
           mode
       in
-      match source with
-      | Source ->
+      match binding_location with
+      | Build_tree ->
           let api_path =
             Option.value_exn ctx.build_api_path
-              ~message:"build_api_path is required for Source compile"
+              ~message:"build_api_path is required for Build_tree compile"
           in
           ocaml_cc_with_obj ~binding_lib_name:ctx.ocaml.binding_lib_name
             ~example_file:ctx.ocaml.example_file mode ~api_path ~target
-      | Prebuilt ->
+      | _ ->
           ocaml_cc_with_pkg ~package:ctx.package_name
             ~example_file:ctx.ocaml.example_file mode ~target)
-  | { code_step = Run; mode; source; _ } -> (
+  | { probe_action = Run_example; mode; binding_location; _ } -> (
       let target =
         example_output_file ~suffix:ctx.target_suffix ctx.ocaml.example_target
           mode
       in
+      let from_source = is_source_location binding_location in
       match mode with
-      | Bytecode -> run_example_bytecode_cmd (Poly.( = ) source Source) target
-      | Native -> run_example_native_cmd (Poly.( = ) source Source) target)
+      | Bytecode -> run_example_bytecode_cmd from_source target
+      | Native -> run_example_native_cmd from_source target)
 
-let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~(spec : job_spec)
+let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~binding_location
     ?(test_expectation = Expect_success) () =
-  let example_name =
-    Option.value_exn spec.example_name
-      ~message:"job_spec.example_name is required for mk_ocaml_test_steps"
-  in
-  let source = origin_of_location spec.binding_location in
+  let example_name = ocaml.ocaml.example_name in
+  let from_source = is_source_location binding_location in
   let variant_suffix =
-    match source with Source -> "" | Prebuilt -> "_with_pkg"
+    if from_source then "" else "_with_pkg"
   in
   let package_name =
     match ocaml.prebuilt with
@@ -228,20 +245,20 @@ let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~(spec : job_spec)
     {
       ocaml = ocaml.ocaml;
       package_name;
-      build_api_path = spec.build_api_path;
+      build_api_path = ocaml.ocaml.build_api_path;
       target_suffix = variant_suffix;
     }
   in
-  List.map all_cc_and_modes ~f:(fun (mode, code_step) ->
+  List.map all_cc_and_modes ~f:(fun (mode, probe_action) ->
       let exp =
-        match (code_step, mode) with
-        | Compile, Bytecode -> Expect_success
+        match (probe_action, mode) with
+        | Compile_example, Bytecode -> Expect_success
         | _ -> test_expectation
       in
-      let verb = verb_of_code_step code_step in
+      let verb = verb_of_probe_action probe_action in
       let suffix = display_suffix_of_mode mode in
       let name =
         [%string "%{verb} %{example_name}%{variant_suffix}%{suffix}"]
       in
-      let tc = { code_step; mode; source; expectation = exp } in
+      let tc = { probe_action; mode; binding_location; expectation = exp } in
       run_step ~name ~expectation:exp (command_of_test_case ctx tc))

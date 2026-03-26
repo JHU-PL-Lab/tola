@@ -1,36 +1,36 @@
 open Base
+open Canary_basic_store
 
 (* ── Type definitions ── *)
 
 type distro = Wsl | MacOS_local
 type runner_os = Ubuntu | MacOS
 type binding_lang = OCaml | Python
-type package_manager = Apt | Brew | Opam | Unsupported
-type code_step = Compile | Run
+type probe_action = Compile_example | Run_example
 type compile_mode = Native | Bytecode
-type origin = Source | Prebuilt
+type artifact_kind = Source | Lib | Binding | App
 
-(* type matrix = {} * {} * {} * {}
-                                - version selecitons
+let kind_order = function
+  | Source -> 0 | Lib -> 1 | Binding -> 2 | App -> 3
 
-combination : 
- *)
+type artifact = { kind : artifact_kind; name : string; location : location }
 
-(* 
-job : step list
-let stanard_test_job project_spec : job list = [ ] 
-  *)
+type artifact_node = {
+  a_kind : artifact_kind;
+  a_name : string;
+  origin : location;
+  a_location : location;
+  built_from : artifact_node option;
+  runtime_dep : artifact_node option;
+}
+
+type artifact_op = Compile | Fetch | Pack | Test
 
 let all_compile_modes = [ Bytecode; Native ]
-let all_code_steps = [ Compile; Run ]
-let all_cc_and_modes = List.cartesian_product all_compile_modes all_code_steps
+let all_probe_actions = [ Compile_example; Run_example ]
 
-type location = Build_tree | System_pm | Lang_pm | Wild of string
-
-type artifact =
-  | Artifact_file of string
-  | Artifact_dir of string
-  | Artifact_package of string
+let all_cc_and_modes =
+  List.cartesian_product all_compile_modes all_probe_actions
 
 type step_expectation =
   | Expect_success
@@ -50,33 +50,39 @@ type project_spec = {
   version : string;
   commit : string;
   bindings : (binding_lang * package_manager) list;
+  (* graph capabilities *)
+  system_pm : package_manager;
+  has_source : bool;
+  has_system_pkg : bool;
+  has_lang_pkg : bool;
+  can_package : bool;
 }
 
-type 'a step = {
+type cmdline = string
+
+type step = {
   name : string;
   guard : condition option;
   shell : string option;
   env_fields : (string * string) list;
   requires : artifact list;
   produces : artifact list;
-  action : 'a;
+  action : cmdline;
   expectation : step_expectation;
 }
 
 type system_pkg = { linux_pkg : string; macos_pkg : string }
 
 type phase_kind =
-  | Install_pkg of system_pkg option
-  | Install_local
-  | Configure_build of string step list
-  | Test_binding
+  | Pm_install of system_pkg option
+  | Pm_install_local of package_manager
+  | Cmake_buildgen of step
+  | Cmake_build of step
+  | Probe_test of { lang : binding_lang }
   | Run_command of { name : string; command : string }
-
-type phase_action = Install | Configure | Test
 
 type step_phase = {
   kind : phase_kind;
-  action : phase_action;
   location : location;
   requires : artifact list;
   produces : artifact list;
@@ -86,12 +92,8 @@ type step_phase = {
 type job_spec = {
   distro : distro;
   id : string;
+  description : string;
   phases : step_phase list;
-  lib_origin : origin;
-  binding_location : location;
-  test_bindings : binding_lang list;
-  example_name : string option;
-  build_api_path : string option;
   if_disabled : bool;
 }
 
@@ -103,13 +105,14 @@ type yaml_preamble_action = {
   with_fields : (string * string) list;
 }
 
-type 'a job = {
+type job = {
   id : string;
+  description : string;
   if_disabled : bool;
   name : string;
   runs_on : string;
   preamble : yaml_preamble_action list;
-  steps : 'a step list;
+  steps : step list;
 }
 
 type template_vars = { assert_result : string; assert_symbols : string }
@@ -140,6 +143,9 @@ type canary_opam = {
   in_generated : string;
 }
 
+let opam_local_repo_path ~pkg_name ~versioned_name =
+  [%string "/opam-local-repo/packages/%{pkg_name}/%{versioned_name}/opam"]
+
 type canary_config = {
   paths : canary_paths;
   backends : canary_backends;
@@ -149,41 +155,32 @@ type canary_config = {
 
 (* ── Functions ── *)
 
+let string_of_lang = function OCaml -> "OCaml" | Python -> "Python"
+
+
+let name_of_phase (phase : step_phase) =
+  match phase.kind with
+  | Pm_install _ -> (
+      match phase.location with
+      | System_pm -> "Install system dependencies"
+      | Lang_pm -> "Install binding package"
+      | loc -> [%string "Install via %{string_of_location loc}"])
+  | Pm_install_local pm ->
+      [%string "Install from local %{string_of_pm pm} repo"]
+  | Cmake_buildgen _ -> "Configure with CMake"
+  | Cmake_build _ -> "Build with CMake"
+  | Probe_test { lang } -> [%string "Probe %{string_of_lang lang} binding"]
+  | Run_command { name; _ } -> name
+
 let detect_distro () =
   match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
   | 0 -> MacOS_local
   | _ -> Wsl
 
-let z3_dev_root_of_distro : distro -> string = function
-  | Wsl -> "/home/ex/code/ocaml-build-examples/vendor/z3"
-  | MacOS_local -> "/Users/ex/code/repos/z3"
-
-let z3_stable_root_of_distro : distro -> string = function
-  | Wsl -> "/home/ex/code/ocaml-build-examples/vendor/z3-stable"
-  | MacOS_local -> "/Users/ex/code/repos/z3-stable"
-
-let z3_dev_spec distro : project_spec =
-  {
-    root = z3_dev_root_of_distro distro;
-    version = "dev";
-    commit = "HEAD";
-    bindings = [ (OCaml, Opam); (Python, Unsupported) ];
-  }
-
-let z3_stable_spec distro : project_spec =
-  {
-    root = z3_stable_root_of_distro distro;
-    version = "4.8.15";
-    commit = "745087e";
-    bindings = [ (OCaml, Opam); (Python, Unsupported) ];
-  }
 
 let name_of_job_spec (spec : job_spec) =
   [%string "%{spec.id} (${{ matrix.os }})"]
 
-let origin_of_location = function
-  | Build_tree -> Source
-  | System_pm | Lang_pm | Wild _ -> Prebuilt
 
 let default_template_vars =
   {
@@ -191,7 +188,7 @@ let default_template_vars =
     assert_symbols = "%{ASSERT_SYMBOLS_SCRIPT}%";
   }
 
-let default_canary_config =
+let mk_canary_config ?(pkg_name = "") ?(versioned_name = "") () =
   let root = "canary" in
   let templates_root = root ^ "/templates" in
   let reference_root = root ^ "/reference" in
@@ -201,6 +198,7 @@ let default_canary_config =
   let contrib_rel = "contrib/canary" in
   let assert_result = contrib_rel ^ "/scripts/assert_result.py" in
   let assert_symbols = contrib_rel ^ "/scripts/assert_binary_symbols.py" in
+  let opam_rel = opam_local_repo_path ~pkg_name ~versioned_name in
   {
     paths = { root; templates_root; reference_root; out_root; contrib_rel };
     backends =
@@ -221,12 +219,9 @@ let default_canary_config =
       };
     opam =
       {
-        tpl_template =
-          templates_root ^ "/opam-local-repo/packages/z3/z3.dev/opam";
-        generated =
-          out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam";
-        in_generated =
-          out_root ^ "/templates/opam-local-repo/packages/z3/z3.dev/opam.in";
+        tpl_template = templates_root ^ opam_rel;
+        generated = out_root ^ "/templates" ^ opam_rel;
+        in_generated = out_root ^ "/templates" ^ opam_rel ^ ".in";
       };
     template_vars = default_template_vars;
   }
@@ -245,7 +240,7 @@ let yaml_preamble_action ?name ?(with_fields = []) uses =
 let run_step ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
     ?(expectation = Expect_success) ~name action =
   ({ name; guard; shell; env_fields; requires; produces; action; expectation }
-    : 'a step)
+    : step)
 
 (* utilities *)
 
@@ -301,7 +296,7 @@ let resolve_backend_scripts ~(scripts : backend_scripts) action =
   |> String.substr_replace_all ~pattern:vars.assert_symbols
        ~with_:scripts.assert_symbols_script
 
-let resolve_job_scripts ~scripts (job : string job) =
+let resolve_job_scripts ~scripts (job : job) =
   {
     job with
     steps =
@@ -322,6 +317,7 @@ let checkout_and_setup_preamble = [ checkout_step; setup_step ]
 let job_of_spec ~(spec : job_spec) =
   {
     id = spec.id;
+    description = spec.description;
     if_disabled = spec.if_disabled;
     name = name_of_job_spec spec;
     runs_on = "${{ matrix.os }}";
@@ -329,10 +325,10 @@ let job_of_spec ~(spec : job_spec) =
     steps = [];
   }
 
-let make_job ~resolve_phase (spec : job_spec) =
+let make_job ~steps_of_phase ~config (spec : job_spec) =
   let job = job_of_spec ~spec in
-  let (steps : string step list) =
-    List.concat_map spec.phases ~f:(resolve_phase spec)
+  let (steps : step list) =
+    List.concat_map spec.phases ~f:(steps_of_phase config)
   in
   let steps =
     List.map steps ~f:(fun step ->
@@ -340,12 +336,12 @@ let make_job ~resolve_phase (spec : job_spec) =
   in
   { job with steps }
 
-let mk_system_dep_steps ~linux_cmd ~macos_cmd =
+let mk_system_dep_steps ~name ~linux_cmd ~macos_cmd =
   [
-    run_step ~name:"Install system dependencies (Linux)"
-      ~guard:(On_runner_os Ubuntu) ~shell:"bash" linux_cmd;
-    run_step ~name:"Install system dependencies (macOS)"
-      ~guard:(On_runner_os MacOS) ~shell:"bash" macos_cmd;
+    run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
+      ~shell:"bash" linux_cmd;
+    run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
+      ~shell:"bash" macos_cmd;
   ]
 
 let string_of_expectation = function
@@ -355,7 +351,7 @@ let string_of_expectation = function
   | Expect_symbols_resolved { provided_lib; _ } ->
       [%string "symbols(%{provided_lib})"]
 
-let dump_step (step : string step) =
+let pp_step ppf (step : step) =
   let guard_s =
     match step.guard with
     | None -> ""
@@ -371,14 +367,19 @@ let dump_step (step : string step) =
     let lines = String.split_lines step.action in
     match lines with [] -> "" | [ l ] -> l | l :: _ -> l ^ " ..."
   in
-  Fmt.pr "  - %s%s%s@." step.name guard_s exp_s;
-  Fmt.pr "    %s@." preview
+  Fmt.pf ppf "  - %s%s%s@." step.name guard_s exp_s;
+  Fmt.pf ppf "    %s@." preview
 
-let dump_job (job : string job) =
-  Fmt.pr "Job: %s@." job.id;
-  if job.if_disabled then Fmt.pr "  (disabled)@.";
-  List.iter job.steps ~f:dump_step;
-  Fmt.pr "@."
+let pp_job ppf (job : job) =
+  Fmt.pf ppf "Job: %s@." job.id;
+  if not (String.is_empty job.description) then
+    Fmt.pf ppf "  %s@." job.description;
+  if job.if_disabled then Fmt.pf ppf "  (disabled)@.";
+  List.iter job.steps ~f:(pp_step ppf);
+  Fmt.pf ppf "@."
+
+let dump_step = pp_step Fmt.stdout
+let dump_job = pp_job Fmt.stdout
 
 let check_file_exists_exn path =
   let exists = Stdlib.Sys.file_exists path in
