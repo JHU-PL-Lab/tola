@@ -1,4 +1,3 @@
-open Base
 open Canary_basic
 open Canary_basic_ocaml
 open Canary
@@ -101,26 +100,22 @@ let config distro =
 
 (* ── Action steps ── *)
 
-let detect_pm () =
-  if Stdlib.Sys.command "which brew > /dev/null 2>&1" = 0 then "brew"
-  else "apt-get"
-
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
 let script_spec : Canary_action.script_spec =
-  let pm = detect_pm () in
-  let sys_pkg = if String.equal pm "brew"
-    then prebuilt.system_package_macos
-    else prebuilt.system_package_linux in
+  let pm = Canary_basic_store.detect_pm () in
+  let sys_pkg = match pm with
+    | Brew -> prebuilt.system_package_macos
+    | _ -> prebuilt.system_package_linux in
   let opam_pkg = prebuilt.opam_package in
   let example = sqlite_ocaml_config.ocaml.example_file in
   let target = sqlite_ocaml_config.ocaml.example_target in
   let binding_lib = sqlite_ocaml_config.ocaml.binding_lib_name in
   { Canary_action.empty_script_spec with
     fetch_lib = Some (fun ~output_dir ->
-      [%string "%{pm} install %{sys_pkg} && echo 'installed' > %{output_dir}/lib.ok"]);
+      [%string "%{Canary_basic_store.pm_install_cmd pm ~pkg:sys_pkg} && echo 'installed' > %{output_dir}/lib.ok"]);
     fetch_binding = Some (fun ~output_dir ->
-      [%string "eval $(opam env) && opam install %{opam_pkg} -y && echo 'installed' > %{output_dir}/binding.ok"]);
+      [%string "%{Canary_basic_store.pm_install_cmd Opam ~pkg:opam_pkg} && echo 'installed' > %{output_dir}/binding.ok"]);
     probe_binding = Some (fun ~output_dir ->
       [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} && %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log"]);
   }

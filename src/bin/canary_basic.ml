@@ -3,7 +3,6 @@ open Canary_basic_store
 
 (* ── Type definitions ── *)
 
-type distro = Wsl | MacOS_local
 type runner_os = Ubuntu | MacOS
 type binding_lang = OCaml | Python
 type probe_action = Compile_example | Run_example

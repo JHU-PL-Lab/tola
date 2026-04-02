@@ -31,28 +31,32 @@ let action_cmd =
     Arg.(value & flag & info [ "quick" ]
            ~doc:"Skip build-from-source actions")
   in
-  let run_z3 ~root ~quick distro =
-    Canary_action.run_project ~root ~project:"z3"
+  let failfast =
+    Arg.(value & flag & info [ "failfast"; "ff" ]
+           ~doc:"Stop on first failure (useful for debugging)")
+  in
+  let run_z3 ~root ~quick ~failfast distro =
+    Canary_action.run_project ~failfast ~root ~project:"z3"
       (Canary_project_z3.action_steps ~quick ~root ~project:"z3" distro)
   in
-  let run project quick () =
+  let run project quick failfast () =
     let root = "_out" in
     let distro = detect_distro () in
     match project with
     | Some "sqlite" ->
-        Canary_action.run_project ~root ~project:"sqlite"
+        Canary_action.run_project ~failfast ~root ~project:"sqlite"
           (Canary_project_sqlite.action_steps ~root ~project:"sqlite")
     | Some "z3" ->
-        run_z3 ~root ~quick distro
+        run_z3 ~root ~quick ~failfast distro
     | None ->
-        Canary_action.run_project ~root ~project:"sqlite"
+        Canary_action.run_project ~failfast ~root ~project:"sqlite"
           (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
-        run_z3 ~root ~quick distro
+        run_z3 ~root ~quick ~failfast distro
     | Some p ->
         Fmt.pr "Unknown project: %s (available: sqlite, z3)@." p
   in
   Cmd.v (Cmd.info "action" ~doc:"Run the action graph")
-    Term.(const run $ project $ quick $ const ())
+    Term.(const run $ project $ quick $ failfast $ const ())
 
 (* ── Main ── *)
 

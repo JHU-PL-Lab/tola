@@ -35,27 +35,27 @@ install: [
     -dll $B/libz3.* \
     $B/src/api/ml/dllz3ml.so"
      ]
-  ["install_name_tool" "-id" "/home/red/.opam/default/lib/stublibs/libz3.dylib" "/home/red/.opam/default/lib/stublibs/libz3.dylib"] {os = "macos"}
+  ["install_name_tool" "-id" "%{lib}%/stublibs/libz3.dylib" "%{lib}%/stublibs/libz3.dylib"] {os = "macos"}
   [ "sh" "-c"
     "
-    LIBZ3_KEY=$(otool -L '/home/red/.opam/default/lib/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
-    install_name_tool -change \"$LIBZ3_KEY\" \"/home/red/.opam/default/lib/stublibs/libz3.dylib\" \"/home/red/.opam/default/lib/stublibs/dllz3ml.so\"
+    LIBZ3_KEY=$(otool -L '%{lib}%/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
+    install_name_tool -change \"$LIBZ3_KEY\" \"%{lib}%/stublibs/libz3.dylib\" \"%{lib}%/stublibs/dllz3ml.so\"
     "
   ] {os = "macos"}
   # [ "sh" "-c" "ocamlfind install z3 build/src/api/ml/* -dll build/libz3.*" ]
   # [ "sh" "-c"
   #   "
   #   echo '-- listing'
-  #   ls /home/red/.opam/default/lib/z3 | grep z3
-  #   ls /home/red/.opam/default/lib/stublibs | grep z3
+  #   ls %{lib}%/z3 | grep z3
+  #   ls %{lib}%/stublibs | grep z3
 
   #   echo '-- otool info'
-  #   otool -L '/home/red/.opam/default/lib/stublibs/libz3.dylib'
-  #   otool -L '/home/red/.opam/default/lib/stublibs/dllz3ml.so'
+  #   otool -L '%{lib}%/stublibs/libz3.dylib'
+  #   otool -L '%{lib}%/stublibs/dllz3ml.so'
 
-  #   LIBZ3_KEY=$(otool -L '/home/red/.opam/default/lib/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
+  #   LIBZ3_KEY=$(otool -L '%{lib}%/stublibs/dllz3ml.so' | awk '/libz3.*dylib/ { print $1 }')
   #   echo \"$LIBZ3_KEY\"
-  #   install_name_tool -change \"$LIBZ3_KEY\" \"/home/red/.opam/default/lib/stublibs/libz3.dylib\" \"/home/red/.opam/default/lib/stublibs/dllz3ml.so\"
+  #   install_name_tool -change \"$LIBZ3_KEY\" \"%{lib}%/stublibs/libz3.dylib\" \"%{lib}%/stublibs/dllz3ml.so\"
   #   "
   # ] {os = "macos"}
 ]
@@ -77,7 +77,7 @@ conflicts: [
 ]
 synopsis: "Z3 solver (development version)"
 url {
-  src: "git+file:///home/red/code/contrib/z3"
+  src: "%{CANARY_Z3_SRC}%"
 }
 extra-source "gccstd-2a.patch" {
   src:

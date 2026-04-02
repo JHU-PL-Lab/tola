@@ -24,6 +24,8 @@ type script_spec = {
   probe_lib : (output_dir:string -> string) option;
   probe_binding : (output_dir:string -> string) option;
   probe_app : (output_dir:string -> string) option;
+  (* Optional per-rule check_post override. None = use default (non-empty dir). *)
+  check_post : (rule -> (output_dir:string -> bool) option);
 }
 
 let empty_script_spec = {
@@ -31,6 +33,7 @@ let empty_script_spec = {
   build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
   probe_lib = None; probe_binding = None; probe_app = None;
+  check_post = (fun _ -> None);
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -159,8 +162,9 @@ let run_step logger ~root ~project (step : action_step) =
 
 type step_status = Step_done | Step_failed | Step_skipped
 
-(* Run all steps in dependency order. Returns status per tag. *)
-let run_graph logger ~project ~root (steps : action_step list) =
+(* Run all steps in dependency order. Returns status per tag.
+   ~failfast:true stops on the first failure (useful for debugging). *)
+let run_graph ?(failfast = false) logger ~project ~root (steps : action_step list) =
   logger.log ~tag:"*" ~event:"graph_start"
     ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
   let status = Hashtbl.create (module String) in
@@ -169,12 +173,13 @@ let run_graph logger ~project ~root (steps : action_step list) =
       let out = output_dir_for ~root ~project ~tag:s.tag in
       if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out then
         Hashtbl.set status ~key:s.tag ~data:Step_done);
-  (* Iterate until no progress *)
+  (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in
-  while !changed do
+  let aborted = ref false in
+  while !changed && not !aborted do
     changed := false;
     List.iter steps ~f:(fun s ->
-        if not (Hashtbl.mem status s.tag) then
+        if (not !aborted) && not (Hashtbl.mem status s.tag) then
           let deps_ok =
             List.for_all s.deps ~f:(fun dep ->
                 match Hashtbl.find status dep with
@@ -185,8 +190,15 @@ let run_graph logger ~project ~root (steps : action_step list) =
             let ok = run_step logger ~project ~root s in
             Hashtbl.set status ~key:s.tag
               ~data:(if ok then Step_done else Step_failed);
-            if ok then changed := true))
+            if ok then changed := true
+            else if failfast then (
+              logger.log ~tag:"*" ~event:"failfast"
+                ~detail:(Some [%string "stopped after %{s.tag}"]);
+              aborted := true)))
   done;
+  if failfast && !aborted then (
+    logger.close ();
+    Stdlib.exit 1);
   (* Mark unreached as skipped *)
   List.iter steps ~f:(fun s ->
       if not (Hashtbl.mem status s.tag) then
@@ -317,18 +329,21 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
         | Some cmd ->
             Hashtbl.set seen ~key:tag ~data:true;
             let deps = deps_of_rule spec rule in
-            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd
-                    ~check_post:(fun ~output_dir ->
-                      (* Default postcondition: output_dir is non-empty *)
-                      Stdlib.Sys.file_exists output_dir &&
-                      Array.length (Stdlib.Sys.readdir output_dir) > 0)))
+            let check_post = match spec.check_post rule with
+              | Some cp -> cp
+              | None -> (fun ~output_dir ->
+                  (* Default postcondition: output_dir is non-empty *)
+                  Stdlib.Sys.file_exists output_dir &&
+                  Array.length (Stdlib.Sys.readdir output_dir) > 0)
+            in
+            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post))
 
-let run_project ~root ~project steps =
+let run_project ?(failfast = false) ~root ~project steps =
   let dir = [%string "%{root}/canary/_local/%{project}"] in
   ensure_dir dir;
   let log_path = [%string "%{dir}/actions.log"] in
   let logger = create_logger ~log_path in
-  let status = run_graph logger ~project ~root steps in
+  let status = run_graph ~failfast logger ~project ~root steps in
   (* Write result diagram — same schema as action_rule.mmd, colored by status *)
   let mmd_path = [%string "%{dir}/result.mmd"] in
   let node_status = result_status_of_run steps status in
