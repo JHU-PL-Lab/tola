@@ -157,6 +157,19 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     This is the core canary research contribution — testing the seams
     between versions across the resolution chain.
 
+20. **Symbol diff between lib versions** — `assert_binary_symbols.py` currently
+    checks `binding_required ⊆ lib_provided` (matching version, expect missing=0).
+    For the cross-version case, the useful query is:
+    (a) `added = symbols(lib_v_new) − symbols(lib_v_old)` — API additions in newer version
+    (b) `breaking = binding_required ∩ added` — symbols the binding needs that don't
+        exist in the older lib (i.e., what breaks if system has v_old but binding
+        was built against v_new)
+    Extend the script with `--provided-lib-v1 / --provided-lib-v2` mode that
+    computes the diff and reports which required symbols fall in `added`.
+    This gives the concrete breakage list without needing API metadata —
+    purely nm-based. Connects to TODO #16 (mismatch prediction) but is
+    independently useful as a diagnostic tool.
+
 19. **LLVM cross-version symbol check** — `probe_binding` for llvm currently
     only compiles and runs the example; no `native_symbol_check_cmd` like z3.
     For the dynamic case (`llvm.19`, not static), add compat check:
