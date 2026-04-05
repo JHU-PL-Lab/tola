@@ -236,6 +236,15 @@ dune build src/langs/ src/bin/yelu/    # yelu only
   on WSL. On GH CI (Ubuntu), sandbox is active — `CANARY_BUILD_DIR`
   pointing outside the sandbox will be blocked. CI should use the
   default `build` fallback (no env var).
+- **ELF symbol versioning in nm output**: Linux shared libs (e.g., LLVM)
+  use versioned symbols — `nm -D` outputs `LLVMAddAlias2@@LLVM_19.1`
+  not `LLVMAddAlias2`. `assert_binary_symbols.py` regex must allow
+  `(?:@@?\S+)?$` suffix; a bare `\w+$` anchor silently matches nothing.
+  Fix is in `parse_defined_symbols` in `canary/scripts/assert_binary_symbols.py`.
+- **`find_llvm_config_cmd` composability**: it's a multi-line `if/elif/fi`
+  shell expression. Cannot be safely nested inside `$()` as a sub-argument
+  (e.g., `$(find_llvm_config_cmd --libdir)` is wrong). Always assign to a
+  variable first: `LLVM_CONFIG=$(find_llvm_config_cmd)` then use `$LLVM_CONFIG`.
 
 ## Conventions
 
