@@ -164,7 +164,31 @@ let script_spec : Canary_action.script_spec =
             {|LLVM_CONFIG=$(%{find_llvm_config_cmd}) && test -x "$LLVM_CONFIG" && "$LLVM_CONFIG" --version 2>&1 | tee %{output_dir}/probe.log|}]);
     probe_binding =
       Some
-        (fun ~output_dir -> llvm_ocaml_probe ~output_dir ~binding_lib ~target);
+        (fun ~output_dir ->
+          let script = "canary/scripts/assert_binary_symbols.py" in
+          let example = llvm_ocaml_config.ocaml.example_file in
+          (* Single integrated script: LLVM_CONFIG set once, shared across all steps.
+             find_llvm_config_cmd is a multi-line if/elif expression — can't be
+             safely nested inside $() inside a subcommand arg, so we set it up front. *)
+          [%string
+            {|eval $(opam env)
+LLVM_CONFIG=$(%{find_llvm_config_cmd})
+test -x "$LLVM_CONFIG"
+PKG_DIR=$(ocamlfind query '%{binding_lib}' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+PROVIDED=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
+test -n "$PROVIDED"
+for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+  [ -f "$f" ] && printf '\n=== %s ===\n' "$f" && ocamlobjinfo "$f"
+done 2>&1 | tee %{output_dir}/archive.log
+python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
+  --symbol-prefix LLVM 2>&1 | tee %{output_dir}/symbols.log
+grep -q 'OK:' %{output_dir}/symbols.log
+LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
+  -o %{output_dir}/%{target}
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]);
     probe_app = Some llvm_python_probe;
   }
 

@@ -166,6 +166,37 @@ let native_symbol_check_cmd ~provided_lib ~required_libs ~prefix ~output_dir =
 let ocaml_archive_info_cmd ~archive ~output_dir =
   [%string "ocamlobjinfo %{archive} 2>&1 | tee %{output_dir}/archive.log"]
 
+(* Inspect all OCaml archives (.cmxa/.cma) in an opam-installed package.
+   Discovers the package dir via `ocamlfind query`, runs ocamlobjinfo on
+   each archive found. Writes archive.log. *)
+let opam_pkg_inspect_cmd ~pkg ~output_dir =
+  [%string
+    {|eval $(opam env)
+PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
+test -n "$PKG_DIR"
+for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+  [ -f "$f" ] && printf '\n=== %s ===\n' "$f" && ocamlobjinfo "$f"
+done 2>&1 | tee %{output_dir}/archive.log|}]
+
+(* Symbol compat check for an opam-installed binding vs a system native lib.
+   Discovers stub archive via `ocamlfind query <pkg>` (looks for lib*.a),
+   finds the system lib with `provided_lib_cmd` (a shell expression → path).
+   Writes symbols.log; exits nonzero if symbols are missing.
+   provided_lib_cmd example: "ls \"$(llvm-config --libdir)\"/libLLVM*.so | head -1" *)
+let opam_pkg_symbol_check_cmd ~pkg ~provided_lib_cmd ~prefix ~output_dir =
+  let script = "canary/scripts/assert_binary_symbols.py" in
+  [%string
+    {|eval $(opam env)
+PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+PROVIDED=$(%{provided_lib_cmd})
+test -n "$PROVIDED"
+python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
+  --symbol-prefix %{prefix} 2>&1 | tee %{output_dir}/symbols.log
+grep -q 'OK:' %{output_dir}/symbols.log|}]
+
 (* Python import probe. Writes import.log. *)
 let python_import_cmd ~pkg ~output_dir =
   [%string

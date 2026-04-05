@@ -53,7 +53,8 @@ def parse_undefined_symbols(nm_output: str, prefix: str) -> Set[str]:
 
 def parse_defined_symbols(nm_output: str, prefix: str) -> Set[str]:
     syms: Set[str] = set()
-    pat = re.compile(rf"^(?:[0-9A-Fa-f]+\s+)?([A-Za-z])\s+({re.escape(prefix)}\w+)$")
+    # Allow optional ELF symbol version suffix (@@VER or @VER) after the name.
+    pat = re.compile(rf"^(?:[0-9A-Fa-f]+\s+)?([A-Za-z])\s+({re.escape(prefix)}\w+)(?:@@?\S+)?$")
     for line in nm_output.splitlines():
         m = pat.match(line.strip())
         if not m:
