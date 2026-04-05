@@ -148,11 +148,11 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     strings — they are version-dependent on the PM tools themselves
     (dpkg, opam, brew CLI may change). Track this as a known fragility.
 
-16. **Mismatch prediction system** — given two versions of artifacts in
-    a dependency chain, predict what breaks and how. Currently
-    `Expect_failure` and `Expect_symbols` are hand-written per test case.
-    A prediction system would derive expected failures from version
-    metadata: e.g., "z3 4.15 binding linked against z3 4.13 lib →
+16. **Mismatch prediction system** *(Opus suggested)* — given two versions
+    of artifacts in a dependency chain, predict what breaks and how.
+    Currently `Expect_failure` and `Expect_symbols` are hand-written per
+    test case. A prediction system would derive expected failures from
+    version metadata: e.g., "z3 4.15 binding linked against z3 4.13 lib →
     missing symbols X, Y, Z" should be computable from API diffs.
     This is the core canary research contribution — testing the seams
     between versions across the resolution chain.
