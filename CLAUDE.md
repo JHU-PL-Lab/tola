@@ -157,6 +157,15 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     This is the core canary research contribution — testing the seams
     between versions across the resolution chain.
 
+18. **ocamlmklib stub archive convention** — `cmxa_stub_archive` in
+    `canary_artifact_check.ml` derives the C stub path as `lib<name>.a`
+    based on `ocamlmklib` naming. This is NOT universal — depends on how
+    the binding was built. Factor into the OCaml toolchain layer (similar
+    to how PM ops live in `canary_basic_opam.ml`): each project or binding
+    spec should declare its stub archive path explicitly, with the
+    `ocamlmklib` default as a fallback. Affects `probe_binding` symbol compat
+    check for any future binding that doesn't follow the `lib<name>.a` pattern.
+
 17. **Module interfaces (.mli)** — add `.mli` files to define contracts
     for PM modules and project modules. PM modules (`canary_basic_apt`,
     `canary_basic_brew`, `canary_basic_opam`) should all implement:

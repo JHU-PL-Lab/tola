@@ -47,8 +47,11 @@ let exists_ocaml_archive path =
   Stdlib.Sys.file_exists path && is_ocaml_archive path
 
 (* Companion C stub archive: z3ml.cmxa → libz3ml.a (contains C FFI symbols).
-   OCaml convention: native archive <name>.cmxa → C stubs in lib<name>.a.
-   This is the file nm can read to find undefined C symbols the binding requires. *)
+   `ocamlmklib` names its outputs lib<name>.a and dll<name>.so by convention.
+   This naming is NOT universal — it depends on how the binding was built.
+   TODO: factor this into the OCaml toolchain layer (like canary_basic_opam.ml
+   for PM ops), so each project declares its stub archive path rather than
+   relying on this derived default. For now, works for z3ml. *)
 let cmxa_stub_archive path =
   let dir = Stdlib.Filename.dirname path in
   let base = Stdlib.Filename.basename path in
