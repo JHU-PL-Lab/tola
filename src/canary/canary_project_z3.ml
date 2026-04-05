@@ -382,6 +382,19 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
     check_post =
       (function
       | Fetch Source -> Some Canary_basic_store.source_check_post
+      | Build_lib ->
+          Some
+            (fun ~output_dir ->
+              Canary_action.has_file ~output_dir "build.ok"
+              && (Stdlib.Sys.file_exists (lib_so_path root)
+                  || Stdlib.Sys.file_exists
+                       [%string "%{root}/build/libz3.dylib"]))
+      | Build_binding ->
+          Some
+            (fun ~output_dir ->
+              Canary_action.has_file ~output_dir "build.ok"
+              && Stdlib.Sys.file_exists
+                   [%string "%{root}/build/src/api/ml/z3ml.cmxa"])
       | Probe Binding ->
           Some
             (fun ~output_dir ->

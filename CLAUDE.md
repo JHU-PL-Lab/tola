@@ -64,10 +64,12 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
    added to `script_spec`; `source_check_post` reads `source.ok` and
    verifies the path still exists.
 
-3. **`check_post` per artifact** — replace remaining empty-dir checks
-   with real artifact existence checks (`.dylib`, `.cma`, etc.) keyed
-   per action kind. `fetch_source` is done; other actions still use
-   the default "output_dir non-empty" check.
+3. ~~**`check_post` per artifact**~~ — done: marker file system in place
+   for all rule categories (see design.md "Default postcondition markers"
+   table). z3 `Build_lib` and `Build_binding` now also check real artifact
+   existence (`libz3.so`, `z3ml.cmxa`) to catch stale-marker/deleted-build
+   cache misses. Remaining: sqlite/llvm have no build steps so no further
+   real artifact checks needed.
 
 4. ~~**Store indirection**~~ — largely done: `pm_install_cmd` handles
    system PMs; `source_repo` type models git sources with per-distro
@@ -78,8 +80,8 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
    opam auto-install system deps in Docker/CI. Currently local dev uses
    `--assume-depexts` (requires pre-installing system deps manually).
 
-6. **LLVM / Torch** — next projects to wire up using the same `script_spec`
-   pattern, validating the framework generalizes.
+6. ~~**LLVM**~~ — done: `canary_project_llvm.ml` wired up with prebuilt
+   system + opam binding + llvmlite python. Torch remains if needed.
 
 7. **z3 stable source** — `z3_source_stable` (4.15.2, bd3e722) is defined
    and `action_steps` accepts `~source`, but no CLI flag to select it yet.

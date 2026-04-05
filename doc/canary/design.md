@@ -585,6 +585,25 @@ Each action step has three parts:
 3. **Postcondition** (`check_post`) — did it succeed?
    Check output dir has expected contents.
 
+**Default postcondition markers** (`canary_action.ml`, `default_check_post`):
+
+| Rule category | Marker file   | Written by                         |
+|---------------|---------------|------------------------------------|
+| `Fetch Source`| `source.ok`   | `source_fetch_cmd` (+ dir check)   |
+| `Fetch Lib`   | `lib.ok`      | `fetch_lib_cmd` template           |
+| `Fetch Binding`| `binding.ok` | `fetch_binding_cmd` template       |
+| `Fetch App`   | `app.ok`      | project `fetch_app` script         |
+| `Build_*`     | `build.ok`    | project build script (`&& echo ok`)|
+| `Publish _`   | `pack.ok`     | project pack script (`&& echo ok`) |
+| `Probe _`     | `probe.log`   | project probe script (`tee probe.log`) |
+
+Projects override `check_post` in `script_spec` when the default marker
+is insufficient. Current overrides:
+- **z3 `Fetch Source`**: `source_check_post` — checks `source.ok` + dir exists
+- **z3 `Build_lib`**: `build.ok` + `libz3.so`/`.dylib` exists in build tree
+- **z3 `Build_binding`**: `build.ok` + `z3ml.cmxa` exists in build tree
+- **z3 `Probe Binding`**: `probe_build.log` AND `probe_pkg.log` (dual probe)
+
 Given vs generated:
 
 - **Given**: source code, system packages, prebuilt libs —
