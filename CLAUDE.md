@@ -55,83 +55,93 @@ project's scripts. `run_graph` executes the steps in dependency order with
 `mermaid_of_action_rule_schema` generates both reference and result diagrams;
 the result diagram colors edges via `linkStyle N stroke:...` by action status.
 
-### Current TODO (pick one to start)
+### Current TODO
 
-1. ~~**Fix z3 `fetch_binding`**~~ — done: `--assume-depexts` added via
-   `pm_install_cmd` in `canary_basic_store.ml`.
+1. **Symbol diff between lib versions** — `assert_binary_symbols.py`
+   currently checks `binding_required ⊆ lib_provided` (matching version,
+   expect missing=0). For the cross-version case, the useful query is:
+   (a) `added = symbols(lib_v_new) − symbols(lib_v_old)` — API additions
+   (b) `breaking = binding_required ∩ added` — what breaks if system has
+   v_old but binding was built against v_new.
+   Extend the script with `--provided-lib-old / --provided-lib-new` mode.
+   Purely nm-based, no API metadata needed. Foundation for TODO #10.
 
-2. ~~**Fix z3 `build_lib` check_post**~~ — done: `check_post` override
-   added to `script_spec`; `source_check_post` reads `source.ok` and
-   verifies the path still exists.
-
-3. ~~**`check_post` per artifact**~~ — done: marker file system in place
-   for all rule categories (see design.md "Default postcondition markers"
-   table). z3 `Build_lib` and `Build_binding` now also check real artifact
-   existence (`libz3.so`, `z3ml.cmxa`) to catch stale-marker/deleted-build
-   cache misses. Remaining: sqlite/llvm have no build steps so no further
-   real artifact checks needed.
-
-4. ~~**Store indirection**~~ — largely done: `pm_install_cmd` handles
-   system PMs; `source_repo` type models git sources with per-distro
-   locals and clone-on-demand; `mk_locals` + `distro_base` factor out
-   paths. Remaining: factor pack commands into store templates.
-
-5. **CI mode for opam depexts** — use `--confirm-level=unsafe-yes` to let
-   opam auto-install system deps in Docker/CI. Currently local dev uses
-   `--assume-depexts` (requires pre-installing system deps manually).
-
-6. ~~**LLVM**~~ — done: `canary_project_llvm.ml` wired up with prebuilt
-   system + opam binding + llvmlite python. Torch remains if needed.
-
-7. **z3 stable source** — `z3_source_stable` (4.15.2, bd3e722) is defined
+2. **z3 stable source** — `z3_source_stable` (4.15.2, bd3e722) is defined
    and `action_steps` accepts `~source`, but no CLI flag to select it yet.
-   Wire up e.g. `action z3-stable` or `--source stable`.
+   Wire up e.g. `action z3-stable` or `--source stable`. Note: z3's OCaml
+   binding doesn't provide a static binding yet, so cross-version testing
+   requires building both versions from source.
 
-8. **cmake configure as a separate action** — currently `build_lib`
+3. **cmake configure as a separate action** — currently `build_lib`
    bundles cmake configure + ninja build. Should be its own action step
    with pre (source exists), cmd (`cmake -B build ...`), post
    (`build/build.ninja` exists). `build_lib` and `build_binding` would
    depend on it instead of re-running configure each time.
 
-9. **Binding build dependencies** — z3's OCaml binding requires `zarith`
+4. **CI mode for opam depexts** — use `--confirm-level=unsafe-yes` to let
+   opam auto-install system deps in Docker/CI. Currently local dev uses
+   `--assume-depexts` (requires pre-installing system deps manually).
+
+5. **Binding build dependencies** — z3's OCaml binding requires `zarith`
    at build time. Currently not tracked in `ocaml_binding` or
    `script_spec`. Need to model per-binding opam deps so `build_binding`
-   can ensure they're installed (or fail clearly). If canary gets
-   first-class language-binding support, this becomes a dependency edge
-   in the action graph; otherwise, add a `binding_deps` field to
-   `ocaml_tool_config`.
+   can ensure they're installed (or fail clearly). Add a `binding_deps`
+   field to `ocaml_tool_config`.
 
-10. **Unified build cache schema** — currently two independent caches:
+6. **Driver mode: read `run_info.json` to configure a run** — allow
+   `canary action --from run_info.json` to replay or reconfigure a
+   run from a previously dumped spec. This enables: (a) reproducing
+   a specific test configuration on another machine, (b) editing the
+   JSON to test a different version/source without changing code,
+   (c) CI generating the JSON and canary executing it.
+
+7. **ocamlmklib stub archive convention** — `cmxa_stub_archive` in
+   `canary_artifact_check.ml` derives the C stub path as `lib<name>.a`
+   based on `ocamlmklib` naming. This is NOT universal — depends on how
+   the binding was built. Factor into the OCaml toolchain layer (similar
+   to how PM ops live in `canary_basic_opam.ml`): each project or binding
+   spec should declare its stub archive path explicitly, with the
+   `ocamlmklib` default as a fallback. Affects `probe_binding` symbol compat
+   check for any future binding that doesn't follow the `lib<name>.a` pattern.
+
+8. **Module interfaces (.mli)** — add `.mli` files to define contracts
+   for PM modules and project modules. PM modules (`canary_basic_apt`,
+   `canary_basic_brew`, `canary_basic_opam`) should all implement:
+   `install_cmd`, `verify_installed_cmd`, `query_version_cmd`,
+   `check_available_cmd`. Project modules (`canary_project_*.ml`)
+   should all provide: `script_spec`, `action_steps`, `run_info`,
+   `config`. This makes it clear what a new PM or project needs to
+   implement and prevents accidental use of internal functions.
+
+9. **PM primitive testing** — `canary_basic_apt.ml`, `canary_basic_brew.ml`,
+   `canary_basic_opam.ml` now have query/verify/check_available commands.
+   Next: wire these into canary actions so PM readiness can be tested
+   independently before project-level actions. Currently the commands are
+   hardcoded strings — version-dependent on the PM tools themselves.
+
+10. **Mismatch prediction system** *(Opus)* — given two versions of
+    artifacts in a dependency chain, predict what breaks and how.
+    A prediction system would derive expected failures from version
+    metadata: e.g., "z3 4.15 binding linked against z3 4.13 lib →
+    missing symbols X, Y, Z" should be computable from API diffs.
+    This is the core canary research contribution. TODO #1 is the
+    nm-based foundation.
+
+11. **Unified build cache schema** — currently two independent caches:
     canary's `_out/canary/_local/` (filesystem check_post) and opam's
     `~/.opam/.../build/` (opam-managed). For version combination testing,
     both layers need a shared cache key scheme (project × version × ref).
-    Explore specifying opam build dir and reusing canary's build artifacts
-    to avoid rebuilding libz3 twice.
-
-11. **tqdm-style progress display** — redirect verbose build output
-   (cmake/ninja) to a log file, show a `\r`-overwriting single-line
-   status on tty. Canary's `run_cmd_logged` already has the logging
-   layer; split tty output from file output.
 
 12. **Multiple probes per artifact kind** — `probe_binding` needs two
-    variants: one against the build tree (`-I api_path`, no `-package z3`)
-    and one against the opam-installed package (`-package z3`, no `-I`).
-    Currently hacked as a two-command sequence in one step. The framework
-    should support multiple probes per kind, each with different deps
-    (build_binding vs pack_binding). Probes are derived from artifacts,
-    not enumerated — this is a design question for the pattern table.
+    variants: one against the build tree and one against the opam-installed
+    package. Currently hacked as a two-command sequence in one step.
+    The framework should support multiple probes per kind, each with
+    different deps. Design question for the pattern table.
 
-13. ~~**Dump project spec / canary config**~~ — done: `run_info.json`
-    dumped at start of each action run with project, version, ref,
-    source, distro, system PM, opam switch, OCaml version, timestamp,
-    actions, and project-specific extras.
-
-13b. **Driver mode: read `run_info.json` to configure a run** — allow
-    `canary action --from run_info.json` to replay or reconfigure a
-    run from a previously dumped spec. This enables: (a) reproducing
-    a specific test configuration on another machine, (b) editing the
-    JSON to test a different version/source without changing code,
-    (c) CI generating the JSON and canary executing it.
+13. **tqdm-style progress display** — redirect verbose build output
+    (cmake/ninja) to a log file, show a `\r`-overwriting single-line
+    status on tty. Canary's `run_cmd_logged` already has the logging
+    layer; split tty output from file output.
 
 14. **z3 cmake `Z3_BUILD_LIBZ3_CORE=OFF` bug** — when set, cmake ignores
     `Z3_ROOT`, `Z3_BUILD_OCAML_BINDINGS`, and other flags. The
@@ -139,65 +149,29 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     Workaround: always build libz3 from source in the opam template.
     See `doc/z3_bug_api.md`.
 
-15. **PM primitive testing** — `canary_basic_apt.ml`, `canary_basic_brew.ml`,
-    `canary_basic_opam.ml` now have query/verify/check_available commands
-    (version query, availability check, depext listing). Next: wire these
-    into canary actions so PM readiness can be tested independently before
-    project-level actions (e.g., "is llvm-19-dev available and installed?
-    is the opam switch ready?"). Currently the commands are hardcoded
-    strings — they are version-dependent on the PM tools themselves
-    (dpkg, opam, brew CLI may change). Track this as a known fragility.
+### Done
 
-16. **Mismatch prediction system** *(Opus suggested)* — given two versions
-    of artifacts in a dependency chain, predict what breaks and how.
-    Currently `Expect_failure` and `Expect_symbols` are hand-written per
-    test case. A prediction system would derive expected failures from
-    version metadata: e.g., "z3 4.15 binding linked against z3 4.13 lib →
-    missing symbols X, Y, Z" should be computable from API diffs.
-    This is the core canary research contribution — testing the seams
-    between versions across the resolution chain.
-
-20. **Symbol diff between lib versions** — `assert_binary_symbols.py` currently
-    checks `binding_required ⊆ lib_provided` (matching version, expect missing=0).
-    For the cross-version case, the useful query is:
-    (a) `added = symbols(lib_v_new) − symbols(lib_v_old)` — API additions in newer version
-    (b) `breaking = binding_required ∩ added` — symbols the binding needs that don't
-        exist in the older lib (i.e., what breaks if system has v_old but binding
-        was built against v_new)
-    Extend the script with `--provided-lib-v1 / --provided-lib-v2` mode that
-    computes the diff and reports which required symbols fall in `added`.
-    This gives the concrete breakage list without needing API metadata —
-    purely nm-based. Connects to TODO #16 (mismatch prediction) but is
-    independently useful as a diagnostic tool.
-
-19. **LLVM cross-version symbol check** — `probe_binding` for llvm currently
-    only compiles and runs the example; no `native_symbol_check_cmd` like z3.
-    For the dynamic case (`llvm.19`, not static), add compat check:
-    `provided_lib = $(llvm-config-19 --libdir)/libLLVM.so`,
-    `required_lib = $(ocamlfind query llvm)/liballvm.a` (stub archive from
-    opam-installed package), `prefix = "LLVM"`. Needs: (a) opam-installed
-    stub archive discovery (unlike z3's build-tree path), (b) confirm LLVM
-    C API symbols are reliably prefixed `LLVM` in the stub archive.
-    Static case (`llvm.19-static`): mismatch caught at install time by conf
-    package; runtime symbol check not applicable.
-
-18. **ocamlmklib stub archive convention** — `cmxa_stub_archive` in
-    `canary_artifact_check.ml` derives the C stub path as `lib<name>.a`
-    based on `ocamlmklib` naming. This is NOT universal — depends on how
-    the binding was built. Factor into the OCaml toolchain layer (similar
-    to how PM ops live in `canary_basic_opam.ml`): each project or binding
-    spec should declare its stub archive path explicitly, with the
-    `ocamlmklib` default as a fallback. Affects `probe_binding` symbol compat
-    check for any future binding that doesn't follow the `lib<name>.a` pattern.
-
-17. **Module interfaces (.mli)** — add `.mli` files to define contracts
-    for PM modules and project modules. PM modules (`canary_basic_apt`,
-    `canary_basic_brew`, `canary_basic_opam`) should all implement:
-    `install_cmd`, `verify_installed_cmd`, `query_version_cmd`,
-    `check_available_cmd`. Project modules (`canary_project_*.ml`)
-    should all provide: `script_spec`, `action_steps`, `run_info`,
-    `config`. This makes it clear what a new PM or project needs to
-    implement and prevents accidental use of internal functions.
+- **Fix z3 `fetch_binding`** — `--assume-depexts` added via
+  `pm_install_cmd` in `canary_basic_store.ml`.
+- **Fix z3 `build_lib` check_post** — `check_post` override added to
+  `script_spec`; `source_check_post` reads `source.ok` and verifies
+  the path still exists.
+- **`check_post` per artifact** — marker file system for all rule
+  categories (see design.md). z3 `Build_lib` and `Build_binding` also
+  check real artifact existence (`libz3.so`, `z3ml.cmxa`).
+  `canary_artifact_check.ml` module: existence checks, nm symbol
+  inspection, opam package inspection.
+- **Store indirection** — `pm_install_cmd`, `source_repo`, `mk_locals`,
+  `distro_base`. Remaining: factor pack commands into store templates.
+- **LLVM** — `canary_project_llvm.ml` wired up with prebuilt system +
+  opam binding + llvmlite python + symbol compat check via opam package
+  inspection.
+- **LLVM cross-version symbol check** — `probe_binding` now inspects
+  opam package (archive.log), runs symbol compat check (symbols.log),
+  and compile+run (probe.log). Dynamic discovery via `ocamlfind query`.
+- **Dump project spec / canary config** — `run_info.json` dumped at
+  start of each action run.
+- **Unified example files** — all under `canary/examples/<project>/`.
 
 ## Other Work: Yelu
 
