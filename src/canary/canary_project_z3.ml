@@ -75,9 +75,9 @@ let z3_ocaml_config : Canary_basic_ocaml.ocaml_tool_config =
     toolchain = Canary_basic_ocaml.default;
     ocaml =
       {
-        example_target = "ml_example";
-        example_name = "ml_example";
-        example_file = "examples/ml/ml_example.ml";
+        example_target = "z3_example";
+        example_name = "z3_example";
+        example_file = "canary/examples/z3/z3_example.ml";
         binding_lib_name = "z3";
         build_api_path = Some "build/src/api/ml";
       };
@@ -302,7 +302,10 @@ let prebuilt_packaged_spec distro : job_spec =
 let mk_script_spec ~source distro : Canary_action.script_spec =
   let root = root_of_source distro source in
   let pm = Canary_basic_store.detect_pm () in
-  let example = z3_ocaml_config.ocaml.example_file in
+  (* example_file is relative to tola root; probe uses cd %{root} so needs abs path *)
+  let example =
+    Unix.getcwd () ^ "/" ^ z3_ocaml_config.ocaml.example_file
+  in
   let target = z3_ocaml_config.ocaml.example_target in
   let binding_lib = z3_ocaml_config.ocaml.binding_lib_name in
   let api_path = Option.value_exn z3_ocaml_config.ocaml.build_api_path in
