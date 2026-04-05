@@ -1,3 +1,17 @@
+# z3 Build Issues
+
+## Python bindings install path warning
+
+z3's cmake auto-detects `CMAKE_INSTALL_PYTHON_PKG_DIR` from the system
+Python. When using uv-managed Python, the detected site-packages path
+(e.g. `~/.local/share/uv/python/.../site-packages`) is outside the cmake
+install prefix (`/usr/local`), triggering a warning at
+`src/api/python/CMakeLists.txt:132`. Not a build error — just a warning
+about a potentially broken install target. Fix: set
+`-DCMAKE_INSTALL_PYTHON_PKG_DIR=...` explicitly if installing.
+
+## OCaml API partial match warning (z3.ml)
+
 ```shell
 [6/8] cd /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml && /home/ex/.opam/5.3.0/bin/ocamlfind ocamlc -package zarith -I /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml -o /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml/z3.cmi -c /home/ex/code/ocaml-build-examples/vendor/z3/src/api/ml/z3.mli && /home/ex/.opam/5.3.0/bin/ocamlfind ocamlc -package zarith -I /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml -o /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml/z3.cmo -c /home/ex/code/ocaml-build-examples/vendor/z3/src/api/ml/z3.ml && /home/ex/.opam/5.3.0/bin/ocamlfind ocamlopt -package zarith -I /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml -o /home/ex/code/ocaml-build-examples/vendor/z3/build/src/api/ml/z3.cmx -c /home/ex/code/ocaml-build-examples/vendor/z3/src/api/ml/z3.ml
 File "/home/ex/code/ocaml-build-examples/vendor/z3/src/api/ml/z3.ml", lines 378-385, characters 6-95:

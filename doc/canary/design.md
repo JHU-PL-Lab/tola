@@ -338,6 +338,128 @@ pattern table     ──select──→    applicable    ──instantiate──
                                                    flags)
 ```
 
+### Store Model
+
+The fundamental unit is a **store** — a place where artifacts live.
+A **fetch** is always a transport between two stores: a remote store
+and a local store. What differs across package managers and source
+is the level of indirection above the stores.
+
+```
+PM world:     remote_store ──[manager]──→ local_store ──[install]──→ artifact
+Source world:  origin       ──[manual]───→ local_copy  ────────────→ artifact
+```
+
+**Package managers** (apt, brew, opam) are really two stores — a
+remote index and a local cache — with a **manager** mediating
+between them. `apt install` is shorthand for "fetch from remote
+store → install to local store." The manager is the interface; the
+stores are the reality underneath. The manager provides a collection
+view: `apt list`, `opam list` — you query the manager, not
+individual packages.
+
+**Source/git** has the same two stores — a remote origin (GitHub
+repo, tarball URL, local path) and a local checkout — but **no
+manager**. Each source is fetched independently and directly. There
+is no registry, no index, no collection view. Nobody "tracks" that
+there is a z3 source or a sqlite source.
+
+The manager is a property of how stores are **connected**, not a
+property of the stores themselves. This means:
+
+- `package_manager` (Apt, Brew, Opam) describes the remote store
+  type + managed transport for packages.
+- `source_method` (Local_path, Git_tag, Archive) describes the
+  remote store type + ad-hoc transport for source.
+
+Both produce the same thing: a local artifact ready for the next
+action. The pattern table doesn't care which — `fetch_source` and
+`fetch_lib` are structurally identical actions.
+
+**Implementation**: `pm_install_cmd` and `source_fetch_cmd` in
+`canary_basic_store.ml` generate the concrete shell commands for
+each transport type. Project specs declare what they need (a PM
+package name, or a source entry), and the store layer handles how.
+
+### Version Resolution Chain
+
+When a lang PM package (e.g. opam `llvm.19-static`) depends on a
+system library (e.g. `llvm-19-dev`), the version must be resolved
+across multiple layers. Each layer has its own discovery mechanism:
+
+```
+System PM        Locator           Conf package      Lang binding
+─────────────    ─────────────     ──────────────    ──────────────
+apt install      llvm-config-19    conf-llvm.19      llvm.19-static
+  llvm-19-dev      --version         configure.sh      (opam)
+                   → "19.1.7"        → finds locator
+                                     → validates ver
+```
+
+**Four layers, three seams:**
+
+| Layer | Responsibility | Discovery mechanism |
+|-------|---------------|---------------------|
+| System PM | Install files to disk | `dpkg -s`, `brew list` |
+| Locator | Report version + paths | `llvm-config`, `pkg-config`, `brew --prefix` |
+| Conf package | Validate system dep for lang PM | `configure.sh`, opam `depexts` |
+| Lang binding | Compile + link against lib | `ocamlfind`, `-package` |
+
+The **locator** is the pivot point — it sits between the system PM
+and the lang PM. Everything upstream of the locator is system PM's
+responsibility; everything downstream trusts what the locator reports.
+
+**Common locator patterns:**
+
+| Locator | Used by | Reports |
+|---------|---------|---------|
+| `pkg-config` | Most C libs (gmp, sqlite, zlib) | `--modversion`, `--cflags`, `--libs` |
+| `llvm-config` | LLVM | `--version`, `--prefix`, `--ldflags` |
+| `brew --prefix <pkg>` | brew-installed libs on macOS | install path |
+| cmake `find_package` | cmake projects (z3) | sets cmake variables |
+| `ocamlfind query` | OCaml packages | install path |
+
+**Where version mismatches happen (the seams):**
+
+1. **System PM → Locator**: Multiple versions installed, wrong one
+   found. E.g., `llvm-config` points to v23 but `llvm-19-dev` is
+   installed. Fix: use versioned locator (`llvm-config-19`).
+
+2. **Locator → Conf**: Conf package searches for locator with
+   hardcoded search order. E.g., `conf-llvm-static.19/configure.sh`
+   tries `llvm-config-19`, `llvm-config19`, etc. If none match,
+   falls back to `llvm-config` and checks version. The search
+   logic is in the conf package, not controlled by the user.
+
+3. **Conf → Binding**: Conf passes version info to binding via opam
+   variables. If conf finds the wrong version (seam 2), the binding
+   compiles against wrong headers/libs. May succeed but produce
+   runtime errors.
+
+**Who controls the version?**
+
+No single layer decides. The system PM installs files, the project
+decides how to find them (locator choice), the lang PM wraps the
+discovery (conf package). Canary's role is to test each seam:
+
+- Does the locator resolve to the expected version?
+- Does the conf package find the right locator?
+- Does the binding compile and link correctly?
+
+**Easy escape via locator**: If the locator can be explicitly
+specified (e.g., `LLVM_CONFIG=/usr/bin/llvm-config-19`), the
+downstream layers follow. But this only works if the conf package
+respects the env var — many don't (they have their own search
+logic). This is a design opportunity: canary could standardize
+locator overrides across projects.
+
+**Implementation status**: `canary_basic_apt.ml`,
+`canary_basic_brew.ml`, `canary_basic_opam.ml` have the primitive
+commands for querying installed versions. The locator layer is
+project-specific (not yet factored into the framework). The PM
+primitive test script (`canary/scripts/test_pm_primitives.sh`)
+validates the system PM and opam layers. Locator testing is next.
+
 ### Store Config (design choice)
 
 Package format is **not** a structural dimension — it belongs to

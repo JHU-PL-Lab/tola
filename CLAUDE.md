@@ -25,15 +25,22 @@ plans for GH CI).
 
 | File | Purpose |
 |------|---------|
-| `src/bin/canary.ml` | Core types, action rules, 14-pattern table, diagram generation |
-| `src/bin/canary_action.ml` | `script_spec`, `derive_steps`, runner, text log |
+| `src/canary/canary.ml` | Core types, action rules, 14-pattern table, diagram generation |
+| `src/canary/canary_action.ml` | `script_spec`, `derive_steps`, runner, text log, shared templates |
 | `src/bin/canary_main.ml` | CLI entry point (`canary_main.exe`) |
-| `src/bin/canary_basic.ml` | `artifact_kind`, `kind_order`, `project_spec` |
-| `src/bin/canary_basic_store.ml` | `location`, `package_manager`, `source_repo`, `distro` types |
-| `src/bin/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec` |
-| `src/bin/canary_project_z3.ml` | z3 project spec + `script_spec` |
+| `src/canary/canary_basic.ml` | `artifact_kind`, `kind_order`, `project_spec` |
+| `src/canary/canary_basic_store.ml` | `location`, `package_manager`, `source_repo`, `distro` types |
+| `src/canary/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec` |
+| `src/canary/canary_project_z3.ml` | z3 project spec + `script_spec` |
+| `src/canary/canary_project_llvm.ml` | LLVM project spec + `script_spec` (prebuilt only) |
+| `src/canary/canary_basic_apt.ml` | apt install/verify/query commands |
+| `src/canary/canary_basic_brew.ml` | brew install/verify/query commands |
+| `src/canary/canary_basic_opam.ml` | opam install/verify/query/switch commands |
 | `doc/canary/design.md` | Design doc: pattern table, store config, execution model |
+| `doc/canary/conf_package_analysis.md` | conf-* package complexity analysis (94% eliminable) |
 | `doc/canary/worklog_2026_03.md` | Session-by-session work log + TODO list |
+| `canary/scripts/test_pm_primitives.sh` | Test apt/brew/opam primitive commands |
+| `canary/scripts/test_llvm_versions.sh` | LLVM version resolution: diagnose, switch, test-seams |
 
 ### Architecture in one paragraph
 
@@ -112,17 +119,50 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     (build_binding vs pack_binding). Probes are derived from artifacts,
     not enumerated — this is a design question for the pattern table.
 
-13. **Dump project spec / canary config** — at the start of an action
-    run, print the resolved project spec (source version, ref, root,
-    enabled actions) and canary config to the log and/or a JSON/text
-    file in `_out/canary/_local/<project>/`. Makes it clear which
-    version combination was tested without reading the code.
+13. ~~**Dump project spec / canary config**~~ — done: `run_info.json`
+    dumped at start of each action run with project, version, ref,
+    source, distro, system PM, opam switch, OCaml version, timestamp,
+    actions, and project-specific extras.
+
+13b. **Driver mode: read `run_info.json` to configure a run** — allow
+    `canary action --from run_info.json` to replay or reconfigure a
+    run from a previously dumped spec. This enables: (a) reproducing
+    a specific test configuration on another machine, (b) editing the
+    JSON to test a different version/source without changing code,
+    (c) CI generating the JSON and canary executing it.
 
 14. **z3 cmake `Z3_BUILD_LIBZ3_CORE=OFF` bug** — when set, cmake ignores
     `Z3_ROOT`, `Z3_BUILD_OCAML_BINDINGS`, and other flags. The
     "use external libz3" code path doesn't wire up binding options.
     Workaround: always build libz3 from source in the opam template.
     See `doc/z3_bug_api.md`.
+
+15. **PM primitive testing** — `canary_basic_apt.ml`, `canary_basic_brew.ml`,
+    `canary_basic_opam.ml` now have query/verify/check_available commands
+    (version query, availability check, depext listing). Next: wire these
+    into canary actions so PM readiness can be tested independently before
+    project-level actions (e.g., "is llvm-19-dev available and installed?
+    is the opam switch ready?"). Currently the commands are hardcoded
+    strings — they are version-dependent on the PM tools themselves
+    (dpkg, opam, brew CLI may change). Track this as a known fragility.
+
+16. **Mismatch prediction system** — given two versions of artifacts in
+    a dependency chain, predict what breaks and how. Currently
+    `Expect_failure` and `Expect_symbols` are hand-written per test case.
+    A prediction system would derive expected failures from version
+    metadata: e.g., "z3 4.15 binding linked against z3 4.13 lib →
+    missing symbols X, Y, Z" should be computable from API diffs.
+    This is the core canary research contribution — testing the seams
+    between versions across the resolution chain.
+
+17. **Module interfaces (.mli)** — add `.mli` files to define contracts
+    for PM modules and project modules. PM modules (`canary_basic_apt`,
+    `canary_basic_brew`, `canary_basic_opam`) should all implement:
+    `install_cmd`, `verify_installed_cmd`, `query_version_cmd`,
+    `check_available_cmd`. Project modules (`canary_project_*.ml`)
+    should all provide: `script_spec`, `action_steps`, `run_info`,
+    `config`. This makes it clear what a new PM or project needs to
+    implement and prevents accidental use of internal functions.
 
 ## Other Work: Yelu
 

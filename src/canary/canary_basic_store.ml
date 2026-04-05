@@ -5,6 +5,15 @@ open Base
    Location identifies where an artifact physically resides. *)
 
 type package_manager = Apt | Brew | Opam | Unsupported
+type store_behavior = Stateless | Stateful_global | Isolated_store of string
+
+type system_package_spec = {
+  linux_pkg : string;
+  macos_pkg : string;
+  version_tag : string option;
+  locator_hint : string option;
+  behavior : store_behavior;
+}
 
 type location = Build_tree | System_pm | Lang_pm | Wild of string
 
@@ -13,6 +22,11 @@ let string_of_pm = function
   | Brew -> "brew"
   | Opam -> "opam"
   | Unsupported -> "unsupported"
+
+let string_of_store_behavior = function
+  | Stateless -> "stateless"
+  | Stateful_global -> "stateful-global"
+  | Isolated_store name -> [%string "isolated(%{name})"]
 
 let string_of_location = function
   | Build_tree -> "build tree"
@@ -34,12 +48,37 @@ let detect_pm () =
   else if Stdlib.Sys.command "which apt-get > /dev/null 2>&1" = 0 then Apt
   else Unsupported
 
+let store_behavior_of_pm = function
+  | Apt | Brew -> Stateful_global
+  | Opam -> Isolated_store "switch"
+  | Unsupported -> Stateless
+
+let mk_system_package_spec ?version_tag ?locator_hint
+    ?(behavior = Stateful_global) ~linux_pkg ~macos_pkg () =
+  { linux_pkg; macos_pkg; version_tag; locator_hint; behavior }
+
+let system_pkg_for_pm spec pm =
+  match pm with
+  | Brew -> spec.macos_pkg
+  | Apt | Opam | Unsupported -> spec.linux_pkg
+
 let pm_install_cmd pm ~pkg =
   match pm with
-  | Brew -> [%string "brew install %{pkg}"]
-  | Apt -> [%string "sudo apt-get install -y %{pkg}"]
+  | Brew -> Canary_basic_brew.install_cmd ~pkg
+  | Apt -> Canary_basic_apt.install_cmd ~pkg
   | Opam -> [%string "eval $(opam env) && opam install %{pkg} -y --assume-depexts"]
   | Unsupported -> [%string "echo 'no package manager for %{pkg}' && false"]
+
+let system_install_cmd pm (spec : system_package_spec) =
+  pm_install_cmd pm ~pkg:(system_pkg_for_pm spec pm)
+
+let verify_system_install_cmd pm (spec : system_package_spec) =
+  let pkg = system_pkg_for_pm spec pm in
+  match pm with
+  | Apt -> Canary_basic_apt.verify_installed_cmd ~pkg
+  | Brew -> Canary_basic_brew.verify_installed_cmd ~pkg
+  | Opam | Unsupported ->
+      [%string "echo 'no verify command for %{pkg}' && false"]
 
 (* ── Source store ──
    Models how to obtain source code. A source_repo is the package-like

@@ -56,7 +56,6 @@ let z3_project_spec distro (src : source_repo) : project_spec =
     can_package = true;
   }
 
-
 let missing_symbols =
   [ "Z3_solver_register_on_clause"; "Z3_mk_seq_replace_all" ]
 
@@ -317,14 +316,14 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       Some
         (fun ~output_dir ->
           [%string
-            "cd %{root} && (test -f build/build.ninja || %{cmake_configure}) && \
-             ninja -C build libz3 && echo 'ok' > %{output_dir}/build.ok"]);
+            "cd %{root} && (test -f build/build.ninja || %{cmake_configure}) \
+             && ninja -C build libz3 && echo 'ok' > %{output_dir}/build.ok"]);
     build_binding =
       Some
         (fun ~output_dir ->
           [%string
-            "cd %{root} && eval $(opam env) && \
-             ninja -C build build_z3_ocaml_bindings && echo 'ok' > %{output_dir}/build.ok"]);
+            "cd %{root} && eval $(opam env) && ninja -C build \
+             build_z3_ocaml_bindings && echo 'ok' > %{output_dir}/build.ok"]);
     fetch_lib =
       Some
         (fun ~output_dir ->
@@ -338,26 +337,28 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
           let tola_root = Unix.getcwd () in
           let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
           let repo_rel = "canary/templates/opam-local-repo" in
-          let pkg_full = Canary_basic_ocaml.pkg_full z3_ocaml_config.toolchain in
+          let pkg_full =
+            Canary_basic_ocaml.pkg_full z3_ocaml_config.toolchain
+          in
           let pkg_name = z3_ocaml_config.toolchain.package_name in
-          let opam_rel = [%string "%{repo_rel}/packages/%{pkg_name}/%{pkg_full}/opam"] in
+          let opam_rel =
+            [%string "%{repo_rel}/packages/%{pkg_name}/%{pkg_full}/opam"]
+          in
           let repo_name = z3_ocaml_config.toolchain.local_repo_name in
           let src_var = z3_ocaml_config.toolchain.canary_src_var in
           let prefix_name = z3_ocaml_config.toolchain.prefix_name in
           let libdir_name = z3_ocaml_config.toolchain.libdir_name in
           [%string
-            "eval $(opam env) && \
-             OPAMVAR_%{src_var}=\"git+file://%{root}\" opam config subst %{opam_rel} && \
-             opam repo add %{repo_name} \"file://%{repo_abs}\" --rank=1 || \
-             opam repo set-url %{repo_name} \"file://%{repo_abs}\" && \
-             opam update %{repo_name} && \
-             opam remove -y %{pkg_full} || true && \
+            "eval $(opam env) && OPAMVAR_%{src_var}=\"git+file://%{root}\" \
+             opam config subst %{opam_rel} && opam repo add %{repo_name} \
+             \"file://%{repo_abs}\" --rank=1 || opam repo set-url %{repo_name} \
+             \"file://%{repo_abs}\" && opam update %{repo_name} && opam remove \
+             -y %{pkg_full} || true && \
              OPAMVAR_%{prefix_name}=\"%{root}/build\" \
              OPAMVAR_%{libdir_name}=\"%{root}/build\" \
-             CANARY_BUILD_DIR=\"%{root}/build\" \
-             opam install -y %{pkg_full} --verbose --keep-build-dir \
-             --assume-depexts && \
-             echo 'ok' > %{output_dir}/pack.ok"]);
+             CANARY_BUILD_DIR=\"%{root}/build\" opam install -y %{pkg_full} \
+             --verbose --keep-build-dir --assume-depexts && echo 'ok' > \
+             %{output_dir}/pack.ok"]);
     probe_lib =
       Some
         (fun ~output_dir ->
@@ -371,23 +372,49 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
           (* probe 1: build tree binding (no ocamlfind, direct -I) *)
           (* probe 2: opam-installed package *)
           [%string
-            "cd %{root} && eval $(opam env) && \
-             ocamlfind ocamlopt -package zarith -linkpkg -I %{api_path} \
-             %{api_path}/z3ml.cmxa %{example} -o %{output_dir}/%{target}_build && \
-             %{output_dir}/%{target}_build 2>&1 | tee %{output_dir}/probe_build.log && \
-             ocamlfind ocamlopt -package %{binding_lib} -linkpkg \
-             %{example} -o %{output_dir}/%{target}_pkg && \
-             %{output_dir}/%{target}_pkg 2>&1 | tee %{output_dir}/probe_pkg.log"]);
-    check_post = (function
+            "cd %{root} && eval $(opam env) && ocamlfind ocamlopt -package \
+             zarith -linkpkg -I %{api_path} %{api_path}/z3ml.cmxa %{example} \
+             -o %{output_dir}/%{target}_build && %{output_dir}/%{target}_build \
+             2>&1 | tee %{output_dir}/probe_build.log && ocamlfind ocamlopt \
+             -package %{binding_lib} -linkpkg %{example} -o \
+             %{output_dir}/%{target}_pkg && %{output_dir}/%{target}_pkg 2>&1 | \
+             tee %{output_dir}/probe_pkg.log"]);
+    check_post =
+      (function
       | Fetch Source -> Some Canary_basic_store.source_check_post
+      | Probe Binding ->
+          Some
+            (fun ~output_dir ->
+              Canary_action.has_file ~output_dir "probe_build.log"
+              && Canary_action.has_file ~output_dir "probe_pkg.log")
       | _ -> None);
   }
 
 (* Full spec: all actions including build-from-source *)
-let action_steps ?(quick = false) ?(source = z3_source_dev) ~root ~project distro =
+let action_steps ?(quick = false) ?(source = z3_source_dev) ~root ~project
+    distro =
   let spec = mk_script_spec ~source distro in
   let spec = if quick then Canary_action.no_source spec else spec in
   Canary_action.derive_steps ~root ~project spec
+
+let run_info ?(source = z3_source_dev) distro steps =
+  let source_str =
+    match Canary_basic_store.source_root distro source with
+    | Some p -> "local:" ^ p
+    | None ->
+        let (Canary_basic_store.Git_remote url) = source.remote in
+        "git:" ^ url
+  in
+  Canary_action.mk_run_info ~project:"z3" ~version:source.version
+    ~ref_:source.ref_ ~source:source_str
+    ~extra:
+      [
+        ("official", if source.official then "true" else "false");
+        ( "remote",
+          let (Canary_basic_store.Git_remote url) = source.remote in
+          url );
+      ]
+    steps
 
 let config distro =
   let z3_dev = z3_project_spec distro z3_source_dev in

@@ -6,6 +6,9 @@ TOLA = dune exec src/bin/tola.exe --
 
 all: tola
 
+build:
+	eval $$(opam env) && dune build
+
 demo_langs:
 	@echo "Demo languages: lt, md, shell" # dd
 
@@ -15,10 +18,19 @@ demo_langs:
 %.eg:
 	dune exec src/bin/example_$(LANG).exe -- $(ARGS)
 
-CANARY = dune exec src/bin/canary_main.exe --
+CANARY = eval $$(opam env) && dune exec src/bin/canary_main.exe --
 
 canary:
 	$(CANARY) run
+
+canary-sqlite:
+	$(CANARY) action sqlite
+
+canary-z3:
+	$(CANARY) action z3
+
+canary-llvm:
+	$(CANARY) action llvm
 
 canary_local:
 	$(CANARY) local

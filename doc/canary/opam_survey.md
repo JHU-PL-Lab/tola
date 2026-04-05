@@ -472,6 +472,26 @@ Incomplete coverage (common in Pattern B packages):
 6. **npm depexts**: The Melange/Reason ecosystem introduces cross-PM deps
    to npm. Not urgent but an interesting future direction.
 
+7. **94% of conf-* packages are eliminable**: Build complexity analysis
+   ([conf_package_analysis.md](conf_package_analysis.md)) shows that
+   314 out of 333 conf packages are mechanical wrappers (pkg-config,
+   version check, compile test, or empty). Only 19 have custom logic.
+   A canary-native `conf-sysdep` mechanism could replace most conf
+   packages with typed declarations, reducing the dependency on the
+   opam-repository for system dep verification.
+
+8. **Reverse dep distribution is heavily skewed**: 41% of conf packages
+   have 0 or 1 reverse dep (median = 2, mean = 10.9). One-to-one
+   conf→binding pairs could inline their check. The most complex conf
+   packages (custom_script) have the highest mean reverse deps (25.3)
+   — they're both the hardest to replace and the most impactful.
+   See [raw/conf_revdeps_classified.md](raw/conf_revdeps_classified.md).
+
+9. **Version resolution chain**: The seam between system PM, locator
+   tool (pkg-config/llvm-config), conf package, and lang binding is
+   where mismatches happen. See "Version Resolution Chain" in
+   [design.md](design.md). Canary should test each seam independently.
+
 ## 11. Data Files
 
 Raw survey data saved in `doc/canary/raw/`:
@@ -487,9 +507,35 @@ Raw survey data saved in `doc/canary/raw/`:
 | `builds_c_from_source.tsv` | 30 packages using C/C++ build-tool confs                |
 | `dune_conf_no_markers.tsv` | 43 packages with dune-configurator but no other markers |
 | `clib_no_conf.tsv`         | 18 packages with clib: tags but no conf-* dependency    |
+| `conf_revdeps_classified.tsv` | All 370 conf-* packages: revdep count, category      |
+| `conf_revdeps_classified.md`  | Same as above, formatted as markdown table            |
+
+### Scripts
+
+| Script                     | Purpose                                                 |
+| -------------------------- | ------------------------------------------------------- |
+| `survey.sh`                | Main survey: counts, TSV data files, package lists      |
+| `classify_conf.sh`         | Classify conf-* by build complexity (pkg-config, version check, compile test, custom script, etc.) |
+| `conf_revdeps.sh`          | Count reverse deps per conf-* package, merge with classification |
+
+To reproduce:
+```bash
+# Main survey (from original mac repo or local clone)
+./doc/canary/raw/survey.sh /path/to/opam-repository doc/canary/raw
+
+# Build complexity classification
+bash doc/canary/raw/classify_conf.sh /path/to/opam-repository/packages
+
+# Reverse deps + classification merge
+bash doc/canary/raw/conf_revdeps.sh /path/to/opam-repository/packages
+```
+
+See also: [`conf_package_analysis.md`](conf_package_analysis.md) for the
+detailed analysis of build complexity and eliminability.
 
 ---
 
-*Survey based on opam-repository snapshot at `/Users/ex/code/opam-all/opam-repository`.
-Only latest version per package examined. Counts are approximate due to
-heuristic categorization (matching `-dev`/`lib` in depexts for C lib detection).*
+*Survey based on opam-repository at `/home/red/code/contrib/opam-repository`
+(restored from git). Only latest version per package examined. Counts are
+approximate due to heuristic categorization (matching `-dev`/`lib` in
+depexts for C lib detection, grep patterns on build sections).*

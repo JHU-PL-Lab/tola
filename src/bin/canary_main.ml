@@ -25,7 +25,7 @@ let run_cmd =
 let action_cmd =
   let project =
     Arg.(value & pos 0 (some string) None & info [] ~docv:"PROJECT"
-           ~doc:"Project to run: sqlite, z3 (default: all)")
+           ~doc:"Project to run: sqlite, z3, llvm (default: all)")
   in
   let quick =
     Arg.(value & flag & info [ "quick" ]
@@ -35,25 +35,37 @@ let action_cmd =
     Arg.(value & flag & info [ "failfast"; "ff" ]
            ~doc:"Stop on first failure (useful for debugging)")
   in
+  let run_with_info ~failfast ~root ~project steps run_info =
+    Canary_action.run_project ~failfast ~run_info ~root ~project steps
+  in
   let run_z3 ~root ~quick ~failfast distro =
-    Canary_action.run_project ~failfast ~root ~project:"z3"
-      (Canary_project_z3.action_steps ~quick ~root ~project:"z3" distro)
+    let steps = Canary_project_z3.action_steps ~quick ~root ~project:"z3" distro in
+    run_with_info ~failfast ~root ~project:"z3" steps
+      (Canary_project_z3.run_info distro steps)
+  in
+  let run_sqlite ~root ~failfast =
+    let steps = Canary_project_sqlite.action_steps ~root ~project:"sqlite" in
+    run_with_info ~failfast ~root ~project:"sqlite" steps
+      (Canary_project_sqlite.run_info steps)
+  in
+  let run_llvm ~root ~failfast =
+    let steps = Canary_project_llvm.action_steps ~root ~project:"llvm" in
+    run_with_info ~failfast ~root ~project:"llvm" steps
+      (Canary_project_llvm.run_info steps)
   in
   let run project quick failfast () =
     let root = "_out" in
     let distro = detect_distro () in
     match project with
-    | Some "sqlite" ->
-        Canary_action.run_project ~failfast ~root ~project:"sqlite"
-          (Canary_project_sqlite.action_steps ~root ~project:"sqlite")
-    | Some "z3" ->
-        run_z3 ~root ~quick ~failfast distro
+    | Some "sqlite" -> run_sqlite ~root ~failfast
+    | Some "z3" -> run_z3 ~root ~quick ~failfast distro
+    | Some "llvm" -> run_llvm ~root ~failfast
     | None ->
-        Canary_action.run_project ~failfast ~root ~project:"sqlite"
-          (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
-        run_z3 ~root ~quick ~failfast distro
+        run_sqlite ~root ~failfast;
+        run_z3 ~root ~quick ~failfast distro;
+        run_llvm ~root ~failfast
     | Some p ->
-        Fmt.pr "Unknown project: %s (available: sqlite, z3)@." p
+        Fmt.pr "Unknown project: %s (available: sqlite, z3, llvm)@." p
   in
   Cmd.v (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ const ())

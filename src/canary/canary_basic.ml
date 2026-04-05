@@ -31,6 +31,8 @@ let all_probe_actions = [ Compile_example; Run_example ]
 let all_cc_and_modes =
   List.cartesian_product all_compile_modes all_probe_actions
 
+(* LEGACY: used by old job_spec/step_phase pipeline (canary run).
+   New action runner uses canary_action.step_expectation instead. *)
 type step_expectation =
   | Expect_success
   | Expect_failure_contains of {
@@ -251,6 +253,8 @@ let indent_block spaces s =
   |> List.map ~f:(fun l -> pad ^ l)
   |> String.concat ~sep:"\n"
 
+(* LEGACY: used by old apply_expectation for YAML/shell backends.
+   New action runner handles expectations directly in run_step. *)
 let mk_assert_result_cmd ~assert_script ?expected_returncode
     ?(contains_any = []) command =
   let expected_returncode_args =

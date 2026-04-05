@@ -5,7 +5,11 @@ open Canary_basic
 open Canary
 
 let project_configs distro =
-  [ Canary_project_z3.config distro; Canary_project_sqlite.config distro ]
+  [
+    Canary_project_z3.config distro;
+    Canary_project_sqlite.config distro;
+    Canary_project_llvm.config distro;
+  ]
 
 let jobs_of_config cfg =
   List.map cfg.job_specs
@@ -134,6 +138,8 @@ let run_action_demo () =
   let distro = Canary_basic.detect_distro () in
   Canary_action.run_project ~root ~project:"sqlite"
     (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
+  Canary_action.run_project ~root ~project:"llvm"
+    (Canary_project_llvm.action_steps ~root ~project:"llvm");
   Canary_action.run_project ~root ~project:"z3"
     (Canary_project_z3.action_steps ~root ~project:"z3" distro)
 

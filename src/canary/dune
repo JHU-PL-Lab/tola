@@ -1,0 +1,16 @@
+(library
+ (name canary_lib)
+ (wrapped false)
+ (libraries
+  unix
+  base
+  fmt
+  cmdliner
+  yaml
+  tola_std
+  binding
+  opam-core
+  opam-format
+  fpath)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))

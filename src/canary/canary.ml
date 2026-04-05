@@ -21,15 +21,21 @@ let verify_of_phase (config : project_config) (phase : step_phase) =
   | Pm_install system_pkg -> (
       match phase.location with
       | System_pm ->
-          let { linux_pkg; macos_pkg } =
+          let info = prebuilt_info_exn config.ocaml in
+          let spec =
             match system_pkg with
-            | Some p -> p
-            | None -> failwith "Pm_install at System_pm requires system_pkg"
+            | Some p ->
+                {
+                  info.system_package with
+                  linux_pkg = p.linux_pkg;
+                  macos_pkg = p.macos_pkg;
+                }
+            | None -> info.system_package
           in
-          verify_system_install_steps ~name ~expectation linux_pkg macos_pkg
+          verify_system_package_steps ~name ~expectation spec
       | Lang_pm ->
           let info = prebuilt_info_exn config.ocaml in
-          verify_opam_install_step ~name ~expectation info.opam_package
+          verify_opam_install_spec_step ~name ~expectation info.opam_package_spec
       | _ -> [])
   | Pm_install_local Opam ->
       let pkg = pkg_full config.ocaml.toolchain in
@@ -46,16 +52,21 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
     | Pm_install system_pkg -> (
         match phase.location with
         | System_pm ->
-            let { linux_pkg; macos_pkg } =
+            let info = prebuilt_info_exn config.ocaml in
+            let spec =
               match system_pkg with
-              | Some p -> p
-              | None -> failwith "Pm_install at System_pm requires system_pkg"
+              | Some p ->
+                  {
+                    info.system_package with
+                    linux_pkg = p.linux_pkg;
+                    macos_pkg = p.macos_pkg;
+                  }
+              | None -> info.system_package
             in
-            install_system_dep_steps ~name config.ocaml.toolchain linux_pkg
-              macos_pkg
+            install_system_package_steps ~name config.ocaml.toolchain spec
         | Lang_pm ->
             let info = prebuilt_info_exn config.ocaml in
-            install_opam_package_step ~name info.opam_package
+            install_opam_package_spec_step ~name info.opam_package_spec
         | _ -> failwith "Pm_install: unsupported location")
     | Pm_install_local pm -> (
         match pm with

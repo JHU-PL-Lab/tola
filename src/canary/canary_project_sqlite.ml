@@ -26,11 +26,8 @@ let sqlite_ocaml_config : ocaml_tool_config =
       };
     prebuilt =
       Some
-        {
-          opam_package = "sqlite3";
-          system_package_linux = "sqlite3";
-          system_package_macos = "sqlite";
-        };
+        (mk_prebuilt_info ~opam_package:"sqlite3"
+           ~system_package_linux:"sqlite3" ~system_package_macos:"sqlite" ());
   }
 
 let prebuilt_prebuilt_spec distro : job_spec =
@@ -104,21 +101,22 @@ let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
 let script_spec : Canary_action.script_spec =
   let pm = Canary_basic_store.detect_pm () in
-  let sys_pkg = match pm with
-    | Brew -> prebuilt.system_package_macos
-    | _ -> prebuilt.system_package_linux in
-  let opam_pkg = prebuilt.opam_package in
-  let example = sqlite_ocaml_config.ocaml.example_file in
-  let target = sqlite_ocaml_config.ocaml.example_target in
-  let binding_lib = sqlite_ocaml_config.ocaml.binding_lib_name in
-  { Canary_action.empty_script_spec with
-    fetch_lib = Some (fun ~output_dir ->
-      [%string "%{Canary_basic_store.pm_install_cmd pm ~pkg:sys_pkg} && echo 'installed' > %{output_dir}/lib.ok"]);
-    fetch_binding = Some (fun ~output_dir ->
-      [%string "%{Canary_basic_store.pm_install_cmd Opam ~pkg:opam_pkg} && echo 'installed' > %{output_dir}/binding.ok"]);
-    probe_binding = Some (fun ~output_dir ->
-      [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} && %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log"]);
+  let ocaml = sqlite_ocaml_config.ocaml in
+  {
+    Canary_action.empty_script_spec with
+    fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_binding =
+      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
+    probe_binding =
+      Some
+        (fun ~output_dir ->
+          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
+            ~example:ocaml.example_file ~target:ocaml.example_target ~output_dir);
   }
 
 let action_steps ~root ~project =
   Canary_action.derive_steps ~root ~project script_spec
+
+let run_info steps =
+  Canary_action.mk_run_info ~project:"sqlite" ~version:"system" ~ref_:""
+    ~source:"prebuilt" steps

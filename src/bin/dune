@@ -32,7 +32,8 @@
   fpath
   logs
   logs.lwt
-  lwt)
+  lwt
+  canary_lib)
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show))
  (promote (until-clean)))

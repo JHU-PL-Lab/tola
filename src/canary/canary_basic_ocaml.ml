@@ -29,6 +29,16 @@ type prebuilt_info = {
   opam_package : string;
   system_package_linux : string;
   system_package_macos : string;
+  system_package : system_package_spec;
+  opam_package_spec : opam_package_spec;
+}
+
+and opam_package_spec = {
+  install_name : string;
+  version_tag : string option;
+  switch_behavior : store_behavior;
+  switch_name : string option;
+  install_args : string list;
 }
 
 type ocaml_tool_config = {
@@ -115,6 +125,42 @@ let default =
 let pkg_full (t : opam_spec) =
   [%string "%{t.package_name}.%{t.package_version}"]
 
+let mk_opam_package_spec ?version_tag ?switch_name
+    ?(switch_behavior = Isolated_store "switch") ?(install_args = [])
+    ~install_name () =
+  { install_name; version_tag; switch_behavior; switch_name; install_args }
+
+let opam_env_prefix (spec : opam_package_spec) =
+  match spec.switch_name with
+  | None -> "eval $(opam env)"
+  | Some switch -> [%string "eval $(opam env --switch=%{switch})"]
+
+let opam_install_cmd (spec : opam_package_spec) =
+  let extra_args =
+    if List.is_empty spec.install_args then ""
+    else " " ^ String.concat ~sep:" " spec.install_args
+  in
+  [%string
+    "%{opam_env_prefix spec} && opam install %{spec.install_name} -y%{extra_args}"]
+
+let mk_prebuilt_info ?version_tag ?locator_hint
+    ?(system_behavior = Stateful_global) ?(switch_behavior = Isolated_store "switch")
+    ?switch_name ?opam_install_name ?(install_args = [ "--assume-depexts" ])
+    ~opam_package ~system_package_linux ~system_package_macos () =
+  let install_name = Option.value opam_install_name ~default:opam_package in
+  {
+    opam_package;
+    system_package_linux;
+    system_package_macos;
+    system_package =
+      mk_system_package_spec ?version_tag ?locator_hint
+        ~behavior:system_behavior ~linux_pkg:system_package_linux
+        ~macos_pkg:system_package_macos ();
+    opam_package_spec =
+      mk_opam_package_spec ?version_tag ?switch_name ~switch_behavior
+        ~install_args ~install_name ();
+  }
+
 let install_and_prefix_cmds t (os : Canary_basic.runner_os) pkg =
   let install_cmd, prefix_cmd =
     match os with
@@ -156,25 +202,50 @@ opam remove -y %{pkg_full} || true
 opam install -y %{pkg_full} --verbose|}]
 
 let install_opam_package_step ~name package =
-  [ run_step ~name [%string {|eval $(opam env)
-opam install -y %{package}|}] ]
+  let spec = mk_opam_package_spec ~install_name:package () in
+  [ run_step ~name (opam_install_cmd spec) ]
+
+let install_opam_package_spec_step ~name spec =
+  [ run_step ~name (opam_install_cmd spec) ]
 
 let install_system_dep_steps ~name opam_spec pkg1 pkg2 =
   mk_system_dep_steps ~name
     ~linux_cmd:(install_and_prefix_cmds opam_spec Ubuntu pkg1)
     ~macos_cmd:(install_and_prefix_cmds opam_spec MacOS pkg2)
 
+let install_system_package_steps ~name opam_spec (spec : system_package_spec) =
+  install_system_dep_steps ~name opam_spec spec.linux_pkg spec.macos_pkg
+
 let verify_system_install_steps ~name ~expectation pkg1 pkg2 =
   [
     run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
-      ~shell:"bash" ~expectation [%string "dpkg -s %{pkg1}"];
+      ~shell:"bash" ~expectation
+      (Canary_basic_store.verify_system_install_cmd Apt
+         (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
     run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
-      ~shell:"bash" ~expectation [%string "brew list %{pkg2}"];
+      ~shell:"bash" ~expectation
+      (Canary_basic_store.verify_system_install_cmd Brew
+         (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
+  ]
+
+let verify_system_package_steps ~name ~expectation (spec : system_package_spec) =
+  [
+    run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
+      ~shell:"bash" ~expectation
+      (Canary_basic_store.verify_system_install_cmd Apt spec);
+    run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
+      ~shell:"bash" ~expectation
+      (Canary_basic_store.verify_system_install_cmd Brew spec);
   ]
 
 let verify_opam_install_step ~name ~expectation package =
-  [ run_step ~name ~expectation [%string {|eval $(opam env)
-opam list %{package} --short|}] ]
+  let spec = mk_opam_package_spec ~install_name:package () in
+  [ run_step ~name ~expectation
+      [%string "%{opam_env_prefix spec} && opam list %{spec.install_name} --short"] ]
+
+let verify_opam_install_spec_step ~name ~expectation spec =
+  [ run_step ~name ~expectation
+      [%string "%{opam_env_prefix spec} && opam list %{spec.install_name} --short"] ]
 
 let export_dyld_envar on =
   if on then "export DYLD_LIBRARY_PATH=$(pwd)/build" else ""

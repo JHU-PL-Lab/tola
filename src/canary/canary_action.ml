@@ -64,6 +64,19 @@ let script_of_rule spec = function
 
 (* ── Action step protocol ── *)
 
+type step_expectation =
+  | Expect_success
+  | Expect_failure of { contains_any : string list }
+      (* step should fail; output must contain one of these strings *)
+  | Expect_symbols of {
+      provided_lib : string;   (* path to .so/.dylib to inspect *)
+      required : string list;  (* symbols that must be resolved *)
+      missing : string list;   (* symbols expected to be missing (version mismatch) *)
+    }
+      (* check binary symbol resolution — catches ABI mismatches.
+         In the future, the missing list should be derived from a
+         mismatch prediction system, not hand-written. *)
+
 type action_step = {
   tag : string;                      (* unique id: e.g., "build_lib" *)
   rule : rule;
@@ -71,6 +84,7 @@ type action_step = {
   cmd : output_dir:string -> string; (* shell command to execute *)
   check_pre : unit -> bool;          (* inputs available? *)
   check_post : output_dir:string -> bool; (* output valid? *)
+  expectation : step_expectation;    (* what should this step do? *)
 }
 
 (* ── Logging (plain text file + console) ── *)
@@ -132,6 +146,21 @@ let exec_step logger ~tag ~output_dir (step : action_step) =
   let shell_cmd = step.cmd ~output_dir in
   run_cmd_logged logger ~tag shell_cmd
 
+(* Check if output contains any of the expected strings *)
+let output_contains_any ~output_dir strings =
+  (* Read all files in output_dir looking for matches *)
+  try
+    let files = Stdlib.Sys.readdir output_dir in
+    Array.exists files ~f:(fun f ->
+        let path = output_dir ^ "/" ^ f in
+        try
+          let ic = Stdlib.open_in path in
+          let content = Stdlib.really_input_string ic (Stdlib.in_channel_length ic) in
+          Stdlib.close_in ic;
+          List.exists strings ~f:(fun s -> String.is_substring content ~substring:s)
+        with _ -> false)
+  with _ -> false
+
 (* Run a single action step. Cache = check_post on existing output_dir. *)
 let run_step logger ~root ~project (step : action_step) =
   let tag = step.tag in
@@ -150,11 +179,50 @@ let run_step logger ~root ~project (step : action_step) =
     else
       try
         let cmd_ok = exec_step logger ~tag ~output_dir:out step in
-        let ok = cmd_ok && step.check_post ~output_dir:out in
-        log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
-        log ~event:(if ok then "done" else "failed")
-          ~detail:(if ok then None else Some "postcondition failed");
-        ok
+        match step.expectation with
+        | Expect_success ->
+            let ok = cmd_ok && step.check_post ~output_dir:out in
+            log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
+            log ~event:(if ok then "done" else "failed")
+              ~detail:(if ok then None else Some "postcondition failed");
+            ok
+        | Expect_failure { contains_any } ->
+            if cmd_ok then (
+              log ~event:"unexpected_success"
+                ~detail:(Some "expected failure but command succeeded");
+              false)
+            else
+              let found = output_contains_any ~output_dir:out contains_any in
+              log ~event:(if found then "done" else "failed")
+                ~detail:(Some (if found
+                  then "expected failure confirmed"
+                  else "command failed but output didn't match expected strings"));
+              found
+        | Expect_symbols { provided_lib; required; missing } ->
+            if not cmd_ok then (
+              log ~event:"failed" ~detail:(Some "command failed before symbol check");
+              false)
+            else
+              (* Use nm to check symbol resolution *)
+              let check_sym lib syms expect_found =
+                List.for_all syms ~f:(fun sym ->
+                    let rc = Stdlib.Sys.command
+                      (Printf.sprintf "nm -D %s 2>/dev/null | grep -q %s" lib sym) in
+                    let found = (rc = 0) in
+                    let found_str = if found then "found" else "missing" in
+                    let expect_str = if expect_found then "found" else "missing" in
+                    if Bool.( <> ) found expect_found then
+                      log ~event:"symbol_mismatch"
+                        ~detail:(Some (Printf.sprintf "%s: %s, expected %s" sym found_str expect_str));
+                    Bool.equal found expect_found)
+              in
+              let req_ok = check_sym provided_lib required true in
+              let miss_ok = check_sym provided_lib missing false in
+              let ok = req_ok && miss_ok in
+              log ~event:(if ok then "done" else "failed")
+                ~detail:(Some (if ok then "symbol check passed"
+                  else "symbol resolution mismatch"));
+              ok
       with exn ->
         let msg = Exn.to_string exn in
         log ~event:"error" ~detail:(Some msg);
@@ -241,6 +309,22 @@ let result_status_of_run (steps : action_step list)
       Hashtbl.set tbl ~key:s.tag ~data:ns);
   tbl
 
+(* ── Shared command templates ──
+   These generate shell commands for common action patterns.
+   Project specs use these instead of writing raw shell strings. *)
+
+(* fetch_lib: install a system package and write marker *)
+let fetch_lib_cmd pm (spec : Canary_basic_store.system_package_spec) ~output_dir =
+  [%string "%{Canary_basic_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
+
+(* fetch_binding: install an opam package and write marker *)
+let fetch_binding_cmd (spec : Canary_basic_ocaml.opam_package_spec) ~output_dir =
+  [%string "%{Canary_basic_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
+
+(* probe_binding (simple): compile and run an OCaml example against an opam package *)
+let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
+  [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} && %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log"]
+
 (* ── Convenience helpers for building steps ── *)
 
 let rec ensure_dir path =
@@ -251,11 +335,35 @@ let rec ensure_dir path =
 let has_file ~output_dir name =
   Stdlib.Sys.file_exists [%string "%{output_dir}/%{name}"]
 
+(* ── Default check_post per rule category ──
+   Derived from the rule type. Projects can override via script_spec.check_post.
+
+   | Rule category | Marker file | What it means |
+   |---------------|-------------|---------------|
+   | Fetch _       | <kind>.ok   | Store op completed, wrote marker |
+   | Build_*       | build.ok    | Build command succeeded |
+   | Publish _     | pack.ok     | Pack/install completed |
+   | Probe _       | probe.log   | Test ran and produced output |
+*)
+
+let marker_of_rule = function
+  | Fetch Source -> "source.ok"
+  | Fetch Lib -> "lib.ok"
+  | Fetch Binding -> "binding.ok"
+  | Fetch App -> "app.ok"
+  | Build_lib | Build_binding | Build_app -> "build.ok"
+  | Publish _ -> "pack.ok"
+  | Probe _ -> "probe.log"
+
+let default_check_post rule ~output_dir =
+  has_file ~output_dir (marker_of_rule rule)
+
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
 
-let mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post =
+let mk_step ~root ~project ~tag ~rule ~deps ~cmd ?(expectation = Expect_success) ~check_post () =
   { tag; rule; deps;
+    expectation;
     check_pre = (fun () ->
       List.for_all deps ~f:(fun dep ->
           let out = output_dir_for ~root ~project ~tag:dep in
@@ -331,16 +439,100 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
             let deps = deps_of_rule spec rule in
             let check_post = match spec.check_post rule with
               | Some cp -> cp
-              | None -> (fun ~output_dir ->
-                  (* Default postcondition: output_dir is non-empty *)
-                  Stdlib.Sys.file_exists output_dir &&
-                  Array.length (Stdlib.Sys.readdir output_dir) > 0)
+              | None -> default_check_post rule
             in
-            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post))
+            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ()))
 
-let run_project ?(failfast = false) ~root ~project steps =
+(* ── Run info: project metadata dumped at start of run ── *)
+
+type run_info = {
+  project : string;
+  version : string;
+  ref_ : string;
+  source : string;       (* "local:<path>" or "git:<url>" or "prebuilt" *)
+  distro : string;
+  system_pm : string;
+  opam_switch : string;
+  ocaml_version : string;
+  actions : string list;  (* tags of enabled action steps *)
+  extra : (string * string) list;  (* project-specific key-value pairs *)
+}
+
+let detect_env () =
+  let chomp s = String.rstrip s in
+  let cmd_output cmd =
+    try
+      let ic = Unix.open_process_in cmd in
+      let s = Stdlib.input_line ic in
+      ignore (Unix.close_process_in ic);
+      chomp s
+    with _ -> ""
+  in
+  let distro = match Stdlib.Sys.command "uname -s 2>/dev/null | grep -q Darwin" with
+    | 0 -> "macos"
+    | _ -> "linux"
+  in
+  let system_pm = match Canary_basic_store.detect_pm () with
+    | Apt -> "apt"
+    | Brew -> "brew"
+    | Opam -> "opam"
+    | Unsupported -> "unsupported"
+  in
+  let opam_switch = cmd_output "opam switch show 2>/dev/null" in
+  let ocaml_version = cmd_output "ocamlopt -version 2>/dev/null" in
+  (distro, system_pm, opam_switch, ocaml_version)
+
+let mk_run_info ~project ~version ~ref_ ~source ?(extra = []) (steps : action_step list) =
+  let distro, system_pm, opam_switch, ocaml_version = detect_env () in
+  { project; version; ref_; source;
+    distro; system_pm; opam_switch; ocaml_version;
+    actions = List.map steps ~f:(fun s -> s.tag);
+    extra;
+  }
+
+let dump_run_info ~dir (info : run_info) =
+  let path = dir ^ "/run_info.json" in
+  let oc = Stdlib.open_out path in
+  let q s = Stdlib.Printf.sprintf "\"%s\"" s in
+  let list_json items =
+    List.map items ~f:q |> String.concat ~sep:", "
+  in
+  let extra_json =
+    List.map info.extra ~f:(fun (k, v) ->
+        Stdlib.Printf.sprintf "    %s: %s" (q k) (q v))
+    |> String.concat ~sep:",\n"
+  in
+  Stdlib.Printf.fprintf oc
+    "{\n\
+    \  \"project\": %s,\n\
+    \  \"version\": %s,\n\
+    \  \"ref\": %s,\n\
+    \  \"source\": %s,\n\
+    \  \"distro\": %s,\n\
+    \  \"system_pm\": %s,\n\
+    \  \"opam_switch\": %s,\n\
+    \  \"ocaml_version\": %s,\n\
+    \  \"timestamp\": %s,\n\
+    \  \"actions\": [%s]%s\n\
+     }\n"
+    (q info.project) (q info.version) (q info.ref_)
+    (q info.source) (q info.distro) (q info.system_pm)
+    (q info.opam_switch) (q info.ocaml_version)
+    (q (now ())) (list_json info.actions)
+    (if List.is_empty info.extra then ""
+     else Stdlib.Printf.sprintf ",\n  \"extra\": {\n%s\n  }" extra_json);
+  Stdlib.close_out oc;
+  path
+
+let run_project ?(failfast = false) ?run_info ~root ~project steps =
   let dir = [%string "%{root}/canary/_local/%{project}"] in
   ensure_dir dir;
+  (* Dump project spec if provided *)
+  (match run_info with
+   | Some info ->
+       let path = dump_run_info ~dir info in
+       Fmt.pr "[run_info] %s@." path
+   | None -> ());
   let log_path = [%string "%{dir}/actions.log"] in
   let logger = create_logger ~log_path in
   let status = run_graph ~failfast logger ~project ~root steps in
