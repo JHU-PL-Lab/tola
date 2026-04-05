@@ -157,6 +157,17 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     This is the core canary research contribution — testing the seams
     between versions across the resolution chain.
 
+19. **LLVM cross-version symbol check** — `probe_binding` for llvm currently
+    only compiles and runs the example; no `native_symbol_check_cmd` like z3.
+    For the dynamic case (`llvm.19`, not static), add compat check:
+    `provided_lib = $(llvm-config-19 --libdir)/libLLVM.so`,
+    `required_lib = $(ocamlfind query llvm)/liballvm.a` (stub archive from
+    opam-installed package), `prefix = "LLVM"`. Needs: (a) opam-installed
+    stub archive discovery (unlike z3's build-tree path), (b) confirm LLVM
+    C API symbols are reliably prefixed `LLVM` in the stub archive.
+    Static case (`llvm.19-static`): mismatch caught at install time by conf
+    package; runtime symbol check not applicable.
+
 18. **ocamlmklib stub archive convention** — `cmxa_stub_archive` in
     `canary_artifact_check.ml` derives the C stub path as `lib<name>.a`
     based on `ocamlmklib` naming. This is NOT universal — depends on how
