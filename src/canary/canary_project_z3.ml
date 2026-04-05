@@ -362,17 +362,29 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
     probe_lib =
       Some
         (fun ~output_dir ->
-          [%string
-            "test -f %{root}/build/libz3.so && echo 'ok' > \
-             %{output_dir}/probe.log || test -f %{root}/build/libz3.dylib && \
-             echo 'ok' > %{output_dir}/probe.log"]);
+          (* Verify libz3 exports Z3_ symbols — stronger than existence alone *)
+          let lib =
+            if Stdlib.Sys.file_exists (lib_so_path root) then lib_so_path root
+            else [%string "%{root}/build/libz3.dylib"]
+          in
+          Canary_artifact_check.native_lib_probe_cmd ~lib ~prefix:"Z3_"
+            ~output_dir);
     probe_binding =
       Some
         (fun ~output_dir ->
-          (* probe 1: build tree binding (no ocamlfind, direct -I) *)
-          (* probe 2: opam-installed package *)
+          (* Step 1: symbol compat — z3ml.a (C stubs) requires ⊆ libz3.so provides.
+             Use .a not .cmxa: nm can read static archives, not OCaml archives. *)
+          let cmxa = [%string "%{root}/build/src/api/ml/z3ml.cmxa"] in
+          let stub_a = Canary_artifact_check.cmxa_stub_archive cmxa in
+          let sym_check =
+            Canary_artifact_check.native_symbol_check_cmd
+              ~provided_lib:(lib_so_path root) ~required_libs:[ stub_a ]
+              ~prefix:"Z3_" ~output_dir
+          in
+          (* Step 2: compile and run OCaml example against build tree and opam pkg *)
           [%string
-            "cd %{root} && eval $(opam env) && ocamlfind ocamlopt -package \
+            "%{sym_check} && \
+             cd %{root} && eval $(opam env) && ocamlfind ocamlopt -package \
              zarith -linkpkg -I %{api_path} %{api_path}/z3ml.cmxa %{example} \
              -o %{output_dir}/%{target}_build && %{output_dir}/%{target}_build \
              2>&1 | tee %{output_dir}/probe_build.log && ocamlfind ocamlopt \
@@ -397,7 +409,8 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       | Probe Binding ->
           Some
             (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "probe_build.log"
+              Canary_action.has_file ~output_dir "symbols.log"
+              && Canary_action.has_file ~output_dir "probe_build.log"
               && Canary_action.has_file ~output_dir "probe_pkg.log")
       | _ -> None);
   }

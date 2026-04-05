@@ -46,6 +46,15 @@ let exists_native_lib_or_dylib path =
 let exists_ocaml_archive path =
   Stdlib.Sys.file_exists path && is_ocaml_archive path
 
+(* Companion C stub archive: z3ml.cmxa → libz3ml.a (contains C FFI symbols).
+   OCaml convention: native archive <name>.cmxa → C stubs in lib<name>.a.
+   This is the file nm can read to find undefined C symbols the binding requires. *)
+let cmxa_stub_archive path =
+  let dir = Stdlib.Filename.dirname path in
+  let base = Stdlib.Filename.basename path in
+  let name = Stdlib.Filename.remove_extension base in
+  dir ^ "/lib" ^ name ^ ".a"
+
 let python_importable pkg =
   Stdlib.Sys.command
     (Printf.sprintf "python3 -c 'import %s' 2>/dev/null" pkg)
@@ -126,6 +135,16 @@ let check_symbols ~provided_lib ~required_libs ~prefix =
   }
 
 (* ── Shell probe commands (write to output_dir, for probe steps) ── *)
+
+(* Sanity probe: count symbols with prefix exported by a native lib.
+   Writes probe.log; exits nonzero if the count is zero.
+   Use to verify the lib compiled and exports the expected API surface. *)
+let native_lib_probe_cmd ~lib ~prefix ~output_dir =
+  let nm_flag = if is_macos then "-g" else "-D" in
+  [%string
+    {|COUNT=$(nm %{nm_flag} '%{lib}' 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
+printf '%{prefix} symbols exported: %d\n' "$COUNT" | tee %{output_dir}/probe.log
+test "$COUNT" -gt 0|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.
    Writes symbols.log; exits nonzero if symbols are missing. *)
