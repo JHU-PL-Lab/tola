@@ -129,23 +129,14 @@ let find_llvm_config_cmd =
      %{prebuilt.system_package.macos_pkg})/bin/%{llvm_locator_hint}\"; else \
      printf '%s\\n' %{llvm_locator_hint}; fi"]
 
+let llvm_example = "canary/examples/llvm/llvm_canary.ml"
+
 let llvm_ocaml_probe ~output_dir ~binding_lib ~target =
   [%string
     {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 test -x "$LLVM_CONFIG"
-cat > %{output_dir}/llvm_canary.ml <<'EOF'
-open Llvm
-
-let () =
-  let context = global_context () in
-  let m = create_module context "canary_llvm" in
-  let i32_t = i32_type context in
-  let fn_t = function_type i32_t [||] in
-  ignore (declare_function "answer" fn_t m);
-  print_endline (string_of_llmodule m)
-EOF
 eval $(opam env)
-LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{output_dir}/llvm_canary.ml -o %{output_dir}/%{target}
+LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{llvm_example} -o %{output_dir}/%{target}
 %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]
 
 let llvm_python_probe ~output_dir =
