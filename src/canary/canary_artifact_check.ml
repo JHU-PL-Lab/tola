@@ -1,0 +1,151 @@
+open Base
+
+(* Artifact checking: knows HOW to verify each artifact type.
+   Project specs provide WHAT to check (paths, prefixes).
+
+   Two levels:
+   - Existence checks (bool): fast, for use in check_post
+   - Shell probe commands (string): write logs to output_dir, for probe steps
+   - Inline symbol check (OCaml): deeper check, callable from check_post or reporter *)
+
+(* ── Platform detection ── *)
+
+let platform =
+  let ic = Unix.open_process_in "uname -s 2>/dev/null" in
+  let s = try String.strip (Stdlib.input_line ic) with End_of_file -> "" in
+  ignore (Unix.close_process_in ic);
+  s
+
+let is_macos = String.equal platform "Darwin"
+
+(* ── Artifact kind predicates ── *)
+
+let is_native_lib path =
+  let b = Stdlib.Filename.basename path in
+  String.is_suffix path ~suffix:".so"
+  || String.is_suffix path ~suffix:".dylib"
+  || String.is_suffix path ~suffix:".a"
+  || String.is_substring b ~substring:".so."
+  || String.is_substring b ~substring:".dylib."
+
+let is_ocaml_archive path =
+  String.is_suffix path ~suffix:".cmxa"
+  || String.is_suffix path ~suffix:".cma"
+
+(* ── Existence checks (bool, for check_post) ── *)
+
+let exists_native_lib path =
+  Stdlib.Sys.file_exists path && is_native_lib path
+
+(* macOS: .dylib fallback when .so is requested *)
+let exists_native_lib_or_dylib path =
+  Stdlib.Sys.file_exists path
+  || Stdlib.Sys.file_exists
+       (Stdlib.Filename.remove_extension path ^ ".dylib")
+
+let exists_ocaml_archive path =
+  Stdlib.Sys.file_exists path && is_ocaml_archive path
+
+let python_importable pkg =
+  Stdlib.Sys.command
+    (Printf.sprintf "python3 -c 'import %s' 2>/dev/null" pkg)
+  = 0
+
+(* ── nm-based symbol inspection ── *)
+
+let nm_cmd path =
+  if is_macos then Printf.sprintf "nm -g '%s' 2>/dev/null" path
+  else if is_native_lib path then
+    Printf.sprintf "nm -D '%s' 2>/dev/null" path
+  else Printf.sprintf "nm '%s' 2>/dev/null" path
+
+let run_nm path =
+  let ic = Unix.open_process_in (nm_cmd path) in
+  let lines = ref [] in
+  (try
+     while true do
+       lines := Stdlib.input_line ic :: !lines
+     done
+   with End_of_file -> ());
+  ignore (Unix.close_process_in ic);
+  List.rev !lines
+
+(* Defined symbols (kind != U) with given prefix *)
+let symbols_defined ~prefix lines =
+  List.filter_map lines ~f:(fun line ->
+      let parts =
+        String.split line ~on:' '
+        |> List.filter ~f:(fun s -> not (String.is_empty s))
+      in
+      match parts with
+      | [ _; kind; sym ] | [ kind; sym ]
+        when String.length kind = 1
+             && Char.( <> ) (Char.uppercase kind.[0]) 'U'
+             && String.is_prefix sym ~prefix ->
+          Some sym
+      | _ -> None)
+
+(* Undefined symbols (kind = U) with given prefix *)
+let symbols_undefined ~prefix lines =
+  List.filter_map lines ~f:(fun line ->
+      let parts =
+        String.split line ~on:' '
+        |> List.filter ~f:(fun s -> not (String.is_empty s))
+      in
+      match parts with
+      | [ _; "U"; sym ] | [ "U"; sym ] when String.is_prefix sym ~prefix ->
+          Some sym
+      | _ -> None)
+
+type symbol_check_result = {
+  n_provided : int;
+  n_required : int;
+  missing : string list;
+}
+
+(* Cross-check: symbols required by required_libs must be provided by provided_lib.
+   Equivalent to canary/scripts/assert_binary_symbols.py but callable from OCaml. *)
+let check_symbols ~provided_lib ~required_libs ~prefix =
+  let provided =
+    run_nm provided_lib
+    |> symbols_defined ~prefix
+    |> List.dedup_and_sort ~compare:String.compare
+    |> Hash_set.of_list (module String)
+  in
+  let required =
+    List.concat_map required_libs ~f:(fun lib ->
+        run_nm lib |> symbols_undefined ~prefix)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let missing =
+    List.filter required ~f:(fun s -> not (Hash_set.mem provided s))
+  in
+  { n_provided = Hash_set.length provided;
+    n_required = List.length required;
+    missing
+  }
+
+(* ── Shell probe commands (write to output_dir, for probe steps) ── *)
+
+(* Symbol compatibility probe via assert_binary_symbols.py.
+   Writes symbols.log; exits nonzero if symbols are missing. *)
+let native_symbol_check_cmd ~provided_lib ~required_libs ~prefix ~output_dir =
+  let script = "canary/scripts/assert_binary_symbols.py" in
+  let req_args =
+    List.map required_libs ~f:(fun l -> "--required-lib " ^ l)
+    |> String.concat ~sep:" "
+  in
+  [%string
+    "python3 %{script} --provided-lib %{provided_lib} %{req_args} \
+     --symbol-prefix %{prefix} 2>&1 | tee %{output_dir}/symbols.log && \
+     grep -q 'OK:' %{output_dir}/symbols.log"]
+
+(* OCaml archive probe via ocamlobjinfo. Writes archive.log. *)
+let ocaml_archive_info_cmd ~archive ~output_dir =
+  [%string "ocamlobjinfo %{archive} 2>&1 | tee %{output_dir}/archive.log"]
+
+(* Python import probe. Writes import.log. *)
+let python_import_cmd ~pkg ~output_dir =
+  [%string
+    "python3 -c 'import %{pkg}; print(\"%{pkg} ok\")' 2>&1 | \
+     tee %{output_dir}/import.log"]

@@ -386,14 +386,13 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
           Some
             (fun ~output_dir ->
               Canary_action.has_file ~output_dir "build.ok"
-              && (Stdlib.Sys.file_exists (lib_so_path root)
-                  || Stdlib.Sys.file_exists
-                       [%string "%{root}/build/libz3.dylib"]))
+              && Canary_artifact_check.exists_native_lib_or_dylib
+                   (lib_so_path root))
       | Build_binding ->
           Some
             (fun ~output_dir ->
               Canary_action.has_file ~output_dir "build.ok"
-              && Stdlib.Sys.file_exists
+              && Canary_artifact_check.exists_ocaml_archive
                    [%string "%{root}/build/src/api/ml/z3ml.cmxa"])
       | Probe Binding ->
           Some
