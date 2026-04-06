@@ -48,8 +48,8 @@ let action_cmd =
     run_with_info ~failfast ~root ~project:"sqlite" steps
       (Canary_project_sqlite.run_info steps)
   in
-  let run_llvm ~root ~failfast =
-    let steps = Canary_project_llvm.action_steps ~root ~project:"llvm" in
+  let run_llvm ~root ~failfast distro =
+    let steps = Canary_project_llvm.action_steps ~root ~project:"llvm" distro in
     run_with_info ~failfast ~root ~project:"llvm" steps
       (Canary_project_llvm.run_info steps)
   in
@@ -59,11 +59,11 @@ let action_cmd =
     match project with
     | Some "sqlite" -> run_sqlite ~root ~failfast
     | Some "z3" -> run_z3 ~root ~quick ~failfast distro
-    | Some "llvm" -> run_llvm ~root ~failfast
+    | Some "llvm" -> run_llvm ~root ~failfast distro
     | None ->
         run_sqlite ~root ~failfast;
         run_z3 ~root ~quick ~failfast distro;
-        run_llvm ~root ~failfast
+        run_llvm ~root ~failfast distro
     | Some p ->
         Fmt.pr "Unknown project: %s (available: sqlite, z3, llvm)@." p
   in

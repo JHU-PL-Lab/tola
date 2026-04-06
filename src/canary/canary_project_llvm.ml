@@ -1,6 +1,38 @@
+open Base
 open Canary_basic
+open Canary_basic_store
 open Canary_basic_ocaml
 open Canary
+
+(* ── Source definitions ── *)
+
+let llvm_source_dev : source_repo =
+  {
+    name = "llvm";
+    remote = Git_remote "https://github.com/arbipher/llvm-project.git";
+    locals =
+      [
+        { distro = Wsl; path = "/home/red/code/contrib/llvm-all/llvm-project" };
+      ];
+    version = "dev";
+    ref_ = "HEAD";
+    official = false;
+  }
+
+(* The build dir is outside the source tree for LLVM monorepo.
+   z3 uses <root>/build; LLVM uses a sibling dir to keep the monorepo clean.
+   This matches the user's local layout: llvm-all/llvm-project + llvm-all/build *)
+let build_dir_of_source distro (src : source_repo) =
+  match source_root distro src with
+  | Some p ->
+      (* local: sibling build dir *)
+      Stdlib.Filename.dirname p ^ "/build"
+  | None ->
+      (* clone-on-demand: build inside canary cache *)
+      [%string "_out/canary/_local/llvm/%{src.version}_%{src.ref_}/build"]
+
+(* cmake source dir: the llvm/ subdir of the monorepo *)
+let cmake_source_of_root root = root ^ "/llvm"
 
 let llvm_ocaml_config : ocaml_tool_config =
   {
@@ -142,7 +174,9 @@ let llvm_python_probe ~output_dir =
   [%string
     {|python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" 2>&1 | tee %{output_dir}/probe.log|}]
 
-let script_spec : Canary_action.script_spec =
+(* ── Prebuilt script spec (fetch from PM, no source build) ── *)
+
+let prebuilt_script_spec : Canary_action.script_spec =
   let pm = Canary_basic_store.detect_pm () in
   let binding_lib = llvm_ocaml_config.ocaml.binding_lib_name in
   let target = llvm_ocaml_config.ocaml.example_target in
@@ -192,18 +226,148 @@ LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %
     probe_app = Some llvm_python_probe;
   }
 
-let action_steps ~root ~project =
-  Canary_action.derive_steps ~root ~project script_spec
+(* ── Source build script spec (build LLVM + OCaml bindings from source) ── *)
 
-let run_info steps =
-  let ver =
-    Option.value prebuilt.system_package.version_tag ~default:"system"
+(* cmake flags for LLVM.
+   LLVM_ENABLE_BINDINGS=ON is the default and enables OCaml bindings
+   when ocamlfind + ctypes are available. The cmake source dir is
+   llvm-project/llvm (not the monorepo root).
+
+   Key differences from z3:
+   - cmake source is a subdir: -S <root>/llvm -B <build>
+   - Build dir is a sibling of the source tree, not inside it
+   - Binding build is part of the main build (no separate target)
+   - lib output: <build>/lib/libLLVM*.so
+   - binding output: <build>/lib/ocaml/llvm.cmxa *)
+
+let cmake_configure_cmd ~source_root ~build_dir =
+  let cmake_source = cmake_source_of_root source_root in
+  [%string
+    {|eval $(opam env) && cmake \
+  -S %{cmake_source} -B %{build_dir} -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DLLVM_ENABLE_BINDINGS=ON \
+  -DLLVM_BUILD_LLVM_DYLIB=ON \
+  -DLLVM_LINK_LLVM_DYLIB=ON \
+  -DLLVM_TARGETS_TO_BUILD="X86" \
+  -DLLVM_BUILD_TOOLS=OFF \
+  -DLLVM_BUILD_EXAMPLES=OFF \
+  -DLLVM_INCLUDE_TESTS=OFF \
+  -DLLVM_INCLUDE_BENCHMARKS=OFF|}]
+
+let mk_source_script_spec ~source distro : Canary_action.script_spec =
+  let root =
+    match source_root distro source with
+    | Some p -> p
+    | None ->
+        [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/src"]
   in
-  Canary_action.mk_run_info ~project:"llvm" ~version:ver ~ref_:""
-    ~source:"prebuilt"
-    ~extra:
-      [
-        ("system_package", prebuilt.system_package_linux);
-        ("opam_package", prebuilt.opam_package);
-      ]
-    steps
+  let build = build_dir_of_source distro source in
+  let pm = Canary_basic_store.detect_pm () in
+  let target = llvm_ocaml_config.ocaml.example_target in
+  let example =
+    Unix.getcwd () ^ "/" ^ llvm_ocaml_config.ocaml.example_file
+  in
+  let llvm_config = [%string "%{build}/bin/llvm-config"] in
+  {
+    Canary_action.empty_script_spec with
+    fetch_source =
+      Some
+        (fun ~output_dir ->
+          Canary_basic_store.source_fetch_cmd distro source ~output_dir);
+    build_lib =
+      Some
+        (fun ~output_dir ->
+          [%string
+            "(test -f %{build}/build.ninja || %{cmake_configure_cmd ~source_root:root ~build_dir:build}) \
+             && ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/build.ok"]);
+    build_binding =
+      Some
+        (fun ~output_dir ->
+          [%string
+            "eval $(opam env) && ninja -C %{build} ocaml_all \
+             && echo 'ok' > %{output_dir}/build.ok"]);
+    (* Also keep fetch_lib/fetch_binding so prebuilt paths remain available *)
+    fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_binding =
+      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
+    probe_lib =
+      Some
+        (fun ~output_dir ->
+          Canary_artifact_check.native_lib_probe_cmd
+            ~lib:[%string "%{build}/lib/libLLVM.so"]
+            ~prefix:"LLVM" ~output_dir);
+    probe_binding =
+      Some
+        (fun ~output_dir ->
+          let script = "canary/scripts/assert_binary_symbols.py" in
+          (* For source builds, the binding .cmxa is in <build>/lib/ocaml/
+             and the stub archive is lib<name>.a in the same dir *)
+          let ocaml_dir = [%string "%{build}/lib/ocaml"] in
+          [%string
+            {|eval $(opam env)
+STUB=$(ls %{ocaml_dir}/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 %{script} --provided-lib %{build}/lib/libLLVM.so --required-lib "$STUB" \
+  --symbol-prefix LLVM 2>&1 | tee %{output_dir}/symbols.log
+grep -q 'OK:' %{output_dir}/symbols.log
+LLVM_CONFIG=%{llvm_config} ocamlfind ocamlopt -package ctypes -linkpkg \
+  -I %{ocaml_dir} %{ocaml_dir}/llvm.cmxa %{example} \
+  -o %{output_dir}/%{target}
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]);
+    probe_app = Some llvm_python_probe;
+    check_post =
+      (function
+      | Fetch Source -> Some Canary_basic_store.source_check_post
+      | Build_lib ->
+          Some
+            (fun ~output_dir ->
+              Canary_action.has_file ~output_dir "build.ok"
+              && Canary_artifact_check.exists_native_lib_or_dylib
+                   [%string "%{build}/lib/libLLVM.so"])
+      | Build_binding ->
+          Some
+            (fun ~output_dir ->
+              Canary_action.has_file ~output_dir "build.ok"
+              && Canary_artifact_check.exists_ocaml_archive
+                   [%string "%{build}/lib/ocaml/llvm.cmxa"])
+      | _ -> None);
+  }
+
+(* ── Action steps: select prebuilt or source ── *)
+
+let action_steps ?(source = false) ~root ~project distro =
+  if source then
+    let spec = mk_source_script_spec ~source:llvm_source_dev distro in
+    Canary_action.derive_steps ~root ~project spec
+  else Canary_action.derive_steps ~root ~project prebuilt_script_spec
+
+let run_info ?(source_repo : source_repo option) steps =
+  match source_repo with
+  | Some src ->
+      let source_str =
+        let (Git_remote url) = src.remote in
+        "git:" ^ url
+      in
+      Canary_action.mk_run_info ~project:"llvm" ~version:src.version
+        ~ref_:src.ref_ ~source:source_str
+        ~extra:
+          [
+            ("official", if src.official then "true" else "false");
+            ( "remote",
+              let (Git_remote url) = src.remote in
+              url );
+          ]
+        steps
+  | None ->
+      let ver =
+        Option.value prebuilt.system_package.version_tag ~default:"system"
+      in
+      Canary_action.mk_run_info ~project:"llvm" ~version:ver ~ref_:""
+        ~source:"prebuilt"
+        ~extra:
+          [
+            ("system_package", prebuilt.system_package_linux);
+            ("opam_package", prebuilt.opam_package);
+          ]
+        steps

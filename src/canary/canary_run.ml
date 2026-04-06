@@ -139,7 +139,7 @@ let run_action_demo () =
   Canary_action.run_project ~root ~project:"sqlite"
     (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
   Canary_action.run_project ~root ~project:"llvm"
-    (Canary_project_llvm.action_steps ~root ~project:"llvm");
+    (Canary_project_llvm.action_steps ~root ~project:"llvm" distro);
   Canary_action.run_project ~root ~project:"z3"
     (Canary_project_z3.action_steps ~root ~project:"z3" distro)
 
