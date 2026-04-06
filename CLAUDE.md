@@ -156,28 +156,8 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
 
 ### Done
 
-1. **Fix z3 `fetch_binding`** — `--assume-depexts` added via
-   `pm_install_cmd` in `canary_basic_store.ml`.
-2. **Fix z3 `build_lib` check_post** — `check_post` override added to
-   `script_spec`; `source_check_post` reads `source.ok` and verifies
-   the path still exists.
-3. **`check_post` per artifact** — marker file system for all rule
-   categories (see design.md). z3 `Build_lib` and `Build_binding` also
-   check real artifact existence (`libz3.so`, `z3ml.cmxa`).
-   `canary_artifact_check.ml` module: existence checks, nm symbol
-   inspection, opam package inspection.
-4. **Store indirection** — `pm_install_cmd`, `source_repo`, `mk_locals`,
-   `distro_base`. Remaining: factor pack commands into store templates.
-6. **LLVM** — `canary_project_llvm.ml` wired up with prebuilt system +
-   opam binding + llvmlite python + symbol compat check via opam package
-   inspection.
-8. **cmake configure as a separate action** — `Configure` rule variant
-   in the action graph between `Fetch Source` and `Build_lib`. Marker
-   `conf.ok`. z3 and llvm both use it. `build_lib` no longer bundles
-   cmake configure.
-13. **Dump project spec / canary config** — `run_info.json` dumped at
-    start of each action run.
-- **Unified example files** — all under `canary/examples/<project>/`.
+Done: #1, #2, #3, #4, #6, #8, #13. Details in
+`doc/canary/worklog_2026_04.md`.
 
 ## Other Work: Yelu
 

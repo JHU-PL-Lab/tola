@@ -132,3 +132,70 @@ let () =
    distro default?
 2. Python: include llvmlite from day one, or add later?
 3. macOS: handle brew PATH issue in `fetch_lib` or defer?
+
+---
+
+## Session 2 (2026-04-05 to 2026-04-06)
+
+### Done
+
+**#1 Fix z3 `fetch_binding`** — `--assume-depexts` added via
+`pm_install_cmd` in `canary_basic_store.ml`.
+
+**#2 Fix z3 `build_lib` check_post** — `check_post` override added to
+`script_spec`; `source_check_post` reads `source.ok` and verifies
+the path still exists.
+
+**#3 `check_post` per artifact** — marker file system for all rule
+categories (see design.md "Default postcondition markers" table).
+z3 `Build_lib` and `Build_binding` also check real artifact existence
+(`libz3.so`, `z3ml.cmxa`) to catch stale-marker/deleted-build cache
+misses. New module `canary_artifact_check.ml`: existence checks
+(`exists_native_lib_or_dylib`, `exists_ocaml_archive`), nm symbol
+inspection (`check_symbols`, `native_lib_probe_cmd`), opam package
+inspection (`opam_pkg_inspect_cmd`, `opam_pkg_symbol_check_cmd`),
+`cmxa_stub_archive` (ocamlmklib convention: `lib<name>.a`).
+
+**#4 Store indirection** — `pm_install_cmd`, `source_repo`, `mk_locals`,
+`distro_base`. Remaining: factor pack commands into store templates.
+
+**#6 LLVM project** — `canary_project_llvm.ml` wired up with prebuilt
+system + opam binding + llvmlite python. Symbol compat check via opam
+package inspection (`ocamlfind query` → `lib*.a` → nm). ELF versioned
+symbol regex fix in `assert_binary_symbols.py`. Source build spec added
+with `llvm_source_dev` (arbipher fork), cmake configure, but not yet
+tested end-to-end.
+
+**#8 cmake configure as a separate action** — new `Configure` rule
+variant between `Fetch Source` and `Build_lib`. Marker `conf.ok`.
+`Build_lib` depends on `Configure` if present. z3 and llvm both use it.
+`build_lib` no longer bundles cmake configure.
+
+**#13 Dump project spec** — `run_info.json` dumped at start of each
+action run with project, version, ref, source, distro, system PM,
+opam switch, OCaml version, timestamp, actions, project-specific extras.
+
+**Unified example files** — all under `canary/examples/<project>/`:
+`z3/z3_example.ml` (new minimal probe), `llvm/llvm_example.ml`
+(renamed from `llvm_canary.ml`), `sqlite3/sqlite3_example.ml` (unchanged).
+
+**Source build capabilities** — `source_repo` now has `has_build_lib`
+and `has_build_binding` flags. Three source tiers: contributor dev
+(both true), official latest (both true), official stable (lib=false,
+binding=true). `mk_script_spec` conditionally includes configure/
+build_lib/build_binding based on these flags.
+
+**Contrib path reorganization** — z3 moved to `contrib/z3-all/z3{,-stable}`,
+opam repos to `contrib/opam-all/`. All references updated across code,
+templates, docs, scripts.
+
+### Gotchas discovered
+
+- ELF symbol versioning: `nm -D` outputs `LLVMAddAlias2@@LLVM_19.1`;
+  regex must allow `@@VER` suffix (fixed in `assert_binary_symbols.py`)
+- `find_llvm_config_cmd` is multi-line if/elif — can't nest in `$()`
+  as sub-arg; always assign to variable first
+- `ocamlmklib` naming: `<name>.cmxa` → C stubs in `lib<name>.a`, not
+  `<name>.a`
+- CMakeCache.txt bakes in absolute source path — moving source dir
+  requires deleting CMakeCache.txt + CMakeFiles/
