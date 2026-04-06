@@ -154,6 +154,13 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     Done for z3 and llvm. Remaining: wire CLI `--source dev|stable`,
     add official latest sources.
 
+22. **Bundle check_post with action slots** — currently `script_spec` has
+    action cmds (`build_lib`, `build_binding`, ...) and a separate
+    `check_post : rule -> ...` dispatch that must be kept in sync. Refactor
+    action slots from `cmd option` to `{ cmd; check } option` so each
+    action carries its own check_post. Do after #12 (multiple probes)
+    since that will also reshape the action slots.
+
 ### Done
 
 Done: #1, #2, #3, #4, #6, #7, #8, #13. Details in
