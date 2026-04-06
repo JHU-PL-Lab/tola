@@ -19,7 +19,7 @@ let z3_source_dev : source_repo =
   {
     name = "z3";
     remote = Git_remote "https://github.com/arbipher/z3.git";
-    locals = mk_locals "contrib/z3";
+    locals = mk_locals "contrib/z3-all/z3";
     version = "dev";
     ref_ = "HEAD";
     official = false;
@@ -29,7 +29,7 @@ let z3_source_stable : source_repo =
   {
     name = "z3";
     remote = Git_remote "https://github.com/Z3Prover/z3.git";
-    locals = mk_locals "contrib/z3-stable";
+    locals = mk_locals "contrib/z3-all/z3-stable";
     version = "4.15.2";
     ref_ = "bd3e722";
     official = true;

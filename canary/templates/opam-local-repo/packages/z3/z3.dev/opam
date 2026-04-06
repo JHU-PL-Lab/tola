@@ -77,7 +77,7 @@ conflicts: [
 ]
 synopsis: "Z3 solver (development version)"
 url {
-  src: "git+file:///home/red/code/contrib/z3"
+  src: "git+file:///home/red/code/contrib/z3-all/z3"
 }
 extra-source "gccstd-2a.patch" {
   src:

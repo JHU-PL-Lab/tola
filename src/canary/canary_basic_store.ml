@@ -111,9 +111,9 @@ type source_repo = {
 }
 
 (* Generate local_path entries for all distros from a relative path.
-   e.g., mk_locals "contrib/z3" = [
-     { distro = Wsl; path = "/home/red/code/contrib/z3" };
-     { distro = MacOS_local; path = "/Users/ex/code/contrib/z3" };
+   e.g., mk_locals "contrib/z3-all/z3" = [
+     { distro = Wsl; path = "/home/red/code/contrib/z3-all/z3" };
+     { distro = MacOS_local; path = "/Users/ex/code/contrib/z3-all/z3" };
    ] *)
 let all_distros = [ Wsl; MacOS_local ]
 

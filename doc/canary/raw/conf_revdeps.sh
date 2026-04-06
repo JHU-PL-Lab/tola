@@ -4,7 +4,7 @@
 # Usage: ./conf_revdeps.sh /path/to/opam-repository/packages [classify.txt]
 # Output: pipe-separated lines sorted by revdep count: count|category|package
 
-REPO=${1:-/home/red/code/contrib/opam-repository/packages}
+REPO=${1:-/home/red/code/contrib/opam-all/opam-repository/packages}
 CLASSIFY=${2:-/tmp/conf_classify.txt}
 
 # If no classify file, generate it

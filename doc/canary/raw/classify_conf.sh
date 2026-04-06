@@ -2,7 +2,7 @@
 # Classify conf-* packages by build section complexity.
 # Usage: ./classify_conf.sh /path/to/opam-repository/packages
 # Output: pipe-separated lines: category|conf-package-name
-REPO=${1:-/home/red/code/contrib/opam-repository/packages}
+REPO=${1:-/home/red/code/contrib/opam-all/opam-repository/packages}
 for d in $REPO/conf-*/; do
   pkg=$(basename "$d")
   latest=$(ls "$d" | sort -V | tail -1)

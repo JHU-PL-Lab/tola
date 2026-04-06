@@ -23,7 +23,7 @@
 **z3 project end-to-end**
 - `fetch_source` → `build_lib` → `build_binding` → `pack_binding`
   → `probe_binding` all passing on WSL
-- `z3_source_dev` (fork at arbipher/z3, local at `contrib/z3`) and
+- `z3_source_dev` (fork at arbipher/z3, local at `contrib/z3-all/z3`) and
   `z3_source_stable` (official, 4.15.2/bd3e722) defined
 - `z3_project_spec` derives `project_spec` from any `source_repo`
 - Removed 5 legacy aliases, unified through `root_of_source`

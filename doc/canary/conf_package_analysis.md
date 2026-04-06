@@ -4,8 +4,8 @@ Companion to [opam_survey.md](opam_survey.md). Classifies all 333
 `conf-*` packages by what their `build:` section does, including
 extra-source files fetched at install time.
 
-Source: opam-repository at `/home/red/code/contrib/opam-repository`,
-extra-source files at `/home/red/code/contrib/opam-source-archives`.
+Source: opam-repository at `/home/red/code/contrib/opam-all/opam-repository`,
+extra-source files at `/home/red/code/contrib/opam-all/opam-source-archives`.
 
 ## Summary
 
@@ -214,12 +214,12 @@ lists every file with its local path for inspection.
 | conf-xen            | test.c                                 | c      | `patches/conf-xen/test.c`                       |
 | conf-zmq            | test.c                                 | c      | `patches/conf-zmq/test.c`                       |
 
-All paths are relative to `/home/red/code/contrib/opam-source-archives`.
+All paths are relative to `/home/red/code/contrib/opam-all/opam-source-archives`.
 For versioned files (e.g., `test.c.4`), the latest version is listed.
 
 To inspect any file:
 ```bash
-cat /home/red/code/contrib/opam-source-archives/patches/<package>/<file>
+cat /home/red/code/contrib/opam-all/opam-source-archives/patches/<package>/<file>
 ```
 
 ### Extra-source file type summary
@@ -280,8 +280,8 @@ as a simple declaration.
 
 ---
 
-*Analysis based on opam-repository at `/home/red/code/contrib/opam-repository`
-and opam-source-archives at `/home/red/code/contrib/opam-source-archives`.
+*Analysis based on opam-repository at `/home/red/code/contrib/opam-all/opam-repository`
+and opam-source-archives at `/home/red/code/contrib/opam-all/opam-source-archives`.
 Classification by grep heuristics on build sections + extra-source file
 inspection. Scripts: `doc/canary/raw/classify_conf.sh`,
 `doc/canary/raw/conf_revdeps.sh`.*

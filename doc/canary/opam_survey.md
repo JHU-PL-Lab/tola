@@ -535,7 +535,7 @@ detailed analysis of build complexity and eliminability.
 
 ---
 
-*Survey based on opam-repository at `/home/red/code/contrib/opam-repository`
+*Survey based on opam-repository at `/home/red/code/contrib/opam-all/opam-repository`
 (restored from git). Only latest version per package examined. Counts are
 approximate due to heuristic categorization (matching `-dev`/`lib` in
 depexts for C lib detection, grep patterns on build sections).*
