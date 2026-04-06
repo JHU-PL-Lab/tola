@@ -17,6 +17,8 @@ let llvm_source_dev : source_repo =
     version = "dev";
     ref_ = "HEAD";
     official = false;
+    has_build_lib = false;
+    has_build_binding = true;
   }
 
 (* The build dir is outside the source tree for LLVM monorepo.
@@ -276,22 +278,28 @@ let mk_source_script_spec ~source distro : Canary_action.script_spec =
         (fun ~output_dir ->
           Canary_basic_store.source_fetch_cmd distro source ~output_dir);
     configure =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "%{cmake_configure_cmd ~source_root:root ~build_dir:build} \
-             && echo 'ok' > %{output_dir}/conf.ok"]);
+      (if source.has_build_lib || source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "%{cmake_configure_cmd ~source_root:root ~build_dir:build} \
+                && echo 'ok' > %{output_dir}/conf.ok"])
+       else None);
     build_lib =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/build.ok"]);
+      (if source.has_build_lib then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/build.ok"])
+       else None);
     build_binding =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "eval $(opam env) && ninja -C %{build} ocaml_all \
-             && echo 'ok' > %{output_dir}/build.ok"]);
+      (if source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "eval $(opam env) && ninja -C %{build} ocaml_all \
+                && echo 'ok' > %{output_dir}/build.ok"])
+       else None);
     (* Also keep fetch_lib/fetch_binding so prebuilt paths remain available *)
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =

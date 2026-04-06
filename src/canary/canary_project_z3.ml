@@ -23,6 +23,8 @@ let z3_source_dev : source_repo =
     version = "dev";
     ref_ = "HEAD";
     official = false;
+    has_build_lib = true;
+    has_build_binding = true;
   }
 
 let z3_source_stable : source_repo =
@@ -33,6 +35,8 @@ let z3_source_stable : source_repo =
     version = "4.15.2";
     ref_ = "bd3e722";
     official = true;
+    has_build_lib = false;
+    has_build_binding = true;
   }
 
 let root_of_source distro (src : source_repo) =
@@ -316,23 +320,29 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
         (fun ~output_dir ->
           Canary_basic_store.source_fetch_cmd distro source ~output_dir);
     configure =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "cd %{root} && %{cmake_configure} \
-             && echo 'ok' > %{output_dir}/conf.ok"]);
+      (if source.has_build_lib || source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "cd %{root} && %{cmake_configure} \
+                && echo 'ok' > %{output_dir}/conf.ok"])
+       else None);
     build_lib =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "cd %{root} && ninja -C build libz3 \
-             && echo 'ok' > %{output_dir}/build.ok"]);
+      (if source.has_build_lib then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "cd %{root} && ninja -C build libz3 \
+                && echo 'ok' > %{output_dir}/build.ok"])
+       else None);
     build_binding =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "cd %{root} && eval $(opam env) && ninja -C build \
-             build_z3_ocaml_bindings && echo 'ok' > %{output_dir}/build.ok"]);
+      (if source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "cd %{root} && eval $(opam env) && ninja -C build \
+                build_z3_ocaml_bindings && echo 'ok' > %{output_dir}/build.ok"])
+       else None);
     fetch_lib =
       Some
         (fun ~output_dir ->

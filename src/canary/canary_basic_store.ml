@@ -108,6 +108,8 @@ type source_repo = {
   version : string;                      (* "dev", "4.13.4" *)
   ref_ : string;                         (* "HEAD", "z3-4.13.4" *)
   official : bool;
+  has_build_lib : bool;                  (* build the native lib from this source? *)
+  has_build_binding : bool;              (* build language bindings from this source? *)
 }
 
 (* Generate local_path entries for all distros from a relative path.
