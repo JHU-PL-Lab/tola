@@ -4,7 +4,21 @@ open Canary_basic_store
 open Canary_basic_ocaml
 open Canary
 
-(* ── Source definitions ── *)
+(* ── Version specs ──
+   LLVM versions map to system PM packages (llvm-N-dev) and opam
+   packages (llvm.N-static). Unlike z3, LLVM lib is almost always
+   prebuilt (building LLVM from source is expensive).
+
+   | Version | Source                   | PM lib? | build_lib | build_binding |
+   |---------|--------------------------|---------|-----------|---------------|
+   | dev     | arbipher/llvm-project    | no      | false*    | true          |
+   | 19      | llvm/llvm-project tag    | yes     | false     | true          |
+   | latest  | llvm/llvm-project HEAD   | no      | false*    | true          |
+
+   *build_lib=false for dev/latest because LLVM lib build is very
+   expensive; the common use case is building only the OCaml binding
+   against a prebuilt system lib. Set has_build_lib=true to also
+   build libLLVM from source. *)
 
 let llvm_source_dev : source_repo =
   {
@@ -20,6 +34,32 @@ let llvm_source_dev : source_repo =
     has_build_lib = false;
     has_build_binding = true;
   }
+
+let llvm_source_stable : source_repo =
+  {
+    name = "llvm";
+    remote = Git_remote "https://github.com/llvm/llvm-project.git";
+    locals = [];
+    version = "19";
+    ref_ = "llvmorg-19.1.7";
+    official = true;
+    has_build_lib = false;
+    has_build_binding = true;
+  }
+
+let llvm_source_latest : source_repo =
+  {
+    name = "llvm";
+    remote = Git_remote "https://github.com/llvm/llvm-project.git";
+    locals = [];
+    version = "latest";
+    ref_ = "HEAD";
+    official = true;
+    has_build_lib = false;
+    has_build_binding = true;
+  }
+
+let llvm_sources = [ llvm_source_dev; llvm_source_stable; llvm_source_latest ]
 
 (* The build dir is outside the source tree for LLVM monorepo.
    z3 uses <root>/build; LLVM uses a sibling dir to keep the monorepo clean.

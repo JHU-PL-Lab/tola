@@ -15,6 +15,20 @@ let mk_instance root = { root; external_libz3 = root $/ ".helper/z3_root" }
 let mk_deploy root =
   { contrib_abs = root $/ canary.paths.contrib_rel; gh_abs = root $/ ".github" }
 
+(* ── Version specs ──
+   Version is the primary key. Each version identifies both the source
+   and which prebuilt libs (if any) exist for it.
+
+   | Version | Source            | PM lib? | build_lib | build_binding |
+   |---------|-------------------|---------|-----------|---------------|
+   | dev     | arbipher/z3 HEAD  | no      | yes       | yes           |
+   | latest  | Z3Prover/z3 HEAD  | no      | yes       | yes           |
+   | 4.15.2  | Z3Prover/z3 tag   | yes     | no        | yes           |
+
+   dev must build lib (no PM ships HEAD of a fork).
+   latest must build lib (no PM ships official HEAD).
+   stable can skip lib build (PM has this version). *)
+
 let z3_source_dev : source_repo =
   {
     name = "z3";
@@ -23,6 +37,18 @@ let z3_source_dev : source_repo =
     version = "dev";
     ref_ = "HEAD";
     official = false;
+    has_build_lib = true;
+    has_build_binding = true;
+  }
+
+let z3_source_latest : source_repo =
+  {
+    name = "z3";
+    remote = Git_remote "https://github.com/Z3Prover/z3.git";
+    locals = [];
+    version = "latest";
+    ref_ = "HEAD";
+    official = true;
     has_build_lib = true;
     has_build_binding = true;
   }
@@ -38,6 +64,8 @@ let z3_source_stable : source_repo =
     has_build_lib = false;
     has_build_binding = true;
   }
+
+let z3_sources = [ z3_source_dev; z3_source_latest; z3_source_stable ]
 
 let root_of_source distro (src : source_repo) =
   match source_root distro src with
