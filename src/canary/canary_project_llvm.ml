@@ -373,17 +373,13 @@ LLVM_CONFIG=%{llvm_config} ocamlfind ocamlopt -package ctypes -linkpkg \
       (function
       | Fetch Source -> Some Canary_basic_store.source_check_post
       | Build_lib ->
-          Some
-            (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "build.ok"
-              && Canary_artifact_check.exists_native_lib_or_dylib
-                   [%string "%{build}/lib/libLLVM.so"])
+          Some (Canary_artifact_check.check_build_lib
+                  ~marker:"build.ok"
+                  ~lib_path:[%string "%{build}/lib/libLLVM.so"])
       | Build_binding ->
-          Some
-            (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "build.ok"
-              && Canary_artifact_check.exists_ocaml_archive
-                   [%string "%{build}/lib/ocaml/llvm.cmxa"])
+          Some (Canary_artifact_check.check_build_binding
+                  ~marker:"build.ok"
+                  ~archive_path:[%string "%{build}/lib/ocaml/llvm.cmxa"])
       | _ -> None);
   }
 

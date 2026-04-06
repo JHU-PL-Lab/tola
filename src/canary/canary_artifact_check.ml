@@ -63,6 +63,24 @@ let python_importable pkg =
     (Printf.sprintf "python3 -c 'import %s' 2>/dev/null" pkg)
   = 0
 
+(* ── check_post compositors ──
+   Thin functions for common check_post patterns. Each returns
+   (output_dir:string -> bool) suitable for script_spec.check_post. *)
+
+(* marker + native lib must exist *)
+let check_build_lib ~marker ~lib_path ~output_dir =
+  Canary_action.has_file ~output_dir marker
+  && exists_native_lib_or_dylib lib_path
+
+(* marker + ocaml archive must exist *)
+let check_build_binding ~marker ~archive_path ~output_dir =
+  Canary_action.has_file ~output_dir marker
+  && exists_ocaml_archive archive_path
+
+(* all listed files must exist in output_dir *)
+let check_markers markers ~output_dir =
+  List.for_all markers ~f:(fun m -> Canary_action.has_file ~output_dir m)
+
 (* ── nm-based symbol inspection ── *)
 
 let nm_cmd path =

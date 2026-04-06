@@ -467,23 +467,15 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       (function
       | Fetch Source -> Some Canary_basic_store.source_check_post
       | Build_lib ->
-          Some
-            (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "build.ok"
-              && Canary_artifact_check.exists_native_lib_or_dylib
-                   (lib_so_path root))
+          Some (Canary_artifact_check.check_build_lib
+                  ~marker:"build.ok" ~lib_path:(lib_so_path root))
       | Build_binding ->
-          Some
-            (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "build.ok"
-              && Canary_artifact_check.exists_ocaml_archive
-                   [%string "%{root}/build/src/api/ml/z3ml.cmxa"])
+          Some (Canary_artifact_check.check_build_binding
+                  ~marker:"build.ok"
+                  ~archive_path:[%string "%{root}/build/src/api/ml/z3ml.cmxa"])
       | Probe Binding ->
-          Some
-            (fun ~output_dir ->
-              Canary_action.has_file ~output_dir "symbols.log"
-              && Canary_action.has_file ~output_dir "probe_build.log"
-              && Canary_action.has_file ~output_dir "probe_pkg.log")
+          Some (Canary_artifact_check.check_markers
+                  [ "symbols.log"; "probe_build.log"; "probe_pkg.log" ])
       | _ -> None);
   }
 
