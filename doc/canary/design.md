@@ -590,6 +590,7 @@ Each action step has three parts:
 | Rule category | Marker file   | Written by                         |
 |---------------|---------------|------------------------------------|
 | `Fetch Source`| `source.ok`   | `source_fetch_cmd` (+ dir check)   |
+| `Configure`   | `conf.ok`     | project configure script           |
 | `Fetch Lib`   | `lib.ok`      | `fetch_lib_cmd` template           |
 | `Fetch Binding`| `binding.ok` | `fetch_binding_cmd` template       |
 | `Fetch App`   | `app.ok`      | project `fetch_app` script         |

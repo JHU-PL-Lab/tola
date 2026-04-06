@@ -390,6 +390,7 @@ let single_version = [ Dev ]
 let two_versions = [ Dev; Stable ]
 
 type rule =
+  | Configure
   | Build_lib
   | Build_binding
   | Build_app
@@ -398,6 +399,7 @@ type rule =
   | Probe of artifact_kind
 
 let string_of_rule = function
+  | Configure -> "configure"
   | Build_lib -> "build_lib"
   | Build_binding -> "build_binding"
   | Build_app -> "build_app"
@@ -417,6 +419,7 @@ let pool_get ar kind =
 let store_rules =
   [
     Fetch Source;
+    Configure;
     Build_lib;
     Fetch Lib;
     Build_binding;
@@ -490,7 +493,7 @@ let make_action_rule ~rules ~versions ~name ~source () =
                         ~built_from:binding ~runtime_dep:runtime_lib ()))
             in
             add pools App nodes
-        | Publish _ | Probe _ -> pools)
+        | Configure | Publish _ | Probe _ -> pools)
   in
   { rules; pools }
 
@@ -818,7 +821,7 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
                | Build_binding -> Poly.equal k Binding
                | Build_app -> Poly.equal k App
                | Fetch fk -> Poly.equal k fk
-               | Publish _ | Probe _ -> false))
+               | Configure | Publish _ | Probe _ -> false))
     |> List.dedup_and_sort ~compare:Poly.compare
   in
   let all_pool_kinds = Source :: artifact_pool_kinds in

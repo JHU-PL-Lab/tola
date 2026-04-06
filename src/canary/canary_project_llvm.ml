@@ -275,12 +275,17 @@ let mk_source_script_spec ~source distro : Canary_action.script_spec =
       Some
         (fun ~output_dir ->
           Canary_basic_store.source_fetch_cmd distro source ~output_dir);
+    configure =
+      Some
+        (fun ~output_dir ->
+          [%string
+            "%{cmake_configure_cmd ~source_root:root ~build_dir:build} \
+             && echo 'ok' > %{output_dir}/conf.ok"]);
     build_lib =
       Some
         (fun ~output_dir ->
           [%string
-            "(test -f %{build}/build.ninja || %{cmake_configure_cmd ~source_root:root ~build_dir:build}) \
-             && ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/build.ok"]);
+            "ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/build.ok"]);
     build_binding =
       Some
         (fun ~output_dir ->

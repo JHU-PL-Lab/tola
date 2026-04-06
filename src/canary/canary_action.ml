@@ -12,6 +12,7 @@ open Canary
 
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
+  configure : (output_dir:string -> string) option;
   build_lib : (output_dir:string -> string) option;
   build_binding : (output_dir:string -> string) option;
   build_app : (output_dir:string -> string) option;
@@ -30,6 +31,7 @@ type script_spec = {
 
 let empty_script_spec = {
   fetch_source = None;
+  configure = None;
   build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
   probe_lib = None; probe_binding = None; probe_app = None;
@@ -38,7 +40,7 @@ let empty_script_spec = {
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
 let no_source spec =
-  { spec with fetch_source = None;
+  { spec with fetch_source = None; configure = None;
     build_lib = None; build_binding = None; build_app = None;     pack_lib = None; pack_binding = None; pack_app = None }
 
 (* Remove packing actions *)
@@ -48,6 +50,7 @@ let no_pack spec =
 (* Look up the script for a rule *)
 let script_of_rule spec = function
   | Fetch Source -> spec.fetch_source
+  | Configure -> spec.configure
   | Fetch Lib -> spec.fetch_lib
   | Fetch Binding -> spec.fetch_binding
   | Fetch App -> spec.fetch_app
@@ -348,6 +351,7 @@ let has_file ~output_dir name =
 
 let marker_of_rule = function
   | Fetch Source -> "source.ok"
+  | Configure -> "conf.ok"
   | Fetch Lib -> "lib.ok"
   | Fetch Binding -> "binding.ok"
   | Fetch App -> "app.ok"
@@ -379,9 +383,16 @@ let deps_of_rule spec rule =
   let tag r = string_of_rule r in
   match rule with
   | Fetch _ -> []
-  | Build_lib ->
+  | Configure ->
       List.filter_opt [
         if has (Fetch Source) then Some (tag (Fetch Source)) else None
+      ]
+  | Build_lib ->
+      List.filter_opt [
+        (* Prefer Configure if present, else Fetch Source directly *)
+        if has Configure then Some (tag Configure)
+        else if has (Fetch Source) then Some (tag (Fetch Source))
+        else None
       ]
   | Build_binding ->
       let lib_dep =
@@ -390,7 +401,9 @@ let deps_of_rule spec rule =
         else None
       in
       List.filter_opt [
-        if has (Fetch Source) then Some (tag (Fetch Source)) else None;
+        if has Configure then Some (tag Configure)
+        else if has (Fetch Source) then Some (tag (Fetch Source))
+        else None;
         lib_dep;
       ]
   | Build_app ->
