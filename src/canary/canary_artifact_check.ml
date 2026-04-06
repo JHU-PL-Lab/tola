@@ -145,8 +145,8 @@ let check_symbols ~provided_lib ~required_libs ~prefix =
 let native_lib_probe_cmd ~lib ~prefix ~output_dir =
   let nm_flag = if is_macos then "-g" else "-D" in
   [%string
-    {|COUNT=$(nm %{nm_flag} '%{lib}' 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
-printf '%{prefix} symbols exported: %d\n' "$COUNT" | tee %{output_dir}/probe.log
+    {|COUNT=$(nm %{nm_flag} "%{lib}" 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
+printf '%{prefix} symbols exported: %s\n' "$COUNT" | tee %{output_dir}/probe.log
 test "$COUNT" -gt 0|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.
