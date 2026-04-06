@@ -61,10 +61,10 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
    opam auto-install system deps in Docker/CI. Currently local dev uses
    `--assume-depexts` (requires pre-installing system deps manually).
 
-7. **z3 stable source CLI** — `z3_source_stable` (4.15.2, bd3e722) is
-   defined with `has_build_lib=false, has_build_binding=true`.
-   `action_steps` accepts `~source`, but no CLI flag to select it yet.
-   Wire up e.g. `action z3-stable` or `--source stable`.
+7. ~~**z3 stable source**~~ — done: three version specs (dev/latest/stable)
+   defined for z3 and llvm. `source_repo` has `has_build_lib` and
+   `has_build_binding` flags. Probes resolve lib path dynamically
+   (build tree or pkg-config). CLI flag deferred to #13b.
 
 9. **Binding build dependencies** — z3's OCaml binding requires `zarith`
    at build time. Currently not tracked in `ocaml_binding` or
@@ -156,7 +156,7 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #8, #13. Details in
+Done: #1, #2, #3, #4, #6, #7, #8, #13. Details in
 `doc/canary/worklog_2026_04.md`.
 
 ## Other Work: Yelu
