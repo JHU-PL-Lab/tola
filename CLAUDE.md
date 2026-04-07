@@ -82,11 +82,12 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     status on tty. Canary's `run_cmd_logged` already has the logging
     layer; split tty output from file output.
 
-12. **Multiple probes per artifact kind** — `probe_binding` needs two
-    variants: one against the build tree and one against the opam-installed
-    package. Currently hacked as a two-command sequence in one step.
-    The framework should support multiple probes per kind, each with
-    different deps. Design question for the pattern table.
+12. ~~**Multiple probes per artifact kind**~~ — done: `probe_binding`
+    is now `(location * cmd) list`. Each entry keyed by `location`
+    (`Build_tree`, `Lang_pm`, etc.) which determines tag and deps.
+    Single entry = one step (`probe_binding`); multiple = expanded
+    (`probe_binding_build`, `probe_binding_pkg`). z3 uses both;
+    llvm/sqlite use single.
 
 13b. **Driver mode: read `run_info.json` to configure a run** — allow
     `canary action --from run_info.json` to replay or reconfigure a
@@ -163,7 +164,7 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #13. Details in
+Done: #1, #2, #3, #4, #6, #7, #8, #12, #13. Details in
 `doc/canary/worklog_2026_04.md`.
 
 ## Other Work: Yelu
