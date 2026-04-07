@@ -10,6 +10,20 @@ open Canary
    Scripts for fetch/pack come from the store (uniform per PM).
    Scripts for build/probe come from the project (project-specific). *)
 
+(* probe_binding is the action; each entry specifies the artifact source.
+   Build = against build tree artifacts (depends on build_binding).
+   Package = against PM-installed package (depends on pack/fetch_binding). *)
+type probe_source = Build | Package
+
+type binding_probe = {
+  probe_source : probe_source;
+  cmd : output_dir:string -> string;
+}
+
+let tag_of_probe_source = function
+  | Build -> "probe_binding_raw"
+  | Package -> "probe_binding_pkg"
+
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
   configure : (output_dir:string -> string) option;
@@ -23,12 +37,7 @@ type script_spec = {
   pack_binding : (output_dir:string -> string) option;
   pack_app : (output_dir:string -> string) option;
   probe_lib : (output_dir:string -> string) option;
-  probe_binding : (output_dir:string -> string) option;
-  (* Split probes: raw = against build tree artifacts, pkg = against
-     PM-installed package. If set, these replace probe_binding in
-     derive_steps with two separate steps with different deps. *)
-  probe_binding_raw : (output_dir:string -> string) option;
-  probe_binding_pkg : (output_dir:string -> string) option;
+  probe_binding : binding_probe list;
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
@@ -39,8 +48,7 @@ let empty_script_spec = {
   configure = None;
   build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
-  probe_lib = None; probe_binding = None;
-  probe_binding_raw = None; probe_binding_pkg = None;
+  probe_lib = None; probe_binding = [];
   probe_app = None;
   check_post = (fun _ -> None);
 }
@@ -68,7 +76,12 @@ let script_of_rule spec = function
   | Publish Binding -> spec.pack_binding
   | Publish App -> spec.pack_app
   | Probe Lib -> spec.probe_lib
-  | Probe Binding -> spec.probe_binding
+  | Probe Binding ->
+      (* Single-probe compat: if exactly one entry, use its cmd.
+         Multiple entries are handled by derive_steps expansion. *)
+      (match spec.probe_binding with
+       | [ p ] -> Some p.cmd
+       | _ -> None)
   | Probe App -> spec.probe_app
   | Publish Source | Probe Source -> None
 
@@ -469,10 +482,6 @@ let deps_of_split_probe spec variant =
 
 let derive_steps ~root ~project (spec : script_spec) : action_step list =
   let seen = Hashtbl.create (module String) in
-  let has_split_binding =
-    Option.is_some spec.probe_binding_raw
-    || Option.is_some spec.probe_binding_pkg
-  in
   let mk_one ~tag ~rule ~deps ~cmd =
     let check_post = match spec.check_post rule with
       | Some cp -> cp
@@ -484,31 +493,20 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
       let tag = string_of_rule rule in
       if Hashtbl.mem seen tag then []
       else
-        (* Probe Binding with split probes: expand into two steps *)
+        (* Probe Binding with multiple probes: expand into one step per entry *)
         match rule with
-        | Probe Binding when has_split_binding ->
+        | Probe Binding when List.length spec.probe_binding > 1 ->
             Hashtbl.set seen ~key:tag ~data:true;
-            let raw_step =
-              Option.map spec.probe_binding_raw ~f:(fun cmd ->
-                  let tag = "probe_binding_raw" in
-                  let deps = deps_of_split_probe spec `Raw in
-                  let check_post = match spec.check_post rule with
-                    | Some cp -> cp
-                    | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
-                  in
-                  mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
-            in
-            let pkg_step =
-              Option.map spec.probe_binding_pkg ~f:(fun cmd ->
-                  let tag = "probe_binding_pkg" in
-                  let deps = deps_of_split_probe spec `Pkg in
-                  let check_post = match spec.check_post rule with
-                    | Some cp -> cp
-                    | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
-                  in
-                  mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
-            in
-            List.filter_opt [ raw_step; pkg_step ]
+            List.map spec.probe_binding ~f:(fun (bp : binding_probe) ->
+                let tag = tag_of_probe_source bp.probe_source in
+                let deps = deps_of_split_probe spec
+                    (match bp.probe_source with
+                     | Build -> `Raw | Package -> `Pkg) in
+                let check_post = match spec.check_post rule with
+                  | Some cp -> cp
+                  | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                in
+                mk_step ~root ~project ~tag ~rule ~deps ~cmd:bp.cmd ~check_post ())
         | _ ->
             match script_of_rule spec rule with
             | None -> []
