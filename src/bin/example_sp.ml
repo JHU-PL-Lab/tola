@@ -137,7 +137,7 @@ let mk_z3_src_example () =
   let z3_root = root_of_source distro z3_source_dev in
   let z3_dev_instance = mk_instance z3_root in
   let z3_dev_spec = z3_project_spec distro z3_source_dev in
-  let open Canary_basic_ocaml in
+  let open Canary_ocaml in
   let z3_binding_project =
     let open Binding.Structures in
     Project

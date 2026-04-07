@@ -1,6 +1,6 @@
 open Base
 open Canary_basic
-open Canary_basic_store
+open Canary_store
 open Canary
 
 (* ── Script spec ──
@@ -337,12 +337,12 @@ let result_status_of_run (steps : action_step list)
    Project specs use these instead of writing raw shell strings. *)
 
 (* fetch_lib: install a system package and write marker *)
-let fetch_lib_cmd pm (spec : Canary_basic_store.system_package_spec) ~output_dir =
-  [%string "%{Canary_basic_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
+let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir =
+  [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
 
 (* fetch_binding: install an opam package and write marker *)
-let fetch_binding_cmd (spec : Canary_basic_ocaml.opam_package_spec) ~output_dir =
-  [%string "%{Canary_basic_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
+let fetch_binding_cmd (spec : Canary_ocaml.opam_package_spec) ~output_dir =
+  [%string "%{Canary_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
@@ -543,7 +543,7 @@ let detect_env () =
     | 0 -> "macos"
     | _ -> "linux"
   in
-  let system_pm = match Canary_basic_store.detect_pm () with
+  let system_pm = match Canary_store.detect_pm () with
     | Apt -> "apt"
     | Brew -> "brew"
     | Opam -> "opam"

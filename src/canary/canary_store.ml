@@ -64,8 +64,8 @@ let system_pkg_for_pm spec pm =
 
 let pm_install_cmd pm ~pkg =
   match pm with
-  | Brew -> Canary_basic_brew.install_cmd ~pkg
-  | Apt -> Canary_basic_apt.install_cmd ~pkg
+  | Brew -> Canary_pm_brew.install_cmd ~pkg
+  | Apt -> Canary_pm_apt.install_cmd ~pkg
   | Opam -> [%string "eval $(opam env) && opam install %{pkg} -y --assume-depexts"]
   | Unsupported -> [%string "echo 'no package manager for %{pkg}' && false"]
 
@@ -75,8 +75,8 @@ let system_install_cmd pm (spec : system_package_spec) =
 let verify_system_install_cmd pm (spec : system_package_spec) =
   let pkg = system_pkg_for_pm spec pm in
   match pm with
-  | Apt -> Canary_basic_apt.verify_installed_cmd ~pkg
-  | Brew -> Canary_basic_brew.verify_installed_cmd ~pkg
+  | Apt -> Canary_pm_apt.verify_installed_cmd ~pkg
+  | Brew -> Canary_pm_brew.verify_installed_cmd ~pkg
   | Opam | Unsupported ->
       [%string "echo 'no verify command for %{pkg}' && false"]
 

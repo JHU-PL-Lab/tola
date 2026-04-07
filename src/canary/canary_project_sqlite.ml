@@ -1,5 +1,5 @@
 open Canary_basic
-open Canary_basic_ocaml
+open Canary_ocaml
 open Canary
 
 let sqlite_ocaml_config : ocaml_tool_config =
@@ -100,7 +100,7 @@ let config distro =
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
 let script_spec : Canary_action.script_spec =
-  let pm = Canary_basic_store.detect_pm () in
+  let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
   {
     Canary_action.empty_script_spec with
@@ -109,7 +109,7 @@ let script_spec : Canary_action.script_spec =
       Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
     probe_binding =
       [
-        (Canary_basic_store.Lang_pm,
+        (Canary_store.Lang_pm,
          (fun ~output_dir ->
            Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
              ~example:ocaml.example_file ~target:ocaml.example_target

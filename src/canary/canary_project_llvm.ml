@@ -1,7 +1,7 @@
 open Base
 open Canary_basic
-open Canary_basic_store
-open Canary_basic_ocaml
+open Canary_store
+open Canary_ocaml
 open Canary
 
 (* ── Version specs ──
@@ -219,7 +219,7 @@ let llvm_python_probe ~output_dir =
 (* ── Prebuilt script spec (fetch from PM, no source build) ── *)
 
 let prebuilt_script_spec : Canary_action.script_spec =
-  let pm = Canary_basic_store.detect_pm () in
+  let pm = Canary_store.detect_pm () in
   let binding_lib = llvm_ocaml_config.ocaml.binding_lib_name in
   let target = llvm_ocaml_config.ocaml.example_target in
   {
@@ -301,7 +301,7 @@ let mk_source_script_spec ~source distro : Canary_action.script_spec =
         [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/src"]
   in
   let build = build_dir_of_source distro source in
-  let pm = Canary_basic_store.detect_pm () in
+  let pm = Canary_store.detect_pm () in
   let target = llvm_ocaml_config.ocaml.example_target in
   let example =
     Unix.getcwd () ^ "/" ^ llvm_ocaml_config.ocaml.example_file
@@ -312,7 +312,7 @@ let mk_source_script_spec ~source distro : Canary_action.script_spec =
     fetch_source =
       Some
         (fun ~output_dir ->
-          Canary_basic_store.source_fetch_cmd distro source ~output_dir);
+          Canary_store.source_fetch_cmd distro source ~output_dir);
     configure =
       (if source.has_build_lib || source.has_build_binding then
          Some
@@ -364,7 +364,7 @@ LLVM_CONFIG=%{llvm_config} ocamlfind ocamlopt -package ctypes -linkpkg \
     probe_app = Some llvm_python_probe;
     check_post =
       (function
-      | Fetch Source -> Some Canary_basic_store.source_check_post
+      | Fetch Source -> Some Canary_store.source_check_post
       | Build_lib ->
           Some (Canary_artifact_check.check_build_lib
                   ~marker:"build.ok"

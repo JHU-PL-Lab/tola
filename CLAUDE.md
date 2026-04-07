@@ -29,13 +29,15 @@ plans for GH CI).
 | `src/canary/canary_action.ml`          | `script_spec`, `derive_steps`, runner, text log, shared templates |
 | `src/bin/canary_main.ml`               | CLI entry point (`canary_main.exe`)                               |
 | `src/canary/canary_basic.ml`           | `artifact_kind`, `kind_order`, `project_spec`                     |
-| `src/canary/canary_basic_store.ml`     | `location`, `package_manager`, `source_repo`, `distro` types      |
+| `src/canary/canary_store.ml`           | `location`, `package_manager`, `source_repo`, `distro` types      |
+| `src/canary/canary_ocaml.ml`           | OCaml toolchain types, opam packaging, probe generation           |
+| `src/canary/canary_pm_apt.ml`          | apt install/verify/query commands                                 |
+| `src/canary/canary_pm_brew.ml`         | brew install/verify/query commands                                |
+| `src/canary/canary_pm_opam.ml`         | opam install/verify/query/switch commands                         |
+| `src/canary/canary_artifact_check.ml`  | Artifact existence checks, nm symbol inspection, check_post       |
 | `src/canary/canary_project_sqlite.ml`  | sqlite3 project spec + `script_spec`                              |
 | `src/canary/canary_project_z3.ml`      | z3 project spec + `script_spec`                                   |
-| `src/canary/canary_project_llvm.ml`    | LLVM project spec + `script_spec` (prebuilt only)                 |
-| `src/canary/canary_basic_apt.ml`       | apt install/verify/query commands                                 |
-| `src/canary/canary_basic_brew.ml`      | brew install/verify/query commands                                |
-| `src/canary/canary_basic_opam.ml`      | opam install/verify/query/switch commands                         |
+| `src/canary/canary_project_llvm.ml`    | LLVM project spec + `script_spec`                                 |
 | `doc/canary/design.md`                 | Design doc: pattern table, store config, execution model          |
 | `doc/canary/conf_package_analysis.md`  | conf-* package complexity analysis (94% eliminable)               |
 | `doc/canary/worklog_2026_03.md`        | Session-by-session work log + TODO list                           |

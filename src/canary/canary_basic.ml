@@ -1,5 +1,5 @@
 open Base
-open Canary_basic_store
+open Canary_store
 
 (* ── Type definitions ── *)
 

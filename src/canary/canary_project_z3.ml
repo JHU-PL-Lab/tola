@@ -1,8 +1,8 @@
 open Base
 open Tola_std
-open Canary_basic_store
+open Canary_store
 open Canary_basic
-open Canary_basic_ocaml
+open Canary_ocaml
 open Canary
 
 type z3_instance = { root : string; external_libz3 : string }
@@ -102,9 +102,9 @@ let expected_python_failure =
   Expect_failure_contains
     { contains_any = missing_symbols; expected_returncode = Some 1 }
 
-let z3_ocaml_config : Canary_basic_ocaml.ocaml_tool_config =
+let z3_ocaml_config : Canary_ocaml.ocaml_tool_config =
   {
-    toolchain = Canary_basic_ocaml.default;
+    toolchain = Canary_ocaml.default;
     ocaml =
       {
         example_target = "z3_example";
@@ -359,7 +359,7 @@ test -d "$BINDING_DIR"|}
 
 let mk_script_spec ~source distro : Canary_action.script_spec =
   let root = root_of_source distro source in
-  let pm = Canary_basic_store.detect_pm () in
+  let pm = Canary_store.detect_pm () in
   let example =
     Unix.getcwd () ^ "/" ^ z3_ocaml_config.ocaml.example_file
   in
@@ -375,7 +375,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
     fetch_source =
       Some
         (fun ~output_dir ->
-          Canary_basic_store.source_fetch_cmd distro source ~output_dir);
+          Canary_store.source_fetch_cmd distro source ~output_dir);
     configure =
       (if source.has_build_lib || source.has_build_binding then
          Some
@@ -403,7 +403,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
     fetch_lib =
       Some
         (fun ~output_dir ->
-          let install = Canary_basic_store.pm_install_cmd pm ~pkg:"z3" in
+          let install = Canary_store.pm_install_cmd pm ~pkg:"z3" in
           [%string "%{install} && echo 'installed' > %{output_dir}/lib.ok"]);
     pack_binding =
       (if source.has_build_binding then
@@ -413,7 +413,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
              let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
              let repo_rel = "canary/templates/opam-local-repo" in
              let pkg_full =
-               Canary_basic_ocaml.pkg_full z3_ocaml_config.toolchain
+               Canary_ocaml.pkg_full z3_ocaml_config.toolchain
              in
              let pkg_name = z3_ocaml_config.toolchain.package_name in
              let opam_rel =
@@ -471,7 +471,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       ];
     check_post =
       (function
-      | Fetch Source -> Some Canary_basic_store.source_check_post
+      | Fetch Source -> Some Canary_store.source_check_post
       | Build_lib ->
           Some (Canary_artifact_check.check_build_lib
                   ~marker:"build.ok" ~lib_path:(lib_so_path root))
@@ -496,10 +496,10 @@ let action_steps ?(quick = false) ?(source = z3_source_dev) ~root ~project
 
 let run_info ?(source = z3_source_dev) distro steps =
   let source_str =
-    match Canary_basic_store.source_root distro source with
+    match Canary_store.source_root distro source with
     | Some p -> "local:" ^ p
     | None ->
-        let (Canary_basic_store.Git_remote url) = source.remote in
+        let (Canary_store.Git_remote url) = source.remote in
         "git:" ^ url
   in
   Canary_action.mk_run_info ~project:"z3" ~version:source.version
@@ -508,7 +508,7 @@ let run_info ?(source = z3_source_dev) distro steps =
       [
         ("official", if source.official then "true" else "false");
         ( "remote",
-          let (Canary_basic_store.Git_remote url) = source.remote in
+          let (Canary_store.Git_remote url) = source.remote in
           url );
       ]
     steps

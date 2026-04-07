@@ -1,6 +1,6 @@
 open Base
 open Tola_std
-open Canary_basic_store
+open Canary_store
 open Canary_basic
 open Canary
 
@@ -165,7 +165,7 @@ let run_local ?(exec = false) ?project distro =
         Fmt.pr "@.--- Running %s ---@." shell;
         run_cmd_exn (Fmt.str "bash %s" shell))
 
-let run (distro : Canary_basic_store.distro) =
+let run (distro : Canary_store.distro) =
   let runner_os = runner_os_of_distro distro in
   let configs = project_configs distro in
   let canary = (List.hd_exn configs).canary in
