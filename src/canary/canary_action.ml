@@ -543,11 +543,7 @@ let detect_env () =
     | 0 -> "macos"
     | _ -> "linux"
   in
-  let system_pm = match Canary_store.detect_pm () with
-    | Apt -> "apt"
-    | Brew -> "brew"
-    | Opam -> "opam"
-    | Unsupported -> "unsupported"
+  let system_pm = Canary_store.string_of_pm (Canary_store.detect_pm ())
   in
   let opam_switch = cmd_output "opam switch show 2>/dev/null" in
   let ocaml_version = cmd_output "ocamlopt -version 2>/dev/null" in

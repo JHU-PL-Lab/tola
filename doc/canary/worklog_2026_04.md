@@ -199,3 +199,57 @@ templates, docs, scripts.
   `<name>.a`
 - CMakeCache.txt bakes in absolute source path — moving source dir
   requires deleting CMakeCache.txt + CMakeFiles/
+
+---
+
+## Session 3 (2026-04-06 to 2026-04-07)
+
+### Done
+
+**#8 cmake configure as separate action** — new `Configure` rule variant
+between `Fetch Source` and `Build_lib`. Marker `conf.ok`. `build_lib`
+no longer bundles cmake configure. z3 and llvm both use it.
+
+**#7 z3 stable source (completed)** — three version specs (dev/latest/stable)
+for z3 and llvm. `source_repo` has `has_build_lib` and `has_build_binding`
+flags. Probes decouple from hardcoded build-tree paths: `lib_cmd_of_source`
+resolves to build tree or `pkg-config` at runtime. `native_lib_probe_cmd`
+uses double-quoted `"$LIB_Z3"` for shell variable expansion.
+
+**#12 Multiple probes per artifact kind** — `probe_binding` is now
+`(location * cmd) list`. `location` (from `canary_store`) determines
+tag and deps: `Build_tree` → `probe_binding_build`, `Lang_pm` →
+`probe_binding_pkg`. z3 uses both; llvm/sqlite use single entry.
+
+**#15 PM primitive testing** — `canary pm-test` command generates and
+runs tests from `canary_pm_{apt,brew,opam,pip}` modules. Each PM module
+has uniform ops and a `properties : pm_properties` record. 19 tests
+passing. `canary_pm_types.ml` breaks the dependency cycle between
+`canary_store` and PM modules.
+
+**#21 Source build capabilities** — `has_build_lib` / `has_build_binding`
+flags on `source_repo`. `mk_script_spec` conditionally includes
+configure/build_lib/build_binding. Three tiers: dev (both true),
+latest (both true), stable (lib=false, binding=true).
+
+**Module renames** — `canary_basic_store` → `canary_store`,
+`canary_basic_ocaml` → `canary_ocaml`, `canary_basic_{apt,brew,opam}` →
+`canary_pm_{apt,brew,opam}`. New: `canary_pm_pip`, `canary_pm_types`.
+
+**Project file separation** — `canary_project_{z3,llvm,sqlite}.ml` and
+`canary_run.ml` moved to `src/canary/projects/` with own library
+(`canary_projects`). Framework (`canary_lib`) and consumers cleanly split.
+
+**check_post compositors** — `check_build_lib`, `check_build_binding`,
+`check_markers` thin functions in `canary_artifact_check.ml`. z3 and
+llvm use these instead of inline logic.
+
+**LLVM source spec** — `llvm_source_dev` (arbipher fork),
+`cmake_configure_cmd`, `mk_source_script_spec`. Build dir as sibling
+(`llvm-all/build`). Not yet tested end-to-end.
+
+### Gotchas discovered
+
+- `opam list --installed-roots` misses transitive deps; use `--installed`
+- opam `eval $(opam env)` prefix hardcodes default switch; needs
+  `--switch=<name>` for per-switch targeting

@@ -1,10 +1,13 @@
 (* PM ops for apt (system PM, stateful global store).
-   No isolated stores. Version switching via update-alternatives.
+   No isolated stores. Version switching via update-alternatives. *)
 
-   Uniform PM ops:
-   - install, remove, verify, query_version   (package ops)
-   - check_available, list_available_versions  (remote query)
-   - active_alternative, set_alternative       (version switching) *)
+let properties : Canary_pm_types.pm_properties = {
+  pm = Apt;
+  scope = System;
+  behavior = Stateful_global;
+  switching = "update-alternatives (per-command, not per-store)";
+  parallel_safe = false;
+}
 
 let install_cmd ~pkg = [%string "sudo apt-get install -y %{pkg}"]
 

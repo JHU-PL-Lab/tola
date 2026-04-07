@@ -88,7 +88,7 @@ let run_tests ?(output_dir = "_out/canary/_local/pm-test") () =
     (match pm with
      | Canary_store.Apt -> apt_tests ~pkg:"cowsay"
      | Canary_store.Brew -> brew_tests ~pkg:"cowsay"
-     | Canary_store.Opam | Canary_store.Unsupported -> [])
+     | Canary_store.Opam | Canary_store.Pip | Canary_store.Unsupported -> [])
     @ (if Stdlib.Sys.command "which opam > /dev/null 2>&1" = 0
        then opam_tests ~pkg:"fmt" else [])
     @ (if Stdlib.Sys.command "which pip > /dev/null 2>&1" = 0

@@ -1,11 +1,14 @@
 (* PM ops for pip (lang PM, isolated stores via venv).
    Each venv is an independent store. Without venv, pip installs
-   to the global/user site-packages (stateful global).
+   to the global/user site-packages (stateful global). *)
 
-   Uniform PM ops:
-   - install, remove, verify, query_version  (package ops)
-   - check_available                          (remote query)
-   - active_venv, create_venv, activate_venv  (store switching) *)
+let properties : Canary_pm_types.pm_properties = {
+  pm = Pip;
+  scope = Lang;
+  behavior = Isolated_store "venv";
+  switching = "source .venv/bin/activate (per-shell)";
+  parallel_safe = true;  (* across venvs; not within one *)
+}
 
 let install_cmd ~pkg = [%string "pip install %{pkg}"]
 

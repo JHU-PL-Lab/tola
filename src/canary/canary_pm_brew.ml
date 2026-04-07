@@ -1,10 +1,13 @@
 (* PM ops for brew (system PM, stateful global store).
-   No isolated stores. Keg-only packages need explicit linking.
+   Keg-only packages need explicit linking. *)
 
-   Uniform PM ops:
-   - install, remove, verify, query_version  (package ops)
-   - check_available, prefix                  (remote query + locate)
-   - link, unlink                             (version switching for keg-only) *)
+let properties : Canary_pm_types.pm_properties = {
+  pm = Brew;
+  scope = System;
+  behavior = Stateful_global;
+  switching = "link/unlink for keg-only; brew switch (deprecated)";
+  parallel_safe = false;
+}
 
 let install_cmd ~pkg = [%string "brew install %{pkg}"]
 

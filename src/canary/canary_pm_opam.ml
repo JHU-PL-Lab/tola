@@ -1,17 +1,19 @@
 (* PM ops for opam (lang PM, isolated stores via switches).
    Each switch is an independent store with its own repo-url list.
-   Packages can be installed directly, via local repo-url, or from
-   a local switch (.opam file).
+   Tests on different switches can run in parallel.
+   Tests within one switch are sequential (stateful).
 
-   Uniform PM ops:
-   - install, remove, verify, query_version  (package ops)
-   - check_available, list_depexts           (remote query)
-   - current_switch, list_switches, switch   (store switching)
-   - list_repos, add_repo, set_repo_url      (source management)
+   NOTE: `eval $(opam env)` prefix activates the current/default switch.
+   To target a specific switch, this should be replaced with
+   `eval $(opam env --switch=<name>)`. Left as-is for now. *)
 
-   Parallelism: each switch is independent, so tests on different
-   switches can run in parallel. Tests within one switch are sequential
-   (stateful). This connects to TODO #10 (unified build cache). *)
+let properties : Canary_pm_types.pm_properties = {
+  pm = Opam;
+  scope = Lang;
+  behavior = Isolated_store "switch";
+  switching = "opam switch (full environment isolation)";
+  parallel_safe = true;  (* across switches; not within one *)
+}
 
 let install_cmd ~pkg =
   [%string "eval $(opam env) && opam install %{pkg} -y --assume-depexts"]

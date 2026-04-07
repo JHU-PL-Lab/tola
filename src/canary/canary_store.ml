@@ -4,8 +4,7 @@ open Base
    A store is any place artifacts can be fetched from or published to.
    Location identifies where an artifact physically resides. *)
 
-type package_manager = Apt | Brew | Opam | Unsupported
-type store_behavior = Stateless | Stateful_global | Isolated_store of string
+include Canary_pm_types
 
 type system_package_spec = {
   linux_pkg : string;
@@ -21,6 +20,7 @@ let string_of_pm = function
   | Apt -> "apt"
   | Brew -> "brew"
   | Opam -> "opam"
+  | Pip -> "pip"
   | Unsupported -> "unsupported"
 
 let string_of_store_behavior = function
@@ -51,6 +51,7 @@ let detect_pm () =
 let store_behavior_of_pm = function
   | Apt | Brew -> Stateful_global
   | Opam -> Isolated_store "switch"
+  | Pip -> Isolated_store "venv"
   | Unsupported -> Stateless
 
 let mk_system_package_spec ?version_tag ?locator_hint
@@ -60,13 +61,14 @@ let mk_system_package_spec ?version_tag ?locator_hint
 let system_pkg_for_pm spec pm =
   match pm with
   | Brew -> spec.macos_pkg
-  | Apt | Opam | Unsupported -> spec.linux_pkg
+  | Apt | Opam | Pip | Unsupported -> spec.linux_pkg
 
 let pm_install_cmd pm ~pkg =
   match pm with
   | Brew -> Canary_pm_brew.install_cmd ~pkg
   | Apt -> Canary_pm_apt.install_cmd ~pkg
   | Opam -> [%string "eval $(opam env) && opam install %{pkg} -y --assume-depexts"]
+  | Pip -> Canary_pm_pip.install_cmd ~pkg
   | Unsupported -> [%string "echo 'no package manager for %{pkg}' && false"]
 
 let system_install_cmd pm (spec : system_package_spec) =
@@ -77,6 +79,7 @@ let verify_system_install_cmd pm (spec : system_package_spec) =
   match pm with
   | Apt -> Canary_pm_apt.verify_installed_cmd ~pkg
   | Brew -> Canary_pm_brew.verify_installed_cmd ~pkg
+  | Pip -> Canary_pm_pip.verify_installed_cmd ~pkg
   | Opam | Unsupported ->
       [%string "echo 'no verify command for %{pkg}' && false"]
 
