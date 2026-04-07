@@ -20,7 +20,7 @@ let remove_cmd ~pkg =
   [%string "eval $(opam env) && opam remove -y %{pkg}"]
 
 let verify_installed_cmd ~pkg =
-  [%string "eval $(opam env) && test -n \"$(opam list --installed-roots %{pkg} --short 2>/dev/null)\""]
+  [%string "eval $(opam env) && test -n \"$(opam list %{pkg} --installed --short 2>/dev/null)\""]
 
 let query_version_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} --field=version 2>/dev/null"]

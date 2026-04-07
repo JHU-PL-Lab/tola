@@ -70,6 +70,12 @@ let action_cmd =
   Cmd.v (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ const ())
 
+let pm_test_cmd =
+  Cmd.v (Cmd.info "pm-test" ~doc:"Test PM primitive commands (apt/brew/opam)")
+    (term_of (fun () ->
+       let ok = Canary_pm_test.run_tests () in
+       if not ok then Stdlib.exit 1))
+
 (* ── Main ── *)
 
 let () =
@@ -80,6 +86,7 @@ let () =
     paths_md_cmd;
     graph_cmd;
     action_cmd;
+    pm_test_cmd;
     run_cmd;
   ] in
   Stdlib.exit (Cmd.eval cmd)
