@@ -1,4 +1,14 @@
+(* PM ops for brew (system PM, stateful global store).
+   No isolated stores. Keg-only packages need explicit linking.
+
+   Uniform PM ops:
+   - install, remove, verify, query_version  (package ops)
+   - check_available, prefix                  (remote query + locate)
+   - link, unlink                             (version switching for keg-only) *)
+
 let install_cmd ~pkg = [%string "brew install %{pkg}"]
+
+let remove_cmd ~pkg = [%string "brew uninstall %{pkg}"]
 
 let verify_installed_cmd ~pkg = [%string "brew list %{pkg}"]
 
@@ -10,3 +20,8 @@ let check_available_cmd ~pkg =
 
 let prefix_cmd ~pkg =
   [%string "brew --prefix %{pkg}"]
+
+(* Version switching: link/unlink for keg-only packages *)
+let link_cmd ~pkg = [%string "brew link %{pkg}"]
+
+let unlink_cmd ~pkg = [%string "brew unlink %{pkg}"]

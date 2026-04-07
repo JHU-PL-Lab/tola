@@ -1,4 +1,14 @@
+(* PM ops for apt (system PM, stateful global store).
+   No isolated stores. Version switching via update-alternatives.
+
+   Uniform PM ops:
+   - install, remove, verify, query_version   (package ops)
+   - check_available, list_available_versions  (remote query)
+   - active_alternative, set_alternative       (version switching) *)
+
 let install_cmd ~pkg = [%string "sudo apt-get install -y %{pkg}"]
+
+let remove_cmd ~pkg = [%string "sudo apt-get remove -y %{pkg}"]
 
 let verify_installed_cmd ~pkg = [%string "dpkg -s %{pkg}"]
 
@@ -10,3 +20,11 @@ let check_available_cmd ~pkg =
 
 let list_available_versions_cmd ~pkg =
   [%string "apt-cache madison %{pkg} 2>/dev/null | awk '{print $3}'"]
+
+(* Version switching: update-alternatives (per-command, not per-store).
+   e.g., llvm-config-19 vs llvm-config-18 *)
+let active_alternative_cmd ~name =
+  [%string "update-alternatives --display %{name} 2>/dev/null | head -2"]
+
+let set_alternative_cmd ~name ~path =
+  [%string "sudo update-alternatives --set %{name} %{path}"]
