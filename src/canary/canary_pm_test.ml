@@ -54,6 +54,17 @@ let brew_tests ~pkg =
     { name = "brew.verify_installed"; cmd = Canary_pm_brew.verify_installed_cmd ~pkg; expected_rc = 0 };
   ]
 
+let pip_tests ~pkg =
+  [
+    { name = "pip.check_available"; cmd = Canary_pm_pip.check_available_cmd ~pkg; expected_rc = 0 };
+    { name = "pip.verify_installed"; cmd = Canary_pm_pip.verify_installed_cmd ~pkg; expected_rc = 0 };
+    { name = "pip.query_version"; cmd = Canary_pm_pip.query_version_cmd ~pkg; expected_rc = 0 };
+    { name = "pip.active_venv"; cmd = Canary_pm_pip.active_venv_cmd; expected_rc = 0 };
+    { name = "pip.verify_installed(bad)";
+      cmd = Canary_pm_pip.verify_installed_cmd ~pkg:"canary-nonexistent-pkg";
+      expected_rc = 1 };
+  ]
+
 let opam_tests ~pkg =
   [
     { name = "opam.current_switch"; cmd = Canary_pm_opam.current_switch_cmd; expected_rc = 0 };
@@ -78,7 +89,10 @@ let run_tests ?(output_dir = "_out/canary/_local/pm-test") () =
      | Canary_store.Apt -> apt_tests ~pkg:"cowsay"
      | Canary_store.Brew -> brew_tests ~pkg:"cowsay"
      | Canary_store.Opam | Canary_store.Unsupported -> [])
-    @ opam_tests ~pkg:"fmt"
+    @ (if Stdlib.Sys.command "which opam > /dev/null 2>&1" = 0
+       then opam_tests ~pkg:"fmt" else [])
+    @ (if Stdlib.Sys.command "which pip > /dev/null 2>&1" = 0
+       then pip_tests ~pkg:"pip" else [])
   in
   let pass = ref 0 in
   let fail = ref 0 in
