@@ -108,10 +108,13 @@ let script_spec : Canary_action.script_spec =
     fetch_binding =
       Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
     probe_binding =
-      [ { Canary_action.probe_source = Package;
-          cmd = (fun ~output_dir ->
-          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
-            ~example:ocaml.example_file ~target:ocaml.example_target ~output_dir) } ];
+      [
+        (Canary_basic_store.Lang_pm,
+         (fun ~output_dir ->
+           Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
+             ~example:ocaml.example_file ~target:ocaml.example_target
+             ~output_dir));
+      ];
   }
 
 let action_steps ~root ~project =

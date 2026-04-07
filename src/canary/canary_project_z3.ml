@@ -443,10 +443,9 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
           [%string "%{lib_resolve}\n%{probe}"]);
     probe_binding =
       List.filter_opt [
-        (* Build: probe against build tree artifacts *)
+        (* Build_tree: probe against build tree artifacts *)
         (if source.has_build_binding then
-           Some { Canary_action.probe_source = Build;
-                  cmd = (fun ~output_dir ->
+           Some (Build_tree, (fun ~output_dir ->
              let script = "canary/scripts/assert_binary_symbols.py" in
              [%string
                {|%{lib_resolve}
@@ -460,16 +459,15 @@ cd %{root} && eval $(opam env)
 ocamlfind ocamlopt -package zarith -linkpkg \
   -I %{api_path} %{api_path}/z3ml.cmxa %{example} \
   -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]) }
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]))
          else None);
-        (* Package: probe against opam-installed package *)
-        Some { Canary_action.probe_source = Package;
-               cmd = (fun ~output_dir ->
+        (* Lang_pm: probe against opam-installed package *)
+        Some (Lang_pm, (fun ~output_dir ->
           [%string
             {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
   -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]) };
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]));
       ];
     check_post =
       (function

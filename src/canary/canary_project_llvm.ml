@@ -239,8 +239,7 @@ let prebuilt_script_spec : Canary_action.script_spec =
           [%string
             {|LLVM_CONFIG=$(%{find_llvm_config_cmd}) && test -x "$LLVM_CONFIG" && "$LLVM_CONFIG" --version 2>&1 | tee %{output_dir}/probe.log|}]);
     probe_binding =
-      [ { Canary_action.probe_source = Package;
-          cmd = (fun ~output_dir ->
+      [ (Lang_pm, (fun ~output_dir ->
           let script = "canary/scripts/assert_binary_symbols.py" in
           let example = llvm_ocaml_config.ocaml.example_file in
           [%string
@@ -261,7 +260,7 @@ python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
 grep -q 'OK:' %{output_dir}/symbols.log
 LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
   -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]) } ];
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])) ];
     probe_app = Some llvm_python_probe;
   }
 
@@ -348,8 +347,7 @@ let mk_source_script_spec ~source distro : Canary_action.script_spec =
             ~lib:[%string "%{build}/lib/libLLVM.so"]
             ~prefix:"LLVM" ~output_dir);
     probe_binding =
-      [ { Canary_action.probe_source = Build;
-          cmd = (fun ~output_dir ->
+      [ (Build_tree, (fun ~output_dir ->
           let script = "canary/scripts/assert_binary_symbols.py" in
           let ocaml_dir = [%string "%{build}/lib/ocaml"] in
           [%string
@@ -362,7 +360,7 @@ grep -q 'OK:' %{output_dir}/symbols.log
 LLVM_CONFIG=%{llvm_config} ocamlfind ocamlopt -package ctypes -linkpkg \
   -I %{ocaml_dir} %{ocaml_dir}/llvm.cmxa %{example} \
   -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]) } ];
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])) ];
     probe_app = Some llvm_python_probe;
     check_post =
       (function

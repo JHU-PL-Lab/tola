@@ -1,5 +1,6 @@
 open Base
 open Canary_basic
+open Canary_basic_store
 open Canary
 
 (* ── Script spec ──
@@ -10,19 +11,18 @@ open Canary
    Scripts for fetch/pack come from the store (uniform per PM).
    Scripts for build/probe come from the project (project-specific). *)
 
-(* probe_binding is the action; each entry specifies the artifact source.
-   Build = against build tree artifacts (depends on build_binding).
-   Package = against PM-installed package (depends on pack/fetch_binding). *)
-type probe_source = Build | Package
+(* probe_binding is the action; each entry is keyed by the location
+   of the artifact being probed. Location determines deps and tag:
+   - Build_tree: depends on build_binding (raw build artifact)
+   - Lang_pm: depends on pack_binding or fetch_binding (PM-installed)
+   - System_pm: depends on fetch_lib (system-level probe)
+   Other locations can be added as needed. *)
 
-type binding_probe = {
-  probe_source : probe_source;
-  cmd : output_dir:string -> string;
-}
-
-let tag_of_probe_source = function
-  | Build -> "probe_binding_raw"
-  | Package -> "probe_binding_pkg"
+let tag_of_probe_location = function
+  | Build_tree -> "probe_binding_build"
+  | Lang_pm -> "probe_binding_pkg"
+  | System_pm -> "probe_binding_sys"
+  | Wild s -> [%string "probe_binding_%{s}"]
 
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
@@ -37,7 +37,7 @@ type script_spec = {
   pack_binding : (output_dir:string -> string) option;
   pack_app : (output_dir:string -> string) option;
   probe_lib : (output_dir:string -> string) option;
-  probe_binding : binding_probe list;
+  probe_binding : (location * (output_dir:string -> string)) list;
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
@@ -80,7 +80,7 @@ let script_of_rule spec = function
       (* Single-probe compat: if exactly one entry, use its cmd.
          Multiple entries are handled by derive_steps expansion. *)
       (match spec.probe_binding with
-       | [ p ] -> Some p.cmd
+       | [ (_, cmd) ] -> Some cmd
        | _ -> None)
   | Probe App -> spec.probe_app
   | Publish Source | Probe Source -> None
@@ -497,16 +497,16 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
         match rule with
         | Probe Binding when List.length spec.probe_binding > 1 ->
             Hashtbl.set seen ~key:tag ~data:true;
-            List.map spec.probe_binding ~f:(fun (bp : binding_probe) ->
-                let tag = tag_of_probe_source bp.probe_source in
+            List.map spec.probe_binding ~f:(fun (loc, cmd) ->
+                let tag = tag_of_probe_location loc in
                 let deps = deps_of_split_probe spec
-                    (match bp.probe_source with
-                     | Build -> `Raw | Package -> `Pkg) in
+                    (match loc with
+                     | Build_tree -> `Raw | _ -> `Pkg) in
                 let check_post = match spec.check_post rule with
                   | Some cp -> cp
                   | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
                 in
-                mk_step ~root ~project ~tag ~rule ~deps ~cmd:bp.cmd ~check_post ())
+                mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
         | _ ->
             match script_of_rule spec rule with
             | None -> []
