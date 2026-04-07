@@ -35,9 +35,10 @@ plans for GH CI).
 | `src/canary/canary_pm_brew.ml`         | brew install/verify/query commands                                |
 | `src/canary/canary_pm_opam.ml`         | opam install/verify/query/switch commands                         |
 | `src/canary/canary_artifact_check.ml`  | Artifact existence checks, nm symbol inspection, check_post       |
-| `src/canary/canary_project_sqlite.ml`  | sqlite3 project spec + `script_spec`                              |
-| `src/canary/canary_project_z3.ml`      | z3 project spec + `script_spec`                                   |
-| `src/canary/canary_project_llvm.ml`    | LLVM project spec + `script_spec`                                 |
+| `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec`                       |
+| `src/canary/projects/canary_project_z3.ml`     | z3 project spec + `script_spec`                            |
+| `src/canary/projects/canary_project_llvm.ml`   | LLVM project spec + `script_spec`                          |
+| `src/canary/projects/canary_run.ml`            | Project orchestrator, config list, action runner           |
 | `doc/canary/design.md`                 | Design doc: pattern table, store config, execution model          |
 | `doc/canary/conf_package_analysis.md`  | conf-* package complexity analysis (94% eliminable)               |
 | `doc/canary/worklog_2026_03.md`        | Session-by-session work log + TODO list                           |
