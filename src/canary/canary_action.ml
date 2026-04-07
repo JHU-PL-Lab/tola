@@ -24,6 +24,11 @@ type script_spec = {
   pack_app : (output_dir:string -> string) option;
   probe_lib : (output_dir:string -> string) option;
   probe_binding : (output_dir:string -> string) option;
+  (* Split probes: raw = against build tree artifacts, pkg = against
+     PM-installed package. If set, these replace probe_binding in
+     derive_steps with two separate steps with different deps. *)
+  probe_binding_raw : (output_dir:string -> string) option;
+  probe_binding_pkg : (output_dir:string -> string) option;
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
@@ -34,7 +39,9 @@ let empty_script_spec = {
   configure = None;
   build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
-  probe_lib = None; probe_binding = None; probe_app = None;
+  probe_lib = None; probe_binding = None;
+  probe_binding_raw = None; probe_binding_pkg = None;
+  probe_app = None;
   check_post = (fun _ -> None);
 }
 
@@ -439,22 +446,75 @@ let deps_of_rule spec rule =
       in
       List.filter_opt [ produce_dep; runtime_lib_dep ]
 
+(* Derive deps for a split probe variant.
+   raw depends on build_binding; pkg depends on pack_binding or fetch_binding.
+   Both need a runtime lib. *)
+let deps_of_split_probe spec variant =
+  let has r = Option.is_some (script_of_rule spec r) in
+  let tag r = string_of_rule r in
+  let produce_dep = match variant with
+    | `Raw ->
+        if has Build_binding then Some (tag Build_binding) else None
+    | `Pkg ->
+        if has (Publish Binding) then Some (tag (Publish Binding))
+        else if has (Fetch Binding) then Some (tag (Fetch Binding))
+        else None
+  in
+  let runtime_lib_dep =
+    if has (Fetch Lib) then Some (tag (Fetch Lib))
+    else if has Build_lib then Some (tag Build_lib)
+    else None
+  in
+  List.filter_opt [ produce_dep; runtime_lib_dep ]
+
 let derive_steps ~root ~project (spec : script_spec) : action_step list =
   let seen = Hashtbl.create (module String) in
-  List.filter_map store_rules ~f:(fun rule ->
+  let has_split_binding =
+    Option.is_some spec.probe_binding_raw
+    || Option.is_some spec.probe_binding_pkg
+  in
+  let mk_one ~tag ~rule ~deps ~cmd =
+    let check_post = match spec.check_post rule with
+      | Some cp -> cp
+      | None -> default_check_post rule
+    in
+    mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ()
+  in
+  List.concat_map store_rules ~f:(fun rule ->
       let tag = string_of_rule rule in
-      if Hashtbl.mem seen tag then None
+      if Hashtbl.mem seen tag then []
       else
-        match script_of_rule spec rule with
-        | None -> None
-        | Some cmd ->
+        (* Probe Binding with split probes: expand into two steps *)
+        match rule with
+        | Probe Binding when has_split_binding ->
             Hashtbl.set seen ~key:tag ~data:true;
-            let deps = deps_of_rule spec rule in
-            let check_post = match spec.check_post rule with
-              | Some cp -> cp
-              | None -> default_check_post rule
+            let raw_step =
+              Option.map spec.probe_binding_raw ~f:(fun cmd ->
+                  let tag = "probe_binding_raw" in
+                  let deps = deps_of_split_probe spec `Raw in
+                  let check_post = match spec.check_post rule with
+                    | Some cp -> cp
+                    | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                  in
+                  mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
             in
-            Some (mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ()))
+            let pkg_step =
+              Option.map spec.probe_binding_pkg ~f:(fun cmd ->
+                  let tag = "probe_binding_pkg" in
+                  let deps = deps_of_split_probe spec `Pkg in
+                  let check_post = match spec.check_post rule with
+                    | Some cp -> cp
+                    | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                  in
+                  mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
+            in
+            List.filter_opt [ raw_step; pkg_step ]
+        | _ ->
+            match script_of_rule spec rule with
+            | None -> []
+            | Some cmd ->
+                Hashtbl.set seen ~key:tag ~data:true;
+                [ mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd ])
 
 (* ── Run info: project metadata dumped at start of run ── *)
 

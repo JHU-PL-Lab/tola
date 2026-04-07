@@ -441,14 +441,14 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
           let probe = Canary_artifact_check.native_lib_probe_cmd
               ~lib:"$LIB_Z3" ~prefix:"Z3_" ~output_dir in
           [%string "%{lib_resolve}\n%{probe}"]);
-    probe_binding =
-      Some
-        (fun ~output_dir ->
-          let script = "canary/scripts/assert_binary_symbols.py" in
-          (* Resolve lib and binding dir, then symbol check + compile probes.
-             All paths come from $LIB_Z3 and $BINDING_DIR — not hardcoded. *)
-          [%string
-            {|%{lib_resolve}
+    (* Split probes: raw = build tree, pkg = opam-installed *)
+    probe_binding_raw =
+      (if source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             let script = "canary/scripts/assert_binary_symbols.py" in
+             [%string
+               {|%{lib_resolve}
 %{binding_resolve}
 STUB=$(ls "$BINDING_DIR"/libz3ml.a 2>/dev/null | head -1)
 test -n "$STUB"
@@ -458,11 +458,17 @@ grep -q 'OK:' %{output_dir}/symbols.log
 cd %{root} && eval $(opam env)
 ocamlfind ocamlopt -package zarith -linkpkg \
   -I %{api_path} %{api_path}/z3ml.cmxa %{example} \
-  -o %{output_dir}/%{target}_build
-%{output_dir}/%{target}_build 2>&1 | tee %{output_dir}/probe_build.log
+  -o %{output_dir}/%{target}
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])
+       else None);
+    probe_binding_pkg =
+      Some
+        (fun ~output_dir ->
+          [%string
+            {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target}_pkg
-%{output_dir}/%{target}_pkg 2>&1 | tee %{output_dir}/probe_pkg.log|}]);
+  -o %{output_dir}/%{target}
+%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]);
     check_post =
       (function
       | Fetch Source -> Some Canary_basic_store.source_check_post
@@ -474,8 +480,10 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                   ~marker:"build.ok"
                   ~archive_path:[%string "%{root}/build/src/api/ml/z3ml.cmxa"])
       | Probe Binding ->
-          Some (Canary_artifact_check.check_markers
-                  [ "symbols.log"; "probe_build.log"; "probe_pkg.log" ])
+          (* Used for both probe_binding_raw and probe_binding_pkg.
+             Raw writes symbols.log + probe.log; pkg writes probe.log.
+             check_markers handles both — extra missing file = fail. *)
+          Some (Canary_artifact_check.check_markers [ "probe.log" ])
       | _ -> None);
   }
 
