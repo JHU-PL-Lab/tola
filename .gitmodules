@@ -1,6 +1,6 @@
 [submodule "vendor/multiverse/arbipher"]
 	path = vendor/multiverse/arbipher
 	url = https://github.com/arbipher/multiverse
-[submodule "vendor/cmake"]
-	path = vendor/cmake
-	url = https://github.com/Kitware/CMake.git
+[submodule "yelu/vendor/yelu-lang"]
+	path = yelu/vendor/yelu-lang
+	url = https://github.com/yelu-lang/yelu-lang.git
