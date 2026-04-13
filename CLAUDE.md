@@ -126,28 +126,9 @@ Done: #1, #2, #3, #4, #6, #7, #8, #12, #13, #15, #21. Details in
 
 ## Other Work: Yelu
 
-Yelu is a programmable config/shell language that compiles to cmake
-(and future targets). The cmake tutorial steps serve as test cases.
-
-### Key source files
-
-| File                                  | Purpose                                              |
-| ------------------------------------- | ---------------------------------------------------- |
-| `src/langs/cmake/lang_cmake.ml`       | CMake AST                                            |
-| `src/langs/cmake/lang_cmake_pp.ml`    | CMake pretty printer                                 |
-| `src/langs/cmake/lang_cmake_utils.ml` | CMake AST utilities                                  |
-| `src/langs/yelu/lang_yelu.ml`         | Yelu AST                                             |
-| `src/langs/yelu/lang_yelu_compile.ml` | Yelu → CMake compiler                                |
-| `src/langs/yelu/lang_yelu_utils.ml`   | Yelu AST utilities                                   |
-| `src/bin/yelu/`                       | Step files (step1.ml–step12.ml)                      |
-| `doc/yelu/design_chat_2026_03_26.md`  | Design notes: namespace-as-type, program equivalence |
-
-### Build commands
-
-```sh
-dune build src/langs/ src/bin/cmake/   # cmake only
-dune build src/langs/ src/bin/yelu/    # yelu only
-```
+Yelu lives under `yelu/` and has its own project guide. If you are working
+on yelu or the cmake language layer, read `yelu/CLAUDE.md` and ignore the
+rest of this file.
 
 ## Gotchas
 

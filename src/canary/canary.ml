@@ -799,6 +799,9 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
   in
   let buf = Buffer.create 1024 in
   let add s = Buffer.add_string buf s; Buffer.add_char buf '\n' in
+  let has_configure = List.exists rules ~f:(fun r ->
+      match r with Configure -> true | _ -> false)
+  in
   let build_rules =
     List.filter rules ~f:(fun r ->
         match r with Build_lib | Build_binding | Build_app -> true | _ -> false)
@@ -837,7 +840,9 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
       let k = string_of_artifact_kind kind in
       add [%string "    %{sid}[(\"%{k}_store\")]"]);
   add "";
-  (* Action nodes — build and probe (fetch is shown as dotted store→pool edges) *)
+  (* Action nodes — configure, build, and probe *)
+  if has_configure then
+    add "    A_configure{{\"configure\"}}";
   List.iter build_rules ~f:(fun r ->
       let name = string_of_rule r in
       add [%string "    A_%{name}{{\"%{name}\"}}"]);
@@ -858,13 +863,21 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
      | None -> ());
     Int.incr edge_idx
   in
+  (* Configure edge: Source → Configure *)
+  if has_configure then (
+    add_edge ~tag:"configure"
+      [%string "%{node_id_of_kind Source} --> A_configure"]);
   (* Build edges *)
   List.iter build_rules ~f:(fun r ->
       let name = string_of_rule r in
       let action_id = [%string "A_%{name}"] in
       (match r with
        | Build_lib ->
-           add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
+           (* If configure exists, build_lib depends on it, not source directly *)
+           if has_configure then
+             add_edge ~tag:name [%string "A_configure --> %{action_id}"]
+           else
+             add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
            add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Lib}"]
        | Build_binding ->
            add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
@@ -943,8 +956,9 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
       add [%string "    class %{nid} %{cls}"]);
   (* Action + store nodes: status-aware or default *)
   let action_entries =
-    List.map build_rules ~f:(fun r ->
-        ([%string "A_%{string_of_rule r}"], string_of_rule r))
+    (if has_configure then [ ("A_configure", "configure") ] else [])
+    @ List.map build_rules ~f:(fun r ->
+          ([%string "A_%{string_of_rule r}"], string_of_rule r))
     @ List.map publish_kinds ~f:(fun k ->
           let k_s = string_of_artifact_kind k in
           ([%string "A_pack_%{k_s}"], [%string "pack_%{k_s}"]))
