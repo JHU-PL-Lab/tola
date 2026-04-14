@@ -114,6 +114,13 @@ the result diagram colors edges via `linkStyle N stroke:...` by action status.
     compat check for dynamic case. Remaining: test with a mismatched
     version pair to confirm breakage detection.
 
+23. **LLVM source build end-to-end** — `llvm_source_dev` now has
+    `has_build_lib=true`; configure/build_lib/build_binding pipeline is
+    wired. Build dir: `/home/red/code/contrib/llvm-all/build` (sibling of
+    llvm-project). `build_lib` target: `ninja LLVM` (builds `libLLVM.so`
+    dylib). Not yet tested end-to-end — LLVM build takes hours, run with
+    `canary action llvm` on a machine with time to spare.
+
 20. **Symbol diff between lib versions** — extend `assert_binary_symbols.py`
     with `--provided-lib-old / --provided-lib-new` mode. Computes
     `added = v_new − v_old`, `breaking = required ∩ added`. Purely

@@ -31,7 +31,7 @@ let llvm_source_dev : source_repo =
     version = "dev";
     ref_ = "HEAD";
     official = false;
-    has_build_lib = false;
+    has_build_lib = true;
     has_build_binding = true;
   }
 
