@@ -280,10 +280,22 @@ LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %
 
 let cmake_configure_cmd ~source_root ~build_dir =
   let cmake_source = cmake_source_of_root source_root in
+  (* Speed flags:
+     - mold: 5-10x faster linking than ld (available on this machine)
+     - LLVM_OPTIMIZED_TABLEGEN: builds tablegen in Release even in Debug builds
+     - ccache: compiler cache; no-op if not installed (CMAKE_*_COMPILER_LAUNCHER
+       falls back gracefully when the binary is absent)
+     - LLVM_PARALLEL_LINK_JOBS: limit concurrent linkers to avoid OOM;
+       each LLVM link can use 4-8 GB — set to (RAM_GB / 8) conservatively *)
   [%string
     {|eval $(opam env) && cmake \
   -S %{cmake_source} -B %{build_dir} -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+  -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+  -DLLVM_USE_LINKER=mold \
+  -DLLVM_OPTIMIZED_TABLEGEN=ON \
+  -DLLVM_PARALLEL_LINK_JOBS=4 \
   -DLLVM_ENABLE_BINDINGS=ON \
   -DLLVM_BUILD_LLVM_DYLIB=ON \
   -DLLVM_LINK_LLVM_DYLIB=ON \
