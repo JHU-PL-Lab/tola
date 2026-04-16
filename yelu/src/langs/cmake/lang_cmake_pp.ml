@@ -787,7 +787,7 @@ and pp_project_cmd ff cmd =
   | Target_link_options { target; before; items } ->
       Fmt.(
         pf ff "target_link_options(%a%s@[<2>%a@])" pp_target target
-          (if before then " BEFORE" else "")
+          (if before then " BEFORE " else " ")
           (list_sp pp_args_with_kind)
           items)
   | Target_precompile_headers { target; items } ->

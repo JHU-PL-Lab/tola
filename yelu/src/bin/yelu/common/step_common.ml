@@ -38,24 +38,24 @@ let compiler_flags_lib =
 let compiler_warning_options =
   [
     yc_set (ycstr "gcc_like_cxx")
-      [ yraw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-    yc_set (ycstr "msvc_cxx") [ yraw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
+      [ ystr_raw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
+    yc_set (ycstr "msvc_cxx") [ ystr_raw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
     compile_opts (yvar "flags")
       [
         ytarget_def ~kind:Interface
           [
-            yraw
+            ystr_raw
               "$<${gcc_like_cxx}:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>";
-            yraw "$<${msvc_cxx}:-W3>";
+            ystr_raw "$<${msvc_cxx}:-W3>";
           ];
       ];
     compile_opts (yvar "flags")
       [
         ytarget_def ~kind:Interface
           [
-            yraw
+            ystr_raw
               "$<${gcc_like_cxx}:$<BUILD_INTERFACE:-Wall;-Wextra;-Wshadow;-Wformat=2;-Wunused>>";
-            yraw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
+            ystr_raw "$<${msvc_cxx}:$<BUILD_INTERFACE:-W3>>";
           ];
       ];
   ]
@@ -84,10 +84,10 @@ let test_suite ~ctest =
     yc_add_test (ystr "Runs") (ystr "Tutorial") [ ystr "25" ];
     yc_add_test (ystr "Usage") (ystr "Tutorial") [];
     yc_set_tests_properties [ ystr "Usage" ]
-      [ ("PASS_REGULAR_EXPRESSION", yraw "Usage:.*number") ];
+      [ ("PASS_REGULAR_EXPRESSION", ystr_raw "Usage:.*number") ];
     yc_add_test (ystr "StandardUse") (ystr "Tutorial") [ ystr "4" ];
     yc_set_tests_properties [ ystr "Usage" ]
-      [ ("PASS_REGULAR_EXPRESSION", yraw "4 is 2") ];
+      [ ("PASS_REGULAR_EXPRESSION", ystr_raw "4 is 2") ];
     yc_function (yvar "do_test")
       [ "target"; "arg"; "result" ]
       [
@@ -95,15 +95,15 @@ let test_suite ~ctest =
         yc_set_tests_properties [ ystr "Comp${arg}" ]
           [ ("PASS_REGULAR_EXPRESSION", ystr "${result}") ];
       ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ystr "4"; yraw "4 is 2" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ystr "9"; yraw "9 is 3" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ystr "5"; yraw "5 is 2.236" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ystr "7"; yraw "7 is 2.645" ];
-    yc_apply (yvar "do_test") [ yvar "tut"; ystr "25"; yraw "25 is 5" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "4"; ystr_raw "4 is 2" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "9"; ystr_raw "9 is 3" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "5"; ystr_raw "5 is 2.236" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "7"; ystr_raw "7 is 2.645" ];
+    yc_apply (yvar "do_test") [ yvar "tut"; ystr "25"; ystr_raw "25 is 5" ];
     yc_apply (yvar "do_test")
-      [ yvar "tut"; ystr "-25"; yraw "-25 is (-nan|nan|0)" ];
+      [ yvar "tut"; ystr "-25"; ystr_raw "-25 is (-nan|nan|0)" ];
     yc_apply (yvar "do_test")
-      [ yvar "tut"; ystr "0.0001"; yraw "0.0001 is 0.01" ];
+      [ yvar "tut"; ystr "0.0001"; ystr_raw "0.0001 is 0.01" ];
   ]
 
 (** CPack configuration.
@@ -114,11 +114,11 @@ let cpack_basic =
     yc_set (ycstr "CPACK_RESOURCE_FILE_LICENSE")
       [ dir_concat source_this "License.txt" ];
     yc_set (ycstr "CPACK_PACKAGE_VERSION_MAJOR")
-      [ yraw "${Tutorial_VERSION_MAJOR}" ];
+      [ ystr_raw "${Tutorial_VERSION_MAJOR}" ];
     yc_set (ycstr "CPACK_PACKAGE_VERSION_MINOR")
-      [ yraw "${Tutorial_VERSION_MINOR}" ];
-    yc_set (ycstr "CPACK_GENERATOR") [ yraw "TGZ" ];
-    yc_set (ycstr "CPACK_SOURCE_GENERATOR") [ yraw "TGZ" ];
+      [ ystr_raw "${Tutorial_VERSION_MINOR}" ];
+    yc_set (ycstr "CPACK_GENERATOR") [ ystr_raw "TGZ" ];
+    yc_set (ycstr "CPACK_SOURCE_GENERATOR") [ ystr_raw "TGZ" ];
     yc_include (yfile "CPack");
   ]
 
@@ -146,7 +146,7 @@ let math_check_cxx_features =
     yc_include (yfile "CheckCXXSourceCompiles");
     yc_apply (yvar "check_cxx")
       [
-        yraw
+        ystr_raw
           "\n\
           \  #include <cmath>\n\
           \  int main() {\n\
@@ -157,7 +157,7 @@ let math_check_cxx_features =
       ];
     yc_apply (yvar "check_cxx")
       [
-        yraw
+        ystr_raw
           "\n\
           \  #include <cmath>\n\
           \  int main() {\n\
@@ -170,7 +170,7 @@ let math_check_cxx_features =
       (Yand (Ytruthy (yvar "have_log"), Ytruthy (yvar "have_exp")))
       (compile_defs (yvar "sqrt")
          [
-           ytarget_def ~kind:Private [ yraw "HAVE_LOG"; yraw "HAVE_EXP" ];
+           ytarget_def ~kind:Private [ ystr_raw "HAVE_LOG"; ystr_raw "HAVE_EXP" ];
          ]);
   ]
 
@@ -184,7 +184,7 @@ let math_install_libs ?export () =
     yifthen (Yis_target (ytval "SqrtLibrary"))
       (ycmd_of_list [ yc_list_append (yvar "inst_libs") [ yvar "sqrt" ] ]);
     yc_install_targets ?export [ ytval "${installable_libs}" ] (ydir "lib");
-    yc_install_files [ yraw "MathFunctions.h" ] (ydir "include");
+    yc_install_files [ ystr_raw "MathFunctions.h" ] (ydir "include");
   ]
 
 (** Compile and print a yelu command to stdout as cmake. *)

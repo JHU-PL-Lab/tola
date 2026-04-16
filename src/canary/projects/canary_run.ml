@@ -140,8 +140,18 @@ let run_action_demo () =
     (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
   Canary_action.run_project ~root ~project:"llvm"
     (Canary_project_llvm.action_steps ~root ~project:"llvm" distro);
+  (* llvm/19: system lib + opam 19-shared binding + dev example → expected mismatch *)
+  Canary_action.run_project ~root ~project:"llvm/19"
+    (Canary_project_llvm.action_steps
+       ~source:Canary_project_llvm.llvm_source_stable
+       ~root ~project:"llvm/19" distro);
   Canary_action.run_project ~root ~project:"z3"
-    (Canary_project_z3.action_steps ~root ~project:"z3" distro)
+    (Canary_project_z3.action_steps ~root ~project:"z3" distro);
+  (* z3/stable: system lib + opam z3 binding + dev example → mismatch path *)
+  Canary_action.run_project ~root ~project:"z3/stable"
+    (Canary_project_z3.action_steps
+       ~source:Canary_project_z3.z3_source_stable
+       ~root ~project:"z3/stable" distro)
 
 let run_local ?(exec = false) ?project distro =
   let runner_os = runner_os_of_distro distro in

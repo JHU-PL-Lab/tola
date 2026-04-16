@@ -25,7 +25,7 @@ let primitives =
       check "set var" "set(FOO bar )"
         (yc_set (ycstr "FOO") [ ystr "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
-        (yc_set (ycstr "FOO") [ yraw "hello" ]);
+        (yc_set (ycstr "FOO") [ ystr_raw "hello" ]);
       check "set bool" "set(FOO ON )"
         (yc_set (ycstr "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
@@ -78,11 +78,11 @@ let targets =
       check "target_compile_definitions"
         "target_compile_definitions(MathFunctions PRIVATE \"USE_MYMATH\")"
         (compile_defs (ytval "MathFunctions")
-           [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ]);
+           [ ytarget_def ~kind:Private [ ystr_raw "USE_MYMATH" ] ]);
       check "target_include_directories"
         "target_include_directories(Tutorial PUBLIC \"${PROJECT_BINARY_DIR}\")"
         (include_dirs (ytval "Tutorial")
-           [ ytarget_def [ yraw "${PROJECT_BINARY_DIR}" ] ]);
+           [ ytarget_def [ ystr_raw "${PROJECT_BINARY_DIR}" ] ]);
     ] )
 
 let project_level =
@@ -221,6 +221,30 @@ let list_ops =
       check "list_filter include"
         "list(FILTER MY_LIST INCLUDE REGEX \".*\\.h\")\n"
         (yc_list_filter Lf_include ".*\\.h" (ycstr "MY_LIST"));
+      check "list_join"
+        "list(JOIN MY_LIST , OUT)\n"
+        (yc_list_join (ycstr "MY_LIST") (ystr ",") "OUT");
+      check "list_sublist"
+        "list(SUBLIST MY_LIST 1 2 OUT)\n"
+        (yc_list_sublist (ycstr "MY_LIST") 1 2 "OUT");
+      check "list_find"
+        "list(FIND MY_LIST val OUT)\n"
+        (yc_list_find (ycstr "MY_LIST") (ystr "val") "OUT");
+      check "list_prepend"
+        "list(PREPEND MY_LIST a b)\n"
+        (yc_list_prepend (ycstr "MY_LIST") [ ystr "a"; ystr "b" ]);
+      check "list_insert"
+        "list(INSERT MY_LIST 0 x)\n"
+        (yc_list_insert (ycstr "MY_LIST") 0 [ ystr "x" ]);
+      check "list_remove_at"
+        "list(REMOVE_AT MY_LIST 0 2)\n"
+        (yc_list_remove_at (ycstr "MY_LIST") [ 0; 2 ]);
+      check "list_pop_back no out"
+        "list(POP_BACK MY_LIST)\n"
+        (yc_list_pop_back (ycstr "MY_LIST"));
+      check "list_pop_front with out"
+        "list(POP_FRONT MY_LIST X)\n"
+        (yc_list_pop_front ~out_vars:[ "X" ] (ycstr "MY_LIST"));
     ] )
 
 let string_ops =
@@ -250,9 +274,80 @@ let string_ops =
       check "string_regex_replace"
         "string(REGEX REPLACE \"[0-9]+\" X OUT src)"
         (yc_string_regex_replace "[0-9]+" (ystr "X") "OUT" [ ystr "src" ]);
+      check "string_append"
+        "string(APPEND VAR a b)"
+        (yc_string_append (ycstr "VAR") [ ystr "a"; ystr "b" ]);
+      check "string_prepend"
+        "string(PREPEND VAR pfx)"
+        (yc_string_prepend (ycstr "VAR") [ ystr "pfx" ]);
+      check "string_join"
+        "string(JOIN , OUT a b)"
+        (yc_string_join (ystr ",") "OUT" [ ystr "a"; ystr "b" ]);
+      check "string_find"
+        "string(FIND hello ell OUT)"
+        (yc_string_find (ystr "hello") (ystr "ell") "OUT");
+      check "string_find reverse"
+        "string(FIND hello ell OUT REVERSE)"
+        (yc_string_find ~reverse:true (ystr "hello") (ystr "ell") "OUT");
+      check "string_substring"
+        "string(SUBSTRING hello 1 3 OUT)"
+        (yc_string_substring (ystr "hello") 1 ~length:3 "OUT");
+      check "string_repeat"
+        "string(REPEAT abc 3 OUT)"
+        (yc_string_repeat (ystr "abc") 3 "OUT");
+      check "string_genex_strip"
+        "string(GENEX_STRIP src OUT)"
+        (yc_string_genex_strip (ystr "src") "OUT");
+      check "string_compare equal"
+        "string(COMPARE EQUAL a b OUT)"
+        (yc_string_compare Sco_equal (ystr "a") (ystr "b") "OUT");
+      check "string_compare less"
+        "string(COMPARE LESS a b OUT)"
+        (yc_string_compare Sco_less (ystr "a") (ystr "b") "OUT");
+      check "string_make_c_identifier"
+        "string(MAKE_C_IDENTIFIER hello OUT)"
+        (yc_string_make_c_identifier (ystr "hello") "OUT");
+      check "string_timestamp plain"
+        "string(TIMESTAMP OUT)"
+        (yc_string_timestamp "OUT");
+      check "string_timestamp utc format"
+        "string(TIMESTAMP OUT \"%Y-%m-%d\" UTC)"
+        (yc_string_timestamp ~utc:true ~format:"%Y-%m-%d" "OUT");
+    ] )
+
+let scripting_ext =
+  ( "scripting_ext",
+    [
+      check "get_filename_component name"
+        "get_filename_component(OUT myfile.txt NAME)"
+        (yc_get_filename_component ~mode:"NAME" (ycstr "OUT") (ystr "myfile.txt"));
+      check "get_filename_component path"
+        "get_filename_component(OUT /a/b/c.txt PATH)"
+        (yc_get_filename_component ~mode:"PATH" (ycstr "OUT") (ystr "/a/b/c.txt"));
+      check "include_guard directory"
+        "include_guard(DIRECTORY)"
+        (yc_include_guard Ig_directory);
+      check "include_guard global"
+        "include_guard(GLOBAL)"
+        (yc_include_guard Ig_global);
+      check "separate_arguments unix"
+        "separate_arguments(VAR UNIX_COMMAND)"
+        (yc_separate_arguments ~mode:Sa_unix_command (ycstr "VAR"));
+      check "target_link_options"
+        "target_link_options(mytarget PUBLIC -Wl,--gc-sections)"
+        (yc_target_link_options (ytval "mytarget")
+           [ ytarget_def ~kind:Public [ ystr "-Wl,--gc-sections" ] ]);
+      check "target_link_options before"
+        "target_link_options(mytarget BEFORE PRIVATE -flag)"
+        (yc_target_link_options ~before:true (ytval "mytarget")
+           [ ytarget_def ~kind:Private [ ystr "-flag" ] ]);
+      check "target_sources"
+        "target_sources(mytarget PRIVATE src/a.cpp)"
+        (yc_target_sources (ytval "mytarget")
+           [ ytarget_def ~kind:Private [ yfile "src/a.cpp" ] ]);
     ] )
 
 let () =
   Alcotest.run "Yelu Compile"
     [ primitives; conditions; targets; project_level; composition; let_bindings;
-      iteration; loop_control; list_ops; string_ops ]
+      iteration; loop_control; list_ops; string_ops; scripting_ext ]

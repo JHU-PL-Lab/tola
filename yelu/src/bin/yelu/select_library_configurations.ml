@@ -13,7 +13,7 @@ let check_slc_macro =
         [ "checking select_library_configurations(${basename})" ];
       yc_apply (ystr "select_library_configurations") [ ystr "${basename}" ];
       yifthen
-        (Ynot (ystrequal (yraw "${${basename}_LIBRARY}") (yraw "${expect}")))
+        (Ynot (ystrequal (ystr_raw "${${basename}_LIBRARY}") (ystr_raw "${expect}")))
         (yc_message ~mode:Mm_send_error
            [
              "select_library_configurations(${basename}) returned \
@@ -22,8 +22,8 @@ let check_slc_macro =
       yifthen
         (Ynot
            (ystrequal
-              (yraw "${${basename}_LIBRARY}")
-              (yraw "${${basename}_LIBRARIES}")))
+              (ystr_raw "${${basename}_LIBRARY}")
+              (ystr_raw "${${basename}_LIBRARIES}")))
         (yc_message ~mode:Mm_send_error
            [
              "select_library_configurations(${basename}) LIBRARY: \
@@ -35,12 +35,12 @@ let notype_block =
   ycmd_of_list
     [
       yc_set (ycstr "NOTYPE_RELONLY_LIBRARY_RELEASE") [ ystr "opt" ];
-      yc_apply (ystr "check_slc") [ ystr "NOTYPE_RELONLY"; yraw "opt" ];
+      yc_apply (ystr "check_slc") [ ystr "NOTYPE_RELONLY"; ystr_raw "opt" ];
       yc_set (ycstr "NOTYPE_DBGONLY_LIBRARY_DEBUG") [ ystr "dbg" ];
-      yc_apply (ystr "check_slc") [ ystr "NOTYPE_DBGONLY"; yraw "dbg" ];
+      yc_apply (ystr "check_slc") [ ystr "NOTYPE_DBGONLY"; ystr_raw "dbg" ];
       yc_set (ycstr "NOTYPE_RELDBG_LIBRARY_RELEASE") [ ystr "opt" ];
       yc_set (ycstr "NOTYPE_RELDBG_LIBRARY_DEBUG") [ ystr "dbg" ];
-      yc_apply (ystr "check_slc") [ ystr "NOTYPE_RELDBG"; yraw "opt" ];
+      yc_apply (ystr "check_slc") [ ystr "NOTYPE_RELDBG"; ystr_raw "opt" ];
       yc_set (ycstr "CMAKE_BUILD_TYPE") [ ystr "Debug" ];
     ]
 
@@ -58,36 +58,36 @@ let cmd =
            ( Ynot (Ytruthy (ycstr "_isMultiConfig")),
              Ynot (Ytruthy (ycstr "CMAKE_BUILD_TYPE")) ))
         notype_block;
-      yc_apply (ystr "check_slc") [ ystr "empty"; yraw "empty_LIBRARY-NOTFOUND" ];
+      yc_apply (ystr "check_slc") [ ystr "empty"; ystr_raw "empty_LIBRARY-NOTFOUND" ];
       yc_set (ycstr "OPTONLY_LIBRARY_RELEASE") [ ystr "opt" ];
-      yc_apply (ystr "check_slc") [ ystr "OPTONLY"; yraw "opt" ];
+      yc_apply (ystr "check_slc") [ ystr "OPTONLY"; ystr_raw "opt" ];
       yc_set (ycstr "DBGONLY_LIBRARY_RELEASE") [ ystr "dbg" ];
-      yc_apply (ystr "check_slc") [ ystr "DBGONLY"; yraw "dbg" ];
+      yc_apply (ystr "check_slc") [ ystr "DBGONLY"; ystr_raw "dbg" ];
       yc_set (ycstr "SAME_LIBRARY_RELEASE") [ ystr "same" ];
       yc_set (ycstr "SAME_LIBRARY_DEBUG") [ ystr "same" ];
-      yc_apply (ystr "check_slc") [ ystr "SAME"; yraw "same" ];
+      yc_apply (ystr "check_slc") [ ystr "SAME"; ystr_raw "same" ];
       yc_set (ycstr "OPTONLYLIST_LIBRARY_RELEASE") [ ystr "opt1;opt2" ];
-      yc_apply (ystr "check_slc") [ ystr "OPTONLYLIST"; yraw "opt1;opt2" ];
+      yc_apply (ystr "check_slc") [ ystr "OPTONLYLIST"; ystr_raw "opt1;opt2" ];
       yc_set (ycstr "DBGONLYLIST_LIBRARY_RELEASE") [ ystr "dbg1;dbg2" ];
-      yc_apply (ystr "check_slc") [ ystr "DBGONLYLIST"; yraw "dbg1;dbg2" ];
+      yc_apply (ystr "check_slc") [ ystr "DBGONLYLIST"; ystr_raw "dbg1;dbg2" ];
       yc_set (ycstr "OPT1DBG1_LIBRARY_RELEASE") [ ystr "opt" ];
       yc_set (ycstr "OPT1DBG1_LIBRARY_DEBUG") [ ystr "dbg" ];
       yc_apply (ystr "check_slc")
-        [ ystr "OPT1DBG1"; yraw "optimized;opt;debug;dbg" ];
+        [ ystr "OPT1DBG1"; ystr_raw "optimized;opt;debug;dbg" ];
       yc_set (ycstr "OPT1DBG2_LIBRARY_RELEASE") [ ystr "opt" ];
       yc_set (ycstr "OPT1DBG2_LIBRARY_DEBUG") [ ystr "dbg1;dbg2" ];
       yc_apply (ystr "check_slc")
-        [ ystr "OPT1DBG2"; yraw "optimized;opt;debug;dbg1;debug;dbg2" ];
+        [ ystr "OPT1DBG2"; ystr_raw "optimized;opt;debug;dbg1;debug;dbg2" ];
       yc_set (ycstr "OPT2DBG1_LIBRARY_RELEASE") [ ystr "opt1;opt2" ];
       yc_set (ycstr "OPT2DBG1_LIBRARY_DEBUG") [ ystr "dbg" ];
       yc_apply (ystr "check_slc")
-        [ ystr "OPT2DBG1"; yraw "optimized;opt1;optimized;opt2;debug;dbg" ];
+        [ ystr "OPT2DBG1"; ystr_raw "optimized;opt1;optimized;opt2;debug;dbg" ];
       yc_set (ycstr "OPT2DBG2_LIBRARY_RELEASE") [ ystr "opt1;opt2" ];
       yc_set (ycstr "OPT2DBG2_LIBRARY_DEBUG") [ ystr "dbg1;dbg2" ];
       yc_apply (ystr "check_slc")
         [
           ystr "OPT2DBG2";
-          yraw "optimized;opt1;optimized;opt2;debug;dbg1;debug;dbg2";
+          ystr_raw "optimized;opt1;optimized;opt2;debug;dbg1;debug;dbg2";
         ];
     ]
 

@@ -114,6 +114,26 @@ See `doc/equiv_checking_research_prompt.md`.
 
 ### Language coverage
 
+**Y10. Add `string(JSON …)` and `string(UUID …)` to cmake AST** — both are
+real cmake commands (UUID since 3.1, JSON since 3.19) that are simply absent
+from `lang_cmake.ml`. JSON has 6 sub-operations (GET, TYPE, LENGTH, MEMBER,
+SET, REMOVE) plus ERROR_VARIABLE; UUID takes NAMESPACE/NAME/TYPE arguments.
+Both have RunCMake positive test scripts (`string/JSON.cmake`,
+`string/Uuid.cmake`). Add `Sc_json` and `Sc_uuid` to `string_cmd`, wire PP,
+utils, and yelu layer.
+
+**Y9. Audit RunCMake positive-test coverage gaps** — the official cmake
+`Tests/RunCMake/list/` and `Tests/RunCMake/string/` directories do not have
+positive (non-error-case) test scripts for every subcommand. For `list`: no
+positive tests for REMOVE_ITEM, REMOVE_AT, REVERSE, FIND, standalone LENGTH/GET.
+For `string`: no positive tests for FIND, SUBSTRING, STRIP, REPLACE, LENGTH.
+The error-case scripts (`*-result.txt` / `*-stderr.txt`) confirm cmake rejects
+bad inputs but don't validate correct output. Determine: (a) is this a gap in
+cmake's test suite, or are these covered elsewhere (e.g., `Tests/CMakeCommands/`,
+`Tests/StringFileTest/`); (b) whether it matters for yelu — if cmake itself
+doesn't test a subcommand's positive behavior, our confidence in the PP output
+being correct is lower and a standalone cmake-run test would be more valuable.
+
 **Y5. File API comparison as semantic oracle** — currently `cmake_file_api_cmp.py`
 compares codemodel-v2 JSON. Extend to also diff cache-v2 (cache variables) and
 confirm target property coverage is sufficient for step1–12.
@@ -122,6 +142,35 @@ confirm target property coverage is sufficient for step1–12.
 most likely to diverge under yelu transformation: generator expressions `$<...>`
 (build-time, not configure-time), `cmake_policy` stack, `find_package` search order.
 Document which are in scope for equivalence checking vs. opaque stubs.
+
+### Language design
+
+**Y8. Multi-stage core — same language across levels (research)** — currently yelu has
+two separate construct families: compile-time (`Ylet`, OCaml `if`/`for`) and
+configure-time (`Ycvar`, `Yc_foreach`, `Yc_if`). The research direction: unify these
+into one construct per concept with explicit staging annotations (`@stage cmake`,
+`@stage build`). Quote/splice across stages replaces preprocessor + macro tooling with
+typed, composable meta-programming. See `doc/language_coverage.md` Tier 7 for full
+design. Connects to Tier 5 (cache variable types as stage-annotated `let`) and Tier 6
+(conf/build boundary collapse). Not urgent — pick up when exploring core language design.
+
+**Y7. Cache-sensitivity annotations on cmake variables (design)** — cmake cache entries
+differ in how much they invalidate: `CMAKE_C_COMPILER` forces full reconfigure + rebuild
+(nothing can be shared between tasks that differ here), while `CMAKE_BUILD_PARALLEL_LEVEL`
+has zero impact on configure output. Idea: add a `cache_sensitivity` refinement to
+`Ycvar` in the yelu AST:
+
+```ocaml
+type cache_sensitivity =
+  | Cache_breaking   (* compiler, toolchain — full reconfigure + rebuild *)
+  | Cache_safe       (* parallelism, verbosity — no artifact impact *)
+  | Cache_partial    (* build type Debug/Release — breaks some targets *)
+```
+
+A yelu program that sets `CMAKE_C_COMPILER` would statically declare the point
+cache-breaking, letting a runner (canary or yelu CLI) decide whether two tasks
+can share a build directory. Connects to canary TODO #10 (unified build cache scheme).
+Not urgent — pick up when exploring yelu-specific language features.
 
 ### Done
 

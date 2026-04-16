@@ -62,7 +62,9 @@ let z3_source_stable : source_repo =
     ref_ = "bd3e722";
     official = true;
     has_build_lib = false;
-    has_build_binding = true;
+    (* No build — use fetch_binding (opam install z3) for the stable path.
+       probe_binding_pkg will compile the example against the installed binding. *)
+    has_build_binding = false;
   }
 
 let z3_sources = [ z3_source_dev; z3_source_latest; z3_source_stable ]
@@ -405,6 +407,14 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
         (fun ~output_dir ->
           let install = Canary_store.pm_install_cmd pm ~pkg:"z3" in
           [%string "%{install} && echo 'installed' > %{output_dir}/lib.ok"]);
+    fetch_binding =
+      (if not source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "eval $(opam env) && opam install z3 -y --assume-depexts \
+                && echo 'installed' > %{output_dir}/binding.ok"])
+       else None);
     pack_binding =
       (if source.has_build_binding then
          Some

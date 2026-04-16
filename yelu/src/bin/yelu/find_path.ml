@@ -7,7 +7,7 @@ open Step_common
 
 let inner_if =
   yif
-    (Ynot (ystrequal (yraw "${REL_HDR}") (yraw "${expected}")))
+    (Ynot (ystrequal (ystr_raw "${REL_HDR}") (ystr_raw "${expected}")))
     (yc_message ~mode:Mm_send_error
        [ "Header ${expected} found as [${REL_HDR}]" ])
     (yifthen
@@ -22,8 +22,8 @@ let outer_if =
        [
          yc_file_relative_path
            ~var:(ycstr "REL_HDR")
-           ~base:(yraw "${CMAKE_CURRENT_SOURCE_DIR}")
-           (yraw "${HDR}");
+           ~base:(ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}")
+           (ystr_raw "${HDR}");
          inner_if;
        ])
     (yc_message ~mode:Mm_send_error [ "Header ${expected} NOT FOUND" ])
@@ -35,7 +35,7 @@ let test_macro =
       yc_apply (ystr "find_path")
         [
           ycstr "HDR";
-          yraw "${ARGN}";
+          ystr_raw "${ARGN}";
           ystr "NO_CMAKE_ENVIRONMENT_PATH";
           ystr "NO_SYSTEM_ENVIRONMENT_PATH";
         ];

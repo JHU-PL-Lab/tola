@@ -1,0 +1,46 @@
+opam-version: "2.0"
+maintainer: "weng@cs.jhu.edu"
+authors: [
+  "whitequark <whitequark@whitequark.org>"
+  "The LLVM team"
+]
+license: "MIT"
+homepage: "http://llvm.org"
+synopsis: "OCaml bindings for a source-built LLVM (canary dev, shared)"
+description: """
+Installs pre-built OCaml bindings from CANARY_LLVM_BUILD.
+Requires that 'ninja ocaml_all' has already been run in that build dir.
+Does not re-run cmake or ninja — artifacts are installed as-is.
+
+The META.llvm in the build tree has 'directory = \"llvm\"' for the
+out-of-tree layout. This is stripped on install so ocamlfind finds
+archives in the flat ~/.opam/.../lib/llvm/ layout.
+
+Default build dir: /home/red/code/contrib/llvm-all/build
+Set CANARY_LLVM_BUILD to override.
+"""
+build: [
+  ["sh" "-c"
+    "BUILD=${CANARY_LLVM_BUILD:-/home/red/code/contrib/llvm-all/build} && \
+     test -f \"$BUILD/lib/libLLVM.so\" || { echo 'libLLVM.so not found — run ninja LLVM first'; exit 1; } && \
+     test -f \"$BUILD/lib/ocaml/llvm/llvm.cmxa\" || { echo 'llvm.cmxa not found — run ninja ocaml_all first'; exit 1; }"
+  ]
+]
+install: [
+  ["sh" "-c"
+    "BUILD=${CANARY_LLVM_BUILD:-/home/red/code/contrib/llvm-all/build} && \
+     PKG=$BUILD/lib/ocaml/llvm && \
+     sed '/^directory/d' \"$BUILD/lib/ocaml/META.llvm\" > ./META && \
+     printf 'linkopts = \"-cclib -L%s/lib -cclib -Wl,-rpath,%s/lib\"\\n' \
+       \"$BUILD\" \"$BUILD\" >> ./META && \
+     ocamlfind install llvm ./META \
+       \"$PKG\"/*.mli \"$PKG\"/*.cmi \"$PKG\"/*.cmx \
+       \"$PKG\"/*.cmxa \"$PKG\"/*.cma \"$PKG\"/*.a"
+  ]
+]
+remove: ["ocamlfind" "remove" "llvm"]
+depends: [
+  "ocaml" {>= "4.00.0"}
+  "ctypes" {>= "0.4"}
+  "ocamlfind"
+]

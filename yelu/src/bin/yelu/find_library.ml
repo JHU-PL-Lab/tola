@@ -9,7 +9,7 @@ open Step_common
 let test_find_library_macro =
   let inner_if =
     yif
-      (Ynot (ystrequal (yraw "${REL_LIB}") (yraw "${expected}")))
+      (Ynot (ystrequal (ystr_raw "${REL_LIB}") (ystr_raw "${expected}")))
       (yc_message ~mode:Mm_send_error
          [ "Library ${expected} found as [${REL_LIB}]${desc}" ])
       (yifthen
@@ -24,8 +24,8 @@ let test_find_library_macro =
          [
            yc_file_relative_path
              ~var:(ycstr "REL_LIB")
-             ~base:(yraw "${CMAKE_CURRENT_SOURCE_DIR}")
-             (yraw "${LIB}");
+             ~base:(ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}")
+             (ystr_raw "${LIB}");
            inner_if;
          ])
       (yc_message ~mode:Mm_send_error [ "Library ${expected} NOT FOUND${desc}" ])
@@ -36,7 +36,7 @@ let test_find_library_macro =
       yc_apply (ystr "find_library")
         [
           ycstr "LIB";
-          yraw "${ARGN}";
+          ystr_raw "${ARGN}";
           ystr "NO_DEFAULT_PATH";
         ];
       outer_if;
@@ -46,18 +46,18 @@ let test_find_library_macro =
 let test_find_library_subst_macro =
   yc_macro (ystr "test_find_library_subst") ~args:[ "expected" ]
     [
-      yc_get_filename_component ~mode:"PATH" (ycstr "dir") (yraw "${expected}");
-      yc_get_filename_component ~mode:"NAME" (ycstr "name") (yraw "${expected}");
+      yc_get_filename_component ~mode:"PATH" (ycstr "dir") (ystr_raw "${expected}");
+      yc_get_filename_component ~mode:"NAME" (ycstr "name") (ystr_raw "${expected}");
       yc_string_regex_replace "lib/?[36Xx][24Y3][Z2]*" (ystr "lib") "dir"
-        [ yraw "${dir}" ];
+        [ ystr_raw "${dir}" ];
       yc_apply (ystr "test_find_library")
         [
-          yraw ", searched as ${dir}";
-          yraw "${expected}";
+          ystr_raw ", searched as ${dir}";
+          ystr_raw "${expected}";
           ystr "NAMES";
-          yraw "${name}";
+          ystr_raw "${name}";
           ystr "PATHS";
-          yraw "${CMAKE_CURRENT_SOURCE_DIR}/${dir}";
+          ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}/${dir}";
         ];
     ]
 
@@ -94,7 +94,7 @@ let cmd =
           ystr "lib32/A/libtest4.a";
           ystr "lib32/libtest4.a";
         ] "lib"
-        (yc_apply (ystr "test_find_library_subst") [ yraw "${lib}" ]);
+        (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${lib}" ]);
       yc_set (ycstr "CMAKE_SIZEOF_VOID_P") [ ystr "8" ];
       yc_foreach ~items:
         [
@@ -106,7 +106,7 @@ let cmd =
           ystr "lib64/A/libtest1.a";
           ystr "lib64/libtest1.a";
         ] "lib64"
-        (yc_apply (ystr "test_find_library_subst") [ yraw "${lib64}" ]);
+        (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${lib64}" ]);
       yc_set (ycstr "CMAKE_INTERNAL_PLATFORM_ABI") [ ystr "ELF X32" ];
       yc_set (ycstr "CMAKE_SIZEOF_VOID_P") [ ystr "4" ];
       yc_foreach ~items:
@@ -119,7 +119,7 @@ let cmd =
           ystr "libx32/A/libtest1.a";
           ystr "libx32/libtest1.a";
         ] "libx32"
-        (yc_apply (ystr "test_find_library_subst") [ yraw "${libx32}" ]);
+        (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${libx32}" ]);
       yc_apply (ystr "test_find_library")
         [
           ystr "";
@@ -165,7 +165,7 @@ let cmd =
           ystr "libXYZ/A/libtest6.a";
           ystr "libXYZ/libtest7.a";
         ] "libXYZ"
-        (yc_apply (ystr "test_find_library_subst") [ yraw "${libXYZ}" ]);
+        (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${libXYZ}" ]);
     ]
 
 let () = print_cmake cmd

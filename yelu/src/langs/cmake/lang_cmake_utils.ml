@@ -98,6 +98,9 @@ let minimum_required_s ?max min =
 let project ?version ?description ?homepage_url ?(languages = []) name =
   Project_cmd (Project { name; version; description; homepage_url; languages })
 
+let include_guard scope = Include_guard { scope }
+let separate_arguments ~mode var = Separete_arguments { var; mode }
+
 let option_ ?(value = bool_ false) ~msg var = Cmake_option { var; msg; value }
 let export_targets targets = Project_cmd (Export_targets { targets })
 let export_export ?file name = Project_cmd (Export_export { file; name })
@@ -178,6 +181,12 @@ let target_include_directories ?system ?before_or_after target items =
 
 let target_link_libraries targets items =
   Project_cmd (Target_link_libraries { targets; items })
+
+let target_link_options ?(before = false) target items =
+  Project_cmd (Target_link_options { target; before; items })
+
+let target_sources target items =
+  Project_cmd (Target_sources { target; items })
 
 let install_targets ?component ?rename ?export ?(permissions = []) targets
     destination =

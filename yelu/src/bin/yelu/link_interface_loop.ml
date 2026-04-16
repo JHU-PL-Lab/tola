@@ -15,7 +15,7 @@ let cmd =
         (Yarg_target (ytarget "A"))
         [
           ("IMPORTED_LINK_DEPENDENT_LIBRARIES", Yarg_target (ytarget "A"));
-          ("IMPORTED_LOCATION", yraw "${CMAKE_CURRENT_BINARY_DIR}/dirA/A");
+          ("IMPORTED_LOCATION", ystr_raw "${CMAKE_CURRENT_BINARY_DIR}/dirA/A");
         ];
       (* B: SHARED IMPORTED that names itself in its link interface — cycle *)
       add_lib_imported ~lib_type:"SHARED" (Yarg_target (ytarget "B"));
@@ -23,13 +23,13 @@ let cmd =
         (Yarg_target (ytarget "B"))
         [
           ("IMPORTED_LINK_INTERFACE_LIBRARIES", Yarg_target (ytarget "B"));
-          ("IMPORTED_LOCATION", yraw "${CMAKE_CURRENT_BINARY_DIR}/dirB/B");
+          ("IMPORTED_LOCATION", ystr_raw "${CMAKE_CURRENT_BINARY_DIR}/dirB/B");
         ];
       (* C: SHARED library with empty link interface, depends on B and A *)
       add_lib ~type_:Lib_shared ~sources:[ yfile "lib.c" ] (Yarg_target (ytarget "C"));
       yc_set_property
         ~targets:[ Yarg_target (ytarget "C") ]
-        [ ("LINK_INTERFACE_LIBRARIES", yraw "") ];
+        [ ("LINK_INTERFACE_LIBRARIES", ystr_raw "") ];
       link_lib
         [ Yarg_target (ytarget "C") ]
         [ ytarget_def ~kind:Plain [ Yarg_target (ytarget "B"); Yarg_target (ytarget "A") ] ];

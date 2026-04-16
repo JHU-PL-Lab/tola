@@ -10,7 +10,7 @@ type yc_string =
   | Ycs_dir of string         (* directory path: source dir, install destination *)
   | Ycs_name of cmake_name    (* generic cmake name, not typed to a specific namespace *)
   | Ycs_val of string         (* plain value: numbers, property values *)
-  | Ycs_raw of string         (* cmake expression, opaque pass-through *)
+  | Ycs_cmake of string         (* cmake expression, opaque pass-through *)
 
 (* Typed wrappers — each pins a cmake_name to a specific namespace *)
 type yelu_cvar = Ycvar of cmake_name    (* cmake Variable namespace: set(), ${}, if(DEFINED) *)
@@ -152,6 +152,10 @@ type yelu_exp =
   | Yc_set_global_property of { properties : (property_key * yarg) list }
   | Yc_get_filename_component of { var : yarg; filename : yarg; mode : string }
   | Yc_get_global_property of { var : yarg; property : string }
+  | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
+  | Yc_separate_arguments of { cvar : yarg; mode : Lang_cmake.separate_arguments_mode }
+  | Yc_target_link_options of { target : yarg; before : bool; items : yelu_items_with_kind list }
+  | Yc_target_sources of { target : yarg; items : yelu_items_with_kind list }
   (* install *)
   | Yc_install_targets of {
       targets : yarg list;
@@ -266,6 +270,14 @@ type yelu_exp =
       case : Lang_cmake.list_sort_case option;
     }
   | Yc_list_filter of { cvar : yarg; mode : Lang_cmake.list_filter_mode; regex : string }
+  | Yc_list_join of { cvar : yarg; glue : yarg; out : string }
+  | Yc_list_sublist of { cvar : yarg; begin_ : int; length : int; out : string }
+  | Yc_list_find of { cvar : yarg; value : yarg; out : string }
+  | Yc_list_prepend of { cvar : yarg; values : yarg list }
+  | Yc_list_insert of { cvar : yarg; index : int; values : yarg list }
+  | Yc_list_remove_at of { cvar : yarg; indices : int list }
+  | Yc_list_pop_back of { cvar : yarg; out_vars : string list }
+  | Yc_list_pop_front of { cvar : yarg; out_vars : string list }
   (* Tier 2: string commands *)
   | Yc_string_toupper of { string : yarg; out : string }
   | Yc_string_tolower of { string : yarg; out : string }
@@ -280,3 +292,18 @@ type yelu_exp =
     }
   | Yc_string_regex_match of { regex : string; out : string; inputs : yarg list }
   | Yc_string_regex_replace of { regex : string; replace : yarg; out : string; inputs : yarg list }
+  | Yc_string_append of { cvar : yarg; inputs : yarg list }
+  | Yc_string_prepend of { cvar : yarg; inputs : yarg list }
+  | Yc_string_join of { glue : yarg; out : string; inputs : yarg list }
+  | Yc_string_find of { string : yarg; substring : yarg; out : string; reverse : bool }
+  | Yc_string_substring of { string : yarg; begin_ : int; length : int option; out : string }
+  | Yc_string_repeat of { string : yarg; count : int; out : string }
+  | Yc_string_genex_strip of { string : yarg; out : string }
+  | Yc_string_compare of {
+      op : Lang_cmake.string_compare_op;
+      string1 : yarg;
+      string2 : yarg;
+      out : string;
+    }
+  | Yc_string_make_c_identifier of { string : yarg; out : string }
+  | Yc_string_timestamp of { out : string; format : string option; utc : bool }

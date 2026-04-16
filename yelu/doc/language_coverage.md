@@ -1,5 +1,18 @@
 # Yelu Language Coverage Plan
 
+## Coverage at a Glance
+
+Two independent metrics — don't conflate them:
+
+| Metric | What it measures | Current status |
+| ------ | ---------------- | -------------- |
+| **Command coverage** (table below) | How many cmake commands have a full yelu pipeline (AST + utils + yelu layer + tests) | ~50 commands fully implemented; ~5 AST-only; ~5 stubs |
+| **Showcase test coverage** (`make cmake-only-check`) | How many official cmake test programs have a yelu equivalent that passes gersemi equivalence | 8 / 20 CMakeOnly suites (Tier 1+2 complete); 0 / 431 RunCMake suites |
+
+Command coverage is the **language completeness** axis — it determines what yelu programs can be written.
+Showcase test coverage is the **validation** axis — it confirms the language produces correct cmake for real programs.
+High command coverage with low showcase coverage means: the language can express it, but we haven't written the programs yet.
+
 Coverage layers:
 - **cmake AST** — typed constructor in `src/langs/cmake/lang_cmake.ml`
 - **utils** — ergonomic constructor in `src/langs/cmake/lang_cmake_utils.ml`
@@ -42,7 +55,12 @@ Abbreviations: `✓` = complete, `~` = partial/in-progress, `stub` = bare constr
 | `enable_testing` / `add_test`              | ✓         | ✓     | ✓        | PP + Y      |
 | `set_tests_properties`                     | ✓         | ✓     | ✓        | PP + Y      |
 | `set_target_properties`                    | ✓         | ✓     | ✓        | PP          |
-| `set_property`                             | ✓         | ✓     | ✓        | —           |
+| `set_property` (TARGET + GLOBAL scopes)    | ✓         | ✓     | ✓        | —           |
+| `get_property` (GLOBAL scope)              | ✓         | ✓     | ~        | —           |
+| `unset` / `unset(CACHE)`                  | ✓         | ✓     | ✓        | —           |
+| `add_library(IMPORTED [GLOBAL])`           | ✓         | ✓     | ✓        | cmake-check |
+| `file(RELATIVE_PATH …)`                    | ✓         | ✓     | ✓        | cmake-check |
+| `get_filename_component`                   | ✓         | ✓     | ✓        | —           |
 | `install` (targets/files/export)           | ✓         | ✓     | ✓        | PP + Y      |
 | `export`                                   | ✓         | ✓     | ✓        | cmake-check |
 | `configure_package_config_file`            | ✓         | ✓     | ✓        | cmake-check |
@@ -57,8 +75,8 @@ Abbreviations: `✓` = complete, `~` = partial/in-progress, `stub` = bare constr
 | `foreach` (items/range/in)                 | ✓         | ✓     | ✓        | PP + Y      |
 | `while` / `break` / `continue`             | ✓         | ✓     | ✓        | PP + Y      |
 | `return`                                   | ✓         | ✓     | ✓        | PP + Y      |
-| `list` (full: 16 sub-commands)             | ✓         | ✓     | ✓        | PP + Y      |
-| `string` (full: 20 sub-commands)           | ✓         | ✓     | ✓        | PP + Y      |
+| `list` (16/16 sub-commands; TRANSFORM absent) | ✓      | ✓     | ✓        | PP + Y      |
+| `string` (18/18 cmake-AST sub-commands; JSON/UUID absent from cmake AST) | ✓ | ✓ | ✓ | PP + Y |
 | **Scripting — AST only, no utils/yelu**    |           |       |          |             |
 | `cmake_policy`                             | ~         | —     | —        | —           |
 | `target_link_options`                      | ✓         | —     | —        | —           |
@@ -68,9 +86,11 @@ Abbreviations: `✓` = complete, `~` = partial/in-progress, `stub` = bare constr
 | `add_dependencies`                         | ✓         | —     | —        | —           |
 | `variable_watch`                           | ✓         | —     | —        | PP partial  |
 | `separate_arguments`                       | ✓         | —     | —        | —           |
-| `get_property` / `define_property`         | ✓         | —     | —        | —           |
-| `include_guard`                            | ✓         | —     | —        | —           |
-| `get_filename_component`                   | ✓         | —     | —        | —           |
+| `include_guard`                            | ✓         | ✓     | ✓        | Y           |
+| `separate_arguments`                       | ✓         | ✓     | ✓        | Y           |
+| `target_link_options`                      | ✓         | ✓     | ✓        | Y           |
+| `target_sources`                           | ✓         | ✓     | ✓        | Y           |
+| `define_property`                          | ✓         | —     | —        | —           |
 | **Tier 3 — stubs or absent**               |           |       |          |             |
 | `find_package`                             | stub      | —     | —        | —           |
 | `execute_process`                          | stub      | —     | —        | —           |
@@ -81,6 +101,10 @@ Abbreviations: `✓` = complete, `~` = partial/in-progress, `stub` = bare constr
 | `cmake_pkg_config` (4.x)                   | —         | —     | —        | —           |
 
 ## cmake Test Suite Taxonomy
+
+> **Tier labels are shared across this file**: Roadmap Tier N = implement the
+> commands required to cover Tier N tests. CMakeOnly and RunCMake tractability
+> columns use the same tier numbers to indicate which roadmap tier unlocks them.
 
 `yelu/vendor/cmake/Tests/` contains ~313 test directories. Most require a
 real compiler (`project(X C)` or `project(X CXX)`). The compiler-free subset
@@ -107,23 +131,84 @@ coverage table above.
 configure-time tests (no compiler needed for most). Used as coverage benchmarks:
 write yelu equivalents, validate with File API comparison.
 
-| Test                                         | Commands needed                     | Tractable  |
-| -------------------------------------------- | ----------------------------------- | ---------- |
-| `find_library`                               | `find_library`, `message`           | **Tier 1** |
-| `find_path`                                  | `find_path`, `message`              | **Tier 1** |
-| `TargetScope`                                | `target_link_libraries` scope modes | **Tier 1** |
-| `LinkInterfaceLoop`                          | `target_link_libraries` circular    | **Tier 1** |
-| `SelectLibraryConfigurations`                | `list(GET)`, module include         | Tier 2     |
-| `MajorVersionSelection`                      | `if`, `string(REGEX)`               | Tier 2     |
-| `CheckSymbolExists` / `CheckCXXCompilerFlag` | `include`, check modules            | Tier 2     |
-| `ProjectInclude*`                            | `cmake_language` meta               | Tier 3     |
-| `AllFindModules`                             | full `find_package`                 | Tier 3     |
+| Test                                         | Commands needed                     | Tractable       | Status    |
+| -------------------------------------------- | ----------------------------------- | --------------- | --------- |
+| `find_library`                               | `find_library`, `message`           | **Tier 1**      | ✓ done    |
+| `find_path`                                  | `find_path`, `message`              | **Tier 1**      | ✓ done    |
+| `TargetScope` (×4 files)                     | `target_link_libraries` scope modes | **Tier 1**      | ✓ done    |
+| `LinkInterfaceLoop`                          | `target_link_libraries` circular    | **Tier 1**      | ✓ done    |
+| `SelectLibraryConfigurations`                | `list(GET)`, module include         | Tier 2          | ✓ done    |
+| `MajorVersionSelection`                      | `if`, `string(REGEX)`, `find_package` | Tier 2/3      | blocked   |
+| `CheckSymbolExists` / `CheckCXXCompilerFlag` | `include`, check modules            | not tractable   | blocked   |
+| `ProjectInclude*`                            | `cmake_language` meta               | Tier 3          | —         |
+| `AllFindModules`                             | full `find_package`                 | Tier 3          | —         |
 
 ## RunCMake Tests — Coverage Benchmark
 
 `Tests/RunCMake/<command>/` — one directory per command, each `.cmake` script
 exercises one behavior. All use `project(${RunCMake_TEST} NONE)`. Tractability
-mirrors our tier plan. Listed by tier:
+mirrors our tier plan.
+
+### Directory Index
+
+**+tests** = positive (non-error-case) `.cmake` scripts in the directory.
+Most RunCMake scripts test error conditions; the `+tests` count is what would
+map to yelu showcase programs.
+
+Filter key: `—` = no constraint · `CMP*` = cmake policy compatibility
+tests · `env` = exercises PATH/env search · `compiler` = C/C++ toolchain
+required · `platform` = Windows/macOS-specific · `fp` = requires
+`find_package`
+
+| Directory                    | Commands tested                                | +tests | Filter       | Yelu              |
+| ---------------------------- | ---------------------------------------------- | ------ | ------------ | ----------------- |
+| **Scripting — pure**         |                                                |        |              |                   |
+| `foreach`                    | foreach IN LISTS/ITEMS/RANGE, ZIP_LISTS        | 5      | —            | ~ (ZIP_LISTS gap) |
+| `while`                      | while, break, continue                         | 4      | CMP*         | ✓                 |
+| `return`                     | return, PROPAGATE                              | 5      | CMP*         | ✓                 |
+| `math`                       | math EXPR, DECIMAL/HEX output                  | 3      | —            | ✓                 |
+| `function`                   | function, macro, ARGN/ARGC/ARGV                | 2      | —            | ✓                 |
+| `message`                    | 14 modes, log levels, CHECK_*, context         | 12     | —            | ✓                 |
+| `set`                        | set, unset, cache modes                        | 6      | env          | ✓                 |
+| `option`                     | option                                         | 4      | CMP*         | ✓                 |
+| `include`                    | include, OPTIONAL, NO_POLICY_SCOPE             | 22     | CMP*         | ✓                 |
+| `if`                         | all condition forms: IN_LIST, MATCHES, VERSION_* | 10   | —            | ~ (some cond forms not in yelu) |
+| `list`                       | 16 subcommands + TRANSFORM                     | 22     | —            | ~ (yelu: 16/16 ✓; TRANSFORM absent from cmake AST) |
+| `string`                     | 20 subcommands incl. JSON, UUID, TIMESTAMP     | 19     | —            | ~ (yelu: 18/18 ✓ all cmake-AST subcommands; JSON/UUID absent from cmake AST) |
+| **Scripting — file/args**    |                                                |        |              |                   |
+| `separate_arguments`         | separate_arguments UNIX/WINDOWS/NATIVE         | 7      | —            | ✓                 |
+| `include_guard`              | include_guard DIRECTORY/GLOBAL                 | 3      | —            | ✓                 |
+| `get_filename_component`     | DIR, NAME, EXT, NAME_WE, REALPATH              | 1      | —            | ✓                 |
+| **Property commands**        |                                                |        |              |                   |
+| `set_property`               | set_property all scopes                        | 13     | —            | ✓ (TARGET+GLOBAL) |
+| `get_property`               | get_property all scopes                        | 10     | —            | ~ (GLOBAL ✓, others AST only) |
+| `define_property`            | define_property, INHERITED, INITIALIZE_FROM_VARIABLE | 3 | —         | AST               |
+| **Find commands**            |                                                |        |              |                   |
+| `find_library`               | find_library, NAMES/PATHS/HINTS/NO_* flags     | 18     | env          | ✓                 |
+| `find_path`                  | find_path                                      | 11     | env          | ✓                 |
+| `find_file`                  | find_file                                      | 10     | env          | ✓                 |
+| `find_program`               | find_program                                   | 18     | env/platform | ✓                 |
+| `find_package`               | basic, CONFIG, COMPONENTS, version             | 123    | fp           | stub              |
+| **Project / configure**      |                                                |        |              |                   |
+| `cmake_minimum_required`     | cmake_minimum_required                         | 9      | CMP*         | ✓                 |
+| `configure_file`             | configure_file                                 | 10     | —            | ✓                 |
+| `project`                    | project, LANGUAGES, VERSION, HOMEPAGE_URL      | 43     | CMP*         | ~                 |
+| **Target commands**          |                                                |        |              |                   |
+| `target_link_libraries`      | target_link_libraries, scope modes             | 15     | compiler     | ✓ yelu            |
+| `target_link_options`        | target_link_options, BEFORE, LINKER: prefix    | 47     | compiler     | ✓ yelu            |
+| `target_sources`             | target_sources, FILE_SET HEADERS               | 23     | compiler     | ✓ yelu            |
+| `target_compile_definitions` | PUBLIC/PRIVATE/INTERFACE                       | 3      | compiler     | ✓ yelu            |
+| `target_compile_features`    | cxx_std_* features                             | 2      | compiler     | ✓ yelu            |
+| `target_compile_options`     | flags with scope                               | 4      | compiler     | ✓ yelu            |
+| `target_include_directories` | SYSTEM, BEFORE, scope                          | 4      | compiler     | ✓ yelu            |
+| **Install / export**         |                                                |        |              |                   |
+| `install`                    | targets / files / export                       | 129    | compiler     | ✓ yelu            |
+| `export`                     | targets, config, package                       | 23     | —            | ✓ yelu            |
+
+**Not listed** (431 total RunCMake directories): CMP* policy dirs (~80),
+toolchain/compiler dirs (VS, Ninja, Clang, CUDA, Swift, …), platform dirs
+(Android, Apple, Windows, …), CMake-infra dirs (ExternalData, FetchContent,
+GenEx-*, …). None of these are tractable as scripting-only yelu showcases.
 
 ### Tier 1 — covered or recently expanded
 
@@ -156,16 +241,16 @@ mirrors our tier plan. Listed by tier:
 
 | RunCMake test            | Commands exercised                                                                        | Yelu coverage                             |
 | ------------------------ | ----------------------------------------------------------------------------------------- | ----------------------------------------- |
-| `list`                   | LENGTH, GET, APPEND, REMOVE_*, INSERT, SORT, REVERSE, FIND, JOIN, FILTER, SUBLIST         | ✓ (full pipeline: cmake AST + utils + yelu + tests) |
-| `string`                 | REGEX, REPLACE, LENGTH, SUBSTRING, UPPER/LOWER, STRIP, FIND, CONCAT, JOIN, HEX, CONFIGURE | ✓ (full pipeline)                                   |
-| `foreach`                | IN LISTS/ITEMS/RANGE, ZIP_LISTS, multiple iter vars                                       | ✓ (full pipeline; ZIP_LISTS via `zip` library fn)   |
+| `list`                   | LENGTH, GET, APPEND, REMOVE_*, INSERT, SORT, REVERSE, FIND, JOIN, FILTER, SUBLIST, POP_*, PREPEND, REMOVE_AT | ✓ (16/16 subcommands; TRANSFORM absent from cmake AST) |
+| `string`                 | REGEX, REPLACE, LENGTH, SUBSTRING, UPPER/LOWER, STRIP, FIND, CONCAT, JOIN, APPEND, PREPEND, REPEAT, GENEX_STRIP, COMPARE, MAKE_C_IDENTIFIER, TIMESTAMP | ✓ (18/18 cmake-AST subcommands; JSON/UUID absent from cmake AST entirely) |
+| `foreach`                | IN LISTS/ITEMS/RANGE, ZIP_LISTS, multiple iter vars                                       | ~ (full pipeline for LISTS/ITEMS/RANGE; ZIP_LISTS yelu gap)         |
 | `while`                  | while/break/continue                                                                      | ✓ (full pipeline)                                   |
 | `return`                 | `return()`, `PROPAGATE`                                                                   | ✓ (full pipeline)                                   |
-| `separate_arguments`     | UNIX/WINDOWS/NATIVE_COMMAND                                                               | ✓ AST only                                |
-| `include_guard`          | DIRECTORY, GLOBAL                                                                         | absent                                    |
-| `get_filename_component` | DIR, NAME, EXT, NAME_WE, REALPATH                                                         | absent                                    |
-| `target_link_options`    | scope, BEFORE, LINKER: prefix                                                             | ✓ AST only                                |
-| `target_sources`         | FILE_SET HEADERS, PRIVATE/PUBLIC                                                          | ✓ AST only                                |
+| `separate_arguments`     | UNIX/WINDOWS/NATIVE_COMMAND                                                               | ✓ (full pipeline)                         |
+| `include_guard`          | DIRECTORY, GLOBAL                                                                         | ✓ (full pipeline)                         |
+| `get_filename_component` | DIR, NAME, EXT, NAME_WE, REALPATH                                                         | ✓ (full pipeline)                         |
+| `target_link_options`    | scope, BEFORE, LINKER: prefix                                                             | ✓ (full pipeline)                         |
+| `target_sources`         | FILE_SET HEADERS, PRIVATE/PUBLIC                                                          | ✓ (full pipeline)                         |
 | `set_tests_properties`   | PASS_REGULAR_EXPRESSION, TIMEOUT                                                          | ✓                                         |
 | `variable_watch`         | variable_watch access types                                                               | ✓ AST only                                |
 
@@ -203,9 +288,11 @@ and `math` utils; unblock `TargetScope` and `LinkInterfaceLoop` CMakeOnly tests.
 | `find_file`         | ✓ done | same shape                                                                |
 | `message`           | ✓ done | 14-variant `message_mode`, `Mm_none`…`Mm_deprecation`; `message` utils fn |
 | `math`              | ✓ done | `math` utils fn wrapping `Math_lib`                                       |
-| `TargetScope` test  | TODO   | Write yelu equivalent of `Tests/CMakeOnly/TargetScope/`                   |
-| `find_library` test | TODO   | Write yelu equivalent, validate with File API                             |
-| `find_path` test    | TODO   | Write yelu equivalent, validate with File API                             |
+| `TargetScope` test (×4 files) | ✓ done | `add_library_imported`, `Plain` target_kind, `Lang_none` — cmake-only-check OK |
+| `LinkInterfaceLoop` test      | ✓ done | imported shared libs + circular dep via set_target_properties — cmake-only-check OK |
+| `find_path` test              | ✓ done | macro, unset_cache, ARGN splat, file(RELATIVE_PATH), if/elseif, STREQUAL — cmake-only-check OK |
+| `find_library` test           | ✓ done | + get_filename_component, string(REGEX REPLACE), set_property GLOBAL, foreach — cmake-only-check OK |
+| New features (unlocked above) | ✓ done | `Yc_macro`, `Yc_unset_cache`, `Yc_file_relative_path`, `Ystrequal`, `elseif` PP, `Yc_set_global_property`, `Yc_get_filename_component` |
 
 ### Tier 2 — List/string ops + foreach + Check modules ✓ (full pipeline done)
 
@@ -220,13 +307,14 @@ and `math` utils; unblock `TargetScope` and `LinkInterfaceLoop` CMakeOnly tests.
 | `string` (20 sub-commands)                | ✓ done | `String_cmd of string_cmd`; full utils + yelu AST + compile + 8 yelu tests        |
 | `while` / `break` / `continue` / `return` | ✓ done | utils + yelu AST + compile + 5 yelu tests (return PROPAGATE uses list_sp newline) |
 
-**Remaining showcase tests** (language covered, no yelu programs written yet):
+**CMakeOnly showcases**:
 
-| Item                               | What to do                                                          |
-| ---------------------------------- | ------------------------------------------------------------------- |
-| `SelectLibraryConfigurations` test | Write yelu equivalent (uses `list(GET)` + conditional)              |
-| `MajorVersionSelection` test       | Write yelu equivalent (uses `string(REGEX)`)                        |
-| Check module tests                 | `CheckSymbolExists`, `CheckCXXCompilerFlag` via `apply` + `include` |
+| Item                               | Status   | Notes                                                                       |
+| ---------------------------------- | -------- | --------------------------------------------------------------------------- |
+| `SelectLibraryConfigurations` test | ✓ done   | `get_property GLOBAL`, macro, double-expansion `${${basename}_LIBRARY}` — cmake-only-check OK |
+| `MajorVersionSelection` test       | blocked  | Requires `find_package` (Tier 3)                                            |
+| `CheckSymbolExists` test           | blocked  | Requires C compiler at runtime — not tractable as structural check          |
+| `CheckCXXCompilerFlag` test        | blocked  | Requires CXX compiler + `execute_process`                                   |
 
 ### Tier 3 — find_package + FetchContent
 
@@ -342,6 +430,74 @@ because a stale entry exists.
 *what to build*, not *how cmake should be configured*. The cache variable lifecycle
 question (Tier 5) becomes an internal implementation detail of yelu's incremental
 engine, not something the programmer ever writes down.
+
+### Tier 7 — Multi-stage core: same language across levels (research)
+
+**Goal**: the same language constructs (`let`, `for`, `if`, function application) should
+be usable at every level of the compilation pipeline. The difference between levels is
+only *when interpretation happens*, not *what the language looks like*.
+
+**Observation from compilation pipelines**: C → asm pipelines have textual
+meta-programming at both levels (C preprocessor, asm macros). These tools exist because
+the surface languages are different — if the language were unified, a single meta facility
+would work across levels. The same pattern appears in `let/loop + high-level primitives`
+compiling to `let/loop + low-level primitives`: the structural language is the same; only
+the primitive set and its interpreter differ.
+
+**Applied to yelu**: currently there are two distinct constructs for the same concept:
+
+| Concept       | Compile-time (OCaml)    | Configure-time (cmake)   |
+| ------------- | ----------------------- | ------------------------ |
+| Binding       | `Ylet { var; value }`   | `Ycvar` + `set()`        |
+| Iteration     | OCaml `for` loop        | `Yc_foreach`             |
+| Conditional   | OCaml `if`              | `Yc_if`                  |
+| Function call | OCaml function call     | `Yc_apply` (cmake macro) |
+
+The multi-stage vision unifies these into **one construct per concept** with a staging
+annotation that decides which level it executes at:
+
+```
+let x = "Tutorial"         -- compile-time: resolved before any cmake emitted
+@stage cmake
+let y = "libm"             -- configure-time: emitted as set(y "libm")
+@stage build
+let z = target_file(foo)   -- build-time: $<TARGET_FILE:foo>
+```
+
+**Meta-programming follows naturally**: quote/splice across stages gives the same
+structural capability as preprocessor + inline macro tools — but typed and composable:
+
+```
+-- compile-time: construct a configure-time expression and splice it in
+let name = if flag then "Debug" else "Release"
+@cmake splice (set_var "BUILD_TYPE" name)
+```
+
+**Key property**: a user (or LLM) needs to learn one syntax, one set of constructs.
+Staging annotations are explicit and local, not implicit (unlike cmake where `${}`,
+`$<>`, and `$ENV{}` silently happen at different evaluation times with no surface
+distinction).
+
+**Relation to existing tiers**:
+- Tier 5's `Ycvar_bool`/`Ycvar_normal` distinction becomes a *stage annotation* on a
+  single `let` form: `@cmake let x = ...` vs `@cmake cache let x = ...`
+- Tier 6's conf/build boundary collapse is a consequence: if the language owns staging,
+  the conf/build split is an implementation detail of the cmake-pack lowering, not
+  something the user writes down
+- The cmake-pack provides stage-specific primitives; yelu-core provides the staging
+  mechanism itself
+
+**Design questions** (open):
+- Is staging syntactic (annotation) or semantic (type-level `Code<T>` as in MetaML)?
+- Can stages be user-defined, or are they fixed (compile / configure / build)?
+- What is the quotation/splice API? Minimal: `quote : expr → code` + `splice : code → expr`
+- Does the core need a tower of three stages (compile → configure → build) or is two
+  stages (now vs later) sufficient, composable into towers?
+
+**Not like Lisp**: homoiconicity (code-as-data) is not required. The key property is
+*structural uniformity* — the same grammar and constructs at every level. Quote/splice
+is a mechanism for crossing levels, not a requirement that all levels share a runtime
+representation.
 
 ## Language Architecture — Core vs Pack
 

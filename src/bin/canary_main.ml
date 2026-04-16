@@ -41,7 +41,14 @@ let action_cmd =
   let run_z3 ~root ~quick ~failfast distro =
     let steps = Canary_project_z3.action_steps ~quick ~root ~project:"z3" distro in
     run_with_info ~failfast ~root ~project:"z3" steps
-      (Canary_project_z3.run_info distro steps)
+      (Canary_project_z3.run_info distro steps);
+    let steps_stable =
+      Canary_project_z3.action_steps ~source:Canary_project_z3.z3_source_stable
+        ~root ~project:"z3/stable" distro
+    in
+    run_with_info ~failfast ~root ~project:"z3/stable" steps_stable
+      (Canary_project_z3.run_info ~source:Canary_project_z3.z3_source_stable
+         distro steps_stable)
   in
   let run_sqlite ~root ~failfast =
     let steps = Canary_project_sqlite.action_steps ~root ~project:"sqlite" in
@@ -51,7 +58,14 @@ let action_cmd =
   let run_llvm ~root ~failfast distro =
     let steps = Canary_project_llvm.action_steps ~root ~project:"llvm" distro in
     run_with_info ~failfast ~root ~project:"llvm" steps
-      (Canary_project_llvm.run_info steps)
+      (Canary_project_llvm.run_info steps);
+    let steps_19 =
+      Canary_project_llvm.action_steps ~source:Canary_project_llvm.llvm_source_stable
+        ~root ~project:"llvm/19" distro
+    in
+    run_with_info ~failfast ~root ~project:"llvm/19" steps_19
+      (Canary_project_llvm.run_info
+         ~source_repo:Canary_project_llvm.llvm_source_stable steps_19)
   in
   let run project quick failfast () =
     let root = "_out" in

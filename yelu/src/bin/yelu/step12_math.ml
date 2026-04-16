@@ -30,7 +30,7 @@ let cmd =
          (ycmd_of_list
             ([
                compile_defs (yvar "math")
-                 [ ytarget_def ~kind:Private [ yraw "USE_MYMATH" ] ];
+                 [ ytarget_def ~kind:Private [ ystr_raw "USE_MYMATH" ] ];
                add_lib ~type_:Lib_static
                  ~sources:[ yfile "mysqrt.cxx"; yfile "${CMAKE_CURRENT_BINARY_DIR}/Table.h" ]
                  (yvar "sqrt");
@@ -48,7 +48,7 @@ let cmd =
                 link_lib [ yvar "math" ]
                   [ ytarget_def ~kind:Private [ yvar "sqrt" ] ];
                 compile_defs (yvar "math")
-                  [ ytarget_def ~kind:Private [ yraw "EXPORTING_MYMATH" ] ];
+                  [ ytarget_def ~kind:Private [ ystr_raw "EXPORTING_MYMATH" ] ];
               ]));
        link_lib [ yvar "math" ]
          [ ytarget_def ~kind:Public [ yvar "flags" ] ];

@@ -19,7 +19,7 @@ let empty_env =
   }
 
 let ycs_to_s = function
-  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_raw s -> s
+  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_cmake s -> s
 
 let is_builtin_cvar s =
   String.is_prefix s ~prefix:"CMAKE_"
@@ -71,7 +71,7 @@ let rec erase_arg env = function
        | Some v -> erase_arg env v
        | None -> Lang_cmake.Bare name)
   | Yarg_cvar (Ycvar name) | Yarg_target (Ytarget name) -> Lang_cmake.Bare name
-  | Yarg_string (Ycs_raw s) ->
+  | Yarg_string (Ycs_cmake s) ->
       let known_dirs =
         [ "PROJECT_BINARY_DIR"; "PROJECT_SOURCE_DIR";
           "CMAKE_CURRENT_BINARY_DIR"; "CMAKE_CURRENT_SOURCE_DIR";
@@ -488,6 +488,31 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             property_name = property;
             set = false;
           } )
+  | Yc_include_guard { scope } -> (env, Include_guard { scope })
+  | Yc_separate_arguments { cvar; mode } ->
+      check_arg env cvar;
+      (env, Separete_arguments { var = erase_arg_s env cvar; mode })
+  | Yc_target_link_options { target; before; items } ->
+      check_arg env target;
+      List.iter items ~f:(check_items_with_kind env);
+      ( env,
+        Project_cmd
+          (Target_link_options
+             {
+               target = erase_arg_s env target;
+               before;
+               items = List.map ~f:(erase_items_with_kind env) items;
+             }) )
+  | Yc_target_sources { target; items } ->
+      check_arg env target;
+      List.iter items ~f:(check_items_with_kind env);
+      ( env,
+        Project_cmd
+          (Target_sources
+             {
+               target = erase_arg_s env target;
+               items = List.map ~f:(erase_items_with_kind env) items;
+             }) )
   (* install *)
   | Yc_install_targets { targets; destination; export } ->
       List.iter targets ~f:(check_arg env);
@@ -720,6 +745,40 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_list_filter { cvar; mode; regex } ->
       check_arg env cvar;
       (env, List_cmd (Lc_filter { var = erase_arg_s env cvar; mode; regex }))
+  | Yc_list_join { cvar; glue; out } ->
+      check_arg env cvar; check_arg env glue;
+      (env, List_cmd (Lc_join { var = erase_arg_s env cvar;
+                                glue = erase_arg env glue; out }))
+  | Yc_list_sublist { cvar; begin_; length; out } ->
+      check_arg env cvar;
+      (env, List_cmd (Lc_sublist { var = erase_arg_s env cvar; begin_; length; out }))
+  | Yc_list_find { cvar; value; out } ->
+      check_arg env cvar; check_arg env value;
+      (env, List_cmd (Lc_find { var = erase_arg_s env cvar;
+                                value = erase_arg env value; out }))
+  | Yc_list_prepend { cvar; values } ->
+      check_arg env cvar;
+      List.iter values ~f:(check_arg env);
+      ( env,
+        List_cmd
+          (Lc_prepend { var = erase_arg_s env cvar;
+                        values = List.map ~f:(erase_arg env) values }) )
+  | Yc_list_insert { cvar; index; values } ->
+      check_arg env cvar;
+      List.iter values ~f:(check_arg env);
+      ( env,
+        List_cmd
+          (Lc_insert { var = erase_arg_s env cvar; index;
+                       values = List.map ~f:(erase_arg env) values }) )
+  | Yc_list_remove_at { cvar; indices } ->
+      check_arg env cvar;
+      (env, List_cmd (Lc_remove_at { var = erase_arg_s env cvar; indices }))
+  | Yc_list_pop_back { cvar; out_vars } ->
+      check_arg env cvar;
+      (env, List_cmd (Lc_pop_back { var = erase_arg_s env cvar; out_vars }))
+  | Yc_list_pop_front { cvar; out_vars } ->
+      check_arg env cvar;
+      (env, List_cmd (Lc_pop_front { var = erase_arg_s env cvar; out_vars }))
   (* Tier 2: string commands *)
   | Yc_string_toupper { string; out } ->
       check_arg env string;
@@ -763,6 +822,63 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
           (Sc_regex
              (Sr_replace { regex; replace = erase_arg env replace; out;
                            inputs = List.map ~f:(erase_arg env) inputs })) )
+  | Yc_string_append { cvar; inputs } ->
+      check_arg env cvar;
+      List.iter inputs ~f:(check_arg env);
+      ( env,
+        String_cmd
+          (Sc_append { var = erase_arg_s env cvar;
+                       inputs = List.map ~f:(erase_arg env) inputs }) )
+  | Yc_string_prepend { cvar; inputs } ->
+      check_arg env cvar;
+      List.iter inputs ~f:(check_arg env);
+      ( env,
+        String_cmd
+          (Sc_prepend { var = erase_arg_s env cvar;
+                        prefix = erase_arg env (List.hd_exn inputs);
+                        inputs = List.tl_exn inputs |> List.map ~f:(erase_arg env) }) )
+  | Yc_string_join { glue; out; inputs } ->
+      check_arg env glue;
+      List.iter inputs ~f:(check_arg env);
+      ( env,
+        String_cmd
+          (Sc_join { glue = erase_arg env glue; out;
+                     inputs = List.map ~f:(erase_arg env) inputs }) )
+  | Yc_string_find { string; substring; out; reverse } ->
+      check_arg env string; check_arg env substring;
+      ( env,
+        String_cmd
+          (Sc_find { string = erase_arg env string;
+                     substring = erase_arg env substring; out; reverse }) )
+  | Yc_string_substring { string; begin_; length; out } ->
+      check_arg env string;
+      ( env,
+        String_cmd
+          (Sc_substring { string = erase_arg env string; begin_; length; out }) )
+  | Yc_string_repeat { string; count; out } ->
+      check_arg env string;
+      ( env,
+        String_cmd
+          (Sc_repeat { string = erase_arg env string; count; out }) )
+  | Yc_string_genex_strip { string; out } ->
+      check_arg env string;
+      ( env,
+        String_cmd
+          (Sc_genex_strip { string = erase_arg env string; out }) )
+  | Yc_string_compare { op; string1; string2; out } ->
+      check_arg env string1; check_arg env string2;
+      ( env,
+        String_cmd
+          (Sc_compare { op;
+                        string1 = erase_arg env string1;
+                        string2 = erase_arg env string2; out }) )
+  | Yc_string_make_c_identifier { string; out } ->
+      check_arg env string;
+      ( env,
+        String_cmd
+          (Sc_make_c_identifier { string = erase_arg env string; out }) )
+  | Yc_string_timestamp { out; format; utc } ->
+      (env, String_cmd (Sc_timestamp { out; format; utc }))
 
 and compile_list env exps =
   let env, rev_cmds =

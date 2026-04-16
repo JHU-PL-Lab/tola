@@ -2,7 +2,7 @@ open Base
 open Lang_yelu
 
 let ycs_to_s = function
-  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_raw s -> s
+  | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_cmake s -> s
 
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
@@ -15,12 +15,12 @@ let ytval s = Yarg_target (Ytarget s)
 let yfile s = Yarg_string (Ycs_file s)
 let ydir s = Yarg_string (Ycs_dir s)
 let ystr s = Yarg_string (Ycs_val s)
-let yraw s = Yarg_string (Ycs_raw s)
+let ystr_raw s = Yarg_string (Ycs_cmake s)
 let ybool b = Yarg_bool b
 
 (* cmake variable reference — erases to ${NAME} for cmake runtime expansion *)
-let ycref s = yraw (Fmt.str "${%s}" s)
-let ycref_path s suffix = yraw (Fmt.str "${%s}/%s" s suffix)
+let ycref s = ystr_raw (Fmt.str "${%s}" s)
+let ycref_path s suffix = ystr_raw (Fmt.str "${%s}/%s" s suffix)
 
 (* cmake directory constants — friendly keys for well-known cmake dir variables *)
 let source_root = "PROJECT_SOURCE_DIR"
@@ -125,6 +125,12 @@ let yc_get_filename_component ~mode var filename =
 let yc_get_global_property ~property var =
   Yc_get_global_property { var; property }
 
+let yc_include_guard scope = Yc_include_guard { scope }
+let yc_separate_arguments ~mode cvar = Yc_separate_arguments { cvar; mode }
+let yc_target_link_options ?(before = false) target items =
+  Yc_target_link_options { target; before; items }
+let yc_target_sources target items = Yc_target_sources { target; items }
+
 (* install *)
 let yc_install_targets ?export targets destination =
   Yc_install_targets { targets; destination; export }
@@ -211,6 +217,15 @@ let yc_list_sort ?order ?compare ?case cvar =
 let yc_list_filter mode regex cvar =
   Yc_list_filter { cvar; mode; regex }
 
+let yc_list_join cvar glue out = Yc_list_join { cvar; glue; out }
+let yc_list_sublist cvar begin_ length out = Yc_list_sublist { cvar; begin_; length; out }
+let yc_list_find cvar value out = Yc_list_find { cvar; value; out }
+let yc_list_prepend cvar values = Yc_list_prepend { cvar; values }
+let yc_list_insert cvar index values = Yc_list_insert { cvar; index; values }
+let yc_list_remove_at cvar indices = Yc_list_remove_at { cvar; indices }
+let yc_list_pop_back ?(out_vars = []) cvar = Yc_list_pop_back { cvar; out_vars }
+let yc_list_pop_front ?(out_vars = []) cvar = Yc_list_pop_front { cvar; out_vars }
+
 (* Tier 2: string commands *)
 let yc_string_toupper string out = Yc_string_toupper { string; out }
 let yc_string_tolower string out = Yc_string_tolower { string; out }
@@ -226,3 +241,22 @@ let yc_string_regex_match regex out inputs =
 
 let yc_string_regex_replace regex replace out inputs =
   Yc_string_regex_replace { regex; replace; out; inputs }
+
+let yc_string_append cvar inputs = Yc_string_append { cvar; inputs }
+let yc_string_prepend cvar inputs = Yc_string_prepend { cvar; inputs }
+let yc_string_join glue out inputs = Yc_string_join { glue; out; inputs }
+let yc_string_find ?(reverse = false) string substring out =
+  Yc_string_find { string; substring; out; reverse }
+let yc_string_substring string begin_ ?length out =
+  Yc_string_substring { string; begin_; length; out }
+let yc_string_repeat string count out = Yc_string_repeat { string; count; out }
+let yc_string_genex_strip string out = Yc_string_genex_strip { string; out }
+
+let yc_string_compare op string1 string2 out =
+  Yc_string_compare { op; string1; string2; out }
+
+let yc_string_make_c_identifier string out =
+  Yc_string_make_c_identifier { string; out }
+
+let yc_string_timestamp ?(utc = false) ?format out =
+  Yc_string_timestamp { out; format; utc }

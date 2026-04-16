@@ -4,12 +4,12 @@ open Step_common
 let cmd =
   ycmd_of_list
     [
-      yc_set (ycstr "CTEST_PROJECT_NAME") [ yraw "CMakeTutorial" ];
-      yc_set (ycstr "CTEST_NIGHTLY_START_TIME") [ yraw "00:00:00 EST" ];
-      yc_set (ycstr "CTEST_DROP_METHOD") [ yraw "http" ];
-      yc_set (ycstr "CTEST_DROP_SITE") [ yraw "my.cdash.org" ];
+      yc_set (ycstr "CTEST_PROJECT_NAME") [ ystr_raw "CMakeTutorial" ];
+      yc_set (ycstr "CTEST_NIGHTLY_START_TIME") [ ystr_raw "00:00:00 EST" ];
+      yc_set (ycstr "CTEST_DROP_METHOD") [ ystr_raw "http" ];
+      yc_set (ycstr "CTEST_DROP_SITE") [ ystr_raw "my.cdash.org" ];
       yc_set (ycstr "CTEST_DROP_LOCATION")
-        [ yraw "/submit.php?project=CMakeTutorial" ];
+        [ ystr_raw "/submit.php?project=CMakeTutorial" ];
       yc_set (ycstr "CTEST_DROP_SITE_CDASH") [ ystr "TRUE" ];
     ]
 

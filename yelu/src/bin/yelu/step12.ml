@@ -10,7 +10,7 @@ let cmd =
         ylet "do_test" (ycstr "do_test");
       ]
     @ shared_libs_output_dirs
-    @ [ yc_set (ycstr "CMAKE_DEBUG_POSTFIX") [ yraw "d" ] ]
+    @ [ yc_set (ycstr "CMAKE_DEBUG_POSTFIX") [ ystr_raw "d" ] ]
     @ compiler_flags_lib
     @ compiler_warning_options
     @ [
@@ -36,11 +36,11 @@ let cmd =
         yc_include (yfile "CMakePackageConfigHelpers");
         yc_configure_package_config_file ~no_set_and_check_macro:true
           ~no_check_required_components_macro:true
-          (yraw "lib/cmake/MathFunctions")
+          (ystr_raw "lib/cmake/MathFunctions")
           (yfile "${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in")
           (dir_concat output_this "MathFunctionsConfig.cmake");
         yc_write_basic_package_version_file ~compatibility:Any_newer_version
-          ~version:(yraw "${Tutorial_VERSION_MAJOR}.${Tutorial_VERSION_MINOR}")
+          ~version:(ystr_raw "${Tutorial_VERSION_MAJOR}.${Tutorial_VERSION_MINOR}")
           (dir_concat output_this "MathFunctionsConfigVersion.cmake");
         yc_install_files
           [

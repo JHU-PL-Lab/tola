@@ -1,7 +1,7 @@
 open Llvm
 
 let () =
-  let context = global_context () in
+  let context = create_context () in
   let m = create_module context "canary_llvm" in
   let i32_t = i32_type context in
   let fn_t = function_type i32_t [||] in
