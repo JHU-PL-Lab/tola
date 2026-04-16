@@ -318,3 +318,9 @@ let message ?(mode = Mm_status) texts = Message { mode; texts }
 
 let math ?(output_format = Decical) ~var exp =
   Math_lib { var; exp; output_format }
+
+let unset_cache var = Unset { var; cache = true; parent_scope = false }
+
+let macro name ?(args = []) commands = Macro { name; args; commands }
+
+let file_relative_path ~var ~base file = File_relative_path { var; base; file }

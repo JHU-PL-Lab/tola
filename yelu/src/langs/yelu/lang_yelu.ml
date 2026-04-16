@@ -126,7 +126,10 @@ type yelu_exp =
   (* scripting *)
   | Yc_include of { file : yarg; optional : bool }
   | Yc_function of { name : yarg; args : string list; body : yelu_exp list }
+  | Yc_macro of { name : yarg; args : string list; body : yelu_exp list }
   | Yc_apply of { name : yarg; args : yarg list }
+  | Yc_unset_cache of { cvar : yarg }
+  | Yc_file_relative_path of { var : yarg; base : yarg; file : yarg }
   | Yc_quote_cmd of string
   | Yc_list_append of { cvar : yarg; values : yarg list }
   (* testing *)

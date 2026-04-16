@@ -361,10 +361,21 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       in
       let _body_env, body_cmds = compile_list body_env body in
       (env, Function { name = erase_arg_s env name; args; cmds = body_cmds })
+  | Yc_macro { name; args; body } ->
+      let body_env =
+        List.fold args ~init:env ~f:(fun env arg ->
+            { env with cvars = Set.add env.cvars arg })
+      in
+      let _body_env, body_cmds = compile_list body_env body in
+      (env, Macro { name = erase_arg_s env name; args; commands = Exp_list body_cmds })
   | Yc_apply { name; args } ->
       check_arg env name;
       List.iter args ~f:(check_arg env);
       (env, Apply { name = erase_arg_s env name; args = List.map ~f:(erase_arg env) args })
+  | Yc_unset_cache { cvar } ->
+      (env, Unset { var = erase_arg_s env cvar; cache = true; parent_scope = false })
+  | Yc_file_relative_path { var; base; file } ->
+      (env, File_relative_path { var = erase_arg_s env var; base = erase_arg_s env base; file = erase_arg_s env file })
   | Yc_quote_cmd s -> (env, Quote s)
   | Yc_list_append { cvar; values } ->
       check_arg env cvar;

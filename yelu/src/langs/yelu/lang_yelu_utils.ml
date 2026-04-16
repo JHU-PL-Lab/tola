@@ -95,7 +95,10 @@ let yif cond then_ else_ = yite cond then_ ~else_ ()
 (* scripting *)
 let yc_include ?(optional = false) file = Yc_include { file; optional }
 let yc_function name args body = Yc_function { name; args; body }
+let yc_macro name ?(args = []) body = Yc_macro { name; args; body }
 let yc_apply name args = Yc_apply { name; args }
+let yc_unset_cache cvar = Yc_unset_cache { cvar }
+let yc_file_relative_path ~var ~base file = Yc_file_relative_path { var; base; file }
 let yc_quote_cmd s = Yc_quote_cmd s
 let yc_list_append cvar values = Yc_list_append { cvar; values }
 

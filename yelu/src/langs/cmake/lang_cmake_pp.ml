@@ -424,12 +424,16 @@ let rec pp ff e =
           (pp_list_with_key "PROPAGATE" pp_var)
           propogate_vars)
   | If { cond; then_; else_ } ->
-      Fmt.(
-        pf ff "if (%a)@.@[<2>  %a@]@." pp_cond cond pp then_;
-        (match else_ with
-        | None -> ()
-        | Some e -> pf ff "else()@.@[<2>  %a@]@." pp e);
-        pf ff "endif()@.")
+      let rec pp_if_chain ff (cond, then_, else_) =
+        Fmt.(pf ff "if (%a)@.@[<2>  %a@]@." pp_cond cond pp then_;
+          match else_ with
+          | None -> ()
+          | Some (If { cond = ec; then_ = et; else_ = ee }) ->
+              pf ff "else";
+              pp_if_chain ff (ec, et, ee)
+          | Some e -> pf ff "else()@.@[<2>  %a@]@." pp e)
+      in
+      Fmt.(pp_if_chain ff (cond, then_, else_); pf ff "endif()@.")
   | Function { name; args; cmds } ->
       Fmt.(
         pf ff "function(%a %a)@.@[<2>  %a@]@.endfunction()@." pp_var name
@@ -584,7 +588,8 @@ let rec pp ff e =
   | Module_cmd cmd -> (Fmt.vbox pp_module_cmd) ff cmd
   (* AST stubs — these constructors carry no fields *)
   | Execute_process -> Fmt.string ff "execute_process()"
-  | File -> Fmt.string ff "file()"
+  | File_relative_path { var; base; file } ->
+      Fmt.(pf ff "file(RELATIVE_PATH %a %s %s)" pp_var var base file)
   | Find_package -> Fmt.string ff "find_package()"
   (* find_var commands *)
   | Find_file a -> pp_find_var ff "find_file" a

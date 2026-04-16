@@ -365,7 +365,7 @@ and exp =
     }
   (* API *)
   | Execute_process
-  | File
+  | File_relative_path of { var : var; base : path; file : path }
   | Find_file of find_var_args
   | Find_library of find_var_args
   | Find_package
