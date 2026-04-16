@@ -470,6 +470,24 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             mode;
             cache = false;
           } )
+  | Yc_get_global_property { var; property } ->
+      check_arg env var;
+      ( env,
+        Get_property
+          {
+            var = erase_arg_s env var;
+            global = true;
+            directory = "";
+            source = "";
+            source_directory = "";
+            source_target_directory = "";
+            install = "";
+            test = "";
+            test_directory = "";
+            variable = false;
+            property_name = property;
+            set = false;
+          } )
   (* install *)
   | Yc_install_targets { targets; destination; export } ->
       List.iter targets ~f:(check_arg env);

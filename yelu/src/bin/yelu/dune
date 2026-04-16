@@ -8,5 +8,6 @@
   target_scope target_scope_sub target_scope_sub_sub target_scope_sib
   link_interface_loop
   find_path
-  find_library)
+  find_library
+  select_library_configurations)
  (libraries base yelu_langs step_common))

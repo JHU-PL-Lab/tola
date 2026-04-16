@@ -151,6 +151,7 @@ type yelu_exp =
     }
   | Yc_set_global_property of { properties : (property_key * yarg) list }
   | Yc_get_filename_component of { var : yarg; filename : yarg; mode : string }
+  | Yc_get_global_property of { var : yarg; property : string }
   (* install *)
   | Yc_install_targets of {
       targets : yarg list;

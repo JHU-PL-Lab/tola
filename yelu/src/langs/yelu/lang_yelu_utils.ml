@@ -122,6 +122,9 @@ let yc_set_global_property properties =
 let yc_get_filename_component ~mode var filename =
   Yc_get_filename_component { var; filename; mode }
 
+let yc_get_global_property ~property var =
+  Yc_get_global_property { var; property }
+
 (* install *)
 let yc_install_targets ?export targets destination =
   Yc_install_targets { targets; destination; export }

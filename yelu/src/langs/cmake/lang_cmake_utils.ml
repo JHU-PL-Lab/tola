@@ -204,6 +204,23 @@ let add_test ?dir name command args =
 let get_filename_component ?(cache = false) ~mode var filename =
   Get_filename_component { var; filename; mode; cache }
 
+let get_global_property ~property var =
+  Get_property
+    {
+      var;
+      global = true;
+      directory = "";
+      source = "";
+      source_directory = "";
+      source_target_directory = "";
+      install = "";
+      test = "";
+      test_directory = "";
+      variable = false;
+      property_name = property;
+      set = false;
+    }
+
 let set_property ?(global = false) ?(directory = []) ?(targets = [])
     ?(sources = []) ?(source_directories = []) ?(source_target_directories = [])
     ?(installs = []) ?(tests = []) ?(test_directories = []) ?(caches = [])
