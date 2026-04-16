@@ -38,7 +38,7 @@ let conditions =
   ( "conditions",
     [
       check "if cond_var"
-        "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
+        "if (USE_MYMATH)\n  set(X 1 )\nendif()\n"
         (yifthen (Ytruthy (ycstr "USE_MYMATH"))
            (yc_set (ycstr "X") [ ystr "1" ]));
       check "if with else"
@@ -47,15 +47,15 @@ let conditions =
            (yc_set (ycstr "X") [ ystr "1" ])
            (yc_set (ycstr "X") [ ystr "0" ]));
       check "if and"
-        "if (HAVE_LOG AND HAVE_EXP)\n  \nelse()\n  \nendif()\n"
+        "if (HAVE_LOG AND HAVE_EXP)\n  \nendif()\n"
         (yifthen
            (Yand (Ytruthy (ycstr "HAVE_LOG"), Ytruthy (ycstr "HAVE_EXP")))
            (Yexp_list []));
       check "is_target"
-        "if (TARGET SqrtLibrary)\n  \nelse()\n  \nendif()\n"
+        "if (TARGET SqrtLibrary)\n  \nendif()\n"
         (yifthen (Yis_target (ytval "SqrtLibrary")) (Yexp_list []));
       check "is_defined"
-        "if (DEFINED MY_VAR)\n  \nelse()\n  \nendif()\n"
+        "if (DEFINED MY_VAR)\n  \nendif()\n"
         (yifthen (Yis_defined (ycstr "MY_VAR")) (Yexp_list []));
     ] )
 

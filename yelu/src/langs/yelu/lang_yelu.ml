@@ -35,7 +35,7 @@ type library_type =
   | Lib_interface
   | Lib_global
 
-type target_kind = Public | Private | Interface
+type target_kind = Public | Private | Interface | Plain
 
 type supported_lang =
   | Lang_none

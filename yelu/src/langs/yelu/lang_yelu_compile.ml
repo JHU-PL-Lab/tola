@@ -98,6 +98,7 @@ let string_of_kind = function
   | Interface -> "INTERFACE"
   | Public -> "PUBLIC"
   | Private -> "PRIVATE"
+  | Plain -> ""
 
 let string_of_library_type = function
   | Lib_static -> "STATIC"
