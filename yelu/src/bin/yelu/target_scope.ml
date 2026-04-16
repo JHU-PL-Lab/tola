@@ -1,0 +1,23 @@
+open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_utils
+open Step_common
+
+(* Generates: Tests/CMakeOnly/TargetScope/CMakeLists.txt *)
+let cmd =
+  ycmd_of_list
+    [
+      yc_minimum_required_s "3.10.";
+      yc_project ~languages:[ Lang_none ] "TargetScope";
+      yc_add_subdirectory (ystr "Sub");
+      yifthen
+        (Yis_target (Yarg_target (ytarget "SubLibLocal")))
+        (ycmd_of_list
+           [ yc_message ~mode:Mm_fatal_error [ "SubLibLocal visible in top directory" ] ]);
+      yifthen
+        (Ynot (Yis_target (Yarg_target (ytarget "SubLibGlobal"))))
+        (ycmd_of_list
+           [ yc_message ~mode:Mm_fatal_error [ "SubLibGlobal not visible in top directory" ] ]);
+      yc_add_subdirectory (ystr "Sib");
+    ]
+
+let () = print_cmake cmd

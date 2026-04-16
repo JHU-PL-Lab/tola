@@ -108,6 +108,9 @@ let quote_cmd s = Quote s
 let add_library ?(exclude_from_all = false) ?type_ ?(sources = []) name =
   Project_cmd (Add_library { name; type_; exclude_from_all; sources })
 
+let add_library_imported ?(global = false) ?lib_type name =
+  Project_cmd (Add_library_imported { name; lib_type; global })
+
 let add_executable ?(options = []) ?(sources = []) name =
   Project_cmd (Add_executable { name; options; sources })
 

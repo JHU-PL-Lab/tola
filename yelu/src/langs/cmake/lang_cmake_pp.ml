@@ -425,8 +425,11 @@ let rec pp ff e =
           propogate_vars)
   | If { cond; then_; else_ } ->
       Fmt.(
-        pf ff "if (%a)@.@[<2>  %a@]@.else()@.@[<2>  %a@]@.endif()@." pp_cond
-          cond pp then_ (option pp) else_)
+        pf ff "if (%a)@.@[<2>  %a@]@." pp_cond cond pp then_;
+        (match else_ with
+        | None -> ()
+        | Some e -> pf ff "else()@.@[<2>  %a@]@." pp e);
+        pf ff "endif()@.")
   | Function { name; args; cmds } ->
       Fmt.(
         pf ff "function(%a %a)@.@[<2>  %a@]@.endfunction()@." pp_var name
@@ -723,6 +726,12 @@ and pp_project_cmd ff cmd =
         pf ff "add_library(%a %a%a %a)" string name (option string) type_
           (pp_flag "EXCLUDE_FROM_ALL")
           exclude_from_all (list_sp pp_source) sources)
+  | Add_library_imported { name; lib_type; global } ->
+      Fmt.(
+        pf ff "add_library(%a%a IMPORTED%s)" string name
+          (option (fun ff t -> pf ff " %s" t))
+          lib_type
+          (if global then " GLOBAL" else ""))
   | Add_library_object { name; sources } ->
       Fmt.(
         pf ff "add_library(%a OBJECT %a)" string name (list_sp pp_source)

@@ -108,8 +108,43 @@ cmake-check: dune-build-cmake
 dune-build-cmake:
 	@$(DUNE) dune build yelu/src/langs/ yelu/src/bin/cmake/ 2>/dev/null
 
-.PHONY: build build-cmake build-yelu test test-pp test-yc cmake-check \
-        file-api-test build-check test-all dune-build-cmake \
+dune-build-yelu:
+	@$(DUNE) dune build yelu/src/langs/ yelu/src/bin/yelu/ 2>/dev/null
+
+# Structural equivalence check for yelu programs against CMakeOnly reference files
+# Same gersemi-based normalization as check_cmake, but uses yelu/src/bin/yelu/ executables
+CMO = vendor/cmake/Tests/CMakeOnly
+
+define check_yelu
+	@bash -c '\
+	  if [ ! -s "$(2)" ]; then \
+	    echo "  SKIP $(1) -> $(2) (empty reference)"; \
+	  elif diff -B <($(DUNE) dune exec yelu/src/bin/yelu/$(1).exe 2>/dev/null | gersemi - 2>/dev/null) <(gersemi $(2) 2>/dev/null) > /dev/null 2>&1; then \
+	    echo "  OK   $(1) -> $(2)"; \
+	  else \
+	    echo "  FAIL $(1) -> $(2)"; \
+	    diff -B <($(DUNE) dune exec yelu/src/bin/yelu/$(1).exe 2>/dev/null | gersemi - 2>/dev/null) <(gersemi $(2) 2>/dev/null) | head -20; \
+	    echo "$(1)" >> /tmp/tola-cmake-check-failures; \
+	  fi'
+endef
+
+cmake-only-check: dune-build-yelu
+	@rm -f /tmp/tola-cmake-check-failures
+	@echo "=== CMakeOnly structural equivalence check ==="
+	$(call check_yelu,target_scope,$(CMO)/TargetScope/CMakeLists.txt)
+	$(call check_yelu,target_scope_sub,$(CMO)/TargetScope/Sub/CMakeLists.txt)
+	$(call check_yelu,target_scope_sub_sub,$(CMO)/TargetScope/Sub/Sub/CMakeLists.txt)
+	$(call check_yelu,target_scope_sib,$(CMO)/TargetScope/Sib/CMakeLists.txt)
+	@bash -c 'if [ -f /tmp/tola-cmake-check-failures ]; then \
+	  echo "=== FAILED: $$(cat /tmp/tola-cmake-check-failures | tr "\n" " ")==="; \
+	  rm -f /tmp/tola-cmake-check-failures; \
+	  exit 1; \
+	else \
+	  echo "=== All checks passed ==="; \
+	fi'
+
+.PHONY: build build-cmake build-yelu test test-pp test-yc cmake-check cmake-only-check \
+        file-api-test build-check test-all dune-build-cmake dune-build-yelu \
         step1 step1_run step2 step3 step4 step5 step6 step7 step8 \
         step9 step10 step11 step12
 

@@ -60,6 +60,9 @@ let add_exe ?(sources = []) name =
 let add_lib ?(exclude_from_all = false) ?type_ ?(sources = []) name =
   Yc_add_library { name; type_; exclude_from_all; sources }
 
+let add_lib_imported ?(global = false) ?lib_type name =
+  Yc_add_library_imported { name; lib_type; global }
+
 let include_dirs target items =
   Yc_target_include_directories { target; items }
 

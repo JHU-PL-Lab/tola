@@ -109,6 +109,7 @@ let string_of_library_type = function
   | Lib_global -> "GLOBAL"
 
 let string_of_supported_lang = function
+  | Lang_none -> "NONE"
   | Lang_c -> "C"
   | Lang_cxx -> "CXX"
   | Lang_csharp -> "CSharp"
@@ -223,6 +224,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                exclude_from_all;
                sources = List.map ~f:(erase_arg_s env) sources;
              }) )
+  | Yc_add_library_imported { name; lib_type; global } ->
+      let env = try_declare_target env name in
+      (env, Project_cmd (Add_library_imported { name = erase_arg_s env name; lib_type; global }))
   | Yc_target_include_directories { target; items } ->
       check_arg env target;
       List.iter items ~f:(check_items_with_kind env);

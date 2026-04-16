@@ -38,6 +38,7 @@ type library_type =
 type target_kind = Public | Private | Interface
 
 type supported_lang =
+  | Lang_none
   | Lang_c
   | Lang_cxx
   | Lang_csharp
@@ -94,6 +95,7 @@ type yelu_exp =
       exclude_from_all : bool;
       sources : yarg list;
     }
+  | Yc_add_library_imported of { name : yarg; lib_type : string option; global : bool }
   | Yc_target_include_directories of {
       target : yarg;
       items : yelu_items_with_kind list;

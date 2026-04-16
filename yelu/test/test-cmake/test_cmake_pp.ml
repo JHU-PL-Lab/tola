@@ -48,7 +48,7 @@ let conditions =
   ( "conditions",
     [
       check "if cond_var"
-        "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  \nendif()\n"
+        "if (USE_MYMATH)\n  set(X 1 )\nendif()\n"
         (ifthen [ "USE_MYMATH" ] (set "X" [ str_ "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
@@ -56,22 +56,22 @@ let conditions =
            (set "X" [ str_ "1" ])
            (set "X" [ str_ "0" ]));
       check "if and"
-        "if (HAVE_LOG AND HAVE_EXP)\n  break()\nelse()\n  \nendif()\n"
+        "if (HAVE_LOG AND HAVE_EXP)\n  break()\nendif()\n"
         (ifthen [ "HAVE_LOG"; "AND"; "HAVE_EXP" ] Break);
       check "if not"
-        "if (NOT DEFINED)\n  break()\nelse()\n  \nendif()\n"
+        "if (NOT DEFINED)\n  break()\nendif()\n"
         (ifthen [ "NOT"; "DEFINED" ] Break);
       check "if or"
-        "if (A OR B)\n  break()\nelse()\n  \nendif()\n"
+        "if (A OR B)\n  break()\nendif()\n"
         (ifthen [ "A"; "OR"; "B" ] Break);
       check "is_target"
-        "if (TARGET SqrtLibrary)\n  break()\nelse()\n  \nendif()\n"
+        "if (TARGET SqrtLibrary)\n  break()\nendif()\n"
         (ifthen [ "TARGET"; "SqrtLibrary" ] Break);
       check "is_defined"
-        "if (DEFINED MY_VAR)\n  break()\nelse()\n  \nendif()\n"
+        "if (DEFINED MY_VAR)\n  break()\nendif()\n"
         (ifthen [ "DEFINED"; "MY_VAR" ] Break);
       check "in_list"
-        "if (x IN_LIST mylist)\n  break()\nelse()\n  \nendif()\n"
+        "if (x IN_LIST mylist)\n  break()\nendif()\n"
         (ifthen [ "x"; "IN_LIST"; "mylist" ] Break);
     ] )
 

@@ -499,6 +499,7 @@ and project_cmd =
       type_ : string option;
       sources : file list;
     }
+  | Add_library_imported of { name : string; lib_type : string option; global : bool }
   | Add_library_object of { name : string; sources : file list }
   | Add_library_interface of { name : string }
   | Add_library_alias of { name : string; target : target }
