@@ -6,5 +6,7 @@
   step10 step10_math step11 step11_math step11_config
   step12 step12_math step12_multi
   target_scope target_scope_sub target_scope_sub_sub target_scope_sib
-  link_interface_loop)
+  link_interface_loop
+  find_path
+  find_library)
  (libraries base yelu_langs step_common))

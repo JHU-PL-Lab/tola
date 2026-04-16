@@ -7,6 +7,7 @@ let ycs_to_s = function
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
 let ytruthy arg = Ytruthy arg
+let ystrequal a b = Ystrequal (a, b)
 let yvar s = Yarg_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
 let ycstr s = Yarg_cvar (Ycvar s)
@@ -114,6 +115,12 @@ let yc_set_target_properties target properties =
 
 let yc_set_property ~targets properties =
   Yc_set_property { targets; properties }
+
+let yc_set_global_property properties =
+  Yc_set_global_property { properties }
+
+let yc_get_filename_component ~mode var filename =
+  Yc_get_filename_component { var; filename; mode }
 
 (* install *)
 let yc_install_targets ?export targets destination =

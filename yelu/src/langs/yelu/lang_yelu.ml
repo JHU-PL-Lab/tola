@@ -79,6 +79,7 @@ type yelu_cond =
   | Yor of yelu_cond * yelu_cond
   | Yis_target of yarg
   | Yis_defined of yarg
+  | Ystrequal of yarg * yarg
 
 type yelu_exp =
   | Yc_minimum_required of { min : version; max : version option }
@@ -148,6 +149,8 @@ type yelu_exp =
       targets : yarg list;
       properties : (property_key * yarg) list;
     }
+  | Yc_set_global_property of { properties : (property_key * yarg) list }
+  | Yc_get_filename_component of { var : yarg; filename : yarg; mode : string }
   (* install *)
   | Yc_install_targets of {
       targets : yarg list;

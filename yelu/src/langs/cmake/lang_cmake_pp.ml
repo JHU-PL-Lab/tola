@@ -494,11 +494,10 @@ let rec pp ff e =
           (fun ff dir ->
             if String.length dir > 0 then pf ff " DIRECTORY %s" dir)
           directory string property)
-  | Get_filename_component { var; filename; mode = _; cache } ->
+  | Get_filename_component { var; filename; mode; cache } ->
       Fmt.(
-        pf ff "get_filename_component(%a %a%a)" pp_var var string filename
-          (pp_flag "CACHE")
-          cache)
+        pf ff "get_filename_component(%a %a %s%a)" pp_var var string filename
+          mode (pp_flag "CACHE") cache)
   | Set { var; values; parent_scope } ->
       Fmt.(
         pf ff "set(%a %a %a)" pp_var var (list_sp pp_arg) values pp_parent_scope
@@ -550,10 +549,13 @@ let rec pp ff e =
             if String.length f > 0 then pf ff " INSTALL %s" f)
           install (pp_flag "VARIABLE") variable string property_name
           (pp_flag "SET") set)
-  | Set_property { targets; properties; _ } ->
-      Fmt.(
-        pf ff "set_property(TARGET %a@;PROPERTY %a)" (list_sp pp_target) targets
-          (list_sp pp_property) properties)
+  | Set_property { global; targets; properties; _ } ->
+      if global then
+        Fmt.(pf ff "set_property(GLOBAL@;PROPERTY %a)" (list_sp pp_property) properties)
+      else
+        Fmt.(
+          pf ff "set_property(TARGET %a@;PROPERTY %a)" (list_sp pp_target) targets
+            (list_sp pp_property) properties)
   (* info and debug *)
   | Site_name { var } -> Fmt.(pf ff "site_name(%a)" pp_var var)
   | Variable_watch { var; access = _; value = _; _ } ->

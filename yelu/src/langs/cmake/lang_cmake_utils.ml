@@ -201,6 +201,9 @@ let enable_testing = Project_cmd Enable_testing
 let add_test ?dir name command args =
   Project_cmd (Add_test { name; command; args; dir })
 
+let get_filename_component ?(cache = false) ~mode var filename =
+  Get_filename_component { var; filename; mode; cache }
+
 let set_property ?(global = false) ?(directory = []) ?(targets = [])
     ?(sources = []) ?(source_directories = []) ?(source_target_directories = [])
     ?(installs = []) ?(tests = []) ?(test_directories = []) ?(caches = [])

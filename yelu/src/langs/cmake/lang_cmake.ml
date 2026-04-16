@@ -313,7 +313,7 @@ and exp =
   | Get_filename_component of {
       var : var;
       filename : path;
-      mode : bool;
+      mode : string;   (* DIRECTORY | NAME | EXT | NAME_WE | PATH | ABSOLUTE | REALPATH *)
       cache : bool;
     }
   (* | Set of { var_value_pairs : (var * arg) list; parent_scope : bool } *)

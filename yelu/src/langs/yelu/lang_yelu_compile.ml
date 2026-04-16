@@ -147,6 +147,7 @@ let rec erase_cond env : yelu_cond -> string list = function
   | Yor (a, b) -> erase_cond env a @ [ "OR" ] @ erase_cond env b
   | Yis_target arg -> [ "TARGET"; erase_arg_s env arg ]
   | Yis_defined arg -> [ "DEFINED"; erase_arg_s env arg ]
+  | Ystrequal (a, b) -> [ erase_arg_s env a; "STREQUAL"; erase_arg_s env b ]
 
 let erase_property env (prop, value) : Lang_cmake.property =
   { prop; value = erase_arg env value }
@@ -173,6 +174,9 @@ let rec check_cond env = function
       check_cond env b
   | Yis_target arg -> check_arg env arg
   | Yis_defined _ -> () (* DEFINED checks existence, no warning *)
+  | Ystrequal (a, b) ->
+      check_arg env a;
+      check_arg env b
 
 let check_items_with_kind env { kind = _; items } =
   List.iter items ~f:(check_arg env)
@@ -435,6 +439,36 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             append = false;
             append_string = false;
             properties = List.map ~f:(erase_property env) properties;
+          } )
+  | Yc_set_global_property { properties } ->
+      List.iter properties ~f:(fun (_, v) -> check_arg env v);
+      ( env,
+        Set_property
+          {
+            global = true;
+            directory = [];
+            targets = [];
+            sources = [];
+            source_directories = [];
+            source_target_directories = [];
+            installs = [];
+            tests = [];
+            test_directories = [];
+            caches = [];
+            append = false;
+            append_string = false;
+            properties = List.map ~f:(erase_property env) properties;
+          } )
+  | Yc_get_filename_component { var; filename; mode } ->
+      check_arg env var;
+      check_arg env filename;
+      ( env,
+        Get_filename_component
+          {
+            var = erase_arg_s env var;
+            filename = erase_arg_s env filename;
+            mode;
+            cache = false;
           } )
   (* install *)
   | Yc_install_targets { targets; destination; export } ->
