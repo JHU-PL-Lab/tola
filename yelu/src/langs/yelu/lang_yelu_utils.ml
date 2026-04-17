@@ -260,3 +260,7 @@ let yc_string_make_c_identifier string out =
 
 let yc_string_timestamp ?(utc = false) ?format out =
   Yc_string_timestamp { out; format; utc }
+
+(* math *)
+let yc_math ?(output_format = Lang_cmake.Decical) exp out =
+  Yc_math { exp; out; output_format }

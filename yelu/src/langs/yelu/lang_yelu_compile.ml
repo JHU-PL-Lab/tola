@@ -81,6 +81,13 @@ let rec erase_arg env = function
           if String.equal s (Fmt.str "${%s}" var) then
             Fmt.epr "Hint: use typed primitive instead of yraw \"${%s}\"@." var);
       Lang_cmake.Quoted s
+  | Yarg_string (Ycs_val s) ->
+    (* Empty string must be Quoted so cmake sees "" rather than nothing.
+       Strings containing "$<" must be quoted so cmake does not try to
+       evaluate them as generator expressions. *)
+    if String.is_empty s || String.is_substring s ~substring:"$<"
+    then Lang_cmake.Quoted s
+    else Lang_cmake.Bare s
   | Yarg_string ycs -> Lang_cmake.Bare (ycs_to_s ycs)
   | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
@@ -140,6 +147,20 @@ let erase_target_feature ({ kind; feature } : yelu_target_feature) :
     Lang_cmake.target_feature =
   { kind = string_of_kind kind; feature }
 
+(* Quote a string for use as a cmake if() condition operand.
+   - Empty strings would disappear unquoted, becoming no argument.
+   - Strings with semicolons are split into multiple tokens by cmake.
+   - Strings with whitespace are split into multiple tokens by cmake.
+   - Variable expansions "${VAR}" need quoting so the expanded value is
+     treated as a single string even when it contains semicolons (i.e. a list). *)
+let cmake_quote_cond s =
+  if String.is_empty s
+  || String.exists s ~f:(Char.equal ';')
+  || String.exists s ~f:Char.is_whitespace
+  || String.is_substring s ~substring:"${"
+  then Fmt.str "\"%s\"" s
+  else s
+
 let rec erase_cond env : yelu_cond -> string list = function
   | Ytruthy arg -> [ erase_arg_s env arg ]
   | Ynot c -> "NOT" :: erase_cond env c
@@ -147,7 +168,10 @@ let rec erase_cond env : yelu_cond -> string list = function
   | Yor (a, b) -> erase_cond env a @ [ "OR" ] @ erase_cond env b
   | Yis_target arg -> [ "TARGET"; erase_arg_s env arg ]
   | Yis_defined arg -> [ "DEFINED"; erase_arg_s env arg ]
-  | Ystrequal (a, b) -> [ erase_arg_s env a; "STREQUAL"; erase_arg_s env b ]
+  | Ystrequal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a);
+      "STREQUAL";
+      cmake_quote_cond (erase_arg_s env b) ]
 
 let erase_property env (prop, value) : Lang_cmake.property =
   { prop; value = erase_arg env value }
@@ -879,6 +903,12 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
           (Sc_make_c_identifier { string = erase_arg env string; out }) )
   | Yc_string_timestamp { out; format; utc } ->
       (env, String_cmd (Sc_timestamp { out; format; utc }))
+  | Yc_math { exp; out; output_format } ->
+      ( env,
+        Math_lib
+          { var = out;
+            exp = Quote (Printf.sprintf "\"%s\"" exp);
+            output_format } )
 
 and compile_list env exps =
   let env, rev_cmds =

@@ -307,3 +307,9 @@ type yelu_exp =
     }
   | Yc_string_make_c_identifier of { string : yarg; out : string }
   | Yc_string_timestamp of { out : string; format : string option; utc : bool }
+  (* math *)
+  | Yc_math of {
+      exp : string;
+      out : string;
+      output_format : Lang_cmake.math_output_format;
+    }
