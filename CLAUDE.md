@@ -88,43 +88,17 @@ opam switch conflicts.
 20. **Symbol diff between lib versions** — extend `assert_binary_symbols.py`
     with `--provided-lib-old / --provided-lib-new` mode. Foundation for #16.
 
-24. **Unified canary project spec** — naming and paths are scattered and
-    inconsistent across projects. Everything should live in the project spec:
-    - Local opam repo: `"local-z3-dev"` (z3) vs `"local-llvm"` (llvm) → `"local-canary"`
-    - Env vars: `CANARY_BUILD_DIR` (z3) vs `CANARY_LLVM_BUILD` (llvm) → single convention
-    - Build dir layout: z3 uses `<source>/build` (in-tree) vs llvm uses sibling `../build`
-    - All configurable paths (source root, build dir, local repo path) should be
-      derivable from the spec so `mk_script_spec` has no hardcoded locations.
-    - `z3/stable` fetch_binding resolves to `z3.dev` (local repo rank 1 shadows
-      upstream); need a real stable z3 opam version or deregister local repo
-      for the stable probe to be meaningful.
-
 25. **Model `cmake --install` as canary action slot** — `install_lib` /
     `install_binding` between `build_*` and `pack_binding`. See
     `doc/canary/install_target_survey.md` for Z3 vs LLVM patterns.
 
-26. **Idempotent step execution** — canary cache (`_out/`) and external state
-    (build tree, opam switch) are independent stores; deleting `_out/` causes
-    all steps to re-run even when artifacts already exist. Fix: each step should
-    check for existing artifacts before executing. Examples:
-    - `configure`: `test -f <build>/CMakeCache.txt || cmake ...` (re-running cmake
-      updates timestamps → ninja considers generated targets stale → partial rebuild)
-    - `build_lib/binding`: `test -f <artifact> || ninja ...`
-    - `fetch_binding/pack_binding`: `opam list pkg.version | grep -q installed || opam install ...`
-    Same pkg+version = same content in opam, so pre-check is always safe.
-
-Backlog (lower priority): #5, #9, #10, #11, #13b, #14, #16, #17, #18, #22.
+Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28.
 Details in `doc/canary/backlog.md`.
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #12, #13, #15, #21, #23. Details in
+Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #26. Details in
 `doc/canary/worklog_2026_04.md`.
-
-- **#23** — LLVM source build end-to-end via canary: `canary action llvm`
-  runs all 11 steps (fetch_source, configure, build_lib, fetch_lib,
-  build_binding, fetch_binding, pack_binding, probe_lib, probe_binding_build,
-  probe_binding_pkg, probe_app). `llvm/19` sub-run demonstrates mismatch.
 
 ## Other Work: Yelu
 
@@ -153,10 +127,16 @@ rest of this file.
   ocamlfind loads the opam version while `-I` adds build tree `.cmi`
   files. For build tree probes, use `-package zarith` (dep only) +
   explicit `z3ml.cmxa`, not `-package z3`.
-- **opam sandbox on WSL**: `wrap-build-commands` is empty by default
-  on WSL (`opam option wrap-build-commands` = `[]`). On GH CI (Ubuntu),
-  sandbox is active — `CANARY_BUILD_DIR` pointing outside the sandbox
-  will be blocked. CI should use the default `build` fallback (no env var).
+- **opam sandbox is active on WSL**: `wrap-build-commands` is set
+  globally to `[sandbox.sh "build"]` even on WSL — bwrap IS active.
+  The switch-level `opam option wrap-build-commands` returns `[]` but
+  that is the switch override (empty = inherit global), not a disable.
+  bwrap mounts the home directory **read-only**: external paths like
+  `CANARY_BUILD_DIR` are readable but not writable. Fix: guard cmake
+  invocations with `test -f <artifact> || cmake ...` so cmake is skipped
+  when artifacts already exist (canary has built them). CI also works:
+  no `CANARY_BUILD_DIR` set, so `B=build` (local to sandbox), cmake
+  runs fresh in a writable local dir.
 - **ELF symbol versioning in nm output**: Linux shared libs (e.g., LLVM)
   use versioned symbols — `nm -D` outputs `LLVMAddAlias2@@LLVM_19.1`
   not `LLVMAddAlias2`. `assert_binary_symbols.py` regex must allow
@@ -172,8 +152,10 @@ rest of this file.
   `ocamlfind install` to `lib/llvm/`, it resolves to the switch root ✗.
   Fix: append `linkopts = "-cclib -L<BUILD>/lib -cclib -Wl,-rpath,<BUILD>/lib"`
   to META. Proper fix (TODO #25): run `cmake --install` which regenerates cmxa.
-- **`mktemp /tmp/...` blocked in opam sandbox**: opam's bwrap sandbox does
-  not mount `/tmp`. Use `./name` (current dir = opam build dir) directly.
+- **`mktemp` in opam sandbox uses `/opam-tmp`, not `/tmp`**: bwrap sets
+  `TMPDIR=/opam-tmp` (a tmpfs), so `mktemp` goes there. `/tmp` itself IS
+  mounted rw (`--bind /tmp /tmp`), so explicit `/tmp/foo` paths work. Use
+  `./name` (current dir = opam build dir, also rw) for simplicity.
 - **`build_z3_ocaml_bindings` is a cmake PHONY target**: `add_custom_target`
   in cmake always generates a PHONY ninja target — ninja never considers it
   up-to-date and always reruns it. Deleting the canary `_out/` cache causes

@@ -253,3 +253,221 @@ llvm use these instead of inline logic.
 - `opam list --installed-roots` misses transitive deps; use `--installed`
 - opam `eval $(opam env)` prefix hardcodes default switch; needs
   `--switch=<name>` for per-switch targeting
+
+---
+
+## Session 4 (2026-04-14 to 2026-04-16)
+
+### Done
+
+**#23 LLVM source build end-to-end** — `canary action llvm` now runs all
+11 action steps (fetch_source → configure → build_lib → fetch_lib →
+build_binding → fetch_binding → pack_binding → probe_lib →
+probe_binding_build → probe_binding_pkg → probe_app). First fully
+end-to-end source-build path for LLVM, passing on WSL.
+
+**`pack_binding` for LLVM** — registers local opam repo, installs
+`conf-llvm-shared.dev` (writes build-tree `llvm-config` path via
+`CANARY_LLVM_BUILD`), then installs `llvm.dev-shared` (copies archives,
+strips `directory` from META, appends `linkopts` for rpath). Writes
+`pack.ok` marker. `Publish Binding` case added to `check_post`.
+
+**Multi-version mismatch probe (llvm/19)** — two sequential
+`action_steps` invocations sharing one opam switch:
+
+| Sub-run | Lib | Binding | Example | Expected |
+|---------|-----|---------|---------|----------|
+| `llvm` | dev source build | `llvm.dev-shared` (packed) | `llvm_example_dev.ml` | pass |
+| `llvm/19` | `llvm-19-dev` (apt) | `llvm.19-shared` (opam) | `llvm_example_dev.ml` | **fail** |
+
+`llvm_example_dev.ml` uses `Opcode.UncondBr` (introduced in LLVM 21,
+March 2026, commit #186176 — `Opcode.Br` split into `UncondBr` +
+`CondBr`). Against `llvm.19-shared` it fails to compile — clean
+OCaml-level API mismatch, no expect-failure infrastructure needed.
+Same sequential pattern applied to z3 + z3/stable.
+
+**`has_build_binding = false` for stable sources** — skips
+configure/build_binding/pack_binding; only fetch_lib + fetch_binding +
+probe steps run. Applied to `llvm_source_stable` and `z3_source_stable`.
+
+**`llvm_source_stable` uses local WSL path** — `fetch_source` emits
+`test -d <path>` (instant existence check, no clone). Source at
+`/home/red/code/contrib/llvm-all/llvm-project`.
+
+**New opam packages** under `canary/templates/opam-local-repo/`:
+- `conf-llvm-shared.dev` — writes config from `$CANARY_LLVM_BUILD`
+- `llvm.dev-shared` — build-tree artifacts + patched META
+- `llvm.19-shared` / `conf-llvm-shared.19` — system LLVM 19 bindings
+
+**New example files**:
+- `llvm_example_dev.ml` — uses `Opcode.UncondBr`; fails against LLVM 19
+- `llvm_example_19.ml` — uses `Opcode.Br`; fails against dev binding
+- `llvm_example_15.ml` — uses `global_context ()`; fails against LLVM 16+
+
+**`run_info` exposed per-project** — `canary action llvm/z3` calls
+`run_info` for each sub-run; `~source_repo` optional arg for header.
+
+**`run_z3` / `run_llvm` in `canary_main.ml`** — each runs dev then
+stable/19 sub-run sequentially (sequential execution avoids opam switch
+state conflicts).
+
+**New documentation**:
+- `doc/canary/install_target_survey.md` — Z3 vs LLVM cmake install
+  patterns; 3 canonical patterns; failure modes. Informs TODO #25.
+- `doc/canary/llvm_build_note.md` — full LLVM source build steps,
+  smoke test, opam install notes.
+- `doc/canary/backlog.md` — lower-priority TODOs (#5, #9–#11,
+  #13b, #14, #16–#18, #22).
+
+### Gotchas discovered
+
+- **`build_z3_ocaml_bindings` is PHONY**: cmake `add_custom_target` →
+  ninja never considers it up-to-date → always reruns. Deleting canary
+  `_out/` cache re-runs cmake, touching `CMakeFiles/` timestamps →
+  cascades into full z3 rebuild (~863 steps). LLVM's `LLVM` target
+  builds concrete `libLLVM.so` → ninja skips correctly.
+- **`$CAMLORIGIN/../..` breaks in flat opam layout**: LLVM's `llvm.cmxa`
+  embeds a relative rpath that resolves correctly in the build tree
+  (`build/lib/ocaml/llvm/ → build/lib/`) but not after `ocamlfind install`.
+  Fix: append `linkopts = "-cclib -L<BUILD>/lib -cclib -Wl,-rpath,<BUILD>/lib"`
+  to META in `llvm.dev-shared/opam`.
+- **`mktemp /tmp/...` blocked in opam sandbox** (CI-relevant): bwrap
+  doesn't mount `/tmp`. Use `./META` (opam build dir) instead.
+- **z3/stable resolved to `z3.dev`**: Local opam repo (rank 1) shadowed
+  upstream — `opam install z3` picked the local dev version. Fixed by
+  pinning to `opam install z3.4.15.2` in `fetch_binding` for the stable
+  path. Root cause: unversioned `opam install <pkg>` lets the solver
+  prefer rank-1 repo entries regardless of version name.
+- **OCaml optional arg semantics**: `?(label : T)` means caller passes
+  `T`; OCaml wraps it in `Some`. Pass `~source_repo:llvm_source_stable`,
+  not `~source_repo:(Some llvm_source_stable)`.
+- **`Publish Binding` not `Pack Binding`**: The `rule` type constructor
+  is `Publish of artifact_kind`; `Pack` does not exist.
+
+### Open TODOs after this session
+
+| # | Summary |
+|---|---------|
+| #19 | LLVM cross-version C symbol check (OCaml API mismatch demonstrated; C level pending) |
+| #20 | `assert_binary_symbols.py` `--provided-lib-old/new` mode |
+| #24 | Unified project spec — local repo naming, env vars, build dir layout, z3/stable shadowing |
+| #25 | Model `cmake --install` as canary action slot (`install_lib` / `install_binding`) |
+| #26 | Idempotent step execution — artifact pre-checks for cmake/ninja/opam |
+
+---
+
+## Session 5 (2026-04-16)
+
+### Done
+
+**#24 Unified canary project spec** — all naming and path inconsistencies
+resolved:
+
+- **`build_path` in `local_path`** — new field is the source of truth for
+  the build directory associated with a local checkout. `mk_locals` computes
+  it from a `build_dir` relative path (default `"../build"`, sibling layout).
+  `mk_script_spec` in both z3 and llvm now reads `local.build_path` directly;
+  no project-specific derivation functions remain.
+
+- **Build dir layout unified** — both z3 and llvm use sibling `../build`
+  convention. z3's old in-tree `<source>/build` abandoned; new build path
+  is `/home/red/code/contrib/z3-all/build`.
+
+- **`CANARY_BUILD_DIR` unified** — `CANARY_LLVM_BUILD` renamed everywhere
+  (ml scripts + opam templates `conf-llvm-shared.dev`, `llvm.dev-shared`).
+  z3's `opam.in` already used `CANARY_BUILD_DIR`; now consistent across all.
+
+- **`"canary-local"` unified** — all three projects (z3, llvm, sqlite) use
+  the same local opam repo name, matching the single
+  `canary/templates/opam-local-repo/` directory that hosts all packages.
+
+- **z3/stable shadowing fixed** — `fetch_binding` for z3/stable now installs
+  `z3.4.15.2` (pinned), not `z3` (unversioned). Unversioned install let
+  opam's solver prefer `z3.dev` from rank-1 `canary-local` over the upstream
+  stable release. LLVM's stable path was already correct (`llvm.19-shared`
+  is an explicit name only in `canary-local`; no upstream collision possible).
+
+### Open TODOs after this session
+
+| # | Summary |
+|---|---------|
+| #19 | LLVM cross-version C symbol check (C level pending) |
+| #20 | `assert_binary_symbols.py` `--provided-lib-old/new` mode |
+| #25 | Model `cmake --install` as canary action slot |
+| #26 | Idempotent step execution — artifact pre-checks for cmake/ninja/opam |
+
+---
+
+## Session 6 (2026-04-17)
+
+### Done
+
+**#26 — Action state detection (complete)**
+
+`check_post` now covers all action slots with external-state probes,
+so canary skips steps whose results are already satisfied — even when
+`_out/` markers are absent.
+
+- **`Configure`** — added to both z3 and llvm `check_post`:
+  `check_markers ["configure.ok"] || Sys.file_exists "<build>/CMakeCache.txt"`.
+  Prevents cmake re-runs (which update timestamps → trigger PHONY ninja
+  rebuild of `build_z3_ocaml_bindings`) when the build dir is already
+  configured and `_out/` was cleared.
+
+- **`Build_lib` / `Build_binding`** — already covered (prior session):
+  `check_build_lib` / `check_build_binding` check artifact existence
+  (`libz3.so`, `z3ml.cmxa`, `libLLVM.so`, `llvm.cmxa`).
+
+- **`Fetch Binding` / `Publish Binding`** — already covered (prior session):
+  `|| Canary_pm_opam.is_installed ~pkg` so opam steps are skipped when
+  the package is already installed.
+
+**z3 `pack_binding` opam sandbox fixes**
+
+Root cause: opam's bwrap sandbox mounts the entire filesystem read-only
+except `$PWD` (opam build dir). External `CANARY_BUILD_DIR` is readable
+but not writable.
+
+- **`CANARY_SRC_DIR`** — new env var passed alongside `CANARY_BUILD_DIR`
+  in z3's `pack_binding`. The z3.dev opam template uses
+  `cmake -S $S -B $B` (was `-B $B` only), matching the existing cmake cache
+  source path and avoiding "source mismatch" errors.
+
+- **Build guard in z3.dev opam template** — cmake+ninja are now wrapped:
+  `if [ -f "$B/src/api/ml/z3ml.cmxa" ]; then echo skip; else cmake ... && ninja ...; fi`.
+  When artifacts exist (canary already ran `build_binding`), cmake is skipped
+  entirely — no writes to the read-only external path needed.
+  On CI (`$B=build`, local to sandbox), cmake runs normally in a writable dir.
+
+**`dev_<hash>` cache paths**
+
+`version_cache_tag distro repo` added to `canary_store.ml`: for `ref_="HEAD"`
+repos, shells `git rev-parse --short=6 HEAD` in the local checkout and returns
+`"dev_abc123"`. Stable refs return `repo.version` unchanged.
+
+`canary_main.ml` and `canary_run.ml` updated: dev sub-runs use
+`"llvm/dev_<hash>"` / `"z3/dev_<hash>"` as project names, producing
+`_local/llvm/dev_ab43cb8/` layout. Sibling stable runs (`llvm/19`, `z3/stable`)
+are unaffected.
+
+**Opam sandbox correctness**
+
+`wrap-build-commands` is active globally (includes `sandbox.sh` + bwrap on
+Linux) — the switch-level `[]` is an "inherit global" marker, not a disable.
+bwrap mounts all of `/` read-only except `$PWD` (rw), `/tmp` (rw bind),
+ccache/dune-cache dirs (rw). `TMPDIR` is redirected to `/opam-tmp` (tmpfs).
+Two CLAUDE.md gotchas corrected.
+
+**Backlog additions**
+
+- **#27** — opam template taxonomy: distinguish "build from source" vs
+  "install pre-built" templates by convention.
+- **#28** — lift shared `pack_binding` preamble into `Canary_ocaml.opam_pack_cmd`.
+
+### Open TODOs after this session
+
+| # | Summary |
+|---|---------|
+| #19 | LLVM cross-version C symbol check (C level pending) |
+| #20 | `assert_binary_symbols.py` `--provided-lib-old/new` mode |
+| #25 | Model `cmake --install` as canary action slot |

@@ -26,7 +26,9 @@ let llvm_source_dev : source_repo =
     remote = Git_remote "https://github.com/arbipher/llvm-project.git";
     locals =
       [
-        { distro = Wsl; path = "/home/red/code/contrib/llvm-all/llvm-project" };
+        { distro = Wsl;
+          path = "/home/red/code/contrib/llvm-all/llvm-project";
+          build_path = "/home/red/code/contrib/llvm-all/build" };
       ];
     version = "dev";
     ref_ = "HEAD";
@@ -43,7 +45,9 @@ let llvm_source_stable : source_repo =
        We don't build from it (has_build_lib=false, has_build_binding=false). *)
     locals =
       [
-        { distro = Wsl; path = "/home/red/code/contrib/llvm-all/llvm-project" };
+        { distro = Wsl;
+          path = "/home/red/code/contrib/llvm-all/llvm-project";
+          build_path = "/home/red/code/contrib/llvm-all/build" };
       ];
     version = "19";
     ref_ = "llvmorg-19.1.7";
@@ -69,17 +73,8 @@ let llvm_source_latest : source_repo =
 
 let llvm_sources = [ llvm_source_dev; llvm_source_stable; llvm_source_latest ]
 
-(* The build dir is outside the source tree for LLVM monorepo.
-   z3 uses <root>/build; LLVM uses a sibling dir to keep the monorepo clean.
-   This matches the user's local layout: llvm-all/llvm-project + llvm-all/build *)
-let build_dir_of_source distro (src : source_repo) =
-  match source_root distro src with
-  | Some p ->
-      (* local: sibling build dir *)
-      Stdlib.Filename.dirname p ^ "/build"
-  | None ->
-      (* clone-on-demand: build inside canary cache *)
-      [%string "_out/canary/_local/llvm/%{src.version}_%{src.ref_}/build"]
+(* Opam package names used in pack_binding and check_post *)
+let llvm_dev_opam_pkg = "llvm.dev-shared"
 
 (* cmake source dir: the llvm/ subdir of the monorepo *)
 let cmake_source_of_root root = root ^ "/llvm"
@@ -93,7 +88,7 @@ let llvm_ocaml_config : ocaml_tool_config =
         prefix_envar = "${LLVM_PREFIX}";
         libdir_name = "LLVM_LIB_DIR";
         libdir_var = "$LLVM_LIB_DIR";
-        local_repo_name = "local-llvm";
+        local_repo_name = "canary-local";
         package_name = "llvm";
         package_version = "system";
         canary_src_var = "CANARY_LLVM_SRC";
@@ -314,13 +309,19 @@ let cmake_configure_cmd ~source_root ~build_dir =
   -DLLVM_ENABLE_ASSERTIONS=OFF|}]
 
 let mk_script_spec ~source distro : Canary_action.script_spec =
+  let local = local_for distro source in
   let root =
-    match source_root distro source with
-    | Some p -> p
+    match local with
+    | Some l -> l.path
     | None ->
         [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/src"]
   in
-  let build = build_dir_of_source distro source in
+  let build =
+    match local with
+    | Some l -> l.build_path
+    | None ->
+        [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/build"]
+  in
   let pm = Canary_store.detect_pm () in
   let target = llvm_ocaml_config.ocaml.example_target in
   (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); it will fail to
@@ -377,9 +378,9 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
 opam repo add %{repo_name} "file://%{repo_abs}" --rank=1 \
   || opam repo set-url %{repo_name} "file://%{repo_abs}"
 opam update %{repo_name}
-CANARY_LLVM_BUILD="%{build}" opam install -y conf-llvm-shared.dev --assume-depexts
+CANARY_BUILD_DIR="%{build}" opam install -y conf-llvm-shared.dev --assume-depexts
 opam remove -y llvm.dev-shared || true
-CANARY_LLVM_BUILD="%{build}" opam install -y llvm.dev-shared \
+CANARY_BUILD_DIR="%{build}" opam install -y %{llvm_dev_opam_pkg} \
   --verbose --keep-build-dir --assume-depexts \
   && echo 'ok' > %{output_dir}/pack.ok|}])
        else None);
@@ -418,7 +419,7 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
   -o %{output_dir}/%{target}
 %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])
            else None);
-          (* Lang_pm: probe opam-installed binding (llvm.19-static) *)
+          (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
           Some
             (Lang_pm, fun ~output_dir ->
               [%string
@@ -431,6 +432,10 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
     check_post =
       (function
       | Fetch Source -> Some Canary_store.source_check_post
+      | Configure ->
+          Some (fun ~output_dir ->
+            Canary_artifact_check.check_markers [ "configure.ok" ] ~output_dir
+            || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
             (Canary_artifact_check.check_build_lib ~marker:"build.ok"
@@ -439,10 +444,17 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some
             (Canary_artifact_check.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/lib/ocaml/llvm/llvm.cmxa"])
+      | Fetch Binding ->
+          let pkg = prebuilt.opam_package_spec.install_name in
+          Some (fun ~output_dir ->
+            Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
+            || Canary_pm_opam.is_installed ~pkg)
       | Probe Binding ->
           Some (Canary_artifact_check.check_markers [ "probe.log" ])
       | Publish Binding ->
-          Some (Canary_artifact_check.check_markers [ "pack.ok" ])
+          Some (fun ~output_dir ->
+            Canary_artifact_check.check_markers [ "pack.ok" ] ~output_dir
+            || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
   }
 

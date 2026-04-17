@@ -101,7 +101,8 @@ type git_remote = Git_remote of string   (* url *)
 
 type local_path = {
   distro : distro;
-  path : string;
+  path : string;        (* source checkout root *)
+  build_path : string;  (* associated build dir — source of truth for this checkout *)
 }
 
 type source_repo = {
@@ -122,9 +123,11 @@ type source_repo = {
    ] *)
 let all_distros = [ Wsl; MacOS_local ]
 
-let mk_locals rel_path =
+let mk_locals ?(build_dir = "../build") rel_path =
   List.map all_distros ~f:(fun distro ->
-      { distro; path = distro_base distro ^ "/" ^ rel_path })
+      let path = distro_base distro ^ "/" ^ rel_path in
+      let build_path = path ^ "/" ^ build_dir in
+      { distro; path; build_path })
 
 (* Find the local checkout for a distro, if any *)
 let local_for distro (repo : source_repo) =
@@ -157,6 +160,32 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir =
          so build_lib etc. can find it via root_of_source *)
       let clone_dir = [%string "_out/canary/_local/%{repo.name}/%{repo.version}_%{ref_}/src"] in
       [%string "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/source.ok"]
+
+(* Compute a cache-path tag for a source repo.
+   For HEAD-tracking repos, appends the short commit hash so the cache
+   path is content-addressed and doesn't collide across checkouts.
+   e.g., version="dev", HEAD=abc123 → "dev_abc123"
+   Falls back to repo.version if the repo has no local checkout or git fails. *)
+let version_cache_tag distro (repo : source_repo) =
+  match repo.ref_ with
+  | "HEAD" -> begin
+      match local_for distro repo with
+      | Some l ->
+          let ic =
+            Unix.open_process_in
+              [%string "git -C %{l.path} rev-parse --short=6 HEAD 2>/dev/null"]
+          in
+          let result =
+            try Some (String.strip (Stdlib.input_line ic)) with End_of_file -> None
+          in
+          ignore (Unix.close_process_in ic);
+          (match result with
+           | Some h when not (String.is_empty h) ->
+               [%string "%{repo.version}_%{h}"]
+           | _ -> repo.version)
+      | None -> repo.version
+    end
+  | _ -> repo.version
 
 (* check_post for fetch_source: read source.ok and verify the path exists *)
 let source_check_post ~output_dir =

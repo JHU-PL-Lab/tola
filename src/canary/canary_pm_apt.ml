@@ -15,6 +15,9 @@ let remove_cmd ~pkg = [%string "sudo apt-get remove -y %{pkg}"]
 
 let verify_installed_cmd ~pkg = [%string "dpkg -s %{pkg}"]
 
+let is_installed ~pkg =
+  Stdlib.Sys.command ([%string "%{verify_installed_cmd ~pkg} >/dev/null 2>&1"]) = 0
+
 let query_version_cmd ~pkg =
   [%string "dpkg -s %{pkg} 2>/dev/null | grep '^Version:' | cut -d' ' -f2"]
 

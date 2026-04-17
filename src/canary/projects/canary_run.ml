@@ -136,17 +136,23 @@ let dump_job_paths_md () = dump_job_paths_with ~pp:pp_job_path_table_md
 let run_action_demo () =
   let root = "_out" in
   let distro = Canary_basic.detect_distro () in
+  let llvm_dev_tag =
+    Canary_store.version_cache_tag distro Canary_project_llvm.llvm_source_dev
+  in
+  let z3_dev_tag =
+    Canary_store.version_cache_tag distro Canary_project_z3.z3_source_dev
+  in
   Canary_action.run_project ~root ~project:"sqlite"
     (Canary_project_sqlite.action_steps ~root ~project:"sqlite");
-  Canary_action.run_project ~root ~project:"llvm"
-    (Canary_project_llvm.action_steps ~root ~project:"llvm" distro);
+  Canary_action.run_project ~root ~project:[%string "llvm/%{llvm_dev_tag}"]
+    (Canary_project_llvm.action_steps ~root ~project:[%string "llvm/%{llvm_dev_tag}"] distro);
   (* llvm/19: system lib + opam 19-shared binding + dev example → expected mismatch *)
   Canary_action.run_project ~root ~project:"llvm/19"
     (Canary_project_llvm.action_steps
        ~source:Canary_project_llvm.llvm_source_stable
        ~root ~project:"llvm/19" distro);
-  Canary_action.run_project ~root ~project:"z3"
-    (Canary_project_z3.action_steps ~root ~project:"z3" distro);
+  Canary_action.run_project ~root ~project:[%string "z3/%{z3_dev_tag}"]
+    (Canary_project_z3.action_steps ~root ~project:[%string "z3/%{z3_dev_tag}"] distro);
   (* z3/stable: system lib + opam z3 binding + dev example → mismatch path *)
   Canary_action.run_project ~root ~project:"z3/stable"
     (Canary_project_z3.action_steps

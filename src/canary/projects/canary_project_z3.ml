@@ -334,12 +334,12 @@ let prebuilt_packaged_spec distro : job_spec =
 (* ── Action steps (derived from script_spec) ── *)
 
 (* Resolve the native lib path based on whether we built it or fetched it.
-   build tree: {root}/build/libz3.so  (or .dylib)
+   build tree: {build}/libz3.so  (or .dylib)
    system PM:  discovered at runtime via pkg-config *)
-let lib_cmd_of_source ~has_build_lib ~root =
+let lib_cmd_of_source ~has_build_lib ~build =
   if has_build_lib then
     (* Static path — known at spec generation time *)
-    [%string {|LIB_Z3=$(ls %{root}/build/libz3.so %{root}/build/libz3.dylib 2>/dev/null | head -1)
+    [%string {|LIB_Z3=$(ls %{build}/libz3.so %{build}/libz3.dylib 2>/dev/null | head -1)
 test -n "$LIB_Z3"|}]
   else
     (* Dynamic discovery — resolved at probe runtime *)
@@ -348,11 +348,11 @@ test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3
 test -f "$LIB_Z3"|}
 
 (* Resolve the binding archive paths based on whether we built it.
-   build tree: {root}/build/src/api/ml/
+   build tree: {build}/src/api/ml/
    opam-installed: $(ocamlfind query z3)/ *)
-let binding_dir_cmd_of_source ~has_build_binding ~root =
+let binding_dir_cmd_of_source ~has_build_binding ~build =
   if has_build_binding then
-    [%string {|BINDING_DIR="%{root}/build/src/api/ml"
+    [%string {|BINDING_DIR="%{build}/src/api/ml"
 test -d "$BINDING_DIR"|}]
   else
     {|eval $(opam env)
@@ -360,17 +360,26 @@ BINDING_DIR=$(ocamlfind query z3 2>/dev/null)
 test -d "$BINDING_DIR"|}
 
 let mk_script_spec ~source distro : Canary_action.script_spec =
-  let root = root_of_source distro source in
+  let local = local_for distro source in
+  let root =
+    match local with
+    | Some l -> l.path
+    | None -> [%string "_out/canary/_local/z3/%{source.version}_%{source.ref_}/src"]
+  in
+  let build =
+    match local with
+    | Some l -> l.build_path
+    | None -> [%string "_out/canary/_local/z3/%{source.version}_%{source.ref_}/build"]
+  in
   let pm = Canary_store.detect_pm () in
   let example =
     Unix.getcwd () ^ "/" ^ z3_ocaml_config.ocaml.example_file
   in
   let target = z3_ocaml_config.ocaml.example_target in
   let binding_lib = z3_ocaml_config.ocaml.binding_lib_name in
-  let api_path = Option.value_exn z3_ocaml_config.ocaml.build_api_path in
-  let lib_resolve = lib_cmd_of_source ~has_build_lib:source.has_build_lib ~root in
+  let lib_resolve = lib_cmd_of_source ~has_build_lib:source.has_build_lib ~build in
   let binding_resolve =
-    binding_dir_cmd_of_source ~has_build_binding:source.has_build_binding ~root
+    binding_dir_cmd_of_source ~has_build_binding:source.has_build_binding ~build
   in
   {
     Canary_action.empty_script_spec with
@@ -383,7 +392,15 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
          Some
            (fun ~output_dir ->
              [%string
-               "cd %{root} && %{cmake_configure} \
+               "eval $(opam env) && cmake -S %{root} -B %{build} -G Ninja \
+                -DCMAKE_VERBOSE_MAKEFILE=ON \
+                -DZ3_BUILD_LIBZ3_SHARED=ON \
+                -DZ3_BUILD_EXECUTABLE=OFF \
+                -DZ3_BUILD_TEST_EXECUTABLES=OFF \
+                -DZ3_LINK_TIME_OPTIMIZATION=ON \
+                -DZ3_BUILD_JAVA_BINDINGS=OFF \
+                -DZ3_BUILD_OCAML_BINDINGS=ON \
+                -DZ3_BUILD_PYTHON_BINDINGS=ON \
                 && echo 'ok' > %{output_dir}/conf.ok"])
        else None);
     build_lib =
@@ -391,7 +408,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
          Some
            (fun ~output_dir ->
              [%string
-               "cd %{root} && ninja -C build libz3 \
+               "ninja -C %{build} libz3 \
                 && echo 'ok' > %{output_dir}/build.ok"])
        else None);
     build_binding =
@@ -399,7 +416,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
          Some
            (fun ~output_dir ->
              [%string
-               "cd %{root} && eval $(opam env) && ninja -C build \
+               "eval $(opam env) && ninja -C %{build} \
                 build_z3_ocaml_bindings && echo 'ok' > %{output_dir}/build.ok"])
        else None);
     fetch_lib =
@@ -411,8 +428,11 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       (if not source.has_build_binding then
          Some
            (fun ~output_dir ->
+             (* Pin to the specific version so opam doesn't pick z3.dev from
+                canary-local (rank 1) instead of the upstream stable release. *)
              [%string
-               "eval $(opam env) && opam install z3 -y --assume-depexts \
+               "eval $(opam env) && opam install z3.%{source.version} -y \
+                --assume-depexts \
                 && echo 'installed' > %{output_dir}/binding.ok"])
        else None);
     pack_binding =
@@ -439,9 +459,10 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
                 \"file://%{repo_abs}\" --rank=1 || opam repo set-url %{repo_name} \
                 \"file://%{repo_abs}\" && opam update %{repo_name} && opam remove \
                 -y %{pkg_full} || true && \
-                OPAMVAR_%{prefix_name}=\"%{root}/build\" \
-                OPAMVAR_%{libdir_name}=\"%{root}/build\" \
-                CANARY_BUILD_DIR=\"%{root}/build\" opam install -y %{pkg_full} \
+                OPAMVAR_%{prefix_name}=\"%{build}\" \
+                OPAMVAR_%{libdir_name}=\"%{build}\" \
+                CANARY_BUILD_DIR=\"%{build}\" \
+                CANARY_SRC_DIR=\"%{root}\" opam install -y %{pkg_full} \
                 --verbose --keep-build-dir --assume-depexts && echo 'ok' > \
                 %{output_dir}/pack.ok"])
        else None);
@@ -465,9 +486,9 @@ test -n "$STUB"
 python3 %{script} --provided-lib "$LIB_Z3" --required-lib "$STUB" \
   --symbol-prefix Z3_ 2>&1 | tee %{output_dir}/symbols.log
 grep -q 'OK:' %{output_dir}/symbols.log
-cd %{root} && eval $(opam env)
+eval $(opam env)
 ocamlfind ocamlopt -package zarith -linkpkg \
-  -I %{api_path} %{api_path}/z3ml.cmxa %{example} \
+  -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa %{example} \
   -o %{output_dir}/%{target}
 %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]))
          else None);
@@ -482,13 +503,22 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
     check_post =
       (function
       | Fetch Source -> Some Canary_store.source_check_post
+      | Configure ->
+          Some (fun ~output_dir ->
+            Canary_artifact_check.check_markers [ "configure.ok" ] ~output_dir
+            || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some (Canary_artifact_check.check_build_lib
-                  ~marker:"build.ok" ~lib_path:(lib_so_path root))
+                  ~marker:"build.ok" ~lib_path:[%string "%{build}/libz3.so"])
       | Build_binding ->
           Some (Canary_artifact_check.check_build_binding
                   ~marker:"build.ok"
-                  ~archive_path:[%string "%{root}/build/src/api/ml/z3ml.cmxa"])
+                  ~archive_path:[%string "%{build}/src/api/ml/z3ml.cmxa"])
+      | Fetch Binding when not source.has_build_binding ->
+          let pkg = [%string "z3.%{source.version}"] in
+          Some (fun ~output_dir ->
+            Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
+            || Canary_pm_opam.is_installed ~pkg)
       | Probe Binding ->
           (* Used for both probe_binding_raw and probe_binding_pkg.
              Raw writes symbols.log + probe.log; pkg writes probe.log.

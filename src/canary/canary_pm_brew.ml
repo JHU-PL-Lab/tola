@@ -15,6 +15,9 @@ let remove_cmd ~pkg = [%string "brew uninstall %{pkg}"]
 
 let verify_installed_cmd ~pkg = [%string "brew list %{pkg}"]
 
+let is_installed ~pkg =
+  Stdlib.Sys.command ([%string "%{verify_installed_cmd ~pkg} >/dev/null 2>&1"]) = 0
+
 let query_version_cmd ~pkg =
   [%string "brew info --json=v2 %{pkg} 2>/dev/null | python3 -c \"import sys,json; d=json.load(sys.stdin); print(d['formulae'][0]['versions']['stable'])\""]
 

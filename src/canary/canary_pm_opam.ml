@@ -24,6 +24,9 @@ let remove_cmd ~pkg =
 let verify_installed_cmd ~pkg =
   [%string "eval $(opam env) && test -n \"$(opam list %{pkg} --installed --short 2>/dev/null)\""]
 
+let is_installed ~pkg =
+  Stdlib.Sys.command (verify_installed_cmd ~pkg) = 0
+
 let query_version_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} --field=version 2>/dev/null"]
 

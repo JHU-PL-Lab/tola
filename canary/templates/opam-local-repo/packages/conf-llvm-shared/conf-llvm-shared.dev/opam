@@ -2,7 +2,7 @@ opam-version: "2.0"
 maintainer: "weng@cs.jhu.edu"
 synopsis: "Virtual package: source-built LLVM shared library (canary dev)"
 description: """
-Points to a source-built libLLVM.so in CANARY_LLVM_BUILD.
+Points to a source-built libLLVM.so in CANARY_BUILD_DIR.
 The build step writes conf-llvm-shared.config so that
 %{conf-llvm-shared:config}% resolves to the build-tree llvm-config.
 Default path: /home/red/code/contrib/llvm-all/build
@@ -11,7 +11,7 @@ flags: conf
 build: [
   ["sh" "-c"
     "printf 'config: \"%s/bin/llvm-config\"\\n' \
-     \"${CANARY_LLVM_BUILD:-/home/red/code/contrib/llvm-all/build}\" \
+     \"${CANARY_BUILD_DIR:-/home/red/code/contrib/llvm-all/build}\" \
      > conf-llvm-shared.config"
   ]
 ]

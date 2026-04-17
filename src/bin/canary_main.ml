@@ -39,8 +39,11 @@ let action_cmd =
     Canary_action.run_project ~failfast ~run_info ~root ~project steps
   in
   let run_z3 ~root ~quick ~failfast distro =
-    let steps = Canary_project_z3.action_steps ~quick ~root ~project:"z3" distro in
-    run_with_info ~failfast ~root ~project:"z3" steps
+    let dev_tag =
+      Canary_store.version_cache_tag distro Canary_project_z3.z3_source_dev
+    in
+    let steps = Canary_project_z3.action_steps ~quick ~root ~project:[%string "z3/%{dev_tag}"] distro in
+    run_with_info ~failfast ~root ~project:[%string "z3/%{dev_tag}"] steps
       (Canary_project_z3.run_info distro steps);
     let steps_stable =
       Canary_project_z3.action_steps ~source:Canary_project_z3.z3_source_stable
@@ -56,8 +59,11 @@ let action_cmd =
       (Canary_project_sqlite.run_info steps)
   in
   let run_llvm ~root ~failfast distro =
-    let steps = Canary_project_llvm.action_steps ~root ~project:"llvm" distro in
-    run_with_info ~failfast ~root ~project:"llvm" steps
+    let dev_tag =
+      Canary_store.version_cache_tag distro Canary_project_llvm.llvm_source_dev
+    in
+    let steps = Canary_project_llvm.action_steps ~root ~project:[%string "llvm/%{dev_tag}"] distro in
+    run_with_info ~failfast ~root ~project:[%string "llvm/%{dev_tag}"] steps
       (Canary_project_llvm.run_info steps);
     let steps_19 =
       Canary_project_llvm.action_steps ~source:Canary_project_llvm.llvm_source_stable

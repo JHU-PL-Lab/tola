@@ -11,17 +11,21 @@ patches: [
 build: [
   [
     "sh" "-ec"
-    "B=${CANARY_BUILD_DIR:-build} && cmake \
-   -B $B -G Ninja \
-  -DCMAKE_VERBOSE_MAKEFILE=ON \
-  -DZ3_BUILD_LIBZ3_SHARED=ON \
-  -DZ3_BUILD_EXECUTABLE=OFF \
-  -DZ3_BUILD_TEST_EXECUTABLES=OFF \
-  -DZ3_LINK_TIME_OPTIMIZATION=ON \
-  -DZ3_BUILD_JAVA_BINDINGS=OFF \
-  -DZ3_BUILD_OCAML_BINDINGS=ON \
-  -DZ3_BUILD_PYTHON_BINDINGS=OFF && \
-  ninja -C $B build_z3_ocaml_bindings"
+    "B=${CANARY_BUILD_DIR:-build} && S=${CANARY_SRC_DIR:-.} && \
+  if [ -f \"$B/src/api/ml/z3ml.cmxa\" ]; then \
+    echo \"z3 OCaml bindings already built in $B, skipping cmake+ninja\"; \
+  else \
+    cmake -S $S -B $B -G Ninja \
+      -DCMAKE_VERBOSE_MAKEFILE=ON \
+      -DZ3_BUILD_LIBZ3_SHARED=ON \
+      -DZ3_BUILD_EXECUTABLE=OFF \
+      -DZ3_BUILD_TEST_EXECUTABLES=OFF \
+      -DZ3_LINK_TIME_OPTIMIZATION=ON \
+      -DZ3_BUILD_JAVA_BINDINGS=OFF \
+      -DZ3_BUILD_OCAML_BINDINGS=ON \
+      -DZ3_BUILD_PYTHON_BINDINGS=OFF && \
+    ninja -C $B build_z3_ocaml_bindings; \
+  fi"
   ]
 ]
 

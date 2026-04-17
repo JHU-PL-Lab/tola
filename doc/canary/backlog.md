@@ -11,10 +11,6 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
    at build time. Model per-binding opam deps so `build_binding` can
    ensure they're installed. Add `binding_deps` to `ocaml_tool_config`.
 
-10. **Unified build cache schema** — canary's `_out/canary/_local/` and
-    opam's `~/.opam/.../build/` need a shared cache key scheme
-    (project × version × ref) for version combination testing.
-
 11. **tqdm-style progress display** — redirect verbose build output
     (cmake/ninja) to a log file, show a `\r`-overwriting single-line
     status on tty. `run_cmd_logged` already has the logging layer.
@@ -38,3 +34,17 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 22. **Bundle check_post with action slots** — refactor `script_spec` action
     slots from `cmd option` to `{ cmd; check } option`.
+
+27. **Opam template taxonomy** — `llvm.dev-shared` is an "install pre-built"
+    package (copies artifacts from `CANARY_BUILD_DIR`); `z3.dev` is a
+    "build from source" package (runs cmake+ninja inside opam build phase).
+    Distinguish by a header comment convention or directory structure so the
+    intent is explicit and future templates know which pattern to follow.
+
+28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
+    z3 and llvm's `pack_binding` repeat the same opam setup sequence:
+    `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url
+    && opam update && opam remove -y <pkg> || true && ... opam install`.
+    Extract into `Canary_ocaml.opam_pack_cmd ~repo_name ~repo_abs ~opam_rel
+    ~pkg_full ~env_bindings` returning the full command string. Each project
+    only provides the project-specific env vars.
