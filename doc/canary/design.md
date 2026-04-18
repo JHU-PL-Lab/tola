@@ -1,412 +1,383 @@
-# Canary Design and Plan
+# Canary Design
+
+## Research Vision
+
+### The problem
+
+Popular native libraries — LLVM, Z3, PyTorch, SQLite, and many others — are
+consumed through multiple language bindings (OCaml, Python, Java, Rust, ...)
+each distributed through a different package manager (opam, pip, maven,
+crates.io, ...). The native library itself is also distributed through system
+package managers (apt, brew) and often built from source. The result is a
+high-dimensional compatibility space:
+
+```
+library version × binding version × package manager × language × platform
+```
+
+Breakage is endemic because no single actor owns this whole space. The library
+team doesn't control how bindings are packaged. The binding author doesn't
+control which library version is installed. The PM doesn't know whether a
+given (lib version, binding version) pair actually works. Users discover
+incompatibilities at install time or worse, at runtime.
+
+### Two-track approach
+
+**Track 1 — Empirical coverage.** Run the full compatibility matrix for real
+projects. Current targets: LLVM, Z3, PyTorch (planned). Longer term: all
+opam packages that wrap native libraries. The pattern table (14 structural
+patterns) and canary's action runner are the machinery for this track.
+
+**Track 2 — Interface theory.** Behind the messy practice lies a clean
+abstraction: the *interface* between a library and a binding. If we can
+characterize this interface formally, we can:
+- *Infer* compatibility results without running every combination
+- *Generate* tests that prove compatible pairs work and disprove expected failures
+- *Explain* failures in terms of interface mismatches, not just exit codes
+
+These two tracks reinforce each other. Empirical results validate or
+contradict inferences; the theory guides which combinations are worth testing.
+
+### The interface
+
+A library and a binding are compatible if the library *provides* what the
+binding *requires* at the interface boundary. For C-based libraries, the
+interface has multiple layers:
+
+```
+Layer               What it contains                Example
+─────────────────   ─────────────────────────────   ──────────────────────
+C symbol surface    exported symbols, types          nm -D libz3.so
+Header API          function signatures, structs     z3.h, llvm-c/Core.h
+ABI conventions     calling convention, struct layout  x86-64 SysV ABI
+Semantic contract   postconditions, thread safety    documentation
+```
+
+Current canary coverage: C symbol surface (via `nm` + `Expect_symbols`),
+partial header API (via OCaml compile failure as a proxy). The deeper layers
+(ABI, semantic) are out of scope for now.
+
+A *compatibility predicate* for a pair `(lib@v1, binding@v2)` is:
+
+```
+provides(lib@v1) ⊇ requires(binding@v2)
+```
+
+where `provides` and `requires` are sets of typed interface elements. For
+C libraries, this reduces to symbol presence + type compatibility. For richer
+interfaces (typed headers, semantic contracts), the predicate becomes richer.
+
+### Inference and test generation
+
+With an interface model, compatibility becomes *computable* from metadata,
+not just observable from test runs:
+
+- **API diff** between `lib@v1` and `lib@v2` → which symbols were added,
+  removed, or changed in type
+- **Binding dependency** `binding@v2` built against `lib@v_build` → which
+  symbols it uses (via nm on the binding's object files or DWARF debug info)
+- **Compatibility inference**: `lib@v1` is compatible with `binding@v2` iff
+  all symbols `binding@v2` uses are present in `lib@v1` at compatible types
+
+The canary then generates targeted tests:
+- For *inferred-compatible* pairs: a probe step expected to succeed
+- For *inferred-incompatible* pairs: an `Expect_failure` probe with predicted
+  missing symbols in `contains_any`
+
+This turns canary from a test runner into a *proof system*: test results
+confirm or contradict predictions, and predictions reduce the combinatorial
+explosion of what needs to be tested.
+
+### Ecosystem design implications
+
+The interface theory has a prescriptive angle beyond compatibility checking.
+Studying where existing package ecosystems fail at the interface seams gives
+concrete guidance for new language PMs:
+
+- **What makes a well-designed binding PM?** Semantic versioning aligned with
+  the upstream library's API surface; conf packages that expose the locator
+  version to downstream; explicit ABI stability policies.
+- **Where do existing PMs fail?** opam's conf packages have ad-hoc locator
+  search logic; pip bundles the library (avoids the seam but at cost of
+  size/duplication); apt/brew have no concept of binding compatibility at all.
+- **New language ecosystems** can learn from this empirical record: what
+  metadata to track, what invariants to enforce, what the seams between
+  native and managed worlds require.
+
+---
 
 ## Goal
 
-Canary is a high-level testing generator for projects with:
+Canary is a compatibility testing framework for projects with a native C/C++
+library, multiple language bindings, and bindings delivered through different
+package managers. These projects are fragile because a binding may be built,
+packaged, or probed against different versions of the upstream library. Canary
+makes all compatibility combinations explicit and tests them systematically.
 
-- one upstream native/core library (C/C++)
-- multiple language bindings
-- bindings delivered through different package managers
+## Module Layering
 
-These projects are fragile because a binding may be built, packaged, or
-published against different versions of the upstream library. Canary makes
-these compatibility combinations explicit and tests them before end users
-discover breakage.
-
-## Current Architecture
-
-### Module Layering
-
-```text
-canary_basic_store    Store types: package_manager, location
+```
+canary_pm_types        PM enum: Apt | Brew | Opam | Pip | Unsupported
+canary_pm_{apt,...}    Per-PM: install_cmd, verify_installed_cmd, is_installed
     |
-canary_basic          Core types, step constructors, backend utilities
+canary_store           source_repo, local_path (with build_path), mk_locals,
+                       version_cache_tag, source_fetch_cmd, source_check_post
     |
-canary_basic_ocaml    OCaml toolchain types, command generation
+canary_basic           artifact_kind, rule, location, project_spec, detect_distro
+canary_ocaml           ocaml_tool_config, opam_package_spec, probe generation
     |
-canary                project_config, resolve_phase, make_job, action_rule
+canary_action          script_spec, derive_steps, run_graph, action_step
+canary_artifact_check  check_build_lib, check_build_binding, check_markers
     |
-canary_project_*      Per-project configs (z3, sqlite)
-    |
-canary_run            Runner: dump, render, deploy
+canary_project_*       Per-project script_spec implementations (z3, llvm, sqlite)
+canary_run             Orchestrator; legacy YAML/shell backends
 ```
 
-### Pipeline
+`canary.ml` sits alongside `canary_action.ml` and owns the universal rule graph
+(`store_rules`, `make_action_rule`, `pattern_rows_of_paths`) and diagram
+generation. It also contains the legacy `project_config`/`job_spec` pipeline
+used by `canary run` (YAML/shell backends).
 
-```text
-project_config
-  -> job_spec (with step_phase list)
-  -> make_job (resolve_phase + apply_expectation)
-  -> string job (fully resolved steps)     <-- canary_dump inspects here
-  -> resolve_backend_scripts (template var substitution)
-  -> render (YAML or shell backend)
-```
+## Core Vocabulary
 
-### Current Type Model
-
-**`step_phase`**: A declarative phase in a job. Fields: `kind`, `action`,
-`location`, `requires`, `produces`, `expectation`.
-
-**`phase_kind`**: What the phase does. Each variant is a declarative
-primitive — `resolve_phase` is the only place that converts them into
-concrete `string step` lists.
-
-| Phase kind         | Semantics                     | `resolve_phase` behavior                                        |
-| ------------------ | ----------------------------- | --------------------------------------------------------------- |
-| `Pm_install`       | Install via system or lang PM | Dispatches on `location` (System_pm → apt/brew, Lang_pm → opam) |
-| `Pm_install_local` | Install from local PM repo    | Takes explicit `package_manager` arg                            |
-| `Cmake_buildgen`   | CMake configure / build-gen   | Passthrough (carries a `string step`)                           |
-| `Cmake_build`      | CMake build                   | Passthrough (carries a `string step`)                           |
-| `Probe_test`       | Smoke-test a language binding | OCaml: compile×run matrix; Python: import-and-print             |
-| `Run_command`      | Run an arbitrary command      | Wraps in `run_step`                                             |
-
-**`ocaml_tool_config`**: Per-project OCaml config:
-`{ toolchain : opam_spec; ocaml : ocaml_binding; prebuilt : prebuilt_info option }`
-
-**Key enumerations**:
-
-- `location = Build_tree | System_pm | Lang_pm | Wild of string`
-- `compile_mode = Native | Bytecode`
-- `probe_action = Compile_example | Run_example`
-- `all_cc_and_modes`: cartesian product of modes and probe actions
-
-**Artifact graph types** (in `canary_basic.ml`):
+### `artifact_kind`
 
 ```ocaml
-type artifact_node = {
-  a_kind : artifact_kind;     (* Lib | Binding | App | ... *)
-  a_name : string;
-  origin : location;          (* where it was made *)
-  a_location : location;      (* where it is now *)
-  built_from : artifact_node option;  (* compile-time dependency *)
-  runtime_dep : artifact_node option; (* runtime dependency, differs from built_from *)
-}
-
-type artifact_op = Compile | Fetch | Pack | Test
+type artifact_kind = Source | Lib | Binding | App
 ```
 
-Node identity includes the full `built_from` chain: `binding@build_tree(lib@system_pm)`
-is a different artifact from `binding@build_tree(lib@build_tree)`.
+The four artifact sorts. Every action either produces or consumes artifacts
+of one of these kinds.
 
-**Graph derivation** (in `canary.ml`):
-
-- `graph_of_job_specs`: walks job spec phases, converts `produces`/`requires`
-  artifacts into `artifact_node`s with `built_from` threading, deduplicates
-  across jobs by `node_tag`.
-- `edges_of_nodes`: derives edges from node properties — `origin ≠ location` →
-  Pack, source origin → Compile, otherwise → Fetch. Lib/Binding/App kinds
-  also get Test edges.
-
-### Current Status
-
-- **z3**: `source-source` (P1, disabled), `prebuilt-source` (P2),
-  `prebuilt-packaged` (P4). Missing: `source-packaged` (P3),
-  `prebuilt-prebuilt` (P5).
-- **sqlite3**: `prebuilt-prebuilt` (P5) only.
-
-## Job Space
-
-A **job = pattern × input**. Patterns are structural skeletons; inputs
-are versioned artifacts. We describe the space using introduction and
-elimination forms.
-
-### Artifacts (sorts)
-
-| Sort      | Properties                            | Notes                                         |
-| --------- | ------------------------------------- | --------------------------------------------- |
-| `Source`  | name, version                         | Project source tree. Always local.            |
-| `Lib`     | name, version, origin, location       | Native/C library (`.so`/`.dylib`/`.a`).       |
-| `Binding` | name, version, origin, location, lang | Language-specific wrapper over a `Lib`.       |
-| `App`     | name, version, origin, location       | App pairing a `Binding` with a runtime `Lib`. |
-
-Every artifact carries **version**, **origin** (where it was made), and
-**location** (where it is now). `Source` is always at `Build_tree`.
-
-**Package managers** (PM) provide artifacts from stores. The content inside
-a package can be a `Lib`, `Binding`, or `App` — e.g. `libsqlite3-dev` (apt)
-and `sqlite3` (opam) both deliver a `Lib`, but through different PMs.
-System PMs (apt, brew) typically package `Lib`s; language PMs (opam, pip)
-typically package `Binding`s or `App`s, though the boundary is blurry.
-
-### Operations (typed)
-
-Each operation has typed inputs and outputs. A job is any well-typed
-composition of operations that produces a `Result`. The type signatures
-constrain which compositions are valid.
-
-```text
-build_lib       : Source(lib)             → Lib@bt
-build_binding   : Source(stub) × Lib      → Binding@bt
-build_app       : Binding × Lib(runtime)  → App
-fetch           : Store × name × version  → Lib@store | Binding@store | App@store
-probe           : Lib | Binding | App     → Result
-```
-
-Notes:
-
-- `build_lib` and `build_binding` are logically distinct even when the
-  build system (e.g. cmake) executes them in one invocation.
-- Source splits into `src-lib` (native library source) and `src-stub`
-  (binding glue: C API headers + language-specific stubs).
-- `fetch` output sort depends on what the store provides — system PMs
-  typically yield `Lib`, lang PMs yield `Binding` or `App`.
-- `build_app` takes two inputs: a binding (compile-time) and a runtime lib.
-  The runtime lib may differ from the lib used to compile the binding.
-- `Source` is always available (axiom). Conceptually, `SRC` is just
-  another store (`git clone` = fetch).
-- `probe` tests each artifact kind independently: `probe_lib` validates
-  the built library, `probe_binding` the binding, `probe_app` the app.
-
-### Action Rule Model
-
-The job space is described by an **action rule**: a list of typed rules
-processed in order, building artifact pools incrementally. Each rule either
-produces artifacts (adding to a pool) or consumes them (probe).
+### `rule`
 
 ```ocaml
 type rule =
-  | Build_lib                  (* Source(lib) → Lib pool *)
-  | Build_binding              (* Source(stub) × Lib pool → Binding pool *)
-  | Build_app                  (* Binding pool × Lib pool(runtime) → App pool *)
-  | Fetch of artifact_kind     (* Store → pool of that kind *)
-  | Probe of artifact_kind     (* pool → Result *)
+  | Fetch of artifact_kind   (* fetch from a store *)
+  | Configure                (* cmake configure / build-gen *)
+  | Build_lib                (* Source → Lib@build_tree *)
+  | Build_binding            (* Source × Lib → Binding@build_tree *)
+  | Build_app                (* Binding × Lib(runtime) → App *)
+  | Publish of artifact_kind (* pack artifact into a store *)
+  | Probe of artifact_kind   (* test an artifact *)
 ```
 
-A **store** abstracts all external artifact sources (system PM, lang PM,
-source repo). `SRC` is conceptually a store too (`git clone` = fetch).
-All stores are unified — the diagram can toggle store visibility since
-it's universal.
+`rule` is the universal vocabulary. `store_rules` is the canonical ordered
+list from which all action graphs are derived.
 
-**Pool construction**: Rules fold left over an accumulator of
-`(artifact_kind * artifact_node list) list`. Each `Build_*` or `Fetch`
-rule reads upstream pools and adds to its output pool. `Build_app` crosses
-the binding pool with the lib pool (runtime dep ≠ compile-time dep).
-`Probe` consumes but doesn't produce.
-
-**Version as control variable**: Each artifact carries a version
-(`Dev`, `Stable`, ...). The same rule list with `[Dev]` vs
-`[Dev; Stable]` produces different pool sizes — the combinatorics
-are handled by pool construction, not by listing traces manually.
-
-**Standard rule lists**:
+### `script_spec`
 
 ```ocaml
-(* With build_app *)
-store_rules = [
-  Build_lib; Fetch Lib; Build_binding; Fetch Binding;
-  Build_app; Fetch App;
-  Probe Lib; Probe Binding; Probe App;
-]
-
-(* Without build_app *)
-store_rules_no_pack = [
-  Build_lib; Fetch Lib; Build_binding; Fetch Binding;
-  Fetch App;
-  Probe Lib; Probe Binding; Probe App;
-]
+type script_spec = {
+  fetch_source   : (output_dir:string -> string) option;
+  configure      : (output_dir:string -> string) option;
+  build_lib      : (output_dir:string -> string) option;
+  build_binding  : (output_dir:string -> string) option;
+  fetch_lib      : (output_dir:string -> string) option;
+  fetch_binding  : (output_dir:string -> string) option;
+  pack_binding   : (output_dir:string -> string) option;
+  probe_binding  : (location * (output_dir:string -> string)) list;
+  (* ... other slots ... *)
+  check_post     : rule -> (output_dir:string -> bool) option;
+}
 ```
 
-**Equivalence with expression enumeration**: The action rule model
-produces the same deduped artifact sets as the previous expression-based
-enumeration (T1–T9 traces), verified across all 4 configurations
-(single/two versions × with/without pack). The expression code has been
-removed; see `doc/canary/expression_sharing_note.md` for background on
-the DAG/tree duality between shared pools (action rule) and unfolded
-expressions.
+A project's implementation of the rule vocabulary: one shell command per slot,
+`None` = slot not supported. `derive_steps` filters `store_rules` by which
+slots are filled and wires deps automatically. Projects never write dep graphs
+by hand.
 
-**Compositionality**: `rule list` is the free monoid — sequential
-composition via `@`. This is sufficient for the current linear pipeline.
-Recursive `action_rule` would only be needed for parallel branches or
-conditionals, which we don't have.
+## Execution Model
 
-### Not yet covered
-
-- **Downstream dependencies**: package B depends on package A (chained
-  fetch within the lang PM).
-- **Multi-lib inputs**: `compile_binding` takes multiple `Lib`s.
-- **Lib packaging**: `pack(Lib)` for redistribution (`.deb`/`.rpm`).
-
-### Action Rule → Job Derivation (gap)
-
-**Current state**: Two parallel paths exist for job enumeration:
-
-1. **Action rule** (`make_action_rule`): folds `rule list` over pools,
-   producing `artifact_node` sets. Used for diagram rendering and
-   counting. This matches the diagram.
-2. **Manual job specs** (`canary_project_*.ml`): hand-written
-   `step_phase` lists in each project config. Used for actual job
-   generation via `make_job`.
-
-These are disconnected — the action rule enumerates *what* artifacts
-exist, but doesn't drive *which jobs* get generated. Job specs are
-written independently and may drift from the action rule model.
-
-**Goal**: Three equivalent representations of the job space, each
-serving a different purpose:
-
-1. **Table** (reference): The universal maximum enumeration of all
-   structurally possible job paths from a rule list. Can be generated
-   once and annotated with metadata — whether a case is common or
-   rare, feasible or meaningless in practice, covered by existing
-   tests or not. The table is checkable before any project spec.
-2. **Algorithm** (`make_action_rule`): Derives the same set
-   programmatically by folding rules over pools. Must produce results
-   equivalent to the table — verifiable by comparison.
-3. **Diagram** (`mermaid_of_action_rule_schema`): Visual rendering of
-   the same structure. Already data-driven from the rule list.
-
-**Table structure**: Each row is a structural action pattern — the
-unique chain of build/fetch operations to produce one artifact kind.
-Columns:
-
-- `d` — depth (number of actions)
-- `action_path` — full chain of actions from source to target
-  (`rt:` prefix marks runtime dependencies that differ from the
-  build chain)
-- `freq` — `common` or `important` (version mismatch cases)
-- `versions` — how many version combinations instantiate this
-  pattern (shown for 2 versions; with N versions the counts scale
-  by version dimensions per artifact kind)
-
-Rows sorted by target kind, then depth. Two universal endings
-apply to every artifact row:
-
-Terminal actions (apply to every artifact, not separate rows):
-
-- **pack**: action_path → pack\_\<kind\> (depth = d+1) —
-  packages the artifact for a store.
-- **probe**: action_path → probe\_\<kind\> (depth = d+1) —
-  tests the artifact. `probe_binding` and `probe_app` also
-  take a runtime lib (can differ from the link-time lib) —
-  this catches version mismatch bugs early at the binding
-  level before they surface in the full app.
-
-15 structural patterns, 58 total artifacts (with 2 versions).
-
-**Source of truth** — generated from `store_rules` by the code in
-`canary.ml` (`pattern_rows_of_paths`, `pp_job_path_table_md`).
-Regenerate with:
-
-```bash
-canary paths      # plain text
-canary paths-md   # markdown table
-```
-
-| id  | d   | origin | target  | action_path                                                                       | description                                             | freq      | versions |
-| --- | --- | ------ | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------- | --------- | -------- |
-| 1   | 1   | store  | source  | fetch_source                                                                      |                                                         | tbd       | 2        |
-| 2   | 1   | store  | lib     | fetch_lib                                                                         | lib from package manager                                | common    | 2        |
-| 3   | 2   | build  | lib     | fetch_source → build_lib                                                          | build lib from source                                   | common    | 2        |
-| 4   | 1   | store  | binding | fetch_binding                                                                     | binding from package manager                            | common    | 2        |
-| 5   | 2   | build  | binding | fetch_lib → build_binding                                                         | build binding, lib from store                           | common    | 4        |
-| 6   | 3   | build  | binding | fetch_source → build_lib → build_binding                                          | build binding, lib from build                           | common    | 4        |
-| 7   | 1   | store  | app     | fetch_app                                                                         | pre-built app from package manager                      | common    | 2        |
-| 8   | 3   | build  | app     | fetch_binding, rt:fetch_lib → build_app                                           | app: bind(store) + rt(store), version mismatch possible | important | 4        |
-| 9   | 3   | build  | app     | fetch_lib → build_binding → build_app                                             | app: bind(build) + same rt lib                          | common    | 4        |
-| 10  | 4   | build  | app     | fetch_binding, rt:fetch_source → build_lib → build_app                            | app: bind(store) + rt(build), version mismatch possible | important | 4        |
-| 11  | 4   | build  | app     | fetch_lib → build_binding, rt:fetch_lib → build_app                               | app: bind(build) + rt(store), version mismatch possible | important | 4        |
-| 12  | 4   | build  | app     | fetch_source → build_lib → build_binding → build_app                              | app: bind(build) + same rt lib                          | common    | 4        |
-| 13  | 5   | build  | app     | fetch_lib → build_binding, rt:fetch_source → build_lib → build_app                | app: bind(build) + rt(build), version mismatch possible | important | 8        |
-| 14  | 5   | build  | app     | fetch_source → build_lib → build_binding, rt:fetch_lib → build_app                | app: bind(build) + rt(store), version mismatch possible | important | 8        |
-| 15  | 6   | build  | app     | fetch_source → build_lib → build_binding, rt:fetch_source → build_lib → build_app | app: bind(build) + rt(build), version mismatch possible | important | 4        |
-
-**Annotations** (per row or per group):
-
-- `common` — same version flows through build and runtime
-- `important` — version mismatch between build-time and runtime lib
-- `feasible` / `infeasible` — whether the combination is meaningful
-- `covered` / `uncovered` — whether existing project specs exercise it
-
-**Instantiation**: The 14 structural patterns are universal. A
-concrete job set is produced by multiplying patterns with
-**instantiation dimensions** — all of which are project-level
-configuration, not structural:
-
-1. **Versions** — how many version variants to test (1, 2, …).
-   Already modelled: the `versions` column shows counts for 2.
-2. **Store config** — which `(artifact_kind, package_manager)`
-   pairs exist for this project. Determines which `fetch_*` and
-   `pack_*` actions are concretized.
-3. **Project capabilities** — has source? can build? which
-   binding languages? Filters which patterns are applicable.
-
-```text
-pattern table     ──select──→    applicable    ──instantiate──→  job_specs
-(14 universal)     (project:      patterns       (project:
-                    caps,                          versions,
-                    store_config)                   pkg names,
-                                                   flags)
-```
-
-### Store Model
-
-The fundamental unit is a **store** — a place where artifacts live.
-A **fetch** is always a transport between two stores: a remote store
-and a local store. What differs across package managers and source
-is the level of indirection above the stores.
+### Data flow
 
 ```
-PM world:     remote_store ──[manager]──→ local_store ──[install]──→ artifact
-Source world:  origin       ──[manual]───→ local_copy  ────────────→ artifact
+canary_main
+  └─ run_llvm distro
+       ├─ version_cache_tag → "dev_ab43cb8"
+       ├─ canary_project_llvm.action_steps ~project:"llvm/dev_ab43cb8"
+       │    └─ mk_script_spec ~source distro  →  script_spec
+       │    └─ derive_steps                   →  action_step list
+       └─ canary_action.run_project
+            └─ run_graph
+                 └─ run_step (per step, in dep order)
+                      ├─ check_post  →  skip if already satisfied
+                      ├─ check_pre   →  deps present?
+                      ├─ exec cmd    →  writes to _out/canary/_local/<project>/<tag>/
+                      └─ check_post  →  verify output
 ```
 
-**Package managers** (apt, brew, opam) are really two stores — a
-remote index and a local cache — with a **manager** mediating
-between them. `apt install` is shorthand for "fetch from remote
-store → install to local store." The manager is the interface; the
-stores are the reality underneath. The manager provides a collection
-view: `apt list`, `opam list` — you query the manager, not
-individual packages.
+`derive_steps` is the bridge between the universal pattern table and actual
+execution. It creates `action_step list` from a `script_spec` by:
+1. Walking `store_rules` in order
+2. Including a step iff the project filled in that slot
+3. Computing deps from the filled slots (e.g. `build_binding` deps on
+   `configure` if present, else `fetch_source`; also deps on `build_lib`
+   or `fetch_lib` whichever is present)
 
-**Source/git** has the same two stores — a remote origin (GitHub
-repo, tarball URL, local path) and a local checkout — but **no
-manager**. Each source is fetched independently and directly. There
-is no registry, no index, no collection view. Nobody "tracks" that
-there is a z3 source or a sqlite source.
+### Step caching
 
-The manager is a property of how stores are **connected**, not a
-property of the stores themselves. This means:
+Each step's output lives in `_out/canary/_local/<project>/<tag>/`. A step is
+skipped if its `check_post` already passes. `check_post` has two layers:
 
-- `package_manager` (Apt, Brew, Opam) describes the remote store
-  type + managed transport for packages.
-- `source_method` (Local_path, Git_tag, Archive) describes the
-  remote store type + ad-hoc transport for source.
+1. **Default** — marker file in output dir (`build.ok`, `conf.ok`, etc.)
+2. **Override** — project-specific external state probe. Examples:
+   - `Configure`: `check_markers ["configure.ok"] || Sys.file_exists "<build>/CMakeCache.txt"`
+   - `Build_lib/binding`: artifact existence in build tree (`libz3.so`, `z3ml.cmxa`, ...)
+   - `Fetch/Publish Binding`: `Canary_pm_opam.is_installed ~pkg`
 
-Both produce the same thing: a local artifact ready for the next
-action. The pattern table doesn't care which — `fetch_source` and
-`fetch_lib` are structurally identical actions.
+The override pattern `marker_ok || external_state_ok` means steps are skipped
+even when `_out/` is cleared, as long as the external artifact is still valid.
 
-**Implementation**: `pm_install_cmd` and `source_fetch_cmd` in
-`canary_basic_store.ml` generate the concrete shell commands for
-each transport type. Project specs declare what they need (a PM
-package name, or a source entry), and the store layer handles how.
+### Step expectations
 
-### Version Resolution Chain
+```ocaml
+type step_expectation =
+  | Expect_success
+  | Expect_failure of { contains_any : string list }
+  | Expect_symbols of { provided_lib : string; required : string list; missing : string list }
+```
 
-When a lang PM package (e.g. opam `llvm.19-static`) depends on a
-system library (e.g. `llvm-19-dev`), the version must be resolved
-across multiple layers. Each layer has its own discovery mechanism:
+`Expect_failure` is used for probe steps that are expected to fail (e.g.
+`llvm/19` probing with a dev example — OCaml API mismatch). `Expect_symbols`
+runs `nm -D` on a shared library and checks symbol presence/absence — used
+for C-level ABI mismatch detection.
+
+### Multi-version sub-runs
+
+A project runs multiple sequential sub-runs sharing one opam switch.
+Example for LLVM:
+
+| Sub-run | Source | Lib | Binding | Example | Expected |
+|---------|--------|-----|---------|---------|----------|
+| `llvm/dev_ab43cb8` | local checkout | dev libLLVM.so | `llvm.dev-shared` (packed) | `llvm_example_dev.ml` | pass |
+| `llvm/19` | none (no source build) | `llvm-19-dev` (apt) | `llvm.19-shared` (opam) | `llvm_example_dev.ml` | **fail — API mismatch** |
+
+Each sub-run has its own `_local/<project>/` directory. Sequential execution
+avoids opam switch conflicts.
+
+### `version_cache_tag`
+
+For `ref_="HEAD"` source repos, the cache path tag is `dev_<6-char-hash>`
+computed via `git rev-parse --short=6 HEAD`. This makes the cache
+content-addressed — two checkouts at different commits get separate dirs.
+Stable refs (git tags) use `repo.version` directly.
+
+## Source and Build Spec
+
+```ocaml
+type local_path = {
+  distro     : distro;
+  path       : string;   (* source checkout root *)
+  build_path : string;   (* associated build dir — source of truth *)
+}
+
+type source_repo = {
+  name : string;
+  remote : git_remote;
+  locals : local_path list;   (* per-distro local checkouts *)
+  version : string;
+  ref_ : string;
+  has_build_lib : bool;
+  has_build_binding : bool;
+}
+```
+
+`build_path` is the single authoritative build dir for a checkout. Default
+layout is sibling (`../build` relative to source root), matching LLVM's
+convention. Z3 uses the same. `mk_locals ?(build_dir="../build") rel_path`
+generates entries for all distros from a relative path.
+
+`CANARY_BUILD_DIR` is the **mechanism** to pass `build_path` into the opam
+sandbox boundary; `build_path` is the **source of truth** in the spec.
+`CANARY_SRC_DIR` passes the source root for cmake `-S` so configure
+re-invocations match the existing cache (opam sandbox mounts external paths
+read-only via bwrap, so cmake cannot write to `$CANARY_BUILD_DIR`; the
+guard `test -f <artifact> || cmake ...` skips configure when already done).
+
+## Pattern Table
+
+The 14 structural action patterns enumerated from `store_rules`. Universal —
+every project is a subset. Generated by `canary paths` / `canary paths-md`.
+
+| id | d | origin | target  | action_path                                                                       | freq      |
+|----|---|--------|---------|-----------------------------------------------------------------------------------|-----------|
+| 1  | 1 | store  | source  | fetch_source                                                                      | tbd       |
+| 2  | 1 | store  | lib     | fetch_lib                                                                         | common    |
+| 3  | 2 | build  | lib     | fetch_source → build_lib                                                          | common    |
+| 4  | 1 | store  | binding | fetch_binding                                                                     | common    |
+| 5  | 2 | build  | binding | fetch_lib → build_binding                                                         | common    |
+| 6  | 3 | build  | binding | fetch_source → build_lib → build_binding                                          | common    |
+| 7  | 1 | store  | app     | fetch_app                                                                         | common    |
+| 8  | 3 | build  | app     | fetch_binding, rt:fetch_lib → build_app                                           | important |
+| 9  | 3 | build  | app     | fetch_lib → build_binding → build_app                                             | common    |
+| 10 | 4 | build  | app     | fetch_binding, rt:fetch_source → build_lib → build_app                            | important |
+| 11 | 4 | build  | app     | fetch_lib → build_binding, rt:fetch_lib → build_app                               | important |
+| 12 | 4 | build  | app     | fetch_source → build_lib → build_binding → build_app                              | common    |
+| 13 | 5 | build  | app     | fetch_lib → build_binding, rt:fetch_source → build_lib → build_app                | important |
+| 14 | 5 | build  | app     | fetch_source → build_lib → build_binding, rt:fetch_lib → build_app                | important |
+| 15 | 6 | build  | app     | fetch_source → build_lib → build_binding, rt:fetch_source → build_lib → build_app | important |
+
+`important` = runtime lib version differs from build-time lib (version mismatch
+path). `Configure` is a prerequisite for build steps but not a separate row —
+it always precedes `build_lib`/`build_binding` when present.
+
+Every pattern has two universal terminals (not separate rows):
+- **probe**: `action_path → probe_<kind>` (d+1) — tests the artifact
+- **publish**: `action_path → publish_<kind>` (d+1) — packages for a store
+
+## Store Model
+
+A **store** is any place an artifact lives. `fetch` is always transport between
+two stores. What differs across PMs and source is the level of indirection.
 
 ```
-System PM        Locator           Conf package      Lang binding
-─────────────    ─────────────     ──────────────    ──────────────
-apt install      llvm-config-19    conf-llvm.19      llvm.19-static
-  llvm-19-dev      --version         configure.sh      (opam)
-                   → "19.1.7"        → finds locator
+PM world:    remote_index ──[manager]──→ local_cache ──[install]──→ artifact
+Source world: remote_origin ──[manual]──→ local_copy  ─────────────→ artifact
+```
+
+Package managers (apt, brew, opam) add a **manager** between remote and local
+stores — a registry, index, and collection view. Source has no manager: each
+repo is fetched directly, no registry tracks what repos exist.
+
+`package_manager` describes the remote store type + managed transport.
+`source_repo` describes the remote store type + ad-hoc transport (git clone,
+local path). Both produce the same thing: a local artifact for the next action.
+The pattern table treats `fetch_source` and `fetch_lib` as structurally identical.
+
+### Opam sandbox
+
+opam's bwrap sandbox (active even on WSL — `wrap-build-commands` is set
+globally) mounts the entire filesystem **read-only** except `$PWD` (rw),
+`/tmp` (rw bind), ccache and dune cache dirs (rw). `TMPDIR` is redirected
+to `/opam-tmp` (tmpfs). External `CANARY_BUILD_DIR` paths are readable but
+not writable — cmake configure (which always writes to the build dir) must
+be guarded with `test -f <artifact> || cmake ...`.
+
+## Version Resolution Chain
+
+When a lang PM package (e.g. `llvm.19-static`) depends on a system library
+(e.g. `llvm-19-dev`), version must be resolved across multiple layers:
+
+```
+System PM       Locator            Conf package     Lang binding
+────────────    ────────────────   ──────────────   ─────────────
+apt install     llvm-config-19     conf-llvm.19     llvm.19-static
+  llvm-19-dev     --version          configure.sh     (opam)
+                  → "19.1.7"         → finds locator
                                      → validates ver
 ```
 
 **Four layers, three seams:**
 
 | Layer | Responsibility | Discovery mechanism |
-|-------|---------------|---------------------|
+|-------|----------------|---------------------|
 | System PM | Install files to disk | `dpkg -s`, `brew list` |
 | Locator | Report version + paths | `llvm-config`, `pkg-config`, `brew --prefix` |
 | Conf package | Validate system dep for lang PM | `configure.sh`, opam `depexts` |
 | Lang binding | Compile + link against lib | `ocamlfind`, `-package` |
 
-The **locator** is the pivot point — it sits between the system PM
-and the lang PM. Everything upstream of the locator is system PM's
+The **locator** is the pivot — everything upstream is system PM's
 responsibility; everything downstream trusts what the locator reports.
 
 **Common locator patterns:**
@@ -417,484 +388,120 @@ responsibility; everything downstream trusts what the locator reports.
 | `llvm-config` | LLVM | `--version`, `--prefix`, `--ldflags` |
 | `brew --prefix <pkg>` | brew-installed libs on macOS | install path |
 | cmake `find_package` | cmake projects (z3) | sets cmake variables |
-| `ocamlfind query` | OCaml packages | install path |
 
-**Where version mismatches happen (the seams):**
+**Where mismatches happen:**
 
-1. **System PM → Locator**: Multiple versions installed, wrong one
-   found. E.g., `llvm-config` points to v23 but `llvm-19-dev` is
-   installed. Fix: use versioned locator (`llvm-config-19`).
+1. **System PM → Locator**: Multiple versions installed, wrong one found.
+   Fix: use versioned locator (`llvm-config-19`).
+2. **Locator → Conf**: Conf searches for locator with hardcoded order;
+   may fall back to `llvm-config` and find wrong version.
+3. **Conf → Binding**: Conf passes wrong version info → binding compiles
+   against wrong headers. May succeed but produce runtime failures.
 
-2. **Locator → Conf**: Conf package searches for locator with
-   hardcoded search order. E.g., `conf-llvm-static.19/configure.sh`
-   tries `llvm-config-19`, `llvm-config19`, etc. If none match,
-   falls back to `llvm-config` and checks version. The search
-   logic is in the conf package, not controlled by the user.
+Currently, locator logic is embedded in project shell commands. A first-class
+`package_locator` type (see open design) would make this explicit and testable.
 
-3. **Conf → Binding**: Conf passes version info to binding via opam
-   variables. If conf finds the wrong version (seam 2), the binding
-   compiles against wrong headers/libs. May succeed but produce
-   runtime errors.
+## Opam Template Taxonomy
 
-**Who controls the version?**
+Two patterns for canary local opam packages (in `canary/templates/opam-local-repo/`):
 
-No single layer decides. The system PM installs files, the project
-decides how to find them (locator choice), the lang PM wraps the
-discovery (conf package). Canary's role is to test each seam:
+**Build from source** (e.g. `z3.dev`): cmake + ninja in opam build phase.
+Used when the official opam package also builds from source and canary needs
+a dev/HEAD variant. Guards cmake with `test -f <artifact> || cmake ...` so the
+opam sandbox's read-only external path doesn't block reuse of canary's pre-built
+artifacts.
 
-- Does the locator resolve to the expected version?
-- Does the conf package find the right locator?
-- Does the binding compile and link correctly?
+**Install pre-built** (e.g. `llvm.dev-shared`): copies pre-built artifacts
+from `CANARY_BUILD_DIR` into the opam prefix. No cmake invocation — all
+build work done by prior canary steps. Analogous to a binary opam package.
 
-**Easy escape via locator**: If the locator can be explicitly
-specified (e.g., `LLVM_CONFIG=/usr/bin/llvm-config-19`), the
-downstream layers follow. But this only works if the conf package
-respects the env var — many don't (they have their own search
-logic). This is a design opportunity: canary could standardize
-locator overrides across projects.
+Both patterns share the same `pack_binding` preamble (opam repo add/update,
+remove old, install). This preamble is currently inlined in each project's
+`pack_binding` shell command; TODO #28 proposes lifting it into
+`Canary_ocaml.opam_pack_cmd`.
 
-**Implementation status**: `canary_basic_apt.ml`,
-`canary_basic_brew.ml`, `canary_basic_opam.ml` have the primitive
-commands for querying installed versions. The locator layer is
-project-specific (not yet factored into the framework). The PM
-primitive test script (`canary/scripts/test_pm_primitives.sh`)
-validates the system PM and opam layers. Locator testing is next.
+## Open Design
 
-### Store Config (design choice)
+### Package locator as first-class type (TODO #29)
 
-Package format is **not** a structural dimension — it belongs to
-the instantiation step. The pattern table says "fetch_lib" without
-specifying which store. The store config maps that to concrete
-stores:
+Locator logic is currently embedded in project shell commands. Factoring it
+out would make the System PM → Locator → Conf chain testable and uniform:
+
+```ocaml
+type discovery_method =
+  | Pkg_config of string      (* pkg-config <name> *)
+  | Brew_prefix of string     (* brew --prefix <formula> *)
+  | Llvm_config of string     (* llvm-config-<ver> --prefix *)
+  | Env_var of string         (* $FOO_PREFIX already set *)
+
+type package_locator = {
+  name       : string;
+  system_pkg : system_package_spec;
+  discovery  : (distro * discovery_method) list;
+  version_cmd : string option;
+}
+```
+
+Plugs into `fetch_lib` / `configure` steps. On macOS, keg-only libraries
+need `PKG_CONFIG_PATH` set before downstream phases — the locator captures this.
+
+### Store config type (TODO #30)
+
+A project's store entries are currently hardcoded in `mk_script_spec`. A
+first-class `store_config` would make `fetch_*` and `pack_*` slot generation
+automatic from declarations:
 
 ```ocaml
 type store_entry = {
-  pm : package_manager;
-  pkg_name : string;               (* e.g., "z3", "libz3-dev" *)
-  primary : artifact_kind;         (* what you're fetching for *)
-  provides : artifact_kind list;   (* all artifacts this produces *)
-  locate : artifact_kind -> string option;
-    (* how to find a side-effect artifact after install *)
+  pm       : package_manager;
+  pkg_name : string;
+  primary  : artifact_kind;
 }
-
 type store_config = store_entry list
-(* e.g., z3:
-   [ { pm = Brew; pkg_name = "z3"; primary = Lib;
-       provides = [Lib];
-       locate = fun Lib -> Some "$(brew --prefix z3)/lib"
-              | _ -> None };
-     { pm = Apt; pkg_name = "libz3-dev"; primary = Lib;
-       provides = [Lib];
-       locate = fun _ -> None };
-     { pm = Opam; pkg_name = "z3"; primary = Binding;
-       provides = [Binding; Lib];
-       locate = fun Lib -> Some "$(opam var z3:lib)" | _ -> None };
-     { pm = Pip; pkg_name = "z3-solver"; primary = Binding;
-       provides = [Binding; Lib];
-       locate = fun Lib -> Some "<bundled>" | _ -> None };
-   ] *)
 ```
 
-A single `opam install z3` serves as both `fetch_binding` and
-`fetch_lib`. The runner deduplicates: the command runs once, and
-both `fetch_binding` and `fetch_lib` share the cached result
-(same output_dir or cross-referenced). The `locate` function
-tells downstream steps where to find side-effect artifacts.
+`derive_steps` could then generate `fetch_lib`, `fetch_binding`, etc. from
+`store_config` rather than from the script_spec slots directly.
 
-**Key insight**: a single `fetch_lib` pattern row can produce
-multiple concrete jobs — one per store entry for Lib. Similarly,
-`pack_lib` produces one job per target store. The packing step
-is store-specific (dpkg vs opam vs pip produce different
-artifacts), but the structural pattern is the same.
+### C API surface model (TODO #31)
 
-**Combinatorics at instantiation**:
+Currently, symbol mismatch expectations (`Expect_symbols { required; missing }`)
+are hand-written per probe step. A declarative C API surface model would make
+them derivable from version metadata:
 
-- Pattern row × versions × store entries for that kind
-- Example: pattern #5 (`fetch_source → build_lib`) with 2
-  versions and `Lib` packable to {apt, brew, opam} produces
-  2 × 3 = 6 pack jobs (but still 2 build jobs — pack
-  multiplies only the pack/fetch actions, not the build chain)
-
-**Package as property, not kind**: The packed artifact wraps
-the original (e.g., dpkg adds metadata, file layout, dependency
-declarations). This is modelled as a property on the artifact
-node (`packaged : (package_manager * string) option`), not as a
-separate artifact kind. The store config determines which
-packaging methods are tested.
-
-**Action vs transport**: `pack` and `probe` are interesting
-actions (can fail, worth testing). `fetch` and `publish` are
-transport — moving artifacts between pools and stores. In the
-diagram, `pack_*` and `probe_*` are action nodes; `fetch` and
-`publish` are edge labels.
-
-**Probing pack**: `pack_lib(opam)` can be probed by publishing
-the pack, fetching it back, and testing — the round-trip test:
-`build → pack(opam) → publish → fetch(opam) → probe`.
-The store config determines which round-trips exist.
-
-### Execution Model
-
-The action graph is the execution plan — not the pattern table.
-Each action runs once per unique input, and its output is shared
-by all downstream consumers.
-
-**Graph vs matrix**: The pattern table (14 rows) enumerates all
-structural paths for verification. But execution doesn't run 14
-independent jobs — it runs the ~9 distinct actions (per version
-combo), each exactly once, with results cached and reused.
-
-**Backend interface**: The graph needs one abstraction —
-artifact sharing between action steps:
-
-```text
-graph (actions + deps)  ──backend──→  execution
-                          │
-                          ├─ local shell: filesystem cache
-                          │   action outputs → directory per (action, version)
-                          │   downstream steps read from cache
-                          │
-                          └─ GH CI: job DAG with artifact sharing
-                              action → job, deps → needs:, outputs → upload/download
+```ocaml
+type api_surface = {
+  version   : string;
+  symbols   : string list;   (* from nm -D or clang AST dump *)
+}
 ```
 
-**Implementation plan**:
+Given two API surfaces (lib version, binding built-against version), the
+expected `missing` symbols can be computed automatically. Foundation: TODO #20
+(`assert_binary_symbols.py --provided-lib-old/new`).
 
-1. **Local runner** — execute the action graph directly.
-   Each action step writes output to
-   `_out/_canary/<project>/<action_tag>/`.
-   Downstream steps read from upstream output dirs.
-2. **Backend interface** — abstract artifact sharing:
-   `run_action`, `store_output`, `load_input`. Local runner
-   uses filesystem; GH CI maps to `upload/download-artifact`
-   and `needs:` in generated YAML.
-3. **Phantom project** — a mock project where every action is
-   trivial (copy/rename). Tests the execution framework without
-   real compilers or package managers.
+### Auto-generated project configs (TODO #32)
 
-### Action Step Protocol
-
-Each action step has three parts:
-
-1. **Precondition** (`check_pre`) — are inputs available?
-   For given artifacts (source, packages from project spec),
-   check they exist as-is. For generated artifacts, check the
-   upstream output dir exists and is valid.
-2. **Execute** (`run`) — perform the action. Output goes to
-   `_out/_canary/<project>/<action_tag>/`.
-3. **Postcondition** (`check_post`) — did it succeed?
-   Check output dir has expected contents.
-
-**Default postcondition markers** (`canary_action.ml`, `default_check_post`):
-
-| Rule category | Marker file   | Written by                         |
-|---------------|---------------|------------------------------------|
-| `Fetch Source`| `source.ok`   | `source_fetch_cmd` (+ dir check)   |
-| `Configure`   | `conf.ok`     | project configure script           |
-| `Fetch Lib`   | `lib.ok`      | `fetch_lib_cmd` template           |
-| `Fetch Binding`| `binding.ok` | `fetch_binding_cmd` template       |
-| `Fetch App`   | `app.ok`      | project `fetch_app` script         |
-| `Build_*`     | `build.ok`    | project build script (`&& echo ok`)|
-| `Publish _`   | `pack.ok`     | project pack script (`&& echo ok`) |
-| `Probe _`     | `probe.log`   | project probe script (`tee probe.log`) |
-
-Projects override `check_post` in `script_spec` when the default marker
-is insufficient. Current overrides:
-- **z3 `Fetch Source`**: `source_check_post` — checks `source.ok` + dir exists
-- **z3 `Build_lib`**: `build.ok` + `libz3.so`/`.dylib` exists in build tree
-- **z3 `Build_binding`**: `build.ok` + `z3ml.cmxa` exists in build tree
-- **z3 `Probe Binding`**: `probe_build.log` AND `probe_pkg.log` (dual probe)
-
-Given vs generated:
-
-- **Given**: source code, system packages, prebuilt libs —
-  declared in project spec, used as-is from their current
-  location. Precondition = existence check.
-- **Generated**: build outputs, packed artifacts — produced by
-  action steps, stored in `_out/_canary/`. Precondition =
-  upstream step completed.
-
-State tracking (SQLite):
-
-```sql
-CREATE TABLE action_run (
-  project    TEXT NOT NULL,
-  action_tag TEXT NOT NULL,   -- e.g. "build_lib/v1"
-  status     TEXT NOT NULL,   -- pending | running | done | failed
-  output_dir TEXT,
-  started_at TEXT,
-  finished_at TEXT,
-  PRIMARY KEY (project, action_tag)
-);
-```
-
-A step runs only if its `action_run` row is missing or not
-`done`. This gives caching for free — re-running the graph
-skips completed steps.
-
-### Phantom Project
-
-A mock project where all actions succeed trivially:
-
-- `fetch_source` → copy a template dir
-- `build_lib` → copy source to `lib/` output
-- `build_binding` → combine lib + source into `binding/`
-- `build_app` → combine binding + lib into `app/`
-- `pack_lib` → tar the lib dir
-- `probe_lib` → check lib files exist
-
-Purpose: test the execution framework, action graph traversal,
-caching, and backend interface without external dependencies.
-All actions are file copies/renames — deterministic and fast.
+Given a project sketch (library name, binding languages, package manager
+presence, source repo layout), generate the full `script_spec` automatically.
+Depends on locator (#29), store config (#30), and C API surface (#31).
 
 ## Design Principles
 
 1. **Configuration is primary, backends are derived.** The main product is a
    structured compatibility model, not the generated YAML/shell.
 
-2. **Gradual abstraction.** Extract patterns from concrete jobs. Every
+2. **`script_spec` is the only project-specific thing.** The runner, dep
+   graph, caching, and logging are project-agnostic. A project is just a
+   filled-in `script_spec`.
+
+3. **External state, not a separate database.** `check_post` probes real
+   external state (cmake cache, opam package index, build artifacts) rather
+   than maintaining a separate tracking database.
+
+4. **Gradual abstraction.** Extract patterns from concrete projects. Every
    abstraction must be validated by at least two examples.
 
-3. **Explicit boundaries.** Make compatibility boundaries visible: upstream
-   library, binding, package manager, artifact, environment.
-
-## Completed
-
-### Orthogonal Step Primitives (done)
-
-**Problem**: The old `phase_kind` mixed abstraction levels.
-`Configure_build of string step list` was a meaningless passthrough.
-`Test_binding` was a magic expander hiding a cartesian product.
-`Install_local` lacked a package manager argument.
-
-**What changed**:
-
-- `Install_pkg` / `Install_local` → `Pm_install of system_pkg option` +
-  `Pm_install_local of package_manager`. Registry install and local install
-  are semantically distinct; local now takes an explicit PM argument.
-- `Configure_build of string step list` → two flat primitives:
-  `Cmake_buildgen of string step` and `Cmake_build of string step`. Each
-  Z3 job spec now lists separate phases for cmake configure and build, with
-  `run_step` called inline at the usage site. No intermediate record type
-  or helper function needed.
-- `Test_binding` → `Test of { lang : binding_lang }`. The resolver dispatches
-  on `lang` (currently OCaml via `mk_ocaml_test_steps`; Python is stubbed).
-- `Run_command` unchanged.
-
-**Design rationale**: We chose flat primitives over a structured
-`build_system` type (Cmake/Dune/Make) because only cmake is currently used.
-When a second build system appears, we can introduce a shared abstraction
-validated by two examples. The flat approach keeps `resolve_phase` trivial —
-`Cmake_buildgen` and `Cmake_build` are simple passthroughs.
-
-### Probe Test and Name Derivation (done)
-
-- Renamed `Test` → `Probe_test` — honest about scope (smoke test, not a
-  test suite). OCaml expands to compile×run × bytecode×native. Python
-  expands to a single import-and-print.
-- Promoted Z3's Python `Run_command` to `Probe_test { lang = Python }`.
-  The resolver derives the import command from `binding_lib_name`.
-  `Run_command` remains as an escape hatch (currently unused).
-- Added `name_of_phase : step_phase -> string` — derives step names from
-  phase kind + location instead of hardcoding them at each call site.
-  `install_system_dep_steps`, `install_opam_package_step`, and the
-  `Pm_install_local`/`Probe_test` arms all use the derived name.
-
-### Local Runner and Install Verification (done)
-
-**Local runner**: `canary_exec` and `canary_exec:<project>` generate shell
-scripts and execute them locally. The shell backend's `$GITHUB_ENV`
-simulation and guard filtering (macOS vs Linux) work correctly. On macOS,
-only macOS-guarded steps run.
-
-**Phase verification** (`verify_of_phase`): Each phase kind can derive
-verification steps from its semantics — the action's actor confirms its
-own effect. `resolve_phase` calls `verify_of_phase` after the action steps
-and appends any verification steps automatically.
-
-Verification inherits the phase's `expectation`: if the install is expected
-to succeed, the verification expects the package to be present. If the
-install is expected to fail, the verification expects it to be absent.
-
-Currently implemented for PM install phases:
-
-- `Pm_install` at `System_pm`: `dpkg -s <pkg>` (Linux), `brew list <pkg>` (macOS)
-- `Pm_install` at `Lang_pm`: `opam list <pkg> --short`
-- `Pm_install_local Opam`: `opam list <pkg> --short`
-
-Remaining phase kinds return `[]` (no verification yet). Future candidates:
-
-- `Cmake_build`: check build artifact exists (`test -f <path>`)
-- `Cmake_buildgen`: check build system files generated
-- `Probe_test` / `Run_command`: self-verifying, no additional verification needed
-
-### Artifact Graph from Job Specs (done)
-
-- `graph_of_job_specs` derives artifact graphs from job spec `produces`/`requires`
-  fields, replacing the need for manual `build_graph` construction.
-- `edges_of_nodes` extracted as reusable edge derivation: `origin ≠ location` →
-  Pack, source origin → Compile, otherwise → Fetch. Lib/Binding/App get Test edges.
-- Tightened `produces`/`requires` in z3 and sqlite job specs for precise
-  dependency tracking.
-- Hardcoded `build_graph` kept as `<project>_reference.mmd` for comparison;
-  derived graphs saved as `<project>.mmd`.
-
-## Next Steps
-
-### 1. Decouple Hardcoded Packages (partial)
-
-**Problem**: Shared code contains project-specific details.
-
-**Done**:
-
-- Z3-specific specs (`z3_dev_spec`, `z3_stable_spec`, distro roots)
-  moved from `canary_basic.ml` to `canary_project_z3.ml`.
-- Opam paths parameterized: `mk_canary_config ~pkg_name ~versioned_name`
-  replaces hardcoded `/opam-local-repo/packages/z3/z3.dev/opam`.
-- Store-related types extracted to `canary_basic_store.ml`.
-
-**Remaining**:
-
-- Python probe hardcodes `PYTHONPATH="build/python"` (cmake-specific)
-- `ocaml_cc_with_obj` hardcodes `-package zarith` (z3-specific)
-- `install_and_prefix_cmds` assumes pkg-config/brew patterns
-
-These need fields in `ocaml_tool_config` or a new `python_tool_config`.
-
-### 2. First-Class Package Locator
-
-**Problem**: Package discovery is scattered across project configs. Z3 uses
-cmake find_package + env vars. SQLite uses pkg-config (implicitly, via
-conf-sqlite3). Homebrew keg-only libraries need explicit `PKG_CONFIG_PATH`.
-The survey (`packaging_study.md`) confirms pkg-config is the #1 failure point
-and keg-only handling is the #1 macOS friction.
-
-**Goal**: Model package discovery as a first-class entity, reusing existing
-canary types. A locator is not a new abstraction layer — it's a tool that
-`Pm_install` and `Cmake_buildgen` phases use to find libraries.
-
-**Design — reuse existing types**:
-
-The locator produces artifacts consumed by later phases. It maps to our
-existing `location` and `package_manager` types:
-
-```ocaml
-type discovery_method =
-  | Pkg_config of string              (* pkg-config <name> *)
-  | Brew_prefix of string             (* brew --prefix <formula> *)
-  | Cmake_find of string              (* find_package(<Name>) *)
-  | Env_var of string                 (* $FOO_PREFIX already set *)
-  | Compile_test of string            (* compile a test .c file *)
-
-type package_locator = {
-  name : string;                      (* human label: "sqlite3", "z3" *)
-  system_pkg : system_pkg;            (* reuses existing type *)
-  discovery : (runner_os * discovery_method) list;
-  version_cmd : string option;
-  keg_only : bool;                    (* macOS: needs PKG_CONFIG_PATH *)
-}
-```
-
-`system_pkg` already exists (`{ linux_pkg; macos_pkg }`). The locator adds
-*how to find it after install*. On macOS with `keg_only = true`, the resolver
-emits `PKG_CONFIG_PATH=$(brew --prefix <formula>)/lib/pkgconfig` before
-downstream phases.
-
-**How it plugs in**:
-
-- `Pm_install` gains an optional `locator` field (replaces bare `system_pkg`)
-- `resolve_phase` for Pm_install: install via system PM, then run discovery
-  method to set PREFIX/LIBDIR env vars
-- Current `install_and_prefix_cmds` logic moves into locator resolution
-
-**Examples**:
-
-```ocaml
-(* SQLite: simple pkg-config, keg-only on macOS *)
-let sqlite_locator = {
-  name = "sqlite3";
-  system_pkg = { linux_pkg = "libsqlite3-dev"; macos_pkg = "sqlite" };
-  discovery = [
-    (Ubuntu, Pkg_config "sqlite3");
-    (MacOS,  Brew_prefix "sqlite");     (* keg-only *)
-  ];
-  version_cmd = Some "pkg-config --modversion sqlite3";
-  keg_only = true;
-}
-
-(* Z3: cmake-based, not in system PM for source builds *)
-let z3_locator = {
-  name = "z3";
-  system_pkg = { linux_pkg = "z3"; macos_pkg = "z3" };
-  discovery = [
-    (Ubuntu, Pkg_config "z3");
-    (MacOS,  Brew_prefix "z3");
-  ];
-  version_cmd = Some "z3 --version";
-  keg_only = false;
-}
-```
-
-**Validation**: sqlite's keg-only handling should generate the same
-`PKG_CONFIG_PATH` setup currently hardcoded in z3's cmake flags. Z3's
-env-var-based discovery should match current `install_and_prefix_cmds` output.
-
-### 3. C API Surface Model
-
-**Problem**: The canary currently has no model of what the upstream project
-provides at the C API level, or what the binding expects from it. Success
-and failure expectations are manually specified.
-
-**Goal**: Model the C API surface so the system can reason about
-compatibility:
-
-- **Upstream provides**: a set of symbols/functions in the shared library,
-  at a specific version
-- **Binding expects**: a set of symbols/functions it calls, built against a
-  specific version
-- **Compatibility check**: if the binding was built against the same version
-  as the installed library, expect success. If the system library lags
-  behind the binding's build version, expect specific missing symbols.
-
-**Approach**:
-
-- Define a type for C API surface (symbol sets, version info)
-- Allow the project config to declare the expected API surface
-- Derive expectations automatically: same-version = success,
-  version-mismatch = expected symbol failures
-- Use build artifacts (e.g., clang AST dump, nm output) to validate the
-  declared API surface against reality
-
-### 4. Auto-Generated Project Configs
-
-**Problem**: Project configs (job specs, phase lists) are manually
-constructed. For a real-world project, given its layout and packaging, the
-canary should be able to generate the full testing matrix.
-
-**Goal**: Given a project sketch (library name, binding languages, package
-manager presence, source repo layout), generate a complete `project_config`
-including which test jobs to run.
-
-**Approach**:
-
-- Define a high-level project sketch type (simpler than `project_config`)
-- Derive the job matrix from the sketch: for each (origin, location,
-  binding) combination, generate the appropriate phases
-- Use the C API entity (step 2) to derive expectations
-- Keep manual override capability for edge cases
-
-## Priority Order
-
-1. **Decouple hardcoded packages** — remove project-specific details from shared code
-2. **Package locator** — models real-world discovery, plugs into Pm_install
-3. **C API surface** — makes expectations derivable
-4. **Auto-generated configs** — end goal, requires 1–3
-
-## References
-
-- `doc/canary/packaging_study.md`: Real-world packaging patterns across
-  apt, brew, opam, pip for Z3, SQLite, libffi, libgit2, OpenSSL, GMP,
-  libsodium, PCRE2
-- `doc/canary/opam_survey.md`: Deep survey of 4460 opam packages, 6 native
-  library patterns (A–F), reproducible via `raw/survey.sh`
-- `canary_dump` command: inspect fully resolved jobs before rendering
+5. **Explicit version boundaries.** Make compatibility seams visible: lib
+   version, binding build version, runtime lib version. The pattern table's
+   `important` rows are exactly the seams where mismatches happen.

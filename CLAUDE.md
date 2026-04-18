@@ -92,7 +92,7 @@ opam switch conflicts.
     `install_binding` between `build_*` and `pack_binding`. See
     `doc/canary/install_target_survey.md` for Z3 vs LLVM patterns.
 
-Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28.
+Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28, #29, #30, #31, #32, #33.
 Details in `doc/canary/backlog.md`.
 
 ### Done

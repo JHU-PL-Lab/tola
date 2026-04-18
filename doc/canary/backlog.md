@@ -41,6 +41,40 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     Distinguish by a header comment convention or directory structure so the
     intent is explicit and future templates know which pattern to follow.
 
+29. **Package locator as first-class type** — locator logic (llvm-config,
+    pkg-config, brew --prefix) is currently embedded in project shell
+    commands. Factor into a `package_locator` type with `discovery_method`
+    variants so the System PM → Locator → Conf chain is testable and uniform.
+    See `design.md` "Open Design" for the proposed type.
+
+30. **Store config type** — `fetch_*` and `pack_*` slot scripts are
+    hardcoded in `mk_script_spec`. A `store_config = store_entry list`
+    type would let `derive_steps` generate these slots from declarations
+    rather than from filled-in `script_spec` fields.
+
+31. **C API surface model** — `Expect_symbols { required; missing }` is
+    currently hand-written per probe step. A declarative `api_surface`
+    type (symbols + version, derived from `nm -D` or clang AST dump) would
+    make expected mismatches derivable from version metadata. Depends on
+    #20 (`assert_binary_symbols.py --provided-lib-old/new`).
+
+32. **Auto-generated project configs** — given a project sketch (library
+    name, binding languages, PM presence, source layout), generate the full
+    `script_spec`. Depends on #29 (locator), #30 (store config), #31
+    (C API surface).
+
+33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —
+    rename `z3.dev` → `z3.dev-src` in `canary/templates/opam-local-repo/` and
+    update `canary_project_z3.ml` accordingly. Apply the same convention to all
+    future canary packages that build entirely from source with no system PM
+    dependency. The `-src` suffix signals: this package is self-contained,
+    transparent to source code, and not affected by what the system PM provides.
+    This matters for projects where the system PM lags far behind HEAD or is
+    inconsistent across distros — the `-src` variant gives reproducible,
+    system-independent testing. Contrast with `-sys` (system-backed) and the
+    upstream opam packages (which build from source but are version-pinned).
+    See `doc/canary/opam_packaging.md` for the full naming rationale.
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url
