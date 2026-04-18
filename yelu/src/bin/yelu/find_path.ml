@@ -31,7 +31,7 @@ let outer_if =
 let test_macro =
   yc_macro (ystr "test_find_path") ~args:[ "expected" ]
     [
-      yc_unset_cache (ycstr "HDR");
+      yc_unset_cache (ycvar "HDR");
       yc_apply (ystr "find_path")
         [
           ycstr "HDR";
@@ -47,10 +47,10 @@ let cmd =
     [
       yc_minimum_required_s "3.10.";
       yc_project ~languages:[ Lang_none ] "FindPathTest";
-      yc_set (ycstr "CMAKE_FIND_DEBUG_MODE") [ ystr "1" ];
+      yc_set (ycvar "CMAKE_FIND_DEBUG_MODE") [ ystr "1" ];
       test_macro;
-      yc_set (ycstr "CMAKE_SYSTEM_PREFIX_PATH") [ ycref source_this ];
-      yc_set (ycstr "CMAKE_LIBRARY_ARCHITECTURE") [ ystr "arch" ];
+      yc_set (ycvar "CMAKE_SYSTEM_PREFIX_PATH") [ ycref source_this ];
+      yc_set (ycvar "CMAKE_LIBRARY_ARCHITECTURE") [ ystr "arch" ];
       yc_apply (ystr "test_find_path")
         [ ystr "include"; ystr "NAMES"; ystr "test1.h" ];
       yc_apply (ystr "test_find_path")

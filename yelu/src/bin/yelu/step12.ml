@@ -10,7 +10,7 @@ let cmd =
         ylet "do_test" (ycstr "do_test");
       ]
     @ shared_libs_output_dirs
-    @ [ yc_set (ycstr "CMAKE_DEBUG_POSTFIX") [ ystr_raw "d" ] ]
+    @ [ yc_set (ycvar "CMAKE_DEBUG_POSTFIX") [ ystr_raw "d" ] ]
     @ compiler_flags_lib
     @ compiler_warning_options
     @ [

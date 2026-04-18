@@ -23,15 +23,15 @@ let primitives =
   ( "primitives",
     [
       check "set var" "set(FOO bar )"
-        (yc_set (ycstr "FOO") [ ystr "bar" ]);
+        (yc_set (ycvar "FOO") [ ystr "bar" ]);
       check "set quoted" "set(FOO \"hello\" )"
-        (yc_set (ycstr "FOO") [ ystr_raw "hello" ]);
+        (yc_set (ycvar "FOO") [ ystr_raw "hello" ]);
       check "set bool" "set(FOO ON )"
-        (yc_set (ycstr "FOO") [ ybool true ]);
+        (yc_set (ycvar "FOO") [ ybool true ]);
       check "set multiple" "set(SRCS a.cpp\nb.cpp )"
-        (yc_set (ycstr "SRCS") [ yfile "a.cpp"; yfile "b.cpp" ]);
+        (yc_set (ycvar "SRCS") [ yfile "a.cpp"; yfile "b.cpp" ]);
       check "set parent_scope" "set(X val PARENT_SCOPE)"
-        (yc_set ~parent_scope:true (ycstr "X") [ ystr "val" ]);
+        (yc_set ~parent_scope:true (ycvar "X") [ ystr "val" ]);
     ] )
 
 let conditions =
@@ -40,14 +40,14 @@ let conditions =
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nendif()\n"
         (yifthen (Ytruthy (ycstr "USE_MYMATH"))
-           (yc_set (ycstr "X") [ ystr "1" ]));
+           (yc_set (ycvar "X") [ ystr "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
         (yif (Ytruthy (ycstr "USE_MYMATH"))
-           (yc_set (ycstr "X") [ ystr "1" ])
-           (yc_set (ycstr "X") [ ystr "0" ]));
+           (yc_set (ycvar "X") [ ystr "1" ])
+           (yc_set (ycvar "X") [ ystr "0" ]));
       check "if and"
-        "if (HAVE_LOG AND HAVE_EXP)\n  \nendif()\n"
+        "if (( HAVE_LOG AND HAVE_EXP ))\n  \nendif()\n"
         (yifthen
            (Yand (Ytruthy (ycstr "HAVE_LOG"), Ytruthy (ycstr "HAVE_EXP")))
            (Yexp_list []));
@@ -111,7 +111,7 @@ let composition =
       check_vbox "exp_list two stmts"
         "set(X 1 )\nset(Y 2 )"
         (ycmd_of_list
-           [ yc_set (ycstr "X") [ ystr "1" ]; yc_set (ycstr "Y") [ ystr "2" ] ]);
+           [ yc_set (ycvar "X") [ ystr "1" ]; yc_set (ycvar "Y") [ ystr "2" ] ]);
     ] )
 
 let let_bindings =
@@ -164,23 +164,23 @@ let iteration =
     [
       check "foreach items no body"
         "foreach(x a b)\nendforeach()"
-        (yc_foreach ~items:[ ystr "a"; ystr "b" ] "x" (Yexp_list []));
+        (yc_foreach ~items:[ ystr "a"; ystr "b" ] (ycvar "x") (Yexp_list []));
       check "foreach items with body"
         "foreach(x a b)\n  set(FOO bar )\nendforeach()"
-        (yc_foreach ~items:[ ystr "a"; ystr "b" ] "x"
-           (yc_set (ycstr "FOO") [ ystr "bar" ]));
+        (yc_foreach ~items:[ ystr "a"; ystr "b" ] (ycvar "x")
+           (yc_set (ycvar "FOO") [ ystr "bar" ]));
       check "foreach_range stop only"
         "foreach(i RANGE 10)\nendforeach()"
-        (yc_foreach_range ~stop:10 "i" (Yexp_list []));
+        (yc_foreach_range ~stop:10 (ycvar "i") (Yexp_list []));
       check "foreach_range start stop"
         "foreach(i RANGE  0 10)\nendforeach()"
-        (yc_foreach_range ~start:0 ~stop:10 "i" (Yexp_list []));
+        (yc_foreach_range ~start:0 ~stop:10 (ycvar "i") (Yexp_list []));
       check "foreach_in lists"
         "foreach(f IN LISTS MY_LIST)\nendforeach()"
-        (yc_foreach_in ~lists:[ ycstr "MY_LIST" ] "f" (Yexp_list []));
+        (yc_foreach_in ~lists:[ ycvar "MY_LIST" ] (ycvar "f") (Yexp_list []));
       check "foreach_in items"
         "foreach(f IN ITEMS a b)\nendforeach()"
-        (yc_foreach_in ~items:[ ystr "a"; ystr "b" ] "f" (Yexp_list []));
+        (yc_foreach_in ~items:[ ystr "a"; ystr "b" ] (ycvar "f") (Yexp_list []));
     ] )
 
 let loop_control =
@@ -202,49 +202,49 @@ let list_ops =
     [
       check "list_length"
         "list(LENGTH MY_LIST OUT)\n"
-        (yc_list_length (ycstr "MY_LIST") "OUT");
+        (yc_list_length (ycvar "MY_LIST") (ycvar "OUT"));
       check "list_get"
         "list(GET MY_LIST 0 OUT)\n"
-        (yc_list_get ~indices:[ 0 ] (ycstr "MY_LIST") "OUT");
+        (yc_list_get ~indices:[ 0 ] (ycvar "MY_LIST") (ycvar "OUT"));
       check "list_remove_item"
         "list(REMOVE_ITEM MY_LIST a b)\n"
-        (yc_list_remove_item (ycstr "MY_LIST") [ ystr "a"; ystr "b" ]);
+        (yc_list_remove_item (ycvar "MY_LIST") [ ystr "a"; ystr "b" ]);
       check "list_remove_duplicates"
         "list(REMOVE_DUPLICATES MY_LIST)\n"
-        (yc_list_remove_duplicates (ycstr "MY_LIST"));
+        (yc_list_remove_duplicates (ycvar "MY_LIST"));
       check "list_reverse"
         "list(REVERSE MY_LIST)\n"
-        (yc_list_reverse (ycstr "MY_LIST"));
+        (yc_list_reverse (ycvar "MY_LIST"));
       check "list_sort default"
         "list(SORT MY_LIST)\n"
-        (yc_list_sort (ycstr "MY_LIST"));
+        (yc_list_sort (ycvar "MY_LIST"));
       check "list_filter include"
         "list(FILTER MY_LIST INCLUDE REGEX \".*\\.h\")\n"
-        (yc_list_filter Lf_include ".*\\.h" (ycstr "MY_LIST"));
+        (yc_list_filter Lf_include ".*\\.h" (ycvar "MY_LIST"));
       check "list_join"
         "list(JOIN MY_LIST , OUT)\n"
-        (yc_list_join (ycstr "MY_LIST") (ystr ",") "OUT");
+        (yc_list_join (ycvar "MY_LIST") (ystr ",") (ycvar "OUT"));
       check "list_sublist"
         "list(SUBLIST MY_LIST 1 2 OUT)\n"
-        (yc_list_sublist (ycstr "MY_LIST") 1 2 "OUT");
+        (yc_list_sublist (ycvar "MY_LIST") 1 2 (ycvar "OUT"));
       check "list_find"
         "list(FIND MY_LIST val OUT)\n"
-        (yc_list_find (ycstr "MY_LIST") (ystr "val") "OUT");
+        (yc_list_find (ycvar "MY_LIST") (ystr "val") (ycvar "OUT"));
       check "list_prepend"
         "list(PREPEND MY_LIST a b)\n"
-        (yc_list_prepend (ycstr "MY_LIST") [ ystr "a"; ystr "b" ]);
+        (yc_list_prepend (ycvar "MY_LIST") [ ystr "a"; ystr "b" ]);
       check "list_insert"
         "list(INSERT MY_LIST 0 x)\n"
-        (yc_list_insert (ycstr "MY_LIST") 0 [ ystr "x" ]);
+        (yc_list_insert (ycvar "MY_LIST") 0 [ ystr "x" ]);
       check "list_remove_at"
         "list(REMOVE_AT MY_LIST 0 2)\n"
-        (yc_list_remove_at (ycstr "MY_LIST") [ 0; 2 ]);
+        (yc_list_remove_at (ycvar "MY_LIST") [ 0; 2 ]);
       check "list_pop_back no out"
         "list(POP_BACK MY_LIST)\n"
-        (yc_list_pop_back (ycstr "MY_LIST"));
+        (yc_list_pop_back (ycvar "MY_LIST"));
       check "list_pop_front with out"
         "list(POP_FRONT MY_LIST X)\n"
-        (yc_list_pop_front ~out_vars:[ "X" ] (ycstr "MY_LIST"));
+        (yc_list_pop_front ~out_vars:[ (ycvar "X") ] (ycvar "MY_LIST"));
     ] )
 
 let string_ops =
@@ -252,67 +252,67 @@ let string_ops =
     [
       check "string_toupper"
         "string(TOUPPER hello OUT)"
-        (yc_string_toupper (ystr "hello") "OUT");
+        (yc_string_toupper (ystr "hello") (ycvar "OUT"));
       check "string_tolower"
         "string(TOLOWER hello OUT)"
-        (yc_string_tolower (ystr "hello") "OUT");
+        (yc_string_tolower (ystr "hello") (ycvar "OUT"));
       check "string_length"
         "string(LENGTH hello OUT)"
-        (yc_string_length (ystr "hello") "OUT");
+        (yc_string_length (ystr "hello") (ycvar "OUT"));
       check "string_strip"
         "string(STRIP hello OUT)"
-        (yc_string_strip (ystr "hello") "OUT");
+        (yc_string_strip (ystr "hello") (ycvar "OUT"));
       check "string_concat"
         "string(CONCAT OUT a b)"
-        (yc_string_concat "OUT" [ ystr "a"; ystr "b" ]);
+        (yc_string_concat (ycvar "OUT") [ ystr "a"; ystr "b" ]);
       check "string_replace"
         "string(REPLACE foo bar OUT input)"
-        (yc_string_replace (ystr "foo") (ystr "bar") "OUT" [ ystr "input" ]);
+        (yc_string_replace (ystr "foo") (ystr "bar") (ycvar "OUT") [ ystr "input" ]);
       check "string_regex_match"
         "string(REGEX MATCH \"[0-9]+\" OUT src)"
-        (yc_string_regex_match "[0-9]+" "OUT" [ ystr "src" ]);
+        (yc_string_regex_match "[0-9]+" (ycvar "OUT") [ ystr "src" ]);
       check "string_regex_replace"
         "string(REGEX REPLACE \"[0-9]+\" X OUT src)"
-        (yc_string_regex_replace "[0-9]+" (ystr "X") "OUT" [ ystr "src" ]);
+        (yc_string_regex_replace "[0-9]+" (ystr "X") (ycvar "OUT") [ ystr "src" ]);
       check "string_append"
         "string(APPEND VAR a b)"
-        (yc_string_append (ycstr "VAR") [ ystr "a"; ystr "b" ]);
+        (yc_string_append (ycvar "VAR") [ ystr "a"; ystr "b" ]);
       check "string_prepend"
         "string(PREPEND VAR pfx)"
-        (yc_string_prepend (ycstr "VAR") [ ystr "pfx" ]);
+        (yc_string_prepend (ycvar "VAR") [ ystr "pfx" ]);
       check "string_join"
         "string(JOIN , OUT a b)"
-        (yc_string_join (ystr ",") "OUT" [ ystr "a"; ystr "b" ]);
+        (yc_string_join (ystr ",") (ycvar "OUT") [ ystr "a"; ystr "b" ]);
       check "string_find"
         "string(FIND hello ell OUT)"
-        (yc_string_find (ystr "hello") (ystr "ell") "OUT");
+        (yc_string_find (ystr "hello") (ystr "ell") (ycvar "OUT"));
       check "string_find reverse"
         "string(FIND hello ell OUT REVERSE)"
-        (yc_string_find ~reverse:true (ystr "hello") (ystr "ell") "OUT");
+        (yc_string_find ~reverse:true (ystr "hello") (ystr "ell") (ycvar "OUT"));
       check "string_substring"
         "string(SUBSTRING hello 1 3 OUT)"
-        (yc_string_substring (ystr "hello") 1 ~length:3 "OUT");
+        (yc_string_substring (ystr "hello") 1 ~length:3 (ycvar "OUT"));
       check "string_repeat"
         "string(REPEAT abc 3 OUT)"
-        (yc_string_repeat (ystr "abc") 3 "OUT");
+        (yc_string_repeat (ystr "abc") 3 (ycvar "OUT"));
       check "string_genex_strip"
         "string(GENEX_STRIP src OUT)"
-        (yc_string_genex_strip (ystr "src") "OUT");
+        (yc_string_genex_strip (ystr "src") (ycvar "OUT"));
       check "string_compare equal"
         "string(COMPARE EQUAL a b OUT)"
-        (yc_string_compare Sco_equal (ystr "a") (ystr "b") "OUT");
+        (yc_string_compare Sco_equal (ystr "a") (ystr "b") (ycvar "OUT"));
       check "string_compare less"
         "string(COMPARE LESS a b OUT)"
-        (yc_string_compare Sco_less (ystr "a") (ystr "b") "OUT");
+        (yc_string_compare Sco_less (ystr "a") (ystr "b") (ycvar "OUT"));
       check "string_make_c_identifier"
         "string(MAKE_C_IDENTIFIER hello OUT)"
-        (yc_string_make_c_identifier (ystr "hello") "OUT");
+        (yc_string_make_c_identifier (ystr "hello") (ycvar "OUT"));
       check "string_timestamp plain"
         "string(TIMESTAMP OUT)"
-        (yc_string_timestamp "OUT");
+        (yc_string_timestamp (ycvar "OUT"));
       check "string_timestamp utc format"
         "string(TIMESTAMP OUT \"%Y-%m-%d\" UTC)"
-        (yc_string_timestamp ~utc:true ~format:"%Y-%m-%d" "OUT");
+        (yc_string_timestamp ~utc:true ~format:"%Y-%m-%d" (ycvar "OUT"));
     ] )
 
 let scripting_ext =
@@ -320,10 +320,10 @@ let scripting_ext =
     [
       check "get_filename_component name"
         "get_filename_component(OUT myfile.txt NAME)"
-        (yc_get_filename_component ~mode:"NAME" (ycstr "OUT") (ystr "myfile.txt"));
+        (yc_get_filename_component ~mode:"NAME" (ycvar "OUT") (ystr "myfile.txt"));
       check "get_filename_component path"
         "get_filename_component(OUT /a/b/c.txt PATH)"
-        (yc_get_filename_component ~mode:"PATH" (ycstr "OUT") (ystr "/a/b/c.txt"));
+        (yc_get_filename_component ~mode:"PATH" (ycvar "OUT") (ystr "/a/b/c.txt"));
       check "include_guard directory"
         "include_guard(DIRECTORY)"
         (yc_include_guard Ig_directory);
@@ -332,7 +332,7 @@ let scripting_ext =
         (yc_include_guard Ig_global);
       check "separate_arguments unix"
         "separate_arguments(VAR UNIX_COMMAND)"
-        (yc_separate_arguments ~mode:Sa_unix_command (ycstr "VAR"));
+        (yc_separate_arguments ~mode:Sa_unix_command (ycvar "VAR"));
       check "target_link_options"
         "target_link_options(mytarget PUBLIC -Wl,--gc-sections)"
         (yc_target_link_options (ytval "mytarget")

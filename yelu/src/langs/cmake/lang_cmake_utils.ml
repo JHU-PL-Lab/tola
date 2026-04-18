@@ -2,8 +2,11 @@ open Base
 open Lang_cmake
 
 let version_of_string s =
-  Stdlib.Scanf.sscanf s "%d.%d.%s" (fun major minor patch ->
-      { major; minor; patch })
+  let parts = String.split s ~on:'.' in
+  match parts with
+  | [major; minor] -> { major = Int.of_string major; minor = Int.of_string minor; patch = "" }
+  | [major; minor; patch] -> { major = Int.of_string major; minor = Int.of_string minor; patch }
+  | _ -> failwith (Printf.sprintf "version_of_string: invalid version %S" s)
 
 let string_of_version ver =
   let str_patch = if String.length ver.patch = 0 then "" else "." ^ ver.patch in
@@ -99,7 +102,7 @@ let project ?version ?description ?homepage_url ?(languages = []) name =
   Project_cmd (Project { name; version; description; homepage_url; languages })
 
 let include_guard scope = Include_guard { scope }
-let separate_arguments ~mode var = Separete_arguments { var; mode }
+let separate_arguments ?(input) ~mode var = Separete_arguments { var; mode; input }
 
 let option_ ?(value = bool_ false) ~msg var = Cmake_option { var; msg; value }
 let export_targets targets = Project_cmd (Export_targets { targets })
@@ -347,6 +350,9 @@ let message ?(mode = Mm_status) texts = Message { mode; texts }
 
 let math ?(output_format = Decical) ~var exp =
   Math_lib { var; exp; output_format }
+
+let set_cache ?(force = false) ?(cache_type = Ct_string) ?(docstring = "") var values =
+  Set_cache { var; values; cache_type; docstring; force }
 
 let unset_cache var = Unset { var; cache = true; parent_scope = false }
 

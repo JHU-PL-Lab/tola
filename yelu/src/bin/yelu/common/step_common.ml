@@ -20,8 +20,8 @@ let project_preamble =
     Steps: 1-3. *)
 let cxx_standard_11 =
   [
-    yc_set (ycstr "CMAKE_CXX_STANDARD") [ ystr "11" ];
-    yc_set (ycstr "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
+    yc_set (ycvar "CMAKE_CXX_STANDARD") [ ystr "11" ];
+    yc_set (ycvar "CMAKE_CXX_STANDARD_REQUIRED") [ ybool true ];
   ]
 
 (** INTERFACE library + cxx_std_11 compile feature.
@@ -37,9 +37,9 @@ let compiler_flags_lib =
     Requires: [yvar "flags"]. Steps: 4-12. *)
 let compiler_warning_options =
   [
-    yc_set (ycstr "gcc_like_cxx")
+    yc_set (ycvar "gcc_like_cxx")
       [ ystr_raw "$<COMPILE_LANG_AND_ID:CXX,ARMClang,AppleClang,Clang,GNU,LCC>" ];
-    yc_set (ycstr "msvc_cxx") [ ystr_raw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
+    yc_set (ycvar "msvc_cxx") [ ystr_raw "$<COMPILE_LANG_AND_ID:CXX,MSVC>" ];
     compile_opts (yvar "flags")
       [
         ytarget_def ~kind:Interface
@@ -111,14 +111,14 @@ let test_suite ~ctest =
 let cpack_basic =
   [
     yc_include (yfile "InstallRequiredSystemLibraries");
-    yc_set (ycstr "CPACK_RESOURCE_FILE_LICENSE")
+    yc_set (ycvar "CPACK_RESOURCE_FILE_LICENSE")
       [ dir_concat source_this "License.txt" ];
-    yc_set (ycstr "CPACK_PACKAGE_VERSION_MAJOR")
+    yc_set (ycvar "CPACK_PACKAGE_VERSION_MAJOR")
       [ ystr_raw "${Tutorial_VERSION_MAJOR}" ];
-    yc_set (ycstr "CPACK_PACKAGE_VERSION_MINOR")
+    yc_set (ycvar "CPACK_PACKAGE_VERSION_MINOR")
       [ ystr_raw "${Tutorial_VERSION_MINOR}" ];
-    yc_set (ycstr "CPACK_GENERATOR") [ ystr_raw "TGZ" ];
-    yc_set (ycstr "CPACK_SOURCE_GENERATOR") [ ystr_raw "TGZ" ];
+    yc_set (ycvar "CPACK_GENERATOR") [ ystr_raw "TGZ" ];
+    yc_set (ycvar "CPACK_SOURCE_GENERATOR") [ ystr_raw "TGZ" ];
     yc_include (yfile "CPack");
   ]
 
@@ -126,14 +126,14 @@ let cpack_basic =
     Steps: 10-12. *)
 let shared_libs_output_dirs =
   [
-    yc_set (ycstr "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
+    yc_set (ycvar "CMAKE_ARCHIVE_OUTPUT_DIRECTORY")
       [ dir output_root ];
-    yc_set (ycstr "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
+    yc_set (ycvar "CMAKE_LIBRARY_OUTPUT_DIRECTORY")
       [ dir output_root ];
-    yc_set (ycstr "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
+    yc_set (ycvar "CMAKE_RUNTIME_OUTPUT_DIRECTORY")
       [ dir output_root ];
     yc_option ~value:(ybool true) ~msg:"Build using shared libraries"
-      (ycstr "BUILD_SHARED_LIBS");
+      (ycvar "BUILD_SHARED_LIBS");
   ]
 
 (* --- MathFunctions blocks --- *)
@@ -180,9 +180,9 @@ let math_check_cxx_features =
     Steps: 5_math-12_math. *)
 let math_install_libs ?export () =
   [
-    yc_set (yvar "inst_libs") [ yvar "math"; yvar "flags" ];
+    yc_set (ycvar "installable_libs") [ yvar "math"; yvar "flags" ];
     yifthen (Yis_target (ytval "SqrtLibrary"))
-      (ycmd_of_list [ yc_list_append (yvar "inst_libs") [ yvar "sqrt" ] ]);
+      (ycmd_of_list [ yc_list_append (ycvar "installable_libs") [ yvar "sqrt" ] ]);
     yc_install_targets ?export [ ytval "${installable_libs}" ] (ydir "lib");
     yc_install_files [ ystr_raw "MathFunctions.h" ] (ydir "include");
   ]

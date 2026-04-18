@@ -25,7 +25,7 @@ let cmd =
              ];
          ];
        yc_option ~value:(ybool true)
-         ~msg:"Use tutorial provided math implementation" (yvar "use_mymath");
+         ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
        yifthen (Ytruthy (yvar "use_mymath"))
          (ycmd_of_list
             ([

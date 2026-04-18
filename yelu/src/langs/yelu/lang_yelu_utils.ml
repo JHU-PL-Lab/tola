@@ -8,6 +8,25 @@ let ycvar s = Ycvar s
 let ytarget s = Ytarget s
 let ytruthy arg = Ytruthy arg
 let ystrequal a b = Ystrequal (a, b)
+let ystrless a b = Ystrless (a, b)
+let ystrgreater a b = Ystrgreater (a, b)
+let ystrless_equal a b = Ystrless_equal (a, b)
+let ystrgreater_equal a b = Ystrgreater_equal (a, b)
+let yequal a b = Yequal (a, b)
+let yless a b = Yless (a, b)
+let ygreater a b = Ygreater (a, b)
+let yless_equal a b = Yless_equal (a, b)
+let ygreater_equal a b = Ygreater_equal (a, b)
+let yin_list value listvar = Yin_list (value, listvar)
+let ymatches value regex = Ymatches (value, regex)
+let yexists path = Yexists path
+let yis_directory path = Yis_directory path
+let yis_absolute path = Yis_absolute path
+let yversion_less a b = Yversion_less (a, b)
+let yversion_greater a b = Yversion_greater (a, b)
+let yversion_equal a b = Yversion_equal (a, b)
+let yversion_less_equal a b = Yversion_less_equal (a, b)
+let yversion_greater_equal a b = Yversion_greater_equal (a, b)
 let yvar s = Yarg_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
 let ycstr s = Yarg_cvar (Ycvar s)
@@ -52,7 +71,7 @@ let yc_minimum_required_s ?max min =
 let yc_project ?version ?(languages = []) name =
   Yc_project { name; version; languages }
 
-let yc_set ?(parent_scope = false) cvar values =
+let yc_set ?(parent_scope = false) (cvar : yelu_cvar) values =
   Yc_set { cvar; values; parent_scope }
 
 let add_exe ?(sources = []) name =
@@ -83,7 +102,7 @@ let yc_configure_file ~input output = Yc_configure_file { input; output }
 let gen_file = yc_configure_file
 let yc_add_subdirectory source_dir = Yc_add_subdirectory { source_dir }
 
-let yc_option ?(value = ybool false) ~msg cvar = Yc_option { cvar; msg; value }
+let yc_option ?(value = ybool false) ~msg (cvar : yelu_cvar) = Yc_option { cvar; msg; value }
 
 let yite cond then_ ?else_ () =
   match else_ with
@@ -98,10 +117,16 @@ let yc_include ?(optional = false) file = Yc_include { file; optional }
 let yc_function name args body = Yc_function { name; args; body }
 let yc_macro name ?(args = []) body = Yc_macro { name; args; body }
 let yc_apply name args = Yc_apply { name; args }
-let yc_unset_cache cvar = Yc_unset_cache { cvar }
+let yc_set_env var value = Yc_set_env { var; value }
+let yc_unset_env var = Yc_unset_env { var }
+
+let yc_set_cache ?(force = false) ?(cache_type = Lang_cmake.Ct_string) ?(docstring = "") (cvar : yelu_cvar) values =
+  Yc_set_cache { cvar; values; cache_type; docstring; force }
+
+let yc_unset_cache (cvar : yelu_cvar) = Yc_unset_cache { cvar }
 let yc_file_relative_path ~var ~base file = Yc_file_relative_path { var; base; file }
 let yc_quote_cmd s = Yc_quote_cmd s
-let yc_list_append cvar values = Yc_list_append { cvar; values }
+let yc_list_append (cvar : yelu_cvar) values = Yc_list_append { cvar; values }
 
 (* testing *)
 let yc_enable_testing = Yc_enable_testing
@@ -126,7 +151,8 @@ let yc_get_global_property ~property var =
   Yc_get_global_property { var; property }
 
 let yc_include_guard scope = Yc_include_guard { scope }
-let yc_separate_arguments ~mode cvar = Yc_separate_arguments { cvar; mode }
+let yc_separate_arguments ?(input) ~mode (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode; input }
+let yc_separate_arguments_plain (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode = Lang_cmake.Sa_plain; input = None }
 let yc_target_link_options ?(before = false) target items =
   Yc_target_link_options { target; before; items }
 let yc_target_sources target items = Yc_target_sources { target; items }
@@ -190,14 +216,17 @@ let yc_find_file ?(names = []) ?(paths = []) ?(hints = [])
 let yc_message ?(mode = Lang_cmake.Mm_status) texts = Yc_message { mode; texts }
 
 (* Tier 2: iteration *)
-let yc_foreach ?(items = []) loop_var commands =
+let yc_foreach ?(items = []) (loop_var : yelu_cvar) commands =
   Yc_foreach { loop_var; items; commands }
 
-let yc_foreach_range ?start ?step ~stop loop_var commands =
+let yc_foreach_range ?start ?step ~stop (loop_var : yelu_cvar) commands =
   Yc_foreach_range { loop_var; start; stop; step; commands }
 
-let yc_foreach_in ?(lists = []) ?(items = []) loop_var commands =
+let yc_foreach_in ?(lists = []) ?(items = []) (loop_var : yelu_cvar) commands =
   Yc_foreach_in { loop_var; lists; items; commands }
+
+let yc_foreach_zip (loop_vars : yelu_cvar list) (lists : yelu_cvar list) commands =
+  Yc_foreach_zip { loop_vars; lists; commands }
 
 let yc_while cond commands = Yc_while { cond; commands }
 let yc_break = Yc_break
@@ -205,62 +234,99 @@ let yc_continue = Yc_continue
 let yc_return ?(propogate_vars = []) () = Yc_return { propogate_vars }
 
 (* Tier 2: list commands *)
-let yc_list_length cvar out = Yc_list_length { cvar; out }
-let yc_list_get ?(indices = []) cvar out = Yc_list_get { cvar; indices; out }
-let yc_list_remove_item cvar values = Yc_list_remove_item { cvar; values }
-let yc_list_remove_duplicates cvar = Yc_list_remove_duplicates { cvar }
-let yc_list_reverse cvar = Yc_list_reverse { cvar }
+let yc_list_length (cvar : yelu_cvar) (out : yelu_cvar) = Yc_list_length { cvar; out }
+let yc_list_get ?(indices = []) (cvar : yelu_cvar) (out : yelu_cvar) = Yc_list_get { cvar; indices; out }
+let yc_list_remove_item (cvar : yelu_cvar) values = Yc_list_remove_item { cvar; values }
+let yc_list_remove_duplicates (cvar : yelu_cvar) = Yc_list_remove_duplicates { cvar }
+let yc_list_reverse (cvar : yelu_cvar) = Yc_list_reverse { cvar }
 
-let yc_list_sort ?order ?compare ?case cvar =
+let yc_list_sort ?order ?compare ?case (cvar : yelu_cvar) =
   Yc_list_sort { cvar; order; compare; case }
 
-let yc_list_filter mode regex cvar =
+let yc_list_filter mode regex (cvar : yelu_cvar) =
   Yc_list_filter { cvar; mode; regex }
 
-let yc_list_join cvar glue out = Yc_list_join { cvar; glue; out }
-let yc_list_sublist cvar begin_ length out = Yc_list_sublist { cvar; begin_; length; out }
-let yc_list_find cvar value out = Yc_list_find { cvar; value; out }
-let yc_list_prepend cvar values = Yc_list_prepend { cvar; values }
-let yc_list_insert cvar index values = Yc_list_insert { cvar; index; values }
-let yc_list_remove_at cvar indices = Yc_list_remove_at { cvar; indices }
-let yc_list_pop_back ?(out_vars = []) cvar = Yc_list_pop_back { cvar; out_vars }
-let yc_list_pop_front ?(out_vars = []) cvar = Yc_list_pop_front { cvar; out_vars }
+let yc_list_join (cvar : yelu_cvar) glue (out : yelu_cvar) = Yc_list_join { cvar; glue; out }
+let yc_list_sublist (cvar : yelu_cvar) begin_ length (out : yelu_cvar) = Yc_list_sublist { cvar; begin_; length; out }
+let yc_list_find (cvar : yelu_cvar) value (out : yelu_cvar) = Yc_list_find { cvar; value; out }
+let yc_list_prepend (cvar : yelu_cvar) values = Yc_list_prepend { cvar; values }
+let yc_list_insert (cvar : yelu_cvar) index values = Yc_list_insert { cvar; index; values }
+let yc_list_remove_at (cvar : yelu_cvar) indices = Yc_list_remove_at { cvar; indices }
+let yc_list_pop_back ?(out_vars = []) (cvar : yelu_cvar) = Yc_list_pop_back { cvar; out_vars }
+let yc_list_pop_front ?(out_vars = []) (cvar : yelu_cvar) = Yc_list_pop_front { cvar; out_vars }
+
+let yc_list_transform ?(selector) ?(output : yelu_cvar option) (cvar : yelu_cvar) action =
+  Yc_list_transform { cvar; action; selector; output }
 
 (* Tier 2: string commands *)
-let yc_string_toupper string out = Yc_string_toupper { string; out }
-let yc_string_tolower string out = Yc_string_tolower { string; out }
-let yc_string_length string out = Yc_string_length { string; out }
-let yc_string_strip string out = Yc_string_strip { string; out }
-let yc_string_concat out inputs = Yc_string_concat { out; inputs }
+let yc_string_toupper string (out : yelu_cvar) = Yc_string_toupper { string; out }
+let yc_string_tolower string (out : yelu_cvar) = Yc_string_tolower { string; out }
+let yc_string_length string (out : yelu_cvar) = Yc_string_length { string; out }
+let yc_string_strip string (out : yelu_cvar) = Yc_string_strip { string; out }
+let yc_string_concat (out : yelu_cvar) inputs = Yc_string_concat { out; inputs }
 
-let yc_string_replace match_string replace_string out inputs =
+let yc_string_replace match_string replace_string (out : yelu_cvar) inputs =
   Yc_string_replace { match_string; replace_string; out; inputs }
 
-let yc_string_regex_match regex out inputs =
+let yc_string_regex_match regex (out : yelu_cvar) inputs =
   Yc_string_regex_match { regex; out; inputs }
+let yc_string_regex_matchall regex (out : yelu_cvar) inputs =
+  Yc_string_regex_matchall { regex; out; inputs }
 
-let yc_string_regex_replace regex replace out inputs =
+let yc_string_regex_replace regex replace (out : yelu_cvar) inputs =
   Yc_string_regex_replace { regex; replace; out; inputs }
 
-let yc_string_append cvar inputs = Yc_string_append { cvar; inputs }
-let yc_string_prepend cvar inputs = Yc_string_prepend { cvar; inputs }
-let yc_string_join glue out inputs = Yc_string_join { glue; out; inputs }
-let yc_string_find ?(reverse = false) string substring out =
+let yc_string_append (cvar : yelu_cvar) inputs = Yc_string_append { cvar; inputs }
+let yc_string_prepend (cvar : yelu_cvar) inputs = Yc_string_prepend { cvar; inputs }
+let yc_string_join glue (out : yelu_cvar) inputs = Yc_string_join { glue; out; inputs }
+let yc_string_find ?(reverse = false) string substring (out : yelu_cvar) =
   Yc_string_find { string; substring; out; reverse }
-let yc_string_substring string begin_ ?length out =
+let yc_string_substring string begin_ ?length (out : yelu_cvar) =
   Yc_string_substring { string; begin_; length; out }
-let yc_string_repeat string count out = Yc_string_repeat { string; count; out }
-let yc_string_genex_strip string out = Yc_string_genex_strip { string; out }
+let yc_string_repeat string count (out : yelu_cvar) = Yc_string_repeat { string; count; out }
+let yc_string_genex_strip string (out : yelu_cvar) = Yc_string_genex_strip { string; out }
 
-let yc_string_compare op string1 string2 out =
+let yc_string_compare op string1 string2 (out : yelu_cvar) =
   Yc_string_compare { op; string1; string2; out }
 
-let yc_string_make_c_identifier string out =
+let yc_string_make_c_identifier string (out : yelu_cvar) =
   Yc_string_make_c_identifier { string; out }
 
-let yc_string_timestamp ?(utc = false) ?format out =
+let yc_string_timestamp ?(utc = false) ?format (out : yelu_cvar) =
   Yc_string_timestamp { out; format; utc }
 
+let yc_string_hex string (out : yelu_cvar) = Yc_string_hex { string; out }
+
+let yc_string_uuid ?(upper = false) ~namespace ~name ~type_ (out : yelu_cvar) =
+  Yc_string_uuid { out; namespace; name; type_; upper }
+
+let yc_string_json_get ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_get { json; path } }
+
+let yc_string_json_get_raw ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_get_raw { json; path } }
+
+let yc_string_json_type ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_type { json; path } }
+
+let yc_string_json_length ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_length { json; path } }
+
+let yc_string_json_member ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_member { json; path } }
+
+let yc_string_json_remove ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
+  Yc_string_json { out; error_var; op = Yjop_remove { json; path } }
+
+let yc_string_json_set ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) ~value json =
+  Yc_string_json { out; error_var; op = Yjop_set { json; path; value } }
+
+let yc_string_json_equal ~(out : yelu_cvar) json1 json2 =
+  Yc_string_json { out; error_var = None; op = Yjop_equal { json1; json2 } }
+
+let yc_string_json_string_encode ~(out : yelu_cvar) value =
+  Yc_string_json { out; error_var = None; op = Yjop_string_encode { value } }
+
 (* math *)
-let yc_math ?(output_format = Lang_cmake.Decical) exp out =
+let yc_math ?(output_format = Lang_cmake.Decical) exp (out : yelu_cvar) =
   Yc_math { exp; out; output_format }

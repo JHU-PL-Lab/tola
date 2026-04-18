@@ -32,7 +32,7 @@ let test_find_library_macro =
   in
   yc_macro (ystr "test_find_library") ~args:[ "desc"; "expected" ]
     [
-      yc_unset_cache (ycstr "LIB");
+      yc_unset_cache (ycvar "LIB");
       yc_apply (ystr "find_library")
         [
           ycstr "LIB";
@@ -46,9 +46,9 @@ let test_find_library_macro =
 let test_find_library_subst_macro =
   yc_macro (ystr "test_find_library_subst") ~args:[ "expected" ]
     [
-      yc_get_filename_component ~mode:"PATH" (ycstr "dir") (ystr_raw "${expected}");
-      yc_get_filename_component ~mode:"NAME" (ycstr "name") (ystr_raw "${expected}");
-      yc_string_regex_replace "lib/?[36Xx][24Y3][Z2]*" (ystr "lib") "dir"
+      yc_get_filename_component ~mode:"PATH" (ycvar "dir") (ystr_raw "${expected}");
+      yc_get_filename_component ~mode:"NAME" (ycvar "name") (ystr_raw "${expected}");
+      yc_string_regex_replace "lib/?[36Xx][24Y3][Z2]*" (ystr "lib") (ycvar "dir")
         [ ystr_raw "${dir}" ];
       yc_apply (ystr "test_find_library")
         [
@@ -66,19 +66,19 @@ let cmd =
     [
       yc_minimum_required_s "3.10.";
       yc_project ~languages:[ Lang_none ] "FindLibraryTest";
-      yc_set (ycstr "CMAKE_FIND_DEBUG_MODE") [ ystr "1" ];
+      yc_set (ycvar "CMAKE_FIND_DEBUG_MODE") [ ystr "1" ];
       test_find_library_macro;
       test_find_library_subst_macro;
-      yc_set (ycstr "CMAKE_FIND_LIBRARY_PREFIXES") [ ystr "lib" ];
-      yc_set (ycstr "CMAKE_FIND_LIBRARY_SUFFIXES") [ ystr ".a" ];
+      yc_set (ycvar "CMAKE_FIND_LIBRARY_PREFIXES") [ ystr "lib" ];
+      yc_set (ycvar "CMAKE_FIND_LIBRARY_SUFFIXES") [ ystr ".a" ];
       yc_set_global_property
         [ ("FIND_LIBRARY_USE_LIBX32_PATHS", ybool true) ];
       yc_set_global_property
         [ ("FIND_LIBRARY_USE_LIB32_PATHS", ybool true) ];
       yc_set_global_property
         [ ("FIND_LIBRARY_USE_LIB64_PATHS", ybool true) ];
-      yc_set (ycstr "CMAKE_INTERNAL_PLATFORM_ABI") [ ystr "ELF" ];
-      yc_set (ycstr "CMAKE_SIZEOF_VOID_P") [ ystr "4" ];
+      yc_set (ycvar "CMAKE_INTERNAL_PLATFORM_ABI") [ ystr "ELF" ];
+      yc_set (ycvar "CMAKE_SIZEOF_VOID_P") [ ystr "4" ];
       yc_foreach ~items:
         [
           ystr "lib/32/libtest5.a";
@@ -93,9 +93,9 @@ let cmd =
           ystr "lib32/A/lib32/libtest4.a";
           ystr "lib32/A/libtest4.a";
           ystr "lib32/libtest4.a";
-        ] "lib"
+        ] (ycvar "lib")
         (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${lib}" ]);
-      yc_set (ycstr "CMAKE_SIZEOF_VOID_P") [ ystr "8" ];
+      yc_set (ycvar "CMAKE_SIZEOF_VOID_P") [ ystr "8" ];
       yc_foreach ~items:
         [
           ystr "lib/64/libtest2.a";
@@ -105,10 +105,10 @@ let cmd =
           ystr "lib64/A/lib64/libtest1.a";
           ystr "lib64/A/libtest1.a";
           ystr "lib64/libtest1.a";
-        ] "lib64"
+        ] (ycvar "lib64")
         (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${lib64}" ]);
-      yc_set (ycstr "CMAKE_INTERNAL_PLATFORM_ABI") [ ystr "ELF X32" ];
-      yc_set (ycstr "CMAKE_SIZEOF_VOID_P") [ ystr "4" ];
+      yc_set (ycvar "CMAKE_INTERNAL_PLATFORM_ABI") [ ystr "ELF X32" ];
+      yc_set (ycvar "CMAKE_SIZEOF_VOID_P") [ ystr "4" ];
       yc_foreach ~items:
         [
           ystr "lib/x32/libtest2.a";
@@ -118,7 +118,7 @@ let cmd =
           ystr "libx32/A/libx32/libtest1.a";
           ystr "libx32/A/libtest1.a";
           ystr "libx32/libtest1.a";
-        ] "libx32"
+        ] (ycvar "libx32")
         (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${libx32}" ]);
       yc_apply (ystr "test_find_library")
         [
@@ -154,7 +154,7 @@ let cmd =
           ycref_path source_this "A";
           ycref_path source_this "B";
         ];
-      yc_set (ycstr "CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX") [ ystr "XYZ" ];
+      yc_set (ycvar "CMAKE_FIND_LIBRARY_CUSTOM_LIB_SUFFIX") [ ystr "XYZ" ];
       yc_foreach ~items:
         [
           ystr "lib/XYZ/libtest1.a";
@@ -164,7 +164,7 @@ let cmd =
           ystr "libXYZ/A/libXYZ/libtest5.a";
           ystr "libXYZ/A/libtest6.a";
           ystr "libXYZ/libtest7.a";
-        ] "libXYZ"
+        ] (ycvar "libXYZ")
         (yc_apply (ystr "test_find_library_subst") [ ystr_raw "${libXYZ}" ]);
     ]
 

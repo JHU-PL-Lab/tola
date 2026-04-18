@@ -5,7 +5,7 @@ let cmd =
   ycmd_of_list
     [
       yc_include (ystr_raw "release/CPackConfig.cmake");
-      yc_set (ycstr "CPACK_INSTALL_CMAKE_PROJECTS")
+      yc_set (ycvar "CPACK_INSTALL_CMAKE_PROJECTS")
         [ ystr_raw "debug;Tutorial;ALL;/"; ystr_raw "release;Tutorial;ALL;/" ];
     ]
 

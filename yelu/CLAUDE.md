@@ -114,13 +114,11 @@ See `doc/equiv_checking_research_prompt.md`.
 
 ### Language coverage
 
-**Y10. Add `string(JSON …)` and `string(UUID …)` to cmake AST** — both are
-real cmake commands (UUID since 3.1, JSON since 3.19) that are simply absent
-from `lang_cmake.ml`. JSON has 6 sub-operations (GET, TYPE, LENGTH, MEMBER,
-SET, REMOVE) plus ERROR_VARIABLE; UUID takes NAMESPACE/NAME/TYPE arguments.
-Both have RunCMake positive test scripts (`string/JSON.cmake`,
-`string/Uuid.cmake`). Add `Sc_json` and `Sc_uuid` to `string_cmd`, wire PP,
-utils, and yelu layer.
+**Y10. ✓ DONE** — `string(JSON …)` and `string(UUID …)` fully implemented:
+`Sc_uuid`/`Sc_json`/`json_op` in `lang_cmake.ml`; PP; `yelu_json_op` + yelu layer;
+8 UUID tests + 8 JSON tests all pass. `GET_RAW`/`STRING_ENCODE` are cmake 4.3+ (we're
+on 3.28); `Jop_get_raw`/`Jop_string_encode` exist in AST but not tested.
+Key fix: `Ycs_cmake` compiles to `Bare` (not `Quoted`) so bracket strings pass through.
 
 **Y9. Audit RunCMake positive-test coverage gaps** — the official cmake
 `Tests/RunCMake/list/` and `Tests/RunCMake/string/` directories do not have
@@ -171,6 +169,17 @@ A yelu program that sets `CMAKE_C_COMPILER` would statically declare the point
 cache-breaking, letting a runner (canary or yelu CLI) decide whether two tasks
 can share a build directory. Connects to canary TODO #10 (unified build cache scheme).
 Not urgent — pick up when exploring yelu-specific language features.
+
+**Y11. Policy-aware compiler/printer (design)** — yelu constructs that require specific
+cmake policies (e.g., `return(PROPAGATE ...)` requires CMP0140 NEW) should be declared
+as such, and the compiler/printer should emit the correct preamble automatically.
+Design questions: (a) where do policy requirements live — per-construct metadata in
+`lang_yelu.ml` or a separate registry; (b) output form — `cmake_minimum_required(VERSION x)`
+(covers all policies up to x) or individual `cmake_policy(SET CMPxxxx NEW)` calls;
+(c) conflict resolution when two constructs require incompatible policies.
+Framing: the compiler's correctness contract is "generated cmake behaves as specified
+on any supported cmake version" — policy preamble is compiler output, not user boilerplate.
+Not urgent — design pass needed before touching code.
 
 ### Done
 

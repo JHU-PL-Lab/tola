@@ -65,6 +65,9 @@ let try_declare_cvar env arg =
 
 let erase_cvar (Ycvar name) = name
 
+(* Extract the cmake variable name from a yelu_cvar *)
+let cv_name (Ycvar n) = n
+
 let rec erase_arg env = function
   | Yarg_var (Yvar name) ->
       (match Map.find env.bindings name with
@@ -80,12 +83,20 @@ let rec erase_arg env = function
       List.iter known_dirs ~f:(fun var ->
           if String.equal s (Fmt.str "${%s}" var) then
             Fmt.epr "Hint: use typed primitive instead of yraw \"${%s}\"@." var);
-      Lang_cmake.Quoted s
+      (* Bracket strings [=[...]=] must not be double-quoted; pass as Bare.
+         All other raw strings are passed Quoted so cmake treats them as
+         single tokens. *)
+      if String.is_prefix s ~prefix:"[" then Lang_cmake.Bare s
+      else Lang_cmake.Quoted s
   | Yarg_string (Ycs_val s) ->
     (* Empty string must be Quoted so cmake sees "" rather than nothing.
-       Strings containing "$<" must be quoted so cmake does not try to
-       evaluate them as generator expressions. *)
-    if String.is_empty s || String.is_substring s ~substring:"$<"
+       Strings with whitespace must be Quoted — unquoted whitespace splits args.
+       Strings containing "$<" must be Quoted so cmake does not evaluate them
+       as generator expressions. *)
+    if String.is_empty s
+    || String.exists s ~f:Char.is_whitespace
+    || String.is_substring s ~substring:"$<"
+    || String.exists s ~f:(Char.equal '\\')
     then Lang_cmake.Quoted s
     else Lang_cmake.Bare s
   | Yarg_string ycs -> Lang_cmake.Bare (ycs_to_s ycs)
@@ -164,14 +175,52 @@ let cmake_quote_cond s =
 let rec erase_cond env : yelu_cond -> string list = function
   | Ytruthy arg -> [ erase_arg_s env arg ]
   | Ynot c -> "NOT" :: erase_cond env c
-  | Yand (a, b) -> erase_cond env a @ [ "AND" ] @ erase_cond env b
-  | Yor (a, b) -> erase_cond env a @ [ "OR" ] @ erase_cond env b
+  | Yand (a, b) -> [ "(" ] @ erase_cond env a @ [ "AND" ] @ erase_cond env b @ [ ")" ]
+  | Yor (a, b) -> [ "(" ] @ erase_cond env a @ [ "OR" ] @ erase_cond env b @ [ ")" ]
   | Yis_target arg -> [ "TARGET"; erase_arg_s env arg ]
   | Yis_defined arg -> [ "DEFINED"; erase_arg_s env arg ]
   | Ystrequal (a, b) ->
-    [ cmake_quote_cond (erase_arg_s env a);
-      "STREQUAL";
-      cmake_quote_cond (erase_arg_s env b) ]
+    [ cmake_quote_cond (erase_arg_s env a); "STREQUAL";       cmake_quote_cond (erase_arg_s env b) ]
+  | Ystrless (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "STRLESS";        cmake_quote_cond (erase_arg_s env b) ]
+  | Ystrgreater (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "STRGREATER";     cmake_quote_cond (erase_arg_s env b) ]
+  | Ystrless_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "STRLESS_EQUAL";  cmake_quote_cond (erase_arg_s env b) ]
+  | Ystrgreater_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "STRGREATER_EQUAL"; cmake_quote_cond (erase_arg_s env b) ]
+  | Yequal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "EQUAL";          cmake_quote_cond (erase_arg_s env b) ]
+  | Yless (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "LESS";           cmake_quote_cond (erase_arg_s env b) ]
+  | Ygreater (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "GREATER";        cmake_quote_cond (erase_arg_s env b) ]
+  | Yless_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "LESS_EQUAL";     cmake_quote_cond (erase_arg_s env b) ]
+  | Ygreater_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "GREATER_EQUAL";  cmake_quote_cond (erase_arg_s env b) ]
+  | Yin_list (value, listvar) ->
+    [ cmake_quote_cond (erase_arg_s env value);
+      "IN_LIST";
+      erase_arg_s env listvar ]
+  | Ymatches (value, regex) ->
+    [ cmake_quote_cond (erase_arg_s env value); "MATCHES"; regex ]
+  | Yexists path ->
+    [ "EXISTS"; cmake_quote_cond (erase_arg_s env path) ]
+  | Yis_directory path ->
+    [ "IS_DIRECTORY"; cmake_quote_cond (erase_arg_s env path) ]
+  | Yis_absolute path ->
+    [ "IS_ABSOLUTE"; cmake_quote_cond (erase_arg_s env path) ]
+  | Yversion_less (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "VERSION_LESS"; cmake_quote_cond (erase_arg_s env b) ]
+  | Yversion_greater (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "VERSION_GREATER"; cmake_quote_cond (erase_arg_s env b) ]
+  | Yversion_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "VERSION_EQUAL"; cmake_quote_cond (erase_arg_s env b) ]
+  | Yversion_less_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "VERSION_LESS_EQUAL"; cmake_quote_cond (erase_arg_s env b) ]
+  | Yversion_greater_equal (a, b) ->
+    [ cmake_quote_cond (erase_arg_s env a); "VERSION_GREATER_EQUAL"; cmake_quote_cond (erase_arg_s env b) ]
 
 let erase_property env (prop, value) : Lang_cmake.property =
   { prop; value = erase_arg env value }
@@ -198,7 +247,20 @@ let rec check_cond env = function
       check_cond env b
   | Yis_target arg -> check_arg env arg
   | Yis_defined _ -> () (* DEFINED checks existence, no warning *)
-  | Ystrequal (a, b) ->
+  | Ystrequal (a, b) | Ystrless (a, b) | Ystrgreater (a, b)
+  | Ystrless_equal (a, b) | Ystrgreater_equal (a, b)
+  | Yequal (a, b) | Yless (a, b) | Ygreater (a, b)
+  | Yless_equal (a, b) | Ygreater_equal (a, b) ->
+      check_arg env a;
+      check_arg env b
+  | Yin_list (value, listvar) ->
+      check_arg env value;
+      check_arg env listvar
+  | Ymatches (value, _regex) -> check_arg env value
+  | Yexists path | Yis_directory path | Yis_absolute path -> check_arg env path
+  | Yversion_less (a, b) | Yversion_greater (a, b)
+  | Yversion_equal (a, b) | Yversion_less_equal (a, b)
+  | Yversion_greater_equal (a, b) ->
       check_arg env a;
       check_arg env b
 
@@ -224,11 +286,11 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
              }) )
   | Yc_set { cvar; values; parent_scope } ->
       List.iter values ~f:(check_arg env);
-      let env = if parent_scope then env else try_declare_cvar env cvar in
+      let env = if parent_scope then env else declare_cvar env cvar in
       ( env,
         Set
           {
-            var = erase_arg_s env cvar;
+            var = cv_name cvar;
             values = List.map ~f:(erase_arg env) values;
             parent_scope;
           } )
@@ -334,8 +396,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
              }) )
   | Yc_option { cvar; msg; value } ->
       check_arg env value;
-      let env = try_declare_cvar env cvar in
-      (env, Cmake_option { var = erase_arg_s env cvar; msg; value = erase_arg env value })
+      let env = declare_cvar env cvar in
+      (env, Cmake_option { var = cv_name cvar; msg; value = erase_arg env value })
   | Ylet { var = Yvar name; value } ->
       check_arg env value;
       let resolved = resolve_arg env value in
@@ -400,17 +462,30 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       check_arg env name;
       List.iter args ~f:(check_arg env);
       (env, Apply { name = erase_arg_s env name; args = List.map ~f:(erase_arg env) args })
+  | Yc_set_env { var; value } ->
+      check_arg env value;
+      (env, Set_env { var; value = erase_arg env value })
+  | Yc_unset_env { var } ->
+      (env, Unset_env { var })
+  | Yc_set_cache { cvar; values; cache_type; docstring; force } ->
+      List.iter values ~f:(check_arg env);
+      ( env,
+        Set_cache
+          { var = cv_name cvar;
+            values = List.map ~f:(erase_arg env) values;
+            cache_type;
+            docstring;
+            force } )
   | Yc_unset_cache { cvar } ->
-      (env, Unset { var = erase_arg_s env cvar; cache = true; parent_scope = false })
+      (env, Unset { var = cv_name cvar; cache = true; parent_scope = false })
   | Yc_file_relative_path { var; base; file } ->
       (env, File_relative_path { var = erase_arg_s env var; base = erase_arg_s env base; file = erase_arg_s env file })
   | Yc_quote_cmd s -> (env, Quote s)
   | Yc_list_append { cvar; values } ->
-      check_arg env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_cmd
-          (Lc_append { var = erase_arg_s env cvar; values = List.map ~f:(erase_arg env) values }) )
+          (Lc_append { var = cv_name cvar; values = List.map ~f:(erase_arg env) values }) )
   (* testing *)
   | Yc_enable_testing -> (env, Project_cmd Enable_testing)
   | Yc_add_test { name; command; args } ->
@@ -484,22 +559,20 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             properties = List.map ~f:(erase_property env) properties;
           } )
   | Yc_get_filename_component { var; filename; mode } ->
-      check_arg env var;
       check_arg env filename;
       ( env,
         Get_filename_component
           {
-            var = erase_arg_s env var;
+            var = cv_name var;
             filename = erase_arg_s env filename;
             mode;
             cache = false;
           } )
   | Yc_get_global_property { var; property } ->
-      check_arg env var;
       ( env,
         Get_property
           {
-            var = erase_arg_s env var;
+            var = cv_name var;
             global = true;
             directory = "";
             source = "";
@@ -513,9 +586,13 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             set = false;
           } )
   | Yc_include_guard { scope } -> (env, Include_guard { scope })
-  | Yc_separate_arguments { cvar; mode } ->
-      check_arg env cvar;
-      (env, Separete_arguments { var = erase_arg_s env cvar; mode })
+  | Yc_separate_arguments { cvar; mode; input } ->
+      Option.iter input ~f:(check_arg env);
+      ( env,
+        Separete_arguments
+          { var = cv_name cvar;
+            mode;
+            input = Option.map input ~f:(erase_arg env) } )
   | Yc_target_link_options { target; before; items } ->
       check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
@@ -654,10 +731,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_find_library { cvar; names; paths; hints; no_default_path;
                       no_cmake_environment_path; no_system_environment_path;
                       required } ->
-      let env = try_declare_cvar env cvar in
+      let env = declare_cvar env cvar in
       let open Lang_cmake in
       ( env,
-        Find_library { (Lang_cmake_utils.find_var_defaults (erase_arg_s env cvar)) with
+        Find_library { (Lang_cmake_utils.find_var_defaults (cv_name cvar)) with
           names = List.map ~f:(erase_arg env) names;
           paths = List.map ~f:(erase_arg env) paths;
           hints = List.map ~f:(erase_arg env) hints;
@@ -666,10 +743,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_find_path { cvar; names; paths; hints; no_default_path;
                    no_cmake_environment_path; no_system_environment_path;
                    required } ->
-      let env = try_declare_cvar env cvar in
+      let env = declare_cvar env cvar in
       let open Lang_cmake in
       ( env,
-        Find_path { (Lang_cmake_utils.find_var_defaults (erase_arg_s env cvar)) with
+        Find_path { (Lang_cmake_utils.find_var_defaults (cv_name cvar)) with
           names = List.map ~f:(erase_arg env) names;
           paths = List.map ~f:(erase_arg env) paths;
           hints = List.map ~f:(erase_arg env) hints;
@@ -678,10 +755,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_find_program { cvar; names; paths; hints; no_default_path;
                       no_cmake_environment_path; no_system_environment_path;
                       required } ->
-      let env = try_declare_cvar env cvar in
+      let env = declare_cvar env cvar in
       let open Lang_cmake in
       ( env,
-        Find_program { (Lang_cmake_utils.find_var_defaults (erase_arg_s env cvar)) with
+        Find_program { (Lang_cmake_utils.find_var_defaults (cv_name cvar)) with
           names = List.map ~f:(erase_arg env) names;
           paths = List.map ~f:(erase_arg env) paths;
           hints = List.map ~f:(erase_arg env) hints;
@@ -690,10 +767,10 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_find_file { cvar; names; paths; hints; no_default_path;
                    no_cmake_environment_path; no_system_environment_path;
                    required } ->
-      let env = try_declare_cvar env cvar in
+      let env = declare_cvar env cvar in
       let open Lang_cmake in
       ( env,
-        Find_file { (Lang_cmake_utils.find_var_defaults (erase_arg_s env cvar)) with
+        Find_file { (Lang_cmake_utils.find_var_defaults (cv_name cvar)) with
           names = List.map ~f:(erase_arg env) names;
           paths = List.map ~f:(erase_arg env) paths;
           hints = List.map ~f:(erase_arg env) hints;
@@ -704,34 +781,45 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   (* Tier 2: iteration and control flow *)
   | Yc_foreach { loop_var; items; commands } ->
       List.iter items ~f:(check_arg env);
-      let body_env = { env with cvars = Set.add env.cvars loop_var } in
+      let lv = cv_name loop_var in
+      let body_env = { env with cvars = Set.add env.cvars lv } in
       let _body_env, body_cmake = compile body_env commands in
-      ( { env with cvars = Set.add env.cvars loop_var },
+      ( { env with cvars = Set.add env.cvars lv },
         Foreach
-          { loop_var;
+          { loop_var = lv;
             items = List.map ~f:(erase_arg env) items;
             commands = body_cmake } )
   | Yc_foreach_range { loop_var; start; stop; step; commands } ->
-      let body_env = { env with cvars = Set.add env.cvars loop_var } in
+      let lv = cv_name loop_var in
+      let body_env = { env with cvars = Set.add env.cvars lv } in
       let _body_env, body_cmake = compile body_env commands in
       let int_var n = Int.to_string n in
-      ( { env with cvars = Set.add env.cvars loop_var },
+      ( { env with cvars = Set.add env.cvars lv },
         Foreach_range
-          { loop_var;
+          { loop_var = lv;
             start = Option.map ~f:int_var start;
             stop = int_var stop;
             step = Option.map ~f:int_var step;
             commands = body_cmake } )
   | Yc_foreach_in { loop_var; lists; items; commands } ->
-      List.iter lists ~f:(check_arg env);
       List.iter items ~f:(check_arg env);
-      let body_env = { env with cvars = Set.add env.cvars loop_var } in
+      let lv = cv_name loop_var in
+      let body_env = { env with cvars = Set.add env.cvars lv } in
       let _body_env, body_cmake = compile body_env commands in
-      ( { env with cvars = Set.add env.cvars loop_var },
+      ( { env with cvars = Set.add env.cvars lv },
         Foreach_in
-          { loop_var;
-            lists = List.map ~f:(erase_arg_s env) lists;
+          { loop_var = lv;
+            lists = List.map ~f:cv_name lists;
             items = List.map ~f:(erase_arg env) items;
+            commands = body_cmake } )
+  | Yc_foreach_zip { loop_vars; lists; commands } ->
+      let lv_names = List.map ~f:cv_name loop_vars in
+      let body_env = { env with cvars = List.fold lv_names ~init:env.cvars ~f:Set.add } in
+      let _body_env, body_cmake = compile body_env commands in
+      ( body_env,
+        Foreach_zip
+          { loop_vars = lv_names;
+            lists = List.map ~f:cv_name lists;
             commands = body_cmake } )
   | Yc_while { cond; commands } ->
       check_cond env cond;
@@ -743,84 +831,76 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       (env, Return { propogate_vars })
   (* Tier 2: list commands *)
   | Yc_list_length { cvar; out } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_length { var = erase_arg_s env cvar; out }))
+      (env, List_cmd (Lc_length { var = cv_name cvar; out = cv_name out }))
   | Yc_list_get { cvar; indices; out } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_get { var = erase_arg_s env cvar; indices; out }))
+      (env, List_cmd (Lc_get { var = cv_name cvar; indices; out = cv_name out }))
   | Yc_list_remove_item { cvar; values } ->
-      check_arg env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_cmd
-          (Lc_remove_item { var = erase_arg_s env cvar;
+          (Lc_remove_item { var = cv_name cvar;
                             values = List.map ~f:(erase_arg env) values }) )
   | Yc_list_remove_duplicates { cvar } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_remove_duplicates { var = erase_arg_s env cvar }))
+      (env, List_cmd (Lc_remove_duplicates { var = cv_name cvar }))
   | Yc_list_reverse { cvar } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_reverse { var = erase_arg_s env cvar }))
+      (env, List_cmd (Lc_reverse { var = cv_name cvar }))
   | Yc_list_sort { cvar; order; compare; case } ->
-      check_arg env cvar;
       ( env,
         List_cmd
-          (Lc_sort { var = erase_arg_s env cvar; order; compare; case }) )
+          (Lc_sort { var = cv_name cvar; order; compare; case }) )
   | Yc_list_filter { cvar; mode; regex } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_filter { var = erase_arg_s env cvar; mode; regex }))
+      (env, List_cmd (Lc_filter { var = cv_name cvar; mode; regex }))
   | Yc_list_join { cvar; glue; out } ->
-      check_arg env cvar; check_arg env glue;
-      (env, List_cmd (Lc_join { var = erase_arg_s env cvar;
-                                glue = erase_arg env glue; out }))
+      check_arg env glue;
+      (env, List_cmd (Lc_join { var = cv_name cvar;
+                                glue = erase_arg env glue; out = cv_name out }))
   | Yc_list_sublist { cvar; begin_; length; out } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_sublist { var = erase_arg_s env cvar; begin_; length; out }))
+      (env, List_cmd (Lc_sublist { var = cv_name cvar; begin_; length; out = cv_name out }))
   | Yc_list_find { cvar; value; out } ->
-      check_arg env cvar; check_arg env value;
-      (env, List_cmd (Lc_find { var = erase_arg_s env cvar;
-                                value = erase_arg env value; out }))
+      check_arg env value;
+      (env, List_cmd (Lc_find { var = cv_name cvar;
+                                value = erase_arg env value; out = cv_name out }))
   | Yc_list_prepend { cvar; values } ->
-      check_arg env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_cmd
-          (Lc_prepend { var = erase_arg_s env cvar;
+          (Lc_prepend { var = cv_name cvar;
                         values = List.map ~f:(erase_arg env) values }) )
   | Yc_list_insert { cvar; index; values } ->
-      check_arg env cvar;
       List.iter values ~f:(check_arg env);
       ( env,
         List_cmd
-          (Lc_insert { var = erase_arg_s env cvar; index;
+          (Lc_insert { var = cv_name cvar; index;
                        values = List.map ~f:(erase_arg env) values }) )
   | Yc_list_remove_at { cvar; indices } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_remove_at { var = erase_arg_s env cvar; indices }))
+      (env, List_cmd (Lc_remove_at { var = cv_name cvar; indices }))
   | Yc_list_pop_back { cvar; out_vars } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_pop_back { var = erase_arg_s env cvar; out_vars }))
+      (env, List_cmd (Lc_pop_back { var = cv_name cvar;
+                                    out_vars = List.map ~f:cv_name out_vars }))
   | Yc_list_pop_front { cvar; out_vars } ->
-      check_arg env cvar;
-      (env, List_cmd (Lc_pop_front { var = erase_arg_s env cvar; out_vars }))
+      (env, List_cmd (Lc_pop_front { var = cv_name cvar;
+                                     out_vars = List.map ~f:cv_name out_vars }))
+  | Yc_list_transform { cvar; action; selector; output } ->
+      (env, List_cmd (Lc_transform { var = cv_name cvar; action; selector;
+                                     output = Option.map ~f:cv_name output }))
   (* Tier 2: string commands *)
   | Yc_string_toupper { string; out } ->
       check_arg env string;
-      (env, String_cmd (Sc_toupper { string = erase_arg env string; out }))
+      (env, String_cmd (Sc_toupper { string = erase_arg env string; out = cv_name out }))
   | Yc_string_tolower { string; out } ->
       check_arg env string;
-      (env, String_cmd (Sc_tolower { string = erase_arg env string; out }))
+      (env, String_cmd (Sc_tolower { string = erase_arg env string; out = cv_name out }))
   | Yc_string_length { string; out } ->
       check_arg env string;
-      (env, String_cmd (Sc_length { string = erase_arg env string; out }))
+      (env, String_cmd (Sc_length { string = erase_arg env string; out = cv_name out }))
   | Yc_string_strip { string; out } ->
       check_arg env string;
-      (env, String_cmd (Sc_strip { string = erase_arg env string; out }))
+      (env, String_cmd (Sc_strip { string = erase_arg env string; out = cv_name out }))
   | Yc_string_concat { out; inputs } ->
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
-          (Sc_concat { out; inputs = List.map ~f:(erase_arg env) inputs }) )
+          (Sc_concat { out = cv_name out; inputs = List.map ~f:(erase_arg env) inputs }) )
   | Yc_string_replace { match_string; replace_string; out; inputs } ->
       check_arg env match_string;
       check_arg env replace_string;
@@ -830,35 +910,39 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
           (Sc_replace
              { match_string = erase_arg env match_string;
                replace_string = erase_arg env replace_string;
-               out;
+               out = cv_name out;
                inputs = List.map ~f:(erase_arg env) inputs }) )
   | Yc_string_regex_match { regex; out; inputs } ->
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
           (Sc_regex
-             (Sr_match { regex; out; inputs = List.map ~f:(erase_arg env) inputs })) )
+             (Sr_match { regex; out = cv_name out; inputs = List.map ~f:(erase_arg env) inputs })) )
+  | Yc_string_regex_matchall { regex; out; inputs } ->
+      List.iter inputs ~f:(check_arg env);
+      ( env,
+        String_cmd
+          (Sc_regex
+             (Sr_matchall { regex; out = cv_name out; inputs = List.map ~f:(erase_arg env) inputs })) )
   | Yc_string_regex_replace { regex; replace; out; inputs } ->
       check_arg env replace;
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
           (Sc_regex
-             (Sr_replace { regex; replace = erase_arg env replace; out;
+             (Sr_replace { regex; replace = erase_arg env replace; out = cv_name out;
                            inputs = List.map ~f:(erase_arg env) inputs })) )
   | Yc_string_append { cvar; inputs } ->
-      check_arg env cvar;
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
-          (Sc_append { var = erase_arg_s env cvar;
+          (Sc_append { var = cv_name cvar;
                        inputs = List.map ~f:(erase_arg env) inputs }) )
   | Yc_string_prepend { cvar; inputs } ->
-      check_arg env cvar;
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
-          (Sc_prepend { var = erase_arg_s env cvar;
+          (Sc_prepend { var = cv_name cvar;
                         prefix = erase_arg env (List.hd_exn inputs);
                         inputs = List.tl_exn inputs |> List.map ~f:(erase_arg env) }) )
   | Yc_string_join { glue; out; inputs } ->
@@ -866,47 +950,78 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       List.iter inputs ~f:(check_arg env);
       ( env,
         String_cmd
-          (Sc_join { glue = erase_arg env glue; out;
+          (Sc_join { glue = erase_arg env glue; out = cv_name out;
                      inputs = List.map ~f:(erase_arg env) inputs }) )
   | Yc_string_find { string; substring; out; reverse } ->
       check_arg env string; check_arg env substring;
       ( env,
         String_cmd
           (Sc_find { string = erase_arg env string;
-                     substring = erase_arg env substring; out; reverse }) )
+                     substring = erase_arg env substring; out = cv_name out; reverse }) )
   | Yc_string_substring { string; begin_; length; out } ->
       check_arg env string;
       ( env,
         String_cmd
-          (Sc_substring { string = erase_arg env string; begin_; length; out }) )
+          (Sc_substring { string = erase_arg env string; begin_; length; out = cv_name out }) )
   | Yc_string_repeat { string; count; out } ->
       check_arg env string;
       ( env,
         String_cmd
-          (Sc_repeat { string = erase_arg env string; count; out }) )
+          (Sc_repeat { string = erase_arg env string; count; out = cv_name out }) )
   | Yc_string_genex_strip { string; out } ->
       check_arg env string;
       ( env,
         String_cmd
-          (Sc_genex_strip { string = erase_arg env string; out }) )
+          (Sc_genex_strip { string = erase_arg env string; out = cv_name out }) )
   | Yc_string_compare { op; string1; string2; out } ->
       check_arg env string1; check_arg env string2;
       ( env,
         String_cmd
           (Sc_compare { op;
                         string1 = erase_arg env string1;
-                        string2 = erase_arg env string2; out }) )
+                        string2 = erase_arg env string2; out = cv_name out }) )
   | Yc_string_make_c_identifier { string; out } ->
       check_arg env string;
       ( env,
         String_cmd
-          (Sc_make_c_identifier { string = erase_arg env string; out }) )
+          (Sc_make_c_identifier { string = erase_arg env string; out = cv_name out }) )
   | Yc_string_timestamp { out; format; utc } ->
-      (env, String_cmd (Sc_timestamp { out; format; utc }))
+      (env, String_cmd (Sc_timestamp { out = cv_name out; format; utc }))
+  | Yc_string_hex { string; out } ->
+      check_arg env string;
+      (env, String_cmd (Sc_hex { string = erase_arg env string; out = cv_name out }))
+  | Yc_string_uuid { out; namespace; name; type_; upper } ->
+      (env, String_cmd (Sc_uuid { out = cv_name out; namespace; name; type_; upper }))
+  | Yc_string_json { out; error_var; op } ->
+      let ep = List.map ~f:(fun s -> Lang_cmake.Bare s) in
+      let ej = erase_arg env in
+      let cmake_op = match op with
+        | Yjop_get { json; path } ->
+            Lang_cmake.Jop_get { json = ej json; path = ep path }
+        | Yjop_get_raw { json; path } ->
+            Lang_cmake.Jop_get_raw { json = ej json; path = ep path }
+        | Yjop_type { json; path } ->
+            Lang_cmake.Jop_type { json = ej json; path = ep path }
+        | Yjop_length { json; path } ->
+            Lang_cmake.Jop_length { json = ej json; path = ep path }
+        | Yjop_member { json; path } ->
+            Lang_cmake.Jop_member { json = ej json; path = ep path }
+        | Yjop_remove { json; path } ->
+            Lang_cmake.Jop_remove { json = ej json; path = ep path }
+        | Yjop_set { json; path; value } ->
+            Lang_cmake.Jop_set { json = ej json; path = ep path; value = ej value }
+        | Yjop_equal { json1; json2 } ->
+            Lang_cmake.Jop_equal { json1 = ej json1; json2 = ej json2 }
+        | Yjop_string_encode { value } ->
+            Lang_cmake.Jop_string_encode { value = ej value }
+      in
+      (env, String_cmd (Sc_json { out = cv_name out;
+                                  error_var = Option.map ~f:cv_name error_var;
+                                  op = cmake_op }))
   | Yc_math { exp; out; output_format } ->
       ( env,
         Math_lib
-          { var = out;
+          { var = cv_name out;
             exp = Quote (Printf.sprintf "\"%s\"" exp);
             output_format } )
 

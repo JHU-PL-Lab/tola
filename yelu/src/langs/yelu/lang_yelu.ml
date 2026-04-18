@@ -80,6 +80,36 @@ type yelu_cond =
   | Yis_target of yarg
   | Yis_defined of yarg
   | Ystrequal of yarg * yarg
+  | Ystrless of yarg * yarg
+  | Ystrgreater of yarg * yarg
+  | Ystrless_equal of yarg * yarg
+  | Ystrgreater_equal of yarg * yarg
+  | Yequal of yarg * yarg          (* numeric EQUAL *)
+  | Yless of yarg * yarg           (* numeric LESS *)
+  | Ygreater of yarg * yarg        (* numeric GREATER *)
+  | Yless_equal of yarg * yarg     (* numeric LESS_EQUAL *)
+  | Ygreater_equal of yarg * yarg  (* numeric GREATER_EQUAL *)
+  | Yin_list of yarg * yarg        (* value IN_LIST listvar *)
+  | Ymatches of yarg * string      (* value MATCHES regex *)
+  | Yexists of yarg                (* EXISTS path *)
+  | Yis_directory of yarg          (* IS_DIRECTORY path *)
+  | Yis_absolute of yarg           (* IS_ABSOLUTE path *)
+  | Yversion_less of yarg * yarg
+  | Yversion_greater of yarg * yarg
+  | Yversion_equal of yarg * yarg
+  | Yversion_less_equal of yarg * yarg
+  | Yversion_greater_equal of yarg * yarg
+
+type yelu_json_op =
+  | Yjop_get of { json : yarg; path : string list }
+  | Yjop_get_raw of { json : yarg; path : string list }
+  | Yjop_type of { json : yarg; path : string list }
+  | Yjop_length of { json : yarg; path : string list }
+  | Yjop_member of { json : yarg; path : string list }
+  | Yjop_remove of { json : yarg; path : string list }
+  | Yjop_set of { json : yarg; path : string list; value : yarg }
+  | Yjop_equal of { json1 : yarg; json2 : yarg }
+  | Yjop_string_encode of { value : yarg }
 
 type yelu_exp =
   | Yc_minimum_required of { min : version; max : version option }
@@ -88,7 +118,7 @@ type yelu_exp =
       version : version option;
       languages : supported_lang list;
     }
-  | Yc_set of { cvar : yarg; values : yarg list; parent_scope : bool }
+  | Yc_set of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
   | Yc_add_executable of { name : yarg; sources : yarg list }
   | Yc_add_library of {
       name : yarg;
@@ -120,7 +150,7 @@ type yelu_exp =
     }
   | Yc_configure_file of { input : yarg; output : yarg }
   | Yc_add_subdirectory of { source_dir : yarg }
-  | Yc_option of { cvar : yarg; msg : string; value : yarg }
+  | Yc_option of { cvar : yelu_cvar; msg : string; value : yarg }
   | Ylet of { var : yelu_var; value : yarg }
   | Yif of { cond : yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
   | Yexp_list of yelu_exp list
@@ -129,10 +159,19 @@ type yelu_exp =
   | Yc_function of { name : yarg; args : string list; body : yelu_exp list }
   | Yc_macro of { name : yarg; args : string list; body : yelu_exp list }
   | Yc_apply of { name : yarg; args : yarg list }
-  | Yc_unset_cache of { cvar : yarg }
+  | Yc_set_env of { var : string; value : yarg }
+  | Yc_unset_env of { var : string }
+  | Yc_set_cache of {
+      cvar : yelu_cvar;
+      values : yarg list;
+      cache_type : Lang_cmake.cache_type;
+      docstring : string;
+      force : bool;
+    }
+  | Yc_unset_cache of { cvar : yelu_cvar }
   | Yc_file_relative_path of { var : yarg; base : yarg; file : yarg }
   | Yc_quote_cmd of string
-  | Yc_list_append of { cvar : yarg; values : yarg list }
+  | Yc_list_append of { cvar : yelu_cvar; values : yarg list }
   (* testing *)
   | Yc_enable_testing
   | Yc_add_test of { name : yarg; command : yarg; args : yarg list }
@@ -150,10 +189,10 @@ type yelu_exp =
       properties : (property_key * yarg) list;
     }
   | Yc_set_global_property of { properties : (property_key * yarg) list }
-  | Yc_get_filename_component of { var : yarg; filename : yarg; mode : string }
-  | Yc_get_global_property of { var : yarg; property : string }
+  | Yc_get_filename_component of { var : yelu_cvar; filename : yarg; mode : string }
+  | Yc_get_global_property of { var : yelu_cvar; property : string }
   | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
-  | Yc_separate_arguments of { cvar : yarg; mode : Lang_cmake.separate_arguments_mode }
+  | Yc_separate_arguments of { cvar : yelu_cvar; mode : Lang_cmake.separate_arguments_mode; input : yarg option }
   | Yc_target_link_options of { target : yarg; before : bool; items : yelu_items_with_kind list }
   | Yc_target_sources of { target : yarg; items : yelu_items_with_kind list }
   (* install *)
@@ -194,7 +233,7 @@ type yelu_exp =
   | Yc_extern_target of yelu_target
   (* Tier 1: find_var commands *)
   | Yc_find_library of {
-      cvar : yarg;
+      cvar : yelu_cvar;
       names : yarg list;
       paths : yarg list;
       hints : yarg list;
@@ -204,7 +243,7 @@ type yelu_exp =
       required : bool;
     }
   | Yc_find_path of {
-      cvar : yarg;
+      cvar : yelu_cvar;
       names : yarg list;
       paths : yarg list;
       hints : yarg list;
@@ -214,7 +253,7 @@ type yelu_exp =
       required : bool;
     }
   | Yc_find_program of {
-      cvar : yarg;
+      cvar : yelu_cvar;
       names : yarg list;
       paths : yarg list;
       hints : yarg list;
@@ -224,7 +263,7 @@ type yelu_exp =
       required : bool;
     }
   | Yc_find_file of {
-      cvar : yarg;
+      cvar : yelu_cvar;
       names : yarg list;
       paths : yarg list;
       hints : yarg list;
@@ -236,21 +275,26 @@ type yelu_exp =
   | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
   (* Tier 2: iteration and control flow *)
   | Yc_foreach of {
-      loop_var : string;      (* cmake variable name for loop var *)
-      items : yarg list;      (* items to iterate over *)
+      loop_var : yelu_cvar;  (* cmake variable name for loop var *)
+      items : yarg list;     (* items to iterate over *)
       commands : yelu_exp;
     }
   | Yc_foreach_range of {
-      loop_var : string;
+      loop_var : yelu_cvar;
       start : int option;
       stop : int;
       step : int option;
       commands : yelu_exp;
     }
   | Yc_foreach_in of {
-      loop_var : string;
-      lists : yarg list;     (* cmake vars holding lists *)
-      items : yarg list;     (* direct items *)
+      loop_var : yelu_cvar;
+      lists : yelu_cvar list; (* cmake vars holding lists *)
+      items : yarg list;      (* direct items *)
+      commands : yelu_exp;
+    }
+  | Yc_foreach_zip of {
+      loop_vars : yelu_cvar list;
+      lists : yelu_cvar list;
       commands : yelu_exp;
     }
   | Yc_while of { cond : yelu_cond; commands : yelu_exp }
@@ -258,58 +302,78 @@ type yelu_exp =
   | Yc_continue
   | Yc_return of { propogate_vars : string list }
   (* Tier 2: list commands *)
-  | Yc_list_length of { cvar : yarg; out : string }
-  | Yc_list_get of { cvar : yarg; indices : int list; out : string }
-  | Yc_list_remove_item of { cvar : yarg; values : yarg list }
-  | Yc_list_remove_duplicates of { cvar : yarg }
-  | Yc_list_reverse of { cvar : yarg }
+  | Yc_list_length of { cvar : yelu_cvar; out : yelu_cvar }
+  | Yc_list_get of { cvar : yelu_cvar; indices : int list; out : yelu_cvar }
+  | Yc_list_remove_item of { cvar : yelu_cvar; values : yarg list }
+  | Yc_list_remove_duplicates of { cvar : yelu_cvar }
+  | Yc_list_reverse of { cvar : yelu_cvar }
   | Yc_list_sort of {
-      cvar : yarg;
+      cvar : yelu_cvar;
       order : Lang_cmake.list_sort_order option;
       compare : Lang_cmake.list_sort_compare option;
       case : Lang_cmake.list_sort_case option;
     }
-  | Yc_list_filter of { cvar : yarg; mode : Lang_cmake.list_filter_mode; regex : string }
-  | Yc_list_join of { cvar : yarg; glue : yarg; out : string }
-  | Yc_list_sublist of { cvar : yarg; begin_ : int; length : int; out : string }
-  | Yc_list_find of { cvar : yarg; value : yarg; out : string }
-  | Yc_list_prepend of { cvar : yarg; values : yarg list }
-  | Yc_list_insert of { cvar : yarg; index : int; values : yarg list }
-  | Yc_list_remove_at of { cvar : yarg; indices : int list }
-  | Yc_list_pop_back of { cvar : yarg; out_vars : string list }
-  | Yc_list_pop_front of { cvar : yarg; out_vars : string list }
+  | Yc_list_filter of { cvar : yelu_cvar; mode : Lang_cmake.list_filter_mode; regex : string }
+  | Yc_list_join of { cvar : yelu_cvar; glue : yarg; out : yelu_cvar }
+  | Yc_list_sublist of { cvar : yelu_cvar; begin_ : int; length : int; out : yelu_cvar }
+  | Yc_list_find of { cvar : yelu_cvar; value : yarg; out : yelu_cvar }
+  | Yc_list_prepend of { cvar : yelu_cvar; values : yarg list }
+  | Yc_list_insert of { cvar : yelu_cvar; index : int; values : yarg list }
+  | Yc_list_remove_at of { cvar : yelu_cvar; indices : int list }
+  | Yc_list_pop_back of { cvar : yelu_cvar; out_vars : yelu_cvar list }
+  | Yc_list_pop_front of { cvar : yelu_cvar; out_vars : yelu_cvar list }
+  | Yc_list_transform of {
+      cvar : yelu_cvar;
+      action : Lang_cmake.list_transform_action;
+      selector : Lang_cmake.list_transform_selector option;
+      output : yelu_cvar option;
+    }
   (* Tier 2: string commands *)
-  | Yc_string_toupper of { string : yarg; out : string }
-  | Yc_string_tolower of { string : yarg; out : string }
-  | Yc_string_length of { string : yarg; out : string }
-  | Yc_string_strip of { string : yarg; out : string }
-  | Yc_string_concat of { out : string; inputs : yarg list }
+  | Yc_string_toupper of { string : yarg; out : yelu_cvar }
+  | Yc_string_tolower of { string : yarg; out : yelu_cvar }
+  | Yc_string_length of { string : yarg; out : yelu_cvar }
+  | Yc_string_strip of { string : yarg; out : yelu_cvar }
+  | Yc_string_concat of { out : yelu_cvar; inputs : yarg list }
   | Yc_string_replace of {
       match_string : yarg;
       replace_string : yarg;
-      out : string;
+      out : yelu_cvar;
       inputs : yarg list;
     }
-  | Yc_string_regex_match of { regex : string; out : string; inputs : yarg list }
-  | Yc_string_regex_replace of { regex : string; replace : yarg; out : string; inputs : yarg list }
-  | Yc_string_append of { cvar : yarg; inputs : yarg list }
-  | Yc_string_prepend of { cvar : yarg; inputs : yarg list }
-  | Yc_string_join of { glue : yarg; out : string; inputs : yarg list }
-  | Yc_string_find of { string : yarg; substring : yarg; out : string; reverse : bool }
-  | Yc_string_substring of { string : yarg; begin_ : int; length : int option; out : string }
-  | Yc_string_repeat of { string : yarg; count : int; out : string }
-  | Yc_string_genex_strip of { string : yarg; out : string }
+  | Yc_string_regex_match of { regex : string; out : yelu_cvar; inputs : yarg list }
+  | Yc_string_regex_matchall of { regex : string; out : yelu_cvar; inputs : yarg list }
+  | Yc_string_regex_replace of { regex : string; replace : yarg; out : yelu_cvar; inputs : yarg list }
+  | Yc_string_append of { cvar : yelu_cvar; inputs : yarg list }
+  | Yc_string_prepend of { cvar : yelu_cvar; inputs : yarg list }
+  | Yc_string_join of { glue : yarg; out : yelu_cvar; inputs : yarg list }
+  | Yc_string_find of { string : yarg; substring : yarg; out : yelu_cvar; reverse : bool }
+  | Yc_string_substring of { string : yarg; begin_ : int; length : int option; out : yelu_cvar }
+  | Yc_string_repeat of { string : yarg; count : int; out : yelu_cvar }
+  | Yc_string_genex_strip of { string : yarg; out : yelu_cvar }
   | Yc_string_compare of {
       op : Lang_cmake.string_compare_op;
       string1 : yarg;
       string2 : yarg;
-      out : string;
+      out : yelu_cvar;
     }
-  | Yc_string_make_c_identifier of { string : yarg; out : string }
-  | Yc_string_timestamp of { out : string; format : string option; utc : bool }
+  | Yc_string_make_c_identifier of { string : yarg; out : yelu_cvar }
+  | Yc_string_timestamp of { out : yelu_cvar; format : string option; utc : bool }
+  | Yc_string_hex of { string : yarg; out : yelu_cvar }
+  | Yc_string_uuid of {
+      out : yelu_cvar;
+      namespace : string;
+      name : string;
+      type_ : [ `Md5 | `Sha1 ];
+      upper : bool;
+    }
+  | Yc_string_json of {
+      out : yelu_cvar;
+      error_var : yelu_cvar option;
+      op : yelu_json_op;
+    }
   (* math *)
   | Yc_math of {
       exp : string;
-      out : string;
+      out : yelu_cvar;
       output_format : Lang_cmake.math_output_format;
     }

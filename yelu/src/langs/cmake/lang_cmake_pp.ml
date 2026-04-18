@@ -99,6 +99,7 @@ let string_of_math_output_format = function
 let pp_math_output_format = Fmt.using string_of_math_output_format Fmt.string
 
 let string_of_separate_arguments_mode = function
+  | Sa_plain -> ""
   | Sa_unix_command -> "UNIX_COMMAND"
   | Sa_windows_command -> "WINDOWS_COMMAND"
   | Sa_native_command -> "NATIVE_COMMAND"
@@ -275,7 +276,6 @@ let pp_list_sort_compare ff = function
   | Ls_string -> Fmt.string ff "STRING"
   | Ls_file_basename -> Fmt.string ff "FILE_BASENAME"
   | Ls_natural -> Fmt.string ff "NATURAL"
-  | Ls_numeric -> Fmt.string ff "NUMERIC"
 
 let pp_list_sort_case ff = function
   | Ls_sensitive -> Fmt.string ff "SENSITIVE"
@@ -284,6 +284,25 @@ let pp_list_sort_case ff = function
 let pp_list_filter_mode ff = function
   | Lf_include -> Fmt.string ff "INCLUDE"
   | Lf_exclude -> Fmt.string ff "EXCLUDE"
+
+let pp_list_transform_action ff = function
+  | Lta_append v -> Fmt.(pf ff "APPEND %a" pp_arg v)
+  | Lta_prepend v -> Fmt.(pf ff "PREPEND %a" pp_arg v)
+  | Lta_toupper -> Fmt.string ff "TOUPPER"
+  | Lta_tolower -> Fmt.string ff "TOLOWER"
+  | Lta_strip -> Fmt.string ff "STRIP"
+  | Lta_genex_strip -> Fmt.string ff "GENEX_STRIP"
+  | Lta_replace { match_regex; replace } ->
+      Fmt.(pf ff "REPLACE \"%s\" \"%s\"" match_regex replace)
+
+let pp_list_transform_selector ff = function
+  | Lts_at indices ->
+      Fmt.(pf ff " AT %a" (list ~sep:sp_char int) indices)
+  | Lts_for { start; stop; step } ->
+      Fmt.pf ff " FOR %d %d" start stop;
+      Option.iter step ~f:(fun s -> Fmt.pf ff " %d" s)
+  | Lts_regex regex ->
+      Fmt.pf ff " REGEX \"%s\"" regex
 
 let pp_list_cmd ff = function
   | Lc_length { var; out } ->
@@ -329,6 +348,11 @@ let pp_list_cmd ff = function
   | Lc_pop_front { var; out_vars } ->
       Fmt.(pf ff "list(POP_FRONT %a%a)@." pp_var var
         (fun ff vs -> List.iter ~f:(fun v -> pf ff " %a" pp_var v) vs) out_vars)
+  | Lc_transform { var; action; selector; output } ->
+      Fmt.pf ff "list(TRANSFORM %a %a" pp_var var pp_list_transform_action action;
+      Option.iter selector ~f:(fun s -> pp_list_transform_selector ff s);
+      Option.iter output ~f:(fun v -> Fmt.(pf ff " OUTPUT_VARIABLE %a" pp_var v));
+      Fmt.pf ff ")@."
 
 let pp_string_compare_op ff = function
   | Sco_less -> Fmt.string ff "LESS"
@@ -391,6 +415,38 @@ let pp_string_cmd ff = function
       Option.iter format ~f:(fun f -> Fmt.(pf ff " %S" f));
       if utc then Fmt.string ff " UTC";
       Fmt.string ff ")"
+  | Sc_hex { string = s; out } ->
+      Fmt.(pf ff "string(HEX %a %a)" pp_arg s pp_var out)
+  | Sc_uuid { out; namespace; name; type_; upper } ->
+      Fmt.pf ff "string(UUID %a NAMESPACE %s NAME %s TYPE %s%s)"
+        pp_var out namespace name
+        (match type_ with `Md5 -> "MD5" | `Sha1 -> "SHA1")
+        (if upper then " UPPER" else "")
+  | Sc_json { out; error_var; op } ->
+      let pp_path ff ps =
+        List.iter ~f:(fun p -> Fmt.(pf ff " %a" pp_arg p)) ps in
+      Fmt.pf ff "string(JSON %a" pp_var out;
+      Option.iter error_var ~f:(fun e -> Fmt.(pf ff " ERROR_VARIABLE %a" pp_var e));
+      (match op with
+       | Jop_get { json; path } ->
+           Fmt.(pf ff " GET %a%a" pp_arg json pp_path path)
+       | Jop_get_raw { json; path } ->
+           Fmt.(pf ff " GET_RAW %a%a" pp_arg json pp_path path)
+       | Jop_type { json; path } ->
+           Fmt.(pf ff " TYPE %a%a" pp_arg json pp_path path)
+       | Jop_length { json; path } ->
+           Fmt.(pf ff " LENGTH %a%a" pp_arg json pp_path path)
+       | Jop_member { json; path } ->
+           Fmt.(pf ff " MEMBER %a%a" pp_arg json pp_path path)
+       | Jop_remove { json; path } ->
+           Fmt.(pf ff " REMOVE %a%a" pp_arg json pp_path path)
+       | Jop_set { json; path; value } ->
+           Fmt.(pf ff " SET %a%a %a" pp_arg json pp_path path pp_arg value)
+       | Jop_equal { json1; json2 } ->
+           Fmt.(pf ff " EQUAL %a %a" pp_arg json1 pp_arg json2)
+       | Jop_string_encode { value } ->
+           Fmt.(pf ff " STRING_ENCODE %a" pp_arg value));
+      Fmt.string ff ")"
 
 (* Main printers *)
 
@@ -438,7 +494,7 @@ let rec pp ff e =
       Fmt.(
         pf ff "function(%a %a)@.@[<2>  %a@]@.endfunction()@." pp_var name
           (list_sp string) args
-          (list ~sep:(sps 0) pp)
+          (list_br pp)
           cmds)
   | Macro { name; args; commands } ->
       Fmt.(
@@ -476,6 +532,14 @@ let rec pp ff e =
        | Exp_list [] -> ()
        | cmds -> Fmt.(pf ff "@[<2>  %a@]@." pp cmds));
       Fmt.string ff "endforeach()"
+  | Foreach_zip { loop_vars; lists; commands } ->
+      Fmt.(pf ff "foreach(%a IN ZIP_LISTS %a)@."
+        (list ~sep:sp_char pp_var) loop_vars
+        (list ~sep:sp_char pp_var) lists);
+      (match commands with
+       | Exp_list [] -> ()
+       | cmds -> Fmt.(pf ff "@[<2>  %a@]@." pp cmds));
+      Fmt.string ff "endforeach()"
   | Include { file; optional; result_var; no_policy_scope } ->
       Fmt.(
         pf ff "include(%a%s%a%a)" pp_arg file
@@ -502,10 +566,13 @@ let rec pp ff e =
       Fmt.(
         pf ff "set(%a %a %a)" pp_var var (list_sp pp_arg) values pp_parent_scope
           parent_scope)
-  | Set_cache { var_value_pairs; parent_scope } ->
-      Fmt.(
-        pf ff "set(%a CACHE %a)" (list_sp (pair ~sep:sp pp_var pp_arg))
-          var_value_pairs pp_parent_scope parent_scope)
+  | Set_cache { var; values; cache_type; docstring; force } ->
+      let type_str = match cache_type with
+        | Ct_bool -> "BOOL" | Ct_filepath -> "FILEPATH" | Ct_path -> "PATH"
+        | Ct_string -> "STRING" | Ct_internal -> "INTERNAL" in
+      Fmt.(pf ff "set(%a %a CACHE %s %S%s)"
+        pp_var var (list_sp pp_arg) values type_str docstring
+        (if force then " FORCE" else ""))
   | Set_env { var; value } ->
       Fmt.(pf ff "set(ENV{%a} %a)" pp_var var pp_arg value)
   | Set_directory_properties { prop_value_pairs } ->
@@ -580,10 +647,12 @@ let rec pp ff e =
         pf ff "option(%a %a %a)" pp_var var
           (list_sp pp_string_quoted)
           help_text pp value)
-  | Separete_arguments { var; mode } ->
-      Fmt.(
-        pf ff "separate_arguments(%a %a)" pp_var var pp_separate_arguments_mode
-          mode)
+  | Separete_arguments { var; mode = Sa_plain; _ } ->
+      Fmt.(pf ff "separate_arguments(%a)" pp_var var)
+  | Separete_arguments { var; mode; input = None } ->
+      Fmt.(pf ff "separate_arguments(%a %a)" pp_var var pp_separate_arguments_mode mode)
+  | Separete_arguments { var; mode; input = Some inp } ->
+      Fmt.(pf ff "separate_arguments(%a %a %a)" pp_var var pp_separate_arguments_mode mode pp_arg inp)
   (* delegated *)
   | Cmake_cmd cmd -> (Fmt.vbox pp_cmake_cmd) ff cmd
   | Project_cmd cmd -> (Fmt.vbox pp_project_cmd) ff cmd

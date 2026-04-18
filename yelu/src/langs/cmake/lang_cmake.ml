@@ -23,6 +23,8 @@ type output = string
 type arg = Bare of string | Quoted of string
 type description = arg
 type cache_entry = Cache_entry
+
+type cache_type = Ct_bool | Ct_filepath | Ct_path | Ct_string | Ct_internal
 type before_or_after = Before | After
 type depend = string
 type comment = string
@@ -125,6 +127,7 @@ type variable_watch_access =
   | Vm_removed_access
 
 type separate_arguments_mode =
+  | Sa_plain               (* old-style: separate_arguments(var) — splits var in-place *)
   | Sa_unix_command
   | Sa_windows_command
   | Sa_native_command
@@ -200,9 +203,23 @@ type gs_directory = Gs_directory of directory | Gs_target_directory of target
 
 (* list() sub-commands *)
 type list_sort_order = Ls_ascending | Ls_descending
-type list_sort_compare = Ls_string | Ls_file_basename | Ls_natural | Ls_numeric
+type list_sort_compare = Ls_string | Ls_file_basename | Ls_natural
 type list_sort_case = Ls_sensitive | Ls_insensitive
 type list_filter_mode = Lf_include | Lf_exclude
+
+type list_transform_action =
+  | Lta_append of arg
+  | Lta_prepend of arg
+  | Lta_toupper
+  | Lta_tolower
+  | Lta_strip
+  | Lta_genex_strip
+  | Lta_replace of { match_regex : string; replace : string }
+
+type list_transform_selector =
+  | Lts_at of int list
+  | Lts_for of { start : int; stop : int; step : int option }
+  | Lts_regex of string
 
 type list_cmd =
   | Lc_length of { var : var; out : var }
@@ -226,6 +243,12 @@ type list_cmd =
   | Lc_filter of { var : var; mode : list_filter_mode; regex : string }
   | Lc_pop_back of { var : var; out_vars : var list }
   | Lc_pop_front of { var : var; out_vars : var list }
+  | Lc_transform of {
+      var : var;
+      action : list_transform_action;
+      selector : list_transform_selector option;
+      output : var option;
+    }
 
 (* string() sub-commands *)
 type string_compare_op =
@@ -255,6 +278,30 @@ type string_cmd =
   | Sc_compare of { op : string_compare_op; string1 : arg; string2 : arg; out : var }
   | Sc_make_c_identifier of { string : arg; out : var }
   | Sc_timestamp of { out : var; format : string option; utc : bool }
+  | Sc_hex of { string : arg; out : var }
+  | Sc_uuid of {
+      out : var;
+      namespace : string;
+      name : string;
+      type_ : [ `Md5 | `Sha1 ];
+      upper : bool;
+    }
+  | Sc_json of {
+      out : var;
+      error_var : var option;
+      op : json_op;
+    }
+
+and json_op =
+  | Jop_get of { json : arg; path : arg list }
+  | Jop_get_raw of { json : arg; path : arg list }
+  | Jop_type of { json : arg; path : arg list }
+  | Jop_length of { json : arg; path : arg list }
+  | Jop_member of { json : arg; path : arg list }
+  | Jop_remove of { json : arg; path : arg list }
+  | Jop_set of { json : arg; path : arg list; value : arg }
+  | Jop_equal of { json1 : arg; json2 : arg }
+  | Jop_string_encode of { value : arg }
 
 type scripting_cmd = exp
 
@@ -294,6 +341,11 @@ and exp =
       items : arg list;
       commands : exp;
     }
+  | Foreach_zip of {
+      loop_vars : var list;
+      lists : var list;
+      commands : exp;
+    }
   | Exp_list of exp list
   | Include of {
       file : arg;
@@ -318,7 +370,13 @@ and exp =
     }
   (* | Set of { var_value_pairs : (var * arg) list; parent_scope : bool } *)
   | Set of { var : var; values : arg list; parent_scope : bool }
-  | Set_cache of { var_value_pairs : (var * arg) list; parent_scope : bool }
+  | Set_cache of {
+      var : var;
+      values : arg list;
+      cache_type : cache_type;
+      docstring : string;
+      force : bool;
+    }
   | Set_env of { var : var; value : arg }
   | Set_directory_properties of { prop_value_pairs : (var * arg) list }
     (* https://cmake.org/cmake/help/latest/command/set_property.html *)
@@ -379,7 +437,7 @@ and exp =
   | Message of { mode : message_mode; texts : string list }
   | Message_config_log of { texts : string list }
   | Option of { var : var; help_text : string list; value : exp }
-  | Separete_arguments of { var : var; mode : separate_arguments_mode }
+  | Separete_arguments of { var : var; mode : separate_arguments_mode; input : arg option }
   | Cmake_cmd of cmake_cmd
   | Project_cmd of project_cmd
   | Module_cmd of module_cmd
