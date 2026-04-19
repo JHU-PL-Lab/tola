@@ -45,7 +45,13 @@ let () =
       ("string", [
         check "Concat"   (script_dir "string");
         check "Append"   (script_dir "string");
-        check "Join"     (script_dir "string") ]);
+        check "Join"     (script_dir "string");
+        check "Hex"      (script_dir "string");
+        check "Uuid"     (script_dir "string");
+        check "Repeat"   (script_dir "string") ]);
       ("foreach", [
         check "foreach-all-test" (script_dir "foreach") ]);
+      ("message", [
+        check "newline"          (script_dir "message");
+        check "message-indent"   (script_dir "message") ]);
     ]

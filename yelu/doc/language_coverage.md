@@ -2,7 +2,7 @@
 
 ## Current Focus
 
-193 unit tests + 23 configure tests passing.
+193 unit tests + 23 configure tests + 16 RunCMake compat tests passing.
 
 **Active next steps:**
 - CMakeOnly showcases — expand from 8/12 tractable; `ProjectInclude*` unblocked
@@ -253,6 +253,10 @@ but their RunCMake test scripts cannot serve as automated equivalence benchmarks
 | `file` (DOWNLOAD, GET_RUNTIME_DEPS) | network / filesystem runtime                              |
 | `file` (STRINGS, READ, WRITE, etc.) | assertions depend on file contents, not cmake semantics   |
 | `CompileFeatures`                   | queries compiler feature database                         |
+| `list/SUBLIST`, `string/JSON`       | test scripts written for cmake 4.3; fail on 3.28 runtime  |
+| `string/UTF-*`                      | require cmake test fixture files, not standalone scripts  |
+| `CMP*` dirs, `string/RegexEmpty*`   | test policy-version-specific behavior, always blocked     |
+| `string/RegexClear`                 | uses `add_subdirectory` — configure-mode only             |
 
 ## Roadmap
 
