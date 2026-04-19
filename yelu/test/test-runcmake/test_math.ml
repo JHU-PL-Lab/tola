@@ -96,10 +96,25 @@ let math_ops =
       (yc_message ~mode:Mm_fatal_error ["16 >> 2 should be 4"]);
   ])
 
+(* Bitwise NOT — unary ~ operator *)
+let math_bitnot =
+  check_cmake "bitnot" (Yexp_list [
+    yc_math "~0" (ycvar "r");
+    yifthen (Ynot (Ystrequal (ycref "r", ystr "-1")))
+      (yc_message ~mode:Mm_fatal_error ["~0 should be -1"]);
+    yc_math "~1" (ycvar "r");
+    yifthen (Ynot (Ystrequal (ycref "r", ystr "-2")))
+      (yc_message ~mode:Mm_fatal_error ["~1 should be -2"]);
+    yc_math "~0" (ycvar "r") ~output_format:Yelu_langs.Lang_cmake.Hexdecimal;
+    yifthen (Ynot (Ystrequal (ycref "r", ystr "0xffffffffffffffff")))
+      (yc_message ~mode:Mm_fatal_error ["~0 hex should be 0xffffffffffffffff"]);
+  ])
+
 let () =
   Alcotest.run "math"
     [ ("math",      [ math ]);
       ("tolerated", [ math_tolerated ]);
       ("overflow",  [ math_overflow ]);
       ("ops",       [ math_ops ]);
+      ("bitnot",    [ math_bitnot ]);
     ]

@@ -1,5 +1,6 @@
-(** conf-run tests for message() log-level modes.
-    VERBOSE/DEBUG/TRACE/DEPRECATION require --log-level flag to be visible. *)
+(** conf-run tests for message() log-level modes and context/indent.
+    VERBOSE/DEBUG/TRACE/DEPRECATION require --log-level flag to be visible.
+    CMAKE_MESSAGE_CONTEXT requires --log-context flag. *)
 
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
@@ -47,6 +48,28 @@ let msg_verbose_hidden =
         Alcotest.failf "VERBOSE message should be hidden at default log level\nstderr:\n%s"
           result.stderr)
 
+(* CMAKE_MESSAGE_CONTEXT: requires --log-context; prepends [ctx] to output *)
+let msg_context =
+  Alcotest.test_case "context" `Quick (fun () ->
+      let result = run_script ~flags:["--log-context"] (compile (Yexp_list [
+        yc_list_append (ycvar "CMAKE_MESSAGE_CONTEXT") [ystr "myctx"];
+        yc_message ~mode:Mm_status ["hello from context"];
+      ])) in
+      if result.exit_code <> 0 then
+        Alcotest.failf "cmake exited %d\nstderr:\n%s" result.exit_code result.stderr;
+      check_stdout_matches "[[]myctx[]] hello from context" result)
+
+(* CMAKE_MESSAGE_INDENT: prepends indent strings unconditionally *)
+let msg_indent =
+  Alcotest.test_case "indent" `Quick (fun () ->
+      let result = run_script (compile (Yexp_list [
+        yc_list_append (ycvar "CMAKE_MESSAGE_INDENT") [ystr "  "];
+        yc_message ~mode:Mm_status ["indented"];
+      ])) in
+      if result.exit_code <> 0 then
+        Alcotest.failf "cmake exited %d\nstderr:\n%s" result.exit_code result.stderr;
+      check_stdout_matches "  indented" result)
+
 let () =
   Alcotest.run "message2"
     [ ("verbose",        [ msg_verbose ]);
@@ -54,4 +77,6 @@ let () =
       ("trace",          [ msg_trace ]);
       ("deprecation",    [ msg_deprecation ]);
       ("verbose_hidden", [ msg_verbose_hidden ]);
+      ("context",        [ msg_context ]);
+      ("indent",         [ msg_indent ]);
     ]

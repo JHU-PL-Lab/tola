@@ -26,25 +26,25 @@ make step2         # etc.
 
 ## Key Source Files
 
-| File                                       | Purpose                                                    |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| `yelu/src/langs/cmake/lang_cmake.ml`       | CMake AST (stringly-typed, mirrors real CMake)             |
-| `yelu/src/langs/cmake/lang_cmake_pp.ml`    | CMake pretty printer (AST → CMake text)                    |
-| `yelu/src/langs/cmake/lang_cmake_utils.ml` | Ergonomic AST constructors                                 |
-| `yelu/src/langs/yelu/lang_yelu.ml`         | Yelu AST (typed surface language)                          |
-| `yelu/src/langs/yelu/lang_yelu_compile.ml` | Yelu → CMake compiler (type erasure)                       |
-| `yelu/src/langs/yelu/lang_yelu_utils.ml`   | Yelu AST utilities                                         |
-| `yelu/src/bin/cmake/step{1-12}*.ml`        | CMake tutorial reference generators                        |
-| `yelu/src/bin/yelu/step{1-12}*.ml`         | Yelu tutorial generators (test cases + syntax experiments) |
-| `yelu/src/bin/yelu/common/step_common.ml`  | Shared step utilities                                      |
-| `yelu/test/test-cmake/test_cmake_pp.ml`    | CMake pretty-printer unit tests (Alcotest)                 |
-| `yelu/test/test-yelu/test_yelu_compile.ml` | Yelu compiler unit tests (Alcotest)                        |
-| `yelu/test/test-cmake-semantics/probes.ml` | CMake namespace probe programs                             |
-| `yelu/doc/cmake_implementation.md`         | AST design, namespaces, design decisions, tutorial versions |
-| `yelu/doc/cmake_comparison.md`             | CMake output comparison strategies, equivalence levels      |
-| `yelu/doc/equiv_checking_research_prompt.md` | Research prompt: e-graphs / Z3 for cmake equivalence      |
-| `yelu/doc/language_coverage.md`            | Coverage table, CMakeOnly tractability, 4-tier roadmap     |
-| `yelu/vendor/cmake`                        | Symlink → `/home/red/code/contrib/cmake-all/cmake` (cmake 4.3 dev, 133 commands) |
+| File                                         | Purpose                                                                          |
+| -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `yelu/src/langs/cmake/lang_cmake.ml`         | CMake AST (stringly-typed, mirrors real CMake)                                   |
+| `yelu/src/langs/cmake/lang_cmake_pp.ml`      | CMake pretty printer (AST → CMake text)                                          |
+| `yelu/src/langs/cmake/lang_cmake_utils.ml`   | Ergonomic AST constructors                                                       |
+| `yelu/src/langs/yelu/lang_yelu.ml`           | Yelu AST (typed surface language)                                                |
+| `yelu/src/langs/yelu/lang_yelu_compile.ml`   | Yelu → CMake compiler (type erasure)                                             |
+| `yelu/src/langs/yelu/lang_yelu_utils.ml`     | Yelu AST utilities                                                               |
+| `yelu/src/bin/cmake/step{1-12}*.ml`          | CMake tutorial reference generators                                              |
+| `yelu/src/bin/yelu/step{1-12}*.ml`           | Yelu tutorial generators (test cases + syntax experiments)                       |
+| `yelu/src/bin/yelu/common/step_common.ml`    | Shared step utilities                                                            |
+| `yelu/test/test-cmake/test_cmake_pp.ml`      | CMake pretty-printer unit tests (Alcotest)                                       |
+| `yelu/test/test-yelu/test_yelu_compile.ml`   | Yelu compiler unit tests (Alcotest)                                              |
+| `yelu/test/test-cmake-semantics/probes.ml`   | CMake namespace probe programs                                                   |
+| `yelu/doc/cmake_implementation.md`           | AST design, namespaces, design decisions, tutorial versions                      |
+| `yelu/doc/cmake_comparison.md`               | CMake output comparison strategies, equivalence levels                           |
+| `yelu/doc/equiv_checking_research_prompt.md` | Research prompt: e-graphs / Z3 for cmake equivalence                             |
+| `yelu/doc/language_coverage.md`              | Coverage table, CMakeOnly tractability, 4-tier roadmap                           |
+| `yelu/vendor/cmake`                          | Symlink → `/home/red/code/contrib/cmake-all/cmake` (cmake 4.3 dev, 133 commands) |
 
 ## Design Vision
 
@@ -66,12 +66,26 @@ yelu programs target one pack at a time; they host languages, not mix them.
 - No runtime IO; primitives construct AST, not execute commands
 - Types/constraints are compile-time contracts; all errors fail before emit
 
-**LLM design goals (first-class)**: cmake is hostile to LLMs (irregular syntax,
-implicit semantics, late errors). yelu's regular syntax, explicit primitive API,
-strong static checking, and early/local errors make it a natural LLM synthesis target.
-The research question is not "yelu vs cmake" but: *which language properties improve
-LLM program synthesis?* — controlled-variable experiments, metrics: first-pass
-correctness, repair convergence, error locality, semantic edit distance.
+**Why cmake**: cmake is a good specimen for this research precisely because of its
+缝缝补补 ("stitched together") character — each decade added a layer (scripting →
+modules → generator expressions → presets → policy stack) without cleaning up what
+came before. The result: irregular syntax (commands and keywords are both bare strings,
+indistinguishable to the parser), implicit namespace collisions (variables, targets,
+cache, and properties shadow each other silently), late errors (a typo in a variable
+name silently produces `""`, the fault surfaces three calls later), and accumulated
+workarounds (`CMP*` policies coexist both old and new behavior forever). cmake is
+mature and widely adopted — important enough that results transfer — yet maximally
+hostile to automated reasoning.
+
+**LLM design goals (first-class)**: cmake's 缝缝补补 properties are exactly what make
+LLM synthesis unreliable: the model generates plausible-looking cmake that silently
+misbehaves at configure time. yelu's typed, regular API provides locally checkable
+primitives — an LLM mistake produces an early, local error rather than a distant cmake
+runtime failure. The research question is not "yelu vs cmake" but: *do language
+properties (regularity, explicitness, early errors) measurably improve LLM first-pass
+correctness and repair convergence?* Metrics: first-pass correctness, repair steps,
+error locality, semantic edit distance. cmake is the controlled variable — yelu holds
+semantics fixed while changing the surface language.
 
 ## Architecture
 
@@ -179,7 +193,32 @@ Design questions: (a) where do policy requirements live — per-construct metada
 (c) conflict resolution when two constructs require incompatible policies.
 Framing: the compiler's correctness contract is "generated cmake behaves as specified
 on any supported cmake version" — policy preamble is compiler output, not user boilerplate.
+
+Background context: cmake policies are unlike interpreter versioning in other ecosystems.
+In Python/Node/Ruby, a version is a property of the *process* — the whole program runs
+under one interpreter, and env tools (pyenv/nvm/rbenv) isolate projects by swapping the
+binary. In cmake, `cmake_minimum_required` activates a policy set *within* the running
+process, and `cmake_policy(PUSH/POP)` scopes policies to call stacks — so two
+subdirectories in the same configure session can operate under different behavioral
+versions simultaneously. The "version" is a property of the *scope*, not the process.
+This means a yelu construct lowered into a subdirectory may encounter a different policy
+context than expected, depending on what the parent project has already set. The
+compiler's policy preamble emission only solves the top-level case; for subdirectory
+inclusion the problem is harder — the parent's policy stack is external state yelu
+cannot control or inspect.
+
 Not urgent — design pass needed before touching code.
+
+**Y12. Cmake-layer tests mirroring yelu tests** — `test_cmake_pp.ml` tests the cmake
+PP in isolation. As yelu coverage grows, cmake-layer tests should be kept in sync: for
+every command with a yelu test there should be a corresponding cmake PP test exercising
+the same cases directly (no yelu compile step). Two reasons: (a) isolates PP bugs from
+yelu compiler bugs — a failure in the cmake test points to the PP, a failure only in
+the yelu test points to the compiler; (b) the cmake layer is independently usable as a
+typed AST builder, so its test coverage should not depend on going through yelu.
+Sync rule: when a yelu test is added for a command, check whether a cmake PP test
+already exists; if not, add one. Priority: commands recently promoted from AST-only
+(`add_custom_target`, `define_property`, `target_precompile_headers`, etc.).
 
 ### Done
 
@@ -208,6 +247,12 @@ Not urgent — design pass needed before touching code.
   `yelu/src/bin/cmake/` paths relative to the tola root via `cd ..`.
 - **`yelu/vendor/cmake` is a symlink**: Points to `/home/red/code/contrib/cmake-all/cmake`
   (cmake 4.3 dev). Not a submodule — do not re-add it as one.
+- **cmake runtime vs vendor source version mismatch**: Installed cmake is 3.28.3
+  (`/usr/bin/cmake`, Ubuntu 24.04 apt max). Vendor source is cmake 4.3. All conf-run
+  and script-mode tests run against 3.28. Everything currently implemented (cmake_path,
+  block, cmake_language) is ≤3.25, so 3.28 covers all active tests. Upgrade needed
+  when cmake_policy CMP0186 (4.1) work starts. Upgrade path: Kitware apt repo —
+  `curl -fsSL https://apt.kitware.com/kitware-archive.sh | sudo bash && sudo apt install cmake`.
 
 ## Conventions
 

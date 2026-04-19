@@ -9,5 +9,8 @@
   link_interface_loop
   find_path
   find_library
-  select_library_configurations)
+  select_library_configurations
+  major_version_selection
+  all_find_modules
+  fetch_content)
  (libraries base yelu_langs step_common))

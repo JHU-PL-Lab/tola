@@ -461,14 +461,16 @@ let rec pp ff e =
   | Exp_list exps -> (list_br pp) ff exps
   | Quote s -> Fmt.string ff s
   (* control flow *)
-  | Block { scope_policy = _; scope_var; propagate } ->
+  | Block { scope_policy = _; scope_var; propagate; body } ->
+      let has_propagate = String.length propagate > 0 in
+      let scope_str =
+        if not (List.is_empty scope_var) || has_propagate then
+          if has_propagate then "SCOPE_FOR VARIABLES PROPAGATE " ^ propagate
+          else "SCOPE_FOR VARIABLES"
+        else ""
+      in
       Fmt.(
-        pf ff "block(SCOPE_FOR%a%a)@.endblock()"
-          (pp_list_with_key " VARIABLES" pp_var)
-          scope_var
-          (fun ff v ->
-            if String.length v > 0 then pf ff " PROPAGATE %s" v)
-          propagate)
+        pf ff "block(%s)@.@[<2>  %a@]@.endblock()" scope_str (list_br pp) body)
   | While { cond; commands } ->
       Fmt.(
         pf ff "while(%a)@.@[<2>  %a@]@.endwhile()" pp_cond cond pp commands)
@@ -625,8 +627,10 @@ let rec pp ff e =
             (list_sp pp_property) properties)
   (* info and debug *)
   | Site_name { var } -> Fmt.(pf ff "site_name(%a)" pp_var var)
-  | Variable_watch { var; access = _; value = _; _ } ->
-      Fmt.(pf ff "variable_watch(%a)" pp_var var)
+  | Variable_watch { var; command; _ } ->
+      (match command with
+       | None -> Fmt.(pf ff "variable_watch(%a)" pp_var var)
+       | Some cmd -> Fmt.(pf ff "variable_watch(%a %s)" pp_var var cmd))
   (* list/string/math lib *)
   | List_cmd lc -> pp_list_cmd ff lc
   | String_cmd sc -> pp_string_cmd ff sc
@@ -658,10 +662,105 @@ let rec pp ff e =
   | Project_cmd cmd -> (Fmt.vbox pp_project_cmd) ff cmd
   | Module_cmd cmd -> (Fmt.vbox pp_module_cmd) ff cmd
   (* AST stubs — these constructors carry no fields *)
-  | Execute_process -> Fmt.string ff "execute_process()"
+  | Execute_process { commands; working_directory; timeout; result_variable;
+                      output_variable; error_variable; input_file; output_file;
+                      error_file; output_quiet; error_quiet;
+                      output_strip_trailing_whitespace;
+                      error_strip_trailing_whitespace; command_error_is_fatal } ->
+      Fmt.string ff "execute_process(";
+      List.iter commands ~f:(fun cmd ->
+        Fmt.string ff "\n  COMMAND";
+        List.iter cmd ~f:(fun a -> Fmt.pf ff " %a" pp_arg a));
+      Option.iter working_directory ~f:(fun d -> Fmt.pf ff "\n  WORKING_DIRECTORY %a" pp_arg d);
+      Option.iter timeout ~f:(fun t -> Fmt.pf ff "\n  TIMEOUT %g" t);
+      Option.iter result_variable ~f:(fun v -> Fmt.pf ff "\n  RESULT_VARIABLE %s" v);
+      Option.iter output_variable ~f:(fun v -> Fmt.pf ff "\n  OUTPUT_VARIABLE %s" v);
+      Option.iter error_variable ~f:(fun v -> Fmt.pf ff "\n  ERROR_VARIABLE %s" v);
+      Option.iter input_file ~f:(fun f -> Fmt.pf ff "\n  INPUT_FILE %a" pp_arg f);
+      Option.iter output_file ~f:(fun f -> Fmt.pf ff "\n  OUTPUT_FILE %a" pp_arg f);
+      Option.iter error_file ~f:(fun f -> Fmt.pf ff "\n  ERROR_FILE %a" pp_arg f);
+      if output_quiet then Fmt.string ff "\n  OUTPUT_QUIET";
+      if error_quiet then Fmt.string ff "\n  ERROR_QUIET";
+      if output_strip_trailing_whitespace then Fmt.string ff "\n  OUTPUT_STRIP_TRAILING_WHITESPACE";
+      if error_strip_trailing_whitespace then Fmt.string ff "\n  ERROR_STRIP_TRAILING_WHITESPACE";
+      Option.iter command_error_is_fatal ~f:(fun m -> Fmt.pf ff "\n  COMMAND_ERROR_IS_FATAL %s" m);
+      Fmt.string ff ")"
   | File_relative_path { var; base; file } ->
       Fmt.(pf ff "file(RELATIVE_PATH %a %s %s)" pp_var var base file)
-  | Find_package -> Fmt.string ff "find_package()"
+  | File_glob { var; recurse; relative; configure_depends; patterns } ->
+      let sub = if recurse then "GLOB_RECURSE" else "GLOB" in
+      Fmt.pf ff "file(%s %a" sub pp_var var;
+      if configure_depends then Fmt.string ff " CONFIGURE_DEPENDS";
+      Option.iter relative ~f:(fun p -> Fmt.pf ff " RELATIVE %s" p);
+      List.iter patterns ~f:(fun p -> Fmt.pf ff " %a" pp_arg p);
+      Fmt.string ff ")"
+  | File_read { var; file; offset; limit; hex } ->
+      Fmt.pf ff "file(READ %a %a" pp_arg file pp_var var;
+      Option.iter offset ~f:(fun n -> Fmt.pf ff " OFFSET %d" n);
+      Option.iter limit ~f:(fun n -> Fmt.pf ff " LIMIT %d" n);
+      if hex then Fmt.string ff " HEX";
+      Fmt.string ff ")"
+  | File_write { file; append; content } ->
+      let sub = if append then "APPEND" else "WRITE" in
+      Fmt.pf ff "file(%s %a" sub pp_arg file;
+      List.iter content ~f:(fun a -> Fmt.pf ff " %a" pp_arg a);
+      Fmt.string ff ")"
+  | File_strings { var; file; regex; encoding; limit_count } ->
+      Fmt.pf ff "file(STRINGS %a %a" pp_arg file pp_var var;
+      Option.iter regex ~f:(fun r -> Fmt.pf ff " REGEX %S" r);
+      Option.iter encoding ~f:(fun e -> Fmt.pf ff " ENCODING %s" e);
+      Option.iter limit_count ~f:(fun n -> Fmt.pf ff " LIMIT_COUNT %d" n);
+      Fmt.string ff ")"
+  | File_touch { files; nocreate } ->
+      let sub = if nocreate then "TOUCH_NOCREATE" else "TOUCH" in
+      Fmt.pf ff "file(%s" sub;
+      List.iter files ~f:(fun f -> Fmt.pf ff " %a" pp_arg f);
+      Fmt.string ff ")"
+  | File_make_directory { dirs } ->
+      Fmt.pf ff "file(MAKE_DIRECTORY";
+      List.iter dirs ~f:(fun d -> Fmt.pf ff " %a" pp_arg d);
+      Fmt.string ff ")"
+  | File_rename { old_; new_; result; no_replace } ->
+      Fmt.pf ff "file(RENAME %a %a" pp_arg old_ pp_arg new_;
+      Option.iter result ~f:(fun v -> Fmt.pf ff " RESULT %a" pp_var v);
+      if no_replace then Fmt.string ff " NO_REPLACE";
+      Fmt.string ff ")"
+  | File_remove { files; recurse } ->
+      let sub = if recurse then "REMOVE_RECURSE" else "REMOVE" in
+      Fmt.pf ff "file(%s" sub;
+      List.iter files ~f:(fun f -> Fmt.pf ff " %a" pp_arg f);
+      Fmt.string ff ")"
+  | File_copy_file { input; output; result; only_if_different } ->
+      Fmt.pf ff "file(COPY_FILE %a %a" pp_arg input pp_arg output;
+      Option.iter result ~f:(fun v -> Fmt.pf ff " RESULT %a" pp_var v);
+      if only_if_different then Fmt.string ff " ONLY_IF_DIFFERENT";
+      Fmt.string ff ")"
+  | File_real_path { var; path; base_dir; expand_tilde } ->
+      Fmt.pf ff "file(REAL_PATH %a %a" pp_arg path pp_var var;
+      Option.iter base_dir ~f:(fun b -> Fmt.pf ff " BASE_DIRECTORY %a" pp_arg b);
+      if expand_tilde then Fmt.string ff " EXPAND_TILDE";
+      Fmt.string ff ")"
+  | File_size { var; file } ->
+      Fmt.pf ff "file(SIZE %a %a)" pp_arg file pp_var var
+  | File_read_symlink { var; link } ->
+      Fmt.pf ff "file(READ_SYMLINK %a %a)" pp_arg link pp_var var
+  | File_timestamp { var; file; format; utc } ->
+      Fmt.pf ff "file(TIMESTAMP %a %a" pp_arg file pp_var var;
+      Option.iter format ~f:(fun f -> Fmt.pf ff " %S" f);
+      if utc then Fmt.string ff " UTC";
+      Fmt.string ff ")"
+  | Find_package { name; version; exact; quiet; config_mode; required; components; optional_components } ->
+      Fmt.pf ff "find_package(%s" name;
+      Option.iter version ~f:(fun v -> Fmt.pf ff " %s" v);
+      if exact then Fmt.string ff " EXACT";
+      if quiet then Fmt.string ff " QUIET";
+      if config_mode then Fmt.string ff " CONFIG";
+      if required then Fmt.string ff " REQUIRED";
+      if not (List.is_empty components) then
+        Fmt.(pf ff " COMPONENTS %a" (list ~sep:sp_char string) components);
+      if not (List.is_empty optional_components) then
+        Fmt.(pf ff " OPTIONAL_COMPONENTS %a" (list ~sep:sp_char string) optional_components);
+      Fmt.string ff ")"
   (* find_var commands *)
   | Find_file a -> pp_find_var ff "find_file" a
   | Find_library a -> pp_find_var ff "find_library" a
@@ -718,9 +817,7 @@ and pp_cmake_cmd ff cmd =
           (String.concat ~sep:";" one_keyword)
           (pp_string_quoted)
           (String.concat ~sep:";" multi_keyword))
-  | Cmake_path_get { path_var; out_var } ->
-      Fmt.(
-        pf ff "cmake_path(GET %a %a)" pp_var path_var pp_var out_var)
+  | Cmake_path cmd -> pp_cmake_path ff cmd
   | Cmake_policy_version { min; max } ->
       Fmt.(
         pf ff "cmake_policy(VERSION %a...%a)" string
@@ -732,12 +829,96 @@ and pp_cmake_cmd ff cmd =
   | Cmake_policy_push -> Fmt.string ff "cmake_policy(PUSH)"
   | Cmake_policy_pop -> Fmt.string ff "cmake_policy(POP)"
 
+and pp_cmake_path_get_field ff = function
+  | Cpf_root_name -> Fmt.string ff "ROOT_NAME"
+  | Cpf_root_directory -> Fmt.string ff "ROOT_DIRECTORY"
+  | Cpf_root_path -> Fmt.string ff "ROOT_PATH"
+  | Cpf_filename -> Fmt.string ff "FILENAME"
+  | Cpf_extension last_only ->
+      Fmt.string ff (if last_only then "EXTENSION LAST_ONLY" else "EXTENSION")
+  | Cpf_stem last_only ->
+      Fmt.string ff (if last_only then "STEM LAST_ONLY" else "STEM")
+  | Cpf_relative_part -> Fmt.string ff "RELATIVE_PART"
+  | Cpf_parent_path -> Fmt.string ff "PARENT_PATH"
+
+and pp_cmake_path_has_field ff = function
+  | Cph_root_name -> Fmt.string ff "HAS_ROOT_NAME"
+  | Cph_root_directory -> Fmt.string ff "HAS_ROOT_DIRECTORY"
+  | Cph_root_path -> Fmt.string ff "HAS_ROOT_PATH"
+  | Cph_filename -> Fmt.string ff "HAS_FILENAME"
+  | Cph_extension -> Fmt.string ff "HAS_EXTENSION"
+  | Cph_stem -> Fmt.string ff "HAS_STEM"
+  | Cph_relative_part -> Fmt.string ff "HAS_RELATIVE_PART"
+  | Cph_parent_path -> Fmt.string ff "HAS_PARENT_PATH"
+
+and pp_cmake_path_compare_op ff = function
+  | Cpco_equal -> Fmt.string ff "EQUAL"
+  | Cpco_not_equal -> Fmt.string ff "NOT_EQUAL"
+
+and pp_out_var ff = function
+  | None -> ()
+  | Some v -> Fmt.(pf ff " OUTPUT_VARIABLE %a" pp_var v)
+
+and pp_cmake_path ff = function
+  | Cpp_get { path_var; field = f; out_var } ->
+      Fmt.(pf ff "cmake_path(GET %a %a %a)" pp_var path_var pp_cmake_path_get_field f pp_var out_var)
+  | Cpp_has { path_var; field = f; out_var } ->
+      Fmt.(pf ff "cmake_path(%a %a %a)" pp_cmake_path_has_field f pp_var path_var pp_var out_var)
+  | Cpp_is_absolute { path_var; out_var } ->
+      Fmt.(pf ff "cmake_path(IS_ABSOLUTE %a %a)" pp_var path_var pp_var out_var)
+  | Cpp_is_relative { path_var; out_var } ->
+      Fmt.(pf ff "cmake_path(IS_RELATIVE %a %a)" pp_var path_var pp_var out_var)
+  | Cpp_is_prefix { path_var; input; normalize; out_var } ->
+      Fmt.(pf ff "cmake_path(IS_PREFIX %a %a%s %a)" pp_var path_var pp_arg input
+             (if normalize then " NORMALIZE" else "") pp_var out_var)
+  | Cpp_compare { input1; op; input2; out_var } ->
+      Fmt.(pf ff "cmake_path(COMPARE %a %a %a %a)"
+             pp_arg input1 pp_cmake_path_compare_op op pp_arg input2 pp_var out_var)
+  | Cpp_set { path_var; input; normalize } ->
+      Fmt.(pf ff "cmake_path(SET %a%s %a)" pp_var path_var
+             (if normalize then " NORMALIZE" else "") pp_arg input)
+  | Cpp_append { path_var; inputs; out_var } ->
+      Fmt.(pf ff "cmake_path(APPEND %a %a%a)" pp_var path_var (list_sp pp_arg) inputs pp_out_var out_var)
+  | Cpp_append_string { path_var; inputs; out_var } ->
+      Fmt.(pf ff "cmake_path(APPEND_STRING %a %a%a)" pp_var path_var (list_sp pp_arg) inputs pp_out_var out_var)
+  | Cpp_remove_filename { path_var; out_var } ->
+      Fmt.(pf ff "cmake_path(REMOVE_FILENAME %a%a)" pp_var path_var pp_out_var out_var)
+  | Cpp_replace_filename { path_var; input; out_var } ->
+      Fmt.(pf ff "cmake_path(REPLACE_FILENAME %a %a%a)" pp_var path_var pp_arg input pp_out_var out_var)
+  | Cpp_remove_extension { path_var; last_only; out_var } ->
+      Fmt.(pf ff "cmake_path(REMOVE_EXTENSION %a%s%a)" pp_var path_var
+             (if last_only then " LAST_ONLY" else "") pp_out_var out_var)
+  | Cpp_replace_extension { path_var; last_only; input; out_var } ->
+      Fmt.(pf ff "cmake_path(REPLACE_EXTENSION %a%s %a%a)" pp_var path_var
+             (if last_only then " LAST_ONLY" else "") pp_arg input pp_out_var out_var)
+  | Cpp_normal_path { path_var; out_var } ->
+      Fmt.(pf ff "cmake_path(NORMAL_PATH %a%a)" pp_var path_var pp_out_var out_var)
+  | Cpp_relative_path { path_var; base_dir; out_var } ->
+      Fmt.(pf ff "cmake_path(RELATIVE_PATH %a%a%a)" pp_var path_var
+             (fun ff -> function None -> () | Some d -> pf ff " BASE_DIRECTORY %a" pp_arg d) base_dir
+             pp_out_var out_var)
+  | Cpp_absolute_path { path_var; base_dir; normalize; out_var } ->
+      Fmt.(pf ff "cmake_path(ABSOLUTE_PATH %a%a%s%a)" pp_var path_var
+             (fun ff -> function None -> () | Some d -> pf ff " BASE_DIRECTORY %a" pp_arg d) base_dir
+             (if normalize then " NORMALIZE" else "") pp_out_var out_var)
+  | Cpp_native_path { path_var; normalize; out_var } ->
+      Fmt.(pf ff "cmake_path(NATIVE_PATH %a%s %a)" pp_var path_var
+             (if normalize then " NORMALIZE" else "") pp_var out_var)
+  | Cpp_convert_to_cmake { input; normalize; out_var } ->
+      Fmt.(pf ff "cmake_path(CONVERT %a TO_CMAKE_PATH_LIST %a%s)" pp_arg input pp_var out_var
+             (if normalize then " NORMALIZE" else ""))
+  | Cpp_convert_to_native { input; normalize; out_var } ->
+      Fmt.(pf ff "cmake_path(CONVERT %a TO_NATIVE_PATH_LIST %a%s)" pp_arg input pp_var out_var
+             (if normalize then " NORMALIZE" else ""))
+  | Cpp_hash { path_var; out_var } ->
+      Fmt.(pf ff "cmake_path(HASH %a %a)" pp_var path_var pp_var out_var)
+
 and pp_cmake_meta_lang ff = function
   | Meta_call { cmd; arg } ->
       Fmt.(
         pf ff "cmake_language(CALL %a %a)" pp cmd (list_sp pp) arg)
   | Meta_eval { code } ->
-      Fmt.(pf ff "cmake_language(EVAL CODE %a)" string code)
+      Fmt.(pf ff "cmake_language(EVAL CODE %S)" code)
   | Meta_defer_call { dir; id = id_; var } ->
       Fmt.(
         pf ff "cmake_language(DEFER%a%a ID_VAR %a)"
@@ -890,17 +1071,18 @@ and pp_project_cmd ff cmd =
           (pp_flag "USES_TERMINAL") uses_terminal
           (pp_flag "APPEND") is_append)
   | Add_custom_target
-      { all; commands; depends; working_directory; comment;
+      { name; all; commands; depends; working_directory; comment;
         verbatim; uses_terminal; sources; _ } ->
       Fmt.(
-        pf ff "add_custom_target(%a%a%a%a%a%a%a%a)" (pp_flag "ALL") all
-          (list_sp pp_custom_command) commands
-          (pp_list_with_key "DEPENDS" string) depends
-          (pp_with_key "WORKING_DIRECTORY" string) working_directory
-          (pp_with_key "COMMENT" string) comment
+        pf ff "add_custom_target(%s%a%a%a%a%a%a%a%a)" name
+          (pp_flag "ALL") all
+          (pp_list_with_key " COMMAND" pp_custom_command) commands
+          (pp_list_with_key " DEPENDS" string) depends
+          (pp_with_key " WORKING_DIRECTORY" string) working_directory
+          (pp_with_key " COMMENT" string) comment
           (pp_flag "VERBATIM") verbatim
           (pp_flag "USES_TERMINAL") uses_terminal
-          (pp_list_with_key "SOURCES" string) sources)
+          (pp_list_with_key " SOURCES" string) sources)
   (* property *)
   | Get_source_file_property { var; file; property } ->
       Fmt.(
@@ -912,10 +1094,8 @@ and pp_project_cmd ff cmd =
           (list_sp string) files
           (pp_list_with_key "DIRECTORY" string) directories
           (pp_list_with_key "TARGET_DIRECTORY" pp_target) target_directories)
-  | Get_target_property { var; target; property } ->
-      Fmt.(
-        pf ff "get_target_property(%a %a %a)" pp_var var pp_target target
-          pp_property property)
+  | Get_target_property { var; target; property = { prop; _ } } ->
+      Fmt.(pf ff "get_target_property(%a %a %s)" pp_var var pp_target target prop)
   | Set_target_properties { target; properties } ->
       Fmt.(
         pf ff "set_target_properties(%a PROPERTIES %a)" pp_target target
@@ -943,9 +1123,9 @@ and pp_project_cmd ff cmd =
       Fmt.(
         pf ff "define_property(%a@;PROPERTY %a%a%a%a%a)" pp_define_property_mode
           mode string property_name (pp_flag "INHERITED") inherited
-          (pp_list_with_key "BRIEF_DOCS" pp_string_quoted)
+          (pp_list_with_key " BRIEF_DOCS" pp_string_quoted)
           brief_docs
-          (pp_list_with_key "FULL_DOCS" pp_string_quoted)
+          (pp_list_with_key " FULL_DOCS" pp_string_quoted)
           full_docs
           (fun ff v ->
             if String.length v > 0 then
@@ -1089,8 +1269,46 @@ and pp_project_cmd ff cmd =
           pfx
           (pp_list_with_key "FILES" string)
           files)
-  | Try_compile -> Fmt.string ff "try_compile()"
-  | Try_run -> Fmt.string ff "try_run()"
+  | Try_compile {
+      tc_result_var; tc_sources; tc_compile_definitions; tc_link_libraries;
+      tc_link_options; tc_cmake_flags; tc_output_variable; tc_copy_file;
+      tc_no_cache; tc_c_standard; tc_cxx_standard } ->
+    Fmt.(pf ff "try_compile(%a " pp_var tc_result_var);
+    pp_list_with_key "SOURCES" pp_arg ff tc_sources;
+    if not (List.is_empty tc_compile_definitions) then
+      pp_list_with_key "COMPILE_DEFINITIONS" pp_arg ff tc_compile_definitions;
+    if not (List.is_empty tc_link_libraries) then
+      pp_list_with_key "LINK_LIBRARIES" pp_arg ff tc_link_libraries;
+    if not (List.is_empty tc_link_options) then
+      pp_list_with_key "LINK_OPTIONS" pp_arg ff tc_link_options;
+    if not (List.is_empty tc_cmake_flags) then
+      pp_list_with_key "CMAKE_FLAGS" pp_arg ff tc_cmake_flags;
+    (match tc_output_variable with
+     | None -> () | Some v -> Fmt.(pf ff " OUTPUT_VARIABLE %a" pp_var v));
+    (match tc_copy_file with
+     | None -> () | Some a -> Fmt.(pf ff " COPY_FILE %a" pp_arg a));
+    (match tc_c_standard with
+     | None -> () | Some s -> Fmt.pf ff " C_STANDARD %s" s);
+    (match tc_cxx_standard with
+     | None -> () | Some s -> Fmt.pf ff " CXX_STANDARD %s" s);
+    if tc_no_cache then Fmt.pf ff " NO_CACHE";
+    Fmt.string ff ")"
+  | Try_run {
+      tr_run_result_var; tr_compile_result_var; tr_sources;
+      tr_compile_definitions; tr_link_libraries;
+      tr_compile_output_variable; tr_run_output_variable; tr_args } ->
+    Fmt.(pf ff "try_run(%a %a " pp_var tr_run_result_var pp_var tr_compile_result_var);
+    pp_list_with_key "SOURCES" pp_arg ff tr_sources;
+    if not (List.is_empty tr_compile_definitions) then
+      pp_list_with_key "COMPILE_DEFINITIONS" pp_arg ff tr_compile_definitions;
+    if not (List.is_empty tr_link_libraries) then
+      pp_list_with_key "LINK_LIBRARIES" pp_arg ff tr_link_libraries;
+    (match tr_compile_output_variable with
+     | None -> () | Some v -> Fmt.(pf ff " COMPILE_OUTPUT_VARIABLE %a" pp_var v));
+    (match tr_run_output_variable with
+     | None -> () | Some v -> Fmt.(pf ff " RUN_OUTPUT_VARIABLE %a" pp_var v));
+    if not (List.is_empty tr_args) then pp_list_with_key "ARGS" pp_arg ff tr_args;
+    Fmt.string ff ")"
 
 and pp_module_cmd ff = function
   | Configure_package_config_file

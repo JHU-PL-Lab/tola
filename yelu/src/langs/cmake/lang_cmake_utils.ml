@@ -359,3 +359,32 @@ let unset_cache var = Unset { var; cache = true; parent_scope = false }
 let macro name ?(args = []) commands = Macro { name; args; commands }
 
 let file_relative_path ~var ~base file = File_relative_path { var; base; file }
+
+let try_compile ?(compile_defs = []) ?(link_libs = []) ?(link_opts = [])
+    ?(cmake_flags = []) ?output_variable ?copy_file ?(no_cache = false)
+    ?c_standard ?cxx_standard result_var sources =
+  Try_compile {
+    tc_result_var = result_var; tc_sources = sources;
+    tc_compile_definitions = compile_defs; tc_link_libraries = link_libs;
+    tc_link_options = link_opts; tc_cmake_flags = cmake_flags;
+    tc_output_variable = output_variable; tc_copy_file = copy_file;
+    tc_no_cache = no_cache; tc_c_standard = c_standard;
+    tc_cxx_standard = cxx_standard }
+
+let try_run ?(compile_defs = []) ?(link_libs = [])
+    ?compile_output_variable ?run_output_variable ?(args = [])
+    run_result_var compile_result_var sources =
+  Try_run {
+    tr_run_result_var = run_result_var; tr_compile_result_var = compile_result_var;
+    tr_sources = sources; tr_compile_definitions = compile_defs;
+    tr_link_libraries = link_libs;
+    tr_compile_output_variable = compile_output_variable;
+    tr_run_output_variable = run_output_variable; tr_args = args }
+
+let add_custom_target name ?(all = false) ?(commands = []) ?(depends = [])
+    ?(byproducts = []) ?working_directory ?comment ?(verbatim = false)
+    ?(uses_terminal = false) ?(sources = []) () =
+  Project_cmd (Add_custom_target {
+    name; all; commands; depends; byproducts; working_directory; comment;
+    job_pool = []; job_server_aware = false; verbatim; uses_terminal;
+    command_expand_list = []; sources })

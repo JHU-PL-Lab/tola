@@ -416,17 +416,64 @@ and exp =
   | Site_name of { var : var }
   | Variable_watch of {
       var : var;
+      command : string option;
       access : variable_watch_access;
       value : exp option;
       current_list_file : path option;
       stack : path list;
     }
   (* API *)
-  | Execute_process
+  | Execute_process of {
+      commands : arg list list;
+      working_directory : arg option;
+      timeout : float option;
+      result_variable : var option;
+      output_variable : var option;
+      error_variable : var option;
+      input_file : arg option;
+      output_file : arg option;
+      error_file : arg option;
+      output_quiet : bool;
+      error_quiet : bool;
+      output_strip_trailing_whitespace : bool;
+      error_strip_trailing_whitespace : bool;
+      command_error_is_fatal : string option;
+    }
   | File_relative_path of { var : var; base : path; file : path }
+  | File_glob of {
+      var : var;
+      recurse : bool;
+      relative : path option;
+      configure_depends : bool;
+      patterns : arg list;
+    }
+  (* file() IO subcommands *)
+  | File_read of { var : var; file : arg; offset : int option; limit : int option; hex : bool }
+  | File_write of { file : arg; append : bool; content : arg list }
+  | File_strings of { var : var; file : arg; regex : string option; encoding : string option; limit_count : int option }
+  (* file() filesystem subcommands *)
+  | File_touch of { files : arg list; nocreate : bool }
+  | File_make_directory of { dirs : arg list }
+  | File_rename of { old_ : arg; new_ : arg; result : var option; no_replace : bool }
+  | File_remove of { files : arg list; recurse : bool }
+  | File_copy_file of { input : arg; output : arg; result : var option; only_if_different : bool }
+  (* file() path-query subcommands *)
+  | File_real_path of { var : var; path : arg; base_dir : arg option; expand_tilde : bool }
+  | File_size of { var : var; file : arg }
+  | File_read_symlink of { var : var; link : arg }
+  | File_timestamp of { var : var; file : arg; format : string option; utc : bool }
   | Find_file of find_var_args
   | Find_library of find_var_args
-  | Find_package
+  | Find_package of {
+      name : string;
+      version : string option;
+      exact : bool;
+      quiet : bool;
+      config_mode : bool;
+      required : bool;
+      components : string list;
+      optional_components : string list;
+    }
   | Find_path of find_var_args
   | Find_program of find_var_args
   (* List lib *)
@@ -449,7 +496,44 @@ and block_exp = {
   scope_policy : policy list;
   scope_var : var list;
   propagate : var;
+  body : cmd list;
 }
+
+and cmake_path_get_field =
+  | Cpf_root_name | Cpf_root_directory | Cpf_root_path
+  | Cpf_filename | Cpf_extension of bool | Cpf_stem of bool
+  | Cpf_relative_part | Cpf_parent_path
+
+and cmake_path_has_field =
+  | Cph_root_name | Cph_root_directory | Cph_root_path | Cph_filename
+  | Cph_extension | Cph_stem | Cph_relative_part | Cph_parent_path
+
+and cmake_path_compare_op = Cpco_equal | Cpco_not_equal
+
+and cmake_path_cmd =
+  (* Decomposition queries *)
+  | Cpp_get of { path_var : var; field : cmake_path_get_field; out_var : var }
+  | Cpp_has of { path_var : var; field : cmake_path_has_field; out_var : var }
+  | Cpp_is_absolute of { path_var : var; out_var : var }
+  | Cpp_is_relative of { path_var : var; out_var : var }
+  | Cpp_is_prefix of { path_var : var; input : arg; normalize : bool; out_var : var }
+  | Cpp_compare of { input1 : arg; op : cmake_path_compare_op; input2 : arg; out_var : var }
+  (* Modification *)
+  | Cpp_set of { path_var : var; input : arg; normalize : bool }
+  | Cpp_append of { path_var : var; inputs : arg list; out_var : var option }
+  | Cpp_append_string of { path_var : var; inputs : arg list; out_var : var option }
+  | Cpp_remove_filename of { path_var : var; out_var : var option }
+  | Cpp_replace_filename of { path_var : var; input : arg; out_var : var option }
+  | Cpp_remove_extension of { path_var : var; last_only : bool; out_var : var option }
+  | Cpp_replace_extension of { path_var : var; last_only : bool; input : arg; out_var : var option }
+  (* Generation *)
+  | Cpp_normal_path of { path_var : var; out_var : var option }
+  | Cpp_relative_path of { path_var : var; base_dir : arg option; out_var : var option }
+  | Cpp_absolute_path of { path_var : var; base_dir : arg option; normalize : bool; out_var : var option }
+  | Cpp_native_path of { path_var : var; normalize : bool; out_var : var }
+  | Cpp_convert_to_cmake of { input : arg; normalize : bool; out_var : var }
+  | Cpp_convert_to_native of { input : arg; normalize : bool; out_var : var }
+  | Cpp_hash of { path_var : var; out_var : var }
 
 and cmake_cmd =
   | Host_system_information of { result : var; query : query_key }
@@ -475,7 +559,7 @@ and cmake_cmd =
       multi_keyword : string list;
     }
   (* https://cmake.org/cmake/help/latest/command/cmake_path.html *)
-  | Cmake_path_get of { path_var : var; out_var : var }
+  | Cmake_path of cmake_path_cmd
   | Cmake_policy_version of { min : version; max : version }
   | Cmake_policy_set of { nnnn : bool }
   | Cmake_policy_get of { var : var }
@@ -630,6 +714,7 @@ and project_cmd =
       depends_explicit_only : bool;
     }
   | Add_custom_target of {
+      name : string;
       all : bool;
       commands : custom_command list;
       depends : depend list;
@@ -736,8 +821,33 @@ and project_cmd =
     }
   | Source_group of { name : string; files : string list; regular_exp : string }
   | Source_group_tree of { root : string; prefix : string; files : file list }
-  | Try_compile
-  | Try_run
+  | Try_compile of try_compile_exp
+  | Try_run of try_run_exp
+
+and try_compile_exp = {
+  tc_result_var : var;
+  tc_sources : arg list;
+  tc_compile_definitions : arg list;
+  tc_link_libraries : arg list;
+  tc_link_options : arg list;
+  tc_cmake_flags : arg list;
+  tc_output_variable : var option;
+  tc_copy_file : arg option;
+  tc_no_cache : bool;
+  tc_c_standard : string option;
+  tc_cxx_standard : string option;
+}
+
+and try_run_exp = {
+  tr_run_result_var : var;
+  tr_compile_result_var : var;
+  tr_sources : arg list;
+  tr_compile_definitions : arg list;
+  tr_link_libraries : arg list;
+  tr_compile_output_variable : var option;
+  tr_run_output_variable : var option;
+  tr_args : arg list;
+}
 
 and module_cmd =
   (* CMakePackageConfigHelpers *)
