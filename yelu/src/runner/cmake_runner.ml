@@ -71,6 +71,34 @@ let check_stdout_matches pattern result =
   if not (Re.execp re result.stdout) then
     Alcotest.failf "stdout did not match pattern %S\ngot:\n%s" pattern result.stdout
 
+let strip_line_anchors pat =
+  (* RunCMake stdout patterns use ^ and $ as line anchors (cmake's multiline regex),
+     but Re.Posix treats them as string anchors. Strip them so Re.execp finds the
+     pattern anywhere in the multi-line stdout string. *)
+  let p = if String.length pat > 0 && pat.[0] = '^' then String.sub pat 1 (String.length pat - 1) else pat in
+  let n = String.length p in
+  if n > 0 && p.[n-1] = '$' then String.sub p 0 (n - 1) else p
+
+let load_stdout_patterns dir name =
+  let path = Filename.concat dir (name ^ "-stdout.txt") in
+  if not (Sys.file_exists path) then []
+  else
+    let ic = open_in path in
+    let lines = ref [] in
+    (try while true do
+       let l = String.trim (input_line ic) in
+       if l <> "" then lines := strip_line_anchors l :: !lines
+     done with End_of_file -> ());
+    close_in ic;
+    List.rev !lines
+
+let check_stdout_patterns patterns result =
+  List.iter (fun pat ->
+    let re = Re.Pcre.regexp pat in
+    if not (Re.execp re result.stdout) then
+      Alcotest.failf "stdout did not match pattern %S\ngot:\n%s" pat result.stdout
+  ) patterns
+
 let run_script ?(env = []) ?(flags = []) cmake_text =
   let tmp = Filename.temp_file "yelu_" ".cmake" in
   let cleanup () = (try Sys.remove tmp with _ -> ()) in
