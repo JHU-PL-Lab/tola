@@ -145,9 +145,9 @@ let string_of_link_library_kind = function
 let pp_link_library_kind = Fmt.using string_of_link_library_kind Fmt.string
 
 let pp_link_library_group ff { item; items; kind } =
-  Fmt.(
-    pf ff "%a %a %a" pp_link_library_kind kind string item (list_sp string)
-      items)
+  match kind with
+  | Ll_general -> Fmt.(pf ff "%s%a" item (fun ff ls -> if List.length ls > 0 then pf ff " %a" (list_sp string) ls) items)
+  | _ -> Fmt.(pf ff "%a %s%a" pp_link_library_kind kind item (fun ff ls -> if List.length ls > 0 then pf ff " %a" (list_sp string) ls) items)
 
 let string_of_file_set_type = function
   | Fs_headers -> "HEADERS"
@@ -625,6 +625,12 @@ let rec pp ff e =
         Fmt.(
           pf ff "set_property(TARGET %a@;PROPERTY %a)" (list_sp pp_target) targets
             (list_sp pp_property) properties)
+  | Set_directory_property { append = is_append; property; values } ->
+      Fmt.(
+        pf ff "set_property(DIRECTORY%s PROPERTY %s %a)"
+          (if is_append then " APPEND" else "")
+          property
+          (list_sp pp_arg) values)
   (* info and debug *)
   | Site_name { var } -> Fmt.(pf ff "site_name(%a)" pp_var var)
   | Variable_watch { var; command; _ } ->
@@ -822,8 +828,8 @@ and pp_cmake_cmd ff cmd =
       Fmt.(
         pf ff "cmake_policy(VERSION %a...%a)" string
           (string_of_version min) string (string_of_version max))
-  | Cmake_policy_set { nnnn } ->
-      Fmt.(pf ff "cmake_policy(SET %a)" string (if nnnn then "NEW" else "OLD"))
+  | Cmake_policy_set { id = policy_id; new_ } ->
+      Fmt.(pf ff "cmake_policy(SET %s %s)" policy_id (if new_ then "NEW" else "OLD"))
   | Cmake_policy_get { var } ->
       Fmt.(pf ff "cmake_policy(GET %a)" pp_var var)
   | Cmake_policy_push -> Fmt.string ff "cmake_policy(PUSH)"

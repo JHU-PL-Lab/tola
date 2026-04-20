@@ -135,7 +135,7 @@ let vw_raise_in_parent_scope =
     yc_function (ystr "f") [] [
       yc_set ~parent_scope:true (ycvar "var") [ystr "b"]
     ];
-    yc_cmake_language_call "f" [];
+    yc_language_call "f" [];
   ]
 
 let vw_watch_twice =
@@ -162,10 +162,10 @@ message("${out}")
 
 let cp_append_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b");
-    yc_cmake_path_append (ycvar "path") [ystr "c"];
+    yc_path_set (ycvar "path") (ystr "/a/b");
+    yc_path_append (ycvar "path") [ystr "c"];
     yc_message ~mode:Mm_none ["${path}"];
-    yc_cmake_path_append ~out:(Some (ycvar "out")) (ycvar "path") [ystr "x/y"];
+    yc_path_append ~out:(Some (ycvar "out")) (ycvar "path") [ystr "x/y"];
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -177,8 +177,8 @@ message("${path}")
 
 let cp_normal_path_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/./b/../c");
-    yc_cmake_path_normal_path (ycvar "path");
+    yc_path_set (ycvar "path") (ystr "a/./b/../c");
+    yc_path_normal_path (ycvar "path");
     yc_message ~mode:Mm_none ["${path}"];
   ]
 
@@ -190,8 +190,8 @@ message("${path}")
 
 let cp_remove_filename_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b/c.txt");
-    yc_cmake_path_remove_filename (ycvar "path");
+    yc_path_set (ycvar "path") (ystr "/a/b/c.txt");
+    yc_path_remove_filename (ycvar "path");
     yc_message ~mode:Mm_none ["${path}"];
   ]
 
@@ -203,8 +203,8 @@ message("${path}")
 
 let cp_replace_extension_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c.txt");
-    yc_cmake_path_replace_extension (ycvar "path") (ystr ".md");
+    yc_path_set (ycvar "path") (ystr "a/b/c.txt");
+    yc_path_replace_extension (ycvar "path") (ystr ".md");
     yc_message ~mode:Mm_none ["${path}"];
   ]
 
@@ -219,11 +219,11 @@ message("${result}")
 
 let cp_is_absolute_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b");
-    yc_cmake_path_is_absolute (ycvar "path") (ycvar "result");
+    yc_path_set (ycvar "path") (ystr "/a/b");
+    yc_path_is_absolute (ycvar "path") (ycvar "result");
     yc_message ~mode:Mm_none ["${result}"];
-    yc_cmake_path_set (ycvar "path") (ystr "a/b");
-    yc_cmake_path_is_absolute (ycvar "path") (ycvar "result");
+    yc_path_set (ycvar "path") (ystr "a/b");
+    yc_path_is_absolute (ycvar "path") (ycvar "result");
     yc_message ~mode:Mm_none ["${result}"];
   ]
 
@@ -236,9 +236,9 @@ message("${result}")
 
 let cp_compare_yelu =
   Yexp_list [
-    yc_cmake_path_compare (ystr "/a/b") Cpco_equal (ystr "/a/b") (ycvar "result");
+    yc_path_compare (ystr "/a/b") Cpco_equal (ystr "/a/b") (ycvar "result");
     yc_message ~mode:Mm_none ["${result}"];
-    yc_cmake_path_compare (ystr "/a/b") Cpco_not_equal (ystr "/a/c") (ycvar "result");
+    yc_path_compare (ystr "/a/b") Cpco_not_equal (ystr "/a/c") (ycvar "result");
     yc_message ~mode:Mm_none ["${result}"];
   ]
 
@@ -313,7 +313,7 @@ let return_early_yelu =
       yc_return ();
       yc_message ~mode:Mm_none ["unreachable"];
     ];
-    yc_cmake_language_call "f" [];
+    yc_language_call "f" [];
   ]
 
 (* return(PROPAGATE) with CMP0140 NEW: caller sees the updated variable. *)
@@ -330,13 +330,13 @@ message("${result}")
 
 let return_propagate_yelu =
   Yexp_list [
-    yc_cmake_language_eval "cmake_policy(SET CMP0140 NEW)";
+    yc_language_eval "cmake_policy(SET CMP0140 NEW)";
     yc_function (ystr "f") [] [
       yc_set (ycvar "result") [ystr "from_f"];
       yc_return ~propogate_vars:["result"] ();
     ];
     yc_set (ycvar "result") [ystr "initial"];
-    yc_cmake_language_call "f" [];
+    yc_language_call "f" [];
     yc_message ~mode:Mm_none ["${result}"];
   ]
 
@@ -378,7 +378,7 @@ endif()
 
 let option_respects_var_yelu =
   Yexp_list [
-    yc_cmake_language_eval "cmake_policy(SET CMP0077 NEW)";
+    yc_language_eval "cmake_policy(SET CMP0077 NEW)";
     yc_set (ycvar "MY_OPT") [ybool true];
     yc_option ~msg:"A test option" (ycvar "MY_OPT");
     yif (Ytruthy (ycstr "MY_OPT"))
@@ -400,7 +400,7 @@ let set_parent_pulling =
       yc_message ~mode:Mm_none ["after PARENT_SCOPE blah=${blah}"];
     ];
     yc_set (ycvar "blah") [ystr "value1"];
-    yc_cmake_language_call "test_set" [];
+    yc_language_call "test_set" [];
     yc_message ~mode:Mm_none ["in parent scope, blah=${blah}"];
   ]
 
@@ -433,9 +433,9 @@ message("${path}")
 |}
 let cp_set_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/x/y/z");
+    yc_path_set (ycvar "path") (ystr "/x/y/z");
     yc_message ~mode:Mm_none ["${path}"];
-    yc_cmake_path_set ~normalize:true (ycvar "path") (ystr "/x/y/../z");
+    yc_path_set ~normalize:true (ycvar "path") (ystr "/x/y/../z");
     yc_message ~mode:Mm_none ["${path}"];
   ]
 
@@ -448,11 +448,11 @@ message("${out}")
 |}
 let cp_absolute_path_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "../../a/d");
-    yc_cmake_path_absolute_path ~base_dir:(Some (ystr "/x/y/a/f"))
+    yc_path_set (ycvar "path") (ystr "../../a/d");
+    yc_path_absolute_path ~base_dir:(Some (ystr "/x/y/a/f"))
       ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_absolute_path ~base_dir:(Some (ystr "/x/y/a/f"))
+    yc_path_absolute_path ~base_dir:(Some (ystr "/x/y/a/f"))
       ~normalize:true ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
   ]
@@ -464,8 +464,8 @@ message("${out}")
 |}
 let cp_append_string_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b");
-    yc_cmake_path_append_string ~out:(Some (ycvar "out")) (ycvar "path") [ystr "cd"];
+    yc_path_set (ycvar "path") (ystr "/a/b");
+    yc_path_append_string ~out:(Some (ycvar "out")) (ycvar "path") [ystr "cd"];
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -479,11 +479,11 @@ message("${out}")
 |}
 let cp_is_relative_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/b");
-    yc_cmake_path_is_relative (ycvar "path") (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "a/b");
+    yc_path_is_relative (ycvar "path") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b");
-    yc_cmake_path_is_relative (ycvar "path") (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "/a/b");
+    yc_path_is_relative (ycvar "path") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -497,11 +497,11 @@ message("${out}")
 |}
 let cp_is_prefix_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c");
-    yc_cmake_path_is_prefix (ycvar "path") (ystr "a/b/c/d") (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "a/b/c");
+    yc_path_is_prefix (ycvar "path") (ystr "a/b/c/d") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c/../d");
-    yc_cmake_path_is_prefix ~normalize:true (ycvar "path") (ystr "a/b/d/e") (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "a/b/c/../d");
+    yc_path_is_prefix ~normalize:true (ycvar "path") (ystr "a/b/d/e") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -519,15 +519,15 @@ message("${out}")
 |}
 let cp_has_item_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b/c.txt");
-    yc_cmake_path_has (ycvar "path") Cph_root_directory (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "/a/b/c.txt");
+    yc_path_has (ycvar "path") Cph_root_directory (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_has (ycvar "path") Cph_filename (ycvar "out");
+    yc_path_has (ycvar "path") Cph_filename (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_has (ycvar "path") Cph_extension (ycvar "out");
+    yc_path_has (ycvar "path") Cph_extension (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_set (ycvar "path") (ystr "a/b");
-    yc_cmake_path_has (ycvar "path") Cph_root_directory (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "a/b");
+    yc_path_has (ycvar "path") Cph_root_directory (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -545,10 +545,10 @@ endif()
 |}
 let cp_hash_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path1") (ystr "a/b/c");
-    yc_cmake_path_set (ycvar "path2") (ystr "a/b////c");
-    yc_cmake_path_hash (ycvar "path1") (ycvar "h1");
-    yc_cmake_path_hash (ycvar "path2") (ycvar "h2");
+    yc_path_set (ycvar "path1") (ystr "a/b/c");
+    yc_path_set (ycvar "path2") (ystr "a/b////c");
+    yc_path_hash (ycvar "path1") (ycvar "h1");
+    yc_path_hash (ycvar "path2") (ycvar "h2");
     yif (Ystrequal (ystr_raw "${h1}", ystr_raw "${h2}"))
       (yc_message ~mode:Mm_none ["equal"])
       (yc_message ~mode:Mm_none ["not equal: ${h1} vs ${h2}"]);
@@ -564,12 +564,12 @@ message("${out}")
 |}
 let cp_relative_path_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/d");
-    yc_cmake_path_relative_path ~base_dir:(Some (ystr "/a/b/c"))
+    yc_path_set (ycvar "path") (ystr "/a/d");
+    yc_path_relative_path ~base_dir:(Some (ystr "/a/b/c"))
       ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c");
-    yc_cmake_path_relative_path ~base_dir:(Some (ystr "a"))
+    yc_path_set (ycvar "path") (ystr "a/b/c");
+    yc_path_relative_path ~base_dir:(Some (ystr "a"))
       ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
   ]
@@ -584,11 +584,11 @@ message("${out}")
 |}
 let cp_remove_extension_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c.e.f");
-    yc_cmake_path_remove_extension ~out:(Some (ycvar "out")) (ycvar "path");
+    yc_path_set (ycvar "path") (ystr "a/b/c.e.f");
+    yc_path_remove_extension ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c.e.f");
-    yc_cmake_path_remove_extension ~last_only:true ~out:(Some (ycvar "out")) (ycvar "path");
+    yc_path_set (ycvar "path") (ystr "a/b/c.e.f");
+    yc_path_remove_extension ~last_only:true ~out:(Some (ycvar "out")) (ycvar "path");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -599,8 +599,8 @@ message("${out}")
 |}
 let cp_replace_filename_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "a/b/c.e.f");
-    yc_cmake_path_replace_filename ~out:(Some (ycvar "out")) (ycvar "path") (ystr "x.y");
+    yc_path_set (ycvar "path") (ystr "a/b/c.e.f");
+    yc_path_replace_filename ~out:(Some (ycvar "out")) (ycvar "path") (ystr "x.y");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -613,9 +613,9 @@ message("${out}")
 |}
 let cp_convert_yelu =
   Yexp_list [
-    yc_cmake_path_convert_to_cmake (ystr "/a/b/c") (ycvar "out");
+    yc_path_convert_to_cmake (ystr "/a/b/c") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
-    yc_cmake_path_convert_to_cmake ~normalize:true (ystr "/x/y/../z") (ycvar "out");
+    yc_path_convert_to_cmake ~normalize:true (ystr "/x/y/../z") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 
@@ -627,8 +627,8 @@ message("${out}")
 |}
 let cp_native_path_yelu =
   Yexp_list [
-    yc_cmake_path_set (ycvar "path") (ystr "/a/b/c");
-    yc_cmake_path_native_path (ycvar "path") (ycvar "out");
+    yc_path_set (ycvar "path") (ystr "/a/b/c");
+    yc_path_native_path (ycvar "path") (ycvar "out");
     yc_message ~mode:Mm_none ["${out}"];
   ]
 

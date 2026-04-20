@@ -412,6 +412,7 @@ and exp =
       append_string : bool;
       properties : property list;
     }
+  | Set_directory_property of { append : bool; property : string; values : arg list }
   (* Info and debug *)
   | Site_name of { var : var }
   | Variable_watch of {
@@ -561,7 +562,7 @@ and cmake_cmd =
   (* https://cmake.org/cmake/help/latest/command/cmake_path.html *)
   | Cmake_path of cmake_path_cmd
   | Cmake_policy_version of { min : version; max : version }
-  | Cmake_policy_set of { nnnn : bool }
+  | Cmake_policy_set of { id : string; new_ : bool }
   | Cmake_policy_get of { var : var }
   | Cmake_policy_push
   | Cmake_policy_pop

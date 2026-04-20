@@ -179,7 +179,7 @@ let link_dirs_yelu =
     yc_link_directories ~before:true [ystr "/B"];
     yc_set (ycvar "CMAKE_LINK_DIRECTORIES_BEFORE") [ybool true];
     yc_link_directories [ystr "/C"];
-    yc_quote_cmd {|get_directory_property(result LINK_DIRECTORIES)|};
+    yc_get_directory_property "LINK_DIRECTORIES" (ycvar "result");
     yifthen (Ynot (ymatches (ycstr "result") "/C;/B;/A"))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["link_directories not populated the LINK_DIRECTORIES directory property"] ]);
     add_exe ~exclude_from_all:true ~sources:[ystr "LinkDirectoriesExe.c"] (t "link_directories");
@@ -564,7 +564,7 @@ int main(int, char**) { return getAutoType(); }
 
 let tcf_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_c; Lang_cxx] "target_compile_features";
     yifthen (yin_list (ystr "c_restrict") (ycstr "CMAKE_C_COMPILE_FEATURES"))
       (Yexp_list [
@@ -658,8 +658,8 @@ let ts_subdir_cmake = {|target_sources(target_sources_lib PUBLIC $<1:${CMAKE_CUR
 
 let ts_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.12)";
-    yc_quote_cmd "cmake_policy(SET CMP0076 NEW)";
+    yc_minimum_required_s "3.12";
+    yc_policy_set "CMP0076";
     yc_project ~languages:[Lang_cxx] "target_sources";
     add_lib (t "target_sources_lib");
     compile_defs (t "target_sources_lib") [ytarget_def ~kind:Private [ystr "-DIS_LIB"]];
@@ -796,9 +796,13 @@ let tid_yelu =
       ytarget_def ~kind:Public [ystr_raw (bindir ^ "/poison")];
     ];
     (* BEFORE PUBLIC with genex: cure overrides poison for EXECUTABLE type *)
-    yc_quote_cmd {|target_include_directories(target_include_directories BEFORE PUBLIC "$<$<STREQUAL:$<TARGET_PROPERTY:target_include_directories,TYPE>,EXECUTABLE>:${CMAKE_CURRENT_BINARY_DIR}/cure>")|};
+    include_dirs ~before:true (t "target_include_directories") [
+      ytarget_def ~kind:Public [ystr_raw {|$<$<STREQUAL:$<TARGET_PROPERTY:target_include_directories,TYPE>,EXECUTABLE>:${CMAKE_CURRENT_BINARY_DIR}/cure>|}];
+    ];
     (* no effect: SHARED_LIBRARY type never matches for exe *)
-    yc_quote_cmd {|target_include_directories(target_include_directories BEFORE PUBLIC "$<$<STREQUAL:$<TARGET_PROPERTY:target_include_directories,TYPE>,SHARED_LIBRARY>:${CMAKE_CURRENT_BINARY_DIR}/poison>")|};
+    include_dirs ~before:true (t "target_include_directories") [
+      ytarget_def ~kind:Public [ystr_raw {|$<$<STREQUAL:$<TARGET_PROPERTY:target_include_directories,TYPE>,SHARED_LIBRARY>:${CMAKE_CURRENT_BINARY_DIR}/poison>|}];
+    ];
     (* consumer exe: CXX/C language-dispatched include dirs *)
     add_exe ~sources:[ystr "consumer.cpp"] (t "consumer");
     yc_target_sources (t "consumer") [ytarget_def ~kind:Private [ystr "consumer.c"]];
@@ -817,11 +821,11 @@ let tid_yelu =
     ];
     (* empty PRIVATE / BEFORE PRIVATE / SYSTEM BEFORE PRIVATE / SYSTEM PRIVATE *)
     include_dirs (t "consumer") [ ytarget_def ~kind:Private [] ];
-    yc_quote_cmd "target_include_directories(consumer BEFORE PRIVATE)";
-    yc_quote_cmd "target_include_directories(consumer SYSTEM BEFORE PRIVATE)";
-    yc_quote_cmd "target_include_directories(consumer SYSTEM PRIVATE)";
+    include_dirs ~before:true (t "consumer") [ ytarget_def ~kind:Private [] ];
+    include_dirs ~before:true ~system:true (t "consumer") [ ytarget_def ~kind:Private [] ];
+    include_dirs ~system:true (t "consumer") [ ytarget_def ~kind:Private [] ];
     (* global include_directories: must NOT populate imported target's property *)
-    yc_quote_cmd "include_directories(${CMAKE_CURRENT_BINARY_DIR})";
+    yc_include_directories [ystr_raw "${CMAKE_CURRENT_BINARY_DIR}"];
     add_lib_imported ~lib_type:"UNKNOWN" (t "imp");
     yc_get_target_property (ycvar "_res") "imp" "INCLUDE_DIRECTORIES";
     yifthen (ytruthy (ycstr "_res"))
@@ -868,7 +872,7 @@ int main(void) { bar(); return 0; }
 
 let libname_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_c] "LibName";
     yc_set (ycvar "LIBRARY_OUTPUT_PATH") [ystr "lib"];
     yc_set (ycvar "EXECUTABLE_OUTPUT_PATH") [ystr "lib"];
@@ -877,9 +881,8 @@ let libname_yelu =
     link_lib [t "foo"] [ytarget_def ~kind:Plain [ytval "bar"]];
     add_exe ~sources:[ystr "foobar.c"] (t "foobar");
     link_lib [t "foobar"] [ytarget_def ~kind:Plain [ytval "foo"]];
-    yc_quote_cmd {|if(UNIX)
-  target_link_libraries(foobar -L/usr/local/lib)
-endif()|};
+    yifthen (ytruthy (ycstr "UNIX"))
+      (Yexp_list [ link_lib [t "foobar"] [ytarget_def ~kind:Plain [ystr_raw "-L/usr/local/lib"]] ]);
     add_lib ~type_:Lib_shared ~sources:[ystr "foo.c"] (t "verFoo");
     link_lib [t "verFoo"] [ytarget_def ~kind:Plain [ytval "bar"]];
     yc_set_target_properties (t "verFoo")
@@ -903,28 +906,27 @@ int main(void) { return (int)sin(0); }
 
 let link_static_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
-    yc_quote_cmd {|if(POLICY CMP0129)
-  cmake_policy(SET CMP0129 NEW)
-endif()|};
+    yc_minimum_required_s "3.10";
+    yifthen (Ypolicy_defined "CMP0129") (Yexp_list [ yc_policy_set "CMP0129" ]);
     yc_project ~languages:[Lang_c] "LinkStatic";
-    yc_quote_cmd {|if(NOT CMAKE_C_COMPILER_ID MATCHES "GNU|LCC")
-  message(FATAL_ERROR "This test works only with the GNU or LCC compiler!")
-endif()|};
-    yc_quote_cmd {|find_library(MATH_LIBRARY NAMES libm.a)
-if(MATH_LIBRARY)
-  get_filename_component(MATH_LIB_DIR ${MATH_LIBRARY} PATH)
-  link_directories(${MATH_LIB_DIR})
-  set(MATH_LIBRARIES ${MATH_LIBRARY} -lm)
-else()
-  message(FATAL_ERROR "Cannot find libm.a needed for this test")
-endif()|};
+    yifthen (Ynot (Ymatches (ycstr "CMAKE_C_COMPILER_ID", "GNU|LCC")))
+      (Yexp_list [ yc_message ~mode:Mm_fatal_error ["This test works only with the GNU or LCC compiler!"] ]);
+    yc_find_library ~names:[ystr "libm.a"] (Ycvar "MATH_LIBRARY");
+    yif (ytruthy (ycstr "MATH_LIBRARY"))
+      (Yexp_list [
+        yc_get_filename_component ~mode:"PATH" (Ycvar "MATH_LIB_DIR") (ycstr "MATH_LIBRARY");
+        yc_link_directories [ystr_raw "${MATH_LIB_DIR}"];
+        yc_set (Ycvar "MATH_LIBRARIES") [ystr_raw "${MATH_LIBRARY}"; ystr "-lm"];
+      ])
+      (Yexp_list [ yc_message ~mode:Mm_fatal_error ["Cannot find libm.a needed for this test"] ]);
     add_exe ~sources:[ystr "LinkStatic.c"] (t "LinkStatic");
     link_lib [t "LinkStatic"]
       [ytarget_def ~kind:Plain [ystr_raw "${MATH_LIBRARIES}"]];
-    yc_quote_cmd {|set(LinkStatic_FLAG "-static" CACHE STRING "Flag to link statically")
-set_property(TARGET LinkStatic PROPERTY LINK_FLAGS "${LinkStatic_FLAG}")
-set_property(TARGET LinkStatic PROPERTY LINK_SEARCH_START_STATIC 1)|};
+    yc_set_cache (Ycvar "LinkStatic_FLAG") [ystr "-static"] ~cache_type:Ct_string
+      ~docstring:"Flag to link statically";
+    yc_set_target_properties (ytval "LinkStatic")
+      [ ("LINK_FLAGS", ystr_raw "${LinkStatic_FLAG}");
+        ("LINK_SEARCH_START_STATIC", ystr "1") ];
   ]
 
 (* ==================================================================== *)
@@ -1023,11 +1025,11 @@ int main(void) { OneFunc(); TwoFunc(); return 0; }
 (* link_libraries() is the global (legacy) form — emit via quote_cmd. *)
 let ll_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_c] "LinkLine";
     add_lib ~sources:[ystr "One.c"] (t "One");
     add_lib ~sources:[ystr "Two.c"] (t "Two");
-    yc_quote_cmd "link_libraries(One Two)";
+    yc_link_libraries [ytval "One"; ytval "Two"];
     add_exe ~sources:[ystr "Exec.c"] (t "LinkLine");
   ]
 
@@ -1068,7 +1070,7 @@ let llo_exec2_c = {|void TwoFunc(); int main(void) { TwoFunc(); return 0; }|}
 
 let llo_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_c] "LinkLineOrder";
     add_lib ~sources:[ystr "NoDepA.c"] (t "NoDepA");
     add_lib ~sources:[ystr "NoDepB.c"] (t "NoDepB");
@@ -1099,7 +1101,7 @@ let llo_yelu =
 (* Tests OUTPUT_NAME prefix/suffix overrides on an executable target. *)
 let out_name_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.12)";
+    yc_minimum_required_s "3.12";
     yc_project ~languages:[Lang_c] "OutName";
     add_exe ~sources:[ystr "main.c"] (t "OutName");
     yc_set_target_properties (t "OutName")
@@ -1114,7 +1116,7 @@ let out_name_yelu =
    The resulting libtest.a is empty (no object files). *)
 let _empty_lib_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project "TestEmptyLibrary";
     yc_add_subdirectory (ystr "subdir");
   ]
@@ -1148,7 +1150,7 @@ endif()
 
 let target_name_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_c] "TargetName";
     yc_add_subdirectory (ystr "executables");
     yc_add_subdirectory (ystr "scripts");
@@ -1430,14 +1432,13 @@ TEST_EXPORT int testCxxModule(void) { return 0; }
 
 let cxxonly_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_cxx] "CxxOnly";
     yc_set (ycvar "CMAKE_DEBUG_POSTFIX") [ystr "_test_debug_postfix"];
-    (* testcxx1.my: target name with a dot — use quote_cmd *)
-    yc_quote_cmd "add_library(testcxx1.my STATIC libcxx1.cxx test.C)";
+    add_lib ~type_:Lib_static ~sources:[ystr "libcxx1.cxx"; ystr "test.C"] (t "testcxx1.my");
     add_lib ~type_:Lib_shared ~sources:[ystr "libcxx2.cxx"] (t "testcxx2");
     add_exe ~sources:[ystr "cxxonly.cxx"] (t "CxxOnly");
-    yc_quote_cmd "target_link_libraries(CxxOnly testcxx1.my testcxx2)";
+    link_lib [t "CxxOnly"] [ytarget_def ~kind:Plain [ytval "testcxx1.my"; ytval "testcxx2"]];
     add_lib ~type_:Lib_module ~sources:[ystr "testCxxModule.cxx"] (t "testCxxModule");
   ]
 
@@ -1515,22 +1516,21 @@ target_link_libraries(tgt Top::foo)
 
 let alias_target_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_cxx] "AliasTarget";
     add_lib ~type_:Lib_shared ~sources:[ystr "empty.cpp"] (t "foo");
-    yc_quote_cmd "add_library(PREFIX::Foo ALIAS foo)";
-    yc_quote_cmd "add_library(Another::Alias ALIAS foo)";
+    add_lib_alias ~alias_of:"foo" "PREFIX::Foo";
+    add_lib_alias ~alias_of:"foo" "Another::Alias";
     add_lib ~type_:Lib_object ~sources:[ystr "object.cpp"] (t "objects");
-    yc_quote_cmd "add_library(Alias::Objects ALIAS objects)";
+    add_lib_alias ~alias_of:"objects" "Alias::Objects";
     compile_defs (t "foo") [ytarget_def ~kind:Public [ytval "FOO_DEFINE"]];
     add_lib ~type_:Lib_shared ~sources:[ystr "empty.cpp"] (t "bar");
     compile_defs (t "bar") [ytarget_def ~kind:Public [ytval "BAR_DEFINE"]];
-    yc_quote_cmd {|target_link_libraries(foo LINK_PUBLIC
-  $<$<STREQUAL:$<TARGET_PROPERTY:PREFIX::Foo,ALIASED_TARGET>,foo>:bar>)|};
-    yc_quote_cmd {|add_executable(AliasTarget
-  commandgenerator.cpp $<TARGET_OBJECTS:Alias::Objects>)|};
-    yc_quote_cmd "add_executable(PREFIX::AliasTarget ALIAS AliasTarget)";
-    yc_quote_cmd "add_executable(Generator::Command ALIAS AliasTarget)";
+    link_lib [t "foo"] [ytarget_def ~kind:Public [ystr_raw {|$<$<STREQUAL:$<TARGET_PROPERTY:PREFIX::Foo,ALIASED_TARGET>,foo>:bar>|}]];
+    add_exe ~sources:[ystr "commandgenerator.cpp";
+                      ystr_raw "$<TARGET_OBJECTS:Alias::Objects>"] (t "AliasTarget");
+    add_exe_alias ~alias_of:"AliasTarget" "PREFIX::AliasTarget";
+    add_exe_alias ~alias_of:"AliasTarget" "Generator::Command";
     yc_add_custom_command ~outputs:[ystr "commandoutput.h"]
       [Yelu_langs.Lang_cmake.{ command = "Generator::Command"; args = [] }];
     add_lib ~type_:Lib_shared
@@ -1540,42 +1540,36 @@ let alias_target_yelu =
     include_dirs (t "bat")
       [ytarget_def ~kind:Private [ystr "${CMAKE_CURRENT_BINARY_DIR}"]];
     add_exe ~sources:[ystr "targetgenerator.cpp"] (t "targetgenerator");
-    yc_quote_cmd "add_executable(Generator::Target ALIAS targetgenerator)";
+    add_exe_alias ~alias_of:"targetgenerator" "Generator::Target";
     yc_add_subdirectory (ystr "subdir");
-    yc_quote_cmd {|add_custom_target(usealias
-  Generator::Target $<TARGET_FILE:Sub::tgt>)|};
-    yc_quote_cmd "add_dependencies(bat usealias)";
-    yc_quote_cmd {|if(NOT TARGET Another::Alias)
-  message(SEND_ERROR "Another::Alias is not considered a target.")
-endif()|};
-    yc_quote_cmd {|get_target_property(_alt PREFIX::Foo ALIASED_TARGET)
-if(NOT ${_alt} STREQUAL foo)
-  message(SEND_ERROR "ALIASED_TARGET is not foo: ${_alt}")
-endif()|};
-    yc_quote_cmd {|get_property(_alt2 TARGET PREFIX::Foo PROPERTY ALIASED_TARGET)
-if(NOT ${_alt2} STREQUAL foo)
-  message(SEND_ERROR "ALIASED_TARGET is not foo.")
-endif()|};
+    yc_add_custom_target ~commands:[{ command = "Generator::Target";
+                                      args = ["$<TARGET_FILE:Sub::tgt>"] }]
+      "usealias";
+    yc_add_dependencies "bat" "usealias";
+    yifthen (Ynot (Yis_target (ystr "Another::Alias")))
+      (yc_message ~mode:Mm_send_error ["Another::Alias is not considered a target."]);
+    yc_get_target_property (ycvar "_alt") "PREFIX::Foo" "ALIASED_TARGET";
+    yifthen (Ynot (Ystrequal (ycstr "_alt", ystr "foo")))
+      (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is not foo: ${_alt}"]);
+    yc_get_property ~target:(ystr "PREFIX::Foo") "ALIASED_TARGET" (ycvar "_alt2");
+    yifthen (Ynot (Ystrequal (ycstr "_alt2", ystr "foo")))
+      (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is not foo."]);
     add_lib ~type_:Lib_interface (t "iface");
-    yc_quote_cmd "add_library(Alias::Iface ALIAS iface)";
-    yc_quote_cmd {|get_property(_aliased_target_set TARGET foo PROPERTY ALIASED_TARGET SET)
-if(_aliased_target_set)
-  message(SEND_ERROR "ALIASED_TARGET is set for target foo")
-endif()|};
-    yc_quote_cmd {|get_target_property(_notAlias1 foo ALIASED_TARGET)
-if(NOT DEFINED _notAlias1)
-  message(SEND_ERROR "_notAlias1 is not defined")
-endif()
-if(_notAlias1)
-  message(SEND_ERROR "_notAlias1 is defined, but foo is not an ALIAS")
-endif()
-if(NOT _notAlias1 STREQUAL _notAlias1-NOTFOUND)
-  message(SEND_ERROR "_notAlias1 not defined to a -NOTFOUND variant")
-endif()|};
-    yc_quote_cmd {|get_property(_notAlias2 TARGET foo PROPERTY ALIASED_TARGET)
-if(_notAlias2)
-  message(SEND_ERROR "_notAlias2 evaluates to true, but foo is not an ALIAS")
-endif()|};
+    add_lib_alias ~alias_of:"iface" "Alias::Iface";
+    yc_get_property ~set:true ~target:(ystr "foo") "ALIASED_TARGET"
+      (ycvar "_aliased_target_set");
+    yifthen (Ytruthy (ycstr "_aliased_target_set"))
+      (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is set for target foo"]);
+    yc_get_target_property (ycvar "_notAlias1") "foo" "ALIASED_TARGET";
+    yifthen (Ynot (Yis_defined (ycstr "_notAlias1")))
+      (yc_message ~mode:Mm_send_error ["_notAlias1 is not defined"]);
+    yifthen (Ytruthy (ycstr "_notAlias1"))
+      (yc_message ~mode:Mm_send_error ["_notAlias1 is defined, but foo is not an ALIAS"]);
+    yifthen (Ynot (Ystrequal (ycstr "_notAlias1", ystr "_notAlias1-NOTFOUND")))
+      (yc_message ~mode:Mm_send_error ["_notAlias1 not defined to a -NOTFOUND variant"]);
+    yc_get_property ~target:(ystr "foo") "ALIASED_TARGET" (ycvar "_notAlias2");
+    yifthen (Ytruthy (ycstr "_notAlias2"))
+      (yc_message ~mode:Mm_send_error ["_notAlias2 evaluates to true, but foo is not an ALIAS"]);
   ]
 
 (* -------------------------------------------------------------------------- *)
@@ -1699,10 +1693,10 @@ target_link_libraries(test_shared_via_iface_non_conflict shared_iface)
 
 let pic_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_cxx] "PositionIndependentTargets";
-    yc_quote_cmd {|include(CheckCXXSourceCompiles)|};
-    yc_quote_cmd {|include_directories("${CMAKE_CURRENT_SOURCE_DIR}")|};
+    yc_include (ystr "CheckCXXSourceCompiles");
+    yc_include_directories [ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}"];
     yc_add_subdirectory (ystr "global");
     yc_add_subdirectory (ystr "targets");
     yc_add_subdirectory (ystr "interface");
@@ -1711,15 +1705,15 @@ let pic_yelu =
 
 let compile_defs_yelu =
   Yexp_list [
-    yc_quote_cmd "cmake_minimum_required(VERSION 3.10)";
+    yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_cxx; Lang_c] "CompileDefinitions";
-    yc_quote_cmd {|foreach(c DEBUG RELEASE RELWITHDEBINFO MINSIZEREL)
-  set(CMAKE_C_FLAGS_${c} "${CMAKE_C_FLAGS_${c}} -DTEST_CONFIG_${c}")
-  set(CMAKE_CXX_FLAGS_${c} "${CMAKE_CXX_FLAGS_${c}} -DTEST_CONFIG_${c}")
-endforeach()|};
-    yc_quote_cmd {|set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
-  "BUILD_CONFIG_NAME=\"$<CONFIGURATION>\""
-)|};
+    yc_foreach ~items:[ystr "DEBUG"; ystr "RELEASE"; ystr "RELWITHDEBINFO"; ystr "MINSIZEREL"]
+      (Ycvar "c") (Yexp_list [
+        yc_set (Ycvar "CMAKE_C_FLAGS_${c}") [ystr_raw "${CMAKE_C_FLAGS_${c}} -DTEST_CONFIG_${c}"];
+        yc_set (Ycvar "CMAKE_CXX_FLAGS_${c}") [ystr_raw "${CMAKE_CXX_FLAGS_${c}} -DTEST_CONFIG_${c}"];
+      ]);
+    yc_set_directory_property ~append:true "COMPILE_DEFINITIONS"
+      [ystr_raw {|BUILD_CONFIG_NAME=\"$<CONFIGURATION>\"|}];
     yc_add_subdirectory (ystr "add_def_cmd");
     yc_add_subdirectory (ystr "target_prop");
     yc_add_subdirectory (ystr "add_def_cmd_tprop");

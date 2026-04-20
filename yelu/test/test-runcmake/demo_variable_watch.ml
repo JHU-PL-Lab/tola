@@ -28,7 +28,7 @@ let prog =
     yc_function (ystr "f") [] [
       yc_set ~parent_scope:true (ycvar "var") [ystr "b"]
     ];
-    yc_cmake_language_call "f" [];
+    yc_language_call "f" [];
   ]
 
 let () =

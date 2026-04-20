@@ -120,6 +120,7 @@ type yelu_cond =
   | Yexists of yarg                (* EXISTS path *)
   | Yis_directory of yarg          (* IS_DIRECTORY path *)
   | Yis_absolute of yarg           (* IS_ABSOLUTE path *)
+  | Ypolicy_defined of string      (* POLICY CMPxxxx *)
   | Yversion_less of yarg * yarg
   | Yversion_greater of yarg * yarg
   | Yversion_equal of yarg * yarg
@@ -153,12 +154,24 @@ type yelu_exp =
       sources : yarg list;
     }
   | Yc_add_library_imported of { name : yarg; lib_type : string option; global : bool }
+  | Yc_add_library_alias of { name : string; target : string }
+  | Yc_add_executable_alias of { name : string; target : string }
+  | Yc_get_property of {
+      var : yelu_cvar;
+      target : yarg;
+      property : string;
+      set : bool;    (* true → query whether property is SET *)
+    }
+  | Yc_get_directory_property of { var : yelu_cvar; property : string }
+  | Yc_include_directories of { dirs : yarg list; before : bool; system : bool }
   | Yc_add_compile_definitions of { defs : yarg list }
   | Yc_add_compile_options of { options : yarg list }
   | Yc_add_link_options of { options : yarg list }
   | Yc_link_directories of { before : bool; dirs : yarg list }
   | Yc_target_include_directories of {
       target : yarg;
+      before : bool;
+      system : bool;
       items : yelu_items_with_kind list;
     }
   | Yc_target_link_libraries of {
@@ -250,7 +263,10 @@ type yelu_exp =
   | Yc_file_size of { out : yelu_cvar; file : yarg }
   | Yc_file_read_symlink of { out : yelu_cvar; link : yarg }
   | Yc_file_timestamp of { out : yelu_cvar; file : yarg; format : string option; utc : bool }
-  | Yc_quote_cmd of string
+  | Yc_quote_cmd of string   (* retired: compile case raises — add typed nodes instead *)
+  | Yc_policy_set of { id : string; new_ : bool }
+  | Yc_set_directory_property of { property : string; append : bool; values : yarg list }
+  | Yc_link_libraries of { items : yarg list }
   | Yc_list_append of { cvar : yelu_cvar; values : yarg list }
   (* testing *)
   | Yc_enable_testing
@@ -470,32 +486,32 @@ type yelu_exp =
       output_format : Lang_cmake.math_output_format;
     }
   (* cmake_language — metaprogramming *)
-  | Yc_cmake_language_call of { cmd : string; args : yarg list }
-  | Yc_cmake_language_eval of { code : string }
-  | Yc_cmake_language_get_log_level of { out : yelu_cvar }
+  | Yc_language_call of { cmd : string; args : yarg list }
+  | Yc_language_eval of { code : string }
+  | Yc_language_get_log_level of { out : yelu_cvar }
   (* block() / endblock() — variable scope isolation *)
   | Yc_block of { scope_vars : yelu_cvar list; propagate : string; body : yelu_exp list }
   (* cmake_path — path manipulation *)
-  | Yc_cmake_path_get of { path_var : yelu_cvar; field : Lang_cmake.cmake_path_get_field; out : yelu_cvar }
-  | Yc_cmake_path_has of { path_var : yelu_cvar; field : Lang_cmake.cmake_path_has_field; out : yelu_cvar }
-  | Yc_cmake_path_is_absolute of { path_var : yelu_cvar; out : yelu_cvar }
-  | Yc_cmake_path_is_relative of { path_var : yelu_cvar; out : yelu_cvar }
-  | Yc_cmake_path_is_prefix of { path_var : yelu_cvar; input : yarg; normalize : bool; out : yelu_cvar }
-  | Yc_cmake_path_compare of { input1 : yarg; op : Lang_cmake.cmake_path_compare_op; input2 : yarg; out : yelu_cvar }
-  | Yc_cmake_path_set of { path_var : yelu_cvar; input : yarg; normalize : bool }
-  | Yc_cmake_path_append of { path_var : yelu_cvar; inputs : yarg list; out : yelu_cvar option }
-  | Yc_cmake_path_append_string of { path_var : yelu_cvar; inputs : yarg list; out : yelu_cvar option }
-  | Yc_cmake_path_remove_filename of { path_var : yelu_cvar; out : yelu_cvar option }
-  | Yc_cmake_path_replace_filename of { path_var : yelu_cvar; input : yarg; out : yelu_cvar option }
-  | Yc_cmake_path_remove_extension of { path_var : yelu_cvar; last_only : bool; out : yelu_cvar option }
-  | Yc_cmake_path_replace_extension of { path_var : yelu_cvar; last_only : bool; input : yarg; out : yelu_cvar option }
-  | Yc_cmake_path_normal_path of { path_var : yelu_cvar; out : yelu_cvar option }
-  | Yc_cmake_path_relative_path of { path_var : yelu_cvar; base_dir : yarg option; out : yelu_cvar option }
-  | Yc_cmake_path_absolute_path of { path_var : yelu_cvar; base_dir : yarg option; normalize : bool; out : yelu_cvar option }
-  | Yc_cmake_path_native_path of { path_var : yelu_cvar; normalize : bool; out : yelu_cvar }
-  | Yc_cmake_path_convert_to_cmake of { input : yarg; normalize : bool; out : yelu_cvar }
-  | Yc_cmake_path_convert_to_native of { input : yarg; normalize : bool; out : yelu_cvar }
-  | Yc_cmake_path_hash of { path_var : yelu_cvar; out : yelu_cvar }
+  | Yc_path_get of { path_var : yelu_cvar; field : Lang_cmake.cmake_path_get_field; out : yelu_cvar }
+  | Yc_path_has of { path_var : yelu_cvar; field : Lang_cmake.cmake_path_has_field; out : yelu_cvar }
+  | Yc_path_is_absolute of { path_var : yelu_cvar; out : yelu_cvar }
+  | Yc_path_is_relative of { path_var : yelu_cvar; out : yelu_cvar }
+  | Yc_path_is_prefix of { path_var : yelu_cvar; input : yarg; normalize : bool; out : yelu_cvar }
+  | Yc_path_compare of { input1 : yarg; op : Lang_cmake.cmake_path_compare_op; input2 : yarg; out : yelu_cvar }
+  | Yc_path_set of { path_var : yelu_cvar; input : yarg; normalize : bool }
+  | Yc_path_append of { path_var : yelu_cvar; inputs : yarg list; out : yelu_cvar option }
+  | Yc_path_append_string of { path_var : yelu_cvar; inputs : yarg list; out : yelu_cvar option }
+  | Yc_path_remove_filename of { path_var : yelu_cvar; out : yelu_cvar option }
+  | Yc_path_replace_filename of { path_var : yelu_cvar; input : yarg; out : yelu_cvar option }
+  | Yc_path_remove_extension of { path_var : yelu_cvar; last_only : bool; out : yelu_cvar option }
+  | Yc_path_replace_extension of { path_var : yelu_cvar; last_only : bool; input : yarg; out : yelu_cvar option }
+  | Yc_path_normal_path of { path_var : yelu_cvar; out : yelu_cvar option }
+  | Yc_path_relative_path of { path_var : yelu_cvar; base_dir : yarg option; out : yelu_cvar option }
+  | Yc_path_absolute_path of { path_var : yelu_cvar; base_dir : yarg option; normalize : bool; out : yelu_cvar option }
+  | Yc_path_native_path of { path_var : yelu_cvar; normalize : bool; out : yelu_cvar }
+  | Yc_path_convert_to_cmake of { input : yarg; normalize : bool; out : yelu_cvar }
+  | Yc_path_convert_to_native of { input : yarg; normalize : bool; out : yelu_cvar }
+  | Yc_path_hash of { path_var : yelu_cvar; out : yelu_cvar }
   | Yc_add_custom_target of {
       name : string;
       commands : Lang_cmake.custom_command list;

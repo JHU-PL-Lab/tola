@@ -105,13 +105,25 @@ let add_lib ?(exclude_from_all = false) ?type_ ?(sources = []) name =
 let add_lib_imported ?(global = false) ?lib_type name =
   Yc_add_library_imported { name; lib_type; global }
 
+let add_lib_alias ~alias_of name = Yc_add_library_alias { name; target = alias_of }
+let add_exe_alias ~alias_of name = Yc_add_executable_alias { name; target = alias_of }
+
 let yc_add_compile_definitions defs = Yc_add_compile_definitions { defs }
 let yc_add_compile_options options = Yc_add_compile_options { options }
 let yc_add_link_options options = Yc_add_link_options { options }
 let yc_link_directories ?(before = false) dirs = Yc_link_directories { before; dirs }
 
-let include_dirs target items =
-  Yc_target_include_directories { target; items }
+let include_dirs ?(before = false) ?(system = false) target items =
+  Yc_target_include_directories { target; before; system; items }
+
+let yc_include_directories ?(before = false) ?(system = false) dirs =
+  Yc_include_directories { dirs; before; system }
+
+let yc_get_property ?(set = false) ~target property var =
+  Yc_get_property { var; target; property; set }
+
+let yc_get_directory_property property var =
+  Yc_get_directory_property { var; property }
 
 let link_lib targets items =
   Yc_target_link_libraries { targets; items }
@@ -205,7 +217,16 @@ let yc_file_read_symlink (out : yelu_cvar) link = Yc_file_read_symlink { out; li
 let yc_file_timestamp ?(format = None) ?(utc = false) (out : yelu_cvar) file =
   Yc_file_timestamp { out; file; format; utc }
 
+let yc_policy_set ?(new_ = true) id = Yc_policy_set { id; new_ }
+
+(* retired: Yc_quote_cmd compile case raises — add typed yelu nodes instead of calling this *)
 let yc_quote_cmd s = Yc_quote_cmd s
+
+let yc_set_directory_property ?(append = false) property values =
+  Yc_set_directory_property { property; append; values }
+
+let yc_link_libraries items = Yc_link_libraries { items }
+
 let yc_list_append (cvar : yelu_cvar) values = Yc_list_append { cvar; values }
 
 (* testing *)
@@ -418,78 +439,78 @@ let yc_string_json_string_encode ~(out : yelu_cvar) value =
 let yc_math ?(output_format = Lang_cmake.Decical) exp (out : yelu_cvar) =
   Yc_math { exp; out; output_format }
 
-let yc_cmake_language_call cmd args =
-  Yc_cmake_language_call { cmd; args }
+let yc_language_call cmd args =
+  Yc_language_call { cmd; args }
 
-let yc_cmake_language_eval code =
-  Yc_cmake_language_eval { code }
+let yc_language_eval code =
+  Yc_language_eval { code }
 
-let yc_cmake_language_get_log_level (out : yelu_cvar) =
-  Yc_cmake_language_get_log_level { out }
+let yc_language_get_log_level (out : yelu_cvar) =
+  Yc_language_get_log_level { out }
 
 let yc_block ?(scope_vars = []) ?(propagate = "") body =
   Yc_block { scope_vars; propagate; body }
 
 (* cmake_path utilities *)
-let yc_cmake_path_get path_var field (out : yelu_cvar) =
-  Yc_cmake_path_get { path_var; field; out }
+let yc_path_get path_var field (out : yelu_cvar) =
+  Yc_path_get { path_var; field; out }
 
-let yc_cmake_path_has path_var field (out : yelu_cvar) =
-  Yc_cmake_path_has { path_var; field; out }
+let yc_path_has path_var field (out : yelu_cvar) =
+  Yc_path_has { path_var; field; out }
 
-let yc_cmake_path_is_absolute path_var (out : yelu_cvar) =
-  Yc_cmake_path_is_absolute { path_var; out }
+let yc_path_is_absolute path_var (out : yelu_cvar) =
+  Yc_path_is_absolute { path_var; out }
 
-let yc_cmake_path_is_relative path_var (out : yelu_cvar) =
-  Yc_cmake_path_is_relative { path_var; out }
+let yc_path_is_relative path_var (out : yelu_cvar) =
+  Yc_path_is_relative { path_var; out }
 
-let yc_cmake_path_is_prefix ?(normalize = false) path_var input (out : yelu_cvar) =
-  Yc_cmake_path_is_prefix { path_var; input; normalize; out }
+let yc_path_is_prefix ?(normalize = false) path_var input (out : yelu_cvar) =
+  Yc_path_is_prefix { path_var; input; normalize; out }
 
-let yc_cmake_path_compare input1 op input2 (out : yelu_cvar) =
-  Yc_cmake_path_compare { input1; op; input2; out }
+let yc_path_compare input1 op input2 (out : yelu_cvar) =
+  Yc_path_compare { input1; op; input2; out }
 
-let yc_cmake_path_set ?(normalize = false) path_var input =
-  Yc_cmake_path_set { path_var; input; normalize }
+let yc_path_set ?(normalize = false) path_var input =
+  Yc_path_set { path_var; input; normalize }
 
-let yc_cmake_path_append ?(out : yelu_cvar option = None) path_var inputs =
-  Yc_cmake_path_append { path_var; inputs; out }
+let yc_path_append ?(out : yelu_cvar option = None) path_var inputs =
+  Yc_path_append { path_var; inputs; out }
 
-let yc_cmake_path_append_string ?(out : yelu_cvar option = None) path_var inputs =
-  Yc_cmake_path_append_string { path_var; inputs; out }
+let yc_path_append_string ?(out : yelu_cvar option = None) path_var inputs =
+  Yc_path_append_string { path_var; inputs; out }
 
-let yc_cmake_path_remove_filename ?(out : yelu_cvar option = None) path_var =
-  Yc_cmake_path_remove_filename { path_var; out }
+let yc_path_remove_filename ?(out : yelu_cvar option = None) path_var =
+  Yc_path_remove_filename { path_var; out }
 
-let yc_cmake_path_replace_filename ?(out : yelu_cvar option = None) path_var input =
-  Yc_cmake_path_replace_filename { path_var; input; out }
+let yc_path_replace_filename ?(out : yelu_cvar option = None) path_var input =
+  Yc_path_replace_filename { path_var; input; out }
 
-let yc_cmake_path_remove_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var =
-  Yc_cmake_path_remove_extension { path_var; last_only; out }
+let yc_path_remove_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var =
+  Yc_path_remove_extension { path_var; last_only; out }
 
-let yc_cmake_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var input =
-  Yc_cmake_path_replace_extension { path_var; last_only; input; out }
+let yc_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var input =
+  Yc_path_replace_extension { path_var; last_only; input; out }
 
-let yc_cmake_path_normal_path ?(out : yelu_cvar option = None) path_var =
-  Yc_cmake_path_normal_path { path_var; out }
+let yc_path_normal_path ?(out : yelu_cvar option = None) path_var =
+  Yc_path_normal_path { path_var; out }
 
-let yc_cmake_path_relative_path ?(base_dir : yarg option = None) ?(out : yelu_cvar option = None) path_var =
-  Yc_cmake_path_relative_path { path_var; base_dir; out }
+let yc_path_relative_path ?(base_dir : yarg option = None) ?(out : yelu_cvar option = None) path_var =
+  Yc_path_relative_path { path_var; base_dir; out }
 
-let yc_cmake_path_absolute_path ?(base_dir : yarg option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
-  Yc_cmake_path_absolute_path { path_var; base_dir; normalize; out }
+let yc_path_absolute_path ?(base_dir : yarg option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
+  Yc_path_absolute_path { path_var; base_dir; normalize; out }
 
-let yc_cmake_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
-  Yc_cmake_path_native_path { path_var; normalize; out }
+let yc_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
+  Yc_path_native_path { path_var; normalize; out }
 
-let yc_cmake_path_convert_to_cmake ?(normalize = false) input (out : yelu_cvar) =
-  Yc_cmake_path_convert_to_cmake { input; normalize; out }
+let yc_path_convert_to_cmake ?(normalize = false) input (out : yelu_cvar) =
+  Yc_path_convert_to_cmake { input; normalize; out }
 
-let yc_cmake_path_convert_to_native ?(normalize = false) input (out : yelu_cvar) =
-  Yc_cmake_path_convert_to_native { input; normalize; out }
+let yc_path_convert_to_native ?(normalize = false) input (out : yelu_cvar) =
+  Yc_path_convert_to_native { input; normalize; out }
 
-let yc_cmake_path_hash path_var (out : yelu_cvar) =
-  Yc_cmake_path_hash { path_var; out }
+let yc_path_hash path_var (out : yelu_cvar) =
+  Yc_path_hash { path_var; out }
 
 let yc_try_compile ?(compile_definitions = []) ?(link_libraries = [])
     ?(link_options = []) ?(output_variable : yelu_cvar option = None)

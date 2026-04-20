@@ -546,100 +546,100 @@ let cmake_path_tests =
       (* GET *)
       check "get_filename"
         "cmake_path(GET MY_PATH FILENAME OUT)"
-        (yc_cmake_path_get (ycvar "MY_PATH") Cpf_filename (ycvar "OUT"));
+        (yc_path_get (ycvar "MY_PATH") Cpf_filename (ycvar "OUT"));
       check "get_stem"
         "cmake_path(GET MY_PATH STEM OUT)"
-        (yc_cmake_path_get (ycvar "MY_PATH") (Cpf_stem false) (ycvar "OUT"));
+        (yc_path_get (ycvar "MY_PATH") (Cpf_stem false) (ycvar "OUT"));
       check "get_stem_last_only"
         "cmake_path(GET MY_PATH STEM LAST_ONLY OUT)"
-        (yc_cmake_path_get (ycvar "MY_PATH") (Cpf_stem true) (ycvar "OUT"));
+        (yc_path_get (ycvar "MY_PATH") (Cpf_stem true) (ycvar "OUT"));
       check "get_extension"
         "cmake_path(GET MY_PATH EXTENSION OUT)"
-        (yc_cmake_path_get (ycvar "MY_PATH") (Cpf_extension false) (ycvar "OUT"));
+        (yc_path_get (ycvar "MY_PATH") (Cpf_extension false) (ycvar "OUT"));
       check "get_parent_path"
         "cmake_path(GET MY_PATH PARENT_PATH OUT)"
-        (yc_cmake_path_get (ycvar "MY_PATH") Cpf_parent_path (ycvar "OUT"));
+        (yc_path_get (ycvar "MY_PATH") Cpf_parent_path (ycvar "OUT"));
       (* HAS_* *)
       check "has_extension"
         "cmake_path(HAS_EXTENSION MY_PATH OUT)"
-        (yc_cmake_path_has (ycvar "MY_PATH") Cph_extension (ycvar "OUT"));
+        (yc_path_has (ycvar "MY_PATH") Cph_extension (ycvar "OUT"));
       check "has_parent_path"
         "cmake_path(HAS_PARENT_PATH MY_PATH OUT)"
-        (yc_cmake_path_has (ycvar "MY_PATH") Cph_parent_path (ycvar "OUT"));
+        (yc_path_has (ycvar "MY_PATH") Cph_parent_path (ycvar "OUT"));
       (* IS_* *)
       check "is_absolute"
         "cmake_path(IS_ABSOLUTE MY_PATH OUT)"
-        (yc_cmake_path_is_absolute (ycvar "MY_PATH") (ycvar "OUT"));
+        (yc_path_is_absolute (ycvar "MY_PATH") (ycvar "OUT"));
       check "is_relative"
         "cmake_path(IS_RELATIVE MY_PATH OUT)"
-        (yc_cmake_path_is_relative (ycvar "MY_PATH") (ycvar "OUT"));
+        (yc_path_is_relative (ycvar "MY_PATH") (ycvar "OUT"));
       check "is_prefix"
         "cmake_path(IS_PREFIX MY_PATH /usr/local OUT)"
-        (yc_cmake_path_is_prefix (ycvar "MY_PATH") (ystr "/usr/local") (ycvar "OUT"));
+        (yc_path_is_prefix (ycvar "MY_PATH") (ystr "/usr/local") (ycvar "OUT"));
       check "is_prefix_normalize"
         "cmake_path(IS_PREFIX MY_PATH /usr/local NORMALIZE OUT)"
-        (yc_cmake_path_is_prefix ~normalize:true (ycvar "MY_PATH") (ystr "/usr/local") (ycvar "OUT"));
+        (yc_path_is_prefix ~normalize:true (ycvar "MY_PATH") (ystr "/usr/local") (ycvar "OUT"));
       (* COMPARE *)
       check "compare_equal"
         "cmake_path(COMPARE /a/b EQUAL /a/b OUT)"
-        (yc_cmake_path_compare (ystr "/a/b") Cpco_equal (ystr "/a/b") (ycvar "OUT"));
+        (yc_path_compare (ystr "/a/b") Cpco_equal (ystr "/a/b") (ycvar "OUT"));
       check "compare_not_equal"
         "cmake_path(COMPARE /a/b NOT_EQUAL /a/c OUT)"
-        (yc_cmake_path_compare (ystr "/a/b") Cpco_not_equal (ystr "/a/c") (ycvar "OUT"));
+        (yc_path_compare (ystr "/a/b") Cpco_not_equal (ystr "/a/c") (ycvar "OUT"));
       (* SET / APPEND *)
       check "set"
         "cmake_path(SET MY_PATH /usr/local)"
-        (yc_cmake_path_set (ycvar "MY_PATH") (ystr "/usr/local"));
+        (yc_path_set (ycvar "MY_PATH") (ystr "/usr/local"));
       check "set_normalize"
         "cmake_path(SET MY_PATH NORMALIZE /usr/../local)"
-        (yc_cmake_path_set ~normalize:true (ycvar "MY_PATH") (ystr "/usr/../local"));
+        (yc_path_set ~normalize:true (ycvar "MY_PATH") (ystr "/usr/../local"));
       check "append_no_out"
         "cmake_path(APPEND MY_PATH bin)"
-        (yc_cmake_path_append (ycvar "MY_PATH") [ ystr "bin" ]);
+        (yc_path_append (ycvar "MY_PATH") [ ystr "bin" ]);
       check "append_with_out"
         "cmake_path(APPEND MY_PATH bin OUTPUT_VARIABLE RESULT)"
-        (yc_cmake_path_append ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH") [ ystr "bin" ]);
+        (yc_path_append ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH") [ ystr "bin" ]);
       (* Modification *)
       check "remove_filename"
         "cmake_path(REMOVE_FILENAME MY_PATH)"
-        (yc_cmake_path_remove_filename (ycvar "MY_PATH"));
+        (yc_path_remove_filename (ycvar "MY_PATH"));
       check "replace_filename"
         "cmake_path(REPLACE_FILENAME MY_PATH new.txt)"
-        (yc_cmake_path_replace_filename (ycvar "MY_PATH") (ystr "new.txt"));
+        (yc_path_replace_filename (ycvar "MY_PATH") (ystr "new.txt"));
       check "remove_extension"
         "cmake_path(REMOVE_EXTENSION MY_PATH)"
-        (yc_cmake_path_remove_extension (ycvar "MY_PATH"));
+        (yc_path_remove_extension (ycvar "MY_PATH"));
       check "remove_extension_last_only"
         "cmake_path(REMOVE_EXTENSION MY_PATH LAST_ONLY)"
-        (yc_cmake_path_remove_extension ~last_only:true (ycvar "MY_PATH"));
+        (yc_path_remove_extension ~last_only:true (ycvar "MY_PATH"));
       check "replace_extension"
         "cmake_path(REPLACE_EXTENSION MY_PATH .bak)"
-        (yc_cmake_path_replace_extension (ycvar "MY_PATH") (ystr ".bak"));
+        (yc_path_replace_extension (ycvar "MY_PATH") (ystr ".bak"));
       (* Generation *)
       check "normal_path"
         "cmake_path(NORMAL_PATH MY_PATH)"
-        (yc_cmake_path_normal_path (ycvar "MY_PATH"));
+        (yc_path_normal_path (ycvar "MY_PATH"));
       check "normal_path_out"
         "cmake_path(NORMAL_PATH MY_PATH OUTPUT_VARIABLE RESULT)"
-        (yc_cmake_path_normal_path ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
+        (yc_path_normal_path ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
       check "relative_path"
         "cmake_path(RELATIVE_PATH MY_PATH BASE_DIRECTORY /usr OUTPUT_VARIABLE RESULT)"
-        (yc_cmake_path_relative_path ~base_dir:(Some (ystr "/usr")) ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
+        (yc_path_relative_path ~base_dir:(Some (ystr "/usr")) ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
       check "absolute_path"
         "cmake_path(ABSOLUTE_PATH MY_PATH NORMALIZE OUTPUT_VARIABLE RESULT)"
-        (yc_cmake_path_absolute_path ~normalize:true ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
+        (yc_path_absolute_path ~normalize:true ~out:(Some (ycvar "RESULT")) (ycvar "MY_PATH"));
       check "native_path"
         "cmake_path(NATIVE_PATH MY_PATH OUT)"
-        (yc_cmake_path_native_path (ycvar "MY_PATH") (ycvar "OUT"));
+        (yc_path_native_path (ycvar "MY_PATH") (ycvar "OUT"));
       check "convert_to_cmake"
         "cmake_path(CONVERT /usr/local TO_CMAKE_PATH_LIST OUT)"
-        (yc_cmake_path_convert_to_cmake (ystr "/usr/local") (ycvar "OUT"));
+        (yc_path_convert_to_cmake (ystr "/usr/local") (ycvar "OUT"));
       check "convert_to_native"
         "cmake_path(CONVERT /usr/local TO_NATIVE_PATH_LIST OUT)"
-        (yc_cmake_path_convert_to_native (ystr "/usr/local") (ycvar "OUT"));
+        (yc_path_convert_to_native (ystr "/usr/local") (ycvar "OUT"));
       check "hash"
         "cmake_path(HASH MY_PATH OUT)"
-        (yc_cmake_path_hash (ycvar "MY_PATH") (ycvar "OUT"));
+        (yc_path_hash (ycvar "MY_PATH") (ycvar "OUT"));
     ] )
 
 let cmake_language_tests =
@@ -647,19 +647,19 @@ let cmake_language_tests =
     [
       check "call_no_args"
         "cmake_language(CALL my_macro )"
-        (yc_cmake_language_call "my_macro" []);
+        (yc_language_call "my_macro" []);
       check "call_with_args"
         "cmake_language(CALL my_macro foo\nbar)"
-        (yc_cmake_language_call "my_macro" [ ystr "foo"; ystr "bar" ]);
+        (yc_language_call "my_macro" [ ystr "foo"; ystr "bar" ]);
       check "call_with_cvar"
         "cmake_language(CALL my_macro MY_VAR)"
-        (yc_cmake_language_call "my_macro" [ ycstr "MY_VAR" ]);
+        (yc_language_call "my_macro" [ ycstr "MY_VAR" ]);
       check "eval_code"
         {|cmake_language(EVAL CODE "message(STATUS hello)")|}
-        (yc_cmake_language_eval {|message(STATUS hello)|});
+        (yc_language_eval {|message(STATUS hello)|});
       check "get_log_level"
         "cmake_language(GET_MESSAGE_LOG_LEVEL LOG_LEVEL)"
-        (yc_cmake_language_get_log_level (ycvar "LOG_LEVEL"));
+        (yc_language_get_log_level (ycvar "LOG_LEVEL"));
     ] )
 
 let block_tests =

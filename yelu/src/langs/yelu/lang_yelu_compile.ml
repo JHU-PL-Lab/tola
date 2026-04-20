@@ -212,6 +212,7 @@ let rec erase_cond env : yelu_cond -> string list = function
     [ "IS_DIRECTORY"; cmake_quote_cond (erase_arg_s env path) ]
   | Yis_absolute path ->
     [ "IS_ABSOLUTE"; cmake_quote_cond (erase_arg_s env path) ]
+  | Ypolicy_defined p -> [ "POLICY"; p ]
   | Yversion_less (a, b) ->
     [ cmake_quote_cond (erase_arg_s env a); "VERSION_LESS"; cmake_quote_cond (erase_arg_s env b) ]
   | Yversion_greater (a, b) ->
@@ -264,6 +265,7 @@ let rec check_cond env = function
   | Yversion_greater_equal (a, b) ->
       check_arg env a;
       check_arg env b
+  | Ypolicy_defined _ -> ()
 
 let check_items_with_kind env { kind = _; items } =
   List.iter items ~f:(check_arg env)
@@ -320,6 +322,34 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_add_library_imported { name; lib_type; global } ->
       let env = try_declare_target env name in
       (env, Project_cmd (Add_library_imported { name = erase_arg_s env name; lib_type; global }))
+  | Yc_add_library_alias { name; target } ->
+      (env, Project_cmd (Add_library_alias { name; target }))
+  | Yc_add_executable_alias { name; target } ->
+      (env, Project_cmd (Add_executable_alias { name; target }))
+  | Yc_get_property { var; target; property; set = _ } ->
+      check_arg env target;
+      (* TARGET-scope get_property: emit as get_target_property — Get_property AST lacks target field *)
+      ( env,
+        Project_cmd
+          (Get_target_property
+             { var = cv_name var;
+               target = erase_arg_s env target;
+               property = { prop = property; value = Bare "" } }) )
+  | Yc_get_directory_property { var; property } ->
+      (env, Get_directory_property { var = cv_name var; directory = ""; property })
+  | Yc_include_directories { dirs; before; system } ->
+      List.iter dirs ~f:(check_arg env);
+      let ba = if before then Lang_cmake.Before else Lang_cmake.Default_order in
+      (match dirs with
+       | [] -> (env, Exp_list [])
+       | first :: rest ->
+         ( env,
+           Project_cmd
+             (Include_directories
+                { before_or_after = ba;
+                  system;
+                  dir = erase_arg_s env first;
+                  dirs = List.map ~f:(erase_arg_s env) rest }) ))
   | Yc_add_compile_definitions { defs } ->
       List.iter defs ~f:(check_arg env);
       (env, Project_cmd (Add_compile_definitions { defs = List.map defs ~f:(fun a -> Lang_cmake.Def_var (erase_arg_s env a)) }))
@@ -336,7 +366,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
        | [] -> (env, Exp_list [])
        | first :: rest ->
          (env, Project_cmd (Link_directories { before_or_after = ba; directory = erase_arg_s env first; directories = List.map ~f:(erase_arg_s env) rest })))
-  | Yc_target_include_directories { target; items } ->
+  | Yc_target_include_directories { target; before; system; items } ->
       check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
       ( env,
@@ -344,8 +374,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
           (Target_include_directories
              {
                target = erase_arg_s env target;
-               system = None;
-               before_or_after = None;
+               system = (if system then Some true else None);
+               before_or_after = (if before then Some Lang_cmake.Before else None);
                items = List.map ~f:(erase_items_with_kind env) items;
              }) )
   | Yc_target_link_libraries { targets; items } ->
@@ -564,7 +594,23 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       (env, Lang_cmake.File_read_symlink { var = cv_name out; link = erase_arg env link })
   | Yc_file_timestamp { out; file; format; utc } ->
       (env, Lang_cmake.File_timestamp { var = cv_name out; file = erase_arg env file; format; utc })
-  | Yc_quote_cmd s -> (env, Quote s)
+  | Yc_quote_cmd _ -> failwith "Yc_quote_cmd: retired — add typed yelu nodes instead"
+  | Yc_policy_set { id; new_ } ->
+      (env, Cmake_cmd (Cmake_policy_set { id; new_ }))
+  | Yc_set_directory_property { property; append; values } ->
+      List.iter values ~f:(check_arg env);
+      ( env,
+        Set_directory_property
+          { append;
+            property;
+            values = List.map ~f:(erase_arg env) values } )
+  | Yc_link_libraries { items } ->
+      List.iter items ~f:(check_arg env);
+      let erased = List.map ~f:(erase_arg_s env) items in
+      let groups =
+        List.map erased ~f:(fun lib -> { Lang_cmake.kind = Ll_general; item = lib; items = [] })
+      in
+      (env, Project_cmd (Link_libraries { groups }))
   | Yc_list_append { cvar; values } ->
       List.iter values ~f:(check_arg env);
       ( env,
@@ -1157,7 +1203,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
           { var = cv_name out;
             exp = Quote (Printf.sprintf "\"%s\"" exp);
             output_format } )
-  | Yc_cmake_language_call { cmd; args } ->
+  | Yc_language_call { cmd; args } ->
       let arg_to_exp a =
         match a with
         | Lang_cmake.Bare s -> Lang_cmake.Var_exp s
@@ -1169,9 +1215,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
              (Meta_call
                 { cmd = Var_exp cmd;
                   arg = List.map ~f:(fun a -> arg_to_exp (erase_arg env a)) args })) )
-  | Yc_cmake_language_eval { code } ->
+  | Yc_language_eval { code } ->
       (env, Cmake_cmd (Cmake_meta_lang (Meta_eval { code })))
-  | Yc_cmake_language_get_log_level { out } ->
+  | Yc_language_get_log_level { out } ->
       ( env,
         Cmake_cmd
           (Cmake_meta_lang (Meta_get_msg_log_level { var = cv_name out })) )
@@ -1183,45 +1229,45 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             scope_var = List.map ~f:cv_name scope_vars;
             propagate;
             body = body_cmds } )
-  | Yc_cmake_path_get { path_var; field; out } ->
+  | Yc_path_get { path_var; field; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_get { path_var = cv_name path_var; field; out_var = cv_name out })))
-  | Yc_cmake_path_has { path_var; field; out } ->
+  | Yc_path_has { path_var; field; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_has { path_var = cv_name path_var; field; out_var = cv_name out })))
-  | Yc_cmake_path_is_absolute { path_var; out } ->
+  | Yc_path_is_absolute { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_is_absolute { path_var = cv_name path_var; out_var = cv_name out })))
-  | Yc_cmake_path_is_relative { path_var; out } ->
+  | Yc_path_is_relative { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_is_relative { path_var = cv_name path_var; out_var = cv_name out })))
-  | Yc_cmake_path_is_prefix { path_var; input; normalize; out } ->
+  | Yc_path_is_prefix { path_var; input; normalize; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_is_prefix { path_var = cv_name path_var; input = erase_arg env input; normalize; out_var = cv_name out })))
-  | Yc_cmake_path_compare { input1; op; input2; out } ->
+  | Yc_path_compare { input1; op; input2; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_compare { input1 = erase_arg env input1; op; input2 = erase_arg env input2; out_var = cv_name out })))
-  | Yc_cmake_path_set { path_var; input; normalize } ->
+  | Yc_path_set { path_var; input; normalize } ->
       (env, Cmake_cmd (Cmake_path (Cpp_set { path_var = cv_name path_var; input = erase_arg env input; normalize })))
-  | Yc_cmake_path_append { path_var; inputs; out } ->
+  | Yc_path_append { path_var; inputs; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_append { path_var = cv_name path_var; inputs = List.map ~f:(erase_arg env) inputs; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_append_string { path_var; inputs; out } ->
+  | Yc_path_append_string { path_var; inputs; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_append_string { path_var = cv_name path_var; inputs = List.map ~f:(erase_arg env) inputs; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_remove_filename { path_var; out } ->
+  | Yc_path_remove_filename { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_remove_filename { path_var = cv_name path_var; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_replace_filename { path_var; input; out } ->
+  | Yc_path_replace_filename { path_var; input; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_replace_filename { path_var = cv_name path_var; input = erase_arg env input; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_remove_extension { path_var; last_only; out } ->
+  | Yc_path_remove_extension { path_var; last_only; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_remove_extension { path_var = cv_name path_var; last_only; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_replace_extension { path_var; last_only; input; out } ->
+  | Yc_path_replace_extension { path_var; last_only; input; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_replace_extension { path_var = cv_name path_var; last_only; input = erase_arg env input; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_normal_path { path_var; out } ->
+  | Yc_path_normal_path { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_normal_path { path_var = cv_name path_var; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_relative_path { path_var; base_dir; out } ->
+  | Yc_path_relative_path { path_var; base_dir; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_relative_path { path_var = cv_name path_var; base_dir = Option.map ~f:(erase_arg env) base_dir; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_absolute_path { path_var; base_dir; normalize; out } ->
+  | Yc_path_absolute_path { path_var; base_dir; normalize; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_absolute_path { path_var = cv_name path_var; base_dir = Option.map ~f:(erase_arg env) base_dir; normalize; out_var = Option.map ~f:cv_name out })))
-  | Yc_cmake_path_native_path { path_var; normalize; out } ->
+  | Yc_path_native_path { path_var; normalize; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_native_path { path_var = cv_name path_var; normalize; out_var = cv_name out })))
-  | Yc_cmake_path_convert_to_cmake { input; normalize; out } ->
+  | Yc_path_convert_to_cmake { input; normalize; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_convert_to_cmake { input = erase_arg env input; normalize; out_var = cv_name out })))
-  | Yc_cmake_path_convert_to_native { input; normalize; out } ->
+  | Yc_path_convert_to_native { input; normalize; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_convert_to_native { input = erase_arg env input; normalize; out_var = cv_name out })))
-  | Yc_cmake_path_hash { path_var; out } ->
+  | Yc_path_hash { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_hash { path_var = cv_name path_var; out_var = cv_name out })))
   | Yc_try_compile { result_var; sources; compile_definitions; link_libraries;
                      link_options; output_variable; no_cache; c_standard; cxx_standard } ->

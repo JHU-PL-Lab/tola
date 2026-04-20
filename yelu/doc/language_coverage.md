@@ -161,14 +161,14 @@ Abbreviations: `✓` = complete, `~` = partial/in-progress, `stub` = bare constr
 
 ### By testing level
 
-| Level         | Commands                                                                                                                                                                                                                                                                                                    |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Level         | Commands                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `build`       | `add_compile_definitions`, `add_compile_options`, `add_link_options`, `link_directories`, `target_link_options`, `target_compile_definitions`, `target_compile_options`, `target_link_directories`, `target_compile_features`, `target_sources`, `target_include_directories` (via `Tests/CMakeCommands/`, 11/12; `target_link_libraries` deferred); also `POSITION_INDEPENDENT_CODE`, ALIAS targets, OBJECT/MODULE/INTERFACE libs, `add_custom_command` (via Group 2/3 tests: PositionIndependentTargets, AliasTarget, CxxOnly, CompileDefinitions, TargetName, Simple, LinkLine, LinkLineOrder, OutName, LibName, LinkStatic) |
-| `configure`   | `add_custom_command`, `set_property`, `get_property`, `define_property`, `add_custom_target`, `add_dependencies`, `target_precompile_headers`, `try_compile`, `file(RELATIVE_PATH)`, `export`, `configure_package_config_file`, `write_basic_package_version_file`, `add_library(IMPORTED)`, `FetchContent` |
-| `script-pair` | `set`/`unset`, `if`, `function`/`macro`, `message`, `math`, `foreach`, `while`/`break`/`continue`, `return`, `list`, `string`, `separate_arguments`, `variable_watch`, `cmake_path`, `cmake_language`                                                                                                       |
-| `script`      | `include` (negative-path variants with stderr check)                                                                                                                                                                                                                                                        |
-| `file-api`    | `cmake_minimum_required`, `project`, `add_executable`, `add_library`, `target_include_directories`, `target_link_libraries`, `target_compile_definitions`/`features`/`options`, `add_custom_command`, `add_subdirectory` (steps 1–12)                                                                       |
-| `text`        | `cmake_minimum_required`, `project`, `option`, `include`, `configure_file`, `add_executable`, `add_library`, `target_*`, `find_*`, `install`, `file` (ops), `execute_process`, `try_run`, `block`, `cmake_path`, `include_guard`, generator expressions                                                     |
+| `configure`   | `add_custom_command`, `set_property`, `get_property`, `define_property`, `add_custom_target`, `add_dependencies`, `target_precompile_headers`, `try_compile`, `file(RELATIVE_PATH)`, `export`, `configure_package_config_file`, `write_basic_package_version_file`, `add_library(IMPORTED)`, `FetchContent`                                                                                                                                                                                                                                                                                                                     |
+| `script-pair` | `set`/`unset`, `if`, `function`/`macro`, `message`, `math`, `foreach`, `while`/`break`/`continue`, `return`, `list`, `string`, `separate_arguments`, `variable_watch`, `cmake_path`, `cmake_language`                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `script`      | `include` (negative-path variants with stderr check)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `file-api`    | `cmake_minimum_required`, `project`, `add_executable`, `add_library`, `target_include_directories`, `target_link_libraries`, `target_compile_definitions`/`features`/`options`, `add_custom_command`, `add_subdirectory` (steps 1–12)                                                                                                                                                                                                                                                                                                                                                                                           |
+| `text`        | `cmake_minimum_required`, `project`, `option`, `include`, `configure_file`, `add_executable`, `add_library`, `target_*`, `find_*`, `install`, `file` (ops), `execute_process`, `try_run`, `block`, `cmake_path`, `include_guard`, generator expressions                                                                                                                                                                                                                                                                                                                                                                         |
 
 ### Incomplete
 
@@ -190,73 +190,73 @@ groups them by tractability for `check_build_pair` coverage.
 
 ### Group 1 — Done
 
-| Directory              | Structure                              | Status                              |
-| ---------------------- | -------------------------------------- | ----------------------------------- |
-| `Tests/CMakeOnly/`     | Full CMakeLists.txt, NONE compiler     | ✓ 12/12 done (`file-api`)           |
-| `Tests/RunCMake/`      | Per-command `.cmake` snippets, NONE    | ✓ 62 compat + 50 pairs done         |
-| `Tests/CMakeCommands/` | 12 subdirs, one command each, ~50 L    | ✓ 11/12 done; `target_link_libraries` deferred |
+| Directory              | Structure                           | Status                                         |
+| ---------------------- | ----------------------------------- | ---------------------------------------------- |
+| `Tests/CMakeOnly/`     | Full CMakeLists.txt, NONE compiler  | ✓ 12/12 done (`file-api`)                      |
+| `Tests/RunCMake/`      | Per-command `.cmake` snippets, NONE | ✓ 62 compat + 50 pairs done                    |
+| `Tests/CMakeCommands/` | 12 subdirs, one command each, ~50 L | ✓ 11/12 done; `target_link_libraries` deferred |
 
 ### Group 2 — New tractable (small, focused, C/CXX)
 
 One CMakeLists.txt, ≤100 lines, no cmake module dependencies. Each could become a
 `check_build_pair` test.
 
-| Directory                  | Lines | Primary feature                              | Note                                      |
-| -------------------------- | ----- | -------------------------------------------- | ----------------------------------------- |
-| `Simple`                   | 17    | basic exe + static lib                       | ✓ done                                    |
-| `LinkLine`                 | 13    | link order preservation                      | ✓ done (`link_libraries` via quote_cmd)   |
-| `LinkLineOrder`            | 37    | deep link order without dep info             | ✓ done                                    |
-| `OutName`                  | 6     | `OUTPUT_NAME`, `PREFIX`, `SUFFIX` properties | ✓ done                                    |
-| `LibName`                  | 35    | `LIBRARY_OUTPUT_PATH` / `EXECUTABLE_OUTPUT_PATH` | ✓ done (`if(UNIX)` emitted unconditionally) |
-| `AliasTarget`              | 72    | `add_library(X ALIAS Y)`, `::` namespacing, `add_custom_command` from alias   | ✓ done |
-| `ObjectLibrary`            | 81    | `OBJECT` library + `$<TARGET_OBJECTS:...>`   | next — 6 subdirs                          |
-| `CompileDefinitions`       | ~80   | per-config compile definitions               | ✓ done (subdir cmake embedded verbatim)   |
-| `Visibility`               | 64    | `C_VISIBILITY_PRESET`, `VISIBILITY_INLINES_HIDDEN` | POST_BUILD nm checks, skip for now |
-| `LinkStatic`               | 30    | static lib + `LINK_SEARCH_*` properties      | ✓ done (mostly quote_cmd; libm.a available) |
-| `PositionIndependentTargets` | 14  | `POSITION_INDEPENDENT_CODE` property         | ✓ done (3 subdirs, INTERFACE/OBJECT libs) |
+| Directory                    | Lines | Primary feature                                                             | Note                                        |
+| ---------------------------- | ----- | --------------------------------------------------------------------------- | ------------------------------------------- |
+| `Simple`                     | 17    | basic exe + static lib                                                      | ✓ done                                      |
+| `LinkLine`                   | 13    | link order preservation                                                     | ✓ done (`link_libraries` via quote_cmd)     |
+| `LinkLineOrder`              | 37    | deep link order without dep info                                            | ✓ done                                      |
+| `OutName`                    | 6     | `OUTPUT_NAME`, `PREFIX`, `SUFFIX` properties                                | ✓ done                                      |
+| `LibName`                    | 35    | `LIBRARY_OUTPUT_PATH` / `EXECUTABLE_OUTPUT_PATH`                            | ✓ done (`if(UNIX)` emitted unconditionally) |
+| `AliasTarget`                | 72    | `add_library(X ALIAS Y)`, `::` namespacing, `add_custom_command` from alias | ✓ done                                      |
+| `ObjectLibrary`              | 81    | `OBJECT` library + `$<TARGET_OBJECTS:...>`                                  | next — 6 subdirs                            |
+| `CompileDefinitions`         | ~80   | per-config compile definitions                                              | ✓ done (subdir cmake embedded verbatim)     |
+| `Visibility`                 | 64    | `C_VISIBILITY_PRESET`, `VISIBILITY_INLINES_HIDDEN`                          | POST_BUILD nm checks, skip for now          |
+| `LinkStatic`                 | 30    | static lib + `LINK_SEARCH_*` properties                                     | ✓ done (mostly quote_cmd; libm.a available) |
+| `PositionIndependentTargets` | 14    | `POSITION_INDEPENDENT_CODE` property                                        | ✓ done (3 subdirs, INTERFACE/OBJECT libs)   |
 
 ### Group 3 — Subdirectory tests (multi-file, C/CXX)
 
 Root CMakeLists.txt is small but delegates to subdirectories.
 
-| Directory      | Lines (root) | Note                                                       |
-| -------------- | ------------ | ---------------------------------------------------------- |
-| `EmptyLibrary` | 4            | `add_subdirectory` to an empty library subdir  | BLOCKED — cmake 3.28 rejects `add_library(test test.h)` (no linker language) |
-| `TargetName`   | 5            | two subdirs: executables + scripts             | ✓ done |
-| `CxxOnly`      | 14           | MODULE lib, dot-in-target-name, mixed `.C`/`.cxx` sources | ✓ done |
-| `SubDir`       | 50           | deprecated `subdirs()`, `aux_source_directory()` | BLOCKED — `Executable/CMakeLists.txt` hardcodes `string(FIND ... "SubDir/Executable" ...)` path assertion; only passes under CTest build tree naming |
-| `SubDirSpaces` | 76           | path-with-spaces RPATH; `subdirs()` with paren paths | shares SubDir blocker |
+| Directory      | Lines (root) | Note                                                      |
+| -------------- | ------------ | --------------------------------------------------------- |
+| `EmptyLibrary` | 4            | `add_subdirectory` to an empty library subdir             | BLOCKED — cmake 3.28 rejects `add_library(test test.h)` (no linker language)                                                                         |
+| `TargetName`   | 5            | two subdirs: executables + scripts                        | ✓ done                                                                                                                                               |
+| `CxxOnly`      | 14           | MODULE lib, dot-in-target-name, mixed `.C`/`.cxx` sources | ✓ done                                                                                                                                               |
+| `SubDir`       | 50           | deprecated `subdirs()`, `aux_source_directory()`          | BLOCKED — `Executable/CMakeLists.txt` hardcodes `string(FIND ... "SubDir/Executable" ...)` path assertion; only passes under CTest build tree naming |
+| `SubDirSpaces` | 76           | path-with-spaces RPATH; `subdirs()` with paren paths      | shares SubDir blocker                                                                                                                                |
 
 ### Group 4 — Needs `GenerateExportHeader` cmake module
 
 Same blocker as `target_link_libraries`: `include(GenerateExportHeader)` +
 `generate_export_header()` calls throughout.
 
-| Directory          | Lines | Note                                   |
-| ------------------ | ----- | -------------------------------------- |
-| `CompatibleInterface` | 243 | interface property compatibility      |
-| `ExportImport`     | 105   | also uses nested cmake invocations     |
+| Directory             | Lines | Note                               |
+| --------------------- | ----- | ---------------------------------- |
+| `CompatibleInterface` | 243   | interface property compatibility   |
+| `ExportImport`        | 105   | also uses nested cmake invocations |
 
 ### Group 5 — Large / complex (C/CXX)
 
 Monolithic tests mixing many features; high `yc_quote_cmd` fraction expected.
 
-| Directory            | Lines | Primary feature                      | Blocker                              |
-| -------------------- | ----- | ------------------------------------ | ------------------------------------ |
-| `InterfaceLibrary`   | 87    | INTERFACE libraries                  | `GENERATOR_IS_MULTI_CONFIG` guards   |
-| `CompileOptions`     | 108   | compile options + policy guards      | CMP0092/CMP0129 + multi-config       |
-| `CompileFeatures`    | 445   | `target_compile_features` + standards|                                      |
-| `GeneratorExpression`| 504   | comprehensive genex testing          |                                      |
-| `CustomCommand`      | 609   | `add_custom_command` full coverage   |                                      |
-| `Complex`            | 416   | multi-feature integration test       |                                      |
+| Directory             | Lines | Primary feature                       | Blocker                            |
+| --------------------- | ----- | ------------------------------------- | ---------------------------------- |
+| `InterfaceLibrary`    | 87    | INTERFACE libraries                   | `GENERATOR_IS_MULTI_CONFIG` guards |
+| `CompileOptions`      | 108   | compile options + policy guards       | CMP0092/CMP0129 + multi-config     |
+| `CompileFeatures`     | 445   | `target_compile_features` + standards |                                    |
+| `GeneratorExpression` | 504   | comprehensive genex testing           |                                    |
+| `CustomCommand`       | 609   | `add_custom_command` full coverage    |                                    |
+| `Complex`             | 416   | multi-feature integration test        |                                    |
 
 ### Group 6 — Blocked
 
-| Directory          | Blocker                                                  |
-| ------------------ | -------------------------------------------------------- |
-| `PolicyScope`      | `cmake_policy(PUSH/POP/SET)` — Y11 design blocked        |
-| `StringFileTest`   | `string(REGEX QUOTE)` requires cmake ≥3.29; we have 3.28 |
-| `TryCompile`       | `try_compile` needs compiler at configure time           |
+| Directory        | Blocker                                                  |
+| ---------------- | -------------------------------------------------------- |
+| `PolicyScope`    | `cmake_policy(PUSH/POP/SET)` — Y11 design blocked        |
+| `StringFileTest` | `string(REGEX QUOTE)` requires cmake ≥3.29; we have 3.28 |
+| `TryCompile`     | `try_compile` needs compiler at configure time           |
 
 ### Group 7 — cmake infrastructure (different domain)
 
@@ -283,11 +283,11 @@ Non-Linux or non-Makefile/Ninja generators:
 
 ### Group 11 — Trivial / skip
 
-| Directory        | Reason                             |
-| ---------------- | ---------------------------------- |
-| `VariableUsage`  | 1-line `message()` — no assertions |
-| `EmptyDepends`   | build-system dep tracking, not cmake language |
-| `EmptyProperty`  | empty property handling, ~10L      |
+| Directory       | Reason                                        |
+| --------------- | --------------------------------------------- |
+| `VariableUsage` | 1-line `message()` — no assertions            |
+| `EmptyDepends`  | build-system dep tracking, not cmake language |
+| `EmptyProperty` | empty property handling, ~10L                 |
 
 ## CMakeOnly Tests — Tractability
 
@@ -427,6 +427,33 @@ Unlocks CMP0186 / CMP0140 / CMP0124; design pass needed first. See `language_des
 Typed variable lifecycle (Tier 5), conf/build boundary collapse (Tier 6), multi-stage
 core (Tier 7), language architecture, and settled design decisions are all in
 `doc/language_design.md`.
+
+## Coverage Scorecard
+
+Five independent axes. Each row is a different question about how well yelu is covered.
+
+| Axis                      | Metric                                     | Done               | Ceiling   | Notes                                                                                    |
+| ------------------------- | ------------------------------------------ | ------------------ | --------- | ---------------------------------------------------------------------------------------- |
+| **Test depth**            | build-level tests (22)                     | 22 / ~30 tractable | ~30       | 11 CMakeCommands + 11 Group 2/3; `target_link_libraries` + SubDir/SubDirSpaces blocked   |
+| **Test depth**            | file-api tests (steps 1–12)                | 12 / 12            | 12        | Full codemodel-v2 binding match ✓                                                        |
+| **Test depth**            | configure tests                            | 23                 | ~30       | Properties, try_compile, FetchContent, export                                            |
+| **Test depth**            | script-pair tests                          | 50 / ~65           | ~65       | 12 command groups; remaining 3 dirs all blocked                                          |
+| **Test depth**            | script compat tests                        | 62 / ~65           | ~65       | ceiling is ~65 tractable from ~15 dirs                                                   |
+| **Test depth**            | text unit tests                            | ~193               | unbounded | PP + compiler correctness                                                                |
+| **Command breadth**       | commands at `build` level                  | ~15                | ~20       | all `target_*` + `add_compile_*`; ALIAS/OBJECT/MODULE libs; gap: `target_link_libraries` |
+| **Command breadth**       | commands at `script-pair` level            | ~15                | ~20       | all scripting core; gap: `cmake_policy` (Y11)                                            |
+| **Command breadth**       | commands with any test                     | ~60                | ~70       | `text`-only commands: `find_*`, `install`, `file`, genex                                 |
+| **Benchmark suites**      | `Tests/CMakeOnly/`                         | 12 / 12 ✓          | 12        | all tractable dirs done                                                                  |
+| **Benchmark suites**      | `Tests/CMakeCommands/`                     | 11 / 12            | 12        | `target_link_libraries` deferred                                                         |
+| **Benchmark suites**      | `Tests/RunCMake/` compat                   | 62 / ~65           | ~65       | realistic ceiling reached                                                                |
+| **Benchmark suites**      | `Tests/RunCMake/` pairs                    | 50 / ~65           | ~65       | all tractable dirs done                                                                  |
+| **Benchmark suites**      | `Tests/` Group 2/3 build                   | 11 / ~18 tractable | ~18       | next: ObjectLibrary (6 subdirs)                                                          |
+| **Language completeness** | commands fully pipelined (AST→yelu→tested) | ~50                | ~70       | gaps: `cmake_policy`, `cmake_language`/`block` yelu layer                                |
+| **Language completeness** | commands AST-only or stubs                 | ~5                 | —         | `cmake_policy` partial stub; `cmake_pkg_config` not started                              |
+
+### Summary
+
+The strongest axes are **benchmark suite coverage** (CMakeOnly and RunCMake both near ceiling) and **scripting depth** (script-pair tests cover all tractable command dirs). The weakest axis is **build-level breadth**: 22 tests cover the common patterns but Groups 2–5 of `Tests/` still have ~7 tractable directories to add. The single biggest unlocker is `cmake_policy` (Y11) — it unblocks CMP0140 (`return(PROPAGATE)`), CMP0124 (`foreach` scoping), CMP0186 (regex empty match), and several blocked RunCMake dirs.
 
 ## Test Harness for CMakeOnly Coverage
 

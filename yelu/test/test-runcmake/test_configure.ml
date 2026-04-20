@@ -47,8 +47,8 @@ let message_to_stdout =
 let cmake_path_get =
   check_conf "cmake_path_get"
     (Yexp_list [
-      yc_cmake_path_set (ycvar "P") (ystr "/usr/local/bin/cmake");
-      yc_cmake_path_get (ycvar "P") Cpf_filename (ycvar "FNAME");
+      yc_path_set (ycvar "P") (ystr "/usr/local/bin/cmake");
+      yc_path_get (ycvar "P") Cpf_filename (ycvar "FNAME");
       yc_message ~mode:Mm_status ["${FNAME}"];
     ])
     (fun r -> check_stdout_matches "cmake" r.run)
@@ -229,15 +229,15 @@ let () =
             yc_macro (ystr "say_hi") [
               yc_message ~mode:Mm_status ["hi from macro"]
             ];
-            yc_cmake_language_call "say_hi" [];
+            yc_language_call "say_hi" [];
           ])
           (fun r -> check_stdout_matches "hi from macro" r.run);
         check_conf "cmake_language_eval"
-          (yc_cmake_language_eval {|message(STATUS "eval says hello")|})
+          (yc_language_eval {|message(STATUS "eval says hello")|})
           (fun r -> check_stdout_matches "eval says hello" r.run);
         check_conf "cmake_language_get_log_level"
           (Yexp_list [
-            yc_cmake_language_get_log_level (ycvar "LOG_LEVEL");
+            yc_language_get_log_level (ycvar "LOG_LEVEL");
             yc_message ~mode:Mm_status ["${LOG_LEVEL}"];
           ])
           (fun r ->
