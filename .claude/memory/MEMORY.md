@@ -25,6 +25,7 @@ Detailed notes: `yelu-vision.md`, `cmake.md`, `string-target-design.md`, `yelu_l
 
 ## Feedback
 - [No eval $(opam env)](feedback_shell_env.md) — dune/opam already on PATH in CC env
+- [dune sandbox + promote](feedback_dune_sandbox.md) — alias deps force build order but don't expose files in sandbox; use glob_files + promote instead
 
 ## User Preferences
 - "cc" means Claude Code (this CLI tool)

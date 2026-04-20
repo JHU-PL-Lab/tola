@@ -31,19 +31,6 @@ let all_probe_actions = [ Compile_example; Run_example ]
 let all_cc_and_modes =
   List.cartesian_product all_compile_modes all_probe_actions
 
-(* LEGACY: used by old job_spec/step_phase pipeline (canary run).
-   New action runner uses canary_action.step_expectation instead. *)
-type step_expectation =
-  | Expect_success
-  | Expect_failure_contains of {
-      contains_any : string list;
-      expected_returncode : int option;
-    }
-  | Expect_symbols_resolved of {
-      required_libs : string list;
-      provided_lib : string;
-    }
-
 type condition = On_runner_os of runner_os
 
 type project_spec = {
@@ -69,7 +56,6 @@ type step = {
   requires : artifact list;
   produces : artifact list;
   action : cmdline;
-  expectation : step_expectation;
 }
 
 type system_pkg = { linux_pkg : string; macos_pkg : string }
@@ -87,7 +73,6 @@ type step_phase = {
   location : location;
   requires : artifact list;
   produces : artifact list;
-  expectation : step_expectation;
 }
 
 type job_spec = {
@@ -239,9 +224,8 @@ let yaml_preamble_action ?name ?(with_fields = []) uses =
   { name; uses; with_fields }
 
 let run_step ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
-    ?(expectation = Expect_success) ~name action =
-  ({ name; guard; shell; env_fields; requires; produces; action; expectation }
-    : step)
+    ~name action =
+  ({ name; guard; shell; env_fields; requires; produces; action } : step)
 
 (* utilities *)
 
@@ -252,44 +236,6 @@ let indent_block spaces s =
   String.split_lines s
   |> List.map ~f:(fun l -> pad ^ l)
   |> String.concat ~sep:"\n"
-
-(* LEGACY: used by old apply_expectation for YAML/shell backends.
-   New action runner handles expectations directly in run_step. *)
-let mk_assert_result_cmd ~assert_script ?expected_returncode
-    ?(contains_any = []) command =
-  let expected_returncode_args =
-    match expected_returncode with
-    | None -> []
-    | Some code -> [ [%string "--expected-returncode %{Int.to_string code}"] ]
-  in
-  let args =
-    expected_returncode_args
-    @ List.map contains_any ~f:(fun s -> [%string "--contains-any '%{s}'"])
-    |> String.concat ~sep:" \\\n  "
-  in
-  let arg_block = if String.is_empty args then "" else args ^ " \\\n  " in
-  [%string {|python3 %{assert_script} \
-  %{arg_block}-- \
-  %{command}|}]
-
-let apply_expectation expectation cmd =
-  let vars = default_template_vars in
-  match expectation with
-  | Expect_success -> cmd
-  | Expect_failure_contains { contains_any; expected_returncode } ->
-      let wrapped =
-        if multiline cmd then [%string "sh -ec '%{cmd}'"] else cmd
-      in
-      mk_assert_result_cmd ~assert_script:vars.assert_result
-        ?expected_returncode ~contains_any wrapped
-  | Expect_symbols_resolved { required_libs; provided_lib } ->
-      let args =
-        List.map required_libs ~f:(fun lib ->
-            [%string "--required-lib \"%{lib}\""])
-        @ [ [%string "--provided-lib \"%{provided_lib}\""] ]
-        |> String.concat ~sep:" \\\n  "
-      in
-      [%string "python3 %{vars.assert_symbols} \\\n  %{args}"]
 
 let resolve_backend_scripts ~(scripts : backend_scripts) action =
   let vars = default_template_vars in
@@ -333,10 +279,6 @@ let make_job ~steps_of_phase ~config (spec : job_spec) =
   let (steps : step list) =
     List.concat_map spec.phases ~f:(steps_of_phase config)
   in
-  let steps =
-    List.map steps ~f:(fun step ->
-        { step with action = apply_expectation step.expectation step.action })
-  in
   { job with steps }
 
 let mk_system_dep_steps ~name ~linux_cmd ~macos_cmd =
@@ -347,13 +289,6 @@ let mk_system_dep_steps ~name ~linux_cmd ~macos_cmd =
       ~shell:"bash" macos_cmd;
   ]
 
-let string_of_expectation = function
-  | Expect_success -> "success"
-  | Expect_failure_contains { contains_any; _ } ->
-      [%string "failure(contains: %{String.concat ~sep:\", \" contains_any})"]
-  | Expect_symbols_resolved { provided_lib; _ } ->
-      [%string "symbols(%{provided_lib})"]
-
 let pp_step ppf (step : step) =
   let guard_s =
     match step.guard with
@@ -361,16 +296,11 @@ let pp_step ppf (step : step) =
     | Some (On_runner_os Ubuntu) -> " [linux]"
     | Some (On_runner_os MacOS) -> " [macos]"
   in
-  let exp_s =
-    match step.expectation with
-    | Expect_success -> ""
-    | exp -> [%string " (%{string_of_expectation exp})"]
-  in
   let preview =
     let lines = String.split_lines step.action in
     match lines with [] -> "" | [ l ] -> l | l :: _ -> l ^ " ..."
   in
-  Fmt.pf ppf "  - %s%s%s@." step.name guard_s exp_s;
+  Fmt.pf ppf "  - %s%s@." step.name guard_s;
   Fmt.pf ppf "    %s@." preview
 
 let pp_job ppf (job : job) =

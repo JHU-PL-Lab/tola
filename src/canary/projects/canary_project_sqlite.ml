@@ -52,21 +52,21 @@ let prebuilt_prebuilt_spec distro : job_spec =
           location = System_pm;
           requires = [];
           produces = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Pm_install None;
           location = Lang_pm;
           requires = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
           produces = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = OCaml };
           location = Lang_pm;
           requires = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
           produces = [];
-          expectation = Expect_success;
+
         };
       ];
     if_disabled = false;

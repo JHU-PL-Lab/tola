@@ -10,7 +10,8 @@
   (source_tree ../fixtures)
   ../cmake_file_api_cmp.py
   run_file_api.py
-  ../../src/bin/cmake/.
-  ../../src/bin/yelu/.)
+  (glob_files ../../src/bin/cmake/*.exe)
+  (glob_files ../../src/bin/yelu/*.exe))
  (action
-  (run python3 %{dep:run_file_api.py})))
+  (setenv TOLA %{workspace_root}
+   (run python3 %{dep:run_file_api.py}))))

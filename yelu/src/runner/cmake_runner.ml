@@ -12,6 +12,19 @@ type configure_result = {
   cache : (string * string) list;  (* variable name → value, type stripped *)
 }
 
+let rec mkdirp path =
+  if Sys.file_exists path then ()
+  else begin
+    mkdirp (Filename.dirname path);
+    (try Unix.mkdir path 0o700 with Unix.Unix_error (Unix.EEXIST, _, _) -> ())
+  end
+
+let write_file path content =
+  mkdirp (Filename.dirname path);
+  let oc = open_out path in
+  output_string oc content;
+  close_out oc
+
 let read_all ch =
   let buf = Buffer.create 4096 in
   let tmp = Bytes.create 4096 in
@@ -39,9 +52,15 @@ let make_env extra =
     in
     Array.of_list (base @ List.map (fun (k, v) -> k ^ "=" ^ v) extra)
 
-let run_script_file ?(env = []) ?(flags = []) path =
+let run_script_file ?(env = []) ?(flags = []) ?(cwd = None) path =
   let flags_str = match flags with [] -> "" | fs -> String.concat " " fs ^ " " in
-  let cmd = Printf.sprintf "cmake %s-P %s" flags_str (Filename.quote path) in
+  let cmake_cmd = Printf.sprintf "cmake %s-P %s" flags_str (Filename.quote path) in
+  (* RunCMake scripts use include(relative.cmake) which resolves to the process CWD.
+     Prefixing with "cd <dir> &&" matches what CTest does when running each test. *)
+  let cmd = match cwd with
+    | None -> cmake_cmd
+    | Some dir -> Printf.sprintf "cd %s && %s" (Filename.quote dir) cmake_cmd
+  in
   let stdout_ch, stdin_ch, stderr_ch =
     Unix.open_process_full cmd (make_env env)
   in
@@ -71,6 +90,23 @@ let check_stdout_matches pattern result =
   if not (Re.execp re result.stdout) then
     Alcotest.failf "stdout did not match pattern %S\ngot:\n%s" pattern result.stdout
 
+let escape_braces pat =
+  (* cmake regex treats { } as literals; PCRE treats {n} as quantifiers.
+     Re.Pcre throws a parse error on bare {word}. Escape every { and } that
+     is not already preceded by a backslash. *)
+  let buf = Buffer.create (String.length pat + 4) in
+  let n = String.length pat in
+  let i = ref 0 in
+  while !i < n do
+    let c = pat.[!i] in
+    if (c = '{' || c = '}') && (!i = 0 || pat.[!i - 1] <> '\\') then
+      (Buffer.add_char buf '\\'; Buffer.add_char buf c)
+    else
+      Buffer.add_char buf c;
+    incr i
+  done;
+  Buffer.contents buf
+
 let strip_line_anchors pat =
   (* RunCMake stdout patterns use ^ and $ as line anchors (cmake's multiline regex),
      but Re.Posix treats them as string anchors. Strip them so Re.execp finds the
@@ -87,7 +123,7 @@ let load_stdout_patterns dir name =
     let lines = ref [] in
     (try while true do
        let l = String.trim (input_line ic) in
-       if l <> "" then lines := strip_line_anchors l :: !lines
+       if l <> "" then lines := (escape_braces (strip_line_anchors l)) :: !lines
      done with End_of_file -> ());
     close_in ic;
     List.rev !lines
@@ -98,6 +134,19 @@ let check_stdout_patterns patterns result =
     if not (Re.execp re result.stdout) then
       Alcotest.failf "stdout did not match pattern %S\ngot:\n%s" pat result.stdout
   ) patterns
+
+(* Replace any cmake filepath (e.g. "/tmp/yelu_12345.cmake") with "<cmake>"
+   so two runs with different temp file names can be compared. *)
+let normalize_cmake_filepath s =
+  let re = Re.Pcre.regexp {|[^\s:"']+\.cmake|} in
+  Re.replace_string re ~by:"<cmake>" s
+
+let check_stderr_normalized ref_result yelu_result cmake_text =
+  let ref_norm  = normalize_cmake_filepath ref_result.stderr in
+  let yelu_norm = normalize_cmake_filepath yelu_result.stderr in
+  if ref_norm <> yelu_norm then
+    Alcotest.failf "stderr mismatch\nref :\n%s\nyelu:\n%s\nyelu cmake:\n%s"
+      ref_result.stderr yelu_result.stderr cmake_text
 
 let run_script ?(env = []) ?(flags = []) cmake_text =
   let tmp = Filename.temp_file "yelu_" ".cmake" in
@@ -168,10 +217,7 @@ let run_configure ?(cmake_min = "3.20") ?(files = []) ?(languages = ["NONE"]) cm
     output_string oc full_text;
     close_out oc;
     List.iter (fun (name, content) ->
-      let path = Filename.concat tmpdir name in
-      let oc = open_out path in
-      output_string oc content;
-      close_out oc) files;
+      write_file (Filename.concat tmpdir name) content) files;
     let cmd = Printf.sprintf "cmake -S %s -B %s" (Filename.quote tmpdir) (Filename.quote build) in
     let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (Unix.environment ()) in
     close_out stdin_ch;
@@ -184,6 +230,145 @@ let run_configure ?(cmake_min = "3.20") ?(files = []) ?(languages = ["NONE"]) cm
     let cache_path = Filename.concat build "CMakeCache.txt" in
     let cache = if Sys.file_exists cache_path then parse_cache cache_path else [] in
     { run = { exit_code; stdout; stderr }; cache }
+  with
+  | result -> cleanup (); result
+  | exception e -> cleanup (); raise e
+
+type artifact = {
+  rel_path : string;   (* path relative to build root, using '/' separator *)
+  size     : int;      (* file size in bytes *)
+}
+
+(* Walk build_dir, skip cmake-internal paths, return artifact list sorted by rel_path. *)
+let enumerate_build_outputs build_dir =
+  let cmake_skip_names = ["CMakeFiles"; "CMakeCache.txt"; "cmake_install.cmake";
+                          "Makefile"; "build.ninja"; ".ninja_deps"; ".ninja_log"] in
+  let cmake_skip_exts  = [".cmake"; ".d"; ".ninja"] in
+  let is_cmake_file name =
+    List.mem name cmake_skip_names
+    || List.exists (fun ext -> Filename.check_suffix name ext) cmake_skip_exts
+  in
+  let results = ref [] in
+  let rec walk rel abs =
+    if Sys.is_directory abs then begin
+      if not (is_cmake_file (Filename.basename abs)) then
+        Array.iter (fun entry ->
+          let rel' = if rel = "" then entry else rel ^ "/" ^ entry in
+          walk rel' (Filename.concat abs entry)
+        ) (Sys.readdir abs)
+    end else begin
+      if not (is_cmake_file (Filename.basename abs)) then begin
+        let st = Unix.stat abs in
+        results := { rel_path = rel; size = st.Unix.st_size } :: !results
+      end
+    end
+  in
+  walk "" build_dir;
+  List.sort (fun a b -> String.compare a.rel_path b.rel_path) !results
+
+let check_artifacts_match ref_arts yelu_arts =
+  let pp_arts arts =
+    String.concat "\n" (List.map (fun a -> Printf.sprintf "  %s (%d bytes)" a.rel_path a.size) arts)
+  in
+  (* Layer 2a: same set of relative paths — strict *)
+  let ref_names  = List.map (fun a -> a.rel_path) ref_arts in
+  let yelu_names = List.map (fun a -> a.rel_path) yelu_arts in
+  if ref_names <> yelu_names then
+    Alcotest.failf "artifact names differ\nref :\n%s\nyelu:\n%s"
+      (pp_arts ref_arts) (pp_arts yelu_arts);
+  (* Layer 2b: size comparison — reported but not a hard failure.
+     GCC embeds source file paths in ELF .strtab even without -g, so sizes
+     differ by a small constant proportional to path length difference between
+     the ref source dir and the yelu temp dir. Symbol-level comparison is
+     deferred to layer 3 (nm inspection). *)
+  List.iter2 (fun r y ->
+    if r.size <> y.size then
+      Printf.printf "  [size] %s: ref %d, yelu %d (diff %+d)\n%!"
+        r.rel_path r.size y.size (y.size - r.size)
+  ) ref_arts yelu_arts
+
+type build_result = {
+  configure : configure_result;
+  build     : run_result;
+  artifacts : artifact list;
+}
+
+let run_cmd_simple cmd =
+  let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (Unix.environment ()) in
+  close_out stdin_ch;
+  let stdout = read_all stdout_ch in
+  let stderr = read_all stderr_ch in
+  let status = Unix.close_process_full (stdout_ch, stdin_ch, stderr_ch) in
+  let exit_code = match status with
+    | Unix.WEXITED n -> n | Unix.WSIGNALED n -> 128 + n | Unix.WSTOPPED n -> 128 + n
+  in
+  { exit_code; stdout; stderr }
+
+(* Run cmake -S -B (configure) then cmake --build unconditionally.
+   Both steps are always attempted; callers decide what to do with the results. *)
+let run_configure_and_build ?(cmake_min = "3.20") ?(files = []) ?(languages = ["C"]) cmake_text =
+  let has_project =
+    let re = Re.(compile (seq [str "project"; rep (alt [char ' '; char '\t']); char '('])) in
+    Re.execp re cmake_text in
+  let full_text =
+    if has_project then cmake_text
+    else
+      let langs = String.concat " " languages in
+      Printf.sprintf "cmake_minimum_required(VERSION %s)\nproject(_yelu_test %s)\n%s" cmake_min langs cmake_text
+  in
+  let tmpdir = Filename.temp_file "yelu_build_" "" in
+  Sys.remove tmpdir;
+  Unix.mkdir tmpdir 0o700;
+  let build = Filename.concat tmpdir "_build" in
+  let cleanup () =
+    let rec rm path =
+      if Sys.is_directory path then begin
+        Array.iter (fun e -> rm (Filename.concat path e)) (Sys.readdir path);
+        Unix.rmdir path
+      end else Sys.remove path
+    in
+    (try rm tmpdir with _ -> ())
+  in
+  match
+    let cmake_file = Filename.concat tmpdir "CMakeLists.txt" in
+    let oc = open_out cmake_file in
+    output_string oc full_text;
+    close_out oc;
+    List.iter (fun (name, content) ->
+      write_file (Filename.concat tmpdir name) content) files;
+    let conf_run = run_cmd_simple (Printf.sprintf "cmake -S %s -B %s" (Filename.quote tmpdir) (Filename.quote build)) in
+    let cache_path = Filename.concat build "CMakeCache.txt" in
+    let cache = if Sys.file_exists cache_path then parse_cache cache_path else [] in
+    let conf = { run = conf_run; cache } in
+    let build_run = run_cmd_simple (Printf.sprintf "cmake --build %s" (Filename.quote build)) in
+    let artifacts = if Sys.file_exists build then enumerate_build_outputs build else [] in
+    { configure = conf; build = build_run; artifacts }
+  with
+  | result -> cleanup (); result
+  | exception e -> cleanup (); raise e
+
+(* Run configure + build against an existing source directory (e.g. upstream cmake test dirs). *)
+let run_build_existing src_dir =
+  let build = Filename.temp_file "yelu_build_ref_" "" in
+  Sys.remove build;
+  Unix.mkdir build 0o700;
+  let cleanup () =
+    let rec rm path =
+      if Sys.is_directory path then begin
+        Array.iter (fun e -> rm (Filename.concat path e)) (Sys.readdir path);
+        Unix.rmdir path
+      end else Sys.remove path
+    in
+    (try rm build with _ -> ())
+  in
+  match
+    let conf_run = run_cmd_simple (Printf.sprintf "cmake -S %s -B %s" (Filename.quote src_dir) (Filename.quote build)) in
+    let cache_path = Filename.concat build "CMakeCache.txt" in
+    let cache = if Sys.file_exists cache_path then parse_cache cache_path else [] in
+    let conf = { run = conf_run; cache } in
+    let build_run = run_cmd_simple (Printf.sprintf "cmake --build %s" (Filename.quote build)) in
+    let artifacts = if Sys.file_exists build then enumerate_build_outputs build else [] in
+    { configure = conf; build = build_run; artifacts }
   with
   | result -> cleanup (); result
   | exception e -> cleanup (); raise e

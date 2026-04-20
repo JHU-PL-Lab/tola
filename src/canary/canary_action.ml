@@ -24,6 +24,15 @@ let tag_of_probe_location = function
   | System_pm -> "probe_binding_sys"
   | Wild s -> [%string "probe_binding_%{s}"]
 
+type step_expectation =
+  | Expect_success
+  | Expect_failure of { contains_any : string list }
+  | Expect_symbols of {
+      provided_lib : string;
+      required : string list;
+      missing : string list;
+    }
+
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
   configure : (output_dir:string -> string) option;
@@ -41,6 +50,8 @@ type script_spec = {
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
+  (* Per-rule expectation. Default: Expect_success. *)
+  expectation : (rule -> step_expectation);
 }
 
 let empty_script_spec = {
@@ -51,16 +62,13 @@ let empty_script_spec = {
   probe_lib = None; probe_binding = [];
   probe_app = None;
   check_post = (fun _ -> None);
+  expectation = (fun _ -> Expect_success);
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
 let no_source spec =
   { spec with fetch_source = None; configure = None;
     build_lib = None; build_binding = None; build_app = None;     pack_lib = None; pack_binding = None; pack_app = None }
-
-(* Remove packing actions *)
-let no_pack spec =
-  { spec with pack_lib = None; pack_binding = None; pack_app = None }
 
 (* Look up the script for a rule *)
 let script_of_rule spec = function
@@ -86,19 +94,6 @@ let script_of_rule spec = function
   | Publish Source | Probe Source -> None
 
 (* ── Action step protocol ── *)
-
-type step_expectation =
-  | Expect_success
-  | Expect_failure of { contains_any : string list }
-      (* step should fail; output must contain one of these strings *)
-  | Expect_symbols of {
-      provided_lib : string;   (* path to .so/.dylib to inspect *)
-      required : string list;  (* symbols that must be resolved *)
-      missing : string list;   (* symbols expected to be missing (version mismatch) *)
-    }
-      (* check binary symbol resolution — catches ABI mismatches.
-         In the future, the missing list should be derived from a
-         mismatch prediction system, not hand-written. *)
 
 type action_step = {
   tag : string;                      (* unique id: e.g., "build_lib" *)
@@ -346,7 +341,7 @@ let fetch_binding_cmd (spec : Canary_ocaml.opam_package_spec) ~output_dir =
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
-  [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} && %{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log"]
+  [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 && %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1"]
 
 (* ── Convenience helpers for building steps ── *)
 
@@ -487,7 +482,8 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
       | Some cp -> cp
       | None -> default_check_post rule
     in
-    mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ()
+    let expectation = spec.expectation rule in
+    mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ~expectation ()
   in
   List.concat_map store_rules ~f:(fun rule ->
       let tag = string_of_rule rule in
@@ -506,7 +502,8 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
                   | Some cp -> cp
                   | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
                 in
-                mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ())
+                let expectation = spec.expectation rule in
+                mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ~expectation ())
         | _ ->
             match script_of_rule spec rule with
             | None -> []

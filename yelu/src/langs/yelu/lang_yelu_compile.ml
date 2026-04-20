@@ -205,7 +205,7 @@ let rec erase_cond env : yelu_cond -> string list = function
       "IN_LIST";
       erase_arg_s env listvar ]
   | Ymatches (value, regex) ->
-    [ cmake_quote_cond (erase_arg_s env value); "MATCHES"; regex ]
+    [ cmake_quote_cond (erase_arg_s env value); "MATCHES"; cmake_quote_cond regex ]
   | Yexists path ->
     [ "EXISTS"; cmake_quote_cond (erase_arg_s env path) ]
   | Yis_directory path ->
@@ -295,14 +295,15 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             values = List.map ~f:(erase_arg env) values;
             parent_scope;
           } )
-  | Yc_add_executable { name; sources } ->
+  | Yc_add_executable { name; exclude_from_all; sources } ->
       let env = try_declare_target env name in
+      let options = if exclude_from_all then [Lang_cmake.Ae_exclude_from_all] else [] in
       ( env,
         Project_cmd
           (Add_executable
              {
                name = erase_arg_s env name;
-               options = [];
+               options;
                sources = List.map ~f:(erase_arg_s env) sources;
              }) )
   | Yc_add_library { name; type_; exclude_from_all; sources } ->
@@ -319,6 +320,22 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
   | Yc_add_library_imported { name; lib_type; global } ->
       let env = try_declare_target env name in
       (env, Project_cmd (Add_library_imported { name = erase_arg_s env name; lib_type; global }))
+  | Yc_add_compile_definitions { defs } ->
+      List.iter defs ~f:(check_arg env);
+      (env, Project_cmd (Add_compile_definitions { defs = List.map defs ~f:(fun a -> Lang_cmake.Def_var (erase_arg_s env a)) }))
+  | Yc_add_compile_options { options } ->
+      List.iter options ~f:(check_arg env);
+      (env, Project_cmd (Add_compile_options { options_ = List.map ~f:(erase_arg_s env) options }))
+  | Yc_add_link_options { options } ->
+      List.iter options ~f:(check_arg env);
+      (env, Project_cmd (Add_link_options { options = List.map ~f:(erase_arg_s env) options }))
+  | Yc_link_directories { before; dirs } ->
+      List.iter dirs ~f:(check_arg env);
+      let ba = if before then Lang_cmake.Before else Lang_cmake.Default_order in
+      (match dirs with
+       | [] -> (env, Exp_list [])
+       | first :: rest ->
+         (env, Project_cmd (Link_directories { before_or_after = ba; directory = erase_arg_s env first; directories = List.map ~f:(erase_arg_s env) rest })))
   | Yc_target_include_directories { target; items } ->
       check_arg env target;
       List.iter items ~f:(check_items_with_kind env);
@@ -691,6 +708,17 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       ( env,
         Project_cmd
           (Target_link_options
+             {
+               target = erase_arg_s env target;
+               before;
+               items = List.map ~f:(erase_items_with_kind env) items;
+             }) )
+  | Yc_target_link_directories { target; before; items } ->
+      check_arg env target;
+      List.iter items ~f:(check_items_with_kind env);
+      ( env,
+        Project_cmd
+          (Target_link_directories
              {
                target = erase_arg_s env target;
                before;

@@ -139,6 +139,10 @@ cmake-only-check: dune-build-yelu
 	$(call check_yelu,find_path,$(CMO)/find_path/CMakeLists.txt)
 	$(call check_yelu,find_library,$(CMO)/find_library/CMakeLists.txt)
 	$(call check_yelu,select_library_configurations,$(CMO)/SelectLibraryConfigurations/CMakeLists.txt)
+	$(call check_yelu,project_include,$(CMO)/ProjectInclude/CMakeLists.txt)
+	$(call check_yelu,project_include,$(CMO)/ProjectIncludeAny/CMakeLists.txt)
+	$(call check_yelu,project_include_before,$(CMO)/ProjectIncludeBefore/CMakeLists.txt)
+	$(call check_yelu,project_include_before,$(CMO)/ProjectIncludeBeforeAny/CMakeLists.txt)
 	@bash -c 'if [ -f /tmp/tola-cmake-check-failures ]; then \
 	  echo "=== FAILED: $$(cat /tmp/tola-cmake-check-failures | tr "\n" " ")==="; \
 	  rm -f /tmp/tola-cmake-check-failures; \

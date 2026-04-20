@@ -89,28 +89,8 @@ let dump distro =
 let dump_graph _distro =
   let graph_dir = "_out/canary/graph" in
   ignore (Stdlib.Sys.command [%string "mkdir -p %{graph_dir}"]);
-  let configs = project_configs _distro in
-  (* Derived graphs from job specs *)
-  List.iter configs ~f:(fun cfg ->
-      let g = graph_of_job_specs cfg.job_specs in
-      let path = [%string "%{graph_dir}/%{cfg.name}.mmd"] in
-      write_file path (mermaid_of_graph g);
-      Fmt.pr "Wrote %s@." path);
-  (* Hardcoded reference graphs *)
-  let hardcoded =
-    [
-      ("z3", build_graph ~name:"z3" ~system_pm:Brew ~lang:OCaml);
-      ("sqlite3", build_graph ~name:"sqlite3" ~system_pm:Brew ~lang:OCaml);
-    ]
-  in
-  List.iter hardcoded ~f:(fun (name, g) ->
-      let path = [%string "%{graph_dir}/%{name}_reference.mmd"] in
-      write_file path (mermaid_of_graph g);
-      Fmt.pr "Wrote %s@." path);
-  (* Action rule schema diagram *)
   let path = [%string "%{graph_dir}/action_rule.mmd"] in
-  write_file path
-    (mermaid_of_action_rule_schema store_rules);
+  write_file path (mermaid_of_action_rule_schema store_rules);
   Fmt.pr "Wrote %s@." path
 
 let dump_job_paths_with ~pp =

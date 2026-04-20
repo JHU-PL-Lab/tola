@@ -130,14 +130,14 @@ let prebuilt_prebuilt_spec distro : job_spec =
           location = System_pm;
           requires = [];
           produces = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Pm_install None;
           location = Lang_pm;
           requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
           produces = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -149,21 +149,21 @@ let prebuilt_prebuilt_spec distro : job_spec =
           location = Lang_pm;
           requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
           produces = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = OCaml };
           location = Lang_pm;
           requires = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
           produces = [];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = Python };
           location = Lang_pm;
           requires = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
           produces = [];
-          expectation = Expect_success;
+
         };
       ];
     if_disabled = false;
@@ -208,57 +208,7 @@ let find_llvm_config_cmd =
 
 let llvm_python_probe ~output_dir =
   [%string
-    {|python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" 2>&1 | tee %{output_dir}/probe.log|}]
-
-(* ── Prebuilt script spec (fetch from PM, no source build) ── *)
-
-let prebuilt_script_spec : Canary_action.script_spec =
-  let pm = Canary_store.detect_pm () in
-  let binding_lib = llvm_ocaml_config.ocaml.binding_lib_name in
-  let target = llvm_ocaml_config.ocaml.example_target in
-  (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+). Against the prebuilt
-     LLVM 19 binding this will fail to compile — expected mismatch signal. *)
-  let example = "canary/examples/llvm/llvm_example_dev.ml" in
-  {
-    Canary_action.empty_script_spec with
-    fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
-    fetch_binding =
-      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
-    fetch_app =
-      Some
-        (fun ~output_dir ->
-          [%string
-            "(uv pip install llvmlite || pip install llvmlite || python3 -m \
-             pip install llvmlite) && echo 'installed' > %{output_dir}/app.ok"]);
-    probe_lib =
-      Some
-        (fun ~output_dir ->
-          [%string
-            {|LLVM_CONFIG=$(%{find_llvm_config_cmd}) && test -x "$LLVM_CONFIG" && "$LLVM_CONFIG" --version 2>&1 | tee %{output_dir}/probe.log|}]);
-    probe_binding =
-      [ (Lang_pm, (fun ~output_dir ->
-          let script = "canary/scripts/assert_binary_symbols.py" in
-          [%string
-            {|eval $(opam env)
-LLVM_CONFIG=$(%{find_llvm_config_cmd})
-test -x "$LLVM_CONFIG"
-PKG_DIR=$(ocamlfind query '%{binding_lib}' 2>/dev/null)
-test -n "$PKG_DIR"
-STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-PROVIDED=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
-test -n "$PROVIDED"
-for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
-  [ -f "$f" ] && printf '\n=== %s ===\n' "$f" && ocamlobjinfo "$f"
-done 2>&1 | tee %{output_dir}/archive.log
-python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
-  --symbol-prefix LLVM 2>&1 | tee %{output_dir}/symbols.log
-grep -q 'OK:' %{output_dir}/symbols.log
-LLVM_CONFIG="$LLVM_CONFIG" ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])) ];
-    probe_app = Some llvm_python_probe;
-  }
+    {|python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{output_dir}/probe.log 2>&1|}]
 
 (* ── Source build script spec (build LLVM + OCaml bindings from source) ── *)
 
@@ -397,7 +347,7 @@ CANARY_BUILD_DIR="%{build}" opam install -y %{llvm_dev_opam_pkg} \
              [%string
                {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 test -x "$LLVM_CONFIG"
-"$LLVM_CONFIG" --version 2>&1 | tee %{output_dir}/probe.log|}]));
+"$LLVM_CONFIG" --version > %{output_dir}/probe.log 2>&1|}]));
     probe_binding =
       List.filter_opt
         [
@@ -416,8 +366,8 @@ python3 %{script} --provided-lib %{build}/lib/libLLVM.so --required-lib "$STUB" 
 grep -q 'OK:' %{output_dir}/symbols.log
 LLVM_CONFIG=%{llvm_config} ocamlopt \
   -I %{pkg_dir} %{pkg_dir}/llvm.cmxa %{example} \
-  -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}])
+  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}])
            else None);
           (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
           Some
@@ -425,8 +375,8 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
               [%string
                 {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]);
+  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]);
         ];
     probe_app = Some llvm_python_probe;
     check_post =
@@ -449,13 +399,17 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg)
-      | Probe Binding ->
-          Some (Canary_artifact_check.check_markers [ "probe.log" ])
       | Publish Binding ->
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "pack.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
+    expectation =
+      (function
+      | Probe Binding when not source.has_build_binding ->
+          (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared *)
+          Expect_failure { contains_any = [ "Unbound constructor Opcode.UncondBr" ] }
+      | _ -> Expect_success);
   }
 
 (* ── Action steps ── *)

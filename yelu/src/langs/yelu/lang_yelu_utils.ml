@@ -96,14 +96,19 @@ let yc_project ?version ?(languages = []) name =
 let yc_set ?(parent_scope = false) (cvar : yelu_cvar) values =
   Yc_set { cvar; values; parent_scope }
 
-let add_exe ?(sources = []) name =
-  Yc_add_executable { name; sources }
+let add_exe ?(exclude_from_all = false) ?(sources = []) name =
+  Yc_add_executable { name; exclude_from_all; sources }
 
 let add_lib ?(exclude_from_all = false) ?type_ ?(sources = []) name =
   Yc_add_library { name; type_; exclude_from_all; sources }
 
 let add_lib_imported ?(global = false) ?lib_type name =
   Yc_add_library_imported { name; lib_type; global }
+
+let yc_add_compile_definitions defs = Yc_add_compile_definitions { defs }
+let yc_add_compile_options options = Yc_add_compile_options { options }
+let yc_add_link_options options = Yc_add_link_options { options }
+let yc_link_directories ?(before = false) dirs = Yc_link_directories { before; dirs }
 
 let include_dirs target items =
   Yc_target_include_directories { target; items }
@@ -230,6 +235,8 @@ let yc_separate_arguments ?(input) ~mode (cvar : yelu_cvar) = Yc_separate_argume
 let yc_separate_arguments_plain (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode = Lang_cmake.Sa_plain; input = None }
 let yc_target_link_options ?(before = false) target items =
   Yc_target_link_options { target; before; items }
+let yc_target_link_directories ?(before = false) target items =
+  Yc_target_link_directories { target; before; items }
 let yc_target_sources target items = Yc_target_sources { target; items }
 let yc_target_precompile_headers target items = Yc_target_precompile_headers { target; items }
 

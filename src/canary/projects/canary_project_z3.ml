@@ -90,19 +90,6 @@ let z3_project_spec distro (src : source_repo) : project_spec =
     can_package = true;
   }
 
-let missing_symbols =
-  [ "Z3_solver_register_on_clause"; "Z3_mk_seq_replace_all" ]
-
-let expected_symbol_failure =
-  Expect_failure_contains
-    {
-      contains_any = [ "undefined symbol"; "Z3_mk_u32string" ];
-      expected_returncode = None;
-    }
-
-let expected_python_failure =
-  Expect_failure_contains
-    { contains_any = missing_symbols; expected_returncode = Some 1 }
 
 let z3_ocaml_config : Canary_ocaml.ocaml_tool_config =
   {
@@ -204,7 +191,7 @@ let source_source_spec distro : job_spec =
           location = Build_tree;
           requires = [];
           produces = [];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -217,14 +204,14 @@ let source_source_spec distro : job_spec =
               { kind = Lib; name = "z3"; location = Build_tree };
               { kind = Binding; name = "z3"; location = Build_tree };
             ];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = OCaml };
           location = Build_tree;
           requires = [ { kind = Binding; name = "z3"; location = Build_tree } ];
           produces = [];
-          expectation = Expect_success;
+
         };
       ];
     if_disabled = true;
@@ -243,7 +230,7 @@ let prebuilt_source_spec distro : job_spec =
           location = System_pm;
           requires = [];
           produces = [ { kind = Lib; name = "z3"; location = System_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -254,7 +241,7 @@ let prebuilt_source_spec distro : job_spec =
           location = Build_tree;
           requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
           produces = [];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -263,7 +250,7 @@ let prebuilt_source_spec distro : job_spec =
           location = Build_tree;
           requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
           produces = [ { kind = Binding; name = "z3"; location = Build_tree } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = Python };
@@ -271,7 +258,6 @@ let prebuilt_source_spec distro : job_spec =
           requires =
             [ { kind = Binding; name = "z3-python"; location = Build_tree } ];
           produces = [];
-          expectation = expected_python_failure;
         };
       ];
     if_disabled = false;
@@ -291,7 +277,7 @@ let prebuilt_packaged_spec distro : job_spec =
           location = System_pm;
           requires = [];
           produces = [ { kind = Lib; name = "z3"; location = System_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -302,7 +288,7 @@ let prebuilt_packaged_spec distro : job_spec =
           location = Build_tree;
           requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
           produces = [];
-          expectation = Expect_success;
+
         };
         {
           kind =
@@ -311,21 +297,20 @@ let prebuilt_packaged_spec distro : job_spec =
           location = Build_tree;
           requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
           produces = [ { kind = Binding; name = "z3"; location = Build_tree } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Pm_install_local Opam;
           location = Lang_pm;
           requires = [ { kind = Binding; name = "z3"; location = Build_tree } ];
           produces = [ { kind = App; name = "z3"; location = Lang_pm } ];
-          expectation = Expect_success;
+
         };
         {
           kind = Probe_test { lang = OCaml };
           location = Lang_pm;
           requires = [ { kind = App; name = "z3"; location = Lang_pm } ];
           produces = [];
-          expectation = expected_symbol_failure;
         };
       ];
     if_disabled = false;
@@ -489,16 +474,16 @@ grep -q 'OK:' %{output_dir}/symbols.log
 eval $(opam env)
 ocamlfind ocamlopt -package zarith -linkpkg \
   -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa %{example} \
-  -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]))
+  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]))
          else None);
         (* Lang_pm: probe against opam-installed package *)
         Some (Lang_pm, (fun ~output_dir ->
           [%string
             {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target}
-%{output_dir}/%{target} 2>&1 | tee %{output_dir}/probe.log|}]));
+  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]));
       ];
     check_post =
       (function
@@ -519,11 +504,6 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg)
-      | Probe Binding ->
-          (* Used for both probe_binding_raw and probe_binding_pkg.
-             Raw writes symbols.log + probe.log; pkg writes probe.log.
-             check_markers handles both — extra missing file = fail. *)
-          Some (Canary_artifact_check.check_markers [ "probe.log" ])
       | _ -> None);
   }
 

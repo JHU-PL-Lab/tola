@@ -127,33 +127,6 @@ let symbols_undefined ~prefix lines =
           Some sym
       | _ -> None)
 
-type symbol_check_result = {
-  n_provided : int;
-  n_required : int;
-  missing : string list;
-}
-
-(* Cross-check: symbols required by required_libs must be provided by provided_lib.
-   Equivalent to canary/scripts/assert_binary_symbols.py but callable from OCaml. *)
-let check_symbols ~provided_lib ~required_libs ~prefix =
-  let provided =
-    run_nm provided_lib
-    |> symbols_defined ~prefix
-    |> List.dedup_and_sort ~compare:String.compare
-    |> Hash_set.of_list (module String)
-  in
-  let required =
-    List.concat_map required_libs ~f:(fun lib ->
-        run_nm lib |> symbols_undefined ~prefix)
-    |> List.dedup_and_sort ~compare:String.compare
-  in
-  let missing =
-    List.filter required ~f:(fun s -> not (Hash_set.mem provided s))
-  in
-  { n_provided = Hash_set.length provided;
-    n_required = List.length required;
-    missing
-  }
 
 (* ── Shell probe commands (write to output_dir, for probe steps) ── *)
 

@@ -145,7 +145,7 @@ type yelu_exp =
       languages : supported_lang list;
     }
   | Yc_set of { cvar : yelu_cvar; values : yarg list; parent_scope : bool }
-  | Yc_add_executable of { name : yarg; sources : yarg list }
+  | Yc_add_executable of { name : yarg; exclude_from_all : bool; sources : yarg list }
   | Yc_add_library of {
       name : yarg;
       type_ : library_type option;
@@ -153,6 +153,10 @@ type yelu_exp =
       sources : yarg list;
     }
   | Yc_add_library_imported of { name : yarg; lib_type : string option; global : bool }
+  | Yc_add_compile_definitions of { defs : yarg list }
+  | Yc_add_compile_options of { options : yarg list }
+  | Yc_add_link_options of { options : yarg list }
+  | Yc_link_directories of { before : bool; dirs : yarg list }
   | Yc_target_include_directories of {
       target : yarg;
       items : yelu_items_with_kind list;
@@ -270,6 +274,7 @@ type yelu_exp =
   | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
   | Yc_separate_arguments of { cvar : yelu_cvar; mode : Lang_cmake.separate_arguments_mode; input : yarg option }
   | Yc_target_link_options of { target : yarg; before : bool; items : yelu_items_with_kind list }
+  | Yc_target_link_directories of { target : yarg; before : bool; items : yelu_items_with_kind list }
   | Yc_target_sources of { target : yarg; items : yelu_items_with_kind list }
   | Yc_target_precompile_headers of { target : yarg; items : yelu_items_with_kind list }
   (* install *)

@@ -16,7 +16,6 @@ type project_config = {
 
 let verify_of_phase (config : project_config) (phase : step_phase) =
   let name = [%string "Verify: %{name_of_phase phase}"] in
-  let expectation = phase.expectation in
   match phase.kind with
   | Pm_install system_pkg -> (
       match phase.location with
@@ -32,14 +31,14 @@ let verify_of_phase (config : project_config) (phase : step_phase) =
                 }
             | None -> info.system_package
           in
-          verify_system_package_steps ~name ~expectation spec
+          verify_system_package_steps ~name spec
       | Lang_pm ->
           let info = prebuilt_info_exn config.ocaml in
-          verify_opam_install_spec_step ~name ~expectation info.opam_package_spec
+          verify_opam_install_spec_step ~name info.opam_package_spec
       | _ -> [])
   | Pm_install_local Opam ->
       let pkg = pkg_full config.ocaml.toolchain in
-      verify_opam_install_step ~name ~expectation pkg
+      verify_opam_install_step ~name pkg
   | Pm_install_local _ -> []
   | Cmake_buildgen _ | Cmake_build _ -> []
   | Probe_test _ -> []
@@ -82,29 +81,22 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
         match lang with
         | OCaml ->
             mk_ocaml_test_steps ~ocaml:config.ocaml
-              ~binding_location:phase.location
-              ~test_expectation:phase.expectation ()
+              ~binding_location:phase.location ()
         | Python ->
             let pkg = config.ocaml.ocaml.binding_lib_name in
             [
-              run_step ~name ~expectation:phase.expectation
+              run_step ~name
                 [%string
                   {|env PYTHONPATH="build/python" python3 -S -c "import %{pkg}; print(%{pkg}.__file__)"|}];
             ])
     | Run_command { name = _; command } ->
-        [ run_step ~name ~expectation:phase.expectation command ]
+        [ run_step ~name command ]
   in
   action_steps @ verify_of_phase config phase
-
-(* ── Job graph ── *)
-
-type graph_edge = artifact_op * artifact_node
 
 let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
     artifact_node =
   { a_kind; a_name; origin; a_location = location; built_from; runtime_dep }
-
-type job_graph = { nodes : artifact_node list; edges : graph_edge list }
 
 let string_of_artifact_kind = function
   | Source -> "source"
@@ -127,254 +119,6 @@ let rec node_tag (n : artifact_node) =
   match n.runtime_dep with
   | None -> with_built
   | Some rt -> [%string "%{with_built}[rt=%{node_tag rt}]"]
-
-let edges_of_nodes nodes =
-  let production_edges =
-    List.map nodes ~f:(fun n ->
-        let op =
-          if not (Poly.equal n.origin n.a_location) then Pack
-          else if is_source_location n.origin then Compile
-          else Fetch
-        in
-        (op, n))
-  in
-  let test_edges =
-    List.filter_map nodes ~f:(fun n ->
-        match n.a_kind with Lib | Binding | App -> Some (Test, n) | _ -> None)
-  in
-  { nodes; edges = production_edges @ test_edges }
-
-let build_graph ~name ~(system_pm : package_manager) ~lang =
-  ignore (system_pm, lang);
-  (* Entry: lib from source and lib from system PM *)
-  let n1 = mk_node Lib name ~origin:Build_tree ~location:Build_tree () in
-  let n2 = mk_node Lib name ~origin:System_pm ~location:System_pm () in
-  (* Binding compiled from source, linked against each lib *)
-  let n3a =
-    mk_node Binding name ~origin:Build_tree ~location:Build_tree ~built_from:n1
-      ()
-  in
-  let n3b =
-    mk_node Binding name ~origin:Build_tree ~location:Build_tree ~built_from:n2
-      ()
-  in
-  (* Build app: pair binding with runtime lib *)
-  let n4a =
-    mk_node App name ~origin:Build_tree ~location:Lang_pm ~built_from:n3a ()
-  in
-  let n4b =
-    mk_node App name ~origin:Build_tree ~location:Lang_pm ~built_from:n3b ()
-  in
-  (* Fetch prebuilt app from lang PM *)
-  let n5 = mk_node App name ~origin:Lang_pm ~location:Lang_pm () in
-  let nodes = [ n1; n2; n3a; n3b; n4a; n4b; n5 ] in
-  edges_of_nodes nodes
-
-(* ── Graph from job specs ── *)
-
-(* Derive origin of a produced artifact from the phase that produces it *)
-let origin_of_phase (phase : step_phase) =
-  match phase.kind with
-  | Pm_install _ -> phase.location (* fetched from where it lands *)
-  | Pm_install_local _ -> Build_tree (* built locally, moved to lang PM *)
-  | Cmake_buildgen _ | Cmake_build _ -> Build_tree
-  | Probe_test _ | Run_command _ -> Build_tree
-
-(* Find the most relevant dependency for built_from:
-   Binding depends on Lib, App depends on Binding *)
-let find_built_from (kind : artifact_kind) (env : artifact_node list) =
-  let find k = List.find env ~f:(fun n -> Poly.equal n.a_kind k) in
-  match kind with Binding -> find Lib | App -> find Binding | _ -> None
-
-(* Convert an artifact + context into an artifact_node *)
-let node_of_artifact ~origin ~(env : artifact_node list) (a : artifact) :
-    artifact_node =
-  let built_from = find_built_from a.kind env in
-  mk_node a.kind a.name ~origin ~location:a.location ?built_from ()
-
-(* Walk one job_spec's phases, accumulating nodes *)
-let nodes_of_job_spec (spec : job_spec) : artifact_node list =
-  let _env, all_nodes =
-    List.fold spec.phases ~init:([], []) ~f:(fun (env, acc) phase ->
-        let origin = origin_of_phase phase in
-        (* Resolve required artifacts to nodes already in env *)
-        let req_nodes =
-          List.filter_map phase.requires ~f:(fun req ->
-              List.find env ~f:(fun n ->
-                  Poly.equal n.a_kind req.kind
-                  && String.equal n.a_name req.name
-                  && Poly.equal n.a_location req.location))
-        in
-        (* Build nodes for produced artifacts; fold so earlier produces
-           are visible to later ones (e.g. Lib visible to Binding) *)
-        let produced_nodes =
-          List.fold phase.produces ~init:[] ~f:(fun built a ->
-              let env = req_nodes @ built in
-              built @ [ node_of_artifact ~origin ~env a ])
-        in
-        (env @ produced_nodes, acc @ produced_nodes))
-  in
-  all_nodes
-
-let graph_of_job_specs (specs : job_spec list) : job_graph =
-  let all_nodes =
-    List.concat_map specs ~f:nodes_of_job_spec
-    |> List.dedup_and_sort ~compare:(fun a b ->
-        String.compare (node_tag a) (node_tag b))
-  in
-  edges_of_nodes all_nodes
-
-let pp_node ppf (n : artifact_node) =
-  Fmt.pf ppf "%s %s  origin=%s  location=%s"
-    (string_of_artifact_kind n.a_kind)
-    n.a_name
-    (string_of_location n.origin)
-    (string_of_location n.a_location);
-  (match n.built_from with
-  | None -> ()
-  | Some dep -> Fmt.pf ppf "  built_from=%s" (node_tag dep));
-  match n.runtime_dep with
-  | None -> ()
-  | Some rt -> Fmt.pf ppf "  runtime=%s" (node_tag rt)
-
-let string_of_artifact_op = function
-  | Compile -> "compile"
-  | Fetch -> "fetch"
-  | Pack -> "pack"
-  | Test -> "test"
-
-let pp_edge ppf ((op, n) : graph_edge) =
-  Fmt.pf ppf "%s -> %a" (string_of_artifact_op op) pp_node n
-
-let pp_graph ppf (g : job_graph) =
-  Fmt.pf ppf "Nodes:@.";
-  List.iter g.nodes ~f:(fun n -> Fmt.pf ppf "  %a@." pp_node n);
-  Fmt.pf ppf "Edges:@.";
-  List.iter g.edges ~f:(fun e -> Fmt.pf ppf "  %a@." pp_edge e);
-  ()
-
-(* ── Mermaid rendering ── *)
-
-let rec mermaid_id (n : artifact_node) =
-  let kind = string_of_artifact_kind n.a_kind in
-  let name = String.substr_replace_all n.a_name ~pattern:"-" ~with_:"_" in
-  let loc =
-    match n.a_location with
-    | Build_tree -> "bt"
-    | System_pm -> "spm"
-    | Lang_pm -> "lpm"
-    | Wild s -> s
-  in
-  let base = [%string "%{kind}_%{name}_%{loc}"] in
-  let with_built =
-    match n.built_from with
-    | None -> base
-    | Some dep -> [%string "%{base}__%{mermaid_id dep}"]
-  in
-  match n.runtime_dep with
-  | None -> with_built
-  | Some rt -> [%string "%{with_built}__rt_%{mermaid_id rt}"]
-
-let mermaid_label (n : artifact_node) =
-  let kind = string_of_artifact_kind n.a_kind in
-  let name = n.a_name in
-  let origin = string_of_location n.origin in
-  let loc = string_of_location n.a_location in
-  let base =
-    match n.built_from with
-    | None ->
-        [%string "%{kind} %{name}<br/>origin=%{origin}<br/>location=%{loc}"]
-    | Some dep ->
-        [%string
-          "%{kind} \
-           %{name}<br/>origin=%{origin}<br/>location=%{loc}<br/>built_from=%{node_tag \
-           dep}"]
-  in
-  match n.runtime_dep with
-  | None -> base
-  | Some rt -> [%string "%{base}<br/>runtime=%{node_tag rt}"]
-
-let mermaid_label_brief (n : artifact_node) =
-  let origin_tag n = if is_source_location n.origin then "src" else "store" in
-  let dep_label dep =
-    let dk = string_of_artifact_kind dep.a_kind in
-    [%string "%{dk} %{dep.a_name}@%{origin_tag dep}"]
-  in
-  let kind = string_of_artifact_kind n.a_kind in
-  let name = n.a_name in
-  let base = [%string "%{kind} %{name}"] in
-  let with_built =
-    match n.built_from with
-    | None -> base
-    | Some dep -> [%string "%{base}<br/>(%{dep_label dep})"]
-  in
-  match n.runtime_dep with
-  | None -> with_built
-  | Some rt -> [%string "%{with_built}<br/>rt: %{dep_label rt}"]
-
-let mermaid_of_graph ?(brief = false) (g : job_graph) =
-  let label_fn = if brief then mermaid_label_brief else mermaid_label in
-  let buf = Buffer.create 1024 in
-  let add s =
-    Buffer.add_string buf s;
-    Buffer.add_char buf '\n'
-  in
-  add "graph TD";
-  (* Nodes *)
-  List.iter g.nodes ~f:(fun n ->
-      let id = mermaid_id n in
-      let label = label_fn n in
-      add [%string "    %{id}[\"%{label}\"]"]);
-  add "";
-  (* Edges *)
-  List.iter g.edges ~f:(fun ((op, n) : graph_edge) ->
-      let id = mermaid_id n in
-      match op with
-      | Compile -> (
-          add [%string "    SRC -->|compile| %{id}"];
-          match n.built_from with
-          | None -> ()
-          | Some dep -> add [%string "    %{mermaid_id dep} -->|link| %{id}"])
-      | Fetch ->
-          let src =
-            match n.origin with
-            | System_pm -> "system_pm"
-            | Lang_pm -> "lang_pm"
-            | Build_tree -> "source"
-            | Wild s -> s
-          in
-          add [%string "    %{src} -->|fetch| %{id}"]
-      | Pack -> (
-          (match n.built_from with
-          | Some input ->
-              add [%string "    %{mermaid_id input} -->|package| %{id}"]
-          | None -> add [%string "    ??? -->|package| %{id}"]);
-          match n.runtime_dep with
-          | Some rt -> add [%string "    %{mermaid_id rt} -.->|runtime| %{id}"]
-          | None -> ())
-      | Test ->
-          let probe_id = [%string "P_%{id}"] in
-          add [%string "    %{id} -->|probe| %{probe_id}((test))"]);
-  add "";
-  (* Style classes *)
-  let libs, rest =
-    List.partition_tf g.nodes ~f:(fun n ->
-        match n.a_kind with Lib -> true | _ -> false)
-  in
-  let bindings, pkgs =
-    List.partition_tf rest ~f:(fun n ->
-        match n.a_kind with Binding -> true | _ -> false)
-  in
-  let id_list ns = List.map ns ~f:mermaid_id |> String.concat ~sep:"," in
-  add "    classDef lib fill:#e8f5e9,stroke:#4caf50";
-  add "    classDef binding fill:#e3f2fd,stroke:#2196f3";
-  add "    classDef pkg fill:#fff3e0,stroke:#ff9800";
-  add "    classDef probe fill:#fce4ec,stroke:#e91e63";
-  if not (List.is_empty libs) then add [%string "    class %{id_list libs} lib"];
-  if not (List.is_empty bindings) then
-    add [%string "    class %{id_list bindings} binding"];
-  if not (List.is_empty pkgs) then add [%string "    class %{id_list pkgs} pkg"];
-  Buffer.contents buf
 
 (* ── Action rule ──
    Rules are typed actions: each variant has implicit input/output sorts.
@@ -429,18 +173,6 @@ let store_rules =
     Publish Lib;
     Publish Binding;
     Publish App;
-    Probe Lib;
-    Probe Binding;
-    Probe App;
-  ]
-
-let store_rules_no_pack =
-  [
-    Build_lib;
-    Fetch Lib;
-    Build_binding;
-    Fetch Binding;
-    Fetch App;
     Probe Lib;
     Probe Binding;
     Probe App;
@@ -502,7 +234,6 @@ let nodes_of_action_rule (ar : action_rule) =
   |> List.dedup_and_sort ~compare:(fun a b ->
       String.compare (node_tag a) (node_tag b))
 
-let job_graph_of_action_rule ar = edges_of_nodes (nodes_of_action_rule ar)
 
 (* ── Job path table ──
    Each artifact node in the pools has a provenance chain (built_from,

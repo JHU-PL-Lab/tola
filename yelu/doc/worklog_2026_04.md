@@ -104,3 +104,63 @@ and gets auto-quoted by the compiler due to the `$<` prefix check.
 | `cmake_path`                   | New `cmake_path_cmd` sum type in cmake AST with 20 constructors; `pp_cmake_path` in PP; full yelu AST + compile + utils; 30 unit tests covering all subcommands |
 
 Total: 173 unit tests. `block_exp.body` fix was a real AST gap (PP was emitting empty block bodies).
+
+---
+
+## RunCMake compat + yelu pairs expansion — Y1 + Tier 3 (done 2026-04-19)
+
+**Goal**: wire RunCMake tests into dune, add yelu pairs across all tractable script-mode dirs,
+complete CMakeOnly showcase coverage, add stderr alignment checking.
+
+### Y1 — File API test alias
+
+`cmake_file_api_cmp.py` now runs under `dune test` via `dune build @yelu/test/test-file-api/file-api-test`.
+Key fixes:
+- `(glob_files ../../src/bin/yelu/*.exe)` + `(promote (until-clean))` — dune sandbox isolation
+  (sandbox only exposes declared deps; promoted exes are in the source tree, visible as glob deps)
+- `(setenv TOLA %{workspace_root})` — gives the Python script a stable root path
+- `run_file_api.py` uses source-tree promoted exes (not `_build/` path)
+All 12 step pairs pass File API comparison.
+
+### ProjectInclude* CMakeOnly showcases
+
+2 new yelu programs (`project_include.ml`, `project_include_before.ml`) cover all 4 suites
+(ProjectInclude, ProjectIncludeAny, ProjectIncludeBefore, ProjectIncludeBeforeAny).
+Any/non-Any variants share CMakeLists content — only the cmake configure flags differ.
+CMakeOnly showcase count: 8/12 → 12/12. All pass `make cmake-only-check`.
+
+### RunCMake compat — include (8 tests)
+
+Added `include` group: EmptyString, EmptyStringOptional, CMP0146-OLD/-WARN, CMP0148-Interp-OLD/-WARN, CMP0148-Libs-OLD/-WARN.
+EmptyString/Optional upgraded to also assert the key warning appears in stderr (`check_stderr_matches`).
+
+### RunCMake yelu pairs — math/list/string/foreach/message + cmake_path (36 → 48)
+
+Added 12 new pairs across 5 compat dirs:
+
+| Dir       | Pairs added                                 |
+| --------- | ------------------------------------------- |
+| `math`    | ops (OUTPUT_FORMAT inline), Overflow        |
+| `list`    | JOIN, SORT, POP_BACK, POP_FRONT, PREPEND    |
+| `string`  | Concat, Append, Join, Hex, Uuid, Repeat     |
+| `foreach` | range (inline), in (inline)                 |
+| `message` | newline (inline), indent                    |
+
+cmake_path pairs: 6 → 18 (added SET, ABSOLUTE_PATH, APPEND_STRING, IS_RELATIVE, IS_PREFIX, HAS_ITEM, HASH, RELATIVE_PATH, REMOVE_EXTENSION, REPLACE_FILENAME, CONVERT, NATIVE_PATH).
+
+### stderr alignment checking (50th pair — include EmptyString/Optional)
+
+New infrastructure in `cmake_runner.ml`:
+- `normalize_cmake_filepath s` — replaces any `*.cmake` path with `<cmake>` for comparison
+- `check_stderr_normalized ref yelu text` — compares normalized stderr between two runs
+
+New test helper `check_pair_text_stderr` in `test_runcmake_yelu.ml` — like `check_pair_text` but
+also checks stderr equality after filepath normalization. Used for negative-path tests that produce
+warnings with no stdout (EmptyString, EmptyStringOptional).
+
+Key insight: the `-stderr.txt` pattern files from RunCMake assume a CMakeLists.txt call stack
+(the CTest framework runs scripts via `include()` from a parent). Running in `-P` mode directly
+has no parent, so the call stack differs. Fix: compare normalized stderr between two `-P` mode
+runs (ref inline cmake vs yelu cmake) rather than matching against the upstream pattern files.
+
+Total pairs: 50. Compat tests: 62.

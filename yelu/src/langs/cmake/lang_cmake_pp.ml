@@ -109,7 +109,7 @@ let string_of_separate_arguments_mode = function
 let pp_separate_arguments_mode =
   Fmt.using string_of_separate_arguments_mode Fmt.string
 
-let string_of_before_or_after = function Before -> "BEFORE" | After -> "AFTER"
+let string_of_before_or_after = function Before -> "BEFORE" | After -> "AFTER" | Default_order -> ""
 let pp_before_or_after = Fmt.using string_of_before_or_after Fmt.string
 
 
@@ -961,10 +961,15 @@ and pp_project_cmd ff cmd =
           (pp_list_with_key "LANGUAGES" string)
           languages)
   | Add_executable { name; options; sources } ->
-      Fmt.(
-        pf ff "add_executable(%a %a%a)" string name
-          (list_sp pp_add_executable_option)
-          options (list_sp pp_source) sources)
+      let option_str o = match o with
+        | Ae_win32 -> "WIN32" | Ae_macos_bundle -> "MACOSX_BUNDLE"
+        | Ae_exclude_from_all -> "EXCLUDE_FROM_ALL"
+      in
+      let opts_str = match options with
+        | [] -> ""
+        | _ -> " " ^ String.concat ~sep:" " (List.map ~f:option_str options)
+      in
+      Fmt.(pf ff "add_executable(%a%s %a)" string name opts_str (list_sp pp_source) sources)
   | Add_executable_imported { name; global } ->
       Fmt.(
         pf ff "add_executable(%a IMPORTED%a)" string name (pp_flag "GLOBAL")
@@ -1031,7 +1036,7 @@ and pp_project_cmd ff cmd =
   | Target_link_directories { target; before; items } ->
       Fmt.(
         pf ff "target_link_directories(%a%s@[<2>%a@])" pp_target target
-          (if before then " BEFORE" else "")
+          (if before then " BEFORE " else " ")
           (list_sp pp_args_with_kind)
           items)
   | Target_link_options { target; before; items } ->
@@ -1170,9 +1175,11 @@ and pp_project_cmd ff cmd =
           regex_complain)
   (* link *)
   | Link_directories { before_or_after; directory; directories } ->
-      Fmt.(
-        pf ff "link_directories(%a %a %a)" pp_before_or_after before_or_after
-          string directory (list_sp string) directories)
+      let kw_pfx = match before_or_after with
+        | Default_order -> ""
+        | ba -> string_of_before_or_after ba ^ " "
+      in
+      Fmt.(pf ff "link_directories(%s%s %a)" kw_pfx directory (list_sp string) directories)
   | Link_libraries { groups } ->
       Fmt.(pf ff "link_libraries(%a)" (list_sp pp_link_library_group) groups)
   (* export *)

@@ -16,10 +16,11 @@ Exit code: 0 if all steps pass, 1 if any fail.
 
 import os, shutil, subprocess, sys, tempfile
 
-TOLA = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+TOLA = os.environ.get("TOLA") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
 FIXTURES = os.path.join(TOLA, "yelu", "test", "fixtures", "tutorial")
 CMP = os.path.join(TOLA, "yelu", "test", "cmake_file_api_cmp.py")
-BUILD = os.path.join(TOLA, "_build", "default", "yelu", "src", "bin")
+# Both cmake and yelu step exes are promoted to their source directories.
+BUILD = os.path.join(TOLA, "yelu", "src", "bin")
 
 
 def exe(subdir, name):

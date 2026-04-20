@@ -25,7 +25,7 @@ type description = arg
 type cache_entry = Cache_entry
 
 type cache_type = Ct_bool | Ct_filepath | Ct_path | Ct_string | Ct_internal
-type before_or_after = Before | After
+type before_or_after = Before | After | Default_order
 type depend = string
 type comment = string
 type doc = string

@@ -26,29 +26,29 @@ plans for GH CI).
 
 ### Key source files
 
-| File                                   | Purpose                                                           |
-| -------------------------------------- | ----------------------------------------------------------------- |
-| `src/canary/canary.ml`                 | Core types, action rules, 14-pattern table, diagram generation    |
-| `src/canary/canary_action.ml`          | `script_spec`, `derive_steps`, runner, text log, shared templates |
-| `src/bin/canary_main.ml`               | CLI entry point; `run_llvm` runs llvm+llvm/19, `run_z3` runs z3+z3/stable |
-| `src/canary/canary_basic.ml`           | `artifact_kind`, `kind_order`, `project_spec`                     |
-| `src/canary/canary_store.ml`           | `location`, `package_manager`, `source_repo`, `distro` types      |
-| `src/canary/canary_ocaml.ml`           | OCaml toolchain types, opam packaging, probe generation           |
-| `src/canary/canary_artifact_check.ml`  | Artifact existence checks, nm symbol inspection, check_post       |
-| `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec`                       |
-| `src/canary/projects/canary_project_z3.ml`     | z3 project spec + `script_spec`; `z3_source_stable` has `has_build_binding=false` |
-| `src/canary/projects/canary_project_llvm.ml`   | LLVM project spec + `script_spec`; `llvm_source_stable` has local path + `has_build_binding=false` |
-| `src/canary/projects/canary_run.ml`            | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable |
-| `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                          |
-| `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared |
-| `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding    |
-| `canary/examples/llvm/llvm_example_15.ml`      | LLVM ≤15 example (global_context); fails against LLVM 16+  |
+| File                                           | Purpose                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/canary/canary.ml`                         | Core types, action rules, 14-pattern table, diagram generation                                        |
+| `src/canary/canary_action.ml`                  | `script_spec`, `derive_steps`, runner, text log, shared templates                                     |
+| `src/bin/canary_main.ml`                       | CLI entry point; `run_llvm` runs llvm+llvm/19, `run_z3` runs z3+z3/stable                             |
+| `src/canary/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`                                                         |
+| `src/canary/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro` types                                          |
+| `src/canary/canary_ocaml.ml`                   | OCaml toolchain types, opam packaging, probe generation                                               |
+| `src/canary/canary_artifact_check.ml`          | Artifact existence checks, nm symbol inspection, check_post                                           |
+| `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec`                                                                  |
+| `src/canary/projects/canary_project_z3.ml`     | z3 project spec + `script_spec`; `z3_source_stable` has `has_build_binding=false`                     |
+| `src/canary/projects/canary_project_llvm.ml`   | LLVM project spec + `script_spec`; `llvm_source_stable` has local path + `has_build_binding=false`    |
+| `src/canary/projects/canary_run.ml`            | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                              |
+| `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                     |
+| `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                      |
+| `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                               |
+| `canary/examples/llvm/llvm_example_15.ml`      | LLVM ≤15 example (global_context); fails against LLVM 16+                                             |
 | `canary/templates/opam-local-repo/`            | Local opam packages: z3.dev, llvm.dev-shared, llvm.19-shared, llvm.19-static, conf-llvm-shared.dev/19 |
-| `canary/scripts/assert_binary_symbols.py`      | nm-based symbol compat check                               |
-| `doc/canary/design.md`                 | Design doc: pattern table, store config, execution model          |
-| `doc/canary/install_target_survey.md`  | Z3 vs LLVM cmake install patterns; informs TODO #25               |
-| `doc/canary/llvm_build_note.md`        | LLVM source build steps, smoke test, opam install notes           |
-| `doc/canary/backlog.md`                | Lower-priority TODOs (#5, #9–#11, #13b, #14, #16–#18, #22)       |
+| `canary/scripts/assert_binary_symbols.py`      | nm-based symbol compat check                                                                          |
+| `doc/canary/design.md`                         | Design doc: pattern table, store config, execution model                                              |
+| `doc/canary/install_target_survey.md`          | Z3 vs LLVM cmake install patterns; informs TODO #25                                                   |
+| `doc/canary/llvm_build_note.md`                | LLVM source build steps, smoke test, opam install notes                                               |
+| `doc/canary/backlog.md`                        | Lower-priority TODOs (#5, #9–#11, #13b, #14, #16–#18, #22)                                            |
 
 ### Architecture in one paragraph
 
@@ -68,10 +68,10 @@ probes with the dev example to demonstrate version mismatch detection.
 
 `canary action llvm` runs two sequential sub-runs sharing one opam switch:
 
-| Sub-run | Source | Lib | Binding | Example | Expected |
-|---------|--------|-----|---------|---------|----------|
-| `llvm` | dev (ninja) | dev libLLVM.so | `llvm.dev-shared` (packed) | `llvm_example_dev.ml` | pass |
-| `llvm/19` | local path (no build) | `llvm-19-dev` (apt) | `llvm.19-shared` (opam) | `llvm_example_dev.ml` | **fail — Opcode.UncondBr unbound** |
+| Sub-run   | Source                | Lib                 | Binding                    | Example               | Expected                           |
+| --------- | --------------------- | ------------------- | -------------------------- | --------------------- | ---------------------------------- |
+| `llvm`    | dev (ninja)           | dev libLLVM.so      | `llvm.dev-shared` (packed) | `llvm_example_dev.ml` | pass                               |
+| `llvm/19` | local path (no build) | `llvm-19-dev` (apt) | `llvm.19-shared` (opam)    | `llvm_example_dev.ml` | **fail — Opcode.UncondBr unbound** |
 
 `llvm_example_dev.ml` uses `Opcode.UncondBr` (added in LLVM 21, March 2026
 commit #186176 — `br` split into `uncondbr+condbr`). Against `llvm.19-shared`

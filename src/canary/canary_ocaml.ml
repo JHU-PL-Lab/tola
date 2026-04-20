@@ -51,7 +51,6 @@ type ocaml_test_case = {
   probe_action : probe_action;
   mode : compile_mode;
   binding_location : location;
-  expectation : step_expectation;
 }
 
 type ocaml_test_context = {
@@ -216,35 +215,35 @@ let install_system_dep_steps ~name opam_spec pkg1 pkg2 =
 let install_system_package_steps ~name opam_spec (spec : system_package_spec) =
   install_system_dep_steps ~name opam_spec spec.linux_pkg spec.macos_pkg
 
-let verify_system_install_steps ~name ~expectation pkg1 pkg2 =
+let verify_system_install_steps ~name pkg1 pkg2 =
   [
     run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
-      ~shell:"bash" ~expectation
+      ~shell:"bash"
       (Canary_store.verify_system_install_cmd Apt
          (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
     run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
-      ~shell:"bash" ~expectation
+      ~shell:"bash"
       (Canary_store.verify_system_install_cmd Brew
          (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
   ]
 
-let verify_system_package_steps ~name ~expectation (spec : system_package_spec) =
+let verify_system_package_steps ~name (spec : system_package_spec) =
   [
     run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
-      ~shell:"bash" ~expectation
+      ~shell:"bash"
       (Canary_store.verify_system_install_cmd Apt spec);
     run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
-      ~shell:"bash" ~expectation
+      ~shell:"bash"
       (Canary_store.verify_system_install_cmd Brew spec);
   ]
 
-let verify_opam_install_step ~name ~expectation package =
+let verify_opam_install_step ~name package =
   let spec = mk_opam_package_spec ~install_name:package () in
-  [ run_step ~name ~expectation
+  [ run_step ~name
       [%string "%{opam_env_prefix spec} && opam list %{spec.install_name} --short"] ]
 
-let verify_opam_install_spec_step ~name ~expectation spec =
-  [ run_step ~name ~expectation
+let verify_opam_install_spec_step ~name spec =
+  [ run_step ~name
       [%string "%{opam_env_prefix spec} && opam list %{spec.install_name} --short"] ]
 
 let export_dyld_envar on =
@@ -300,8 +299,7 @@ let command_of_test_case (ctx : ocaml_test_context) = function
       | Bytecode -> run_example_bytecode_cmd from_source target
       | Native -> run_example_native_cmd from_source target)
 
-let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~binding_location
-    ?(test_expectation = Expect_success) () =
+let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~binding_location () =
   let example_name = ocaml.ocaml.example_name in
   let from_source = is_source_location binding_location in
   let variant_suffix =
@@ -321,15 +319,10 @@ let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~binding_location
     }
   in
   List.map all_cc_and_modes ~f:(fun (mode, probe_action) ->
-      let exp =
-        match (probe_action, mode) with
-        | Compile_example, Bytecode -> Expect_success
-        | _ -> test_expectation
-      in
       let verb = verb_of_probe_action probe_action in
       let suffix = display_suffix_of_mode mode in
       let name =
         [%string "%{verb} %{example_name}%{variant_suffix}%{suffix}"]
       in
-      let tc = { probe_action; mode; binding_location; expectation = exp } in
-      run_step ~name ~expectation:exp (command_of_test_case ctx tc))
+      let tc = { probe_action; mode; binding_location } in
+      run_step ~name (command_of_test_case ctx tc))
