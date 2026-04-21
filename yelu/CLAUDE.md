@@ -256,12 +256,9 @@ Y1, Y9, Y10 — see `doc/worklog_2026_04.md`.
   `cmake_runner.ml`'s `cmake_env` overrides with `CLICOLOR_FORCE=0` for all cmake
   subprocesses. The `message/newline` RunCMake compat test remains blocked — the
   override is insufficient on some configurations; see `doc/yelu_infra_test.md` blockers.
-- **cmake runtime vs vendor source version mismatch**: Installed cmake is 3.28.3
-  (`/usr/bin/cmake`, Ubuntu 24.04 apt max). Vendor source is cmake 4.3. All conf-run
-  and script-mode tests run against 3.28. Everything currently implemented (cmake_path,
-  block, cmake_language) is ≤3.25, so 3.28 covers all active tests. Upgrade needed
-  when cmake_policy CMP0186 (4.1) work starts. Upgrade path: Kitware apt repo —
-  `curl -fsSL https://apt.kitware.com/kitware-archive.sh | sudo bash && sudo apt install cmake`.
+- **cmake runtime matches vendor source**: Both are cmake 4.3.1 (`/usr/bin/cmake`,
+  Kitware apt). Previously 3.28.3; upgrading unblocked `cmake_path GET`,
+  `message/newline`, `string/RegexEmptyMatch`, and `get_filename_component KnownComponents`.
 
 ## Handoff Workflow
 

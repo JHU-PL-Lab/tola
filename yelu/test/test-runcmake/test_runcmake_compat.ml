@@ -64,14 +64,14 @@ let () =
         check "Append"   (script_dir "string");
         check "Join"     (script_dir "string");
         check "Hex"      (script_dir "string");
-        check "Uuid"     (script_dir "string");
-        check "Repeat"   (script_dir "string") ]);
+        check "Uuid"            (script_dir "string");
+        check "Repeat"          (script_dir "string");
+        (* CMP0186 NEW is default in cmake 4.1+; regex zero-length match now well-defined *)
+        check "RegexEmptyMatch" (script_dir "string") ]);
       ("foreach", [
         check "foreach-all-test" (script_dir "foreach") ]);
       ("message", [
-        (* newline: blocked — cmake emits ANSI reset codes (\x1b[0m) around message()
-           output when CLICOLOR_FORCE is set; hex-encoded stderr comparison fails.
-           Root cause not fully resolved; tracked in language_coverage.md blockers. *)
+        check "newline"          (script_dir "message");
         check "message-indent"   (script_dir "message") ]);
       ("variable_watch", [
         check "ModifiedAccess"       (script_dir "variable_watch");
@@ -85,7 +85,7 @@ let () =
         check_cmake_path "APPEND_STRING";
         check_cmake_path "COMPARE";
         check_cmake_path "CONVERT";
-        (* GET: fails on cmake 3.28 — STEM("..")="." differs from 4.3 *)
+        check_cmake_path "GET";
         check_cmake_path "HASH";
         check_cmake_path "HAS_ITEM";
         check_cmake_path "IS_ABSOLUTE";
@@ -137,4 +137,7 @@ let () =
         check "CMP0148-Interp-WARN"  (script_dir "include");
         check "CMP0148-Libs-OLD"     (script_dir "include");
         check "CMP0148-Libs-WARN"    (script_dir "include") ]);
+      ("get_filename_component", [
+        (* KnownComponents: was blocked on CMP0057 OLD (IN_LIST) on 3.28; passes on 4.3 *)
+        check "KnownComponents" (script_dir "get_filename_component") ]);
     ]

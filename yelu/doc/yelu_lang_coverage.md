@@ -2,14 +2,16 @@
 
 ## Current State
 
-193 unit tests + 23 configure tests + 61 RunCMake compat + 50 RunCMake yelu pairs + 12/12 CMakeOnly showcases + 26 build-level passing: 11 CMakeCommands (`target_link_*`, `add_compile_*`, `link_directories`, `target_sources`, `target_include_directories`) + 15 Group 2/3/5 (Simple, LinkLine, LinkLineOrder, OutName, LibName, LinkStatic, CompileDefinitions, TargetName, PositionIndependentTargets, AliasTarget, CxxOnly, **CompileOptions**, **CustomCommand**, **ObjectLibrary**, **Visibility**). SubDir/SubDirSpaces blocked.
+193 unit tests + 23 configure tests + 64 RunCMake compat + 50 RunCMake yelu pairs + 12/12 CMakeOnly showcases + 26 build-level passing: 11 CMakeCommands (`target_link_*`, `add_compile_*`, `link_directories`, `target_sources`, `target_include_directories`) + 15 Group 2/3/5 (Simple, LinkLine, LinkLineOrder, OutName, LibName, LinkStatic, CompileDefinitions, TargetName, PositionIndependentTargets, AliasTarget, CxxOnly, **CompileOptions**, **CustomCommand**, **ObjectLibrary**, **Visibility**). SubDir/SubDirSpaces blocked.
+
+Runtime: cmake 4.3.1 (`/usr/bin/cmake`, Kitware apt).
 
 | Suite                    | Done       | Ceiling   |
 | ------------------------ | ---------- | --------- |
 | `text` unit tests        | ~193       | unbounded |
 | `text` cmake-check       | 24 / 24    | 24 ✓      |
 | `text` cmake-only-check  | 12 / 12    | 12 ✓      |
-| `script` compat          | 61 / ~65   | ~65       |
+| `script` compat          | 64 / ~67   | ~67       |
 | `script-pair`            | 50 / ~65   | ~65       |
 | `configure`              | 23 / ~30   | ~30       |
 | `build`                  | 26 / ~30   | ~30       |
@@ -28,7 +30,7 @@
 | `include` ParentVariable*       | Tests `CMAKE_PARENT_LIST_FILE` tracking through include chains — needs multi-file test fixture infra               | Blocked |
 | `foreach-all-test` pair         | Upstream uses ITEMS-before-LISTS ordering; PP always emits LISTS-first; needs PP extension or remain compat-only   | Blocked |
 
-Realistic ceiling: ~65 tractable scripts from ~15 dirs.
+Realistic ceiling: ~67 tractable scripts from ~15 dirs.
 
 ---
 
@@ -203,7 +205,7 @@ groups them by tractability for `check_build_pair` coverage.
 | Directory              | Structure                           | Status                                         |
 | ---------------------- | ----------------------------------- | ---------------------------------------------- |
 | `Tests/CMakeOnly/`     | Full CMakeLists.txt, NONE compiler  | ✓ 12/12 done (`file-api`)                      |
-| `Tests/RunCMake/`      | Per-command `.cmake` snippets, NONE | ✓ 61 compat + 50 pairs done (1 blocked: message/newline)                    |
+| `Tests/RunCMake/`      | Per-command `.cmake` snippets, NONE | ✓ 64 compat + 50 pairs done                                                 |
 | `Tests/CMakeCommands/` | 12 subdirs, one command each, ~50 L | ✓ 11/12 done; `target_link_libraries` deferred |
 
 ### Group 2 — New tractable (small, focused, C/CXX)
@@ -249,9 +251,9 @@ All commands covered by the typed yelu API. No `yc_quote_cmd` needed.
 
 | Directory             | Lines | Blocker                                                                                             |
 | --------------------- | ----- | --------------------------------------------------------------------------------------------------- |
-| `EmptyLibrary`        | 4     | cmake 3.28 rejects `add_library(test test.h)` (no linker language)                                 |
-| *(cmake < 3.30)*      | —     | `$<C_COMPILER_FRONTEND_VARIANT>` and similar 3.30+ genex; `Tests/CompileOptions/` used `check_build_yelu` as workaround but the full reference comparison is blocked until cmake upgrade (Kitware apt → 3.30+) |
-| `ObjectLibrary/Transitive` | — | `target_link_libraries(FooObject2 INTERFACE FooStatic)` — OBJECT INTERFACE dep propagation differs cmake 3.28 vs 4.3; subdir dropped from test |
+| `EmptyLibrary`        | 4     | cmake 4.3 still requires a linker language — `add_library(test test.h)` (header-only) rejected      |
+| `Tests/CompileOptions/` | —   | `check_build_yelu` workaround no longer needed (cmake 4.3 available); upgrade to `check_build_pair` pending |
+| `ObjectLibrary/Transitive` | — | OBJECT INTERFACE dep propagation — needs re-verification on 4.3; subdir was dropped for 3.28 compat |
 | `SubDir`              | 50    | `Executable/CMakeLists.txt` hardcodes `string(FIND ... "SubDir/Executable" ...)` — CTest path only |
 | `SubDirSpaces`        | 76    | shares SubDir blocker                                                                               |
 | `CompatibleInterface` | 243   | `include(GenerateExportHeader)` + `generate_export_header()` throughout                            |
@@ -264,7 +266,7 @@ All commands covered by the typed yelu API. No `yc_quote_cmd` needed.
 | Directory        | Blocker                                                  |
 | ---------------- | -------------------------------------------------------- |
 | `PolicyScope`    | `cmake_policy(PUSH/POP/SET)` — Y11 design blocked        |
-| `StringFileTest` | `string(REGEX QUOTE)` requires cmake ≥3.29; we have 3.28 |
+| `StringFileTest` | `string(REGEX QUOTE)` — now available (4.3); needs `Sc_regex_quote` in AST + PP + yelu layer |
 | `TryCompile`     | `try_compile` needs compiler at configure time           |
 
 ### Group 7 — cmake infrastructure (different domain)
@@ -333,7 +335,7 @@ gaps:
 
 Full directory listing: `yelu/vendor/cmake/Tests/RunCMake/`.
 
-### Tiers 1–3 — all ✓ (61 compat + 50 pairs; see `doc/worklog_2026_04.md` for details)
+### Tiers 1–3 — all ✓ (64 compat + 50 pairs; see `doc/worklog_2026_04.md` for details)
 
 | Tier | RunCMake commands covered                                                                                                                                                              | Status |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
@@ -355,19 +357,20 @@ but their RunCMake test scripts cannot serve as automated equivalence benchmarks
 | `file` (DOWNLOAD, GET_RUNTIME_DEPS) | ✓             | network / filesystem runtime                                 |
 | `file` (STRINGS, READ, WRITE, etc.) | ✓             | assertions depend on file contents, not cmake semantics      |
 | `CompileFeatures`                   | ✓             | queries compiler feature database                            |
-| `list/SUBLIST`, `string/JSON/UUID`  | ✓ (own tests) | RunCMake scripts written for cmake 4.3; fail on 3.28 runtime |
+| `list/SUBLIST`, `string/JSON/UUID`  | ✓ (own tests) | RunCMake scripts use cmake 4.3 features; own tests cover them |
 | `string/UTF-*`                      | —             | require cmake test fixture files, not standalone scripts     |
-| `CMP*` dirs, `string/RegexEmpty*`   | —             | policy-version-specific behavior, always blocked             |
+| `CMP*` dirs                         | —             | policy/compat tests, error-case only — always blocked        |
+| `string/RegexEmptyMatch`            | compat ✓      | compat added (CMP0186 NEW default in 4.1+); yelu pair needs Y11 (cmake_policy) |
 | `string/RegexClear`                 | —             | uses `add_subdirectory` — configure-mode only                |
 
 ## Roadmap
 
-### RunCMake Script-Mode — All tractable dirs (61 compat + 50 pairs, ✓ done)
+### RunCMake Script-Mode — tractable dirs (64 compat + 50 pairs)
 
 | Dir                            | Compat scripts                                                                                                                                                                                                                    | Yelu pairs                       | Notes                                                                              |
 | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------- |
 | `variable_watch`               | ModifiedAccess, ModifyWatchInCallback, NoWatcher, RaiseInParentScope, WatchTwice                                                                                                                                                  | all 5                            | ✓                                                                                  |
-| `cmake_path`                   | ABSOLUTE_PATH, APPEND, APPEND_STRING, COMPARE, CONVERT, HASH, HAS_ITEM, IS_ABSOLUTE, IS_PREFIX, IS_RELATIVE, NATIVE_PATH, NORMAL_PATH, RELATIVE_PATH, REMOVE_EXTENSION, REMOVE_FILENAME, REPLACE_EXTENSION, REPLACE_FILENAME, SET | all 18                           | ✓; needs `-DRunCMake_SOURCE_DIR=dir`; GET blocked (STEM("..")="." differs on 3.28) |
+| `cmake_path`                   | ABSOLUTE_PATH, APPEND, APPEND_STRING, COMPARE, CONVERT, GET, HASH, HAS_ITEM, IS_ABSOLUTE, IS_PREFIX, IS_RELATIVE, NATIVE_PATH, NORMAL_PATH, RELATIVE_PATH, REMOVE_EXTENSION, REMOVE_FILENAME, REPLACE_EXTENSION, REPLACE_FILENAME, SET | all 19 (exit-0 only, no stdout) | ✓                                                                                   |
 | `while`                        | CMP0130-OLD, CMP0130-WARN, CMP0130-common, EndMismatch                                                                                                                                                                            | counter + break                  | ✓; OLD/-WARN use `check_from_dir`                                                  |
 | `return`                       | CMP0140-NEW, CMP0140-OLD, PropagateNothing                                                                                                                                                                                        | early + propagate                | ✓; PropagateFromFunction/Directory blocked                                         |
 | `option`                       | CMP0077-NEW, CMP0077-OLD, CMP0077-SECOND-PASS, CMP0077-WARN                                                                                                                                                                       | default + respects_var           | ✓                                                                                  |
@@ -377,15 +380,15 @@ but their RunCMake test scripts cannot serve as automated equivalence benchmarks
 | `list`                         | JOIN, SORT, POP_BACK, POP_FRONT, PREPEND                                                                                                                                                                                          | all 5                            | ✓                                                                                  |
 | `string`                       | Concat, Append, Join, Hex, Uuid, Repeat                                                                                                                                                                                           | all 6                            | ✓                                                                                  |
 | `foreach`                      | foreach-all-test                                                                                                                                                                                                                  | range + in                       | ✓; upstream ITEMS-before-LISTS → pairs use inline cmake                            |
-| `message`                      | message-indent                                                                                                                                                                                                                    | indent                           | ✓; newline blocked (ANSI codes — see `yelu_infra_test.md` blockers)                |
+| `message`                      | newline, message-indent                                                                                                                                                                                                           | newline + indent                 | ✓                                                                                   |
 | `function`                     | —                                                                                                                                                                                                                                 | —                                | Blocked: CMAKE_CURRENT_FUNCTION uses `list(SUBLIST)` (cmake 4.3+)                  |
 | `include_guard`                | —                                                                                                                                                                                                                                 | —                                | Blocked: all scripts use `add_subdirectory`                                        |
-| `get_filename_component`       | —                                                                                                                                                                                                                                 | —                                | Blocked: KnownComponents uses `IN_LIST` (CMP0057 OLD on 3.28)                      |
+| `get_filename_component`       | KnownComponents (exit-0)                                                                                                                                                                                                          | —                                | ✓ compat; CMP0057 OLD no longer needed on 4.3; yelu pair todo                      |
 | `include/ParentVariableScript` | —                                                                                                                                                                                                                                 | —                                | Blocked: `CMAKE_PARENT_LIST_FILE` chain — needs multi-file fixture infra           |
 
 Also fixed: `{`/`}` in stdout patterns (e.g. `ENV{VAR}`) cause `Re.Pcre` parse errors — `escape_braces` in `cmake_runner.ml` escapes them before regex compilation.
 
-Realistic ceiling: ~65 tractable scripts from ~15 dirs (currently 61).
+Realistic ceiling: ~67 tractable scripts from ~15 dirs (currently 64).
 
 **Remaining open gaps:**
 
@@ -447,14 +450,14 @@ Five independent axes. Each row is a different question about how well yelu is c
 | **Test depth**            | file-api tests (steps 1–12)                | 12 / 12            | 12        | Full codemodel-v2 binding match ✓                                                        |
 | **Test depth**            | configure tests                            | 23                 | ~30       | Properties, try_compile, FetchContent, export                                            |
 | **Test depth**            | script-pair tests                          | 50 / ~65           | ~65       | 12 command groups; remaining 3 dirs all blocked                                          |
-| **Test depth**            | script compat tests                        | 61 / ~65           | ~65       | ceiling is ~65 tractable from ~15 dirs                                                   |
+| **Test depth**            | script compat tests                        | 64 / ~67           | ~67       | cmake 4.3 unblocked GET, newline, RegexEmptyMatch, KnownComponents                       |
 | **Test depth**            | text unit tests                            | ~193               | unbounded | PP + compiler correctness                                                                |
 | **Command breadth**       | commands at `build` level                  | ~15                | ~20       | all `target_*` + `add_compile_*`; ALIAS/OBJECT/MODULE libs; gap: `target_link_libraries` |
 | **Command breadth**       | commands at `script-pair` level            | ~15                | ~20       | all scripting core; gap: `cmake_policy` (Y11)                                            |
 | **Command breadth**       | commands with any test                     | ~60                | ~70       | `text`-only commands: `find_*`, `install`, `file`, genex                                 |
 | **Benchmark suites**      | `Tests/CMakeOnly/`                         | 12 / 12 ✓          | 12        | all tractable dirs done                                                                  |
 | **Benchmark suites**      | `Tests/CMakeCommands/`                     | 11 / 12            | 12        | `target_link_libraries` deferred                                                         |
-| **Benchmark suites**      | `Tests/RunCMake/` compat                   | 61 / ~65           | ~65       | realistic ceiling reached                                                                |
+| **Benchmark suites**      | `Tests/RunCMake/` compat                   | 64 / ~67           | ~67       | cmake 4.3 unblocked 3 tests; get_filename_component KnownComponents added               |
 | **Benchmark suites**      | `Tests/RunCMake/` pairs                    | 50 / ~65           | ~65       | all tractable dirs done                                                                  |
 | **Benchmark suites**      | `Tests/` Group 2/3/5 build                 | 15 / ~26 tractable | ~26       | next: CompatibleInterface (blocked — GenerateExportHeader) or cmake upgrade              |
 | **Language completeness** | commands fully pipelined (AST→yelu→tested) | ~50                | ~70       | gaps: `cmake_policy`; `cmake_language`/`block`/`cmake_path` yelu layer ✓ (was stale)     |
