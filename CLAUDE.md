@@ -92,7 +92,7 @@ opam switch conflicts.
     `install_binding` between `build_*` and `pack_binding`. See
     `doc/canary/install_target_survey.md` for Z3 vs LLVM patterns.
 
-Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28, #29, #30, #31, #32, #33.
+Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28, #29, #30, #31, #32, #33, #34.
 Details in `doc/canary/backlog.md`.
 
 ### Done
@@ -167,6 +167,11 @@ rest of this file.
   subdirectory of the build tree. Set `OCAMLPATH` to the parent
   (`build/lib/ocaml/`), not `build/lib/ocaml/llvm/`. Strip `directory`
   field when doing flat opam install.
+- **cmake ANSI color codes corrupt hex pattern tests**: cmake adds `\x1b[0m`
+  escape sequences to stderr when it detects a TTY. The `message/newline`
+  compat test hex-encodes subprocess stderr — ANSI codes corrupt it. Fix:
+  `cmake_runner.ml`'s `make_env` always injects `NO_COLOR=1`; never call
+  `Unix.open_process_full` with `Unix.environment ()` directly in the runner.
 
 ## Conventions
 

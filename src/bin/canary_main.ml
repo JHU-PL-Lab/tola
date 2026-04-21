@@ -90,6 +90,24 @@ let action_cmd =
   Cmd.v (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ const ())
 
+let ci_cmd =
+  let out =
+    Arg.(value & opt string ".github/workflows" & info [ "out"; "o" ]
+           ~docv:"DIR" ~doc:"Output directory for generated YAML (default: .github/workflows)")
+  in
+  let run out () =
+    let distro = detect_distro () in
+    let yaml = Canary_run.render_ci ~root:"_out" distro in
+    let path = out ^ "/canary_ci.yml" in
+    ignore (Stdlib.Sys.command (Fmt.str "mkdir -p %s" out));
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc yaml;
+    Stdlib.close_out oc;
+    Fmt.pr "Wrote %s@." path
+  in
+  Cmd.v (Cmd.info "ci" ~doc:"Generate GH Actions workflow YAML")
+    Term.(const run $ out $ const ())
+
 let pm_test_cmd =
   Cmd.v (Cmd.info "pm-test" ~doc:"Test PM primitive commands (apt/brew/opam)")
     (term_of (fun () ->
@@ -106,6 +124,7 @@ let () =
     paths_md_cmd;
     graph_cmd;
     action_cmd;
+    ci_cmd;
     pm_test_cmd;
     run_cmd;
   ] in

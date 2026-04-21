@@ -1,0 +1,186 @@
+name: Canary CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  llvm-19:
+    name: LLVM 19 — fetch + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/fetch_lib"
+          sudo apt-get install -y llvm-19-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/llvm/19/fetch_lib/lib.ok
+
+      - name: fetch_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/fetch_binding"
+          eval $(opam env) && opam install llvm.19-shared -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/llvm/19/fetch_binding/binding.ok
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_lib"
+          LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
+          test -x "$LLVM_CONFIG"
+          "$LLVM_CONFIG" --version > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_lib/probe.log 2>&1
+
+      - name: probe_binding
+        id: probe_binding
+        continue-on-error: true
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding"
+          eval $(opam env)
+          ocamlfind ocamlopt -package llvm -linkpkg $GITHUB_WORKSPACE/canary/examples/llvm/llvm_example_dev.ml \
+            -o $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/llvm_example > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/llvm_example >> $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/probe.log 2>&1
+
+      - name: probe_binding (verify)
+        run: |
+          if [ "${{ steps.probe_binding.outcome }}" = "success" ]; then
+            echo "FAIL: expected failure but step succeeded"
+            exit 1
+          fi
+          if grep -qF 'Unbound constructor Opcode.UncondBr' "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/probe.log" 2>/dev/null \
+                    || grep -qF 'Unbound constructor "Opcode.UncondBr"' "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/probe.log" 2>/dev/null; then
+            echo "PASS: expected failure confirmed"
+          else
+            echo "FAIL: expected message not found in probe.log"
+            cat "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/probe.log" || true
+            exit 1
+          fi
+
+      - name: probe_app
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_app"
+          python3 -m pip install --quiet llvmlite
+          python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_app/probe.log 2>&1
+
+
+  z3-dev:
+    name: Z3 dev — build from source + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Install system build dependencies
+        run: sudo apt-get install -y --no-install-recommends cmake ninja-build libgmp-dev python3-dev
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/fetch_lib"
+          sudo apt-get install -y z3 && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/z3/dev/fetch_lib/lib.ok
+
+      - name: pack_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding"
+          eval $(opam env)
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo/packages/z3/z3.dev"
+          cp "$GITHUB_WORKSPACE/canary/templates/opam-local-repo/packages/z3/z3.dev/opam.in" "$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo/packages/z3/z3.dev/opam.in"
+          (cd "$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo" && OPAMVAR_CANARY_Z3_SRC="git+https://github.com/arbipher/z3.git" opam config subst "packages/z3/z3.dev/opam")
+          opam repo add canary-local-pack "file://$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo" --rank=1 \
+            || opam repo set-url canary-local-pack "file://$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo"
+          opam update canary-local-pack
+          opam remove -y z3.dev || true
+          OPAMVAR_Z3_PREFIX="_out/canary/_local/z3/dev_HEAD/build" OPAMVAR_Z3_LIB_DIR="_out/canary/_local/z3/dev_HEAD/build" \
+          CANARY_BUILD_DIR="_out/canary/_local/z3/dev_HEAD/build" CANARY_SRC_DIR="_out/canary/_local/z3/dev_HEAD/src" \
+          opam install -y z3.dev --verbose --keep-build-dir --assume-depexts \
+            && echo 'ok' > $GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack.ok
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib"
+          LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+          test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+          test -f "$LIB_Z3"
+          COUNT=$(nm -D "$LIB_Z3" 2>/dev/null | grep -v ' U ' | grep -c 'Z3_' || echo 0)
+          printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib/probe.log
+          test "$COUNT" -gt 0
+
+      - name: probe_binding_build
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build"
+          LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+          test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+          test -f "$LIB_Z3"
+          BINDING_DIR="_out/canary/_local/z3/dev_HEAD/build/src/api/ml"
+          test -d "$BINDING_DIR"
+          STUB=$(ls "$BINDING_DIR"/libz3ml.a 2>/dev/null | head -1)
+          test -n "$STUB"
+          python3 canary/scripts/assert_binary_symbols.py --provided-lib "$LIB_Z3" --required-lib "$STUB" \
+            --symbol-prefix Z3_ 2>&1 | tee $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/symbols.log
+          grep -q 'OK:' $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/symbols.log
+          eval $(opam env)
+          ocamlfind ocamlopt -package zarith -linkpkg \
+            -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
+            -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/probe.log 2>&1
+
+      - name: probe_binding_pkg
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg"
+          eval $(opam env)
+          ocamlfind ocamlopt -package z3 -linkpkg $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
+            -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/probe.log 2>&1
+
+
+  sqlite:
+    name: SQLite — fetch + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib"
+          sudo apt-get install -y sqlite3 && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib/lib.ok
+
+      - name: fetch_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding"
+          eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding/binding.ok
+
+      - name: probe_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
+          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1
+

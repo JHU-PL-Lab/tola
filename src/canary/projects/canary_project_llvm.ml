@@ -35,6 +35,7 @@ let llvm_source_dev : source_repo =
     official = false;
     has_build_lib = true;
     has_build_binding = true;
+    build_sys_deps = [ "cmake"; "ninja-build" ];
   }
 
 let llvm_source_stable : source_repo =
@@ -57,6 +58,7 @@ let llvm_source_stable : source_repo =
        probe_binding_pkg will compile llvm_example_dev.ml against the 19 binding
        and fail, demonstrating the version mismatch. *)
     has_build_binding = false;
+    build_sys_deps = [];
   }
 
 let llvm_source_latest : source_repo =
@@ -69,6 +71,7 @@ let llvm_source_latest : source_repo =
     official = true;
     has_build_lib = false;
     has_build_binding = true;
+    build_sys_deps = [ "cmake"; "ninja-build" ];
   }
 
 let llvm_sources = [ llvm_source_dev; llvm_source_stable; llvm_source_latest ]
@@ -208,7 +211,8 @@ let find_llvm_config_cmd =
 
 let llvm_python_probe ~output_dir =
   [%string
-    {|python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{output_dir}/probe.log 2>&1|}]
+    {|python3 -m pip install --quiet llvmlite
+python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{output_dir}/probe.log 2>&1|}]
 
 (* ── Source build script spec (build LLVM + OCaml bindings from source) ── *)
 
@@ -258,7 +262,7 @@ let cmake_configure_cmd ~source_root ~build_dir =
   -DLLVM_BUILD_RUNTIME=OFF \
   -DLLVM_ENABLE_ASSERTIONS=OFF|}]
 
-let mk_script_spec ~source distro : Canary_action.script_spec =
+let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.script_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -277,7 +281,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
   (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); it will fail to
      compile against LLVM 19 binding, which is the mismatch we want to detect. *)
   let example =
-    Unix.getcwd () ^ "/canary/examples/llvm/llvm_example_dev.ml"
+    tola_root ^ "/canary/examples/llvm/llvm_example_dev.ml"
   in
   let llvm_config = [%string "%{build}/bin/llvm-config"] in
   let binding_lib = llvm_ocaml_config.ocaml.binding_lib_name in
@@ -317,7 +321,6 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       (if source.has_build_binding then
          Some
            (fun ~output_dir ->
-             let tola_root = Unix.getcwd () in
              let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
              let repo_name = llvm_ocaml_config.toolchain.local_repo_name in
              (* llvm.dev-shared and conf-llvm-shared.dev read CANARY_LLVM_BUILD
@@ -408,7 +411,9 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       (function
       | Probe Binding when not source.has_build_binding ->
           (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared *)
-          Expect_failure { contains_any = [ "Unbound constructor Opcode.UncondBr" ] }
+          (* OCaml 5.2+ quotes constructor names: "Opcode.UncondBr"; match both forms *)
+          Expect_failure { contains_any = [ "Unbound constructor Opcode.UncondBr";
+                                            {|Unbound constructor "Opcode.UncondBr"|} ] }
       | _ -> Expect_success);
   }
 

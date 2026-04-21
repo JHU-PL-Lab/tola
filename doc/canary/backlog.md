@@ -75,6 +75,14 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     upstream opam packages (which build from source but are version-pinned).
     See `doc/canary/opam_packaging.md` for the full naming rationale.
 
+34. **GH CI multi-platform support** — `detect_pm ()` is called at derivation
+    time on the local machine, baking Apt/Brew into the generated YAML. For
+    macOS CI, `mk_script_spec` needs a `~target_pm` parameter (alongside
+    `~tola_root`) so CI jobs can specify the target PM independently of the
+    local host. Follow-on: add OS-conditional step support to
+    `canary_backend_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
+    matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url

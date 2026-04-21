@@ -39,6 +39,7 @@ let z3_source_dev : source_repo =
     official = false;
     has_build_lib = true;
     has_build_binding = true;
+    build_sys_deps = [ "cmake"; "ninja-build"; "libgmp-dev"; "python3-dev" ];
   }
 
 let z3_source_latest : source_repo =
@@ -51,6 +52,7 @@ let z3_source_latest : source_repo =
     official = true;
     has_build_lib = true;
     has_build_binding = true;
+    build_sys_deps = [ "cmake"; "ninja-build"; "libgmp-dev"; "python3-dev" ];
   }
 
 let z3_source_stable : source_repo =
@@ -65,6 +67,7 @@ let z3_source_stable : source_repo =
     (* No build — use fetch_binding (opam install z3) for the stable path.
        probe_binding_pkg will compile the example against the installed binding. *)
     has_build_binding = false;
+    build_sys_deps = [];
   }
 
 let z3_sources = [ z3_source_dev; z3_source_latest; z3_source_stable ]
@@ -344,7 +347,9 @@ test -d "$BINDING_DIR"|}]
 BINDING_DIR=$(ocamlfind query z3 2>/dev/null)
 test -d "$BINDING_DIR"|}
 
-let mk_script_spec ~source distro : Canary_action.script_spec =
+let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
+    ?(cmake_build_binding = source.has_build_binding) distro
+    : Canary_action.script_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -356,10 +361,17 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
     | Some l -> l.build_path
     | None -> [%string "_out/canary/_local/z3/%{source.version}_%{source.ref_}/build"]
   in
-  let pm = Canary_store.detect_pm () in
-  let example =
-    Unix.getcwd () ^ "/" ^ z3_ocaml_config.ocaml.example_file
+  (* When no local checkout, opam fetches from the remote git URL directly.
+     When a local checkout exists, opam installs from the local file:// path. *)
+  let pack_src_url =
+    match local with
+    | Some l -> [%string "git+file://%{l.path}"]
+    | None ->
+        let (Git_remote url) = source.remote in
+        [%string "git+%{url}"]
   in
+  let pm = Canary_store.detect_pm () in
+  let example = tola_root ^ "/" ^ z3_ocaml_config.ocaml.example_file in
   let target = z3_ocaml_config.ocaml.example_target in
   let binding_lib = z3_ocaml_config.ocaml.binding_lib_name in
   let lib_resolve = lib_cmd_of_source ~has_build_lib:source.has_build_lib ~build in
@@ -368,23 +380,28 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
   in
   {
     Canary_action.empty_script_spec with
+    (* Skip fetch_source when opam will handle source fetching (pack_binding remote flow) *)
     fetch_source =
-      Some
-        (fun ~output_dir ->
-          Canary_store.source_fetch_cmd distro source ~output_dir);
+      (if source.has_build_lib || cmake_build_binding then
+         Some
+           (fun ~output_dir ->
+             Canary_store.source_fetch_cmd distro source ~output_dir)
+       else None);
     configure =
-      (if source.has_build_lib || source.has_build_binding then
+      (if source.has_build_lib || cmake_build_binding then
+         let cmake_cmd = if cmake_build_binding then "opam exec -- cmake" else "cmake" in
+         let ocaml_flag = if cmake_build_binding then "ON" else "OFF" in
          Some
            (fun ~output_dir ->
              [%string
-               "eval $(opam env) && cmake -S %{root} -B %{build} -G Ninja \
+               "%{cmake_cmd} -S %{root} -B %{build} -G Ninja \
                 -DCMAKE_VERBOSE_MAKEFILE=ON \
                 -DZ3_BUILD_LIBZ3_SHARED=ON \
                 -DZ3_BUILD_EXECUTABLE=OFF \
                 -DZ3_BUILD_TEST_EXECUTABLES=OFF \
                 -DZ3_LINK_TIME_OPTIMIZATION=ON \
                 -DZ3_BUILD_JAVA_BINDINGS=OFF \
-                -DZ3_BUILD_OCAML_BINDINGS=ON \
+                -DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag} \
                 -DZ3_BUILD_PYTHON_BINDINGS=ON \
                 && echo 'ok' > %{output_dir}/conf.ok"])
        else None);
@@ -397,7 +414,7 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
                 && echo 'ok' > %{output_dir}/build.ok"])
        else None);
     build_binding =
-      (if source.has_build_binding then
+      (if cmake_build_binding then
          Some
            (fun ~output_dir ->
              [%string
@@ -413,8 +430,6 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       (if not source.has_build_binding then
          Some
            (fun ~output_dir ->
-             (* Pin to the specific version so opam doesn't pick z3.dev from
-                canary-local (rank 1) instead of the upstream stable release. *)
              [%string
                "eval $(opam env) && opam install z3.%{source.version} -y \
                 --assume-depexts \
@@ -424,32 +439,32 @@ let mk_script_spec ~source distro : Canary_action.script_spec =
       (if source.has_build_binding then
          Some
            (fun ~output_dir ->
-             let tola_root = Unix.getcwd () in
-             let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
-             let repo_rel = "canary/templates/opam-local-repo" in
-             let pkg_full =
-               Canary_ocaml.pkg_full z3_ocaml_config.toolchain
+             let src_template =
+               [%string
+                 "%{tola_root}/canary/templates/opam-local-repo/packages/%{z3_ocaml_config.toolchain.package_name}/%{Canary_ocaml.pkg_full z3_ocaml_config.toolchain}/opam.in"]
              in
-             let pkg_name = z3_ocaml_config.toolchain.package_name in
-             let opam_rel =
-               [%string "%{repo_rel}/packages/%{pkg_name}/%{pkg_full}/opam"]
+             let pkg_full = Canary_ocaml.pkg_full z3_ocaml_config.toolchain in
+             let pkg_dir =
+               [%string "%{output_dir}/pack-repo/packages/%{z3_ocaml_config.toolchain.package_name}/%{pkg_full}"]
              in
-             let repo_name = z3_ocaml_config.toolchain.local_repo_name in
+             let pack_repo = [%string "%{output_dir}/pack-repo"] in
+             let repo_name = [%string "%{z3_ocaml_config.toolchain.local_repo_name}-pack"] in
              let src_var = z3_ocaml_config.toolchain.canary_src_var in
              let prefix_name = z3_ocaml_config.toolchain.prefix_name in
              let libdir_name = z3_ocaml_config.toolchain.libdir_name in
              [%string
-               "eval $(opam env) && OPAMVAR_%{src_var}=\"git+file://%{root}\" \
-                opam config subst %{opam_rel} && opam repo add %{repo_name} \
-                \"file://%{repo_abs}\" --rank=1 || opam repo set-url %{repo_name} \
-                \"file://%{repo_abs}\" && opam update %{repo_name} && opam remove \
-                -y %{pkg_full} || true && \
-                OPAMVAR_%{prefix_name}=\"%{build}\" \
-                OPAMVAR_%{libdir_name}=\"%{build}\" \
-                CANARY_BUILD_DIR=\"%{build}\" \
-                CANARY_SRC_DIR=\"%{root}\" opam install -y %{pkg_full} \
-                --verbose --keep-build-dir --assume-depexts && echo 'ok' > \
-                %{output_dir}/pack.ok"])
+               {|eval $(opam env)
+mkdir -p "%{pkg_dir}"
+cp "%{src_template}" "%{pkg_dir}/opam.in"
+(cd "%{pack_repo}" && OPAMVAR_%{src_var}="%{pack_src_url}" opam config subst "packages/%{z3_ocaml_config.toolchain.package_name}/%{pkg_full}/opam")
+opam repo add %{repo_name} "file://%{pack_repo}" --rank=1 \
+  || opam repo set-url %{repo_name} "file://%{pack_repo}"
+opam update %{repo_name}
+opam remove -y %{pkg_full} || true
+OPAMVAR_%{prefix_name}="%{build}" OPAMVAR_%{libdir_name}="%{build}" \
+CANARY_BUILD_DIR="%{build}" CANARY_SRC_DIR="%{root}" \
+opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > %{output_dir}/pack.ok|}])
        else None);
     probe_lib =
       Some

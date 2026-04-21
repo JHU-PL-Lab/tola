@@ -114,6 +114,7 @@ type source_repo = {
   official : bool;
   has_build_lib : bool;                  (* build the native lib from this source? *)
   has_build_binding : bool;              (* build language bindings from this source? *)
+  build_sys_deps : string list;          (* apt packages required to build from source *)
 }
 
 (* Generate local_path entries for all distros from a relative path.

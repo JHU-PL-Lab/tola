@@ -86,6 +86,56 @@ let dump distro =
   List.iter configs ~f:(fun cfg ->
       Stdlib.print_string (dump_config_to_string cfg))
 
+(* ── GH CI backend ── *)
+
+(* CI step derivation: skip source builds for LLVM (expensive, CI-unfriendly).
+   Z3 is a special case: its OCaml binding requires building from source. *)
+let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
+  let open Canary_backend_gh in
+  let gh_root = "$GITHUB_WORKSPACE" in
+  (* Z3: opam fetches from GitHub remote and builds the OCaml binding entirely.
+     has_build_lib=false + cmake_build_binding=false: no cmake steps in CI;
+     pack_binding substitutes CANARY_Z3_SRC with the remote git URL so opam
+     clones and builds from source internally. *)
+  let z3_ci_source =
+    { Canary_project_z3.z3_source_dev with locals = []; has_build_lib = false }
+  in
+  let z3_ci_tag = Canary_store.version_cache_tag distro z3_ci_source in
+  let z3_ci_project = [%string "z3/%{z3_ci_tag}"] in
+  [
+    (* LLVM 19: system lib + opam binding only, no source build *)
+    { id = "llvm-19";
+      name = "LLVM 19 — fetch + probe";
+      project = "llvm/19";
+      sys_deps = [];
+      steps =
+        Canary_action.(derive_steps ~root ~project:"llvm/19"
+          (no_source (Canary_project_llvm.mk_script_spec
+             ~source:Canary_project_llvm.llvm_source_stable
+             ~tola_root:gh_root distro))) };
+    (* Z3: build from source (no prebuilt OCaml binding in opam) *)
+    { id = "z3-dev";
+      name = "Z3 dev — build from source + probe";
+      project = z3_ci_project;
+      sys_deps = z3_ci_source.build_sys_deps;
+      steps =
+        Canary_action.derive_steps ~root ~project:z3_ci_project
+          (Canary_project_z3.mk_script_spec ~source:z3_ci_source
+             ~tola_root:gh_root ~cmake_build_binding:false distro) };
+    (* SQLite: system lib + opam binding *)
+    { id = "sqlite";
+      name = "SQLite — fetch + probe";
+      project = "sqlite";
+      sys_deps = [];
+      steps =
+        Canary_action.(derive_steps ~root ~project:"sqlite"
+          (no_source Canary_project_sqlite.script_spec)) };
+  ]
+
+let render_ci ~root distro =
+  let jobs = ci_jobs ~root distro in
+  Canary_backend_gh.render_workflow ~workflow_name:"Canary CI" jobs
+
 let dump_graph _distro =
   let graph_dir = "_out/canary/graph" in
   ignore (Stdlib.Sys.command [%string "mkdir -p %{graph_dir}"]);
