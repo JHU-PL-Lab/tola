@@ -222,6 +222,8 @@ let yc_policy_set ?(new_ = true) id = Yc_policy_set { id; new_ }
 (* retired: Yc_quote_cmd compile case raises — add typed yelu nodes instead of calling this *)
 let yc_quote_cmd s = Yc_quote_cmd s
 
+let yc_at_var key = Yc_at_var key
+
 let yc_set_directory_property ?(append = false) property values =
   Yc_set_directory_property { property; append; values }
 
@@ -239,8 +241,14 @@ let yc_set_tests_properties tests properties =
 let yc_set_target_properties target properties =
   Yc_set_target_properties { target; properties }
 
-let yc_set_property ~targets properties =
-  Yc_set_property { targets; properties }
+let yc_set_property ?(append = false) ~targets properties =
+  Yc_set_property { targets; append; properties }
+
+let yc_set_source_property ?(property = "COMPILE_OPTIONS") file values =
+  Yc_set_source_property { file; property; values }
+
+let yc_enable_language ?(optional = false) langs =
+  Yc_enable_language { langs; optional }
 
 let yc_set_global_property properties =
   Yc_set_global_property { properties }
@@ -285,8 +293,19 @@ let yc_write_basic_package_version_file ~compatibility ?version file =
   Yc_write_basic_package_version_file { file; version; compatibility }
 
 (* custom commands *)
-let yc_add_custom_command ~outputs ?(depends = []) commands =
-  Yc_add_custom_command { outputs; commands; depends }
+let yc_add_custom_command ~outputs ?(depends = []) ?(verbatim = false)
+    ?(comment : string option = None) commands =
+  Yc_add_custom_command { outputs; commands; depends; verbatim; comment }
+
+let yc_add_custom_command_target ?(verbatim = false) ?(comment : string option = None)
+    ~target ~when_ commands =
+  Yc_add_custom_command_target { target; when_; commands; comment; verbatim }
+
+let cw_pre_build  = Lang_cmake.Cw_pre_build
+let cw_pre_link   = Lang_cmake.Cw_pre_link
+let cw_post_build = Lang_cmake.Cw_post_build
+
+let yc_add_definitions defs = Yc_add_definitions { defs }
 
 (* Tier 1: find_var commands *)
 let yc_find_library ?(names = []) ?(paths = []) ?(hints = [])
@@ -527,8 +546,9 @@ let yc_try_run ?(compile_definitions = []) ?(link_libraries = [])
   Yc_try_run { run_result_var; compile_result_var; sources; compile_definitions;
                link_libraries; compile_output_variable; run_output_variable; args }
 
-let yc_add_custom_target ?(commands = []) ?(comment : string option = None) name =
-  Yc_add_custom_target { name; commands; comment }
+let yc_add_custom_target ?(all = false) ?(commands = []) ?(depends = [])
+    ?(comment : string option = None) name =
+  Yc_add_custom_target { name; all; commands; depends; comment }
 
 let yc_get_target_property var target property =
   Yc_get_target_property { var; target; property }

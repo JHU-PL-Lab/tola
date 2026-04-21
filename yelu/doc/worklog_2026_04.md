@@ -1,6 +1,6 @@
 # Yelu Worklog — April 2026
 
-Implementation history. For current state see `language_coverage.md`.
+Implementation history. For current state see `yelu_lang_coverage.md`.
 
 ---
 
@@ -164,3 +164,22 @@ has no parent, so the call stack differs. Fix: compare normalized stderr between
 runs (ref inline cmake vs yelu cmake) rather than matching against the upstream pattern files.
 
 Total pairs: 50. Compat tests: 62.
+
+---
+
+## TODO completions (2026-04-21)
+
+**Y1** — File API wired into tests: `make file-api-test` runs cmake configure + codemodel-v2
+diff for all 12 steps (yelu-generated vs reference cmake).
+
+**Y9** — RunCMake positive-test gap audit complete. Gaps are real (cmake 4.3 still
+has no positive RunCMake scripts for `list` FIND/REMOVE_ITEM/REMOVE_AT/REVERSE/LENGTH/GET
+or `string` FIND/SUBSTRING/STRIP/REPLACE/LENGTH; `Tests/StringFileTest/` fills some
+regex cases but not these). No impact on yelu — standalone tests in `test_list*.ml`
+and `test_string*.ml` cover all these subcommands independently.
+
+**Y10** — `string(JSON …)` and `string(UUID …)` fully implemented:
+`Sc_uuid`/`Sc_json`/`json_op` in `lang_cmake.ml`; PP; `yelu_json_op` + yelu layer;
+8 UUID tests + 8 JSON tests all pass. `GET_RAW`/`STRING_ENCODE` are cmake 4.3+ (we're
+on 3.28); `Jop_get_raw`/`Jop_string_encode` exist in AST but not tested.
+Key fix: `Ycs_cmake` compiles to `Bare` (not `Quoted`) so bracket strings pass through.

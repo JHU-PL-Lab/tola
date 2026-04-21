@@ -43,13 +43,24 @@ test-yc:
 
 cmake-check: dune-build-cmake
 
-file-api-test:
-	$(DUNE) dune build yelu/src/bin/cmake/ yelu/src/bin/yelu/
-	$(DUNE) python3 yelu/test/test-file-api/run_file_api.py
-
 build-check:
 	$(DUNE) dune build yelu/src/bin/cmake/ yelu/src/bin/yelu/
 	$(DUNE) python3 yelu/test/test-build/run_build_check.py
+
+runcmake-compat:
+	$(DUNE) dune build @yelu/test/test-runcmake/runcmake-compat
+
+runcmake-yelu:
+	$(DUNE) dune build @yelu/test/test-runcmake/runcmake-yelu
+
+cmake-commands:
+	$(DUNE) dune build @yelu/test/test-runcmake/cmake-commands
+
+file-api-test:
+	$(DUNE) dune build @yelu/test/test-file-api/file-api-test
+
+coverage: test cmake-check cmake-only-check runcmake-compat runcmake-yelu cmake-commands file-api-test
+	@echo "=== Coverage sweep complete ==="
 
 test-all: test cmake-check file-api-test build-check
 
@@ -152,7 +163,8 @@ cmake-only-check: dune-build-yelu
 	fi'
 
 .PHONY: build build-cmake build-yelu test test-pp test-yc cmake-check cmake-only-check \
-        file-api-test build-check test-all dune-build-cmake dune-build-yelu \
+        runcmake-compat runcmake-yelu cmake-commands file-api-test build-check \
+        coverage test-all dune-build-cmake dune-build-yelu \
         step1 step1_run step2 step3 step4 step5 step6 step7 step8 \
         step9 step10 step11 step12
 

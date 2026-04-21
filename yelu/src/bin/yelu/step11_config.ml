@@ -4,7 +4,7 @@ open Step_common
 let cmd =
   ycmd_of_list
     [
-      yc_quote_cmd "@PACKAGE_INIT@";
+      yc_at_var "PACKAGE_INIT";
       yc_include (dir_concat list_this "MathFunctionsTargets.cmake");
     ]
 

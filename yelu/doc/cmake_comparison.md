@@ -1,163 +1,133 @@
-# CMake Output Comparison: Pipeline, Tooling, and Test Coverage
+# CMake Equivalence — Language, Semantics, and Test Coverage
 
-When generating or transforming CMake from yelu programs, we need to verify
-correctness at multiple levels of rigor — from exact text identity to full
-build equivalence. This document covers the comparison levels, which ones apply
-to each test category, current tooling, and active status.
-
----
-
-## Comparison levels
-
-The pipeline mirrors a C-with-macros model: cmake's configure-time language is
-the "macro" layer, and the build system is the "C runtime" layer.
-
-### src — Source text
-
-- Pretty-print cmake AST → string diff (gersemi-normalized or Alcotest match)
-- **Strict**: any whitespace or statement-order change fails
-- Good for: regression guard during refactors; bootstrapping new command coverage
-- Limitation: rejects semantically equivalent cmake with different statement order
-
-### ast — AST structural equality
-
-- Compare `Lang_cmake.exp` values via OCaml `[@@deriving equal]`
-- Ignores formatting differences; still order-sensitive
-- Good for: isolating pretty-printer changes from semantic changes
-- *Not currently active — internal development tool only*
-
-### conf-run — Configure execution output
-
-- Run `cmake -P script.cmake` (script mode) or `cmake -S . -B build` (project mode)
-- Compare stdout/stderr against expected output
-- Semantically stronger than `src`: two different cmake texts that produce the
-  same output both pass
-- Applicable to scripting tests (`cmake -P`) and project configure (`cmake -S -B`)
-- RunCMake's own `-stdout.txt` / `-stderr.txt` files are the ground truth for
-  the scripting case
-
-### conf-cache — Configure structured output
-
-- Run cmake configure, read file API replies (`codemodel-v2`, `cache-v2`)
-- cmake dumps JSON: targets, sources, deps, compile flags, cache variables
-- Mostly order-independent (targets are a set, not a list)
-- **Key limitation**: captures only one concrete configure run — dead branches pruned
-- Only applicable when the project has targets (`add_executable` / `add_library`)
-- Good for: verifying reordered statements produce the same project structure
-
-### build — Build artifacts
-
-- Run `cmake --build build` after configure
-- Compare artifact sets, check ELF/ar magic bytes
-- Tests the full cmake evaluation including generator expressions, `find_package`
-- Heavyweight, platform-dependent, path-dependent
+This document is the theory companion to `yelu_infra_test.md`. It grounds the
+yelu equivalence question in the properties of cmake as a language, defines the
+PL vocabulary, states what each equivalence level proves, and maps each level to
+the concrete test observations in the harness. For symbolic/SMT approaches to
+full equivalence see `cmake_equiv_research.md`.
 
 ---
 
-## Decision matrix: which levels apply where
+## CMake as a language
 
-| Test type | src | conf-run | conf-cache | build |
-|---|---|---|---|---|
-| **Unit tests** (Alcotest, no cmake) | ✓ active | — | — | — |
-| **CMakeOnly showcases** (compile-time, no targets) | ✓ active | — | ✗ N/A | ✗ N/A |
-| **RunCMake scripting** (planned) | ✓ active | ✓ planned | ✗ N/A | ✗ N/A |
-| **Tutorial steps** (have targets, sources) | ✓ active | ✓ active | ✓ active | ✓ active |
+CMake's configure-time language (CMakeLists.txt) is a restricted imperative
+language with these properties relevant to equivalence checking:
 
-**Why conf-cache and build don't apply to scripting-only tests:**
-`conf-cache` (`codemodel-v2`) is a target graph query — it only has content when
-`add_executable` / `add_library` commands exist. Pure scripting tests (variable
-manipulation, string ops, list ops, `foreach`, `find_library`) produce no targets
-and no meaningful codemodel. Without targets there is nothing to build either.
+- **Straight-line code + boolean conditionals** — `if(COND) … else() … endif()`;
+  no dynamic dispatch, no first-class functions.
+- **String-typed state** — all variable values are strings; lists are
+  semicolon-joined strings. No numeric tower, no booleans at the value level.
+- **6 independent namespaces** — TARGET, Variable, Cache, COMMAND, TEST, POLICY.
+  A name like `foo` can exist in all six simultaneously; they never collide.
+  Empirically confirmed via 24 namespace probes.
+- **Finite iteration** — `foreach` is over a finite list; no unbounded loops.
+- **Mutable, scoped state** — `set(VAR val)` overwrites; scope is
+  per-directory / per-function with `PARENT_SCOPE` escape.
+- **Impure commands** — `find_package`, `execute_process`, `file(READ …)`
+  are side-effectful and not symbolically encodable without stubs.
+- **Option variables** — `option(FLAG "…" ON)` declares a boolean cache entry.
+  These are the *inputs* to a configure run; users set them at cmake invocation
+  time. A program with n option variables has 2^n distinct configurations.
 
-**Why conf-run is the right level for RunCMake scripting tests:**
-The RunCMake positive test scripts are small cmake programs that call `message()`
-to report results. Running `cmake -P` on the yelu-generated equivalent and
-comparing stdout is both sufficient (semantic validation) and cheap (no project
-structure needed). Unlike `src`, conf-run tolerates safely reordered statements.
-
-**Why conf-cache is valuable for full projects:**
-For steps with targets, `conf-cache` confirms target names, source lists, include
-directories, compile flags, and link dependencies are equivalent regardless of
-cmake statement order — the best semantic check short of a full build.
-
----
-
-## Current status
-
-### Active
-
-- **src — cmake-only-check**: `make cmake-check` — gersemi-normalizes each step pair
-  and diffs. 24 step pairs, all passing. Also used for CMakeOnly showcases (8 active).
-- **src — unit tests**: Alcotest string matching in `dune test yelu/`. Currently
-  **82 tests**: cmake PP tests + yelu compile tests across list, string, foreach,
-  while, install, export, find_* commands.
-- **conf-run — tutorial steps**: cmake configure stdout checked as part of step
-  validation.
-- **conf-cache — file API**: `make file-api-test` — `run_file_api.py` assembles
-  fixture dirs, runs cmake configure, diffs `codemodel-v2` JSON via
-  `cmake_file_api_cmp.py`. **Note**: strip `"id"` fields (content hashes that
-  differ even for identical cmake text).
-- **build — artifact check**: `make build-check` — `run_build_check.py` builds
-  both sides, compares artifact sets, checks ELF/ar magic bytes.
-
-### Planned
-
-- **conf-run — RunCMake scripting tests**: Alcotest-style, organized per command
-  directory. For each positive RunCMake `.cmake` script: write the yelu equivalent,
-  compile to cmake, run `cmake -P`, assert stdout matches. Target dirs: `foreach`,
-  `while`, `list`, `string`, `set`, `math`, `find_library`, `find_path`, `find_file`,
-  `find_program`, `message`, `include`, `block` (~13 dirs). See
-  `doc/language_coverage.md` directory index for the full filter analysis.
+The configure-time language (the part yelu targets) is mostly decidable: you can
+enumerate all `option()` combinations and run cmake. The build-time part (compiler
+invocations, linking) is a separate execution stage.
 
 ---
 
-## Testcase categories
+## Entities and actions in PL terms
 
-### 1. Unit tests (`yelu/test/`)
+The pipeline mirrors a C-with-macros model: configure-time is the "macro" layer;
+the build system is the "C runtime" layer.
 
-OCaml Alcotest tests that exercise the cmake PP and yelu compile pipeline without
-running cmake. Each test: write a yelu (or cmake AST) expression, compile/print it,
-Alcotest.check `string` against a hardcoded expected string. Comparison level: `src`.
+| cmake term                                       | PL term                               |
+| ------------------------------------------------ | ------------------------------------- |
+| program text (`CMakeLists.txt`)                  | `src`                                 |
+| user-supplied cache / option variables           | `input : name → string`               |
+| configure-time state (variables, targets, props) | `env : name ⇀ val`                    |
+| build graph (`Makefile` / `build.ninja`)         | `build_spec`                          |
+| compiled binary or library                       | `artifact`                            |
+| `cmake -P script.cmake`                          | `eval : src → env`                    |
+| `cmake -S src -B bld` (configure)                | `compile : src × input → build_spec`  |
+| File API codemodel query                         | `inspect : build_spec → env`          |
+| `cmake --build bld`                              | `run : build_spec → artifact set`     |
 
-Organized by command group:
-- `test_cmake_pp.ml` — cmake AST → text (54 tests)
-- `test_yelu_compile.ml` — yelu AST → cmake text (28 tests, covering all list/string
-  subcommands, foreach, while, find_*, install, export, ...)
+The 6 namespaces mean `env` is a product of 6 partial maps; yelu's typed AST
+(`Ycvar`, `Ytarget`) selects the right component at compile time. Impure commands
+(`find_package`, `execute_process`) are opaque side effects — not captured in
+`env` and must be stubbed for symbolic analysis.
 
-Coverage: every yelu AST node has at least one Alcotest test case.
-
-### 2. CMakeOnly showcases (`yelu/src/bin/yelu/step*.ml`)
-
-Step files that define yelu programs, compile them to CMakeLists.txt, and compare
-against a reference cmake step file (`yelu/src/bin/cmake/step*.ml`). These cover
-the cmake tutorial (steps 1–12) plus language feature showcases (LinkInterfaceLoop,
-TargetScope, SelectLibraryConfigurations, ...).
-
-The `cmake-only-check` target in the Makefile runs gersemi on both sides and diffs
-(`src` level). Tutorial steps additionally run `conf-run`, `conf-cache`, and `build`.
-
-### 3. RunCMake benchmark (planned)
-
-cmake's official `Tests/RunCMake/` directory contains ~431 command-specific test dirs.
-Most are error-case tests (have `-result.txt` / `-stderr.txt`); positive tests have no
-result file counterpart. For our purposes we use the positive test `.cmake` scripts
-as reference programs.
-
-Test structure: one Alcotest test module per command directory (e.g., `test_list.ml`,
-`test_string.ml`). Each test: write the yelu equivalent, compile to cmake text, run
-`cmake -P`, assert stdout matches the RunCMake expected output (`conf-run` level).
-
-Filter constraints (see directory index in `language_coverage.md`):
-- `—` no constraint (directly tractable)
-- `CMP*` cmake policy tests — tractable, no compiler
-- `env` PATH/env search tests — tractable on matching environment
-- `compiler` requires C/C++ toolchain — defer
-- `platform` Windows/macOS-specific — skip
-- `fp` requires `find_package` — defer (Tier 3)
+**Why `src` is stringly-typed**: cmake's real AST (`cmListFileArgument` in
+`Source/cmListFileCache.h`) is completely untyped — every command receives a
+`vector<cmListFileArgument>` where each argument carries only a quote-delimiter
+tag (`Unquoted | Quoted | Bracket`) and a string value. There are no var, target,
+or value types at the cmake level. The cmake layer in yelu mirrors this exactly;
+all typed constructs live in the yelu layer and are erased to `arg list` by the
+compiler.
 
 ---
 
-## conf-cache: file API usage recipe
+## Equivalence levels
+
+Two cmake programs P1 and P2 are equivalent at a given level when:
+
+| Level    | Equivalence assertion                                         |
+| -------- | ------------------------------------------------------------- |
+| `src`    | `P1 = P2` (syntactic equality after normalization)            |
+| `interp` | `compile(P1, i) ≅ compile(P2, i)` for a given input `i`      |
+| `run`    | `run(compile(P1, i)) = run(compile(P2, i))` for a given `i`  |
+
+`src` is purely syntactic — it rejects semantically equivalent programs with
+different statement order or formatting. `interp` and `run` are semantic: they
+test observable behavior, not text.
+
+**The fundamental gap**: both `interp` and `run` hold for a given concrete `i`.
+With n option variables there are 2^n inputs; none of these levels can prove
+equivalence for all configurations. Closing that gap requires symbolic methods;
+see `cmake_equiv_research.md`.
+
+---
+
+## Test harness: observations
+
+Concrete test variants are different *observations* of `interp` and `run`. The
+semantic level is the same; what differs is which part of cmake's output is
+inspected, and whether one or two programs are under test:
+
+| Test variant  | Level    | cmake action          | What is compared                                   | Scope                   |
+| ------------- | -------- | --------------------- | -------------------------------------------------- | ----------------------- |
+| unit tests    | `src`    | none (OCaml only)     | emitted `src` text (Alcotest string match)         | all yelu programs       |
+| `script`      | `interp` | `eval`                | stdout of one program vs. expected pattern         | scripting, no targets   |
+| `script-pair` | `interp` | `eval` ×2             | stdout of ref vs. yelu (observational equivalence) | scripting, no targets   |
+| `configure`   | `interp` | `compile`             | selected `input` bindings in `CMakeCache.txt`      | projects with targets   |
+| `file-api`    | `interp` | `compile` + `inspect` | full `env` (targets, flags, deps) from codemodel   | projects with targets   |
+| `build`       | `run`    | `compile` + `run`     | artifact set                                       | projects with targets   |
+
+`script-pair` is strictly stronger than `script`: it checks two programs against
+each other rather than one against a fixed expected string.
+`file-api` is strictly stronger than `configure`: `inspect` returns the full `env`
+(target graph, compile flags, link deps), not just selected cache variables.
+`build` is needed despite `file-api` because generator expressions (`$<…>`) are
+build-time and do not appear expanded in codemodel JSON.
+
+`configure`/`build`/`file-api` do not apply to scripting tests: `inspect`
+(codemodel-v2) only has content when targets exist. Pure scripting programs
+(`eval`) produce no targets.
+
+---
+
+## Inactive levels
+
+**`ast`** — OCaml structural equality on `Lang_cmake.exp`. Finer than `src`
+(format-independent), coarser than `interp`. Useful for isolating PP regressions
+from semantic changes. Not active.
+
+**`symbol`** — `nm -D` inspection of shared library exports: a `run`-level
+observation at ABI granularity. Blocked: nm infra not wired into the test suite.
+
+---
+
+## File API recipe
 
 ```
 mkdir -p build/.cmake/api/v1/query
@@ -165,28 +135,8 @@ touch build/.cmake/api/v1/query/codemodel-v2
 touch build/.cmake/api/v1/query/cache-v2
 cmake -S . -B build
 # replies appear in build/.cmake/api/v1/reply/
-# codemodel JSON: targets, source groups, compile info, link deps
-# cache JSON: all cache variables with types and values
 ```
 
-Key pitfall: `"id"` fields in codemodel replies are content hashes derived from
-the build directory path. Strip them before diffing — they differ even when the
-two cmake programs are textually identical.
-
----
-
-## Known issues
-
-### `@.` in cmake PP resets the formatter
-
-Several command format strings in `lang_cmake_pp.ml` use `@.` (e.g., `If`, `Function`,
-`Apply`, `List_append`). In OCaml Format, `@.` calls `pp_print_newline` which **resets
-the entire formatter** — closing all open boxes. After that, `Fmt.cut` separators in
-`Exp_list` become conditional breaks instead of forced newlines. Short consecutive
-commands can end up on the same line.
-
-Workaround (current): `list_br` uses `Stdlib.Format.pp_force_newline` instead of
-`Fmt.cut`.
-
-Proper fix (TODO): replace all `@.` with `@,` (cut hint) in command printers, so the
-outer vbox is never destroyed. Then `list_br` can go back to `Fmt.cut`.
+`"id"` fields in codemodel replies are content hashes derived from the build
+directory path — strip them before diffing. `cache-v2` is path-independent and
+can be compared directly.

@@ -57,6 +57,18 @@ let run_build_pair ref_path ?(files = []) yelu_prog =
        yelu_result.build.exit_code yelu_result.build.stderr cmake_text);
   check_artifacts_match ref_result.artifacts yelu_result.artifacts
 
+(** Yelu-only build test: configure + build yelu-generated cmake, no reference. *)
+let check_build_yelu name ?(files = []) yelu_prog =
+  Alcotest.test_case name `Quick (fun () ->
+    let cmake_text = compile yelu_prog in
+    let r = run_configure_and_build ~files cmake_text in
+    (if r.configure.run.exit_code <> 0 then
+       Alcotest.failf "configure failed (exit %d)\nstderr:\n%s\ncmake:\n%s"
+         r.configure.run.exit_code r.configure.run.stderr cmake_text);
+    if r.build.exit_code <> 0 then
+      Alcotest.failf "build failed (exit %d)\nstderr:\n%s\ncmake:\n%s"
+        r.build.exit_code r.build.stderr cmake_text)
+
 (** Fate-sharing build test against Tests/CMakeCommands/<ref_name>. *)
 let check_build_pair name ref_name ?(files = []) yelu_prog =
   Alcotest.test_case name `Quick (fun () ->
@@ -1703,6 +1715,376 @@ let pic_yelu =
     add_exe ~sources:[ystr "main.cpp"] (t "PositionIndependentTargets");
   ]
 
+(* ── ObjectLibrary ─────────────────────────────────────────────────────────── *)
+
+let objlib_a_h = {|#ifndef A_DEF
+#  error "A_DEF not defined"
+#endif
+#ifdef B_DEF
+#  error "B_DEF must not be defined"
+#endif
+|}
+let objlib_a1_c = {|#include "a.h"
+int a1(void) { return 0; }
+|}
+let objlib_a2_c = {|#include "a.h"
+int a2(void) { return 0; }
+|}
+
+let objlib_b_h = {|#ifdef A_DEF
+#  error "A_DEF must not be defined"
+#endif
+#ifndef B_DEF
+#  error "B_DEF not defined"
+#endif
+#if defined(_WIN32) && defined(Bexport)
+#  define EXPORT_B __declspec(dllexport)
+#else
+#  define EXPORT_B
+#endif
+#if defined(_WIN32) && defined(SHARED_B)
+#  define IMPORT_B __declspec(dllimport)
+#else
+#  define IMPORT_B
+#endif
+|}
+let objlib_b1_c = {|#include "b.h"
+EXPORT_B int b1(void) { return 0; }
+|}
+let objlib_b2_c = {|#include "b.h"
+EXPORT_B int b2(void) { return 0; }
+|}
+
+let objlib_c_c = {|#if defined(_WIN32) && defined(Cshared_EXPORTS)
+#  define EXPORT_C __declspec(dllexport)
+#else
+#  define EXPORT_C
+#endif
+extern int a1(void); extern int a2(void);
+extern int b1(void); extern int b2(void);
+EXPORT_C int c(void) { return 0 + a1() + a2() + b1() + b2(); }
+|}
+
+let objlib_main_c = {|#if defined(_WIN32) && defined(SHARED_C)
+#  define IMPORT_C __declspec(dllimport)
+#else
+#  define IMPORT_C
+#endif
+extern IMPORT_C int b1(void); extern IMPORT_C int b2(void); extern IMPORT_C int c(void);
+int main(void) { return 0 + c() + b1() + b2(); }
+|}
+
+let objlib_mainAB_c = {|#include "b.h"
+extern IMPORT_B int b1(void); extern IMPORT_B int b2(void);
+#ifndef NO_A
+extern int a1(void); extern int a2(void);
+#endif
+int main(void) {
+  return 0
+#ifndef NO_A
+    + a1() + a2()
+#endif
+    + b1() + b2();
+}
+|}
+
+(* TransitiveLinkDeps source files *)
+let objlib_tld_dep_c = "int from_dep(void) { return 0; }"
+let objlib_tld_impl_obj_c = {|int from_dep(void);
+int impl_obj(void) { return from_dep(); }
+|}
+let objlib_tld_main_c = {|int impl_obj(void);
+int main(int argc, char* argv[]) { return impl_obj(); }
+|}
+
+(* A subdir — yelu program compiled to cmake string *)
+let objlib_a_cmake =
+  compile (Yexp_list [
+    yc_project ~languages:[Lang_c] "ObjectLibraryA";
+    yc_set (ycvar "CMAKE_POSITION_INDEPENDENT_CODE") [ystr "ON"];
+    yc_add_definitions [ystr "-DA_DEF"];
+    yc_add_custom_command
+      ~outputs:[ystr "a1.c"]
+      ~depends:[ystr "${CMAKE_CURRENT_SOURCE_DIR}/a1.c.in"]
+      [custom_command "${CMAKE_COMMAND}"
+         ["-E"; "copy"; "${CMAKE_CURRENT_SOURCE_DIR}/a1.c.in";
+          "${CMAKE_CURRENT_BINARY_DIR}/a1.c"]];
+    yc_file_remove [ystr "${CMAKE_CURRENT_BINARY_DIR}/a.cmake"];
+    yc_add_custom_command
+      ~outputs:[ystr "a.cmake"]
+      [custom_command "${CMAKE_COMMAND}"
+         ["-E"; "touch"; "${CMAKE_CURRENT_BINARY_DIR}/a.cmake"]];
+    add_lib ~type_:Lib_object ~sources:[ystr "a1.c"; ystr "a2.c"; ystr "a.cmake"] (t "A");
+    include_dirs (t "A") [ytarget_def ~kind:Private [ystr "${CMAKE_CURRENT_SOURCE_DIR}"]];
+    yc_set_property ~targets:[t "A"] [("COMPILE_PDB_NAME", ystr "Apdb")];
+  ])
+
+(* B subdir — yelu program *)
+let objlib_b_cmake =
+  compile (Yexp_list [
+    yc_project ~languages:[Lang_c] "ObjectLibraryB";
+    yc_set (ycvar "CMAKE_POSITION_INDEPENDENT_CODE") [ystr "ON"];
+    add_lib ~type_:Lib_object ~sources:[ystr "b1.c"; ystr "b2.c"] (t "B");
+    include_dirs (t "B") [ytarget_def ~kind:Public [ystr "${CMAKE_CURRENT_SOURCE_DIR}"]];
+    compile_defs (t "B") [ytarget_def ~kind:Public [ystr "B_DEF"]];
+    add_lib ~type_:Lib_object ~sources:[ystr "b1.c"; ystr "b2.c"] (t "Bexport");
+    yc_set_property ~targets:[t "Bexport"]
+      [("COMPILE_DEFINITIONS", ystr "Bexport")];
+    include_dirs (t "Bexport")
+      [ytarget_def ~kind:Private
+         [ystr_raw "$<TARGET_PROPERTY:B,INTERFACE_INCLUDE_DIRECTORIES>"]];
+    compile_defs (t "Bexport")
+      [ytarget_def ~kind:Private
+         [ystr_raw "$<TARGET_PROPERTY:B,INTERFACE_COMPILE_DEFINITIONS>"]];
+  ])
+
+
+
+(* TransitiveLinkDeps subdir — verbatim cmake *)
+let objlib_tld_cmake = {|
+add_library(implgather INTERFACE)
+add_library(dep STATIC dep.c)
+add_library(deps INTERFACE)
+target_link_libraries(deps INTERFACE dep)
+add_library(impl_obj OBJECT impl_obj.c)
+target_link_libraries(impl_obj PUBLIC deps)
+target_sources(implgather INTERFACE "$<TARGET_OBJECTS:impl_obj>")
+target_link_libraries(implgather INTERFACE impl_obj)
+add_executable(useimpl main.c)
+target_link_libraries(useimpl PRIVATE implgather)
+|}
+
+(* Root yelu program.
+   ExportLanguages skipped — uses ExternalProject_Add (external cmake invocation). *)
+let objlib_yelu =
+  let obj = ystr_raw in  (* shorthand for $<TARGET_OBJECTS:X> *)
+  Yexp_list [
+    yc_project ~languages:[Lang_c] "ObjectLibrary";
+    yc_add_subdirectory (ystr "A");
+    yc_add_subdirectory (ystr "B");
+    (* Cstatic: c.c + objects from A and B *)
+    add_lib ~type_:Lib_static
+      ~sources:[ystr "c.c"; obj "$<TARGET_OBJECTS:A>"; obj "$<TARGET_OBJECTS:B>"]
+      (t "Cstatic");
+    add_exe ~sources:[ystr "main.c"] (t "UseCstatic");
+    link_lib [t "UseCstatic"] [ytarget_def ~kind:Private [t "Cstatic"]];
+    (* Cshared *)
+    add_lib ~type_:Lib_shared
+      ~sources:[ystr "c.c"; obj "$<TARGET_OBJECTS:A>"; obj "$<TARGET_OBJECTS:Bexport>"]
+      (t "Cshared");
+    add_exe ~sources:[ystr "main.c"] (t "UseCshared");
+    yc_set_property ~targets:[t "UseCshared"] [("COMPILE_DEFINITIONS", ystr "SHARED_C")];
+    link_lib [t "UseCshared"] [ytarget_def ~kind:Private [t "Cshared"]];
+    yc_add_custom_command_target ~target:"UseCshared" ~when_:cw_post_build
+      [custom_command "${CMAKE_COMMAND}"
+         ["-P"; "${CMAKE_CURRENT_BINARY_DIR}/A/a.cmake"]];
+    (* ABstatic: no own sources *)
+    add_lib ~type_:Lib_static
+      ~sources:[obj "$<TARGET_OBJECTS:A>"; obj "$<TARGET_OBJECTS:B>"]
+      (t "ABstatic");
+    include_dirs (t "ABstatic")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_INCLUDE_DIRECTORIES>"]];
+    compile_defs (t "ABstatic")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_COMPILE_DEFINITIONS>"]];
+    add_exe ~sources:[ystr "mainAB.c"] (t "UseABstatic");
+    link_lib [t "UseABstatic"] [ytarget_def ~kind:Private [t "ABstatic"]];
+    (* ABshared: Linux path — B objects (no .def file needed on Linux) *)
+    add_lib ~type_:Lib_shared
+      ~sources:[obj "$<TARGET_OBJECTS:A>"; obj "$<TARGET_OBJECTS:B>"]
+      (t "ABshared");
+    include_dirs (t "ABshared")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_INCLUDE_DIRECTORIES>"]];
+    compile_defs (t "ABshared")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_COMPILE_DEFINITIONS>"]];
+    add_exe ~sources:[ystr "mainAB.c"] (t "UseABshared");
+    yc_set_property ~targets:[t "UseABshared"] [("COMPILE_DEFINITIONS", ystr "SHARED_B")];
+    link_lib [t "UseABshared"] [ytarget_def ~kind:Private [t "ABshared"]];
+    (* ABmain OBJECT + UseABinternal executable from objects *)
+    add_lib ~type_:Lib_object ~sources:[ystr "mainAB.c"] (t "ABmain");
+    include_dirs (t "ABmain")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_INCLUDE_DIRECTORIES>"]];
+    compile_defs (t "ABmain")
+      [ytarget_def ~kind:Public
+         [obj "$<TARGET_PROPERTY:B,INTERFACE_COMPILE_DEFINITIONS>"]];
+    add_exe
+      ~sources:[obj "$<TARGET_OBJECTS:ABmain>"; obj "$<TARGET_OBJECTS:A>";
+                obj "$<TARGET_OBJECTS:B>"]
+      (t "UseABinternal");
+    yc_file_remove [ystr "${CMAKE_CURRENT_BINARY_DIR}/UseABinternalDep.cmake"];
+    yc_add_custom_target
+      ~commands:[custom_command "${CMAKE_COMMAND}"
+                   ["-E"; "touch"; "UseABinternalDep.cmake"]]
+      "UseABinternalDep";
+    yc_add_custom_command_target ~target:"UseABinternal" ~when_:cw_post_build
+      [custom_command "${CMAKE_COMMAND}" ["-P"; "UseABinternalDep.cmake"]];
+    yc_add_dependencies "UseABinternal" "UseABinternalDep";
+    (* Second-order object consumers *)
+    add_lib ~type_:Lib_static
+      ~sources:[obj "$<TARGET_OBJECTS:Cstatic>"; obj "$<TARGET_OBJECTS:A>";
+                obj "$<TARGET_OBJECTS:Bexport>"]
+      (t "UseCstaticObjs");
+    add_lib ~type_:Lib_shared
+      ~sources:[obj "$<TARGET_OBJECTS:Cshared>"; obj "$<TARGET_OBJECTS:A>";
+                obj "$<TARGET_OBJECTS:Bexport>"]
+      (t "UseCsharedObjs");
+    add_exe ~sources:[obj "$<TARGET_OBJECTS:UseABstatic>"] (t "UseABstaticObjs");
+    link_lib [t "UseABstaticObjs"] [ytarget_def ~kind:Private [t "ABstatic"]];
+    (* ExportLanguages skipped (ExternalProject_Add).
+       Transitive skipped (OBJECT INTERFACE dep propagation differs cmake 3.28 vs 4.3). *)
+    yc_add_subdirectory (ystr "TransitiveLinkDeps");
+  ]
+
+let compile_options_main_cpp =
+  (* _COMPILER_FRONTEND_VARIANT genex requires cmake 3.30+; stripped for 3.28 compat *)
+  {|#ifndef TEST_DEFINE
+#  error Expected definition TEST_DEFINE
+#endif
+#ifndef NEEDS_ESCAPE
+#  error Expected definition NEEDS_ESCAPE
+#endif
+#ifdef DO_GNU_TESTS
+#  ifndef TEST_DEFINE_GNU
+#    error Expected definition TEST_DEFINE_GNU
+#  endif
+#  ifndef TEST_DEFINE_CXX_AND_GNU
+#    error Expected definition TEST_DEFINE_CXX_AND_GNU
+#  endif
+#endif
+#ifndef NO_DEF_TESTS
+#  ifndef DEF_A
+#    error Expected definition DEF_A
+#  endif
+#  ifndef DEF_B
+#    error Expected definition DEF_B
+#  endif
+#  ifndef DEF_C
+#    error Expected definition DEF_C
+#  endif
+#  ifndef DEF_D
+#    error Expected definition DEF_D
+#  endif
+#  ifndef DEF_STR
+#    error Expected definition DEF_STR
+#  endif
+#endif
+#ifdef DO_FLAG_TESTS
+#  if FLAG_A != 2
+#    error "FLAG_A is not 2"
+#  endif
+#  if FLAG_B != 2
+#    error "FLAG_B is not 2"
+#  endif
+#  if FLAG_C != 2
+#    error "FLAG_C is not 2"
+#  endif
+#  if FLAG_D != 2
+#    error "FLAG_D is not 2"
+#  endif
+#  if defined(FLAG_E) && FLAG_E != 2
+#    error "FLAG_E is not 2"
+#  endif
+#endif
+#include <string.h>
+int main()
+{
+  return (strcmp(NEEDS_ESCAPE, "E$CAPE") == 0
+#ifndef NO_DEF_TESTS
+          && strcmp(DEF_STR, "string with spaces") == 0
+#endif
+          &&
+          strcmp(EXPECTED_C_COMPILER_VERSION, TEST_C_COMPILER_VERSION) == 0 &&
+          strcmp(EXPECTED_CXX_COMPILER_VERSION, TEST_CXX_COMPILER_VERSION) == 0
+          ) ? 0 : 1;
+}
+|}
+
+let compile_options_yelu =
+  let co = t "CompileOptions" in
+  let testlib = t "testlib" in
+  Yexp_list [
+    yc_minimum_required_s "3.10";
+    yifthen (Ypolicy_defined "CMP0092") (yc_policy_set "CMP0092");
+    yifthen (Ypolicy_defined "CMP0129") (yc_policy_set "CMP0129");
+    yc_get_global_property ~property:"GENERATOR_IS_MULTI_CONFIG" (ycvar "_isMultiConfig");
+    yifthen (Yand (Ynot (Ytruthy (ycstr "_isMultiConfig")), Ynot (Ytruthy (ycstr "CMAKE_BUILD_TYPE"))))
+      (yc_set_cache (Ycvar "CMAKE_BUILD_TYPE") [ystr "Debug"]
+         ~force:true ~cache_type:Ct_string ~docstring:"Choose the type of build");
+    yc_project ~languages:[Lang_c; Lang_cxx] "CompileOptions";
+    add_lib ~sources:[ystr "other.cpp"] testlib;
+    add_exe ~sources:[ystr "main.cpp"] co;
+    (* macro: appends per-compiler genex flags; _COMPILER_FRONTEND_VARIANT stripped for cmake 3.28 compat *)
+    yc_macro (ystr "get_compiler_test_genex") ~args:["lst"; "lang"] [
+      yc_list_append (ycvar "${lst}") [ystr_raw {|-DTEST_${lang}_COMPILER_VERSION=\"$<${lang}_COMPILER_VERSION>\"|}];
+      yc_list_append (ycvar "${lst}") [ystr_raw {|-DTEST_${lang}_COMPILER_VERSION_EQUALITY=$<${lang}_COMPILER_VERSION:${CMAKE_${lang}_COMPILER_VERSION}>|}];
+    ];
+    yc_apply (ystr "get_compiler_test_genex") [ycstr "c_tests"; ystr "C"];
+    yc_apply (ystr "get_compiler_test_genex") [ycstr "cxx_tests"; ystr "CXX"];
+    (* set COMPILE_OPTIONS property: base flags + genex + per-lang version flags *)
+    compile_opts co [
+      ytarget_def ~kind:Private [
+        ystr "-DTEST_DEFINE";
+        ystr_raw {|-DNEEDS_ESCAPE=\"E$CAPE\"|};
+        ystr_raw {|$<$<CXX_COMPILER_ID:GNU,LCC>:-DTEST_DEFINE_GNU>|};
+        ystr_raw {|$<$<COMPILE_LANG_AND_ID:CXX,GNU,LCC>:-DTEST_DEFINE_CXX_AND_GNU>|};
+        ystr "SHELL:";
+        ystr_raw "${c_tests}";
+        ystr_raw "${cxx_tests}";
+      ];
+    ];
+    (* BORLAND/WATCOM: no -D flag support; others: SHELL -D defines *)
+    yif (Yor (Ytruthy (ycstr "BORLAND"), Ytruthy (ycstr "WATCOM")))
+      (compile_defs co [ ytarget_def ~kind:Private [ystr "NO_DEF_TESTS"] ])
+      (compile_opts co [
+        ytarget_def ~kind:Private [
+          ystr {|SHELL:-D DEF_A|};
+          ystr_raw {|$<1:SHELL:-D DEF_B>|};
+          ystr_raw {|SHELL:-D 'DEF_C' -D \"DEF_D\"|};
+          ystr_raw {|[=[SHELL:-D "DEF_STR=\"string with spaces\""]=]|};
+        ]
+      ]);
+    (* octothorpe define: GNU/LCC/Clang compilers, not NMake *)
+    yifthen (Yand (
+        ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|GNU|LCC|Clang|Borland|Embarcadero|},
+        Ynot (ymatches (ycstr "CMAKE_GENERATOR") "NMake Makefiles")))
+      (compile_opts co [ ytarget_def ~kind:Private [ystr_raw {|-DTEST_OCTOTHORPE=\"#\"|}] ]);
+    (* flag tests: GNU/LCC/AppleClang/MSVC compilers *)
+    yifthen (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|^(GNU|LCC|AppleClang|MSVC)$|})
+      (Yexp_list [
+        compile_defs co [ ytarget_def ~kind:Private [ystr "DO_FLAG_TESTS"] ];
+        yifthen (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|^(GNU|LCC|AppleClang)$|})
+          (yc_string_append (Ycvar "CMAKE_CXX_FLAGS") [ystr " -w"]);
+        yc_string_append (Ycvar "CMAKE_CXX_FLAGS")                [ystr " -DFLAG_A=1 -DFLAG_B=1"];
+        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_DEBUG")          [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_RELEASE")        [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_RELWITHDEBINFO") [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_MINSIZEREL")     [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_toupper (ystr_raw "${CMAKE_BUILD_TYPE}") (ycvar "_xbuild_type");
+        yifthen (Ynot (ymatches (ycstr "_xbuild_type") {|^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$|}))
+          (yc_string_append (Ycvar "CMAKE_CXX_FLAGS_${_xbuild_type}") [ystr " -DFLAG_A=2 -DFLAG_C=1"]);
+        compile_opts co [ ytarget_def ~kind:Private [ystr "-DFLAG_B=2"; ystr "-DFLAG_C=2"; ystr "-DFLAG_D=1"] ];
+        yc_set_property ~append:true ~targets:[testlib]
+          [("INTERFACE_COMPILE_OPTIONS", ystr "-DFLAG_D=2")];
+        yc_set_property ~append:true ~targets:[testlib]
+          [("INTERFACE_COMPILE_OPTIONS", ystr "-DFLAG_E=1")];
+        yc_set_source_property (ystr "main.cpp") [ystr "-DFLAG_E=2"];
+      ]);
+    link_lib [co] [ ytarget_def ~kind:Plain [testlib] ];
+    yifthen (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") "GNU|LCC")
+      (compile_defs co [ ytarget_def ~kind:Private [ystr "DO_GNU_TESTS"] ]);
+    compile_defs co [
+      ytarget_def ~kind:Private [
+        ystr_raw {|EXPECTED_C_COMPILER_VERSION=\"${CMAKE_C_COMPILER_VERSION}\"|};
+        ystr_raw {|EXPECTED_CXX_COMPILER_VERSION=\"${CMAKE_CXX_COMPILER_VERSION}\"|};
+
+      ]
+    ];
+  ]
+
 let compile_defs_yelu =
   Yexp_list [
     yc_minimum_required_s "3.10";
@@ -1900,6 +2282,65 @@ let () =
                   ("interface/CMakeLists.txt", pic_interface_cmake)]
           pic_yelu;
       ]);
+      ("object_library", [
+        (* Tests/ObjectLibrary/ uses ExternalProject_Add in ExportLanguages subdir
+           → no reference comparison. Exercises: add_library(OBJECT), $<TARGET_OBJECTS:X>
+           as source arg, add_custom_command TARGET POST_BUILD, add_definitions. *)
+        check_build_yelu "basic"
+          ~files:[("A/CMakeLists.txt", objlib_a_cmake);
+                  ("A/a1.c.in",        objlib_a1_c);
+                  ("A/a2.c",           objlib_a2_c);
+                  ("A/a.h",            objlib_a_h);
+                  ("B/CMakeLists.txt", objlib_b_cmake);
+                  ("B/b1.c",           objlib_b1_c);
+                  ("B/b2.c",           objlib_b2_c);
+                  ("B/b.h",            objlib_b_h);
+                  ("c.c",              objlib_c_c);
+                  ("main.c",           objlib_main_c);
+                  ("mainAB.c",         objlib_mainAB_c);
+                  ("TransitiveLinkDeps/CMakeLists.txt", objlib_tld_cmake);
+                  ("TransitiveLinkDeps/dep.c",          objlib_tld_dep_c);
+                  ("TransitiveLinkDeps/impl_obj.c",     objlib_tld_impl_obj_c);
+                  ("TransitiveLinkDeps/main.c",         objlib_tld_main_c)]
+          objlib_yelu;
+      ]);
+      ("compile_options", [
+        (* upstream Tests/CompileOptions uses $<C_COMPILER_FRONTEND_VARIANT> (cmake 3.30+);
+           no reference comparison — yelu-only build *)
+        check_build_yelu "basic"
+          ~files:[("main.cpp", compile_options_main_cpp);
+                  ("other.cpp", "void foo(void) {}\n")]
+          compile_options_yelu;
+      ]);
+      ("custom_command", [
+        (* Tests/CustomCommand/ is 609 lines: generator-exe subdirs, shell
+           operators (< > >>), genex ($<1:generator>, $<TARGET_PROPERTY:...>),
+           COMMAND_EXPAND_LISTS, configure_file, PerConfig sibling subdir —
+           not tractable as a reference. Yelu-only build covering OUTPUT form,
+           add_custom_target ALL+DEPENDS, and add_dependencies. *)
+        check_build_yelu "basic"
+          (Yexp_list [
+            yc_project "CustomCommandTest";
+            (* step 1: touch a stamp file *)
+            yc_add_custom_command
+              ~outputs:[ystr "stamp.txt"]
+              ~verbatim:true
+              ~comment:(Some "Stamping stamp.txt")
+              [custom_command "${CMAKE_COMMAND}" ["-E"; "touch"; "stamp.txt"]];
+            yc_add_custom_target ~all:true ~depends:[ystr "stamp.txt"]
+              "drive_stamp";
+            (* step 2: copy stamp to copy.txt, depends on stamp *)
+            yc_add_custom_command
+              ~outputs:[ystr "copy.txt"]
+              ~depends:[ystr "stamp.txt"]
+              ~verbatim:true
+              ~comment:(Some "Copying stamp to copy.txt")
+              [custom_command "${CMAKE_COMMAND}" ["-E"; "copy"; "stamp.txt"; "copy.txt"]];
+            yc_add_custom_target ~all:true ~depends:[ystr "copy.txt"]
+              "drive_copy";
+            yc_add_dependencies "drive_copy" "drive_stamp";
+          ]);
+      ]);
       ("compile_definitions", [
         check_build_pair_tests "basic" "CompileDefinitions"
           ~files:[("compiletest.cpp", cd_compiletest_cpp);
@@ -1927,5 +2368,87 @@ int main(void) {
                   ("add_def_cmd/CMakeLists.txt", cd_add_def_cmd_cmake);
                   ("add_def_cmd_tprop/CMakeLists.txt", cd_add_def_cmd_tprop_cmake)]
           compile_defs_yelu;
+      ]);
+      ("visibility", [
+        (* Tests/Visibility/ — C_VISIBILITY_PRESET hidden + VISIBILITY_INLINES_HIDDEN.
+           POST_BUILD runs cmake -P verify.cmake (nm check); build exit code is oracle. *)
+        check_build_yelu "basic"
+          ~files:[
+            ("hidden.c", {|
+int hidden_function(void) { return 0; }
+__attribute__((visibility("default"))) int not_hidden(void) { return hidden_function(); }
+|});
+            ("shared.c", {|
+extern int not_hidden(void);
+int shared(void) { return not_hidden(); }
+|});
+            ("foo.cpp", {|
+class Foo { public: void bar() {} };
+void baz() { Foo foo; foo.bar(); }
+|});
+            ("bar.c", {|void bar(void) {}|});
+            ("shared.cpp", {|
+extern "C" int bar(void);
+void baz();
+int shared() { baz(); return bar(); }
+|});
+            ("verify.cmake", {|
+execute_process(COMMAND ${CMAKE_NM} -D ${TEST_LIBRARY_PATH}
+  RESULT_VARIABLE RESULT OUTPUT_VARIABLE OUTPUT ERROR_VARIABLE ERROR)
+if(NOT "${RESULT}" STREQUAL "0")
+  message(FATAL_ERROR "nm failed [${RESULT}] [${OUTPUT}] [${ERROR}]")
+endif()
+if(${OUTPUT} MATCHES "(Foo[^\n]*bar|hidden_function)")
+  message(FATAL_ERROR "Found ${CMAKE_MATCH_1} which should have been hidden [${OUTPUT}]")
+endif()
+|})]
+          (let pb tname =
+             yc_add_custom_command_target ~verbatim:true ~target:tname ~when_:cw_post_build
+               [custom_command "${CMAKE_COMMAND}"
+                  ["-DCMAKE_NM=${CMAKE_NM}";
+                   "-DTEST_LIBRARY_PATH=$<TARGET_FILE:" ^ tname ^ ">";
+                   "-P"; "${CMAKE_CURRENT_SOURCE_DIR}/verify.cmake"]]
+           in
+           Yexp_list [
+             yc_project "Visibility";
+             (* C hidden targets *)
+             add_lib ~type_:Lib_shared ~sources:[ystr "hidden.c"] (t "hidden1");
+             yc_set_property ~targets:[t "hidden1"]
+               [("C_VISIBILITY_PRESET", ystr "hidden")];
+             add_lib ~type_:Lib_object ~sources:[ystr "hidden.c"] (t "hidden_object");
+             yc_set_property ~targets:[t "hidden_object"]
+               [("C_VISIBILITY_PRESET", ystr "hidden");
+                ("POSITION_INDEPENDENT_CODE", ystr "ON")];
+             add_lib ~type_:Lib_static ~sources:[ystr "hidden.c"] (t "hidden_static");
+             yc_set_property ~targets:[t "hidden_static"]
+               [("C_VISIBILITY_PRESET", ystr "hidden");
+                ("POSITION_INDEPENDENT_CODE", ystr "ON")];
+             add_lib ~type_:Lib_shared
+               ~sources:[ystr_raw "$<TARGET_OBJECTS:hidden_object>"; ystr "shared.c"] (t "hidden2");
+             add_lib ~type_:Lib_shared ~sources:[ystr "shared.c"] (t "hidden3");
+             link_lib [t "hidden3"] [ytarget_def [t "hidden_static"]];
+             pb "hidden1"; pb "hidden2"; pb "hidden3";
+             (* C++ inlines_hidden targets *)
+             add_lib ~type_:Lib_shared ~sources:[ystr "foo.cpp"; ystr "bar.c"] (t "inlines_hidden1");
+             yc_set_property ~targets:[t "inlines_hidden1"]
+               [("VISIBILITY_INLINES_HIDDEN", ystr "ON")];
+             compile_opts (t "inlines_hidden1") [ytarget_def ~kind:Private [ystr "-Werror"]];
+             add_lib ~type_:Lib_object ~sources:[ystr "foo.cpp"; ystr "bar.c"] (t "inlines_hidden_object");
+             yc_set_property ~targets:[t "inlines_hidden_object"]
+               [("VISIBILITY_INLINES_HIDDEN", ystr "ON");
+                ("POSITION_INDEPENDENT_CODE", ystr "ON")];
+             compile_opts (t "inlines_hidden_object") [ytarget_def ~kind:Private [ystr "-Werror"]];
+             add_lib ~type_:Lib_static ~sources:[ystr "foo.cpp"; ystr "bar.c"] (t "inlines_hidden_static");
+             yc_set_property ~targets:[t "inlines_hidden_static"]
+               [("VISIBILITY_INLINES_HIDDEN", ystr "ON");
+                ("POSITION_INDEPENDENT_CODE", ystr "ON")];
+             compile_opts (t "inlines_hidden_static") [ytarget_def ~kind:Private [ystr "-Werror"]];
+             add_lib ~type_:Lib_shared
+               ~sources:[ystr_raw "$<TARGET_OBJECTS:inlines_hidden_object>"; ystr "shared.cpp"]
+               (t "inlines_hidden2");
+             add_lib ~type_:Lib_shared ~sources:[ystr "shared.cpp"] (t "inlines_hidden3");
+             link_lib [t "inlines_hidden3"] [ytarget_def [t "inlines_hidden_static"]];
+             pb "inlines_hidden1"; pb "inlines_hidden2"; pb "inlines_hidden3";
+           ]);
       ]);
     ]

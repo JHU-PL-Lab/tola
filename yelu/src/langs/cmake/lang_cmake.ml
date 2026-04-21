@@ -64,6 +64,7 @@ type set_property_mode = Sp_set | Sp_defined | Sp_brief_doc | Sp_full_doc
 type add_executable_option = Ae_win32 | Ae_macos_bundle | Ae_exclude_from_all
 
 type custom_command = { command : string; args : string list }
+type custom_when = Cw_pre_build | Cw_pre_link | Cw_post_build
 
 (* Argument Caveats *)
 type pseudo_var = Argn | Argc | Argv | Argv0
@@ -413,6 +414,7 @@ and exp =
       properties : property list;
     }
   | Set_directory_property of { append : bool; property : string; values : arg list }
+  | Set_source_property of { file : string; property : string; values : arg list }
   (* Info and debug *)
   | Site_name of { var : var }
   | Variable_watch of {
@@ -713,6 +715,14 @@ and project_cmd =
       codegen : bool;
       command_expand_list : string list;
       depends_explicit_only : bool;
+    }
+  | Add_custom_command_target of {
+      target : target;
+      when_ : custom_when;
+      commands : custom_command list;
+      comment : comment option;
+      verbatim : bool;
+      uses_terminal : bool;
     }
   | Add_custom_target of {
       name : string;

@@ -1,7 +1,9 @@
 # Yelu Test Infrastructure — Comparison Levels
 
-This document defines the named comparison levels used across all yelu tests.
-`language_coverage.md` refers to these terms without re-defining them.
+This document covers **how to run** tests at each comparison level — harness code,
+dune aliases, patterns, gotchas, and blockers. `yelu_lang_coverage.md` refers to
+these terms without re-defining them. For **why** each level exists and which levels
+apply to which test categories see `cmake_comparison.md`.
 
 ---
 
@@ -9,14 +11,14 @@ This document defines the named comparison levels used across all yelu tests.
 
 Each level subsumes all levels below it (a `build` test also passes `configure`, `script`, and `text`).
 
-| Level         | PL term          | Mechanism                       | What it asserts                                                                                                     | Harness location                                              |
-| ------------- | ---------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| `text`        | `src`            | OCaml Alcotest, no cmake        | Emitted cmake source text matches expected (PP and/or yelu compile)                                                 | `test_cmake_pp.ml`, `test_yelu_compile.ml`                    |
-| `script`      | `interp-result`  | `cmake -P script.cmake`         | cmake interpreter accepts it; exit 0; stdout patterns match                                                         | `test-runcmake/` (runcmake-test alias)                        |
-| `script-pair` | `interp-pair`    | `cmake -P` run twice            | Ref cmake and yelu cmake are observationally equivalent under the interpreter (identical stdout, normalized stderr) | `test_runcmake_yelu.ml` (runcmake-yelu alias)                 |
-| `configure`   | `compile`        | `cmake -S . -B _build`          | cmake compiles CMakeLists.txt into a build system; exits 0; specific cache variable bindings correct                | `test-runcmake/` configure tests; showcase `make cmake-check` |
-| `build`       | `run`            | `cmake -S -B` + `cmake --build` | Running the compiled build system (make/ninja) produces identical artifact names; sizes reported                    | `test_cmake_commands.ml` (cmake-commands alias)               |
-| `file-api`    | `interp-binding` | configure + File API query      | Full binding environment (target → flags, includes, deps) identical between ref and yelu                            | `test-file-api/` (file-api-test alias)                        |
+| Level         | Mechanism                       | What it asserts                                                                                                     | Harness location                                              |
+| ------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `text`        | OCaml Alcotest, no cmake        | Emitted cmake source text matches expected (PP and/or yelu compile)                                                 | `test_cmake_pp.ml`, `test_yelu_compile.ml`                    |
+| `script`      | `cmake -P script.cmake`         | cmake interpreter accepts it; exit 0; stdout patterns match                                                         | `test-runcmake/` (runcmake-test alias)                        |
+| `script-pair` | `cmake -P` run twice            | Ref cmake and yelu cmake are observationally equivalent under the interpreter (identical stdout, normalized stderr) | `test_runcmake_yelu.ml` (runcmake-yelu alias)                 |
+| `configure`   | `cmake -S . -B _build`          | cmake compiles CMakeLists.txt into a build system; exits 0; specific cache variable bindings correct                | `test-runcmake/` configure tests; showcase `make cmake-check` |
+| `build`       | `cmake -S -B` + `cmake --build` | Running the compiled build system (make/ninja) produces identical artifact names; sizes reported                    | `test_cmake_commands.ml` (cmake-commands alias)               |
+| `file-api`    | configure + File API query      | Full binding environment (target → flags, includes, deps) identical between ref and yelu                            | `test-file-api/` (file-api-test alias)                        |
 
 Future (not yet implemented):
 
@@ -194,6 +196,29 @@ let check_build_pair name ref_name ?(files = []) yelu_prog =
     check_artifacts_match ref_result.artifacts yelu_result.artifacts)
 ```
 
+### check_build_yelu
+
+Used when the upstream reference cmake requires a newer cmake version than
+what is installed (e.g., cmake 3.30+ genex in `Tests/CompileOptions/`). Runs
+only the yelu-generated cmake — no reference cmake, no artifact comparison.
+
+```
+yelu: cmake -S tmpdir_src -B tmpdir_build → cmake --build tmpdir_build
+```
+
+```ocaml
+let check_build_yelu name ?(files = []) yelu_prog =
+  Alcotest.test_case name `Quick (fun () ->
+    let cmake_text = compile yelu_prog in
+    let r = run_configure_and_build ~files cmake_text in
+    (if r.configure.run.exit_code <> 0 then failf "configure failed ...");
+    if r.build.exit_code <> 0 then failf "build failed ...")
+```
+
+Do **not** add files to the upstream cmake source tree as a workaround —
+if the upstream reference is incompatible, use `check_build_yelu` or mark
+the test blocked.
+
 ### Artifact comparison (check_artifacts_match)
 
 Walk the build directory, skip cmake internals (`CMakeFiles/`, `*.cmake`, `*.d`,
@@ -268,11 +293,23 @@ codemodel-v2 JSON between the cmake-generated reference and yelu-generated outpu
 | Level         | Count             |
 | ------------- | ----------------- |
 | `text`        | ~193 unit tests   |
-| `script`      | 62 compat tests   |
+| `script`      | 61 compat tests (1 blocked)   |
 | `script-pair` | 50 pairs          |
 | `configure`   | 23 tests          |
-| `build`       | 22 tests (growing) |
+| `build`       | 26 tests (growing) |
 | `file-api`    | 12 step pairs     |
+
+---
+
+## Environment gotchas
+
+**`CLICOLOR_FORCE` propagation**: dune sets `CLICOLOR_FORCE=1` when running test
+aliases to force colors in alcotest output. cmake inherits this and wraps every
+`message()` output with ANSI reset codes (`\x1b[0m`). The `message/newline` compat
+test hex-encodes captured stderr for byte-exact comparison — ANSI codes corrupt it.
+`cmake_runner.ml`'s `cmake_env` forces `CLICOLOR_FORCE=0` for all cmake subprocess
+calls to isolate them from dune's color forcing. Note: `NO_COLOR=1` does not work —
+cmake 3.28 ignores it; `CLICOLOR_FORCE` is the actual switch cmake respects.
 
 ---
 
@@ -280,6 +317,7 @@ codemodel-v2 JSON between the cmake-generated reference and yelu-generated outpu
 
 | Item                                    | Blocker                                      |
 | --------------------------------------- | -------------------------------------------- |
+| `message/newline` script                | cmake emits `\x1b[0m` ANSI reset codes around `message()` output when `CLICOLOR_FORCE` is set (injected by dune for alias runs); hex-encoded stderr comparison fails. `CLICOLOR_FORCE=0` override in `cmake_env` did not resolve on all machines. |
 | `include` CMP0146/CMP0148 `script-pair` | Require real cmake modules + policy state    |
 | `include` ParentVariable*               | Multi-file fixture infra                     |
 | `foreach-all-test` pair                 | PP always emits LISTS-first; needs extension |

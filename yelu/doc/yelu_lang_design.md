@@ -1,7 +1,7 @@
 # Yelu Language Design
 
 Research directions and open design questions. For current implementation state see
-`language_coverage.md`. For done history see `worklog_2026_04.md`.
+`yelu_lang_coverage.md`. For done history see `worklog_2026_04.md`.
 
 ---
 

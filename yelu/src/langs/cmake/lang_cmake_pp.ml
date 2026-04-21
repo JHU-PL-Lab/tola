@@ -618,19 +618,22 @@ let rec pp ff e =
             if String.length f > 0 then pf ff " INSTALL %s" f)
           install (pp_flag "VARIABLE") variable string property_name
           (pp_flag "SET") set)
-  | Set_property { global; targets; properties; _ } ->
+  | Set_property { global; targets; append = do_append; properties; _ } ->
+      let app = if do_append then " APPEND" else "" in
       if global then
-        Fmt.(pf ff "set_property(GLOBAL@;PROPERTY %a)" (list_sp pp_property) properties)
+        Fmt.(pf ff "set_property(GLOBAL%s@;PROPERTY %a)" app (list_sp pp_property) properties)
       else
         Fmt.(
-          pf ff "set_property(TARGET %a@;PROPERTY %a)" (list_sp pp_target) targets
-            (list_sp pp_property) properties)
+          pf ff "set_property(TARGET %a%s@;PROPERTY %a)" (list_sp pp_target) targets
+            app (list_sp pp_property) properties)
   | Set_directory_property { append = is_append; property; values } ->
       Fmt.(
         pf ff "set_property(DIRECTORY%s PROPERTY %s %a)"
           (if is_append then " APPEND" else "")
           property
           (list_sp pp_arg) values)
+  | Set_source_property { file; property; values } ->
+      Fmt.(pf ff "set_property(SOURCE %s PROPERTY %s %a)" file property (list_sp pp_arg) values)
   (* info and debug *)
   | Site_name { var } -> Fmt.(pf ff "site_name(%a)" pp_var var)
   | Variable_watch { var; command; _ } ->
@@ -1081,6 +1084,17 @@ and pp_project_cmd ff cmd =
           (pp_flag "VERBATIM") verbatim
           (pp_flag "USES_TERMINAL") uses_terminal
           (pp_flag "APPEND") is_append)
+  | Add_custom_command_target { target; when_; commands; comment; verbatim; uses_terminal } ->
+      let when_s = match when_ with
+        | Cw_pre_build -> "PRE_BUILD" | Cw_pre_link -> "PRE_LINK" | Cw_post_build -> "POST_BUILD"
+      in
+      Fmt.(
+        pf ff "add_custom_command(TARGET %a %s%a%a%a%a)@."
+          pp_target target when_s
+          (pp_list_with_key "COMMAND" pp_custom_command) commands
+          (pp_with_key "COMMENT" string) comment
+          (pp_flag "VERBATIM") verbatim
+          (pp_flag "USES_TERMINAL") uses_terminal)
   | Add_custom_target
       { name; all; commands; depends; working_directory; comment;
         verbatim; uses_terminal; sources; _ } ->

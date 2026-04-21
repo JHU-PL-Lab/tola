@@ -167,6 +167,7 @@ type yelu_exp =
   | Yc_add_compile_definitions of { defs : yarg list }
   | Yc_add_compile_options of { options : yarg list }
   | Yc_add_link_options of { options : yarg list }
+  | Yc_add_definitions of { defs : yarg list }
   | Yc_link_directories of { before : bool; dirs : yarg list }
   | Yc_target_include_directories of {
       target : yarg;
@@ -264,10 +265,13 @@ type yelu_exp =
   | Yc_file_read_symlink of { out : yelu_cvar; link : yarg }
   | Yc_file_timestamp of { out : yelu_cvar; file : yarg; format : string option; utc : bool }
   | Yc_quote_cmd of string   (* retired: compile case raises — add typed nodes instead *)
+  | Yc_at_var of string   (* cmake configure substitution marker: @KEY@ — used in configure_file templates *)
   | Yc_policy_set of { id : string; new_ : bool }
   | Yc_set_directory_property of { property : string; append : bool; values : yarg list }
   | Yc_link_libraries of { items : yarg list }
   | Yc_list_append of { cvar : yelu_cvar; values : yarg list }
+  (* language *)
+  | Yc_enable_language of { langs : string list; optional : bool }
   (* testing *)
   | Yc_enable_testing
   | Yc_add_test of { name : yarg; command : yarg; args : yarg list }
@@ -282,7 +286,13 @@ type yelu_exp =
     }
   | Yc_set_property of {
       targets : yarg list;
+      append : bool;
       properties : (property_key * yarg) list;
+    }
+  | Yc_set_source_property of {
+      file : yarg;
+      property : string;
+      values : yarg list;
     }
   | Yc_set_global_property of { properties : (property_key * yarg) list }
   | Yc_get_filename_component of { var : yelu_cvar; filename : yarg; mode : string }
@@ -325,6 +335,15 @@ type yelu_exp =
       outputs : yarg list;
       commands : Lang_cmake.custom_command list;
       depends : yarg list;
+      verbatim : bool;
+      comment : string option;
+    }
+  | Yc_add_custom_command_target of {
+      target : string;
+      when_ : Lang_cmake.custom_when;
+      commands : Lang_cmake.custom_command list;
+      comment : string option;
+      verbatim : bool;
     }
   (* extern declarations — register in env without emitting cmake *)
   | Yc_extern_cvar of yelu_cvar
@@ -514,7 +533,9 @@ type yelu_exp =
   | Yc_path_hash of { path_var : yelu_cvar; out : yelu_cvar }
   | Yc_add_custom_target of {
       name : string;
+      all : bool;
       commands : Lang_cmake.custom_command list;
+      depends : yarg list;
       comment : string option;
     }
   | Yc_get_target_property of {

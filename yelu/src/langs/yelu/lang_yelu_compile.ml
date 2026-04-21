@@ -170,6 +170,8 @@ let cmake_quote_cond s =
   || String.exists s ~f:(Char.equal ';')
   || String.exists s ~f:Char.is_whitespace
   || String.is_substring s ~substring:"${"
+  || String.exists s ~f:(Char.equal '(')
+  || String.exists s ~f:(Char.equal ')')
   then Fmt.str "\"%s\"" s
   else s
 
@@ -594,7 +596,8 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       (env, Lang_cmake.File_read_symlink { var = cv_name out; link = erase_arg env link })
   | Yc_file_timestamp { out; file; format; utc } ->
       (env, Lang_cmake.File_timestamp { var = cv_name out; file = erase_arg env file; format; utc })
-  | Yc_quote_cmd _ -> failwith "Yc_quote_cmd: retired — add typed yelu nodes instead"
+  | Yc_quote_cmd _ -> failwith "Yc_quote_cmd: retired — use Yc_cmake_verbatim for raw cmake passthrough"
+  | Yc_at_var key -> (env, Lang_cmake.Quote (Printf.sprintf "@%s@" key))
   | Yc_policy_set { id; new_ } ->
       (env, Cmake_cmd (Cmake_policy_set { id; new_ }))
   | Yc_set_directory_property { property; append; values } ->
@@ -616,6 +619,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       ( env,
         List_cmd
           (Lc_append { var = cv_name cvar; values = List.map ~f:(erase_arg env) values }) )
+  (* language *)
+  | Yc_enable_language { langs; optional } ->
+      (env, Project_cmd (Enable_language { langs; optional }))
   (* testing *)
   | Yc_enable_testing -> (env, Project_cmd Enable_testing)
   | Yc_add_test { name; command; args } ->
@@ -649,7 +655,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                target = erase_arg_s env target;
                properties = List.map ~f:(erase_property env) properties;
              }) )
-  | Yc_set_property { targets; properties } ->
+  | Yc_set_property { targets; append = do_append; properties } ->
       List.iter targets ~f:(check_arg env);
       List.iter properties ~f:(fun (_, v) -> check_arg env v);
       ( env,
@@ -665,9 +671,19 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             tests = [];
             test_directories = [];
             caches = [];
-            append = false;
+            append = do_append;
             append_string = false;
             properties = List.map ~f:(erase_property env) properties;
+          } )
+  | Yc_set_source_property { file; property; values } ->
+      check_arg env file;
+      List.iter values ~f:(check_arg env);
+      ( env,
+        Set_source_property
+          {
+            file = erase_arg_s env file;
+            property;
+            values = List.map ~f:(erase_arg env) values;
           } )
   | Yc_set_global_property { properties } ->
       List.iter properties ~f:(fun (_, v) -> check_arg env v);
@@ -715,10 +731,13 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
             property_name = property;
             set = false;
           } )
-  | Yc_add_custom_target { name; commands; comment } ->
+  | Yc_add_custom_target { name; all; commands; depends; comment } ->
+      List.iter depends ~f:(check_arg env);
       ( env,
         Project_cmd (Add_custom_target {
-          name; all = false; commands; depends = []; byproducts = [];
+          name; all; commands;
+          depends = List.map ~f:(erase_arg_s env) depends;
+          byproducts = [];
           working_directory = None; comment; job_pool = [];
           job_server_aware = false; verbatim = false; uses_terminal = false;
           command_expand_list = []; sources = [] }) )
@@ -877,7 +896,9 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                arch_independent = false;
              }) )
   (* custom commands *)
-  | Yc_add_custom_command { outputs; commands; depends } ->
+  | Yc_add_custom_command { outputs; commands; depends; verbatim; comment } ->
+      List.iter outputs ~f:(check_arg env);
+      List.iter depends ~f:(check_arg env);
       ( env,
         Project_cmd
           (Add_custom_command
@@ -889,17 +910,29 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
                byproducts = [];
                implicit_depends = [];
                working_directory = None;
-               comment = None;
+               comment;
                depfile = None;
                job_pool = None;
                job_server_aware = false;
-               verbatim = false;
+               verbatim;
                append = false;
                uses_terminal = false;
                codegen = false;
                command_expand_list = [];
                depends_explicit_only = false;
              }) )
+  | Yc_add_custom_command_target { target; when_; commands; comment; verbatim } ->
+      ( env,
+        Project_cmd
+          (Add_custom_command_target
+             { target; when_; commands; comment; verbatim; uses_terminal = false }) )
+  | Yc_add_definitions { defs } ->
+      List.iter defs ~f:(check_arg env);
+      ( env,
+        Project_cmd
+          (Add_definitions
+             { defs = List.map defs ~f:(fun d ->
+                 Lang_cmake.Def_var (erase_arg_s env d)) }) )
   (* extern declarations — register in env, emit nothing *)
   | Yc_extern_cvar v -> (declare_cvar env v, Exp_list [])
   | Yc_extern_target t -> (declare_target env t, Exp_list [])

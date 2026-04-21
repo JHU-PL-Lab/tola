@@ -40,17 +40,24 @@ let read_all ch =
   Buffer.contents buf
 
 let make_env extra =
-  if extra = [] then Unix.environment ()
-  else
-    let extra_keys = List.map (fun (k, _) -> k) extra in
-    let base = Array.to_list (Unix.environment ())
-      |> List.filter (fun entry ->
-          let key = match String.index_opt entry '=' with
-            | Some i -> String.sub entry 0 i
-            | None -> entry in
-          not (List.mem key extra_keys))
-    in
-    Array.of_list (base @ List.map (fun (k, v) -> k ^ "=" ^ v) extra)
+  let extra_keys = List.map (fun (k, _) -> k) extra in
+  let base = Array.to_list (Unix.environment ())
+    |> List.filter (fun entry ->
+        let key = match String.index_opt entry '=' with
+          | Some i -> String.sub entry 0 i
+          | None -> entry in
+        not (List.mem key extra_keys))
+  in
+  Array.of_list (base @ List.map (fun (k, v) -> k ^ "=" ^ v) extra)
+
+(* All cmake subprocess calls go through cmake_env so they never emit ANSI escape
+   codes into captured stderr/stdout. Dune sets CLICOLOR_FORCE=1 when running test
+   aliases to force colors in alcotest output; cmake inherits this and wraps every
+   message() with \x1b[0m reset codes, breaking hex-encoded pattern checks in the
+   message/newline compat test. Force CLICOLOR_FORCE=0 for cmake subprocesses. *)
+let cmake_env extra =
+  let base = if List.mem_assoc "CLICOLOR_FORCE" extra then extra else ("CLICOLOR_FORCE", "0") :: extra in
+  make_env base
 
 let run_script_file ?(env = []) ?(flags = []) ?(cwd = None) path =
   let flags_str = match flags with [] -> "" | fs -> String.concat " " fs ^ " " in
@@ -62,7 +69,7 @@ let run_script_file ?(env = []) ?(flags = []) ?(cwd = None) path =
     | Some dir -> Printf.sprintf "cd %s && %s" (Filename.quote dir) cmake_cmd
   in
   let stdout_ch, stdin_ch, stderr_ch =
-    Unix.open_process_full cmd (make_env env)
+    Unix.open_process_full cmd (cmake_env env)
   in
   close_out stdin_ch;
   let stdout = read_all stdout_ch in
@@ -219,7 +226,7 @@ let run_configure ?(cmake_min = "3.20") ?(files = []) ?(languages = ["NONE"]) cm
     List.iter (fun (name, content) ->
       write_file (Filename.concat tmpdir name) content) files;
     let cmd = Printf.sprintf "cmake -S %s -B %s" (Filename.quote tmpdir) (Filename.quote build) in
-    let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (Unix.environment ()) in
+    let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (cmake_env []) in
     close_out stdin_ch;
     let stdout = read_all stdout_ch in
     let stderr = read_all stderr_ch in
@@ -294,7 +301,7 @@ type build_result = {
 }
 
 let run_cmd_simple cmd =
-  let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (Unix.environment ()) in
+  let stdout_ch, stdin_ch, stderr_ch = Unix.open_process_full cmd (cmake_env []) in
   close_out stdin_ch;
   let stdout = read_all stdout_ch in
   let stderr = read_all stderr_ch in
