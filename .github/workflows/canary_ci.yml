@@ -121,32 +121,13 @@ jobs:
           printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib/probe.log
           test "$COUNT" -gt 0
 
-      - name: probe_binding_build
+      - name: probe_binding
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build"
-          LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
-          test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
-          test -f "$LIB_Z3"
-          BINDING_DIR="_out/canary/_local/z3/dev_HEAD/build/src/api/ml"
-          test -d "$BINDING_DIR"
-          STUB=$(ls "$BINDING_DIR"/libz3ml.a 2>/dev/null | head -1)
-          test -n "$STUB"
-          python3 canary/scripts/assert_binary_symbols.py --provided-lib "$LIB_Z3" --required-lib "$STUB" \
-            --symbol-prefix Z3_ 2>&1 | tee $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/symbols.log
-          grep -q 'OK:' $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/symbols.log
-          eval $(opam env)
-          ocamlfind ocamlopt -package zarith -linkpkg \
-            -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
-            -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/probe.log 2>&1 || exit 1
-          $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_build/probe.log 2>&1
-
-      - name: probe_binding_pkg
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding"
           eval $(opam env)
           ocamlfind ocamlopt -package z3 -linkpkg $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
-            -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/probe.log 2>&1 || exit 1
-          $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding_pkg/probe.log 2>&1
+            -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/probe.log 2>&1
 
 
   sqlite:

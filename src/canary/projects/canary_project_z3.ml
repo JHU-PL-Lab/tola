@@ -483,8 +483,8 @@ opam remove -y %{pkg_full} || true
           [%string "%{lib_resolve}\n%{probe}"]);
     probe_binding =
       List.filter_opt [
-        (* Build_tree: probe against build tree artifacts *)
-        (if source.has_build_binding then
+        (* Build_tree: probe against build tree artifacts (only when cmake built them) *)
+        (if source.has_build_binding && cmake_build_binding then
            Some (Build_tree, (fun ~output_dir ->
              let script = "canary/scripts/assert_binary_symbols.py" in
              [%string
