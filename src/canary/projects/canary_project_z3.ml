@@ -452,6 +452,17 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
              let src_var = z3_ocaml_config.toolchain.canary_src_var in
              let prefix_name = z3_ocaml_config.toolchain.prefix_name in
              let libdir_name = z3_ocaml_config.toolchain.libdir_name in
+             (* When opam fetches from a remote URL, the source is in the opam
+                build dir (S=. by default). Don't pass CANARY_SRC/BUILD_DIR or
+                opam will try to use a relative path that doesn't exist there. *)
+             let install_env = match local with
+               | Some _ ->
+                   [%string
+                     "OPAMVAR_%{prefix_name}=\"%{build}\" \
+                      OPAMVAR_%{libdir_name}=\"%{build}\" \
+                      CANARY_BUILD_DIR=\"%{build}\" CANARY_SRC_DIR=\"%{root}\" "]
+               | None -> ""
+             in
              [%string
                {|eval $(opam env)
 mkdir -p "%{pkg_dir}"
@@ -461,9 +472,7 @@ opam repo add %{repo_name} "file://%{pack_repo}" --rank=1 \
   || opam repo set-url %{repo_name} "file://%{pack_repo}"
 opam update %{repo_name}
 opam remove -y %{pkg_full} || true
-OPAMVAR_%{prefix_name}="%{build}" OPAMVAR_%{libdir_name}="%{build}" \
-CANARY_BUILD_DIR="%{build}" CANARY_SRC_DIR="%{root}" \
-opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
+%{install_env}opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
   && echo 'ok' > %{output_dir}/pack.ok|}])
        else None);
     probe_lib =

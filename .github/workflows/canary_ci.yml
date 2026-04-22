@@ -108,8 +108,6 @@ jobs:
             || opam repo set-url canary-local-pack "file://$GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack-repo"
           opam update canary-local-pack
           opam remove -y z3.dev || true
-          OPAMVAR_Z3_PREFIX="_out/canary/_local/z3/dev_HEAD/build" OPAMVAR_Z3_LIB_DIR="_out/canary/_local/z3/dev_HEAD/build" \
-          CANARY_BUILD_DIR="_out/canary/_local/z3/dev_HEAD/build" CANARY_SRC_DIR="_out/canary/_local/z3/dev_HEAD/src" \
           opam install -y z3.dev --verbose --keep-build-dir --assume-depexts \
             && echo 'ok' > $GITHUB_WORKSPACE/_out/canary/z3/dev/pack_binding/pack.ok
 
