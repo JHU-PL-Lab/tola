@@ -1,0 +1,39 @@
+name: Canary Debug CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sqlite:
+    name: SQLite — fetch + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib"
+          sudo apt-get install -y sqlite3 && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib/lib.ok
+
+      - name: fetch_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding"
+          eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding/binding.ok
+
+      - name: probe_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
+          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1
+

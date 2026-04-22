@@ -15,6 +15,10 @@ build: [
   if [ -f \"$B/src/api/ml/z3ml.cmxa\" ]; then \
     echo \"z3 OCaml bindings already built in $B, skipping cmake+ninja\"; \
   else \
+    SCCACHE=$(command -v sccache 2>/dev/null || true); \
+    SCCACHE_FLAGS=\"\"; [ -n \"$SCCACHE\" ] && SCCACHE_FLAGS=\"-DCMAKE_C_COMPILER_LAUNCHER=$SCCACHE -DCMAKE_CXX_COMPILER_LAUNCHER=$SCCACHE\" || true; \
+    MOLD=$(command -v mold 2>/dev/null || true); \
+    MOLD_FLAGS=\"\"; [ -n \"$MOLD\" ] && MOLD_FLAGS=\"-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=mold\" || true; \
     cmake -S $S -B $B -G Ninja \
       -DCMAKE_VERBOSE_MAKEFILE=ON \
       -DZ3_BUILD_LIBZ3_SHARED=ON \
@@ -23,7 +27,8 @@ build: [
       -DZ3_LINK_TIME_OPTIMIZATION=ON \
       -DZ3_BUILD_JAVA_BINDINGS=OFF \
       -DZ3_BUILD_OCAML_BINDINGS=ON \
-      -DZ3_BUILD_PYTHON_BINDINGS=OFF && \
+      -DZ3_BUILD_PYTHON_BINDINGS=OFF \
+      $SCCACHE_FLAGS $MOLD_FLAGS && \
     ninja -C $B build_z3_ocaml_bindings; \
   fi"
   ]

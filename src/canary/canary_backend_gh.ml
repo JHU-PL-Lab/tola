@@ -60,7 +60,7 @@ fi|}]
 %{run_block verify_body}|}] ]
 
 let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
-    (steps : Canary_action.action_step list) =
+    ~preamble_steps (steps : Canary_action.action_step list) =
   let gh_steps =
     List.concat_map steps ~f:(render_gh_step ~project)
     |> String.concat ~sep:"\n"
@@ -73,6 +73,10 @@ let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
         {|      - name: Install system build dependencies
         run: sudo apt-get install -y --no-install-recommends %{pkgs}
 |}]
+  in
+  let preamble =
+    if List.is_empty preamble_steps then ""
+    else String.concat ~sep:"\n" preamble_steps ^ "\n"
   in
   let opam_repo_setup =
     [%string
@@ -96,7 +100,7 @@ let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "%{ocaml_version}"
-%{sys_deps_step}%{opam_repo_setup}
+%{preamble}%{sys_deps_step}%{opam_repo_setup}
 %{gh_steps}
 |}]
 
@@ -104,24 +108,25 @@ type job_spec = {
   id : string;
   name : string;
   project : string;
-  sys_deps : string list;   (* apt packages to install before action steps *)
+  sys_deps : string list;         (* apt packages to install before action steps *)
+  preamble_steps : string list;   (* raw yaml steps inserted after setup-ocaml *)
   steps : Canary_action.action_step list;
 }
 
 let render_workflow ?(runner_os = "ubuntu-latest") ?(ocaml_version = "5.2")
-    ~workflow_name (jobs : job_spec list) =
+    ?(triggers = "on:\n  push:\n  pull_request:") ~workflow_name
+    (jobs : job_spec list) =
   let jobs_yaml =
     List.map jobs ~f:(fun j ->
         render_job ~job_id:j.id ~job_name:j.name ~runner_os ~ocaml_version
-          ~project:j.project ~sys_deps:j.sys_deps j.steps)
+          ~project:j.project ~sys_deps:j.sys_deps ~preamble_steps:j.preamble_steps
+          j.steps)
     |> String.concat ~sep:"\n"
   in
   [%string
     {|name: %{workflow_name}
 
-on:
-  push:
-  pull_request:
+%{triggers}
 
 jobs:
 %{jobs_yaml}|}]

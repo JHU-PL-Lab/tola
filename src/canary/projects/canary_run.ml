@@ -88,6 +88,10 @@ let dump distro =
 
 (* ── GH CI backend ── *)
 
+let sccache_step =
+  {|      - name: Setup sccache
+        uses: mozilla-actions/sccache-action@v0.0.9|}
+
 (* CI step derivation: skip source builds for LLVM (expensive, CI-unfriendly).
    Z3 is a special case: its OCaml binding requires building from source. *)
 let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
@@ -96,7 +100,8 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
   (* Z3: opam fetches from GitHub remote and builds the OCaml binding entirely.
      has_build_lib=false + cmake_build_binding=false: no cmake steps in CI;
      pack_binding substitutes CANARY_Z3_SRC with the remote git URL so opam
-     clones and builds from source internally. *)
+     clones and builds from source internally.
+     sccache caches C++ compilation; mold speeds up linking. *)
   let z3_ci_source =
     { Canary_project_z3.z3_source_dev with locals = []; has_build_lib = false }
   in
@@ -108,16 +113,19 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       name = "LLVM 19 — fetch + probe";
       project = "llvm/19";
       sys_deps = [];
+      preamble_steps = [];
       steps =
         Canary_action.(derive_steps ~root ~project:"llvm/19"
           (no_source (Canary_project_llvm.mk_script_spec
              ~source:Canary_project_llvm.llvm_source_stable
              ~tola_root:gh_root distro))) };
-    (* Z3: build from source (no prebuilt OCaml binding in opam) *)
+    (* Z3: build from source (no prebuilt OCaml binding in opam).
+       sccache caches C++ compilation across runs; mold replaces ld for faster links. *)
     { id = "z3-dev";
       name = "Z3 dev — build from source + probe";
       project = z3_ci_project;
-      sys_deps = z3_ci_source.build_sys_deps;
+      sys_deps = z3_ci_source.build_sys_deps @ [ "mold" ];
+      preamble_steps = [ sccache_step ];
       steps =
         Canary_action.derive_steps ~root ~project:z3_ci_project
           (Canary_project_z3.mk_script_spec ~source:z3_ci_source
@@ -127,14 +135,32 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       name = "SQLite — fetch + probe";
       project = "sqlite";
       sys_deps = [];
+      preamble_steps = [];
       steps =
         Canary_action.(derive_steps ~root ~project:"sqlite"
           (no_source Canary_project_sqlite.script_spec)) };
   ]
 
+let sqlite_job ~root : Canary_backend_gh.job_spec =
+  let open Canary_backend_gh in
+  { id = "sqlite";
+    name = "SQLite — fetch + probe";
+    project = "sqlite";
+    sys_deps = [];
+    preamble_steps = [];
+    steps =
+      Canary_action.(derive_steps ~root ~project:"sqlite"
+        (no_source Canary_project_sqlite.script_spec)) }
+
 let render_ci ~root distro =
   let jobs = ci_jobs ~root distro in
   Canary_backend_gh.render_workflow ~workflow_name:"Canary CI" jobs
+
+let render_debug_ci ~root _distro =
+  Canary_backend_gh.render_workflow
+    ~triggers:"on:\n  workflow_dispatch:"
+    ~workflow_name:"Canary Debug CI"
+    [ sqlite_job ~root ]
 
 let dump_graph _distro =
   let graph_dir = "_out/canary/graph" in
