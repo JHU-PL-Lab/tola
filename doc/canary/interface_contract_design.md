@@ -51,14 +51,66 @@ we think of it as symbols, but the levels are:
 
 | Level | Granularity | Detection method |
 |---|---|---|
-| L1 Symbol | binary exported names (`Z3_mk_solver`) | `nm -D` |
+| L1a Symbol | binary exported names (`Z3_mk_solver`) | `nm -D` |
+| L1b Versioned symbol | runtime version requirement (`malloc@@GLIBC_2.31`) | `nm -D` `@@` annotations |
 | L2 Type signature | OCaml type of exported value | `ocamlobjinfo`, `.cmi` digest |
 | L3 API shape | constructor set, module structure | compile probe |
-| L4 ABI/calling convention | struct layout, calling convention | (hard; DWARF/clang-ast) |
+| L4 ABI/runtime | C runtime implementation + version, C++ ABI, soname | `readelf -d`, `ldd` |
 | L5 Behavioral contract | pre/post conditions | (research territory) |
 
-Canary today covers L1 (Expect_symbols) and L3 (Expect_failure probe compile).
+Canary today covers L1a (Expect_symbols) and L3 (Expect_failure probe compile).
+L1b is partially handled — `assert_binary_symbols.py` allows `@@` suffixes in
+`nm` output but does not yet treat the version part as a constraint.
 L2 is partially covered — `.cmi` digests are checked implicitly by `ocamlfind`.
+
+The glibc/musl example lives at **L1b + L4**: the `@@GLIBC_2.31` annotation
+is detectable at L1b, and "which C runtime implementation" is an L4 property.
+Both fold into the same unified interface model.
+
+## Concrete Example: C Runtime Mismatch (glibc vs musl)
+
+A library compiled against glibc 2.31 carries versioned symbol requirements
+visible in its binary:
+
+```
+$ nm -D libz3.so | grep malloc
+  malloc@@GLIBC_2.17
+  __cxa_throw@@GLIBC_2.3.4
+```
+
+A system running glibc 2.17 or musl libc cannot satisfy `@@GLIBC_2.31`.
+The failure is a **runtime linker error** — not a missing symbol (both provide
+`malloc`), but a missing *versioned* symbol. Users see:
+
+```
+/lib/x86_64-linux-gnu/libz3.so: /lib/x86_64-linux-gnu/libc.so.6: version
+  `GLIBC_2.31' not found
+```
+
+This is detectable from the binary before any runtime is involved. The `@@`
+annotations in `nm -D` output encode the required runtime interface exactly.
+`assert_binary_symbols.py` already handles `@@` suffixes; the next step is to
+treat the version part as a *constraint* rather than ignore it.
+
+The **abstraction**: instead of saying "linked against glibc 2.31" (a toolchain
+detail), the artifact's interface declares:
+
+```
+libz3.requires.c_runtime = { implementation = Glibc; version = >= 2.31 }
+```
+
+The deployment environment provides:
+
+```
+ubuntu_20_04.provides.c_runtime = { implementation = Glibc; version = 2.31 }
+alpine_3_18.provides.c_runtime  = { implementation = Musl;  version = 1.2.3 }
+```
+
+Compatibility check: `artifact.requires.c_runtime ≤ environment.provides.c_runtime`.
+Alpine fails; Ubuntu 20.04 exactly satisfies.
+
+This is the same subtyping check as the Z3/LLVM API examples — the C runtime
+is just another versioned interface, one level below the library's own API.
 
 ## Concrete Example: Z3 dev vs apt stable
 
@@ -127,19 +179,39 @@ Rather than ad-hoc checks scattered across probe steps, give each artifact an
 `interface` value:
 
 ```ocaml
-type symbol_name = string   (* e.g. "Z3_mk_solver" *)
-type type_id = string       (* e.g. "Z3.Solver.t -> Z3.expr list -> unit" *)
+type symbol_name = string    (* e.g. "Z3_mk_solver" *)
+type versioned_symbol = {
+  name    : string;          (* e.g. "malloc" *)
+  version : string;          (* e.g. "GLIBC_2.31" — from @@ annotation in nm -D *)
+}
+type type_id = string        (* e.g. "Z3.Solver.t -> Z3.expr list -> unit" *)
+
+type c_runtime = Glibc | Musl | Bionic | Other of string
+type cxx_runtime = Libstdcxx | Libcxx | Other of string
+
+type runtime_req =
+  | C_runtime   of { impl: c_runtime;   version_min: string }
+  | Cxx_runtime of { impl: cxx_runtime; version_min: string }
+  | Soname      of { name: string;      version: string option }
 
 type interface_level =
-  | Symbols of symbol_name list           (* L1: nm-visible exports *)
-  | Ocaml_types of type_id list           (* L2: .cmi-level types *)
-  | Compile_probe of string               (* L3: compile a small program *)
+  | Symbols          of symbol_name list           (* L1a: nm -D exports *)
+  | Versioned_syms   of versioned_symbol list      (* L1b: @@GLIBC_x.y requirements *)
+  | Ocaml_types      of type_id list               (* L2: .cmi-level types *)
+  | Compile_probe    of string                     (* L3: compile a small program *)
+  | Runtime_reqs     of runtime_req list           (* L4: C/C++ runtime, soname *)
 
 type interface = {
   provides : interface_level list;
   requires : interface_level list;
 }
 ```
+
+`Versioned_syms` and `Runtime_reqs` together capture the glibc/musl case:
+a binary's `@@GLIBC_2.31` annotations become `Versioned_syms` in its `requires`;
+the deployment environment's glibc version becomes `Runtime_reqs` in its `provides`.
+The compatibility check is the same `requires ⊆ provides` relation, now spanning
+from OCaml constructor names all the way down to C runtime version symbols.
 
 Each canary `source_repo` can declare its interface. The `probe_*` steps
 become **compatibility checks**: does `artifact.provides ⊇ consumer.requires`?
