@@ -105,6 +105,7 @@ let ci_cmd =
   in
   let run out () =
     let distro = detect_distro () in
+    Canary_project_z3.render_opam_in ~tola_root:".";
     write_workflow out "canary_ci.yml" (Canary_run.render_ci ~root:"_out" distro)
   in
   Cmd.v (Cmd.info "ci" ~doc:"Generate GH Actions workflow YAML")

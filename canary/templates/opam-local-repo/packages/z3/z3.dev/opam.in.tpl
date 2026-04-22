@@ -19,14 +19,7 @@ build: [
     SCCACHE_FLAGS=\"\"; [ -n \"$SCCACHE\" ] && SCCACHE_FLAGS=\"-DCMAKE_C_COMPILER_LAUNCHER=$SCCACHE -DCMAKE_CXX_COMPILER_LAUNCHER=$SCCACHE\" || true; \
     MOLD=$(command -v mold 2>/dev/null || true); \
     MOLD_FLAGS=\"\"; [ -n \"$MOLD\" ] && MOLD_FLAGS=\"-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=mold\" || true; \
-    cmake -S $S -B $B -G Ninja \
-      -DCMAKE_VERBOSE_MAKEFILE=ON \
-      -DZ3_BUILD_LIBZ3_SHARED=ON \
-      -DZ3_BUILD_EXECUTABLE=OFF \
-      -DZ3_BUILD_TEST_EXECUTABLES=OFF \
-      -DZ3_LINK_TIME_OPTIMIZATION=ON \
-      -DZ3_BUILD_JAVA_BINDINGS=OFF \
-      -DZ3_BUILD_PYTHON_BINDINGS=OFF \
+    cmake -S $S -B $B %%Z3_CMAKE_BUILD_FLAGS%% \
       -DZ3_BUILD_OCAML_BINDINGS=ON \
       $SCCACHE_FLAGS $MOLD_FLAGS && \
     ninja -C $B build_z3_ocaml_bindings; \

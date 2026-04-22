@@ -126,6 +126,38 @@ let shared_flags =
   -DZ3_LINK_TIME_OPTIMIZATION=ON \
   -DZ3_BUILD_JAVA_BINDINGS=OFF|}
 
+(* Canonical cmake build flags for Z3 — single source of truth.
+   Excludes: -S/-B paths, -DZ3_BUILD_OCAML_BINDINGS (caller sets per context).
+   Used by both mk_script_spec configure and opam.in.tpl rendering. *)
+let z3_cmake_build_flags =
+  [ "-G Ninja";
+    "-DCMAKE_VERBOSE_MAKEFILE=ON";
+    "-DZ3_BUILD_LIBZ3_SHARED=ON";
+    "-DZ3_BUILD_EXECUTABLE=OFF";
+    "-DZ3_BUILD_TEST_EXECUTABLES=OFF";
+    "-DZ3_LINK_TIME_OPTIMIZATION=ON";
+    "-DZ3_BUILD_JAVA_BINDINGS=OFF";
+    "-DZ3_BUILD_PYTHON_BINDINGS=OFF" ]
+
+let z3_cmake_build_flags_str ~indent =
+  String.concat ~sep:(" \\\n" ^ indent) z3_cmake_build_flags
+
+let opam_in_tpl_path ~tola_root =
+  tola_root
+  ^ "/canary/templates/opam-local-repo/packages/z3/z3.dev/opam.in.tpl"
+
+let opam_in_path ~tola_root =
+  tola_root ^ "/canary/templates/opam-local-repo/packages/z3/z3.dev/opam.in"
+
+let render_opam_in ~tola_root =
+  let tpl = read_file (opam_in_tpl_path ~tola_root) in
+  let flags = z3_cmake_build_flags_str ~indent:"      " in
+  let rendered =
+    String.substr_replace_all tpl ~pattern:"%%Z3_CMAKE_BUILD_FLAGS%%"
+      ~with_:flags
+  in
+  write_file (opam_in_path ~tola_root) rendered
+
 let cmake_configure =
   [%string
     {|eval $(opam env) && cmake \
@@ -391,18 +423,12 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
       (if source.has_build_lib || cmake_build_binding then
          let cmake_cmd = if cmake_build_binding then "opam exec -- cmake" else "cmake" in
          let ocaml_flag = if cmake_build_binding then "ON" else "OFF" in
+         let flags = z3_cmake_build_flags_str ~indent:"                " in
          Some
            (fun ~output_dir ->
              [%string
-               "%{cmake_cmd} -S %{root} -B %{build} -G Ninja \
-                -DCMAKE_VERBOSE_MAKEFILE=ON \
-                -DZ3_BUILD_LIBZ3_SHARED=ON \
-                -DZ3_BUILD_EXECUTABLE=OFF \
-                -DZ3_BUILD_TEST_EXECUTABLES=OFF \
-                -DZ3_LINK_TIME_OPTIMIZATION=ON \
-                -DZ3_BUILD_JAVA_BINDINGS=OFF \
-                -DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag} \
-                -DZ3_BUILD_PYTHON_BINDINGS=ON \
+               "%{cmake_cmd} -S %{root} -B %{build} %{flags} \
+                \\\n                -DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag} \
                 && echo 'ok' > %{output_dir}/conf.ok"])
        else None);
     build_lib =
