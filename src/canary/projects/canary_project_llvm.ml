@@ -453,13 +453,11 @@ test -n "$LLVM_LIB"
     ~watchlist:llvm_native_watchlist
     ~output_dir ()}|}])
       | Probe Binding ->
-          let pkg =
-            if source.has_build_binding then "llvm.dev-shared"
-            else "llvm.19-shared"
-          in
+          (* ocamlfind package is "llvm" regardless of opam variant suffix
+             (llvm.dev-shared / llvm.19-shared are opam-only names). *)
           Some (fun ~output_dir ->
             Canary_artifact_ocaml.summary_opam_pkg_cmd
-              ~pkg ~watchlist:llvm_ocaml_watchlist ~output_dir ())
+              ~pkg:"llvm" ~watchlist:llvm_ocaml_watchlist ~output_dir ())
       | _ -> None);
   }
 

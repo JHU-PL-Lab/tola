@@ -179,7 +179,9 @@ Still open:
   Source summaries (git SHA, public header count, FFI surface via C-ABI
   exports for other languages) are a natural next extension.
 - **No python summary in any project spec** — `summary_cmd` helpers for python
-  haven't been defined (no project uses a python artifact yet).
+  haven't been defined (no project uses a python artifact yet). Plan at
+  `doc/canary/python_binding_plan.md` (z3-solver, llvmlite, stdlib sqlite3);
+  delete the plan doc when all three projects have Python probe + summary wired.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.

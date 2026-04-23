@@ -53,7 +53,10 @@ let summary_cmd ~archive ?(watchlist = []) ~output_dir () =
 
 (* Emit summary for an opam-installed OCaml package: inspects all its
    .cmxa/.cma archives via ocamlfind query + ocamlobjinfo, merged into one
-   summary.json with combined module list. *)
+   summary.json with combined module list.
+   NOTE: [~pkg] must be the *ocamlfind* package name, not the opam package
+   name. These can differ: e.g., opam has llvm.19-shared / llvm.dev-shared
+   variants, but the ocamlfind package they all install is just "llvm". *)
 let summary_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir () =
   let script = "canary/scripts/summarize_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in

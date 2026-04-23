@@ -79,12 +79,12 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding"
           eval $(opam env)
-          PKG_DIR=$(ocamlfind query 'llvm.19-shared' 2>/dev/null)
+          PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
           test -n "$PKG_DIR"
           { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
               [ -f "$f" ] && ocamlobjinfo "$f"
             done
-          } | python3 canary/scripts/summarize_ocaml.py --path 'llvm.19-shared' --watchlist 'Llvm,Llvm_target,Llvm_executionengine' \
+          } | python3 canary/scripts/summarize_ocaml.py --path 'llvm' --watchlist 'Llvm,Llvm_target,Llvm_executionengine' \
             > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/summary.json
 
       - name: probe_app
