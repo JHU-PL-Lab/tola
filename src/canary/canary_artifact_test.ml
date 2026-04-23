@@ -120,7 +120,7 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
 
 (* ── Runner ── *)
 
-let run_tests ?(output_dir = "_out/canary/_local/artifact-test") () =
+let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   (* Probe commands tee into sub-dirs; ensure they all exist up front. *)
   List.iter
     [ ""; "/native_probe"; "/native_summary";

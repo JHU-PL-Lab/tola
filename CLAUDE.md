@@ -13,10 +13,15 @@ dune exec src/bin/canary_main.exe -- action llvm     # runs llvm (dev) + llvm/19
 make canary       # run canary via Makefile shorthand
 ```
 
-Output lives under `_out/canary/_local/<project>/` (gitignored via `_*`).
-`action llvm` writes to `_local/llvm/` (dev) and `_local/llvm/19/` (stable mismatch).
-`action z3` writes to `_local/z3/` (dev) and `_local/z3/stable/` (stable mismatch).
-Do NOT copy `_local/` to the z3 repo for GH CI.
+Output layout (gitignored via `_*`):
+- `_out/canary/projects/<project>/<step>/` — per-project action runs
+  (`action llvm` writes `projects/llvm/dev_<hash>/` + `projects/llvm/19/`;
+   `action z3` writes `projects/z3/dev_<hash>/` + `projects/z3/stable/`)
+- `_out/canary/test/{artifact-test,pm-test,artifact-summary}/` — framework
+  self-tests and ad-hoc dumps
+- `_out/canary/graph/action_rule.mmd` — universal schema diagram from `canary graph`
+
+Do NOT copy `_out/canary/` to the z3 repo for GH CI.
 
 ## Active Work: Canary
 

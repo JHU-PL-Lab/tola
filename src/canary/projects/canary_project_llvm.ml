@@ -279,13 +279,13 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.
     match local with
     | Some l -> l.path
     | None ->
-        [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/src"]
+        [%string "_out/canary/projects/llvm/%{source.version}_%{source.ref_}/src"]
   in
   let build =
     match local with
     | Some l -> l.build_path
     | None ->
-        [%string "_out/canary/_local/llvm/%{source.version}_%{source.ref_}/build"]
+        [%string "_out/canary/projects/llvm/%{source.version}_%{source.ref_}/build"]
   in
   let pm = Canary_store.detect_pm () in
   let target = llvm_ocaml_config.ocaml.example_target in

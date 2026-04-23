@@ -278,7 +278,7 @@ let artifact_summary_cmd =
            ~doc:"Comma-separated watchlist of names to check presence/absence")
   in
   let out_dir =
-    Arg.(value & opt string "_out/canary/_local/artifact-summary"
+    Arg.(value & opt string "_out/canary/test/artifact-summary"
            & info [ "out" ] ~docv:"DIR"
                ~doc:"Output directory for summary.json")
   in

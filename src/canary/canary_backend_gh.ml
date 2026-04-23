@@ -17,7 +17,7 @@ let sanitize_id s =
       else '_')
 
 let output_dir_of ~project ~tag =
-  "$GITHUB_WORKSPACE/_out/canary/" ^ project ^ "/" ^ tag
+  "$GITHUB_WORKSPACE/_out/canary/projects/" ^ project ^ "/" ^ tag
 
 (* Render one action_step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)

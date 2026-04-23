@@ -90,7 +90,7 @@ let root_of_source distro (src : source_repo) =
   | Some p -> p
   | None ->
       (* No local checkout — use canary local cache *)
-      [%string "_out/canary/_local/z3/%{src.version}_%{src.ref_}/src"]
+      [%string "_out/canary/projects/z3/%{src.version}_%{src.ref_}/src"]
 
 (* z3 capabilities shared across versions *)
 let z3_project_spec distro (src : source_repo) : project_spec =
@@ -399,12 +399,12 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
   let root =
     match local with
     | Some l -> l.path
-    | None -> [%string "_out/canary/_local/z3/%{source.version}_%{source.ref_}/src"]
+    | None -> [%string "_out/canary/projects/z3/%{source.version}_%{source.ref_}/src"]
   in
   let build =
     match local with
     | Some l -> l.build_path
-    | None -> [%string "_out/canary/_local/z3/%{source.version}_%{source.ref_}/build"]
+    | None -> [%string "_out/canary/projects/z3/%{source.version}_%{source.ref_}/build"]
   in
   (* When no local checkout, opam fetches from the remote git URL directly.
      When a local checkout exists, opam installs from the local file:// path. *)

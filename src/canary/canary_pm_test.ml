@@ -81,7 +81,7 @@ let opam_tests ~pkg =
 
 (* ── Runner ── *)
 
-let run_tests ?(output_dir = "_out/canary/_local/pm-test") () =
+let run_tests ?(output_dir = "_out/canary/test/pm-test") () =
   ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}"] : int);
   let pm = Canary_store.detect_pm () in
   let tests =

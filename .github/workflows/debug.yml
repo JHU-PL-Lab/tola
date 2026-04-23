@@ -24,22 +24,22 @@ jobs:
 
       - name: fetch_lib
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib"
-          sudo apt-get install -y sqlite3 && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_lib/lib.ok
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_lib"
+          sudo apt-get install -y sqlite3 && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_lib/lib.ok
 
       - name: fetch_binding
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding"
-          eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/sqlite/fetch_binding/binding.ok
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding"
+          eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/binding.ok
 
       - name: probe_binding
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
-          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding"
+          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/probe.log 2>&1
 
       - name: probe_binding_summary
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding"
           eval $(opam env)
           PKG_DIR=$(ocamlfind query 'sqlite3' 2>/dev/null)
           test -n "$PKG_DIR"
@@ -47,5 +47,5 @@ jobs:
               [ -f "$f" ] && ocamlobjinfo "$f"
             done
           } | python3 canary/scripts/summarize_ocaml.py --path 'sqlite3' --watchlist 'Sqlite3' \
-            > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/summary.json
+            > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/summary.json
 

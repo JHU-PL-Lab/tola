@@ -65,7 +65,7 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir =
       let ref_ = repo.ref_ in
       (* Clone into a stable path derived from version+ref, not output_dir,
          so build_lib etc. can find it via root_of_source *)
-      let clone_dir = [%string "_out/canary/_local/%{repo.name}/%{repo.version}_%{ref_}/src"] in
+      let clone_dir = [%string "_out/canary/projects/%{repo.name}/%{repo.version}_%{ref_}/src"] in
       [%string "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/source.ok"]
 
 (* Compute a cache-path tag for a source repo.

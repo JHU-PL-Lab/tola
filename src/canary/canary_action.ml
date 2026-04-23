@@ -133,7 +133,7 @@ type action_step = {
   output_tag : string;               (* tag used for this step's output_dir; usually same as tag,
                                         but summary steps set it to their parent's tag so they
                                         share the parent's directory (no empty _summary dir). *)
-  output_dir : string;               (* absolute path = root/canary/_local/project/output_tag *)
+  output_dir : string;               (* absolute path = root/canary/projects/project/output_tag *)
   rule : rule;
   deps : string list;                (* tags of upstream steps *)
   cmd : output_dir:string -> string; (* shell command to execute *)
@@ -191,7 +191,7 @@ let run_cmd_logged logger ~tag cmd =
 (* ── Runner ── *)
 
 let output_dir_for ~root ~project ~tag =
-  let base = [%string "%{root}/canary/_local/%{project}/%{tag}"] in
+  let base = [%string "%{root}/canary/projects/%{project}/%{tag}"] in
   if Stdlib.Filename.is_relative base then
     Stdlib.Filename.concat (Unix.getcwd ()) base
   else base
@@ -674,7 +674,7 @@ let dump_run_info ~dir (info : run_info) =
   path
 
 let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
-  let dir = [%string "%{root}/canary/_local/%{project}"] in
+  let dir = [%string "%{root}/canary/projects/%{project}"] in
   ensure_dir dir;
   (* Dump project spec if provided *)
   (match run_info with
