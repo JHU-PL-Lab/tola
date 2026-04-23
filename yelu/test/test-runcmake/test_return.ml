@@ -34,7 +34,7 @@ let return_from_foreach =
     yc_function (ycstr "finder") []
       [ yc_foreach_in ~items:[ ystr "a"; ystr "b"; ystr "target"; ystr "c" ] (ycvar "item")
           (Yexp_list [
-            yifthen (Ystrequal (ycref "item", ystr "target"))
+            yifthen (ystrequal (ycref "item") (ystr "target"))
               (Yexp_list [
                 yc_set ~parent_scope:true (ycvar "found") [ ystr "yes" ];
                 yc_return ();
@@ -42,7 +42,7 @@ let return_from_foreach =
           ]);
         yc_set ~parent_scope:true (ycvar "found") [ ystr "no" ] ];
     yc_apply (ycstr "finder") [];
-    yifthen (Ynot (Ystrequal (ycref "found", ystr "yes")))
+    yifthen (ynot (ystrequal (ycref "found") (ystr "yes")))
       (yc_message ~mode:Mm_fatal_error ["return from foreach: found should be yes"]);
   ])
 
@@ -54,7 +54,7 @@ let function_scope =
       [ yc_set (ycvar "x") [ ystr "local" ] ];
     yc_set (ycvar "x") [ ystr "outer" ];
     yc_apply (ycstr "setlocal") [];
-    yifthen (Ynot (Ystrequal (ycref "x", ystr "outer")))
+    yifthen (ynot (ystrequal (ycref "x") (ystr "outer")))
       (yc_message ~mode:Mm_fatal_error ["function_scope: x should remain outer"]);
   ])
 

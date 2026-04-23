@@ -24,21 +24,21 @@ let join =
   check_cmake "join" (Yexp_list [
     (* JOIN undefined list → "" *)
     yc_list_join (ycvar "undefList") (ystr "%") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "")))
       (yc_message ~mode:Mm_fatal_error ["list JOIN undefList should produce empty"]);
     (* JOIN single element *)
     yc_set (ycvar "myList") [ ystr "a" ];
     yc_list_join (ycvar "myList") (ystr "%") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a")))
       (yc_message ~mode:Mm_fatal_error ["JOIN single element failed"]);
     (* JOIN two elements *)
     yc_set (ycvar "myList") [ ystr "a"; ystr "b" ];
     yc_list_join (ycvar "myList") (ystr "%") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a%b")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a%b")))
       (yc_message ~mode:Mm_fatal_error ["JOIN two elements failed"]);
     (* JOIN with empty glue *)
     yc_list_join (ycvar "myList") (ystr "") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "ab")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "ab")))
       (yc_message ~mode:Mm_fatal_error ["JOIN empty glue failed"]);
   ])
 
@@ -47,14 +47,14 @@ let sublist =
   check_cmake "sublist" (Yexp_list [
     yc_set (ycvar "L") [ ystr "alpha"; ystr "bravo"; ystr "charlie"; ystr "delta" ];
     yc_list_sublist (ycvar "L") 1 2 (ycvar "result");
-    yifthen (Ynot (Ystrequal (ycref "result", ystr "bravo;charlie")))
+    yifthen (ynot (ystrequal (ycref "result") (ystr "bravo;charlie")))
       (yc_message ~mode:Mm_fatal_error ["SUBLIST 1 2 failed"]);
     yc_list_sublist (ycvar "L") 0 2 (ycvar "result");
-    yifthen (Ynot (Ystrequal (ycref "result", ystr "alpha;bravo")))
+    yifthen (ynot (ystrequal (ycref "result") (ystr "alpha;bravo")))
       (yc_message ~mode:Mm_fatal_error ["SUBLIST 0 2 failed"]);
     (* -1 length = rest of list *)
     yc_list_sublist (ycvar "L") 1 (-1) (ycvar "result");
-    yifthen (Ynot (Ystrequal (ycref "result", ystr "bravo;charlie;delta")))
+    yifthen (ynot (ystrequal (ycref "result") (ystr "bravo;charlie;delta")))
       (yc_message ~mode:Mm_fatal_error ["SUBLIST 1 -1 failed"]);
   ])
 
@@ -63,12 +63,12 @@ let prepend =
   check_cmake "prepend" (Yexp_list [
     yc_set (ycvar "L") [ ystr "c"; ystr "d" ];
     yc_list_prepend (ycvar "L") [ ystr "a"; ystr "b" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;b;c;d")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c;d")))
       (yc_message ~mode:Mm_fatal_error ["PREPEND failed"]);
     (* PREPEND to empty list *)
     yc_set (ycvar "E") [];
     yc_list_prepend (ycvar "E") [ ystr "x" ];
-    yifthen (Ynot (Ystrequal (ycref "E", ystr "x")))
+    yifthen (ynot (ystrequal (ycref "E") (ystr "x")))
       (yc_message ~mode:Mm_fatal_error ["PREPEND to empty failed"]);
   ])
 
@@ -78,14 +78,14 @@ let pop_back =
     (* POP_BACK from 2-item list, no out var *)
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_back (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "one")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "one")))
       (yc_message ~mode:Mm_fatal_error ["POP_BACK no-outvar failed"]);
     (* POP_BACK with out var *)
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_back ~out_vars:[ycvar "popped"] (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "one")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "one")))
       (yc_message ~mode:Mm_fatal_error ["POP_BACK outvar: list wrong"]);
-    yifthen (Ynot (Ystrequal (ycref "popped", ystr "two")))
+    yifthen (ynot (ystrequal (ycref "popped") (ystr "two")))
       (yc_message ~mode:Mm_fatal_error ["POP_BACK outvar: popped wrong"]);
   ])
 
@@ -94,13 +94,13 @@ let pop_front =
   check_cmake "pop_front" (Yexp_list [
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_front (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "two")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "two")))
       (yc_message ~mode:Mm_fatal_error ["POP_FRONT no-outvar failed"]);
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_front ~out_vars:[ycvar "head"] (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "head", ystr "one")))
+    yifthen (ynot (ystrequal (ycref "head") (ystr "one")))
       (yc_message ~mode:Mm_fatal_error ["POP_FRONT outvar: head wrong"]);
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "two")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "two")))
       (yc_message ~mode:Mm_fatal_error ["POP_FRONT outvar: list wrong"]);
   ])
 
@@ -110,12 +110,12 @@ let sort =
     (* default sort: case-sensitive ascending string *)
     yc_set (ycvar "L") [ ystr "c/B.h"; ystr "a/c.h"; ystr "B/a.h" ];
     yc_list_sort (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "B/a.h;a/c.h;c/B.h")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "B/a.h;a/c.h;c/B.h")))
       (yc_message ~mode:Mm_fatal_error ["SORT default failed"]);
     (* case-insensitive ascending *)
     yc_set (ycvar "L") [ ystr "c/B.h"; ystr "a/c.h"; ystr "B/a.h" ];
     yc_list_sort ~case:Ls_insensitive ~order:Ls_ascending (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a/c.h;B/a.h;c/B.h")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a/c.h;B/a.h;c/B.h")))
       (yc_message ~mode:Mm_fatal_error ["SORT case-insensitive ascending failed"]);
   ])
 
@@ -124,7 +124,7 @@ let remove_duplicates =
   check_cmake "remove_duplicates" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "a"; ystr "c"; ystr "b" ];
     yc_list_remove_duplicates (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;b;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["REMOVE_DUPLICATES preserve order failed"]);
   ])
 

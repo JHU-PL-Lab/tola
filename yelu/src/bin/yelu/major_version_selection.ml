@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Step_common
@@ -34,9 +33,7 @@ let cmd =
       yc_find_package ~version:(Some "3") ~quiet:true "OpenSSL";
       yc_string_toupper (ystr "OpenSSL") (ycvar "MODULE_UPPER");
       yifthen
-        (Yand
-           ( Ytruthy (ycstr "OPENSSL_FOUND"),
-             Ytruthy (ycstr "OPENSSL_VERSION_STRING") ))
+        (yand (ytruthy (ycstr "OPENSSL_FOUND")) (ytruthy (ycstr "OPENSSL_VERSION_STRING")))
         version_check;
     ]
 

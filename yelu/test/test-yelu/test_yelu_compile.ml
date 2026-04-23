@@ -39,24 +39,24 @@ let conditions =
     [
       check "if cond_var"
         "if (USE_MYMATH)\n  set(X 1 )\nendif()\n"
-        (yifthen (Ytruthy (ycstr "USE_MYMATH"))
+        (yifthen (ytruthy (ycstr "USE_MYMATH"))
            (yc_set (ycvar "X") [ ystr "1" ]));
       check "if with else"
         "if (USE_MYMATH)\n  set(X 1 )\nelse()\n  set(X 0 )\nendif()\n"
-        (yif (Ytruthy (ycstr "USE_MYMATH"))
+        (yif (ytruthy (ycstr "USE_MYMATH"))
            (yc_set (ycvar "X") [ ystr "1" ])
            (yc_set (ycvar "X") [ ystr "0" ]));
       check "if and"
         "if (( HAVE_LOG AND HAVE_EXP ))\n  \nendif()\n"
         (yifthen
-           (Yand (Ytruthy (ycstr "HAVE_LOG"), Ytruthy (ycstr "HAVE_EXP")))
+           (yand (ytruthy (ycstr "HAVE_LOG")) (ytruthy (ycstr "HAVE_EXP")))
            (Yexp_list []));
       check "is_target"
         "if (TARGET SqrtLibrary)\n  \nendif()\n"
-        (yifthen (Yis_target (ytval "SqrtLibrary")) (Yexp_list []));
+        (yifthen (yis_target (ytval "SqrtLibrary")) (Yexp_list []));
       check "is_defined"
         "if (DEFINED MY_VAR)\n  \nendif()\n"
-        (yifthen (Yis_defined (ycstr "MY_VAR")) (Yexp_list []));
+        (yifthen (yis_defined (ycstr "MY_VAR")) (Yexp_list []));
     ] )
 
 let targets =
@@ -188,7 +188,7 @@ let loop_control =
     [
       check "while empty body"
         "while(FLAG)\n  \nendwhile()"
-        (yc_while (Ytruthy (ycstr "FLAG")) (Yexp_list []));
+        (yc_while (ytruthy (ycstr "FLAG")) (Yexp_list []));
       check "break" "break()" yc_break;
       check "continue" "continue()" yc_continue;
       check "return empty" "return()" (yc_return ());
@@ -274,6 +274,9 @@ let string_ops =
       check "string_regex_replace"
         "string(REGEX REPLACE \"[0-9]+\" X OUT src)"
         (yc_string_regex_replace "[0-9]+" (ystr "X") (ycvar "OUT") [ ystr "src" ]);
+      check "string_regex_quote"
+        "string(REGEX QUOTE OUT a.b+c)"
+        (yc_string_regex_quote (ycvar "OUT") [ ystr "a.b+c" ]);
       check "string_append"
         "string(APPEND VAR a b)"
         (yc_string_append (ycvar "VAR") [ ystr "a"; ystr "b" ]);

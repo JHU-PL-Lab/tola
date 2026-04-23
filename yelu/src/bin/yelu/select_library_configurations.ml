@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Step_common
@@ -13,14 +12,14 @@ let check_slc_macro =
         [ "checking select_library_configurations(${basename})" ];
       yc_apply (ystr "select_library_configurations") [ ystr "${basename}" ];
       yifthen
-        (Ynot (ystrequal (ystr_raw "${${basename}_LIBRARY}") (ystr_raw "${expect}")))
+        (ynot (ystrequal (ystr_raw "${${basename}_LIBRARY}") (ystr_raw "${expect}")))
         (yc_message ~mode:Mm_send_error
            [
              "select_library_configurations(${basename}) returned \
               '${${basename}_LIBRARY}' but '${expect}' was expected";
            ]);
       yifthen
-        (Ynot
+        (ynot
            (ystrequal
               (ystr_raw "${${basename}_LIBRARY}")
               (ystr_raw "${${basename}_LIBRARIES}")))
@@ -54,9 +53,7 @@ let cmd =
       yc_get_global_property ~property:"GENERATOR_IS_MULTI_CONFIG"
         (ycvar "_isMultiConfig");
       yifthen
-        (Yand
-           ( Ynot (Ytruthy (ycstr "_isMultiConfig")),
-             Ynot (Ytruthy (ycstr "CMAKE_BUILD_TYPE")) ))
+        (yand (ynot (ytruthy (ycstr "_isMultiConfig"))) (ynot (ytruthy (ycstr "CMAKE_BUILD_TYPE"))))
         notype_block;
       yc_apply (ystr "check_slc") [ ystr "empty"; ystr_raw "empty_LIBRARY-NOTFOUND" ];
       yc_set (ycvar "OPTONLY_LIBRARY_RELEASE") [ ystr "opt" ];

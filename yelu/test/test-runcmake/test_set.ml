@@ -23,10 +23,10 @@ let check_cmake name prog =
 let normal_unset =
   check_cmake "normal_unset" (Yexp_list [
     yc_set (ycvar "x") [ ystr "hello" ];
-    yifthen (Ynot (Yis_defined (ycstr "x")))
+    yifthen (ynot (yis_defined (ycstr "x")))
       (yc_message ~mode:Mm_fatal_error ["normal_unset: x should be defined"]);
     yc_set (ycvar "x") [];   (* set to empty = undefine *)
-    yifthen (Yis_defined (ycstr "x"))
+    yifthen (yis_defined (ycstr "x"))
       (yc_message ~mode:Mm_fatal_error ["normal_unset: x should be undefined after empty set"]);
   ])
 
@@ -36,7 +36,7 @@ let parent_scope =
     yc_function (ycstr "setval") []
       [ yc_set ~parent_scope:true (ycvar "result") [ ystr "from_func" ] ];
     yc_apply (ycstr "setval") [];
-    yifthen (Ynot (Ystrequal (ycref "result", ystr "from_func")))
+    yifthen (ynot (ystrequal (ycref "result") (ystr "from_func")))
       (yc_message ~mode:Mm_fatal_error ["parent_scope: result should be from_func"]);
   ])
 
@@ -45,7 +45,7 @@ let cache_first_write_wins =
   check_cmake "cache_first_write_wins" (Yexp_list [
     yc_set_cache (ycvar "cfg") [ ystr "initial" ] ~docstring:"test";
     yc_set_cache (ycvar "cfg") [ ystr "ignored" ] ~docstring:"test";
-    yifthen (Ynot (Ystrequal (ycref "cfg", ystr "initial")))
+    yifthen (ynot (ystrequal (ycref "cfg") (ystr "initial")))
       (yc_message ~mode:Mm_fatal_error ["cache_first_write_wins: cfg should remain initial"]);
   ])
 
@@ -54,7 +54,7 @@ let cache_force =
   check_cmake "cache_force" (Yexp_list [
     yc_set_cache (ycvar "cfg") [ ystr "initial" ] ~docstring:"test";
     yc_set_cache ~force:true (ycvar "cfg") [ ystr "overridden" ] ~docstring:"test";
-    yifthen (Ynot (Ystrequal (ycref "cfg", ystr "overridden")))
+    yifthen (ynot (ystrequal (ycref "cfg") (ystr "overridden")))
       (yc_message ~mode:Mm_fatal_error ["cache_force: cfg should be overridden"]);
   ])
 
@@ -62,7 +62,7 @@ let cache_force =
 let cache_path_type =
   check_cmake "cache_path_type" (Yexp_list [
     yc_set_cache ~cache_type:Ct_path (ycvar "mypath") [ ystr "/usr/lib" ] ~docstring:"a path";
-    yifthen (Ynot (Ystrequal (ycref "mypath", ystr "/usr/lib")))
+    yifthen (ynot (ystrequal (ycref "mypath") (ystr "/usr/lib")))
       (yc_message ~mode:Mm_fatal_error ["cache_path_type: mypath should be /usr/lib"]);
   ])
 
@@ -70,10 +70,10 @@ let cache_path_type =
 let unset_cache =
   check_cmake "unset_cache" (Yexp_list [
     yc_set_cache (ycvar "tmp") [ ystr "val" ] ~docstring:"temp";
-    yifthen (Ynot (Yis_defined (ycstr "tmp")))
+    yifthen (ynot (yis_defined (ycstr "tmp")))
       (yc_message ~mode:Mm_fatal_error ["unset_cache: tmp should be defined"]);
     yc_unset_cache (ycvar "tmp");
-    yifthen (Yis_defined (ycstr "tmp"))
+    yifthen (yis_defined (ycstr "tmp"))
       (yc_message ~mode:Mm_fatal_error ["unset_cache: tmp should be undefined after unset"]);
   ])
 
@@ -81,7 +81,7 @@ let unset_cache =
 let cache_bool_type =
   check_cmake "cache_bool_type" (Yexp_list [
     yc_set_cache ~cache_type:Ct_bool (ycvar "flag") [ ystr "ON" ] ~docstring:"a bool flag";
-    yifthen (Ynot (Ystrequal (ycref "flag", ystr "ON")))
+    yifthen (ynot (ystrequal (ycref "flag") (ystr "ON")))
       (yc_message ~mode:Mm_fatal_error ["cache_bool_type: flag should be ON"]);
   ])
 
@@ -89,7 +89,7 @@ let cache_bool_type =
 let cache_string_type =
   check_cmake "cache_string_type" (Yexp_list [
     yc_set_cache ~cache_type:Ct_string (ycvar "greeting") [ ystr "hello" ] ~docstring:"a string";
-    yifthen (Ynot (Ystrequal (ycref "greeting", ystr "hello")))
+    yifthen (ynot (ystrequal (ycref "greeting") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["cache_string_type: greeting should be hello"]);
   ])
 

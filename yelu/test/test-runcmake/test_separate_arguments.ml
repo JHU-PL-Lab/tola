@@ -24,7 +24,7 @@ let empty_command =
   check_cmake "empty_command" (Yexp_list [
     (* nothing is not set — separate_arguments(nothing) must leave it undefined *)
     yc_separate_arguments_plain (ycvar "nothing");
-    yifthen (Yis_defined (ycstr "nothing"))
+    yifthen (yis_defined (ycstr "nothing"))
       (yc_message ~mode:Mm_fatal_error ["empty_command: nothing should remain undefined"]);
   ])
 
@@ -34,7 +34,7 @@ let plain_command =
   check_cmake "plain_command" (Yexp_list [
     yc_set (ycvar "out") [ ystr "a b  c" ];
     yc_separate_arguments_plain (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;b;;c")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;;c")))
       (yc_message ~mode:Mm_fatal_error ["plain_command failed"]);
   ])
 
@@ -44,15 +44,15 @@ let unix_simple =
   check_cmake "unix_simple" (Yexp_list [
     (* plain space-separated words *)
     yc_separate_arguments ~mode:Sa_unix_command ~input:(ystr "a b c") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;b;c")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["unix_simple: a b c failed"]);
     (* single-quoted token containing space *)
     yc_separate_arguments ~mode:Sa_unix_command ~input:(ystr "a 'b c' d") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;b c;d")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;b c;d")))
       (yc_message ~mode:Mm_fatal_error ["unix_simple: quoted token failed"]);
     (* empty input → empty output (defined as empty) *)
     yc_separate_arguments ~mode:Sa_unix_command ~input:(ystr "") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "")))
       (yc_message ~mode:Mm_fatal_error ["unix_simple: empty input failed"]);
   ])
 
@@ -60,7 +60,7 @@ let unix_simple =
 let native_command =
   check_cmake "native_command" (Yexp_list [
     yc_separate_arguments ~mode:Sa_native_command ~input:(ystr "a b c") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;b;c")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["native_command: a b c failed"]);
   ])
 

@@ -25,7 +25,7 @@ let filter_include =
   check_cmake "filter_include" (Yexp_list [
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.h"; ystr "baz.c"; ystr "qux.h" ];
     yc_list_filter Lf_include "\\.c$" (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "foo.c;baz.c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "foo.c;baz.c")))
       (yc_message ~mode:Mm_fatal_error ["FILTER INCLUDE .c failed"]);
   ])
 
@@ -34,7 +34,7 @@ let filter_exclude =
   check_cmake "filter_exclude" (Yexp_list [
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.h"; ystr "baz.c"; ystr "qux.h" ];
     yc_list_filter Lf_exclude "\\.h$" (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "foo.c;baz.c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "foo.c;baz.c")))
       (yc_message ~mode:Mm_fatal_error ["FILTER EXCLUDE .h failed"]);
   ])
 
@@ -43,7 +43,7 @@ let sort_descending =
   check_cmake "sort_descending" (Yexp_list [
     yc_set (ycvar "L") [ ystr "banana"; ystr "apple"; ystr "cherry" ];
     yc_list_sort ~order:Ls_descending (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "cherry;banana;apple")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "cherry;banana;apple")))
       (yc_message ~mode:Mm_fatal_error ["SORT DESCENDING failed"]);
   ])
 
@@ -52,7 +52,7 @@ let sort_natural =
   check_cmake "sort_natural" (Yexp_list [
     yc_set (ycvar "L") [ ystr "file10.txt"; ystr "file2.txt"; ystr "file1.txt" ];
     yc_list_sort ~compare:Ls_natural (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "file1.txt;file2.txt;file10.txt")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "file1.txt;file2.txt;file10.txt")))
       (yc_message ~mode:Mm_fatal_error ["SORT NATURAL failed"]);
   ])
 
@@ -67,7 +67,7 @@ let sort_file_basename =
   check_cmake "sort_file_basename" (Yexp_list [
     yc_set (ycvar "L") [ ystr "dir/foo.txt"; ystr "other/bar.txt"; ystr "a/baz.txt" ];
     yc_list_sort ~compare:Ls_file_basename (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "other/bar.txt;a/baz.txt;dir/foo.txt")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "other/bar.txt;a/baz.txt;dir/foo.txt")))
       (yc_message ~mode:Mm_fatal_error ["SORT FILE_BASENAME failed"]);
   ])
 

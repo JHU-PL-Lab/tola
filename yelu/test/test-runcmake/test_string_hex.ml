@@ -21,7 +21,7 @@ let check_cmake name prog =
 let hex_ascii =
   check_cmake "hex_ascii" (Yexp_list [
     yc_string_hex (ystr "abc") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "616263")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "616263")))
       (yc_message ~mode:Mm_fatal_error ["HEX: abc should be 616263"]);
   ])
 
@@ -29,7 +29,7 @@ let hex_ascii =
 let hex_empty =
   check_cmake "hex_empty" (Yexp_list [
     yc_string_hex (ystr "") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "")))
       (yc_message ~mode:Mm_fatal_error ["HEX: empty should be empty"]);
   ])
 
@@ -37,7 +37,7 @@ let hex_empty =
 let hex_hello =
   check_cmake "hex_hello" (Yexp_list [
     yc_string_hex (ystr "Hello") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "48656c6c6f")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "48656c6c6f")))
       (yc_message ~mode:Mm_fatal_error ["HEX: Hello should be 48656c6c6f"]);
   ])
 
@@ -45,7 +45,7 @@ let hex_hello =
 let hex_space =
   check_cmake "hex_space" (Yexp_list [
     yc_string_hex (ystr " ") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "20")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "20")))
       (yc_message ~mode:Mm_fatal_error ["HEX: space should be 20"]);
   ])
 

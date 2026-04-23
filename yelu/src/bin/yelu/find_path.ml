@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Step_common
@@ -7,17 +6,17 @@ open Step_common
 
 let inner_if =
   yif
-    (Ynot (ystrequal (ystr_raw "${REL_HDR}") (ystr_raw "${expected}")))
+    (ynot (ystrequal (ystr_raw "${REL_HDR}") (ystr_raw "${expected}")))
     (yc_message ~mode:Mm_send_error
        [ "Header ${expected} found as [${REL_HDR}]" ])
     (yifthen
-       (Ytruthy (ycstr "CMAKE_FIND_DEBUG_MODE"))
+       (ytruthy (ycstr "CMAKE_FIND_DEBUG_MODE"))
        (yc_message ~mode:Mm_status
           [ "Header ${expected} found as [${REL_HDR}]" ]))
 
 let outer_if =
   yif
-    (Ytruthy (ycstr "HDR"))
+    (ytruthy (ycstr "HDR"))
     (ycmd_of_list
        [
          yc_file_relative_path

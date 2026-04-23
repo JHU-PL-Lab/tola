@@ -23,7 +23,7 @@ let dns_ns = "6ba7b810-9dad-11d1-80b4-00c04fd430c8"
 let uuid_md5 =
   check_cmake "uuid_md5" (Yexp_list [
     yc_string_uuid ~namespace:dns_ns ~name:"www.example.com" ~type_:`Md5 (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "5df41881-3aed-3515-88a7-2f4a814cf09e")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "5df41881-3aed-3515-88a7-2f4a814cf09e")))
       (yc_message ~mode:Mm_fatal_error ["UUID MD5 mismatch: ${out}"]);
   ])
 
@@ -32,7 +32,7 @@ let uuid_sha1_upper =
   check_cmake "uuid_sha1_upper" (Yexp_list [
     yc_string_uuid ~namespace:dns_ns ~name:"www.example.com"
       ~type_:`Sha1 ~upper:true (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "2ED6657D-E927-568B-95E1-2665A8AEA6A2")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "2ED6657D-E927-568B-95E1-2665A8AEA6A2")))
       (yc_message ~mode:Mm_fatal_error ["UUID SHA1 UPPER mismatch: ${out}"]);
   ])
 
@@ -41,7 +41,7 @@ let uuid_length =
   check_cmake "uuid_length" (Yexp_list [
     yc_string_uuid ~namespace:dns_ns ~name:"test" ~type_:`Md5 (ycvar "out");
     yc_string_length (ycref "out") (ycvar "n");
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "36")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "36")))
       (yc_message ~mode:Mm_fatal_error ["UUID length should be 36, got: ${n}"]);
   ])
 

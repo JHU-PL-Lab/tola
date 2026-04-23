@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Step_common
 
@@ -10,11 +9,11 @@ let cmd =
       yc_project ~languages:[ Lang_none ] "TargetScope";
       yc_add_subdirectory (ystr "Sub");
       yifthen
-        (Yis_target (Yarg_target (ytarget "SubLibLocal")))
+        (yis_target (ytval "SubLibLocal"))
         (ycmd_of_list
            [ yc_message ~mode:Mm_fatal_error [ "SubLibLocal visible in top directory" ] ]);
       yifthen
-        (Ynot (Yis_target (Yarg_target (ytarget "SubLibGlobal"))))
+        (ynot (yis_target (ytval "SubLibGlobal")))
         (ycmd_of_list
            [ yc_message ~mode:Mm_fatal_error [ "SubLibGlobal not visible in top directory" ] ]);
       yc_add_subdirectory (ystr "Sib");

@@ -25,7 +25,7 @@ let range_stop =
     yc_foreach_range ~stop:3 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
     (* acc should be "0123" *)
-    yifthen (Ynot (Ystrequal (ycref "acc", ystr "0123")))
+    yifthen (ynot (ystrequal (ycref "acc") (ystr "0123")))
       (yc_message ~mode:Mm_fatal_error ["range_stop: acc should be 0123"]);
   ])
 
@@ -36,7 +36,7 @@ let range_start_stop =
     yc_foreach_range ~start:2 ~stop:4 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
     (* acc should be "234" *)
-    yifthen (Ynot (Ystrequal (ycref "acc", ystr "234")))
+    yifthen (ynot (ystrequal (ycref "acc") (ystr "234")))
       (yc_message ~mode:Mm_fatal_error ["range_start_stop: acc should be 234"]);
   ])
 
@@ -47,7 +47,7 @@ let range_step =
     yc_foreach_range ~start:0 ~stop:6 ~step:2 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
     (* acc should be "0246" *)
-    yifthen (Ynot (Ystrequal (ycref "acc", ystr "0246")))
+    yifthen (ynot (ystrequal (ycref "acc") (ystr "0246")))
       (yc_message ~mode:Mm_fatal_error ["range_step: acc should be 0246"]);
   ])
 
@@ -57,7 +57,7 @@ let in_items =
     yc_set (ycvar "acc") [ ystr "" ];
     yc_foreach_in ~items:[ ystr "a"; ystr "b"; ystr "c" ] (ycvar "x")
       (yc_string_append (ycvar "acc") [ ycref "x" ]);
-    yifthen (Ynot (Ystrequal (ycref "acc", ystr "abc")))
+    yifthen (ynot (ystrequal (ycref "acc") (ystr "abc")))
       (yc_message ~mode:Mm_fatal_error ["in_items: acc should be abc"]);
   ])
 
@@ -68,7 +68,7 @@ let in_lists =
     yc_set (ycvar "count") [ ystr "0" ];
     yc_foreach_in ~lists:[ ycvar "words" ] (ycvar "w")
       (yc_math "${count} + 1" (ycvar "count"));
-    yifthen (Ynot (Ystrequal (ycref "count", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "count") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["in_lists: count should be 3"]);
   ])
 
@@ -80,7 +80,7 @@ let in_lists_and_items =
     yc_foreach_in ~lists:[ ycvar "base" ] ~items:[ ystr "z" ] (ycvar "v")
       (yc_math "${count} + 1" (ycvar "count"));
     (* base has 2 items, plus 1 literal = 3 *)
-    yifthen (Ynot (Ystrequal (ycref "count", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "count") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["in_lists_and_items: count should be 3"]);
   ])
 

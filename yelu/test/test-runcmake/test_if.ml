@@ -25,7 +25,7 @@ let in_list =
   check_cmake "in_list" (Yexp_list [
     yc_minimum_required_s "3.3";
     yc_list_append (ycvar "fruits") [ ystr "apple"; ystr "banana"; ystr "cherry" ];
-    yifthen (Ynot (yin_list (ystr "banana") (ycstr "fruits")))
+    yifthen (ynot (yin_list (ystr "banana") (ycstr "fruits")))
       (yc_message ~mode:Mm_fatal_error ["in_list: banana should be in fruits"]);
     yifthen (yin_list (ystr "mango") (ycstr "fruits"))
       (yc_message ~mode:Mm_fatal_error ["in_list: mango should not be in fruits"]);
@@ -35,7 +35,7 @@ let in_list =
 let matches =
   check_cmake "matches" (Yexp_list [
     yc_set (ycvar "ver") [ ystr "3.14.1" ];
-    yifthen (Ynot (ymatches (ycref "ver") "^[0-9]+\\.[0-9]+"))
+    yifthen (ynot (ymatches (ycref "ver") "^[0-9]+\\.[0-9]+"))
       (yc_message ~mode:Mm_fatal_error ["matches: ver should match version regex"]);
     yifthen (ymatches (ycref "ver") "^[a-z]+$")
       (yc_message ~mode:Mm_fatal_error ["matches: ver should not match alpha regex"]);
@@ -44,22 +44,22 @@ let matches =
 (* VERSION_LESS / VERSION_GREATER / VERSION_EQUAL *)
 let version_compare =
   check_cmake "version_compare" (Yexp_list [
-    yifthen (Ynot (yversion_less (ystr "1.0") (ystr "2.0")))
+    yifthen (ynot (yversion_less (ystr "1.0") (ystr "2.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare: 1.0 should be less than 2.0"]);
-    yifthen (Ynot (yversion_greater (ystr "2.0") (ystr "1.0")))
+    yifthen (ynot (yversion_greater (ystr "2.0") (ystr "1.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare: 2.0 should be greater than 1.0"]);
-    yifthen (Ynot (yversion_equal (ystr "1.2.3") (ystr "1.2.3")))
+    yifthen (ynot (yversion_equal (ystr "1.2.3") (ystr "1.2.3")))
       (yc_message ~mode:Mm_fatal_error ["version_compare: 1.2.3 should equal 1.2.3"]);
   ])
 
 (* VERSION_LESS_EQUAL / VERSION_GREATER_EQUAL *)
 let version_compare_equal =
   check_cmake "version_compare_equal" (Yexp_list [
-    yifthen (Ynot (yversion_less_equal (ystr "1.0") (ystr "1.0")))
+    yifthen (ynot (yversion_less_equal (ystr "1.0") (ystr "1.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare_equal: 1.0 should be <= 1.0"]);
-    yifthen (Ynot (yversion_less_equal (ystr "1.0") (ystr "2.0")))
+    yifthen (ynot (yversion_less_equal (ystr "1.0") (ystr "2.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare_equal: 1.0 should be <= 2.0"]);
-    yifthen (Ynot (yversion_greater_equal (ystr "2.0") (ystr "2.0")))
+    yifthen (ynot (yversion_greater_equal (ystr "2.0") (ystr "2.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare_equal: 2.0 should be >= 2.0"]);
   ])
 
@@ -68,13 +68,13 @@ let compound =
   check_cmake "compound" (Yexp_list [
     yc_set (ycvar "x") [ ystr "5" ];
     (* AND: both true *)
-    yifthen (Ynot (Yand (ygreater (ycref "x") (ystr "3"), yless (ycref "x") (ystr "10"))))
+    yifthen (ynot (yand (ygreater (ycref "x") (ystr "3")) (yless (ycref "x") (ystr "10"))))
       (yc_message ~mode:Mm_fatal_error ["compound AND: 3 < 5 < 10 failed"]);
     (* OR: at least one true *)
-    yifthen (Ynot (Yor (yequal (ycref "x") (ystr "5"), yequal (ycref "x") (ystr "99"))))
+    yifthen (ynot (yor (yequal (ycref "x") (ystr "5")) (yequal (ycref "x") (ystr "99"))))
       (yc_message ~mode:Mm_fatal_error ["compound OR: x==5 OR x==99 failed"]);
     (* NOT (AND): x==0 AND x==1 is false → NOT true; use yif to assert *)
-    yif (Ynot (Yand (yequal (ycref "x") (ystr "0"), yequal (ycref "x") (ystr "1"))))
+    yif (ynot (yand (yequal (ycref "x") (ystr "0")) (yequal (ycref "x") (ystr "1"))))
       (Yexp_list [])
       (yc_message ~mode:Mm_fatal_error ["compound NOT(AND false false) should be true"]);
   ])
@@ -82,28 +82,28 @@ let compound =
 (* Numeric EQUAL / LESS / GREATER / LESS_EQUAL / GREATER_EQUAL *)
 let numeric_compare =
   check_cmake "numeric_compare" (Yexp_list [
-    yifthen (Ynot (yequal (ystr "42") (ystr "42")))
+    yifthen (ynot (yequal (ystr "42") (ystr "42")))
       (yc_message ~mode:Mm_fatal_error ["EQUAL: 42 == 42 failed"]);
-    yifthen (Ynot (yless (ystr "3") (ystr "10")))
+    yifthen (ynot (yless (ystr "3") (ystr "10")))
       (yc_message ~mode:Mm_fatal_error ["LESS: 3 < 10 failed"]);
-    yifthen (Ynot (ygreater (ystr "10") (ystr "3")))
+    yifthen (ynot (ygreater (ystr "10") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["GREATER: 10 > 3 failed"]);
-    yifthen (Ynot (yless_equal (ystr "5") (ystr "5")))
+    yifthen (ynot (yless_equal (ystr "5") (ystr "5")))
       (yc_message ~mode:Mm_fatal_error ["LESS_EQUAL: 5 <= 5 failed"]);
-    yifthen (Ynot (ygreater_equal (ystr "7") (ystr "5")))
+    yifthen (ynot (ygreater_equal (ystr "7") (ystr "5")))
       (yc_message ~mode:Mm_fatal_error ["GREATER_EQUAL: 7 >= 5 failed"]);
   ])
 
 (* STRLESS / STRGREATER / STRLESS_EQUAL / STRGREATER_EQUAL *)
 let string_compare =
   check_cmake "string_compare" (Yexp_list [
-    yifthen (Ynot (ystrless (ystr "apple") (ystr "banana")))
+    yifthen (ynot (ystrless (ystr "apple") (ystr "banana")))
       (yc_message ~mode:Mm_fatal_error ["STRLESS: apple < banana failed"]);
-    yifthen (Ynot (ystrgreater (ystr "zebra") (ystr "apple")))
+    yifthen (ynot (ystrgreater (ystr "zebra") (ystr "apple")))
       (yc_message ~mode:Mm_fatal_error ["STRGREATER: zebra > apple failed"]);
-    yifthen (Ynot (ystrless_equal (ystr "abc") (ystr "abc")))
+    yifthen (ynot (ystrless_equal (ystr "abc") (ystr "abc")))
       (yc_message ~mode:Mm_fatal_error ["STRLESS_EQUAL: abc <= abc failed"]);
-    yifthen (Ynot (ystrgreater_equal (ystr "z") (ystr "a")))
+    yifthen (ynot (ystrgreater_equal (ystr "z") (ystr "a")))
       (yc_message ~mode:Mm_fatal_error ["STRGREATER_EQUAL: z >= a failed"]);
   ])
 
@@ -111,15 +111,15 @@ let string_compare =
 let file_tests =
   check_cmake "file_tests" (Yexp_list [
     (* /tmp always exists and is a directory on Linux *)
-    yifthen (Ynot (yexists (ystr "/tmp")))
+    yifthen (ynot (yexists (ystr "/tmp")))
       (yc_message ~mode:Mm_fatal_error ["EXISTS: /tmp should exist"]);
-    yifthen (Ynot (yis_directory (ystr "/tmp")))
+    yifthen (ynot (yis_directory (ystr "/tmp")))
       (yc_message ~mode:Mm_fatal_error ["IS_DIRECTORY: /tmp should be a directory"]);
     (* /tmp/nonexistent_yelu_test_xyz should not exist *)
     yifthen (yexists (ystr "/tmp/nonexistent_yelu_test_xyz"))
       (yc_message ~mode:Mm_fatal_error ["EXISTS: nonexistent path should not exist"]);
     (* absolute vs relative *)
-    yifthen (Ynot (yis_absolute (ystr "/usr")))
+    yifthen (ynot (yis_absolute (ystr "/usr")))
       (yc_message ~mode:Mm_fatal_error ["IS_ABSOLUTE: /usr should be absolute"]);
     yifthen (yis_absolute (ystr "relative/path"))
       (yc_message ~mode:Mm_fatal_error ["IS_ABSOLUTE: relative/path should not be absolute"]);

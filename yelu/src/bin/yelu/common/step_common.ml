@@ -167,7 +167,7 @@ let math_check_cxx_features =
         yvar "have_exp";
       ];
     yifthen
-      (Yand (Ytruthy (yvar "have_log"), Ytruthy (yvar "have_exp")))
+      (yand (ytruthy (yvar "have_log")) (ytruthy (yvar "have_exp")))
       (compile_defs (yvar "sqrt")
          [
            ytarget_def ~kind:Private [ ystr_raw "HAVE_LOG"; ystr_raw "HAVE_EXP" ];
@@ -181,7 +181,7 @@ let math_check_cxx_features =
 let math_install_libs ?export () =
   [
     yc_set (ycvar "installable_libs") [ yvar "math"; yvar "flags" ];
-    yifthen (Yis_target (ytval "SqrtLibrary"))
+    yifthen (yis_target (ytval "SqrtLibrary"))
       (ycmd_of_list [ yc_list_append (ycvar "installable_libs") [ yvar "sqrt" ] ]);
     yc_install_targets ?export [ ytval "${installable_libs}" ] (ydir "lib");
     yc_install_files [ ystr_raw "MathFunctions.h" ] (ydir "include");

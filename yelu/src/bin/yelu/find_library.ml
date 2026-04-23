@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Step_common
@@ -9,17 +8,17 @@ open Step_common
 let test_find_library_macro =
   let inner_if =
     yif
-      (Ynot (ystrequal (ystr_raw "${REL_LIB}") (ystr_raw "${expected}")))
+      (ynot (ystrequal (ystr_raw "${REL_LIB}") (ystr_raw "${expected}")))
       (yc_message ~mode:Mm_send_error
          [ "Library ${expected} found as [${REL_LIB}]${desc}" ])
       (yifthen
-         (Ytruthy (ycstr "CMAKE_FIND_DEBUG_MODE"))
+         (ytruthy (ycstr "CMAKE_FIND_DEBUG_MODE"))
          (yc_message ~mode:Mm_status
             [ "Library ${expected} found as [${REL_LIB}]${desc}" ]))
   in
   let outer_if =
     yif
-      (Ytruthy (ycstr "LIB"))
+      (ytruthy (ycstr "LIB"))
       (ycmd_of_list
          [
            yc_file_relative_path

@@ -22,12 +22,12 @@ let length =
   check_cmake "length" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_length (ycvar "L") (ycvar "n");
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["LENGTH: 3-element list failed"]);
     (* empty list: length 0 *)
     yc_set (ycvar "E") [];
     yc_list_length (ycvar "E") (ycvar "n");
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "0")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "0")))
       (yc_message ~mode:Mm_fatal_error ["LENGTH: empty list failed"]);
   ])
 
@@ -37,15 +37,15 @@ let get =
     yc_set (ycvar "L") [ ystr "alpha"; ystr "bravo"; ystr "charlie" ];
     (* single positive index *)
     yc_list_get ~indices:[1] (ycvar "L") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "bravo")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "bravo")))
       (yc_message ~mode:Mm_fatal_error ["GET index 1 failed"]);
     (* negative index: -1 = last *)
     yc_list_get ~indices:[-1] (ycvar "L") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "charlie")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "charlie")))
       (yc_message ~mode:Mm_fatal_error ["GET index -1 failed"]);
     (* multiple indices → semicolon-joined result *)
     yc_list_get ~indices:[0; 2] (ycvar "L") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "alpha;charlie")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "alpha;charlie")))
       (yc_message ~mode:Mm_fatal_error ["GET indices 0 2 failed"]);
   ])
 
@@ -54,11 +54,11 @@ let append =
   check_cmake "append" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b" ];
     yc_list_append (ycvar "L") [ ystr "c"; ystr "d" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;b;c;d")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c;d")))
       (yc_message ~mode:Mm_fatal_error ["APPEND failed"]);
     (* APPEND to undefined list creates it *)
     yc_list_append (ycvar "New") [ ystr "x" ];
-    yifthen (Ynot (Ystrequal (ycref "New", ystr "x")))
+    yifthen (ynot (ystrequal (ycref "New") (ystr "x")))
       (yc_message ~mode:Mm_fatal_error ["APPEND to undefined failed"]);
   ])
 
@@ -67,11 +67,11 @@ let find =
   check_cmake "find" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_find (ycvar "L") (ystr "b") (ycvar "idx");
-    yifthen (Ynot (Ystrequal (ycref "idx", ystr "1")))
+    yifthen (ynot (ystrequal (ycref "idx") (ystr "1")))
       (yc_message ~mode:Mm_fatal_error ["FIND: b should be at index 1"]);
     (* not present → -1 *)
     yc_list_find (ycvar "L") (ystr "z") (ycvar "idx");
-    yifthen (Ynot (Ystrequal (ycref "idx", ystr "-1")))
+    yifthen (ynot (ystrequal (ycref "idx") (ystr "-1")))
       (yc_message ~mode:Mm_fatal_error ["FIND: missing should return -1"]);
   ])
 
@@ -80,11 +80,11 @@ let remove_item =
   check_cmake "remove_item" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "a"; ystr "c" ];
     yc_list_remove_item (ycvar "L") [ ystr "a" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "b;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "b;c")))
       (yc_message ~mode:Mm_fatal_error ["REMOVE_ITEM: both a's should be removed"]);
     (* remove value not in list: no-op *)
     yc_list_remove_item (ycvar "L") [ ystr "z" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "b;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "b;c")))
       (yc_message ~mode:Mm_fatal_error ["REMOVE_ITEM: no-op failed"]);
   ])
 
@@ -93,11 +93,11 @@ let remove_at =
   check_cmake "remove_at" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c"; ystr "d" ];
     yc_list_remove_at (ycvar "L") [ 1 ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;c;d")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;c;d")))
       (yc_message ~mode:Mm_fatal_error ["REMOVE_AT index 1 failed"]);
     (* negative index: -1 removes last *)
     yc_list_remove_at (ycvar "L") [ -1 ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;c")))
       (yc_message ~mode:Mm_fatal_error ["REMOVE_AT index -1 failed"]);
   ])
 
@@ -106,12 +106,12 @@ let reverse =
   check_cmake "reverse" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_reverse (ycvar "L");
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "c;b;a")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "c;b;a")))
       (yc_message ~mode:Mm_fatal_error ["REVERSE failed"]);
     (* single element: no-op *)
     yc_set (ycvar "S") [ ystr "x" ];
     yc_list_reverse (ycvar "S");
-    yifthen (Ynot (Ystrequal (ycref "S", ystr "x")))
+    yifthen (ynot (ystrequal (ycref "S") (ystr "x")))
       (yc_message ~mode:Mm_fatal_error ["REVERSE single element failed"]);
   ])
 
@@ -120,11 +120,11 @@ let insert =
   check_cmake "insert" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "c" ];
     yc_list_insert (ycvar "L") 1 [ ystr "b" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "a;b;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["INSERT at 1 failed"]);
     (* insert at 0: prepend *)
     yc_list_insert (ycvar "L") 0 [ ystr "z" ];
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "z;a;b;c")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "z;a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["INSERT at 0 failed"]);
   ])
 

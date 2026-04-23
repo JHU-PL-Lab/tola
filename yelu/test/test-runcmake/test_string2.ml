@@ -21,14 +21,14 @@ let check_cmake name prog =
 let find =
   check_cmake "find" (Yexp_list [
     yc_string_find (ystr "hello world") (ystr "world") (ycvar "idx");
-    yifthen (Ynot (Ystrequal (ycref "idx", ystr "6")))
+    yifthen (ynot (ystrequal (ycref "idx") (ystr "6")))
       (yc_message ~mode:Mm_fatal_error ["FIND: world should be at index 6"]);
     yc_string_find (ystr "hello world") (ystr "missing") (ycvar "idx");
-    yifthen (Ynot (Ystrequal (ycref "idx", ystr "-1")))
+    yifthen (ynot (ystrequal (ycref "idx") (ystr "-1")))
       (yc_message ~mode:Mm_fatal_error ["FIND: missing should return -1"]);
     (* REVERSE: find last occurrence *)
     yc_string_find ~reverse:true (ystr "abcabc") (ystr "b") (ycvar "idx");
-    yifthen (Ynot (Ystrequal (ycref "idx", ystr "4")))
+    yifthen (ynot (ystrequal (ycref "idx") (ystr "4")))
       (yc_message ~mode:Mm_fatal_error ["FIND REVERSE: last b should be at index 4"]);
   ])
 
@@ -36,15 +36,15 @@ let find =
 let substring =
   check_cmake "substring" (Yexp_list [
     yc_string_substring (ystr "hello world") 6 ~length:5 (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "world")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "world")))
       (yc_message ~mode:Mm_fatal_error ["SUBSTRING: world failed"]);
     (* length -1 = rest of string *)
     yc_string_substring (ystr "hello world") 6 ~length:(-1) (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "world")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "world")))
       (yc_message ~mode:Mm_fatal_error ["SUBSTRING: length -1 failed"]);
     (* zero-length *)
     yc_string_substring (ystr "hello") 2 ~length:0 (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "")))
       (yc_message ~mode:Mm_fatal_error ["SUBSTRING: length 0 failed"]);
   ])
 
@@ -52,13 +52,13 @@ let substring =
 let strip =
   check_cmake "strip" (Yexp_list [
     yc_string_strip (ystr "  hello  ") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "hello")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["STRIP: spaces failed"]);
     yc_string_strip (ystr "no spaces") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "no spaces")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "no spaces")))
       (yc_message ~mode:Mm_fatal_error ["STRIP: no-op failed"]);
     yc_string_strip (ystr "") (ycvar "out");
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "")))
       (yc_message ~mode:Mm_fatal_error ["STRIP: empty failed"]);
   ])
 
@@ -66,11 +66,11 @@ let strip =
 let replace =
   check_cmake "replace" (Yexp_list [
     yc_string_replace (ystr "foo") (ystr "bar") (ycvar "out") [ ystr "foo and foo" ];
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "bar and bar")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "bar and bar")))
       (yc_message ~mode:Mm_fatal_error ["REPLACE: foo->bar failed"]);
     (* no match: output equals input *)
     yc_string_replace (ystr "xyz") (ystr "!") (ycvar "out") [ ystr "hello" ];
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "hello")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["REPLACE: no-match failed"]);
     (* SKIP: empty match-string replace — implementation-defined in cmake;
        behavior varies across versions. See language_coverage.md §Known Gaps. *)
@@ -81,11 +81,11 @@ let regex_replace =
   check_cmake "regex_replace" (Yexp_list [
     (* \\\\1 in OCaml → \\1 in cmake source → \1 back-reference in replacement *)
     yc_string_regex_replace "([0-9]+)" (ystr "(\\\\1)") (ycvar "out") [ ystr "abc 42 def" ];
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "abc (42) def")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "abc (42) def")))
       (yc_message ~mode:Mm_fatal_error ["REGEX REPLACE: back-ref failed"]);
     (* global: all occurrences replaced *)
     yc_string_regex_replace "[aeiou]" (ystr "*") (ycvar "out") [ ystr "hello" ];
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "h*ll*")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "h*ll*")))
       (yc_message ~mode:Mm_fatal_error ["REGEX REPLACE: global replace failed"]);
   ])
 

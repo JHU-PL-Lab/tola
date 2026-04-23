@@ -96,7 +96,7 @@ __declspec(dllexport)
 int flags_lib(void) { return 0; }
 |}
 
-let t name = Yarg_target (ytarget name)
+let t name = ytval name
 
 let tlo_yelu =
   Yexp_list [
@@ -168,7 +168,7 @@ let add_link_opts_yelu =
     yc_add_link_options [ystr "-LINK_FLAG"];
     add_exe ~exclude_from_all:true ~sources:[ystr "LinkOptionsExe.c"] (t "add_link_options");
     yc_get_target_property (ycvar "result") "add_link_options" "LINK_OPTIONS";
-    yifthen (Ynot (ymatches (ycstr "result") "-LINK_FLAG"))
+    yifthen (ynot (ymatches (ycstr "result") "-LINK_FLAG"))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["add_link_options not populated the LINK_OPTIONS target property"] ]);
     add_lib_imported ~lib_type:"UNKNOWN" (t "imp");
     yc_get_target_property (ycvar "result") "imp" "LINK_OPTIONS";
@@ -192,11 +192,11 @@ let link_dirs_yelu =
     yc_set (ycvar "CMAKE_LINK_DIRECTORIES_BEFORE") [ybool true];
     yc_link_directories [ystr "/C"];
     yc_get_directory_property "LINK_DIRECTORIES" (ycvar "result");
-    yifthen (Ynot (ymatches (ycstr "result") "/C;/B;/A"))
+    yifthen (ynot (ymatches (ycstr "result") "/C;/B;/A"))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["link_directories not populated the LINK_DIRECTORIES directory property"] ]);
     add_exe ~exclude_from_all:true ~sources:[ystr "LinkDirectoriesExe.c"] (t "link_directories");
     yc_get_target_property (ycvar "result") "link_directories" "LINK_DIRECTORIES";
-    yifthen (Ynot (ymatches (ycstr "result") "/C;/B;/A"))
+    yifthen (ynot (ymatches (ycstr "result") "/C;/B;/A"))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["link_directories not populated the LINK_DIRECTORIES target property"] ]);
     add_lib_imported ~lib_type:"UNKNOWN" (t "imp");
     yc_get_target_property (ycvar "result") "imp" "LINK_DIRECTORIES";
@@ -490,31 +490,31 @@ let tld_yelu =
       ytarget_def ~kind:Interface [ystr "/interface/dir"];
     ];
     yc_get_target_property (ycvar "result") "target_link_directories_2" "LINK_DIRECTORIES";
-    yifthen (Ynot (ystrequal (ycstr "result") (ystr "/private/dir")))
+    yifthen (ynot (ystrequal (ycstr "result") (ystr "/private/dir")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["${result} target_link_directories not populated the LINK_DIRECTORIES target property"] ]);
     yc_get_target_property (ycvar "result") "target_link_directories_2" "INTERFACE_LINK_DIRECTORIES";
-    yifthen (Ynot (ystrequal (ycstr "result") (ystr "/interface/dir")))
+    yifthen (ynot (ystrequal (ycstr "result") (ystr "/interface/dir")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_link_directories not populated the INTERFACE_LINK_DIRECTORIES target property of shared library"] ]);
     add_lib ~type_:Lib_static ~exclude_from_all:true ~sources:[ystr "LinkDirectoriesLib.c"] (t "target_link_directories_3");
     yc_target_link_directories (t "target_link_directories_3") [
       ytarget_def ~kind:Interface [ystr "/interface/dir"];
     ];
     yc_get_target_property (ycvar "result") "target_link_directories_3" "INTERFACE_LINK_DIRECTORIES";
-    yifthen (Ynot (ystrequal (ycstr "result") (ystr "/interface/dir")))
+    yifthen (ynot (ystrequal (ycstr "result") (ystr "/interface/dir")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_link_directories not populated the INTERFACE_LINK_DIRECTORIES target property of static library"] ]);
     add_lib ~type_:Lib_shared ~exclude_from_all:true ~sources:[ystr "LinkDirectoriesLib.c"] (t "target_link_directories_4");
     yc_target_link_directories (t "target_link_directories_4") [
       ytarget_def ~kind:Private [ystr "relative/dir"];
     ];
     yc_get_target_property (ycvar "result") "target_link_directories_4" "LINK_DIRECTORIES";
-    yifthen (Ynot (ystrequal (ycstr "result") (ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}/relative/dir")))
+    yifthen (ynot (ystrequal (ycstr "result") (ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}/relative/dir")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_link_directories not populated the LINK_DIRECTORIES with relative path"] ]);
     yc_add_subdirectory (ystr "subdir");
     yc_target_link_directories (t "target_link_directories_5") [
       ytarget_def ~kind:Private [ystr "relative/dir"];
     ];
     yc_get_target_property (ycvar "result") "target_link_directories_5" "LINK_DIRECTORIES";
-    yifthen (Ynot (ystrequal (ycstr "result") (ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}/relative/dir")))
+    yifthen (ynot (ystrequal (ycstr "result") (ystr_raw "${CMAKE_CURRENT_SOURCE_DIR}/relative/dir")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_link_directories not populated the LINK_DIRECTORIES with relative path"] ]);
   ]
 
@@ -587,8 +587,7 @@ let tcf_yelu =
         add_exe ~sources:[ystr "restrict_user.c"] (t "c_restrict_user_specific");
         link_lib [t "c_restrict_user_specific"] [ytarget_def ~kind:Plain [ytval "c_lib_restrict_specific"]];
       ]);
-    yifthen (Yand (yin_list (ystr "c_std_99") (ycstr "CMAKE_C_COMPILE_FEATURES"),
-                  Ynot (ystrequal (ycstr "CMAKE_C_COMPILER_ID") (ystr "MSVC"))))
+    yifthen (yand (yin_list (ystr "c_std_99") (ycstr "CMAKE_C_COMPILE_FEATURES")) (ynot (ystrequal (ycstr "CMAKE_C_COMPILER_ID") (ystr "MSVC"))))
       (Yexp_list [
         add_exe ~sources:[ystr "main.c"] (t "c_target_compile_features_meta");
         compile_feats (t "c_target_compile_features_meta") [ytarget_feature ~kind:Private "c_std_99"];
@@ -678,20 +677,20 @@ let ts_yelu =
     yc_add_subdirectory (ystr "subdir");
     yc_set (ycvar "subdir_fullpath") [ystr_raw "${CMAKE_CURRENT_LIST_DIR}/subdir"];
     yc_get_target_property (ycvar "target_sources_lib_property") "target_sources_lib" "SOURCES";
-    yifthen (Ynot (yin_list (ystr_raw "$<1:${subdir_fullpath}/subdir_empty_1.cpp>") (ycstr "target_sources_lib_property")))
+    yifthen (ynot (yin_list (ystr_raw "$<1:${subdir_fullpath}/subdir_empty_1.cpp>") (ycstr "target_sources_lib_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources_lib: Generator expression to absolute sub directory file not found"] ]);
-    yifthen (Ynot (yin_list (ystr_raw "$<1:${subdir_fullpath}/../empty_1.cpp>") (ycstr "target_sources_lib_property")))
+    yifthen (ynot (yin_list (ystr_raw "$<1:${subdir_fullpath}/../empty_1.cpp>") (ycstr "target_sources_lib_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources_lib: Generator expression to absolute main directory file not found"] ]);
-    yifthen (Ynot (yin_list (ystr_raw "${subdir_fullpath}/subdir_empty_2.cpp") (ycstr "target_sources_lib_property")))
+    yifthen (ynot (yin_list (ystr_raw "${subdir_fullpath}/subdir_empty_2.cpp") (ycstr "target_sources_lib_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources_lib: Relative sub directory file not converted to absolute"] ]);
-    yifthen (Ynot (yin_list (ystr_raw "$<1:empty_2.cpp>") (ycstr "target_sources_lib_property")))
+    yifthen (ynot (yin_list (ystr_raw "$<1:empty_2.cpp>") (ycstr "target_sources_lib_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources_lib: Generator expression to relative main directory file not found"] ]);
-    yifthen (Ynot (yin_list (ystr_raw "${subdir_fullpath}/../empty_3.cpp") (ycstr "target_sources_lib_property")))
+    yifthen (ynot (yin_list (ystr_raw "${subdir_fullpath}/../empty_3.cpp") (ycstr "target_sources_lib_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources_lib: Relative main directory file not converted to absolute"] ]);
     add_exe ~sources:[ystr "main.cpp"] (t "target_sources");
     link_lib [t "target_sources"] [ytarget_def ~kind:Plain [ytval "target_sources_lib"]];
     yc_get_target_property (ycvar "target_sources_property") "target_sources" "SOURCES";
-    yifthen (Ynot (yin_list (ystr "main.cpp") (ycstr "target_sources_property")))
+    yifthen (ynot (yin_list (ystr "main.cpp") (ycstr "target_sources_property")))
       (Yexp_list [ yc_message ~mode:Mm_send_error ["target_sources: Relative main directory file converted to absolute"] ]);
   ]
 
@@ -919,22 +918,22 @@ int main(void) { return (int)sin(0); }
 let link_static_yelu =
   Yexp_list [
     yc_minimum_required_s "3.10";
-    yifthen (Ypolicy_defined "CMP0129") (Yexp_list [ yc_policy_set "CMP0129" ]);
+    yifthen (ypolicy_defined "CMP0129") (Yexp_list [ yc_policy_set "CMP0129" ]);
     yc_project ~languages:[Lang_c] "LinkStatic";
-    yifthen (Ynot (Ymatches (ycstr "CMAKE_C_COMPILER_ID", "GNU|LCC")))
+    yifthen (ynot (ymatches (ycstr "CMAKE_C_COMPILER_ID") ("GNU|LCC")))
       (Yexp_list [ yc_message ~mode:Mm_fatal_error ["This test works only with the GNU or LCC compiler!"] ]);
-    yc_find_library ~names:[ystr "libm.a"] (Ycvar "MATH_LIBRARY");
+    yc_find_library ~names:[ystr "libm.a"] (ycvar "MATH_LIBRARY");
     yif (ytruthy (ycstr "MATH_LIBRARY"))
       (Yexp_list [
-        yc_get_filename_component ~mode:"PATH" (Ycvar "MATH_LIB_DIR") (ycstr "MATH_LIBRARY");
+        yc_get_filename_component ~mode:"PATH" (ycvar "MATH_LIB_DIR") (ycstr "MATH_LIBRARY");
         yc_link_directories [ystr_raw "${MATH_LIB_DIR}"];
-        yc_set (Ycvar "MATH_LIBRARIES") [ystr_raw "${MATH_LIBRARY}"; ystr "-lm"];
+        yc_set (ycvar "MATH_LIBRARIES") [ystr_raw "${MATH_LIBRARY}"; ystr "-lm"];
       ])
       (Yexp_list [ yc_message ~mode:Mm_fatal_error ["Cannot find libm.a needed for this test"] ]);
     add_exe ~sources:[ystr "LinkStatic.c"] (t "LinkStatic");
     link_lib [t "LinkStatic"]
       [ytarget_def ~kind:Plain [ystr_raw "${MATH_LIBRARIES}"]];
-    yc_set_cache (Ycvar "LinkStatic_FLAG") [ystr "-static"] ~cache_type:Ct_string
+    yc_set_cache (ycvar "LinkStatic_FLAG") [ystr "-static"] ~cache_type:Ct_string
       ~docstring:"Flag to link statically";
     yc_set_target_properties (ytval "LinkStatic")
       [ ("LINK_FLAGS", ystr_raw "${LinkStatic_FLAG}");
@@ -1558,29 +1557,29 @@ let alias_target_yelu =
                                       args = ["$<TARGET_FILE:Sub::tgt>"] }]
       "usealias";
     yc_add_dependencies "bat" "usealias";
-    yifthen (Ynot (Yis_target (ystr "Another::Alias")))
+    yifthen (ynot (yis_target (ystr "Another::Alias")))
       (yc_message ~mode:Mm_send_error ["Another::Alias is not considered a target."]);
     yc_get_target_property (ycvar "_alt") "PREFIX::Foo" "ALIASED_TARGET";
-    yifthen (Ynot (Ystrequal (ycstr "_alt", ystr "foo")))
+    yifthen (ynot (ystrequal (ycstr "_alt") (ystr "foo")))
       (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is not foo: ${_alt}"]);
     yc_get_property ~target:(ystr "PREFIX::Foo") "ALIASED_TARGET" (ycvar "_alt2");
-    yifthen (Ynot (Ystrequal (ycstr "_alt2", ystr "foo")))
+    yifthen (ynot (ystrequal (ycstr "_alt2") (ystr "foo")))
       (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is not foo."]);
     add_lib ~type_:Lib_interface (t "iface");
     add_lib_alias ~alias_of:"iface" "Alias::Iface";
     yc_get_property ~set:true ~target:(ystr "foo") "ALIASED_TARGET"
       (ycvar "_aliased_target_set");
-    yifthen (Ytruthy (ycstr "_aliased_target_set"))
+    yifthen (ytruthy (ycstr "_aliased_target_set"))
       (yc_message ~mode:Mm_send_error ["ALIASED_TARGET is set for target foo"]);
     yc_get_target_property (ycvar "_notAlias1") "foo" "ALIASED_TARGET";
-    yifthen (Ynot (Yis_defined (ycstr "_notAlias1")))
+    yifthen (ynot (yis_defined (ycstr "_notAlias1")))
       (yc_message ~mode:Mm_send_error ["_notAlias1 is not defined"]);
-    yifthen (Ytruthy (ycstr "_notAlias1"))
+    yifthen (ytruthy (ycstr "_notAlias1"))
       (yc_message ~mode:Mm_send_error ["_notAlias1 is defined, but foo is not an ALIAS"]);
-    yifthen (Ynot (Ystrequal (ycstr "_notAlias1", ystr "_notAlias1-NOTFOUND")))
+    yifthen (ynot (ystrequal (ycstr "_notAlias1") (ystr "_notAlias1-NOTFOUND")))
       (yc_message ~mode:Mm_send_error ["_notAlias1 not defined to a -NOTFOUND variant"]);
     yc_get_property ~target:(ystr "foo") "ALIASED_TARGET" (ycvar "_notAlias2");
-    yifthen (Ytruthy (ycstr "_notAlias2"))
+    yifthen (ytruthy (ycstr "_notAlias2"))
       (yc_message ~mode:Mm_send_error ["_notAlias2 evaluates to true, but foo is not an ALIAS"]);
   ]
 
@@ -2008,11 +2007,11 @@ let compile_options_yelu =
   let testlib = t "testlib" in
   Yexp_list [
     yc_minimum_required_s "3.10";
-    yifthen (Ypolicy_defined "CMP0092") (yc_policy_set "CMP0092");
-    yifthen (Ypolicy_defined "CMP0129") (yc_policy_set "CMP0129");
+    yifthen (ypolicy_defined "CMP0092") (yc_policy_set "CMP0092");
+    yifthen (ypolicy_defined "CMP0129") (yc_policy_set "CMP0129");
     yc_get_global_property ~property:"GENERATOR_IS_MULTI_CONFIG" (ycvar "_isMultiConfig");
-    yifthen (Yand (Ynot (Ytruthy (ycstr "_isMultiConfig")), Ynot (Ytruthy (ycstr "CMAKE_BUILD_TYPE"))))
-      (yc_set_cache (Ycvar "CMAKE_BUILD_TYPE") [ystr "Debug"]
+    yifthen (yand (ynot (ytruthy (ycstr "_isMultiConfig"))) (ynot (ytruthy (ycstr "CMAKE_BUILD_TYPE"))))
+      (yc_set_cache (ycvar "CMAKE_BUILD_TYPE") [ystr "Debug"]
          ~force:true ~cache_type:Ct_string ~docstring:"Choose the type of build");
     yc_project ~languages:[Lang_c; Lang_cxx] "CompileOptions";
     add_lib ~sources:[ystr "other.cpp"] testlib;
@@ -2037,7 +2036,7 @@ let compile_options_yelu =
       ];
     ];
     (* BORLAND/WATCOM: no -D flag support; others: SHELL -D defines *)
-    yif (Yor (Ytruthy (ycstr "BORLAND"), Ytruthy (ycstr "WATCOM")))
+    yif (yor (ytruthy (ycstr "BORLAND")) (ytruthy (ycstr "WATCOM")))
       (compile_defs co [ ytarget_def ~kind:Private [ystr "NO_DEF_TESTS"] ])
       (compile_opts co [
         ytarget_def ~kind:Private [
@@ -2048,24 +2047,22 @@ let compile_options_yelu =
         ]
       ]);
     (* octothorpe define: GNU/LCC/Clang compilers, not NMake *)
-    yifthen (Yand (
-        ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|GNU|LCC|Clang|Borland|Embarcadero|},
-        Ynot (ymatches (ycstr "CMAKE_GENERATOR") "NMake Makefiles")))
+    yifthen (yand (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|GNU|LCC|Clang|Borland|Embarcadero|}) (ynot (ymatches (ycstr "CMAKE_GENERATOR") "NMake Makefiles")))
       (compile_opts co [ ytarget_def ~kind:Private [ystr_raw {|-DTEST_OCTOTHORPE=\"#\"|}] ]);
     (* flag tests: GNU/LCC/AppleClang/MSVC compilers *)
     yifthen (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|^(GNU|LCC|AppleClang|MSVC)$|})
       (Yexp_list [
         compile_defs co [ ytarget_def ~kind:Private [ystr "DO_FLAG_TESTS"] ];
         yifthen (ymatches (ycstr "CMAKE_CXX_COMPILER_ID") {|^(GNU|LCC|AppleClang)$|})
-          (yc_string_append (Ycvar "CMAKE_CXX_FLAGS") [ystr " -w"]);
-        yc_string_append (Ycvar "CMAKE_CXX_FLAGS")                [ystr " -DFLAG_A=1 -DFLAG_B=1"];
-        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_DEBUG")          [ystr " -DFLAG_A=2 -DFLAG_C=1"];
-        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_RELEASE")        [ystr " -DFLAG_A=2 -DFLAG_C=1"];
-        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_RELWITHDEBINFO") [ystr " -DFLAG_A=2 -DFLAG_C=1"];
-        yc_string_append (Ycvar "CMAKE_CXX_FLAGS_MINSIZEREL")     [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+          (yc_string_append (ycvar "CMAKE_CXX_FLAGS") [ystr " -w"]);
+        yc_string_append (ycvar "CMAKE_CXX_FLAGS")                [ystr " -DFLAG_A=1 -DFLAG_B=1"];
+        yc_string_append (ycvar "CMAKE_CXX_FLAGS_DEBUG")          [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (ycvar "CMAKE_CXX_FLAGS_RELEASE")        [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (ycvar "CMAKE_CXX_FLAGS_RELWITHDEBINFO") [ystr " -DFLAG_A=2 -DFLAG_C=1"];
+        yc_string_append (ycvar "CMAKE_CXX_FLAGS_MINSIZEREL")     [ystr " -DFLAG_A=2 -DFLAG_C=1"];
         yc_string_toupper (ystr_raw "${CMAKE_BUILD_TYPE}") (ycvar "_xbuild_type");
-        yifthen (Ynot (ymatches (ycstr "_xbuild_type") {|^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$|}))
-          (yc_string_append (Ycvar "CMAKE_CXX_FLAGS_${_xbuild_type}") [ystr " -DFLAG_A=2 -DFLAG_C=1"]);
+        yifthen (ynot (ymatches (ycstr "_xbuild_type") {|^(DEBUG|RELEASE|RELWITHDEBINFO|MINSIZEREL)$|}))
+          (yc_string_append (ycvar "CMAKE_CXX_FLAGS_${_xbuild_type}") [ystr " -DFLAG_A=2 -DFLAG_C=1"]);
         compile_opts co [ ytarget_def ~kind:Private [ystr "-DFLAG_B=2"; ystr "-DFLAG_C=2"; ystr "-DFLAG_D=1"] ];
         yc_set_property ~append:true ~targets:[testlib]
           [("INTERFACE_COMPILE_OPTIONS", ystr "-DFLAG_D=2")];
@@ -2090,9 +2087,9 @@ let compile_defs_yelu =
     yc_minimum_required_s "3.10";
     yc_project ~languages:[Lang_cxx; Lang_c] "CompileDefinitions";
     yc_foreach ~items:[ystr "DEBUG"; ystr "RELEASE"; ystr "RELWITHDEBINFO"; ystr "MINSIZEREL"]
-      (Ycvar "c") (Yexp_list [
-        yc_set (Ycvar "CMAKE_C_FLAGS_${c}") [ystr_raw "${CMAKE_C_FLAGS_${c}} -DTEST_CONFIG_${c}"];
-        yc_set (Ycvar "CMAKE_CXX_FLAGS_${c}") [ystr_raw "${CMAKE_CXX_FLAGS_${c}} -DTEST_CONFIG_${c}"];
+      (ycvar "c") (Yexp_list [
+        yc_set (ycvar "CMAKE_C_FLAGS_${c}") [ystr_raw "${CMAKE_C_FLAGS_${c}} -DTEST_CONFIG_${c}"];
+        yc_set (ycvar "CMAKE_CXX_FLAGS_${c}") [ystr_raw "${CMAKE_CXX_FLAGS_${c}} -DTEST_CONFIG_${c}"];
       ]);
     yc_set_directory_property ~append:true "COMPILE_DEFINITIONS"
       [ystr_raw {|BUILD_CONFIG_NAME=\"$<CONFIGURATION>\"|}];

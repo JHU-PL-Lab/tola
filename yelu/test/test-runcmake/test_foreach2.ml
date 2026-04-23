@@ -23,17 +23,17 @@ let zip_basic =
     yc_set (ycvar "ok") [ystr "1"];
     yc_foreach_zip [ycvar "x"; ycvar "y"] [ycvar "as"; ycvar "bs"] (Yexp_list [
       (* if x_y pair doesn't match expected, clear ok *)
-      yifthen (Ystrequal (ycref "x", ystr "a"))
-        (yifthen (Ynot (Ystrequal (ycref "y", ystr "1")))
+      yifthen (ystrequal (ycref "x") (ystr "a"))
+        (yifthen (ynot (ystrequal (ycref "y") (ystr "1")))
           (yc_set (ycvar "ok") []));
-      yifthen (Ystrequal (ycref "x", ystr "b"))
-        (yifthen (Ynot (Ystrequal (ycref "y", ystr "2")))
+      yifthen (ystrequal (ycref "x") (ystr "b"))
+        (yifthen (ynot (ystrequal (ycref "y") (ystr "2")))
           (yc_set (ycvar "ok") []));
-      yifthen (Ystrequal (ycref "x", ystr "c"))
-        (yifthen (Ynot (Ystrequal (ycref "y", ystr "3")))
+      yifthen (ystrequal (ycref "x") (ystr "c"))
+        (yifthen (ynot (ystrequal (ycref "y") (ystr "3")))
           (yc_set (ycvar "ok") []));
     ]);
-    yifthen (Ynot (Ystrequal (ycref "ok", ystr "1")))
+    yifthen (ynot (ystrequal (ycref "ok") (ystr "1")))
       (yc_message ~mode:Mm_fatal_error ["ZIP_LISTS pair mismatch"]);
   ])
 
@@ -47,7 +47,7 @@ let zip_unequal =
       yc_math (Fmt.str "${count} + 1") (ycvar "count");
     ]);
     (* all 3 elements of xs are visited *)
-    yifthen (Ynot (Ystrequal (ycref "count", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "count") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["ZIP_LISTS unequal: expected 3 iterations, got ${count}"]);
   ])
 
@@ -61,7 +61,7 @@ let zip_three =
     yc_foreach_zip [ycvar "a"; ycvar "b"; ycvar "c"] [ycvar "as"; ycvar "bs"; ycvar "cs"] (Yexp_list [
       yc_string_concat (ycvar "result") [ycref "result"; ycref "a"; ycref "b"; ycref "c"];
     ]);
-    yifthen (Ynot (Ystrequal (ycref "result", ystr "a1xb2y")))
+    yifthen (ynot (ystrequal (ycref "result") (ystr "a1xb2y")))
       (yc_message ~mode:Mm_fatal_error ["ZIP_LISTS three: expected a1xb2y got ${result}"]);
   ])
 

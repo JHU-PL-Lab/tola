@@ -1,4 +1,3 @@
-open Yelu_langs.Lang_yelu
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Step_common
@@ -26,15 +25,15 @@ let check_version_string_macro =
   yc_macro (ystr "check_version_string") ~args:[ "MODULE_NAME"; "VERSION_VAR" ]
     [
       yifthen
-        (Ytruthy (ycstr "${MODULE_NAME}_FOUND"))
+        (ytruthy (ycstr "${MODULE_NAME}_FOUND"))
         (yif
-           (Yis_defined (ycstr "${VERSION_VAR}"))
+           (yis_defined (ycstr "${VERSION_VAR}"))
            (ycmd_of_list
               [
                 yc_message ~mode:Mm_status
                   [ "${VERSION_VAR}='${${VERSION_VAR}}'" ];
                 yifthen
-                  (Ynot (ymatches (ystr_raw "${${VERSION_VAR}}") "^[0-9]"))
+                  (ynot (ymatches (ystr_raw "${${VERSION_VAR}}") "^[0-9]"))
                   (yc_message ~mode:Mm_send_error
                      [ "unexpected: ${VERSION_VAR} does not begin with a \
                         decimal digit" ]);
@@ -47,7 +46,7 @@ let check_version_string_macro =
                   (yc_message ~mode:Mm_send_error
                      [ "unexpected: ${VERSION_VAR} is VERSION_EQUAL 0" ]);
                 yifthen
-                  (Ynot
+                  (ynot
                      (yversion_greater
                         (ystr_raw "${${VERSION_VAR}}")
                         (ystr "0")))

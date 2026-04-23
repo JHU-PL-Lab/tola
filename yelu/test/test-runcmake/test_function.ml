@@ -27,7 +27,7 @@ let current_function_name =
     yc_function (ycstr "my_func") []
       [ yc_set ~parent_scope:true (ycvar "fn_name") [ ycref "CMAKE_CURRENT_FUNCTION" ] ];
     yc_apply (ycstr "my_func") [];
-    yifthen (Ynot (Ystrequal (ycref "fn_name", ystr "my_func")))
+    yifthen (ynot (ystrequal (ycref "fn_name") (ystr "my_func")))
       (yc_message ~mode:Mm_fatal_error
         ["CMAKE_CURRENT_FUNCTION: expected my_func"]);
   ])
@@ -41,11 +41,11 @@ let current_list_file =
     yc_function (ycstr "file_func") []
       [ yc_set ~parent_scope:true (ycvar "cl_file") [ ycref "CMAKE_CURRENT_LIST_FILE" ] ];
     yc_apply (ycstr "file_func") [];
-    yifthen (Ystrequal (ycref "cl_file", ystr ""))
+    yifthen (ystrequal (ycref "cl_file") (ystr ""))
       (yc_message ~mode:Mm_fatal_error
         ["CMAKE_CURRENT_LIST_FILE: expected non-empty"]);
     (* must be an absolute path *)
-    yifthen (Ynot (yis_absolute (ycref "cl_file")))
+    yifthen (ynot (yis_absolute (ycref "cl_file")))
       (yc_message ~mode:Mm_fatal_error
         ["CMAKE_CURRENT_LIST_FILE: expected absolute path"]);
   ])
@@ -58,11 +58,11 @@ let function_args =
         yc_set ~parent_scope:true (ycvar "argv0_out") [ ycref "ARGV0" ];
         yc_set ~parent_scope:true (ycvar "argv_out") [ ycref "ARGV" ] ];
     yc_apply (ycstr "arg_func") [ ystr "foo"; ystr "bar" ];
-    yifthen (Ynot (Ystrequal (ycref "argc_out", ystr "2")))
+    yifthen (ynot (ystrequal (ycref "argc_out") (ystr "2")))
       (yc_message ~mode:Mm_fatal_error ["ARGC should be 2"]);
-    yifthen (Ynot (Ystrequal (ycref "argv0_out", ystr "foo")))
+    yifthen (ynot (ystrequal (ycref "argv0_out") (ystr "foo")))
       (yc_message ~mode:Mm_fatal_error ["ARGV0 should be foo"]);
-    yifthen (Ynot (Ystrequal (ycref "argv_out", ystr "foo;bar")))
+    yifthen (ynot (ystrequal (ycref "argv_out") (ystr "foo;bar")))
       (yc_message ~mode:Mm_fatal_error ["ARGV should be foo;bar"]);
   ])
 

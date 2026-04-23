@@ -284,7 +284,7 @@ let while_break_yelu =
     yc_set (ycvar "i") [ystr "0"];
     yc_while (Yless (ystr_raw "${i}", ystr "10"))
       (Yexp_list [
-        yifthen (Ystrequal (ystr_raw "${i}", ystr "3")) yc_break;
+        yifthen (ystrequal (ystr_raw "${i}") (ystr "3")) yc_break;
         yc_message ~mode:Mm_none ["${i}"];
         yc_math "${i} + 1" (ycvar "i");
       ]);
@@ -359,7 +359,7 @@ endif()
 let option_default_yelu =
   Yexp_list [
     yc_option ~msg:"A test option" (ycvar "MY_OPT");
-    yif (Ytruthy (ycstr "MY_OPT"))
+    yif (ytruthy (ycstr "MY_OPT"))
       (yc_message ~mode:Mm_none ["ON"])
       (yc_message ~mode:Mm_none ["OFF"]);
   ]
@@ -381,7 +381,7 @@ let option_respects_var_yelu =
     yc_language_eval "cmake_policy(SET CMP0077 NEW)";
     yc_set (ycvar "MY_OPT") [ybool true];
     yc_option ~msg:"A test option" (ycvar "MY_OPT");
-    yif (Ytruthy (ycstr "MY_OPT"))
+    yif (ytruthy (ycstr "MY_OPT"))
       (yc_message ~mode:Mm_none ["ON"])
       (yc_message ~mode:Mm_none ["OFF"]);
   ]
@@ -549,7 +549,7 @@ let cp_hash_yelu =
     yc_path_set (ycvar "path2") (ystr "a/b////c");
     yc_path_hash (ycvar "path1") (ycvar "h1");
     yc_path_hash (ycvar "path2") (ycvar "h2");
-    yif (Ystrequal (ystr_raw "${h1}", ystr_raw "${h2}"))
+    yif (ystrequal (ystr_raw "${h1}") (ystr_raw "${h2}"))
       (yc_message ~mode:Mm_none ["equal"])
       (yc_message ~mode:Mm_none ["not equal: ${h1} vs ${h2}"]);
   ]

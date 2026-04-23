@@ -19,7 +19,7 @@ let cmd =
          [ ytarget_def ~kind:Interface [ ydir "${CMAKE_CURRENT_SOURCE_DIR}" ] ];
        yc_option ~value:(ybool true)
          ~msg:"Use tutorial provided math implementation" (ycvar "USE_MYMATH");
-       yifthen (Ytruthy (yvar "use_mymath"))
+       yifthen (ytruthy (yvar "use_mymath"))
          (ycmd_of_list
             ([
                compile_defs (yvar "math")

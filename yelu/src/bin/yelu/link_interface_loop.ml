@@ -10,33 +10,33 @@ let cmd =
       yc_minimum_required_s "3.10.";
       yc_project ~languages:[ Lang_c ] "LinkInterfaceLoop";
       (* A: SHARED IMPORTED that names itself as a link dependency — cycle *)
-      add_lib_imported ~lib_type:"SHARED" (Yarg_target (ytarget "A"));
+      add_lib_imported ~lib_type:"SHARED" (ytval "A");
       yc_set_target_properties
-        (Yarg_target (ytarget "A"))
+        (ytval "A")
         [
-          ("IMPORTED_LINK_DEPENDENT_LIBRARIES", Yarg_target (ytarget "A"));
+          ("IMPORTED_LINK_DEPENDENT_LIBRARIES", ytval "A");
           ("IMPORTED_LOCATION", ystr_raw "${CMAKE_CURRENT_BINARY_DIR}/dirA/A");
         ];
       (* B: SHARED IMPORTED that names itself in its link interface — cycle *)
-      add_lib_imported ~lib_type:"SHARED" (Yarg_target (ytarget "B"));
+      add_lib_imported ~lib_type:"SHARED" (ytval "B");
       yc_set_target_properties
-        (Yarg_target (ytarget "B"))
+        (ytval "B")
         [
-          ("IMPORTED_LINK_INTERFACE_LIBRARIES", Yarg_target (ytarget "B"));
+          ("IMPORTED_LINK_INTERFACE_LIBRARIES", ytval "B");
           ("IMPORTED_LOCATION", ystr_raw "${CMAKE_CURRENT_BINARY_DIR}/dirB/B");
         ];
       (* C: SHARED library with empty link interface, depends on B and A *)
-      add_lib ~type_:Lib_shared ~sources:[ yfile "lib.c" ] (Yarg_target (ytarget "C"));
+      add_lib ~type_:Lib_shared ~sources:[ yfile "lib.c" ] (ytval "C");
       yc_set_property
-        ~targets:[ Yarg_target (ytarget "C") ]
+        ~targets:[ ytval "C" ]
         [ ("LINK_INTERFACE_LIBRARIES", ystr_raw "") ];
       link_lib
-        [ Yarg_target (ytarget "C") ]
-        [ ytarget_def ~kind:Plain [ Yarg_target (ytarget "B"); Yarg_target (ytarget "A") ] ];
-      add_exe ~sources:[ yfile "main.c" ] (Yarg_target (ytarget "main"));
+        [ ytval "C" ]
+        [ ytarget_def ~kind:Plain [ ytval "B"; ytval "A" ] ];
+      add_exe ~sources:[ yfile "main.c" ] (ytval "main");
       link_lib
-        [ Yarg_target (ytarget "main") ]
-        [ ytarget_def ~kind:Plain [ Yarg_target (ytarget "C") ] ];
+        [ ytval "main" ]
+        [ ytarget_def ~kind:Plain [ ytval "C" ] ];
     ]
 
 let () = print_cmake cmd

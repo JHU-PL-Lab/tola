@@ -27,11 +27,11 @@ let json2 = ystr_raw {|[=[{"x":1}]=]|}
 let json_get =
   check_cmake "json_get" (Yexp_list [
     yc_string_json_get ~out:(ycvar "val") json1 ~path:["name"];
-    yifthen (Ynot (Ystrequal (ycref "val", ystr "cmake")))
+    yifthen (ynot (ystrequal (ycref "val") (ystr "cmake")))
       (yc_message ~mode:Mm_fatal_error ["JSON GET name failed"]);
     (* nested: tags[1] *)
     yc_string_json_get ~out:(ycvar "val") json1 ~path:["tags"; "1"];
-    yifthen (Ynot (Ystrequal (ycref "val", ystr "b")))
+    yifthen (ynot (ystrequal (ycref "val") (ystr "b")))
       (yc_message ~mode:Mm_fatal_error ["JSON GET tags 1 failed"]);
   ])
 
@@ -39,9 +39,9 @@ let json_get =
 let json_get_error =
   check_cmake "json_get_error" (Yexp_list [
     yc_string_json_get ~error_var:(ycvar "err") ~out:(ycvar "val") json1 ~path:["missing"];
-    yifthen (Ynot (ymatches (ycref "val") "NOTFOUND"))
+    yifthen (ynot (ymatches (ycref "val") "NOTFOUND"))
       (yc_message ~mode:Mm_fatal_error ["JSON GET missing: expected NOTFOUND"]);
-    yifthen (Ystrequal (ycref "err", ystr ""))
+    yifthen (ystrequal (ycref "err") (ystr ""))
       (yc_message ~mode:Mm_fatal_error ["JSON GET missing: expected non-empty error"]);
   ])
 
@@ -49,13 +49,13 @@ let json_get_error =
 let json_type =
   check_cmake "json_type" (Yexp_list [
     yc_string_json_type ~out:(ycvar "t") json1 ~path:["name"];
-    yifthen (Ynot (Ystrequal (ycref "t", ystr "STRING")))
+    yifthen (ynot (ystrequal (ycref "t") (ystr "STRING")))
       (yc_message ~mode:Mm_fatal_error ["JSON TYPE name: expected STRING"]);
     yc_string_json_type ~out:(ycvar "t") json1 ~path:["version"];
-    yifthen (Ynot (Ystrequal (ycref "t", ystr "NUMBER")))
+    yifthen (ynot (ystrequal (ycref "t") (ystr "NUMBER")))
       (yc_message ~mode:Mm_fatal_error ["JSON TYPE version: expected NUMBER"]);
     yc_string_json_type ~out:(ycvar "t") json1 ~path:["tags"];
-    yifthen (Ynot (Ystrequal (ycref "t", ystr "ARRAY")))
+    yifthen (ynot (ystrequal (ycref "t") (ystr "ARRAY")))
       (yc_message ~mode:Mm_fatal_error ["JSON TYPE tags: expected ARRAY"]);
   ])
 
@@ -63,10 +63,10 @@ let json_type =
 let json_length =
   check_cmake "json_length" (Yexp_list [
     yc_string_json_length ~out:(ycvar "n") json1;
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["JSON LENGTH root: expected 3"]);
     yc_string_json_length ~out:(ycvar "n") json1 ~path:["tags"];
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "3")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["JSON LENGTH tags: expected 3"]);
   ])
 
@@ -74,7 +74,7 @@ let json_length =
 let json_member =
   check_cmake "json_member" (Yexp_list [
     yc_string_json_member ~out:(ycvar "k") json1 ~path:["0"];
-    yifthen (Ynot (Ystrequal (ycref "k", ystr "name")))
+    yifthen (ynot (ystrequal (ycref "k") (ystr "name")))
       (yc_message ~mode:Mm_fatal_error ["JSON MEMBER 0: expected name"]);
   ])
 
@@ -83,11 +83,11 @@ let json_member =
 let json_remove =
   check_cmake "json_remove" (Yexp_list [
     yc_string_json_remove ~error_var:(ycvar "err") ~out:(ycvar "result") json2 ~path:["x"];
-    yifthen (Ynot (Ystrequal (ycref "err", ystr "NOTFOUND")))
+    yifthen (ynot (ystrequal (ycref "err") (ystr "NOTFOUND")))
       (yc_message ~mode:Mm_fatal_error ["JSON REMOVE: unexpected error: ${err}"]);
     (* result should be an empty object {} — check it has length 0 *)
     yc_string_json_length ~out:(ycvar "n") (ycref "result");
-    yifthen (Ynot (Ystrequal (ycref "n", ystr "0")))
+    yifthen (ynot (ystrequal (ycref "n") (ystr "0")))
       (yc_message ~mode:Mm_fatal_error ["JSON REMOVE: expected empty object"]);
   ])
 
@@ -98,7 +98,7 @@ let json_set =
     yc_string_json_set ~out:(ycvar "result")
       ~value:(ystr_raw {|[=["hello"]=]|}) json2 ~path:["y"];
     yc_string_json_get ~out:(ycvar "val") (ycref "result") ~path:["y"];
-    yifthen (Ynot (Ystrequal (ycref "val", ystr "hello")))
+    yifthen (ynot (ystrequal (ycref "val") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["JSON SET y: expected hello"]);
   ])
 
@@ -108,12 +108,12 @@ let json_equal =
     yc_string_json_equal ~out:(ycvar "eq")
       (ystr_raw {|[=[{"a":1}]=]|})
       (ystr_raw {|[=[ { "a" : 1 } ]=]|});
-    yifthen (Ynot (Ystrequal (ycref "eq", ystr "ON")))
+    yifthen (ynot (ystrequal (ycref "eq") (ystr "ON")))
       (yc_message ~mode:Mm_fatal_error ["JSON EQUAL: expected ON"]);
     yc_string_json_equal ~out:(ycvar "eq")
       (ystr_raw {|[=[{"a":1}]=]|})
       (ystr_raw {|[=[{"a":2}]=]|});
-    yifthen (Ystrequal (ycref "eq", ystr "ON"))
+    yifthen (ystrequal (ycref "eq") (ystr "ON"))
       (yc_message ~mode:Mm_fatal_error ["JSON EQUAL: expected OFF"]);
   ])
 

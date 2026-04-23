@@ -25,7 +25,7 @@ let transform_toupper_all =
   check_cmake "transform_toupper_all" (Yexp_list [
     yc_set (ycvar "L") [ ystr "foo"; ystr "bar"; ystr "baz" ];
     yc_list_transform ~output:(ycvar "out") (ycvar "L") Lta_toupper;
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "FOO;BAR;BAZ")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "FOO;BAR;BAZ")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM TOUPPER all failed"]);
   ])
 
@@ -34,7 +34,7 @@ let transform_tolower_inplace =
   check_cmake "transform_tolower_inplace" (Yexp_list [
     yc_set (ycvar "L") [ ystr "HELLO"; ystr "WORLD" ];
     yc_list_transform (ycvar "L") Lta_tolower;
-    yifthen (Ynot (Ystrequal (ycref "L", ystr "hello;world")))
+    yifthen (ynot (ystrequal (ycref "L") (ystr "hello;world")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM TOLOWER inplace failed"]);
   ])
 
@@ -43,7 +43,7 @@ let transform_strip =
   check_cmake "transform_strip" (Yexp_list [
     yc_set (ycvar "L") [ ystr "  hello  "; ystr " world " ];
     yc_list_transform ~output:(ycvar "out") (ycvar "L") Lta_strip;
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "hello;world")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "hello;world")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM STRIP failed"]);
   ])
 
@@ -52,7 +52,7 @@ let transform_append =
   check_cmake "transform_append" (Yexp_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_transform ~output:(ycvar "out") (ycvar "L") (Lta_append (Bare ".txt"));
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a.txt;b.txt;c.txt")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a.txt;b.txt;c.txt")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM APPEND failed"]);
   ])
 
@@ -61,7 +61,7 @@ let transform_prepend =
   check_cmake "transform_prepend" (Yexp_list [
     yc_set (ycvar "L") [ ystr "foo"; ystr "bar" ];
     yc_list_transform ~output:(ycvar "out") (ycvar "L") (Lta_prepend (Bare "lib"));
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "libfoo;libbar")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "libfoo;libbar")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM PREPEND failed"]);
   ])
 
@@ -71,7 +71,7 @@ let transform_replace =
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.c"; ystr "baz.h" ];
     yc_list_transform ~output:(ycvar "out") (ycvar "L")
       (Lta_replace { match_regex = "\\.c$"; replace = ".cpp" });
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "foo.cpp;bar.cpp;baz.h")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "foo.cpp;bar.cpp;baz.h")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM REPLACE failed"]);
   ])
 
@@ -81,7 +81,7 @@ let transform_at =
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c"; ystr "d" ];
     yc_list_transform ~selector:(Lts_at [1; 3]) ~output:(ycvar "out")
       (ycvar "L") Lta_toupper;
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;B;c;D")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;B;c;D")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM AT selector failed"]);
   ])
 
@@ -91,7 +91,7 @@ let transform_for =
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c"; ystr "d" ];
     yc_list_transform ~selector:(Lts_for { start = 1; stop = 2; step = None })
       ~output:(ycvar "out") (ycvar "L") Lta_toupper;
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "a;B;C;d")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "a;B;C;d")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM FOR selector failed"]);
   ])
 
@@ -101,7 +101,7 @@ let transform_regex_selector =
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.h"; ystr "baz.c" ];
     yc_list_transform ~selector:(Lts_regex "\\.c$") ~output:(ycvar "out")
       (ycvar "L") Lta_toupper;
-    yifthen (Ynot (Ystrequal (ycref "out", ystr "FOO.C;bar.h;BAZ.C")))
+    yifthen (ynot (ystrequal (ycref "out") (ystr "FOO.C;bar.h;BAZ.C")))
       (yc_message ~mode:Mm_fatal_error ["TRANSFORM REGEX selector failed"]);
   ])
 
