@@ -103,6 +103,18 @@ let prebuilt = prebuilt_info_exn sqlite_ocaml_config
    ocamlobjinfo Name: fields; constructor-level drift is caught by compile probes. *)
 let sqlite_ocaml_watchlist = [ "Sqlite3" ]
 
+(* Top-level attribute watchlist for Python's stdlib sqlite3. Drift here
+   reveals either CPython API changes or a bundled-libsqlite version bump
+   that removed a wrapper. `sqlite_version_info` (not plain `version_info`,
+   which doesn't exist) is the canonical libsqlite version accessor. *)
+let sqlite_python_watchlist = [
+  "connect";
+  "sqlite_version";
+  "sqlite_version_info";
+  "Connection";
+  "Cursor";
+]
+
 let script_spec : Canary_action.script_spec =
   let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
@@ -118,9 +130,21 @@ let script_spec : Canary_action.script_spec =
            Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
              ~example:ocaml.example_file ~target:ocaml.example_target
              ~output_dir));
+        (* Python sqlite3 is stdlib-bundled — no install, just verify import
+           and a minimal connect. Depends on nothing except python3; the
+           deps_of_split_probe `Pkg default requires fetch_binding but that's
+           a no-op for this stdlib case. If it proves awkward we may need a
+           dedicated stdlib-binding location tag. *)
+        (Canary_store.Wild "pip",
+         (fun ~output_dir ->
+           [%string {|python3 -c "import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')" > %{output_dir}/probe.log 2>&1 && cat %{output_dir}/probe.log|}]));
       ];
-    summary = (function
-      | Probe Binding ->
+    summary = (fun rule loc -> match rule, loc with
+      | Probe Binding, Some (Canary_store.Wild "pip") ->
+          Some (fun ~output_dir ->
+            Canary_artifact_python.summary_cmd
+              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ())
+      | Probe Binding, _ ->
           Some (fun ~output_dir ->
             Canary_artifact_ocaml.summary_opam_pkg_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ())

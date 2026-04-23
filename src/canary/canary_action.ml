@@ -80,8 +80,12 @@ type script_spec = {
   symbol_check : (rule -> symbol_check option);
   (* Optional per-rule artifact summary command. When present, derive_steps
      emits an extra step that runs after the base step and writes summary.json.
+     For multi-probe rules (Probe Binding with several locations), the loc
+     parameter carries the specific location so callers can return different
+     summaries per variant (e.g., opam pkg vs pip pkg). For single-location
+     rules, loc is None.
      See doc/canary/artifact_summary_design.md. *)
-  summary : (rule -> (output_dir:string -> string) option);
+  summary : rule -> location option -> (output_dir:string -> string) option;
 }
 
 let empty_script_spec = {
@@ -94,7 +98,7 @@ let empty_script_spec = {
   check_post = (fun _ -> None);
   expectation = (fun _ -> Expect_success);
   symbol_check = (fun _ -> None);
-  summary = (fun _ -> None);
+  summary = (fun _ _ -> None);
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -561,8 +565,8 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
       ~cmd:summary_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ()
   in
-  let attach_summary ~parent_tag ~rule base_step =
-    match spec.summary rule with
+  let attach_summary ~parent_tag ~rule ?loc base_step =
+    match spec.summary rule loc with
     | None -> [ base_step ]
     | Some cmd -> [ base_step; mk_summary ~parent_tag ~rule ~summary_cmd:cmd ]
   in
@@ -587,7 +591,7 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
                   ~deps ~cmd ~check_post ~expectation ~symbol_check () in
-                attach_summary ~parent_tag:ptag ~rule base)
+                attach_summary ~parent_tag:ptag ~rule ~loc base)
         | _ ->
             match script_of_rule spec rule with
             | None -> []

@@ -15,3 +15,14 @@ let python_import_cmd ~pkg ~output_dir =
   [%string
     "python3 -c 'import %{pkg}; print(\"%{pkg} ok\")' \
      > %{output_dir}/import.log 2>&1 && cat %{output_dir}/import.log"]
+
+(* Emit compact Python package summary as summary.json via
+   canary/scripts/summarize_python.py. Watchlist is a list of top-level
+   attribute names; present/missing recorded in the JSON.
+   See doc/canary/python_binding_plan.md. *)
+let summary_cmd ~pkg ?(watchlist = []) ~output_dir () =
+  let script = "canary/scripts/summarize_python.py" in
+  let watchlist_csv = String.concat "," watchlist in
+  Printf.sprintf
+    "python3 %s --pkg '%s' --watchlist '%s' > %s/summary.json"
+    script pkg watchlist_csv output_dir

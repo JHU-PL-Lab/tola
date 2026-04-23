@@ -69,6 +69,28 @@ Each project runs two variants: dev (source build + pack_binding) and
 stable (fetch_lib + fetch_binding only, no build) — the stable variant
 probes with the dev example to demonstrate version mismatch detection.
 
+### Two testing axes
+
+Canary's test surface has two independent axes — both are kept alive because
+either can silently break first:
+
+| Axis                | Subcommand                               | Fails when …                                                                                                                                         |
+| ------------------- | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Project tests**   | `canary action <project>`                | The project under test drifts (new Z3 renames a symbol, LLVM adds Opcode)                                                                            |
+| **Framework tests** | `canary artifact-test`, `canary pm-test` | Canary's own tool assumptions drift (`nm`/`ocamlobjinfo`/`ocamlfind`/`python3` change output format, `dir(sys)` loses an attr, shell pipe semantics) |
+
+A green project run is meaningless if `nm` silently started emitting an
+extra column and our parser discarded every symbol. Framework tests fix
+known-stable fixtures (sqlite3.so, fmt.cmxa, Python sys/sqlite3) that
+exercise every primitive canary depends on. Especially useful when
+expanding to macOS (different `nm` flags, Mach-O format, keg-only paths)
+or upgrading the OCaml / Python / distro runtime — framework tests
+diagnose environment drift early.
+
+Current framework tests verify "command runs, rc matches, JSON parses."
+Stronger invariants (e.g., `counts.total > 0` on libsqlite3.so, `modules
+== 1` on fmt.cmxa) are a candidate hardening step.
+
 ### Multi-version probe design
 
 `canary action llvm` runs two sequential sub-runs sharing one opam switch:
@@ -115,13 +137,40 @@ Artifact summary progress (`doc/canary/artifact_summary_design.md`):
   `doc/canary/artifact_summary.json` will likely ride on step-cache transport
 
 Still open:
-- **macOS CI + `On_runner_os` step guards** — the retired `canary_backend_yaml.ml`
-  rendered a matrix (`ubuntu-latest` × `macos-latest`) with per-step
-  `if: runner.os == '…'` guards. The current `canary_backend_gh.ml` hardcodes
-  `runs-on: ubuntu-latest`. Add matrix support + a per-step guard field to
-  `action_step` (or extend `preamble_steps` semantics) if macOS coverage is
-  ever needed. Couples with "multi-ocaml-version matrix" (old supported
-  `ocaml-version: ["5.4.0"]` in the matrix).
+- **macOS support (three scopes)** — each a prerequisite for the next:
+
+  **1. Code framework** — partially scaffolded, not end-to-end viable.
+  What exists: `Canary_artifact_native.is_macos` chooses `nm -g` vs `-D`
+  and handles `.dylib` alongside `.so`; `Canary_store.distro` type has
+  `MacOS_local`; `canary_pm_brew.ml` PM module defined; `distro_base` has
+  a hardcoded `/Users/ex/code` path.
+  What's missing: Mach-O ELF-analogue probes (no `.so` versioned symbols,
+  different dyld semantics), proper keg-only Homebrew path handling
+  (`PKG_CONFIG_PATH` for sqlite/openssl/libffi), project specs (Z3/LLVM)
+  have Linux-only shell pipelines, opam sandbox behavior diverges from
+  Linux (bwrap → `sandbox-exec` / different mount semantics).
+
+  **2. Local testing** — user has SSH access to a Mac. Framework tests
+  (`canary artifact-test`) should run green there against macOS fixtures:
+  `/usr/lib/libSystem.dylib` instead of `libsqlite3.so.0`, `nm -g`
+  output parsed correctly, Mach-O versioned-symbol analogue surfaced (or
+  explicitly declared N/A), `Probe Lib` summary on at least one brew
+  package. This is the cheapest way to find the framework-drift gaps
+  without waiting for CI setup.
+
+  **3. GH CI for macOS** — the retired `canary_backend_yaml.ml` had
+  `ubuntu-latest` × `macos-latest` matrix + per-step `if: runner.os == …`
+  guards. The current `canary_backend_gh.ml` hardcodes `runs-on:
+  ubuntu-latest`. Add matrix support + a per-step guard field to
+  `action_step` (or extend `preamble_steps` semantics). Couples with
+  "multi-ocaml-version matrix" (old supported `ocaml-version: ["5.4.0"]`
+  in the matrix). GH macOS runners are paid minutes — ship selectively
+  (sqlite + one other). Strictly a follow-up to (1) and (2).
+
+  **Order to execute**: (1) finish core framework + parser fallbacks →
+  (2) exercise on SSH Mac to catch gaps the Linux-only runs hid →
+  (3) wire up GH CI matrix only after (1) and (2) are green. Skipping
+  ahead to (3) burns paid CI minutes on known failures.
 - **Retire legacy `config distro` / `project_config` / `job_spec` plumbing**
   — now unreachable (zero callers after the yaml+shell backend removal),
   but parked rather than deleted because it encodes the *intent* of the
@@ -155,18 +204,18 @@ Still open:
   compiler libraries instead of shelling out. Called from
   `src/bin/example_sp.ml`. Each module's canary-relevance:
 
-  | File | Lines | Canary-relevance |
-  |------|-------|------------------|
-  | `canary.ml`         | 417 | **High** — old canary model (test case enumeration, version/API/lib mapping). Predates current canary; check overlap before re-implementing. |
-  | `ocaml_files.ml`    | 330 | **High** — file classification for `.o/.cmo/.cmi/.cmx/.cmxs/.ml/.mli/.cma/.cmxa` via `Objinfo.extra` + `Fl_metascanner`. |
-  | `shared_library.ml` | 257 | **High** — `ldd`-style linked-dep extraction (`linked_dep` type). Directly enables loader-path analysis. |
-  | `ocamls.ml`         | 137 | **High** — `Objinfo` module; proper API to `.cmxa`/`.cma` inspection (replaces shell+python in `summarize_ocaml.py`). |
-  | `resolve.ml`        | 125 | Medium — `Resolve_strategy` (`Via_name` / `Via_value`). Maps to watchlist vs. content-hash matching. |
-  | `macho.ml`          | 102 | Medium — macOS Mach-O (dyld) inspection; paired with `shared_library.ml` for cross-platform loader paths. |
-  | `structures.ml`     | 100 | Medium — consumer of `resolve.ml`. |
-  | `c_utils.ml`        |  87 | Medium — `yojson_conv` precedent for serialising results. |
-  | `path.ml`           |  76 | Low — path abstraction with roots. |
-  | `fs.ml`, `opam.ml`, `package.ml`, `compilers.ml`, `platform.ml`, `config.ml` | ~250 total | Mixed — check per-module; some overlaps with existing `canary_pm_*`, `canary_store`. |
+  | File                                                                         | Lines      | Canary-relevance                                                                                                                             |
+  | ---------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `canary.ml`                                                                  | 417        | **High** — old canary model (test case enumeration, version/API/lib mapping). Predates current canary; check overlap before re-implementing. |
+  | `ocaml_files.ml`                                                             | 330        | **High** — file classification for `.o/.cmo/.cmi/.cmx/.cmxs/.ml/.mli/.cma/.cmxa` via `Objinfo.extra` + `Fl_metascanner`.                     |
+  | `shared_library.ml`                                                          | 257        | **High** — `ldd`-style linked-dep extraction (`linked_dep` type). Directly enables loader-path analysis.                                     |
+  | `ocamls.ml`                                                                  | 137        | **High** — `Objinfo` module; proper API to `.cmxa`/`.cma` inspection (replaces shell+python in `summarize_ocaml.py`).                        |
+  | `resolve.ml`                                                                 | 125        | Medium — `Resolve_strategy` (`Via_name` / `Via_value`). Maps to watchlist vs. content-hash matching.                                         |
+  | `macho.ml`                                                                   | 102        | Medium — macOS Mach-O (dyld) inspection; paired with `shared_library.ml` for cross-platform loader paths.                                    |
+  | `structures.ml`                                                              | 100        | Medium — consumer of `resolve.ml`.                                                                                                           |
+  | `c_utils.ml`                                                                 | 87         | Medium — `yojson_conv` precedent for serialising results.                                                                                    |
+  | `path.ml`                                                                    | 76         | Low — path abstraction with roots.                                                                                                           |
+  | `fs.ml`, `opam.ml`, `package.ml`, `compilers.ml`, `platform.ml`, `config.ml` | ~250 total | Mixed — check per-module; some overlaps with existing `canary_pm_*`, `canary_store`.                                                         |
 
   Other `src/` dirs (`ainterp`, `interp`, `langs`, `packaging`, `repl`, `std`,
   `tola`, `versioned_maps`, `versioning`) are the tola interpreter / language
@@ -182,6 +231,22 @@ Still open:
   haven't been defined (no project uses a python artifact yet). Plan at
   `doc/canary/python_binding_plan.md` (z3-solver, llvmlite, stdlib sqlite3);
   delete the plan doc when all three projects have Python probe + summary wired.
+- **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
+  primitives landing first. Plan at `doc/canary/pytorch_plan.md` covers the
+  pip × opam × apt libtorch matrix and the OCaml `torch` version-conflict
+  case. Motivated by multi-PM interop (same libtorch shipped by many PMs).
+- **Two-tier candidate queue for canary expansion** —
+  `doc/canary/batch_candidates.md` holds a dozen tracked targets (Tier 1:
+  famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
+  zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
+  opam survey; living doc, updated as candidates land.
+- **First-class API-source layer** — `doc/canary/api_source_design.md`.
+  Moves per-project "what's the C API surface, how do bindings build from it,
+  what symbols are stable" from hand-written project-spec shell into a typed
+  `source_repo.api_source` sub-object. Enables adding a new language binding
+  as a data change (one `binding_target` entry) rather than duplicated shell.
+  Deferred until Python primitives + one new Pattern A candidate land, to
+  have enough data points.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.

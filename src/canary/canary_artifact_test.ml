@@ -107,6 +107,7 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
   ]
 
 let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
+  let sum_dir = output_dir ^ "/py_summary" in
   [
     { name = "python.import_cmd";
       cmd = Canary_artifact_python.python_import_cmd
@@ -116,6 +117,22 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       cmd = Canary_artifact_python.python_import_cmd
               ~pkg:"canary_nonexistent_pkg" ~output_dir:(output_dir ^ "/py_import_bad");
       expected_rc = 1 };
+    { name = "python.summary_cmd";
+      cmd = Canary_artifact_python.summary_cmd
+              ~pkg ~watchlist:[] ~output_dir:sum_dir ();
+      expected_rc = 0 };
+    { name = "python.summary_json_valid";
+      (* Python summary has no "counts" if error — check kind + path + attrs or error *)
+      cmd = [%string {|python3 -c "
+import json, sys
+with open('%{sum_dir}/summary.json') as f:
+    d = json.load(f)
+for k in ('kind','path'):
+    assert k in d, 'missing key: ' + k
+assert d['kind'] == 'python'
+print('ok')
+" |}];
+      expected_rc = 0 };
   ]
 
 (* ── Runner ── *)
@@ -125,7 +142,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   List.iter
     [ ""; "/native_probe"; "/native_summary";
       "/ocaml_inspect"; "/ocaml_summary";
-      "/py_import"; "/py_import_bad" ]
+      "/py_import"; "/py_import_bad"; "/py_summary" ]
     ~f:(fun sub ->
       ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}%{sub}"] : int));
 

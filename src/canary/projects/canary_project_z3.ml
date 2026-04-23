@@ -42,6 +42,18 @@ let z3_native_watchlist = [
   "Z3_mk_optimize_assert_soft";
 ]
 
+(* Python watchlist for z3-solver. pip pkg = "z3-solver"; import name = "z3". *)
+let z3_python_watchlist = [
+  "Solver";
+  "BitVec";
+  "Optimize";
+  "Tactic";
+  "Context";
+  "Int";
+  "Real";
+  "Bool";
+]
+
 let z3_source_dev : source_repo =
   {
     name = "z3";
@@ -547,6 +559,28 @@ ocamlfind ocamlopt -package zarith -linkpkg \
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
   -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
 %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]));
+        (* Wild "pip": install z3-solver via pip, then exercise Z3's Python API.
+           Combined install+probe for now; if install dominates runtime we can
+           split into a dedicated fetch_binding_pip step.
+           Pip-invocation fallback: tries `pip`, `python3 -m pip`, then `uv pip`
+           — covers standard CI (pip-in-PATH), venv without pip, and uv-managed
+           environments. Proper "global-truth" multi-PM env handling is future
+           work; this chain is the pragmatic middle ground. *)
+        Some (Wild "pip", (fun ~output_dir ->
+          [%string {|set -e
+INSTALL_LOG=%{output_dir}/install.log
+if command -v pip >/dev/null 2>&1; then
+  pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif python3 -m pip --version >/dev/null 2>&1; then
+  python3 -m pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif command -v uv >/dev/null 2>&1; then
+  uv pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+else
+  echo "no pip / python3 -m pip / uv available" > "$INSTALL_LOG"
+  exit 1
+fi
+python3 -c "import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check())" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
+cat %{output_dir}/probe.log|}]));
       ];
     check_post =
       (function
@@ -568,8 +602,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
-    summary = (function
-      | Probe Lib ->
+    summary = (fun rule loc -> match rule, loc with
+      | Probe Lib, _ ->
           Some (fun ~output_dir ->
             let sum = Canary_artifact_native.summary_cmd
                         ~lib:"$LIB_Z3"
@@ -577,7 +611,11 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                         ~watchlist:z3_native_watchlist
                         ~output_dir () in
             [%string "%{lib_resolve}\n%{sum}"])
-      | Probe Binding ->
+      | Probe Binding, Some (Wild "pip") ->
+          Some (fun ~output_dir ->
+            Canary_artifact_python.summary_cmd
+              ~pkg:"z3" ~watchlist:z3_python_watchlist ~output_dir ())
+      | Probe Binding, _ ->
           Some (fun ~output_dir ->
             Canary_artifact_ocaml.summary_opam_pkg_cmd
               ~pkg:"z3" ~watchlist:z3_ocaml_watchlist ~output_dir ())

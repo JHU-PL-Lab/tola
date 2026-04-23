@@ -31,6 +31,17 @@ let llvm_native_watchlist = [
   "LLVMCreateBuilder";
 ]
 
+(* Python watchlist for llvmlite. pip pkg = "llvmlite"; import name = "llvmlite.binding".
+   llvmlite.binding is the FFI to LLVM's C API and is the most API-surface
+   that might drift across llvm versions. *)
+let llvm_python_watchlist = [
+  "initialize";
+  "initialize_native_target";
+  "parse_assembly";
+  "create_mcjit_compiler";
+  "Target";
+]
+
 let llvm_source_dev : source_repo =
   {
     name = "llvm";
@@ -391,6 +402,24 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
   -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
 %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]);
+          (* Wild "pip": install llvmlite and exercise its FFI binding. Same
+             pip fallback chain as z3 (pip / python3 -m pip / uv pip). *)
+          Some
+            (Wild "pip", fun ~output_dir ->
+              [%string {|set -e
+INSTALL_LOG=%{output_dir}/install.log
+if command -v pip >/dev/null 2>&1; then
+  pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+elif python3 -m pip --version >/dev/null 2>&1; then
+  python3 -m pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+elif command -v uv >/dev/null 2>&1; then
+  uv pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+else
+  echo "no pip / python3 -m pip / uv available" > "$INSTALL_LOG"
+  exit 1
+fi
+python3 -c "import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
+cat %{output_dir}/probe.log|}]);
         ];
     probe_app = Some llvm_python_probe;
     check_post =
@@ -434,15 +463,15 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             };
           }
       | _ -> Expect_success);
-    summary = (function
-      | Probe Lib when source.has_build_lib ->
+    summary = (fun rule loc -> match rule, loc with
+      | Probe Lib, _ when source.has_build_lib ->
           Some (fun ~output_dir ->
             Canary_artifact_native.summary_cmd
               ~lib:[%string "%{build}/lib/libLLVM.so"]
               ~prefixes:[ "LLVM" ]
               ~watchlist:llvm_native_watchlist
               ~output_dir ())
-      | Probe Lib ->
+      | Probe Lib, _ ->
           Some (fun ~output_dir ->
             [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
@@ -452,7 +481,12 @@ test -n "$LLVM_LIB"
     ~prefixes:[ "LLVM" ]
     ~watchlist:llvm_native_watchlist
     ~output_dir ()}|}])
-      | Probe Binding ->
+      | Probe Binding, Some (Wild "pip") ->
+          Some (fun ~output_dir ->
+            Canary_artifact_python.summary_cmd
+              ~pkg:"llvmlite.binding"
+              ~watchlist:llvm_python_watchlist ~output_dir ())
+      | Probe Binding, _ ->
           (* ocamlfind package is "llvm" regardless of opam variant suffix
              (llvm.dev-shared / llvm.19-shared are opam-only names). *)
           Some (fun ~output_dir ->

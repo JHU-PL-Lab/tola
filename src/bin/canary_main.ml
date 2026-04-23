@@ -291,8 +291,10 @@ let artifact_summary_cmd =
           Canary_artifact_ocaml.summary_cmd ~archive:path ~watchlist ~output_dir:out_dir ()
       | "opam" ->
           Canary_artifact_ocaml.summary_opam_pkg_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
+      | "python" ->
+          Canary_artifact_python.summary_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
       | k ->
-          Fmt.epr "Unknown kind: %s (expected: native | ocaml | opam)@." k;
+          Fmt.epr "Unknown kind: %s (expected: native | ocaml | opam | python)@." k;
           Stdlib.exit 2
     in
     let rc = Stdlib.Sys.command cmd in
