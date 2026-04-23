@@ -40,6 +40,16 @@ jobs:
           test -x "$LLVM_CONFIG"
           "$LLVM_CONFIG" --version > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_lib/probe.log 2>&1
 
+      - name: probe_lib_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_lib"
+          LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
+          LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
+          test -n "$LLVM_LIB"
+          nm -D "$LLVM_LIB" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LLVM_LIB" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder' \
+            > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_lib/summary.json
+
       - name: probe_binding
         id: probe_binding
         continue-on-error: true
@@ -65,6 +75,18 @@ jobs:
             exit 1
           fi
 
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'llvm.19-shared' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'llvm.19-shared' --watchlist 'Llvm,Llvm_target,Llvm_executionengine' \
+            > $GITHUB_WORKSPACE/_out/canary/llvm/19/probe_binding/summary.json
+
       - name: probe_app
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/llvm/19/probe_app"
@@ -80,6 +102,13 @@ jobs:
       - uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5.2"
+      - name: Restore sccache disk cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/sccache
+          key: sccache-z3-${{ runner.os }}-${{ hashFiles('canary/templates/opam-local-repo/packages/z3/z3.dev/opam.in') }}
+          restore-keys: |
+            sccache-z3-${{ runner.os }}-
       - name: Setup sccache
         uses: mozilla-actions/sccache-action@v0.0.9
       - name: Install system build dependencies
@@ -123,6 +152,16 @@ jobs:
           printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib/probe.log
           test "$COUNT" -gt 0
 
+      - name: probe_lib_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib"
+          LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+          test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+          test -f "$LIB_Z3"
+          nm -D "$LIB_Z3" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft' \
+            > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_lib/summary.json
+
       - name: probe_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding"
@@ -130,6 +169,18 @@ jobs:
           ocamlfind ocamlopt -package z3 -linkpkg $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
             -o $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/z3_example > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/probe.log 2>&1 || exit 1
           $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/z3_example >> $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/probe.log 2>&1
+
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'z3' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'z3' --watchlist 'Z3' \
+            > $GITHUB_WORKSPACE/_out/canary/z3/dev/probe_binding/summary.json
 
 
   sqlite:
@@ -164,4 +215,16 @@ jobs:
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
           eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1
+
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'sqlite3' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'sqlite3' --watchlist 'Sqlite3' \
+            > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/summary.json
 

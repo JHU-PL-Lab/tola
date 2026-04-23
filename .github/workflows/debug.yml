@@ -37,3 +37,15 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
           eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/probe.log 2>&1
 
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'sqlite3' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'sqlite3' --watchlist 'Sqlite3' \
+            > $GITHUB_WORKSPACE/_out/canary/sqlite/probe_binding/summary.json
+

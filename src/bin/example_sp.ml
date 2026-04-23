@@ -137,7 +137,7 @@ let mk_z3_src_example () =
   let z3_root = root_of_source distro z3_source_dev in
   let z3_dev_instance = mk_instance z3_root in
   let z3_dev_spec = z3_project_spec distro z3_source_dev in
-  let open Canary_ocaml in
+  let open Canary_toolchain_ocaml in
   let z3_binding_project =
     let open Binding.Structures in
     Project
@@ -205,17 +205,12 @@ let z3_pkg_example () = List (mk_z3_pkg_example ())
 let () =
   Fmt.set_style_renderer Fmt.stdout `Ansi_tty;
   match Stdlib.Sys.argv.(1) with
-  | "canary" -> Canary_run.run (Canary_basic.detect_distro ())
-  | "canary_local" -> Canary_run.run_local (detect_distro ())
-  | "canary_exec" -> Canary_run.run_local ~exec:true (detect_distro ())
-  | s when String.is_prefix s ~prefix:"canary_exec:" ->
-      let project = String.chop_prefix_exn s ~prefix:"canary_exec:" in
-      Canary_run.run_local ~exec:true ~project (detect_distro ())
-  | "canary_dump" -> Canary_run.dump (detect_distro ())
+  (* canary subcommands live in src/bin/canary_main.ml now.
+     Use `dune exec -- canary <subcommand>` (paths, graph, action, ci, ...).
+     The legacy yaml+shell backends were removed. *)
   | "canary_graph" -> Canary_run.dump_graph (detect_distro ())
   | "canary_paths" -> Canary_run.dump_job_paths ()
   | "canary_paths_md" -> Canary_run.dump_job_paths_md ()
-  | "canary_action" -> Canary_run.run_action_demo ()
   | "z3_1" -> interp z3_opam_pkg_example
   | "z3_src" -> interp (z3_src_example ())
   | "z3_pkg" -> interp (z3_pkg_example ())

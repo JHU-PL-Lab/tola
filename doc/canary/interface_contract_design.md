@@ -5,13 +5,13 @@
 Canary already detects compatibility failures empirically — run the build, check
 the symbols, compile the probe. The current failure modes we can observe:
 
-| Failure kind | Example in canary | Detection |
-|---|---|---|
-| Missing symbol (binary) | Z3 OCaml stub requires `Z3_mk_solver`, lib has it | `nm` + `assert_binary_symbols.py` → `Expect_symbols` |
-| Type mismatch (OCaml API) | `llvm.19-shared` missing `Opcode.UncondBr` | `Expect_failure { contains_any }` |
-| Linking mode change | ELF versioned symbols `Z3_foo@@Z3_4.15` vs plain `Z3_foo` | `nm -D` regex must allow `@@` suffix |
-| ABI/soname change | shared vs static, soname mismatch | (not yet modelled) |
-| Semantic/invariant failure | behavior change without API break | (not yet modelled, likely undetectable statically) |
+| Failure kind               | Example in canary                                         | Detection                                            |
+| -------------------------- | --------------------------------------------------------- | ---------------------------------------------------- |
+| Missing symbol (binary)    | Z3 OCaml stub requires `Z3_mk_solver`, lib has it         | `nm` + `assert_binary_symbols.py` → `Expect_symbols` |
+| Type mismatch (OCaml API)  | `llvm.19-shared` missing `Opcode.UncondBr`                | `Expect_failure { contains_any }`                    |
+| Linking mode change        | ELF versioned symbols `Z3_foo@@Z3_4.15` vs plain `Z3_foo` | `nm -D` regex must allow `@@` suffix                 |
+| ABI/soname change          | shared vs static, soname mismatch                         | (not yet modelled)                                   |
+| Semantic/invariant failure | behavior change without API break                         | (not yet modelled, likely undetectable statically)   |
 
 The question is: can we give these failures a **unified abstract representation**
 rather than scattered ad-hoc checks? And can we lift version numbers into the
@@ -49,14 +49,14 @@ This is a subtyping / Liskov-style contract:
 An **interface** is a named set of observable facts about an artifact. Currently
 we think of it as symbols, but the levels are:
 
-| Level | Granularity | Detection method |
-|---|---|---|
-| L1a Symbol | binary exported names (`Z3_mk_solver`) | `nm -D` |
-| L1b Versioned symbol | runtime version requirement (`malloc@@GLIBC_2.31`) | `nm -D` `@@` annotations |
-| L2 Type signature | OCaml type of exported value | `ocamlobjinfo`, `.cmi` digest |
-| L3 API shape | constructor set, module structure | compile probe |
-| L4 ABI/runtime | C runtime implementation + version, C++ ABI, soname | `readelf -d`, `ldd` |
-| L5 Behavioral contract | pre/post conditions | (research territory) |
+| Level                  | Granularity                                         | Detection method              |
+| ---------------------- | --------------------------------------------------- | ----------------------------- |
+| L1a Symbol             | binary exported names (`Z3_mk_solver`)              | `nm -D`                       |
+| L1b Versioned symbol   | runtime version requirement (`malloc@@GLIBC_2.31`)  | `nm -D` `@@` annotations      |
+| L2 Type signature      | OCaml type of exported value                        | `ocamlobjinfo`, `.cmi` digest |
+| L3 API shape           | constructor set, module structure                   | compile probe                 |
+| L4 ABI/runtime         | C runtime implementation + version, C++ ABI, soname | `readelf -d`, `ldd`           |
+| L5 Behavioral contract | pre/post conditions                                 | (research territory)          |
 
 Canary today covers L1a (Expect_symbols) and L3 (Expect_failure probe compile).
 L1b is partially handled — `assert_binary_symbols.py` allows `@@` suffixes in

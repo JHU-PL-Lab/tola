@@ -24,13 +24,37 @@ let tag_of_probe_location = function
   | System_pm -> "probe_binding_sys"
   | Wild s -> [%string "probe_binding_%{s}"]
 
+type version_info = {
+  provider_version : string;   (* e.g. "19" for llvm.19-shared *)
+  consumer_requires : string;  (* e.g. "Opcode.UncondBr" *)
+  since : string option;       (* e.g. "LLVM 21 (dev, commit #186176)" *)
+  note : string option;
+}
+
+(* A single symbol, optionally carrying its version annotation (L1b: @@GLIBC_2.31). *)
+type symbol_entry = {
+  sym_name : string;
+  sym_version : string option;  (* e.g. "GLIBC_2.31" from nm @@GLIBC_2.31 *)
+}
+
+let sym name = { sym_name = name; sym_version = None }
+let sym_v name version = { sym_name = name; sym_version = Some version }
+
+(* Declarative check on a binary artifact's symbol table.
+   Orthogonal to step_expectation — runs after the command succeeds.
+   Any rule may carry a symbol_check; it is not a variant of "did the cmd fail". *)
+type symbol_check = {
+  provided_lib : string;           (* path to .so to inspect with nm -D *)
+  required : symbol_entry list;    (* must be exported *)
+  missing : symbol_entry list;     (* must NOT be exported *)
+  version_info : version_info option;
+}
+
 type step_expectation =
   | Expect_success
-  | Expect_failure of { contains_any : string list }
-  | Expect_symbols of {
-      provided_lib : string;
-      required : string list;
-      missing : string list;
+  | Expect_failure of {
+      contains_any : string list;
+      version_info : version_info option;
     }
 
 type script_spec = {
@@ -52,6 +76,12 @@ type script_spec = {
   check_post : (rule -> (output_dir:string -> bool) option);
   (* Per-rule expectation. Default: Expect_success. *)
   expectation : (rule -> step_expectation);
+  (* Optional per-rule artifact symbol check. None = no symbol check. *)
+  symbol_check : (rule -> symbol_check option);
+  (* Optional per-rule artifact summary command. When present, derive_steps
+     emits an extra step that runs after the base step and writes summary.json.
+     See doc/canary/artifact_summary_design.md. *)
+  summary : (rule -> (output_dir:string -> string) option);
 }
 
 let empty_script_spec = {
@@ -63,6 +93,8 @@ let empty_script_spec = {
   probe_app = None;
   check_post = (fun _ -> None);
   expectation = (fun _ -> Expect_success);
+  symbol_check = (fun _ -> None);
+  summary = (fun _ -> None);
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -97,12 +129,18 @@ let script_of_rule spec = function
 
 type action_step = {
   tag : string;                      (* unique id: e.g., "build_lib" *)
+  cache_key : string;                (* global cache key: "cache_project:tag" *)
+  output_tag : string;               (* tag used for this step's output_dir; usually same as tag,
+                                        but summary steps set it to their parent's tag so they
+                                        share the parent's directory (no empty _summary dir). *)
+  output_dir : string;               (* absolute path = root/canary/_local/project/output_tag *)
   rule : rule;
   deps : string list;                (* tags of upstream steps *)
   cmd : output_dir:string -> string; (* shell command to execute *)
   check_pre : unit -> bool;          (* inputs available? *)
   check_post : output_dir:string -> bool; (* output valid? *)
   expectation : step_expectation;    (* what should this step do? *)
+  symbol_check : symbol_check option; (* optional artifact symbol check, runs after cmd succeeds *)
 }
 
 (* ── Logging (plain text file + console) ── *)
@@ -179,13 +217,22 @@ let output_contains_any ~output_dir strings =
         with _ -> false)
   with _ -> false
 
-(* Run a single action step. Cache = check_post on existing output_dir. *)
-let run_step logger ~root ~project (step : action_step) =
+(* Run a single action step.
+   Skip priority: (1) global cache hit, (2) local postcondition already passes. *)
+let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
   let tag = step.tag in
-  let out = output_dir_for ~root ~project ~tag in
+  let out = step.output_dir in
   let log = logger.log ~tag in
-  (* Cache: if postcondition already passes, skip *)
-  if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out then (
+  (* Global cache: skip if a previous CI run recorded success for this key *)
+  let global_hit = match global_cache with
+    | Some cache -> Canary_step_cache.is_success cache ~key:step.cache_key
+    | None -> false
+  in
+  if global_hit then (
+    log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
+    true)
+  (* Local cache: if postcondition already passes, skip *)
+  else if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out then (
     log ~event:"skip" ~detail:(Some "postcondition ok");
     true)
   else (
@@ -197,50 +244,58 @@ let run_step logger ~root ~project (step : action_step) =
     else
       try
         let cmd_ok = exec_step logger ~tag ~output_dir:out step in
-        match step.expectation with
-        | Expect_success ->
-            let ok = cmd_ok && step.check_post ~output_dir:out in
-            log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
-            log ~event:(if ok then "done" else "failed")
-              ~detail:(if ok then None else Some "postcondition failed");
-            ok
-        | Expect_failure { contains_any } ->
-            if cmd_ok then (
-              log ~event:"unexpected_success"
-                ~detail:(Some "expected failure but command succeeded");
-              false)
-            else
-              let found = output_contains_any ~output_dir:out contains_any in
-              log ~event:(if found then "done" else "failed")
-                ~detail:(Some (if found
-                  then "expected failure confirmed"
-                  else "command failed but output didn't match expected strings"));
-              found
-        | Expect_symbols { provided_lib; required; missing } ->
-            if not cmd_ok then (
-              log ~event:"failed" ~detail:(Some "command failed before symbol check");
-              false)
-            else
-              (* Use nm to check symbol resolution *)
-              let check_sym lib syms expect_found =
-                List.for_all syms ~f:(fun sym ->
+        let expectation_ok = match step.expectation with
+          | Expect_success ->
+              let ok = cmd_ok && step.check_post ~output_dir:out in
+              log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
+              log ~event:(if ok then "done" else "failed")
+                ~detail:(if ok then None else Some "postcondition failed");
+              ok
+          | Expect_failure { contains_any; version_info } ->
+              if cmd_ok then (
+                log ~event:"unexpected_success"
+                  ~detail:(Some "expected failure but command succeeded");
+                false)
+              else
+                let found = output_contains_any ~output_dir:out contains_any in
+                let confirmed_msg = match version_info with
+                  | None -> "expected failure confirmed"
+                  | Some vi ->
+                      let since = Option.value_map vi.since ~default:"" ~f:(fun s -> Printf.sprintf ", added in %s" s) in
+                      Printf.sprintf "expected failure confirmed: %s predates %s%s"
+                        vi.provider_version vi.consumer_requires since
+                in
+                log ~event:(if found then "done" else "failed")
+                  ~detail:(Some (if found then confirmed_msg
+                    else "command failed but output didn't match expected strings"));
+                found
+        in
+        (* Symbol check runs independently after command expectation is met. *)
+        let symbol_ok = match step.symbol_check with
+          | None -> true
+          | Some sc ->
+              let check_sym syms expect_found =
+                List.for_all syms ~f:(fun entry ->
+                    let pattern = match entry.sym_version with
+                      | None -> entry.sym_name
+                      | Some v -> [%string "%{entry.sym_name}@@%{v}"]
+                    in
                     let rc = Stdlib.Sys.command
-                      (Printf.sprintf "nm -D %s 2>/dev/null | grep -q %s" lib sym) in
+                      (Printf.sprintf "nm -D %s 2>/dev/null | grep -qF '%s'" sc.provided_lib pattern) in
                     let found = (rc = 0) in
-                    let found_str = if found then "found" else "missing" in
-                    let expect_str = if expect_found then "found" else "missing" in
                     if Bool.( <> ) found expect_found then
                       log ~event:"symbol_mismatch"
-                        ~detail:(Some (Printf.sprintf "%s: %s, expected %s" sym found_str expect_str));
+                        ~detail:(Some (Printf.sprintf "%s: %s, expected %s" pattern
+                            (if found then "found" else "missing")
+                            (if expect_found then "found" else "missing")));
                     Bool.equal found expect_found)
               in
-              let req_ok = check_sym provided_lib required true in
-              let miss_ok = check_sym provided_lib missing false in
-              let ok = req_ok && miss_ok in
-              log ~event:(if ok then "done" else "failed")
-                ~detail:(Some (if ok then "symbol check passed"
-                  else "symbol resolution mismatch"));
+              let ok = check_sym sc.required true && check_sym sc.missing false in
+              log ~event:(if ok then "symbols_ok" else "symbols_failed")
+                ~detail:(Some (if ok then "symbol check passed" else "symbol mismatch"));
               ok
+        in
+        expectation_ok && symbol_ok
       with exn ->
         let msg = Exn.to_string exn in
         log ~event:"error" ~detail:(Some msg);
@@ -250,13 +305,13 @@ type step_status = Step_done | Step_failed | Step_skipped
 
 (* Run all steps in dependency order. Returns status per tag.
    ~failfast:true stops on the first failure (useful for debugging). *)
-let run_graph ?(failfast = false) logger ~project ~root (steps : action_step list) =
+let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : action_step list) =
   logger.log ~tag:"*" ~event:"graph_start"
     ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
   let status = Hashtbl.create (module String) in
   (* Seed with already-done steps (postcondition passes) *)
   List.iter steps ~f:(fun s ->
-      let out = output_dir_for ~root ~project ~tag:s.tag in
+      let out = s.output_dir in
       if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out then
         Hashtbl.set status ~key:s.tag ~data:Step_done);
   (* Iterate until no progress (or first failure in failfast mode) *)
@@ -273,7 +328,7 @@ let run_graph ?(failfast = false) logger ~project ~root (steps : action_step lis
                 | _ -> false)
           in
           if deps_ok then (
-            let ok = run_step logger ~project ~root s in
+            let ok = run_step logger ~project ~root ?global_cache s in
             Hashtbl.set status ~key:s.tag
               ~data:(if ok then Step_done else Step_failed);
             if ok then changed := true
@@ -336,8 +391,8 @@ let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir =
   [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
 
 (* fetch_binding: install an opam package and write marker *)
-let fetch_binding_cmd (spec : Canary_ocaml.opam_package_spec) ~output_dir =
-  [%string "%{Canary_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
+let fetch_binding_cmd (spec : Canary_toolchain_ocaml.opam_package_spec) ~output_dir =
+  [%string "%{Canary_toolchain_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
@@ -380,9 +435,16 @@ let default_check_post rule ~output_dir =
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
 
-let mk_step ~root ~project ~tag ~rule ~deps ~cmd ?(expectation = Expect_success) ~check_post () =
-  { tag; rule; deps;
-    expectation;
+let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
+    ?(expectation = Expect_success) ?(symbol_check = None) ~check_post () =
+  let output_tag = Option.value output_tag ~default:tag in
+  let output_dir = output_dir_for ~root ~project ~tag:output_tag in
+  { tag;
+    cache_key = cache_project ^ ":" ^ tag;
+    output_tag;
+    output_dir;
+    rule; deps;
+    expectation; symbol_check;
     check_pre = (fun () ->
       List.for_all deps ~f:(fun dep ->
           let out = output_dir_for ~root ~project ~tag:dep in
@@ -475,7 +537,7 @@ let deps_of_split_probe spec variant =
   in
   List.filter_opt [ produce_dep; runtime_lib_dep ]
 
-let derive_steps ~root ~project (spec : script_spec) : action_step list =
+let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) : action_step list =
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~rule ~deps ~cmd =
     let check_post = match spec.check_post rule with
@@ -483,7 +545,26 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
       | None -> default_check_post rule
     in
     let expectation = spec.expectation rule in
-    mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ~expectation ()
+    let symbol_check = spec.symbol_check rule in
+    mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ()
+  in
+  (* Optional follow-up step that writes summary.json for an artifact.
+     Writes into the PARENT's output_dir (alongside probe.log) rather than
+     creating a separate <parent>_summary/ directory. Depends on parent;
+     check_post just needs summary.json to exist in that shared dir. *)
+  let mk_summary ~parent_tag ~rule ~summary_cmd =
+    let tag = parent_tag ^ "_summary" in
+    let check_post ~output_dir = has_file ~output_dir "summary.json" in
+    mk_step ~root ~project ~cache_project ~tag
+      ~output_tag:parent_tag ~rule
+      ~deps:[ parent_tag ]
+      ~cmd:summary_cmd ~check_post ~expectation:Expect_success
+      ~symbol_check:None ()
+  in
+  let attach_summary ~parent_tag ~rule base_step =
+    match spec.summary rule with
+    | None -> [ base_step ]
+    | Some cmd -> [ base_step; mk_summary ~parent_tag ~rule ~summary_cmd:cmd ]
   in
   List.concat_map store_rules ~f:(fun rule ->
       let tag = string_of_rule rule in
@@ -493,8 +574,8 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
         match rule with
         | Probe Binding when List.length spec.probe_binding > 1 ->
             Hashtbl.set seen ~key:tag ~data:true;
-            List.map spec.probe_binding ~f:(fun (loc, cmd) ->
-                let tag = tag_of_probe_location loc in
+            List.concat_map spec.probe_binding ~f:(fun (loc, cmd) ->
+                let ptag = tag_of_probe_location loc in
                 let deps = deps_of_split_probe spec
                     (match loc with
                      | Build_tree -> `Raw | _ -> `Pkg) in
@@ -503,13 +584,17 @@ let derive_steps ~root ~project (spec : script_spec) : action_step list =
                   | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
                 in
                 let expectation = spec.expectation rule in
-                mk_step ~root ~project ~tag ~rule ~deps ~cmd ~check_post ~expectation ())
+                let symbol_check = spec.symbol_check rule in
+                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check () in
+                attach_summary ~parent_tag:ptag ~rule base)
         | _ ->
             match script_of_rule spec rule with
             | None -> []
             | Some cmd ->
                 Hashtbl.set seen ~key:tag ~data:true;
-                [ mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd ])
+                let base = mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd in
+                attach_summary ~parent_tag:tag ~rule base)
 
 (* ── Run info: project metadata dumped at start of run ── *)
 
@@ -588,7 +673,7 @@ let dump_run_info ~dir (info : run_info) =
   Stdlib.close_out oc;
   path
 
-let run_project ?(failfast = false) ?run_info ~root ~project steps =
+let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   let dir = [%string "%{root}/canary/_local/%{project}"] in
   ensure_dir dir;
   (* Dump project spec if provided *)
@@ -597,9 +682,10 @@ let run_project ?(failfast = false) ?run_info ~root ~project steps =
        let path = dump_run_info ~dir info in
        Fmt.pr "[run_info] %s@." path
    | None -> ());
+  let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
   let log_path = [%string "%{dir}/actions.log"] in
   let logger = create_logger ~log_path in
-  let status = run_graph ~failfast logger ~project ~root steps in
+  let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
   (* Write result diagram — same schema as action_rule.mmd, colored by status *)
   let mmd_path = [%string "%{dir}/result.mmd"] in
   let node_status = result_status_of_run steps status in

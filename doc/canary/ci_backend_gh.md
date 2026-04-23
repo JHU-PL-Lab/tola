@@ -206,6 +206,11 @@ and avoid matrix-imposed constraints on step structure.
 
 ## Gotchas
 
+**LLVM probe_binding shows orange warning in GH UI**: The `probe_binding` step for LLVM 19
+uses `continue-on-error: true` (it intentionally fails — Opcode.UncondBr not in LLVM 19).
+GH shows `Error: Process completed with exit code 1` with an orange icon. This is correct;
+the `probe_binding (verify)` step confirms the expected failure. Not a bug.
+
 **OCaml 5.2 quotes constructor names in errors**: `Unbound constructor "Opcode.UncondBr"`
 (with quotes), not `Opcode.UncondBr`. `Expect_failure.contains_any` must include both
 forms for backwards compatibility.
@@ -221,10 +226,12 @@ set to local paths (e.g., `_out/canary/_local/z3/...`), cmake gets a `src:` path
 doesn't exist in opam's sandbox. Fix: `install_env` in `pack_binding` is empty (`""`)
 when `local = None` (remote fetch); opam defaults `S=. B=build` work correctly.
 
-**sccache + opam cmake**: sccache must be in PATH before opam starts the build. The
-`sccache-action` preamble step installs it; `opam.in` detects it via `command -v sccache`
-and sets `CMAKE_C_COMPILER_LAUNCHER` / `CMAKE_CXX_COMPILER_LAUNCHER`. No explicit
-`SCCACHE_GHA_ENABLED` needed — the action wires GH cache automatically.
+**sccache GH cache backend blocked by opam bwrap**: `sccache-action` sets
+`SCCACHE_GHA_ENABLED=true` but opam's bwrap sandbox drops the GH Actions env vars
+(`ACTIONS_CACHE_URL`, `ACTIONS_RUNTIME_TOKEN`). Result: sccache runs but uses local disk
+(`~/.cache/sccache`), getting 0 cache hits across fresh runners. Fix: add `actions/cache@v4`
+as a preamble step to save/restore `~/.cache/sccache` explicitly. The cache key hashes
+`opam.in` so it invalidates when the Z3 build config changes.
 
 **cmake_build_binding flag**: decouples the OCaml binding cmake build from the opam
 packaging step. When `cmake_build_binding=false`, configure uses `-DZ3_BUILD_OCAML_BINDINGS=OFF`

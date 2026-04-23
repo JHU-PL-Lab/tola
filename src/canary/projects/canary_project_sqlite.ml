@@ -1,5 +1,5 @@
 open Canary_basic
-open Canary_ocaml
+open Canary_toolchain_ocaml
 open Canary
 
 let sqlite_ocaml_config : ocaml_tool_config =
@@ -99,6 +99,10 @@ let config distro =
 
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
+(* Module-level watchlist for the sqlite3 opam package. Module names from
+   ocamlobjinfo Name: fields; constructor-level drift is caught by compile probes. *)
+let sqlite_ocaml_watchlist = [ "Sqlite3" ]
+
 let script_spec : Canary_action.script_spec =
   let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
@@ -115,6 +119,12 @@ let script_spec : Canary_action.script_spec =
              ~example:ocaml.example_file ~target:ocaml.example_target
              ~output_dir));
       ];
+    summary = (function
+      | Probe Binding ->
+          Some (fun ~output_dir ->
+            Canary_artifact_ocaml.summary_opam_pkg_cmd
+              ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ())
+      | _ -> None);
   }
 
 let action_steps ~root ~project =

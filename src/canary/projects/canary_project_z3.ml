@@ -1,8 +1,9 @@
 open Base
 open Tola_std
 open Canary_store
+open Canary_artifact_source
 open Canary_basic
-open Canary_ocaml
+open Canary_toolchain_ocaml
 open Canary
 
 type z3_instance = { root : string; external_libz3 : string }
@@ -28,6 +29,18 @@ let mk_deploy root =
    dev must build lib (no PM ships HEAD of a fork).
    latest must build lib (no PM ships official HEAD).
    stable can skip lib build (PM has this version). *)
+
+(* Module-level watchlist for the Z3 opam package. *)
+let z3_ocaml_watchlist = [ "Z3" ]
+
+(* Native symbol watchlist for libz3.so — famously renamed / stability bellwethers. *)
+let z3_native_watchlist = [
+  "Z3_mk_solver";
+  "Z3_mk_optimize";
+  "Z3_mk_context";
+  "Z3_solver_check";
+  "Z3_mk_optimize_assert_soft";
+]
 
 let z3_source_dev : source_repo =
   {
@@ -94,9 +107,9 @@ let z3_project_spec distro (src : source_repo) : project_spec =
   }
 
 
-let z3_ocaml_config : Canary_ocaml.ocaml_tool_config =
+let z3_ocaml_config : Canary_toolchain_ocaml.ocaml_tool_config =
   {
-    toolchain = Canary_ocaml.default;
+    toolchain = Canary_toolchain_ocaml.default;
     ocaml =
       {
         example_target = "z3_example";
@@ -417,7 +430,7 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
       (if source.has_build_lib || cmake_build_binding then
          Some
            (fun ~output_dir ->
-             Canary_store.source_fetch_cmd distro source ~output_dir)
+             Canary_artifact_source.source_fetch_cmd distro source ~output_dir)
        else None);
     configure =
       (if source.has_build_lib || cmake_build_binding then
@@ -467,9 +480,9 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ())
            (fun ~output_dir ->
              let src_template =
                [%string
-                 "%{tola_root}/canary/templates/opam-local-repo/packages/%{z3_ocaml_config.toolchain.package_name}/%{Canary_ocaml.pkg_full z3_ocaml_config.toolchain}/opam.in"]
+                 "%{tola_root}/canary/templates/opam-local-repo/packages/%{z3_ocaml_config.toolchain.package_name}/%{Canary_toolchain_ocaml.pkg_full z3_ocaml_config.toolchain}/opam.in"]
              in
-             let pkg_full = Canary_ocaml.pkg_full z3_ocaml_config.toolchain in
+             let pkg_full = Canary_toolchain_ocaml.pkg_full z3_ocaml_config.toolchain in
              let pkg_dir =
                [%string "%{output_dir}/pack-repo/packages/%{z3_ocaml_config.toolchain.package_name}/%{pkg_full}"]
              in
@@ -504,7 +517,7 @@ opam remove -y %{pkg_full} || true
     probe_lib =
       Some
         (fun ~output_dir ->
-          let probe = Canary_artifact_check.native_lib_probe_cmd
+          let probe = Canary_artifact_native.native_lib_probe_cmd
               ~lib:"$LIB_Z3" ~prefix:"Z3_" ~output_dir in
           [%string "%{lib_resolve}\n%{probe}"]);
     probe_binding =
@@ -537,7 +550,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       ];
     check_post =
       (function
-      | Fetch Source -> Some Canary_store.source_check_post
+      | Fetch Source -> Some Canary_artifact_source.source_check_post
       | Configure ->
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "configure.ok" ] ~output_dir
@@ -555,6 +568,20 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
+    summary = (function
+      | Probe Lib ->
+          Some (fun ~output_dir ->
+            let sum = Canary_artifact_native.summary_cmd
+                        ~lib:"$LIB_Z3"
+                        ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ]
+                        ~watchlist:z3_native_watchlist
+                        ~output_dir () in
+            [%string "%{lib_resolve}\n%{sum}"])
+      | Probe Binding ->
+          Some (fun ~output_dir ->
+            Canary_artifact_ocaml.summary_opam_pkg_cmd
+              ~pkg:"z3" ~watchlist:z3_ocaml_watchlist ~output_dir ())
+      | _ -> None);
   }
 
 (* Full spec: all actions including build-from-source *)
@@ -566,10 +593,10 @@ let action_steps ?(quick = false) ?(source = z3_source_dev) ~root ~project
 
 let run_info ?(source = z3_source_dev) distro steps =
   let source_str =
-    match Canary_store.source_root distro source with
+    match Canary_artifact_source.source_root distro source with
     | Some p -> "local:" ^ p
     | None ->
-        let (Canary_store.Git_remote url) = source.remote in
+        let (Canary_artifact_source.Git_remote url) = source.remote in
         "git:" ^ url
   in
   Canary_action.mk_run_info ~project:"z3" ~version:source.version
@@ -578,7 +605,7 @@ let run_info ?(source = z3_source_dev) distro steps =
       [
         ("official", if source.official then "true" else "false");
         ( "remote",
-          let (Canary_store.Git_remote url) = source.remote in
+          let (Canary_artifact_source.Git_remote url) = source.remote in
           url );
       ]
     steps

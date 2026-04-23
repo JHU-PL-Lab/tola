@@ -1,7 +1,7 @@
 open Base
 open Canary_store
 open Canary_basic
-open Canary_ocaml
+open Canary_toolchain_ocaml
 
 type project_config = {
   canary : canary_config;

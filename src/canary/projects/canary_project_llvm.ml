@@ -1,7 +1,8 @@
 open Base
 open Canary_basic
 open Canary_store
-open Canary_ocaml
+open Canary_artifact_source
+open Canary_toolchain_ocaml
 open Canary
 
 (* ── Version specs ──
@@ -19,6 +20,16 @@ open Canary
    expensive; the common use case is building only the OCaml binding
    against a prebuilt system lib. Set has_build_lib=true to also
    build libLLVM from source. *)
+
+(* Module-level watchlist for the LLVM opam binding. *)
+let llvm_ocaml_watchlist = [ "Llvm"; "Llvm_target"; "Llvm_executionengine" ]
+
+(* Native symbol watchlist for libLLVM.so. *)
+let llvm_native_watchlist = [
+  "LLVMContextCreate";
+  "LLVMModuleCreateWithName";
+  "LLVMCreateBuilder";
+]
 
 let llvm_source_dev : source_repo =
   {
@@ -290,7 +301,7 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.
     fetch_source =
       Some
         (fun ~output_dir ->
-          Canary_store.source_fetch_cmd distro source ~output_dir);
+          Canary_artifact_source.source_fetch_cmd distro source ~output_dir);
     configure =
       (if source.has_build_lib || source.has_build_binding then
          Some
@@ -341,7 +352,7 @@ CANARY_BUILD_DIR="%{build}" opam install -y %{llvm_dev_opam_pkg} \
       (if source.has_build_lib then
          Some
            (fun ~output_dir ->
-             Canary_artifact_check.native_lib_probe_cmd
+             Canary_artifact_native.native_lib_probe_cmd
                ~lib:[%string "%{build}/lib/libLLVM.so"]
                ~prefix:"LLVM" ~output_dir)
        else
@@ -384,7 +395,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
     probe_app = Some llvm_python_probe;
     check_post =
       (function
-      | Fetch Source -> Some Canary_store.source_check_post
+      | Fetch Source -> Some Canary_artifact_source.source_check_post
       | Configure ->
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "configure.ok" ] ~output_dir
@@ -412,9 +423,44 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Probe Binding when not source.has_build_binding ->
           (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared *)
           (* OCaml 5.2+ quotes constructor names: "Opcode.UncondBr"; match both forms *)
-          Expect_failure { contains_any = [ "Unbound constructor Opcode.UncondBr";
-                                            {|Unbound constructor "Opcode.UncondBr"|} ] }
+          Expect_failure {
+            contains_any = [ "Unbound constructor Opcode.UncondBr";
+                             {|Unbound constructor "Opcode.UncondBr"|} ];
+            version_info = Some {
+              provider_version = "llvm 19";
+              consumer_requires = "Opcode.UncondBr";
+              since = Some "LLVM 21 (dev, commit #186176)";
+              note = None;
+            };
+          }
       | _ -> Expect_success);
+    summary = (function
+      | Probe Lib when source.has_build_lib ->
+          Some (fun ~output_dir ->
+            Canary_artifact_native.summary_cmd
+              ~lib:[%string "%{build}/lib/libLLVM.so"]
+              ~prefixes:[ "LLVM" ]
+              ~watchlist:llvm_native_watchlist
+              ~output_dir ())
+      | Probe Lib ->
+          Some (fun ~output_dir ->
+            [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
+LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
+test -n "$LLVM_LIB"
+%{Canary_artifact_native.summary_cmd
+    ~lib:"$LLVM_LIB"
+    ~prefixes:[ "LLVM" ]
+    ~watchlist:llvm_native_watchlist
+    ~output_dir ()}|}])
+      | Probe Binding ->
+          let pkg =
+            if source.has_build_binding then "llvm.dev-shared"
+            else "llvm.19-shared"
+          in
+          Some (fun ~output_dir ->
+            Canary_artifact_ocaml.summary_opam_pkg_cmd
+              ~pkg ~watchlist:llvm_ocaml_watchlist ~output_dir ())
+      | _ -> None);
   }
 
 (* ── Action steps ── *)

@@ -95,6 +95,101 @@ opam switch conflicts.
 Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28, #29, #30, #31, #32, #33, #34.
 Details in `doc/canary/backlog.md`.
 
+### Known Gaps (interface / expectation layer)
+
+These are tracked here rather than the backlog because they directly affect
+the `step_expectation` / interface model design.
+
+Artifact summary progress (`doc/canary/artifact_summary_design.md`):
+- ✅ Step 1 — `summary_cmd` for native/ocaml/opam kinds (per-probe `summary.json`)
+- ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
+  field on `script_spec`, `derive_steps` emits follow-up `<tag>_summary` steps
+- ✅ `summary-diff` subcommand (local only; no committed cache yet)
+- ✅ Summary command coverage in `canary_artifact_test.ml`
+- ⏳ Step 3 deferred — `summary-sync` into a committed
+  `doc/canary/artifact_summary.json` will likely ride on step-cache transport
+
+Still open:
+- **macOS CI + `On_runner_os` step guards** — the retired `canary_backend_yaml.ml`
+  rendered a matrix (`ubuntu-latest` × `macos-latest`) with per-step
+  `if: runner.os == '…'` guards. The current `canary_backend_gh.ml` hardcodes
+  `runs-on: ubuntu-latest`. Add matrix support + a per-step guard field to
+  `action_step` (or extend `preamble_steps` semantics) if macOS coverage is
+  ever needed. Couples with "multi-ocaml-version matrix" (old supported
+  `ocaml-version: ["5.4.0"]` in the matrix).
+- **Retire legacy `config distro` / `project_config` / `job_spec` plumbing**
+  — now unreachable (zero callers after the yaml+shell backend removal),
+  but parked rather than deleted because it encodes the *intent* of the
+  distro × sys-PM × lang-PM enumeration that the current action-graph
+  pipeline doesn't yet model explicitly. Specifically:
+    - No distro abstraction is exercised (WSL and macOS paths untested).
+    - No two-OS CI (macOS matrix is the paired TODO above).
+    - Sys-PM × lang-PM enumeration (apt × opam, brew × opam, apt × pip, …)
+      exists conceptually in `project_config.phases` but isn't represented
+      in the new `script_spec` → `action_step` path.
+  **Revisit together with the version/symbol/interface work**: when we
+  formalise interfaces as first-class (per `interface_contract_design.md`),
+  the PM-cross-distro enumeration becomes part of "which provider (PM on
+  distro) satisfies a given interface at a given version." Delete
+  `project_config` plumbing (and each project's `config distro` fn) once
+  the replacement exists; until then it's dead code but documents the
+  missing model. Files touched when the cleanup happens:
+  `canary_basic.ml` (`job_spec`, `step_phase`, `canary_backends`,
+  `canary_config`, `mk_canary_config`), `canary.ml` (`project_config`,
+  `verify_of_phase`, `steps_of_phase`, `make_job`, `resolve_job_scripts`),
+  each project's `config distro` + `prebuilt_*_spec` helpers.
+- **Per-step `env:` fields in GH YAML** — old yaml backend had an `env_fields`
+  list per step. New backend only allows raw YAML blocks via `preamble_steps`.
+  Not blocking; re-add as a typed field if a project needs it.
+- **Deeper OCaml binding analysis** — ocamlobjinfo is module-level only; no
+  constructor-level drift (e.g., `Opcode.UncondBr`) from summaries. User flagged
+  this as a dedicated future step requiring a "structure of ocaml-binding / any-
+  language-binding" model, outside current local-feature scope.
+- **Migrate the old tola artifact inspectors in `src/binding/` into canary**
+  (not just `ocaml_files.ml`). ~1880 lines, 15 modules, uses native OCaml
+  compiler libraries instead of shelling out. Called from
+  `src/bin/example_sp.ml`. Each module's canary-relevance:
+
+  | File | Lines | Canary-relevance |
+  |------|-------|------------------|
+  | `canary.ml`         | 417 | **High** — old canary model (test case enumeration, version/API/lib mapping). Predates current canary; check overlap before re-implementing. |
+  | `ocaml_files.ml`    | 330 | **High** — file classification for `.o/.cmo/.cmi/.cmx/.cmxs/.ml/.mli/.cma/.cmxa` via `Objinfo.extra` + `Fl_metascanner`. |
+  | `shared_library.ml` | 257 | **High** — `ldd`-style linked-dep extraction (`linked_dep` type). Directly enables loader-path analysis. |
+  | `ocamls.ml`         | 137 | **High** — `Objinfo` module; proper API to `.cmxa`/`.cma` inspection (replaces shell+python in `summarize_ocaml.py`). |
+  | `resolve.ml`        | 125 | Medium — `Resolve_strategy` (`Via_name` / `Via_value`). Maps to watchlist vs. content-hash matching. |
+  | `macho.ml`          | 102 | Medium — macOS Mach-O (dyld) inspection; paired with `shared_library.ml` for cross-platform loader paths. |
+  | `structures.ml`     | 100 | Medium — consumer of `resolve.ml`. |
+  | `c_utils.ml`        |  87 | Medium — `yojson_conv` precedent for serialising results. |
+  | `path.ml`           |  76 | Low — path abstraction with roots. |
+  | `fs.ml`, `opam.ml`, `package.ml`, `compilers.ml`, `platform.ml`, `config.ml` | ~250 total | Mixed — check per-module; some overlaps with existing `canary_pm_*`, `canary_store`. |
+
+  Other `src/` dirs (`ainterp`, `interp`, `langs`, `packaging`, `repl`, `std`,
+  `tola`, `versioned_maps`, `versioning`) are the tola interpreter / language
+  layer, mostly unrelated to canary — only cross-reference if a specific primitive
+  is needed (e.g., `versioning/` for version-constraint solving per the
+  interface-contract design doc).
+
+  **Do after** local summary flow stabilises; migrate incrementally per module.
+- **No source-artifact summary** — only native / ocaml / opam kinds so far.
+  Source summaries (git SHA, public header count, FFI surface via C-ABI
+  exports for other languages) are a natural next extension.
+- **No python summary in any project spec** — `summary_cmd` helpers for python
+  haven't been defined (no project uses a python artifact yet).
+- **`version_info` dropped in GH verify step** — the verify YAML just prints
+  `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
+  Should annotate the echo with the context string.
+- **`symbol_check` in CI is a plain `nm` shell snippet** — rendered in GH backend
+  now (one extra step per symbol_check), but no project spec fills the field in yet;
+  the `summary` watchlist is what's doing the real work. Decide whether to keep
+  both `symbol_check` and watchlist, or collapse.
+- **`symbol_entry.version_tag`** (`@@GLIBC_2.31` annotations) — typed field
+  exists in the OCaml model but not yet populated; `summary.versioned_req`
+  computes these at runtime via `summarize_native.py`. Connects to L1b in
+  `doc/canary/interface_contract_design.md`.
+- **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
+  verify step reads `probe.log` but the local runner scans all files in `output_dir`.
+  Should align: both should scan `probe.log` only.
+
 ### Done
 
 Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #26. Details in

@@ -22,25 +22,55 @@ let output_dir_of ~project ~tag =
 (* Render one action_step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)
 let render_gh_step ~project (step : Canary_action.action_step) =
-  let out = output_dir_of ~project ~tag:step.tag in
+  (* Use output_tag (not tag) so summary steps share the parent's directory. *)
+  let out = output_dir_of ~project ~tag:step.output_tag in
   let raw_cmd = step.cmd ~output_dir:out in
   let full_cmd = [%string "mkdir -p \"%{out}\"\n%{raw_cmd}"] in
-  let run_block body =
-    [%string "        run: |\n%{indent 10 body}\n"]
+  let run_block body = [%string "        run: |\n%{indent 10 body}\n"] in
+  let sym_check_step =
+    match step.symbol_check with
+    | None -> []
+    | Some sc ->
+        let checks =
+          List.map sc.required ~f:(fun e ->
+              let pat =
+                match e.sym_version with
+                | None -> e.sym_name
+                | Some v -> [%string "%{e.sym_name}@@%{v}"]
+              in
+              [%string
+                {|nm -D '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' || { echo "FAIL: required symbol missing: %{pat}"; exit 1; }|}])
+          @ List.map sc.missing ~f:(fun e ->
+              let pat =
+                match e.sym_version with
+                | None -> e.sym_name
+                | Some v -> [%string "%{e.sym_name}@@%{v}"]
+              in
+              [%string
+                {|nm -D '%{sc.provided_lib}' 2>/dev/null | grep -qF '%{pat}' && { echo "FAIL: symbol present but should be missing: %{pat}"; exit 1; } || true|}])
+        in
+        let body =
+          String.concat ~sep:"\n" checks
+          ^ [%string "\necho 'symbol check passed: %{sc.provided_lib}'"]
+        in
+        [ [%string {|      - name: %{step.tag} (symbols)
+%{run_block body}|}] ]
   in
   match step.expectation with
-  | Expect_success | Expect_symbols _ ->
-    [ [%string {|      - name: %{step.tag}
+  | Expect_success ->
+      [ [%string {|      - name: %{step.tag}
 %{run_block full_cmd}|}] ]
-  | Expect_failure { contains_any } ->
-    let id = sanitize_id step.tag in
-    let grep_check =
-      List.map contains_any ~f:(fun pat ->
-          [%string {|grep -qF '%{pat}' "%{out}/probe.log" 2>/dev/null|}])
-      |> String.concat ~sep:" \\\n          || "
-    in
-    let verify_body =
-      [%string {|if [ "${{ steps.%{id}.outcome }}" = "success" ]; then
+      @ sym_check_step
+  | Expect_failure { contains_any; version_info = _ } ->
+      let id = sanitize_id step.tag in
+      let grep_check =
+        List.map contains_any ~f:(fun pat ->
+            [%string {|grep -qF '%{pat}' "%{out}/probe.log" 2>/dev/null|}])
+        |> String.concat ~sep:" \\\n          || "
+      in
+      let verify_body =
+        [%string
+          {|if [ "${{ steps.%{id}.outcome }}" = "success" ]; then
   echo "FAIL: expected failure but step succeeded"
   exit 1
 fi
@@ -51,13 +81,17 @@ else
   cat "%{out}/probe.log" || true
   exit 1
 fi|}]
-    in
-    [ [%string {|      - name: %{step.tag}
+      in
+      [
+        [%string
+          {|      - name: %{step.tag}
         id: %{id}
         continue-on-error: true
 %{run_block full_cmd}|}];
-      [%string {|      - name: %{step.tag} (verify)
-%{run_block verify_body}|}] ]
+        [%string
+          {|      - name: %{step.tag} (verify)
+%{run_block verify_body}|}];
+      ]
 
 let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
     ~preamble_steps (steps : Canary_action.action_step list) =
@@ -108,8 +142,8 @@ type job_spec = {
   id : string;
   name : string;
   project : string;
-  sys_deps : string list;         (* apt packages to install before action steps *)
-  preamble_steps : string list;   (* raw yaml steps inserted after setup-ocaml *)
+  sys_deps : string list; (* apt packages to install before action steps *)
+  preamble_steps : string list; (* raw yaml steps inserted after setup-ocaml *)
   steps : Canary_action.action_step list;
 }
 
@@ -119,12 +153,11 @@ let render_workflow ?(runner_os = "ubuntu-latest") ?(ocaml_version = "5.2")
   let jobs_yaml =
     List.map jobs ~f:(fun j ->
         render_job ~job_id:j.id ~job_name:j.name ~runner_os ~ocaml_version
-          ~project:j.project ~sys_deps:j.sys_deps ~preamble_steps:j.preamble_steps
-          j.steps)
+          ~project:j.project ~sys_deps:j.sys_deps
+          ~preamble_steps:j.preamble_steps j.steps)
     |> String.concat ~sep:"\n"
   in
-  [%string
-    {|name: %{workflow_name}
+  [%string {|name: %{workflow_name}
 
 %{triggers}
 
