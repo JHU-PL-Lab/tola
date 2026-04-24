@@ -50,34 +50,34 @@ jobs:
             | python3 canary/scripts/summarize_native.py --path "$LLVM_LIB" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder' \
             > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_lib/summary.json
 
-      - name: probe_binding
-        id: probe_binding
+      - name: probe_binding_pkg
+        id: probe_binding_pkg
         continue-on-error: true
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg"
           eval $(opam env)
           ocamlfind ocamlopt -package llvm -linkpkg $GITHUB_WORKSPACE/canary/examples/llvm/llvm_example_dev.ml \
-            -o $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/llvm_example > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/probe.log 2>&1 || exit 1
-          $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/llvm_example >> $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/probe.log 2>&1
+            -o $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/llvm_example > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/llvm_example >> $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/probe.log 2>&1
 
-      - name: probe_binding (verify)
+      - name: probe_binding_pkg (verify)
         run: |
-          if [ "${{ steps.probe_binding.outcome }}" = "success" ]; then
+          if [ "${{ steps.probe_binding_pkg.outcome }}" = "success" ]; then
             echo "FAIL: expected failure but step succeeded"
             exit 1
           fi
-          if grep -qF 'Unbound constructor Opcode.UncondBr' "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/probe.log" 2>/dev/null \
-                    || grep -qF 'Unbound constructor "Opcode.UncondBr"' "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/probe.log" 2>/dev/null; then
+          if grep -qF 'Unbound constructor Opcode.UncondBr' "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/probe.log" 2>/dev/null \
+                    || grep -qF 'Unbound constructor "Opcode.UncondBr"' "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/probe.log" 2>/dev/null; then
             echo "PASS: expected failure confirmed"
           else
             echo "FAIL: expected message not found in probe.log"
-            cat "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/probe.log" || true
+            cat "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/probe.log" || true
             exit 1
           fi
 
-      - name: probe_binding_summary
+      - name: probe_binding_pkg_summary
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg"
           eval $(opam env)
           PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
           test -n "$PKG_DIR"
@@ -85,7 +85,30 @@ jobs:
               [ -f "$f" ] && ocamlobjinfo "$f"
             done
           } | python3 canary/scripts/summarize_ocaml.py --path 'llvm' --watchlist 'Llvm,Llvm_target,Llvm_executionengine' \
-            > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding/summary.json
+            > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pkg/summary.json
+
+      - name: probe_binding_pip
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip"
+          set -e
+          INSTALL_LOG=$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip/install.log
+          if command -v pip >/dev/null 2>&1; then
+            pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+          elif python3 -m pip --version >/dev/null 2>&1; then
+            python3 -m pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+          elif command -v uv >/dev/null 2>&1; then
+            uv pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
+          else
+            echo "no pip / python3 -m pip / uv available" > "$INSTALL_LOG"
+            exit 1
+          fi
+          python3 -c "import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)" > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip/probe.log 2>&1 || { cat $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip/probe.log; exit 1; }
+          cat $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip/probe.log
+
+      - name: probe_binding_pip_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip"
+          python3 canary/scripts/summarize_python.py --pkg 'llvmlite.binding' --watchlist 'initialize,initialize_native_target,parse_assembly,create_mcjit_compiler,Target' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/probe_binding_pip/summary.json
 
       - name: probe_app
         run: |
@@ -162,17 +185,17 @@ jobs:
             | python3 canary/scripts/summarize_native.py --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft' \
             > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_lib/summary.json
 
-      - name: probe_binding
+      - name: probe_binding_pkg
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg"
           eval $(opam env)
           ocamlfind ocamlopt -package z3 -linkpkg $GITHUB_WORKSPACE/canary/examples/z3/z3_example.ml \
-            -o $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding/z3_example > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding/probe.log 2>&1 || exit 1
-          $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding/z3_example >> $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding/probe.log 2>&1
+            -o $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg/z3_example > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg/probe.log 2>&1 || exit 1
+          $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg/z3_example >> $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg/probe.log 2>&1
 
-      - name: probe_binding_summary
+      - name: probe_binding_pkg_summary
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg"
           eval $(opam env)
           PKG_DIR=$(ocamlfind query 'z3' 2>/dev/null)
           test -n "$PKG_DIR"
@@ -180,7 +203,30 @@ jobs:
               [ -f "$f" ] && ocamlobjinfo "$f"
             done
           } | python3 canary/scripts/summarize_ocaml.py --path 'z3' --watchlist 'Z3' \
-            > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding/summary.json
+            > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pkg/summary.json
+
+      - name: probe_binding_pip
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip"
+          set -e
+          INSTALL_LOG=$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip/install.log
+          if command -v pip >/dev/null 2>&1; then
+            pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+          elif python3 -m pip --version >/dev/null 2>&1; then
+            python3 -m pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+          elif command -v uv >/dev/null 2>&1; then
+            uv pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+          else
+            echo "no pip / python3 -m pip / uv available" > "$INSTALL_LOG"
+            exit 1
+          fi
+          python3 -c "import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check())" > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip/probe.log 2>&1 || { cat $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip/probe.log; exit 1; }
+          cat $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip/probe.log
+
+      - name: probe_binding_pip_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip"
+          python3 canary/scripts/summarize_python.py --pkg 'z3' --watchlist 'Solver,BitVec,Optimize,Tactic,Context,Int,Real,Bool' > $GITHUB_WORKSPACE/_out/canary/projects/z3/dev/probe_binding_pip/summary.json
 
 
   sqlite:
@@ -211,14 +257,14 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding"
           eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/binding.ok
 
-      - name: probe_binding
+      - name: probe_binding_pkg
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding"
-          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/probe.log 2>&1
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg"
+          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1
 
-      - name: probe_binding_summary
+      - name: probe_binding_pkg_summary
         run: |
-          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding"
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg"
           eval $(opam env)
           PKG_DIR=$(ocamlfind query 'sqlite3' 2>/dev/null)
           test -n "$PKG_DIR"
@@ -226,5 +272,15 @@ jobs:
               [ -f "$f" ] && ocamlobjinfo "$f"
             done
           } | python3 canary/scripts/summarize_ocaml.py --path 'sqlite3' --watchlist 'Sqlite3' \
-            > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding/summary.json
+            > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/summary.json
+
+      - name: probe_binding_pip
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip"
+          python3 -c "import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')" > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip/probe.log 2>&1 && cat $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip/probe.log
+
+      - name: probe_binding_pip_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip"
+          python3 canary/scripts/summarize_python.py --pkg 'sqlite3' --watchlist 'connect,sqlite_version,sqlite_version_info,Connection,Cursor' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip/summary.json
 

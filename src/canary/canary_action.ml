@@ -74,8 +74,12 @@ type script_spec = {
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
-  (* Per-rule expectation. Default: Expect_success. *)
-  expectation : (rule -> step_expectation);
+  (* Per-rule expectation. Default: Expect_success.
+     loc carries the per-location variant for multi-probe rules (e.g., a
+     Probe Binding that has opam AND pip variants — the opam one may be
+     Expect_failure while the pip one is Expect_success). None for
+     single-location rules. *)
+  expectation : rule -> location option -> step_expectation;
   (* Optional per-rule artifact symbol check. None = no symbol check. *)
   symbol_check : (rule -> symbol_check option);
   (* Optional per-rule artifact summary command. When present, derive_steps
@@ -96,7 +100,7 @@ let empty_script_spec = {
   probe_lib = None; probe_binding = [];
   probe_app = None;
   check_post = (fun _ -> None);
-  expectation = (fun _ -> Expect_success);
+  expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
   summary = (fun _ _ -> None);
 }
@@ -548,7 +552,7 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
       | Some cp -> cp
       | None -> default_check_post rule
     in
-    let expectation = spec.expectation rule in
+    let expectation = spec.expectation rule None in
     let symbol_check = spec.symbol_check rule in
     mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ()
   in
@@ -587,7 +591,7 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
                   | Some cp -> cp
                   | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
                 in
-                let expectation = spec.expectation rule in
+                let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
                   ~deps ~cmd ~check_post ~expectation ~symbol_check () in

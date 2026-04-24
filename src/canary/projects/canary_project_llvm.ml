@@ -447,9 +447,13 @@ cat %{output_dir}/probe.log|}]);
             Canary_artifact_check.check_markers [ "pack.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
-    expectation =
-      (function
-      | Probe Binding when not source.has_build_binding ->
+    expectation = (fun rule loc -> match rule, loc with
+      | Probe Binding, Some (Wild "pip") ->
+          (* llvmlite bundles its own libLLVM; independent of opam's LLVM
+             version, so the pip probe is Expect_success regardless of
+             has_build_binding. *)
+          Expect_success
+      | Probe Binding, _ when not source.has_build_binding ->
           (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared *)
           (* OCaml 5.2+ quotes constructor names: "Opcode.UncondBr"; match both forms *)
           Expect_failure {
