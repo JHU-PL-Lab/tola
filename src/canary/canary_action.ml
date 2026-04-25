@@ -417,7 +417,15 @@ let fetch_binding_cmd (spec : Canary_toolchain_ocaml.opam_package_spec) ~output_
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
-  [%string "eval $(opam env) && ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 && %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1"]
+  (* On failure (compile or run), dump probe.log to stdout and re-raise the
+     original exit code. Without this, CI step failures show only "exit 127"
+     with no context — the actual ocamlfind / dynamic-link error is hidden in
+     the file. Successful runs print probe.log too (cheap, useful confirmation). *)
+  [%string {|eval $(opam env)
+ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 && %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1
+RC=$?
+cat %{output_dir}/probe.log
+exit $RC|}]
 
 (* ── Convenience helpers for building steps ── *)
 

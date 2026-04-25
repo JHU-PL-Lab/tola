@@ -260,7 +260,11 @@ jobs:
       - name: probe_binding_pkg
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg"
-          eval $(opam env) && ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1
+          eval $(opam env)
+          ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/sqlite3_example >> $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pkg/probe.log
+          exit $RC
 
       - name: probe_binding_pkg_summary
         run: |
@@ -340,7 +344,11 @@ jobs:
       - name: probe_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding"
-          eval $(opam env) && ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example >> $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1
+          eval $(opam env)
+          ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example >> $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log
+          exit $RC
 
       - name: probe_binding_summary
         run: |
@@ -410,7 +418,11 @@ jobs:
       - name: probe_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding"
-          eval $(opam env) && ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl/ssl_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example >> $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1
+          eval $(opam env)
+          ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl/ssl_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example >> $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1
+          RC=$?
+          cat $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log
+          exit $RC
 
       - name: probe_binding_summary
         run: |
