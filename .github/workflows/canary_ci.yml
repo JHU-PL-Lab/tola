@@ -320,25 +320,23 @@ jobs:
       - name: probe_lib
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
-          LIB_GMP=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* 2>/dev/null \
-                  /usr/lib*/libgmp.so* 2>/dev/null \
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
                   "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
                   | head -1)
-          test -n "$LIB_GMP" -a -e "$LIB_GMP"
-          COUNT=$(nm -D "$LIB_GMP" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
           printf '__gmp symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/probe.log
           test "$COUNT" -gt 0
 
       - name: probe_lib_summary
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
-          LIB_GMP=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* 2>/dev/null \
-                  /usr/lib*/libgmp.so* 2>/dev/null \
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
                   "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
                   | head -1)
-          test -n "$LIB_GMP" -a -e "$LIB_GMP"
-          nm -D "$LIB_GMP" 2>/dev/null \
-            | python3 canary/scripts/summarize_native.py --path "$LIB_GMP" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmp_' --watchlist '__gmpz_init,__gmpz_clear,__gmpz_set_str,__gmpz_add,__gmpz_mul,__gmpz_pow_ui,__gmpz_get_str' \
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmp_' --watchlist '__gmpz_init,__gmpz_clear,__gmpz_set_str,__gmpz_add,__gmpz_mul,__gmpz_pow_ui,__gmpz_get_str' \
             > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/summary.json
 
       - name: probe_binding
@@ -394,25 +392,23 @@ jobs:
       - name: probe_lib
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
-          LIB_SSL=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* 2>/dev/null \
-                  /usr/lib*/libssl.so.* 2>/dev/null \
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
                   "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
                   | head -1)
-          test -n "$LIB_SSL" -a -e "$LIB_SSL"
-          COUNT=$(nm -D "$LIB_SSL" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
           printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/probe.log
           test "$COUNT" -gt 0
 
       - name: probe_lib_summary
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
-          LIB_SSL=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* 2>/dev/null \
-                  /usr/lib*/libssl.so.* 2>/dev/null \
+          LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
                   "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
                   | head -1)
-          test -n "$LIB_SSL" -a -e "$LIB_SSL"
-          nm -D "$LIB_SSL" 2>/dev/null \
-            | python3 canary/scripts/summarize_native.py --path "$LIB_SSL" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+          test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+          nm -D "$LIB_NATIVE" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
             > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/summary.json
 
       - name: probe_binding

@@ -118,8 +118,17 @@ below (or delete the row and update `CLAUDE.md`).
   summary; surfaced summarize_native.py bug — was stripping leading `_` on
   Linux ELF too, mangling `__gmp*` GMP symbols. Fixed via
   `--strip-leading-underscore` flag passed only on macOS). CI green.
-- #5 ssl — local 2026-04-25 (Pattern A second datapoint; libssl summary +
-  ssl opam summary; gotcha: `Ssl.get_version` doesn't exist in opam ssl
-  v0.7.0; example simplified to context construction only. Limitation:
-  only summarises libssl; libcrypto needs probe_lib-as-list extension —
-  noted for the multi-native-lib gap). CI: pending push.
+- #5 ssl — committed 2026-04-25 (Pattern A second datapoint; libssl
+  summary + ssl opam summary; gotchas: (a) `Ssl.get_version` doesn't
+  exist in opam ssl v0.7.0; example simplified to context construction
+  only; (b) ssl doesn't pull ocamlfind transitively (uses dune-configurator)
+  — fix landed in `fetch_binding_cmd` to install ocamlfind alongside
+  every binding. Limitation: only summarises libssl; libcrypto needs
+  probe_lib-as-list extension — noted as multi-native-lib gap). CI green.
+- Pattern A template — extracted 2026-04-25 from zarith + ssl as the
+  two-data-point validation predicted by step 4 of the sequencing.
+  `canary_pattern_a.ml` (135 lines) compresses each Pattern A project
+  spec to ~40 lines of declaration. Net: 226 → 86 lines across zarith
+  and ssl (140-line reduction). Behavior verified identical pre/post
+  refactor; CI YAML changes are cosmetic ($LIB_GMP / $LIB_SSL → unified
+  $LIB_NATIVE).
