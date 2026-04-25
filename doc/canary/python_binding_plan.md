@@ -1,8 +1,10 @@
 # Plan: Python bindings for canary projects
 
-**Status (2026-04-23):** Steps A–D landed locally. Framework primitives
-wired; sqlite/z3/llvm all have pip probe + python summary; framework tests
-20/20 green.
+**Status (2026-04-24):** Steps A–D landed locally **and validated in CI**
+(run 24875490174 green after the expectation-signature fix that retrofitted
+location-awareness into LLVM's `Probe Binding` discrimination). Framework
+primitives wired; sqlite/z3/llvm all have pip probe + python summary;
+framework tests 20/20 green.
 
 - ✅ A — `summarize_python.py`, `Canary_artifact_python.summary_cmd`,
       `artifact-summary --kind python`
@@ -25,17 +27,22 @@ these primitives being in place.
 
 Ordered by urgency.
 
-### 1. CI validation on GH runners — near-term
+### 1. CI validation on GH runners — ✅ done (2026-04-24)
 
-The three pip probes work locally in a uv-managed environment via the
-fallback chain. GH runners have `pip` in PATH so they should take the first
-branch of the chain. Needs a CI push + verify. If something differs
-(pip behind `python3 -m pip` only, write-permission issues, version pin
-quirks), fix lands here before CI is called "validated."
+CI run 24875490174 went green with all `probe_binding_pip` and
+`probe_binding_pip_summary` steps in sqlite, z3, and llvm jobs. GH
+runners had `pip` directly available so the fallback chain took the
+first branch (no fallback to `uv pip` needed in CI).
 
-Acceptance: CI run completes green on a commit that touches nothing but
-a whitespace change, showing `probe_binding_pip` + `probe_binding_pip_summary`
-steps green in the sqlite, z3, and llvm jobs. Install duration noted.
+Two retrofits surfaced before this closed:
+- An earlier commit `f52c096` "shipped" the pip probes but forgot to
+  regenerate `canary_ci.yml`, so CI was green-but-not-actually-testing-pip.
+- The `expectation` accessor needed extension to take `location option`
+  (mirror of the earlier `summary` fix). Without it, LLVM's
+  `Expect_failure { Opcode.UncondBr }` applied to the pip probe too
+  and produced spurious `unexpected_success` markers locally.
+
+Both fixes in commit `ae05abe`.
 
 ### 2. Multi-PM env orchestration — medium-term
 
