@@ -411,9 +411,13 @@ let result_status_of_run (steps : action_step list)
 let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir =
   [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
 
-(* fetch_binding: install an opam package and write marker *)
+(* fetch_binding: install an opam package + ocamlfind, then write marker.
+   We add ocamlfind explicitly because some bindings (e.g. ssl, dune-only
+   pkgs) don't pull it transitively, but probe_ocaml_cmd uses
+   `ocamlfind ocamlopt` to compile probes. Bindings that DO pull ocamlfind
+   (e.g. zarith) treat the second install as a no-op. *)
 let fetch_binding_cmd (spec : Canary_toolchain_ocaml.opam_package_spec) ~output_dir =
-  [%string "%{Canary_toolchain_ocaml.opam_install_cmd spec} && echo 'installed' > %{output_dir}/binding.ok"]
+  [%string "%{Canary_toolchain_ocaml.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/binding.ok"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =

@@ -31,7 +31,7 @@ jobs:
       - name: fetch_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/llvm/19/fetch_binding"
-          eval $(opam env) && opam install llvm.19-shared -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/fetch_binding/binding.ok
+          eval $(opam env) && opam install llvm.19-shared -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/llvm/19/fetch_binding/binding.ok
 
       - name: probe_lib
         run: |
@@ -255,7 +255,7 @@ jobs:
       - name: fetch_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding"
-          eval $(opam env) && opam install sqlite3 -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/binding.ok
+          eval $(opam env) && opam install sqlite3 -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/fetch_binding/binding.ok
 
       - name: probe_binding_pkg
         run: |
@@ -315,7 +315,7 @@ jobs:
       - name: fetch_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding"
-          eval $(opam env) && opam install zarith -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding/binding.ok
+          eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding/binding.ok
 
       - name: probe_lib
         run: |
@@ -389,7 +389,7 @@ jobs:
       - name: fetch_binding
         run: |
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding"
-          eval $(opam env) && opam install ssl -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/binding.ok
+          eval $(opam env) && opam install ssl -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/binding.ok
 
       - name: probe_lib
         run: |
