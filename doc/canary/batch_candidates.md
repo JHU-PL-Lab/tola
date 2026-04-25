@@ -31,7 +31,7 @@ Picked from [`opam_survey.md`](opam_survey.md) §3 (revdep rankings) and §2
 | 2 | **LLVM** ✓ | `llvm.19-shared` / `llvm.dev-shared` | A+C hybrid | Done. `conf-llvm-static` discovery + source build. `Opcode.UncondBr` drift demo. |
 | 3 | **SQLite** ✓ | `sqlite3` | A | Done. Simplest Pattern A. Python `sqlite3` is stdlib-bundled (cross-PM edge case). |
 | 4 | **PyTorch** | `torch` (opam) + `torch` (pip) | A (binary-only) | Queued in [`pytorch_plan.md`](pytorch_plan.md). pip × opam × apt libtorch matrix. Version range constraint `[2.1, 2.2)` is a real mismatch case. |
-| 5 | **OpenSSL** | `ssl` via `conf-libssl` | A | OpenSSL 1.x → 3.x API breakage; macOS keg-only paths; Windows. Classic "C library that breaks everything." 3 revdeps — under-covered relative to real-world importance. |
+| 5 | **OpenSSL** ✓ | `ssl` via `conf-libssl` | A | Local 2026-04-25. OpenSSL 1.x → 3.x API breakage; macOS keg-only paths; Windows. Classic "C library that breaks everything." 3 revdeps — under-covered relative to real-world importance. CI pending. |
 | 6 | **FFmpeg** | `ffmpeg-avcodec`, `ffmpeg-avformat`, `ffmpeg-swscale`, … | A (multi-pkg) | One `conf-ffmpeg` drives a family of binding packages. Tests canary's modelling of "one conf, multiple binding artifacts." 7 revdeps. |
 
 ## Tier 2 — Tricky OCaml bindings
@@ -114,7 +114,12 @@ below (or delete the row and update `CLAUDE.md`).
 - #2 llvm — committed 2026-03 (A+C hybrid; local + CI)
 - #3 sqlite — committed 2026-03 (Pattern A; local + CI)
 - python primitives + pip probes for sqlite/z3/llvm — committed 2026-04-23/24 (local + CI)
-- #7 zarith — local 2026-04-25 (Pattern A; libgmp summary + zarith opam summary;
-  surfaced summarize_native.py bug — was stripping leading `_` on Linux ELF too,
-  mangling `__gmp*` GMP symbols. Fixed via `--strip-leading-underscore` flag
-  passed only on macOS). CI: pending push.
+- #7 zarith — committed 2026-04-25 (Pattern A; libgmp summary + zarith opam
+  summary; surfaced summarize_native.py bug — was stripping leading `_` on
+  Linux ELF too, mangling `__gmp*` GMP symbols. Fixed via
+  `--strip-leading-underscore` flag passed only on macOS). CI green.
+- #5 ssl — local 2026-04-25 (Pattern A second datapoint; libssl summary +
+  ssl opam summary; gotcha: `Ssl.get_version` doesn't exist in opam ssl
+  v0.7.0; example simplified to context construction only. Limitation:
+  only summarises libssl; libcrypto needs probe_lib-as-list extension —
+  noted for the multi-native-lib gap). CI: pending push.

@@ -354,3 +354,73 @@ jobs:
           } | python3 canary/scripts/summarize_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
             > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/summary.json
 
+
+  ssl:
+    name: ssl — fetch + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_lib"
+          sudo apt-get install -y libssl-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_lib/lib.ok
+
+      - name: fetch_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding"
+          eval $(opam env) && opam install ssl -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/ssl/fetch_binding/binding.ok
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
+          LIB_SSL=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* 2>/dev/null \
+                  /usr/lib*/libssl.so.* 2>/dev/null \
+                  "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_SSL" -a -e "$LIB_SSL"
+          COUNT=$(nm -D "$LIB_SSL" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+          printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/probe.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib"
+          LIB_SSL=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* 2>/dev/null \
+                  /usr/lib*/libssl.so.* 2>/dev/null \
+                  "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_SSL" -a -e "$LIB_SSL"
+          nm -D "$LIB_SSL" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LIB_SSL" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_lib/summary.json
+
+      - name: probe_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding"
+          eval $(opam env) && ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl/ssl_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/ssl_example >> $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/probe.log 2>&1
+
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'ssl' --watchlist 'Ssl,Ssl_threads' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/ssl/probe_binding/summary.json
+

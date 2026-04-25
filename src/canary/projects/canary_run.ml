@@ -76,6 +76,16 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       steps =
         Canary_action.(derive_steps ~root ~project:"zarith" ~cache_project:"zarith"
           (no_source Canary_project_zarith.script_spec)) };
+    (* ssl: Pattern A second datapoint — apt libssl-dev + opam ssl binding;
+       libssl/libcrypto symbol watchlist surfaces OpenSSL 1.x→3.x drift. *)
+    { id = "ssl";
+      name = "ssl — fetch + probe";
+      project = "ssl";
+      sys_deps = [];
+      preamble_steps = [];
+      steps =
+        Canary_action.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
+          (no_source Canary_project_ssl.script_spec)) };
   ]
 
 let sqlite_job ~root : Canary_backend_gh.job_spec =

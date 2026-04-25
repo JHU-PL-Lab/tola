@@ -64,6 +64,11 @@ let action_cmd =
     run_with_info ~failfast ~cache_path ~root ~project:"zarith" steps
       (Canary_project_zarith.run_info steps)
   in
+  let run_ssl ~root ~failfast ~cache_path =
+    let steps = Canary_project_ssl.action_steps ~root ~project:"ssl" in
+    run_with_info ~failfast ~cache_path ~root ~project:"ssl" steps
+      (Canary_project_ssl.run_info steps)
+  in
   let run_llvm ~root ~failfast ~cache_path distro =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro Canary_project_llvm.llvm_source_dev
@@ -85,15 +90,17 @@ let action_cmd =
     match project with
     | Some "sqlite" -> run_sqlite ~root ~failfast ~cache_path
     | Some "zarith" -> run_zarith ~root ~failfast ~cache_path
+    | Some "ssl" -> run_ssl ~root ~failfast ~cache_path
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path distro
     | None ->
         run_sqlite ~root ~failfast ~cache_path;
         run_zarith ~root ~failfast ~cache_path;
+        run_ssl ~root ~failfast ~cache_path;
         run_z3 ~root ~quick ~failfast ~cache_path distro;
         run_llvm ~root ~failfast ~cache_path distro
     | Some p ->
-        Fmt.pr "Unknown project: %s (available: sqlite, zarith, z3, llvm)@." p
+        Fmt.pr "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm)@." p
   in
   Cmd.v (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ cache_path_arg $ const ())
