@@ -284,3 +284,73 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip"
           python3 canary/scripts/summarize_python.py --pkg 'sqlite3' --watchlist 'connect,sqlite_version,sqlite_version_info,Connection,Cursor' > $GITHUB_WORKSPACE/_out/canary/projects/sqlite/probe_binding_pip/summary.json
 
+
+  zarith:
+    name: zarith — fetch + probe
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.2"
+      - name: Add canary opam repo
+        run: |
+          eval $(opam env)
+          opam repo add canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo" \
+            --rank=1 2>/dev/null \
+            || opam repo set-url canary-local \
+            "file://$GITHUB_WORKSPACE/canary/templates/opam-local-repo"
+          opam update canary-local
+
+      - name: fetch_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_lib"
+          sudo apt-get install -y libgmp-dev && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_lib/lib.ok
+
+      - name: fetch_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding"
+          eval $(opam env) && opam install zarith -y --assume-depexts && echo 'installed' > $GITHUB_WORKSPACE/_out/canary/projects/zarith/fetch_binding/binding.ok
+
+      - name: probe_lib
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
+          LIB_GMP=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* 2>/dev/null \
+                  /usr/lib*/libgmp.so* 2>/dev/null \
+                  "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_GMP" -a -e "$LIB_GMP"
+          COUNT=$(nm -D "$LIB_GMP" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+          printf '__gmp symbols exported: %s\n' "$COUNT" | tee $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/probe.log
+          test "$COUNT" -gt 0
+
+      - name: probe_lib_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib"
+          LIB_GMP=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* 2>/dev/null \
+                  /usr/lib*/libgmp.so* 2>/dev/null \
+                  "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+                  | head -1)
+          test -n "$LIB_GMP" -a -e "$LIB_GMP"
+          nm -D "$LIB_GMP" 2>/dev/null \
+            | python3 canary/scripts/summarize_native.py --path "$LIB_GMP" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmp_' --watchlist '__gmpz_init,__gmpz_clear,__gmpz_set_str,__gmpz_add,__gmpz_mul,__gmpz_pow_ui,__gmpz_get_str' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_lib/summary.json
+
+      - name: probe_binding
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding"
+          eval $(opam env) && ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1 && $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/zarith_example >> $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/probe.log 2>&1
+
+      - name: probe_binding_summary
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding"
+          eval $(opam env)
+          PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+          test -n "$PKG_DIR"
+          { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+              [ -f "$f" ] && ocamlobjinfo "$f"
+            done
+          } | python3 canary/scripts/summarize_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+            > $GITHUB_WORKSPACE/_out/canary/projects/zarith/probe_binding/summary.json
+

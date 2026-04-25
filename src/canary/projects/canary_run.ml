@@ -67,6 +67,15 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       steps =
         Canary_action.(derive_steps ~root ~project:"sqlite" ~cache_project:"sqlite"
           (no_source Canary_project_sqlite.script_spec)) };
+    (* zarith: classic Pattern A — apt libgmp-dev + opam zarith binding *)
+    { id = "zarith";
+      name = "zarith — fetch + probe";
+      project = "zarith";
+      sys_deps = [];
+      preamble_steps = [];
+      steps =
+        Canary_action.(derive_steps ~root ~project:"zarith" ~cache_project:"zarith"
+          (no_source Canary_project_zarith.script_spec)) };
   ]
 
 let sqlite_job ~root : Canary_backend_gh.job_spec =

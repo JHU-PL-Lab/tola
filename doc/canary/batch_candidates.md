@@ -38,7 +38,7 @@ Picked from [`opam_survey.md`](opam_survey.md) §3 (revdep rankings) and §2
 
 | # | Library | OCaml binding | Pattern | Tricky-factor |
 |---|---------|--------------|---------|---------------|
-| 7 | **GMP** | `zarith` via `conf-gmp` | A | 25 revdeps — most-used Pattern A. Every numeric / crypto / verification pkg depends on it transitively. Template-worthy: if anything reveals the "standard" Pattern A shape, zarith does. |
+| 7 | **GMP** ✓ | `zarith` via `conf-gmp` | A | Local 2026-04-25. 25 revdeps — most-used Pattern A. Every numeric / crypto / verification pkg depends on it transitively. Template-worthy: if anything reveals the "standard" Pattern A shape, zarith does. CI pending validation. |
 | 8 | **libev** | `lwt` (optional, via `conf-libev`) | A + optional | `depopts: conf-libev` + `%{conf-libev:installed}%` — canary tests "same binding with vs. without C dep". First real test of optional-C-dep modelling. |
 | 9 | **cvc5** | `cvc5` | C (self-build) | SMT solver sibling of z3. Uses `conf-cmake` + `conf-g++` + `conf-gmp` — richer conf-set than z3. Second data point for the self-building template. |
 | 10 | **bitwuzla** | `bitwuzla-c` + `bitwuzla-cxx` | C + A hybrid | Vendors the solver (self-build) but links system GMP via `conf-gmp`. Demonstrates the hybrid case that neither pure A nor pure C covers. |
@@ -113,3 +113,8 @@ below (or delete the row and update `CLAUDE.md`).
 - #1 z3 — committed 2026-03 (Pattern C self-build; local runs + CI)
 - #2 llvm — committed 2026-03 (A+C hybrid; local + CI)
 - #3 sqlite — committed 2026-03 (Pattern A; local + CI)
+- python primitives + pip probes for sqlite/z3/llvm — committed 2026-04-23/24 (local + CI)
+- #7 zarith — local 2026-04-25 (Pattern A; libgmp summary + zarith opam summary;
+  surfaced summarize_native.py bug — was stripping leading `_` on Linux ELF too,
+  mangling `__gmp*` GMP symbols. Fixed via `--strip-leading-underscore` flag
+  passed only on macOS). CI: pending push.

@@ -101,12 +101,15 @@ test "$COUNT" -gt 0|}]
    need escaping at the call site. *)
 let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir () =
   let nm_flag = if is_macos then "-g" else "-D" in
+  (* On macOS, Mach-O nm prefixes every C symbol with `_`. Tell the parser
+     to strip it; on Linux the symbol IS the C ABI name (no strip). *)
+  let strip_flag = if is_macos then "--strip-leading-underscore " else "" in
   let script = "canary/scripts/summarize_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
-  | python3 %{script} --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
+  | python3 %{script} %{strip_flag}--path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
   > %{output_dir}/summary.json|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.

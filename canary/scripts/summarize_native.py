@@ -21,7 +21,7 @@ import json
 import sys
 
 
-def parse_nm(lines):
+def parse_nm(lines, strip_leading_underscore=False):
     defined = []
     versioned_req = {}
     for line in lines:
@@ -40,9 +40,13 @@ def parse_nm(lines):
             # Weak — skip for counts (they're optional)
             pass
         else:
-            # Defined. Strip any @@VER suffix and leading _ on macOS.
+            # Defined. Strip any @@VER suffix.
             base = sym.split("@")[0]
-            if base.startswith("_"):
+            # macOS Mach-O nm prefixes every C symbol with `_` (e.g. C
+            # `malloc` → `_malloc`). Strip on macOS only. On Linux ELF
+            # the symbol name IS the C ABI name (`malloc`, `__gmpz_init`)
+            # — stripping would mangle GMP-style `__gmp*` symbols.
+            if strip_leading_underscore and base.startswith("_"):
                 base = base[1:]
             defined.append(base)
     return defined, versioned_req
@@ -53,9 +57,13 @@ def main():
     ap.add_argument("--path", required=True, help="artifact path (for the record)")
     ap.add_argument("--prefixes", default="", help="comma-separated prefix list")
     ap.add_argument("--watchlist", default="", help="comma-separated watchlist names")
+    ap.add_argument("--strip-leading-underscore", action="store_true",
+                    help="strip one leading _ from each defined symbol "
+                         "(macOS Mach-O convention; do NOT use on Linux ELF)")
     args = ap.parse_args()
 
-    defined, versioned_req = parse_nm(sys.stdin)
+    defined, versioned_req = parse_nm(
+        sys.stdin, strip_leading_underscore=args.strip_leading_underscore)
     prefixes = [p for p in args.prefixes.split(",") if p]
     watchlist = [w for w in args.watchlist.split(",") if w]
 

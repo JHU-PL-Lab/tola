@@ -57,6 +57,19 @@ type step_expectation =
       version_info : version_info option;
     }
 
+(* DESIGN NOTE — adding new per-rule fields to script_spec:
+   When a property of an action_step varies per-location for multi-probe
+   rules (probe_binding has multiple location entries), the property's
+   accessor in script_spec MUST take `location option` from the start.
+   Both [expectation] and [summary] originally took only [rule] and had
+   to be retrofitted to [rule -> location option -> ...] when their first
+   per-location use case appeared (sqlite/z3/llvm pip probes). Mismatch
+   between rule and the location entry led to silent miscategorisation
+   (pip probes wrapped as Expect_failure). For any future field of shape
+   `rule -> X` ask: could two probe_binding variants want different X?
+   If yes, take location option upfront. [check_post] and [symbol_check]
+   are still rule-only because no current project needs per-location
+   variation; revisit when one does. *)
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
   configure : (output_dir:string -> string) option;
