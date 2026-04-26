@@ -20,7 +20,7 @@ pip probes on GH runners, and the multi-PM env concern below has a home
 (resolved here, or migrated to its own plan doc / CLAUDE.md entry).
 Gotchas below stay with the file until retirement.
 
-Related downstream plan: [`pytorch_plan.md`](pytorch_plan.md) — depends on
+Related downstream plan: [`../coverage/pytorch.md`](../coverage/pytorch.md) — depends on
 these primitives being in place.
 
 ## Remaining work (NOT done)
@@ -52,7 +52,7 @@ right shape is a proper `Canary_pm_pip.ml` (currently declarative-only)
 that knows how to install/verify/remove a pip package across system-pip /
 venv / uv contexts, mirroring `Canary_pm_opam.ml`'s structure. This becomes
 load-bearing when PyTorch lands (heavier install, per-variant env isolation
-needed). Flagged in [`pytorch_plan.md`](pytorch_plan.md) Open Questions.
+needed). Flagged in [`../coverage/pytorch.md`](../coverage/pytorch.md) Open Questions.
 
 Acceptance: fallback shell chain in project specs reduces to a single call
 into `Canary_pm_pip.install_cmd ~pkg`, with the PM module picking the right
@@ -165,7 +165,7 @@ functionally changes.
 5. **Combined install + probe in one step** — pragmatic but conflates
    install-cost and probe-cost in the step's runtime. For PyTorch
    (~200 MB wheel), split into a dedicated `fetch_binding` variant for
-   Pip. Flagged in `pytorch_plan.md`.
+   Pip. Flagged in `../coverage/pytorch.md`.
 
 ### Step D — llvmlite probe
 

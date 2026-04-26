@@ -473,7 +473,7 @@ Incomplete coverage (common in Pattern B packages):
    to npm. Not urgent but an interesting future direction.
 
 7. **94% of conf-* packages are eliminable**: Build complexity analysis
-   ([conf_package_analysis.md](conf_package_analysis.md)) shows that
+   ([conf_packages.md](conf_packages.md)) shows that
    314 out of 333 conf packages are mechanical wrappers (pkg-config,
    version check, compile test, or empty). Only 19 have custom logic.
    A canary-native `conf-sysdep` mechanism could replace most conf
@@ -490,7 +490,7 @@ Incomplete coverage (common in Pattern B packages):
 9. **Version resolution chain**: The seam between system PM, locator
    tool (pkg-config/llvm-config), conf package, and lang binding is
    where mismatches happen. See "Version Resolution Chain" in
-   [design.md](design.md). Canary should test each seam independently.
+   [../design/overview.md](../design/overview.md). Canary should test each seam independently.
 
 ## 11. Data Files
 
@@ -530,7 +530,7 @@ bash doc/canary/raw/classify_conf.sh /path/to/opam-repository/packages
 bash doc/canary/raw/conf_revdeps.sh /path/to/opam-repository/packages
 ```
 
-See also: [`conf_package_analysis.md`](conf_package_analysis.md) for the
+See also: [`conf_packages.md`](conf_packages.md) for the
 detailed analysis of build complexity and eliminability.
 
 ---

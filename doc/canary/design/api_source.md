@@ -10,9 +10,9 @@ This doc has two parts:
 2. **Proposed code modifications** — concrete refactor once the model settles.
 
 Related:
-- [`artifact_summary_design.md`](artifact_summary_design.md) — current summary /
+- [`artifact_summary.md`](artifact_summary.md) — current summary /
   watchlist model that this proposal would refactor
-- [`interface_contract_design.md`](interface_contract_design.md) — broader
+- [`interface_contract.md`](interface_contract.md) — broader
   interface-as-object vision; API-source is a concretisation for C/native projects
 - [`batch_candidates.md`](batch_candidates.md) — each candidate has an API layer
   to declare once the model exists
@@ -73,7 +73,7 @@ declarative home. Consequences:
    `build_z3_python_bindings` is a data change, not a code change.
 3. **Version-dependent API snapshot**. Each `(source_repo, version)` pair
    has a derivable API interface object — feeds directly into the
-   `interface_contract_design.md` vision (L1a/L1b symbols, plus header
+   `interface_contract.md` vision (L1a/L1b symbols, plus header
    definitions if we want them later).
 4. **Binding consumers reference an API, not a source**. The OCaml binding
    spec says "I consume z3's v4.13 API" rather than "I know Z3 source
@@ -256,13 +256,13 @@ bigger refactor):
 Total: ~250 lines net change, roughly −300 / +250 (project specs get
 smaller, new module grows). Prerequisite: Python binding plan's Step A
 (Python primitives) — Step E here validates with Python, so it's a natural
-rendezvous with `python_binding_plan.md`.
+rendezvous with `python_binding.md`.
 
 ### When to execute
 
 Not now. Order of operations for maximum clarity:
 
-1. Finish the Python binding primitives (`python_binding_plan.md`) — gives
+1. Finish the Python binding primitives (`python_binding.md`) — gives
    us a second language consumer to model.
 2. Land one Pattern A candidate from `batch_candidates.md` (zarith or ssl)
    — another data point to validate that api_source generalises beyond

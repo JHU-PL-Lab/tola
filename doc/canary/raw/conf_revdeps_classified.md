@@ -1,7 +1,7 @@
 # conf-* Package Reverse Dependencies (classified)
 
 Sorted by reverse dependency count (non-conf packages depending on it).
-See [conf_package_analysis.md](../conf_package_analysis.md) for full
+See [conf_packages.md](../surveys/conf_packages.md) for full
 category descriptions and eliminability analysis.
 
 ### Category key

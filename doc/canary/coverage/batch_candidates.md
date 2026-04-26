@@ -1,8 +1,8 @@
 # Plan: Canary target expansion candidates (2-tier dozen)
 
 **Status:** living plan — tracks the expansion queue beyond the current
-z3 / llvm / sqlite trio. Companion to [`opam_survey.md`](opam_survey.md)
-(survey data) and [`pytorch_plan.md`](pytorch_plan.md), [`python_binding_plan.md`](python_binding_plan.md)
+z3 / llvm / sqlite trio. Companion to [`../surveys/opam.md`](../surveys/opam.md)
+(survey data) and [`pytorch.md`](pytorch.md), [`../design/python_binding.md`](../design/python_binding.md)
 (per-target plans).
 
 **Do not delete this file wholesale** — as candidates land, move them to a
@@ -20,7 +20,7 @@ superseded (e.g., by a proper template + config-driven catalog).
   isn't necessarily a household name, but the packaging (Pattern A/C, optional
   C deps, hybrid build) exposes structural cases canary should model well.
 
-Picked from [`opam_survey.md`](opam_survey.md) §3 (revdep rankings) and §2
+Picked from [`../surveys/opam.md`](../surveys/opam.md) §3 (revdep rankings) and §2
 (pattern-complexity hot spots).
 
 ## Tier 1 — Famous libraries
@@ -30,7 +30,7 @@ Picked from [`opam_survey.md`](opam_survey.md) §3 (revdep rankings) and §2
 | 1 | **Z3** ✓ | `z3` | C (self-build) | Done. SMT solver, source-built, OCaml + Python + C# + Java bindings. |
 | 2 | **LLVM** ✓ | `llvm.19-shared` / `llvm.dev-shared` | A+C hybrid | Done. `conf-llvm-static` discovery + source build. `Opcode.UncondBr` drift demo. |
 | 3 | **SQLite** ✓ | `sqlite3` | A | Done. Simplest Pattern A. Python `sqlite3` is stdlib-bundled (cross-PM edge case). |
-| 4 | **PyTorch** | `torch` (opam) + `torch` (pip) | A (binary-only) | Queued in [`pytorch_plan.md`](pytorch_plan.md). pip × opam × apt libtorch matrix. Version range constraint `[2.1, 2.2)` is a real mismatch case. |
+| 4 | **PyTorch** | `torch` (opam) + `torch` (pip) | A (binary-only) | Queued in [`pytorch.md`](pytorch.md). pip × opam × apt libtorch matrix. Version range constraint `[2.1, 2.2)` is a real mismatch case. |
 | 5 | **OpenSSL** ✓ | `ssl` via `conf-libssl` | A | Local 2026-04-25. OpenSSL 1.x → 3.x API breakage; macOS keg-only paths; Windows. Classic "C library that breaks everything." 3 revdeps — under-covered relative to real-world importance. CI pending. |
 | 6 | **FFmpeg** | `ffmpeg-avcodec`, `ffmpeg-avformat`, `ffmpeg-swscale`, … | A (multi-pkg) | One `conf-ffmpeg` drives a family of binding packages. Tests canary's modelling of "one conf, multiple binding artifacts." 7 revdeps. |
 
@@ -50,7 +50,7 @@ Picked from [`opam_survey.md`](opam_survey.md) §3 (revdep rankings) and §2
 Ordered so that each addition compounds into the natural template shape
 without committing to the template up-front:
 
-1. **Finish batch-1 Python side** via [`python_binding_plan.md`](python_binding_plan.md)
+1. **Finish batch-1 Python side** via [`../design/python_binding.md`](../design/python_binding.md)
    → sqlite stdlib (smallest), then z3-solver, then llvmlite.
 2. **Add zarith (#7)** — first new-from-survey Pattern A. Hand-written spec
    ~300 lines, reveals what the Pattern A template needs.
@@ -61,7 +61,7 @@ without committing to the template up-front:
    optional-dep; may require template extension.
 6. **Add cvc5 (#9)** — Pattern C second datapoint; sibling to z3. Same
    exercise on the build-from-source side.
-7. **PyTorch (#4)** — [`pytorch_plan.md`](pytorch_plan.md). Highest-leverage
+7. **PyTorch (#4)** — [`pytorch.md`](pytorch.md). Highest-leverage
    multi-PM case; lands after Python primitives + zarith-style Pattern A
    maturity.
 8. **Remaining** — bitwuzla, mariadb, ffmpeg family, openssl — each uses
@@ -87,15 +87,15 @@ without committing to the template up-front:
 
 | Doc | Scope |
 |-----|-------|
-| [`opam_survey.md`](opam_survey.md) | Full survey of 4460 opam packages; pattern classification; revdep rankings (source of truth for candidate selection). |
-| [`python_binding_plan.md`](python_binding_plan.md) | Adds Python-artifact primitives to canary; prereq for PyTorch and for any Python-binding probe in the candidate list. |
-| [`pytorch_plan.md`](pytorch_plan.md) | Per-project plan for PyTorch (candidate #4). |
-| [`artifact_summary_design.md`](artifact_summary_design.md) | Summary-generation design; every candidate needs watchlists declared here. |
-| [`interface_contract_design.md`](interface_contract_design.md) | The interface/version model all candidates collectively stress-test. |
+| [`../surveys/opam.md`](../surveys/opam.md) | Full survey of 4460 opam packages; pattern classification; revdep rankings (source of truth for candidate selection). |
+| [`../design/python_binding.md`](../design/python_binding.md) | Adds Python-artifact primitives to canary; prereq for PyTorch and for any Python-binding probe in the candidate list. |
+| [`pytorch.md`](pytorch.md) | Per-project plan for PyTorch (candidate #4). |
+| [`../design/artifact_summary.md`](../design/artifact_summary.md) | Summary-generation design; every candidate needs watchlists declared here. |
+| [`../design/interface_contract.md`](../design/interface_contract.md) | The interface/version model all candidates collectively stress-test. |
 
 ## How to consume this list
 
-Before adding a candidate, write a per-project plan doc (like `pytorch_plan.md`)
+Before adding a candidate, write a per-project plan doc (like `pytorch.md`)
 covering:
 
 1. **Which native library + which binding(s)** — explicit about artifact kinds.

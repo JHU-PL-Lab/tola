@@ -1,6 +1,6 @@
 # conf-* Package Build Complexity Analysis
 
-Companion to [opam_survey.md](opam_survey.md). Classifies all 333
+Companion to [opam.md](opam.md). Classifies all 333
 `conf-*` packages by what their `build:` section does, including
 extra-source files fetched at install time.
 

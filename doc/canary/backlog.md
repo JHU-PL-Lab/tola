@@ -45,7 +45,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     pkg-config, brew --prefix) is currently embedded in project shell
     commands. Factor into a `package_locator` type with `discovery_method`
     variants so the System PM → Locator → Conf chain is testable and uniform.
-    See `design.md` "Open Design" for the proposed type.
+    See `design/overview.md` "Open Design" for the proposed type.
 
 30. **Store config type** — `fetch_*` and `pack_*` slot scripts are
     hardcoded in `mk_script_spec`. A `store_config = store_entry list`
@@ -73,7 +73,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     inconsistent across distros — the `-src` variant gives reproducible,
     system-independent testing. Contrast with `-sys` (system-backed) and the
     upstream opam packages (which build from source but are version-pinned).
-    See `doc/canary/opam_packaging.md` for the full naming rationale.
+    See `ops/opam_packaging.md` for the full naming rationale.
 
 34. **GH CI multi-platform support** — `detect_pm ()` is called at derivation
     time on the local machine, baking Apt/Brew into the generated YAML. For

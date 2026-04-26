@@ -244,7 +244,7 @@ binding actually produces correct results.
 - **abipkgdiff** / **libabigail** (Red Hat): Compares the ABI of shared
   libraries across package versions. Detects symbol removals, type changes,
   vtable layout shifts. This is the most directly relevant tool for the
-  canary's C API entity concept (design.md step 2).
+  canary's C API entity concept (../design/overview.md step 2).
   *Usage*: **Used by Fedora/RHEL infrastructure, niche elsewhere.** Run
   by Fedora's `abicheck` CI job on library packages. Also used by some
   upstream projects (e.g., systemd, elfutils) in their own CI. Not widely
@@ -290,7 +290,7 @@ binding actually produces correct results.
 
 **Key insight for the canary**: The Debian `symbols` file mechanism and
 Red Hat's `libabigail` are the closest existing tools to what the canary's
-C API entity (design.md step 2) aims to model. They track which symbols
+C API entity (../design/overview.md step 2) aims to model. They track which symbols
 a library provides at which version, enabling precise compatibility
 reasoning. The canary could learn from their approach:
 

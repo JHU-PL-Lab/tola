@@ -101,7 +101,7 @@ type script_spec = {
      parameter carries the specific location so callers can return different
      summaries per variant (e.g., opam pkg vs pip pkg). For single-location
      rules, loc is None.
-     See doc/canary/artifact_summary_design.md. *)
+     See doc/canary/design/artifact_summary.md. *)
   summary : rule -> location option -> (output_dir:string -> string) option;
 }
 

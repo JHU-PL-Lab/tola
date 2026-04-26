@@ -7,7 +7,7 @@ dump a compact, structured summary of its "symbol-like interface" — enough
 signal to detect version drift, populate `version_info` for expectations,
 and diff across builds, without storing a full symbol list.
 
-This connects to `doc/canary/interface_contract_design.md` (interface as
+This connects to `interface_contract.md` (interface as
 first-class object) and to the `step_expectation` / `symbol_check` model
 in `canary_action.ml`.
 
