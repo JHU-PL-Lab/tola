@@ -21,10 +21,10 @@ let check_cmake name prog =
 
 (* Count from 1 to 5 with a while loop, check final value *)
 let basic_loop =
-  check_cmake "basic_loop" (Yexp_list [
+  check_cmake "basic_loop" (Ystmt_list [
     yc_set (ycvar "i") [ ystr "1" ];
     yc_while (ytruthy (ycstr "i"))
-      (Yexp_list [
+      (Ystmt_list [
         yifthen (ystrequal (ycref "i") (ystr "6"))
           yc_break;
         yc_math "${i} + 1" (ycvar "i");
@@ -36,11 +36,11 @@ let basic_loop =
 
 (* break exits the loop immediately *)
 let break_test =
-  check_cmake "break" (Yexp_list [
+  check_cmake "break" (Ystmt_list [
     (* start with a truthy value so the loop body executes at least once *)
     yc_set (ycvar "x") [ ystr "1" ];
     yc_while (ytruthy (ycstr "x"))
-      (Yexp_list [
+      (Ystmt_list [
         yc_set (ycvar "x") [ ystr "99" ];
         yc_break;
         (* this set must not execute *)
@@ -55,14 +55,14 @@ let break_test =
    calls continue — the while condition re-evaluates to false and exits.
    count should be 3 (incremented at i=1, 2, 3 only). *)
 let continue_test =
-  check_cmake "continue" (Yexp_list [
+  check_cmake "continue" (Ystmt_list [
     yc_set (ycvar "i") [ ystr "1" ];
     yc_set (ycvar "count") [ ystr "0" ];
     yc_while (ytruthy (ycstr "i"))
-      (Yexp_list [
+      (Ystmt_list [
         (* at i=4: set i="" (falsy) and continue → exits the loop *)
         yifthen (ystrequal (ycref "i") (ystr "4"))
-          (Yexp_list [
+          (Ystmt_list [
             yc_set (ycvar "i") [ ystr "" ];
             yc_continue;
           ]);

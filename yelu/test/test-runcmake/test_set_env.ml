@@ -26,7 +26,7 @@ let read_env_var =
 
 (* set(ENV{VAR} value) sets an env var readable via $ENV{} in the same script *)
 let set_env_var =
-  check_cmake_env "set_env_var" [] (Yexp_list [
+  check_cmake_env "set_env_var" [] (Ystmt_list [
     yc_set_env "YELU_SET_VAR" (ystr "world");
     yifthen (ynot (ystrequal (ystr_raw "$ENV{YELU_SET_VAR}") (ystr "world")))
       (yc_message ~mode:Mm_fatal_error ["set_env_var: YELU_SET_VAR should be world"]);
@@ -34,7 +34,7 @@ let set_env_var =
 
 (* unset(ENV{VAR}) clears the variable *)
 let unset_env_var =
-  check_cmake_env "unset_env_var" [("YELU_UNSET_VAR", "present")] (Yexp_list [
+  check_cmake_env "unset_env_var" [("YELU_UNSET_VAR", "present")] (Ystmt_list [
     yifthen (ynot (ystrequal (ystr_raw "$ENV{YELU_UNSET_VAR}") (ystr "present")))
       (yc_message ~mode:Mm_fatal_error ["unset_env_var: var should be present before unset"]);
     yc_unset_env "YELU_UNSET_VAR";

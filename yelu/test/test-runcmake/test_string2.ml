@@ -19,7 +19,7 @@ let check_cmake name prog =
 
 (* FIND: returns 0-based index, or -1 if not found *)
 let find =
-  check_cmake "find" (Yexp_list [
+  check_cmake "find" (Ystmt_list [
     yc_string_find (ystr "hello world") (ystr "world") (ycvar "idx");
     yifthen (ynot (ystrequal (ycref "idx") (ystr "6")))
       (yc_message ~mode:Mm_fatal_error ["FIND: world should be at index 6"]);
@@ -34,7 +34,7 @@ let find =
 
 (* SUBSTRING: extract by begin+length, or begin to end *)
 let substring =
-  check_cmake "substring" (Yexp_list [
+  check_cmake "substring" (Ystmt_list [
     yc_string_substring (ystr "hello world") 6 ~length:5 (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "world")))
       (yc_message ~mode:Mm_fatal_error ["SUBSTRING: world failed"]);
@@ -50,7 +50,7 @@ let substring =
 
 (* STRIP: remove leading and trailing whitespace *)
 let strip =
-  check_cmake "strip" (Yexp_list [
+  check_cmake "strip" (Ystmt_list [
     yc_string_strip (ystr "  hello  ") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["STRIP: spaces failed"]);
@@ -64,7 +64,7 @@ let strip =
 
 (* REPLACE: literal string replacement *)
 let replace =
-  check_cmake "replace" (Yexp_list [
+  check_cmake "replace" (Ystmt_list [
     yc_string_replace (ystr "foo") (ystr "bar") (ycvar "out") [ ystr "foo and foo" ];
     yifthen (ynot (ystrequal (ycref "out") (ystr "bar and bar")))
       (yc_message ~mode:Mm_fatal_error ["REPLACE: foo->bar failed"]);
@@ -78,7 +78,7 @@ let replace =
 
 (* REGEX REPLACE: regex substitution with back-references *)
 let regex_replace =
-  check_cmake "regex_replace" (Yexp_list [
+  check_cmake "regex_replace" (Ystmt_list [
     (* \\\\1 in OCaml → \\1 in cmake source → \1 back-reference in replacement *)
     yc_string_regex_replace "([0-9]+)" (ystr "(\\\\1)") (ycvar "out") [ ystr "abc 42 def" ];
     yifthen (ynot (ystrequal (ycref "out") (ystr "abc (42) def")))

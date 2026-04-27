@@ -86,68 +86,68 @@ let yc_extern_target s = Yc_extern_target (Ytarget s)
 let ytarget_def ?(kind = Public) items : yelu_items_with_kind = { kind; items }
 let ytarget_feature ?(kind = Public) feature : yelu_target_feature =
   { kind; feature }
-let ycmd_of_list cmds = Yexp_list cmds
+let ycmd_of_list cmds = Ystmt_list cmds
 let custom_command command args : Lang_cmake.custom_command = { command; args }
 
 let yc_minimum_required_s ?max min =
-  Ye_cmake (Ycmake_minimum_required
+  Ys_cmake (Ycmake_minimum_required
     {
       min = Lang_cmake_utils.version_of_string min;
       max = Option.map ~f:Lang_cmake_utils.version_of_string max;
     })
 
 let yc_project ?version ?(languages = []) name =
-  Ye_cmake (Ycmake_project { name; version; languages })
+  Ys_cmake (Ycmake_project { name; version; languages })
 
 let yc_set ?(parent_scope = false) (cvar : yelu_cvar) values =
-  Ye_state (Ystate_set { cvar; values; parent_scope })
+  Ys_state (Ystate_set { cvar; values; parent_scope })
 
 let add_exe ?(exclude_from_all = false) ?(sources = []) name =
-  Ye_target (Ytgt_add_executable { name; exclude_from_all; sources })
+  Ys_target (Ytgt_add_executable { name; exclude_from_all; sources })
 
 let add_lib ?(exclude_from_all = false) ?type_ ?(sources = []) name =
-  Ye_target (Ytgt_add_library { name; type_; exclude_from_all; sources })
+  Ys_target (Ytgt_add_library { name; type_; exclude_from_all; sources })
 
 let add_lib_imported ?(global = false) ?lib_type name =
-  Ye_target (Ytgt_add_library_imported { name; lib_type; global })
+  Ys_target (Ytgt_add_library_imported { name; lib_type; global })
 
-let add_lib_alias ~alias_of name = Ye_target (Ytgt_add_library_alias { name; target = alias_of })
-let add_exe_alias ~alias_of name = Ye_target (Ytgt_add_executable_alias { name; target = alias_of })
+let add_lib_alias ~alias_of name = Ys_target (Ytgt_add_library_alias { name; target = alias_of })
+let add_exe_alias ~alias_of name = Ys_target (Ytgt_add_executable_alias { name; target = alias_of })
 
-let yc_add_compile_definitions defs = Ye_dir (Ydir_add_compile_definitions { defs })
-let yc_add_compile_options options = Ye_dir (Ydir_add_compile_options { options })
-let yc_add_link_options options = Ye_dir (Ydir_add_link_options { options })
-let yc_link_directories ?(before = false) dirs = Ye_dir (Ydir_link_directories { before; dirs })
+let yc_add_compile_definitions defs = Ys_dir (Ydir_add_compile_definitions { defs })
+let yc_add_compile_options options = Ys_dir (Ydir_add_compile_options { options })
+let yc_add_link_options options = Ys_dir (Ydir_add_link_options { options })
+let yc_link_directories ?(before = false) dirs = Ys_dir (Ydir_link_directories { before; dirs })
 
 let include_dirs ?(before = false) ?(system = false) target items =
-  Ye_target (Ytgt_include_directories { target; before; system; items })
+  Ys_target (Ytgt_include_directories { target; before; system; items })
 
 let yc_include_directories ?(before = false) ?(system = false) dirs =
-  Ye_dir (Ydir_include_directories { dirs; before; system })
+  Ys_dir (Ydir_include_directories { dirs; before; system })
 
 let yc_get_property ?(set = false) ~target property var =
-  Ye_state (Ystate_get_property { var; target; property; set })
+  Ys_state (Ystate_get_property { var; target; property; set })
 
 let yc_get_directory_property property var =
-  Ye_state (Ystate_get_directory_property { var; property })
+  Ys_state (Ystate_get_directory_property { var; property })
 
 let link_lib targets items =
-  Ye_target (Ytgt_link_libraries { targets; items })
+  Ys_target (Ytgt_link_libraries { targets; items })
 
 let compile_defs target items =
-  Ye_target (Ytgt_compile_definitions { target; items })
+  Ys_target (Ytgt_compile_definitions { target; items })
 
 let compile_feats target features =
-  Ye_target (Ytgt_compile_features { target; features })
+  Ys_target (Ytgt_compile_features { target; features })
 
 let compile_opts ?(before = false) target items =
-  Ye_target (Ytgt_compile_options { target; before; items })
+  Ys_target (Ytgt_compile_options { target; before; items })
 
-let yc_configure_file ~input output = Ye_file (Yfile_configure { input; output })
+let yc_configure_file ~input output = Ys_file (Yfile_configure { input; output })
 let gen_file = yc_configure_file
-let yc_add_subdirectory source_dir = Ye_dir (Ydir_add_subdirectory { source_dir })
+let yc_add_subdirectory source_dir = Ys_dir (Ydir_add_subdirectory { source_dir })
 
-let yc_option ?(value = ybool false) ~msg (cvar : yelu_cvar) = Ye_state (Ystate_option { cvar; msg; value })
+let yc_option ?(value = ybool false) ~msg (cvar : yelu_cvar) = Ys_state (Ystate_option { cvar; msg; value })
 
 let yite cond then_ ?else_ () =
   match else_ with
@@ -162,13 +162,13 @@ let yc_include ?(optional = false) file = Yc_include { file; optional }
 let yc_function name args body = Yc_function { name; args; body }
 let yc_macro name ?(args = []) body = Yc_macro { name; args; body }
 let yc_apply name args = Yc_apply { name; args }
-let yc_set_env var value = Ye_state (Ystate_set_env { var; value })
-let yc_unset_env var = Ye_state (Ystate_unset_env { var })
+let yc_set_env var value = Ys_state (Ystate_set_env { var; value })
+let yc_unset_env var = Ys_state (Ystate_unset_env { var })
 
 let yc_set_cache ?(force = false) ?(cache_type = Lang_cmake.Ct_string) ?(docstring = "") (cvar : yelu_cvar) values =
-  Ye_state (Ystate_set_cache { cvar; values; cache_type; docstring; force })
+  Ys_state (Ystate_set_cache { cvar; values; cache_type; docstring; force })
 
-let yc_unset_cache (cvar : yelu_cvar) = Ye_state (Ystate_unset_cache { cvar })
+let yc_unset_cache (cvar : yelu_cvar) = Ys_state (Ystate_unset_cache { cvar })
 
 let yc_execute_process
     ?(working_directory = None) ?(timeout = None)
@@ -185,45 +185,45 @@ let yc_execute_process
       output_strip_trailing_whitespace; error_strip_trailing_whitespace;
       command_error_is_fatal }
 
-let yc_file_relative_path ~var ~base file = Ye_file (Yfile_relative_path { var; base; file })
+let yc_file_relative_path ~var ~base file = Ys_file (Yfile_relative_path { var; base; file })
 
 let yc_file_glob ?(recurse = false) ?(relative = None) ?(configure_depends = false)
     (out : yelu_cvar) patterns =
-  Ye_file (Yfile_glob { out; recurse; relative; configure_depends; patterns })
+  Ys_file (Yfile_glob { out; recurse; relative; configure_depends; patterns })
 
 let yc_file_read ?(offset = None) ?(limit = None) ?(hex = false) (out : yelu_cvar) file =
-  Ye_file (Yfile_read { out; file; offset; limit; hex })
+  Ys_file (Yfile_read { out; file; offset; limit; hex })
 
 let yc_file_write ?(append = false) file content =
-  Ye_file (Yfile_write { file; append; content })
+  Ys_file (Yfile_write { file; append; content })
 
-let yc_file_append file content = Ye_file (Yfile_write { file; append = true; content })
+let yc_file_append file content = Ys_file (Yfile_write { file; append = true; content })
 
 let yc_file_strings ?(regex = None) ?(encoding = None) ?(limit_count = None)
     (out : yelu_cvar) file =
-  Ye_file (Yfile_strings { out; file; regex; encoding; limit_count })
+  Ys_file (Yfile_strings { out; file; regex; encoding; limit_count })
 
-let yc_file_touch ?(nocreate = false) files = Ye_file (Yfile_touch { files; nocreate })
-let yc_file_make_directory dirs = Ye_file (Yfile_make_directory { dirs })
+let yc_file_touch ?(nocreate = false) files = Ys_file (Yfile_touch { files; nocreate })
+let yc_file_make_directory dirs = Ys_file (Yfile_make_directory { dirs })
 
 let yc_file_rename ?(result = None) ?(no_replace = false) old_ new_ =
-  Ye_file (Yfile_rename { old_; new_; result; no_replace })
+  Ys_file (Yfile_rename { old_; new_; result; no_replace })
 
-let yc_file_remove ?(recurse = false) files = Ye_file (Yfile_remove { files; recurse })
+let yc_file_remove ?(recurse = false) files = Ys_file (Yfile_remove { files; recurse })
 
 let yc_file_copy_file ?(result = None) ?(only_if_different = false) input output =
-  Ye_file (Yfile_copy { input; output; result; only_if_different })
+  Ys_file (Yfile_copy { input; output; result; only_if_different })
 
 let yc_file_real_path ?(base_dir = None) ?(expand_tilde = false) (out : yelu_cvar) path =
-  Ye_file (Yfile_real_path { out; path; base_dir; expand_tilde })
+  Ys_file (Yfile_real_path { out; path; base_dir; expand_tilde })
 
-let yc_file_size (out : yelu_cvar) file = Ye_file (Yfile_size { out; file })
-let yc_file_read_symlink (out : yelu_cvar) link = Ye_file (Yfile_read_symlink { out; link })
+let yc_file_size (out : yelu_cvar) file = Ys_file (Yfile_size { out; file })
+let yc_file_read_symlink (out : yelu_cvar) link = Ys_file (Yfile_read_symlink { out; link })
 
 let yc_file_timestamp ?(format = None) ?(utc = false) (out : yelu_cvar) file =
-  Ye_file (Yfile_timestamp { out; file; format; utc })
+  Ys_file (Yfile_timestamp { out; file; format; utc })
 
-let yc_policy_set ?(new_ = true) id = Ye_cmake (Ycmake_policy_set { id; new_ })
+let yc_policy_set ?(new_ = true) id = Ys_cmake (Ycmake_policy_set { id; new_ })
 
 (* retired: Yc_quote_cmd compile case raises — add typed yelu nodes instead of calling this *)
 let yc_quote_cmd s = Yc_quote_cmd s
@@ -231,127 +231,127 @@ let yc_quote_cmd s = Yc_quote_cmd s
 let yc_at_var key = Yc_at_var key
 
 let yc_set_directory_property ?(append = false) property values =
-  Ye_state (Ystate_set_directory_property { property; append; values })
+  Ys_state (Ystate_set_directory_property { property; append; values })
 
-let yc_link_libraries items = Ye_dir (Ydir_link_libraries { items })
+let yc_link_libraries items = Ys_dir (Ydir_link_libraries { items })
 
-let yc_list_append (cvar : yelu_cvar) values = Ye_list (Ylist_append { cvar; values })
+let yc_list_append (cvar : yelu_cvar) values = Ys_list (Ylist_append { cvar; values })
 
 (* testing *)
-let yc_enable_testing = Ye_test Ytest_enable_testing
-let yc_add_test name command args = Ye_test (Ytest_add_test { name; command; args })
+let yc_enable_testing = Ys_test Ytest_enable_testing
+let yc_add_test name command args = Ys_test (Ytest_add_test { name; command; args })
 let yc_set_tests_properties tests properties =
-  Ye_state (Ystate_set_tests_properties { tests; properties })
+  Ys_state (Ystate_set_tests_properties { tests; properties })
 
 (* target properties *)
 let yc_set_target_properties target properties =
-  Ye_state (Ystate_set_target_properties { target; properties })
+  Ys_state (Ystate_set_target_properties { target; properties })
 
 let yc_set_property ?(append = false) ~targets properties =
-  Ye_state (Ystate_set_property { targets; append; properties })
+  Ys_state (Ystate_set_property { targets; append; properties })
 
 let yc_set_source_property ?(property = "COMPILE_OPTIONS") file values =
-  Ye_state (Ystate_set_source_property { file; property; values })
+  Ys_state (Ystate_set_source_property { file; property; values })
 
 let yc_enable_language ?(optional = false) langs =
-  Ye_cmake (Ycmake_enable_language { langs; optional })
+  Ys_cmake (Ycmake_enable_language { langs; optional })
 
 let yc_set_global_property properties =
-  Ye_state (Ystate_set_global_property { properties })
+  Ys_state (Ystate_set_global_property { properties })
 
 let yc_get_filename_component ~mode var filename =
-  Ye_file (Ypath_get_filename_component { var; filename; mode })
+  Ys_file (Ypath_get_filename_component { var; filename; mode })
 
 let yc_get_global_property ~property var =
-  Ye_state (Ystate_get_global_property { var; property })
+  Ys_state (Ystate_get_global_property { var; property })
 
 let yc_include_guard scope = Yc_include_guard { scope }
 let yc_separate_arguments ?(input) ~mode (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode; input }
 let yc_separate_arguments_plain (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode = Lang_cmake.Sa_plain; input = None }
 let yc_target_link_options ?(before = false) target items =
-  Ye_target (Ytgt_link_options { target; before; items })
+  Ys_target (Ytgt_link_options { target; before; items })
 let yc_target_link_directories ?(before = false) target items =
-  Ye_target (Ytgt_link_directories { target; before; items })
-let yc_target_sources target items = Ye_target (Ytgt_sources { target; items })
+  Ys_target (Ytgt_link_directories { target; before; items })
+let yc_target_sources target items = Ys_target (Ytgt_sources { target; items })
 
 let ytsi_plain kind items = Ytsi_plain { kind; items }
 let ytsi_file_set_headers ?(base_dirs = []) ?(files = []) kind =
   Ytsi_file_set { kind; type_ = Lang_cmake.Fs_headers; base_dirs; files }
 
-let yc_target_sources_fs target items = Ye_target (Ytgt_sources_fs { target; items })
-let yc_target_precompile_headers target items = Ye_target (Ytgt_precompile_headers { target; items })
+let yc_target_sources_fs target items = Ys_target (Ytgt_sources_fs { target; items })
+let yc_target_precompile_headers target items = Ys_target (Ytgt_precompile_headers { target; items })
 
 (* install *)
 let yc_install_targets ?export targets destination =
-  Ye_install (Yinstall_targets { targets; destination; export })
+  Ys_install (Yinstall_targets { targets; destination; export })
 
 let yc_install_files files destination =
-  Ye_install (Yinstall_files { files; destination })
+  Ys_install (Yinstall_files { files; destination })
 
 let yc_install_export ?file ?namespace export destination =
-  Ye_install (Yinstall_export { file; export; destination; namespace })
+  Ys_install (Yinstall_export { file; export; destination; namespace })
 
 (* export *)
-let yc_export_export ?file name = Ye_install (Yinstall_export_export { name; file })
+let yc_export_export ?file name = Ys_install (Yinstall_export_export { name; file })
 
 (* module commands *)
 let yc_configure_package_config_file ?(no_set_and_check_macro = false)
     ?(no_check_required_components_macro = false) install_dest input output =
-  Ye_install (Yinstall_configure_package_config_file
+  Ys_install (Yinstall_configure_package_config_file
     { install_dest; input; output; no_set_and_check_macro;
       no_check_required_components_macro })
 
 let yc_write_basic_package_version_file ~compatibility ?(arch_independent = false)
     ?version file =
-  Ye_install (Yinstall_write_basic_package_version_file { file; version; compatibility; arch_independent })
+  Ys_install (Yinstall_write_basic_package_version_file { file; version; compatibility; arch_independent })
 
 (* custom commands *)
 let yc_add_custom_command ~outputs ?(depends = []) ?(verbatim = false)
     ?(comment : string option = None) commands =
-  Ye_target (Ytgt_add_custom_command { outputs; commands; depends; verbatim; comment })
+  Ys_target (Ytgt_add_custom_command { outputs; commands; depends; verbatim; comment })
 
 let yc_add_custom_command_target ?(verbatim = false) ?(comment : string option = None)
     ~target ~when_ commands =
-  Ye_target (Ytgt_add_custom_command_target { target; when_; commands; comment; verbatim })
+  Ys_target (Ytgt_add_custom_command_target { target; when_; commands; comment; verbatim })
 
 let cw_pre_build  = Lang_cmake.Cw_pre_build
 let cw_pre_link   = Lang_cmake.Cw_pre_link
 let cw_post_build = Lang_cmake.Cw_post_build
 
-let yc_add_definitions defs = Ye_dir (Ydir_add_definitions { defs })
+let yc_add_definitions defs = Ys_dir (Ydir_add_definitions { defs })
 
 (* Tier 1: find_var commands *)
 let yc_find_library ?(names = []) ?(paths = []) ?(hints = [])
     ?(no_default_path = false) ?(no_cmake_environment_path = false)
     ?(no_system_environment_path = false) ?(required = false) cvar =
-  Ye_find (Yfind_library { cvar; names; paths; hints; no_default_path;
+  Ys_find (Yfind_library { cvar; names; paths; hints; no_default_path;
                            no_cmake_environment_path; no_system_environment_path;
                            required })
 
 let yc_find_path ?(names = []) ?(paths = []) ?(hints = [])
     ?(no_default_path = false) ?(no_cmake_environment_path = false)
     ?(no_system_environment_path = false) ?(required = false) cvar =
-  Ye_find (Yfind_path { cvar; names; paths; hints; no_default_path;
+  Ys_find (Yfind_path { cvar; names; paths; hints; no_default_path;
                         no_cmake_environment_path; no_system_environment_path;
                         required })
 
 let yc_find_program ?(names = []) ?(paths = []) ?(hints = [])
     ?(no_default_path = false) ?(no_cmake_environment_path = false)
     ?(no_system_environment_path = false) ?(required = false) cvar =
-  Ye_find (Yfind_program { cvar; names; paths; hints; no_default_path;
+  Ys_find (Yfind_program { cvar; names; paths; hints; no_default_path;
                            no_cmake_environment_path; no_system_environment_path;
                            required })
 
 let yc_find_file ?(names = []) ?(paths = []) ?(hints = [])
     ?(no_default_path = false) ?(no_cmake_environment_path = false)
     ?(no_system_environment_path = false) ?(required = false) cvar =
-  Ye_find (Yfind_file { cvar; names; paths; hints; no_default_path;
+  Ys_find (Yfind_file { cvar; names; paths; hints; no_default_path;
                         no_cmake_environment_path; no_system_environment_path;
                         required })
 
 let yc_find_package ?(version = None) ?(exact = false) ?(quiet = false) ?(config_mode = false)
     ?(required = false) ?(components = []) ?(optional_components = []) name =
-  Ye_find (Yfind_package { name; version; exact; quiet; config_mode; required; components; optional_components })
+  Ys_find (Yfind_package { name; version; exact; quiet; config_mode; required; components; optional_components })
 
 let yc_message ?(mode = Lang_cmake.Mm_status) texts = Yc_message { mode; texts }
 
@@ -374,206 +374,206 @@ let yc_continue = Yc_continue
 let yc_return ?(propogate_vars = []) () = Yc_return { propogate_vars }
 
 (* Tier 2: list commands *)
-let yc_list_length (cvar : yelu_cvar) (out : yelu_cvar) = Ye_list (Ylist_length { cvar; out })
-let yc_list_get ?(indices = []) (cvar : yelu_cvar) (out : yelu_cvar) = Ye_list (Ylist_get { cvar; indices; out })
-let yc_list_remove_item (cvar : yelu_cvar) values = Ye_list (Ylist_remove_item { cvar; values })
-let yc_list_remove_duplicates (cvar : yelu_cvar) = Ye_list (Ylist_remove_duplicates { cvar })
-let yc_list_reverse (cvar : yelu_cvar) = Ye_list (Ylist_reverse { cvar })
+let yc_list_length (cvar : yelu_cvar) (out : yelu_cvar) = Ys_list (Ylist_length { cvar; out })
+let yc_list_get ?(indices = []) (cvar : yelu_cvar) (out : yelu_cvar) = Ys_list (Ylist_get { cvar; indices; out })
+let yc_list_remove_item (cvar : yelu_cvar) values = Ys_list (Ylist_remove_item { cvar; values })
+let yc_list_remove_duplicates (cvar : yelu_cvar) = Ys_list (Ylist_remove_duplicates { cvar })
+let yc_list_reverse (cvar : yelu_cvar) = Ys_list (Ylist_reverse { cvar })
 
 let yc_list_sort ?order ?compare ?case (cvar : yelu_cvar) =
-  Ye_list (Ylist_sort { cvar; order; compare; case })
+  Ys_list (Ylist_sort { cvar; order; compare; case })
 
 let yc_list_filter mode regex (cvar : yelu_cvar) =
-  Ye_list (Ylist_filter { cvar; mode; regex })
+  Ys_list (Ylist_filter { cvar; mode; regex })
 
-let yc_list_join (cvar : yelu_cvar) glue (out : yelu_cvar) = Ye_list (Ylist_join { cvar; glue; out })
-let yc_list_sublist (cvar : yelu_cvar) begin_ length (out : yelu_cvar) = Ye_list (Ylist_sublist { cvar; begin_; length; out })
-let yc_list_find (cvar : yelu_cvar) value (out : yelu_cvar) = Ye_list (Ylist_find { cvar; value; out })
-let yc_list_prepend (cvar : yelu_cvar) values = Ye_list (Ylist_prepend { cvar; values })
-let yc_list_insert (cvar : yelu_cvar) index values = Ye_list (Ylist_insert { cvar; index; values })
-let yc_list_remove_at (cvar : yelu_cvar) indices = Ye_list (Ylist_remove_at { cvar; indices })
-let yc_list_pop_back ?(out_vars = []) (cvar : yelu_cvar) = Ye_list (Ylist_pop_back { cvar; out_vars })
-let yc_list_pop_front ?(out_vars = []) (cvar : yelu_cvar) = Ye_list (Ylist_pop_front { cvar; out_vars })
+let yc_list_join (cvar : yelu_cvar) glue (out : yelu_cvar) = Ys_list (Ylist_join { cvar; glue; out })
+let yc_list_sublist (cvar : yelu_cvar) begin_ length (out : yelu_cvar) = Ys_list (Ylist_sublist { cvar; begin_; length; out })
+let yc_list_find (cvar : yelu_cvar) value (out : yelu_cvar) = Ys_list (Ylist_find { cvar; value; out })
+let yc_list_prepend (cvar : yelu_cvar) values = Ys_list (Ylist_prepend { cvar; values })
+let yc_list_insert (cvar : yelu_cvar) index values = Ys_list (Ylist_insert { cvar; index; values })
+let yc_list_remove_at (cvar : yelu_cvar) indices = Ys_list (Ylist_remove_at { cvar; indices })
+let yc_list_pop_back ?(out_vars = []) (cvar : yelu_cvar) = Ys_list (Ylist_pop_back { cvar; out_vars })
+let yc_list_pop_front ?(out_vars = []) (cvar : yelu_cvar) = Ys_list (Ylist_pop_front { cvar; out_vars })
 
 let yc_list_transform ?(selector) ?(output : yelu_cvar option) (cvar : yelu_cvar) action =
-  Ye_list (Ylist_transform { cvar; action; selector; output })
+  Ys_list (Ylist_transform { cvar; action; selector; output })
 
 (* Tier 2: string commands *)
-let yc_string_toupper string (out : yelu_cvar) = Ye_string (Ystr_toupper { string; out })
-let yc_string_tolower string (out : yelu_cvar) = Ye_string (Ystr_tolower { string; out })
-let yc_string_length string (out : yelu_cvar) = Ye_string (Ystr_length { string; out })
-let yc_string_strip string (out : yelu_cvar) = Ye_string (Ystr_strip { string; out })
-let yc_string_concat (out : yelu_cvar) inputs = Ye_string (Ystr_concat { out; inputs })
+let yc_string_toupper string (out : yelu_cvar) = Ys_string (Ystr_toupper { string; out })
+let yc_string_tolower string (out : yelu_cvar) = Ys_string (Ystr_tolower { string; out })
+let yc_string_length string (out : yelu_cvar) = Ys_string (Ystr_length { string; out })
+let yc_string_strip string (out : yelu_cvar) = Ys_string (Ystr_strip { string; out })
+let yc_string_concat (out : yelu_cvar) inputs = Ys_string (Ystr_concat { out; inputs })
 
 let yc_string_replace match_string replace_string (out : yelu_cvar) inputs =
-  Ye_string (Ystr_replace { match_string; replace_string; out; inputs })
+  Ys_string (Ystr_replace { match_string; replace_string; out; inputs })
 
 let yc_string_regex_match regex (out : yelu_cvar) inputs =
-  Ye_string (Ystr_regex_match { regex; out; inputs })
+  Ys_string (Ystr_regex_match { regex; out; inputs })
 let yc_string_regex_matchall regex (out : yelu_cvar) inputs =
-  Ye_string (Ystr_regex_matchall { regex; out; inputs })
+  Ys_string (Ystr_regex_matchall { regex; out; inputs })
 
 let yc_string_regex_replace regex replace (out : yelu_cvar) inputs =
-  Ye_string (Ystr_regex_replace { regex; replace; out; inputs })
+  Ys_string (Ystr_regex_replace { regex; replace; out; inputs })
 let yc_string_regex_quote (out : yelu_cvar) inputs =
-  Ye_string (Ystr_regex_quote { out; inputs })
+  Ys_string (Ystr_regex_quote { out; inputs })
 
-let yc_string_append (cvar : yelu_cvar) inputs = Ye_string (Ystr_append { cvar; inputs })
-let yc_string_prepend (cvar : yelu_cvar) inputs = Ye_string (Ystr_prepend { cvar; inputs })
-let yc_string_join glue (out : yelu_cvar) inputs = Ye_string (Ystr_join { glue; out; inputs })
+let yc_string_append (cvar : yelu_cvar) inputs = Ys_string (Ystr_append { cvar; inputs })
+let yc_string_prepend (cvar : yelu_cvar) inputs = Ys_string (Ystr_prepend { cvar; inputs })
+let yc_string_join glue (out : yelu_cvar) inputs = Ys_string (Ystr_join { glue; out; inputs })
 let yc_string_find ?(reverse = false) string substring (out : yelu_cvar) =
-  Ye_string (Ystr_find { string; substring; out; reverse })
+  Ys_string (Ystr_find { string; substring; out; reverse })
 let yc_string_substring string begin_ ?length (out : yelu_cvar) =
-  Ye_string (Ystr_substring { string; begin_; length; out })
-let yc_string_repeat string count (out : yelu_cvar) = Ye_string (Ystr_repeat { string; count; out })
-let yc_string_genex_strip string (out : yelu_cvar) = Ye_string (Ystr_genex_strip { string; out })
+  Ys_string (Ystr_substring { string; begin_; length; out })
+let yc_string_repeat string count (out : yelu_cvar) = Ys_string (Ystr_repeat { string; count; out })
+let yc_string_genex_strip string (out : yelu_cvar) = Ys_string (Ystr_genex_strip { string; out })
 
 let yc_string_compare op string1 string2 (out : yelu_cvar) =
-  Ye_string (Ystr_compare { op; string1; string2; out })
+  Ys_string (Ystr_compare { op; string1; string2; out })
 
 let yc_string_make_c_identifier string (out : yelu_cvar) =
-  Ye_string (Ystr_make_c_identifier { string; out })
+  Ys_string (Ystr_make_c_identifier { string; out })
 
 let yc_string_timestamp ?(utc = false) ?format (out : yelu_cvar) =
-  Ye_string (Ystr_timestamp { out; format; utc })
+  Ys_string (Ystr_timestamp { out; format; utc })
 
-let yc_string_hex string (out : yelu_cvar) = Ye_string (Ystr_hex { string; out })
+let yc_string_hex string (out : yelu_cvar) = Ys_string (Ystr_hex { string; out })
 
 let yc_string_uuid ?(upper = false) ~namespace ~name ~type_ (out : yelu_cvar) =
-  Ye_string (Ystr_uuid { out; namespace; name; type_; upper })
+  Ys_string (Ystr_uuid { out; namespace; name; type_; upper })
 
 let yc_string_json_get ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_get { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_get { json; path } })
 
 let yc_string_json_get_raw ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_get_raw { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_get_raw { json; path } })
 
 let yc_string_json_type ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_type { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_type { json; path } })
 
 let yc_string_json_length ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_length { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_length { json; path } })
 
 let yc_string_json_member ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_member { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_member { json; path } })
 
 let yc_string_json_remove ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_remove { json; path } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_remove { json; path } })
 
 let yc_string_json_set ?(error_var : yelu_cvar option) ?(path = []) ~(out : yelu_cvar) ~value json =
-  Ye_string (Ystr_json { out; error_var; op = Yjop_set { json; path; value } })
+  Ys_string (Ystr_json { out; error_var; op = Yjop_set { json; path; value } })
 
 let yc_string_json_equal ~(out : yelu_cvar) json1 json2 =
-  Ye_string (Ystr_json { out; error_var = None; op = Yjop_equal { json1; json2 } })
+  Ys_string (Ystr_json { out; error_var = None; op = Yjop_equal { json1; json2 } })
 
 let yc_string_json_string_encode ~(out : yelu_cvar) value =
-  Ye_string (Ystr_json { out; error_var = None; op = Yjop_string_encode { value } })
+  Ys_string (Ystr_json { out; error_var = None; op = Yjop_string_encode { value } })
 
 (* math *)
 let yc_math ?(output_format = Lang_cmake.Decical) exp (out : yelu_cvar) =
-  Ye_cmake (Ycmake_math { exp; out; output_format })
+  Ys_cmake (Ycmake_math { exp; out; output_format })
 
 let yc_language_call cmd args =
-  Ye_cmake (Ycmake_language_call { cmd; args })
+  Ys_cmake (Ycmake_language_call { cmd; args })
 
 let yc_language_eval code =
-  Ye_cmake (Ycmake_language_eval { code })
+  Ys_cmake (Ycmake_language_eval { code })
 
 let yc_language_get_log_level (out : yelu_cvar) =
-  Ye_cmake (Ycmake_language_get_log_level { out })
+  Ys_cmake (Ycmake_language_get_log_level { out })
 
 let yc_block ?(scope_vars = []) ?(propagate = "") body =
   Yc_block { scope_vars; propagate; body }
 
 (* cmake_path utilities *)
 let yc_path_get path_var field (out : yelu_cvar) =
-  Ye_file (Ypath_get { path_var; field; out })
+  Ys_file (Ypath_get { path_var; field; out })
 
 let yc_path_has path_var field (out : yelu_cvar) =
-  Ye_file (Ypath_has { path_var; field; out })
+  Ys_file (Ypath_has { path_var; field; out })
 
 let yc_path_is_absolute path_var (out : yelu_cvar) =
-  Ye_file (Ypath_is_absolute { path_var; out })
+  Ys_file (Ypath_is_absolute { path_var; out })
 
 let yc_path_is_relative path_var (out : yelu_cvar) =
-  Ye_file (Ypath_is_relative { path_var; out })
+  Ys_file (Ypath_is_relative { path_var; out })
 
 let yc_path_is_prefix ?(normalize = false) path_var input (out : yelu_cvar) =
-  Ye_file (Ypath_is_prefix { path_var; input; normalize; out })
+  Ys_file (Ypath_is_prefix { path_var; input; normalize; out })
 
 let yc_path_compare input1 op input2 (out : yelu_cvar) =
-  Ye_file (Ypath_compare { input1; op; input2; out })
+  Ys_file (Ypath_compare { input1; op; input2; out })
 
 let yc_path_set ?(normalize = false) path_var input =
-  Ye_file (Ypath_set { path_var; input; normalize })
+  Ys_file (Ypath_set { path_var; input; normalize })
 
 let yc_path_append ?(out : yelu_cvar option = None) path_var inputs =
-  Ye_file (Ypath_append { path_var; inputs; out })
+  Ys_file (Ypath_append { path_var; inputs; out })
 
 let yc_path_append_string ?(out : yelu_cvar option = None) path_var inputs =
-  Ye_file (Ypath_append_string { path_var; inputs; out })
+  Ys_file (Ypath_append_string { path_var; inputs; out })
 
 let yc_path_remove_filename ?(out : yelu_cvar option = None) path_var =
-  Ye_file (Ypath_remove_filename { path_var; out })
+  Ys_file (Ypath_remove_filename { path_var; out })
 
 let yc_path_replace_filename ?(out : yelu_cvar option = None) path_var input =
-  Ye_file (Ypath_replace_filename { path_var; input; out })
+  Ys_file (Ypath_replace_filename { path_var; input; out })
 
 let yc_path_remove_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var =
-  Ye_file (Ypath_remove_extension { path_var; last_only; out })
+  Ys_file (Ypath_remove_extension { path_var; last_only; out })
 
 let yc_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var input =
-  Ye_file (Ypath_replace_extension { path_var; last_only; input; out })
+  Ys_file (Ypath_replace_extension { path_var; last_only; input; out })
 
 let yc_path_normal_path ?(out : yelu_cvar option = None) path_var =
-  Ye_file (Ypath_normal_path { path_var; out })
+  Ys_file (Ypath_normal_path { path_var; out })
 
 let yc_path_relative_path ?(base_dir : yelu_expr option = None) ?(out : yelu_cvar option = None) path_var =
-  Ye_file (Ypath_relative_path { path_var; base_dir; out })
+  Ys_file (Ypath_relative_path { path_var; base_dir; out })
 
 let yc_path_absolute_path ?(base_dir : yelu_expr option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
-  Ye_file (Ypath_absolute_path { path_var; base_dir; normalize; out })
+  Ys_file (Ypath_absolute_path { path_var; base_dir; normalize; out })
 
 let yc_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
-  Ye_file (Ypath_native_path { path_var; normalize; out })
+  Ys_file (Ypath_native_path { path_var; normalize; out })
 
 let yc_path_convert_to_cmake ?(normalize = false) input (out : yelu_cvar) =
-  Ye_file (Ypath_convert_to_cmake { input; normalize; out })
+  Ys_file (Ypath_convert_to_cmake { input; normalize; out })
 
 let yc_path_convert_to_native ?(normalize = false) input (out : yelu_cvar) =
-  Ye_file (Ypath_convert_to_native { input; normalize; out })
+  Ys_file (Ypath_convert_to_native { input; normalize; out })
 
 let yc_path_hash path_var (out : yelu_cvar) =
-  Ye_file (Ypath_hash { path_var; out })
+  Ys_file (Ypath_hash { path_var; out })
 
 let yc_try_compile ?(compile_definitions = []) ?(link_libraries = [])
     ?(link_options = []) ?(output_variable : yelu_cvar option = None)
     ?(no_cache = false) ?(c_standard : string option = None)
     ?(cxx_standard : string option = None)
     result_var sources =
-  Ye_try (Ytry_compile { result_var; sources; compile_definitions; link_libraries;
+  Ys_try (Ytry_compile { result_var; sources; compile_definitions; link_libraries;
                          link_options; output_variable; no_cache; c_standard; cxx_standard })
 
 let yc_try_run ?(compile_definitions = []) ?(link_libraries = [])
     ?(compile_output_variable : yelu_cvar option = None)
     ?(run_output_variable : yelu_cvar option = None) ?(args = [])
     run_result_var compile_result_var sources =
-  Ye_try (Ytry_run { run_result_var; compile_result_var; sources; compile_definitions;
+  Ys_try (Ytry_run { run_result_var; compile_result_var; sources; compile_definitions;
                      link_libraries; compile_output_variable; run_output_variable; args })
 
 let yc_add_custom_target ?(all = false) ?(commands = []) ?(depends = [])
     ?(comment : string option = None) name =
-  Ye_target (Ytgt_add_custom_target { name; all; commands; depends; comment })
+  Ys_target (Ytgt_add_custom_target { name; all; commands; depends; comment })
 
 let yc_get_target_property var target property =
-  Ye_state (Ystate_get_target_property { var; target; property })
+  Ys_state (Ystate_get_target_property { var; target; property })
 
 let yc_define_property ?(inherited = false) ?(brief_docs = []) ?(full_docs = [])
     ?(initialize_from : string option = None) mode property_name =
-  Ye_state (Ystate_define_property { mode; property_name; inherited; brief_docs; full_docs; initialize_from })
+  Ys_state (Ystate_define_property { mode; property_name; inherited; brief_docs; full_docs; initialize_from })
 
 let yc_add_dependencies target dep =
-  Ye_target (Ytgt_add_dependencies { target; dep })
+  Ys_target (Ytgt_add_dependencies { target; dep })
 
 let yc_variable_watch ?(command : string option = None) var =
-  Ye_cmake (Ycmake_variable_watch { var; command })
+  Ys_cmake (Ycmake_variable_watch { var; command })

@@ -17,11 +17,11 @@ let check_cmake name prog =
 
 (* ZIP_LISTS: parallel iteration over two lists *)
 let zip_basic =
-  check_cmake "zip_basic" (Yexp_list [
+  check_cmake "zip_basic" (Ystmt_list [
     yc_set (ycvar "as") [ystr "a"; ystr "b"; ystr "c"];
     yc_set (ycvar "bs") [ystr "1"; ystr "2"; ystr "3"];
     yc_set (ycvar "ok") [ystr "1"];
-    yc_foreach_zip [ycvar "x"; ycvar "y"] [ycvar "as"; ycvar "bs"] (Yexp_list [
+    yc_foreach_zip [ycvar "x"; ycvar "y"] [ycvar "as"; ycvar "bs"] (Ystmt_list [
       (* if x_y pair doesn't match expected, clear ok *)
       yifthen (ystrequal (ycref "x") (ystr "a"))
         (yifthen (ynot (ystrequal (ycref "y") (ystr "1")))
@@ -39,11 +39,11 @@ let zip_basic =
 
 (* ZIP_LISTS: unequal lengths — shorter list yields empty string for missing elements *)
 let zip_unequal =
-  check_cmake "zip_unequal" (Yexp_list [
+  check_cmake "zip_unequal" (Ystmt_list [
     yc_set (ycvar "xs") [ystr "a"; ystr "b"; ystr "c"];
     yc_set (ycvar "ys") [ystr "1"];
     yc_set (ycvar "count") [ystr "0"];
-    yc_foreach_zip [ycvar "x"; ycvar "y"] [ycvar "xs"; ycvar "ys"] (Yexp_list [
+    yc_foreach_zip [ycvar "x"; ycvar "y"] [ycvar "xs"; ycvar "ys"] (Ystmt_list [
       yc_math (Fmt.str "${count} + 1") (ycvar "count");
     ]);
     (* all 3 elements of xs are visited *)
@@ -53,12 +53,12 @@ let zip_unequal =
 
 (* ZIP_LISTS: three lists *)
 let zip_three =
-  check_cmake "zip_three" (Yexp_list [
+  check_cmake "zip_three" (Ystmt_list [
     yc_set (ycvar "as") [ystr "a"; ystr "b"];
     yc_set (ycvar "bs") [ystr "1"; ystr "2"];
     yc_set (ycvar "cs") [ystr "x"; ystr "y"];
     yc_set (ycvar "result") [];
-    yc_foreach_zip [ycvar "a"; ycvar "b"; ycvar "c"] [ycvar "as"; ycvar "bs"; ycvar "cs"] (Yexp_list [
+    yc_foreach_zip [ycvar "a"; ycvar "b"; ycvar "c"] [ycvar "as"; ycvar "bs"; ycvar "cs"] (Ystmt_list [
       yc_string_concat (ycvar "result") [ycref "result"; ycref "a"; ycref "b"; ycref "c"];
     ]);
     yifthen (ynot (ystrequal (ycref "result") (ystr "a1xb2y")))

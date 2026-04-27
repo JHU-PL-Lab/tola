@@ -1,5 +1,5 @@
 (* Shared building blocks for yelu step programs.
-   Blocks are [yelu_exp list] values, composed with [@] into [ycmd_of_list].
+   Blocks are [yelu_stmt list] values, composed with [@] into [ycmd_of_list].
    [ylet] bindings stay in each step file to wire blocks together. *)
 open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils

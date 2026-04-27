@@ -21,7 +21,7 @@ let check_cmake name prog =
 (* Mirrors Tests/RunCMake/separate_arguments/EmptyCommand.cmake
    Old-style separate_arguments on an undefined variable leaves it undefined. *)
 let empty_command =
-  check_cmake "empty_command" (Yexp_list [
+  check_cmake "empty_command" (Ystmt_list [
     (* nothing is not set — separate_arguments(nothing) must leave it undefined *)
     yc_separate_arguments_plain (ycvar "nothing");
     yifthen (yis_defined (ycstr "nothing"))
@@ -31,7 +31,7 @@ let empty_command =
 (* Mirrors Tests/RunCMake/separate_arguments/PlainCommand.cmake
    Old-style: split "a b  c" → "a;b;;c" (double space → empty middle element). *)
 let plain_command =
-  check_cmake "plain_command" (Yexp_list [
+  check_cmake "plain_command" (Ystmt_list [
     yc_set (ycvar "out") [ ystr "a b  c" ];
     yc_separate_arguments_plain (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;;c")))
@@ -41,7 +41,7 @@ let plain_command =
 (* Mirrors Tests/RunCMake/separate_arguments/UnixCommand.cmake (simple subset).
    Full test uses complex shell quoting; we cover the structural cases. *)
 let unix_simple =
-  check_cmake "unix_simple" (Yexp_list [
+  check_cmake "unix_simple" (Ystmt_list [
     (* plain space-separated words *)
     yc_separate_arguments ~mode:Sa_unix_command ~input:(ystr "a b c") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;c")))
@@ -58,7 +58,7 @@ let unix_simple =
 
 (* NativeCommand on Linux behaves identically to UnixCommand for the simple cases. *)
 let native_command =
-  check_cmake "native_command" (Yexp_list [
+  check_cmake "native_command" (Ystmt_list [
     yc_separate_arguments ~mode:Sa_native_command ~input:(ystr "a b c") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "a;b;c")))
       (yc_message ~mode:Mm_fatal_error ["native_command: a b c failed"]);

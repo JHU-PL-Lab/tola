@@ -51,7 +51,7 @@ let msg_verbose_hidden =
 (* CMAKE_MESSAGE_CONTEXT: requires --log-context; prepends [ctx] to output *)
 let msg_context =
   Alcotest.test_case "context" `Quick (fun () ->
-      let result = run_script ~flags:["--log-context"] (compile (Yexp_list [
+      let result = run_script ~flags:["--log-context"] (compile (Ystmt_list [
         yc_list_append (ycvar "CMAKE_MESSAGE_CONTEXT") [ystr "myctx"];
         yc_message ~mode:Mm_status ["hello from context"];
       ])) in
@@ -62,7 +62,7 @@ let msg_context =
 (* CMAKE_MESSAGE_INDENT: prepends indent strings unconditionally *)
 let msg_indent =
   Alcotest.test_case "indent" `Quick (fun () ->
-      let result = run_script (compile (Yexp_list [
+      let result = run_script (compile (Ystmt_list [
         yc_list_append (ycvar "CMAKE_MESSAGE_INDENT") [ystr "  "];
         yc_message ~mode:Mm_status ["indented"];
       ])) in

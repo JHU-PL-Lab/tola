@@ -30,12 +30,12 @@ let propagate_nothing =
    A function searches a list; on match sets found=yes in parent scope and returns.
    This also tests that return() inside a foreach exits the function, not just the loop. *)
 let return_from_foreach =
-  check_cmake "return_from_foreach" (Yexp_list [
+  check_cmake "return_from_foreach" (Ystmt_list [
     yc_function (ycstr "finder") []
       [ yc_foreach_in ~items:[ ystr "a"; ystr "b"; ystr "target"; ystr "c" ] (ycvar "item")
-          (Yexp_list [
+          (Ystmt_list [
             yifthen (ystrequal (ycref "item") (ystr "target"))
-              (Yexp_list [
+              (Ystmt_list [
                 yc_set ~parent_scope:true (ycvar "found") [ ystr "yes" ];
                 yc_return ();
               ]);
@@ -49,7 +49,7 @@ let return_from_foreach =
 (* function scope: set() inside a function is local; after return
    the caller sees its own pre-call value, not the function's local value. *)
 let function_scope =
-  check_cmake "function_scope" (Yexp_list [
+  check_cmake "function_scope" (Ystmt_list [
     yc_function (ycstr "setlocal") []
       [ yc_set (ycvar "x") [ ystr "local" ] ];
     yc_set (ycvar "x") [ ystr "outer" ];

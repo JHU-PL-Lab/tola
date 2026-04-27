@@ -20,7 +20,7 @@ let check_cmake name prog =
 
 (* foreach(RANGE stop) — iterates 0..stop inclusive *)
 let range_stop =
-  check_cmake "range_stop" (Yexp_list [
+  check_cmake "range_stop" (Ystmt_list [
     yc_set (ycvar "acc") [ ystr "" ];
     yc_foreach_range ~stop:3 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
@@ -31,7 +31,7 @@ let range_stop =
 
 (* foreach(RANGE start stop) — iterates start..stop inclusive *)
 let range_start_stop =
-  check_cmake "range_start_stop" (Yexp_list [
+  check_cmake "range_start_stop" (Ystmt_list [
     yc_set (ycvar "acc") [ ystr "" ];
     yc_foreach_range ~start:2 ~stop:4 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
@@ -42,7 +42,7 @@ let range_start_stop =
 
 (* foreach(RANGE start stop step) — iterates with step *)
 let range_step =
-  check_cmake "range_step" (Yexp_list [
+  check_cmake "range_step" (Ystmt_list [
     yc_set (ycvar "acc") [ ystr "" ];
     yc_foreach_range ~start:0 ~stop:6 ~step:2 (ycvar "i")
       (yc_string_append (ycvar "acc") [ ycref "i" ]);
@@ -53,7 +53,7 @@ let range_step =
 
 (* foreach(IN ITEMS ...) — iterates literal items *)
 let in_items =
-  check_cmake "in_items" (Yexp_list [
+  check_cmake "in_items" (Ystmt_list [
     yc_set (ycvar "acc") [ ystr "" ];
     yc_foreach_in ~items:[ ystr "a"; ystr "b"; ystr "c" ] (ycvar "x")
       (yc_string_append (ycvar "acc") [ ycref "x" ]);
@@ -63,7 +63,7 @@ let in_items =
 
 (* foreach(IN LISTS var) — iterates a cmake list variable *)
 let in_lists =
-  check_cmake "in_lists" (Yexp_list [
+  check_cmake "in_lists" (Ystmt_list [
     yc_list_append (ycvar "words") [ ystr "one"; ystr "two"; ystr "three" ];
     yc_set (ycvar "count") [ ystr "0" ];
     yc_foreach_in ~lists:[ ycvar "words" ] (ycvar "w")
@@ -74,7 +74,7 @@ let in_lists =
 
 (* foreach(IN LISTS var ITEMS ...) — combined lists + items *)
 let in_lists_and_items =
-  check_cmake "in_lists_and_items" (Yexp_list [
+  check_cmake "in_lists_and_items" (Ystmt_list [
     yc_list_append (ycvar "base") [ ystr "x"; ystr "y" ];
     yc_set (ycvar "count") [ ystr "0" ];
     yc_foreach_in ~lists:[ ycvar "base" ] ~items:[ ystr "z" ] (ycvar "v")

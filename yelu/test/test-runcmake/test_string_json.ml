@@ -25,7 +25,7 @@ let json2 = ystr_raw {|[=[{"x":1}]=]|}
 
 (* GET: top-level string field *)
 let json_get =
-  check_cmake "json_get" (Yexp_list [
+  check_cmake "json_get" (Ystmt_list [
     yc_string_json_get ~out:(ycvar "val") json1 ~path:["name"];
     yifthen (ynot (ystrequal (ycref "val") (ystr "cmake")))
       (yc_message ~mode:Mm_fatal_error ["JSON GET name failed"]);
@@ -37,7 +37,7 @@ let json_get =
 
 (* GET with ERROR_VARIABLE: missing key sets val to key-NOTFOUND *)
 let json_get_error =
-  check_cmake "json_get_error" (Yexp_list [
+  check_cmake "json_get_error" (Ystmt_list [
     yc_string_json_get ~error_var:(ycvar "err") ~out:(ycvar "val") json1 ~path:["missing"];
     yifthen (ynot (ymatches (ycref "val") "NOTFOUND"))
       (yc_message ~mode:Mm_fatal_error ["JSON GET missing: expected NOTFOUND"]);
@@ -47,7 +47,7 @@ let json_get_error =
 
 (* TYPE: returns NULL, NUMBER, STRING, BOOLEAN, ARRAY, OBJECT *)
 let json_type =
-  check_cmake "json_type" (Yexp_list [
+  check_cmake "json_type" (Ystmt_list [
     yc_string_json_type ~out:(ycvar "t") json1 ~path:["name"];
     yifthen (ynot (ystrequal (ycref "t") (ystr "STRING")))
       (yc_message ~mode:Mm_fatal_error ["JSON TYPE name: expected STRING"]);
@@ -61,7 +61,7 @@ let json_type =
 
 (* LENGTH: number of elements in object or array *)
 let json_length =
-  check_cmake "json_length" (Yexp_list [
+  check_cmake "json_length" (Ystmt_list [
     yc_string_json_length ~out:(ycvar "n") json1;
     yifthen (ynot (ystrequal (ycref "n") (ystr "3")))
       (yc_message ~mode:Mm_fatal_error ["JSON LENGTH root: expected 3"]);
@@ -72,7 +72,7 @@ let json_length =
 
 (* MEMBER: get key name at index in an object *)
 let json_member =
-  check_cmake "json_member" (Yexp_list [
+  check_cmake "json_member" (Ystmt_list [
     yc_string_json_member ~out:(ycvar "k") json1 ~path:["0"];
     yifthen (ynot (ystrequal (ycref "k") (ystr "name")))
       (yc_message ~mode:Mm_fatal_error ["JSON MEMBER 0: expected name"]);
@@ -81,7 +81,7 @@ let json_member =
 (* REMOVE: removes a key, result is new JSON.
    ERROR_VARIABLE is NOTFOUND on success (cmake convention). *)
 let json_remove =
-  check_cmake "json_remove" (Yexp_list [
+  check_cmake "json_remove" (Ystmt_list [
     yc_string_json_remove ~error_var:(ycvar "err") ~out:(ycvar "result") json2 ~path:["x"];
     yifthen (ynot (ystrequal (ycref "err") (ystr "NOTFOUND")))
       (yc_message ~mode:Mm_fatal_error ["JSON REMOVE: unexpected error: ${err}"]);
@@ -94,7 +94,7 @@ let json_remove =
 (* SET: adds or updates a key.
    Value must be a JSON literal — pass string values bracket-quoted. *)
 let json_set =
-  check_cmake "json_set" (Yexp_list [
+  check_cmake "json_set" (Ystmt_list [
     yc_string_json_set ~out:(ycvar "result")
       ~value:(ystr_raw {|[=["hello"]=]|}) json2 ~path:["y"];
     yc_string_json_get ~out:(ycvar "val") (ycref "result") ~path:["y"];
@@ -104,7 +104,7 @@ let json_set =
 
 (* EQUAL: structural JSON equality — returns ON or OFF *)
 let json_equal =
-  check_cmake "json_equal" (Yexp_list [
+  check_cmake "json_equal" (Ystmt_list [
     yc_string_json_equal ~out:(ycvar "eq")
       (ystr_raw {|[=[{"a":1}]=]|})
       (ystr_raw {|[=[ { "a" : 1 } ]=]|});

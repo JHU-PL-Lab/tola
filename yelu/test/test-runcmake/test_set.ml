@@ -21,7 +21,7 @@ let check_cmake name prog =
 
 (* set then unset — variable becomes undefined *)
 let normal_unset =
-  check_cmake "normal_unset" (Yexp_list [
+  check_cmake "normal_unset" (Ystmt_list [
     yc_set (ycvar "x") [ ystr "hello" ];
     yifthen (ynot (yis_defined (ycstr "x")))
       (yc_message ~mode:Mm_fatal_error ["normal_unset: x should be defined"]);
@@ -32,7 +32,7 @@ let normal_unset =
 
 (* PARENT_SCOPE: set in function propagates to caller *)
 let parent_scope =
-  check_cmake "parent_scope" (Yexp_list [
+  check_cmake "parent_scope" (Ystmt_list [
     yc_function (ycstr "setval") []
       [ yc_set ~parent_scope:true (ycvar "result") [ ystr "from_func" ] ];
     yc_apply (ycstr "setval") [];
@@ -42,7 +42,7 @@ let parent_scope =
 
 (* cache first-write-wins: second set without FORCE is ignored *)
 let cache_first_write_wins =
-  check_cmake "cache_first_write_wins" (Yexp_list [
+  check_cmake "cache_first_write_wins" (Ystmt_list [
     yc_set_cache (ycvar "cfg") [ ystr "initial" ] ~docstring:"test";
     yc_set_cache (ycvar "cfg") [ ystr "ignored" ] ~docstring:"test";
     yifthen (ynot (ystrequal (ycref "cfg") (ystr "initial")))
@@ -51,7 +51,7 @@ let cache_first_write_wins =
 
 (* cache FORCE: overrides existing cache entry *)
 let cache_force =
-  check_cmake "cache_force" (Yexp_list [
+  check_cmake "cache_force" (Ystmt_list [
     yc_set_cache (ycvar "cfg") [ ystr "initial" ] ~docstring:"test";
     yc_set_cache ~force:true (ycvar "cfg") [ ystr "overridden" ] ~docstring:"test";
     yifthen (ynot (ystrequal (ycref "cfg") (ystr "overridden")))
@@ -60,7 +60,7 @@ let cache_force =
 
 (* cache type PATH *)
 let cache_path_type =
-  check_cmake "cache_path_type" (Yexp_list [
+  check_cmake "cache_path_type" (Ystmt_list [
     yc_set_cache ~cache_type:Ct_path (ycvar "mypath") [ ystr "/usr/lib" ] ~docstring:"a path";
     yifthen (ynot (ystrequal (ycref "mypath") (ystr "/usr/lib")))
       (yc_message ~mode:Mm_fatal_error ["cache_path_type: mypath should be /usr/lib"]);
@@ -68,7 +68,7 @@ let cache_path_type =
 
 (* unset(CACHE): removes cache entry, variable becomes undefined *)
 let unset_cache =
-  check_cmake "unset_cache" (Yexp_list [
+  check_cmake "unset_cache" (Ystmt_list [
     yc_set_cache (ycvar "tmp") [ ystr "val" ] ~docstring:"temp";
     yifthen (ynot (yis_defined (ycstr "tmp")))
       (yc_message ~mode:Mm_fatal_error ["unset_cache: tmp should be defined"]);
@@ -79,7 +79,7 @@ let unset_cache =
 
 (* cache type BOOL: value is ON/OFF *)
 let cache_bool_type =
-  check_cmake "cache_bool_type" (Yexp_list [
+  check_cmake "cache_bool_type" (Ystmt_list [
     yc_set_cache ~cache_type:Ct_bool (ycvar "flag") [ ystr "ON" ] ~docstring:"a bool flag";
     yifthen (ynot (ystrequal (ycref "flag") (ystr "ON")))
       (yc_message ~mode:Mm_fatal_error ["cache_bool_type: flag should be ON"]);
@@ -87,7 +87,7 @@ let cache_bool_type =
 
 (* cache type STRING: generic string value *)
 let cache_string_type =
-  check_cmake "cache_string_type" (Yexp_list [
+  check_cmake "cache_string_type" (Ystmt_list [
     yc_set_cache ~cache_type:Ct_string (ycvar "greeting") [ ystr "hello" ] ~docstring:"a string";
     yifthen (ynot (ystrequal (ycref "greeting") (ystr "hello")))
       (yc_message ~mode:Mm_fatal_error ["cache_string_type: greeting should be hello"]);

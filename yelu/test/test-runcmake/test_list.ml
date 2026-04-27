@@ -21,7 +21,7 @@ let check_cmake name prog =
 
 (* Mirrors Tests/RunCMake/list/JOIN.cmake *)
 let join =
-  check_cmake "join" (Yexp_list [
+  check_cmake "join" (Ystmt_list [
     (* JOIN undefined list → "" *)
     yc_list_join (ycvar "undefList") (ystr "%") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "")))
@@ -44,7 +44,7 @@ let join =
 
 (* Mirrors Tests/RunCMake/list/SUBLIST.cmake *)
 let sublist =
-  check_cmake "sublist" (Yexp_list [
+  check_cmake "sublist" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "alpha"; ystr "bravo"; ystr "charlie"; ystr "delta" ];
     yc_list_sublist (ycvar "L") 1 2 (ycvar "result");
     yifthen (ynot (ystrequal (ycref "result") (ystr "bravo;charlie")))
@@ -60,7 +60,7 @@ let sublist =
 
 (* Mirrors Tests/RunCMake/list/PREPEND.cmake *)
 let prepend =
-  check_cmake "prepend" (Yexp_list [
+  check_cmake "prepend" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "c"; ystr "d" ];
     yc_list_prepend (ycvar "L") [ ystr "a"; ystr "b" ];
     yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c;d")))
@@ -74,7 +74,7 @@ let prepend =
 
 (* Mirrors Tests/RunCMake/list/POP_BACK.cmake *)
 let pop_back =
-  check_cmake "pop_back" (Yexp_list [
+  check_cmake "pop_back" (Ystmt_list [
     (* POP_BACK from 2-item list, no out var *)
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_back (ycvar "L");
@@ -91,7 +91,7 @@ let pop_back =
 
 (* Mirrors Tests/RunCMake/list/POP_FRONT.cmake *)
 let pop_front =
-  check_cmake "pop_front" (Yexp_list [
+  check_cmake "pop_front" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "one"; ystr "two" ];
     yc_list_pop_front (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "two")))
@@ -106,7 +106,7 @@ let pop_front =
 
 (* Mirrors Tests/RunCMake/list/SORT.cmake (subset: default + case-insensitive) *)
 let sort =
-  check_cmake "sort" (Yexp_list [
+  check_cmake "sort" (Ystmt_list [
     (* default sort: case-sensitive ascending string *)
     yc_set (ycvar "L") [ ystr "c/B.h"; ystr "a/c.h"; ystr "B/a.h" ];
     yc_list_sort (ycvar "L");
@@ -121,7 +121,7 @@ let sort =
 
 (* Mirrors Tests/RunCMake/list/REMOVE_DUPLICATES-PreserveOrder.cmake *)
 let remove_duplicates =
-  check_cmake "remove_duplicates" (Yexp_list [
+  check_cmake "remove_duplicates" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "a"; ystr "c"; ystr "b" ];
     yc_list_remove_duplicates (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c")))

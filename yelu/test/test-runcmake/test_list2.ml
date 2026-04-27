@@ -19,7 +19,7 @@ let check_cmake name prog =
 
 (* LENGTH: returns number of elements *)
 let length =
-  check_cmake "length" (Yexp_list [
+  check_cmake "length" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_length (ycvar "L") (ycvar "n");
     yifthen (ynot (ystrequal (ycref "n") (ystr "3")))
@@ -33,7 +33,7 @@ let length =
 
 (* GET: retrieve element(s) by index *)
 let get =
-  check_cmake "get" (Yexp_list [
+  check_cmake "get" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "alpha"; ystr "bravo"; ystr "charlie" ];
     (* single positive index *)
     yc_list_get ~indices:[1] (ycvar "L") (ycvar "out");
@@ -51,7 +51,7 @@ let get =
 
 (* APPEND: add elements to end of list *)
 let append =
-  check_cmake "append" (Yexp_list [
+  check_cmake "append" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b" ];
     yc_list_append (ycvar "L") [ ystr "c"; ystr "d" ];
     yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c;d")))
@@ -64,7 +64,7 @@ let append =
 
 (* FIND: returns 0-based index or -1 if not found *)
 let find =
-  check_cmake "find" (Yexp_list [
+  check_cmake "find" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_find (ycvar "L") (ystr "b") (ycvar "idx");
     yifthen (ynot (ystrequal (ycref "idx") (ystr "1")))
@@ -77,7 +77,7 @@ let find =
 
 (* REMOVE_ITEM: remove all occurrences of given values *)
 let remove_item =
-  check_cmake "remove_item" (Yexp_list [
+  check_cmake "remove_item" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "a"; ystr "c" ];
     yc_list_remove_item (ycvar "L") [ ystr "a" ];
     yifthen (ynot (ystrequal (ycref "L") (ystr "b;c")))
@@ -90,7 +90,7 @@ let remove_item =
 
 (* REMOVE_AT: remove by index position *)
 let remove_at =
-  check_cmake "remove_at" (Yexp_list [
+  check_cmake "remove_at" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c"; ystr "d" ];
     yc_list_remove_at (ycvar "L") [ 1 ];
     yifthen (ynot (ystrequal (ycref "L") (ystr "a;c;d")))
@@ -103,7 +103,7 @@ let remove_at =
 
 (* REVERSE: reverses list in place *)
 let reverse =
-  check_cmake "reverse" (Yexp_list [
+  check_cmake "reverse" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "b"; ystr "c" ];
     yc_list_reverse (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "c;b;a")))
@@ -117,7 +117,7 @@ let reverse =
 
 (* INSERT: insert elements at given index *)
 let insert =
-  check_cmake "insert" (Yexp_list [
+  check_cmake "insert" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "a"; ystr "c" ];
     yc_list_insert (ycvar "L") 1 [ ystr "b" ];
     yifthen (ynot (ystrequal (ycref "L") (ystr "a;b;c")))

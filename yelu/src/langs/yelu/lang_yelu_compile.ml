@@ -274,7 +274,7 @@ let check_items_with_kind env { kind = _; items } =
 
 (* --- File / path group --- *)
 
-let compile_file_exp env : yelu_file_exp -> env * Lang_cmake.exp = function
+let compile_file_stmt env : yelu_file_stmt -> env * Lang_cmake.exp = function
   | Yfile_configure { input; output } ->
       ( env,
         Cmake_cmd
@@ -372,7 +372,7 @@ let compile_file_exp env : yelu_file_exp -> env * Lang_cmake.exp = function
   | Ypath_hash { path_var; out } ->
       (env, Cmake_cmd (Cmake_path (Cpp_hash { path_var = cv_name path_var; out_var = cv_name out })))
 
-let compile_list_exp env : yelu_list_exp -> env * Lang_cmake.exp = function
+let compile_list_stmt env : yelu_list_stmt -> env * Lang_cmake.exp = function
   | Ylist_append { cvar; values } ->
       List.iter values ~f:(check_arg env);
       (env, List_cmd (Lc_append { var = cv_name cvar; values = List.map ~f:(erase_arg env) values }))
@@ -420,7 +420,7 @@ let compile_list_exp env : yelu_list_exp -> env * Lang_cmake.exp = function
       (env, List_cmd (Lc_transform { var = cv_name cvar; action; selector;
                                      output = Option.map ~f:cv_name output }))
 
-let compile_install_exp env : yelu_install_exp -> env * Lang_cmake.exp = function
+let compile_install_stmt env : yelu_install_stmt -> env * Lang_cmake.exp = function
   | Yinstall_targets { targets; destination; export } ->
       List.iter targets ~f:(check_arg env);
       check_arg env destination;
@@ -471,7 +471,7 @@ let compile_install_exp env : yelu_install_exp -> env * Lang_cmake.exp = functio
         compatibility = string_of_compatibility compatibility;
         arch_independent }))
 
-let compile_cmake_exp env : yelu_cmake_exp -> env * Lang_cmake.exp = function
+let compile_cmake_stmt env : yelu_cmake_stmt -> env * Lang_cmake.exp = function
   | Ycmake_minimum_required { min; max } ->
       (env, Cmake_cmd (Cmake_minimum_required { min; max }))
   | Ycmake_project { name; version; languages } ->
@@ -506,7 +506,7 @@ let compile_cmake_exp env : yelu_cmake_exp -> env * Lang_cmake.exp = function
         var = cv_name var; command; access = Vw_read_access;
         value = None; current_list_file = None; stack = [] })
 
-let compile_test_exp env : yelu_test_exp -> env * Lang_cmake.exp = function
+let compile_test_stmt env : yelu_test_stmt -> env * Lang_cmake.exp = function
   | Ytest_enable_testing -> (env, Project_cmd Enable_testing)
   | Ytest_add_test { name; command; args } ->
       (env, Project_cmd (Add_test {
@@ -515,7 +515,7 @@ let compile_test_exp env : yelu_test_exp -> env * Lang_cmake.exp = function
         args = List.map ~f:(erase_arg_s env) args;
         dir = None }))
 
-let compile_try_exp env : yelu_try_exp -> env * Lang_cmake.exp = function
+let compile_try_stmt env : yelu_try_stmt -> env * Lang_cmake.exp = function
   | Ytry_compile { result_var; sources; compile_definitions; link_libraries;
                    link_options; output_variable; no_cache; c_standard; cxx_standard } ->
       (env, Project_cmd (Try_compile {
@@ -542,7 +542,7 @@ let compile_try_exp env : yelu_try_exp -> env * Lang_cmake.exp = function
         tr_run_output_variable = Option.map ~f:cv_name run_output_variable;
         tr_args = List.map ~f:(erase_arg env) args }))
 
-let compile_dir_exp env : yelu_dir_exp -> env * Lang_cmake.exp = function
+let compile_dir_stmt env : yelu_dir_stmt -> env * Lang_cmake.exp = function
   | Ydir_include_directories { dirs; before; system } ->
       List.iter dirs ~f:(check_arg env);
       let ba = if before then Lang_cmake.Before else Lang_cmake.Default_order in
@@ -588,7 +588,7 @@ let compile_dir_exp env : yelu_dir_exp -> env * Lang_cmake.exp = function
         { Lang_cmake.kind = Ll_general; item = lib; items = [] }) in
       (env, Project_cmd (Link_libraries { groups }))
 
-let compile_find_exp env : yelu_find_exp -> env * Lang_cmake.exp = function
+let compile_find_stmt env : yelu_find_stmt -> env * Lang_cmake.exp = function
   | Yfind_library { cvar; names; paths; hints; no_default_path;
                     no_cmake_environment_path; no_system_environment_path; required } ->
       let env = declare_cvar env cvar in
@@ -633,7 +633,7 @@ let compile_find_exp env : yelu_find_exp -> env * Lang_cmake.exp = function
       (env, Lang_cmake.Find_package { name; version; exact; quiet; config_mode;
                                       required; components; optional_components })
 
-let compile_state_exp env : yelu_state_exp -> env * Lang_cmake.exp = function
+let compile_state_stmt env : yelu_state_stmt -> env * Lang_cmake.exp = function
   | Ystate_set { cvar; values; parent_scope } ->
       List.iter values ~f:(check_arg env);
       let env = if parent_scope then env else declare_cvar env cvar in
@@ -718,7 +718,7 @@ let compile_state_exp env : yelu_state_exp -> env * Lang_cmake.exp = function
         mode; property_name; inherited; brief_docs; full_docs;
         initialize_from = Option.value initialize_from ~default:"" }))
 
-let compile_target_exp env : yelu_target_exp -> env * Lang_cmake.exp = function
+let compile_target_stmt env : yelu_target_stmt -> env * Lang_cmake.exp = function
   | Ytgt_add_executable { name; exclude_from_all; sources } ->
       let env = try_declare_target env name in
       let options = if exclude_from_all then [Lang_cmake.Ae_exclude_from_all] else [] in
@@ -839,7 +839,7 @@ let compile_target_exp env : yelu_target_exp -> env * Lang_cmake.exp = function
   | Ytgt_add_dependencies { target; dep } ->
       (env, Project_cmd (Add_dependencies { target; dep }))
 
-let compile_string_exp env : yelu_string_exp -> env * Lang_cmake.exp = function
+let compile_string_stmt env : yelu_string_stmt -> env * Lang_cmake.exp = function
   | Ystr_toupper { string; out } ->
       check_arg env string;
       (env, String_cmd (Sc_toupper { string = erase_arg env string; out = cv_name out }))
@@ -939,18 +939,18 @@ let compile_string_exp env : yelu_string_exp -> env * Lang_cmake.exp = function
 
 (* --- Compile with env threading --- *)
 
-let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
-  | Ye_file e -> compile_file_exp env e
-  | Ye_string e -> compile_string_exp env e
-  | Ye_list e -> compile_list_exp env e
-  | Ye_target e -> compile_target_exp env e
-  | Ye_state e -> compile_state_exp env e
-  | Ye_find e -> compile_find_exp env e
-  | Ye_install e -> compile_install_exp env e
-  | Ye_dir e -> compile_dir_exp env e
-  | Ye_cmake e -> compile_cmake_exp env e
-  | Ye_test e -> compile_test_exp env e
-  | Ye_try e -> compile_try_exp env e
+let rec compile env : yelu_stmt -> env * Lang_cmake.exp = function
+  | Ys_file e -> compile_file_stmt env e
+  | Ys_string e -> compile_string_stmt env e
+  | Ys_list e -> compile_list_stmt env e
+  | Ys_target e -> compile_target_stmt env e
+  | Ys_state e -> compile_state_stmt env e
+  | Ys_find e -> compile_find_stmt env e
+  | Ys_install e -> compile_install_stmt env e
+  | Ys_dir e -> compile_dir_stmt env e
+  | Ys_cmake e -> compile_cmake_stmt env e
+  | Ys_test e -> compile_test_stmt env e
+  | Ys_try e -> compile_try_stmt env e
   | Ylet { var = Yvar name; value } ->
       check_arg env value;
       let resolved = resolve_arg env value in
@@ -976,7 +976,7 @@ let rec compile env : yelu_exp -> env * Lang_cmake.exp = function
       in
       ( env,
         If { cond = erase_cond env cond; then_ = then_cmake; else_ = else_cmake } )
-  | Yexp_list exps ->
+  | Ystmt_list exps ->
       let env, rev_cmds =
         List.fold exps ~init:(env, []) ~f:(fun (env, acc) exp ->
             let env, cmd = compile env exp in
@@ -1119,5 +1119,5 @@ and compile_list env exps =
   in
   (env, List.rev rev_cmds)
 
-and compile_cmd env (yelu_exp : yelu_exp) : env * Lang_cmake.cmd =
-  compile env yelu_exp
+and compile_cmd env (yelu_stmt : yelu_stmt) : env * Lang_cmake.cmd =
+  compile env yelu_stmt

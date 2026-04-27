@@ -50,13 +50,13 @@ let conditions =
         "if (( HAVE_LOG AND HAVE_EXP ))\n  \nendif()\n"
         (yifthen
            (yand (ytruthy (ycstr "HAVE_LOG")) (ytruthy (ycstr "HAVE_EXP")))
-           (Yexp_list []));
+           (Ystmt_list []));
       check "is_target"
         "if (TARGET SqrtLibrary)\n  \nendif()\n"
-        (yifthen (yis_target (ytval "SqrtLibrary")) (Yexp_list []));
+        (yifthen (yis_target (ytval "SqrtLibrary")) (Ystmt_list []));
       check "is_defined"
         "if (DEFINED MY_VAR)\n  \nendif()\n"
-        (yifthen (yis_defined (ycstr "MY_VAR")) (Yexp_list []));
+        (yifthen (yis_defined (ycstr "MY_VAR")) (Ystmt_list []));
     ] )
 
 let targets =
@@ -164,23 +164,23 @@ let iteration =
     [
       check "foreach items no body"
         "foreach(x a b)\nendforeach()"
-        (yc_foreach ~items:[ ystr "a"; ystr "b" ] (ycvar "x") (Yexp_list []));
+        (yc_foreach ~items:[ ystr "a"; ystr "b" ] (ycvar "x") (Ystmt_list []));
       check "foreach items with body"
         "foreach(x a b)\n  set(FOO bar )\nendforeach()"
         (yc_foreach ~items:[ ystr "a"; ystr "b" ] (ycvar "x")
            (yc_set (ycvar "FOO") [ ystr "bar" ]));
       check "foreach_range stop only"
         "foreach(i RANGE 10)\nendforeach()"
-        (yc_foreach_range ~stop:10 (ycvar "i") (Yexp_list []));
+        (yc_foreach_range ~stop:10 (ycvar "i") (Ystmt_list []));
       check "foreach_range start stop"
         "foreach(i RANGE  0 10)\nendforeach()"
-        (yc_foreach_range ~start:0 ~stop:10 (ycvar "i") (Yexp_list []));
+        (yc_foreach_range ~start:0 ~stop:10 (ycvar "i") (Ystmt_list []));
       check "foreach_in lists"
         "foreach(f IN LISTS MY_LIST)\nendforeach()"
-        (yc_foreach_in ~lists:[ ycvar "MY_LIST" ] (ycvar "f") (Yexp_list []));
+        (yc_foreach_in ~lists:[ ycvar "MY_LIST" ] (ycvar "f") (Ystmt_list []));
       check "foreach_in items"
         "foreach(f IN ITEMS a b)\nendforeach()"
-        (yc_foreach_in ~items:[ ystr "a"; ystr "b" ] (ycvar "f") (Yexp_list []));
+        (yc_foreach_in ~items:[ ystr "a"; ystr "b" ] (ycvar "f") (Ystmt_list []));
     ] )
 
 let loop_control =
@@ -188,7 +188,7 @@ let loop_control =
     [
       check "while empty body"
         "while(FLAG)\n  \nendwhile()"
-        (yc_while (ytruthy (ycstr "FLAG")) (Yexp_list []));
+        (yc_while (ytruthy (ycstr "FLAG")) (Ystmt_list []));
       check "break" "break()" yc_break;
       check "continue" "continue()" yc_continue;
       check "return empty" "return()" (yc_return ());

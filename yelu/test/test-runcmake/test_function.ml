@@ -23,7 +23,7 @@ let check_cmake name prog =
 
 (* CMAKE_CURRENT_FUNCTION: name of the currently executing function *)
 let current_function_name =
-  check_cmake "current_function_name" (Yexp_list [
+  check_cmake "current_function_name" (Ystmt_list [
     yc_function (ycstr "my_func") []
       [ yc_set ~parent_scope:true (ycvar "fn_name") [ ycref "CMAKE_CURRENT_FUNCTION" ] ];
     yc_apply (ycstr "my_func") [];
@@ -37,7 +37,7 @@ let current_function_name =
 
 (* CMAKE_CURRENT_LIST_FILE: path of the script being processed *)
 let current_list_file =
-  check_cmake "current_list_file" (Yexp_list [
+  check_cmake "current_list_file" (Ystmt_list [
     yc_function (ycstr "file_func") []
       [ yc_set ~parent_scope:true (ycvar "cl_file") [ ycref "CMAKE_CURRENT_LIST_FILE" ] ];
     yc_apply (ycstr "file_func") [];
@@ -52,7 +52,7 @@ let current_list_file =
 
 (* cmake function args: ARGC, ARGV, ARGN, ARG0 etc. *)
 let function_args =
-  check_cmake "function_args" (Yexp_list [
+  check_cmake "function_args" (Ystmt_list [
     yc_function (ycstr "arg_func") [ "a"; "b" ]
       [ yc_set ~parent_scope:true (ycvar "argc_out") [ ycref "ARGC" ];
         yc_set ~parent_scope:true (ycvar "argv0_out") [ ycref "ARGV0" ];

@@ -23,7 +23,7 @@ let check_cmake name prog =
 
 (* TOUPPER / TOLOWER *)
 let case_convert =
-  check_cmake "case_convert" (Yexp_list [
+  check_cmake "case_convert" (Ystmt_list [
     yc_string_toupper (ystr "hello World") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "HELLO WORLD")))
       (yc_message ~mode:Mm_fatal_error ["TOUPPER failed"]);
@@ -38,7 +38,7 @@ let case_convert =
 
 (* LENGTH: number of characters *)
 let length =
-  check_cmake "length" (Yexp_list [
+  check_cmake "length" (Ystmt_list [
     yc_string_length (ystr "hello") (ycvar "n");
     yifthen (ynot (ystrequal (ycref "n") (ystr "5")))
       (yc_message ~mode:Mm_fatal_error ["LENGTH: hello should be 5"]);
@@ -49,7 +49,7 @@ let length =
 
 (* PREPEND: prepend to a cmake variable *)
 let prepend =
-  check_cmake "prepend" (Yexp_list [
+  check_cmake "prepend" (Ystmt_list [
     yc_set (ycvar "s") [ ystr "world" ];
     yc_string_prepend (ycvar "s") [ ystr "hello " ];
     yifthen (ynot (ystrequal (ycref "s") (ystr "hello world")))
@@ -62,7 +62,7 @@ let prepend =
 
 (* REGEX MATCH: store first match *)
 let regex_match =
-  check_cmake "regex_match" (Yexp_list [
+  check_cmake "regex_match" (Ystmt_list [
     yc_string_regex_match "[0-9]+" (ycvar "out") [ ystr "abc 42 def 7" ];
     yifthen (ynot (ystrequal (ycref "out") (ystr "42")))
       (yc_message ~mode:Mm_fatal_error ["REGEX MATCH: first number should be 42"]);
@@ -74,7 +74,7 @@ let regex_match =
 
 (* COMPARE: lexicographic comparison, result 0/1 *)
 let compare =
-  check_cmake "compare" (Yexp_list [
+  check_cmake "compare" (Ystmt_list [
     yc_string_compare Sco_equal (ystr "abc") (ystr "abc") (ycvar "r");
     yifthen (ynot (ystrequal (ycref "r") (ystr "1")))
       (yc_message ~mode:Mm_fatal_error ["COMPARE EQUAL: abc==abc should be 1"]);
@@ -94,7 +94,7 @@ let compare =
 
 (* MAKE_C_IDENTIFIER: replace non-identifier chars with _ *)
 let make_c_identifier =
-  check_cmake "make_c_identifier" (Yexp_list [
+  check_cmake "make_c_identifier" (Ystmt_list [
     yc_string_make_c_identifier (ystr "foo-bar.baz") (ycvar "out");
     yifthen (ynot (ystrequal (ycref "out") (ystr "foo_bar_baz")))
       (yc_message ~mode:Mm_fatal_error ["MAKE_C_IDENTIFIER: foo-bar.baz failed"]);
@@ -111,7 +111,7 @@ let make_c_identifier =
 (* REGEX MATCHALL: collect all non-overlapping matches as a semicolon list.
    SKIP: zero-length match behavior (CMP0186, blocked until Y11). *)
 let regex_matchall =
-  check_cmake "regex_matchall" (Yexp_list [
+  check_cmake "regex_matchall" (Ystmt_list [
     yc_string_regex_matchall "[0-9]+" (ycvar "out") [ ystr "a1 b22 c333" ];
     yifthen (ynot (ystrequal (ycref "out") (ystr "1;22;333")))
       (yc_message ~mode:Mm_fatal_error ["REGEX MATCHALL: numbers failed"]);

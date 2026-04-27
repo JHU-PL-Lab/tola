@@ -22,7 +22,7 @@ let check_cmake name prog =
 
 (* FILTER INCLUDE: keep elements matching regex *)
 let filter_include =
-  check_cmake "filter_include" (Yexp_list [
+  check_cmake "filter_include" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.h"; ystr "baz.c"; ystr "qux.h" ];
     yc_list_filter Lf_include "\\.c$" (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "foo.c;baz.c")))
@@ -31,7 +31,7 @@ let filter_include =
 
 (* FILTER EXCLUDE: remove elements matching regex *)
 let filter_exclude =
-  check_cmake "filter_exclude" (Yexp_list [
+  check_cmake "filter_exclude" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "foo.c"; ystr "bar.h"; ystr "baz.c"; ystr "qux.h" ];
     yc_list_filter Lf_exclude "\\.h$" (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "foo.c;baz.c")))
@@ -40,7 +40,7 @@ let filter_exclude =
 
 (* SORT DESCENDING: reverse alphabetical order *)
 let sort_descending =
-  check_cmake "sort_descending" (Yexp_list [
+  check_cmake "sort_descending" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "banana"; ystr "apple"; ystr "cherry" ];
     yc_list_sort ~order:Ls_descending (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "cherry;banana;apple")))
@@ -49,7 +49,7 @@ let sort_descending =
 
 (* SORT COMPARE NATURAL: human-friendly ordering (e.g. 2 before 10) *)
 let sort_natural =
-  check_cmake "sort_natural" (Yexp_list [
+  check_cmake "sort_natural" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "file10.txt"; ystr "file2.txt"; ystr "file1.txt" ];
     yc_list_sort ~compare:Ls_natural (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "file1.txt;file2.txt;file10.txt")))
@@ -64,7 +64,7 @@ let sort_natural =
 
 (* SORT COMPARE FILE_BASENAME: sort by filename ignoring directory prefix *)
 let sort_file_basename =
-  check_cmake "sort_file_basename" (Yexp_list [
+  check_cmake "sort_file_basename" (Ystmt_list [
     yc_set (ycvar "L") [ ystr "dir/foo.txt"; ystr "other/bar.txt"; ystr "a/baz.txt" ];
     yc_list_sort ~compare:Ls_file_basename (ycvar "L");
     yifthen (ynot (ystrequal (ycref "L") (ystr "other/bar.txt;a/baz.txt;dir/foo.txt")))

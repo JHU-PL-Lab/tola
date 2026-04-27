@@ -126,7 +126,7 @@ end
 module Make_string_op (T : LANG_TYPES) = struct
   module Json = Make_json_op (T)
 
-  type yelu_string_exp =
+  type yelu_string_stmt =
     | Ystr_toupper of { string : T.arg; out : T.var }
     | Ystr_tolower of { string : T.arg; out : T.var }
     | Ystr_length of { string : T.arg; out : T.var }
@@ -192,7 +192,7 @@ end
    ============================================================ *)
 
 module Make_list_op (T : LANG_TYPES) = struct
-  type yelu_list_exp =
+  type yelu_list_stmt =
     | Ylist_append of { cvar : T.var; values : T.arg list }
     | Ylist_length of { cvar : T.var; out : T.var }
     | Ylist_get of { cvar : T.var; indices : int list; out : T.var }
@@ -236,7 +236,7 @@ end
    ============================================================ *)
 
 module Make_file_op (T : LANG_TYPES) = struct
-  type yelu_file_exp =
+  type yelu_file_stmt =
     (* file() IO *)
     | Yfile_read of {
         out : T.var;
@@ -446,7 +446,7 @@ module Make_target_op (T : LANG_TYPES) = struct
     | Ytsi_plain of yelu_items_with_kind
     | Ytsi_file_set of yelu_file_set
 
-  type yelu_target_exp =
+  type yelu_target_stmt =
     | Ytgt_add_executable of {
         name : T.arg;
         exclude_from_all : bool;
@@ -533,7 +533,7 @@ end
    ============================================================ *)
 
 module Make_dir_op (T : LANG_TYPES) = struct
-  type yelu_dir_exp =
+  type yelu_dir_stmt =
     | Ydir_include_directories of {
         dirs : T.arg list;
         before : bool;
@@ -553,7 +553,7 @@ end
    ============================================================ *)
 
 module Make_state_op (T : LANG_TYPES) = struct
-  type yelu_state_exp =
+  type yelu_state_stmt =
     (* plain variables *)
     | Ystate_set of {
         cvar : T.var;
@@ -628,7 +628,7 @@ end
    ============================================================ *)
 
 module Make_find_op (T : LANG_TYPES) = struct
-  type yelu_find_exp =
+  type yelu_find_stmt =
     | Yfind_library of {
         cvar : T.var;
         names : T.arg list;
@@ -686,7 +686,7 @@ end
    ============================================================ *)
 
 module Make_install_op (T : LANG_TYPES) = struct
-  type yelu_install_exp =
+  type yelu_install_stmt =
     | Yinstall_targets of {
         targets : T.arg list;
         destination : T.arg;
@@ -720,7 +720,7 @@ end
    ============================================================ *)
 
 module Make_test_op (T : LANG_TYPES) = struct
-  type yelu_test_exp =
+  type yelu_test_stmt =
     | Ytest_enable_testing
     | Ytest_add_test of { name : T.arg; command : T.arg; args : T.arg list }
 end
@@ -730,7 +730,7 @@ end
    ============================================================ *)
 
 module Make_try_op (T : LANG_TYPES) = struct
-  type yelu_try_exp =
+  type yelu_try_stmt =
     | Ytry_compile of {
         result_var : T.var;
         sources : T.arg list;
@@ -759,7 +759,7 @@ end
    ============================================================ *)
 
 module Make_cmake_op (T : LANG_TYPES) = struct
-  type yelu_cmake_exp =
+  type yelu_cmake_stmt =
     | Ycmake_minimum_required of {
         min : Lang_cmake.version;
         max : Lang_cmake.version option;
@@ -785,12 +785,12 @@ end
 (* ============================================================
    Top-level expression (groups + core constructs + scripting)
 
-   This is the parametric mirror of [Lang_yelu_cmake.yelu_exp]. Constructor
+   This is the parametric mirror of [Lang_yelu_cmake.yelu_stmt]. Constructor
    names match yelu's so that lowering is mechanical (constructor
    pattern → same-name constructor in Lang_yelu_cmake).
    ============================================================ *)
 
-module Make_exp (T : LANG_TYPES) = struct
+module Make_stmt (T : LANG_TYPES) = struct
   module String_op = Make_string_op (T)
   module List_op = Make_list_op (T)
   module File_op = Make_file_op (T)
@@ -804,26 +804,26 @@ module Make_exp (T : LANG_TYPES) = struct
   module Try_op = Make_try_op (T)
   module Cmake_op = Make_cmake_op (T)
 
-  type yelu_exp =
-    | Ye_string of String_op.yelu_string_exp
-    | Ye_list of List_op.yelu_list_exp
-    | Ye_file of File_op.yelu_file_exp
-    | Ye_target of Target_op.yelu_target_exp
-    | Ye_dir of Dir_op.yelu_dir_exp
-    | Ye_state of State_op.yelu_state_exp
-    | Ye_find of Find_op.yelu_find_exp
-    | Ye_install of Install_op.yelu_install_exp
-    | Ye_test of Test_op.yelu_test_exp
-    | Ye_try of Try_op.yelu_try_exp
-    | Ye_cmake of Cmake_op.yelu_cmake_exp
+  type yelu_stmt =
+    | Ys_string of String_op.yelu_string_stmt
+    | Ys_list of List_op.yelu_list_stmt
+    | Ys_file of File_op.yelu_file_stmt
+    | Ys_target of Target_op.yelu_target_stmt
+    | Ys_dir of Dir_op.yelu_dir_stmt
+    | Ys_state of State_op.yelu_state_stmt
+    | Ys_find of Find_op.yelu_find_stmt
+    | Ys_install of Install_op.yelu_install_stmt
+    | Ys_test of Test_op.yelu_test_stmt
+    | Ys_try of Try_op.yelu_try_stmt
+    | Ys_cmake of Cmake_op.yelu_cmake_stmt
     (* core *)
     | Ylet of { var : yelu_var; value : T.arg }
-    | Yif of { cond : Cond.yelu_cond; then_ : yelu_exp; else_ : yelu_exp option }
-    | Yexp_list of yelu_exp list
+    | Yif of { cond : Cond.yelu_cond; then_ : yelu_stmt; else_ : yelu_stmt option }
+    | Ystmt_list of yelu_stmt list
     (* scripting *)
     | Yc_include of { file : T.arg; optional : bool }
-    | Yc_function of { name : T.arg; args : string list; body : yelu_exp list }
-    | Yc_macro of { name : T.arg; args : string list; body : yelu_exp list }
+    | Yc_function of { name : T.arg; args : string list; body : yelu_stmt list }
+    | Yc_macro of { name : T.arg; args : string list; body : yelu_stmt list }
     | Yc_apply of { name : T.arg; args : T.arg list }
     | Yc_execute_process of {
         commands : T.arg list list;
@@ -853,32 +853,32 @@ module Make_exp (T : LANG_TYPES) = struct
     | Yc_extern_target of T.target
     | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
     (* control flow *)
-    | Yc_foreach of { loop_var : T.var; items : T.arg list; commands : yelu_exp }
+    | Yc_foreach of { loop_var : T.var; items : T.arg list; commands : yelu_stmt }
     | Yc_foreach_range of {
         loop_var : T.var;
         start : int option;
         stop : int;
         step : int option;
-        commands : yelu_exp;
+        commands : yelu_stmt;
       }
     | Yc_foreach_in of {
         loop_var : T.var;
         lists : T.var list;
         items : T.arg list;
-        commands : yelu_exp;
+        commands : yelu_stmt;
       }
     | Yc_foreach_zip of {
         loop_vars : T.var list;
         lists : T.var list;
-        commands : yelu_exp;
+        commands : yelu_stmt;
       }
-    | Yc_while of { cond : Cond.yelu_cond; commands : yelu_exp }
+    | Yc_while of { cond : Cond.yelu_cond; commands : yelu_stmt }
     | Yc_break
     | Yc_continue
     | Yc_return of { propogate_vars : string list }
     | Yc_block of {
         scope_vars : T.var list;
         propagate : string;
-        body : yelu_exp list;
+        body : yelu_stmt list;
       }
 end

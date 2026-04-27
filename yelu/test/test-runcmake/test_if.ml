@@ -22,7 +22,7 @@ let check_cmake name prog =
 (* IN_LIST: value is a member of a cmake list variable.
    Requires CMP0057 NEW (cmake 3.3+); cmake_minimum_required sets it. *)
 let in_list =
-  check_cmake "in_list" (Yexp_list [
+  check_cmake "in_list" (Ystmt_list [
     yc_minimum_required_s "3.3";
     yc_list_append (ycvar "fruits") [ ystr "apple"; ystr "banana"; ystr "cherry" ];
     yifthen (ynot (yin_list (ystr "banana") (ycstr "fruits")))
@@ -33,7 +33,7 @@ let in_list =
 
 (* MATCHES: value matches a regex *)
 let matches =
-  check_cmake "matches" (Yexp_list [
+  check_cmake "matches" (Ystmt_list [
     yc_set (ycvar "ver") [ ystr "3.14.1" ];
     yifthen (ynot (ymatches (ycref "ver") "^[0-9]+\\.[0-9]+"))
       (yc_message ~mode:Mm_fatal_error ["matches: ver should match version regex"]);
@@ -43,7 +43,7 @@ let matches =
 
 (* VERSION_LESS / VERSION_GREATER / VERSION_EQUAL *)
 let version_compare =
-  check_cmake "version_compare" (Yexp_list [
+  check_cmake "version_compare" (Ystmt_list [
     yifthen (ynot (yversion_less (ystr "1.0") (ystr "2.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare: 1.0 should be less than 2.0"]);
     yifthen (ynot (yversion_greater (ystr "2.0") (ystr "1.0")))
@@ -54,7 +54,7 @@ let version_compare =
 
 (* VERSION_LESS_EQUAL / VERSION_GREATER_EQUAL *)
 let version_compare_equal =
-  check_cmake "version_compare_equal" (Yexp_list [
+  check_cmake "version_compare_equal" (Ystmt_list [
     yifthen (ynot (yversion_less_equal (ystr "1.0") (ystr "1.0")))
       (yc_message ~mode:Mm_fatal_error ["version_compare_equal: 1.0 should be <= 1.0"]);
     yifthen (ynot (yversion_less_equal (ystr "1.0") (ystr "2.0")))
@@ -65,7 +65,7 @@ let version_compare_equal =
 
 (* AND / OR compound conditions *)
 let compound =
-  check_cmake "compound" (Yexp_list [
+  check_cmake "compound" (Ystmt_list [
     yc_set (ycvar "x") [ ystr "5" ];
     (* AND: both true *)
     yifthen (ynot (yand (ygreater (ycref "x") (ystr "3")) (yless (ycref "x") (ystr "10"))))
@@ -75,13 +75,13 @@ let compound =
       (yc_message ~mode:Mm_fatal_error ["compound OR: x==5 OR x==99 failed"]);
     (* NOT (AND): x==0 AND x==1 is false → NOT true; use yif to assert *)
     yif (ynot (yand (yequal (ycref "x") (ystr "0")) (yequal (ycref "x") (ystr "1"))))
-      (Yexp_list [])
+      (Ystmt_list [])
       (yc_message ~mode:Mm_fatal_error ["compound NOT(AND false false) should be true"]);
   ])
 
 (* Numeric EQUAL / LESS / GREATER / LESS_EQUAL / GREATER_EQUAL *)
 let numeric_compare =
-  check_cmake "numeric_compare" (Yexp_list [
+  check_cmake "numeric_compare" (Ystmt_list [
     yifthen (ynot (yequal (ystr "42") (ystr "42")))
       (yc_message ~mode:Mm_fatal_error ["EQUAL: 42 == 42 failed"]);
     yifthen (ynot (yless (ystr "3") (ystr "10")))
@@ -96,7 +96,7 @@ let numeric_compare =
 
 (* STRLESS / STRGREATER / STRLESS_EQUAL / STRGREATER_EQUAL *)
 let string_compare =
-  check_cmake "string_compare" (Yexp_list [
+  check_cmake "string_compare" (Ystmt_list [
     yifthen (ynot (ystrless (ystr "apple") (ystr "banana")))
       (yc_message ~mode:Mm_fatal_error ["STRLESS: apple < banana failed"]);
     yifthen (ynot (ystrgreater (ystr "zebra") (ystr "apple")))
@@ -109,7 +109,7 @@ let string_compare =
 
 (* EXISTS / IS_DIRECTORY / IS_ABSOLUTE *)
 let file_tests =
-  check_cmake "file_tests" (Yexp_list [
+  check_cmake "file_tests" (Ystmt_list [
     (* /tmp always exists and is a directory on Linux *)
     yifthen (ynot (yexists (ystr "/tmp")))
       (yc_message ~mode:Mm_fatal_error ["EXISTS: /tmp should exist"]);

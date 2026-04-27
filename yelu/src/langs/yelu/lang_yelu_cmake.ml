@@ -123,7 +123,7 @@ end
    (e.g. Lang_yelu_cmake.Json).
    ============================================================ *)
 
-(* Cond first — referenced by Yif/Yc_while via Make_exp *)
+(* Cond first — referenced by Yif/Yc_while via Make_stmt *)
 include Lang_yelu.Make_cond (Cmake_types)
 
 (* Target — also brings yelu_items_with_kind, yelu_target_feature,
@@ -144,6 +144,6 @@ include Lang_yelu.Make_cmake_op (Cmake_types)
 (* Hoist Json sub-module's yelu_json_op + Yjop_* constructors to top level *)
 include Json
 
-(* Top-level expression — brings yelu_exp + Cond/String_op/etc.
+(* Top-level expression — brings yelu_stmt + Cond/String_op/etc.
    sub-modules (same applicative results as the includes above). *)
-include Lang_yelu.Make_exp (Cmake_types)
+include Lang_yelu.Make_stmt (Cmake_types)
