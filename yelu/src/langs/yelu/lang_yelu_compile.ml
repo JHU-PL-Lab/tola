@@ -8,7 +8,7 @@ open Lang_yelu
 type env = {
   cvars : Set.M(String).t;
   targets : Set.M(String).t;
-  bindings : yarg Map.M(String).t;
+  bindings : yelu_arg Map.M(String).t;
 }
 
 let empty_env =

@@ -23,7 +23,7 @@ let rec genex_to_string = function
   | Yge_platform_id id -> Printf.sprintf "$<PLATFORM_ID:%s>" id
   | Yge_raw s -> s
 
-let yge (ge : yelu_genex) : yarg = Yarg_string (Ycs_val (genex_to_string ge))
+let yge (ge : yelu_genex) : yelu_arg = Yarg_string (Ycs_val (genex_to_string ge))
 
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
@@ -528,10 +528,10 @@ let yc_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = No
 let yc_path_normal_path ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_normal_path { path_var; out })
 
-let yc_path_relative_path ?(base_dir : yarg option = None) ?(out : yelu_cvar option = None) path_var =
+let yc_path_relative_path ?(base_dir : yelu_arg option = None) ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_relative_path { path_var; base_dir; out })
 
-let yc_path_absolute_path ?(base_dir : yarg option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
+let yc_path_absolute_path ?(base_dir : yelu_arg option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_absolute_path { path_var; base_dir; normalize; out })
 
 let yc_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
