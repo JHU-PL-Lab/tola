@@ -1,7 +1,7 @@
 (** conf-run level tests for list sub-commands not covered in test_list.ml.
     Covers: LENGTH, GET, APPEND, FIND, REMOVE_ITEM, REMOVE_AT, REVERSE, INSERT. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

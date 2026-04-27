@@ -1,7 +1,7 @@
 (** conf-run level tests for string(HEX ...).
     Covers: basic ASCII encoding, empty string, multi-byte input. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

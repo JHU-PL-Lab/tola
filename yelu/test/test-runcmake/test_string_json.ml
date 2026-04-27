@@ -3,7 +3,7 @@
     GET_RAW and STRING_ENCODE are cmake 4.3+ and are not tested here.
     JSON content is passed as cmake bracket strings via ystr_raw to avoid quoting issues. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

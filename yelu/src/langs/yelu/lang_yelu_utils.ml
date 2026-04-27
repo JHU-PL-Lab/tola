@@ -1,5 +1,5 @@
 open Base
-open Lang_yelu
+open Lang_yelu_cmake
 
 let ycs_to_s = function
   | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_cmake s -> s

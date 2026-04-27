@@ -2,7 +2,7 @@
     Mirrors Tests/RunCMake/separate_arguments/ positive scripts.
     WindowsCommand and ProgramCommand* skipped (platform/PATH-search specific). *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

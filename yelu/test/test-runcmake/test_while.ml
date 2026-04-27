@@ -3,7 +3,7 @@
     useful as yelu targets.  These tests validate the actual loop semantics
     that the yelu layer generates. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

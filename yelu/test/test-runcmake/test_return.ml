@@ -4,7 +4,7 @@
     CMP0140 / return(PROPAGATE) tests are skipped (cmake_policy not in yelu).
     Function return values use PARENT_SCOPE instead. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

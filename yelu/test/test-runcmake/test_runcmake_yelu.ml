@@ -7,7 +7,7 @@
       check_pair_text — reference is an inline cmake string (used when the
                         upstream script produces no stdout, e.g. cmake_path) *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_cmake
 open Yelu_langs.Lang_yelu_compile

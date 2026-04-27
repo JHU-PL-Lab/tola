@@ -3,7 +3,7 @@
     The yelu program generates cmake text; cmake -P runs it; exit_code 0 = pass. *)
 
 open Yelu_langs.Lang_cmake
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

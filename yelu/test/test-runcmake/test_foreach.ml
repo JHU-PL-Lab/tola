@@ -2,7 +2,7 @@
     Mirrors Tests/RunCMake/foreach/foreach-all-test.cmake positive cases.
     ZIP_LISTS and multiple-iter-vars skipped (yelu gap — needs zip in core). *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

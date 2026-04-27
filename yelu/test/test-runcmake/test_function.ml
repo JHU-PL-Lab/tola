@@ -5,7 +5,7 @@
     SKIP: CMAKE_CURRENT_FUNCTION_LIST_DIR/FILE — same as CMAKE_CURRENT_LIST_*
     in script mode; only differ when include()d from another file. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

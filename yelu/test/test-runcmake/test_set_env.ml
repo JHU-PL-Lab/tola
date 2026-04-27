@@ -1,7 +1,7 @@
 (** conf-run level tests for set(ENV{...}) / $ENV{VAR} / unset(ENV{...}).
     Uses run_script ~env to pre-populate the cmake process environment. *)
 
-open Yelu_langs.Lang_yelu
+open Yelu_langs.Lang_yelu_cmake
 open Yelu_langs.Lang_yelu_utils
 open Yelu_langs.Lang_yelu_compile
 open Yelu_langs.Lang_cmake_pp

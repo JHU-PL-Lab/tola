@@ -1,5 +1,5 @@
 open Base
-open Lang_yelu
+open Lang_yelu_cmake
 
 (* Type erasure: yelu_ast -> cmake_ast, with scope checking *)
 
