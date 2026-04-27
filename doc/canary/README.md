@@ -1,6 +1,9 @@
 # Canary documentation
 
-Top-level navigation for `doc/canary/`. Files grouped by intent.
+Directory map for `doc/canary/`. Files grouped by intent.
+
+**Start with `design/index.md` for the design narrative.** See `CLAUDE.md`
+(project root) for live status, gaps, and current gotchas.
 
 ## design/ — what canary models
 
@@ -53,27 +56,4 @@ retrieval to avoid re-discovering the same friction.
 | File | Topic |
 |---|---|
 | [backlog.md](backlog.md) | Lower-priority TODOs (numbered #N like GH issues) |
-| [expression_sharing_note.md](expression_sharing_note.md) | Side-project idea (DAG enumeration / shared subexpressions). Revisit later. |
 | [worklog/](worklog/) | Meeting notes + monthly worklogs |
-
-## Reading order for newcomers
-
-1. **`design/index.md`** — the unified design (start here)
-2. **`design/interface.md`** — the conceptual frame (versioning, drift, layered observability)
-3. **`surveys/opam.md` §1, §2** — what canary is up against
-4. **`trackers/batch_candidates.md`** — concrete expansion targets
-5. **CLAUDE.md** (project root) — current live status, gaps, gotchas
-
-## Stages of work currently in flight
-
-(See `CLAUDE.md` for live status; this is just the orientation map.)
-
-- **Stage 1 — Python binding for core projects.** Done locally + CI green;
-  gotchas in `ops/python_binding_gotchas.md`; tracker in
-  `trackers/python_binding.md`.
-- **Stage 2 — Doc reorg.** Layout in this file (Stage 2's deliverable).
-- **Stage 3 — Universal binding abstraction.** Active. `design/index.md` §4
-  + `design/api_source.md` are the design surface. Will model: provider
-  (opam/pip/cargo) × language × runtime, with per-binding version axes.
-- **Stage 4 — Cover more projects.** Resumes
-  `trackers/batch_candidates.md` after Stage 3 abstraction.
