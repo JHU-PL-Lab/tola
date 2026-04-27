@@ -45,7 +45,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     pkg-config, brew --prefix) is currently embedded in project shell
     commands. Factor into a `package_locator` type with `discovery_method`
     variants so the System PM → Locator → Conf chain is testable and uniform.
-    See `design/overview.md` "Open Design" for the proposed type.
+    See `design/index.md` "Open Design" for the proposed type.
 
 30. **Store config type** — `fetch_*` and `pack_*` slot scripts are
     hardcoded in `mk_script_spec`. A `store_config = store_entry list`

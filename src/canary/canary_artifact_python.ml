@@ -19,7 +19,7 @@ let python_import_cmd ~pkg ~output_dir =
 (* Emit compact Python package summary as summary.json via
    canary/scripts/summarize_python.py. Watchlist is a list of top-level
    attribute names; present/missing recorded in the JSON.
-   See doc/canary/design/python_binding.md. *)
+   See doc/canary/ops/python_binding_gotchas.md. *)
 let summary_cmd ~pkg ?(watchlist = []) ~output_dir () =
   let script = "canary/scripts/summarize_python.py" in
   let watchlist_csv = String.concat "," watchlist in

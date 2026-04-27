@@ -2,7 +2,7 @@
 
 **Status:** living plan — tracks the expansion queue beyond the current
 z3 / llvm / sqlite trio. Companion to [`../surveys/opam.md`](../surveys/opam.md)
-(survey data) and [`pytorch.md`](pytorch.md), [`../design/python_binding.md`](../design/python_binding.md)
+(survey data) and [`pytorch.md`](pytorch.md), [`python_binding.md`](python_binding.md)
 (per-target plans).
 
 **Do not delete this file wholesale** — as candidates land, move them to a
@@ -50,7 +50,7 @@ Picked from [`../surveys/opam.md`](../surveys/opam.md) §3 (revdep rankings) and
 Ordered so that each addition compounds into the natural template shape
 without committing to the template up-front:
 
-1. **Finish batch-1 Python side** via [`../design/python_binding.md`](../design/python_binding.md)
+1. **Finish batch-1 Python side** via [`python_binding.md`](python_binding.md)
    → sqlite stdlib (smallest), then z3-solver, then llvmlite.
 2. **Add zarith (#7)** — first new-from-survey Pattern A. Hand-written spec
    ~300 lines, reveals what the Pattern A template needs.
@@ -88,10 +88,10 @@ without committing to the template up-front:
 | Doc | Scope |
 |-----|-------|
 | [`../surveys/opam.md`](../surveys/opam.md) | Full survey of 4460 opam packages; pattern classification; revdep rankings (source of truth for candidate selection). |
-| [`../design/python_binding.md`](../design/python_binding.md) | Adds Python-artifact primitives to canary; prereq for PyTorch and for any Python-binding probe in the candidate list. |
+| [`python_binding.md`](python_binding.md) | Adds Python-artifact primitives to canary; prereq for PyTorch and for any Python-binding probe in the candidate list. |
 | [`pytorch.md`](pytorch.md) | Per-project plan for PyTorch (candidate #4). |
-| [`../design/artifact_summary.md`](../design/artifact_summary.md) | Summary-generation design; every candidate needs watchlists declared here. |
-| [`../design/interface_contract.md`](../design/interface_contract.md) | The interface/version model all candidates collectively stress-test. |
+| [`../design/interface.md`](../design/interface.md) | Summary-generation design; every candidate needs watchlists declared here. |
+| [`../design/interface.md`](../design/interface.md) | The interface/version model all candidates collectively stress-test. |
 
 ## How to consume this list
 

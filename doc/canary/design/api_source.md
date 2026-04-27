@@ -10,11 +10,11 @@ This doc has two parts:
 2. **Proposed code modifications** — concrete refactor once the model settles.
 
 Related:
-- [`artifact_summary.md`](artifact_summary.md) — current summary /
+- [`interface.md`](interface.md) — current summary /
   watchlist model that this proposal would refactor
-- [`interface_contract.md`](interface_contract.md) — broader
+- [`interface.md`](interface.md) — broader
   interface-as-object vision; API-source is a concretisation for C/native projects
-- [`batch_candidates.md`](batch_candidates.md) — each candidate has an API layer
+- [`../trackers/batch_candidates.md`](../trackers/batch_candidates.md) — each candidate has an API layer
   to declare once the model exists
 
 ## Part 1 — Overview analysis
@@ -56,12 +56,12 @@ Canary's `artifact_kind` is `Source | Lib | Binding | App`. The API isn't a
 kind — it's smeared across Lib (symbols) and Binding (wrapper) without a
 declarative home. Consequences:
 
-| Symptom | Where visible |
-|---------|---------------|
-| Build target for each binding is hand-written shell in the project spec | `canary_project_z3.ml` has `ninja build_z3_ocaml_bindings` hardcoded; LLVM has `cmake_build_binding` flag threaded through |
-| Watchlists mix API-level and consumer-level concerns | `z3_native_watchlist` is actually "stable Z3 C API symbols" (API-level); `z3_ocaml_watchlist` is "OCaml modules that wrap that API" (consumer-level) — no explicit distinction |
-| Adding a new language binding duplicates structure | Python z3-solver would need its own `ninja build_z3_python_bindings` shell + its own watchlist + its own probe — nothing factors |
-| No way to query "which API version does this binding consume" | The version is implicit in the source's `version_cache_tag`; the *API version* (which can differ if only bindings change) has no carrier |
+| Symptom                                                                 | Where visible                                                                                                                                                                  |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Build target for each binding is hand-written shell in the project spec | `canary_project_z3.ml` has `ninja build_z3_ocaml_bindings` hardcoded; LLVM has `cmake_build_binding` flag threaded through                                                     |
+| Watchlists mix API-level and consumer-level concerns                    | `z3_native_watchlist` is actually "stable Z3 C API symbols" (API-level); `z3_ocaml_watchlist` is "OCaml modules that wrap that API" (consumer-level) — no explicit distinction |
+| Adding a new language binding duplicates structure                      | Python z3-solver would need its own `ninja build_z3_python_bindings` shell + its own watchlist + its own probe — nothing factors                                               |
+| No way to query "which API version does this binding consume"           | The version is implicit in the source's `version_cache_tag`; the *API version* (which can differ if only bindings change) has no carrier                                       |
 
 ### What "first-class API" buys us
 
@@ -73,7 +73,7 @@ declarative home. Consequences:
    `build_z3_python_bindings` is a data change, not a code change.
 3. **Version-dependent API snapshot**. Each `(source_repo, version)` pair
    has a derivable API interface object — feeds directly into the
-   `interface_contract.md` vision (L1a/L1b symbols, plus header
+   `interface.md` vision (L1a/L1b symbols, plus header
    definitions if we want them later).
 4. **Binding consumers reference an API, not a source**. The OCaml binding
    spec says "I consume z3's v4.13 API" rather than "I know Z3 source
@@ -102,11 +102,11 @@ declarative home. Consequences:
 
 ### Concrete shape per project
 
-| Project | API headers | Symbol prefix | Binding generator | OCaml build target | Python build target | Rust build target |
-|---------|-------------|---------------|-------------------|---------------------|---------------------|-------------------|
-| z3 | `src/api/z3_*.h` | `Z3_` | `python3 scripts/mk_make.py --ml` | `ninja build_z3_ocaml_bindings` | `cmake --build ... --target bindings/python` | (via `cxx-bridge`, out of z3's tree) |
-| llvm | `llvm/include/llvm-c/*.h` | `LLVM` | none (headers hand-written) | `cmake --build ... --target OCaml_bindings_install` (via `AddOCaml.cmake`) | n/a (llvmlite has its own IR) | n/a (inkwell wraps, same API) |
-| sqlite | `sqlite3.h` | `sqlite3_` | none | n/a (upstream has no OCaml binding; opam's `sqlite3` is external) | n/a (CPython bundles sqlite3) | n/a (`rusqlite` is external) |
+| Project | API headers               | Symbol prefix | Binding generator                 | OCaml build target                                                         | Python build target                          | Rust build target                    |
+| ------- | ------------------------- | ------------- | --------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- | ------------------------------------ |
+| z3      | `src/api/z3_*.h`          | `Z3_`         | `python3 scripts/mk_make.py --ml` | `ninja build_z3_ocaml_bindings`                                            | `cmake --build ... --target bindings/python` | (via `cxx-bridge`, out of z3's tree) |
+| llvm    | `llvm/include/llvm-c/*.h` | `LLVM`        | none (headers hand-written)       | `cmake --build ... --target OCaml_bindings_install` (via `AddOCaml.cmake`) | n/a (llvmlite has its own IR)                | n/a (inkwell wraps, same API)        |
+| sqlite  | `sqlite3.h`               | `sqlite3_`    | none                              | n/a (upstream has no OCaml binding; opam's `sqlite3` is external)          | n/a (CPython bundles sqlite3)                | n/a (`rusqlite` is external)         |
 
 Observation: sqlite's API is very stable across decades; z3's changes per
 release; llvm's breaks often. The API-source object captures this *per project*
@@ -245,13 +245,13 @@ bigger refactor):
 
 ### Estimated scope
 
-| Step | Lines | Files touched | Risk |
-|------|-------|---------------|------|
-| A (type + None) | ~30 | `canary_artifact_source.ml`, 2 project specs | Low |
-| B (declare) | ~60 | 2 project specs | Low |
-| C (summaries read it) | ~20 | 2 project specs | Low |
-| D (derive builds) | ~100 | 2 project specs, maybe `canary_action.ml` | Medium (builds-from-source are hot path) |
-| E (add python to validate) | ~40 | 1 project spec | Low (validation only) |
+| Step                       | Lines | Files touched                                | Risk                                     |
+| -------------------------- | ----- | -------------------------------------------- | ---------------------------------------- |
+| A (type + None)            | ~30   | `canary_artifact_source.ml`, 2 project specs | Low                                      |
+| B (declare)                | ~60   | 2 project specs                              | Low                                      |
+| C (summaries read it)      | ~20   | 2 project specs                              | Low                                      |
+| D (derive builds)          | ~100  | 2 project specs, maybe `canary_action.ml`    | Medium (builds-from-source are hot path) |
+| E (add python to validate) | ~40   | 1 project spec                               | Low (validation only)                    |
 
 Total: ~250 lines net change, roughly −300 / +250 (project specs get
 smaller, new module grows). Prerequisite: Python binding plan's Step A
@@ -264,7 +264,7 @@ Not now. Order of operations for maximum clarity:
 
 1. Finish the Python binding primitives (`python_binding.md`) — gives
    us a second language consumer to model.
-2. Land one Pattern A candidate from `batch_candidates.md` (zarith or ssl)
+2. Land one Pattern A candidate from `../trackers/batch_candidates.md` (zarith or ssl)
    — another data point to validate that api_source generalises beyond
    z3/llvm's self-builds.
 3. **Then** do Steps A–E above, using the three+ data points.

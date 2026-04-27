@@ -42,7 +42,7 @@ let cmxa_stub_archive path =
 (* Emit compact archive summary as summary.json.
    Module-level only (ocamlobjinfo doesn't expose constructors);
    constructor-level drift is detected via compile probes.
-   See doc/canary/design/artifact_summary.md. *)
+   See doc/canary/design/interface.md. *)
 let summary_cmd ~archive ?(watchlist = []) ~output_dir () =
   let script = "canary/scripts/summarize_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in

@@ -490,7 +490,7 @@ Incomplete coverage (common in Pattern B packages):
 9. **Version resolution chain**: The seam between system PM, locator
    tool (pkg-config/llvm-config), conf package, and lang binding is
    where mismatches happen. See "Version Resolution Chain" in
-   [../design/overview.md](../design/overview.md). Canary should test each seam independently.
+   [../design/index.md](../design/index.md). Canary should test each seam independently.
 
 ## 11. Data Files
 

@@ -94,7 +94,7 @@ test "$COUNT" -gt 0|}]
 
 (* Emit compact artifact summary as summary.json.
    Dumps total symbol count, per-prefix counts, versioned-deps map (L1b),
-   and a watchlist presence check. See doc/canary/design/artifact_summary.md. *)
+   and a watchlist presence check. See doc/canary/design/interface.md. *)
 (* Note: [lib] is embedded in double quotes so shell variable expansion works
    (e.g., passing "$LIB_Z3" from a resolve snippet). Callers using literal
    paths get the usual behavior; paths with shell metacharacters or spaces

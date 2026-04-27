@@ -11,7 +11,7 @@ open Canary
    This module compresses the boilerplate. A new Pattern A project becomes
    ~25 lines of declaration vs. ~100 lines of hand-rolled script_spec.
    Extracted from zarith + ssl as the second-data-point validation per
-   doc/canary/coverage/batch_candidates.md sequencing.
+   doc/canary/trackers/batch_candidates.md sequencing.
 
    Coverage boundaries:
    - This template covers native_lib + ocaml binding probe only. Projects with

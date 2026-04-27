@@ -4,31 +4,30 @@ Top-level navigation for `doc/canary/`. Files grouped by intent.
 
 ## design/ — what canary models
 
-How canary represents projects, artifacts, interfaces, and bindings.
-Active design surface; updated as the model evolves.
+The unified design narrative. Active surface; updated as the model evolves.
 
 | File | Topic |
 |---|---|
-| [overview.md](design/overview.md) | Pattern table, store config, execution model — the canonical canary design |
-| [interface_contract.md](design/interface_contract.md) | Interface as first-class object; L1a/L1b/L2/L3/L4/L5 layering |
-| [artifact_summary.md](design/artifact_summary.md) | Compact artifact summary (`summary.json`) — counts, watchlists, versioned-deps |
-| [api_source.md](design/api_source.md) | First-class API-source layer (deferred; revisit after Stage 3 universal binding work) |
-| [python_binding.md](design/python_binding.md) | Python binding integration — primitives + per-project wiring |
+| [index.md](design/index.md) | Unified design: vision, identity, action graph, spec_shape & scan stage, workflow |
+| [interface.md](design/interface.md) | Interface contract (provides ⊆ requires; L1a–L5 layering; failure taxonomy) + concrete `summary.json` schema and tooling |
+| [api_source.md](design/api_source.md) | C-API-specific implementation plan; subsumed by index.md §4 conceptually but kept for the migration steps A–E |
 
-## coverage/ — which projects canary tests
+## trackers/ — implementation status & coverage plans
 
-Plans for adding new target projects to canary. Coverage growth, not model
-change.
+Time-bound trackers for ongoing implementation efforts and target coverage.
+Each file should declare a deletion trigger so the directory doesn't grow
+unbounded.
 
 | File | Topic |
 |---|---|
-| [pytorch.md](coverage/pytorch.md) | PyTorch as multi-PM target (queued; depends on Python primitives) |
-| [batch_candidates.md](coverage/batch_candidates.md) | Two-tier portfolio of expansion targets (core: z3/llvm/torch; extended: zarith/ssl/cvc5/…) |
+| [python_binding.md](trackers/python_binding.md) | Stage 1 Python binding integration — A–D done + CI green; remaining items |
+| [pytorch.md](trackers/pytorch.md) | PyTorch as multi-PM target (queued; depends on Python primitives) |
+| [batch_candidates.md](trackers/batch_candidates.md) | Two-tier portfolio: core (z3/llvm/torch) + extended (zarith/ssl/cvc5/…) |
 
 ## surveys/ — background research
 
-Pre-code survey data. Source of truth for `coverage/batch_candidates.md`
-choices and the `interface_contract.md` failure taxonomy.
+Pre-code survey data. Source of truth for `trackers/batch_candidates.md`
+choices and the `design/interface.md` failure taxonomy.
 
 | File | Topic |
 |---|---|
@@ -38,8 +37,8 @@ choices and the `interface_contract.md` failure taxonomy.
 
 ## ops/ — operational notes & gotchas
 
-Pre-code summaries and gotchas. Kept for both human and AI retrieval to
-avoid re-discovering the same friction.
+Pre-code summaries and gotchas. Durable. Kept for both human and AI
+retrieval to avoid re-discovering the same friction.
 
 | File | Topic |
 |---|---|
@@ -47,6 +46,7 @@ avoid re-discovering the same friction.
 | [llvm_build.md](ops/llvm_build.md) | LLVM source build steps, smoke test, opam install notes |
 | [install_targets.md](ops/install_targets.md) | Z3 vs LLVM cmake install patterns |
 | [opam_packaging.md](ops/opam_packaging.md) | opam packaging patterns for canary |
+| [python_binding_gotchas.md](ops/python_binding_gotchas.md) | Lessons from sqlite/z3/llvm Python integration (pip env, version axes, deprecated APIs, etc.) |
 
 ## Top-level
 
@@ -58,17 +58,22 @@ avoid re-discovering the same friction.
 
 ## Reading order for newcomers
 
-1. **`design/overview.md`** — what canary is and how it works
-2. **`design/interface_contract.md`** — the conceptual frame (versioning, drift, layering)
+1. **`design/index.md`** — the unified design (start here)
+2. **`design/interface.md`** — the conceptual frame (versioning, drift, layered observability)
 3. **`surveys/opam.md` §1, §2** — what canary is up against
-4. **`coverage/batch_candidates.md`** — concrete expansion targets
-5. CLAUDE.md (project root) — current status, gaps, gotchas
+4. **`trackers/batch_candidates.md`** — concrete expansion targets
+5. **CLAUDE.md** (project root) — current live status, gaps, gotchas
 
 ## Stages of work currently in flight
 
-(See `CLAUDE.md` for live status.)
+(See `CLAUDE.md` for live status; this is just the orientation map.)
 
-- **Stage 1 — Python binding for core projects.** `design/python_binding.md`. Done locally + CI; gotchas captured.
-- **Stage 2 — Doc reorg.** This file is the deliverable.
-- **Stage 3 — Universal binding abstraction.** Pending. `design/api_source.md` is the precursor. Will model: provider (opam/pip/cargo) × language × runtime, with per-binding version axes (key Stage 1 finding).
-- **Stage 4 — Cover more projects.** Resumes `coverage/batch_candidates.md` work after Stage 3 abstraction.
+- **Stage 1 — Python binding for core projects.** Done locally + CI green;
+  gotchas in `ops/python_binding_gotchas.md`; tracker in
+  `trackers/python_binding.md`.
+- **Stage 2 — Doc reorg.** Layout in this file (Stage 2's deliverable).
+- **Stage 3 — Universal binding abstraction.** Active. `design/index.md` §4
+  + `design/api_source.md` are the design surface. Will model: provider
+  (opam/pip/cargo) × language × runtime, with per-binding version axes.
+- **Stage 4 — Cover more projects.** Resumes
+  `trackers/batch_candidates.md` after Stage 3 abstraction.

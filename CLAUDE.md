@@ -50,7 +50,7 @@ plans for GH CI).
 | `canary/examples/llvm/llvm_example_15.ml`      | LLVM ≤15 example (global_context); fails against LLVM 16+                                             |
 | `canary/templates/opam-local-repo/`            | Local opam packages: z3.dev, llvm.dev-shared, llvm.19-shared, llvm.19-static, conf-llvm-shared.dev/19 |
 | `canary/scripts/assert_binary_symbols.py`      | nm-based symbol compat check                                                                          |
-| `doc/canary/design/overview.md`                         | Design doc: pattern table, store config, execution model                                              |
+| `doc/canary/design/index.md`                         | Design doc: pattern table, store config, execution model                                              |
 | `doc/canary/ops/install_targets.md`          | Z3 vs LLVM cmake install patterns; informs TODO #25                                                   |
 | `doc/canary/ops/llvm_build.md`                | LLVM source build steps, smoke test, opam install notes                                               |
 | `doc/canary/backlog.md`                        | Lower-priority TODOs (#5, #9–#11, #13b, #14, #16–#18, #22)                                            |
@@ -127,7 +127,7 @@ Details in `doc/canary/backlog.md`.
 These are tracked here rather than the backlog because they directly affect
 the `step_expectation` / interface model design.
 
-Artifact summary progress (`doc/canary/design/artifact_summary.md`):
+Artifact summary progress (`doc/canary/design/interface.md`):
 - ✅ Step 1 — `summary_cmd` for native/ocaml/opam kinds (per-probe `summary.json`)
 - ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
   field on `script_spec`, `derive_steps` emits follow-up `<tag>_summary` steps
@@ -229,14 +229,14 @@ Still open:
   exports for other languages) are a natural next extension.
 - **No python summary in any project spec** — `summary_cmd` helpers for python
   haven't been defined (no project uses a python artifact yet). Plan at
-  `doc/canary/design/python_binding.md` (z3-solver, llvmlite, stdlib sqlite3);
+  `doc/canary/trackers/python_binding.md` (z3-solver, llvmlite, stdlib sqlite3);
   delete the plan doc when all three projects have Python probe + summary wired.
 - **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
-  primitives landing first. Plan at `doc/canary/coverage/pytorch.md` covers the
+  primitives landing first. Plan at `doc/canary/trackers/pytorch.md` covers the
   pip × opam × apt libtorch matrix and the OCaml `torch` version-conflict
   case. Motivated by multi-PM interop (same libtorch shipped by many PMs).
 - **Two-tier candidate queue for canary expansion** —
-  `doc/canary/coverage/batch_candidates.md` holds a dozen tracked targets (Tier 1:
+  `doc/canary/trackers/batch_candidates.md` holds a dozen tracked targets (Tier 1:
   famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
   zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
   opam survey; living doc, updated as candidates land.
@@ -257,7 +257,7 @@ Still open:
 - **`symbol_entry.version_tag`** (`@@GLIBC_2.31` annotations) — typed field
   exists in the OCaml model but not yet populated; `summary.versioned_req`
   computes these at runtime via `summarize_native.py`. Connects to L1b in
-  `doc/canary/design/interface_contract.md`.
+  `doc/canary/design/interface.md`.
 - **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
   verify step reads `probe.log` but the local runner scans all files in `output_dir`.
   Should align: both should scan `probe.log` only.

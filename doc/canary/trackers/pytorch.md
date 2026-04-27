@@ -1,7 +1,7 @@
 # Plan: PyTorch as a multi-language, multi-PM canary target
 
 **Status:** queued — batch-2 target. Depends on Python binding primitives
-(`../design/python_binding.md`) being in place first.
+(`python_binding.md`) being in place first.
 
 **Delete this file** when PyTorch is wired in with at least one working
 pip-torch + opam-torch interop probe and symbol/module summaries.
@@ -105,7 +105,7 @@ Start minimal. **Defer** CUDA, macOS MPS, conda, homebrew, manual downloads.
 
 ## Implementation steps
 
-Assumes Python binding primitives exist (per `../design/python_binding.md`).
+Assumes Python binding primitives exist (per `python_binding.md`).
 
 ### Step 1 — Sqlite-first prototype (prerequisite, part of python plan)
 Validate Python summary pipeline end-to-end on stdlib `sqlite3` (no install,
