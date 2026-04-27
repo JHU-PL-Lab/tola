@@ -23,7 +23,7 @@ module type LANG_TYPES = sig
   (** Runtime variable handle (≅ [yelu_cvar] in cmake-pack). *)
   type var
 
-  (** Argument / value substrate (≅ [yelu_arg] in cmake-pack). *)
+  (** Argument / value substrate (≅ [yelu_expr] in cmake-pack). *)
   type arg
 
   (** Target name handle (≅ [yelu_target] in cmake-pack). *)

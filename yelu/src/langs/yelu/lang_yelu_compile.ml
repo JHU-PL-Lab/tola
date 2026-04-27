@@ -8,7 +8,7 @@ open Lang_yelu_cmake
 type env = {
   cvars : Set.M(String).t;
   targets : Set.M(String).t;
-  bindings : yelu_arg Map.M(String).t;
+  bindings : yelu_expr Map.M(String).t;
 }
 
 let empty_env =
@@ -46,20 +46,20 @@ let declare_target env (Ytarget name) =
 (* --- Variable resolution --- *)
 
 let rec resolve_arg env = function
-  | Yarg_var (Yvar name) ->
+  | Yexpr_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> resolve_arg env v
-       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yarg_string (Ycs_val name))
+       | None -> Fmt.epr "Warning: unbound variable '%s'@." name; Yexpr_string (Ycs_val name))
   | other -> other
 
 let try_declare_target env arg =
   match resolve_arg env arg with
-  | Yarg_target t -> declare_target env t
+  | Yexpr_target t -> declare_target env t
   | _ -> env
 
 let try_declare_cvar env arg =
   match resolve_arg env arg with
-  | Yarg_cvar v -> declare_cvar env v
+  | Yexpr_cvar v -> declare_cvar env v
   | _ -> env
 
 (* --- Erasure helpers --- *)
@@ -70,12 +70,12 @@ let erase_cvar (Ycvar name) = name
 let cv_name (Ycvar n) = n
 
 let rec erase_arg env = function
-  | Yarg_var (Yvar name) ->
+  | Yexpr_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> erase_arg env v
        | None -> Lang_cmake.Bare name)
-  | Yarg_cvar (Ycvar name) | Yarg_target (Ytarget name) -> Lang_cmake.Bare name
-  | Yarg_string (Ycs_cmake s) ->
+  | Yexpr_cvar (Ycvar name) | Yexpr_target (Ytarget name) -> Lang_cmake.Bare name
+  | Yexpr_string (Ycs_cmake s) ->
       let known_dirs =
         [ "PROJECT_BINARY_DIR"; "PROJECT_SOURCE_DIR";
           "CMAKE_CURRENT_BINARY_DIR"; "CMAKE_CURRENT_SOURCE_DIR";
@@ -89,7 +89,7 @@ let rec erase_arg env = function
          single tokens. *)
       if String.is_prefix s ~prefix:"[" then Lang_cmake.Bare s
       else Lang_cmake.Quoted s
-  | Yarg_string (Ycs_val s) ->
+  | Yexpr_string (Ycs_val s) ->
     (* Empty string must be Quoted so cmake sees "" rather than nothing.
        Strings with whitespace must be Quoted — unquoted whitespace splits args.
        Strings containing "$<" must be Quoted so cmake does not evaluate them
@@ -100,18 +100,18 @@ let rec erase_arg env = function
     || String.exists s ~f:(Char.equal '\\')
     then Lang_cmake.Quoted s
     else Lang_cmake.Bare s
-  | Yarg_string ycs -> Lang_cmake.Bare (ycs_to_s ycs)
-  | Yarg_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
+  | Yexpr_string ycs -> Lang_cmake.Bare (ycs_to_s ycs)
+  | Yexpr_bool b -> Lang_cmake.Bare (if b then "ON" else "OFF")
 
 (* For cmake fields that expect plain string, not arg *)
 let rec erase_arg_s env = function
-  | Yarg_var (Yvar name) ->
+  | Yexpr_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> erase_arg_s env v
        | None -> name)
-  | Yarg_cvar (Ycvar name) | Yarg_target (Ytarget name) -> name
-  | Yarg_string ycs -> ycs_to_s ycs
-  | Yarg_bool b -> if b then "ON" else "OFF"
+  | Yexpr_cvar (Ycvar name) | Yexpr_target (Ytarget name) -> name
+  | Yexpr_string ycs -> ycs_to_s ycs
+  | Yexpr_bool b -> if b then "ON" else "OFF"
 
 let string_of_kind = function
   | Interface -> "INTERFACE"
@@ -232,13 +232,13 @@ let erase_property env (prop, value) : Lang_cmake.property =
 (* --- Scope checking --- *)
 
 let rec check_arg env = function
-  | Yarg_var (Yvar name) ->
+  | Yexpr_var (Yvar name) ->
       (match Map.find env.bindings name with
        | Some v -> check_arg env v
        | None -> Fmt.epr "Warning: unbound variable '%s'@." name)
-  | Yarg_cvar v -> warn_undeclared_cvar env v
-  | Yarg_target t -> warn_undeclared_target env t
-  | Yarg_string _ | Yarg_bool _ -> ()
+  | Yexpr_cvar v -> warn_undeclared_cvar env v
+  | Yexpr_target t -> warn_undeclared_target env t
+  | Yexpr_string _ | Yexpr_bool _ -> ()
 
 let rec check_cond env = function
   | Ytruthy arg -> check_arg env arg

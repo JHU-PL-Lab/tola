@@ -92,17 +92,17 @@ type yelu_genex =
   | Yge_raw of string                            (* $<raw> — user supplies full inner content *)
 
 (* Unified arg type — replaces old yelu_value + yelu_item *)
-type yelu_arg =
-  | Yarg_cvar of yelu_cvar
-  | Yarg_target of yelu_target
-  | Yarg_string of yc_string  (* file, dir, name, value, or raw cmake expr *)
-  | Yarg_bool of bool
-  | Yarg_var of yelu_var  (* compile-time variable reference *)
+type yelu_expr =
+  | Yexpr_cvar of yelu_cvar
+  | Yexpr_target of yelu_target
+  | Yexpr_string of yc_string  (* file, dir, name, value, or raw cmake expr *)
+  | Yexpr_bool of bool
+  | Yexpr_var of yelu_var  (* compile-time variable reference *)
 
 (* cmake-pack substrate for Lang_yelu functors *)
 module Cmake_types = struct
   type var = yelu_cvar
-  type arg = yelu_arg
+  type arg = yelu_expr
   type target = yelu_target
 end
 

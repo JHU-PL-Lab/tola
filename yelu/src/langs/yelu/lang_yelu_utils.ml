@@ -23,16 +23,16 @@ let rec genex_to_string = function
   | Yge_platform_id id -> Printf.sprintf "$<PLATFORM_ID:%s>" id
   | Yge_raw s -> s
 
-let yge (ge : yelu_genex) : yelu_arg = Yarg_string (Ycs_val (genex_to_string ge))
+let yge (ge : yelu_genex) : yelu_expr = Yexpr_string (Ycs_val (genex_to_string ge))
 
 let ycvar s = Ycvar s
 let ytarget s = Ytarget s
-let ytruthy arg = Ytruthy arg
+let ytruthy expr = Ytruthy expr
 let ynot c = Ynot c
 let yand a b = Yand (a, b)
 let yor a b = Yor (a, b)
-let yis_target arg = Yis_target arg
-let yis_defined arg = Yis_defined arg
+let yis_target expr = Yis_target expr
+let yis_defined expr = Yis_defined expr
 let ypolicy_defined id = Ypolicy_defined id
 let ystrequal a b = Ystrequal (a, b)
 let ystrless a b = Ystrless (a, b)
@@ -54,16 +54,16 @@ let yversion_greater a b = Yversion_greater (a, b)
 let yversion_equal a b = Yversion_equal (a, b)
 let yversion_less_equal a b = Yversion_less_equal (a, b)
 let yversion_greater_equal a b = Yversion_greater_equal (a, b)
-let yvar s = Yarg_var (Yvar s)
+let yvar s = Yexpr_var (Yvar s)
 let ylet name value = Ylet { var = Yvar name; value }
-let ycstr s = Yarg_cvar (Ycvar s)
-let ytval s = Yarg_target (Ytarget s)
-let yfile s = Yarg_string (Ycs_file s)
-let ydir s = Yarg_string (Ycs_dir s)
-let ystr s = Yarg_string (Ycs_val s)
-let ystr_raw s = Yarg_string (Ycs_cmake s)
-let ystr_bare s = Yarg_string (Ycs_name s)
-let ybool b = Yarg_bool b
+let ycstr s = Yexpr_cvar (Ycvar s)
+let ytval s = Yexpr_target (Ytarget s)
+let yfile s = Yexpr_string (Ycs_file s)
+let ydir s = Yexpr_string (Ycs_dir s)
+let ystr s = Yexpr_string (Ycs_val s)
+let ystr_raw s = Yexpr_string (Ycs_cmake s)
+let ystr_bare s = Yexpr_string (Ycs_name s)
+let ybool b = Yexpr_bool b
 
 (* cmake variable reference — erases to ${NAME} for cmake runtime expansion *)
 let ycref s = ystr_raw (Fmt.str "${%s}" s)
@@ -528,10 +528,10 @@ let yc_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = No
 let yc_path_normal_path ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_normal_path { path_var; out })
 
-let yc_path_relative_path ?(base_dir : yelu_arg option = None) ?(out : yelu_cvar option = None) path_var =
+let yc_path_relative_path ?(base_dir : yelu_expr option = None) ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_relative_path { path_var; base_dir; out })
 
-let yc_path_absolute_path ?(base_dir : yelu_arg option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
+let yc_path_absolute_path ?(base_dir : yelu_expr option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
   Ye_file (Ypath_absolute_path { path_var; base_dir; normalize; out })
 
 let yc_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
