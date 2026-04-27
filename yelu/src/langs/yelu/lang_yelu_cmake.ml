@@ -102,7 +102,7 @@ type yelu_expr =
 (* cmake-pack substrate for Lang_yelu functors *)
 module Cmake_types = struct
   type var = yelu_cvar
-  type arg = yelu_expr
+  type expr = yelu_expr
   type target = yelu_target
 end
 

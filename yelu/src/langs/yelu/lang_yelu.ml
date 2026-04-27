@@ -23,8 +23,8 @@ module type LANG_TYPES = sig
   (** Runtime variable handle (≅ [yelu_cvar] in cmake-pack). *)
   type var
 
-  (** Argument / value substrate (≅ [yelu_expr] in cmake-pack). *)
-  type arg
+  (** Value-bearing expression substrate (≅ [yelu_expr] in cmake-pack). *)
+  type expr
 
   (** Target name handle (≅ [yelu_target] in cmake-pack). *)
   type target
@@ -108,15 +108,15 @@ type math_output_format = Decimal | Hexadecimal
 
 module Make_json_op (T : LANG_TYPES) = struct
   type yelu_json_op =
-    | Yjop_get of { json : T.arg; path : string list }
-    | Yjop_get_raw of { json : T.arg; path : string list }
-    | Yjop_type of { json : T.arg; path : string list }
-    | Yjop_length of { json : T.arg; path : string list }
-    | Yjop_member of { json : T.arg; path : string list }
-    | Yjop_remove of { json : T.arg; path : string list }
-    | Yjop_set of { json : T.arg; path : string list; value : T.arg }
-    | Yjop_equal of { json1 : T.arg; json2 : T.arg }
-    | Yjop_string_encode of { value : T.arg }
+    | Yjop_get of { json : T.expr; path : string list }
+    | Yjop_get_raw of { json : T.expr; path : string list }
+    | Yjop_type of { json : T.expr; path : string list }
+    | Yjop_length of { json : T.expr; path : string list }
+    | Yjop_member of { json : T.expr; path : string list }
+    | Yjop_remove of { json : T.expr; path : string list }
+    | Yjop_set of { json : T.expr; path : string list; value : T.expr }
+    | Yjop_equal of { json1 : T.expr; json2 : T.expr }
+    | Yjop_string_encode of { value : T.expr }
 end
 
 (* ============================================================
@@ -127,52 +127,52 @@ module Make_string_op (T : LANG_TYPES) = struct
   module Json = Make_json_op (T)
 
   type yelu_string_stmt =
-    | Ystr_toupper of { string : T.arg; out : T.var }
-    | Ystr_tolower of { string : T.arg; out : T.var }
-    | Ystr_length of { string : T.arg; out : T.var }
-    | Ystr_strip of { string : T.arg; out : T.var }
-    | Ystr_concat of { out : T.var; inputs : T.arg list }
+    | Ystr_toupper of { string : T.expr; out : T.var }
+    | Ystr_tolower of { string : T.expr; out : T.var }
+    | Ystr_length of { string : T.expr; out : T.var }
+    | Ystr_strip of { string : T.expr; out : T.var }
+    | Ystr_concat of { out : T.var; inputs : T.expr list }
     | Ystr_replace of {
-        match_string : T.arg;
-        replace_string : T.arg;
+        match_string : T.expr;
+        replace_string : T.expr;
         out : T.var;
-        inputs : T.arg list;
+        inputs : T.expr list;
       }
-    | Ystr_regex_match of { regex : string; out : T.var; inputs : T.arg list }
-    | Ystr_regex_matchall of { regex : string; out : T.var; inputs : T.arg list }
+    | Ystr_regex_match of { regex : string; out : T.var; inputs : T.expr list }
+    | Ystr_regex_matchall of { regex : string; out : T.var; inputs : T.expr list }
     | Ystr_regex_replace of {
         regex : string;
-        replace : T.arg;
+        replace : T.expr;
         out : T.var;
-        inputs : T.arg list;
+        inputs : T.expr list;
       }
-    | Ystr_regex_quote of { out : T.var; inputs : T.arg list }
-    | Ystr_append of { cvar : T.var; inputs : T.arg list }
-    | Ystr_prepend of { cvar : T.var; inputs : T.arg list }
-    | Ystr_join of { glue : T.arg; out : T.var; inputs : T.arg list }
+    | Ystr_regex_quote of { out : T.var; inputs : T.expr list }
+    | Ystr_append of { cvar : T.var; inputs : T.expr list }
+    | Ystr_prepend of { cvar : T.var; inputs : T.expr list }
+    | Ystr_join of { glue : T.expr; out : T.var; inputs : T.expr list }
     | Ystr_find of {
-        string : T.arg;
-        substring : T.arg;
+        string : T.expr;
+        substring : T.expr;
         out : T.var;
         reverse : bool;
       }
     | Ystr_substring of {
-        string : T.arg;
+        string : T.expr;
         begin_ : int;
         length : int option;
         out : T.var;
       }
-    | Ystr_repeat of { string : T.arg; count : int; out : T.var }
-    | Ystr_genex_strip of { string : T.arg; out : T.var }
+    | Ystr_repeat of { string : T.expr; count : int; out : T.var }
+    | Ystr_genex_strip of { string : T.expr; out : T.var }
     | Ystr_compare of {
         op : Lang_cmake.string_compare_op;
-        string1 : T.arg;
-        string2 : T.arg;
+        string1 : T.expr;
+        string2 : T.expr;
         out : T.var;
       }
-    | Ystr_make_c_identifier of { string : T.arg; out : T.var }
+    | Ystr_make_c_identifier of { string : T.expr; out : T.var }
     | Ystr_timestamp of { out : T.var; format : string option; utc : bool }
-    | Ystr_hex of { string : T.arg; out : T.var }
+    | Ystr_hex of { string : T.expr; out : T.var }
     | Ystr_uuid of {
         out : T.var;
         namespace : string;
@@ -193,10 +193,10 @@ end
 
 module Make_list_op (T : LANG_TYPES) = struct
   type yelu_list_stmt =
-    | Ylist_append of { cvar : T.var; values : T.arg list }
+    | Ylist_append of { cvar : T.var; values : T.expr list }
     | Ylist_length of { cvar : T.var; out : T.var }
     | Ylist_get of { cvar : T.var; indices : int list; out : T.var }
-    | Ylist_remove_item of { cvar : T.var; values : T.arg list }
+    | Ylist_remove_item of { cvar : T.var; values : T.expr list }
     | Ylist_remove_duplicates of { cvar : T.var }
     | Ylist_reverse of { cvar : T.var }
     | Ylist_sort of {
@@ -210,16 +210,16 @@ module Make_list_op (T : LANG_TYPES) = struct
         mode : Lang_cmake.list_filter_mode;
         regex : string;
       }
-    | Ylist_join of { cvar : T.var; glue : T.arg; out : T.var }
+    | Ylist_join of { cvar : T.var; glue : T.expr; out : T.var }
     | Ylist_sublist of {
         cvar : T.var;
         begin_ : int;
         length : int;
         out : T.var;
       }
-    | Ylist_find of { cvar : T.var; value : T.arg; out : T.var }
-    | Ylist_prepend of { cvar : T.var; values : T.arg list }
-    | Ylist_insert of { cvar : T.var; index : int; values : T.arg list }
+    | Ylist_find of { cvar : T.var; value : T.expr; out : T.var }
+    | Ylist_prepend of { cvar : T.var; values : T.expr list }
+    | Ylist_insert of { cvar : T.var; index : int; values : T.expr list }
     | Ylist_remove_at of { cvar : T.var; indices : int list }
     | Ylist_pop_back of { cvar : T.var; out_vars : T.var list }
     | Ylist_pop_front of { cvar : T.var; out_vars : T.var list }
@@ -240,59 +240,59 @@ module Make_file_op (T : LANG_TYPES) = struct
     (* file() IO *)
     | Yfile_read of {
         out : T.var;
-        file : T.arg;
+        file : T.expr;
         offset : int option;
         limit : int option;
         hex : bool;
       }
-    | Yfile_write of { file : T.arg; append : bool; content : T.arg list }
+    | Yfile_write of { file : T.expr; append : bool; content : T.expr list }
     | Yfile_strings of {
         out : T.var;
-        file : T.arg;
+        file : T.expr;
         regex : string option;
         encoding : string option;
         limit_count : int option;
       }
     (* file() filesystem *)
-    | Yfile_touch of { files : T.arg list; nocreate : bool }
-    | Yfile_make_directory of { dirs : T.arg list }
+    | Yfile_touch of { files : T.expr list; nocreate : bool }
+    | Yfile_make_directory of { dirs : T.expr list }
     | Yfile_rename of {
-        old_ : T.arg;
-        new_ : T.arg;
+        old_ : T.expr;
+        new_ : T.expr;
         result : T.var option;
         no_replace : bool;
       }
-    | Yfile_remove of { files : T.arg list; recurse : bool }
+    | Yfile_remove of { files : T.expr list; recurse : bool }
     | Yfile_copy of {
-        input : T.arg;
-        output : T.arg;
+        input : T.expr;
+        output : T.expr;
         result : T.var option;
         only_if_different : bool;
       }
     (* file() path queries *)
     | Yfile_real_path of {
         out : T.var;
-        path : T.arg;
-        base_dir : T.arg option;
+        path : T.expr;
+        base_dir : T.expr option;
         expand_tilde : bool;
       }
-    | Yfile_size of { out : T.var; file : T.arg }
-    | Yfile_read_symlink of { out : T.var; link : T.arg }
+    | Yfile_size of { out : T.var; file : T.expr }
+    | Yfile_read_symlink of { out : T.var; link : T.expr }
     | Yfile_timestamp of {
         out : T.var;
-        file : T.arg;
+        file : T.expr;
         format : string option;
         utc : bool;
       }
-    | Yfile_relative_path of { var : T.arg; base : T.arg; file : T.arg }
+    | Yfile_relative_path of { var : T.expr; base : T.expr; file : T.expr }
     | Yfile_glob of {
         out : T.var;
         recurse : bool;
-        relative : T.arg option;
+        relative : T.expr option;
         configure_depends : bool;
-        patterns : T.arg list;
+        patterns : T.expr list;
       }
-    | Yfile_configure of { input : T.arg; output : T.arg }
+    | Yfile_configure of { input : T.expr; output : T.expr }
     (* cmake_path *)
     | Ypath_get of {
         path_var : T.var;
@@ -308,31 +308,31 @@ module Make_file_op (T : LANG_TYPES) = struct
     | Ypath_is_relative of { path_var : T.var; out : T.var }
     | Ypath_is_prefix of {
         path_var : T.var;
-        input : T.arg;
+        input : T.expr;
         normalize : bool;
         out : T.var;
       }
     | Ypath_compare of {
-        input1 : T.arg;
+        input1 : T.expr;
         op : Lang_cmake.cmake_path_compare_op;
-        input2 : T.arg;
+        input2 : T.expr;
         out : T.var;
       }
-    | Ypath_set of { path_var : T.var; input : T.arg; normalize : bool }
+    | Ypath_set of { path_var : T.var; input : T.expr; normalize : bool }
     | Ypath_append of {
         path_var : T.var;
-        inputs : T.arg list;
+        inputs : T.expr list;
         out : T.var option;
       }
     | Ypath_append_string of {
         path_var : T.var;
-        inputs : T.arg list;
+        inputs : T.expr list;
         out : T.var option;
       }
     | Ypath_remove_filename of { path_var : T.var; out : T.var option }
     | Ypath_replace_filename of {
         path_var : T.var;
-        input : T.arg;
+        input : T.expr;
         out : T.var option;
       }
     | Ypath_remove_extension of {
@@ -343,18 +343,18 @@ module Make_file_op (T : LANG_TYPES) = struct
     | Ypath_replace_extension of {
         path_var : T.var;
         last_only : bool;
-        input : T.arg;
+        input : T.expr;
         out : T.var option;
       }
     | Ypath_normal_path of { path_var : T.var; out : T.var option }
     | Ypath_relative_path of {
         path_var : T.var;
-        base_dir : T.arg option;
+        base_dir : T.expr option;
         out : T.var option;
       }
     | Ypath_absolute_path of {
         path_var : T.var;
-        base_dir : T.arg option;
+        base_dir : T.expr option;
         normalize : bool;
         out : T.var option;
       }
@@ -364,19 +364,19 @@ module Make_file_op (T : LANG_TYPES) = struct
         out : T.var;
       }
     | Ypath_convert_to_cmake of {
-        input : T.arg;
+        input : T.expr;
         normalize : bool;
         out : T.var;
       }
     | Ypath_convert_to_native of {
-        input : T.arg;
+        input : T.expr;
         normalize : bool;
         out : T.var;
       }
     | Ypath_hash of { path_var : T.var; out : T.var }
     | Ypath_get_filename_component of {
         var : T.var;
-        filename : T.arg;
+        filename : T.expr;
         mode : string;
       }
 end
@@ -387,33 +387,33 @@ end
 
 module Make_cond (T : LANG_TYPES) = struct
   type yelu_cond =
-    | Ytruthy of T.arg
+    | Ytruthy of T.expr
     | Ynot of yelu_cond
     | Yand of yelu_cond * yelu_cond
     | Yor of yelu_cond * yelu_cond
-    | Yis_target of T.arg
-    | Yis_defined of T.arg
-    | Ystrequal of T.arg * T.arg
-    | Ystrless of T.arg * T.arg
-    | Ystrgreater of T.arg * T.arg
-    | Ystrless_equal of T.arg * T.arg
-    | Ystrgreater_equal of T.arg * T.arg
-    | Yequal of T.arg * T.arg
-    | Yless of T.arg * T.arg
-    | Ygreater of T.arg * T.arg
-    | Yless_equal of T.arg * T.arg
-    | Ygreater_equal of T.arg * T.arg
-    | Yin_list of T.arg * T.arg
-    | Ymatches of T.arg * string
-    | Yexists of T.arg
-    | Yis_directory of T.arg
-    | Yis_absolute of T.arg
+    | Yis_target of T.expr
+    | Yis_defined of T.expr
+    | Ystrequal of T.expr * T.expr
+    | Ystrless of T.expr * T.expr
+    | Ystrgreater of T.expr * T.expr
+    | Ystrless_equal of T.expr * T.expr
+    | Ystrgreater_equal of T.expr * T.expr
+    | Yequal of T.expr * T.expr
+    | Yless of T.expr * T.expr
+    | Ygreater of T.expr * T.expr
+    | Yless_equal of T.expr * T.expr
+    | Ygreater_equal of T.expr * T.expr
+    | Yin_list of T.expr * T.expr
+    | Ymatches of T.expr * string
+    | Yexists of T.expr
+    | Yis_directory of T.expr
+    | Yis_absolute of T.expr
     | Ypolicy_defined of string
-    | Yversion_less of T.arg * T.arg
-    | Yversion_greater of T.arg * T.arg
-    | Yversion_equal of T.arg * T.arg
-    | Yversion_less_equal of T.arg * T.arg
-    | Yversion_greater_equal of T.arg * T.arg
+    | Yversion_less of T.expr * T.expr
+    | Yversion_greater of T.expr * T.expr
+    | Yversion_equal of T.expr * T.expr
+    | Yversion_less_equal of T.expr * T.expr
+    | Yversion_greater_equal of T.expr * T.expr
 end
 
 (* ============================================================
@@ -421,13 +421,13 @@ end
 
    target_kind, items_with_kind, target_feature, file_set,
    target_sources_item are defined inside the functor since they
-   depend on T.arg.
+   depend on T.expr.
    ============================================================ *)
 
 module Make_target_op (T : LANG_TYPES) = struct
   type yelu_items_with_kind = {
     kind : target_kind;
-    items : T.arg list;
+    items : T.expr list;
   }
 
   type yelu_target_feature = {
@@ -438,8 +438,8 @@ module Make_target_op (T : LANG_TYPES) = struct
   type yelu_file_set = {
     kind : target_kind;
     type_ : Lang_cmake.file_set_type;
-    base_dirs : T.arg list;
-    files : T.arg list;
+    base_dirs : T.expr list;
+    files : T.expr list;
   }
 
   type yelu_target_sources_item =
@@ -448,66 +448,66 @@ module Make_target_op (T : LANG_TYPES) = struct
 
   type yelu_target_stmt =
     | Ytgt_add_executable of {
-        name : T.arg;
+        name : T.expr;
         exclude_from_all : bool;
-        sources : T.arg list;
+        sources : T.expr list;
       }
     | Ytgt_add_library of {
-        name : T.arg;
+        name : T.expr;
         type_ : library_type option;
         exclude_from_all : bool;
-        sources : T.arg list;
+        sources : T.expr list;
       }
     | Ytgt_add_library_imported of {
-        name : T.arg;
+        name : T.expr;
         lib_type : string option;
         global : bool;
       }
     | Ytgt_add_library_alias of { name : string; target : string }
     | Ytgt_add_executable_alias of { name : string; target : string }
     | Ytgt_include_directories of {
-        target : T.arg;
+        target : T.expr;
         before : bool;
         system : bool;
         items : yelu_items_with_kind list;
       }
     | Ytgt_link_libraries of {
-        targets : T.arg list;
+        targets : T.expr list;
         items : yelu_items_with_kind list;
       }
     | Ytgt_compile_definitions of {
-        target : T.arg;
+        target : T.expr;
         items : yelu_items_with_kind list;
       }
     | Ytgt_compile_features of {
-        target : T.arg;
+        target : T.expr;
         features : yelu_target_feature list;
       }
     | Ytgt_compile_options of {
-        target : T.arg;
+        target : T.expr;
         before : bool;
         items : yelu_items_with_kind list;
       }
     | Ytgt_link_options of {
-        target : T.arg;
+        target : T.expr;
         before : bool;
         items : yelu_items_with_kind list;
       }
     | Ytgt_link_directories of {
-        target : T.arg;
+        target : T.expr;
         before : bool;
         items : yelu_items_with_kind list;
       }
-    | Ytgt_sources of { target : T.arg; items : yelu_items_with_kind list }
-    | Ytgt_sources_fs of { target : T.arg; items : yelu_target_sources_item list }
+    | Ytgt_sources of { target : T.expr; items : yelu_items_with_kind list }
+    | Ytgt_sources_fs of { target : T.expr; items : yelu_target_sources_item list }
     | Ytgt_precompile_headers of {
-        target : T.arg;
+        target : T.expr;
         items : yelu_items_with_kind list;
       }
     | Ytgt_add_custom_command of {
-        outputs : T.arg list;
+        outputs : T.expr list;
         commands : Lang_cmake.custom_command list;
-        depends : T.arg list;
+        depends : T.expr list;
         verbatim : bool;
         comment : string option;
       }
@@ -522,7 +522,7 @@ module Make_target_op (T : LANG_TYPES) = struct
         name : string;
         all : bool;
         commands : Lang_cmake.custom_command list;
-        depends : T.arg list;
+        depends : T.expr list;
         comment : string option;
       }
     | Ytgt_add_dependencies of { target : string; dep : string }
@@ -535,17 +535,17 @@ end
 module Make_dir_op (T : LANG_TYPES) = struct
   type yelu_dir_stmt =
     | Ydir_include_directories of {
-        dirs : T.arg list;
+        dirs : T.expr list;
         before : bool;
         system : bool;
       }
-    | Ydir_add_compile_definitions of { defs : T.arg list }
-    | Ydir_add_compile_options of { options : T.arg list }
-    | Ydir_add_link_options of { options : T.arg list }
-    | Ydir_add_definitions of { defs : T.arg list }
-    | Ydir_link_directories of { before : bool; dirs : T.arg list }
-    | Ydir_add_subdirectory of { source_dir : T.arg }
-    | Ydir_link_libraries of { items : T.arg list }
+    | Ydir_add_compile_definitions of { defs : T.expr list }
+    | Ydir_add_compile_options of { options : T.expr list }
+    | Ydir_add_link_options of { options : T.expr list }
+    | Ydir_add_definitions of { defs : T.expr list }
+    | Ydir_link_directories of { before : bool; dirs : T.expr list }
+    | Ydir_add_subdirectory of { source_dir : T.expr }
+    | Ydir_link_libraries of { items : T.expr list }
 end
 
 (* ============================================================
@@ -557,26 +557,26 @@ module Make_state_op (T : LANG_TYPES) = struct
     (* plain variables *)
     | Ystate_set of {
         cvar : T.var;
-        values : T.arg list;
+        values : T.expr list;
         parent_scope : bool;
       }
     (* cache *)
-    | Ystate_option of { cvar : T.var; msg : string; value : T.arg }
+    | Ystate_option of { cvar : T.var; msg : string; value : T.expr }
     | Ystate_set_cache of {
         cvar : T.var;
-        values : T.arg list;
+        values : T.expr list;
         cache_type : Lang_cmake.cache_type;
         docstring : string;
         force : bool;
       }
     | Ystate_unset_cache of { cvar : T.var }
     (* env *)
-    | Ystate_set_env of { var : string; value : T.arg }
+    | Ystate_set_env of { var : string; value : T.expr }
     | Ystate_unset_env of { var : string }
     (* property *)
     | Ystate_get_property of {
         var : T.var;
-        target : T.arg;
+        target : T.expr;
         property : string;
         set : bool;
       }
@@ -584,28 +584,28 @@ module Make_state_op (T : LANG_TYPES) = struct
     | Ystate_set_directory_property of {
         property : string;
         append : bool;
-        values : T.arg list;
+        values : T.expr list;
       }
     | Ystate_set_tests_properties of {
-        tests : T.arg list;
-        properties : (string * T.arg) list;
+        tests : T.expr list;
+        properties : (string * T.expr) list;
       }
     | Ystate_set_target_properties of {
-        target : T.arg;
-        properties : (string * T.arg) list;
+        target : T.expr;
+        properties : (string * T.expr) list;
       }
     | Ystate_set_property of {
-        targets : T.arg list;
+        targets : T.expr list;
         append : bool;
-        properties : (string * T.arg) list;
+        properties : (string * T.expr) list;
       }
     | Ystate_set_source_property of {
-        file : T.arg;
+        file : T.expr;
         property : string;
-        values : T.arg list;
+        values : T.expr list;
       }
     | Ystate_set_global_property of {
-        properties : (string * T.arg) list;
+        properties : (string * T.expr) list;
       }
     | Ystate_get_global_property of { var : T.var; property : string }
     | Ystate_get_target_property of {
@@ -631,9 +631,9 @@ module Make_find_op (T : LANG_TYPES) = struct
   type yelu_find_stmt =
     | Yfind_library of {
         cvar : T.var;
-        names : T.arg list;
-        paths : T.arg list;
-        hints : T.arg list;
+        names : T.expr list;
+        paths : T.expr list;
+        hints : T.expr list;
         no_default_path : bool;
         no_cmake_environment_path : bool;
         no_system_environment_path : bool;
@@ -641,9 +641,9 @@ module Make_find_op (T : LANG_TYPES) = struct
       }
     | Yfind_path of {
         cvar : T.var;
-        names : T.arg list;
-        paths : T.arg list;
-        hints : T.arg list;
+        names : T.expr list;
+        paths : T.expr list;
+        hints : T.expr list;
         no_default_path : bool;
         no_cmake_environment_path : bool;
         no_system_environment_path : bool;
@@ -651,9 +651,9 @@ module Make_find_op (T : LANG_TYPES) = struct
       }
     | Yfind_program of {
         cvar : T.var;
-        names : T.arg list;
-        paths : T.arg list;
-        hints : T.arg list;
+        names : T.expr list;
+        paths : T.expr list;
+        hints : T.expr list;
         no_default_path : bool;
         no_cmake_environment_path : bool;
         no_system_environment_path : bool;
@@ -661,9 +661,9 @@ module Make_find_op (T : LANG_TYPES) = struct
       }
     | Yfind_file of {
         cvar : T.var;
-        names : T.arg list;
-        paths : T.arg list;
-        hints : T.arg list;
+        names : T.expr list;
+        paths : T.expr list;
+        hints : T.expr list;
         no_default_path : bool;
         no_cmake_environment_path : bool;
         no_system_environment_path : bool;
@@ -688,28 +688,28 @@ end
 module Make_install_op (T : LANG_TYPES) = struct
   type yelu_install_stmt =
     | Yinstall_targets of {
-        targets : T.arg list;
-        destination : T.arg;
-        export : T.arg option;
+        targets : T.expr list;
+        destination : T.expr;
+        export : T.expr option;
       }
-    | Yinstall_files of { files : T.arg list; destination : T.arg }
+    | Yinstall_files of { files : T.expr list; destination : T.expr }
     | Yinstall_export of {
-        file : T.arg option;
-        export : T.arg;
-        destination : T.arg;
+        file : T.expr option;
+        export : T.expr;
+        destination : T.expr;
         namespace : string option;
       }
-    | Yinstall_export_export of { name : T.arg; file : T.arg option }
+    | Yinstall_export_export of { name : T.expr; file : T.expr option }
     | Yinstall_configure_package_config_file of {
-        install_dest : T.arg;
-        input : T.arg;
-        output : T.arg;
+        install_dest : T.expr;
+        input : T.expr;
+        output : T.expr;
         no_set_and_check_macro : bool;
         no_check_required_components_macro : bool;
       }
     | Yinstall_write_basic_package_version_file of {
-        file : T.arg;
-        version : T.arg option;
+        file : T.expr;
+        version : T.expr option;
         compatibility : compatibility;
         arch_independent : bool;
       }
@@ -722,7 +722,7 @@ end
 module Make_test_op (T : LANG_TYPES) = struct
   type yelu_test_stmt =
     | Ytest_enable_testing
-    | Ytest_add_test of { name : T.arg; command : T.arg; args : T.arg list }
+    | Ytest_add_test of { name : T.expr; command : T.expr; args : T.expr list }
 end
 
 (* ============================================================
@@ -733,10 +733,10 @@ module Make_try_op (T : LANG_TYPES) = struct
   type yelu_try_stmt =
     | Ytry_compile of {
         result_var : T.var;
-        sources : T.arg list;
-        compile_definitions : T.arg list;
-        link_libraries : T.arg list;
-        link_options : T.arg list;
+        sources : T.expr list;
+        compile_definitions : T.expr list;
+        link_libraries : T.expr list;
+        link_options : T.expr list;
         output_variable : T.var option;
         no_cache : bool;
         c_standard : string option;
@@ -745,12 +745,12 @@ module Make_try_op (T : LANG_TYPES) = struct
     | Ytry_run of {
         run_result_var : T.var;
         compile_result_var : T.var;
-        sources : T.arg list;
-        compile_definitions : T.arg list;
-        link_libraries : T.arg list;
+        sources : T.expr list;
+        compile_definitions : T.expr list;
+        link_libraries : T.expr list;
         compile_output_variable : T.var option;
         run_output_variable : T.var option;
-        args : T.arg list;
+        args : T.expr list;
       }
 end
 
@@ -771,7 +771,7 @@ module Make_cmake_op (T : LANG_TYPES) = struct
       }
     | Ycmake_enable_language of { langs : string list; optional : bool }
     | Ycmake_policy_set of { id : string; new_ : bool }
-    | Ycmake_language_call of { cmd : string; args : T.arg list }
+    | Ycmake_language_call of { cmd : string; args : T.expr list }
     | Ycmake_language_eval of { code : string }
     | Ycmake_language_get_log_level of { out : T.var }
     | Ycmake_math of {
@@ -817,24 +817,24 @@ module Make_stmt (T : LANG_TYPES) = struct
     | Ys_try of Try_op.yelu_try_stmt
     | Ys_cmake of Cmake_op.yelu_cmake_stmt
     (* core *)
-    | Ylet of { var : yelu_var; value : T.arg }
+    | Ylet of { var : yelu_var; value : T.expr }
     | Yif of { cond : Cond.yelu_cond; then_ : yelu_stmt; else_ : yelu_stmt option }
     | Ystmt_list of yelu_stmt list
     (* scripting *)
-    | Yc_include of { file : T.arg; optional : bool }
-    | Yc_function of { name : T.arg; args : string list; body : yelu_stmt list }
-    | Yc_macro of { name : T.arg; args : string list; body : yelu_stmt list }
-    | Yc_apply of { name : T.arg; args : T.arg list }
+    | Yc_include of { file : T.expr; optional : bool }
+    | Yc_function of { name : T.expr; args : string list; body : yelu_stmt list }
+    | Yc_macro of { name : T.expr; args : string list; body : yelu_stmt list }
+    | Yc_apply of { name : T.expr; args : T.expr list }
     | Yc_execute_process of {
-        commands : T.arg list list;
-        working_directory : T.arg option;
+        commands : T.expr list list;
+        working_directory : T.expr option;
         timeout : float option;
         result_variable : T.var option;
         output_variable : T.var option;
         error_variable : T.var option;
-        input_file : T.arg option;
-        output_file : T.arg option;
-        error_file : T.arg option;
+        input_file : T.expr option;
+        output_file : T.expr option;
+        error_file : T.expr option;
         output_quiet : bool;
         error_quiet : bool;
         output_strip_trailing_whitespace : bool;
@@ -847,13 +847,13 @@ module Make_stmt (T : LANG_TYPES) = struct
     | Yc_separate_arguments of {
         cvar : T.var;
         mode : Lang_cmake.separate_arguments_mode;
-        input : T.arg option;
+        input : T.expr option;
       }
     | Yc_extern_cvar of T.var
     | Yc_extern_target of T.target
     | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
     (* control flow *)
-    | Yc_foreach of { loop_var : T.var; items : T.arg list; commands : yelu_stmt }
+    | Yc_foreach of { loop_var : T.var; items : T.expr list; commands : yelu_stmt }
     | Yc_foreach_range of {
         loop_var : T.var;
         start : int option;
@@ -864,7 +864,7 @@ module Make_stmt (T : LANG_TYPES) = struct
     | Yc_foreach_in of {
         loop_var : T.var;
         lists : T.var list;
-        items : T.arg list;
+        items : T.expr list;
         commands : yelu_stmt;
       }
     | Yc_foreach_zip of {
