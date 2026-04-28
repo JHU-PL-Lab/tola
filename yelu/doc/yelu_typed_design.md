@@ -172,6 +172,37 @@ Build the typed layer when at least one of these becomes true:
 Until then, the untyped AST + OCaml-level constraints in helpers are
 sufficient.
 
+## Checking stages
+
+Yelu programs pass through multiple stages before runtime. Each stage can
+detect a different class of errors; earlier is cheaper. This table maps the
+full spectrum for yelu/cmake and notes what is currently implemented.
+
+| Stage                   | Runner                       | Detects                                                                                                        | Status                                                                                 |
+| ----------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **S0 Syntactic local**  | Yelu checker (per-stmt)      | Type mismatches within a statement; bool where string expected                                                 | ✅ `Make_cond_check`, `Make_string_check`, `Cmake_check`                                |
+| **S1 Syntactic global** | Yelu checker (whole-program) | Use-before-define, undefined target reference, duplicate names, unused bindings                                | ⏳ not started; needs a second pass over the program graph                              |
+| **S2 Semantic / scope** | Yelu checker (scope-aware)   | Operation outside valid cmake scope (e.g. `target_*` in script mode); cache variable set after first configure | ⏳ requires a scope dimension in `yelu_type`                                            |
+| **S3 Emit-time**        | Yelu compiler                | Structural errors during AST → cmake lowering                                                                  | ⚠️ partial — compiler panics on malformed input but has no systematic pass              |
+| **S4 Conf-time**        | cmake itself                 | `REQUIRED` find_package fails, `math(EXPR)` malformed, policy violations                                       | ✅ covered by `make runcmake-compat` and `make file-api-test` (observed, not predicted) |
+| **S5 Conf-result**      | File API / canary            | Target shapes, cache entries, property attachments — the *output* of configuration                             | ✅ `make file-api-test` diffs codemodel-v2 JSON                                         |
+| **S6 Build-time**       | Compiler / linker            | C/OCaml type errors, missing link symbols                                                                      | outside yelu scope                                                                     |
+| **S7 Post-build**       | Canary artifact checks       | Symbol compatibility, OCaml module surface, ABI version, watchlists                                            | ✅ canary `probe_lib` + `summary`                                                       |
+| **S8 Runtime**          | Program execution            | Generator expression values (`$<CONFIG:...>`), runtime path lookups                                            | outside yelu scope                                                                     |
+
+**Overlaps with existing test layers**: `test_yelu_compile.ml` exercises S3;
+`test_yelu_check.ml` exercises S0; RunCMake compat and file-api tests observe
+S4/S5. S1 has no tests yet.
+
+**Priority sequence**: S0 per-theory (current work) → S1 global (needs program
+graph) → S2 scope (needs type dimension) → S3 systematic emit pass.
+S4/S5 are already covered via cmake execution; the yelu value is collapsing
+their failures into S0/S1.
+
+Future direction: concretise S0–S2 as typed checker passes that produce
+structured diagnostics (not just `type_error list`), compatible with the
+evidence-bearing types design (§Evidence-bearing types above).
+
 ## Theory-composition architecture
 
 Yelu's `lang_yelu.ml` is a collection of **theories over a shared substrate**
@@ -186,50 +217,75 @@ bundles them into an integrated system; the cmake-pack is the integration point.
 
 ### Theories
 
-| Theory | Functor | cmake-specific? |
-|---|---|---|
-| JSON | `Make_json_op` | no — pack-agnostic |
-| String | `Make_string_op` | mostly |
-| List | `Make_list_op` | yes |
-| File/path | `Make_file_op` | yes |
-| State/variable | `Make_state_op` | yes |
-| Target | `Make_target_op` | cmake-specific |
-| Directory | `Make_dir_op` | cmake-specific |
-| Find | `Make_find_op` | cmake-specific |
-| Install | `Make_install_op` | cmake-specific |
-| Test | `Make_test_op` | cmake-specific |
-| Try | `Make_try_op` | cmake-specific |
-| Cmake meta | `Make_cmake_op` | cmake-specific |
+`✅` = in `fragments/`, has checker. `⏳` = AST in `lang_yelu.ml`, checker pending.
+Complexity estimates are for adding an S0 local type checker.
+Planned functor splits (file I/O / path ops; state var / cache-env-property) are
+noted in the `lang_yelu.ml` header; the table uses current functor names.
+
+| Theory | Functor | Checker | Complexity |
+|--------|---------|---------|------------|
+| Cond | `Make_cond` | ✅ `Make_cond_check` | — |
+| JSON | `Make_json_op` | ✅ (via string) | — |
+| String | `Make_string_op` | ✅ `Make_string_check` | — |
+| List | `Make_list_op` | ⏳ | Medium — `Ty_list` input constraint, 16 constructors |
+| File / path | `Make_file_op` | ⏳ | Med-high — large; planned split into I/O + path-manip |
+| State | `Make_state_op` | ⏳ | High — property types dynamic; planned split into var + cache/env/property |
+| Target | `Make_target_op` | ⏳ | Med-high — `Ty_target` interactions, nested kinds |
+| Directory | `Make_dir_op` | ⏳ | Low — void effects, path/string inputs |
+| Find | `Make_find_op` | ⏳ | Medium — output `Ty_path`; `find_package` sets many implicit vars |
+| Install | `Make_install_op` | ⏳ | Low — no output vars, path/string inputs |
+| Test | `Make_test_op` | ⏳ | Low — 2 constructors |
+| Try | `Make_try_op` | ⏳ | Low-med — `result_var → Ty_bool`, optional outputs → `Ty_string` |
+| Cmake meta | `Make_cmake_op` | ⏳ | Low-med — `math → Ty_int`, escape hatches stay untyped |
+
+### Abstraction levels within cmake-specific theories
+
+The cmake-specific theories are not uniform in kind — there are at least three
+distinct levels, which will matter when deciding how to type and eventually
+refactor them:
+
+**Level 1 — Domain operations** (Target, Directory, Find, Install, Test, Try):
+These abstract over cmake's build-model concepts — targets, properties,
+packages, tests. They are the "what" of a cmake project. A future typed layer
+here encodes domain constraints: a target must be declared before it is used;
+a `find_library` output is either a path or `<NAME>-NOTFOUND`.
+
+**Level 2 — Cmake meta / scripting primitives** (`Make_cmake_op`):
+These are cmake's own evaluation and control machinery — `execute_process`,
+`cmake_language(CALL)`, `math(EXPR)`, `message`, policy management. They
+are more like a scripting runtime than a build-model. The typed layer here is
+closer to S0 value-shape typing (`math → Ty_int`); deeper semantics are mostly
+opaque. May be refactored when we work through it — `execute_process` is
+arguably closer to Level 1 than to `message`/`include_guard`.
+
+**Level 3 — Generator expressions** (`yelu_genex` in `lang_yelu_cmake`):
+Generator expressions are cmake's embedded *functional* sublanguage — composed
+at configure-time, evaluated lazily at build-time. They are structurally
+different from both Level 1 and Level 2: pure, applicative, no side effects,
+different evaluation phase. Currently typed as `Yexpr_genex` in `yelu_expr`.
+
+The long-term framing: cmake has an **imperative layer** (statements, variable
+mutation, cmake meta) and a **functional layer** (generator expressions,
+`string(JSON ...)`, pure path manipulation). The current pack conflates both.
+A future split into `imperative_cmake` and `fp_cmake` packs could share the
+same theories at different evaluation models — the theories (list, string, cond)
+are evaluation-model-agnostic; the core language configures which style is
+primary. `yelu_genex` is the seed of the fp layer already present in the pack.
+Not an immediate task, but the theory isolation we have now is the foundation.
 
 ### Typing implication
 
-Each theory carries its own `yelu_type` fragment — what types its constructors
-produce and consume — and its own checker. The integrated cmake-pack checker
-is the composition of per-theory checkers.
-
-This matches the lambda-calculus analogy: `int-theory`, `let-with-int-theory`,
-`type-for-int-theory`, `let-typed-with-int-theory`. For yelu:
-
-- `string-theory` — syntax (`Make_string_op`) + type fragment + checker
-- `let-typed-with-string-theory` — integrated cmake-pack with string checker wired in
-
-Each theory is testable in isolation before integration. The functor boundary
-already provides the isolation; the type + checker layer is what needs to be
-added per functor module.
-
-### Recommended entry point
-
-JSON (`Make_json_op`) or string (`Make_string_op`) — both are relatively
-self-contained. JSON is the most pack-agnostic. Implement type fragment +
-checker for one theory standalone, then wire into the cmake-pack integrated
-checker.
+Each theory carries its own `yelu_type` fragment and its own checker. The
+integrated cmake-pack checker (`Cmake_check`) composes them. The lambda-calculus
+analogy: `string-theory` + `let-with-string-theory` + `type-for-string-theory` →
+`let-typed-with-string-theory`. Each theory is testable in isolation; the
+functor boundary is the isolation mechanism.
 
 ### typed_yelu_cmake vs yelu_cmake
 
 A second pack instantiation (`typed_yelu_cmake`) uses `yelu_typed_expr` as
-the substrate (`T.expr`). All functor-generated statement types are shared by
-construction — no duplication. The typed pack opt-in is a substrate choice, not
-a code fork.
+`T.expr`. All functor-generated statement types are shared — the typed pack is
+a substrate choice, not a code fork.
 
 ## Open questions (deferred to implementation time)
 

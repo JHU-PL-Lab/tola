@@ -1,12 +1,28 @@
 (** Parametric AST shapes for yelu — aggregates all theory groups.
 
-    [LANG_TYPES] lives in [Lang_yelu_sig]. Cond and string theories live in
-    [Lang_yelu_cond] and [Lang_yelu_string] respectively, each colocated with
-    their checkers. Remaining theories are defined here until they gain
-    checkers and are split out.
-
+    [LANG_TYPES] and the type universe live in [Lang_yelu_type].
+    Fragments with checkers have been split to [fragments/]: cond, string.
+    Remaining theories live here until they gain checkers and are split out.
     [Make_stmt] bundles all theories at a given substrate; packs instantiate
-    it once with [include Lang_yelu.Make_stmt (My_types)]. *)
+    it once with [include Lang_yelu.Make_stmt (My_types)].
+
+    Planned splits (deferred until checkers are written for each group):
+
+    [Make_file_op] conflates two distinct concerns:
+    - Filesystem I/O  — [file(READ/WRITE/GLOB/STRINGS/...)] — effectful,
+      touches the filesystem, outputs are string/bool/int.
+    - Path manipulation — [cmake_path GET/APPEND/...] — pure computation on
+      path strings, semantically closer to string ops.
+    Split into [Make_file_io_op] + [Make_path_op] when checkers are added.
+
+    [Make_state_op] conflates four cmake namespaces with different semantics:
+    - Plain variables  — [set/unset], mutable, scoped to function/directory.
+    - Cache entries    — [option/set CACHE], persist across cmake runs, cmake-typed.
+    - Env variables    — [set ENV{}/unset ENV{}], process-level, untyped.
+    - Properties       — [set_property/get_property], stringly-keyed, scope-tagged.
+    Plain variable ops are the most checkable; property ops require knowing
+    the property's declared type (dynamic). Split when the checker design
+    for each namespace is clear. *)
 
 module type LANG_TYPES = Lang_yelu_type.LANG_TYPES
 

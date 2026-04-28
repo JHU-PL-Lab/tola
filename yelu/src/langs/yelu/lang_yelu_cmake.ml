@@ -71,31 +71,7 @@ type compatibility = Lang_cmake.compatibility =
   | Same_minor_version
   | Exact_version
 
-(* Generator expressions — typed wrappers that compile to $<...> strings *)
-type yelu_genex =
-  (* logical *)
-  | Yge_config of string (* $<CONFIG:cfg> *)
-  | Yge_not of yelu_genex (* $<NOT:g> *)
-  | Yge_and of yelu_genex list (* $<AND:g1,g2,...> *)
-  | Yge_or of yelu_genex list (* $<OR:g1,g2,...> *)
-  | Yge_if of yelu_genex * yelu_genex * yelu_genex (* $<IF:cond,t,f> *)
-  | Yge_bool of string (* $<BOOL:s> *)
-  (* target *)
-  | Yge_target_file of string (* $<TARGET_FILE:tgt> *)
-  | Yge_target_file_dir of string (* $<TARGET_FILE_DIR:tgt> *)
-  | Yge_target_property of string * string (* $<TARGET_PROPERTY:tgt,prop> *)
-  (* interface *)
-  | Yge_install_interface of yelu_genex (* $<INSTALL_INTERFACE:...> *)
-  | Yge_build_interface of yelu_genex (* $<BUILD_INTERFACE:...> *)
-  (* string ops *)
-  | Yge_strequal of string * string (* $<STREQUAL:a,b> *)
-  | Yge_lower_case of yelu_genex (* $<LOWER_CASE:...> *)
-  | Yge_upper_case of yelu_genex (* $<UPPER_CASE:...> *)
-  (* platform / language *)
-  | Yge_compile_language of string (* $<COMPILE_LANGUAGE:lang> *)
-  | Yge_platform_id of string (* $<PLATFORM_ID:id> *)
-  (* escape hatch *)
-  | Yge_raw of string (* $<raw> — user supplies full inner content *)
+include Lang_yelu_genex
 
 type yelu_expr =
   | Yexpr_cvar of yelu_cvar

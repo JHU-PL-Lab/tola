@@ -4,25 +4,6 @@ open Lang_yelu_cmake
 let ycs_to_s = function
   | Ycs_file s | Ycs_dir s | Ycs_name s | Ycs_val s | Ycs_cmake s -> s
 
-let rec genex_to_string = function
-  | Yge_config cfg -> Printf.sprintf "$<CONFIG:%s>" cfg
-  | Yge_not g -> Printf.sprintf "$<NOT:%s>" (genex_to_string g)
-  | Yge_and gs -> Printf.sprintf "$<AND:%s>" (String.concat ~sep:"," (List.map gs ~f:genex_to_string))
-  | Yge_or gs -> Printf.sprintf "$<OR:%s>" (String.concat ~sep:"," (List.map gs ~f:genex_to_string))
-  | Yge_if (c, t, f) -> Printf.sprintf "$<IF:%s,%s,%s>" (genex_to_string c) (genex_to_string t) (genex_to_string f)
-  | Yge_bool s -> Printf.sprintf "$<BOOL:%s>" s
-  | Yge_target_file tgt -> Printf.sprintf "$<TARGET_FILE:%s>" tgt
-  | Yge_target_file_dir tgt -> Printf.sprintf "$<TARGET_FILE_DIR:%s>" tgt
-  | Yge_target_property (tgt, prop) -> Printf.sprintf "$<TARGET_PROPERTY:%s,%s>" tgt prop
-  | Yge_install_interface g -> Printf.sprintf "$<INSTALL_INTERFACE:%s>" (genex_to_string g)
-  | Yge_build_interface g -> Printf.sprintf "$<BUILD_INTERFACE:%s>" (genex_to_string g)
-  | Yge_strequal (a, b) -> Printf.sprintf "$<STREQUAL:%s,%s>" a b
-  | Yge_lower_case g -> Printf.sprintf "$<LOWER_CASE:%s>" (genex_to_string g)
-  | Yge_upper_case g -> Printf.sprintf "$<UPPER_CASE:%s>" (genex_to_string g)
-  | Yge_compile_language lang -> Printf.sprintf "$<COMPILE_LANGUAGE:%s>" lang
-  | Yge_platform_id id -> Printf.sprintf "$<PLATFORM_ID:%s>" id
-  | Yge_raw s -> s
-
 let yge (ge : yelu_genex) : yelu_expr = Yexpr_string (Ycs_val (genex_to_string ge))
 
 let ycvar s = Ycvar s
