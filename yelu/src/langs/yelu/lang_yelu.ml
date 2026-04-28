@@ -790,6 +790,12 @@ end
    pattern → same-name constructor in Lang_yelu_cmake).
    ============================================================ *)
 
+(* [Make_stmt] is a functor application bundle — it only instantiates
+   the per-group functors at a given substrate [T]. The top-level
+   [yelu_stmt] sum type (which weaves group statements with cmake-
+   specific scripting and control flow) lives in [Lang_yelu_cmake];
+   each pack composes its own statement type from these group bundles
+   plus its pack-specific scripting vocabulary. *)
 module Make_stmt (T : LANG_TYPES) = struct
   module String_op = Make_string_op (T)
   module List_op = Make_list_op (T)
@@ -803,82 +809,4 @@ module Make_stmt (T : LANG_TYPES) = struct
   module Test_op = Make_test_op (T)
   module Try_op = Make_try_op (T)
   module Cmake_op = Make_cmake_op (T)
-
-  type yelu_stmt =
-    | Ys_string of String_op.yelu_string_stmt
-    | Ys_list of List_op.yelu_list_stmt
-    | Ys_file of File_op.yelu_file_stmt
-    | Ys_target of Target_op.yelu_target_stmt
-    | Ys_dir of Dir_op.yelu_dir_stmt
-    | Ys_state of State_op.yelu_state_stmt
-    | Ys_find of Find_op.yelu_find_stmt
-    | Ys_install of Install_op.yelu_install_stmt
-    | Ys_test of Test_op.yelu_test_stmt
-    | Ys_try of Try_op.yelu_try_stmt
-    | Ys_cmake of Cmake_op.yelu_cmake_stmt
-    (* core *)
-    | Ylet of { var : yelu_var; value : T.expr }
-    | Yif of { cond : Cond.yelu_cond; then_ : yelu_stmt; else_ : yelu_stmt option }
-    | Ystmt_list of yelu_stmt list
-    (* scripting *)
-    | Yc_include of { file : T.expr; optional : bool }
-    | Yc_function of { name : T.expr; args : string list; body : yelu_stmt list }
-    | Yc_macro of { name : T.expr; args : string list; body : yelu_stmt list }
-    | Yc_apply of { name : T.expr; args : T.expr list }
-    | Yc_execute_process of {
-        commands : T.expr list list;
-        working_directory : T.expr option;
-        timeout : float option;
-        result_variable : T.var option;
-        output_variable : T.var option;
-        error_variable : T.var option;
-        input_file : T.expr option;
-        output_file : T.expr option;
-        error_file : T.expr option;
-        output_quiet : bool;
-        error_quiet : bool;
-        output_strip_trailing_whitespace : bool;
-        error_strip_trailing_whitespace : bool;
-        command_error_is_fatal : string option;
-      }
-    | Yc_quote_cmd of string
-    | Yc_at_var of string
-    | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
-    | Yc_separate_arguments of {
-        cvar : T.var;
-        mode : Lang_cmake.separate_arguments_mode;
-        input : T.expr option;
-      }
-    | Yc_extern_cvar of T.var
-    | Yc_extern_target of T.target
-    | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
-    (* control flow *)
-    | Yc_foreach of { loop_var : T.var; items : T.expr list; commands : yelu_stmt }
-    | Yc_foreach_range of {
-        loop_var : T.var;
-        start : int option;
-        stop : int;
-        step : int option;
-        commands : yelu_stmt;
-      }
-    | Yc_foreach_in of {
-        loop_var : T.var;
-        lists : T.var list;
-        items : T.expr list;
-        commands : yelu_stmt;
-      }
-    | Yc_foreach_zip of {
-        loop_vars : T.var list;
-        lists : T.var list;
-        commands : yelu_stmt;
-      }
-    | Yc_while of { cond : Cond.yelu_cond; commands : yelu_stmt }
-    | Yc_break
-    | Yc_continue
-    | Yc_return of { propogate_vars : string list }
-    | Yc_block of {
-        scope_vars : T.var list;
-        propagate : string;
-        body : yelu_stmt list;
-      }
 end

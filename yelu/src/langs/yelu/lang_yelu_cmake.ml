@@ -144,6 +144,91 @@ include Lang_yelu.Make_cmake_op (Cmake_types)
 (* Hoist Json sub-module's yelu_json_op + Yjop_* constructors to top level *)
 include Json
 
-(* Top-level expression — brings yelu_stmt + Cond/String_op/etc.
-   sub-modules (same applicative results as the includes above). *)
-include Lang_yelu.Make_stmt (Cmake_types)
+(* ============================================================
+   Top-level statement — cmake-pack-specific.
+
+   Group statements come from the per-group includes above (yelu_*_stmt
+   types are at top level). The cmake-specific scripting and control
+   flow (include / function / macro / apply / foreach / message / ...)
+   live here directly — these are part of the cmake-pack vocabulary,
+   not the parametric core. A future pack (json/nix/...) would compose
+   its own yelu_stmt with its own scripting constructors.
+   ============================================================ *)
+
+type yelu_stmt =
+  | Ys_string of yelu_string_stmt
+  | Ys_list of yelu_list_stmt
+  | Ys_file of yelu_file_stmt
+  | Ys_target of yelu_target_stmt
+  | Ys_dir of yelu_dir_stmt
+  | Ys_state of yelu_state_stmt
+  | Ys_find of yelu_find_stmt
+  | Ys_install of yelu_install_stmt
+  | Ys_test of yelu_test_stmt
+  | Ys_try of yelu_try_stmt
+  | Ys_cmake of yelu_cmake_stmt
+  (* core *)
+  | Ylet of { var : yelu_var; value : yelu_expr }
+  | Yif of { cond : yelu_cond; then_ : yelu_stmt; else_ : yelu_stmt option }
+  | Ystmt_list of yelu_stmt list
+  (* cmake-specific scripting *)
+  | Yc_include of { file : yelu_expr; optional : bool }
+  | Yc_function of { name : yelu_expr; args : string list; body : yelu_stmt list }
+  | Yc_macro of { name : yelu_expr; args : string list; body : yelu_stmt list }
+  | Yc_apply of { name : yelu_expr; args : yelu_expr list }
+  | Yc_execute_process of {
+      commands : yelu_expr list list;
+      working_directory : yelu_expr option;
+      timeout : float option;
+      result_variable : yelu_cvar option;
+      output_variable : yelu_cvar option;
+      error_variable : yelu_cvar option;
+      input_file : yelu_expr option;
+      output_file : yelu_expr option;
+      error_file : yelu_expr option;
+      output_quiet : bool;
+      error_quiet : bool;
+      output_strip_trailing_whitespace : bool;
+      error_strip_trailing_whitespace : bool;
+      command_error_is_fatal : string option;
+    }
+  | Yc_quote_cmd of string
+  | Yc_at_var of string
+  | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
+  | Yc_separate_arguments of {
+      cvar : yelu_cvar;
+      mode : Lang_cmake.separate_arguments_mode;
+      input : yelu_expr option;
+    }
+  | Yc_extern_cvar of yelu_cvar
+  | Yc_extern_target of yelu_target
+  | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
+  (* cmake-specific control flow *)
+  | Yc_foreach of { loop_var : yelu_cvar; items : yelu_expr list; commands : yelu_stmt }
+  | Yc_foreach_range of {
+      loop_var : yelu_cvar;
+      start : int option;
+      stop : int;
+      step : int option;
+      commands : yelu_stmt;
+    }
+  | Yc_foreach_in of {
+      loop_var : yelu_cvar;
+      lists : yelu_cvar list;
+      items : yelu_expr list;
+      commands : yelu_stmt;
+    }
+  | Yc_foreach_zip of {
+      loop_vars : yelu_cvar list;
+      lists : yelu_cvar list;
+      commands : yelu_stmt;
+    }
+  | Yc_while of { cond : yelu_cond; commands : yelu_stmt }
+  | Yc_break
+  | Yc_continue
+  | Yc_return of { propogate_vars : string list }
+  | Yc_block of {
+      scope_vars : yelu_cvar list;
+      propagate : string;
+      body : yelu_stmt list;
+    }
