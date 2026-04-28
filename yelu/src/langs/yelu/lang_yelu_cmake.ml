@@ -179,6 +179,10 @@ module Cmake_check = struct
 
   module Cond_check = Lang_yelu_cond.Make_cond_check (Cmake_types)
   module Str_check = Lang_yelu_string.Make_string_check (Cmake_types)
+  module Dir_check = Lang_yelu_dir.Make_dir_check (Cmake_types)
+  module Install_check = Lang_yelu_install.Make_install_check (Cmake_types)
+  module Test_check = Lang_yelu_test.Make_test_check (Cmake_types)
+  module Try_check = Lang_yelu_try.Make_try_check (Cmake_types)
 
   type env = yelu_type Map.M(String).t
 
@@ -199,6 +203,14 @@ module Cmake_check = struct
       (bind env name (type_of env value), [])
     | Ys_string s ->
       let (errs, outputs) = Str_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_dir s -> (env, Dir_check.check ~type_of:(type_of env) s)
+    | Ys_install s -> (env, Install_check.check ~type_of:(type_of env) s)
+    | Ys_test s -> (env, Test_check.check ~type_of:(type_of env) s)
+    | Ys_try s ->
+      let (errs, outputs) = Try_check.check ~type_of:(type_of env) s in
       let env' = List.fold outputs ~init:env
         ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
       (env', errs)

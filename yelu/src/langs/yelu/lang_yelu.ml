@@ -212,41 +212,6 @@ module Make_file_op (T : LANG_TYPES) = struct
 end
 
 (* ============================================================
-   Conditional / boolean expressions
-   ============================================================ *)
-
-module Make_cond (T : LANG_TYPES) = struct
-  type yelu_cond =
-    | Ytruthy of T.expr
-    | Ynot of yelu_cond
-    | Yand of yelu_cond * yelu_cond
-    | Yor of yelu_cond * yelu_cond
-    | Yis_target of T.expr
-    | Yis_defined of T.expr
-    | Ystrequal of T.expr * T.expr
-    | Ystrless of T.expr * T.expr
-    | Ystrgreater of T.expr * T.expr
-    | Ystrless_equal of T.expr * T.expr
-    | Ystrgreater_equal of T.expr * T.expr
-    | Yequal of T.expr * T.expr
-    | Yless of T.expr * T.expr
-    | Ygreater of T.expr * T.expr
-    | Yless_equal of T.expr * T.expr
-    | Ygreater_equal of T.expr * T.expr
-    | Yin_list of T.expr * T.expr
-    | Ymatches of T.expr * string
-    | Yexists of T.expr
-    | Yis_directory of T.expr
-    | Yis_absolute of T.expr
-    | Ypolicy_defined of string
-    | Yversion_less of T.expr * T.expr
-    | Yversion_greater of T.expr * T.expr
-    | Yversion_equal of T.expr * T.expr
-    | Yversion_less_equal of T.expr * T.expr
-    | Yversion_greater_equal of T.expr * T.expr
-end
-
-(* ============================================================
    Target operations
 
    target_kind, items_with_kind, target_feature, file_set,
@@ -352,26 +317,6 @@ module Make_target_op (T : LANG_TYPES) = struct
         comment : string option;
       }
     | Ytgt_add_dependencies of { target : string; dep : string }
-end
-
-(* ============================================================
-   Directory-scope operations
-   ============================================================ *)
-
-module Make_dir_op (T : LANG_TYPES) = struct
-  type yelu_dir_stmt =
-    | Ydir_include_directories of {
-        dirs : T.expr list;
-        before : bool;
-        system : bool;
-      }
-    | Ydir_add_compile_definitions of { defs : T.expr list }
-    | Ydir_add_compile_options of { options : T.expr list }
-    | Ydir_add_link_options of { options : T.expr list }
-    | Ydir_add_definitions of { defs : T.expr list }
-    | Ydir_link_directories of { before : bool; dirs : T.expr list }
-    | Ydir_add_subdirectory of { source_dir : T.expr }
-    | Ydir_link_libraries of { items : T.expr list }
 end
 
 (* ============================================================
@@ -502,79 +447,6 @@ module Make_find_op (T : LANG_TYPES) = struct
 end
 
 (* ============================================================
-   Install operations
-   ============================================================ *)
-
-module Make_install_op (T : LANG_TYPES) = struct
-  type yelu_install_stmt =
-    | Yinstall_targets of {
-        targets : T.expr list;
-        destination : T.expr;
-        export : T.expr option;
-      }
-    | Yinstall_files of { files : T.expr list; destination : T.expr }
-    | Yinstall_export of {
-        file : T.expr option;
-        export : T.expr;
-        destination : T.expr;
-        namespace : string option;
-      }
-    | Yinstall_export_export of { name : T.expr; file : T.expr option }
-    | Yinstall_configure_package_config_file of {
-        install_dest : T.expr;
-        input : T.expr;
-        output : T.expr;
-        no_set_and_check_macro : bool;
-        no_check_required_components_macro : bool;
-      }
-    | Yinstall_write_basic_package_version_file of {
-        file : T.expr;
-        version : T.expr option;
-        compatibility : Lang_cmake.compatibility;
-        arch_independent : bool;
-      }
-end
-
-(* ============================================================
-   Test operations
-   ============================================================ *)
-
-module Make_test_op (T : LANG_TYPES) = struct
-  type yelu_test_stmt =
-    | Ytest_enable_testing
-    | Ytest_add_test of { name : T.expr; command : T.expr; args : T.expr list }
-end
-
-(* ============================================================
-   Try operations (try_compile / try_run)
-   ============================================================ *)
-
-module Make_try_op (T : LANG_TYPES) = struct
-  type yelu_try_stmt =
-    | Ytry_compile of {
-        result_var : T.var;
-        sources : T.expr list;
-        compile_definitions : T.expr list;
-        link_libraries : T.expr list;
-        link_options : T.expr list;
-        output_variable : T.var option;
-        no_cache : bool;
-        c_standard : string option;
-        cxx_standard : string option;
-      }
-    | Ytry_run of {
-        run_result_var : T.var;
-        compile_result_var : T.var;
-        sources : T.expr list;
-        compile_definitions : T.expr list;
-        link_libraries : T.expr list;
-        compile_output_variable : T.var option;
-        run_output_variable : T.var option;
-        args : T.expr list;
-      }
-end
-
-(* ============================================================
    Cmake meta operations
    ============================================================ *)
 
@@ -640,9 +512,9 @@ module Make_stmt (T : LANG_TYPES) = struct
   include Make_list_op (T)
   include Make_state_op (T)
   include Make_find_op (T)
-  include Make_install_op (T)
-  include Make_test_op (T)
-  include Make_try_op (T)
-  include Make_dir_op (T)
+  include Lang_yelu_install.Make_install_op (T)
+  include Lang_yelu_test.Make_test_op (T)
+  include Lang_yelu_try.Make_try_op (T)
+  include Lang_yelu_dir.Make_dir_op (T)
   include Make_cmake_op (T)
 end
