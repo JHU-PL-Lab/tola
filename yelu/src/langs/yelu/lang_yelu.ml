@@ -1,33 +1,30 @@
 (** Parametric AST shapes for yelu — full coverage of all groups.
 
     Functors are used purely as type-level macros: a [LANG_TYPES] module
-    parameterizes the variable/argument/target substrate, and each
-    functor outputs a concrete sum type whose constructors are
-    pattern-matchable directly. No interface abstraction, no
-    information hiding.
+    parameterizes the variable/argument/target substrate, and each functor
+    outputs a concrete sum type whose constructors are pattern-matchable
+    directly. No interface abstraction, no information hiding.
 
-    Auxiliary enums (target_kind, cache_type, etc.) are referenced
-    directly from [Lang_yelu_cmake] / [Lang_cmake]. We only abstract over
-    the substrate (var, target, arg); enums are concrete because their
-    semantics are cmake-flavored anyway and lifting them adds noise
-    without real value at the first cut.
+    Auxiliary enums (target_kind, cache_type, etc.) are referenced directly from
+    [Lang_yelu_cmake] / [Lang_cmake]. We only abstract over the substrate (var,
+    target, arg); enums are concrete because their semantics are cmake-flavored
+    anyway and lifting them adds noise without real value at the first cut.
 
     Source of truth: [Lang_yelu_cmake] instantiates these functors at
-    [Cmake_types] via [include], so its group types ARE the parametric
-    types applied to cmake substrate (applicative-functor identity).
-    Future packs (json, nix, …) would create their own concrete
-    instances by instantiating with their own substrate.
-*)
+    [Cmake_types] via [include], so its group types ARE the parametric types
+    applied to cmake substrate (applicative-functor identity). Future packs
+    (json, nix, …) would create their own concrete instances by instantiating
+    with their own substrate. *)
 
 module type LANG_TYPES = sig
-  (** Runtime variable handle (≅ [yelu_cvar] in cmake-pack). *)
   type var
+  (** Runtime variable handle (≅ [yelu_cvar] in cmake-pack). *)
 
-  (** Value-bearing expression substrate (≅ [yelu_expr] in cmake-pack). *)
   type expr
+  (** Value-bearing expression substrate (≅ [yelu_expr] in cmake-pack). *)
 
-  (** Target name handle (≅ [yelu_target] in cmake-pack). *)
   type target
+  (** Target name handle (≅ [yelu_target] in cmake-pack). *)
 end
 
 (* ============================================================
@@ -83,12 +80,7 @@ type yelu_var = Yvar of string
    ============================================================ *)
 
 type list_sort_order = Asc | Desc
-
-type list_sort_compare =
-  | Cmp_string
-  | Cmp_file_basename
-  | Cmp_natural
-
+type list_sort_compare = Cmp_string | Cmp_file_basename | Cmp_natural
 type list_sort_case = Case_sensitive | Case_insensitive
 type list_filter_mode = Filter_include | Filter_exclude
 
@@ -139,7 +131,11 @@ module Make_string_op (T : LANG_TYPES) = struct
         inputs : T.expr list;
       }
     | Ystr_regex_match of { regex : string; out : T.var; inputs : T.expr list }
-    | Ystr_regex_matchall of { regex : string; out : T.var; inputs : T.expr list }
+    | Ystr_regex_matchall of {
+        regex : string;
+        out : T.var;
+        inputs : T.expr list;
+      }
     | Ystr_regex_replace of {
         regex : string;
         replace : T.expr;
@@ -211,12 +207,7 @@ module Make_list_op (T : LANG_TYPES) = struct
         regex : string;
       }
     | Ylist_join of { cvar : T.var; glue : T.expr; out : T.var }
-    | Ylist_sublist of {
-        cvar : T.var;
-        begin_ : int;
-        length : int;
-        out : T.var;
-      }
+    | Ylist_sublist of { cvar : T.var; begin_ : int; length : int; out : T.var }
     | Ylist_find of { cvar : T.var; value : T.expr; out : T.var }
     | Ylist_prepend of { cvar : T.var; values : T.expr list }
     | Ylist_insert of { cvar : T.var; index : int; values : T.expr list }
@@ -358,11 +349,7 @@ module Make_file_op (T : LANG_TYPES) = struct
         normalize : bool;
         out : T.var option;
       }
-    | Ypath_native_path of {
-        path_var : T.var;
-        normalize : bool;
-        out : T.var;
-      }
+    | Ypath_native_path of { path_var : T.var; normalize : bool; out : T.var }
     | Ypath_convert_to_cmake of {
         input : T.expr;
         normalize : bool;
@@ -425,15 +412,8 @@ end
    ============================================================ *)
 
 module Make_target_op (T : LANG_TYPES) = struct
-  type yelu_items_with_kind = {
-    kind : target_kind;
-    items : T.expr list;
-  }
-
-  type yelu_target_feature = {
-    kind : target_kind;
-    feature : string;
-  }
+  type yelu_items_with_kind = { kind : target_kind; items : T.expr list }
+  type yelu_target_feature = { kind : target_kind; feature : string }
 
   type yelu_file_set = {
     kind : target_kind;
@@ -499,7 +479,10 @@ module Make_target_op (T : LANG_TYPES) = struct
         items : yelu_items_with_kind list;
       }
     | Ytgt_sources of { target : T.expr; items : yelu_items_with_kind list }
-    | Ytgt_sources_fs of { target : T.expr; items : yelu_target_sources_item list }
+    | Ytgt_sources_fs of {
+        target : T.expr;
+        items : yelu_target_sources_item list;
+      }
     | Ytgt_precompile_headers of {
         target : T.expr;
         items : yelu_items_with_kind list;
@@ -555,11 +538,7 @@ end
 module Make_state_op (T : LANG_TYPES) = struct
   type yelu_state_stmt =
     (* plain variables *)
-    | Ystate_set of {
-        cvar : T.var;
-        values : T.expr list;
-        parent_scope : bool;
-      }
+    | Ystate_set of { cvar : T.var; values : T.expr list; parent_scope : bool }
     (* cache *)
     | Ystate_option of { cvar : T.var; msg : string; value : T.expr }
     | Ystate_set_cache of {
@@ -604,9 +583,7 @@ module Make_state_op (T : LANG_TYPES) = struct
         property : string;
         values : T.expr list;
       }
-    | Ystate_set_global_property of {
-        properties : (string * T.expr) list;
-      }
+    | Ystate_set_global_property of { properties : (string * T.expr) list }
     | Ystate_get_global_property of { var : T.var; property : string }
     | Ystate_get_target_property of {
         var : T.var;
@@ -790,23 +767,26 @@ end
    pattern → same-name constructor in Lang_yelu_cmake).
    ============================================================ *)
 
-(* [Make_stmt] is a functor application bundle — it only instantiates
-   the per-group functors at a given substrate [T]. The top-level
-   [yelu_stmt] sum type (which weaves group statements with cmake-
-   specific scripting and control flow) lives in [Lang_yelu_cmake];
+(* [Make_stmt] is a functor application bundle — it [include]s every
+   per-group functor at a given substrate [T] so a pack can pull all
+   group types and constructors into its top-level namespace with one
+   [include Lang_yelu.Make_stmt (My_types)].
+
+   The top-level [yelu_stmt] sum type (which weaves group statements
+   with cmake-specific scripting and control flow) does NOT live here —
    each pack composes its own statement type from these group bundles
    plus its pack-specific scripting vocabulary. *)
 module Make_stmt (T : LANG_TYPES) = struct
-  module String_op = Make_string_op (T)
-  module List_op = Make_list_op (T)
-  module File_op = Make_file_op (T)
-  module Cond = Make_cond (T)
-  module Target_op = Make_target_op (T)
-  module Dir_op = Make_dir_op (T)
-  module State_op = Make_state_op (T)
-  module Find_op = Make_find_op (T)
-  module Install_op = Make_install_op (T)
-  module Test_op = Make_test_op (T)
-  module Try_op = Make_try_op (T)
-  module Cmake_op = Make_cmake_op (T)
+  include Make_cond (T)
+  include Make_target_op (T)
+  include Make_file_op (T)
+  include Make_string_op (T)
+  include Make_list_op (T)
+  include Make_state_op (T)
+  include Make_find_op (T)
+  include Make_install_op (T)
+  include Make_test_op (T)
+  include Make_try_op (T)
+  include Make_dir_op (T)
+  include Make_cmake_op (T)
 end

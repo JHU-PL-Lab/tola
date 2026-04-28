@@ -123,23 +123,9 @@ end
    (e.g. Lang_yelu_cmake.Json).
    ============================================================ *)
 
-(* Cond first — referenced by Yif/Yc_while via Make_stmt *)
-include Lang_yelu.Make_cond (Cmake_types)
-
-(* Target — also brings yelu_items_with_kind, yelu_target_feature,
-   yelu_file_set, yelu_target_sources_item *)
-include Lang_yelu.Make_target_op (Cmake_types)
-
-include Lang_yelu.Make_file_op (Cmake_types)
-include Lang_yelu.Make_string_op (Cmake_types)  (* + Json sub-module *)
-include Lang_yelu.Make_list_op (Cmake_types)
-include Lang_yelu.Make_state_op (Cmake_types)
-include Lang_yelu.Make_find_op (Cmake_types)
-include Lang_yelu.Make_install_op (Cmake_types)
-include Lang_yelu.Make_test_op (Cmake_types)
-include Lang_yelu.Make_try_op (Cmake_types)
-include Lang_yelu.Make_dir_op (Cmake_types)
-include Lang_yelu.Make_cmake_op (Cmake_types)
+(* All 12 group statement types + constructors + the Json sub-module
+   come in via this single bundle include. *)
+include Lang_yelu.Make_stmt (Cmake_types)
 
 (* Hoist Json sub-module's yelu_json_op + Yjop_* constructors to top level *)
 include Json
