@@ -152,25 +152,6 @@ type yelu_stmt =
     }
   | Yc_macro of { name : yelu_expr; args : string list; body : yelu_stmt list }
   | Yc_apply of { name : yelu_expr; args : yelu_expr list }
-  | Yc_execute_process of {
-      commands : yelu_expr list list;
-      working_directory : yelu_expr option;
-      timeout : float option;
-      result_variable : yelu_cvar option;
-      output_variable : yelu_cvar option;
-      error_variable : yelu_cvar option;
-      input_file : yelu_expr option;
-      output_file : yelu_expr option;
-      error_file : yelu_expr option;
-      output_quiet : bool;
-      error_quiet : bool;
-      output_strip_trailing_whitespace : bool;
-      error_strip_trailing_whitespace : bool;
-      command_error_is_fatal : string option;
-    }
-  | Yc_quote_cmd of string
-  | Yc_at_var of string
-  | Yc_include_guard of { scope : Lang_cmake.include_guard_scope }
   | Yc_separate_arguments of {
       cvar : yelu_cvar;
       mode : Lang_cmake.separate_arguments_mode;
@@ -178,7 +159,6 @@ type yelu_stmt =
     }
   | Yc_extern_cvar of yelu_cvar
   | Yc_extern_target of yelu_target
-  | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
   (* cmake-specific control flow *)
   | Yc_foreach of {
       loop_var : yelu_cvar;

@@ -689,6 +689,27 @@ module Make_cmake_op (T : LANG_TYPES) = struct
         output_format : Lang_cmake.math_output_format;
       }
     | Ycmake_variable_watch of { var : T.var; command : string option }
+    | Ycmake_execute_process of {
+        commands : T.expr list list;
+        working_directory : T.expr option;
+        timeout : float option;
+        result_variable : T.var option;
+        output_variable : T.var option;
+        error_variable : T.var option;
+        input_file : T.expr option;
+        output_file : T.expr option;
+        error_file : T.expr option;
+        output_quiet : bool;
+        error_quiet : bool;
+        output_strip_trailing_whitespace : bool;
+        error_strip_trailing_whitespace : bool;
+        command_error_is_fatal : string option;
+      }
+    | Ycmake_include_guard of { scope : Lang_cmake.include_guard_scope }
+    | Ycmake_message of { mode : Lang_cmake.message_mode; texts : string list }
+    (* cmake escape hatches — raw injection, outside the typed language *)
+    | Ycmake_quote_cmd of string
+    | Ycmake_at_var of string
 end
 
 (* [Make_stmt] is a functor application bundle — it [include]s every

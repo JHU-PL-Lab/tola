@@ -505,6 +505,29 @@ let compile_cmake_stmt env : yelu_cmake_stmt -> env * Lang_cmake.exp = function
       (env, Variable_watch {
         var = cv_name var; command; access = Vw_read_access;
         value = None; current_list_file = None; stack = [] })
+  | Ycmake_execute_process { commands; working_directory; timeout; result_variable;
+                              output_variable; error_variable; input_file; output_file;
+                              error_file; output_quiet; error_quiet;
+                              output_strip_trailing_whitespace;
+                              error_strip_trailing_whitespace; command_error_is_fatal } ->
+      ( env,
+        Lang_cmake.Execute_process
+          { commands = List.map commands ~f:(List.map ~f:(erase_arg env));
+            working_directory = Option.map working_directory ~f:(erase_arg env);
+            timeout;
+            result_variable = Option.map result_variable ~f:cv_name;
+            output_variable = Option.map output_variable ~f:cv_name;
+            error_variable = Option.map error_variable ~f:cv_name;
+            input_file = Option.map input_file ~f:(erase_arg env);
+            output_file = Option.map output_file ~f:(erase_arg env);
+            error_file = Option.map error_file ~f:(erase_arg env);
+            output_quiet; error_quiet;
+            output_strip_trailing_whitespace; error_strip_trailing_whitespace;
+            command_error_is_fatal } )
+  | Ycmake_include_guard { scope } -> (env, Include_guard { scope })
+  | Ycmake_message { mode; texts } -> (env, Lang_cmake.Message { mode; texts })
+  | Ycmake_quote_cmd _ -> failwith "Ycmake_quote_cmd: retired — use Ycmake_language_eval for raw cmake passthrough"
+  | Ycmake_at_var key -> (env, Lang_cmake.Quote (Printf.sprintf "@%s@" key))
 
 let compile_test_stmt env : yelu_test_stmt -> env * Lang_cmake.exp = function
   | Ytest_enable_testing -> (env, Project_cmd Enable_testing)
@@ -1015,29 +1038,6 @@ let rec compile env : yelu_stmt -> env * Lang_cmake.exp = function
       check_arg env name;
       List.iter args ~f:(check_arg env);
       (env, Apply { name = erase_arg_s env name; args = List.map ~f:(erase_arg env) args })
-  | Yc_execute_process { commands; working_directory; timeout; result_variable;
-                         output_variable; error_variable; input_file; output_file;
-                         error_file; output_quiet; error_quiet;
-                         output_strip_trailing_whitespace;
-                         error_strip_trailing_whitespace; command_error_is_fatal } ->
-      ( env,
-        Lang_cmake.Execute_process
-          { commands = List.map commands ~f:(List.map ~f:(erase_arg env));
-            working_directory = Option.map working_directory ~f:(erase_arg env);
-            timeout;
-            result_variable = Option.map result_variable ~f:cv_name;
-            output_variable = Option.map output_variable ~f:cv_name;
-            error_variable = Option.map error_variable ~f:cv_name;
-            input_file = Option.map input_file ~f:(erase_arg env);
-            output_file = Option.map output_file ~f:(erase_arg env);
-            error_file = Option.map error_file ~f:(erase_arg env);
-            output_quiet; error_quiet;
-            output_strip_trailing_whitespace; error_strip_trailing_whitespace;
-            command_error_is_fatal } )
-  | Yc_quote_cmd _ -> failwith "Yc_quote_cmd: retired — use Yc_cmake_verbatim for raw cmake passthrough"
-  | Yc_at_var key -> (env, Lang_cmake.Quote (Printf.sprintf "@%s@" key))
-  (* language *)
-  | Yc_include_guard { scope } -> (env, Include_guard { scope })
   | Yc_separate_arguments { cvar; mode; input } ->
       Option.iter input ~f:(check_arg env);
       ( env,
@@ -1048,9 +1048,6 @@ let rec compile env : yelu_stmt -> env * Lang_cmake.exp = function
   (* extern declarations — register in env, emit nothing *)
   | Yc_extern_cvar v -> (declare_cvar env v, Exp_list [])
   | Yc_extern_target t -> (declare_target env t, Exp_list [])
-  (* Tier 1: find_var commands *)
-  | Yc_message { mode; texts } ->
-      (env, Lang_cmake.Message { mode; texts })
   (* Tier 2: iteration and control flow *)
   | Yc_foreach { loop_var; items; commands } ->
       List.iter items ~f:(check_arg env);

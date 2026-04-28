@@ -179,11 +179,11 @@ let yc_execute_process
     ?(error_strip_trailing_whitespace = false)
     ?(command_error_is_fatal = None)
     commands =
-  Yc_execute_process
+  Ys_cmake (Ycmake_execute_process
     { commands; working_directory; timeout; result_variable; output_variable;
       error_variable; input_file; output_file; error_file; output_quiet; error_quiet;
       output_strip_trailing_whitespace; error_strip_trailing_whitespace;
-      command_error_is_fatal }
+      command_error_is_fatal })
 
 let yc_file_relative_path ~var ~base file = Ys_file (Yfile_relative_path { var; base; file })
 
@@ -225,10 +225,9 @@ let yc_file_timestamp ?(format = None) ?(utc = false) (out : yelu_cvar) file =
 
 let yc_policy_set ?(new_ = true) id = Ys_cmake (Ycmake_policy_set { id; new_ })
 
-(* retired: Yc_quote_cmd compile case raises — add typed yelu nodes instead of calling this *)
-let yc_quote_cmd s = Yc_quote_cmd s
+let yc_quote_cmd s = Ys_cmake (Ycmake_quote_cmd s)
 
-let yc_at_var key = Yc_at_var key
+let yc_at_var key = Ys_cmake (Ycmake_at_var key)
 
 let yc_set_directory_property ?(append = false) property values =
   Ys_state (Ystate_set_directory_property { property; append; values })
@@ -265,7 +264,7 @@ let yc_get_filename_component ~mode var filename =
 let yc_get_global_property ~property var =
   Ys_state (Ystate_get_global_property { var; property })
 
-let yc_include_guard scope = Yc_include_guard { scope }
+let yc_include_guard scope = Ys_cmake (Ycmake_include_guard { scope })
 let yc_separate_arguments ?(input) ~mode (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode; input }
 let yc_separate_arguments_plain (cvar : yelu_cvar) = Yc_separate_arguments { cvar; mode = Lang_cmake.Sa_plain; input = None }
 let yc_target_link_options ?(before = false) target items =
@@ -353,7 +352,7 @@ let yc_find_package ?(version = None) ?(exact = false) ?(quiet = false) ?(config
     ?(required = false) ?(components = []) ?(optional_components = []) name =
   Ys_find (Yfind_package { name; version; exact; quiet; config_mode; required; components; optional_components })
 
-let yc_message ?(mode = Lang_cmake.Mm_status) texts = Yc_message { mode; texts }
+let yc_message ?(mode = Lang_cmake.Mm_status) texts = Ys_cmake (Ycmake_message { mode; texts })
 
 (* Tier 2: iteration *)
 let yc_foreach ?(items = []) (loop_var : yelu_cvar) commands =
