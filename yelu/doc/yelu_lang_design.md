@@ -35,6 +35,37 @@ lowering target.
 | Haskell        | Prelude + base          | hackage packages                |
 | yelu (planned) | yelu-core               | cmake-pack, json-pack, nix-pack |
 
+### Fragment composition
+
+The `fragments/` directory introduces a second axis alongside core/pack:
+**atomic fragments vs. compound languages**. But at the interface level, the
+distinction dissolves — both satisfy the same structural contract:
+
+- Syntax: AST constructors (a functor over `LANG_TYPES`, or a concrete type)
+- Type fragment: what types its expressions produce and consume (`yelu_type`)
+- Checker: a function from program to `type_error list`
+- Semantics: an interpreter or compiler to a target language
+
+A compound language (`cmake-pack`) is just a language that `include`s several
+fragments at its substrate. A fragment (`lang_yelu_cond`, `lang_yelu_genex`) is
+a language with a restricted domain. From the outside — from the perspective of
+a type checker, an interpreter, or a user — they are indistinguishable in kind.
+
+The practical implication: a `LANG` signature (OCaml module type) that any
+fragment or compound language satisfies. Composition is then one language
+including another, not a special operation. The `fragments/` label is a
+construction-time convenience; at runtime they are all just languages.
+
+This echoes the SMT-LIB vocabulary (theories, logics, languages) where the
+same interface contract applies at every level of composition, and a "logic"
+is simply a named combination of theories under a fixed set of constraints.
+
+Linguistic analogy (not adopted as terminology): a compound pack resembles a
+pidgin — assembled from contributing fragments, each with its own grammar,
+unified into a working whole. Two future cmake styles (`fp_cmake`,
+`imperative_cmake`) would be different compounds built from largely the same
+fragments combined differently.
+
 ---
 
 ## Primitive Types — Planned yelu-core Types
