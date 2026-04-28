@@ -6,16 +6,21 @@ type cmake_name = string
 
 (* String content classification — what role a string plays *)
 type yc_string =
-  | Ycs_file of string        (* file path: source, config, header, cmake module *)
-  | Ycs_dir of string         (* directory path: source dir, install destination *)
-  | Ycs_name of cmake_name    (* generic cmake name, not typed to a specific namespace *)
-  | Ycs_val of string         (* plain value: numbers, property values *)
-  | Ycs_cmake of string         (* cmake expression, opaque pass-through *)
+  | Ycs_file of string (* file path: source, config, header, cmake module *)
+  | Ycs_dir of string (* directory path: source dir, install destination *)
+  | Ycs_name of
+      cmake_name (* generic cmake name, not typed to a specific namespace *)
+  | Ycs_val of string (* plain value: numbers, property values *)
+  | Ycs_cmake of string (* cmake expression, opaque pass-through *)
 
 (* Typed wrappers — each pins a cmake_name to a specific namespace *)
-type yelu_cvar = Ycvar of cmake_name    (* cmake Variable namespace: set(), ${}, if(DEFINED) *)
-type yelu_target = Ytarget of cmake_name  (* cmake Target namespace: add_library, if(TARGET) *)
-type yelu_var = Lang_yelu.yelu_var = Yvar of string    (* compile-time variable *)
+type yelu_cvar =
+  | Ycvar of cmake_name (* cmake Variable namespace: set(), ${}, if(DEFINED) *)
+
+type yelu_target =
+  | Ytarget of cmake_name (* cmake Target namespace: add_library, if(TARGET) *)
+
+type yelu_var = Yvar of string (* compile-time variable *)
 
 (* Type aliases — placeholders for future typed variants *)
 type project_name = string
@@ -25,11 +30,9 @@ type property_key = string
 (* Shared structural types *)
 type version = Lang_cmake.version
 
-(* Typed enums — defined in Lang_yelu (the parametric base) and
-   re-exported here as manifest-variant aliases so existing code using
-   bare constructor names (Public, Private, Lib_static, ...) continues
-   to work. *)
-type library_type = Lang_yelu.library_type =
+(* Manifest-variant aliases — bring Lang_cmake enum constructors into
+   scope unqualified (Public, Private, Lib_static, …). *)
+type library_type = Lang_cmake.library_type =
   | Lib_static
   | Lib_shared
   | Lib_module
@@ -38,10 +41,13 @@ type library_type = Lang_yelu.library_type =
   | Lib_interface
   | Lib_global
 
-type target_kind = Lang_yelu.target_kind =
-  | Public | Private | Interface | Plain
+type target_kind = Lang_cmake.target_kind =
+  | Public
+  | Private
+  | Interface
+  | Plain
 
-type supported_lang = Lang_yelu.supported_lang =
+type supported_lang = Lang_cmake.supported_lang =
   | Lang_none
   | Lang_c
   | Lang_cxx
@@ -59,7 +65,7 @@ type supported_lang = Lang_yelu.supported_lang =
   | Lang_asm_masm
   | Lang_asm_att
 
-type compatibility = Lang_yelu.compatibility =
+type compatibility = Lang_cmake.compatibility =
   | Any_newer_version
   | Same_major_version
   | Same_minor_version
@@ -68,36 +74,35 @@ type compatibility = Lang_yelu.compatibility =
 (* Generator expressions — typed wrappers that compile to $<...> strings *)
 type yelu_genex =
   (* logical *)
-  | Yge_config of string                         (* $<CONFIG:cfg> *)
-  | Yge_not of yelu_genex                        (* $<NOT:g> *)
-  | Yge_and of yelu_genex list                   (* $<AND:g1,g2,...> *)
-  | Yge_or of yelu_genex list                    (* $<OR:g1,g2,...> *)
-  | Yge_if of yelu_genex * yelu_genex * yelu_genex  (* $<IF:cond,t,f> *)
-  | Yge_bool of string                           (* $<BOOL:s> *)
+  | Yge_config of string (* $<CONFIG:cfg> *)
+  | Yge_not of yelu_genex (* $<NOT:g> *)
+  | Yge_and of yelu_genex list (* $<AND:g1,g2,...> *)
+  | Yge_or of yelu_genex list (* $<OR:g1,g2,...> *)
+  | Yge_if of yelu_genex * yelu_genex * yelu_genex (* $<IF:cond,t,f> *)
+  | Yge_bool of string (* $<BOOL:s> *)
   (* target *)
-  | Yge_target_file of string                    (* $<TARGET_FILE:tgt> *)
-  | Yge_target_file_dir of string                (* $<TARGET_FILE_DIR:tgt> *)
-  | Yge_target_property of string * string       (* $<TARGET_PROPERTY:tgt,prop> *)
+  | Yge_target_file of string (* $<TARGET_FILE:tgt> *)
+  | Yge_target_file_dir of string (* $<TARGET_FILE_DIR:tgt> *)
+  | Yge_target_property of string * string (* $<TARGET_PROPERTY:tgt,prop> *)
   (* interface *)
-  | Yge_install_interface of yelu_genex          (* $<INSTALL_INTERFACE:...> *)
-  | Yge_build_interface of yelu_genex            (* $<BUILD_INTERFACE:...> *)
+  | Yge_install_interface of yelu_genex (* $<INSTALL_INTERFACE:...> *)
+  | Yge_build_interface of yelu_genex (* $<BUILD_INTERFACE:...> *)
   (* string ops *)
-  | Yge_strequal of string * string              (* $<STREQUAL:a,b> *)
-  | Yge_lower_case of yelu_genex                 (* $<LOWER_CASE:...> *)
-  | Yge_upper_case of yelu_genex                 (* $<UPPER_CASE:...> *)
+  | Yge_strequal of string * string (* $<STREQUAL:a,b> *)
+  | Yge_lower_case of yelu_genex (* $<LOWER_CASE:...> *)
+  | Yge_upper_case of yelu_genex (* $<UPPER_CASE:...> *)
   (* platform / language *)
-  | Yge_compile_language of string               (* $<COMPILE_LANGUAGE:lang> *)
-  | Yge_platform_id of string                    (* $<PLATFORM_ID:id> *)
+  | Yge_compile_language of string (* $<COMPILE_LANGUAGE:lang> *)
+  | Yge_platform_id of string (* $<PLATFORM_ID:id> *)
   (* escape hatch *)
-  | Yge_raw of string                            (* $<raw> — user supplies full inner content *)
+  | Yge_raw of string (* $<raw> — user supplies full inner content *)
 
-(* Unified arg type — replaces old yelu_value + yelu_item *)
 type yelu_expr =
   | Yexpr_cvar of yelu_cvar
   | Yexpr_target of yelu_target
-  | Yexpr_string of yc_string  (* file, dir, name, value, or raw cmake expr *)
+  | Yexpr_string of yc_string (* file, dir, name, value, or raw cmake expr *)
   | Yexpr_bool of bool
-  | Yexpr_var of yelu_var  (* compile-time variable reference *)
+  | Yexpr_var of yelu_var (* compile-time variable reference *)
 
 (* cmake-pack substrate for Lang_yelu functors *)
 module Cmake_types = struct
@@ -106,29 +111,10 @@ module Cmake_types = struct
   type target = yelu_target
 end
 
-
-(* ============================================================
-   Group ASTs imported from Lang_yelu via include.
-
-   Each Make_<group> functor outputs a structure containing a
-   yelu_<group>_exp type (and any auxiliary types). Including the
-   functor result here brings those types and constructors into
-   Lang_yelu_cmake's top-level namespace, exactly as if defined locally.
-
-   yelu_<group>_exp values are pattern-matchable with bare
-   constructor names (e.g. Ystr_concat) — module-prefix free.
-
-   Sub-modules introduced as a side-effect (e.g. Make_string_op
-   nests Json = Make_json_op (T)) are accessible at top-level
-   (e.g. Lang_yelu_cmake.Json).
-   ============================================================ *)
-
-(* All 12 group statement types + constructors + the Json sub-module
-   come in via this single bundle include. *)
+(* All group statement types and constructors at top-level namespace via
+   a single bundle include. yelu_json_op + Yjop_* also surface here
+   because Make_string_op includes Make_json_op. *)
 include Lang_yelu.Make_stmt (Cmake_types)
-
-(* Hoist Json sub-module's yelu_json_op + Yjop_* constructors to top level *)
-include Json
 
 (* ============================================================
    Top-level statement — cmake-pack-specific.
@@ -159,7 +145,11 @@ type yelu_stmt =
   | Ystmt_list of yelu_stmt list
   (* cmake-specific scripting *)
   | Yc_include of { file : yelu_expr; optional : bool }
-  | Yc_function of { name : yelu_expr; args : string list; body : yelu_stmt list }
+  | Yc_function of {
+      name : yelu_expr;
+      args : string list;
+      body : yelu_stmt list;
+    }
   | Yc_macro of { name : yelu_expr; args : string list; body : yelu_stmt list }
   | Yc_apply of { name : yelu_expr; args : yelu_expr list }
   | Yc_execute_process of {
@@ -190,7 +180,11 @@ type yelu_stmt =
   | Yc_extern_target of yelu_target
   | Yc_message of { mode : Lang_cmake.message_mode; texts : string list }
   (* cmake-specific control flow *)
-  | Yc_foreach of { loop_var : yelu_cvar; items : yelu_expr list; commands : yelu_stmt }
+  | Yc_foreach of {
+      loop_var : yelu_cvar;
+      items : yelu_expr list;
+      commands : yelu_stmt;
+    }
   | Yc_foreach_range of {
       loop_var : yelu_cvar;
       start : int option;

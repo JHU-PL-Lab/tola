@@ -20,7 +20,7 @@ type test = string
 type policy = Policy
 type var = string
 type output = string
-type arg = Bare of string | Quoted of string
+type arg = Bare of string | Quoted of string | Bracket of string
 type description = arg
 type cache_entry = Cache_entry
 
@@ -39,6 +39,40 @@ type items_with_kind = { kind : string; items : arg list }
 type target_feature = { kind : string; feature : string }
 type set = SSet
 type file_set_type = Fs_headers | Fs_cxxmodules
+type target_kind = Public | Private | Interface | Plain
+
+type library_type =
+  | Lib_static
+  | Lib_shared
+  | Lib_module
+  | Lib_unknown
+  | Lib_object
+  | Lib_interface
+  | Lib_global
+
+type supported_lang =
+  | Lang_none
+  | Lang_c
+  | Lang_cxx
+  | Lang_csharp
+  | Lang_cuda
+  | Lang_objc
+  | Lang_objcxx
+  | Lang_fortran
+  | Lang_hipy
+  | Lang_ispc
+  | Lang_swift
+  | Lang_asm
+  | Lang_asm_nasm
+  | Lang_asm_marmasm
+  | Lang_asm_masm
+  | Lang_asm_att
+
+type compatibility =
+  | Any_newer_version
+  | Same_major_version
+  | Same_minor_version
+  | Exact_version
 
 type target_file_set = {
   kind : string;
@@ -47,6 +81,10 @@ type target_file_set = {
   base_dirs : directory list;
   files : file list;
 }
+
+type target_sources_item =
+  | Tsi_plain of items_with_kind
+  | Tsi_file_set of target_file_set
 
 type link_library_kind = Ll_debug | Ll_optimized | Ll_general
 
@@ -260,6 +298,7 @@ type string_regex_op =
   | Sr_match of { regex : string; out : var; inputs : arg list }
   | Sr_matchall of { regex : string; out : var; inputs : arg list }
   | Sr_replace of { regex : string; replace : arg; out : var; inputs : arg list }
+  | Sr_quote of { out : var; inputs : arg list }
 
 type string_cmd =
   | Sc_find of { string : arg; substring : arg; out : var; reverse : bool }
@@ -695,7 +734,7 @@ and project_cmd =
       items : items_with_kind list;
     }
   | Target_sources of { target : target; items : items_with_kind list }
-  | Target_sources_file_set of { target : target; items : items_with_kind list }
+  | Target_sources_file_set of { target : target; items : target_sources_item list }
   (* custom *)
   | Add_custom_command of {
       outputs : string list;
@@ -809,6 +848,7 @@ and project_cmd =
       file : arg option;
       export : arg;
       destination : arg;
+      namespace : string option;
       component : string option;
       rename : string option;
       permissions : permissions;

@@ -1,20 +1,19 @@
 (** Parametric AST shapes for yelu — full coverage of all groups.
 
     Functors are used purely as type-level macros: a [LANG_TYPES] module
-    parameterizes the variable/argument/target substrate, and each functor
+    parameterizes the variable/expression/target substrate, and each functor
     outputs a concrete sum type whose constructors are pattern-matchable
     directly. No interface abstraction, no information hiding.
 
-    Auxiliary enums (target_kind, cache_type, etc.) are referenced directly from
-    [Lang_yelu_cmake] / [Lang_cmake]. We only abstract over the substrate (var,
-    target, arg); enums are concrete because their semantics are cmake-flavored
-    anyway and lifting them adds noise without real value at the first cut.
+    Cmake-specific enums (target_kind, library_type, supported_lang, etc.) live
+    in [Lang_cmake]. Functors reference them as [Lang_cmake.xxx]; packs
+    re-export them as manifest-variant aliases for bare constructor access.
 
-    Source of truth: [Lang_yelu_cmake] instantiates these functors at
-    [Cmake_types] via [include], so its group types ARE the parametric types
-    applied to cmake substrate (applicative-functor identity). Future packs
-    (json, nix, …) would create their own concrete instances by instantiating
-    with their own substrate. *)
+    [Lang_yelu_cmake] instantiates these functors at [Cmake_types] via
+    [include], so its group types ARE the parametric types applied to cmake
+    substrate (applicative-functor identity). Future packs (json, nix, …)
+    would create their own concrete instances by instantiating with their own
+    substrate. *)
 
 module type LANG_TYPES = sig
   type var
@@ -26,73 +25,6 @@ module type LANG_TYPES = sig
   type target
   (** Target name handle (≅ [yelu_target] in cmake-pack). *)
 end
-
-(* ============================================================
-   Shared enums — owned at the parametric layer so functors can
-   reference them without depending on Lang_yelu_cmake. Lang_yelu_cmake
-   re-exports these via manifest-variant aliases.
-   ============================================================ *)
-
-type target_kind = Public | Private | Interface | Plain
-
-type library_type =
-  | Lib_static
-  | Lib_shared
-  | Lib_module
-  | Lib_unknown
-  | Lib_object
-  | Lib_interface
-  | Lib_global
-
-type supported_lang =
-  | Lang_none
-  | Lang_c
-  | Lang_cxx
-  | Lang_csharp
-  | Lang_cuda
-  | Lang_objc
-  | Lang_objcxx
-  | Lang_fortran
-  | Lang_hipy
-  | Lang_ispc
-  | Lang_swift
-  | Lang_asm
-  | Lang_asm_nasm
-  | Lang_asm_marmasm
-  | Lang_asm_masm
-  | Lang_asm_att
-
-type compatibility =
-  | Any_newer_version
-  | Same_major_version
-  | Same_minor_version
-  | Exact_version
-
-(* Compile-time variable name (yelu's let-bound names — distinct from
-   the target language's runtime variables which live in T.var). *)
-type yelu_var = Yvar of string
-
-(* ============================================================
-   Universal helper enums
-
-   Owned at the parametric layer because their semantics are
-   host-language-agnostic.
-   ============================================================ *)
-
-type list_sort_order = Asc | Desc
-type list_sort_compare = Cmp_string | Cmp_file_basename | Cmp_natural
-type list_sort_case = Case_sensitive | Case_insensitive
-type list_filter_mode = Filter_include | Filter_exclude
-
-type string_compare_op =
-  | Streq
-  | Strneq
-  | Strless
-  | Strgreater
-  | Strless_eq
-  | Strgreater_eq
-
-type math_output_format = Decimal | Hexadecimal
 
 (* ============================================================
    JSON operations (used by string ops as a sub-variant)
@@ -116,7 +48,7 @@ end
    ============================================================ *)
 
 module Make_string_op (T : LANG_TYPES) = struct
-  module Json = Make_json_op (T)
+  include Make_json_op (T)
 
   type yelu_string_stmt =
     | Ystr_toupper of { string : T.expr; out : T.var }
@@ -179,7 +111,7 @@ module Make_string_op (T : LANG_TYPES) = struct
     | Ystr_json of {
         out : T.var;
         error_var : T.var option;
-        op : Json.yelu_json_op;
+        op : yelu_json_op;
       }
 end
 
@@ -412,11 +344,11 @@ end
    ============================================================ *)
 
 module Make_target_op (T : LANG_TYPES) = struct
-  type yelu_items_with_kind = { kind : target_kind; items : T.expr list }
-  type yelu_target_feature = { kind : target_kind; feature : string }
+  type yelu_items_with_kind = { kind : Lang_cmake.target_kind; items : T.expr list }
+  type yelu_target_feature = { kind : Lang_cmake.target_kind; feature : string }
 
   type yelu_file_set = {
-    kind : target_kind;
+    kind : Lang_cmake.target_kind;
     type_ : Lang_cmake.file_set_type;
     base_dirs : T.expr list;
     files : T.expr list;
@@ -434,7 +366,7 @@ module Make_target_op (T : LANG_TYPES) = struct
       }
     | Ytgt_add_library of {
         name : T.expr;
-        type_ : library_type option;
+        type_ : Lang_cmake.library_type option;
         exclude_from_all : bool;
         sources : T.expr list;
       }
@@ -687,7 +619,7 @@ module Make_install_op (T : LANG_TYPES) = struct
     | Yinstall_write_basic_package_version_file of {
         file : T.expr;
         version : T.expr option;
-        compatibility : compatibility;
+        compatibility : Lang_cmake.compatibility;
         arch_independent : bool;
       }
 end
@@ -744,7 +676,7 @@ module Make_cmake_op (T : LANG_TYPES) = struct
     | Ycmake_project of {
         name : string;
         version : Lang_cmake.version option;
-        languages : supported_lang list;
+        languages : Lang_cmake.supported_lang list;
       }
     | Ycmake_enable_language of { langs : string list; optional : bool }
     | Ycmake_policy_set of { id : string; new_ : bool }
@@ -758,14 +690,6 @@ module Make_cmake_op (T : LANG_TYPES) = struct
       }
     | Ycmake_variable_watch of { var : T.var; command : string option }
 end
-
-(* ============================================================
-   Top-level expression (groups + core constructs + scripting)
-
-   This is the parametric mirror of [Lang_yelu_cmake.yelu_stmt]. Constructor
-   names match yelu's so that lowering is mechanical (constructor
-   pattern → same-name constructor in Lang_yelu_cmake).
-   ============================================================ *)
 
 (* [Make_stmt] is a functor application bundle — it [include]s every
    per-group functor at a given substrate [T] so a pack can pull all
