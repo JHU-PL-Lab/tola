@@ -1,119 +1,14 @@
-(** Parametric AST shapes for yelu — full coverage of all groups.
+(** Parametric AST shapes for yelu — aggregates all theory groups.
 
-    Functors are used purely as type-level macros: a [LANG_TYPES] module
-    parameterizes the variable/expression/target substrate, and each functor
-    outputs a concrete sum type whose constructors are pattern-matchable
-    directly. No interface abstraction, no information hiding.
+    [LANG_TYPES] lives in [Lang_yelu_sig]. Cond and string theories live in
+    [Lang_yelu_cond] and [Lang_yelu_string] respectively, each colocated with
+    their checkers. Remaining theories are defined here until they gain
+    checkers and are split out.
 
-    Cmake-specific enums (target_kind, library_type, supported_lang, etc.) live
-    in [Lang_cmake]. Functors reference them as [Lang_cmake.xxx]; packs
-    re-export them as manifest-variant aliases for bare constructor access.
+    [Make_stmt] bundles all theories at a given substrate; packs instantiate
+    it once with [include Lang_yelu.Make_stmt (My_types)]. *)
 
-    [Lang_yelu_cmake] instantiates these functors at [Cmake_types] via
-    [include], so its group types ARE the parametric types applied to cmake
-    substrate (applicative-functor identity). Future packs (json, nix, …)
-    would create their own concrete instances by instantiating with their own
-    substrate. *)
-
-module type LANG_TYPES = sig
-  type var
-  (** Runtime variable handle (≅ [yelu_cvar] in cmake-pack). *)
-
-  type expr
-  (** Value-bearing expression substrate (≅ [yelu_expr] in cmake-pack). *)
-
-  type target
-  (** Target name handle (≅ [yelu_target] in cmake-pack). *)
-end
-
-(* ============================================================
-   JSON operations (used by string ops as a sub-variant)
-   ============================================================ *)
-
-module Make_json_op (T : LANG_TYPES) = struct
-  type yelu_json_op =
-    | Yjop_get of { json : T.expr; path : string list }
-    | Yjop_get_raw of { json : T.expr; path : string list }
-    | Yjop_type of { json : T.expr; path : string list }
-    | Yjop_length of { json : T.expr; path : string list }
-    | Yjop_member of { json : T.expr; path : string list }
-    | Yjop_remove of { json : T.expr; path : string list }
-    | Yjop_set of { json : T.expr; path : string list; value : T.expr }
-    | Yjop_equal of { json1 : T.expr; json2 : T.expr }
-    | Yjop_string_encode of { value : T.expr }
-end
-
-(* ============================================================
-   String operations
-   ============================================================ *)
-
-module Make_string_op (T : LANG_TYPES) = struct
-  include Make_json_op (T)
-
-  type yelu_string_stmt =
-    | Ystr_toupper of { string : T.expr; out : T.var }
-    | Ystr_tolower of { string : T.expr; out : T.var }
-    | Ystr_length of { string : T.expr; out : T.var }
-    | Ystr_strip of { string : T.expr; out : T.var }
-    | Ystr_concat of { out : T.var; inputs : T.expr list }
-    | Ystr_replace of {
-        match_string : T.expr;
-        replace_string : T.expr;
-        out : T.var;
-        inputs : T.expr list;
-      }
-    | Ystr_regex_match of { regex : string; out : T.var; inputs : T.expr list }
-    | Ystr_regex_matchall of {
-        regex : string;
-        out : T.var;
-        inputs : T.expr list;
-      }
-    | Ystr_regex_replace of {
-        regex : string;
-        replace : T.expr;
-        out : T.var;
-        inputs : T.expr list;
-      }
-    | Ystr_regex_quote of { out : T.var; inputs : T.expr list }
-    | Ystr_append of { cvar : T.var; inputs : T.expr list }
-    | Ystr_prepend of { cvar : T.var; inputs : T.expr list }
-    | Ystr_join of { glue : T.expr; out : T.var; inputs : T.expr list }
-    | Ystr_find of {
-        string : T.expr;
-        substring : T.expr;
-        out : T.var;
-        reverse : bool;
-      }
-    | Ystr_substring of {
-        string : T.expr;
-        begin_ : int;
-        length : int option;
-        out : T.var;
-      }
-    | Ystr_repeat of { string : T.expr; count : int; out : T.var }
-    | Ystr_genex_strip of { string : T.expr; out : T.var }
-    | Ystr_compare of {
-        op : Lang_cmake.string_compare_op;
-        string1 : T.expr;
-        string2 : T.expr;
-        out : T.var;
-      }
-    | Ystr_make_c_identifier of { string : T.expr; out : T.var }
-    | Ystr_timestamp of { out : T.var; format : string option; utc : bool }
-    | Ystr_hex of { string : T.expr; out : T.var }
-    | Ystr_uuid of {
-        out : T.var;
-        namespace : string;
-        name : string;
-        type_ : [ `Md5 | `Sha1 ];
-        upper : bool;
-      }
-    | Ystr_json of {
-        out : T.var;
-        error_var : T.var option;
-        op : yelu_json_op;
-      }
-end
+module type LANG_TYPES = Lang_yelu_type.LANG_TYPES
 
 (* ============================================================
    List operations
@@ -722,10 +617,10 @@ end
    each pack composes its own statement type from these group bundles
    plus its pack-specific scripting vocabulary. *)
 module Make_stmt (T : LANG_TYPES) = struct
-  include Make_cond (T)
+  include Lang_yelu_cond.Make_cond (T)
+  include Lang_yelu_string.Make_string_op (T)
   include Make_target_op (T)
   include Make_file_op (T)
-  include Make_string_op (T)
   include Make_list_op (T)
   include Make_state_op (T)
   include Make_find_op (T)

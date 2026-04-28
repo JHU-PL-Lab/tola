@@ -1,26 +1,38 @@
-open Base
 open Lang_yelu_type
 
-(* Per-theory type checkers. Each Make_xxx_check mirrors its Make_xxx counterpart
-   in lang_yelu.ml — same functor parameter, adds a check function.
-   The integrated cmake-pack checker composes these. *)
+module Make_cond (T : LANG_TYPES) = struct
+  type yelu_cond =
+    | Ytruthy of T.expr
+    | Ynot of yelu_cond
+    | Yand of yelu_cond * yelu_cond
+    | Yor of yelu_cond * yelu_cond
+    | Yis_target of T.expr
+    | Yis_defined of T.expr
+    | Ystrequal of T.expr * T.expr
+    | Ystrless of T.expr * T.expr
+    | Ystrgreater of T.expr * T.expr
+    | Ystrless_equal of T.expr * T.expr
+    | Ystrgreater_equal of T.expr * T.expr
+    | Yequal of T.expr * T.expr
+    | Yless of T.expr * T.expr
+    | Ygreater of T.expr * T.expr
+    | Yless_equal of T.expr * T.expr
+    | Ygreater_equal of T.expr * T.expr
+    | Yin_list of T.expr * T.expr
+    | Ymatches of T.expr * string
+    | Yexists of T.expr
+    | Yis_directory of T.expr
+    | Yis_absolute of T.expr
+    | Ypolicy_defined of string
+    | Yversion_less of T.expr * T.expr
+    | Yversion_greater of T.expr * T.expr
+    | Yversion_equal of T.expr * T.expr
+    | Yversion_less_equal of T.expr * T.expr
+    | Yversion_greater_equal of T.expr * T.expr
+end
 
-let rec compatible expected got =
-  match expected, got with
-  | Ty_any, _ | _, Ty_any -> true
-  | Ty_list a, Ty_list b -> compatible a b
-  | e, g -> equal_yelu_type e g
-
-let check_compat ~context expected got =
-  if compatible expected got then []
-  else [ Type_mismatch { expected; got; context } ]
-
-(* ============================================================
-   Cond checker
-   ============================================================ *)
-
-module Make_cond_check (T : Lang_yelu.LANG_TYPES) = struct
-  include Lang_yelu.Make_cond (T)
+module Make_cond_check (T : LANG_TYPES) = struct
+  include Make_cond (T)
 
   let rec check ~(type_of : T.expr -> yelu_type) = function
     | Ytruthy e ->

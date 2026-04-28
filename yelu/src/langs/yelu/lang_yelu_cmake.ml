@@ -192,3 +192,51 @@ type yelu_stmt =
       propagate : string;
       body : yelu_stmt list;
     }
+
+(* ============================================================
+   Cmake-pack type checker
+   ============================================================ *)
+
+module Cmake_check = struct
+  open Base
+  open Lang_yelu_type
+
+  module Cond_check = Lang_yelu_cond.Make_cond_check (Cmake_types)
+  module Str_check = Lang_yelu_string.Make_string_check (Cmake_types)
+
+  type env = yelu_type Map.M(String).t
+
+  let empty_env = Map.empty (module String)
+
+  let type_of (env : env) = function
+    | Yexpr_bool _ -> Ty_bool
+    | Yexpr_string (Ycs_file _ | Ycs_dir _) -> Ty_path
+    | Yexpr_string _ -> Ty_string
+    | Yexpr_target _ -> Ty_target
+    | Yexpr_cvar (Ycvar name) | Yexpr_var (Yvar name) ->
+      Map.find env name |> Option.value ~default:Ty_any
+
+  let bind env name ty = Map.set env ~key:name ~data:ty
+
+  let rec check_stmt (env : env) : yelu_stmt -> env * type_error list = function
+    | Ylet { var = Yvar name; value } ->
+      (bind env name (type_of env value), [])
+    | Ys_string s ->
+      let (errs, outputs) = Str_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Yif { cond; then_; else_ } ->
+      let cond_errs = Cond_check.check ~type_of:(type_of env) cond in
+      let (env1, then_errs) = check_stmt env then_ in
+      let (_, else_errs) = Option.value_map else_
+        ~default:(env, []) ~f:(check_stmt env) in
+      (env1, cond_errs @ then_errs @ else_errs)
+    | Ystmt_list stmts -> check_stmts env stmts
+    | _ -> (env, [])
+
+  and check_stmts env stmts =
+    List.fold stmts ~init:(env, []) ~f:(fun (e, errs) s ->
+      let (e', new_errs) = check_stmt e s in
+      (e', errs @ new_errs))
+end
