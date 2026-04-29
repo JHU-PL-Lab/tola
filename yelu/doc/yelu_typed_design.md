@@ -180,7 +180,7 @@ full spectrum for yelu/cmake and notes what is currently implemented.
 
 | Stage                   | Runner                       | Detects                                                                                                        | Status                                                                                 |
 | ----------------------- | ---------------------------- | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| **S0 Syntactic local**  | Yelu checker (per-stmt)      | Type mismatches within a statement; bool where string expected                                                 | ✅ `Make_cond_check`, `Make_string_check`, `Cmake_check`                                |
+| **S0 Syntactic local**  | Yelu checker (per-stmt)      | Type mismatches within a statement; bool where string expected                                                 | ✅ all fragments except `Make_target_op`; see theory table below                        |
 | **S1 Syntactic global** | Yelu checker (whole-program) | Use-before-define, undefined target reference, duplicate names, unused bindings                                | ⏳ not started; needs a second pass over the program graph                              |
 | **S2 Semantic / scope** | Yelu checker (scope-aware)   | Operation outside valid cmake scope (e.g. `target_*` in script mode); cache variable set after first configure | ⏳ requires a scope dimension in `yelu_type`                                            |
 | **S3 Emit-time**        | Yelu compiler                | Structural errors during AST → cmake lowering                                                                  | ⚠️ partial — compiler panics on malformed input but has no systematic pass              |
@@ -194,7 +194,7 @@ full spectrum for yelu/cmake and notes what is currently implemented.
 `test_yelu_check.ml` exercises S0; RunCMake compat and file-api tests observe
 S4/S5. S1 has no tests yet.
 
-**Priority sequence**: S0 per-theory (current work) → S1 global (needs program
+**Priority sequence**: S0 per-theory (✅ done except target ops) → S1 global (needs program
 graph) → S2 scope (needs type dimension) → S3 systematic emit pass.
 S4/S5 are already covered via cmake execution; the yelu value is collapsing
 their failures into S0/S1.
@@ -217,26 +217,25 @@ bundles them into an integrated system; the cmake-pack is the integration point.
 
 ### Theories
 
-`✅` = in `fragments/`, has checker. `⏳` = AST in `lang_yelu.ml`, checker pending.
-Complexity estimates are for adding an S0 local type checker.
-Planned functor splits (file I/O / path ops; state var / cache-env-property) are
-noted in the `lang_yelu.ml` header; the table uses current functor names.
+`✅` = in `fragments/`, has checker. `✅*` = partial (some constructors deferred, noted).
+`⏳` = not yet started.
 
-| Theory | Functor | Checker | Complexity |
-|--------|---------|---------|------------|
+| Theory | Functor | Checker | Notes |
+|--------|---------|---------|-------|
 | Cond | `Make_cond` | ✅ `Make_cond_check` | — |
 | JSON | `Make_json_op` | ✅ (via string) | — |
 | String | `Make_string_op` | ✅ `Make_string_check` | — |
-| List | `Make_list_op` | ⏳ | Medium — `Ty_list` input constraint, 16 constructors |
-| File / path | `Make_file_op` | ⏳ | Med-high — large; planned split into I/O + path-manip |
-| State | `Make_state_op` | ⏳ | High — property types dynamic; planned split into var + cache/env/property |
+| List | `Make_list_op` | ✅ `Make_list_check` | `cvar` inputs not checked — see §S0 design gaps |
+| File IO | `Make_file_io_op` | ✅ `Make_file_io_check` | `Yfile_relative_path.var` is `T.expr`, not `T.var` — design inconsistency |
+| Path | `Make_path_op` | ✅ `Make_path_check` | `path_var` inputs not checked — see §S0 design gaps |
+| State | `Make_state_op` | ✅* `Make_state_check` | `set/option/set_cache` typed; property ops → `([], [])` — see §S0 design gaps |
 | Target | `Make_target_op` | ⏳ | Med-high — `Ty_target` interactions, nested kinds |
-| Directory | `Make_dir_op` | ⏳ | Low — void effects, path/string inputs |
-| Find | `Make_find_op` | ⏳ | Medium — output `Ty_path`; `find_package` sets many implicit vars |
-| Install | `Make_install_op` | ⏳ | Low — no output vars, path/string inputs |
-| Test | `Make_test_op` | ⏳ | Low — 2 constructors |
-| Try | `Make_try_op` | ⏳ | Low-med — `result_var → Ty_bool`, optional outputs → `Ty_string` |
-| Cmake meta | `Make_cmake_op` | ⏳ | Low-med — `math → Ty_int`, escape hatches stay untyped |
+| Directory | `Make_dir_op` | ✅ `Make_dir_check` | — |
+| Find | `Make_find_op` | ✅* `Make_find_check` | `find_{library,path,program,file}` typed; `find_package` → `([], [])` — see §S0 design gaps |
+| Install | `Make_install_op` | ✅ `Make_install_check` | — |
+| Test | `Make_test_op` | ✅ `Make_test_check` | — |
+| Try | `Make_try_op` | ✅ `Make_try_check` | `result_var → Ty_bool`, optional outputs → `Ty_string/Ty_int` |
+| Cmake meta | `Make_cmake_op` | ✅* `Make_cmake_op_check` | `math → Ty_int`, `execute_process` outputs typed; escape hatches → `([], [])` |
 
 ### Abstraction levels within cmake-specific theories
 
@@ -281,11 +280,75 @@ analogy: `string-theory` + `let-with-string-theory` + `type-for-string-theory` �
 `let-typed-with-string-theory`. Each theory is testable in isolation; the
 functor boundary is the isolation mechanism.
 
+### Pending functor split
+
+`Make_state_op` conflates four cmake namespaces (plain variables, cache entries,
+env variables, properties) with very different semantics and checker needs.
+The plain-variable and cache-entry cases are checkable now; env and property
+ops need external registries (§S0 design gaps §2, §3 above). A future split
+into `Make_state_var_op` + `Make_state_cache_op` + `Make_state_property_op`
+would isolate the checkable subset and keep the dynamic portion separate.
+Not urgent while property ops return `([], [])`.
+
 ### typed_yelu_cmake vs yelu_cmake
 
 A second pack instantiation (`typed_yelu_cmake`) uses `yelu_typed_expr` as
 `T.expr`. All functor-generated statement types are shared — the typed pack is
 a substrate choice, not a code fork.
+
+## S0 design gaps (deferred, documented)
+
+Four cases where S0 coverage is intentionally incomplete. Implementations
+return `([], [])` or `Ty_any`; each is a distinct design question.
+
+### 1. `T.var` inputs not checkable in list / path ops
+
+`Make_list_op` and `Make_path_op` operate on a `cvar : T.var` (the list or
+path being mutated). `T.var` is not `T.expr`, so `type_of : T.expr → yelu_type`
+can't inspect it. Only output vars and `T.expr` inputs are typed today.
+
+**Extension needed**: a second argument `var_type : T.var → yelu_type` backed
+by an env lookup, passed alongside `type_of`. This would let `Ylist_append`
+verify that `cvar` is already known as `Ty_list _`, and `Ypath_append` verify
+that `path_var` is `Ty_path`. Design question: should `check` always receive
+`var_type`, or is it opt-in per theory?
+
+### 2. `Yfind_package` implicit output variables
+
+`find_package(Foo)` sets `Foo_FOUND`, `Foo_INCLUDE_DIRS`, `Foo_LIBRARIES`, and
+a package-specific set of variables — the exact set depends on the package's
+cmake module. These cannot be modelled as a single `T.var` output.
+
+**Extension needed**: a package schema mapping package name to `(var_name *
+yelu_type) list`. Until a schema exists, `find_package` silently passes; any
+downstream use of `Foo_FOUND` gets `Ty_any`. This is the same class of problem
+as property typing (see §3 below) — both require an external registry.
+
+### 3. `Make_state_op` property ops
+
+`get_property`, `get_directory_property`, `get_target_property`,
+`get_global_property` all write to a `T.var` output but the value type is
+determined by the property name — a stringly-keyed, scope-tagged registry cmake
+doesn't expose as structured data. All property getters emit `output → Ty_any`.
+
+Property setters (`set_target_properties`, `set_property`, etc.) take
+`(string * T.expr) list` pairs where property name determines the expected type.
+Typed without a property schema, these are `([], [])`.
+
+**Extension needed**: a property schema for at least the standard cmake
+properties (`INTERFACE_INCLUDE_DIRECTORIES`, `IMPORTED_LOCATION`, etc.).
+The same infrastructure would serve `find_package` (§2) and S2 scope checks.
+
+### 4. `Ylist_transform` action semantics
+
+`list(TRANSFORM ...)` applies an action (`TOUPPER`, `TOLOWER`, `STRIP`, `REGEX
+REPLACE`, etc.) to each element. The `output : T.var option` follows the
+same mutate-in-place vs. new-binding pattern as path ops. Currently:
+`output → Ty_list Ty_any` when present, `([], [])` otherwise.
+
+The action semantics are more like a map over a list — the output element type
+mirrors the input element type. Typing this precisely requires knowing the
+element type of the input list (see §1: `cvar` is `T.var`). Blocked on §1.
 
 ## Open questions (deferred to implementation time)
 
