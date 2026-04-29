@@ -39,50 +39,72 @@ let action_cmd =
   let run_with_info ~failfast ~cache_path ~root ~project steps run_info =
     Canary_action.run_project ~failfast ~run_info ?cache_path ~root ~project steps
   in
+  let source_run_info ~project distro (repo : Canary_artifact_source.source_repo) steps =
+    let (Canary_artifact_source.Git_remote url) = repo.remote in
+    Canary_action.mk_run_info ~project ~version:repo.version ~ref_:repo.ref_
+      ~source:(Canary_artifact_source.source_desc distro repo)
+      ~extra:[
+        ("official", if repo.official then "true" else "false");
+        ("remote", url);
+      ]
+      steps
+  in
   let run_z3 ~root ~quick ~failfast ~cache_path distro =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro Canary_project_z3.z3_source_dev
     in
-    let steps = Canary_project_z3.action_steps ~quick ~root ~project:[%string "z3/%{dev_tag}"] distro in
-    run_with_info ~failfast ~cache_path ~root ~project:[%string "z3/%{dev_tag}"] steps
-      (Canary_project_z3.run_info distro steps);
-    let steps_stable =
-      Canary_project_z3.action_steps ~source:Canary_project_z3.z3_source_stable
-        ~root ~project:"z3/stable" distro
-    in
+    let project = [%string "z3/%{dev_tag}"] in
+    let src = Canary_project_z3.z3_source_dev in
+    let spec = Canary_project_z3.mk_script_spec ~source:src distro in
+    let spec = if quick then Canary_action.no_source spec else spec in
+    let steps = Canary_action.derive_steps ~root ~project spec in
+    run_with_info ~failfast ~cache_path ~root ~project steps
+      (source_run_info ~project:"z3" distro src steps);
+    let src_stable = Canary_project_z3.z3_source_stable in
+    let spec_stable = Canary_project_z3.mk_script_spec ~source:src_stable distro in
+    let steps_stable = Canary_action.derive_steps ~root ~project:"z3/stable" spec_stable in
     run_with_info ~failfast ~cache_path ~root ~project:"z3/stable" steps_stable
-      (Canary_project_z3.run_info ~source:Canary_project_z3.z3_source_stable
-         distro steps_stable)
+      (source_run_info ~project:"z3" distro src_stable steps_stable)
+  in
+  let prebuilt_run_info ~project ~version ~extra steps =
+    Canary_action.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt" ~extra steps
   in
   let run_sqlite ~root ~failfast ~cache_path =
-    let steps = Canary_project_sqlite.action_steps ~root ~project:"sqlite" in
+    let steps = Canary_action.derive_steps ~root ~project:"sqlite"
+        Canary_project_sqlite.script_spec in
     run_with_info ~failfast ~cache_path ~root ~project:"sqlite" steps
-      (Canary_project_sqlite.run_info steps)
+      (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
   let run_zarith ~root ~failfast ~cache_path =
-    let steps = Canary_project_zarith.action_steps ~root ~project:"zarith" in
+    let steps = Canary_action.derive_steps ~root ~project:"zarith"
+        Canary_project_zarith.script_spec in
     run_with_info ~failfast ~cache_path ~root ~project:"zarith" steps
-      (Canary_project_zarith.run_info steps)
+      (prebuilt_run_info ~project:"zarith" ~version:"system" ~extra:[] steps)
   in
   let run_ssl ~root ~failfast ~cache_path =
-    let steps = Canary_project_ssl.action_steps ~root ~project:"ssl" in
+    let steps = Canary_action.derive_steps ~root ~project:"ssl"
+        Canary_project_ssl.script_spec in
     run_with_info ~failfast ~cache_path ~root ~project:"ssl" steps
-      (Canary_project_ssl.run_info steps)
+      (prebuilt_run_info ~project:"ssl" ~version:"system" ~extra:[] steps)
   in
   let run_llvm ~root ~failfast ~cache_path distro =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro Canary_project_llvm.llvm_source_dev
     in
-    let steps = Canary_project_llvm.action_steps ~root ~project:[%string "llvm/%{dev_tag}"] distro in
-    run_with_info ~failfast ~cache_path ~root ~project:[%string "llvm/%{dev_tag}"] steps
-      (Canary_project_llvm.run_info steps);
-    let steps_19 =
-      Canary_project_llvm.action_steps ~source:Canary_project_llvm.llvm_source_stable
-        ~root ~project:"llvm/19" distro
-    in
+    let project = [%string "llvm/%{dev_tag}"] in
+    let spec = Canary_project_llvm.mk_script_spec ~source:Canary_project_llvm.llvm_source_dev distro in
+    let steps = Canary_action.derive_steps ~root ~project spec in
+    let pb = Canary_project_llvm.prebuilt in
+    let ver = Option.value pb.system_package.version_tag ~default:"system" in
+    run_with_info ~failfast ~cache_path ~root ~project steps
+      (prebuilt_run_info ~project:"llvm" ~version:ver
+         ~extra:[("system_package", pb.system_package_linux); ("opam_package", pb.opam_package)]
+         steps);
+    let src_19 = Canary_project_llvm.llvm_source_stable in
+    let spec_19 = Canary_project_llvm.mk_script_spec ~source:src_19 distro in
+    let steps_19 = Canary_action.derive_steps ~root ~project:"llvm/19" spec_19 in
     run_with_info ~failfast ~cache_path ~root ~project:"llvm/19" steps_19
-      (Canary_project_llvm.run_info
-         ~source_repo:Canary_project_llvm.llvm_source_stable steps_19)
+      (source_run_info ~project:"llvm" distro src_19 steps_19)
   in
   let run project quick failfast cache_path () =
     let root = "_out" in
@@ -302,11 +324,11 @@ let artifact_summary_cmd =
       | "native" ->
           Canary_artifact_native.summary_cmd ~lib:path ~prefixes ~watchlist ~output_dir:out_dir ()
       | "ocaml" ->
-          Canary_artifact_ocaml.summary_cmd ~archive:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.summary_cmd ~archive:path ~watchlist ~output_dir:out_dir ()
       | "opam" ->
-          Canary_artifact_ocaml.summary_opam_pkg_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.summary_opam_pkg_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
       | "python" ->
-          Canary_artifact_python.summary_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.python_summary_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
       | k ->
           Fmt.epr "Unknown kind: %s (expected: native | ocaml | opam | python)@." k;
           Stdlib.exit 2

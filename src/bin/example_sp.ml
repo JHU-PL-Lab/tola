@@ -131,13 +131,14 @@ git -c advice.detachedHead=false checkout 745087e
 
 open Canary_basic
 open Canary_project_z3
+open Canary_dead_code.Z3
 
 let mk_z3_src_example () =
   let distro = detect_distro () in
   let z3_root = root_of_source distro z3_source_dev in
   let z3_dev_instance = mk_instance z3_root in
   let z3_dev_spec = z3_project_spec distro z3_source_dev in
-  let open Canary_toolchain_ocaml in
+  let open Canary_toolchain in
   let z3_binding_project =
     let open Binding.Structures in
     Project

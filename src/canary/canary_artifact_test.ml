@@ -46,11 +46,11 @@ let native_pure_tests = [
 ]
 
 let ocaml_pure_tests = [
-  { name = "ocaml.is_ocaml_archive(.cmxa)"; check = fun () -> Canary_artifact_ocaml.is_ocaml_archive "foo.cmxa" };
-  { name = "ocaml.is_ocaml_archive(.cma)"; check = fun () -> Canary_artifact_ocaml.is_ocaml_archive "foo.cma" };
-  { name = "ocaml.!is_ocaml_archive(.so)"; check = fun () -> not (Canary_artifact_ocaml.is_ocaml_archive "foo.so") };
+  { name = "ocaml.is_ocaml_archive(.cmxa)"; check = fun () -> Canary_artifact_lang.is_ocaml_archive "foo.cmxa" };
+  { name = "ocaml.is_ocaml_archive(.cma)"; check = fun () -> Canary_artifact_lang.is_ocaml_archive "foo.cma" };
+  { name = "ocaml.!is_ocaml_archive(.so)"; check = fun () -> not (Canary_artifact_lang.is_ocaml_archive "foo.so") };
   { name = "ocaml.cmxa_stub_archive"; check = fun () ->
-      String.equal (Canary_artifact_ocaml.cmxa_stub_archive "/x/z3ml.cmxa") "/x/libz3ml.a" };
+      String.equal (Canary_artifact_lang.cmxa_stub_archive "/x/z3ml.cmxa") "/x/libz3ml.a" };
 ]
 
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
@@ -94,11 +94,11 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
   let sum_dir = output_dir ^ "/ocaml_summary" in
   [
     { name = "ocaml.opam_pkg_inspect";
-      cmd = Canary_artifact_ocaml.opam_pkg_inspect_cmd
+      cmd = Canary_artifact_lang.opam_pkg_inspect_cmd
               ~pkg ~output_dir:(output_dir ^ "/ocaml_inspect");
       expected_rc = 0 };
     { name = "ocaml.summary_opam_pkg_cmd";
-      cmd = Canary_artifact_ocaml.summary_opam_pkg_cmd
+      cmd = Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg ~watchlist:[] ~output_dir:sum_dir ();
       expected_rc = 0 };
     { name = "ocaml.summary_json_valid";
@@ -110,15 +110,15 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
   let sum_dir = output_dir ^ "/py_summary" in
   [
     { name = "python.import_cmd";
-      cmd = Canary_artifact_python.python_import_cmd
+      cmd = Canary_artifact_lang.python_import_cmd
               ~pkg ~output_dir:(output_dir ^ "/py_import");
       expected_rc = 0 };
     { name = "python.import_cmd(bad)";
-      cmd = Canary_artifact_python.python_import_cmd
+      cmd = Canary_artifact_lang.python_import_cmd
               ~pkg:"canary_nonexistent_pkg" ~output_dir:(output_dir ^ "/py_import_bad");
       expected_rc = 1 };
     { name = "python.summary_cmd";
-      cmd = Canary_artifact_python.summary_cmd
+      cmd = Canary_artifact_lang.python_summary_cmd
               ~pkg ~watchlist:[] ~output_dir:sum_dir ();
       expected_rc = 0 };
     { name = "python.summary_json_valid";

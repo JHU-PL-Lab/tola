@@ -1,12 +1,11 @@
 open Base
 
-(* OCaml archive artifact ops.
-   Handles .cmxa / .cma formats. Uses ocamlobjinfo for archive inspection
-   and ocamlfind query for opam-installed package discovery.
+(* Language binding artifact ops — OCaml and Python.
+   Both cover importable / linkable binding artifacts (as opposed to native
+   system libs handled in canary_artifact_native.ml).
 
-   NOTE: Richer inspectors already exist across the whole [src/binding/]
-   directory (~1880 lines, called from [src/bin/example_sp.ml]). The most
-   directly relevant are:
+   OCaml NOTE: Richer inspectors exist in [src/binding/] (~1880 lines,
+   called from [src/bin/example_sp.ml]). Most relevant:
      - [src/binding/ocaml_files.ml]   — file classification via [Objinfo.extra]
      - [src/binding/ocamls.ml]        — proper OCaml archive inspection
      - [src/binding/shared_library.ml]— ldd-style linked-dep extraction
@@ -16,7 +15,7 @@ open Base
    All use native OCaml compiler/opam libraries, not shell. See CLAUDE.md
    "Known Gaps" for full table + migration priority. *)
 
-(* ── Kind predicates & existence checks ── *)
+(* ── OCaml ── *)
 
 let is_ocaml_archive path =
   String.is_suffix path ~suffix:".cmxa"
@@ -36,8 +35,6 @@ let cmxa_stub_archive path =
   let base = Stdlib.Filename.basename path in
   let name = Stdlib.Filename.remove_extension base in
   dir ^ "/lib" ^ name ^ ".a"
-
-(* ── Shell probe commands ── *)
 
 (* Emit compact archive summary as summary.json.
    Module-level only (ocamlobjinfo doesn't expose constructors);
@@ -104,3 +101,32 @@ test -n "$PROVIDED"
 python3 %{script} --provided-lib "$PROVIDED" --required-lib "$STUB" \
   --symbol-prefix %{prefix} 2>&1 | tee %{output_dir}/symbols.log
 grep -q 'OK:' %{output_dir}/symbols.log|}]
+
+(* ── Python ── *)
+
+(* A "python artifact" is importable via `python3 -c 'import <pkg>'`.
+   No filesystem path to check — the package may live in site-packages,
+   a venv, or be installed globally. *)
+
+let python_importable pkg =
+  Stdlib.Sys.command
+    (Printf.sprintf "python3 -c 'import %s' 2>/dev/null" pkg)
+  = 0
+
+(* Python import probe. Writes import.log.
+   Output goes to file first, then cat — this preserves python's exit code.
+   `| tee` would swallow the exit code (tee returning 0 even when python fails). *)
+let python_import_cmd ~pkg ~output_dir =
+  [%string
+    "python3 -c 'import %{pkg}; print(\"%{pkg} ok\")' \
+     > %{output_dir}/import.log 2>&1 && cat %{output_dir}/import.log"]
+
+(* Emit compact Python package summary as summary.json via
+   canary/scripts/summarize_python.py. Watchlist is a list of top-level
+   attribute names; present/missing recorded in the JSON.
+   See doc/canary/ops/python_binding_gotchas.md. *)
+let python_summary_cmd ~pkg ?(watchlist = []) ~output_dir () =
+  let script = "canary/scripts/summarize_python.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    "python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}' > %{output_dir}/summary.json"]

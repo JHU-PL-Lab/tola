@@ -2,7 +2,8 @@ open Base
 open Canary_basic
 open Canary_store
 open Canary_artifact_source
-open Canary_toolchain_ocaml
+open Canary_artifact_api
+open Canary_toolchain
 open Canary
 
 (* ── Version specs ──
@@ -21,26 +22,63 @@ open Canary
    against a prebuilt system lib. Set has_build_lib=true to also
    build libLLVM from source. *)
 
-(* Module-level watchlist for the LLVM opam binding. *)
-let llvm_ocaml_watchlist = [ "Llvm"; "Llvm_target"; "Llvm_executionengine" ]
-
-(* Native symbol watchlist for libLLVM.so. *)
-let llvm_native_watchlist = [
-  "LLVMContextCreate";
-  "LLVMModuleCreateWithName";
-  "LLVMCreateBuilder";
-]
-
-(* Python watchlist for llvmlite. pip pkg = "llvmlite"; import name = "llvmlite.binding".
-   llvmlite.binding is the FFI to LLVM's C API and is the most API-surface
-   that might drift across llvm versions. *)
-let llvm_python_watchlist = [
-  "initialize";
-  "initialize_native_target";
-  "parse_assembly";
-  "create_mcjit_compiler";
-  "Target";
-]
+(* API source spec for llvm — native_api for the C API surface and in-tree
+   OCaml binding_api. llvmlite is out-of-tree (source_dir = None).
+   All sources (dev and stable) share this spec. *)
+let llvm_api_source : Canary_artifact_api.t =
+  let native_api : Canary_artifact_api.native_api =
+    {
+      kind       = C;
+      components = [ Headers; Runtime_lib; Link_stub ];
+      headers    = Some { dir = "llvm/include/llvm-c";
+                          files =
+                            [ (* top-level *)
+                              "Analysis.h"; "BitReader.h"; "BitWriter.h"; "Comdat.h"; "Core.h";
+                              "DataTypes.h"; "DebugInfo.h"; "Deprecated.h"; "Disassembler.h";
+                              "DisassemblerTypes.h"; "Error.h"; "ErrorHandling.h";
+                              "ExecutionEngine.h"; "ExternC.h"; "IRReader.h"; "LLJIT.h";
+                              "LLJITUtils.h"; "Linker.h"; "Object.h"; "Orc.h"; "OrcEE.h";
+                              "Remarks.h"; "Support.h"; "Target.h"; "TargetMachine.h"; "Types.h";
+                              "Visibility.h"; "blake3.h"; "lto.h";
+                              (* Transforms/ subdir *)
+                              "Transforms/AggressiveInstCombine.h"; "Transforms/IPO.h";
+                              "Transforms/InstCombine.h"; "Transforms/PassBuilder.h";
+                              "Transforms/Scalar.h"; "Transforms/Utils.h";
+                              "Transforms/Vectorize.h" ] };
+      symbol_prefixes = [ "LLVM" ];
+      stable_symbols  =
+        [ "LLVMContextCreate"; "LLVMModuleCreateWithName"; "LLVMCreateBuilder";
+          "LLVMBuildAdd"; "LLVMBuildBr"; "LLVMBuildRetVoid";
+          "LLVMVerifyModule"; "LLVMDisposeMessage" ];
+    }
+  in
+  let ocaml_binding : Canary_artifact_api.binding_api =
+    {
+      lang = OCaml;
+      source_dir = Some "llvm/bindings/ocaml";
+      deps = deps_all;
+      (* Drift signal: Llvm.Opcode.UncondBr added in v21 (Br split into
+         UncondBr+CondBr). Lives in binding_api watchlist, not native_api
+         stable_symbols — it's a C enum value, not a named export. *)
+      module_watchlist =
+        [ "Llvm"; "Llvm_analysis"; "Llvm_bitreader"; "Llvm_bitwriter";
+          "Llvm_target"; "Llvm_executionengine";
+          "Llvm.Opcode"; "Llvm.Opcode.UncondBr" ];
+    }
+  in
+  (* llvmlite bundles its own libLLVM; out-of-tree (source_dir = None).
+     Python consumers need only the runtime lib — no headers at import time. *)
+  let python_binding : Canary_artifact_api.binding_api =
+    {
+      lang = Python;
+      source_dir = None;
+      deps = deps_runtime_only;
+      module_watchlist =
+        [ "initialize"; "initialize_native_target";
+          "parse_assembly"; "create_mcjit_compiler"; "Target" ];
+    }
+  in
+  { native_api; binding_apis = [ ocaml_binding; python_binding ] }
 
 let llvm_source_dev : source_repo =
   {
@@ -58,6 +96,7 @@ let llvm_source_dev : source_repo =
     has_build_lib = true;
     has_build_binding = true;
     build_sys_deps = [ "cmake"; "ninja-build" ];
+    api_source = Some llvm_api_source;
   }
 
 let llvm_source_stable : source_repo =
@@ -81,6 +120,9 @@ let llvm_source_stable : source_repo =
        and fail, demonstrating the version mismatch. *)
     has_build_binding = false;
     build_sys_deps = [];
+    (* Stable sources share the dev api_source — same project, same spec.
+       Summary closures will warn when source.has_build_binding = false. *)
+    api_source = Some llvm_api_source;
   }
 
 let llvm_source_latest : source_repo =
@@ -94,6 +136,7 @@ let llvm_source_latest : source_repo =
     has_build_lib = false;
     has_build_binding = true;
     build_sys_deps = [ "cmake"; "ninja-build" ];
+    api_source = Some llvm_api_source;
   }
 
 let llvm_sources = [ llvm_source_dev; llvm_source_stable; llvm_source_latest ]
@@ -134,88 +177,13 @@ let llvm_ocaml_config : ocaml_tool_config =
            ());
   }
 
-let prebuilt_prebuilt_spec distro : job_spec =
-  {
-    distro;
-    id = "prebuilt-prebuilt";
-    description =
-      "Install system LLVM, install opam llvm binding and llvmlite, probe";
-    phases =
-      [
-        {
-          kind =
-            Pm_install
-              (Some
-                 {
-                   linux_pkg =
-                     (prebuilt_info_exn llvm_ocaml_config).system_package_linux;
-                   macos_pkg =
-                     (prebuilt_info_exn llvm_ocaml_config).system_package_macos;
-                 });
-          location = System_pm;
-          requires = [];
-          produces = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-
-        };
-        {
-          kind = Pm_install None;
-          location = Lang_pm;
-          requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-          produces = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
-
-        };
-        {
-          kind =
-            Run_command
-              {
-                name = "Install llvmlite";
-                command = "python3 -m pip install llvmlite";
-              };
-          location = Lang_pm;
-          requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-          produces = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
-
-        };
-        {
-          kind = Probe_test { lang = OCaml };
-          location = Lang_pm;
-          requires = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
-          produces = [];
-
-        };
-        {
-          kind = Probe_test { lang = Python };
-          location = Lang_pm;
-          requires = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
-          produces = [];
-
-        };
-      ];
-    if_disabled = false;
-  }
-
-let config distro =
-  {
-    canary = Canary_basic.mk_canary_config ();
-    workflow_name = "Canary Testing for LLVM OCaml and Python";
-    name = "llvm";
-    project =
-      {
-        root = "";
-        version = "system";
-        commit = "";
-        bindings = [ (OCaml, Opam); (Python, Unsupported) ];
-        system_pm = Brew;
-        has_source = false;
-        has_system_pkg = true;
-        has_lang_pkg = true;
-        can_package = false;
-      };
-    ocaml = llvm_ocaml_config;
-    job_specs = [ prebuilt_prebuilt_spec distro ];
-    deploy = None;
-    opam_template_bindings = [];
-  }
+let llvm_python_config : Canary_toolchain.binding_config =
+  Python_config
+    {
+      pip_package = Some "llvmlite";
+      probe_snippet =
+        {|import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)|};
+    }
 
 let prebuilt = prebuilt_info_exn llvm_ocaml_config
 
@@ -284,7 +252,10 @@ let cmake_configure_cmd ~source_root ~build_dir =
   -DLLVM_BUILD_RUNTIME=OFF \
   -DLLVM_ENABLE_ASSERTIONS=OFF|}]
 
-let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.script_spec =
+let mk_script_spec ~source
+    ?(binding_configs =
+        [ Ocaml_config llvm_ocaml_config; llvm_python_config ])
+    ?(tola_root = Unix.getcwd ()) distro : Canary_action.script_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -299,20 +270,31 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.
         [%string "_out/canary/projects/llvm/%{source.version}_%{source.ref_}/build"]
   in
   let pm = Canary_store.detect_pm () in
-  let target = llvm_ocaml_config.ocaml.example_target in
+  let ocaml_tc =
+    List.find_map binding_configs ~f:(function
+      | Ocaml_config c -> Some c
+      | Python_config _ -> None)
+    |> Option.value_exn
+         ~message:"llvm mk_script_spec: no Ocaml_config in binding_configs"
+  in
+  let target = ocaml_tc.ocaml.example_target in
   (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); it will fail to
      compile against LLVM 19 binding, which is the mismatch we want to detect. *)
   let example =
     tola_root ^ "/canary/examples/llvm/llvm_example_dev.ml"
   in
   let llvm_config = [%string "%{build}/bin/llvm-config"] in
-  let binding_lib = llvm_ocaml_config.ocaml.binding_lib_name in
+  let binding_lib = ocaml_tc.ocaml.binding_lib_name in
   {
     Canary_action.empty_script_spec with
     fetch_source =
       Some
         (fun ~output_dir ->
           Canary_artifact_source.source_fetch_cmd distro source ~output_dir);
+    scan_source =
+      Option.map source.api_source ~f:(fun api ->
+        fun ~output_dir ->
+          Canary_artifact_api.scan_source_cmd ~source_root:root api ~output_dir);
     configure =
       (if source.has_build_lib || source.has_build_binding then
          Some
@@ -344,7 +326,7 @@ let mk_script_spec ~source ?(tola_root = Unix.getcwd ()) distro : Canary_action.
          Some
            (fun ~output_dir ->
              let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
-             let repo_name = llvm_ocaml_config.toolchain.local_repo_name in
+             let repo_name = ocaml_tc.toolchain.local_repo_name in
              (* llvm.dev-shared and conf-llvm-shared.dev read CANARY_LLVM_BUILD
                 to locate the build tree. No opam config subst needed — these
                 packages use shell ${VAR:-default} directly. *)
@@ -402,25 +384,11 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
   -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
 %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]);
-          (* Wild "pip": install llvmlite and exercise its FFI binding. Same
-             pip fallback chain as z3 (pip / python3 -m pip / uv pip). *)
-          Some
-            (Wild "pip", fun ~output_dir ->
-              [%string {|set -e
-INSTALL_LOG=%{output_dir}/install.log
-if command -v pip >/dev/null 2>&1; then
-  pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-elif python3 -m pip --version >/dev/null 2>&1; then
-  python3 -m pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-elif command -v uv >/dev/null 2>&1; then
-  uv pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-else
-  echo "no pip / python3 -m pip / uv available" > "$INSTALL_LOG"
-  exit 1
-fi
-python3 -c "import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
-cat %{output_dir}/probe.log|}]);
-        ];
+        ]
+      @ List.filter_map binding_configs ~f:(function
+          | Python_config p ->
+              Some (Wild "pip", fun ~output_dir -> pip_probe_cmd p ~output_dir)
+          | Ocaml_config _ -> None);
     probe_app = Some llvm_python_probe;
     check_post =
       (function
@@ -467,70 +435,51 @@ cat %{output_dir}/probe.log|}]);
             };
           }
       | _ -> Expect_success);
-    summary = (fun rule loc -> match rule, loc with
+    summary = (fun rule loc ->
+      let api = Option.value_exn source.api_source
+          ~message:"llvm mk_script_spec: api_source not set" in
+      let warn =
+        if not source.has_build_binding then
+          Some (Canary_artifact_api.stable_reuse_warning
+                  ~source_name:"llvm" ~source_version:source.version)
+        else None
+      in
+      let prepend_warn cmd =
+        match warn with
+        | None -> cmd
+        | Some w -> [%string "%{w}\n%{cmd}"]
+      in
+      match rule, loc with
       | Probe Lib, _ when source.has_build_lib ->
           Some (fun ~output_dir ->
-            Canary_artifact_native.summary_cmd
+            prepend_warn (Canary_artifact_native.summary_cmd
               ~lib:[%string "%{build}/lib/libLLVM.so"]
               ~prefixes:[ "LLVM" ]
-              ~watchlist:llvm_native_watchlist
-              ~output_dir ())
+              ~watchlist:(Canary_artifact_api.native_watchlist api)
+              ~output_dir ()))
       | Probe Lib, _ ->
           Some (fun ~output_dir ->
-            [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
+            prepend_warn [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
 test -n "$LLVM_LIB"
 %{Canary_artifact_native.summary_cmd
     ~lib:"$LLVM_LIB"
     ~prefixes:[ "LLVM" ]
-    ~watchlist:llvm_native_watchlist
+    ~watchlist:(Canary_artifact_api.native_watchlist api)
     ~output_dir ()}|}])
       | Probe Binding, Some (Wild "pip") ->
           Some (fun ~output_dir ->
-            Canary_artifact_python.summary_cmd
+            prepend_warn (Canary_artifact_lang.python_summary_cmd
               ~pkg:"llvmlite.binding"
-              ~watchlist:llvm_python_watchlist ~output_dir ())
+              ~watchlist:(Canary_artifact_api.binding_watchlist_exn api Python)
+              ~output_dir ()))
       | Probe Binding, _ ->
           (* ocamlfind package is "llvm" regardless of opam variant suffix
              (llvm.dev-shared / llvm.19-shared are opam-only names). *)
           Some (fun ~output_dir ->
-            Canary_artifact_ocaml.summary_opam_pkg_cmd
-              ~pkg:"llvm" ~watchlist:llvm_ocaml_watchlist ~output_dir ())
+            prepend_warn (Canary_artifact_lang.summary_opam_pkg_cmd
+              ~pkg:"llvm"
+              ~watchlist:(Canary_artifact_api.binding_watchlist_exn api OCaml)
+              ~output_dir ()))
       | _ -> None);
   }
-
-(* ── Action steps ── *)
-
-let action_steps ?(source = llvm_source_dev) ~root ~project distro =
-  let spec = mk_script_spec ~source distro in
-  Canary_action.derive_steps ~root ~project spec
-
-let run_info ?(source_repo : source_repo option) steps =
-  match source_repo with
-  | Some src ->
-      let source_str =
-        let (Git_remote url) = src.remote in
-        "git:" ^ url
-      in
-      Canary_action.mk_run_info ~project:"llvm" ~version:src.version
-        ~ref_:src.ref_ ~source:source_str
-        ~extra:
-          [
-            ("official", if src.official then "true" else "false");
-            ( "remote",
-              let (Git_remote url) = src.remote in
-              url );
-          ]
-        steps
-  | None ->
-      let ver =
-        Option.value prebuilt.system_package.version_tag ~default:"system"
-      in
-      Canary_action.mk_run_info ~project:"llvm" ~version:ver ~ref_:""
-        ~source:"prebuilt"
-        ~extra:
-          [
-            ("system_package", prebuilt.system_package_linux);
-            ("opam_package", prebuilt.opam_package);
-          ]
-        steps

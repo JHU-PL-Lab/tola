@@ -26,6 +26,7 @@ type source_repo = {
   has_build_lib : bool;                  (* build the native lib from this source? *)
   has_build_binding : bool;              (* build language bindings from this source? *)
   build_sys_deps : string list;          (* apt packages required to build from source *)
+  api_source : Canary_artifact_api.t option; (* hand-written API/binding spec; None = not yet declared *)
 }
 
 (* Generate local_path entries for all distros from a relative path.
@@ -103,3 +104,11 @@ let source_check_post ~output_dir =
     Stdlib.close_in ic;
     Stdlib.Sys.file_exists path
   else false
+
+(* Human-readable origin string for a source_repo: "local:<path>" or "git:<url>" *)
+let source_desc distro (repo : source_repo) =
+  match local_for distro repo with
+  | Some l -> "local:" ^ l.path
+  | None ->
+      let (Git_remote url) = repo.remote in
+      "git:" ^ url

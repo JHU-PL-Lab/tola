@@ -1,5 +1,5 @@
 open Canary_basic
-open Canary_toolchain_ocaml
+open Canary_toolchain
 open Canary
 
 (* ── Pattern A template ──
@@ -120,16 +120,9 @@ let script_spec (d : t) : Canary_action.script_spec =
             Printf.sprintf "%s\n%s" resolve sum)
       | Probe Binding, _ ->
           Some (fun ~output_dir ->
-            Canary_artifact_ocaml.summary_opam_pkg_cmd
+            Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg
               ~watchlist:d.ocaml_module_watchlist
               ~output_dir ())
       | _ -> None);
   }
-
-let action_steps ~root ~project (d : t) =
-  Canary_action.derive_steps ~root ~project (script_spec d)
-
-let run_info (d : t) steps =
-  Canary_action.mk_run_info ~project:d.name ~version:"system" ~ref_:""
-    ~source:"prebuilt" steps

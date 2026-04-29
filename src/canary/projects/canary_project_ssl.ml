@@ -42,5 +42,3 @@ let decl : Canary_pattern_a.t = {
 }
 
 let script_spec = Canary_pattern_a.script_spec decl
-let action_steps ~root ~project = Canary_pattern_a.action_steps ~root ~project decl
-let run_info steps = Canary_pattern_a.run_info decl steps

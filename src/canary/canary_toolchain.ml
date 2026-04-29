@@ -2,16 +2,9 @@ open Base
 open Tola_std
 open Canary_store
 open Canary_basic
+open Canary_artifact_api
 
 (* ── Type definitions ── *)
-
-type ocaml_binding = {
-  example_target : string;
-  example_name : string;
-  example_file : string;
-  binding_lib_name : string;
-  build_api_path : string option;
-}
 
 type opam_spec = {
   prefix_name : string;
@@ -46,6 +39,27 @@ type ocaml_tool_config = {
   ocaml : ocaml_binding;
   prebuilt : prebuilt_info option;
 }
+
+type binding_config =
+  | Ocaml_config of ocaml_tool_config
+  | Python_config of python_binding
+
+type python_toolchain = {
+  interpreter : string;
+  pip_entries : (string * string) list;
+  (* (check_cmd, install_prefix) pairs — generate if/elif fallback chain *)
+}
+
+let default_python_toolchain =
+  {
+    interpreter = "python3";
+    pip_entries =
+      [
+        ("command -v pip >/dev/null 2>&1", "pip");
+        ("python3 -m pip --version >/dev/null 2>&1", "python3 -m pip");
+        ("command -v uv >/dev/null 2>&1", "uv pip");
+      ];
+  }
 
 type ocaml_test_case = {
   probe_action : probe_action;
@@ -107,19 +121,6 @@ let ocaml_run_cmd target mode =
   | Bytecode -> [%string {|eval $(opam env)
 ocamlrun ./%{target_s}|}]
   | Native -> [%string "./%{target_s}"]
-
-let default =
-  {
-    prefix_name = "Z3_PREFIX";
-    prefix_var = "$Z3_PREFIX";
-    prefix_envar = "${Z3_PREFIX}";
-    libdir_name = "Z3_LIB_DIR";
-    libdir_var = "$Z3_LIB_DIR";
-    local_repo_name = "canary-local";
-    package_name = "z3";
-    package_version = "dev";
-    canary_src_var = "CANARY_Z3_SRC";
-  }
 
 let pkg_full (t : opam_spec) =
   [%string "%{t.package_name}.%{t.package_version}"]
@@ -263,6 +264,35 @@ let prebuilt_info_exn (config : ocaml_tool_config) =
   match config.prebuilt with
   | Some info -> info
   | None -> failwith "Expected prebuilt OCaml binding config"
+
+let pip_probe_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
+    ~output_dir =
+  let install_lines =
+    match p.pip_package with
+    | None -> ""
+    | Some pkg ->
+        let make_branch i (check, prefix) =
+          let kw = if i = 0 then "if" else "elif" in
+          kw ^ " " ^ check ^ "; then\n  " ^ prefix ^ " install --quiet " ^ pkg
+          ^ " > \"$INSTALL_LOG\" 2>&1"
+        in
+        let branches = List.mapi toolchain.pip_entries ~f:make_branch in
+        let names =
+          String.concat ~sep:" / " (List.map toolchain.pip_entries ~f:snd)
+        in
+        [%string
+          {|INSTALL_LOG=%{output_dir}/install.log
+%{String.concat ~sep:"\n" branches}
+else
+  echo "no %{names} available" > "$INSTALL_LOG"
+  exit 1
+fi
+|}]
+  in
+  [%string
+    {|set -e
+%{install_lines}%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
+cat %{output_dir}/probe.log|}]
 
 let verb_of_probe_action = function
   | Compile_example -> "Compile"

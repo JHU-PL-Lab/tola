@@ -72,6 +72,10 @@ type step_expectation =
    variation; revisit when one does. *)
 type script_spec = {
   fetch_source : (output_dir:string -> string) option;
+  (* Scan step: verifies api_source header/binding claims against the fetched
+     source tree. Emitted after fetch_source; configure/build depend on it.
+     None when no source build (stable fetch-only sources). *)
+  scan_source : (output_dir:string -> string) option;
   configure : (output_dir:string -> string) option;
   build_lib : (output_dir:string -> string) option;
   build_binding : (output_dir:string -> string) option;
@@ -107,6 +111,7 @@ type script_spec = {
 
 let empty_script_spec = {
   fetch_source = None;
+  scan_source = None;
   configure = None;
   build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
@@ -120,8 +125,9 @@ let empty_script_spec = {
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
 let no_source spec =
-  { spec with fetch_source = None; configure = None;
-    build_lib = None; build_binding = None; build_app = None;     pack_lib = None; pack_binding = None; pack_app = None }
+  { spec with fetch_source = None; scan_source = None; configure = None;
+    build_lib = None; build_binding = None; build_app = None;
+    pack_lib = None; pack_binding = None; pack_app = None }
 
 (* Look up the script for a rule *)
 let script_of_rule spec = function
@@ -416,8 +422,8 @@ let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir =
    pkgs) don't pull it transitively, but probe_ocaml_cmd uses
    `ocamlfind ocamlopt` to compile probes. Bindings that DO pull ocamlfind
    (e.g. zarith) treat the second install as a no-op. *)
-let fetch_binding_cmd (spec : Canary_toolchain_ocaml.opam_package_spec) ~output_dir =
-  [%string "%{Canary_toolchain_ocaml.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/binding.ok"]
+let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir =
+  [%string "%{Canary_toolchain.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/binding.ok"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
@@ -494,14 +500,19 @@ let deps_of_rule spec rule =
   match rule with
   | Fetch _ -> []
   | Configure ->
-      List.filter_opt [
-        if has (Fetch Source) then Some (tag (Fetch Source)) else None
-      ]
+      let fetch_or_scan =
+        if has (Fetch Source) then
+          Some (if Option.is_some spec.scan_source then "scan_source"
+                else tag (Fetch Source))
+        else None
+      in
+      List.filter_opt [ fetch_or_scan ]
   | Build_lib ->
       List.filter_opt [
-        (* Prefer Configure if present, else Fetch Source directly *)
         if has Configure then Some (tag Configure)
-        else if has (Fetch Source) then Some (tag (Fetch Source))
+        else if has (Fetch Source) then
+          Some (if Option.is_some spec.scan_source then "scan_source"
+                else tag (Fetch Source))
         else None
       ]
   | Build_binding ->
@@ -510,12 +521,14 @@ let deps_of_rule spec rule =
         else if has (Fetch Lib) then Some (tag (Fetch Lib))
         else None
       in
-      List.filter_opt [
+      let src_dep =
         if has Configure then Some (tag Configure)
-        else if has (Fetch Source) then Some (tag (Fetch Source))
-        else None;
-        lib_dep;
-      ]
+        else if has (Fetch Source) then
+          Some (if Option.is_some spec.scan_source then "scan_source"
+                else tag (Fetch Source))
+        else None
+      in
+      List.filter_opt [ src_dep; lib_dep ]
   | Build_app ->
       let binding_dep =
         if has Build_binding then Some (tag Build_binding)
@@ -599,6 +612,16 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
     | None -> [ base_step ]
     | Some cmd -> [ base_step; mk_summary ~parent_tag ~rule ~summary_cmd:cmd ]
   in
+  (* scan_source: verifies api_source header/binding claims post-fetch.
+     Shares fetch_source's output dir; configure/build depend on it. *)
+  let mk_scan_source ~fetch_tag scan_cmd =
+    let check_post ~output_dir = has_file ~output_dir "scan.ok" in
+    mk_step ~root ~project ~cache_project ~tag:"scan_source"
+      ~output_tag:fetch_tag ~rule:(Fetch Source)
+      ~deps:[ fetch_tag ]
+      ~cmd:scan_cmd ~check_post ~expectation:Expect_success
+      ~symbol_check:None ()
+  in
   List.concat_map store_rules ~f:(fun rule ->
       let tag = string_of_rule rule in
       if Hashtbl.mem seen tag then []
@@ -627,7 +650,14 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
             | Some cmd ->
                 Hashtbl.set seen ~key:tag ~data:true;
                 let base = mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd in
-                attach_summary ~parent_tag:tag ~rule base)
+                let steps = attach_summary ~parent_tag:tag ~rule base in
+                (* Emit scan_source after fetch_source when wired *)
+                (match rule, spec.scan_source with
+                 | Fetch Source, Some scan_cmd
+                   when not (Hashtbl.mem seen "scan_source") ->
+                     Hashtbl.set seen ~key:"scan_source" ~data:true;
+                     steps @ [ mk_scan_source ~fetch_tag:tag scan_cmd ]
+                 | _ -> steps))
 
 (* ── Run info: project metadata dumped at start of run ── *)
 

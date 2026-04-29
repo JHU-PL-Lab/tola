@@ -17,7 +17,7 @@ let check_build_lib ~marker ~lib_path ~output_dir =
 (* marker + ocaml archive must exist *)
 let check_build_binding ~marker ~archive_path ~output_dir =
   Canary_action.has_file ~output_dir marker
-  && Canary_artifact_ocaml.exists_ocaml_archive archive_path
+  && Canary_artifact_lang.exists_ocaml_archive archive_path
 
 (* all listed files must exist in output_dir *)
 let check_markers markers ~output_dir =
