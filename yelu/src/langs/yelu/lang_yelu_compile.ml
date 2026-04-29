@@ -274,7 +274,7 @@ let check_items_with_kind env { kind = _; items } =
 
 (* --- File / path group --- *)
 
-let compile_file_stmt env : yelu_file_stmt -> env * Lang_cmake.exp = function
+let compile_file_io_stmt env : yelu_file_io_stmt -> env * Lang_cmake.exp = function
   | Yfile_configure { input; output } ->
       ( env,
         Cmake_cmd
@@ -326,6 +326,7 @@ let compile_file_stmt env : yelu_file_stmt -> env * Lang_cmake.exp = function
       (env, Lang_cmake.File_read_symlink { var = cv_name out; link = erase_arg env link })
   | Yfile_timestamp { out; file; format; utc } ->
       (env, Lang_cmake.File_timestamp { var = cv_name out; file = erase_arg env file; format; utc })
+let compile_path_stmt env : yelu_path_stmt -> env * Lang_cmake.exp = function
   | Ypath_get_filename_component { var; filename; mode } ->
       check_arg env filename;
       ( env,
@@ -963,7 +964,8 @@ let compile_string_stmt env : yelu_string_stmt -> env * Lang_cmake.exp = functio
 (* --- Compile with env threading --- *)
 
 let rec compile env : yelu_stmt -> env * Lang_cmake.exp = function
-  | Ys_file e -> compile_file_stmt env e
+  | Ys_file e -> compile_file_io_stmt env e
+  | Ys_path e -> compile_path_stmt env e
   | Ys_string e -> compile_string_stmt env e
   | Ys_list e -> compile_list_stmt env e
   | Ys_target e -> compile_target_stmt env e

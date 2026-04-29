@@ -240,7 +240,7 @@ let yc_set_global_property properties =
   Ys_state (Ystate_set_global_property { properties })
 
 let yc_get_filename_component ~mode var filename =
-  Ys_file (Ypath_get_filename_component { var; filename; mode })
+  Ys_path (Ypath_get_filename_component { var; filename; mode })
 
 let yc_get_global_property ~property var =
   Ys_state (Ystate_get_global_property { var; property })
@@ -467,64 +467,64 @@ let yc_block ?(scope_vars = []) ?(propagate = "") body =
 
 (* cmake_path utilities *)
 let yc_path_get path_var field (out : yelu_cvar) =
-  Ys_file (Ypath_get { path_var; field; out })
+  Ys_path (Ypath_get { path_var; field; out })
 
 let yc_path_has path_var field (out : yelu_cvar) =
-  Ys_file (Ypath_has { path_var; field; out })
+  Ys_path (Ypath_has { path_var; field; out })
 
 let yc_path_is_absolute path_var (out : yelu_cvar) =
-  Ys_file (Ypath_is_absolute { path_var; out })
+  Ys_path (Ypath_is_absolute { path_var; out })
 
 let yc_path_is_relative path_var (out : yelu_cvar) =
-  Ys_file (Ypath_is_relative { path_var; out })
+  Ys_path (Ypath_is_relative { path_var; out })
 
 let yc_path_is_prefix ?(normalize = false) path_var input (out : yelu_cvar) =
-  Ys_file (Ypath_is_prefix { path_var; input; normalize; out })
+  Ys_path (Ypath_is_prefix { path_var; input; normalize; out })
 
 let yc_path_compare input1 op input2 (out : yelu_cvar) =
-  Ys_file (Ypath_compare { input1; op; input2; out })
+  Ys_path (Ypath_compare { input1; op; input2; out })
 
 let yc_path_set ?(normalize = false) path_var input =
-  Ys_file (Ypath_set { path_var; input; normalize })
+  Ys_path (Ypath_set { path_var; input; normalize })
 
 let yc_path_append ?(out : yelu_cvar option = None) path_var inputs =
-  Ys_file (Ypath_append { path_var; inputs; out })
+  Ys_path (Ypath_append { path_var; inputs; out })
 
 let yc_path_append_string ?(out : yelu_cvar option = None) path_var inputs =
-  Ys_file (Ypath_append_string { path_var; inputs; out })
+  Ys_path (Ypath_append_string { path_var; inputs; out })
 
 let yc_path_remove_filename ?(out : yelu_cvar option = None) path_var =
-  Ys_file (Ypath_remove_filename { path_var; out })
+  Ys_path (Ypath_remove_filename { path_var; out })
 
 let yc_path_replace_filename ?(out : yelu_cvar option = None) path_var input =
-  Ys_file (Ypath_replace_filename { path_var; input; out })
+  Ys_path (Ypath_replace_filename { path_var; input; out })
 
 let yc_path_remove_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var =
-  Ys_file (Ypath_remove_extension { path_var; last_only; out })
+  Ys_path (Ypath_remove_extension { path_var; last_only; out })
 
 let yc_path_replace_extension ?(last_only = false) ?(out : yelu_cvar option = None) path_var input =
-  Ys_file (Ypath_replace_extension { path_var; last_only; input; out })
+  Ys_path (Ypath_replace_extension { path_var; last_only; input; out })
 
 let yc_path_normal_path ?(out : yelu_cvar option = None) path_var =
-  Ys_file (Ypath_normal_path { path_var; out })
+  Ys_path (Ypath_normal_path { path_var; out })
 
 let yc_path_relative_path ?(base_dir : yelu_expr option = None) ?(out : yelu_cvar option = None) path_var =
-  Ys_file (Ypath_relative_path { path_var; base_dir; out })
+  Ys_path (Ypath_relative_path { path_var; base_dir; out })
 
 let yc_path_absolute_path ?(base_dir : yelu_expr option = None) ?(normalize = false) ?(out : yelu_cvar option = None) path_var =
-  Ys_file (Ypath_absolute_path { path_var; base_dir; normalize; out })
+  Ys_path (Ypath_absolute_path { path_var; base_dir; normalize; out })
 
 let yc_path_native_path ?(normalize = false) path_var (out : yelu_cvar) =
-  Ys_file (Ypath_native_path { path_var; normalize; out })
+  Ys_path (Ypath_native_path { path_var; normalize; out })
 
 let yc_path_convert_to_cmake ?(normalize = false) input (out : yelu_cvar) =
-  Ys_file (Ypath_convert_to_cmake { input; normalize; out })
+  Ys_path (Ypath_convert_to_cmake { input; normalize; out })
 
 let yc_path_convert_to_native ?(normalize = false) input (out : yelu_cvar) =
-  Ys_file (Ypath_convert_to_native { input; normalize; out })
+  Ys_path (Ypath_convert_to_native { input; normalize; out })
 
 let yc_path_hash path_var (out : yelu_cvar) =
-  Ys_file (Ypath_hash { path_var; out })
+  Ys_path (Ypath_hash { path_var; out })
 
 let yc_try_compile ?(compile_definitions = []) ?(link_libraries = [])
     ?(link_options = []) ?(output_variable : yelu_cvar option = None)

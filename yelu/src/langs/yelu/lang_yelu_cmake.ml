@@ -106,7 +106,8 @@ include Lang_yelu.Make_stmt (Cmake_types)
 type yelu_stmt =
   | Ys_string of yelu_string_stmt
   | Ys_list of yelu_list_stmt
-  | Ys_file of yelu_file_stmt
+  | Ys_file of yelu_file_io_stmt
+  | Ys_path of yelu_path_stmt
   | Ys_target of yelu_target_stmt
   | Ys_dir of yelu_dir_stmt
   | Ys_state of yelu_state_stmt
@@ -179,10 +180,16 @@ module Cmake_check = struct
 
   module Cond_check = Lang_yelu_cond.Make_cond_check (Cmake_types)
   module Str_check = Lang_yelu_string.Make_string_check (Cmake_types)
+  module File_check = Lang_yelu_file.Make_file_io_check (Cmake_types)
+  module Path_check = Lang_yelu_path.Make_path_check (Cmake_types)
+  module List_check = Lang_yelu_list.Make_list_check (Cmake_types)
+  module State_check = Lang_yelu_state.Make_state_check (Cmake_types)
+  module Find_check = Lang_yelu_find.Make_find_check (Cmake_types)
   module Dir_check = Lang_yelu_dir.Make_dir_check (Cmake_types)
   module Install_check = Lang_yelu_install.Make_install_check (Cmake_types)
   module Test_check = Lang_yelu_test.Make_test_check (Cmake_types)
   module Try_check = Lang_yelu_try.Make_try_check (Cmake_types)
+  module Cmake_op_check = Lang_yelu_cmake_op.Make_cmake_op_check (Cmake_types)
 
   type env = yelu_type Map.M(String).t
 
@@ -203,6 +210,36 @@ module Cmake_check = struct
       (bind env name (type_of env value), [])
     | Ys_string s ->
       let (errs, outputs) = Str_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_file s ->
+      let (errs, outputs) = File_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_path s ->
+      let (errs, outputs) = Path_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_list s ->
+      let (errs, outputs) = List_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_state s ->
+      let (errs, outputs) = State_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_find s ->
+      let (errs, outputs) = Find_check.check ~type_of:(type_of env) s in
+      let env' = List.fold outputs ~init:env
+        ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
+      (env', errs)
+    | Ys_cmake s ->
+      let (errs, outputs) = Cmake_op_check.check ~type_of:(type_of env) s in
       let env' = List.fold outputs ~init:env
         ~f:(fun e (Ycvar n, ty) -> bind e n ty) in
       (env', errs)
