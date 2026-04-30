@@ -180,7 +180,75 @@ Stable sources (`z3_source_stable`, `llvm_source_stable`) share the dev
 NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift
 ```
 
-## 5. Concrete examples
+## 5. Package provider model *(sketch — to be detailed later)*
+
+### 5.1 Actions and artifacts are abstract; packages are concrete providers
+
+The canary action graph operates on **abstract artifact kinds** (Source, Headers,
+Lib, Binding, App). These are slots, not packages. A package is a *provider* that
+satisfies one or more slots simultaneously. The same slot can be satisfied by
+different providers on different paths.
+
+Examples for z3:
+
+| Provider | Slots satisfied |
+|----------|----------------|
+| `libz3-dev` (apt) | `Headers`, `Pc_file`, `Link_stub`, `Runtime_lib` |
+| `z3-solver` (pip) | `Binding(Python)` + `Runtime_lib` (bundled, co-provided) |
+| `z3` (opam) | `Binding(OCaml)` (implicitly includes source artifacts) |
+| source build | `Source`, `Headers`, `Lib`, `Binding(OCaml)`, `Binding(Python)` |
+
+The diagram shows artifact kinds and action nodes at this abstract level. It does
+not show which package fills each slot — that is the action list's job.
+
+### 5.2 Version as identity
+
+The core assumption: **a versioned artifact is the same regardless of provider**.
+`libz3@4.15.2` from apt, from the pip wheel, and from a source build at that tag
+should all expose the same C ABI, the same symbol set, the same module surface.
+
+Canary's verification work therefore reduces to two questions:
+1. **What version does each provider give?** (detect: `pip show`, `apt-cache
+   policy`, `z3.get_version()`, `nm` symbol prefix scan, …)
+2. **Does that version satisfy the expected interface?** (confirm: symbol
+   watchlist check, functional probe, module surface diff)
+
+If both checks pass, the provider is interchangeable with any other provider of
+the same version. If they diverge, the provider lied about its version or
+distributions diverged — both are real mismatch signals.
+
+### 5.3 Bundled co-provider (pip-bundled lib case)
+
+`z3-solver` is a *co-provider*: it satisfies `Binding(Python)` and `Runtime_lib`
+in one package. The binding's runtime dep on `libz3.so` is resolved internally
+inside the wheel. No external `Lib` slot needs to be filled separately.
+
+Implication for the action graph: `probe_python_pip` for a bundled-lib package
+has **no external `lib_node` runtime dependency**. The current diagram draws
+`lib_node -.->|runtime| probe_python_pip`, which is correct only when the Python
+binding links against an external system lib (non-bundled case). For co-providers
+the edge should be absent.
+
+The `binding_api.deps` field (#35) is the right hook to express this: a binding
+that lists `deps_runtime_only = [Runtime_lib]` and whose provider is a co-provider
+pip wheel does not require the lib slot to be filled from a sibling action — the
+runtime dep is internal to the provider.
+
+The confirmation task for a bundled co-provider is the same two questions from
+§5.2 applied twice:
+- Python module version: `z3.get_version()` → compare against pip metadata version
+- Bundled lib version: `nm site-packages/z3/lib/libz3.so` → same symbol check as
+  done on the system lib; diff against a known-good summary for that version
+
+### 5.4 Scope of the diagram
+
+The diagram operates at the abstract kind level intentionally: it shapes action
+generation and shows action status without over-specifying provider details. When
+the HTML viewer (TODO #37) lands, provider-level details (which package filled
+which slot, bundled vs external, version detected) can be surfaced as a drill-down
+layer, keeping the diagram itself at the middle concept level.
+
+## 6. Concrete examples
 
 ### C runtime mismatch (glibc vs musl)
 
@@ -237,7 +305,7 @@ binding_dev.requires   = { ocaml_api: { Opcode.UncondBr } }
 detected and **expected** in canary (`Expect_failure`). With first-class
 interface it becomes a checked contract, not a grep on an error string.
 
-## 6. Expanded failure taxonomy
+## 7. Expanded failure taxonomy
 
 Beyond symbol-missing:
 
@@ -266,7 +334,7 @@ Beyond symbol-missing:
   tactic removed, default changed). Undetectable without behavioral tests.
   L5 territory; could be a `probe_app` pattern.
 
-## 7. Concrete realisation: artifact summaries
+## 8. Concrete realisation: artifact summaries
 
 Each scan produces a compact `summary.json` that captures the L1a/L1b/L3
 observations without storing a full symbol list.
@@ -321,7 +389,7 @@ Per-language extras: Python summaries also surface module-specific facts via
 `extras_for(pkg, mod)` — e.g. `sqlite3.sqlite_version` captures the bundled
 libsqlite version, independent of CPython's own version.
 
-## 8. Watchlists
+## 9. Watchlists
 
 Watchlists are *human-curated* canaries: "we expect these names to remain
 stable." Two concerns, now cleanly split:
@@ -343,7 +411,7 @@ Embedded drift signals (intentional placeholders that double as demos):
 - `initialize`, `initialize_native_target` in llvmlite's `module_watchlist` —
   llvmlite deprecated these; future removal will surface as missing.
 
-## 9. Storage
+## 10. Storage
 
 - **Per-probe** (today): each probe step writes `summary.json` to its
   output dir alongside `probe.log`. Scan writes `scan.ok` alongside `source.ok`
@@ -352,7 +420,7 @@ Embedded drift signals (intentional placeholders that double as demos):
   summaries into a committed index keyed by `{artifact_kind, name, fingerprint}`.
   Small files (~1KB each), safe to commit. Cross-machine drift visibility.
 
-## 10. Drift detection: summary-diff
+## 11. Drift detection: summary-diff
 
 Given two summaries `(old, new)`:
 
@@ -367,7 +435,7 @@ plus a clean GLIBCXX/CXXABI/GLIBC requirement-floor delta. See
 [trackers/python_binding.md](../trackers/python_binding.md) for the
 in-flight examples.
 
-## 11. Bridge to version_logic
+## 12. Bridge to version_logic
 
 With interface as a first-class object, a version is no longer just a number —
 it carries an interface snapshot:
@@ -391,7 +459,7 @@ Canonical questions the combined system can answer:
 Bridges canary (concrete tests) to the pkgm formalism (abstract version
 constraint SAT).
 
-## 12. Roadmap
+## 13. Roadmap
 
 ### Step 1 — unified summary primitives ✅
 
@@ -424,7 +492,7 @@ Cross-references the pkgm formalism. Research-paper material.
 Behavioral probes (probe_app level) as interface at L5. Property-based
 testing against a declared behavioral interface. Research territory.
 
-## 13. Open implementation questions
+## 14. Open implementation questions
 
 - **L1b as a constraint, not just a count.** Today `versioned_req` is a
   count map. Becoming a real glibc-version-floor calculation needs the
