@@ -18,12 +18,23 @@ open Canary
    - Pm { lang; pm }: depends on pack_binding or fetch_binding (PM-installed) *)
 
 let tag_of_probe_location = function
-  | Build_tree -> "probe_binding_build"
+  | Build_tree -> "probe_binding"                        (* OCaml, build tree — canonical name *)
   | Staged -> "probe_binding_staged"
+  | Pm { lang = OCaml; pm = Opam } -> "probe_binding_opam"
+  | Pm { lang = Python; pm = Pip } -> "probe_python_pip"
   | Pm { lang; pm } ->
-      [%string
-        "probe_binding_%{Canary_artifact_api.string_of_lang \
-         lang}_%{string_of_pm pm}"]
+      [%string "probe_%{Canary_artifact_api.string_of_lang lang}_%{string_of_pm pm}"]
+
+(* Binding kind (artifact group) for a probe location: "ocaml" | "python" | … *)
+let binding_kind_of_probe_location = function
+  | Build_tree | Staged | Pm { lang = OCaml; _ } -> "ocaml"
+  | Pm { lang = Python; _ } -> "python"
+  | Pm { lang; _ } -> Canary_artifact_api.string_of_lang lang
+
+(* Whether this probe reads from the packed/installed store (vs. raw build tree) *)
+let probe_from_store = function
+  | Build_tree -> false
+  | _ -> true
 
 type version_info = {
   provider_version : string;   (* e.g. "19" for llvm.19-shared *)
@@ -804,21 +815,27 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   (* Write result diagram — same schema as action_rule.mmd, colored by status *)
   let mmd_path = [%string "%{dir}/result.mmd"] in
   let node_status = result_status_of_run steps status in
-  let canonical_probe_binding = string_of_rule (Probe Binding) in
-  let split_probe_tags =
-    List.filter_map steps ~f:(fun s ->
+  let probe_binding_steps =
+    List.filter steps ~f:(fun s ->
         match s.rule with
-        | Probe Binding
-          when not (String.equal s.tag canonical_probe_binding)
-            && not (String.is_suffix s.tag ~suffix:"_summary") ->
-            Some s.tag
-        | _ -> None)
-    |> List.sort ~compare:String.compare
-    |> List.dedup_and_sort ~compare:String.compare
+        | Probe Binding when not (String.is_suffix s.tag ~suffix:"_summary") -> true
+        | _ -> false)
+  in
+  let split_probes : Canary.probe_split list =
+    if List.length probe_binding_steps > 1 then
+      List.map probe_binding_steps ~f:(fun s ->
+          (* from_store: probe uses a PM-installed package, not raw build-tree artifact *)
+          let from_store = not (String.equal s.tag "probe_binding") in
+          let binding_kind =
+            if String.is_prefix s.tag ~prefix:"probe_python" then "python"
+            else "ocaml"
+          in
+          { Canary.probe_tag = s.tag; binding_kind; from_store })
+    else []
   in
   let oc = Stdlib.open_out mmd_path in
   Stdlib.output_string oc
-    (Canary.mermaid_of_action_rule_schema ~status:node_status ~split_probe_tags
+    (Canary.mermaid_of_action_rule_schema ~status:node_status ~split_probes
        store_rules);
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
