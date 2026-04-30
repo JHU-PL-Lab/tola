@@ -683,11 +683,16 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
   List.iter probe_kinds ~f:(fun kind ->
       match kind with
       | Binding when split_binding ->
-          (* All split probes read from their language's binding node;
-             from_store distinction is encoded in the probe tag name only *)
+          (* OCaml from_store probes (probe_binding_opam) route through pack_binding —
+             shows the PM packaging step before the probe.
+             All other probes (build-tree or non-OCaml) connect from the binding node. *)
           List.iter split_probes ~f:(fun e ->
-              add_edge ~tag:e.probe_tag
-                [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"];
+              (if e.from_store && String.equal e.binding_kind "ocaml" then
+                add_edge ~tag:e.probe_tag
+                  [%string "A_pack_binding --> A_%{e.probe_tag}"]
+              else
+                add_edge ~tag:e.probe_tag
+                  [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"]);
               add_edge ~tag:e.probe_tag
                 [%string "%{node_id_of_kind Lib} -.->|runtime| A_%{e.probe_tag}"])
       | _ ->

@@ -132,6 +132,16 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     JSON blob. Pairs with TODO #36 (scan_source / summary node fidelity) since
     toggling visibility makes those extra nodes practical to add.
 
+38. **`pack_python` action — local pip wheel packaging** — `pack_binding` is
+    currently OCaml-only (opam packaging). A Python equivalent would build a
+    pip wheel from the locally-compiled Python extension and install it into a
+    local pip index or venv, enabling a `probe_python_pip` variant that tests
+    the packaged wheel rather than the raw build artifact. Prerequisite:
+    `probe_python` build-tree variant (test the raw `.so` before packaging)
+    as the base to compare against. See `interface.md §5` for the co-provider
+    design — pip wheels often bundle their own native lib, so `pack_python` for
+    z3 would produce a co-provider artifact.
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url
