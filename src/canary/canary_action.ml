@@ -21,7 +21,7 @@ let tag_of_probe_location = function
   | Build_tree -> "probe_binding"                        (* OCaml, build tree — canonical name *)
   | Staged -> "probe_binding_staged"
   | Pm { lang = OCaml; pm = Opam } -> "probe_binding_opam"
-  | Pm { lang = Python; pm = Pip } -> "probe_python_pip"
+  | Pm { lang = Python; pm = Pip } -> "probe_python"
   | Pm { lang; pm } ->
       [%string "probe_%{Canary_artifact_api.string_of_lang lang}_%{string_of_pm pm}"]
 
