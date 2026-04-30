@@ -591,15 +591,16 @@ let check_api_consistency (spec : script_spec) =
   match spec.api_source with
   | None -> ()
   | Some api ->
-      let has_build = Option.is_some spec.build_binding in
-      let any_source_dir =
-        List.exists api.Canary_artifact_api.binding_apis
-          ~f:(fun b -> Option.is_some b.Canary_artifact_api.source_dir)
-      in
-      if any_source_dir && not has_build then
-        failwith "api_source: binding_api has source_dir but script_spec has no build_binding";
-      if has_build && not any_source_dir then
-        failwith "api_source: script_spec has build_binding but no binding_api declares source_dir"
+      (* One-directional: build_binding being wired requires a declared source_dir.
+         The reverse is not required — source may exist in the repo but a given
+         run configuration may use a prebuilt binding instead of building it. *)
+      if Option.is_some spec.build_binding then
+        let any_source_dir =
+          List.exists api.Canary_artifact_api.binding_apis
+            ~f:(fun b -> Option.is_some b.Canary_artifact_api.source_dir)
+        in
+        if not any_source_dir then
+          failwith "api_source: script_spec has build_binding but no binding_api declares source_dir"
 
 let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) : action_step list =
   check_api_consistency spec;
