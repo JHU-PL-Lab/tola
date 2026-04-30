@@ -603,23 +603,30 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
         let nid = [%string "%{kind}_binding_node"] in
         add [%string "    %{nid}@{ shape: docs, label: \"%{kind} binding\" }"]);
   add "";
-  (* Action nodes *)
+  (* Action nodes — each gets a sequential id displayed in the label *)
+  let action_counter = ref 0 in
+  let next_id () = Int.incr action_counter; !action_counter in
+  let action_label name =
+    let n = next_id () in [%string "%{name}\\n[%{Int.to_string n}]"]
+  in
   if has_configure then
-    add "    A_configure{{\"configure\"}}";
+    add [%string "    A_configure{{\"  %{action_label \"configure\"}\"}}"];
   List.iter build_rules ~f:(fun r ->
       let name = string_of_rule r in
-      add [%string "    A_%{name}{{\"%{name}\"}}"]);
+      add [%string "    A_%{name}{{\"  %{action_label name}\"}}"]);
   List.iter publish_kinds ~f:(fun kind ->
       let k = string_of_artifact_kind kind in
-      add [%string "    A_pack_%{k}{{\"%{(string_of_rule (Publish kind))}\"}}"]);
+      let name = string_of_rule (Publish kind) in
+      add [%string "    A_pack_%{k}{{\"  %{action_label name}\"}}"]);
   List.iter probe_kinds ~f:(fun kind ->
       match kind with
       | Binding when split_binding ->
           List.iter split_probes ~f:(fun e ->
-              add [%string "    A_%{e.probe_tag}([\"%{e.probe_tag}\"])"])
+              add [%string "    A_%{e.probe_tag}([\"  %{action_label e.probe_tag}\"])"])
       | _ ->
           let k = string_of_artifact_kind kind in
-          add [%string "    A_probe_%{k}([\"%{(string_of_rule (Probe kind))}\"])"]);
+          let name = string_of_rule (Probe kind) in
+          add [%string "    A_probe_%{k}([\"  %{action_label name}\"])"]);
   add "";
   (* Edges *)
   let edge_idx = ref 0 in
