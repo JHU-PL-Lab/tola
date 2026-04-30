@@ -7,8 +7,10 @@ open Base
 
    Provider side (native_api): declares which components an artifact exposes
    and carries path details for components known at fetch time.
-   Consumer side (binding_api.deps): which components a binding needs,
-   using the same api_component type.
+   Consumer side (binding_api): describes the binding artifact and which
+   canary actions apply (Build when source_dir is set; Pack when can_pack).
+   Action dep requirements (headers + link_lib for build; runtime_lib for probe)
+   are derivable from action type — not declared on binding_api.
    See doc/canary/design/interface.md §4 for the design rationale. *)
 
 type lang =
@@ -25,13 +27,14 @@ type native_api_kind =
   | Cpp_api
 [@@deriving show]
 
-(* Component kinds — pure enum shared by provider (native_api.components)
-   and consumer (binding_api.deps). No path payload here; paths live in
-   the provider's detail fields (headers, etc.). *)
+(* Component kinds — declared by the provider (native_api.components).
+   No path payload here; paths live in the provider's detail fields (headers, etc.).
+   Link_lib: unversioned .so symlink (shared) or .a (static) — used at link time.
+   Runtime_lib: versioned .so/.dylib — loaded at runtime; absent for static linking. *)
 type api_component =
   | Headers      (** C/C++ public headers *)
   | Runtime_lib  (** versioned .so/.dylib — loaded at runtime *)
-  | Link_stub    (** unversioned .so symlink — for -l at build time *)
+  | Link_lib     (** lib used at link time — .so symlink (shared) or .a (static) *)
   | Pc_file      (** pkg-config file — build-system metadata *)
 [@@deriving show]
 
@@ -52,9 +55,8 @@ type native_api = {
 [@@deriving show]
 
 type binding_api = {
-  lang             : lang;
-  source_dir       : string option;      (** relative to source root; None = out-of-tree *)
-  deps             : api_component list; (** which components from native_api this binding needs *)
+  lang             : lang;               (** explicit language tag — Binding is always lang-keyed *)
+  source_dir       : string option;      (** Some _ ↔ Build_binding applicable; headers here or in -dev pkg *)
   module_watchlist : string list;        (** dotted paths ok: "Llvm.Opcode.UncondBr" *)
 }
 [@@deriving show]
@@ -83,10 +85,6 @@ type t = {
 let _ = show_lang
 let _ = show
 
-(* Canonical deps lists for common binding patterns *)
-let deps_all          = [ Headers; Link_stub; Runtime_lib ]
-let deps_runtime_only = [ Runtime_lib ]
-
 (* Watchlist accessors — used by summary closures in project specs *)
 
 let native_watchlist (api : t) = api.native_api.stable_symbols
@@ -108,7 +106,7 @@ let stable_reuse_warning ~source_name ~source_version =
 (* Shell command that verifies api_source claims against the fetched source tree.
    Headers component: checks dir exists and each listed file exists.
    binding_api.source_dir (in-tree): checks dir exists.
-   Runtime_lib / Link_stub / Pc_file are post-build or PM-installed — not checked here.
+   Runtime_lib / Link_lib / Pc_file are post-build or PM-installed — not checked here.
    Writes scan.ok to output_dir on success. *)
 let scan_source_cmd ~source_root (api : t) ~output_dir =
   let header_checks =

@@ -83,6 +83,29 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `canary_backend_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
 
+35. **Split `binding_api.deps` into provenance and runtime contract** —
+    `api_component` is currently shared by the provider side (`native_api.components`:
+    `Headers`, `Link_stub`, `Runtime_lib`) and the consumer side (`binding_api.deps`).
+    This conflates two distinct concerns:
+    - **Provenance** (what was consumed at build time): headers + a lib to link against.
+      `Headers` here records what the binding was compiled against, not what it needs
+      to run. `Link_stub` (the unversioned `.so` symlink in Debian `-dev` packages) is
+      a packaging mechanism, not an OCaml concept — it shouldn't appear in a
+      language-level binding spec.
+    - **Runtime contract** (what the built artifact needs to function): the real `.so`
+      at a compatible ABI version.
+    Direction: split `binding_api` into two aspects — `provenance` (build inputs,
+    including which header version was used) and `runtime_deps` (what the binding
+    needs at load time). The consumer side should use a phase-level vocabulary
+    (`Build_dep` / `Runtime_dep`) rather than the provider's packaging-level enum.
+    The mapping from phase-level to concrete component (`Link_stub` vs `Runtime_lib`)
+    is a resolver concern.
+    Header corollary: since headers are fetchable (source tree or `-dev` package),
+    `scan_source` can extract richer API surface info (types, struct layouts,
+    function signatures) than `nm`-based `.so` inspection alone. The `.so` gives
+    runtime compat checks; headers give semantic API drift. Both are useful but
+    answer different questions and should be distinct inspection phases.
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url

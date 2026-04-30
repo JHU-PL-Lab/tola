@@ -29,7 +29,7 @@ let llvm_api_source : Canary_artifact_api.t =
   let native_api : Canary_artifact_api.native_api =
     {
       kind       = C;
-      components = [ Headers; Runtime_lib; Link_stub ];
+      components = [ Headers; Runtime_lib; Link_lib ];
       headers    = Some { dir = "llvm/include/llvm-c";
                           files =
                             [ (* top-level *)
@@ -56,7 +56,6 @@ let llvm_api_source : Canary_artifact_api.t =
     {
       lang = OCaml;
       source_dir = Some "llvm/bindings/ocaml";
-      deps = deps_all;
       (* Drift signal: Llvm.Opcode.UncondBr added in v21 (Br split into
          UncondBr+CondBr). Lives in binding_api watchlist, not native_api
          stable_symbols — it's a C enum value, not a named export. *)
@@ -66,13 +65,11 @@ let llvm_api_source : Canary_artifact_api.t =
           "Llvm.Opcode"; "Llvm.Opcode.UncondBr" ];
     }
   in
-  (* llvmlite bundles its own libLLVM; out-of-tree (source_dir = None).
-     Python consumers need only the runtime lib — no headers at import time. *)
+  (* llvmlite bundles its own libLLVM; out-of-tree (source_dir = None). *)
   let python_binding : Canary_artifact_api.binding_api =
     {
       lang = Python;
       source_dir = None;
-      deps = deps_runtime_only;
       module_watchlist =
         [ "initialize"; "initialize_native_target";
           "parse_assembly"; "create_mcjit_compiler"; "Target" ];
@@ -287,6 +284,7 @@ let mk_script_spec ~source
   let binding_lib = ocaml_tc.ocaml.binding_lib_name in
   {
     Canary_action.empty_script_spec with
+    api_source = source.api_source;
     fetch_source =
       Some
         (fun ~output_dir ->

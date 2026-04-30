@@ -13,7 +13,7 @@ let z3_api_source : Canary_artifact_api.t =
   let native_api : Canary_artifact_api.native_api =
     {
       kind = C;
-      components = [ Headers; Runtime_lib; Link_stub ];
+      components = [ Headers; Runtime_lib; Link_lib ];
       headers =
         Some
           {
@@ -50,17 +50,15 @@ let z3_api_source : Canary_artifact_api.t =
     {
       lang = OCaml;
       source_dir = Some "src/api/ml";
-      deps = deps_all;
       module_watchlist = [ "Z3" ];
     }
   in
-  (* z3-solver pip wheel is pre-compiled; Python consumers need only the
-     runtime lib — headers are not used at Python import time. *)
+  (* z3-solver is a pre-compiled pip wheel; source_dir marks in-tree source
+     but the wheel is not packaged by canary — installed directly via pip. *)
   let python_binding : Canary_artifact_api.binding_api =
     {
       lang = Python;
       source_dir = Some "src/api/python/z3";
-      deps = deps_runtime_only;
       module_watchlist =
         [
           "Solver";
@@ -279,6 +277,7 @@ let mk_script_spec ~source
   in
   {
     Canary_action.empty_script_spec with
+    api_source = source.api_source;
     (* Skip fetch_source when opam will handle source fetching (pack_binding remote flow) *)
     fetch_source =
       (if source.has_build_lib || cmake_build_binding then
