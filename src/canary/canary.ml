@@ -658,7 +658,10 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
           add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
           let out_nid = if split_binding then "ocaml_binding_node"
                         else node_id_of_kind Binding in
-          add_edge ~tag:name [%string "%{action_id} --> %{out_nid}"]
+          add_edge ~tag:name [%string "%{action_id} --> %{out_nid}"];
+          if split_binding &&
+             List.exists binding_kinds ~f:(String.equal "python") then
+            add_edge ~tag:name [%string "%{action_id} --> python_binding_node"]
       | Build_app ->
           let in_nid = if split_binding then "ocaml_binding_node"
                        else node_id_of_kind Binding in
@@ -677,25 +680,14 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
           let tag = [%string "pack_%{k}"] in
           add_edge ~tag [%string "%{pid} --> A_pack_%{k}"]);
   (* Probe edges *)
-  (* from_store probes: chain off pack_binding only when it actually ran.
-     Schema diagrams (no status) show the full potential flow. *)
-  let pack_binding_feeds_probe =
-    match status with
-    | None -> List.exists publish_kinds ~f:(fun k -> Poly.equal k Binding)
-    | Some tbl -> Poly.equal (Hashtbl.find tbl "pack_binding") (Some Done)
-  in
   List.iter probe_kinds ~f:(fun kind ->
       match kind with
       | Binding when split_binding ->
+          (* All split probes read from their language's binding node;
+             from_store distinction is encoded in the probe tag name only *)
           List.iter split_probes ~f:(fun e ->
-              (* from_store probes chain off pack_binding (if present); else only runtime edge *)
-              (if e.from_store then (
-                if pack_binding_feeds_probe then
-                  add_edge ~tag:e.probe_tag
-                    [%string "A_pack_binding --> A_%{e.probe_tag}"])
-              else
-                add_edge ~tag:e.probe_tag
-                  [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"]);
+              add_edge ~tag:e.probe_tag
+                [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"];
               add_edge ~tag:e.probe_tag
                 [%string "%{node_id_of_kind Lib} -.->|runtime| A_%{e.probe_tag}"])
       | _ ->
@@ -707,10 +699,7 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
             add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]);
   add "";
   (* Styling *)
-  add "    classDef source fill:#fafafa,stroke:#999";
-  add "    classDef lib fill:#e8f5e9,stroke:#4caf50";
-  add "    classDef binding fill:#e3f2fd,stroke:#2196f3";
-  add "    classDef app fill:#e8eaf6,stroke:#3f51b5";
+  add "    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
   add "    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px";
   add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px";
   add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
@@ -730,9 +719,8 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
       | Binding when split_binding -> ()  (* handled per-kind below *)
       | _ ->
           let nid = node_id_of_kind kind in
-          let default_cls = string_of_artifact_kind kind in
           let cls = match status with
-            | None -> default_cls
+            | None -> "artifact"
             | Some _ ->
                 let build_tag = match kind with
                   | Headers -> Some "build_headers"
@@ -744,14 +732,14 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
                 let fetch_tag = Some [%string "fetch_%{string_of_artifact_kind kind}"] in
                 if any_done build_tag || any_done fetch_tag then "st_done"
                 else if any_failed build_tag || any_failed fetch_tag then "st_failed"
-                else default_cls
+                else "artifact"
           in
           add [%string "    class %{nid} %{cls}"]);
   if split_binding then
     List.iter binding_kinds ~f:(fun kind ->
         let nid = [%string "%{kind}_binding_node"] in
         let cls = match status with
-          | None -> "binding"
+          | None -> "artifact"
           | Some _ ->
               let build_done = String.equal kind "ocaml" &&
                                any_done (Some "build_binding") in
@@ -761,7 +749,7 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
                   String.equal e.binding_kind kind &&
                   Poly.equal (get_status e.probe_tag) (Some Done)) in
               if build_done || fetch_done || probe_done then "st_done"
-              else "binding"
+              else "artifact"
         in
         add [%string "    class %{nid} %{cls}"]);
   (* Action + store nodes: status-aware or default *)
