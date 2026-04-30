@@ -116,6 +116,22 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     for `scan_source` and per-probe `*_summary` steps. May require extending
     `store_rules` with new rule variants or a separate "annotation step" layer.
 
+37. **HTML diagram viewer with node-group visibility toggles and log drill-down** —
+    The static `.mmd` output works for quick review but becomes hard to read
+    as more node groups are added (stores, summary steps, scan_source, etc.).
+    Replace or augment with a self-contained HTML page that:
+    (a) Renders the Mermaid diagram inline (via mermaid.js CDN or bundled);
+    (b) Provides checkboxes / toggle buttons to show/hide node groups:
+        stores, summary steps, `scan_source`, disabled/`st_nospec` actions;
+    (c) Makes each action node clickable to open (or inline) the corresponding
+        log file (`probe.log`, `summary.json`, `actions.log`) from the run
+        output directory — enables reading results without leaving the viewer.
+    The HTML file would live alongside `result.mmd` in each run's output dir.
+    Consider whether a single template (`canary_backend_html.ml`) can serve
+    all projects by embedding the per-run step list and output-dir paths as a
+    JSON blob. Pairs with TODO #36 (scan_source / summary node fidelity) since
+    toggling visibility makes those extra nodes practical to add.
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url

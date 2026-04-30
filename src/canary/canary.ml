@@ -531,9 +531,6 @@ let pp_job_path_table_md ppf (paths : job_path list) =
 let node_id_of_kind k =
   [%string "%{string_of_artifact_kind k}_node"]
 
-let store_id_of_kind k =
-  [%string "%{string_of_artifact_kind k}_store"]
-
 type node_status = Done | Failed | Skipped | Not_in_spec
 
 (* Probe split entry: one per probe_binding variant when a project has multiple. *)
@@ -605,18 +602,6 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
     List.iter binding_kinds ~f:(fun kind ->
         let nid = [%string "%{kind}_binding_node"] in
         add [%string "    %{nid}@{ shape: docs, label: \"%{kind} binding\" }"]);
-  (* Store nodes *)
-  List.iter all_pool_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding -> ()
-      | _ ->
-          let sid = store_id_of_kind kind in
-          let k = string_of_artifact_kind kind in
-          add [%string "    %{sid}[(\"%{k}_store\")]"]);
-  if split_binding then
-    List.iter binding_kinds ~f:(fun kind ->
-        let sid = [%string "%{kind}_binding_store"] in
-        add [%string "    %{sid}[(\"%{kind}_binding_store\")]"]);
   add "";
   (* Action nodes *)
   if has_configure then
@@ -681,52 +666,36 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
           add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind App}"]
       | _ -> ());
-  (* Fetch edges *)
-  List.iter all_pool_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding ->
-          (* OCaml binding fetch goes to ocaml_binding_node *)
-          let tag = [%string "fetch_%{string_of_artifact_kind kind}"] in
-          add_edge ~tag "ocaml_binding_store -.->|fetch| ocaml_binding_node"
-      | _ ->
-          let pid = node_id_of_kind kind in
-          let sid = store_id_of_kind kind in
-          let tag = [%string "fetch_%{string_of_artifact_kind kind}"] in
-          add_edge ~tag [%string "%{sid} -.->|fetch| %{pid}"]);
-  (* Python binding fetch edge — no explicit rule, shown structurally *)
-  if split_binding &&
-     List.exists binding_kinds ~f:(String.equal "python") then
-    add_edge "python_binding_store -.->|fetch| python_binding_node";
-  (* Publish edges *)
+  (* Publish edges: artifact → pack action only; no store edge *)
   List.iter publish_kinds ~f:(fun kind ->
       match kind with
       | Binding when split_binding ->
-          add_edge ~tag:"pack_binding"
-            "ocaml_binding_node --> A_pack_binding";
-          add_edge ~tag:"pack_binding"
-            "A_pack_binding -->|publish| ocaml_binding_store"
+          add_edge ~tag:"pack_binding" "ocaml_binding_node --> A_pack_binding"
       | _ ->
           let k = string_of_artifact_kind kind in
           let pid = node_id_of_kind kind in
-          let sid = store_id_of_kind kind in
           let tag = [%string "pack_%{k}"] in
-          add_edge ~tag [%string "%{pid} --> A_pack_%{k}"];
-          add_edge ~tag [%string "A_pack_%{k} -->|publish| %{sid}"]);
-  add_edge [%string "%{node_id_of_kind Source} -.->|publish| %{store_id_of_kind Source}"];
+          add_edge ~tag [%string "%{pid} --> A_pack_%{k}"]);
   (* Probe edges *)
+  (* from_store probes: chain off pack_binding only when it actually ran.
+     Schema diagrams (no status) show the full potential flow. *)
+  let pack_binding_feeds_probe =
+    match status with
+    | None -> List.exists publish_kinds ~f:(fun k -> Poly.equal k Binding)
+    | Some tbl -> Poly.equal (Hashtbl.find tbl "pack_binding") (Some Done)
+  in
   List.iter probe_kinds ~f:(fun kind ->
       match kind with
       | Binding when split_binding ->
           List.iter split_probes ~f:(fun e ->
-              (* Source node: raw probes read from artifact node; PM probes from store *)
-              let src_nid =
-                if e.from_store then
-                  [%string "%{e.binding_kind}_binding_store"]
-                else
-                  [%string "%{e.binding_kind}_binding_node"]
-              in
-              add_edge ~tag:e.probe_tag
-                [%string "%{src_nid} -->|test| A_%{e.probe_tag}"];
+              (* from_store probes chain off pack_binding (if present); else only runtime edge *)
+              (if e.from_store then (
+                if pack_binding_feeds_probe then
+                  add_edge ~tag:e.probe_tag
+                    [%string "A_pack_binding --> A_%{e.probe_tag}"])
+              else
+                add_edge ~tag:e.probe_tag
+                  [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"]);
               add_edge ~tag:e.probe_tag
                 [%string "%{node_id_of_kind Lib} -.->|runtime| A_%{e.probe_tag}"])
       | _ ->
@@ -743,7 +712,6 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
   add "    classDef binding fill:#e3f2fd,stroke:#2196f3";
   add "    classDef app fill:#e8eaf6,stroke:#3f51b5";
   add "    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px";
-  add "    classDef store fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
   add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px";
   add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
   add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
@@ -825,16 +793,6 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
              | Some Not_in_spec | None -> "st_nospec"
            in
            add [%string "    class %{node_id} %{cls}"]));
-  (* Store style *)
-  let store_ids =
-    (List.filter_map all_pool_kinds ~f:(fun k ->
-         if Poly.equal k Binding && split_binding then None
-         else Some (store_id_of_kind k)))
-    @ (if split_binding then
-         List.map binding_kinds ~f:(fun kind -> [%string "%{kind}_binding_store"])
-       else [])
-  in
-  add [%string "    class %{String.concat store_ids ~sep:\",\"} store"];
   (* Edge styles *)
   (match status with
    | None -> ()
