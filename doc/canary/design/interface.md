@@ -8,13 +8,13 @@ concrete `summary.json` realisation for L1a/L1b/L3.
 
 Canary detects compatibility failures empirically. Observed failure modes:
 
-| Failure kind | Example | Detection |
-|---|---|---|
-| Missing symbol (binary) | Z3 OCaml stub requires `Z3_mk_solver`, lib has it | `nm` + `assert_binary_symbols.py` |
-| Type mismatch (OCaml API) | `llvm.19-shared` missing `Opcode.UncondBr` | `Expect_failure { contains_any }` |
-| Linking mode change | ELF versioned symbols `Z3_foo@@Z3_4.15` vs plain `Z3_foo` | `nm -D` regex with `@@` suffix |
-| ABI/soname change | shared vs static, soname mismatch | (not yet modelled) |
-| Semantic/invariant failure | behavior change without API break | (not yet modelled, likely undetectable statically) |
+| Failure kind               | Example                                                   | Detection                                          |
+| -------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
+| Missing symbol (binary)    | Z3 OCaml stub requires `Z3_mk_solver`, lib has it         | `nm` + `assert_binary_symbols.py`                  |
+| Type mismatch (OCaml API)  | `llvm.19-shared` missing `Opcode.UncondBr`                | `Expect_failure { contains_any }`                  |
+| Linking mode change        | ELF versioned symbols `Z3_foo@@Z3_4.15` vs plain `Z3_foo` | `nm -D` regex with `@@` suffix                     |
+| ABI/soname change          | shared vs static, soname mismatch                         | (not yet modelled)                                 |
+| Semantic/invariant failure | behavior change without API break                         | (not yet modelled, likely undetectable statically) |
 
 Goal: a **unified abstract representation** rather than scattered ad-hoc checks.
 Lift version numbers into the picture so "apt has z3 4.8, but the binding was
@@ -42,14 +42,14 @@ This is a Liskov-style subtyping contract:
 An **interface** is a named set of observable facts about an artifact.
 Layered by granularity:
 
-| Level | Granularity | Detection method |
-|---|---|---|
-| **L1a** Symbol | binary exported names (`Z3_mk_solver`) | `nm -D` |
-| **L1b** Versioned symbol | runtime version requirement (`malloc@@GLIBC_2.31`) | `nm -D` `@@` annotations |
-| **L2** Type signature | OCaml type of exported value | `ocamlobjinfo`, `.cmi` digest |
-| **L3** API shape | constructor set, module structure | compile probe |
-| **L4** ABI/runtime | C runtime implementation + version, C++ ABI, soname | `readelf -d`, `ldd` |
-| **L5** Behavioral contract | pre/post conditions | (research territory) |
+| Level                      | Granularity                                         | Detection method              |
+| -------------------------- | --------------------------------------------------- | ----------------------------- |
+| **L1a** Symbol             | binary exported names (`Z3_mk_solver`)              | `nm -D`                       |
+| **L1b** Versioned symbol   | runtime version requirement (`malloc@@GLIBC_2.31`)  | `nm -D` `@@` annotations      |
+| **L2** Type signature      | OCaml type of exported value                        | `ocamlobjinfo`, `.cmi` digest |
+| **L3** API shape           | constructor set, module structure                   | compile probe                 |
+| **L4** ABI/runtime         | C runtime implementation + version, C++ ABI, soname | `readelf -d`, `ldd`           |
+| **L5** Behavioral contract | pre/post conditions                                 | (research territory)          |
 
 Canary today covers L1a (`Expect_symbols`, summary watchlists) and L3
 (`Expect_failure` compile probes). L1b is partially handled —
@@ -61,7 +61,126 @@ The glibc/musl example lives at **L1b + L4**: the `@@GLIBC_2.31` annotation
 is an L1b versioned-symbol requirement; "which C runtime implementation" is
 an L4 property. Both fold into the same unified model.
 
-## 4. Concrete examples
+## 4. API source layer (`canary_artifact_api`)
+
+An upstream project that ships a native library has three layers. All three
+are now modelled:
+
+```
+┌───────────────────────────────────────┐
+│  Source repo (z3/, llvm-project/, …)  │  source_repo
+└────────────────┬──────────────────────┘
+                 │ api_source : Canary_artifact_api.t option
+                 ▼
+┌───────────────────────────────────────┐
+│  native_api                           │  C/native API surface (L1a provider)
+│  - components : api_component list    │  Headers | Runtime_lib | Link_stub | Pc_file
+│  - headers : headers_spec option      │  path detail for the Headers component
+│  - symbol_prefixes, stable_symbols    │
+└────────┬────────────┬─────────────────┘
+         │            │
+         ▼            ▼
+    ┌─────────┐  ┌─────────┐
+    │ OCaml   │  │ Python  │  …   binding_api (one per language; L3 consumer)
+    │ binding │  │ binding │      source_dir + deps + module_watchlist
+    └─────────┘  └─────────┘
+```
+
+### Types (`canary_artifact_api.ml`)
+
+```ocaml
+type lang = OCaml | Python | Rust | Cpp | CSharp | Java
+
+(* Pure enum — shared by provider (native_api.components) and consumer (binding_api.deps).
+   No path payload; paths live in native_api.headers. *)
+type api_component =
+  | Headers      (* C/C++ public headers *)
+  | Runtime_lib  (* versioned .so/.dylib *)
+  | Link_stub    (* unversioned .so symlink — for -l at build time *)
+  | Pc_file      (* pkg-config file *)
+
+(* Path detail for the Headers component — only present on the provider side *)
+type headers_spec = { dir : string; files : string list }
+
+type native_api = {
+  kind            : native_api_kind;      (* C | Cpp_api *)
+  components      : api_component list;   (* what this source/package exposes *)
+  headers         : headers_spec option;  (* path detail when Headers ∈ components *)
+  symbol_prefixes : string list;          (* e.g. ["Z3_"] or ["LLVM"] *)
+  stable_symbols  : string list;          (* L1a watchlist: claim these survive version bumps *)
+}
+
+type binding_api = {
+  lang             : lang;
+  source_dir       : string option;       (* relative to source root; None = out-of-tree *)
+  deps             : api_component list;  (* which components from native_api this binding needs *)
+  module_watchlist : string list;         (* L3 watchlist; dotted paths ok: "Llvm.Opcode.UncondBr" *)
+}
+
+type t = {
+  native_api   : native_api;
+  binding_apis : binding_api list;
+}
+```
+
+`source_repo.api_source : t option` — `None` means not yet declared.
+
+Key accessors: `native_watchlist`, `binding_watchlist_exn`, `stable_reuse_warning`,
+`scan_source_cmd`.
+
+Convenience values:
+- `deps_all = [Headers; Link_stub; Runtime_lib]` — OCaml, Rust (compile C stubs at install time)
+- `deps_runtime_only = [Runtime_lib]` — Python pre-compiled wheels (no C compilation at user-install time)
+
+### What belongs here vs elsewhere
+
+**In `api_source`:** component kinds, header paths and file list, symbol prefixes,
+native stable-symbol watchlist, per-language binding source dirs and deps,
+per-language module watchlists.
+
+**Not in `api_source`:** build targets, generators, build commands — those stay
+in `action_step`/`script_spec`. `api_source` is a declarative artifact
+description, not a build recipe.
+
+`native_api.components` is a **provider declaration**: which component kinds
+this source or package exposes. `binding_api.deps` is a **consumer declaration**:
+which of those components the binding needs. `api_component` is shared by both —
+the same enum drives provider enumeration and consumer dependency checks.
+
+`native_api.stable_symbols` is a **provider claim** (what the C API promises).
+`binding_api.module_watchlist` is a **consumer claim** (what the binding exposes
+in its own language). Both are hand-written; scan/summary confirm them
+post-build.
+
+### Scan confirmation step
+
+`script_spec.scan_source` carries the generated check command (from
+`scan_source_cmd`). `derive_steps` emits it as a `scan_source` step after
+`fetch_source`, sharing `fetch_source`'s output dir and writing `scan.ok`.
+`Configure`, `Build_lib`, and `Build_binding` depend on `scan_source` when it
+is wired — a spec-drift failure (header claim wrong, binding dir missing) blocks
+the build chain.
+
+Only source-build runs carry a scan step. Stable fetch-only sources
+(`has_build_lib = false`, `has_build_binding = false`) have `scan_source = None`.
+
+### Concrete instances
+
+| Project | `headers.dir`         | `symbol_prefixes` | `binding_apis`                                                                      |
+| ------- | --------------------- | ----------------- | ----------------------------------------------------------------------------------- |
+| z3      | `src/api`             | `["Z3_"]`         | OCaml (`deps_all`, in-tree `src/api/ml`), Python (`deps_runtime_only`, in-tree `src/api/python/z3`) |
+| llvm    | `llvm/include/llvm-c` | `["LLVM"]`        | OCaml (`deps_all`, in-tree `llvm/bindings/ocaml`), Python (`deps_runtime_only`, out-of-tree llvmlite) |
+
+`source_dir = None` on llvm's Python entry: scan skips the `test -d` check;
+the `module_watchlist` still drives the pip summary.
+
+Stable sources (`z3_source_stable`, `llvm_source_stable`) share the dev
+`api_source`. When `has_build_binding = false`, the summary closure prepends:
+```
+NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift
+```
+
+## 5. Concrete examples
 
 ### C runtime mismatch (glibc vs musl)
 
@@ -118,7 +237,7 @@ binding_dev.requires   = { ocaml_api: { Opcode.UncondBr } }
 detected and **expected** in canary (`Expect_failure`). With first-class
 interface it becomes a checked contract, not a grep on an error string.
 
-## 5. Expanded failure taxonomy
+## 6. Expanded failure taxonomy
 
 Beyond symbol-missing:
 
@@ -147,21 +266,21 @@ Beyond symbol-missing:
   tactic removed, default changed). Undetectable without behavioral tests.
   L5 territory; could be a `probe_app` pattern.
 
-## 6. Concrete realisation: artifact summaries
+## 7. Concrete realisation: artifact summaries
 
 Each scan produces a compact `summary.json` that captures the L1a/L1b/L3
 observations without storing a full symbol list.
 
 ### "Symbol" per artifact kind
 
-| Artifact | Symbol analog | Tool |
-|---|---|---|
-| Native `.so`/`.dylib` | C exports | `nm -D` (Linux), `nm -g` (macOS) |
-| Native `.so`/`.dylib` | Versioned deps (L1b) | `nm -D` `@@` suffixes |
-| OCaml `.cmxa`/`.cma` | Modules + top-level constructors/vals | `ocamlobjinfo` |
-| OCaml opam pkg | Same, walked via `ocamlfind query` | `ocamlobjinfo` |
-| Python pkg | `dir(module)` attributes | `python3 -c "import x; print(dir(x))"` |
-| Source repo | Public header names, commit SHA | `find`, `git log` (extensible to FFI surfaces across languages — many provide C-ABI) |
+| Artifact              | Symbol analog                         | Tool                                   |
+| --------------------- | ------------------------------------- | -------------------------------------- |
+| Native `.so`/`.dylib` | C exports                             | `nm -D` (Linux), `nm -g` (macOS)       |
+| Native `.so`/`.dylib` | Versioned deps (L1b)                  | `nm -D` `@@` suffixes                  |
+| OCaml `.cmxa`/`.cma`  | Modules + top-level constructors/vals | `ocamlobjinfo`                         |
+| OCaml opam pkg        | Same, walked via `ocamlfind query`    | `ocamlobjinfo`                         |
+| Python pkg            | `dir(module)` attributes              | `python3 -c "import x; print(dir(x))"` |
+| Source repo           | Public header names, commit SHA       | `find`, `git log`                      |
 
 Note: OCaml tools (outside the compiler) don't have a nice programmable API,
 but `ocamlobjinfo` is well-implemented and shell-friendly. `tola/binding/`
@@ -202,38 +321,38 @@ Per-language extras: Python summaries also surface module-specific facts via
 `extras_for(pkg, mod)` — e.g. `sqlite3.sqlite_version` captures the bundled
 libsqlite version, independent of CPython's own version.
 
-## 7. Watchlists
+## 8. Watchlists
 
 Watchlists are *human-curated* canaries: "we expect these names to remain
-stable." The model splits two concerns:
+stable." Two concerns, now cleanly split:
 
-- **API-level watchlist** — what the upstream project promises. Sits on
-  `api_source.stable_symbols` (per [index.md §4](index.md)).
-- **Binding-level watchlist** — what a specific consumer expects. Sits on
-  the binding declaration (`ocaml_module_watchlist`, `python_attr_watchlist`).
+- **Provider watchlist** (`native_api.stable_symbols`) — what the upstream
+  C API promises. Sits on `api_source.native_api` per §4.
+- **Consumer watchlist** (`binding_api.module_watchlist`) — what a specific
+  language binding expects. Sits on its `binding_api` entry per §4.
 
-Today these are mixed in project specs (`z3_native_watchlist` is API-level;
-`z3_ocaml_watchlist` is binding-level). The Stage 3 abstraction pulls them
-apart cleanly.
+The split is implemented: `z3_native_watchlist` and `z3_ocaml_watchlist`
+are gone as top-level constants; their lists live inside `z3_api_source`.
+Summary closures read them via `native_watchlist api` and
+`binding_watchlist_exn api lang`.
 
 Embedded drift signals (intentional placeholders that double as demos):
 
-- `Z3_mk_optimize_assert_soft` in `z3_native_watchlist` — function was renamed
+- `Z3_mk_optimize_assert_soft` in z3's `stable_symbols` — function was renamed
   upstream; missing entry validates drift detection.
-- `initialize`, `initialize_native_target` in `llvm_python_watchlist` —
+- `initialize`, `initialize_native_target` in llvmlite's `module_watchlist` —
   llvmlite deprecated these; future removal will surface as missing.
 
-## 8. Storage
+## 9. Storage
 
 - **Per-probe** (today): each probe step writes `summary.json` to its
-  output dir alongside `probe.log`.
-- **Per-scan** (Stage 3 target, see [index.md §4](index.md)): scan stage
-  writes one `scan_result.json` per artifact, multiple probes share it.
+  output dir alongside `probe.log`. Scan writes `scan.ok` alongside `source.ok`
+  in the `fetch_source` output dir.
 - **Committed index** (future): `summary-sync` subcommand promotes selected
   summaries into a committed index keyed by `{artifact_kind, name, fingerprint}`.
   Small files (~1KB each), safe to commit. Cross-machine drift visibility.
 
-## 9. Drift detection: summary-diff
+## 10. Drift detection: summary-diff
 
 Given two summaries `(old, new)`:
 
@@ -248,7 +367,7 @@ plus a clean GLIBCXX/CXXABI/GLIBC requirement-floor delta. See
 [trackers/python_binding.md](../trackers/python_binding.md) for the
 in-flight examples.
 
-## 10. Bridge to version_logic
+## 11. Bridge to version_logic
 
 With interface as a first-class object, a version is no longer just a number —
 it carries an interface snapshot:
@@ -272,39 +391,50 @@ Canonical questions the combined system can answer:
 Bridges canary (concrete tests) to the pkgm formalism (abstract version
 constraint SAT).
 
-## 11. Roadmap
+## 12. Roadmap
 
 ### Step 1 — unified summary primitives ✅
 
 Per-artifact summary commands (`Canary_artifact_native.summary_cmd`,
 `Canary_artifact_ocaml.summary_cmd`, `Canary_artifact_python.summary_cmd`).
 Watchlists declared per project. Summary attached to probe steps via
-`script_spec.summary` field. Done; CI green.
+`script_spec.summary`. Done; CI green.
 
-### Step 2 — interface diff across versions
+### Step 2 — API source layer + scan ✅
 
-Today: `summary-diff` works on per-probe summaries. Next: scan stage produces
-authoritative `scan_result.json` per artifact (per [index.md §4](index.md));
-summary-diff operates on those. Diffs become per-version, not per-probe.
+`canary_artifact_api.ml` types the three-layer structure (source →
+native_api → binding_api per language). Watchlists split into provider
+(`stable_symbols`) and consumer (`module_watchlist`) levels. `scan_source`
+step verifies header/binding-dir claims post-fetch, blocking builds on
+spec drift.
 
-### Step 3 — interface ↔ version_logic
+### Step 3 — interface diff across versions
+
+`summary-diff` works on per-probe summaries today. Next: scan stage
+produces an authoritative per-artifact summary usable across versions;
+diffs become per-version, not per-probe. Gated on committed summary index.
+
+### Step 4 — interface ↔ version_logic
 
 Represent `requires ⊆ provides` as a constraint solvable in `Version_logic`.
 Cross-references the pkgm formalism. Research-paper material.
 
-### Step 4 — semantic contracts (L5)
+### Step 5 — semantic contracts (L5)
 
 Behavioral probes (probe_app level) as interface at L5. Property-based
 testing against a declared behavioral interface. Research territory.
 
-## 12. Open implementation questions
+## 13. Open implementation questions
 
 - **L1b as a constraint, not just a count.** Today `versioned_req` is a
   count map. Becoming a real glibc-version-floor calculation needs the
   highest-required-version computation per dependency.
+- **`nm`-based symbol scan step.** `stable_symbols` are confirmed by the
+  existing `probe_lib` summary via `nm -D`; no dedicated post-build scan
+  step for them yet. The `scan_source` step only checks file existence.
 - **Header parsing for L2/L3.** Currently human-claimed. Mechanical
   extraction (libclang for C, ocamlc for OCaml signatures) is a separate
   add-on, not a replacement. Keep "claimed" and "extracted" distinct.
 - **L4 (ABI/runtime).** soname tracking, libc/libstdc++ implementation
-  tag, per-binary `readelf -d` capture. Out of scope for Stage 3; Stage 4+.
+  tag, per-binary `readelf -d` capture. Out of scope; Stage 4+.
 - **L5 behavioral.** Out of scope; research add-on.

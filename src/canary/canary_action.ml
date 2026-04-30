@@ -14,15 +14,16 @@ open Canary
 (* probe_binding is the action; each entry is keyed by the location
    of the artifact being probed. Location determines deps and tag:
    - Build_tree: depends on build_binding (raw build artifact)
-   - Lang_pm: depends on pack_binding or fetch_binding (PM-installed)
-   - System_pm: depends on fetch_lib (system-level probe)
-   Other locations can be added as needed. *)
+   - Staged: depends on an installed (cmake --install) artifact
+   - Pm { lang; pm }: depends on pack_binding or fetch_binding (PM-installed) *)
 
 let tag_of_probe_location = function
   | Build_tree -> "probe_binding_build"
-  | Lang_pm -> "probe_binding_pkg"
-  | System_pm -> "probe_binding_sys"
-  | Wild s -> [%string "probe_binding_%{s}"]
+  | Staged -> "probe_binding_staged"
+  | Pm { lang; pm } ->
+      [%string
+        "probe_binding_%{Canary_artifact_api.string_of_lang \
+         lang}_%{string_of_pm pm}"]
 
 type version_info = {
   provider_version : string;   (* e.g. "19" for llvm.19-shared *)
@@ -80,6 +81,11 @@ type script_spec = {
      None when no source build (stable fetch-only sources). *)
   scan_source : (output_dir:string -> string) option;
   configure : (output_dir:string -> string) option;
+  (* Headers: public C API headers consumed by build_binding.
+     build_headers: headers from the source/build tree (after configure).
+     fetch_headers: headers from a system -dev package (e.g. apt install libz3-dev). *)
+  build_headers : (output_dir:string -> string) option;
+  fetch_headers : (output_dir:string -> string) option;
   build_lib : (output_dir:string -> string) option;
   build_binding : (output_dir:string -> string) option;
   build_app : (output_dir:string -> string) option;
@@ -117,7 +123,9 @@ let empty_script_spec = {
   api_source = None;
   scan_source = None;
   configure = None;
-  build_lib = None; build_binding = None; build_app = None;   fetch_lib = None; fetch_binding = None; fetch_app = None;
+  build_headers = None; fetch_headers = None;
+  build_lib = None; build_binding = None; build_app = None;
+  fetch_lib = None; fetch_binding = None; fetch_app = None;
   pack_lib = None; pack_binding = None; pack_app = None;
   probe_lib = None; probe_binding = [];
   probe_app = None;
@@ -130,6 +138,7 @@ let empty_script_spec = {
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
 let no_source spec =
   { spec with fetch_source = None; scan_source = None; configure = None;
+    build_headers = None;
     build_lib = None; build_binding = None; build_app = None;
     pack_lib = None; pack_binding = None; pack_app = None }
 
@@ -137,6 +146,8 @@ let no_source spec =
 let script_of_rule spec = function
   | Fetch Source -> spec.fetch_source
   | Configure -> spec.configure
+  | Build_headers -> spec.build_headers
+  | Fetch Headers -> spec.fetch_headers
   | Fetch Lib -> spec.fetch_lib
   | Fetch Binding -> spec.fetch_binding
   | Fetch App -> spec.fetch_app
@@ -154,7 +165,7 @@ let script_of_rule spec = function
        | [ (_, cmd) ] -> Some cmd
        | _ -> None)
   | Probe App -> spec.probe_app
-  | Publish Source | Probe Source -> None
+  | Publish Source | Probe Source | Publish Headers | Probe Headers -> None
 
 (* ── Action step protocol ── *)
 
@@ -402,7 +413,17 @@ let result_status_of_run (steps : action_step list)
   (* Mark all store_rules actions as Not_in_spec initially *)
   List.iter store_rules ~f:(fun r ->
       Hashtbl.set tbl ~key:(string_of_rule r) ~data:Not_in_spec);
-  (* Override with actual run results *)
+  (* Override with actual run results.
+     Also update the canonical rule tag for split probes: probe_binding_pkg/pip
+     have tag ≠ string_of_rule, so merge them into "probe_binding" using
+     Done > Failed > Skipped precedence so the diagram node reflects reality. *)
+  let merge_status prev ns =
+    let open Canary in
+    match prev with
+    | None | Some Not_in_spec | Some Skipped -> ns
+    | Some Done -> Done
+    | Some Failed -> (match ns with Done -> Done | _ -> Failed)
+  in
   List.iter steps ~f:(fun s ->
       let ns = match Hashtbl.find run_status s.tag with
         | Some Step_done -> Done
@@ -410,7 +431,10 @@ let result_status_of_run (steps : action_step list)
         | Some Step_skipped -> Skipped
         | None -> Skipped
       in
-      Hashtbl.set tbl ~key:s.tag ~data:ns);
+      Hashtbl.set tbl ~key:s.tag ~data:ns;
+      let canonical = string_of_rule s.rule in
+      if not (String.equal s.tag canonical) then
+        Hashtbl.update tbl canonical ~f:(fun prev -> merge_status prev ns));
   tbl
 
 (* ── Shared command templates ──
@@ -465,6 +489,7 @@ let has_file ~output_dir name =
 let marker_of_rule = function
   | Fetch Source -> "source.ok"
   | Configure -> "conf.ok"
+  | Build_headers | Fetch Headers -> "headers.ok"
   | Fetch Lib -> "lib.ok"
   | Fetch Binding -> "binding.ok"
   | Fetch App -> "app.ok"
@@ -501,23 +526,26 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
 let deps_of_rule spec rule =
   let has r = Option.is_some (script_of_rule spec r) in
   let tag r = string_of_rule r in
+  let scan_or_fetch_source () =
+    if has (Fetch Source) then
+      Some (if Option.is_some spec.scan_source then "scan_source"
+            else tag (Fetch Source))
+    else None
+  in
   match rule with
   | Fetch _ -> []
   | Configure ->
-      let fetch_or_scan =
-        if has (Fetch Source) then
-          Some (if Option.is_some spec.scan_source then "scan_source"
-                else tag (Fetch Source))
-        else None
-      in
-      List.filter_opt [ fetch_or_scan ]
+      List.filter_opt [ scan_or_fetch_source () ]
+  | Build_headers ->
+      (* headers come from configured source; fall back to scan/fetch if no configure *)
+      List.filter_opt [
+        if has Configure then Some (tag Configure)
+        else scan_or_fetch_source ()
+      ]
   | Build_lib ->
       List.filter_opt [
         if has Configure then Some (tag Configure)
-        else if has (Fetch Source) then
-          Some (if Option.is_some spec.scan_source then "scan_source"
-                else tag (Fetch Source))
-        else None
+        else scan_or_fetch_source ()
       ]
   | Build_binding ->
       let lib_dep =
@@ -525,14 +553,17 @@ let deps_of_rule spec rule =
         else if has (Fetch Lib) then Some (tag (Fetch Lib))
         else None
       in
-      let src_dep =
-        if has Configure then Some (tag Configure)
-        else if has (Fetch Source) then
-          Some (if Option.is_some spec.scan_source then "scan_source"
-                else tag (Fetch Source))
+      let headers_dep =
+        if has Build_headers then Some (tag Build_headers)
+        else if has (Fetch Headers) then Some (tag (Fetch Headers))
         else None
       in
-      List.filter_opt [ src_dep; lib_dep ]
+      (* configure needed separately when cmake drives the binding build *)
+      let configure_dep =
+        if has Configure then Some (tag Configure)
+        else None
+      in
+      List.filter_opt [ configure_dep; headers_dep; lib_dep ]
   | Build_app ->
       let binding_dep =
         if has Build_binding then Some (tag Build_binding)
@@ -547,6 +578,7 @@ let deps_of_rule spec rule =
       List.filter_opt [ binding_dep; lib_dep ]
   | Publish kind | Probe kind ->
       let produce_rule = match kind with
+        | Headers -> if has Build_headers then Some Build_headers else Some (Fetch Headers)
         | Lib -> if has Build_lib then Some Build_lib else Some (Fetch Lib)
         | Binding -> if has Build_binding then Some Build_binding else Some (Fetch Binding)
         | App -> if has Build_app then Some Build_app else Some (Fetch App)
@@ -772,9 +804,22 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   (* Write result diagram — same schema as action_rule.mmd, colored by status *)
   let mmd_path = [%string "%{dir}/result.mmd"] in
   let node_status = result_status_of_run steps status in
+  let canonical_probe_binding = string_of_rule (Probe Binding) in
+  let split_probe_tags =
+    List.filter_map steps ~f:(fun s ->
+        match s.rule with
+        | Probe Binding
+          when not (String.equal s.tag canonical_probe_binding)
+            && not (String.is_suffix s.tag ~suffix:"_summary") ->
+            Some s.tag
+        | _ -> None)
+    |> List.sort ~compare:String.compare
+    |> List.dedup_and_sort ~compare:String.compare
+  in
   let oc = Stdlib.open_out mmd_path in
   Stdlib.output_string oc
-    (Canary.mermaid_of_action_rule_schema ~status:node_status store_rules);
+    (Canary.mermaid_of_action_rule_schema ~status:node_status ~split_probe_tags
+       store_rules);
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
   logger.close ()

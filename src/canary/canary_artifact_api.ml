@@ -14,13 +14,18 @@ open Base
    See doc/canary/design/interface.md §4 for the design rationale. *)
 
 type lang =
+  | Native  (** ELF / Mach-O / PE — no language runtime *)
+  | Cpp
   | OCaml
   | Python
   | Rust
-  | Cpp
   | CSharp
   | Java
 [@@deriving show]
+
+let string_of_lang = function
+  | Native -> "native" | Cpp -> "cpp" | OCaml -> "ocaml"
+  | Python -> "python" | Rust -> "rust" | CSharp -> "csharp" | Java -> "java"
 
 type native_api_kind =
   | C

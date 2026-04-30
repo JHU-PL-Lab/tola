@@ -169,9 +169,9 @@ ninja -C build build_z3_python_bindings|}
         [
           {
             kind = Pm_install (Some { linux_pkg = "z3"; macos_pkg = "z3" });
-            location = System_pm;
+            location = Pm { lang = Canary_artifact_api.Native; pm = Apt };
             requires = [];
-            produces = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            produces = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
           };
           {
             kind =
@@ -180,7 +180,7 @@ ninja -C build build_z3_python_bindings|}
                    (binding_buildgen_use_external
                       z3_ocaml_config.toolchain.prefix_envar));
             location = Build_tree;
-            requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            requires = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
             produces = [];
           };
           {
@@ -188,7 +188,7 @@ ninja -C build build_z3_python_bindings|}
               Cmake_build
                 (run_step ~name:"Build OCaml and Python bindings" binding_build);
             location = Build_tree;
-            requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            requires = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
             produces = [ { kind = Binding; name = "z3"; location = Build_tree } ];
           };
           {
@@ -213,9 +213,9 @@ ninja -C build build_z3_python_bindings|}
         [
           {
             kind = Pm_install (Some { linux_pkg = "z3"; macos_pkg = "z3" });
-            location = System_pm;
+            location = Pm { lang = Canary_artifact_api.Native; pm = Apt };
             requires = [];
-            produces = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            produces = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
           };
           {
             kind =
@@ -224,7 +224,7 @@ ninja -C build build_z3_python_bindings|}
                    (binding_buildgen_use_external
                       z3_ocaml_config.toolchain.prefix_envar));
             location = Build_tree;
-            requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            requires = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
             produces = [];
           };
           {
@@ -232,19 +232,19 @@ ninja -C build build_z3_python_bindings|}
               Cmake_build
                 (run_step ~name:"Build OCaml and Python bindings" binding_build);
             location = Build_tree;
-            requires = [ { kind = Lib; name = "z3"; location = System_pm } ];
+            requires = [ { kind = Lib; name = "z3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
             produces = [ { kind = Binding; name = "z3"; location = Build_tree } ];
           };
           {
             kind = Pm_install_local Opam;
-            location = Lang_pm;
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
             requires = [ { kind = Binding; name = "z3"; location = Build_tree } ];
-            produces = [ { kind = App; name = "z3"; location = Lang_pm } ];
+            produces = [ { kind = App; name = "z3"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Lang_pm;
-            requires = [ { kind = App; name = "z3"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = App; name = "z3"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
             produces = [];
           };
         ];
@@ -297,15 +297,15 @@ module Llvm = struct
                      macos_pkg =
                        (prebuilt_info_exn llvm_ocaml_config).system_package_macos;
                    });
-            location = System_pm;
+            location = Pm { lang = Canary_artifact_api.Native; pm = Apt };
             requires = [];
-            produces = [ { kind = Lib; name = "llvm"; location = System_pm } ];
+            produces = [ { kind = Lib; name = "llvm"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
           };
           {
             kind = Pm_install None;
-            location = Lang_pm;
-            requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-            produces = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = Lib; name = "llvm"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
+            produces = [ { kind = Binding; name = "llvm"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
           };
           {
             kind =
@@ -314,20 +314,20 @@ module Llvm = struct
                   name = "Install llvmlite";
                   command = "python3 -m pip install llvmlite";
                 };
-            location = Lang_pm;
-            requires = [ { kind = Lib; name = "llvm"; location = System_pm } ];
-            produces = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = Lib; name = "llvm"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
+            produces = [ { kind = App; name = "llvmlite"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Lang_pm;
-            requires = [ { kind = Binding; name = "llvm"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = Binding; name = "llvm"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
             produces = [];
           };
           {
             kind = Probe_test { lang = Python };
-            location = Lang_pm;
-            requires = [ { kind = App; name = "llvmlite"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = App; name = "llvmlite"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
             produces = [];
           };
         ];
@@ -385,20 +385,20 @@ module Sqlite = struct
                        (prebuilt_info_exn sqlite_ocaml_config)
                          .system_package_macos;
                    });
-            location = System_pm;
+            location = Pm { lang = Canary_artifact_api.Native; pm = Apt };
             requires = [];
-            produces = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
+            produces = [ { kind = Lib; name = "sqlite3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
           };
           {
             kind = Pm_install None;
-            location = Lang_pm;
-            requires = [ { kind = Lib; name = "sqlite3"; location = System_pm } ];
-            produces = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = Lib; name = "sqlite3"; location = Pm { lang = Canary_artifact_api.Native; pm = Apt } } ];
+            produces = [ { kind = App; name = "sqlite3"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Lang_pm;
-            requires = [ { kind = App; name = "sqlite3"; location = Lang_pm } ];
+            location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam };
+            requires = [ { kind = App; name = "sqlite3"; location = Pm { lang = Canary_artifact_api.OCaml; pm = Opam } } ];
             produces = [];
           };
         ];

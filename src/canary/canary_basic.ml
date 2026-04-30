@@ -7,10 +7,10 @@ type runner_os = Ubuntu | MacOS
 type binding_lang = OCaml | Python
 type probe_action = Compile_example | Run_example
 type compile_mode = Native | Bytecode
-type artifact_kind = Source | Lib | Binding | App
+type artifact_kind = Source | Headers | Lib | Binding | App
 
 let kind_order = function
-  | Source -> 0 | Lib -> 1 | Binding -> 2 | App -> 3
+  | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding -> 3 | App -> 4
 
 type artifact = { kind : artifact_kind; name : string; location : location }
 
@@ -148,8 +148,8 @@ let name_of_phase (phase : step_phase) =
   match phase.kind with
   | Pm_install _ -> (
       match phase.location with
-      | System_pm -> "Install system dependencies"
-      | Lang_pm -> "Install binding package"
+      | Pm { lang = Canary_artifact_api.Native; _ } -> "Install system dependencies"
+      | Pm _ -> "Install binding package"
       | loc -> [%string "Install via %{string_of_location loc}"])
   | Pm_install_local pm ->
       [%string "Install from local %{string_of_pm pm} repo"]

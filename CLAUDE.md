@@ -240,13 +240,11 @@ Still open:
   famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
   zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
   opam survey; living doc, updated as candidates land.
-- **First-class API-source layer** — `doc/canary/design/api_source.md`.
-  Moves per-project "what's the C API surface, how do bindings build from it,
-  what symbols are stable" from hand-written project-spec shell into a typed
-  `source_repo.api_source` sub-object. Enables adding a new language binding
-  as a data change (one `binding_target` entry) rather than duplicated shell.
-  Deferred until Python primitives + one new Pattern A candidate land, to
-  have enough data points.
+- **First-class API-source layer** — implemented. `canary_artifact_api.ml`
+  types the three-layer structure (source_repo → native_api → binding_api).
+  Watchlists split into provider (`stable_symbols`) and consumer
+  (`module_watchlist`) levels. `scan_source` step verifies header/binding-dir
+  claims post-fetch. See `doc/canary/design/interface.md §4`.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.

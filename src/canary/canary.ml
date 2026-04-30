@@ -19,7 +19,7 @@ let verify_of_phase (config : project_config) (phase : step_phase) =
   match phase.kind with
   | Pm_install system_pkg -> (
       match phase.location with
-      | System_pm ->
+      | Pm { lang = Canary_artifact_api.Native; _ } ->
           let info = prebuilt_info_exn config.ocaml in
           let spec =
             match system_pkg with
@@ -32,7 +32,7 @@ let verify_of_phase (config : project_config) (phase : step_phase) =
             | None -> info.system_package
           in
           verify_system_package_steps ~name spec
-      | Lang_pm ->
+      | Pm _ ->
           let info = prebuilt_info_exn config.ocaml in
           verify_opam_install_spec_step ~name info.opam_package_spec
       | _ -> [])
@@ -50,7 +50,7 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
     match phase.kind with
     | Pm_install system_pkg -> (
         match phase.location with
-        | System_pm ->
+        | Pm { lang = Canary_artifact_api.Native; _ } ->
             let info = prebuilt_info_exn config.ocaml in
             let spec =
               match system_pkg with
@@ -63,7 +63,7 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
               | None -> info.system_package
             in
             install_system_package_steps ~name config.ocaml.toolchain spec
-        | Lang_pm ->
+        | Pm _ ->
             let info = prebuilt_info_exn config.ocaml in
             install_opam_package_spec_step ~name info.opam_package_spec
         | _ -> failwith "Pm_install: unsupported location")
@@ -100,6 +100,7 @@ let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
 
 let string_of_artifact_kind = function
   | Source -> "source"
+  | Headers -> "headers"
   | Lib -> "lib"
   | Binding -> "binding"
   | App -> "app"
@@ -135,6 +136,7 @@ let two_versions = [ Dev; Stable ]
 
 type rule =
   | Configure
+  | Build_headers
   | Build_lib
   | Build_binding
   | Build_app
@@ -144,6 +146,7 @@ type rule =
 
 let string_of_rule = function
   | Configure -> "configure"
+  | Build_headers -> "build_headers"
   | Build_lib -> "build_lib"
   | Build_binding -> "build_binding"
   | Build_app -> "build_app"
@@ -164,6 +167,8 @@ let store_rules =
   [
     Fetch Source;
     Configure;
+    Build_headers;
+    Fetch Headers;
     Build_lib;
     Fetch Lib;
     Build_binding;
@@ -221,10 +226,17 @@ let make_action_rule ~rules ~versions ~name ~source () =
             let nodes =
               List.concat_map bindings ~f:(fun binding ->
                   List.map libs ~f:(fun runtime_lib ->
-                      mk_node App name ~origin:Build_tree ~location:Lang_pm
+                      mk_node App name ~origin:Build_tree ~location:Build_tree
                         ~built_from:binding ~runtime_dep:runtime_lib ()))
             in
             add pools App nodes
+        | Build_headers ->
+            let nodes =
+              List.map versions ~f:(fun v ->
+                  mk_node Headers (name ^ vs v)
+                    ~origin:Build_tree ~location:Build_tree ())
+            in
+            add pools Headers nodes
         | Configure | Publish _ | Probe _ -> pools)
   in
   { rules; pools }
@@ -277,6 +289,7 @@ let rec action_path_of_node (n : artifact_node) =
   else
     (* Built: trace the chain *)
     let build_action = match n.a_kind with
+      | Headers -> "build_headers"
       | Lib -> "build_lib"
       | Binding -> "build_binding"
       | App -> "build_app"
@@ -405,7 +418,7 @@ let job_paths_of_action_rule (ar : action_rule) : job_path list =
     [%string "%{prefix}%{Int.to_string (n + 1)}"]
   in
   let kind_prefix = function
-    | Source -> "S" | Lib -> "L" | Binding -> "B" | App -> "A"
+    | Source -> "S" | Headers -> "H" | Lib -> "L" | Binding -> "B" | App -> "A"
   in
   let paths =
     List.concat_map ar.pools ~f:(fun (kind, nodes) ->
@@ -523,7 +536,7 @@ let store_id_of_kind k =
 
 type node_status = Done | Failed | Skipped | Not_in_spec
 
-let mermaid_of_action_rule_schema ?status (rules : rule list) =
+let mermaid_of_action_rule_schema ?status ?(split_probe_tags = []) (rules : rule list) =
   let get_status tag = match status with
     | None -> None
     | Some tbl -> Hashtbl.find tbl tag
@@ -535,7 +548,9 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
   in
   let build_rules =
     List.filter rules ~f:(fun r ->
-        match r with Build_lib | Build_binding | Build_app -> true | _ -> false)
+        match r with
+        | Build_headers | Build_lib | Build_binding | Build_app -> true
+        | _ -> false)
   in
   let publish_kinds =
     List.filter_map rules ~f:(fun r ->
@@ -547,10 +562,11 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
   in
   (* All pool kinds: source is always present, plus artifact kinds from rules *)
   let artifact_pool_kinds =
-    [ Lib; Binding; App ]
+    [ Headers; Lib; Binding; App ]
     |> List.filter ~f:(fun k ->
            List.exists rules ~f:(fun r ->
                match r with
+               | Build_headers -> Poly.equal k Headers
                | Build_lib -> Poly.equal k Lib
                | Build_binding -> Poly.equal k Binding
                | Build_app -> Poly.equal k App
@@ -581,8 +597,13 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
       let k = string_of_artifact_kind kind in
       add [%string "    A_pack_%{k}{{\"%{(string_of_rule (Publish kind))}\"}}"]);
   List.iter probe_kinds ~f:(fun kind ->
-      let k = string_of_artifact_kind kind in
-      add [%string "    A_probe_%{k}([\"%{(string_of_rule (Probe kind))}\"])"]);
+      match kind with
+      | Binding when not (List.is_empty split_probe_tags) ->
+          List.iter split_probe_tags ~f:(fun stag ->
+              add [%string "    A_%{stag}([\"%{stag}\"])"])
+      | _ ->
+          let k = string_of_artifact_kind kind in
+          add [%string "    A_probe_%{k}([\"%{(string_of_rule (Probe kind))}\"])"]);
   add "";
   (* Edges — collected with action tags for status-based styling *)
   let edge_idx = ref 0 in
@@ -603,15 +624,26 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
       let name = string_of_rule r in
       let action_id = [%string "A_%{name}"] in
       (match r with
+       | Build_headers ->
+           (* headers come from configured source, or directly from source if no configure *)
+           if has_configure then
+             add_edge ~tag:name [%string "A_configure --> %{action_id}"]
+           else
+             add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
+           add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Headers}"]
        | Build_lib ->
-           (* If configure exists, build_lib depends on it, not source directly *)
            if has_configure then
              add_edge ~tag:name [%string "A_configure --> %{action_id}"]
            else
              add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
            add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Lib}"]
        | Build_binding ->
-           add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
+           (* configure sets up the cmake build system *)
+           if has_configure then
+             add_edge ~tag:name [%string "A_configure --> %{action_id}"];
+           (* headers consumed at compile time *)
+           add_edge ~tag:name
+             [%string "%{node_id_of_kind Headers} -.->|headers| %{action_id}"];
            add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
            add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Binding}"]
        | Build_app ->
@@ -637,11 +669,17 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
   (* Probe edges *)
   List.iter probe_kinds ~f:(fun kind ->
       let pid = node_id_of_kind kind in
-      let k = string_of_artifact_kind kind in
-      let tag = [%string "probe_%{k}"] in
-      add_edge ~tag [%string "%{pid} -->|test| A_probe_%{k}"];
-      if Poly.equal kind Binding || Poly.equal kind App then
-        add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]);
+      match kind with
+      | Binding when not (List.is_empty split_probe_tags) ->
+          List.iter split_probe_tags ~f:(fun stag ->
+              add_edge ~tag:stag [%string "%{pid} -->|test| A_%{stag}"];
+              add_edge ~tag:stag [%string "%{node_id_of_kind Lib} -.->|runtime| A_%{stag}"])
+      | _ ->
+          let k = string_of_artifact_kind kind in
+          let tag = [%string "probe_%{k}"] in
+          add_edge ~tag [%string "%{pid} -->|test| A_probe_%{k}"];
+          if Poly.equal kind Binding || Poly.equal kind App then
+            add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]);
   add "";
   (* Styling *)
   add "    classDef source fill:#fafafa,stroke:#999";
@@ -664,6 +702,7 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
         | None -> default_cls
         | Some _ ->
             let build_tag = match kind with
+              | Headers -> Some "build_headers"
               | Lib -> Some "build_lib"
               | Binding -> Some "build_binding"
               | App -> Some "build_app"
@@ -693,9 +732,13 @@ let mermaid_of_action_rule_schema ?status (rules : rule list) =
     @ List.map publish_kinds ~f:(fun k ->
           let k_s = string_of_artifact_kind k in
           ([%string "A_pack_%{k_s}"], [%string "pack_%{k_s}"]))
-    @ List.map probe_kinds ~f:(fun k ->
-          let k_s = string_of_artifact_kind k in
-          ([%string "A_probe_%{k_s}"], [%string "probe_%{k_s}"]))
+    @ List.concat_map probe_kinds ~f:(fun kind ->
+          match kind with
+          | Binding when not (List.is_empty split_probe_tags) ->
+              List.map split_probe_tags ~f:(fun stag -> ([%string "A_%{stag}"], stag))
+          | _ ->
+              let k_s = string_of_artifact_kind kind in
+              [ ([%string "A_probe_%{k_s}"], [%string "probe_%{k_s}"]) ])
   in
   (match status with
    | None ->

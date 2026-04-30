@@ -12,8 +12,7 @@ The unified design narrative. Active surface; updated as the model evolves.
 | File | Topic |
 |---|---|
 | [index.md](design/index.md) | Unified design: vision, identity, action graph, spec_shape & scan stage, workflow |
-| [interface.md](design/interface.md) | Interface contract (provides ⊆ requires; L1a–L5 layering; failure taxonomy) + concrete `summary.json` schema and tooling |
-| [api_source.md](design/api_source.md) | C-API-specific implementation plan; subsumed by index.md §4 conceptually but kept for the migration steps A–E |
+| [interface.md](design/interface.md) | Interface contract (provides ⊆ requires; L1a–L5 layering; failure taxonomy) + `canary_artifact_api` types + `summary.json` schema |
 
 ## trackers/ — implementation status & coverage plans
 

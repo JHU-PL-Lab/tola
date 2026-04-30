@@ -106,6 +106,16 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     runtime compat checks; headers give semantic API drift. Both are useful but
     answer different questions and should be distinct inspection phases.
 
+36. **Diagram fidelity: `scan_source` and `_summary` steps have no nodes** —
+    `scan_source` runs as a post-fetch check (verifying header/binding-dir
+    claims) but shares the `fetch_source` output dir and is invisible in
+    `result.mmd`. Similarly, `*_summary` introspection steps are emitted by
+    `derive_steps` as follow-ups after each probe but are not rendered in the
+    diagram. Both gaps make the diagram an incomplete view of what canary
+    actually runs. When the diagram is redesigned, add dedicated action nodes
+    for `scan_source` and per-probe `*_summary` steps. May require extending
+    `store_rules` with new rule variants or a separate "annotation step" layer.
+
 28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
     z3 and llvm's `pack_binding` repeat the same opam setup sequence:
     `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url

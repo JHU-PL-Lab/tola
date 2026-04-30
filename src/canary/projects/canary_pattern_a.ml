@@ -103,7 +103,7 @@ let script_spec (d : t) : Canary_action.script_spec =
         Printf.sprintf "%s\n%s" resolve probe);
     probe_binding =
       [
-        (Canary_store.Lang_pm,
+        (Canary_store.Pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam },
          (fun ~output_dir ->
            Canary_action.probe_ocaml_cmd ~binding_lib:d.binding_lib
              ~example:d.example_file ~target:d.example_target

@@ -67,7 +67,7 @@ let script_spec : Canary_action.script_spec =
     fetch_binding =
       Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
     probe_binding =
-      (Canary_store.Lang_pm,
+      (Canary_store.Pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam },
        fun ~output_dir ->
          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
            ~example:ocaml.example_file ~target:ocaml.example_target
@@ -76,11 +76,11 @@ let script_spec : Canary_action.script_spec =
          and a minimal connect. *)
       (match sqlite_python_config with
        | Python_config p ->
-           [ (Canary_store.Wild "pip",
+           [ (Canary_store.Pm { lang = Canary_artifact_api.Python; pm = Canary_store.Pip },
               fun ~output_dir -> pip_probe_cmd p ~output_dir) ]
        | Ocaml_config _ -> []);
     summary = (fun rule loc -> match rule, loc with
-      | Probe Binding, Some (Canary_store.Wild "pip") ->
+      | Probe Binding, Some (Canary_store.Pm { lang = Canary_artifact_api.Python; _ }) ->
           Some (fun ~output_dir ->
             Canary_artifact_lang.python_summary_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ())

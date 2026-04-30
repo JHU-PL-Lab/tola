@@ -14,7 +14,19 @@ type system_package_spec = {
   behavior : store_behavior;
 }
 
-type location = Build_tree | System_pm | Lang_pm | Wild of string
+(* Location: objective "where does this artifact live right now".
+   Also encodes packaging stage: Build_tree (raw build output),
+   Staged (cmake --install into a prefix, TODO #25), Pm (in a package manager).
+   Local vs. remote is PM-internal — both map to Pm here. *)
+type location =
+  | Build_tree
+  | Staged    (** cmake --install'd into a prefix — see TODO #25 *)
+  | Pm of { lang : Canary_artifact_api.lang; pm : package_manager }
+
+(* Lifecycle stage of an artifact — explicit complement to location.
+   Derivable from location for now (Build_tree→Built, Staged→Installed,
+   Pm→Packed or Fetched). Will become a field on a first-class artifact type. *)
+type stage = Built | Installed | Packed | Fetched
 
 let string_of_pm = function
   | Apt -> "apt"
@@ -29,17 +41,18 @@ let string_of_store_behavior = function
   | Isolated_store name -> [%string "isolated(%{name})"]
 
 let string_of_location = function
-  | Build_tree -> "build tree"
-  | System_pm -> "system PM"
-  | Lang_pm -> "lang PM"
-  | Wild s -> s
+  | Build_tree -> "build_tree"
+  | Staged -> "staged"
+  | Pm { lang; pm } ->
+      [%string "%{Canary_artifact_api.string_of_lang lang}:%{string_of_pm pm}"]
 
 let is_source_location = function
-  | Build_tree -> true
-  | System_pm | Lang_pm | Wild _ -> false
+  | Build_tree | Staged -> true
+  | Pm _ -> false
 
-(* Abstract unified store for action rule enumeration *)
-let store = Wild "store"
+(* Placeholder location for universal action-rule enumeration (canary paths).
+   Represents "from some PM store" — any Pm variant suffices. *)
+let store = Pm { lang = Canary_artifact_api.Native; pm = Apt }
 
 (* ── System package manager detection and commands ── *)
 

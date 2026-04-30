@@ -3,7 +3,7 @@
 This is the single design narrative for canary. Companion to:
 
 - [interface.md](interface.md) — the interface contract details + concrete artifact-summary tooling
-- [api_source.md](api_source.md) — focused C-API model (subsumed by §4 of this doc; api_source remains for the implementation-level migration plan)
+- [interface.md §4](interface.md) — API source layer: `canary_artifact_api` types, scan step, concrete instances
 - [`../trackers/`](../trackers/) — implementation status per stage (transient)
 - [`../ops/`](../ops/) — operational gotchas (durable)
 
@@ -154,9 +154,10 @@ artifact is still valid.
 
 ## 4. Spec_shape and scan stage
 
-This section consolidates the [api_source.md](api_source.md) proposal and the
-"scan stage" idea (every project declares what canary should scan, and the
-scan result is a cacheable action_step output).
+This section covers the `api_source` layer (now implemented; see
+[interface.md §4](interface.md)) and the fuller "scan stage" vision (every
+project declares what canary should scan, and the scan result is a cacheable
+action_step output).
 
 ### Today: `script_spec` as imperative shell
 
@@ -216,9 +217,11 @@ generalisation:
 
 ### Migration
 
-The api_source.md migration steps A–E remain the implementation roadmap.
-Step C (summaries read from api_source) is the natural insertion point for
-the scan stage abstraction; step E (add Python as data-only) validates it.
+Steps A–C of the original migration plan are done (type declared, populated
+for z3/llvm, summaries read from api_source, scan step wired). What remains
+is the full `scan_result.json` generalisation — uniform scan machinery across
+every project, per-artifact caching. Step E (Python as data-only addition)
+is the validation target.
 
 ### Per-language binding integration
 
@@ -280,7 +283,7 @@ solving). `locate` or `materialise` may be better names.
 
 ### Header-derived API surface
 
-Currently `api_source.stable_symbols` is human-claimed. Parsing headers (libclang
+Currently `native_api.stable_symbols` is human-claimed. Parsing headers (libclang
 for C, ocamlc for OCaml signatures, etc.) would derive surfaces mechanically.
 Out of scope for now; design separates "claimed" from "extracted" so this
 comes later as an addition, not a replacement.

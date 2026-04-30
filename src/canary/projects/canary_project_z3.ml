@@ -292,6 +292,14 @@ let mk_script_spec ~source
               Canary_artifact_api.scan_source_cmd ~source_root:root api
                 ~output_dir)
        else None);
+    build_headers =
+      (if source.has_build_lib || cmake_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "test -f %{root}/src/api/z3.h \
+                && echo 'ok' > %{output_dir}/headers.ok"])
+       else None);
     configure =
       (if source.has_build_lib || cmake_build_binding then
          let cmake_cmd =
@@ -415,7 +423,7 @@ ocamlfind ocamlopt -package zarith -linkpkg \
            else None);
           (* Lang_pm: probe against opam-installed package *)
           Some
-            ( Lang_pm,
+            ( Pm { lang = OCaml; pm = Opam },
               fun ~output_dir ->
                 [%string
                   {|eval $(opam env)
@@ -426,7 +434,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ]
       @ List.filter_map binding_configs ~f:(function
         | Python_config p ->
-            Some (Wild "pip", fun ~output_dir -> pip_probe_cmd p ~output_dir)
+            Some (Pm { lang = Python; pm = Pip }, fun ~output_dir -> pip_probe_cmd p ~output_dir)
         | Ocaml_config _ -> None);
     check_post =
       (function
@@ -478,7 +486,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                     ~output_dir ()
                 in
                 prepend_warn [%string "%{lib_resolve}\n%{sum}"])
-        | Probe Binding, Some (Wild "pip") ->
+        | Probe Binding, Some (Pm { lang = Python; _ }) ->
             Some
               (fun ~output_dir ->
                 prepend_warn

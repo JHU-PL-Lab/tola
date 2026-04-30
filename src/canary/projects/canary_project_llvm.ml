@@ -293,6 +293,14 @@ let mk_script_spec ~source
       Option.map source.api_source ~f:(fun api ->
         fun ~output_dir ->
           Canary_artifact_api.scan_source_cmd ~source_root:root api ~output_dir);
+    build_headers =
+      (if source.has_build_lib || source.has_build_binding then
+         Some
+           (fun ~output_dir ->
+             [%string
+               "test -d %{root}/llvm/include/llvm-c \
+                && echo 'ok' > %{output_dir}/headers.ok"])
+       else None);
     configure =
       (if source.has_build_lib || source.has_build_binding then
          Some
@@ -376,7 +384,7 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
            else None);
           (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
           Some
-            (Lang_pm, fun ~output_dir ->
+            (Pm { lang = OCaml; pm = Opam }, fun ~output_dir ->
               [%string
                 {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
@@ -385,7 +393,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ]
       @ List.filter_map binding_configs ~f:(function
           | Python_config p ->
-              Some (Wild "pip", fun ~output_dir -> pip_probe_cmd p ~output_dir)
+              Some (Pm { lang = Python; pm = Pip }, fun ~output_dir -> pip_probe_cmd p ~output_dir)
           | Ocaml_config _ -> None);
     probe_app = Some llvm_python_probe;
     check_post =
@@ -414,7 +422,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     expectation = (fun rule loc -> match rule, loc with
-      | Probe Binding, Some (Wild "pip") ->
+      | Probe Binding, Some (Pm { lang = Python; _ }) ->
           (* llvmlite bundles its own libLLVM; independent of opam's LLVM
              version, so the pip probe is Expect_success regardless of
              has_build_binding. *)
@@ -465,7 +473,7 @@ test -n "$LLVM_LIB"
     ~prefixes:[ "LLVM" ]
     ~watchlist:(Canary_artifact_api.native_watchlist api)
     ~output_dir ()}|}])
-      | Probe Binding, Some (Wild "pip") ->
+      | Probe Binding, Some (Pm { lang = Python; _ }) ->
           Some (fun ~output_dir ->
             prepend_warn (Canary_artifact_lang.python_summary_cmd
               ~pkg:"llvmlite.binding"
