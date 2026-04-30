@@ -705,53 +705,17 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
   add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
   add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
-  (* Artifact node status coloring *)
-  let any_done tag_opt = match tag_opt with
-    | None -> false
-    | Some t -> Poly.equal (get_status t) (Some Done)
+  (* Artifact nodes are always orange — status is shown on their producing action nodes *)
+  let all_artifact_nids =
+    (List.filter_map all_pool_kinds ~f:(fun k ->
+         if Poly.equal k Binding && split_binding then None
+         else Some (node_id_of_kind k)))
+    @ (if split_binding then
+         List.map binding_kinds ~f:(fun kind -> [%string "%{kind}_binding_node"])
+       else [])
   in
-  let any_failed tag_opt = match tag_opt with
-    | None -> false
-    | Some t -> Poly.equal (get_status t) (Some Failed)
-  in
-  List.iter all_pool_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding -> ()  (* handled per-kind below *)
-      | _ ->
-          let nid = node_id_of_kind kind in
-          let cls = match status with
-            | None -> "artifact"
-            | Some _ ->
-                let build_tag = match kind with
-                  | Headers -> Some "build_headers"
-                  | Lib -> Some "build_lib"
-                  | Binding -> Some "build_binding"
-                  | App -> Some "build_app"
-                  | Source -> None
-                in
-                let fetch_tag = Some [%string "fetch_%{string_of_artifact_kind kind}"] in
-                if any_done build_tag || any_done fetch_tag then "st_done"
-                else if any_failed build_tag || any_failed fetch_tag then "st_failed"
-                else "artifact"
-          in
-          add [%string "    class %{nid} %{cls}"]);
-  if split_binding then
-    List.iter binding_kinds ~f:(fun kind ->
-        let nid = [%string "%{kind}_binding_node"] in
-        let cls = match status with
-          | None -> "artifact"
-          | Some _ ->
-              let build_done = String.equal kind "ocaml" &&
-                               any_done (Some "build_binding") in
-              let fetch_done = String.equal kind "ocaml" &&
-                               any_done (Some "fetch_binding") in
-              let probe_done = List.exists split_probes ~f:(fun e ->
-                  String.equal e.binding_kind kind &&
-                  Poly.equal (get_status e.probe_tag) (Some Done)) in
-              if build_done || fetch_done || probe_done then "st_done"
-              else "artifact"
-        in
-        add [%string "    class %{nid} %{cls}"]);
+  if not (List.is_empty all_artifact_nids) then
+    add [%string "    class %{String.concat all_artifact_nids ~sep:\",\"} artifact"];
   (* Action + store nodes: status-aware or default *)
   let action_entries =
     (if has_configure then [ ("A_configure", "configure") ] else [])
