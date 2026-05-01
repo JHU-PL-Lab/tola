@@ -17,6 +17,7 @@ updated as the model evolves.
 | [index.md](design/index.md) | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
 | [api_interface.md](design/api_interface.md) | Interface contract (`provides ⊆ requires`; L1a–L5 layering; failure taxonomy), `canary_artifact_api` types, `summary.json` schema, §13 working compat-check implementation |
 | [new_project.md](design/new_project.md) | Expansion portfolio (two-tier candidate framework), mechanics for adding a project, auto-generation plan (#29/#30/#32), PyTorch case study |
+| [diagram.md](design/diagram.md) | Diagram improvements plan: summary node fidelity (#36), multi-view per project, HTML viewer (#37) |
 
 ## surveys/ — background research
 
