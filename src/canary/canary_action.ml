@@ -889,7 +889,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ()
   in
-  List.concat_map (store_rules ~langs) ~f:(fun rule ->
+  let raw_steps = List.concat_map (store_rules ~langs) ~f:(fun rule ->
       let tag = string_of_rule rule in
       if Hashtbl.mem seen tag then []
       else
@@ -942,6 +942,27 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                      Hashtbl.set seen ~key:"scan_source" ~data:true;
                      steps @ [ mk_scan_source ~fetch_tag:tag scan_cmd ]
                  | _ -> steps))
+  in
+  (* Resolve check_pre against actual sibling output_dirs.
+     Step constructors set check_pre = "every dep tag's output_dir
+     exists", but a dep's output_dir may differ from its tag's directory
+     when output_tag is set (e.g. scan_source writes inside fetch_source/).
+     Here we have the full step list, so re-bind each check_pre to look up
+     deps via a tag → output_dir map. *)
+  let by_tag = Hashtbl.create (module String) in
+  List.iter raw_steps ~f:(fun s -> Hashtbl.set by_tag ~key:s.tag ~data:s.output_dir);
+  List.map raw_steps ~f:(fun s ->
+      let check_pre () =
+        List.for_all s.deps ~f:(fun dep ->
+            match Hashtbl.find by_tag dep with
+            | Some out -> Stdlib.Sys.file_exists out
+            | None ->
+                (* Dep tag not in step list (filtered out by langs/spec).
+                   Fall back to the old tag-based path. *)
+                Stdlib.Sys.file_exists
+                  (output_dir_for ~root ~project ~tag:dep))
+      in
+      { s with check_pre })
 
 (* ── Run info: project metadata dumped at start of run ── *)
 
