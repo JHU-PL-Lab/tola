@@ -88,7 +88,7 @@ type step_expectation =
   (* Failure expected; contains_any is *derived* at evaluation time from
      cached compat summaries given by [inputs]. Empty derived list ⇒ the
      check degenerates to "any failure with non-empty probe.log".
-     See doc/canary/design/interface.md §13. *)
+     See doc/canary/design/api_interface.md §13. *)
   | Expect_compat_failure of {
       inputs       : compat_summary_input list;
       version_info : version_info option;
@@ -160,7 +160,7 @@ type script_spec = {
      Use for native probe summaries (lib path is always project-specific)
      or any case needing custom logic beyond what api_source provides.
      loc is Some _ for per-location probe variants, None for single-location rules.
-     See doc/canary/design/interface.md. *)
+     See doc/canary/design/api_interface.md. *)
   summary : rule -> location option -> (output_dir:string -> string) option;
 }
 

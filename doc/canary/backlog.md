@@ -26,7 +26,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     split, C API surface (consumer/provider cross-check + provider-vs-
     provider delta), mismatch prediction, Python summary enhancements.
     The shipped portion (Steps C1, D-basic for OCaml + Python) is
-    documented in `doc/canary/design/interface.md` §13. Open items
+    documented in `doc/canary/design/api_interface.md` §13. Open items
     (#35, #20, #41, #42) remain.
 
 43. **L1b — versioned symbol requirements in compat check** — `summarize_native.py`
@@ -35,7 +35,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     L1b: a binding requires a specific @VER suffix on a symbol, the lib must
     provide that or higher. Adds glibc/libstdc++ floor checking — predicts
     failures from binaries built on newer distros that won't run on older
-    ones, even when symbol names match. See `doc/canary/design/interface.md`
+    ones, even when symbol names match. See `doc/canary/design/api_interface.md`
     §13.6.
 
 44. **L2 — typed signatures via clang AST or libclang** — today's compat
@@ -45,7 +45,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     compiler output. Then `check_compat` is real subtyping with contravariance
     on argument types, covariance on results, refinement on value domains.
     Gives a decidable-but-conservative type-system over artifact interfaces;
-    catches "same name, different signature" version drift. See interface.md
+    catches "same name, different signature" version drift. See api_interface.md
     §13.1 "typing-rule shape" and §15 "open theoretical questions".
 
 17. **Module interfaces (.mli)** — define contracts for PM modules
@@ -60,7 +60,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 29–30, 32. **New project spec auto-generation** — package locator, store
     config type, and auto-generated `script_spec` from a project sketch.
-    Grouped into `doc/canary/trackers/new_project_spec.md`.
+    Grouped into `doc/canary/design/new_project.md` §3.
 
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —
@@ -115,7 +115,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     local pip index or venv, enabling a `probe_python_pip` variant that tests
     the packaged wheel rather than the raw build artifact. Prerequisite:
     `probe_python` build-tree variant (test the raw `.so` before packaging)
-    as the base to compare against. See `interface.md §5` for the co-provider
+    as the base to compare against. See `api_interface.md §5` for the co-provider
     design — pip wheels often bundle their own native lib, so `pack_python` for
     z3 would produce a co-provider artifact.
 
@@ -125,8 +125,8 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     react to runtime outcomes (success, failure, produced artifact). Three ad-hoc
     cases in `derive_steps` (`scan_source`, `_summary`, `probe_binding`
     multi-probe) all share the same shape — a parent rule emitting dependent
-    follow-up steps — but each was wired in separately (see tension 3 in
-    `trackers/action_enumeration.md`). A general dispatch model would let steps
+    follow-up steps — but each was wired in separately (action enumeration
+    tension; see worklog history). A general dispatch model would let steps
     register themselves as followers of another rule, turning those special cases
     into declarations. Longer term, conditional dispatch (only run if upstream
     produced artifact X, or only on failure) would enable retry logic, staged

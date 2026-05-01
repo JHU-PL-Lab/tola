@@ -72,7 +72,7 @@ support.
 | `canary/scripts/summarize_python.py`           | Python `dir()` parser → `python` summary (attrs + watchlist + extras)                                  |
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `summarize_native.py` superseding for new code)        |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/interface.md`               | Theory + implementation: subtyping lattice, summary schema, §13 compat-check working code              |
+| `doc/canary/design/api_interface.md`               | Theory + implementation: subtyping lattice, summary schema, §13 compat-check working code              |
 | `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
 | `doc/canary/ops/llvm_build.md`                 | LLVM source build steps, smoke test, opam install notes                                                |
 | `doc/canary/backlog.md`                        | Lower-priority TODOs; api-compat group + new project spec group (see line below for current set)       |
@@ -142,7 +142,7 @@ stable-variant `expectation` returns `Expect_compat_failure` and the runner
 derives `Opcode.UncondBr` from the cached `fetch_ocaml_binding/summary.json`
 watchlist. z3's stable variant has a parallel Python case (`z3.parser_context`
 missing from the z3-solver pip wheel) using `Expect_compat_failure { inputs
-= [Python_attrs ...] }`. See `interface.md` §13.
+= [Python_attrs ...] }`. See `api_interface.md` §13.
 
 ### Current TODO (numbers are stable like GH issues — never renumbered)
 
@@ -158,7 +158,7 @@ missing from the z3-solver pip wheel) using `Expect_compat_failure { inputs
     rewriting, symlink creation, pkg-config/cmake config file generation).
     See `doc/canary/ops/install_targets.md` for z3 vs LLVM install patterns.
 
-Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see trackers/new_project_spec.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see design/interface.md §13).
+Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see design/new_project.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see design/api_interface.md §13).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)
@@ -166,7 +166,7 @@ Details in `doc/canary/backlog.md`.
 These are tracked here rather than the backlog because they directly affect
 the `step_expectation` / interface model design.
 
-Artifact summary progress (`doc/canary/design/interface.md`):
+Artifact summary progress (`doc/canary/design/api_interface.md`):
 - ✅ Step 1 — `summary_cmd` for native/ocaml/python/mli/stub kinds
 - ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
   field on `script_spec`, install-step + probe-step summaries in
@@ -176,7 +176,7 @@ Artifact summary progress (`doc/canary/design/interface.md`):
   helper pure tests)
 - ✅ Compat cross-check shipped — `canary compat`, `canary verify`,
   `Expect_compat_failure` derive expected probe-failure substrings from
-  cached summaries. See `interface.md` §13. Live demos on llvm/19 (OCaml
+  cached summaries. See `api_interface.md` §13. Live demos on llvm/19 (OCaml
   `Opcode.UncondBr`) and z3/stable (Python `parser_context`).
 - ⏳ Step 3 deferred — `summary-sync` into a committed
   `doc/canary/artifact_summary.json` will likely ride on step-cache transport
@@ -227,7 +227,7 @@ Still open:
       exists conceptually in `project_config.phases` but isn't represented
       in the new `script_spec` → `action_step` path.
   **Revisit together with the version/symbol/interface work**: when we
-  formalise interfaces as first-class (per `doc/canary/design/interface.md`),
+  formalise interfaces as first-class (per `doc/canary/design/api_interface.md`),
   the PM-cross-distro enumeration becomes part of "which provider (PM on
   distro) satisfies a given interface at a given version." Delete
   `project_config` plumbing (and each project's `config distro` fn) once
@@ -279,11 +279,12 @@ Still open:
   off into `Fetch (Binding Python)` so the summary is cached before the
   probe runs. `python_binding.md` tracker has been deleted.
 - **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
-  primitives landing first. Plan at `doc/canary/trackers/pytorch.md` covers the
-  pip × opam × apt libtorch matrix and the OCaml `torch` version-conflict
-  case. Motivated by multi-PM interop (same libtorch shipped by many PMs).
+  primitives landing first. Plan at `doc/canary/design/new_project.md` §4
+  covers the pip × opam × apt libtorch matrix and the OCaml `torch`
+  version-conflict case. Motivated by multi-PM interop (same libtorch
+  shipped by many PMs).
 - **Two-tier candidate queue for canary expansion** —
-  `doc/canary/trackers/batch_candidates.md` holds a dozen tracked targets (Tier 1:
+  `doc/canary/design/new_project.md` §1 holds a dozen tracked targets (Tier 1:
   famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
   zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
   opam survey; living doc, updated as candidates land.
@@ -292,7 +293,7 @@ Still open:
   native_api → binding_api). Watchlists split into provider
   (`stable_symbols`) and consumer (`module_watchlist`) levels.
   `scan_source` step verifies header/binding-dir claims post-fetch. See
-  `doc/canary/design/interface.md §4`.
+  `doc/canary/design/api_interface.md §4`.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.
@@ -303,7 +304,7 @@ Still open:
 - **`symbol_entry.version_tag`** (`@@GLIBC_2.31` annotations) — typed field
   exists in the OCaml model but not yet populated; `summary.versioned_req`
   computes these at runtime via `summarize_native.py`. Connects to L1b in
-  `doc/canary/design/interface.md`.
+  `doc/canary/design/api_interface.md`.
 - **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
   verify step reads `probe.log` but the local runner scans all files in `output_dir`.
   Should align: both should scan `probe.log` only.
@@ -318,7 +319,7 @@ Still open:
 Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28.
 The api-compat milestone (Phases 1–3e: `summarize_binding.py`, `canary
 compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
-derived expectation) shipped this session — see `interface.md` §13 and
+derived expectation) shipped this session — see `api_interface.md` §13 and
 commits `2a8d2eb`, `96b143c`, `84caf5d`, `8943ba2`, `7dfb1f2`.
 
 Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05}.md`.

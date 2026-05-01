@@ -11,7 +11,7 @@ open Canary
    This module compresses the boilerplate. A new Pattern A project becomes
    ~25 lines of declaration vs. ~100 lines of hand-rolled script_spec.
    Extracted from zarith + ssl as the second-data-point validation per
-   doc/canary/trackers/batch_candidates.md sequencing.
+   doc/canary/design/new_project.md §1 sequencing.
 
    Coverage boundaries:
    - This template covers native_lib + ocaml binding probe only. Projects with
@@ -95,15 +95,17 @@ let script_spec (d : t) : Canary_action.script_spec =
     Canary_action.empty_script_spec with
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
+      [ (Canary_artifact_api.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
     probe_lib =
-      Some (fun ~output_dir ->
-        let probe = Canary_artifact_native.native_lib_probe_cmd
-          ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir in
-        Printf.sprintf "%s\n%s" resolve probe);
+      [ ( Canary_store.Pm (Canary_store.Sys_pm { pm }),
+          fun ~output_dir ->
+            let probe = Canary_artifact_native.native_lib_probe_cmd
+              ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir in
+            Printf.sprintf "%s\n%s" resolve probe ) ];
     probe_binding =
       [
-        (Canary_store.Pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam },
+        (Canary_artifact_api.OCaml,
+         Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
          (fun ~output_dir ->
            Canary_action.probe_ocaml_cmd ~binding_lib:d.binding_lib
              ~example:d.example_file ~target:d.example_target
@@ -118,7 +120,7 @@ let script_spec (d : t) : Canary_action.script_spec =
               ~watchlist:d.native_watchlist
               ~output_dir () in
             Printf.sprintf "%s\n%s" resolve sum)
-      | Probe Binding, _ ->
+      | Probe (Binding _), _ ->
           Some (fun ~output_dir ->
             Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg

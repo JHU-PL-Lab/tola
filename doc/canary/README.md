@@ -2,34 +2,26 @@
 
 Directory map for `doc/canary/`. Files grouped by intent.
 
-**Start with `design/index.md` for the design narrative.** See `CLAUDE.md`
+**Start with `design/index.md` for the narrative**, `design/api_interface.md`
+for the interface model + compat-check implementation, and
+`design/new_project.md` for the expansion roadmap. See `CLAUDE.md`
 (project root) for live status, gaps, and current gotchas.
 
 ## design/ — what canary models
 
-The unified design narrative. Active surface; updated as the model evolves.
+The unified design narrative + supporting design docs. Active surface;
+updated as the model evolves.
 
 | File | Topic |
 |---|---|
-| [index.md](design/index.md) | Unified design: vision, identity, action graph, spec_shape & scan stage, workflow |
-| [interface.md](design/interface.md) | Interface contract (provides ⊆ requires; L1a–L5 layering; failure taxonomy) + `canary_artifact_api` types + `summary.json` schema |
-
-## trackers/ — implementation status & coverage plans
-
-Time-bound trackers for ongoing implementation efforts and target coverage.
-Each file should declare a deletion trigger so the directory doesn't grow
-unbounded.
-
-| File | Topic |
-|---|---|
-| [python_binding.md](trackers/python_binding.md) | Stage 1 Python binding integration — A–D done + CI green; remaining items |
-| [pytorch.md](trackers/pytorch.md) | PyTorch as multi-PM target (queued; depends on Python primitives) |
-| [batch_candidates.md](trackers/batch_candidates.md) | Two-tier portfolio: core (z3/llvm/torch) + extended (zarith/ssl/cvc5/…) |
+| [index.md](design/index.md) | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
+| [api_interface.md](design/api_interface.md) | Interface contract (`provides ⊆ requires`; L1a–L5 layering; failure taxonomy), `canary_artifact_api` types, `summary.json` schema, §13 working compat-check implementation |
+| [new_project.md](design/new_project.md) | Expansion portfolio (two-tier candidate framework), mechanics for adding a project, auto-generation plan (#29/#30/#32), PyTorch case study |
 
 ## surveys/ — background research
 
-Pre-code survey data. Source of truth for `trackers/batch_candidates.md`
-choices and the `design/interface.md` failure taxonomy.
+Pre-code survey data. Source of truth for `design/new_project.md`
+candidate selection and the `design/api_interface.md` failure taxonomy.
 
 | File | Topic |
 |---|---|

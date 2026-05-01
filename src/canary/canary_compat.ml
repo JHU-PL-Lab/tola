@@ -8,11 +8,11 @@ open Base
    and summarize_native.py --emit-symbols, respectively. Output is a verdict
    on `requires ⊆ provides`.
 
-   See doc/canary/design/interface.md §13 for the design.
+   See doc/canary/design/api_interface.md §13 for the design.
    The OCaml-level half is already covered by the mli summary's watchlist
    (e.g. Llvm.Opcode.UncondBr present/missing). Together they form the
    set-inclusion necessary-condition layer (L0/L1) of the compatibility
-   lattice from interface.md §15. *)
+   lattice from api_interface.md §15. *)
 
 (* ── Summary loaders ── *)
 

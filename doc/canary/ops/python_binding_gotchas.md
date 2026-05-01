@@ -1,8 +1,8 @@
 # Python binding integration — gotchas (durable lessons)
 
 Lessons retained from the Stage-1 Python-binding integration (sqlite, z3,
-llvm). Applies to any future Python binding work; status / tracker info
-moved to [`../trackers/python_binding.md`](../trackers/python_binding.md).
+llvm). Applies to any future Python binding work. Status info moved into
+the milestone log; the gotchas below are durable.
 
 ## Step A — framework primitives (sqlite3 validation fixture)
 
@@ -78,10 +78,12 @@ moved to [`../trackers/python_binding.md`](../trackers/python_binding.md).
    `__version__`. Surface via `extras_for("z3", mod)` calling
    `z3.get_version()` or `z3.get_full_version()`.
 
-5. **Combined install + probe in one step** — pragmatic but conflates
-   install-cost and probe-cost in the step's runtime. For PyTorch
-   (~200 MB wheel), split into a dedicated `fetch_binding` variant for
-   Pip. Flagged in [`../trackers/pytorch.md`](../trackers/pytorch.md).
+5. **Combined install + probe in one step** — was pragmatic but conflated
+   install-cost and probe-cost in the step's runtime. Split into a dedicated
+   `Fetch (Binding Python)` step in 2026-05 (`pip_install_cmd` /
+   `python_probe_only_cmd`); summary now caches before probe runs.
+   PyTorch (~200 MB wheel) benefits more from this; see
+   [`../design/new_project.md`](../design/new_project.md) §4.
 
 ## Step D — llvmlite probe
 

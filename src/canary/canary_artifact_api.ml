@@ -11,10 +11,9 @@ open Base
    canary actions apply (Build when source_dir is set; Pack when can_pack).
    Action dep requirements (headers + link_lib for build; runtime_lib for probe)
    are derivable from action type — not declared on binding_api.
-   See doc/canary/design/interface.md §4 for the design rationale. *)
+   See doc/canary/design/api_interface.md §4 for the design rationale. *)
 
 type lang =
-  | Native  (** ELF / Mach-O / PE — no language runtime *)
   | Cpp
   | OCaml
   | Python
@@ -24,7 +23,7 @@ type lang =
 [@@deriving show]
 
 let string_of_lang = function
-  | Native -> "native" | Cpp -> "cpp" | OCaml -> "ocaml"
+  | Cpp -> "cpp" | OCaml -> "ocaml"
   | Python -> "python" | Rust -> "rust" | CSharp -> "csharp" | Java -> "java"
 
 type native_api_kind =

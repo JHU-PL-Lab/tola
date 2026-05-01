@@ -387,7 +387,7 @@ let compat_cmd =
   in
   Cmd.v (Cmd.info "compat"
            ~doc:"Static C-symbol cross-check: predict whether a binding's required \
-                 symbols are all provided by a native lib. See interface.md §13.")
+                 symbols are all provided by a native lib. See api_interface.md §13.")
     Term.(const run $ project $ variant $ stub $ lib $ const ())
 
 let verify_cmd =

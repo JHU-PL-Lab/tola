@@ -1,12 +1,11 @@
 # Canary — Unified Design
 
-This is the single design narrative for canary. Companion to:
-
-- [interface.md](interface.md) — interface theory (subtyping lattice,
-  failure taxonomy, summary schema) and the working compat-check
-  implementation (§13: types, data flow, demos)
-- [`../trackers/`](../trackers/) — implementation status per stage (transient)
-- [`../ops/`](../ops/) — operational gotchas (durable)
+The design narrative: vision, identity model, action graph, workflow,
+design principles. For interface theory + the compat-check
+implementation see [api_interface.md](api_interface.md). For the
+expansion roadmap and per-target plans see
+[new_project.md](new_project.md). Doc map at
+[../README.md](../README.md).
 
 ## 1. Research vision
 
@@ -30,13 +29,13 @@ Canary's two-track approach:
 
 - **Track 1 — Empirical coverage.** Run the real compatibility matrix.
   Current core targets: z3, llvm, sqlite (smoke test). Extended targets
-  per [batch_candidates](../trackers/batch_candidates.md). Track 1's
+  per [new_project.md §1](new_project.md). Track 1's
   machinery: action graph, runner, summary system.
 - **Track 2 — Interface theory.** Behind the messy practice lies a clean
   abstraction: the *interface* between a library and a binding. If we can
   characterise this interface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [interface.md](interface.md).
+  Details in [api_interface.md](api_interface.md).
 
 The two tracks reinforce each other. Empirical results validate or contradict
 inferences; the theory guides which combinations are worth testing.
@@ -58,8 +57,9 @@ the OCaml-side opam version. When it wraps a system lib (opam `sqlite3`,
 opam `ssl`, opam `llvm.19-shared`), they couple. The model must track
 version axes per (binding, runtime), not per project.
 
-This is why the universal abstraction in §6 below has to model providers and
-their version pins explicitly, not implicitly.
+This is why the package provider model in
+[api_interface.md §5](api_interface.md) has to model providers and their
+version pins explicitly, not implicitly.
 
 ## 3. Action graph & store model
 
@@ -137,7 +137,7 @@ identical.
 
 ```
 canary action <project>
-  ├─ project gives spec_shape (today: script_spec)         ← §4
+  ├─ project gives script_spec + api_source                ← §4
   ├─ derive_steps spec_shape → action_step list            ← step-cache aware
   └─ run_graph
        └─ per step (in dep order):
@@ -145,7 +145,7 @@ canary action <project>
             (skip if check_post already passes — caching)
             exec cmd   → writes to _out/canary/projects/<project>/<tag>/
             check_post → verify output
-            on Probe rule → record summary.json (§5)
+            on Probe rule → record summary.json (api_interface.md §8)
 ```
 
 Each step's output lives in `_out/canary/projects/<project>/<tag>/`. A step
@@ -164,7 +164,7 @@ declarative metadata that make the shell less opaque to canary:
   → `native_api` → `binding_api` per language). Provider claims (header
   paths, symbol prefixes, stable-symbol watchlist) and consumer claims
   (per-language module watchlists) are separate. See
-  [interface.md §4](interface.md).
+  [api_interface.md §4](api_interface.md).
 - **`scan_source`** — a step emitted after `fetch_source` that verifies
   the api_source claims (headers exist, binding source dirs present);
   blocks the build chain on spec drift.
@@ -178,7 +178,7 @@ The summaries feed a **compatibility check** (`canary_compat.ml`,
 at runtime, so `step_expectation` doesn't need hand-written
 `contains_any` lists for cases the cross-check covers. End-to-end demos
 on LLVM 19 (OCaml `Opcode.UncondBr`) and Z3 stable (Python
-`parser_context`). See [interface.md §13](interface.md) for design and
+`parser_context`). See [api_interface.md §13](api_interface.md) for design and
 implementation details.
 
 ### Per-language binding integration
@@ -209,25 +209,7 @@ share one cached result. Today's per-step summaries cover the practical
 cases; uniform `scan_result` becomes the cleaner shape once a fourth or
 fifth language binding lands.
 
-## 5. Interface contract & artifact summaries
-
-[interface.md](interface.md) is the single doc covering both the theory
-and the working code:
-
-- Provides ⊆ Requires subtyping (Liskov-style); six-level layering L1a
-  (symbols) → L1b (versioned) → L2 (types) → L3 (API shape) → L4
-  (ABI/runtime) → L5 (behavior).
-- Failure taxonomy and concrete examples (z3 dev/apt, llvm 19/dev,
-  glibc/musl, z3-solver pip).
-- `summary.json` schema and tooling per artifact kind; watchlist
-  mechanics (provider vs consumer).
-- **§13 — Compatibility check (implementation):** typing-rule frame,
-  module layout, key types, data flow, status table, demo recipes,
-  open items. The shipped portion of the api-compat milestone.
-- §15 open theoretical questions (typed signatures, subtyping with
-  refinement).
-
-## 6. Workflow stages
+## 5. Workflow stages
 
 ```
 [Declare]    project gives script_spec + api_source (§4)
@@ -239,7 +221,7 @@ and the working code:
 [Probe]      compile/run examples per binding (OCaml + Python)
    ↓
 [Predict]    Expect_compat_failure derives expected substrings from
-             cached install-step summaries (§5 — interface.md §13)
+             cached install-step summaries (api_interface.md §13)
    ↓
 [Verify]     canary verify cross-references prediction vs probe.log
    ↓
@@ -249,7 +231,7 @@ and the working code:
 The stages map to canary's action_step model: each stage produces an output
 that downstream stages can consume, all cached uniformly.
 
-## 7. Open design questions
+## 6. Open design questions
 
 ### Should `Resolve` be a step?
 
@@ -279,7 +261,7 @@ diagnose tool-version drift early when crossing OS lines.
 Property-based testing against declared invariants. Research territory; not in
 the implementation path yet.
 
-## 8. Design principles
+## 7. Design principles
 
 1. **Configuration is primary, backends are derived.** The main product is a
    structured compatibility model, not the generated YAML/shell.

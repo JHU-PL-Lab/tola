@@ -1,8 +1,8 @@
-# Canary — Interface Contract & Artifact Summaries
+# Canary — API interface model
 
-Companion to [index.md §5](index.md). Contains the full interface model
-(provides ⊆ requires, layered observability, failure taxonomy) plus the
-concrete `summary.json` realisation for L1a/L1b/L3.
+The interface contract and artifact summary system: how canary models
+"is binding X compatible with library Y at version V?" Theory in
+§§1–12; implementation in §13 (concise — the code is more honest).
 
 ## 1. Motivation: failure taxonomy
 
@@ -460,176 +460,102 @@ constraint SAT).
 ## 13. Compatibility check — implementation
 
 The theory above is realised as a small typing system over artifact
-interfaces. This section maps the model to the working code.
+interfaces. The code is the source of truth for shape and types; this
+section captures the conceptual mapping and the visible state.
 
 ### 13.1 Typing-rule shape
 
-Each piece of the implementation has a direct type-system analogue:
+| Code                                         | Type-system analogue                                |
+| -------------------------------------------- | --------------------------------------------------- |
+| `summarize_{native,binding,python}.py`       | extract provider/consumer interfaces                |
+| `Canary_compat.check_c_compat`               | the subtyping judgment `requires ⊆ provides`        |
+| `Expect_compat_failure`                      | a type-error report derived from a failed judgment  |
+| `Compatible / Missing / Unknown`             | well-typed / ill-typed-with-witness / undecidable   |
+| L0 ⊑ L1b ⊑ L2 ⊑ L3 ⊑ L5                      | a refinement chain on interface types               |
 
-| Implementation                           | Type-system analogue                                       |
-| ---------------------------------------- | ---------------------------------------------------------- |
-| `summarize_binding.py --kind stub`       | extract a consumer's required interface (L0 C symbols)     |
-| `summarize_binding.py --kind mli`        | extract a consumer-facing OCaml interface (L3 mli)         |
-| `summarize_python.py`                    | extract a Python module surface (L3 attrs)                 |
-| `summarize_native.py --emit-symbols`     | extract a provider's offered interface (L0 native exports) |
-| `Canary_compat.check_c_compat`           | the subtyping judgment `requires ⊆ provides`               |
-| `Expect_compat_failure`                  | a type-error report derived from a failed judgment         |
-| `Compatible / Missing { … } / Unknown`   | well-typed / ill-typed-with-witness / decidability-failure |
-| L0 ⊑ L1b ⊑ L2 ⊑ L3 ⊑ L5                  | a refinement chain on interface types                      |
+`canary verify` and `canary compat` are the artifacts of treating
+compatibility as a typing judgment rather than an empirical observation.
+`predicted_contains_any` is the witness produced by a failed judgment —
+the shape of a type-error message.
 
-The compat machinery's `verify` and `compat` commands are the artifacts of
-treating compatibility as a typing judgment instead of an empirical
-observation. `predicted_contains_any` is the witness produced by a failed
-judgment — exactly the shape of a type-error message.
+The judgment lives at L0 today (set inclusion of names). L1b (versioned
+reqs) and L2 (typed signatures) are parked in the backlog (#43, #44).
 
-The judgment lives at L0 today (set inclusion of names). Lifting it to L1b
-(versioned reqs) and L2 (typed signatures) is parked in the backlog
-(#43, #44).
+### 13.2 Where to read the code
 
-### 13.2 Module layout
+- **`canary_compat.ml`** — `compat_summary_input` typed inputs,
+  `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project`.
+  Single file, ~400 lines; the implementation reads end-to-end.
+- **`canary_action.ml`** — `step_expectation` variant
+  `Expect_compat_failure { inputs; version_info }`; runner branch
+  resolves cached summaries and matches against `probe.log`.
+- **`canary_artifact_lang.ml`**, **`canary_artifact_native.ml`** —
+  install-step summary helpers that invoke the python scripts.
+- **`canary/scripts/summarize_*.py`** — surface extractors. Each one
+  produces a `summary.json` with `kind` field and a watchlist
+  present/missing block.
+- **`canary_artifact_test.ml`** — `compat.*` pure tests exercise the
+  helpers against synthetic fixtures; the most concrete spec.
 
-| File                                       | Role                                                          |
-| ------------------------------------------ | ------------------------------------------------------------- |
-| `canary/scripts/summarize_native.py`       | nm-based provider surface (L0/L1b)                            |
-| `canary/scripts/summarize_binding.py`      | mli + stub parsers — consumer surface (L0 stub, L3 mli)       |
-| `canary/scripts/summarize_python.py`       | Python `dir()` consumer surface (L3 attrs)                    |
-| `canary_artifact_lang.ml`                  | shell helpers that invoke the scripts and write `summary.json` |
-| `canary_artifact_api.ml`                   | declarative `native_api` / `binding_api` types                |
-| `canary_compat.ml`                         | typed loaders, `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project` |
-| `canary_action.ml` (`step_expectation`)    | `Expect_compat_failure` variant + runner branch               |
-| `canary_main.ml` (`compat`, `verify`)      | CLI entry points                                              |
-
-### 13.3 Key types
-
-```ocaml
-(* Inputs to a derived expectation — each entry is a list of candidate
-   relative paths; the runner picks the first that exists. Languages
-   contribute whichever layers apply. *)
-type compat_summary_input =
-  | C_stub       of { paths : string list }   (* L0 consumer  *)
-  | Native_lib   of { paths : string list }   (* L0 provider  *)
-  | Ocaml_mli    of { paths : string list }   (* L3 OCaml     *)
-  | Python_attrs of { paths : string list }   (* L3 Python    *)
-
-type step_expectation =
-  | Expect_success
-  | Expect_failure of { contains_any : string list; version_info : … }
-  | Expect_compat_failure of {
-      inputs       : compat_summary_input list;
-      version_info : version_info option;
-    }
-
-type compat_result =
-  | Compatible
-  | Missing of { symbols : string list }
-  | Unknown   (* one side has no usable summary *)
-```
-
-`predicted_contains_any_v2 : typed_input list -> string list` produces the
-union of L0 missing symbols (from `C_stub` ∩ `Native_lib`) and L3 missing
-watchlist names (from `Ocaml_mli` and `Python_attrs`, expanded into
-substring variants for the `probe.log` grep).
-
-### 13.4 Data flow
-
-```
-                                   ┌──────────────────────────────┐
-fetch_lib    →  probe_lib*         │ summarize_native.py           │ → probe_lib*/summary.json    (provider, L0)
-fetch_lib    →  probe_lib*         │  --emit-symbols                │
-                                   └──────────────────────────────┘
-                                                 │
-fetch_binding (OCaml)                            ▼
-   │  ┌──────────────────────────────────────┐
-   ├─►│ summarize_binding.py --kind stub     │ → fetch_ocaml_binding/stub_summary.json  (consumer, L0)
-   │  │ summarize_binding.py --kind mli      │ → fetch_ocaml_binding/summary.json       (consumer, L3 OCaml)
-   │  └──────────────────────────────────────┘
-   │
-fetch_binding (Python)
-   │  ┌──────────────────────────────────────┐
-   └─►│ summarize_python.py                  │ → fetch_python_binding/summary.json      (consumer, L3 Python)
-      └──────────────────────────────────────┘
-                                                 │
-                                                 ▼
-probe_*_binding evaluates Expect_compat_failure { inputs = [ ... ] }
-   │
-   ▼   Canary_compat.predicted_contains_any_v2
-   │     ↳ resolves first-existing path per input
-   │     ↳ unions L0 set diff + L3 watchlist-missing variants
-   │
-   ▼   Runner greps probe.log for derived substrings
-       ↳ found  → "expected failure confirmed (derived)"
-       ↳ absent → "command failed but output didn't match derived predictions"
-```
-
-The summaries are produced by the install step (`fetch_*_binding` /
-`pack_*_binding`), so they're cached *before* the probe runs and its
+The summaries are produced at the *install step* (`fetch_*_binding` /
+`pack_*_binding`), so they're cached before the probe runs and its
 expectation is evaluated.
 
-### 13.5 What's running today
+### 13.3 What's wired today
 
-| Layer | OCaml                              | Python                                | C ABI (L0)                                     |
-| ----- | ---------------------------------- | ------------------------------------- | ---------------------------------------------- |
-| Summary kind | `ocaml_mli` (mli files)     | `python` (`dir()` attrs)              | `c_stub` (binding) + `native` (lib)            |
-| Cached at | `{fetch,pack}_ocaml_binding/` | `fetch_python_binding/`              | install dirs + `probe_lib*/`                   |
-| Used by `Expect_compat_failure` | ✓ LLVM stable | ✓ z3 stable (parser_context demo) | ✓ LLVM stable                                  |
-| Used by `canary verify` | ✓                          | ✓                                     | ✓                                              |
+| Layer        | OCaml                            | Python                              | C ABI (L0)                          |
+| ------------ | -------------------------------- | ----------------------------------- | ----------------------------------- |
+| Summary kind | `ocaml_mli` (mli)                | `python` (`dir()`)                  | `c_stub` + `native`                 |
+| Cached at    | `{fetch,pack}_ocaml_binding/`    | `fetch_python_binding/`             | install dirs + `probe_lib*/`        |
+| `Expect_compat_failure` user | ✓ LLVM stable    | ✓ z3 stable                         | ✓ LLVM stable                       |
+| `canary verify` reports it    | ✓                | ✓                                   | ✓                                   |
 
-Demo recipes:
+Demos:
 
 ```sh
-canary action llvm                # full run, includes derived OCaml expectation
-canary action z3                  # full run, includes derived Python expectation
-canary verify llvm 19             # cross-references prediction vs probe.log per layer
-canary verify z3 stable
-canary compat llvm 19             # L0 cross-check from cached summaries
-canary compat --stub <p> --lib <p>  # raw paths
+canary action llvm                # full run; OCaml derived expectation
+canary action z3                  # full run; Python derived expectation
+canary verify <project> <variant> # per-layer prediction vs probe.log
+canary compat  <project> <variant># L0 C-symbol cross-check
+canary compat --stub <p> --lib <p># raw paths
 ```
 
-Live verification on `llvm/19` and `z3/stable`:
+Sample runner output (from `canary action`):
 
 ```
-[probe_ocaml_binding] cmd_fail (exit 1)
 [probe_ocaml_binding] compat_predicted (3 substring(s))
 [probe_ocaml_binding] done (expected failure confirmed (derived):
                             llvm 19 predates Opcode.UncondBr,
                             added in LLVM 21 …)
 
-[probe_python_binding] cmd_fail (exit 1)
 [probe_python_binding] compat_predicted (1 substring(s))
 [probe_python_binding] done (expected failure confirmed (derived):
                              z3-solver pip wheel predates z3.parser_context …)
 ```
 
-### 13.6 Open items
+### 13.4 Open items
 
-Tracked in `doc/canary/backlog.md` under the api-compat grouping:
+Tracked in `doc/canary/backlog.md`:
 
-- **#43** — L1b versioned symbol requirements: lift `check_c_compat` from
-  name-level set inclusion to versioned matching (`@@GLIBC_2.31` floors).
-  Data already in `summarize_native.py`'s `versioned_req`.
-- **#44** — L2 typed signatures: real subtyping over typed C / OCaml /
-  Python signatures via clang AST, ocamlc, etc. The next theoretical step.
-- **#35** — split `binding_api.deps` into provenance vs runtime contract
-  (correct co-provider diagram edges).
-- **#20** — provider-vs-provider delta (`assert_binary_symbols.py --old/new`)
-  for cross-version drift detection.
-- **#41, #42** — Python summary enrichments (version extras, attr
-  categorisation).
-- **Co-implementation** — replace shell-out `summarize_*.py` with native
-  OCaml parsers (leveraging `src/binding/Objinfo`, `shared_library.ml`,
-  `macho.ml`). Avoids subprocess fan-out; lets richer queries use
-  compiler-quality data structures instead of grep heuristics.
+- **#43 L1b** — versioned symbols; data in `summarize_native.py`'s
+  `versioned_req`, just needs to flow into `check_compat`.
+- **#44 L2** — typed signatures (clang AST, ocamlc); the next
+  theoretical step.
+- **#35** — split `binding_api.deps` into provenance vs runtime contract.
+- **#20** — provider-vs-provider delta (`--lib-old/new`).
+- **#41, #42** — Python summary enrichments.
+- **Co-implementation** — replace shell-out scripts with native OCaml
+  parsers (`src/binding/Objinfo`, `shared_library.ml`, `macho.ml`).
 
-The implementation log lives in git; see commits `2a8d2eb`, `96b143c`,
-`84caf5d`, `8943ba2` for the api-compat milestone landings.
+Implementation log: git commits `2a8d2eb`, `96b143c`, `84caf5d`,
+`8943ba2`, `7dfb1f2` cover the api-compat milestone.
 
 ## Future stages (deferred)
 
 - **Interface ↔ version_logic.** Represent `requires ⊆ provides` as a
   constraint solvable in `Version_logic` — bridge to the pkgm formalism.
 - **Semantic contracts (L5).** Behavioural probes at the `probe_app`
-  level as interface invariants. Property-based testing against declared
-  behavioural contracts. Research territory.
+  level as interface invariants. Research territory.
 
 ## 14. Open implementation questions
 

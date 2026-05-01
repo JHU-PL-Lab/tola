@@ -463,7 +463,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              reads mli watchlist's missing list (e.g. Llvm.Opcode.UncondBr →
              "Opcode.UncondBr" / "UncondBr" substrings) plus L0 missing C symbols.
              Hand-written list retained as fallback at the variant level via
-             empty-derived → any-failure-with-probe.log. See interface.md §13. *)
+             empty-derived → any-failure-with-probe.log. See api_interface.md §13. *)
           Expect_compat_failure {
             inputs = [
               C_stub { paths = [ "pack_ocaml_binding/stub_summary.json";
