@@ -693,10 +693,245 @@ let view_predicate (v : view) (s : action_step) : bool =
   | `Pack ->
       String.is_prefix s.tag ~prefix:"pack_"
 
+(* ── Artifact-aware detail renderers ──
+   The basic view filter (mermaid_of_steps + view_predicate) shows step
+   nodes only. The detail renderers below add artifact pool nodes per
+   variant — e.g. lib(build_tree), lib(staged), lib(apt) — so each
+   (artifact, store) instance is its own node and the variant-specific
+   action chain is visible. Used for the lib + binding tabs in the HTML
+   viewer. *)
+
+let _id_label_for ~ids tag =
+  match Hashtbl.find ids tag with
+  | Some n -> [%string "%{tag} [%{Int.to_string n}]"]
+  | None -> tag
+
+(* Variant tag derived from a probe_<X> step tag.
+   - probe_lib              → "default"
+   - probe_lib_apt          → "apt"
+   - probe_lib_staged       → "staged"
+   - probe_lib_build_tree   → "build_tree"
+   - probe_ocaml_binding    → "default"
+   - probe_ocaml_binding_opam → "opam"
+   etc. *)
+let _variant_of_probe_tag ~prefix tag =
+  if String.equal tag prefix then "default"
+  else
+    match String.chop_prefix tag ~prefix:(prefix ^ "_") with
+    | Some suffix -> suffix
+    | None -> "default"
+
+(* Determine the "default" variant alias.
+   - If there's a build_<artifact> step → primary is build_tree.
+   - Else if there's a fetch step → primary is whatever PM (apt/brew/opam/pip).
+   - Else just "default". *)
+let _default_variant_alias ~all_steps ~build_tag ~fetch_tag ~variants =
+  let has_step t = List.exists all_steps ~f:(fun s -> String.equal s.tag t) in
+  if has_step build_tag then "build_tree"
+  else if has_step fetch_tag then begin
+    (* Pick the PM-like variant if exactly one is present. Otherwise fall
+       back to a generic "fetch" alias (better than "default" — at least
+       names the producer). *)
+    let pm_like = List.filter variants ~f:(fun v ->
+        not (String.equal v "default")
+        && not (String.equal v "build_tree")
+        && not (String.equal v "staged")) in
+    match pm_like with
+    | [ v ] -> v
+    | _ -> "fetch"
+  end
+  else "default"
+
+(* Render an artifact-detail view. Generic over artifact kind ([artifact]
+   = "lib", "ocaml_binding", "python_binding"); variants come from the
+   probes for that artifact. *)
+let mermaid_artifact_detail
+    ?(status : (string, Canary.node_status) Hashtbl.t option)
+    ~(artifact : string)               (* "lib" | "ocaml_binding" | "python_binding" *)
+    ~(label_kind : string)             (* "lib" | "ocaml binding" | "python binding" *)
+    ~(all_steps : action_step list)
+    () : string =
+  let ids = step_id_table all_steps in
+  let id_label = _id_label_for ~ids in
+  let buf = Buffer.create 1024 in
+  let add s = Buffer.add_string buf s; Buffer.add_char buf '\n' in
+  add ("%% view: " ^ artifact ^ " (artifact-detail)");
+  add "graph LR";
+  let probe_prefix = "probe_" ^ artifact in
+  let build_tag    = "build_" ^ artifact in
+  let fetch_tag    = "fetch_" ^ artifact in
+  let pack_tag     = "pack_"  ^ artifact in
+  let install_tag  = "install_" ^ artifact in (* for lib only *)
+  let has_step t = List.exists all_steps ~f:(fun s -> String.equal s.tag t) in
+  (* Identify probe steps and their variants *)
+  let probe_steps =
+    List.filter all_steps ~f:(fun s ->
+        not (String.is_suffix s.tag ~suffix:"_summary")
+        && (String.equal s.tag probe_prefix
+            || String.is_prefix s.tag ~prefix:(probe_prefix ^ "_")))
+  in
+  let variants =
+    List.map probe_steps ~f:(fun s ->
+        _variant_of_probe_tag ~prefix:probe_prefix s.tag)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let default_alias =
+    _default_variant_alias ~all_steps ~build_tag ~fetch_tag ~variants
+  in
+  let resolved_variant v =
+    (* "default" maps to the alias for visual labelling *)
+    if String.equal v "default" then default_alias else v
+  in
+  let nid_of_var v = artifact ^ "_" ^ resolved_variant v in
+  let label_of_var v =
+    [%string "%{label_kind} (%{resolved_variant v})"]
+  in
+  (* Artifact nodes — one per variant *)
+  List.iter variants ~f:(fun v ->
+      add [%string "    %{nid_of_var v}@{ shape: docs, label: \"%{label_of_var v}\" }"]);
+  add "";
+  (* Action nodes — actually-present steps *)
+  let action_steps =
+    List.filter all_steps ~f:(fun s ->
+        if String.is_suffix s.tag ~suffix:"_summary" then false
+        else
+          match s.tag with
+          | t when String.equal t build_tag
+                || String.equal t install_tag
+                || String.equal t fetch_tag
+                || String.equal t pack_tag
+                || String.is_prefix t ~prefix:(fetch_tag ^ "_")
+                || String.is_prefix t ~prefix:(pack_tag ^ "_") -> true
+          | t when String.equal t probe_prefix
+                || String.is_prefix t ~prefix:(probe_prefix ^ "_") -> true
+          | _ -> false)
+  in
+  let summary_steps =
+    List.filter all_steps ~f:(fun s ->
+        String.is_suffix s.tag ~suffix:"_summary"
+        && (String.is_prefix s.tag ~prefix:probe_prefix
+            || String.is_prefix s.tag ~prefix:fetch_tag
+            || String.is_prefix s.tag ~prefix:pack_tag))
+  in
+  let action_node s =
+    let nid = "S_" ^ s.tag in
+    let label = id_label s.tag in
+    let line = match s.rule with
+      | Probe _ -> [%string "    %{nid}([\"%{label}\"])"]
+      | _       -> [%string "    %{nid}{{\"%{label}\"}}"]
+    in
+    add line
+  in
+  let summary_node s =
+    let nid = "S_" ^ s.tag in
+    let label = id_label s.tag in
+    add [%string "    %{nid}([\"%{label}\"])"]
+  in
+  List.iter action_steps ~f:action_node;
+  List.iter summary_steps ~f:summary_node;
+  add "";
+  (* Edges *)
+  let pick_variant ~prefer =
+    (* Pick a variant from [variants], preferring [prefer], falling
+       back to default_alias, then to the first available. *)
+    if List.mem variants prefer ~equal:String.equal then prefer
+    else if List.mem variants "default" ~equal:String.equal then "default"
+    else (match variants with v :: _ -> v | [] -> "default")
+  in
+  (* build_<artifact> → artifact (build_tree) *)
+  if has_step build_tag then begin
+    let v = pick_variant ~prefer:"build_tree" in
+    add [%string "    S_%{build_tag} --> %{nid_of_var v}"]
+  end;
+  (* install_lib only: build_tree → install_lib → staged *)
+  if has_step install_tag then begin
+    let from_v = pick_variant ~prefer:"build_tree" in
+    add [%string "    %{nid_of_var from_v} --> S_%{install_tag}"];
+    if List.mem variants "staged" ~equal:String.equal then
+      add [%string "    S_%{install_tag} --> %{nid_of_var \"staged\"}"]
+  end;
+  (* fetch_<artifact> (no suffix): unlike build/install which produce
+     build_tree/staged, fetch brings in a PM-installed (or system-PM
+     prebuilt) instance. When PM-like variants exist (apt/brew/opam/pip),
+     route fetch to the first one. Otherwise fall back to default_alias. *)
+  if has_step fetch_tag then begin
+    let pm_like = List.filter variants ~f:(fun v ->
+        not (String.equal v "default")
+        && not (String.equal v "build_tree")
+        && not (String.equal v "staged"))
+    in
+    let v = match pm_like with
+      | x :: _ -> x
+      | [] -> pick_variant ~prefer:default_alias
+    in
+    add [%string "    S_%{fetch_tag} --> %{nid_of_var v}"]
+  end;
+  (* fetch_<artifact>_<pm> → variant matching the pm suffix *)
+  List.iter all_steps ~f:(fun s ->
+      match String.chop_prefix s.tag ~prefix:(fetch_tag ^ "_") with
+      | Some suffix when List.mem variants suffix ~equal:String.equal ->
+          add [%string "    S_%{s.tag} --> %{nid_of_var suffix}"]
+      | _ -> ());
+  (* pack_<artifact> (binding-only): produces an installed/packaged variant *)
+  if has_step pack_tag then begin
+    (* Pack consumes build_tree binding and produces the pm-installed one.
+       For OCaml binding the pm is opam (probe_ocaml_binding_opam). *)
+    let consumed = pick_variant ~prefer:"build_tree" in
+    add [%string "    %{nid_of_var consumed} --> S_%{pack_tag}"];
+    let produced = pick_variant ~prefer:"opam" in
+    if not (String.equal produced consumed) then
+      add [%string "    S_%{pack_tag} --> %{nid_of_var produced}"]
+  end;
+  (* probe_<artifact>_<X> consumes artifact (X) *)
+  List.iter probe_steps ~f:(fun s ->
+      let v = _variant_of_probe_tag ~prefix:probe_prefix s.tag in
+      add [%string "    %{nid_of_var v} -->|test| S_%{s.tag}"]);
+  (* probe → its summary (dashed annotation) *)
+  List.iter summary_steps ~f:(fun s ->
+      let parent_tag =
+        if String.is_suffix s.tag ~suffix:"_stub_summary" then
+          String.chop_suffix_exn s.tag ~suffix:"_stub_summary"
+        else
+          String.chop_suffix_exn s.tag ~suffix:"_summary"
+      in
+      if List.exists all_steps ~f:(fun p -> String.equal p.tag parent_tag) then
+        add [%string "    S_%{parent_tag} -.-> S_%{s.tag}"]);
+  add "";
+  (* Styling *)
+  add "    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
+  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:2px";
+  add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:2px";
+  add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
+  add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
+  let artifact_nids = List.map variants ~f:nid_of_var in
+  if not (List.is_empty artifact_nids) then
+    add [%string "    class %{String.concat artifact_nids ~sep:\",\"} artifact"];
+  (match status with
+   | None -> ()
+   | Some tbl ->
+       List.iter (action_steps @ summary_steps) ~f:(fun s ->
+           let cls = match Hashtbl.find tbl s.tag with
+             | Some Canary.Done -> "st_done"
+             | Some Canary.Failed -> "st_failed"
+             | Some Canary.Skipped -> "st_skipped"
+             | Some Canary.Not_in_spec | None -> "st_nospec"
+           in
+           add [%string "    class S_%{s.tag} %{cls}"]));
+  Buffer.contents buf
+
 let mermaid_view ?status ~view (steps : action_step list) : string =
-  let title = "view: " ^ view_name view in
-  mermaid_of_steps ?status ~title ~all_steps:steps
-    ~filter:(view_predicate view) ()
+  match view with
+  | `Lib ->
+      mermaid_artifact_detail ?status ~artifact:"lib" ~label_kind:"lib"
+        ~all_steps:steps ()
+  | `Binding lang ->
+      let s = Canary_artifact_api.string_of_lang lang in
+      mermaid_artifact_detail ?status ~artifact:(s ^ "_binding")
+        ~label_kind:(s ^ " binding") ~all_steps:steps ()
+  | _ ->
+      let title = "view: " ^ view_name view in
+      mermaid_of_steps ?status ~title ~all_steps:steps
+        ~filter:(view_predicate view) ()
 
 (* ── Shared command templates ──
    These generate shell commands for common action patterns.
