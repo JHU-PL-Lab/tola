@@ -1637,34 +1637,63 @@ let _source_kind_of_run_info ~variant_dir =
 let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
   if not (Stdlib.Sys.file_exists projects_root) then []
   else
+    let make_entry ~project ~variant ~href ~variant_dir =
+      let html_path = variant_dir ^ "/result.html" in
+      if not (Stdlib.Sys.file_exists html_path) then None
+      else
+        let mtime = (Unix.stat html_path).st_mtime in
+        let (total, done_, failed, skipped) = _counts_from_log ~variant_dir in
+        let src = _source_kind_of_run_info ~variant_dir in
+        Some Canary_backend_html.{
+          project; variant;
+          run_at = _format_mtime mtime;
+          href;
+          total_steps = total;
+          done_steps = done_;
+          failed_steps = failed;
+          skipped_steps = skipped;
+          source_kind = src;
+        }
+    in
     let projects = _list_dirs projects_root in
     List.concat_map projects ~f:(fun project ->
         let proj_dir = projects_root ^ "/" ^ project in
-        let variants = _list_dirs proj_dir in
-        List.filter_map variants ~f:(fun variant ->
-            let variant_dir = proj_dir ^ "/" ^ variant in
-            let html_path = variant_dir ^ "/result.html" in
-            if not (Stdlib.Sys.file_exists html_path) then None
-            else
-              let mtime = (Unix.stat html_path).st_mtime in
-              let (total, done_, failed, skipped) =
-                _counts_from_log ~variant_dir
-              in
-              let src = _source_kind_of_run_info ~variant_dir in
-              Some Canary_backend_html.{
-                project;
-                variant;
-                run_at = _format_mtime mtime;
-                href = project ^ "/" ^ variant ^ "/result.html";
-                total_steps = total;
-                done_steps = done_;
-                failed_steps = failed;
-                skipped_steps = skipped;
-                source_kind = src;
-              }))
+        (* Multi-variant: run dirs live in _run/{variant}/ *)
+        let run_subdir = proj_dir ^ "/_run" in
+        let multi =
+          if Stdlib.Sys.file_exists run_subdir && Stdlib.Sys.is_directory run_subdir then
+            _list_dirs run_subdir
+            |> List.filter_map ~f:(fun variant ->
+                let variant_dir = run_subdir ^ "/" ^ variant in
+                make_entry ~project ~variant
+                  ~href:(project ^ "/_run/" ^ variant ^ "/result.html")
+                  ~variant_dir)
+          else []
+        in
+        (* Single-variant: result.html directly in proj_dir *)
+        let single =
+          Option.to_list (make_entry ~project ~variant:""
+            ~href:(project ^ "/result.html")
+            ~variant_dir:proj_dir)
+        in
+        multi @ single)
 
 let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
-  let dir = [%string "%{root}/canary/projects/%{project}"] in
+  let (project_name, variant_id) =
+    match String.rsplit2 project ~on:'/' with
+    | Some (name, vid) -> (name, vid)
+    | None -> (project, "")
+  in
+  (* Run metadata (result.html, actions.log, diagrams) lives in:
+     - Multi-variant: projects/{project_name}/_run/{variant_id}/
+     - Single-variant: projects/{project_name}/
+     This keeps top-level step dirs ({step}/{variant_id}/) unambiguous. *)
+  let dir =
+    if String.is_empty variant_id then
+      [%string "%{root}/canary/projects/%{project_name}"]
+    else
+      [%string "%{root}/canary/projects/%{project_name}/_run/%{variant_id}"]
+  in
   ensure_dir dir;
   (* Dump project spec if provided *)
   (match run_info with
@@ -1808,21 +1837,17 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
           | Some Canary.Not_in_spec | None -> "not_in_spec"
         in
         (* output_rel: path from the run dir (dir) to the step's output_dir.
-           New layout: step dirs live at project_dir/{tag}[/{variant_id}], not
-           under the variant dir. Relative path is "../{tag}[/{variant_id}]" for
-           variant runs, or just "{tag}" for single-variant projects. *)
+           Single-variant: dir = project_dir/, step = project_dir/{tag}/ → "{tag}"
+           Multi-variant:  dir = project_dir/_run/{variant_id}/, step = project_dir/{tag}/{variant_id}/
+                           → "../../{tag}/{variant_id}" *)
         let output_rel =
           if String.is_empty s.variant_id then
-            (* Single-variant: step dir is a direct subdir of project=run dir *)
             match String.chop_prefix s.output_dir ~prefix:(dir ^ "/") with
             | Some rel -> rel
             | None -> s.output_tag
           else
-            (* Multi-variant: output_dir = .../project/{tag}/{variant_id}
-               dir (run_dir) = .../project/{variant_id}/
-               Relative path: ../{tag}/{variant_id} *)
             let tag_part = Stdlib.Filename.basename (Stdlib.Filename.dirname s.output_dir) in
-            "../" ^ tag_part ^ "/" ^ s.variant_id
+            "../../" ^ tag_part ^ "/" ^ s.variant_id
         in
         Canary_backend_html.{
           tag = s.tag;
@@ -1844,10 +1869,17 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
     | Some (p, v) -> (p, v)
     | None -> (project, "")
   in
+  (* index_rel: relative path from result.html back to index.html.
+     Single-variant: dir = projects/X/        → ../index.html   (1 up)
+     Multi-variant:  dir = projects/X/_run/V/ → ../../../index.html (3 up) *)
+  let index_rel =
+    if String.is_empty variant_id then "../index.html"
+    else "../../../index.html"
+  in
   let html =
     Canary_backend_html.render
       ~project:proj_name ~variant
-      ~run_at
+      ~run_at ~index_rel
       ~views:html_views
       ~default_view:"overview"
       ~steps:html_steps

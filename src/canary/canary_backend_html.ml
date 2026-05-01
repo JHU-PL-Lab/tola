@@ -90,7 +90,7 @@ let render_steps_data steps =
 (* The page: HTML + inline CSS + JS. Mermaid loaded from CDN; logs
    loaded lazily on node click via fetch (relative paths). *)
 let render
-    ~project ~variant ~run_at
+    ~project ~variant ~run_at ~index_rel
     ~(views : view_entry list)
     ~(default_view : string)
     ~(steps : step_meta list) =
@@ -134,7 +134,7 @@ let render
 </head>
 <body>
 <header>
-  <a href="../../index.html" style="color:#666;text-decoration:none;font-size:13px;">← all runs</a>
+  <a href="%s" style="color:#666;text-decoration:none;font-size:13px;">← all runs</a>
   <h1>canary <span style="color: #1976d2;">%s/%s</span></h1>
   <span class="meta">run at %s</span>
 </header>
@@ -246,6 +246,7 @@ let render
 </html>
 |}
     project variant            (* title *)
+    index_rel                  (* ← all runs href *)
     project variant run_at     (* header *)
     selector
     views_json steps_json
