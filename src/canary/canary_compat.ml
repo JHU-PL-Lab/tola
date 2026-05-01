@@ -353,6 +353,24 @@ let verify_for_project ~root ~project ~variant =
         List.iter mli_missing ~f:(fun e -> Fmt.pr "    - %s@." e);
         Fmt.pr "  → predicts FAIL referencing one of these names@.");
 
+      (* L3 (Python attrs) prediction *)
+      let py_missing =
+        match find_python_summary dir with
+        | None -> []
+        | Some p -> load_watchlist_missing p
+      in
+      Fmt.pr "@.L3 (Python attrs) prediction:@.";
+      (match find_python_summary dir with
+       | None -> Fmt.pr "  (no Python summary cached at fetch_python_binding/)@."
+       | Some _ ->
+           if List.is_empty py_missing then
+             Fmt.pr "  watchlist missing: (none) — predicts SUCCESS at Python level@."
+           else (
+             Fmt.pr "  watchlist missing: %d entry/entries@."
+               (List.length py_missing);
+             List.iter py_missing ~f:(fun e -> Fmt.pr "    - %s@." e);
+             Fmt.pr "  → predicts FAIL referencing one of these names@."));
+
       (* L0 (C symbols) prediction *)
       let stub_path = find_stub_summary dir in
       let lib_path = find_lib_summary dir in
@@ -384,36 +402,46 @@ let verify_for_project ~root ~project ~variant =
       in
 
       (* Probe.log analysis *)
-      let log_path = dir ^ "/probe_ocaml_binding/probe.log" in
-      let log = read_file_or_empty log_path in
-      let line_count, head = probe_log_summary log in
-      Fmt.pr "@.probe.log analysis (%d lines):@." line_count;
-      if String.is_empty log then Fmt.pr "  (empty or missing)@."
-      else (
-        Fmt.pr "  head:@.";
-        List.iter (String.split_lines head) ~f:(fun l ->
-            Fmt.pr "    | %s@." l));
+      let read_log rel = read_file_or_empty (dir ^ "/" ^ rel) in
+      let ocaml_log = read_log "probe_ocaml_binding/probe.log" in
+      let python_log = read_log "probe_python_binding/probe.log" in
+      let print_log_section name log =
+        let line_count, head = probe_log_summary log in
+        Fmt.pr "@.%s probe.log analysis (%d lines):@." name line_count;
+        if String.is_empty log then Fmt.pr "  (empty or missing)@."
+        else (
+          Fmt.pr "  head:@.";
+          List.iter (String.split_lines head) ~f:(fun l ->
+              Fmt.pr "    | %s@." l))
+      in
+      print_log_section "OCaml" ocaml_log;
+      if not (String.is_empty python_log) then
+        print_log_section "Python" python_log;
 
       (* Cross-reference predictions vs log *)
       Fmt.pr "@.Verdict:@.";
-      let l3_confirmed =
-        List.filter_map mli_missing ~f:(fun e ->
+      let confirmed_in log entries =
+        List.filter_map entries ~f:(fun e ->
             Option.map (match_in_log ~log e) ~f:(fun m -> (e, m)))
       in
-      let l3_unconfirmed =
-        List.filter mli_missing ~f:(fun e ->
+      let unconfirmed_in log entries =
+        List.filter entries ~f:(fun e ->
             Option.is_none (match_in_log ~log e))
       in
+      let l3_ocaml_confirmed = confirmed_in ocaml_log mli_missing in
+      let l3_ocaml_unconfirmed = unconfirmed_in ocaml_log mli_missing in
+      let l3_python_confirmed = confirmed_in python_log py_missing in
+      let l3_python_unconfirmed = unconfirmed_in python_log py_missing in
       let l0_confirmed =
         List.filter c_missing ~f:(fun s ->
-            String.is_substring log ~substring:s)
+            String.is_substring ocaml_log ~substring:s)
       in
       let l0_unconfirmed =
         List.filter c_missing ~f:(fun s ->
-            not (String.is_substring log ~substring:s))
+            not (String.is_substring ocaml_log ~substring:s))
       in
 
-      let print_verdict_layer layer ~predicted ~confirmed ~unconfirmed =
+      let print_verdict_layer layer ~log ~predicted ~confirmed ~unconfirmed =
         match predicted, confirmed, unconfirmed with
         | [], _, _ ->
             Fmt.pr "  %s: predicted COMPATIBLE — %s@." layer
@@ -429,13 +457,16 @@ let verify_for_project ~root ~project ~variant =
               layer (List.length confirmed)
               (List.length predicted)
       in
-      print_verdict_layer "L3 (OCaml)"
-        ~predicted:mli_missing ~confirmed:(List.map l3_confirmed ~f:fst)
-        ~unconfirmed:l3_unconfirmed;
-      print_verdict_layer "L0 (C ABI)"
+      print_verdict_layer "L3 (OCaml)" ~log:ocaml_log
+        ~predicted:mli_missing ~confirmed:(List.map l3_ocaml_confirmed ~f:fst)
+        ~unconfirmed:l3_ocaml_unconfirmed;
+      print_verdict_layer "L3 (Python)" ~log:python_log
+        ~predicted:py_missing ~confirmed:(List.map l3_python_confirmed ~f:fst)
+        ~unconfirmed:l3_python_unconfirmed;
+      print_verdict_layer "L0 (C ABI)" ~log:ocaml_log
         ~predicted:c_missing ~confirmed:l0_confirmed
         ~unconfirmed:l0_unconfirmed;
-      List.iter l3_confirmed ~f:(fun (entry, matched) ->
+      List.iter (l3_ocaml_confirmed @ l3_python_confirmed) ~f:(fun (entry, matched) ->
           if not (String.equal entry matched) then
             Fmt.pr "    note: '%s' matched as substring '%s'@." entry matched);
       0

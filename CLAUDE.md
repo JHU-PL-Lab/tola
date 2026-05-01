@@ -112,14 +112,14 @@ opam switch conflicts.
     (compile error). Remaining: also verify at the C symbol level with a
     mismatched libLLVM.so version pair.
 
-20. **Symbol diff between lib versions** — extend `assert_binary_symbols.py`
-    with `--provided-lib-old / --provided-lib-new` mode. Foundation for #16.
+40. **Replace fake `install_lib` scripts with real cmake --install** —
+    current z3/llvm `install_lib` scripts copy build artifacts with `cp`
+    (fake install). Replace with `cmake --install --prefix $PREFIX` so
+    canary actually tests cmake's install-time transformations (RPATH
+    rewriting, symlink creation, pkg-config/cmake config file generation).
+    See `doc/canary/ops/install_targets.md` for z3 vs LLVM install patterns.
 
-25. **Model `cmake --install` as canary action slot** — `install_lib` /
-    `install_binding` between `build_*` and `pack_binding`. See
-    `doc/canary/ops/install_targets.md` for Z3 vs LLVM patterns.
-
-Backlog (lower priority): #5, #9, #11, #13b, #14, #16, #17, #18, #22, #27, #28, #29, #30, #31, #32, #33, #34.
+Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see trackers/new_project_spec.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (see design/api_compat.md).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)
@@ -262,7 +262,7 @@ Still open:
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #26. Details in
+Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28. Details in
 `doc/canary/worklog_2026_04.md`.
 
 ## Other Work: Yelu

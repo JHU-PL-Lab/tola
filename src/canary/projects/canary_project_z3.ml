@@ -62,6 +62,12 @@ let z3_api_source : Canary_artifact_api.t =
     {
       lang = Python;
       source_dir = Some "src/api/python/z3";
+      (* Drift signal: parser_context is in the Z3 4.15+ Python source but
+         not exported from `z3` namespace in the bundled z3-solver pip wheel
+         (4.16 as of 2026-05-01). Listed here so the Fetch (Binding Python)
+         summary reports it as missing; an Expect_compat_failure with
+         Python_attrs then predicts the probe failure. Parallel to LLVM's
+         Opcode.UncondBr at the C/OCaml level. *)
       module_watchlist =
         [
           "Solver";
@@ -72,6 +78,7 @@ let z3_api_source : Canary_artifact_api.t =
           "Int";
           "Real";
           "Bool";
+          "parser_context";
         ];
     }
   in
@@ -164,12 +171,18 @@ let z3_ocaml_config : Canary_toolchain.ocaml_tool_config =
     prebuilt = None;
   }
 
+(* Probe references parser_context — present in Z3 4.15+ Python source but
+   not exported by the z3-solver pip wheel (4.16 as of 2026-05-01). Probe
+   fails with AttributeError; Expect_compat_failure { Python_attrs } derives
+   the predicted substring from the cached Fetch (Binding Python) summary.
+   Demonstrates L3 forward-incompat detection for Python (parallel to the
+   LLVM 19 OCaml/L0 case). *)
 let z3_python_config : Canary_toolchain.binding_config =
   Python_config
     {
       pip_package = Some "z3-solver";
       probe_snippet =
-        {|import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check())|};
+        {|import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check()); _ = z3.parser_context|};
     }
 
 (* Canonical cmake build flags for Z3 — single source of truth.
@@ -505,6 +518,28 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_summary = [ (OCaml, "z3"); (Python, "z3") ];
+    expectation = (fun rule loc -> match rule, loc with
+      | Probe (Binding _),
+        Some (Canary_store.Pm
+                (Canary_store.Lang_pm
+                   { lang = Canary_artifact_api.Python; _ })) ->
+          (* z3-solver pip wheel doesn't export `parser_context` (drift in
+             the bundled Python module surface vs Z3 4.15+ source). Probe
+             references it on purpose; expected substring is derived from
+             the cached Fetch (Binding Python) summary's missing watchlist. *)
+          Canary_action.Expect_compat_failure {
+            inputs = [
+              Canary_action.Python_attrs
+                { paths = [ "fetch_python_binding/summary.json" ] };
+            ];
+            version_info = Some {
+              provider_version = "z3-solver pip wheel";
+              consumer_requires = "z3.parser_context";
+              since = Some "Z3 4.15+ Python source (not yet exported in pip wheel)";
+              note = None;
+            };
+          }
+      | _ -> Expect_success);
     summary_note =
       (if not source.has_build_binding then
          Some

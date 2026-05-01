@@ -423,11 +423,46 @@ _out/canary/projects/z3/<variant>/
 `probe_python_binding` evaluates AFTER `fetch_python_binding_summary`
 has cached `summary.json`, so an `Expect_compat_failure { inputs = [
 Python_attrs { paths = ["fetch_python_binding/summary.json"] }; … ] }`
-on the probe step would resolve correctly. Wiring an actual project
-probe to use it is project-by-project — no failing pip probe exists in
-the current set, so today's z3/llvm Python probes stay
-`Expect_success`. Drop-in conversion is one-line per project when a
-case warrants it.
+on the probe step resolves correctly.
+
+**Phase 3e — Python derived expectation in production (shipped).**
+The z3-solver pip wheel (4.16.0 as of 2026-05-01) doesn't export
+`parser_context` from the `z3` namespace, even though it's defined in
+the Z3 4.15+ Python source. Z3's project spec exploits this real
+forward-incompat for the demo:
+
+- `python_binding.module_watchlist` includes `parser_context`. The
+  cached `fetch_python_binding/summary.json` reports it as missing.
+- The probe snippet references `z3.parser_context` (causes a clean
+  `AttributeError`).
+- z3's `expectation` field returns `Expect_compat_failure { inputs =
+  [Python_attrs { paths = ["fetch_python_binding/summary.json"] }];
+  ... }` for the Python pip probe.
+
+Live demo (canary action z3, stable variant):
+```
+[probe_python_binding] cmd_fail (exit 1)
+[probe_python_binding] compat_predicted (1 substring(s))
+[probe_python_binding] done (expected failure confirmed (derived):
+                             z3-solver pip wheel predates z3.parser_context,
+                             added in Z3 4.15+ Python source ...)
+```
+
+`canary verify z3 stable` now reports three layers — L3 OCaml,
+L3 Python, L0 C ABI — each with its own probe.log analysis and
+verdict.
+
+**Future directions (in backlog).**
+
+- **L1b — versioned symbol requirements (#43).** Lift `check_c_compat`
+  from name-level set inclusion to versioned matching (`@@GLIBC_2.31`
+  floors etc.). Data already in `summarize_native.py`'s
+  `versioned_req`; just needs to flow into the check.
+- **L2 — typed signatures (#44).** Move from name set inclusion to a
+  real subtyping system: types via clang AST for C, ocamlc signatures
+  for OCaml, Python type-stub equivalents. Catches "same name, wrong
+  signature" version drift that name-level checks miss. See
+  interface.md §15 and the typing-rule observation above.
 
 **Inherently behavioural failures** (version-string mismatches in
 import logs, functions that exist but return wrong results, runtime

@@ -27,6 +27,25 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     provider delta), mismatch prediction, Python summary enhancements.
     Grouped into `doc/canary/design/api_compat.md`.
 
+43. **L1b — versioned symbol requirements in compat check** — `summarize_native.py`
+    already records `versioned_req` (e.g. `{"GLIBC_2.31": 3}`) per artifact.
+    Today's `check_c_compat` is L0 only (set inclusion of names). Lift it to
+    L1b: a binding requires a specific @VER suffix on a symbol, the lib must
+    provide that or higher. Adds glibc/libstdc++ floor checking — predicts
+    failures from binaries built on newer distros that won't run on older
+    ones, even when symbol names match. See `doc/canary/design/api_compat.md`
+    "future direction".
+
+44. **L2 — typed signatures via clang AST or libclang** — today's compat
+    check is name-level (L0/L3 set inclusion). Lift to L2 by extracting
+    typed signatures from C headers (clang AST dump, similar to the dead-code
+    example at `canary_dead_code` line 47) and OCaml/Python signatures from
+    compiler output. Then `check_compat` is real subtyping with contravariance
+    on argument types, covariance on results, refinement on value domains.
+    Gives a decidable-but-conservative type-system over artifact interfaces;
+    catches "same name, different signature" version drift. See interface.md
+    §15 "open theoretical questions" and api_compat.md "typing-rule shape".
+
 17. **Module interfaces (.mli)** — define contracts for PM modules
     (`canary_pm_{apt,brew,opam,pip}`) and project modules (`canary_project_*.ml`).
 
