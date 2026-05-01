@@ -1021,9 +1021,17 @@ let mermaid_view
            mermaid_artifact_detail ?status ~artifact:art_str ~label_kind:lkind
              ~all_steps:steps ())
   | _ ->
+      (* Source, Pack, Probes: show the full schema graph with no artifact
+         expansion. Same as the overview but with a view_title label. *)
       let title = "view: " ^ view_name view in
-      mermaid_of_steps ?status ~title ~all_steps:steps
-        ~filter:(view_predicate view) ()
+      (match rules, step_ids, steps_by_rule_tag, summary_rules with
+       | Some rules, Some sids, Some sbrt, Some srules ->
+           mermaid_of_action_rule_schema ?status ~has_scan
+             ~summary_rules:srules ~step_ids:sids ~steps_by_rule_tag:sbrt
+             ~view_title:title rules
+       | _ ->
+           mermaid_of_steps ?status ~title ~all_steps:steps
+             ~filter:(view_predicate view) ())
 
 (* ── Shared command templates ──
    These generate shell commands for common action patterns.
