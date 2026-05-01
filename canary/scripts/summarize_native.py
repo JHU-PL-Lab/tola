@@ -60,6 +60,10 @@ def main():
     ap.add_argument("--strip-leading-underscore", action="store_true",
                     help="strip one leading _ from each defined symbol "
                          "(macOS Mach-O convention; do NOT use on Linux ELF)")
+    ap.add_argument("--emit-symbols", action="store_true",
+                    help="include the list of defined symbols (filtered by "
+                         "--prefixes) in the output. Required for compat "
+                         "cross-checks against a binding's stub.requires.")
     args = ap.parse_args()
 
     defined, versioned_req = parse_nm(
@@ -79,6 +83,14 @@ def main():
         "versioned_req": versioned_req,
         "watchlist": {"present": present, "missing": missing},
     }
+    if args.emit_symbols:
+        # Filter by any prefix; if no prefix given, emit all.
+        if prefixes:
+            kept = sorted(s for s in dset
+                          if any(s.startswith(p) for p in prefixes))
+        else:
+            kept = sorted(dset)
+        summary["symbols"] = kept
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
 

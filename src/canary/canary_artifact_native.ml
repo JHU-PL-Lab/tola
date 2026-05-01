@@ -109,7 +109,7 @@ let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir () =
   let watchlist_csv = String.concat ~sep:"," watchlist in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
-  | python3 %{script} %{strip_flag}--path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
+  | python3 %{script} %{strip_flag}--emit-symbols --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
   > %{output_dir}/summary.json|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.

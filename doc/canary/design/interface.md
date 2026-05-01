@@ -431,9 +431,7 @@ Given two summaries `(old, new)`:
 
 `canary summary-diff --old A.json --new B.json` already implements this.
 Real-world demo: libLLVM 19 vs libLLVM dev = `total: 43813 → 34176` (-9637),
-plus a clean GLIBCXX/CXXABI/GLIBC requirement-floor delta. See
-[trackers/python_binding.md](../trackers/python_binding.md) for the
-in-flight examples.
+plus a clean GLIBCXX/CXXABI/GLIBC requirement-floor delta.
 
 ## 12. Bridge to version_logic
 
@@ -476,11 +474,20 @@ native_api → binding_api per language). Watchlists split into provider
 step verifies header/binding-dir claims post-fetch, blocking builds on
 spec drift.
 
-### Step 3 — interface diff across versions
+### Step 3 — first-class compatibility type *(next milestone)*
 
-`summary-diff` works on per-probe summaries today. Next: scan stage
-produces an authoritative per-artifact summary usable across versions;
-diffs become per-version, not per-probe. Gated on committed summary index.
+See [design/api_compat.md](api_compat.md) for the full plan. Four steps:
+
+- **A (#35)** — split `binding_api.deps` into provenance and runtime contract;
+  fixes co-provider diagram edges; no external dependencies.
+- **B (#41, #42)** — Python summary enhancements (version extras, attr
+  categorisation); independent of A.
+- **C (#31)** — declarative C API surface from `nm` output; depends on #20
+  (`assert_binary_symbols.py --provided-lib-old/new`).
+- **D (#16)** — mismatch prediction from stored summaries; depends on C.
+
+End state: `check_compat : provides:interface -> requires:interface ->
+compat_result` is a pure function; probe outcomes confirm or contradict it.
 
 ### Step 4 — interface ↔ version_logic
 
@@ -506,3 +513,33 @@ testing against a declared behavioral interface. Research territory.
 - **L4 (ABI/runtime).** soname tracking, libc/libstdc++ implementation
   tag, per-binary `readelf -d` capture. Out of scope; Stage 4+.
 - **L5 behavioral.** Out of scope; research add-on.
+
+## 15. Open theoretical questions
+
+The current model treats compatibility as set-theoretic inclusion on names:
+`requires ⊆ provides`. That is the cheap necessary-condition check
+(`summarize_binding.py` implements it for `.mli` and `.a` artifacts) and
+catches most version-drift failures we hit in practice. It is not the full
+story:
+
+- **Type/arity compatibility.** `Z3_mk_solver` may exist in two versions
+  with a changed signature. Name-set inclusion accepts it; link or runtime
+  rejects it. A proper compatibility predicate parameterises symbols by
+  their type signature and checks compatibility pointwise.
+- **Semantic compatibility.** Same name, same signature, different
+  behaviour (enum case ordering, default parameter, error condition). No
+  static check on artifacts catches this; only behavioural probes (L5) do.
+- **Subtyping / substitutability.** Set inclusion `requires ⊆ provides`
+  flattens out variance. The proper PL formulation is interface subtyping:
+  contravariance on argument types, covariance on result types, and
+  refinement on value domains where applicable. `check_compat` then
+  becomes a decision procedure on a subtyping judgment, not a set diff.
+- **Layered lattice.** L0 (name inclusion) ⊑ L1 (versioned symbols) ⊑ L2
+  (typed signatures) ⊑ L3 (module structure) ⊑ L5 (behaviour). Each
+  refinement is a finer compatibility relation; coarser layers are
+  necessary conditions for the finer ones. Deciding at which layer to
+  reject is a cost/precision tradeoff — name diff is ~ms, behaviour
+  probes are minutes.
+
+These are out of scope for the current implementation milestone but worth
+parking as the long-term direction the `interface` type points toward.

@@ -83,6 +83,46 @@ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
   [ -f "$f" ] && printf '\n=== %s ===\n' "$f" && ocamlobjinfo "$f"
 done 2>&1 | tee %{output_dir}/archive.log|}]
 
+(* Source-level mli summary for an opam-installed OCaml binding.
+   Discovers the package's .mli files via `ocamlfind query` and parses them
+   with summarize_binding.py (grep-based, no compiler needed). Output JSON
+   includes vals + constructors + module nesting (richer than ocamlobjinfo,
+   which is module-level only).
+
+   Use this when the binding ships .mli files in the install dir (LLVM does;
+   z3 does too). When .mli files aren't installed, fall back to summary_opam_pkg_cmd. *)
+let mli_summary_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir () =
+  let script = "canary/scripts/summarize_binding.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    {|eval $(opam env)
+PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
+test -n "$PKG_DIR"
+python3 %{script} --kind mli --dir "$PKG_DIR" \
+  --watchlist '%{watchlist_csv}' > %{output_dir}/summary.json|}]
+
+(* C-stub summary: undefined symbols a binding requires from its native lib.
+   Discovers the binding's stub archive (lib<name>.a) via `ocamlfind query`,
+   runs `nm` to collect undefined symbols, optionally filtered by a prefix
+   (e.g. Z3_, LLVM). Output JSON has the consumer-side symbol set — pair
+   with summarize_native.py output (provider side) for check_compat.
+   Default filename "stub_summary.json" so it can coexist with the OCaml-level
+   "summary.json" in the same probe output directory. *)
+let stub_summary_opam_pkg_cmd
+    ~pkg ?(prefix = "") ?(watchlist = []) ?(filename = "stub_summary.json")
+    ~output_dir () =
+  let script = "canary/scripts/summarize_binding.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    {|eval $(opam env)
+PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
+test -n "$PKG_DIR"
+STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 %{script} --kind stub --path "$STUB" \
+  --prefix '%{prefix}' --watchlist '%{watchlist_csv}' \
+  > %{output_dir}/%{filename}|}]
+
 (* Symbol compat check for an opam-installed binding vs a system native lib.
    Discovers stub archive via `ocamlfind query <pkg>` (looks for lib*.a),
    finds the system lib with `provided_lib_cmd` (a shell expression → path).

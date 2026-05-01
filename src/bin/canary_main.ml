@@ -343,6 +343,67 @@ let artifact_summary_cmd =
            ~doc:"Dump compact artifact interface summary to summary.json")
     Term.(const run $ kind $ path $ prefixes $ watchlist $ out_dir $ const ())
 
+let compat_cmd =
+  (* Two modes:
+     - Positional <project> [<variant>] uses cached summaries under
+       _out/canary/projects/<project>/<variant>/.
+     - Explicit --stub PATH --lib PATH uses raw summary.json paths. *)
+  let project =
+    Arg.(value & pos 0 (some string) None & info [] ~docv:"PROJECT"
+           ~doc:"Project name (e.g. llvm, z3) — uses cached summaries.")
+  in
+  let variant =
+    Arg.(value & pos 1 string "dev" & info [] ~docv:"VARIANT"
+           ~doc:"Variant name (e.g. 19, dev, stable). \"dev\" matches \
+                 the most recent dev_* dir.")
+  in
+  let stub =
+    Arg.(value & opt (some string) None & info [ "stub" ] ~docv:"PATH"
+           ~doc:"Path to a c_stub summary.json (overrides project/variant lookup).")
+  in
+  let lib =
+    Arg.(value & opt (some string) None & info [ "lib" ] ~docv:"PATH"
+           ~doc:"Path to a native summary.json with --emit-symbols.")
+  in
+  let run project variant stub_path lib_path () =
+    let rc = match stub_path, lib_path with
+      | Some s, Some l -> Canary_compat.run ~stub_path:s ~lib_path:l
+      | _ ->
+          (match project with
+           | None ->
+               Fmt.epr "compat: pass either <project> [<variant>] or both \
+                        --stub and --lib@.";
+               2
+           | Some p ->
+               let root = Stdlib.Sys.getcwd () in
+               Canary_compat.run_for_project ~root ~project:p ~variant)
+    in
+    Stdlib.exit rc
+  in
+  Cmd.v (Cmd.info "compat"
+           ~doc:"Static C-symbol cross-check: predict whether a binding's required \
+                 symbols are all provided by a native lib (Step C1 of api_compat.md).")
+    Term.(const run $ project $ variant $ stub $ lib $ const ())
+
+let verify_cmd =
+  let project =
+    Arg.(required & pos 0 (some string) None & info [] ~docv:"PROJECT"
+           ~doc:"Project name (e.g. llvm, z3)")
+  in
+  let variant =
+    Arg.(value & pos 1 string "dev" & info [] ~docv:"VARIANT"
+           ~doc:"Variant (e.g. 19, dev, stable). \"dev\" matches dev_*.")
+  in
+  let run project variant () =
+    let root = Stdlib.Sys.getcwd () in
+    Stdlib.exit (Canary_compat.verify_for_project ~root ~project ~variant)
+  in
+  Cmd.v (Cmd.info "verify"
+           ~doc:"Cross-reference cached compat predictions against probe.log \
+                 outcomes (Step D-basic of api_compat.md). Reports per-layer \
+                 prediction-vs-observation alignment.")
+    Term.(const run $ project $ variant $ const ())
+
 let summary_diff_cmd =
   let old_ =
     Arg.(required & opt (some string) None & info [ "old" ] ~docv:"PATH"
@@ -376,5 +437,7 @@ let () =
     artifact_test_cmd;
     artifact_summary_cmd;
     summary_diff_cmd;
+    compat_cmd;
+    verify_cmd;
   ] in
   Stdlib.exit (Cmd.eval cmd)

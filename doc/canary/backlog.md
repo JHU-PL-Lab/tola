@@ -22,18 +22,14 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     and binding flags. Workaround: always build libz3 from source in opam
     template. See `doc/z3_bug_api.md`.
 
-16. **Mismatch prediction system** *(Opus)* — derive expected failures from
-    version metadata. "z3 4.15 binding against z3 4.13 lib → missing symbols
-    X, Y, Z" computable from API diffs. TODO #20 is the nm-based foundation.
+16, 20, 31, 35, 41, 42. **API compatibility model** — binding_api.deps
+    split, C API surface (consumer/provider cross-check + provider-vs-
+    provider delta), mismatch prediction, Python summary enhancements.
+    Grouped into `doc/canary/design/api_compat.md`.
 
 17. **Module interfaces (.mli)** — define contracts for PM modules
     (`canary_pm_{apt,brew,opam,pip}`) and project modules (`canary_project_*.ml`).
 
-18. **ocamlmklib stub archive convention** — factor `lib<name>.a` naming
-    into OCaml toolchain layer so each binding declares its stub archive path.
-
-22. **Bundle check_post with action slots** — refactor `script_spec` action
-    slots from `cmd option` to `{ cmd; check } option`.
 
 27. **Opam template taxonomy** — `llvm.dev-shared` is an "install pre-built"
     package (copies artifacts from `CANARY_BUILD_DIR`); `z3.dev` is a
@@ -41,27 +37,10 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     Distinguish by a header comment convention or directory structure so the
     intent is explicit and future templates know which pattern to follow.
 
-29. **Package locator as first-class type** — locator logic (llvm-config,
-    pkg-config, brew --prefix) is currently embedded in project shell
-    commands. Factor into a `package_locator` type with `discovery_method`
-    variants so the System PM → Locator → Conf chain is testable and uniform.
-    See `design/index.md` "Open Design" for the proposed type.
+29–30, 32. **New project spec auto-generation** — package locator, store
+    config type, and auto-generated `script_spec` from a project sketch.
+    Grouped into `doc/canary/trackers/new_project_spec.md`.
 
-30. **Store config type** — `fetch_*` and `pack_*` slot scripts are
-    hardcoded in `mk_script_spec`. A `store_config = store_entry list`
-    type would let `derive_steps` generate these slots from declarations
-    rather than from filled-in `script_spec` fields.
-
-31. **C API surface model** — `Expect_symbols { required; missing }` is
-    currently hand-written per probe step. A declarative `api_surface`
-    type (symbols + version, derived from `nm -D` or clang AST dump) would
-    make expected mismatches derivable from version metadata. Depends on
-    #20 (`assert_binary_symbols.py --provided-lib-old/new`).
-
-32. **Auto-generated project configs** — given a project sketch (library
-    name, binding languages, PM presence, source layout), generate the full
-    `script_spec`. Depends on #29 (locator), #30 (store config), #31
-    (C API surface).
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —
     rename `z3.dev` → `z3.dev-src` in `canary/templates/opam-local-repo/` and
@@ -82,29 +61,6 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     local host. Follow-on: add OS-conditional step support to
     `canary_backend_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
-
-35. **Split `binding_api.deps` into provenance and runtime contract** —
-    `api_component` is currently shared by the provider side (`native_api.components`:
-    `Headers`, `Link_stub`, `Runtime_lib`) and the consumer side (`binding_api.deps`).
-    This conflates two distinct concerns:
-    - **Provenance** (what was consumed at build time): headers + a lib to link against.
-      `Headers` here records what the binding was compiled against, not what it needs
-      to run. `Link_stub` (the unversioned `.so` symlink in Debian `-dev` packages) is
-      a packaging mechanism, not an OCaml concept — it shouldn't appear in a
-      language-level binding spec.
-    - **Runtime contract** (what the built artifact needs to function): the real `.so`
-      at a compatible ABI version.
-    Direction: split `binding_api` into two aspects — `provenance` (build inputs,
-    including which header version was used) and `runtime_deps` (what the binding
-    needs at load time). The consumer side should use a phase-level vocabulary
-    (`Build_dep` / `Runtime_dep`) rather than the provider's packaging-level enum.
-    The mapping from phase-level to concrete component (`Link_stub` vs `Runtime_lib`)
-    is a resolver concern.
-    Header corollary: since headers are fetchable (source tree or `-dev` package),
-    `scan_source` can extract richer API surface info (types, struct layouts,
-    function signatures) than `nm`-based `.so` inspection alone. The `.so` gives
-    runtime compat checks; headers give semantic API drift. Both are useful but
-    answer different questions and should be distinct inspection phases.
 
 36. **Diagram fidelity: `scan_source` and `_summary` steps have no nodes** —
     `scan_source` runs as a post-fetch check (verifying header/binding-dir
@@ -142,10 +98,30 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     design — pip wheels often bundle their own native lib, so `pack_python` for
     z3 would produce a co-provider artifact.
 
-28. **Lift shared `pack_binding` preamble into `canary_ocaml.ml`** — both
-    z3 and llvm's `pack_binding` repeat the same opam setup sequence:
-    `eval $(opam env) && opam config subst <opam_rel> && opam repo add/set-url
-    && opam update && opam remove -y <pkg> || true && ... opam install`.
-    Extract into `Canary_ocaml.opam_pack_cmd ~repo_name ~repo_abs ~opam_rel
-    ~pkg_full ~env_bindings` returning the full command string. Each project
-    only provides the project-specific env vars.
+39. **Dynamic scheduling / action dispatch** — `derive_steps` produces a static
+    ordered list; `run_graph` walks it linearly. There is no mechanism to
+    conditionally trigger steps, register follow-ups keyed by a trigger rule, or
+    react to runtime outcomes (success, failure, produced artifact). Three ad-hoc
+    cases in `derive_steps` (`scan_source`, `_summary`, `probe_binding`
+    multi-probe) all share the same shape — a parent rule emitting dependent
+    follow-up steps — but each was wired in separately (see tension 3 in
+    `trackers/action_enumeration.md`). A general dispatch model would let steps
+    register themselves as followers of another rule, turning those special cases
+    into declarations. Longer term, conditional dispatch (only run if upstream
+    produced artifact X, or only on failure) would enable retry logic, staged
+    probes, and the driver-mode replay from #13b. Not urgent while the step list
+    stays small and manually curated; revisit when #40 (real cmake --install) adds
+    another follow-up shape or when conditional execution is needed for CI.
+
+40. **Replace fake `install_lib` with real `cmake --install`** — z3 and
+    llvm's `install_lib` scripts currently copy build artifacts with `cp`
+    (fake install). Replace with `cmake --install --prefix $PREFIX` to
+    actually exercise cmake's install-time transformations: RPATH rewriting,
+    versioned symlink creation, `pkg-config`/`FindPackage` config file
+    generation. The `probe_lib Staged` step then tests the installed artifact
+    rather than a hand-copied one, giving the install step real diagnostic
+    value. See `doc/canary/ops/install_targets.md` for z3 vs LLVM cmake
+    install patterns (z3 needs `ocamlfind install` separately; LLVM uses
+    `LLVM_OCAML_INSTALL_PATH`). Prerequisite: a fixed `$PREFIX` convention
+    per project run, likely `$build/../install`.
+

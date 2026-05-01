@@ -92,6 +92,7 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
 
 let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
   let sum_dir = output_dir ^ "/ocaml_summary" in
+  let mli_dir = output_dir ^ "/ocaml_mli_summary" in
   [
     { name = "ocaml.opam_pkg_inspect";
       cmd = Canary_artifact_lang.opam_pkg_inspect_cmd
@@ -103,6 +104,45 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       expected_rc = 0 };
     { name = "ocaml.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
+      expected_rc = 0 };
+    (* mli-based summary (summarize_binding.py --kind mli). Verifies
+       summary.json kind == ocaml_mli with non-zero counts. *)
+    { name = "ocaml.mli_summary_opam_pkg_cmd";
+      cmd = Canary_artifact_lang.mli_summary_opam_pkg_cmd
+              ~pkg ~watchlist:[] ~output_dir:mli_dir ();
+      expected_rc = 0 };
+    { name = "ocaml.mli_summary_json_valid";
+      cmd = [%string {|python3 -c "
+import json
+with open('%{mli_dir}/summary.json') as f:
+    d = json.load(f)
+assert d['kind'] == 'ocaml_mli', 'wrong kind: ' + d['kind']
+assert d['counts']['vals'] > 0, 'no vals'
+assert d['counts']['modules'] > 0, 'no modules'
+print('ok')
+" |}];
+      expected_rc = 0 };
+  ]
+
+(* Stub-archive summary tests. Requires a pkg that ships a C stub archive
+   (lib<name>.a alongside .cmxa). [pkg] is a known stub-bearing pkg like
+   "zarith" that the caller verified is installed. *)
+let ocaml_stub_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
+  let stub_dir = output_dir ^ "/ocaml_stub_summary" in
+  [
+    { name = "ocaml.stub_summary_opam_pkg_cmd";
+      cmd = Canary_artifact_lang.stub_summary_opam_pkg_cmd
+              ~pkg ~prefix:"" ~watchlist:[] ~output_dir:stub_dir ();
+      expected_rc = 0 };
+    { name = "ocaml.stub_summary_json_valid";
+      cmd = [%string {|python3 -c "
+import json
+with open('%{stub_dir}/summary.json') as f:
+    d = json.load(f)
+assert d['kind'] == 'c_stub', 'wrong kind: ' + d['kind']
+assert d['counts']['required'] > 0, 'no required symbols'
+print('ok')
+" |}];
       expected_rc = 0 };
   ]
 
@@ -142,6 +182,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   List.iter
     [ ""; "/native_probe"; "/native_summary";
       "/ocaml_inspect"; "/ocaml_summary";
+      "/ocaml_mli_summary"; "/ocaml_stub_summary";
       "/py_import"; "/py_import_bad"; "/py_summary" ]
     ~f:(fun sub ->
       ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}%{sub}"] : int));
@@ -170,13 +211,20 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
             ocaml_shell_tests ~pkg:"fmt" ~output_dir)
       else (Fmt.pr "opam not found — skipping ocaml shell tests@."; [])
     in
+    let ocaml_stub =
+      if Stdlib.Sys.command
+           "eval $(opam env) && ocamlfind query zarith > /dev/null 2>&1" = 0
+      then (Fmt.pr "zarith found — testing stub summary on zarith@.";
+            ocaml_stub_shell_tests ~pkg:"zarith" ~output_dir)
+      else (Fmt.pr "zarith not installed — skipping stub summary tests@."; [])
+    in
     let python =
       if Stdlib.Sys.command "which python3 > /dev/null 2>&1" = 0
       then (Fmt.pr "python3 found — testing python_import on sys@.";
             python_shell_tests ~pkg:"sys" ~output_dir)
       else (Fmt.pr "python3 not found — skipping python shell tests@."; [])
     in
-    native @ ocaml_ @ python
+    native @ ocaml_ @ ocaml_stub @ python
   in
   let sh_pass = ref 0 in
   let sh_fail = ref 0 in

@@ -17,19 +17,25 @@ open Canary
    - Staged: depends on an installed (cmake --install) artifact
    - Pm { lang; pm }: depends on pack_binding or fetch_binding (PM-installed) *)
 
-let tag_of_probe_location = function
-  | Build_tree -> "probe_binding"                        (* OCaml, build tree — canonical name *)
-  | Staged -> "probe_binding_staged"
-  | Pm { lang = OCaml; pm = Opam } -> "probe_binding_opam"
-  | Pm { lang = Python; pm = Pip } -> "probe_python"
-  | Pm { lang; pm } ->
-      [%string "probe_%{Canary_artifact_api.string_of_lang lang}_%{string_of_pm pm}"]
+(* Tag for a split probe step: probe_<lang>_binding[_<pm>].
+   Build_tree/Staged use the rule's lang; Pm entries use the location's lang.
+   This matches string_of_rule (Probe (Binding lang)) for the Build_tree base case. *)
+let tag_of_probe_lib_location loc =
+  let base = string_of_rule (Probe Lib) in
+  match loc with
+  | Build_tree -> base
+  | Staged -> base ^ "_staged"
+  | Pm (Sys_pm { pm }) -> [%string "%{base}_%{string_of_pm pm}"]
+  | Pm (Lang_pm _) -> failwith "tag_of_probe_lib_location: Lang_pm is not a lib probe location"
 
-(* Binding kind (artifact group) for a probe location: "ocaml" | "python" | … *)
-let binding_kind_of_probe_location = function
-  | Build_tree | Staged | Pm { lang = OCaml; _ } -> "ocaml"
-  | Pm { lang = Python; _ } -> "python"
-  | Pm { lang; _ } -> Canary_artifact_api.string_of_lang lang
+let tag_of_probe_location ~lang location =
+  let base l = string_of_rule (Probe (Binding l)) in
+  match location with
+  | Build_tree -> base lang
+  | Staged -> base lang ^ "_staged"
+  | Pm (Lang_pm { lang = loc_lang; pm }) ->
+      [%string "%{base loc_lang}_%{string_of_pm pm}"]
+  | Pm (Sys_pm _) -> failwith "tag_of_probe_location: Sys_pm is not a binding probe location"
 
 (* Whether this probe reads from the packed/installed store (vs. raw build tree) *)
 let probe_from_store = function
@@ -98,16 +104,17 @@ type script_spec = {
   build_headers : (output_dir:string -> string) option;
   fetch_headers : (output_dir:string -> string) option;
   build_lib : (output_dir:string -> string) option;
-  build_binding : (output_dir:string -> string) option;
+  build_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
+  install_lib : (output_dir:string -> string) option;
   build_app : (output_dir:string -> string) option;
   fetch_lib : (output_dir:string -> string) option;
-  fetch_binding : (output_dir:string -> string) option;
+  fetch_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
   fetch_app : (output_dir:string -> string) option;
   pack_lib : (output_dir:string -> string) option;
-  pack_binding : (output_dir:string -> string) option;
+  pack_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
   pack_app : (output_dir:string -> string) option;
-  probe_lib : (output_dir:string -> string) option;
-  probe_binding : (location * (output_dir:string -> string)) list;
+  probe_lib : (location * (output_dir:string -> string)) list;
+  probe_binding : (Canary_artifact_api.lang * location * (output_dir:string -> string)) list;
   probe_app : (output_dir:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> bool) option);
@@ -119,12 +126,21 @@ type script_spec = {
   expectation : rule -> location option -> step_expectation;
   (* Optional per-rule artifact symbol check. None = no symbol check. *)
   symbol_check : (rule -> symbol_check option);
-  (* Optional per-rule artifact summary command. When present, derive_steps
-     emits an extra step that runs after the base step and writes summary.json.
-     For multi-probe rules (Probe Binding with several locations), the loc
-     parameter carries the specific location so callers can return different
-     summaries per variant (e.g., opam pkg vs pip pkg). For single-location
-     rules, loc is None.
+  (* Auto-summary pkg names for binding probes. When api_source is present and
+     a matching lang entry exists here, derive_steps auto-generates a summary
+     step after each Probe (Binding lang) step:
+       OCaml → mli_summary_opam_pkg_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
+       Python → python_summary_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
+     Typical projects set this and omit binding arms from [summary]. *)
+  binding_summary : (Canary_artifact_api.lang * string) list;
+  (* Optional note prepended to auto-generated binding summaries (shell echo).
+     Used by stable-fetch specs to warn that watchlists were declared for the
+     dev version. Ignored when the explicit [summary] override is used. *)
+  summary_note : string option;
+  (* Explicit per-rule summary override. Wins over auto-generation.
+     Use for native probe summaries (lib path is always project-specific)
+     or any case needing custom logic beyond what api_source provides.
+     loc is Some _ for per-location probe variants, None for single-location rules.
      See doc/canary/design/interface.md. *)
   summary : rule -> location option -> (output_dir:string -> string) option;
 }
@@ -135,14 +151,17 @@ let empty_script_spec = {
   scan_source = None;
   configure = None;
   build_headers = None; fetch_headers = None;
-  build_lib = None; build_binding = None; build_app = None;
-  fetch_lib = None; fetch_binding = None; fetch_app = None;
-  pack_lib = None; pack_binding = None; pack_app = None;
-  probe_lib = None; probe_binding = [];
+  build_lib = None; build_binding = []; install_lib = None;
+  build_app = None;
+  fetch_lib = None; fetch_binding = []; fetch_app = None;
+  pack_lib = None; pack_binding = []; pack_app = None;
+  probe_lib = []; probe_binding = [];
   probe_app = None;
   check_post = (fun _ -> None);
   expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
+  binding_summary = [];
+  summary_note = None;
   summary = (fun _ _ -> None);
 }
 
@@ -150,8 +169,11 @@ let empty_script_spec = {
 let no_source spec =
   { spec with fetch_source = None; scan_source = None; configure = None;
     build_headers = None;
-    build_lib = None; build_binding = None; build_app = None;
-    pack_lib = None; pack_binding = None; pack_app = None }
+    build_lib = None; build_binding = []; install_lib = None;
+    build_app = None;
+    pack_lib = None; pack_binding = []; pack_app = None;
+    probe_lib = List.filter spec.probe_lib ~f:(fun (loc, _) ->
+        match loc with Build_tree | Staged -> false | _ -> true) }
 
 (* Look up the script for a rule *)
 let script_of_rule spec = function
@@ -160,21 +182,22 @@ let script_of_rule spec = function
   | Build_headers -> spec.build_headers
   | Fetch Headers -> spec.fetch_headers
   | Fetch Lib -> spec.fetch_lib
-  | Fetch Binding -> spec.fetch_binding
+  | Fetch (Binding lang) -> List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang
   | Fetch App -> spec.fetch_app
   | Build_lib -> spec.build_lib
-  | Build_binding -> spec.build_binding
+  | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang
+  | Install_lib -> spec.install_lib
   | Build_app -> spec.build_app
   | Publish Lib -> spec.pack_lib
-  | Publish Binding -> spec.pack_binding
+  | Publish (Binding lang) -> List.Assoc.find spec.pack_binding ~equal:Poly.equal lang
   | Publish App -> spec.pack_app
-  | Probe Lib -> spec.probe_lib
-  | Probe Binding ->
-      (* Single-probe compat: if exactly one entry, use its cmd.
-         Multiple entries are handled by derive_steps expansion. *)
-      (match spec.probe_binding with
-       | [ (_, cmd) ] -> Some cmd
-       | _ -> None)
+  | Probe Lib ->
+      (match spec.probe_lib with [] -> None | (_, cmd) :: _ -> Some cmd)
+  | Probe (Binding lang) ->
+      (* For has-check purposes: Some _ when any probe entry exists for this lang. *)
+      (match List.filter spec.probe_binding ~f:(fun (l, _, _) -> Poly.equal l lang) with
+       | [] -> None
+       | (_, _, cmd) :: _ -> Some cmd)
   | Probe App -> spec.probe_app
   | Publish Source | Probe Source | Publish Headers | Probe Headers -> None
 
@@ -421,8 +444,18 @@ let result_status_of_run (steps : action_step list)
     (run_status : (string, step_status) Hashtbl.t) =
   let open Canary in
   let tbl = Hashtbl.create (module String) in
-  (* Mark all store_rules actions as Not_in_spec initially *)
-  List.iter store_rules ~f:(fun r ->
+  (* Mark all store_rules actions as Not_in_spec initially.
+     Use OCaml as sentinel lang — langs are fully known from steps. *)
+  let langs =
+    List.filter_map steps ~f:(fun s ->
+        match s.rule with
+        | Build_binding lang | Fetch (Binding lang)
+        | Publish (Binding lang) | Probe (Binding lang) -> Some lang
+        | _ -> None)
+    |> List.dedup_and_sort ~compare:Poly.compare
+    |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
+  in
+  List.iter (store_rules ~langs) ~f:(fun r ->
       Hashtbl.set tbl ~key:(string_of_rule r) ~data:Not_in_spec);
   (* Override with actual run results.
      Also update the canonical rule tag for split probes: probe_binding_pkg/pip
@@ -502,9 +535,10 @@ let marker_of_rule = function
   | Configure -> "conf.ok"
   | Build_headers | Fetch Headers -> "headers.ok"
   | Fetch Lib -> "lib.ok"
-  | Fetch Binding -> "binding.ok"
+  | Fetch (Binding _) -> "binding.ok"
   | Fetch App -> "app.ok"
-  | Build_lib | Build_binding | Build_app -> "build.ok"
+  | Build_lib | Build_binding _ | Build_app -> "build.ok"
+  | Install_lib -> "install.ok"
   | Publish _ -> "pack.ok"
   | Probe _ -> "probe.log"
 
@@ -558,7 +592,9 @@ let deps_of_rule spec rule =
         if has Configure then Some (tag Configure)
         else scan_or_fetch_source ()
       ]
-  | Build_binding ->
+  | Install_lib ->
+      List.filter_opt [ if has Build_lib then Some (tag Build_lib) else None ]
+  | Build_binding _lang ->
       let lib_dep =
         if has Build_lib then Some (tag Build_lib)
         else if has (Fetch Lib) then Some (tag (Fetch Lib))
@@ -576,9 +612,11 @@ let deps_of_rule spec rule =
       in
       List.filter_opt [ configure_dep; headers_dep; lib_dep ]
   | Build_app ->
+      (* OCaml is the primary binding lang for App by convention.
+         TODO: scan all langs when multi-lang App support is needed. *)
       let binding_dep =
-        if has Build_binding then Some (tag Build_binding)
-        else if has (Fetch Binding) then Some (tag (Fetch Binding))
+        if has (Build_binding OCaml) then Some (tag (Build_binding OCaml))
+        else if has (Fetch (Binding OCaml)) then Some (tag (Fetch (Binding OCaml)))
         else None
       in
       let lib_dep =
@@ -591,7 +629,9 @@ let deps_of_rule spec rule =
       let produce_rule = match kind with
         | Headers -> if has Build_headers then Some Build_headers else Some (Fetch Headers)
         | Lib -> if has Build_lib then Some Build_lib else Some (Fetch Lib)
-        | Binding -> if has Build_binding then Some Build_binding else Some (Fetch Binding)
+        | Binding lang ->
+            if has (Build_binding lang) then Some (Build_binding lang)
+            else Some (Fetch (Binding lang))
         | App -> if has Build_app then Some Build_app else Some (Fetch App)
         | Source -> Some (Fetch Source)
       in
@@ -601,7 +641,7 @@ let deps_of_rule spec rule =
       in
       (* probe_binding and probe_app also need a runtime lib *)
       let runtime_lib_dep = match rule with
-        | Probe (Binding | App) ->
+        | Probe (Binding _) | Probe App ->
             if has (Fetch Lib) then Some (tag (Fetch Lib))
             else if has Build_lib then Some (tag Build_lib)
             else None
@@ -609,18 +649,17 @@ let deps_of_rule spec rule =
       in
       List.filter_opt [ produce_dep; runtime_lib_dep ]
 
-(* Derive deps for a split probe variant.
-   raw depends on build_binding; pkg depends on pack_binding or fetch_binding.
-   Both need a runtime lib. *)
-let deps_of_split_probe spec variant =
+(* Deps for a specific probe entry: Build_tree depends on build_binding,
+   all other locations depend on pack_binding or fetch_binding. *)
+let deps_of_probe_entry spec ~lang loc =
   let has r = Option.is_some (script_of_rule spec r) in
   let tag r = string_of_rule r in
-  let produce_dep = match variant with
-    | `Raw ->
-        if has Build_binding then Some (tag Build_binding) else None
-    | `Pkg ->
-        if has (Publish Binding) then Some (tag (Publish Binding))
-        else if has (Fetch Binding) then Some (tag (Fetch Binding))
+  let produce_dep = match loc with
+    | Build_tree ->
+        if has (Build_binding lang) then Some (tag (Build_binding lang)) else None
+    | _ ->
+        if has (Publish (Binding lang)) then Some (tag (Publish (Binding lang)))
+        else if has (Fetch (Binding lang)) then Some (tag (Fetch (Binding lang)))
         else None
   in
   let runtime_lib_dep =
@@ -630,6 +669,16 @@ let deps_of_split_probe spec variant =
   in
   List.filter_opt [ produce_dep; runtime_lib_dep ]
 
+let deps_of_probe_lib_entry spec loc =
+  let has r = Option.is_some (script_of_rule spec r) in
+  let tag r = string_of_rule r in
+  let produce_dep = match loc with
+    | Build_tree -> if has Build_lib then Some (tag Build_lib) else None
+    | Staged     -> if has Install_lib then Some (tag Install_lib) else None
+    | _          -> if has (Fetch Lib) then Some (tag (Fetch Lib)) else None
+  in
+  List.filter_opt [ produce_dep ]
+
 let check_api_consistency (spec : script_spec) =
   match spec.api_source with
   | None -> ()
@@ -637,7 +686,7 @@ let check_api_consistency (spec : script_spec) =
       (* One-directional: build_binding being wired requires a declared source_dir.
          The reverse is not required — source may exist in the repo but a given
          run configuration may use a prebuilt binding instead of building it. *)
-      if Option.is_some spec.build_binding then
+      if not (List.is_empty spec.build_binding) then
         let any_source_dir =
           List.exists api.Canary_artifact_api.binding_apis
             ~f:(fun b -> Option.is_some b.Canary_artifact_api.source_dir)
@@ -645,7 +694,7 @@ let check_api_consistency (spec : script_spec) =
         if not any_source_dir then
           failwith "api_source: script_spec has build_binding but no binding_api declares source_dir"
 
-let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) : action_step list =
+let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_artifact_api.[ OCaml ]) (spec : script_spec) : action_step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~rule ~deps ~cmd =
@@ -657,23 +706,89 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
     let symbol_check = spec.symbol_check rule in
     mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ()
   in
-  (* Optional follow-up step that writes summary.json for an artifact.
+  (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
      creating a separate <parent>_summary/ directory. Depends on parent;
-     check_post just needs summary.json to exist in that shared dir. *)
-  let mk_summary ~parent_tag ~rule ~summary_cmd =
-    let tag = parent_tag ^ "_summary" in
-    let check_post ~output_dir = has_file ~output_dir "summary.json" in
+     check_post verifies the named file exists in that shared dir.
+     [tag_suffix] is appended to parent_tag (e.g. "_summary", "_stub_summary");
+     [filename] is the basename written by [summary_cmd] (e.g. "summary.json",
+     "stub_summary.json"). The cmd is responsible for redirecting to that file. *)
+  let mk_summary ~parent_tag ~rule ~tag_suffix ~filename ~summary_cmd =
+    let tag = parent_tag ^ tag_suffix in
+    let check_post ~output_dir = has_file ~output_dir filename in
     mk_step ~root ~project ~cache_project ~tag
       ~output_tag:parent_tag ~rule
       ~deps:[ parent_tag ]
       ~cmd:summary_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ()
   in
+  (* A summary attached to a parent step: (tag suffix, filename, command).
+     OCaml bindings get two: mli (semantic) and stub (C-symbol consumer). *)
+  let prepend_note (note : string option) (cmd : output_dir:string -> string) =
+    match note with
+    | None -> cmd
+    | Some n -> fun ~output_dir -> [%string "%{n}\n%{cmd ~output_dir}"]
+  in
+  let auto_binding_summaries rule
+      : (string * string * (output_dir:string -> string)) list =
+    match spec.api_source with
+    | None -> []
+    | Some api ->
+        match rule with
+        | Probe (Binding lang) ->
+            (match List.Assoc.find spec.binding_summary ~equal:Poly.equal lang with
+             | None -> []
+             | Some pkg ->
+                 let wl = Canary_artifact_api.binding_watchlist_exn api lang in
+                 (match lang with
+                  | Canary_artifact_api.OCaml ->
+                      (* mli summary: vals + constructors + module nesting at
+                         the OCaml interface level (L3 of the lattice). *)
+                      let mli =
+                        prepend_note spec.summary_note (fun ~output_dir ->
+                          Canary_artifact_lang.mli_summary_opam_pkg_cmd
+                            ~pkg ~watchlist:wl ~output_dir ())
+                      in
+                      (* stub summary: C symbols this binding consumes from the
+                         native lib (L0/L1). Pair with summarize_native to
+                         decide compatibility — see canary_compat.ml. *)
+                      let prefix =
+                        match api.native_api.symbol_prefixes with
+                        | p :: _ -> p
+                        | [] -> ""
+                      in
+                      let stub =
+                        prepend_note spec.summary_note (fun ~output_dir ->
+                          Canary_artifact_lang.stub_summary_opam_pkg_cmd
+                            ~pkg ~prefix ~watchlist:[] ~output_dir ())
+                      in
+                      [ ("_summary", "summary.json", mli);
+                        ("_stub_summary", "stub_summary.json", stub) ]
+                  | Canary_artifact_api.Python ->
+                      let py =
+                        prepend_note spec.summary_note (fun ~output_dir ->
+                          Canary_artifact_lang.python_summary_cmd
+                            ~pkg ~watchlist:wl ~output_dir ())
+                      in
+                      [ ("_summary", "summary.json", py) ]
+                  | _ -> []))
+        | _ -> []
+  in
+  (* spec.summary is the explicit override (legacy, single-summary). When
+     present, it wins and we skip auto generation entirely. *)
   let attach_summary ~parent_tag ~rule ?loc base_step =
     match spec.summary rule loc with
-    | None -> [ base_step ]
-    | Some cmd -> [ base_step; mk_summary ~parent_tag ~rule ~summary_cmd:cmd ]
+    | Some c ->
+        [ base_step;
+          mk_summary ~parent_tag ~rule ~tag_suffix:"_summary"
+            ~filename:"summary.json" ~summary_cmd:c ]
+    | None ->
+        let summaries = auto_binding_summaries rule in
+        if List.is_empty summaries then [ base_step ]
+        else
+          base_step ::
+          List.map summaries ~f:(fun (tag_suffix, filename, summary_cmd) ->
+              mk_summary ~parent_tag ~rule ~tag_suffix ~filename ~summary_cmd)
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
@@ -685,19 +800,36 @@ let derive_steps ~root ~project ?(cache_project = project) (spec : script_spec) 
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ()
   in
-  List.concat_map store_rules ~f:(fun rule ->
+  List.concat_map (store_rules ~langs) ~f:(fun rule ->
       let tag = string_of_rule rule in
       if Hashtbl.mem seen tag then []
       else
-        (* Probe Binding with multiple probes: expand into one step per entry *)
+        (* Probe Lib / Probe Binding: expand per-location entries.
+           Single entry uses the canonical rule tag; multiple expand to per-location tags. *)
         match rule with
-        | Probe Binding when List.length spec.probe_binding > 1 ->
+        | Probe Lib ->
             Hashtbl.set seen ~key:tag ~data:true;
-            List.concat_map spec.probe_binding ~f:(fun (loc, cmd) ->
-                let ptag = tag_of_probe_location loc in
-                let deps = deps_of_split_probe spec
-                    (match loc with
-                     | Build_tree -> `Raw | _ -> `Pkg) in
+            List.concat_map spec.probe_lib ~f:(fun (loc, cmd) ->
+                let ptag = if List.length spec.probe_lib = 1 then tag
+                           else tag_of_probe_lib_location loc in
+                let deps = deps_of_probe_lib_entry spec loc in
+                let check_post = match spec.check_post rule with
+                  | Some cp -> cp
+                  | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                in
+                let expectation = spec.expectation rule (Some loc) in
+                let symbol_check = spec.symbol_check rule in
+                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check () in
+                attach_summary ~parent_tag:ptag ~rule ~loc base)
+        | Probe (Binding lang) ->
+            Hashtbl.set seen ~key:tag ~data:true;
+            let entries = List.filter spec.probe_binding
+                ~f:(fun (l, _, _) -> Poly.equal l lang) in
+            List.concat_map entries ~f:(fun (_, loc, cmd) ->
+                let ptag = if List.length entries = 1 then tag
+                           else tag_of_probe_location ~lang loc in
+                let deps = deps_of_probe_entry spec ~lang loc in
                 let check_post = match spec.check_post rule with
                   | Some cp -> cp
                   | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
@@ -815,28 +947,25 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   (* Write result diagram — same schema as action_rule.mmd, colored by status *)
   let mmd_path = [%string "%{dir}/result.mmd"] in
   let node_status = result_status_of_run steps status in
-  let probe_binding_steps =
-    List.filter steps ~f:(fun s ->
+  let langs =
+    List.filter_map steps ~f:(fun s ->
         match s.rule with
-        | Probe Binding when not (String.is_suffix s.tag ~suffix:"_summary") -> true
-        | _ -> false)
+        | Build_binding lang | Fetch (Binding lang)
+        | Publish (Binding lang) | Probe (Binding lang) -> Some lang
+        | _ -> None)
+    |> List.dedup_and_sort ~compare:Poly.compare
+    |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
   in
-  let split_probes : Canary.probe_split list =
-    if List.length probe_binding_steps > 1 then
-      List.map probe_binding_steps ~f:(fun s ->
-          (* from_store: probe uses a PM-installed package, not raw build-tree artifact *)
-          let from_store = not (String.equal s.tag "probe_binding") in
-          let binding_kind =
-            if String.is_prefix s.tag ~prefix:"probe_python" then "python"
-            else "ocaml"
-          in
-          { Canary.probe_tag = s.tag; binding_kind; from_store })
-    else []
+  let has_scan = List.exists steps ~f:(fun s -> String.equal s.tag "scan_source") in
+  let summary_rules =
+    List.filter_map steps ~f:(fun s ->
+        if String.is_suffix s.tag ~suffix:"_summary" then Some s.rule else None)
+    |> List.dedup_and_sort ~compare:Poly.compare
   in
   let oc = Stdlib.open_out mmd_path in
   Stdlib.output_string oc
-    (Canary.mermaid_of_action_rule_schema ~status:node_status ~split_probes
-       store_rules);
+    (Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
+       ~summary_rules (store_rules ~langs));
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
   logger.close ()
