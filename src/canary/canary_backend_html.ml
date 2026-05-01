@@ -134,7 +134,7 @@ let render
     <p class="placeholder">Click a node in the diagram to inspect its output files.</p>
   </aside>
 </main>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
 <script>
   const VIEWS = %s;
   const STEPS = %s;
@@ -142,19 +142,29 @@ let render
   const diagramDiv = document.getElementById('diagram');
   let currentView = %s;
 
-  function renderView(name) {
+  let renderCounter = 0;
+  async function renderView(name) {
     currentView = name;
     document.querySelectorAll('.view-btn').forEach(b =>
       b.classList.toggle('active', b.dataset.view === name));
     const v = VIEWS[name];
     if (!v) { diagramDiv.textContent = '(no view: ' + name + ')'; return; }
-    diagramDiv.removeAttribute('data-processed');
-    diagramDiv.innerHTML = '';
-    const code = document.createElement('div');
-    code.className = 'mermaid';
-    code.textContent = v.mmd;
-    diagramDiv.appendChild(code);
-    mermaid.run({ nodes: [code] }).then(() => attachClicks(code));
+    diagramDiv.innerHTML = '<div style="color:#999">rendering…</div>';
+    const id = 'mmd-' + (++renderCounter);
+    try {
+      const { svg, bindFunctions } = await mermaid.render(id, v.mmd);
+      diagramDiv.innerHTML = svg;
+      if (bindFunctions) bindFunctions(diagramDiv);
+      attachClicks(diagramDiv);
+    } catch (err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      diagramDiv.innerHTML =
+        '<div style="color:#b71c1c;background:#ffebee;padding:12px;border-radius:4px;">' +
+        '<b>Mermaid error</b><br><pre style="white-space:pre-wrap;font-size:12px;margin-top:8px">' +
+        escape(msg) + '</pre></div>' +
+        '<details style="margin-top:8px"><summary>view source (' + escape(name) + ')</summary>' +
+        '<pre style="font-size:11px">' + escape(v.mmd) + '</pre></details>';
+    }
   }
 
   function attachClicks(container) {
