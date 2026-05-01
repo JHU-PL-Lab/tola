@@ -65,26 +65,40 @@ let script_spec : Canary_action.script_spec =
     Canary_action.empty_script_spec with
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
+      (Canary_artifact_api.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
+      ::
+      (match sqlite_python_config with
+       | Python_config p ->
+           [ (Canary_artifact_api.Python,
+              fun ~output_dir -> Canary_toolchain.pip_install_cmd p ~output_dir) ]
+       | Ocaml_config _ -> []);
     probe_binding =
-      (Canary_store.Pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam },
+      (Canary_artifact_api.OCaml,
+       Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
        fun ~output_dir ->
          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
            ~example:ocaml.example_file ~target:ocaml.example_target
            ~output_dir) ::
-      (* Python sqlite3 is stdlib-bundled — no install, just verify import
-         and a minimal connect. *)
+      (* Python sqlite3 is stdlib-bundled — install no-ops to a marker;
+         this probe step just runs the import. *)
       (match sqlite_python_config with
        | Python_config p ->
-           [ (Canary_store.Pm { lang = Canary_artifact_api.Python; pm = Canary_store.Pip },
-              fun ~output_dir -> pip_probe_cmd p ~output_dir) ]
+           [ (Canary_artifact_api.Python,
+              Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; pm = Canary_store.Pip }),
+              fun ~output_dir ->
+                Canary_toolchain.python_probe_only_cmd p ~output_dir) ]
        | Ocaml_config _ -> []);
+    (* Sqlite has no api_source/binding_summary so auto-summary doesn't fire.
+       Both OCaml and Python summaries are produced via this explicit
+       override at probe time. (Python summary is at probe time rather than
+       fetch step here — Phase 3d's pre-cache benefit only kicks in for
+       projects that opt into the api_source flow.) *)
     summary = (fun rule loc -> match rule, loc with
-      | Probe Binding, Some (Canary_store.Pm { lang = Canary_artifact_api.Python; _ }) ->
+      | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; _ })) ->
           Some (fun ~output_dir ->
             Canary_artifact_lang.python_summary_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ())
-      | Probe Binding, _ ->
+      | Probe (Binding _), _ ->
           Some (fun ~output_dir ->
             Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ())

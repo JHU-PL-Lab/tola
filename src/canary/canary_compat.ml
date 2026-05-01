@@ -167,6 +167,18 @@ let find_ocaml_install_dir variant_dir =
       if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
       then Some p else None)
 
+(* Python binding summary is written at Fetch (Binding Python) →
+   fetch_python_binding/. *)
+let find_python_install_dir variant_dir =
+  let p = variant_dir ^ "/fetch_python_binding" in
+  if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
+  then Some p else None
+
+let find_python_summary variant_dir =
+  Option.bind (find_python_install_dir variant_dir) ~f:(fun dir ->
+      let p = dir ^ "/summary.json" in
+      if Stdlib.Sys.file_exists p then Some p else None)
+
 let find_stub_summary variant_dir =
   Option.bind (find_ocaml_install_dir variant_dir) ~f:(fun dir ->
       let p = dir ^ "/stub_summary.json" in
@@ -229,33 +241,37 @@ let load_mli_missing variant_dir =
       | Some wl -> get_string_list wl "missing"
       | None -> []
 
+(* Variants of a dotted name suitable for substring matching against a
+   probe.log: full path, suffix without top-level package prefix, last
+   component. Same logic for OCaml ("Llvm.Opcode.UncondBr" → also
+   "Opcode.UncondBr" and "UncondBr") and Python ("z3.Solver" → also
+   "Solver"). *)
+let name_variants e =
+  let parts = String.split e ~on:'.' in
+  let suffix_no_top = match parts with
+    | _ :: (_ :: _ as rest) -> [ String.concat ~sep:"." rest ]
+    | _ -> []
+  in
+  let last = match List.last parts with Some l -> [ l ] | None -> [] in
+  e :: suffix_no_top @ last
+
+let load_watchlist_missing path =
+  if not (Stdlib.Sys.file_exists path) then []
+  else
+    let j = Yojson.Basic.from_file path in
+    match field j "watchlist" with
+    | Some wl -> get_string_list wl "missing"
+    | None -> []
+
 (* Predict the set of substrings that would appear in a failed probe.log,
-   given paths to cached summaries. This is the consumer-facing entry point
-   for Expect_compat_failure: pass paths to install-dir summaries and the
-   probe_lib summary; get back the contains_any list to grep probe.log for.
-   Variants of dotted names (full path, suffix without top-level prefix,
-   last component) are emitted so the substring search matches OCaml-level
-   "Unbound constructor X.Y" patterns regardless of how X.Y is qualified. *)
+   given paths to cached summaries. Consumer-facing entry point for
+   Expect_compat_failure (legacy positional API; prefer
+   [predicted_contains_any_v2] with typed inputs). *)
 let predicted_contains_any
     ?stub_summary_path ?lib_summary_path ?mli_summary_path () =
-  let l3 = match mli_summary_path with
-    | None -> []
-    | Some p when not (Stdlib.Sys.file_exists p) -> []
-    | Some p ->
-        let j = Yojson.Basic.from_file p in
-        match field j "watchlist" with
-        | Some wl -> get_string_list wl "missing"
-        | None -> []
-  in
+  let l3 = Option.value_map mli_summary_path ~default:[] ~f:load_watchlist_missing in
   let l3_variants =
-    List.concat_map l3 ~f:(fun e ->
-        let parts = String.split e ~on:'.' in
-        let suffix_no_top = match parts with
-          | _ :: (_ :: _ as rest) -> [ String.concat ~sep:"." rest ]
-          | _ -> []
-        in
-        let last = match List.last parts with Some l -> [ l ] | None -> [] in
-        e :: suffix_no_top @ last)
+    List.concat_map l3 ~f:name_variants
     |> List.dedup_and_sort ~compare:String.compare
   in
   let l0 = match stub_summary_path, lib_summary_path with
@@ -269,6 +285,40 @@ let predicted_contains_any
     | _ -> []
   in
   l3_variants @ l0
+  |> List.dedup_and_sort ~compare:String.compare
+
+(* Typed variant of predicted_contains_any: takes a list of typed summary
+   inputs (already path-resolved). Each input contributes substrings:
+     - C_stub + Native_lib together → L0 missing C symbols (set diff)
+     - Ocaml_mli → L3 watchlist missing, expanded with name_variants
+     - Python_attrs → L3 watchlist missing, expanded with name_variants
+   Order-insensitive within a list; languages can mix any subset. *)
+type typed_input =
+  | C_stub of string
+  | Native_lib of string
+  | Ocaml_mli of string
+  | Python_attrs of string
+
+let predicted_contains_any_v2 (inputs : typed_input list) : string list =
+  let stub_path = List.find_map inputs ~f:(function C_stub p -> Some p | _ -> None) in
+  let lib_path = List.find_map inputs ~f:(function Native_lib p -> Some p | _ -> None) in
+  let l0 = match stub_path, lib_path with
+    | Some s, Some l
+      when Stdlib.Sys.file_exists s && Stdlib.Sys.file_exists l ->
+        let stub = load_stub s in
+        let lib = load_native l in
+        (match check_c_compat ~binding_stub:stub ~native_lib:lib with
+         | Missing { symbols } -> symbols
+         | Compatible | Unknown -> [])
+    | _ -> []
+  in
+  let l3 =
+    List.concat_map inputs ~f:(function
+      | Ocaml_mli p | Python_attrs p ->
+          load_watchlist_missing p |> List.concat_map ~f:name_variants
+      | C_stub _ | Native_lib _ -> [])
+  in
+  l3 @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step

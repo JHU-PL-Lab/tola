@@ -57,12 +57,14 @@ let action_cmd =
     let src = Canary_project_z3.z3_source_dev in
     let spec = Canary_project_z3.mk_script_spec ~source:src distro in
     let spec = if quick then Canary_action.no_source spec else spec in
-    let steps = Canary_action.derive_steps ~root ~project spec in
+    let steps = Canary_action.derive_steps ~root ~project
+        ~langs:Canary_artifact_api.[ OCaml; Python ] spec in
     run_with_info ~failfast ~cache_path ~root ~project steps
       (source_run_info ~project:"z3" distro src steps);
     let src_stable = Canary_project_z3.z3_source_stable in
     let spec_stable = Canary_project_z3.mk_script_spec ~source:src_stable distro in
-    let steps_stable = Canary_action.derive_steps ~root ~project:"z3/stable" spec_stable in
+    let steps_stable = Canary_action.derive_steps ~root ~project:"z3/stable"
+        ~langs:Canary_artifact_api.[ OCaml; Python ] spec_stable in
     run_with_info ~failfast ~cache_path ~root ~project:"z3/stable" steps_stable
       (source_run_info ~project:"z3" distro src_stable steps_stable)
   in
@@ -71,6 +73,7 @@ let action_cmd =
   in
   let run_sqlite ~root ~failfast ~cache_path =
     let steps = Canary_action.derive_steps ~root ~project:"sqlite"
+        ~langs:Canary_artifact_api.[ OCaml; Python ]
         Canary_project_sqlite.script_spec in
     run_with_info ~failfast ~cache_path ~root ~project:"sqlite" steps
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
@@ -93,7 +96,8 @@ let action_cmd =
     in
     let project = [%string "llvm/%{dev_tag}"] in
     let spec = Canary_project_llvm.mk_script_spec ~source:Canary_project_llvm.llvm_source_dev distro in
-    let steps = Canary_action.derive_steps ~root ~project spec in
+    let steps = Canary_action.derive_steps ~root ~project
+        ~langs:Canary_artifact_api.[ OCaml; Python ] spec in
     let pb = Canary_project_llvm.prebuilt in
     let ver = Option.value pb.system_package.version_tag ~default:"system" in
     run_with_info ~failfast ~cache_path ~root ~project steps
@@ -102,7 +106,8 @@ let action_cmd =
          steps);
     let src_19 = Canary_project_llvm.llvm_source_stable in
     let spec_19 = Canary_project_llvm.mk_script_spec ~source:src_19 distro in
-    let steps_19 = Canary_action.derive_steps ~root ~project:"llvm/19" spec_19 in
+    let steps_19 = Canary_action.derive_steps ~root ~project:"llvm/19"
+        ~langs:Canary_artifact_api.[ OCaml; Python ] spec_19 in
     run_with_info ~failfast ~cache_path ~root ~project:"llvm/19" steps_19
       (source_run_info ~project:"llvm" distro src_19 steps_19)
   in

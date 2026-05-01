@@ -53,6 +53,55 @@ let ocaml_pure_tests = [
       String.equal (Canary_artifact_lang.cmxa_stub_archive "/x/z3ml.cmxa") "/x/libz3ml.a" };
 ]
 
+(* Compat-helper tests: feed a synthetic summary.json into
+   predicted_contains_any_v2 and assert the right substrings come out.
+   Exercises both Ocaml_mli (dotted-name expansion) and Python_attrs
+   (flat names) input variants without needing a real probe run. *)
+let compat_pure_tests =
+  let tmp_root = "_out/canary/test/compat-helper" in
+  let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
+  let write_summary kind name watchlist_missing =
+    let path = tmp_root ^ "/" ^ name in
+    let missing_json =
+      "[" ^ (List.map watchlist_missing ~f:(fun s -> "\"" ^ s ^ "\"")
+             |> String.concat ~sep:",") ^ "]"
+    in
+    let body =
+      [%string {|{"kind": "%{kind}", "path": "fixture",
+  "watchlist": {"present": [], "missing": %{missing_json}}}|}]
+    in
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc body;
+    Stdlib.close_out oc;
+    path
+  in
+  let mli_path = write_summary "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
+  let py_path  = write_summary "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
+  let l3_only = Canary_compat.predicted_contains_any_v2
+      [ Canary_compat.Ocaml_mli mli_path ] in
+  let py_only = Canary_compat.predicted_contains_any_v2
+      [ Canary_compat.Python_attrs py_path ] in
+  let mixed = Canary_compat.predicted_contains_any_v2
+      [ Canary_compat.Ocaml_mli mli_path; Canary_compat.Python_attrs py_path ] in
+  let mem xs s = List.mem xs s ~equal:String.equal in
+  [
+    { name = "compat.mli_dotted_expansion";
+      check = fun () ->
+        mem l3_only "Llvm.Opcode.UncondBr"
+        && mem l3_only "Opcode.UncondBr"
+        && mem l3_only "UncondBr" };
+    { name = "compat.python_attr_expansion";
+      check = fun () ->
+        mem py_only "Solver.add" && mem py_only "add"
+        && mem py_only "BitVec" };
+    { name = "compat.mixed_inputs_union";
+      check = fun () ->
+        mem mixed "UncondBr" && mem mixed "BitVec" };
+    { name = "compat.empty_inputs";
+      check = fun () ->
+        List.is_empty (Canary_compat.predicted_contains_any_v2 []) };
+  ]
+
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
 
 (* Run a command and check the process exit code against expectation.
@@ -190,7 +239,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   (* Pure tests: always run *)
   let pure_pass = ref 0 in
   let pure_fail = ref 0 in
-  let pure_all = native_pure_tests @ ocaml_pure_tests in
+  let pure_all = native_pure_tests @ ocaml_pure_tests @ compat_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in

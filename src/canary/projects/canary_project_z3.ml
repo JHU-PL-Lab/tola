@@ -50,7 +50,10 @@ let z3_api_source : Canary_artifact_api.t =
     {
       lang = OCaml;
       source_dir = Some "src/api/ml";
-      module_watchlist = [ "Z3" ];
+      (* mli-level watchlist (resolved against vals + constructors + modules
+         under the package's filename-derived top-level prefix). *)
+      module_watchlist =
+        [ "Z3"; "Z3.Solver.add"; "Z3.Optimize.minimize"; "Z3.Expr.mk_app" ];
     }
   in
   (* z3-solver is a pre-compiled pip wheel; source_dir marks in-tree source
@@ -323,11 +326,20 @@ let mk_script_spec ~source
        else None);
     build_binding =
       (if cmake_build_binding then
-         Some
-           (fun ~output_dir ->
-             [%string
-               "eval $(opam env) && ninja -C %{build} build_z3_ocaml_bindings \
-                && echo 'ok' > %{output_dir}/build.ok"])
+         [ (OCaml,
+            fun ~output_dir ->
+              [%string
+                "eval $(opam env) && ninja -C %{build} build_z3_ocaml_bindings \
+                 && echo 'ok' > %{output_dir}/build.ok"]) ]
+       else []);
+    install_lib =
+      (if source.has_build_lib then
+         Some (fun ~output_dir ->
+           [%string
+             {|PREFIX="%{build}/../install"
+mkdir -p "$PREFIX/lib"
+cp %{build}/libz3.so* "$PREFIX/lib/" 2>/dev/null || true
+echo 'ok' > %{output_dir}/install.ok|}])
        else None);
     fetch_lib =
       Some
@@ -335,75 +347,103 @@ let mk_script_spec ~source
           let install = Canary_store.pm_install_cmd pm ~pkg:"z3" in
           [%string "%{install} && echo 'installed' > %{output_dir}/lib.ok"]);
     fetch_binding =
-      (if not source.has_build_binding then
-         Some
-           (fun ~output_dir ->
-             [%string
-               "eval $(opam env) && opam install z3.%{source.version} -y \
-                --assume-depexts && echo 'installed' > \
-                %{output_dir}/binding.ok"])
-       else None);
+      (let ocaml_entry =
+         if not source.has_build_binding then
+           [ (OCaml,
+              fun ~output_dir ->
+                [%string
+                  "eval $(opam env) && opam install z3.%{source.version} -y \
+                   --assume-depexts && echo 'installed' > \
+                   %{output_dir}/binding.ok"]) ]
+         else []
+       in
+       let python_entry =
+         List.filter_map binding_configs ~f:(function
+           | Python_config p ->
+               Some (Canary_artifact_api.Python,
+                     fun ~output_dir ->
+                       Canary_toolchain.pip_install_cmd p ~output_dir)
+           | Ocaml_config _ -> None)
+       in
+       ocaml_entry @ python_entry);
     pack_binding =
       (if source.has_build_binding then
-         Some
-           (fun ~output_dir ->
-             let src_template =
-               [%string
-                 "%{tola_root}/canary/templates/opam-local-repo/packages/%{ocaml_tc.toolchain.package_name}/%{Canary_toolchain.pkg_full \
-                  ocaml_tc.toolchain}/opam.in"]
-             in
-             let pkg_full = Canary_toolchain.pkg_full ocaml_tc.toolchain in
-             let pkg_dir =
-               [%string
-                 "%{output_dir}/pack-repo/packages/%{ocaml_tc.toolchain.package_name}/%{pkg_full}"]
-             in
-             let pack_repo = [%string "%{output_dir}/pack-repo"] in
-             let repo_name =
-               [%string "%{ocaml_tc.toolchain.local_repo_name}-pack"]
-             in
-             let src_var = ocaml_tc.toolchain.canary_src_var in
-             let prefix_name = ocaml_tc.toolchain.prefix_name in
-             let libdir_name = ocaml_tc.toolchain.libdir_name in
-             (* When opam fetches from a remote URL, the source is in the opam
-                build dir (S=. by default). Don't pass CANARY_SRC/BUILD_DIR or
-                opam will try to use a relative path that doesn't exist there. *)
-             let install_env =
-               match local with
-               | Some _ ->
-                   [%string
-                     "OPAMVAR_%{prefix_name}=\"%{build}\" \
-                      OPAMVAR_%{libdir_name}=\"%{build}\" \
-                      CANARY_BUILD_DIR=\"%{build}\" \
-                      CANARY_SRC_DIR=\"%{root}\" "]
-               | None -> ""
-             in
-             [%string
-               {|eval $(opam env)
-mkdir -p "%{pkg_dir}"
+         [ (OCaml,
+            fun ~output_dir ->
+              let pkg_full = Canary_toolchain.pkg_full ocaml_tc.toolchain in
+              let pack_repo = [%string "%{output_dir}/pack-repo"] in
+              let pkg_dir =
+                [%string
+                  "%{pack_repo}/packages/%{ocaml_tc.toolchain.package_name}/%{pkg_full}"]
+              in
+              let repo_name =
+                [%string "%{ocaml_tc.toolchain.local_repo_name}-pack"]
+              in
+              let src_template =
+                [%string
+                  "%{tola_root}/canary/templates/opam-local-repo/packages/%{ocaml_tc.toolchain.package_name}/%{pkg_full}/opam.in"]
+              in
+              let src_var = ocaml_tc.toolchain.canary_src_var in
+              let preamble =
+                [%string
+                  {|mkdir -p "%{pkg_dir}"
 cp "%{src_template}" "%{pkg_dir}/opam.in"
-(cd "%{pack_repo}" && OPAMVAR_%{src_var}="%{pack_src_url}" opam config subst "packages/%{ocaml_tc.toolchain.package_name}/%{pkg_full}/opam")
-opam repo add %{repo_name} "file://%{pack_repo}" --rank=1 \
-  || opam repo set-url %{repo_name} "file://%{pack_repo}"
-opam update %{repo_name}
-opam remove -y %{pkg_full} || true
-%{install_env}opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
-  && echo 'ok' > %{output_dir}/pack.ok|}])
-       else None);
+(cd "%{pack_repo}" && OPAMVAR_%{src_var}="%{pack_src_url}" opam config subst "packages/%{ocaml_tc.toolchain.package_name}/%{pkg_full}/opam")|}]
+              in
+              (* When opam fetches from a remote URL, the source is in the opam
+                 build dir (S=. by default). Don't pass CANARY_SRC/BUILD_DIR or
+                 opam will try to use a relative path that doesn't exist there. *)
+              let env_prefix =
+                match local with
+                | Some _ ->
+                    [%string
+                      {|OPAMVAR_%{ocaml_tc.toolchain.prefix_name}="%{build}" OPAMVAR_%{ocaml_tc.toolchain.libdir_name}="%{build}" CANARY_BUILD_DIR="%{build}" CANARY_SRC_DIR="%{root}" |}]
+                | None -> ""
+              in
+              opam_pack_cmd ~repo_name ~repo_abs:pack_repo ~pkg_full ~preamble
+                ~env_prefix ~output_dir ()) ]
+       else []);
     probe_lib =
-      Some
-        (fun ~output_dir ->
-          let probe =
-            Canary_artifact_native.native_lib_probe_cmd ~lib:"$LIB_Z3"
-              ~prefix:"Z3_" ~output_dir
-          in
-          [%string "%{lib_resolve}\n%{probe}"]);
+      List.filter_opt
+        [
+          (if source.has_build_lib then
+             Some
+               ( Build_tree,
+                 fun ~output_dir ->
+                   let resolve =
+                     [%string
+                       {|LIB_Z3=$(ls %{build}/libz3.so %{build}/libz3.dylib 2>/dev/null | head -1)
+test -n "$LIB_Z3"|}]
+                   in
+                   [%string
+                     "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir}"])
+           else None);
+          (if source.has_build_lib then
+             Some
+               ( Staged,
+                 fun ~output_dir ->
+                   let lib = [%string "%{build}/../install/lib/libz3.so"] in
+                   Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix:"Z3_"
+                     ~output_dir )
+           else None);
+          Some
+            ( Pm (Sys_pm { pm }),
+              fun ~output_dir ->
+                let resolve =
+                  {|LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+test -f "$LIB_Z3"|}
+                in
+                [%string
+                  "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir}"] );
+        ];
     probe_binding =
       List.filter_opt
         [
           (* Build_tree: probe against build tree artifacts (only when cmake built them) *)
           (if source.has_build_binding && cmake_build_binding then
              Some
-               ( Build_tree,
+               ( Canary_artifact_api.OCaml, Build_tree,
                  fun ~output_dir ->
                    let script = "canary/scripts/assert_binary_symbols.py" in
                    [%string
@@ -423,7 +463,7 @@ ocamlfind ocamlopt -package zarith -linkpkg \
            else None);
           (* Lang_pm: probe against opam-installed package *)
           Some
-            ( Pm { lang = OCaml; pm = Opam },
+            ( Canary_artifact_api.OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }),
               fun ~output_dir ->
                 [%string
                   {|eval $(opam env)
@@ -434,7 +474,12 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ]
       @ List.filter_map binding_configs ~f:(function
         | Python_config p ->
-            Some (Pm { lang = Python; pm = Pip }, fun ~output_dir -> pip_probe_cmd p ~output_dir)
+            (* Install split off into Fetch (Binding Python); probe is
+               import-only here so the cached summary from fetch is
+               available to expectation evaluation. *)
+            Some (Canary_artifact_api.Python, Pm (Lang_pm { lang = Python; pm = Pip }),
+                  fun ~output_dir ->
+                    Canary_toolchain.python_probe_only_cmd p ~output_dir)
         | Ocaml_config _ -> None);
     check_post =
       (function
@@ -448,19 +493,26 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some
             (Canary_artifact_check.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/libz3.so"])
-      | Build_binding ->
+      | Build_binding _ ->
           Some
             (Canary_artifact_check.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/src/api/ml/z3ml.cmxa"])
-      | Fetch Binding when not source.has_build_binding ->
+      | Fetch (Binding _) when not source.has_build_binding ->
           let pkg = [%string "z3.%{source.version}"] in
           Some
             (fun ~output_dir ->
               Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
+    binding_summary = [ (OCaml, "z3"); (Python, "z3") ];
+    summary_note =
+      (if not source.has_build_binding then
+         Some
+           (Canary_artifact_api.stable_reuse_warning ~source_name:"z3"
+              ~source_version:source.version)
+       else None);
     summary =
-      (fun rule loc ->
+      (fun rule _loc ->
         let api =
           Option.value_exn source.api_source
             ~message:"z3 mk_script_spec: api_source not set"
@@ -475,8 +527,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         let prepend_warn cmd =
           match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
         in
-        match (rule, loc) with
-        | Probe Lib, _ ->
+        match rule with
+        | Probe Lib ->
             Some
               (fun ~output_dir ->
                 let sum =
@@ -486,21 +538,5 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                     ~output_dir ()
                 in
                 prepend_warn [%string "%{lib_resolve}\n%{sum}"])
-        | Probe Binding, Some (Pm { lang = Python; _ }) ->
-            Some
-              (fun ~output_dir ->
-                prepend_warn
-                  (Canary_artifact_lang.python_summary_cmd ~pkg:"z3"
-                     ~watchlist:
-                       (Canary_artifact_api.binding_watchlist_exn api Python)
-                     ~output_dir ()))
-        | Probe Binding, _ ->
-            Some
-              (fun ~output_dir ->
-                prepend_warn
-                  (Canary_artifact_lang.summary_opam_pkg_cmd ~pkg:"z3"
-                     ~watchlist:
-                       (Canary_artifact_api.binding_watchlist_exn api OCaml)
-                     ~output_dir ()))
         | _ -> None);
   }

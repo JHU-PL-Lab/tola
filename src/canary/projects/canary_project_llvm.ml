@@ -335,7 +335,14 @@ echo 'ok' > %{output_dir}/install.ok|}])
        else None);
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      [ (OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
+      (Canary_artifact_api.OCaml,
+       Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
+      :: List.filter_map binding_configs ~f:(function
+        | Python_config p ->
+            Some (Canary_artifact_api.Python,
+                  fun ~output_dir ->
+                    Canary_toolchain.pip_install_cmd p ~output_dir)
+        | Ocaml_config _ -> None);
     pack_binding =
       (if source.has_build_binding then
          [ (OCaml,
@@ -412,8 +419,11 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ]
       @ List.filter_map binding_configs ~f:(function
           | Python_config p ->
+              (* Install moved to Fetch (Binding Python); this step is
+                 import-only so summary from fetch is pre-cached. *)
               Some (Python, Pm (Lang_pm { lang = Python; pm = Pip }),
-                    fun ~output_dir -> pip_probe_cmd p ~output_dir)
+                    fun ~output_dir ->
+                      Canary_toolchain.python_probe_only_cmd p ~output_dir)
           | Ocaml_config _ -> None);
     probe_app = Some llvm_python_probe;
     check_post =
@@ -455,13 +465,15 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              Hand-written list retained as fallback at the variant level via
              empty-derived → any-failure-with-probe.log. See api_compat.md §3b. *)
           Expect_compat_failure {
-            stub_summary = [ "pack_ocaml_binding/stub_summary.json";
-                             "fetch_ocaml_binding/stub_summary.json" ];
-            lib_summary  = [ "probe_lib/summary.json";
-                             "probe_lib_apt/summary.json";
-                             "probe_lib_staged/summary.json" ];
-            mli_summary  = [ "pack_ocaml_binding/summary.json";
-                             "fetch_ocaml_binding/summary.json" ];
+            inputs = [
+              C_stub { paths = [ "pack_ocaml_binding/stub_summary.json";
+                                 "fetch_ocaml_binding/stub_summary.json" ] };
+              Native_lib { paths = [ "probe_lib/summary.json";
+                                     "probe_lib_apt/summary.json";
+                                     "probe_lib_staged/summary.json" ] };
+              Ocaml_mli { paths = [ "pack_ocaml_binding/summary.json";
+                                    "fetch_ocaml_binding/summary.json" ] };
+            ];
             version_info = Some {
               provider_version = "llvm 19";
               consumer_requires = "Opcode.UncondBr";

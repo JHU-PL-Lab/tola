@@ -68,6 +68,17 @@ type symbol_check = {
   version_info : version_info option;
 }
 
+(* Input to a derived (compat-driven) failure expectation. Each entry is
+   a list of CANDIDATE relative paths (relative to the run dir = parent
+   of the step's output_dir); the first that exists is used. Languages
+   contribute whichever layers apply: OCaml has L0 (stub) + L3 (mli);
+   Python typically has only L3 (attrs); native libs are L0 providers. *)
+type compat_summary_input =
+  | C_stub      of { paths : string list }   (* L0 consumer: binding's required C symbols *)
+  | Native_lib  of { paths : string list }   (* L0 provider: native lib's defined C symbols *)
+  | Ocaml_mli   of { paths : string list }   (* L3: OCaml mli watchlist *)
+  | Python_attrs of { paths : string list }  (* L3: Python dir() watchlist *)
+
 type step_expectation =
   | Expect_success
   | Expect_failure of {
@@ -75,18 +86,11 @@ type step_expectation =
       version_info : version_info option;
     }
   (* Failure expected; contains_any is *derived* at evaluation time from
-     cached compat summaries. Each entry is a list of CANDIDATE relative
-     paths (relative to the run dir = parent of the step's output_dir);
-     the first that exists is used. Empty derived list ⇒ the check
-     degenerates to "any failure with non-empty probe.log".
+     cached compat summaries given by [inputs]. Empty derived list ⇒ the
+     check degenerates to "any failure with non-empty probe.log".
      See Step D-basic in doc/canary/design/api_compat.md. *)
   | Expect_compat_failure of {
-      stub_summary : string list;  (* e.g. ["pack_ocaml_binding/stub_summary.json";
-                                              "fetch_ocaml_binding/stub_summary.json"] *)
-      lib_summary  : string list;  (* e.g. ["probe_lib/summary.json";
-                                              "probe_lib_apt/summary.json"] *)
-      mli_summary  : string list;  (* e.g. ["pack_ocaml_binding/summary.json";
-                                              "fetch_ocaml_binding/summary.json"] *)
+      inputs       : compat_summary_input list;
       version_info : version_info option;
     }
 
@@ -360,8 +364,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                   ~detail:(Some (if found then confirmed_msg
                     else "command failed but output didn't match expected strings"));
                 found
-          | Expect_compat_failure { stub_summary; lib_summary; mli_summary;
-                                    version_info } ->
+          | Expect_compat_failure { inputs; version_info } ->
               if cmd_ok then (
                 log ~event:"unexpected_success"
                   ~detail:(Some "expected failure (derived) but command succeeded");
@@ -373,12 +376,23 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                       let p = run_dir ^ "/" ^ rel in
                       if Stdlib.Sys.file_exists p then Some p else None)
                 in
+                let typed_inputs =
+                  List.filter_map inputs ~f:(function
+                    | C_stub { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.C_stub p)
+                    | Native_lib { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.Native_lib p)
+                    | Ocaml_mli { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.Ocaml_mli p)
+                    | Python_attrs { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.Python_attrs p))
+                in
                 let derived =
-                  Canary_compat.predicted_contains_any
-                    ?stub_summary_path:(pick_first_existing stub_summary)
-                    ?lib_summary_path:(pick_first_existing lib_summary)
-                    ?mli_summary_path:(pick_first_existing mli_summary)
-                    ()
+                  Canary_compat.predicted_contains_any_v2 typed_inputs
                 in
                 log ~event:"compat_predicted"
                   ~detail:(Some (Printf.sprintf "%d substring(s)"
@@ -820,27 +834,33 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
           [ ("_summary", "summary.json", mli);
             ("_stub_summary", "stub_summary.json", stub) ]
         in
+        let python_install_summary pkg =
+          (* Python summary attaches at Fetch (Binding Python) — the install
+             step — so the cached summary.json is available before
+             Probe (Binding Python) evaluates its (possibly compat-derived)
+             expectation. Mirrors the OCaml mli/stub placement. *)
+          let wl =
+            Canary_artifact_api.binding_watchlist_exn api
+              Canary_artifact_api.Python
+          in
+          let py =
+            prepend_note spec.summary_note (fun ~output_dir ->
+              Canary_artifact_lang.python_summary_cmd
+                ~pkg ~watchlist:wl ~output_dir ())
+          in
+          [ ("_summary", "summary.json", py) ]
+        in
         match rule with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
             (match List.Assoc.find spec.binding_summary
                      ~equal:Poly.equal Canary_artifact_api.OCaml with
              | None -> []
              | Some pkg -> ocaml_install_summaries pkg)
-        | Probe (Binding Python) ->
+        | Fetch (Binding Python) ->
             (match List.Assoc.find spec.binding_summary
                      ~equal:Poly.equal Canary_artifact_api.Python with
              | None -> []
-             | Some pkg ->
-                 let wl =
-                   Canary_artifact_api.binding_watchlist_exn api
-                     Canary_artifact_api.Python
-                 in
-                 let py =
-                   prepend_note spec.summary_note (fun ~output_dir ->
-                     Canary_artifact_lang.python_summary_cmd
-                       ~pkg ~watchlist:wl ~output_dir ())
-                 in
-                 [ ("_summary", "summary.json", py) ])
+             | Some pkg -> python_install_summary pkg)
         | _ -> []
   in
   (* spec.summary is the explicit override (legacy, single-summary). When

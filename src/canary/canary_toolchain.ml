@@ -201,6 +201,25 @@ opam update %{t.local_repo_name}
 opam remove -y %{pkg_full} || true
 opam install -y %{pkg_full} --verbose|}]
 
+(* Shared opam pack_binding shell sequence used by project pack_binding closures.
+   ~preamble:    shell lines after `eval $(opam env)`, before repo add — typically
+                 mkdir+cp+opam-config-subst for template-based packages (e.g. z3).
+   ~pre_install: shell lines between `opam update` and `opam remove` — typically
+                 a conf-* dep install (e.g. conf-llvm-shared.dev for llvm).
+   ~env_prefix:  space-terminated env-var assignments prepended to opam install
+                 (e.g. "CANARY_BUILD_DIR=\"...\" "); use "" when not needed. *)
+let opam_pack_cmd ~repo_name ~repo_abs ~pkg_full ?(preamble = "")
+    ?(pre_install = "") ~env_prefix ~output_dir () =
+  let maybe s = if String.is_empty s then "" else s ^ "\n" in
+  [%string
+    {|eval $(opam env)
+%{maybe preamble}opam repo add %{repo_name} "file://%{repo_abs}" --rank=1 \
+  || opam repo set-url %{repo_name} "file://%{repo_abs}"
+opam update %{repo_name}
+%{maybe pre_install}opam remove -y %{pkg_full} || true
+%{env_prefix}opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > %{output_dir}/pack.ok|}]
+
 let install_opam_package_step ~name package =
   let spec = mk_opam_package_spec ~install_name:package () in
   [ run_step ~name (opam_install_cmd spec) ]
@@ -265,34 +284,55 @@ let prebuilt_info_exn (config : ocaml_tool_config) =
   | Some info -> info
   | None -> failwith "Expected prebuilt OCaml binding config"
 
-let pip_probe_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
+(* Pip install only — runs at Fetch (Binding Python) time so the summary
+   step can attach a child that reads the just-installed package. Writes
+   binding.ok marker on success (canary's standard fetch postcondition).
+   When pip_package is None the binding is stdlib — no install needed. *)
+let pip_install_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
     ~output_dir =
-  let install_lines =
-    match p.pip_package with
-    | None -> ""
-    | Some pkg ->
-        let make_branch i (check, prefix) =
-          let kw = if i = 0 then "if" else "elif" in
-          kw ^ " " ^ check ^ "; then\n  " ^ prefix ^ " install --quiet " ^ pkg
-          ^ " > \"$INSTALL_LOG\" 2>&1"
-        in
-        let branches = List.mapi toolchain.pip_entries ~f:make_branch in
-        let names =
-          String.concat ~sep:" / " (List.map toolchain.pip_entries ~f:snd)
-        in
-        [%string
-          {|INSTALL_LOG=%{output_dir}/install.log
+  match p.pip_package with
+  | None ->
+      (* Stdlib (or pre-installed): just create the marker. *)
+      [%string {|echo 'stdlib' > %{output_dir}/binding.ok|}]
+  | Some pkg ->
+      let make_branch i (check, prefix) =
+        let kw = if i = 0 then "if" else "elif" in
+        kw ^ " " ^ check ^ "; then\n  " ^ prefix ^ " install --quiet " ^ pkg
+        ^ " > \"$INSTALL_LOG\" 2>&1"
+      in
+      let branches = List.mapi toolchain.pip_entries ~f:make_branch in
+      let names =
+        String.concat ~sep:" / " (List.map toolchain.pip_entries ~f:snd)
+      in
+      [%string
+        {|set -e
+INSTALL_LOG=%{output_dir}/install.log
 %{String.concat ~sep:"\n" branches}
 else
   echo "no %{names} available" > "$INSTALL_LOG"
   exit 1
 fi
-|}]
-  in
+echo 'installed' > %{output_dir}/binding.ok|}]
+
+(* Probe only — runs at Probe (Binding Python) time, assuming pip install
+   has already happened in the Fetch (Binding Python) step. *)
+let python_probe_only_cmd ?(toolchain = default_python_toolchain)
+    (p : python_binding) ~output_dir =
   [%string
     {|set -e
-%{install_lines}%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
+%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
 cat %{output_dir}/probe.log|}]
+
+(* Backward-compatible single-step variant: install + probe in one go.
+   Kept so projects that haven't migrated to the split form still work
+   (and so canary_pattern_a / older specs compile). New code should
+   prefer pip_install_cmd + python_probe_only_cmd. *)
+let pip_probe_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
+    ~output_dir =
+  let install = pip_install_cmd ~toolchain p ~output_dir in
+  let probe = python_probe_only_cmd ~toolchain p ~output_dir in
+  [%string {|%{install}
+%{probe}|}]
 
 let verb_of_probe_action = function
   | Compile_example -> "Compile"

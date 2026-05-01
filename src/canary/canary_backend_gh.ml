@@ -101,8 +101,7 @@ fi|}]
       [ [%string {|      - name: %{step.tag}
 %{run_block full_cmd}|}] ]
       @ sym_check_step
-  | Expect_compat_failure { stub_summary; lib_summary; mli_summary;
-                            version_info = _ } ->
+  | Expect_compat_failure { inputs; version_info = _ } ->
       (* Resolve predictions at YAML-generation time using locally-cached
          summaries. When cache is empty (fresh CI runner), the fallback in
          render_failure_check accepts any failure with non-empty probe.log. *)
@@ -112,13 +111,22 @@ fi|}]
             let p = run_dir ^ "/" ^ rel in
             if Stdlib.Sys.file_exists p then Some p else None)
       in
-      let derived =
-        Canary_compat.predicted_contains_any
-          ?stub_summary_path:(pick_first_existing stub_summary)
-          ?lib_summary_path:(pick_first_existing lib_summary)
-          ?mli_summary_path:(pick_first_existing mli_summary)
-          ()
+      let typed_inputs =
+        List.filter_map inputs ~f:(function
+          | Canary_action.C_stub { paths } ->
+              Option.map (pick_first_existing paths) ~f:(fun p ->
+                Canary_compat.C_stub p)
+          | Canary_action.Native_lib { paths } ->
+              Option.map (pick_first_existing paths) ~f:(fun p ->
+                Canary_compat.Native_lib p)
+          | Canary_action.Ocaml_mli { paths } ->
+              Option.map (pick_first_existing paths) ~f:(fun p ->
+                Canary_compat.Ocaml_mli p)
+          | Canary_action.Python_attrs { paths } ->
+              Option.map (pick_first_existing paths) ~f:(fun p ->
+                Canary_compat.Python_attrs p))
       in
+      let derived = Canary_compat.predicted_contains_any_v2 typed_inputs in
       render_failure_check ~contains_any:derived
   | Expect_failure { contains_any; version_info = _ } ->
       render_failure_check ~contains_any

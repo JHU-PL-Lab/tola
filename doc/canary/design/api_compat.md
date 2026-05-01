@@ -202,6 +202,41 @@ manually (hand-written Expect_symbols). With this type:
 
 ---
 
+## The shape we ended up with: a typing rule
+
+What landed as Phases 1–3b is, in retrospect, a small typing system for
+artifact compatibility:
+
+| Implementation piece                       | Type-system analogue                        |
+|--------------------------------------------|---------------------------------------------|
+| `summarize_binding.py`                     | extract a consumer's required interface     |
+| `summarize_native.py --emit-symbols`       | extract a provider's offered interface      |
+| `Canary_compat.check_c_compat`             | the subtyping judgment `requires ⊆ provides`|
+| `Expect_compat_failure`                    | a type-error report derived from a failed judgment |
+| `Compatible / Missing { symbols } / Unknown` | well-typed / ill-typed-with-witness / decidability-failure |
+| L0 (C) ⊑ L1b (versioned) ⊑ L3 (modules) ⊑ L5 (behaviour) | a refinement chain on interface types |
+
+The "forward analysis and rejection" pattern of the `verify` and
+`compat` commands is the artifact of treating compatibility as a
+typing judgment instead of an empirical observation. `predicted_
+contains_any` is the witness produced by a failed judgment — exactly
+the shape of a type-error message.
+
+Today the judgment lives at L0 (set inclusion of names). The next
+theoretical step is lifting it to typed signatures: contravariance on
+argument types, covariance on results, refinement on value domains.
+At that point the lattice from interface.md §15 becomes the literal
+subtyping order on artifact interfaces, and `check_compat` is a real
+decision procedure rather than a set diff.
+
+This framing is mostly retrospective rationale; the code can keep
+calling them "compat checks" and the doc can keep talking about
+"prediction." But the analogy is exact, and it suggests where the
+design points: subtyping with refinement, decidable-but-conservative,
+backed by empirical probes for the layers that aren't yet typed.
+
+---
+
 ## Execution plan
 
 Concrete next steps to land Step C1 → Step D-basic.
@@ -317,12 +352,87 @@ Two distinct sub-cases worth separating:
   exist but return wrong results, runtime initialization order. These
   legitimately remain hand-written; they require an actual probe run.
 
-The `Expect_compat_failure` variant is currently OCaml-shaped (the
-field name `mli_summary` is OCaml-specific). When a second language
-adopts L0/L3 cross-checking, the variant should be reshaped to take a
-list of typed `compat_summary_input` entries (`C_stub | Native_lib |
-Ocaml_mli | Python_attrs`) so each language contributes whichever
-layers apply.
+**Phase 3c — typed compat inputs (shipped).**
+The `Expect_compat_failure` variant is now language-agnostic:
+
+```ocaml
+type compat_summary_input =
+  | C_stub      of { paths : string list }
+  | Native_lib  of { paths : string list }
+  | Ocaml_mli   of { paths : string list }
+  | Python_attrs of { paths : string list }
+
+| Expect_compat_failure of {
+    inputs       : compat_summary_input list;
+    version_info : version_info option;
+  }
+```
+
+`Canary_compat.predicted_contains_any_v2` consumes the list, picks the
+first existing path per input (resolved against the run dir), and
+unions the predictions: L0 set diff for `C_stub` ∩ `Native_lib`, L3
+watchlist-missing (with name-variant expansion) for `Ocaml_mli` and
+`Python_attrs`. Each language contributes whichever layers apply.
+
+LLVM's spec now uses the new shape:
+```ocaml
+Expect_compat_failure {
+  inputs = [
+    C_stub      { paths = [ "pack_ocaml_binding/stub_summary.json"; ... ] };
+    Native_lib  { paths = [ "probe_lib/summary.json"; "probe_lib_apt/summary.json"; ... ] };
+    Ocaml_mli   { paths = [ "pack_ocaml_binding/summary.json"; ... ] };
+  ];
+  version_info = ...;
+}
+```
+
+Unit tests in `canary_artifact_test.ml` (`compat.mli_dotted_expansion`,
+`compat.python_attr_expansion`, `compat.mixed_inputs_union`,
+`compat.empty_inputs`) exercise the helper directly without a real
+probe, demonstrating that `Python_attrs` works correctly.
+
+**Phase 3d — Python pip probe split (shipped).**
+The pip flow is now split into install + probe:
+
+- `Canary_toolchain.pip_install_cmd` does just `pip install` (+ writes
+  `binding.ok` marker). Wired in as a `Fetch (Binding Python)` entry on
+  z3, llvm, sqlite project specs.
+- `Canary_toolchain.python_probe_only_cmd` does just `python -c …` —
+  the import-and-test snippet, no install.
+- `auto_binding_summaries` emits `summarize_python.py` on
+  `Fetch (Binding Python)` instead of `Probe (Binding Python)`.
+- `Canary_compat.find_python_install_dir` /
+  `find_python_summary` look in `fetch_python_binding/`.
+- The `pip_probe_cmd` shim is retained (composes the two halves) for
+  backward compatibility.
+
+`derive_steps` callers in `canary_main.ml` now pass
+`~langs:[OCaml; Python]` for action targets that have Python probes;
+without that, `store_rules` filters Python rules out at graph
+generation.
+
+After a fresh `canary action z3` run, the layout is:
+```
+_out/canary/projects/z3/<variant>/
+├── fetch_ocaml_binding/{summary.json, stub_summary.json}
+├── fetch_python_binding/{binding.ok, install.log, summary.json}
+├── probe_ocaml_binding/probe.log
+└── probe_python_binding/probe.log
+```
+
+`probe_python_binding` evaluates AFTER `fetch_python_binding_summary`
+has cached `summary.json`, so an `Expect_compat_failure { inputs = [
+Python_attrs { paths = ["fetch_python_binding/summary.json"] }; … ] }`
+on the probe step would resolve correctly. Wiring an actual project
+probe to use it is project-by-project — no failing pip probe exists in
+the current set, so today's z3/llvm Python probes stay
+`Expect_success`. Drop-in conversion is one-line per project when a
+case warrants it.
+
+**Inherently behavioural failures** (version-string mismatches in
+import logs, functions that exist but return wrong results, runtime
+init-order issues) legitimately remain hand-written `Expect_failure`;
+they require an actual probe run.
 
 ### Deferred
 
