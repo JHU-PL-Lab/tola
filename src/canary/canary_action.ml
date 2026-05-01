@@ -1249,14 +1249,90 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   in
   let view_dir = [%string "%{dir}/diagrams"] in
   ensure_dir view_dir;
+  let emitted_views = ref [] in
   List.iter views ~f:(fun v ->
       let filtered = List.filter steps ~f:(view_predicate v) in
       if not (List.is_empty filtered) then begin
         let path = [%string "%{view_dir}/%{view_name v}.mmd"] in
+        let mmd = mermaid_view ~status:node_status ~view:v steps in
         let oc = Stdlib.open_out path in
-        Stdlib.output_string oc (mermaid_view ~status:node_status ~view:v steps);
+        Stdlib.output_string oc mmd;
         Stdlib.close_out oc;
+        emitted_views := (v, mmd) :: !emitted_views;
         logger.log ~tag:"*" ~event:"view"
           ~detail:(Some [%string "%{view_name v} (%{Int.to_string (List.length filtered)} steps)"])
       end);
+  (* result.html — interactive viewer over all the emitted .mmd files.
+     Embeds the views inline; lazy-loads logs from output_dir on click. *)
+  let html_path = [%string "%{dir}/result.html"] in
+  let overview_mmd =
+    Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
+      ~summary_rules (store_rules ~langs)
+  in
+  let html_views =
+    Canary_backend_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }
+    :: List.rev_map !emitted_views ~f:(fun (v, mmd) ->
+        let n = view_name v in
+        let title = match v with
+          | `Source -> "Source"
+          | `Lib -> "Lib"
+          | `Pack -> "Pack"
+          | `Probes -> "Probes"
+          | `Binding lang ->
+              "Binding (" ^ Canary_artifact_api.string_of_lang lang ^ ")"
+        in
+        Canary_backend_html.{ name = n; title; mmd })
+  in
+  let html_steps =
+    List.map steps ~f:(fun s ->
+        let exp_str = match s.expectation with
+          | Expect_success -> "Expect_success"
+          | Expect_failure _ -> "Expect_failure"
+          | Expect_compat_failure _ -> "Expect_compat_failure"
+        in
+        let status_str = match Hashtbl.find node_status s.tag with
+          | Some Canary.Done -> "done"
+          | Some Canary.Failed -> "failed"
+          | Some Canary.Skipped -> "skipped"
+          | Some Canary.Not_in_spec | None -> "not_in_spec"
+        in
+        (* output_rel is the path from the run dir to the step's output_dir.
+           Step output_dir is absolute under run dir; strip the run-dir prefix. *)
+        let output_rel =
+          match String.chop_prefix s.output_dir ~prefix:(dir ^ "/") with
+          | Some rel -> rel
+          | None -> s.output_tag
+        in
+        Canary_backend_html.{
+          tag = s.tag;
+          rule = string_of_rule s.rule;
+          output_rel;
+          expectation = exp_str;
+          status = status_str;
+        })
+  in
+  let run_at =
+    let t = Unix.gettimeofday () in
+    let tm = Unix.localtime t in
+    Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+      (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+      tm.tm_hour tm.tm_min tm.tm_sec
+  in
+  let proj_name, variant =
+    match String.lsplit2 project ~on:'/' with
+    | Some (p, v) -> (p, v)
+    | None -> (project, "")
+  in
+  let html =
+    Canary_backend_html.render
+      ~project:proj_name ~variant
+      ~run_at
+      ~views:html_views
+      ~default_view:"overview"
+      ~steps:html_steps
+  in
+  let oc = Stdlib.open_out html_path in
+  Stdlib.output_string oc html;
+  Stdlib.close_out oc;
+  logger.log ~tag:"*" ~event:"html" ~detail:(Some html_path);
   logger.close ()
