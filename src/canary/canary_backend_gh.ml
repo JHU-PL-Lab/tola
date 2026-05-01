@@ -17,7 +17,12 @@ let sanitize_id s =
       else '_')
 
 let output_dir_of ~project ~tag =
-  "$GITHUB_WORKSPACE/_out/canary/projects/" ^ project ^ "/" ^ tag
+  let base = "$GITHUB_WORKSPACE/_out/canary/projects/" in
+  match String.rsplit2 project ~on:'/' with
+  | Some (project_name, variant_id) ->
+      base ^ project_name ^ "/" ^ tag ^ "/" ^ variant_id
+  | None ->
+      base ^ project ^ "/" ^ tag
 
 (* Render one action_step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)
@@ -104,11 +109,23 @@ fi|}]
   | Expect_compat_failure { inputs; version_info = _ } ->
       (* Resolve predictions at YAML-generation time using locally-cached
          summaries. When cache is empty (fresh CI runner), the fallback in
-         render_failure_check accepts any failure with non-empty probe.log. *)
-      let run_dir = Stdlib.Filename.dirname out in
+         render_failure_check accepts any failure with non-empty probe.log.
+         Path format: "step_tag/file.json". For variant runs, the step dir is
+         project_dir/{step_tag}/{variant_id}/; for single-variant, project_dir/{step_tag}/. *)
+      let project_dir =
+        if String.is_empty step.variant_id then Stdlib.Filename.dirname out
+        else Stdlib.Filename.dirname (Stdlib.Filename.dirname out)
+      in
       let pick_first_existing rels =
         List.find_map rels ~f:(fun rel ->
-            let p = run_dir ^ "/" ^ rel in
+            let p = if String.is_empty step.variant_id then
+              project_dir ^ "/" ^ rel
+            else
+              match String.lsplit2 rel ~on:'/' with
+              | Some (step_tag, file) ->
+                  project_dir ^ "/" ^ step_tag ^ "/" ^ step.variant_id ^ "/" ^ file
+              | None -> project_dir ^ "/" ^ rel
+            in
             if Stdlib.Sys.file_exists p then Some p else None)
       in
       let typed_inputs =

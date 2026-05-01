@@ -4,13 +4,12 @@ open Canary_store
 (* ── Type definitions ── *)
 
 type runner_os = Ubuntu | MacOS
-type binding_lang = OCaml | Python
 type probe_action = Compile_example | Run_example
 type compile_mode = Native | Bytecode
-type artifact_kind = Source | Headers | Lib | Binding | App
+type artifact_kind = Source | Headers | Lib | Binding of Canary_artifact_api.lang | App
 
 let kind_order = function
-  | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding -> 3 | App -> 4
+  | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
 
 type artifact = { kind : artifact_kind; name : string; location : location }
 
@@ -37,7 +36,7 @@ type project_spec = {
   root : string;
   version : string;
   commit : string;
-  bindings : (binding_lang * package_manager) list;
+  bindings : (Canary_artifact_api.lang * package_manager) list;
   (* graph capabilities *)
   system_pm : package_manager;
   has_source : bool;
@@ -65,7 +64,7 @@ type phase_kind =
   | Pm_install_local of package_manager
   | Cmake_buildgen of step
   | Cmake_build of step
-  | Probe_test of { lang : binding_lang }
+  | Probe_test of { lang : Canary_artifact_api.lang }
   | Run_command of { name : string; command : string }
 
 type step_phase = {
@@ -141,14 +140,13 @@ type canary_config = {
 
 (* ── Functions ── *)
 
-let string_of_lang = function OCaml -> "OCaml" | Python -> "Python"
+let string_of_lang = Canary_artifact_api.string_of_lang
 
 
 let name_of_phase (phase : step_phase) =
   match phase.kind with
   | Pm_install _ -> (
       match phase.location with
-      | Pm { lang = Canary_artifact_api.Native; _ } -> "Install system dependencies"
       | Pm _ -> "Install binding package"
       | loc -> [%string "Install via %{string_of_location loc}"])
   | Pm_install_local pm ->

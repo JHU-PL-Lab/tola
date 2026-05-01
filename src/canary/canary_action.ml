@@ -228,7 +228,8 @@ type action_step = {
   output_tag : string;               (* tag used for this step's output_dir; usually same as tag,
                                         but summary steps set it to their parent's tag so they
                                         share the parent's directory (no empty _summary dir). *)
-  output_dir : string;               (* absolute path = root/canary/projects/project/output_tag *)
+  output_dir : string;               (* absolute path = root/canary/projects/project_name/tag[/variant_id] *)
+  variant_id : string;               (* "" for single-variant projects, else e.g. "stable" or "dev_abc" *)
   rule : rule;
   deps : string list;                (* tags of upstream steps *)
   cmd : output_dir:string -> string; (* shell command to execute *)
@@ -285,8 +286,23 @@ let run_cmd_logged logger ~tag cmd =
 
 (* ── Runner ── *)
 
+(* project = "z3/stable" → project_name="z3", variant_id="stable"
+   project = "sqlite"   → project_name="sqlite", variant_id=""
+   Step output: root/projects/{project_name}/{tag}[/{variant_id}]
+   This swaps the old {variant}/{tag} order to {tag}/{variant}, so step dirs
+   are shared at the project level and variants appear as leaf subdirectories. *)
 let output_dir_for ~root ~project ~tag =
-  let base = [%string "%{root}/canary/projects/%{project}/%{tag}"] in
+  let (project_name, variant_id) =
+    match String.rsplit2 project ~on:'/' with
+    | Some (name, vid) -> (name, vid)
+    | None -> (project, "")
+  in
+  let base =
+    if String.is_empty variant_id then
+      [%string "%{root}/canary/projects/%{project_name}/%{tag}"]
+    else
+      [%string "%{root}/canary/projects/%{project_name}/%{tag}/%{variant_id}"]
+  in
   if Stdlib.Filename.is_relative base then
     Stdlib.Filename.concat (Unix.getcwd ()) base
   else base
@@ -370,10 +386,24 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                   ~detail:(Some "expected failure (derived) but command succeeded");
                 false)
               else
-                let run_dir = Stdlib.Filename.dirname out in
+                (* Resolve compat summary paths relative to the project dir.
+                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/stub_summary.json").
+                   For variants: project_dir/{step_tag}/{variant_id}/file.
+                   For single-variant (variant_id=""): project_dir/{step_tag}/file. *)
+                let project_dir =
+                  if String.is_empty step.variant_id then Stdlib.Filename.dirname out
+                  else Stdlib.Filename.dirname (Stdlib.Filename.dirname out)
+                in
                 let pick_first_existing rels =
                   List.find_map rels ~f:(fun rel ->
-                      let p = run_dir ^ "/" ^ rel in
+                      let p = if String.is_empty step.variant_id then
+                        project_dir ^ "/" ^ rel
+                      else
+                        match String.lsplit2 rel ~on:'/' with
+                        | Some (step_tag, file) ->
+                            project_dir ^ "/" ^ step_tag ^ "/" ^ step.variant_id ^ "/" ^ file
+                        | None -> project_dir ^ "/" ^ rel
+                      in
                       if Stdlib.Sys.file_exists p then Some p else None)
                 in
                 let typed_inputs =
@@ -1104,10 +1134,15 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
+  let variant_id = match String.rsplit2 project ~on:'/' with
+    | Some (_, vid) -> vid
+    | None -> ""
+  in
   { tag;
     cache_key = cache_project ^ ":" ^ tag;
     output_tag;
     output_dir;
+    variant_id;
     rule; deps;
     expectation; symbol_check;
     check_pre = (fun () ->
@@ -1772,12 +1807,22 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
           | Some Canary.Skipped -> "skipped"
           | Some Canary.Not_in_spec | None -> "not_in_spec"
         in
-        (* output_rel is the path from the run dir to the step's output_dir.
-           Step output_dir is absolute under run dir; strip the run-dir prefix. *)
+        (* output_rel: path from the run dir (dir) to the step's output_dir.
+           New layout: step dirs live at project_dir/{tag}[/{variant_id}], not
+           under the variant dir. Relative path is "../{tag}[/{variant_id}]" for
+           variant runs, or just "{tag}" for single-variant projects. *)
         let output_rel =
-          match String.chop_prefix s.output_dir ~prefix:(dir ^ "/") with
-          | Some rel -> rel
-          | None -> s.output_tag
+          if String.is_empty s.variant_id then
+            (* Single-variant: step dir is a direct subdir of project=run dir *)
+            match String.chop_prefix s.output_dir ~prefix:(dir ^ "/") with
+            | Some rel -> rel
+            | None -> s.output_tag
+          else
+            (* Multi-variant: output_dir = .../project/{tag}/{variant_id}
+               dir (run_dir) = .../project/{variant_id}/
+               Relative path: ../{tag}/{variant_id} *)
+            let tag_part = Stdlib.Filename.basename (Stdlib.Filename.dirname s.output_dir) in
+            "../" ^ tag_part ^ "/" ^ s.variant_id
         in
         Canary_backend_html.{
           tag = s.tag;

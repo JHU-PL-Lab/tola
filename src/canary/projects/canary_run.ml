@@ -115,7 +115,7 @@ let dump_graph _distro =
   let graph_dir = "_out/canary/graph" in
   ignore (Stdlib.Sys.command [%string "mkdir -p %{graph_dir}"]);
   let path = [%string "%{graph_dir}/action_rule.mmd"] in
-  Tola_std.write_file path (mermaid_of_action_rule_schema store_rules);
+  Tola_std.write_file path (mermaid_of_action_rule_schema (store_rules ~langs:[ OCaml ]));
   Fmt.pr "Wrote %s@." path
 
 let dump_job_paths_with ~pp =
@@ -124,7 +124,7 @@ let dump_job_paths_with ~pp =
   Fmt.pr "how many version combinations instantiate that pattern (with 2 versions).@.";
   Fmt.pr "Every artifact can be probed (probe = action_path → probe_<kind>, d+1).@.@.";
   let ar =
-    make_action_rule ~rules:store_rules ~versions:two_versions ~name:"pkg"
+    make_action_rule ~rules:(store_rules ~langs:[ OCaml ]) ~versions:two_versions ~name:"pkg"
       ~source:Canary_store.store ()
   in
   let paths = job_paths_of_action_rule ar in

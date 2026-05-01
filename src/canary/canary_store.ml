@@ -14,14 +14,21 @@ type system_package_spec = {
   behavior : store_behavior;
 }
 
+(* pm_info: what kind of package manager location.
+   Sys_pm: system PM (apt/brew) — native C lib; pm distinguishes linux vs macOS.
+   Lang_pm: language PM (opam/pip) — binding artifact; carries lang + pm.
+   Future variants: Virtual_pm, Project_pm, Multi_lingua_pm, … *)
+type pm_info =
+  | Sys_pm of { pm : package_manager }
+  | Lang_pm of { lang : Canary_artifact_api.lang; pm : package_manager }
+
 (* Location: objective "where does this artifact live right now".
-   Also encodes packaging stage: Build_tree (raw build output),
-   Staged (cmake --install into a prefix, TODO #25), Pm (in a package manager).
-   Local vs. remote is PM-internal — both map to Pm here. *)
+   Build_tree: raw build output. Staged: cmake --install'd (TODO #25).
+   Pm: in a package manager — see pm_info for the sub-kind. *)
 type location =
   | Build_tree
-  | Staged    (** cmake --install'd into a prefix — see TODO #25 *)
-  | Pm of { lang : Canary_artifact_api.lang; pm : package_manager }
+  | Staged  (** cmake --install'd into a prefix — see TODO #25 *)
+  | Pm of pm_info
 
 (* Lifecycle stage of an artifact — explicit complement to location.
    Derivable from location for now (Build_tree→Built, Staged→Installed,
@@ -43,16 +50,16 @@ let string_of_store_behavior = function
 let string_of_location = function
   | Build_tree -> "build_tree"
   | Staged -> "staged"
-  | Pm { lang; pm } ->
+  | Pm (Sys_pm { pm }) -> [%string "sys_pm:%{string_of_pm pm}"]
+  | Pm (Lang_pm { lang; pm }) ->
       [%string "%{Canary_artifact_api.string_of_lang lang}:%{string_of_pm pm}"]
 
 let is_source_location = function
   | Build_tree | Staged -> true
   | Pm _ -> false
 
-(* Placeholder location for universal action-rule enumeration (canary paths).
-   Represents "from some PM store" — any Pm variant suffices. *)
-let store = Pm { lang = Canary_artifact_api.Native; pm = Apt }
+(* Placeholder location for universal action-rule enumeration (canary paths). *)
+let store = Pm (Sys_pm { pm = Apt })
 
 (* ── System package manager detection and commands ── *)
 

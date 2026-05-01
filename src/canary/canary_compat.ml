@@ -114,100 +114,129 @@ let run ~stub_path ~lib_path =
 
 (* ── Convenience: locate cached summaries for a (project, variant) pair ── *)
 
-(* Resolve a variant arg to an actual directory name. If [variant] exists
-   under projects/<proj>/, return it; otherwise try to expand "<variant>_*"
-   (so "dev" matches "dev_ab43cb8"). Picks the most-recent match by mtime. *)
-let resolve_variant_dir ~root ~project variant =
-  let base = root ^ "/" ^"_out/canary/projects" ^ "/" ^project in
-  let exact = base ^ "/" ^variant in
-  if Stdlib.Sys.file_exists exact && Stdlib.Sys.is_directory exact then
-    Some exact
-  else if Stdlib.Sys.file_exists base && Stdlib.Sys.is_directory base then
-    let prefix = variant ^ "_" in
-    let candidates =
-      Stdlib.Sys.readdir base
-      |> Array.to_list
-      |> List.filter ~f:(String.is_prefix ~prefix)
-      |> List.map ~f:(fun d -> base ^ "/" ^d)
-      |> List.filter ~f:(fun p -> Stdlib.Sys.is_directory p)
-    in
-    match candidates with
-    | [] -> None
-    | xs ->
-        let with_mtime =
-          List.map xs ~f:(fun p ->
-              let m = (Unix.stat p).st_mtime in
-              (p, m))
-        in
-        let sorted =
-          List.sort with_mtime ~compare:(fun (_, a) (_, b) -> Float.compare b a)
-        in
-        Some (fst (List.hd_exn sorted))
-  else None
+(* Phase 2 layout: projects/{project}/{step_tag}/{variant_id}/...
+   For single-variant projects (variant_id = ""), the variant leaf is omitted:
+   projects/{project}/{step_tag}/...
 
-(* Pick the first existing probe_lib*/summary.json under a variant dir. *)
-let find_lib_summary variant_dir =
+   Resolve a variant arg to (project_dir, resolved_variant_id).
+   Expands prefix matches: "dev" → "dev_ab43cb8" (most-recent match by mtime)
+   by scanning the first available step subdirectory under project_dir.
+   Returns None only when project_dir does not exist. *)
+let resolve_variant ~root ~project variant =
+  let project_dir = [%string "%{root}/_out/canary/projects/%{project}"] in
+  if not (Stdlib.Sys.file_exists project_dir && Stdlib.Sys.is_directory project_dir)
+  then None
+  else if String.is_empty variant then
+    Some (project_dir, "")
+  else begin
+    let find_variant_in_step_dir step_dir =
+      let exact = step_dir ^ "/" ^ variant in
+      if Stdlib.Sys.file_exists exact && Stdlib.Sys.is_directory exact then
+        Some variant
+      else if Stdlib.Sys.file_exists step_dir && Stdlib.Sys.is_directory step_dir then begin
+        let prefix = variant ^ "_" in
+        let candidates =
+          Stdlib.Sys.readdir step_dir
+          |> Array.to_list
+          |> List.filter ~f:(String.is_prefix ~prefix)
+          |> List.map ~f:(fun d -> (step_dir ^ "/" ^ d, d))
+          |> List.filter ~f:(fun (p, _) -> Stdlib.Sys.is_directory p)
+        in
+        match candidates with
+        | [] -> None
+        | xs ->
+            let with_mtime = List.map xs ~f:(fun (p, d) ->
+                ((Unix.stat p).st_mtime, d))
+            in
+            let sorted = List.sort with_mtime
+                ~compare:(fun (a, _) (b, _) -> Float.compare b a) in
+            Some (snd (List.hd_exn sorted))
+      end else None
+    in
+    let step_candidates = [
+      "probe_lib"; "pack_binding_ocaml"; "fetch_binding_ocaml";
+      "fetch_binding_python"; "probe_binding_ocaml"; "probe_binding_python";
+    ] in
+    let resolved = List.find_map step_candidates ~f:(fun step ->
+        find_variant_in_step_dir (project_dir ^ "/" ^ step))
+    in
+    Some (project_dir, Option.value resolved ~default:variant)
+  end
+
+(* Build a step-output path honouring the variant leaf (or not). *)
+let step_path ~project_dir ~variant_id step rel =
+  if String.is_empty variant_id then
+    [%string "%{project_dir}/%{step}/%{rel}"]
+  else
+    [%string "%{project_dir}/%{step}/%{variant_id}/%{rel}"]
+
+let step_dir ~project_dir ~variant_id step =
+  if String.is_empty variant_id then
+    [%string "%{project_dir}/%{step}"]
+  else
+    [%string "%{project_dir}/%{step}/%{variant_id}"]
+
+(* Pick the first existing probe_lib*/summary.json. *)
+let find_lib_summary ~project_dir ~variant_id =
   let candidates = [
-    "probe_lib/summary.json";
-    "probe_lib_apt/summary.json";
-    "probe_lib_brew/summary.json";
-    "probe_lib_staged/summary.json";
+    "probe_lib"; "probe_lib_apt"; "probe_lib_brew"; "probe_lib_staged"
   ] in
-  List.find_map candidates ~f:(fun rel ->
-      let p = variant_dir ^ "/" ^rel in
+  List.find_map candidates ~f:(fun step ->
+      let p = step_path ~project_dir ~variant_id step "summary.json" in
       if Stdlib.Sys.file_exists p then Some p else None)
 
 (* OCaml binding summaries (mli + stub) are written by the install step —
    either Fetch (Binding OCaml) → fetch_binding_ocaml/, or
    Publish (Binding OCaml) → pack_binding_ocaml/. Try both. *)
-let find_ocaml_install_dir variant_dir =
+let find_ocaml_install_dir ~project_dir ~variant_id =
   let candidates = [ "pack_binding_ocaml"; "fetch_binding_ocaml" ] in
-  List.find_map candidates ~f:(fun rel ->
-      let p = variant_dir ^ "/" ^ rel in
+  List.find_map candidates ~f:(fun step ->
+      let p = step_dir ~project_dir ~variant_id step in
       if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
       then Some p else None)
 
 (* Python binding summary is written at Fetch (Binding Python) →
-   fetch_binding_python/. *)
-let find_python_install_dir variant_dir =
-  let p = variant_dir ^ "/fetch_binding_python" in
+   fetch_binding_python/{variant_id}/. *)
+let find_python_install_dir ~project_dir ~variant_id =
+  let p = step_dir ~project_dir ~variant_id "fetch_binding_python" in
   if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
   then Some p else None
 
-let find_python_summary variant_dir =
-  Option.bind (find_python_install_dir variant_dir) ~f:(fun dir ->
+let find_python_summary ~project_dir ~variant_id =
+  Option.bind (find_python_install_dir ~project_dir ~variant_id) ~f:(fun dir ->
       let p = dir ^ "/summary.json" in
       if Stdlib.Sys.file_exists p then Some p else None)
 
-let find_stub_summary variant_dir =
-  Option.bind (find_ocaml_install_dir variant_dir) ~f:(fun dir ->
+let find_stub_summary ~project_dir ~variant_id =
+  Option.bind (find_ocaml_install_dir ~project_dir ~variant_id) ~f:(fun dir ->
       let p = dir ^ "/stub_summary.json" in
       if Stdlib.Sys.file_exists p then Some p else None)
 
-let find_mli_summary variant_dir =
-  Option.bind (find_ocaml_install_dir variant_dir) ~f:(fun dir ->
+let find_mli_summary ~project_dir ~variant_id =
+  Option.bind (find_ocaml_install_dir ~project_dir ~variant_id) ~f:(fun dir ->
       let p = dir ^ "/summary.json" in
       if Stdlib.Sys.file_exists p then Some p else None)
 
 let run_for_project ~root ~project ~variant =
-  match resolve_variant_dir ~root ~project variant with
+  match resolve_variant ~root ~project variant with
   | None ->
-      Fmt.epr "compat: no run dir for %s/%s under _out/canary/projects/@."
-        project variant;
+      Fmt.epr "compat: no project dir for %s under _out/canary/projects/@." project;
       2
-  | Some dir ->
-      let stub_path = find_stub_summary dir in
-      let lib_path = find_lib_summary dir in
+  | Some (project_dir, variant_id) ->
+      let stub_path = find_stub_summary ~project_dir ~variant_id in
+      let lib_path = find_lib_summary ~project_dir ~variant_id in
       (match stub_path, lib_path with
        | None, _ ->
-           Fmt.epr "compat: no stub_summary.json under %s/probe_binding_ocaml/@." dir;
+           Fmt.epr "compat: no stub_summary.json under %s/pack_binding_ocaml/%s/@."
+             project_dir variant_id;
            Fmt.epr "  (run `canary action %s` first to populate the cache)@." project;
            2
        | _, None ->
-           Fmt.epr "compat: no probe_lib*/summary.json under %s@." dir;
+           Fmt.epr "compat: no probe_lib*/summary.json under %s/%s@."
+             project_dir variant_id;
            2
        | Some stub_p, Some lib_p ->
-           Fmt.pr "(using cached summaries under %s)@." dir;
+           Fmt.pr "(using cached summaries for %s/%s)@." project variant_id;
            run ~stub_path:stub_p ~lib_path:lib_p)
 
 (* ── Verification: prediction vs probe outcome ── *)
@@ -232,8 +261,8 @@ let read_file_or_empty path =
   then Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
   else ""
 
-let load_mli_missing variant_dir =
-  match find_mli_summary variant_dir with
+let load_mli_missing ~project_dir ~variant_id =
+  match find_mli_summary ~project_dir ~variant_id with
   | None -> []
   | Some p ->
       let j = Yojson.Basic.from_file p in
@@ -333,17 +362,17 @@ let probe_log_summary log =
   (line_count, head)
 
 let verify_for_project ~root ~project ~variant =
-  match resolve_variant_dir ~root ~project variant with
+  match resolve_variant ~root ~project variant with
   | None ->
-      Fmt.epr "verify: no run dir for %s/%s under _out/canary/projects/@."
-        project variant;
+      Fmt.epr "verify: no project dir for %s under _out/canary/projects/@." project;
       2
-  | Some dir ->
-      Fmt.pr "=== Compat verification: %s/%s ===@.@." project variant;
-      Fmt.pr "Run dir: %s@.@." dir;
+  | Some (project_dir, variant_id) ->
+      Fmt.pr "=== Compat verification: %s/%s ===@.@." project variant_id;
+      Fmt.pr "Project dir: %s  variant: %s@.@." project_dir
+        (if String.is_empty variant_id then "(single-variant)" else variant_id);
 
       (* L3 (OCaml mli) prediction *)
-      let mli_missing = load_mli_missing dir in
+      let mli_missing = load_mli_missing ~project_dir ~variant_id in
       Fmt.pr "L3 (OCaml mli) prediction:@.";
       if List.is_empty mli_missing then
         Fmt.pr "  watchlist missing: (none) — predicts SUCCESS at OCaml level@."
@@ -355,12 +384,12 @@ let verify_for_project ~root ~project ~variant =
 
       (* L3 (Python attrs) prediction *)
       let py_missing =
-        match find_python_summary dir with
+        match find_python_summary ~project_dir ~variant_id with
         | None -> []
         | Some p -> load_watchlist_missing p
       in
       Fmt.pr "@.L3 (Python attrs) prediction:@.";
-      (match find_python_summary dir with
+      (match find_python_summary ~project_dir ~variant_id with
        | None -> Fmt.pr "  (no Python summary cached at fetch_binding_python/)@."
        | Some _ ->
            if List.is_empty py_missing then
@@ -372,8 +401,8 @@ let verify_for_project ~root ~project ~variant =
              Fmt.pr "  → predicts FAIL referencing one of these names@."));
 
       (* L0 (C symbols) prediction *)
-      let stub_path = find_stub_summary dir in
-      let lib_path = find_lib_summary dir in
+      let stub_path = find_stub_summary ~project_dir ~variant_id in
+      let lib_path = find_lib_summary ~project_dir ~variant_id in
       let c_result = match stub_path, lib_path with
         | Some s, Some l ->
             let stub = load_stub s in
@@ -402,9 +431,11 @@ let verify_for_project ~root ~project ~variant =
       in
 
       (* Probe.log analysis *)
-      let read_log rel = read_file_or_empty (dir ^ "/" ^ rel) in
-      let ocaml_log = read_log "probe_binding_ocaml/probe.log" in
-      let python_log = read_log "probe_binding_python/probe.log" in
+      let read_log step =
+        read_file_or_empty (step_path ~project_dir ~variant_id step "probe.log")
+      in
+      let ocaml_log = read_log "probe_binding_ocaml" in
+      let python_log = read_log "probe_binding_python" in
       let print_log_section name log =
         let line_count, head = probe_log_summary log in
         Fmt.pr "@.%s probe.log analysis (%d lines):@." name line_count;
