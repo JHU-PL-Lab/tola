@@ -260,22 +260,69 @@ Demo (live):
 - `canary verify llvm dev` — both layers predict COMPATIBLE; probe.log
   shows successful LLVM IR output. Both confirmed.
 
-**Phase 3b — derived `step_expectation` (next, not yet built).**
-Replace the hand-written `Expect_failure { contains_any = [...] }` with a
-value derived from compat at run time. Needs:
-1. The stub summary to be available *before* `probe_ocaml_binding` runs
-   (move its summary step from a child of `probe_binding` to a child of
-   `fetch_binding`/`pack_binding`).
-2. The `expectation` field on `script_spec` to take a closure that can
-   read cached summaries (`rule -> location option -> output_dir:string ->
-   step_expectation`), or the runner to compute expectations after
-   pre-probe summaries land.
-3. A small adapter in each project spec that returns
-   `Expect_failure { contains_any = compat.missing; ... }` instead of a
-   hand-written list.
+**Phase 3b — derived `step_expectation` (shipped).**
+Replaces the hand-written `Expect_failure { contains_any = [...] }` with
+a new variant `Expect_compat_failure { stub_summary; lib_summary;
+mli_summary; version_info }` whose contents are *derived at evaluation
+time* from cached compat summaries.
 
-Once 3b lands, hand-written expectations become a fallback, used only
-where compat can't decide (Python, behavioural mismatches, etc.).
+Implementation:
+1. **Auto-summary moved.** `auto_binding_summaries` now emits both mli
+   and stub summaries on `Fetch (Binding OCaml)` / `Publish (Binding
+   OCaml)` (the install step) instead of `Probe (Binding _)`. The
+   summaries are cached in `<run_dir>/fetch_ocaml_binding/` or
+   `<run_dir>/pack_ocaml_binding/` *before* `probe_binding` runs.
+2. **New step_expectation variant** carries a list of candidate relative
+   paths for each summary kind (so the same expectation works for both
+   `fetch_*` and `pack_*` variants). The runner picks the first existing.
+3. **Runner derives contains_any** by calling
+   `Canary_compat.predicted_contains_any` with the resolved paths. Empty
+   derived list ⇒ falls back to "any failure with non-empty probe.log".
+4. **Project spec adapter** — LLVM's stable-variant probe expectation now
+   reads:
+   ```ocaml
+   Expect_compat_failure {
+     stub_summary = [ "pack_ocaml_binding/stub_summary.json";
+                      "fetch_ocaml_binding/stub_summary.json" ];
+     lib_summary  = [ "probe_lib/summary.json"; "probe_lib_apt/summary.json"; ... ];
+     mli_summary  = [ "pack_ocaml_binding/summary.json";
+                      "fetch_ocaml_binding/summary.json" ];
+     version_info = Some { ... };
+   }
+   ```
+   No hand-written `contains_any`.
+
+Live demo:
+```
+[probe_ocaml_binding] cmd_fail (exit 1)
+[probe_ocaml_binding] compat_predicted (3 substring(s))
+[probe_ocaml_binding] done (expected failure confirmed (derived):
+                           llvm 19 predates Opcode.UncondBr,
+                           added in LLVM 21 (dev, commit #186176))
+```
+
+Hand-written `Expect_failure` remains for cases compat can't decide.
+Two distinct sub-cases worth separating:
+
+- **Not yet wired (3c candidate).** Python summary already exists
+  (`summarize_python.py` produces `dir()` attrs + L3 watchlist). The
+  L3-driven `Expect_compat_failure` for Python is implementable today
+  by extending `predicted_contains_any` to consume Python attr
+  summaries; just hasn't been wired. Note Python typically has no L0
+  cross-check (pip wheels bundle their own native lib — co-provider
+  case from §5.3) so it would be L3-only.
+
+- **Inherently behavioural.** Failures that no static summary can
+  predict — version-string mismatches in import logs, functions that
+  exist but return wrong results, runtime initialization order. These
+  legitimately remain hand-written; they require an actual probe run.
+
+The `Expect_compat_failure` variant is currently OCaml-shaped (the
+field name `mli_summary` is OCaml-specific). When a second language
+adopts L0/L3 cross-checking, the variant should be reshaped to take a
+list of typed `compat_summary_input` entries (`C_stub | Native_lib |
+Ocaml_mli | Python_attrs`) so each language contributes whichever
+layers apply.
 
 ### Deferred
 

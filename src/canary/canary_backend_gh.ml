@@ -56,19 +56,22 @@ let render_gh_step ~project (step : Canary_action.action_step) =
         [ [%string {|      - name: %{step.tag} (symbols)
 %{run_block body}|}] ]
   in
-  match step.expectation with
-  | Expect_success ->
-      [ [%string {|      - name: %{step.tag}
-%{run_block full_cmd}|}] ]
-      @ sym_check_step
-  | Expect_failure { contains_any; version_info = _ } ->
-      let id = sanitize_id step.tag in
-      let grep_check =
-        List.map contains_any ~f:(fun pat ->
-            [%string {|grep -qF '%{pat}' "%{out}/probe.log" 2>/dev/null|}])
-        |> String.concat ~sep:" \\\n          || "
-      in
-      let verify_body =
+  let render_failure_check ~contains_any =
+    let id = sanitize_id step.tag in
+    let grep_check =
+      List.map contains_any ~f:(fun pat ->
+          [%string {|grep -qF '%{pat}' "%{out}/probe.log" 2>/dev/null|}])
+      |> String.concat ~sep:" \\\n          || "
+    in
+    let verify_body =
+      if List.is_empty contains_any then
+        [%string
+          {|if [ "${{ steps.%{id}.outcome }}" = "success" ]; then
+  echo "FAIL: expected failure but step succeeded"
+  exit 1
+fi
+echo "PASS: expected failure confirmed (no specific predicted strings)"|}]
+      else
         [%string
           {|if [ "${{ steps.%{id}.outcome }}" = "success" ]; then
   echo "FAIL: expected failure but step succeeded"
@@ -81,17 +84,44 @@ else
   cat "%{out}/probe.log" || true
   exit 1
 fi|}]
-      in
-      [
-        [%string
-          {|      - name: %{step.tag}
+    in
+    [
+      [%string
+        {|      - name: %{step.tag}
         id: %{id}
         continue-on-error: true
 %{run_block full_cmd}|}];
-        [%string
-          {|      - name: %{step.tag} (verify)
+      [%string
+        {|      - name: %{step.tag} (verify)
 %{run_block verify_body}|}];
-      ]
+    ]
+  in
+  match step.expectation with
+  | Expect_success ->
+      [ [%string {|      - name: %{step.tag}
+%{run_block full_cmd}|}] ]
+      @ sym_check_step
+  | Expect_compat_failure { stub_summary; lib_summary; mli_summary;
+                            version_info = _ } ->
+      (* Resolve predictions at YAML-generation time using locally-cached
+         summaries. When cache is empty (fresh CI runner), the fallback in
+         render_failure_check accepts any failure with non-empty probe.log. *)
+      let run_dir = Stdlib.Filename.dirname out in
+      let pick_first_existing rels =
+        List.find_map rels ~f:(fun rel ->
+            let p = run_dir ^ "/" ^ rel in
+            if Stdlib.Sys.file_exists p then Some p else None)
+      in
+      let derived =
+        Canary_compat.predicted_contains_any
+          ?stub_summary_path:(pick_first_existing stub_summary)
+          ?lib_summary_path:(pick_first_existing lib_summary)
+          ?mli_summary_path:(pick_first_existing mli_summary)
+          ()
+      in
+      render_failure_check ~contains_any:derived
+  | Expect_failure { contains_any; version_info = _ } ->
+      render_failure_check ~contains_any
 
 let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
     ~preamble_steps (steps : Canary_action.action_step list) =

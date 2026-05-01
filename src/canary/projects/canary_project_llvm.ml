@@ -318,56 +318,75 @@ let mk_script_spec ~source
        else None);
     build_binding =
       (if source.has_build_binding then
-         Some
-           (fun ~output_dir ->
-             [%string
-               "eval $(opam env) && ninja -C %{build} ocaml_all \
-                && echo 'ok' > %{output_dir}/build.ok"])
+         [ (OCaml,
+            fun ~output_dir ->
+              [%string
+                "eval $(opam env) && ninja -C %{build} ocaml_all \
+                 && echo 'ok' > %{output_dir}/build.ok"]) ]
+       else []);
+    install_lib =
+      (if source.has_build_lib then
+         Some (fun ~output_dir ->
+           [%string
+             {|PREFIX="%{build}/../install"
+mkdir -p "$PREFIX/lib"
+cp %{build}/lib/libLLVM*.so "$PREFIX/lib/" 2>/dev/null || true
+echo 'ok' > %{output_dir}/install.ok|}])
        else None);
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      Some (Canary_action.fetch_binding_cmd prebuilt.opam_package_spec);
+      [ (OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
     pack_binding =
       (if source.has_build_binding then
-         Some
-           (fun ~output_dir ->
-             let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
-             let repo_name = ocaml_tc.toolchain.local_repo_name in
-             (* llvm.dev-shared and conf-llvm-shared.dev read CANARY_LLVM_BUILD
-                to locate the build tree. No opam config subst needed — these
-                packages use shell ${VAR:-default} directly. *)
-             [%string
-               {|eval $(opam env)
-opam repo add %{repo_name} "file://%{repo_abs}" --rank=1 \
-  || opam repo set-url %{repo_name} "file://%{repo_abs}"
-opam update %{repo_name}
-CANARY_BUILD_DIR="%{build}" opam install -y conf-llvm-shared.dev --assume-depexts
-opam remove -y llvm.dev-shared || true
-CANARY_BUILD_DIR="%{build}" opam install -y %{llvm_dev_opam_pkg} \
-  --verbose --keep-build-dir --assume-depexts \
-  && echo 'ok' > %{output_dir}/pack.ok|}])
-       else None);
+         [ (OCaml,
+            fun ~output_dir ->
+              let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
+              let repo_name = ocaml_tc.toolchain.local_repo_name in
+              (* llvm.dev-shared and conf-llvm-shared.dev read CANARY_BUILD_DIR
+                 to locate the build tree. No opam config subst needed — these
+                 packages use shell ${VAR:-default} directly. *)
+              let env_prefix = [%string {|CANARY_BUILD_DIR="%{build}" |}] in
+              let pre_install =
+                [%string
+                  {|CANARY_BUILD_DIR="%{build}" opam install -y conf-llvm-shared.dev --assume-depexts|}]
+              in
+              opam_pack_cmd ~repo_name ~repo_abs ~pkg_full:llvm_dev_opam_pkg
+                ~pre_install ~env_prefix ~output_dir ()) ]
+       else []);
     probe_lib =
-      (if source.has_build_lib then
-         Some
-           (fun ~output_dir ->
-             Canary_artifact_native.native_lib_probe_cmd
-               ~lib:[%string "%{build}/lib/libLLVM.so"]
-               ~prefix:"LLVM" ~output_dir)
-       else
-         Some
-           (fun ~output_dir ->
-             [%string
-               {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
+      List.filter_opt
+        [
+          (if source.has_build_lib then
+             Some
+               ( Build_tree,
+                 fun ~output_dir ->
+                   Canary_artifact_native.native_lib_probe_cmd
+                     ~lib:[%string "%{build}/lib/libLLVM.so"]
+                     ~prefix:"LLVM" ~output_dir )
+           else None);
+          (if source.has_build_lib then
+             Some
+               ( Staged,
+                 fun ~output_dir ->
+                   Canary_artifact_native.native_lib_probe_cmd
+                     ~lib:[%string "%{build}/../install/lib/libLLVM.so"]
+                     ~prefix:"LLVM" ~output_dir )
+           else None);
+          Some
+            ( Pm (Sys_pm { pm }),
+              fun ~output_dir ->
+                [%string
+                  {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 test -x "$LLVM_CONFIG"
-"$LLVM_CONFIG" --version > %{output_dir}/probe.log 2>&1|}]));
+"$LLVM_CONFIG" --version > %{output_dir}/probe.log 2>&1|}] );
+        ];
     probe_binding =
       List.filter_opt
         [
           (* Build_tree: probe source-built binding against source-built lib *)
           (if source.has_build_binding then
              Some
-               (Build_tree, fun ~output_dir ->
+               (OCaml, Build_tree, fun ~output_dir ->
                  let script = "canary/scripts/assert_binary_symbols.py" in
                  let pkg_dir = [%string "%{build}/lib/ocaml/llvm"] in
                  [%string
@@ -384,7 +403,7 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
            else None);
           (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
           Some
-            (Pm { lang = OCaml; pm = Opam }, fun ~output_dir ->
+            (OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }), fun ~output_dir ->
               [%string
                 {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
@@ -393,7 +412,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ]
       @ List.filter_map binding_configs ~f:(function
           | Python_config p ->
-              Some (Pm { lang = Python; pm = Pip }, fun ~output_dir -> pip_probe_cmd p ~output_dir)
+              Some (Python, Pm (Lang_pm { lang = Python; pm = Pip }),
+                    fun ~output_dir -> pip_probe_cmd p ~output_dir)
           | Ocaml_config _ -> None);
     probe_app = Some llvm_python_probe;
     check_post =
@@ -407,32 +427,41 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some
             (Canary_artifact_check.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/lib/libLLVM.so"])
-      | Build_binding ->
+      | Build_binding _ ->
           Some
             (Canary_artifact_check.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/lib/ocaml/llvm/llvm.cmxa"])
-      | Fetch Binding ->
+      | Fetch (Binding _) ->
           let pkg = prebuilt.opam_package_spec.install_name in
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg)
-      | Publish Binding ->
+      | Publish (Binding _) ->
           Some (fun ~output_dir ->
             Canary_artifact_check.check_markers [ "pack.ok" ] ~output_dir
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     expectation = (fun rule loc -> match rule, loc with
-      | Probe Binding, Some (Pm { lang = Python; _ }) ->
+      | Probe (Binding _), Some (Pm (Lang_pm { lang = Python; _ })) ->
           (* llvmlite bundles its own libLLVM; independent of opam's LLVM
              version, so the pip probe is Expect_success regardless of
              has_build_binding. *)
           Expect_success
-      | Probe Binding, _ when not source.has_build_binding ->
-          (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared *)
-          (* OCaml 5.2+ quotes constructor names: "Opcode.UncondBr"; match both forms *)
-          Expect_failure {
-            contains_any = [ "Unbound constructor Opcode.UncondBr";
-                             {|Unbound constructor "Opcode.UncondBr"|} ];
+      | Probe (Binding _), _ when not source.has_build_binding ->
+          (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared.
+             contains_any is now DERIVED from cached compat summaries by the runner —
+             reads mli watchlist's missing list (e.g. Llvm.Opcode.UncondBr →
+             "Opcode.UncondBr" / "UncondBr" substrings) plus L0 missing C symbols.
+             Hand-written list retained as fallback at the variant level via
+             empty-derived → any-failure-with-probe.log. See api_compat.md §3b. *)
+          Expect_compat_failure {
+            stub_summary = [ "pack_ocaml_binding/stub_summary.json";
+                             "fetch_ocaml_binding/stub_summary.json" ];
+            lib_summary  = [ "probe_lib/summary.json";
+                             "probe_lib_apt/summary.json";
+                             "probe_lib_staged/summary.json" ];
+            mli_summary  = [ "pack_ocaml_binding/summary.json";
+                             "fetch_ocaml_binding/summary.json" ];
             version_info = Some {
               provider_version = "llvm 19";
               consumer_requires = "Opcode.UncondBr";
@@ -441,7 +470,13 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             };
           }
       | _ -> Expect_success);
-    summary = (fun rule loc ->
+    binding_summary = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
+    summary_note =
+      (if not source.has_build_binding then
+         Some (Canary_artifact_api.stable_reuse_warning
+                 ~source_name:"llvm" ~source_version:source.version)
+       else None);
+    summary = (fun rule _loc ->
       let api = Option.value_exn source.api_source
           ~message:"llvm mk_script_spec: api_source not set" in
       let warn =
@@ -451,19 +486,17 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         else None
       in
       let prepend_warn cmd =
-        match warn with
-        | None -> cmd
-        | Some w -> [%string "%{w}\n%{cmd}"]
+        match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
       in
-      match rule, loc with
-      | Probe Lib, _ when source.has_build_lib ->
+      match rule with
+      | Probe Lib when source.has_build_lib ->
           Some (fun ~output_dir ->
             prepend_warn (Canary_artifact_native.summary_cmd
               ~lib:[%string "%{build}/lib/libLLVM.so"]
               ~prefixes:[ "LLVM" ]
               ~watchlist:(Canary_artifact_api.native_watchlist api)
               ~output_dir ()))
-      | Probe Lib, _ ->
+      | Probe Lib ->
           Some (fun ~output_dir ->
             prepend_warn [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
@@ -473,19 +506,5 @@ test -n "$LLVM_LIB"
     ~prefixes:[ "LLVM" ]
     ~watchlist:(Canary_artifact_api.native_watchlist api)
     ~output_dir ()}|}])
-      | Probe Binding, Some (Pm { lang = Python; _ }) ->
-          Some (fun ~output_dir ->
-            prepend_warn (Canary_artifact_lang.python_summary_cmd
-              ~pkg:"llvmlite.binding"
-              ~watchlist:(Canary_artifact_api.binding_watchlist_exn api Python)
-              ~output_dir ()))
-      | Probe Binding, _ ->
-          (* ocamlfind package is "llvm" regardless of opam variant suffix
-             (llvm.dev-shared / llvm.19-shared are opam-only names). *)
-          Some (fun ~output_dir ->
-            prepend_warn (Canary_artifact_lang.summary_opam_pkg_cmd
-              ~pkg:"llvm"
-              ~watchlist:(Canary_artifact_api.binding_watchlist_exn api OCaml)
-              ~output_dir ()))
       | _ -> None);
   }

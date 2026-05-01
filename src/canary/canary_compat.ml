@@ -157,9 +157,25 @@ let find_lib_summary variant_dir =
       let p = variant_dir ^ "/" ^rel in
       if Stdlib.Sys.file_exists p then Some p else None)
 
+(* OCaml binding summaries (mli + stub) are written by the install step —
+   either Fetch (Binding OCaml) → fetch_ocaml_binding/, or
+   Publish (Binding OCaml) → pack_ocaml_binding/. Try both. *)
+let find_ocaml_install_dir variant_dir =
+  let candidates = [ "pack_ocaml_binding"; "fetch_ocaml_binding" ] in
+  List.find_map candidates ~f:(fun rel ->
+      let p = variant_dir ^ "/" ^ rel in
+      if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
+      then Some p else None)
+
 let find_stub_summary variant_dir =
-  let p = variant_dir ^ "/" ^"probe_ocaml_binding/stub_summary.json" in
-  if Stdlib.Sys.file_exists p then Some p else None
+  Option.bind (find_ocaml_install_dir variant_dir) ~f:(fun dir ->
+      let p = dir ^ "/stub_summary.json" in
+      if Stdlib.Sys.file_exists p then Some p else None)
+
+let find_mli_summary variant_dir =
+  Option.bind (find_ocaml_install_dir variant_dir) ~f:(fun dir ->
+      let p = dir ^ "/summary.json" in
+      if Stdlib.Sys.file_exists p then Some p else None)
 
 let run_for_project ~root ~project ~variant =
   match resolve_variant_dir ~root ~project variant with
@@ -205,13 +221,55 @@ let read_file_or_empty path =
   else ""
 
 let load_mli_missing variant_dir =
-  let p = variant_dir ^ "/probe_ocaml_binding/summary.json" in
-  if not (Stdlib.Sys.file_exists p) then []
-  else
-    let j = Yojson.Basic.from_file p in
-    match field j "watchlist" with
-    | Some wl -> get_string_list wl "missing"
+  match find_mli_summary variant_dir with
+  | None -> []
+  | Some p ->
+      let j = Yojson.Basic.from_file p in
+      match field j "watchlist" with
+      | Some wl -> get_string_list wl "missing"
+      | None -> []
+
+(* Predict the set of substrings that would appear in a failed probe.log,
+   given paths to cached summaries. This is the consumer-facing entry point
+   for Expect_compat_failure: pass paths to install-dir summaries and the
+   probe_lib summary; get back the contains_any list to grep probe.log for.
+   Variants of dotted names (full path, suffix without top-level prefix,
+   last component) are emitted so the substring search matches OCaml-level
+   "Unbound constructor X.Y" patterns regardless of how X.Y is qualified. *)
+let predicted_contains_any
+    ?stub_summary_path ?lib_summary_path ?mli_summary_path () =
+  let l3 = match mli_summary_path with
     | None -> []
+    | Some p when not (Stdlib.Sys.file_exists p) -> []
+    | Some p ->
+        let j = Yojson.Basic.from_file p in
+        match field j "watchlist" with
+        | Some wl -> get_string_list wl "missing"
+        | None -> []
+  in
+  let l3_variants =
+    List.concat_map l3 ~f:(fun e ->
+        let parts = String.split e ~on:'.' in
+        let suffix_no_top = match parts with
+          | _ :: (_ :: _ as rest) -> [ String.concat ~sep:"." rest ]
+          | _ -> []
+        in
+        let last = match List.last parts with Some l -> [ l ] | None -> [] in
+        e :: suffix_no_top @ last)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let l0 = match stub_summary_path, lib_summary_path with
+    | Some s, Some l
+      when Stdlib.Sys.file_exists s && Stdlib.Sys.file_exists l ->
+        let stub = load_stub s in
+        let lib = load_native l in
+        (match check_c_compat ~binding_stub:stub ~native_lib:lib with
+         | Missing { symbols } -> symbols
+         | Compatible | Unknown -> [])
+    | _ -> []
+  in
+  l3_variants @ l0
+  |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step
    succeeded. probe.log non-empty + no .ok marker implies cmd failed (which
