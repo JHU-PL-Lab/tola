@@ -25,7 +25,9 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 16, 20, 31, 35, 41, 42. **API compatibility model** — binding_api.deps
     split, C API surface (consumer/provider cross-check + provider-vs-
     provider delta), mismatch prediction, Python summary enhancements.
-    Grouped into `doc/canary/design/api_compat.md`.
+    The shipped portion (Steps C1, D-basic for OCaml + Python) is
+    documented in `doc/canary/design/interface.md` §13. Open items
+    (#35, #20, #41, #42) remain.
 
 43. **L1b — versioned symbol requirements in compat check** — `summarize_native.py`
     already records `versioned_req` (e.g. `{"GLIBC_2.31": 3}`) per artifact.
@@ -33,8 +35,8 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     L1b: a binding requires a specific @VER suffix on a symbol, the lib must
     provide that or higher. Adds glibc/libstdc++ floor checking — predicts
     failures from binaries built on newer distros that won't run on older
-    ones, even when symbol names match. See `doc/canary/design/api_compat.md`
-    "future direction".
+    ones, even when symbol names match. See `doc/canary/design/interface.md`
+    §13.6.
 
 44. **L2 — typed signatures via clang AST or libclang** — today's compat
     check is name-level (L0/L3 set inclusion). Lift to L2 by extracting
@@ -44,7 +46,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     on argument types, covariance on results, refinement on value domains.
     Gives a decidable-but-conservative type-system over artifact interfaces;
     catches "same name, different signature" version drift. See interface.md
-    §15 "open theoretical questions" and api_compat.md "typing-rule shape".
+    §13.1 "typing-rule shape" and §15 "open theoretical questions".
 
 17. **Module interfaces (.mli)** — define contracts for PM modules
     (`canary_pm_{apt,brew,opam,pip}`) and project modules (`canary_project_*.ml`).

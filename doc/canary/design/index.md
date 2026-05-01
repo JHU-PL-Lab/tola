@@ -2,8 +2,9 @@
 
 This is the single design narrative for canary. Companion to:
 
-- [interface.md](interface.md) — the interface contract details + concrete artifact-summary tooling
-- [interface.md §4](interface.md) — API source layer: `canary_artifact_api` types, scan step, concrete instances
+- [interface.md](interface.md) — interface theory (subtyping lattice,
+  failure taxonomy, summary schema) and the working compat-check
+  implementation (§13: types, data flow, demos)
 - [`../trackers/`](../trackers/) — implementation status per stage (transient)
 - [`../ops/`](../ops/) — operational gotchas (durable)
 
@@ -152,82 +153,41 @@ is skipped if its `check_post` already passes — `external_state || marker`
 form so steps skip even when `_out/` is cleared, as long as the external
 artifact is still valid.
 
-## 4. Spec_shape and scan stage
+## 4. Spec, scan, and compat-check stages
 
-This section covers the `api_source` layer (now implemented; see
-[interface.md §4](interface.md)) and the fuller "scan stage" vision (every
-project declares what canary should scan, and the scan result is a cacheable
-action_step output).
+Each project file (`canary_project_z3.ml`, etc.) defines a `script_spec`:
+one shell command per action slot, plus per-rule check_post, expectation,
+symbol_check, and summary callbacks. Around the spec sit three pieces of
+declarative metadata that make the shell less opaque to canary:
 
-### Today: `script_spec` as imperative shell
+- **`api_source`** (`canary_artifact_api.ml`) — three-layer model (source
+  → `native_api` → `binding_api` per language). Provider claims (header
+  paths, symbol prefixes, stable-symbol watchlist) and consumer claims
+  (per-language module watchlists) are separate. See
+  [interface.md §4](interface.md).
+- **`scan_source`** — a step emitted after `fetch_source` that verifies
+  the api_source claims (headers exist, binding source dirs present);
+  blocks the build chain on spec drift.
+- **Per-artifact summaries** (mli, c-stub, native, python) — written at
+  install steps (`fetch_*_binding` / `pack_*_binding`) and probe-lib
+  steps. Cached as `summary.json` / `stub_summary.json` under
+  `_out/canary/projects/<project>/<variant>/<step>/`.
 
-Each project file (`canary_project_z3.ml`, etc.) defines a `script_spec`: one
-shell command per action slot, plus per-rule check_post / expectation /
-symbol_check / summary callbacks. This works but the shell is opaque to canary
-— it can't *see* which symbols are stable, which build target produces the
-OCaml binding, which headers define the API.
-
-### Tomorrow: `spec_shape` + scan_result
-
-A project's declarative shape captures *what canary scans for*:
-
-```ocaml
-type spec_shape = {
-  identity : project_identity;        (* (name, version, source_repo) *)
-  api : api_definition option;        (* headers, exported symbol prefixes,
-                                         binding generators, build targets per language *)
-  bindings : binding_decl list;       (* per (language, PM) declared up front *)
-  scan_strategy : scan_strategy;      (* what to extract during scan *)
-}
-```
-
-Canary then has a **scan stage** between fetch and probe:
-
-```
-fetch_source → scan_source     → produces scan_result.source.json
-fetch_lib    → scan_lib        → produces scan_result.lib.json
-build_binding → scan_binding   → produces scan_result.binding.json
-```
-
-Each `scan_*` is a regular action_step with the same caching semantics as any
-other step. The `scan_result.json` contains *first-class* observations about
-the artifact — header lists, exported C-symbol surface (with version tags
-where present), OCaml module list, Python attr list, etc.
-
-Probe steps then *consume* scan_result.json instead of re-doing the inspection
-ad-hoc. summary-diff between two scan_results IS the drift detection
-mechanism.
-
-### Why this is more than today's `summary.json`
-
-Today's summary.json is per-probe and handcrafted per project (z3 looks at
-libz3.so via its own `lib_resolve`; ssl does its own; etc.). The scan_result
-generalisation:
-
-- Makes the scan a **uniform stage** — same machinery for every project, just
-  parametrised by spec_shape
-- Caches at the artifact identity level, not per-probe — multiple probes share
-  one scan
-- Makes adding a new language binding a **data-only change**: extend
-  `bindings` with `(Python, pip)`, the scan stage figures out what to scan
-  on the Python side, downstream probes just consume the result
-- Captures source-level scans (header globs, public API entity counts) that
-  are absent from the current per-probe summary model — the missing piece for
-  source-as-interface
-
-### Migration
-
-Steps A–C of the original migration plan are done (type declared, populated
-for z3/llvm, summaries read from api_source, scan step wired). What remains
-is the full `scan_result.json` generalisation — uniform scan machinery across
-every project, per-artifact caching. Step E (Python as data-only addition)
-is the validation target.
+The summaries feed a **compatibility check** (`canary_compat.ml`,
+`Expect_compat_failure`) that derives expected probe-failure substrings
+at runtime, so `step_expectation` doesn't need hand-written
+`contains_any` lists for cases the cross-check covers. End-to-end demos
+on LLVM 19 (OCaml `Opcode.UncondBr`) and Z3 stable (Python
+`parser_context`). See [interface.md §13](interface.md) for design and
+implementation details.
 
 ### Per-language binding integration
 
-A `binding_decl` captures: language, package manager, install command,
-probe template, watchlist, optional summary tooling. Today these are scattered
-across project specs as ad-hoc shell. The unified model lets us say:
+A binding entry in `api_source` captures: language, package manager,
+source dir (or out-of-tree), module watchlist. Today's project specs
+declare these for OCaml + Python; new languages plug in as data-only
+additions when the action graph supports the relevant `Fetch / Probe
+(Binding lang)` rules.
 
 ```
 z3 has bindings = [
@@ -240,30 +200,50 @@ z3 has bindings = [
 Each binding has its own version axis (per §2 finding: independent when
 binding ships own native, coupled when wrapping system).
 
+### Open direction: uniform scan_result
+
+A future generalisation lifts the per-probe summary model to a
+per-artifact `scan_result.json` cached at the artifact identity level
+(name × version × kind), so multiple probes consuming the same artifact
+share one cached result. Today's per-step summaries cover the practical
+cases; uniform `scan_result` becomes the cleaner shape once a fourth or
+fifth language binding lands.
+
 ## 5. Interface contract & artifact summaries
 
-See [interface.md](interface.md) for the full story:
+[interface.md](interface.md) is the single doc covering both the theory
+and the working code:
 
-- Provides ⊆ Requires subtyping (Liskov-style)
-- Six-level layering L1a (symbols) → L1b (versioned) → L2 (types) → L3 (API
-  shape) → L4 (ABI/runtime) → L5 (behavior)
-- Failure taxonomy
-- Concrete `summary.json` schema and tooling per artifact kind
-- Watchlist mechanics
-- Interface ↔ version_logic bridge
+- Provides ⊆ Requires subtyping (Liskov-style); six-level layering L1a
+  (symbols) → L1b (versioned) → L2 (types) → L3 (API shape) → L4
+  (ABI/runtime) → L5 (behavior).
+- Failure taxonomy and concrete examples (z3 dev/apt, llvm 19/dev,
+  glibc/musl, z3-solver pip).
+- `summary.json` schema and tooling per artifact kind; watchlist
+  mechanics (provider vs consumer).
+- **§13 — Compatibility check (implementation):** typing-rule frame,
+  module layout, key types, data flow, status table, demo recipes,
+  open items. The shipped portion of the api-compat milestone.
+- §15 open theoretical questions (typed signatures, subtyping with
+  refinement).
 
 ## 6. Workflow stages
 
 ```
-[Declare]    project gives spec_shape (§4)
+[Declare]    project gives script_spec + api_source (§4)
    ↓
-[Scan]       spec_shape × source/lib/binding → scan_result.json   (§4)
+[Scan]       fetch_source → scan_source verifies api_source claims  (§4)
    ↓
-[Probe]      compile/run examples per binding                    (§3 — already in canary)
+[Install]    fetch/pack_*_binding → produces summary.json + stub_summary.json
    ↓
-[Summarize]  artifact → summary.json                             (§5 — today; will fold into Scan)
+[Probe]      compile/run examples per binding (OCaml + Python)
    ↓
-[Compare]    scan_result × N → drift report                      (§5 — summary-diff today, version-aware tomorrow)
+[Predict]    Expect_compat_failure derives expected substrings from
+             cached install-step summaries (§5 — interface.md §13)
+   ↓
+[Verify]     canary verify cross-references prediction vs probe.log
+   ↓
+[Compare]    canary summary-diff between two snapshots (drift detection)
 ```
 
 The stages map to canary's action_step model: each stage produces an output

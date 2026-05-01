@@ -119,7 +119,7 @@ opam switch conflicts.
     rewriting, symlink creation, pkg-config/cmake config file generation).
     See `doc/canary/ops/install_targets.md` for z3 vs LLVM install patterns.
 
-Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see trackers/new_project_spec.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (see design/api_compat.md).
+Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see trackers/new_project_spec.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see design/interface.md §13).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)

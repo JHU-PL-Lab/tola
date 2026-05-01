@@ -387,7 +387,7 @@ let compat_cmd =
   in
   Cmd.v (Cmd.info "compat"
            ~doc:"Static C-symbol cross-check: predict whether a binding's required \
-                 symbols are all provided by a native lib (Step C1 of api_compat.md).")
+                 symbols are all provided by a native lib. See interface.md §13.")
     Term.(const run $ project $ variant $ stub $ lib $ const ())
 
 let verify_cmd =
@@ -405,7 +405,7 @@ let verify_cmd =
   in
   Cmd.v (Cmd.info "verify"
            ~doc:"Cross-reference cached compat predictions against probe.log \
-                 outcomes (Step D-basic of api_compat.md). Reports per-layer \
+                 outcomes. Reports per-layer \
                  prediction-vs-observation alignment.")
     Term.(const run $ project $ variant $ const ())
 

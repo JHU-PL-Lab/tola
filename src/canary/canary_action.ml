@@ -88,7 +88,7 @@ type step_expectation =
   (* Failure expected; contains_any is *derived* at evaluation time from
      cached compat summaries given by [inputs]. Empty derived list ⇒ the
      check degenerates to "any failure with non-empty probe.log".
-     See Step D-basic in doc/canary/design/api_compat.md. *)
+     See doc/canary/design/interface.md §13. *)
   | Expect_compat_failure of {
       inputs       : compat_summary_input list;
       version_info : version_info option;
