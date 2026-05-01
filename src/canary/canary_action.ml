@@ -1186,6 +1186,113 @@ let dump_run_info ~dir (info : run_info) =
   Stdlib.close_out oc;
   path
 
+(* ── Index scanner ──
+   Walks <root>/canary/projects/<project>/<variant>/ and collects metadata
+   for every result.html found. Used to regenerate the top-level index
+   after each run and by the standalone `canary index` command. *)
+
+let _list_dirs path =
+  if not (Stdlib.Sys.file_exists path) then []
+  else
+    try
+      Stdlib.Sys.readdir path
+      |> Array.to_list
+      |> List.filter ~f:(fun n ->
+          let p = path ^ "/" ^ n in
+          Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p)
+    with _ -> []
+
+let _read_file_lines path =
+  try
+    let ic = Stdlib.open_in path in
+    let rec loop acc =
+      match Stdlib.input_line ic with
+      | l -> loop (l :: acc)
+      | exception End_of_file -> Stdlib.close_in ic; List.rev acc
+    in
+    loop []
+  with _ -> []
+
+(* Coarse status counts from actions.log: each step emits a "done" or
+   "failed" or "skipped" event line. We count distinct step tags. *)
+let _counts_from_log ~variant_dir =
+  let log = variant_dir ^ "/actions.log" in
+  let lines = _read_file_lines log in
+  let by_tag = Hashtbl.create (module String) in
+  List.iter lines ~f:(fun line ->
+      (* Format: "[YYYY-MM-DD HH:MM:SS.SSS] <tag><spaces><event>  ..." *)
+      match String.lsplit2 line ~on:']' with
+      | None -> ()
+      | Some (_, rest) ->
+          let rest = String.lstrip rest in
+          (match String.split rest ~on:' ' with
+           | tag :: rest_tokens ->
+               let event = List.find rest_tokens ~f:(fun t ->
+                   not (String.is_empty t)) in
+               (match event with
+                | Some "done" -> Hashtbl.set by_tag ~key:tag ~data:"done"
+                | Some "failed" -> Hashtbl.set by_tag ~key:tag ~data:"failed"
+                | Some "skipped" ->
+                    (* Don't override done/failed *)
+                    if not (Hashtbl.mem by_tag tag) then
+                      Hashtbl.set by_tag ~key:tag ~data:"skipped"
+                | _ -> ())
+           | _ -> ()));
+  let total = Hashtbl.length by_tag in
+  let done_ = Hashtbl.count by_tag ~f:(String.equal "done") in
+  let failed = Hashtbl.count by_tag ~f:(String.equal "failed") in
+  let skipped = Hashtbl.count by_tag ~f:(String.equal "skipped") in
+  (total, done_, failed, skipped)
+
+let _format_mtime (t : float) =
+  let tm = Unix.localtime t in
+  Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+    (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+    tm.tm_hour tm.tm_min tm.tm_sec
+
+let _source_kind_of_run_info ~variant_dir =
+  let path = variant_dir ^ "/run_info.json" in
+  let lines = _read_file_lines path in
+  List.find_map lines ~f:(fun l ->
+      let l = String.strip l in
+      match String.chop_prefix l ~prefix:{|"source": |} with
+      | Some s ->
+          (* s looks like "git:... ," or "local:... ," *)
+          Some (String.strip ~drop:(fun c ->
+              Char.equal c '"' || Char.equal c ','
+              || Char.equal c ' ') s)
+      | None -> None)
+  |> Option.value ~default:""
+
+let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
+  if not (Stdlib.Sys.file_exists projects_root) then []
+  else
+    let projects = _list_dirs projects_root in
+    List.concat_map projects ~f:(fun project ->
+        let proj_dir = projects_root ^ "/" ^ project in
+        let variants = _list_dirs proj_dir in
+        List.filter_map variants ~f:(fun variant ->
+            let variant_dir = proj_dir ^ "/" ^ variant in
+            let html_path = variant_dir ^ "/result.html" in
+            if not (Stdlib.Sys.file_exists html_path) then None
+            else
+              let mtime = (Unix.stat html_path).st_mtime in
+              let (total, done_, failed, skipped) =
+                _counts_from_log ~variant_dir
+              in
+              let src = _source_kind_of_run_info ~variant_dir in
+              Some Canary_backend_html.{
+                project;
+                variant;
+                run_at = _format_mtime mtime;
+                href = project ^ "/" ^ variant ^ "/result.html";
+                total_steps = total;
+                done_steps = done_;
+                failed_steps = failed;
+                skipped_steps = skipped;
+                source_kind = src;
+              }))
+
 let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   let dir = [%string "%{root}/canary/projects/%{project}"] in
   ensure_dir dir;
@@ -1372,4 +1479,14 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   Stdlib.output_string oc html;
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"html" ~detail:(Some html_path);
+  (* Rewrite the top-level index covering every (project, variant) under
+     <root>/canary/projects/. Cheap to regenerate after each run. *)
+  let projects_root = [%string "%{root}/canary/projects"] in
+  let index_path = projects_root ^ "/index.html" in
+  let entries = scan_index_entries ~projects_root in
+  let index_html = Canary_backend_html.render_index ~entries ~generated_at:run_at in
+  let oc = Stdlib.open_out index_path in
+  Stdlib.output_string oc index_html;
+  Stdlib.close_out oc;
+  logger.log ~tag:"*" ~event:"index" ~detail:(Some index_path);
   logger.close ()

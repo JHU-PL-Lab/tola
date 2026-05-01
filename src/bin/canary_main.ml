@@ -409,6 +409,31 @@ let verify_cmd =
                  prediction-vs-observation alignment.")
     Term.(const run $ project $ variant $ const ())
 
+let index_cmd =
+  let run () =
+    let projects_root = "_out/canary/projects" in
+    let entries = Canary_action.scan_index_entries ~projects_root in
+    let now =
+      let t = Unix.gettimeofday () in
+      let tm = Unix.localtime t in
+      Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d"
+        (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
+        tm.tm_hour tm.tm_min tm.tm_sec
+    in
+    let html =
+      Canary_backend_html.render_index ~entries ~generated_at:now
+    in
+    let path = projects_root ^ "/index.html" in
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc html;
+    Stdlib.close_out oc;
+    Fmt.pr "Wrote %s (%d runs)@." path (List.length entries)
+  in
+  Cmd.v (Cmd.info "index"
+           ~doc:"Refresh the top-level index.html listing every (project, variant) \
+                 run found under _out/canary/projects/.")
+    Term.(const run $ const ())
+
 let summary_diff_cmd =
   let old_ =
     Arg.(required & opt (some string) None & info [ "old" ] ~docv:"PATH"
@@ -444,5 +469,6 @@ let () =
     summary_diff_cmd;
     compat_cmd;
     verify_cmd;
+    index_cmd;
   ] in
   Stdlib.exit (Cmd.eval cmd)
