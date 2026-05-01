@@ -526,6 +526,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
     ?(summary_rules : (rule * string) list = [])
     ?(step_ids : (string, int) Hashtbl.t option)
     ?(steps_by_rule_tag : (string, string list) Hashtbl.t option)
+    ?(expand_artifact : (artifact_kind * (string * string) list) option)
+    ?(view_title : string option)
     (rules : rule list) =
   let get_status tag = match status with
     | None -> None
@@ -654,6 +656,36 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
          | None -> if have_step_info then tag else action_label tag)
     | None -> action_label tag
   in
+  (* Helpers for expand_artifact support.
+     When expand_artifact = Some (kind, [(vid, label),...]), the focused
+     artifact kind is split into per-variant docs nodes instead of the
+     single collapsed node used in the overview. *)
+  let is_expanded kind =
+    match expand_artifact with
+    | Some (exp_kind, _) -> Poly.equal kind exp_kind
+    | None -> false
+  in
+  let expand_vars () =
+    match expand_artifact with Some (_, vs) -> vs | None -> []
+  in
+  let expand_variant_nid kind vid =
+    [%string "%{string_of_artifact_kind kind}_%{vid}_node"]
+  in
+  (* Canonical node id for a kind: for the expanded kind, use the
+     "canonical consumer" variant (staged > build_tree > first pm).
+     For other kinds, fall back to the normal node id. *)
+  let kind_nid kind =
+    if is_expanded kind then begin
+      let vs = expand_vars () in
+      let vid =
+        if List.exists vs ~f:(fun (v,_) -> String.equal v "staged") then "staged"
+        else if List.exists vs ~f:(fun (v,_) -> String.equal v "build_tree") then "build_tree"
+        else (match vs with (v,_) :: _ -> v | [] -> "default")
+      in
+      expand_variant_nid kind vid
+    end else node_id_of_kind kind
+  in
+  Option.iter view_title ~f:(fun t -> add ("%% " ^ t));
   add "graph LR";
   (* Artifact nodes — fetch action ID embedded in label when a Fetch rule
      exists, so it cross-references the log without adding a separate
@@ -661,15 +693,22 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
      all map to the same artifact pool node, so we collect their step
      ids together. *)
   List.iter all_pool_kinds ~f:(fun kind ->
-      let nid = node_id_of_kind kind in
-      let lbl = label_of_artifact_kind kind in
-      let label =
-        if List.mem fetch_kinds kind ~equal:Poly.equal then
-          let rule_tag = string_of_rule (Fetch kind) in
-          label_with_ids lbl rule_tag
-        else lbl
-      in
-      add [%string "    %{nid}@{ shape: docs, label: \"%{label}\" }"]);
+      if is_expanded kind then
+        (* Emit one docs node per variant for the focused artifact *)
+        List.iter (expand_vars ()) ~f:(fun (vid, vlabel) ->
+            let nid = expand_variant_nid kind vid in
+            add [%string "    %{nid}@{ shape: docs, label: \"%{vlabel}\" }"])
+      else begin
+        let nid = node_id_of_kind kind in
+        let lbl = label_of_artifact_kind kind in
+        let label =
+          if List.mem fetch_kinds kind ~equal:Poly.equal then
+            let rule_tag = string_of_rule (Fetch kind) in
+            label_with_ids lbl rule_tag
+          else lbl
+        in
+        add [%string "    %{nid}@{ shape: docs, label: \"%{label}\" }"]
+      end);
   add "";
   (* Scan action — pill shape (validation check), only when wired *)
   if has_scan then
@@ -740,37 +779,54 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
             add_edge ~tag:name [%string "A_configure --> %{action_id}"]
           else
             add_edge ~tag:name [%string "%{source_upstream} --> %{action_id}"];
-          add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Lib}"]
+          (* When lib is expanded, build_lib produces the build_tree variant *)
+          let lib_dest =
+            if is_expanded Lib
+               && List.exists (expand_vars ()) ~f:(fun (v,_) -> String.equal v "build_tree")
+            then expand_variant_nid Lib "build_tree"
+            else kind_nid Lib
+          in
+          add_edge ~tag:name [%string "%{action_id} --> %{lib_dest}"]
       | Build_binding lang ->
           if has_configure then
             add_edge ~tag:name [%string "A_configure --> %{action_id}"];
           add_edge ~tag:name
-            [%string "%{node_id_of_kind Headers} -.->|headers| %{action_id}"];
-          add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
-          add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind (Binding lang)}"]
+            [%string "%{kind_nid Headers} -.->|headers| %{action_id}"];
+          add_edge ~tag:name [%string "%{kind_nid Lib} -.->|link| %{action_id}"];
+          add_edge ~tag:name [%string "%{action_id} --> %{kind_nid (Binding lang)}"]
       | Build_app ->
           let app_binding_nid =
             match List.find_map rules ~f:(fun r ->
                 match r with Build_binding lang -> Some lang | _ -> None) with
-            | Some lang -> node_id_of_kind (Binding lang)
-            | None -> node_id_of_kind (Binding OCaml)
+            | Some lang -> kind_nid (Binding lang)
+            | None -> kind_nid (Binding OCaml)
           in
           add_edge ~tag:name [%string "%{app_binding_nid} --> %{action_id}"];
-          add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
-          add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind App}"]
+          add_edge ~tag:name [%string "%{kind_nid Lib} -.->|link| %{action_id}"];
+          add_edge ~tag:name [%string "%{action_id} --> %{kind_nid App}"]
       | _ -> ());
-  (* Install edges: build → install *)
+  (* Install edges: build → install.
+     When lib is expanded, route through build_tree/staged artifact nodes. *)
   List.iter install_rules ~f:(fun r ->
       let name = string_of_rule r in
       match r with
       | Install_lib ->
-          add_edge ~tag:name [%string "A_build_lib --> A_%{name}"]
+          let vs = expand_vars () in
+          let has_var v = List.exists vs ~f:(fun (vi,_) -> String.equal vi v) in
+          if is_expanded Lib && has_var "build_tree" then begin
+            add_edge ~tag:name
+              [%string "%{expand_variant_nid Lib \"build_tree\"} --> A_%{name}"];
+            if has_var "staged" then
+              add_edge ~tag:name
+                [%string "A_%{name} --> %{expand_variant_nid Lib \"staged\"}"]
+          end else
+            add_edge ~tag:name [%string "A_build_lib --> A_%{name}"]
       | _ -> ());
   (* Publish edges: artifact node → pack action *)
   List.iter publish_kinds ~f:(fun kind ->
       let k = string_of_artifact_kind kind in
       let tag = [%string "pack_%{k}"] in
-      add_edge ~tag [%string "%{node_id_of_kind kind} --> A_pack_%{k}"]);
+      add_edge ~tag [%string "%{kind_nid kind} --> A_pack_%{k}"]);
   (* Probe edges *)
   List.iter probe_kinds ~f:(fun kind ->
       let k = string_of_artifact_kind kind in
@@ -780,13 +836,13 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
            if List.exists rules ~f:(Poly.equal (Publish (Binding lang))) then
              add_edge ~tag [%string "A_pack_%{k} --> A_probe_%{k}"]
            else
-             add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"];
-           add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]
+             add_edge ~tag [%string "%{kind_nid kind} -->|test| A_probe_%{k}"];
+           add_edge ~tag [%string "%{kind_nid Lib} -.->|runtime| A_probe_%{k}"]
        | App ->
-           add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"];
-           add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]
+           add_edge ~tag [%string "%{kind_nid kind} -->|test| A_probe_%{k}"];
+           add_edge ~tag [%string "%{kind_nid Lib} -.->|runtime| A_probe_%{k}"]
        | _ ->
-           add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"]););
+           add_edge ~tag [%string "%{kind_nid kind} -->|test| A_probe_%{k}"]););
   (* Summary edges: parent action → summary action.
      Dashed edge to signal "follow-up annotation" rather than data flow. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
@@ -802,7 +858,12 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
   add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
   add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
-  let all_artifact_nids = List.map all_pool_kinds ~f:node_id_of_kind in
+  let all_artifact_nids =
+    List.concat_map all_pool_kinds ~f:(fun kind ->
+        if is_expanded kind then
+          List.map (expand_vars ()) ~f:(fun (vid,_) -> expand_variant_nid kind vid)
+        else [ node_id_of_kind kind ])
+  in
   if not (List.is_empty all_artifact_nids) then
     add [%string "    class %{String.concat all_artifact_nids ~sep:\",\"} artifact"];
   (* action_entries: (node_id, status_tag) pairs for rendered action nodes.

@@ -919,15 +919,107 @@ let mermaid_artifact_detail
            add [%string "    class S_%{s.tag} %{cls}"]));
   Buffer.contents buf
 
-let mermaid_view ?status ~view (steps : action_step list) : string =
+(* Compute the expand_artifact parameter for mermaid_of_action_rule_schema.
+   Derives per-variant (variant_id, label) pairs from the actual probe steps.
+   Returns None when no probe steps for the artifact are found. *)
+let _compute_expand
+    ~(artifact_kind : artifact_kind)
+    ~(probe_prefix : string)
+    ~(build_tag : string)
+    ~(fetch_tag : string)
+    ~(label_kind : string)
+    ~(step_ids : (string, int) Hashtbl.t)
+    (steps : action_step list)
+  : (artifact_kind * (string * string) list) option =
+  let has_step t = List.exists steps ~f:(fun s -> String.equal s.tag t) in
+  let probe_steps = List.filter steps ~f:(fun s ->
+      not (String.is_suffix s.tag ~suffix:"_summary")
+      && (String.equal s.tag probe_prefix
+          || String.is_prefix s.tag ~prefix:(probe_prefix ^ "_")))
+  in
+  if List.is_empty probe_steps then None
+  else begin
+    let variants =
+      List.map probe_steps ~f:(fun s ->
+          _variant_of_probe_tag ~prefix:probe_prefix s.tag)
+      |> List.dedup_and_sort ~compare:String.compare
+    in
+    let default_alias =
+      _default_variant_alias ~all_steps:steps ~build_tag ~fetch_tag ~variants
+    in
+    let variant_pairs =
+      List.map variants ~f:(fun v ->
+          let rv = if String.equal v "default" then default_alias else v in
+          let label =
+            if String.equal rv "build_tree" then
+              [%string "%{label_kind} (build_tree)"]
+            else if String.equal rv "staged" then
+              [%string "%{label_kind} (staged)"]
+            else begin
+              (* Fetch variant: embed step ID in label *)
+              let fetch_step_tag =
+                let suffix_tag = fetch_tag ^ "_" ^ rv in
+                if has_step suffix_tag then suffix_tag else fetch_tag
+              in
+              let id_part = match Hashtbl.find step_ids fetch_step_tag with
+                | Some n -> [%string " [%{Int.to_string n}]"]
+                | None -> ""
+              in
+              [%string "%{label_kind} (%{rv})%{id_part}"]
+            end
+          in
+          (rv, label))
+    in
+    Some (artifact_kind, variant_pairs)
+  end
+
+let mermaid_view
+    ?(status : (string, node_status) Hashtbl.t option)
+    ?(rules : rule list option)
+    ?(step_ids : (string, int) Hashtbl.t option)
+    ?(steps_by_rule_tag : (string, string list) Hashtbl.t option)
+    ?(summary_rules : (rule * string) list option)
+    ?(has_scan = false)
+    ~view
+    (steps : action_step list)
+    : string =
   match view with
-  | `Lib ->
-      mermaid_artifact_detail ?status ~artifact:"lib" ~label_kind:"lib"
-        ~all_steps:steps ()
-  | `Binding lang ->
-      let s = Canary_artifact_api.string_of_lang lang in
-      mermaid_artifact_detail ?status ~artifact:(s ^ "_binding")
-        ~label_kind:(s ^ " binding") ~all_steps:steps ()
+  | `Lib | `Binding _ ->
+      (* For artifact views: use the full schema renderer with the focused
+         artifact expanded into per-variant docs nodes. Falls back to the
+         step-level artifact renderer when schema params are unavailable. *)
+      let artifact_kind, probe_prefix, build_tag, fetch_tag, label_kind =
+        match view with
+        | `Lib -> Lib, "probe_lib", "build_lib", "fetch_lib", "lib"
+        | `Binding lang ->
+            let s = Canary_artifact_api.string_of_lang lang in
+            ( Binding lang
+            , "probe_" ^ s ^ "_binding"
+            , "build_" ^ s ^ "_binding"
+            , "fetch_" ^ s ^ "_binding"
+            , s ^ " binding" )
+        | _ -> assert false
+      in
+      let view_title_str = "view: " ^ view_name view in
+      (match rules, step_ids, steps_by_rule_tag, summary_rules with
+       | Some rules, Some sids, Some sbrt, Some srules ->
+           let expand = _compute_expand ~artifact_kind ~probe_prefix ~build_tag
+               ~fetch_tag ~label_kind ~step_ids:sids steps
+           in
+           mermaid_of_action_rule_schema ?status ~has_scan
+             ~summary_rules:srules ~step_ids:sids ~steps_by_rule_tag:sbrt
+             ?expand_artifact:expand ~view_title:view_title_str rules
+       | _ ->
+           let artifact = Canary_artifact_api.string_of_lang
+               (match view with `Binding l -> l | _ -> Canary_artifact_api.OCaml)
+           in
+           let art_str, lkind = match view with
+             | `Lib -> "lib", "lib"
+             | `Binding _ -> artifact ^ "_binding", artifact ^ " binding"
+             | _ -> assert false
+           in
+           mermaid_artifact_detail ?status ~artifact:art_str ~label_kind:lkind
+             ~all_steps:steps ())
   | _ ->
       let title = "view: " ^ view_name view in
       mermaid_of_steps ?status ~title ~all_steps:steps
@@ -1633,7 +1725,9 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
       let filtered = List.filter steps ~f:(view_predicate v) in
       if not (List.is_empty filtered) then begin
         let path = [%string "%{view_dir}/%{view_name v}.mmd"] in
-        let mmd = mermaid_view ~status:node_status ~view:v steps in
+        let mmd = mermaid_view ~status:node_status ~view:v
+            ~rules:(store_rules ~langs) ~step_ids ~steps_by_rule_tag
+            ~summary_rules ~has_scan steps in
         let oc = Stdlib.open_out path in
         Stdlib.output_string oc mmd;
         Stdlib.close_out oc;
