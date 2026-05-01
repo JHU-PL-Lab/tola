@@ -3,14 +3,20 @@
 ## Build & Run
 
 ```sh
-dune build                          # build everything
-dune exec src/bin/canary_main.exe -- paths      # print 14-row action pattern table
-dune exec src/bin/canary_main.exe -- paths-md   # same, markdown output
-dune exec src/bin/canary_main.exe -- graph       # write _out/canary/action_rule.mmd
+dune build                                                   # build everything
+dune exec src/bin/canary_main.exe -- paths                   # print 15-row action pattern table
+dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
+dune exec src/bin/canary_main.exe -- graph                   # write _out/canary/graph/action_rule.mmd
 dune exec src/bin/canary_main.exe -- action sqlite
-dune exec src/bin/canary_main.exe -- action z3       # runs z3 (dev) + z3/stable
-dune exec src/bin/canary_main.exe -- action llvm     # runs llvm (dev) + llvm/19
-make canary       # run canary via Makefile shorthand
+dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
+dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
+dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
+dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests (apt/brew/opam/pip)
+dune exec src/bin/canary_main.exe -- artifact-summary --kind native --path X  # ad-hoc summary dump
+dune exec src/bin/canary_main.exe -- summary-diff --old A --new B            # diff two summary.json files
+dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
+dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # cross-reference prediction vs probe.log
+make canary                                                  # run canary via Makefile shorthand
 ```
 
 Output layout (gitignored via `_*`):
@@ -26,48 +32,72 @@ Do NOT copy `_out/canary/` to the z3 repo for GH CI.
 ## Active Work: Canary
 
 Canary is a dependency-testing framework that enumerates all possible
-build/probe actions for a C/OCaml project and runs them locally (with
-plans for GH CI).
+build/probe actions for a C library project (with OCaml + Python bindings
+today; Rust/Java/etc. plug in as data) and runs them locally, with GH CI
+support.
 
 ### Key source files
 
-| File                                           | Purpose                                                                                               |
-| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `src/canary/canary.ml`                         | Core types, action rules, 14-pattern table, diagram generation                                        |
-| `src/canary/canary_action.ml`                  | `script_spec`, `derive_steps`, runner, text log, shared templates                                     |
-| `src/bin/canary_main.ml`                       | CLI entry point; `run_llvm` runs llvm+llvm/19, `run_z3` runs z3+z3/stable                             |
-| `src/canary/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`                                                         |
-| `src/canary/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro` types                                          |
-| `src/canary/canary_ocaml.ml`                   | OCaml toolchain types, opam packaging, probe generation                                               |
-| `src/canary/canary_artifact_check.ml`          | Artifact existence checks, nm symbol inspection, check_post                                           |
-| `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec + `script_spec`                                                                  |
-| `src/canary/projects/canary_project_z3.ml`     | z3 project spec + `script_spec`; `z3_source_stable` has `has_build_binding=false`                     |
-| `src/canary/projects/canary_project_llvm.ml`   | LLVM project spec + `script_spec`; `llvm_source_stable` has local path + `has_build_binding=false`    |
-| `src/canary/projects/canary_run.ml`            | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                              |
-| `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                     |
-| `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                      |
-| `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                               |
-| `canary/examples/llvm/llvm_example_15.ml`      | LLVM ≤15 example (global_context); fails against LLVM 16+                                             |
-| `canary/templates/opam-local-repo/`            | Local opam packages: z3.dev, llvm.dev-shared, llvm.19-shared, llvm.19-static, conf-llvm-shared.dev/19 |
-| `canary/scripts/assert_binary_symbols.py`      | nm-based symbol compat check                                                                          |
-| `doc/canary/design/index.md`                         | Design doc: pattern table, store config, execution model                                              |
-| `doc/canary/ops/install_targets.md`          | Z3 vs LLVM cmake install patterns; informs TODO #25                                                   |
-| `doc/canary/ops/llvm_build.md`                | LLVM source build steps, smoke test, opam install notes                                               |
-| `doc/canary/backlog.md`                        | Lower-priority TODOs (#5, #9–#11, #13b, #14, #16–#18, #22)                                            |
+| File                                           | Purpose                                                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `src/canary/canary.ml`                         | Core types (`rule`, `artifact_kind`), action rules, 15-pattern table, diagram generation               |
+| `src/canary/canary_action.ml`                  | `script_spec`, `step_expectation` (incl. `Expect_compat_failure`), `derive_steps`, runner, action log  |
+| `src/bin/canary_main.ml`                       | CLI: `action`, `paths`, `graph`, `compat`, `verify`, `summary-diff`, `artifact-test`, `pm-test`, …     |
+| `src/canary/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`                                                          |
+| `src/canary/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro` types                                           |
+| `src/canary/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
+| `src/canary/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists)                  |
+| `src/canary/canary_artifact_check.ml`          | Artifact existence checks, check_post helpers                                                          |
+| `src/canary/canary_artifact_native.ml`         | nm-based native lib summaries; `--emit-symbols` for compat cross-check                                 |
+| `src/canary/canary_artifact_lang.ml`           | OCaml + Python summary helpers (mli, stub, ocamlobjinfo, `dir()`)                                      |
+| `src/canary/canary_artifact_source.ml`         | Source artifact helpers; `scan_source` post-fetch verification                                         |
+| `src/canary/canary_artifact_test.ml`           | Framework self-tests (native, OCaml, Python, compat helpers — pure + shell)                            |
+| `src/canary/canary_compat.ml`                  | Typed `compat_summary_input`, `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project`      |
+| `src/canary/canary_summary_diff.ml`            | `canary summary-diff` — counts/modules/watchlist/versioned_req drift                                   |
+| `src/canary/canary_step_cache.ml`              | Cross-run cache (skip steps recorded successful in a previous run)                                     |
+| `src/canary/canary_backend_gh.ml`              | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
+| `src/canary/canary_pm_{apt,brew,opam,pip}.ml`  | Per-PM presence checks + install commands; `canary_pm_test.ml` runs the suite                          |
+| `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
+| `src/canary/projects/canary_project_z3.ml`     | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
+| `src/canary/projects/canary_project_llvm.ml`   | LLVM spec; OCaml stable variant uses `Expect_compat_failure` for forward-incompat detection            |
+| `src/canary/projects/canary_run.ml`            | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
+| `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
+| `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |
+| `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                                |
+| `canary/examples/llvm/llvm_example_15.ml`      | LLVM ≤15 example (global_context); fails against LLVM 16+                                              |
+| `canary/templates/opam-local-repo/`            | Local opam packages: z3.dev, llvm.dev-shared, llvm.19-shared, llvm.19-static, conf-llvm-shared.dev/19  |
+| `canary/scripts/summarize_native.py`           | nm parser → `kind: native` summary (counts, by_prefix, versioned_req, optional symbol list)            |
+| `canary/scripts/summarize_binding.py`          | mli + stub `.a` parser → `ocaml_mli` / `c_stub` summaries; consumer-side L0/L3 surface                 |
+| `canary/scripts/summarize_ocaml.py`            | ocamlobjinfo parser → `ocaml` summary (module list)                                                    |
+| `canary/scripts/summarize_python.py`           | Python `dir()` parser → `python` summary (attrs + watchlist + extras)                                  |
+| `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `summarize_native.py` superseding for new code)        |
+| `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
+| `doc/canary/design/interface.md`               | Theory + implementation: subtyping lattice, summary schema, §13 compat-check working code              |
+| `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
+| `doc/canary/ops/llvm_build.md`                 | LLVM source build steps, smoke test, opam install notes                                                |
+| `doc/canary/backlog.md`                        | Lower-priority TODOs; api-compat group + new project spec group (see line below for current set)       |
 
 ### Architecture in one paragraph
 
 `store_rules` in `canary.ml` defines the universal action graph (fetch,
-build, probe, pack for each artifact kind: Source → Lib → Binding → App).
-`pattern_rows_of_paths` enumerates 14 structural patterns with `action_path`
-strings like `fetch_source → build_lib → build_binding`. A project provides
-a `script_spec` (hardcoded shell commands per action). `derive_steps` filters
-the 14 patterns by project capabilities and instantiates them with the
-project's scripts. `run_graph` executes the steps in dependency order with
-`check_pre`/`check_post` filesystem checks and appends to `actions.log`.
-Each project runs two variants: dev (source build + pack_binding) and
-stable (fetch_lib + fetch_binding only, no build) — the stable variant
-probes with the dev example to demonstrate version mismatch detection.
+build, probe, pack for each artifact kind: Source → Lib → Binding → App,
+per language). `pattern_rows_of_paths` enumerates 15 structural patterns
+with `action_path` strings like `fetch_source → build_lib → build_binding`.
+A project provides a `script_spec` (shell commands per action) plus an
+`api_source` (declarative provider/consumer surface — header paths, symbol
+prefixes, watchlists). `derive_steps` filters the 15 patterns by project
+capabilities, attaches per-artifact summaries (mli, stub, native, python)
+to install steps, and instantiates them with the project's scripts.
+`run_graph` executes the steps in dependency order with `check_pre`/
+`check_post` filesystem checks and appends to `actions.log`. Probe
+expectations may be hand-written (`Expect_failure`) or **derived** at
+runtime (`Expect_compat_failure`) — `canary_compat.ml` reads cached
+install-step summaries and computes the predicted failure substrings
+(L0 C-symbol set diff + L3 watchlist-missing variants). Each project
+runs two variants: dev (source build + pack_binding) and stable (fetch_lib
++ fetch_binding only, no build) — the stable variant probes with the dev
+example to demonstrate version mismatch detection. `canary verify`
+cross-references the prediction against probe.log post-hoc.
 
 ### Two testing axes
 
@@ -87,9 +117,11 @@ expanding to macOS (different `nm` flags, Mach-O format, keg-only paths)
 or upgrading the OCaml / Python / distro runtime — framework tests
 diagnose environment drift early.
 
-Current framework tests verify "command runs, rc matches, JSON parses."
-Stronger invariants (e.g., `counts.total > 0` on libsqlite3.so, `modules
-== 1` on fmt.cmxa) are a candidate hardening step.
+Current framework tests cover "command runs, rc matches, JSON parses"
+plus pure helper tests (compat helpers exercise `predicted_contains_any_v2`
+against synthetic Ocaml_mli / Python_attrs fixtures). Stronger
+content-shape invariants (e.g. `counts.total > 0` on libsqlite3.so,
+`modules ≥ 1` on fmt.cmxa) are a candidate hardening step.
 
 ### Multi-version probe design
 
@@ -104,6 +136,13 @@ Stronger invariants (e.g., `counts.total > 0` on libsqlite3.so, `modules
 commit #186176 — `br` split into `uncondbr+condbr`). Against `llvm.19-shared`
 it fails to compile, demonstrating API mismatch. Sequential execution avoids
 opam switch conflicts.
+
+The expected-failure substring is no longer hand-written: llvm's
+stable-variant `expectation` returns `Expect_compat_failure` and the runner
+derives `Opcode.UncondBr` from the cached `fetch_ocaml_binding/summary.json`
+watchlist. z3's stable variant has a parallel Python case (`z3.parser_context`
+missing from the z3-solver pip wheel) using `Expect_compat_failure { inputs
+= [Python_attrs ...] }`. See `interface.md` §13.
 
 ### Current TODO (numbers are stable like GH issues — never renumbered)
 
@@ -128,11 +167,17 @@ These are tracked here rather than the backlog because they directly affect
 the `step_expectation` / interface model design.
 
 Artifact summary progress (`doc/canary/design/interface.md`):
-- ✅ Step 1 — `summary_cmd` for native/ocaml/opam kinds (per-probe `summary.json`)
+- ✅ Step 1 — `summary_cmd` for native/ocaml/python/mli/stub kinds
 - ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
-  field on `script_spec`, `derive_steps` emits follow-up `<tag>_summary` steps
+  field on `script_spec`, install-step + probe-step summaries in
+  `derive_steps`
 - ✅ `summary-diff` subcommand (local only; no committed cache yet)
-- ✅ Summary command coverage in `canary_artifact_test.ml`
+- ✅ Summary command coverage in `canary_artifact_test.ml` (incl. compat
+  helper pure tests)
+- ✅ Compat cross-check shipped — `canary compat`, `canary verify`,
+  `Expect_compat_failure` derive expected probe-failure substrings from
+  cached summaries. See `interface.md` §13. Live demos on llvm/19 (OCaml
+  `Opcode.UncondBr`) and z3/stable (Python `parser_context`).
 - ⏳ Step 3 deferred — `summary-sync` into a committed
   `doc/canary/artifact_summary.json` will likely ride on step-cache transport
 
@@ -182,7 +227,7 @@ Still open:
       exists conceptually in `project_config.phases` but isn't represented
       in the new `script_spec` → `action_step` path.
   **Revisit together with the version/symbol/interface work**: when we
-  formalise interfaces as first-class (per `interface_contract_design.md`),
+  formalise interfaces as first-class (per `doc/canary/design/interface.md`),
   the PM-cross-distro enumeration becomes part of "which provider (PM on
   distro) satisfies a given interface at a given version." Delete
   `project_config` plumbing (and each project's `config distro` fn) once
@@ -195,10 +240,11 @@ Still open:
 - **Per-step `env:` fields in GH YAML** — old yaml backend had an `env_fields`
   list per step. New backend only allows raw YAML blocks via `preamble_steps`.
   Not blocking; re-add as a typed field if a project needs it.
-- **Deeper OCaml binding analysis** — ocamlobjinfo is module-level only; no
-  constructor-level drift (e.g., `Opcode.UncondBr`) from summaries. User flagged
-  this as a dedicated future step requiring a "structure of ocaml-binding / any-
-  language-binding" model, outside current local-feature scope.
+- ~~**Deeper OCaml binding analysis**~~ — ✅ resolved by
+  `summarize_binding.py --kind mli`, which parses `.mli` files at the
+  vals/constructors/modules level (catches `Opcode.UncondBr` drift). The
+  ocamlobjinfo summary still exists but is superseded by the mli summary
+  for L3 work.
 - **Migrate the old tola artifact inspectors in `src/binding/` into canary**
   (not just `ocaml_files.ml`). ~1880 lines, 15 modules, uses native OCaml
   compiler libraries instead of shelling out. Called from
@@ -227,10 +273,11 @@ Still open:
 - **No source-artifact summary** — only native / ocaml / opam kinds so far.
   Source summaries (git SHA, public header count, FFI surface via C-ABI
   exports for other languages) are a natural next extension.
-- **No python summary in any project spec** — `summary_cmd` helpers for python
-  haven't been defined (no project uses a python artifact yet). Plan at
-  `doc/canary/trackers/python_binding.md` (z3-solver, llvmlite, stdlib sqlite3);
-  delete the plan doc when all three projects have Python probe + summary wired.
+- ~~**No python summary in any project spec**~~ — ✅ resolved. z3
+  (z3-solver), llvm (llvmlite), and sqlite (stdlib sqlite3) all have
+  Python probes with `python_summary_cmd` attached; pip-install split
+  off into `Fetch (Binding Python)` so the summary is cached before the
+  probe runs. `python_binding.md` tracker has been deleted.
 - **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
   primitives landing first. Plan at `doc/canary/trackers/pytorch.md` covers the
   pip × opam × apt libtorch matrix and the OCaml `torch` version-conflict
@@ -240,11 +287,12 @@ Still open:
   famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
   zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
   opam survey; living doc, updated as candidates land.
-- **First-class API-source layer** — implemented. `canary_artifact_api.ml`
-  types the three-layer structure (source_repo → native_api → binding_api).
-  Watchlists split into provider (`stable_symbols`) and consumer
-  (`module_watchlist`) levels. `scan_source` step verifies header/binding-dir
-  claims post-fetch. See `doc/canary/design/interface.md §4`.
+- ~~**First-class API-source layer**~~ — ✅ implemented.
+  `canary_artifact_api.ml` types the three-layer structure (source_repo →
+  native_api → binding_api). Watchlists split into provider
+  (`stable_symbols`) and consumer (`module_watchlist`) levels.
+  `scan_source` step verifies header/binding-dir claims post-fetch. See
+  `doc/canary/design/interface.md §4`.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.
@@ -259,11 +307,21 @@ Still open:
 - **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
   verify step reads `probe.log` but the local runner scans all files in `output_dir`.
   Should align: both should scan `probe.log` only.
+- **`Expect_compat_failure` is OCaml-shaped per language** — the variant
+  takes typed inputs (`C_stub | Native_lib | Ocaml_mli | Python_attrs`)
+  but the layer-vs-language mapping is hardcoded in
+  `predicted_contains_any_v2`. New languages need helper extension.
+  Probably fine until a fourth language joins.
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28. Details in
-`doc/canary/worklog_2026_04.md`.
+Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28.
+The api-compat milestone (Phases 1–3e: `summarize_binding.py`, `canary
+compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
+derived expectation) shipped this session — see `interface.md` §13 and
+commits `2a8d2eb`, `96b143c`, `84caf5d`, `8943ba2`, `7dfb1f2`.
+
+Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05}.md`.
 
 ## Other Work: Yelu
 
