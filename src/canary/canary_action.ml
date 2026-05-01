@@ -553,6 +553,137 @@ let result_status_of_run (steps : action_step list)
         Hashtbl.update tbl canonical ~f:(fun prev -> merge_status prev ns));
   tbl
 
+(* ── Step-based Mermaid renderer (per-view diagrams) ──
+   Renders a (possibly filtered) action_step list. Each step becomes a
+   node; edges follow step.deps within the rendered subset.
+   Caller filters before calling — use [mermaid_of_steps_for_view] for
+   the canned view filters defined in this module. *)
+
+let _node_shape_of_rule rule =
+  match rule with
+  | Probe _                                  -> `Pill
+  | Build_lib | Build_binding _ | Build_app
+  | Build_headers | Configure | Install_lib
+  | Publish _                                -> `Hex
+  | Fetch _                                  -> `Box
+
+let mermaid_node_for_step ~is_summary ~is_scan (s : action_step) =
+  let nid = "S_" ^ s.tag in
+  let label =
+    if is_scan then s.tag
+    else if is_summary then s.tag
+    else s.tag
+  in
+  let shape =
+    if is_summary || is_scan then `Pill
+    else _node_shape_of_rule s.rule
+  in
+  let line = match shape with
+    | `Pill -> [%string "    %{nid}([\"%{label}\"])"]
+    | `Hex  -> [%string "    %{nid}{{\"%{label}\"}}"]
+    | `Box  -> [%string "    %{nid}[\"%{label}\"]"]
+  in
+  (nid, line)
+
+let _is_summary_step (s : action_step) =
+  String.is_suffix s.tag ~suffix:"_summary"
+let _is_scan_step (s : action_step) =
+  String.equal s.tag "scan_source"
+
+(* Render a filtered action_step list as a Mermaid graph. The filter
+   predicate selects which steps appear; deps that point outside the
+   subset are silently dropped. [status] (optional) maps each step.tag
+   to a Canary.node_status to color the nodes. *)
+let mermaid_of_steps
+    ?(status : (string, Canary.node_status) Hashtbl.t option)
+    ?(title : string option)
+    (steps : action_step list) : string =
+  let buf = Buffer.create 1024 in
+  let add s = Buffer.add_string buf s; Buffer.add_char buf '\n' in
+  Option.iter title ~f:(fun t -> add ("%% " ^ t));
+  add "graph LR";
+  let in_subset = Hash_set.create (module String) in
+  List.iter steps ~f:(fun s -> Hash_set.add in_subset s.tag);
+  let edge_idx = ref 0 in
+  let edge_tags = ref [] in
+  let add_edge ~src ~dst ~tag ~dashed =
+    let arrow = if dashed then "-.->" else "-->" in
+    add [%string "    %{src} %{arrow} %{dst}"];
+    edge_tags := (!edge_idx, tag) :: !edge_tags;
+    Int.incr edge_idx
+  in
+  (* Nodes *)
+  List.iter steps ~f:(fun s ->
+      let is_summary = _is_summary_step s in
+      let is_scan = _is_scan_step s in
+      let (_, line) = mermaid_node_for_step ~is_summary ~is_scan s in
+      add line);
+  add "";
+  (* Edges *)
+  List.iter steps ~f:(fun s ->
+      let dst = "S_" ^ s.tag in
+      let dashed = _is_summary_step s || _is_scan_step s in
+      List.iter s.deps ~f:(fun dep ->
+          if Hash_set.mem in_subset dep then
+            add_edge ~src:("S_" ^ dep) ~dst ~tag:s.tag ~dashed));
+  add "";
+  (* Styling *)
+  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:2px";
+  add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:2px";
+  add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
+  add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
+  (match status with
+   | None -> ()
+   | Some tbl ->
+       List.iter steps ~f:(fun s ->
+           let cls = match Hashtbl.find tbl s.tag with
+             | Some Canary.Done -> "st_done"
+             | Some Canary.Failed -> "st_failed"
+             | Some Canary.Skipped -> "st_skipped"
+             | Some Canary.Not_in_spec | None -> "st_nospec"
+           in
+           add [%string "    class S_%{s.tag} %{cls}"]));
+  Buffer.contents buf
+
+(* ── Canned view filters ── *)
+
+type view = [
+  | `Source
+  | `Lib
+  | `Binding of Canary_artifact_api.lang
+  | `Probes
+  | `Pack
+]
+
+let view_name : view -> string = function
+  | `Source -> "source"
+  | `Lib -> "lib"
+  | `Binding lang -> "binding_" ^ Canary_artifact_api.string_of_lang lang
+  | `Probes -> "probes"
+  | `Pack -> "pack"
+
+let view_predicate (v : view) (s : action_step) : bool =
+  match v with
+  | `Source ->
+      String.equal s.tag "fetch_source" || String.equal s.tag "scan_source"
+  | `Lib ->
+      String.equal s.tag "fetch_lib"
+      || String.equal s.tag "build_lib"
+      || String.equal s.tag "install_lib"
+      || String.is_prefix s.tag ~prefix:"probe_lib"
+  | `Binding lang ->
+      let lang_tag = Canary_artifact_api.string_of_lang lang ^ "_binding" in
+      String.is_substring s.tag ~substring:lang_tag
+  | `Probes ->
+      String.is_prefix s.tag ~prefix:"probe_"
+  | `Pack ->
+      String.is_prefix s.tag ~prefix:"pack_"
+
+let mermaid_view ?status ~view (steps : action_step list) : string =
+  let filtered = List.filter steps ~f:(view_predicate view) in
+  let title = "view: " ^ view_name view in
+  mermaid_of_steps ?status ~title filtered
+
 (* ── Shared command templates ──
    These generate shell commands for common action patterns.
    Project specs use these instead of writing raw shell strings. *)
@@ -1109,4 +1240,23 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
        ~summary_rules (store_rules ~langs));
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
+  (* Per-view diagrams: emit a focused .mmd per view that has ≥1
+     matching step. Keeps overview as primary artifact; views are
+     drill-downs for users who want a narrower slice. *)
+  let views : view list =
+    [ `Source; `Lib; `Pack; `Probes ]
+    @ List.map langs ~f:(fun l -> `Binding l)
+  in
+  let view_dir = [%string "%{dir}/diagrams"] in
+  ensure_dir view_dir;
+  List.iter views ~f:(fun v ->
+      let filtered = List.filter steps ~f:(view_predicate v) in
+      if not (List.is_empty filtered) then begin
+        let path = [%string "%{view_dir}/%{view_name v}.mmd"] in
+        let oc = Stdlib.open_out path in
+        Stdlib.output_string oc (mermaid_view ~status:node_status ~view:v steps);
+        Stdlib.close_out oc;
+        logger.log ~tag:"*" ~event:"view"
+          ~detail:(Some [%string "%{view_name v} (%{Int.to_string (List.length filtered)} steps)"])
+      end);
   logger.close ()
