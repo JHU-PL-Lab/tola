@@ -567,13 +567,9 @@ let _node_shape_of_rule rule =
   | Publish _                                -> `Hex
   | Fetch _                                  -> `Box
 
-let mermaid_node_for_step ~is_summary ~is_scan (s : action_step) =
+let mermaid_node_for_step ~id ~is_summary ~is_scan (s : action_step) =
   let nid = "S_" ^ s.tag in
-  let label =
-    if is_scan then s.tag
-    else if is_summary then s.tag
-    else s.tag
-  in
+  let label = [%string "%{s.tag} [%{Int.to_string id}]"] in
   let shape =
     if is_summary || is_scan then `Pill
     else _node_shape_of_rule s.rule
@@ -590,14 +586,30 @@ let _is_summary_step (s : action_step) =
 let _is_scan_step (s : action_step) =
   String.equal s.tag "scan_source"
 
-(* Render a filtered action_step list as a Mermaid graph. The filter
-   predicate selects which steps appear; deps that point outside the
-   subset are silently dropped. [status] (optional) maps each step.tag
-   to a Canary.node_status to color the nodes. *)
+(* Stable per-step index based on execution order (1-based).
+   Same id is used across overview and detail views so users can
+   cross-reference between diagrams and the action log. *)
+let step_id_table (all_steps : action_step list) : (string, int) Hashtbl.t =
+  let tbl = Hashtbl.create (module String) in
+  List.iteri all_steps ~f:(fun i s ->
+      Hashtbl.set tbl ~key:s.tag ~data:(i + 1));
+  tbl
+
+(* Render a filtered action_step list as a Mermaid graph. [all_steps]
+   gives the full step list (used for stable ID assignment); only the
+   subset for which [filter] returns true is rendered. Deps that point
+   outside the subset are silently dropped. [status] (optional) maps
+   each step.tag to a Canary.node_status to color the nodes. *)
 let mermaid_of_steps
     ?(status : (string, Canary.node_status) Hashtbl.t option)
     ?(title : string option)
-    (steps : action_step list) : string =
+    ~(all_steps : action_step list)
+    ?(filter : (action_step -> bool) option)
+    () : string =
+  let ids = step_id_table all_steps in
+  let id_of s = Hashtbl.find_exn ids s.tag in
+  let pred = Option.value filter ~default:(fun _ -> true) in
+  let steps = List.filter all_steps ~f:pred in
   let buf = Buffer.create 1024 in
   let add s = Buffer.add_string buf s; Buffer.add_char buf '\n' in
   Option.iter title ~f:(fun t -> add ("%% " ^ t));
@@ -616,7 +628,9 @@ let mermaid_of_steps
   List.iter steps ~f:(fun s ->
       let is_summary = _is_summary_step s in
       let is_scan = _is_scan_step s in
-      let (_, line) = mermaid_node_for_step ~is_summary ~is_scan s in
+      let (_, line) =
+        mermaid_node_for_step ~id:(id_of s) ~is_summary ~is_scan s
+      in
       add line);
   add "";
   (* Edges *)
@@ -680,9 +694,9 @@ let view_predicate (v : view) (s : action_step) : bool =
       String.is_prefix s.tag ~prefix:"pack_"
 
 let mermaid_view ?status ~view (steps : action_step list) : string =
-  let filtered = List.filter steps ~f:(view_predicate view) in
   let title = "view: " ^ view_name view in
-  mermaid_of_steps ?status ~title filtered
+  mermaid_of_steps ?status ~title ~all_steps:steps
+    ~filter:(view_predicate view) ()
 
 (* ── Shared command templates ──
    These generate shell commands for common action patterns.
@@ -1234,10 +1248,33 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
            | 0 -> String.compare s1 s2
            | n -> n)
   in
+  (* Build maps for ID grouping in the overview: every step has a
+     1-based ID; multiple step variants of the same rule (e.g.
+     probe_lib + probe_lib_apt + probe_lib_staged) map to the same
+     schema-level node and share a label like "probe_lib [3][4][5]". *)
+  let step_ids = step_id_table steps in
+  (* Exclude follow-up steps (summary, stub_summary, scan_source) from
+     the rule-tag bucket — they share their parent's rule but don't
+     "produce" the artifact, so their IDs shouldn't appear in the
+     parent's combined label. They get their own summary-node ids. *)
+  let is_follow_up s =
+    String.is_suffix s.tag ~suffix:"_summary"
+    || String.equal s.tag "scan_source"
+  in
+  let steps_by_rule_tag =
+    let tbl = Hashtbl.create (module String) in
+    List.iter steps ~f:(fun s ->
+        if not (is_follow_up s) then
+          let key = string_of_rule s.rule in
+          Hashtbl.update tbl key ~f:(function
+            | None -> [ s.tag ]
+            | Some xs -> s.tag :: xs));
+    tbl
+  in
   let oc = Stdlib.open_out mmd_path in
   Stdlib.output_string oc
     (Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
-       ~summary_rules (store_rules ~langs));
+       ~summary_rules ~step_ids ~steps_by_rule_tag (store_rules ~langs));
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
   (* Per-view diagrams: emit a focused .mmd per view that has ≥1
@@ -1267,7 +1304,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   let html_path = [%string "%{dir}/result.html"] in
   let overview_mmd =
     Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
-      ~summary_rules (store_rules ~langs)
+      ~summary_rules ~step_ids ~steps_by_rule_tag (store_rules ~langs)
   in
   let html_views =
     Canary_backend_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }

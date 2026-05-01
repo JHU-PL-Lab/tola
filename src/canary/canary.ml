@@ -514,9 +514,19 @@ type node_status = Done | Failed | Skipped | Not_in_spec
    - Same rule can appear with multiple suffixes (e.g.
      Fetch (Binding OCaml) has both "_summary" — mli — and
      "_stub_summary" — c_stub).
-   - The diagram emits one summary node per pair. *)
+   - The diagram emits one summary node per pair.
+
+   step_ids : optional table from step tag to its step index (1-based,
+   execution order). When supplied, action labels show all step indices
+   that map to a given rule kind, like "probe_lib [3][4][5]" — useful
+   when multiple step variants (apt / staged / build_tree) collapse into
+   one schema-level node. Empty table → labels use a fresh sequential
+   counter (legacy behaviour). *)
 let mermaid_of_action_rule_schema ?status ?(has_scan = false)
-    ?(summary_rules : (rule * string) list = []) (rules : rule list) =
+    ?(summary_rules : (rule * string) list = [])
+    ?(step_ids : (string, int) Hashtbl.t option)
+    ?(steps_by_rule_tag : (string, string list) Hashtbl.t option)
+    (rules : rule list) =
   let get_status tag = match status with
     | None -> None
     | Some tbl -> Hashtbl.find tbl tag
@@ -598,31 +608,72 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
     if has_scan then scan_nid
     else node_id_of_kind Source
   in
-  (* Action nodes — each gets a sequential id in the label.
-     Counter is defined here so fetch IDs (embedded in artifact labels) are
-     assigned first, keeping the numbering consistent with the step log order. *)
+  (* Action labels: when [step_ids] + [steps_by_rule_tag] are supplied,
+     each schema-level node lists ALL step indices that map to it
+     (e.g. probe_lib [3][4][5] when there are apt/staged/build_tree
+     variants). Slots without any matching step (not-in-spec) get just
+     the name; standalone callers (no step info) fall back to a fresh
+     sequential counter so they still get [N] labels. *)
+  let have_step_info =
+    Option.is_some step_ids && Option.is_some steps_by_rule_tag
+  in
   let action_counter = ref 0 in
   let next_id () = Int.incr action_counter; !action_counter in
-  let action_label name =
-    let n = next_id () in [%string "%{name} [%{Int.to_string n}]"]
+  let label_with_ids name rule_tag =
+    let ids =
+      match steps_by_rule_tag, step_ids with
+      | Some by_tag, Some id_tbl ->
+          (match Hashtbl.find by_tag rule_tag with
+           | Some tags ->
+               List.filter_map tags ~f:(Hashtbl.find id_tbl)
+               |> List.sort ~compare:Int.compare
+           | None -> [])
+      | _ -> []
+    in
+    if List.is_empty ids then
+      if have_step_info then name (* not-in-spec slot — no bracket *)
+      else
+        let n = next_id () in
+        [%string "%{name} [%{Int.to_string n}]"]
+    else
+      let id_str =
+        List.map ids ~f:(fun i -> [%string "[%{Int.to_string i}]"])
+        |> String.concat ~sep:""
+      in
+      [%string "%{name} %{id_str}"]
+  in
+  let action_label name = label_with_ids name name in
+  (* Direct tag lookup — for follow-up steps (scan_source, *_summary)
+     that have a 1:1 step mapping but were excluded from the rule-tag
+     bucket so they don't pollute parent labels. *)
+  let direct_tag_label tag =
+    match step_ids with
+    | Some tbl ->
+        (match Hashtbl.find tbl tag with
+         | Some n -> [%string "%{tag} [%{Int.to_string n}]"]
+         | None -> if have_step_info then tag else action_label tag)
+    | None -> action_label tag
   in
   add "graph LR";
-  (* Artifact nodes — fetch action ID embedded in label when a Fetch rule exists,
-     so it cross-references the log without adding a separate node. *)
+  (* Artifact nodes — fetch action ID embedded in label when a Fetch rule
+     exists, so it cross-references the log without adding a separate
+     node. Multiple Fetch step variants (e.g. fetch_lib + fetch_lib_apt)
+     all map to the same artifact pool node, so we collect their step
+     ids together. *)
   List.iter all_pool_kinds ~f:(fun kind ->
       let nid = node_id_of_kind kind in
       let lbl = label_of_artifact_kind kind in
       let label =
         if List.mem fetch_kinds kind ~equal:Poly.equal then
-          let n = next_id () in
-          [%string "%{lbl} [%{Int.to_string n}]"]
+          let rule_tag = string_of_rule (Fetch kind) in
+          label_with_ids lbl rule_tag
         else lbl
       in
       add [%string "    %{nid}@{ shape: docs, label: \"%{label}\" }"]);
   add "";
   (* Scan action — pill shape (validation check), only when wired *)
   if has_scan then
-    add [%string "    %{scan_nid}([\"%{action_label \"scan_source\"}\"])"];
+    add [%string "    %{scan_nid}([\"%{direct_tag_label \"scan_source\"}\"])"];
   (* Configure + build actions — hexagon shape (active transformation) *)
   if has_configure then
     add [%string "    A_configure{{\"%{action_label \"configure\"}\"}}"];
@@ -645,11 +696,13 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
       add [%string "    A_probe_%{k}([\"%{action_label name}\"])"]);
   (* Summary actions — pill shape, one per (rule, suffix) pair.
      Covers Probe Lib (_summary), Fetch (Binding lang) (_summary +
-     _stub_summary), Publish (Binding lang) (same as Fetch), etc. *)
+     _stub_summary), Publish (Binding lang) (same as Fetch), etc.
+     Each summary tag is a real step tag, so use direct lookup to
+     surface its individual step id. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
       let nid = summary_nid rule suffix in
       let tag = summary_label rule suffix in
-      add [%string "    %{nid}([\"%{action_label tag}\"])"]);
+      add [%string "    %{nid}([\"%{direct_tag_label tag}\"])"]);
   add "";
   (* Edges *)
   let edge_idx = ref 0 in
