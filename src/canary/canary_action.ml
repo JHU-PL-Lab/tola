@@ -1046,10 +1046,41 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
     |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
   in
   let has_scan = List.exists steps ~f:(fun s -> String.equal s.tag "scan_source") in
+  (* Collect (rule, tag_suffix) pairs for every summary follow-up step.
+     A given rule may have multiple suffixes — e.g. Fetch (Binding OCaml)
+     has both "_summary" (mli) and "_stub_summary" (c_stub). The schema
+     diagram emits one summary node per pair. The tag_suffix is recovered
+     by stripping the rule's canonical tag prefix from the step tag. *)
   let summary_rules =
+    let canonical_parent_tag rule =
+      match rule with
+      | Probe kind   -> [%string "probe_%{string_of_artifact_kind kind}"]
+      | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
+      | _ -> string_of_rule rule
+    in
     List.filter_map steps ~f:(fun s ->
-        if String.is_suffix s.tag ~suffix:"_summary" then Some s.rule else None)
-    |> List.dedup_and_sort ~compare:Poly.compare
+        if String.is_suffix s.tag ~suffix:"_summary" then
+          let parent = canonical_parent_tag s.rule in
+          (* For multi-location probes (probe_lib_apt vs probe_lib_staged),
+             the canonical schema-level node is just the rule's tag — drop
+             the location marker so the schema dedup is clean. *)
+          if String.is_prefix s.tag ~prefix:parent then
+            let suffix = String.chop_prefix_exn s.tag ~prefix:parent in
+            (* suffix may include a location marker like "_apt_summary";
+               normalise to just the trailing _summary / _stub_summary. *)
+            let normalised =
+              if String.is_suffix suffix ~suffix:"_stub_summary"
+              then "_stub_summary"
+              else "_summary"
+            in
+            Some (s.rule, normalised)
+          else None
+        else None)
+    |> List.dedup_and_sort
+         ~compare:(fun (r1, s1) (r2, s2) ->
+           match Poly.compare r1 r2 with
+           | 0 -> String.compare s1 s2
+           | n -> n)
   in
   let oc = Stdlib.open_out mmd_path in
   Stdlib.output_string oc

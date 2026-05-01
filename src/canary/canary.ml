@@ -17,21 +17,8 @@ type project_config = {
 let verify_of_phase (config : project_config) (phase : step_phase) =
   let name = [%string "Verify: %{name_of_phase phase}"] in
   match phase.kind with
-  | Pm_install system_pkg -> (
+  | Pm_install _system_pkg -> (
       match phase.location with
-      | Pm { lang = Canary_artifact_api.Native; _ } ->
-          let info = prebuilt_info_exn config.ocaml in
-          let spec =
-            match system_pkg with
-            | Some p ->
-                {
-                  info.system_package with
-                  linux_pkg = p.linux_pkg;
-                  macos_pkg = p.macos_pkg;
-                }
-            | None -> info.system_package
-          in
-          verify_system_package_steps ~name spec
       | Pm _ ->
           let info = prebuilt_info_exn config.ocaml in
           verify_opam_install_spec_step ~name info.opam_package_spec
@@ -48,21 +35,8 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
   let name = name_of_phase phase in
   let action_steps =
     match phase.kind with
-    | Pm_install system_pkg -> (
+    | Pm_install _system_pkg -> (
         match phase.location with
-        | Pm { lang = Canary_artifact_api.Native; _ } ->
-            let info = prebuilt_info_exn config.ocaml in
-            let spec =
-              match system_pkg with
-              | Some p ->
-                  {
-                    info.system_package with
-                    linux_pkg = p.linux_pkg;
-                    macos_pkg = p.macos_pkg;
-                  }
-              | None -> info.system_package
-            in
-            install_system_package_steps ~name config.ocaml.toolchain spec
         | Pm _ ->
             let info = prebuilt_info_exn config.ocaml in
             install_opam_package_spec_step ~name info.opam_package_spec
@@ -88,7 +62,8 @@ let steps_of_phase (config : project_config) (phase : step_phase) =
               run_step ~name
                 [%string
                   {|env PYTHONPATH="build/python" python3 -S -c "import %{pkg}; print(%{pkg}.__file__)"|}];
-            ])
+            ]
+        | _ -> failwith "Probe_test: unsupported lang")
     | Run_command { name = _; command } ->
         [ run_step ~name command ]
   in
@@ -102,7 +77,7 @@ let string_of_artifact_kind = function
   | Source -> "source"
   | Headers -> "headers"
   | Lib -> "lib"
-  | Binding -> "binding"
+  | Binding lang -> [%string "%{Canary_artifact_api.string_of_lang lang}_binding"]
   | App -> "app"
 
 let rec node_tag (n : artifact_node) =
@@ -138,7 +113,8 @@ type rule =
   | Configure
   | Build_headers
   | Build_lib
-  | Build_binding
+  | Build_binding of Canary_artifact_api.lang
+  | Install_lib
   | Build_app
   | Fetch of artifact_kind
   | Publish of artifact_kind
@@ -148,7 +124,8 @@ let string_of_rule = function
   | Configure -> "configure"
   | Build_headers -> "build_headers"
   | Build_lib -> "build_lib"
-  | Build_binding -> "build_binding"
+  | Build_binding lang -> [%string "build_%{string_of_artifact_kind (Binding lang)}"]
+  | Install_lib -> "install_lib"
   | Build_app -> "build_app"
   | Fetch kind -> [%string "fetch_%{string_of_artifact_kind kind}"]
   | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
@@ -162,26 +139,15 @@ type action_rule = {
 let pool_get ar kind =
   List.Assoc.find ar.pools ~equal:Poly.equal kind |> Option.value ~default:[]
 
-(* Standard rule sets *)
-let store_rules =
-  [
-    Fetch Source;
-    Configure;
-    Build_headers;
-    Fetch Headers;
-    Build_lib;
-    Fetch Lib;
-    Build_binding;
-    Fetch Binding;
-    Build_app;
-    Fetch App;
-    Publish Lib;
-    Publish Binding;
-    Publish App;
-    Probe Lib;
-    Probe Binding;
-    Probe App;
-  ]
+(* Standard rule sets.
+   ~langs: binding languages this project supports (external loop).
+   Each lang gets its own Build_binding / Fetch / Publish / Probe rules. *)
+let store_rules ~langs =
+  [ Fetch Source; Configure; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
+  @ List.concat_map langs ~f:(fun lang ->
+      [ Build_binding lang; Fetch (Binding lang);
+        Publish (Binding lang); Probe (Binding lang) ])
+  @ [ Build_app; Fetch App; Publish Lib; Publish App; Probe Lib; Probe App ]
 
 let make_action_rule ~rules ~versions ~name ~source () =
   let vs = version_suffix in
@@ -209,19 +175,25 @@ let make_action_rule ~rules ~versions ~name ~source () =
                   mk_node kind (name ^ vs v) ~origin:source ~location:source ())
             in
             add pools kind nodes
-        | Build_binding ->
+        | Build_binding lang ->
             let libs = get pools Lib in
             let nodes =
               List.concat_map versions ~f:(fun v ->
                   List.map libs ~f:(fun lib ->
-                      mk_node Binding
+                      mk_node (Binding lang)
                         (name ^ vs v)
                         ~origin:Build_tree ~location:Build_tree ~built_from:lib
                         ()))
             in
-            add pools Binding nodes
+            add pools (Binding lang) nodes
         | Build_app ->
-            let bindings = get pools Binding in
+            (* App depends on OCaml binding by convention; take first Binding pool found *)
+            let bindings =
+              let ocaml_bindings = get pools (Binding OCaml) in
+              if not (List.is_empty ocaml_bindings) then ocaml_bindings
+              else List.concat_map Canary_artifact_api.[ OCaml; Python; Rust; Cpp; CSharp; Java ]
+                     ~f:(fun l -> get pools (Binding l))
+            in
             let libs = get pools Lib in
             let nodes =
               List.concat_map bindings ~f:(fun binding ->
@@ -237,7 +209,7 @@ let make_action_rule ~rules ~versions ~name ~source () =
                     ~origin:Build_tree ~location:Build_tree ())
             in
             add pools Headers nodes
-        | Configure | Publish _ | Probe _ -> pools)
+        | Configure | Install_lib | Publish _ | Probe _ -> pools)
   in
   { rules; pools }
 
@@ -245,6 +217,10 @@ let nodes_of_action_rule (ar : action_rule) =
   List.concat_map ar.pools ~f:snd
   |> List.dedup_and_sort ~compare:(fun a b ->
       String.compare (node_tag a) (node_tag b))
+
+(* Human-readable label: "ocaml_binding" → "ocaml binding" *)
+let label_of_artifact_kind k =
+  String.tr ~target:'_' ~replacement:' ' (string_of_artifact_kind k)
 
 
 (* ── Job path table ──
@@ -291,7 +267,7 @@ let rec action_path_of_node (n : artifact_node) =
     let build_action = match n.a_kind with
       | Headers -> "build_headers"
       | Lib -> "build_lib"
-      | Binding -> "build_binding"
+      | Binding lang -> [%string "build_%{string_of_artifact_kind (Binding lang)}"]
       | App -> "build_app"
       | Source -> "build_source"
     in
@@ -362,7 +338,7 @@ let annotate_path ~is_probe (node : artifact_node) : path_annotation =
   | Lib, Fetched ->
       { description = "lib from package manager";
         frequency = "common"; feasibility = "feasible" }
-  | Binding, Built ->
+  | Binding _, Built ->
       let lib_origin = match node.built_from with
         | Some lib -> string_of_path_origin (path_origin_of_node lib)
         | None -> "?"
@@ -370,7 +346,7 @@ let annotate_path ~is_probe (node : artifact_node) : path_annotation =
       { description = [%string "build binding, lib from %{lib_origin}"];
         frequency = (if String.equal lib_origin "store" then "common" else "common");
         feasibility = "feasible" }
-  | Binding, Fetched ->
+  | Binding _, Fetched ->
       { description = "binding from package manager";
         frequency = "common"; feasibility = "feasible" }
   | App, Built ->
@@ -418,7 +394,7 @@ let job_paths_of_action_rule (ar : action_rule) : job_path list =
     [%string "%{prefix}%{Int.to_string (n + 1)}"]
   in
   let kind_prefix = function
-    | Source -> "S" | Headers -> "H" | Lib -> "L" | Binding -> "B" | App -> "A"
+    | Source -> "S" | Headers -> "H" | Lib -> "L" | Binding _ -> "B" | App -> "A"
   in
   let paths =
     List.concat_map ar.pools ~f:(fun (kind, nodes) ->
@@ -533,14 +509,14 @@ let node_id_of_kind k =
 
 type node_status = Done | Failed | Skipped | Not_in_spec
 
-(* Probe split entry: one per probe_binding variant when a project has multiple. *)
-type probe_split = {
-  probe_tag : string;    (* e.g. "probe_binding", "probe_binding_opam", "probe_python_pip" *)
-  binding_kind : string; (* "ocaml" | "python" | … — determines which artifact node *)
-  from_store : bool;     (* true: reads from <kind>_binding_store; false: from <kind>_binding_node *)
-}
-
-let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []) (rules : rule list) =
+(* summary_rules : list of (parent rule, tag_suffix) pairs.
+   - One pair per summary follow-up step that appears in the run.
+   - Same rule can appear with multiple suffixes (e.g.
+     Fetch (Binding OCaml) has both "_summary" — mli — and
+     "_stub_summary" — c_stub).
+   - The diagram emits one summary node per pair. *)
+let mermaid_of_action_rule_schema ?status ?(has_scan = false)
+    ?(summary_rules : (rule * string) list = []) (rules : rule list) =
   let get_status tag = match status with
     | None -> None
     | Some tbl -> Hashtbl.find tbl tag
@@ -550,10 +526,19 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
   let has_configure = List.exists rules ~f:(fun r ->
       match r with Configure -> true | _ -> false)
   in
+  let fetch_kinds =
+    List.filter_map rules ~f:(fun r -> match r with Fetch k -> Some k | _ -> None)
+  in
   let build_rules =
     List.filter rules ~f:(fun r ->
         match r with
-        | Build_headers | Build_lib | Build_binding | Build_app -> true
+        | Build_headers | Build_lib | Build_binding _ | Build_app -> true
+        | _ -> false)
+  in
+  let install_rules =
+    List.filter rules ~f:(fun r ->
+        match r with
+        | Install_lib -> true
         | _ -> false)
   in
   let publish_kinds =
@@ -564,69 +549,107 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
     List.filter_map rules ~f:(fun r ->
         match r with Probe k -> Some k | _ -> None)
   in
-  let split_binding = not (List.is_empty split_probes) in
-  (* Distinct binding kinds when split (e.g. ["ocaml"; "python"]) *)
-  let binding_kinds =
-    if split_binding then
-      List.map split_probes ~f:(fun e -> e.binding_kind)
-      |> List.dedup_and_sort ~compare:String.compare
-    else []
-  in
-  (* Artifact pool kinds: which kinds appear in the rule set *)
+  (* Artifact pool kinds: derived from rules — includes Binding lang variants *)
   let artifact_pool_kinds =
-    [ Headers; Lib; Binding; App ]
-    |> List.filter ~f:(fun k ->
-           List.exists rules ~f:(fun r ->
-               match r with
-               | Build_headers -> Poly.equal k Headers
-               | Build_lib -> Poly.equal k Lib
-               | Build_binding -> Poly.equal k Binding
-               | Build_app -> Poly.equal k App
-               | Fetch fk -> Poly.equal k fk
-               | Configure | Publish _ | Probe _ -> false))
+    List.filter_map rules ~f:(fun r ->
+        match r with
+        | Build_headers | Fetch Headers -> Some Headers
+        | Build_lib | Fetch Lib -> Some Lib
+        | Build_binding lang | Fetch (Binding lang) -> Some (Binding lang)
+        | Build_app | Fetch App -> Some App
+        | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
   in
   let all_pool_kinds = Source :: artifact_pool_kinds in
-  add "graph LR";
-  (* Artifact nodes *)
-  List.iter all_pool_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding ->
-          (* Replaced by per-kind nodes below *)
-          ()
-      | _ ->
-          let nid = node_id_of_kind kind in
-          let k = string_of_artifact_kind kind in
-          add [%string "    %{nid}@{ shape: docs, label: \"%{k}\" }"]);
-  if split_binding then
-    List.iter binding_kinds ~f:(fun kind ->
-        let nid = [%string "%{kind}_binding_node"] in
-        add [%string "    %{nid}@{ shape: docs, label: \"%{kind} binding\" }"]);
-  add "";
-  (* Action nodes — each gets a sequential id displayed in the label *)
+  let scan_nid = "A_scan_source" in
+  (* Parent node id for a summary follow-up's incoming edge.
+     Probe and Publish have their own action nodes; Fetch has no
+     separate action node — the fetch ID is embedded in the artifact
+     label — so the edge originates from the artifact pool node. *)
+  let parent_action_nid rule =
+    match rule with
+    | Probe kind   -> [%string "A_probe_%{string_of_artifact_kind kind}"]
+    | Publish kind -> [%string "A_pack_%{string_of_artifact_kind kind}"]
+    | Fetch kind   -> node_id_of_kind kind
+    | _            -> [%string "A_%{string_of_rule rule}"]
+  in
+  (* Summary nodes are uniquely identified by (parent rule, tag suffix).
+     suffix is e.g. "_summary" or "_stub_summary". *)
+  let summary_nid rule suffix =
+    let parent_tag = match rule with
+      | Probe kind -> [%string "probe_%{string_of_artifact_kind kind}"]
+      | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
+      | _ -> string_of_rule rule
+    in
+    [%string "A_%{parent_tag}%{suffix}"]
+  in
+  let summary_label rule suffix =
+    (* e.g. fetch_ocaml_binding_stub_summary *)
+    let parent_tag = match rule with
+      | Probe kind -> [%string "probe_%{string_of_artifact_kind kind}"]
+      | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
+      | _ -> string_of_rule rule
+    in
+    parent_tag ^ suffix
+  in
+  (* The node that build/configure reads source from:
+     scan_source sits between fetch_source and configure/build when wired. *)
+  let source_upstream =
+    if has_scan then scan_nid
+    else node_id_of_kind Source
+  in
+  (* Action nodes — each gets a sequential id in the label.
+     Counter is defined here so fetch IDs (embedded in artifact labels) are
+     assigned first, keeping the numbering consistent with the step log order. *)
   let action_counter = ref 0 in
   let next_id () = Int.incr action_counter; !action_counter in
   let action_label name =
     let n = next_id () in [%string "%{name} [%{Int.to_string n}]"]
   in
+  add "graph LR";
+  (* Artifact nodes — fetch action ID embedded in label when a Fetch rule exists,
+     so it cross-references the log without adding a separate node. *)
+  List.iter all_pool_kinds ~f:(fun kind ->
+      let nid = node_id_of_kind kind in
+      let lbl = label_of_artifact_kind kind in
+      let label =
+        if List.mem fetch_kinds kind ~equal:Poly.equal then
+          let n = next_id () in
+          [%string "%{lbl} [%{Int.to_string n}]"]
+        else lbl
+      in
+      add [%string "    %{nid}@{ shape: docs, label: \"%{label}\" }"]);
+  add "";
+  (* Scan action — pill shape (validation check), only when wired *)
+  if has_scan then
+    add [%string "    %{scan_nid}([\"%{action_label \"scan_source\"}\"])"];
+  (* Configure + build actions — hexagon shape (active transformation) *)
   if has_configure then
     add [%string "    A_configure{{\"%{action_label \"configure\"}\"}}"];
   List.iter build_rules ~f:(fun r ->
       let name = string_of_rule r in
       add [%string "    A_%{name}{{\"%{action_label name}\"}}"]);
+  (* Install actions — hexagon shape *)
+  List.iter install_rules ~f:(fun r ->
+      let name = string_of_rule r in
+      add [%string "    A_%{name}{{\"%{action_label name}\"}}"]);
+  (* Publish actions — hexagon shape *)
   List.iter publish_kinds ~f:(fun kind ->
       let k = string_of_artifact_kind kind in
       let name = string_of_rule (Publish kind) in
       add [%string "    A_pack_%{k}{{\"%{action_label name}\"}}"]);
+  (* Probe actions — pill shape *)
   List.iter probe_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding ->
-          List.iter split_probes ~f:(fun e ->
-              add [%string "    A_%{e.probe_tag}([\"%{action_label e.probe_tag}\"])"])
-      | _ ->
-          let k = string_of_artifact_kind kind in
-          let name = string_of_rule (Probe kind) in
-          add [%string "    A_probe_%{k}([\"%{action_label name}\"])"]);
+      let k = string_of_artifact_kind kind in
+      let name = string_of_rule (Probe kind) in
+      add [%string "    A_probe_%{k}([\"%{action_label name}\"])"]);
+  (* Summary actions — pill shape, one per (rule, suffix) pair.
+     Covers Probe Lib (_summary), Fetch (Binding lang) (_summary +
+     _stub_summary), Publish (Binding lang) (same as Fetch), etc. *)
+  List.iter summary_rules ~f:(fun (rule, suffix) ->
+      let nid = summary_nid rule suffix in
+      let tag = summary_label rule suffix in
+      add [%string "    %{nid}([\"%{action_label tag}\"])"]);
   add "";
   (* Edges *)
   let edge_idx = ref 0 in
@@ -638,9 +661,17 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
      | None -> ());
     Int.incr edge_idx
   in
+  (* Scan edge: source_node -.-> scan (annotation/follow-up).
+     The downstream scan -> configure edge stays solid (real dep ordering). *)
+  if has_scan then begin
+    add_edge ~tag:"scan_source"
+      [%string "%{node_id_of_kind Source} -.-> %{scan_nid}"]
+  end;
+  (* Configure edge: source_upstream → configure *)
   if has_configure then
     add_edge ~tag:"configure"
-      [%string "%{node_id_of_kind Source} --> A_configure"];
+      [%string "%{source_upstream} --> A_configure"];
+  (* Build edges *)
   List.iter build_rules ~f:(fun r ->
       let name = string_of_rule r in
       let action_id = [%string "A_%{name}"] in
@@ -649,66 +680,67 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
           if has_configure then
             add_edge ~tag:name [%string "A_configure --> %{action_id}"]
           else
-            add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
+            add_edge ~tag:name [%string "%{source_upstream} --> %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Headers}"]
       | Build_lib ->
           if has_configure then
             add_edge ~tag:name [%string "A_configure --> %{action_id}"]
           else
-            add_edge ~tag:name [%string "%{node_id_of_kind Source} --> %{action_id}"];
+            add_edge ~tag:name [%string "%{source_upstream} --> %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind Lib}"]
-      | Build_binding ->
+      | Build_binding lang ->
           if has_configure then
             add_edge ~tag:name [%string "A_configure --> %{action_id}"];
           add_edge ~tag:name
             [%string "%{node_id_of_kind Headers} -.->|headers| %{action_id}"];
           add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
-          let out_nid = if split_binding then "ocaml_binding_node"
-                        else node_id_of_kind Binding in
-          add_edge ~tag:name [%string "%{action_id} --> %{out_nid}"];
-          if split_binding &&
-             List.exists binding_kinds ~f:(String.equal "python") then
-            add_edge ~tag:name [%string "%{action_id} --> python_binding_node"]
+          add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind (Binding lang)}"]
       | Build_app ->
-          let in_nid = if split_binding then "ocaml_binding_node"
-                       else node_id_of_kind Binding in
-          add_edge ~tag:name [%string "%{in_nid} --> %{action_id}"];
+          let app_binding_nid =
+            match List.find_map rules ~f:(fun r ->
+                match r with Build_binding lang -> Some lang | _ -> None) with
+            | Some lang -> node_id_of_kind (Binding lang)
+            | None -> node_id_of_kind (Binding OCaml)
+          in
+          add_edge ~tag:name [%string "%{app_binding_nid} --> %{action_id}"];
           add_edge ~tag:name [%string "%{node_id_of_kind Lib} -.->|link| %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{node_id_of_kind App}"]
       | _ -> ());
-  (* Publish edges: artifact → pack action only; no store edge *)
+  (* Install edges: build → install *)
+  List.iter install_rules ~f:(fun r ->
+      let name = string_of_rule r in
+      match r with
+      | Install_lib ->
+          add_edge ~tag:name [%string "A_build_lib --> A_%{name}"]
+      | _ -> ());
+  (* Publish edges: artifact node → pack action *)
   List.iter publish_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding ->
-          add_edge ~tag:"pack_binding" "ocaml_binding_node --> A_pack_binding"
-      | _ ->
-          let k = string_of_artifact_kind kind in
-          let pid = node_id_of_kind kind in
-          let tag = [%string "pack_%{k}"] in
-          add_edge ~tag [%string "%{pid} --> A_pack_%{k}"]);
+      let k = string_of_artifact_kind kind in
+      let tag = [%string "pack_%{k}"] in
+      add_edge ~tag [%string "%{node_id_of_kind kind} --> A_pack_%{k}"]);
   (* Probe edges *)
   List.iter probe_kinds ~f:(fun kind ->
-      match kind with
-      | Binding when split_binding ->
-          (* OCaml from_store probes (probe_binding_opam) route through pack_binding —
-             shows the PM packaging step before the probe.
-             All other probes (build-tree or non-OCaml) connect from the binding node. *)
-          List.iter split_probes ~f:(fun e ->
-              (if e.from_store && String.equal e.binding_kind "ocaml" then
-                add_edge ~tag:e.probe_tag
-                  [%string "A_pack_binding --> A_%{e.probe_tag}"]
-              else
-                add_edge ~tag:e.probe_tag
-                  [%string "%{e.binding_kind}_binding_node -->|test| A_%{e.probe_tag}"]);
-              add_edge ~tag:e.probe_tag
-                [%string "%{node_id_of_kind Lib} -.->|runtime| A_%{e.probe_tag}"])
-      | _ ->
-          let pid = node_id_of_kind kind in
-          let k = string_of_artifact_kind kind in
-          let tag = [%string "probe_%{k}"] in
-          add_edge ~tag [%string "%{pid} -->|test| A_probe_%{k}"];
-          if Poly.equal kind Binding || Poly.equal kind App then
-            add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]);
+      let k = string_of_artifact_kind kind in
+      let tag = [%string "probe_%{k}"] in
+      (match kind with
+       | Binding lang ->
+           if List.exists rules ~f:(Poly.equal (Publish (Binding lang))) then
+             add_edge ~tag [%string "A_pack_%{k} --> A_probe_%{k}"]
+           else
+             add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"];
+           add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]
+       | App ->
+           add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"];
+           add_edge ~tag [%string "%{node_id_of_kind Lib} -.->|runtime| A_probe_%{k}"]
+       | _ ->
+           add_edge ~tag [%string "%{node_id_of_kind kind} -->|test| A_probe_%{k}"]););
+  (* Summary edges: parent action → summary action.
+     Dashed edge to signal "follow-up annotation" rather than data flow. *)
+  List.iter summary_rules ~f:(fun (rule, suffix) ->
+      let parent_nid = parent_action_nid rule in
+      let nid = summary_nid rule suffix in
+      let tag = summary_label rule suffix in
+      add_edge ~tag [%string "%{parent_nid} -.-> %{nid}"]);
   add "";
   (* Styling *)
   add "    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
@@ -717,37 +749,38 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
   add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
   add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
-  (* Artifact nodes are always orange — status is shown on their producing action nodes *)
-  let all_artifact_nids =
-    (List.filter_map all_pool_kinds ~f:(fun k ->
-         if Poly.equal k Binding && split_binding then None
-         else Some (node_id_of_kind k)))
-    @ (if split_binding then
-         List.map binding_kinds ~f:(fun kind -> [%string "%{kind}_binding_node"])
-       else [])
-  in
+  let all_artifact_nids = List.map all_pool_kinds ~f:node_id_of_kind in
   if not (List.is_empty all_artifact_nids) then
     add [%string "    class %{String.concat all_artifact_nids ~sep:\",\"} artifact"];
-  (* Action + store nodes: status-aware or default *)
+  (* action_entries: (node_id, status_tag) pairs for rendered action nodes.
+     Fetch steps are embedded in artifact labels — not listed here. *)
+  let scan_entries =
+    if has_scan then [ (scan_nid, "scan_source") ] else []
+  in
+  let summary_entries =
+    List.map summary_rules ~f:(fun (rule, suffix) ->
+        (summary_nid rule suffix, summary_label rule suffix))
+  in
   let action_entries =
-    (if has_configure then [ ("A_configure", "configure") ] else [])
+    scan_entries
+    @ (if has_configure then [ ("A_configure", "configure") ] else [])
     @ List.map build_rules ~f:(fun r ->
+          ([%string "A_%{string_of_rule r}"], string_of_rule r))
+    @ List.map install_rules ~f:(fun r ->
           ([%string "A_%{string_of_rule r}"], string_of_rule r))
     @ List.map publish_kinds ~f:(fun k ->
           let k_s = string_of_artifact_kind k in
           ([%string "A_pack_%{k_s}"], [%string "pack_%{k_s}"]))
-    @ List.concat_map probe_kinds ~f:(fun kind ->
-          match kind with
-          | Binding when split_binding ->
-              List.map split_probes ~f:(fun e -> ([%string "A_%{e.probe_tag}"], e.probe_tag))
-          | _ ->
-              let k_s = string_of_artifact_kind kind in
-              [ ([%string "A_probe_%{k_s}"], [%string "probe_%{k_s}"]) ])
+    @ List.map probe_kinds ~f:(fun k ->
+          let k_s = string_of_artifact_kind k in
+          ([%string "A_probe_%{k_s}"], [%string "probe_%{k_s}"]))
+    @ summary_entries
   in
   (match status with
    | None ->
        let action_ids = List.map action_entries ~f:fst in
-       add [%string "    class %{String.concat action_ids ~sep:\",\"} action"]
+       if not (List.is_empty action_ids) then
+         add [%string "    class %{String.concat action_ids ~sep:\",\"} action"]
    | Some _ ->
        List.iter action_entries ~f:(fun (node_id, tag) ->
            let cls = match get_status tag with
@@ -757,7 +790,6 @@ let mermaid_of_action_rule_schema ?status ?(split_probes : probe_split list = []
              | Some Not_in_spec | None -> "st_nospec"
            in
            add [%string "    class %{node_id} %{cls}"]));
-  (* Edge styles *)
   (match status with
    | None -> ()
    | Some _ ->
