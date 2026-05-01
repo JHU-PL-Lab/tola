@@ -158,19 +158,19 @@ let find_lib_summary variant_dir =
       if Stdlib.Sys.file_exists p then Some p else None)
 
 (* OCaml binding summaries (mli + stub) are written by the install step —
-   either Fetch (Binding OCaml) → fetch_ocaml_binding/, or
-   Publish (Binding OCaml) → pack_ocaml_binding/. Try both. *)
+   either Fetch (Binding OCaml) → fetch_binding_ocaml/, or
+   Publish (Binding OCaml) → pack_binding_ocaml/. Try both. *)
 let find_ocaml_install_dir variant_dir =
-  let candidates = [ "pack_ocaml_binding"; "fetch_ocaml_binding" ] in
+  let candidates = [ "pack_binding_ocaml"; "fetch_binding_ocaml" ] in
   List.find_map candidates ~f:(fun rel ->
       let p = variant_dir ^ "/" ^ rel in
       if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
       then Some p else None)
 
 (* Python binding summary is written at Fetch (Binding Python) →
-   fetch_python_binding/. *)
+   fetch_binding_python/. *)
 let find_python_install_dir variant_dir =
-  let p = variant_dir ^ "/fetch_python_binding" in
+  let p = variant_dir ^ "/fetch_binding_python" in
   if Stdlib.Sys.file_exists p && Stdlib.Sys.is_directory p
   then Some p else None
 
@@ -200,7 +200,7 @@ let run_for_project ~root ~project ~variant =
       let lib_path = find_lib_summary dir in
       (match stub_path, lib_path with
        | None, _ ->
-           Fmt.epr "compat: no stub_summary.json under %s/probe_ocaml_binding/@." dir;
+           Fmt.epr "compat: no stub_summary.json under %s/probe_binding_ocaml/@." dir;
            Fmt.epr "  (run `canary action %s` first to populate the cache)@." project;
            2
        | _, None ->
@@ -361,7 +361,7 @@ let verify_for_project ~root ~project ~variant =
       in
       Fmt.pr "@.L3 (Python attrs) prediction:@.";
       (match find_python_summary dir with
-       | None -> Fmt.pr "  (no Python summary cached at fetch_python_binding/)@."
+       | None -> Fmt.pr "  (no Python summary cached at fetch_binding_python/)@."
        | Some _ ->
            if List.is_empty py_missing then
              Fmt.pr "  watchlist missing: (none) — predicts SUCCESS at Python level@."
@@ -403,8 +403,8 @@ let verify_for_project ~root ~project ~variant =
 
       (* Probe.log analysis *)
       let read_log rel = read_file_or_empty (dir ^ "/" ^ rel) in
-      let ocaml_log = read_log "probe_ocaml_binding/probe.log" in
-      let python_log = read_log "probe_python_binding/probe.log" in
+      let ocaml_log = read_log "probe_binding_ocaml/probe.log" in
+      let python_log = read_log "probe_binding_python/probe.log" in
       let print_log_section name log =
         let line_count, head = probe_log_summary log in
         Fmt.pr "@.%s probe.log analysis (%d lines):@." name line_count;

@@ -466,13 +466,13 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              empty-derived → any-failure-with-probe.log. See api_interface.md §13. *)
           Expect_compat_failure {
             inputs = [
-              C_stub { paths = [ "pack_ocaml_binding/stub_summary.json";
-                                 "fetch_ocaml_binding/stub_summary.json" ] };
+              C_stub { paths = [ "pack_binding_ocaml/stub_summary.json";
+                                 "fetch_binding_ocaml/stub_summary.json" ] };
               Native_lib { paths = [ "probe_lib/summary.json";
                                      "probe_lib_apt/summary.json";
                                      "probe_lib_staged/summary.json" ] };
-              Ocaml_mli { paths = [ "pack_ocaml_binding/summary.json";
-                                    "fetch_ocaml_binding/summary.json" ] };
+              Ocaml_mli { paths = [ "pack_binding_ocaml/summary.json";
+                                    "fetch_binding_ocaml/summary.json" ] };
             ];
             version_info = Some {
               provider_version = "llvm 19";

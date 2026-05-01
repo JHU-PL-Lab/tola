@@ -686,8 +686,8 @@ let view_predicate (v : view) (s : action_step) : bool =
       || String.equal s.tag "install_lib"
       || String.is_prefix s.tag ~prefix:"probe_lib"
   | `Binding lang ->
-      let lang_tag = Canary_artifact_api.string_of_lang lang ^ "_binding" in
-      String.is_substring s.tag ~substring:lang_tag
+      let lang_str = Canary_artifact_api.string_of_lang lang in
+      String.is_substring s.tag ~substring:("binding_" ^ lang_str)
   | `Probes ->
       String.is_prefix s.tag ~prefix:"probe_"
   | `Pack ->
@@ -711,8 +711,8 @@ let _id_label_for ~ids tag =
    - probe_lib_apt          → "apt"
    - probe_lib_staged       → "staged"
    - probe_lib_build_tree   → "build_tree"
-   - probe_ocaml_binding    → "default"
-   - probe_ocaml_binding_opam → "opam"
+   - probe_binding_ocaml    → "default"
+   - probe_binding_ocaml_opam → "opam"
    etc. *)
 let _variant_of_probe_tag ~prefix tag =
   if String.equal tag prefix then "default"
@@ -747,7 +747,7 @@ let _default_variant_alias ~all_steps ~build_tag ~fetch_tag ~variants =
    probes for that artifact. *)
 let mermaid_artifact_detail
     ?(status : (string, Canary.node_status) Hashtbl.t option)
-    ~(artifact : string)               (* "lib" | "ocaml_binding" | "python_binding" *)
+    ~(artifact : string)               (* "lib" | "binding_ocaml" | "binding_python" *)
     ~(label_kind : string)             (* "lib" | "ocaml binding" | "python binding" *)
     ~(all_steps : action_step list)
     () : string =
@@ -875,7 +875,7 @@ let mermaid_artifact_detail
   (* pack_<artifact> (binding-only): produces an installed/packaged variant *)
   if has_step pack_tag then begin
     (* Pack consumes build_tree binding and produces the pm-installed one.
-       For OCaml binding the pm is opam (probe_ocaml_binding_opam). *)
+       For OCaml binding the pm is opam (probe_binding_ocaml_opam). *)
     let consumed = pick_variant ~prefer:"build_tree" in
     add [%string "    %{nid_of_var consumed} --> S_%{pack_tag}"];
     let produced = pick_variant ~prefer:"opam" in
@@ -994,10 +994,10 @@ let mermaid_view
         | `Binding lang ->
             let s = Canary_artifact_api.string_of_lang lang in
             ( Binding lang
-            , "probe_" ^ s ^ "_binding"
-            , "build_" ^ s ^ "_binding"
-            , "fetch_" ^ s ^ "_binding"
-            , s ^ " binding" )
+            , "probe_binding_" ^ s
+            , "build_binding_" ^ s
+            , "fetch_binding_" ^ s
+            , "binding " ^ s )
         | _ -> assert false
       in
       let view_title_str = "view: " ^ view_name view in
@@ -1015,7 +1015,7 @@ let mermaid_view
            in
            let art_str, lkind = match view with
              | `Lib -> "lib", "lib"
-             | `Binding _ -> artifact ^ "_binding", artifact ^ " binding"
+             | `Binding _ -> "binding_" ^ artifact, "binding " ^ artifact
              | _ -> assert false
            in
            mermaid_artifact_detail ?status ~artifact:art_str ~label_kind:lkind
@@ -1660,12 +1660,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
      diagram emits one summary node per pair. The tag_suffix is recovered
      by stripping the rule's canonical tag prefix from the step tag. *)
   let summary_rules =
-    let canonical_parent_tag rule =
-      match rule with
-      | Probe kind   -> [%string "probe_%{string_of_artifact_kind kind}"]
-      | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
-      | _ -> string_of_rule rule
-    in
+    let canonical_parent_tag rule = string_of_rule rule in
     List.filter_map steps ~f:(fun s ->
         if String.is_suffix s.tag ~suffix:"_summary" then
           let parent = canonical_parent_tag s.rule in

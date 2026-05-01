@@ -530,7 +530,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Canary_action.Expect_compat_failure {
             inputs = [
               Canary_action.Python_attrs
-                { paths = [ "fetch_python_binding/summary.json" ] };
+                { paths = [ "fetch_binding_python/summary.json" ] };
             ];
             version_info = Some {
               provider_version = "z3-solver pip wheel";
