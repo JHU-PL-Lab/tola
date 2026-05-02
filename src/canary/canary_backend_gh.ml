@@ -18,18 +18,19 @@ let sanitize_id s =
 
 let output_dir_of ~project ~tag =
   let base = "$GITHUB_WORKSPACE/_out/canary/projects/" in
-  match String.rsplit2 project ~on:'/' with
-  | Some (project_name, variant_id) ->
-      base ^ project_name ^ "/" ^ tag ^ "/" ^ variant_id
-  | None ->
-      base ^ project ^ "/" ^ tag
+  let project_name = match String.rsplit2 project ~on:'/' with
+    | Some (name, _) -> name
+    | None -> project
+  in
+  let step_dir = Canary_step_key.step_dir_of_tag tag in
+  base ^ project_name ^ "/" ^ step_dir
 
 (* Render one action_step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)
 let render_gh_step ~project (step : Canary_action.action_step) =
   (* Use output_tag (not tag) so summary steps share the parent's directory. *)
   let out = output_dir_of ~project ~tag:step.output_tag in
-  let raw_cmd = step.cmd ~output_dir:out in
+  let raw_cmd = step.cmd ~output_dir:out ~variant_key:step.variant_id in
   let full_cmd = [%string "mkdir -p \"%{out}\"\n%{raw_cmd}"] in
   let run_block body = [%string "        run: |\n%{indent 10 body}\n"] in
   let sym_check_step =
@@ -110,21 +111,19 @@ fi|}]
       (* Resolve predictions at YAML-generation time using locally-cached
          summaries. When cache is empty (fresh CI runner), the fallback in
          render_failure_check accepts any failure with non-empty probe.log.
-         Path format: "step_tag/file.json". For variant runs, the step dir is
-         project_dir/{step_tag}/{variant_id}/; for single-variant, project_dir/{step_tag}/. *)
-      let project_dir =
-        if String.is_empty step.variant_id then Stdlib.Filename.dirname out
-        else Stdlib.Filename.dirname (Stdlib.Filename.dirname out)
-      in
+         Path format: "step_tag/file.json". v3 layout: no variant subdir —
+         variant_id is encoded as a filename suffix (e.g. summary_19.json). *)
+      let project_dir = step.project_dir in
       let pick_first_existing rels =
         List.find_map rels ~f:(fun rel ->
-            let p = if String.is_empty step.variant_id then
-              project_dir ^ "/" ^ rel
-            else
-              match String.lsplit2 rel ~on:'/' with
+            let p = match String.lsplit2 rel ~on:'/' with
               | Some (step_tag, file) ->
-                  project_dir ^ "/" ^ step_tag ^ "/" ^ step.variant_id ^ "/" ^ file
-              | None -> project_dir ^ "/" ^ rel
+                  let step_d = Canary_step_key.step_dir_of_tag step_tag in
+                  let vk_file = Canary_step_key.variant_file ~variant_key:step.variant_id file in
+                  project_dir ^ "/" ^ step_d ^ "/" ^ vk_file
+              | None ->
+                  let vk_rel = Canary_step_key.variant_file ~variant_key:step.variant_id rel in
+                  project_dir ^ "/" ^ vk_rel
             in
             if Stdlib.Sys.file_exists p then Some p else None)
       in

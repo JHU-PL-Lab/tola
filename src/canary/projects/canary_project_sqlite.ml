@@ -70,23 +70,23 @@ let script_spec : Canary_action.script_spec =
       (match sqlite_python_config with
        | Python_config p ->
            [ (Canary_artifact_api.Python,
-              fun ~output_dir -> Canary_toolchain.pip_install_cmd p ~output_dir) ]
+              fun ~output_dir ~variant_key -> Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key) ]
        | Ocaml_config _ -> []);
     probe_binding =
       (Canary_artifact_api.OCaml,
        Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
-       fun ~output_dir ->
+       fun ~output_dir ~variant_key ->
          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
            ~example:ocaml.example_file ~target:ocaml.example_target
-           ~output_dir) ::
+           ~output_dir ~variant_key) ::
       (* Python sqlite3 is stdlib-bundled — install no-ops to a marker;
          this probe step just runs the import. *)
       (match sqlite_python_config with
        | Python_config p ->
            [ (Canary_artifact_api.Python,
               Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; pm = Canary_store.Pip }),
-              fun ~output_dir ->
-                Canary_toolchain.python_probe_only_cmd p ~output_dir) ]
+              fun ~output_dir ~variant_key ->
+                Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key) ]
        | Ocaml_config _ -> []);
     (* Sqlite has no api_source/binding_summary so auto-summary doesn't fire.
        Both OCaml and Python summaries are produced via this explicit
@@ -95,12 +95,12 @@ let script_spec : Canary_action.script_spec =
        projects that opt into the api_source flow.) *)
     summary = (fun rule loc -> match rule, loc with
       | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; _ })) ->
-          Some (fun ~output_dir ->
+          Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.python_summary_cmd
-              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ())
+              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ~variant_key ())
       | Probe (Binding _), _ ->
-          Some (fun ~output_dir ->
+          Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.summary_opam_pkg_cmd
-              ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ())
+              ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ~variant_key ())
       | _ -> None);
   }

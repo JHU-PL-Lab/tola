@@ -85,11 +85,12 @@ let symbols_undefined ~prefix lines =
 (* Sanity probe: count symbols with prefix exported by a native lib.
    Writes probe.log; exits nonzero if the count is zero.
    Use to verify the lib compiled and exports the expected API surface. *)
-let native_lib_probe_cmd ~lib ~prefix ~output_dir =
+let native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key =
   let nm_flag = if is_macos then "-g" else "-D" in
+  let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
   [%string
     {|COUNT=$(nm %{nm_flag} "%{lib}" 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
-printf '%{prefix} symbols exported: %s\n' "$COUNT" | tee %{output_dir}/probe.log
+printf '%{prefix} symbols exported: %s\n' "$COUNT" | tee %{output_dir}/%{probe_log}
 test "$COUNT" -gt 0|}]
 
 (* Emit compact artifact summary as summary.json.
@@ -99,7 +100,7 @@ test "$COUNT" -gt 0|}]
    (e.g., passing "$LIB_Z3" from a resolve snippet). Callers using literal
    paths get the usual behavior; paths with shell metacharacters or spaces
    need escaping at the call site. *)
-let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir () =
+let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
   let nm_flag = if is_macos then "-g" else "-D" in
   (* On macOS, Mach-O nm prefixes every C symbol with `_`. Tell the parser
      to strip it; on Linux the symbol IS the C ABI name (no strip). *)
@@ -107,10 +108,11 @@ let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir () =
   let script = "canary/scripts/summarize_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
   | python3 %{script} %{strip_flag}--emit-symbols --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
-  > %{output_dir}/summary.json|}]
+  > %{output_dir}/%{out_file}|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.
    Writes symbols.log; exits nonzero if symbols are missing. *)

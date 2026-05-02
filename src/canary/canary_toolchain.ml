@@ -196,7 +196,8 @@ let install_local_cmd t ~canary_contrib_rel =
   [%string
     {|eval $(opam env)
 OPAMVAR_%{t.canary_src_var}="git+file://$PWD" opam config subst %{opam_rel}
-opam repo add %{t.local_repo_name} "file://$PWD/%{repo_rel}" --rank=1 || opam repo set-url %{t.local_repo_name} "file://$PWD/%{repo_rel}"
+opam repo remove %{t.local_repo_name} 2>/dev/null || true
+opam repo add %{t.local_repo_name} "file://$PWD/%{repo_rel}" --rank=1
 opam update %{t.local_repo_name}
 opam remove -y %{pkg_full} || true
 opam install -y %{pkg_full} --verbose|}]
@@ -209,16 +210,18 @@ opam install -y %{pkg_full} --verbose|}]
    ~env_prefix:  space-terminated env-var assignments prepended to opam install
                  (e.g. "CANARY_BUILD_DIR=\"...\" "); use "" when not needed. *)
 let opam_pack_cmd ~repo_name ~repo_abs ~pkg_full ?(preamble = "")
-    ?(pre_install = "") ~env_prefix ~output_dir () =
+    ?(pre_install = "") ~env_prefix ~output_dir ~variant_key () =
+  let pack_ok = Canary_step_key.variant_file ~variant_key "pack.ok" in
   let maybe s = if String.is_empty s then "" else s ^ "\n" in
   [%string
     {|eval $(opam env)
-%{maybe preamble}opam repo add %{repo_name} "file://%{repo_abs}" --rank=1 \
-  || opam repo set-url %{repo_name} "file://%{repo_abs}"
+%{maybe preamble}printf 'opam-version: "2.0"\n' > "%{repo_abs}/repo"
+opam repo remove %{repo_name} 2>/dev/null || true
+opam repo add %{repo_name} "file://%{repo_abs}" --rank=1
 opam update %{repo_name}
 %{maybe pre_install}opam remove -y %{pkg_full} || true
 %{env_prefix}opam install -y %{pkg_full} --verbose --keep-build-dir --assume-depexts \
-  && echo 'ok' > %{output_dir}/pack.ok|}]
+  && echo 'ok' > %{output_dir}/%{pack_ok}|}]
 
 let install_opam_package_step ~name package =
   let spec = mk_opam_package_spec ~install_name:package () in
@@ -289,11 +292,13 @@ let prebuilt_info_exn (config : ocaml_tool_config) =
    binding.ok marker on success (canary's standard fetch postcondition).
    When pip_package is None the binding is stdlib — no install needed. *)
 let pip_install_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
-    ~output_dir =
+    ~output_dir ~variant_key =
+  let binding_ok = Canary_step_key.variant_file ~variant_key "binding.ok" in
+  let install_log = Canary_step_key.variant_file ~variant_key "install.log" in
   match p.pip_package with
   | None ->
       (* Stdlib (or pre-installed): just create the marker. *)
-      [%string {|echo 'stdlib' > %{output_dir}/binding.ok|}]
+      [%string {|echo 'stdlib' > %{output_dir}/%{binding_ok}|}]
   | Some pkg ->
       let make_branch i (check, prefix) =
         let kw = if i = 0 then "if" else "elif" in
@@ -306,31 +311,32 @@ let pip_install_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
       in
       [%string
         {|set -e
-INSTALL_LOG=%{output_dir}/install.log
+INSTALL_LOG=%{output_dir}/%{install_log}
 %{String.concat ~sep:"\n" branches}
 else
   echo "no %{names} available" > "$INSTALL_LOG"
   exit 1
 fi
-echo 'installed' > %{output_dir}/binding.ok|}]
+echo 'installed' > %{output_dir}/%{binding_ok}|}]
 
 (* Probe only — runs at Probe (Binding Python) time, assuming pip install
    has already happened in the Fetch (Binding Python) step. *)
 let python_probe_only_cmd ?(toolchain = default_python_toolchain)
-    (p : python_binding) ~output_dir =
+    (p : python_binding) ~output_dir ~variant_key =
+  let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
   [%string
     {|set -e
-%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/probe.log 2>&1 || { cat %{output_dir}/probe.log; exit 1; }
-cat %{output_dir}/probe.log|}]
+%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/%{probe_log} 2>&1 || { cat %{output_dir}/%{probe_log}; exit 1; }
+cat %{output_dir}/%{probe_log}|}]
 
 (* Backward-compatible single-step variant: install + probe in one go.
    Kept so projects that haven't migrated to the split form still work
    (and so canary_pattern_a / older specs compile). New code should
    prefer pip_install_cmd + python_probe_only_cmd. *)
 let pip_probe_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
-    ~output_dir =
-  let install = pip_install_cmd ~toolchain p ~output_dir in
-  let probe = python_probe_only_cmd ~toolchain p ~output_dir in
+    ~output_dir ~variant_key =
+  let install = pip_install_cmd ~toolchain p ~output_dir ~variant_key in
+  let probe = python_probe_only_cmd ~toolchain p ~output_dir ~variant_key in
   [%string {|%{install}
 %{probe}|}]
 

@@ -512,7 +512,12 @@ let pp_job_path_table_md ppf (paths : job_path list) =
 let node_id_of_kind k =
   [%string "%{string_of_artifact_kind k}_node"]
 
-type node_status = Done | Failed | Skipped | Not_in_spec
+type node_status =
+  | Done       (* expected success, confirmed *)
+  | Done_fail  (* expected failure, confirmed *)
+  | Failed     (* unexpected: expected success but failed, or expected failure but succeeded/mismatched *)
+  | Skipped
+  | Not_in_spec
 
 (* summary_rules : list of (parent rule, tag_suffix) pairs.
    - One pair per summary follow-up step that appears in the run.
@@ -533,6 +538,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
     ?(steps_by_rule_tag : (string, string list) Hashtbl.t option)
     ?(expand_artifact : (artifact_kind * (string * string) list) option)
     ?(view_title : string option)
+    ?(focal_predicate : (string -> bool) option)
     (rules : rule list) =
   let get_status tag = match status with
     | None -> None
@@ -582,12 +588,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
   (* Parent node id for a summary follow-up's incoming edge.
      Probe and Publish have their own action nodes; Fetch has no
      separate action node — the fetch ID is embedded in the artifact
-     label — so the edge originates from the artifact pool node. *)
-  let parent_action_nid rule =
-    match rule with
-    | Fetch kind -> node_id_of_kind kind
-    | _          -> [%string "A_%{string_of_rule rule}"]
-  in
+     label — so the edge originates from the artifact pool node.
+     Defined after kind_nid below as parent_action_nid_ex (expanded-aware). *)
   (* Summary nodes are uniquely identified by (parent rule, tag suffix).
      suffix is e.g. "_summary" or "_stub_summary". *)
   let summary_nid rule suffix =
@@ -677,6 +679,28 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
       in
       expand_variant_nid kind vid
     end else node_id_of_kind kind
+  in
+  (* The artifact variant node produced by a pack (Publish) step: the first
+     PM-like variant (opam/pip/fetch) that is not the consumed build_tree/staged
+     input. Returns None when the kind is not expanded or has no distinct produced
+     variant (e.g. only one variant = build_tree). *)
+  let pack_produced_nid kind =
+    if is_expanded kind then
+      let vs = expand_vars () in
+      let pm_like = List.filter vs ~f:(fun (v, _) ->
+          not (String.equal v "build_tree")
+          && not (String.equal v "staged")
+          && not (String.equal v "default")) in
+      match pm_like with
+      | [(v, _)] -> Some (expand_variant_nid kind v)
+      | _ -> None
+    else None
+  in
+  (* parent_action_nid for summary edges: Fetch → artifact node (expanded-aware) *)
+  let parent_action_nid_ex rule =
+    match rule with
+    | Fetch kind -> kind_nid kind
+    | _          -> [%string "A_%{string_of_rule rule}"]
   in
   Option.iter view_title ~f:(fun t -> add ("%% " ^ t));
   add "graph LR";
@@ -813,18 +837,25 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
           end else
             add_edge ~tag:name [%string "A_build_lib --> A_%{name}"]
       | _ -> ());
-  (* Publish edges: artifact node → pack action *)
+  (* Publish edges: consumed variant → pack action → produced variant (if distinct) *)
   List.iter publish_kinds ~f:(fun kind ->
       let tag = string_of_rule (Publish kind) in
-      add_edge ~tag [%string "%{kind_nid kind} --> A_%{tag}"]);
+      add_edge ~tag [%string "%{kind_nid kind} --> A_%{tag}"];
+      Option.iter (pack_produced_nid kind) ~f:(fun produced ->
+          add_edge ~tag [%string "A_%{tag} --> %{produced}"]));
   (* Probe edges *)
   List.iter probe_kinds ~f:(fun kind ->
       let tag = string_of_rule (Probe kind) in
       (match kind with
        | Binding lang ->
-           if List.exists rules ~f:(Poly.equal (Publish (Binding lang))) then
-             add_edge ~tag [%string "A_%{string_of_rule (Publish kind)} --> A_%{tag}"]
-           else
+           if List.exists rules ~f:(Poly.equal (Publish (Binding lang))) then begin
+             (* Pack produces an installed variant; probe consumes it (or pack directly) *)
+             let probe_source = match pack_produced_nid (Binding lang) with
+               | Some produced -> [%string "%{produced} -->|test|"]
+               | None          -> [%string "A_%{string_of_rule (Publish kind)} -->"]
+             in
+             add_edge ~tag [%string "%{probe_source} A_%{tag}"]
+           end else
              add_edge ~tag [%string "%{kind_nid kind} -->|test| A_%{tag}"];
            add_edge ~tag [%string "%{kind_nid Lib} -.->|runtime| A_%{tag}"]
        | App ->
@@ -835,7 +866,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
   (* Summary edges: parent action → summary action.
      Dashed edge to signal "follow-up annotation" rather than data flow. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
-      let parent_nid = parent_action_nid rule in
+      let parent_nid = parent_action_nid_ex rule in
       let nid = summary_nid rule suffix in
       let tag = summary_label rule suffix in
       add_edge ~tag [%string "%{parent_nid} -.-> %{nid}"]);
@@ -844,8 +875,10 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
   add "    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
   add "    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px";
   add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px";
-  add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:3px";
-  add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
+  add "    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px";
+  add "    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px";
+  add "    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px";
+  add "    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
   let all_artifact_nids =
     List.concat_map all_pool_kinds ~f:(fun kind ->
@@ -887,7 +920,11 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
    | Some _ ->
        List.iter action_entries ~f:(fun (node_id, tag) ->
            let cls = match get_status tag with
-             | Some Done -> "st_done"
+             | Some Done ->
+                 (match focal_predicate with
+                  | None -> "st_done"
+                  | Some pred -> if pred tag then "st_done" else "st_done_ctx")
+             | Some Done_fail -> "st_expected_fail"
              | Some Failed -> "st_failed"
              | Some Skipped -> "st_skipped"
              | Some Not_in_spec | None -> "st_nospec"
@@ -899,7 +936,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false)
        List.iter (List.rev !edge_tags) ~f:(fun (idx, tag) ->
            let style = match get_status tag with
              | Some Done -> Some "stroke:#4caf50,stroke-width:3px"
-             | Some Failed -> Some "stroke:#e53935,stroke-width:3px"
+             | Some Done_fail -> Some "stroke:#f9a825,stroke-width:3px"
+             | Some Failed -> Some "stroke:#ef5350,stroke-width:3px"
              | Some Skipped -> Some "stroke:#9e9e9e,stroke-width:1px,stroke-dasharray:5"
              | Some Not_in_spec | None -> Some "stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5"
            in

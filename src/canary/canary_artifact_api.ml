@@ -112,7 +112,8 @@ let stable_reuse_warning ~source_name ~source_version =
    binding_api.source_dir (in-tree): checks dir exists.
    Runtime_lib / Link_lib / Pc_file are post-build or PM-installed — not checked here.
    Writes scan.ok to output_dir on success. *)
-let scan_source_cmd ~source_root (api : t) ~output_dir =
+let scan_source_cmd ~source_root (api : t) ~output_dir ~variant_key =
+  let ok = Canary_step_key.variant_file ~variant_key "scan.ok" in
   let header_checks =
     match api.native_api.headers with
     | None -> []
@@ -128,4 +129,4 @@ let scan_source_cmd ~source_root (api : t) ~output_dir =
   in
   String.concat ~sep:"\n"
     (header_checks @ binding_checks
-     @ [[%string "echo 'scan ok' > %{output_dir}/scan.ok"]])
+     @ [[%string "echo 'scan ok' > %{output_dir}/%{ok}"]])

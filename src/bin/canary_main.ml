@@ -53,20 +53,20 @@ let action_cmd =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro Canary_project_z3.z3_source_dev
     in
-    let project = [%string "z3/%{dev_tag}"] in
     let src = Canary_project_z3.z3_source_dev in
     let spec = Canary_project_z3.mk_script_spec ~source:src distro in
     let spec = if quick then Canary_action.no_source spec else spec in
-    let steps = Canary_action.derive_steps ~root ~project
+    let steps = Canary_action.derive_steps ~root ~project:[%string "z3/%{dev_tag}"]
         ~langs:Canary_artifact_api.[ OCaml; Python ] spec in
-    run_with_info ~failfast ~cache_path ~root ~project steps
-      (source_run_info ~project:"z3" distro src steps);
     let src_stable = Canary_project_z3.z3_source_stable in
     let spec_stable = Canary_project_z3.mk_script_spec ~source:src_stable distro in
     let steps_stable = Canary_action.derive_steps ~root ~project:"z3/stable"
         ~langs:Canary_artifact_api.[ OCaml; Python ] spec_stable in
-    run_with_info ~failfast ~cache_path ~root ~project:"z3/stable" steps_stable
-      (source_run_info ~project:"z3" distro src_stable steps_stable)
+    Canary_action.run_project_multi ~failfast ?cache_path ~root ~project_name:"z3"
+      ~variants:[
+        (dev_tag, steps, Some (source_run_info ~project:"z3" distro src steps));
+        ("stable", steps_stable, Some (source_run_info ~project:"z3" distro src_stable steps_stable));
+      ] ()
   in
   let prebuilt_run_info ~project ~version ~extra steps =
     Canary_action.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt" ~extra steps
@@ -94,22 +94,25 @@ let action_cmd =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro Canary_project_llvm.llvm_source_dev
     in
-    let project = [%string "llvm/%{dev_tag}"] in
     let spec = Canary_project_llvm.mk_script_spec ~source:Canary_project_llvm.llvm_source_dev distro in
-    let steps = Canary_action.derive_steps ~root ~project
+    let steps = Canary_action.derive_steps ~root ~project:[%string "llvm/%{dev_tag}"]
         ~langs:Canary_artifact_api.[ OCaml; Python ] spec in
     let pb = Canary_project_llvm.prebuilt in
     let ver = Option.value pb.system_package.version_tag ~default:"system" in
-    run_with_info ~failfast ~cache_path ~root ~project steps
-      (prebuilt_run_info ~project:"llvm" ~version:ver
-         ~extra:[("system_package", pb.system_package_linux); ("opam_package", pb.opam_package)]
-         steps);
+    let dev_run_info =
+      prebuilt_run_info ~project:"llvm" ~version:ver
+        ~extra:[("system_package", pb.system_package_linux); ("opam_package", pb.opam_package)]
+        steps
+    in
     let src_19 = Canary_project_llvm.llvm_source_stable in
     let spec_19 = Canary_project_llvm.mk_script_spec ~source:src_19 distro in
     let steps_19 = Canary_action.derive_steps ~root ~project:"llvm/19"
         ~langs:Canary_artifact_api.[ OCaml; Python ] spec_19 in
-    run_with_info ~failfast ~cache_path ~root ~project:"llvm/19" steps_19
-      (source_run_info ~project:"llvm" distro src_19 steps_19)
+    Canary_action.run_project_multi ~failfast ?cache_path ~root ~project_name:"llvm"
+      ~variants:[
+        (dev_tag, steps, Some dev_run_info);
+        ("19", steps_19, Some (source_run_info ~project:"llvm" distro src_19 steps_19));
+      ] ()
   in
   let run project quick failfast cache_path () =
     let root = "_out" in
@@ -327,13 +330,13 @@ let artifact_summary_cmd =
     ignore (Stdlib.Sys.command (Fmt.str "mkdir -p %s" out_dir));
     let cmd = match kind with
       | "native" ->
-          Canary_artifact_native.summary_cmd ~lib:path ~prefixes ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_native.summary_cmd ~lib:path ~prefixes ~watchlist ~output_dir:out_dir ~variant_key:"" ()
       | "ocaml" ->
-          Canary_artifact_lang.summary_cmd ~archive:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.summary_cmd ~archive:path ~watchlist ~output_dir:out_dir ~variant_key:"" ()
       | "opam" ->
-          Canary_artifact_lang.summary_opam_pkg_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.summary_opam_pkg_cmd ~pkg:path ~watchlist ~output_dir:out_dir ~variant_key:"" ()
       | "python" ->
-          Canary_artifact_lang.python_summary_cmd ~pkg:path ~watchlist ~output_dir:out_dir ()
+          Canary_artifact_lang.python_summary_cmd ~pkg:path ~watchlist ~output_dir:out_dir ~variant_key:"" ()
       | k ->
           Fmt.epr "Unknown kind: %s (expected: native | ocaml | opam | python)@." k;
           Stdlib.exit 2

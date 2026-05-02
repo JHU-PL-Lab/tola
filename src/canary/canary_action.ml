@@ -108,35 +108,35 @@ type step_expectation =
    are still rule-only because no current project needs per-location
    variation; revisit when one does. *)
 type script_spec = {
-  fetch_source : (output_dir:string -> string) option;
+  fetch_source : (output_dir:string -> variant_key:string -> string) option;
   (* Declarative API spec for this source version. When present, derive_steps
      checks consistency: binding_api.source_dir = Some _ ↔ build_binding = Some _. *)
   api_source : Canary_artifact_api.t option;
   (* Scan step: verifies api_source header/binding claims against the fetched
      source tree. Emitted after fetch_source; configure/build depend on it.
      None when no source build (stable fetch-only sources). *)
-  scan_source : (output_dir:string -> string) option;
-  configure : (output_dir:string -> string) option;
+  scan_source : (output_dir:string -> variant_key:string -> string) option;
+  configure : (output_dir:string -> variant_key:string -> string) option;
   (* Headers: public C API headers consumed by build_binding.
      build_headers: headers from the source/build tree (after configure).
      fetch_headers: headers from a system -dev package (e.g. apt install libz3-dev). *)
-  build_headers : (output_dir:string -> string) option;
-  fetch_headers : (output_dir:string -> string) option;
-  build_lib : (output_dir:string -> string) option;
-  build_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
-  install_lib : (output_dir:string -> string) option;
-  build_app : (output_dir:string -> string) option;
-  fetch_lib : (output_dir:string -> string) option;
-  fetch_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
-  fetch_app : (output_dir:string -> string) option;
-  pack_lib : (output_dir:string -> string) option;
-  pack_binding : (Canary_artifact_api.lang * (output_dir:string -> string)) list;
-  pack_app : (output_dir:string -> string) option;
-  probe_lib : (location * (output_dir:string -> string)) list;
-  probe_binding : (Canary_artifact_api.lang * location * (output_dir:string -> string)) list;
-  probe_app : (output_dir:string -> string) option;
+  build_headers : (output_dir:string -> variant_key:string -> string) option;
+  fetch_headers : (output_dir:string -> variant_key:string -> string) option;
+  build_lib : (output_dir:string -> variant_key:string -> string) option;
+  build_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  install_lib : (output_dir:string -> variant_key:string -> string) option;
+  build_app : (output_dir:string -> variant_key:string -> string) option;
+  fetch_lib : (output_dir:string -> variant_key:string -> string) option;
+  fetch_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  fetch_app : (output_dir:string -> variant_key:string -> string) option;
+  pack_lib : (output_dir:string -> variant_key:string -> string) option;
+  pack_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  pack_app : (output_dir:string -> variant_key:string -> string) option;
+  probe_lib : (location * (output_dir:string -> variant_key:string -> string)) list;
+  probe_binding : (Canary_artifact_api.lang * location * (output_dir:string -> variant_key:string -> string)) list;
+  probe_app : (output_dir:string -> variant_key:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
-  check_post : (rule -> (output_dir:string -> bool) option);
+  check_post : (rule -> (output_dir:string -> variant_key:string -> bool) option);
   (* Per-rule expectation. Default: Expect_success.
      loc carries the per-location variant for multi-probe rules (e.g., a
      Probe Binding that has opam AND pip variants — the opam one may be
@@ -161,7 +161,7 @@ type script_spec = {
      or any case needing custom logic beyond what api_source provides.
      loc is Some _ for per-location probe variants, None for single-location rules.
      See doc/canary/design/api_interface.md. *)
-  summary : rule -> location option -> (output_dir:string -> string) option;
+  summary : rule -> location option -> (output_dir:string -> variant_key:string -> string) option;
 }
 
 let empty_script_spec = {
@@ -228,13 +228,16 @@ type action_step = {
   output_tag : string;               (* tag used for this step's output_dir; usually same as tag,
                                         but summary steps set it to their parent's tag so they
                                         share the parent's directory (no empty _summary dir). *)
-  output_dir : string;               (* absolute path = root/canary/projects/project_name/tag[/variant_id] *)
-  variant_id : string;               (* "" for single-variant projects, else e.g. "stable" or "dev_abc" *)
+  output_dir : string;               (* absolute path = root/canary/projects/project_name/step_dir
+                                        step_dir = Canary_step_key.step_dir_of_tag output_tag
+                                        NO variant subdir — variants are encoded in file names. *)
+  project_dir : string;              (* root/canary/projects/project_name — used for compat lookups *)
+  variant_id : string;               (* "" for single-variant projects, else e.g. "stable" or "19" *)
   rule : rule;
   deps : string list;                (* tags of upstream steps *)
-  cmd : output_dir:string -> string; (* shell command to execute *)
+  cmd : output_dir:string -> variant_key:string -> string; (* shell command; writes variant-keyed files *)
   check_pre : unit -> bool;          (* inputs available? *)
-  check_post : output_dir:string -> bool; (* output valid? *)
+  check_post : output_dir:string -> variant_key:string -> bool; (* output valid? *)
   expectation : step_expectation;    (* what should this step do? *)
   symbol_check : symbol_check option; (* optional artifact symbol check, runs after cmd succeeds *)
 }
@@ -288,29 +291,36 @@ let run_cmd_logged logger ~tag cmd =
 
 (* project = "z3/stable" → project_name="z3", variant_id="stable"
    project = "sqlite"   → project_name="sqlite", variant_id=""
-   Step output: root/projects/{project_name}/{tag}[/{variant_id}]
-   This swaps the old {variant}/{tag} order to {tag}/{variant}, so step dirs
-   are shared at the project level and variants appear as leaf subdirectories. *)
+   Output Layout v3: step_dir uses action-first grouping for binding tags
+   ("build_binding_ocaml" → "build_binding/ocaml"); NO variant subdir.
+   Variants are encoded as filename suffixes (_19.json, _stable.log).
+   All variants of a step share the same output_dir. *)
 let output_dir_for ~root ~project ~tag =
-  let (project_name, variant_id) =
+  let (project_name, _variant_id) =
     match String.rsplit2 project ~on:'/' with
     | Some (name, vid) -> (name, vid)
     | None -> (project, "")
   in
-  let base =
-    if String.is_empty variant_id then
-      [%string "%{root}/canary/projects/%{project_name}/%{tag}"]
-    else
-      [%string "%{root}/canary/projects/%{project_name}/%{tag}/%{variant_id}"]
+  let step_dir = Canary_step_key.step_dir_of_tag tag in
+  let base = [%string "%{root}/canary/projects/%{project_name}/%{step_dir}"] in
+  if Stdlib.Filename.is_relative base then
+    Stdlib.Filename.concat (Unix.getcwd ()) base
+  else base
+
+let project_dir_of ~root ~project =
+  let project_name = match String.rsplit2 project ~on:'/' with
+    | Some (name, _) -> name
+    | None -> project
   in
+  let base = [%string "%{root}/canary/projects/%{project_name}"] in
   if Stdlib.Filename.is_relative base then
     Stdlib.Filename.concat (Unix.getcwd ()) base
   else base
 
 (* Execute a step's shell command, ensuring output_dir exists. *)
 let exec_step logger ~tag ~output_dir (step : action_step) =
-  ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}"] : int);
-  let shell_cmd = step.cmd ~output_dir in
+  ignore (Stdlib.Sys.command [%string "mkdir -p \"%{output_dir}\""] : int);
+  let shell_cmd = step.cmd ~output_dir ~variant_key:step.variant_id in
   run_cmd_logged logger ~tag shell_cmd
 
 (* Check if output contains any of the expected strings *)
@@ -343,7 +353,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
     log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
     true)
   (* Local cache: if postcondition already passes, skip *)
-  else if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out then (
+  else if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out ~variant_key:step.variant_id then (
     log ~event:"skip" ~detail:(Some "postcondition ok");
     true)
   else (
@@ -357,7 +367,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
         let cmd_ok = exec_step logger ~tag ~output_dir:out step in
         let expectation_ok = match step.expectation with
           | Expect_success ->
-              let ok = cmd_ok && step.check_post ~output_dir:out in
+              let ok = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
               log ~event:"check_post" ~detail:(Some (if ok then "pass" else "FAIL"));
               log ~event:(if ok then "done" else "failed")
                 ~detail:(if ok then None else Some "postcondition failed");
@@ -387,22 +397,21 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                 false)
               else
                 (* Resolve compat summary paths relative to the project dir.
-                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/stub_summary.json").
-                   For variants: project_dir/{step_tag}/{variant_id}/file.
-                   For single-variant (variant_id=""): project_dir/{step_tag}/file. *)
-                let project_dir =
-                  if String.is_empty step.variant_id then Stdlib.Filename.dirname out
-                  else Stdlib.Filename.dirname (Stdlib.Filename.dirname out)
-                in
+                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/summary_stub.json").
+                   v3 layout: step_tag is mapped through step_dir_of_tag for action-first dirs,
+                   and the filename is variant-key-qualified (_19.json for variant "19"). *)
                 let pick_first_existing rels =
                   List.find_map rels ~f:(fun rel ->
-                      let p = if String.is_empty step.variant_id then
-                        project_dir ^ "/" ^ rel
-                      else
-                        match String.lsplit2 rel ~on:'/' with
+                      let p = match String.lsplit2 rel ~on:'/' with
                         | Some (step_tag, file) ->
-                            project_dir ^ "/" ^ step_tag ^ "/" ^ step.variant_id ^ "/" ^ file
-                        | None -> project_dir ^ "/" ^ rel
+                            let step_dir = Canary_step_key.step_dir_of_tag step_tag in
+                            let vk_file = Canary_step_key.variant_file
+                                ~variant_key:step.variant_id file in
+                            step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
+                        | None ->
+                            let vk_rel = Canary_step_key.variant_file
+                                ~variant_key:step.variant_id rel in
+                            step.project_dir ^ "/" ^ vk_rel
                       in
                       if Stdlib.Sys.file_exists p then Some p else None)
                 in
@@ -481,6 +490,18 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
 
 type step_status = Step_done | Step_failed | Step_skipped
 
+(* Merge multiple per-variant status tables. Done > Failed > Skipped. *)
+let merge_step_statuses (all : (string, step_status) Hashtbl.t list)
+    : (string, step_status) Hashtbl.t =
+  let priority = function Step_done -> 3 | Step_failed -> 2 | Step_skipped -> 1 in
+  let out = Hashtbl.create (module String) in
+  List.iter all ~f:(fun tbl ->
+      Hashtbl.iteri tbl ~f:(fun ~key ~data ->
+          Hashtbl.update out key ~f:(function
+            | None -> data
+            | Some prev -> if priority data > priority prev then data else prev)));
+  out
+
 (* Run all steps in dependency order. Returns status per tag.
    ~failfast:true stops on the first failure (useful for debugging). *)
 let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : action_step list) =
@@ -490,7 +511,7 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : a
   (* Seed with already-done steps (postcondition passes) *)
   List.iter steps ~f:(fun s ->
       let out = s.output_dir in
-      if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out then
+      if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out ~variant_key:s.variant_id then
         Hashtbl.set status ~key:s.tag ~data:Step_done);
   (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in
@@ -568,11 +589,15 @@ let result_status_of_run (steps : action_step list)
     match prev with
     | None | Some Not_in_spec | Some Skipped -> ns
     | Some Done -> Done
+    | Some Done_fail -> (match ns with Done -> Done | Failed -> Failed | _ -> Done_fail)
     | Some Failed -> (match ns with Done -> Done | _ -> Failed)
   in
   List.iter steps ~f:(fun s ->
       let ns = match Hashtbl.find run_status s.tag with
-        | Some Step_done -> Done
+        | Some Step_done ->
+            (match s.expectation with
+             | Expect_failure _ | Expect_compat_failure _ -> Done_fail
+             | Expect_success -> Done)
         | Some Step_failed -> Failed
         | Some Step_skipped -> Skipped
         | None -> Skipped
@@ -672,9 +697,10 @@ let mermaid_of_steps
             add_edge ~src:("S_" ^ dep) ~dst ~tag:s.tag ~dashed));
   add "";
   (* Styling *)
-  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:2px";
-  add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:2px";
-  add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
+  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px";
+  add "    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px";
+  add "    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px";
+  add "    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
   (match status with
    | None -> ()
@@ -682,6 +708,7 @@ let mermaid_of_steps
        List.iter steps ~f:(fun s ->
            let cls = match Hashtbl.find tbl s.tag with
              | Some Canary.Done -> "st_done"
+             | Some Canary.Done_fail -> "st_expected_fail"
              | Some Canary.Failed -> "st_failed"
              | Some Canary.Skipped -> "st_skipped"
              | Some Canary.Not_in_spec | None -> "st_nospec"
@@ -705,6 +732,21 @@ let view_name : view -> string = function
   | `Binding lang -> "binding_" ^ Canary_artifact_api.string_of_lang lang
   | `Probes -> "probes"
   | `Pack -> "pack"
+
+let focal_tag_pred (v : view) (tag : string) : bool =
+  match v with
+  | `Source ->
+      String.equal tag "fetch_source" || String.equal tag "scan_source"
+  | `Lib ->
+      String.equal tag "fetch_lib"
+      || String.equal tag "build_lib"
+      || String.equal tag "install_lib"
+      || String.is_prefix tag ~prefix:"probe_lib"
+  | `Binding lang ->
+      let lang_str = Canary_artifact_api.string_of_lang lang in
+      String.is_substring tag ~substring:("binding_" ^ lang_str)
+  | `Probes -> String.is_prefix tag ~prefix:"probe_"
+  | `Pack -> String.is_prefix tag ~prefix:"pack_"
 
 let view_predicate (v : view) (s : action_step) : bool =
   match v with
@@ -929,9 +971,10 @@ let mermaid_artifact_detail
   add "";
   (* Styling *)
   add "    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px";
-  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:2px";
-  add "    classDef st_failed fill:#ffcdd2,stroke:#e53935,stroke-width:2px";
-  add "    classDef st_skipped fill:#e0e0e0,stroke:#9e9e9e,stroke-dasharray:5";
+  add "    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px";
+  add "    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px";
+  add "    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px";
+  add "    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5";
   add "    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5";
   let artifact_nids = List.map variants ~f:nid_of_var in
   if not (List.is_empty artifact_nids) then
@@ -942,6 +985,7 @@ let mermaid_artifact_detail
        List.iter (action_steps @ summary_steps) ~f:(fun s ->
            let cls = match Hashtbl.find tbl s.tag with
              | Some Canary.Done -> "st_done"
+             | Some Canary.Done_fail -> "st_expected_fail"
              | Some Canary.Failed -> "st_failed"
              | Some Canary.Skipped -> "st_skipped"
              | Some Canary.Not_in_spec | None -> "st_nospec"
@@ -1031,6 +1075,7 @@ let mermaid_view
         | _ -> assert false
       in
       let view_title_str = "view: " ^ view_name view in
+      let fp = Some (focal_tag_pred view) in
       (match rules, step_ids, steps_by_rule_tag, summary_rules with
        | Some rules, Some sids, Some sbrt, Some srules ->
            let expand = _compute_expand ~artifact_kind ~probe_prefix ~build_tag
@@ -1038,7 +1083,8 @@ let mermaid_view
            in
            mermaid_of_action_rule_schema ?status ~has_scan
              ~summary_rules:srules ~step_ids:sids ~steps_by_rule_tag:sbrt
-             ?expand_artifact:expand ~view_title:view_title_str rules
+             ?expand_artifact:expand ~view_title:view_title_str
+             ?focal_predicate:fp rules
        | _ ->
            let artifact = Canary_artifact_api.string_of_lang
                (match view with `Binding l -> l | _ -> Canary_artifact_api.OCaml)
@@ -1054,11 +1100,12 @@ let mermaid_view
       (* Source, Pack, Probes: show the full schema graph with no artifact
          expansion. Same as the overview but with a view_title label. *)
       let title = "view: " ^ view_name view in
+      let fp = Some (focal_tag_pred view) in
       (match rules, step_ids, steps_by_rule_tag, summary_rules with
        | Some rules, Some sids, Some sbrt, Some srules ->
            mermaid_of_action_rule_schema ?status ~has_scan
              ~summary_rules:srules ~step_ids:sids ~steps_by_rule_tag:sbrt
-             ~view_title:title rules
+             ~view_title:title ?focal_predicate:fp rules
        | _ ->
            mermaid_of_steps ?status ~title ~all_steps:steps
              ~filter:(view_predicate view) ())
@@ -1068,27 +1115,30 @@ let mermaid_view
    Project specs use these instead of writing raw shell strings. *)
 
 (* fetch_lib: install a system package and write marker *)
-let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir =
-  [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/lib.ok"]
+let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir ~variant_key =
+  let lib_ok = Canary_step_key.variant_file ~variant_key "lib.ok" in
+  [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/%{lib_ok}"]
 
 (* fetch_binding: install an opam package + ocamlfind, then write marker.
    We add ocamlfind explicitly because some bindings (e.g. ssl, dune-only
    pkgs) don't pull it transitively, but probe_ocaml_cmd uses
    `ocamlfind ocamlopt` to compile probes. Bindings that DO pull ocamlfind
    (e.g. zarith) treat the second install as a no-op. *)
-let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir =
-  [%string "%{Canary_toolchain.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/binding.ok"]
+let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir ~variant_key =
+  let binding_ok = Canary_step_key.variant_file ~variant_key "binding.ok" in
+  [%string "%{Canary_toolchain.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/%{binding_ok}"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
-let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir =
+let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
   (* On failure (compile or run), dump probe.log to stdout and re-raise the
      original exit code. Without this, CI step failures show only "exit 127"
      with no context — the actual ocamlfind / dynamic-link error is hidden in
      the file. Successful runs print probe.log too (cheap, useful confirmation). *)
+  let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
   [%string {|eval $(opam env)
-ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 && %{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1
+ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1
 RC=$?
-cat %{output_dir}/probe.log
+cat %{output_dir}/%{probe_log}
 exit $RC|}]
 
 (* ── Convenience helpers for building steps ── *)
@@ -1124,8 +1174,8 @@ let marker_of_rule = function
   | Publish _ -> "pack.ok"
   | Probe _ -> "probe.log"
 
-let default_check_post rule ~output_dir =
-  has_file ~output_dir (marker_of_rule rule)
+let default_check_post rule ~output_dir ~variant_key =
+  has_file ~output_dir (Canary_step_key.variant_file ~variant_key (marker_of_rule rule))
 
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
@@ -1134,6 +1184,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
+  let project_dir = project_dir_of ~root ~project in
   let variant_id = match String.rsplit2 project ~on:'/' with
     | Some (_, vid) -> vid
     | None -> ""
@@ -1142,6 +1193,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     cache_key = cache_project ^ ":" ^ tag;
     output_tag;
     output_dir;
+    project_dir;
     variant_id;
     rule; deps;
     expectation; symbol_check;
@@ -1300,9 +1352,13 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
      [tag_suffix] is appended to parent_tag (e.g. "_summary", "_stub_summary");
      [filename] is the basename written by [summary_cmd] (e.g. "summary.json",
      "stub_summary.json"). The cmd is responsible for redirecting to that file. *)
-  let mk_summary ~parent_tag ~rule ~tag_suffix ~filename ~summary_cmd =
+  let mk_summary ~parent_tag ~rule ~tag_suffix ~base_name ~summary_cmd =
     let tag = parent_tag ^ tag_suffix in
-    let check_post ~output_dir = has_file ~output_dir filename in
+    (* base_name is the variant-independent base (e.g. "summary", "summary_stub").
+       The actual filename is base_name + "_" + variant_key + ".json" at run time. *)
+    let check_post ~output_dir ~variant_key =
+      has_file ~output_dir (Canary_step_key.filename ~variant_key ~base:base_name ~ext:"json")
+    in
     mk_step ~root ~project ~cache_project ~tag
       ~output_tag:parent_tag ~rule
       ~deps:[ parent_tag ]
@@ -1311,13 +1367,19 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
   in
   (* A summary attached to a parent step: (tag suffix, filename, command).
      OCaml bindings get two: mli (semantic) and stub (C-symbol consumer). *)
-  let prepend_note (note : string option) (cmd : output_dir:string -> string) =
+  let prepend_note (note : string option)
+      (cmd : output_dir:string -> variant_key:string -> string) =
     match note with
     | None -> cmd
-    | Some n -> fun ~output_dir -> [%string "%{n}\n%{cmd ~output_dir}"]
+    | Some n -> fun ~output_dir ~variant_key ->
+        [%string "%{n}\n%{cmd ~output_dir ~variant_key}"]
   in
+  (* Tuples: (tag_suffix, base_name, cmd).
+     base_name is the variant-independent part of the output filename:
+       "summary"      → summary.json / summary_19.json
+       "summary_stub" → summary_stub.json / summary_stub_19.json   (type-first) *)
   let auto_binding_summaries rule
-      : (string * string * (output_dir:string -> string)) list =
+      : (string * string * (output_dir:string -> variant_key:string -> string)) list =
     match spec.api_source with
     | None -> []
     | Some api ->
@@ -1332,9 +1394,9 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
             Canary_artifact_api.binding_watchlist_exn api Canary_artifact_api.OCaml
           in
           let mli =
-            prepend_note spec.summary_note (fun ~output_dir ->
+            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
               Canary_artifact_lang.mli_summary_opam_pkg_cmd
-                ~pkg ~watchlist:wl ~output_dir ())
+                ~pkg ~watchlist:wl ~output_dir ~variant_key ())
           in
           let prefix =
             match api.native_api.symbol_prefixes with
@@ -1342,12 +1404,12 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
             | [] -> ""
           in
           let stub =
-            prepend_note spec.summary_note (fun ~output_dir ->
+            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
               Canary_artifact_lang.stub_summary_opam_pkg_cmd
-                ~pkg ~prefix ~watchlist:[] ~output_dir ())
+                ~pkg ~prefix ~watchlist:[] ~output_dir ~variant_key ())
           in
-          [ ("_summary", "summary.json", mli);
-            ("_stub_summary", "stub_summary.json", stub) ]
+          [ ("_summary", "summary", mli);
+            ("_stub_summary", "summary_stub", stub) ]
         in
         let python_install_summary pkg =
           (* Python summary attaches at Fetch (Binding Python) — the install
@@ -1359,11 +1421,11 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
               Canary_artifact_api.Python
           in
           let py =
-            prepend_note spec.summary_note (fun ~output_dir ->
+            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
               Canary_artifact_lang.python_summary_cmd
-                ~pkg ~watchlist:wl ~output_dir ())
+                ~pkg ~watchlist:wl ~output_dir ~variant_key ())
           in
-          [ ("_summary", "summary.json", py) ]
+          [ ("_summary", "summary", py) ]
         in
         match rule with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
@@ -1385,19 +1447,21 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
     | Some c ->
         [ base_step;
           mk_summary ~parent_tag ~rule ~tag_suffix:"_summary"
-            ~filename:"summary.json" ~summary_cmd:c ]
+            ~base_name:"summary" ~summary_cmd:c ]
     | None ->
         let summaries = auto_binding_summaries rule in
         if List.is_empty summaries then [ base_step ]
         else
           base_step ::
-          List.map summaries ~f:(fun (tag_suffix, filename, summary_cmd) ->
-              mk_summary ~parent_tag ~rule ~tag_suffix ~filename ~summary_cmd)
+          List.map summaries ~f:(fun (tag_suffix, base_name, summary_cmd) ->
+              mk_summary ~parent_tag ~rule ~tag_suffix ~base_name ~summary_cmd)
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
   let mk_scan_source ~fetch_tag scan_cmd =
-    let check_post ~output_dir = has_file ~output_dir "scan.ok" in
+    let check_post ~output_dir ~variant_key =
+      has_file ~output_dir (Canary_step_key.variant_file ~variant_key "scan.ok")
+    in
     mk_step ~root ~project ~cache_project ~tag:"scan_source"
       ~output_tag:fetch_tag ~rule:(Fetch Source)
       ~deps:[ fetch_tag ]
@@ -1419,7 +1483,9 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                 let deps = deps_of_probe_lib_entry spec loc in
                 let check_post = match spec.check_post rule with
                   | Some cp -> cp
-                  | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                  | None -> fun ~output_dir ~variant_key ->
+                      has_file ~output_dir
+                        (Canary_step_key.variant_file ~variant_key "probe.log")
                 in
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
@@ -1436,7 +1502,9 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                 let deps = deps_of_probe_entry spec ~lang loc in
                 let check_post = match spec.check_post rule with
                   | Some cp -> cp
-                  | None -> fun ~output_dir -> has_file ~output_dir "probe.log"
+                  | None -> fun ~output_dir ~variant_key ->
+                      has_file ~output_dir
+                        (Canary_step_key.variant_file ~variant_key "probe.log")
                 in
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
@@ -1522,8 +1590,8 @@ let mk_run_info ~project ~version ~ref_ ~source ?(extra = []) (steps : action_st
     extra;
   }
 
-let dump_run_info ~dir (info : run_info) =
-  let path = dir ^ "/run_info.json" in
+let dump_run_info ?(filename = "run_info") ~dir (info : run_info) =
+  let path = [%string "%{dir}/%{filename}.json"] in
   let oc = Stdlib.open_out path in
   let q s = Stdlib.Printf.sprintf "\"%s\"" s in
   let list_json items =
@@ -1621,8 +1689,11 @@ let _format_mtime (t : float) =
     tm.tm_hour tm.tm_min tm.tm_sec
 
 let _source_kind_of_run_info ~variant_dir =
-  let path = variant_dir ^ "/run_info.json" in
-  let lines = _read_file_lines path in
+  let candidates = ["run_info.json"; "run_info_dev.json"; "run_info_stable.json"; "run_info_19.json"] in
+  let lines = List.find_map candidates ~f:(fun f ->
+      let p = variant_dir ^ "/" ^ f in
+      if Stdlib.Sys.file_exists p then Some (_read_file_lines p) else None)
+    |> Option.value ~default:[] in
   List.find_map lines ~f:(fun l ->
       let l = String.strip l in
       match String.chop_prefix l ~prefix:{|"source": |} with
@@ -1637,17 +1708,17 @@ let _source_kind_of_run_info ~variant_dir =
 let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
   if not (Stdlib.Sys.file_exists projects_root) then []
   else
-    let make_entry ~project ~variant ~href ~variant_dir =
-      let html_path = variant_dir ^ "/result.html" in
+    let make_entry ~project ~proj_dir =
+      let html_path = proj_dir ^ "/result.html" in
       if not (Stdlib.Sys.file_exists html_path) then None
       else
         let mtime = (Unix.stat html_path).st_mtime in
-        let (total, done_, failed, skipped) = _counts_from_log ~variant_dir in
-        let src = _source_kind_of_run_info ~variant_dir in
+        let (total, done_, failed, skipped) = _counts_from_log ~variant_dir:proj_dir in
+        let src = _source_kind_of_run_info ~variant_dir:proj_dir in
         Some Canary_backend_html.{
-          project; variant;
+          project; variant = "";
           run_at = _format_mtime mtime;
-          href;
+          href = project ^ "/result.html";
           total_steps = total;
           done_steps = done_;
           failed_steps = failed;
@@ -1656,58 +1727,17 @@ let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
         }
     in
     let projects = _list_dirs projects_root in
-    List.concat_map projects ~f:(fun project ->
-        let proj_dir = projects_root ^ "/" ^ project in
-        (* Multi-variant: run dirs live in _run/{variant}/ *)
-        let run_subdir = proj_dir ^ "/_run" in
-        let multi =
-          if Stdlib.Sys.file_exists run_subdir && Stdlib.Sys.is_directory run_subdir then
-            _list_dirs run_subdir
-            |> List.filter_map ~f:(fun variant ->
-                let variant_dir = run_subdir ^ "/" ^ variant in
-                make_entry ~project ~variant
-                  ~href:(project ^ "/_run/" ^ variant ^ "/result.html")
-                  ~variant_dir)
-          else []
-        in
-        (* Single-variant: result.html directly in proj_dir *)
-        let single =
-          Option.to_list (make_entry ~project ~variant:""
-            ~href:(project ^ "/result.html")
-            ~variant_dir:proj_dir)
-        in
-        multi @ single)
+    List.filter_map projects ~f:(fun project ->
+        make_entry ~project ~proj_dir:(projects_root ^ "/" ^ project))
 
-let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
-  let (project_name, variant_id) =
-    match String.rsplit2 project ~on:'/' with
-    | Some (name, vid) -> (name, vid)
-    | None -> (project, "")
-  in
-  (* Run metadata (result.html, actions.log, diagrams) lives in:
-     - Multi-variant: projects/{project_name}/_run/{variant_id}/
-     - Single-variant: projects/{project_name}/
-     This keeps top-level step dirs ({step}/{variant_id}/) unambiguous. *)
-  let dir =
-    if String.is_empty variant_id then
-      [%string "%{root}/canary/projects/%{project_name}"]
-    else
-      [%string "%{root}/canary/projects/%{project_name}/_run/%{variant_id}"]
-  in
-  ensure_dir dir;
-  (* Dump project spec if provided *)
-  (match run_info with
-   | Some info ->
-       let path = dump_run_info ~dir info in
-       Fmt.pr "[run_info] %s@." path
-   | None -> ());
-  let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
-  let log_path = [%string "%{dir}/actions.log"] in
-  let logger = create_logger ~log_path in
-  let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
-  (* Write result diagram — same schema as action_rule.mmd, colored by status *)
-  let mmd_path = [%string "%{dir}/result.mmd"] in
-  let node_status = result_status_of_run steps status in
+(* ── Output generation ──
+   Writes diagrams/all.mmd, per-view diagrams, result.html, and refreshes
+   index.html. Shared by run_project (single-variant) and run_project_multi. *)
+
+let write_project_output ~dir ~project_name ~variant ~steps
+    ~(run_status : (string, step_status) Hashtbl.t)
+    ~root logger =
+  let node_status = result_status_of_run steps run_status in
   let langs =
     List.filter_map steps ~f:(fun s ->
         match s.rule with
@@ -1718,23 +1748,13 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
     |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
   in
   let has_scan = List.exists steps ~f:(fun s -> String.equal s.tag "scan_source") in
-  (* Collect (rule, tag_suffix) pairs for every summary follow-up step.
-     A given rule may have multiple suffixes — e.g. Fetch (Binding OCaml)
-     has both "_summary" (mli) and "_stub_summary" (c_stub). The schema
-     diagram emits one summary node per pair. The tag_suffix is recovered
-     by stripping the rule's canonical tag prefix from the step tag. *)
   let summary_rules =
     let canonical_parent_tag rule = string_of_rule rule in
     List.filter_map steps ~f:(fun s ->
         if String.is_suffix s.tag ~suffix:"_summary" then
           let parent = canonical_parent_tag s.rule in
-          (* For multi-location probes (probe_lib_apt vs probe_lib_staged),
-             the canonical schema-level node is just the rule's tag — drop
-             the location marker so the schema dedup is clean. *)
           if String.is_prefix s.tag ~prefix:parent then
             let suffix = String.chop_prefix_exn s.tag ~prefix:parent in
-            (* suffix may include a location marker like "_apt_summary";
-               normalise to just the trailing _summary / _stub_summary. *)
             let normalised =
               if String.is_suffix suffix ~suffix:"_stub_summary"
               then "_stub_summary"
@@ -1749,15 +1769,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
            | 0 -> String.compare s1 s2
            | n -> n)
   in
-  (* Build maps for ID grouping in the overview: every step has a
-     1-based ID; multiple step variants of the same rule (e.g.
-     probe_lib + probe_lib_apt + probe_lib_staged) map to the same
-     schema-level node and share a label like "probe_lib [3][4][5]". *)
   let step_ids = step_id_table steps in
-  (* Exclude follow-up steps (summary, stub_summary, scan_source) from
-     the rule-tag bucket — they share their parent's rule but don't
-     "produce" the artifact, so their IDs shouldn't appear in the
-     parent's combined label. They get their own summary-node ids. *)
   let is_follow_up s =
     String.is_suffix s.tag ~suffix:"_summary"
     || String.equal s.tag "scan_source"
@@ -1772,21 +1784,23 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
             | Some xs -> s.tag :: xs));
     tbl
   in
-  let oc = Stdlib.open_out mmd_path in
-  Stdlib.output_string oc
-    (Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
-       ~summary_rules ~step_ids ~steps_by_rule_tag (store_rules ~langs));
+  (* Overview diagram → diagrams/all.mmd *)
+  let view_dir = [%string "%{dir}/diagrams"] in
+  ensure_dir view_dir;
+  let overview_mmd =
+    Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
+      ~summary_rules ~step_ids ~steps_by_rule_tag (store_rules ~langs)
+  in
+  let all_mmd_path = [%string "%{view_dir}/all.mmd"] in
+  let oc = Stdlib.open_out all_mmd_path in
+  Stdlib.output_string oc overview_mmd;
   Stdlib.close_out oc;
-  logger.log ~tag:"*" ~event:"diagram" ~detail:(Some mmd_path);
-  (* Per-view diagrams: emit a focused .mmd per view that has ≥1
-     matching step. Keeps overview as primary artifact; views are
-     drill-downs for users who want a narrower slice. *)
+  logger.log ~tag:"*" ~event:"diagram" ~detail:(Some all_mmd_path);
+  (* Per-view diagrams *)
   let views : view list =
     [ `Source; `Lib; `Pack; `Probes ]
     @ List.map langs ~f:(fun l -> `Binding l)
   in
-  let view_dir = [%string "%{dir}/diagrams"] in
-  ensure_dir view_dir;
   let emitted_views = ref [] in
   List.iter views ~f:(fun v ->
       let filtered = List.filter steps ~f:(view_predicate v) in
@@ -1802,13 +1816,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
         logger.log ~tag:"*" ~event:"view"
           ~detail:(Some [%string "%{view_name v} (%{Int.to_string (List.length filtered)} steps)"])
       end);
-  (* result.html — interactive viewer over all the emitted .mmd files.
-     Embeds the views inline; lazy-loads logs from output_dir on click. *)
   let html_path = [%string "%{dir}/result.html"] in
-  let overview_mmd =
-    Canary.mermaid_of_action_rule_schema ~status:node_status ~has_scan
-      ~summary_rules ~step_ids ~steps_by_rule_tag (store_rules ~langs)
-  in
   let html_views =
     Canary_backend_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }
     :: List.rev_map !emitted_views ~f:(fun (v, mmd) ->
@@ -1832,27 +1840,19 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
         in
         let status_str = match Hashtbl.find node_status s.tag with
           | Some Canary.Done -> "done"
+          | Some Canary.Done_fail -> "expected_fail"
           | Some Canary.Failed -> "failed"
           | Some Canary.Skipped -> "skipped"
           | Some Canary.Not_in_spec | None -> "not_in_spec"
         in
-        (* output_rel: path from the run dir (dir) to the step's output_dir.
-           Single-variant: dir = project_dir/, step = project_dir/{tag}/ → "{tag}"
-           Multi-variant:  dir = project_dir/_run/{variant_id}/, step = project_dir/{tag}/{variant_id}/
-                           → "../../{tag}/{variant_id}" *)
-        let output_rel =
-          if String.is_empty s.variant_id then
-            match String.chop_prefix s.output_dir ~prefix:(dir ^ "/") with
-            | Some rel -> rel
-            | None -> s.output_tag
-          else
-            let tag_part = Stdlib.Filename.basename (Stdlib.Filename.dirname s.output_dir) in
-            "../../" ^ tag_part ^ "/" ^ s.variant_id
-        in
+        (* output_rel: relative path from dir (projects/X/) to the step dir.
+           Flat layout: dir = projects/X/ for all variants, so always step_dir. *)
+        let step_dir = Canary_step_key.step_dir_of_tag s.output_tag in
         Canary_backend_html.{
           tag = s.tag;
           rule = string_of_rule s.rule;
-          output_rel;
+          output_rel = step_dir;
+          variant_key = s.variant_id;
           expectation = exp_str;
           status = status_str;
         })
@@ -1864,22 +1864,10 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
       (tm.tm_year + 1900) (tm.tm_mon + 1) tm.tm_mday
       tm.tm_hour tm.tm_min tm.tm_sec
   in
-  let proj_name, variant =
-    match String.lsplit2 project ~on:'/' with
-    | Some (p, v) -> (p, v)
-    | None -> (project, "")
-  in
-  (* index_rel: relative path from result.html back to index.html.
-     Single-variant: dir = projects/X/        → ../index.html   (1 up)
-     Multi-variant:  dir = projects/X/_run/V/ → ../../../index.html (3 up) *)
-  let index_rel =
-    if String.is_empty variant_id then "../index.html"
-    else "../../../index.html"
-  in
   let html =
     Canary_backend_html.render
-      ~project:proj_name ~variant
-      ~run_at ~index_rel
+      ~project:project_name ~variant
+      ~run_at ~index_rel:"../index.html"
       ~views:html_views
       ~default_view:"overview"
       ~steps:html_steps
@@ -1888,8 +1876,6 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   Stdlib.output_string oc html;
   Stdlib.close_out oc;
   logger.log ~tag:"*" ~event:"html" ~detail:(Some html_path);
-  (* Rewrite the top-level index covering every (project, variant) under
-     <root>/canary/projects/. Cheap to regenerate after each run. *)
   let projects_root = [%string "%{root}/canary/projects"] in
   let index_path = projects_root ^ "/index.html" in
   let entries = scan_index_entries ~projects_root in
@@ -1897,5 +1883,61 @@ let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
   let oc = Stdlib.open_out index_path in
   Stdlib.output_string oc index_html;
   Stdlib.close_out oc;
-  logger.log ~tag:"*" ~event:"index" ~detail:(Some index_path);
+  logger.log ~tag:"*" ~event:"index" ~detail:(Some index_path)
+
+let run_project ?(failfast = false) ?run_info ?cache_path ~root ~project steps =
+  let (project_name, variant_id) =
+    match String.rsplit2 project ~on:'/' with
+    | Some (name, vid) -> (name, vid)
+    | None -> (project, "")
+  in
+  let dir = [%string "%{root}/canary/projects/%{project_name}"] in
+  ensure_dir dir;
+  Option.iter run_info ~f:(fun info ->
+      let filename = if String.is_empty variant_id then "run_info"
+                     else "run_info_" ^ variant_id in
+      let path = dump_run_info ~filename ~dir info in
+      Fmt.pr "[run_info] %s@." path);
+  let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
+  let log_path = [%string "%{dir}/actions.log"] in
+  let logger = create_logger ~log_path in
+  let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
+  write_project_output ~dir ~project_name ~variant:variant_id ~steps
+    ~run_status:status ~root logger;
+  logger.close ()
+
+(* Run multiple variants of a project sharing one log, one result.html, one
+   diagrams/ directory. Steps from all variants share the flat projects/<name>/
+   step dirs; only filenames are variant-keyed (e.g. probe_stable.log). *)
+let run_project_multi ?(failfast = false) ?cache_path ~project_name ~root
+    ~(variants : (string * action_step list * run_info option) list)
+    () =
+  let dir = [%string "%{root}/canary/projects/%{project_name}"] in
+  ensure_dir dir;
+  let log_path = [%string "%{dir}/actions.log"] in
+  let logger = create_logger ~log_path in
+  let all_results =
+    List.map variants ~f:(fun (variant_id, steps, run_info) ->
+        Option.iter run_info ~f:(fun info ->
+            let filename = if String.is_empty variant_id then "run_info"
+                           else "run_info_" ^ variant_id in
+            let path = dump_run_info ~filename ~dir info in
+            Fmt.pr "[run_info] %s@." path);
+        let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
+        let project = if String.is_empty variant_id then project_name
+                      else [%string "%{project_name}/%{variant_id}"] in
+        logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);
+        let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
+        (steps, status))
+  in
+  (* Combine step lists: dedup by tag (first variant that defines a tag wins).
+     Merge status tables: Done > Failed > Skipped. *)
+  let seen_tags = Hashtbl.create (module String) in
+  let all_steps = List.concat_map all_results ~f:fst
+                  |> List.filter ~f:(fun s ->
+                      if Hashtbl.mem seen_tags s.tag then false
+                      else (Hashtbl.set seen_tags ~key:s.tag ~data:(); true)) in
+  let merged_status = merge_step_statuses (List.map all_results ~f:snd) in
+  write_project_output ~dir ~project_name ~variant:"" ~steps:all_steps
+    ~run_status:merged_status ~root logger;
   logger.close ()

@@ -10,15 +10,16 @@ open Base
    - canary_artifact_python.ml  (python import) *)
 
 (* marker + native lib must exist *)
-let check_build_lib ~marker ~lib_path ~output_dir =
-  Canary_action.has_file ~output_dir marker
+let check_build_lib ~marker ~lib_path ~output_dir ~variant_key =
+  Canary_action.has_file ~output_dir (Canary_step_key.variant_file ~variant_key marker)
   && Canary_artifact_native.exists_native_lib_or_dylib lib_path
 
 (* marker + ocaml archive must exist *)
-let check_build_binding ~marker ~archive_path ~output_dir =
-  Canary_action.has_file ~output_dir marker
+let check_build_binding ~marker ~archive_path ~output_dir ~variant_key =
+  Canary_action.has_file ~output_dir (Canary_step_key.variant_file ~variant_key marker)
   && Canary_artifact_lang.exists_ocaml_archive archive_path
 
 (* all listed files must exist in output_dir *)
-let check_markers markers ~output_dir =
-  List.for_all markers ~f:(fun m -> Canary_action.has_file ~output_dir m)
+let check_markers markers ~output_dir ~variant_key =
+  List.for_all markers ~f:(fun m ->
+    Canary_action.has_file ~output_dir (Canary_step_key.variant_file ~variant_key m))

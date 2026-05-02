@@ -98,33 +98,33 @@ let script_spec (d : t) : Canary_action.script_spec =
       [ (Canary_artifact_api.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
     probe_lib =
       [ ( Canary_store.Pm (Canary_store.Sys_pm { pm }),
-          fun ~output_dir ->
+          fun ~output_dir ~variant_key ->
             let probe = Canary_artifact_native.native_lib_probe_cmd
-              ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir in
+              ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir ~variant_key in
             Printf.sprintf "%s\n%s" resolve probe ) ];
     probe_binding =
       [
         (Canary_artifact_api.OCaml,
          Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
-         (fun ~output_dir ->
+         (fun ~output_dir ~variant_key ->
            Canary_action.probe_ocaml_cmd ~binding_lib:d.binding_lib
              ~example:d.example_file ~target:d.example_target
-             ~output_dir));
+             ~output_dir ~variant_key));
       ];
     summary = (fun rule loc -> match rule, loc with
       | Probe Lib, _ ->
-          Some (fun ~output_dir ->
+          Some (fun ~output_dir ~variant_key ->
             let sum = Canary_artifact_native.summary_cmd
               ~lib:"$LIB_NATIVE"
               ~prefixes:d.native_summary_prefixes
               ~watchlist:d.native_watchlist
-              ~output_dir () in
+              ~output_dir ~variant_key () in
             Printf.sprintf "%s\n%s" resolve sum)
       | Probe (Binding _), _ ->
-          Some (fun ~output_dir ->
+          Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg
               ~watchlist:d.ocaml_module_watchlist
-              ~output_dir ())
+              ~output_dir ~variant_key ())
       | _ -> None);
   }

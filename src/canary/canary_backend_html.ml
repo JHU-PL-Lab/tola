@@ -22,7 +22,8 @@ type view_entry = {
 type step_meta = {
   tag         : string;
   rule        : string;
-  output_rel  : string;  (* relative path from run dir to step output_dir *)
+  output_rel  : string;  (* relative path from run dir to step output_dir (shared, no variant subdir) *)
+  variant_key : string;  (* "" for single-variant, "19" for llvm/19, etc. — used to qualify file names *)
   expectation : string;  (* "Expect_success" | "Expect_failure" | "Expect_compat_failure" *)
   status      : string;  (* "done" | "failed" | "skipped" | "not_in_spec" *)
 }
@@ -80,9 +81,10 @@ let render_views_data views =
 let render_steps_data steps =
   let entries = List.map steps ~f:(fun s ->
       Printf.sprintf
-        "    %s: { rule: %s, output_rel: %s, expectation: %s, status: %s }"
+        "    %s: { rule: %s, output_rel: %s, variant_key: %s, expectation: %s, status: %s }"
         (json_string s.tag)
         (json_string s.rule) (json_string s.output_rel)
+        (json_string s.variant_key)
         (json_string s.expectation) (json_string s.status))
   in
   "{\n" ^ String.concat ~sep:",\n" entries ^ "\n  }"
@@ -209,8 +211,17 @@ let render
     html += '<span><b>rule:</b> ' + escape(meta.rule) + '</span>';
     html += '<span class="exp-badge">' + escape(meta.expectation) + '</span>';
     html += '</div>';
-    // Try to fetch the canonical files in the step's output_dir
-    const candidates = ['probe.log', 'summary.json', 'stub_summary.json', 'install.log', 'symbols.log'];
+    // Try to fetch the canonical files in the step's output_dir.
+    // v3: filenames are variant-keyed: "probe_19.log", "summary_19.json" etc.
+    // when variant_key is non-empty; original names for single-variant.
+    const vk = meta.variant_key || '';
+    function vkFile(base, ext) {
+      return vk ? base + '_' + vk + '.' + ext : base + '.' + ext;
+    }
+    const candidates = [
+      vkFile('probe', 'log'), vkFile('summary', 'json'),
+      vkFile('summary_stub', 'json'), vkFile('install', 'log'), vkFile('symbols', 'log')
+    ];
     for (const fname of candidates) {
       const url = meta.output_rel + '/' + fname;
       try {

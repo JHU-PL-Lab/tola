@@ -57,17 +57,18 @@ let source_root distro (repo : source_repo) =
    into the canary local cache. For arbitrary refs (commit SHAs), we
    clone then checkout in two steps since --branch only works for
    tags and branch names. *)
-let source_fetch_cmd distro (repo : source_repo) ~output_dir =
+let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
+  let ok = Canary_step_key.variant_file ~variant_key "source.ok" in
   match local_for distro repo with
   | Some l ->
-      [%string "test -d %{l.path} && echo '%{l.path}' > %{output_dir}/source.ok"]
+      [%string "test -d %{l.path} && echo '%{l.path}' > %{output_dir}/%{ok}"]
   | None ->
       let (Git_remote url) = repo.remote in
       let ref_ = repo.ref_ in
       (* Clone into a stable path derived from version+ref, not output_dir,
          so build_lib etc. can find it via root_of_source *)
       let clone_dir = [%string "_out/canary/projects/%{repo.name}/%{repo.version}_%{ref_}/src"] in
-      [%string "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/source.ok"]
+      [%string "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/%{ok}"]
 
 (* Compute a cache-path tag for a source repo.
    For HEAD-tracking repos, appends the short commit hash so the cache
@@ -95,9 +96,10 @@ let version_cache_tag distro (repo : source_repo) =
     end
   | _ -> repo.version
 
-(* check_post for fetch_source: read source.ok and verify the path exists *)
-let source_check_post ~output_dir =
-  let ok_file = output_dir ^ "/source.ok" in
+(* check_post for fetch_source: read source.ok (variant-keyed) and verify the path exists *)
+let source_check_post ~output_dir ~variant_key =
+  let ok_name = Canary_step_key.variant_file ~variant_key "source.ok" in
+  let ok_file = output_dir ^ "/" ^ ok_name in
   if Stdlib.Sys.file_exists ok_file then
     let ic = Stdlib.open_in ok_file in
     let path = Stdlib.input_line ic in

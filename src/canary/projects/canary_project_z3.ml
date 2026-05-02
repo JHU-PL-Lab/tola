@@ -298,23 +298,24 @@ let mk_script_spec ~source
     fetch_source =
       (if source.has_build_lib || cmake_build_binding then
          Some
-           (fun ~output_dir ->
-             Canary_artifact_source.source_fetch_cmd distro source ~output_dir)
+           (fun ~output_dir ~variant_key ->
+             Canary_artifact_source.source_fetch_cmd distro source ~output_dir ~variant_key)
        else None);
     scan_source =
       (if source.has_build_lib || cmake_build_binding then
          Option.map source.api_source ~f:(fun api ->
-             fun ~output_dir ->
+             fun ~output_dir ~variant_key ->
               Canary_artifact_api.scan_source_cmd ~source_root:root api
-                ~output_dir)
+                ~output_dir ~variant_key)
        else None);
     build_headers =
       (if source.has_build_lib || cmake_build_binding then
          Some
-           (fun ~output_dir ->
+           (fun ~output_dir ~variant_key ->
+             let hdr_ok = Canary_step_key.variant_file ~variant_key "headers.ok" in
              [%string
                "test -f %{root}/src/api/z3.h \
-                && echo 'ok' > %{output_dir}/headers.ok"])
+                && echo 'ok' > %{output_dir}/%{hdr_ok}"])
        else None);
     configure =
       (if source.has_build_lib || cmake_build_binding then
@@ -324,65 +325,60 @@ let mk_script_spec ~source
          let ocaml_flag = if cmake_build_binding then "ON" else "OFF" in
          let flags = z3_cmake_build_flags_str ~indent:"                " in
          Some
-           (fun ~output_dir ->
+           (fun ~output_dir ~variant_key ->
+             let conf_ok = Canary_step_key.variant_file ~variant_key "conf.ok" in
              [%string
                "%{cmake_cmd} -S %{root} -B %{build} %{flags} \\\n\
                \                -DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag} && \
-                echo 'ok' > %{output_dir}/conf.ok"])
+                echo 'ok' > %{output_dir}/%{conf_ok}"])
        else None);
     build_lib =
       (if source.has_build_lib then
          Some
-           (fun ~output_dir ->
+           (fun ~output_dir ~variant_key ->
+             let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
              [%string
-               "ninja -C %{build} libz3 && echo 'ok' > %{output_dir}/build.ok"])
+               "ninja -C %{build} libz3 && echo 'ok' > %{output_dir}/%{build_ok}"])
        else None);
     build_binding =
       (if cmake_build_binding then
          [ (OCaml,
-            fun ~output_dir ->
+            fun ~output_dir ~variant_key ->
+              let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
               [%string
                 "eval $(opam env) && ninja -C %{build} build_z3_ocaml_bindings \
-                 && echo 'ok' > %{output_dir}/build.ok"]) ]
+                 && echo 'ok' > %{output_dir}/%{build_ok}"]) ]
        else []);
     install_lib =
       (if source.has_build_lib then
-         Some (fun ~output_dir ->
+         Some (fun ~output_dir ~variant_key ->
+           let install_ok = Canary_step_key.variant_file ~variant_key "install.ok" in
            [%string
              {|PREFIX="%{build}/../install"
 mkdir -p "$PREFIX/lib"
 cp %{build}/libz3.so* "$PREFIX/lib/" 2>/dev/null || true
-echo 'ok' > %{output_dir}/install.ok|}])
+echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
     fetch_lib =
       Some
-        (fun ~output_dir ->
+        (fun ~output_dir ~variant_key ->
+          let lib_ok = Canary_step_key.variant_file ~variant_key "lib.ok" in
           let install = Canary_store.pm_install_cmd pm ~pkg:"z3" in
-          [%string "%{install} && echo 'installed' > %{output_dir}/lib.ok"]);
+          [%string "%{install} && echo 'installed' > %{output_dir}/%{lib_ok}"]);
     fetch_binding =
-      (let ocaml_entry =
-         if not source.has_build_binding then
-           [ (OCaml,
-              fun ~output_dir ->
-                [%string
-                  "eval $(opam env) && opam install z3.%{source.version} -y \
-                   --assume-depexts && echo 'installed' > \
-                   %{output_dir}/binding.ok"]) ]
-         else []
-       in
-       let python_entry =
+      (let python_entry =
          List.filter_map binding_configs ~f:(function
            | Python_config p ->
                Some (Canary_artifact_api.Python,
-                     fun ~output_dir ->
-                       Canary_toolchain.pip_install_cmd p ~output_dir)
+                     fun ~output_dir ~variant_key ->
+                       Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)
            | Ocaml_config _ -> None)
        in
-       ocaml_entry @ python_entry);
+       python_entry);
     pack_binding =
       (if source.has_build_binding then
          [ (OCaml,
-            fun ~output_dir ->
+            fun ~output_dir ~variant_key ->
               let pkg_full = Canary_toolchain.pkg_full ocaml_tc.toolchain in
               let pack_repo = [%string "%{output_dir}/pack-repo"] in
               let pkg_dir =
@@ -414,7 +410,7 @@ cp "%{src_template}" "%{pkg_dir}/opam.in"
                 | None -> ""
               in
               opam_pack_cmd ~repo_name ~repo_abs:pack_repo ~pkg_full ~preamble
-                ~env_prefix ~output_dir ()) ]
+                ~env_prefix ~output_dir ~variant_key ()) ]
        else []);
     probe_lib =
       List.filter_opt
@@ -422,33 +418,33 @@ cp "%{src_template}" "%{pkg_dir}/opam.in"
           (if source.has_build_lib then
              Some
                ( Build_tree,
-                 fun ~output_dir ->
+                 fun ~output_dir ~variant_key ->
                    let resolve =
                      [%string
                        {|LIB_Z3=$(ls %{build}/libz3.so %{build}/libz3.dylib 2>/dev/null | head -1)
 test -n "$LIB_Z3"|}]
                    in
                    [%string
-                     "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir}"])
+                     "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir ~variant_key}"])
            else None);
           (if source.has_build_lib then
              Some
                ( Staged,
-                 fun ~output_dir ->
+                 fun ~output_dir ~variant_key ->
                    let lib = [%string "%{build}/../install/lib/libz3.so"] in
                    Canary_artifact_native.native_lib_probe_cmd ~lib ~prefix:"Z3_"
-                     ~output_dir )
+                     ~output_dir ~variant_key )
            else None);
           Some
             ( Pm (Sys_pm { pm }),
-              fun ~output_dir ->
+              fun ~output_dir ~variant_key ->
                 let resolve =
                   {|LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
 test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
 test -f "$LIB_Z3"|}
                 in
                 [%string
-                  "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir}"] );
+                  "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir ~variant_key}"] );
         ];
     probe_binding =
       List.filter_opt
@@ -457,32 +453,35 @@ test -f "$LIB_Z3"|}
           (if source.has_build_binding && cmake_build_binding then
              Some
                ( Canary_artifact_api.OCaml, Build_tree,
-                 fun ~output_dir ->
+                 fun ~output_dir ~variant_key ->
                    let script = "canary/scripts/assert_binary_symbols.py" in
+                   let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
+                   let symbols_log = Canary_step_key.variant_file ~variant_key "symbols.log" in
                    [%string
                      {|%{lib_resolve}
 %{binding_resolve}
 STUB=$(ls "$BINDING_DIR"/libz3ml.a 2>/dev/null | head -1)
 test -n "$STUB"
 python3 %{script} --provided-lib "$LIB_Z3" --required-lib "$STUB" \
-  --symbol-prefix Z3_ 2>&1 | tee %{output_dir}/symbols.log
-grep -q 'OK:' %{output_dir}/symbols.log
+  --symbol-prefix Z3_ 2>&1 | tee %{output_dir}/%{symbols_log}
+grep -q 'OK:' %{output_dir}/%{symbols_log}
 eval $(opam env)
 ocamlfind ocamlopt -package zarith -linkpkg \
   -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa %{example} \
-  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
-%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]
+  -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1|}]
                )
            else None);
           (* Lang_pm: probe against opam-installed package *)
           Some
             ( Canary_artifact_api.OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }),
-              fun ~output_dir ->
+              fun ~output_dir ~variant_key ->
+                let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
                 [%string
                   {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target} > %{output_dir}/probe.log 2>&1 || exit 1
-%{output_dir}/%{target} >> %{output_dir}/probe.log 2>&1|}]
+  -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 || exit 1
+%{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1|}]
             );
         ]
       @ List.filter_map binding_configs ~f:(function
@@ -491,16 +490,16 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                import-only here so the cached summary from fetch is
                available to expectation evaluation. *)
             Some (Canary_artifact_api.Python, Pm (Lang_pm { lang = Python; pm = Pip }),
-                  fun ~output_dir ->
-                    Canary_toolchain.python_probe_only_cmd p ~output_dir)
+                  fun ~output_dir ~variant_key ->
+                    Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key)
         | Ocaml_config _ -> None);
     check_post =
       (function
       | Fetch Source -> Some Canary_artifact_source.source_check_post
       | Configure ->
           Some
-            (fun ~output_dir ->
-              Canary_artifact_check.check_markers [ "configure.ok" ] ~output_dir
+            (fun ~output_dir ~variant_key ->
+              Canary_artifact_check.check_markers [ "conf.ok" ] ~output_dir ~variant_key
               || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
@@ -513,8 +512,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Fetch (Binding _) when not source.has_build_binding ->
           let pkg = [%string "z3.%{source.version}"] in
           Some
-            (fun ~output_dir ->
-              Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir
+            (fun ~output_dir ~variant_key ->
+              Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir ~variant_key
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_summary = [ (OCaml, "z3"); (Python, "z3") ];
@@ -565,12 +564,12 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         match rule with
         | Probe Lib ->
             Some
-              (fun ~output_dir ->
+              (fun ~output_dir ~variant_key ->
                 let sum =
                   Canary_artifact_native.summary_cmd ~lib:"$LIB_Z3"
                     ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ]
                     ~watchlist:(Canary_artifact_api.native_watchlist api)
-                    ~output_dir ()
+                    ~output_dir ~variant_key ()
                 in
                 prepend_warn [%string "%{lib_resolve}\n%{sum}"])
         | _ -> None);

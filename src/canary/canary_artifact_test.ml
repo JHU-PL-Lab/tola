@@ -127,12 +127,12 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
       expected_rc = 0 };
     { name = "native.probe_cmd";
       cmd = Canary_artifact_native.native_lib_probe_cmd
-              ~lib ~prefix ~output_dir:(output_dir ^ "/native_probe");
+              ~lib ~prefix ~output_dir:(output_dir ^ "/native_probe") ~variant_key:"";
       expected_rc = 0 };
     { name = "native.summary_cmd";
       cmd = Canary_artifact_native.summary_cmd
               ~lib ~prefixes:[ prefix ] ~watchlist:[]
-              ~output_dir:sum_dir ();
+              ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "native.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
@@ -149,7 +149,7 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       expected_rc = 0 };
     { name = "ocaml.summary_opam_pkg_cmd";
       cmd = Canary_artifact_lang.summary_opam_pkg_cmd
-              ~pkg ~watchlist:[] ~output_dir:sum_dir ();
+              ~pkg ~watchlist:[] ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "ocaml.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
@@ -158,7 +158,7 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
        summary.json kind == ocaml_mli with non-zero counts. *)
     { name = "ocaml.mli_summary_opam_pkg_cmd";
       cmd = Canary_artifact_lang.mli_summary_opam_pkg_cmd
-              ~pkg ~watchlist:[] ~output_dir:mli_dir ();
+              ~pkg ~watchlist:[] ~output_dir:mli_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "ocaml.mli_summary_json_valid";
       cmd = [%string {|python3 -c "
@@ -181,12 +181,12 @@ let ocaml_stub_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
   [
     { name = "ocaml.stub_summary_opam_pkg_cmd";
       cmd = Canary_artifact_lang.stub_summary_opam_pkg_cmd
-              ~pkg ~prefix:"" ~watchlist:[] ~output_dir:stub_dir ();
+              ~pkg ~prefix:"" ~watchlist:[] ~output_dir:stub_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "ocaml.stub_summary_json_valid";
       cmd = [%string {|python3 -c "
 import json
-with open('%{stub_dir}/summary.json') as f:
+with open('%{stub_dir}/summary_stub.json') as f:
     d = json.load(f)
 assert d['kind'] == 'c_stub', 'wrong kind: ' + d['kind']
 assert d['counts']['required'] > 0, 'no required symbols'
@@ -208,7 +208,7 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       expected_rc = 1 };
     { name = "python.summary_cmd";
       cmd = Canary_artifact_lang.python_summary_cmd
-              ~pkg ~watchlist:[] ~output_dir:sum_dir ();
+              ~pkg ~watchlist:[] ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "python.summary_json_valid";
       (* Python summary has no "counts" if error — check kind + path + attrs or error *)
