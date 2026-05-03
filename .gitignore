@@ -31,3 +31,7 @@ CMakeLists.txt
 # quarto build
 pkgm_files
 build
+
+# Local dev symlinks (absolute paths, not portable)
+vendor/z3_dev
+yelu/vendor/cmake
