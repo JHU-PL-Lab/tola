@@ -2,7 +2,18 @@ name: Canary CI
 
 on:
   push:
+    paths:
+      - 'canary/**'
+      - 'src/canary/**'
+      - 'src/bin/canary_main.ml'
+      - '.github/workflows/canary_ci.yml'
   pull_request:
+    paths:
+      - 'canary/**'
+      - 'src/canary/**'
+      - 'src/bin/canary_main.ml'
+      - '.github/workflows/canary_ci.yml'
+  workflow_dispatch:
 
 jobs:
   llvm-19:
