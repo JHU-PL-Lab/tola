@@ -158,7 +158,7 @@ missing from the z3-solver pip wheel) using `Expect_compat_failure { inputs
     rewriting, symlink creation, pkg-config/cmake config file generation).
     See `doc/canary/ops/install_targets.md` for z3 vs LLVM install patterns.
 
-Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see design/new_project.md), #33, #34, #39, #40; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see design/api_interface.md §13).
+Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see design/new_project.md), #33, #34, #39, #40, #45; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see design/api_interface.md §13).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)

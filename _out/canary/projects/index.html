@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>canary runs</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #fafafa; color: #222; }
+  header { padding: 12px 24px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 18px; }
+  header .meta { color: #777; font-size: 13px; }
+  main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+  section { margin-bottom: 32px; }
+  section h2 { margin: 0 0 8px; font-size: 16px; color: #1976d2; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 4px; overflow: hidden; }
+  th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid #eee; font-size: 13px; }
+  th { background: #f5f5f5; font-weight: 600; color: #555; }
+  tr:last-child td { border-bottom: none; }
+  tr.row-failed td:first-child a { color: #c62828; font-weight: 600; }
+  tr.row-done td:first-child a { color: #2e7d32; font-weight: 500; }
+  tr.row-skipped td:first-child { color: #888; }
+  td a { text-decoration: none; }
+  td a:hover { text-decoration: underline; }
+  td.src { color: #888; font-family: monospace; font-size: 11px; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; margin-right: 4px; }
+  .badge.done { background: #c8e6c9; color: #1b5e20; }
+  .badge.failed { background: #ffcdd2; color: #b71c1c; }
+  .badge.skipped { background: #e0e0e0; color: #555; }
+  .empty { padding: 40px; text-align: center; color: #999; }
+</style>
+</head>
+<body>
+<header>
+  <h1>canary runs</h1>
+  <span class="meta">3 runs · 0 with failures · generated 2026-05-03 02:13:21</span>
+</header>
+<main>
+<section><h2>llvm</h2>
+<table>
+  <thead><tr><th>variant</th><th>run at</th><th>steps</th><th>status</th><th>source</th></tr></thead>
+  <tbody>
+      <tr class="row-done"><td><a href="llvm/_run/result.html">llvm</a></td><td></td><td>2026-05-02 22:22:29</td><td>26</td><td><span class="badge done">26 done</span></td><td class="src">prebuilt</td></tr>
+  </tbody>
+</table></section>
+<section><h2>sqlite</h2>
+<table>
+  <thead><tr><th>variant</th><th>run at</th><th>steps</th><th>status</th><th>source</th></tr></thead>
+  <tbody>
+      <tr class="row-done"><td><a href="sqlite/_run/result.html">sqlite</a></td><td></td><td>2026-05-02 21:24:02</td><td>7</td><td><span class="badge done">7 done</span></td><td class="src">prebuilt</td></tr>
+  </tbody>
+</table></section>
+<section><h2>z3</h2>
+<table>
+  <thead><tr><th>variant</th><th>run at</th><th>steps</th><th>status</th><th>source</th></tr></thead>
+  <tbody>
+      <tr class="row-done"><td><a href="z3/_run/result.html">z3</a></td><td></td><td>2026-05-03 02:13:21</td><td>22</td><td><span class="badge done">22 done</span></td><td class="src">local:/home/red/code/contrib/z3-all/z3</td></tr>
+  </tbody>
+</table></section>
+</main>
+</body>
+</html>

@@ -20,6 +20,10 @@
 
 _*
 
+# Canary run outputs for GitHub Pages are committed via `git add -f`.
+# _out/ remains gitignored for normal builds; only specific z3 run files are tracked.
+# See _out/canary/projects/z3/ for the committed subset.
+
 !__init__.py
 
 CMakeLists.txt
