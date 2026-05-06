@@ -11,7 +11,7 @@ open Base
    canary actions apply (Build when source_dir is set; Pack when can_pack).
    Action dep requirements (headers + link_lib for build; runtime_lib for probe)
    are derivable from action type — not declared on binding_api.
-   See doc/canary/design/api_interface.md §4 for the design rationale. *)
+   See doc/canary/design/api_surface.md §4 for the design rationale. *)
 
 type lang =
   | Cpp
@@ -25,6 +25,10 @@ type lang =
 let string_of_lang = function
   | Cpp -> "cpp" | OCaml -> "ocaml"
   | Python -> "python" | Rust -> "rust" | CSharp -> "csharp" | Java -> "java"
+
+let display_of_lang = function
+  | Cpp -> "C++" | OCaml -> "OCaml"
+  | Python -> "Python" | Rust -> "Rust" | CSharp -> "C#" | Java -> "Java"
 
 type native_api_kind =
   | C
@@ -54,14 +58,24 @@ type native_api = {
   components      : api_component list;  (** what this source/package exposes *)
   headers         : headers_spec option; (** path detail when Headers ∈ components *)
   symbol_prefixes : string list;
-  stable_symbols  : string list;
+  stable_symbols  : string list;         (** L1a: must be exported *)
+  (* L1b: symbols expected to carry @@ version annotations (e.g. malloc@@GLIBC_2.31).
+     Placeholder — inspect not yet wired. *)
+  versioned_symbols : string list;
+  (* L4: ABI/runtime properties.  Placeholder — inspect not yet wired. *)
+  soname    : string option;             (** expected SONAME (e.g. "libz3.so.4.15") *)
+  c_runtime : string option;             (** expected C runtime ("glibc", "musl") *)
+  cxx_abi   : string option;             (** expected C++ ABI ("itanium", "msvc") *)
 }
 [@@deriving show]
 
 type binding_api = {
   lang             : lang;               (** explicit language tag — Binding is always lang-keyed *)
   source_dir       : string option;      (** Some _ ↔ Build_binding applicable; headers here or in -dev pkg *)
-  module_watchlist : string list;        (** dotted paths ok: "Llvm.Opcode.UncondBr" *)
+  module_watchlist : string list;        (** L3: dotted paths ok: "Llvm.Opcode.UncondBr" *)
+  (* L2: type/function signatures to inspect (.cmi digests, C prototypes).
+     Placeholder — inspect not yet wired. *)
+  type_watchlist   : string list;
 }
 [@@deriving show]
 

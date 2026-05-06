@@ -43,7 +43,7 @@ type t = {
   binding_lib : string;             (* `ocamlfind -package <binding_lib>`, usually = ocamlfind_pkg *)
   lib : lib_locator;                (* native lib resolution *)
   native_probe_prefix : string;     (* prefix for the count-symbols probe, e.g. "__gmp" / "SSL_" *)
-  native_summary_prefixes : string list; (* by_prefix breakdown for summary *)
+  native_inspect_prefixes : string list; (* by_prefix breakdown for summary *)
   native_watchlist : string list;   (* hand-curated stable C symbols *)
   ocaml_module_watchlist : string list; (* hand-curated OCaml module names *)
 }
@@ -111,18 +111,18 @@ let script_spec (d : t) : Canary_action.script_spec =
              ~example:d.example_file ~target:d.example_target
              ~output_dir ~variant_key));
       ];
-    summary = (fun rule loc -> match rule, loc with
+    inspect = (fun rule loc -> match rule, loc with
       | Probe Lib, _ ->
           Some (fun ~output_dir ~variant_key ->
-            let sum = Canary_artifact_native.summary_cmd
+            let sum = Canary_artifact_native.inspect_cmd
               ~lib:"$LIB_NATIVE"
-              ~prefixes:d.native_summary_prefixes
+              ~prefixes:d.native_inspect_prefixes
               ~watchlist:d.native_watchlist
               ~output_dir ~variant_key () in
             Printf.sprintf "%s\n%s" resolve sum)
       | Probe (Binding _), _ ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.summary_opam_pkg_cmd
+            Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg
               ~watchlist:d.ocaml_module_watchlist
               ~output_dir ~variant_key ())

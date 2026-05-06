@@ -50,6 +50,10 @@ let llvm_api_source : Canary_artifact_api.t =
         [ "LLVMContextCreate"; "LLVMModuleCreateWithName"; "LLVMCreateBuilder";
           "LLVMBuildAdd"; "LLVMBuildBr"; "LLVMBuildRetVoid";
           "LLVMVerifyModule"; "LLVMDisposeMessage" ];
+      versioned_symbols = [];
+      soname    = None;
+      c_runtime = None;
+      cxx_abi   = None;
     }
   in
   let ocaml_binding : Canary_artifact_api.binding_api =
@@ -63,6 +67,7 @@ let llvm_api_source : Canary_artifact_api.t =
         [ "Llvm"; "Llvm_analysis"; "Llvm_bitreader"; "Llvm_bitwriter";
           "Llvm_target"; "Llvm_executionengine";
           "Llvm.Opcode"; "Llvm.Opcode.UncondBr" ];
+      type_watchlist = [];
     }
   in
   (* llvmlite bundles its own libLLVM; out-of-tree (source_dir = None). *)
@@ -73,6 +78,7 @@ let llvm_api_source : Canary_artifact_api.t =
       module_watchlist =
         [ "initialize"; "initialize_native_target";
           "parse_assembly"; "create_mcjit_compiler"; "Target" ];
+      type_watchlist = [];
     }
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
@@ -478,11 +484,11 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             inputs = [
               C_stub { paths = [ "pack_binding_ocaml/summary_stub.json";
                                  "fetch_binding_ocaml/summary_stub.json" ] };
-              Native_lib { paths = [ "probe_lib/summary.json";
-                                     "probe_lib_apt/summary.json";
-                                     "probe_lib_staged/summary.json" ] };
-              Ocaml_mli { paths = [ "pack_binding_ocaml/summary.json";
-                                    "fetch_binding_ocaml/summary.json" ] };
+              Native_lib { paths = [ "probe_lib/inspect.json";
+                                     "probe_lib_apt/inspect.json";
+                                     "probe_lib_staged/inspect.json" ] };
+              Ocaml_mli { paths = [ "pack_binding_ocaml/inspect.json";
+                                    "fetch_binding_ocaml/inspect.json" ] };
             ];
             version_info = Some {
               provider_version = "llvm 19";
@@ -493,12 +499,12 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           }
       | _ -> Expect_success);
     binding_summary = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
-    summary_note =
+    inspect_note =
       (if not source.has_build_binding then
          Some (Canary_artifact_api.stable_reuse_warning
                  ~source_name:"llvm" ~source_version:source.version)
        else None);
-    summary = (fun rule _loc ->
+    inspect = (fun rule _loc ->
       let api = Option.value_exn source.api_source
           ~message:"llvm mk_script_spec: api_source not set" in
       let warn =
@@ -513,7 +519,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       match rule with
       | Probe Lib when source.has_build_lib ->
           Some (fun ~output_dir ~variant_key ->
-            prepend_warn (Canary_artifact_native.summary_cmd
+            prepend_warn (Canary_artifact_native.inspect_cmd
               ~lib:[%string "%{build}/lib/libLLVM.so"]
               ~prefixes:[ "LLVM" ]
               ~watchlist:(Canary_artifact_api.native_watchlist api)
@@ -523,7 +529,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             prepend_warn [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
 test -n "$LLVM_LIB"
-%{Canary_artifact_native.summary_cmd
+%{Canary_artifact_native.inspect_cmd
     ~lib:"$LLVM_LIB"
     ~prefixes:[ "LLVM" ]
     ~watchlist:(Canary_artifact_api.native_watchlist api)

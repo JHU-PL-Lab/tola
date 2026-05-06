@@ -141,7 +141,10 @@ fi|}]
                 Canary_compat.Ocaml_mli p)
           | Python_attrs { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Python_attrs p))
+                Canary_compat.Python_attrs p)
+          | Versioned_symbols { paths } ->
+              Option.map (pick_first_existing paths) ~f:(fun p ->
+                Canary_compat.Versioned_symbols p))
       in
       let derived = Canary_compat.predicted_contains_any_v2 typed_inputs in
       render_failure_check ~contains_any:derived

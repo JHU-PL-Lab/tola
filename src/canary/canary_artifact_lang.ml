@@ -39,11 +39,11 @@ let cmxa_stub_archive path =
 (* Emit compact archive summary as summary.json.
    Module-level only (ocamlobjinfo doesn't expose constructors);
    constructor-level drift is detected via compile probes.
-   See doc/canary/design/api_interface.md. *)
-let summary_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/summarize_ocaml.py" in
+   See doc/canary/design/api_surface.md. *)
+let inspect_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|ocamlobjinfo '%{archive}' 2>/dev/null \
   | python3 %{script} --path '%{archive}' --watchlist '%{watchlist_csv}' \
@@ -55,10 +55,10 @@ let summary_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
    NOTE: [~pkg] must be the *ocamlfind* package name, not the opam package
    name. These can differ: e.g., opam has llvm.19-shared / llvm.dev-shared
    variants, but the ocamlfind package they all install is just "llvm". *)
-let summary_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/summarize_ocaml.py" in
+let inspect_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -87,16 +87,16 @@ done 2>&1 | tee %{output_dir}/archive.log|}]
 
 (* Source-level mli summary for an opam-installed OCaml binding.
    Discovers the package's .mli files via `ocamlfind query` and parses them
-   with summarize_binding.py (grep-based, no compiler needed). Output JSON
+   with inspect_binding.py (grep-based, no compiler needed). Output JSON
    includes vals + constructors + module nesting (richer than ocamlobjinfo,
    which is module-level only).
 
    Use this when the binding ships .mli files in the install dir (LLVM does;
-   z3 does too). When .mli files aren't installed, fall back to summary_opam_pkg_cmd. *)
-let mli_summary_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/summarize_binding.py" in
+   z3 does too). When .mli files aren't installed, fall back to inspect_opam_pkg_cmd. *)
+let mli_inspect_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_binding.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -108,15 +108,15 @@ python3 %{script} --kind mli --dir "$PKG_DIR" \
    Discovers the binding's stub archive (lib<name>.a) via `ocamlfind query`,
    runs `nm` to collect undefined symbols, optionally filtered by a prefix
    (e.g. Z3_, LLVM). Output JSON has the consumer-side symbol set — pair
-   with summarize_native.py output (provider side) for check_compat.
-   Default filename "stub_summary.json" so it can coexist with the OCaml-level
-   "summary.json" in the same probe output directory. *)
-let stub_summary_opam_pkg_cmd
+   with inspect_native.py output (provider side) for check_compat.
+   Default filename "stub_inspect.json" so it can coexist with the OCaml-level
+   "inspect.json" in the same probe output directory. *)
+let stub_inspect_opam_pkg_cmd
     ~pkg ?(prefix = "") ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/summarize_binding.py" in
+  let script = "canary/scripts/inspect_binding.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  (* v3 naming: "summary_stub" (type-first), variant-keyed → "summary_stub_19.json" *)
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary_stub" ~ext:"json" in
+  (* v3 naming: "inspect_stub" (type-first), variant-keyed → "inspect_stub_19.json" *)
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect_stub" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -166,12 +166,12 @@ let python_import_cmd ~pkg ~output_dir =
      > %{output_dir}/import.log 2>&1 && cat %{output_dir}/import.log"]
 
 (* Emit compact Python package summary as summary.json via
-   canary/scripts/summarize_python.py. Watchlist is a list of top-level
+   canary/scripts/inspect_python.py. Watchlist is a list of top-level
    attribute names; present/missing recorded in the JSON.
    See doc/canary/ops/python_binding_gotchas.md. *)
-let python_summary_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/summarize_python.py" in
+let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_python.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     "python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}' > %{output_dir}/%{out_file}"]

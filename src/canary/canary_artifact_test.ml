@@ -60,7 +60,7 @@ let ocaml_pure_tests = [
 let compat_pure_tests =
   let tmp_root = "_out/canary/test/compat-helper" in
   let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
-  let write_summary kind name watchlist_missing =
+  let write_inspect kind name watchlist_missing =
     let path = tmp_root ^ "/" ^ name in
     let missing_json =
       "[" ^ (List.map watchlist_missing ~f:(fun s -> "\"" ^ s ^ "\"")
@@ -75,8 +75,8 @@ let compat_pure_tests =
     Stdlib.close_out oc;
     path
   in
-  let mli_path = write_summary "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
-  let py_path  = write_summary "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
+  let mli_path = write_inspect "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
+  let py_path  = write_inspect "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
   let l3_only = Canary_compat.predicted_contains_any_v2
       [ Canary_compat.Ocaml_mli mli_path ] in
   let py_only = Canary_compat.predicted_contains_any_v2
@@ -106,7 +106,7 @@ let compat_pure_tests =
 
 (* Run a command and check the process exit code against expectation.
    Writes output to {output_dir}/{name}.log for inspection. *)
-(* Verify that a summary.json produced by a summary_cmd is valid JSON with
+(* Verify that a summary.json produced by a inspect_cmd is valid JSON with
    the expected top-level fields. Returns 0 on success, 1 on failure. *)
 let summary_json_valid_cmd path =
   [%string {|python3 -c "
@@ -120,7 +120,7 @@ print('ok')
 
 let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
   let prefix = if Canary_artifact_native.is_macos then "_" else "" in
-  let sum_dir = output_dir ^ "/native_summary" in
+  let sum_dir = output_dir ^ "/native_inspect" in
   [
     { name = "native.nm_cmd";
       cmd = Canary_artifact_native.nm_cmd lib;
@@ -129,8 +129,8 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
       cmd = Canary_artifact_native.native_lib_probe_cmd
               ~lib ~prefix ~output_dir:(output_dir ^ "/native_probe") ~variant_key:"";
       expected_rc = 0 };
-    { name = "native.summary_cmd";
-      cmd = Canary_artifact_native.summary_cmd
+    { name = "native.inspect_cmd";
+      cmd = Canary_artifact_native.inspect_cmd
               ~lib ~prefixes:[ prefix ] ~watchlist:[]
               ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
@@ -140,27 +140,27 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
   ]
 
 let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
-  let sum_dir = output_dir ^ "/ocaml_summary" in
-  let mli_dir = output_dir ^ "/ocaml_mli_summary" in
+  let sum_dir = output_dir ^ "/ocaml_inspect" in
+  let mli_dir = output_dir ^ "/ocaml_mli_inspect" in
   [
     { name = "ocaml.opam_pkg_inspect";
       cmd = Canary_artifact_lang.opam_pkg_inspect_cmd
               ~pkg ~output_dir:(output_dir ^ "/ocaml_inspect");
       expected_rc = 0 };
-    { name = "ocaml.summary_opam_pkg_cmd";
-      cmd = Canary_artifact_lang.summary_opam_pkg_cmd
+    { name = "ocaml.inspect_opam_pkg_cmd";
+      cmd = Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg ~watchlist:[] ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "ocaml.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
       expected_rc = 0 };
-    (* mli-based summary (summarize_binding.py --kind mli). Verifies
+    (* mli-based summary (inspect_binding.py --kind mli). Verifies
        summary.json kind == ocaml_mli with non-zero counts. *)
-    { name = "ocaml.mli_summary_opam_pkg_cmd";
-      cmd = Canary_artifact_lang.mli_summary_opam_pkg_cmd
+    { name = "ocaml.mli_inspect_opam_pkg_cmd";
+      cmd = Canary_artifact_lang.mli_inspect_opam_pkg_cmd
               ~pkg ~watchlist:[] ~output_dir:mli_dir ~variant_key:"" ();
       expected_rc = 0 };
-    { name = "ocaml.mli_summary_json_valid";
+    { name = "ocaml.mli_inspect_json_valid";
       cmd = [%string {|python3 -c "
 import json
 with open('%{mli_dir}/summary.json') as f:
@@ -177,16 +177,16 @@ print('ok')
    (lib<name>.a alongside .cmxa). [pkg] is a known stub-bearing pkg like
    "zarith" that the caller verified is installed. *)
 let ocaml_stub_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
-  let stub_dir = output_dir ^ "/ocaml_stub_summary" in
+  let stub_dir = output_dir ^ "/ocaml_stub_inspect" in
   [
-    { name = "ocaml.stub_summary_opam_pkg_cmd";
-      cmd = Canary_artifact_lang.stub_summary_opam_pkg_cmd
+    { name = "ocaml.stub_inspect_opam_pkg_cmd";
+      cmd = Canary_artifact_lang.stub_inspect_opam_pkg_cmd
               ~pkg ~prefix:"" ~watchlist:[] ~output_dir:stub_dir ~variant_key:"" ();
       expected_rc = 0 };
-    { name = "ocaml.stub_summary_json_valid";
+    { name = "ocaml.stub_inspect_json_valid";
       cmd = [%string {|python3 -c "
 import json
-with open('%{stub_dir}/summary_stub.json') as f:
+with open('%{stub_dir}/inspect_stub.json') as f:
     d = json.load(f)
 assert d['kind'] == 'c_stub', 'wrong kind: ' + d['kind']
 assert d['counts']['required'] > 0, 'no required symbols'
@@ -196,7 +196,7 @@ print('ok')
   ]
 
 let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
-  let sum_dir = output_dir ^ "/py_summary" in
+  let sum_dir = output_dir ^ "/py_inspect" in
   [
     { name = "python.import_cmd";
       cmd = Canary_artifact_lang.python_import_cmd
@@ -206,8 +206,8 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       cmd = Canary_artifact_lang.python_import_cmd
               ~pkg:"canary_nonexistent_pkg" ~output_dir:(output_dir ^ "/py_import_bad");
       expected_rc = 1 };
-    { name = "python.summary_cmd";
-      cmd = Canary_artifact_lang.python_summary_cmd
+    { name = "python.inspect_cmd";
+      cmd = Canary_artifact_lang.python_inspect_cmd
               ~pkg ~watchlist:[] ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "python.summary_json_valid";
@@ -229,10 +229,10 @@ print('ok')
 let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   (* Probe commands tee into sub-dirs; ensure they all exist up front. *)
   List.iter
-    [ ""; "/native_probe"; "/native_summary";
-      "/ocaml_inspect"; "/ocaml_summary";
-      "/ocaml_mli_summary"; "/ocaml_stub_summary";
-      "/py_import"; "/py_import_bad"; "/py_summary" ]
+    [ ""; "/native_probe"; "/native_inspect";
+      "/ocaml_inspect"; "/ocaml_inspect";
+      "/ocaml_mli_inspect"; "/ocaml_stub_inspect";
+      "/py_import"; "/py_import_bad"; "/py_inspect" ]
     ~f:(fun sub ->
       ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}%{sub}"] : int));
 

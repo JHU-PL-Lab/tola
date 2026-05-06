@@ -4,15 +4,15 @@ open Base
    "what C symbols this binding requires from the native lib") and a native
    library's defined-symbols summary (provider side: "what this .so exports").
 
-   Inputs are summary.json files produced by summarize_binding.py --kind stub
-   and summarize_native.py --emit-symbols, respectively. Output is a verdict
+   Inputs are summary.json files produced by inspect_binding.py --kind stub
+   and inspect_native.py --emit-symbols, respectively. Output is a verdict
    on `requires ⊆ provides`.
 
-   See doc/canary/design/api_interface.md §13 for the design.
+   See doc/canary/design/api_surface.md §13 for the design.
    The OCaml-level half is already covered by the mli summary's watchlist
    (e.g. Llvm.Opcode.UncondBr present/missing). Together they form the
    set-inclusion necessary-condition layer (L0/L1) of the compatibility
-   lattice from api_interface.md §15. *)
+   lattice from api_surface.md §15. *)
 
 (* ── Summary loaders ── *)
 
@@ -38,12 +38,12 @@ let get_string_list j name =
 
 (* ── Typed views ── *)
 
-type stub_summary = {
+type stub_inspect = {
   path : string;
   requires : string list;
 }
 
-type native_summary = {
+type native_inspect = {
   path : string;
   symbols : string list;  (* defined exports, prefix-filtered if emitted that way *)
 }
@@ -73,7 +73,7 @@ type compat_result =
   | Missing of { symbols : string list }
   | Unknown   (* one side lacks the data needed to decide *)
 
-let check_c_compat ~(binding_stub : stub_summary) ~(native_lib : native_summary)
+let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
     : compat_result =
   if List.is_empty binding_stub.requires then Unknown
   else if List.is_empty native_lib.symbols then Unknown
@@ -86,7 +86,7 @@ let check_c_compat ~(binding_stub : stub_summary) ~(native_lib : native_summary)
 
 (* ── Reporting ── *)
 
-let print_result ~(stub : stub_summary) ~(lib : native_summary) result =
+let print_result ~(stub : stub_inspect) ~(lib : native_inspect) result =
   Fmt.pr "stub:     %s (%d required symbols)@."
     stub.path (List.length stub.requires);
   Fmt.pr "lib:      %s (%d defined symbols)@.@."
@@ -184,13 +184,13 @@ let step_dir ~project_dir step =
   [%string "%{project_dir}/%{step_d}"]
 
 (* Pick the first existing probe_lib*/summary.json. *)
-let find_lib_summary ~project_dir ~variant_id =
+let find_lib_inspect ~project_dir ~variant_id =
   let candidates = [
     "probe_lib"; "probe_lib_apt"; "probe_lib_brew"; "probe_lib_staged"
   ] in
   List.find_map candidates ~f:(fun step ->
       let d = step_dir ~project_dir step in
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"summary" ~ext:"json" in
+      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = d ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
@@ -205,21 +205,21 @@ let find_ocaml_install_dir ~project_dir =
       then Some p else None)
 
 (* Python binding summary is at fetch_binding/python/summary_{vk}.json. *)
-let find_python_summary ~project_dir ~variant_id =
+let find_python_inspect ~project_dir ~variant_id =
   let d = step_dir ~project_dir "fetch_binding_python" in
-  let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"summary" ~ext:"json" in
+  let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
   let p = d ^ "/" ^ fname in
   if Stdlib.Sys.file_exists p then Some p else None
 
-let find_stub_summary ~project_dir ~variant_id =
+let find_stub_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"summary_stub" ~ext:"json" in
+      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect_stub" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
-let find_mli_summary ~project_dir ~variant_id =
+let find_mli_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"summary" ~ext:"json" in
+      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
@@ -229,11 +229,11 @@ let run_for_project ~root ~project ~variant =
       Fmt.epr "compat: no project dir for %s under _out/canary/projects/@." project;
       2
   | Some (project_dir, variant_id) ->
-      let stub_path = find_stub_summary ~project_dir ~variant_id in
-      let lib_path = find_lib_summary ~project_dir ~variant_id in
+      let stub_path = find_stub_inspect ~project_dir ~variant_id in
+      let lib_path = find_lib_inspect ~project_dir ~variant_id in
       (match stub_path, lib_path with
        | None, _ ->
-           Fmt.epr "compat: no summary_stub.json under %s/pack_binding/ocaml/@."
+           Fmt.epr "compat: no inspect_stub.json under %s/pack_binding/ocaml/@."
              project_dir;
            Fmt.epr "  (run `canary action %s` first to populate the cache)@." project;
            2
@@ -267,7 +267,7 @@ let read_file_or_empty path =
   else ""
 
 let load_mli_missing ~project_dir ~variant_id =
-  match find_mli_summary ~project_dir ~variant_id with
+  match find_mli_inspect ~project_dir ~variant_id with
   | None -> []
   | Some p ->
       let j = Yojson.Basic.from_file p in
@@ -302,13 +302,13 @@ let load_watchlist_missing path =
    Expect_compat_failure (legacy positional API; prefer
    [predicted_contains_any_v2] with typed inputs). *)
 let predicted_contains_any
-    ?stub_summary_path ?lib_summary_path ?mli_summary_path () =
-  let l3 = Option.value_map mli_summary_path ~default:[] ~f:load_watchlist_missing in
+    ?stub_inspect_path ?lib_inspect_path ?mli_inspect_path () =
+  let l3 = Option.value_map mli_inspect_path ~default:[] ~f:load_watchlist_missing in
   let l3_variants =
     List.concat_map l3 ~f:name_variants
     |> List.dedup_and_sort ~compare:String.compare
   in
-  let l0 = match stub_summary_path, lib_summary_path with
+  let l0 = match stub_inspect_path, lib_inspect_path with
     | Some s, Some l
       when Stdlib.Sys.file_exists s && Stdlib.Sys.file_exists l ->
         let stub = load_stub s in
@@ -324,6 +324,7 @@ let predicted_contains_any
 (* Typed variant of predicted_contains_any: takes a list of typed summary
    inputs (already path-resolved). Each input contributes substrings:
      - C_stub + Native_lib together → L0 missing C symbols (set diff)
+     - Versioned_symbols → L1b version tag mismatch (glibc version requirements)
      - Ocaml_mli → L3 watchlist missing, expanded with name_variants
      - Python_attrs → L3 watchlist missing, expanded with name_variants
    Order-insensitive within a list; languages can mix any subset. *)
@@ -332,6 +333,7 @@ type typed_input =
   | Native_lib of string
   | Ocaml_mli of string
   | Python_attrs of string
+  | Versioned_symbols of string
 
 let predicted_contains_any_v2 (inputs : typed_input list) : string list =
   let stub_path = List.find_map inputs ~f:(function C_stub p -> Some p | _ -> None) in
@@ -346,13 +348,24 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
          | Compatible | Unknown -> [])
     | _ -> []
   in
+  let l1b =
+    List.concat_map inputs ~f:(function
+      | Versioned_symbols p ->
+          if not (Stdlib.Sys.file_exists p) then []
+          else
+            let j = Yojson.Basic.from_file p in
+            (match field j "versioned_req" with
+             | Some (`Assoc entries) -> List.map entries ~f:fst
+             | _ -> [])
+      | _ -> [])
+  in
   let l3 =
     List.concat_map inputs ~f:(function
       | Ocaml_mli p | Python_attrs p ->
           load_watchlist_missing p |> List.concat_map ~f:name_variants
-      | C_stub _ | Native_lib _ -> [])
+      | _ -> [])
   in
-  l3 @ l0
+  l1b @ l3 @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step
@@ -360,7 +373,7 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
    for Expect_failure cases is the GOAL — see step_expectation in
    canary_action.ml). We're not re-implementing the runner's verdict; just
    distinguishing "log has compile error text" from "log shows runtime ok". *)
-let probe_log_summary log =
+let probe_log_inspect log =
   let lines = String.split_lines log in
   let line_count = List.length lines in
   let head = List.take lines 4 |> String.concat ~sep:"\n" in
@@ -389,12 +402,12 @@ let verify_for_project ~root ~project ~variant =
 
       (* L3 (Python attrs) prediction *)
       let py_missing =
-        match find_python_summary ~project_dir ~variant_id with
+        match find_python_inspect ~project_dir ~variant_id with
         | None -> []
         | Some p -> load_watchlist_missing p
       in
       Fmt.pr "@.L3 (Python attrs) prediction:@.";
-      (match find_python_summary ~project_dir ~variant_id with
+      (match find_python_inspect ~project_dir ~variant_id with
        | None -> Fmt.pr "  (no Python summary cached at fetch_binding_python/)@."
        | Some _ ->
            if List.is_empty py_missing then
@@ -406,8 +419,8 @@ let verify_for_project ~root ~project ~variant =
              Fmt.pr "  → predicts FAIL referencing one of these names@."));
 
       (* L0 (C symbols) prediction *)
-      let stub_path = find_stub_summary ~project_dir ~variant_id in
-      let lib_path = find_lib_summary ~project_dir ~variant_id in
+      let stub_path = find_stub_inspect ~project_dir ~variant_id in
+      let lib_path = find_lib_inspect ~project_dir ~variant_id in
       let c_result = match stub_path, lib_path with
         | Some s, Some l ->
             let stub = load_stub s in
@@ -442,7 +455,7 @@ let verify_for_project ~root ~project ~variant =
       let ocaml_log = read_log "probe_binding_ocaml" in
       let python_log = read_log "probe_binding_python" in
       let print_log_section name log =
-        let line_count, head = probe_log_summary log in
+        let line_count, head = probe_log_inspect log in
         Fmt.pr "@.%s probe.log analysis (%d lines):@." name line_count;
         if String.is_empty log then Fmt.pr "  (empty or missing)@."
         else (

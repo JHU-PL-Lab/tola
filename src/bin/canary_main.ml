@@ -441,7 +441,7 @@ let artifact_test_cmd =
          let ok = Canary_artifact_test.run_tests () in
          if not ok then Stdlib.exit 1))
 
-let artifact_summary_cmd =
+let artifact_inspect_cmd =
   let kind =
     Arg.(
       required
@@ -482,16 +482,16 @@ let artifact_summary_cmd =
     let cmd =
       match kind with
       | "native" ->
-          Canary_artifact_native.summary_cmd ~lib:path ~prefixes ~watchlist
+          Canary_artifact_native.inspect_cmd ~lib:path ~prefixes ~watchlist
             ~output_dir:out_dir ~variant_key:"" ()
       | "ocaml" ->
-          Canary_artifact_lang.summary_cmd ~archive:path ~watchlist
+          Canary_artifact_lang.inspect_cmd ~archive:path ~watchlist
             ~output_dir:out_dir ~variant_key:"" ()
       | "opam" ->
-          Canary_artifact_lang.summary_opam_pkg_cmd ~pkg:path ~watchlist
+          Canary_artifact_lang.inspect_opam_pkg_cmd ~pkg:path ~watchlist
             ~output_dir:out_dir ~variant_key:"" ()
       | "python" ->
-          Canary_artifact_lang.python_summary_cmd ~pkg:path ~watchlist
+          Canary_artifact_lang.python_inspect_cmd ~pkg:path ~watchlist
             ~output_dir:out_dir ~variant_key:"" ()
       | k ->
           Fmt.epr
@@ -565,7 +565,7 @@ let compat_cmd =
     (Cmd.info "compat"
        ~doc:
          "Static C-symbol cross-check: predict whether a binding's required \
-          symbols are all provided by a native lib. See api_interface.md §13.")
+          symbols are all provided by a native lib. See api_surface.md §13.")
     Term.(const run $ project $ variant $ stub $ lib $ const ())
 
 let verify_cmd =
@@ -629,9 +629,9 @@ let summary_diff_cmd =
       & opt (some string) None
       & info [ "new" ] ~docv:"PATH" ~doc:"Path to the newer summary.json")
   in
-  let run old_path new_path () = Canary_summary_diff.diff ~old_path ~new_path in
+  let run old_path new_path () = Canary_inspect_diff.diff ~old_path ~new_path in
   Cmd.v
-    (Cmd.info "summary-diff"
+    (Cmd.info "inspect-diff"
        ~doc:
          "Diff two artifact summary.json files (counts, modules, watchlist, \
           versioned_req)")
@@ -655,7 +655,7 @@ let () =
         cache_sync_cmd;
         pm_test_cmd;
         artifact_test_cmd;
-        artifact_summary_cmd;
+        artifact_inspect_cmd;
         summary_diff_cmd;
         compat_cmd;
         verify_cmd;

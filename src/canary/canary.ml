@@ -276,11 +276,12 @@ type symbol_check = {
   version_info : version_info option;
 }
 
-type compat_summary_input =
-  | C_stub      of { paths : string list }
-  | Native_lib  of { paths : string list }
-  | Ocaml_mli   of { paths : string list }
-  | Python_attrs of { paths : string list }
+type compat_inspect_input =
+  | C_stub           of { paths : string list }
+  | Native_lib       of { paths : string list }
+  | Ocaml_mli        of { paths : string list }
+  | Python_attrs     of { paths : string list }
+  | Versioned_symbols of { paths : string list }  (* L1b: @@GLIBC_X.YY version tags *)
 
 type step_expectation =
   | Expect_success
@@ -289,7 +290,7 @@ type step_expectation =
       version_info : version_info option;
     }
   | Expect_compat_failure of {
-      inputs       : compat_summary_input list;
+      inputs       : compat_inspect_input list;
       version_info : version_info option;
     }
 
@@ -645,14 +646,14 @@ type node_status =
   | Skipped
   | Not_in_spec
 
-(* Diagram display label for a surface-inspection step tag (ends in _summary or
-   _stub_summary).  Converts the internal step tag to a concise `inspect_*`
+(* Diagram display label for a surface-inspection step tag (ends in _inspect or
+   _stub_inspect).  Converts the internal step tag to a concise `inspect_*`
    verb form that reads well at its position in the diagram without the full
    parent-action prefix.
 
    Examples:
-     pack_binding_ocaml_summary      → inspect_ocaml
-     pack_binding_ocaml_stub_summary → inspect_ocaml_stub
-     probe_lib_summary               → inspect_lib
-     probe_lib_staged_summary        → inspect_lib_staged
-     fetch_binding_python_summary    → inspect_python *)
+     pack_binding_ocaml_inspect      → inspect_ocaml
+     pack_binding_ocaml_stub_inspect → inspect_ocaml_stub
+     probe_lib_inspect               → inspect_lib
+     probe_lib_staged_inspect        → inspect_lib_staged
+     fetch_binding_python_inspect    → inspect_python *)

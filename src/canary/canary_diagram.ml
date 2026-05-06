@@ -22,10 +22,10 @@ let node_id_of_kind k =
   [%string "%{string_of_artifact_kind k}_node"]
 
 let inspect_label_of_tag tag =
-  let stub = String.is_suffix tag ~suffix:"_stub_summary" in
+  let stub = String.is_suffix tag ~suffix:"_stub_inspect" in
   let base =
-    if stub then String.chop_suffix_exn tag ~suffix:"_stub_summary"
-    else String.chop_suffix_exn tag ~suffix:"_summary"
+    if stub then String.chop_suffix_exn tag ~suffix:"_stub_inspect"
+    else String.chop_suffix_exn tag ~suffix:"_inspect"
   in
   let subject =
     List.find_map
@@ -41,8 +41,8 @@ let inspect_label_of_tag tag =
 
    - One pair per summary follow-up step that appears in the run.
    - Same rule can appear with multiple suffixes (e.g.
-     Fetch (Binding OCaml) has both "_summary" — mli — and
-     "_stub_summary" — c_stub).
+     Fetch (Binding OCaml) has both "_inspect" — mli — and
+     "_stub_inspect" — c_stub).
    - The diagram emits one summary node per pair.
 
    step_ids : optional table from step tag to its step index (1-based,
@@ -112,12 +112,12 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      label — so the edge originates from the artifact pool node.
      Defined after kind_nid below as parent_action_nid_ex (expanded-aware). *)
   (* Summary nodes are uniquely identified by (parent rule, tag suffix).
-     suffix is e.g. "_summary" or "_stub_summary". *)
+     suffix is e.g. "_inspect" or "_stub_inspect". *)
   let summary_nid rule suffix =
     [%string "A_%{string_of_rule rule}%{suffix}"]
   in
   let summary_label rule suffix =
-    (* e.g. fetch_binding_ocaml_stub_summary *)
+    (* e.g. fetch_binding_ocaml_stub_inspect *)
     string_of_rule rule ^ suffix
   in
   let source_upstream =
@@ -158,12 +158,12 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
       [%string "%{name} %{id_str}"]
   in
   let action_label name = label_with_ids name name in
-  (* Direct tag lookup — for follow-up steps (scan_source, *_summary)
+  (* Direct tag lookup — for follow-up steps (scan_source, *_inspect)
      that have a 1:1 step mapping but were excluded from the rule-tag
      bucket so they don't pollute parent labels. *)
   let direct_tag_label tag =
     let disp =
-      if String.is_suffix tag ~suffix:"_summary"
+      if String.is_suffix tag ~suffix:"_inspect"
       then inspect_label_of_tag tag else tag
     in
     match step_ids with
@@ -242,7 +242,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      artifact kind it belongs to is not expanded in this view.
      Covers Publish, Probe, and Fetch binding summaries.  Inlined summaries keep
      their status entry (for edge colouring) but lose the separate pill node. *)
-  let is_inlined_summary rule =
+  let is_inlined_inspect rule =
     match rule with
     | Publish kind | Probe kind | Fetch kind -> not (is_probe_expanded kind)
     | _ -> false
@@ -268,7 +268,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
               List.filter_map tags ~f:(fun t -> Hashtbl.find sids t))
   in
   (* Build an action label with action + summary IDs merged and sorted together. *)
-  let action_label_with_summary name rule =
+  let action_label_with_inspect name rule =
     let all_ids =
       (action_int_ids name @ summary_int_ids rule)
       |> List.sort ~compare:Int.compare
@@ -279,7 +279,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   in
   (* Formatted summary-only ID suffix — used for fetch artifact labels where the
      fetch action IDs are already embedded by label_with_ids. *)
-  let inline_summary_ids rule =
+  let inline_inspect_ids rule =
     summary_int_ids rule
     |> List.sort ~compare:Int.compare
     |> List.map ~f:(fun n -> [%string "[%{Int.to_string n}]"])
@@ -310,15 +310,15 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
       (summary_nid rule suffix, summary_label rule suffix, parent_action_nid_ex rule)
     in
     match rule with
-    | Probe kind when is_probe_expanded kind && String.equal suffix "_summary" ->
+    | Probe kind when is_probe_expanded kind && String.equal suffix "_inspect" ->
         let variants = List.filter_map (probe_expand_items kind) ~f:(fun (probe_tag, _, _) ->
-            let stag = probe_tag ^ "_summary" in
+            let stag = probe_tag ^ "_inspect" in
             let known = match step_ids with
               | Some sids -> Hashtbl.mem sids stag
               | None -> false
             in
             if known then
-              Some ([%string "A_%{probe_tag}_summary"], stag, [%string "A_%{probe_tag}"])
+              Some ([%string "A_%{probe_tag}_inspect"], stag, [%string "A_%{probe_tag}"])
             else None)
         in
         if List.is_empty variants then [ canonical ] else variants
@@ -326,7 +326,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   in
   (* Label for a canonical summary node in the overview (non-expanded) case.
      Looks up ALL concrete step tags that map to this canonical tag and shows
-     all their IDs: e.g. "probe_lib_summary [18][20][22]". Falls back to
+     all their IDs: e.g. "probe_lib_inspect [18][20][22]". Falls back to
      direct_tag_label when no table is provided. *)
   let summary_all_ids_label canonical_tag =
     let disp = inspect_label_of_tag canonical_tag in
@@ -411,8 +411,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
             let base = label_with_ids lbl rule_tag in
             (* In non-expanded views, fetch summaries are inlined into the artifact
                label rather than shown as separate pills. *)
-            if is_inlined_summary (Fetch kind) then
-              base ^ inline_summary_ids (Fetch kind)
+            if is_inlined_inspect (Fetch kind) then
+              base ^ inline_inspect_ids (Fetch kind)
             else base
           end else lbl
         in
@@ -437,8 +437,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      IDs are appended directly to the pack action label instead. *)
   List.iter publish_kinds ~f:(fun kind ->
       let name = string_of_rule (Publish kind) in
-      let lbl = if is_inlined_summary (Publish kind)
-                then action_label_with_summary name (Publish kind)
+      let lbl = if is_inlined_inspect (Publish kind)
+                then action_label_with_inspect name (Publish kind)
                 else action_label name in
       add [%string "    A_%{name}{{\"%{lbl}\"}}"]);
   (* Probe actions — pill shape.
@@ -450,16 +450,16 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
             add [%string "    A_%{probe_tag}([\"%{label}\"])"])
       else begin
         let name = string_of_rule (Probe kind) in
-        let lbl = action_label_with_summary name (Probe kind) in
+        let lbl = action_label_with_inspect name (Probe kind) in
         add [%string "    A_%{name}([\"%{lbl}\"])"]
       end);
   (* Summary actions — pill shape, one per (rule, suffix) pair.
-     Covers Probe Lib (_summary), Fetch (Binding lang) (_summary +
-     _stub_summary), Publish (Binding lang) (same as Fetch), etc.
+     Covers Probe Lib (_inspect), Fetch (Binding lang) (_inspect +
+     _stub_inspect), Publish (Binding lang) (same as Fetch), etc.
      Each summary tag is a real step tag, so use direct lookup to
      surface its individual step id. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
-      if not (is_inlined_summary rule) then begin
+      if not (is_inlined_inspect rule) then begin
         let triples = summary_item_triples rule suffix in
         (* One triple = collapsed overview node → show all concrete IDs.
            Multiple triples = expanded focused nodes → each shows its own ID. *)
@@ -598,7 +598,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   (* Summary edges: parent action → summary action.
      Dashed edge to signal "follow-up annotation" rather than data flow. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
-      if not (is_inlined_summary rule) then
+      if not (is_inlined_inspect rule) then
         List.iter (summary_item_triples rule suffix) ~f:(fun (nid, tag, parent_nid) ->
             add_edge ~tag [%string "%{parent_nid} -.-> %{nid}"]));
   add "";
@@ -626,7 +626,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   in
   let summary_entries =
     List.concat_map summary_rules ~f:(fun (rule, suffix) ->
-        if is_inlined_summary rule then []
+        if is_inlined_inspect rule then []
         else List.map (summary_item_triples rule suffix) ~f:(fun (nid, tag, _) -> (nid, tag)))
   in
   let action_entries =
@@ -744,11 +744,11 @@ let _node_shape_of_rule rule =
   | Publish _                                -> `Hex
   | Fetch _                                  -> `Box
 
-let mermaid_node_for_step ~id ~is_summary ~is_scan (s : action_step) =
+let mermaid_node_for_step ~id ~is_inspect ~is_scan (s : action_step) =
   let nid = "S_" ^ s.tag in
   let label = [%string "%{s.tag} [%{Int.to_string id}]"] in
   let shape =
-    if is_summary || is_scan then `Pill
+    if is_inspect || is_scan then `Pill
     else _node_shape_of_rule s.rule
   in
   let line = match shape with
@@ -758,8 +758,8 @@ let mermaid_node_for_step ~id ~is_summary ~is_scan (s : action_step) =
   in
   (nid, line)
 
-let _is_summary_step (s : action_step) =
-  String.is_suffix s.tag ~suffix:"_summary"
+let _is_inspect_step (s : action_step) =
+  String.is_suffix s.tag ~suffix:"_inspect"
 let _is_scan_step (s : action_step) =
   String.equal s.tag "scan_source"
 
@@ -803,17 +803,17 @@ let mermaid_of_steps
   in
   (* Nodes *)
   List.iter steps ~f:(fun s ->
-      let is_summary = _is_summary_step s in
+      let is_inspect = _is_inspect_step s in
       let is_scan = _is_scan_step s in
       let (_, line) =
-        mermaid_node_for_step ~id:(id_of s) ~is_summary ~is_scan s
+        mermaid_node_for_step ~id:(id_of s) ~is_inspect ~is_scan s
       in
       add line);
   add "";
   (* Edges *)
   List.iter steps ~f:(fun s ->
       let dst = "S_" ^ s.tag in
-      let dashed = _is_summary_step s || _is_scan_step s in
+      let dashed = _is_inspect_step s || _is_scan_step s in
       List.iter s.deps ~f:(fun dep ->
           if Hash_set.mem in_subset dep then
             add_edge ~src:("S_" ^ dep) ~dst ~tag:s.tag ~dashed));
@@ -954,7 +954,7 @@ let _compute_probe_expand
     (steps : action_step list)
   : (artifact_kind * (string * string * string) list) option =
   let probe_steps = List.filter steps ~f:(fun s ->
-      not (String.is_suffix s.tag ~suffix:"_summary")
+      not (String.is_suffix s.tag ~suffix:"_inspect")
       && (String.equal s.tag probe_prefix
           || String.is_prefix s.tag ~prefix:(probe_prefix ^ "_")))
   in
@@ -1051,7 +1051,7 @@ let _compute_expand
     (steps : action_step list)
   : (artifact_kind * (string * string) list) option =
   let probe_steps = List.filter steps ~f:(fun s ->
-      not (String.is_suffix s.tag ~suffix:"_summary")
+      not (String.is_suffix s.tag ~suffix:"_inspect")
       && (String.equal s.tag probe_prefix
           || String.is_prefix s.tag ~prefix:(probe_prefix ^ "_")))
   in
@@ -1140,7 +1140,7 @@ let mermaid_full
   let has_step t = List.exists steps ~f:(fun s -> String.equal s.tag t) in
   let id_label tag =
     let disp =
-      if String.is_suffix tag ~suffix:"_summary"
+      if String.is_suffix tag ~suffix:"_inspect"
       then inspect_label_of_tag tag else tag
     in
     match Hashtbl.find step_ids tag with
@@ -1175,7 +1175,7 @@ let mermaid_full
     let install = Poly.equal kind Lib && has_step "install_lib" in
     let fetch_base = string_of_rule (Fetch kind) in
     let fetch_steps = List.filter steps ~f:(fun s ->
-        not (String.is_suffix s.tag ~suffix:"_summary")
+        not (String.is_suffix s.tag ~suffix:"_inspect")
         && (String.equal s.tag fetch_base
             || String.is_prefix s.tag ~prefix:(fetch_base ^ "_")))
     in
@@ -1353,7 +1353,7 @@ let mermaid_full
      Fetch steps (non-summary) are already emitted above as hexagons; summary
      steps for fetch rules fall through here so they get a pill node. *)
   let is_fetch_or_follow s =
-    not (String.is_suffix s.tag ~suffix:"_summary")
+    not (String.is_suffix s.tag ~suffix:"_inspect")
     && ((match s.rule with Fetch _ -> true | _ -> false)
         || String.equal s.tag "scan_source"
         || String.equal s.tag "configure")
@@ -1364,7 +1364,7 @@ let mermaid_full
         let lbl = id_label s.tag in
         let line = match s.rule with
           | Probe _ -> [%string "    %{nid}([\"%{lbl}\"])"]
-          | _ when String.is_suffix s.tag ~suffix:"_summary" ->
+          | _ when String.is_suffix s.tag ~suffix:"_inspect" ->
               [%string "    %{nid}([\"%{lbl}\"])"]
           | _ -> [%string "    %{nid}{{\"%{lbl}\"}}"]
         in
@@ -1478,7 +1478,7 @@ let mermaid_full
         (* probe_<kind>_<variant> → from matching artifact variant *)
         let probe_base = string_of_rule (Probe kind) in
         let probe_steps = List.filter steps ~f:(fun s ->
-            not (String.is_suffix s.tag ~suffix:"_summary")
+            not (String.is_suffix s.tag ~suffix:"_inspect")
             && (String.equal s.tag probe_base
                 || String.is_prefix s.tag ~prefix:(probe_base ^ "_")))
         in
@@ -1512,12 +1512,12 @@ let mermaid_full
       end);
   (* Summary follow-up edges (dashed) *)
   List.iter steps ~f:(fun s ->
-      if String.is_suffix s.tag ~suffix:"_summary" then begin
+      if String.is_suffix s.tag ~suffix:"_inspect" then begin
         let parent_tag =
-          if String.is_suffix s.tag ~suffix:"_stub_summary" then
-            String.chop_suffix_exn s.tag ~suffix:"_stub_summary"
+          if String.is_suffix s.tag ~suffix:"_stub_inspect" then
+            String.chop_suffix_exn s.tag ~suffix:"_stub_inspect"
           else
-            String.chop_suffix_exn s.tag ~suffix:"_summary"
+            String.chop_suffix_exn s.tag ~suffix:"_inspect"
         in
         if has_step parent_tag then
           add_edge ~tag:s.tag [%string "A_%{parent_tag} -.-> A_%{s.tag}"]
@@ -1593,8 +1593,8 @@ let mermaid_view
     | None -> None
     | Some srules ->
         let norm_suffix tail =
-          if String.is_suffix tail ~suffix:"_stub_summary" then "_stub_summary"
-          else "_summary"
+          if String.is_suffix tail ~suffix:"_stub_inspect" then "_stub_inspect"
+          else "_inspect"
         in
         let tbl = Hashtbl.create (module String) in
         List.iter srules ~f:(fun (rule, suffix) ->
@@ -1602,7 +1602,7 @@ let mermaid_view
             let rule_base = string_of_rule rule in
             let concretes = List.filter_map steps ~f:(fun s ->
                 if Poly.equal s.rule rule
-                && String.is_suffix s.tag ~suffix:"_summary" then
+                && String.is_suffix s.tag ~suffix:"_inspect" then
                   match String.chop_prefix s.tag ~prefix:rule_base with
                   | Some tail when String.equal (norm_suffix tail) suffix -> Some s.tag
                   | _ -> None
@@ -1636,7 +1636,7 @@ let mermaid_view
   let all_probe_expand =
     List.filter_map steps ~f:(fun s ->
         match s.rule with
-        | Canary.Probe k when not (String.is_suffix s.tag ~suffix:"_summary") -> Some k
+        | Canary.Probe k when not (String.is_suffix s.tag ~suffix:"_inspect") -> Some k
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
     |> (match focal_probe_kinds with
@@ -1875,14 +1875,14 @@ let write_project_output ~dir ~project_name ~variant ~steps
   let summary_rules =
     let canonical_parent_tag rule = string_of_rule rule in
     List.filter_map steps ~f:(fun s ->
-        if String.is_suffix s.tag ~suffix:"_summary" then
+        if String.is_suffix s.tag ~suffix:"_inspect" then
           let parent = canonical_parent_tag s.rule in
           if String.is_prefix s.tag ~prefix:parent then
             let suffix = String.chop_prefix_exn s.tag ~prefix:parent in
             let normalised =
-              if String.is_suffix suffix ~suffix:"_stub_summary"
-              then "_stub_summary"
-              else "_summary"
+              if String.is_suffix suffix ~suffix:"_stub_inspect"
+              then "_stub_inspect"
+              else "_inspect"
             in
             Some (s.rule, normalised)
           else None
@@ -1901,7 +1901,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
     let tbl = Hashtbl.create (module String) in
     List.iter steps ~f:(fun s ->
         let skip =
-          String.is_suffix s.tag ~suffix:"_summary"
+          String.is_suffix s.tag ~suffix:"_inspect"
           || (String.equal s.tag "scan_source" && not include_scan)
         in
         if not skip then
@@ -1921,15 +1921,15 @@ let write_project_output ~dir ~project_name ~variant ~steps
   let view_dir = [%string "%{run_dir}/diagrams"] in
   ensure_dir view_dir;
   (* Maps canonical summary tag → all concrete step tags for that summary kind.
-     E.g. "probe_lib_summary" → ["probe_lib_summary";"probe_lib_staged_summary";"probe_lib_apt_summary"]
+     E.g. "probe_lib_inspect" → ["probe_lib_inspect";"probe_lib_staged_inspect";"probe_lib_apt_inspect"]
      Used by the overview to show all concrete IDs in one collapsed summary node. *)
   let summary_tags_by_canonical =
-    (* Normalize a tag suffix to "_stub_summary" or "_summary".
-       Required because String.is_suffix ~suffix:"_summary" also matches
-       "_stub_summary", which would double-count step 11 in both buckets. *)
+    (* Normalize a tag suffix to "_stub_inspect" or "_inspect".
+       Required because String.is_suffix ~suffix:"_inspect" also matches
+       "_stub_inspect", which would double-count step 11 in both buckets. *)
     let norm_suffix tail =
-      if String.is_suffix tail ~suffix:"_stub_summary" then "_stub_summary"
-      else "_summary"
+      if String.is_suffix tail ~suffix:"_stub_inspect" then "_stub_inspect"
+      else "_inspect"
     in
     let tbl = Hashtbl.create (module String) in
     List.iter summary_rules ~f:(fun (rule, suffix) ->
@@ -1937,7 +1937,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
         let rule_base = string_of_rule rule in
         let concretes = List.filter_map steps ~f:(fun s ->
             if Poly.equal s.rule rule
-            && String.is_suffix s.tag ~suffix:"_summary" then
+            && String.is_suffix s.tag ~suffix:"_inspect" then
               match String.chop_prefix s.tag ~prefix:rule_base with
               | Some tail when String.equal (norm_suffix tail) suffix -> Some s.tag
               | _ -> None

@@ -24,7 +24,7 @@ let decl : Canary_pattern_a.t = {
     brew_dylib = "libssl.dylib";
   };
   native_probe_prefix = "SSL_";
-  native_summary_prefixes = [ "SSL_"; "TLS_"; "BIO_" ];
+  native_inspect_prefixes = [ "SSL_"; "TLS_"; "BIO_" ];
   (* Stable TLS-context construction & I/O entry points present in both
      OpenSSL 1.x and 3.x. Names that disappeared (e.g. `SSLv23_method`
      removed in 3.0) would surface as missing — exactly the 1→3 drift

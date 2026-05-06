@@ -26,16 +26,16 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     split, C API surface (consumer/provider cross-check + provider-vs-
     provider delta), mismatch prediction, Python summary enhancements.
     The shipped portion (Steps C1, D-basic for OCaml + Python) is
-    documented in `doc/canary/design/api_interface.md` §13. Open items
+    documented in `doc/canary/design/api_surface.md` §13. Open items
     (#35, #20, #41, #42) remain.
 
-43. **L1b — versioned symbol requirements in compat check** — `summarize_native.py`
+43. **L1b — versioned symbol requirements in compat check** — `inspect_native.py`
     already records `versioned_req` (e.g. `{"GLIBC_2.31": 3}`) per artifact.
     Today's `check_c_compat` is L0 only (set inclusion of names). Lift it to
     L1b: a binding requires a specific @VER suffix on a symbol, the lib must
     provide that or higher. Adds glibc/libstdc++ floor checking — predicts
     failures from binaries built on newer distros that won't run on older
-    ones, even when symbol names match. See `doc/canary/design/api_interface.md`
+    ones, even when symbol names match. See `doc/canary/design/api_surface.md`
     §13.6.
 
 44. **L2 — typed signatures via clang AST or libclang** — today's compat
@@ -45,10 +45,10 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     compiler output. Then `check_compat` is real subtyping with contravariance
     on argument types, covariance on results, refinement on value domains.
     Gives a decidable-but-conservative type-system over artifact interfaces;
-    catches "same name, different signature" version drift. See api_interface.md
+    catches "same name, different signature" version drift. See api_surface.md
     §13.1 "typing-rule shape" and §15 "open theoretical questions".
 
-17. **Module interfaces (.mli)** — define contracts for PM modules
+17. **Module surfaces (.mli)** — define contracts for PM modules
     (`canary_pm_{apt,brew,opam,pip}`) and project modules (`canary_project_*.ml`).
 
 
@@ -83,14 +83,14 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `canary_backend_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
 
-36. **Diagram fidelity: `scan_source` and `_summary` steps have no nodes** —
+36. **Diagram fidelity: `scan_source` and `_inspect` steps have no nodes** —
     `scan_source` runs as a post-fetch check (verifying header/binding-dir
     claims) but shares the `fetch_source` output dir and is invisible in
-    `result.mmd`. Similarly, `*_summary` introspection steps are emitted by
+    `result.mmd`. Similarly, `*_inspect` introspection steps are emitted by
     `derive_steps` as follow-ups after each probe but are not rendered in the
     diagram. Both gaps make the diagram an incomplete view of what canary
     actually runs. When the diagram is redesigned, add dedicated action nodes
-    for `scan_source` and per-probe `*_summary` steps. May require extending
+    for `scan_source` and per-probe `*_inspect` steps. May require extending
     `store_rules` with new rule variants or a separate "annotation step" layer.
 
 37. **HTML diagram viewer with node-group visibility toggles and log drill-down** —
@@ -101,7 +101,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     (b) Provides checkboxes / toggle buttons to show/hide node groups:
         stores, summary steps, `scan_source`, disabled/`st_nospec` actions;
     (c) Makes each action node clickable to open (or inline) the corresponding
-        log file (`probe.log`, `summary.json`, `actions.log`) from the run
+        log file (`probe.log`, `inspect.json`, `actions.log`) from the run
         output directory — enables reading results without leaving the viewer.
     The HTML file would live alongside `result.mmd` in each run's output dir.
     Consider whether a single template (`canary_backend_html.ml`) can serve
@@ -115,7 +115,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     local pip index or venv, enabling a `probe_python_pip` variant that tests
     the packaged wheel rather than the raw build artifact. Prerequisite:
     `probe_python` build-tree variant (test the raw `.so` before packaging)
-    as the base to compare against. See `api_interface.md §5` for the co-provider
+    as the base to compare against. See `api_surface.md §5` for the co-provider
     design — pip wheels often bundle their own native lib, so `pack_python` for
     z3 would produce a co-provider artifact.
 
@@ -123,7 +123,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     ordered list; `run_graph` walks it linearly. There is no mechanism to
     conditionally trigger steps, register follow-ups keyed by a trigger rule, or
     react to runtime outcomes (success, failure, produced artifact). Three ad-hoc
-    cases in `derive_steps` (`scan_source`, `_summary`, `probe_binding`
+    cases in `derive_steps` (`scan_source`, `_inspect`, `probe_binding`
     multi-probe) all share the same shape — a parent rule emitting dependent
     follow-up steps — but each was wired in separately (action enumeration
     tension; see worklog history). A general dispatch model would let steps
@@ -165,6 +165,6 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     potentially adding a separate inspect step to surface the bundled lib's
     symbol set for compat checking.
 
-    See `doc/canary/design/api_interface.md §5` (co-provider design) and
+    See `doc/canary/design/api_surface.md §5` (co-provider design) and
     backlog #38 (`pack_python` wheel packaging, which has the same
     co-provider shape on the producer side).

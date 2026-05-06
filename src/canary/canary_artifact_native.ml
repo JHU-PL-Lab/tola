@@ -95,20 +95,20 @@ test "$COUNT" -gt 0|}]
 
 (* Emit compact artifact summary as summary.json.
    Dumps total symbol count, per-prefix counts, versioned-deps map (L1b),
-   and a watchlist presence check. See doc/canary/design/api_interface.md. *)
+   and a watchlist presence check. See doc/canary/design/api_surface.md. *)
 (* Note: [lib] is embedded in double quotes so shell variable expansion works
    (e.g., passing "$LIB_Z3" from a resolve snippet). Callers using literal
    paths get the usual behavior; paths with shell metacharacters or spaces
    need escaping at the call site. *)
-let summary_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
+let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
   let nm_flag = if is_macos then "-g" else "-D" in
   (* On macOS, Mach-O nm prefixes every C symbol with `_`. Tell the parser
      to strip it; on Linux the symbol IS the C ABI name (no strip). *)
   let strip_flag = if is_macos then "--strip-leading-underscore " else "" in
-  let script = "canary/scripts/summarize_native.py" in
+  let script = "canary/scripts/inspect_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_key.filename ~variant_key ~base:"summary" ~ext:"json" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
   | python3 %{script} %{strip_flag}--emit-symbols --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \

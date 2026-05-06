@@ -2,7 +2,7 @@
 
 How canary expands its target coverage: which projects we're queueing,
 how a project lands mechanically today, and what the future auto-generation
-shape looks like. Companion to [api_interface.md](api_interface.md) (interface
+shape looks like. Companion to [api_surface.md](api_surface.md) (interface
 model the candidates collectively stress-test) and the
 [opam survey](../surveys/opam.md) (data behind tier picks).
 
@@ -73,10 +73,10 @@ committing to the template up-front:
 | 2 | llvm                   | 2026-03    | A+C hybrid; local + CI                                                 |
 | 3 | sqlite                 | 2026-03    | Pattern A; local + CI                                                  |
 | — | python primitives      | 2026-04-23 | Sqlite/z3/llvm pip probes, both local + CI                             |
-| 7 | zarith                 | 2026-04-25 | Pattern A. Surfaced `summarize_native.py` GMP `__gmp*` stripping bug   |
+| 7 | zarith                 | 2026-04-25 | Pattern A. Surfaced `inspect_native.py` GMP `__gmp*` stripping bug   |
 | 5 | ssl                    | 2026-04-25 | Pattern A second datapoint. `Ssl.get_version` doesn't exist in v0.7.0  |
 | — | Pattern A template     | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines      |
-| — | api-compat milestone   | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [api_interface.md §13](api_interface.md) |
+| — | api-compat milestone   | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [api_surface.md §13](api_surface.md) |
 
 ---
 
@@ -179,7 +179,7 @@ PyTorch stresses canary's model in ways z3 / llvm don't:
    `conflicts: libtorch { < 2.1.0 | >= 2.2.0 }`. pip's default is
    typically outside that range → classic cross-PM mismatch.
 4. **Multiple library binaries.** `libtorch_cpu.so`, `libtorch_cuda.so`,
-   `libc10.so`, `libc10_cuda.so` — summary needs to cover the set.
+   `libc10.so`, `libc10_cuda.so` — surface needs to cover the set.
 
 ### Multi-PM matrix canary will exercise
 
@@ -211,7 +211,7 @@ Each row is one canary action variant; together they capture the full
 
 1. **Variant 1** — pip-torch (Python-only, CPU wheel ~200 MB):
    `pip install torch --index-url …/cpu` → `import torch; …` probe.
-   Native summary on `site-packages/torch/lib/libtorch_cpu.so`,
+   Native inspect on `site-packages/torch/lib/libtorch_cpu.so`,
    path discovered at runtime.
 2. **Variant 2** — opam torch + pip torch interop: pip-install first,
    then `opam install torch`. Capture conflict-failure as
@@ -237,7 +237,7 @@ Each row is one canary action variant; together they capture the full
 
 ### Why high-leverage
 
-- Forces the Python summary pipeline beyond its "sqlite3 toy" comfort zone.
+- Forces the Python inspect pipeline beyond its "sqlite3 toy" comfort zone.
 - Exposes multi-PM interop modelling needs before we over-abstract a template.
 - Yields a concrete "here's a mismatch canary detected" story for the
   research narrative (version-range conflicts across PMs).

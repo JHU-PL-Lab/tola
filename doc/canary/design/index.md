@@ -1,8 +1,8 @@
 # Canary — Unified Design
 
 The design narrative: vision, identity model, action graph, workflow,
-design principles. For interface theory + the compat-check
-implementation see [api_interface.md](api_interface.md). For the
+design principles. For surface theory + the compat-check
+implementation see [api_surface.md](api_surface.md). For the
 expansion roadmap and per-target plans see
 [new_project.md](new_project.md). Doc map at
 [../README.md](../README.md).
@@ -32,10 +32,10 @@ Canary's two-track approach:
   per [new_project.md §1](new_project.md). Track 1's
   machinery: action graph, runner, summary system.
 - **Track 2 — Interface theory.** Behind the messy practice lies a clean
-  abstraction: the *interface* between a library and a binding. If we can
-  characterise this interface formally we can *infer* compatibility,
+  abstraction: the *surface* between a library and a binding. If we can
+  characterise this surface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [api_interface.md](api_interface.md).
+  Details in [api_surface.md](api_surface.md).
 
 The two tracks reinforce each other. Empirical results validate or contradict
 inferences; the theory guides which combinations are worth testing.
@@ -58,7 +58,7 @@ opam `ssl`, opam `llvm.19-shared`), they couple. The model must track
 version axes per (binding, runtime), not per project.
 
 This is why the package provider model in
-[api_interface.md §5](api_interface.md) has to model providers and their
+[api_surface.md §5](api_surface.md) has to model providers and their
 version pins explicitly, not implicitly.
 
 ## 3. Action graph & store model
@@ -145,7 +145,7 @@ canary action <project>
             (skip if check_post already passes — caching)
             exec cmd   → writes to _out/canary/projects/<project>/<tag>/
             check_post → verify output
-            on Probe rule → record summary.json (api_interface.md §8)
+            on Probe rule → record inspect.json (api_surface.md §8)
 ```
 
 Each step's output lives in `_out/canary/projects/<project>/<tag>/`. A step
@@ -164,13 +164,13 @@ declarative metadata that make the shell less opaque to canary:
   → `native_api` → `binding_api` per language). Provider claims (header
   paths, symbol prefixes, stable-symbol watchlist) and consumer claims
   (per-language module watchlists) are separate. See
-  [api_interface.md §4](api_interface.md).
+  [api_surface.md §4](api_surface.md).
 - **`scan_source`** — a step emitted after `fetch_source` that verifies
   the api_source claims (headers exist, binding source dirs present);
   blocks the build chain on spec drift.
 - **Per-artifact summaries** (mli, c-stub, native, python) — written at
   install steps (`fetch_*_binding` / `pack_*_binding`) and probe-lib
-  steps. Cached as `summary.json` / `stub_summary.json` under
+  steps. Cached as `inspect.json` / `stub_inspect.json` under
   `_out/canary/projects/<project>/<variant>/<step>/`.
 
 The summaries feed a **compatibility check** (`canary_compat.ml`,
@@ -178,7 +178,7 @@ The summaries feed a **compatibility check** (`canary_compat.ml`,
 at runtime, so `step_expectation` doesn't need hand-written
 `contains_any` lists for cases the cross-check covers. End-to-end demos
 on LLVM 19 (OCaml `Opcode.UncondBr`) and Z3 stable (Python
-`parser_context`). See [api_interface.md §13](api_interface.md) for design and
+`parser_context`). See [api_surface.md §13](api_surface.md) for design and
 implementation details.
 
 ### Per-language binding integration
@@ -216,16 +216,16 @@ fifth language binding lands.
    ↓
 [Scan]       fetch_source → scan_source verifies api_source claims  (§4)
    ↓
-[Install]    fetch/pack_*_binding → produces summary.json + stub_summary.json
+[Install]    fetch/pack_*_binding → produces inspect.json + stub_inspect.json
    ↓
 [Probe]      compile/run examples per binding (OCaml + Python)
    ↓
 [Predict]    Expect_compat_failure derives expected substrings from
-             cached install-step summaries (api_interface.md §13)
+             cached install-step summaries (api_surface.md §13)
    ↓
 [Verify]     canary verify cross-references prediction vs probe.log
    ↓
-[Compare]    canary summary-diff between two snapshots (drift detection)
+[Compare]    canary inspect-diff between two snapshots (drift detection)
 ```
 
 The stages map to canary's action_step model: each stage produces an output

@@ -44,6 +44,10 @@ let z3_api_source : Canary_artifact_api.t =
           "Z3_mk_optimize_assert_soft";
           "Z3_mk_seq_replace_re_all";
         ];
+      versioned_symbols = [];
+      soname    = None;
+      c_runtime = None;
+      cxx_abi   = None;
     }
   in
   let ocaml_binding : Canary_artifact_api.binding_api =
@@ -54,6 +58,7 @@ let z3_api_source : Canary_artifact_api.t =
          under the package's filename-derived top-level prefix). *)
       module_watchlist =
         [ "Z3"; "Z3.Solver.add"; "Z3.Optimize.minimize"; "Z3.Expr.mk_app" ];
+      type_watchlist = [];
     }
   in
   (* z3-solver is a pre-compiled pip wheel; source_dir marks in-tree source
@@ -80,6 +85,7 @@ let z3_api_source : Canary_artifact_api.t =
           "Bool";
           "parser_context";
         ];
+      type_watchlist = [];
     }
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
@@ -529,7 +535,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Expect_compat_failure {
             inputs = [
               Python_attrs
-                { paths = [ "fetch_binding_python/summary.json" ] };
+                { paths = [ "fetch_binding_python/inspect.json" ] };
             ];
             version_info = Some {
               provider_version = "z3-solver pip wheel";
@@ -539,13 +545,13 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             };
           }
       | _ -> Expect_success);
-    summary_note =
+    inspect_note =
       (if not source.has_build_binding then
          Some
            (Canary_artifact_api.stable_reuse_warning ~source_name:"z3"
               ~source_version:source.version)
        else None);
-    summary =
+    inspect =
       (fun rule _loc ->
         let api =
           Option.value_exn source.api_source
@@ -566,7 +572,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             Some
               (fun ~output_dir ~variant_key ->
                 let sum =
-                  Canary_artifact_native.summary_cmd ~lib:"$LIB_Z3"
+                  Canary_artifact_native.inspect_cmd ~lib:"$LIB_Z3"
                     ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ]
                     ~watchlist:(Canary_artifact_api.native_watchlist api)
                     ~output_dir ~variant_key ()

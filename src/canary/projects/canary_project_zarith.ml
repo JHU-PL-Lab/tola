@@ -18,7 +18,7 @@ let decl : Canary_pattern_a.t = {
     brew_dylib = "libgmp.dylib";
   };
   native_probe_prefix = "__gmp";
-  native_summary_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmp_" ];
+  native_inspect_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmp_" ];
   (* Decades-stable GMP integer ops. Removing one would be a major upstream
      break — exactly the bellwether the watchlist is for. *)
   native_watchlist = [

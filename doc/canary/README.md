@@ -2,8 +2,8 @@
 
 Directory map for `doc/canary/`. Files grouped by intent.
 
-**Start with `design/index.md` for the narrative**, `design/api_interface.md`
-for the interface model + compat-check implementation, and
+**Start with `design/index.md` for the narrative**, `design/api_surface.md`
+for the surface model + compat-check implementation, and
 `design/new_project.md` for the expansion roadmap. See `CLAUDE.md`
 (project root) for live status, gaps, and current gotchas.
 
@@ -15,14 +15,14 @@ updated as the model evolves.
 | File | Topic |
 |---|---|
 | [index.md](design/index.md) | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
-| [api_interface.md](design/api_interface.md) | Interface contract (`provides ⊆ requires`; L1a–L5 layering; failure taxonomy), `canary_artifact_api` types, `summary.json` schema, §13 working compat-check implementation |
+| [api_surface.md](design/api_surface.md) | Interface contract (`provides ⊆ requires`; L1a–L5 layering; failure taxonomy), `canary_artifact_api` types, `inspect.json` schema, §13 working compat-check implementation |
 | [new_project.md](design/new_project.md) | Expansion portfolio (two-tier candidate framework), mechanics for adding a project, auto-generation plan (#29/#30/#32), PyTorch case study |
 | [diagram.md](design/diagram.md) | Diagram improvements plan: summary node fidelity (#36), multi-view per project, HTML viewer (#37) |
 
 ## surveys/ — background research
 
 Pre-code survey data. Source of truth for `design/new_project.md`
-candidate selection and the `design/api_interface.md` failure taxonomy.
+candidate selection and the `design/api_surface.md` failure taxonomy.
 
 | File | Topic |
 |---|---|

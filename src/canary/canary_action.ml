@@ -99,20 +99,20 @@ type script_spec = {
   (* Auto-summary pkg names for binding probes. When api_source is present and
      a matching lang entry exists here, derive_steps auto-generates a summary
      step after each Probe (Binding lang) step:
-       OCaml → mli_summary_opam_pkg_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
-       Python → python_summary_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
+       OCaml → mli_inspect_opam_pkg_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
+       Python → python_inspect_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
      Typical projects set this and omit binding arms from [summary]. *)
   binding_summary : (Canary_artifact_api.lang * string) list;
   (* Optional note prepended to auto-generated binding summaries (shell echo).
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
-  summary_note : string option;
-  (* Explicit per-rule summary override. Wins over auto-generation.
+  inspect_note : string option;
+  (* Explicit per-rule inspect override. Wins over auto-generation.
      Use for native probe summaries (lib path is always project-specific)
      or any case needing custom logic beyond what api_source provides.
      loc is Some _ for per-location probe variants, None for single-location rules.
-     See doc/canary/design/api_interface.md. *)
-  summary : rule -> location option -> (output_dir:string -> variant_key:string -> string) option;
+     See doc/canary/design/api_surface.md. *)
+  inspect : rule -> location option -> (output_dir:string -> variant_key:string -> string) option;
   (* Human-readable artifact name per kind for diagram labels. *)
   artifact_name : artifact_kind -> string option;
 }
@@ -133,8 +133,8 @@ let empty_script_spec = {
   expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
   binding_summary = [];
-  summary_note = None;
-  summary = (fun _ _ -> None);
+  inspect_note = None;
+  inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
 }
 
@@ -299,7 +299,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                 false)
               else
                 (* Resolve compat summary paths relative to the project dir.
-                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/summary_stub.json").
+                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/inspect_stub.json").
                    v3 layout: step_tag is mapped through step_dir_of_tag for action-first dirs,
                    and the filename is variant-key-qualified (_19.json for variant "19"). *)
                 let pick_first_existing rels =
@@ -330,7 +330,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                           Canary_compat.Ocaml_mli p)
                     | Python_attrs { paths } ->
                         Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat.Python_attrs p))
+                          Canary_compat.Python_attrs p)
+                    | Versioned_symbols { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.Versioned_symbols p))
                 in
                 let derived =
                   Canary_compat.predicted_contains_any_v2 typed_inputs
@@ -695,14 +698,14 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
   in
   (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
-     creating a separate <parent>_summary/ directory. Depends on parent;
+     creating a separate <parent>_inspect/ directory. Depends on parent;
      check_post verifies the named file exists in that shared dir.
-     [tag_suffix] is appended to parent_tag (e.g. "_summary", "_stub_summary");
-     [filename] is the basename written by [summary_cmd] (e.g. "summary.json",
-     "stub_summary.json"). The cmd is responsible for redirecting to that file. *)
-  let mk_summary ~parent_tag ~rule ~tag_suffix ~base_name ~summary_cmd =
+     [tag_suffix] is appended to parent_tag (e.g. "_inspect", "_stub_inspect");
+     [filename] is the basename written by [inspect_cmd] (e.g. "inspect.json",
+     "stub_inspect.json"). The cmd is responsible for redirecting to that file. *)
+  let mk_inspect ~parent_tag ~rule ~tag_suffix ~base_name ~inspect_cmd =
     let tag = parent_tag ^ tag_suffix in
-    (* base_name is the variant-independent base (e.g. "summary", "summary_stub").
+    (* base_name is the variant-independent base (e.g. "inspect", "inspect_stub").
        The actual filename is base_name + "_" + variant_key + ".json" at run time. *)
     let check_post ~output_dir ~variant_key =
       has_file ~output_dir (Canary_step_key.filename ~variant_key ~base:base_name ~ext:"json")
@@ -710,7 +713,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
     mk_step ~root ~project ~cache_project ~tag
       ~output_tag:parent_tag ~rule
       ~deps:[ parent_tag ]
-      ~cmd:summary_cmd ~check_post ~expectation:Expect_success
+      ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ()
   in
   (* A summary attached to a parent step: (tag suffix, filename, command).
@@ -724,8 +727,8 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
   in
   (* Tuples: (tag_suffix, base_name, cmd).
      base_name is the variant-independent part of the output filename:
-       "summary"      → summary.json / summary_19.json
-       "summary_stub" → summary_stub.json / summary_stub_19.json   (type-first) *)
+       "inspect"      → summary.json / summary_19.json
+       "inspect_stub" → inspect_stub.json / inspect_stub_19.json   (type-first) *)
   let auto_binding_summaries rule
       : (string * string * (output_dir:string -> variant_key:string -> string)) list =
     match spec.api_source with
@@ -742,8 +745,8 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
             Canary_artifact_api.binding_watchlist_exn api Canary_artifact_api.OCaml
           in
           let mli =
-            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
-              Canary_artifact_lang.mli_summary_opam_pkg_cmd
+            prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
+              Canary_artifact_lang.mli_inspect_opam_pkg_cmd
                 ~pkg ~watchlist:wl ~output_dir ~variant_key ())
           in
           let prefix =
@@ -752,14 +755,14 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
             | [] -> ""
           in
           let stub =
-            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
-              Canary_artifact_lang.stub_summary_opam_pkg_cmd
+            prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
+              Canary_artifact_lang.stub_inspect_opam_pkg_cmd
                 ~pkg ~prefix ~watchlist:[] ~output_dir ~variant_key ())
           in
-          [ ("_summary", "summary", mli);
-            ("_stub_summary", "summary_stub", stub) ]
+          [ ("_inspect", "inspect", mli);
+            ("_stub_inspect", "inspect_stub", stub) ]
         in
-        let python_install_summary pkg =
+        let python_install_inspect pkg =
           (* Python summary attaches at Fetch (Binding Python) — the install
              step — so the cached summary.json is available before
              Probe (Binding Python) evaluates its (possibly compat-derived)
@@ -769,11 +772,11 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
               Canary_artifact_api.Python
           in
           let py =
-            prepend_note spec.summary_note (fun ~output_dir ~variant_key ->
-              Canary_artifact_lang.python_summary_cmd
+            prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
+              Canary_artifact_lang.python_inspect_cmd
                 ~pkg ~watchlist:wl ~output_dir ~variant_key ())
           in
-          [ ("_summary", "summary", py) ]
+          [ ("_inspect", "inspect", py) ]
         in
         match rule with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
@@ -785,24 +788,24 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
             (match List.Assoc.find spec.binding_summary
                      ~equal:Poly.equal Canary_artifact_api.Python with
              | None -> []
-             | Some pkg -> python_install_summary pkg)
+             | Some pkg -> python_install_inspect pkg)
         | _ -> []
   in
-  (* spec.summary is the explicit override (legacy, single-summary). When
+  (* spec.inspect is the explicit override (legacy, single-summary). When
      present, it wins and we skip auto generation entirely. *)
-  let attach_summary ~parent_tag ~rule ?loc base_step =
-    match spec.summary rule loc with
+  let attach_inspect ~parent_tag ~rule ?loc base_step =
+    match spec.inspect rule loc with
     | Some c ->
         [ base_step;
-          mk_summary ~parent_tag ~rule ~tag_suffix:"_summary"
-            ~base_name:"summary" ~summary_cmd:c ]
+          mk_inspect ~parent_tag ~rule ~tag_suffix:"_inspect"
+            ~base_name:"inspect" ~inspect_cmd:c ]
     | None ->
         let summaries = auto_binding_summaries rule in
         if List.is_empty summaries then [ base_step ]
         else
           base_step ::
-          List.map summaries ~f:(fun (tag_suffix, base_name, summary_cmd) ->
-              mk_summary ~parent_tag ~rule ~tag_suffix ~base_name ~summary_cmd)
+          List.map summaries ~f:(fun (tag_suffix, base_name, inspect_cmd) ->
+              mk_inspect ~parent_tag ~rule ~tag_suffix ~base_name ~inspect_cmd)
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
@@ -839,7 +842,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
                   ~deps ~cmd ~check_post ~expectation ~symbol_check () in
-                attach_summary ~parent_tag:ptag ~rule ~loc base)
+                attach_inspect ~parent_tag:ptag ~rule ~loc base)
         | Probe (Binding lang) ->
             Hashtbl.set seen ~key:tag ~data:true;
             let entries = List.filter spec.probe_binding
@@ -858,14 +861,14 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
                   ~deps ~cmd ~check_post ~expectation ~symbol_check () in
-                attach_summary ~parent_tag:ptag ~rule ~loc base)
+                attach_inspect ~parent_tag:ptag ~rule ~loc base)
         | _ ->
             match script_of_rule spec rule with
             | None -> []
             | Some cmd ->
                 Hashtbl.set seen ~key:tag ~data:true;
                 let base = mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd in
-                let steps = attach_summary ~parent_tag:tag ~rule base in
+                let steps = attach_inspect ~parent_tag:tag ~rule base in
                 (* Emit scan_source after fetch_source when wired *)
                 (match rule, spec.scan_source with
                  | Fetch Source, Some scan_cmd

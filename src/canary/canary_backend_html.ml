@@ -333,7 +333,7 @@ let render
     const vkFile = (base, ext) => vk ? base + '_' + vk + '.' + ext : base + '.' + ext;
     const candidates = [
       vkFile('probe', 'log'), vkFile('summary', 'json'),
-      vkFile('summary_stub', 'json'), vkFile('install', 'log'), vkFile('symbols', 'log')
+      vkFile('inspect_stub', 'json'), vkFile('install', 'log'), vkFile('symbols', 'log')
     ];
     let filesHtml = '';
     for (const fname of candidates) {
@@ -430,7 +430,7 @@ let render
    Renders as a simple table with status counts and a link to each run's
    result.html. Usually written to _out/canary/projects/index.html. *)
 
-let _status_summary (e : index_entry) =
+let _status_inspect (e : index_entry) =
   let parts = ref [] in
   if e.failed_steps > 0 then
     parts := Printf.sprintf {|<span class="badge failed">%d failed</span>|}
@@ -461,7 +461,7 @@ let _index_row (e : index_entry) =
     (html_escape e.variant)
     (html_escape e.run_at)
     e.total_steps
-    (_status_summary e)
+    (_status_inspect e)
     (html_escape e.source_kind)
 
 let render_index ~(entries : index_entry list) ~generated_at =

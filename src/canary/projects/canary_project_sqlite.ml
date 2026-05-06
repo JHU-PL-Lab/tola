@@ -93,14 +93,14 @@ let script_spec : Canary_action.script_spec =
        override at probe time. (Python summary is at probe time rather than
        fetch step here — Phase 3d's pre-cache benefit only kicks in for
        projects that opt into the api_source flow.) *)
-    summary = (fun rule loc -> match rule, loc with
+    inspect = (fun rule loc -> match rule, loc with
       | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; _ })) ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.python_summary_cmd
+            Canary_artifact_lang.python_inspect_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ~variant_key ())
       | Probe (Binding _), _ ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.summary_opam_pkg_cmd
+            Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ~variant_key ())
       | _ -> None);
     artifact_name = (function
