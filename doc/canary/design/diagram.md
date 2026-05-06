@@ -50,6 +50,13 @@ in any diagram refers to the same step as `[N]` in any other diagram for the
 same run. This makes diagrams comparable and the viewer's action list the
 single source of truth.
 
+This invariant is enforced by a **post-generation checker** that runs after all
+diagrams are written. It scans every `.mmd` file for `[N]` references and
+verifies the union equals the full step set from `step_ids`. A mismatch logs a
+warning (`! invariant: missing step IDs [N]`) in `actions.log`. This catches
+regressions where a renderer parameter change accidentally drops a step from a
+view.
+
 ---
 
 ## Output layout
@@ -57,7 +64,7 @@ single source of truth.
 Every `canary action <project>` run writes:
 
 ```
-_out/canary/projects/<project>/_run/
+_out/canary/projects/<project>/-run/
   diagrams/
     all.mmd             ← overview (min)
     full.mmd            ← full expanded (max)
@@ -87,10 +94,12 @@ Every artifact kind is one node; every probe rule is one collapsed node.
   (`lib [1][6]`).
 - **Action nodes** — hexagons for build/install/pack, pills for probes and
   follow-up steps.
-- **Combined probe labels** — `probe_lib [17][19][21]` shows all concrete
-  step IDs for a rule via `steps_by_rule_tag`.
-- **Combined summary labels** — `probe_lib_summary [18][20][22]` shows all
-  concrete summary IDs via `summary_tags_by_canonical`.
+- **Combined probe labels** — `probe_lib [17][18][19][20][21][22]` shows all
+  concrete step IDs for a rule via `steps_by_rule_tag`, with summary IDs
+  inlined via `summary_tags_by_canonical`. Likewise, `pack_binding_ocaml
+  [9][10][11]` inlines both pack and summary IDs. Summary inlining applies
+  when a probe/pack/fetch kind is not expanded; separate summary pills only
+  appear in views where the parent kind is expanded (lib, probes, binding_*).
 - **Status colours** — green (done), yellow (expected-fail), red (failed),
   grey-dashed (skipped), light grey (not-in-spec).
 - **Edge colours** — match the downstream step status.
@@ -193,9 +202,14 @@ view; was removed to keep the tab count manageable).
 ### Focal artifact expansion — `expand_artifact` and subgraphs
 
 Only `lib` and `binding_*` views expand their artifact node into per-variant
-nodes, wrapped in subgraph(s) that mirror the `full` diagram structure. The
-`focal_predicate` colours focal steps solid green (`st_done`) and non-focal
-done steps dim green (`st_done_ctx`).
+nodes, wrapped in subgraph(s) that mirror the `full` diagram structure. Each
+per-variant node label embeds the **producer step's `[N]` ID** —
+`build_lib [5]` → `libz3.so (dev) [5]`, `fetch_lib [7]` → `libz3.so (4.15.2) [7]`,
+`pack_binding_ocaml [9]` → `z3 (dev) [9]`. This is computed by
+`_compute_expand` in `canary_action.ml`, which maps each variant to its
+producer step (build → build_tag, staged → install_lib, pack PM → pack step,
+fetch PM → fetch step). The `focal_predicate` colours focal steps solid green
+(`st_done`) and non-focal done steps dim green (`st_done_ctx`).
 
 ### Subgraph structure for expanded kinds
 
@@ -256,7 +270,7 @@ in the action list via `STEPS[t] || STEPS.find(k => k.startsWith(t+'_'))`.
 
 ### Step detail
 
-Lazily fetches files from the step's output directory (relative to `_run/`):
+Lazily fetches files from the step's output directory (relative to `-run/`):
 `probe.log`, `summary.json`, `summary_stub.json`, `install.log`,
 `symbols.log` — all variant-qualified (`probe_dev_1d8c50.log`).
 
@@ -311,6 +325,7 @@ overall status badge / link to `result.html`.
 | `summary_rules` | `(rule * string) list` | which (rule, suffix) pairs produce summary follow-up nodes |
 | `has_scan` | `bool` | whether a scan_source node exists (affects source label and standalone node) |
 | `chain_scan` | `bool` | Full only: route configure through scan_source node |
+| `view_title` | `string option` | comment line in output (`"%% view: lib"`); omitted when None |
 
 ### `mermaid_full` (full view)
 
@@ -322,4 +337,10 @@ individual node; nothing is merged. Key inputs:
 | `variant_infos` | `(variant_id * version * action_tags) list` from `run_info.json`; drives version annotation on artifact nodes |
 | `step_ids` | same `[N]` label table |
 | `has_scan` | whether to emit scan_source node and dashed source edge |
+| `summary_rules` | accepted but ignored (summary and action IDs are both derived from `steps`) |
+| `artifact_names` | `artifact_kind -> string option`; supplies real artifact names for doc node labels (e.g. `libz3.so`) |
+| `view_title` | title comment in the output (default `"full"`) |
 | `status` | node status hashtable for colour classes and edge colours |
+
+Web-viewable output is copied to `docs/canary/projects/<project>/` for GitHub Pages.
+Build artifacts (`.ok`, `pack-repo/`, `*_example*`) are excluded.

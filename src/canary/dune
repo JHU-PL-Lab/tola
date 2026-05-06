@@ -12,6 +12,7 @@
   binding
   opam-core
   opam-format
-  fpath)
+  fpath
+  str)
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show)))

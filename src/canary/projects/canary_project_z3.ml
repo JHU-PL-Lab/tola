@@ -526,9 +526,9 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              the bundled Python module surface vs Z3 4.15+ source). Probe
              references it on purpose; expected substring is derived from
              the cached Fetch (Binding Python) summary's missing watchlist. *)
-          Canary_action.Expect_compat_failure {
+          Expect_compat_failure {
             inputs = [
-              Canary_action.Python_attrs
+              Python_attrs
                 { paths = [ "fetch_binding_python/summary.json" ] };
             ];
             version_info = Some {
@@ -573,4 +573,9 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                 in
                 prepend_warn [%string "%{lib_resolve}\n%{sum}"])
         | _ -> None);
+    artifact_name = (function
+      | Canary_basic.Lib -> Some "libz3.so"
+      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "z3"
+      | Canary_basic.Binding Canary_artifact_api.Python -> Some "z3-solver"
+      | _ -> None);
   }

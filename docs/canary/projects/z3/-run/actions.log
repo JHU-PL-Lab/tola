@@ -1,0 +1,29 @@
+[2026-05-06 17:01:41.588] *                          variant_start  (dev_1d8c50)
+[2026-05-06 17:01:41.588] *                          graph_start  (22 steps)
+[2026-05-06 17:01:41.589] *                          graph_end  (22/22 completed)
+[2026-05-06 17:01:41.589] *                          variant_start  (stable)
+[2026-05-06 17:01:41.589] *                          graph_start  (7 steps)
+[2026-05-06 17:01:41.589] *                          graph_end  (7/7 completed)
+[2026-05-06 17:01:41.589] *                          diagram  (_out/canary/projects/z3/-run/diagrams/all.mmd)
+[2026-05-06 17:01:41.589] *                          diagram  (_out/canary/projects/z3/-run/diagrams/full.mmd)
+[2026-05-06 17:01:41.590] *                          view  (source (2 steps))
+[2026-05-06 17:01:41.590] *                          view  (lib (9 steps))
+[2026-05-06 17:01:41.590] *                          view  (probes (9 steps))
+[2026-05-06 17:01:41.590] *                          view  (binding_ocaml (6 steps))
+[2026-05-06 17:01:41.590] *                          view  (binding_python (3 steps))
+[2026-05-06 17:01:41.592] *                          html  (_out/canary/projects/z3/-run/result.html)
+[2026-05-06 17:01:41.592] *                          index  (_out/canary/projects/index.html)
+[2026-05-06 17:01:41.592] !                          invariant  (full.mmd: connectivity errors:
+  [14]→[16]: no edge A_fetch_binding_python→A_probe_binding_python
+  [7]→[16]: no edge A_fetch_lib→A_probe_binding_python
+  [8]→[12]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
+  [7]→[12]: no edge A_fetch_lib→A_probe_binding_ocaml
+  [4]→[8]: no edge A_build_headers→A_build_binding_ocaml
+  [5]→[8]: no edge A_build_lib→A_build_binding_ocaml
+  [5]→[17]: no edge A_build_lib→A_probe_lib
+  [6]→[19]: no edge A_install_lib→A_probe_lib_staged
+  [9]→[13]: no edge A_pack_binding_ocaml→A_probe_binding_ocaml_opam
+  [7]→[13]: no edge A_fetch_lib→A_probe_binding_ocaml_opam
+  [7]→[21]: no edge A_fetch_lib→A_probe_lib_apt
+  [1]→[2]: no edge A_fetch_source→A_scan_source)
+[2026-05-06 17:01:41.592] !                          invariant  (SOME FAILED)

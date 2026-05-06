@@ -529,4 +529,9 @@ test -n "$LLVM_LIB"
     ~watchlist:(Canary_artifact_api.native_watchlist api)
     ~output_dir ~variant_key ()}|}])
       | _ -> None);
+    artifact_name = (function
+      | Canary_basic.Lib -> Some "libLLVM.so"
+      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "llvm"
+      | Canary_basic.Binding Canary_artifact_api.Python -> Some "llvmlite"
+      | _ -> None);
   }

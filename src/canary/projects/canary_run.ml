@@ -115,7 +115,7 @@ let dump_graph _distro =
   let graph_dir = "_out/canary/graph" in
   ignore (Stdlib.Sys.command [%string "mkdir -p %{graph_dir}"]);
   let path = [%string "%{graph_dir}/action_rule.mmd"] in
-  Tola_std.write_file path (mermaid_of_action_rule_schema (store_rules ~langs:[ OCaml ]));
+  Tola_std.write_file path (Canary_diagram.mermaid_of_action_rule_schema (store_rules ~langs:[ OCaml ]));
   Fmt.pr "Wrote %s@." path
 
 let dump_job_paths_with ~pp =

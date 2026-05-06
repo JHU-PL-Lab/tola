@@ -20,9 +20,12 @@
 
 _*
 
-# Canary run outputs for GitHub Pages are committed via `git add -f`.
-# _out/ remains gitignored for normal builds; only specific z3 run files are tracked.
-# See _out/canary/projects/z3/ for the committed subset.
+# docs/ is tracked for GitHub Pages — web-viewable files only.
+!docs/
+!docs/**
+docs/**/*.ok
+docs/**/pack-repo/
+docs/**/*_example*
 
 !__init__.py
 

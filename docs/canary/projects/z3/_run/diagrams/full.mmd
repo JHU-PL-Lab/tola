@@ -7,20 +7,20 @@ graph LR
       headers_node@{ shape: doc, label: "headers (dev)" }
     end
     subgraph lib_input_sg ["lib"]
-      lib_build_tree_node@{ shape: doc, label: "libz3.so (dev)" }
-      lib_apt_node@{ shape: doc, label: "libz3.so (4.15.2)" }
+      lib_build_tree_node@{ shape: doc, label: "lib (dev)" }
+      lib_apt_node@{ shape: doc, label: "lib (4.15.2)" }
     end
     subgraph lib_product_sg ["lib (product)"]
-      lib_staged_node@{ shape: doc, label: "libz3.so (dev)" }
+      lib_staged_node@{ shape: doc, label: "lib (dev)" }
     end
     subgraph ocaml_binding_input_sg ["ocaml binding"]
-      ocaml_binding_build_tree_node@{ shape: doc, label: "z3 (dev)" }
+      ocaml_binding_build_tree_node@{ shape: doc, label: "ocaml binding (dev)" }
     end
     subgraph ocaml_binding_product_sg ["ocaml binding (opam)"]
-      ocaml_binding_opam_node@{ shape: doc, label: "z3 (dev)" }
+      ocaml_binding_opam_node@{ shape: doc, label: "ocaml binding (dev)" }
     end
     subgraph python_binding_sg ["python binding"]
-      python_binding_node@{ shape: doc, label: "z3-solver (4.15.2)" }
+      python_binding_node@{ shape: doc, label: "python binding (4.15.2)" }
     end
 
     apt_store@{ shape: cyl, label: "apt" }
@@ -104,11 +104,11 @@ graph LR
     class A_install_lib st_done
     class A_fetch_lib st_done
     class A_build_binding_ocaml st_done
-    class A_pack_binding_ocaml st_done
-    class A_pack_binding_ocaml_summary st_done
-    class A_pack_binding_ocaml_stub_summary st_done
+    class A_pack_binding_ocaml st_failed
+    class A_pack_binding_ocaml_summary st_skipped
+    class A_pack_binding_ocaml_stub_summary st_skipped
     class A_probe_binding_ocaml st_done
-    class A_probe_binding_ocaml_opam st_done
+    class A_probe_binding_ocaml_opam st_skipped
     class A_fetch_binding_python st_done
     class A_fetch_binding_python_summary st_done
     class A_probe_binding_python st_expected_fail
@@ -135,18 +135,18 @@ graph LR
     linkStyle 14 stroke:#4caf50,stroke-width:3px
     linkStyle 15 stroke:#4caf50,stroke-width:3px
     linkStyle 16 stroke:#4caf50,stroke-width:3px
-    linkStyle 17 stroke:#4caf50,stroke-width:3px
-    linkStyle 18 stroke:#4caf50,stroke-width:3px
+    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 19 stroke:#4caf50,stroke-width:3px
     linkStyle 20 stroke:#4caf50,stroke-width:3px
-    linkStyle 21 stroke:#4caf50,stroke-width:3px
-    linkStyle 22 stroke:#4caf50,stroke-width:3px
+    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 23 stroke:#4caf50,stroke-width:3px
     linkStyle 24 stroke:#4caf50,stroke-width:3px
     linkStyle 25 stroke:#4caf50,stroke-width:3px
     linkStyle 26 stroke:#4caf50,stroke-width:3px
-    linkStyle 27 stroke:#4caf50,stroke-width:3px
-    linkStyle 28 stroke:#4caf50,stroke-width:3px
+    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 28 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 29 stroke:#4caf50,stroke-width:3px
     linkStyle 30 stroke:#4caf50,stroke-width:3px
     linkStyle 31 stroke:#4caf50,stroke-width:3px

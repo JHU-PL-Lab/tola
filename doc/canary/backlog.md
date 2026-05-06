@@ -146,3 +146,25 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `LLVM_OCAML_INSTALL_PATH`). Prerequisite: a fixed `$PREFIX` convention
     per project run, likely `$build/../install`.
 
+45. **z3-solver pip wheel is a co-provider (bundles its own libz3.so)** —
+    `z3-solver` is not a pure Python binding that depends on a separately
+    installed `libz3.so`; it ships its own copy of `libz3.so` inside the
+    wheel. This makes it a *co-provider*: one pip install delivers both the
+    native lib and the Python extension. Two gaps follow:
+
+    **Diagram**: the current `lib -.->|runtime|` edge from `lib_build_tree_node`
+    into `A_fetch_binding_python` and `A_probe_binding_python` is misleading —
+    z3-solver does not consume the externally built lib at runtime; it carries
+    its own. The correct diagram would show the python binding node as
+    self-contained (no runtime edge from the lib kind).
+
+    **Action enumeration**: `derive_steps` models Python bindings as always
+    depending on the native lib for runtime. A co-provider package violates
+    this assumption. The spec needs a way to declare that a pip package is
+    self-contained (co-provider), suppressing the lib runtime edge and
+    potentially adding a separate inspect step to surface the bundled lib's
+    symbol set for compat checking.
+
+    See `doc/canary/design/api_interface.md §5` (co-provider design) and
+    backlog #38 (`pack_python` wheel packaging, which has the same
+    co-provider shape on the producer side).

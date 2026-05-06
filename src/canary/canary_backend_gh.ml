@@ -1,4 +1,5 @@
 open Base
+open Canary
 
 (* ── GH Actions YAML backend ──
    Renders action_step lists as GH Actions workflow YAML.
@@ -27,7 +28,7 @@ let output_dir_of ~project ~tag =
 
 (* Render one action_step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)
-let render_gh_step ~project (step : Canary_action.action_step) =
+let render_gh_step ~project (step : action_step) =
   (* Use output_tag (not tag) so summary steps share the parent's directory. *)
   let out = output_dir_of ~project ~tag:step.output_tag in
   let raw_cmd = step.cmd ~output_dir:out ~variant_key:step.variant_id in
@@ -129,16 +130,16 @@ fi|}]
       in
       let typed_inputs =
         List.filter_map inputs ~f:(function
-          | Canary_action.C_stub { paths } ->
+          | C_stub { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
                 Canary_compat.C_stub p)
-          | Canary_action.Native_lib { paths } ->
+          | Native_lib { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
                 Canary_compat.Native_lib p)
-          | Canary_action.Ocaml_mli { paths } ->
+          | Ocaml_mli { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
                 Canary_compat.Ocaml_mli p)
-          | Canary_action.Python_attrs { paths } ->
+          | Python_attrs { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
                 Canary_compat.Python_attrs p))
       in
@@ -148,7 +149,7 @@ fi|}]
       render_failure_check ~contains_any
 
 let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
-    ~preamble_steps (steps : Canary_action.action_step list) =
+    ~preamble_steps (steps : action_step list) =
   let gh_steps =
     List.concat_map steps ~f:(render_gh_step ~project)
     |> String.concat ~sep:"\n"
@@ -198,7 +199,7 @@ type job_spec = {
   project : string;
   sys_deps : string list; (* apt packages to install before action steps *)
   preamble_steps : string list; (* raw yaml steps inserted after setup-ocaml *)
-  steps : Canary_action.action_step list;
+  steps : action_step list;
 }
 
 let render_workflow ?(runner_os = "ubuntu-latest") ?(ocaml_version = "5.2")

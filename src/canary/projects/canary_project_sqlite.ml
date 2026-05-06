@@ -103,4 +103,9 @@ let script_spec : Canary_action.script_spec =
             Canary_artifact_lang.summary_opam_pkg_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ~variant_key ())
       | _ -> None);
+    artifact_name = (function
+      | Canary_basic.Lib -> Some "libsqlite3.so"
+      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "sqlite3"
+      | Canary_basic.Binding Canary_artifact_api.Python -> Some "sqlite3"
+      | _ -> None);
   }
