@@ -308,6 +308,30 @@ overall status badge / link to `result.html`.
   than a split `lib_staged_node`; the per-variant routing is only wired for
   the focal artifact kind in `lib`/`binding_*` views.
 
+- **Model-first diagram architecture** — currently `mermaid_of_action_rule_schema`
+  (~630 lines) and `mermaid_full` (~450 lines) are two independent renderers that
+  both emit Mermaid text directly from rules/steps. They duplicate node emission,
+  edge routing, CSS styling, and status mapping. A model-first approach would:
+
+  1. Define a `diagram_model` type: nodes (with associated `[N]` IDs), edges,
+     styling — format-agnostic.
+  2. Build the fully-expanded model from rules + step data.
+  3. Apply merge/unmerge as operations on the model: collapse a kind into a pool
+     node, expand a kind into per-variant nodes, inline summaries. These are the
+     "zoom" operations that produce overview/focused/full views from one model.
+  4. Render with a thin `mermaid_of_model` walk over the model.
+
+  This eliminates the ~1100-line duplication and makes the zoom logic explicit
+  and testable. The invariant checker (see §Truth invariant) would operate
+  directly on the model rather than parsing rendered `.mmd` output.
+
+- **Invariant checker improvements** — the current checker verifies coverage
+  (all `[N]` appear) and connectivity (dependencies preserved across zoom
+  levels) by parsing `.mmd` output. With a model-first architecture it would
+  compare models directly. The connectivity check currently produces false
+  positives on BFS path finding; reachability through intermediate artifact
+  nodes needs fixing.
+
 ---
 
 ## Key renderer parameters
