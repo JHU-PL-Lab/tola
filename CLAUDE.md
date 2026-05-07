@@ -420,6 +420,19 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   compat test hex-encodes subprocess stderr — ANSI codes corrupt it. Fix:
   `cmake_runner.ml`'s `make_env` always injects `NO_COLOR=1`; never call
   `Unix.open_process_full` with `Unix.environment ()` directly in the runner.
+- **NEVER use sed or python on OCaml source.** Use the `Edit` tool exclusively.
+  sed cannot distinguish match-case scope, `let`/`in` boundaries, or which
+  `| _ -> None` is the intended anchor.  Append commands match multiple
+  locations, line numbers drift after earlier edits, and one bad deletion
+  can silently remove adjacent code.  `git checkout` recovery costs hours.
+  Examples from this project: `_summary→_inspect` sed corrupted
+  `binding_summary`; Python line-number-based removals cut into
+  `_counts_from_log` and `save_run_state`.  Edit → build → diff → commit
+  after each working tier.
+- **Catch-all ordering in `match`**: `| _ -> ...` or `| e -> ...` must come
+  LAST.  Putting it first makes all patterns below unreachable.  The
+  compiler warns `redundant-case` but doesn't error — the match silently
+  ignores later patterns.
 
 ## Conventions
 

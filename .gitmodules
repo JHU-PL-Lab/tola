@@ -1,6 +1,3 @@
 [submodule "vendor/multiverse/arbipher"]
 	path = vendor/multiverse/arbipher
 	url = https://github.com/arbipher/multiverse
-[submodule "yelu/vendor/yelu-lang"]
-	path = yelu/vendor/yelu-lang
-	url = https://github.com/yelu-lang/yelu-lang.git
