@@ -22,8 +22,8 @@ graph LR
     A_probe_binding_python(["probe_binding_python [6]"])
     A_probe_lib(["probe_lib"])
     A_probe_app(["probe_app"])
-    A_probe_binding_ocaml_summary(["inspect_ocaml [4]"])
-    A_probe_binding_python_summary(["inspect_python [7]"])
+    A_probe_binding_ocaml_inspect(["inspect_ocaml [4]"])
+    A_probe_binding_python_inspect(["inspect_python [7]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -53,8 +53,8 @@ graph LR
     lib_node -->|test| A_probe_lib
     app_node -->|test| A_probe_app
     lib_node -.->|runtime| A_probe_app
-    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_summary
-    A_probe_binding_python -.-> A_probe_binding_python_summary
+    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect
+    A_probe_binding_python -.-> A_probe_binding_python_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
@@ -80,8 +80,8 @@ graph LR
     class A_probe_binding_python st_done
     class A_probe_lib st_nospec
     class A_probe_app st_nospec
-    class A_probe_binding_ocaml_summary st_done
-    class A_probe_binding_python_summary st_done
+    class A_probe_binding_ocaml_inspect st_done
+    class A_probe_binding_python_inspect st_done
     linkStyle 0 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5

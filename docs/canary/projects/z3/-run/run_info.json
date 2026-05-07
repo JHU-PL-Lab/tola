@@ -10,8 +10,8 @@
       "system_pm": "apt",
       "opam_switch": "default",
       "ocaml_version": "5.4.1",
-      "timestamp": "2026-05-06 17:01:41.589",
-      "actions": ["fetch_source", "scan_source", "configure", "build_headers", "build_lib", "install_lib", "fetch_lib", "build_binding_ocaml", "pack_binding_ocaml", "pack_binding_ocaml_summary", "pack_binding_ocaml_stub_summary", "probe_binding_ocaml", "probe_binding_ocaml_opam", "fetch_binding_python", "fetch_binding_python_summary", "probe_binding_python", "probe_lib", "probe_lib_summary", "probe_lib_staged", "probe_lib_staged_summary", "probe_lib_apt", "probe_lib_apt_summary"],
+      "timestamp": "2026-05-06 17:40:07.731",
+      "actions": ["fetch_source", "scan_source", "configure", "build_headers", "build_lib", "install_lib", "fetch_lib", "build_binding_ocaml", "pack_binding_ocaml", "pack_binding_ocaml_inspect", "pack_binding_ocaml_stub_inspect", "probe_binding_ocaml", "probe_binding_ocaml_opam", "fetch_binding_python", "fetch_binding_python_inspect", "probe_binding_python", "probe_lib", "probe_lib_inspect", "probe_lib_staged", "probe_lib_staged_inspect", "probe_lib_apt", "probe_lib_apt_inspect"],
       "extra": {
       "official": "false",
       "remote": "https://github.com/arbipher/z3.git"
@@ -26,8 +26,8 @@
       "system_pm": "apt",
       "opam_switch": "default",
       "ocaml_version": "5.4.1",
-      "timestamp": "2026-05-06 17:01:41.589",
-      "actions": ["fetch_lib", "probe_binding_ocaml", "fetch_binding_python", "fetch_binding_python_summary", "probe_binding_python", "probe_lib", "probe_lib_summary"],
+      "timestamp": "2026-05-06 17:40:07.731",
+      "actions": ["fetch_lib", "probe_binding_ocaml", "fetch_binding_python", "fetch_binding_python_inspect", "probe_binding_python", "probe_lib", "probe_lib_inspect"],
       "extra": {
       "official": "true",
       "remote": "https://github.com/Z3Prover/z3.git"

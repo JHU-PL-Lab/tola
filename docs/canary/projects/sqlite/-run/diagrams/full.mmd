@@ -18,9 +18,9 @@ graph LR
     A_fetch_binding_ocaml{{"fetch_binding_ocaml [2]"}}
     A_fetch_binding_python{{"fetch_binding_python [5]"}}
     A_probe_binding_ocaml(["probe_binding_ocaml [3]"])
-    A_probe_binding_ocaml_summary(["inspect_ocaml [4]"])
+    A_probe_binding_ocaml_inspect(["inspect_ocaml [4]"])
     A_probe_binding_python(["probe_binding_python [6]"])
-    A_probe_binding_python_summary(["inspect_python [7]"])
+    A_probe_binding_python_inspect(["inspect_python [7]"])
 
     apt_store --> A_fetch_lib --> lib_node
     opam_store --> A_fetch_binding_ocaml --> ocaml_binding_node
@@ -31,8 +31,8 @@ graph LR
     lib_node -.->|runtime| A_fetch_binding_python
     python_binding_node -->|test| A_probe_binding_python
     lib_node -.->|runtime| A_probe_binding_python
-    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_summary
-    A_probe_binding_python -.-> A_probe_binding_python_summary
+    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect
+    A_probe_binding_python -.-> A_probe_binding_python_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef store fill:#e8eaf6,stroke:#3f51b5,stroke-width:1.5px
@@ -49,10 +49,10 @@ graph LR
     class A_fetch_lib st_done
     class A_fetch_binding_ocaml st_done
     class A_probe_binding_ocaml st_done
-    class A_probe_binding_ocaml_summary st_done
+    class A_probe_binding_ocaml_inspect st_done
     class A_fetch_binding_python st_done
     class A_probe_binding_python st_done
-    class A_probe_binding_python_summary st_done
+    class A_probe_binding_python_inspect st_done
     linkStyle 0 stroke:#4caf50,stroke-width:3px
     linkStyle 1 stroke:#4caf50,stroke-width:3px
     linkStyle 2 stroke:#4caf50,stroke-width:3px

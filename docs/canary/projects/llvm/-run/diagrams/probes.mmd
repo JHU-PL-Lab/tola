@@ -1,0 +1,156 @@
+%% view: probes
+graph LR
+    source_node@{ shape: docs, label: "source [1]" }
+    headers_node@{ shape: docs, label: "headers" }
+    lib_node@{ shape: docs, label: "lib [7]" }
+    app_node@{ shape: docs, label: "app" }
+    ocaml_binding_node@{ shape: docs, label: "ocaml binding [9]" }
+    python_binding_node@{ shape: docs, label: "python binding [17]" }
+
+    A_scan_source{{"scan_source [2]"}}
+    A_configure{{"configure [3]"}}
+    A_build_headers{{"build_headers [4]"}}
+    A_build_lib{{"build_lib [5]"}}
+    A_build_binding_ocaml{{"build_binding_ocaml [8]"}}
+    A_build_binding_python{{"build_binding_python"}}
+    A_build_app{{"build_app"}}
+    A_install_lib{{"install_lib [6]"}}
+    A_pack_binding_ocaml{{"pack_binding_ocaml [12]"}}
+    A_pack_binding_python{{"pack_binding_python"}}
+    A_pack_lib{{"pack_lib"}}
+    A_pack_app{{"pack_app"}}
+    A_probe_binding_ocaml(["probe_binding_ocaml [15]"])
+    A_probe_binding_ocaml_opam(["probe_binding_ocaml_opam [16]"])
+    A_probe_binding_python(["probe_binding_python [19]"])
+    A_probe_lib(["probe_lib [20]"])
+    A_probe_lib_staged(["probe_lib_staged [22]"])
+    A_probe_lib_apt(["probe_lib_apt [24]"])
+    A_probe_app(["probe_app [26]"])
+    A_fetch_binding_ocaml_inspect(["inspect_ocaml [10]"])
+    A_fetch_binding_ocaml_stub_inspect(["inspect_ocaml_stub [11]"])
+    A_fetch_binding_python_inspect(["inspect_python [18]"])
+    A_pack_binding_ocaml_inspect(["inspect_ocaml [13]"])
+    A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [14]"])
+    A_probe_lib_inspect(["inspect_lib [21]"])
+    A_probe_lib_staged_inspect(["inspect_lib_staged [23]"])
+    A_probe_lib_apt_inspect(["inspect_lib_apt [25]"])
+
+    source_node -.-> A_scan_source
+    source_node --> A_configure
+    A_configure --> A_build_headers
+    A_build_headers --> headers_node
+    A_configure --> A_build_lib
+    A_build_lib --> lib_node
+    A_configure --> A_build_binding_ocaml
+    headers_node -.->|headers| A_build_binding_ocaml
+    lib_node -.->|link| A_build_binding_ocaml
+    A_build_binding_ocaml --> ocaml_binding_node
+    A_configure --> A_build_binding_python
+    headers_node -.->|headers| A_build_binding_python
+    lib_node -.->|link| A_build_binding_python
+    A_build_binding_python --> python_binding_node
+    ocaml_binding_node --> A_build_app
+    lib_node -.->|link| A_build_app
+    A_build_app --> app_node
+    A_build_lib --> A_install_lib
+    ocaml_binding_node --> A_pack_binding_ocaml
+    python_binding_node --> A_pack_binding_python
+    lib_node --> A_pack_lib
+    app_node --> A_pack_app
+    ocaml_binding_node -->|test| A_probe_binding_ocaml
+    lib_node -.->|runtime| A_probe_binding_ocaml
+    ocaml_binding_node -->|test| A_probe_binding_ocaml_opam
+    lib_node -.->|runtime| A_probe_binding_ocaml_opam
+    python_binding_node -->|test| A_probe_binding_python
+    lib_node -.->|runtime| A_probe_binding_python
+    lib_node -->|test| A_probe_lib
+    lib_node -->|test| A_probe_lib_staged
+    lib_node -->|test| A_probe_lib_apt
+    app_node -->|test| A_probe_app
+    lib_node -.->|runtime| A_probe_app
+    ocaml_binding_node -.-> A_fetch_binding_ocaml_inspect
+    ocaml_binding_node -.-> A_fetch_binding_ocaml_stub_inspect
+    python_binding_node -.-> A_fetch_binding_python_inspect
+    A_pack_binding_ocaml -.-> A_pack_binding_ocaml_inspect
+    A_pack_binding_ocaml -.-> A_pack_binding_ocaml_stub_inspect
+    A_probe_lib -.-> A_probe_lib_inspect
+    A_probe_lib_staged -.-> A_probe_lib_staged_inspect
+    A_probe_lib_apt -.-> A_probe_lib_apt_inspect
+
+    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px
+    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px
+    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px
+    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5
+    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5
+    class source_node,headers_node,lib_node,app_node,ocaml_binding_node,python_binding_node artifact
+    class A_scan_source st_done_ctx
+    class A_configure st_done_ctx
+    class A_build_headers st_done_ctx
+    class A_build_lib st_done_ctx
+    class A_build_binding_ocaml st_done_ctx
+    class A_build_binding_python st_nospec
+    class A_build_app st_nospec
+    class A_install_lib st_done_ctx
+    class A_pack_binding_ocaml st_done_ctx
+    class A_pack_binding_python st_nospec
+    class A_pack_lib st_nospec
+    class A_pack_app st_nospec
+    class A_probe_binding_ocaml st_done
+    class A_probe_binding_ocaml_opam st_done
+    class A_probe_binding_python st_done
+    class A_probe_lib st_done
+    class A_probe_lib_staged st_done
+    class A_probe_lib_apt st_done
+    class A_probe_app st_done
+    class A_fetch_binding_ocaml_inspect st_done_ctx
+    class A_fetch_binding_ocaml_stub_inspect st_done_ctx
+    class A_fetch_binding_python_inspect st_done_ctx
+    class A_pack_binding_ocaml_inspect st_done_ctx
+    class A_pack_binding_ocaml_stub_inspect st_done_ctx
+    class A_probe_lib_inspect st_done
+    class A_probe_lib_staged_inspect st_done
+    class A_probe_lib_apt_inspect st_done
+    linkStyle 0 stroke:#4caf50,stroke-width:3px
+    linkStyle 1 stroke:#4caf50,stroke-width:3px
+    linkStyle 2 stroke:#4caf50,stroke-width:3px
+    linkStyle 3 stroke:#4caf50,stroke-width:3px
+    linkStyle 4 stroke:#4caf50,stroke-width:3px
+    linkStyle 5 stroke:#4caf50,stroke-width:3px
+    linkStyle 6 stroke:#4caf50,stroke-width:3px
+    linkStyle 7 stroke:#4caf50,stroke-width:3px
+    linkStyle 8 stroke:#4caf50,stroke-width:3px
+    linkStyle 9 stroke:#4caf50,stroke-width:3px
+    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 12 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 13 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 14 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 15 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 17 stroke:#4caf50,stroke-width:3px
+    linkStyle 18 stroke:#4caf50,stroke-width:3px
+    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 22 stroke:#4caf50,stroke-width:3px
+    linkStyle 23 stroke:#4caf50,stroke-width:3px
+    linkStyle 24 stroke:#4caf50,stroke-width:3px
+    linkStyle 25 stroke:#4caf50,stroke-width:3px
+    linkStyle 26 stroke:#4caf50,stroke-width:3px
+    linkStyle 27 stroke:#4caf50,stroke-width:3px
+    linkStyle 28 stroke:#4caf50,stroke-width:3px
+    linkStyle 29 stroke:#4caf50,stroke-width:3px
+    linkStyle 30 stroke:#4caf50,stroke-width:3px
+    linkStyle 31 stroke:#4caf50,stroke-width:3px
+    linkStyle 32 stroke:#4caf50,stroke-width:3px
+    linkStyle 33 stroke:#4caf50,stroke-width:3px
+    linkStyle 34 stroke:#4caf50,stroke-width:3px
+    linkStyle 35 stroke:#4caf50,stroke-width:3px
+    linkStyle 36 stroke:#4caf50,stroke-width:3px
+    linkStyle 37 stroke:#4caf50,stroke-width:3px
+    linkStyle 38 stroke:#4caf50,stroke-width:3px
+    linkStyle 39 stroke:#4caf50,stroke-width:3px
+    linkStyle 40 stroke:#4caf50,stroke-width:3px
