@@ -6,6 +6,7 @@ Reads `nm` output from stdin; emits compact JSON summary:
 - counts.by_prefix: per-prefix counts
 - versioned_req: map of {GLIBC_2.17: 3} from undefined @VER requirements (L1b)
 - watchlist.{present,missing}: presence check against a fixed name list
+- elf (when --elf): SONAME, NEEDED, RPATH, RUNPATH from readelf -d (L4)
 
 nm output formats handled:
   Linux (nm -D):  "<addr> T symname"        (defined)
@@ -18,7 +19,46 @@ Usage: nm -D libfoo.so | summarize_native.py --path libfoo.so \\
 """
 import argparse
 import json
+import os
+import re
+import subprocess
 import sys
+
+
+def parse_elf(path):
+    """Run readelf -d and extract SONAME, NEEDED, RPATH, RUNPATH (L4)."""
+    if not os.path.exists(path):
+        return None
+    try:
+        out = subprocess.check_output(
+            ["readelf", "-d", path],
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    soname = None
+    needed = []
+    rpath = []
+    runpath = []
+
+    soname_re = re.compile(r"\(SONAME\)\s+Library soname:\s+\[(.+)\]")
+    needed_re = re.compile(r"\(NEEDED\)\s+Shared library:\s+\[(.+)\]")
+    rpath_re = re.compile(r"\(RPATH\)\s+Library rpath:\s+\[(.+)\]")
+    runpath_re = re.compile(r"\(RUNPATH\)\s+Library runpath:\s+\[(.+)\]")
+
+    for line in out.splitlines():
+        m = soname_re.search(line)
+        if m: soname = m.group(1); continue
+        m = needed_re.search(line)
+        if m: needed.append(m.group(1)); continue
+        m = rpath_re.search(line)
+        if m: rpath.append(m.group(1)); continue
+        m = runpath_re.search(line)
+        if m: runpath.append(m.group(1))
+
+    return {"soname": soname, "needed": needed, "rpath": rpath, "runpath": runpath}
 
 
 def parse_nm(lines, strip_leading_underscore=False):
@@ -64,6 +104,9 @@ def main():
                     help="include the list of defined symbols (filtered by "
                          "--prefixes) in the output. Required for compat "
                          "cross-checks against a binding's stub.requires.")
+    ap.add_argument("--elf", action="store_true",
+                    help="also run readelf -d and include ELF ABI metadata "
+                         "(soname, needed, rpath, runpath) in the output (L4)")
     args = ap.parse_args()
 
     defined, versioned_req = parse_nm(
@@ -91,6 +134,10 @@ def main():
         else:
             kept = sorted(dset)
         summary["symbols"] = kept
+    if args.elf:
+        elf = parse_elf(args.path)
+        if elf:
+            summary["elf"] = elf
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
 

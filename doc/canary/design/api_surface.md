@@ -4,21 +4,58 @@ The surface contract and artifact inspect system: how canary models
 "is binding X compatible with library Y at version V?" Theory in
 §§1–12; implementation in §13 (concise — the code is more honest).
 
+## Approach: static inference + runtime canary
+
+Canary answers "is binding X compatible with library Y?" using two
+complementary strategies:
+
+| | Static inference | Runtime canary |
+|---|---|---|
+| **What** | Analyze artifacts without execution: inspect symbols, ELF metadata, headers | Compile, link, and run probe programs against the actual library |
+| **Answers** | "This *should* work" or "this *will* fail because X is missing" | "This *actually* works" or "this *fails* because Y" |
+| **Property** | **Sound** — if it says "will fail", it will fail. But may miss some failures (false negatives) | **Complete** — if there's a real failure, running it will find it. But can't predict without running (no false negatives) |
+| **Code path** | `canary compat`, `canary verify`, `inspect-diff`, `predicted_contains_any_v2` | `canary action`, probe steps, `Expect_failure`, `Expect_compat_failure` |
+| **Cost** | Milliseconds — pure data comparison | Minutes — full build + compile + link + run |
+| **Needs source?** | Depends on layer (L1a/L1b/L4 work on `.so` alone) | Yes — must compile/link a probe |
+
+The two feed each other. Static inference generates predictions that the
+runtime canary verifies. When a runtime probe fails, static inference blames
+the root cause by comparing the provider's inspect data against the consumer's
+expectations.
+
+The inspect system (§§8–11) is the shared infrastructure: `nm -D`, `readelf -d`,
+and per-language extractors produce `inspect.json` files that power both paths.
+
 ## 1. Motivation: failure taxonomy
 
-Canary detects compatibility failures empirically. Observed failure modes:
+Canary detects compatibility failures empirically. But detection alone isn't
+enough — the goal is **diagnosis with blame**. When a binding fails, you want
+to know not just *that* it's incompatible but *why*: is the symbol missing?
+Was it compiled against the wrong glibc? Does the SONAME not match?
 
-| Failure kind               | Example                                                   | Detection                                          |
-| -------------------------- | --------------------------------------------------------- | -------------------------------------------------- |
-| Missing symbol (binary)    | Z3 OCaml stub requires `Z3_mk_solver`, lib has it         | `nm` + `assert_binary_symbols.py`                  |
-| Type mismatch (OCaml API)  | `llvm.19-shared` missing `Opcode.UncondBr`                | `Expect_failure { contains_any }`                  |
-| Linking mode change        | ELF versioned symbols `Z3_foo@@Z3_4.15` vs plain `Z3_foo` | `nm -D` regex with `@@` suffix                     |
-| ABI/soname change          | shared vs static, soname mismatch                         | (not yet modelled)                                 |
-| Semantic/invariant failure | behavior change without API break                         | (not yet modelled, likely undetectable statically) |
+Each layer in the taxonomy answers a specific diagnostic question. If you can
+answer all of them automatically, you can produce a root-cause report:
+
+> "llvm/19 binding probe failed. Reason: `Opcode.UncondBr` not found (L3, API
+> drifted between v19 and v21). Also: `GLIBC_2.38` required but provider has
+> `GLIBC_2.34` (L1b, glibc version lag). Provider SONAME `libLLVM.so.19` does
+> not match consumer link dep `libLLVM.so.15` (L4)."
+
+Observed failure modes and which layer blames them:
+
+| Layer | Failure kind | Detection | Data source | Needs source/-dev? |
+|---|---|---|---|---|
+| **L1a** | Missing symbol | `nm -D` | `.so` ELF | No |
+| **L1b** | Wrong symbol version | `nm -D` `@@VER` | `.so` ELF | No |
+| **L2** | Type/signature mismatch | `.cmi` digest, header parse | `.h`, `.cmi` | Yes |
+| **L3** | API shape drift | compile probe, `dir()` | `.mli`, Python package | Yes (OCaml), No (Python) |
+| **L4** | SONAME/NEEDED mismatch | `readelf -d` | `.so` ELF | No |
+| **L5** | Behavioral change | (research) | (research) | — |
 
 Goal: a **unified abstract representation** rather than scattered ad-hoc checks.
 Lift version numbers into the picture so "apt has z3 4.8, but the binding was
-built against z3 4.12" is a first-class analysis result.
+built against z3 4.12" is a first-class analysis result. And when it fails,
+point at the specific layer and say what drifted.
 
 ## 2. Surface as a first-class object
 
@@ -67,11 +104,36 @@ but the semantics are wrong. L4 catches the case where nothing even loads.
 Together they form a **refinement chain**: each layer is a finer sieve on the
 same inspect output.
 
-Current implementation: L1a (inspect watchlists) and L3 (`Expect_failure`
-compile probes) are wired. L1b, L2, L4 have typed placeholder fields on
-`native_api` / `binding_api` (`versioned_symbols`, `type_watchlist`,
-`soname`/`c_runtime`/`cxx_abi`) — ready for gradual implementation.
-L5 is research territory.
+Current implementation status:
+
+| Layer | Data extraction | Compat variant | Project wired |
+|---|---|---|---|
+| **L1a** | `inspect_native.py` (`nm -D`) ✅ | `Native_lib` / `C_stub` ✅ | z3, llvm ✅ |
+| **L1b** | `inspect_native.py` (`versioned_req`) ✅ | `Versioned_symbols` ✅ | — needs concrete case |
+| **L2** | — | `type_watchlist` placeholder | — |
+| **L3** | `inspect_binding.py` / `inspect_python.py` ✅ | `Ocaml_mli` / `Python_attrs` ✅ | z3/stable, llvm/19 ✅ |
+| **L4** | `inspect_native.py --elf` (`readelf -d`) ✅ | `Abi_surface` ✅ | — needs concrete case |
+| **L5** | — | — | research territory |
+
+L1a and L3 are fully wired end-to-end: data extraction → type variant →
+`predicted_contains_any_v2` → `Expect_compat_failure` on real projects.
+
+L1b has data extraction working (`versioned_req` captures undefined `@VER`
+symbols — what the binary *needs*) and the `Versioned_symbols` compat variant
+is in place. The failure mode is the same grep-able pattern as L1a/L3:
+`version 'GLIBC_2.31' not found`. However a proper L1b check requires comparing
+consumer `@VER` needs against provider `@@VER` exports (what the library
+*provides*). Currently `inspect_native.py` strips `@@VER` from defined symbols,
+losing the provider side. To complete L1b: (1) capture `@@VER` defined symbols,
+(2) verify consumer's `@VER` ≤ provider's `@@VER` for each symbol.
+
+L4 has data extraction working (`inspect_native.py --elf` captures SONAME,
+NEEDED, RPATH, RUNPATH via `readelf -d`) and the `Abi_surface` compat variant
+is in place. SONAME mismatch produces a grep-able loader error (`cannot open
+shared object file: No such file or directory`). Real SONAME/NEEDED comparison
+needs both provider and consumer inspect data to be meaningful.
+
+L2 has only the `type_watchlist` placeholder field; no data extraction yet.
 
 The glibc/musl example lives at **L1b + L4**: the `@@GLIBC_2.31` annotation
 is an L1b versioned-symbol requirement; "which C runtime implementation" is

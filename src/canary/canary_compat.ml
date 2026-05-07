@@ -325,6 +325,7 @@ let predicted_contains_any
    inputs (already path-resolved). Each input contributes substrings:
      - C_stub + Native_lib together → L0 missing C symbols (set diff)
      - Versioned_symbols → L1b version tag mismatch (glibc version requirements)
+     - Abi_surface → L4 SONAME/NEEDED mismatch (missing or wrong .so version)
      - Ocaml_mli → L3 watchlist missing, expanded with name_variants
      - Python_attrs → L3 watchlist missing, expanded with name_variants
    Order-insensitive within a list; languages can mix any subset. *)
@@ -334,6 +335,7 @@ type typed_input =
   | Ocaml_mli of string
   | Python_attrs of string
   | Versioned_symbols of string
+  | Abi_surface of string
 
 let predicted_contains_any_v2 (inputs : typed_input list) : string list =
   let stub_path = List.find_map inputs ~f:(function C_stub p -> Some p | _ -> None) in
@@ -359,13 +361,35 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
              | _ -> [])
       | _ -> [])
   in
+  let l4 =
+    List.concat_map inputs ~f:(function
+      | Abi_surface p ->
+          if not (Stdlib.Sys.file_exists p) then []
+          else
+            let j = Yojson.Basic.from_file p in
+            let elf = field j "elf" in
+            let soname = match elf with
+              | Some e -> (match field e "soname" with
+                  | Some (`String s) -> [s] | _ -> [])
+              | None -> []
+            in
+            let needed = match elf with
+              | Some e -> (match field e "needed" with
+                  | Some (`List xs) ->
+                      List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+                  | _ -> [])
+              | None -> []
+            in
+            soname @ needed
+      | _ -> [])
+  in
   let l3 =
     List.concat_map inputs ~f:(function
       | Ocaml_mli p | Python_attrs p ->
           load_watchlist_missing p |> List.concat_map ~f:name_variants
       | _ -> [])
   in
-  l1b @ l3 @ l0
+  l1b @ l4 @ l3 @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step

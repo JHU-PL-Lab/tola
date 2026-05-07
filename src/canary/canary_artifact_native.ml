@@ -102,8 +102,6 @@ test "$COUNT" -gt 0|}]
    need escaping at the call site. *)
 let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
   let nm_flag = if is_macos then "-g" else "-D" in
-  (* On macOS, Mach-O nm prefixes every C symbol with `_`. Tell the parser
-     to strip it; on Linux the symbol IS the C ABI name (no strip). *)
   let strip_flag = if is_macos then "--strip-leading-underscore " else "" in
   let script = "canary/scripts/inspect_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
@@ -111,8 +109,16 @@ let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key
   let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
-  | python3 %{script} %{strip_flag}--emit-symbols --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
+  | python3 %{script} %{strip_flag}--emit-symbols --elf --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
   > %{output_dir}/%{out_file}|}]
+
+(* L4: ELF ABI metadata via readelf -d.  Captures SONAME, NEEDED, RPATH, RUNPATH.
+   Writes inspect_elf.json to the output directory. *)
+let elf_inspect_cmd ~lib ~output_dir ~variant_key () =
+  let script = "canary/scripts/inspect_elf.py" in
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect_elf" ~ext:"json" in
+  [%string
+    {|python3 %{script} --path "%{lib}" > %{output_dir}/%{out_file}|}]
 
 (* Symbol compatibility probe via assert_binary_symbols.py.
    Writes symbols.log; exits nonzero if symbols are missing. *)

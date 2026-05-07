@@ -282,6 +282,7 @@ type compat_inspect_input =
   | Ocaml_mli        of { paths : string list }
   | Python_attrs     of { paths : string list }
   | Versioned_symbols of { paths : string list }  (* L1b: @@GLIBC_X.YY version tags *)
+  | Abi_surface      of { paths : string list }  (* L4: SONAME/NEEDED/RPATH mismatch *)
 
 type step_expectation =
   | Expect_success

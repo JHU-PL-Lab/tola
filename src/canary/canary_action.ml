@@ -333,7 +333,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                           Canary_compat.Python_attrs p)
                     | Versioned_symbols { paths } ->
                         Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat.Versioned_symbols p))
+                          Canary_compat.Versioned_symbols p)
+                    | Abi_surface { paths } ->
+                        Option.map (pick_first_existing paths) ~f:(fun p ->
+                          Canary_compat.Abi_surface p))
                 in
                 let derived =
                   Canary_compat.predicted_contains_any_v2 typed_inputs
