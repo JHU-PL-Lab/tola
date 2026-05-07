@@ -64,6 +64,7 @@ def parse_elf(path):
 def parse_nm(lines, strip_leading_underscore=False):
     defined = []
     versioned_req = {}
+    versioned_exports = {}  # L1b provider side: {symbol_name: version_tag}
     for line in lines:
         parts = line.rstrip("\n").split()
         if len(parts) < 2:
@@ -72,7 +73,8 @@ def parse_nm(lines, strip_leading_underscore=False):
         sym = parts[-1]
         kind = parts[-2] if len(parts) >= 2 else ""
         if kind == "U":
-            # Undefined — if it carries @VER that's a versioned requirement (L1b)
+            # Undefined — if it carries @VER that's a versioned requirement
+            # (L1b consumer side: what the binary needs)
             if "@" in sym and "@@" not in sym:
                 _, ver = sym.split("@", 1)
                 versioned_req[ver] = versioned_req.get(ver, 0) + 1
@@ -80,8 +82,12 @@ def parse_nm(lines, strip_leading_underscore=False):
             # Weak — skip for counts (they're optional)
             pass
         else:
-            # Defined. Strip any @@VER suffix.
-            base = sym.split("@")[0]
+            # Defined.  Keep @@VER annotations for provider-side L1b.
+            if "@@" in sym:
+                base, ver = sym.split("@@", 1)
+                versioned_exports[base] = ver
+            else:
+                base = sym.split("@")[0]
             # macOS Mach-O nm prefixes every C symbol with `_` (e.g. C
             # `malloc` → `_malloc`). Strip on macOS only. On Linux ELF
             # the symbol name IS the C ABI name (`malloc`, `__gmpz_init`)
@@ -89,7 +95,7 @@ def parse_nm(lines, strip_leading_underscore=False):
             if strip_leading_underscore and base.startswith("_"):
                 base = base[1:]
             defined.append(base)
-    return defined, versioned_req
+    return defined, versioned_req, versioned_exports
 
 
 def main():
@@ -109,7 +115,7 @@ def main():
                          "(soname, needed, rpath, runpath) in the output (L4)")
     args = ap.parse_args()
 
-    defined, versioned_req = parse_nm(
+    defined, versioned_req, versioned_exports = parse_nm(
         sys.stdin, strip_leading_underscore=args.strip_leading_underscore)
     prefixes = [p for p in args.prefixes.split(",") if p]
     watchlist = [w for w in args.watchlist.split(",") if w]
@@ -124,6 +130,7 @@ def main():
         "path": args.path,
         "counts": {"total": len(defined), "by_prefix": by_prefix},
         "versioned_req": versioned_req,
+        "versioned_exports": versioned_exports,  # L1b provider side
         "watchlist": {"present": present, "missing": missing},
     }
     if args.emit_symbols:

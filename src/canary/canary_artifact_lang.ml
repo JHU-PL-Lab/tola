@@ -175,3 +175,19 @@ let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
   let out_file = Canary_step_key.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     "python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}' > %{output_dir}/%{out_file}"]
+
+(* L2: .cmi digest inspection for OCaml bindings.
+   Runs md5sum on all .cmi files in the package directory, outputs JSON:
+   { "kind": "cmi", "modules": { "Module": "d41d8cd9...", ... } }
+   Detects type-level drift even when module/val names are unchanged. *)
+let cmi_inspect_cmd ~pkg_dir ~output_dir ~variant_key () =
+  let out_file = Canary_step_key.filename ~variant_key ~base:"inspect_cmi" ~ext:"json" in
+  [%string
+    {|(echo '{"kind":"cmi","modules":{'
+for f in "%{pkg_dir}"/*.cmi; do
+  [ -f "$f" ] || continue
+  mod=$(basename "$f" .cmi)
+  hash=$(md5sum "$f" | cut -d' ' -f1)
+  printf '"%s":"%s",' "$mod" "$hash"
+done
+echo '"":""}}' ) | sed 's/,"":""//' > %{output_dir}/%{out_file}|}]
