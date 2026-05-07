@@ -361,28 +361,10 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
              | _ -> [])
       | _ -> [])
   in
-  let l4 =
-    List.concat_map inputs ~f:(function
-      | Abi_surface p ->
-          if not (Stdlib.Sys.file_exists p) then []
-          else
-            let j = Yojson.Basic.from_file p in
-            let elf = field j "elf" in
-            let soname = match elf with
-              | Some e -> (match field e "soname" with
-                  | Some (`String s) -> [s] | _ -> [])
-              | None -> []
-            in
-            let needed = match elf with
-              | Some e -> (match field e "needed" with
-                  | Some (`List xs) ->
-                      List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
-                  | _ -> [])
-              | None -> []
-            in
-            soname @ needed
-      | _ -> [])
-  in
+  (* L4 is diagnostic: SONAME/NEEDED identify *which* library was loaded.
+     Different SONAMEs don't cause runtime failure in canary's setup
+     (each variant probes its own lib).  L4 helps blame, not predict. *)
+  let l4 = [] in
   let l3 =
     List.concat_map inputs ~f:(function
       | Ocaml_mli p | Python_attrs p ->

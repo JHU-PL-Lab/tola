@@ -96,7 +96,7 @@ Each layer catches a specific class of mismatch that coarser layers can't see:
 | **L1b** Versioned symbol | Right version of the symbol? | Consumer needs `malloc@@GLIBC_2.31`, provider has `malloc@@GLIBC_2.17` — forward-incompat, name alone looks fine |
 | **L2** Type signature | Right type at the same name? | `Z3_mk_solver` changed from `int→solver` to `int→int→solver` — symbol name unchanged, ABI broken |
 | **L3** API shape | Right constructors/modules? | `parser_context` missing from Python module — catches additive/subtractive API drift |
-| **L4** ABI/runtime | Right runtime environment? | Consumer linked against `libLLVM.so.19` but only `libLLVM.so.15` installed — load-time failure before any symbol check |
+| **L4** ABI/runtime | *Which* library was loaded? | SONAME `libLLVM.so.23.0git` (dev) vs `libLLVM.so.19.1` (stable). Different SONAMEs don't cause failure in canary's setup (each variant probes its own lib). L4 is diagnostic — it blames the library identity, not predicts failure. |
 | **L5** Behavioral | Right behavior? | Solver returns different result for same input — undetectable statically |
 
 L1a is a yes/no existence check. L1b+L2 catch cases where the name is right
