@@ -205,7 +205,9 @@ let find_llvm_config_cmd =
 let llvm_python_probe ~output_dir ~variant_key =
   let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
   [%string
-    {|python3 -m pip install --quiet llvmlite
+    {|(pip install --quiet llvmlite 2>/dev/null \
+ || python3 -m pip install --quiet llvmlite 2>/dev/null \
+ || uv pip install --quiet llvmlite)
 python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{output_dir}/%{probe_log} 2>&1|}]
 
 (* ── Source build script spec (build LLVM + OCaml bindings from source) ── *)
