@@ -1,0 +1,10 @@
+; tiny_helper: a downstream OCaml library built on top of the Tiny
+; binding. Demonstrates that intra-binding repacking composes — the
+; library presents its own idiomatic surface to consumers, while
+; transitively keeping libtiny.so on its dynamic-link chain through
+; the Tiny binding's stub.a.
+
+(library
+ (name tiny_helper)
+ (modules tiny_helper)
+ (libraries tiny))

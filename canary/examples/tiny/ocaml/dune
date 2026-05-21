@@ -1,0 +1,21 @@
+; OCaml binding for the tiny C library.
+;
+; Conceptually two layers (see ../README.md and doc/canary/research/tiny.md):
+;   - tiny_raw.{ml,mli}   stub-facing layer (1-to-1 with tiny.h externals)
+;   - tiny.{ml,mli}       user-facing layer (idiomatic repack)
+; Plus tiny_stubs.c (C glue, compiled and linked into the library).
+;
+; Build expects the C library to have been built at
+; <example_root>/c/build/libtiny.so.1 (run `make c` from the example
+; root, or invoke cmake manually). The Makefile sets LIBRARY_PATH and
+; LD_RUN_PATH to that absolute build dir so the linker resolves
+; `-ltiny` and bakes a matching rpath into the binding.
+
+(library
+ (name tiny)
+ (modules tiny tiny_raw)
+ (foreign_stubs
+  (language c)
+  (names tiny_stubs)
+  (include_dirs ../c/include))
+ (c_library_flags -ltiny))

@@ -1,0 +1,11 @@
+(executable
+ (name probe_baseline)
+ (libraries tiny))
+
+(executable
+ (name app_binding)
+ (libraries tiny))
+
+(executable
+ (name app_helper)
+ (libraries tiny_helper))

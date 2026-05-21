@@ -2,7 +2,7 @@
 
 The design narrative: vision, identity model, action graph, workflow,
 design principles. For surface theory + the compat-check
-implementation see [api_surface.md](api_surface.md). For the
+implementation see [../research/surface_theory.md](../research/surface_theory.md). For the
 expansion roadmap and per-target plans see
 [new_project.md](new_project.md). Doc map at
 [../README.md](../README.md).
@@ -35,7 +35,7 @@ Canary's two-track approach:
   abstraction: the *surface* between a library and a binding. If we can
   characterise this surface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [api_surface.md](api_surface.md).
+  Details in [../research/surface_theory.md](../research/surface_theory.md).
 
 The two tracks reinforce each other. Empirical results validate or contradict
 inferences; the theory guides which combinations are worth testing.
@@ -58,7 +58,7 @@ opam `ssl`, opam `llvm.19-shared`), they couple. The model must track
 version axes per (binding, runtime), not per project.
 
 This is why the package provider model in
-[api_surface.md §5](api_surface.md) has to model providers and their
+a future `package_theory.md` (deferred) has to model providers and their
 version pins explicitly, not implicitly.
 
 ## 3. Action graph & store model
@@ -145,7 +145,7 @@ canary action <project>
             (skip if check_post already passes — caching)
             exec cmd   → writes to _out/canary/projects/<project>/<tag>/
             check_post → verify output
-            on Probe rule → record inspect.json (api_surface.md §8)
+            on Probe rule → record inspect.json (`research/surface_theory.md` §2.7)
 ```
 
 Each step's output lives in `_out/canary/projects/<project>/<tag>/`. A step
@@ -164,7 +164,7 @@ declarative metadata that make the shell less opaque to canary:
   → `native_api` → `binding_api` per language). Provider claims (header
   paths, symbol prefixes, stable-symbol watchlist) and consumer claims
   (per-language module watchlists) are separate. See
-  [api_surface.md §4](api_surface.md).
+  [../research/surface_theory.md §2.1](../research/surface_theory.md).
 - **`scan_source`** — a step emitted after `fetch_source` that verifies
   the api_source claims (headers exist, binding source dirs present);
   blocks the build chain on spec drift.
@@ -178,7 +178,7 @@ The summaries feed a **compatibility check** (`canary_compat.ml`,
 at runtime, so `step_expectation` doesn't need hand-written
 `contains_any` lists for cases the cross-check covers. End-to-end demos
 on LLVM 19 (OCaml `Opcode.UncondBr`) and Z3 stable (Python
-`parser_context`). See [api_surface.md §13](api_surface.md) for design and
+`parser_context`). See [../research/surface_theory.md §2.7](../research/surface_theory.md) for design and
 implementation details.
 
 ### Per-language binding integration
@@ -221,7 +221,7 @@ fifth language binding lands.
 [Probe]      compile/run examples per binding (OCaml + Python)
    ↓
 [Predict]    Expect_compat_failure derives expected substrings from
-             cached install-step summaries (api_surface.md §13)
+             cached install-step summaries (`research/surface_theory.md` §2.7)
    ↓
 [Verify]     canary verify cross-references prediction vs probe.log
    ↓

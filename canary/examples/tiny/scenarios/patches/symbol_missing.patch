@@ -1,0 +1,11 @@
+--- a/c/src/tiny.c
++++ b/c/src/tiny.c
+@@ -2,7 +2,7 @@
+ 
+ int tiny_offset = 42;
+ 
+-int tiny_sum(int a, int b) {
++int tiny_total(int a, int b) {
+     return a + b + tiny_offset;
+ }
+ 

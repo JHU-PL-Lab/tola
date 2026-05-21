@@ -1,0 +1,20 @@
+--- a/c/include/tiny.h
++++ b/c/include/tiny.h
+@@ -10,4 +10,7 @@
+ /* Returns a - b. */
+ int tiny_diff(int a, int b);
+
++/* Returns max(a, b). Added in this version; no binding wraps it yet. */
++int tiny_max(int a, int b);
++
+ #endif /* TINY_H */
+--- a/c/src/tiny.c
++++ b/c/src/tiny.c
+@@ -9,3 +9,7 @@ int tiny_sum(int a, int b) {
+ int tiny_diff(int a, int b) {
+     return a - b;
+ }
++
++int tiny_max(int a, int b) {
++    return a > b ? a : b;
++}

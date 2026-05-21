@@ -1,0 +1,18 @@
+--- a/c/src/tiny.c	2026-05-15 02:54:20.720363961 -0500
++++ b/c/src/tiny.c	2026-05-15 02:54:20.720363961 -0500
+@@ -1,9 +1,11 @@
+-#include "tiny.h"
+-
+ int tiny_offset = 42;
+ 
+-int tiny_sum(int a, int b) {
+-    return a + b + tiny_offset;
++/* Header still says `int tiny_sum(int, int)`. We deliberately diverge:
++   the actual definition takes two doubles. SysV x86-64 passes ints in
++   GPRs (%edi, %esi) and doubles in xmm regs (%xmm0, %xmm1), so the
++   caller's int args go nowhere the callee reads. */
++int tiny_sum(double a, double b) {
++    return (int)(a + b + tiny_offset);
+ }
+ 
+ int tiny_diff(int a, int b) {

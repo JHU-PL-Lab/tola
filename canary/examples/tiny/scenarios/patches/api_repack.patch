@@ -1,0 +1,7 @@
+--- a/ocaml/tiny.ml
++++ b/ocaml/tiny.ml
+@@ -1,3 +1,3 @@
+ let sum    = Tiny_raw.sum
+-let diff   = Tiny_raw.diff
++let diff a b = Tiny_raw.diff b a   (* silent argument reversal *)
+ let offset = Tiny_raw.get_offset

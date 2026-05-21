@@ -1,0 +1,22 @@
+--- a/python_cext/tiny_cext/__init__.py
++++ b/python_cext/tiny_cext/__init__.py
+@@ -12,7 +12,7 @@
+ 
+ 
+ def diff(a: int, b: int) -> int:
+-    return _native.diff(a, b)
++    return _native.diff(b, a)  # silent argument reversal
+ 
+ 
+ def offset() -> int:
+--- a/python_ctypes/tiny_ctypes/__init__.py
++++ b/python_ctypes/tiny_ctypes/__init__.py
+@@ -13,7 +13,7 @@
+ 
+ 
+ def diff(a: int, b: int) -> int:
+-    return _raw._lib.tiny_diff(a, b)
++    return _raw._lib.tiny_diff(b, a)  # silent argument reversal
+ 
+ 
+ def offset() -> int:

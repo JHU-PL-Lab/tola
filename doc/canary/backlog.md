@@ -26,7 +26,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     split, C API surface (consumer/provider cross-check + provider-vs-
     provider delta), mismatch prediction, Python summary enhancements.
     The shipped portion (Steps C1, D-basic for OCaml + Python) is
-    documented in `doc/canary/design/api_surface.md` §13. Open items
+    documented in `doc/canary/research/surface_theory.md` §2.7. Open items
     (#35, #20, #41, #42) remain.
 
 43. **L1b — versioned symbol requirements in compat check** — `inspect_native.py`
@@ -35,8 +35,8 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     L1b: a binding requires a specific @VER suffix on a symbol, the lib must
     provide that or higher. Adds glibc/libstdc++ floor checking — predicts
     failures from binaries built on newer distros that won't run on older
-    ones, even when symbol names match. See `doc/canary/design/api_surface.md`
-    §13.6.
+    ones, even when symbol names match. See
+    `doc/canary/research/surface_theory.md` §2.7 (c5 cmp_sym_version).
 
 44. **L2 — typed signatures via clang AST or libclang** — today's compat
     check is name-level (L0/L3 set inclusion). Lift to L2 by extracting
@@ -45,8 +45,9 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     compiler output. Then `check_compat` is real subtyping with contravariance
     on argument types, covariance on results, refinement on value domains.
     Gives a decidable-but-conservative type-system over artifact interfaces;
-    catches "same name, different signature" version drift. See api_surface.md
-    §13.1 "typing-rule shape" and §15 "open theoretical questions".
+    catches "same name, different signature" version drift. See
+    `doc/canary/research/surface_theory.md` §2.4 (Type contract) and
+    §10.3 (Toward a formal model).
 
 17. **Module surfaces (.mli)** — define contracts for PM modules
     (`canary_pm_{apt,brew,opam,pip}`) and project modules (`canary_project_*.ml`).
@@ -115,8 +116,9 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     local pip index or venv, enabling a `probe_python_pip` variant that tests
     the packaged wheel rather than the raw build artifact. Prerequisite:
     `probe_python` build-tree variant (test the raw `.so` before packaging)
-    as the base to compare against. See `api_surface.md §5` for the co-provider
-    design — pip wheels often bundle their own native lib, so `pack_python` for
+    as the base to compare against. The co-provider design (pip wheels
+    bundling their own native lib) is deferred to a future `package_theory.md`
+    — see `doc/canary/research/README.md` for the deferral rationale. `pack_python` for
     z3 would produce a co-provider artifact.
 
 39. **Dynamic scheduling / action dispatch** — `derive_steps` produces a static
@@ -165,6 +167,6 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     potentially adding a separate inspect step to surface the bundled lib's
     symbol set for compat checking.
 
-    See `doc/canary/design/api_surface.md §5` (co-provider design) and
+    See the (future) `package_theory.md` (co-provider design — deferred) and
     backlog #38 (`pack_python` wheel packaging, which has the same
     co-provider shape on the producer side).

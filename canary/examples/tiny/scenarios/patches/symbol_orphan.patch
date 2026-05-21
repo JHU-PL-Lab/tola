@@ -1,0 +1,31 @@
+--- a/ocaml/tiny_raw.mli
++++ b/ocaml/tiny_raw.mli
+@@ -4,3 +4,6 @@
+ external sum        : int -> int -> int = "caml_tiny_sum"
+ external diff       : int -> int -> int = "caml_tiny_diff"
+ external get_offset : unit -> int       = "caml_tiny_get_offset"
++
++(** Orphan: claimed by the binding, never provided by the C side. *)
++external extra      : int -> int -> int = "caml_tiny_extra"
+--- a/ocaml/tiny_raw.ml
++++ b/ocaml/tiny_raw.ml
+@@ -1,3 +1,4 @@
+ external sum        : int -> int -> int = "caml_tiny_sum"
+ external diff       : int -> int -> int = "caml_tiny_diff"
+ external get_offset : unit -> int       = "caml_tiny_get_offset"
++external extra      : int -> int -> int = "caml_tiny_extra"
+--- a/ocaml/tiny_stubs.c
++++ b/ocaml/tiny_stubs.c
+@@ -17,3 +17,12 @@
+     CAMLparam1(unit);
+     CAMLreturn(Val_int(tiny_offset));
+ }
++
++/* Orphan: forward-declare tiny_extra so this file compiles, even though
++ * the C side never defines it. cmp_symbol catches the dangling stub.a
++ * undef ref; the probe doesn't call Tiny.extra so runtime stays clean. */
++extern int tiny_extra(int a, int b);
++CAMLprim value caml_tiny_extra(value a, value b) {
++    CAMLparam2(a, b);
++    CAMLreturn(Val_int(tiny_extra(Int_val(a), Int_val(b))));
++}

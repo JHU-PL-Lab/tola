@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiny_ctypes"
+version = "0.1.0"
+description = "ctypes (dynamic FFI) binding for the tiny C library."
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["tiny_ctypes*"]

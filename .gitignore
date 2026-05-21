@@ -37,3 +37,14 @@ build
 
 # Local dev symlinks (absolute paths, not portable)
 vendor/z3_dev
+
+# Tiny example — track intentional underscore-prefixed sources
+# (Python convention for "private" modules) and the cmake build file.
+!canary/examples/tiny/c/CMakeLists.txt
+!canary/examples/tiny/python_cext/tiny_cext/_native.c
+!canary/examples/tiny/python_ctypes/tiny_ctypes/_raw.py
+!canary/examples/tiny/scenarios/_harness/
+!canary/examples/tiny/scenarios/_harness/**
+
+# setuptools-generated metadata
+*.egg-info/

@@ -1,0 +1,10 @@
+--- a/ocaml/tiny.mli
++++ b/ocaml/tiny.mli
+@@ -4,7 +4,6 @@
+     distinct because it is where the binding author re-presents the C
+     surface in idiomatic OCaml. *)
+
+-val sum    : int -> int -> int
+ val diff   : int -> int -> int
+
+ (** Queries the C global [tiny_offset] on each call. *)

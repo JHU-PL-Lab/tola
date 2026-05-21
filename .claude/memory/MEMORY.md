@@ -1,33 +1,20 @@
 # Tola Project Memory
 
-Detailed notes: `yelu-vision.md`, `cmake.md`, `string-target-design.md`, `yelu_lang_decisions.md`
+## Canary CI
+- [GH CI backend — all 3 jobs green](project_canary_ci.md) — Z3/SQLite/LLVM passing; Z3 uses opam remote fetch (~33 min); debug.yml for fast iteration (~2 min)
 
 ## Quick Reference
 - **Main research**: Package management (PL perspective) + canary testing
-- **yelu-lang**: programmable config shell language; compiles to cmake (and future targets)
-- CMake AST: `src/langs/cmake/lang_cmake.ml`, PP: `lang_cmake_pp.ml`, Utils: `lang_cmake_utils.ml`
-- Yelu AST: `src/langs/yelu/lang_yelu.ml`, Compile: `lang_yelu_compile.ml`, Utils: `lang_yelu_utils.ml`
-- Build cmake only: `dune build src/langs/ src/bin/cmake/`
-- Build yelu only: `dune build src/langs/ src/bin/yelu/`
 - `open Base` shadows `result`, `prefix`, `id`, `append` — rename in patterns
-- "cc" = Claude Code; remind user before touching code outside cmake dirs
-
-## Yelu Type System
-- `yelu_cvar` / `Ycvar` = cmake runtime variable (erases to cmake set/${})
-- `yelu_target` / `Ytarget` = cmake target name
-- `yelu_var` / `Yvar` = yelu compile-time variable, resolved during compilation
-- `Ylet` = compile-time binding, immutable single-assignment
-- `yarg` = unified arg type with semantic string variants: `Yarg_file`, `Yarg_dir`, `Yarg_str`
-- See `string-target-design.md` for cmake string/target internals + yc_string proposal
-
-## yelu Language Design (settled)
-- [Core design decisions](yelu_lang_decisions.md) — FP flavor, monomorphic typed lists, zip not ZIP_LISTS
+- "cc" = Claude Code
 
 ## Feedback
 - [No eval $(opam env)](feedback_shell_env.md) — dune/opam already on PATH in CC env
 - [dune sandbox + promote](feedback_dune_sandbox.md) — alias deps force build order but don't expose files in sandbox; use glob_files + promote instead
+- [Latin letters not Greek](feedback_option_letters.md) — use a/b/c/d or 1/2/3/4 for option lists
+- [Protect contrib/ build caches](feedback_protect_contrib_cache.md) — never rm -rf contrib/* (heavy z3/llvm builds)
 
 ## User Preferences
 - "cc" means Claude Code (this CLI tool)
-- When working on cmake scope, remind user before touching code outside cmake dirs
 - User reads Chinese; project comments may reference Chinese terms
+- **Yelu is now standalone** at `/home/red/code/research/yelu` — extracted 2026-05-04
