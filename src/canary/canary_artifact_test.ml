@@ -24,9 +24,14 @@ let first_existing paths =
 
 let native_lib_fixture () =
   if Canary_artifact_native.is_macos then
+    (* macOS 15+: /usr/lib/*.dylib live only in the dyld shared cache, so
+       file-existence checks fail. Use a Homebrew-shipped on-disk dylib
+       (sqlite mirrors the Linux fixture; falls back to libffi/openssl). *)
     first_existing [
-      "/usr/lib/libSystem.dylib";
-      "/usr/lib/libc.dylib";
+      "/opt/homebrew/opt/sqlite/lib/libsqlite3.dylib";
+      "/opt/homebrew/opt/libffi/lib/libffi.dylib";
+      "/opt/homebrew/opt/openssl@3/lib/libssl.dylib";
+      "/usr/local/opt/sqlite/lib/libsqlite3.dylib";  (* Intel Macs *)
     ]
   else
     first_existing [
@@ -135,7 +140,7 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
               ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "native.summary_json_valid";
-      cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
+      cmd = summary_json_valid_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
   ]
 
@@ -152,7 +157,7 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
               ~pkg ~watchlist:[] ~output_dir:sum_dir ~variant_key:"" ();
       expected_rc = 0 };
     { name = "ocaml.summary_json_valid";
-      cmd = summary_json_valid_cmd (sum_dir ^ "/summary.json");
+      cmd = summary_json_valid_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
     (* mli-based summary (inspect_binding.py --kind mli). Verifies
        summary.json kind == ocaml_mli with non-zero counts. *)
@@ -163,7 +168,7 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
     { name = "ocaml.mli_inspect_json_valid";
       cmd = [%string {|python3 -c "
 import json
-with open('%{mli_dir}/summary.json') as f:
+with open('%{mli_dir}/inspect.json') as f:
     d = json.load(f)
 assert d['kind'] == 'ocaml_mli', 'wrong kind: ' + d['kind']
 assert d['counts']['vals'] > 0, 'no vals'
@@ -214,7 +219,7 @@ let python_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
       (* Python summary has no "counts" if error — check kind + path + attrs or error *)
       cmd = [%string {|python3 -c "
 import json, sys
-with open('%{sum_dir}/summary.json') as f:
+with open('%{sum_dir}/inspect.json') as f:
     d = json.load(f)
 for k in ('kind','path'):
     assert k in d, 'missing key: ' + k

@@ -51,7 +51,12 @@ let brew_tests ~pkg =
   [
     { name = "brew.check_available"; cmd = Canary_pm_brew.check_available_cmd ~pkg; expected_rc = 0 };
     { name = "brew.query_version"; cmd = Canary_pm_brew.query_version_cmd ~pkg; expected_rc = 0 };
+    { name = "brew.install"; cmd = Canary_pm_brew.install_cmd ~pkg; expected_rc = 0 };
     { name = "brew.verify_installed"; cmd = Canary_pm_brew.verify_installed_cmd ~pkg; expected_rc = 0 };
+    { name = "brew.remove"; cmd = Canary_pm_brew.remove_cmd ~pkg; expected_rc = 0 };
+    { name = "brew.check_available(bad)";
+      cmd = Canary_pm_brew.check_available_cmd ~pkg:"canary-nonexistent-pkg";
+      expected_rc = 1 };
   ]
 
 let pip_tests ~pkg =
