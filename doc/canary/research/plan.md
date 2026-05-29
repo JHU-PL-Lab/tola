@@ -493,8 +493,19 @@ row in the M2 / M3 milestones above.
 
 **Derived (free once c1/c6/c7 exist):**
 
-- [ ] **c8 `cmp_api_faithfulness`.** Pure composition. Tiny's e4
-      api_faithful scenario flips ✗ → ✓ when this lands.
+- [x] **c8 `cmp_api_faithfulness`** (2026-05-29). Function
+      `check_api_faithfulness ~type_verdict ~symbol_verdict
+      ~repack_verdict` in `canary_compat.ml`; dedicated
+      `faithfulness_result` type (`Faithful` / `Unfaithful` /
+      `Faithfulness_unknown`). Pure composition of the three
+      constituent verdicts; `Unfaithful` carries optional per-
+      constituent issues so callers can attribute blame.
+      7 unit tests in `cmp_api_faithfulness_pure_tests`
+      covering all-compatible, each constituent's drift in
+      isolation, multiple-issue, all-unknown, and partial-unknown
+      (which is still Faithful). When wired into the action
+      pipeline alongside c1/c6/c7, e4 api_faithful flips ✗ → ✓
+      (today silent at the c1/c2/c3 level).
 
 **Project-spec command decoupling — thread (b) cleanup (absorbs **#18, #25, #26, #40**):**
 

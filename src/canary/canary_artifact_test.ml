@@ -366,6 +366,91 @@ let cmp_api_repack_pure_tests =
         match r with Repack_unknown -> true | _ -> false };
   ]
 
+(* c8 cmp_api_faithfulness — pure composition of c1, c6, c7.
+   Catches tiny scenario e4 api_faithful when the action pipeline
+   wires c8 (today e4 is silent at the c1/c2/c3 level). *)
+let cmp_api_faithfulness_pure_tests =
+  let open Canary_compat in
+  let stub_of requires : Canary_compat.stub_inspect =
+    { path = "fixture-stub"; requires } in
+  let native_of symbols : Canary_compat.native_inspect =
+    { path = "fixture-native"; symbols } in
+  [
+    { name = "cmp_faithful.all_compatible";
+      check = fun () ->
+        let r = check_api_faithfulness
+            ~type_verdict:Type_compatible
+            ~symbol_verdict:(check_c_compat
+                ~binding_stub:(stub_of [ "tiny_sum" ])
+                ~native_lib:(native_of [ "tiny_sum"; "tiny_diff" ]))
+            ~repack_verdict:Repack_compatible in
+        match r with Faithful -> true | _ -> false };
+    { name = "cmp_faithful.type_drift_unfaithful";
+      check = fun () ->
+        let type_v = Type_arity_mismatch
+            { mismatches = [ ("sum", 2, 3) ] } in
+        let r = check_api_faithfulness
+            ~type_verdict:type_v
+            ~symbol_verdict:Compatible
+            ~repack_verdict:Repack_compatible in
+        match r with
+        | Unfaithful { type_issue = Some _; symbol_issue = None;
+                       repack_issue = None } -> true
+        | _ -> false };
+    { name = "cmp_faithful.symbol_drift_unfaithful";
+      check = fun () ->
+        let sym = Missing { symbols = [ "tiny_sum" ] } in
+        let r = check_api_faithfulness
+            ~type_verdict:Type_compatible
+            ~symbol_verdict:sym
+            ~repack_verdict:Repack_compatible in
+        match r with
+        | Unfaithful { type_issue = None; symbol_issue = Some _;
+                       repack_issue = None } -> true
+        | _ -> false };
+    { name = "cmp_faithful.repack_orphan_unfaithful";
+      check = fun () ->
+        (* e14 shape after c8 wires: repack issue surfaces under
+           api-faithfulness as a stub_orphan attribution. *)
+        let rep = Repack_stub_orphan
+            { externals_not_exposed = [ "alias_sum" ] } in
+        let r = check_api_faithfulness
+            ~type_verdict:Type_compatible
+            ~symbol_verdict:Compatible
+            ~repack_verdict:rep in
+        match r with
+        | Unfaithful { type_issue = None; symbol_issue = None;
+                       repack_issue = Some _ } -> true
+        | _ -> false };
+    { name = "cmp_faithful.multiple_issues";
+      check = fun () ->
+        let r = check_api_faithfulness
+            ~type_verdict:(Type_arity_mismatch
+                { mismatches = [ ("a", 1, 2) ] })
+            ~symbol_verdict:(Missing { symbols = [ "x" ] })
+            ~repack_verdict:Repack_compatible in
+        match r with
+        | Unfaithful { type_issue = Some _; symbol_issue = Some _;
+                       repack_issue = None } -> true
+        | _ -> false };
+    { name = "cmp_faithful.unknown_when_all_unknown";
+      check = fun () ->
+        let r = check_api_faithfulness
+            ~type_verdict:Type_unknown
+            ~symbol_verdict:Unknown
+            ~repack_verdict:Repack_unknown in
+        match r with Faithfulness_unknown -> true | _ -> false };
+    { name = "cmp_faithful.partial_unknown_still_faithful";
+      check = fun () ->
+        (* Two constituents Unknown, one Compatible — overall Faithful
+           because no constituent reported a definite Unfaithful. *)
+        let r = check_api_faithfulness
+            ~type_verdict:Type_compatible
+            ~symbol_verdict:Unknown
+            ~repack_verdict:Repack_unknown in
+        match r with Faithful -> true | _ -> false };
+  ]
+
 (* n3 inspector: inspect_header.py parses C function declarations and
    `extern` variable declarations from a .h file. Today's parser is
    regex-based, scoped to tiny.h-shape headers (flat, no preprocessor
@@ -757,7 +842,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
     @ cmp_symbol_pure_tests @ cmp_abi_pure_tests
     @ cmp_sym_version_pure_tests @ cmp_api_repack_pure_tests
-    @ cmp_type_pure_tests
+    @ cmp_type_pure_tests @ cmp_api_faithfulness_pure_tests
     @ n3_header_inspect_pure_tests @ bo1_external_inspect_pure_tests
     @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
