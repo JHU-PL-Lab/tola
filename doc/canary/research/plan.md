@@ -402,15 +402,23 @@ row in the M2 / M3 milestones above.
 
 **Comparator-only gaps:**
 
-- [ ] **c4 `cmp_abi`.** Reads `n4`'s ELF metadata (SONAME +
-      NEEDED) and `bo6` / `bo7` (or `bpe3`) NEEDED list; verifies
-      every consumer NEEDED entry resolves to some library
-      exporting that SONAME. Canary has the inspect-diff helper as
-      a diagnostic today; the comparator promotes it to a verdict.
-- [ ] **c5 `cmp_sym_version`.** Reads `n4`'s `versioned_exports`
-      and consumer-side `versioned_req` fields; verifies every
-      `@VER` requirement is satisfied by some `@@VER` export.
-      Inspectors already emit the JSON fields; pure plumbing.
+- [x] **c4 `cmp_abi`** (2026-05-29, commit `2426099`). Function
+      `check_abi ~provider_soname ~consumer_needed` in
+      `canary_compat.ml`; dedicated `abi_result` type
+      (`Abi_compatible` / `Abi_mismatch` / `Abi_unknown`). 5 unit
+      tests in `cmp_abi_pure_tests` covering the e2-shape negative
+      case plus Unknown branches. Wiring into the action pipeline
+      (Expect_compat_failure prediction / per-step verdict) is a
+      follow-up.
+- [x] **c5 `cmp_sym_version`** (2026-05-29). Function
+      `check_sym_version ~provider_versioned_exports
+      ~consumer_required_versions` in `canary_compat.ml`; dedicated
+      `sym_version_result` type. 6 unit tests in
+      `cmp_sym_version_pure_tests` covering exact-match,
+      subset-match, glibc/musl version-drift, missing-multiple, and
+      both Unknown branches. Today's check is exact-match on the
+      version tag string; floor-comparison is a future refinement.
+      Wiring into the action pipeline is a follow-up.
 
 **Inspector-and-comparator gaps:**
 

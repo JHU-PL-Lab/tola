@@ -118,6 +118,67 @@ let check_abi ~(provider_soname : string option) ~(consumer_needed : string list
       else Abi_mismatch { expected_soname = sn; consumer_needed }
 
 
+(** [c5 cmp_sym_version] result type. The "missing versions" failure
+    shape carries the version tags the consumer required that the
+    provider doesn't export — typically [@@GLIBC_2.31] when running on
+    an older glibc, or the deferred tiny scenario e9
+    [symbol_version_floor]'s [TINY_FUTURE_99.0]. *)
+type sym_version_result =
+  | Sym_version_compatible
+  | Sym_version_missing of { missing_versions : string list }
+  | Sym_version_unknown
+
+(** [c5 cmp_sym_version] implementation. Set-inclusion check on version
+    tags: every version the consumer requires must be exported by the
+    provider.
+
+    Inputs from cached JSON ([inspect_native.py] emits both):
+    - [provider_versioned_exports]: list of [(symbol, version)] pairs
+      drawn from {i n4}'s [versioned_exports] field (defined symbols
+      carrying [@@VER] suffixes, e.g. [malloc@@GLIBC_2.31]).
+    - [consumer_required_versions]: list of version tags drawn from
+      consumer-side [versioned_req] field keys (e.g.
+      [{"GLIBC_2.31": 3, "GLIBC_2.17": 5}] → [["GLIBC_2.31"; "GLIBC_2.17"]]).
+
+    Catches the deferred tiny scenario e9 [symbol_version_floor]
+    and, end-to-end, the §4.2 glibc/musl case: binary built on
+    Ubuntu 22.04 has [malloc@GLIBC_2.31] in its NEEDED references;
+    running on a glibc-2.17 host the system libc only exports
+    [@@GLIBC_2.17] — the version tag [GLIBC_2.31] is missing from the
+    provider's exported set, hence [Sym_version_missing].
+
+    Today's check is exact-match on the version tag string. A future
+    refinement could parse version components and do floor-comparison
+    (provider must export ≥ consumer's required version). Exact-match
+    is the common case for [@@GLIBC_X.YY] annotations because the
+    linker normally records the specific version it was built against.
+
+    Returns:
+    - [Sym_version_compatible] — every consumer-required version tag
+      ∈ provider's exported version set.
+    - [Sym_version_missing] — consumer requires tags the provider
+      doesn't export. The list is the missing tags.
+    - [Sym_version_unknown] — one side lacks the data (empty
+      versioned_req on the consumer, or empty versioned_exports on the
+      provider when we'd otherwise need to compare). *)
+let check_sym_version
+    ~(provider_versioned_exports : (string * string) list)
+    ~(consumer_required_versions : string list)
+    : sym_version_result =
+  if List.is_empty consumer_required_versions then Sym_version_unknown
+  else if List.is_empty provider_versioned_exports then Sym_version_unknown
+  else
+    let provider_set =
+      List.map provider_versioned_exports ~f:snd
+      |> Set.of_list (module String) in
+    let missing =
+      List.filter consumer_required_versions ~f:(fun v ->
+          not (Set.mem provider_set v))
+      |> List.dedup_and_sort ~compare:String.compare in
+    if List.is_empty missing then Sym_version_compatible
+    else Sym_version_missing { missing_versions = missing }
+
+
 (** [c1 cmp_symbol] implementation. Set-inclusion check: every C symbol the
     consumer requires must be defined by the provider.
 

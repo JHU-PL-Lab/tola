@@ -219,6 +219,68 @@ let cmp_abi_pure_tests =
         match r with Abi_unknown -> true | _ -> false };
   ]
 
+(* c5 cmp_sym_version — provider's exported @@VER set ⊇ consumer's
+   required @VER set?
+   Catches the deferred tiny scenario e9 symbol_version_floor and,
+   end-to-end, the glibc/musl version-drift case (surface_theory §4.2). *)
+let cmp_sym_version_pure_tests =
+  [
+    { name = "cmp_sym_version.compatible_exact_match";
+      check = fun () ->
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:
+              [ "malloc", "GLIBC_2.17"; "__cxa_throw", "GLIBC_2.3.4" ]
+            ~consumer_required_versions:[ "GLIBC_2.17" ] in
+        match r with Sym_version_compatible -> true | _ -> false };
+    { name = "cmp_sym_version.compatible_subset";
+      check = fun () ->
+        (* Consumer requires a subset of what provider exports. *)
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:
+              [ "malloc", "GLIBC_2.31"; "memcpy", "GLIBC_2.17";
+                "__cxa_throw", "GLIBC_2.3.4" ]
+            ~consumer_required_versions:[ "GLIBC_2.17"; "GLIBC_2.3.4" ] in
+        match r with Sym_version_compatible -> true | _ -> false };
+    { name = "cmp_sym_version.missing_newer_version";
+      check = fun () ->
+        (* The glibc-musl case: consumer built against GLIBC_2.31 but
+           running on a host with only GLIBC_2.17 exports. *)
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
+            ~consumer_required_versions:[ "GLIBC_2.31" ] in
+        match r with
+        | Sym_version_missing { missing_versions } ->
+            List.equal String.equal missing_versions [ "GLIBC_2.31" ]
+        | _ -> false };
+    { name = "cmp_sym_version.missing_multiple";
+      check = fun () ->
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
+            ~consumer_required_versions:
+              [ "GLIBC_2.31"; "GLIBC_2.34"; "GLIBC_2.17" ] in
+        match r with
+        | Sym_version_missing { missing_versions } ->
+            (* missing_versions deduplicated + sorted; GLIBC_2.17 not in *)
+            List.equal String.equal missing_versions
+              [ "GLIBC_2.31"; "GLIBC_2.34" ]
+        | _ -> false };
+    { name = "cmp_sym_version.unknown_no_consumer_req";
+      check = fun () ->
+        (* Consumer has no @VER requirements at all — nothing to check. *)
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:[ "malloc", "GLIBC_2.17" ]
+            ~consumer_required_versions:[] in
+        match r with Sym_version_unknown -> true | _ -> false };
+    { name = "cmp_sym_version.unknown_no_provider_exports";
+      check = fun () ->
+        (* Tiny baseline today: provider has no @@VER annotations even
+           though it could in principle. We can't decide either way. *)
+        let r = Canary_compat.check_sym_version
+            ~provider_versioned_exports:[]
+            ~consumer_required_versions:[ "GLIBC_2.17" ] in
+        match r with Sym_version_unknown -> true | _ -> false };
+  ]
+
 (* c2 prediction shape: a JSON whose watchlist.missing is [] should
    produce NO failure-string predictions (the positive complement to
    the existing compat.mli_dotted_expansion test which checks the
@@ -395,7 +457,8 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   let pure_fail = ref 0 in
   let pure_all =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
-    @ cmp_symbol_pure_tests @ cmp_abi_pure_tests @ c2_prediction_pure_tests in
+    @ cmp_symbol_pure_tests @ cmp_abi_pure_tests
+    @ cmp_sym_version_pure_tests @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in
