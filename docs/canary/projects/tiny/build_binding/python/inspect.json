@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "by_prefix": {
+      "tiny_": 0
+    },
+    "total": 0
+  },
+  "kind": "native",
+  "path": "canary/examples/tiny/python_cext/tiny_cext/_native.cpython-*.so",
+  "symbols": [],
+  "versioned_exports": {},
+  "versioned_req": {},
+  "watchlist": {
+    "missing": [
+      "tiny_sum",
+      "tiny_diff",
+      "tiny_offset"
+    ],
+    "present": []
+  }
+}
