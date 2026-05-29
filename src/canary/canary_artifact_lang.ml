@@ -1,19 +1,41 @@
 open Base
 
-(* Language binding artifact ops — OCaml and Python.
-   Both cover importable / linkable binding artifacts (as opposed to native
-   system libs handled in canary_artifact_native.ml).
+(** Language binding artifact ops — OCaml and Python.
 
-   OCaml NOTE: Richer inspectors exist in [src/binding/] (~1880 lines,
-   called from [src/bin/example_sp.ml]). Most relevant:
-     - [src/binding/ocaml_files.ml]   — file classification via [Objinfo.extra]
-     - [src/binding/ocamls.ml]        — proper OCaml archive inspection
-     - [src/binding/shared_library.ml]— ldd-style linked-dep extraction
-     - [src/binding/macho.ml]         — macOS Mach-O / dyld inspection
-     - [src/binding/resolve.ml]       — Via_name / Via_value matching
-     - [src/binding/canary.ml]        — old canary model (test case enumeration)
-   All use native OCaml compiler/opam libraries, not shell. See CLAUDE.md
-   "Known Gaps" for full table + migration priority. *)
+    In surface-theory terms, this module drives the inspectors that
+    extract the binding side's surfaces (s3 stub-facing through s5
+    compiled) for both supported languages. Two scripts dispatched
+    from here:
+
+    - [inspect_binding.py]
+      {ul
+        {- [--kind mli] reads a [.mli] producing the {i s4 user_facing}
+           JSON. Aliases: {i bo4 user_binding_ocaml.mli}.}
+        {- [--kind stub] reads a stub archive's undefined refs producing
+           the {i s5 compiled_binding.stub-a} JSON. Aliases: {i bo7
+           compiled_binding_ocaml.stub-a}.}
+      }
+    - [inspect_ocaml.py] reads a [.cmxa] producing the {i s5
+      compiled_binding_ocaml.cmxa} JSON via [ocamlobjinfo]. Aliases:
+      {i bo6 compiled_binding_ocaml.cmxa}.
+    - [inspect_python.py] reads a Python package's [dir()] producing the
+      {i s4 user_facing} JSON. Aliases: {i bpe2 user_binding_cext.py}
+      and {i bpc2 user_binding_ctypes.py}.
+
+    Both languages cover importable / linkable binding artifacts (as
+    opposed to native system libs handled in [canary_artifact_native.ml],
+    which targets {i s2 native_lib} = {i n4}).
+
+    OCaml NOTE: Richer inspectors exist in [src/binding/] (~1880 lines,
+    called from [src/bin/example_sp.ml]). Most relevant:
+    - [src/binding/ocaml_files.ml]   — file classification via [Objinfo.extra]
+    - [src/binding/ocamls.ml]        — proper OCaml archive inspection
+    - [src/binding/shared_library.ml]— ldd-style linked-dep extraction
+    - [src/binding/macho.ml]         — macOS Mach-O / dyld inspection
+    - [src/binding/resolve.ml]       — Via_name / Via_value matching
+    - [src/binding/canary.ml]        — old canary model (test case enumeration)
+    All use native OCaml compiler/opam libraries, not shell. See CLAUDE.md
+    "Known Gaps" for full table + migration priority. *)
 
 (* ── OCaml ── *)
 

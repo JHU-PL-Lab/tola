@@ -73,6 +73,24 @@ type compat_result =
   | Missing of { symbols : string list }
   | Unknown   (* one side lacks the data needed to decide *)
 
+(** [c1 cmp_symbol] implementation. Set-inclusion check: every C symbol the
+    consumer requires must be defined by the provider.
+
+    {!check_c_compat} takes:
+    - [binding_stub]: consumer-side undefined refs, from one of
+      {ul
+        {- {i bo7 compiled_binding_ocaml.stub-a} via
+           [inspect_binding.py --kind stub] on [libtiny_stubs.a], or}
+        {- {i bpe3 compiled_binding_cext.so} via [nm -u] on the cext [.so]
+           reshaped to [c_stub] form (run.sh handles the coercion).}
+      }
+    - [native_lib]: provider-side defined symbols, from {i n4 lib_native.so}
+      via [inspect_native.py] on the [.so].
+
+    Returns:
+    - [Compatible] — every required symbol present.
+    - [Missing { symbols }] — at least one required symbol absent.
+    - [Unknown] — one side has no symbol data (treat as inconclusive). *)
 let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
     : compat_result =
   if List.is_empty binding_stub.requires then Unknown
@@ -297,10 +315,16 @@ let load_watchlist_missing path =
     | Some wl -> get_string_list wl "missing"
     | None -> []
 
-(* Predict the set of substrings that would appear in a failed probe.log,
-   given paths to cached summaries. Consumer-facing entry point for
-   Expect_compat_failure (legacy positional API; prefer
-   [predicted_contains_any_v2] with typed inputs). *)
+(** Predict substrings that would appear in a failed [probe.log] given
+    cached inspector JSON paths. Legacy positional API kept for back-
+    compat; new call sites should use {!predicted_contains_any_v2}.
+
+    Combines two prediction layers:
+    - [stub_inspect_path] + [lib_inspect_path] → {i c1 cmp_symbol}
+      missing-symbol prediction (set diff: stub requires \ lib defines).
+      Driven by {i bo7} + {i n4} for OCaml or {i bpe3} + {i n4} for cext.
+    - [mli_inspect_path] → {i c2 cmp_api_completeness} watchlist-missing
+      prediction. Driven by {i bo4 user_binding_ocaml.mli}'s inspect JSON. *)
 let predicted_contains_any
     ?stub_inspect_path ?lib_inspect_path ?mli_inspect_path () =
   let l3 = Option.value_map mli_inspect_path ~default:[] ~f:load_watchlist_missing in
@@ -321,14 +345,29 @@ let predicted_contains_any
   l3_variants @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
-(* Typed variant of predicted_contains_any: takes a list of typed summary
-   inputs (already path-resolved). Each input contributes substrings:
-     - C_stub + Native_lib together → L0 missing C symbols (set diff)
-     - Versioned_symbols → L1b version tag mismatch (glibc version requirements)
-     - Abi_surface → L4 SONAME/NEEDED mismatch (missing or wrong .so version)
-     - Ocaml_mli → L3 watchlist missing, expanded with name_variants
-     - Python_attrs → L3 watchlist missing, expanded with name_variants
-   Order-insensitive within a list; languages can mix any subset. *)
+(** Typed input for {!predicted_contains_any_v2}: each constructor names
+    the artifact role whose cached inspect JSON sits at the carried path.
+
+    Maps 1-to-1 with {!Canary.compat_inspect_input}'s constructors —
+    that variant is the {i intent} (declared on a {!Canary.step_expectation}),
+    this one is the {i resolved-path} form computed at run time once the
+    inspector has produced its JSON. Aliases:
+
+    - [C_stub p]            ↔ {i bo7 compiled_binding_ocaml.stub-a} or
+                              {i bpe3 compiled_binding_cext.so} (stub-shape
+                              coerced). Feeds {i c1 cmp_symbol}.
+    - [Native_lib p]        ↔ {i n4 lib_native.so}. Feeds {i c1 cmp_symbol}
+                              and {i c4 cmp_abi} predictions.
+    - [Ocaml_mli p]         ↔ {i bo4 user_binding_ocaml.mli}. Feeds the
+                              {i c2 cmp_api_completeness} watchlist check.
+    - [Python_attrs p]      ↔ {i bpe2 user_binding_cext.py} or
+                              {i bpc2 user_binding_ctypes.py}. Same role
+                              as [Ocaml_mli] for the Python flavour.
+    - [Versioned_symbols p] ↔ {i n4}'s [versioned_req]/[versioned_exports]
+                              fields. Feeds {i c5 cmp_sym_version} (L1b).
+    - [Abi_surface p]       ↔ {i n4}'s ELF SONAME/NEEDED/RPATH. Feeds
+                              {i c4 cmp_abi} (L4) — currently coarser than
+                              the SONAME-only check would be. *)
 type typed_input =
   | C_stub of string
   | Native_lib of string

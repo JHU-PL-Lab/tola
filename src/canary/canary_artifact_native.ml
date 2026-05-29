@@ -1,9 +1,24 @@
 open Base
 
-(* Native library artifact ops.
-   Handles .so / .dylib / .a formats. Uses nm for symbol inspection.
-   Platform detection lives here because it currently only affects nm flags
-   (-g on macOS, -D on Linux) and native lib filename conventions. *)
+(** Native library artifact ops — extraction of the {i s2 native_lib}
+    surface (and, when reused on a binding artifact, {i s5 binding_lib}'s
+    cext flavour).
+
+    In surface-theory terms, this module is the OCaml-side glue that drives
+    the [inspect_native.py] script. The same script + this glue cover two
+    distinct artifact aliases depending on the input path:
+
+    - {i n4 lib_native.so} — the project's compiled native library
+      (e.g. tiny's [libtiny.so.1], z3's [libz3.so]).
+    - {i bpe3 compiled_binding_cext.so} (or any cext flavour in another
+      project) — a CPython C extension ELF, which {i is} a native lib
+      from the toolchain's perspective even though surface theory
+      classifies it as the consumer's compiled binding.
+
+    Handles [.so] / [.dylib] / [.a] formats. Uses [nm] for symbol
+    inspection. Platform detection lives here because it currently only
+    affects nm flags ([-g] on macOS, [-D] on Linux) and native lib
+    filename conventions. *)
 
 (* ── Platform detection ── *)
 
