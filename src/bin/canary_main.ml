@@ -112,6 +112,20 @@ let action_cmd =
       steps
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
+  (* Phase 4 milestone — drive tiny's in-tree witness through the canary
+     pipeline using the aligned vocabulary. Only OCaml binding for now;
+     Python bindings live in the tiny harness ([scenarios/scenarios.py]). *)
+  let run_tiny ~root ~failfast ~cache_path =
+    let steps =
+      Canary_action.derive_steps ~root ~project:"tiny"
+        ~langs:Canary_artifact_api.[ OCaml ]
+        Canary_project_tiny.script_spec
+    in
+    run_with_info ~artifact_names:Canary_project_tiny.script_spec.artifact_name
+      ~failfast ~cache_path ~root ~project:"tiny"
+      steps
+      (prebuilt_run_info ~project:"tiny" ~version:"in_tree" ~extra:[] steps)
+  in
   let run_zarith ~root ~failfast ~cache_path =
     let steps =
       Canary_action.derive_steps ~root ~project:"zarith"
@@ -180,6 +194,7 @@ let action_cmd =
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path distro
+    | Some "tiny" -> run_tiny ~root ~failfast ~cache_path
     | None ->
         run_sqlite ~root ~failfast ~cache_path;
         run_zarith ~root ~failfast ~cache_path;
@@ -188,7 +203,7 @@ let action_cmd =
         run_llvm ~root ~failfast ~cache_path distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm, tiny)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")

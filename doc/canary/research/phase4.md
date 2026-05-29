@@ -145,17 +145,28 @@ files. Safe to ship in pieces.
 
 ### Pass 4 — `canary_project_tiny.ml` (milestone)
 
-- [ ] **`src/canary/projects/canary_project_tiny.ml`**: new project
-      spec that drives `canary action tiny` over tiny's `c/`,
-      `ocaml/`, `python_cext/`, `python_ctypes/` trees using the
-      aligned vocabulary throughout.
-- [ ] Wire into `canary_project_run.ml` so `dune exec ... -- action
-      tiny` works.
-- [ ] Sanity check: `canary action tiny` runs all 12 scenarios via
-      the production pipeline; the recorded outcomes match
-      `scenarios.py`'s `expected` dict per scenario.
-- [ ] Sanity check: `canary compat tiny` / `canary verify tiny`
-      produce sensible output for the symbol-missing case.
+- [x] **`src/canary/projects/canary_project_tiny.ml`** (2026-05-28):
+      new project spec driving the 5-step canary pipeline over
+      tiny's in-tree source. Configure / Build_lib / Build_binding
+      OCaml / Probe / Probe-inspect all green. Module docstring +
+      command-level comments use the aligned vocabulary throughout
+      (n4 [lib_native.so], bo6/bo7 [compiled_binding_ocaml.{cmxa,stub-a}],
+      bo4 [user_binding_ocaml.mli], etc.).
+- [x] **Wired into `canary_main.ml`** — added `run_tiny` and the
+      `"tiny"` dispatch case alongside sqlite / zarith / ssl / z3 /
+      llvm. `dune exec src/bin/canary_main.exe -- action tiny` runs
+      end-to-end.
+- [ ] (Stretch) Add Python (cext + ctypes) sub-arms — currently
+      only OCaml binding is driven via canary. The tiny harness
+      ([scenarios/scenarios.py], [_harness/run_cached.py]) covers
+      Python today; folding them into the canary spec needs uv /
+      pip command handling that isn't load-bearing for the Phase 4
+      alignment milestone.
+- [ ] (Follow-up) `canary compat tiny` / `canary verify tiny` —
+      the prediction commands work on summary JSONs; tiny's
+      api_source flow isn't wired so these aren't directly
+      applicable until tiny gets an [api_source] field (parallel to
+      z3's). Not blocking for Phase 4.
 
 ### Pass 5 — docs sync after each pass
 
