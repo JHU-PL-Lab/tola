@@ -325,35 +325,40 @@ let mk_script_spec ~source
        else None);
     configure =
       (if source.has_build_lib || cmake_build_binding then
-         let cmake_cmd =
+         let cmake_exec =
            if cmake_build_binding then "opam exec -- cmake" else "cmake"
          in
          let ocaml_flag = if cmake_build_binding then "ON" else "OFF" in
-         let flags = z3_cmake_build_flags_str ~indent:"                " in
+         let flags =
+           z3_cmake_build_flags
+           @ [ [%string "-DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag}"] ]
+         in
          Some
            (fun ~output_dir ~variant_key ->
-             let conf_ok = Canary_step_key.variant_file ~variant_key "conf.ok" in
-             [%string
-               "%{cmake_cmd} -S %{root} -B %{build} %{flags} \\\n\
-               \                -DZ3_BUILD_OCAML_BINDINGS=%{ocaml_flag} && \
-                echo 'ok' > %{output_dir}/%{conf_ok}"])
+             Canary_toolchain.cmake_configure_cmd
+               ~cmake_exec ~flags ~src:root ~build ()
+             |> Canary_toolchain.with_marker
+                  ~marker:"conf.ok" ~output_dir ~variant_key)
        else None);
     build_lib =
       (if source.has_build_lib then
          Some
            (fun ~output_dir ~variant_key ->
-             let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-             [%string
-               "ninja -C %{build} libz3 && echo 'ok' > %{output_dir}/%{build_ok}"])
+             Canary_toolchain.ninja_build_cmd ~target:"libz3" ~build ()
+             |> Canary_toolchain.with_marker
+                  ~marker:"build.ok" ~output_dir ~variant_key)
        else None);
     build_binding =
       (if cmake_build_binding then
          [ (OCaml,
             fun ~output_dir ~variant_key ->
-              let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-              [%string
-                "eval $(opam env) && ninja -C %{build} build_z3_ocaml_bindings \
-                 && echo 'ok' > %{output_dir}/%{build_ok}"]) ]
+              let ninja_cmd =
+                Canary_toolchain.ninja_build_cmd
+                  ~target:"build_z3_ocaml_bindings" ~build ()
+              in
+              Printf.sprintf "eval $(opam env) && %s" ninja_cmd
+              |> Canary_toolchain.with_marker
+                   ~marker:"build.ok" ~output_dir ~variant_key) ]
        else []);
     install_lib =
       (if source.has_build_lib then

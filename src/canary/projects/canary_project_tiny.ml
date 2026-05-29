@@ -133,20 +133,21 @@ let script_spec : Canary_action.script_spec =
     (* No fetch_source: tiny is in-tree. *)
     api_source = Some tiny_api_source;
 
-    (* Configure: cmake -S c -B c/build. The trailing marker-write satisfies
-       canary's default check_post (looks for conf.ok in output_dir). *)
+    (* Configure: cmake -S c -B c/build. The marker-write suffix is added
+       via [Canary_toolchain.with_marker] so check_post sees conf.ok. *)
     configure = Some (fun ~output_dir ~variant_key ->
-      let conf_ok = Canary_step_key.variant_file ~variant_key "conf.ok" in
-      Printf.sprintf
-        "cmake -S %s/c -B %s/c/build && echo 'ok' > %s/%s"
-        tiny_root tiny_root output_dir conf_ok);
+      Canary_toolchain.cmake_configure_cmd
+        ~src:[%string "%{tiny_root}/c"]
+        ~build:[%string "%{tiny_root}/c/build"] ()
+      |> Canary_toolchain.with_marker
+           ~marker:"conf.ok" ~output_dir ~variant_key);
 
     (* Build_lib produces lib_native.so (n4) at c/build/libtiny.so.1. *)
     build_lib = Some (fun ~output_dir ~variant_key ->
-      let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-      Printf.sprintf
-        "cmake --build %s/c/build && echo 'ok' > %s/%s"
-        tiny_root output_dir build_ok);
+      Canary_toolchain.cmake_build_cmd
+        ~build:[%string "%{tiny_root}/c/build"] ()
+      |> Canary_toolchain.with_marker
+           ~marker:"build.ok" ~output_dir ~variant_key);
 
     (* Build_binding OCaml: dune build under canary/examples/tiny/ocaml/.
        Produces:
@@ -160,20 +161,22 @@ let script_spec : Canary_action.script_spec =
     build_binding = [
       (Canary_artifact_api.OCaml,
        fun ~output_dir ~variant_key ->
-         let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-         Printf.sprintf
-           "LIBRARY_PATH=%s LD_RUN_PATH=%s dune build %s/ocaml && \
-            echo 'ok' > %s/%s"
-           tiny_lib_dir tiny_lib_dir tiny_root output_dir build_ok);
+         Canary_toolchain.dune_build_cmd
+           ~env_extra:[
+             [%string "LIBRARY_PATH=%{tiny_lib_dir}"];
+             [%string "LD_RUN_PATH=%{tiny_lib_dir}"];
+           ]
+           ~target:[%string "%{tiny_root}/ocaml"] ()
+         |> Canary_toolchain.with_marker
+              ~marker:"build.ok" ~output_dir ~variant_key);
       (* Build_binding Python: invoke tiny's Makefile python_cext target,
          which runs `uv build --wheel` and copies _native.cpython-*.so back
          next to __init__.py. Produces bpe3 compiled_binding_cext.so. *)
       (Canary_artifact_api.Python,
        fun ~output_dir ~variant_key ->
-         let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-         Printf.sprintf
-           "make -C %s python_cext && echo 'ok' > %s/%s"
-           tiny_root output_dir build_ok);
+         Printf.sprintf "make -C %s python_cext" tiny_root
+         |> Canary_toolchain.with_marker
+              ~marker:"build.ok" ~output_dir ~variant_key);
     ];
 
     (* Probe_lib: minimal "the lib exists and is loadable" check. The real

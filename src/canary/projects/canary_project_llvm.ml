@@ -224,39 +224,41 @@ python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{
    - lib output: <build>/lib/libLLVM*.so
    - binding output: <build>/lib/ocaml/llvm.cmxa *)
 
-let cmake_configure_cmd ~source_root ~build_dir =
-  let cmake_source = cmake_source_of_root source_root in
-  (* Speed flags:
-     - mold: 5-10x faster linking than ld (available on this machine)
-     - LLVM_OPTIMIZED_TABLEGEN: builds tablegen in Release even in Debug builds
-     - ccache: compiler cache; no-op if not installed (CMAKE_*_COMPILER_LAUNCHER
-       falls back gracefully when the binary is absent)
-     - LLVM_PARALLEL_LINK_JOBS: limit concurrent linkers to avoid OOM;
-       each LLVM link can use 4-8 GB — set to (RAM_GB / 8) conservatively *)
-  [%string
-    {|eval $(opam env) && cmake \
-  -S %{cmake_source} -B %{build_dir} -G Ninja \
-  -DCMAKE_C_COMPILER=clang-23 \
-  -DCMAKE_CXX_COMPILER=clang++-23 \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER_LAUNCHER=sccache \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
-  -DLLVM_USE_LINKER=mold \
-  -DLLVM_OPTIMIZED_TABLEGEN=ON \
-  -DLLVM_PARALLEL_LINK_JOBS=8 \
-  -DLLVM_ENABLE_BINDINGS=ON \
-  -DLLVM_BUILD_LLVM_DYLIB=ON \
-  -DLLVM_LINK_LLVM_DYLIB=ON \
-  -DLLVM_TARGETS_TO_BUILD="X86" \
-  -DLLVM_ENABLE_PROJECTS="" \
-  -DLLVM_ENABLE_RUNTIMES="" \
-  -DLLVM_BUILD_TOOLS=OFF \
-  -DLLVM_BUILD_EXAMPLES=OFF \
-  -DLLVM_INCLUDE_TESTS=OFF \
-  -DLLVM_INCLUDE_BENCHMARKS=OFF \
-  -DLLVM_INCLUDE_DOCS=OFF \
-  -DLLVM_BUILD_RUNTIME=OFF \
-  -DLLVM_ENABLE_ASSERTIONS=OFF|}]
+(* cmake flag list for LLVM (no -S/-B). The actual configure command is
+   assembled by [Canary_toolchain.cmake_configure_cmd] in the script_spec.
+
+   Speed flags:
+   - mold: 5-10x faster linking than ld (available on this machine)
+   - LLVM_OPTIMIZED_TABLEGEN: builds tablegen in Release even in Debug builds
+   - ccache/sccache: compiler cache; no-op if not installed
+     (CMAKE_*_COMPILER_LAUNCHER falls back gracefully when the binary is absent)
+   - LLVM_PARALLEL_LINK_JOBS: limit concurrent linkers to avoid OOM;
+     each LLVM link can use 4-8 GB — set to (RAM_GB / 8) conservatively *)
+let llvm_cmake_flags =
+  [
+    "-G Ninja";
+    "-DCMAKE_C_COMPILER=clang-23";
+    "-DCMAKE_CXX_COMPILER=clang++-23";
+    "-DCMAKE_BUILD_TYPE=Release";
+    "-DCMAKE_C_COMPILER_LAUNCHER=sccache";
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=sccache";
+    "-DLLVM_USE_LINKER=mold";
+    "-DLLVM_OPTIMIZED_TABLEGEN=ON";
+    "-DLLVM_PARALLEL_LINK_JOBS=8";
+    "-DLLVM_ENABLE_BINDINGS=ON";
+    "-DLLVM_BUILD_LLVM_DYLIB=ON";
+    "-DLLVM_LINK_LLVM_DYLIB=ON";
+    {|-DLLVM_TARGETS_TO_BUILD="X86"|};
+    {|-DLLVM_ENABLE_PROJECTS=""|};
+    {|-DLLVM_ENABLE_RUNTIMES=""|};
+    "-DLLVM_BUILD_TOOLS=OFF";
+    "-DLLVM_BUILD_EXAMPLES=OFF";
+    "-DLLVM_INCLUDE_TESTS=OFF";
+    "-DLLVM_INCLUDE_BENCHMARKS=OFF";
+    "-DLLVM_INCLUDE_DOCS=OFF";
+    "-DLLVM_BUILD_RUNTIME=OFF";
+    "-DLLVM_ENABLE_ASSERTIONS=OFF";
+  ]
 
 let mk_script_spec ~source
     ?(binding_configs =
@@ -313,29 +315,37 @@ let mk_script_spec ~source
        else None);
     configure =
       (if source.has_build_lib || source.has_build_binding then
+         let cmake_source = cmake_source_of_root root in
          Some
            (fun ~output_dir ~variant_key ->
-             let conf_ok = Canary_step_key.variant_file ~variant_key "conf.ok" in
-             [%string
-               "%{cmake_configure_cmd ~source_root:root ~build_dir:build} \
-                && echo 'ok' > %{output_dir}/%{conf_ok}"])
+             let cmake_cmd =
+               Canary_toolchain.cmake_configure_cmd
+                 ~cmake_exec:"cmake" ~flags:llvm_cmake_flags
+                 ~src:cmake_source ~build ()
+             in
+             Printf.sprintf "eval $(opam env) && %s" cmake_cmd
+             |> Canary_toolchain.with_marker
+                  ~marker:"conf.ok" ~output_dir ~variant_key)
        else None);
     build_lib =
       (if source.has_build_lib then
          Some
            (fun ~output_dir ~variant_key ->
-             let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-             [%string
-               "ninja -C %{build} LLVM && echo 'ok' > %{output_dir}/%{build_ok}"])
+             Canary_toolchain.ninja_build_cmd ~target:"LLVM" ~build ()
+             |> Canary_toolchain.with_marker
+                  ~marker:"build.ok" ~output_dir ~variant_key)
        else None);
     build_binding =
       (if source.has_build_binding then
          [ (OCaml,
             fun ~output_dir ~variant_key ->
-              let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-              [%string
-                "eval $(opam env) && ninja -C %{build} ocaml_all \
-                 && echo 'ok' > %{output_dir}/%{build_ok}"]) ]
+              let ninja_cmd =
+                Canary_toolchain.ninja_build_cmd
+                  ~target:"ocaml_all" ~build ()
+              in
+              Printf.sprintf "eval $(opam env) && %s" ninja_cmd
+              |> Canary_toolchain.with_marker
+                   ~marker:"build.ok" ~output_dir ~variant_key) ]
        else []);
     install_lib =
       (if source.has_build_lib then
