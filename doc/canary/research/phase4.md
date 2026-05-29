@@ -167,28 +167,35 @@ files. Safe to ship in pieces.
       Binding OCaml), bpe2 attrs (via Probe Binding Python).
       `canary action tiny` now runs 12 steps (6 main + 6 inspect)
       and produces the same JSON shapes the standalone harness does.
-- [ ] **Gap: c1 cmp_symbol not wired into the action pipeline.**
-      canary's `action` command produces n4 + bo7 + bpe3 inspector
-      JSONs but does not cross-compare them. cmp_symbol fires via
-      `canary compat <project>` (separate command) or via an
-      `Expect_compat_failure` step expectation (only when a probe
-      is expected to fail). For baseline tiny, every probe succeeds,
-      so no comparator runs. Closing this gap = wiring `canary compat
-      tiny` to read tiny's cached JSONs and run check_c_compat. Not
-      a tiny-side gap — same pattern would apply to z3/llvm baselines.
-- [ ] **Gap: Python ctypes (bpc1/bpc2) not modeled.** By §2.3 of
-      surface theory, ctypes has no s5 (no compiled binding artifact).
-      canary's `Binding Python` slot is fundamentally Build_binding
-      → Probe_binding, which assumes s5 exists. Modelling ctypes
-      would require either a "no-build" binding subtype in canary or
-      a parallel `Binding (Python, ctypes)` variant. Deferred.
-- [ ] **Gap: app_binding.exe / app_helper.exe / tiny_helper.** The
-      tiny harness covers these via dedicated probes (e12/e13
-      fixtures + tiny_helper as a downstream library layer). canary's
-      `App` and `Build_app` rules could carry app_binding; tiny_helper
-      could be a second `Binding OCaml` if the schema allowed multiple.
-      Deferred — minimal value vs. probe_binding_ocaml which already
-      transitively exercises the chain.
+**Resolved 2026-05-29 after gap review:**
+
+- [closed] **c1 cmp_symbol not wired into the action pipeline** — not
+  a tiny-specific gap. z3 and llvm have exactly the same shape:
+  curated `stable_symbols` watchlist in `api_source`, provider-side
+  check at Probe Lib time, no consumer-side cross-compare in the
+  action pipeline. The cross-compare (n4.symbols ⊇ bo7.requires)
+  lives in `canary compat` / `Expect_compat_failure` only.
+  For tiny's perturbation set, the watchlist already catches e1
+  symbol_missing, e6 api_complete, e11 api_complete_python; e8
+  symbol_orphan needs cross-compare but is caught at link time by
+  modern linkers' `--no-undefined` default. So tiny has the same
+  coverage as z3/llvm baselines. A project-wide auto-`compat` after
+  `action` would be a future improvement; not blocking Phase 4.
+
+- [deferred] **Python ctypes (bpc1/bpc2)** — no real-world canary
+  target uses pure-ctypes today (z3-solver is cext via pip wheel;
+  llvmlite is hybrid cext+ctypes where canary cares about the cext
+  side). Modelling ctypes in canary's schema would need a no-build
+  binding subtype. Revisit when a real-world ctypes-only binding
+  appears as a canary target.
+
+- [todo] **app_binding.exe / app_helper.exe / tiny_helper** — left
+  in the backlog. The probe_binding_ocaml step transitively
+  exercises the build chain (probe links against bo3/bo7, dynamically
+  loads n4), so the marginal value of separate App / Helper steps in
+  canary is low. Worth doing if/when tiny's e12/e13 outcomes (the
+  per-fixture probes the standalone harness records) become
+  comparison targets for canary's run_state.json.
 
 ### Pass 5 — docs sync after each pass
 
