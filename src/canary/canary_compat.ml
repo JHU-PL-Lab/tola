@@ -73,6 +73,51 @@ type compat_result =
   | Missing of { symbols : string list }
   | Unknown   (* one side lacks the data needed to decide *)
 
+(** [c4 cmp_abi] result type. Distinct from [compat_result] because the
+    failure shape differs — mismatched SONAME (single name we expected)
+    rather than missing symbols (a set). *)
+type abi_result =
+  | Abi_compatible
+  | Abi_mismatch of { expected_soname : string; consumer_needed : string list }
+  | Abi_unknown
+
+(** [c4 cmp_abi] implementation. Provider exports a SONAME; consumer has
+    a NEEDED list. Compatible iff [consumer_needed] contains
+    [provider_soname].
+
+    Inputs in tiny's vocabulary:
+    - [provider_soname] from {i n4 lib_native.so}'s [elf.soname] field
+      (produced by [inspect_native.py] + [readelf -d]).
+    - [consumer_needed] from {i bpe3 compiled_binding_cext.so}'s
+      [elf.needed] field (same script, different artifact). OCaml
+      bindings don't surface NEEDED on their [.cmxa] / [.stub-a] — it
+      lives on the final linked exe — so [check_abi] only handles the
+      cext (and, generally, any [.so]-shaped consumer artifact) for
+      now; OCaml-side ABI checks would need an inspect of the linked
+      probe exe.
+
+    Catches tiny scenario {i e2 abi_soname_bump}: provider's SONAME
+    flips libtiny.so.1 → libtiny.so.2; consumer's NEEDED still lists
+    libtiny.so.1. {check_abi} returns [Abi_mismatch] — at static check
+    time, before the OS dynamic loader fails the load.
+
+    Returns:
+    - [Abi_compatible] — [provider_soname] ∈ [consumer_needed]
+    - [Abi_mismatch] — provider exports a SONAME the consumer doesn't
+      reference (or, by symmetry, the consumer requires a SONAME the
+      provider doesn't export). The [consumer_needed] list is carried
+      forward for diagnostic strings.
+    - [Abi_unknown] — one side lacks the data. *)
+let check_abi ~(provider_soname : string option) ~(consumer_needed : string list)
+    : abi_result =
+  match provider_soname with
+  | None -> Abi_unknown
+  | Some sn ->
+      if List.is_empty consumer_needed then Abi_unknown
+      else if List.mem consumer_needed sn ~equal:String.equal then Abi_compatible
+      else Abi_mismatch { expected_soname = sn; consumer_needed }
+
+
 (** [c1 cmp_symbol] implementation. Set-inclusion check: every C symbol the
     consumer requires must be defined by the provider.
 

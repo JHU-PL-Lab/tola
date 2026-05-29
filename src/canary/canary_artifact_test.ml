@@ -166,6 +166,59 @@ let cmp_symbol_pure_tests =
         match r with Unknown -> true | _ -> false };
   ]
 
+(* c4 cmp_abi — provider.SONAME ∈ consumer.NEEDED?
+   Catches tiny scenario e2 abi_soname_bump (and the same shape on
+   z3/llvm: libz3.so.4 vs libz3.so.5 etc.). *)
+let cmp_abi_pure_tests =
+  [
+    { name = "cmp_abi.compatible_soname_in_needed";
+      check = fun () ->
+        let r = Canary_compat.check_abi
+            ~provider_soname:(Some "libtiny.so.1")
+            ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
+        match r with Abi_compatible -> true | _ -> false };
+    { name = "cmp_abi.mismatch_soname_bumped";
+      check = fun () ->
+        (* e2-shape: provider bumped to libtiny.so.2 but consumer still
+           references libtiny.so.1. The Abi_mismatch carries the
+           expected (provider) SONAME for diagnostics. *)
+        let r = Canary_compat.check_abi
+            ~provider_soname:(Some "libtiny.so.2")
+            ~consumer_needed:[ "libc.so.6"; "libtiny.so.1" ] in
+        match r with
+        | Abi_mismatch { expected_soname; consumer_needed } ->
+            String.equal expected_soname "libtiny.so.2"
+            && List.equal String.equal consumer_needed
+                 [ "libc.so.6"; "libtiny.so.1" ]
+        | _ -> false };
+    { name = "cmp_abi.mismatch_when_only_system_libs";
+      check = fun () ->
+        (* Consumer only needs libc — doesn't reference our provider at
+           all. Treated as a mismatch since the provider's SONAME isn't
+           in the list. (Could be relaxed to Compatible if "consumer
+           doesn't need our lib at all" is fine; today's check is
+           strict.) *)
+        let r = Canary_compat.check_abi
+            ~provider_soname:(Some "libtiny.so.1")
+            ~consumer_needed:[ "libc.so.6" ] in
+        match r with
+        | Abi_mismatch { expected_soname; _ } ->
+            String.equal expected_soname "libtiny.so.1"
+        | _ -> false };
+    { name = "cmp_abi.unknown_no_provider_soname";
+      check = fun () ->
+        let r = Canary_compat.check_abi
+            ~provider_soname:None
+            ~consumer_needed:[ "libtiny.so.1" ] in
+        match r with Abi_unknown -> true | _ -> false };
+    { name = "cmp_abi.unknown_empty_needed";
+      check = fun () ->
+        let r = Canary_compat.check_abi
+            ~provider_soname:(Some "libtiny.so.1")
+            ~consumer_needed:[] in
+        match r with Abi_unknown -> true | _ -> false };
+  ]
+
 (* c2 prediction shape: a JSON whose watchlist.missing is [] should
    produce NO failure-string predictions (the positive complement to
    the existing compat.mli_dotted_expansion test which checks the
@@ -342,7 +395,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   let pure_fail = ref 0 in
   let pure_all =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
-    @ cmp_symbol_pure_tests @ c2_prediction_pure_tests in
+    @ cmp_symbol_pure_tests @ cmp_abi_pure_tests @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in
