@@ -319,20 +319,54 @@ action` and tiny's harness should consume.
       (`api_faithful` / `api_complete` describe the *property*, not
       the *violation* — separate small pass).
 
-### Step 4 — Implementation
+### Step 4 — Comparator and inspector buildout (principled shape)
 
-Order by gap-shape (comparator-only first, since the JSON already
-exists) then by likely effort. Each item is also a row in the M2
-or M3 milestone above.
+Steps 1–3 (and Phase 4 inside step 3) were **vocabulary** work —
+unify terms, align docs and code, build the tiny witness so
+canary spec matches the standalone harness. Step 4 is the
+**substance** work: close the static-check gaps the tiny scenarios
+reveal.
 
-- [ ] **c4 `cmp_abi`.** Reads `n4` + `bo6`/`bo7` (or `bpe3`)
-      outputs; verifies every NEEDED entry resolves to some library
-      exporting that SONAME. Diagnostic today; promote to a
-      comparator. (Comparator-only.)
+Two threads, interleaved:
+
+**(a) Implement what's missing.** c4..c8 don't exist; n3 / bo1 /
+bpc1 / bpe1 inspectors don't exist. The tiny scenarios show what
+each ought to detect — e.g. e6 api_complete needs bo4 mli inspector
++ c2 (both wired today); e3 type_wrong needs n3 + bo1 inspectors +
+c6 cmp_type (all missing). For each gap row in `surface_theory.md`
+§2.4's contract status table, build the inspector(s) and
+comparator that closes it.
+
+**(b) Retrofit to the principled shape.** Tiny's comparators
+(`_harness/comparators/cmp_*.py`) are standalone CLI scripts: take
+two JSONs, return a verdict. Canary's existing comparators are
+{i embedded} — `check_c_compat` lives inside `canary_compat.ml` and
+runs as part of the action graph; the c2 watchlist check is
+buried inside the `Expect_compat_failure` step expectation runner.
+That's pragmatic but not principled — it conflates "comparator
+logic" with "where canary invokes it." Step 4's new comparators
+should follow tiny's standalone-script pattern (the [Step 3]
+"shared utilities `canary_inspectors/` Python package" item) and
+the existing c1/c2/c3 can be retrofit when convenient.
+
+Order: comparator-only gaps first (JSONs exist; just need the
+diff logic), then inspector-and-comparator gaps. Each item is a
+row in the M2 / M3 milestones above.
+
+**Comparator-only gaps:**
+
+- [ ] **c4 `cmp_abi`.** Reads `n4`'s ELF metadata (SONAME +
+      NEEDED) and `bo6` / `bo7` (or `bpe3`) NEEDED list; verifies
+      every consumer NEEDED entry resolves to some library
+      exporting that SONAME. Canary has the inspect-diff helper as
+      a diagnostic today; the comparator promotes it to a verdict.
 - [ ] **c5 `cmp_sym_version`.** Reads `n4`'s `versioned_exports`
       and consumer-side `versioned_req` fields; verifies every
       `@VER` requirement is satisfied by some `@@VER` export.
-      (Comparator-only.)
+      Inspectors already emit the JSON fields; pure plumbing.
+
+**Inspector-and-comparator gaps:**
+
 - [ ] **Inspector for `bo1`** (OCaml `external` decls). Add
       `^external` matching to `inspect_binding.py` (one-line regex
       change). Unblocks s3 stub-facing for OCaml.
@@ -340,15 +374,25 @@ or M3 milestone above.
       function signatures from `.h`. tree-sitter-c or libclang.
       Substantial.
 - [ ] **c6 `cmp_type` (OCaml first).** Once `n3` and `bo1`
-      inspectors land; compare signatures by name.
+      inspectors land; compare signatures by name. Today the type
+      contract has zero static coverage; tiny's e3 type_wrong
+      scenario is the regression test that flips ✗ → ✓ when this
+      lands.
 - [ ] **Inspectors for `bpc1`** (ctypes argtypes parse) and
       **`bpe1`** (cext `PyMethodDef` parse). Python AST parse for
       ctypes; C parse for cext.
 - [ ] **c7 `cmp_api_repack` (OCaml first).** Compare `bo1` vs
       `bo4`; verify every user-facing name corresponds to a
-      stub-facing name with compatible types.
-- [ ] **c8 `cmp_api_faithfulness`.** Pure composition once c1, c6,
-      c7 exist.
+      stub-facing name with compatible types. Tiny's e5 api_repack
+      is the regression test.
+
+**Derived (free once c1/c6/c7 exist):**
+
+- [ ] **c8 `cmp_api_faithfulness`.** Pure composition. Tiny's e4
+      api_faithful scenario flips ✗ → ✓ when this lands.
+
+**Milestone (closed):**
+
 - [x] **`canary_project_tiny.ml`** (2026-05-28 / expanded 2026-05-29):
       `canary action tiny` runs the full 12-step pipeline (6 main +
       6 inspect) using the aligned vocabulary. JSON shapes
