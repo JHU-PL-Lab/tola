@@ -4,3 +4,8 @@
  (libraries unix base fmt tola_std canary_lib)
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+
+; Opt out of the parent canary_lib's (include_subdirs unqualified) so
+; this directory is treated as its own library, not as files belonging
+; to canary_lib.
+(include_subdirs no)

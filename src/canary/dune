@@ -16,3 +16,20 @@
   str)
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+
+; Layered subdirectory organization (introduced 2026-05-29).
+; Subdirs are physical-only — wrapped:false + include_subdirs:unqualified
+; means every .ml in any subdir produces a flat top-level module (e.g.
+; action/canary_action.ml → module Canary_action). Layers:
+;
+;   base/    Layer 0 — primitive enum types (location, distro, pm)
+;   core/    Layer 1 — surface theory: artifact, api, contract, inspect data
+;   inspect/ Layer 2 — inspector glue (drives Python scripts)
+;   action/  Layer 3 — action graph (rule, step, run, post, cache, key)
+;   pm/      Layer 4 — package managers + toolchain
+;   backend/ Layer 5 — output renderers (GH Actions YAML, Mermaid)
+;   test/    Layer 6 — framework self-tests
+;
+; The projects/ subdirectory has its own dune file (canary_projects
+; sub-library); it opts out of include_subdirs via its own dune.
+(include_subdirs unqualified)
