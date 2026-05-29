@@ -58,6 +58,11 @@ def parse_mli_lines(lines):
     - module aliases (`module Foo = Bar`) produce no vals/constructors.
     """
     vals = []
+    externals = []     # `external name : ty = "C_symbol"` decls — stub-facing
+                       # (s3 surface). Distinct from vals (s4 surface) because
+                       # externals bind directly to C symbols; the corresponding
+                       # user-facing vals live in a different .mli on the same
+                       # binding's repack layer.
     constructors = []
     modules = []
     module_path = []   # current module nesting, e.g. ["Opcode"]
@@ -113,7 +118,16 @@ def parse_mli_lines(lines):
                 module_path.pop()
             continue
 
-        # val declaration (any indentation)
+        # external declaration (any indentation) — s3 stub-facing surface.
+        # Matched BEFORE val so `external` doesn't accidentally fall through
+        # to a `val` match on a hypothetical future grammar overlap.
+        m = re.match(r'external\s+(\w+)', line)
+        if m:
+            prefix = '.'.join(module_path) + '.' if module_path else ''
+            externals.append(prefix + m.group(1))
+            continue
+
+        # val declaration (any indentation) — s4 user-facing surface.
         m = re.match(r'val\s+(\w+)', line)
         if m:
             prefix = '.'.join(module_path) + '.' if module_path else ''
@@ -126,7 +140,7 @@ def parse_mli_lines(lines):
             prefix = '.'.join(module_path) + '.' if module_path else ''
             constructors.append(prefix + m.group(1))
 
-    return vals, constructors, modules
+    return vals, externals, constructors, modules
 
 
 def summarize_mli(paths, watchlist, prefix_by_filename=False):
@@ -137,18 +151,20 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
     package convention: `llvm.mli` is the body of module `Llvm`). The module
     itself is also added to the modules list.
     """
-    all_vals, all_constructors, all_modules = [], [], []
+    all_vals, all_externals, all_constructors, all_modules = [], [], [], []
     for p in paths:
         with open(p) as f:
-            v, c, m = parse_mli_lines(f.readlines())
+            v, e, c, m = parse_mli_lines(f.readlines())
         if prefix_by_filename:
             stem = os.path.splitext(os.path.basename(p))[0]
             mod = stem[:1].upper() + stem[1:]
             v = [f"{mod}.{x}" for x in v]
+            e = [f"{mod}.{x}" for x in e]
             c = [f"{mod}.{x}" for x in c]
             m = [f"{mod}.{x}" for x in m]
             all_modules.append(mod)
         all_vals.extend(v)
+        all_externals.extend(e)
         all_constructors.extend(c)
         all_modules.extend(m)
 
@@ -158,9 +174,13 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
         return [x for x in xs if not (x in seen or seen.add(x))]
 
     vals = dedup(all_vals)
+    externals = dedup(all_externals)
     constructors = dedup(all_constructors)
     modules = dedup(all_modules)
-    all_names = set(vals) | set(constructors) | set(modules)
+    # Watchlist resolves against the union of all four sets so a single
+    # inspect can be used on either an s3 (externals-bearing) or s4
+    # (vals-bearing) .mli without the caller needing to know which.
+    all_names = set(vals) | set(externals) | set(constructors) | set(modules)
     present = [w for w in watchlist if w in all_names]
     missing = [w for w in watchlist if w not in all_names]
 
@@ -170,10 +190,12 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
         "path": source,
         "counts": {
             "vals": len(vals),
+            "externals": len(externals),
             "constructors": len(constructors),
             "modules": len(modules),
         },
         "vals": vals,
+        "externals": externals,
         "constructors": constructors,
         "modules": modules,
         "watchlist": {"present": present, "missing": missing},

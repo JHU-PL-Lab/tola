@@ -219,6 +219,75 @@ let cmp_abi_pure_tests =
         match r with Abi_unknown -> true | _ -> false };
   ]
 
+(* bo1 inspector: `^external` parse in inspect_binding.py --kind mli.
+   The s3 stub-facing surface for OCaml bindings. Written as shell
+   tests because the inspector is a separate Python script; tests
+   produce synthetic .mli fixtures, run the script, parse the JSON,
+   and assert the externals / vals fields. *)
+let bo1_external_inspect_pure_tests =
+  let tmp_root = "_out/canary/test/bo1-external" in
+  let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
+  let write_mli name body =
+    let path = tmp_root ^ "/" ^ name ^ ".mli" in
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc body;
+    Stdlib.close_out oc;
+    path in
+  let inspect mli_path =
+    let out_file = mli_path ^ ".inspect.json" in
+    let cmd = [%string
+      "python3 canary/scripts/inspect_binding.py --kind mli --path %{mli_path} > %{out_file}"] in
+    let rc = Stdlib.Sys.command cmd in
+    if rc <> 0 then failwith [%string "inspect_binding failed (rc=%{rc#Int})"];
+    Yojson.Basic.from_file out_file in
+  let str_list_of_json j name =
+    Yojson.Basic.Util.(j |> member name |> to_list |> filter_string) in
+  let int_of_json j key =
+    Yojson.Basic.Util.(j |> member "counts" |> member key |> to_int) in
+
+  let stub_path = write_mli "stub"
+    {|external sum        : int -> int -> int = "caml_tiny_sum"
+external diff       : int -> int -> int = "caml_tiny_diff"
+external get_offset : unit -> int       = "caml_tiny_get_offset"
+|} in
+  let user_path = write_mli "user"
+    {|val sum    : int -> int -> int
+val diff   : int -> int -> int
+val offset : unit -> int
+|} in
+  let mixed_path = write_mli "mixed"
+    {|external raw_alpha : int -> int = "c_alpha"
+val cooked : int -> int
+external raw_beta  : int -> int = "c_beta"
+|} in
+  let stub_j = inspect stub_path in
+  let user_j = inspect user_path in
+  let mixed_j = inspect mixed_path in
+  [
+    { name = "bo1.stub_mli_has_externals_no_vals";
+      check = fun () ->
+        let externals = str_list_of_json stub_j "externals" in
+        let vals = str_list_of_json stub_j "vals" in
+        int_of_json stub_j "externals" = 3
+        && List.equal String.equal externals
+             [ "sum"; "diff"; "get_offset" ]
+        && List.is_empty vals };
+    { name = "bo1.user_mli_has_vals_no_externals";
+      check = fun () ->
+        let externals = str_list_of_json user_j "externals" in
+        let vals = str_list_of_json user_j "vals" in
+        int_of_json user_j "vals" = 3
+        && int_of_json user_j "externals" = 0
+        && List.equal String.equal vals [ "sum"; "diff"; "offset" ]
+        && List.is_empty externals };
+    { name = "bo1.mixed_mli_separates_externals_and_vals";
+      check = fun () ->
+        let externals = str_list_of_json mixed_j "externals" in
+        let vals = str_list_of_json mixed_j "vals" in
+        List.equal String.equal externals [ "raw_alpha"; "raw_beta" ]
+        && List.equal String.equal vals [ "cooked" ] };
+  ]
+
 (* c5 cmp_sym_version — provider's exported @@VER set ⊇ consumer's
    required @VER set?
    Catches the deferred tiny scenario e9 symbol_version_floor and,
@@ -458,7 +527,8 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   let pure_all =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
     @ cmp_symbol_pure_tests @ cmp_abi_pure_tests
-    @ cmp_sym_version_pure_tests @ c2_prediction_pure_tests in
+    @ cmp_sym_version_pure_tests @ bo1_external_inspect_pure_tests
+    @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in

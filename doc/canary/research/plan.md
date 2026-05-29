@@ -422,9 +422,15 @@ row in the M2 / M3 milestones above.
 
 **Inspector-and-comparator gaps:**
 
-- [ ] **Inspector for `bo1`** (OCaml `external` decls). Add
-      `^external` matching to `inspect_binding.py` (one-line regex
-      change). Unblocks s3 stub-facing for OCaml.
+- [x] **Inspector for `bo1`** (2026-05-29). `^external` parse added
+      to `inspect_binding.py`; emits a new `externals` field
+      alongside `vals` so a single `--kind mli` run on either a
+      stub-facing `.mli` ({i bo1}) or user-facing `.mli` ({i bo4})
+      cleanly separates the two surfaces. Watchlist resolves against
+      both. 3 fixture-driven OCaml tests (`bo1_external_inspect_pure_tests`)
+      assert the externals-vs-vals split on stub-only, user-only, and
+      mixed `.mli` inputs. Unblocks {i s3 stub-facing} for OCaml; c7
+      cmp_api_repack can now compare `bo1.externals` ↔ `bo4.vals`.
 - [ ] **Inspector for `n3`** (C header parser). New parser for C
       function signatures from `.h`. tree-sitter-c or libclang.
       Substantial.
