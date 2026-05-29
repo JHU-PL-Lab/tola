@@ -61,6 +61,7 @@ support.
 | `src/canary/projects/canary_project_sqlite.ml` | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
 | `src/canary/projects/canary_project_z3.ml`     | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/projects/canary_project_llvm.ml`   | LLVM spec; OCaml stable variant uses `Expect_compat_failure` for forward-incompat detection            |
+| `src/canary/projects/canary_project_tiny.ml`   | tiny in-tree spec (Phase 4 alignment milestone); api_source + OCaml + Python cext sub-arms; 12-step pipeline produces JSONs byte-equivalent to `make scenarios-cached`. See `doc/canary/research/phase4.md`. |
 | `src/canary/projects/canary_run.ml`            | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
 | `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |

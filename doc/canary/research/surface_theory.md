@@ -595,7 +595,12 @@ them one at a time.
 #### Implementation pointers — where each piece lives in the canary tree
 
 For readers who want to trace the contracts to running code rather
-than to the inspector/comparator IDs:
+than to the inspector/comparator IDs. Phase 4 (2026-05-28/29) added
+doc-comments on the cited types and functions naming the canonical
+artifacts they handle (e.g. `compat_inspect_input`'s constructors
+each carry their `n*`/`bo*`/`bpe*` alias mapping inline) — so a
+reader following these pointers will find the alignment table
+restated in code as well.
 
 **Table — Implementation pointers.** Per-component file references; maps the abstract `i*` / `c*` IDs to concrete files in the canary tree.
 

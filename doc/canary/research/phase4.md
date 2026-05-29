@@ -31,16 +31,16 @@ with the aligned vocabulary, the loop is closed.
 
 ## Naming convention (final)
 
-| index family | examples | usage |
-|---|---|---|
-| `s1..s6` | s1 native_header, s2 native_lib, ... | abstract surface roles (theory layer) |
-| `c1..c8` | c1 cmp_symbol, c2 cmp_api_completeness | contracts = comparators (1-to-1) |
-| `e1..e13` | e1 symbol_missing, e2 abi_soname_bump | scenarios |
-| `n*` | n1 `source_native.c`, n4 `lib_native.so` | native-side artifacts, project-local |
-| `bo*` | bo1 `stub_binding_ocaml.mli`, bo7 `compiled_binding_ocaml.stub-a` | ocaml binding artifacts |
-| `bpc*` | bpc2 `user_binding_ctypes.py` | python ctypes binding artifacts |
-| `bpe*` | bpe3 `compiled_binding_cext.so` | python cext binding artifacts |
-| canonical names | `<role>_<side>[_<lang>][_<mech>].<form>` | pan-universal, the prose form in OCaml code |
+| index family    | examples                                                          | usage                                       |
+| --------------- | ----------------------------------------------------------------- | ------------------------------------------- |
+| `s1..s6`        | s1 native_header, s2 native_lib, ...                              | abstract surface roles (theory layer)       |
+| `c1..c8`        | c1 cmp_symbol, c2 cmp_api_completeness                            | contracts = comparators (1-to-1)            |
+| `e1..e13`       | e1 symbol_missing, e2 abi_soname_bump                             | scenarios                                   |
+| `n*`            | n1 `source_native.c`, n4 `lib_native.so`                          | native-side artifacts, project-local        |
+| `bo*`           | bo1 `stub_binding_ocaml.mli`, bo7 `compiled_binding_ocaml.stub-a` | ocaml binding artifacts                     |
+| `bpc*`          | bpc2 `user_binding_ctypes.py`                                     | python ctypes binding artifacts             |
+| `bpe*`          | bpe3 `compiled_binding_cext.so`                                   | python cext binding artifacts               |
+| canonical names | `<role>_<side>[_<lang>][_<mech>].<form>`                          | pan-universal, the prose form in OCaml code |
 
 **Code convention**:
 
@@ -58,21 +58,21 @@ See `tiny.md` "Artifact inventory" for the full mapping.
 
 A survey of where the old vocabulary lives in `src/canary/`:
 
-| canary location | term today | direction for Phase 4 |
-|---|---|---|
-| `canary_basic.ml` | `artifact_kind = Source ∣ Headers ∣ Lib ∣ Binding of lang ∣ App` | **keep** — coarse action-dispatch grouping. Add doc-comment mapping each constructor to its canonical-name group (e.g. `Headers → header_native`; `Binding OCaml → {stub,user,compiled}_binding_ocaml.*`). |
-| `canary_basic.ml` | `artifact = { kind; name; location }`, `artifact_node` | leave types alone; add doc-comments tying `name` to canonical-name conventions for each kind. |
-| `canary.ml` | `string_of_artifact_kind` produces `"source" \| "headers" \| "lib" \| "<lang>_binding" \| "app"` | **keep** — already role-shaped. |
-| `canary.ml` | `compat_inspect_input = C_stub ∣ Native_lib ∣ Ocaml_mli ∣ Python_attrs ∣ Versioned_symbols` | each constructor maps to a canonical artifact role. Add doc-comment per constructor: `Ocaml_mli (* parses bo4 user_binding_ocaml.mli OR bpe2/bpc2 equivalent *)`. Consider renaming `Ocaml_mli → User_binding_mli` and `Python_attrs → User_binding_attrs` (per binding-language-agnostic shape), but that's a wider rename — propose as a follow-up if simpler names suffice. |
-| `canary.ml` | `step_expectation`, `Expect_compat_failure` | document that the predicted failure substring comes from a specific surface delta on the named artifact alias. |
-| `canary_action.ml` | `binding_summary : (lang * string) list` (e.g. `[(OCaml, "z3")]`) | rename to `binding_user_facing_pkg` or `user_facing_label`. The field actually labels the user-facing package name per language; `binding_summary` was the pre-Phase-2 term. |
-| `canary_artifact_api.ml` | `native_api`, `binding_api`, `api_component = Headers ∣ Runtime_lib ∣ Link_lib ∣ Pc_file` | keep types; doc-comment cross-references: `Headers (* → header_native = n3 in tiny *)`, `Runtime_lib (* → lib_native = n4 *)`, etc. |
-| `canary_artifact_native.ml` | inspect glue for `inspect_native.py` | doc-comments tying functions to `n4` / `bpe3` (the two artifacts using this script). |
-| `canary_artifact_lang.ml` | OCaml + Python summary helpers | per-function docs: which alias each function produces JSON for. |
-| `canary_artifact_test.ml` | test fixtures: `fmt_cmxa`, `libsqlite3_so`, `sys_dir`, ... | rename test variable names to canonical form where it improves clarity (e.g. `sys_dir → user_binding_python_sys` if the fixture is symbolic of s4 Python). |
-| `canary_compat.ml` | `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project` | already structurally aligned; doc-comments tying inputs to alias pairs (e.g. `check_c_compat n4 bo7` for OCaml, `check_c_compat n4 bpe3` for cext). |
-| project specs (`canary_project_{z3,llvm,sqlite}.ml`) | hand-written per-project paths and watchlists | optional follow-up: add an `aliases : (string * string) list` field carrying the per-project artifact inventory. Not strictly needed for Phase 4 but unblocks tooling that wants to print `n4 lib_native.so` instead of raw paths. |
-| `canary_project_tiny.ml` | **doesn't exist yet** | new module — the milestone check. Must build cleanly and `canary action tiny` must run all 12 scenarios through the production pipeline using the aligned vocabulary. |
+| canary location                                      | term today                                                                                       | direction for Phase 4                                                                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `canary_basic.ml`                                    | `artifact_kind = Source ∣ Headers ∣ Lib ∣ Binding of lang ∣ App`                                 | **keep** — coarse action-dispatch grouping. Add doc-comment mapping each constructor to its canonical-name group (e.g. `Headers → header_native`; `Binding OCaml → {stub,user,compiled}_binding_ocaml.*`).                                                                                                                                                                     |
+| `canary_basic.ml`                                    | `artifact = { kind; name; location }`, `artifact_node`                                           | leave types alone; add doc-comments tying `name` to canonical-name conventions for each kind.                                                                                                                                                                                                                                                                                  |
+| `canary.ml`                                          | `string_of_artifact_kind` produces `"source" \| "headers" \| "lib" \| "<lang>_binding" \| "app"` | **keep** — already role-shaped.                                                                                                                                                                                                                                                                                                                                                |
+| `canary.ml`                                          | `compat_inspect_input = C_stub ∣ Native_lib ∣ Ocaml_mli ∣ Python_attrs ∣ Versioned_symbols`      | each constructor maps to a canonical artifact role. Add doc-comment per constructor: `Ocaml_mli (* parses bo4 user_binding_ocaml.mli OR bpe2/bpc2 equivalent *)`. Consider renaming `Ocaml_mli → User_binding_mli` and `Python_attrs → User_binding_attrs` (per binding-language-agnostic shape), but that's a wider rename — propose as a follow-up if simpler names suffice. |
+| `canary.ml`                                          | `step_expectation`, `Expect_compat_failure`                                                      | document that the predicted failure substring comes from a specific surface delta on the named artifact alias.                                                                                                                                                                                                                                                                 |
+| `canary_action.ml`                                   | `binding_summary : (lang * string) list` (e.g. `[(OCaml, "z3")]`)                                | rename to `binding_user_facing_pkg` or `user_facing_label`. The field actually labels the user-facing package name per language; `binding_summary` was the pre-Phase-2 term.                                                                                                                                                                                                   |
+| `canary_artifact_api.ml`                             | `native_api`, `binding_api`, `api_component = Headers ∣ Runtime_lib ∣ Link_lib ∣ Pc_file`        | keep types; doc-comment cross-references: `Headers (* → header_native = n3 in tiny *)`, `Runtime_lib (* → lib_native = n4 *)`, etc.                                                                                                                                                                                                                                            |
+| `canary_artifact_native.ml`                          | inspect glue for `inspect_native.py`                                                             | doc-comments tying functions to `n4` / `bpe3` (the two artifacts using this script).                                                                                                                                                                                                                                                                                           |
+| `canary_artifact_lang.ml`                            | OCaml + Python summary helpers                                                                   | per-function docs: which alias each function produces JSON for.                                                                                                                                                                                                                                                                                                                |
+| `canary_artifact_test.ml`                            | test fixtures: `fmt_cmxa`, `libsqlite3_so`, `sys_dir`, ...                                       | rename test variable names to canonical form where it improves clarity (e.g. `sys_dir → user_binding_python_sys` if the fixture is symbolic of s4 Python).                                                                                                                                                                                                                     |
+| `canary_compat.ml`                                   | `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project`                              | already structurally aligned; doc-comments tying inputs to alias pairs (e.g. `check_c_compat n4 bo7` for OCaml, `check_c_compat n4 bpe3` for cext).                                                                                                                                                                                                                            |
+| project specs (`canary_project_{z3,llvm,sqlite}.ml`) | hand-written per-project paths and watchlists                                                    | optional follow-up: add an `aliases : (string * string) list` field carrying the per-project artifact inventory. Not strictly needed for Phase 4 but unblocks tooling that wants to print `n4 lib_native.so` instead of raw paths.                                                                                                                                             |
+| `canary_project_tiny.ml`                             | **doesn't exist yet**                                                                            | new module — the milestone check. Must build cleanly and `canary action tiny` must run all 12 scenarios through the production pipeline using the aligned vocabulary.                                                                                                                                                                                                          |
 
 ## Task list
 
@@ -81,28 +81,31 @@ Ordered low-risk → higher. Each item should leave canary green
 
 ### Pass 1 — doc-comment annotations (zero rename risk)
 
-- [ ] **`canary.ml` `compat_inspect_input`**: doc-comment each
-      constructor with the artifact alias(es) it represents
+Landed in two commits:
+
+- [x] **`canary.ml` `compat_inspect_input`** (`ee14dc2`): doc-comment
+      each constructor with the artifact alias(es) it represents
       (`Ocaml_mli` ↔ bo4 / bpe2 / bpc2; `Native_lib` ↔ n4; etc.).
-- [ ] **`canary.ml` `string_of_artifact_kind`**: docstring linking
-      each output string to the canonical-name group.
-- [ ] **`canary_basic.ml` `artifact_kind`**: docstring per
+- [x] **`canary.ml` `string_of_artifact_kind`** (`ee14dc2`): docstring
+      linking each output string to the canonical-name group.
+- [x] **`canary_basic.ml` `artifact_kind`** (`ee14dc2`): docstring per
       constructor + a single comment block mapping the coarse kind
       to the fine `n*/b*` aliases in tiny.
-- [ ] **`canary_artifact_api.ml` `api_component`**: doc-comment per
-      constructor (Headers / Runtime_lib / Link_lib / Pc_file) tying
-      to `s1..s2` and the canonical-name groups.
-- [ ] **`canary_compat.ml`**: function-header docstrings for
-      `check_c_compat` and `predicted_contains_any_v2` naming the
-      alias pair each call site exercises.
-- [ ] **`canary_artifact_native.ml` / `_lang.ml` / `_check.ml`**:
-      per-function docstrings: which alias's JSON each function
-      produces or reads.
+- [x] **`canary_artifact_api.ml` `api_component`** (`ee14dc2`):
+      doc-comment per constructor (Headers / Runtime_lib / Link_lib /
+      Pc_file) tying to `s1..s2` and the canonical-name groups.
+- [x] **`canary_compat.ml`** (`2ac5b9d`): function-header docstrings
+      for `check_c_compat`, `predicted_contains_any`, and the
+      `typed_input` variant naming the alias pair each call site
+      exercises.
+- [x] **`canary_artifact_native.ml` / `_lang.ml`** (`2ac5b9d`):
+      module-header docstrings naming which alias's JSON each
+      module's glue produces or reads. `_check.ml` left unannotated
+      — pure existence checks, no surface-theory mapping needed.
 
-Pass 1 deliverable: every type and function dealing with surface
-artifacts has a doc-comment naming its canonical role. No code
-changes; greps for `s1..s6`, `n4`, `bo1`, etc. find the right
-files. Safe to ship in pieces.
+Pass 1 deliverable shipped: every type and function dealing with
+surface artifacts has a doc-comment naming its canonical role.
+Greps for `s1..s6`, `n4`, `bo1`, etc. find the right files.
 
 ### Pass 2 — surgical renames (low-risk)
 
@@ -199,16 +202,19 @@ files. Safe to ship in pieces.
 
 ### Pass 5 — docs sync after each pass
 
-- [ ] After Pass 1 (doc-comments): update `surface_theory.md` §2.7
-      "Implementation pointers" table — file-level pointers are now
-      navigable by canonical name.
-- [ ] After Pass 2 (renames): update CLAUDE.md "Key source files"
-      table.
-- [ ] After Pass 3 (alias module): document the canonical /
-      alias types in `surface_theory.md` and link from this tracker.
-- [ ] After Pass 4 (`canary_project_tiny.ml`): update `tiny.md`
-      "Not yet wired" section to remove the canary_project_tiny.ml
-      gap; close §6 step 4's final bullet in `plan.md`.
+- [x] After Pass 1 (doc-comments): `surface_theory.md` §2.7
+      "Implementation pointers" updated with a note that the cited
+      types/functions now carry inline canonical-name annotations.
+- [x] After Pass 2 (renames): `CLAUDE.md` "Key source files" table
+      updated with `canary_project_tiny.ml` row. (binding_summary
+      rename didn't appear in CLAUDE.md.)
+- [n/a] After Pass 3 (alias module): Pass 3 was skipped per the
+      "do Pass 4 first, evaluate grouping later" decision. Revisit
+      when the future refactor that produces the typed alias module
+      lands.
+- [x] After Pass 4 (`canary_project_tiny.ml`): `tiny.md` "Not yet
+      wired" updated (tiny project spec ✓ done); `plan.md` §6 step 4
+      final bullet marked done.
 
 ## Open questions
 
@@ -251,11 +257,11 @@ Rationale:
 When we revisit (separate refactor, post-Phase-4), three options on
 the table:
 
-| | what | structural signal | churn |
-|---|---|---|---|
-| **A** | Keep `canary_` prefix; doc-comment "generic, extractable" | none | minimal |
-| **B** | Drop prefix in module names; keep in canary's dune library | name-level | small renames (+ likely `(wrapped false)` headache) |
-| **C** | Split into a sibling dune library `src/surface/`; canary depends on it | library-level | moderate (dune file + every import) |
+|       | what                                                                   | structural signal | churn                                               |
+| ----- | ---------------------------------------------------------------------- | ----------------- | --------------------------------------------------- |
+| **A** | Keep `canary_` prefix; doc-comment "generic, extractable"              | none              | minimal                                             |
+| **B** | Drop prefix in module names; keep in canary's dune library             | name-level        | small renames (+ likely `(wrapped false)` headache) |
+| **C** | Split into a sibling dune library `src/surface/`; canary depends on it | library-level     | moderate (dune file + every import)                 |
 
 Option B has a wrinkle: OCaml's default namespace-wrap exports as
 `Canary__Surface`. Cleanly un-prefixing pulls in `(wrapped false)`
@@ -277,16 +283,25 @@ A natural grouping after that future split:
 These names go into Phase 4 with the `canary_` prefix; the future
 refactor revisits the question.
 
-## Done criteria for Phase 4
+## Done criteria for Phase 4 — ✓ met (2026-05-29)
 
-- All passes 1–4 complete.
-- `make canary` clean.
-- `dune exec src/bin/canary_main.exe -- artifact-test` 28/28 (Linux),
-  matches macOS pm-test count from `1b078a2`.
-- `dune exec src/bin/canary_main.exe -- pm-test` green.
-- `canary action tiny` runs and produces a sensible
-  `run_state.json`.
-- Pass 5 doc updates landed.
+- [x] Pass 1 (doc-comments) — `ee14dc2`, `2ac5b9d`
+- [x] Pass 2 (binding_summary rename) — `5a8f8d7`
+- [n/a] Pass 3 (typed alias module) — skipped per the
+  "evaluate grouping later" decision; revisit with the future
+  refactor.
+- [x] Pass 4 (`canary_project_tiny.ml`) — `51700b3` (minimal
+  5-step) + `7ffa3a0` (expanded to 12-step harness parity)
+- [x] Pass 5 (docs sync) — this commit
+- [x] `make canary` clean throughout
+- [x] `artifact-test` 28/28 (Linux); macOS path landed earlier in
+  `1b078a2`
+- [x] `pm-test` 14/14
+- [x] `canary action tiny` runs and produces a 12-step
+  `run_state.json` with JSON shapes byte-equivalent to
+  `make scenarios-cached`
 
-Then Phase 4 closes and §6 step 4 (comparators) picks up with the
-aligned vocabulary already in place.
+Phase 4 closes. §6 step 4 (comparators c4 / c5 / c6 / c7 / c8)
+picks up with the aligned vocabulary already in place — every
+comparator's contract/alias/file mapping is searchable in code via
+the Pass 1 docstrings.

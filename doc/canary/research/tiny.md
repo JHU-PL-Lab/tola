@@ -956,9 +956,12 @@ own concern; what the binding artifact *is* is the contract.
 
 ## Not yet wired
 
-- **`tiny` project spec.** `src/canary/projects/canary_project_tiny.ml`
-  doesn't exist yet. Once added, `canary action tiny` runs the same
-  pipeline as `canary action z3` on this minimal target.
+- ✓ **`tiny` project spec** (2026-05-28 / expanded 2026-05-29).
+  `src/canary/projects/canary_project_tiny.ml` exists and
+  `canary action tiny` runs the same pipeline as `canary action
+  z3` — 12 steps (6 main + 6 inspect) producing JSON shapes
+  byte-equivalent to what `make scenarios-cached` produces for
+  every artifact (n4, bo4, bo7, bpe2, bpe3). See [`phase4.md`](phase4.md).
 - **Rust binding.** Open question — worth including for the
   cross-binding agreement sub-component (§2.2). Deferred until the
   OCaml + Python scenario set has been reviewed.

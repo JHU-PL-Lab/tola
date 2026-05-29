@@ -349,11 +349,11 @@ or M3 milestone above.
       stub-facing name with compatible types.
 - [ ] **c8 `cmp_api_faithfulness`.** Pure composition once c1, c6,
       c7 exist.
-- [ ] **`canary_project_tiny.ml`** so `canary action tiny` works.
-      Once this exists, every scenario in tiny becomes an automated
-      check that `canary action` runs. Treated as the milestone
-      check for Phase 4 (term alignment) — see
-      [`phase4.md`](phase4.md).
+- [x] **`canary_project_tiny.ml`** (2026-05-28 / expanded 2026-05-29):
+      `canary action tiny` runs the full 12-step pipeline (6 main +
+      6 inspect) using the aligned vocabulary. JSON shapes
+      byte-equivalent to `make scenarios-cached`. Phase 4 milestone
+      check passed — see [`phase4.md`](phase4.md).
 
 ### Step 4b — Phase 4: canary code-side term alignment
 
