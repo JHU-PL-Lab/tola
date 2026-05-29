@@ -267,7 +267,7 @@ Naming convention used in the docs and code (final scheme):
   tables / log lines / JSON keys / status displays (column-fits).
 - **Formal `Σ_*` notation**: reserved for the paper.
 
-See [`phase4.md`](phase4.md) for the term-alignment tracker that
+See [`phase4_2026_05.md`](../worklog/phase4_2026_05.md) for the term-alignment tracker that
 applies this scheme to canary's OCaml code.
 
 ### Step 1 — Establish unified terms  ✓ **DONE** (2026-05-15)
@@ -353,11 +353,11 @@ or M3 milestone above.
       `canary action tiny` runs the full 12-step pipeline (6 main +
       6 inspect) using the aligned vocabulary. JSON shapes
       byte-equivalent to `make scenarios-cached`. Phase 4 milestone
-      check passed — see [`phase4.md`](phase4.md).
+      check passed — see [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
 
 ### Step 4b — Phase 4: canary code-side term alignment
 
-Tracked in detail in [`phase4.md`](phase4.md). Brief: canary OCaml
+Tracked in detail in [`phase4_2026_05.md`](../worklog/phase4_2026_05.md). Brief: canary OCaml
 code currently uses a pre-Phase-2 vocabulary (`artifact_kind`,
 `binding_summary`, language-flavoured ad-hoc names). Phase 4
 aligns it to the unified scheme (canonical names + `n*`/`b*`

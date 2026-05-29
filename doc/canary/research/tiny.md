@@ -961,7 +961,7 @@ own concern; what the binding artifact *is* is the contract.
   `canary action tiny` runs the same pipeline as `canary action
   z3` — 12 steps (6 main + 6 inspect) producing JSON shapes
   byte-equivalent to what `make scenarios-cached` produces for
-  every artifact (n4, bo4, bo7, bpe2, bpe3). See [`phase4.md`](phase4.md).
+  every artifact (n4, bo4, bo7, bpe2, bpe3). See [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
 - **Rust binding.** Open question — worth including for the
   cross-binding agreement sub-component (§2.2). Deferred until the
   OCaml + Python scenario set has been reviewed.
