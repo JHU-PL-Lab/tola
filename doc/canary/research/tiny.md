@@ -356,12 +356,16 @@ the unmodified baseline:
 | **API-completeness** | `Tiny.mli` exposes `{sum, diff, offset}` → ✓ (c2 wired)                                              | `dir(tiny) ⊇ {sum, diff, offset}` → ✓                                                |
 | **Behavior**         | `Tiny.sum 2 3 = 47` matches direct C call → ✓ (c3 wired via probe)                                   | `tiny.sum(2, 3) == 47` matches direct C call → ✓                                     |
 
-## Scenarios — twelve variants (ten perturbations + two positive coverage)
+## Scenarios — thirteen variants (eleven perturbations + two positive coverage)
 
 Each *perturbation* scenario violates one (or more) contracts from
 §2.4. The two positive-coverage scenarios (e12, e13) apply no
 perturbation; they assert that the longest-interesting build/link
-chains stay wired in baseline.
+chains stay wired in baseline. One scenario (e14) is a
+{i statically-detectable-but-runtime-silent} regression test for
+{c7 cmp_api_repack} — the standard harness records it as
+all-pass because c7 isn't wired into [`run.sh`](../../canary/examples/tiny/scenarios/_harness/run.sh);
+the unit-test layer covers the verdict shape.
 
 Two harnesses run the scenarios. Both are kept; either should
 match the other's PASS set, so divergence between them is a
@@ -392,8 +396,9 @@ regression signal:
 | **e11** | `api_complete_python`   | source patch both Python user-facing `__init__.py` (drop `sum`)           | API-completeness          | ok                           | fail (AttributeError) | fail (AttributeError) |
 | **e12** | `app_over_binding_ocaml` | no-op apply; asserts `app_binding.exe` (Tiny-using app) builds and runs | (positive coverage — c1 dyn, c2, c3) | ok                | ok                 | ok                 |
 | **e13** | `app_over_helper_ocaml`  | no-op apply; asserts `app_helper.exe` (uses `tiny_helper` which uses `Tiny`) builds and runs | (positive coverage — repack composes across layers) | ok | ok | ok |
+| **e14** | `api_repack_stub_orphan` | source patch adds `external alias_sum` to Tiny_raw.mli + caml_tiny_alias_sum wrapper, but Tiny.mli doesn't surface it | API-repacking (s3↔s4 orphan) | ok (silent — c7 catches statically) | ok (silent) | ok (silent) |
 
-Twelve variants now cover the contract grid in both OCaml and Python
+Thirteen variants now cover the contract grid in both OCaml and Python
 directions (e5/e6 = OCaml; e10/e11 = Python parallels) plus the
 longest-interesting chain (e12 = app → Tiny binding; e13 = app →
 tiny_helper → Tiny binding). `e9 symbol_version_floor` is reserved

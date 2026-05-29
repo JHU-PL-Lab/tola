@@ -421,6 +421,26 @@ SCENARIOS = {
             "cmp_api_complete_ctypes": "pass",
         },
     },
+    "api_repack_stub_orphan": {
+        "description": "e14 stub-side orphan: Tiny_raw.mli (bo1) adds `external alias_sum` with a matching caml_tiny_alias_sum C wrapper, but Tiny.mli (bo4) doesn't surface it. The binding compiles + links + probes pass; c1 cmp_symbol passes (no new tiny_* undef refs — caml_tiny_alias_sum internally calls tiny_sum which is already exported); c2 cmp_api_completeness passes (bo4.vals still ⊇ watchlist). The orphan is invisible to today's standard harness; c7 cmp_api_repack catches it via bo1.externals \\ bo4.vals (minus declared renames).",
+        "violates": ["API-repacking"],
+        "perturbs": ["ocaml/tiny_raw.ml", "ocaml/tiny_raw.mli", "ocaml/tiny_stubs.c"],  # [s3 OCaml extension; orphan at s3↔s4]
+        "apply":  _ml_patch_apply("api_repack_stub_orphan"),
+        "revert": _ml_patch_revert("api_repack_stub_orphan"),
+        "expected": {
+            "ocaml_build":             "ok",
+            "ocaml_probe":             "ok",
+            "ocaml_app_binding":       "ok",
+            "ocaml_app_helper":        "ok",
+            "python_cext_probe":       "ok",
+            "python_ctypes_probe":     "ok",
+            "cmp_symbol_ocaml":        "pass",
+            "cmp_symbol_cext":         "pass",
+            "cmp_api_complete_ocaml":  "pass",
+            "cmp_api_complete_cext":   "pass",
+            "cmp_api_complete_ctypes": "pass",
+        },
+    },
 }
 
 

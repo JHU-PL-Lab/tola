@@ -219,6 +219,71 @@ let cmp_abi_pure_tests =
         match r with Abi_unknown -> true | _ -> false };
   ]
 
+(* c7 cmp_api_repack — stub externals ↔ user vals (intra-binding,
+   modulo declared renames).
+   Catches the new tiny scenario e14 api_repack_stub_orphan. *)
+let cmp_api_repack_pure_tests =
+  let open Canary_compat in
+  [
+    { name = "cmp_api_repack.compatible_exact_match";
+      check = fun () ->
+        let r = check_api_repack
+            ~stub_externals:[ "sum"; "diff"; "offset" ]
+            ~user_vals:[ "sum"; "diff"; "offset" ]
+            ~renames:[] in
+        match r with Repack_compatible -> true | _ -> false };
+    { name = "cmp_api_repack.compatible_with_rename";
+      check = fun () ->
+        (* tiny baseline: bo1 has get_offset, bo4 has offset. Rename
+           pair declared → Compatible. *)
+        let r = check_api_repack
+            ~stub_externals:[ "sum"; "diff"; "get_offset" ]
+            ~user_vals:[ "sum"; "diff"; "offset" ]
+            ~renames:[ ("get_offset", "offset") ] in
+        match r with Repack_compatible -> true | _ -> false };
+    { name = "cmp_api_repack.stub_orphan_unrenamed";
+      check = fun () ->
+        (* e14 shape: stub has an extra external not in vals and not
+           declared as a rename source. *)
+        let r = check_api_repack
+            ~stub_externals:[ "sum"; "diff"; "offset"; "alias_sum" ]
+            ~user_vals:[ "sum"; "diff"; "offset" ]
+            ~renames:[] in
+        match r with
+        | Repack_stub_orphan { externals_not_exposed } ->
+            List.equal String.equal externals_not_exposed [ "alias_sum" ]
+        | _ -> false };
+    { name = "cmp_api_repack.stub_orphan_with_rename_ignored";
+      check = fun () ->
+        (* Rename map filters out get_offset/offset but alias_sum is
+           still an orphan. *)
+        let r = check_api_repack
+            ~stub_externals:[ "sum"; "diff"; "get_offset"; "alias_sum" ]
+            ~user_vals:[ "sum"; "diff"; "offset" ]
+            ~renames:[ ("get_offset", "offset") ] in
+        match r with
+        | Repack_stub_orphan { externals_not_exposed } ->
+            List.equal String.equal externals_not_exposed [ "alias_sum" ]
+        | _ -> false };
+    { name = "cmp_api_repack.user_phantom_unbacked";
+      check = fun () ->
+        (* Synthetic: a val without a backing external. Unreachable in
+           well-typed OCaml; still a meaningful Python/non-OCaml case. *)
+        let r = check_api_repack
+            ~stub_externals:[ "sum"; "diff" ]
+            ~user_vals:[ "sum"; "diff"; "phantom_thing" ]
+            ~renames:[] in
+        match r with
+        | Repack_user_phantom { vals_without_external } ->
+            List.equal String.equal vals_without_external [ "phantom_thing" ]
+        | _ -> false };
+    { name = "cmp_api_repack.unknown_both_empty";
+      check = fun () ->
+        let r = check_api_repack
+            ~stub_externals:[] ~user_vals:[] ~renames:[] in
+        match r with Repack_unknown -> true | _ -> false };
+  ]
+
 (* bo1 inspector: `^external` parse in inspect_binding.py --kind mli.
    The s3 stub-facing surface for OCaml bindings. Written as shell
    tests because the inspector is a separate Python script; tests
@@ -527,8 +592,8 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   let pure_all =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
     @ cmp_symbol_pure_tests @ cmp_abi_pure_tests
-    @ cmp_sym_version_pure_tests @ bo1_external_inspect_pure_tests
-    @ c2_prediction_pure_tests in
+    @ cmp_sym_version_pure_tests @ cmp_api_repack_pure_tests
+    @ bo1_external_inspect_pure_tests @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in

@@ -442,10 +442,26 @@ row in the M2 / M3 milestones above.
 - [ ] **Inspectors for `bpc1`** (ctypes argtypes parse) and
       **`bpe1`** (cext `PyMethodDef` parse). Python AST parse for
       ctypes; C parse for cext.
-- [ ] **c7 `cmp_api_repack` (OCaml first).** Compare `bo1` vs
-      `bo4`; verify every user-facing name corresponds to a
-      stub-facing name with compatible types. Tiny's e5 api_repack
-      is the regression test.
+- [x] **c7 `cmp_api_repack` (OCaml first)** (2026-05-29). Function
+      `check_api_repack ~stub_externals ~user_vals ~renames` in
+      `canary_compat.ml`; dedicated `repack_result` type
+      (`Repack_compatible` / `Repack_stub_orphan` /
+      `Repack_user_phantom` / `Repack_unknown`). Renames are
+      explicit (project specs declare allowed (external, val)
+      pairs); empty list for default strict match. 6 unit tests in
+      `cmp_api_repack_pure_tests` covering exact-match,
+      compatible-with-rename (tiny's `get_offset → offset`),
+      stub_orphan with and without renames, user_phantom, and
+      unknown. **Regression scenario**: new tiny scenario
+      **e14 `api_repack_stub_orphan`** — patch adds
+      `external alias_sum` to Tiny_raw.mli (with matching C wrapper)
+      but Tiny.mli doesn't surface it. Today's standard harness
+      records it as all-pass because c7 isn't wired into
+      `run.sh`; the unit-test layer covers the verdict shape.
+      **Note**: my earlier plan incorrectly named e5 as the c7
+      regression test. e5 patches `.ml` (implementation, swaps
+      diff args); .mli signatures unchanged → c7 sees no drift.
+      e5 is c3 Behavior's territory, not c7's.
 
 **Derived (free once c1/c6/c7 exist):**
 
