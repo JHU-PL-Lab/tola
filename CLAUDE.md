@@ -151,44 +151,31 @@ missing from the z3-solver pip wheel) using `Expect_compat_failure { inputs
 
 ### Current TODO (numbers are stable like GH issues — never renumbered)
 
-15b. **Unit-test framework for compat/inspect logic** — current testing is
-     `canary action <project>` (heavy integration test — opam installs, cmake
-     builds). Need a lightweight harness that feeds synthetic `inspect.json`
-     fixtures into `predicted_contains_any_v2` and `check_c_compat`, asserting
-     expected predictions without running any probe. Analogous to the pure
-     compat tests in `canary_artifact_test.ml` but focused on the mismatch
-     prediction pipeline. Would enable test-driven development for the L1b/L2/L4
-     placeholder layers.
+**Active Step 4 work — all driven from
+[`doc/canary/research/plan.md`](doc/canary/research/plan.md) §6 Step 3b + Step 4.**
+Numbers below are still the canonical TODO ids; plan.md is the
+sequencing / progress doc that absorbs them.
 
-16b. **Wire L1b versioned-symbol mismatch detection** — plumbing done
-     (`Versioned_symbols` variant on `compat_inspect_input`, `predicted_contains_any_v2`
-     extracts `versioned_req` keys). Needs a concrete project with glibc/C++ ABI
-     version drift to wire into `Expect_compat_failure`. This is really a
-     version-mismatch problem: the consumer's `@VER` requirements must be
-     satisfiable by the provider's `@@VER` exports. Cross-references TODO #19
-     (LLVM C-symbol check) and the `inspect.json` `versioned_req` field.
+- **#15b** — Unit-test framework for compat/inspect logic. Plan: §6 Step 3b.
+- **#43** — L1b versioned-symbol mismatch detection (c5 cmp_sym_version).
+  Plan: §6 Step 4 (a) "Comparator-only gaps".
+- **#44** — L2 typed signatures via clang AST (c6 cmp_type). Plan: §6 Step 4
+  (a) "Inspector-and-comparator gaps".
+- **#18** — Audit project specs for hardcoded shell commands. Plan: §6 Step 4
+  (b) "Project-spec command decoupling" (now generalized to extracting
+  cmake / dune / ninja primitives into `Canary_toolchain`).
+- **#19** — LLVM cross-version C-symbol check. Plan: §6 Step 4 (b) "Live
+  demos to strengthen" (belt-and-suspenders with the existing OCaml-side
+  c2 watchlist demo).
+- **#25 / #40** — Real `cmake --install` instead of fake `cp`. Plan: §6 Step
+  4 (b) "Project-spec command decoupling".
+- **#26** — z3 cmake `build_z3_ocaml_bindings` PHONY guard. Plan: §6 Step 4
+  (b).
+- **#16b** — Older redundant entry, superseded by #43 in the absorbed plan.
 
-18. **Audit project specs for hardcoded shell commands** — every shell command
-    should delegate to a toolchain helper (`Canary_toolchain.pip_install_cmd`,
-    `Canary_action.probe_ocaml_cmd`, `Canary_action.fetch_lib_cmd`, etc.) rather
-    than hardcoding `python3 -m pip`, `apt-get install`, etc.  The llvm spec's
-    `probe_app` was found to hardcode `python3 -m pip install` (brittle; fails
-    in venvs without pip).  Fixed that one instance; audit the rest of llvm +
-    sqlite + zarith + ssl specs for similar issues.
-
-19. **LLVM cross-version symbol check** — probe_binding has symbol compat
-    check. `llvm/19` probe_binding_pkg now demonstrates OCaml API mismatch
-    (compile error). Remaining: also verify at the C symbol level with a
-    mismatched libLLVM.so version pair.
-
-40. **Replace fake `install_lib` scripts with real cmake --install** —
-    current z3/llvm `install_lib` scripts copy build artifacts with `cp`
-    (fake install). Replace with `cmake --install --prefix $PREFIX` so
-    canary actually tests cmake's install-time transformations (RPATH
-    rewriting, symlink creation, pkg-config/cmake config file generation).
-    See `doc/canary/ops/install_targets.md` for z3 vs LLVM install patterns.
-
-Backlog (lower priority): #5, #9, #11, #13b, #14, #17, #27, #29–32 (see design/new_project.md), #33, #34, #39, #40, #45; #16,#20,#31,#35,#41,#42,#43,#44 (api-compat — see research/surface_theory.md §2.7).
+Backlog (lower priority, paper-orthogonal): #5, #9, #11, #13b, #14, #17, #27,
+#29–32 (see design/new_project.md), #33, #34, #38, #39, #45; #16, #20, #31,
+#35, #41, #42 (api-compat — see research/surface_theory.md §2.7).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)

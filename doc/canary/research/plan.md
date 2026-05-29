@@ -311,13 +311,55 @@ action` and tiny's harness should consume.
       `canary_inspectors/` exposing every inspector as a CLI
       (preserves current behaviour) and an importable API. Both
       `canary action`'s OCaml runner and tiny's harness keep using
-      the CLI; new tooling can import.
+      the CLI; new tooling can import. Foundational for Step 3b.
 - [ ] Decide naming for the new inspectors targeting `bo1` (OCaml
       `external` parse), `bpc1` (ctypes argtypes parse), `bpe1`
       (cext `PyMethodDef` parse), and `n3` (C header parse).
 - [ ] Discuss scenario naming consistency
       (`api_faithful` / `api_complete` describe the *property*, not
       the *violation* — separate small pass).
+
+### Step 3b — Unit-test layer for primitives (absorbs **#15b**)
+
+Goal: a fast, fixture-driven test harness that exercises
+comparators and inspectors against synthetic JSON inputs, so we can
+iterate on primitives without paying the integration-test cost
+(`canary action z3` is ~10s; full pipeline with opam installs is
+minutes).
+
+Today's testing coverage:
+
+| layer                              | tool                                | covers                                                          |
+| ---------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
+| Pure unit (data shape)             | `canary_artifact_test.ml` pure      | watchlist matchers, JSON parsing, compat helpers — 13/13        |
+| Shell integration (primitive runs) | `canary_artifact_test.ml` shell     | `nm` / `ocamlobjinfo` / inspect_*.py on fixed fixtures — 15/15  |
+| Per-PM                             | `canary_pm_test.ml`                 | apt/brew/opam/pip install + verify + remove lifecycle — 14/14   |
+| Integration (heavy)                | `canary action <project>`           | full pipeline, ~10s–5min per project                            |
+
+**Missing**: the layer between "primitive runs against a real fixture"
+and "full project pipeline." Fixture-driven unit tests for each
+comparator + inspector that take canned JSONs and assert
+predicate outcomes.
+
+- [ ] **`canary_test/cmp_fixtures/`** — synthetic
+      provider+consumer JSON pairs per scenario shape (symbol
+      missing, soname bump, type drift, watchlist drop, …). Seed
+      from tiny's `_harness/comparators/` fixtures.
+- [ ] **`canary_artifact_test.ml`** new test group: each comparator
+      run against the fixtures, assert verdict. No real artifacts,
+      no real builds.
+- [ ] **Reciprocal coverage**: every comparator that exists ⇒ at
+      least one negative fixture (something it should reject) and
+      one positive fixture (something it should accept).
+- [ ] Once `canary_inspectors/` package exists (Step 3 shared
+      utilities), share the fixture set as Python-importable test
+      data so tiny's harness and canary core run the *same* test
+      matrix.
+
+Lands before Step 4 so every new primitive has fast-feedback test
+coverage from the moment it's written. Estimated effort: ~1-2
+sessions for the seed fixtures + runner; ongoing as comparators
+land.
 
 ### Step 4 — Comparator and inspector buildout (principled shape)
 
@@ -391,6 +433,50 @@ row in the M2 / M3 milestones above.
 - [ ] **c8 `cmp_api_faithfulness`.** Pure composition. Tiny's e4
       api_faithful scenario flips ✗ → ✓ when this lands.
 
+**Project-spec command decoupling — thread (b) cleanup (absorbs **#18, #25, #26, #40**):**
+
+The z3 / llvm specs have ~40-line `Printf.sprintf` blocks for
+cmake / dune / ninja invocations. Each new comparator that lands
+auto-fires for these projects via `api_source` (no spec edit
+needed), but the build / configure / install commands they wrap
+remain inline shell. Peeling these into reusable primitives is
+the (b) thread's project-side work.
+
+- [ ] **`Canary_toolchain` cmake/dune/ninja primitives**
+      (absorbs **#18**) — extract:
+      - `cmake_configure_cmd ~src ~build ~flags ~marker`
+      - `cmake_build_cmd ~build ~target ~marker`
+      - `ninja_build_cmd ~build ~target ~marker`
+      - `dune_build_cmd ~target ~env_extra ~marker`
+      - `mark_step_complete ~output_dir ~marker` helper (replaces
+        every command's trailing `&& echo 'ok' > ...`).
+      Touches z3 / llvm specs uniformly. Each spec file shrinks
+      ~40 lines.
+- [ ] **Real `cmake --install`** (absorbs **#25, #40**) —
+      z3 / llvm `install_lib` scripts currently `cp` files (fake
+      install). Replace with `cmake --install --prefix $PREFIX` so
+      canary exercises cmake's install-time transformations: RPATH
+      rewriting, versioned symlink creation, pkg-config / FindPackage
+      config file generation. The `Probe Lib Staged` step then
+      tests an actually-installed artifact rather than a hand-copied
+      one. See `doc/canary/ops/install_targets.md` for z3 vs LLVM
+      patterns.
+- [ ] **z3 cmake build_z3_ocaml_bindings PHONY guard** (absorbs
+      **#26**) — `add_custom_target` always reruns; gate with
+      `test -f z3ml.cmxa || ninja ...` so re-running canary
+      doesn't trigger a full z3 rebuild on cache rebuild.
+
+**Live demos to strengthen (absorbs **#19**):**
+
+- [ ] **LLVM cross-version C-symbol check** — `llvm/19` probe today
+      demonstrates OCaml API mismatch (`Opcode.UncondBr` compile
+      error via c2 watchlist). After c1 cmp_symbol cross-compare
+      wires up, *also* surface as a C-symbol-set mismatch between
+      libLLVM-dev's exports and libLLVM-19's exports. Belt-and-
+      suspenders for the same drift case. Requires no new
+      inspectors; just an Expect_compat_failure with a Native_lib
+      cross-check input.
+
 **Milestone (closed):**
 
 - [x] **`canary_project_tiny.ml`** (2026-05-28 / expanded 2026-05-29):
@@ -398,6 +484,14 @@ row in the M2 / M3 milestones above.
       6 inspect) using the aligned vocabulary. JSON shapes
       byte-equivalent to `make scenarios-cached`. Phase 4 milestone
       check passed — see [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
+
+**Sequencing note**: comparator-only gaps (c4, c5) first — they have
+the lowest cost and fastest feedback. Inspector-and-comparator
+gaps (n3 + bo1 → c6 → c7 → c8) second. Project-spec command
+decoupling can run in parallel as it touches different files.
+Step 3b's unit-test fixtures should land before any comparator
+work begins (or in lockstep with the first one) so iterations are
+fast.
 
 ### Step 4b — Phase 4: canary code-side term alignment
 
