@@ -1,5 +1,7 @@
 # Surface theory — artifact records and compatibility
 
+think about the title and the scope of the paper
+
 The problem: a C library (e.g. Z3, LLVM) ships through multiple package
 managers (apt, opam, pip) at multiple versions, with bindings for multiple
 languages (OCaml, Python, …). When any component drifts, the binding breaks.
@@ -310,16 +312,16 @@ SymbolVersion + derived API-faithfulness) × four pillars (tiny /
 inspectors / comparator / canary status). For the provider↔consumer
 surface of each row, read across to "Table — Contract definitions" above.
 
-| Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                | Comparator id + name          | Canary status                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
-| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior)                                                                          | n3 + bo1 / bpc1 / bpe1           | **c6** `cmp_type`             | ✗ blocked on n3 + bo1/bpc1/bpe1 (inspectors missing)                         |
-| **Symbol**           | [e1 `symbol_missing`](tiny.md#e1-symbol_missing--symbol-contract), [e8 `symbol_orphan`](tiny.md#e8-symbol_orphan--symbol-contract-binding-side-orphan) | n4 + bo7                         | **c1** `cmp_symbol`           | ✓ `check_c_compat` — `canary compat` / `verify`                              |
-| **SymbolVersion**    | **e9 deferred** — `symbol_version_floor`; needs `.symver` on both sides, paired with c5 implementation                                                 | n4                               | **c5** `cmp_sym_version`      | ✗ JSON ready (`versioned_req` / `versioned_exports`); diff step + e9 missing |
-| **ABI**              | [e2 `abi_soname_bump`](tiny.md#e2-abi_soname_bump--abi-contract)                                                                                       | n4 + bo6 (or bo7)                | **c4** `cmp_abi`              | ✗ inspect-diff only — comparator missing                                     |
+| Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                 | Comparator id + name          | Canary status                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior)                                                                          | n3 + bo1 / bpc1 / bpe1            | **c6** `cmp_type`             | ✗ blocked on n3 + bo1/bpc1/bpe1 (inspectors missing)                         |
+| **Symbol**           | [e1 `symbol_missing`](tiny.md#e1-symbol_missing--symbol-contract), [e8 `symbol_orphan`](tiny.md#e8-symbol_orphan--symbol-contract-binding-side-orphan) | n4 + bo7                          | **c1** `cmp_symbol`           | ✓ `check_c_compat` — `canary compat` / `verify`                              |
+| **SymbolVersion**    | **e9 deferred** — `symbol_version_floor`; needs `.symver` on both sides, paired with c5 implementation                                                 | n4                                | **c5** `cmp_sym_version`      | ✗ JSON ready (`versioned_req` / `versioned_exports`); diff step + e9 missing |
+| **ABI**              | [e2 `abi_soname_bump`](tiny.md#e2-abi_soname_bump--abi-contract)                                                                                       | n4 + bo6 (or bo7)                 | **c4** `cmp_abi`              | ✗ inspect-diff only — comparator missing                                     |
 | **API-repacking**    | [e5 `api_repack`](tiny.md#e5-api_repack--intra-binding-repacking-ocaml-only) (OCaml), e10 `api_repack_python` (Python)                                 | (bo1/bpc1/bpe1) + (bo4/bpc2/bpe2) | **c7** `cmp_api_repack`       | ✗ blocked on bo1/bpc1/bpe1                                                   |
-| **API-completeness** | [e6 `api_complete`](tiny.md#e6-api_complete--api-completeness-ocaml-only) (OCaml), e11 `api_complete_python` (Python parallel)                         | bo4 or bpc2 / bpe2               | **c2** `cmp_api_completeness` | ✓ watchlist inside `Expect_compat_failure { Ocaml_mli, Python_attrs }`       |
-| **API-faithfulness** | [e4 `api_faithful`](tiny.md#e4-api_faithful--api-faithfulness-contract-fully-silent) (silent today)                                                    | transitive                       | **c8** `cmp_api_faithfulness` | ✗ blocked on c6 + c7 (§2.5 derivation)                                       |
-| **Behavior**         | [e7 `behavior_silent`](tiny.md#e7-behavior_silent--behavior-contract) + every other scenario's probe                                                   | probe + reference                | **c3** `cmp_behavior`         | ✓ probe runner + `Expect_success` / `Expect_failure`                         |
+| **API-completeness** | [e6 `api_complete`](tiny.md#e6-api_complete--api-completeness-ocaml-only) (OCaml), e11 `api_complete_python` (Python parallel)                         | bo4 or bpc2 / bpe2                | **c2** `cmp_api_completeness` | ✓ watchlist inside `Expect_compat_failure { Ocaml_mli, Python_attrs }`       |
+| **API-faithfulness** | [e4 `api_faithful`](tiny.md#e4-api_faithful--api-faithfulness-contract-fully-silent) (silent today)                                                    | transitive                        | **c8** `cmp_api_faithfulness` | ✗ blocked on c6 + c7 (§2.5 derivation)                                       |
+| **Behavior**         | [e7 `behavior_silent`](tiny.md#e7-behavior_silent--behavior-contract) + every other scenario's probe                                                   | probe + reference                 | **c3** `cmp_behavior`         | ✓ probe runner + `Expect_success` / `Expect_failure`                         |
 
 This is the **plan-and-status table** for roadmap step 3 (compare
 theory/tiny/canary) and step 4 (close the ✗ rows). Each ✗ in the last
@@ -435,15 +437,15 @@ roles from §2.1; the "Contracts checked" column names the `c*`
 contracts from §2.4. This is the *operational* view — what each step
 does to the surface/contract picture.
 
-| Action                    | Canary step / tiny artifact                                                              | Inputs (consumed)        | Contracts checked                                              | Outputs (produced)          | Status                                              |
-| ------------------------- | ---------------------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------- | --------------------------- | --------------------------------------------------- |
-| **build_native_lib**      | `build_lib` (cmake/ninja → `libtiny.so.1`, `libz3.so`)                                   | C source + `s1`          | (defines provider; no cross-check)                             | `s2`                        | ✓                                                   |
-| **build_binding_static**  | `build_binding_ocaml`, python cext `setup.py build_ext`; tiny `ocaml/dune`, `python_cext/` | `s1`, `s2`, `s3`         | **c6** Type (compile-time), **c1** Symbol-static (link-time)   | `s5`                        | ✓ pipeline; c6 post-hoc inspector ✗                 |
-| **install_binding**       | `pack_binding_ocaml`, `pip install`; tiny `Makefile install`                             | `s5`                     | **c4** ABI (NEEDED resolution at install)                      | (installed binding on disk) | partial — c4 surfaces only as load failure today    |
-| **probe_binding**         | `probe_binding_ocaml`, `probe_binding_python`; tiny `examples/probe_baseline.{ml,py}`    | `s5` + `s2`              | **c1** Symbol-dynamic (`dlsym`), **c4** ABI (load), **c2** API-completeness (watchlist), **c3** Behavior | `s6` (runtime trace)        | ✓ probe runs; c4 implicit; c3 vs reference          |
-| **apply / revert patch**  | tiny `scenarios/scenarios.py` (no canary analogue)                                       | source tree              | (perturbation — no check itself; sets up subsequent actions)   | mutated source tree         | ✓                                                   |
-| **inspect_\***            | `canary/scripts/inspect_*.py`                                                            | one artifact (n*/b*)     | (extraction only — feeds comparators)                          | JSON record                 | per artifact; see §2.7 inspector-coverage table     |
-| **cmp_\*** (c1..c8)       | `canary_compat.ml`, tiny `_harness/comparators/`                                         | two JSON records         | exactly one contract (c1..c8)                                  | pass/fail verdict           | per c*; see contract-status table (§2.4)            |
+| Action                   | Canary step / tiny artifact                                                                | Inputs (consumed)    | Contracts checked                                                                                        | Outputs (produced)          | Status                                           |
+| ------------------------ | ------------------------------------------------------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------ |
+| **build_native_lib**     | `build_lib` (cmake/ninja → `libtiny.so.1`, `libz3.so`)                                     | C source + `s1`      | (defines provider; no cross-check)                                                                       | `s2`                        | ✓                                                |
+| **build_binding_static** | `build_binding_ocaml`, python cext `setup.py build_ext`; tiny `ocaml/dune`, `python_cext/` | `s1`, `s2`, `s3`     | **c6** Type (compile-time), **c1** Symbol-static (link-time)                                             | `s5`                        | ✓ pipeline; c6 post-hoc inspector ✗              |
+| **install_binding**      | `pack_binding_ocaml`, `pip install`; tiny `Makefile install`                               | `s5`                 | **c4** ABI (NEEDED resolution at install)                                                                | (installed binding on disk) | partial — c4 surfaces only as load failure today |
+| **probe_binding**        | `probe_binding_ocaml`, `probe_binding_python`; tiny `examples/probe_baseline.{ml,py}`      | `s5` + `s2`          | **c1** Symbol-dynamic (`dlsym`), **c4** ABI (load), **c2** API-completeness (watchlist), **c3** Behavior | `s6` (runtime trace)        | ✓ probe runs; c4 implicit; c3 vs reference       |
+| **apply / revert patch** | tiny `scenarios/scenarios.py` (no canary analogue)                                         | source tree          | (perturbation — no check itself; sets up subsequent actions)                                             | mutated source tree         | ✓                                                |
+| **inspect_\***           | `canary/scripts/inspect_*.py`                                                              | one artifact (n*/b*) | (extraction only — feeds comparators)                                                                    | JSON record                 | per artifact; see §2.7 inspector-coverage table  |
+| **cmp_\*** (c1..c8)      | `canary_compat.ml`, tiny `_harness/comparators/`                                           | two JSON records     | exactly one contract (c1..c8)                                                                            | pass/fail verdict           | per c*; see contract-status table (§2.4)         |
 
 A key reading: the **multi-contract pipeline rows** are
 `build_binding_static` and `probe_binding` — these are the actions
@@ -526,20 +528,20 @@ this section uses the aliases as compact handles. Surface tags
 `tiny`. The *implementation* view — what extracts each surface, and
 what's wired today.
 
-| alias  | canonical name (artifact)         | surface | inspector tool                                            | status     |
-| ------ | --------------------------------- | ------- | --------------------------------------------------------- | ---------- |
-| n4     | `lib_native.so`                   | s2      | `inspect_native.py` via `nm -D` + `readelf -d`            | ✓          |
-| bo4    | `user_binding_ocaml.mli`          | s4      | `inspect_binding.py --kind mli`                           | ✓          |
-| bo7    | `compiled_binding_ocaml.stub-a`   | s5      | `inspect_binding.py --kind stub` via `nm`                 | ✓          |
-| bo6    | `compiled_binding_ocaml.cmxa`     | s5      | `inspect_ocaml.py` via `ocamlobjinfo`                     | ✓          |
-| bpc2   | `user_binding_ctypes.py`          | s4      | `inspect_python.py --pkg tiny_ctypes`                     | ✓          |
-| bpe2   | `user_binding_cext.py`            | s4      | `inspect_python.py --pkg tiny_cext`                       | ✓          |
-| bpe3   | `compiled_binding_cext.so`        | s5      | `inspect_native.py` (same tool, on a binding ELF)         | ✓          |
-| n3     | `header_native.h`                 | s1      | — (no parser; `scan_source` presence check only)          | ✗          |
-| bo1    | `stub_binding_ocaml.mli`          | s3      | — (mli inspector matches `^val`, not `external`)          | ✗          |
-| bpc1   | `stub_binding_ctypes.py`          | s3      | — (no ctypes-decl parser)                                 | ✗          |
-| bpe1   | `stub_binding_cext.c`             | s3      | — (no Py C API parser)                                    | ✗          |
-| —      | runtime probe                     | s6      | probe binary + reference expected values                  | ✓ implicit |
+| alias | canonical name (artifact)       | surface | inspector tool                                    | status     |
+| ----- | ------------------------------- | ------- | ------------------------------------------------- | ---------- |
+| n4    | `lib_native.so`                 | s2      | `inspect_native.py` via `nm -D` + `readelf -d`    | ✓          |
+| bo4   | `user_binding_ocaml.mli`        | s4      | `inspect_binding.py --kind mli`                   | ✓          |
+| bo7   | `compiled_binding_ocaml.stub-a` | s5      | `inspect_binding.py --kind stub` via `nm`         | ✓          |
+| bo6   | `compiled_binding_ocaml.cmxa`   | s5      | `inspect_ocaml.py` via `ocamlobjinfo`             | ✓          |
+| bpc2  | `user_binding_ctypes.py`        | s4      | `inspect_python.py --pkg tiny_ctypes`             | ✓          |
+| bpe2  | `user_binding_cext.py`          | s4      | `inspect_python.py --pkg tiny_cext`               | ✓          |
+| bpe3  | `compiled_binding_cext.so`      | s5      | `inspect_native.py` (same tool, on a binding ELF) | ✓          |
+| n3    | `header_native.h`               | s1      | — (no parser; `scan_source` presence check only)  | ✗          |
+| bo1   | `stub_binding_ocaml.mli`        | s3      | — (mli inspector matches `^val`, not `external`)  | ✗          |
+| bpc1  | `stub_binding_ctypes.py`        | s3      | — (no ctypes-decl parser)                         | ✗          |
+| bpe1  | `stub_binding_cext.c`           | s3      | — (no Py C API parser)                            | ✗          |
+| —     | runtime probe                   | s6      | probe binary + reference expected values          | ✓ implicit |
 
 Compact reading: the native semantic surface (s2 / `n4`) and the
 language user-facing surface (s4 / `bo4`, `bpc2`, `bpe2`) are well

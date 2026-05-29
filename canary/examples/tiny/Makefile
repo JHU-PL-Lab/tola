@@ -22,7 +22,7 @@ OCAML_BUILD := $(PROJ_ROOT)/_build/default/canary/examples/tiny/ocaml
 
 SCENARIOS := $(shell python3 scenarios/scenarios.py list 2>/dev/null)
 
-.PHONY: all c ocaml python_cext python_ctypes probe probe-ocaml probe-python-cext probe-python-ctypes inspect clean scenarios scenario-list
+.PHONY: all c ocaml python_cext python_ctypes probe probe-ocaml probe-python-cext probe-python-ctypes inspect clean scenarios scenario-list baseline prepare prepare-all scenarios-cached scenario-cached-%
 
 all: c ocaml python_cext
 
@@ -96,6 +96,40 @@ inspect: c ocaml python_cext
 
 scenario-list:
 	@python3 scenarios/scenarios.py list | sed 's/^/  /'
+
+# Phase 3a: prepare populates scenarios/_cache/ with per-scenario inspector
+# JSONs + confirm_ill.json showing the surface delta vs baseline.
+baseline: c ocaml python_cext
+	python3 scenarios/scenarios.py baseline
+
+prepare-%: baseline
+	python3 scenarios/scenarios.py prepare $*
+
+prepare-all: baseline
+	python3 scenarios/scenarios.py prepare-all
+
+# Phase 3b: scenarios-cached uses the prepared cache to skip apply / build /
+# inspect / revert. Probes + comparators still run; everything else is file copy.
+scenario-cached-%:
+	python3 scenarios/_harness/run_cached.py $*
+
+# Assumes the cache has been populated by `make prepare-all` (or per-scenario
+# `make prepare-NAME`). Doesn't re-prepare on each invocation; that would
+# defeat the speedup.
+scenarios-cached:
+	@if [ ! -d scenarios/_cache/baseline ]; then \
+	    echo "no baseline cache; run \`make prepare-all\` first" >&2; exit 2; \
+	fi
+	@fail=0; \
+	for s in $(SCENARIOS); do \
+	    out=$$(python3 scenarios/_harness/run_cached.py $$s 2>&1); \
+	    if echo "$$out" | grep -q '^PASS$$'; then \
+	      echo "PASS  $$s"; \
+	    else \
+	      echo "FAIL  $$s"; echo "$$out" | sed 's/^/    /'; fail=$$((fail+1)); \
+	    fi; \
+	done; \
+	if [ $$fail -gt 0 ]; then echo "$$fail scenario(s) failed" >&2; exit 1; fi
 
 scenario-%: c ocaml python_cext
 	bash scenarios/_harness/run.sh $*

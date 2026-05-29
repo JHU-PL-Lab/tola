@@ -3,8 +3,11 @@
 A minimal C library (two functions, one global) with hand-written
 OCaml and Python bindings. Designed to instantiate every contract in
 §2.4 of [`surface_theory.md`](surface_theory.md) on the smallest
-possible target, and to give eight deliberately-broken variants so
-each failure mode is reproducible in isolation.
+possible target, and to give twelve deliberately-broken (or
+positive-coverage) variants so each failure mode is reproducible in
+isolation. The Phase 3 `prepare` flow makes each variant's
+contract-violation claim a machine-checkable assertion — see the
+"Phase 3a" subsection.
 
 The whole point is that the reader (and we) can hold the entire
 example in working memory and trace every surface and every contract
@@ -189,9 +192,10 @@ canary/examples/tiny/
     pyproject.toml
     examples/probe_baseline.py
   scenarios/                         # 12 variants (10 perturbations + 2 positive-coverage) + harness
-    scenarios.py                     # apply/revert/expected (single source of truth)
+    scenarios.py                     # apply/revert/expected + Phase 3 baseline/prepare/restore (single source of truth)
     patches/                         # .patch files for source-edit scenarios
-    _harness/run.sh, check.py, comparators/cmp_*.py
+    _harness/run.sh, run_cached.py, check.py, comparators/cmp_*.py
+    _cache/                          # (gitignored) baseline + per-scenario artifacts + JSONs, populated by `make prepare-all`
 ```
 
 **OCaml directory is flat** because dune's `foreign_stubs` needs the
@@ -217,14 +221,24 @@ a project Python that doesn't itself ship `setuptools` or `pip`.
 ## Build & probe
 
 ```sh
-make c                 # builds libtiny.so.1 in c/build/
-make ocaml             # builds OCaml binding (depends on c)
-make python_cext       # compiles tiny_cext/_native.so via uv build (depends on c)
-make python_ctypes     # no-op (pure Python; depends on c at runtime)
-make probe             # runs all three baseline probes
-make inspect           # runs canary inspectors on every surface
-make scenarios         # runs all eight scenarios
-make scenario-<name>   # runs a single scenario
+make c                       # builds libtiny.so.1 in c/build/
+make ocaml                   # builds OCaml binding (depends on c)
+make python_cext             # compiles tiny_cext/_native.so via uv build (depends on c)
+make python_ctypes           # no-op (pure Python; depends on c at runtime)
+make probe                   # runs all three baseline probes
+make inspect                 # runs canary inspectors on every surface
+
+# Scenarios (apply / build / inspect / probe / revert per run; original flow)
+make scenarios               # runs all 12 scenarios
+make scenario-<name>         # runs a single scenario
+
+# Phase 3 — prepare populates _cache/ with per-scenario inspector JSONs +
+# artifact snapshots; scenarios-cached replays them via file copies.
+make baseline                # build + inspect baseline, snapshot to _cache/baseline/
+make prepare-<name>          # apply + build + inspect + snapshot + confirm-ill + revert
+make prepare-all             # all 12 scenarios (~8s wall clock)
+make scenario-cached-<name>  # replay a single scenario from cache (skips apply / build / inspect)
+make scenarios-cached        # replay all 12 from cache (~6s, vs ~10s for `make scenarios`)
 make clean
 ```
 
@@ -347,11 +361,22 @@ the unmodified baseline:
 Each *perturbation* scenario violates one (or more) contracts from
 §2.4. The two positive-coverage scenarios (e12, e13) apply no
 perturbation; they assert that the longest-interesting build/link
-chains stay wired in baseline. The harness
-(`scenarios/_harness/run.sh`) applies via `scenarios.py apply <name>`,
-runs static comparators and runtime probes, compares observed
-outcomes against `scenarios.py`'s `expected` dict, and reverts
-(always, via `trap`).
+chains stay wired in baseline.
+
+Two harnesses run the scenarios. Both are kept; either should
+match the other's PASS set, so divergence between them is a
+regression signal:
+
+- **`scenarios/_harness/run.sh`** (original) — applies via
+  `scenarios.py apply <name>`, rebuilds, runs inspectors + static
+  comparators + runtime probes, compares observed outcomes against
+  `scenarios.py`'s `expected` dict, and reverts (always, via
+  `trap`). Invoked by `make scenarios`.
+- **`scenarios/_harness/run_cached.py`** (Phase 3b) — `restore`s
+  the perturbed state from `_cache/<name>/` (file copies, no
+  rebuild), runs the probes against restored exes, runs comparators
+  against the cached inspect JSONs, then `restore-baseline`s.
+  Invoked by `make scenarios-cached`. See "Phase 3b" below.
 
 | id      | name                    | construction                                                              | contract(s)               | OCaml probe                  | cext probe         | ctypes probe       |
 | ------- | ----------------------- | ------------------------------------------------------------------------- | ------------------------- | ---------------------------- | ------------------ | ------------------ |
@@ -456,10 +481,117 @@ modifies it; the right column lists scenarios that touch it. Empty
   tests the app, not the binding.
 
 The helper-layer gap is the closest follow-up to e12/e13. The
-compiled-binding gap connects to the Phase 3 "pre-built ill
-artifacts" refactor — a separate `prepare` step that does binary
-surgery on `bpe3` (rather than source-level via rebuild) would
-naturally produce a post-build perturbation cache entry.
+compiled-binding gap is now structurally easy to fill — Phase 3b's
+`prepare` step already produces a post-build perturbation cache
+entry per scenario, so a scenario that does binary surgery on
+`bpe3` directly (rather than driving the perturbation via source +
+rebuild) just needs a new `apply_*` function and a new entry in
+`SCENARIOS`.
+
+### Phase 3a — `prepare` and `confirm_ill`
+
+A second flow alongside the existing `apply` / `revert` runner:
+`scenarios.py prepare <name>` applies the perturbation, rebuilds
+affected artifacts (skipping rebuild for artifact-direct
+perturbations like e2 so the surgery survives), runs every
+inspector, computes the surface delta against a cached **baseline**,
+and writes `scenarios/_cache/<name>/confirm_ill.json`. The delta is
+the machine-checkable form of "this perturbation does what its
+`violates` claim says it does."
+
+CLI:
+
+```sh
+make baseline                       # build + cache baseline JSONs (once)
+make prepare-<scenario>             # prepare a single scenario
+make prepare-all                    # all 12 in one pass (~8s)
+python3 scenarios/scenarios.py confirm <name>   # show the cached delta
+```
+
+What we see today across the 12 scenarios, grouped by the shape of
+the observed delta:
+
+| shape                                        | scenarios                                                | confirm_ill shows                                                  |
+| -------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------ |
+| **n4 symbol delta**                          | e1 symbol_missing, e4 api_faithful                       | `n4.symbols.{added,removed}`                                       |
+| **n4 ABI delta**                             | e2 abi_soname_bump                                       | `n4.soname.{baseline,perturbed}`                                   |
+| **bo4 val delta**                            | e6 api_complete                                          | `bo4.vals.removed`                                                 |
+| **bo7 undef-ref delta**                      | e8 symbol_orphan                                         | `bo7.requires.added`                                               |
+| **bpc2 + bpe2 attr delta**                   | e11 api_complete_python                                  | `bpc2.attrs.removed`, `bpe2.attrs.removed`                         |
+| **no static delta — intentionally invisible** | e5 api_repack, e7 behavior_silent, e10 api_repack_python | confirms `c3 cmp_behavior` / `c7 cmp_api_repack` are non-redundant |
+| **no static delta — inspector gap**          | e3 type_wrong                                            | WARN — `n3` + `bo1` inspectors missing, c6 would catch this        |
+| **no perturbation**                          | e12, e13                                                 | empty deltas (positive coverage)                                   |
+
+The `intentionally invisible` row is the empirical evidence that
+runtime probes (Behavior) subsidise contracts the static layer
+can't yet see — exactly the gap §2.7 calls out.
+
+### Phase 3b — cached artifacts and `restore`-driven runs
+
+`prepare` now also snapshots the perturbed *artifacts* (libtiny.so
+chain, cext `.so`, the three OCaml `.exe`s) and any patched source
+files into `_cache/<name>/{artifacts, source}/`. A symmetric baseline
+snapshot lives under `_cache/baseline/`. Two new commands move state
+between live tree and cache:
+
+```sh
+python3 scenarios/scenarios.py restore-baseline    # _cache/baseline/* -> live
+python3 scenarios/scenarios.py restore <name>      # baseline + scenario delta -> live
+```
+
+`restore <name>` first applies baseline (so files the scenario did
+*not* perturb are clean), then overlays the scenario's cached
+artifacts + source on top. Pure file copy; no rebuild, no
+inspector runs.
+
+A second harness — `scenarios/_harness/run_cached.py` — uses these
+to skip the slow apply/build/inspect path:
+
+```
+restore <name>      → ill state on disk
+[probes]            → run against restored exes
+[comparators]       → consume cached _cache/<name>/inspect/*.json
+[check.py]          → same outcome diff as the original harness
+restore-baseline    → live tree clean for next iteration
+```
+
+The `make scenarios-cached` target runs the cached harness over all
+12 scenarios (assumes `make prepare-all` was run once first).
+
+**Measured timing** (WSL Linux, baseline + caches already populated):
+
+| flow                                                                    | time | speedup |
+| ----------------------------------------------------------------------- | ---- | ------- |
+| `make scenarios` (apply / dune-build / inspect / probe / revert per run) | 9.9s |   1.0×  |
+| `make scenarios-cached` (restore / probe / cached comparators per run)   | 6.3s |   1.6×  |
+
+The wall-clock gain on tiny is modest because the baseline `make
+scenarios` is already cheap (dune is incremental, the C lib is
+tiny). The win scales with build cost — projects whose binding
+takes minutes (Z3, LLVM) would see proportionally larger speedups.
+The structural value is also independent of the speed: `prepare`
+asserts "this perturbation does what we claim it does" *once*, then
+many `run`s replay that recorded ill state deterministically.
+
+**Cache layout** (per scenario, populated by `prepare`):
+
+```
+scenarios/_cache/baseline/
+  artifacts/c_build/{libtiny.so, libtiny.so.1, libtiny.so.1.0}
+  artifacts/cext/_native.cpython-*.so
+  artifacts/ocaml/examples/{probe_baseline,app_binding,app_helper}.exe
+  source/{c,ocaml,python_cext,python_ctypes}/...  (13 perturbable files)
+  inspect/{n4,bo4,bo6,bo7,bpc2,bpe2,bpe3}.json
+
+scenarios/_cache/<scenario>/
+  manifest.json              # build status + captured artifact list
+  confirm_ill.json           # surface delta vs baseline (Phase 3a)
+  inspect/<alias>.json       # perturbed inspector outputs (Phase 3a)
+  artifacts/                 # only files that differ from baseline
+  source/                    # only files patched by the scenario
+```
+
+The full `_cache/` tree is gitignored.
 
 ### e9 — reserved slot for SymbolVersion
 
@@ -806,16 +938,18 @@ own concern; what the binding artifact *is* is the contract.
 
 1. **§1 motivating example.** Replace the multi-page Z3/LLVM
    walkthrough with one page showing `tiny`'s artifacts across three
-   bindings and the eight failure modes side by side.
+   bindings and the twelve scenarios side by side.
 2. **§2 worked instantiation.** The §2 contract table becomes a
    *checkable* claim: for `tiny`, here are the specific surfaces and
-   the contract verdict for each scenario.
+   the contract verdict for each scenario. The Phase 3a
+   `confirm_ill.json` per scenario is the machine-verified form of
+   that claim.
 3. **§3 (subtyping) made concrete.** Subtyping relations can be
    exhibited on `tiny` records directly.
 4. **§5 evaluation.** The scenario matrix is a clean "does canary
    detect this failure?" benchmark, with binary outcomes per contract
-   per binding. Eight scenarios × five probe/comparator outcomes =
-   forty data points from one library.
+   per binding. Twelve scenarios × ~10 probe/comparator outcomes
+   ≈ 120 data points from one library.
 5. **Reproducibility.** Anyone reading the paper can clone, run, and
    reproduce every figure in under five minutes. With Z3/LLVM that's
    a day-plus of cmake.
