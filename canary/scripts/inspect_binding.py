@@ -63,6 +63,12 @@ def parse_mli_lines(lines):
                        # externals bind directly to C symbols; the corresponding
                        # user-facing vals live in a different .mli on the same
                        # binding's repack layer.
+    externals_detail = []  # parallel to `externals`: each entry is
+                           #   {"name", "sig", "c_symbol", "arity"}
+                           # where arity is the number of OCaml argument
+                           # positions (count of `->` in the type signature).
+                           # Used by c6 cmp_type for arity-level checks
+                           # against the C header's function signatures.
     constructors = []
     modules = []
     module_path = []   # current module nesting, e.g. ["Opcode"]
@@ -121,6 +127,32 @@ def parse_mli_lines(lines):
         # external declaration (any indentation) — s3 stub-facing surface.
         # Matched BEFORE val so `external` doesn't accidentally fall through
         # to a `val` match on a hypothetical future grammar overlap.
+        # Full shape: `external NAME : TYPE_SIG = "C_SYMBOL"` (we capture all
+        # three when present, falling back to NAME-only if the line is
+        # mid-multi-line and the rest is on the next line).
+        m = re.match(
+            r'external\s+(\w+)\s*:\s*(.+?)\s*=\s*"(\w+)"\s*$',
+            line,
+        )
+        if m:
+            prefix = '.'.join(module_path) + '.' if module_path else ''
+            qname = prefix + m.group(1)
+            externals.append(qname)
+            sig = m.group(2).strip()
+            # OCaml arity = count of top-level `->` in the type signature.
+            # E.g. `int -> int -> int` has 2 arrows → arity 2 (the last
+            # `int` is the return type). Doesn't handle parenthesized
+            # higher-order types correctly; tiny.h-shape signatures only.
+            arity = sig.count("->")
+            externals_detail.append({
+                "name": qname,
+                "sig": sig,
+                "c_symbol": m.group(3),
+                "arity": arity,
+            })
+            continue
+        # Fallback: name-only external (without inline type/c_symbol).
+        # Less informative but keeps backward compat.
         m = re.match(r'external\s+(\w+)', line)
         if m:
             prefix = '.'.join(module_path) + '.' if module_path else ''
@@ -140,7 +172,7 @@ def parse_mli_lines(lines):
             prefix = '.'.join(module_path) + '.' if module_path else ''
             constructors.append(prefix + m.group(1))
 
-    return vals, externals, constructors, modules
+    return vals, externals, externals_detail, constructors, modules
 
 
 def summarize_mli(paths, watchlist, prefix_by_filename=False):
@@ -151,20 +183,23 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
     package convention: `llvm.mli` is the body of module `Llvm`). The module
     itself is also added to the modules list.
     """
-    all_vals, all_externals, all_constructors, all_modules = [], [], [], []
+    all_vals, all_externals, all_externals_detail = [], [], []
+    all_constructors, all_modules = [], []
     for p in paths:
         with open(p) as f:
-            v, e, c, m = parse_mli_lines(f.readlines())
+            v, e, ed, c, m = parse_mli_lines(f.readlines())
         if prefix_by_filename:
             stem = os.path.splitext(os.path.basename(p))[0]
             mod = stem[:1].upper() + stem[1:]
             v = [f"{mod}.{x}" for x in v]
             e = [f"{mod}.{x}" for x in e]
+            ed = [{**d, "name": f"{mod}.{d['name']}"} for d in ed]
             c = [f"{mod}.{x}" for x in c]
             m = [f"{mod}.{x}" for x in m]
             all_modules.append(mod)
         all_vals.extend(v)
         all_externals.extend(e)
+        all_externals_detail.extend(ed)
         all_constructors.extend(c)
         all_modules.extend(m)
 
@@ -177,6 +212,13 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
     externals = dedup(all_externals)
     constructors = dedup(all_constructors)
     modules = dedup(all_modules)
+    # Dedup externals_detail by name, preserving order.
+    seen_ed = set()
+    externals_detail = []
+    for d in all_externals_detail:
+        if d["name"] not in seen_ed:
+            externals_detail.append(d)
+            seen_ed.add(d["name"])
     # Watchlist resolves against the union of all four sets so a single
     # inspect can be used on either an s3 (externals-bearing) or s4
     # (vals-bearing) .mli without the caller needing to know which.
@@ -196,6 +238,7 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False):
         },
         "vals": vals,
         "externals": externals,
+        "externals_detail": externals_detail,
         "constructors": constructors,
         "modules": modules,
         "watchlist": {"present": present, "missing": missing},

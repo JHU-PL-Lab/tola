@@ -431,14 +431,42 @@ row in the M2 / M3 milestones above.
       assert the externals-vs-vals split on stub-only, user-only, and
       mixed `.mli` inputs. Unblocks {i s3 stub-facing} for OCaml; c7
       cmp_api_repack can now compare `bo1.externals` ↔ `bo4.vals`.
-- [ ] **Inspector for `n3`** (C header parser). New parser for C
-      function signatures from `.h`. tree-sitter-c or libclang.
-      Substantial.
-- [ ] **c6 `cmp_type` (OCaml first).** Once `n3` and `bo1`
-      inspectors land; compare signatures by name. Today the type
-      contract has zero static coverage; tiny's e3 type_wrong
-      scenario is the regression test that flips ✗ → ✓ when this
-      lands.
+- [x] **Inspector for `n3`** (2026-05-29). New
+      `canary/scripts/inspect_header.py` — regex-based C header
+      parser. Emits `{kind: c_header, functions: [{name, return_type,
+      arg_types}], extern_vars: [{name, type}]}`. Scoped to tiny.h-
+      shape headers (flat, no preprocessor macros / typedefs).
+      Real-world z3.h / llvm-c/*.h need libclang or tree-sitter —
+      followup. 4 fixture-driven OCaml tests
+      (`n3_header_inspect_pure_tests`) cover tiny-like, 3-arg
+      bumped, void-args.
+- [x] **`bo1` enhanced** (2026-05-29). `inspect_binding.py --kind
+      mli` now emits an additional `externals_detail` field per
+      external: `{name, sig, c_symbol, arity}`. Arity is the number
+      of OCaml argument positions (count of `->` in the signature).
+      Backward-compatible: existing `externals` array unchanged.
+- [x] **c6 `cmp_type` (OCaml first)** (2026-05-29). Function
+      `check_type ~header_functions ~binding_externals ~name_mapping`
+      in `canary_compat.ml`; dedicated `type_result` type
+      (`Type_compatible` / `Type_arity_mismatch` / `Type_unmapped`
+      / `Type_unknown`). MVP is arity-only after applying a
+      project-declared name mapping (binding externals → header
+      function names; e.g. tiny passes
+      `[("sum", "tiny_sum"); ("diff", "tiny_diff")]`,
+      excluding `get_offset` which maps to an extern var).
+      Full C ↔ OCaml type-equivalence comparison is a later
+      refinement. 7 unit tests in `cmp_type_pure_tests`.
+
+      **Note on the regression scenario**: my earlier plan claim
+      "tiny's e3 type_wrong scenario flips ✗ → ✓ when this lands"
+      was wrong. e3 patches `c/src/tiny.c` (body); the header and
+      external signatures stay aligned. c6 sees no drift; e3 is
+      c3 Behavior's territory. A future tiny scenario `e15
+      cmp_type_header_drift` would patch tiny.h to bump tiny_sum
+      to 3 args while the binding stays at 2 — the regression
+      shape c6 actually catches. Deferred (analogous to c4/c5
+      having unit-test-only coverage today, no live tiny
+      scenario).
 - [ ] **Inspectors for `bpc1`** (ctypes argtypes parse) and
       **`bpe1`** (cext `PyMethodDef` parse). Python AST parse for
       ctypes; C parse for cext.

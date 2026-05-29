@@ -219,6 +219,88 @@ let cmp_abi_pure_tests =
         match r with Abi_unknown -> true | _ -> false };
   ]
 
+(* c6 cmp_type — header function arity ↔ binding external arity.
+   Today's check is arity-only after applying a declared name
+   mapping (binding externals → header function names). Full
+   type-equivalence comparison would also map C types ↔ OCaml types;
+   left for a later refinement. *)
+let cmp_type_pure_tests =
+  let open Canary_compat in
+  [
+    { name = "cmp_type.compatible_arity_match";
+      check = fun () ->
+        (* tiny baseline shape: tiny.h declares int tiny_sum(int, int)
+           etc.; bo1 declares external sum : int -> int -> int. Both
+           arities = 2. *)
+        let r = check_type
+            ~header_functions:[ ("tiny_sum", 2); ("tiny_diff", 2) ]
+            ~binding_externals:[ ("sum", 2); ("diff", 2) ]
+            ~name_mapping:[ ("sum", "tiny_sum"); ("diff", "tiny_diff") ] in
+        match r with Type_compatible -> true | _ -> false };
+    { name = "cmp_type.arity_mismatch_header_added_arg";
+      check = fun () ->
+        (* Synthetic e15-shape: header bumped tiny_sum to 3 args; binding
+           still expects 2. *)
+        let r = check_type
+            ~header_functions:[ ("tiny_sum", 3); ("tiny_diff", 2) ]
+            ~binding_externals:[ ("sum", 2); ("diff", 2) ]
+            ~name_mapping:[ ("sum", "tiny_sum"); ("diff", "tiny_diff") ] in
+        match r with
+        | Type_arity_mismatch { mismatches } ->
+            List.equal Poly.equal mismatches [ ("sum", 2, 3) ]
+        | _ -> false };
+    { name = "cmp_type.arity_mismatch_header_dropped_arg";
+      check = fun () ->
+        let r = check_type
+            ~header_functions:[ ("tiny_sum", 1) ]
+            ~binding_externals:[ ("sum", 2) ]
+            ~name_mapping:[ ("sum", "tiny_sum") ] in
+        match r with
+        | Type_arity_mismatch { mismatches } ->
+            List.equal Poly.equal mismatches [ ("sum", 2, 1) ]
+        | _ -> false };
+    { name = "cmp_type.compatible_with_extra_unmapped";
+      check = fun () ->
+        (* tiny's get_offset is an extern var, not a function; it's
+           intentionally excluded from name_mapping. Other mapped
+           externals match → Type_compatible (unmapped externals are
+           informational only). *)
+        let r = check_type
+            ~header_functions:[ ("tiny_sum", 2); ("tiny_diff", 2) ]
+            ~binding_externals:[ ("sum", 2); ("diff", 2); ("get_offset", 1) ]
+            ~name_mapping:[ ("sum", "tiny_sum"); ("diff", "tiny_diff") ] in
+        match r with Type_compatible -> true | _ -> false };
+    { name = "cmp_type.unmapped_all";
+      check = fun () ->
+        (* No name_mapping at all → can't compare anything → Type_unmapped. *)
+        let r = check_type
+            ~header_functions:[ ("tiny_sum", 2) ]
+            ~binding_externals:[ ("sum", 2) ]
+            ~name_mapping:[] in
+        match r with
+        | Type_unmapped { externals } ->
+            List.equal String.equal externals [ "sum" ]
+        | _ -> false };
+    { name = "cmp_type.mapped_to_nonexistent_header_fn";
+      check = fun () ->
+        (* Binding has external mapping to a header function name
+           that doesn't appear in header_functions. Treated as a
+           -1 vs binding_arity mismatch. *)
+        let r = check_type
+            ~header_functions:[ ("tiny_other", 1) ]
+            ~binding_externals:[ ("sum", 2) ]
+            ~name_mapping:[ ("sum", "tiny_sum") ] in
+        match r with
+        | Type_arity_mismatch { mismatches } ->
+            List.equal Poly.equal mismatches [ ("sum", 2, -1) ]
+        | _ -> false };
+    { name = "cmp_type.unknown_empty";
+      check = fun () ->
+        let r = check_type
+            ~header_functions:[] ~binding_externals:[] ~name_mapping:[] in
+        match r with Type_unknown -> true | _ -> false };
+  ]
+
 (* c7 cmp_api_repack — stub externals ↔ user vals (intra-binding,
    modulo declared renames).
    Catches the new tiny scenario e14 api_repack_stub_orphan. *)
@@ -282,6 +364,88 @@ let cmp_api_repack_pure_tests =
         let r = check_api_repack
             ~stub_externals:[] ~user_vals:[] ~renames:[] in
         match r with Repack_unknown -> true | _ -> false };
+  ]
+
+(* n3 inspector: inspect_header.py parses C function declarations and
+   `extern` variable declarations from a .h file. Today's parser is
+   regex-based, scoped to tiny.h-shape headers (flat, no preprocessor
+   tricks). Real-world headers will need a libclang or tree-sitter
+   upgrade — see plan.md §6 Step 4 (a). *)
+let n3_header_inspect_pure_tests =
+  let tmp_root = "_out/canary/test/n3-header" in
+  let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
+  let write_h name body =
+    let path = tmp_root ^ "/" ^ name ^ ".h" in
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc body;
+    Stdlib.close_out oc;
+    path in
+  let inspect h_path =
+    let out_file = h_path ^ ".inspect.json" in
+    let cmd = [%string
+      "python3 canary/scripts/inspect_header.py --path %{h_path} > %{out_file}"] in
+    let rc = Stdlib.Sys.command cmd in
+    if rc <> 0 then failwith [%string "inspect_header failed (rc=%{rc#Int})"];
+    Yojson.Basic.from_file out_file in
+  let funcs_of j =
+    Yojson.Basic.Util.(j |> member "functions" |> to_list) in
+  let vars_of j =
+    Yojson.Basic.Util.(j |> member "extern_vars" |> to_list) in
+  let fn_name j = Yojson.Basic.Util.(j |> member "name" |> to_string) in
+  let fn_arity j =
+    Yojson.Basic.Util.(j |> member "arg_types" |> to_list |> List.length) in
+
+  let tinyh = write_h "tiny_like"
+    {|#ifndef TINY_H
+#define TINY_H
+
+/* Read-mostly global. Initial value 42. */
+extern int tiny_offset;
+
+/* Returns a + b + tiny_offset. */
+int tiny_sum(int a, int b);
+
+/* Returns a - b. */
+int tiny_diff(int a, int b);
+
+#endif
+|} in
+  let bumped_h = write_h "bumped"
+    {|int tiny_sum(int a, int b, int c);
+int tiny_diff(int a, int b);
+|} in
+  let void_h = write_h "void_args"
+    {|void tiny_init(void);
+int tiny_count(void);
+|} in
+  let tiny_j = inspect tinyh in
+  let bumped_j = inspect bumped_h in
+  let void_j = inspect void_h in
+  [
+    { name = "n3.tiny_like_two_fns_one_var";
+      check = fun () ->
+        let fns = funcs_of tiny_j in
+        let vars = vars_of tiny_j in
+        List.length fns = 2
+        && List.length vars = 1
+        && List.equal String.equal (List.map fns ~f:fn_name)
+             [ "tiny_sum"; "tiny_diff" ]
+        && (Yojson.Basic.Util.(List.hd_exn vars |> member "name" |> to_string)
+            |> String.equal "tiny_offset") };
+    { name = "n3.arity_extracted";
+      check = fun () ->
+        let arities =
+          funcs_of tiny_j |> List.map ~f:fn_arity in
+        List.equal Int.equal arities [ 2; 2 ] };
+    { name = "n3.bumped_header_3_args";
+      check = fun () ->
+        let arities = funcs_of bumped_j |> List.map ~f:fn_arity in
+        (* Mirrors the c6 e15-shape test: header bumped tiny_sum to 3 args. *)
+        List.equal Int.equal arities [ 3; 2 ] };
+    { name = "n3.void_args_treated_as_zero";
+      check = fun () ->
+        let arities = funcs_of void_j |> List.map ~f:fn_arity in
+        List.equal Int.equal arities [ 0; 0 ] };
   ]
 
 (* bo1 inspector: `^external` parse in inspect_binding.py --kind mli.
@@ -593,7 +757,9 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
     native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
     @ cmp_symbol_pure_tests @ cmp_abi_pure_tests
     @ cmp_sym_version_pure_tests @ cmp_api_repack_pure_tests
-    @ bo1_external_inspect_pure_tests @ c2_prediction_pure_tests in
+    @ cmp_type_pure_tests
+    @ n3_header_inspect_pure_tests @ bo1_external_inspect_pure_tests
+    @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in
