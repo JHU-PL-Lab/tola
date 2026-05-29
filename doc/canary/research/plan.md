@@ -341,25 +341,30 @@ and "full project pipeline." Fixture-driven unit tests for each
 comparator + inspector that take canned JSONs and assert
 predicate outcomes.
 
-- [ ] **`canary_test/cmp_fixtures/`** — synthetic
-      provider+consumer JSON pairs per scenario shape (symbol
-      missing, soname bump, type drift, watchlist drop, …). Seed
-      from tiny's `_harness/comparators/` fixtures.
-- [ ] **`canary_artifact_test.ml`** new test group: each comparator
-      run against the fixtures, assert verdict. No real artifacts,
-      no real builds.
-- [ ] **Reciprocal coverage**: every comparator that exists ⇒ at
-      least one negative fixture (something it should reject) and
-      one positive fixture (something it should accept).
+- [x] **Seed fixtures + runner** (2026-05-29) — in-memory OCaml
+      fixtures in `canary_artifact_test.ml`:
+      - `cmp_symbol_pure_tests` (5 cases): Compatible / Missing one
+        / Missing multiple / Unknown-empty-requires /
+        Unknown-empty-symbols. Reciprocal coverage on c1.
+      - `c2_prediction_pure_tests` (2 cases): JSONs whose
+        `watchlist.missing` is `[]` produce no prediction strings —
+        the positive complement to the existing
+        `compat.mli_dotted_expansion` test.
+      - artifact-test pure suite 13 → 20, total 28 → 35.
+- [ ] **`canary_test/cmp_fixtures/`** — on-disk JSON fixture set
+      (shareable with tiny's harness). Lands when the
+      `canary_inspectors/` shared package does, so the Python and
+      OCaml sides can read the same fixtures.
+- [ ] **Reciprocal coverage** — extend the seed set as new
+      comparators land: every c4..c8 ⇒ at least one positive
+      fixture (accept) + one negative (reject).
 - [ ] Once `canary_inspectors/` package exists (Step 3 shared
       utilities), share the fixture set as Python-importable test
       data so tiny's harness and canary core run the *same* test
       matrix.
 
-Lands before Step 4 so every new primitive has fast-feedback test
-coverage from the moment it's written. Estimated effort: ~1-2
-sessions for the seed fixtures + runner; ongoing as comparators
-land.
+Seed landed before Step 4 begins so every new primitive has
+fast-feedback test coverage from the moment it's written.
 
 ### Step 4 — Comparator and inspector buildout (principled shape)
 

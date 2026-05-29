@@ -107,6 +107,102 @@ let compat_pure_tests =
         List.is_empty (Canary_compat.predicted_contains_any_v2 []) };
   ]
 
+(* Step 3b — Unit-test layer for primitives.
+   Synthetic provider+consumer fixtures exercise each comparator without
+   needing a real artifact or build. Reciprocal coverage (positive +
+   negative) per comparator: every accept case is paired with a reject
+   case so the test catches "always says compatible" / "always says
+   incompatible" regressions.
+
+   Today's coverage: c1 cmp_symbol (4 cases) + c2 prediction shape
+   (2 cases). c4 cmp_abi / c5 cmp_sym_version / c6 cmp_type / c7 cmp_repack
+   / c8 cmp_api_faithfulness will add fixtures here as they land — see
+   plan.md §6 Step 4 (a). *)
+let cmp_symbol_pure_tests =
+  let stub_of requires : Canary_compat.stub_inspect =
+    { path = "fixture-stub"; requires } in
+  let native_of symbols : Canary_compat.native_inspect =
+    { path = "fixture-native"; symbols } in
+  [
+    { name = "cmp_symbol.compatible";
+      check = fun () ->
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
+            ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
+        match r with Compatible -> true | _ -> false };
+    { name = "cmp_symbol.missing_one";
+      check = fun () ->
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
+            ~native_lib:(native_of [ "tiny_total"; "tiny_diff"; "tiny_offset" ]) in
+        match r with
+        | Missing { symbols } ->
+            List.equal String.equal symbols [ "tiny_sum" ]
+        | _ -> false };
+    { name = "cmp_symbol.missing_multiple";
+      check = fun () ->
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff"; "tiny_extra" ])
+            ~native_lib:(native_of [ "tiny_offset" ]) in
+        match r with
+        | Missing { symbols } ->
+            (* Order in 'missing' matches input order *)
+            List.length symbols = 3
+            && List.mem symbols "tiny_sum" ~equal:String.equal
+            && List.mem symbols "tiny_diff" ~equal:String.equal
+            && List.mem symbols "tiny_extra" ~equal:String.equal
+        | _ -> false };
+    { name = "cmp_symbol.unknown_empty_requires";
+      check = fun () ->
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [])
+            ~native_lib:(native_of [ "tiny_sum" ]) in
+        match r with Unknown -> true | _ -> false };
+    { name = "cmp_symbol.unknown_empty_symbols";
+      check = fun () ->
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum" ])
+            ~native_lib:(native_of []) in
+        match r with Unknown -> true | _ -> false };
+  ]
+
+(* c2 prediction shape: a JSON whose watchlist.missing is [] should
+   produce NO failure-string predictions (the positive complement to
+   the existing compat.mli_dotted_expansion test which checks the
+   non-empty case). *)
+let c2_prediction_pure_tests =
+  let tmp_root = "_out/canary/test/compat-helper" in
+  let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
+  let write_inspect kind name watchlist_missing =
+    let path = tmp_root ^ "/" ^ name in
+    let missing_json =
+      "[" ^ (List.map watchlist_missing ~f:(fun s -> "\"" ^ s ^ "\"")
+             |> String.concat ~sep:",") ^ "]"
+    in
+    let body =
+      [%string {|{"kind": "%{kind}", "path": "fixture",
+  "watchlist": {"present": [], "missing": %{missing_json}}}|}]
+    in
+    let oc = Stdlib.open_out path in
+    Stdlib.output_string oc body;
+    Stdlib.close_out oc;
+    path
+  in
+  let mli_clean = write_inspect "ocaml_mli" "mli_clean.json" [] in
+  let py_clean  = write_inspect "python"   "py_clean.json"  [] in
+  [
+    { name = "c2_prediction.mli_no_missing_no_strings";
+      check = fun () ->
+        let r = Canary_compat.predicted_contains_any_v2
+            [ Canary_compat.Ocaml_mli mli_clean ] in
+        List.is_empty r };
+    { name = "c2_prediction.python_no_missing_no_strings";
+      check = fun () ->
+        let r = Canary_compat.predicted_contains_any_v2
+            [ Canary_compat.Python_attrs py_clean ] in
+        List.is_empty r };
+  ]
+
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
 
 (* Run a command and check the process exit code against expectation.
@@ -244,7 +340,9 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
   (* Pure tests: always run *)
   let pure_pass = ref 0 in
   let pure_fail = ref 0 in
-  let pure_all = native_pure_tests @ ocaml_pure_tests @ compat_pure_tests in
+  let pure_all =
+    native_pure_tests @ ocaml_pure_tests @ compat_pure_tests
+    @ cmp_symbol_pure_tests @ c2_prediction_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in
