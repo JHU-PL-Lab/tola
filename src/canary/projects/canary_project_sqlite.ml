@@ -88,7 +88,7 @@ let script_spec : Canary_action.script_spec =
               fun ~output_dir ~variant_key ->
                 Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key) ]
        | Ocaml_config _ -> []);
-    (* Sqlite has no api_source/binding_summary so auto-summary doesn't fire.
+    (* Sqlite has no api_source/binding_user_facing_pkg so auto-summary doesn't fire.
        Both OCaml and Python summaries are produced via this explicit
        override at probe time. (Python summary is at probe time rather than
        fetch step here — Phase 3d's pre-cache benefit only kicks in for

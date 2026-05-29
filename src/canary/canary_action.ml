@@ -96,13 +96,25 @@ type script_spec = {
   expectation : rule -> location option -> step_expectation;
   (* Optional per-rule artifact symbol check. None = no symbol check. *)
   symbol_check : (rule -> symbol_check option);
-  (* Auto-summary pkg names for binding probes. When api_source is present and
-     a matching lang entry exists here, derive_steps auto-generates a summary
-     step after each Probe (Binding lang) step:
-       OCaml → mli_inspect_opam_pkg_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
-       Python → python_inspect_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)
-     Typical projects set this and omit binding arms from [summary]. *)
-  binding_summary : (Canary_artifact_api.lang * string) list;
+  (** Per-language user-facing package name(s) carrying the
+      {i s4 user_binding} surface for this project. Used by
+      [derive_steps] to auto-generate an inspector step after each
+      Probe (Binding lang) step:
+      - OCaml  → [mli_inspect_opam_pkg_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)]
+                 (produces the {i bo4 user_binding_ocaml.mli} JSON)
+      - Python → [python_inspect_cmd ~pkg ~watchlist:(binding_api[lang].module_watchlist)]
+                 (produces the {i bpe2 user_binding_cext.py} or
+                 {i bpc2 user_binding_ctypes.py} JSON depending on
+                 which mechanism the package ships as)
+
+      Example: z3 sets [[(OCaml, "z3"); (Python, "z3")]]; llvm sets
+      [[(OCaml, "llvm"); (Python, "llvmlite.binding")]]. Typical
+      projects set this and omit binding arms from [summary].
+
+      Renamed 2026-05-28 (Phase 4 Pass 2) from [binding_summary] —
+      the old name reflected the pre-Phase-2 "summary" terminology
+      that became "inspect" everywhere else. *)
+  binding_user_facing_pkg : (Canary_artifact_api.lang * string) list;
   (* Optional note prepended to auto-generated binding summaries (shell echo).
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
@@ -132,7 +144,7 @@ let empty_script_spec = {
   check_post = (fun _ -> None);
   expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
-  binding_summary = [];
+  binding_user_facing_pkg = [];
   inspect_note = None;
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
@@ -783,12 +795,12 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
         in
         match rule with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
-            (match List.Assoc.find spec.binding_summary
+            (match List.Assoc.find spec.binding_user_facing_pkg
                      ~equal:Poly.equal Canary_artifact_api.OCaml with
              | None -> []
              | Some pkg -> ocaml_install_summaries pkg)
         | Fetch (Binding Python) ->
-            (match List.Assoc.find spec.binding_summary
+            (match List.Assoc.find spec.binding_user_facing_pkg
                      ~equal:Poly.equal Canary_artifact_api.Python with
              | None -> []
              | Some pkg -> python_install_inspect pkg)

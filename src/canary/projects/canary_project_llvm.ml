@@ -500,7 +500,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             };
           }
       | _ -> Expect_success);
-    binding_summary = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
+    binding_user_facing_pkg = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
     inspect_note =
       (if not source.has_build_binding then
          Some (Canary_artifact_api.stable_reuse_warning

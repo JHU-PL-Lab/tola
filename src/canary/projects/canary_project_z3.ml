@@ -522,7 +522,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
               Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir ~variant_key
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
-    binding_summary = [ (OCaml, "z3"); (Python, "z3") ];
+    binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];
     expectation = (fun rule loc -> match rule, loc with
       | Probe (Binding _),
         Some (Canary_store.Pm

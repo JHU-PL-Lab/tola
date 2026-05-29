@@ -106,15 +106,15 @@ files. Safe to ship in pieces.
 
 ### Pass 2 — surgical renames (low-risk)
 
-- [ ] **`canary_action.ml`**: rename `binding_summary` field on
-      `script_spec` to `binding_user_facing_pkg` (or similar — open
-      to alternatives). Touches 3 project specs (z3, llvm, sqlite)
-      + a few action call sites. Pure rename.
-- [ ] **`canary_artifact_test.ml`**: rename test fixture
-      identifiers (variable names) to canonical form where the
-      name carries surface meaning. E.g. `fmt_cmxa` →
-      `compiled_binding_ocaml_cmxa_fixture`. Only renames; no test
-      behavior changes.
+- [x] **`canary_action.ml`** (2026-05-28): renamed `binding_summary`
+      field on `script_spec` to `binding_user_facing_pkg`. Updated
+      derive_steps call sites + z3 / llvm project specs + sqlite
+      comment mention.
+- [x] **`canary_artifact_test.ml`** (2026-05-28): inspected — the
+      existing fixture identifiers (`native_lib_fixture`,
+      `native_pure_tests`, `ocaml_pure_tests`, `compat_pure_tests`)
+      are already aligned with the canonical-name scheme. No
+      renames needed.
 - [ ] (Optional, propose first) `canary.ml`: rename
       `Ocaml_mli → User_binding_mli` and `Python_attrs →
       User_binding_attrs` to drop language-flavoured names. This is
@@ -179,10 +179,9 @@ files. Safe to ship in pieces.
   name pointing at a language-agnostic concept" with just a doc?
   Lean toward leaving as-is + doc-comment for Phase 4; flag for a
   later cleanup pass.
-- **`binding_summary` rename** — proposed `binding_user_facing_pkg`,
-  but other names work too (`user_facing_pkg`, `user_pkg_name`,
-  `binding_label`). Pick one; touches 3 project specs and a small
-  number of call sites.
+- ✓ **`binding_summary` rename** — resolved 2026-05-28: chose
+  `binding_user_facing_pkg`. Doc-comment carries a "renamed from"
+  note for searchability.
 - **Project spec alias inventory** — Phase 4 adds a type for it
   but doesn't require every project to fill it in. For Phase 4 the
   inventory only needs to exist for tiny (driving `canary action
