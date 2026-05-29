@@ -1,28 +1,38 @@
 (** Project: tiny — the in-tree foundational witness for surface theory.
 
-    {b Phase 4 milestone (2026-05-28).} This module exists so that
-    [canary action tiny] runs every action graph step on tiny's
-    minimal C library + OCaml binding using the production canary
-    pipeline. It is the integration check that closes the loop
-    between [doc/canary/research/surface_theory.md], [tiny.md], and
-    the canary code.
+    {b Phase 4 milestone (2026-05-28; expanded 2026-05-29).} This module
+    drives the production canary pipeline over tiny's minimal C library +
+    OCaml binding + Python cext binding. It is the integration check that
+    closes the loop between [doc/canary/research/surface_theory.md],
+    [tiny.md], and the canary code.
 
-    Unlike z3/llvm/sqlite (which fetch from package managers or
-    upstream source repos), tiny lives in the repository at
-    [canary/examples/tiny/] and builds entirely from in-tree source:
+    {b Relationship to the standalone tiny harness.} Tiny's
+    [scenarios/scenarios.py] + [_harness/run_cached.py] is the {i golden
+    truth} for what breakage can be induced and detected on this minimal
+    target — the perturbation matrix runs 12 scenarios against handwritten
+    comparators. canary_project_tiny.ml's job is to declare the same
+    surfaces + watchlists in canary's vocabulary so that canary's standard
+    inspectors + comparators would detect the same violations when
+    presented with the same {i ill artifacts} (the perturbations are
+    treated as "versioned variants the canary may encounter from stores").
+
+    Unlike z3/llvm/sqlite (which fetch from package managers or upstream
+    source repos), tiny lives in the repository at [canary/examples/tiny/]
+    and builds entirely from in-tree source:
 
     - {i n4 lib_native.so} produced by [cmake -S c -B c/build]
     - {i bo3..bo7 compiled_binding_ocaml.*} produced by [dune build]
       with [LIBRARY_PATH] pointed at the cmake output dir
-    - {i bo6/bo7/bo4} surfaces extracted by the standard inspector
-      scripts ([inspect_native.py], [inspect_binding.py],
-      [inspect_ocaml.py])
+    - {i bpe3 compiled_binding_cext.so} produced by [uv build] (via the
+      tiny Makefile's [python_cext] target)
+    - {i bo4 / bpe2} user-facing surfaces extracted by the standard
+      inspector scripts ([inspect_binding.py --kind mli], [inspect_python.py])
 
-    Python bindings (cext, ctypes) are intentionally not driven from
-    canary today — the tiny harness ([scenarios/scenarios.py],
-    [_harness/run_cached.py]) covers them already, and adding them to
-    the canary spec would require additional uv / pip command handling
-    that isn't load-bearing for the Phase 4 alignment check.
+    Python ctypes ({i bpc2}) is intentionally not driven from canary today
+    — it's pure-Python (no compiled binding artifact = no {i s5} for the
+    ctypes column, by §2.3 of surface theory) and the canary pipeline
+    needs a build_binding artifact for the [Binding Python] arm. The
+    standalone harness covers it; canary models the static cext case.
 
     Aligned vocabulary: this spec uses canonical names in commentary
     ({i lib_native}, {i compiled_binding_ocaml.cmxa}, etc.) and ties
@@ -44,19 +54,84 @@ let tiny_root = "canary/examples/tiny"
     so the OCaml binding's cstubs link against the right libtiny. *)
 let tiny_lib_dir = Printf.sprintf "$PWD/%s/c/build" tiny_root
 
-(** Module-level watchlist for tiny's OCaml user-facing surface (bo4
-    [user_binding_ocaml.mli]). These three vals are what every probe in
-    the tiny harness exercises. *)
-let tiny_ocaml_module_watchlist = [ "Tiny" ]
-let tiny_ocaml_val_watchlist = [ "sum"; "diff"; "offset" ]
+(** The three C symbols the tiny native lib exports — what every binding
+    requires. Drift here is what {i e1 symbol_missing} induces; canary
+    catches it via the [stable_symbols] watchlist in [api_source]. *)
+let tiny_native_stable_symbols = [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]
+
+(** Module + val watchlist on {i bo4 user_binding_ocaml.mli}. The dotted
+    paths resolve against the [Tiny] module's vals at inspect time.
+    Dropping one of these from [Tiny.mli] (= {i e6 api_complete}) makes
+    {i c2 cmp_api_completeness} predict the failure. *)
+let tiny_ocaml_module_watchlist =
+  [ "Tiny"; "Tiny.sum"; "Tiny.diff"; "Tiny.offset" ]
+
+(** Attribute watchlist on {i bpe2 user_binding_cext.py} (and equivalently
+    on {i bpc2 user_binding_ctypes.py} when the standalone harness checks
+    it). Dropping one of these from [tiny_cext/__init__.py] (= {i e11
+    api_complete_python}) makes {i c2 cmp_api_completeness} on the Python
+    side predict the failure. *)
+let tiny_python_module_watchlist = [ "sum"; "diff"; "offset" ]
+
+(** Canary's [api_source] is the typed declaration of what tiny's surfaces
+    are. [derive_steps] uses this to auto-generate inspect-and-watchlist
+    steps after each Build/Probe, which is how canary detects drift the
+    same way the standalone harness does.
+
+    - [native_api.headers] declares {i n3 header_native.h}.
+    - [native_api.components = [Headers; Runtime_lib; Link_lib]] declares
+      that tiny exposes a header file, a runtime [.so] ({i n4}), and a
+      link-time symlink (also {i n4} via [libtiny.so → libtiny.so.1]).
+    - [stable_symbols] drives a symbol-level watchlist that {i c1
+      cmp_symbol} would check against {i n4}'s exported set (catches {i e1
+      symbol_missing}).
+    - The OCaml binding_api carries the module watchlist (catches
+      {i e6 api_complete}).
+    - The Python binding_api carries the attr watchlist (catches
+      {i e11 api_complete_python}). *)
+let tiny_api_source : Canary_artifact_api.t =
+  let native_api : Canary_artifact_api.native_api =
+    {
+      kind = C;
+      components = [ Headers; Runtime_lib; Link_lib ];
+      headers =
+        Some
+          {
+            dir = "c/include";
+            files = [ "tiny.h" ];
+          };
+      symbol_prefixes = [ "tiny_" ];
+      stable_symbols = tiny_native_stable_symbols;
+      versioned_symbols = [];
+      soname    = Some "libtiny.so.1";   (** {i c4 cmp_abi} reference (placeholder until c4 wires up) *)
+      c_runtime = None;
+      cxx_abi   = None;
+    }
+  in
+  let ocaml_binding : Canary_artifact_api.binding_api =
+    {
+      lang = OCaml;
+      source_dir = Some "ocaml";
+      module_watchlist = tiny_ocaml_module_watchlist;
+      type_watchlist = [];
+    }
+  in
+  let python_binding : Canary_artifact_api.binding_api =
+    {
+      lang = Python;
+      source_dir = Some "python_cext/tiny_cext";
+      module_watchlist = tiny_python_module_watchlist;
+      type_watchlist = [];
+    }
+  in
+  { native_api; binding_apis = [ ocaml_binding; python_binding ] }
 
 let script_spec : Canary_action.script_spec =
   {
     Canary_action.empty_script_spec with
 
     (* No fetch_source: tiny is in-tree. *)
-    (* No api_source: tiny doesn't go through the api_source flow today;
-       the tiny harness handles inspector chaining directly. *)
+    api_source = Some tiny_api_source;
 
     (* Configure: cmake -S c -B c/build. The trailing marker-write satisfies
        canary's default check_post (looks for conf.ok in output_dir). *)
@@ -78,26 +153,45 @@ let script_spec : Canary_action.script_spec =
        - compiled_binding_ocaml.cmxa (bo6)
        - compiled_binding_ocaml.stub-a (bo7) = libtiny_stubs.a
        - examples/probe_baseline.exe (the s6 carrier)
-       LIBRARY_PATH lets the cstubs link find libtiny; LD_RUN_PATH bakes
-       the rpath into the binding so probe runs without LD_LIBRARY_PATH. *)
+       Invoked from the tola root with the example tree as an explicit
+       target (avoids dune-project context errors when cd'ing into the
+       subdir). LIBRARY_PATH lets the cstubs link find libtiny;
+       LD_RUN_PATH bakes the rpath into the binding. *)
     build_binding = [
       (Canary_artifact_api.OCaml,
        fun ~output_dir ~variant_key ->
          let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
-         (* Invoke dune from the tola root (where dune-project lives) with
-            the example tree as an explicit target. Avoids "path cannot
-            escape the context root" that bites when cd'ing into the
-            example subdir. *)
          Printf.sprintf
            "LIBRARY_PATH=%s LD_RUN_PATH=%s dune build %s/ocaml && \
             echo 'ok' > %s/%s"
            tiny_lib_dir tiny_lib_dir tiny_root output_dir build_ok);
+      (* Build_binding Python: invoke tiny's Makefile python_cext target,
+         which runs `uv build --wheel` and copies _native.cpython-*.so back
+         next to __init__.py. Produces bpe3 compiled_binding_cext.so. *)
+      (Canary_artifact_api.Python,
+       fun ~output_dir ~variant_key ->
+         let build_ok = Canary_step_key.variant_file ~variant_key "build.ok" in
+         Printf.sprintf
+           "make -C %s python_cext && echo 'ok' > %s/%s"
+           tiny_root output_dir build_ok);
     ];
 
-    (* Probe_binding OCaml: run the probe_baseline.exe. The binary was
-       built with rpath baked in (LD_RUN_PATH above), so LD_LIBRARY_PATH
-       is a safety net rather than strictly required. probe.log marker
-       captures stdout (default check_post). *)
+    (* Probe_lib: minimal "the lib exists and is loadable" check. The real
+       payload of this step is the attached _inspect (see [inspect] field
+       below) which runs inspect_native.py against n4 lib_native.so with
+       the stable_symbols watchlist — that's what would catch
+       {i e1 symbol_missing} via {i c1 cmp_symbol}. *)
+    probe_lib = [
+      (Canary_store.Build_tree,
+       fun ~output_dir ~variant_key ->
+         let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
+         Printf.sprintf
+           "nm -D %s/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
+            > %s/%s 2>&1"
+           tiny_root output_dir probe_log);
+    ];
+
+    (* Probe_binding OCaml: run probe_baseline.exe. *)
     probe_binding = [
       (Canary_artifact_api.OCaml,
        Canary_store.Build_tree,
@@ -107,39 +201,114 @@ let script_spec : Canary_action.script_spec =
            "LD_LIBRARY_PATH=%s _build/default/%s/ocaml/examples/probe_baseline.exe \
             > %s/%s 2>&1"
            tiny_lib_dir tiny_root output_dir probe_log);
+      (* Probe_binding Python (cext): import + invoke wrappers. The
+         standalone harness's probe_baseline.py asserts the same value set;
+         here we use the same script. *)
+      (Canary_artifact_api.Python,
+       Canary_store.Build_tree,
+       fun ~output_dir ~variant_key ->
+         let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
+         Printf.sprintf
+           "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext python3 \
+            %s/python_cext/examples/probe_baseline.py > %s/%s 2>&1"
+           tiny_lib_dir tiny_root tiny_root output_dir probe_log);
     ];
 
-    (* Explicit inspect override per probe — keep tiny harness's flat
-       inspector chain. The artifacts being inspected here are:
-       - Probe (Binding OCaml) → bo4 user_binding_ocaml.mli (the watchlist
-         driver for c2 cmp_api_completeness). *)
-    inspect = (fun rule _loc -> match rule with
+    (* binding_user_facing_pkg drives auto-generation of inspect steps
+       after each Probe (Binding lang) — OCaml gets an [mli]
+       inspect on the bo4 user_binding_ocaml.mli; Python gets a [dir(pkg)]
+       inspect on bpe2 user_binding_cext.py. The pkg names match the
+       package containing the user-facing surface. *)
+    binding_user_facing_pkg = [
+      (Canary_artifact_api.OCaml, "tiny");
+      (Canary_artifact_api.Python, "tiny_cext");
+    ];
+
+    (* Inspect overrides — produce per-artifact JSON for each binding-side
+       artifact. These are what the standard tiny harness comparators
+       consume, restated in canary's vocabulary so [canary action tiny]
+       writes the same JSONs as [make scenarios-cached] does:
+
+       - Build_binding OCaml   → bo7 compiled_binding_ocaml.stub-a
+         (libtiny_stubs.a). Feeds c1 cmp_symbol.
+       - Build_binding Python  → bpe3 compiled_binding_cext.so
+         (_native.cpython-*.so). Feeds c1 cmp_symbol (cext flavor).
+       - Probe (Binding OCaml) → bo4 user_binding_ocaml.mli (tiny.mli)
+         with module + val watchlist. Feeds c2 cmp_api_completeness.
+       - Probe (Binding Python)→ bpe2 user_binding_cext.py (dir(tiny_cext))
+         with attr watchlist. Feeds c2 cmp_api_completeness (Python). *)
+    inspect = (fun rule _loc ->
+      let ocaml_build_dir =
+        Printf.sprintf "_build/default/%s/ocaml" tiny_root in
+      match rule with
+      | Probe Lib ->
+          (* n4 lib_native.so via inspect_native.py; the stable_symbols
+             watchlist drives the c1 cmp_symbol equivalent on the
+             provider side. *)
+          Some (fun ~output_dir ~variant_key ->
+            Canary_artifact_native.inspect_cmd
+              ~lib:(Printf.sprintf "%s/c/build/libtiny.so.1" tiny_root)
+              ~prefixes:[ "tiny_" ]
+              ~watchlist:tiny_native_stable_symbols
+              ~output_dir ~variant_key ())
+      | Build_binding Canary_artifact_api.OCaml ->
+          Some (fun ~output_dir ~variant_key ->
+            (* base="inspect" matches the default tag_suffix="_inspect" that
+               attach_inspect uses when wiring the explicit `inspect` field.
+               The standalone harness names this JSON `ocaml_stub.json`; in
+               canary the per-parent output_dir separates it from other
+               binding inspectors. *)
+            let out_file =
+              Canary_step_key.filename ~variant_key
+                ~base:"inspect" ~ext:"json" in
+            Printf.sprintf
+              "python3 canary/scripts/inspect_binding.py --kind stub \
+               --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s"
+              ocaml_build_dir output_dir out_file)
+      | Build_binding Canary_artifact_api.Python ->
+          Some (fun ~output_dir ~variant_key ->
+            let cext_so =
+              Printf.sprintf
+                "%s/python_cext/tiny_cext/_native.cpython-*.so" tiny_root in
+            Canary_artifact_native.inspect_cmd
+              ~lib:cext_so ~prefixes:[ "tiny_" ]
+              ~watchlist:tiny_native_stable_symbols
+              ~output_dir ~variant_key ())
       | Probe (Binding Canary_artifact_api.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.inspect_cmd
-              ~archive:(Printf.sprintf "_build/default/%s/ocaml/tiny.cmxa" tiny_root)
-              ~watchlist:tiny_ocaml_module_watchlist
-              ~output_dir ~variant_key ())
+            let out_file =
+              Canary_step_key.filename ~variant_key
+                ~base:"inspect" ~ext:"json" in
+            let watchlist_csv =
+              String.concat ~sep:"," tiny_ocaml_module_watchlist in
+            Printf.sprintf
+              "python3 canary/scripts/inspect_binding.py --kind mli \
+               --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
+              tiny_root watchlist_csv output_dir out_file)
+      | Probe (Binding Canary_artifact_api.Python) ->
+          Some (fun ~output_dir ~variant_key ->
+            let out_file =
+              Canary_step_key.filename ~variant_key
+                ~base:"inspect" ~ext:"json" in
+            let watchlist_csv =
+              String.concat ~sep:"," tiny_python_module_watchlist in
+            Printf.sprintf
+              "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext \
+               python3 canary/scripts/inspect_python.py --pkg tiny_cext \
+               --watchlist '%s' > %s/%s"
+              tiny_lib_dir tiny_root watchlist_csv output_dir out_file)
       | _ -> None);
 
     (* Diagram labels: bind the canary kinds to the canonical names tiny uses. *)
     artifact_name = (function
+      | Headers -> Some "header_native.h (tiny.h)"
       | Lib -> Some "lib_native.so (libtiny.so.1)"
       | Binding Canary_artifact_api.OCaml ->
           Some "compiled_binding_ocaml (tiny.cmxa + libtiny_stubs.a)"
-      | App -> Some "probe_baseline.exe"
+      | Binding Canary_artifact_api.Python ->
+          Some "compiled_binding_cext (_native.cpython-*.so)"
+      | App -> Some "probe_baseline.exe / .py"
       | _ -> None);
 
-    expectation = (fun rule _loc -> match rule with
-      | Probe (Binding Canary_artifact_api.OCaml) -> Expect_success
-      | _ -> Expect_success);
-
-    (* Baseline tiny: every probe must produce the values the
-       probe_baseline.{ml,py} reference set asserts. The tiny harness
-       captures broken variants under scenarios/_cache/<scenario>/; this
-       canary path runs only the healthy baseline. *)
+    expectation = (fun _rule _loc -> Expect_success);
   }
-
-(* Suppress unused-binding warnings on the val-level watchlist; reserved
-   for a future inspect that targets bo4 via inspect_binding.py --kind mli. *)
-let _ = tiny_ocaml_val_watchlist

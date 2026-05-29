@@ -156,17 +156,39 @@ files. Safe to ship in pieces.
       `"tiny"` dispatch case alongside sqlite / zarith / ssl / z3 /
       llvm. `dune exec src/bin/canary_main.exe -- action tiny` runs
       end-to-end.
-- [ ] (Stretch) Add Python (cext + ctypes) sub-arms — currently
-      only OCaml binding is driven via canary. The tiny harness
-      ([scenarios/scenarios.py], [_harness/run_cached.py]) covers
-      Python today; folding them into the canary spec needs uv /
-      pip command handling that isn't load-bearing for the Phase 4
-      alignment milestone.
-- [ ] (Follow-up) `canary compat tiny` / `canary verify tiny` —
-      the prediction commands work on summary JSONs; tiny's
-      api_source flow isn't wired so these aren't directly
-      applicable until tiny gets an [api_source] field (parallel to
-      z3's). Not blocking for Phase 4.
+- [x] (Expanded 2026-05-29) `api_source` declared (n3 header + n4
+      runtime_lib + link_lib + stable_symbols watchlist + ocaml +
+      python binding_apis with module/attr watchlists). Python cext
+      sub-arm added (build via tiny Makefile python_cext target;
+      probe via probe_baseline.py). `probe_lib` entry added so the
+      n4 inspect step fires. Five `inspect` overrides wired:
+      n4 (via Probe Lib), bo7 stub.a (via Build_binding OCaml),
+      bpe3 cext .so (via Build_binding Python), bo4 mli (via Probe
+      Binding OCaml), bpe2 attrs (via Probe Binding Python).
+      `canary action tiny` now runs 12 steps (6 main + 6 inspect)
+      and produces the same JSON shapes the standalone harness does.
+- [ ] **Gap: c1 cmp_symbol not wired into the action pipeline.**
+      canary's `action` command produces n4 + bo7 + bpe3 inspector
+      JSONs but does not cross-compare them. cmp_symbol fires via
+      `canary compat <project>` (separate command) or via an
+      `Expect_compat_failure` step expectation (only when a probe
+      is expected to fail). For baseline tiny, every probe succeeds,
+      so no comparator runs. Closing this gap = wiring `canary compat
+      tiny` to read tiny's cached JSONs and run check_c_compat. Not
+      a tiny-side gap — same pattern would apply to z3/llvm baselines.
+- [ ] **Gap: Python ctypes (bpc1/bpc2) not modeled.** By §2.3 of
+      surface theory, ctypes has no s5 (no compiled binding artifact).
+      canary's `Binding Python` slot is fundamentally Build_binding
+      → Probe_binding, which assumes s5 exists. Modelling ctypes
+      would require either a "no-build" binding subtype in canary or
+      a parallel `Binding (Python, ctypes)` variant. Deferred.
+- [ ] **Gap: app_binding.exe / app_helper.exe / tiny_helper.** The
+      tiny harness covers these via dedicated probes (e12/e13
+      fixtures + tiny_helper as a downstream library layer). canary's
+      `App` and `Build_app` rules could carry app_binding; tiny_helper
+      could be a second `Binding OCaml` if the schema allowed multiple.
+      Deferred — minimal value vs. probe_binding_ocaml which already
+      transitively exercises the chain.
 
 ### Pass 5 — docs sync after each pass
 

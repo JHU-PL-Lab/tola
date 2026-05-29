@@ -118,7 +118,7 @@ let action_cmd =
   let run_tiny ~root ~failfast ~cache_path =
     let steps =
       Canary_action.derive_steps ~root ~project:"tiny"
-        ~langs:Canary_artifact_api.[ OCaml ]
+        ~langs:Canary_artifact_api.[ OCaml; Python ]
         Canary_project_tiny.script_spec
     in
     run_with_info ~artifact_names:Canary_project_tiny.script_spec.artifact_name
