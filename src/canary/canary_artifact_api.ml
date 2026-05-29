@@ -35,15 +35,31 @@ type native_api_kind =
   | Cpp_api
 [@@deriving show]
 
-(* Component kinds — declared by the provider (native_api.components).
-   No path payload here; paths live in the provider's detail fields (headers, etc.).
-   Link_lib: unversioned .so symlink (shared) or .a (static) — used at link time.
-   Runtime_lib: versioned .so/.dylib — loaded at runtime; absent for static linking. *)
+(** Component kinds — declared by the provider ([native_api.components]).
+    No path payload here; paths live in the provider's detail fields
+    ([headers] etc.). [Link_lib] is the unversioned [.so] symlink (shared)
+    or [.a] (static) used at link time; [Runtime_lib] is the versioned
+    [.so]/[.dylib] loaded at runtime (absent for static linking).
+
+    Cross-reference to the surface-theory vocabulary in
+    [doc/canary/research/surface_theory.md] §2.1:
+
+    - [Headers]     ↔ {i s1 native_header} — syntactic native surface.
+                      In tiny: [n3 header_native.h] = [c/include/tiny.h].
+    - [Runtime_lib] ↔ {i s2 native_lib} (semantic). The {i runtime} carrier;
+                      ELF/dyld resolves this. In tiny: [n4 lib_native.so]
+                      = [c/build/libtiny.so.1].
+    - [Link_lib]    ↔ {i s2 native_lib} via the link-time symlink (shared)
+                      or archive (static). Same s2 role; different access
+                      time. In tiny: [c/build/libtiny.so] (symlink to [n4]).
+    - [Pc_file]     ↔ no s* role — packaging metadata that {i drives} where
+                      [Headers]/[Link_lib]/[Runtime_lib] live, but isn't
+                      itself a surface canary checks. *)
 type api_component =
-  | Headers      (** C/C++ public headers *)
-  | Runtime_lib  (** versioned .so/.dylib — loaded at runtime *)
-  | Link_lib     (** lib used at link time — .so symlink (shared) or .a (static) *)
-  | Pc_file      (** pkg-config file — build-system metadata *)
+  | Headers      (** C/C++ public headers ↔ s1 native_header *)
+  | Runtime_lib  (** versioned .so/.dylib ↔ s2 native_lib (runtime carrier) *)
+  | Link_lib     (** .so symlink or .a ↔ s2 native_lib (link-time carrier) *)
+  | Pc_file      (** pkg-config file — packaging metadata, no s* role *)
 [@@deriving show]
 
 (* Path detail for Header components — only present on the provider side *)

@@ -6,13 +6,48 @@ open Canary_store
 type runner_os = Ubuntu | MacOS
 type probe_action = Compile_example | Run_example
 type compile_mode = Native | Bytecode
+
+(** Coarse artifact grouping used for action dispatch (rule selection in
+    {!Canary.store_rules}). Each constructor here corresponds to a
+    {i group} of fine-grained artifact roles from the surface-theory
+    vocabulary used in [doc/canary/research/surface_theory.md] §2.1
+    and [doc/canary/research/tiny.md] "Artifact inventory":
+
+    - [Source]        — pre-build C sources (no surface; build input for s2).
+                        Canonical: [source_native.*]. Aliased as [n0..] in tiny.
+    - [Headers]       — public C headers carrying s1. Canonical:
+                        [header_native.h]. Aliased as [n3] in tiny.
+    - [Lib]           — compiled native library carrying s2. Canonical:
+                        [lib_native.so]. Aliased as [n4] in tiny.
+    - [Binding lang]  — a whole language binding, internally a chain of
+                        roles {i stub} (s3) → {i user} (s4) → {i compiled}
+                        (s5). For tiny's OCaml binding this group is the
+                        union of bo1..bo7; for cext it's bpe1..bpe3; for
+                        ctypes bpc1..bpc2 (no s5 — pure-Python dynamic).
+    - [App]           — consumer executable / probe. No surface; runtime
+                        carrier of s6 ([runtime_trace]).
+
+    Surface-theory's fine vocabulary refines [Binding lang] but does not
+    replace this coarse grouping — action dispatch (fetch/build/pack/probe)
+    still operates at the [Binding lang] grain. The fine roles surface in
+    inspector/comparator code under canonical names. *)
 type artifact_kind = Source | Headers | Lib | Binding of Canary_artifact_api.lang | App
 
 let kind_order = function
   | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
 
+(** A concrete artifact instance: a [kind] tag plus an identifier ([name])
+    and a [location] (filesystem path / package coordinates).
+
+    Naming convention for [name]: prose-style, mirrors the canonical-name
+    forms from surface theory where applicable. For [Lib] artifacts, [name]
+    is the project name (e.g. ["libz3"]); for [Binding lang], it's the
+    binding's user-facing package label (e.g. ["z3ml"], ["z3-solver"]). *)
 type artifact = { kind : artifact_kind; name : string; location : location }
 
+(** Build-graph node: an artifact plus how it was produced ([built_from])
+    and what it needs at runtime ([runtime_dep]). The graph is materialised
+    by {!Canary.run_graph}. *)
 type artifact_node = {
   a_kind : artifact_kind;
   a_name : string;

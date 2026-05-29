@@ -73,6 +73,20 @@ let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
     artifact_node =
   { a_kind; a_name; origin; a_location = location; built_from; runtime_dep }
 
+(** Stringify an {!Canary_basic.artifact_kind} for action tags and log
+    output. Output strings map to surface-theory canonical-name groups:
+
+    - ["source"]        ↔ [source_native.*] group
+    - ["headers"]       ↔ [header_native.h] (s1)
+    - ["lib"]           ↔ [lib_native.so] (s2)
+    - ["<lang>_binding"] ↔ the binding chain
+                          {i {stub,user,compiled}_binding_<lang>.*} for that
+                          language. E.g. ["ocaml_binding"] covers tiny's
+                          bo1..bo7. ["python_binding"] covers the cext
+                          {i and} ctypes mechanisms unless a [mechanism]
+                          subtype refines later.
+    - ["app"]           ↔ consumer / probe (no surface; runtime carrier
+                          of s6 [runtime_trace]). *)
 let string_of_artifact_kind = function
   | Source -> "source"
   | Headers -> "headers"
@@ -276,6 +290,48 @@ type symbol_check = {
   version_info : version_info option;
 }
 
+(** Input descriptor for a compatibility prediction: pairs an artifact-role
+    tag with the [paths] of inspector JSONs (produced by canary's Python
+    inspector scripts) that {!Canary_compat.predicted_contains_any_v2}
+    should read.
+
+    Each constructor names a {i role}; the artifact-alias mapping (the
+    [n*]/[b*] vocabulary from surface theory) is the same role-by-role:
+
+    - [Native_lib]   — provider side {i s2 native_lib}. In tiny this is
+                       the [n4] inspector's JSON (from [inspect_native.py]
+                       on [c/build/libtiny.so.1]). For cext compiled
+                       extensions, the same script reused on the binding
+                       artifact ({i bpe3 compiled_binding_cext.so} in tiny).
+    - [C_stub]       — consumer side carrying undefined refs to native C
+                       symbols. Comes from [inspect_binding.py --kind stub]
+                       on [libtiny_stubs.a] ({i bo7 compiled_binding_ocaml.stub-a}
+                       in tiny), or [nm -u] on a cext [.so] reshaped to the
+                       same JSON form ({i bpe3} in stub-like coercion mode).
+                       Paired with [Native_lib] for {i c1 cmp_symbol} (set
+                       inclusion: {i native.symbols ⊇ stub.requires}).
+    - [Ocaml_mli]    — consumer side {i s4 user_binding_ocaml.mli}. From
+                       [inspect_binding.py --kind mli] on the [.mli]
+                       ({i bo4 user_binding_ocaml.mli} in tiny). Drives
+                       {i c2 cmp_api_completeness} via watchlist check
+                       against [vals].
+    - [Python_attrs] — consumer side {i s4 user_binding_<python>.py}. From
+                       [inspect_python.py --pkg <name>] ({i bpe2} or {i bpc2}
+                       in tiny). Drives the Python flavour of {i c2
+                       cmp_api_completeness} via watchlist check against
+                       [attrs].
+    - [Versioned_symbols] — provider side {i s2.versioned} (i.e. [@@VER]
+                            annotations on [Native_lib]). Drives the
+                            {i c5 cmp_sym_version} comparator (L1b
+                            in canary's layered diagnostic — [@@GLIBC_X.YY]
+                            tags). Comparator not yet wired.
+    - [Abi_surface]  — provider side {i s2}'s SONAME / NEEDED / RPATH
+                       (subset of [Native_lib]'s ELF metadata, surfaced
+                       separately so an ABI-only prediction can be
+                       expressed). L4 in canary's diagnostic layering.
+
+    Each constructor's [paths] resolves at runtime to the cached inspector
+    JSON written by the action that produced the artifact. *)
 type compat_inspect_input =
   | C_stub           of { paths : string list }
   | Native_lib       of { paths : string list }
@@ -284,6 +340,24 @@ type compat_inspect_input =
   | Versioned_symbols of { paths : string list }  (* L1b: @@GLIBC_X.YY version tags *)
   | Abi_surface      of { paths : string list }  (* L4: SONAME/NEEDED/RPATH mismatch *)
 
+(** What an action step's outcome should be when {!Canary_action.run_step}
+    runs it. Used by {!Canary_action.derive_steps} and the GH backend.
+
+    - [Expect_success]              — step must exit 0.
+    - [Expect_failure { contains_any; ... }] — step must fail; the failure
+                                       output must contain at least one
+                                       hand-written substring from
+                                       [contains_any]. Brittle for multiline;
+                                       use [Expect_compat_failure] when the
+                                       prediction can be derived.
+    - [Expect_compat_failure { inputs; version_info }] — step must fail;
+                                       the expected failure substrings are
+                                       {i derived} at run time by
+                                       {!Canary_compat.predicted_contains_any_v2}
+                                       from the cached inspector JSONs of
+                                       [inputs]. Use when the surface delta
+                                       between provider and consumer can
+                                       predict the failure message. *)
 type step_expectation =
   | Expect_success
   | Expect_failure of {

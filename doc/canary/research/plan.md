@@ -159,10 +159,20 @@ will look for.
       witness, plan in three aligned docs; entry point at
       [`README.md`](README.md); legacy `api_surface.md` retired.
 - [x] **`tiny` example** — minimal C lib + 3 bindings (OCaml
-      cstubs, Python cext, Python ctypes) + 8 scenarios all passing
-      against the harness; both points of the §2.3 static/dynamic
-      axis instantiated; coverage matrix in
+      cstubs, Python cext, Python ctypes) + downstream `tiny_helper`
+      lib + 12 scenarios (10 perturbations + 2 positive-coverage)
+      all passing against the harness; both points of the §2.3
+      static/dynamic axis instantiated; coverage matrix in
       [`tiny.md`](tiny.md).
+- [x] **`prepare` + `confirm_ill` flow** (Phase 3, 2026-05-28).
+      Each scenario's `violates` claim is now a machine-checkable
+      assertion — `prepare` computes the surface delta vs cached
+      baseline JSONs and writes it to
+      `_cache/<name>/confirm_ill.json`. Phase 3b adds artifact +
+      source snapshots for cached replay (`make scenarios-cached`,
+      ~1.6× faster than `make scenarios` on tiny; scales with build
+      cost on larger projects). See [`tiny.md`](tiny.md) "Phase 3a"
+      and "Phase 3b" subsections.
 - [ ] **Calculus story sharper.** `surface_theory.md` §6 is a
       sketch; make it a contribution — transformer signatures,
       surface subtyping, and the static/runtime refinement loop as
@@ -243,13 +253,22 @@ hygiene that unblock and verify the implementation work.
 We do these steps **one at a time, with a discussion / clarification
 pause between each**. Not aggressive.
 
-Naming convention used in the docs and code:
+Naming convention used in the docs and code (final scheme):
 
-- Friendly name + per-kind index (e.g. `s1 / native_header`,
-  `c4 / cmp_abi`, `e2 / abi_soname_bump`).
-- Formal `Σ_*` (and `I_*`, `Cmp_*`) notation reserved for the paper
-  and the §2.4 contract table when writing for a theorem-reading
-  audience.
+- **Theory-side indices**: `s1..s6` (surface roles), `c1..c8`
+  (contracts / comparators), `e1..e13` (scenarios). Project-invariant.
+- **Project-side artifact aliases**: `n*` native, `bo*` ocaml binding,
+  `bpc*` python ctypes binding, `bpe*` python cext binding. Sequential
+  per binding, file-keyed.
+- **Canonical artifact names**: `<role>_<side>[_<lang>][_<mech>].<form>`
+  (e.g. `lib_native.so`, `compiled_binding_ocaml.stub-a`,
+  `user_binding_cext.py`). Pan-universal; the prose form in code.
+- **Usage**: canonical names in OCaml code (self-documenting), IDs in
+  tables / log lines / JSON keys / status displays (column-fits).
+- **Formal `Σ_*` notation**: reserved for the paper.
+
+See [`phase4.md`](phase4.md) for the term-alignment tracker that
+applies this scheme to canary's OCaml code.
 
 ### Step 1 — Establish unified terms  ✓ **DONE** (2026-05-15)
 
@@ -332,7 +351,20 @@ or M3 milestone above.
       c7 exist.
 - [ ] **`canary_project_tiny.ml`** so `canary action tiny` works.
       Once this exists, every scenario in tiny becomes an automated
-      check that `canary action` runs.
+      check that `canary action` runs. Treated as the milestone
+      check for Phase 4 (term alignment) — see
+      [`phase4.md`](phase4.md).
+
+### Step 4b — Phase 4: canary code-side term alignment
+
+Tracked in detail in [`phase4.md`](phase4.md). Brief: canary OCaml
+code currently uses a pre-Phase-2 vocabulary (`artifact_kind`,
+`binding_summary`, language-flavoured ad-hoc names). Phase 4
+aligns it to the unified scheme (canonical names + `n*`/`b*`
+aliases) so the docs, tiny, and canary speak the same language.
+No semantics change; mostly comments, renames, and a small typed
+mapping. Milestone check: `canary_project_tiny.ml` + `canary
+action tiny` runs every scenario through the production pipeline.
 
 ### Step 5 — Update docs after each implementation milestone
 
@@ -347,6 +379,10 @@ Standard "tests green, docs follow" pass. Cumulative.
 - [x] Retire `api_surface.md`. Implementation pointers folded into
       `surface_theory.md` §2.7; glibc/musl case into §4.2; packaging
       kept as §3 of the same doc.
+- [x] Phase 3 (2026-05-28): tiny harness extended with prepare /
+      confirm_ill (3a) and cached restore-driven runs (3b).
+      `tiny.md` Phase-3a / Phase-3b subsections document the new
+      flow; Makefile + scenarios.py expose the commands.
 
 ## 7. Operating rules
 
