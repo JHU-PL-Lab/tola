@@ -1,0 +1,57 @@
+; Parking lot for pre-canary plumbing and the example_sp binary that
+; consumed it. See CLAUDE.md §"Retire legacy config distro / project_config
+; / job_spec plumbing" for why this is parked rather than deleted.
+;
+; canary_dead_code.ml stays compilable so the intent it encodes (the
+; distro × sys-PM × lang-PM enumeration the current pipeline doesn't yet
+; model) remains visible. example_sp.ml is the only consumer.
+(library
+ (name canary_legacy)
+ (wrapped false)
+ (modules canary_dead_code)
+ (libraries
+  unix
+  base
+  fmt
+  yojson
+  tola_std
+  binding
+  canary_lib
+  canary_projects)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+
+(executable
+ (name example_sp)
+ (modules example_sp)
+ (libraries
+  unix
+  fix
+  fmt
+  sexplib
+  cmdliner
+  yaml
+  tola_std
+  binding
+  ocamlgraph
+  interp
+  ainterp
+  versioned_maps
+  example
+  langs
+  opam-core
+  opam-format
+  fpath
+  logs
+  logs.lwt
+  lwt
+  canary_lib
+  canary_projects
+  canary_legacy
+  yojson)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show))
+ (flags
+  (:standard -w -32 -w -37)))
+
+(include_subdirs no)
