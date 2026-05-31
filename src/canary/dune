@@ -26,7 +26,7 @@
 ;                      uses (artifact_kind, runner_os, cmdline, location,
 ;                      distro, package_manager, pm_properties). Pure
 ;                      data, no theory of its own.
-;   theory/  Layer 1 — surface theory: the API-surface declaration types
+;   surface/ Layer 1 — surface theory: the API-surface declaration types
 ;                      (canary_artifact_api) and the c1..c8 contract
 ;                      comparators (canary_compat_contract). Pure, no I/O
 ;                      beyond Yojson.from_file.
