@@ -17,24 +17,29 @@
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
 
-; Layered subdirectory organization (introduced 2026-05-29, refactored
-; 2026-05-31 into a theory/execution split). Subdirs are physical-only —
-; wrapped:false + include_subdirs:unqualified means every .ml in any
-; subdir produces a flat top-level module (e.g. action/canary_action.ml
-; → module Canary_action). Layers:
+; Layered subdirectory organization (2026-05-31). Subdirs are
+; physical-only — wrapped:false + include_subdirs:unqualified means every
+; .ml in any subdir produces a flat top-level module (e.g.
+; action/canary_action.ml → module Canary_action). Layers:
 ;
-;   theory/  Layer 0 — pure: primitive types (artifact_kind, runner_os,
-;                      location, distro, pm), surface-theory types
-;                      (api, comparators), no I/O beyond Yojson.from_file
-;   exec/    Layer 1 — execution: drives Python inspector scripts and
-;                      generates build-tool / opam / pip commands
-;                      (cmake/ninja/dune/cc/pip/opam_install)
-;   pm/      Layer 2 — per-PM drivers (apt/brew/opam/pip presence checks
-;                      and install commands)
+;   base/    Layer 0 — vocabulary: foundational types every other layer
+;                      uses (artifact_kind, runner_os, cmdline, location,
+;                      distro, package_manager, pm_properties). Pure
+;                      data, no theory of its own.
+;   theory/  Layer 1 — surface theory: the API-surface declaration types
+;                      (canary_artifact_api) and the c1..c8 contract
+;                      comparators (canary_compat_contract). Pure, no I/O
+;                      beyond Yojson.from_file.
+;   tool/    Layer 2 — real-world tool wrappers: per-PM drivers
+;                      (canary_pm_{apt,brew,opam,pip}), inspector drivers
+;                      that shell out to inspect_*.py
+;                      (canary_artifact_{native,lang,source}), post-hoc
+;                      diff (canary_inspect_diff), and build-tool +
+;                      opam/pip command generators (canary_toolchain).
 ;   action/  Layer 3 — action graph (rule, step, run, post, cache, key,
-;                      compat action-integration)
-;   backend/ Layer 4 — output renderers (GH Actions YAML, HTML, Mermaid)
-;   test/    Layer 5 — framework self-tests
+;                      compat action-integration).
+;   backend/ Layer 4 — output renderers (GH Actions YAML, HTML, Mermaid).
+;   test/    Layer 5 — framework self-tests.
 ;
 ; Sub-libraries opt out via their own dune:
 ;   projects/ → canary_projects (live project specs)
