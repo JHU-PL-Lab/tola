@@ -48,13 +48,13 @@ let action_cmd =
   in
   let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
       ~root ~project steps run_info =
-    Canary_action.run_project ~failfast ~run_info ?cache_path ~artifact_names
+    Canary_run_info.run_project ~failfast ~run_info ?cache_path ~artifact_names
       ~root ~project steps
   in
   let source_run_info ~project distro
       (repo : Canary_artifact_source.source_repo) steps =
     let (Canary_artifact_source.Git_remote url) = repo.remote in
-    Canary_action.mk_run_info ~project ~version:repo.version ~ref_:repo.ref_
+    Canary_run_info.mk_run_info ~project ~version:repo.version ~ref_:repo.ref_
       ~source:(Canary_artifact_source.source_desc distro repo)
       ~extra:
         [
@@ -85,7 +85,7 @@ let action_cmd =
         ~langs:Canary_lang.[ OCaml; Python ]
         spec_stable
     in
-    Canary_action.run_project_multi ~failfast ?cache_path ~root
+    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
       ~project_name:"z3" ~artifact_names:spec.artifact_name
       ~variants:
         [
@@ -98,7 +98,7 @@ let action_cmd =
       ()
   in
   let prebuilt_run_info ~project ~version ~extra steps =
-    Canary_action.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
+    Canary_run_info.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
       ~extra steps
   in
   let run_sqlite ~root ~failfast ~cache_path =
@@ -174,7 +174,7 @@ let action_cmd =
         ~langs:Canary_lang.[ OCaml; Python ]
         spec_19
     in
-    Canary_action.run_project_multi ~failfast ?cache_path ~root
+    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
       ~project_name:"llvm" ~artifact_names:spec.artifact_name
       ~variants:
         [
@@ -218,7 +218,7 @@ let view_cmd =
   in
   let run project () =
     let root = "_out" in
-    Canary_action.view_project ~root ~project ()
+    Canary_run_info.view_project ~root ~project ()
   in
   Cmd.v
     (Cmd.info "view"
