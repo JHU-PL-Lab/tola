@@ -23,8 +23,8 @@ let sccache_step =
 
 (* CI step derivation: skip source builds for LLVM (expensive, CI-unfriendly).
    Z3 is a special case: its OCaml binding requires building from source. *)
-let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
-  let open Canary_backend_gh in
+let ci_jobs ~root distro : Canary_gh.job_spec list =
+  let open Canary_gh in
   let gh_root = "$GITHUB_WORKSPACE" in
   (* Z3: opam fetches from GitHub remote and builds the OCaml binding entirely.
      has_build_lib=false + cmake_build_binding=false: no cmake steps in CI;
@@ -89,8 +89,8 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
           (no_source Canary_project_ssl.script_spec)) };
   ]
 
-let sqlite_job ~root : Canary_backend_gh.job_spec =
-  let open Canary_backend_gh in
+let sqlite_job ~root : Canary_gh.job_spec =
+  let open Canary_gh in
   { id = "sqlite";
     name = "SQLite — fetch + probe";
     project = "sqlite";
@@ -102,10 +102,10 @@ let sqlite_job ~root : Canary_backend_gh.job_spec =
 
 let render_ci ~root distro =
   let jobs = ci_jobs ~root distro in
-  Canary_backend_gh.render_workflow ~workflow_name:"Canary CI" jobs
+  Canary_gh.render_workflow ~workflow_name:"Canary CI" jobs
 
 let render_debug_ci ~root _distro =
-  Canary_backend_gh.render_workflow
+  Canary_gh.render_workflow
     ~triggers:"on:\n  workflow_dispatch:"
     ~workflow_name:"Canary Debug CI"
     [ sqlite_job ~root ]

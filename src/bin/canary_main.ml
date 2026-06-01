@@ -617,7 +617,7 @@ let index_cmd =
       Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
         (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
     in
-    let html = Canary_backend_html.render_index ~entries ~generated_at:now in
+    let html = Canary_html.render_index ~entries ~generated_at:now in
     let path = projects_root ^ "/index.html" in
     let oc = Stdlib.open_out path in
     Stdlib.output_string oc html;

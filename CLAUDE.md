@@ -85,8 +85,8 @@ catalogues every module with its current verdict.
 | `src/canary/action/canary_runner.ml`                | `script_spec`, `derive_steps`, `run_step`, `run_graph`, check_post compositors — the runner            |
 | `src/canary/action/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/action/canary_step_cache.ml`            | Cross-run cache (skip steps recorded successful in a previous run)                                     |
-| `src/canary/backend/canary_backend_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
-| `src/canary/backend/canary_backend_html.ml`         | HTML result page + index rendering                                                                     |
+| `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
+| `src/canary/backend/canary_html.ml`         | HTML result page + index rendering                                                                     |
 | `src/canary/backend/canary_diagram.ml`              | Mermaid diagram + view machinery (2283 LOC; biggest single file)                                       |
 | `src/canary/test/canary_artifact_test.ml`           | Framework self-tests (native, OCaml, Python, compat helpers — pure + shell)                            |
 | `src/canary/test/canary_pm_test.ml`                 | PM module self-tests                                                                                   |
@@ -270,7 +270,7 @@ Still open:
 
   **3. GH CI for macOS** — the retired `canary_backend_yaml.ml` had
   `ubuntu-latest` × `macos-latest` matrix + per-step `if: runner.os == …`
-  guards. The current `canary_backend_gh.ml` hardcodes `runs-on:
+  guards. The current `canary_gh.ml` hardcodes `runs-on:
   ubuntu-latest`. Add matrix support + a per-step guard field to
   `action_step` (or extend `preamble_steps` semantics). Couples with
   "multi-ocaml-version matrix" (old supported `ocaml-version: ["5.4.0"]`

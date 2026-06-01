@@ -1800,7 +1800,7 @@ let _counts_from_run_state ~run_dir =
       counts
     with _ -> _counts_from_log ~variant_dir:run_dir
 
-let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
+let scan_index_entries ~projects_root : Canary_html.index_entry list =
   if not (Stdlib.Sys.file_exists projects_root) then []
   else
     let make_entry ~project ~proj_dir =
@@ -1811,7 +1811,7 @@ let scan_index_entries ~projects_root : Canary_backend_html.index_entry list =
         let mtime = (Unix.stat html_path).st_mtime in
         let (total, done_, failed, skipped) = _counts_from_run_state ~run_dir in
         let src = _source_kind_of_run_info ~variant_dir:run_dir in
-        Some Canary_backend_html.{
+        Some Canary_html.{
           project; variant = "";
           run_at = _format_mtime mtime;
           href = project ^ "/-run/result.html";
@@ -1995,8 +1995,8 @@ let write_project_output ~dir ~project_name ~variant ~steps
       end);
   let html_path = [%string "%{run_dir}/result.html"] in
   let html_views =
-    Canary_backend_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }
-    :: Canary_backend_html.{ name = "full"; title = "Full"; mmd = full_mmd }
+    Canary_html.{ name = "overview"; title = "Overview"; mmd = overview_mmd }
+    :: Canary_html.{ name = "full"; title = "Full"; mmd = full_mmd }
     :: List.rev_map !emitted_views ~f:(fun (v, mmd) ->
         let n = view_name v in
         let title = match v with
@@ -2008,7 +2008,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
           | `Binding lang ->
               "Binding (" ^ Canary_lang.display_of_lang lang ^ ")"
         in
-        Canary_backend_html.{ name = n; title; mmd })
+        Canary_html.{ name = n; title; mmd })
   in
   let html_steps =
     List.map steps ~f:(fun s ->
@@ -2026,7 +2026,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
         in
         (* output_rel: path from -run/ to the step dir one level up. *)
         let step_dir = Canary_output_path.step_dir_of_tag s.output_tag in
-        Canary_backend_html.{
+        Canary_html.{
           id = Hashtbl.find step_ids s.tag;
           tag = s.tag;
           rule = string_of_rule s.rule;
@@ -2044,7 +2044,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
       tm.tm_hour tm.tm_min tm.tm_sec
   in
   let html =
-    Canary_backend_html.render
+    Canary_html.render
       ~project:project_name ~variant
       ~run_at ~index_rel:"../../index.html"
       ~views:html_views
@@ -2058,7 +2058,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
   let projects_root = [%string "%{root}/canary/projects"] in
   let index_path = projects_root ^ "/index.html" in
   let entries = scan_index_entries ~projects_root in
-  let index_html = Canary_backend_html.render_index ~entries ~generated_at:run_at in
+  let index_html = Canary_html.render_index ~entries ~generated_at:run_at in
   let oc = Stdlib.open_out index_path in
   Stdlib.output_string oc index_html;
   Stdlib.close_out oc;
@@ -2276,7 +2276,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
   ignore (Stdlib.Sys.command [%string "find \"%{docs_dir}\" -name 'pack-repo' -type d -prune -exec rm -rf {} +"]);
   ignore (Stdlib.Sys.command [%string "find \"%{docs_dir}\" -name '*_example*' -type f -delete"]);
   let entries = scan_index_entries ~projects_root:docs_projects in
-  let docs_index_html = Canary_backend_html.render_index ~entries ~generated_at:run_at in
+  let docs_index_html = Canary_html.render_index ~entries ~generated_at:run_at in
   let docs_index_path = docs_projects ^ "/index.html" in
   let oc = Stdlib.open_out docs_index_path in
   Stdlib.output_string oc docs_index_html;

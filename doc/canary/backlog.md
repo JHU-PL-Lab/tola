@@ -81,7 +81,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     macOS CI, `mk_script_spec` needs a `~target_pm` parameter (alongside
     `~tola_root`) so CI jobs can specify the target PM independently of the
     local host. Follow-on: add OS-conditional step support to
-    `canary_backend_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
+    `canary_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
 
 36. **Diagram fidelity: `scan_source` and `_inspect` steps have no nodes** —
@@ -105,7 +105,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
         log file (`probe.log`, `inspect.json`, `actions.log`) from the run
         output directory — enables reading results without leaving the viewer.
     The HTML file would live alongside `result.mmd` in each run's output dir.
-    Consider whether a single template (`canary_backend_html.ml`) can serve
+    Consider whether a single template (`canary_html.ml`) can serve
     all projects by embedding the per-run step list and output-dir paths as a
     JSON blob. Pairs with TODO #36 (scan_source / summary node fidelity) since
     toggling visibility makes those extra nodes practical to add.

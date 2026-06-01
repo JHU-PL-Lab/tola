@@ -72,7 +72,7 @@ let get_string_list j name =
     as [Canary.compat_inspect_input] (paths : string list) on the
     declaration side and as [Canary_compat_run.typed_input] (single
     string) after resolution, with a manual 20-line translation in
-    [Canary_action] and [Canary_backend_gh]. Constructors map to surface
+    [Canary_action] and [Canary_gh]. Constructors map to surface
     roles:
 
     - [C_stub p]            ↔ {i bo7 compiled_binding_ocaml.stub-a}.

@@ -97,7 +97,9 @@ using Docker.
 - Start with `ubuntu-latest` mapped to the official `ubuntu:22.04` image or
   the `catthehacker/ubuntu:act-22.04` image (has more pre-installed tools).
 - GH macOS runners are real VMs (paid minutes). For macOS-specific testing,
-  use actual GH runners or a macOS machine running the shell backend directly.
+  use actual GH runners or invoke `canary action <project>` directly on a
+  macOS host (the local runner in `action/canary_runner.ml` executes the
+  same `script_spec` the GH backend renders into YAML).
 
 Workflow for iteration:
 ```sh

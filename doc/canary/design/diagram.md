@@ -44,6 +44,18 @@ direction only.
 the diagram layer. The diagram layer never calls back: it's a leaf
 consumer.
 
+> **Renderer vs runner.** `backend/` holds {i renderers} — files that
+> consume `action_step list` and emit something for someone else
+> ([canary_gh.ml](../../../src/canary/backend/canary_gh.ml) → GH
+> Actions YAML; [canary_html.ml](../../../src/canary/backend/canary_html.ml)
+> → result.html; [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)
+> → Mermaid). `action/canary_runner.ml` consumes the same
+> `action_step list` but {i executes} the shell commands directly,
+> in-process. The retired yaml-and-shell backend pair both emitted
+> files for later execution; the current local-execution path runs
+> in-process instead, which is why it lives in `action/` rather than
+> next to the renderers.
+
 The single translator between layers is `result_status_of_run`
 ([canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)),
 which maps step verdicts (`Step_done` / `Step_failed` / `Step_skipped`,

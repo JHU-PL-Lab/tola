@@ -4,7 +4,7 @@
     2026-06-01 into the legacy/ sub-library. These types and helpers
     drove an earlier yaml + shell backend that has since been replaced
     by the current action-graph pipeline ([Canary_runner.script_spec]
-    + [Canary_runner.derive_steps] + [Canary_backend_gh] for GH YAML).
+    + [Canary_runner.derive_steps] + [Canary_gh] for GH YAML).
 
     Nothing in the live pipeline references this module — it remains
     only because {!Canary_dead_code} consumed [mk_canary_config] and

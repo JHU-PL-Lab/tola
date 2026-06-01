@@ -1,6 +1,6 @@
 (** [Canary_step_model] — the step model types shared between
     [Canary_action] (the runner), [Canary_diagram] (renderer), and
-    [Canary_backend_gh] (YAML emission).
+    [Canary_gh] (YAML emission).
 
     Split from [Canary] on 2026-06-01 (Phase 5). Holds:
     - [version_info]: human-readable provider/consumer version pair for
