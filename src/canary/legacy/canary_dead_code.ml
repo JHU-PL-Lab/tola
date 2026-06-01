@@ -10,8 +10,8 @@ module Z3 = struct
   open Canary_artifact_source
   open Canary_artifact_api
   open Canary_basic
+  open Canary_yaml_backend
   open Canary_toolchain
-  open Canary
   open Canary_project_z3
 
   (* ── example_sp.ml only — pre-canary inspection utilities ──
@@ -88,7 +88,7 @@ ninja -C build build_z3_python_bindings|}
   (* ── end example_sp.ml only ── *)
 
   let canary =
-    Canary_basic.mk_canary_config ~pkg_name:"z3" ~versioned_name:"z3.dev" ()
+    Canary_yaml_backend.mk_canary_config ~pkg_name:"z3" ~versioned_name:"z3.dev" ()
 
   let mk_deploy root =
     { contrib_abs = root $/ canary.paths.contrib_rel; gh_abs = root $/ ".github" }
@@ -275,10 +275,10 @@ end
 module Llvm = struct
   [@@@warning "-32"]
   open Canary_basic
+  open Canary_yaml_backend
   open Canary_artifact_api
   open Canary_store
   open Canary_toolchain
-  open Canary
   open Canary_project_llvm
 
   let prebuilt_prebuilt_spec distro : job_spec =
@@ -338,7 +338,7 @@ module Llvm = struct
 
   let config distro =
     {
-      canary = Canary_basic.mk_canary_config ();
+      canary = Canary_yaml_backend.mk_canary_config ();
       workflow_name = "Canary Testing for LLVM OCaml and Python";
       name = "llvm";
       project =
@@ -364,9 +364,9 @@ end
 module Sqlite = struct
   [@@@warning "-32"]
   open Canary_basic
+  open Canary_yaml_backend
   open Canary_artifact_api
   open Canary_toolchain
-  open Canary
   open Canary_project_sqlite
 
   let prebuilt_prebuilt_spec distro : job_spec =
@@ -410,7 +410,7 @@ module Sqlite = struct
 
   let config distro =
     {
-      canary = Canary_basic.mk_canary_config ();
+      canary = Canary_yaml_backend.mk_canary_config ();
       workflow_name = "Canary Testing for SQLite3 OCaml";
       name = "sqlite";
       project =

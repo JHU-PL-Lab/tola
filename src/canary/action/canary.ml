@@ -1,73 +1,11 @@
 open Base
 open Canary_store
 open Canary_basic
-open Canary_toolchain
 
-type project_config = {
-  canary : canary_config;
-  workflow_name : string;
-  name : string;
-  project : project_spec;
-  ocaml : ocaml_tool_config;
-  job_specs : job_spec list;
-  deploy : deploy_target option;
-  opam_template_bindings : (string * string) list;
-}
-
-let verify_of_phase (config : project_config) (phase : step_phase) =
-  let name = [%string "Verify: %{name_of_phase phase}"] in
-  match phase.kind with
-  | Pm_install _system_pkg -> (
-      match phase.location with
-      | Pm _ ->
-          let info = prebuilt_info_exn config.ocaml in
-          verify_opam_install_spec_step ~name info.opam_package_spec
-      | _ -> [])
-  | Pm_install_local Opam ->
-      let pkg = pkg_full config.ocaml.toolchain in
-      verify_opam_install_step ~name pkg
-  | Pm_install_local _ -> []
-  | Cmake_buildgen _ | Cmake_build _ -> []
-  | Probe_test _ -> []
-  | Run_command _ -> []
-
-let steps_of_phase (config : project_config) (phase : step_phase) =
-  let name = name_of_phase phase in
-  let action_steps =
-    match phase.kind with
-    | Pm_install _system_pkg -> (
-        match phase.location with
-        | Pm _ ->
-            let info = prebuilt_info_exn config.ocaml in
-            install_opam_package_spec_step ~name info.opam_package_spec
-        | _ -> failwith "Pm_install: unsupported location")
-    | Pm_install_local pm -> (
-        match pm with
-        | Opam ->
-            [
-              run_step ~name
-                (install_local_cmd config.ocaml.toolchain
-                   ~canary_contrib_rel:config.canary.paths.contrib_rel);
-            ]
-        | _ -> failwith "Pm_install_local: only Opam is currently supported")
-    | Cmake_buildgen step | Cmake_build step -> [ step ]
-    | Probe_test { lang } -> (
-        match lang with
-        | OCaml ->
-            mk_ocaml_test_steps ~ocaml:config.ocaml
-              ~binding_location:phase.location ()
-        | Python ->
-            let pkg = config.ocaml.ocaml.binding_lib_name in
-            [
-              run_step ~name
-                [%string
-                  {|env PYTHONPATH="build/python" python3 -S -c "import %{pkg}; print(%{pkg}.__file__)"|}];
-            ]
-        | _ -> failwith "Probe_test: unsupported lang")
-    | Run_command { name = _; command } ->
-        [ run_step ~name command ]
-  in
-  action_steps @ verify_of_phase config phase
+(* project_config, verify_of_phase, steps_of_phase moved to
+   legacy/canary_yaml_backend.ml on 2026-06-01 — they drove the retired
+   yaml backend's phase model; the live pipeline uses script_spec →
+   derive_steps in [Canary_action] instead. *)
 
 let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
     artifact_node =
