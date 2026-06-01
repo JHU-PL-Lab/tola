@@ -493,14 +493,14 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              Hand-written list retained as fallback at the variant level via
              empty-derived → any-failure-with-probe.log. See api_interface.md §13. *)
           Expect_compat_failure {
-            inputs = [
-              C_stub { paths = [ "pack_binding_ocaml/summary_stub.json";
-                                 "fetch_binding_ocaml/summary_stub.json" ] };
-              Native_lib { paths = [ "probe_lib/inspect.json";
-                                     "probe_lib_apt/inspect.json";
-                                     "probe_lib_staged/inspect.json" ] };
-              Ocaml_mli { paths = [ "pack_binding_ocaml/inspect.json";
-                                    "fetch_binding_ocaml/inspect.json" ] };
+            inputs = Canary_compat.[
+              C_stub [ "pack_binding_ocaml/summary_stub.json";
+                       "fetch_binding_ocaml/summary_stub.json" ];
+              Native_lib [ "probe_lib/inspect.json";
+                           "probe_lib_apt/inspect.json";
+                           "probe_lib_staged/inspect.json" ];
+              Ocaml_mli [ "pack_binding_ocaml/inspect.json";
+                          "fetch_binding_ocaml/inspect.json" ];
             ];
             version_info = Some {
               provider_version = "llvm 19";

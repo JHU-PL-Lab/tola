@@ -266,43 +266,33 @@ let predicted_contains_any
   l3_variants @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
-(** Typed input for {!predicted_contains_any_v2}: each constructor names
-    the artifact role whose cached inspect JSON sits at the carried path.
+(** Derive expected failure substrings from declared inspector inputs.
 
-    Maps 1-to-1 with {!Canary.compat_inspect_input}'s constructors —
-    that variant is the {i intent} (declared on a {!Canary.step_expectation}),
-    this one is the {i resolved-path} form computed at run time once the
-    inspector has produced its JSON. Aliases:
+    [resolve] turns a per-input relative path (e.g.
+    [pack_binding_ocaml/inspect_stub.json]) into an absolute path. The
+    runner picks the first input path whose resolved form exists on
+    disk, then hands it to the pure comparators in {!Canary_compat}.
 
-    - [C_stub p]            ↔ {i bo7 compiled_binding_ocaml.stub-a} or
-                              {i bpe3 compiled_binding_cext.so} (stub-shape
-                              coerced). Feeds {i c1 cmp_symbol}.
-    - [Native_lib p]        ↔ {i n4 lib_native.so}. Feeds {i c1 cmp_symbol}
-                              and {i c4 cmp_abi} predictions.
-    - [Ocaml_mli p]         ↔ {i bo4 user_binding_ocaml.mli}. Feeds the
-                              {i c2 cmp_api_completeness} watchlist check.
-    - [Python_attrs p]      ↔ {i bpe2 user_binding_cext.py} or
-                              {i bpc2 user_binding_ctypes.py}. Same role
-                              as [Ocaml_mli] for the Python flavour.
-    - [Versioned_symbols p] ↔ {i n4}'s [versioned_req]/[versioned_exports]
-                              fields. Feeds {i c5 cmp_sym_version} (L1b).
-    - [Abi_surface p]       ↔ {i n4}'s ELF SONAME/NEEDED/RPATH. Feeds
-                              {i c4 cmp_abi} (L4) — currently coarser than
-                              the SONAME-only check would be. *)
-type typed_input =
-  | C_stub of string
-  | Native_lib of string
-  | Ocaml_mli of string
-  | Python_attrs of string
-  | Versioned_symbols of string
-  | Abi_surface of string
-
-let predicted_contains_any_v2 (inputs : typed_input list) : string list =
-  let stub_path = List.find_map inputs ~f:(function C_stub p -> Some p | _ -> None) in
-  let lib_path = List.find_map inputs ~f:(function Native_lib p -> Some p | _ -> None) in
+    Phase 4 (2026-06-01): unified with [Canary.compat_inspect_input].
+    Previously this function took its own [typed_input] ADT (single
+    string per constructor) and callers translated a list-paths form
+    into it by hand. Now [inputs : Canary_compat.inspect_input list]
+    carries the path list directly. *)
+let predicted_contains_any_v2 ~resolve (inputs : inspect_input list)
+    : string list =
+  let pick_existing paths =
+    List.find_map paths ~f:(fun rel ->
+      let abs = resolve rel in
+      if Stdlib.Sys.file_exists abs then Some abs else None)
+  in
+  let stub_path =
+    List.find_map inputs ~f:(function C_stub ps -> pick_existing ps | _ -> None)
+  in
+  let lib_path =
+    List.find_map inputs ~f:(function Native_lib ps -> pick_existing ps | _ -> None)
+  in
   let l0 = match stub_path, lib_path with
-    | Some s, Some l
-      when Stdlib.Sys.file_exists s && Stdlib.Sys.file_exists l ->
+    | Some s, Some l ->
         let stub = load_stub s in
         let lib = load_native l in
         (match check_c_compat ~binding_stub:stub ~native_lib:lib with
@@ -312,13 +302,14 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
   in
   let l1b =
     List.concat_map inputs ~f:(function
-      | Versioned_symbols p ->
-          if not (Stdlib.Sys.file_exists p) then []
-          else
-            let j = Yojson.Basic.from_file p in
-            (match field j "versioned_req" with
-             | Some (`Assoc entries) -> List.map entries ~f:fst
-             | _ -> [])
+      | Versioned_symbols ps ->
+          (match pick_existing ps with
+           | None -> []
+           | Some p ->
+               let j = Yojson.Basic.from_file p in
+               (match field j "versioned_req" with
+                | Some (`Assoc entries) -> List.map entries ~f:fst
+                | _ -> []))
       | _ -> [])
   in
   (* L4 is diagnostic: SONAME/NEEDED identify *which* library was loaded.
@@ -327,8 +318,10 @@ let predicted_contains_any_v2 (inputs : typed_input list) : string list =
   let l4 = [] in
   let l3 =
     List.concat_map inputs ~f:(function
-      | Ocaml_mli p | Python_attrs p ->
-          load_watchlist_missing p |> List.concat_map ~f:name_variants
+      | Ocaml_mli ps | Python_attrs ps ->
+          (match pick_existing ps with
+           | None -> []
+           | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
       | _ -> [])
   in
   l1b @ l4 @ l3 @ l0

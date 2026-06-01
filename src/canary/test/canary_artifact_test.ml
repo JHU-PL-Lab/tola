@@ -82,12 +82,12 @@ let compat_pure_tests =
   in
   let mli_path = write_inspect "ocaml_mli" "mli.json" [ "Llvm.Opcode.UncondBr" ] in
   let py_path  = write_inspect "python"   "py.json"  [ "Solver.add"; "BitVec" ] in
-  let l3_only = Canary_compat_run.predicted_contains_any_v2
-      [ Canary_compat_run.Ocaml_mli mli_path ] in
-  let py_only = Canary_compat_run.predicted_contains_any_v2
-      [ Canary_compat_run.Python_attrs py_path ] in
-  let mixed = Canary_compat_run.predicted_contains_any_v2
-      [ Canary_compat_run.Ocaml_mli mli_path; Canary_compat_run.Python_attrs py_path ] in
+  let l3_only = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_compat.Ocaml_mli [ mli_path ] ] in
+  let py_only = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_compat.Python_attrs [ py_path ] ] in
+  let mixed = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
+      [ Canary_compat.Ocaml_mli [ mli_path ]; Canary_compat.Python_attrs [ py_path ] ] in
   let mem xs s = List.mem xs s ~equal:String.equal in
   [
     { name = "compat.mli_dotted_expansion";
@@ -104,7 +104,7 @@ let compat_pure_tests =
         mem mixed "UncondBr" && mem mixed "BitVec" };
     { name = "compat.empty_inputs";
       check = fun () ->
-        List.is_empty (Canary_compat_run.predicted_contains_any_v2 []) };
+        List.is_empty (Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id []) };
   ]
 
 (* Step 3b — Unit-test layer for primitives.
@@ -691,13 +691,13 @@ let c2_prediction_pure_tests =
   [
     { name = "c2_prediction.mli_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_compat_run.predicted_contains_any_v2
-            [ Canary_compat_run.Ocaml_mli mli_clean ] in
+        let r = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
+            [ Canary_compat.Ocaml_mli [ mli_clean ] ] in
         List.is_empty r };
     { name = "c2_prediction.python_no_missing_no_strings";
       check = fun () ->
-        let r = Canary_compat_run.predicted_contains_any_v2
-            [ Canary_compat_run.Python_attrs py_clean ] in
+        let r = Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id
+            [ Canary_compat.Python_attrs [ py_clean ] ] in
         List.is_empty r };
   ]
 

@@ -184,13 +184,8 @@ type symbol_check = {
 
     Each constructor's [paths] resolves at runtime to the cached inspector
     JSON written by the action that produced the artifact. *)
-type compat_inspect_input =
-  | C_stub           of { paths : string list }
-  | Native_lib       of { paths : string list }
-  | Ocaml_mli        of { paths : string list }
-  | Python_attrs     of { paths : string list }
-  | Versioned_symbols of { paths : string list }  (* L1b: @@GLIBC_X.YY version tags *)
-  | Abi_surface      of { paths : string list }  (* L4: SONAME/NEEDED/RPATH mismatch *)
+(* [compat_inspect_input] unified with [Canary_compat_run.typed_input]
+   into [Canary_compat.inspect_input] on 2026-06-01 (Phase 4). *)
 
 (** What an action step's outcome should be when {!Canary_action.run_step}
     runs it. Used by {!Canary_action.derive_steps} and the GH backend.
@@ -217,7 +212,7 @@ type step_expectation =
       version_info : version_info option;
     }
   | Expect_compat_failure of {
-      inputs       : compat_inspect_input list;
+      inputs       : Canary_compat.inspect_input list;
       version_info : version_info option;
     }
 

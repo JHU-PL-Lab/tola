@@ -310,48 +310,26 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                   ~detail:(Some "expected failure (derived) but command succeeded");
                 false)
               else
-                (* Resolve compat summary paths relative to the project dir.
-                   Path format: "step_tag/file.json" (e.g. "pack_binding_ocaml/inspect_stub.json").
-                   v3 layout: step_tag is mapped through step_dir_of_tag for action-first dirs,
-                   and the filename is variant-key-qualified (_19.json for variant "19"). *)
-                let pick_first_existing rels =
-                  List.find_map rels ~f:(fun rel ->
-                      let p = match String.lsplit2 rel ~on:'/' with
-                        | Some (step_tag, file) ->
-                            let step_dir = Canary_output_path.step_dir_of_tag step_tag in
-                            let vk_file = Canary_output_path.variant_file
-                                ~variant_key:step.variant_id file in
-                            step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
-                        | None ->
-                            let vk_rel = Canary_output_path.variant_file
-                                ~variant_key:step.variant_id rel in
-                            step.project_dir ^ "/" ^ vk_rel
-                      in
-                      if Stdlib.Sys.file_exists p then Some p else None)
-                in
-                let typed_inputs =
-                  List.filter_map inputs ~f:(function
-                    | C_stub { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.C_stub p)
-                    | Native_lib { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.Native_lib p)
-                    | Ocaml_mli { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.Ocaml_mli p)
-                    | Python_attrs { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.Python_attrs p)
-                    | Versioned_symbols { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.Versioned_symbols p)
-                    | Abi_surface { paths } ->
-                        Option.map (pick_first_existing paths) ~f:(fun p ->
-                          Canary_compat_run.Abi_surface p))
+                (* Resolve each declared relative path (e.g.
+                   "pack_binding_ocaml/inspect_stub.json") to its
+                   project-dir-absolute form, applying v3 layout's
+                   step_dir mapping and variant-key suffix. The
+                   comparator runner picks the first existing path
+                   per input. *)
+                let resolve rel =
+                  match String.lsplit2 rel ~on:'/' with
+                  | Some (step_tag, file) ->
+                      let step_dir = Canary_output_path.step_dir_of_tag step_tag in
+                      let vk_file = Canary_output_path.variant_file
+                          ~variant_key:step.variant_id file in
+                      step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
+                  | None ->
+                      let vk_rel = Canary_output_path.variant_file
+                          ~variant_key:step.variant_id rel in
+                      step.project_dir ^ "/" ^ vk_rel
                 in
                 let derived =
-                  Canary_compat_run.predicted_contains_any_v2 typed_inputs
+                  Canary_compat_run.predicted_contains_any_v2 ~resolve inputs
                 in
                 log ~event:"compat_predicted"
                   ~detail:(Some (Printf.sprintf "%d substring(s)"

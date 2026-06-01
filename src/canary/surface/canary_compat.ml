@@ -60,6 +60,42 @@ let get_string_list j name =
 
 (* ── Typed views ── *)
 
+(** [inspect_input] — what inspector JSON kind feeds a comparator
+    prediction. Carries a {i list} of candidate paths (different action
+    paths in the graph write the same logical artifact to different
+    relative locations — [pack_binding_ocaml/inspect_stub.json] vs.
+    [fetch_binding_ocaml/inspect_stub.json] for OCaml stub, for example).
+    The runner picks the first existing path via [~resolve].
+
+    Unified on 2026-06-01 (Phase 4): previously this type lived twice,
+    as [Canary.compat_inspect_input] (paths : string list) on the
+    declaration side and as [Canary_compat_run.typed_input] (single
+    string) after resolution, with a manual 20-line translation in
+    [Canary_action] and [Canary_backend_gh]. Constructors map to surface
+    roles:
+
+    - [C_stub p]            ↔ {i bo7 compiled_binding_ocaml.stub-a}.
+                              Feeds {i c1 cmp_symbol}.
+    - [Native_lib p]        ↔ {i n4 lib_native.so}. Feeds {i c1 cmp_symbol}
+                              and {i c4 cmp_abi} predictions.
+    - [Ocaml_mli p]         ↔ {i bo4 user_binding_ocaml.mli}. Feeds the
+                              {i c2 cmp_api_completeness} watchlist check.
+    - [Python_attrs p]      ↔ {i bpe2 user_binding_cext.py} or
+                              {i bpc2 user_binding_ctypes.py}. Same role
+                              as [Ocaml_mli] for the Python flavour.
+    - [Versioned_symbols p] ↔ {i n4}'s [versioned_req] /
+                              [versioned_exports]. Feeds {i c5
+                              cmp_sym_version} (L1b).
+    - [Abi_surface p]       ↔ {i n4}'s ELF SONAME/NEEDED/RPATH. Feeds
+                              {i c4 cmp_abi} (L4). *)
+type inspect_input =
+  | C_stub of string list
+  | Native_lib of string list
+  | Ocaml_mli of string list
+  | Python_attrs of string list
+  | Versioned_symbols of string list
+  | Abi_surface of string list
+
 type stub_inspect = {
   path : string;
   requires : string list;

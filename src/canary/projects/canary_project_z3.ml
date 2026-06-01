@@ -538,9 +538,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
              references it on purpose; expected substring is derived from
              the cached Fetch (Binding Python) summary's missing watchlist. *)
           Expect_compat_failure {
-            inputs = [
-              Python_attrs
-                { paths = [ "fetch_binding_python/inspect.json" ] };
+            inputs = Canary_compat.[
+              Python_attrs [ "fetch_binding_python/inspect.json" ];
             ];
             version_info = Some {
               provider_version = "z3-solver pip wheel";
