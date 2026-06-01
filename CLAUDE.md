@@ -47,8 +47,8 @@ order (also in [`src/canary/dune`](src/canary/dune)):
 base/      vocabulary — types every other layer uses
 surface/   surface theory — API records + c1..c8 comparators
 tool/      real-world wrappers — PM drivers, inspector drivers, build cmds
-action/    action graph — rules, step model, step builder, paths, run_info
-backend/   step-list consumers — local runner (executes), GH YAML, HTML, Mermaid
+action/    action graph — rules, step model, step builder, paths, step cache
+backend/   step-list consumers — local runner (executes), GH YAML, HTML, Mermaid, run_info orchestrator
 test/      framework self-tests
 projects/  live project specs (canary_projects sub-library)
 legacy/    parked code (canary_legacy sub-library)
@@ -84,7 +84,7 @@ catalogues every module with its current verdict.
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_step_builder.ml`          | `script_spec`, `derive_steps`, shared command templates, check_post compositors — the step list builder |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` — executes the step list locally (in-process backend)    |
-| `src/canary/action/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
+| `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/action/canary_step_cache.ml`            | Cross-run cache (skip steps recorded successful in a previous run)                                     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
 | `src/canary/backend/canary_html.ml`         | HTML result page + index rendering                                                                     |
@@ -144,7 +144,7 @@ appends to `actions.log`. Probe expectations may be hand-written
 `surface/canary_compat_run.ml`'s `predicted_contains_any_v2 ~resolve`
 reads cached install-step summaries to compute the predicted failure
 substrings (L0 C-symbol set diff + L3 watchlist-missing variants). The
-high-level orchestrator `run_project` in `action/canary_run_info.ml`
+high-level orchestrator `run_project` in `backend/canary_run_info.ml`
 bundles run_info dump + `run_graph` + HTML/Mermaid rendering + run-state
 save into the single call `canary_main.ml` invokes. Each project runs
 two variants: dev (source build + pack_binding) and stable (fetch_lib +

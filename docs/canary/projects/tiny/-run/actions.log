@@ -373,3 +373,41 @@
   [2]→[9]: no edge A_build_lib→A_probe_binding_python
   [2]→[3]: no edge A_build_lib→A_build_binding_ocaml)
 [2026-06-01 18:27:56.209] !                          invariant  (SOME FAILED)
+[2026-06-01 18:28:24.535] *                          graph_start  (12 steps)
+[2026-06-01 18:28:24.535] *                          graph_end  (12/12 completed)
+[2026-06-01 18:28:24.535] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/all.mmd)
+[2026-06-01 18:28:24.535] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/full.mmd)
+[2026-06-01 18:28:24.535] *                          view  (lib (3 steps))
+[2026-06-01 18:28:24.535] *                          view  (probes (6 steps))
+[2026-06-01 18:28:24.536] *                          view  (binding_ocaml (4 steps))
+[2026-06-01 18:28:24.536] *                          view  (binding_python (4 steps))
+[2026-06-01 18:28:24.538] *                          html  (_out/canary/projects/tiny/-run/result.html)
+[2026-06-01 18:28:24.538] *                          index  (_out/canary/projects/index.html)
+[2026-06-01 18:28:24.538] !                          invariant  (full.mmd: connectivity errors:
+  [3]→[5]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
+  [2]→[5]: no edge A_build_lib→A_probe_binding_ocaml
+  [2]→[7]: no edge A_build_lib→A_build_binding_python
+  [2]→[11]: no edge A_build_lib→A_probe_lib
+  [7]→[9]: no edge A_build_binding_python→A_probe_binding_python
+  [2]→[9]: no edge A_build_lib→A_probe_binding_python
+  [2]→[3]: no edge A_build_lib→A_build_binding_ocaml)
+[2026-06-01 18:28:24.538] !                          invariant  (SOME FAILED)
+[2026-06-01 18:30:42.963] *                          graph_start  (12 steps)
+[2026-06-01 18:30:42.963] *                          graph_end  (12/12 completed)
+[2026-06-01 18:30:42.964] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/all.mmd)
+[2026-06-01 18:30:42.964] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/full.mmd)
+[2026-06-01 18:30:42.964] *                          view  (lib (3 steps))
+[2026-06-01 18:30:42.964] *                          view  (probes (6 steps))
+[2026-06-01 18:30:42.965] *                          view  (binding_ocaml (4 steps))
+[2026-06-01 18:30:42.965] *                          view  (binding_python (4 steps))
+[2026-06-01 18:30:42.968] *                          html  (_out/canary/projects/tiny/-run/result.html)
+[2026-06-01 18:30:42.968] *                          index  (_out/canary/projects/index.html)
+[2026-06-01 18:30:42.968] !                          invariant  (full.mmd: connectivity errors:
+  [3]→[5]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
+  [2]→[5]: no edge A_build_lib→A_probe_binding_ocaml
+  [2]→[7]: no edge A_build_lib→A_build_binding_python
+  [2]→[11]: no edge A_build_lib→A_probe_lib
+  [7]→[9]: no edge A_build_binding_python→A_probe_binding_python
+  [2]→[9]: no edge A_build_lib→A_probe_binding_python
+  [2]→[3]: no edge A_build_lib→A_build_binding_ocaml)
+[2026-06-01 18:30:42.968] !                          invariant  (SOME FAILED)

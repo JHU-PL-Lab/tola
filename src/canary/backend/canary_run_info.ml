@@ -1,13 +1,12 @@
 (** [Canary_run_info] — run metadata, run-state persistence, and the
     high-level [run_project] / [run_project_multi] orchestrators.
 
-    Split from [Canary_action] on 2026-06-01 (Phase 6 of the post-audit
-    refactor). The low-level runner — [run_step], [run_graph],
-    [merge_step_statuses] — stays in [Canary_action] because it is the
-    runtime primitive used by everything; this module sits one layer up
-    and packages "execute the steps + dump info + save state + render
-    HTML+Mermaid + close logger" into the single entry point project
-    drivers actually call.
+    Lives in [backend/] (since 2026-06-01 Phase 9b) because it
+    composes multiple sibling backends —
+    {!Canary_local_runner.run_graph} to execute, {!Canary_diagram}
+    + {!Canary_html} for rendering — into the single entry point
+    [run_project] that [canary_main.ml] calls. Living in [action/]
+    would force [action → backend] edges that don't belong there.
 
     What lives here:
     - [type run_info]: project metadata (version, ref, env) dumped at

@@ -25,6 +25,8 @@ chosen: park into `legacy/canary_yaml_backend.ml`).
 | 6 | `c52d4d7` | `action/canary_run_info.ml` (338) extracted from `canary_action.ml` (1226→912). |
 | 7 | `0139e07` | Stale flat paths in active docs refreshed to layered subdir paths. |
 | 8 | (follow-up) | Backend filenames lose the `_backend_` prefix (`canary_gh.ml`, `canary_html.ml`); `canary_runner.ml` splits into `action/canary_step_builder.ml` (script_spec + derive_steps) + `backend/canary_local_runner.ml` (run_step + run_graph). Four sibling backends now consume `action_step list`. |
+| 9a | `a5f6c50` | PM dispatchers (`pm_install_cmd`, `system_install_cmd`, `verify_system_install_cmd`) extracted from `base/canary_store.ml` to new `tool/canary_pm.ml`. Resolves the pre-existing base→tool layer reversal (the dispatchers reached into `tool/canary_pm_*`). |
+| 9b | (this commit) | `action/canary_run_info.ml` moves to `backend/canary_run_info.ml`. It orchestrates multiple backends (calls `Canary_local_runner.run_graph` + `Canary_diagram.write_project_output` + `Canary_html`) and was forcing action→backend edges; living in `backend/` makes it a backend-internal orchestrator. Module name unchanged, no caller updates needed. |
 
 Regression at every commit: `artifact-test 73/73`, `pm-test 14/14`,
 `action tiny 12/12`. The pre-existing diagram-connectivity invariant

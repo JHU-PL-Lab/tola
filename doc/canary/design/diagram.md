@@ -10,43 +10,43 @@ rules) live in module docstrings under [`src/canary/backend/`](../../../src/cana
 
 ## How a diagram run happens
 
-The diagram code is a **pure consumer** of the action-graph runtime.
-One entry point crosses from `action/` into `backend/`; data flows one
-direction only.
+Data flows one direction: the bin layer asks `action/` to build the
+step list, then hands the list to `backend/canary_run_info.ml` which
+fans out across the sibling backends.
 
 ```
-  src/bin/canary_main.ml
+  src/bin/canary_main.ml (or projects/canary_run.ml)
         │
-        │  Canary_run_info.run_project
+        │  Canary_step_builder.derive_steps  (script_spec → action_step list)
         ▼
-  action/canary_run_info.ml
+  action/canary_step_builder.ml   ← returns action_step list
         │
-        │  Canary_step_builder.derive_steps  (project script_spec → action_step list)
         ▼
-  action/canary_step_builder.ml   ← builds the step list, returns to caller
+  src/bin/canary_main.ml          ← now holds the step list
         │
-        │  Canary_local_runner.run_graph
+        │  Canary_run_info.run_project ~steps:…
         ▼
-  backend/canary_local_runner.ml  ← executes each step, builds run_status
+  backend/canary_run_info.ml      ← orchestrates the backends
         │
+        │  (1) Canary_local_runner.run_graph
+        ▼
+  backend/canary_local_runner.ml  ← executes each step, returns run_status
         │  returns (run_status : (tag, step_status) Hashtbl.t)
         ▼
-  action/canary_run_info.ml       ← hands the data to the renderer
+  backend/canary_run_info.ml
         │
-        │  Canary_diagram.write_project_output
-        │      ~steps                  ← from step_builder
-        │      ~run_status             ← from local_runner
-        │      ~artifact_names         ← from project spec
+        │  (2) Canary_diagram.write_project_output
+        │        ~steps, ~run_status, ~artifact_names
         ▼
   backend/canary_diagram.ml       ← produces every .mmd in one call
-        │
+        │  (also calls Canary_html.render for result.html)
         ▼
   -run/diagrams/*.mmd + result.html + index.html
 ```
 
-`write_project_output` is the only function the action layer calls in
-the diagram layer. The diagram layer never calls back: it's a leaf
-consumer.
+`canary_diagram` and `canary_local_runner` are leaf consumers —
+they never call back upward. `canary_run_info` orchestrates them as
+siblings, fanning out the same `action_step list` to each backend.
 
 > **Four sibling backends.** `backend/` holds four files that each
 > consume `action_step list`, differing only in what they produce:
