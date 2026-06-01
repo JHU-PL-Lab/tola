@@ -15,10 +15,11 @@
       [check_api_faithfulness]
 
     The companion {!Canary_compat_run} module (same dir) carries the
-    action-graph integration half: [typed_input] +
-    [predicted_contains_any_v2] + the CLI commands [run] /
-    [run_for_project] / [verify_for_project] + cached-summary lookup
-    helpers ([find_*_inspect], [resolve_variant]). *)
+    action-graph integration half: [predicted_contains_any_v2] (the
+    ADT-to-substring derivation that consumes [inspect_input] declared
+    above) + the CLI commands [run] / [run_for_project] /
+    [verify_for_project] + cached-summary lookup helpers
+    ([find_*_inspect], [resolve_variant]). *)
 
 open Base
 

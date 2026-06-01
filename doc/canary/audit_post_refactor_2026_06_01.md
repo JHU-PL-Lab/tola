@@ -29,6 +29,15 @@ Regression at every commit: `artifact-test 73/73`, `pm-test 14/14`,
 `action tiny 12/12`. The pre-existing diagram-connectivity invariant
 warning predates this work and is unchanged.
 
+The `pm-test 14/14` figure is **environment-dependent**: the `apt`
+test case invokes `sudo apt install` and relies on a working sudo
+setup. In sandboxed environments where `/etc/sudo.conf` ownership is
+non-root (a common LXC / container artefact), the apt case fails
+with `sudo: /etc/sudo.conf is owned by uid 65534, should be 0` and
+the suite reports 13/14. This is an environment limitation, not a
+canary issue. On a vanilla WSL2 / Ubuntu host the suite passes 14/14
+as cataloged.
+
 ---
 
 ## A. Per-module catalog — post-refactor
@@ -101,7 +110,7 @@ and tests. The 0-count is an artefact of the shim, not unused code.
 
 | Subdir | Files | LOC | Notes |
 |---|---:|---:|---|
-| `backend/` | 3 | 3027 | unchanged; `canary_diagram.ml` (2283) remains the heaviest single file |
+| `backend/` | 3 | 3027 | mostly unchanged; `canary_backend_gh.ml` adjusted in Phase 4 to call `Canary_compat_run.predicted_contains_any_v2 ~resolve` after the compat ADT unification. `canary_diagram.ml` (2283) remains the heaviest single file |
 | `test/` | 2 | 1036 | unchanged |
 | `projects/` | 8 | 1922 | constructors changed from `C_stub { paths = [...] }` to `Canary_compat.C_stub [...]` (Phase 4) |
 | `legacy/` | 3 | 962 | gained `canary_yaml_backend.ml` (302 LOC, Phase 2); `canary_dead_code.ml` retargets to it; `example_sp.ml` unchanged |
