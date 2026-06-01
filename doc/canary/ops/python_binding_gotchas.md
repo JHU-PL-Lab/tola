@@ -24,10 +24,12 @@ the milestone log; the gotchas below are durable.
    emits `{kind, path, error}` JSON + exits 1. Callers can distinguish
    "package missing" (error field) from "summary failed" (non-JSON).
 
-5. **stdlib `String.concat` vs Base `String.concat`** —
-   `canary_artifact_python.ml` doesn't `open Base`, so uses stdlib
-   `String.concat sep list` (positional). Don't switch to Base style
-   without matching the other artifact modules consistently.
+5. **stdlib `String.concat` vs Base `String.concat`** — the Python
+   helpers in `tool/canary_artifact_lang.ml` (which absorbed the
+   former `canary_artifact_python.ml`) don't `open Base`, so they
+   use stdlib `String.concat sep list` (positional). Don't switch
+   to Base style without matching the other artifact modules
+   consistently.
 
 ## Step B — sqlite pip probe
 
@@ -118,7 +120,7 @@ the milestone log; the gotchas below are durable.
 whether they pull `ocamlfind` transitively. zarith does (legacy build);
 ssl uses dune-configurator and doesn't. The probe template uses
 `ocamlfind ocamlopt` directly, so `fetch_binding_cmd` now installs
-`ocamlfind` explicitly after the binding (see `canary_action.ml`).
+`ocamlfind` explicitly after the binding (see `action/canary_action.ml`).
 Caused exit-127 CI failure in the ssl probe; fix in commit `61b5c97`.
 
 **probe.log dump on failure** — `probe_ocaml_cmd` ends with

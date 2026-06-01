@@ -353,7 +353,7 @@ overall status badge / link to `result.html`.
 
 ### `mermaid_full` (full view)
 
-Separate step-level renderer (`canary_action.ml`). Every concrete step is an
+Separate step-level renderer (`action/canary_action.ml`). Every concrete step is an
 individual node; nothing is merged. Key inputs:
 
 | Parameter | Effect |

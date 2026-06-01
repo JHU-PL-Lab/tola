@@ -160,7 +160,7 @@ one shell command per action slot, plus per-rule check_post, expectation,
 symbol_check, and summary callbacks. Around the spec sit three pieces of
 declarative metadata that make the shell less opaque to canary:
 
-- **`api_source`** (`canary_artifact_api.ml`) — three-layer model (source
+- **`api_source`** (`surface/canary_artifact_api.ml`) — three-layer model (source
   → `native_api` → `binding_api` per language). Provider claims (header
   paths, symbol prefixes, stable-symbol watchlist) and consumer claims
   (per-language module watchlists) are separate. See
@@ -173,7 +173,7 @@ declarative metadata that make the shell less opaque to canary:
   steps. Cached as `inspect.json` / `stub_inspect.json` under
   `_out/canary/projects/<project>/<variant>/<step>/`.
 
-The summaries feed a **compatibility check** (`canary_compat.ml`,
+The summaries feed a **compatibility check** (`surface/canary_compat.ml`,
 `Expect_compat_failure`) that derives expected probe-failure substrings
 at runtime, so `step_expectation` doesn't need hand-written
 `contains_any` lists for cases the cross-check covers. End-to-end demos

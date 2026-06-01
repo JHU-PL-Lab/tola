@@ -331,8 +331,8 @@ Today's testing coverage:
 
 | layer                              | tool                                | covers                                                          |
 | ---------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
-| Pure unit (data shape)             | `canary_artifact_test.ml` pure      | watchlist matchers, JSON parsing, compat helpers — 13/13        |
-| Shell integration (primitive runs) | `canary_artifact_test.ml` shell     | `nm` / `ocamlobjinfo` / inspect_*.py on fixed fixtures — 15/15  |
+| Pure unit (data shape)             | `test/canary_artifact_test.ml` pure      | watchlist matchers, JSON parsing, compat helpers — 13/13        |
+| Shell integration (primitive runs) | `test/canary_artifact_test.ml` shell     | `nm` / `ocamlobjinfo` / inspect_*.py on fixed fixtures — 15/15  |
 | Per-PM                             | `canary_pm_test.ml`                 | apt/brew/opam/pip install + verify + remove lifecycle — 14/14   |
 | Integration (heavy)                | `canary action <project>`           | full pipeline, ~10s–5min per project                            |
 
@@ -342,7 +342,7 @@ comparator + inspector that take canned JSONs and assert
 predicate outcomes.
 
 - [x] **Seed fixtures + runner** (2026-05-29) — in-memory OCaml
-      fixtures in `canary_artifact_test.ml`:
+      fixtures in `test/canary_artifact_test.ml`:
       - `cmp_symbol_pure_tests` (5 cases): Compatible / Missing one
         / Missing multiple / Unknown-empty-requires /
         Unknown-empty-symbols. Reciprocal coverage on c1.
@@ -387,7 +387,7 @@ comparator that closes it.
 **(b) Retrofit to the principled shape.** Tiny's comparators
 (`_harness/comparators/cmp_*.py`) are standalone CLI scripts: take
 two JSONs, return a verdict. Canary's existing comparators are
-{i embedded} — `check_c_compat` lives inside `canary_compat.ml` and
+{i embedded} — `check_c_compat` lives inside `surface/canary_compat.ml` and
 runs as part of the action graph; the c2 watchlist check is
 buried inside the `Expect_compat_failure` step expectation runner.
 That's pragmatic but not principled — it conflates "comparator
@@ -404,7 +404,7 @@ row in the M2 / M3 milestones above.
 
 - [x] **c4 `cmp_abi`** (2026-05-29, commit `2426099`). Function
       `check_abi ~provider_soname ~consumer_needed` in
-      `canary_compat.ml`; dedicated `abi_result` type
+      `surface/canary_compat.ml`; dedicated `abi_result` type
       (`Abi_compatible` / `Abi_mismatch` / `Abi_unknown`). 5 unit
       tests in `cmp_abi_pure_tests` covering the e2-shape negative
       case plus Unknown branches. Wiring into the action pipeline
@@ -412,7 +412,7 @@ row in the M2 / M3 milestones above.
       follow-up.
 - [x] **c5 `cmp_sym_version`** (2026-05-29). Function
       `check_sym_version ~provider_versioned_exports
-      ~consumer_required_versions` in `canary_compat.ml`; dedicated
+      ~consumer_required_versions` in `surface/canary_compat.ml`; dedicated
       `sym_version_result` type. 6 unit tests in
       `cmp_sym_version_pure_tests` covering exact-match,
       subset-match, glibc/musl version-drift, missing-multiple, and
@@ -447,7 +447,7 @@ row in the M2 / M3 milestones above.
       Backward-compatible: existing `externals` array unchanged.
 - [x] **c6 `cmp_type` (OCaml first)** (2026-05-29). Function
       `check_type ~header_functions ~binding_externals ~name_mapping`
-      in `canary_compat.ml`; dedicated `type_result` type
+      in `surface/canary_compat.ml`; dedicated `type_result` type
       (`Type_compatible` / `Type_arity_mismatch` / `Type_unmapped`
       / `Type_unknown`). MVP is arity-only after applying a
       project-declared name mapping (binding externals → header
@@ -472,7 +472,7 @@ row in the M2 / M3 milestones above.
       ctypes; C parse for cext.
 - [x] **c7 `cmp_api_repack` (OCaml first)** (2026-05-29). Function
       `check_api_repack ~stub_externals ~user_vals ~renames` in
-      `canary_compat.ml`; dedicated `repack_result` type
+      `surface/canary_compat.ml`; dedicated `repack_result` type
       (`Repack_compatible` / `Repack_stub_orphan` /
       `Repack_user_phantom` / `Repack_unknown`). Renames are
       explicit (project specs declare allowed (external, val)
@@ -495,7 +495,7 @@ row in the M2 / M3 milestones above.
 
 - [x] **c8 `cmp_api_faithfulness`** (2026-05-29). Function
       `check_api_faithfulness ~type_verdict ~symbol_verdict
-      ~repack_verdict` in `canary_compat.ml`; dedicated
+      ~repack_verdict` in `surface/canary_compat.ml`; dedicated
       `faithfulness_result` type (`Faithful` / `Unfaithful` /
       `Faithfulness_unknown`). Pure composition of the three
       constituent verdicts; `Unfaithful` carries optional per-

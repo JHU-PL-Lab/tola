@@ -445,7 +445,7 @@ does to the surface/contract picture.
 | **probe_binding**        | `probe_binding_ocaml`, `probe_binding_python`; tiny `examples/probe_baseline.{ml,py}`      | `s5` + `s2`          | **c1** Symbol-dynamic (`dlsym`), **c4** ABI (load), **c2** API-completeness (watchlist), **c3** Behavior | `s6` (runtime trace)        | ✓ probe runs; c4 implicit; c3 vs reference       |
 | **apply / revert patch** | tiny `scenarios/scenarios.py` (no canary analogue)                                         | source tree          | (perturbation — no check itself; sets up subsequent actions)                                             | mutated source tree         | ✓                                                |
 | **inspect_\***           | `canary/scripts/inspect_*.py`                                                              | one artifact (n*/b*) | (extraction only — feeds comparators)                                                                    | JSON record                 | per artifact; see §2.7 inspector-coverage table  |
-| **cmp_\*** (c1..c8)      | `canary_compat.ml`, tiny `_harness/comparators/`                                           | two JSON records     | exactly one contract (c1..c8)                                                                            | pass/fail verdict           | per c*; see contract-status table (§2.4)         |
+| **cmp_\*** (c1..c8)      | `surface/canary_compat.ml`, tiny `_harness/comparators/`                                   | two JSON records     | exactly one contract (c1..c8)                                                                            | pass/fail verdict           | per c*; see contract-status table (§2.4)         |
 
 A key reading: the **multi-contract pipeline rows** are
 `build_binding_static` and `probe_binding` — these are the actions
@@ -604,16 +604,17 @@ restated in code as well.
 
 **Table — Implementation pointers.** Per-component file references; maps the abstract `i*` / `c*` IDs to concrete files in the canary tree.
 
-| Component                         | File / artifact                                                                                     | Notes                                                                                    |
-| --------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Inspectors (CLI scripts)          | `canary/scripts/inspect_native.py`, `inspect_binding.py`, `inspect_ocaml.py`, `inspect_python.py`   | One per surface kind; each emits a JSON `inspect.json` with a `kind` field               |
-| Comparator (Symbol, c1)           | `src/canary/canary_compat.ml` → `check_c_compat`, `predicted_contains_any_v2`, `verify_for_project` | Single file, ~400 lines; reads `c_stub` + `native` JSONs                                 |
-| Comparator (API-completeness, c2) | `src/canary/canary_action.ml` → `Expect_compat_failure { Ocaml_mli, Python_attrs }`                 | Watchlist check inside the step-expectation runner                                       |
-| Surface records (typed)           | `src/canary/canary_artifact_api.ml`                                                                 | `native_api` (provider) and `binding_api` (consumer) types; survives the `Σ_*` rename    |
-| Per-language inspect glue         | `src/canary/canary_artifact_native.ml`, `canary_artifact_lang.ml`                                   | Shell out to the Python scripts; cache JSONs under per-step output dirs                  |
-| Step expectation                  | `src/canary/canary_action.ml` → `step_expectation`                                                  | `Expect_compat_failure { inputs; version_info }` resolves cached summaries vs. probe.log |
-| Inspect-diff (drift)              | `src/canary/canary_inspect_diff.ml`                                                                 | Compares two `inspect.json`s; currently informational, not a comparator                  |
-| Pure tests (fixtures)             | `src/canary/canary_artifact_test.ml` → `compat.*`                                                   | Synthetic fixtures exercise the comparator logic without integration runs                |
+| Component                         | File / artifact                                                                                                       | Notes                                                                                    |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Inspectors (CLI scripts)          | `canary/scripts/inspect_native.py`, `inspect_binding.py`, `inspect_ocaml.py`, `inspect_python.py`                     | One per surface kind; each emits a JSON `inspect.json` with a `kind` field               |
+| Comparator (pure, c1..c8)         | `src/canary/surface/canary_compat.ml` → `check_c_compat`, `check_abi`, `check_sym_version`, `check_type`, …           | Pure theory: input types + result ADTs + comparator functions; ~460 lines                |
+| Comparator runner / CLI           | `src/canary/surface/canary_compat_run.ml` → `predicted_contains_any_v2`, `run_for_project`, `verify_for_project`      | Drives cached-summary lookup + the `compat` / `verify` CLI subcommands                   |
+| Comparator (API-completeness, c2) | `src/canary/action/canary_step_model.ml` → `Expect_compat_failure { inputs; ... }` (uses `Canary_compat.inspect_input`) | Watchlist check inside the step-expectation runner                                       |
+| Surface records (typed)           | `src/canary/surface/canary_artifact_api.ml`                                                                           | `native_api` (provider) and `binding_api` (consumer) types; survives the `Σ_*` rename    |
+| Per-language inspect glue         | `src/canary/tool/canary_artifact_native.ml`, `canary_artifact_lang.ml`                                                | Shell out to the Python scripts; cache JSONs under per-step output dirs                  |
+| Step expectation                  | `src/canary/action/canary_step_model.ml` → `step_expectation`                                                         | `Expect_compat_failure { inputs; version_info }` resolves cached summaries vs. probe.log |
+| Inspect-diff (drift)              | `src/canary/tool/canary_inspect_diff.ml`                                                                              | Compares two `inspect.json`s; currently informational, not a comparator                  |
+| Pure tests (fixtures)             | `src/canary/test/canary_artifact_test.ml` → `compat.*`                                                                | Synthetic fixtures exercise the comparator logic without integration runs                |
 
 The JSONs produced by the inspectors are the load-bearing data
 format. Their schema is shared across `canary action` (which feeds
