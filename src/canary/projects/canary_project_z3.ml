@@ -510,21 +510,21 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Configure ->
           Some
             (fun ~output_dir ~variant_key ->
-              Canary_artifact_check.check_markers [ "conf.ok" ] ~output_dir ~variant_key
+              Canary_action.check_markers [ "conf.ok" ] ~output_dir ~variant_key
               || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
-            (Canary_artifact_check.check_build_lib ~marker:"build.ok"
+            (Canary_action.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/libz3.so"])
       | Build_binding _ ->
           Some
-            (Canary_artifact_check.check_build_binding ~marker:"build.ok"
+            (Canary_action.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/src/api/ml/z3ml.cmxa"])
       | Fetch (Binding _) when not source.has_build_binding ->
           let pkg = [%string "z3.%{source.version}"] in
           Some
             (fun ~output_dir ~variant_key ->
-              Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir ~variant_key
+              Canary_action.check_markers [ "binding.ok" ] ~output_dir ~variant_key
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];

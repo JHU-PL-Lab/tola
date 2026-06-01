@@ -459,24 +459,24 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Fetch Source -> Some Canary_artifact_source.source_check_post
       | Configure ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_check.check_markers [ "conf.ok" ] ~output_dir ~variant_key
+            Canary_action.check_markers [ "conf.ok" ] ~output_dir ~variant_key
             || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
-            (Canary_artifact_check.check_build_lib ~marker:"build.ok"
+            (Canary_action.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/lib/libLLVM.so"])
       | Build_binding _ ->
           Some
-            (Canary_artifact_check.check_build_binding ~marker:"build.ok"
+            (Canary_action.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/lib/ocaml/llvm/llvm.cmxa"])
       | Fetch (Binding _) ->
           let pkg = prebuilt.opam_package_spec.install_name in
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_check.check_markers [ "binding.ok" ] ~output_dir ~variant_key
+            Canary_action.check_markers [ "binding.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg)
       | Publish (Binding _) ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_check.check_markers [ "pack.ok" ] ~output_dir ~variant_key
+            Canary_action.check_markers [ "pack.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     expectation = (fun rule loc -> match rule, loc with
