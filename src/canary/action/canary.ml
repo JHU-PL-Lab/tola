@@ -7,8 +7,8 @@
     - dead [project_config] / [verify_of_phase] / [steps_of_phase] moved
       to [legacy/canary_yaml_backend.ml];
     - the remaining four topics split into:
-      - {!Canary_action_rule} — rules, pools, store_rules, make_action_rule,
-        nodes_of_action_rule, node_status.
+      - {!Canary_action} — rules, pools, store_rules, make_action_rule,
+        nodes_of_action_rule, node_status (the action-graph schema).
       - {!Canary_step_model} — version_info, symbol_*, step_expectation,
         action_step, logger, step_status, ensure_dir, now, create_logger.
       - {!Canary_path_table} — path_origin, path_annotation, job_path,
@@ -16,9 +16,12 @@
         job_paths_of_action_rule, pattern_row, pattern_rows_of_paths,
         pp_job_path_table, pp_job_path_table_md.
 
+    The runner half (script_spec, derive_steps, run_step, run_graph)
+    lives in {!Canary_runner}.
+
     This shim [include]s each so existing [open Canary] keeps working.
     Callers can also open individual modules for precision. *)
 
-include Canary_action_rule
+include Canary_action
 include Canary_step_model
 include Canary_path_table

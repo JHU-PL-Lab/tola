@@ -57,14 +57,14 @@ let sqlite_python_config : Canary_toolchain.binding_config =
         {|import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')|};
     }
 
-let script_spec : Canary_action.script_spec =
+let script_spec : Canary_runner.script_spec =
   let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
   {
-    Canary_action.empty_script_spec with
-    fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
+    Canary_runner.empty_script_spec with
+    fetch_lib = Some (Canary_runner.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      (Canary_lang.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
+      (Canary_lang.OCaml, Canary_runner.fetch_binding_cmd prebuilt.opam_package_spec)
       ::
       (match sqlite_python_config with
        | Python_config p ->
@@ -75,7 +75,7 @@ let script_spec : Canary_action.script_spec =
       (Canary_lang.OCaml,
        Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
        fun ~output_dir ~variant_key ->
-         Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
+         Canary_runner.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
            ~example:ocaml.example_file ~target:ocaml.example_target
            ~output_dir ~variant_key) ::
       (* Python sqlite3 is stdlib-bundled — install no-ops to a marker;

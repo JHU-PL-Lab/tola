@@ -20,7 +20,7 @@
 open Base
 open Canary_store
 open Canary_basic
-open Canary_action_rule
+open Canary_action
 
 type path_origin = Built | Fetched
 

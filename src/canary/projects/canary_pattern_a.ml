@@ -85,16 +85,16 @@ let ocaml_config (d : t) : ocaml_tool_config =
            ~system_package_macos:d.system_pkg_macos ());
   }
 
-let script_spec (d : t) : Canary_action.script_spec =
+let script_spec (d : t) : Canary_runner.script_spec =
   let cfg = ocaml_config d in
   let prebuilt = prebuilt_info_exn cfg in
   let pm = Canary_store.detect_pm () in
   let resolve = lib_resolve d.lib in
   {
-    Canary_action.empty_script_spec with
-    fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
+    Canary_runner.empty_script_spec with
+    fetch_lib = Some (Canary_runner.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      [ (Canary_lang.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
+      [ (Canary_lang.OCaml, Canary_runner.fetch_binding_cmd prebuilt.opam_package_spec) ];
     probe_lib =
       [ ( Canary_store.Pm (Canary_store.Sys_pm { pm }),
           fun ~output_dir ~variant_key ->
@@ -106,7 +106,7 @@ let script_spec (d : t) : Canary_action.script_spec =
         (Canary_lang.OCaml,
          Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
          (fun ~output_dir ~variant_key ->
-           Canary_action.probe_ocaml_cmd ~binding_lib:d.binding_lib
+           Canary_runner.probe_ocaml_cmd ~binding_lib:d.binding_lib
              ~example:d.example_file ~target:d.example_target
              ~output_dir ~variant_key));
       ];

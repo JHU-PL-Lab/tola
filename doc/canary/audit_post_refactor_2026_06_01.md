@@ -21,7 +21,7 @@ chosen: park into `legacy/canary_yaml_backend.ml`).
 | 2 | `826838b` | Dead YAML plumbing parked in `legacy/canary_yaml_backend.ml`. `canary_basic.ml` 460→238 (-48%); `canary.ml` 648→586. |
 | 3 | `800108d` | `tool/canary_build_cmd.ml` extracted from `canary_toolchain.ml`. |
 | 4 | `0e0164d` | One `Canary_compat.inspect_input` ADT replaces two duplicated types + 40 lines of manual translation in two callers. |
-| 5 | `b5f3006` | `canary.ml` 581 LOC → 24-line `include` shim; new `canary_action_rule` (135), `canary_step_model` (130), `canary_path_table` (288). |
+| 5 | `b5f3006` | `canary.ml` 581 LOC → 24-line `include` shim; new `canary_action` (135), `canary_step_model` (130), `canary_path_table` (288). |
 | 6 | `c52d4d7` | `action/canary_run_info.ml` (338) extracted from `canary_action.ml` (1226→912). |
 | 7 | `0139e07` | Stale flat paths in active docs refreshed to layered subdir paths. |
 
@@ -44,7 +44,7 @@ as cataloged.
 
 In-degree counts qualified references (`Canary_<module>.X`); files
 exposed via the `Canary` `include` shim may show 0 because callers
-use `Canary.foo` instead of `Canary_action_rule.foo`.
+use `Canary.foo` instead of `Canary_action.foo`.
 
 ### base/ (5 files, 439 LOC)
 
@@ -92,10 +92,10 @@ moved to their own sibling.
 | Module | LOC | In | Verdict | Change since 06-01 |
 |---|---:|---:|:-:|---|
 | `canary.ml` | 24 | 4 | ✅ | was ❌ kitchen sink (648 LOC); now `include` shim |
-| `canary_action_rule.ml` | 135 | 0¹ | ✅ | **NEW** (Phase 5) |
+| `canary_action.ml` | 135 | 0¹ | ✅ | **NEW** (Phase 5, originally `canary_action_rule`; renamed in the action/runner pass) — the action-graph schema |
 | `canary_step_model.ml` | 130 | 0¹ | ✅ | **NEW** (Phase 5) |
 | `canary_path_table.ml` | 288 | 0¹ | ✅ | **NEW** (Phase 5) |
-| `canary_action.ml` | 912 | 9 | ⚠ | was ⚠ broad (1226 LOC); `run_info` extracted (Phase 6); now coherently the runner core |
+| `canary_runner.ml` | 912 | 9 | ⚠ | was ⚠ broad (1226 LOC, then named `canary_action.ml`); `run_info` extracted (Phase 6); renamed to `canary_runner.ml` as part of the schema/runner naming pass — now coherently the runner |
 | `canary_run_info.ml` | 338 | 1 | ✅ | **NEW** (Phase 6) |
 | `canary_step_cache.ml` | 71 | 3 | ✅ | unchanged |
 
@@ -128,7 +128,7 @@ Each row maps an original-audit finding to the commit that resolved it.
 | Latent base→surface layer reversal via `Canary_artifact_api.lang` | 1 | ✓ resolved — `lang` lifted to `base/canary_lang.ml`; `Canary_artifact_api.lang` is a transparent re-export |
 | Duplicate ADT `compat_inspect_input` / `typed_input` + 40 lines of manual translation | 4 | ✓ resolved — single `Canary_compat.inspect_input`; runner takes `~resolve` to handle path resolution |
 | `canary_toolchain.ml` mixes 3 sub-concerns | 3 | ✓ resolved — build primitives split out; toolchain is now opam+cc+pip only |
-| `canary_action.ml` broad (1248 LOC) | 6 | ✓ partial — `run_info` tail extracted; remaining 912 LOC is the coherent runner core (still large but no longer mixed) |
+| `canary_action.ml` broad (1248 LOC) | 6 | ✓ partial — `run_info` tail extracted; file renamed to `canary_runner.ml` (912 LOC) — now coherently the runner |
 | `surface_theory.md` + design/research docs have stale flat paths | 7 | ✓ resolved — paths refreshed across active docs (worklogs kept as historical record) |
 | Codex finding 2: `legacy/canary_dead_code` still calls `Canary_basic.mk_canary_config` | 2 | ✓ resolved — dead-code references updated to `Canary_yaml_backend.mk_canary_config`, keeping legacy library compilable |
 | Codex finding 8 (warning discipline uneven) | — | not addressed; live code still doesn't declare local warning flags |
@@ -140,7 +140,7 @@ Each row maps an original-audit finding to the commit that resolved it.
 ### C.1 The `Canary` shim is a compatibility crutch
 
 `action/canary.ml` is now a 24-line file that `include`s
-`Canary_action_rule`, `Canary_step_model`, `Canary_path_table`. Every
+`Canary_action`, `Canary_step_model`, `Canary_path_table`. Every
 project spec, backend, and test still says `open Canary` to grab
 everything at once. The shim keeps the migration cheap, but it also
 hides which module each constructor / type actually lives in. A reader
@@ -158,9 +158,9 @@ Two reasonable futures:
 Recommend keeping the shim for now and revisiting if it gets in the
 way of future work.
 
-### C.2 `canary_action.ml` is still 912 LOC
+### C.2 `canary_runner.ml` is still 912 LOC
 
-Even after Phase 6 extracted ~315 LOC of `run_info`, `canary_action.ml`
+Even after Phase 6 extracted ~315 LOC of `run_info`, `canary_runner.ml`
 remains the largest active file. The remaining content is genuinely
 cohesive — `script_spec` + `derive_steps` (the contract) +
 `run_step` / `run_graph` (the runner) + shared command templates
@@ -225,7 +225,7 @@ deliberate attention.
 |---|---:|---:|---:|
 | `canary_basic.ml` LOC | 460 | 238 | -222 (-48%) |
 | `canary.ml` LOC | 648 | 24 | -624 (-96%) |
-| `canary_action.ml` LOC | 1248 | 912 | -336 (-27%) |
+| `canary_action.ml` → `canary_runner.ml` LOC | 1248 | 912 | -336 (-27%) |
 | `canary_toolchain.ml` LOC | 466 | 410 | -56 (-12%) |
 | Module count in `action/` | 3 | 7 | +4 (split, not bloat) |
 | Module count in `base/` | 4 | 5 | +1 (new `canary_lang`) |
@@ -314,12 +314,15 @@ layout. With the splits and renames, a refreshed walk-through:
 12. [action/canary_step_model.ml](../../src/canary/action/canary_step_model.ml)
     — `step_expectation`, `action_step`, `logger`. The vocabulary the
     runner and renderer share.
-13. [action/canary_action_rule.ml](../../src/canary/action/canary_action_rule.ml)
-    — `action_rule`, `store_rules`, `make_action_rule`. The data
-    structure the rule list builds up.
-14. [action/canary_action.ml](../../src/canary/action/canary_action.ml)
+13. [action/canary_action.ml](../../src/canary/action/canary_action.ml)
+    — `action_rule`, `store_rules`, `make_action_rule`. The
+    action-graph schema (what actions exist, what artifacts they
+    produce).
+14. [action/canary_runner.ml](../../src/canary/action/canary_runner.ml)
     — `script_spec`, `derive_steps`, `run_step`, `run_graph`. The
-    heart of the runner. Largest file in this layer; read in pieces.
+    runner: bridges the schema into a project's concrete
+    `action_step list` and executes it. Largest file in this layer;
+    read in pieces.
 15. [action/canary_run_info.ml](../../src/canary/action/canary_run_info.ml)
     — `run_project` + state persistence. The user-facing entry the
     CLI calls.

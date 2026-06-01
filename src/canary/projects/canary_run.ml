@@ -44,7 +44,7 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_action.(derive_steps ~root ~project:"llvm/19" ~cache_project:"llvm-19"
+        Canary_runner.(derive_steps ~root ~project:"llvm/19" ~cache_project:"llvm-19"
           (no_source (Canary_project_llvm.mk_script_spec
              ~source:Canary_project_llvm.llvm_source_stable
              ~tola_root:gh_root distro))) };
@@ -56,7 +56,7 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       sys_deps = z3_ci_source.build_sys_deps @ [ "mold" ];
       preamble_steps = [ sccache_cache_step; sccache_step ];
       steps =
-        Canary_action.derive_steps ~root ~project:z3_ci_project ~cache_project:"z3-dev"
+        Canary_runner.derive_steps ~root ~project:z3_ci_project ~cache_project:"z3-dev"
           (Canary_project_z3.mk_script_spec ~source:z3_ci_source
              ~tola_root:gh_root ~cmake_build_binding:false distro) };
     (* SQLite: system lib + opam binding *)
@@ -66,7 +66,7 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_action.(derive_steps ~root ~project:"sqlite" ~cache_project:"sqlite"
+        Canary_runner.(derive_steps ~root ~project:"sqlite" ~cache_project:"sqlite"
           (no_source Canary_project_sqlite.script_spec)) };
     (* zarith: classic Pattern A — apt libgmp-dev + opam zarith binding *)
     { id = "zarith";
@@ -75,7 +75,7 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_action.(derive_steps ~root ~project:"zarith" ~cache_project:"zarith"
+        Canary_runner.(derive_steps ~root ~project:"zarith" ~cache_project:"zarith"
           (no_source Canary_project_zarith.script_spec)) };
     (* ssl: Pattern A second datapoint — apt libssl-dev + opam ssl binding;
        libssl/libcrypto symbol watchlist surfaces OpenSSL 1.x→3.x drift. *)
@@ -85,7 +85,7 @@ let ci_jobs ~root distro : Canary_backend_gh.job_spec list =
       sys_deps = [];
       preamble_steps = [];
       steps =
-        Canary_action.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
+        Canary_runner.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
           (no_source Canary_project_ssl.script_spec)) };
   ]
 
@@ -97,7 +97,7 @@ let sqlite_job ~root : Canary_backend_gh.job_spec =
     sys_deps = [];
     preamble_steps = [];
     steps =
-      Canary_action.(derive_steps ~root ~project:"sqlite"
+      Canary_runner.(derive_steps ~root ~project:"sqlite"
         (no_source Canary_project_sqlite.script_spec)) }
 
 let render_ci ~root distro =

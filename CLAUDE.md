@@ -79,10 +79,10 @@ catalogues every module with its current verdict.
 | `src/canary/tool/canary_inspect_diff.ml`            | `canary inspect-diff` — counts/modules/watchlist/versioned_req drift                                   |
 | `src/canary/tool/canary_pm_{apt,brew,opam,pip}.ml`  | Per-PM presence checks + install commands; `canary_pm_test.ml` runs the suite                          |
 | `src/canary/action/canary.ml`                       | 24-line `include` shim re-exporting the three step-domain modules below                                |
-| `src/canary/action/canary_action_rule.ml`           | `action_rule`, `store_rules`, `make_action_rule`, `nodes_of_action_rule`, `node_status`                |
+| `src/canary/action/canary_action.ml`                | `action_rule`, `store_rules`, `make_action_rule`, `nodes_of_action_rule`, `node_status` — the schema   |
 | `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `action_step`, `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
-| `src/canary/action/canary_action.ml`                | `script_spec`, `derive_steps`, `run_step`, `run_graph`, check_post compositors — the runner core       |
+| `src/canary/action/canary_runner.ml`                | `script_spec`, `derive_steps`, `run_step`, `run_graph`, check_post compositors — the runner            |
 | `src/canary/action/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/action/canary_step_cache.ml`            | Cross-run cache (skip steps recorded successful in a previous run)                                     |
 | `src/canary/backend/canary_backend_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
@@ -120,14 +120,14 @@ catalogues every module with its current verdict.
 
 ### Architecture in one paragraph
 
-`store_rules` in `action/canary_action_rule.ml` defines the universal
+`store_rules` in `action/canary_action.ml` defines the universal
 action graph (fetch, build, probe, pack for each artifact kind: Source
 → Lib → Binding → App, per language). `pattern_rows_of_paths` in
 `action/canary_path_table.ml` enumerates 15 structural patterns with
 `action_path` strings like `fetch_source → build_lib → build_binding`.
 A project provides a `script_spec` (shell commands per action) plus an
 `api_source` (declarative provider/consumer surface — header paths,
-symbol prefixes, watchlists). `derive_steps` in `action/canary_action.ml`
+symbol prefixes, watchlists). `derive_steps` in `action/canary_runner.ml`
 filters the 15 patterns by project capabilities, attaches per-artifact
 summaries (mli, stub, native, python) to install steps, and instantiates
 them with the project's scripts. `run_graph` executes the steps in

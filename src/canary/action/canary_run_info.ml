@@ -24,7 +24,7 @@
 open Base
 open Canary_basic
 open Canary_step_model
-open Canary_action
+open Canary_runner
 
 (* ── Run info: project metadata dumped at start of run ── *)
 

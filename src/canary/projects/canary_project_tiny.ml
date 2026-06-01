@@ -126,9 +126,9 @@ let tiny_api_source : Canary_artifact_api.t =
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
 
-let script_spec : Canary_action.script_spec =
+let script_spec : Canary_runner.script_spec =
   {
-    Canary_action.empty_script_spec with
+    Canary_runner.empty_script_spec with
 
     (* No fetch_source: tiny is in-tree. *)
     api_source = Some tiny_api_source;
