@@ -1,8 +1,8 @@
-(** [Canary_compat_contract] — pure surface-theory comparators (Layer 1,
-    core/).
+(** [Canary_compat] — pure surface-theory comparators (surface/).
 
-    Split out of [Canary_compat] on 2026-05-29 as part of the layered-
-    directory reorganization. This module holds:
+    The theoretical half of the compat machinery: input types and the
+    c1..c8 comparator functions. Pure; the only I/O is reading a JSON
+    file from a path. Holds:
 
     - Input types: [stub_inspect], [native_inspect]
     - Comparator result types: [compat_result] (c1), [abi_result] (c4),
@@ -14,8 +14,8 @@
       [check_sym_version], [check_type], [check_api_repack],
       [check_api_faithfulness]
 
-    The companion [Canary_compat] module (now under [action/]) carries
-    the action-graph integration half: [typed_input] +
+    The companion {!Canary_compat_run} module (same dir) carries the
+    action-graph integration half: [typed_input] +
     [predicted_contains_any_v2] + the CLI commands [run] /
     [run_for_project] / [verify_for_project] + cached-summary lookup
     helpers ([find_*_inspect], [resolve_variant]). *)

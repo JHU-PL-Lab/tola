@@ -23,7 +23,7 @@ let output_dir_of ~project ~tag =
     | Some (name, _) -> name
     | None -> project
   in
-  let step_dir = Canary_step_key.step_dir_of_tag tag in
+  let step_dir = Canary_step_path.step_dir_of_tag tag in
   base ^ project_name ^ "/" ^ step_dir
 
 (* Render one action_step as one or two GH step blocks.
@@ -119,11 +119,11 @@ fi|}]
         List.find_map rels ~f:(fun rel ->
             let p = match String.lsplit2 rel ~on:'/' with
               | Some (step_tag, file) ->
-                  let step_d = Canary_step_key.step_dir_of_tag step_tag in
-                  let vk_file = Canary_step_key.variant_file ~variant_key:step.variant_id file in
+                  let step_d = Canary_step_path.step_dir_of_tag step_tag in
+                  let vk_file = Canary_step_path.variant_file ~variant_key:step.variant_id file in
                   project_dir ^ "/" ^ step_d ^ "/" ^ vk_file
               | None ->
-                  let vk_rel = Canary_step_key.variant_file ~variant_key:step.variant_id rel in
+                  let vk_rel = Canary_step_path.variant_file ~variant_key:step.variant_id rel in
                   project_dir ^ "/" ^ vk_rel
             in
             if Stdlib.Sys.file_exists p then Some p else None)
@@ -132,24 +132,24 @@ fi|}]
         List.filter_map inputs ~f:(function
           | C_stub { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.C_stub p)
+                Canary_compat_run.C_stub p)
           | Native_lib { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Native_lib p)
+                Canary_compat_run.Native_lib p)
           | Ocaml_mli { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Ocaml_mli p)
+                Canary_compat_run.Ocaml_mli p)
           | Python_attrs { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Python_attrs p)
+                Canary_compat_run.Python_attrs p)
           | Versioned_symbols { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Versioned_symbols p)
+                Canary_compat_run.Versioned_symbols p)
           | Abi_surface { paths } ->
               Option.map (pick_first_existing paths) ~f:(fun p ->
-                Canary_compat.Abi_surface p))
+                Canary_compat_run.Abi_surface p))
       in
-      let derived = Canary_compat.predicted_contains_any_v2 typed_inputs in
+      let derived = Canary_compat_run.predicted_contains_any_v2 typed_inputs in
       render_failure_check ~contains_any:derived
   | Expect_failure { contains_any; version_info = _ } ->
       render_failure_check ~contains_any

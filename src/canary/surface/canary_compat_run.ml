@@ -1,26 +1,26 @@
-(** [Canary_compat] — action-graph integration for compatibility checks
-    (Layer 3, action/).
+(** [Canary_compat_run] — drives the surface-theory compat contract over
+    the action graph's cached artifacts (surface/, next to the contract).
 
-    Split out of the original [Canary_compat] on 2026-05-29: the pure
-    comparator half moved to [Canary_compat_contract] (core/). What
-    lives here:
+    Companion to {!Canary_compat}: that module is the pure theory (types
+    and c1..c8 comparators); this module locates the cached inspector
+    JSONs in [_out/canary/projects/<project>/<step>/], hands them to the
+    pure comparators, and derives the expected failure substrings the
+    [Expect_compat_failure] runner consumes. What lives here:
 
     - [typed_input] — the action-graph's view of which JSONs a step
       expectation should consume (constructors map to surface roles).
     - [predicted_contains_any] / [predicted_contains_any_v2] — derive
       expected probe-failure substrings from cached inspector JSONs;
-      consumed by [Canary_action]'s [Expect_compat_failure] runner.
+      consumed by {!Canary_action}'s [Expect_compat_failure] runner.
     - Cached-summary path resolution: [resolve_variant],
       [find_lib_inspect], [find_stub_inspect], [find_mli_inspect],
       [find_python_inspect].
     - CLI entry points: [run] (single stub/lib pair),
       [run_for_project], [verify_for_project].
-    - Reporting: [print_result].
-
-    Depends on [Canary_compat_contract] for the comparator primitives. *)
+    - Reporting: [print_result]. *)
 
 open Base
-open Canary_compat_contract
+open Canary_compat
 
 
 (* ── Reporting ── *)
@@ -54,7 +54,7 @@ let run ~stub_path ~lib_path =
 (* ── Convenience: locate cached summaries for a (project, variant) pair ── *)
 
 (* v3 layout: projects/{project}/{step_dir}/file_{variant_id}.ext
-   step_dir = Canary_step_key.step_dir_of_tag (e.g. "pack_binding/ocaml").
+   step_dir = Canary_step_path.step_dir_of_tag (e.g. "pack_binding/ocaml").
    variant_id is a filename suffix, not a subdir.
    For single-variant projects (variant_id = ""), filenames have no suffix.
 
@@ -114,12 +114,12 @@ let resolve_variant ~root ~project variant =
    step_dir_of_tag converts e.g. "probe_binding_ocaml" → "probe_binding/ocaml".
    variant_id is encoded as a filename suffix (e.g. "probe_19.log"). *)
 let step_path ~project_dir ~variant_id step rel =
-  let step_d = Canary_step_key.step_dir_of_tag step in
-  let rel_vk = Canary_step_key.variant_file ~variant_key:variant_id rel in
+  let step_d = Canary_step_path.step_dir_of_tag step in
+  let rel_vk = Canary_step_path.variant_file ~variant_key:variant_id rel in
   [%string "%{project_dir}/%{step_d}/%{rel_vk}"]
 
 let step_dir ~project_dir step =
-  let step_d = Canary_step_key.step_dir_of_tag step in
+  let step_d = Canary_step_path.step_dir_of_tag step in
   [%string "%{project_dir}/%{step_d}"]
 
 (* Pick the first existing probe_lib*/summary.json. *)
@@ -129,7 +129,7 @@ let find_lib_inspect ~project_dir ~variant_id =
   ] in
   List.find_map candidates ~f:(fun step ->
       let d = step_dir ~project_dir step in
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+      let fname = Canary_step_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = d ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
@@ -146,19 +146,19 @@ let find_ocaml_install_dir ~project_dir =
 (* Python binding summary is at fetch_binding/python/summary_{vk}.json. *)
 let find_python_inspect ~project_dir ~variant_id =
   let d = step_dir ~project_dir "fetch_binding_python" in
-  let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+  let fname = Canary_step_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
   let p = d ^ "/" ^ fname in
   if Stdlib.Sys.file_exists p then Some p else None
 
 let find_stub_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect_stub" ~ext:"json" in
+      let fname = Canary_step_path.filename ~variant_key:variant_id ~base:"inspect_stub" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
 let find_mli_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_step_key.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+      let fname = Canary_step_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 

@@ -292,7 +292,7 @@ type symbol_check = {
 
 (** Input descriptor for a compatibility prediction: pairs an artifact-role
     tag with the [paths] of inspector JSONs (produced by canary's Python
-    inspector scripts) that {!Canary_compat.predicted_contains_any_v2}
+    inspector scripts) that {!Canary_compat_run.predicted_contains_any_v2}
     should read.
 
     Each constructor names a {i role}; the artifact-alias mapping (the
@@ -353,7 +353,7 @@ type compat_inspect_input =
     - [Expect_compat_failure { inputs; version_info }] — step must fail;
                                        the expected failure substrings are
                                        {i derived} at run time by
-                                       {!Canary_compat.predicted_contains_any_v2}
+                                       {!Canary_compat_run.predicted_contains_any_v2}
                                        from the cached inspector JSONs of
                                        [inputs]. Use when the surface delta
                                        between provider and consumer can

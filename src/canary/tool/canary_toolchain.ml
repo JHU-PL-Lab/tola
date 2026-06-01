@@ -211,7 +211,7 @@ opam install -y %{pkg_full} --verbose|}]
                  (e.g. "CANARY_BUILD_DIR=\"...\" "); use "" when not needed. *)
 let opam_pack_cmd ~repo_name ~repo_abs ~pkg_full ?(preamble = "")
     ?(pre_install = "") ~env_prefix ~output_dir ~variant_key () =
-  let pack_ok = Canary_step_key.variant_file ~variant_key "pack.ok" in
+  let pack_ok = Canary_step_path.variant_file ~variant_key "pack.ok" in
   let maybe s = if String.is_empty s then "" else s ^ "\n" in
   [%string
     {|eval $(opam env)
@@ -293,8 +293,8 @@ let prebuilt_info_exn (config : ocaml_tool_config) =
    When pip_package is None the binding is stdlib — no install needed. *)
 let pip_install_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
     ~output_dir ~variant_key =
-  let binding_ok = Canary_step_key.variant_file ~variant_key "binding.ok" in
-  let install_log = Canary_step_key.variant_file ~variant_key "install.log" in
+  let binding_ok = Canary_step_path.variant_file ~variant_key "binding.ok" in
+  let install_log = Canary_step_path.variant_file ~variant_key "install.log" in
   match p.pip_package with
   | None ->
       (* Stdlib (or pre-installed): just create the marker. *)
@@ -323,7 +323,7 @@ echo 'installed' > %{output_dir}/%{binding_ok}|}]
    has already happened in the Fetch (Binding Python) step. *)
 let python_probe_only_cmd ?(toolchain = default_python_toolchain)
     (p : python_binding) ~output_dir ~variant_key =
-  let probe_log = Canary_step_key.variant_file ~variant_key "probe.log" in
+  let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
   [%string
     {|set -e
 %{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/%{probe_log} 2>&1 || { cat %{output_dir}/%{probe_log}; exit 1; }
@@ -417,7 +417,7 @@ let mk_ocaml_test_steps ~(ocaml : ocaml_tool_config) ~binding_location () =
     [marker] is the canonical marker name for the rule (conf.ok / build.ok
     / install.ok / pack.ok / probe.log). *)
 let mark_step_complete ~output_dir ~variant_key marker =
-  let f = Canary_step_key.variant_file ~variant_key marker in
+  let f = Canary_step_path.variant_file ~variant_key marker in
   Printf.sprintf "echo 'ok' > %s/%s" output_dir f
 
 (** Compose a build command with the marker-write suffix that canary's
