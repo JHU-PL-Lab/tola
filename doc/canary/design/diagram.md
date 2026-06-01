@@ -21,17 +21,21 @@ direction only.
         ▼
   action/canary_run_info.ml
         │
-        │  Canary_runner.run_graph
+        │  Canary_step_builder.derive_steps  (project script_spec → action_step list)
         ▼
-  action/canary_runner.ml         ← executes each step, builds run_status
+  action/canary_step_builder.ml   ← builds the step list, returns to caller
+        │
+        │  Canary_local_runner.run_graph
+        ▼
+  backend/canary_local_runner.ml  ← executes each step, builds run_status
         │
         │  returns (run_status : (tag, step_status) Hashtbl.t)
         ▼
   action/canary_run_info.ml       ← hands the data to the renderer
         │
         │  Canary_diagram.write_project_output
-        │      ~steps                  ← from runner
-        │      ~run_status             ← from runner
+        │      ~steps                  ← from step_builder
+        │      ~run_status             ← from local_runner
         │      ~artifact_names         ← from project spec
         ▼
   backend/canary_diagram.ml       ← produces every .mmd in one call
@@ -44,17 +48,27 @@ direction only.
 the diagram layer. The diagram layer never calls back: it's a leaf
 consumer.
 
-> **Renderer vs runner.** `backend/` holds {i renderers} — files that
-> consume `action_step list` and emit something for someone else
-> ([canary_gh.ml](../../../src/canary/backend/canary_gh.ml) → GH
-> Actions YAML; [canary_html.ml](../../../src/canary/backend/canary_html.ml)
-> → result.html; [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)
-> → Mermaid). `action/canary_runner.ml` consumes the same
-> `action_step list` but {i executes} the shell commands directly,
-> in-process. The retired yaml-and-shell backend pair both emitted
-> files for later execution; the current local-execution path runs
-> in-process instead, which is why it lives in `action/` rather than
-> next to the renderers.
+> **Four sibling backends.** `backend/` holds four files that each
+> consume `action_step list`, differing only in what they produce:
+>
+> - [canary_local_runner.ml](../../../src/canary/backend/canary_local_runner.ml)
+>   — *executes* the steps' shell commands directly, in-process.
+>   Produces `run_status` (and side effects on disk).
+> - [canary_gh.ml](../../../src/canary/backend/canary_gh.ml) — emits
+>   GitHub Actions YAML.
+> - [canary_html.ml](../../../src/canary/backend/canary_html.ml) — renders
+>   `result.html`.
+> - [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) —
+>   renders `.mmd` diagram files.
+>
+> Three of them write a file for someone else to consume; the local
+> runner does the work itself. The retired yaml-and-shell backend pair
+> both emitted files for later execution; `canary_local_runner.ml`
+> replaces the shell half with in-process execution.
+>
+> The shared upstream is [canary_step_builder.ml](../../../src/canary/action/canary_step_builder.ml):
+> it owns `script_spec` and `derive_steps`, building the
+> `action_step list` that all four backends consume.
 
 The single translator between layers is `result_status_of_run`
 ([canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)),

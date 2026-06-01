@@ -256,7 +256,7 @@ let mk_script_spec ~source
     ?(binding_configs = [ Ocaml_config z3_ocaml_config; z3_python_config ])
     ?(tola_root = Unix.getcwd ())
     ?(cmake_build_binding = source.has_build_binding) distro :
-    Canary_runner.script_spec =
+    Canary_step_builder.script_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -298,7 +298,7 @@ let mk_script_spec ~source
     binding_dir_cmd_of_source ~has_build_binding:source.has_build_binding ~build
   in
   {
-    Canary_runner.empty_script_spec with
+    Canary_step_builder.empty_script_spec with
     api_source = source.api_source;
     (* Skip fetch_source when opam will handle source fetching (pack_binding remote flow) *)
     fetch_source =
@@ -510,21 +510,21 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Configure ->
           Some
             (fun ~output_dir ~variant_key ->
-              Canary_runner.check_markers [ "conf.ok" ] ~output_dir ~variant_key
+              Canary_step_builder.check_markers [ "conf.ok" ] ~output_dir ~variant_key
               || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
-            (Canary_runner.check_build_lib ~marker:"build.ok"
+            (Canary_step_builder.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/libz3.so"])
       | Build_binding _ ->
           Some
-            (Canary_runner.check_build_binding ~marker:"build.ok"
+            (Canary_step_builder.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/src/api/ml/z3ml.cmxa"])
       | Fetch (Binding _) when not source.has_build_binding ->
           let pkg = [%string "z3.%{source.version}"] in
           Some
             (fun ~output_dir ~variant_key ->
-              Canary_runner.check_markers [ "binding.ok" ] ~output_dir ~variant_key
+              Canary_step_builder.check_markers [ "binding.ok" ] ~output_dir ~variant_key
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];

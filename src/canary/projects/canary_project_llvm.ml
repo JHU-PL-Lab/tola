@@ -263,7 +263,7 @@ let llvm_cmake_flags =
 let mk_script_spec ~source
     ?(binding_configs =
         [ Ocaml_config llvm_ocaml_config; llvm_python_config ])
-    ?(tola_root = Unix.getcwd ()) distro : Canary_runner.script_spec =
+    ?(tola_root = Unix.getcwd ()) distro : Canary_step_builder.script_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -294,7 +294,7 @@ let mk_script_spec ~source
   let llvm_config = [%string "%{build}/bin/llvm-config"] in
   let binding_lib = ocaml_tc.ocaml.binding_lib_name in
   {
-    Canary_runner.empty_script_spec with
+    Canary_step_builder.empty_script_spec with
     api_source = source.api_source;
     fetch_source =
       Some
@@ -357,10 +357,10 @@ mkdir -p "$PREFIX/lib"
 cp %{build}/lib/libLLVM*.so "$PREFIX/lib/" 2>/dev/null || true
 echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
-    fetch_lib = Some (Canary_runner.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
       (Canary_lang.OCaml,
-       Canary_runner.fetch_binding_cmd prebuilt.opam_package_spec)
+       Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)
       :: List.filter_map binding_configs ~f:(function
         | Python_config p ->
             Some (Canary_lang.Python,
@@ -459,24 +459,24 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Fetch Source -> Some Canary_artifact_source.source_check_post
       | Configure ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_runner.check_markers [ "conf.ok" ] ~output_dir ~variant_key
+            Canary_step_builder.check_markers [ "conf.ok" ] ~output_dir ~variant_key
             || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
       | Build_lib ->
           Some
-            (Canary_runner.check_build_lib ~marker:"build.ok"
+            (Canary_step_builder.check_build_lib ~marker:"build.ok"
                ~lib_path:[%string "%{build}/lib/libLLVM.so"])
       | Build_binding _ ->
           Some
-            (Canary_runner.check_build_binding ~marker:"build.ok"
+            (Canary_step_builder.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/lib/ocaml/llvm/llvm.cmxa"])
       | Fetch (Binding _) ->
           let pkg = prebuilt.opam_package_spec.install_name in
           Some (fun ~output_dir ~variant_key ->
-            Canary_runner.check_markers [ "binding.ok" ] ~output_dir ~variant_key
+            Canary_step_builder.check_markers [ "binding.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg)
       | Publish (Binding _) ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_runner.check_markers [ "pack.ok" ] ~output_dir ~variant_key
+            Canary_step_builder.check_markers [ "pack.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     expectation = (fun rule loc -> match rule, loc with

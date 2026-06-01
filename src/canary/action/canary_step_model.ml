@@ -39,8 +39,8 @@ type symbol_check = {
   version_info : version_info option;
 }
 
-(** What an action step's outcome should be when {!Canary_runner.run_step}
-    runs it. Used by {!Canary_runner.derive_steps} and the GH backend.
+(** What an action step's outcome should be when {!Canary_step_builder.run_step}
+    runs it. Used by {!Canary_step_builder.derive_steps} and the GH backend.
 
     - [Expect_success]                       — step must exit 0.
     - [Expect_failure { contains_any; ... }] — step must fail; the

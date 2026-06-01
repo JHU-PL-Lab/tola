@@ -98,8 +98,10 @@ using Docker.
   the `catthehacker/ubuntu:act-22.04` image (has more pre-installed tools).
 - GH macOS runners are real VMs (paid minutes). For macOS-specific testing,
   use actual GH runners or invoke `canary action <project>` directly on a
-  macOS host (the local runner in `action/canary_runner.ml` executes the
-  same `script_spec` the GH backend renders into YAML).
+  macOS host (the local runner in `backend/canary_local_runner.ml`
+  executes the same `script_spec` that `backend/canary_gh.ml` renders
+  into YAML — both are sibling backends consuming the step list built by
+  `action/canary_step_builder.ml`).
 
 Workflow for iteration:
 ```sh

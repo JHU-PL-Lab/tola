@@ -70,9 +70,9 @@ let action_cmd =
     in
     let src = Canary_project_z3.z3_source_dev in
     let spec = Canary_project_z3.mk_script_spec ~source:src distro in
-    let spec = if quick then Canary_runner.no_source spec else spec in
+    let spec = if quick then Canary_step_builder.no_source spec else spec in
     let steps =
-      Canary_runner.derive_steps ~root ~project:[%string "z3/%{dev_tag}"]
+      Canary_step_builder.derive_steps ~root ~project:[%string "z3/%{dev_tag}"]
         ~langs:Canary_lang.[ OCaml; Python ]
         spec
     in
@@ -81,7 +81,7 @@ let action_cmd =
       Canary_project_z3.mk_script_spec ~source:src_stable distro
     in
     let steps_stable =
-      Canary_runner.derive_steps ~root ~project:"z3/stable"
+      Canary_step_builder.derive_steps ~root ~project:"z3/stable"
         ~langs:Canary_lang.[ OCaml; Python ]
         spec_stable
     in
@@ -103,7 +103,7 @@ let action_cmd =
   in
   let run_sqlite ~root ~failfast ~cache_path =
     let steps =
-      Canary_runner.derive_steps ~root ~project:"sqlite"
+      Canary_step_builder.derive_steps ~root ~project:"sqlite"
         ~langs:Canary_lang.[ OCaml; Python ]
         Canary_project_sqlite.script_spec
     in
@@ -117,7 +117,7 @@ let action_cmd =
      Python bindings live in the tiny harness ([scenarios/scenarios.py]). *)
   let run_tiny ~root ~failfast ~cache_path =
     let steps =
-      Canary_runner.derive_steps ~root ~project:"tiny"
+      Canary_step_builder.derive_steps ~root ~project:"tiny"
         ~langs:Canary_lang.[ OCaml; Python ]
         Canary_project_tiny.script_spec
     in
@@ -128,7 +128,7 @@ let action_cmd =
   in
   let run_zarith ~root ~failfast ~cache_path =
     let steps =
-      Canary_runner.derive_steps ~root ~project:"zarith"
+      Canary_step_builder.derive_steps ~root ~project:"zarith"
         Canary_project_zarith.script_spec
     in
     run_with_info ~failfast ~cache_path ~root ~project:"zarith" steps
@@ -136,7 +136,7 @@ let action_cmd =
   in
   let run_ssl ~root ~failfast ~cache_path =
     let steps =
-      Canary_runner.derive_steps ~root ~project:"ssl"
+      Canary_step_builder.derive_steps ~root ~project:"ssl"
         Canary_project_ssl.script_spec
     in
     run_with_info ~failfast ~cache_path ~root ~project:"ssl" steps
@@ -152,7 +152,7 @@ let action_cmd =
         ~source:Canary_project_llvm.llvm_source_dev distro
     in
     let steps =
-      Canary_runner.derive_steps ~root ~project:[%string "llvm/%{dev_tag}"]
+      Canary_step_builder.derive_steps ~root ~project:[%string "llvm/%{dev_tag}"]
         ~langs:Canary_lang.[ OCaml; Python ]
         spec
     in
@@ -170,7 +170,7 @@ let action_cmd =
     let src_19 = Canary_project_llvm.llvm_source_stable in
     let spec_19 = Canary_project_llvm.mk_script_spec ~source:src_19 distro in
     let steps_19 =
-      Canary_runner.derive_steps ~root ~project:"llvm/19"
+      Canary_step_builder.derive_steps ~root ~project:"llvm/19"
         ~langs:Canary_lang.[ OCaml; Python ]
         spec_19
     in

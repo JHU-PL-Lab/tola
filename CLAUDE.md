@@ -47,8 +47,8 @@ order (also in [`src/canary/dune`](src/canary/dune)):
 base/      vocabulary — types every other layer uses
 surface/   surface theory — API records + c1..c8 comparators
 tool/      real-world wrappers — PM drivers, inspector drivers, build cmds
-action/    action graph — rules, step model, runner, paths, run_info
-backend/   output renderers — GH YAML, HTML, Mermaid
+action/    action graph — rules, step model, step builder, paths, run_info
+backend/   step-list consumers — local runner (executes), GH YAML, HTML, Mermaid
 test/      framework self-tests
 projects/  live project specs (canary_projects sub-library)
 legacy/    parked code (canary_legacy sub-library)
@@ -82,7 +82,8 @@ catalogues every module with its current verdict.
 | `src/canary/action/canary_action.ml`                | `action_rule`, `store_rules`, `make_action_rule`, `nodes_of_action_rule`, `node_status` — the schema   |
 | `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `action_step`, `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
-| `src/canary/action/canary_runner.ml`                | `script_spec`, `derive_steps`, `run_step`, `run_graph`, check_post compositors — the runner            |
+| `src/canary/action/canary_step_builder.ml`          | `script_spec`, `derive_steps`, shared command templates, check_post compositors — the step list builder |
+| `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` — executes the step list locally (in-process backend)    |
 | `src/canary/action/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/action/canary_step_cache.ml`            | Cross-run cache (skip steps recorded successful in a previous run)                                     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
@@ -127,10 +128,15 @@ action graph (fetch, build, probe, pack for each artifact kind: Source
 `action_path` strings like `fetch_source → build_lib → build_binding`.
 A project provides a `script_spec` (shell commands per action) plus an
 `api_source` (declarative provider/consumer surface — header paths,
-symbol prefixes, watchlists). `derive_steps` in `action/canary_runner.ml`
-filters the 15 patterns by project capabilities, attaches per-artifact
-summaries (mli, stub, native, python) to install steps, and instantiates
-them with the project's scripts. `run_graph` executes the steps in
+symbol prefixes, watchlists). `derive_steps` in
+`action/canary_step_builder.ml` filters the 15 patterns by project
+capabilities, attaches per-artifact summaries (mli, stub, native,
+python) to install steps, and instantiates them with the project's
+scripts. The resulting `action_step list` is consumed by one of four
+sibling backends: `backend/canary_local_runner.ml` executes it
+directly (in-process); `backend/canary_gh.ml` renders it as GH
+Actions YAML; `backend/canary_diagram.ml` renders it as Mermaid;
+`backend/canary_html.ml` renders the interactive viewer. `run_graph` executes the steps in
 dependency order with `check_pre`/`check_post` filesystem checks and
 appends to `actions.log`. Probe expectations may be hand-written
 (`Expect_failure`) or **derived** at runtime (`Expect_compat_failure`)

@@ -24,6 +24,7 @@ chosen: park into `legacy/canary_yaml_backend.ml`).
 | 5 | `b5f3006` | `canary.ml` 581 LOC → 24-line `include` shim; new `canary_action` (135), `canary_step_model` (130), `canary_path_table` (288). |
 | 6 | `c52d4d7` | `action/canary_run_info.ml` (338) extracted from `canary_action.ml` (1226→912). |
 | 7 | `0139e07` | Stale flat paths in active docs refreshed to layered subdir paths. |
+| 8 | (follow-up) | Backend filenames lose the `_backend_` prefix (`canary_gh.ml`, `canary_html.ml`); `canary_runner.ml` splits into `action/canary_step_builder.ml` (script_spec + derive_steps) + `backend/canary_local_runner.ml` (run_step + run_graph). Four sibling backends now consume `action_step list`. |
 
 Regression at every commit: `artifact-test 73/73`, `pm-test 14/14`,
 `action tiny 12/12`. The pre-existing diagram-connectivity invariant
@@ -95,7 +96,7 @@ moved to their own sibling.
 | `canary_action.ml` | 135 | 0¹ | ✅ | **NEW** (Phase 5, originally `canary_action_rule`; renamed in the action/runner pass) — the action-graph schema |
 | `canary_step_model.ml` | 130 | 0¹ | ✅ | **NEW** (Phase 5) |
 | `canary_path_table.ml` | 288 | 0¹ | ✅ | **NEW** (Phase 5) |
-| `canary_runner.ml` | 912 | 9 | ⚠ | was ⚠ broad (1226 LOC, then named `canary_action.ml`); `run_info` extracted (Phase 6); renamed to `canary_runner.ml` as part of the schema/runner naming pass — now coherently the runner |
+| `canary_step_builder.ml` | 708 | 7 | ✅ | was `canary_runner.ml` (912 LOC); execute-half (run_step + run_graph + …) split to `backend/canary_local_runner.ml` (Phase 8); now coherently the step-list builder (script_spec + derive_steps + shared templates + check_post compositors + defaults) |
 | `canary_run_info.ml` | 338 | 1 | ✅ | **NEW** (Phase 6) |
 | `canary_step_cache.ml` | 71 | 3 | ✅ | unchanged |
 
@@ -110,7 +111,7 @@ and tests. The 0-count is an artefact of the shim, not unused code.
 
 | Subdir | Files | LOC | Notes |
 |---|---:|---:|---|
-| `backend/` | 3 | 3027 | mostly unchanged; `canary_backend_gh.ml` adjusted in Phase 4 to call `Canary_compat_run.predicted_contains_any_v2 ~resolve` after the compat ADT unification. `canary_diagram.ml` (2283) remains the heaviest single file |
+| `backend/` | 4 | 3300 | Phase 8 dropped `_backend_` prefix → `canary_gh.ml` + `canary_html.ml`, and added `canary_local_runner.ml` (273 LOC, the execute-half of the former canary_runner). Four sibling backends now consume `action_step list`. `canary_diagram.ml` (2283) remains the heaviest single file. `canary_gh.ml` had also been adjusted in Phase 4 for the compat ADT unification. |
 | `test/` | 2 | 1036 | unchanged |
 | `projects/` | 8 | 1922 | constructors changed from `C_stub { paths = [...] }` to `Canary_compat.C_stub [...]` (Phase 4) |
 | `legacy/` | 3 | 962 | gained `canary_yaml_backend.ml` (302 LOC, Phase 2); `canary_dead_code.ml` retargets to it; `example_sp.ml` unchanged |
@@ -158,8 +159,13 @@ Two reasonable futures:
 Recommend keeping the shim for now and revisiting if it gets in the
 way of future work.
 
-### C.2 `canary_runner.ml` is still 912 LOC
+### C.2 ~~`canary_runner.ml` is still 912 LOC~~ — resolved (Phase 8)
 
+After Phase 8 split execution into `backend/canary_local_runner.ml`,
+the renamed `canary_step_builder.ml` is 708 LOC and the new
+`canary_local_runner.ml` is 273 LOC. Both are coherent.
+
+(Original Phase 6 commentary, kept for historical context:)
 Even after Phase 6 extracted ~315 LOC of `run_info`, `canary_runner.ml`
 remains the largest active file. The remaining content is genuinely
 cohesive — `script_spec` + `derive_steps` (the contract) +
@@ -225,7 +231,7 @@ deliberate attention.
 |---|---:|---:|---:|
 | `canary_basic.ml` LOC | 460 | 238 | -222 (-48%) |
 | `canary.ml` LOC | 648 | 24 | -624 (-96%) |
-| `canary_action.ml` → `canary_runner.ml` LOC | 1248 | 912 | -336 (-27%) |
+| `canary_action.ml` → `canary_runner.ml` → `canary_step_builder.ml` + `canary_local_runner.ml` LOC | 1248 | 708 + 273 | step-builder dropped to 708; +273 in a new sibling file |
 | `canary_toolchain.ml` LOC | 466 | 410 | -56 (-12%) |
 | Module count in `action/` | 3 | 7 | +4 (split, not bloat) |
 | Module count in `base/` | 4 | 5 | +1 (new `canary_lang`) |
@@ -318,11 +324,15 @@ layout. With the splits and renames, a refreshed walk-through:
     — `action_rule`, `store_rules`, `make_action_rule`. The
     action-graph schema (what actions exist, what artifacts they
     produce).
-14. [action/canary_runner.ml](../../src/canary/action/canary_runner.ml)
-    — `script_spec`, `derive_steps`, `run_step`, `run_graph`. The
-    runner: bridges the schema into a project's concrete
-    `action_step list` and executes it. Largest file in this layer;
-    read in pieces.
+14. [action/canary_step_builder.ml](../../src/canary/action/canary_step_builder.ml)
+    — `script_spec`, `derive_steps`, shared command templates,
+    check_post compositors. Bridges the action-graph schema into a
+    project's concrete `action_step list`. Largest file in this
+    layer; read in pieces.
+14b. [backend/canary_local_runner.ml](../../src/canary/backend/canary_local_runner.ml)
+    — `run_step`, `run_graph`, `merge_step_statuses`. Sibling
+    backend to canary_gh/html/diagram, but executes the steps
+    locally in-process rather than emitting a file.
 15. [action/canary_run_info.ml](../../src/canary/action/canary_run_info.ml)
     — `run_project` + state persistence. The user-facing entry the
     CLI calls.
