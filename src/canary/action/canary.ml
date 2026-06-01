@@ -73,27 +73,6 @@ let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
     artifact_node =
   { a_kind; a_name; origin; a_location = location; built_from; runtime_dep }
 
-(** Stringify an {!Canary_basic.artifact_kind} for action tags and log
-    output. Output strings map to surface-theory canonical-name groups:
-
-    - ["source"]        ↔ [source_native.*] group
-    - ["headers"]       ↔ [header_native.h] (s1)
-    - ["lib"]           ↔ [lib_native.so] (s2)
-    - ["<lang>_binding"] ↔ the binding chain
-                          {i {stub,user,compiled}_binding_<lang>.*} for that
-                          language. E.g. ["ocaml_binding"] covers tiny's
-                          bo1..bo7. ["python_binding"] covers the cext
-                          {i and} ctypes mechanisms unless a [mechanism]
-                          subtype refines later.
-    - ["app"]           ↔ consumer / probe (no surface; runtime carrier
-                          of s6 [runtime_trace]). *)
-let string_of_artifact_kind = function
-  | Source -> "source"
-  | Headers -> "headers"
-  | Lib -> "lib"
-  | Binding lang -> [%string "%{Canary_artifact_api.string_of_lang lang}_binding"]
-  | App -> "app"
-
 let rec node_tag (n : artifact_node) =
   let name = n.a_name in
   let base =
@@ -110,74 +89,9 @@ let rec node_tag (n : artifact_node) =
   | None -> with_built
   | Some rt -> [%string "%{with_built}[rt=%{node_tag rt}]"]
 
-(* ── Action rule ──
-   Rules are typed actions: each variant has implicit input/output sorts.
-   Pools are indexed by artifact_kind, built incrementally by applying rules.
-   The rule list defines both the action chain and which pools get populated. *)
-
-type version = Dev | Stable
-
-let version_suffix = function Dev -> "" | Stable -> "-stable"
-
-(* Version configurations *)
-let single_version = [ Dev ]
-let two_versions = [ Dev; Stable ]
-
-type rule =
-  | Configure
-  | Build_headers
-  | Build_lib
-  | Build_binding of Canary_artifact_api.lang
-  | Install_lib
-  | Build_app
-  | Fetch of artifact_kind
-  | Publish of artifact_kind
-  | Probe of artifact_kind
-
-let string_of_rule = function
-  | Configure -> "configure"
-  | Build_headers -> "build_headers"
-  | Build_lib -> "build_lib"
-  | Build_binding lang -> [%string "build_binding_%{Canary_artifact_api.string_of_lang lang}"]
-  | Install_lib -> "install_lib"
-  | Build_app -> "build_app"
-  | Fetch (Binding lang) -> [%string "fetch_binding_%{Canary_artifact_api.string_of_lang lang}"]
-  | Fetch kind -> [%string "fetch_%{string_of_artifact_kind kind}"]
-  | Publish (Binding lang) -> [%string "pack_binding_%{Canary_artifact_api.string_of_lang lang}"]
-  | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
-  | Probe (Binding lang) -> [%string "probe_binding_%{Canary_artifact_api.string_of_lang lang}"]
-  | Probe kind -> [%string "probe_%{string_of_artifact_kind kind}"]
-
-let rule_of_string s =
-  let module A = Canary_artifact_api in
-  let lang_of_str = function
-    | "ocaml"  -> Some A.OCaml  | "python" -> Some A.Python
-    | "cpp"    -> Some A.Cpp    | "rust"   -> Some A.Rust
-    | "csharp" -> Some A.CSharp | "java"   -> Some A.Java
-    | _ -> None
-  in
-  let try_binding prefix wrap =
-    Option.bind (String.chop_prefix s ~prefix) ~f:(fun l ->
-        Option.map (lang_of_str l) ~f:wrap)
-  in
-  match s with
-  | "configure"     -> Some Configure
-  | "build_headers" -> Some Build_headers
-  | "build_lib"     -> Some Build_lib
-  | "install_lib"   -> Some Install_lib
-  | "build_app"     -> Some Build_app
-  | "fetch_source"  -> Some (Fetch Source)
-  | "fetch_headers" -> Some (Fetch Headers)
-  | "fetch_lib"     -> Some (Fetch Lib)
-  | "fetch_app"     -> Some (Fetch App)
-  | "pack_lib"      -> Some (Publish Lib)
-  | "probe_lib"     -> Some (Probe Lib)
-  | "probe_app"     -> Some (Probe App)
-  | _ ->
-      try_binding "build_binding_" (fun l -> Build_binding l)
-      |> Option.first_some (try_binding "fetch_binding_" (fun l -> Fetch (Binding l)))
-      |> Option.first_some (try_binding "pack_binding_" (fun l -> Publish (Binding l)))
-      |> Option.first_some (try_binding "probe_binding_" (fun l -> Probe (Binding l)))
+(* The rule + version vocabulary moved to [Canary_basic] on 2026-06-01.
+   The graph proper (action_rule, store_rules, derive_*, diagrams) stays
+   here. *)
 
 type action_rule = {
   rules : rule list;

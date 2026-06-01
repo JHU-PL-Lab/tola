@@ -215,7 +215,7 @@ let output_dir_for ~root ~project ~tag =
     | Some (name, vid) -> (name, vid)
     | None -> (project, "")
   in
-  let step_dir = Canary_step_path.step_dir_of_tag tag in
+  let step_dir = Canary_output_path.step_dir_of_tag tag in
   let base = [%string "%{root}/canary/projects/%{project_name}/%{step_dir}"] in
   if Stdlib.Filename.is_relative base then
     Stdlib.Filename.concat (Unix.getcwd ()) base
@@ -318,12 +318,12 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                   List.find_map rels ~f:(fun rel ->
                       let p = match String.lsplit2 rel ~on:'/' with
                         | Some (step_tag, file) ->
-                            let step_dir = Canary_step_path.step_dir_of_tag step_tag in
-                            let vk_file = Canary_step_path.variant_file
+                            let step_dir = Canary_output_path.step_dir_of_tag step_tag in
+                            let vk_file = Canary_output_path.variant_file
                                 ~variant_key:step.variant_id file in
                             step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
                         | None ->
-                            let vk_rel = Canary_step_path.variant_file
+                            let vk_rel = Canary_output_path.variant_file
                                 ~variant_key:step.variant_id rel in
                             step.project_dir ^ "/" ^ vk_rel
                       in
@@ -486,7 +486,7 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : a
 
 (* fetch_lib: install a system package and write marker *)
 let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir ~variant_key =
-  let lib_ok = Canary_step_path.variant_file ~variant_key "lib.ok" in
+  let lib_ok = Canary_output_path.variant_file ~variant_key "lib.ok" in
   [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/%{lib_ok}"]
 
 (* fetch_binding: install an opam package + ocamlfind, then write marker.
@@ -495,7 +495,7 @@ let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir ~vari
    `ocamlfind ocamlopt` to compile probes. Bindings that DO pull ocamlfind
    (e.g. zarith) treat the second install as a no-op. *)
 let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir ~variant_key =
-  let binding_ok = Canary_step_path.variant_file ~variant_key "binding.ok" in
+  let binding_ok = Canary_output_path.variant_file ~variant_key "binding.ok" in
   [%string "%{Canary_toolchain.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/%{binding_ok}"]
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
@@ -504,7 +504,7 @@ let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
      original exit code. Without this, CI step failures show only "exit 127"
      with no context — the actual ocamlfind / dynamic-link error is hidden in
      the file. Successful runs print probe.log too (cheap, useful confirmation). *)
-  let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+  let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
   [%string {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1
 RC=$?
@@ -523,18 +523,18 @@ let has_file ~output_dir name =
 
 (** Marker file present AND a native .so/.dylib exists at [lib_path]. *)
 let check_build_lib ~marker ~lib_path ~output_dir ~variant_key =
-  has_file ~output_dir (Canary_step_path.variant_file ~variant_key marker)
+  has_file ~output_dir (Canary_output_path.variant_file ~variant_key marker)
   && Canary_artifact_native.exists_native_lib_or_dylib lib_path
 
 (** Marker file present AND an OCaml archive exists at [archive_path]. *)
 let check_build_binding ~marker ~archive_path ~output_dir ~variant_key =
-  has_file ~output_dir (Canary_step_path.variant_file ~variant_key marker)
+  has_file ~output_dir (Canary_output_path.variant_file ~variant_key marker)
   && Canary_artifact_lang.exists_ocaml_archive archive_path
 
 (** All listed marker files exist in [output_dir]. *)
 let check_markers markers ~output_dir ~variant_key =
   List.for_all markers ~f:(fun m ->
-    has_file ~output_dir (Canary_step_path.variant_file ~variant_key m))
+    has_file ~output_dir (Canary_output_path.variant_file ~variant_key m))
 
 (* ── Default check_post per rule category ──
    Derived from the rule type. Projects can override via script_spec.check_post.
@@ -560,7 +560,7 @@ let marker_of_rule = function
   | Probe _ -> "probe.log"
 
 let default_check_post rule ~output_dir ~variant_key =
-  has_file ~output_dir (Canary_step_path.variant_file ~variant_key (marker_of_rule rule))
+  has_file ~output_dir (Canary_output_path.variant_file ~variant_key (marker_of_rule rule))
 
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
@@ -742,7 +742,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
     (* base_name is the variant-independent base (e.g. "inspect", "inspect_stub").
        The actual filename is base_name + "_" + variant_key + ".json" at run time. *)
     let check_post ~output_dir ~variant_key =
-      has_file ~output_dir (Canary_step_path.filename ~variant_key ~base:base_name ~ext:"json")
+      has_file ~output_dir (Canary_output_path.filename ~variant_key ~base:base_name ~ext:"json")
     in
     mk_step ~root ~project ~cache_project ~tag
       ~output_tag:parent_tag ~rule
@@ -845,7 +845,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
      Shares fetch_source's output dir; configure/build depend on it. *)
   let mk_scan_source ~fetch_tag scan_cmd =
     let check_post ~output_dir ~variant_key =
-      has_file ~output_dir (Canary_step_path.variant_file ~variant_key "scan.ok")
+      has_file ~output_dir (Canary_output_path.variant_file ~variant_key "scan.ok")
     in
     mk_step ~root ~project ~cache_project ~tag:"scan_source"
       ~output_tag:fetch_tag ~rule:(Fetch Source)
@@ -870,7 +870,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                   | Some cp -> cp
                   | None -> fun ~output_dir ~variant_key ->
                       has_file ~output_dir
-                        (Canary_step_path.variant_file ~variant_key "probe.log")
+                        (Canary_output_path.variant_file ~variant_key "probe.log")
                 in
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
@@ -889,7 +889,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
                   | Some cp -> cp
                   | None -> fun ~output_dir ~variant_key ->
                       has_file ~output_dir
-                        (Canary_step_path.variant_file ~variant_key "probe.log")
+                        (Canary_output_path.variant_file ~variant_key "probe.log")
                 in
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
@@ -1075,7 +1075,7 @@ let load_run_state ~dir =
     let variant_id = str "variant_id" in
     let expect_str = str "expect" in
     let status_str = str "status" in
-    let rule = match Canary.rule_of_string rule_str with
+    let rule = match Canary_basic.rule_of_string rule_str with
       | Some r -> r
       | None   -> failwith [%string "load_run_state: unknown rule %{rule_str}"]
     in
@@ -1087,7 +1087,7 @@ let load_run_state ~dir =
       | s -> failwith [%string "load_run_state: unknown expect %{s}"]
     in
     let output_dir =
-      [%string "%{dir}/%{Canary_step_path.step_dir_of_tag output_tag}"]
+      [%string "%{dir}/%{Canary_output_path.step_dir_of_tag output_tag}"]
     in
     let step : action_step = {
       tag; cache_key = ""; output_tag; output_dir;

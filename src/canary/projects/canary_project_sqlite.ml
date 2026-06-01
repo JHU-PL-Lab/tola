@@ -1,6 +1,5 @@
 open Canary_basic
 open Canary_toolchain
-open Canary
 
 let sqlite_ocaml_config : ocaml_tool_config =
   {

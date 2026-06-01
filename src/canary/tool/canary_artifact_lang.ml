@@ -65,7 +65,7 @@ let cmxa_stub_archive path =
 let inspect_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
   let script = "canary/scripts/inspect_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|ocamlobjinfo '%{archive}' 2>/dev/null \
   | python3 %{script} --path '%{archive}' --watchlist '%{watchlist_csv}' \
@@ -80,7 +80,7 @@ let inspect_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
 let inspect_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
   let script = "canary/scripts/inspect_ocaml.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -118,7 +118,7 @@ done 2>&1 | tee %{output_dir}/archive.log|}]
 let mli_inspect_opam_pkg_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
   let script = "canary/scripts/inspect_binding.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -138,7 +138,7 @@ let stub_inspect_opam_pkg_cmd
   let script = "canary/scripts/inspect_binding.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
   (* v3 naming: "inspect_stub" (type-first), variant-keyed → "inspect_stub_19.json" *)
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect_stub" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect_stub" ~ext:"json" in
   [%string
     {|eval $(opam env)
 PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
@@ -194,7 +194,7 @@ let python_import_cmd ~pkg ~output_dir =
 let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
   let script = "canary/scripts/inspect_python.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     "python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}' > %{output_dir}/%{out_file}"]
 
@@ -203,7 +203,7 @@ let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
    { "kind": "cmi", "modules": { "Module": "d41d8cd9...", ... } }
    Detects type-level drift even when module/val names are unchanged. *)
 let cmi_inspect_cmd ~pkg_dir ~output_dir ~variant_key () =
-  let out_file = Canary_step_path.filename ~variant_key ~base:"inspect_cmi" ~ext:"json" in
+  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect_cmi" ~ext:"json" in
   [%string
     {|(echo '{"kind":"cmi","modules":{'
 for f in "%{pkg_dir}"/*.cmi; do

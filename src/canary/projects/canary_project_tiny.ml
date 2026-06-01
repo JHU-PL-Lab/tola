@@ -187,7 +187,7 @@ let script_spec : Canary_action.script_spec =
     probe_lib = [
       (Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
-         let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+         let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
          Printf.sprintf
            "nm -D %s/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
             > %s/%s 2>&1"
@@ -199,7 +199,7 @@ let script_spec : Canary_action.script_spec =
       (Canary_artifact_api.OCaml,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
-         let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+         let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
          Printf.sprintf
            "LD_LIBRARY_PATH=%s _build/default/%s/ocaml/examples/probe_baseline.exe \
             > %s/%s 2>&1"
@@ -210,7 +210,7 @@ let script_spec : Canary_action.script_spec =
       (Canary_artifact_api.Python,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
-         let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+         let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
          Printf.sprintf
            "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext python3 \
             %s/python_cext/examples/probe_baseline.py > %s/%s 2>&1"
@@ -262,7 +262,7 @@ let script_spec : Canary_action.script_spec =
                canary the per-parent output_dir separates it from other
                binding inspectors. *)
             let out_file =
-              Canary_step_path.filename ~variant_key
+              Canary_output_path.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind stub \
@@ -280,7 +280,7 @@ let script_spec : Canary_action.script_spec =
       | Probe (Binding Canary_artifact_api.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
-              Canary_step_path.filename ~variant_key
+              Canary_output_path.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
             let watchlist_csv =
               String.concat ~sep:"," tiny_ocaml_module_watchlist in
@@ -291,7 +291,7 @@ let script_spec : Canary_action.script_spec =
       | Probe (Binding Canary_artifact_api.Python) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
-              Canary_step_path.filename ~variant_key
+              Canary_output_path.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
             let watchlist_csv =
               String.concat ~sep:"," tiny_python_module_watchlist in

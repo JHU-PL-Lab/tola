@@ -1,6 +1,5 @@
 open Canary_basic
 open Canary_toolchain
-open Canary
 
 (* ── Pattern A template ──
    Pattern A in opam-survey terminology: a `conf-*` virtual package verifies a

@@ -1,4 +1,5 @@
 open Base
+open Canary_basic
 open Canary
 
 (* ── GH CI backend ── *)

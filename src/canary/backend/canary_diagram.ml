@@ -1636,7 +1636,7 @@ let mermaid_view
   let all_probe_expand =
     List.filter_map steps ~f:(fun s ->
         match s.rule with
-        | Canary.Probe k when not (String.is_suffix s.tag ~suffix:"_inspect") -> Some k
+        | Canary_basic.Probe k when not (String.is_suffix s.tag ~suffix:"_inspect") -> Some k
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
     |> (match focal_probe_kinds with
@@ -2025,7 +2025,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
           | Some Canary.Not_in_spec | None -> "not_in_spec"
         in
         (* output_rel: path from -run/ to the step dir one level up. *)
-        let step_dir = Canary_step_path.step_dir_of_tag s.output_tag in
+        let step_dir = Canary_output_path.step_dir_of_tag s.output_tag in
         Canary_backend_html.{
           id = Hashtbl.find step_ids s.tag;
           tag = s.tag;

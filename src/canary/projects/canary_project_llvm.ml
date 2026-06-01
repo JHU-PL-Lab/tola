@@ -203,7 +203,7 @@ let find_llvm_config_cmd =
      printf '%s\\n' %{llvm_locator_hint}; fi"]
 
 let llvm_python_probe ~output_dir ~variant_key =
-  let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+  let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
   [%string
     {|(pip install --quiet llvmlite 2>/dev/null \
  || python3 -m pip install --quiet llvmlite 2>/dev/null \
@@ -308,7 +308,7 @@ let mk_script_spec ~source
       (if source.has_build_lib || source.has_build_binding then
          Some
            (fun ~output_dir ~variant_key ->
-             let hdr_ok = Canary_step_path.variant_file ~variant_key "headers.ok" in
+             let hdr_ok = Canary_output_path.variant_file ~variant_key "headers.ok" in
              [%string
                "test -d %{root}/llvm/include/llvm-c \
                 && echo 'ok' > %{output_dir}/%{hdr_ok}"])
@@ -350,7 +350,7 @@ let mk_script_spec ~source
     install_lib =
       (if source.has_build_lib then
          Some (fun ~output_dir ~variant_key ->
-           let install_ok = Canary_step_path.variant_file ~variant_key "install.ok" in
+           let install_ok = Canary_output_path.variant_file ~variant_key "install.ok" in
            [%string
              {|PREFIX="%{build}/../install"
 mkdir -p "$PREFIX/lib"
@@ -406,7 +406,7 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
           Some
             ( Pm (Sys_pm { pm }),
               fun ~output_dir ~variant_key ->
-                let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+                let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
                 [%string
                   {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 test -x "$LLVM_CONFIG"
@@ -421,8 +421,8 @@ test -x "$LLVM_CONFIG"
                (OCaml, Build_tree, fun ~output_dir ~variant_key ->
                  let script = "canary/scripts/assert_binary_symbols.py" in
                  let pkg_dir = [%string "%{build}/lib/ocaml/llvm"] in
-                 let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
-                 let symbols_log = Canary_step_path.variant_file ~variant_key "symbols.log" in
+                 let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
+                 let symbols_log = Canary_output_path.variant_file ~variant_key "symbols.log" in
                  [%string
                    {|eval $(opam env)
 STUB=$(ls %{pkg_dir}/lib*.a 2>/dev/null | head -1)
@@ -438,7 +438,7 @@ LLVM_CONFIG=%{llvm_config} ocamlopt \
           (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
           Some
             (OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }), fun ~output_dir ~variant_key ->
-              let probe_log = Canary_step_path.variant_file ~variant_key "probe.log" in
+              let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
               [%string
                 {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
