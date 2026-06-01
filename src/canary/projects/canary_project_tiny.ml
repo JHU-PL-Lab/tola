@@ -134,19 +134,19 @@ let script_spec : Canary_action.script_spec =
     api_source = Some tiny_api_source;
 
     (* Configure: cmake -S c -B c/build. The marker-write suffix is added
-       via [Canary_toolchain.with_marker] so check_post sees conf.ok. *)
+       via [Canary_build_cmd.with_marker] so check_post sees conf.ok. *)
     configure = Some (fun ~output_dir ~variant_key ->
-      Canary_toolchain.cmake_configure_cmd
+      Canary_build_cmd.cmake_configure_cmd
         ~src:[%string "%{tiny_root}/c"]
         ~build:[%string "%{tiny_root}/c/build"] ()
-      |> Canary_toolchain.with_marker
+      |> Canary_build_cmd.with_marker
            ~marker:"conf.ok" ~output_dir ~variant_key);
 
     (* Build_lib produces lib_native.so (n4) at c/build/libtiny.so.1. *)
     build_lib = Some (fun ~output_dir ~variant_key ->
-      Canary_toolchain.cmake_build_cmd
+      Canary_build_cmd.cmake_build_cmd
         ~build:[%string "%{tiny_root}/c/build"] ()
-      |> Canary_toolchain.with_marker
+      |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
     (* Build_binding OCaml: dune build under canary/examples/tiny/ocaml/.
@@ -161,13 +161,13 @@ let script_spec : Canary_action.script_spec =
     build_binding = [
       (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
-         Canary_toolchain.dune_build_cmd
+         Canary_build_cmd.dune_build_cmd
            ~env_extra:[
              [%string "LIBRARY_PATH=%{tiny_lib_dir}"];
              [%string "LD_RUN_PATH=%{tiny_lib_dir}"];
            ]
            ~target:[%string "%{tiny_root}/ocaml"] ()
-         |> Canary_toolchain.with_marker
+         |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
       (* Build_binding Python: invoke tiny's Makefile python_cext target,
          which runs `uv build --wheel` and copies _native.cpython-*.so back
@@ -175,7 +175,7 @@ let script_spec : Canary_action.script_spec =
       (Canary_lang.Python,
        fun ~output_dir ~variant_key ->
          Printf.sprintf "make -C %s python_cext" tiny_root
-         |> Canary_toolchain.with_marker
+         |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
     ];
 

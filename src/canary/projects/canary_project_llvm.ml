@@ -225,7 +225,7 @@ python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{
    - binding output: <build>/lib/ocaml/llvm.cmxa *)
 
 (* cmake flag list for LLVM (no -S/-B). The actual configure command is
-   assembled by [Canary_toolchain.cmake_configure_cmd] in the script_spec.
+   assembled by [Canary_build_cmd.cmake_configure_cmd] in the script_spec.
 
    Speed flags:
    - mold: 5-10x faster linking than ld (available on this machine)
@@ -319,20 +319,20 @@ let mk_script_spec ~source
          Some
            (fun ~output_dir ~variant_key ->
              let cmake_cmd =
-               Canary_toolchain.cmake_configure_cmd
+               Canary_build_cmd.cmake_configure_cmd
                  ~cmake_exec:"cmake" ~flags:llvm_cmake_flags
                  ~src:cmake_source ~build ()
              in
              Printf.sprintf "eval $(opam env) && %s" cmake_cmd
-             |> Canary_toolchain.with_marker
+             |> Canary_build_cmd.with_marker
                   ~marker:"conf.ok" ~output_dir ~variant_key)
        else None);
     build_lib =
       (if source.has_build_lib then
          Some
            (fun ~output_dir ~variant_key ->
-             Canary_toolchain.ninja_build_cmd ~target:"LLVM" ~build ()
-             |> Canary_toolchain.with_marker
+             Canary_build_cmd.ninja_build_cmd ~target:"LLVM" ~build ()
+             |> Canary_build_cmd.with_marker
                   ~marker:"build.ok" ~output_dir ~variant_key)
        else None);
     build_binding =
@@ -340,11 +340,11 @@ let mk_script_spec ~source
          [ (OCaml,
             fun ~output_dir ~variant_key ->
               let ninja_cmd =
-                Canary_toolchain.ninja_build_cmd
+                Canary_build_cmd.ninja_build_cmd
                   ~target:"ocaml_all" ~build ()
               in
               Printf.sprintf "eval $(opam env) && %s" ninja_cmd
-              |> Canary_toolchain.with_marker
+              |> Canary_build_cmd.with_marker
                    ~marker:"build.ok" ~output_dir ~variant_key) ]
        else []);
     install_lib =

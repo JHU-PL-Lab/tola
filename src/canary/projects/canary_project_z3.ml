@@ -335,17 +335,17 @@ let mk_script_spec ~source
          in
          Some
            (fun ~output_dir ~variant_key ->
-             Canary_toolchain.cmake_configure_cmd
+             Canary_build_cmd.cmake_configure_cmd
                ~cmake_exec ~flags ~src:root ~build ()
-             |> Canary_toolchain.with_marker
+             |> Canary_build_cmd.with_marker
                   ~marker:"conf.ok" ~output_dir ~variant_key)
        else None);
     build_lib =
       (if source.has_build_lib then
          Some
            (fun ~output_dir ~variant_key ->
-             Canary_toolchain.ninja_build_cmd ~target:"libz3" ~build ()
-             |> Canary_toolchain.with_marker
+             Canary_build_cmd.ninja_build_cmd ~target:"libz3" ~build ()
+             |> Canary_build_cmd.with_marker
                   ~marker:"build.ok" ~output_dir ~variant_key)
        else None);
     build_binding =
@@ -353,11 +353,11 @@ let mk_script_spec ~source
          [ (OCaml,
             fun ~output_dir ~variant_key ->
               let ninja_cmd =
-                Canary_toolchain.ninja_build_cmd
+                Canary_build_cmd.ninja_build_cmd
                   ~target:"build_z3_ocaml_bindings" ~build ()
               in
               Printf.sprintf "eval $(opam env) && %s" ninja_cmd
-              |> Canary_toolchain.with_marker
+              |> Canary_build_cmd.with_marker
                    ~marker:"build.ok" ~output_dir ~variant_key) ]
        else []);
     install_lib =
