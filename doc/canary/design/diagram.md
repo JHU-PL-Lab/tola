@@ -1,370 +1,212 @@
-# Diagram system
+# Diagram system — pipeline + design ideas
 
-Canary generates Mermaid diagrams and an HTML viewer per run.
-Backlog refs: #36 (summary node fidelity), #37 (HTML viewer).
+Every `canary action <project>` run writes Mermaid diagrams and an HTML
+viewer alongside the step output. This doc covers the big-to-middle
+picture: how the diagrams are produced and what design ideas the output
+implements. Renderer mechanics (per-parameter behaviour, subgraph
+rules) live in module docstrings under [`src/canary/backend/`](../../../src/canary/backend/).
 
 ---
 
-## Purpose and design philosophy
+## How a diagram run happens
 
-The diagram series exists to make all concrete canary actions visible and
-discussable. The same run produces diagrams at different levels of detail,
-but they all represent the **same set of truth** — the same steps, the same
-results. Action IDs (`[N]` labels) are the cross-diagram reference that lets
-you verify a node in one diagram corresponds to the same action in another.
+The diagram code is a **pure consumer** of the action-graph runtime.
+One entry point crosses from `action/` into `backend/`; data flows one
+direction only.
+
+```
+  src/bin/canary_main.ml
+        │
+        │  Canary_run_info.run_project
+        ▼
+  action/canary_run_info.ml
+        │
+        │  Canary_runner.run_graph
+        ▼
+  action/canary_runner.ml         ← executes each step, builds run_status
+        │
+        │  returns (run_status : (tag, step_status) Hashtbl.t)
+        ▼
+  action/canary_run_info.ml       ← hands the data to the renderer
+        │
+        │  Canary_diagram.write_project_output
+        │      ~steps                  ← from runner
+        │      ~run_status             ← from runner
+        │      ~artifact_names         ← from project spec
+        ▼
+  backend/canary_diagram.ml       ← produces every .mmd in one call
+        │
+        ▼
+  -run/diagrams/*.mmd + result.html + index.html
+```
+
+`write_project_output` is the only function the action layer calls in
+the diagram layer. The diagram layer never calls back: it's a leaf
+consumer.
+
+The single translator between layers is `result_status_of_run`
+([canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)),
+which maps step verdicts (`Step_done` / `Step_failed` / `Step_skipped`,
+from action/) to node verdicts (`Done` / `Done_fail` / `Failed` /
+`Skipped` / `Not_in_spec`, used for colour). It lives in `canary_diagram`
+because `Done_fail` (an expected-failure step that succeeded as
+planned) is a diagram-only colour — the runner doesn't distinguish it
+from `Done`.
+
+**Adding a new view** = add a view predicate + render call inside
+`write_project_output`. No changes needed in action/.
+
+---
+
+## Design ideas
 
 ### The min–max spectrum
 
+All diagrams from one run show the **same set of truth** — the same
+steps, the same verdicts. They differ only in how much merging the
+renderer applies. Three altitudes:
+
 ```
-overview (all.mmd)          focused views (lib.mmd, …)          full.mmd
-      ↑ min                         ↑ middle                    ↑ max
-  compact, workflow            scoped to one artifact        all steps,
-  and pattern level            kind, good for audit          nothing merged
+overview (all.mmd)        focused views (lib.mmd, …)        full.mmd
+      ↑ min                       ↑ middle                  ↑ max
+  compact, workflow          scoped to one artifact      every step,
+  and pattern level          kind, good for audit        nothing merged
 ```
 
-- **Overview** — the most compact representation. Shows which *action
-  patterns* will run (e.g. "we probe the lib from three sources"). Good for
-  communicating the workflow and catching missing patterns. One node per rule;
-  fetch step IDs embedded in artifact labels.
+- **Overview** — the most compact. One node per rule; every artifact
+  kind is one pool node. Fetch step IDs embedded in artifact labels
+  (`lib [1]`). Good for showing *which action patterns* will run and
+  catching missing ones.
+- **Focused views** — intermediate. Scoped to one artifact kind
+  (lib, binding OCaml, …). The focal kind expands into per-variant
+  nodes; other kinds stay collapsed at overview altitude. Good for
+  auditing one pipeline stage without losing the surrounding shape.
+- **Full** — every concrete step is a node, every artifact split
+  into input + product subgraphs. Unambiguous about what was tested.
 
-- **Focused views** — intermediate. Scoped to one artifact kind (lib, binding
-  OCaml, …). Expands the focal artifact into per-variant nodes; keeps other
-  kinds merged for context. Good for auditing one pipeline stage without losing
-  the surrounding structure.
-
-- **Full** — the most detailed representation. Every step is an individual
-  node. Artifacts are split into input subgraphs (PM-fetched + build-tree) and
-  product subgraphs (install/pack output). Artifact nodes carry version
-  annotations where the run version is meaningful (build_tree, staged, packed
-  PM). Stores appear as cylinder nodes upstream of fetch actions.
-
-The goal of this spectrum: overview is good for ideas and workflow discussion;
-full is unambiguous about what concrete things are being tested. The focused
-views are the working diagrams in between.
+The progression mirrors how people actually read these: start
+overview to confirm "we're running the right patterns", drop to a
+focused view to audit one column, fall to full only when chasing a
+specific concrete step.
 
 ### The truth invariant
 
-All diagrams in a run show the same underlying step set. No diagram introduces
-or hides steps — it only changes the level of node merging. An action ID `[N]`
-in any diagram refers to the same step as `[N]` in any other diagram for the
-same run. This makes diagrams comparable and the viewer's action list the
-single source of truth.
+An action ID `[N]` in any diagram refers to **the same step** as `[N]`
+in any other diagram for the same run. No diagram introduces or hides
+steps; it only changes the merging level.
 
-This invariant is enforced by a **post-generation checker** that runs after all
-diagrams are written. It scans every `.mmd` file for `[N]` references and
-verifies the union equals the full step set from `step_ids`. A mismatch logs a
-warning (`! invariant: missing step IDs [N]`) in `actions.log`. This catches
-regressions where a renderer parameter change accidentally drops a step from a
-view.
+This is enforced post-generation: after every diagram is written, an
+invariant checker scans every `.mmd` for `[N]` references and verifies
+the union equals the full step set from `step_ids`. Mismatches log a
+warning in `actions.log` (`! invariant: missing step IDs [N]`). The
+check exists because a parameter mistake in a renderer can quietly
+drop a step from one view, and you'd never notice if the diagram
+still "looks right".
+
+### Schema renderer vs step renderer
+
+Two renderers, one model:
+
+| Renderer | Used by | Drives nodes from | Strength |
+|---|---|---|---|
+| `mermaid_of_action_rule_schema` | overview, all focused views | `Canary_action.store_rules ~langs` + expansion params | predictable shape; non-focal kinds look the same across views |
+| `mermaid_full` (a.k.a. step renderer) | `full.mmd` only | concrete `action_step list` | every step gets its own node + subgraph; nothing is hidden |
+
+The schema renderer is the workhorse — overview and focused views
+share its core, differing only in which kinds are expanded. The step
+renderer exists to give one diagram where the IDs match concrete file
+paths. A "model-first" refactor that unifies them into one
+intermediate model + format-emitter would remove ~1100 LOC of
+duplication; see *Open work* below.
 
 ---
 
 ## Output layout
 
-Every `canary action <project>` run writes:
-
 ```
-_out/canary/projects/<project>/-run/
-  diagrams/
-    all.mmd             ← overview (min)
-    full.mmd            ← full expanded (max)
-    source.mmd          (if scan_source ran)
-    lib.mmd
-    probes.mmd
-    binding_ocaml.mmd
-    binding_python.mmd  (one per language)
-  result.html           ← interactive HTML viewer (all views + action list)
-  actions.log
-  run_info.json
-  run_state.json
+_out/canary/projects/<project>/
+  <step_tag>/                ← step output dirs (probe.log, inspect.json, …)
+  -run/
+    diagrams/
+      all.mmd                ← overview (min altitude)
+      full.mmd               ← every step (max altitude)
+      source.mmd             ← if scan_source ran
+      lib.mmd
+      probes.mmd
+      binding_ocaml.mmd
+      binding_python.mmd     ← one per binding language
+    result.html              ← interactive viewer (all diagrams + action list)
+    actions.log              ← per-step verdict log
+    run_info.json            ← project + env metadata
+    run_state.json           ← run verdicts (for view_project re-render)
 ```
 
-Step output directories sit one level up at `_out/canary/projects/<project>/`.
-`_out/canary/projects/index.html` is a top-level index across all runs.
+`_out/canary/projects/index.html` at the parent level is regenerated
+after every run and links to each project's `result.html`. Web-viewable
+files are copied to `docs/canary/projects/<project>/` for GitHub Pages.
 
 ---
 
-## Overview diagram (`all.mmd`)
+## The HTML viewer (result.html)
 
-Uses the schema renderer with all expansion parameters at their defaults.
-Every artifact kind is one node; every probe rule is one collapsed node.
+[`Canary_backend_html`](../../../src/canary/backend/canary_backend_html.ml)
+emits a single self-contained HTML file per run.
 
-- **Artifact pool nodes** (docs shape, orange) — one per kind. Fetch step
-  IDs embedded in the label (`lib [1]`); multiple fetch variants combined
-  (`lib [1][6]`).
-- **Action nodes** — hexagons for build/install/pack, pills for probes and
-  follow-up steps.
-- **Combined probe labels** — `probe_lib [17][18][19][20][21][22]` shows all
-  concrete step IDs for a rule via `steps_by_rule_tag`, with summary IDs
-  inlined via `summary_tags_by_canonical`. Likewise, `pack_binding_ocaml
-  [9][10][11]` inlines both pack and summary IDs. Summary inlining applies
-  when a probe/pack/fetch kind is not expanded; separate summary pills only
-  appear in views where the parent kind is expanded (lib, probes, binding_*).
-- **Status colours** — green (done), yellow (expected-fail), red (failed),
-  grey-dashed (skipped), light grey (not-in-spec).
-- **Edge colours** — match the downstream step status.
-
----
-
-## Full diagram (`full.mmd`)
-
-Step-level renderer (`mermaid_full` in `canary_diagram.ml`). Every step is an
-individual node; nothing is merged.
-
-### Artifact subgraphs
-
-Each artifact kind gets one or two subgraphs depending on whether the run
-produces a new artifact of that kind:
-
-| Kind | Input subgraph | Product subgraph |
-|---|---|---|
-| Lib (build + install) | `lib` — contains `lib (build_tree)` + `lib (apt)` | `lib (product)` — contains `lib (staged)` |
-| Binding (build + pack) | `ocaml binding` — `ocaml binding (build_tree)` | `ocaml binding (packed)` — `ocaml binding (opam)` |
-| Lib / Binding (fetch only) | single subgraph | — |
-| Source, Headers, App | single subgraph | — |
-
-**Input subgraph** = artifacts brought in from outside (PM-fetched) or built
-from source but not yet installed/packed.
-
-**Product subgraph** = artifacts produced by the canary run itself:
-`install_lib` → staged, `pack_binding` → packed PM artifact.
-
-### Version annotation
-
-Artifact nodes carry a version suffix where the run-level version is
-meaningful. Version strings come from `run_info.json` (each variant's
-`version` field, e.g. `"dev"` or `"4.15.2"`).
-
-| Variant | Annotated? | Reason |
-|---|---|---|
-| `build_tree` | ✓ | built from the spec's source version |
-| `staged` | ✓ | installed from the same source build |
-| packed PM (opam/pip) | ✓ | packed from the same source build |
-| PM-fetched (apt, opam, pip via fetch) | — | run version ≠ package version; actual package version needs a fetch-step write (future work) |
-
-### Store nodes
-
-Package manager sources appear as cylinder nodes (`@{ shape: cyl }`) upstream
-of their fetch action: `apt_store`, `opam_store`, `pip_store`, `git_store`.
-One store node per unique PM across all fetch steps.
-
-### Scan + configure chain
-
-When `scan_source` ran, the Full diagram chains it: `source_node -.-> A_scan_source --> A_configure`. The dashed edge marks scan as an annotation step (no gate); the solid edge into configure makes the dependency explicit.
-
----
-
-## Focused views (per-kind diagrams)
-
-Each view is generated by `mermaid_view` in `canary_diagram.ml`. All focused
-views use the **schema renderer** (`mermaid_of_action_rule_schema`), not the
-step renderer. The schema renderer gives every non-expanded kind a pool node
-by default; focal expansion parameters control what gets split out.
-
-### Design invariant: non-focal nodes look like the overview
-
-A binding-focused view must be composable with the overview: any non-focal
-artifact kind in `binding_ocaml.mmd` renders identically to the same node in
-`all.mmd`. Concretely:
-
-- Non-focal pool nodes use `docs` shape and the same label (including embedded
-  `[N]` IDs) as the overview.
-- Non-focal probe kinds stay as one collapsed pill with combined IDs — never
-  split into per-variant pills.
-- There are no subgraphs for non-focal kinds.
-
-This means a reader can mentally overlay a focused view on the overview without
-any translation: the focal artifact is the only thing that looks different.
-
-### `steps_by_rule_tag` variant for binding views
-
-Binding views use `steps_by_rule_tag_overview` (scan included in the
-`fetch_source` bucket) instead of `steps_by_rule_tag`. This gives the source
-pool node the label `source [1][2]` — matching the overview — rather than
-`source [1]` with a separate `scan_source [2]` hexagon. The binding focus is
-on the binding, not on source scanning; source stays as a pool node.
-
-### Focal probe expansion — `expand_probe_kinds`
-
-Each view expands only its own probe kind; others stay collapsed:
-
-| View | Expanded probe kind | Collapsed (combined ID) |
-|---|---|---|
-| `lib` | `Probe Lib` | all binding/app probes |
-| `binding_ocaml` | `Probe (Binding OCaml)` | lib, python, app probes |
-| `binding_python` | `Probe (Binding Python)` | lib, ocaml, app probes |
-| `probes` | all probe kinds | — |
-| `source` | none | all probes |
-
-The `pack` view is currently hidden (the pack pipeline is not yet a priority
-view; was removed to keep the tab count manageable).
-
-### Focal artifact expansion — `expand_artifact` and subgraphs
-
-Only `lib` and `binding_*` views expand their artifact node into per-variant
-nodes, wrapped in subgraph(s) that mirror the `full` diagram structure. Each
-per-variant node label embeds the **producer step's `[N]` ID** —
-`build_lib [5]` → `libz3.so (dev) [5]`, `fetch_lib [7]` → `libz3.so (4.15.2) [7]`,
-`pack_binding_ocaml [9]` → `z3 (dev) [9]`. This is computed by
-`_compute_expand` in `canary_diagram.ml`, which maps each variant to its
-producer step (build → build_tag, staged → install_lib, pack PM → pack step,
-fetch PM → fetch step). The `focal_predicate` colours focal steps solid green
-(`st_done`) and non-focal done steps dim green (`st_done_ctx`).
-
-### Subgraph structure for expanded kinds
-
-The schema renderer mirrors `mermaid_full`'s split when the expanded kind has
-a "product" variant (output of `install_lib` or `pack_binding`):
-
-| Kind | Input subgraph | Product subgraph |
-|---|---|---|
-| Lib (with `Install_lib` in rules) | `lib` — build_tree + PM-fetched variants | `lib (product)` — staged |
-| Binding OCaml (with `Publish` in rules) | `ocaml binding` — build_tree | `ocaml binding (opam)` — opam |
-| Binding Python (with `Publish` in rules) | `python binding` — build_tree | `python binding (pip)` — pip |
-| Any kind with no pack/install | single `<kind>_sg` subgraph | — |
-
-Product variant detection is rule-based (not heuristic): `Install_lib ∈ rules`
-→ "staged" for Lib; `Publish (Binding OCaml) ∈ rules` → "opam"; etc. This
-avoids the mis-classification that occurs when a PM-fetched variant (apt) is
-confused for a pack product just because it's not "build_tree" or "staged".
-
----
-
-## result.html — interactive viewer
-
-`canary_backend_html.ml` generates a self-contained HTML page per run.
-
-### Layout
-
-- **Left pane** — view selector tabs + Mermaid diagram block.
+- **Left pane** — view selector tabs + Mermaid block.
 - **Right pane** — action list (top) + step detail (bottom).
-
-### View selector
-
-Tabs: Overview, Full, Source (if ran), Lib, Probes, Binding (OCaml),
-Binding (Python). Clicking re-renders the Mermaid block without a page
-reload; the action list updates to reflect which steps have nodes in the
-new view (steps not in the current diagram are dimmed).
-
-### Action list
-
-Sorted by sequential step ID (1-based, execution order). Each row shows:
-
-```
-[N]  step_tag    STATUS-BADGE
-```
-
-Steps not present as nodes in the current diagram view are dimmed (0.3
-opacity). Clicking a row:
-1. Selects the row (blue highlight).
-2. Highlights the corresponding diagram node with a drop-shadow ring.
-3. Loads the step's output files in the detail panel (probe.log,
-   inspect.json, etc.) via relative fetch.
-
-### Diagram node clicks
-
-Clicking an `A_<tag>` node in the diagram selects the matching action list
-row and loads the step detail. Collapsed overview nodes (e.g. `A_probe_lib`
-representing three concrete steps) resolve to the first matching step tag
-in the action list via `STEPS[t] || STEPS.find(k => k.startsWith(t+'_'))`.
-
-### Step detail
-
-Lazily fetches files from the step's output directory (relative to `-run/`):
-`probe.log`, `inspect.json`, `summary_stub.json`, `install.log`,
-`symbols.log` — all variant-qualified (`probe_dev_1d8c50.log`).
+- **Cross-diagram navigation** — clicking an action list row
+  highlights the matching diagram node in the current view and
+  lazy-loads the step's output files (`probe.log`, `inspect.json`, …).
+  Conversely, clicking a node selects the action list row and loads
+  the same files.
+- **The viewer is the action list's source of truth** — diagrams
+  reflect that list, not the other way around. The truth invariant
+  (see above) guarantees that clicking `[5]` in the overview and
+  `[5]` in the full diagram select the same row.
 
 ---
 
-## index.html — top-level index
+## Open work
 
-`_out/canary/projects/index.html` is regenerated after every run. Lists all
-(project, variant) runs as a table with project / variant / source kind /
-overall status badge / link to `result.html`.
+Each item is tracked elsewhere; this section is the diagram-side index.
 
----
+- **Model-first renderer architecture** —
+  `mermaid_of_action_rule_schema` (~630 LOC) and `mermaid_full`
+  (~450 LOC) emit Mermaid text directly. Replacing both with a
+  format-agnostic `diagram_model` + a thin `mermaid_of_model` would
+  remove the duplicated node/edge/style logic and let the invariant
+  checker operate on the model rather than parsing `.mmd` output.
+  Largest single readability win available for backend/.
 
-## Future direction
+- **PM-fetched version annotation** — `mermaid_full` currently
+  annotates build-tree / staged / packed-PM artifacts with the run
+  version, but leaves PM-fetched artifacts (apt, opam, pip via fetch)
+  unannotated because the *actual installed version* isn't recorded.
+  Fixing requires each fetch step's script to write a `version.txt`.
 
-- **GH CI integration** — the web viewer currently shows only local run
-  results. The intent is to also fetch GH CI run results that are written back
-  to the repo (e.g. as JSON artifacts committed to a branch). This lets the
-  same viewer show local and CI results side by side, using the same diagram
-  and action-list infrastructure.
+- **GH CI result integration** — the viewer shows only local results
+  today. The intent is to also pull GH CI run results committed back
+  to the repo so the same viewer shows local and CI side-by-side.
 
-- **Version annotation for PM-fetched artifacts** — currently unannotated.
-  Requires each fetch step script to write a `version.txt` (e.g.
-  `dpkg-query -W libz3-dev | cut -f2`) so `mermaid_full` can read it.
+- **Connectivity-check false positives** — the post-gen invariant
+  checker's BFS path-finding misreports some legal routes through
+  intermediate artifact nodes. Fixed by the model-first rewrite, or
+  by patching the BFS directly.
 
-- **Bidirectional diagram highlight** — clicking an action list row sets a
-  drop-shadow on the diagram node, but `filter` on SVG `g` elements is not
-  reliably visible in all renderers. Needs investigation.
+- **Bundled mermaid.js** — viewer uses the CDN by default; offline
+  use needs a `--bundle-mermaid` flag (not yet wired).
 
-- **Bundled mermaid.js** — CDN is the current default; offline use
-  requires an explicit `--bundle-mermaid` flag (not yet implemented).
-
-- **Non-focal artifact expansion in non-lib focused views** — in the
-  `probes` view, `probe_lib_staged` routes to the merged `lib_node` rather
-  than a split `lib_staged_node`; the per-variant routing is only wired for
-  the focal artifact kind in `lib`/`binding_*` views.
-
-- **Model-first diagram architecture** — currently `mermaid_of_action_rule_schema`
-  (~630 lines) and `mermaid_full` (~450 lines) are two independent renderers that
-  both emit Mermaid text directly from rules/steps. They duplicate node emission,
-  edge routing, CSS styling, and status mapping. A model-first approach would:
-
-  1. Define a `diagram_model` type: nodes (with associated `[N]` IDs), edges,
-     styling — format-agnostic.
-  2. Build the fully-expanded model from rules + step data.
-  3. Apply merge/unmerge as operations on the model: collapse a kind into a pool
-     node, expand a kind into per-variant nodes, inline summaries. These are the
-     "zoom" operations that produce overview/focused/full views from one model.
-  4. Render with a thin `mermaid_of_model` walk over the model.
-
-  This eliminates the ~1100-line duplication and makes the zoom logic explicit
-  and testable. The invariant checker (see §Truth invariant) would operate
-  directly on the model rather than parsing rendered `.mmd` output.
-
-- **Invariant checker improvements** — the current checker verifies coverage
-  (all `[N]` appear) and connectivity (dependencies preserved across zoom
-  levels) by parsing `.mmd` output. With a model-first architecture it would
-  compare models directly. The connectivity check currently produces false
-  positives on BFS path finding; reachability through intermediate artifact
-  nodes needs fixing.
+Backlog refs: #36 (summary node fidelity), #37 (HTML viewer
+hardening).
 
 ---
 
-## Key renderer parameters
+## Where to read next
 
-### `mermaid_of_action_rule_schema` (overview + focused views)
-
-| Parameter | Type | Effect |
-|---|---|---|
-| `expand_artifact` | `(kind * (variant_id * label) list) option` | splits one artifact node into per-variant nodes |
-| `expand_probe_kinds` | `(kind * (probe_tag * variant_id * label) list) list` | splits probe action nodes into per-variant pill nodes |
-| `summary_tags_by_canonical` | `(string, string list) Hashtbl.t option` | provides all concrete step tags per canonical summary tag, used for combined ID labels |
-| `steps_by_rule_tag` | `(string, string list) Hashtbl.t option` | maps rule name → concrete step tags for combined ID labels on action nodes |
-| `step_ids` | `(string, int) Hashtbl.t option` | maps step tag → sequential ID for `[N]` labels |
-| `focal_predicate` | `(string -> bool) option` | distinguishes in-focus (`st_done`) from contextual (`st_done_ctx`) done steps |
-| `summary_rules` | `(rule * string) list` | which (rule, suffix) pairs produce summary follow-up nodes |
-| `has_scan` | `bool` | whether a scan_source node exists (affects source label and standalone node) |
-| `chain_scan` | `bool` | Full only: route configure through scan_source node |
-| `view_title` | `string option` | comment line in output (`"%% view: lib"`); omitted when None |
-
-### `mermaid_full` (full view)
-
-Separate step-level renderer (`action/canary_action.ml`). Every concrete step is an
-individual node; nothing is merged. Key inputs:
-
-| Parameter | Effect |
+| Want to know | Read |
 |---|---|
-| `variant_infos` | `(variant_id * version * action_tags) list` from `run_info.json`; drives version annotation on artifact nodes |
-| `step_ids` | same `[N]` label table |
-| `has_scan` | whether to emit scan_source node and dashed source edge |
-| `summary_rules` | accepted but ignored (summary and action IDs are both derived from `steps`) |
-| `artifact_names` | `artifact_kind -> string option`; supplies real artifact names for doc node labels (e.g. `libz3.so`) |
-| `view_title` | title comment in the output (default `"full"`) |
-| `status` | node status hashtable for colour classes and edge colours |
-
-Web-viewable output is copied to `docs/canary/projects/<project>/` for GitHub Pages.
-Build artifacts (`.ok`, `pack-repo/`, `*_example*`) are excluded.
+| The exact data the renderer consumes | `Canary_step_model.action_step` ([canary_step_model.ml](../../../src/canary/action/canary_step_model.ml)) |
+| Per-renderer parameter list | top of each function in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) — `mermaid_of_action_rule_schema`, `mermaid_full`, `mermaid_view` |
+| Why the schema and full renderers differ | [canary_diagram.ml:54+ and :1128+](../../../src/canary/backend/canary_diagram.ml) — the two big blocks |
+| How the HTML viewer dispatches clicks | [canary_backend_html.ml](../../../src/canary/backend/canary_backend_html.ml) |
+| Status-to-colour mapping | `result_status_of_run` in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) |
