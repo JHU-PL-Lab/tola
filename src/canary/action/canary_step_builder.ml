@@ -261,7 +261,7 @@ let project_dir_of ~root ~project =
 (* fetch_lib: install a system package and write marker *)
 let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir ~variant_key =
   let lib_ok = Canary_output_path.variant_file ~variant_key "lib.ok" in
-  [%string "%{Canary_store.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/%{lib_ok}"]
+  [%string "%{Canary_pm.system_install_cmd pm spec} && echo 'installed' > %{output_dir}/%{lib_ok}"]
 
 (* fetch_binding: install an opam package + ocamlfind, then write marker.
    We add ocamlfind explicitly because some bindings (e.g. ssl, dune-only

@@ -242,11 +242,11 @@ let verify_system_install_steps ~name pkg1 pkg2 =
   [
     run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
       ~shell:"bash"
-      (Canary_store.verify_system_install_cmd Apt
+      (Canary_pm.verify_system_install_cmd Apt
          (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
     run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
       ~shell:"bash"
-      (Canary_store.verify_system_install_cmd Brew
+      (Canary_pm.verify_system_install_cmd Brew
          (mk_system_package_spec ~linux_pkg:pkg1 ~macos_pkg:pkg2 ()));
   ]
 
@@ -254,10 +254,10 @@ let verify_system_package_steps ~name (spec : system_package_spec) =
   [
     run_step ~name:[%string "%{name} (Linux)"] ~guard:(On_runner_os Ubuntu)
       ~shell:"bash"
-      (Canary_store.verify_system_install_cmd Apt spec);
+      (Canary_pm.verify_system_install_cmd Apt spec);
     run_step ~name:[%string "%{name} (macOS)"] ~guard:(On_runner_os MacOS)
       ~shell:"bash"
-      (Canary_store.verify_system_install_cmd Brew spec);
+      (Canary_pm.verify_system_install_cmd Brew spec);
   ]
 
 let verify_opam_install_step ~name package =

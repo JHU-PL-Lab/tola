@@ -83,25 +83,12 @@ let system_pkg_for_pm spec pm =
   | Brew -> spec.macos_pkg
   | Apt | Opam | Pip | Unsupported -> spec.linux_pkg
 
-let pm_install_cmd pm ~pkg =
-  match pm with
-  | Brew -> Canary_pm_brew.install_cmd ~pkg
-  | Apt -> Canary_pm_apt.install_cmd ~pkg
-  | Opam -> [%string "eval $(opam env) && opam install %{pkg} -y --assume-depexts"]
-  | Pip -> Canary_pm_pip.install_cmd ~pkg
-  | Unsupported -> [%string "echo 'no package manager for %{pkg}' && false"]
-
-let system_install_cmd pm (spec : system_package_spec) =
-  pm_install_cmd pm ~pkg:(system_pkg_for_pm spec pm)
-
-let verify_system_install_cmd pm (spec : system_package_spec) =
-  let pkg = system_pkg_for_pm spec pm in
-  match pm with
-  | Apt -> Canary_pm_apt.verify_installed_cmd ~pkg
-  | Brew -> Canary_pm_brew.verify_installed_cmd ~pkg
-  | Pip -> Canary_pm_pip.verify_installed_cmd ~pkg
-  | Opam | Unsupported ->
-      [%string "echo 'no verify command for %{pkg}' && false"]
+(* The PM dispatchers (pm_install_cmd, system_install_cmd,
+   verify_system_install_cmd) moved to tool/canary_pm.ml on 2026-06-01
+   (Phase 9a) to fix the base→tool layer reversal. The per-PM drivers
+   live in tool/canary_pm_{apt,brew,opam,pip}.ml; their dispatcher
+   belongs next to them, not here. base/canary_store keeps only types
+   and pure helpers. *)
 
 (* ── Distro ──
    Cross-cutting: affects both source local-path lookup and system PM

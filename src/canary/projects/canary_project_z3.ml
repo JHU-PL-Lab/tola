@@ -374,7 +374,7 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
       Some
         (fun ~output_dir ~variant_key ->
           let lib_ok = Canary_output_path.variant_file ~variant_key "lib.ok" in
-          let install = Canary_store.pm_install_cmd pm ~pkg:"z3" in
+          let install = Canary_pm.install_cmd pm ~pkg:"z3" in
           [%string "%{install} && echo 'installed' > %{output_dir}/%{lib_ok}"]);
     fetch_binding =
       (let python_entry =
