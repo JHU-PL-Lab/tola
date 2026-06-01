@@ -94,7 +94,7 @@ let script_spec (d : t) : Canary_action.script_spec =
     Canary_action.empty_script_spec with
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      [ (Canary_artifact_api.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
+      [ (Canary_lang.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec) ];
     probe_lib =
       [ ( Canary_store.Pm (Canary_store.Sys_pm { pm }),
           fun ~output_dir ~variant_key ->
@@ -103,8 +103,8 @@ let script_spec (d : t) : Canary_action.script_spec =
             Printf.sprintf "%s\n%s" resolve probe ) ];
     probe_binding =
       [
-        (Canary_artifact_api.OCaml,
-         Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
+        (Canary_lang.OCaml,
+         Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
          (fun ~output_dir ~variant_key ->
            Canary_action.probe_ocaml_cmd ~binding_lib:d.binding_lib
              ~example:d.example_file ~target:d.example_target

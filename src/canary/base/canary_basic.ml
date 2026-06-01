@@ -31,7 +31,11 @@ type compile_mode = Native | Bytecode
     replace this coarse grouping — action dispatch (fetch/build/pack/probe)
     still operates at the [Binding lang] grain. The fine roles surface in
     inspector/comparator code under canonical names. *)
-type artifact_kind = Source | Headers | Lib | Binding of Canary_artifact_api.lang | App
+(* Binding language vocabulary lives in [Canary_lang] — a sibling file
+   so [Canary_store] can use [lang] without circular import via
+   [Canary_basic]. *)
+
+type artifact_kind = Source | Headers | Lib | Binding of Canary_lang.lang | App
 
 let kind_order = function
   | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
@@ -71,7 +75,7 @@ type project_spec = {
   root : string;
   version : string;
   commit : string;
-  bindings : (Canary_artifact_api.lang * package_manager) list;
+  bindings : (Canary_lang.lang * package_manager) list;
   (* graph capabilities *)
   system_pm : package_manager;
   has_source : bool;
@@ -99,7 +103,7 @@ type phase_kind =
   | Pm_install_local of package_manager
   | Cmake_buildgen of step
   | Cmake_build of step
-  | Probe_test of { lang : Canary_artifact_api.lang }
+  | Probe_test of { lang : Canary_lang.lang }
   | Run_command of { name : string; command : string }
 
 type step_phase = {
@@ -175,8 +179,6 @@ type canary_config = {
 
 (* ── Functions ── *)
 
-let string_of_lang = Canary_artifact_api.string_of_lang
-
 (** Stringify an {!artifact_kind} for action tags and log output. Output
     strings map to surface-theory canonical-name groups:
 
@@ -195,7 +197,7 @@ let string_of_artifact_kind = function
   | Source -> "source"
   | Headers -> "headers"
   | Lib -> "lib"
-  | Binding lang -> [%string "%{Canary_artifact_api.string_of_lang lang}_binding"]
+  | Binding lang -> [%string "%{Canary_lang.string_of_lang lang}_binding"]
   | App -> "app"
 
 
@@ -209,7 +211,7 @@ let name_of_phase (phase : step_phase) =
       [%string "Install from local %{string_of_pm pm} repo"]
   | Cmake_buildgen _ -> "Configure with CMake"
   | Cmake_build _ -> "Build with CMake"
-  | Probe_test { lang } -> [%string "Probe %{string_of_lang lang} binding"]
+  | Probe_test { lang } -> [%string "Probe %{Canary_lang.string_of_lang lang} binding"]
   | Run_command { name; _ } -> name
 
 let detect_distro () =
@@ -407,7 +409,7 @@ type rule =
   | Configure
   | Build_headers
   | Build_lib
-  | Build_binding of Canary_artifact_api.lang
+  | Build_binding of Canary_lang.lang
   | Install_lib
   | Build_app
   | Fetch of artifact_kind
@@ -418,18 +420,18 @@ let string_of_rule = function
   | Configure -> "configure"
   | Build_headers -> "build_headers"
   | Build_lib -> "build_lib"
-  | Build_binding lang -> [%string "build_binding_%{Canary_artifact_api.string_of_lang lang}"]
+  | Build_binding lang -> [%string "build_binding_%{Canary_lang.string_of_lang lang}"]
   | Install_lib -> "install_lib"
   | Build_app -> "build_app"
-  | Fetch (Binding lang) -> [%string "fetch_binding_%{Canary_artifact_api.string_of_lang lang}"]
+  | Fetch (Binding lang) -> [%string "fetch_binding_%{Canary_lang.string_of_lang lang}"]
   | Fetch kind -> [%string "fetch_%{string_of_artifact_kind kind}"]
-  | Publish (Binding lang) -> [%string "pack_binding_%{Canary_artifact_api.string_of_lang lang}"]
+  | Publish (Binding lang) -> [%string "pack_binding_%{Canary_lang.string_of_lang lang}"]
   | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
-  | Probe (Binding lang) -> [%string "probe_binding_%{Canary_artifact_api.string_of_lang lang}"]
+  | Probe (Binding lang) -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
   | Probe kind -> [%string "probe_%{string_of_artifact_kind kind}"]
 
 let rule_of_string s =
-  let module A = Canary_artifact_api in
+  let module A = Canary_lang in
   let lang_of_str = function
     | "ocaml"  -> Some A.OCaml  | "python" -> Some A.Python
     | "cpp"    -> Some A.Cpp    | "rust"   -> Some A.Rust

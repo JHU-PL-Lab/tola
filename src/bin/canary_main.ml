@@ -73,7 +73,7 @@ let action_cmd =
     let spec = if quick then Canary_action.no_source spec else spec in
     let steps =
       Canary_action.derive_steps ~root ~project:[%string "z3/%{dev_tag}"]
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         spec
     in
     let src_stable = Canary_project_z3.z3_source_stable in
@@ -82,7 +82,7 @@ let action_cmd =
     in
     let steps_stable =
       Canary_action.derive_steps ~root ~project:"z3/stable"
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         spec_stable
     in
     Canary_action.run_project_multi ~failfast ?cache_path ~root
@@ -104,7 +104,7 @@ let action_cmd =
   let run_sqlite ~root ~failfast ~cache_path =
     let steps =
       Canary_action.derive_steps ~root ~project:"sqlite"
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         Canary_project_sqlite.script_spec
     in
     run_with_info ~artifact_names:Canary_project_sqlite.script_spec.artifact_name
@@ -118,7 +118,7 @@ let action_cmd =
   let run_tiny ~root ~failfast ~cache_path =
     let steps =
       Canary_action.derive_steps ~root ~project:"tiny"
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         Canary_project_tiny.script_spec
     in
     run_with_info ~artifact_names:Canary_project_tiny.script_spec.artifact_name
@@ -153,7 +153,7 @@ let action_cmd =
     in
     let steps =
       Canary_action.derive_steps ~root ~project:[%string "llvm/%{dev_tag}"]
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         spec
     in
     let pb = Canary_project_llvm.prebuilt in
@@ -171,7 +171,7 @@ let action_cmd =
     let spec_19 = Canary_project_llvm.mk_script_spec ~source:src_19 distro in
     let steps_19 =
       Canary_action.derive_steps ~root ~project:"llvm/19"
-        ~langs:Canary_artifact_api.[ OCaml; Python ]
+        ~langs:Canary_lang.[ OCaml; Python ]
         spec_19
     in
     Canary_action.run_project_multi ~failfast ?cache_path ~root

@@ -64,16 +64,16 @@ let script_spec : Canary_action.script_spec =
     Canary_action.empty_script_spec with
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      (Canary_artifact_api.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
+      (Canary_lang.OCaml, Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
       ::
       (match sqlite_python_config with
        | Python_config p ->
-           [ (Canary_artifact_api.Python,
+           [ (Canary_lang.Python,
               fun ~output_dir ~variant_key -> Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key) ]
        | Ocaml_config _ -> []);
     probe_binding =
-      (Canary_artifact_api.OCaml,
-       Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.OCaml; pm = Canary_store.Opam }),
+      (Canary_lang.OCaml,
+       Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
        fun ~output_dir ~variant_key ->
          Canary_action.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
            ~example:ocaml.example_file ~target:ocaml.example_target
@@ -82,8 +82,8 @@ let script_spec : Canary_action.script_spec =
          this probe step just runs the import. *)
       (match sqlite_python_config with
        | Python_config p ->
-           [ (Canary_artifact_api.Python,
-              Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; pm = Canary_store.Pip }),
+           [ (Canary_lang.Python,
+              Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; pm = Canary_store.Pip }),
               fun ~output_dir ~variant_key ->
                 Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key) ]
        | Ocaml_config _ -> []);
@@ -93,7 +93,7 @@ let script_spec : Canary_action.script_spec =
        fetch step here — Phase 3d's pre-cache benefit only kicks in for
        projects that opt into the api_source flow.) *)
     inspect = (fun rule loc -> match rule, loc with
-      | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_artifact_api.Python; _ })) ->
+      | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.python_inspect_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ~variant_key ())
@@ -104,7 +104,7 @@ let script_spec : Canary_action.script_spec =
       | _ -> None);
     artifact_name = (function
       | Canary_basic.Lib -> Some "libsqlite3.so"
-      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "sqlite3"
-      | Canary_basic.Binding Canary_artifact_api.Python -> Some "sqlite3"
+      | Canary_basic.Binding Canary_lang.OCaml -> Some "sqlite3"
+      | Canary_basic.Binding Canary_lang.Python -> Some "sqlite3"
       | _ -> None);
   }

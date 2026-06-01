@@ -13,22 +13,21 @@ open Base
    are derivable from action type — not declared on binding_api.
    See doc/canary/design/api_surface.md §4 for the design rationale. *)
 
-type lang =
+(* [lang] moved to [base/canary_lang.ml] on 2026-06-01 to eliminate the
+   base→surface layer reversal. Re-exported here as a transparent alias
+   so existing [open Canary_artifact_api] users see the constructors
+   ([OCaml], [Python], …) without needing to also [open Canary_lang]. *)
+type lang = Canary_lang.lang =
   | Cpp
   | OCaml
   | Python
   | Rust
   | CSharp
   | Java
-[@@deriving show]
-
-let string_of_lang = function
-  | Cpp -> "cpp" | OCaml -> "ocaml"
-  | Python -> "python" | Rust -> "rust" | CSharp -> "csharp" | Java -> "java"
-
-let display_of_lang = function
-  | Cpp -> "C++" | OCaml -> "OCaml"
-  | Python -> "Python" | Rust -> "Rust" | CSharp -> "C#" | Java -> "Java"
+let string_of_lang = Canary_lang.string_of_lang
+let display_of_lang = Canary_lang.display_of_lang
+let show_lang = Canary_lang.show_lang
+let pp_lang = Canary_lang.pp_lang
 
 type native_api_kind =
   | C
@@ -86,7 +85,7 @@ type native_api = {
 [@@deriving show]
 
 type binding_api = {
-  lang             : lang;               (** explicit language tag — Binding is always lang-keyed *)
+  lang             : Canary_lang.lang;               (** explicit language tag — Binding is always lang-keyed *)
   source_dir       : string option;      (** Some _ ↔ Build_binding applicable; headers here or in -dev pkg *)
   module_watchlist : string list;        (** L3: dotted paths ok: "Llvm.Opcode.UncondBr" *)
   (* L2: type/function signatures to inspect (.cmi digests, C prototypes).
@@ -116,19 +115,19 @@ type t = {
 }
 [@@deriving show]
 
-let _ = show_lang
+let _ = Canary_lang.show_lang
 let _ = show
 
 (* Watchlist accessors — used by summary closures in project specs *)
 
 let native_watchlist (api : t) = api.native_api.stable_symbols
 
-let binding_watchlist_exn (api : t) (lang : lang) =
+let binding_watchlist_exn (api : t) (lang : Canary_lang.lang) =
   match List.find api.binding_apis ~f:(fun b -> Poly.equal b.lang lang) with
   | Some b -> b.module_watchlist
   | None ->
       failwith
-        [%string "canary_artifact_api: no binding for lang %{show_lang lang}"]
+        [%string "canary_artifact_api: no binding for lang %{Canary_lang.show_lang lang}"]
 
 (* Shell warning prefix for a summary command when a stable (fetch-only)
    source reuses the dev api_source spec. *)

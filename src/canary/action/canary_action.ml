@@ -74,17 +74,17 @@ type script_spec = {
   build_headers : (output_dir:string -> variant_key:string -> string) option;
   fetch_headers : (output_dir:string -> variant_key:string -> string) option;
   build_lib : (output_dir:string -> variant_key:string -> string) option;
-  build_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  build_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
   install_lib : (output_dir:string -> variant_key:string -> string) option;
   build_app : (output_dir:string -> variant_key:string -> string) option;
   fetch_lib : (output_dir:string -> variant_key:string -> string) option;
-  fetch_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  fetch_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
   fetch_app : (output_dir:string -> variant_key:string -> string) option;
   pack_lib : (output_dir:string -> variant_key:string -> string) option;
-  pack_binding : (Canary_artifact_api.lang * (output_dir:string -> variant_key:string -> string)) list;
+  pack_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
   pack_app : (output_dir:string -> variant_key:string -> string) option;
   probe_lib : (location * (output_dir:string -> variant_key:string -> string)) list;
-  probe_binding : (Canary_artifact_api.lang * location * (output_dir:string -> variant_key:string -> string)) list;
+  probe_binding : (Canary_lang.lang * location * (output_dir:string -> variant_key:string -> string)) list;
   probe_app : (output_dir:string -> variant_key:string -> string) option;
   (* Optional per-rule check_post override. None = use default (non-empty dir). *)
   check_post : (rule -> (output_dir:string -> variant_key:string -> bool) option);
@@ -114,7 +114,7 @@ type script_spec = {
       Renamed 2026-05-28 (Phase 4 Pass 2) from [binding_summary] —
       the old name reflected the pre-Phase-2 "summary" terminology
       that became "inspect" everywhere else. *)
-  binding_user_facing_pkg : (Canary_artifact_api.lang * string) list;
+  binding_user_facing_pkg : (Canary_lang.lang * string) list;
   (* Optional note prepended to auto-generated binding summaries (shell echo).
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
@@ -718,7 +718,7 @@ let check_api_consistency (spec : script_spec) =
         if not any_source_dir then
           failwith "api_source: script_spec has build_binding but no binding_api declares source_dir"
 
-let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_artifact_api.[ OCaml ]) (spec : script_spec) : action_step list =
+let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : script_spec) : action_step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~rule ~deps ~cmd =
@@ -776,7 +776,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
              (Fetch/Publish Binding) so they're cached *before*
              probe_binding evaluates Expect_compat_failure. *)
           let wl =
-            Canary_artifact_api.binding_watchlist_exn api Canary_artifact_api.OCaml
+            Canary_artifact_api.binding_watchlist_exn api Canary_lang.OCaml
           in
           let mli =
             prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
@@ -803,7 +803,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
              expectation. Mirrors the OCaml mli/stub placement. *)
           let wl =
             Canary_artifact_api.binding_watchlist_exn api
-              Canary_artifact_api.Python
+              Canary_lang.Python
           in
           let py =
             prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
@@ -815,12 +815,12 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_arti
         match rule with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
             (match List.Assoc.find spec.binding_user_facing_pkg
-                     ~equal:Poly.equal Canary_artifact_api.OCaml with
+                     ~equal:Poly.equal Canary_lang.OCaml with
              | None -> []
              | Some pkg -> ocaml_install_summaries pkg)
         | Fetch (Binding Python) ->
             (match List.Assoc.find spec.binding_user_facing_pkg
-                     ~equal:Poly.equal Canary_artifact_api.Python with
+                     ~equal:Poly.equal Canary_lang.Python with
              | None -> []
              | Some pkg -> python_install_inspect pkg)
         | _ -> []
@@ -1046,7 +1046,7 @@ let save_run_state ~dir ~project_name steps
   in
   let kind_name k = string_of_artifact_kind k in
   let artifact_names_json =
-    [ Lib; Binding Canary_artifact_api.OCaml; Binding Canary_artifact_api.Python ]
+    [ Lib; Binding Canary_lang.OCaml; Binding Canary_lang.Python ]
     |> List.filter_map ~f:(fun k ->
         match artifact_name k with
         | Some n -> Some (`Assoc [("kind", `String (kind_name k)); ("name", `String n)])
@@ -1116,8 +1116,8 @@ let load_run_state ~dir =
           let name = a |> member "name" |> to_string in
           match kind_str with
           | "lib" -> Some (Canary_basic.Lib, name)
-          | "ocaml_binding" -> Some (Canary_basic.Binding Canary_artifact_api.OCaml, name)
-          | "python_binding" -> Some (Canary_basic.Binding Canary_artifact_api.Python, name)
+          | "ocaml_binding" -> Some (Canary_basic.Binding Canary_lang.OCaml, name)
+          | "python_binding" -> Some (Canary_basic.Binding Canary_lang.Python, name)
           | _ -> None)
       in
       fun k -> List.Assoc.find pairs ~equal:Poly.equal k

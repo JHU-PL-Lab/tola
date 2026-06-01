@@ -370,8 +370,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
           | Binding lang ->
               if List.mem publish_kinds kind ~equal:Poly.equal then
                 Some (match lang with
-                  | Canary_artifact_api.OCaml -> "opam"
-                  | Canary_artifact_api.Python -> "pip"
+                  | Canary_lang.OCaml -> "opam"
+                  | Canary_lang.Python -> "pip"
                   | _ -> "packed")
               else None
           | _ -> None
@@ -698,7 +698,7 @@ let result_status_of_run (steps : action_step list)
         | Publish (Binding lang) | Probe (Binding lang) -> Some lang
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
-    |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
+    |> fun ls -> if List.is_empty ls then Canary_lang.[ OCaml ] else ls
   in
   List.iter (store_rules ~langs) ~f:(fun r ->
       Hashtbl.set tbl ~key:(string_of_rule r) ~data:Not_in_spec);
@@ -843,7 +843,7 @@ let mermaid_of_steps
 type view = [
   | `Source
   | `Lib
-  | `Binding of Canary_artifact_api.lang
+  | `Binding of Canary_lang.lang
   | `Probes
   | `Pack
   | `Full
@@ -852,7 +852,7 @@ type view = [
 let view_name : view -> string = function
   | `Source -> "source"
   | `Lib -> "lib"
-  | `Binding lang -> "binding_" ^ Canary_artifact_api.string_of_lang lang
+  | `Binding lang -> "binding_" ^ Canary_lang.string_of_lang lang
   | `Probes -> "probes"
   | `Pack -> "pack"
   | `Full -> "full"
@@ -867,7 +867,7 @@ let focal_tag_pred (v : view) (tag : string) : bool =
       || String.equal tag "install_lib"
       || String.is_prefix tag ~prefix:"probe_lib"
   | `Binding lang ->
-      let lang_str = Canary_artifact_api.string_of_lang lang in
+      let lang_str = Canary_lang.string_of_lang lang in
       String.is_substring tag ~substring:("binding_" ^ lang_str)
   | `Probes -> String.is_prefix tag ~prefix:"probe_"
   | `Pack -> String.is_prefix tag ~prefix:"pack_"
@@ -883,7 +883,7 @@ let view_predicate (v : view) (s : action_step) : bool =
       || String.equal s.tag "install_lib"
       || String.is_prefix s.tag ~prefix:"probe_lib"
   | `Binding lang ->
-      let lang_str = Canary_artifact_api.string_of_lang lang in
+      let lang_str = Canary_lang.string_of_lang lang in
       String.is_substring s.tag ~substring:("binding_" ^ lang_str)
   | `Probes ->
       String.is_prefix s.tag ~prefix:"probe_"
@@ -989,8 +989,8 @@ let _fetch_pm_of_tag kind tag =
   | None -> (match kind with
       | Source -> "git"
       | Lib -> "apt"
-      | Binding Canary_artifact_api.OCaml -> "opam"
-      | Binding Canary_artifact_api.Python -> "pip"
+      | Binding Canary_lang.OCaml -> "opam"
+      | Binding Canary_lang.Python -> "pip"
       | _ -> "pkg")
 
 (* Shared helper: version string for an (artifact_kind, artifact_variant_id) pair.
@@ -1075,7 +1075,7 @@ let _compute_expand
              then fetch step. *)
           let pack_tag = match artifact_kind with
             | Binding lang ->
-                let t = "pack_binding_" ^ Canary_artifact_api.string_of_lang lang in
+                let t = "pack_binding_" ^ Canary_lang.string_of_lang lang in
                 if List.exists steps ~f:(fun s -> String.equal s.tag t) then Some t else None
             | Lib ->
                 let t = "pack_lib" in
@@ -1083,8 +1083,8 @@ let _compute_expand
             | _ -> None
           in
           let from_pack = match pack_tag, artifact_kind with
-            | Some pt, Binding Canary_artifact_api.OCaml when String.equal resolved_vid "opam" -> Some pt
-            | Some pt, Binding Canary_artifact_api.Python when String.equal resolved_vid "pip" -> Some pt
+            | Some pt, Binding Canary_lang.OCaml when String.equal resolved_vid "opam" -> Some pt
+            | Some pt, Binding Canary_lang.Python when String.equal resolved_vid "pip" -> Some pt
             | _ -> None
           in
           match from_pack with
@@ -1151,7 +1151,7 @@ let mermaid_full
   let kind_str k = string_of_artifact_kind k in
   let kind_label = function
     | Source -> "source" | Headers -> "headers" | Lib -> "lib"
-    | Binding lang -> Canary_artifact_api.string_of_lang lang ^ " binding"
+    | Binding lang -> Canary_lang.string_of_lang lang ^ " binding"
     | App -> "app"
   in
   (* Artifact docs node id for (kind, variant_id).  Single-variant uses canonical. *)
@@ -1167,7 +1167,7 @@ let mermaid_full
       | Lib -> if has_step "build_lib" then Some "build_lib" else None
       | Headers -> if has_step "build_headers" then Some "build_headers" else None
       | Binding lang ->
-          let t = "build_binding_" ^ Canary_artifact_api.string_of_lang lang in
+          let t = "build_binding_" ^ Canary_lang.string_of_lang lang in
           if has_step t then Some t else None
       | App -> if has_step "build_app" then Some "build_app" else None
       | Source -> None
@@ -1183,14 +1183,14 @@ let mermaid_full
        pack produces an opam/pip artifact that is a distinct variant from build_tree. *)
     let pack_pm =
       let pack_t = match kind with
-        | Binding lang -> "pack_binding_" ^ Canary_artifact_api.string_of_lang lang
+        | Binding lang -> "pack_binding_" ^ Canary_lang.string_of_lang lang
         | Lib -> "pack_lib"
         | _ -> ""
       in
       if (not (String.is_empty pack_t)) && has_step pack_t then
         Some (match kind with
-          | Binding Canary_artifact_api.OCaml -> "opam"
-          | Binding Canary_artifact_api.Python -> "pip"
+          | Binding Canary_lang.OCaml -> "opam"
+          | Binding Canary_lang.Python -> "pip"
           | _ -> fetch_pm kind pack_t)
       else None
     in
@@ -1258,11 +1258,11 @@ let mermaid_full
     match kind with
     | Lib -> if has_step "install_lib" then [ "staged" ] else []
     | Binding lang ->
-        let pack_t = "pack_binding_" ^ Canary_artifact_api.string_of_lang lang in
+        let pack_t = "pack_binding_" ^ Canary_lang.string_of_lang lang in
         if has_step pack_t then
           [ (match lang with
-             | Canary_artifact_api.OCaml -> "opam"
-             | Canary_artifact_api.Python -> "pip"
+             | Canary_lang.OCaml -> "opam"
+             | Canary_lang.Python -> "pip"
              | _ -> fetch_pm (Binding lang) pack_t) ]
         else []
     | _ -> []
@@ -1458,7 +1458,7 @@ let mermaid_full
         let pack_tag = match kind with
           | Lib -> if has_step "pack_lib" then Some "pack_lib" else None
           | Binding lang ->
-              let t = "pack_binding_" ^ Canary_artifact_api.string_of_lang lang in
+              let t = "pack_binding_" ^ Canary_lang.string_of_lang lang in
               if has_step t then Some t else None
           | App -> if has_step "pack_app" then Some "pack_app" else None
           | _ -> None
@@ -1499,9 +1499,9 @@ let mermaid_full
         if Poly.equal kind App then
           Option.iter build_tag ~f:(fun bt ->
               let ocaml_n = match List.find kind_data ~f:(fun (k, _) ->
-                  Poly.equal k (Binding Canary_artifact_api.OCaml)) with
-                | Some (_, (bvs, _, _, _)) -> primary_nid (Binding Canary_artifact_api.OCaml) bvs
-                | None -> art_nid_canonical (Binding Canary_artifact_api.OCaml)
+                  Poly.equal k (Binding Canary_lang.OCaml)) with
+                | Some (_, (bvs, _, _, _)) -> primary_nid (Binding Canary_lang.OCaml) bvs
+                | None -> art_nid_canonical (Binding Canary_lang.OCaml)
               in
               let lib_n = match List.find kind_data ~f:(fun (k, _) -> Poly.equal k Lib) with
                 | Some (_, (lvs, _, _, _)) -> primary_nid Lib lvs
@@ -1616,7 +1616,7 @@ let mermaid_view
     match kind with
     | Lib -> "probe_lib", "build_lib", "fetch_lib"
     | Binding lang ->
-        let s = Canary_artifact_api.string_of_lang lang in
+        let s = Canary_lang.string_of_lang lang in
         "probe_binding_" ^ s, "build_binding_" ^ s, "fetch_binding_" ^ s
     | App -> "probe_app", "build_app", "fetch_app"
     | _ -> "", "", ""
@@ -1652,7 +1652,7 @@ let mermaid_view
   | `Binding lang ->
       (* Focused binding view: schema graph with the focal binding expanded per-variant.
          All other kinds render as overview-style pool nodes (no subgraphs). *)
-      let s_lang = Canary_artifact_api.string_of_lang lang in
+      let s_lang = Canary_lang.string_of_lang lang in
       let expand =
         _compute_expand ~artifact_kind:(Binding lang)
           ~probe_prefix:("probe_binding_" ^ s_lang)
@@ -1869,7 +1869,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
         | Publish (Binding lang) | Probe (Binding lang) -> Some lang
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
-    |> fun ls -> if List.is_empty ls then Canary_artifact_api.[ OCaml ] else ls
+    |> fun ls -> if List.is_empty ls then Canary_lang.[ OCaml ] else ls
   in
   let has_scan = List.exists steps ~f:(fun s -> String.equal s.tag "scan_source") in
   let summary_rules =
@@ -2006,7 +2006,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
           | `Probes -> "Probes"
           | `Full -> "Full"
           | `Binding lang ->
-              "Binding (" ^ Canary_artifact_api.display_of_lang lang ^ ")"
+              "Binding (" ^ Canary_lang.display_of_lang lang ^ ")"
         in
         Canary_backend_html.{ name = n; title; mmd })
   in

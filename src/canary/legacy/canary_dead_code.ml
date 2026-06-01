@@ -238,14 +238,14 @@ ninja -C build build_z3_python_bindings|}
           };
           {
             kind = Pm_install_local Opam;
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
             requires = [ { kind = Binding OCaml; name = "z3"; location = Build_tree } ];
-            produces = [ { kind = App; name = "z3"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            produces = [ { kind = App; name = "z3"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
-            requires = [ { kind = App; name = "z3"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
+            requires = [ { kind = App; name = "z3"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
             produces = [];
           };
         ];
@@ -305,9 +305,9 @@ module Llvm = struct
           };
           {
             kind = Pm_install None;
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
             requires = [ { kind = Lib; name = "llvm"; location = Build_tree } ];
-            produces = [ { kind = Binding OCaml; name = "llvm"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            produces = [ { kind = Binding OCaml; name = "llvm"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
           };
           {
             kind =
@@ -316,20 +316,20 @@ module Llvm = struct
                   name = "Install llvmlite";
                   command = "python3 -m pip install llvmlite";
                 };
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
             requires = [ { kind = Lib; name = "llvm"; location = Build_tree } ];
-            produces = [ { kind = App; name = "llvmlite"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            produces = [ { kind = App; name = "llvmlite"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
-            requires = [ { kind = Binding OCaml; name = "llvm"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
+            requires = [ { kind = Binding OCaml; name = "llvm"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
             produces = [];
           };
           {
             kind = Probe_test { lang = Python };
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
-            requires = [ { kind = App; name = "llvmlite"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
+            requires = [ { kind = App; name = "llvmlite"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
             produces = [];
           };
         ];
@@ -394,14 +394,14 @@ module Sqlite = struct
           };
           {
             kind = Pm_install None;
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
             requires = [ { kind = Lib; name = "sqlite3"; location = Build_tree } ];
-            produces = [ { kind = App; name = "sqlite3"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            produces = [ { kind = App; name = "sqlite3"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
           };
           {
             kind = Probe_test { lang = OCaml };
-            location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam });
-            requires = [ { kind = App; name = "sqlite3"; location = Pm (Lang_pm { lang = Canary_artifact_api.OCaml; pm = Opam }) } ];
+            location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam });
+            requires = [ { kind = App; name = "sqlite3"; location = Pm (Lang_pm { lang = Canary_lang.OCaml; pm = Opam }) } ];
             produces = [];
           };
         ];

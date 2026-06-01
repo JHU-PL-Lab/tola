@@ -23,10 +23,12 @@
 ; action/canary_action.ml → module Canary_action). Layers:
 ;
 ;   base/    Layer 0 — vocabulary: foundational types every other layer
-;                      uses (artifact_kind, runner_os, cmdline, location,
-;                      distro, package_manager, pm_properties, rule,
-;                      version, output-path conventions). Pure data,
-;                      no theory of its own.
+;                      uses (lang, artifact_kind, runner_os, cmdline,
+;                      location, distro, package_manager, pm_properties,
+;                      rule, version, output-path conventions). Pure
+;                      data, no theory of its own. canary_lang is its
+;                      own file so canary_store and canary_basic can
+;                      both depend on it without a cycle.
 ;   surface/ Layer 1 — surface theory: the API-surface declaration types
 ;                      (canary_artifact_api) and the c1..c8 contract
 ;                      comparators (canary_compat_contract). Pure, no I/O

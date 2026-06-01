@@ -153,7 +153,7 @@ let make_action_rule ~rules ~versions ~name ~source () =
             let bindings =
               let ocaml_bindings = get pools (Binding OCaml) in
               if not (List.is_empty ocaml_bindings) then ocaml_bindings
-              else List.concat_map Canary_artifact_api.[ OCaml; Python; Rust; Cpp; CSharp; Java ]
+              else List.concat_map Canary_lang.[ OCaml; Python; Rust; Cpp; CSharp; Java ]
                      ~f:(fun l -> get pools (Binding l))
             in
             let libs = get pools Lib in
@@ -383,14 +383,14 @@ let rec action_path_of_node (n : artifact_node) =
   if not (is_source_location n.origin) then
     (* Fetched from store *)
     (match n.a_kind with
-     | Binding lang -> [%string "fetch_binding_%{Canary_artifact_api.string_of_lang lang}"]
+     | Binding lang -> [%string "fetch_binding_%{Canary_lang.string_of_lang lang}"]
      | kind -> [%string "fetch_%{string_of_artifact_kind kind}"])
   else
     (* Built: trace the chain *)
     let build_action = match n.a_kind with
       | Headers -> "build_headers"
       | Lib -> "build_lib"
-      | Binding lang -> [%string "build_binding_%{Canary_artifact_api.string_of_lang lang}"]
+      | Binding lang -> [%string "build_binding_%{Canary_lang.string_of_lang lang}"]
       | App -> "build_app"
       | Source -> "build_source"
     in

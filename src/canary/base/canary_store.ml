@@ -20,7 +20,7 @@ type system_package_spec = {
    Future variants: Virtual_pm, Project_pm, Multi_lingua_pm, … *)
 type pm_info =
   | Sys_pm of { pm : package_manager }
-  | Lang_pm of { lang : Canary_artifact_api.lang; pm : package_manager }
+  | Lang_pm of { lang : Canary_lang.lang; pm : package_manager }
 
 (* Location: objective "where does this artifact live right now".
    Build_tree: raw build output. Staged: cmake --install'd (TODO #25).
@@ -52,7 +52,7 @@ let string_of_location = function
   | Staged -> "staged"
   | Pm (Sys_pm { pm }) -> [%string "sys_pm:%{string_of_pm pm}"]
   | Pm (Lang_pm { lang; pm }) ->
-      [%string "%{Canary_artifact_api.string_of_lang lang}:%{string_of_pm pm}"]
+      [%string "%{Canary_lang.string_of_lang lang}:%{string_of_pm pm}"]
 
 let is_source_location = function
   | Build_tree | Staged -> true

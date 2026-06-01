@@ -380,7 +380,7 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
       (let python_entry =
          List.filter_map binding_configs ~f:(function
            | Python_config p ->
-               Some (Canary_artifact_api.Python,
+               Some (Canary_lang.Python,
                      fun ~output_dir ~variant_key ->
                        Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)
            | Ocaml_config _ -> None)
@@ -463,7 +463,7 @@ test -f "$LIB_Z3"|}
           (* Build_tree: probe against build tree artifacts (only when cmake built them) *)
           (if source.has_build_binding && cmake_build_binding then
              Some
-               ( Canary_artifact_api.OCaml, Build_tree,
+               ( Canary_lang.OCaml, Build_tree,
                  fun ~output_dir ~variant_key ->
                    let script = "canary/scripts/assert_binary_symbols.py" in
                    let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
@@ -485,7 +485,7 @@ ocamlfind ocamlopt -package zarith -linkpkg \
            else None);
           (* Lang_pm: probe against opam-installed package *)
           Some
-            ( Canary_artifact_api.OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }),
+            ( Canary_lang.OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }),
               fun ~output_dir ~variant_key ->
                 let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
                 [%string
@@ -500,7 +500,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             (* Install split off into Fetch (Binding Python); probe is
                import-only here so the cached summary from fetch is
                available to expectation evaluation. *)
-            Some (Canary_artifact_api.Python, Pm (Lang_pm { lang = Python; pm = Pip }),
+            Some (Canary_lang.Python, Pm (Lang_pm { lang = Python; pm = Pip }),
                   fun ~output_dir ~variant_key ->
                     Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key)
         | Ocaml_config _ -> None);
@@ -532,7 +532,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Probe (Binding _),
         Some (Canary_store.Pm
                 (Canary_store.Lang_pm
-                   { lang = Canary_artifact_api.Python; _ })) ->
+                   { lang = Canary_lang.Python; _ })) ->
           (* z3-solver pip wheel doesn't export `parser_context` (drift in
              the bundled Python module surface vs Z3 4.15+ source). Probe
              references it on purpose; expected substring is derived from
@@ -586,7 +586,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         | _ -> None);
     artifact_name = (function
       | Canary_basic.Lib -> Some "libz3.so"
-      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "z3"
-      | Canary_basic.Binding Canary_artifact_api.Python -> Some "z3-solver"
+      | Canary_basic.Binding Canary_lang.OCaml -> Some "z3"
+      | Canary_basic.Binding Canary_lang.Python -> Some "z3-solver"
       | _ -> None);
   }

@@ -159,7 +159,7 @@ let script_spec : Canary_action.script_spec =
        subdir). LIBRARY_PATH lets the cstubs link find libtiny;
        LD_RUN_PATH bakes the rpath into the binding. *)
     build_binding = [
-      (Canary_artifact_api.OCaml,
+      (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
          Canary_toolchain.dune_build_cmd
            ~env_extra:[
@@ -172,7 +172,7 @@ let script_spec : Canary_action.script_spec =
       (* Build_binding Python: invoke tiny's Makefile python_cext target,
          which runs `uv build --wheel` and copies _native.cpython-*.so back
          next to __init__.py. Produces bpe3 compiled_binding_cext.so. *)
-      (Canary_artifact_api.Python,
+      (Canary_lang.Python,
        fun ~output_dir ~variant_key ->
          Printf.sprintf "make -C %s python_cext" tiny_root
          |> Canary_toolchain.with_marker
@@ -196,7 +196,7 @@ let script_spec : Canary_action.script_spec =
 
     (* Probe_binding OCaml: run probe_baseline.exe. *)
     probe_binding = [
-      (Canary_artifact_api.OCaml,
+      (Canary_lang.OCaml,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
@@ -207,7 +207,7 @@ let script_spec : Canary_action.script_spec =
       (* Probe_binding Python (cext): import + invoke wrappers. The
          standalone harness's probe_baseline.py asserts the same value set;
          here we use the same script. *)
-      (Canary_artifact_api.Python,
+      (Canary_lang.Python,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
@@ -223,8 +223,8 @@ let script_spec : Canary_action.script_spec =
        inspect on bpe2 user_binding_cext.py. The pkg names match the
        package containing the user-facing surface. *)
     binding_user_facing_pkg = [
-      (Canary_artifact_api.OCaml, "tiny");
-      (Canary_artifact_api.Python, "tiny_cext");
+      (Canary_lang.OCaml, "tiny");
+      (Canary_lang.Python, "tiny_cext");
     ];
 
     (* Inspect overrides — produce per-artifact JSON for each binding-side
@@ -254,7 +254,7 @@ let script_spec : Canary_action.script_spec =
               ~prefixes:[ "tiny_" ]
               ~watchlist:tiny_native_stable_symbols
               ~output_dir ~variant_key ())
-      | Build_binding Canary_artifact_api.OCaml ->
+      | Build_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
             (* base="inspect" matches the default tag_suffix="_inspect" that
                attach_inspect uses when wiring the explicit `inspect` field.
@@ -268,7 +268,7 @@ let script_spec : Canary_action.script_spec =
               "python3 canary/scripts/inspect_binding.py --kind stub \
                --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s"
               ocaml_build_dir output_dir out_file)
-      | Build_binding Canary_artifact_api.Python ->
+      | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
             let cext_so =
               Printf.sprintf
@@ -277,7 +277,7 @@ let script_spec : Canary_action.script_spec =
               ~lib:cext_so ~prefixes:[ "tiny_" ]
               ~watchlist:tiny_native_stable_symbols
               ~output_dir ~variant_key ())
-      | Probe (Binding Canary_artifact_api.OCaml) ->
+      | Probe (Binding Canary_lang.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
               Canary_output_path.filename ~variant_key
@@ -288,7 +288,7 @@ let script_spec : Canary_action.script_spec =
               "python3 canary/scripts/inspect_binding.py --kind mli \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               tiny_root watchlist_csv output_dir out_file)
-      | Probe (Binding Canary_artifact_api.Python) ->
+      | Probe (Binding Canary_lang.Python) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
               Canary_output_path.filename ~variant_key
@@ -306,9 +306,9 @@ let script_spec : Canary_action.script_spec =
     artifact_name = (function
       | Headers -> Some "header_native.h (tiny.h)"
       | Lib -> Some "lib_native.so (libtiny.so.1)"
-      | Binding Canary_artifact_api.OCaml ->
+      | Binding Canary_lang.OCaml ->
           Some "compiled_binding_ocaml (tiny.cmxa + libtiny_stubs.a)"
-      | Binding Canary_artifact_api.Python ->
+      | Binding Canary_lang.Python ->
           Some "compiled_binding_cext (_native.cpython-*.so)"
       | App -> Some "probe_baseline.exe / .py"
       | _ -> None);

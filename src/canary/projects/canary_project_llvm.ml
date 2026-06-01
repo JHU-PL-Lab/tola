@@ -359,11 +359,11 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
     fetch_lib = Some (Canary_action.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
-      (Canary_artifact_api.OCaml,
+      (Canary_lang.OCaml,
        Canary_action.fetch_binding_cmd prebuilt.opam_package_spec)
       :: List.filter_map binding_configs ~f:(function
         | Python_config p ->
-            Some (Canary_artifact_api.Python,
+            Some (Canary_lang.Python,
                   fun ~output_dir ~variant_key ->
                     Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)
         | Ocaml_config _ -> None);
@@ -549,7 +549,7 @@ test -n "$LLVM_LIB"
       | _ -> None);
     artifact_name = (function
       | Canary_basic.Lib -> Some "libLLVM.so"
-      | Canary_basic.Binding Canary_artifact_api.OCaml -> Some "llvm"
-      | Canary_basic.Binding Canary_artifact_api.Python -> Some "llvmlite"
+      | Canary_basic.Binding Canary_lang.OCaml -> Some "llvm"
+      | Canary_basic.Binding Canary_lang.Python -> Some "llvmlite"
       | _ -> None);
   }
