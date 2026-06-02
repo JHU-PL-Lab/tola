@@ -7,7 +7,7 @@
    To target a specific switch, this should be replaced with
    `eval $(opam env --switch=<name>)`. Left as-is for now. *)
 
-let properties : Canary_pm_types.pm_properties = {
+let properties : Canary_store.pm_properties = {
   pm = Opam;
   scope = Lang;
   behavior = Isolated_store "switch";

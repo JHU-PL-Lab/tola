@@ -4,7 +4,23 @@ open Base
    A store is any place artifacts can be fetched from or published to.
    Location identifies where an artifact physically resides. *)
 
-include Canary_pm_types
+(* PM-related types (inlined from canary_pm_types.ml on 2026-06-01,
+   Phase 10a). The separate file existed only because canary_store and
+   the per-PM drivers needed shared types without a circular dep —
+   now that the dispatchers (pm_install_cmd etc.) live in
+   tool/canary_pm.ml (Phase 9a), no cycle remains. *)
+
+type package_manager = Apt | Brew | Opam | Pip | Unsupported
+type store_behavior = Stateless | Stateful_global | Isolated_store of string
+type pm_scope = System | Lang
+
+type pm_properties = {
+  pm : package_manager;
+  scope : pm_scope;
+  behavior : store_behavior;
+  switching : string;
+  parallel_safe : bool;
+}
 
 type system_package_spec = {
   linux_pkg : string;

@@ -1,7 +1,7 @@
 (* PM ops for apt (system PM, stateful global store).
    No isolated stores. Version switching via update-alternatives. *)
 
-let properties : Canary_pm_types.pm_properties = {
+let properties : Canary_store.pm_properties = {
   pm = Apt;
   scope = System;
   behavior = Stateful_global;

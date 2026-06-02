@@ -1,7 +1,7 @@
 (* PM ops for brew (system PM, stateful global store).
    Keg-only packages need explicit linking. *)
 
-let properties : Canary_pm_types.pm_properties = {
+let properties : Canary_store.pm_properties = {
   pm = Brew;
   scope = System;
   behavior = Stateful_global;

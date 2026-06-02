@@ -2,7 +2,7 @@
    Each venv is an independent store. Without venv, pip installs
    to the global/user site-packages (stateful global). *)
 
-let properties : Canary_pm_types.pm_properties = {
+let properties : Canary_store.pm_properties = {
   pm = Pip;
   scope = Lang;
   behavior = Isolated_store "venv";
