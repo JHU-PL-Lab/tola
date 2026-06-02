@@ -596,6 +596,138 @@ Standard "tests green, docs follow" pass. Cumulative.
       `tiny.md` Phase-3a / Phase-3b subsections document the new
       flow; Makefile + scenarios.py expose the commands.
 
+### Step 6 — Lift contracts to a per-contract registry (2026-06-02)
+
+**Motivation.** Today's `predicted_contains_any_v2` in
+`surface/canary_compat_run.ml` is already structured as four
+implicit "layers" (L0, L1b, L3, L4), each implementing one
+contract:
+
+| Layer | Contract | Status |
+|---|---|---|
+| L0 | c1 cmp_symbol | ✓ wired |
+| L1b | c5 cmp_sym_version | ⚠ JSON read but no diff |
+| L3 | c2 cmp_api_completeness | ✓ wired |
+| L4 | c4 cmp_abi | 🗑 stub returns `[]` |
+
+The mapping is correct (every existing check IS a c\* row) but
+implicit. New comparators get added by editing one growing function
+with inline `match`-on-input dispatch, the §2.4 status table can
+silently drift from the code, and there's no way to disable a
+single contract without code changes.
+
+**Refactor (no new features).** Make each contract a registered
+record:
+
+```ocaml
+type contract_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
+type contract_status =
+  | Wired | Inspect_only | Comparator_only
+  | Blocked of contract_id list | Stubbed
+
+type contract_check = {
+  id       : contract_id;
+  name     : string;          (* "cmp_symbol", … *)
+  layer    : string;          (* "L0", "L1b", "L3", "L4" *)
+  status   : contract_status;
+  enabled  : bool;
+  predict  : resolve:(string -> string) -> inspect_input list -> string list;
+}
+
+let registered_checks : contract_check list = [
+  { id = C1; status = Wired;        enabled = true;  predict = c1_predict };
+  { id = C2; status = Wired;        enabled = true;  predict = c2_predict };
+  { id = C4; status = Stubbed;      enabled = false; predict = c4_stub    };
+  { id = C5; status = Inspect_only; enabled = true;  predict = c5_predict };
+  { id = C6; status = Blocked [];    enabled = false; predict = c6_stub    };
+  { id = C7; status = Blocked [C6];  enabled = false; predict = c7_stub    };
+  { id = C8; status = Blocked [C6;C7]; enabled = false; predict = c8_stub  };
+]
+```
+
+`predicted_contains_any_v2` becomes a 4-line iterator over the
+registry. The L0/L1b/L3/L4 sections of today's function each
+become one `c?_predict` closure.
+
+**What this gives us:**
+
+1. **§2.4 becomes derivable.** The status table prints from
+   the registry; the doc table is regenerated from code rather
+   than maintained by hand.
+2. **Per-project / per-CLI toggles.** A project spec can
+   override `enabled` per contract (e.g. disable c5 for projects
+   where versioned-symbol noise is intractable). A CLI flag can
+   disable a contract globally for triaging.
+3. **Adding a new c\* becomes data.** One new registry entry +
+   one predict closure. The runner doesn't need editing.
+4. **Honest blocked declarations.** `Blocked [C6]` self-documents
+   that c8 can't run until c6 lands.
+
+**No behavior change.** Byte-for-byte identical output today;
+every regression stays green; the matrix of inputs/outputs is
+unchanged. Pure lifting.
+
+**Tracked as Phase 12 in the refactor sequence**
+(`doc/canary/audit_post_refactor_2026_06_01.md`).
+
+### Step 6b — Per-project / per-CLI contract toggles (after Step 6)
+
+Once the registry exists, add the two consumer paths:
+
+- `script_spec.disabled_contracts : contract_id list` — projects opt
+  out of specific contracts (e.g. when a c\* gives systematic false
+  positives on a project's idiomatic patterns).
+- `--disable-contract c5` CLI flag on `canary action`, `compat`,
+  `verify` — global override for triaging or "minimum viable
+  check" runs.
+
+Small follow-up; can ride in the same commit as Step 6 or land
+separately.
+
+### Step 7 — Perturbation fixtures for real projects (research thread)
+
+**Motivation.** Tiny's full matrix coverage (12 scenarios × every
+implemented c\*) is the witness that canary's machinery is sound.
+Real projects (llvm, z3, sqlite) currently demonstrate ONE
+perturbation each — natural version-mismatch flavour
+(`Opcode.UncondBr`, `parser_context`). That's a thin demo: it
+shows the machinery WORKS but not that it COVERS.
+
+**Target.** Each real project ships per-scenario fixtures that
+deliberately trigger each implemented c\*, replicating tiny's
+matrix discipline. Concretely:
+
+- `canary/perturbations/<project>/<scenario>/` ships patches,
+  alternate artifact paths, or generation scripts that produce a
+  perturbed version of one artifact.
+- Project spec declares a `perturbations : (scenario_id * (artifact
+  * patch)) list` field listing which scenarios it supports.
+- A `--perturbation <id>` flag on `canary action` swaps the
+  artifact at runtime; the registry tells the runner which c\* the
+  perturbation is supposed to trigger.
+
+**Justification for the paper.** Each real project's perturbation
+matrix becomes a coverage row alongside tiny's. The story shifts
+from "canary catches version drift in two real projects" to
+"canary's surface-check coverage is complete on every project we
+test, with both tiny (controlled) and llvm/z3/sqlite (production-
+shaped) inputs hitting every implemented c\*."
+
+**Status: not yet started.** Step 6 (registry lift) is the
+prerequisite — perturbation fixtures attach to registry entries,
+so the registry needs to exist first. Per-project list is:
+
+| Project | Easy wins (c\* and natural perturbation source) |
+|---|---|
+| llvm | c1 + c2 OCaml already wired (Opcode.UncondBr); add Python (llvmlite version-floor); investigate c4 (LLVM SONAME bumps across majors); investigate c5 (libLLVM.so versioned symbols). |
+| z3 | c2 Python already wired (parser_context); re-enable `has_build_binding=true` on z3-stable to add c1 (parallel to llvm); investigate c4. |
+| sqlite | Most plumbed but no live demo. apt's `libsqlite3.so.0` vs Homebrew's `libsqlite.so.0` SONAME may differ — natural c4 candidate. |
+
+This is the research thread that goes alongside (or after) Step 4's
+remaining inspector + comparator buildout. Step 4 fills the c\*
+rows (one row at a time); Step 7 fills the project × c\* matrix
+(once each c\* is wired).
+
 ## 7. Operating rules
 
 - Every code change should also move the paper forward, or vice
