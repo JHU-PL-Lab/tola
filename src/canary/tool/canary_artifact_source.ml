@@ -114,3 +114,32 @@ let source_desc distro (repo : source_repo) =
   | None ->
       let (Git_remote url) = repo.remote in
       "git:" ^ url
+
+(* Shell command that verifies api_source claims against the fetched source tree.
+   Headers component: checks dir exists and each listed file exists.
+   binding_api.source_dir (in-tree): checks dir exists.
+   Runtime_lib / Link_lib / Pc_file are post-build or PM-installed — not checked here.
+   Writes scan.ok to output_dir on success.
+
+   Moved here from surface/canary_artifact_api.ml on 2026-06-02 (Phase
+   11c) — it's a CHECK shell command, not a fact-type definition; lives
+   next to the other source-side helpers. *)
+let scan_source_cmd ~source_root (api : Canary_artifact_api.t)
+    ~output_dir ~variant_key =
+  let ok = Canary_basic.variant_file ~variant_key "scan.ok" in
+  let header_checks =
+    match api.native_api.headers with
+    | None -> []
+    | Some { dir; files } ->
+        let abs_dir = [%string "%{source_root}/%{dir}"] in
+        [%string "test -d %{abs_dir}"]
+        :: List.map files ~f:(fun f -> [%string "test -f %{abs_dir}/%{f}"])
+  in
+  let binding_checks =
+    List.filter_map api.binding_apis ~f:(fun b ->
+      Option.map b.source_dir ~f:(fun sd ->
+        [%string "test -d %{source_root}/%{sd}"]))
+  in
+  String.concat ~sep:"\n"
+    (header_checks @ binding_checks
+     @ [[%string "echo 'scan ok' > %{output_dir}/%{ok}"]])

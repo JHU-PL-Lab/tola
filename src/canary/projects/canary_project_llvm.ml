@@ -304,7 +304,7 @@ let mk_script_spec ~source
     scan_source =
       Option.map source.api_source ~f:(fun api ->
         fun ~output_dir ~variant_key ->
-          Canary_artifact_api.scan_source_cmd ~source_root:root api ~output_dir ~variant_key);
+          Canary_artifact_source.scan_source_cmd ~source_root:root api ~output_dir ~variant_key);
     build_headers =
       (if source.has_build_lib || source.has_build_binding then
          Some

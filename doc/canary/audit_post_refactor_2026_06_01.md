@@ -29,7 +29,10 @@ chosen: park into `legacy/canary_yaml_backend.ml`).
 | 9b | `d11120d` | `action/canary_run_info.ml` moves to `backend/canary_run_info.ml`. It orchestrates multiple backends (calls `Canary_local_runner.run_graph` + `Canary_diagram.write_project_output` + `Canary_html`) and was forcing action→backend edges; living in `backend/` makes it a backend-internal orchestrator. Module name unchanged, no caller updates needed. |
 | 10a | `cbaaf7d` | `base/canary_pm_types.ml` (15 LOC) inlined into `base/canary_store.ml`. The shared-types file existed to mediate a canary_store↔per-PM cycle that Phase 9a already eliminated. One fewer base/ file. |
 | 10b | `f5e2433` | `action/canary_step_cache.ml` (71 LOC) inlined into `backend/canary_local_runner.ml` as a "Cross-run cache" section. The cache is unambiguously the local runner's persistence. Public API renamed for clarity (`load_cache`, `cache_is_success`, …). Future-revisit note in-code: if GH backend grows its own cache, extract a shared abstraction. |
-| 10c | (this commit) | `base/canary_output_path.ml` (45 LOC) inlined into `base/canary_basic.ml`. 15 caller files retarget `Canary_output_path.X` → `Canary_basic.X` via sed. `canary_basic` becomes the unified base vocabulary (rule + version + artifact_kind + output-tree naming conventions). |
+| 10c | `229643a` | `base/canary_output_path.ml` (45 LOC) inlined into `base/canary_basic.ml`. 15 caller files retarget `Canary_output_path.X` → `Canary_basic.X` via sed. `canary_basic` becomes the unified base vocabulary (rule + version + artifact_kind + output-tree naming conventions). |
+| 11a | `ae89171` | `surface/canary_artifact_api.ml`'s transparent `lang` re-export shim dropped (~12 LOC of duplicated constructors). 3 `open Canary_artifact_api` callers + 1 legacy file add `open Canary_lang` where bare constructors are needed. |
+| 11b | `88296bc` | Probe specs `ocaml_binding` and `python_binding` moved from `surface/canary_artifact_api.ml` to `tool/canary_toolchain.ml`. They're operational (how to compile + run a probe), not theoretical (what the binding exposes). `canary_toolchain` dropped its now-unneeded `open Canary_artifact_api`. |
+| 11c | (this commit) | `canary_artifact_api.ml` moved from `surface/` to `base/`. The file holds fact-shaped library-API declaration types (native_api, binding_api, headers_spec, api_component) with canary watchlist fields embedded; it's foundational vocabulary, not theory. `scan_source_cmd` (a check shell command) moved to `tool/canary_artifact_source.ml`. After this, `surface/` holds only the c1..c8 theory work (canary_compat + canary_compat_run). |
 
 Regression at every commit: `artifact-test 73/73`, `pm-test 14/14`,
 `action tiny 12/12`. The pre-existing diagram-connectivity invariant
@@ -70,7 +73,7 @@ reversal that both audits flagged is gone.
 
 | Module | LOC | In | Verdict | Change since 06-01 |
 |---|---:|---:|:-:|---|
-| `canary_artifact_api.ml` | 161 | 5 | ✅ | `lang` re-exported as transparent alias; rest unchanged |
+| ~~`canary_artifact_api.ml`~~ | — | — | 🗑 | moved to `base/canary_artifact_api.ml` in Phase 11c (it's facts, not theory). After this surface/ holds only the c1..c8 theory pair. |
 | `canary_compat.ml` | 501 | 5 | ✅ | gained `inspect_input` ADT (Phase 4); rest unchanged |
 | `canary_compat_run.ml` | 480 | 6 | ✅ | `predicted_contains_any_v2` takes `~resolve`; `typed_input` deleted (Phase 4) |
 

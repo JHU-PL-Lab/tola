@@ -44,11 +44,14 @@ After the 2026-06-01 refactor (commits `5c0438f` → `0139e07`),
 order (also in [`src/canary/dune`](src/canary/dune)):
 
 ```
-base/      vocabulary — types every other layer uses
-surface/   surface theory — API records + c1..c8 comparators
-tool/      real-world wrappers — PM drivers, inspector drivers, build cmds
-action/    action graph — rules, step model, step builder, paths, step cache
-backend/   step-list consumers — local runner (executes), GH YAML, HTML, Mermaid, run_info orchestrator
+base/      vocabulary — types every other layer uses (incl. API-surface
+           claim types and output-tree naming conventions)
+surface/   surface theory — c1..c8 comparators + compat runner
+tool/      real-world wrappers — PM drivers, inspector drivers, build cmds,
+           toolchain config (incl. per-language probe specs)
+action/    action graph — rules, step model, step builder, paths
+backend/   step-list consumers — local runner (executes), GH YAML, HTML,
+           Mermaid, run_info orchestrator
 test/      framework self-tests
 projects/  live project specs (canary_projects sub-library)
 legacy/    parked code (canary_legacy sub-library)
@@ -67,7 +70,7 @@ catalogues every module with its current verdict.
 | `src/canary/base/canary_lang.ml`                    | `type lang = OCaml \| Python \| …`; sibling file so `canary_basic` + `canary_store` can both use it    |
 | `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`, `rule`, `version`, `string_of_*`, `step_dir_of_tag`, `filename`, `variant_file` — live vocabulary including output-tree naming |
 | `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
-| `src/canary/surface/canary_artifact_api.ml`         | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists)                  |
+| `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/surface/canary_compat.ml`               | Pure theory: `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) |
 | `src/canary/surface/canary_compat_run.ml`           | Drives the contract: cached-summary lookup + `predicted_contains_any_v2 ~resolve` + CLI run/verify     |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |

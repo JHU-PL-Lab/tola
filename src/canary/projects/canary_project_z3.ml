@@ -312,7 +312,7 @@ let mk_script_spec ~source
       (if source.has_build_lib || cmake_build_binding then
          Option.map source.api_source ~f:(fun api ->
              fun ~output_dir ~variant_key ->
-              Canary_artifact_api.scan_source_cmd ~source_root:root api
+              Canary_artifact_source.scan_source_cmd ~source_root:root api
                 ~output_dir ~variant_key)
        else None);
     build_headers =
