@@ -218,6 +218,13 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                   Canary_compat_run.predicted_contains_any_v2
                     ~disabled:step.disabled_contracts ~resolve inputs
                 in
+                (* TODO (plan.md Step 6c): replace this single
+                   collapsed line with one event per contract row
+                   ("c1 cmp_symbol (3 symbols)", …), plus a
+                   contract_skipped event for each disabled / stubbed
+                   / blocked entry. Needs a per-contract variant of
+                   predicted_contains_any_v2 that returns
+                   (contract_id * string list) list. *)
                 log ~event:"compat_predicted"
                   ~detail:(Some (Printf.sprintf "%d substring(s)"
                                    (List.length derived)));

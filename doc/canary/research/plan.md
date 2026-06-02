@@ -687,6 +687,39 @@ Once the registry exists, the two consumer paths landed as Phase 13:
 contract whose id appears in the per-call disabled list. Backwards-
 compatible — the parameter is optional and defaults to `[]`.
 
+### Step 6c — Surface-aware actions.log (deferred — after features land)
+
+The runtime log line emitted by `Canary_local_runner.run_step` for
+`Expect_compat_failure` collapses all contracts into one count:
+
+```
+[…] probe_binding_ocaml      compat_predicted  (3 substring(s))
+```
+
+It doesn't say which c\* fired or how many substrings each one
+contributed. After the registry exists, the same predicted list is
+trivially attributable per-contract — we can produce:
+
+```
+[…] probe_binding_ocaml      c1 cmp_symbol             (3 symbols)
+[…] probe_binding_ocaml      c2 cmp_api_completeness   (1 module variant)
+[…] probe_binding_ocaml      c5 cmp_sym_version        (skipped: Stubbed)
+```
+
+Concretely:
+- Expose a `predicted_contains_any_v2_detailed` (or similar) that
+  returns `(contract_id * string list) list` instead of a flat
+  string list.
+- Have `run_step` log one event per contract row.
+- Add `contract_skipped` events when a contract is filtered out
+  (registry `enabled = false`, in `Stubbed` / `Blocked`, or in the
+  `disabled` list).
+
+Deferred to after Step 7 (perturbation fixtures) — the surface-aware
+log becomes most useful when there's a populated matrix of which
+contracts fire on which projects. Tracked here so it doesn't get
+lost.
+
 ### Step 7 — Perturbation fixtures for real projects (research thread)
 
 **Motivation.** Tiny's full matrix coverage (12 scenarios × every
