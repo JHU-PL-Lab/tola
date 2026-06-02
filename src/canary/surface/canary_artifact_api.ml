@@ -13,21 +13,10 @@ open Base
    are derivable from action type — not declared on binding_api.
    See doc/canary/design/api_surface.md §4 for the design rationale. *)
 
-(* [lang] moved to [base/canary_lang.ml] on 2026-06-01 to eliminate the
-   base→surface layer reversal. Re-exported here as a transparent alias
-   so existing [open Canary_artifact_api] users see the constructors
-   ([OCaml], [Python], …) without needing to also [open Canary_lang]. *)
-type lang = Canary_lang.lang =
-  | Cpp
-  | OCaml
-  | Python
-  | Rust
-  | CSharp
-  | Java
-let string_of_lang = Canary_lang.string_of_lang
-let display_of_lang = Canary_lang.display_of_lang
-let show_lang = Canary_lang.show_lang
-let pp_lang = Canary_lang.pp_lang
+(* [lang] lives in [Canary_lang] (base/). Earlier this file had a
+   transparent re-export so [open Canary_artifact_api] users saw the
+   constructors; the shim was dropped on 2026-06-02 (Phase 11a) — the
+   3 affected callers now [open Canary_lang] directly. *)
 
 type native_api_kind =
   | C

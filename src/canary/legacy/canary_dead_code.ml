@@ -8,7 +8,7 @@ module Z3 = struct
   open Tola_std
   open Canary_store
   open Canary_artifact_source
-  open Canary_artifact_api
+  open Canary_lang
   open Canary_basic
   open Canary_yaml_backend
   open Canary_toolchain
@@ -276,7 +276,7 @@ module Llvm = struct
   [@@@warning "-32"]
   open Canary_basic
   open Canary_yaml_backend
-  open Canary_artifact_api
+  open Canary_lang
   open Canary_store
   open Canary_toolchain
   open Canary_project_llvm
@@ -365,7 +365,7 @@ module Sqlite = struct
   [@@@warning "-32"]
   open Canary_basic
   open Canary_yaml_backend
-  open Canary_artifact_api
+  open Canary_lang
   open Canary_toolchain
   open Canary_project_sqlite
 

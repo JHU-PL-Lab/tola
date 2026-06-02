@@ -3,6 +3,7 @@ open Tola_std
 open Canary_store
 open Canary_artifact_source
 open Canary_artifact_api
+open Canary_lang
 open Canary_basic
 open Canary_toolchain
 open Canary
