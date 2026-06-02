@@ -176,7 +176,7 @@ let load_run_state ~dir =
       | s -> failwith [%string "load_run_state: unknown expect %{s}"]
     in
     let output_dir =
-      [%string "%{dir}/%{Canary_output_path.step_dir_of_tag output_tag}"]
+      [%string "%{dir}/%{Canary_basic.step_dir_of_tag output_tag}"]
     in
     let step : action_step = {
       tag; cache_key = ""; output_tag; output_dir;

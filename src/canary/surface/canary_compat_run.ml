@@ -54,7 +54,7 @@ let run ~stub_path ~lib_path =
 (* ── Convenience: locate cached summaries for a (project, variant) pair ── *)
 
 (* v3 layout: projects/{project}/{step_dir}/file_{variant_id}.ext
-   step_dir = Canary_output_path.step_dir_of_tag (e.g. "pack_binding/ocaml").
+   step_dir = Canary_basic.step_dir_of_tag (e.g. "pack_binding/ocaml").
    variant_id is a filename suffix, not a subdir.
    For single-variant projects (variant_id = ""), filenames have no suffix.
 
@@ -114,12 +114,12 @@ let resolve_variant ~root ~project variant =
    step_dir_of_tag converts e.g. "probe_binding_ocaml" → "probe_binding/ocaml".
    variant_id is encoded as a filename suffix (e.g. "probe_19.log"). *)
 let step_path ~project_dir ~variant_id step rel =
-  let step_d = Canary_output_path.step_dir_of_tag step in
-  let rel_vk = Canary_output_path.variant_file ~variant_key:variant_id rel in
+  let step_d = Canary_basic.step_dir_of_tag step in
+  let rel_vk = Canary_basic.variant_file ~variant_key:variant_id rel in
   [%string "%{project_dir}/%{step_d}/%{rel_vk}"]
 
 let step_dir ~project_dir step =
-  let step_d = Canary_output_path.step_dir_of_tag step in
+  let step_d = Canary_basic.step_dir_of_tag step in
   [%string "%{project_dir}/%{step_d}"]
 
 (* Pick the first existing probe_lib*/summary.json. *)
@@ -129,7 +129,7 @@ let find_lib_inspect ~project_dir ~variant_id =
   ] in
   List.find_map candidates ~f:(fun step ->
       let d = step_dir ~project_dir step in
-      let fname = Canary_output_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+      let fname = Canary_basic.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = d ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
@@ -146,19 +146,19 @@ let find_ocaml_install_dir ~project_dir =
 (* Python binding summary is at fetch_binding/python/summary_{vk}.json. *)
 let find_python_inspect ~project_dir ~variant_id =
   let d = step_dir ~project_dir "fetch_binding_python" in
-  let fname = Canary_output_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+  let fname = Canary_basic.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
   let p = d ^ "/" ^ fname in
   if Stdlib.Sys.file_exists p then Some p else None
 
 let find_stub_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_output_path.filename ~variant_key:variant_id ~base:"inspect_stub" ~ext:"json" in
+      let fname = Canary_basic.filename ~variant_key:variant_id ~base:"inspect_stub" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 
 let find_mli_inspect ~project_dir ~variant_id =
   Option.bind (find_ocaml_install_dir ~project_dir) ~f:(fun dir ->
-      let fname = Canary_output_path.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
+      let fname = Canary_basic.filename ~variant_key:variant_id ~base:"inspect" ~ext:"json" in
       let p = dir ^ "/" ^ fname in
       if Stdlib.Sys.file_exists p then Some p else None)
 

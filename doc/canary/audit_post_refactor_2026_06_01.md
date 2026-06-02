@@ -26,7 +26,10 @@ chosen: park into `legacy/canary_yaml_backend.ml`).
 | 7 | `0139e07` | Stale flat paths in active docs refreshed to layered subdir paths. |
 | 8 | (follow-up) | Backend filenames lose the `_backend_` prefix (`canary_gh.ml`, `canary_html.ml`); `canary_runner.ml` splits into `action/canary_step_builder.ml` (script_spec + derive_steps) + `backend/canary_local_runner.ml` (run_step + run_graph). Four sibling backends now consume `action_step list`. |
 | 9a | `a5f6c50` | PM dispatchers (`pm_install_cmd`, `system_install_cmd`, `verify_system_install_cmd`) extracted from `base/canary_store.ml` to new `tool/canary_pm.ml`. Resolves the pre-existing base→tool layer reversal (the dispatchers reached into `tool/canary_pm_*`). |
-| 9b | (this commit) | `action/canary_run_info.ml` moves to `backend/canary_run_info.ml`. It orchestrates multiple backends (calls `Canary_local_runner.run_graph` + `Canary_diagram.write_project_output` + `Canary_html`) and was forcing action→backend edges; living in `backend/` makes it a backend-internal orchestrator. Module name unchanged, no caller updates needed. |
+| 9b | `d11120d` | `action/canary_run_info.ml` moves to `backend/canary_run_info.ml`. It orchestrates multiple backends (calls `Canary_local_runner.run_graph` + `Canary_diagram.write_project_output` + `Canary_html`) and was forcing action→backend edges; living in `backend/` makes it a backend-internal orchestrator. Module name unchanged, no caller updates needed. |
+| 10a | `cbaaf7d` | `base/canary_pm_types.ml` (15 LOC) inlined into `base/canary_store.ml`. The shared-types file existed to mediate a canary_store↔per-PM cycle that Phase 9a already eliminated. One fewer base/ file. |
+| 10b | `f5e2433` | `action/canary_step_cache.ml` (71 LOC) inlined into `backend/canary_local_runner.ml` as a "Cross-run cache" section. The cache is unambiguously the local runner's persistence. Public API renamed for clarity (`load_cache`, `cache_is_success`, …). Future-revisit note in-code: if GH backend grows its own cache, extract a shared abstraction. |
+| 10c | (this commit) | `base/canary_output_path.ml` (45 LOC) inlined into `base/canary_basic.ml`. 15 caller files retarget `Canary_output_path.X` → `Canary_basic.X` via sed. `canary_basic` becomes the unified base vocabulary (rule + version + artifact_kind + output-tree naming conventions). |
 
 Regression at every commit: `artifact-test 73/73`, `pm-test 14/14`,
 `action tiny 12/12`. The pre-existing diagram-connectivity invariant
@@ -54,10 +57,10 @@ use `Canary.foo` instead of `Canary_action.foo`.
 | Module | LOC | In | Verdict | Change since 06-01 |
 |---|---:|---:|:-:|---|
 | `canary_lang.ml` | 22 | 16 | ✅ | **NEW** (Phase 1) — lifted from surface/ |
-| `canary_basic.ml` | 238 | 8 | ✅ | was ❌ kitchen sink (460 LOC); dead helpers parked (Phase 2) |
-| `canary_store.ml` | 119 | 11 | ✅ | unchanged; uses `Canary_lang.lang` instead of `Canary_artifact_api.lang` |
-| `canary_pm_types.ml` | 15 | 4 | ✅ | unchanged |
-| `canary_output_path.ml` | 45 | 14 | ✅ | unchanged |
+| `canary_basic.ml` | ~285 | many | ✅ | was ❌ kitchen sink (460 LOC); dead helpers parked (Phase 2); `canary_output_path` inlined (Phase 10c) |
+| `canary_store.ml` | ~134 | 11 | ✅ | `canary_pm_types` inlined (Phase 10a); PM dispatchers extracted to `tool/canary_pm.ml` (Phase 9a) |
+| ~~`canary_pm_types.ml`~~ | — | — | 🗑 | inlined into canary_store (Phase 10a) |
+| ~~`canary_output_path.ml`~~ | — | — | 🗑 | inlined into canary_basic (Phase 10c) |
 
 `base/` is now genuinely layer 0: every module here is small, coherent,
 and free of references to higher layers. The latent base→surface
@@ -100,7 +103,7 @@ moved to their own sibling.
 | `canary_path_table.ml` | 288 | 0¹ | ✅ | **NEW** (Phase 5) |
 | `canary_step_builder.ml` | 708 | 7 | ✅ | was `canary_runner.ml` (912 LOC); execute-half (run_step + run_graph + …) split to `backend/canary_local_runner.ml` (Phase 8); now coherently the step-list builder (script_spec + derive_steps + shared templates + check_post compositors + defaults) |
 | `canary_run_info.ml` | 338 | 1 | ✅ | **NEW** (Phase 6) |
-| `canary_step_cache.ml` | 71 | 3 | ✅ | unchanged |
+| ~~`canary_step_cache.ml`~~ | — | — | 🗑 | inlined into backend/canary_local_runner (Phase 10b) |
 
 ¹ The new step-model / action-rule / path-table modules show 0 because
 callers reach their contents through `open Canary` (the shim

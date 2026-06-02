@@ -205,12 +205,12 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                 let resolve rel =
                   match String.lsplit2 rel ~on:'/' with
                   | Some (step_tag, file) ->
-                      let step_dir = Canary_output_path.step_dir_of_tag step_tag in
-                      let vk_file = Canary_output_path.variant_file
+                      let step_dir = Canary_basic.step_dir_of_tag step_tag in
+                      let vk_file = Canary_basic.variant_file
                           ~variant_key:step.variant_id file in
                       step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
                   | None ->
-                      let vk_rel = Canary_output_path.variant_file
+                      let vk_rel = Canary_basic.variant_file
                           ~variant_key:step.variant_id rel in
                       step.project_dir ^ "/" ^ vk_rel
                 in

@@ -20,7 +20,7 @@ open Base
     [marker] is the canonical marker name for the rule (conf.ok / build.ok
     / install.ok / pack.ok / probe.log). *)
 let mark_step_complete ~output_dir ~variant_key marker =
-  let f = Canary_output_path.variant_file ~variant_key marker in
+  let f = Canary_basic.variant_file ~variant_key marker in
   Printf.sprintf "echo 'ok' > %s/%s" output_dir f
 
 (** Compose a build command with the marker-write suffix that canary's

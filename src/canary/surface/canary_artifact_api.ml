@@ -142,7 +142,7 @@ let stable_reuse_warning ~source_name ~source_version =
    Runtime_lib / Link_lib / Pc_file are post-build or PM-installed — not checked here.
    Writes scan.ok to output_dir on success. *)
 let scan_source_cmd ~source_root (api : t) ~output_dir ~variant_key =
-  let ok = Canary_output_path.variant_file ~variant_key "scan.ok" in
+  let ok = Canary_basic.variant_file ~variant_key "scan.ok" in
   let header_checks =
     match api.native_api.headers with
     | None -> []

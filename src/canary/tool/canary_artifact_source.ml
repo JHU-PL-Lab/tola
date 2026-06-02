@@ -58,7 +58,7 @@ let source_root distro (repo : source_repo) =
    clone then checkout in two steps since --branch only works for
    tags and branch names. *)
 let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
-  let ok = Canary_output_path.variant_file ~variant_key "source.ok" in
+  let ok = Canary_basic.variant_file ~variant_key "source.ok" in
   match local_for distro repo with
   | Some l ->
       [%string "test -d %{l.path} && echo '%{l.path}' > %{output_dir}/%{ok}"]
@@ -98,7 +98,7 @@ let version_cache_tag distro (repo : source_repo) =
 
 (* check_post for fetch_source: read source.ok (variant-keyed) and verify the path exists *)
 let source_check_post ~output_dir ~variant_key =
-  let ok_name = Canary_output_path.variant_file ~variant_key "source.ok" in
+  let ok_name = Canary_basic.variant_file ~variant_key "source.ok" in
   let ok_file = output_dir ^ "/" ^ ok_name in
   if Stdlib.Sys.file_exists ok_file then
     let ic = Stdlib.open_in ok_file in

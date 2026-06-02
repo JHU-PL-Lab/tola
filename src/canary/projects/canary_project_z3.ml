@@ -318,7 +318,7 @@ let mk_script_spec ~source
       (if source.has_build_lib || cmake_build_binding then
          Some
            (fun ~output_dir ~variant_key ->
-             let hdr_ok = Canary_output_path.variant_file ~variant_key "headers.ok" in
+             let hdr_ok = Canary_basic.variant_file ~variant_key "headers.ok" in
              [%string
                "test -f %{root}/src/api/z3.h \
                 && echo 'ok' > %{output_dir}/%{hdr_ok}"])
@@ -363,7 +363,7 @@ let mk_script_spec ~source
     install_lib =
       (if source.has_build_lib then
          Some (fun ~output_dir ~variant_key ->
-           let install_ok = Canary_output_path.variant_file ~variant_key "install.ok" in
+           let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
            [%string
              {|PREFIX="%{build}/../install"
 mkdir -p "$PREFIX/lib"
@@ -373,7 +373,7 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
     fetch_lib =
       Some
         (fun ~output_dir ~variant_key ->
-          let lib_ok = Canary_output_path.variant_file ~variant_key "lib.ok" in
+          let lib_ok = Canary_basic.variant_file ~variant_key "lib.ok" in
           let install = Canary_pm.install_cmd pm ~pkg:"z3" in
           [%string "%{install} && echo 'installed' > %{output_dir}/%{lib_ok}"]);
     fetch_binding =
@@ -466,8 +466,8 @@ test -f "$LIB_Z3"|}
                ( Canary_lang.OCaml, Build_tree,
                  fun ~output_dir ~variant_key ->
                    let script = "canary/scripts/assert_binary_symbols.py" in
-                   let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
-                   let symbols_log = Canary_output_path.variant_file ~variant_key "symbols.log" in
+                   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+                   let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
                    [%string
                      {|%{lib_resolve}
 %{binding_resolve}
@@ -487,7 +487,7 @@ ocamlfind ocamlopt -package zarith -linkpkg \
           Some
             ( Canary_lang.OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }),
               fun ~output_dir ~variant_key ->
-                let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
+                let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
                 [%string
                   {|eval $(opam env)
 ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \

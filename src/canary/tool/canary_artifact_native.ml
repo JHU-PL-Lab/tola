@@ -102,7 +102,7 @@ let symbols_undefined ~prefix lines =
    Use to verify the lib compiled and exports the expected API surface. *)
 let native_lib_probe_cmd ~lib ~prefix ~output_dir ~variant_key =
   let nm_flag = if is_macos then "-g" else "-D" in
-  let probe_log = Canary_output_path.variant_file ~variant_key "probe.log" in
+  let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
   [%string
     {|COUNT=$(nm %{nm_flag} "%{lib}" 2>/dev/null | grep -v ' U ' | grep -c '%{prefix}' || echo 0)
 printf '%{prefix} symbols exported: %s\n' "$COUNT" | tee %{output_dir}/%{probe_log}
@@ -121,7 +121,7 @@ let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key
   let script = "canary/scripts/inspect_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
   | python3 %{script} %{strip_flag}--emit-symbols --elf --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
@@ -131,7 +131,7 @@ let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key
    Writes inspect_elf.json to the output directory. *)
 let elf_inspect_cmd ~lib ~output_dir ~variant_key () =
   let script = "canary/scripts/inspect_elf.py" in
-  let out_file = Canary_output_path.filename ~variant_key ~base:"inspect_elf" ~ext:"json" in
+  let out_file = Canary_basic.filename ~variant_key ~base:"inspect_elf" ~ext:"json" in
   [%string
     {|python3 %{script} --path "%{lib}" > %{output_dir}/%{out_file}|}]
 

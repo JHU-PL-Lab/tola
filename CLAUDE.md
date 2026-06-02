@@ -65,9 +65,8 @@ catalogues every module with its current verdict.
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `src/bin/canary_main.ml`                            | CLI: `action`, `paths`, `graph`, `compat`, `verify`, `inspect-diff`, `artifact-test`, `pm-test`, …     |
 | `src/canary/base/canary_lang.ml`                    | `type lang = OCaml \| Python \| …`; sibling file so `canary_basic` + `canary_store` can both use it    |
-| `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`, `rule`, `version`, `string_of_*` — live vocabulary only |
-| `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro` types                                           |
-| `src/canary/base/canary_output_path.ml`             | `step_dir_of_tag`, `filename`, `variant_file` — output-tree naming convention (was canary_step_key)    |
+| `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`, `rule`, `version`, `string_of_*`, `step_dir_of_tag`, `filename`, `variant_file` — live vocabulary including output-tree naming |
+| `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
 | `src/canary/surface/canary_artifact_api.ml`         | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists)                  |
 | `src/canary/surface/canary_compat.ml`               | Pure theory: `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) |
 | `src/canary/surface/canary_compat_run.ml`           | Drives the contract: cached-summary lookup + `predicted_contains_any_v2 ~resolve` + CLI run/verify     |
@@ -83,9 +82,8 @@ catalogues every module with its current verdict.
 | `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `action_step`, `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_step_builder.ml`          | `script_spec`, `derive_steps`, shared command templates, check_post compositors — the step list builder |
-| `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` — executes the step list locally (in-process backend)    |
+| `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
-| `src/canary/action/canary_step_cache.ml`            | Cross-run cache (skip steps recorded successful in a previous run)                                     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
 | `src/canary/backend/canary_html.ml`         | HTML result page + index rendering                                                                     |
 | `src/canary/backend/canary_diagram.ml`              | Mermaid diagram + view machinery (2283 LOC; biggest single file)                                       |
