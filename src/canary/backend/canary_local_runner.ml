@@ -27,6 +27,88 @@
 open Base
 open Canary_step_model
 
+(* ── Cross-run cache (inlined from canary_step_cache.ml on 2026-06-01,
+   Phase 10b) ─────────────────────────────────────────────────────────
+   Maps cache_key → entry, where cache_key = "<project>:<step_tag>"
+   (e.g. "sqlite:fetch_lib", "llvm-19:probe_binding_pkg"). Populated by
+   the `cache-sync` CLI subcommand reading GH CI results back into a
+   local JSON; consulted by run_step below to skip steps a previous CI
+   run has already certified as successful.
+
+   FUTURE: if the GH backend grows its own cache (e.g. CI-side artifact
+   caching with a different schema), revisit and extract a shared
+   cache abstraction. For now this lives next to its only consumer
+   (run_step's `?global_cache`). *)
+
+type cache_entry = {
+  status : string;   (* "success" or "failure" *)
+  run_id : int;      (* GH Actions run database ID; 0 = local *)
+  at : string;       (* date recorded, e.g. "2026-04-22" *)
+}
+
+type step_cache = (string, cache_entry) Hashtbl.t
+
+let make_cache () : step_cache = Hashtbl.create (module String)
+
+let cache_entry_of_json fields =
+  let get_s name =
+    match List.Assoc.find fields ~equal:String.equal name with
+    | Some (`String s) -> s
+    | _ -> ""
+  in
+  let get_i name =
+    match List.Assoc.find fields ~equal:String.equal name with
+    | Some (`Int i) -> i
+    | _ -> 0
+  in
+  { status = get_s "status"; run_id = get_i "run_id"; at = get_s "at" }
+
+let cache_of_json (json : Yojson.Basic.t) : step_cache =
+  let tbl = make_cache () in
+  (match json with
+   | `Assoc pairs ->
+     List.iter pairs ~f:(fun (key, v) ->
+         match v with
+         | `Assoc fields -> Hashtbl.set tbl ~key ~data:(cache_entry_of_json fields)
+         | _ -> ())
+   | _ -> ());
+  tbl
+
+let cache_to_json (tbl : step_cache) : Yojson.Basic.t =
+  let pairs =
+    Hashtbl.to_alist tbl
+    |> List.sort ~compare:(fun (a, _) (b, _) -> String.compare a b)
+    |> List.map ~f:(fun (key, e) ->
+           ( key,
+             `Assoc
+               [ ("status", `String e.status);
+                 ("run_id", `Int e.run_id);
+                 ("at", `String e.at) ] ))
+  in
+  `Assoc pairs
+
+let load_cache ~path : step_cache =
+  if Stdlib.Sys.file_exists path then
+    (try Yojson.Basic.from_file path |> cache_of_json
+     with _ -> make_cache ())
+  else make_cache ()
+
+let save_cache ~path (tbl : step_cache) =
+  let oc = Stdlib.open_out path in
+  Yojson.Basic.pretty_to_channel oc (cache_to_json tbl);
+  Stdlib.output_char oc '\n';
+  Stdlib.close_out oc
+
+let cache_record (tbl : step_cache) ~key (e : cache_entry) =
+  Hashtbl.set tbl ~key ~data:e
+
+let cache_is_success tbl ~key =
+  match Hashtbl.find tbl key with
+  | Some { status = "success"; _ } -> true
+  | _ -> false
+
+(* ── Execution ─────────────────────────────────────────────────────── *)
+
 (* Run one shell command, log it, return whether it exit-zeroed. *)
 let run_cmd_logged logger ~tag cmd =
   logger.log ~tag ~event:"cmd" ~detail:(Some cmd);
@@ -64,7 +146,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
   let log = logger.log ~tag in
   (* Global cache: skip if a previous CI run recorded success for this key *)
   let global_hit = match global_cache with
-    | Some cache -> Canary_step_cache.is_success cache ~key:step.cache_key
+    | Some cache -> cache_is_success cache ~key:step.cache_key
     | None -> false
   in
   if global_hit then (

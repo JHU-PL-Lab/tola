@@ -246,7 +246,7 @@ let run_project ?(failfast = false) ?run_info ?cache_path
   Option.iter run_info ~f:(fun info ->
       let path = dump_run_info ~dir:run_dir info in
       Fmt.pr "[run_info] %s@." path);
-  let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
+  let global_cache = Option.map cache_path ~f:(fun p -> Canary_local_runner.load_cache ~path:p) in
   let log_path = [%string "%{run_dir}/actions.log"] in
   let logger = create_logger ~log_path in
   let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
@@ -311,7 +311,7 @@ let run_project_multi ?(failfast = false) ?cache_path ~project_name ~root
   let logger = create_logger ~log_path in
   let all_results =
     List.map variants ~f:(fun (variant_id, steps, _run_info) ->
-        let global_cache = Option.map cache_path ~f:(fun p -> Canary_step_cache.load ~path:p) in
+        let global_cache = Option.map cache_path ~f:(fun p -> Canary_local_runner.load_cache ~path:p) in
         let project = if String.is_empty variant_id then project_name
                       else [%string "%{project_name}/%{variant_id}"] in
         logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);

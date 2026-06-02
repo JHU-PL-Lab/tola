@@ -328,7 +328,7 @@ let cache_sync_cmd =
       | Some s -> Yojson.Basic.from_string s
     in
     (* Step 3: parse and record *)
-    let cache = Canary_step_cache.load ~path:cache_path in
+    let cache = Canary_local_runner.load_cache ~path:cache_path in
     let today =
       let t = Unix.localtime (Unix.gettimeofday ()) in
       Fmt.str "%04d-%02d-%02d" (t.tm_year + 1900) (t.tm_mon + 1) t.tm_mday
@@ -385,17 +385,17 @@ let cache_sync_cmd =
                         then (
                           let key = cp ^ ":" ^ name in
                           let entry =
-                            Canary_step_cache.
+                            Canary_local_runner.
                               { status = conclusion; run_id; at = today }
                           in
-                          Canary_step_cache.record cache ~key entry;
+                          Canary_local_runner.cache_record cache ~key entry;
                           Fmt.pr "  %s  →  %s@." key conclusion;
                           incr recorded)
                     | _ -> ())
                   steps)
         | _ -> ())
       jobs;
-    Canary_step_cache.save ~path:cache_path cache;
+    Canary_local_runner.save_cache ~path:cache_path cache;
     Fmt.pr "cache-sync: recorded %d entries → %s@." !recorded cache_path
   in
   Cmd.v
