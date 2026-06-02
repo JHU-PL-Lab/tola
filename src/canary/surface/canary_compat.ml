@@ -500,3 +500,53 @@ let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
         ~f:(fun s -> not (Set.mem provided s)) in
     if List.is_empty missing then Compatible
     else Missing { symbols = missing }
+
+(* ── Contract registry vocabulary (Phase 12, 2026-06-02) ──────────────
+   The c1..c8 surface-theory contracts as a registered collection. Each
+   entry pairs a contract id with its status, the action-graph layer it
+   sits in (L0/L1b/L2/L3/L4), an enable flag, and the predicate that
+   turns [inspect_input list] into expected failure substrings.
+
+   The concrete predicate implementations + registered list live in
+   {!Canary_compat_run} (which has the dispatch entry
+   [predicted_contains_any_v2]). This file defines only the types so
+   they're available to anyone consuming the theory layer. *)
+
+(** The eight contracts of surface theory. See
+    [doc/canary/research/surface_theory.md] §2.4 for definitions. *)
+type contract_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
+
+let string_of_contract_id = function
+  | C1 -> "c1" | C2 -> "c2" | C3 -> "c3" | C4 -> "c4"
+  | C5 -> "c5" | C6 -> "c6" | C7 -> "c7" | C8 -> "c8"
+
+(** Wiring status of a contract within canary's action graph.
+
+    - [Wired] — full pipeline: inspect → predict → check, exercised by
+      real projects.
+    - [Inspect_only] — JSON output ready; the predict step reads it
+      but no comparator runs (currently true of c5).
+    - [Comparator_only] — pure [check_*] function exists in this file
+      but isn't driven from the action graph.
+    - [Blocked deps] — depends on these contracts being implemented
+      first (e.g. c8 ⇐ [c6; c7]).
+    - [Stubbed] — placeholder; the predict closure returns []. *)
+type contract_status =
+  | Wired
+  | Inspect_only
+  | Comparator_only
+  | Blocked of contract_id list
+  | Stubbed
+
+(** One entry in the contract registry. [predict] consumes the same
+    [inspect_input list + ~resolve] that {!Canary_compat_run}'s top-
+    level dispatcher does, and returns the substrings this contract
+    predicts the probe.log will contain on failure. *)
+type contract_check = {
+  id        : contract_id;
+  name      : string;        (* "cmp_symbol", "cmp_api_completeness", … *)
+  layer     : string;        (* "L0", "L1b", "L3", "L4", … *)
+  status    : contract_status;
+  enabled   : bool;
+  predict   : resolve:(string -> string) -> inspect_input list -> string list;
+}

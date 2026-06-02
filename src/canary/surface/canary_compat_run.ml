@@ -266,6 +266,104 @@ let predicted_contains_any
   l3_variants @ l0
   |> List.dedup_and_sort ~compare:String.compare
 
+(* ── Contract registry (Phase 12, 2026-06-02) ─────────────────────────
+   Each c* contract is a registered entry with its own predict closure.
+   [predicted_contains_any_v2] is a 4-line iterator over the registry;
+   adding a new c* = one more registry entry + one predict function.
+
+   The types live in {!Canary_compat} so consumers can name
+   [contract_id] / [contract_status] without opening this file. *)
+
+let pick_existing ~resolve paths =
+  List.find_map paths ~f:(fun rel ->
+    let abs = resolve rel in
+    if Stdlib.Sys.file_exists abs then Some abs else None)
+
+(** c1 cmp_symbol (L0). Pairs C_stub + Native_lib paths and returns
+    the missing C symbols from {!check_c_compat}. *)
+let c1_predict ~resolve (inputs : inspect_input list) : string list =
+  let stub_path =
+    List.find_map inputs
+      ~f:(function C_stub ps -> pick_existing ~resolve ps | _ -> None)
+  in
+  let lib_path =
+    List.find_map inputs
+      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None)
+  in
+  match stub_path, lib_path with
+  | Some s, Some l ->
+      let stub = load_stub s in
+      let lib = load_native l in
+      (match check_c_compat ~binding_stub:stub ~native_lib:lib with
+       | Missing { symbols } -> symbols
+       | Compatible | Unknown -> [])
+  | _ -> []
+
+(** c2 cmp_api_completeness (L3). Reads watchlist_missing from
+    Ocaml_mli / Python_attrs JSONs and expands each missing name into
+    its observable variants (e.g. [Llvm.Opcode.UncondBr] →
+    [Opcode.UncondBr], [UncondBr]). *)
+let c2_predict ~resolve (inputs : inspect_input list) : string list =
+  List.concat_map inputs ~f:(function
+    | Ocaml_mli ps | Python_attrs ps ->
+        (match pick_existing ~resolve ps with
+         | None -> []
+         | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
+    | _ -> [])
+
+(** c5 cmp_sym_version (L1b). Reads the [versioned_req] map from a
+    Versioned_symbols JSON and returns its keys.  No diff yet — the
+    inspector emits the data but the comparator (set vs available)
+    isn't implemented.  Status will flip to [Wired] once the diff
+    step lands. *)
+let c5_predict ~resolve (inputs : inspect_input list) : string list =
+  List.concat_map inputs ~f:(function
+    | Versioned_symbols ps ->
+        (match pick_existing ~resolve ps with
+         | None -> []
+         | Some p ->
+             let j = Yojson.Basic.from_file p in
+             (match field j "versioned_req" with
+              | Some (`Assoc entries) -> List.map entries ~f:fst
+              | _ -> []))
+    | _ -> [])
+
+(** c4 cmp_abi (L4). Stub — see [contract_status.Stubbed] note. L4 is
+    diagnostic in canary's current setup (each variant probes its own
+    lib so different SONAMEs don't cause runtime failure). When the
+    comparator wires up, returns [check_abi]'s mismatch substring. *)
+let c4_predict ~resolve:_ _ = []
+
+(** Stubs for c3/c6/c7/c8 — all currently [Blocked] or [Stubbed] per
+    the registry status field. They contribute no predictions today;
+    their registry entries exist so the status table is honest about
+    what's not yet implemented. *)
+let c3_predict ~resolve:_ _ = []
+let c6_predict ~resolve:_ _ = []
+let c7_predict ~resolve:_ _ = []
+let c8_predict ~resolve:_ _ = []
+
+(** The contract registry. Single source of truth for §2.4 of
+    [surface_theory.md] — adding a contract = adding one entry. *)
+let registered_checks : contract_check list = [
+  { id = C1; name = "cmp_symbol";            layer = "L0";  status = Wired;
+    enabled = true;  predict = c1_predict };
+  { id = C2; name = "cmp_api_completeness";  layer = "L3";  status = Wired;
+    enabled = true;  predict = c2_predict };
+  { id = C3; name = "cmp_behavior";          layer = "dyn"; status = Blocked [];
+    enabled = false; predict = c3_predict };
+  { id = C4; name = "cmp_abi";               layer = "L4";  status = Stubbed;
+    enabled = true;  predict = c4_predict };
+  { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Inspect_only;
+    enabled = true;  predict = c5_predict };
+  { id = C6; name = "cmp_type";              layer = "L2";  status = Blocked [];
+    enabled = false; predict = c6_predict };
+  { id = C7; name = "cmp_api_repack";        layer = "L?";  status = Blocked [C6];
+    enabled = false; predict = c7_predict };
+  { id = C8; name = "cmp_api_faithfulness";  layer = "L?";  status = Blocked [C6; C7];
+    enabled = false; predict = c8_predict };
+]
+
 (** Derive expected failure substrings from declared inspector inputs.
 
     [resolve] turns a per-input relative path (e.g.
@@ -273,58 +371,16 @@ let predicted_contains_any
     runner picks the first input path whose resolved form exists on
     disk, then hands it to the pure comparators in {!Canary_compat}.
 
-    Phase 4 (2026-06-01): unified with [Canary.compat_inspect_input].
-    Previously this function took its own [typed_input] ADT (single
-    string per constructor) and callers translated a list-paths form
-    into it by hand. Now [inputs : Canary_compat.inspect_input list]
-    carries the path list directly. *)
+    Phase 12 (2026-06-02): the four L0/L1b/L3/L4 sections of this
+    function moved into per-contract predict closures registered in
+    [registered_checks]. The body is now a flat iterator over the
+    registry. Behaviour is unchanged — c1, c2, c5 fire as before; c4
+    returns []. Per-contract toggling becomes possible by editing the
+    [enabled] fields. *)
 let predicted_contains_any_v2 ~resolve (inputs : inspect_input list)
     : string list =
-  let pick_existing paths =
-    List.find_map paths ~f:(fun rel ->
-      let abs = resolve rel in
-      if Stdlib.Sys.file_exists abs then Some abs else None)
-  in
-  let stub_path =
-    List.find_map inputs ~f:(function C_stub ps -> pick_existing ps | _ -> None)
-  in
-  let lib_path =
-    List.find_map inputs ~f:(function Native_lib ps -> pick_existing ps | _ -> None)
-  in
-  let l0 = match stub_path, lib_path with
-    | Some s, Some l ->
-        let stub = load_stub s in
-        let lib = load_native l in
-        (match check_c_compat ~binding_stub:stub ~native_lib:lib with
-         | Missing { symbols } -> symbols
-         | Compatible | Unknown -> [])
-    | _ -> []
-  in
-  let l1b =
-    List.concat_map inputs ~f:(function
-      | Versioned_symbols ps ->
-          (match pick_existing ps with
-           | None -> []
-           | Some p ->
-               let j = Yojson.Basic.from_file p in
-               (match field j "versioned_req" with
-                | Some (`Assoc entries) -> List.map entries ~f:fst
-                | _ -> []))
-      | _ -> [])
-  in
-  (* L4 is diagnostic: SONAME/NEEDED identify *which* library was loaded.
-     Different SONAMEs don't cause runtime failure in canary's setup
-     (each variant probes its own lib).  L4 helps blame, not predict. *)
-  let l4 = [] in
-  let l3 =
-    List.concat_map inputs ~f:(function
-      | Ocaml_mli ps | Python_attrs ps ->
-          (match pick_existing ps with
-           | None -> []
-           | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
-      | _ -> [])
-  in
-  l1b @ l4 @ l3 @ l0
+  List.concat_map registered_checks ~f:(fun c ->
+    if c.enabled then c.predict ~resolve inputs else [])
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step

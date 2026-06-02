@@ -312,6 +312,14 @@ SymbolVersion + derived API-faithfulness) × four pillars (tiny /
 inspectors / comparator / canary status). For the provider↔consumer
 surface of each row, read across to "Table — Contract definitions" above.
 
+> Since 2026-06-02 (Phase 12), the canary-status column derives from
+> the contract registry in
+> `src/canary/surface/canary_compat_run.ml`'s `registered_checks`
+> binding. Each entry's `status` field (`Wired` /
+> `Inspect_only` / `Comparator_only` / `Blocked _` / `Stubbed`) is the
+> authoritative source for this row's last column. The table below is
+> the human-readable rendering; if they drift, the registry wins.
+
 | Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                 | Comparator id + name          | Canary status                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
 | **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior)                                                                          | n3 + bo1 / bpc1 / bpe1            | **c6** `cmp_type`             | ✗ blocked on n3 + bo1/bpc1/bpe1 (inspectors missing)                         |
