@@ -83,20 +83,10 @@ type binding_api = {
 }
 [@@deriving show]
 
-(* ── Binding probe specs — how to compile/run the probe for each language ── *)
-
-type ocaml_binding = {
-  example_target   : string;
-  example_name     : string;
-  example_file     : string;
-  binding_lib_name : string;
-  build_api_path   : string option;
-}
-
-type python_binding = {
-  probe_snippet : string;
-  pip_package   : string option;
-}
+(* The per-language probe specs [ocaml_binding] and [python_binding]
+   moved to [tool/canary_toolchain.ml] on 2026-06-02 (Phase 11b) —
+   they describe how to compile/probe a binding (operational), not
+   what the binding exposes (theoretical). *)
 
 type t = {
   native_api   : native_api;

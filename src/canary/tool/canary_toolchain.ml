@@ -2,9 +2,25 @@ open Base
 open Tola_std
 open Canary_store
 open Canary_basic
-open Canary_artifact_api
 
 (* ── Type definitions ── *)
+
+(* Per-language probe specs (inlined from surface/canary_artifact_api.ml
+   on 2026-06-02, Phase 11b). These describe how to compile and run a
+   probe for each binding language — operational config, not theory. *)
+
+type ocaml_binding = {
+  example_target   : string;
+  example_name     : string;
+  example_file     : string;
+  binding_lib_name : string;
+  build_api_path   : string option;
+}
+
+type python_binding = {
+  probe_snippet : string;
+  pip_package   : string option;
+}
 
 type opam_spec = {
   prefix_name : string;
