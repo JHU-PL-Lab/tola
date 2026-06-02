@@ -520,6 +520,25 @@ let string_of_contract_id = function
   | C1 -> "c1" | C2 -> "c2" | C3 -> "c3" | C4 -> "c4"
   | C5 -> "c5" | C6 -> "c6" | C7 -> "c7" | C8 -> "c8"
 
+(** Parse a string like ["c5"] back into a contract id. Accepts
+    upper- or lower-case prefix; rejects anything else. Used by the
+    CLI [--disable-contract] flag parser and by deserialisers. *)
+let contract_id_of_string s =
+  match String.lowercase s with
+  | "c1" -> Some C1 | "c2" -> Some C2 | "c3" -> Some C3 | "c4" -> Some C4
+  | "c5" -> Some C5 | "c6" -> Some C6 | "c7" -> Some C7 | "c8" -> Some C8
+  | _ -> None
+
+(** Parse a comma-separated list like ["c4,c5"]. Silently drops
+    anything that doesn't parse; the caller can re-validate the input
+    if it cares about reporting unknown ids. *)
+let contract_ids_of_csv s =
+  s
+  |> String.split ~on:','
+  |> List.filter_map ~f:(fun part ->
+       let part = String.strip part in
+       if String.is_empty part then None else contract_id_of_string part)
+
 (** Wiring status of a contract within canary's action graph.
 
     - [Wired] — full pipeline: inspect → predict → check, exercised by

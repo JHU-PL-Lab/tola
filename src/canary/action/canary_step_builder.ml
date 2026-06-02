@@ -154,6 +154,14 @@ type script_spec = {
   inspect : rule -> location option -> (output_dir:string -> variant_key:string -> string) option;
   (* Human-readable artifact name per kind for diagram labels. *)
   artifact_name : artifact_kind -> string option;
+  (** Per-project list of surface-theory contracts this project opts out
+      of. Empty by default; populate when a contract gives systematic
+      false positives on the project's idiomatic patterns. Threaded
+      through to {!Canary_compat_run.predicted_contains_any_v2} via
+      its [?disabled] argument. Layered with the CLI's
+      [--disable-contract] flag — both contribute to the per-run
+      disabled set. *)
+  disabled_contracts : Canary_compat.contract_id list;
 }
 
 let empty_script_spec = {
@@ -175,6 +183,7 @@ let empty_script_spec = {
   inspect_note = None;
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
+  disabled_contracts = [];
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -340,7 +349,8 @@ let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
 
 let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
-    ?(expectation = Expect_success) ?(symbol_check = None) ~check_post () =
+    ?(expectation = Expect_success) ?(symbol_check = None)
+    ?(disabled_contracts = []) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
   let output_dir = output_dir_for ~root ~project ~tag:output_tag in
   let project_dir = project_dir_of ~root ~project in
@@ -356,6 +366,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     variant_id;
     rule; deps;
     expectation; symbol_check;
+    disabled_contracts;
     check_pre = (fun () ->
       List.for_all deps ~f:(fun dep ->
           let out = output_dir_for ~root ~project ~tag:dep in
@@ -502,7 +513,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
     in
     let expectation = spec.expectation rule None in
     let symbol_check = spec.symbol_check rule in
-    mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ()
+    mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts ()
   in
   (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
@@ -522,7 +533,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       ~output_tag:parent_tag ~rule
       ~deps:[ parent_tag ]
       ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
-      ~symbol_check:None ()
+      ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
   in
   (* A summary attached to a parent step: (tag suffix, filename, command).
      OCaml bindings get two: mli (semantic) and stub (C-symbol consumer). *)
@@ -625,7 +636,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       ~output_tag:fetch_tag ~rule:(Fetch Source)
       ~deps:[ fetch_tag ]
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
-      ~symbol_check:None ()
+      ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
   in
   let raw_steps = List.concat_map (store_rules ~langs) ~f:(fun rule ->
       let tag = string_of_rule rule in
@@ -649,7 +660,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
                 attach_inspect ~parent_tag:ptag ~rule ~loc base)
         | Probe (Binding lang) ->
             Hashtbl.set seen ~key:tag ~data:true;
@@ -668,7 +679,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let expectation = spec.expectation rule (Some loc) in
                 let symbol_check = spec.symbol_check rule in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
-                  ~deps ~cmd ~check_post ~expectation ~symbol_check () in
+                  ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
                 attach_inspect ~parent_tag:ptag ~rule ~loc base)
         | _ ->
             match script_of_rule spec rule with

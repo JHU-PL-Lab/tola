@@ -215,7 +215,8 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
                       step.project_dir ^ "/" ^ vk_rel
                 in
                 let derived =
-                  Canary_compat_run.predicted_contains_any_v2 ~resolve inputs
+                  Canary_compat_run.predicted_contains_any_v2
+                    ~disabled:step.disabled_contracts ~resolve inputs
                 in
                 log ~event:"compat_predicted"
                   ~detail:(Some (Printf.sprintf "%d substring(s)"

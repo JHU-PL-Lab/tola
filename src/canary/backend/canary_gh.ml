@@ -128,7 +128,8 @@ fi|}]
             project_dir ^ "/" ^ vk_rel
       in
       let derived =
-        Canary_compat_run.predicted_contains_any_v2 ~resolve inputs
+        Canary_compat_run.predicted_contains_any_v2
+          ~disabled:step.disabled_contracts ~resolve inputs
       in
       render_failure_check ~contains_any:derived
   | Expect_failure { contains_any; version_info = _ } ->

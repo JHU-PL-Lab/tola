@@ -670,19 +670,22 @@ unchanged. Pure lifting.
 **Tracked as Phase 12 in the refactor sequence**
 (`doc/canary/audit_post_refactor_2026_06_01.md`).
 
-### Step 6b — Per-project / per-CLI contract toggles (after Step 6)
+### Step 6b — Per-project / per-CLI contract toggles ✓ **DONE** (2026-06-02)
 
-Once the registry exists, add the two consumer paths:
+Once the registry exists, the two consumer paths landed as Phase 13:
 
-- `script_spec.disabled_contracts : contract_id list` — projects opt
-  out of specific contracts (e.g. when a c\* gives systematic false
-  positives on a project's idiomatic patterns).
-- `--disable-contract c5` CLI flag on `canary action`, `compat`,
-  `verify` — global override for triaging or "minimum viable
-  check" runs.
+- ✓ `script_spec.disabled_contracts : Canary_compat.contract_id list`
+  — projects opt out of specific contracts. Default `[]`. Threaded
+  through `mk_step` so every `action_step.disabled_contracts` carries
+  the project's list.
+- ✓ `--disable-contract c5,c4` CLI flag on `canary action`. Parsed
+  by `Canary_compat.contract_ids_of_csv`; layered on top of each
+  project's per-spec list. Logs `[disable-contract] skipping: c5, c4`
+  on activation.
 
-Small follow-up; can ride in the same commit as Step 6 or land
-separately.
+`predicted_contains_any_v2 ?disabled` consumes both, skipping any
+contract whose id appears in the per-call disabled list. Backwards-
+compatible — the parameter is optional and defaults to `[]`.
 
 ### Step 7 — Perturbation fixtures for real projects (research thread)
 

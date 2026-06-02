@@ -371,16 +371,26 @@ let registered_checks : contract_check list = [
     runner picks the first input path whose resolved form exists on
     disk, then hands it to the pure comparators in {!Canary_compat}.
 
+    [?disabled] is the per-call list of contracts to skip on top of
+    the registry's own [enabled] flag. Typical sources:
+    - per-project: [script_spec.disabled_contracts]
+    - per-CLI: the [--disable-contract c5,c4] flag on canary action / compat / verify
+    A contract fires iff its registry [enabled] is true AND its id is
+    not in [disabled].
+
     Phase 12 (2026-06-02): the four L0/L1b/L3/L4 sections of this
     function moved into per-contract predict closures registered in
     [registered_checks]. The body is now a flat iterator over the
-    registry. Behaviour is unchanged — c1, c2, c5 fire as before; c4
-    returns []. Per-contract toggling becomes possible by editing the
-    [enabled] fields. *)
-let predicted_contains_any_v2 ~resolve (inputs : inspect_input list)
-    : string list =
+    registry. Behaviour is unchanged with default [?disabled = []] —
+    c1, c2, c5 fire as before; c4 returns [].
+
+    Phase 13 (2026-06-02): per-call [?disabled] override added. *)
+let predicted_contains_any_v2 ?(disabled = []) ~resolve
+    (inputs : inspect_input list) : string list =
   List.concat_map registered_checks ~f:(fun c ->
-    if c.enabled then c.predict ~resolve inputs else [])
+    if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal)
+    then c.predict ~resolve inputs
+    else [])
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step
