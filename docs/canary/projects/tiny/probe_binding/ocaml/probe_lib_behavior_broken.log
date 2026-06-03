@@ -1,0 +1,4 @@
+Entering directory 'canary/examples/tiny/scenarios/_cache/behavior_silent/workspace'
+Leaving directory 'canary/examples/tiny/scenarios/_cache/behavior_silent/workspace'
+FAIL Tiny.sum 2 3: expected 47, got -43
+OK   Tiny.offset () = 42

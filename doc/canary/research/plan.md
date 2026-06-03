@@ -1051,6 +1051,45 @@ invocation, all pass.
 Contracts honestly firing: c1 OCaml, c1 Python, c2 OCaml, c2 Python,
 **c4 (Python)**. Next on the docket: c3 cmp_behavior.
 
+**Phase 14f (c3 cmp_behavior — shipped 2026-06-02).** Adds
+`lib_behavior_broken` variant mapping to harness scenario
+`behavior_silent` (tiny_sum computes `a - b - tiny_offset` instead of
+`a + b + tiny_offset`; symbols, SONAME, mli, attrs all unchanged).
+
+c3 is structurally different from c1/c2/c4/c5. Those derive failure
+substrings from inspector JSONs via `predict`; c3 is dynamic — the
+behavioral truth lives in the running binary, and the expected
+values are embedded as assertions in the probe's source
+(`if expected <> actual then exit 1`). The comparator IS the probe's
+exit-code check, surfaced to canary via `Expect_failure
+{ contains_any = ["FAIL "] }` (the tiny probes print `FAIL …` on
+mismatch, both OCaml and Python).
+
+So c3 didn't need a `predict` rewrite. The C3 registry entry's
+status stays `Blocked []` and `enabled = false` — those reflect the
+{b predict} side being a no-op, which is accurate. Coverage is via
+the probe runner, documented in the registry comment.
+
+Smoke (`canary action tiny`): both OCaml and Python probes for
+lib_behavior_broken `cmd_fail (exit 1)` → `done (expected failure
+confirmed)`. probe.log contains literally
+`FAIL Tiny.sum 2 3: expected 47, got -43` (and analogous Python),
+exactly the perturbation's math (2 - 3 - 42 = -43).
+
+Contracts honestly firing across the seven-variant matrix: c1
+OCaml, c1 Python, c2 OCaml, c2 Python, c3 (both), c4 Python. The
+remaining surface-theory contracts (c5 sym_version, c6 type, c7
+api_repack, c8 api_faithfulness) are still parked per their
+registry status — each needs more inspector work or a paired
+deferred scenario.
+
+Possible future restructure: turning the `C1..C8` contract IDs from
+enum cases into richer index objects with metadata (layer, status,
+applicable surfaces, dynamic-vs-static, predict closure). The
+`contract_check` record already carries most of this; the IDs
+themselves could move to values. Worth its own pass when revisiting
+the registry.
+
 **14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the

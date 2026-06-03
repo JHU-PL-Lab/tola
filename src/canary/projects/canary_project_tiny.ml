@@ -597,6 +597,36 @@ let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [lib_behavior_broken_script_spec]: at every [Probe (Binding _)],
+    expect c3 [cmp_behavior] to fire — the probe runs, computes a
+    result that disagrees with its embedded baseline assertion, and
+    exits with a [FAIL …] line in probe.log.
+
+    c3 is fundamentally dynamic: behavioral truth lives in the
+    {b running} binary, and the expected values live inside the
+    probe's source as assertions ([Tiny.sum 2 3 == 47]). There's no
+    static input to predict over — the comparator IS the probe's
+    [if expected <> actual then exit 1] check, surfaced to canary via
+    [Expect_failure { contains_any = ["FAIL "] }].
+
+    Maps to harness scenario [e7 behavior_silent] (tiny_sum computes
+    [a - b - tiny_offset] instead of [a + b + tiny_offset]; symbols,
+    SONAME, mli, attrs all unchanged). The OCaml and Python probes
+    share the same FAIL message format, so one expectation covers
+    both languages. *)
+let make_lib_behavior_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding _) ->
+          Expect_failure {
+            contains_any = [ "FAIL " ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** Default workspace path for tiny's harness-materialized caches.
     Variants append a scenario name to this. *)
 let cache_workspace_of ~scenario =

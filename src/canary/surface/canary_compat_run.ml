@@ -366,7 +366,20 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
        | Abi_compatible | Abi_unknown -> [])
   | _ -> []
 
-(** Stubs for c3/c6/c7/c8 — all currently [Blocked] or [Stubbed] per
+(** c3 cmp_behavior is structurally different from c1/c2/c4/c5.
+    There's no static input to predict over — behavioral truth lives
+    in the {b running} binary, and expected values live inside the
+    probe's source as embedded assertions. The comparator IS the
+    probe's exit-code check; canary surfaces it via
+    [Expect_failure { contains_any = ["FAIL "] }] on Probe steps (the
+    tiny probe prints [FAIL …] on assertion mismatch).
+    See [Canary_project_tiny.make_lib_behavior_broken_script_spec]
+    for the demo against harness scenario [e7 behavior_silent].
+    [c3_predict] returns [] honestly: there's nothing static to
+    predict. Status stays [Blocked []] to reflect the {b predict} side
+    being a no-op; coverage is via the probe runner.
+
+    Stubs for c6/c7/c8 — all currently [Blocked] per
     the registry status field. They contribute no predictions today;
     their registry entries exist so the status table is honest about
     what's not yet implemented. *)

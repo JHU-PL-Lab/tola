@@ -206,6 +206,9 @@ let action_cmd =
       mk "lib_soname_bumped"
         (Canary_project_tiny.make_lib_soname_bumped_script_spec
            ~stores:(ws_stores ~lib_filename:"libtiny.so.2" "abi_soname_bump"));
+      mk "lib_behavior_broken"
+        (Canary_project_tiny.make_lib_behavior_broken_script_spec
+           ~stores:(ws_stores "behavior_silent"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants
