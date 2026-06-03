@@ -233,6 +233,16 @@ let action_cmd =
       mk "lib_symbol_version_broken"
         (Canary_project_tiny.make_lib_symbol_version_broken_script_spec
            ~stores:(ws_stores "symbol_version_floor"));
+      (* binding_type_broken: c6 cmp_type fires when the perturbed
+         header declares a different arity than the binding's stub
+         expects. Build (Binding OCaml) fails at C compile; the c6
+         predict compares scan_sources/inspect_typed_header.json
+         (3-arg) against scan_sources/inspect_typed_binding_stub_ocaml.json
+         (2-arg) and returns "tiny_sum" as the predicted substring.
+         Maps to harness scenario header_arity_bump. *)
+      mk "binding_type_broken"
+        (Canary_project_tiny.make_binding_type_broken_script_spec
+           ~stores:(ws_stores "header_arity_bump"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

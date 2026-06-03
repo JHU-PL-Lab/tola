@@ -405,14 +405,48 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     predict. Status stays [Blocked []] to reflect the {b predict} side
     being a no-op; coverage is via the probe runner.
 
-    Stubs for c6/c7/c8 — all currently [Blocked] per
-    the registry status field. They contribute no predictions today;
-    their registry entries exist so the status table is honest about
+    Stubs for c7/c8 — both currently [Blocked] per the registry
+    status field. They contribute no predictions today; their
+    registry entries exist so the status table is honest about
     what's not yet implemented. *)
 let c3_predict ~resolve:_ _ = []
-let c6_predict ~resolve:_ _ = []
 let c7_predict ~resolve:_ _ = []
 let c8_predict ~resolve:_ _ = []
+
+(** c6 cmp_type (L2). Pairs a [Typed_header] input (provider's C
+    signatures, n3) with a [Typed_binding_stub] input (consumer's
+    stub-facing typed surface, bo1 / bpe1 — the binding's expectation
+    of the C ABI). For each function present on both sides, checks
+    whether the signatures agree (same return type, same arg type
+    list). Mismatching names are returned as predicted substrings —
+    the compiler error message for an arity / type clash mentions the
+    function name verbatim (e.g.
+    `error: too few arguments to function 'tiny_sum'`).
+
+    Names present in only one side aren't c6 — they're c1
+    (cmp_symbol's domain). c6 only fires when both sides claim the
+    function but disagree on its signature. *)
+let c6_predict ~resolve (inputs : inspect_input list) : string list =
+  let header_path =
+    List.find_map inputs
+      ~f:(function Typed_header ps -> pick_existing ~resolve ps | _ -> None) in
+  let stub_path =
+    List.find_map inputs
+      ~f:(function Typed_binding_stub ps -> pick_existing ~resolve ps
+                 | _ -> None) in
+  match header_path, stub_path with
+  | Some hp, Some sp ->
+      let h = Canary_compat.load_typed_signatures hp in
+      let s = Canary_compat.load_typed_signatures sp in
+      List.filter_map h.functions ~f:(fun (name, h_sig) ->
+        match List.Assoc.find s.functions name ~equal:String.equal with
+        | None -> None
+        | Some s_sig ->
+            if String.equal h_sig.return_type s_sig.return_type
+               && List.equal String.equal h_sig.arg_types s_sig.arg_types
+            then None
+            else Some name)
+  | _ -> []
 
 (** The contract registry. Single source of truth for §2.4 of
     [surface_theory.md] — adding a contract = adding one entry. *)
@@ -427,8 +461,8 @@ let registered_checks : contract_check list = [
     enabled = true;  predict = c4_predict };
   { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Wired;
     enabled = true;  predict = c5_predict };
-  { id = C6; name = "cmp_type";              layer = "L2";  status = Blocked [];
-    enabled = false; predict = c6_predict };
+  { id = C6; name = "cmp_type";              layer = "L2";  status = Wired;
+    enabled = true;  predict = c6_predict };
   { id = C7; name = "cmp_api_repack";        layer = "L?";  status = Blocked [C6];
     enabled = false; predict = c7_predict };
   { id = C8; name = "cmp_api_faithfulness";  layer = "L?";  status = Blocked [C6; C7];

@@ -1,0 +1,23 @@
+--- a/c/include/tiny.h
++++ b/c/include/tiny.h
+@@ -5,7 +5,7 @@
+ extern int tiny_offset;
+
+ /* Returns a + b + tiny_offset. */
+-int tiny_sum(int a, int b);
++int tiny_sum(int a, int b, int c);
+
+ /* Returns a - b. */
+ int tiny_diff(int a, int b);
+--- a/c/src/tiny.c
++++ b/c/src/tiny.c
+@@ -2,7 +2,8 @@
+
+ int tiny_offset = 42;
+
+-int tiny_sum(int a, int b) {
++int tiny_sum(int a, int b, int c) {
++    (void)c;
+     return a + b + tiny_offset;
+ }
+

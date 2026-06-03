@@ -7,10 +7,6 @@
       ],
       "return": "int"
     },
-    "tiny_offset": {
-      "args": [],
-      "return": "int"
-    },
     "tiny_sum": {
       "args": [
         "int",

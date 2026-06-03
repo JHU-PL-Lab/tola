@@ -32,6 +32,7 @@ cases, the c6/c7/c8 predicates) and tiny's spec do not change.
 """
 import argparse
 import json
+import re
 import sys
 
 # Tiny's known typed surface — what a real AST inspector would extract.
@@ -95,16 +96,65 @@ def main():
         }, indent=2, sort_keys=True))
         sys.exit(0)
 
-    # Trivial grep: name present in file ⇒ "present." Substring match
-    # so a comment mentioning the name counts; good enough for tiny's
-    # current scenarios. A real inspector wouldn't have this looseness.
-    present = {name: sig for name, sig in known.items() if name in text}
+    if args.layer == "header":
+        # For the C header layer, *actually parse* the declaration —
+        # critical so perturbations like header_arity_bump (tiny.h
+        # changing tiny_sum's arity) show up as a real signature
+        # change in the JSON. Other layers still use the trivial
+        # hardcoded-sig fallback; they'll graduate to parsing when
+        # their c6/c7 scenarios land. Regex is rough but adequate
+        # for tiny's hand-written header.
+        present = parse_c_header(text, known)
+    else:
+        # Trivial grep fallback: name present in file ⇒ emit known
+        # hardcoded signature. Substring match; doesn't catch
+        # signature-level perturbations on these layers (would need
+        # layer-specific parsing). Adequate where the demo
+        # perturbations affect presence/absence rather than types.
+        present = {name: sig for name, sig in known.items() if name in text}
 
     print(json.dumps({
         "kind": f"typed_{args.layer}",
         "path": args.path,
         "functions": present,
     }, indent=2, sort_keys=True))
+
+
+# Regex for a C function declaration: <return> <name>(<args>);
+# Captures: 1=return type token, 2=function name, 3=raw args string.
+# Single-line only — tiny.h fits in one line per decl.
+_C_DECL_RE = re.compile(
+    r'^\s*(?:extern\s+)?(\w[\w\s\*]*?)\s+(\w+)\s*\(([^)]*)\)\s*;', re.MULTILINE)
+
+
+def parse_c_header(text, known):
+    """Parse C declarations matching names in [known], emit
+    {name: {return, args}} reflecting the actual header content.
+    Args list is parsed as comma-split type tokens; for each arg,
+    we keep only the type part (everything before an identifier
+    name, if present). `void` arg list becomes []."""
+    result = {}
+    for m in _C_DECL_RE.finditer(text):
+        return_type = m.group(1).strip()
+        name = m.group(2)
+        args_str = m.group(3).strip()
+        if name not in known:
+            continue
+        if args_str == "" or args_str == "void":
+            args = []
+        else:
+            args = []
+            for part in args_str.split(","):
+                part = part.strip()
+                # Strip the parameter name (last token) if present.
+                # "int a"  → "int"; "const char *p" → "const char *".
+                toks = part.rsplit(maxsplit=1)
+                if len(toks) == 2 and re.match(r"^\w+$", toks[1]):
+                    args.append(toks[0].strip())
+                else:
+                    args.append(part)
+        result[name] = {"return": return_type, "args": args}
+    return result
 
 
 if __name__ == "__main__":

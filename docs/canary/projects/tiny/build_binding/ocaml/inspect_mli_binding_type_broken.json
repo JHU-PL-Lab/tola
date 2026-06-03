@@ -1,0 +1,30 @@
+{
+  "kind": "ocaml_mli",
+  "path": "canary/examples/tiny/scenarios/_cache/header_arity_bump/workspace/ocaml/tiny.mli",
+  "counts": {
+    "vals": 3,
+    "externals": 0,
+    "constructors": 0,
+    "modules": 1
+  },
+  "vals": [
+    "Tiny.sum",
+    "Tiny.diff",
+    "Tiny.offset"
+  ],
+  "externals": [],
+  "externals_detail": [],
+  "constructors": [],
+  "modules": [
+    "Tiny"
+  ],
+  "watchlist": {
+    "present": [
+      "Tiny",
+      "Tiny.sum",
+      "Tiny.diff",
+      "Tiny.offset"
+    ],
+    "missing": []
+  }
+}

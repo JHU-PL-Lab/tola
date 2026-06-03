@@ -643,6 +643,43 @@ let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [binding_type_broken_script_spec]: at [Build (Binding OCaml)],
+    expect c6 [cmp_type] to fire. The harness scenario
+    [header_arity_bump] adds an [int c] arg to tiny.h's
+    [tiny_sum] declaration (and matches the .c definition so the lib
+    still builds). The OCaml binding's [tiny_raw.mli] is unchanged —
+    still expects [int -> int -> int]. When canary rebuilds the cstub
+    against the perturbed header, the C compile fails:
+    [error: too few arguments to function 'tiny_sum']. c6's predict
+    pairs [Typed_header] (3-arg signature from parsed tiny.h) with
+    [Typed_binding_stub] (2-arg signature from tiny_raw.mli), finds
+    the mismatch, returns the function name as the predicted
+    substring. Build (Binding OCaml)'s stderr is captured in
+    build.log (Phase 15.5a redirect); substring match confirms.
+
+    OCaml side only: tiny_stubs.c calls tiny_sum with two args. The
+    Python cext is cached and didn't see the header change. *)
+let make_binding_type_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  let c6_inputs = Canary_compat.[
+    Typed_header       [ "scan_sources/inspect_typed_header.json" ];
+    Typed_binding_stub [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
+  ] in
+  { (make_base_script_spec ~stores ()) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Build_binding Canary_lang.OCaml ->
+          (* Primary c6 fire: cstub compile fails when re-built against
+             the perturbed header. *)
+          Expect_compat_failure { inputs = c6_inputs; version_info = None }
+      | Probe (Binding Canary_lang.OCaml) ->
+          (* Cascade: probe rebuilds the same cstub via [dune build
+             probe_baseline.exe] and hits the same C compile error.
+             Same c6 prediction applies; probe.log contains tiny_sum. *)
+          Expect_compat_failure { inputs = c6_inputs; version_info = None }
+      | _ -> Expect_success);
+  }
+
 (** [lib_symbol_version_broken_script_spec]: at [Probe (Binding
     Python)], expect c5 [cmp_sym_version] to fire. The lib's tiny.map
     was bumped from TINY_1.0 to TINY_2.0 (harness scenario

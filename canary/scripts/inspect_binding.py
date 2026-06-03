@@ -270,7 +270,12 @@ def parse_stub_a(path, prefix):
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, check=False)
     if proc.returncode != 0:
-        raise RuntimeError(f"nm {path} failed: {proc.stderr.strip()}")
+        # File missing or unreadable — return empty sets with the
+        # error string saved for inspection. Lets dependent canary
+        # steps observe "binding not built" without crashing the
+        # inspector. The caller (summarize_stub) packs this into the
+        # JSON's "error" field below.
+        return [], {}, proc.stderr.strip()
 
     required = set()
     # versioned_req maps version_tag → count of undefined refs that
@@ -292,7 +297,7 @@ def parse_stub_a(path, prefix):
             if "@" in raw and "@@" not in raw:
                 _, ver = raw.split("@", 1)
                 versioned_req[ver] = versioned_req.get(ver, 0) + 1
-    return sorted(required), versioned_req
+    return sorted(required), versioned_req, None
 
 
 def parse_elf_surface(path):
@@ -327,7 +332,7 @@ def parse_elf_surface(path):
 
 
 def summarize_stub(path, prefix, watchlist):
-    requires, versioned_req = parse_stub_a(path, prefix)
+    requires, versioned_req, err = parse_stub_a(path, prefix)
     names_set = set(requires)
     present = [w for w in watchlist if w in names_set]
     missing = [w for w in watchlist if w not in names_set]
@@ -342,6 +347,13 @@ def summarize_stub(path, prefix, watchlist):
         "versioned_req": versioned_req,
         "watchlist": {"present": present, "missing": missing},
     }
+    if err is not None:
+        # nm couldn't read the file (typically because an upstream
+        # build step failed). Record the error so downstream callers
+        # can distinguish "binding has no required symbols" from
+        # "binding wasn't built." Exit 0 so the inspect step itself
+        # succeeds.
+        summary["error"] = err
     elf = parse_elf_surface(path)
     if elf is not None:
         summary["elf"] = elf
