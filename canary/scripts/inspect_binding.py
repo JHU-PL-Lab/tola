@@ -273,15 +273,26 @@ def parse_stub_a(path, prefix):
         raise RuntimeError(f"nm {path} failed: {proc.stderr.strip()}")
 
     required = set()
+    # versioned_req maps version_tag → count of undefined refs that
+    # carry it (e.g. {"TINY_1.0": 3}). Captured for c5 cmp_sym_version:
+    # if the lib later exports a different @@VER set, dyld can't satisfy
+    # the consumer's tags.
+    versioned_req = {}
     for line in proc.stdout.splitlines():
         parts = line.strip().split()
         if len(parts) < 2:
             continue
         kind = parts[-2] if len(parts) >= 2 else ""
-        sym = parts[-1].split("@")[0]  # strip ELF @@VER suffix
+        raw = parts[-1]
+        sym = raw.split("@")[0]  # strip ELF @VER / @@VER suffix
         if kind == "U" and (not prefix or sym.startswith(prefix)):
             required.add(sym)
-    return sorted(required)
+            # Undefined refs use a single "@VER" suffix (not @@). Capture
+            # the version tag if present.
+            if "@" in raw and "@@" not in raw:
+                _, ver = raw.split("@", 1)
+                versioned_req[ver] = versioned_req.get(ver, 0) + 1
+    return sorted(required), versioned_req
 
 
 def parse_elf_surface(path):
@@ -316,7 +327,7 @@ def parse_elf_surface(path):
 
 
 def summarize_stub(path, prefix, watchlist):
-    requires = parse_stub_a(path, prefix)
+    requires, versioned_req = parse_stub_a(path, prefix)
     names_set = set(requires)
     present = [w for w in watchlist if w in names_set]
     missing = [w for w in watchlist if w not in names_set]
@@ -325,6 +336,10 @@ def summarize_stub(path, prefix, watchlist):
         "path": path,
         "counts": {"required": len(requires)},
         "requires": requires,
+        # c5 cmp_sym_version: tags the consumer requires; provider must
+        # export the same tags. Empty on .a archives and on .so files
+        # whose undefined refs aren't @VER-annotated.
+        "versioned_req": versioned_req,
         "watchlist": {"present": present, "missing": missing},
     }
     elf = parse_elf_surface(path)

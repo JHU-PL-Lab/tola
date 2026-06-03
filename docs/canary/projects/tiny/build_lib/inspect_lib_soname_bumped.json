@@ -20,7 +20,11 @@
     "tiny_offset",
     "tiny_sum"
   ],
-  "versioned_exports": {},
+  "versioned_exports": {
+    "tiny_diff": "TINY_1.0",
+    "tiny_offset": "TINY_1.0",
+    "tiny_sum": "TINY_1.0"
+  },
   "versioned_req": {},
   "watchlist": {
     "missing": [],

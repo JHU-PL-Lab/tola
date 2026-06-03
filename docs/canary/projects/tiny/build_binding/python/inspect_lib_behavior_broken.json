@@ -9,6 +9,9 @@
     "tiny_offset",
     "tiny_sum"
   ],
+  "versioned_req": {
+    "TINY_1.0": 3
+  },
   "watchlist": {
     "present": [],
     "missing": []

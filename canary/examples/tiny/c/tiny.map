@@ -1,0 +1,8 @@
+TINY_1.0 {
+    global:
+        tiny_sum;
+        tiny_diff;
+        tiny_offset;
+    local:
+        *;
+};

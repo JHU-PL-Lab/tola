@@ -95,6 +95,12 @@ type inspect_input =
   | Ocaml_mli of string list
   | Python_attrs of string list
   | Versioned_symbols of string list
+      (** Deprecated single-side input for c5 — kept for callers that
+          read `versioned_req` from one JSON without diffing against a
+          provider. New variants should use
+          [Versioned_exports] + [Versioned_req] instead. *)
+  | Versioned_exports of string list  (** provider side, n4's elf.versioned_exports *)
+  | Versioned_req of string list      (** consumer side, e.g. cext's elf.versioned_req *)
   | Abi_surface of string list
   (* Typed-signature inputs for c6 / c7 / c8.
      Producer side ([Typed_header]) and consumer sides
@@ -183,6 +189,37 @@ type typed_signatures_inspect = {
   layer : string;
   functions : (string * typed_signature) list;
 }
+
+(** Versioned-symbol view of an inspect JSON. Produced by
+    [inspect_native.py] (which reads [@@VER] / [@VER] suffixes from
+    [nm -D]); fields are non-empty when the ELF artifact carries
+    GNU symbol versioning.
+    - [exports] map: defined symbol → exported version tag (provider
+      side, populated for libs built with a version script).
+    - [req_counts] map: required version tag → reference count
+      (consumer side, populated for binaries linked against a
+      versioned provider). *)
+type versioned_symbols_inspect = {
+  path : string;
+  exports : (string * string) list;
+  req_counts : (string * int) list;
+}
+
+let load_versioned_symbols path : versioned_symbols_inspect =
+  let j = load path in
+  let exports =
+    match field j "versioned_exports" with
+    | Some (`Assoc entries) ->
+        List.filter_map entries ~f:(fun (sym, v) ->
+          match v with `String ver -> Some (sym, ver) | _ -> None)
+    | _ -> [] in
+  let req_counts =
+    match field j "versioned_req" with
+    | Some (`Assoc entries) ->
+        List.filter_map entries ~f:(fun (ver, v) ->
+          match v with `Int n -> Some (ver, n) | _ -> None)
+    | _ -> [] in
+  { path = get_string j "path"; exports; req_counts }
 
 let load_typed_signatures path : typed_signatures_inspect =
   let j = load path in

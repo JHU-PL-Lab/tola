@@ -1,0 +1,8 @@
+--- a/c/tiny.map
++++ b/c/tiny.map
+@@ -1,4 +1,4 @@
+-TINY_1.0 {
++TINY_2.0 {
+     global:
+         tiny_sum;
+         tiny_diff;

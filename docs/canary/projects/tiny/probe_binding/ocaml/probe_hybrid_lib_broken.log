@@ -1,3 +1,3 @@
 Entering directory 'canary/examples/tiny/scenarios/_cache/baseline/workspace'
 Leaving directory 'canary/examples/tiny/scenarios/_cache/baseline/workspace'
-canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe: symbol lookup error: canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe: undefined symbol: tiny_sum
+canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe: symbol lookup error: canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe: undefined symbol: tiny_sum, version TINY_1.0

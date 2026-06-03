@@ -642,6 +642,41 @@ let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [lib_symbol_version_broken_script_spec]: at [Probe (Binding
+    Python)], expect c5 [cmp_sym_version] to fire. The lib's tiny.map
+    was bumped from TINY_1.0 to TINY_2.0 (harness scenario
+    [e9 symbol_version_floor]); the rebuilt lib exports
+    [tiny_sum@@TINY_2.0] etc., but the cached cext records
+    [tiny_sum@TINY_1.0] in its NEEDED. dyld can't satisfy the version
+    tag at load time.
+
+    Provider input ([Versioned_exports]) cites build_lib's inspect.json
+    (carries elf.versioned_exports). Consumer input ([Versioned_req])
+    cites build_binding_python's inspect.json (carries elf.versioned_req).
+    [check_sym_version] diffs: consumer required TINY_1.0; provider
+    exports TINY_2.0; missing tag is TINY_1.0 — which appears verbatim
+    in dyld's error.
+
+    OCaml side is unaffected: canary rebuilds the OCaml binding fresh
+    against the bumped lib, so its NEEDED tracks @@TINY_2.0 (matches
+    provider). Only the cached Python cext carries the stale version
+    tag. Same pattern as [lib_soname_bumped]. *)
+let make_lib_symbol_version_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores ()) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.Python) ->
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              Versioned_exports [ "build_lib/inspect.json" ];
+              Versioned_req     [ "build_binding_python/inspect.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** [binding_overdeclares_stubs_script_spec]: c1 [cmp_symbol] from the
     {b orphan} direction. The OCaml cstub references [tiny_extra] that
     the lib never had — the dual of [lib_broken] (there the lib lost a

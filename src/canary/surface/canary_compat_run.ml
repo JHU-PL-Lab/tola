@@ -311,22 +311,48 @@ let c2_predict ~resolve (inputs : inspect_input list) : string list =
          | Some p -> load_watchlist_missing p |> List.concat_map ~f:name_variants)
     | _ -> [])
 
-(** c5 cmp_sym_version (L1b). Reads the [versioned_req] map from a
-    Versioned_symbols JSON and returns its keys.  No diff yet — the
-    inspector emits the data but the comparator (set vs available)
-    isn't implemented.  Status will flip to [Wired] once the diff
-    step lands. *)
+(** c5 cmp_sym_version (L1b). Reads provider's versioned_exports map
+    from a [Versioned_exports] input and consumer's versioned_req map
+    from a [Versioned_req] input; runs [check_sym_version] and on
+    mismatch returns the version tags the consumer requires that the
+    provider doesn't export. dyld's runtime error mentions those tags
+    verbatim ("version `TINY_1.0' not found"), so they're the right
+    substrings to grep probe.log for.
+
+    The legacy [Versioned_symbols] case is also accepted; if present,
+    its JSON is treated as carrying {b both} provider and consumer
+    fields (the way [inspect_native.py] emits them on a single
+    artifact). *)
 let c5_predict ~resolve (inputs : inspect_input list) : string list =
-  List.concat_map inputs ~f:(function
-    | Versioned_symbols ps ->
-        (match pick_existing ~resolve ps with
-         | None -> []
-         | Some p ->
-             let j = Yojson.Basic.from_file p in
-             (match field j "versioned_req" with
-              | Some (`Assoc entries) -> List.map entries ~f:fst
-              | _ -> []))
-    | _ -> [])
+  let exports =
+    List.find_map inputs
+      ~f:(function
+        | Versioned_exports ps -> pick_existing ~resolve ps
+        | _ -> None) in
+  let reqs =
+    List.find_map inputs
+      ~f:(function
+        | Versioned_req ps -> pick_existing ~resolve ps
+        | _ -> None) in
+  (* Fallback: a single Versioned_symbols carrying both sides. *)
+  let single =
+    List.find_map inputs
+      ~f:(function
+        | Versioned_symbols ps -> pick_existing ~resolve ps
+        | _ -> None) in
+  let provider_path = match exports with Some _ as p -> p | None -> single in
+  let consumer_path = match reqs with Some _ as p -> p | None -> single in
+  match provider_path, consumer_path with
+  | Some pp, Some cp ->
+      let prov = Canary_compat.load_versioned_symbols pp in
+      let cons = Canary_compat.load_versioned_symbols cp in
+      let consumer_required = List.map cons.req_counts ~f:fst in
+      (match Canary_compat.check_sym_version
+               ~provider_versioned_exports:prov.exports
+               ~consumer_required_versions:consumer_required with
+       | Sym_version_missing { missing_versions } -> missing_versions
+       | Sym_version_compatible | Sym_version_unknown -> [])
+  | _ -> []
 
 (** c4 cmp_abi (L4). Reads provider's SONAME from a [Native_lib]
     input's [elf.soname] and consumer's NEEDED list from an
@@ -399,7 +425,7 @@ let registered_checks : contract_check list = [
     enabled = false; predict = c3_predict };
   { id = C4; name = "cmp_abi";               layer = "L4";  status = Wired;
     enabled = true;  predict = c4_predict };
-  { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Inspect_only;
+  { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Wired;
     enabled = true;  predict = c5_predict };
   { id = C6; name = "cmp_type";              layer = "L2";  status = Blocked [];
     enabled = false; predict = c6_predict };

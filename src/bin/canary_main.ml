@@ -226,6 +226,13 @@ let action_cmd =
         (Canary_project_tiny.make_lib_broken_script_spec
            ~stores:(ws_stores "symbol_missing")
            ~probe_exe:"ocaml/examples/app_helper.exe" ());
+      (* lib_symbol_version_broken: c5 cmp_sym_version fires when the
+         lib's exported version tag (TINY_2.0 post-bump) doesn't match
+         the cached cext's required tag (TINY_1.0). Maps to harness
+         scenario e9 symbol_version_floor. *)
+      mk "lib_symbol_version_broken"
+        (Canary_project_tiny.make_lib_symbol_version_broken_script_spec
+           ~stores:(ws_stores "symbol_version_floor"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

@@ -201,6 +201,26 @@ SCENARIOS = {
             "cmp_api_complete_ctypes": "skip",
         },
     },
+    "symbol_version_floor": {
+        "description": "Lib's tiny.map version script is bumped from TINY_1.0 to TINY_2.0; rebuild emits libtiny.so with `tiny_sum@@TINY_2.0` etc. Cached cext (built when lib exported @@TINY_1.0) records `@TINY_1.0` in its NEEDED — dyld can't satisfy that version tag at load time, even though the lib's filename and the bare symbol names are unchanged. c5 cmp_sym_version catches the static mismatch by diffing provider's versioned_exports against consumer's versioned_req.",
+        "violates": ["SymbolVersion"],
+        "perturbs": ["c/tiny.map"],  # [s2 via rebuild]
+        "apply":  _c_patch_apply("symbol_version_floor"),
+        "revert": _c_patch_revert("symbol_version_floor"),
+        "expected": {
+            "ocaml_build":             "ok",
+            "ocaml_probe":             "ok",
+            "ocaml_app_binding":       "ok",
+            "ocaml_app_helper":        "ok",
+            "python_cext_probe":       "fail",
+            "python_ctypes_probe":     "ok",
+            "cmp_symbol_ocaml":        "pass",
+            "cmp_symbol_cext":         "pass",
+            "cmp_api_complete_ocaml":  "pass",
+            "cmp_api_complete_cext":   "pass",
+            "cmp_api_complete_ctypes": "pass",
+        },
+    },
     "abi_soname_bump": {
         "description": "SONAME bumped libtiny.so.1 -> libtiny.so.2 and file renamed; binding NEEDED libtiny.so.1 has nothing to resolve against. Symbols themselves unchanged.",
         "violates": ["ABI"],
@@ -646,6 +666,7 @@ PERTURBABLE_SOURCES = [
     "python_cext/tiny_cext/_native.c",
     "python_ctypes/tiny_ctypes/__init__.py",
     "python_ctypes/tiny_ctypes/_raw.py",
+    "c/tiny.map",
 ]
 
 
