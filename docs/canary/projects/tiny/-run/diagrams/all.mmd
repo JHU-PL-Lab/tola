@@ -8,22 +8,22 @@ graph LR
 
     A_configure{{"configure [1]"}}
     A_build_headers{{"build_headers"}}
-    A_build_lib{{"build_lib [2]"}}
-    A_build_binding_ocaml{{"build_binding_ocaml [4]"}}
-    A_build_binding_python{{"build_binding_python [8]"}}
+    A_build_lib{{"build_lib [3]"}}
+    A_build_binding_ocaml{{"build_binding_ocaml [5]"}}
+    A_build_binding_python{{"build_binding_python [9]"}}
     A_build_app{{"build_app"}}
     A_install_lib{{"install_lib"}}
     A_pack_binding_ocaml{{"pack_binding_ocaml"}}
     A_pack_binding_python{{"pack_binding_python"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [6][7]"])
-    A_probe_binding_python(["probe_binding_python [10][11]"])
-    A_probe_lib(["probe_lib [12][13]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [7][8]"])
+    A_probe_binding_python(["probe_binding_python [11][12]"])
+    A_probe_lib(["probe_lib [13][14]"])
     A_probe_app(["probe_app"])
-    A_build_lib_inspect(["inspect_lib [3]"])
-    A_build_binding_ocaml_inspect(["inspect_ocaml [5]"])
-    A_build_binding_python_inspect(["inspect_python [9]"])
+    A_build_lib_inspect(["inspect_lib [4]"])
+    A_build_binding_ocaml_inspect(["inspect_ocaml [6]"])
+    A_build_binding_python_inspect(["inspect_python [10]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers

@@ -183,6 +183,16 @@ let two_versions = [ Dev; Stable ]
     incrementally by applying rules. *)
 type rule =
   | Configure
+  | Scan_sources
+      (** Project-specific step that inspects source files (typically
+          producing typed-signature JSONs for c6/c7/c8). Placement in
+          the dep graph is project-controlled — for hand-written
+          bindings (tiny) it runs early after Configure; for
+          generated bindings (z3) the project's spec overrides the
+          dep so it runs after Build_lib (which generates the
+          binding's source). The rule itself is structurally just
+          "inspect source files"; the spec decides when those
+          files are available. *)
   | Build_headers
   | Build_lib
   | Build_binding of Canary_lang.lang
@@ -194,6 +204,7 @@ type rule =
 
 let string_of_rule = function
   | Configure -> "configure"
+  | Scan_sources -> "scan_sources"
   | Build_headers -> "build_headers"
   | Build_lib -> "build_lib"
   | Build_binding lang -> [%string "build_binding_%{Canary_lang.string_of_lang lang}"]
@@ -220,6 +231,7 @@ let rule_of_string s =
   in
   match s with
   | "configure"     -> Some Configure
+  | "scan_sources"  -> Some Scan_sources
   | "build_headers" -> Some Build_headers
   | "build_lib"     -> Some Build_lib
   | "install_lib"   -> Some Install_lib

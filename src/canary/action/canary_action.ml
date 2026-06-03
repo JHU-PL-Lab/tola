@@ -54,7 +54,7 @@ let pool_get ar kind =
    ~langs: binding languages this project supports (external loop).
    Each lang gets its own Build_binding / Fetch / Publish / Probe rules. *)
 let store_rules ~langs =
-  [ Fetch Source; Configure; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
+  [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
   @ List.concat_map langs ~f:(fun lang ->
       [ Build_binding lang; Fetch (Binding lang);
         Publish (Binding lang); Probe (Binding lang) ])
@@ -120,7 +120,10 @@ let make_action_rule ~rules ~versions ~name ~source () =
                     ~origin:Build_tree ~location:Build_tree ())
             in
             add pools Headers nodes
-        | Configure | Install_lib | Publish _ | Probe _ -> pools)
+        (* Scan_sources doesn't produce new artifact nodes — it just
+           emits inspect JSONs into the runner's output dirs.
+           Configure / Install_lib / Publish / Probe likewise. *)
+        | Configure | Scan_sources | Install_lib | Publish _ | Probe _ -> pools)
   in
   { rules; pools }
 

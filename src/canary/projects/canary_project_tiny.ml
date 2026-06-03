@@ -237,6 +237,35 @@ let make_base_script_spec
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
+    (* Scan_sources: emit typed-signature JSONs derived directly from
+       source files (Phase 15.5a). Runs after Configure (the default
+       scan_sources_after), so it's available to any downstream step
+       — critically including Build_binding_<lang>, which is where c6's
+       type-mismatch perturbations cause compile failure. *)
+    scan_sources = Some (fun ~output_dir ~variant_key ->
+      let mk base layer src =
+        let out = Canary_basic.filename ~variant_key ~base ~ext:"json" in
+        Printf.sprintf
+          "python3 canary/scripts/inspect_tiny_typed.py --layer %s \
+           --path %s/%s > %s/%s"
+          layer source src output_dir out
+      in
+      let cmds = [
+        mk "inspect_typed_header" "header"
+          "c/include/tiny.h";
+        mk "inspect_typed_binding_stub_ocaml" "stub_ocaml"
+          "ocaml/tiny_raw.mli";
+        mk "inspect_typed_binding_user_ocaml" "user_ocaml"
+          "ocaml/tiny.mli";
+        mk "inspect_typed_binding_stub_python" "stub_python"
+          "python_cext/tiny_cext/_native.c";
+        mk "inspect_typed_binding_user_python" "user_python"
+          "python_cext/tiny_cext/__init__.py";
+      ] in
+      String.concat ~sep:" && " cmds
+      |> Canary_build_cmd.with_marker
+           ~marker:"scan.ok" ~output_dir ~variant_key);
+
     (* Build_binding OCaml: build the binding {b library} only —
        tiny.cmxa (bo6) and libtiny_stubs.a (bo7). dune --root pins the
        source tree as workspace; targets are relative to that root.
@@ -245,13 +274,23 @@ let make_base_script_spec
     build_binding = [
       (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
-         Canary_build_cmd.dune_build_cmd
-           ~env_extra:[
-             [%string "LIBRARY_PATH=%{abs_lib_dir}"];
-             [%string "LD_RUN_PATH=%{abs_lib_dir}"];
-           ]
-           ~root:source
-           ~target:"ocaml/tiny.cmxa ocaml/libtiny_stubs.a" ()
+         (* Capture dune's stderr into output_dir/build.log so c6's
+            substring-match has something to grep against when the
+            cstub compile fails (header arity mismatch etc.). The
+            marker echo runs only on dune success. *)
+         let build_log =
+           Canary_basic.variant_file ~variant_key "build.log" in
+         let dune_cmd =
+           Canary_build_cmd.dune_build_cmd
+             ~env_extra:[
+               [%string "LIBRARY_PATH=%{abs_lib_dir}"];
+               [%string "LD_RUN_PATH=%{abs_lib_dir}"];
+             ]
+             ~root:source
+             ~target:"ocaml/tiny.cmxa ocaml/libtiny_stubs.a" () in
+         Printf.sprintf
+           "(%s) > %s/%s 2>&1"
+           dune_cmd output_dir build_log
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
       (* Build_binding Python: verify the prebuilt cext exists in the
@@ -326,24 +365,14 @@ let make_base_script_spec
          with attr watchlist. Feeds c2 cmp_api_completeness (Python). *)
     inspect = (fun rule _loc ->
       let lib_inspect_cmd ~output_dir ~variant_key =
-        let nm_cmd = Canary_artifact_native.inspect_cmd
+        (* Native nm-derived inspect of libtiny.so for c1 / c4 / c5.
+           typed_header.json moved to scan_sources in Phase 15.5a so
+           it's available even when later build steps fail. *)
+        Canary_artifact_native.inspect_cmd
           ~lib:lib_path
           ~prefixes:[ "tiny_" ]
           ~watchlist:tiny_native_stable_symbols
           ~output_dir ~variant_key () in
-        (* Phase 15.3: also emit typed_header.json so c6/c7/c8 inputs
-           are available before Probe evaluates. Uses the trivial-grep
-           [inspect_tiny_typed.py] script — name presence in tiny.h
-           gates each entry; signatures are hardcoded (replaceable by
-           a real clang-AST inspector). *)
-        let typed_file =
-          Canary_basic.filename ~variant_key
-            ~base:"inspect_typed_header" ~ext:"json" in
-        Printf.sprintf
-          "%s && \
-           python3 canary/scripts/inspect_tiny_typed.py --layer header \
-           --path %s/c/include/tiny.h > %s/%s"
-          nm_cmd source output_dir typed_file in
       match rule with
       | Build_lib ->
           (* Inspect the lib as soon as we've verified it exists in the
@@ -361,42 +390,26 @@ let make_base_script_spec
           Some lib_inspect_cmd
       | Build_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
-            (* Two-file inspect: stub (c1) + mli (c2). Both JSONs live
-               in build_binding_ocaml/ so Probe's expectation can cite
-               them before it runs. *)
+            (* Two-file inspect: stub (c1) + mli (c2). Typed signatures
+               moved to scan_sources in Phase 15.5a — they live at
+               scan_sources/inspect_typed_*.json so c6 can cite them
+               even when Build (Binding OCaml) fails. *)
             let stub_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
             let mli_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect_mli" ~ext:"json" in
-            let typed_stub_file =
-              Canary_basic.filename ~variant_key
-                ~base:"inspect_typed_binding_stub" ~ext:"json" in
-            let typed_user_file =
-              Canary_basic.filename ~variant_key
-                ~base:"inspect_typed_binding_user" ~ext:"json" in
             let watchlist_csv =
               String.concat ~sep:"," tiny_ocaml_module_watchlist in
-            (* Four-file inspect at Build (Binding OCaml):
-               - inspect.json (c_stub, c1)
-               - inspect_mli.json (mli watchlist, c2)
-               - inspect_typed_binding_stub.json (typed bo1 stub, c6/c7)
-               - inspect_typed_binding_user.json (typed bo4 user, c7/c8) *)
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind stub \
                --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s && \
                python3 canary/scripts/inspect_binding.py --kind mli \
                --module-prefix Tiny \
-               --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s && \
-               python3 canary/scripts/inspect_tiny_typed.py --layer stub_ocaml \
-               --path %s/ocaml/tiny_raw.mli > %s/%s && \
-               python3 canary/scripts/inspect_tiny_typed.py --layer user_ocaml \
-               --path %s/ocaml/tiny.mli > %s/%s"
+               --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               ocaml_build_dir output_dir stub_file
-              source watchlist_csv output_dir mli_file
-              source output_dir typed_stub_file
-              source output_dir typed_user_file)
+              source watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
             (* Two-file inspect on the Python side. Mirrors the OCaml
@@ -421,32 +434,20 @@ let make_base_script_spec
             let attrs_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect_attrs" ~ext:"json" in
-            let typed_stub_file =
-              Canary_basic.filename ~variant_key
-                ~base:"inspect_typed_binding_stub" ~ext:"json" in
-            let typed_user_file =
-              Canary_basic.filename ~variant_key
-                ~base:"inspect_typed_binding_user" ~ext:"json" in
             let attrs_watchlist_csv =
               String.concat ~sep:"," tiny_python_module_watchlist in
-            (* Four-file inspect at Build (Binding Python). Mirrors the
-               OCaml side: c_stub (c1) + attrs (c2) + typed stub
-               (c6/c7) + typed user (c7/c8). *)
+            (* Two-file inspect at Build (Binding Python): c_stub (c1)
+               + attrs (c2). Typed-signature inspects moved to
+               scan_sources (Phase 15.5a). *)
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind stub \
                --path %s --prefix tiny_ > %s/%s && \
                LD_LIBRARY_PATH=%s PYTHONPATH=%s \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
-               --watchlist '%s' > %s/%s && \
-               python3 canary/scripts/inspect_tiny_typed.py --layer stub_python \
-               --path %s/python_cext/tiny_cext/_native.c > %s/%s && \
-               python3 canary/scripts/inspect_tiny_typed.py --layer user_python \
-               --path %s/python_cext/tiny_cext/__init__.py > %s/%s"
+               --watchlist '%s' > %s/%s"
               cext_so_glob output_dir stub_file
               abs_lib_dir python_cext_root
-              attrs_watchlist_csv output_dir attrs_file
-              source output_dir typed_stub_file
-              source output_dir typed_user_file)
+              attrs_watchlist_csv output_dir attrs_file)
       | Probe (Binding Canary_lang.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =

@@ -94,6 +94,17 @@ type script_spec = {
      source tree. Emitted after fetch_source; configure/build depend on it.
      None when no source build (stable fetch-only sources). *)
   scan_source : (output_dir:string -> variant_key:string -> string) option;
+  (* Source-derived inspections (typed signatures, etc.) for c6/c7/c8.
+     Placement in the dep graph is project-controlled via
+     [scan_sources_after]:
+     - hand-written bindings (tiny): runs after Configure (default).
+     - generated bindings (z3): set scan_sources_after = Some Build_lib
+       so it runs after the binding source has been generated.
+     Emits JSONs into the scan_sources/ output dir; comparators
+     downstream reference [scan_sources/<file>.json] via the
+     [Typed_*] inspect_input cases. *)
+  scan_sources : (output_dir:string -> variant_key:string -> string) option;
+  scan_sources_after : Canary_basic.rule option;
   configure : (output_dir:string -> variant_key:string -> string) option;
   (* Headers: public C API headers consumed by build_binding.
      build_headers: headers from the source/build tree (after configure).
@@ -168,6 +179,8 @@ let empty_script_spec = {
   fetch_source = None;
   api_source = None;
   scan_source = None;
+  scan_sources = None;
+  scan_sources_after = None;
   configure = None;
   build_headers = None; fetch_headers = None;
   build_lib = None; build_binding = []; install_lib = None;
@@ -188,7 +201,9 @@ let empty_script_spec = {
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
 let no_source spec =
-  { spec with fetch_source = None; scan_source = None; configure = None;
+  { spec with fetch_source = None; scan_source = None;
+    scan_sources = None; scan_sources_after = None;
+    configure = None;
     build_headers = None;
     build_lib = None; build_binding = []; install_lib = None;
     build_app = None;
@@ -200,6 +215,7 @@ let no_source spec =
 let script_of_rule spec = function
   | Fetch Source -> spec.fetch_source
   | Configure -> spec.configure
+  | Scan_sources -> spec.scan_sources
   | Build_headers -> spec.build_headers
   | Fetch Headers -> spec.fetch_headers
   | Fetch Lib -> spec.fetch_lib
@@ -333,6 +349,7 @@ let check_markers markers ~output_dir ~variant_key =
 let marker_of_rule = function
   | Fetch Source -> "source.ok"
   | Configure -> "conf.ok"
+  | Scan_sources -> "scan.ok"
   | Build_headers | Fetch Headers -> "headers.ok"
   | Fetch Lib -> "lib.ok"
   | Fetch (Binding _) -> "binding.ok"
@@ -390,6 +407,18 @@ let deps_of_rule spec rule =
   | Fetch _ -> []
   | Configure ->
       List.filter_opt [ scan_or_fetch_source () ]
+  | Scan_sources ->
+      (* Default to Configure when wired, else fall back to source/scan.
+         Override via spec.scan_sources_after for projects whose
+         binding source is generated at a later step (e.g. z3 sets
+         scan_sources_after = Some Build_lib). *)
+      let after =
+        Option.value spec.scan_sources_after
+          ~default:(if has Configure then Configure
+                    else if has (Fetch Source) then Fetch Source
+                    else Configure)
+      in
+      List.filter_opt [ if has after then Some (tag after) else None ]
   | Build_headers ->
       (* headers come from configured source; fall back to scan/fetch if no configure *)
       List.filter_opt [

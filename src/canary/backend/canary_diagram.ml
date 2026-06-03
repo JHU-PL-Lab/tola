@@ -740,7 +740,7 @@ let _node_shape_of_rule rule =
   match rule with
   | Probe _                                  -> `Pill
   | Build_lib | Build_binding _ | Build_app
-  | Build_headers | Configure | Install_lib
+  | Build_headers | Configure | Scan_sources | Install_lib
   | Publish _                                -> `Hex
   | Fetch _                                  -> `Box
 
@@ -1237,7 +1237,7 @@ let mermaid_full
         | Build_lib -> Poly.equal k Lib | Install_lib -> Poly.equal k Lib
         | Build_headers -> Poly.equal k Headers
         | Build_binding l -> Poly.equal k (Binding l) | Build_app -> Poly.equal k App
-        | Configure -> Poly.equal k Source)
+        | Configure | Scan_sources -> Poly.equal k Source)
   in
   let present_kinds = List.filter all_kinds ~f:kind_has_steps in
   (* Compute variant info for every present kind upfront *)
