@@ -84,9 +84,9 @@ let get_string_list j name =
     - [Python_attrs p]      ↔ {i bpe2 user_binding_cext.py} or
                               {i bpc2 user_binding_ctypes.py}. Same role
                               as [Ocaml_mli] for the Python flavour.
-    - [Versioned_symbols p] ↔ {i n4}'s [versioned_req] /
-                              [versioned_exports]. Feeds {i c5
-                              cmp_sym_version} (L1b).
+    - [Versioned_exports p] ↔ provider's {i n4}'s [versioned_exports].
+                              Feeds {i c5 cmp_sym_version} (L1b).
+    - [Versioned_req p]     ↔ consumer's [versioned_req]. Same.
     - [Abi_surface p]       ↔ {i n4}'s ELF SONAME/NEEDED/RPATH. Feeds
                               {i c4 cmp_abi} (L4). *)
 type inspect_input =
@@ -94,11 +94,6 @@ type inspect_input =
   | Native_lib of string list
   | Ocaml_mli of string list
   | Python_attrs of string list
-  | Versioned_symbols of string list
-      (** Deprecated single-side input for c5 — kept for callers that
-          read `versioned_req` from one JSON without diffing against a
-          provider. New variants should use
-          [Versioned_exports] + [Versioned_req] instead. *)
   | Versioned_exports of string list  (** provider side, n4's elf.versioned_exports *)
   | Versioned_req of string list      (** consumer side, e.g. cext's elf.versioned_req *)
   | Abi_surface of string list

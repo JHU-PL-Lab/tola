@@ -267,8 +267,13 @@ let action_cmd =
     in
     match selected with
     | [] ->
-        Fmt.epr "Unknown tiny variant: %s (available: baseline (no suffix), lib_broken)@."
+        let available =
+          all_variants
+          |> List.map (fun (vid, _, _) -> if vid = "" then "(baseline)" else vid)
+          |> String.concat ", " in
+        Fmt.epr "Unknown tiny variant: %s (available: %s)@."
           (match variant_filter with Some s -> s | None -> "")
+          available
     | variants ->
         Canary_run_info.run_project_multi ~failfast ?cache_path ~root
           ~project_name:"tiny"

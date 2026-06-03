@@ -114,7 +114,7 @@ catalogues every module with its current verdict.
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
 | `doc/canary/research/README.md`                | Entry point — four-pillar alignment for surface theory + tiny witness + roadmap                       |
 | `doc/canary/research/surface_theory.md`        | Theory (current): six surface roles s1..s6, eight contracts, §2.7 coverage (inspectors i*, comparators c*) + implementation pointers |
-| `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 8 scenarios + coverage matrix + findings              |
+| `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
 | `doc/canary/research/plan.md`                  | Paper venues + milestones + working roadmap (steps 1-5; step 1+2 done)                                |
 | `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
 | `doc/canary/ops/llvm_build.md`                 | LLVM source build steps, smoke test, opam install notes                                                |
@@ -208,10 +208,13 @@ Numbers below are still the canonical TODO ids; plan.md is the
 sequencing / progress doc that absorbs them.
 
 - **#15b** — Unit-test framework for compat/inspect logic. Plan: §6 Step 3b.
-- **#43** — L1b versioned-symbol mismatch detection (c5 cmp_sym_version).
-  Plan: §6 Step 4 (a) "Comparator-only gaps".
-- **#44** — L2 typed signatures via clang AST (c6 cmp_type). Plan: §6 Step 4
-  (a) "Inspector-and-comparator gaps".
+- ~~**#43**~~ — c5 cmp_sym_version: **shipped Phase 15.4**. Lib gained
+  `tiny.map` version script; canary diffs `Versioned_exports` vs
+  `Versioned_req`. Demoed via `lib_symbol_version_broken` variant.
+- ~~**#44**~~ — c6 cmp_type: **shipped Phase 15.5b** via trivial-grep
+  inspector (`inspect_tiny_typed.py`'s `header` layer uses regex; other
+  layers hardcoded). Clang-AST replacement is future work, not blocker.
+  Demoed via `binding_type_broken` variant.
 - **#18** — Audit project specs for hardcoded shell commands. Plan: §6 Step 4
   (b) "Project-spec command decoupling". The build-primitive extraction
   half is done (commits `952498e` Step 4(b) + `800108d` Phase 3): the

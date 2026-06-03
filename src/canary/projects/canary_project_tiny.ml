@@ -66,11 +66,11 @@ let tiny_native_stable_symbols = [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]
 let tiny_ocaml_module_watchlist =
   [ "Tiny"; "Tiny.sum"; "Tiny.diff"; "Tiny.offset" ]
 
-(** Attribute watchlist on {i bpe2 user_binding_cext.py} (and equivalently
-    on {i bpc2 user_binding_ctypes.py} when the standalone harness checks
-    it). Dropping one of these from [tiny_cext/__init__.py] (= {i e11
-    api_complete_python}) makes {i c2 cmp_api_completeness} on the Python
-    side predict the failure. *)
+(** Attribute watchlist on {i bpe2 user_binding_cext.py}. Dropping one
+    of these from [tiny_cext/__init__.py] (= {i e11 api_complete_python})
+    makes {i c2 cmp_api_completeness} on the Python side predict the
+    failure. (Python ctypes — {i bpc2} — is intentionally not driven
+    by canary; see header docstring.) *)
 let tiny_python_module_watchlist = [ "sum"; "diff"; "offset" ]
 
 (** Canary's [api_source] is the typed declaration of what tiny's surfaces
@@ -103,7 +103,7 @@ let tiny_api_source : Canary_artifact_api.t =
       symbol_prefixes = [ "tiny_" ];
       stable_symbols = tiny_native_stable_symbols;
       versioned_symbols = [];
-      soname    = Some "libtiny.so.1";   (** {i c4 cmp_abi} reference (placeholder until c4 wires up) *)
+      soname    = Some "libtiny.so.1";   (** {i c4 cmp_abi} reference SONAME (live via [lib_soname_bumped] variant) *)
       c_runtime = None;
       cxx_abi   = None;
     }
@@ -381,12 +381,6 @@ let make_base_script_spec
              c1's expectation at probe_binding needs the lib JSON
              already-present. Attaching the inspect to build_lib makes
              the JSON available before any Probe step evaluates. *)
-          Some lib_inspect_cmd
-      | Probe Lib ->
-          (* Same nm-derived JSON, now redundant with build_lib's
-             inspect. Kept for callers that read probe_lib/inspect.json
-             (e.g. lib_broken originally; switch them to build_lib over
-             time). *)
           Some lib_inspect_cmd
       | Build_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->

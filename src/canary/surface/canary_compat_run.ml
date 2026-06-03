@@ -103,8 +103,10 @@ let resolve_variant ~root ~project variant =
       end
     in
     let step_candidates = [
-      "probe_lib"; "pack_binding/ocaml"; "fetch_binding/ocaml";
-      "fetch_binding/python"; "probe_binding/ocaml"; "probe_binding/python";
+      "build_lib"; "probe_lib";
+      "pack_binding/ocaml"; "fetch_binding/ocaml"; "build_binding/ocaml";
+      "fetch_binding/python"; "build_binding/python";
+      "probe_binding/ocaml"; "probe_binding/python";
     ] in
     let resolved = List.find_map step_candidates ~f:find_variant_in_step in
     Some (project_dir, Option.value resolved ~default:variant)
@@ -125,6 +127,7 @@ let step_dir ~project_dir step =
 (* Pick the first existing probe_lib*/summary.json. *)
 let find_lib_inspect ~project_dir ~variant_id =
   let candidates = [
+    "build_lib";  (* tiny: lib inspect lives here (Phase 14d onward) *)
     "probe_lib"; "probe_lib_apt"; "probe_lib_brew"; "probe_lib_staged"
   ] in
   List.find_map candidates ~f:(fun step ->
@@ -317,31 +320,18 @@ let c2_predict ~resolve (inputs : inspect_input list) : string list =
     mismatch returns the version tags the consumer requires that the
     provider doesn't export. dyld's runtime error mentions those tags
     verbatim ("version `TINY_1.0' not found"), so they're the right
-    substrings to grep probe.log for.
-
-    The legacy [Versioned_symbols] case is also accepted; if present,
-    its JSON is treated as carrying {b both} provider and consumer
-    fields (the way [inspect_native.py] emits them on a single
-    artifact). *)
+    substrings to grep probe.log for. *)
 let c5_predict ~resolve (inputs : inspect_input list) : string list =
-  let exports =
+  let provider_path =
     List.find_map inputs
       ~f:(function
         | Versioned_exports ps -> pick_existing ~resolve ps
         | _ -> None) in
-  let reqs =
+  let consumer_path =
     List.find_map inputs
       ~f:(function
         | Versioned_req ps -> pick_existing ~resolve ps
         | _ -> None) in
-  (* Fallback: a single Versioned_symbols carrying both sides. *)
-  let single =
-    List.find_map inputs
-      ~f:(function
-        | Versioned_symbols ps -> pick_existing ~resolve ps
-        | _ -> None) in
-  let provider_path = match exports with Some _ as p -> p | None -> single in
-  let consumer_path = match reqs with Some _ as p -> p | None -> single in
   match provider_path, consumer_path with
   | Some pp, Some cp ->
       let prov = Canary_compat.load_versioned_symbols pp in
@@ -405,10 +395,19 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     predict. Status stays [Blocked []] to reflect the {b predict} side
     being a no-op; coverage is via the probe runner.
 
-    Stubs for c7/c8 — both currently [Blocked] per the registry
-    status field. They contribute no predictions today; their
-    registry entries exist so the status table is honest about
-    what's not yet implemented. *)
+    c7 [api_sound_repack] is structurally analogous to c3 — same
+    probe-runner mechanism, different Contract attribution (binding-
+    repack-layer bug vs native-behavior bug). Variants declaring c7
+    use [Expect_failure { contains_any = ["FAIL "] }] same as c3.
+    [c7_predict] returns []; registry entry stays in place for
+    documentation only (status = Stubbed, enabled = false). See
+    [Canary_project_tiny.make_binding_repack_broken_script_spec] and
+    [make_binding_python_repack_broken_script_spec] for live demos
+    against scenarios [api_repack] and [api_repack_python].
+
+    c8 is disabled — no Contract for canary to maintain. Each binding
+    is independent; cross-binding consistency isn't a canary-side
+    agreement. Candidate for removal in a future registry cleanup. *)
 let c3_predict ~resolve:_ _ = []
 let c7_predict ~resolve:_ _ = []
 let c8_predict ~resolve:_ _ = []

@@ -27,7 +27,6 @@ graph LR
     A_build_lib_inspect(["inspect_lib [4]"])
     A_build_binding_ocaml_inspect(["inspect_ocaml [6]"])
     A_build_binding_python_inspect(["inspect_python [10]"])
-    A_probe_lib_inspect(["inspect_lib [14]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -60,7 +59,6 @@ graph LR
     A_build_lib -.-> A_build_lib_inspect
     A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect
     A_build_binding_python -.-> A_build_binding_python_inspect
-    A_probe_lib -.-> A_probe_lib_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
@@ -89,7 +87,6 @@ graph LR
     class A_build_lib_inspect st_done_ctx
     class A_build_binding_ocaml_inspect st_done_ctx
     class A_build_binding_python_inspect st_done_ctx
-    class A_probe_lib_inspect st_done
     linkStyle 0 stroke:#4caf50,stroke-width:3px
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
@@ -121,4 +118,3 @@ graph LR
     linkStyle 28 stroke:#4caf50,stroke-width:3px
     linkStyle 29 stroke:#4caf50,stroke-width:3px
     linkStyle 30 stroke:#4caf50,stroke-width:3px
-    linkStyle 31 stroke:#4caf50,stroke-width:3px

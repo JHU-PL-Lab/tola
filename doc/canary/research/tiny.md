@@ -367,7 +367,7 @@ chains stay wired in baseline. One scenario (e14) is a
 all-pass because c7 isn't wired into [`run.sh`](../../canary/examples/tiny/scenarios/_harness/run.sh);
 the unit-test layer covers the verdict shape.
 
-### Harness ↔ canary variant mapping (Phase 14a, 2026-06-02)
+### Harness ↔ canary variant mapping (current as of Phase 15.6, 2026-06-03)
 
 The standalone tiny harness names scenarios by what the
 *perturbation* is (`symbol_missing`, `api_complete`, …). canary's
@@ -376,28 +376,38 @@ fire* on the resulting artifact, in surface-theory vocabulary
 (`lib_broken`, `binding_mli_broken`, …). The mapping is conventional
 and lives here:
 
-| Harness scenario        | canary variant                | Contract that fires                |
+| Harness scenario             | canary variant                  | Contract that fires (attribution)               |
 |---|---|---|
-| `baseline` / e12 / e13  | (no suffix; `base_script_spec`) | none (Expect_success everywhere)   |
-| `symbol_missing` / e1   | `lib_broken`                  | c1 cmp_symbol @ probe_binding_ocaml |
+| (none — live tree)           | (no suffix; `base_script_spec`) | none (Expect_success everywhere)                |
+| `symbol_missing` (e1)        | `lib_broken`                    | c1 cmp_symbol @ probe_binding_{ocaml,python}    |
+| `abi_soname_bump` (e2)       | `lib_soname_bumped`             | c4 cmp_abi @ probe_binding_python               |
+| `behavior_silent` (e7)       | `lib_behavior_broken`           | c3 cmp_behavior @ probe_binding_{ocaml,python}  |
+| `symbol_orphan` (e8)         | `binding_overdeclares_stubs`    | c1 cmp_symbol (orphan direction) @ probe_binding_ocaml |
+| `symbol_version_floor` (e9)  | `lib_symbol_version_broken`     | c5 cmp_sym_version @ probe_binding_python       |
+| `api_complete` (e6)          | `binding_mli_broken`            | c2 cmp_api_completeness @ probe_binding_ocaml   |
+| `api_complete_python` (e11)  | `binding_python_attrs_broken`   | c2 cmp_api_completeness @ probe_binding_python  |
+| `header_arity_bump` (canary-added) | `binding_type_broken`     | c6 cmp_type @ build_binding_ocaml + probe       |
+| `api_repack` (e5)            | `binding_repack_broken`         | c7 api_sound_repack @ probe_binding_ocaml       |
+| `api_repack_python` (e10)    | `binding_python_repack_broken`  | c7 api_sound_repack @ probe_binding_python      |
+| `symbol_missing` (e1) + baseline source | `hybrid_lib_broken`  | c1 (cross-product store wiring)                 |
+| `symbol_missing` (e1) + app_helper.exe  | `app_helper_lib_broken` | c1 (chain through tiny_helper)               |
 
-Workflow (Phase 14a, using the restore-based scaffolding —
-superseded by cache-pointing in 14b):
+Workflow today (Phase 14b cache-coexistence; no restore between variants):
 
 ```sh
-cd canary/examples/tiny/scenarios
-./scenarios.py restore symbol_missing
-cd ../../../..
-canary action tiny/lib_broken         # c1 fires; expected failure confirmed
-./scenarios.py restore-baseline       # back to clean tree
-canary action tiny                    # both variants run; baseline passes, lib_broken
-                                      #   reports unexpected_success (intended for 14b)
+make canary                      # runs all 13 variants in sequence via canary action tiny
+# or:
+dune exec src/bin/canary_main.exe -- action tiny            # all variants
+dune exec src/bin/canary_main.exe -- action tiny/<variant>  # one variant
 ```
 
-Adding more scenarios = one new `<name>_script_spec` value in
-`canary_project_tiny.ml` + one new row in this table. Each new spec
-encodes its expectation in (contract, stage) terms, not in scenario
-terms. canary never sees `e1` / `e6` / …; only the harness side does.
+Each variant points at `_cache/<scenario>/workspace/` materialized by
+`scenarios.py prepare-all`. Adding more scenarios = one new
+`make_<name>_script_spec` constructor in `canary_project_tiny.ml` +
+one new `mk` entry in `canary_main.ml`'s variant table + one new row
+in this mapping. Each new spec encodes its expectation in (contract,
+stage) terms; canary never sees `e1` / `e6` / … — only the harness
+side does.
 
 Two harnesses run the scenarios. Both are kept; either should
 match the other's PASS set, so divergence between them is a
@@ -630,18 +640,24 @@ scenarios/_cache/<scenario>/
 
 The full `_cache/` tree is gitignored.
 
-### e9 — reserved slot for SymbolVersion
+### e9 `symbol_version_floor` — SymbolVersion contract (shipped 2026-06-03)
 
-The SymbolVersion contract (`c5 cmp_sym_version`) is the only one in
-§2.4 without a tiny witness. The natural scenario would carry a
-`tiny_sum@@TINY_2.0` annotation on the library and a
-`tiny_sum@TINY_FUTURE_99.0` requirement on the binding; the load
-would fail with `version 'TINY_FUTURE_99.0' not found`. Implementation
-needs `.symver` linker directives on **both sides** (library and at
-least one binding's stubs.c / _native.c), which is more setup than
-the other scenarios. Deferred to roadmap step 4 when `c5
-cmp_sym_version` is being implemented — building e9 and c5 together
-keeps them coupled as regression test ↔ comparator.
+Tiny's `c/tiny.map` declares a single GNU version node `TINY_1.0`
+containing all exported symbols; CMakeLists.txt passes
+`-Wl,--version-script` so `libtiny.so.1` exports
+`tiny_sum@@TINY_1.0` etc. Consumers (cstubs, cext) record the
+matching `@TINY_1.0` requirement in their NEEDED on link. The
+`symbol_version_floor` patch flips the node to `TINY_2.0`; rebuild
+emits `@@TINY_2.0` exports while the cached consumer still wants
+`@TINY_1.0`. dyld surfaces `version 'TINY_1.0' not found` at load
+time — the same shape the §4.2 glibc/musl runtime case takes.
+
+Canary's c5 cmp_sym_version pairs `Versioned_exports` (from the
+lib's `inspect.json`'s `versioned_exports` field) with
+`Versioned_req` (from the cext's `inspect.json`'s `versioned_req`
+field), runs `check_sym_version`, and on mismatch returns the
+missing version tags as predicted substrings. See
+`lib_symbol_version_broken` variant.
 
 ### cext vs. ctypes is visible in the failure mode
 
@@ -844,57 +860,59 @@ this view is "for each artifact, what inspector parses it today."
 aliases. An empty `inspector` cell = no parser exists yet (a
 canary-side gap).
 
-| alias  | canonical name                  | inspector tool                                    | status              |
-| ------ | ------------------------------- | ------------------------------------------------- | ------------------- |
-| n3     | `header_native.h`               | — (`scan_source` presence check only)             | ✗ inspector missing |
-| n4     | `lib_native.so`                 | `inspect_native.py` via `nm -D` + `readelf -d`    | ✓ wired             |
-| bo1    | `stub_binding_ocaml.mli`        | — (mli inspector matches `^val`, not `external`)  | ✗ inspector missing |
-| bo3    | `stub_binding_ocaml.c`          | — (no parser yet)                                 | ✗ inspector missing |
-| bo4    | `user_binding_ocaml.mli`        | `inspect_binding.py --kind mli`                   | ✓ wired             |
-| bo6    | `compiled_binding_ocaml.cmxa`   | `inspect_ocaml.py` via `ocamlobjinfo`             | ✓ wired             |
-| bo7    | `compiled_binding_ocaml.stub-a` | `inspect_binding.py --kind stub` via `nm`         | ✓ wired             |
-| bpc1   | `stub_binding_ctypes.py`        | — (no ctypes-decl parser)                         | ✗ inspector missing |
-| bpc2   | `user_binding_ctypes.py`        | `inspect_python.py --pkg tiny_ctypes`             | ✓ wired             |
-| bpe1   | `stub_binding_cext.c`           | — (no Py C API parser)                            | ✗ inspector missing |
-| bpe2   | `user_binding_cext.py`          | `inspect_python.py --pkg tiny_cext`               | ✓ wired             |
-| bpe3   | `compiled_binding_cext.so`      | `inspect_native.py` (same tool, on a binding ELF) | ✓ wired             |
-| —      | runtime probe                   | probe binary + reference expected values          | ✓ implicit          |
+| alias  | canonical name                  | inspector tool                                          | status              |
+| ------ | ------------------------------- | ------------------------------------------------------- | ------------------- |
+| n3     | `header_native.h`               | `inspect_tiny_typed.py --layer header` (regex C parser) | ✓ wired (Phase 15.3) |
+| n4     | `lib_native.so`                 | `inspect_native.py` via `nm -D` + `readelf -d`          | ✓ wired             |
+| bo1    | `stub_binding_ocaml.mli`        | `inspect_tiny_typed.py --layer stub_ocaml` (hardcoded)  | ✓ wired (hardcoded; real parser is future work) |
+| bo3    | `stub_binding_ocaml.c`          | — (no parser yet)                                       | ✗ inspector missing |
+| bo4    | `user_binding_ocaml.mli`        | `inspect_binding.py --kind mli` + `inspect_tiny_typed.py --layer user_ocaml` | ✓ wired |
+| bo6    | `compiled_binding_ocaml.cmxa`   | `inspect_ocaml.py` via `ocamlobjinfo`                   | ✓ wired             |
+| bo7    | `compiled_binding_ocaml.stub-a` | `inspect_binding.py --kind stub` via `nm`               | ✓ wired             |
+| bpc1   | `stub_binding_ctypes.py`        | — (canary doesn't drive ctypes)                         | ✗ out of scope     |
+| bpc2   | `user_binding_ctypes.py`        | — (canary doesn't drive ctypes)                         | ✗ out of scope     |
+| bpe1   | `stub_binding_cext.c`           | `inspect_tiny_typed.py --layer stub_python` (hardcoded) | ✓ wired (hardcoded) |
+| bpe2   | `user_binding_cext.py`          | `inspect_python.py --pkg tiny_cext` + `inspect_tiny_typed.py --layer user_python` | ✓ wired |
+| bpe3   | `compiled_binding_cext.so`      | `inspect_binding.py --kind stub` (cext NEEDED via nm -D)| ✓ wired             |
+| —      | runtime probe                   | probe binary + reference expected values                | ✓ implicit          |
 
-Compact reading: `n4` (native lib, s2) and `b*2` (user-facing
-syntactic, s4) are well covered. `n3` (s1) and the `s3` stub-facing
-layer across every binding mechanism (`bo1`, `bpc1`, `bpe1`) are the
-parsing gaps.
+Compact reading: every artifact except `bo3` has at least a
+trivial-grep inspector. The Phase 15.3 `inspect_tiny_typed.py`
+backfills typed signatures for the layers where signature data was
+otherwise missing — `n3 header` uses real regex parsing,
+`stub_ocaml`/`user_ocaml`/`stub_python`/`user_python` use hardcoded
+maps (grep for known names, emit the sig). Real AST-based inspectors
+are future work; the contract logic is exercised end-to-end
+regardless.
 
 ### Comparator invocations from the scenario harness
 
-| comparator                       | exists in canary | invoked against `tiny` JSONs | status                            |
-| -------------------------------- | ---------------- | ----------------------------- | --------------------------------- |
-| c1 `cmp_symbol`                  | ✓                | ✓ ocaml stub + cext .so       | wired                             |
-| c2 `cmp_api_completeness`        | ✓                | ✓ ocaml + cext + ctypes       | wired                             |
-| c3 `cmp_behavior`                | ✓ (probes)       | ✓ every scenario              | wired                             |
-| c4 `cmp_abi`                     | ✗ (not built)    | n/a                          | comparator missing                |
-| c5 `cmp_sym_version`             | ✗ (not built)    | n/a                          | comparator missing                |
-| c6 `cmp_type`                    | ✗ (not built)    | n/a                          | comparator missing                |
-| c7 `cmp_api_repack`              | ✗ (not built)    | n/a                          | comparator missing                |
-| c8 `cmp_api_faithfulness`        | ✗ (not built)    | n/a                          | comparator missing                |
+| comparator / check               | exists in canary | invoked against `tiny` JSONs        | status                            |
+| -------------------------------- | ---------------- | ------------------------------------ | --------------------------------- |
+| c1 `cmp_symbol`                  | ✓ static         | ✓ ocaml stub + cext .so + lib       | wired                             |
+| c2 `cmp_api_completeness`        | ✓ static         | ✓ ocaml mli + cext attrs            | wired                             |
+| c3 `cmp_behavior`                | ✓ probe runner   | ✓ every probe                       | wired                             |
+| c4 `cmp_abi`                     | ✓ static         | ✓ Native_lib + Abi_surface          | wired (Phase 14e)                 |
+| c5 `cmp_sym_version`             | ✓ static         | ✓ Versioned_exports + Versioned_req | wired (Phase 15.4)                |
+| c6 `cmp_type`                    | ✓ static         | ✓ Typed_header + Typed_binding_stub | wired (Phase 15.5b)               |
+| c7 `api_sound_repack`            | ✓ probe runner   | ✓ binding-side refutation           | wired (Phase 15.6; same check shape as c3, different Contract attribution) |
+| ~~c8 `cmp_api_faithfulness`~~    | disabled         | n/a                                  | no Contract — each binding is independent (Phase 15.6) |
 
-Every existing comparator (c1, c2, c3) now produces a verdict in
-each scenario run. For Symbol- and API-completeness-violating
-scenarios, the harness records both a *static comparator verdict*
-and the *runtime probe verdict*; when they disagree, that's a
-regression signal. The harness implementations of c1 and c2 live as
-small Python scripts under `scenarios/_harness/comparators/`; when
-canary grows a CLI wrapper around its OCaml `check_c_compat` and
-watchlist code, these scripts can swap to calling that wrapper.
+Every active Contract now produces a verdict in canary's tiny
+matrix. Static comparators (c1/c2/c4/c5/c6) read inspect JSONs and
+predict failure substrings. Probe-runner Contracts (c3, c7) use
+`Expect_failure { contains_any = ["FAIL "] }` matched against
+probe.log assertions. Attribution between c3 and c7 is by variant
+declaration (which surface was perturbed) — canary doesn't
+disambiguate at the detection layer.
 
 ### Summary of recorded gaps
 
 | gap class                                    | items                                            | next step                                                                |
 | -------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
-| By-design                                    | s5 × ctypes                                       | none — keep as demonstration                                              |
-| Canary inspector missing (also in §2.7)      | n3, bo1, bpc1, bpe1                              | roadmap step 4                                                            |
-| Canary comparator missing (also in §2.7)     | c4, c5, c6, c7, c8                                | roadmap step 4                                                            |
-| Tiny wiring                                  | (closed) — bpe3 reuses `inspect_native.py`; bo6, c1, c2 all wired | done                                                  |
+| By-design                                    | ctypes not driven (s5 × ctypes)                  | none — keep as demonstration                                              |
+| Tiny-specific hardcoded inspectors           | typed `bo1`, `bpe1`, `bo4`, `bpe2` layers        | swap for AST-based inspectors (compiler-libs / Python ast) when a real project needs it |
+| Tiny wiring                                  | (closed) — all 8 surface-theory contracts have either a wired check or a documented reason to skip | done                                                  |
 
 ## Findings from building the scenarios
 

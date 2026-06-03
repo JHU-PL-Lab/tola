@@ -368,6 +368,14 @@ fast-feedback test coverage from the moment it's written.
 
 ### Step 4 — Comparator and inspector buildout (principled shape)
 
+> **Status note (2026-06-03):** Step 4's listed gaps (c4, c5, c6, c7,
+> c8) are now superseded by **Phases 14e / 15.4 / 15.5b / 15.6**. c4,
+> c5, c6 are wired as static comparators. c7 reframed as
+> `api_sound_repack` (probe-runner mechanism, like c3). c8 disabled
+> (no Contract). The 13-variant tiny matrix demonstrates each. The
+> text below is preserved for historical context — read it as the
+> "intent that drove Phase 15" rather than as live TODOs.
+
 Steps 1–3 (and Phase 4 inside step 3) were **vocabulary** work —
 unify terms, align docs and code, build the tiny witness so
 canary spec matches the standalone harness. Step 4 is the
