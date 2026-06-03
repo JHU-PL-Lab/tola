@@ -772,6 +772,27 @@ let make_binding_repack_broken_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [binding_python_repack_broken_script_spec]: Python-side parallel
+    of [binding_repack_broken]. Maps to harness scenario
+    [api_repack_python] (e10): python_cext/tiny_cext/__init__.py's
+    [diff] silently reverses its arguments before delegating to
+    [_native.diff]. Probe asserts [tiny.diff(5, 2) == 3]; with the
+    perturbation it computes [_native.diff(2, 5) = -3]; assertion
+    fires [FAIL tiny.diff(5, 2)]; same c7 attribution, different
+    binding. OCaml side unaffected (separate binding). *)
+let make_binding_python_repack_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores ()) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.Python) ->
+          Expect_failure {
+            contains_any = [ "FAIL " ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** [lib_behavior_broken_script_spec]: at every [Probe (Binding _)],
     expect c3 [cmp_behavior] to fire — the probe runs, computes a
     result that disagrees with its embedded baseline assertion, and

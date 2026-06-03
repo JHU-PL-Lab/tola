@@ -252,6 +252,13 @@ let action_cmd =
       mk "binding_repack_broken"
         (Canary_project_tiny.make_binding_repack_broken_script_spec
            ~stores:(ws_stores "api_repack"));
+      (* binding_python_repack_broken: Python parallel — same c7
+         attribution, e10 api_repack_python perturbs
+         python_cext/tiny_cext/__init__.py's diff. Each binding is
+         independent; OCaml unaffected. *)
+      mk "binding_python_repack_broken"
+        (Canary_project_tiny.make_binding_python_repack_broken_script_spec
+           ~stores:(ws_stores "api_repack_python"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants
