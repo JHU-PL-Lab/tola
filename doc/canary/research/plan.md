@@ -142,34 +142,12 @@ will look for.
 
 ### Theory
 
-- [x] Surface-contract model defined in
-      [`surface_theory.md`](surface_theory.md) §2: per-side
-      syntactic / semantic surfaces, six primitive contracts (Type,
-      Symbol, ABI, API-repacking, API-completeness, Behavior),
-      derived API-faithfulness. Language-side internal structure
-      (stub-facing / repacking / compiled artifact); binding
-      mechanism on a static-vs-dynamic axis.
-- [x] §2.7 coverage view: inspectors keyed by artifact aliases
-      (`n*` / `b<lang><mech?>*`), comparators `c1..c8`, status in
-      canary core, link to tiny scenarios.
-- [x] **Single source of truth** established (2026-05-19): theory,
-      witness, plan in three aligned docs; entry point at
-      [`README.md`](README.md); legacy `api_surface.md` retired.
-- [x] **`tiny` example** — minimal C lib + 3 bindings (OCaml
-      cstubs, Python cext, Python ctypes) + downstream `tiny_helper`
-      lib + 12 scenarios (10 perturbations + 2 positive-coverage)
-      all passing against the harness; both points of the §2.3
-      static/dynamic axis instantiated; coverage matrix in
-      [`tiny.md`](tiny.md).
-- [x] **`prepare` + `confirm_ill` flow** (Phase 3, 2026-05-28).
-      Each scenario's `violates` claim is now a machine-checkable
-      assertion — `prepare` computes the surface delta vs cached
-      baseline JSONs and writes it to
-      `_cache/<name>/confirm_ill.json`. Phase 3b adds artifact +
-      source snapshots for cached replay (`make scenarios-cached`,
-      ~1.6× faster than `make scenarios` on tiny; scales with build
-      cost on larger projects). See [`tiny.md`](tiny.md) "Phase 3a"
-      and "Phase 3b" subsections.
+Foundational theory + tiny witness + prepare/confirm_ill flow all
+landed pre-June 2026 — see [`worklog_2026_05.md`](../worklog/worklog_2026_05.md)
+Session 8 for the chronicle. Surface-theory model lives in
+[`surface_theory.md`](surface_theory.md); tiny witness in
+[`tiny.md`](tiny.md). Remaining open items for the paper:
+
 - [ ] **Calculus story sharper.** `surface_theory.md` §6 is a
       sketch; make it a contribution — transformer signatures,
       surface subtyping, and the static/runtime refinement loop as
@@ -183,17 +161,13 @@ will look for.
 
 ### Implementation
 
-- [x] `canary action {z3,llvm,sqlite}` end-to-end, both dev and
-      stable variants, on Linux/WSL + GH CI.
-- [x] Compat cross-check shipped: `canary compat`, `canary verify`,
-      `Expect_compat_failure` derives predictions from cached
-      summaries.
-- [x] Live demos: llvm/19 OCaml `Opcode.UncondBr`, z3/stable Python
-      `parser_context`.
-- [x] Artifact summaries (native, mli, c_stub, ocaml, python) typed
-      and serialised; `inspect-diff` available locally.
-- [x] Two-axis test surface: project tests + framework tests
-      (`artifact-test`, `pm-test`).
+`canary action {z3,llvm,sqlite}` end-to-end (both dev + stable
+variants) and the tiny matrix (13 variants, contracts c1..c7 firing)
+both demoed on Linux/WSL + GH CI. Live demos: llvm/19 OCaml
+`Opcode.UncondBr`, z3/stable Python `parser_context`, plus every
+tiny variant. Two-axis test surface (`artifact-test`, `pm-test`)
+green. Remaining open items for the paper:
+
 - [ ] **Empirical breadth.** Move from 3 libraries to 5–8 across
       PMs; at minimum land PyTorch (queued), pick one more from the
       Tier-1 candidate queue.
@@ -269,28 +243,14 @@ applies this scheme to canary's OCaml code.
 
 ### Step 1 — Establish unified terms  ✓ **DONE** (2026-05-15)
 
-Goal: every doc and every code symbol references the same set of
-surface roles, inspectors, comparators, and scenarios by the same
-name. Pure doc + light code-rename work; no behaviour changes.
-
-Glossary tables landed in `surface_theory.md` §2.1 (six surface
-roles `s1..s6`), §2.4 (eight contracts / comparators `c1..c8`),
-§2.7 (inspectors keyed by artifact alias), and `tiny.md` (twelve
-scenarios `e1..e13`). The artifact alias scheme (`n*` native,
-`b<lang><mech?>*` per-language binding) was introduced 2026-05-20 —
-it replaces the per-inspector `i*` index that earlier turns used.
+Glossary tables in `surface_theory.md` + `tiny.md`. Artifact alias
+scheme (`n*` native, `b<lang><mech?>*` per-language binding)
+introduced 2026-05-20. See worklog Session 8 for detail.
 
 ### Step 2 — Defer packaging cleanly  ✓ **DONE** (2026-05-19)
 
-Per the latest direction: packaging stays *as a section inside*
-`surface_theory.md` (now §3 "Packaging and co-providers"), not a
-separate file. No `package_theory.md` needed unless that section
-grows large.
-
-- [x] Move §6/§7 from old structure into a single §3 in the
-      tightened `surface_theory.md`.
-- [x] `tiny` stays packaging-free — no apt / opam / pip variants
-      modeled here.
+Packaging stays as a section inside `surface_theory.md` (§3
+"Packaging and co-providers"). No `package_theory.md` needed.
 
 ### Step 3 — Compare theory, tiny, canary; plan shared utilities
 
@@ -298,12 +258,10 @@ Goal: use the precision of step 1's vocabulary to plan
 implementation gaps *and* the shared tooling that both `canary
 action` and tiny's harness should consume.
 
-- [x] §2.7 inspector table indexed by artifact aliases (`n*` / `b<lang><mech?>*`); surfaces `s1..s6` are a column.
-- [x] **§2.7 alignment table** — single canonical view joining
-      contracts × tiny scenarios × inspectors needed × comparators
-      × canary status across all four pillars. Replaces the separate
-      comparator-coverage table and the contract→scenario lookup;
-      now the load-bearing guide for steps 3 and 4.
+§2.7 alignment table landed and remains the load-bearing
+contracts × scenarios × inspectors × comparators × status grid.
+Remaining open items:
+
 - [ ] **Shared utilities.** Design a small Python package
       `canary_inspectors/` exposing every inspector as a CLI
       (preserves current behaviour) and an importable API. Both
@@ -333,35 +291,19 @@ Today's testing coverage:
 | Per-PM                             | `canary_pm_test.ml`                 | apt/brew/opam/pip install + verify + remove lifecycle — 14/14   |
 | Integration (heavy)                | `canary action <project>`           | full pipeline, ~10s–5min per project                            |
 
-**Missing**: the layer between "primitive runs against a real fixture"
-and "full project pipeline." Fixture-driven unit tests for each
-comparator + inspector that take canned JSONs and assert
-predicate outcomes.
+Seed fixtures + runner landed 2026-05-29; per-contract case lists
+accumulated through Phase 14/15 (64 cases total at end of June; see
+worklog_2026_06.md "Unit-test harness closure" + worklog_2026_05.md
+Session 8). Remaining open items:
 
-- [x] **Seed fixtures + runner** (2026-05-29) — in-memory OCaml
-      fixtures in `test/canary_artifact_test.ml`:
-      - `cmp_symbol_pure_tests` (5 cases): Compatible / Missing one
-        / Missing multiple / Unknown-empty-requires /
-        Unknown-empty-symbols. Reciprocal coverage on c1.
-      - `c2_prediction_pure_tests` (2 cases): JSONs whose
-        `watchlist.missing` is `[]` produce no prediction strings —
-        the positive complement to the existing
-        `compat.mli_dotted_expansion` test.
-      - artifact-test pure suite 13 → 20, total 28 → 35.
 - [ ] **`canary_test/cmp_fixtures/`** — on-disk JSON fixture set
       (shareable with tiny's harness). Lands when the
       `canary_inspectors/` shared package does, so the Python and
       OCaml sides can read the same fixtures.
-- [ ] **Reciprocal coverage** — extend the seed set as new
-      comparators land: every c4..c8 ⇒ at least one positive
-      fixture (accept) + one negative (reject).
 - [ ] Once `canary_inspectors/` package exists (Step 3 shared
       utilities), share the fixture set as Python-importable test
       data so tiny's harness and canary core run the *same* test
       matrix.
-
-Seed landed before Step 4 begins so every new primitive has
-fast-feedback test coverage from the moment it's written.
 
 ### Step 4 — Comparator and inspector buildout (principled shape)
 
@@ -373,324 +315,69 @@ fast-feedback test coverage from the moment it's written.
 > text below is preserved for historical context — read it as the
 > "intent that drove Phase 15" rather than as live TODOs.
 
-Steps 1–3 (and Phase 4 inside step 3) were **vocabulary** work —
-unify terms, align docs and code, build the tiny witness so
-canary spec matches the standalone harness. Step 4 is the
-**substance** work: close the static-check gaps the tiny scenarios
-reveal.
+Step 4's original framing — close the c4..c8 inspector + comparator
+gaps revealed by tiny — is delivered. Detailed implementation
+history is in
+[`worklog_2026_05.md`](../worklog/worklog_2026_05.md) Session 8
+(late-May scaffolding) and
+[`worklog_2026_06.md`](../worklog/worklog_2026_06.md) (Phase 14/15
+pipeline wiring). Remaining open items from Step 4's original
+scope:
 
-Two threads, interleaved:
-
-**(a) Implement what's missing.** c4..c8 don't exist; n3 / bo1 /
-bpc1 / bpe1 inspectors don't exist. The tiny scenarios show what
-each ought to detect — e.g. e6 api_complete needs bo4 mli inspector
-+ c2 (both wired today); e3 type_wrong needs n3 + bo1 inspectors +
-c6 cmp_type (all missing). For each gap row in `surface_theory.md`
-§2.4's contract status table, build the inspector(s) and
-comparator that closes it.
-
-**(b) Retrofit to the principled shape.** Tiny's comparators
-(`_harness/comparators/cmp_*.py`) are standalone CLI scripts: take
-two JSONs, return a verdict. Canary's existing comparators are
-{i embedded} — `check_c_compat` lives inside `surface/canary_compat.ml` and
-runs as part of the action graph; the c2 watchlist check is
-buried inside the `Expect_compat_failure` step expectation runner.
-That's pragmatic but not principled — it conflates "comparator
-logic" with "where canary invokes it." Step 4's new comparators
-should follow tiny's standalone-script pattern (the [Step 3]
-"shared utilities `canary_inspectors/` Python package" item) and
-the existing c1/c2/c3 can be retrofit when convenient.
-
-Order: comparator-only gaps first (JSONs exist; just need the
-diff logic), then inspector-and-comparator gaps. Each item is a
-row in the M2 / M3 milestones above.
-
-**Comparator-only gaps:**
-
-- [x] **c4 `cmp_abi`** (2026-05-29, commit `2426099`). Function
-      `check_abi ~provider_soname ~consumer_needed` in
-      `surface/canary_compat.ml`; dedicated `abi_result` type
-      (`Abi_compatible` / `Abi_mismatch` / `Abi_unknown`). 5 unit
-      tests in `cmp_abi_pure_tests` covering the e2-shape negative
-      case plus Unknown branches. Wiring into the action pipeline
-      (Expect_compat_failure prediction / per-step verdict) is a
-      follow-up.
-- [x] **c5 `cmp_sym_version`** (2026-05-29). Function
-      `check_sym_version ~provider_versioned_exports
-      ~consumer_required_versions` in `surface/canary_compat.ml`; dedicated
-      `sym_version_result` type. 6 unit tests in
-      `cmp_sym_version_pure_tests` covering exact-match,
-      subset-match, glibc/musl version-drift, missing-multiple, and
-      both Unknown branches. Today's check is exact-match on the
-      version tag string; floor-comparison is a future refinement.
-      Wiring into the action pipeline is a follow-up.
-
-**Inspector-and-comparator gaps:**
-
-- [x] **Inspector for `bo1`** (2026-05-29). `^external` parse added
-      to `inspect_binding.py`; emits a new `externals` field
-      alongside `vals` so a single `--kind mli` run on either a
-      stub-facing `.mli` ({i bo1}) or user-facing `.mli` ({i bo4})
-      cleanly separates the two surfaces. Watchlist resolves against
-      both. 3 fixture-driven OCaml tests (`bo1_external_inspect_pure_tests`)
-      assert the externals-vs-vals split on stub-only, user-only, and
-      mixed `.mli` inputs. Unblocks {i s3 stub-facing} for OCaml; c7
-      cmp_api_repack can now compare `bo1.externals` ↔ `bo4.vals`.
-- [x] **Inspector for `n3`** (2026-05-29). New
-      `canary/scripts/inspect_header.py` — regex-based C header
-      parser. Emits `{kind: c_header, functions: [{name, return_type,
-      arg_types}], extern_vars: [{name, type}]}`. Scoped to tiny.h-
-      shape headers (flat, no preprocessor macros / typedefs).
-      Real-world z3.h / llvm-c/*.h need libclang or tree-sitter —
-      followup. 4 fixture-driven OCaml tests
-      (`n3_header_inspect_pure_tests`) cover tiny-like, 3-arg
-      bumped, void-args.
-- [x] **`bo1` enhanced** (2026-05-29). `inspect_binding.py --kind
-      mli` now emits an additional `externals_detail` field per
-      external: `{name, sig, c_symbol, arity}`. Arity is the number
-      of OCaml argument positions (count of `->` in the signature).
-      Backward-compatible: existing `externals` array unchanged.
-- [x] **c6 `cmp_type` (OCaml first)** (2026-05-29). Function
-      `check_type ~header_functions ~binding_externals ~name_mapping`
-      in `surface/canary_compat.ml`; dedicated `type_result` type
-      (`Type_compatible` / `Type_arity_mismatch` / `Type_unmapped`
-      / `Type_unknown`). MVP is arity-only after applying a
-      project-declared name mapping (binding externals → header
-      function names; e.g. tiny passes
-      `[("sum", "tiny_sum"); ("diff", "tiny_diff")]`,
-      excluding `get_offset` which maps to an extern var).
-      Full C ↔ OCaml type-equivalence comparison is a later
-      refinement. 7 unit tests in `cmp_type_pure_tests`.
-
-      **Note on the regression scenario**: my earlier plan claim
-      "tiny's e3 type_wrong scenario flips ✗ → ✓ when this lands"
-      was wrong. e3 patches `c/src/tiny.c` (body); the header and
-      external signatures stay aligned. c6 sees no drift; e3 is
-      c3 Behavior's territory. A future tiny scenario `e15
-      cmp_type_header_drift` would patch tiny.h to bump tiny_sum
-      to 3 args while the binding stays at 2 — the regression
-      shape c6 actually catches. Deferred (analogous to c4/c5
-      having unit-test-only coverage today, no live tiny
-      scenario).
 - [ ] **Inspectors for `bpc1`** (ctypes argtypes parse) and
       **`bpe1`** (cext `PyMethodDef` parse). Python AST parse for
-      ctypes; C parse for cext.
-- [x] **c7 `cmp_api_repack` (OCaml first)** (2026-05-29). Function
-      `check_api_repack ~stub_externals ~user_vals ~renames` in
-      `surface/canary_compat.ml`; dedicated `repack_result` type
-      (`Repack_compatible` / `Repack_stub_orphan` /
-      `Repack_user_phantom` / `Repack_unknown`). Renames are
-      explicit (project specs declare allowed (external, val)
-      pairs); empty list for default strict match. 6 unit tests in
-      `cmp_api_repack_pure_tests` covering exact-match,
-      compatible-with-rename (tiny's `get_offset → offset`),
-      stub_orphan with and without renames, user_phantom, and
-      unknown. **Regression scenario**: new tiny scenario
-      **e14 `api_repack_stub_orphan`** — patch adds
-      `external alias_sum` to Tiny_raw.mli (with matching C wrapper)
-      but Tiny.mli doesn't surface it. Today's standard harness
-      records it as all-pass because c7 isn't wired into
-      `run.sh`; the unit-test layer covers the verdict shape.
-      **Note**: my earlier plan incorrectly named e5 as the c7
-      regression test. e5 patches `.ml` (implementation, swaps
-      diff args); .mli signatures unchanged → c7 sees no drift.
-      e5 is c3 Behavior's territory, not c7's.
-
-**Derived (free once c1/c6/c7 exist):**
-
-- [x] **c8 `cmp_api_faithfulness`** (2026-05-29). Function
-      `check_api_faithfulness ~type_verdict ~symbol_verdict
-      ~repack_verdict` in `surface/canary_compat.ml`; dedicated
-      `faithfulness_result` type (`Faithful` / `Unfaithful` /
-      `Faithfulness_unknown`). Pure composition of the three
-      constituent verdicts; `Unfaithful` carries optional per-
-      constituent issues so callers can attribute blame.
-      7 unit tests in `cmp_api_faithfulness_pure_tests`
-      covering all-compatible, each constituent's drift in
-      isolation, multiple-issue, all-unknown, and partial-unknown
-      (which is still Faithful). When wired into the action
-      pipeline alongside c1/c6/c7, e4 api_faithful flips ✗ → ✓
-      (today silent at the c1/c2/c3 level).
-
-**Project-spec command decoupling — thread (b) cleanup (absorbs **#18, #25, #26, #40**):**
-
-The z3 / llvm specs have ~40-line `Printf.sprintf` blocks for
-cmake / dune / ninja invocations. Each new comparator that lands
-auto-fires for these projects via `api_source` (no spec edit
-needed), but the build / configure / install commands they wrap
-remain inline shell. Peeling these into reusable primitives is
-the (b) thread's project-side work.
-
-- [ ] **`Canary_toolchain` cmake/dune/ninja primitives**
-      (absorbs **#18**) — extract:
-      - `cmake_configure_cmd ~src ~build ~flags ~marker`
-      - `cmake_build_cmd ~build ~target ~marker`
-      - `ninja_build_cmd ~build ~target ~marker`
-      - `dune_build_cmd ~target ~env_extra ~marker`
-      - `mark_step_complete ~output_dir ~marker` helper (replaces
-        every command's trailing `&& echo 'ok' > ...`).
-      Touches z3 / llvm specs uniformly. Each spec file shrinks
-      ~40 lines.
+      ctypes; C parse for cext. Currently hardcoded-grep stand-ins
+      (`inspect_tiny_typed.py` `stub_python` / `user_python`
+      layers); real AST inspectors are the upgrade path.
+- [ ] **Project-spec command decoupling — `Canary_toolchain`
+      primitives** (absorbs **#18**). cmake / dune / ninja wrappers
+      now live in `tool/canary_build_cmd.ml` (commits `952498e`,
+      `800108d`); z3 / llvm / tiny use them. Remaining sweep: any
+      project still doing raw `Printf.sprintf` of shell verbs that
+      should route through a named primitive.
 - [ ] **Real `cmake --install`** (absorbs **#25, #40**) —
       z3 / llvm `install_lib` scripts currently `cp` files (fake
       install). Replace with `cmake --install --prefix $PREFIX` so
-      canary exercises cmake's install-time transformations: RPATH
-      rewriting, versioned symlink creation, pkg-config / FindPackage
-      config file generation. The `Probe Lib Staged` step then
-      tests an actually-installed artifact rather than a hand-copied
-      one. See `doc/canary/ops/install_targets.md` for z3 vs LLVM
-      patterns.
-- [ ] **z3 cmake build_z3_ocaml_bindings PHONY guard** (absorbs
+      canary exercises cmake's install-time transformations.
+      See `doc/canary/ops/install_targets.md` for patterns.
+- [ ] **z3 cmake `build_z3_ocaml_bindings` PHONY guard** (absorbs
       **#26**) — `add_custom_target` always reruns; gate with
       `test -f z3ml.cmxa || ninja ...` so re-running canary
       doesn't trigger a full z3 rebuild on cache rebuild.
+- [ ] **LLVM cross-version C-symbol check** (absorbs **#19**) —
+      `llvm/19` probe today demonstrates OCaml API mismatch
+      (`Opcode.UncondBr` compile error via c2 watchlist). Also
+      surface as a C-symbol-set mismatch between libLLVM-dev's
+      exports and libLLVM-19's exports via c1. Belt-and-suspenders
+      for the same drift case.
 
-**Live demos to strengthen (absorbs **#19**):**
+### Step 4b — Phase 4: canary code-side term alignment ✓ **DONE** (2026-05-29)
 
-- [ ] **LLVM cross-version C-symbol check** — `llvm/19` probe today
-      demonstrates OCaml API mismatch (`Opcode.UncondBr` compile
-      error via c2 watchlist). After c1 cmp_symbol cross-compare
-      wires up, *also* surface as a C-symbol-set mismatch between
-      libLLVM-dev's exports and libLLVM-19's exports. Belt-and-
-      suspenders for the same drift case. Requires no new
-      inspectors; just an Expect_compat_failure with a Native_lib
-      cross-check input.
-
-**Milestone (closed):**
-
-- [x] **`canary_project_tiny.ml`** (2026-05-28 / expanded 2026-05-29):
-      `canary action tiny` runs the full 12-step pipeline (6 main +
-      6 inspect) using the aligned vocabulary. JSON shapes
-      byte-equivalent to `make scenarios-cached`. Phase 4 milestone
-      check passed — see [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
-
-**Sequencing note**: comparator-only gaps (c4, c5) first — they have
-the lowest cost and fastest feedback. Inspector-and-comparator
-gaps (n3 + bo1 → c6 → c7 → c8) second. Project-spec command
-decoupling can run in parallel as it touches different files.
-Step 3b's unit-test fixtures should land before any comparator
-work begins (or in lockstep with the first one) so iterations are
-fast.
-
-### Step 4b — Phase 4: canary code-side term alignment
-
-Tracked in detail in [`phase4_2026_05.md`](../worklog/phase4_2026_05.md). Brief: canary OCaml
-code currently uses a pre-Phase-2 vocabulary (`artifact_kind`,
-`binding_summary`, language-flavoured ad-hoc names). Phase 4
-aligns it to the unified scheme (canonical names + `n*`/`b*`
-aliases) so the docs, tiny, and canary speak the same language.
-No semantics change; mostly comments, renames, and a small typed
-mapping. Milestone check: `canary_project_tiny.ml` + `canary
-action tiny` runs every scenario through the production pipeline.
+Canary OCaml code aligned to the unified scheme (canonical names +
+`n*`/`b*` aliases) so docs, tiny, and canary speak the same
+language. See [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
 
 ### Step 5 — Update docs after each implementation milestone
 
-Standard "tests green, docs follow" pass. Cumulative.
+Standard "tests green, docs follow" pass. Cumulative. Open items:
 
-- [ ] After each c\* lands: flip the corresponding ✓/✗ in §2.7
-      comparator table; update tiny scenario expected outcomes if
-      the scenario's outcomes change.
-- [ ] After c8 lands: tiny's `e4 api_faithful` scenario flips one
-      outcome to `fail`; it becomes the regression test for the
-      newly-detected violation.
-- [x] Retire `api_surface.md`. Implementation pointers folded into
-      `surface_theory.md` §2.7; glibc/musl case into §4.2; packaging
-      kept as §3 of the same doc.
-- [x] Phase 3 (2026-05-28): tiny harness extended with prepare /
-      confirm_ill (3a) and cached restore-driven runs (3b).
-      `tiny.md` Phase-3a / Phase-3b subsections document the new
-      flow; Makefile + scenarios.py expose the commands.
+- [ ] After each remaining c\* / Contract update: flip the
+      corresponding ✓/✗ in `surface_theory.md` §2.4 and update tiny
+      scenario expected outcomes if they change.
 
-### Step 6 — Lift contracts to a per-contract registry (2026-06-02)
+### Step 6 — Per-contract registry ✓ **DONE** (2026-06-02)
 
-**Motivation.** Today's `predicted_contains_any_v2` in
-`surface/canary_compat_run.ml` is already structured as four
-implicit "layers" (L0, L1b, L3, L4), each implementing one
-contract:
-
-| Layer | Contract | Status |
-|---|---|---|
-| L0 | c1 cmp_symbol | ✓ wired |
-| L1b | c5 cmp_sym_version | ⚠ JSON read but no diff |
-| L3 | c2 cmp_api_completeness | ✓ wired |
-| L4 | c4 cmp_abi | 🗑 stub returns `[]` |
-
-The mapping is correct (every existing check IS a c\* row) but
-implicit. New comparators get added by editing one growing function
-with inline `match`-on-input dispatch, the §2.4 status table can
-silently drift from the code, and there's no way to disable a
-single contract without code changes.
-
-**Refactor (no new features).** Make each contract a registered
-record:
-
-```ocaml
-type contract_id = C1 | C2 | C3 | C4 | C5 | C6 | C7 | C8
-type contract_status =
-  | Wired | Inspect_only | Comparator_only
-  | Blocked of contract_id list | Stubbed
-
-type contract_check = {
-  id       : contract_id;
-  name     : string;          (* "cmp_symbol", … *)
-  layer    : string;          (* "L0", "L1b", "L3", "L4" *)
-  status   : contract_status;
-  enabled  : bool;
-  predict  : resolve:(string -> string) -> inspect_input list -> string list;
-}
-
-let registered_checks : contract_check list = [
-  { id = C1; status = Wired;        enabled = true;  predict = c1_predict };
-  { id = C2; status = Wired;        enabled = true;  predict = c2_predict };
-  { id = C4; status = Stubbed;      enabled = false; predict = c4_stub    };
-  { id = C5; status = Inspect_only; enabled = true;  predict = c5_predict };
-  { id = C6; status = Blocked [];    enabled = false; predict = c6_stub    };
-  { id = C7; status = Blocked [C6];  enabled = false; predict = c7_stub    };
-  { id = C8; status = Blocked [C6;C7]; enabled = false; predict = c8_stub  };
-]
-```
-
-`predicted_contains_any_v2` becomes a 4-line iterator over the
-registry. The L0/L1b/L3/L4 sections of today's function each
-become one `c?_predict` closure.
-
-**What this gives us:**
-
-1. **§2.4 becomes derivable.** The status table prints from
-   the registry; the doc table is regenerated from code rather
-   than maintained by hand.
-2. **Per-project / per-CLI toggles.** A project spec can
-   override `enabled` per contract (e.g. disable c5 for projects
-   where versioned-symbol noise is intractable). A CLI flag can
-   disable a contract globally for triaging.
-3. **Adding a new c\* becomes data.** One new registry entry +
-   one predict closure. The runner doesn't need editing.
-4. **Honest blocked declarations.** `Blocked [C6]` self-documents
-   that c8 can't run until c6 lands.
-
-**No behavior change.** Byte-for-byte identical output today;
-every regression stays green; the matrix of inputs/outputs is
-unchanged. Pure lifting.
-
-**Tracked as Phase 12 in the refactor sequence**
-(`doc/canary/audit_post_refactor_2026_06_01.md`).
+`registered_checks : contract_check list` in
+`surface/canary_compat_run.ml`. `predicted_contains_any_v2` is now a
+4-line iterator over the registry; each contract is one entry with
+`id`, `name`, `layer`, `status`, `enabled`, `predict`. Tracked as
+Phase 12 in `doc/canary/audit_post_refactor_2026_06_01.md`.
 
 ### Step 6b — Per-project / per-CLI contract toggles ✓ **DONE** (2026-06-02)
 
-Once the registry exists, the two consumer paths landed as Phase 13:
-
-- ✓ `script_spec.disabled_contracts : Canary_compat.contract_id list`
-  — projects opt out of specific contracts. Default `[]`. Threaded
-  through `mk_step` so every `action_step.disabled_contracts` carries
-  the project's list.
-- ✓ `--disable-contract c5,c4` CLI flag on `canary action`. Parsed
-  by `Canary_compat.contract_ids_of_csv`; layered on top of each
-  project's per-spec list. Logs `[disable-contract] skipping: c5, c4`
-  on activation.
-
-`predicted_contains_any_v2 ?disabled` consumes both, skipping any
-contract whose id appears in the per-call disabled list. Backwards-
-compatible — the parameter is optional and defaults to `[]`.
+`script_spec.disabled_contracts` (project-side) + `--disable-contract
+c5,c4` (CLI flag) both consumed by `predicted_contains_any_v2
+?disabled`. Tracked as Phase 13 in the audit doc.
 
 ### Step 6c — Surface-aware actions.log (deferred — after features land)
 
