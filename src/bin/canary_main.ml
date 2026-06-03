@@ -243,6 +243,15 @@ let action_cmd =
       mk "binding_type_broken"
         (Canary_project_tiny.make_binding_type_broken_script_spec
            ~stores:(ws_stores "header_arity_bump"));
+      (* binding_repack_broken: c7 api_sound_repack — refutes the
+         binding's repack of its stub layer via probe-assertion
+         failure. Same Expect_failure shape as lib_behavior_broken,
+         but a different Contract (binding-layer bug vs native-layer
+         bug). Maps to harness scenario api_repack (e5: Tiny.diff
+         silently reverses args before calling Tiny_raw.diff). *)
+      mk "binding_repack_broken"
+        (Canary_project_tiny.make_binding_repack_broken_script_spec
+           ~stores:(ws_stores "api_repack"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

@@ -1233,6 +1233,49 @@ Typed inspectors (c6/c7/c8) graduate from constant JSONs to real
 implementations when motivated by a real divergence the team wants
 to catch.
 
+**Phase 15.6 — c7 reframed as api_sound_repack, c8 disabled
+(shipped 2026-06-03).** Earlier framing treated c7 / c8 as static
+comparators awaiting clang-AST-class inspectors. The cleaner
+position lands here:
+
+- **Contract vs comparator/check.** A Contract is the theoretical
+  agreement at a surface boundary. A check is one possible
+  implementation. The same Contract can be checked by multiple
+  mechanisms (static comparator, runtime probe, binding-side test,
+  compile failure). Folding c7's runtime symptoms into c3's
+  comparator banner conflates the two.
+
+- **c7 renamed [api_sound_repack].** The Contract is "the binding's
+  user-facing layer is a sound repacking of its stub-facing layer."
+  The check shape (probe-assertion refutation) is identical to c3's,
+  but the Contract differs: c3 attributes failure to the native
+  lib's behavior; c7 attributes to the binding's repack. Variant
+  declarations (which surface was perturbed) determine attribution —
+  canary doesn't disambiguate at the detection layer. Dropped the
+  `cmp_` prefix since the Contract isn't comparator-implemented.
+
+- **c8 disabled (candidate for removal).** No Contract for canary
+  to maintain. Each binding is independent; cross-binding
+  consistency isn't a canary-side agreement to check. Probes happen
+  to assert the same constants across languages by project
+  convention, not by a Contract canary enforces.
+
+- **New tiny variant `binding_repack_broken`** maps to harness
+  scenario `api_repack` (e5: `Tiny.diff a b = Tiny_raw.diff b a` —
+  silent argument reversal). `Expect_failure { contains_any =
+  ["FAIL "] }` at Probe (Binding OCaml). Python side unaffected
+  (api_repack perturbs only ocaml/tiny.ml).
+
+End-to-end smoke (`canary action tiny`):
+- probe_binding_ocaml cmd_fail (exit 1).
+- probe.log: `FAIL Tiny.diff 5 2: expected 3, got -3`.
+- done (expected failure confirmed).
+
+Twelve variants now ride `canary action tiny`. Contracts honestly
+firing (with attribution): c1 OCaml (missing + orphan), c1 Python,
+c2 OCaml, c2 Python, c3 (both), c4 Python, c5 Python, c6 OCaml,
+c7 OCaml. c8 dormant.
+
 **14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the

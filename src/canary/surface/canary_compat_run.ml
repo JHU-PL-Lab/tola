@@ -463,9 +463,23 @@ let registered_checks : contract_check list = [
     enabled = true;  predict = c5_predict };
   { id = C6; name = "cmp_type";              layer = "L2";  status = Wired;
     enabled = true;  predict = c6_predict };
-  { id = C7; name = "cmp_api_repack";        layer = "L?";  status = Blocked [C6];
+  (* c7 api_sound_repack — Contract that the binding's user-facing
+     layer is a sound repacking of its stub-facing layer. Same check
+     shape as c3 (probe-assertion refutation), different Contract
+     (binding-layer bug vs native-layer bug). The probe IS the
+     binding-side test; predict returns []. The variant declaration
+     attributes the failure to c7 — canary doesn't disambiguate at
+     the detection layer. See
+     [Canary_project_tiny.make_binding_repack_broken_script_spec]
+     for the demo against harness scenario [api_repack] (e5). *)
+  { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
     enabled = false; predict = c7_predict };
-  { id = C8; name = "cmp_api_faithfulness";  layer = "L?";  status = Blocked [C6; C7];
+  (* c8 disabled — no Contract for canary to maintain. Each binding
+     is independent; cross-binding consistency isn't a canary-side
+     agreement to check. Probes happen to assert the same constants
+     across languages by project convention, not by a Contract.
+     Candidate for removal in a future registry cleanup. *)
+  { id = C8; name = "cmp_api_faithfulness";  layer = "n/a"; status = Stubbed;
     enabled = false; predict = c8_predict };
 ]
 

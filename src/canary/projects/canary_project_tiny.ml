@@ -741,6 +741,37 @@ let make_binding_overdeclares_stubs_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [binding_repack_broken_script_spec]: probe-assertion refutation
+    of the binding's user-facing repack of its stub-facing layer.
+    This is the {b api_sound_repack} Contract (c7).
+
+    Same check shape as [lib_behavior_broken] (Expect_failure on FAIL
+    substring), but a different Contract: there the {i native lib's}
+    behavior is broken; here the {i binding's repack} is broken. The
+    same probe assertion catches both — attribution comes from which
+    surface the scenario perturbed.
+
+    Maps to harness scenario [api_repack] (e5): tiny.ml redefines
+    [diff a b = Tiny_raw.diff b a] (silent argument reversal). The
+    user-facing surface, stub-facing surface, and native lib all
+    {i type-check} fine; only the runtime probe — exercising the
+    full repack chain — refutes the soundness. *)
+let make_binding_repack_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores ()) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.OCaml) ->
+          (* OCaml-only: api_repack perturbs ocaml/tiny.ml. Each
+             binding is independent — Python cext is unaffected, so
+             its probe still passes. *)
+          Expect_failure {
+            contains_any = [ "FAIL " ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** [lib_behavior_broken_script_spec]: at every [Probe (Binding _)],
     expect c3 [cmp_behavior] to fire — the probe runs, computes a
     result that disagrees with its embedded baseline assertion, and
