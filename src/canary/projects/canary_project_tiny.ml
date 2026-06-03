@@ -597,6 +597,32 @@ let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [binding_overdeclares_stubs_script_spec]: c1 [cmp_symbol] from the
+    {b orphan} direction. The OCaml cstub references [tiny_extra] that
+    the lib never had — the dual of [lib_broken] (there the lib lost a
+    symbol; here the binding gained a reference). c1's set-diff
+    [stub.requires \ lib.symbols] picks up [tiny_extra] either way.
+
+    Maps to harness scenario [e8 symbol_orphan]. Only the OCaml side
+    is perturbed (tiny_raw.ml, tiny_raw.mli, tiny_stubs.c gain the
+    [tiny_extra] binding); Python cext is untouched, so Python probe
+    succeeds. *)
+let make_binding_overdeclares_stubs_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.OCaml) ->
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              C_stub     [ "build_binding_ocaml/inspect.json" ];
+              Native_lib [ "build_lib/inspect.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** [lib_behavior_broken_script_spec]: at every [Probe (Binding _)],
     expect c3 [cmp_behavior] to fire — the probe runs, computes a
     result that disagrees with its embedded baseline assertion, and

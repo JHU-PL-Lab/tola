@@ -1090,6 +1090,60 @@ applicable surfaces, dynamic-vs-static, predict closure). The
 themselves could move to values. Worth its own pass when revisiting
 the registry.
 
+**Phase 14g (c1 orphan direction — shipped 2026-06-03).** Adds
+`binding_overdeclares_stubs` variant mapping to harness scenario
+`symbol_orphan` (e8). The OCaml cstub references `tiny_extra` that
+the lib never had — the dual of `lib_broken` (there the lib lost a
+symbol; here the binding gained a reference).
+
+c1's `predict` already handles both directions via the set-diff
+`stub.requires \ lib.symbols` in `check_c_compat`. The new variant
+uses identical c1 inputs to `lib_broken`'s; what differs is the
+workspace (`_cache/symbol_orphan/workspace/`) where the cstub's
+`requires` includes `tiny_extra` and the lib's symbols don't.
+
+Only OCaml is perturbed in e8 (tiny_raw.ml, tiny_raw.mli,
+tiny_stubs.c gain the `tiny_extra` binding). Python cext is
+untouched — so the variant's Python probe expectation is
+`Expect_success`, not c1. This is why we couldn't reuse
+`make_lib_broken_script_spec` (which expects Python to also fail);
+needed a dedicated `make_binding_overdeclares_stubs_script_spec`.
+
+Smoke: probe_binding_ocaml `cmd_fail (exit 1)` → `compat_predicted
+(1 substring)` → `done (expected failure confirmed (derived))`.
+probe.log contains `mold: error: undefined symbol: tiny_extra`,
+matching the c1 predicted `tiny_extra` from the cstub-vs-lib diff.
+
+Tiny variant matrix (eight):
+
+| Variant | Scenario | Fires |
+|---|---|---|
+| baseline | — | — |
+| lib_broken | symbol_missing | c1 OCaml + c1 Python |
+| binding_mli_broken | api_complete | c2 OCaml |
+| binding_python_attrs_broken | api_complete_python | c2 Python |
+| hybrid_lib_broken | (cross-product) | c1 OCaml + c1 Python |
+| lib_soname_bumped | abi_soname_bump | c4 Python |
+| lib_behavior_broken | behavior_silent | c3 OCaml + c3 Python |
+| binding_overdeclares_stubs | symbol_orphan | c1 OCaml (orphan) |
+
+Honest contracts firing: c1 OCaml (both directions), c1 Python,
+c2 OCaml, c2 Python, c3 (both), c4 Python.
+
+Remaining harness scenarios not yet wired into canary tiny:
+- `api_repack` / `api_repack_python` (e5/e10) → c7 — blocked on
+  typed binding inspectors (bo1/bpc1/bpe1).
+- `api_repack_stub_orphan` — variant of repack.
+- `type_wrong` (e3) → c6 — blocked on typed header inspector (n3).
+- `api_faithful` (e4) → c8 — blocked on c6+c7.
+- `app_over_binding_ocaml` / `app_over_helper_ocaml` — app-chain
+  coverage; no new contract, just an extra layer.
+
+Not in harness yet:
+- `e9 symbol_version_floor` → c5 — would need `.symver` annotations
+  on tiny + new harness scenario. Could be added before pivoting to
+  real projects.
+
 **14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the

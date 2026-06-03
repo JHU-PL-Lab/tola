@@ -1,0 +1,25 @@
+{
+  "kind": "c_stub",
+  "path": "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/tiny_cext/_native.cpython-314-x86_64-linux-gnu.so",
+  "counts": {
+    "required": 3
+  },
+  "requires": [
+    "tiny_diff",
+    "tiny_offset",
+    "tiny_sum"
+  ],
+  "watchlist": {
+    "present": [],
+    "missing": []
+  },
+  "elf": {
+    "soname": null,
+    "needed": [
+      "libtiny.so.1",
+      "libc.so.6"
+    ],
+    "rpath": [],
+    "runpath": []
+  }
+}

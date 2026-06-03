@@ -209,6 +209,13 @@ let action_cmd =
       mk "lib_behavior_broken"
         (Canary_project_tiny.make_lib_behavior_broken_script_spec
            ~stores:(ws_stores "behavior_silent"));
+      (* binding_overdeclares_stubs: c1 cmp_symbol from the orphan
+         direction. The cstub references tiny_extra the lib never had;
+         only OCaml is perturbed, Python cext is untouched. Maps to
+         harness scenario e8 symbol_orphan. *)
+      mk "binding_overdeclares_stubs"
+        (Canary_project_tiny.make_binding_overdeclares_stubs_script_spec
+           ~stores:(ws_stores "symbol_orphan"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants
