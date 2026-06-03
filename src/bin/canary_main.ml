@@ -168,9 +168,10 @@ let action_cmd =
        of the per-kind model). Cross-product variants — e.g. baseline
        source + perturbed lib — would construct stores with paths
        from different workspaces; deferred to Phase 14c. *)
-    let ws_stores scenario =
+    let ws_stores ?lib_filename scenario =
       Canary_project_tiny.stores_of_workspace
-        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario) in
+        ?lib_filename
+        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario) () in
     (* Cross-product demo: pluck individual artifact-kind paths from
        different scenario workspaces. [hybrid_lib_broken] = baseline
        source/python + perturbed lib (from symbol_missing). The c1
@@ -183,6 +184,7 @@ let action_cmd =
     let hybrid_lib_broken_stores : Canary_project_tiny.tiny_stores = {
       source = baseline_stores.source;
       lib_dir = [%string "%{symbol_missing_ws}/c/build"];
+      lib_filename = baseline_stores.lib_filename;
       python_cext_root = baseline_stores.python_cext_root;
     } in
     let all_variants = [
@@ -201,6 +203,9 @@ let action_cmd =
       mk "hybrid_lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
            ~stores:hybrid_lib_broken_stores);
+      mk "lib_soname_bumped"
+        (Canary_project_tiny.make_lib_soname_bumped_script_spec
+           ~stores:(ws_stores ~lib_filename:"libtiny.so.2" "abi_soname_bump"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

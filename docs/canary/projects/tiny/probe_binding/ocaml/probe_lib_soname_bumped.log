@@ -1,0 +1,7 @@
+Entering directory 'canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace'
+Leaving directory 'canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace'
+OK   Tiny.offset () = 42
+OK   Tiny.sum 2 3 = 47
+OK   Tiny.diff 5 2 = 3
+OK   Tiny.diff 2 5 = -3
+all checks passed

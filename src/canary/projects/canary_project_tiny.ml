@@ -183,23 +183,28 @@ let tiny_api_source : Canary_artifact_api.t =
 type tiny_stores = {
   source : string;
   lib_dir : string;
+  lib_filename : string;  (* basename within lib_dir, e.g. "libtiny.so.1" *)
   python_cext_root : string;
 }
 
 (** Default stores derived from a single materialized workspace —
-    the common case when a variant uses one harness scenario. *)
-let stores_of_workspace ~workspace_root = {
+    the common case when a variant uses one harness scenario.
+    [lib_filename] defaults to [libtiny.so.1]; SONAME-bump variants
+    override it (e.g. abi_soname_bump's workspace has [libtiny.so.2]). *)
+let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
   source = workspace_root;
   lib_dir = [%string "%{workspace_root}/c/build"];
+  lib_filename;
   python_cext_root = [%string "%{workspace_root}/python_cext"];
 }
 
 let make_base_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  let { source; lib_dir; python_cext_root } = stores in
+  let { source; lib_dir; lib_filename; python_cext_root } = stores in
   (* Absolute lib_dir for {LIBRARY,LD_LIBRARY,LD_RUN}_PATH — $PWD
      anchors to canary's invocation cwd (the tola root). *)
   let abs_lib_dir = [%string "$PWD/%{lib_dir}"] in
+  let lib_path = [%string "%{lib_dir}/%{lib_filename}"] in
   let ocaml_build_dir =
     [%string "%{source}/_build/default/ocaml"] in
   let cext_so_glob =
@@ -226,8 +231,8 @@ let make_base_script_spec ~(stores : tiny_stores)
 
     build_lib = Some (fun ~output_dir ~variant_key ->
       Printf.sprintf
-        "test -f %s/libtiny.so.1 || { echo 'libtiny.so.1 missing in %s'; exit 1; }"
-        lib_dir lib_dir
+        "test -f %s || { echo '%s missing'; exit 1; }"
+        lib_path lib_path
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
@@ -257,15 +262,15 @@ let make_base_script_spec ~(stores : tiny_stores)
               ~marker:"build.ok" ~output_dir ~variant_key);
     ];
 
-    (* Probe_lib: nm against the lib_dir store's libtiny.so.1. *)
+    (* Probe_lib: nm against the lib_dir store's actual libtiny. *)
     probe_lib = [
       (Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
          Printf.sprintf
-           "nm -D %s/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
+           "nm -D %s | grep -E '^[0-9a-f]+ T tiny_' \
             > %s/%s 2>&1"
-           lib_dir output_dir probe_log);
+           lib_path output_dir probe_log);
     ];
 
     (* Probe_binding OCaml: dune build + exec probe_baseline.exe with
@@ -322,7 +327,7 @@ let make_base_script_spec ~(stores : tiny_stores)
     inspect = (fun rule _loc ->
       let lib_inspect_cmd ~output_dir ~variant_key =
         Canary_artifact_native.inspect_cmd
-          ~lib:(Printf.sprintf "%s/libtiny.so.1" lib_dir)
+          ~lib:lib_path
           ~prefixes:[ "tiny_" ]
           ~watchlist:tiny_native_stable_symbols
           ~output_dir ~variant_key () in
@@ -555,6 +560,43 @@ let make_binding_python_attrs_broken_script_spec ~(stores : tiny_stores)
       | _ -> Expect_success);
   }
 
+(** [lib_soname_bumped_script_spec]: at [Probe (Binding Python)],
+    expect c4 [cmp_abi] to fire. The provider's SONAME (libtiny.so.2
+    after [patchelf]) doesn't match the consumer cext's NEEDED
+    (libtiny.so.1, recorded at the cext's build time). dyld fails to
+    resolve [libtiny.so.1] at probe time; c4 predicts the missing
+    NEEDED entry.
+
+    [Native_lib] cites build_lib's inspect.json (provider's
+    elf.soname). [Abi_surface] cites build_binding_python's
+    inspect.json (consumer cext's elf.needed) — the same stub JSON
+    that carries c1's [requires], now also carrying [elf] via
+    [inspect_binding.py]'s extension on shared libs.
+
+    Maps to harness scenario [e? abi_soname_bump]. The OCaml side
+    isn't a meaningful demo here: canary's build_binding rebuilds
+    tiny.cmxa / probe_baseline.exe against whatever the workspace's
+    libtiny.so currently advertises, so the OCaml consumer's NEEDED
+    tracks the bumped SONAME. The Python cext was built earlier in
+    the harness pipeline (before patchelf), so its NEEDED still
+    references the pre-bump SONAME — the genuine mismatch surfaces
+    only on the Python side. *)
+let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.Python) ->
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              Native_lib  [ "build_lib/inspect.json" ];
+              Abi_surface [ "build_binding_python/inspect.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
 (** Default workspace path for tiny's harness-materialized caches.
     Variants append a scenario name to this. *)
 let cache_workspace_of ~scenario =
@@ -566,5 +608,6 @@ let cache_workspace_of ~scenario =
     live-tree stores works for ad-hoc invocations even though the
     canonical flow points each variant at its own materialized cache. *)
 let base_script_spec =
-  make_base_script_spec ~stores:(stores_of_workspace ~workspace_root:tiny_root)
+  make_base_script_spec
+    ~stores:(stores_of_workspace ~workspace_root:tiny_root ())
 let script_spec = base_script_spec

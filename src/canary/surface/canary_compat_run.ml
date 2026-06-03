@@ -328,11 +328,43 @@ let c5_predict ~resolve (inputs : inspect_input list) : string list =
               | _ -> []))
     | _ -> [])
 
-(** c4 cmp_abi (L4). Stub — see [contract_status.Stubbed] note. L4 is
-    diagnostic in canary's current setup (each variant probes its own
-    lib so different SONAMEs don't cause runtime failure). When the
-    comparator wires up, returns [check_abi]'s mismatch substring. *)
-let c4_predict ~resolve:_ _ = []
+(** c4 cmp_abi (L4). Reads provider's SONAME from a [Native_lib]
+    input's [elf.soname] and consumer's NEEDED list from an
+    [Abi_surface] input's [elf.needed]. When [check_abi] returns
+    [Abi_mismatch], the predicted substring set is the consumer's
+    NEEDED entries that share the provider's family-stem
+    (e.g. [libtiny] from [libtiny.so.1]) — at runtime, dyld's error
+    mentions the missing NEEDED entry verbatim, so that's what we want
+    to grep for. *)
+let c4_predict ~resolve (inputs : inspect_input list) : string list =
+  let provider_path =
+    List.find_map inputs
+      ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None) in
+  let consumer_path =
+    List.find_map inputs
+      ~f:(function Abi_surface ps -> pick_existing ~resolve ps | _ -> None) in
+  match provider_path, consumer_path with
+  | Some pp, Some cp ->
+      let prov = Canary_compat.load_abi_surface pp in
+      let cons = Canary_compat.load_abi_surface cp in
+      (match Canary_compat.check_abi
+               ~provider_soname:prov.soname
+               ~consumer_needed:cons.needed with
+       | Abi_mismatch _ ->
+           (* Stem = strip trailing ".so.X" / ".so.X.Y" so libtiny.so.1
+              and libtiny.so.2 share stem "libtiny". *)
+           let stem name =
+             match String.index name '.' with
+             | None -> name
+             | Some i -> String.sub name ~pos:0 ~len:i in
+           (match prov.soname with
+            | None -> []
+            | Some sn ->
+                let prov_stem = stem sn in
+                List.filter cons.needed
+                  ~f:(fun n -> String.equal (stem n) prov_stem))
+       | Abi_compatible | Abi_unknown -> [])
+  | _ -> []
 
 (** Stubs for c3/c6/c7/c8 — all currently [Blocked] or [Stubbed] per
     the registry status field. They contribute no predictions today;
@@ -352,7 +384,7 @@ let registered_checks : contract_check list = [
     enabled = true;  predict = c2_predict };
   { id = C3; name = "cmp_behavior";          layer = "dyn"; status = Blocked [];
     enabled = false; predict = c3_predict };
-  { id = C4; name = "cmp_abi";               layer = "L4";  status = Stubbed;
+  { id = C4; name = "cmp_abi";               layer = "L4";  status = Wired;
     enabled = true;  predict = c4_predict };
   { id = C5; name = "cmp_sym_version";       layer = "L1b"; status = Inspect_only;
     enabled = true;  predict = c5_predict };

@@ -12,5 +12,14 @@
   "watchlist": {
     "present": [],
     "missing": []
+  },
+  "elf": {
+    "soname": null,
+    "needed": [
+      "libtiny.so.1",
+      "libc.so.6"
+    ],
+    "rpath": [],
+    "runpath": []
   }
 }

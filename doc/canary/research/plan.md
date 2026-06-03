@@ -998,6 +998,59 @@ parked — the cross-product door is wide open now, but the
 interesting compositions aren't paper-critical until c4/c7/c8 wire
 up.
 
+**Phase 14e (c4 cmp_abi — shipped 2026-06-02).** Wires c4 end-to-end
+against harness scenario `abi_soname_bump` (libtiny.so.1 → libtiny.so.2
+SONAME bump). The provider's bumped SONAME doesn't match the cached
+cext's NEEDED (libtiny.so.1, recorded at the cext's original build
+time); c4 predicts the missing NEEDED entry.
+
+Implementation pieces:
+- `inspect_binding.py --kind stub` on shared libs now emits an `elf`
+  sub-object (SONAME, NEEDED, RPATH, RUNPATH) via `readelf -d`. The
+  same JSON serves both c1 (`requires`) and c4 (`elf.needed`).
+- `Canary_compat.load_abi_surface` reads `elf.soname` + `elf.needed`
+  from any inspect JSON.
+- `c4_predict` is no longer a no-op: it pairs a `Native_lib` input
+  (provider's SONAME) with an `Abi_surface` input (consumer's NEEDED),
+  runs `check_abi`, and on mismatch returns the consumer NEEDED
+  entries that share the provider's family-stem (e.g. `libtiny` from
+  `libtiny.so.1`/`libtiny.so.2`) — dyld's runtime error mentions the
+  missing NEEDED verbatim.
+- Registry flipped C4's status from `Stubbed` → `Wired`.
+- `tiny_stores` gained a `lib_filename` field (default
+  `libtiny.so.1`); `lib_soname_bumped` variant overrides to
+  `libtiny.so.2`. `stores_of_workspace` takes an optional
+  `?lib_filename` arg.
+- `_snapshot_workspace` strips DT_RUNPATH from cached cext .so files
+  (via `patchelf --remove-rpath`) and synthesizes a `libtiny.so`
+  symlink in `c/build/` when missing — both unblock c4 demos.
+  The first prevents dyld from falling back to the live tree's
+  unperturbed libtiny via the cext's baked-in runtime_library_dirs;
+  the second lets `dune --root <ws>` link `-ltiny` against the
+  bumped lib (canary's fresh workspace has no dune cache to lean on
+  the way the standalone harness does).
+- `lib_soname_bumped_script_spec` attaches Expect_compat_failure at
+  `Probe (Binding Python)` with `Native_lib` + `Abi_surface` inputs.
+  OCaml is unaffected because canary's `build_binding` rebuilds the
+  OCaml binding fresh against the bumped lib (NEEDED tracks the new
+  SONAME, no mismatch); only the Python cext (built earlier and
+  cached) carries stale NEEDED.
+
+End-to-end on `canary action tiny`: six variants now ride one
+invocation, all pass.
+
+| Variant | OCaml probe | Python probe |
+|---|---|---|
+| baseline | done | done |
+| lib_broken | c1 (1× tiny_sum) | c1 (1× tiny_sum) |
+| binding_mli_broken | c2 (2× Tiny.sum) | done |
+| binding_python_attrs_broken | done | c2 (1× sum) |
+| hybrid_lib_broken | c1 (1× tiny_sum) | c1 (1× tiny_sum) |
+| lib_soname_bumped | done | **c4 (1× libtiny.so.1)** |
+
+Contracts honestly firing: c1 OCaml, c1 Python, c2 OCaml, c2 Python,
+**c4 (Python)**. Next on the docket: c3 cmp_behavior.
+
 **14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the

@@ -31,6 +31,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 
@@ -283,18 +284,53 @@ def parse_stub_a(path, prefix):
     return sorted(required)
 
 
+def parse_elf_surface(path):
+    """For shared libs only — read SONAME and NEEDED via `readelf -d`.
+    Returns a dict with [soname] (string or None) and [needed] (list of
+    strings). On static archives or when readelf is unavailable, returns
+    None to signal "no abi surface here." Used to feed c4 cmp_abi's
+    provider/consumer ELF surface (SONAME vs NEEDED) — see
+    canary_compat.ml's check_abi."""
+    if not (path.endswith(".so") or path.endswith(".dylib")
+            or ".cpython-" in path or ".so." in path):
+        return None
+    if shutil.which("readelf") is None:
+        return None
+    proc = subprocess.run(
+        ["readelf", "-d", path], text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False)
+    if proc.returncode != 0:
+        return None
+    soname = None
+    needed = []
+    for line in proc.stdout.splitlines():
+        # Format: "0x... (SONAME) Library soname: [libtiny.so.1]"
+        #         "0x... (NEEDED) Shared library: [libc.so.6]"
+        if "(SONAME)" in line and "[" in line:
+            soname = line[line.index("[") + 1 : line.rindex("]")]
+        elif "(NEEDED)" in line and "[" in line:
+            needed.append(line[line.index("[") + 1 : line.rindex("]")])
+    return {"soname": soname, "needed": needed,
+            # rpath/runpath omitted — not c4 inputs today
+            "rpath": [], "runpath": []}
+
+
 def summarize_stub(path, prefix, watchlist):
     requires = parse_stub_a(path, prefix)
     names_set = set(requires)
     present = [w for w in watchlist if w in names_set]
     missing = [w for w in watchlist if w not in names_set]
-    return {
+    summary = {
         "kind": "c_stub",
         "path": path,
         "counts": {"required": len(requires)},
         "requires": requires,
         "watchlist": {"present": present, "missing": missing},
     }
+    elf = parse_elf_surface(path)
+    if elf is not None:
+        summary["elf"] = elf
+    return summary
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────

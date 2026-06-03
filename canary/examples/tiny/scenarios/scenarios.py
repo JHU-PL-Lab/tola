@@ -821,6 +821,43 @@ def _snapshot_workspace(target_dir: Path) -> int:
     # but the file is needed for the workspace to be valid at all).
     (ws_dir / "dune-project").write_text("(lang dune 3.10)\n")
     count += 1
+
+    # Strip RUNPATH from the cext .so so dyld resolution respects
+    # LD_LIBRARY_PATH alone. setup.py bakes a runtime_library_dirs
+    # pointing at the LIVE tree's c/build, which lets dyld fall back
+    # to the live (unperturbed) libtiny when LD_LIBRARY_PATH's
+    # workspace path doesn't contain the expected SONAME — defeating
+    # c4 cmp_abi (abi_soname_bump) detection. Stripping makes the
+    # workspace's stores actually authoritative.
+    if shutil.which("patchelf") is not None:
+        for cext in (ws_dir / "python_cext" / "tiny_cext").glob(
+                "_native.cpython-*.so"):
+            try:
+                subprocess.run(["patchelf", "--remove-rpath", str(cext)],
+                               check=True, stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError:
+                pass
+
+    # Ensure libtiny.so symlink exists in the workspace's c/build so
+    # `-ltiny` resolves cleanly on a fresh dune build. Some
+    # perturbations (e.g. abi_soname_bump) remove libtiny.so to defeat
+    # the dynamic loader at runtime; the harness gets away with that
+    # because its dune cache from the baseline build still has the
+    # final .cmxa, but canary's fresh workspace has no cache and would
+    # fail at link time. We restore the symlink (pointing at the
+    # highest-versioned libtiny.so.X present), preserving the runtime
+    # mismatch (the cached cext still NEEDs the {b old} version string).
+    ws_c_build = ws_dir / "c" / "build"
+    libtiny_so = ws_c_build / "libtiny.so"
+    if ws_c_build.is_dir() and not libtiny_so.exists():
+        candidates = sorted(
+            (f for f in ws_c_build.glob("libtiny.so.*")
+             if ".bak." not in f.name and f.suffix.lstrip(".").isdigit()),
+            reverse=True)
+        if candidates:
+            libtiny_so.symlink_to(candidates[0].name)
+
     return count
 
 

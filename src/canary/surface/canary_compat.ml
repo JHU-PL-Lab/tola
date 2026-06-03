@@ -125,6 +125,32 @@ let load_native path =
              it produced with --emit-symbols? (%s)@." path;
   { path = get_string j "path"; symbols }
 
+(** ELF surface view of an inspect JSON — what {!check_abi} needs.
+    The producing inspector ([inspect_native.py] for the lib;
+    [inspect_binding.py --kind stub] for shared-lib consumers) emits an
+    [elf] sub-object with [soname] (string or null) and [needed] (list
+    of strings). Either may be empty/None on archives or platforms
+    without readelf. *)
+type abi_surface_inspect = {
+  path : string;
+  soname : string option;
+  needed : string list;
+}
+
+let load_abi_surface path =
+  let j = load path in
+  let elf = field j "elf" in
+  let soname =
+    match Option.bind elf ~f:(fun e -> field e "soname") with
+    | Some (`String s) when not (String.is_empty s) -> Some s
+    | _ -> None in
+  let needed =
+    match Option.bind elf ~f:(fun e -> field e "needed") with
+    | Some (`List xs) ->
+        List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+    | _ -> [] in
+  { path = get_string j "path"; soname; needed }
+
 (* ── Cross-check ── *)
 
 type compat_result =
