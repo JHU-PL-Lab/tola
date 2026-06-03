@@ -1,0 +1,34 @@
+{
+  "counts": {
+    "by_prefix": {
+      "tiny_": 3
+    },
+    "total": 3
+  },
+  "elf": {
+    "needed": [
+      "libc.so.6"
+    ],
+    "rpath": [],
+    "runpath": [],
+    "soname": "libtiny.so.1"
+  },
+  "kind": "native",
+  "path": "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1",
+  "symbols": [
+    "tiny_diff",
+    "tiny_offset",
+    "tiny_total"
+  ],
+  "versioned_exports": {},
+  "versioned_req": {},
+  "watchlist": {
+    "missing": [
+      "tiny_sum"
+    ],
+    "present": [
+      "tiny_diff",
+      "tiny_offset"
+    ]
+  }
+}

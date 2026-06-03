@@ -1,0 +1,16 @@
+{
+  "kind": "c_stub",
+  "path": "canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/libtiny_stubs.a",
+  "counts": {
+    "required": 3
+  },
+  "requires": [
+    "tiny_diff",
+    "tiny_offset",
+    "tiny_sum"
+  ],
+  "watchlist": {
+    "present": [],
+    "missing": []
+  }
+}

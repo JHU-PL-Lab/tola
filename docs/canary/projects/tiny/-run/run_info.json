@@ -10,7 +10,7 @@
       "system_pm": "apt",
       "opam_switch": "default",
       "ocaml_version": "5.4.1",
-      "timestamp": "2026-06-02 21:59:26.661",
+      "timestamp": "2026-06-02 22:05:02.221",
       "actions": ["configure", "build_lib", "build_lib_inspect", "build_binding_ocaml", "build_binding_ocaml_inspect", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "build_binding_python", "build_binding_python_inspect", "probe_binding_python", "probe_binding_python_inspect", "probe_lib", "probe_lib_inspect"]
     },
     {
@@ -22,7 +22,7 @@
       "system_pm": "apt",
       "opam_switch": "default",
       "ocaml_version": "5.4.1",
-      "timestamp": "2026-06-02 21:59:26.661",
+      "timestamp": "2026-06-02 22:05:02.221",
       "actions": ["configure", "build_lib", "build_lib_inspect", "build_binding_ocaml", "build_binding_ocaml_inspect", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "build_binding_python", "build_binding_python_inspect", "probe_binding_python", "probe_binding_python_inspect", "probe_lib", "probe_lib_inspect"]
     },
     {
@@ -34,7 +34,31 @@
       "system_pm": "apt",
       "opam_switch": "default",
       "ocaml_version": "5.4.1",
-      "timestamp": "2026-06-02 21:59:26.661",
+      "timestamp": "2026-06-02 22:05:02.221",
+      "actions": ["configure", "build_lib", "build_lib_inspect", "build_binding_ocaml", "build_binding_ocaml_inspect", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "build_binding_python", "build_binding_python_inspect", "probe_binding_python", "probe_binding_python_inspect", "probe_lib", "probe_lib_inspect"]
+    },
+    {
+      "id": "binding_python_attrs_broken",
+      "version": "in_tree",
+      "ref": "",
+      "source": "prebuilt",
+      "distro": "linux",
+      "system_pm": "apt",
+      "opam_switch": "default",
+      "ocaml_version": "5.4.1",
+      "timestamp": "2026-06-02 22:05:02.221",
+      "actions": ["configure", "build_lib", "build_lib_inspect", "build_binding_ocaml", "build_binding_ocaml_inspect", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "build_binding_python", "build_binding_python_inspect", "probe_binding_python", "probe_binding_python_inspect", "probe_lib", "probe_lib_inspect"]
+    },
+    {
+      "id": "hybrid_lib_broken",
+      "version": "in_tree",
+      "ref": "",
+      "source": "prebuilt",
+      "distro": "linux",
+      "system_pm": "apt",
+      "opam_switch": "default",
+      "ocaml_version": "5.4.1",
+      "timestamp": "2026-06-02 22:05:02.221",
       "actions": ["configure", "build_lib", "build_lib_inspect", "build_binding_ocaml", "build_binding_ocaml_inspect", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "build_binding_python", "build_binding_python_inspect", "probe_binding_python", "probe_binding_python_inspect", "probe_lib", "probe_lib_inspect"]
     }
   ]

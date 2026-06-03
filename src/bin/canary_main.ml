@@ -171,6 +171,20 @@ let action_cmd =
     let ws_stores scenario =
       Canary_project_tiny.stores_of_workspace
         ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario) in
+    (* Cross-product demo: pluck individual artifact-kind paths from
+       different scenario workspaces. [hybrid_lib_broken] = baseline
+       source/python + perturbed lib (from symbol_missing). The c1
+       expectation fires the same way as [lib_broken], but the store
+       wiring proves the per-kind model actually mixes — not just the
+       API surface. *)
+    let symbol_missing_ws =
+      Canary_project_tiny.cache_workspace_of ~scenario:"symbol_missing" in
+    let baseline_stores = ws_stores "baseline" in
+    let hybrid_lib_broken_stores : Canary_project_tiny.tiny_stores = {
+      source = baseline_stores.source;
+      lib_dir = [%string "%{symbol_missing_ws}/c/build"];
+      python_cext_root = baseline_stores.python_cext_root;
+    } in
     let all_variants = [
       mk ""
         (Canary_project_tiny.make_base_script_spec
@@ -181,6 +195,12 @@ let action_cmd =
       mk "binding_mli_broken"
         (Canary_project_tiny.make_binding_mli_broken_script_spec
            ~stores:(ws_stores "api_complete"));
+      mk "binding_python_attrs_broken"
+        (Canary_project_tiny.make_binding_python_attrs_broken_script_spec
+           ~stores:(ws_stores "api_complete_python"));
+      mk "hybrid_lib_broken"
+        (Canary_project_tiny.make_lib_broken_script_spec
+           ~stores:hybrid_lib_broken_stores);
     ] in
     let selected = match variant_filter with
       | None -> all_variants

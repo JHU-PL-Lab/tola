@@ -938,13 +938,41 @@ Smoke test (`canary action tiny`) is unchanged end-to-end: baseline +
 lib_broken (c1 fires, Python fails) + binding_mli_broken (c2 fires)
 all honest.
 
-Deferred to 14c (cross-products):
-  - A `hybrid_lib_broken` variant constructed with stores from two
-    workspaces (e.g., baseline source + symbol_missing lib_dir). Would
-    validate that the per-kind model actually delivers mix-and-match,
-    not just the API.
-  - Beyond two stores: e2 abi_change × e6 api_complete combinations
-    (different perturbations on different artifact kinds).
+**14c (cross-products and broader scenario coverage — shipped
+2026-06-02).** Two pieces landed together:
+
+- `binding_python_attrs_broken_script_spec`: c2
+  cmp_api_completeness on the Python side. Maps to harness scenario
+  [e11 api_complete_python] (drops `sum` from
+  `python_cext/tiny_cext/__init__.py`). Probe (Binding Python)
+  imports tiny_cext, calls `tiny_cext.sum`, raises AttributeError.
+  c2's Python_attrs input cites `build_binding_python/
+  inspect_attrs.json`, produced by Build (Binding Python)'s now
+  {b two-file} inspect (cext native symbols + dir(tiny_cext) attrs).
+  Mirrors the OCaml two-file inspect introduced in 14a. Fires with
+  1 substring `sum`.
+
+- `hybrid_lib_broken` variant in canary_main.ml: baseline source +
+  symbol_missing lib_dir. Same expectation shape as `lib_broken`
+  (c1 fires at probe_binding_ocaml; Python probe substring-matches
+  tiny_sum), reached via per-kind store wiring — the source/binding
+  artifacts come from `_cache/baseline/workspace`, while the lib
+  artifact comes from `_cache/symbol_missing/workspace/c/build`.
+  Validates that the per-kind model from 14b' actually delivers
+  mix-and-match, not just the API.
+
+Five variants total now ride one `canary action tiny` invocation:
+baseline, lib_broken, binding_mli_broken,
+binding_python_attrs_broken, hybrid_lib_broken. Contracts firing:
+c1 OCaml (lib_broken + hybrid_lib_broken), c1 Python via substring
+(both ditto), c2 OCaml (binding_mli_broken), c2 Python
+(binding_python_attrs_broken).
+
+Beyond two stores: e2 abi_change × e6 api_complete combinations
+(different perturbations on different artifact kinds) are still
+parked — the cross-product door is wide open now, but the
+interesting compositions aren't paper-critical until c4/c7/c8 wire
+up.
 
 **14c (parked — cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"

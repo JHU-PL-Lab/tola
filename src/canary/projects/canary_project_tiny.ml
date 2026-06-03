@@ -364,10 +364,30 @@ let make_base_script_spec ~(stores : tiny_stores)
               source watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_native.inspect_cmd
-              ~lib:cext_so_glob ~prefixes:[ "tiny_" ]
-              ~watchlist:tiny_native_stable_symbols
-              ~output_dir ~variant_key ())
+            (* Two-file inspect on the Python side: cext native symbols
+               (c1 cmp_symbol Python analog) + user-facing dir(tiny_cext)
+               attrs (c2 cmp_api_completeness Python). Mirrors the
+               two-file inspect on Build (Binding OCaml). The attrs
+               JSON lives at build_binding_python/inspect_attrs.json so
+               Probe (Binding Python)'s Expect_compat_failure can cite
+               it before the probe runs. *)
+            let cext_stub_cmd =
+              Canary_artifact_native.inspect_cmd
+                ~lib:cext_so_glob ~prefixes:[ "tiny_" ]
+                ~watchlist:tiny_native_stable_symbols
+                ~output_dir ~variant_key () in
+            let attrs_file =
+              Canary_basic.filename ~variant_key
+                ~base:"inspect_attrs" ~ext:"json" in
+            let watchlist_csv =
+              String.concat ~sep:"," tiny_python_module_watchlist in
+            Printf.sprintf
+              "%s && \
+               LD_LIBRARY_PATH=%s PYTHONPATH=%s \
+               python3 canary/scripts/inspect_python.py --pkg tiny_cext \
+               --watchlist '%s' > %s/%s"
+              cext_stub_cmd abs_lib_dir python_cext_root
+              watchlist_csv output_dir attrs_file)
       | Probe (Binding Canary_lang.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
@@ -486,6 +506,37 @@ let make_binding_mli_broken_script_spec ~(stores : tiny_stores)
           Expect_compat_failure {
             inputs = Canary_compat.[
               Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
+(** [binding_python_attrs_broken_script_spec]: at [Probe (Binding
+    Python)], expect c2 [cmp_api_completeness] to fire on the Python
+    side. The Python-language parallel of [binding_mli_broken].
+
+    Probe (Binding Python) imports tiny_cext and calls e.g.
+    [tiny_cext.sum(...)]; if the patched [tiny_cext/__init__.py] drops
+    [sum], the call raises [AttributeError] and probe.log surfaces it.
+
+    The Python_attrs input cites the attrs JSON produced by Build
+    (Binding Python)'s two-file inspect — [build_binding_python/
+    inspect_attrs.json] is populated before Probe evaluates its
+    expectation. [predicted_contains_any_v2] feeds it to
+    [load_watchlist_missing]; the watchlist member names become the
+    predicted failure substrings.
+
+    Maps to harness scenario [e11 api_complete_python]. *)
+let make_binding_python_attrs_broken_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~stores) with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.Python) ->
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              Python_attrs [ "build_binding_python/inspect_attrs.json" ];
             ];
             version_info = None;
           }
