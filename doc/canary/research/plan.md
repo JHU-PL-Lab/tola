@@ -1144,6 +1144,95 @@ Not in harness yet:
   on tiny + new harness scenario. Could be added before pivoting to
   real projects.
 
+**Phase 15 — finish the tiny contract matrix via hardcoded
+inspectors (planned 2026-06-03).** Goal: get c5/c6/c7/c8 wired and
+firing on tiny *without* committing to the heavy clang-AST inspector
+work first. The contract logic (comparators in `canary_compat.ml`)
+already exists or is minor; what's missing is just the inspector
+JSONs feeding them. Since canary's comparators consume JSON without
+caring how it was produced, we can ship checked-in *constant
+inspector* JSONs per scenario for the contracts that need typed
+data, demo the contracts end-to-end, and defer the real (clang-AST,
+mli-AST, ctypes-introspection) inspectors until they're motivated by
+a real project.
+
+This isn't a contract shortcut — the comparator runs the same set-
+diff / type-match logic regardless of where the JSON came from.
+What's "synthetic" is the inspector plumbing; the contract
+semantics are unchanged.
+
+Order of work:
+
+1. **Doc + plan refresh.** Rewrite
+   [design/harness_canary_orthogonality.md](../design/harness_canary_orthogonality.md)
+   to lead with the store/runner/producer orthogonal framing.
+   Update plan.md (this file) with the Phase-15 sequence.
+2. **`app_over_*` variants.** Validates that the model propagates
+   through the tiny_helper chain. ~1 commit per variant (or one
+   covering both). No new contract; exercises an extra layer.
+3. **Hardcoded-inspector infrastructure.** One generic mechanism
+   in tiny's spec: per-scenario constant JSONs live under
+   `canary/examples/tiny/scenarios/constants/<scenario>/<artifact>.json`,
+   and the harness's workspace materializer copies them into the
+   workspace's inspect-output locations so canary's spec can
+   reference them via the existing `inspect_input` ADT
+   (`Versioned_symbols`, a new `Typed_header` / `Typed_stub` /
+   `Typed_binding`, etc.). The hardcoded JSONs replace what a real
+   `inspect_*.py` (clang-AST, ctypes-aware) would have produced.
+4. **c5 cmp_sym_version wired.** Real comparator
+   (`check_sym_version`) already exists; predicate currently
+   inspect-only. Implement `c5_predict` to diff consumer
+   `versioned_req` against provider `versioned_exports`. Add new
+   harness scenario `symbol_version_floor` with constant
+   `versioned_*` JSONs. Tiny variant
+   `lib_symbol_version_broken_script_spec`.
+5. **c6 cmp_type wired.** Implement `c6_predict` over a new
+   `Typed_header` / `Typed_stub` input pair. Constants encode the
+   `tiny_sum / tiny_diff / tiny_offset` signatures for baseline +
+   `type_wrong` (`tiny_sum: (double, double) -> int`). Tiny variant
+   `lib_type_wrong_script_spec`.
+6. **c7 cmp_api_repack wired.** Implement `c7_predict` over
+   `Typed_binding` inputs (binding's user-facing types vs binding's
+   stub-facing types). Constants encode repack relationships.
+   Variants `binding_repack_broken_script_spec` (OCaml) and
+   Python counterpart, mapping to harness `api_repack` /
+   `api_repack_python`.
+7. **c8 cmp_api_faithfulness wired.** Derived from c6 + c7 outputs;
+   no new inspector. Variant `binding_unfaithful_script_spec` to
+   harness `api_faithful`.
+8. **Full matrix complete.** All eight surface-theory contracts
+   demoed honestly on tiny. Hand off to the unique-harness pass
+   (Phase 16) then real projects (Phase 17+).
+
+What this defers and why:
+
+- **Real (clang-AST) inspectors.** Hardcoded JSONs are tiny-specific
+  by design. Long-term we'd replace them with general inspectors
+  using libclang, ocaml's compiler-libs (for mli parsing), and Python
+  introspection. That work is ~2-3 days for n3 + bo1 alone, paper-
+  worthy as engineering but not paper-blocking.
+- **Real symbol versioning** (`.symver` / version scripts on tiny's
+  build). Same story — c5 fires honestly on glibc-linked code in
+  the real world; tiny just gets to test the comparator without
+  adopting the linker mechanism.
+
+**Phase 16 — unique-harness refactor (sketched).** Once Phase 15
+lands, lift workspace fixups (`patchelf --remove-rpath`,
+`libtiny.so` symlink synthesis) out of `scenarios.py` into a
+canary-owned store sanitiser. Parameterize `scenarios.py`'s output
+destination so synthetic and natural producers look the same to
+canary. See
+[design/harness_canary_orthogonality.md](../design/harness_canary_orthogonality.md)
+for the full sketch.
+
+**Phase 17+ — real projects** (llvm, z3, sqlite). Apply the
+Phase-14/15 spec + matrix model to natural divergences from real
+package managers. No synthetic perturbations needed; the producers
+are opam / pip / apt. c5 demos for free against glibc-linked code.
+Typed inspectors (c6/c7/c8) graduate from constant JSONs to real
+implementations when motivated by a real divergence the team wants
+to catch.
+
 **14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the

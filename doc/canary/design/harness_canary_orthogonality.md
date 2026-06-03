@@ -1,167 +1,168 @@
 # Harness vs. canary: store/runner orthogonality
 
-**Status:** open design tension, working around it for now. Written
-2026-06-02 alongside Phase 14e.
+**Status:** working design framing. Initial draft 2026-06-02 alongside
+Phase 14e; rewritten 2026-06-03 to lead with the orthogonal vision
+rather than the leaks.
 
-## The two models
+## The orthogonal factoring
 
-The tiny example exists in two parallel forms:
+There are three concerns that today's tiny example tangles together
+inside the standalone harness. Pulling them apart is what canary's
+workspace model is converging on:
 
-- **Standalone harness** ([canary/examples/tiny/scenarios/](../../canary/examples/tiny/scenarios/)).
-  Mutates the live tree in place: `apply()` runs `patchelf` /
-  `cp` / file renames on `canary/examples/tiny/` itself, then runs
-  builds and probes, then `revert()` restores baseline. State is
-  ambient — whatever the live tree looks like at any moment IS the
-  state the test sees.
+- **Stores** — *what artifacts are available*. A directory or package
+  containing source, lib, binding, app. Self-describing, no state of
+  its own beyond "here are some files." Provides the artifact-kind
+  surfaces (`source`, `lib_dir`, `python_cext_root`, `lib_filename`,
+  ...) that canary's spec consumes.
 
-- **Canary** ([src/canary/projects/canary_project_tiny.ml](../../src/canary/projects/canary_project_tiny.ml)
-  via [src/bin/canary_main.ml:run_tiny](../../src/bin/canary_main.ml)).
-  Each variant points at a self-contained materialized workspace
-  under `_cache/<scenario>/workspace/`. Source, lib, and cext live
-  there. canary's per-kind stores (`tiny_stores = { source; lib_dir;
-  python_cext_root; lib_filename }`) declare which workspace dir
-  serves each artifact kind. State is explicit and per-variant.
-
-Both run against the same source and produce the same contract
-outcomes when configured right, but they organise responsibility
-differently.
-
-## The ideal: one form of truth, orthogonal components
-
-Conceptually we'd want a clean factoring:
-
-- **Stores** (= "what artifacts are available"): a directory or
-  package containing source, lib, binding, app. No state of its own
-  beyond "here are some files."
-- **Runners** (= "what computation is performed"): a sequence of
+- **Runners** — *what computation is performed*. A sequence of
   build / probe / inspect steps that read from stores and emit
-  artifacts/logs.
-- **Harness** (= "how stores are populated"): a producer that
-  perturbs / patches / builds to fill a store.
+  artifacts / logs into a separate, shared output dir. canary's
+  `run_project_multi` is the runner; the project spec
+  (`canary_project_tiny.ml`) declares how to drive it.
+
+- **Producers** — *how stores are populated*. For tiny that's the
+  perturbation harness in `scenarios.py` ("apply this patch, build,
+  snapshot"). For real projects it's the package manager
+  ("opam install z3.4.13" produces one store; "opam install z3.dev"
+  produces another).
 
 Under this factoring:
-- The standalone harness is a *producer + runner* fused. It
-  perturbs the live tree, runs the verification, reverts.
-- canary is a *runner* over named *stores*. It doesn't perturb
-  anything; the harness pre-populated the stores.
 
-Today's canary already moves halfway here: the harness produces
-materialized workspaces (`_cache/<scenario>/workspace/`) and canary
-consumes them. The remaining tension is that the harness's
-**perturbation logic** is still partially co-designed with the
-live-tree state, leaking that coupling into what ends up in the
-store.
+| Concern | Today on tiny | Today on real projects (z3/llvm) | Where the running result goes |
+|---|---|---|---|
+| Producer | `scenarios.py apply` + harness build | `opam install` / `pip install` / `apt install` | — (producer outputs feed the store) |
+| Store | `_cache/<scenario>/workspace/` | opam switch / pip env / apt-installed prefix | — |
+| Runner | canary's per-variant pipeline | canary's per-version pipeline | `_out/canary/projects/<project>/<step>/` |
 
-## The leaks (and the current workarounds)
+The synthetic-vs-natural axis maps cleanly: tiny's perturbations
+*mimic* the divergences that arise naturally between real-world
+package versions. Synthetic stores (perturbed-tiny caches) and
+natural stores (different package installs) feed the same runner
+through the same store-shaped interface. **If canary catches the
+synthetic divergences on tiny, the same checks catch real-world
+divergences on llvm/z3 — no contract logic changes between them.**
 
-Two leaks surfaced during Phase 14e when wiring c4 cmp_abi against
-`abi_soname_bump`. Both are about implicit dependencies on the live
-tree that hold for the harness but break for canary's workspace
-consumers.
+## Why orthogonality matters
 
-### Leak 1: cext's `DT_RUNPATH` points at the live tree
+The standalone harness ties producer + runner together: its
+`apply()` mutates the live tree, then runs the verification, then
+reverts. State is ambient. That's *fine for tiny's standalone
+testing* — it's a small example with one well-defined live tree —
+but it doesn't generalize.
+
+For real projects there's no "apply / revert" cycle to mimic. The
+producer (opam, pip, apt) just *exists* as system state. Multiple
+producers coexist (opam switches, pip envs, apt packages). canary
+has to consume their outputs without orchestrating them. That
+requires the runner to be agnostic about how stores were populated.
+
+Pushing the live-tree workflow toward the orthogonal factoring also
+clarifies design questions the current tiny setup mostly papers
+over:
+
+- **Output dir parameterization.** If the harness's apply() / build()
+  can write to any output dir (not just `c/build/` in the live tree),
+  then synthetic and natural producers look the same to canary: each
+  hands canary a fully-formed store at some path. No special-case
+  workspace materialization needed.
+- **Store boundaries.** Each artifact kind (source, lib, binding,
+  app) gets a store boundary. Today `tiny_stores` has four fields
+  (`source`, `lib_dir`, `lib_filename`, `python_cext_root`); for
+  real projects the fields map to opam switch prefix, pip site-
+  packages, apt install paths, etc.
+- **Where running results live.** Always in canary's `_out/` — never
+  in a store. Stores are read-only inputs.
+
+## The remaining ties
+
+Today's tiny harness still mixes producer + runner concerns in two
+specific places (these are the "leaks" the initial Phase 14e doc
+described — keeping them documented here so we don't forget what
+needs untangling, but framed now as "where producer/runner aren't
+yet separated" rather than as workarounds).
+
+### 1. cext's `DT_RUNPATH` baked at producer time, used at runner time
 
 [python_cext/setup.py](../../canary/examples/tiny/python_cext/setup.py)
-builds with `runtime_library_dirs=[C_BUILD]` where `C_BUILD` is
-resolved at build time from setup.py's location. The resulting
-`_native.cpython-*.so` carries an **absolute** RUNPATH pointing at
-the live tree's `c/build/`.
+builds the cext with `runtime_library_dirs=[C_BUILD]`. `C_BUILD` is
+resolved at *producer time* from setup.py's location, so the
+absolute path of the live tree's `c/build/` gets baked into the
+cached `_native.cpython-*.so` as `DT_RUNPATH`. At *runner time* dyld
+honors that RUNPATH and can find the live tree's libtiny — even
+when canary's `LD_LIBRARY_PATH` points at a different store.
 
-Dyld searches: `LD_LIBRARY_PATH` → `DT_RUNPATH` → ld.so cache →
-defaults. For literal NEEDED filenames.
+In the orthogonal picture: the producer is encoding runner-time
+assumptions about where the library will live. That's a layering
+violation. Fixes (in increasing order of structural correctness):
 
-- *Harness*: live tree IS the perturbed tree. RUNPATH lookup finds
-  the perturbed lib. Mismatch surfaces.
-- *Canary*: live tree is unperturbed (the whole point of workspaces).
-  `LD_LIBRARY_PATH` is set to the workspace's lib_dir. If that doesn't
-  have the cached cext's NEEDED filename (e.g. `libtiny.so.1` when
-  the bumped workspace has `libtiny.so.2`), dyld falls back to
-  RUNPATH and finds the unperturbed lib in the live tree. Mismatch
-  hidden.
+- **Workspace materialization strips it** (current). Patch the
+  cached cext to remove RUNPATH; runner controls path via env vars.
+  Works, but the fixup lives in the producer (`scenarios.py`).
+- **Producer doesn't bake RUNPATH** at all. `setup.py` drops
+  `runtime_library_dirs`; runners always set `LD_LIBRARY_PATH`
+  explicitly. Cleaner; matches the orthogonal vision.
+- **Per-runner producer rebuild.** Rebuild the cext fresh into each
+  store with that store's c/build path. Most expressive but most
+  expensive — only worth it if a contract genuinely needs the
+  rebuild (e.g. a future "RUNPATH integrity" check).
 
-**Current workaround** ([scenarios.py:_snapshot_workspace](../../canary/examples/tiny/scenarios/scenarios.py)):
-strip RUNPATH from cached `_native.cpython-*.so` files via
-`patchelf --remove-rpath` at workspace materialization time. Dyld is
-now forced to consult only `LD_LIBRARY_PATH`, and the workspace's
-lib_dir is authoritative.
+### 2. `abi_soname_bump` relies on the consumer side's cache
 
-**Ideal fix.** The cext build should produce a RUNPATH-free
-artifact, and runners should always set the path explicitly. Or:
-build the cext fresh into the workspace at the right time, with the
-workspace's `c/build/` baked in. The current single-build-then-cache
-flow makes RUNPATH a baked-in lie about where the lib is.
+The harness's `apply_abi_soname_bump` deletes the plain `libtiny.so`
+symlink. In the standalone flow that's harmless because dune's
+incremental build from `_build/` doesn't re-link. In canary's flow,
+each variant gets a fresh workspace with no `_build/` cache, so
+fresh dune builds need a usable `libtiny.so`.
 
-### Leak 2: `abi_soname_bump` deletes `libtiny.so`
+In the orthogonal picture: the producer is leaving the store in a
+state that's only valid for *cached* consumers. A self-describing
+store should be usable for *fresh* consumers too. Fixes:
 
-[scenarios.py:apply_abi_soname_bump](../../canary/examples/tiny/scenarios/scenarios.py)
-bumps SONAME to `libtiny.so.2`, renames the file to `libtiny.so.2.0`,
-creates `libtiny.so.2` symlink, and **deletes** `libtiny.so.1` and
-`libtiny.so` symlinks. No plain `libtiny.so` exists post-apply.
+- **Workspace materialization synthesizes the symlink** (current).
+  After capturing the perturbed lib, the materializer adds back the
+  plain `libtiny.so` symlink pointing at the highest-versioned
+  file. Works, in `scenarios.py`.
+- **Producer always emits a usable store.** The apply rule keeps
+  the plain symlink (pointing at the bumped file). The runtime
+  mismatch still surfaces on consumers whose cached NEEDED predates
+  the bump.
 
-The linker (`-ltiny`) looks for exactly `libtiny.so` (or
-`libtiny.a`); no versioned fallback. Without `libtiny.so`, fresh
-links fail with `library not found: tiny`.
+## Implications for the unique-harness pass
 
-- *Harness*: live tree's `_build/` cache from the prior baseline
-  build still contains a working `tiny.cmxa`. dune's incremental
-  build sees no source changes, reuses the cache, never re-runs the
-  linker. `ocaml_build: ok` succeeds because the link doesn't
-  happen.
-- *Canary*: fresh per-variant workspace has no `_build/` cache.
-  dune builds from scratch. Linker fails. Build halts. Downstream
-  probes never run.
+The above are working today, so this isn't a blocker. The next
+unique-harness refactor (Phase 16-ish, once the contract matrix is
+complete on tiny) probably wants:
 
-**Current workaround** ([scenarios.py:_snapshot_workspace](../../canary/examples/tiny/scenarios/scenarios.py)):
-at workspace materialization, if `c/build/libtiny.so` is missing,
-synthesize a symlink pointing at the highest-versioned
-`libtiny.so.N` present. For abi_soname_bump: `libtiny.so →
-libtiny.so.2.0`. Fresh dune builds succeed; the OCaml binding's
-NEEDED tracks the current SONAME (libtiny.so.2). Runtime mismatch
-is preserved only on the Python side because the cached cext
-carries the **old** NEEDED (libtiny.so.1) from before the bump.
+1. **Parameterize `scenarios.py`'s output destination.** Today
+   apply() writes into the live tree's `c/build/`. If apply()
+   accepted an output dir, synthetic producers would look the same
+   as natural producers from canary's perspective: a path where the
+   store materializes.
 
-**Ideal fix.** The store should be self-describing: "this dir
-provides libtiny via this filename." A perturbation that breaks
-fresh linking should be expressed as "this store has no usable
-libtiny for fresh linking" — not silently hidden by a stale cache.
-Or: the harness should always emit a store that's complete for
-fresh use, and rely on a separate "frozen pre-built artifact" store
-for the cases where re-linking would mask the perturbation.
+2. **Lift workspace fixups out of `scenarios.py` into a
+   canary-owned "store sanitiser."** The RUNPATH-strip and
+   libtiny.so-synthesis logic is about *making a store usable by
+   canary's runner*, not about *implementing tiny's perturbations*.
+   It belongs on the runner side.
 
-## Where this lands
+3. **Express real-project package-manager outputs as canary
+   stores.** opam's per-switch artifact tree, pip's site-packages,
+   apt's `/usr/lib`/`/usr/include` — each is already store-shaped.
+   What canary needs is a way to point its stores at those paths
+   without the workspace materialization shim.
 
-The current fixes work and don't change the standalone harness's
-behavior — they only add fixups inside `_snapshot_workspace`. They
-sit at exactly the producer/consumer boundary where the leak
-matters.
+None of this is paper-critical for the surface-theory work — the
+contracts already fire honestly through the workarounds. It's
+cleanup that makes the bridge from synthetic tiny to natural
+real-project stores trivial instead of bespoke.
 
-Longer term, the right move is probably:
+## Cross-references
 
-1. **Make `setup.py`'s RUNPATH conditional** (or build the cext
-   into the workspace fresh). RUNPATH-pointing-at-the-build-path is
-   a runtime-deployment shortcut that should be opt-in, not baked
-   into every produced artifact.
-
-2. **Make the harness produce stores that are complete for fresh
-   use.** If `abi_soname_bump` should test "consumer's cached
-   NEEDED doesn't match provider's SONAME," the store should
-   include a cached binding artifact (with the old NEEDED) *and* a
-   usable lib_dir (with `libtiny.so` symlink) — split explicitly,
-   not implicitly via "we don't re-link because the cache is
-   there."
-
-3. **Lift the workspace materializer's special-case logic out of
-   the harness** into a generic "store sanitiser" canary owns.
-   Right now `_snapshot_workspace` lives in `scenarios.py`; if the
-   responsibility is "canary's store layout must be self-contained,"
-   the fixups belong on canary's side.
-
-None of this is paper-critical for the contracts work — c1, c2, c4
-all fire honestly today. Worth doing when revisiting the harness
-for the next round of contract coverage (c3, c5+).
-
-## Pointer
-
-See git commit log around Phase 14e (`canary: Phase 14e — c4 cmp_abi
-wired, demoed on lib_soname_bumped`) and the surrounding 14b /
-14b' / 14c / 14d commits for the workspace model's evolution.
+- Commit log Phase 14b…14g for the workspace model's evolution.
+- [research/plan.md](../research/plan.md) Phase 15 for the
+  contract-completion sequence (c5/c6/c7/c8 on tiny via hardcoded
+  inspectors) that precedes the harness refactor.
+- [research/surface_theory.md §2.7](../research/surface_theory.md)
+  for the comparator catalogue.
