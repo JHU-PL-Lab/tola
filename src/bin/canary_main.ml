@@ -162,22 +162,25 @@ let action_cmd =
         ~extra:[] steps in
       (variant_id, steps, Some info)
     in
-    (* Phase 14b: each variant points at its harness-materialized
-       workspace. The canary↔harness scenario mapping lives here, not
-       in tiny's spec. baseline uses _cache/baseline/workspace; perturbed
-       variants use the cache produced by `scenarios.py prepare <name>`. *)
-    let ws_of scenario =
-      Canary_project_tiny.cache_workspace_of ~scenario in
+    (* Phase 14b': each variant configures per-artifact-kind stores.
+       Today every variant's stores come from a single materialized
+       workspace via [stores_of_workspace] (single-store special case
+       of the per-kind model). Cross-product variants — e.g. baseline
+       source + perturbed lib — would construct stores with paths
+       from different workspaces; deferred to Phase 14c. *)
+    let ws_stores scenario =
+      Canary_project_tiny.stores_of_workspace
+        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario) in
     let all_variants = [
       mk ""
         (Canary_project_tiny.make_base_script_spec
-           ~workspace_root:(ws_of "baseline"));
+           ~stores:(ws_stores "baseline"));
       mk "lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
-           ~workspace_root:(ws_of "symbol_missing"));
+           ~stores:(ws_stores "symbol_missing"));
       mk "binding_mli_broken"
         (Canary_project_tiny.make_binding_mli_broken_script_spec
-           ~workspace_root:(ws_of "api_complete"));
+           ~stores:(ws_stores "api_complete"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

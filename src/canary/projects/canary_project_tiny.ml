@@ -152,25 +152,58 @@ let tiny_api_source : Canary_artifact_api.t =
     that don't need to distinguish variants.
 *)
 
-(** [make_base_script_spec ~workspace_root] produces tiny's spec
-    operating against a self-contained dune workspace at
-    [workspace_root]. All source/build paths thread [workspace_root]
-    rather than the live [canary/examples/tiny/] tree. Dune commands
-    pass [--root workspace_root] so the workspace is the dune root
-    (since the materialized cache lives outside the tola workspace
-    boundary; see [scenarios.py:_snapshot_workspace]).
+(** {1 Per-artifact-kind stores (Phase 14b', 2026-06-02)}
 
-    Variants pick their own [workspace_root]:
-    - baseline → [_cache/baseline/workspace/] (or live tree as a
-      fallback for development)
-    - lib_broken → [_cache/symbol_missing/workspace/]
-    - binding_mli_broken → [_cache/api_complete/workspace/]
-    The harness↔canary mapping lives in [canary_main.ml]'s variant
-    table, not here. The spec is uniform across variants. *)
-let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
-  let lib_dir = [%string "$PWD/%{workspace_root}/c/build"] in
+    The spec is parameterized by [stores] rather than a single
+    workspace path. Each field is a directory serving one artifact
+    kind:
+
+    - [source]: tree root containing [c/], [ocaml/], [python_cext/].
+      Provides source files for all builds (dune compiles binding from
+      [source/ocaml/], cmake configures from [source/c/], Python probe
+      reads [source/python_cext/examples/]). Also the dune workspace
+      root ([dune build --root source] — outputs land at
+      [source/_build/default/]).
+
+    - [lib_dir]: directory containing [libtiny.so*]. The provider for
+      the Lib artifact. Canary's [build_lib] verifies presence here
+      rather than running cmake; [LIBRARY_PATH] and [LD_LIBRARY_PATH]
+      point at this dir.
+
+    - [python_cext_root]: directory under which the [tiny_cext/]
+      package lives. The provider for the Python Binding artifact
+      ([python_cext_root/tiny_cext/_native.cpython-*.so]). Used as
+      [PYTHONPATH] when running Python probes.
+
+    For today's three variants every store points into the same
+    materialized workspace (via [stores_of_workspace]). Cross-product
+    variants — e.g. baseline source + perturbed lib — would construct
+    stores with paths from different workspaces. Cross-products are
+    parked under Phase 14c in [plan.md]; this layout opens the door. *)
+type tiny_stores = {
+  source : string;
+  lib_dir : string;
+  python_cext_root : string;
+}
+
+(** Default stores derived from a single materialized workspace —
+    the common case when a variant uses one harness scenario. *)
+let stores_of_workspace ~workspace_root = {
+  source = workspace_root;
+  lib_dir = [%string "%{workspace_root}/c/build"];
+  python_cext_root = [%string "%{workspace_root}/python_cext"];
+}
+
+let make_base_script_spec ~(stores : tiny_stores)
+    : Canary_step_builder.script_spec =
+  let { source; lib_dir; python_cext_root } = stores in
+  (* Absolute lib_dir for {LIBRARY,LD_LIBRARY,LD_RUN}_PATH — $PWD
+     anchors to canary's invocation cwd (the tola root). *)
+  let abs_lib_dir = [%string "$PWD/%{lib_dir}"] in
   let ocaml_build_dir =
-    [%string "%{workspace_root}/_build/default/ocaml"] in
+    [%string "%{source}/_build/default/ocaml"] in
+  let cext_so_glob =
+    [%string "%{python_cext_root}/tiny_cext/_native.cpython-*.so"] in
   {
     Canary_step_builder.empty_script_spec with
 
@@ -186,63 +219,59 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
        points at a different store. *)
     configure = Some (fun ~output_dir ~variant_key ->
       Printf.sprintf
-        "test -d %s/c/build || { echo 'workspace c/build missing'; exit 1; }"
-        workspace_root
+        "test -d %s || { echo 'lib_dir missing: %s'; exit 1; }"
+        lib_dir lib_dir
       |> Canary_build_cmd.with_marker
            ~marker:"conf.ok" ~output_dir ~variant_key);
 
     build_lib = Some (fun ~output_dir ~variant_key ->
       Printf.sprintf
-        "test -f %s/c/build/libtiny.so.1 || { echo 'libtiny.so.1 missing'; exit 1; }"
-        workspace_root
+        "test -f %s/libtiny.so.1 || { echo 'libtiny.so.1 missing in %s'; exit 1; }"
+        lib_dir lib_dir
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
     (* Build_binding OCaml: build the binding {b library} only —
        tiny.cmxa (bo6) and libtiny_stubs.a (bo7). dune --root pins the
-       workspace; targets are relative to that root. Consumer compile
-       (examples/probe_baseline.exe) is deferred to Probe so that mli
-       mismatches surface there rather than here. *)
+       source tree as workspace; targets are relative to that root.
+       Consumer compile (examples/probe_baseline.exe) is deferred to
+       Probe so that mli mismatches surface there rather than here. *)
     build_binding = [
       (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
          Canary_build_cmd.dune_build_cmd
            ~env_extra:[
-             [%string "LIBRARY_PATH=%{lib_dir}"];
-             [%string "LD_RUN_PATH=%{lib_dir}"];
+             [%string "LIBRARY_PATH=%{abs_lib_dir}"];
+             [%string "LD_RUN_PATH=%{abs_lib_dir}"];
            ]
-           ~root:workspace_root
+           ~root:source
            ~target:"ocaml/tiny.cmxa ocaml/libtiny_stubs.a" ()
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
-      (* Build_binding Python: tiny's Makefile python_cext target ran
-         at workspace prep time; here we just verify the artifact is in
-         place. The workspace materialization captured
-         tiny_cext/_native.cpython-*.so. *)
+      (* Build_binding Python: verify the prebuilt cext exists in the
+         python_cext_root store. *)
       (Canary_lang.Python,
        fun ~output_dir ~variant_key ->
-         Printf.sprintf
-           "ls %s/python_cext/tiny_cext/_native.cpython-*.so > /dev/null"
-           workspace_root
+         Printf.sprintf "ls %s > /dev/null" cext_so_glob
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
     ];
 
-    (* Probe_lib: nm against the workspace's libtiny.so.1. *)
+    (* Probe_lib: nm against the lib_dir store's libtiny.so.1. *)
     probe_lib = [
       (Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
          Printf.sprintf
-           "nm -D %s/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
+           "nm -D %s/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
             > %s/%s 2>&1"
-           workspace_root output_dir probe_log);
+           lib_dir output_dir probe_log);
     ];
 
-    (* Probe_binding OCaml: dune build + exec probe_baseline.exe inside
-       the workspace. mli mismatches surface here as consumer-compile
-       failures; runtime symbol failures show up when exec runs. Both
-       redirect to probe.log. *)
+    (* Probe_binding OCaml: dune build + exec probe_baseline.exe with
+       source as the dune workspace root. mli mismatches surface here
+       as consumer-compile failures; runtime symbol failures show up
+       when exec runs against [abs_lib_dir]'s libtiny. *)
     probe_binding = [
       (Canary_lang.OCaml,
        Canary_store.Build_tree,
@@ -252,18 +281,19 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
          Printf.sprintf
            "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build --root %s %s \
             && LD_LIBRARY_PATH=%s %s/_build/default/%s) > %s/%s 2>&1"
-           lib_dir lib_dir workspace_root example_exe
-           lib_dir workspace_root example_exe output_dir probe_log);
-      (* Probe_binding Python (cext): import + invoke wrappers from the
-         workspace's python_cext/. *)
+           abs_lib_dir abs_lib_dir source example_exe
+           abs_lib_dir source example_exe output_dir probe_log);
+      (* Probe_binding Python (cext): the probe script lives with the
+         source tree (probes are source-coupled); the cext .so it
+         imports lives in [python_cext_root]. *)
       (Canary_lang.Python,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
          Printf.sprintf
-           "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext python3 \
+           "LD_LIBRARY_PATH=%s PYTHONPATH=%s python3 \
             %s/python_cext/examples/probe_baseline.py > %s/%s 2>&1"
-           lib_dir workspace_root workspace_root output_dir probe_log);
+           abs_lib_dir python_cext_root source output_dir probe_log);
     ];
 
     (* binding_user_facing_pkg drives auto-generation of inspect steps
@@ -292,7 +322,7 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
     inspect = (fun rule _loc ->
       let lib_inspect_cmd ~output_dir ~variant_key =
         Canary_artifact_native.inspect_cmd
-          ~lib:(Printf.sprintf "%s/c/build/libtiny.so.1" workspace_root)
+          ~lib:(Printf.sprintf "%s/libtiny.so.1" lib_dir)
           ~prefixes:[ "tiny_" ]
           ~watchlist:tiny_native_stable_symbols
           ~output_dir ~variant_key () in
@@ -331,15 +361,11 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
                --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               ocaml_build_dir output_dir stub_file
-              workspace_root watchlist_csv output_dir mli_file)
+              source watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
-            let cext_so =
-              Printf.sprintf
-                "%s/python_cext/tiny_cext/_native.cpython-*.so"
-                workspace_root in
             Canary_artifact_native.inspect_cmd
-              ~lib:cext_so ~prefixes:[ "tiny_" ]
+              ~lib:cext_so_glob ~prefixes:[ "tiny_" ]
               ~watchlist:tiny_native_stable_symbols
               ~output_dir ~variant_key ())
       | Probe (Binding Canary_lang.OCaml) ->
@@ -353,7 +379,7 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
               "python3 canary/scripts/inspect_binding.py --kind mli \
                --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
-              workspace_root watchlist_csv output_dir out_file)
+              source watchlist_csv output_dir out_file)
       | Probe (Binding Canary_lang.Python) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
@@ -362,10 +388,10 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
             let watchlist_csv =
               String.concat ~sep:"," tiny_python_module_watchlist in
             Printf.sprintf
-              "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext \
+              "LD_LIBRARY_PATH=%s PYTHONPATH=%s \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
                --watchlist '%s' > %s/%s"
-              lib_dir workspace_root watchlist_csv output_dir out_file)
+              abs_lib_dir python_cext_root watchlist_csv output_dir out_file)
       | _ -> None);
 
     (* Diagram labels: bind the canary kinds to the canonical names tiny uses. *)
@@ -399,9 +425,9 @@ let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
     [tiny_offset]), the missing-symbols list becomes the predicted
     failure substring set, and the probe's failure must mention at
     least one of those substrings for the expectation to confirm. *)
-let make_lib_broken_script_spec ~workspace_root
+let make_lib_broken_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~workspace_root) with
+  { (make_base_script_spec ~stores) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -451,9 +477,9 @@ let make_lib_broken_script_spec ~workspace_root
     remove `val sum`). When canary runs Probe under that perturbation,
     the dune build of probe_baseline.exe fails with "Unbound value
     Tiny.sum"; the predicted "Tiny.sum" matches. *)
-let make_binding_mli_broken_script_spec ~workspace_root
+let make_binding_mli_broken_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~workspace_root) with
+  { (make_base_script_spec ~stores) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -474,7 +500,8 @@ let cache_workspace_of ~scenario =
 (** Convenience aliases at the live-tree path for callers that don't
     distinguish variants. The live tree {b is} a valid dune workspace
     (the tola workspace root supplies dune-project), so passing
-    [tiny_root] works for ad-hoc invocations even though the canonical
-    flow points each variant at its own materialized cache. *)
-let base_script_spec = make_base_script_spec ~workspace_root:tiny_root
+    live-tree stores works for ad-hoc invocations even though the
+    canonical flow points each variant at its own materialized cache. *)
+let base_script_spec =
+  make_base_script_spec ~stores:(stores_of_workspace ~workspace_root:tiny_root)
 let script_spec = base_script_spec

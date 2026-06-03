@@ -903,18 +903,48 @@ runner logs `compat_predicted (2 substring(s))` →
       "target healthy" — target health is a JSON-content question.
     - tiny library's dune stanza already had `-w -32` from Phase 14a.
 
-  Deferred (still on the docket):
-    - Per-artifact-kind stores (14b'): replace the single
-      `workspace_root` with a store config `{ src; lib;
-      binding_ocaml; … }` so variants can mix-and-match providers
-      per kind. Today every variant's `workspace_root` is one path;
-      the per-kind model collapses to "all stores point at the same
-      path" as the default.
+  Deferred:
     - Python c1 via a cext-equivalent c_stub inspect (currently the
       lib_broken Python expectation is hand-written
       `Expect_failure { contains_any = ["tiny_sum"] }`; a stub
       inspect on the cext `.so` would let it switch to
       `Expect_compat_failure`).
+
+**14b' (per-artifact-kind stores — shipped 2026-06-02).**
+- `tiny_stores = { source; lib_dir; python_cext_root }` in
+  `canary_project_tiny.ml`. Each field is a directory serving one
+  artifact kind:
+    - `source`: tree root containing `c/`, `ocaml/`, `python_cext/`;
+      also the dune workspace root (`dune build --root source`).
+    - `lib_dir`: directory containing `libtiny.so*` — used as
+      `LIBRARY_PATH`, `LD_LIBRARY_PATH`, and inspected by `Build_lib`
+      and `Probe Lib`.
+    - `python_cext_root`: dir under which `tiny_cext/` lives — used
+      as `PYTHONPATH` when running Python probes.
+- `make_base_script_spec ~stores` consumes the record; every closure
+  reads from `source / lib_dir / python_cext_root` rather than from a
+  single workspace path. Same shape for `make_lib_broken_script_spec`
+  and `make_binding_mli_broken_script_spec`.
+- `stores_of_workspace ~workspace_root` is the single-workspace
+  constructor — today's three variants all use it (one
+  materialized workspace per variant). The cross-product door is now
+  open: a variant could mix `{ source = baseline_ws; lib_dir =
+  symbol_missing_ws/c/build; … }` to point at multiple workspaces.
+- `canary_main.ml` is unchanged in shape — it just calls
+  `stores_of_workspace ~workspace_root:(cache_workspace_of ~scenario)`
+  per variant.
+
+Smoke test (`canary action tiny`) is unchanged end-to-end: baseline +
+lib_broken (c1 fires, Python fails) + binding_mli_broken (c2 fires)
+all honest.
+
+Deferred to 14c (cross-products):
+  - A `hybrid_lib_broken` variant constructed with stores from two
+    workspaces (e.g., baseline source + symbol_missing lib_dir). Would
+    validate that the per-kind model actually delivers mix-and-match,
+    not just the API.
+  - Beyond two stores: e2 abi_change × e6 api_complete combinations
+    (different perturbations on different artifact kinds).
 
 **14c (parked — cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
