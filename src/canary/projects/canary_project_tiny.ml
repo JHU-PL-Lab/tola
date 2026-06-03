@@ -364,30 +364,39 @@ let make_base_script_spec ~(stores : tiny_stores)
               source watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
-            (* Two-file inspect on the Python side: cext native symbols
-               (c1 cmp_symbol Python analog) + user-facing dir(tiny_cext)
-               attrs (c2 cmp_api_completeness Python). Mirrors the
-               two-file inspect on Build (Binding OCaml). The attrs
-               JSON lives at build_binding_python/inspect_attrs.json so
-               Probe (Binding Python)'s Expect_compat_failure can cite
-               it before the probe runs. *)
-            let cext_stub_cmd =
-              Canary_artifact_native.inspect_cmd
-                ~lib:cext_so_glob ~prefixes:[ "tiny_" ]
-                ~watchlist:tiny_native_stable_symbols
-                ~output_dir ~variant_key () in
+            (* Two-file inspect on the Python side. Mirrors the OCaml
+               binding's two-file inspect.
+               - inspect.json (c_stub via [inspect_binding.py --kind
+                 stub] on the cext .so) — undefined refs into libtiny,
+                 the Python analog of libtiny_stubs.a. Feeds c1
+                 cmp_symbol's C_stub input.
+               - inspect_attrs.json (Python dir() attrs via
+                 [inspect_python.py]) — user-facing surface for
+                 c2 cmp_api_completeness's Python_attrs input.
+
+               The cext .so doesn't {b export} tiny_* — those are
+               undefined refs satisfied by libtiny at load time. So we
+               use the stub inspector here, not the native one
+               (which would always report zero defined tiny_* symbols
+               and was misleading before Phase 14c-followup,
+               2026-06-02). *)
+            let stub_file =
+              Canary_basic.filename ~variant_key
+                ~base:"inspect" ~ext:"json" in
             let attrs_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect_attrs" ~ext:"json" in
-            let watchlist_csv =
+            let attrs_watchlist_csv =
               String.concat ~sep:"," tiny_python_module_watchlist in
             Printf.sprintf
-              "%s && \
+              "python3 canary/scripts/inspect_binding.py --kind stub \
+               --path %s --prefix tiny_ > %s/%s && \
                LD_LIBRARY_PATH=%s PYTHONPATH=%s \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
                --watchlist '%s' > %s/%s"
-              cext_stub_cmd abs_lib_dir python_cext_root
-              watchlist_csv output_dir attrs_file)
+              cext_so_glob output_dir stub_file
+              abs_lib_dir python_cext_root
+              attrs_watchlist_csv output_dir attrs_file)
       | Probe (Binding Canary_lang.OCaml) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
@@ -463,13 +472,16 @@ let make_lib_broken_script_spec ~(stores : tiny_stores)
             version_info = None;
           }
       | Probe (Binding Canary_lang.Python) ->
-          (* The cext .so was compiled from baseline source and calls
-             tiny_sum at runtime. With the perturbed lib (tiny_sum →
-             tiny_total) the cext fails to resolve the symbol on import.
-             Hand-written substring for now; switching to a
-             cext-equivalent c_stub inspect is a follow-up. *)
-          Expect_failure {
-            contains_any = [ "tiny_sum" ];
+          (* c1 cmp_symbol on the Python side: the cext .so's
+             undefined refs (from inspect_binding.py --kind stub on
+             _native.cpython-*.so) minus the lib's defined symbols
+             gives the missing-symbols substring set. Mirrors the
+             OCaml-side wiring. *)
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              C_stub     [ "build_binding_python/inspect.json" ];
+              Native_lib [ "build_lib/inspect.json" ];
+            ];
             version_info = None;
           }
       | _ -> Expect_success);

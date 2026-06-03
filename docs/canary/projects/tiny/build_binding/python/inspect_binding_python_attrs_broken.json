@@ -1,21 +1,16 @@
 {
+  "kind": "c_stub",
+  "path": "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-314-x86_64-linux-gnu.so",
   "counts": {
-    "by_prefix": {
-      "tiny_": 0
-    },
-    "total": 0
+    "required": 3
   },
-  "kind": "native",
-  "path": "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-*.so",
-  "symbols": [],
-  "versioned_exports": {},
-  "versioned_req": {},
+  "requires": [
+    "tiny_diff",
+    "tiny_offset",
+    "tiny_sum"
+  ],
   "watchlist": {
-    "missing": [
-      "tiny_sum",
-      "tiny_diff",
-      "tiny_offset"
-    ],
-    "present": []
+    "present": [],
+    "missing": []
   }
 }

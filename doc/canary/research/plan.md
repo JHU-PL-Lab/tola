@@ -903,12 +903,7 @@ runner logs `compat_predicted (2 substring(s))` →
       "target healthy" — target health is a JSON-content question.
     - tiny library's dune stanza already had `-w -32` from Phase 14a.
 
-  Deferred:
-    - Python c1 via a cext-equivalent c_stub inspect (currently the
-      lib_broken Python expectation is hand-written
-      `Expect_failure { contains_any = ["tiny_sum"] }`; a stub
-      inspect on the cext `.so` would let it switch to
-      `Expect_compat_failure`).
+  Deferred — addressed in Phase 14d (Python c1, 2026-06-02).
 
 **14b' (per-artifact-kind stores — shipped 2026-06-02).**
 - `tiny_stores = { source; lib_dir; python_cext_root }` in
@@ -963,10 +958,39 @@ all honest.
 
 Five variants total now ride one `canary action tiny` invocation:
 baseline, lib_broken, binding_mli_broken,
-binding_python_attrs_broken, hybrid_lib_broken. Contracts firing:
-c1 OCaml (lib_broken + hybrid_lib_broken), c1 Python via substring
-(both ditto), c2 OCaml (binding_mli_broken), c2 Python
-(binding_python_attrs_broken).
+binding_python_attrs_broken, hybrid_lib_broken.
+
+**Phase 14d (honest c1 Python — shipped 2026-06-02).** The
+`lib_broken` and `hybrid_lib_broken` Python expectations dropped the
+hand-written `Expect_failure { contains_any = ["tiny_sum"] }` for a
+proper `Expect_compat_failure` with c1 inputs:
+
+```
+Probe (Binding Python) ->
+  Expect_compat_failure {
+    inputs = [
+      C_stub     [ "build_binding_python/inspect.json" ];
+      Native_lib [ "build_lib/inspect.json" ];
+    ];
+    ...
+  }
+```
+
+The C_stub input is produced by extending `inspect_binding.py --kind
+stub` to handle shared libraries (`nm -D` on `.so`/`.dylib`/`.cpython-
+*.so` reads the dynamic symbol table). The cext `.so`'s undefined
+refs filtered by the `tiny_` prefix are the "stubs" — the Python
+analog of `libtiny_stubs.a`. Build (Binding Python)'s inspect was
+restructured to a two-file step (stub + attrs), mirroring Build
+(Binding OCaml).
+
+Contracts now firing honestly across all five variants:
+- c1 cmp_symbol OCaml: lib_broken + hybrid_lib_broken.
+- c1 cmp_symbol Python: lib_broken + hybrid_lib_broken (no more
+  hand-written substring; the predicted `tiny_sum` flows from the
+  registered c1 predicate).
+- c2 cmp_api_completeness OCaml: binding_mli_broken.
+- c2 cmp_api_completeness Python: binding_python_attrs_broken.
 
 Beyond two stores: e2 abi_change × e6 api_complete combinations
 (different perturbations on different artifact kinds) are still
@@ -974,7 +998,7 @@ parked — the cross-product door is wide open now, but the
 interesting compositions aren't paper-critical until c4/c7/c8 wire
 up.
 
-**14c (parked — cross-products).**
+**14c-deferred (further cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"
   combinations canary's machinery would handle even though the
   standalone harness doesn't model them. Whether to enumerate

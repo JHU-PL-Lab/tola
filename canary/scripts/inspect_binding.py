@@ -257,8 +257,15 @@ def summarize_mli(paths, watchlist, prefix_by_filename=False,
 # ── .a stub archive parser ────────────────────────────────────────────────────
 
 def parse_stub_a(path, prefix):
-    """Run nm on a static archive; collect undefined symbols (what binding requires)."""
-    cmd = ["nm", path]
+    """Run nm and collect undefined symbols (what the binding requires
+    from external providers). Handles both static archives (.a) and
+    shared libraries (.so/.dylib/.cpython-*.so) — for shared libs we
+    use [nm -D] to read the dynamic symbol table; for archives plain
+    [nm] reads the per-object symbol tables."""
+    is_shared = (path.endswith(".so") or path.endswith(".dylib")
+                 or ".cpython-" in path  # _native.cpython-3xx-...-.so
+                 or ".so." in path)
+    cmd = ["nm", "-D", path] if is_shared else ["nm", path]
     proc = subprocess.run(cmd, text=True, stdout=subprocess.PIPE,
                           stderr=subprocess.PIPE, check=False)
     if proc.returncode != 0:
