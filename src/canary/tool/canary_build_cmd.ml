@@ -59,11 +59,16 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
     ["VAR=value"] pairs prepended to the command (e.g.
     [["LIBRARY_PATH=$PWD/c/build"; "LD_RUN_PATH=$PWD/c/build"]]).
     [target] is the dune build target (path or @alias); omitted = build
-    everything in scope. *)
-let dune_build_cmd ?(env_extra = []) ?target () =
+    everything in scope. [root] is the dune workspace root (passed via
+    [--root <root>]); used by tiny variants whose materialized
+    workspace lives outside the tola dune-project. *)
+let dune_build_cmd ?(env_extra = []) ?root ?target () =
   let env_prefix = match env_extra with
     | [] -> ""
     | xs -> String.concat ~sep:" " xs ^ " " in
+  let root_flag = match root with
+    | None -> ""
+    | Some r -> " --root " ^ r in
   match target with
-  | None -> env_prefix ^ "dune build"
-  | Some t -> Printf.sprintf "%sdune build %s" env_prefix t
+  | None -> Printf.sprintf "%sdune build%s" env_prefix root_flag
+  | Some t -> Printf.sprintf "%sdune build%s %s" env_prefix root_flag t

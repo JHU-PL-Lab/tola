@@ -1,14 +1,13 @@
 {
   "kind": "ocaml_mli",
-  "path": "canary/examples/tiny/ocaml/tiny.mli",
+  "path": "canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli",
   "counts": {
-    "vals": 3,
+    "vals": 2,
     "externals": 0,
     "constructors": 0,
     "modules": 1
   },
   "vals": [
-    "Tiny.sum",
     "Tiny.diff",
     "Tiny.offset"
   ],
@@ -21,10 +20,11 @@
   "watchlist": {
     "present": [
       "Tiny",
-      "Tiny.sum",
       "Tiny.diff",
       "Tiny.offset"
     ],
-    "missing": []
+    "missing": [
+      "Tiny.sum"
+    ]
   }
 }

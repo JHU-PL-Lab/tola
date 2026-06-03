@@ -1,6 +1,6 @@
 {
   "kind": "ocaml_mli",
-  "path": "canary/examples/tiny/ocaml/tiny.mli",
+  "path": "canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli",
   "counts": {
     "vals": 2,
     "externals": 0,

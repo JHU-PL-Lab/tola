@@ -734,6 +734,96 @@ def _snapshot_sources(target_dir: Path, rel_paths: list[str]) -> list[str]:
     return captured
 
 
+# Top-level entries under TINY/ that should be excluded when materializing
+# a workspace snapshot. The workspace is consumed by canary (Phase 14b) as
+# a self-contained dune workspace; it doesn't need the harness's own
+# state, the python build cache, dune's build dir, or the in-tree
+# tests/docs.
+_WORKSPACE_EXCLUDED_TOP = {
+    "scenarios",          # harness state / patches / this script's cache
+    "test",               # standalone harness tests
+    "README.md",
+    "Makefile",           # tiny's top-level Makefile (canary drives builds itself)
+}
+# Sub-tree fragments to skip during rglob (matched as any path segment):
+# dune's build dir, bytecode caches. NOT "build" bare — c/build/ holds
+# libtiny.so etc which canary needs.
+_WORKSPACE_EXCLUDED_FRAGMENTS = {
+    "_build",
+    "__pycache__",
+}
+# Relative-to-TINY path prefixes to skip. Catches python_cext/build
+# (uv wheel output, transient) without losing c/build (the live C
+# library build dir). Also drops cmake's bookkeeping: the cached
+# CMakeCache.txt encodes the {b live tree's} absolute source dir, so
+# any cmake invocation against the materialized workspace would fail
+# with "current cache directory ≠ source used to generate cache."
+# We keep the {i artifacts} under c/build (libtiny.so* + symlinks);
+# canary's tiny spec treats configure / build_lib as cached-artifact
+# verification rather than re-cmaking.
+_WORKSPACE_EXCLUDED_PREFIXES = (
+    "python_cext/build/",
+    "python_cext/tiny_cext.egg-info/",
+    "c/build/CMakeFiles/",
+    "c/build/CMakeCache.txt",
+    "c/build/cmake_install.cmake",
+    "c/build/Makefile",
+)
+
+
+def _snapshot_workspace(target_dir: Path) -> int:
+    """Materialize a complete self-contained dune workspace at
+    target_dir/workspace/. Called from cmd_prepare AFTER apply() so the
+    perturbed sources are captured in place, and BEFORE revert().
+
+    The workspace contains the full live tiny tree (minus harness state
+    + dune/python build dirs) plus a minimal dune-project at the root so
+    dune treats it as its own workspace (canary invokes `dune build
+    --root <workspace>`). c/build/ is preserved so canary doesn't need
+    to rebuild libtiny.so; python_cext/tiny_cext/_native.*.so likewise.
+
+    Returns the number of files copied. The single-store workspace
+    model (one path per variant) is a stepping stone toward the
+    per-artifact-kind store model in canary's spec (14b').
+    """
+    ws_dir = target_dir / "workspace"
+    if ws_dir.exists():
+        shutil.rmtree(ws_dir)
+    ws_dir.mkdir(parents=True)
+
+    count = 0
+    for entry in TINY.iterdir():
+        if entry.name in _WORKSPACE_EXCLUDED_TOP:
+            continue
+        for src in entry.rglob("*"):
+            if any(part in _WORKSPACE_EXCLUDED_FRAGMENTS for part in src.parts):
+                continue
+            if not src.is_file() and not src.is_symlink():
+                continue
+            rel = src.relative_to(TINY)
+            rel_str = str(rel).replace(os.sep, "/")
+            if any(rel_str.startswith(pfx) for pfx in _WORKSPACE_EXCLUDED_PREFIXES):
+                continue
+            dst = ws_dir / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if src.is_symlink():
+                link_target = os.readlink(src)
+                if dst.exists() or dst.is_symlink():
+                    dst.unlink()
+                dst.symlink_to(link_target)
+            else:
+                _force_copy(src, dst)
+            count += 1
+
+    # Minimal standalone dune-project so dune treats this dir as a
+    # workspace root (its presence stops dune from climbing up to the
+    # tola workspace; `dune build --root` makes the choice explicit
+    # but the file is needed for the workspace to be valid at all).
+    (ws_dir / "dune-project").write_text("(lang dune 3.10)\n")
+    count += 1
+    return count
+
+
 def _restore_native(cache_dir: Path) -> bool:
     """Replace c/build/libtiny.so* with the cached set. Returns True if
     any cache was applied."""
@@ -827,6 +917,13 @@ def cmd_baseline() -> int:
     src_captured = _snapshot_sources(BASELINE_CACHE, PERTURBABLE_SOURCES)
     print(f"baseline: snapshot artifacts {art_manifest}", file=sys.stderr)
     print(f"baseline: snapshot {len(src_captured)} source files", file=sys.stderr)
+    # Phase 14b: materialize the baseline workspace so canary's baseline
+    # variant has the same {workspace}/{dune-project at root} shape as
+    # every perturbed variant. (canary could equivalently point at the
+    # live tree for baseline, but routing every variant through
+    # _cache/<name>/workspace keeps the spec uniform.)
+    ws_count = _snapshot_workspace(BASELINE_CACHE)
+    print(f"baseline: snapshot workspace ({ws_count} files)", file=sys.stderr)
     return 0
 
 
@@ -943,6 +1040,10 @@ def cmd_prepare(name: str) -> int:
         # c/build/libtiny.so.1 — those are captured under artifacts/).
         source_perturbs = [p for p in perturbs if p in PERTURBABLE_SOURCES]
         src_captured = _snapshot_sources(scen_dir, source_perturbs)
+        # Phase 14b: materialize a self-contained dune workspace
+        # capturing the full perturbed tree. canary points each variant
+        # at its scenario's workspace and invokes `dune build --root`.
+        ws_count = _snapshot_workspace(scen_dir)
 
         _save_json(scen_dir / "confirm_ill.json", confirm)
         _save_json(scen_dir / "manifest.json", {
@@ -951,6 +1052,7 @@ def cmd_prepare(name: str) -> int:
             "inspected_aliases": sorted(perturbed.keys()),
             "snapshot_artifacts": art_manifest,
             "snapshot_sources":  src_captured,
+            "snapshot_workspace_files": ws_count,
         })
 
         # Some scenarios are static-invisible by design: their violation

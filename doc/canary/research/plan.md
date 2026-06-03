@@ -865,17 +865,56 @@ substring `Tiny.sum`, the substring is found in probe.log, and the
 runner logs `compat_predicted (2 substring(s))` →
 `done (expected failure confirmed (derived))`.
 
-**14b (coexistence — the real structural change).**
-- Tiny harness gains side-by-side cached perturbed artifacts:
-  `_cache/baseline/artifacts/*`, `_cache/lib_broken/artifacts/*`,
-  etc., each containing the full artifact set for that variant.
-  `scenarios.py prepare-all` produces them.
-- canary's tiny spec points at the cache directly. Each variant's
-  closures read from `_cache/<variant>/artifacts/…` rather than
-  the live tree. No restore step between variants — both baseline
-  and perturbed artifacts coexist on disk.
-- `canary action tiny` now runs the full matrix in one invocation
-  cleanly. No setup ceremony beyond the one-time `prepare-all`.
+**14b (coexistence — shipped 2026-06-02).**
+- Tiny harness gains side-by-side materialized workspaces:
+  `scenarios.py baseline` and `prepare <name>` each write a
+  self-contained dune workspace at `_cache/<scenario>/workspace/`
+  containing the full perturbed source tree + built artifacts
+  (libtiny.so*, tiny_cext _native.so) + a minimal `dune-project` at
+  the root.
+- canary's tiny spec is parameterized: one
+  `make_base_script_spec ~workspace_root` consumed by each variant.
+  Dune commands use `--root <workspace_root>`. Configure / build_lib
+  become artifact-verification (the cache pre-builds them); only
+  build_binding_ocaml runs dune.
+- `canary_main.ml` wires variants to scenario workspaces:
+  baseline → `_cache/baseline/workspace`, lib_broken →
+  `_cache/symbol_missing/workspace`, binding_mli_broken →
+  `_cache/api_complete/workspace`. The harness↔canary scenario
+  mapping lives in this variant table — canary's spec is unaware.
+- `canary action tiny` runs the full matrix in one invocation. No
+  restore ceremony. Three variants confirm honestly:
+    - baseline: every step `done`.
+    - lib_broken: `compat_predicted (1 substring(s))` (c1 →
+      `tiny_sum`) at probe_binding_ocaml; `Expect_failure` matches
+      `tiny_sum` at probe_binding_python (cext ImportError surfaces
+      the undefined symbol).
+    - binding_mli_broken: `compat_predicted (2 substring(s))` (c2 →
+      `Tiny.sum` variants) at probe_binding_ocaml.
+
+  Coordinated side-changes that landed with 14b:
+    - `dune_build_cmd ?root` flag (canary_build_cmd.ml).
+    - `Build_lib` gets a native inspect attached, so c1's
+      `Native_lib` input cites `build_lib/inspect.json` (the lib
+      JSON is available before any probe step's expectation evaluates;
+      probe_lib can run later in topological order without breaking c1).
+    - `inspect_python.py` exits 0 on import error (writes a JSON with
+      an `error` field). Exit code now reflects "inspector ran," not
+      "target healthy" — target health is a JSON-content question.
+    - tiny library's dune stanza already had `-w -32` from Phase 14a.
+
+  Deferred (still on the docket):
+    - Per-artifact-kind stores (14b'): replace the single
+      `workspace_root` with a store config `{ src; lib;
+      binding_ocaml; … }` so variants can mix-and-match providers
+      per kind. Today every variant's `workspace_root` is one path;
+      the per-kind model collapses to "all stores point at the same
+      path" as the default.
+    - Python c1 via a cext-equivalent c_stub inspect (currently the
+      lib_broken Python expectation is hand-written
+      `Expect_failure { contains_any = ["tiny_sum"] }`; a stub
+      inspect on the cext `.so` would let it switch to
+      `Expect_compat_failure`).
 
 **14c (parked — cross-products).**
 - The coexistence model naturally permits "e1 lib + e6 binding"

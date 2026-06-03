@@ -162,10 +162,22 @@ let action_cmd =
         ~extra:[] steps in
       (variant_id, steps, Some info)
     in
+    (* Phase 14b: each variant points at its harness-materialized
+       workspace. The canary↔harness scenario mapping lives here, not
+       in tiny's spec. baseline uses _cache/baseline/workspace; perturbed
+       variants use the cache produced by `scenarios.py prepare <name>`. *)
+    let ws_of scenario =
+      Canary_project_tiny.cache_workspace_of ~scenario in
     let all_variants = [
-      mk "" Canary_project_tiny.base_script_spec;
-      mk "lib_broken" Canary_project_tiny.lib_broken_script_spec;
-      mk "binding_mli_broken" Canary_project_tiny.binding_mli_broken_script_spec;
+      mk ""
+        (Canary_project_tiny.make_base_script_spec
+           ~workspace_root:(ws_of "baseline"));
+      mk "lib_broken"
+        (Canary_project_tiny.make_lib_broken_script_spec
+           ~workspace_root:(ws_of "symbol_missing"));
+      mk "binding_mli_broken"
+        (Canary_project_tiny.make_binding_mli_broken_script_spec
+           ~workspace_root:(ws_of "api_complete"));
     ] in
     let selected = match variant_filter with
       | None -> all_variants

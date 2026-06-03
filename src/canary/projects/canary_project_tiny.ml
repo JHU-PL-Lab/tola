@@ -152,67 +152,83 @@ let tiny_api_source : Canary_artifact_api.t =
     that don't need to distinguish variants.
 *)
 
-let base_script_spec : Canary_step_builder.script_spec =
+(** [make_base_script_spec ~workspace_root] produces tiny's spec
+    operating against a self-contained dune workspace at
+    [workspace_root]. All source/build paths thread [workspace_root]
+    rather than the live [canary/examples/tiny/] tree. Dune commands
+    pass [--root workspace_root] so the workspace is the dune root
+    (since the materialized cache lives outside the tola workspace
+    boundary; see [scenarios.py:_snapshot_workspace]).
+
+    Variants pick their own [workspace_root]:
+    - baseline → [_cache/baseline/workspace/] (or live tree as a
+      fallback for development)
+    - lib_broken → [_cache/symbol_missing/workspace/]
+    - binding_mli_broken → [_cache/api_complete/workspace/]
+    The harness↔canary mapping lives in [canary_main.ml]'s variant
+    table, not here. The spec is uniform across variants. *)
+let make_base_script_spec ~workspace_root : Canary_step_builder.script_spec =
+  let lib_dir = [%string "$PWD/%{workspace_root}/c/build"] in
+  let ocaml_build_dir =
+    [%string "%{workspace_root}/_build/default/ocaml"] in
   {
     Canary_step_builder.empty_script_spec with
 
-    (* No fetch_source: tiny is in-tree. *)
+    (* No fetch_source: workspace is pre-materialized. *)
     api_source = Some tiny_api_source;
 
-    (* Configure: cmake -S c -B c/build. The marker-write suffix is added
-       via [Canary_build_cmd.with_marker] so check_post sees conf.ok. *)
+    (* Configure / Build_lib: the workspace store provides libtiny.so.*
+       pre-built (the harness ran cmake at prepare-all time). Canary
+       verifies the cached artifact rather than re-running cmake — the
+       workspace deliberately omits CMakeCache.txt because it encodes
+       the live tree's absolute source path. This matches the long-term
+       "store provides artifacts" model: a perturbed-lib variant just
+       points at a different store. *)
     configure = Some (fun ~output_dir ~variant_key ->
-      Canary_build_cmd.cmake_configure_cmd
-        ~src:[%string "%{tiny_root}/c"]
-        ~build:[%string "%{tiny_root}/c/build"] ()
+      Printf.sprintf
+        "test -d %s/c/build || { echo 'workspace c/build missing'; exit 1; }"
+        workspace_root
       |> Canary_build_cmd.with_marker
            ~marker:"conf.ok" ~output_dir ~variant_key);
 
-    (* Build_lib produces lib_native.so (n4) at c/build/libtiny.so.1. *)
     build_lib = Some (fun ~output_dir ~variant_key ->
-      Canary_build_cmd.cmake_build_cmd
-        ~build:[%string "%{tiny_root}/c/build"] ()
+      Printf.sprintf
+        "test -f %s/c/build/libtiny.so.1 || { echo 'libtiny.so.1 missing'; exit 1; }"
+        workspace_root
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
     (* Build_binding OCaml: build the binding {b library} only —
-       tiny.cmxa (bo6) and libtiny_stubs.a (bo7). The consumer-side
-       compile (examples/probe_baseline.exe) is deferred to Probe so
-       that mli mismatches surface there rather than here. dune's
-       target-based laziness skips the examples/ dir when the named
-       targets don't depend on it. LIBRARY_PATH lets the cstubs link
-       find libtiny; LD_RUN_PATH bakes the rpath into the binding.
-
-       This split lets e6 (patched tiny.mli) succeed at Build (library
-       can expose a narrowed mli; tiny.ml may be richer) and fail at
-       Probe (consumer references the narrowed-away symbol). *)
+       tiny.cmxa (bo6) and libtiny_stubs.a (bo7). dune --root pins the
+       workspace; targets are relative to that root. Consumer compile
+       (examples/probe_baseline.exe) is deferred to Probe so that mli
+       mismatches surface there rather than here. *)
     build_binding = [
       (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
          Canary_build_cmd.dune_build_cmd
            ~env_extra:[
-             [%string "LIBRARY_PATH=%{tiny_lib_dir}"];
-             [%string "LD_RUN_PATH=%{tiny_lib_dir}"];
+             [%string "LIBRARY_PATH=%{lib_dir}"];
+             [%string "LD_RUN_PATH=%{lib_dir}"];
            ]
-           ~target:[%string "%{tiny_root}/ocaml/tiny.cmxa \
-                              %{tiny_root}/ocaml/libtiny_stubs.a"] ()
+           ~root:workspace_root
+           ~target:"ocaml/tiny.cmxa ocaml/libtiny_stubs.a" ()
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
-      (* Build_binding Python: invoke tiny's Makefile python_cext target,
-         which runs `uv build --wheel` and copies _native.cpython-*.so back
-         next to __init__.py. Produces bpe3 compiled_binding_cext.so. *)
+      (* Build_binding Python: tiny's Makefile python_cext target ran
+         at workspace prep time; here we just verify the artifact is in
+         place. The workspace materialization captured
+         tiny_cext/_native.cpython-*.so. *)
       (Canary_lang.Python,
        fun ~output_dir ~variant_key ->
-         Printf.sprintf "make -C %s python_cext" tiny_root
+         Printf.sprintf
+           "ls %s/python_cext/tiny_cext/_native.cpython-*.so > /dev/null"
+           workspace_root
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
     ];
 
-    (* Probe_lib: minimal "the lib exists and is loadable" check. The real
-       payload of this step is the attached _inspect (see [inspect] field
-       below) which runs inspect_native.py against n4 lib_native.so with
-       the stable_symbols watchlist — that's what would catch
-       {i e1 symbol_missing} via {i c1 cmp_symbol}. *)
+    (* Probe_lib: nm against the workspace's libtiny.so.1. *)
     probe_lib = [
       (Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
@@ -220,30 +236,26 @@ let base_script_spec : Canary_step_builder.script_spec =
          Printf.sprintf
            "nm -D %s/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' \
             > %s/%s 2>&1"
-           tiny_root output_dir probe_log);
+           workspace_root output_dir probe_log);
     ];
 
-    (* Probe_binding OCaml: build {b and} run probe_baseline.exe.
-       The example compile lives here (not at Build_binding) because
-       OCaml mli mismatches are compile-time consumer-side: this is
-       where c2 cmp_api_completeness violations surface. Both stages
-       redirect to probe.log so [output_contains_any] can grep
-       compile errors as well as runtime output. *)
+    (* Probe_binding OCaml: dune build + exec probe_baseline.exe inside
+       the workspace. mli mismatches surface here as consumer-compile
+       failures; runtime symbol failures show up when exec runs. Both
+       redirect to probe.log. *)
     probe_binding = [
       (Canary_lang.OCaml,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-         let example_exe =
-           [%string "%{tiny_root}/ocaml/examples/probe_baseline.exe"] in
+         let example_exe = "ocaml/examples/probe_baseline.exe" in
          Printf.sprintf
-           "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build %s \
-            && LD_LIBRARY_PATH=%s _build/default/%s) > %s/%s 2>&1"
-           tiny_lib_dir tiny_lib_dir example_exe
-           tiny_lib_dir example_exe output_dir probe_log);
-      (* Probe_binding Python (cext): import + invoke wrappers. The
-         standalone harness's probe_baseline.py asserts the same value set;
-         here we use the same script. *)
+           "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build --root %s %s \
+            && LD_LIBRARY_PATH=%s %s/_build/default/%s) > %s/%s 2>&1"
+           lib_dir lib_dir workspace_root example_exe
+           lib_dir workspace_root example_exe output_dir probe_log);
+      (* Probe_binding Python (cext): import + invoke wrappers from the
+         workspace's python_cext/. *)
       (Canary_lang.Python,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
@@ -251,7 +263,7 @@ let base_script_spec : Canary_step_builder.script_spec =
          Printf.sprintf
            "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext python3 \
             %s/python_cext/examples/probe_baseline.py > %s/%s 2>&1"
-           tiny_lib_dir tiny_root tiny_root output_dir probe_log);
+           lib_dir workspace_root workspace_root output_dir probe_log);
     ];
 
     (* binding_user_facing_pkg drives auto-generation of inspect steps
@@ -278,33 +290,32 @@ let base_script_spec : Canary_step_builder.script_spec =
        - Probe (Binding Python)→ bpe2 user_binding_cext.py (dir(tiny_cext))
          with attr watchlist. Feeds c2 cmp_api_completeness (Python). *)
     inspect = (fun rule _loc ->
-      let ocaml_build_dir =
-        Printf.sprintf "_build/default/%s/ocaml" tiny_root in
+      let lib_inspect_cmd ~output_dir ~variant_key =
+        Canary_artifact_native.inspect_cmd
+          ~lib:(Printf.sprintf "%s/c/build/libtiny.so.1" workspace_root)
+          ~prefixes:[ "tiny_" ]
+          ~watchlist:tiny_native_stable_symbols
+          ~output_dir ~variant_key () in
       match rule with
+      | Build_lib ->
+          (* Inspect the lib as soon as we've verified it exists in the
+             workspace. Critical for c1 cmp_symbol ordering: the runner's
+             topological sort can put probe_lib after probe_binding, but
+             c1's expectation at probe_binding needs the lib JSON
+             already-present. Attaching the inspect to build_lib makes
+             the JSON available before any Probe step evaluates. *)
+          Some lib_inspect_cmd
       | Probe Lib ->
-          (* n4 lib_native.so via inspect_native.py; the stable_symbols
-             watchlist drives the c1 cmp_symbol equivalent on the
-             provider side. *)
-          Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_native.inspect_cmd
-              ~lib:(Printf.sprintf "%s/c/build/libtiny.so.1" tiny_root)
-              ~prefixes:[ "tiny_" ]
-              ~watchlist:tiny_native_stable_symbols
-              ~output_dir ~variant_key ())
+          (* Same nm-derived JSON, now redundant with build_lib's
+             inspect. Kept for callers that read probe_lib/inspect.json
+             (e.g. lib_broken originally; switch them to build_lib over
+             time). *)
+          Some lib_inspect_cmd
       | Build_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
-            (* Build (Binding OCaml) attaches a {b two-file} inspect step
-               so both inspect JSONs exist before Probe evaluates:
-               - inspect.json (stub side, for c1 cmp_symbol's C_stub input)
-               - inspect_mli.json (mli side, for c2 cmp_api_completeness's
-                 Ocaml_mli input)
-
-               Tiny's older layout put the mli inspect at Probe (Binding
-               OCaml) follow-up, which meant the JSON appeared after the
-               probe ran and the expectation couldn't reference it. Moving
-               the mli inspect to build time lets c2 cite a path that's
-               populated before Probe's expectation evaluates. Phase 14a
-               (2026-06-02). *)
+            (* Two-file inspect: stub (c1) + mli (c2). Both JSONs live
+               in build_binding_ocaml/ so Probe's expectation can cite
+               them before it runs. *)
             let stub_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
@@ -320,12 +331,13 @@ let base_script_spec : Canary_step_builder.script_spec =
                --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               ocaml_build_dir output_dir stub_file
-              tiny_root watchlist_csv output_dir mli_file)
+              workspace_root watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
             let cext_so =
               Printf.sprintf
-                "%s/python_cext/tiny_cext/_native.cpython-*.so" tiny_root in
+                "%s/python_cext/tiny_cext/_native.cpython-*.so"
+                workspace_root in
             Canary_artifact_native.inspect_cmd
               ~lib:cext_so ~prefixes:[ "tiny_" ]
               ~watchlist:tiny_native_stable_symbols
@@ -341,7 +353,7 @@ let base_script_spec : Canary_step_builder.script_spec =
               "python3 canary/scripts/inspect_binding.py --kind mli \
                --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
-              tiny_root watchlist_csv output_dir out_file)
+              workspace_root watchlist_csv output_dir out_file)
       | Probe (Binding Canary_lang.Python) ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
@@ -353,7 +365,7 @@ let base_script_spec : Canary_step_builder.script_spec =
               "LD_LIBRARY_PATH=%s PYTHONPATH=%s/python_cext \
                python3 canary/scripts/inspect_python.py --pkg tiny_cext \
                --watchlist '%s' > %s/%s"
-              tiny_lib_dir tiny_root watchlist_csv output_dir out_file)
+              lib_dir workspace_root watchlist_csv output_dir out_file)
       | _ -> None);
 
     (* Diagram labels: bind the canary kinds to the canonical names tiny uses. *)
@@ -387,22 +399,31 @@ let base_script_spec : Canary_step_builder.script_spec =
     [tiny_offset]), the missing-symbols list becomes the predicted
     failure substring set, and the probe's failure must mention at
     least one of those substrings for the expectation to confirm. *)
-let lib_broken_script_spec : Canary_step_builder.script_spec =
-  { base_script_spec with
+let make_lib_broken_script_spec ~workspace_root
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~workspace_root) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
-          (* Tiny's Build_binding_ocaml inspect step writes the stub
-             JSON to `inspect.json` (not `inspect_stub.json` — only
-             projects with a separate Pack/Install step like z3/llvm
-             produce both). The Probe_lib inspect writes the native
-             lib JSON to `inspect.json` as well; the resolver picks
-             the variant-keyed flavor at runtime. *)
           Expect_compat_failure {
             inputs = Canary_compat.[
               C_stub     [ "build_binding_ocaml/inspect.json" ];
-              Native_lib [ "probe_lib/inspect.json" ];
+              (* Cite build_lib (runs earlier in dep order) rather than
+                 probe_lib — c1's expectation evaluates at probe_binding
+                 and probe_lib may not have run yet in multi-variant
+                 scheduling. *)
+              Native_lib [ "build_lib/inspect.json" ];
             ];
+            version_info = None;
+          }
+      | Probe (Binding Canary_lang.Python) ->
+          (* The cext .so was compiled from baseline source and calls
+             tiny_sum at runtime. With the perturbed lib (tiny_sum →
+             tiny_total) the cext fails to resolve the symbol on import.
+             Hand-written substring for now; switching to a
+             cext-equivalent c_stub inspect is a follow-up. *)
+          Expect_failure {
+            contains_any = [ "tiny_sum" ];
             version_info = None;
           }
       | _ -> Expect_success);
@@ -430,8 +451,9 @@ let lib_broken_script_spec : Canary_step_builder.script_spec =
     remove `val sum`). When canary runs Probe under that perturbation,
     the dune build of probe_baseline.exe fails with "Unbound value
     Tiny.sum"; the predicted "Tiny.sum" matches. *)
-let binding_mli_broken_script_spec : Canary_step_builder.script_spec =
-  { base_script_spec with
+let make_binding_mli_broken_script_spec ~workspace_root
+    : Canary_step_builder.script_spec =
+  { (make_base_script_spec ~workspace_root) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -444,5 +466,15 @@ let binding_mli_broken_script_spec : Canary_step_builder.script_spec =
       | _ -> Expect_success);
   }
 
-(** Convenience alias for callers that want the default tiny spec. *)
+(** Default workspace path for tiny's harness-materialized caches.
+    Variants append a scenario name to this. *)
+let cache_workspace_of ~scenario =
+  [%string "%{tiny_root}/scenarios/_cache/%{scenario}/workspace"]
+
+(** Convenience aliases at the live-tree path for callers that don't
+    distinguish variants. The live tree {b is} a valid dune workspace
+    (the tola workspace root supplies dune-project), so passing
+    [tiny_root] works for ad-hoc invocations even though the canonical
+    flow points each variant at its own materialized cache. *)
+let base_script_spec = make_base_script_spec ~workspace_root:tiny_root
 let script_spec = base_script_spec

@@ -62,7 +62,10 @@ def main():
         mod = importlib.import_module(args.pkg)
     except Exception as e:
         # Emit a structured failure summary so callers can detect absence
-        # without shelling around for exit codes.
+        # via the JSON "error" field. Exit 0 so the inspect step itself
+        # succeeds — the inspector did its job (recorded that the import
+        # failed); whether {b the target} is healthy is a separate
+        # question carried by the JSON content.
         summary = {
             "kind": "python",
             "path": args.pkg,
@@ -70,7 +73,7 @@ def main():
         }
         json.dump(summary, sys.stdout, indent=2, sort_keys=True)
         sys.stdout.write("\n")
-        sys.exit(1)
+        sys.exit(0)
 
     attrs = public_attrs(mod, include_private=args.include_private)
     watchlist = [w for w in args.watchlist.split(",") if w]
