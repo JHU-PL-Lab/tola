@@ -370,8 +370,7 @@ Standard "tests green, docs follow" pass. Cumulative. Open items:
 `registered_checks : contract_check list` in
 `surface/canary_compat_run.ml`. `predicted_contains_any_v2` is now a
 4-line iterator over the registry; each contract is one entry with
-`id`, `name`, `layer`, `status`, `enabled`, `predict`. Tracked as
-Phase 12 in `doc/canary/audit_post_refactor_2026_06_01.md`.
+`id`, `name`, `layer`, `status`, `enabled`, `predict`.
 
 ### Step 6b — Per-project / per-CLI contract toggles ✓ **DONE** (2026-06-02)
 

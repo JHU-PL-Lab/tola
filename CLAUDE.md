@@ -59,8 +59,6 @@ legacy/    parked code (canary_legacy sub-library)
 
 `base/`→`surface/`→`tool/`→`action/`→`backend/` is the dependency
 order; `projects/`, `test/`, `legacy/` consume the upper layers.
-[`doc/canary/audit_post_refactor_2026_06_01.md`](doc/canary/audit_post_refactor_2026_06_01.md)
-catalogues every module with its current verdict.
 
 ### Key source files
 
