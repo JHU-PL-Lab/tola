@@ -96,6 +96,16 @@ type inspect_input =
   | Python_attrs of string list
   | Versioned_symbols of string list
   | Abi_surface of string list
+  (* Typed-signature inputs for c6 / c7 / c8.
+     Producer side ([Typed_header]) and consumer sides
+     ([Typed_binding_stub], [Typed_binding_user]) all carry the same
+     JSON shape — only the layer differs. See
+     [canary/scripts/inspect_tiny_typed.py] for the (trivial-grep)
+     inspector producing them; replace with real AST inspectors when
+     they land. *)
+  | Typed_header of string list         (* n3 — provider C sigs *)
+  | Typed_binding_stub of string list   (* bo1/bpe1 — consumer C sigs *)
+  | Typed_binding_user of string list   (* bo4/bpe2 — consumer language sigs *)
 
 type stub_inspect = {
   path : string;
@@ -150,6 +160,53 @@ let load_abi_surface path =
         List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
     | _ -> [] in
   { path = get_string j "path"; soname; needed }
+
+(** Typed-signature view of an inspect JSON. The producing inspector
+    ([canary/scripts/inspect_tiny_typed.py] today; AST-based
+    replacements later) emits one [functions] dict keyed by name with
+    typed return / arg lists. [layer] preserves which surface this
+    came from (header / stub_ocaml / user_ocaml / stub_python /
+    user_python) so c6/c7/c8 predicates can sanity-check the inputs
+    they were handed.
+
+    Provider and consumer sides share this shape — what differs is
+    which file the inspector ran on. The diff happens in the
+    comparator (c6 checks header vs stub agreement; c7 checks
+    stub vs user repack consistency; c8 combines both). *)
+type typed_signature = {
+  return_type : string;
+  arg_types : string list;
+}
+
+type typed_signatures_inspect = {
+  path : string;
+  layer : string;
+  functions : (string * typed_signature) list;
+}
+
+let load_typed_signatures path : typed_signatures_inspect =
+  let j = load path in
+  let kind = get_string j "kind" in
+  let layer =
+    match String.chop_prefix kind ~prefix:"typed_" with
+    | Some l -> l
+    | None ->
+        Fmt.epr "compat: warning — expected kind=typed_<layer>, got %s (%s)@."
+          kind path;
+        "unknown" in
+  let functions =
+    match field j "functions" with
+    | Some (`Assoc entries) ->
+        List.map entries ~f:(fun (name, sig_json) ->
+          let return_type = get_string sig_json "return" in
+          let arg_types =
+            match field sig_json "args" with
+            | Some (`List xs) ->
+                List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+            | _ -> [] in
+          (name, { return_type; arg_types }))
+    | _ -> [] in
+  { path = get_string j "path"; layer; functions }
 
 (* ── Cross-check ── *)
 
