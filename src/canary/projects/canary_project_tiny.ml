@@ -126,7 +126,33 @@ let tiny_api_source : Canary_artifact_api.t =
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
 
-let script_spec : Canary_step_builder.script_spec =
+(** {1 Variants}
+
+    Tiny is multi-variant. Each variant is a named [script_spec] value
+    whose expectation field encodes which surface-theory contracts canary
+    expects to fire at which stages — {i not} which scenario produced the
+    artifacts. The harness↔canary mapping lives in
+    [doc/canary/research/tiny.md] (or a wrapper script), not here.
+
+    - [base_script_spec]: positive coverage. Every step is expected to
+      succeed (Expect_success). Corresponds to the unperturbed tiny
+      build / harness scenarios [e12 baseline_canary] / [e13
+      baseline_unbroken].
+    - [lib_broken_script_spec]: at probe_binding_ocaml, expect c1
+      cmp_symbol to fire. Used when the lib at runtime lacks a symbol
+      the OCaml binding stub requires. Maps to harness scenario
+      [e1 symbol_missing] but doesn't know it.
+
+    More variants land as we expand coverage (next candidates:
+    [binding_mli_broken] for c2, [binding_python_attrs_broken] for c2
+    Python, [binding_overdeclares_stubs] for c1 from the orphan
+    direction).
+
+    Convenience: [script_spec] aliases [base_script_spec] for callers
+    that don't need to distinguish variants.
+*)
+
+let base_script_spec : Canary_step_builder.script_spec =
   {
     Canary_step_builder.empty_script_spec with
 
@@ -315,3 +341,44 @@ let script_spec : Canary_step_builder.script_spec =
 
     expectation = (fun _rule _loc -> Expect_success);
   }
+
+(** [lib_broken_script_spec]: at [Probe (Binding OCaml)], expect c1
+    [cmp_symbol] to fire. Same body as [base_script_spec] with one
+    expectation override.
+
+    The Expect_compat_failure inputs point at the cached inspector
+    JSONs that the runner's [predicted_contains_any_v2] consumes:
+    - [C_stub …]: the OCaml stub's required-symbol list (from
+      [inspect_binding.py --kind stub] on libtiny_stubs.a).
+    - [Native_lib …]: the lib's defined-symbol list (from
+      [inspect_native.py --emit-symbols] on libtiny.so.1).
+
+    Together they drive c1's set-inclusion check
+    ([Canary_compat.check_c_compat]). If the lib lacks a symbol the
+    stub requires (e.g. harness scenario [e1 symbol_missing] removes
+    [tiny_offset]), the missing-symbols list becomes the predicted
+    failure substring set, and the probe's failure must mention at
+    least one of those substrings for the expectation to confirm. *)
+let lib_broken_script_spec : Canary_step_builder.script_spec =
+  { base_script_spec with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.OCaml) ->
+          (* Tiny's Build_binding_ocaml inspect step writes the stub
+             JSON to `inspect.json` (not `inspect_stub.json` — only
+             projects with a separate Pack/Install step like z3/llvm
+             produce both). The Probe_lib inspect writes the native
+             lib JSON to `inspect.json` as well; the resolver picks
+             the variant-keyed flavor at runtime. *)
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              C_stub     [ "build_binding_ocaml/inspect.json" ];
+              Native_lib [ "probe_lib/inspect.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
+(** Convenience alias for callers that want the default tiny spec. *)
+let script_spec = base_script_spec

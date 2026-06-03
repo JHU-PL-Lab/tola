@@ -367,6 +367,38 @@ chains stay wired in baseline. One scenario (e14) is a
 all-pass because c7 isn't wired into [`run.sh`](../../canary/examples/tiny/scenarios/_harness/run.sh);
 the unit-test layer covers the verdict shape.
 
+### Harness ↔ canary variant mapping (Phase 14a, 2026-06-02)
+
+The standalone tiny harness names scenarios by what the
+*perturbation* is (`symbol_missing`, `api_complete`, …). canary's
+`canary_project_tiny.ml` names variants by what canary *expects to
+fire* on the resulting artifact, in surface-theory vocabulary
+(`lib_broken`, `binding_mli_broken`, …). The mapping is conventional
+and lives here:
+
+| Harness scenario        | canary variant                | Contract that fires                |
+|---|---|---|
+| `baseline` / e12 / e13  | (no suffix; `base_script_spec`) | none (Expect_success everywhere)   |
+| `symbol_missing` / e1   | `lib_broken`                  | c1 cmp_symbol @ probe_binding_ocaml |
+
+Workflow (Phase 14a, using the restore-based scaffolding —
+superseded by cache-pointing in 14b):
+
+```sh
+cd canary/examples/tiny/scenarios
+./scenarios.py restore symbol_missing
+cd ../../../..
+canary action tiny/lib_broken         # c1 fires; expected failure confirmed
+./scenarios.py restore-baseline       # back to clean tree
+canary action tiny                    # both variants run; baseline passes, lib_broken
+                                      #   reports unexpected_success (intended for 14b)
+```
+
+Adding more scenarios = one new `<name>_script_spec` value in
+`canary_project_tiny.ml` + one new row in this table. Each new spec
+encodes its expectation in (contract, stage) terms, not in scenario
+terms. canary never sees `e1` / `e6` / …; only the harness side does.
+
 Two harnesses run the scenarios. Both are kept; either should
 match the other's PASS set, so divergence between them is a
 regression signal:

@@ -136,20 +136,50 @@ let action_cmd =
       steps
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
-  (* Phase 4 milestone — drive tiny's in-tree witness through the canary
-     pipeline using the aligned vocabulary. Only OCaml binding for now;
-     Python bindings live in the tiny harness ([scenarios/scenarios.py]). *)
-  let run_tiny ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_tiny.script_spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:"tiny"
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec
+  (* Tiny is multi-variant. Each variant is a named script_spec in
+     canary_project_tiny.ml whose expectations describe which surface-
+     theory contracts canary expects to fire at which stages. The
+     harness↔canary mapping (e.g. "lib_broken matches scenario e1") is
+     a documentation concern, not encoded here.
+
+     - variant_filter = None: run all known variants via
+       Canary_run_info.run_project_multi.
+     - variant_filter = Some "<name>": run only the named variant.
+     The CLI dispatches "tiny" → None and "tiny/<name>" → Some name. *)
+  let run_tiny ~root ~failfast ~cache_path ~cli_disabled ~variant_filter =
+    let mk variant_id spec_raw =
+      let spec = with_cli_disabled cli_disabled spec_raw in
+      let project =
+        if variant_id = "" then "tiny"
+        else "tiny/" ^ variant_id
+      in
+      let steps =
+        Canary_step_builder.derive_steps ~root ~project
+          ~langs:Canary_lang.[ OCaml; Python ]
+          spec
+      in
+      let info = prebuilt_run_info ~project:"tiny" ~version:"in_tree"
+        ~extra:[] steps in
+      (variant_id, steps, Some info)
     in
-    run_with_info ~artifact_names:spec.artifact_name
-      ~failfast ~cache_path ~root ~project:"tiny"
-      steps
-      (prebuilt_run_info ~project:"tiny" ~version:"in_tree" ~extra:[] steps)
+    let all_variants = [
+      mk "" Canary_project_tiny.base_script_spec;
+      mk "lib_broken" Canary_project_tiny.lib_broken_script_spec;
+    ] in
+    let selected = match variant_filter with
+      | None -> all_variants
+      | Some name ->
+          List.filter (fun (vid, _, _) -> vid = name) all_variants
+    in
+    match selected with
+    | [] ->
+        Fmt.epr "Unknown tiny variant: %s (available: baseline (no suffix), lib_broken)@."
+          (match variant_filter with Some s -> s | None -> "")
+    | variants ->
+        Canary_run_info.run_project_multi ~failfast ?cache_path ~root
+          ~project_name:"tiny"
+          ~artifact_names:Canary_project_tiny.base_script_spec.artifact_name
+          ~variants ()
   in
   let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_zarith.script_spec in
@@ -228,7 +258,14 @@ let action_cmd =
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
-    | Some "tiny" -> run_tiny ~root ~failfast ~cache_path ~cli_disabled
+    | Some "tiny" ->
+        run_tiny ~root ~failfast ~cache_path ~cli_disabled
+          ~variant_filter:None
+    | Some p when (String.length p > 5)
+                  && (String.sub p 0 5 = "tiny/") ->
+        let variant = String.sub p 5 (String.length p - 5) in
+        run_tiny ~root ~failfast ~cache_path ~cli_disabled
+          ~variant_filter:(Some variant)
     | None ->
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
         run_zarith ~root ~failfast ~cache_path ~cli_disabled;
@@ -237,7 +274,7 @@ let action_cmd =
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm, tiny)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm, tiny, tiny/<variant>)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
