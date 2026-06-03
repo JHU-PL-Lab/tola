@@ -198,8 +198,9 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
   python_cext_root = [%string "%{workspace_root}/python_cext"];
 }
 
-let make_base_script_spec ~(stores : tiny_stores)
-    : Canary_step_builder.script_spec =
+let make_base_script_spec
+    ?(probe_exe = "ocaml/examples/probe_baseline.exe")
+    ~(stores : tiny_stores) () : Canary_step_builder.script_spec =
   let { source; lib_dir; lib_filename; python_cext_root } = stores in
   (* Absolute lib_dir for {LIBRARY,LD_LIBRARY,LD_RUN}_PATH — $PWD
      anchors to canary's invocation cwd (the tola root). *)
@@ -282,12 +283,11 @@ let make_base_script_spec ~(stores : tiny_stores)
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-         let example_exe = "ocaml/examples/probe_baseline.exe" in
          Printf.sprintf
            "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build --root %s %s \
             && LD_LIBRARY_PATH=%s %s/_build/default/%s) > %s/%s 2>&1"
-           abs_lib_dir abs_lib_dir source example_exe
-           abs_lib_dir source example_exe output_dir probe_log);
+           abs_lib_dir abs_lib_dir source probe_exe
+           abs_lib_dir source probe_exe output_dir probe_log);
       (* Probe_binding Python (cext): the probe script lives with the
          source tree (probes are source-coupled); the cext .so it
          imports lives in [python_cext_root]. *)
@@ -459,9 +459,9 @@ let make_base_script_spec ~(stores : tiny_stores)
     [tiny_offset]), the missing-symbols list becomes the predicted
     failure substring set, and the probe's failure must mention at
     least one of those substrings for the expectation to confirm. *)
-let make_lib_broken_script_spec ~(stores : tiny_stores)
+let make_lib_broken_script_spec ?probe_exe ~(stores : tiny_stores) ()
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ?probe_exe ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -516,7 +516,7 @@ let make_lib_broken_script_spec ~(stores : tiny_stores)
     Tiny.sum"; the predicted "Tiny.sum" matches. *)
 let make_binding_mli_broken_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -547,7 +547,7 @@ let make_binding_mli_broken_script_spec ~(stores : tiny_stores)
     Maps to harness scenario [e11 api_complete_python]. *)
 let make_binding_python_attrs_broken_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.Python) ->
@@ -583,7 +583,7 @@ let make_binding_python_attrs_broken_script_spec ~(stores : tiny_stores)
     only on the Python side. *)
 let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.Python) ->
@@ -609,7 +609,7 @@ let make_lib_soname_bumped_script_spec ~(stores : tiny_stores)
     succeeds. *)
 let make_binding_overdeclares_stubs_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding Canary_lang.OCaml) ->
@@ -642,7 +642,7 @@ let make_binding_overdeclares_stubs_script_spec ~(stores : tiny_stores)
     both languages. *)
 let make_lib_behavior_broken_script_spec ~(stores : tiny_stores)
     : Canary_step_builder.script_spec =
-  { (make_base_script_spec ~stores) with
+  { (make_base_script_spec ~stores ()) with
     expectation = (fun rule _loc ->
       match rule with
       | Probe (Binding _) ->
@@ -665,5 +665,5 @@ let cache_workspace_of ~scenario =
     canonical flow points each variant at its own materialized cache. *)
 let base_script_spec =
   make_base_script_spec
-    ~stores:(stores_of_workspace ~workspace_root:tiny_root ())
+    ~stores:(stores_of_workspace ~workspace_root:tiny_root ()) ()
 let script_spec = base_script_spec

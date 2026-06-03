@@ -1,492 +1,553 @@
-[2026-06-03 00:16:56.176] *                          variant_start  ()
-[2026-06-03 00:16:56.176] *                          graph_start  (13 steps)
-[2026-06-03 00:16:56.176] configure                  check_pre  (pass)
-[2026-06-03 00:16:56.178] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf.ok)
-[2026-06-03 00:16:56.179] configure                  check_post  (pass)
-[2026-06-03 00:16:56.179] configure                  done
-[2026-06-03 00:16:56.179] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:56.182] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build.ok)
-[2026-06-03 00:16:56.183] build_lib                  check_post  (pass)
-[2026-06-03 00:16:56.183] build_lib                  done
-[2026-06-03 00:16:56.183] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:56.185] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:21:59.324] *                          variant_start  ()
+[2026-06-03 02:21:59.324] *                          graph_start  (13 steps)
+[2026-06-03 02:21:59.324] configure                  check_pre  (pass)
+[2026-06-03 02:21:59.327] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf.ok)
+[2026-06-03 02:21:59.327] configure                  check_post  (pass)
+[2026-06-03 02:21:59.327] configure                  done
+[2026-06-03 02:21:59.327] build_lib                  check_pre  (pass)
+[2026-06-03 02:21:59.330] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build.ok)
+[2026-06-03 02:21:59.331] build_lib                  check_post  (pass)
+[2026-06-03 02:21:59.331] build_lib                  done
+[2026-06-03 02:21:59.331] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:21:59.332] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect.json)
-[2026-06-03 00:16:56.237] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:56.237] build_lib_inspect          done
-[2026-06-03 00:16:56.237] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:56.240] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build.ok)
-[2026-06-03 00:16:56.270] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:56.270] build_binding_ocaml        done
-[2026-06-03 00:16:56.270] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.273] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli.json)
-[2026-06-03 00:16:53.758] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:53.758] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:53.758] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:53.761] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe.log 2>&1)
-[2026-06-03 00:16:53.795] probe_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:53.795] probe_binding_ocaml        done
-[2026-06-03 00:16:53.795] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:53.797] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect.json)
-[2026-06-03 00:16:53.837] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:53.837] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:53.837] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:53.840] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build.ok)
-[2026-06-03 00:16:53.842] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:53.842] build_binding_python       done
-[2026-06-03 00:16:53.842] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:53.844] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs.json)
-[2026-06-03 00:16:53.965] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:53.965] build_binding_python_inspect  done
-[2026-06-03 00:16:53.965] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:53.968] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe.log 2>&1)
-[2026-06-03 00:16:53.980] probe_binding_python       check_post  (pass)
-[2026-06-03 00:16:53.980] probe_binding_python       done
-[2026-06-03 00:16:53.980] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:53.982] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect.json)
-[2026-06-03 00:16:54.019] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:54.020] probe_binding_python_inspect  done
-[2026-06-03 00:16:54.020] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:54.022] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe.log 2>&1)
-[2026-06-03 00:16:54.067] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:54.067] probe_lib                  done
-[2026-06-03 00:16:54.067] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:54.069] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:21:59.400] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:21:59.400] build_lib_inspect          done
+[2026-06-03 02:21:59.401] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:21:59.404] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build.ok)
+[2026-06-03 02:21:59.438] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:21:59.438] build_binding_ocaml        done
+[2026-06-03 02:21:59.438] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:21:59.440] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli.json)
+[2026-06-03 02:21:59.567] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:21:59.567] build_binding_ocaml_inspect  done
+[2026-06-03 02:21:59.568] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:21:59.571] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe.log 2>&1)
+[2026-06-03 02:21:59.610] probe_binding_ocaml        check_post  (pass)
+[2026-06-03 02:21:59.610] probe_binding_ocaml        done
+[2026-06-03 02:21:59.610] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:21:59.612] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect.json)
+[2026-06-03 02:21:59.655] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:21:59.655] probe_binding_ocaml_inspect  done
+[2026-06-03 02:21:59.655] build_binding_python       check_pre  (pass)
+[2026-06-03 02:21:59.658] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build.ok)
+[2026-06-03 02:21:59.660] build_binding_python       check_post  (pass)
+[2026-06-03 02:21:59.660] build_binding_python       done
+[2026-06-03 02:21:59.660] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:21:59.662] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs.json)
+[2026-06-03 02:21:59.787] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:21:59.787] build_binding_python_inspect  done
+[2026-06-03 02:21:59.787] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:21:59.790] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe.log 2>&1)
+[2026-06-03 02:21:59.804] probe_binding_python       check_post  (pass)
+[2026-06-03 02:21:59.804] probe_binding_python       done
+[2026-06-03 02:21:59.804] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:21:59.806] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect.json)
+[2026-06-03 02:21:59.844] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:21:59.844] probe_binding_python_inspect  done
+[2026-06-03 02:21:59.844] probe_lib                  check_pre  (pass)
+[2026-06-03 02:21:59.846] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe.log 2>&1)
+[2026-06-03 02:21:59.891] probe_lib                  check_post  (pass)
+[2026-06-03 02:21:59.891] probe_lib                  done
+[2026-06-03 02:21:59.891] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:21:59.893] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/baseline/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect.json)
-[2026-06-03 00:16:54.124] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:54.124] probe_lib_inspect          done
-[2026-06-03 00:16:54.124] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:54.124] *                          variant_start  (lib_broken)
-[2026-06-03 00:16:54.124] *                          graph_start  (13 steps)
-[2026-06-03 00:16:54.124] configure                  check_pre  (pass)
-[2026-06-03 00:16:54.127] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_broken.ok)
-[2026-06-03 00:16:54.127] configure                  check_post  (pass)
-[2026-06-03 00:16:54.128] configure                  done
-[2026-06-03 00:16:54.128] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:54.130] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_broken.ok)
-[2026-06-03 00:16:54.130] build_lib                  check_post  (pass)
-[2026-06-03 00:16:54.130] build_lib                  done
-[2026-06-03 00:16:54.130] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:54.133] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:21:59.948] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:21:59.948] probe_lib_inspect          done
+[2026-06-03 02:21:59.948] *                          graph_end  (13/13 completed)
+[2026-06-03 02:21:59.948] *                          variant_start  (lib_broken)
+[2026-06-03 02:21:59.948] *                          graph_start  (13 steps)
+[2026-06-03 02:21:59.949] configure                  check_pre  (pass)
+[2026-06-03 02:21:59.951] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_broken.ok)
+[2026-06-03 02:21:59.952] configure                  check_post  (pass)
+[2026-06-03 02:21:59.952] configure                  done
+[2026-06-03 02:21:59.952] build_lib                  check_pre  (pass)
+[2026-06-03 02:21:59.954] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_broken.ok)
+[2026-06-03 02:21:59.955] build_lib                  check_post  (pass)
+[2026-06-03 02:21:59.955] build_lib                  done
+[2026-06-03 02:21:59.955] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:21:59.957] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_lib_broken.json)
-[2026-06-03 00:16:54.187] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:54.187] build_lib_inspect          done
-[2026-06-03 00:16:54.187] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:54.190] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_broken.ok)
-[2026-06-03 00:16:54.221] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:54.221] build_binding_ocaml        done
-[2026-06-03 00:16:54.221] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:54.223] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_broken.json)
-[2026-06-03 00:16:54.352] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:54.352] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:54.352] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:54.354] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_broken.log 2>&1)
-[2026-06-03 00:16:54.458] probe_binding_ocaml        cmd_fail  (exit 1)
-[2026-06-03 00:16:54.458] probe_binding_ocaml        compat_predicted  (1 substring(s))
-[2026-06-03 00:16:54.458] probe_binding_ocaml        done  (expected failure confirmed (derived))
-[2026-06-03 00:16:54.458] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:54.461] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_broken.json)
-[2026-06-03 00:16:54.502] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:54.502] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:54.502] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:54.504] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_broken.ok)
-[2026-06-03 00:16:54.507] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:54.507] build_binding_python       done
-[2026-06-03 00:16:54.507] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:54.509] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_broken.json)
-[2026-06-03 00:16:54.632] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:54.632] build_binding_python_inspect  done
-[2026-06-03 00:16:54.632] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:54.635] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_broken.log 2>&1)
-[2026-06-03 00:16:54.666] probe_binding_python       cmd_fail  (exit 1)
-[2026-06-03 00:16:54.667] probe_binding_python       compat_predicted  (1 substring(s))
-[2026-06-03 00:16:54.667] probe_binding_python       done  (expected failure confirmed (derived))
-[2026-06-03 00:16:54.667] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:54.669] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_broken.json)
-[2026-06-03 00:16:54.705] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:54.705] probe_binding_python_inspect  done
-[2026-06-03 00:16:54.705] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:54.707] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_broken.log 2>&1)
-[2026-06-03 00:16:54.749] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:54.749] probe_lib                  done
-[2026-06-03 00:16:54.749] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:54.751] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:00.010] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:00.010] build_lib_inspect          done
+[2026-06-03 02:22:00.010] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:00.012] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_broken.ok)
+[2026-06-03 02:22:00.047] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:00.047] build_binding_ocaml        done
+[2026-06-03 02:22:00.047] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.049] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_broken.json)
+[2026-06-03 02:22:00.181] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:00.181] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:00.181] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:00.183] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_broken.log 2>&1)
+[2026-06-03 02:22:00.304] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-06-03 02:22:00.304] probe_binding_ocaml        compat_predicted  (1 substring(s))
+[2026-06-03 02:22:00.304] probe_binding_ocaml        done  (expected failure confirmed (derived))
+[2026-06-03 02:22:00.304] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.307] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_broken.json)
+[2026-06-03 02:22:00.351] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:00.351] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:00.351] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:00.353] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_broken.ok)
+[2026-06-03 02:22:00.356] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:00.356] build_binding_python       done
+[2026-06-03 02:22:00.356] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.358] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_broken.json)
+[2026-06-03 02:22:00.490] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:00.490] build_binding_python_inspect  done
+[2026-06-03 02:22:00.490] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:00.492] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_broken.log 2>&1)
+[2026-06-03 02:22:00.528] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:00.528] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-06-03 02:22:00.528] probe_binding_python       done  (expected failure confirmed (derived))
+[2026-06-03 02:22:00.528] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.530] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_broken.json)
+[2026-06-03 02:22:00.568] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:00.568] probe_binding_python_inspect  done
+[2026-06-03 02:22:00.568] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:00.570] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_broken.log 2>&1)
+[2026-06-03 02:22:00.616] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:00.616] probe_lib                  done
+[2026-06-03 02:22:00.616] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:00.618] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_lib_broken.json)
-[2026-06-03 00:16:54.801] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:54.801] probe_lib_inspect          done
-[2026-06-03 00:16:54.801] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:54.801] *                          variant_start  (binding_mli_broken)
-[2026-06-03 00:16:54.801] *                          graph_start  (13 steps)
-[2026-06-03 00:16:54.801] configure                  check_pre  (pass)
-[2026-06-03 00:16:54.803] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_mli_broken.ok)
-[2026-06-03 00:16:54.804] configure                  check_post  (pass)
-[2026-06-03 00:16:54.804] configure                  done
-[2026-06-03 00:16:54.804] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:54.806] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_mli_broken.ok)
-[2026-06-03 00:16:54.808] build_lib                  check_post  (pass)
-[2026-06-03 00:16:54.808] build_lib                  done
-[2026-06-03 00:16:54.808] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:54.810] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:00.674] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:00.674] probe_lib_inspect          done
+[2026-06-03 02:22:00.674] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:00.674] *                          variant_start  (binding_mli_broken)
+[2026-06-03 02:22:00.675] *                          graph_start  (13 steps)
+[2026-06-03 02:22:00.675] configure                  check_pre  (pass)
+[2026-06-03 02:22:00.677] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_mli_broken.ok)
+[2026-06-03 02:22:00.678] configure                  check_post  (pass)
+[2026-06-03 02:22:00.678] configure                  done
+[2026-06-03 02:22:00.678] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:00.680] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_mli_broken.ok)
+[2026-06-03 02:22:00.681] build_lib                  check_post  (pass)
+[2026-06-03 02:22:00.681] build_lib                  done
+[2026-06-03 02:22:00.681] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:00.683] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_binding_mli_broken.json)
-[2026-06-03 00:16:54.861] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:54.861] build_lib_inspect          done
-[2026-06-03 00:16:54.861] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:54.864] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_mli_broken.ok)
-[2026-06-03 00:16:54.893] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:54.893] build_binding_ocaml        done
-[2026-06-03 00:16:54.893] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:54.895] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_mli_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_mli_broken.json)
-[2026-06-03 00:16:55.018] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:55.018] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:55.018] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:55.020] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build canary/examples/tiny/scenarios/_cache/api_complete/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_mli_broken.log 2>&1)
-[2026-06-03 00:16:55.063] probe_binding_ocaml        cmd_fail  (exit 1)
-[2026-06-03 00:16:55.063] probe_binding_ocaml        compat_predicted  (2 substring(s))
-[2026-06-03 00:16:55.063] probe_binding_ocaml        done  (expected failure confirmed (derived))
-[2026-06-03 00:16:55.064] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.066] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_mli_broken.json)
-[2026-06-03 00:16:55.106] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:55.107] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:55.107] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:55.109] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_mli_broken.ok)
-[2026-06-03 00:16:55.111] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:55.111] build_binding_python       done
-[2026-06-03 00:16:55.111] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.113] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_mli_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_mli_broken.json)
-[2026-06-03 00:16:55.234] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:55.234] build_binding_python_inspect  done
-[2026-06-03 00:16:55.234] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:55.236] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_mli_broken.log 2>&1)
-[2026-06-03 00:16:55.249] probe_binding_python       check_post  (pass)
-[2026-06-03 00:16:55.249] probe_binding_python       done
-[2026-06-03 00:16:55.249] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.251] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_mli_broken.json)
-[2026-06-03 00:16:55.287] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:55.287] probe_binding_python_inspect  done
-[2026-06-03 00:16:55.287] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:55.289] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_mli_broken.log 2>&1)
-[2026-06-03 00:16:55.332] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:55.332] probe_lib                  done
-[2026-06-03 00:16:55.332] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:55.335] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:00.737] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:00.737] build_lib_inspect          done
+[2026-06-03 02:22:00.737] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:00.739] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_mli_broken.ok)
+[2026-06-03 02:22:00.774] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:00.774] build_binding_ocaml        done
+[2026-06-03 02:22:00.774] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.776] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_mli_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_mli_broken.json)
+[2026-06-03 02:22:00.917] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:00.917] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:00.917] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:00.920] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build canary/examples/tiny/scenarios/_cache/api_complete/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_mli_broken.log 2>&1)
+[2026-06-03 02:22:00.968] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-06-03 02:22:00.968] probe_binding_ocaml        compat_predicted  (2 substring(s))
+[2026-06-03 02:22:00.968] probe_binding_ocaml        done  (expected failure confirmed (derived))
+[2026-06-03 02:22:00.968] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:00.970] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_mli_broken.json)
+[2026-06-03 02:22:01.016] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:01.016] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:01.016] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:01.018] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_mli_broken.ok)
+[2026-06-03 02:22:01.020] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:01.020] build_binding_python       done
+[2026-06-03 02:22:01.020] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.023] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_mli_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_mli_broken.json)
+[2026-06-03 02:22:01.167] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:01.167] build_binding_python_inspect  done
+[2026-06-03 02:22:01.167] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:01.170] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_mli_broken.log 2>&1)
+[2026-06-03 02:22:01.186] probe_binding_python       check_post  (pass)
+[2026-06-03 02:22:01.187] probe_binding_python       done
+[2026-06-03 02:22:01.187] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.189] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_mli_broken.json)
+[2026-06-03 02:22:01.229] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:01.229] probe_binding_python_inspect  done
+[2026-06-03 02:22:01.229] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:01.232] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_mli_broken.log 2>&1)
+[2026-06-03 02:22:01.285] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:01.285] probe_lib                  done
+[2026-06-03 02:22:01.285] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:01.288] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/api_complete/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_binding_mli_broken.json)
-[2026-06-03 00:16:55.398] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:55.398] probe_lib_inspect          done
-[2026-06-03 00:16:55.398] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:55.398] *                          variant_start  (binding_python_attrs_broken)
-[2026-06-03 00:16:55.398] *                          graph_start  (13 steps)
-[2026-06-03 00:16:55.398] configure                  check_pre  (pass)
-[2026-06-03 00:16:55.401] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_python_attrs_broken.ok)
-[2026-06-03 00:16:55.401] configure                  check_post  (pass)
-[2026-06-03 00:16:55.401] configure                  done
-[2026-06-03 00:16:55.401] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:55.403] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_python_attrs_broken.ok)
-[2026-06-03 00:16:55.404] build_lib                  check_post  (pass)
-[2026-06-03 00:16:55.404] build_lib                  done
-[2026-06-03 00:16:55.404] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:55.406] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:01.343] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:01.343] probe_lib_inspect          done
+[2026-06-03 02:22:01.343] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:01.343] *                          variant_start  (binding_python_attrs_broken)
+[2026-06-03 02:22:01.343] *                          graph_start  (13 steps)
+[2026-06-03 02:22:01.344] configure                  check_pre  (pass)
+[2026-06-03 02:22:01.346] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_python_attrs_broken.ok)
+[2026-06-03 02:22:01.347] configure                  check_post  (pass)
+[2026-06-03 02:22:01.347] configure                  done
+[2026-06-03 02:22:01.347] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:01.349] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_python_attrs_broken.ok)
+[2026-06-03 02:22:01.351] build_lib                  check_post  (pass)
+[2026-06-03 02:22:01.351] build_lib                  done
+[2026-06-03 02:22:01.351] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:01.353] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_binding_python_attrs_broken.json)
-[2026-06-03 00:16:55.470] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:55.470] build_lib_inspect          done
-[2026-06-03 00:16:55.470] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:55.472] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete_python/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_python_attrs_broken.ok)
-[2026-06-03 00:16:55.501] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:55.501] build_binding_ocaml        done
-[2026-06-03 00:16:55.502] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.504] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_python_attrs_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_python_attrs_broken.json)
-[2026-06-03 00:16:55.627] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:55.627] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:55.627] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:55.629] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete_python/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_python_attrs_broken.log 2>&1)
-[2026-06-03 00:16:55.662] probe_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:55.662] probe_binding_ocaml        done
-[2026-06-03 00:16:55.662] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.664] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_python_attrs_broken.json)
-[2026-06-03 00:16:55.704] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:55.704] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:55.705] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:55.707] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_python_attrs_broken.ok)
-[2026-06-03 00:16:55.709] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:55.709] build_binding_python       done
-[2026-06-03 00:16:55.709] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.711] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_python_attrs_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_python_attrs_broken.json)
-[2026-06-03 00:16:55.830] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:55.830] build_binding_python_inspect  done
-[2026-06-03 00:16:55.830] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:55.833] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_python_attrs_broken.log 2>&1)
-[2026-06-03 00:16:55.865] probe_binding_python       cmd_fail  (exit 1)
-[2026-06-03 00:16:55.865] probe_binding_python       compat_predicted  (1 substring(s))
-[2026-06-03 00:16:55.865] probe_binding_python       done  (expected failure confirmed (derived))
-[2026-06-03 00:16:55.865] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:55.868] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_python_attrs_broken.json)
-[2026-06-03 00:16:55.903] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:55.903] probe_binding_python_inspect  done
-[2026-06-03 00:16:55.903] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:55.906] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_python_attrs_broken.log 2>&1)
-[2026-06-03 00:16:55.949] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:55.949] probe_lib                  done
-[2026-06-03 00:16:55.949] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:55.951] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:01.413] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:01.413] build_lib_inspect          done
+[2026-06-03 02:22:01.413] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:01.416] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete_python/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_python_attrs_broken.ok)
+[2026-06-03 02:22:01.450] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:01.450] build_binding_ocaml        done
+[2026-06-03 02:22:01.450] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.453] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_python_attrs_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_python_attrs_broken.json)
+[2026-06-03 02:22:01.587] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:01.587] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:01.587] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:01.589] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/api_complete_python/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_python_attrs_broken.log 2>&1)
+[2026-06-03 02:22:01.634] probe_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:01.634] probe_binding_ocaml        done
+[2026-06-03 02:22:01.634] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.636] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_python_attrs_broken.json)
+[2026-06-03 02:22:01.681] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:01.681] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:01.681] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:01.683] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_python_attrs_broken.ok)
+[2026-06-03 02:22:01.686] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:01.686] build_binding_python       done
+[2026-06-03 02:22:01.686] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.688] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_python_attrs_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_python_attrs_broken.json)
+[2026-06-03 02:22:01.822] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:01.822] build_binding_python_inspect  done
+[2026-06-03 02:22:01.822] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:01.825] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_python_attrs_broken.log 2>&1)
+[2026-06-03 02:22:01.861] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:01.861] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-06-03 02:22:01.862] probe_binding_python       done  (expected failure confirmed (derived))
+[2026-06-03 02:22:01.862] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:01.864] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_python_attrs_broken.json)
+[2026-06-03 02:22:01.902] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:01.902] probe_binding_python_inspect  done
+[2026-06-03 02:22:01.902] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:01.905] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_python_attrs_broken.log 2>&1)
+[2026-06-03 02:22:01.950] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:01.950] probe_lib                  done
+[2026-06-03 02:22:01.950] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:01.952] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_binding_python_attrs_broken.json)
-[2026-06-03 00:16:56.003] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:56.003] probe_lib_inspect          done
-[2026-06-03 00:16:56.003] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:56.003] *                          variant_start  (hybrid_lib_broken)
-[2026-06-03 00:16:56.003] *                          graph_start  (13 steps)
-[2026-06-03 00:16:56.004] configure                  check_pre  (pass)
-[2026-06-03 00:16:56.006] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_hybrid_lib_broken.ok)
-[2026-06-03 00:16:56.007] configure                  check_post  (pass)
-[2026-06-03 00:16:56.007] configure                  done
-[2026-06-03 00:16:56.007] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:56.009] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_hybrid_lib_broken.ok)
-[2026-06-03 00:16:56.010] build_lib                  check_post  (pass)
-[2026-06-03 00:16:56.010] build_lib                  done
-[2026-06-03 00:16:56.010] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:56.012] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:02.009] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:02.009] probe_lib_inspect          done
+[2026-06-03 02:22:02.009] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:02.009] *                          variant_start  (hybrid_lib_broken)
+[2026-06-03 02:22:02.009] *                          graph_start  (13 steps)
+[2026-06-03 02:22:02.009] configure                  check_pre  (pass)
+[2026-06-03 02:22:02.012] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_hybrid_lib_broken.ok)
+[2026-06-03 02:22:02.013] configure                  check_post  (pass)
+[2026-06-03 02:22:02.013] configure                  done
+[2026-06-03 02:22:02.013] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:02.015] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_hybrid_lib_broken.ok)
+[2026-06-03 02:22:02.016] build_lib                  check_post  (pass)
+[2026-06-03 02:22:02.016] build_lib                  done
+[2026-06-03 02:22:02.016] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:02.018] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.064] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:56.064] build_lib_inspect          done
-[2026-06-03 00:16:56.064] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:56.066] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_hybrid_lib_broken.ok)
-[2026-06-03 00:16:56.095] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:56.095] build_binding_ocaml        done
-[2026-06-03 00:16:56.095] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.098] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_hybrid_lib_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.222] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:56.222] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:56.222] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:56.224] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_hybrid_lib_broken.log 2>&1)
-[2026-06-03 00:16:56.260] probe_binding_ocaml        cmd_fail  (exit 127)
-[2026-06-03 00:16:56.260] probe_binding_ocaml        compat_predicted  (1 substring(s))
-[2026-06-03 00:16:56.260] probe_binding_ocaml        done  (expected failure confirmed (derived))
-[2026-06-03 00:16:56.260] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.263] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.303] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:56.303] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:56.303] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:56.306] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_hybrid_lib_broken.ok)
-[2026-06-03 00:16:56.308] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:56.308] build_binding_python       done
-[2026-06-03 00:16:56.308] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.310] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_hybrid_lib_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.432] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:56.432] build_binding_python_inspect  done
-[2026-06-03 00:16:56.432] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:56.434] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_hybrid_lib_broken.log 2>&1)
-[2026-06-03 00:16:56.467] probe_binding_python       cmd_fail  (exit 1)
-[2026-06-03 00:16:56.467] probe_binding_python       compat_predicted  (1 substring(s))
-[2026-06-03 00:16:56.467] probe_binding_python       done  (expected failure confirmed (derived))
-[2026-06-03 00:16:56.467] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.470] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.505] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:56.505] probe_binding_python_inspect  done
-[2026-06-03 00:16:56.505] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:56.507] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_hybrid_lib_broken.log 2>&1)
-[2026-06-03 00:16:56.551] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:56.552] probe_lib                  done
-[2026-06-03 00:16:56.552] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:56.554] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:02.074] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:02.074] build_lib_inspect          done
+[2026-06-03 02:22:02.074] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:02.076] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_hybrid_lib_broken.ok)
+[2026-06-03 02:22:02.107] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:02.108] build_binding_ocaml        done
+[2026-06-03 02:22:02.108] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.110] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_hybrid_lib_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_hybrid_lib_broken.json)
+[2026-06-03 02:22:02.240] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:02.240] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:02.240] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:02.242] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/baseline/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build canary/examples/tiny/scenarios/_cache/baseline/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_hybrid_lib_broken.log 2>&1)
+[2026-06-03 02:22:02.277] probe_binding_ocaml        cmd_fail  (exit 127)
+[2026-06-03 02:22:02.277] probe_binding_ocaml        compat_predicted  (1 substring(s))
+[2026-06-03 02:22:02.277] probe_binding_ocaml        done  (expected failure confirmed (derived))
+[2026-06-03 02:22:02.277] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.279] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/baseline/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_hybrid_lib_broken.json)
+[2026-06-03 02:22:02.323] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:02.323] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:02.323] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:02.325] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_hybrid_lib_broken.ok)
+[2026-06-03 02:22:02.328] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:02.328] build_binding_python       done
+[2026-06-03 02:22:02.328] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.330] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_hybrid_lib_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_hybrid_lib_broken.json)
+[2026-06-03 02:22:02.458] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:02.458] build_binding_python_inspect  done
+[2026-06-03 02:22:02.458] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:02.460] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_hybrid_lib_broken.log 2>&1)
+[2026-06-03 02:22:02.496] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:02.496] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-06-03 02:22:02.496] probe_binding_python       done  (expected failure confirmed (derived))
+[2026-06-03 02:22:02.497] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.499] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/baseline/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_hybrid_lib_broken.json)
+[2026-06-03 02:22:02.536] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:02.536] probe_binding_python_inspect  done
+[2026-06-03 02:22:02.536] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:02.538] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_hybrid_lib_broken.log 2>&1)
+[2026-06-03 02:22:02.582] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:02.582] probe_lib                  done
+[2026-06-03 02:22:02.582] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:02.584] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_hybrid_lib_broken.json)
-[2026-06-03 00:16:56.607] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:56.607] probe_lib_inspect          done
-[2026-06-03 00:16:56.607] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:56.607] *                          variant_start  (lib_soname_bumped)
-[2026-06-03 00:16:56.607] *                          graph_start  (13 steps)
-[2026-06-03 00:16:56.607] configure                  check_pre  (pass)
-[2026-06-03 00:16:56.609] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_soname_bumped.ok)
-[2026-06-03 00:16:56.610] configure                  check_post  (pass)
-[2026-06-03 00:16:56.610] configure                  done
-[2026-06-03 00:16:56.610] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:56.612] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 || { echo 'canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_soname_bumped.ok)
-[2026-06-03 00:16:56.613] build_lib                  check_post  (pass)
-[2026-06-03 00:16:56.613] build_lib                  done
-[2026-06-03 00:16:56.613] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:56.615] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" 2>/dev/null \
+[2026-06-03 02:22:02.637] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:02.637] probe_lib_inspect          done
+[2026-06-03 02:22:02.637] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:02.637] *                          variant_start  (lib_soname_bumped)
+[2026-06-03 02:22:02.637] *                          graph_start  (13 steps)
+[2026-06-03 02:22:02.637] configure                  check_pre  (pass)
+[2026-06-03 02:22:02.639] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_soname_bumped.ok)
+[2026-06-03 02:22:02.640] configure                  check_post  (pass)
+[2026-06-03 02:22:02.640] configure                  done
+[2026-06-03 02:22:02.640] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:02.642] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 || { echo 'canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_soname_bumped.ok)
+[2026-06-03 02:22:02.643] build_lib                  check_post  (pass)
+[2026-06-03 02:22:02.643] build_lib                  done
+[2026-06-03 02:22:02.643] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:02.645] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_lib_soname_bumped.json)
-[2026-06-03 00:16:56.667] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:56.667] build_lib_inspect          done
-[2026-06-03 00:16:56.667] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:56.669] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_soname_bumped.ok)
-[2026-06-03 00:16:56.699] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:56.699] build_binding_ocaml        done
-[2026-06-03 00:16:56.699] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.701] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_soname_bumped.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_soname_bumped.json)
-[2026-06-03 00:16:56.830] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:56.830] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:56.830] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:56.832] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_soname_bumped.log 2>&1)
-[2026-06-03 00:16:56.866] probe_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:56.866] probe_binding_ocaml        done
-[2026-06-03 00:16:56.866] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.868] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_soname_bumped.json)
-[2026-06-03 00:16:56.913] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:56.913] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:56.913] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:56.915] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_soname_bumped.ok)
-[2026-06-03 00:16:56.917] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:56.917] build_binding_python       done
-[2026-06-03 00:16:56.917] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:56.919] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_soname_bumped.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_soname_bumped.json)
-[2026-06-03 00:16:57.042] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:57.042] build_binding_python_inspect  done
-[2026-06-03 00:16:57.042] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:57.044] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_soname_bumped.log 2>&1)
-[2026-06-03 00:16:57.077] probe_binding_python       cmd_fail  (exit 1)
-[2026-06-03 00:16:57.077] probe_binding_python       compat_predicted  (1 substring(s))
-[2026-06-03 00:16:57.077] probe_binding_python       done  (expected failure confirmed (derived))
-[2026-06-03 00:16:57.078] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.080] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_soname_bumped.json)
-[2026-06-03 00:16:57.117] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:57.117] probe_binding_python_inspect  done
-[2026-06-03 00:16:57.117] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:57.119] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_soname_bumped.log 2>&1)
-[2026-06-03 00:16:57.165] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:57.165] probe_lib                  done
-[2026-06-03 00:16:57.165] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:57.167] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" 2>/dev/null \
+[2026-06-03 02:22:02.698] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:02.698] build_lib_inspect          done
+[2026-06-03 02:22:02.698] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:02.700] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_soname_bumped.ok)
+[2026-06-03 02:22:02.734] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:02.734] build_binding_ocaml        done
+[2026-06-03 02:22:02.734] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.736] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_soname_bumped.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_soname_bumped.json)
+[2026-06-03 02:22:02.866] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:02.866] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:02.867] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:02.869] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_soname_bumped.log 2>&1)
+[2026-06-03 02:22:02.908] probe_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:02.908] probe_binding_ocaml        done
+[2026-06-03 02:22:02.908] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.911] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_soname_bumped.json)
+[2026-06-03 02:22:02.954] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:02.954] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:02.954] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:02.956] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_soname_bumped.ok)
+[2026-06-03 02:22:02.959] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:02.959] build_binding_python       done
+[2026-06-03 02:22:02.959] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:02.961] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_soname_bumped.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_soname_bumped.json)
+[2026-06-03 02:22:03.086] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:03.086] build_binding_python_inspect  done
+[2026-06-03 02:22:03.086] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:03.089] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_soname_bumped.log 2>&1)
+[2026-06-03 02:22:03.123] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:03.123] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-06-03 02:22:03.123] probe_binding_python       done  (expected failure confirmed (derived))
+[2026-06-03 02:22:03.123] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:03.126] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_soname_bumped.json)
+[2026-06-03 02:22:03.163] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:03.163] probe_binding_python_inspect  done
+[2026-06-03 02:22:03.163] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:03.166] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_soname_bumped.log 2>&1)
+[2026-06-03 02:22:03.210] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:03.210] probe_lib                  done
+[2026-06-03 02:22:03.210] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:03.213] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/abi_soname_bump/workspace/c/build/libtiny.so.2" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_lib_soname_bumped.json)
-[2026-06-03 00:16:57.218] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:57.218] probe_lib_inspect          done
-[2026-06-03 00:16:57.218] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:57.218] *                          variant_start  (lib_behavior_broken)
-[2026-06-03 00:16:57.218] *                          graph_start  (13 steps)
-[2026-06-03 00:16:57.218] configure                  check_pre  (pass)
-[2026-06-03 00:16:57.220] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_behavior_broken.ok)
-[2026-06-03 00:16:57.221] configure                  check_post  (pass)
-[2026-06-03 00:16:57.221] configure                  done
-[2026-06-03 00:16:57.221] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:57.223] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_behavior_broken.ok)
-[2026-06-03 00:16:57.224] build_lib                  check_post  (pass)
-[2026-06-03 00:16:57.224] build_lib                  done
-[2026-06-03 00:16:57.224] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:57.226] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:03.275] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:03.276] probe_lib_inspect          done
+[2026-06-03 02:22:03.276] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:03.276] *                          variant_start  (lib_behavior_broken)
+[2026-06-03 02:22:03.276] *                          graph_start  (13 steps)
+[2026-06-03 02:22:03.276] configure                  check_pre  (pass)
+[2026-06-03 02:22:03.278] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_lib_behavior_broken.ok)
+[2026-06-03 02:22:03.279] configure                  check_post  (pass)
+[2026-06-03 02:22:03.279] configure                  done
+[2026-06-03 02:22:03.279] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:03.281] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_lib_behavior_broken.ok)
+[2026-06-03 02:22:03.282] build_lib                  check_post  (pass)
+[2026-06-03 02:22:03.282] build_lib                  done
+[2026-06-03 02:22:03.282] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:03.285] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_lib_behavior_broken.json)
-[2026-06-03 00:16:57.282] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:57.282] build_lib_inspect          done
-[2026-06-03 00:16:57.283] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:57.285] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/behavior_silent/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_behavior_broken.ok)
-[2026-06-03 00:16:57.314] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:57.314] build_binding_ocaml        done
-[2026-06-03 00:16:57.314] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.316] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_behavior_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_behavior_broken.json)
-[2026-06-03 00:16:57.439] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:57.439] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:57.439] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:57.441] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/behavior_silent/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_behavior_broken.log 2>&1)
-[2026-06-03 00:16:57.474] probe_binding_ocaml        cmd_fail  (exit 1)
-[2026-06-03 00:16:57.474] probe_binding_ocaml        done  (expected failure confirmed)
-[2026-06-03 00:16:57.474] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.476] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_behavior_broken.json)
-[2026-06-03 00:16:57.517] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:57.517] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:57.517] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:57.519] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_behavior_broken.ok)
-[2026-06-03 00:16:57.521] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:57.521] build_binding_python       done
-[2026-06-03 00:16:57.521] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.523] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_behavior_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_behavior_broken.json)
-[2026-06-03 00:16:57.642] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:57.642] build_binding_python_inspect  done
-[2026-06-03 00:16:57.642] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:57.644] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_behavior_broken.log 2>&1)
-[2026-06-03 00:16:57.657] probe_binding_python       cmd_fail  (exit 1)
-[2026-06-03 00:16:57.657] probe_binding_python       done  (expected failure confirmed)
-[2026-06-03 00:16:57.657] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.659] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_behavior_broken.json)
-[2026-06-03 00:16:57.696] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:57.696] probe_binding_python_inspect  done
-[2026-06-03 00:16:57.696] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:57.698] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_behavior_broken.log 2>&1)
-[2026-06-03 00:16:57.742] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:57.742] probe_lib                  done
-[2026-06-03 00:16:57.742] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:57.744] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:03.348] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:03.348] build_lib_inspect          done
+[2026-06-03 02:22:03.349] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:03.351] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/behavior_silent/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_lib_behavior_broken.ok)
+[2026-06-03 02:22:03.394] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:03.394] build_binding_ocaml        done
+[2026-06-03 02:22:03.394] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:03.397] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_lib_behavior_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_lib_behavior_broken.json)
+[2026-06-03 02:22:03.542] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:03.542] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:03.542] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:03.545] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/behavior_silent/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_lib_behavior_broken.log 2>&1)
+[2026-06-03 02:22:03.585] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-06-03 02:22:03.585] probe_binding_ocaml        done  (expected failure confirmed)
+[2026-06-03 02:22:03.585] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:03.587] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_lib_behavior_broken.json)
+[2026-06-03 02:22:03.630] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:03.630] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:03.630] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:03.632] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_lib_behavior_broken.ok)
+[2026-06-03 02:22:03.635] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:03.635] build_binding_python       done
+[2026-06-03 02:22:03.635] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:03.637] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_lib_behavior_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_lib_behavior_broken.json)
+[2026-06-03 02:22:03.761] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:03.761] build_binding_python_inspect  done
+[2026-06-03 02:22:03.761] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:03.764] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_lib_behavior_broken.log 2>&1)
+[2026-06-03 02:22:03.777] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:03.777] probe_binding_python       done  (expected failure confirmed)
+[2026-06-03 02:22:03.777] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:03.780] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_lib_behavior_broken.json)
+[2026-06-03 02:22:03.818] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:03.818] probe_binding_python_inspect  done
+[2026-06-03 02:22:03.818] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:03.820] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_lib_behavior_broken.log 2>&1)
+[2026-06-03 02:22:03.865] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:03.865] probe_lib                  done
+[2026-06-03 02:22:03.865] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:03.867] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/behavior_silent/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_lib_behavior_broken.json)
-[2026-06-03 00:16:57.801] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:57.801] probe_lib_inspect          done
-[2026-06-03 00:16:57.801] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:57.801] *                          variant_start  (binding_overdeclares_stubs)
-[2026-06-03 00:16:57.801] *                          graph_start  (13 steps)
-[2026-06-03 00:16:57.801] configure                  check_pre  (pass)
-[2026-06-03 00:16:57.803] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_overdeclares_stubs.ok)
-[2026-06-03 00:16:57.804] configure                  check_post  (pass)
-[2026-06-03 00:16:57.804] configure                  done
-[2026-06-03 00:16:57.804] build_lib                  check_pre  (pass)
-[2026-06-03 00:16:57.806] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_overdeclares_stubs.ok)
-[2026-06-03 00:16:57.807] build_lib                  check_post  (pass)
-[2026-06-03 00:16:57.807] build_lib                  done
-[2026-06-03 00:16:57.807] build_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:57.809] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:03.921] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:03.921] probe_lib_inspect          done
+[2026-06-03 02:22:03.921] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:03.921] *                          variant_start  (binding_overdeclares_stubs)
+[2026-06-03 02:22:03.921] *                          graph_start  (13 steps)
+[2026-06-03 02:22:03.921] configure                  check_pre  (pass)
+[2026-06-03 02:22:03.924] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_binding_overdeclares_stubs.ok)
+[2026-06-03 02:22:03.925] configure                  check_post  (pass)
+[2026-06-03 02:22:03.925] configure                  done
+[2026-06-03 02:22:03.925] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:03.927] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_binding_overdeclares_stubs.ok)
+[2026-06-03 02:22:03.928] build_lib                  check_post  (pass)
+[2026-06-03 02:22:03.928] build_lib                  done
+[2026-06-03 02:22:03.928] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:03.930] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:57.864] build_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:57.864] build_lib_inspect          done
-[2026-06-03 00:16:57.864] build_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:57.866] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_overdeclares_stubs.ok)
-[2026-06-03 00:16:57.896] build_binding_ocaml        check_post  (pass)
-[2026-06-03 00:16:57.896] build_binding_ocaml        done
-[2026-06-03 00:16:57.896] build_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:57.898] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_overdeclares_stubs.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:58.023] build_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:58.023] build_binding_ocaml_inspect  done
-[2026-06-03 00:16:58.023] probe_binding_ocaml        check_pre  (pass)
-[2026-06-03 00:16:58.025] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_overdeclares_stubs.log 2>&1)
-[2026-06-03 00:16:58.125] probe_binding_ocaml        cmd_fail  (exit 1)
-[2026-06-03 00:16:58.125] probe_binding_ocaml        compat_predicted  (1 substring(s))
-[2026-06-03 00:16:58.125] probe_binding_ocaml        done  (expected failure confirmed (derived))
-[2026-06-03 00:16:58.125] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-06-03 00:16:58.127] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:58.169] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-06-03 00:16:58.169] probe_binding_ocaml_inspect  done
-[2026-06-03 00:16:58.169] build_binding_python       check_pre  (pass)
-[2026-06-03 00:16:58.171] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_overdeclares_stubs.ok)
-[2026-06-03 00:16:58.174] build_binding_python       check_post  (pass)
-[2026-06-03 00:16:58.174] build_binding_python       done
-[2026-06-03 00:16:58.174] build_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:58.176] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_overdeclares_stubs.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:58.298] build_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:58.298] build_binding_python_inspect  done
-[2026-06-03 00:16:58.298] probe_binding_python       check_pre  (pass)
-[2026-06-03 00:16:58.300] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_overdeclares_stubs.log 2>&1)
-[2026-06-03 00:16:58.313] probe_binding_python       check_post  (pass)
-[2026-06-03 00:16:58.313] probe_binding_python       done
-[2026-06-03 00:16:58.313] probe_binding_python_inspect  check_pre  (pass)
-[2026-06-03 00:16:58.315] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:58.352] probe_binding_python_inspect  check_post  (pass)
-[2026-06-03 00:16:58.352] probe_binding_python_inspect  done
-[2026-06-03 00:16:58.352] probe_lib                  check_pre  (pass)
-[2026-06-03 00:16:58.355] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_overdeclares_stubs.log 2>&1)
-[2026-06-03 00:16:58.397] probe_lib                  check_post  (pass)
-[2026-06-03 00:16:58.397] probe_lib                  done
-[2026-06-03 00:16:58.397] probe_lib_inspect          check_pre  (pass)
-[2026-06-03 00:16:58.399] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" 2>/dev/null \
+[2026-06-03 02:22:03.985] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:03.985] build_lib_inspect          done
+[2026-06-03 02:22:03.986] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:03.988] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_binding_overdeclares_stubs.ok)
+[2026-06-03 02:22:04.021] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:04.021] build_binding_ocaml        done
+[2026-06-03 02:22:04.021] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:04.023] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_binding_overdeclares_stubs.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_binding_overdeclares_stubs.json)
+[2026-06-03 02:22:04.152] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:04.152] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:04.152] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:04.154] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/_build/default/ocaml/examples/probe_baseline.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_binding_overdeclares_stubs.log 2>&1)
+[2026-06-03 02:22:04.265] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-06-03 02:22:04.265] probe_binding_ocaml        compat_predicted  (1 substring(s))
+[2026-06-03 02:22:04.265] probe_binding_ocaml        done  (expected failure confirmed (derived))
+[2026-06-03 02:22:04.265] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:04.267] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_binding_overdeclares_stubs.json)
+[2026-06-03 02:22:04.312] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:04.312] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:04.312] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:04.315] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_binding_overdeclares_stubs.ok)
+[2026-06-03 02:22:04.317] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:04.317] build_binding_python       done
+[2026-06-03 02:22:04.317] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:04.319] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_binding_overdeclares_stubs.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_binding_overdeclares_stubs.json)
+[2026-06-03 02:22:04.454] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:04.455] build_binding_python_inspect  done
+[2026-06-03 02:22:04.455] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:04.457] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_binding_overdeclares_stubs.log 2>&1)
+[2026-06-03 02:22:04.471] probe_binding_python       check_post  (pass)
+[2026-06-03 02:22:04.471] probe_binding_python       done
+[2026-06-03 02:22:04.471] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:04.474] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_binding_overdeclares_stubs.json)
+[2026-06-03 02:22:04.515] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:04.515] probe_binding_python_inspect  done
+[2026-06-03 02:22:04.515] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:04.518] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_binding_overdeclares_stubs.log 2>&1)
+[2026-06-03 02:22:04.568] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:04.568] probe_lib                  done
+[2026-06-03 02:22:04.569] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:04.571] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_orphan/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
   > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_binding_overdeclares_stubs.json)
-[2026-06-03 00:16:58.452] probe_lib_inspect          check_post  (pass)
-[2026-06-03 00:16:58.452] probe_lib_inspect          done
-[2026-06-03 00:16:58.452] *                          graph_end  (13/13 completed)
-[2026-06-03 00:16:58.453] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/all.mmd)
-[2026-06-03 00:16:58.453] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/full.mmd)
-[2026-06-03 00:16:58.453] *                          view  (lib (3 steps))
-[2026-06-03 00:16:58.453] *                          view  (probes (6 steps))
-[2026-06-03 00:16:58.453] *                          view  (binding_ocaml (4 steps))
-[2026-06-03 00:16:58.453] *                          view  (binding_python (4 steps))
-[2026-06-03 00:16:58.455] *                          html  (_out/canary/projects/tiny/-run/result.html)
-[2026-06-03 00:16:58.455] *                          index  (_out/canary/projects/index.html)
-[2026-06-03 00:16:58.456] !                          invariant  (full.mmd: connectivity errors:
+[2026-06-03 02:22:04.626] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:04.626] probe_lib_inspect          done
+[2026-06-03 02:22:04.627] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:04.627] *                          variant_start  (app_helper_lib_broken)
+[2026-06-03 02:22:04.627] *                          graph_start  (13 steps)
+[2026-06-03 02:22:04.627] configure                  check_pre  (pass)
+[2026-06-03 02:22:04.629] configure                  cmd  (test -d canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build || { echo 'lib_dir missing: canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/configure/conf_app_helper_lib_broken.ok)
+[2026-06-03 02:22:04.630] configure                  check_post  (pass)
+[2026-06-03 02:22:04.630] configure                  done
+[2026-06-03 02:22:04.630] build_lib                  check_pre  (pass)
+[2026-06-03 02:22:04.632] build_lib                  cmd  (test -f canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 || { echo 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 missing'; exit 1; } && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/build_app_helper_lib_broken.ok)
+[2026-06-03 02:22:04.634] build_lib                  check_post  (pass)
+[2026-06-03 02:22:04.634] build_lib                  done
+[2026-06-03 02:22:04.634] build_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:04.636] build_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
+  > /home/red/code/research/tola/_out/canary/projects/tiny/build_lib/inspect_app_helper_lib_broken.json)
+[2026-06-03 02:22:04.690] build_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:04.691] build_lib_inspect          done
+[2026-06-03 02:22:04.691] build_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:04.693] build_binding_ocaml        cmd  (LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/tiny.cmxa ocaml/libtiny_stubs.a && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/build_app_helper_lib_broken.ok)
+[2026-06-03 02:22:04.724] build_binding_ocaml        check_post  (pass)
+[2026-06-03 02:22:04.724] build_binding_ocaml        done
+[2026-06-03 02:22:04.724] build_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:04.726] build_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/libtiny_stubs.a --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_app_helper_lib_broken.json && python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/ocaml/inspect_mli_app_helper_lib_broken.json)
+[2026-06-03 02:22:04.861] build_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:04.861] build_binding_ocaml_inspect  done
+[2026-06-03 02:22:04.861] probe_binding_ocaml        check_pre  (pass)
+[2026-06-03 02:22:04.863] probe_binding_ocaml        cmd  ((LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build LD_RUN_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build dune build --root canary/examples/tiny/scenarios/_cache/symbol_missing/workspace ocaml/examples/app_helper.exe && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/_build/default/ocaml/examples/app_helper.exe) > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/probe_app_helper_lib_broken.log 2>&1)
+[2026-06-03 02:22:05.063] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-06-03 02:22:05.064] probe_binding_ocaml        compat_predicted  (1 substring(s))
+[2026-06-03 02:22:05.064] probe_binding_ocaml        done  (expected failure confirmed (derived))
+[2026-06-03 02:22:05.064] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-06-03 02:22:05.066] probe_binding_ocaml_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind mli --module-prefix Tiny --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny.mli --watchlist 'Tiny,Tiny.sum,Tiny.diff,Tiny.offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/ocaml/inspect_app_helper_lib_broken.json)
+[2026-06-03 02:22:05.114] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-06-03 02:22:05.114] probe_binding_ocaml_inspect  done
+[2026-06-03 02:22:05.115] build_binding_python       check_pre  (pass)
+[2026-06-03 02:22:05.117] build_binding_python       cmd  (ls canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/build_app_helper_lib_broken.ok)
+[2026-06-03 02:22:05.120] build_binding_python       check_post  (pass)
+[2026-06-03 02:22:05.120] build_binding_python       done
+[2026-06-03 02:22:05.120] build_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:05.122] build_binding_python_inspect  cmd  (python3 canary/scripts/inspect_binding.py --kind stub --path canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/_native.cpython-*.so --prefix tiny_ > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_app_helper_lib_broken.json && LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/build_binding/python/inspect_attrs_app_helper_lib_broken.json)
+[2026-06-03 02:22:05.267] build_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:05.267] build_binding_python_inspect  done
+[2026-06-03 02:22:05.267] probe_binding_python       check_pre  (pass)
+[2026-06-03 02:22:05.270] probe_binding_python       cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/examples/probe_baseline.py > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/probe_app_helper_lib_broken.log 2>&1)
+[2026-06-03 02:22:05.304] probe_binding_python       cmd_fail  (exit 1)
+[2026-06-03 02:22:05.304] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-06-03 02:22:05.304] probe_binding_python       done  (expected failure confirmed (derived))
+[2026-06-03 02:22:05.304] probe_binding_python_inspect  check_pre  (pass)
+[2026-06-03 02:22:05.307] probe_binding_python_inspect  cmd  (LD_LIBRARY_PATH=$PWD/canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build PYTHONPATH=canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext python3 canary/scripts/inspect_python.py --pkg tiny_cext --watchlist 'sum,diff,offset' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_binding/python/inspect_app_helper_lib_broken.json)
+[2026-06-03 02:22:05.346] probe_binding_python_inspect  check_post  (pass)
+[2026-06-03 02:22:05.346] probe_binding_python_inspect  done
+[2026-06-03 02:22:05.346] probe_lib                  check_pre  (pass)
+[2026-06-03 02:22:05.348] probe_lib                  cmd  (nm -D canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/probe_app_helper_lib_broken.log 2>&1)
+[2026-06-03 02:22:05.394] probe_lib                  check_post  (pass)
+[2026-06-03 02:22:05.394] probe_lib                  done
+[2026-06-03 02:22:05.394] probe_lib_inspect          check_pre  (pass)
+[2026-06-03 02:22:05.396] probe_lib_inspect          cmd  (nm -D "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1" --prefixes 'tiny_' --watchlist 'tiny_sum,tiny_diff,tiny_offset' \
+  > /home/red/code/research/tola/_out/canary/projects/tiny/probe_lib/inspect_app_helper_lib_broken.json)
+[2026-06-03 02:22:05.453] probe_lib_inspect          check_post  (pass)
+[2026-06-03 02:22:05.453] probe_lib_inspect          done
+[2026-06-03 02:22:05.453] *                          graph_end  (13/13 completed)
+[2026-06-03 02:22:05.454] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/all.mmd)
+[2026-06-03 02:22:05.454] *                          diagram  (_out/canary/projects/tiny/-run/diagrams/full.mmd)
+[2026-06-03 02:22:05.455] *                          view  (lib (3 steps))
+[2026-06-03 02:22:05.455] *                          view  (probes (6 steps))
+[2026-06-03 02:22:05.455] *                          view  (binding_ocaml (4 steps))
+[2026-06-03 02:22:05.456] *                          view  (binding_python (4 steps))
+[2026-06-03 02:22:05.456] *                          html  (_out/canary/projects/tiny/-run/result.html)
+[2026-06-03 02:22:05.459] *                          index  (_out/canary/projects/index.html)
+[2026-06-03 02:22:05.459] !                          invariant  (full.mmd: connectivity errors:
   [2]→[4]: no edge A_build_lib→A_build_binding_ocaml
   [4]→[6]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
   [2]→[6]: no edge A_build_lib→A_probe_binding_ocaml
@@ -494,4 +555,4 @@
   [2]→[10]: no edge A_build_lib→A_probe_binding_python
   [2]→[12]: no edge A_build_lib→A_probe_lib
   [2]→[8]: no edge A_build_lib→A_build_binding_python)
-[2026-06-03 00:16:58.456] !                          invariant  (SOME FAILED)
+[2026-06-03 02:22:05.459] !                          invariant  (SOME FAILED)

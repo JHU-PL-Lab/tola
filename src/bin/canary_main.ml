@@ -190,10 +190,10 @@ let action_cmd =
     let all_variants = [
       mk ""
         (Canary_project_tiny.make_base_script_spec
-           ~stores:(ws_stores "baseline"));
+           ~stores:(ws_stores "baseline") ());
       mk "lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:(ws_stores "symbol_missing"));
+           ~stores:(ws_stores "symbol_missing") ());
       mk "binding_mli_broken"
         (Canary_project_tiny.make_binding_mli_broken_script_spec
            ~stores:(ws_stores "api_complete"));
@@ -202,7 +202,7 @@ let action_cmd =
            ~stores:(ws_stores "api_complete_python"));
       mk "hybrid_lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:hybrid_lib_broken_stores);
+           ~stores:hybrid_lib_broken_stores ());
       mk "lib_soname_bumped"
         (Canary_project_tiny.make_lib_soname_bumped_script_spec
            ~stores:(ws_stores ~lib_filename:"libtiny.so.2" "abi_soname_bump"));
@@ -216,6 +216,16 @@ let action_cmd =
       mk "binding_overdeclares_stubs"
         (Canary_project_tiny.make_binding_overdeclares_stubs_script_spec
            ~stores:(ws_stores "symbol_orphan"));
+      (* app_helper_lib_broken: c1 cmp_symbol fires through the
+         tiny_helper chain (app_helper.exe → Tiny_helper.sum_doubled →
+         Tiny.sum → libtiny.sym tiny_sum, which is missing under
+         symbol_missing). Same store + expectation as lib_broken; only
+         the OCaml probe exe differs. Validates the model propagates
+         through an extra binding layer (Phase 15, 2026-06-03). *)
+      mk "app_helper_lib_broken"
+        (Canary_project_tiny.make_lib_broken_script_spec
+           ~stores:(ws_stores "symbol_missing")
+           ~probe_exe:"ocaml/examples/app_helper.exe" ());
     ] in
     let selected = match variant_filter with
       | None -> all_variants
