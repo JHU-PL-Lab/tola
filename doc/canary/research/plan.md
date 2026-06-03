@@ -763,21 +763,90 @@ inspectors for an unimplemented `n*` / `b*` artifact alias. Each
 gap is a TODO item with a clear shape. Start with what works; close
 gaps as we go.
 
-**Order of attack:**
+**Variant naming — canary vocabulary, not scenario vocabulary.**
+canary's tiny spec stays ignorant of harness scenarios. Each variant
+is a named `script_spec` value whose name describes **what canary
+expects to fire**, not **what the harness did to produce the
+artifact**:
 
-1. **Tiny first.** Start with one scenario where the contract is
-   already wired (e.g. `e1 symbol_missing` → c1, or
-   `e6 api_complete` → c2). Make the harness prepare the perturbed
-   artifact, parameterise `canary_project_tiny.ml` so its
-   `script_spec` can point at the prepared directory, declare the
-   expectation, and confirm canary fires the expected contract.
-2. **Expand tiny coverage.** Once one scenario works end-to-end,
-   add the rest of the c1 / c2 scenarios. Each is a variant entry.
-3. **Real projects.** Apply the same model to llvm / z3 / sqlite.
-   These have natural perturbations (version-mismatch builds)
-   instead of patched fakes, so the "store" providing the
-   perturbed artifact is just a different opam / pip / apt
-   version.
+```ocaml
+(* canary_project_tiny.ml *)
+
+let base_script_spec = { ... ; expectation = (fun _ _ -> Expect_success) }
+
+(* "At probe_binding_ocaml, expect c1 cmp_symbol to fire." *)
+let lib_broken_script_spec = { base_script_spec with
+  expectation = fun rule _ -> match rule with
+    | Probe (Binding OCaml) ->
+        Expect_compat_failure { inputs = [ C_stub …; Native_lib … ]; … }
+    | _ -> Expect_success
+}
+
+(* "At probe_binding_ocaml, expect c2 cmp_api_completeness to fire." *)
+let binding_mli_broken_script_spec = { base_script_spec with
+  expectation = fun rule _ -> match rule with
+    | Probe (Binding OCaml) ->
+        Expect_compat_failure { inputs = [ Ocaml_mli … ]; … }
+    | _ -> Expect_success
+}
+
+let script_spec = base_script_spec  (* convenience binding *)
+```
+
+No scenario enum. The variant `lib_broken` doesn't know it
+corresponds to harness scenario `e1 symbol_missing`. The
+harness↔canary mapping table lives in tiny.md (or a wrapper
+script), not in canary's spec.
+
+**CLI routing — default runs the matrix; selective routing for
+debug.**
+- `canary action tiny` (no suffix) → runs every implemented variant
+  via `run_project_multi` (parallel to today's `canary action z3`
+  running dev + stable). After 14a: baseline + lib_broken. As more
+  variants land, the set grows.
+- `canary action tiny/<variant>` → runs only that variant.
+  Permanently useful for development and debug (fast feedback on
+  one specific contract's pipeline) but not the default user path.
+
+**Order of attack — Phase 14 sub-steps:**
+
+**14a (small, today).** Proof of concept with one perturbed variant.
+- `base_script_spec` (= today's spec, no behavior change)
+- `lib_broken_script_spec` (c1 fires at probe_binding_ocaml)
+- Tiny becomes multi-variant — `canary action tiny` switches from
+  single-variant (`script_spec` directly) to `run_project_multi`
+  over the two variants.
+- Workflow: `scenarios.py restore e1 && canary action tiny/lib_broken`
+  → c1 fires; `scenarios.py restore-baseline && canary action tiny`
+  → both variants pass (after restore-baseline, lib_broken's
+  expectation matches "no failure → unexpected_success"; we need to
+  document that restore-baseline is incompatible with the
+  full-matrix invocation until 14b lands).
+
+**14b (coexistence — the real structural change).**
+- Tiny harness gains side-by-side cached perturbed artifacts:
+  `_cache/baseline/artifacts/*`, `_cache/lib_broken/artifacts/*`,
+  etc., each containing the full artifact set for that variant.
+  `scenarios.py prepare-all` produces them.
+- canary's tiny spec points at the cache directly. Each variant's
+  closures read from `_cache/<variant>/artifacts/…` rather than
+  the live tree. No restore step between variants — both baseline
+  and perturbed artifacts coexist on disk.
+- `canary action tiny` now runs the full matrix in one invocation
+  cleanly. No setup ceremony beyond the one-time `prepare-all`.
+
+**14c (parked — cross-products).**
+- The coexistence model naturally permits "e1 lib + e6 binding"
+  combinations canary's machinery would handle even though the
+  standalone harness doesn't model them. Whether to enumerate
+  crosses is a later decision; the *infrastructure* supports it
+  because each store holds every variant.
+- Probably not paper-critical. Park.
+
+**14d+ (real projects).** Apply the same model to llvm / z3 /
+sqlite. These have natural perturbations (version-mismatch builds)
+instead of patched fakes, so the "store" providing the perturbed
+artifact is just a different opam / pip / apt version.
 
 **Justification for the paper.** Tiny becomes a fully-populated
 project × contract matrix run by canary, byte-equivalent to the
