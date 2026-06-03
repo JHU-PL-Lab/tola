@@ -89,8 +89,6 @@ pulls effort away from M2.
 - [ ] Soundness theorem statement; proof sketch acceptable.
 - [ ] Type closed for at least one language (OCaml `.cmi` digest is
       the most tractable) — see §6 step 4 (c6 `cmp_type`).
-- [ ] TODO #15b — unit-test harness for compat/inspect logic (lets
-      us iterate on the calculus without full integration runs).
 
 ### M2 — OOPSLA 2027 Round 1 (~mid-Oct 2026) — **PRIMARY, ~5 months**
 
@@ -110,14 +108,13 @@ Tool / empirical:
 - [ ] At least 2 more libraries beyond Z3/LLVM/sqlite. PyTorch
       (queued) is the obvious next; pick one more from the Tier-1
       candidate queue.
-- [ ] Comparator coverage closures — see §6 step 4 (c4 `cmp_abi`,
-      c5 `cmp_sym_version` at minimum; c6 if time).
-- [ ] TODO #18 — audit project specs for hardcoded shell commands.
+- [ ] TODO #18 — audit project specs for hardcoded shell commands
+      (build-primitive extraction done; final sweep for leftover
+      `Printf.sprintf` shell verbs pending).
 - [ ] TODO #19 — LLVM cross-version C symbol check.
 - [ ] TODO #40 — real `cmake --install` instead of fake `cp`.
 - [ ] macOS local testing green (scope 2 of the macOS plan) — at
       least `canary artifact-test` on a Mac.
-- [ ] TODO #15b — compat/inspect unit-test harness (also serves M1).
 
 ### M3 — PLDI 2027 (~mid-Nov 2026) — **stretch (preferred optional), ~6 months**
 

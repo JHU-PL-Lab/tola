@@ -569,6 +569,21 @@ Docs:
 - CLAUDE.md: tiny.md description updated (8 scenarios → 13 variants).
   TODOs #43 (c5) and #44 (c6) marked shipped with phase references.
 
+### Unit-test harness closure (TODO #15b, accumulated through Phase 14–15)
+
+`src/canary/test/canary_artifact_test.ml` is the compat/inspect unit-
+test harness foreseen as TODO #15b. Phase 4 (worklog
+`phase4_2026_05.md`) inspected and renamed it; Phase 14e / 15.4 /
+15.5b / 15.6 added the per-contract `cmp_*_pure_tests` sections as
+each comparator wired in. End-of-June state: **64 named cases**
+across c1 (cmp_symbol), c4 (cmp_abi), c5 (cmp_sym_version),
+c6 (cmp_type), c7 (cmp_api_repack), c8 (cmp_api_faithfulness),
+plus `native_pure_tests`, `ocaml_pure_tests`, `compat_pure_tests`
+exercising the lower-level loaders / primitives. Coverage could
+grow (more fixtures per contract), but the harness itself is
+complete and exercised on every `make canary` via `canary
+artifact-test`. #15b can be considered closed.
+
 ## Final state (end of Phase 15.7)
 
 **13 variants on `canary action tiny`, all passing:**
