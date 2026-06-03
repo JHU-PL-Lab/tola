@@ -720,7 +720,7 @@ log becomes most useful when there's a populated matrix of which
 contracts fire on which projects. Tracked here so it doesn't get
 lost.
 
-### Step 7 — Perturbation fixtures for real projects (research thread)
+### Step 7 — Matrix coverage on real projects via store-provided artifacts
 
 **Motivation.** Tiny's full matrix coverage (12 scenarios × every
 implemented c\*) is the witness that canary's machinery is sound.
@@ -729,40 +729,72 @@ perturbation each — natural version-mismatch flavour
 (`Opcode.UncondBr`, `parser_context`). That's a thin demo: it
 shows the machinery WORKS but not that it COVERS.
 
-**Target.** Each real project ships per-scenario fixtures that
-deliberately trigger each implemented c\*, replicating tiny's
-matrix discipline. Concretely:
+**Design principle (revised 2026-06-02): perturbations are artifacts,
+not a separate concept.** Earlier this section proposed a
+`canary/perturbations/` directory and a `--perturbation` flag.
+Replacing that with a cleaner framing:
 
-- `canary/perturbations/<project>/<scenario>/` ships patches,
-  alternate artifact paths, or generation scripts that produce a
-  perturbed version of one artifact.
-- Project spec declares a `perturbations : (scenario_id * (artifact
-  * patch)) list` field listing which scenarios it supports.
-- A `--perturbation <id>` flag on `canary action` swaps the
-  artifact at runtime; the registry tells the runner which c\* the
-  perturbation is supposed to trigger.
+- **The canary action knows nothing about scenarios or
+  perturbations.** It only sees artifacts at locations a store
+  provides. (Today the store types are `Build_tree`, `Staged`,
+  `Pm { … }`; a local-path store variant for "artifact at this
+  filesystem path" is a natural extension.)
+- **An external harness prepares each perturbed artifact** at some
+  location — tiny's `scenarios.py` is the prototype. The harness
+  knows scenarios; canary runs its checks on whatever the harness
+  provides.
+- **Each scenario becomes a project variant.** Tiny becomes
+  multi-variant (`tiny/baseline`, `tiny/e1`, `tiny/e6`, …). The
+  variant's `script_spec` declares the expected outcome
+  (`Expect_compat_failure { inputs = …; … }` for scenarios that
+  should fire c\*; `Expect_success` for the baseline). Running
+  `canary action tiny/e1` invokes the existing variant-routing
+  infrastructure — no new flag needed.
+- **Result matches the standalone tiny harness.** For every
+  scenario the harness defines, running the corresponding canary
+  variant should fire the same contract(s) the standalone
+  comparator does. Drift between the two implementations is the
+  bug signal.
 
-**Justification for the paper.** Each real project's perturbation
-matrix becomes a coverage row alongside tiny's. The story shifts
-from "canary catches version drift in two real projects" to
-"canary's surface-check coverage is complete on every project we
-test, with both tiny (controlled) and llvm/z3/sqlite (production-
-shaped) inputs hitting every implemented c\*."
+**It's OK if canary can't catch some scenarios today.** Some
+scenarios may need infrastructure canary doesn't yet have — e.g. a
+"fake / local-path store" type, per-artifact overrides, or
+inspectors for an unimplemented `n*` / `b*` artifact alias. Each
+gap is a TODO item with a clear shape. Start with what works; close
+gaps as we go.
 
-**Status: not yet started.** Step 6 (registry lift) is the
-prerequisite — perturbation fixtures attach to registry entries,
-so the registry needs to exist first. Per-project list is:
+**Order of attack:**
+
+1. **Tiny first.** Start with one scenario where the contract is
+   already wired (e.g. `e1 symbol_missing` → c1, or
+   `e6 api_complete` → c2). Make the harness prepare the perturbed
+   artifact, parameterise `canary_project_tiny.ml` so its
+   `script_spec` can point at the prepared directory, declare the
+   expectation, and confirm canary fires the expected contract.
+2. **Expand tiny coverage.** Once one scenario works end-to-end,
+   add the rest of the c1 / c2 scenarios. Each is a variant entry.
+3. **Real projects.** Apply the same model to llvm / z3 / sqlite.
+   These have natural perturbations (version-mismatch builds)
+   instead of patched fakes, so the "store" providing the
+   perturbed artifact is just a different opam / pip / apt
+   version.
+
+**Justification for the paper.** Tiny becomes a fully-populated
+project × contract matrix run by canary, byte-equivalent to the
+standalone harness. The story shifts from "canary catches version
+drift in two real projects" to "canary's surface-check coverage is
+complete on every project we test, with both tiny (controlled) and
+llvm/z3/sqlite (production-shaped) inputs hitting every implemented
+c\*."
+
+**Per-project pre-existing demos** (kept here as reference for when
+the work moves to real projects after tiny):
 
 | Project | Easy wins (c\* and natural perturbation source) |
 |---|---|
 | llvm | c1 + c2 OCaml already wired (Opcode.UncondBr); add Python (llvmlite version-floor); investigate c4 (LLVM SONAME bumps across majors); investigate c5 (libLLVM.so versioned symbols). |
 | z3 | c2 Python already wired (parser_context); re-enable `has_build_binding=true` on z3-stable to add c1 (parallel to llvm); investigate c4. |
 | sqlite | Most plumbed but no live demo. apt's `libsqlite3.so.0` vs Homebrew's `libsqlite.so.0` SONAME may differ — natural c4 candidate. |
-
-This is the research thread that goes alongside (or after) Step 4's
-remaining inspector + comparator buildout. Step 4 fills the c\*
-rows (one row at a time); Step 7 fills the project × c\* matrix
-(once each c\* is wired).
 
 ## 7. Operating rules
 
