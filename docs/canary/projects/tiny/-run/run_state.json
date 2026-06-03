@@ -5,7 +5,7 @@
       "tag": "configure",
       "output_tag": "configure",
       "rule": "configure",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -13,7 +13,7 @@
       "tag": "build_lib",
       "output_tag": "build_lib",
       "rule": "build_lib",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -21,7 +21,7 @@
       "tag": "build_binding_ocaml",
       "output_tag": "build_binding_ocaml",
       "rule": "build_binding_ocaml",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -29,7 +29,7 @@
       "tag": "build_binding_ocaml_inspect",
       "output_tag": "build_binding_ocaml",
       "rule": "build_binding_ocaml",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -37,15 +37,15 @@
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
       "rule": "probe_binding_ocaml",
-      "variant_id": "",
-      "expect": "success",
+      "variant_id": "lib_broken",
+      "expect": "compat_failure",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml_inspect",
       "output_tag": "probe_binding_ocaml",
       "rule": "probe_binding_ocaml",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -53,7 +53,7 @@
       "tag": "build_binding_python",
       "output_tag": "build_binding_python",
       "rule": "build_binding_python",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -61,7 +61,7 @@
       "tag": "build_binding_python_inspect",
       "output_tag": "build_binding_python",
       "rule": "build_binding_python",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -69,7 +69,7 @@
       "tag": "probe_binding_python",
       "output_tag": "probe_binding_python",
       "rule": "probe_binding_python",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -77,7 +77,7 @@
       "tag": "probe_binding_python_inspect",
       "output_tag": "probe_binding_python",
       "rule": "probe_binding_python",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -85,7 +85,7 @@
       "tag": "probe_lib",
       "output_tag": "probe_lib",
       "rule": "probe_lib",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     },
@@ -93,7 +93,7 @@
       "tag": "probe_lib_inspect",
       "output_tag": "probe_lib",
       "rule": "probe_lib",
-      "variant_id": "",
+      "variant_id": "lib_broken",
       "expect": "success",
       "status": "done"
     }

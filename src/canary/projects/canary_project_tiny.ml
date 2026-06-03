@@ -282,18 +282,33 @@ let base_script_spec : Canary_step_builder.script_spec =
               ~output_dir ~variant_key ())
       | Build_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
-            (* base="inspect" matches the default tag_suffix="_inspect" that
-               attach_inspect uses when wiring the explicit `inspect` field.
-               The standalone harness names this JSON `ocaml_stub.json`; in
-               canary the per-parent output_dir separates it from other
-               binding inspectors. *)
-            let out_file =
+            (* Build (Binding OCaml) attaches a {b two-file} inspect step
+               so both inspect JSONs exist before Probe evaluates:
+               - inspect.json (stub side, for c1 cmp_symbol's C_stub input)
+               - inspect_mli.json (mli side, for c2 cmp_api_completeness's
+                 Ocaml_mli input)
+
+               Tiny's older layout put the mli inspect at Probe (Binding
+               OCaml) follow-up, which meant the JSON appeared after the
+               probe ran and the expectation couldn't reference it. Moving
+               the mli inspect to build time lets c2 cite a path that's
+               populated before Probe's expectation evaluates. Phase 14a
+               (2026-06-02). *)
+            let stub_file =
               Canary_basic.filename ~variant_key
                 ~base:"inspect" ~ext:"json" in
+            let mli_file =
+              Canary_basic.filename ~variant_key
+                ~base:"inspect_mli" ~ext:"json" in
+            let watchlist_csv =
+              String.concat ~sep:"," tiny_ocaml_module_watchlist in
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind stub \
-               --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s"
-              ocaml_build_dir output_dir out_file)
+               --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s && \
+               python3 canary/scripts/inspect_binding.py --kind mli \
+               --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
+              ocaml_build_dir output_dir stub_file
+              tiny_root watchlist_csv output_dir mli_file)
       | Build_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
             let cext_so =

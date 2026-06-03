@@ -18,15 +18,14 @@
   "symbols": [
     "tiny_diff",
     "tiny_offset",
-    "tiny_total"
+    "tiny_sum"
   ],
   "versioned_exports": {},
   "versioned_req": {},
   "watchlist": {
-    "missing": [
-      "tiny_sum"
-    ],
+    "missing": [],
     "present": [
+      "tiny_sum",
       "tiny_diff",
       "tiny_offset"
     ]
