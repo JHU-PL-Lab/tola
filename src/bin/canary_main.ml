@@ -165,6 +165,7 @@ let action_cmd =
     let all_variants = [
       mk "" Canary_project_tiny.base_script_spec;
       mk "lib_broken" Canary_project_tiny.lib_broken_script_spec;
+      mk "binding_mli_broken" Canary_project_tiny.binding_mli_broken_script_spec;
     ] in
     let selected = match variant_filter with
       | None -> all_variants

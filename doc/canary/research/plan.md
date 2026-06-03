@@ -823,51 +823,47 @@ debug.**
   document that restore-baseline is incompatible with the
   full-matrix invocation until 14b lands).
 
-**14a follow-up — c2 OCaml (binding_mli_broken) blocked on
-restructuring.** Adding a `binding_mli_broken` variant for c2
-`cmp_api_completeness` against harness scenario e6 (`api_complete`
-removes `val sum` from tiny.mli) revealed that c2 doesn't fit the
-existing build/probe split:
+**14a follow-up — c2 OCaml (binding_mli_broken) shipped.** Maps
+canary against harness scenario e6 (`api_complete` removes `val sum`
+from tiny.mli). The naive attempt revealed that c2 didn't fit tiny's
+original step model, so the followup landed four coordinated changes:
 
-1. *Failure stage is Build, not Probe.* OCaml mli mismatch is a
-   compile-time concept. With e6's patched mli, `dune build
-   canary/examples/tiny/ocaml` fails because `examples/probe_baseline.ml`
-   uses `Tiny.sum`. Probe is skipped, so a `Probe`-stage expectation
-   never fires.
+1. *Build/Probe split for OCaml.* Build (Binding OCaml) now targets
+   only `tiny.cmxa` + `libtiny_stubs.a` — the binding library. Probe
+   (Binding OCaml) does `dune build probe_baseline.exe && exec`,
+   redirecting both the compile and runtime stages to `probe.log`.
+   This puts the c2 violation at Probe, matching how it surfaces on
+   real projects (llvm/z3 install the opam-packed binding, then
+   compile the consumer at Probe time).
 
-2. *Inspect JSON not available before Build.* The mli inspect today
-   attaches to Build (Binding OCaml) as a follow-up step, so it only
-   runs *after* Build succeeds. With Build failing under e6, the JSON
-   never gets produced — Expect_compat_failure on Build can't resolve
-   its prediction.
+2. *Two-file inspect at Build (Binding OCaml).* Build's inspect step
+   produces `inspect.json` (stub side, c1) {b and} `inspect_mli.json`
+   (mli side, c2) so both JSONs exist before Probe evaluates its
+   expectation.
 
-3. *Build stderr isn't captured.* Even if the JSON existed, the
-   build cmd does no `>build.log 2>&1` redirect, so
-   `output_contains_any` (which scans output_dir files) has nothing
-   to match against.
+3. *`-w -32` on tiny's library dune stanza.* dune treats
+   unused-value-declaration as an error by default, which conflated
+   "the .ml may legitimately expose more than the .mli" (OCaml language
+   semantics) with "API-completeness violation" (c2). Relaxing it lets
+   the library compile cleanly under mli-narrowing perturbations; the
+   c2 violation surfaces at the consumer compile where it conceptually
+   belongs. Harness `_try_build_ocaml` was also narrowed to library
+   targets, and e6's expected outcomes flipped from `ocaml_build: fail`
+   / `ocaml_probe: skip` to `ocaml_build: ok` / `ocaml_probe: fail`.
 
-Done in this commit as groundwork for the proper c2 wiring:
-- Build (Binding OCaml) inspect step now produces both `inspect.json`
-  (stub side, c1) and `inspect_mli.json` (mli side, c2). Non-breaking
-  for baseline + lib_broken. Documents the target path c2 will cite
-  once available before Build.
+4. *Inspector `--module-prefix` flag.* `inspect_binding.py --kind mli
+   --path` previously matched watchlist entries against bare top-level
+   `vals` (so `Tiny.sum` would never match `sum`). Opt-in
+   `--module-prefix Tiny` prefixes extracted names so the consumer-side
+   qualified watchlist matches honestly. Tiny's spec passes it on both
+   mli inspect sites.
 
-Still needed for c2 (deferred — likely 14b-adjacent):
-- Add `scan_source` to tiny that runs the mli + Python-attrs inspects
-  on the source tree before any build step. JSONs become available
-  to every downstream expectation regardless of build outcome.
-- Make Build (Binding OCaml)'s cmd capture stderr to `build.log` in
-  output_dir so substring matching has something to search.
-- Then `binding_mli_broken_script_spec` overrides Build (Binding OCaml)'s
-  expectation to `Expect_compat_failure { inputs = [ Ocaml_mli [
-  "scan_source/inspect_mli.json" ] ] }`.
-
-This work item also exposes a pre-existing watchlist-matching bug:
-`tiny_ocaml_module_watchlist` uses dotted names (`Tiny.sum`) but the
-mli inspector matches against the top-level `vals` list (bare `sum`),
-so today's baseline `inspect_mli.json` reports `Tiny.sum` as missing
-even when the mli has it. Either the watchlist should drop the module
-prefix or the inspector should understand top-level mli files.
+End-to-end on e6: Build succeeds (library compiles with sparser mli),
+Probe's dune-build fails ("Unbound value Tiny.sum"), c2's
+`Ocaml_mli [build_binding_ocaml/inspect_mli.json]` resolves to predicted
+substring `Tiny.sum`, the substring is found in probe.log, and the
+runner logs `compat_predicted (2 substring(s))` →
+`done (expected failure confirmed (derived))`.
 
 **14b (coexistence — the real structural change).**
 - Tiny harness gains side-by-side cached perturbed artifacts:

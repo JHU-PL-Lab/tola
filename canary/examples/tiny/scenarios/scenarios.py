@@ -282,16 +282,16 @@ SCENARIOS = {
         },
     },
     "api_complete": {
-        "description": "OCaml user-facing Tiny.mli drops 'val sum'. Library still defines Tiny.sum internally; the probe references Tiny.sum and fails at compile time. c2 cmp_api_completeness statically catches the missing val on the OCaml side; Python bindings untouched.",
+        "description": "OCaml user-facing Tiny.mli drops 'val sum'. Library still defines Tiny.sum internally; the library compiles cleanly (tiny's dune sets -w -32 so 'unused value' is not promoted to an error — see ocaml/dune for why), but every consumer that references Tiny.sum fails at compile time (probe_baseline, app_binding directly; app_helper transitively via tiny_helper). c2 cmp_api_completeness statically catches the missing val on the OCaml side; Python bindings untouched.",
         "violates": ["API-completeness"],
         "perturbs": ["ocaml/tiny.mli"],  # [s4 OCaml]
         "apply":  _ml_patch_apply("api_complete"),
         "revert": _ml_patch_revert("api_complete"),
         "expected": {
-            "ocaml_build":             "fail",
-            "ocaml_probe":             "skip",
-            "ocaml_app_binding":       "skip",
-            "ocaml_app_helper":        "skip",
+            "ocaml_build":             "ok",
+            "ocaml_probe":             "fail",
+            "ocaml_app_binding":       "fail",
+            "ocaml_app_helper":        "fail",
             "python_cext_probe":       "ok",
             "python_ctypes_probe":     "ok",
             "cmp_symbol_ocaml":        "pass",
@@ -568,12 +568,20 @@ def _ensure_cache_dirs(scenario: str | None = None) -> None:
 
 
 def _try_build_ocaml() -> bool:
-    """Run dune build under the tiny ocaml dir. Returns success."""
+    """Build the tiny OCaml {b library} (tiny.cmxa + libtiny_stubs.a),
+    {i not} the consumer-side examples. The "ocaml_build" outcome should
+    reflect "does the binding library compile?" — mli-narrowing
+    perturbations (e.g. e6 api_complete drops val sum) leave the library
+    intact (per OCaml's "ml may expose more than mli" semantics; tiny's
+    dune sets -w -32 so unused-value isn't an error) but break consumers
+    that reference the narrowed-away symbol. Those consumer failures
+    surface in the dedicated ocaml_probe / ocaml_app_binding /
+    ocaml_app_helper keys, not here."""
     env = os.environ.copy()
     env["LIBRARY_PATH"] = _LIBPATH + ":" + env.get("LIBRARY_PATH", "")
     env["LD_RUN_PATH"] = _LIBPATH + ":" + env.get("LD_RUN_PATH", "")
     r = subprocess.run(
-        ["dune", "build"],
+        ["dune", "build", "tiny.cmxa", "libtiny_stubs.a"],
         cwd=TINY / "ocaml",
         env=env,
         stdout=subprocess.DEVNULL,

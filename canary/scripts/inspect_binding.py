@@ -175,22 +175,31 @@ def parse_mli_lines(lines):
     return vals, externals, externals_detail, constructors, modules
 
 
-def summarize_mli(paths, watchlist, prefix_by_filename=False):
+def summarize_mli(paths, watchlist, prefix_by_filename=False,
+                  module_prefix=None):
     """Parse each .mli file and aggregate.
 
     When `prefix_by_filename` is True (set for --dir mode by default), each
     file's contents are prefixed by its filename-derived module name (OCaml
     package convention: `llvm.mli` is the body of module `Llvm`). The module
     itself is also added to the modules list.
+
+    When `module_prefix` is set (--path mode opt-in), the same prefixing is
+    applied with the explicit module name (e.g. `Tiny`). Use this for
+    top-level mli files whose qualified consumer-side name is known.
     """
     all_vals, all_externals, all_externals_detail = [], [], []
     all_constructors, all_modules = [], []
     for p in paths:
         with open(p) as f:
             v, e, ed, c, m = parse_mli_lines(f.readlines())
+        mod = None
         if prefix_by_filename:
             stem = os.path.splitext(os.path.basename(p))[0]
             mod = stem[:1].upper() + stem[1:]
+        elif module_prefix:
+            mod = module_prefix
+        if mod is not None:
             v = [f"{mod}.{x}" for x in v]
             e = [f"{mod}.{x}" for x in e]
             ed = [{**d, "name": f"{mod}.{d['name']}"} for d in ed]
@@ -293,6 +302,11 @@ def main():
                     help="comma-separated names to presence-check")
     ap.add_argument("--prefix", default="",
                     help="stub mode: filter undefined symbols by this prefix")
+    ap.add_argument("--module-prefix", default="", dest="module_prefix",
+                    help="mli --path mode: prefix extracted names with "
+                         "MOD. so they match qualified consumer-side names "
+                         "(e.g. --module-prefix Tiny treats tiny.mli as the "
+                         "body of module Tiny)")
     args = ap.parse_args()
 
     watchlist = [w for w in args.watchlist.split(",") if w]
@@ -313,7 +327,8 @@ def main():
             summary = summarize_mli(paths, watchlist, prefix_by_filename=True)
         elif args.path:
             paths = [args.path]
-            summary = summarize_mli(paths, watchlist)
+            summary = summarize_mli(paths, watchlist,
+                                    module_prefix=args.module_prefix or None)
         else:
             ap.error("--kind mli requires --path or --dir")
 

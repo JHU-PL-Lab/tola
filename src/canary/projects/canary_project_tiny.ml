@@ -175,15 +175,17 @@ let base_script_spec : Canary_step_builder.script_spec =
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 
-    (* Build_binding OCaml: dune build under canary/examples/tiny/ocaml/.
-       Produces:
-       - compiled_binding_ocaml.cmxa (bo6)
-       - compiled_binding_ocaml.stub-a (bo7) = libtiny_stubs.a
-       - examples/probe_baseline.exe (the s6 carrier)
-       Invoked from the tola root with the example tree as an explicit
-       target (avoids dune-project context errors when cd'ing into the
-       subdir). LIBRARY_PATH lets the cstubs link find libtiny;
-       LD_RUN_PATH bakes the rpath into the binding. *)
+    (* Build_binding OCaml: build the binding {b library} only —
+       tiny.cmxa (bo6) and libtiny_stubs.a (bo7). The consumer-side
+       compile (examples/probe_baseline.exe) is deferred to Probe so
+       that mli mismatches surface there rather than here. dune's
+       target-based laziness skips the examples/ dir when the named
+       targets don't depend on it. LIBRARY_PATH lets the cstubs link
+       find libtiny; LD_RUN_PATH bakes the rpath into the binding.
+
+       This split lets e6 (patched tiny.mli) succeed at Build (library
+       can expose a narrowed mli; tiny.ml may be richer) and fail at
+       Probe (consumer references the narrowed-away symbol). *)
     build_binding = [
       (Canary_lang.OCaml,
        fun ~output_dir ~variant_key ->
@@ -192,7 +194,8 @@ let base_script_spec : Canary_step_builder.script_spec =
              [%string "LIBRARY_PATH=%{tiny_lib_dir}"];
              [%string "LD_RUN_PATH=%{tiny_lib_dir}"];
            ]
-           ~target:[%string "%{tiny_root}/ocaml"] ()
+           ~target:[%string "%{tiny_root}/ocaml/tiny.cmxa \
+                              %{tiny_root}/ocaml/libtiny_stubs.a"] ()
          |> Canary_build_cmd.with_marker
               ~marker:"build.ok" ~output_dir ~variant_key);
       (* Build_binding Python: invoke tiny's Makefile python_cext target,
@@ -220,16 +223,24 @@ let base_script_spec : Canary_step_builder.script_spec =
            tiny_root output_dir probe_log);
     ];
 
-    (* Probe_binding OCaml: run probe_baseline.exe. *)
+    (* Probe_binding OCaml: build {b and} run probe_baseline.exe.
+       The example compile lives here (not at Build_binding) because
+       OCaml mli mismatches are compile-time consumer-side: this is
+       where c2 cmp_api_completeness violations surface. Both stages
+       redirect to probe.log so [output_contains_any] can grep
+       compile errors as well as runtime output. *)
     probe_binding = [
       (Canary_lang.OCaml,
        Canary_store.Build_tree,
        fun ~output_dir ~variant_key ->
          let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+         let example_exe =
+           [%string "%{tiny_root}/ocaml/examples/probe_baseline.exe"] in
          Printf.sprintf
-           "LD_LIBRARY_PATH=%s _build/default/%s/ocaml/examples/probe_baseline.exe \
-            > %s/%s 2>&1"
-           tiny_lib_dir tiny_root output_dir probe_log);
+           "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build %s \
+            && LD_LIBRARY_PATH=%s _build/default/%s) > %s/%s 2>&1"
+           tiny_lib_dir tiny_lib_dir example_exe
+           tiny_lib_dir example_exe output_dir probe_log);
       (* Probe_binding Python (cext): import + invoke wrappers. The
          standalone harness's probe_baseline.py asserts the same value set;
          here we use the same script. *)
@@ -306,6 +317,7 @@ let base_script_spec : Canary_step_builder.script_spec =
               "python3 canary/scripts/inspect_binding.py --kind stub \
                --path %s/libtiny_stubs.a --prefix tiny_ > %s/%s && \
                python3 canary/scripts/inspect_binding.py --kind mli \
+               --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               ocaml_build_dir output_dir stub_file
               tiny_root watchlist_csv output_dir mli_file)
@@ -327,6 +339,7 @@ let base_script_spec : Canary_step_builder.script_spec =
               String.concat ~sep:"," tiny_ocaml_module_watchlist in
             Printf.sprintf
               "python3 canary/scripts/inspect_binding.py --kind mli \
+               --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               tiny_root watchlist_csv output_dir out_file)
       | Probe (Binding Canary_lang.Python) ->
@@ -389,6 +402,42 @@ let lib_broken_script_spec : Canary_step_builder.script_spec =
             inputs = Canary_compat.[
               C_stub     [ "build_binding_ocaml/inspect.json" ];
               Native_lib [ "probe_lib/inspect.json" ];
+            ];
+            version_info = None;
+          }
+      | _ -> Expect_success);
+  }
+
+(** [binding_mli_broken_script_spec]: at [Probe (Binding OCaml)], expect
+    c2 [cmp_api_completeness] to fire.
+
+    With the Build / Probe split (Build builds tiny.cmxa only; Probe
+    builds + runs probe_baseline.exe), an OCaml mli mismatch shows up
+    here: the library compiles fine against a sparser mli, but the
+    consumer (probe_baseline) compile fails because it references a
+    symbol the mli no longer exposes. Both the dune build and the
+    runtime exec write to probe.log, so [output_contains_any] can grep
+    the compile error.
+
+    The Expect_compat_failure input cites the mli JSON produced by
+    Build (Binding OCaml)'s two-file inspect step
+    (`build_binding_ocaml/inspect_mli.json`). [predicted_contains_any_v2]
+    feeds it to [load_watchlist_missing] which returns the watchlist
+    members the mli no longer exposes; those names become the predicted
+    failure substrings.
+
+    Maps to harness scenario [e6 api_complete] (patches tiny.mli to
+    remove `val sum`). When canary runs Probe under that perturbation,
+    the dune build of probe_baseline.exe fails with "Unbound value
+    Tiny.sum"; the predicted "Tiny.sum" matches. *)
+let binding_mli_broken_script_spec : Canary_step_builder.script_spec =
+  { base_script_spec with
+    expectation = (fun rule _loc ->
+      match rule with
+      | Probe (Binding Canary_lang.OCaml) ->
+          Expect_compat_failure {
+            inputs = Canary_compat.[
+              Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
             ];
             version_info = None;
           }

@@ -11,9 +11,17 @@
 ; LD_RUN_PATH to that absolute build dir so the linker resolves
 ; `-ltiny` and bakes a matching rpath into the binding.
 
+; -w -32 (unused-value-declaration): tiny.ml may legitimately define
+; `let foo = ...` for values the user-facing tiny.mli does not expose.
+; Treating that as an error would conflate "the .ml is richer than the
+; .mli" (OCaml language semantics, fine) with "API-completeness
+; violation" (c2 cmp_api_completeness, detected at consumer compile).
+; Per doc/canary/research/surface_theory.md the violation surfaces at
+; the consumer's compile (probe_baseline), not here.
 (library
  (name tiny)
  (modules tiny tiny_raw)
+ (flags (:standard -w -32))
  (foreign_stubs
   (language c)
   (names tiny_stubs)

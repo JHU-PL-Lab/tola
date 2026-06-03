@@ -5,24 +5,26 @@
     "vals": 3,
     "externals": 0,
     "constructors": 0,
-    "modules": 0
+    "modules": 1
   },
   "vals": [
-    "sum",
-    "diff",
-    "offset"
+    "Tiny.sum",
+    "Tiny.diff",
+    "Tiny.offset"
   ],
   "externals": [],
   "externals_detail": [],
   "constructors": [],
-  "modules": [],
+  "modules": [
+    "Tiny"
+  ],
   "watchlist": {
-    "present": [],
-    "missing": [
+    "present": [
       "Tiny",
       "Tiny.sum",
       "Tiny.diff",
       "Tiny.offset"
-    ]
+    ],
+    "missing": []
   }
 }
