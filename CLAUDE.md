@@ -110,8 +110,10 @@ order; `projects/`, `test/`, `legacy/` consume the upper layers.
 | `canary/scripts/inspect_python.py`           | Python `dir()` parser → `python` summary (attrs + watchlist + extras)                                  |
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/research/README.md`                | Entry point — four-pillar alignment for surface theory + tiny witness + roadmap                       |
-| `doc/canary/research/surface_theory.md`        | Theory (current): six surface roles s1..s6, eight contracts, §2.7 coverage (inspectors i*, comparators c*) + implementation pointers |
+| `doc/canary/README.md`                         | Directory map + four-pillar alignment entry point (theory + tiny witness + roadmap)                   |
+| `doc/canary/research/surface.md`               | **Manuscript-in-progress** (renamed from `notes.md` 2026-06-04). Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM); backbone (rules / traces / worlds), PL notation, implementation slots. **Authoritative** for current framing. |
+| `doc/canary/research/surface_draft/`           | **Materials collection** (split 2026-06-04, surface_theory.md removed). Older drafts split across `main.md`, `surface.md`, `principle.md`, `implementation.md` (§2.7 pointers, may be stale), `package.md`, `versioning.md`, `notation.md`. Mine for content; not authoritative. |
+| `doc/canary/research/drafting.md`              | Drafting playbook + active edit queue for `surface.md` (drafting order, per-section sources, batched edits)  |
 | `doc/canary/research/tiny.md`                  | Witness (current): minimal C lib + 3 bindings + 13-variant canary matrix + harness scenario table + findings |
 | `doc/canary/research/plan.md`                  | Paper venues + milestones + working roadmap (steps 1-5; step 1+2 done)                                |
 | `doc/canary/ops/install_targets.md`            | Z3 vs LLVM cmake install patterns; informs TODO #40                                                    |
@@ -196,7 +198,7 @@ watchlist. z3's stable variant has a parallel Python case (`z3.parser_context`
 missing from the z3-solver pip wheel) using
 `Expect_compat_failure { inputs = Canary_compat.[ Python_attrs […] ]; … }`
 (list-of-string-list syntax since the 2026-06-01 Phase 4 ADT unification).
-See `surface_theory.md` §2.7.
+See `surface_draft/implementation.md` §2.7.
 
 ### Current TODO (numbers are stable like GH issues — never renumbered)
 
@@ -231,7 +233,7 @@ sequencing / progress doc that absorbs them.
 
 Backlog (lower priority, paper-orthogonal): #5, #9, #11, #13b, #14, #17, #27,
 #29–32 (see design/new_project.md), #33, #34, #38, #39, #45; #16, #20, #31,
-#35, #41, #42 (api-compat — see research/surface_theory.md §2.7).
+#35, #41, #42 (api-compat — see research/surface_draft/implementation.md §2.7).
 Details in `doc/canary/backlog.md`.
 
 ### Known Gaps (interface / expectation layer)
@@ -239,7 +241,7 @@ Details in `doc/canary/backlog.md`.
 These are tracked here rather than the backlog because they directly affect
 the `step_expectation` / interface model design.
 
-Artifact summary progress (`doc/canary/research/surface_theory.md`):
+Artifact summary progress (`doc/canary/research/surface_draft/`):
 - ✅ Step 1 — `summary_cmd` for native/ocaml/python/mli/stub kinds
 - ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
   field on `script_spec`, install-step + probe-step summaries in
@@ -249,7 +251,7 @@ Artifact summary progress (`doc/canary/research/surface_theory.md`):
   helper pure tests)
 - ✅ Compat cross-check shipped — `canary compat`, `canary verify`,
   `Expect_compat_failure` derive expected probe-failure substrings from
-  cached summaries. See `surface_theory.md` §2.7. Live demos on llvm/19 (OCaml
+  cached summaries. See `surface_draft/implementation.md` §2.7. Live demos on llvm/19 (OCaml
   `Opcode.UncondBr`) and z3/stable (Python `parser_context`).
 - ⏳ Step 3 deferred — `summary-sync` into a committed
   `doc/canary/artifact_inspect.json` will likely ride on step-cache transport
@@ -300,7 +302,7 @@ Still open:
       exists conceptually in `project_config.phases` but isn't represented
       in the new `script_spec` → `action_step` path.
   **Revisit together with the version/symbol/interface work**: when we
-  formalise interfaces as first-class (per `doc/canary/research/surface_theory.md`),
+  formalise interfaces as first-class (per `doc/canary/research/surface.md` + `surface_draft/`),
   the PM-cross-distro enumeration becomes part of "which provider (PM on
   distro) satisfies a given interface at a given version." Delete
   `project_config` plumbing (and each project's `config distro` fn) once
@@ -366,7 +368,7 @@ Still open:
   native_api → binding_api). Watchlists split into provider
   (`stable_symbols`) and consumer (`module_watchlist`) levels.
   `scan_source` step verifies header/binding-dir claims post-fetch. See
-  `doc/canary/research/surface_theory.md` §2.1.
+  `doc/canary/research/surface_draft/surface.md` §2.1.
 - **`version_info` dropped in GH verify step** — the verify YAML just prints
   `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
   Should annotate the echo with the context string.
@@ -377,7 +379,7 @@ Still open:
 - **`symbol_entry.version_tag`** (`@@GLIBC_2.31` annotations) — typed field
   exists in the OCaml model but not yet populated; `summary.versioned_req`
   computes these at runtime via `inspect_native.py`. Connects to L1b in
-  `doc/canary/research/surface_theory.md`.
+  `doc/canary/research/surface_draft/surface.md`.
 - **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
   verify step reads `probe.log` but the local runner scans all files in `output_dir`.
   Should align: both should scan `probe.log` only.
@@ -392,7 +394,7 @@ Still open:
 Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28.
 The api-compat milestone (Phases 1–3e: `inspect_binding.py`, `canary
 compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
-derived expectation) shipped this session — see `surface_theory.md` §2.7 and
+derived expectation) shipped this session — see `surface_draft/implementation.md` §2.7 and
 commits `2a8d2eb`, `96b143c`, `84caf5d`, `8943ba2`, `7dfb1f2`.
 
 Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05}.md`.

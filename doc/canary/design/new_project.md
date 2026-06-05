@@ -2,8 +2,9 @@
 
 How canary expands its target coverage: which projects we're queueing,
 how a project lands mechanically today, and what the future auto-generation
-shape looks like. Companion to [../research/surface_theory.md](../research/surface_theory.md) (interface
-model the candidates collectively stress-test) and the
+shape looks like. Companion to [../research/surface.md](../research/surface.md) (manuscript) and
+[../research/surface_draft/](../research/surface_draft/) (materials) for the interface
+model the candidates collectively stress-test, and the
 [opam survey](../surveys/opam.md) (data behind tier picks).
 
 ---
@@ -76,7 +77,7 @@ committing to the template up-front:
 | 7 | zarith                 | 2026-04-25 | Pattern A. Surfaced `inspect_native.py` GMP `__gmp*` stripping bug   |
 | 5 | ssl                    | 2026-04-25 | Pattern A second datapoint. `Ssl.get_version` doesn't exist in v0.7.0  |
 | — | Pattern A template     | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines      |
-| — | api-compat milestone   | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [../research/surface_theory.md §2.7](../research/surface_theory.md) |
+| — | api-compat milestone   | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [../research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md) |
 
 ---
 

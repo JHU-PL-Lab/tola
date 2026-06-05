@@ -26,7 +26,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     split, C API surface (consumer/provider cross-check + provider-vs-
     provider delta), mismatch prediction, Python summary enhancements.
     The shipped portion (Steps C1, D-basic for OCaml + Python) is
-    documented in `doc/canary/research/surface_theory.md` §2.7. Open items
+    documented in `doc/canary/research/surface_draft/implementation.md` §2.7. Open items
     (#35, #20, #41, #42) remain.
 
 43. **L1b — versioned symbol requirements in compat check** — `inspect_native.py`
@@ -36,7 +36,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     provide that or higher. Adds glibc/libstdc++ floor checking — predicts
     failures from binaries built on newer distros that won't run on older
     ones, even when symbol names match. See
-    `doc/canary/research/surface_theory.md` §2.7 (c5 cmp_sym_version).
+    `doc/canary/research/surface_draft/implementation.md` §2.7 (c5 cmp_sym_version).
 
 44. **L2 — typed signatures via clang AST or libclang** — today's compat
     check is name-level (L0/L3 set inclusion). Lift to L2 by extracting
@@ -46,7 +46,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     on argument types, covariance on results, refinement on value domains.
     Gives a decidable-but-conservative type-system over artifact interfaces;
     catches "same name, different signature" version drift. See
-    `doc/canary/research/surface_theory.md` §2.4 (Type contract) and
+    `doc/canary/research/surface_draft/surface.md` §2.4 (Type contract) and
     §10.3 (Toward a formal model).
 
 17. **Module surfaces (.mli)** — define contracts for PM modules
@@ -118,7 +118,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `probe_python` build-tree variant (test the raw `.so` before packaging)
     as the base to compare against. The co-provider design (pip wheels
     bundling their own native lib) is deferred to a future `package_theory.md`
-    — see `doc/canary/research/README.md` for the deferral rationale. `pack_python` for
+    — see `doc/canary/research/surface_draft/package.md` for the deferral rationale. `pack_python` for
     z3 would produce a co-provider artifact.
 
 39. **Dynamic scheduling / action dispatch** — `derive_steps` produces a static
@@ -170,3 +170,17 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     See the (future) `package_theory.md` (co-provider design — deferred) and
     backlog #38 (`pack_python` wheel packaging, which has the same
     co-provider shape on the producer side).
+
+46. **Engine vocabulary alignment in code (post-stabilisation polish)** —
+    After `doc/canary/research/surface.md` (the manuscript) stabilises, audit
+    OCaml / Python sources for engine vocabulary alignment. The
+    store / runner / producer factoring already permeates the code; adding
+    explicit *mutation engine* / *combinator engine* naming would clarify
+    `src/canary/projects/canary_project_tiny.ml` (combinator-side) and
+    `canary/examples/tiny/scenarios/scenarios.py` (mutation-side) header
+    comments. Background: the engine framing is the surface.md backbone
+    distinction between concrete-trace (mutation, harness on tiny) and
+    abstract-trace (combinator, canary on per-kind stores) machinery; see
+    `surface.md` §Implementation slots. Low priority; part of the
+    post-stabilisation polish pass driven by surface.md's "uniformity
+    eventually" principle.

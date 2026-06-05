@@ -2,7 +2,29 @@
 
 **Status:** working design framing. Initial draft 2026-06-02 alongside
 Phase 14e; rewritten 2026-06-03 to lead with the orthogonal vision
-rather than the leaks.
+rather than the leaks; 2026-06-04 cross-linked with the
+mutation / combinator engine framing from `research/surface.md`.
+
+## Two engines (cross-reference)
+
+[`research/surface.md`](../research/surface.md) names two engines that
+probe the rule catalogue: the **mutation engine** (the harness on
+tiny, perturbing one fixed world via `scenarios.py apply` /
+`revert`) and the **combinator engine** (canary, traversing a space
+of worlds composed from per-kind stores via the variant matrix in
+`canary_project_tiny.ml`).
+
+Both engines need to consume stores; they differ in how producers
+populate them. The store / runner / producer factoring below is
+the **cross-engine abstraction**: every engine's machinery slots
+into the same three concerns. The "remaining ties" section records
+where the *mutation engine's* producer (scenarios.py) currently
+leaks assumptions that only the mutation engine's runner satisfies
+— so when the *combinator engine's* runner (canary) consumes the
+same store, the assumptions don't hold. Closing those leaks is the
+operational work that keeps the methodological claim from
+surface.md (*"two independent engines validate the same rules"*)
+honest.
 
 ## The orthogonal factoring
 
@@ -78,10 +100,11 @@ over:
 ## The remaining ties
 
 Today's tiny harness still mixes producer + runner concerns in two
-specific places (these are the "leaks" the initial Phase 14e doc
-described — keeping them documented here so we don't forget what
-needs untangling, but framed now as "where producer/runner aren't
-yet separated" rather than as workarounds).
+specific places. In engine terms: each is the **mutation engine's
+producer** (scenarios.py) encoding assumptions that hold under its
+own runner (the standalone harness) but not under the combinator
+engine's runner (canary). Each entry below names which engine
+boundary the leak crosses.
 
 ### 1. cext's `DT_RUNPATH` baked at producer time, used at runner time
 
@@ -93,9 +116,10 @@ cached `_native.cpython-*.so` as `DT_RUNPATH`. At *runner time* dyld
 honors that RUNPATH and can find the live tree's libtiny — even
 when canary's `LD_LIBRARY_PATH` points at a different store.
 
-In the orthogonal picture: the producer is encoding runner-time
-assumptions about where the library will live. That's a layering
-violation. Fixes (in increasing order of structural correctness):
+In engine terms: the mutation engine's producer bakes path
+assumptions that hold under its own runner but not under the
+combinator engine's runner. That's an engine-boundary violation.
+Fixes (in increasing order of structural correctness):
 
 - **Workspace materialization strips it** (current). Patch the
   cached cext to remove RUNPATH; runner controls path via env vars.
@@ -116,8 +140,9 @@ incremental build from `_build/` doesn't re-link. In canary's flow,
 each variant gets a fresh workspace with no `_build/` cache, so
 fresh dune builds need a usable `libtiny.so`.
 
-In the orthogonal picture: the producer is leaving the store in a
-state that's only valid for *cached* consumers. A self-describing
+In engine terms: the mutation engine's producer leaves the store
+valid only for the mutation engine's *cached* consumers; the
+combinator engine's runner has no such cache. A self-describing
 store should be usable for *fresh* consumers too. Fixes:
 
 - **Workspace materialization synthesizes the symlink** (current).
@@ -130,6 +155,10 @@ store should be usable for *fresh* consumers too. Fixes:
   the bump.
 
 ## Implications for the unique-harness pass
+
+**Goal.** Keep the mutation and combinator engines operationally
+separate, so the methodological claim from `research/surface.md` —
+that two independent engines validate the same rules — is honest.
 
 The above are working today, so this isn't a blocker. The next
 unique-harness refactor (Phase 16-ish, once the contract matrix is
@@ -164,5 +193,5 @@ real-project stores trivial instead of bespoke.
 - [research/plan.md](../research/plan.md) Phase 15 for the
   contract-completion sequence (c5/c6/c7/c8 on tiny via hardcoded
   inspectors) that precedes the harness refactor.
-- [research/surface_theory.md §2.7](../research/surface_theory.md)
+- [research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md)
   for the comparator catalogue.

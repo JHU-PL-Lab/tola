@@ -1,8 +1,10 @@
 # Canary — Unified Design
 
 The design narrative: vision, identity model, action graph, workflow,
-design principles. For surface theory + the compat-check
-implementation see [../research/surface_theory.md](../research/surface_theory.md). For the
+design principles. For surface theory see
+[../research/surface.md](../research/surface.md) (manuscript) and
+[../research/surface_draft/](../research/surface_draft/) (materials,
+with `implementation.md` for the compat-check implementation). For the
 expansion roadmap and per-target plans see
 [new_project.md](new_project.md). Doc map at
 [../README.md](../README.md).
@@ -35,7 +37,8 @@ Canary's two-track approach:
   abstraction: the *surface* between a library and a binding. If we can
   characterise this surface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [../research/surface_theory.md](../research/surface_theory.md).
+  Details in [../research/surface.md](../research/surface.md) (manuscript)
+  and [../research/surface_draft/](../research/surface_draft/) (materials).
 
 The two tracks reinforce each other. Empirical results validate or contradict
 inferences; the theory guides which combinations are worth testing.
@@ -145,7 +148,7 @@ canary action <project>
             (skip if check_post already passes — caching)
             exec cmd   → writes to _out/canary/projects/<project>/<tag>/
             check_post → verify output
-            on Probe rule → record inspect.json (`research/surface_theory.md` §2.7)
+            on Probe rule → record inspect.json (`research/surface_draft/implementation.md` §2.7)
 ```
 
 Each step's output lives in `_out/canary/projects/<project>/<tag>/`. A step
@@ -164,7 +167,7 @@ declarative metadata that make the shell less opaque to canary:
   → `native_api` → `binding_api` per language). Provider claims (header
   paths, symbol prefixes, stable-symbol watchlist) and consumer claims
   (per-language module watchlists) are separate. See
-  [../research/surface_theory.md §2.1](../research/surface_theory.md).
+  [../research/surface_draft/surface.md §2.1](../research/surface_draft/surface.md).
 - **`scan_source`** — a step emitted after `fetch_source` that verifies
   the api_source claims (headers exist, binding source dirs present);
   blocks the build chain on spec drift.
@@ -178,7 +181,7 @@ The summaries feed a **compatibility check** (`surface/canary_compat.ml`,
 at runtime, so `step_expectation` doesn't need hand-written
 `contains_any` lists for cases the cross-check covers. End-to-end demos
 on LLVM 19 (OCaml `Opcode.UncondBr`) and Z3 stable (Python
-`parser_context`). See [../research/surface_theory.md §2.7](../research/surface_theory.md) for design and
+`parser_context`). See [../research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md) for design and
 implementation details.
 
 ### Per-language binding integration
@@ -221,7 +224,7 @@ fifth language binding lands.
 [Probe]      compile/run examples per binding (OCaml + Python)
    ↓
 [Predict]    Expect_compat_failure derives expected substrings from
-             cached install-step summaries (`research/surface_theory.md` §2.7)
+             cached install-step summaries (`research/surface_draft/implementation.md` §2.7)
    ↓
 [Verify]     canary verify cross-references prediction vs probe.log
    ↓

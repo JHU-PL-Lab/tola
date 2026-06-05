@@ -2,11 +2,46 @@
 
 Directory map for `doc/canary/`. Files grouped by intent.
 
-**Start with `research/README.md`** for the surface-theory entry
-point (theory + `tiny` witness + roadmap, three aligned docs).
+**Start with [`research/surface.md`](research/surface.md)** for the
+confirmed-content writeup-in-progress (manuscript), or
+[`research/tiny.md`](research/tiny.md) to read alongside the code.
+[`research/surface_draft/`](research/surface_draft/) is the older
+materials collection (split across `main.md`, `surface.md`,
+`principle.md`, `implementation.md`, `package.md`,
+`versioning.md`) — mine for content, but `surface.md` (the
+manuscript) is authoritative for current framing.
 `design/index.md` is the older project narrative;
-`design/new_project.md` covers the expansion roadmap. See `CLAUDE.md`
-(project root) for live status, gaps, and current gotchas.
+`design/new_project.md` covers the expansion roadmap. See
+`CLAUDE.md` (project root) for live status, gaps, and current
+gotchas.
+
+## research/ — surface theory, tiny witness, plan
+
+The work is organised around four aligned views of the same problem:
+
+| #   | Pillar       | Question it answers                                                                          | Lives in                                                      |
+| --- | ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| 1   | **Theory**   | What are the surfaces, contracts, and what counts as a violation?                            | [`surface.md`](research/surface.md) §1 + materials in `surface_draft/` |
+| 2   | **Witness**  | Is there a minimal artifact that instantiates every surface and every contract reproducibly? | [`tiny.md`](research/tiny.md)                                          |
+| 3   | **Coverage** | Which contracts does canary check, with which inspector + comparator?                        | [`surface_draft/implementation.md`](research/surface_draft/implementation.md) §2.7 |
+| 4   | **Plan**     | What changes — to canary, to tiny, to docs — close the remaining coverage gaps?              | [`plan.md`](research/plan.md)                                          |
+
+The alignment is *load-bearing*: every contract named in Theory
+appears in Witness as at least one scenario, in Coverage as a row
+in the inspector/comparator tables, and in Plan as a step toward
+closing its gap.
+
+| File                                                  | Topic                                                                                                                                                                                                                |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [surface.md](research/surface.md)                     | **Manuscript-in-progress.** Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM). Backbone framing (**rules / traces / worlds**), PL notation, implementation slots. The authoritative current framing.                                                                                                       |
+| [surface_draft/](research/surface_draft/)             | **Materials collection** (split 2026-06-04). `main.md` (header + §5 related work + §6 calculus + appendix); `surface.md` (Parts A, B, §2.4 contracts, §4 hidden deps); `principle.md` (P1–P6); `implementation.md` (§2.7 + §2.5 + §2.6); `package.md` (§3); `versioning.md` (§2.8). Mine for content; not authoritative.       |
+| [tiny.md](research/tiny.md)                           | Witness. Minimal C lib + 3 bindings + downstream helper; 13-variant matrix exercising every active contract. The doc to read alongside the code.                                                                     |
+| [plan.md](research/plan.md)                           | Venues + milestones + roadmap. OOPSLA primary; PLDI / POPL optional. Open `[ ]` items only; chronicled work lives in `worklog/`.                                                                                     |
+| [literature.md](research/literature.md)               | Companion bibliography. Compiler correctness, type-preserving compilation, linking calculi, ELF semantics, FFI semantics, ABI tooling — each entry with an "Inherits / Departs" note tying it back to surface theory. |
+| [drafting.md](research/drafting.md)                   | Drafting playbook for `surface.md`. Drafting order, per-section "Pull from" sources mapping into `surface_draft/`, cross-section navigational notes. Operational reference, not authoritative content.                  |
+
+Packaging lives in [`surface_draft/package.md`](research/surface_draft/package.md)
+in the materials collection; the manuscript covers it in §4.2.
 
 ## design/ — what canary models
 
@@ -16,7 +51,7 @@ updated as the model evolves.
 | File                                    | Topic                                                                                                                                                                      |
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [index.md](design/index.md)             | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles                                                                          |
-| ~~[api_surface.md](design/api_surface.md)~~ | **Retired.** Theory + implementation pointers folded into [`research/surface_theory.md`](research/surface_theory.md); packaging sections deferred to a future `package_theory.md`. See [`research/README.md`](research/README.md) for the live entry point. |
+| ~~[api_surface.md](design/api_surface.md)~~ | **Retired.** Theory + implementation pointers folded into the surface theory materials at [`research/surface_draft/`](research/surface_draft/); packaging sections deferred to a future `package_theory.md`.       |
 | [new_project.md](design/new_project.md) | Expansion portfolio (two-tier candidate framework), mechanics for adding a project, auto-generation plan (#29/#30/#32), PyTorch case study                                 |
 | [diagram.md](design/diagram.md)         | Diagram improvements plan: summary node fidelity (#36), multi-view per project, HTML viewer (#37)                                                                          |
 
@@ -24,7 +59,7 @@ updated as the model evolves.
 
 Pre-code survey data. Source of truth for `design/new_project.md`
 candidate selection and the failure taxonomy now in
-`research/surface_theory.md`.
+`research/surface.md` (and materials in `research/surface_draft/`).
 
 | File                                             | Topic                                                                           |
 | ------------------------------------------------ | ------------------------------------------------------------------------------- |
@@ -49,5 +84,5 @@ retrieval to avoid re-discovering the same friction.
 
 | File                     | Topic                                             |
 | ------------------------ | ------------------------------------------------- |
-| [backlog.md](backlog.md) | Lower-priority TODOs (numbered #N like GH issues) |
-| [worklog/](worklog/)     | Meeting notes + monthly worklogs                  |
+| [backlog.md](backlog.md) | Lower-priority TODOs (numbered #N like GH issues)  |
+| [worklog/](worklog/)     | Meeting notes + monthly worklogs                   |

@@ -2,7 +2,7 @@
 
 A minimal C library (two functions, one global) with hand-written
 OCaml and Python bindings. Designed to instantiate every contract in
-§2.4 of [`surface_theory.md`](surface_theory.md) on the smallest
+§2.4 of [`surface_draft/surface.md`](surface_draft/surface.md) on the smallest
 possible target, and to give twelve deliberately-broken (or
 positive-coverage) variants so each failure mode is reproducible in
 isolation. The Phase 3 `prepare` flow makes each variant's
@@ -16,8 +16,10 @@ by eye. Z3/LLVM/sqlite are too big for that; `tiny` is not.
 This doc is the single source of truth for the example — design
 rationale, file-level spec, build instructions, per-scenario detail,
 and coverage. For the abstract surface-role / contract framework,
-read [`surface_theory.md`](surface_theory.md). For the contract-by-
-contract status (canary core vs. tiny), see `surface_theory.md` §2.7.
+read [`surface.md`](surface.md) (manuscript) or
+[`surface_draft/`](surface_draft/) (materials). For the contract-by-
+contract status (canary core vs. tiny), see
+`surface_draft/implementation.md` §2.7.
 
 ## Spec — the native side
 
@@ -327,7 +329,7 @@ the group; the alias addresses individual files. Group references in
 prose use the canonical-name prefix (e.g. "the stub stage" or
 `stub_binding_ocaml.*`).
 
-**Surface-role population** (`s1..s6` from `surface_theory.md` §2.1):
+**Surface-role population** (`s1..s6` from `surface_draft/surface.md` §2.1):
 
 | role / binding   | Native | OCaml binding (`bo*`) | Python cext (`bpe*`) | Python ctypes (`bpc*`) | notes                                            |
 | ---------------- | ------ | --------------------- | -------------------- | ---------------------- | ------------------------------------------------ |
@@ -344,7 +346,7 @@ s-roles are populated for every binding.
 
 ## Contract check matrix (baseline — everything healthy)
 
-For each contract in `surface_theory.md` §2.4, what is checked on
+For each contract in `surface_draft/surface.md` §2.4, what is checked on
 the unmodified baseline:
 
 | Contract             | OCaml side                                                                                          | Python side                                                                          |
@@ -847,7 +849,7 @@ differ by direction and linker policy.
 
 ## What `tiny` covers — and what it doesn't
 
-Companion view to `surface_theory.md` §2.7. Records explicitly which
+Companion view to `surface_draft/implementation.md` §2.7. Records explicitly which
 surfaces, inspectors, comparators, and scenarios `tiny` exercises
 today.
 

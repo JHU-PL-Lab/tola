@@ -1,6 +1,6 @@
 # Literature — semantic preservation across language/binding boundaries
 
-Working bibliography for `surface_theory.md`. Each entry includes a
+Working bibliography for `surface.md` (manuscript) and `surface_draft/` (materials). Each entry includes a
 short note on what the work *does* and what surface theory *inherits
 from* or *departs from* it. Living doc; add as we read more.
 
@@ -353,8 +353,8 @@ CompCert proves the linker step needs its own contract.
 
 ## Open follow-ups
 
-- Read Patterson-Ahmed (ICFP 2019) in full; it likely structures §9 of
-  `surface_theory.md` better than the current ad-hoc related-work.
+- Read Patterson-Ahmed (ICFP 2019) in full; it likely structures the related-work
+  treatment (manuscript §5.6 / materials `surface_draft/main.md` §5) better than the current ad-hoc shape.
 - Read Drossopoulou-Wragg-Eisenbach (OOPSLA 1998) in full and compare
   their JVM binary-compatibility predicates to what's checkable at the
   ELF level. Likely a paragraph in §9 and possibly a worked example

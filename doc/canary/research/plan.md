@@ -4,8 +4,9 @@ Venue strategy, milestones, OOPSLA punch list, and the five-step
 alignment roadmap. One doc; cross-referenced. Replaces the earlier
 split `plan.md` + `roadmap.md` (2026-05-19).
 
-Companion to [`surface_theory.md`](surface_theory.md) (theory) and
-[`tiny.md`](tiny.md) (witness); see [`README.md`](README.md) for the
+Companion to [`surface.md`](surface.md) (manuscript) +
+[`surface_draft/`](surface_draft/) (materials) for theory, and
+[`tiny.md`](tiny.md) (witness); see [`../README.md`](../README.md) for the
 four-pillar map.
 
 ## Quick map
@@ -84,7 +85,7 @@ Realistic only if we want to push the formal track. Drop if it
 pulls effort away from M2.
 
 - [ ] Define transformer calculus syntax + typing rules (extends
-      `surface_theory.md` §6).
+      `surface_draft/main.md` §6 / manuscript §5.7).
 - [ ] Subtyping algorithm + decidability sketch.
 - [ ] Soundness theorem statement; proof sketch acceptable.
 - [ ] Type closed for at least one language (OCaml `.cmi` digest is
@@ -95,11 +96,11 @@ pulls effort away from M2.
 This is the one to plan around. Everything else is opportunistic.
 
 Theory / writing:
-- [ ] Full draft of `surface_theory.md` plus intro, related work,
+- [ ] Full draft of `surface.md` (manuscript) plus intro, related work,
       evaluation, and conclusion as a single OOPSLA submission.
-- [ ] `surface_theory.md` §6 (typed calculus) formalised to "applied
+- [ ] Manuscript §5.7 / materials `surface_draft/main.md` §6 (typed calculus) formalised to "applied
       PL paper" level (not full POPL, but more than a sketch).
-- [ ] Coverage / blame story (§2.7) lifted into a contribution, not
+- [ ] Coverage / blame story (§6 Impl / materials `surface_draft/implementation.md` §2.7) lifted into a contribution, not
       just a status table.
 - [ ] Related work section against linking calculi, manifest
       contracts, ABI tooling (see [`literature.md`](literature.md)).
@@ -145,10 +146,12 @@ will look for.
 Foundational theory + tiny witness + prepare/confirm_ill flow all
 landed pre-June 2026 — see [`worklog_2026_05.md`](../worklog/worklog_2026_05.md)
 Session 8 for the chronicle. Surface-theory model lives in
-[`surface_theory.md`](surface_theory.md); tiny witness in
-[`tiny.md`](tiny.md). Remaining open items for the paper:
+[`surface.md`](surface.md) (manuscript) + [`surface_draft/`](surface_draft/)
+(materials); tiny witness in [`tiny.md`](tiny.md). Remaining open
+items for the paper:
 
-- [ ] **Calculus story sharper.** `surface_theory.md` §6 is a
+- [ ] **Calculus story sharper.** Manuscript §5.7 / materials
+      `surface_draft/main.md` §6 is a
       sketch; make it a contribution — transformer signatures,
       surface subtyping, and the static/runtime refinement loop as
       the headline.
@@ -181,7 +184,7 @@ green. Remaining open items for the paper:
       contracts, ABI compatibility tools (`abigail`,
       `abi-compliance-checker`), and SemVer literature. Notes in
       [`literature.md`](literature.md).
-- [ ] **Full paper draft.** `surface_theory.md` + intro, related
+- [ ] **Full paper draft.** `surface.md` (manuscript) + intro, related
       work, evaluation, and conclusion as a single OOPSLA
       submission.
 
@@ -205,7 +208,7 @@ green. Remaining open items for the paper:
 ### POPL (second optional)
 
 1. Formal calculus: explicit syntax, typing judgments, reduction
-   rules (extending `surface_theory.md` §6).
+   rules (extending `surface_draft/main.md` §6 / manuscript §5.7).
 2. Algorithmic subtyping with decidability argument.
 3. Soundness theorem with proof (subject reduction / progress
    flavour).
@@ -243,14 +246,14 @@ applies this scheme to canary's OCaml code.
 
 ### Step 1 — Establish unified terms  ✓ **DONE** (2026-05-15)
 
-Glossary tables in `surface_theory.md` + `tiny.md`. Artifact alias
+Glossary tables in `surface_draft/` + `tiny.md`. Artifact alias
 scheme (`n*` native, `b<lang><mech?>*` per-language binding)
 introduced 2026-05-20. See worklog Session 8 for detail.
 
 ### Step 2 — Defer packaging cleanly  ✓ **DONE** (2026-05-19)
 
-Packaging stays as a section inside `surface_theory.md` (§3
-"Packaging and co-providers"). No `package_theory.md` needed.
+Packaging stays as a section inside `surface_draft/package.md`.
+No `package_theory.md` needed.
 
 ### Step 3 — Compare theory, tiny, canary; plan shared utilities
 
@@ -362,7 +365,7 @@ language. See [`phase4_2026_05.md`](../worklog/phase4_2026_05.md).
 Standard "tests green, docs follow" pass. Cumulative. Open items:
 
 - [ ] After each remaining c\* / Contract update: flip the
-      corresponding ✓/✗ in `surface_theory.md` §2.4 and update tiny
+      corresponding ✓/✗ in `surface_draft/surface.md` §2.4 and update tiny
       scenario expected outcomes if they change.
 
 ### Step 6 — Per-contract registry ✓ **DONE** (2026-06-02)
