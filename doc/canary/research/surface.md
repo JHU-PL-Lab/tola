@@ -97,6 +97,9 @@ contract** spine (columns) crossed with the three pillars
 concept; the table doubles as a reader's at-a-glance map and a
 writer's gap-check.
 
+**Table — Organising grid.** Three pillars × three spine
+concepts; cell entries name what the pillar contributes.
+
 |                  | **artifact**                                          | **surface**                                              | **contract**                                                |
 | ---------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
 | **theory** (§2)  | kinds (Source, Lib, Binding, App); the boundary       | syntactic / semantic split; six surface roles `s1..s6`   | `c1..c7` catalogue; explicit agreement between two surfaces |
@@ -191,6 +194,10 @@ axis* (syntactic / semantic) and, on the binding side, by
 *layer* (stub-facing / user-facing). Six roles cover the binding
 scenario:
 
+**Table — Surface roles.** Six rows, one per surface — the
+definitional view of *what surfaces exist*, with the universal
+`s*` ids and formal `Σ_*` notation.
+
 | id     | friendly name    | formal | side    | kind      | what it is                                                                 |
 | ------ | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
 | **s1** | `native_header`  | Σ_NH   | native  | syntactic | declared C interface — function signatures, structs, macros                |
@@ -211,6 +218,10 @@ scenario:
   artifact is the natural check-target because every syntactic
   decision propagates into it.
 - **Binding-mechanism axis** (orthogonal to the surface roles):
+
+  **Table — Binding mechanism.** Three rows × resolution-phase
+  columns. The surface roles are unchanged across mechanisms;
+  only the materialisation timing differs.
 
   | Mechanism                     | Stub-facing materialized at | Link-time C refs in artifact | Symbol-resolution phase    |
   | ----------------------------- | --------------------------- | ---------------------------- | -------------------------- |
@@ -235,6 +246,11 @@ counterpart to declared agreement).
 Seven contracts cover the foundational picture. The catalogue is
 **one canonical table** — surface pairs, kind, and where each
 fires:
+
+**Table — Contract catalogue.** Seven rows × five columns
+(contract, provider surface, consumer surface, kind, where it
+fires). The universal `c*` ids are the cross-cutting names used
+in theory, tiny scenarios, and canary code.
 
 | Contract                | Provider surface                                | Consumer surface                                            | Kind                                  | Where it fires                                 |
 | ----------------------- | ----------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
