@@ -89,6 +89,26 @@ The reader should leave §1 knowing *what* is coming and *where*.
   mechanisms, code-citation map, harness/canary boundary
   cleanness.
 
+### 1.5 Organising grid
+
+The writeup is organised along the **artifact → surface →
+contract** spine (columns) crossed with the three pillars
+(rows). Each cell names what that pillar contributes about that
+concept; the table doubles as a reader's at-a-glance map and a
+writer's gap-check.
+
+|                  | **artifact**                                          | **surface**                                              | **contract**                                                |
+| ---------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
+| **theory** (§2)  | kinds (Source, Lib, Binding, App); the boundary       | syntactic / semantic split; six surface roles `s1..s6`   | `c1..c7` catalogue; explicit agreement between two surfaces |
+| **tiny** (§3)    | concrete artifacts (libtiny.so, 3 bindings, helper)   | each artifact populates `s1..s6` deterministically       | each perturbation breaks one contract; 13-variant matrix    |
+| **canary** (§4)  | per-kind stores; producer-agnostic artifact sources   | inspectors extract surfaces from artifacts               | comparators check contracts on extracted surfaces           |
+
+The spine has a clean PL parallel: artifact ↔ *expression*,
+surface ↔ *type*, contract ↔ *run-time invariant / assertion*.
+This positions surface theory as "a type system for binding
+interfaces" — orientation for PL-paper readers, and the hook for
+§5.6 (calculus sketch).
+
 ---
 
 ## The backbone: rules, traces, worlds
@@ -166,38 +186,79 @@ openness to new checking targets closes the section.
 
 ### 2.3 The six surface roles
 
-- `s1..s6` named explicitly: `native_header`, `native_lib`,
-  `binding_stub`, `binding_header`, `binding_lib`,
-  `runtime_trace`. Diagram of the pairing across native /
-  binding sides.
+The boundary on each side splits into surfaces by *presence
+axis* (syntactic / semantic) and, on the binding side, by
+*layer* (stub-facing / user-facing). Six roles cover the binding
+scenario:
+
+| id     | friendly name    | formal | side    | kind      | what it is                                                                 |
+| ------ | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
+| **s1** | `native_header`  | Σ_NH   | native  | syntactic | declared C interface — function signatures, structs, macros                |
+| **s2** | `native_lib`     | Σ_NL   | native  | semantic  | compiled `.so` / `.dylib` — defined symbols, `@@VER`, SONAME, NEEDED       |
+| **s3** | `binding_stub`   | Σ_BS   | binding | syntactic | binding stub-facing decls — `external` / `argtypes` / `PyMethodDef`        |
+| **s4** | `binding_header` | Σ_BH   | binding | syntactic | binding user-facing module signature — `.mli` `val`s, Python module funcs  |
+| **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
+| **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
+
 - **Naming convention is load-bearing.** The `s*` identifiers
-  are universal vocabulary across theory, tiny, and the canary
-  code; the project invested in this and the writeup keeps it
-  first-class.
-- Language-side internal structure: stub-facing → repacking →
-  compiled artifact. (Why the binding side isn't one surface but
-  several layers where belief can drift.)
-- **Binding-mechanism axis** as orthogonal: static (cstubs, hand
-  stubs) vs dynamic (ctypes, cffi). The surface roles are the
-  same; only the materialisation timing differs.
+  (and the formal `Σ_*` notation for paper prose) are universal
+  vocabulary across theory, tiny, and the canary code. Same names
+  everywhere.
+- **Language-side internal structure.** The binding side isn't
+  one surface but several layers where *belief* can drift:
+  stub-facing (s3) → repacking (one or more user-facing layers,
+  surfacing as s4) → compiled artifact (s5). The compiled
+  artifact is the natural check-target because every syntactic
+  decision propagates into it.
+- **Binding-mechanism axis** (orthogonal to the surface roles):
+
+  | Mechanism                     | Stub-facing materialized at | Link-time C refs in artifact | Symbol-resolution phase    |
+  | ----------------------------- | --------------------------- | ---------------------------- | -------------------------- |
+  | Static (cstubs, hand stubs)   | binding-build time          | yes                          | process link + load        |
+  | Dynamic (ctypes, cffi, ffi.h) | binding-runtime             | no                           | runtime `dlopen` + `dlsym` |
+  | Hybrid (JIT'd stubs)          | varies                      | varies                       | varies                     |
+
+  Every mechanism has the same `s1..s6`; only the materialisation
+  timing differs.
 - **Scoping.** The c-api binding mechanism is *one* instance of
   the rule schema. Other instances (ctypes, Rust FFI, JNI, …)
   fit the same theory but aren't covered in depth here.
 
 ### 2.4 Contracts
 
-- Definition: an **explicit contract** is an agreement pinning
-  two surfaces. (The *agreement axis* of the core vocabulary;
-  paired with **behavior** as the runtime presentation a
-  contract ultimately tests — echoing *behavioral subtyping*.)
-- The `c1..c7` catalogue as **one canonical table** — columns:
-  contract, provider surface, consumer surface, kind, where it
-  fires. (Replaces the two drifting tables in the materials.)
-- **Universal naming**: `c*` identifiers used in theory, tiny
+An **explicit contract** is an agreement pinning two surfaces.
+This is the *agreement axis* of the core vocabulary; paired with
+**behavior** as the runtime presentation a contract ultimately
+tests (echoing *behavioral subtyping*, used here as the runtime
+counterpart to declared agreement).
+
+Seven contracts cover the foundational picture. The catalogue is
+**one canonical table** — surface pairs, kind, and where each
+fires:
+
+| Contract                | Provider surface                                | Consumer surface                                            | Kind                                  | Where it fires                                 |
+| ----------------------- | ----------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
+| **c1 Symbol**           | **s2** `native_lib` — defined symbols           | **s5** `binding_lib` — link-time refs / `dlsym`             | semantic ↔ semantic                   | process link (static) / process load (dynamic) |
+| **c2 API-completeness** | **s4** `binding_header`                         | app expectations (watchlist or imports)                     | syntactic ↔ syntactic (within lang)   | app build / probe                              |
+| **c3 Behavior**         | **s6** `runtime_trace` (provider's invocation)  | **s6** `runtime_trace` (consumer's wrapper)                 | semantic ↔ semantic                   | runtime                                        |
+| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed    | **s5** `binding_lib` — NEEDED entries                       | semantic ↔ semantic                   | process load                                   |
+| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations       | **s5** `binding_lib` — `@VER` requirements                  | semantic ↔ semantic                   | process load                                   |
+| **c6 Type**             | **s1** `native_header` — C signature            | **s3** `binding_stub` — `external` / `argtypes` / decl      | syntactic ↔ syntactic                 | binding build                                  |
+| **c7 API-repacking**    | **s3** `binding_stub`                           | **s4** `binding_header` — module signature                  | syntactic ↔ syntactic (intra-binding) | binding-author time (probe-checked today)      |
+
+- **Universal naming.** `c*` identifiers used in theory, tiny
   scenarios, and canary code — same names everywhere.
-- API-repacking and API-completeness are present in the
-  catalogue but flagged as "checked via probe today; static
-  check future work."
+- Two contracts (c2 API-completeness, c7 API-repacking) are
+  *entirely within the language side*; the other five cross the
+  native ↔ binding boundary.
+- **API-repacking (c7) and API-completeness (c2) are checked via
+  probe today; static check is future work.** Their entries in
+  the catalogue exist; their static comparators don't yet (c7
+  for stub-facing layers across all binding mechanisms; c2
+  partly covered by watchlist + `Expect_compat_failure`).
+- ~~c8 API-faithfulness~~ was retired (2026-06-03) as a contract
+  because each binding is independent; cross-binding consistency
+  isn't a canary-side agreement.
 
 ### 2.5 Extending the framework
 
