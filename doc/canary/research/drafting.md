@@ -108,10 +108,10 @@ that say `surface_draft/*` are in the materials collection
 
 ## Cross-section navigational notes
 
-- **Contract-vs-check distinction.** Primary home: §2.5
-  (theoretical insight about Contract independence).
-  Cross-reference from §6.3 (the implementation realises both
-  mechanisms cleanly).
+- **Contract-vs-check distinction.** Primary home: §2.6
+  (theoretical insight about Contract independence, as one of
+  the section's "properties of the theory"). Cross-reference
+  from §6.3 (the implementation realises both mechanisms cleanly).
 
 ## Companion docs outside surface.md
 
@@ -142,11 +142,17 @@ tiny / canary) as rows. Each cell says what that pillar
 contributes about that concept. Use as a sanity-check: anywhere
 a cell is empty or thin, the writeup has a gap to fill.
 
-|                  | **artifact**                                          | **surface**                                              | **contract**                                                |
-| ---------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
-| **theory** (§2)  | kinds (Source, Lib, Binding, App); the boundary       | syntactic / semantic split; six surface roles `s1..s6`   | `c1..c7` catalogue; explicit agreement between two surfaces |
-| **tiny** (§3)    | concrete artifacts (libtiny.so, 3 bindings, helper)   | each artifact populates `s1..s6` deterministically       | each perturbation breaks one contract; 13-variant matrix    |
-| **canary** (§4)  | per-kind stores; producer-agnostic artifact sources   | inspectors extract surfaces from artifacts               | comparators check contracts on extracted surfaces           |
+|                 | **artifact**                                        | **surface**                                            | **contract**                                                |
+| --------------- | --------------------------------------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
+| **theory** (§2) | kinds (Source, Lib, Binding, App); the boundary     | syntactic / semantic split; six surface roles `s1..s6` | `c1..c7` catalogue; explicit agreement between two surfaces |
+| **tiny** (§3)   | concrete artifacts (libtiny.so, 3 bindings, helper) | each artifact populates `s1..s6` deterministically     | each perturbation breaks one contract; 13-variant matrix    |
+| **canary** (§4) | per-kind stores; producer-agnostic artifact sources | inspectors extract surfaces from artifacts             | comparators check contracts on extracted surfaces           |
+
+tiny: one good set of artifacts, plus lots of mutations...concrete traces
+(....) retire..
+
+tiny-dyn
+canary: src store * lib store
 
 ### PL analogy
 
@@ -158,6 +164,10 @@ The project-wide spine has a clean PL parallel:
 - **contract** ↔ *run-time behavior, invariant, assertion* — the
   agreement that holds between two surfaces, checked statically
   or dynamically.
+
+
+**invariant**; standards
+contract : sth written
 
 Making this parallel explicit in §2 SS positions surface theory
 as "a type system for binding interfaces" — orientation familiar

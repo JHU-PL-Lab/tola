@@ -68,10 +68,12 @@ One-line previews of the working principles. Full discussion in
 Every topic the rest of the writeup touches, in a sentence each.
 The reader should leave §1 knowing *what* is coming and *where*.
 
-- **§2 Surface theory (SS).** Rules over surfaces — what counts
-  as agreement. The c1..c7 catalogue, the six surface roles, and
-  the spec-space framing. The detailed catalogue + older theory
-  drafts live in [`surface_draft/`](surface_draft/).
+- **§2 Surface theory (SS).** **Artifact → surface → contract**
+  along an explicit spine. The `s1..s6` surface roles and `c1..c7`
+  contract catalogue with universal naming; the framework's
+  openness to new checking targets (hidden deps, symbol versions,
+  paths). The detailed catalogue + older drafts live in
+  [`surface_draft/`](surface_draft/).
 - **§3 Tiny (TT).** A controlled witness — mechanism-complete but
   material-naive — that exercises every rule. The 13-variant
   matrix and per-scenario detail live in [`tiny.md`](tiny.md).
@@ -81,8 +83,7 @@ The reader should leave §1 knowing *what* is coming and *where*.
   traces.
 - **§5 Miscellaneous (MM).** Working principles in full;
   packaging as a real-world trace source; versioning as
-  cross-cutting; hidden dependencies; related work; calculus
-  sketch.
+  cross-cutting; related work; calculus sketch.
 - **§6 Implementation (Impl).** How the theory is realised in
   code: two engines (mutation, combinator), inspectors and check
   mechanisms, code-citation map, harness/canary boundary
@@ -111,11 +112,11 @@ Two trace shapes do complementary work:
 
 The PL analog:
 
-| Concept             | PL analog                | Canary instantiation                                          |
-| ------------------- | ------------------------ | ------------------------------------------------------------- |
-| **rule**            | inference rule, property | e.g. "binding's referenced symbols ⊆ lib's exported symbols"  |
-| **concrete trace**  | one program execution    | tiny + a perturbation: one observed verdict on a fixed world  |
-| **abstract trace**  | the execution space      | a configuration drawn from per-kind stores                    |
+| Concept            | PL analog                | Canary instantiation                                         |
+| ------------------ | ------------------------ | ------------------------------------------------------------ |
+| **rule**           | inference rule, property | e.g. "binding's referenced symbols ⊆ lib's exported symbols" |
+| **concrete trace** | one program execution    | tiny + a perturbation: one observed verdict on a fixed world |
+| **abstract trace** | the execution space      | a configuration drawn from per-kind stores                   |
 
 A rule is robust when both trace shapes expose it. Concrete
 traces give **depth** — controlled, reproducible witnesses;
@@ -136,67 +137,109 @@ until the theory settles enough to need it.
 
 ## §2 — Surface theory
 
-**Goal.** Define the conceptual framework. Set up what a "Contract
-at a surface boundary" is, why this slicing is useful, and which
-Contracts the rest of the paper will reason about.
+**Goal.** Develop the theory along the **artifact → surface →
+contract** spine. Each piece gets a defined role, named
+explicitly, before any commentary on the theory's properties.
+The `s*` / `c*` universal naming is first-class. The framework's
+openness to new checking targets closes the section.
 
-### 2.1 Framing — what problem this addresses
+### 2.1 Artifacts and the boundary
 
-- 1-paragraph motivation: where contract drift bites in practice
-  (binding / library / loader chains).
-- The shape of the question: which surfaces agree on what, when.
-- **Scoping (instances of the rule schema).** The c-api binding
-  mechanism is *one* instance of the rule schema. Other instances
-  (ctypes, Rust FFI, JNI, …) fit the same theory but aren't
-  covered in depth here.
-- **Core vocabulary.** Two axes pair up:
-  - **Surfaces (presence axis).** Each surface is either
-    *syntactic* (declared — what the developer wrote, or what
-    tools recorded at link time) or *semantic* (extracted — what
-    the binary actually presents). The s1..s6 roles in §2.2 are
-    classified along this axis.
-  - **Agreement axis.** A **contract** is the invariant tools
-    wish to agree on and hold across two surfaces. **Behavior**
-    is the run-time presentation that a contract ultimately
-    tests — echoing *behavioral subtyping* (used here as the
-    runtime counterpart to declared agreement, not in the full
-    Liskov / refinement sense).
-  - "**Belief**" appears in §1 BB as softer motivational language
-    for contract; not first-class in §2 SS.
+- Artifact kinds (Source, Lib, Binding, App).
+- The boundary as the only thing tools see — every check happens
+  at one.
+- Tools rely on *implicit* assumptions about what's at the
+  boundary; surface theory makes these assumptions **explicit**.
+  (One sentence in place of the tool-surfaces table.)
 
-### 2.2 The surface roles `s1..s6`
+### 2.2 What a surface is
 
-- The six roles (header / lib / stub-facing / user-facing / etc.).
-- Diagram + naming convention.
+- Definition: the observable properties an artifact presents at
+  its boundary.
+- **Presence axis** of the core vocabulary: a surface is either
+  *syntactic* (declared — what the developer wrote or what tools
+  recorded at link time) or *semantic* (extracted — what the
+  binary actually presents).
+- The gap (declared ≠ extracted) — what tools should catch but
+  don't. Briefly; surface theory's job is to make these gaps
+  visible.
 
-### 2.3 Contracts at boundaries
+### 2.3 The six surface roles
 
-- Each Contract pins a relationship between two surfaces.
-- Brief tour of the contract list (c1..c7 active; c8 disabled).
-- The §3.4 status table as a load-bearing artifact.
+- `s1..s6` named explicitly: `native_header`, `native_lib`,
+  `binding_stub`, `binding_header`, `binding_lib`,
+  `runtime_trace`. Diagram of the pairing across native /
+  binding sides.
+- **Naming convention is load-bearing.** The `s*` identifiers
+  are universal vocabulary across theory, tiny, and the canary
+  code; the project invested in this and the writeup keeps it
+  first-class.
+- Language-side internal structure: stub-facing → repacking →
+  compiled artifact. (Why the binding side isn't one surface but
+  several layers where belief can drift.)
+- **Binding-mechanism axis** as orthogonal: static (cstubs, hand
+  stubs) vs dynamic (ctypes, cffi). The surface roles are the
+  same; only the materialisation timing differs.
+- **Scoping.** The c-api binding mechanism is *one* instance of
+  the rule schema. Other instances (ctypes, Rust FFI, JNI, …)
+  fit the same theory but aren't covered in depth here.
 
-### 2.4 The static / dynamic axis
+### 2.4 Contracts
 
-- Some Contracts are statically detectable (set diff, type match);
-  others manifest only at runtime (probe-assertion refutation).
-- This is an *implementation* axis, not a Contract axis.
+- Definition: an **explicit contract** is an agreement pinning
+  two surfaces. (The *agreement axis* of the core vocabulary;
+  paired with **behavior** as the runtime presentation a
+  contract ultimately tests — echoing *behavioral subtyping*.)
+- The `c1..c7` catalogue as **one canonical table** — columns:
+  contract, provider surface, consumer surface, kind, where it
+  fires. (Replaces the two drifting tables in the materials.)
+- **Universal naming**: `c*` identifiers used in theory, tiny
+  scenarios, and canary code — same names everywhere.
+- API-repacking and API-completeness are present in the
+  catalogue but flagged as "checked via probe today; static
+  check future work."
 
-### 2.5 Contract vs check — the independence axis
+### 2.5 Extending the framework
 
-- A Contract is the agreement. A check is one possible
-  implementation (static comparator, runtime probe, binding-side
-  test, compile failure).
-- One Contract can be checked by several mechanisms; one
-  mechanism can serve several Contracts (c3 probe runner also
-  detects c7).
-- Attribution lives at the variant declaration, not at the
-  detection layer.
+- The `(surface, contract)` machinery is **open** — new checking
+  targets slot in without changing the framework.
+- Concrete extension targets:
+  - **Hidden dependencies** (glibc / musl as the canonical case):
+    a surface requirement not declared in headers but present in
+    NEEDED / `@@VER`. Caught by the same comparator pattern as
+    declared symbols. (Absorbs former §5.4.)
+  - **Symbol versions**: already extensively checked (c5).
+  - **Path resolution**: to-do — the loader's filename →
+    artifact resolution is another surface to make explicit.
+- **Completeness-by-construction.** The framework is complete
+  with respect to "is this binding compatible with this library?"
+  precisely because new failure modes slot in as new
+  (surface, contract) pairs. The list of targets above is
+  illustrative, not exhaustive.
 
-### 2.6 Worked examples in prose
+### 2.6 Properties of the theory
 
-- Pick 2–3 representative Contracts (probably c1 Symbol, c4 ABI,
-  c7 api_sound_repack) and walk through each: which surfaces it
-  binds, what a violation looks like, what check would detect it.
+(Comments on the theory, presented after the theory itself has
+something to refer to.)
+
+- **Contract-vs-check independence.** A contract is the
+  agreement; a check is one possible implementation (static
+  comparator, runtime probe, binding-side test, compile
+  failure). One contract can be checked by several mechanisms;
+  one mechanism can serve several contracts (c3 probe runner
+  also detects c7). Attribution lives at the variant
+  declaration, not the detection layer. Cross-reference from
+  §6.3 (the implementation realises both mechanisms cleanly).
+- **Static / dynamic axis.** Some contracts are statically
+  detectable (set diff, type match); others manifest only at
+  runtime (probe-assertion refutation). This is an
+  *implementation* axis, not a contract axis.
+- **Refinement lattice.** Contracts have an order
+  (`SymbolVersion ⊑ Symbol`; API-faithfulness derives from
+  Type ∧ Symbol ∧ API-repacking). Operationally, comparators
+  are a *flat* implementation of selected lattice points.
+- **Satisfaction.** A configuration satisfies a contract set
+  conjunctively: every contract must pass for every refinement.
 
 ---
 
@@ -344,10 +387,11 @@ engine boundary) lives in §6 Implementation.
 SS / TT / CC spine cleanly. Some live here permanently (working
 principles in full, related work, calculus sketch); some are
 cross-cutting concerns visible from all three pillars but
-canonical-source-of-truth nowhere else (packaging, versioning,
-hidden dependencies). The "extensions" pattern from PL papers is
-**held in mind** here — we may or may not commit to it as prose
-lands.
+canonical-source-of-truth nowhere else (packaging, versioning).
+Hidden dependencies, originally slated here, moved to §2.5 as an
+example of the framework's extension targets. The "extensions"
+pattern from PL papers is **held in mind** here — we may or may
+not commit to it as prose lands.
 
 ### 5.1 Principles (full discussion)
 
@@ -372,17 +416,13 @@ lands.
 
 - Versioning isn't a single rule — it cuts across c1 Symbol, c4
   ABI, c5 SymbolVersion, and the version-script work.
-- Glibc / musl as the canonical example.
+- Glibc / musl as one canonical example.
 - Why this gets its own section: it threads through SS, TT, and
-  CC equally.
+  CC equally. (Hidden dependencies, which are also cross-cutting,
+  moved to §2.5 as an example of the framework's extension
+  targets.)
 
-### 5.4 Hidden dependencies
-
-- Glibc / musl as the hidden C-runtime dep.
-- Why hidden deps matter for canaries — they show up only at the
-  runtime layer, after every static check has passed.
-
-### 5.5 Extensions [held in mind]
+### 5.4 Extensions [held in mind]
 
 - PL-paper convention: a section enumerating directions of
   generalisation (other binding mechanisms — ctypes / Rust FFI /
@@ -391,12 +431,12 @@ lands.
   needing it; otherwise the extensions get inlined where
   relevant.
 
-### 5.6 Related work
+### 5.5 Related work
 
 - Compiler correctness, type-preserving compilation, linking
   calculi, ELF semantics, FFI semantics, ABI tooling.
 
-### 5.7 Calculus sketch
+### 5.6 Calculus sketch
 
 - Speculative formal direction; depth depends on venue.
 
