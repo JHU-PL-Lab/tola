@@ -171,6 +171,59 @@ Pattern is reusable for **Table — Surface roles** (§2.3), **Table
 — Binding mechanism** (§2.3), **Table — Contract catalogue**
 (§2.4), and any future grid in §3 / §4 prose.
 
+## Backbone section — verbose original (parked 2026-06-11 from surface.md L124-168)
+
+Compressed into a single paragraph at the end of `surface.md`
+§1.5 on 2026-06-11. Original verbose form kept here as material:
+re-expand into a standalone `## The backbone` section if a future
+reader needs the rules / traces / worlds vocabulary developed at
+length (e.g. as part of §2.6 Properties or as theory front-matter
+before §2).
+
+```markdown
+## The backbone: rules, traces, worlds
+
+A **rule** says what counts as agreement between two surfaces
+(the `c1..c7` catalogue). A **world** is a configuration of
+artifacts; a rule is either satisfied or violated in a given
+world. A **trace** is an observed verdict — the rule's status on
+a particular world.
+
+Two trace shapes do complementary work:
+
+- **Concrete trace.** A specific world we construct by hand:
+  tiny + a controlled perturbation. Each rule has at least one
+  concrete trace witnessing a violation — a single, reproducible
+  failure.
+- **Abstract trace.** A world drawn from per-kind candidate sets:
+  one artifact per kind, sourced independently. Canary's variant
+  matrix is a structured walk over the abstract-trace space; the
+  same shape applies to natural producers (opam / pip / apt).
+
+In PL terms, **rules** are inference rules / property statements
+and **traces** are executions — concrete traces are single runs
+(tiny + a perturbation), abstract traces are the execution space
+drawn from per-kind stores. This complements §1.5's spine analogy:
+the spine names *what is agreed upon* (artifact / surface /
+contract); the backbone names *how agreement is tested* (rules
+observed via traces in worlds).
+
+A rule is robust when both trace shapes expose it. Concrete
+traces give **depth** — controlled, reproducible witnesses;
+abstract traces give **breadth** — configurations that arise from
+independent producers, beyond what hand-construction can reach.
+
+This maps the §2–§4 arc: §2 names the rules; §3 covers the
+concrete-trace witness (tiny); §4 covers the abstract-trace
+framework (canary), including a validation step against tiny's
+concrete traces along the way. How each shape is mechanically
+produced is **§6 Implementation**.
+
+The PL notation scaffold (formal rule / world / trace definitions)
+is parked in [`surface_draft/notation.md`](surface_draft/notation.md)
+until the theory settles enough to need it.
+```
+
 ## Stray scratch (from purged sections, 2026-06-05 to 2026-06-11)
 
 Free-form marginalia rescued before purging the duplicated

@@ -116,54 +116,19 @@ concepts; cell entries name what the pillar contributes.
 | **canary** (§4)  | §4.1–4.2 stores abstraction; §4.6 natural producers                         | §4.4 — scan_sources places extraction in the pipeline (mechanism §6.2)   | §4.5 validation against tiny; §4.7 lifts real projects                      |
 
 The spine has a clean PL parallel: artifact ↔ *expression*,
-surface ↔ *type*, contract ↔ *run-time invariant / assertion*.
-This positions surface theory as "a type system for binding
-interfaces" — orientation for PL-paper readers, and the hook for
-§5.6 (calculus sketch).
-
----
-
-## The backbone: rules, traces, worlds
-
-A **rule** says what counts as agreement between two surfaces
-(the `c1..c7` catalogue). A **world** is a configuration of
-artifacts; a rule is either satisfied or violated in a given
-world. A **trace** is an observed verdict — the rule's status on
-a particular world.
-
-Two trace shapes do complementary work:
-
-- **Concrete trace.** A specific world we construct by hand:
-  tiny + a controlled perturbation. Each rule has at least one
-  concrete trace witnessing a violation — a single, reproducible
-  failure.
-- **Abstract trace.** A world drawn from per-kind candidate sets:
-  one artifact per kind, sourced independently. Canary's variant
-  matrix is a structured walk over the abstract-trace space; the
-  same shape applies to natural producers (opam / pip / apt).
-
-In PL terms, **rules** are inference rules / property statements
-and **traces** are executions — concrete traces are single runs
-(tiny + a perturbation), abstract traces are the execution space
-drawn from per-kind stores. This complements §1.5's spine analogy:
-the spine names *what is agreed upon* (artifact / surface /
-contract); the backbone names *how agreement is tested* (rules
-observed via traces in worlds).
-
-A rule is robust when both trace shapes expose it. Concrete
-traces give **depth** — controlled, reproducible witnesses;
-abstract traces give **breadth** — configurations that arise from
-independent producers, beyond what hand-construction can reach.
-
-This maps the §2–§4 arc: §2 names the rules; §3 covers the
-concrete-trace witness (tiny); §4 covers the abstract-trace
-framework (canary), including a validation step against tiny's
-concrete traces along the way. How each shape is mechanically
-produced is **§6 Implementation**.
-
-The PL notation scaffold (formal rule / world / trace definitions)
-is parked in [`surface_draft/notation.md`](surface_draft/notation.md)
-until the theory settles enough to need it.
+surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
+positioning surface theory as "a type system for binding
+interfaces" (hook for §5.6 calculus sketch). A complementary
+internal vocabulary names **rules** (the `c1..c7` catalogue —
+agreements between surfaces) and the **traces** that observe
+them in particular **worlds** (configurations of artifacts):
+**concrete traces** are tiny + a controlled perturbation (single
+reproducible witness, §3), **abstract traces** are worlds drawn
+from per-kind stores (independent-producer combinations, §4); §6
+covers how each shape is mechanically produced. The formal
+scaffold (rule / world / trace definitions) is parked in
+[`surface_draft/notation.md`](surface_draft/notation.md) until
+the theory settles enough to need it.
 
 ---
 
