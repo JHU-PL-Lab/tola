@@ -134,6 +134,43 @@ belong inline in the manuscript:
   lift); that pivot happens when §2–§4.5 outlines + drafts are
   solid enough to guide the real-project shape.
 
+### Doc-revision protocol (agreed 2026-06-11, Mac session)
+
+- **Default**: agree on a section / paragraph-level thesis +
+  summary first; the user writes the prose; Claude comments and
+  judges.
+- **Exception**: when the user says "directly update" / "write
+  it" / similar, Claude drafts the prose.
+- **File roles** (cross-check before edits touching multiple
+  files):
+  - `surface.md` — manuscript, edited freely.
+  - `drafting.md` — batched edit queue indexed against
+    `surface_draft/` by line number.
+  - `surface_draft/*` — source pool, **pruneable** once material
+    lands in the manuscript. **Flag whole-file deletions before
+    doing them.**
+
+## Grid-cell audit pattern
+
+When a manuscript navigation table has cells of the form "§4 row
+contains X" or "canary × contract = Y," **audit each cell** by:
+
+1. A concrete subsection pointer (`§X.Y`) exists in the
+   manuscript at that location.
+2. The cell phrase describes content **actually present** at that
+   subsection — not aspirational, not located in a different
+   chapter (e.g. implementation content under §4 row).
+
+The §1.5 grid was audited 2026-06-11; **canary × surface** and
+**canary × contract** were describing §6 Implementation content
+under the §4 row, and got reassigned to §4.4 (scan_sources
+placement) and §4.5 / §4.7 (validation + real-project demos),
+with §6.2 noted as the mechanism home.
+
+Pattern is reusable for **Table — Surface roles** (§2.3), **Table
+— Binding mechanism** (§2.3), **Table — Contract catalogue**
+(§2.4), and any future grid in §3 / §4 prose.
+
 ## Project-wide planning grid
 
 The writeup's organising spine is **artifact → surface → contract**
@@ -329,5 +366,32 @@ at the back.
 
 ## Active edit queue
 
-(empty — flushed 2026-06-04. Code-comment cites in `src/canary/`
+### §2 / §3 / §4 subsection prose audit against §1.5 grid
+
+The §1.5 grid (manuscript) is **now the spec**. Each cell points
+at a concrete `§X.Y`. Audit task: walk those §X.Y subsections in
+turn and confirm the prose (or current bullets) actually says
+what the grid cell promises.
+
+- **§2 SS row.** §2.1 (kinds, boundary as check site), §2.2–2.3
+  (presence axis + s1..s6), §2.4 (c1..c7 catalogue). Apply the
+  grid-cell audit pattern above.
+- **§3 TT row.** §3.2 (concrete artifacts), §3.2 (s1..s6
+  populations — likely needs a sub-table in §3.2), §3.3
+  (13-variant matrix).
+- **§4 CC row.** §4.1–4.2 (stores), §4.4 (scan_sources placement
+  mechanism, §6.2 home), §4.5 (validation), §4.6 (natural
+  producers), §4.7 (real-project demos).
+
+### §5.1 Principles full discussion — reshape to match §1.3
+
+§1.3 (manuscript, reshaped 2026-06-11) now organises four
+principles around the backbone: three rules/concrete-trace/
+abstract-trace-aligned plus one orthogonal. **§5.1 full
+discussion must adopt the same shape** next time it's touched
+(currently still a flat list expanding §1.3's old four bullets).
+
+### Note (carried from 2026-06-04 flush)
+
+Code-comment cites in `src/canary/`
 and `canary/scripts/` remain; covered by backlog #46.)
