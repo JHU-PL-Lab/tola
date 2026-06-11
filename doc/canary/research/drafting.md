@@ -10,24 +10,121 @@ for applying them, plus the queue for what's about to be edited.
 Convention: queued items get removed once applied (not retained as
 history); deferred / lower-priority work moves to `backlog.md`.
 
-## Suggested order of drafting
+## §2 SS — focused work area
 
-1. **§1 (BB) sketch** — enough to anchor the topics preview; full
-   prose drafts last, after §2–§4 settle.
-2. **§2 (SS)** first substantive draft — most adaptable; gives
-   the writeup its theoretical anchor.
-3. **§3 (TT)** second — builds on §2; mostly synthesis from
-   [`tiny.md`](tiny.md).
-4. **§4 (CC)** third — leaner now (4.1–4.8 after the §6 split);
-   §4.6 / §4.7 (real-project material) need the real-project lift
-   before honest.
-5. **§5 (MM)** subsections grow as cross-cutting topics demand
-   depth; 5.1 / 5.2 plausible to draft anytime, others later.
-6. **§6 (Impl)** drafts last for content depth, but the
-   structural outline (6.1–6.6) is in place from the start so §4
-   knows what it offloads.
-7. **§1 (BB) full prose pass** last — once all later topics are
-   stable, BB's topics preview lands honestly.
+All §2 SS-related items grouped here for focused content-fill
+work on the surface theory chapter. §1 / §3 / §4 / §5 / §6 items
+continue in their original homes below.
+
+### §2 Pull from sources
+
+`surface_draft/surface.md` §2.4 contract table + §2.1 surface
+roles + §2.2 lang-side structure; `surface_draft/principle.md`
+for P1..P6 background.
+
+### §2 row from grid-cell audit (against §1.4 grid)
+
+The §1.4 grid is now the spec. Walk each §X.Y in turn and
+confirm the prose (or current bullets) actually says what the
+grid cell promises.
+
+- §2.1 (artifact and its boundary), §2.2–2.3 (surface, presence
+  axis, role catalogue), §2.4 (contract catalogue and agreement).
+  Apply the grid-cell audit pattern below (see *Grid-cell audit
+  pattern*).
+
+### Contract-vs-check distinction (cross-section nav for §2.6 ↔ §6.3)
+
+- **Primary home**: §2.6 (theoretical insight about Contract
+  independence, as one of the section's "properties of the
+  theory").
+- **Cross-reference** from §6.3 (the implementation realises both
+  mechanisms cleanly).
+
+### Vocabulary deliberation: contract / invariant / agreement (parked 2026-06-11)
+
+User flagged 2026-06-11 that **contract** carries an "explicit
+written" connotation that fits c1 / c2 / c4 / c5 / c6 but stretches
+for c3 Behavior (implicit, runtime-determined), c7 API-repacking
+(intent-only), and the hidden-deps extension target (§2.5 — no
+party writes it down). The asymmetry is real.
+
+#### Options surveyed
+
+| Term          | Fits explicit | Fits implicit | Two-party flavor | "Can be broken" verb             |
+| ------------- | ------------- | ------------- | ---------------- | -------------------------------- |
+| **Contract**  | ✓             | ✗             | ✓✓               | ✓ (break a contract)             |
+| **Invariant** | ✓             | ✓             | △                | ✗ (invariants hold)              |
+| **Property**  | ✓             | ✓             | ✗                | △                                |
+| **Agreement** | ✓             | ✓             | ✓✓               | ✓ (break agreement)              |
+| **Rule**      | ✓             | ✓             | △                | ✓ — but reused for c-meta schema |
+
+#### User's refining cut (the deciding point)
+
+**"Agreement is more umbrella; invariant is principle-flavor.
+One can break the agreement, while the invariant should already
+hold."** The verb compatibility is what tips it: canary's whole
+business is to *run scenarios that violate*. "Break the
+agreement" reads naturally; "break the invariant" doesn't —
+invariants are by definition the things that hold, so saying
+they "break" undercuts the term.
+
+This bumps **agreement** above **invariant** as the umbrella
+candidate, and re-pins **contract** as a *subtype* (an
+agreement-with-a-written-carrier).
+
+#### Where this leaves things
+
+Three live candidates:
+
+- **(a) Full rename to "agreement"** as the umbrella term across
+  §1.4 grid + §2.4 title + table + prose. Contract becomes a
+  subtype label for the c-metas that have a written carrier.
+- **(b) Keep "contract" with reframing** in §2.4: "an agreement
+  pinning two surfaces — most are *explicit contracts* (written
+  declarations); some are implicit." Lower churn; preserves the
+  established vocabulary at the cost of mild dissonance for c3 /
+  c7.
+- **(c) Half-rename**: §2.4 title and the `Table —` label switch
+  to "Agreement"; row labels and code-level vocabulary stay
+  "contract" until a wider sync.
+
+#### Decision pending
+
+Postponed. Revisit when next touching §2.4 prose or the §1.4 grid.
+
+#### Scope reminder (if applied)
+
+Manuscript touchpoints: §1.4 grid header + closing paragraph;
+§1.5 §2 SS preview bullet; §2.4 section title + canonical-table
+label + definition + c2 / c7 deferred-static-check prose; §2.5
+"(surface, contract) machinery" phrase; §2.6
+"Contract-vs-check" subsection. Materials and code remain on
+"contract" until a wider sync per "uniformity eventually."
+
+### §1.4 column-header invariant rename — vocabulary sync TBD (2026-06-11)
+
+User changed the §1.4 grid (was §1.5) column header from
+**contract** to **invariant**. Other places not yet synced:
+
+- Cell content in `theory (§2)` row uses "agreement between two
+  surfaces" — diverges from column header.
+- §1.4 paragraph PL parallel still uses "contract ↔ run-time
+  invariant / assertion."
+- §1.4 paragraph "internal vocabulary" still uses "rules" /
+  "agreements."
+- §1.5 Topics preview §2 SS bullet still uses "contract catalogue"
+  / "Artifact → surface → contract along an explicit spine."
+- §2.4 section title still "Contracts"; **Table — Contract
+  catalogue**; "explicit contract" definition; "(surface,
+  contract) machinery" in §2.5; "Contract-vs-check independence"
+  in §2.6.
+
+Pairs with the **Vocabulary deliberation** section above. Decision
+still pending; the partial rename in §1.4 is a probe to feel out
+the vocabulary in context. Don't propagate until decision is made.
+
+---
 
 ## Per-section "Pull from" sources
 
@@ -39,9 +136,8 @@ that say `surface_draft/*` are in the materials collection
   surface?), §0 (syntactic/semantic split); `tiny.md` (concrete
   witness examples); llvm/z3/sqlite project specs (real-world
   examples); worklogs (lessons that became principles).
-- **§2 SS Surface theory** — `surface_draft/surface.md` §2.4
-  contract table + §2.1 surface roles + §2.2 lang-side structure;
-  `surface_draft/principle.md` for P1..P6 background.
+- **§2 SS Surface theory** — moved to **§2 SS — focused work
+  area** at the top.
 - **§3 TT Tiny** — [`tiny.md`](tiny.md) (witness spec);
   `worklog_2026_06.md` closing matrix.
 - **§4 CC Canary** — `worklog_2026_06.md` (Phase 14/15 mechanics);
@@ -62,13 +158,6 @@ that say `surface_draft/*` are in the materials collection
   `src/canary/projects/`, `src/canary/surface/`,
   `canary/examples/tiny/scenarios/`, `canary/scripts/inspect_*`.
 
-## Cross-section navigational notes
-
-- **Contract-vs-check distinction.** Primary home: §2.6
-  (theoretical insight about Contract independence, as one of
-  the section's "properties of the theory"). Cross-reference
-  from §6.3 (the implementation realises both mechanisms cleanly).
-
 ## Companion docs outside surface.md
 
 Pointers a reader of `surface.md` might want, but which don't
@@ -79,16 +168,6 @@ belong inline in the manuscript:
 - **Implementation status of the framework's internal factoring**
   (engine-boundary leak inventory, Phase 16 refactor plan) —
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
-
-## What changes about how we work
-
-- Coding pauses. Discussion + outline iteration is the primary
-  mode while the manuscript stabilises.
-- When a §4 or §6 prose draft surfaces a refactor candidate, we
-  make the refactor; the prose checks it for cleanness.
-- §4.6 / §4.7 work requires going back into code (real-project
-  lift); that pivot happens when §2–§4.5 outlines + drafts are
-  solid enough to guide the real-project shape.
 
 ### Doc-revision protocol (agreed 2026-06-11, Mac session)
 
@@ -126,69 +205,6 @@ with §6.2 noted as the mechanism home.
 Pattern is reusable for **Table — Surface roles** (§2.3), **Table
 — Binding mechanism** (§2.3), **Table — Contract catalogue**
 (§2.4), and any future grid in §3 / §4 prose.
-
-## Vocabulary deliberation: contract / invariant / agreement (parked 2026-06-11)
-
-User flagged 2026-06-11 that **contract** carries an "explicit
-written" connotation that fits c1 / c2 / c4 / c5 / c6 but stretches
-for c3 Behavior (implicit, runtime-determined), c7 API-repacking
-(intent-only), and the hidden-deps extension target (§2.5 — no
-party writes it down). The asymmetry is real.
-
-### Options surveyed
-
-| Term          | Fits explicit | Fits implicit | Two-party flavor | "Can be broken" verb             |
-| ------------- | ------------- | ------------- | ---------------- | -------------------------------- |
-| **Contract**  | ✓             | ✗             | ✓✓               | ✓ (break a contract)             |
-| **Invariant** | ✓             | ✓             | △                | ✗ (invariants hold)              |
-| **Property**  | ✓             | ✓             | ✗                | △                                |
-| **Agreement** | ✓             | ✓             | ✓✓               | ✓ (break agreement)              |
-| **Rule**      | ✓             | ✓             | △                | ✓ — but reused for c-meta schema |
-
-### User's refining cut (the deciding point)
-
-**"Agreement is more umbrella; invariant is principle-flavor.
-One can break the agreement, while the invariant should already
-hold."** The verb compatibility is what tips it: canary's whole
-business is to *run scenarios that violate*. "Break the
-agreement" reads naturally; "break the invariant" doesn't —
-invariants are by definition the things that hold, so saying
-they "break" undercuts the term.
-
-This bumps **agreement** above **invariant** as the umbrella
-candidate, and re-pins **contract** as a *subtype* (an
-agreement-with-a-written-carrier).
-
-### Where this leaves things
-
-Three live candidates:
-
-- **(a) Full rename to "agreement"** as the umbrella term across
-  §1.4 grid + §2.4 title + table + prose. Contract becomes a
-  subtype label for the c-metas that have a written carrier.
-- **(b) Keep "contract" with reframing** in §2.4: "an agreement
-  pinning two surfaces — most are *explicit contracts* (written
-  declarations); some are implicit." Lower churn; preserves the
-  established vocabulary at the cost of mild dissonance for c3 /
-  c7.
-- **(c) Half-rename**: §2.4 title and the `Table —` label switch
-  to "Agreement"; row labels and code-level vocabulary stay
-  "contract" until a wider sync.
-
-### Decision pending
-
-Postponed. Revisit when next touching §2.4 prose or the §1.4 grid.
-
-### Scope reminder (if applied)
-
-Manuscript touchpoints: §1.4 grid header + closing paragraph;
-§1.4 §2 SS preview bullet; §2.4 section title + canonical-table
-label + definition + c2 / c7 deferred-static-check prose; §2.5
-"(surface, contract) machinery" phrase; §2.6
-"Contract-vs-check" subsection. Materials and code remain on
-"contract" until a wider sync per "uniformity eventually."
-
----
 
 ## Backbone section — verbose original (parked 2026-06-11 from surface.md L124-168)
 
@@ -281,20 +297,6 @@ once prose lands and a reader can scan the spine before diving in).
 > in [`drafting.md`](drafting.md).
 ```
 
-### Six-part spine prose + ASCII diagram
-
-```markdown
-**Six-part spine.** Three pillars (SS / TT / CC) sit between a
-background opener (BB) and miscellaneous + implementation chapters
-at the back.
-
-```
-┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌─────────┐     ┌──────────┐
-│ §1  BB  │ ──→ │ §2  SS  │ ──→ │ §3  TT  │ ──→ │ §4  CC  │ ──→ │ §5  MM  │ ──→ │ §6 Impl  │
-└─────────┘     └─────────┘     └─────────┘     └─────────┘     └─────────┘     └──────────┘
-```
-```
-
 ### Numbered chapter list
 
 ```markdown
@@ -324,41 +326,15 @@ at the back.
 
 ## Active edit queue
 
-### §1.4 column-header invariant rename — vocabulary sync TBD (2026-06-11)
-
-User changed the §1.4 grid (was §1.5) column header from
-**contract** to **invariant**. Other places not yet synced:
-
-- Cell content in `theory (§2)` row uses "agreement between two
-  surfaces" — diverges from column header.
-- §1.4 paragraph PL parallel still uses "contract ↔ run-time
-  invariant / assertion."
-- §1.4 paragraph "internal vocabulary" still uses "rules" /
-  "agreements."
-- §1.5 Topics preview §2 SS bullet says "c1..c7 contract
-  catalogue" / "Artifact → surface → contract along an explicit
-  spine."
-- §2.4 section title still "Contracts"; **Table — Contract
-  catalogue**; "explicit contract" definition; "(surface,
-  contract) machinery" in §2.5; "Contract-vs-check independence"
-  in §2.6.
-
-Pairs with the **Vocabulary deliberation: contract / invariant /
-agreement** section below. Decision still pending; the partial
-rename in §1.4 is a probe to feel out the vocabulary in context.
-Don't propagate until decision is made.
-
-### §2 / §3 / §4 subsection prose audit against §1.4 grid
+### §3 / §4 subsection prose audit against §1.4 grid
 
 The §1.4 grid (manuscript) is **now the spec**. Each cell points
 at a concrete `§X.Y`. Audit task: walk those §X.Y subsections in
 turn and confirm the prose (or current bullets) actually says
-what the grid cell promises.
+what the grid cell promises. (§2 row moved to **§2 SS — focused
+work area** at top.)
 
-- **§2 SS row.** §2.1 (kinds, boundary as check site), §2.2–2.3
-  (presence axis + s1..s6), §2.4 (c1..c7 catalogue). Apply the
-  grid-cell audit pattern above.
-- **§3 TT row.** §3.2 (concrete artifacts), §3.2 (s1..s6
+- **§3 TT row.** §3.2 (concrete artifacts), §3.2 (surface
   populations — likely needs a sub-table in §3.2), §3.3
   (13-variant matrix).
 - **§4 CC row.** §4.1–4.2 (stores), §4.4 (scan_sources placement
