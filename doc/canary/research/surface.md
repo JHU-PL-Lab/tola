@@ -55,13 +55,22 @@ and that an implementation chapter sits at the back.
 
 ### 1.3 Principles preview
 
-One-line previews of the working principles. Full discussion in
-§5.1 (MM).
+One-line previews of the working principles. Three align with the
+backbone (rules / concrete traces / abstract traces, introduced
+below); one is orthogonal. Full discussion in §5.1 (MM).
 
-- **Test the canary, not (just) the lib.**
-- **Comparator + probe as complementary.**
-- **Synthetic witness as scaffolding, not contribution.**
-- **Producer-agnostic framework.**
+- **Comparator + probe as complementary** — the rules-vs-traces
+  duality: comparators check rules statically; probes observe
+  traces at runtime.
+- **Synthetic witness as scaffolding, not contribution** — the
+  concrete-trace principle: tiny exists to witness each rule
+  reproducibly, not to be the result.
+- **Producer-agnostic framework** — the abstract-trace principle:
+  a rule's robustness is measured across configurations drawn from
+  natural producers (opam / pip / apt), not only hand-built ones.
+- **Test the canary, not (just) the lib** — orthogonal to the
+  backbone: an attitude about *what* we measure (the canary's
+  response to the lib, not the lib in isolation).
 
 ### 1.4 Topics preview (roadmap)
 
@@ -100,11 +109,11 @@ writer's gap-check.
 **Table — Organising grid.** Three pillars × three spine
 concepts; cell entries name what the pillar contributes.
 
-|                  | **artifact**                                          | **surface**                                              | **contract**                                                |
-| ---------------- | ----------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------- |
-| **theory** (§2)  | kinds (Source, Lib, Binding, App); the boundary       | syntactic / semantic split; six surface roles `s1..s6`   | `c1..c7` catalogue; explicit agreement between two surfaces |
-| **tiny** (§3)    | concrete artifacts (libtiny.so, 3 bindings, helper)   | each artifact populates `s1..s6` deterministically       | each perturbation breaks one contract; 13-variant matrix    |
-| **canary** (§4)  | per-kind stores; producer-agnostic artifact sources   | inspectors extract surfaces from artifacts               | comparators check contracts on extracted surfaces           |
+|                  | **artifact**                                                                | **surface**                                                              | **contract**                                                                |
+| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| **theory** (§2)  | §2.1 — four kinds (Source/Lib/Binding/App); boundary as the only check site | §2.2–2.3 — presence axis (syntactic/semantic); six roles `s1..s6`        | §2.4 — `c1..c7` catalogue; contract = pinned pair of surfaces               |
+| **tiny** (§3)    | §3.2 — concrete artifacts (libtiny.so, 3 bindings, helper)                  | §3.2 — each artifact populates `s1..s6` (full detail in tiny.md)         | §3.3 — 13-variant matrix: each perturbation breaks one rule                 |
+| **canary** (§4)  | §4.1–4.2 stores abstraction; §4.6 natural producers                         | §4.4 — scan_sources places extraction in the pipeline (mechanism §6.2)   | §4.5 validation against tiny; §4.7 lifts real projects                      |
 
 The spine has a clean PL parallel: artifact ↔ *expression*,
 surface ↔ *type*, contract ↔ *run-time invariant / assertion*.
@@ -133,13 +142,13 @@ Two trace shapes do complementary work:
   matrix is a structured walk over the abstract-trace space; the
   same shape applies to natural producers (opam / pip / apt).
 
-The PL analog:
-
-| Concept            | PL analog                | Canary instantiation                                         |
-| ------------------ | ------------------------ | ------------------------------------------------------------ |
-| **rule**           | inference rule, property | e.g. "binding's referenced symbols ⊆ lib's exported symbols" |
-| **concrete trace** | one program execution    | tiny + a perturbation: one observed verdict on a fixed world |
-| **abstract trace** | the execution space      | a configuration drawn from per-kind stores                   |
+In PL terms, **rules** are inference rules / property statements
+and **traces** are executions — concrete traces are single runs
+(tiny + a perturbation), abstract traces are the execution space
+drawn from per-kind stores. This complements §1.5's spine analogy:
+the spine names *what is agreed upon* (artifact / surface /
+contract); the backbone names *how agreement is tested* (rules
+observed via traces in worlds).
 
 A rule is robust when both trace shapes expose it. Concrete
 traces give **depth** — controlled, reproducible witnesses;
