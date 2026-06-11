@@ -181,13 +181,13 @@ party writes it down). The asymmetry is real.
 
 ### Options surveyed
 
-| Term            | Fits explicit | Fits implicit | Two-party flavor | "Can be broken" verb |
-| --------------- | ------------- | ------------- | ---------------- | -------------------- |
-| **Contract**    | ✓             | ✗             | ✓✓               | ✓ (break a contract) |
-| **Invariant**   | ✓             | ✓             | △                | ✗ (invariants hold)  |
-| **Property**    | ✓             | ✓             | ✗                | △                    |
-| **Agreement**   | ✓             | ✓             | ✓✓               | ✓ (break agreement)  |
-| **Rule**        | ✓             | ✓             | △                | ✓ — but reused for c-meta schema |
+| Term          | Fits explicit | Fits implicit | Two-party flavor | "Can be broken" verb             |
+| ------------- | ------------- | ------------- | ---------------- | -------------------------------- |
+| **Contract**  | ✓             | ✗             | ✓✓               | ✓ (break a contract)             |
+| **Invariant** | ✓             | ✓             | △                | ✗ (invariants hold)              |
+| **Property**  | ✓             | ✓             | ✗                | △                                |
+| **Agreement** | ✓             | ✓             | ✓✓               | ✓ (break agreement)              |
+| **Rule**      | ✓             | ✓             | △                | ✓ — but reused for c-meta schema |
 
 ### User's refining cut (the deciding point)
 
@@ -208,7 +208,7 @@ agreement-with-a-written-carrier).
 Three live candidates:
 
 - **(a) Full rename to "agreement"** as the umbrella term across
-  §1.5 grid + §2.4 title + table + prose. Contract becomes a
+  §1.4 grid + §2.4 title + table + prose. Contract becomes a
   subtype label for the c-metas that have a written carrier.
 - **(b) Keep "contract" with reframing** in §2.4: "an agreement
   pinning two surfaces — most are *explicit contracts* (written
@@ -221,11 +221,11 @@ Three live candidates:
 
 ### Decision pending
 
-Postponed. Revisit when next touching §2.4 prose or the §1.5 grid.
+Postponed. Revisit when next touching §2.4 prose or the §1.4 grid.
 
 ### Scope reminder (if applied)
 
-Manuscript touchpoints: §1.5 grid header + closing paragraph;
+Manuscript touchpoints: §1.4 grid header + closing paragraph;
 §1.4 §2 SS preview bullet; §2.4 section title + canonical-table
 label + definition + c2 / c7 deferred-static-check prose; §2.5
 "(surface, contract) machinery" phrase; §2.6
@@ -368,9 +368,78 @@ at the back.
 
 ## Active edit queue
 
-### §2 / §3 / §4 subsection prose audit against §1.5 grid
+### §1.1 — strong-motivation thesis (parked 2026-06-11 from user comment)
 
-The §1.5 grid (manuscript) is **now the spec**. Each cell points
+User flagged §1.1 is missing a concluding strong-motivation
+paragraph (after the four bullets). Raw thesis sketch to absorb
+or polish:
+
+> Real-world package management doesn't have strict
+> specifications. Some errors on the boundaries are rejected by
+> tools; others are tolerated. The tolerated ones may become
+> critical in later stages — e.g. a missing dependency that may
+> or may not be exercised at runtime. The whole pipeline runs on
+> a level of *courtesy*; our research detects and confirms the
+> principles tools rely on (usually tool behaviours), establishes
+> the rules, and constructs the smallest-but-representative
+> scenarios that try to be complete.
+
+Lift the key ideas:
+- "No strict specifications" — pipeline relies on tool conventions
+- "Errors: rejected vs tolerated" — two failure modes
+- "Critical later if exercised" — late-stage manifestation
+- "Pipeline on courtesy" — the load-bearing observation
+- "Detect-confirm-establish-fulfill" — our four moves
+- "Smallest-but-representative scenarios" — the tiny / canary
+  combination, completeness-by-construction
+
+This feeds the §1.1 expansion and chains into §1.2's "starting
+observation" bullet (tools are behavior-based, best-effort).
+
+### §1.1 / §1.2 / §1.3 — clarity pass (parked 2026-06-11)
+
+User flag: "1.1 and 1.2 (maybe including 1.3) are not clear
+enough." Three subsections need a coordinated rewrite once the
+motivation thesis above lands. The current bullet shapes are
+fine; the prose around them (the goal / framing / connective
+tissue) needs to make the rules / concrete-trace / abstract-trace
+backbone of §1.3 land earlier (already in §1.2 implicitly).
+
+### §1.4 / §1.5 swap (applied 2026-06-11)
+
+User asked to swap §1.4 Topics preview and §1.5 Organising grid,
+or treat 1.4 as exemplification of 1.5. Applied as swap: grid
+becomes §1.4 (structural foundation), topics preview becomes §1.5
+(prose elaboration of the grid). Topics preview goal-line updated
+to "a prose elaboration of the grid above."
+
+### §1.4 column-header invariant rename — vocabulary sync TBD (2026-06-11)
+
+User changed the §1.4 grid (was §1.5) column header from
+**contract** to **invariant**. Other places not yet synced:
+
+- Cell content in `theory (§2)` row uses "agreement between two
+  surfaces" — diverges from column header.
+- §1.4 paragraph PL parallel still uses "contract ↔ run-time
+  invariant / assertion."
+- §1.4 paragraph "internal vocabulary" still uses "rules" /
+  "agreements."
+- §1.5 Topics preview §2 SS bullet says "c1..c7 contract
+  catalogue" / "Artifact → surface → contract along an explicit
+  spine."
+- §2.4 section title still "Contracts"; **Table — Contract
+  catalogue**; "explicit contract" definition; "(surface,
+  contract) machinery" in §2.5; "Contract-vs-check independence"
+  in §2.6.
+
+Pairs with the **Vocabulary deliberation: contract / invariant /
+agreement** section below. Decision still pending; the partial
+rename in §1.4 is a probe to feel out the vocabulary in context.
+Don't propagate until decision is made.
+
+### §2 / §3 / §4 subsection prose audit against §1.4 grid
+
+The §1.4 grid (manuscript) is **now the spec**. Each cell points
 at a concrete `§X.Y`. Audit task: walk those §X.Y subsections in
 turn and confirm the prose (or current bullets) actually says
 what the grid cell promises.
@@ -396,4 +465,4 @@ discussion must adopt the same shape** next time it's touched
 ### Note (carried from 2026-06-04 flush)
 
 Code-comment cites in `src/canary/`
-and `canary/scripts/` remain; covered by backlog #46.)
+and `canary/scripts/` remain; covered by backlog #46.

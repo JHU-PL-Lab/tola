@@ -72,10 +72,43 @@ below); one is orthogonal. Full discussion in §5.1 (MM).
   backbone: an attitude about *what* we measure (the canary's
   response to the lib, not the lib in isolation).
 
-### 1.4 Topics preview (roadmap)
+### 1.4 Organising grid
 
-Every topic the rest of the writeup touches, in a sentence each.
-The reader should leave §1 knowing *what* is coming and *where*.
+The writeup is organised along the **artifact → surface →
+contract** spine (columns) crossed with the three pillars
+(rows). Each cell names what that pillar contributes about that
+concept; the table doubles as a reader's at-a-glance map and a
+writer's gap-check.
+
+**Table — Organising grid.** Three pillars × three spine
+concepts; cell entries name what the pillar contributes.
+
+|                 | **artifact**                                   | **surface**                                                  | **invariant**                                                |
+| --------------- | ---------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **theory** (§2) | §2.1 — artifact and its boundary               | §2.2–2.3 — surface and the role catalogue                    | §2.4 — agreement between two surfaces                        |
+| **tiny** (§3)   | §3.2 — controllable instantiation              | §3.2 — every role populated in the controlled testbed        | §3.3 — every agreement perturbed and broken, one at a time   |
+| **canary** (§4) | §4.1–4.2 stores; §4.6 natural-producer sources | §4.4 — extraction from real-world artifacts (mechanism §6.2) | §4.5 validated against tiny; §4.7 exercised on real projects |
+
+The spine has a clean PL parallel: artifact ↔ *expression*,
+surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
+positioning surface theory as "a type system for binding
+interfaces" (hook for §5.6 calculus sketch). A complementary
+internal vocabulary names **rules** (the `c1..c7` catalogue —
+agreements between surfaces) and the **traces** that observe
+them in particular **worlds** (configurations of artifacts):
+**concrete traces** are tiny + a controlled perturbation (single
+reproducible witness, §3), **abstract traces** are worlds drawn
+from per-kind stores (independent-producer combinations, §4); §6
+covers how each shape is mechanically produced. The formal
+scaffold (rule / world / trace definitions) is parked in
+[`surface_draft/notation.md`](surface_draft/notation.md) until
+the theory settles enough to need it.
+
+### 1.5 Topics preview (roadmap)
+
+Every topic the rest of the writeup touches, in a sentence each
+— a prose elaboration of the grid above. The reader should leave
+§1 knowing *what* is coming and *where*.
 
 - **§2 Surface theory (SS).** **Artifact → surface → contract**
   along an explicit spine. The `s1..s6` surface roles and `c1..c7`
@@ -97,38 +130,6 @@ The reader should leave §1 knowing *what* is coming and *where*.
   code: two engines (mutation, combinator), inspectors and check
   mechanisms, code-citation map, harness/canary boundary
   cleanness.
-
-### 1.5 Organising grid
-
-The writeup is organised along the **artifact → surface →
-contract** spine (columns) crossed with the three pillars
-(rows). Each cell names what that pillar contributes about that
-concept; the table doubles as a reader's at-a-glance map and a
-writer's gap-check.
-
-**Table — Organising grid.** Three pillars × three spine
-concepts; cell entries name what the pillar contributes.
-
-|                  | **artifact**                                                  | **surface**                                                              | **contract**                                                       |
-| ---------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| **theory** (§2)  | §2.1 — artifact and its boundary                              | §2.2–2.3 — surface and the role catalogue                                | §2.4 — agreement between two surfaces                              |
-| **tiny** (§3)    | §3.2 — controllable instantiation                             | §3.2 — every role populated in the controlled testbed                    | §3.3 — every agreement perturbed and broken, one at a time         |
-| **canary** (§4)  | §4.1–4.2 stores; §4.6 natural-producer sources                | §4.4 — extraction from real-world artifacts (mechanism §6.2)             | §4.5 validated against tiny; §4.7 exercised on real projects       |
-
-The spine has a clean PL parallel: artifact ↔ *expression*,
-surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
-positioning surface theory as "a type system for binding
-interfaces" (hook for §5.6 calculus sketch). A complementary
-internal vocabulary names **rules** (the `c1..c7` catalogue —
-agreements between surfaces) and the **traces** that observe
-them in particular **worlds** (configurations of artifacts):
-**concrete traces** are tiny + a controlled perturbation (single
-reproducible witness, §3), **abstract traces** are worlds drawn
-from per-kind stores (independent-producer combinations, §4); §6
-covers how each shape is mechanically produced. The formal
-scaffold (rule / world / trace definitions) is parked in
-[`surface_draft/notation.md`](surface_draft/notation.md) until
-the theory settles enough to need it.
 
 ---
 
@@ -226,15 +227,15 @@ fires:
 fires). The universal `c*` ids are the cross-cutting names used
 in theory, tiny scenarios, and canary code.
 
-| Contract                | Provider surface                                | Consumer surface                                            | Kind                                  | Where it fires                                 |
-| ----------------------- | ----------------------------------------------- | ----------------------------------------------------------- | ------------------------------------- | ---------------------------------------------- |
-| **c1 Symbol**           | **s2** `native_lib` — defined symbols           | **s5** `binding_lib` — link-time refs / `dlsym`             | semantic ↔ semantic                   | process link (static) / process load (dynamic) |
-| **c2 API-completeness** | **s4** `binding_header`                         | app expectations (watchlist or imports)                     | syntactic ↔ syntactic (within lang)   | app build / probe                              |
-| **c3 Behavior**         | **s6** `runtime_trace` (provider's invocation)  | **s6** `runtime_trace` (consumer's wrapper)                 | semantic ↔ semantic                   | runtime                                        |
-| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed    | **s5** `binding_lib` — NEEDED entries                       | semantic ↔ semantic                   | process load                                   |
-| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations       | **s5** `binding_lib` — `@VER` requirements                  | semantic ↔ semantic                   | process load                                   |
-| **c6 Type**             | **s1** `native_header` — C signature            | **s3** `binding_stub` — `external` / `argtypes` / decl      | syntactic ↔ syntactic                 | binding build                                  |
-| **c7 API-repacking**    | **s3** `binding_stub`                           | **s4** `binding_header` — module signature                  | syntactic ↔ syntactic (intra-binding) | binding-author time (probe-checked today)      |
+| Contract                | Provider surface                               | Consumer surface                                       | Kind                                  | Where it fires                                 |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------------------ | ------------------------------------- | ---------------------------------------------- |
+| **c1 Symbol**           | **s2** `native_lib` — defined symbols          | **s5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                   | process link (static) / process load (dynamic) |
+| **c2 API-completeness** | **s4** `binding_header`                        | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)   | app build / probe                              |
+| **c3 Behavior**         | **s6** `runtime_trace` (provider's invocation) | **s6** `runtime_trace` (consumer's wrapper)            | semantic ↔ semantic                   | runtime                                        |
+| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed   | **s5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                   | process load                                   |
+| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations      | **s5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                   | process load                                   |
+| **c6 Type**             | **s1** `native_header` — C signature           | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                 | binding build                                  |
+| **c7 API-repacking**    | **s3** `binding_stub`                          | **s4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding) | binding-author time (probe-checked today)      |
 
 - **Universal naming.** `c*` identifiers used in theory, tiny
   scenarios, and canary code — same names everywhere.
