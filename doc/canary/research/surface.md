@@ -33,6 +33,20 @@ and that an implementation chapter sits at the back.
   test passes, is the artifact actually consistent with its
   provider?"
 
+**The pipeline runs on courtesy.** Real-world package management
+doesn't ship with strict specifications. Some boundary errors get
+rejected by tools (a missing symbol fails the link); others are
+tolerated (a missing dependency that isn't exercised at load time
+looks healthy until it isn't). The tolerated errors become
+critical only at later stages, once usage finally touches them.
+The whole binding pipeline runs on mutual *courtesy* — each tool
+relies on conventions it can't enforce. Our research detects and
+confirms the conventions tools depend on (usually tool
+*behaviours* rather than written specs), establishes them as
+**rules**, and constructs the **smallest-but-representative**
+scenarios that try to be complete with respect to the rule
+catalogue.
+
 ### 1.2 Approach: rules and traces
 
 - **Starting observation.** Existing tools are behavior-based;

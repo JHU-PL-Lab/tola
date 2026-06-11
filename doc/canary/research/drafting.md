@@ -1,47 +1,3 @@
-surface_draft/surface.md
-
-L1-5 informal problem
-
-L7-11, meta; mention tiny, which should be duplicated, mention plan.md, can be delete.
-
-L13-16, purpose: justifies and predicts; too vague;
-- the paragraph serves the movitation that the surface theory is universal, while in real-world, there are many surface theory instanec, e.g. the setting via C_API, or ctypes, or rust ffi, or so. this should be merged into that discussion.
-
-L24-43, stating artifacts in systems, tools consume artifacts with their implicit model, esp L39 **a typed contract for artifacts** (though _typed_ is not a good term).
-
-L45-53, not perfect, we don't need a table for transforming, since here is on artifacts; however, we can mention that tools have implicit requirements on artifacts, this is more relavent here.
-
-L55-70. commmenting the theory should be later in the SS. at least we need present them fully first.
-
-L72-79. meta, should be merged into the corresponding paragraphs.
-
-L81-85. definition of surface again, including up to L114. This is better starting on definitions.
-L116, the gap also naturally appear. up to L158 is ok, but a bit verbose.
-
-L160-180, artifact as records. we don't develop the idea very clearly. It's acturally my another research topic so we can move them to the miscalleous or draft.
-
-section starting at L182 is ok, but L184-189 is duplicated a bit.
-
-L191-206. It's good to stay in this writeup.
-
-L208-227. another example table, not good to be here.
-
-L229-262. content is good. language binding side structure.
-
-So up to now, we should have one leading outline in the section is artiract--surface--contract.
-
-Then it starts with the contract part. L284-300 is ahead before the definition. starting from L300 is good.
-
-L302-L313 is meta for contract
-
-Table till L330 is good. but the coding side discusses about API-repacking,API-completeness, which should be a to-do to discuss later (which is also mentioned in L357-371). I found you discuss that in table L346-355, but now the two tables don't match.
-
-The draft is not insisting on the importance for a universal naming, which we worked hard.
-
-the final topic is on Hidden dependencies, which is part of the some surface contract. The code reflects a fact that, the checking framework is open to extend, since the surface checking is a complete checking, so we can have more checking targets, e.g. depenedencies, symbols (which we checked a lot), path (which is to-do)
-
---
-
 # Drafting playbook for `surface.md`
 
 Operational reference + active edit queue for drafting work on the
@@ -367,51 +323,6 @@ at the back.
 ---
 
 ## Active edit queue
-
-### §1.1 — strong-motivation thesis (parked 2026-06-11 from user comment)
-
-User flagged §1.1 is missing a concluding strong-motivation
-paragraph (after the four bullets). Raw thesis sketch to absorb
-or polish:
-
-> Real-world package management doesn't have strict
-> specifications. Some errors on the boundaries are rejected by
-> tools; others are tolerated. The tolerated ones may become
-> critical in later stages — e.g. a missing dependency that may
-> or may not be exercised at runtime. The whole pipeline runs on
-> a level of *courtesy*; our research detects and confirms the
-> principles tools rely on (usually tool behaviours), establishes
-> the rules, and constructs the smallest-but-representative
-> scenarios that try to be complete.
-
-Lift the key ideas:
-- "No strict specifications" — pipeline relies on tool conventions
-- "Errors: rejected vs tolerated" — two failure modes
-- "Critical later if exercised" — late-stage manifestation
-- "Pipeline on courtesy" — the load-bearing observation
-- "Detect-confirm-establish-fulfill" — our four moves
-- "Smallest-but-representative scenarios" — the tiny / canary
-  combination, completeness-by-construction
-
-This feeds the §1.1 expansion and chains into §1.2's "starting
-observation" bullet (tools are behavior-based, best-effort).
-
-### §1.1 / §1.2 / §1.3 — clarity pass (parked 2026-06-11)
-
-User flag: "1.1 and 1.2 (maybe including 1.3) are not clear
-enough." Three subsections need a coordinated rewrite once the
-motivation thesis above lands. The current bullet shapes are
-fine; the prose around them (the goal / framing / connective
-tissue) needs to make the rules / concrete-trace / abstract-trace
-backbone of §1.3 land earlier (already in §1.2 implicitly).
-
-### §1.4 / §1.5 swap (applied 2026-06-11)
-
-User asked to swap §1.4 Topics preview and §1.5 Organising grid,
-or treat 1.4 as exemplification of 1.5. Applied as swap: grid
-becomes §1.4 (structural foundation), topics preview becomes §1.5
-(prose elaboration of the grid). Topics preview goal-line updated
-to "a prose elaboration of the grid above."
 
 ### §1.4 column-header invariant rename — vocabulary sync TBD (2026-06-11)
 
