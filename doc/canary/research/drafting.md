@@ -12,15 +12,28 @@ history); deferred / lower-priority work moves to `backlog.md`.
 
 ## §2 SS — focused work area
 
-All §2 SS-related items grouped here for focused content-fill
-work on the surface theory chapter. §1 / §3 / §4 / §5 / §6 items
-continue in their original homes below.
-
 ### §2 Pull from sources
 
-`surface_draft/surface.md` §2.4 contract table + §2.1 surface
-roles + §2.2 lang-side structure; `surface_draft/principle.md`
-for P1..P6 background.
+(§2.1 surface-roles table and §2.4 contract-definitions table
+from `surface_draft/surface.md` have been migrated to manuscript
+§2.3 / §2.4 — no longer Pull-from sources.)
+
+Remaining sources for §2 prose expansion:
+
+- `surface_draft/surface.md` §2.2 — **language-side internal
+  structure**: 3-layer breakdown (stub-facing → repacking →
+  compiled artifact) + the "why the compiled artifact is the
+  natural check-target" callout. Only a single-bullet summary
+  has landed in manuscript §2.3; full prose still source.
+- `surface_draft/surface.md` §2.4 surrounding prose —
+  "Categories of invariants (cross-cutting)" subsection (NOT
+  migrated; potentially feeds §2.5 or §2.6); "Two notes on the
+  contracts table" (intra-language note partially migrated);
+  "Currently active vs. deferred" (partial — manuscript notes
+  c2 / c7 deferred and c8 retired).
+- `surface_draft/principle.md` — P1..P6 background for §2.6
+  *Properties of the theory* + §5.1 *Principles (full
+  discussion)*.
 
 ### §2 row from grid-cell audit (against §1.4 grid)
 
@@ -119,6 +132,9 @@ User changed the §1.4 grid (was §1.5) column header from
   catalogue**; "explicit contract" definition; "(surface,
   contract) machinery" in §2.5; "Contract-vs-check independence"
   in §2.6.
+
+
+
 
 Pairs with the **Vocabulary deliberation** section above. Decision
 still pending; the partial rename in §1.4 is a probe to feel out
