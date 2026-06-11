@@ -171,6 +171,69 @@ Pattern is reusable for **Table — Surface roles** (§2.3), **Table
 — Binding mechanism** (§2.3), **Table — Contract catalogue**
 (§2.4), and any future grid in §3 / §4 prose.
 
+## Vocabulary deliberation: contract / invariant / agreement (parked 2026-06-11)
+
+User flagged 2026-06-11 that **contract** carries an "explicit
+written" connotation that fits c1 / c2 / c4 / c5 / c6 but stretches
+for c3 Behavior (implicit, runtime-determined), c7 API-repacking
+(intent-only), and the hidden-deps extension target (§2.5 — no
+party writes it down). The asymmetry is real.
+
+### Options surveyed
+
+| Term            | Fits explicit | Fits implicit | Two-party flavor | "Can be broken" verb |
+| --------------- | ------------- | ------------- | ---------------- | -------------------- |
+| **Contract**    | ✓             | ✗             | ✓✓               | ✓ (break a contract) |
+| **Invariant**   | ✓             | ✓             | △                | ✗ (invariants hold)  |
+| **Property**    | ✓             | ✓             | ✗                | △                    |
+| **Agreement**   | ✓             | ✓             | ✓✓               | ✓ (break agreement)  |
+| **Rule**        | ✓             | ✓             | △                | ✓ — but reused for c-meta schema |
+
+### User's refining cut (the deciding point)
+
+**"Agreement is more umbrella; invariant is principle-flavor.
+One can break the agreement, while the invariant should already
+hold."** The verb compatibility is what tips it: canary's whole
+business is to *run scenarios that violate*. "Break the
+agreement" reads naturally; "break the invariant" doesn't —
+invariants are by definition the things that hold, so saying
+they "break" undercuts the term.
+
+This bumps **agreement** above **invariant** as the umbrella
+candidate, and re-pins **contract** as a *subtype* (an
+agreement-with-a-written-carrier).
+
+### Where this leaves things
+
+Three live candidates:
+
+- **(a) Full rename to "agreement"** as the umbrella term across
+  §1.5 grid + §2.4 title + table + prose. Contract becomes a
+  subtype label for the c-metas that have a written carrier.
+- **(b) Keep "contract" with reframing** in §2.4: "an agreement
+  pinning two surfaces — most are *explicit contracts* (written
+  declarations); some are implicit." Lower churn; preserves the
+  established vocabulary at the cost of mild dissonance for c3 /
+  c7.
+- **(c) Half-rename**: §2.4 title and the `Table —` label switch
+  to "Agreement"; row labels and code-level vocabulary stay
+  "contract" until a wider sync.
+
+### Decision pending
+
+Postponed. Revisit when next touching §2.4 prose or the §1.5 grid.
+
+### Scope reminder (if applied)
+
+Manuscript touchpoints: §1.5 grid header + closing paragraph;
+§1.4 §2 SS preview bullet; §2.4 section title + canonical-table
+label + definition + c2 / c7 deferred-static-check prose; §2.5
+"(surface, contract) machinery" phrase; §2.6
+"Contract-vs-check" subsection. Materials and code remain on
+"contract" until a wider sync per "uniformity eventually."
+
+---
+
 ## Backbone section — verbose original (parked 2026-06-11 from surface.md L124-168)
 
 Compressed into a single paragraph at the end of `surface.md`
