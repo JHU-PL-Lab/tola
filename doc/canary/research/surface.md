@@ -107,8 +107,8 @@ The spine has a clean PL parallel: artifact ↔ *expression*,
 surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
 positioning surface theory as "a type system for binding
 interfaces" (hook for §5.6 calculus sketch). A complementary
-internal vocabulary names **rules** (the `c1..c7` catalogue —
-agreements between surfaces) and the **traces** that observe
+internal vocabulary names **rules** (the catalogue — agreements
+between surfaces) and the **traces** that observe
 them in particular **worlds** (configurations of artifacts):
 **concrete traces** are tiny + a controlled perturbation (single
 reproducible witness, §3), **abstract traces** are worlds drawn
@@ -125,10 +125,10 @@ Every topic the rest of the writeup touches, in a sentence each
 §1 knowing *what* is coming and *where*.
 
 - **§2 Surface theory (SS).** **Artifact → surface → contract**
-  along an explicit spine. The `s1..s6` surface roles and `c1..c7`
-  contract catalogue with universal naming; the framework's
-  openness to new checking targets (hidden deps, symbol versions,
-  paths). The detailed catalogue + older drafts live in
+  along an explicit spine. The surface roles and contract
+  catalogue with universal naming; the framework's openness to
+  new checking targets (hidden deps, symbol versions, paths).
+  The detailed catalogue + older drafts live in
   [`surface_draft/`](surface_draft/).
 - **§3 Tiny (TT).** A controlled witness — mechanism-complete but
   material-naive — that exercises every rule. The 13-variant
@@ -152,8 +152,8 @@ Every topic the rest of the writeup touches, in a sentence each
 **Goal.** Develop the theory along the **artifact → surface →
 contract** spine. Each piece gets a defined role, named
 explicitly, before any commentary on the theory's properties.
-The `s*` / `c*` universal naming is first-class. The framework's
-openness to new checking targets closes the section.
+Universal naming is first-class. The framework's openness to new
+checking targets closes the section.
 
 ### 2.1 Artifacts and the boundary
 
@@ -185,7 +185,7 @@ scenario:
 
 **Table — Surface roles.** Six rows, one per surface — the
 definitional view of *what surfaces exist*, with the universal
-`s*` ids and formal `Σ_*` notation.
+identifiers and the formal notation column.
 
 | id     | friendly name    | formal | side    | kind      | what it is                                                                 |
 | ------ | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
@@ -196,10 +196,10 @@ definitional view of *what surfaces exist*, with the universal
 | **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
 | **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
 
-- **Naming convention is load-bearing.** The `s*` identifiers
-  (and the formal `Σ_*` notation for paper prose) are universal
-  vocabulary across theory, tiny, and the canary code. Same names
-  everywhere.
+- **Naming convention is load-bearing.** The surface identifiers
+  (and their formal notation, reserved for paper prose) are
+  universal vocabulary across theory, tiny, and the canary code.
+  Same names everywhere.
 - **Language-side internal structure.** The binding side isn't
   one surface but several layers where *belief* can drift:
   stub-facing (s3) → repacking (one or more user-facing layers,
@@ -218,8 +218,8 @@ definitional view of *what surfaces exist*, with the universal
   | Dynamic (ctypes, cffi, ffi.h) | binding-runtime             | no                           | runtime `dlopen` + `dlsym` |
   | Hybrid (JIT'd stubs)          | varies                      | varies                       | varies                     |
 
-  Every mechanism has the same `s1..s6`; only the materialisation
-  timing differs.
+  Every mechanism has the same surface roles; only the
+  materialisation timing differs.
 - **Scoping.** The c-api binding mechanism is *one* instance of
   the rule schema. Other instances (ctypes, Rust FFI, JNI, …)
   fit the same theory but aren't covered in depth here.
@@ -238,8 +238,8 @@ fires:
 
 **Table — Contract catalogue.** Seven rows × five columns
 (contract, provider surface, consumer surface, kind, where it
-fires). The universal `c*` ids are the cross-cutting names used
-in theory, tiny scenarios, and canary code.
+fires). The universal contract identifiers are the cross-cutting
+names used in theory, tiny scenarios, and canary code.
 
 | Contract                | Provider surface                               | Consumer surface                                       | Kind                                  | Where it fires                                 |
 | ----------------------- | ---------------------------------------------- | ------------------------------------------------------ | ------------------------------------- | ---------------------------------------------- |
@@ -251,7 +251,7 @@ in theory, tiny scenarios, and canary code.
 | **c6 Type**             | **s1** `native_header` — C signature           | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                 | binding build                                  |
 | **c7 API-repacking**    | **s3** `binding_stub`                          | **s4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding) | binding-author time (probe-checked today)      |
 
-- **Universal naming.** `c*` identifiers used in theory, tiny
+- **Universal naming.** Contract identifiers used in theory, tiny
   scenarios, and canary code — same names everywhere.
 - Two contracts (c2 API-completeness, c7 API-repacking) are
   *entirely within the language side*; the other five cross the
