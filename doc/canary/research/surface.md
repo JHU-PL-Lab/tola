@@ -109,11 +109,11 @@ writer's gap-check.
 **Table — Organising grid.** Three pillars × three spine
 concepts; cell entries name what the pillar contributes.
 
-|                  | **artifact**                                                                | **surface**                                                              | **contract**                                                                |
-| ---------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
-| **theory** (§2)  | §2.1 — four kinds (Source/Lib/Binding/App); boundary as the only check site | §2.2–2.3 — presence axis (syntactic/semantic); six roles `s1..s6`        | §2.4 — `c1..c7` catalogue; contract = pinned pair of surfaces               |
-| **tiny** (§3)    | §3.2 — concrete artifacts (libtiny.so, 3 bindings, helper)                  | §3.2 — each artifact populates `s1..s6` (full detail in tiny.md)         | §3.3 — 13-variant matrix: each perturbation breaks one rule                 |
-| **canary** (§4)  | §4.1–4.2 stores abstraction; §4.6 natural producers                         | §4.4 — scan_sources places extraction in the pipeline (mechanism §6.2)   | §4.5 validation against tiny; §4.7 lifts real projects                      |
+|                  | **artifact**                                                  | **surface**                                                              | **contract**                                                       |
+| ---------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| **theory** (§2)  | §2.1 — artifact and its boundary                              | §2.2–2.3 — surface and the role catalogue                                | §2.4 — agreement between two surfaces                              |
+| **tiny** (§3)    | §3.2 — controllable instantiation                             | §3.2 — every role populated in the controlled testbed                    | §3.3 — every agreement perturbed and broken, one at a time         |
+| **canary** (§4)  | §4.1–4.2 stores; §4.6 natural-producer sources                | §4.4 — extraction from real-world artifacts (mechanism §6.2)             | §4.5 validated against tiny; §4.7 exercised on real projects       |
 
 The spine has a clean PL parallel: artifact ↔ *expression*,
 surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
