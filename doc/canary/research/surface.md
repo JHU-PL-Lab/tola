@@ -155,6 +155,65 @@ explicitly, before any commentary on the theory's properties.
 Universal naming is first-class. The framework's openness to new
 checking targets closes the section.
 
+**Naming convention is load-bearing.** The identifiers
+  (and their formal notation, reserved for paper prose) are
+  universal vocabulary across theory, tiny, and the canary code.
+  Same names everywhere.
+
+### 2.0 A running example: tiny
+
+The theory below treats artifacts and surfaces abstractly. To
+keep each table grounded, this section introduces a minimal
+concrete example — a C library and a binding consumer — that
+subsequent subsections refer to by name. The full witness with
+its perturbation matrix is §3; this is the **touchstone** version
+used throughout §2.
+
+**The library.** A single header:
+
+```c
+/* tiny.h */
+extern int tiny_offset;       /* mutable, read-only to consumers */
+int tiny_sum(int a, int b);   /* returns a + b + tiny_offset */
+```
+
+Built into `libtiny.so.1` (SONAME), the library exports
+`tiny_offset` as an OBJECT symbol and `tiny_sum` as a FUNC symbol.
+
+**The artifact chain.** Three binding mechanisms consume the
+library; a downstream `tiny_helper` consumes the binding:
+
+```
+  native side                 ←─ boundary ─→                binding side
+  ───────────                                               ────────────
+
+  native_header  (tiny.h)  ──────────────  binding_stub      (per binding mechanism)
+                                            binding_header   (per binding mechanism)
+  native_lib     (libtiny.so.1) ─────────  binding_lib       (per binding mechanism)
+
+
+                            runtime_trace
+                            (tiny_helper → binding → libtiny.so)
+```
+
+**Per-surface instantiation in tiny.**
+
+**Table — Tiny touchstone.** Maps each surface (by friendly name)
+to its tiny instance.
+
+| friendly name    | side    | tiny instance                                                          |
+| ---------------- | ------- | ---------------------------------------------------------------------- |
+| `native_header`  | native  | `tiny.h` — decls of `tiny_offset`, `tiny_sum`                          |
+| `native_lib`     | native  | `libtiny.so.1` — exports `tiny_offset` (OBJECT), `tiny_sum` (FUNC)     |
+| `binding_stub`   | binding | per-binding stubs (OCaml `external`, ctypes `argtypes`, cext stub)     |
+| `binding_header` | binding | per-binding user-facing decls (OCaml `val`, Python module attrs)       |
+| `binding_lib`    | binding | per-binding compiled artifact (`.cmxa`, cext `.so`; ctypes has none)   |
+| `runtime_trace`  | runtime | probe: set `tiny_offset = 42`, call `tiny_sum(2, 3)` → `47`            |
+
+Subsequent §2 tables and prose read off these names. §3 develops
+the full witness — every binding mechanism, every perturbation,
+the 13-variant matrix.
+
 ### 2.1 Artifacts and the boundary
 
 - Artifact kinds (Source, Lib, Binding, App).
@@ -196,10 +255,6 @@ identifiers and the formal notation column.
 | **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
 | **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
 
-- **Naming convention is load-bearing.** The surface identifiers
-  (and their formal notation, reserved for paper prose) are
-  universal vocabulary across theory, tiny, and the canary code.
-  Same names everywhere.
 - **Language-side internal structure.** The binding side isn't
   one surface but several layers where *belief* can drift:
   stub-facing (s3) → repacking (one or more user-facing layers,
@@ -224,7 +279,7 @@ identifiers and the formal notation column.
   the rule schema. Other instances (ctypes, Rust FFI, JNI, …)
   fit the same theory but aren't covered in depth here.
 
-### 2.4 Contracts
+### 2.4 Contracts (Agreement)
 
 An **explicit contract** is an agreement pinning two surfaces.
 This is the *agreement axis* of the core vocabulary; paired with
