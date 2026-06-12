@@ -173,13 +173,15 @@ the 13-variant matrix) is §4.
 **Presentation convention.** For each artifact, we show *the
 code* when the surface is **syntactic** (declared by the
 developer) or *an inspector's output* when the surface is
-**semantic** (extracted from a compiled artifact). The alignment
-between presence axis and presentation mode is deliberate:
-semantic surfaces need an inspector to be visible at all.
+**semantic** (extracted from a compiled artifact). Semantic
+surfaces need an inspector to be visible at all. **Sn.6 is
+different** — it shows a probe input → expected output (a
+runtime observation, not an artifact's surface; see §3.3).
 
 **The tiny interface.** One mutable const and one function —
-sufficient to populate all six surface roles and exercise all
-seven contracts:
+sufficient to populate the five surface roles, exercise six
+surface contracts, and (via the runtime observation) anchor the
+c3 Behavior contract:
 
 - `tiny_offset` — `extern int`, mutable, read-only to consumers.
 - `tiny_sum(a, b)` — returns `a + b + tiny_offset`.
@@ -281,14 +283,15 @@ Same names everywhere.
   don't. Briefly; surface theory's job is to make these gaps
   visible.
 
-### 3.3 The six surface roles
+### 3.3 The five surface roles
 
-The boundary on each side splits into surfaces by *presence
-axis* (syntactic / semantic) and, on the binding side, by
-*layer* (stub-facing / user-facing). Six roles cover the binding
-scenario:
+A surface is the observable properties an artifact presents at
+its **boundary**. The boundary on each side splits into surfaces
+by *presence axis* (syntactic / semantic) and, on the binding
+side, by *layer* (stub-facing / user-facing). Five roles cover
+the binding scenario:
 
-**Table — Surface roles.** Six rows, one per surface — the
+**Table — Surface roles.** Five rows, one per surface — the
 definitional view of *what surfaces exist*, with the universal
 identifiers and the formal notation column.
 
@@ -299,11 +302,20 @@ identifiers and the formal notation column.
 | **s3** | `binding_stub`   | Σ_BS   | binding | syntactic | binding stub-facing decls — `external` / `argtypes` / `PyMethodDef`        |
 | **s4** | `binding_header` | Σ_BH   | binding | syntactic | binding user-facing module signature — `.mli` `val`s, Python module funcs  |
 | **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
-| **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
+
+**Runtime observation is not a surface.** Sn.6 in §2 — the probe
+input → expected output — is *not* an artifact's boundary; it is
+an observation of *execution*. We refer to it as a **runtime
+observation** (or *behavioral trace*), distinct from the five
+surfaces. It plays a role in the contract catalogue (§3.4
+c3 Behavior) and in the framework's extensibility argument (§3.5),
+but theorems about surface alignment (s1..s5) do not transfer
+directly to it.
 
 **Table — Tiny touchstone.** Maps each surface role (by friendly
 name) to a snippet id from §2; reads as the concrete
-instantiation of the abstract roles in the table above.
+instantiation of the abstract roles in the table above. (Sn.6 is
+listed separately — runtime observation, not a surface.)
 
 | friendly name    | side    | snippet  | what it shows                                          |
 | ---------------- | ------- | -------- | ------------------------------------------------------ |
@@ -312,7 +324,10 @@ instantiation of the abstract roles in the table above.
 | `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)         |
 | `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)             |
 | `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)          |
-| `runtime_trace`  | runtime | **Sn.6** | probe input → expected output (semantic, observed)     |
+
+*Runtime observation* — `Sn.6` — probe input (`set tiny_offset =
+42; call tiny_sum(2, 3)`) → expected output (`47`). Used by c3
+Behavior (§3.4) as an *action expectation*; not a surface.
 
 - **Language-side internal structure.** The binding side isn't
   one surface but several layers where *belief* can drift:
@@ -359,7 +374,7 @@ names used in theory, tiny scenarios, and canary code.
 | ----------------------- | ---------------------------------------------- | ------------------------------------------------------ | ------------------------------------- | ---------------------------------------------- |
 | **c1 Symbol**           | **s2** `native_lib` — defined symbols          | **s5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                   | process link (static) / process load (dynamic) |
 | **c2 API-completeness** | **s4** `binding_header`                        | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)   | app build / probe                              |
-| **c3 Behavior**         | **s6** `runtime_trace` (provider's invocation) | **s6** `runtime_trace` (consumer's wrapper)            | semantic ↔ semantic                   | runtime                                        |
+| **c3 Behavior** †       | provider's invocation (runtime observation)    | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                  |
 | **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed   | **s5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                   | process load                                   |
 | **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations      | **s5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                   | process load                                   |
 | **c6 Type**             | **s1** `native_header` — C signature           | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                 | binding build                                  |
@@ -370,6 +385,14 @@ names used in theory, tiny scenarios, and canary code.
 - Two contracts (c2 API-completeness, c7 API-repacking) are
   *entirely within the language side*; the other five cross the
   native ↔ binding boundary.
+- **† c3 Behavior is an action expectation, not a surface
+  alignment.** The other six contracts pin two *distinct*
+  surfaces and ask whether they agree. c3 instead asks whether
+  running the binding produces the expected output — a
+  trace-vs-expected-trace check (see §3.3 "Runtime observation
+  is not a surface"). The framework's surface theorems
+  (covariance, refinement) apply to the surface contracts; c3
+  sits alongside as a complementary mode.
 - **API-repacking (c7) and API-completeness (c2) are checked via
   probe today; static check is future work.** Their entries in
   the catalogue exist; their static comparators don't yet (c7
@@ -397,6 +420,13 @@ names used in theory, tiny scenarios, and canary code.
   precisely because new failure modes slot in as new
   (surface, contract) pairs. The list of targets above is
   illustrative, not exhaustive.
+- **Two extension modes.** The `(surface, contract)` machinery
+  covers *static agreements* (the five surfaces, six surface
+  contracts). Runtime behavioral checks (c3-style action
+  expectations) sit alongside as a compatible but separate mode.
+  Adding a new behavioral check adds an action-expectation
+  channel; adding a new static check adds a new
+  (surface, contract) pair. The framework supports both.
 
 ### 3.6 Properties of the theory
 

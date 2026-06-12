@@ -384,3 +384,49 @@ discussion must adopt the same shape** next time it's touched
 
 Code-comment cites in `src/canary/`
 and `canary/scripts/` remain; covered by backlog #46.
+
+---
+
+## Code TODOs (postponed to polish pass)
+
+Code-level work surfaced during manuscript editing but
+deliberately deferred — manuscript leads, code catches up later
+per the *uniformity eventually* principle. Add items here as
+they surface; revisit in a coordinated code-polish pass once the
+manuscript stabilises.
+
+### 2026-06-12 — `runtime_trace` is not a surface (from §3.3 decision)
+
+Manuscript reclassified the former s6 `runtime_trace` as a
+**runtime observation**, not a surface (§3.3 *The five surface
+roles* + §3.4 c3 Behavior footnote). The code still treats it as
+a surface peer to s1..s5. Items to align eventually:
+
+- **OCaml source** (`src/canary/`):
+  - `Σ_RT` / `runtime_trace` naming — rename to
+    `runtime_observation` (or `behavioral_trace`), or drop the
+    `Σ_*` formal label entirely for this case.
+  - Any type or constructor in the `inspect_input` ADT that
+    treats `Runtime_trace` as a surface-family peer — split out
+    as a separate variant or document the asymmetry inline.
+  - Surface-role enum / friendly-name mapping: surface roles are
+    now s1..s5; runtime observation gets its own slot.
+- **Python inspectors** (`canary/scripts/`):
+  - `inspect_*` scripts emit JSON with a `kind` field. Probe-trace
+    output's `kind` should reflect "observation" not "surface."
+- **Materials** (`surface_draft/`):
+  - The materials' Surface roles table still lists s6 as a
+    surface row. When materials get pruned per their pruneable
+    status, this gets resolved naturally; until then it stays as
+    historical reference.
+- **tiny.md**:
+  - References to "s1..s6 surface roles" — update to "s1..s5
+    surfaces + Sn.6 runtime observation" (or similar). Several
+    lines reference s6 explicitly.
+- **plan.md / backlog.md** — may have stale s6 references;
+  scan during polish pass.
+
+Cross-reference: backlog #46 covers the broader engine
+vocabulary alignment audit; this item is narrower and specific
+to the surface-vs-observation distinction. Could fold into #46
+or stand alone — decide at polish-pass time.
