@@ -186,18 +186,7 @@ seven contracts:
 
 One binding mechanism shown here (OCaml cstubs); the other two
 (Python cext, Python ctypes) follow the same shape and appear in §4.
-
-**Table — Tiny touchstone.** Maps each surface role (by friendly
-name) to a snippet id; the snippets follow below.
-
-| friendly name    | side    | snippet  | what it shows                                          |
-| ---------------- | ------- | -------- | ------------------------------------------------------ |
-| `native_header`  | native  | **Sn.1** | `tiny.h` source (syntactic)                            |
-| `native_lib`     | native  | **Sn.2** | `nm -D libtiny.so.1` + SONAME (semantic, inspected)    |
-| `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)         |
-| `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)             |
-| `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)          |
-| `runtime_trace`  | runtime | **Sn.6** | probe input → expected output (semantic, observed)     |
+Six snippets follow, one per surface role.
 
 **Sn.1 — `tiny.h`** (s1 native_header, syntactic).
 
@@ -311,6 +300,19 @@ identifiers and the formal notation column.
 | **s4** | `binding_header` | Σ_BH   | binding | syntactic | binding user-facing module signature — `.mli` `val`s, Python module funcs  |
 | **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
 | **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
+
+**Table — Tiny touchstone.** Maps each surface role (by friendly
+name) to a snippet id from §2; reads as the concrete
+instantiation of the abstract roles in the table above.
+
+| friendly name    | side    | snippet  | what it shows                                          |
+| ---------------- | ------- | -------- | ------------------------------------------------------ |
+| `native_header`  | native  | **Sn.1** | `tiny.h` source (syntactic)                            |
+| `native_lib`     | native  | **Sn.2** | `nm -D libtiny.so.1` + SONAME (semantic, inspected)    |
+| `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)         |
+| `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)             |
+| `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)          |
+| `runtime_trace`  | runtime | **Sn.6** | probe input → expected output (semantic, observed)     |
 
 - **Language-side internal structure.** The binding side isn't
   one surface but several layers where *belief* can drift:
