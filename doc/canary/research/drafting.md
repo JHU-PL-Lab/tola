@@ -372,6 +372,27 @@ work area** at top.)
   placement mechanism, §7.2 home), §5.5 (validation), §5.6
   (natural producers), §5.7 (real-project demos).
 
+### §3.1 Artifacts and the boundary — consider adding an artifact table (2026-06-12)
+
+User noted (2026-06-12) that canary's code has an artifact table
+(artifact kinds in `Canary_basic` — `Source | Lib | Binding | App
+| Package` — and the per-artifact alias dictionary used in tiny's
+inventory, e.g. `n4 = lib_native.so`, `bo7 = compiled_binding_ocaml.stub-a`).
+§3.1 currently just lists artifact kinds as a bullet:
+
+> Artifact kinds (Source, Lib, Binding, App).
+
+When §3 SS gets a prose pass, consider promoting to **Table —
+Artifact kinds** (or **Table — Artifact inventory**) with one
+row per kind: id / friendly name / what it is / examples. Could
+mirror the §3.3 Surface roles table structure for visual
+consistency.
+
+Source: canary code (`Canary_basic.artifact_kind`); concrete
+inventory in `tiny.md`'s artifact-alias section. **Not urgent**;
+the existing one-bullet outline of §3.1 is fine until prose
+lands.
+
 ### §6.1 Principles full discussion — reshape to match §1.3
 
 §1.3 (manuscript, reshaped 2026-06-11) now organises four
