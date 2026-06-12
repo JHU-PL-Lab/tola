@@ -164,12 +164,41 @@ checking targets closes the section.
 
 The theory below treats artifacts and surfaces abstractly. To
 keep each table grounded, this section introduces a minimal
-concrete example — a C library and a binding consumer — that
-subsequent subsections refer to by name. The full witness with
-its perturbation matrix is §3; this is the **touchstone** version
-used throughout §2.
+concrete example — a C library and one binding consumer — that
+subsequent subsections refer to by name and by **snippet id**.
+The full witness (every binding mechanism, every perturbation,
+the 13-variant matrix) is §3.
 
-**The library.** A single header:
+**Presentation convention.** For each artifact, we show *the
+code* when the surface is **syntactic** (declared by the
+developer) or *an inspector's output* when the surface is
+**semantic** (extracted from a compiled artifact). The alignment
+between presence axis and presentation mode is deliberate:
+semantic surfaces need an inspector to be visible at all.
+
+**The tiny interface.** One mutable const and one function —
+sufficient to populate all six surface roles and exercise all
+seven contracts:
+
+- `tiny_offset` — `extern int`, mutable, read-only to consumers.
+- `tiny_sum(a, b)` — returns `a + b + tiny_offset`.
+
+One binding mechanism shown here (OCaml cstubs); the other two
+(Python cext, Python ctypes) follow the same shape and appear in §3.
+
+**Table — Tiny touchstone.** Maps each surface role (by friendly
+name) to a snippet id; the snippets follow below.
+
+| friendly name    | side    | snippet  | what it shows                                          |
+| ---------------- | ------- | -------- | ------------------------------------------------------ |
+| `native_header`  | native  | **Sn.1** | `tiny.h` source (syntactic)                            |
+| `native_lib`     | native  | **Sn.2** | `nm -D libtiny.so.1` + SONAME (semantic, inspected)    |
+| `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)         |
+| `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)             |
+| `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)          |
+| `runtime_trace`  | runtime | **Sn.6** | probe input → expected output (semantic, observed)     |
+
+**Sn.1 — `tiny.h`** (s1 native_header, syntactic).
 
 ```c
 /* tiny.h */
@@ -177,42 +206,54 @@ extern int tiny_offset;       /* mutable, read-only to consumers */
 int tiny_sum(int a, int b);   /* returns a + b + tiny_offset */
 ```
 
-Built into `libtiny.so.1` (SONAME), the library exports
-`tiny_offset` as an OBJECT symbol and `tiny_sum` as a FUNC symbol.
-
-**The artifact chain.** Three binding mechanisms consume the
-library; a downstream `tiny_helper` consumes the binding:
+**Sn.2 — `libtiny.so.1` inspected** (s2 native_lib, semantic).
 
 ```
-  native side                 ←─ boundary ─→                binding side
-  ───────────                                               ────────────
+$ nm -D libtiny.so.1
+00001234 D tiny_offset       (OBJECT)
+00005678 T tiny_sum          (FUNC)
 
-  native_header  (tiny.h)  ──────────────  binding_stub      (per binding mechanism)
-                                            binding_header   (per binding mechanism)
-  native_lib     (libtiny.so.1) ─────────  binding_lib       (per binding mechanism)
-
-
-                            runtime_trace
-                            (tiny_helper → binding → libtiny.so)
+$ readelf -d libtiny.so.1 | grep SONAME
+ (SONAME)   Library soname: [libtiny.so.1]
 ```
 
-**Per-surface instantiation in tiny.**
+**Sn.3 — OCaml stub-facing decls** (s3 binding_stub, syntactic).
 
-**Table — Tiny touchstone.** Maps each surface (by friendly name)
-to its tiny instance.
+```ocaml
+(* in the binding's stub layer *)
+external _sum    : int -> int -> int = "caml_tiny_sum"
+external _offset : unit -> int       = "caml_tiny_get_offset"
+```
 
-| friendly name    | side    | tiny instance                                                          |
-| ---------------- | ------- | ---------------------------------------------------------------------- |
-| `native_header`  | native  | `tiny.h` — decls of `tiny_offset`, `tiny_sum`                          |
-| `native_lib`     | native  | `libtiny.so.1` — exports `tiny_offset` (OBJECT), `tiny_sum` (FUNC)     |
-| `binding_stub`   | binding | per-binding stubs (OCaml `external`, ctypes `argtypes`, cext stub)     |
-| `binding_header` | binding | per-binding user-facing decls (OCaml `val`, Python module attrs)       |
-| `binding_lib`    | binding | per-binding compiled artifact (`.cmxa`, cext `.so`; ctypes has none)   |
-| `runtime_trace`  | runtime | probe: set `tiny_offset = 42`, call `tiny_sum(2, 3)` → `47`            |
+**Sn.4 — OCaml user-facing `.mli`** (s4 binding_header, syntactic).
 
-Subsequent §2 tables and prose read off these names. §3 develops
-the full witness — every binding mechanism, every perturbation,
-the 13-variant matrix.
+```ocaml
+(* tiny.mli — user-facing module signature *)
+val sum    : int -> int -> int
+val offset : unit -> int
+```
+
+**Sn.5 — OCaml stub `.a` inspected** (s5 binding_lib, semantic).
+
+```
+$ nm tiny_stubs.a | grep -E 'tiny_|caml_tiny'
+                U tiny_offset
+                U tiny_sum
+T caml_tiny_sum
+T caml_tiny_get_offset
+```
+
+**Sn.6 — Runtime probe** (s6 runtime_trace, semantic).
+
+```
+input:    set tiny_offset = 42
+          call tiny_sum(2, 3)
+expected: 47          (i.e. 2 + 3 + 42)
+```
+
+Subsequent §2 tables and prose refer to these snippets by id
+(Sn.1 … Sn.6). §3 develops the full witness — every binding
+mechanism, every perturbation, the 13-variant matrix.
 
 ### 2.1 Artifacts and the boundary
 
