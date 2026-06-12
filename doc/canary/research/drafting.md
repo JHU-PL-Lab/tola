@@ -350,9 +350,9 @@ turn and confirm the prose (or current bullets) actually says
 what the grid cell promises. (§2 row moved to **§2 SS — focused
 work area** at top.)
 
-- **§3 TT row.** §3.2 (concrete artifacts), §3.2 (surface
-  populations — likely needs a sub-table in §3.2), §3.3
-  (13-variant matrix).
+- **§3 TT row.** Anatomy absorbed into §2.0 (touchstone);
+  §3 focuses on witness role + perturbation matrix (§3.2) + what
+  tiny demonstrates/doesn't (§3.3).
 - **§4 CC row.** §4.1–4.2 (stores), §4.4 (scan_sources placement
   mechanism, §6.2 home), §4.5 (validation), §4.6 (natural
   producers), §4.7 (real-project demos).

@@ -100,7 +100,7 @@ concepts; cell entries name what the pillar contributes.
 |                 | **artifact**                                   | **surface**                                                  | **invariant**                                                |
 | --------------- | ---------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | **theory** (§2) | §2.1 — artifact and its boundary               | §2.2–2.3 — surface and the role catalogue                    | §2.4 — agreement between two surfaces                        |
-| **tiny** (§3)   | §3.2 — controllable instantiation              | §3.2 — every role populated in the controlled testbed        | §3.3 — every agreement perturbed and broken, one at a time   |
+| **tiny** (§3)   | §2.0 + §3 — controllable instantiation         | §2.0 touchstone; §3 expands binding-mechanism diversity      | §3.2 — every agreement perturbed and broken, one at a time   |
 | **canary** (§4) | §4.1–4.2 stores; §4.6 natural-producer sources | §4.4 — extraction from real-world artifacts (mechanism §6.2) | §4.5 validated against tiny; §4.7 exercised on real projects |
 
 The spine has a clean PL parallel: artifact ↔ *expression*,
@@ -411,6 +411,14 @@ something to refer to.)
 testbed with a hand-controlled perturbation budget; every active
 Contract has a witness scenario.
 
+§2.0 introduced **tiny in miniature** — one C library, one OCaml
+binding, one const + one function — as the touchstone for §2's
+theory tables. §3 develops the **full tiny**: three binding
+mechanisms (OCaml cstubs, Python cext, Python ctypes), a
+downstream `tiny_helper` application, and packaging considerations
+that surface gaps in the canary implementation itself. Tiny-as-
+object is presupposed; this chapter is about tiny-as-evidence.
+
 ### 3.1 Why a synthetic witness
 
 - **Tiny's role: pivot.** A *pivot* — canary/smoke testing for
@@ -427,14 +435,13 @@ Contract has a witness scenario.
   tiny exists so we can run it deterministically.
 - If tiny passes both positive and negative cases, every concrete
   trace aligns with surface theory for the mechanisms tiny covers.
+- **What §3 adds beyond §2.0's touchstone**: the two Python
+  binding mechanisms (cext + ctypes) alongside OCaml, the
+  downstream `tiny_helper` app exercising the full user-side
+  chain, and packaging considerations (apt / opam / pip) — the
+  last of which is a known gap in canary's implementation today.
 
-### 3.2 Anatomy of tiny
-
-- C lib + 3 bindings (OCaml cstubs, Python cext, Python ctypes) +
-  downstream `tiny_helper`.
-- One-paragraph tour; refer reader to `tiny.md` for the full spec.
-
-### 3.3 Perturbations and the 13-variant matrix
+### 3.2 The perturbation matrix
 
 - The harness ↔ canary mapping table (13 entries) is the load-
   bearing artifact.
@@ -445,7 +452,7 @@ Contract has a witness scenario.
 - *How* perturbations are mechanically produced is §6.1 (the two
   engines).
 
-### 3.4 What tiny demonstrates and what it doesn't
+### 3.3 What tiny demonstrates and what it doesn't
 
 - **Demonstrates.** Every active rule has at least one fire.
 - **Doesn't (mechanism scope).** Real-world ABI complexity (no
