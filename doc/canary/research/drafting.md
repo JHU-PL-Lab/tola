@@ -372,6 +372,44 @@ work area** at top.)
   placement mechanism, §7.2 home), §5.5 (validation), §5.6
   (natural producers), §5.7 (real-project demos).
 
+### Boundary vs surface — vocabulary unification (2026-06-12)
+
+User's framing: **boundary = the objective reality** (the locus
+where artifacts meet); **surface = what is detected** at that
+boundary. Inspector bridges the two. Aligns naturally with the
+syntactic / semantic split — semantic surfaces are what
+inspectors extract at the boundary; syntactic surfaces are what
+the developer declared about it.
+
+Current manuscript mixes "boundary" in three senses (§3 SS prose
+audit found three distinct uses):
+
+- **(A) Artifact boundary** — the objective locus. *Load-bearing.*
+  §3.1, §3.3 use this correctly.
+- **(B) Native ↔ binding "boundary"** — the chasm between two
+  *families* of artifacts, not one artifact's boundary. Currently
+  in §3.4 ("the other five cross the native ↔ binding
+  boundary"). Should rename to **"native ↔ binding divide"** or
+  **"side"** or **"chasm"** — different *kind* of separation
+  from (A).
+- **(C) Engine boundary / harness-canary boundary** — implementation
+  seam. §1.5, §5.5, §7.5. Lower priority — context disambiguates
+  by §5 / §7 — but could rename to **"engine seam"** /
+  **"engine interface"** for cleanliness.
+
+When prose lands:
+
+- Add a one-sentence definition in §3.1: *"By 'boundary' we mean
+  the objective locus where one artifact meets another; a
+  **surface** is what's detected at that boundary."* Before §3.2
+  uses the term.
+- Rename (B) — single occurrence in §3.4 bullet.
+- Decide on (C) — likely leave alone unless §7 prose pass needs
+  the disambiguation.
+
+Surface uses appear to be already clean (noun = detected
+properties; verb = "to come up" — distinct).
+
 ### §3.1 Artifacts and the boundary — consider adding an artifact table (2026-06-12)
 
 User noted (2026-06-12) that canary's code has an artifact table
