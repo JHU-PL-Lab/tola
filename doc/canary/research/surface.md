@@ -71,7 +71,7 @@ catalogue.
 
 One-line previews of the working principles. Three align with the
 backbone (rules / concrete traces / abstract traces, introduced
-below); one is orthogonal. Full discussion in §5.1 (MM).
+below); one is orthogonal. Full discussion in §6.1 (MM).
 
 - **Comparator + probe as complementary** — the rules-vs-traces
   duality: comparators check rules statically; probes observe
@@ -99,20 +99,20 @@ concepts; cell entries name what the pillar contributes.
 
 |                 | **artifact**                                   | **surface**                                                  | **invariant**                                                |
 | --------------- | ---------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| **theory** (§2) | §2.1 — artifact and its boundary               | §2.2–2.3 — surface and the role catalogue                    | §2.4 — agreement between two surfaces                        |
-| **tiny** (§3)   | §2.0 + §3 — controllable instantiation         | §2.0 touchstone; §3 expands binding-mechanism diversity      | §3.2 — every agreement perturbed and broken, one at a time   |
-| **canary** (§4) | §4.1–4.2 stores; §4.6 natural-producer sources | §4.4 — extraction from real-world artifacts (mechanism §6.2) | §4.5 validated against tiny; §4.7 exercised on real projects |
+| **theory** (§3) | §3.1 — artifact and its boundary               | §3.2–3.3 — surface and the role catalogue                    | §3.4 — agreement between two surfaces                        |
+| **tiny** (§2+§4)| §2 + §4 — controllable instantiation           | §2 touchstone; §4 expands binding-mechanism diversity        | §4.2 — every agreement perturbed and broken, one at a time   |
+| **canary** (§5) | §5.1–5.2 stores; §5.6 natural-producer sources | §5.4 — extraction from real-world artifacts (mechanism §7.2) | §5.5 validated against tiny; §5.7 exercised on real projects |
 
 The spine has a clean PL parallel: artifact ↔ *expression*,
 surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
 positioning surface theory as "a type system for binding
-interfaces" (hook for §5.6 calculus sketch). A complementary
+interfaces" (hook for §6.6 calculus sketch). A complementary
 internal vocabulary names **rules** (the catalogue — agreements
 between surfaces) and the **traces** that observe
 them in particular **worlds** (configurations of artifacts):
 **concrete traces** are tiny + a controlled perturbation (single
-reproducible witness, §3), **abstract traces** are worlds drawn
-from per-kind stores (independent-producer combinations, §4); §6
+reproducible witness, §4), **abstract traces** are worlds drawn
+from per-kind stores (independent-producer combinations, §5); §7
 covers how each shape is mechanically produced. The formal
 scaffold (rule / world / trace definitions) is parked in
 [`surface_draft/notation.md`](surface_draft/notation.md) until
@@ -124,50 +124,51 @@ Every topic the rest of the writeup touches, in a sentence each
 — a prose elaboration of the grid above. The reader should leave
 §1 knowing *what* is coming and *where*.
 
-- **§2 Surface theory (SS).** **Artifact → surface → contract**
+- **§2 Tiny-tiny: running example.** The minimal touchstone — one
+  C library, one OCaml binding, one const + one function — with
+  six snippets (Sn.1…Sn.6) the rest of the writeup refers to by
+  id. Built so §3's theory tables have a concrete anchor.
+- **§3 Surface theory (SS).** **Artifact → surface → contract**
   along an explicit spine. The surface roles and contract
   catalogue with universal naming; the framework's openness to
   new checking targets (hidden deps, symbol versions, paths).
   The detailed catalogue + older drafts live in
   [`surface_draft/`](surface_draft/).
-- **§3 Tiny (TT).** A controlled witness — mechanism-complete but
-  material-naive — that exercises every rule. The 13-variant
-  matrix and per-scenario detail live in [`tiny.md`](tiny.md).
-- **§4 Canary (CC).** A producer-agnostic framework that scales
+- **§4 Tiny-complete (TT).** The full witness — three binding
+  mechanisms (OCaml cstubs + Python cext + Python ctypes), a
+  downstream `tiny_helper` app, and packaging considerations.
+  Includes the 13-variant perturbation matrix; per-scenario
+  detail in [`tiny.md`](tiny.md).
+- **§5 Canary (CC).** A producer-agnostic framework that scales
   the witness to natural producers (opam / pip / apt). Includes
   a methodological validation step against tiny's concrete
   traces.
-- **§5 Miscellaneous (MM).** Working principles in full;
+- **§6 Miscellaneous (MM).** Working principles in full;
   packaging as a real-world trace source; versioning as
   cross-cutting; related work; calculus sketch.
-- **§6 Implementation (Impl).** How the theory is realised in
+- **§7 Implementation (Impl).** How the theory is realised in
   code: two engines (mutation, combinator), inspectors and check
   mechanisms, code-citation map, harness/canary boundary
   cleanness.
 
 ---
 
-## §2 — Surface theory
+## §2 — Tiny-tiny: a running example
 
-**Goal.** Develop the theory along the **artifact → surface →
-contract** spine. Each piece gets a defined role, named
-explicitly, before any commentary on the theory's properties.
-Universal naming is first-class. The framework's openness to new
-checking targets closes the section.
-
-**Naming convention is load-bearing.** The identifiers
-  (and their formal notation, reserved for paper prose) are
-  universal vocabulary across theory, tiny, and the canary code.
-  Same names everywhere.
-
-### 2.0 A running example: tiny
+**Goal.** Introduce a minimal concrete example — a C library and
+one binding consumer — that §3 (Surface theory) refers to by name
+and by snippet id. Six snippets follow, one per surface role,
+arranged so **syntactic** surfaces show source and **semantic**
+surfaces show inspector output. §4 (Tiny-complete) develops the
+full tiny with three binding mechanisms, a downstream app, and
+packaging considerations.
 
 The theory below treats artifacts and surfaces abstractly. To
 keep each table grounded, this section introduces a minimal
 concrete example — a C library and one binding consumer — that
 subsequent subsections refer to by name and by **snippet id**.
 The full witness (every binding mechanism, every perturbation,
-the 13-variant matrix) is §3.
+the 13-variant matrix) is §4.
 
 **Presentation convention.** For each artifact, we show *the
 code* when the surface is **syntactic** (declared by the
@@ -184,7 +185,7 @@ seven contracts:
 - `tiny_sum(a, b)` — returns `a + b + tiny_offset`.
 
 One binding mechanism shown here (OCaml cstubs); the other two
-(Python cext, Python ctypes) follow the same shape and appear in §3.
+(Python cext, Python ctypes) follow the same shape and appear in §4.
 
 **Table — Tiny touchstone.** Maps each surface role (by friendly
 name) to a snippet id; the snippets follow below.
@@ -251,11 +252,26 @@ input:    set tiny_offset = 42
 expected: 47          (i.e. 2 + 3 + 42)
 ```
 
-Subsequent §2 tables and prose refer to these snippets by id
-(Sn.1 … Sn.6). §3 develops the full witness — every binding
+Subsequent §3 tables and prose refer to these snippets by id
+(Sn.1 … Sn.6). §4 develops the full witness — every binding
 mechanism, every perturbation, the 13-variant matrix.
 
-### 2.1 Artifacts and the boundary
+---
+
+## §3 — Surface theory
+
+**Goal.** Develop the theory along the **artifact → surface →
+contract** spine. Each piece gets a defined role, named
+explicitly, before any commentary on the theory's properties.
+Universal naming is first-class. The framework's openness to new
+checking targets closes the section.
+
+**Naming convention is load-bearing.** The identifiers
+(and their formal notation, reserved for paper prose) are
+universal vocabulary across theory, tiny, and the canary code.
+Same names everywhere.
+
+### 3.1 Artifacts and the boundary
 
 - Artifact kinds (Source, Lib, Binding, App).
 - The boundary as the only thing tools see — every check happens
@@ -264,7 +280,7 @@ mechanism, every perturbation, the 13-variant matrix.
   boundary; surface theory makes these assumptions **explicit**.
   (One sentence in place of the tool-surfaces table.)
 
-### 2.2 What a surface is
+### 3.2 What a surface is
 
 - Definition: the observable properties an artifact presents at
   its boundary.
@@ -276,7 +292,7 @@ mechanism, every perturbation, the 13-variant matrix.
   don't. Briefly; surface theory's job is to make these gaps
   visible.
 
-### 2.3 The six surface roles
+### 3.3 The six surface roles
 
 The boundary on each side splits into surfaces by *presence
 axis* (syntactic / semantic) and, on the binding side, by
@@ -320,7 +336,7 @@ identifiers and the formal notation column.
   the rule schema. Other instances (ctypes, Rust FFI, JNI, …)
   fit the same theory but aren't covered in depth here.
 
-### 2.4 Contracts (Agreement)
+### 3.4 Contracts (Agreement)
 
 An **explicit contract** is an agreement pinning two surfaces.
 This is the *agreement axis* of the core vocabulary; paired with
@@ -361,7 +377,7 @@ names used in theory, tiny scenarios, and canary code.
   because each binding is independent; cross-binding consistency
   isn't a canary-side agreement.
 
-### 2.5 Extending the framework
+### 3.5 Extending the framework
 
 - The `(surface, contract)` machinery is **open** — new checking
   targets slot in without changing the framework.
@@ -369,7 +385,8 @@ names used in theory, tiny scenarios, and canary code.
   - **Hidden dependencies** (glibc / musl as the canonical case):
     a surface requirement not declared in headers but present in
     NEEDED / `@@VER`. Caught by the same comparator pattern as
-    declared symbols. (Absorbs former §5.4.)
+    declared symbols. (Absorbs the former MM Hidden dependencies
+    subsection that was removed in the restructure.)
   - **Symbol versions**: already extensively checked (c5).
   - **Path resolution**: to-do — the loader's filename →
     artifact resolution is another surface to make explicit.
@@ -379,7 +396,7 @@ names used in theory, tiny scenarios, and canary code.
   (surface, contract) pairs. The list of targets above is
   illustrative, not exhaustive.
 
-### 2.6 Properties of the theory
+### 3.6 Properties of the theory
 
 (Comments on the theory, presented after the theory itself has
 something to refer to.)
@@ -391,7 +408,7 @@ something to refer to.)
   one mechanism can serve several contracts (c3 probe runner
   also detects c7). Attribution lives at the variant
   declaration, not the detection layer. Cross-reference from
-  §6.3 (the implementation realises both mechanisms cleanly).
+  §7.3 (the implementation realises both mechanisms cleanly).
 - **Static / dynamic axis.** Some contracts are statically
   detectable (set diff, type match); others manifest only at
   runtime (probe-assertion refutation). This is an
@@ -405,21 +422,22 @@ something to refer to.)
 
 ---
 
-## §3 — Tiny: the controlled witness
+## §4 — Tiny-complete: the controlled witness
 
 **Goal.** Show that the theory is non-vacuous. Tiny is a minimal
 testbed with a hand-controlled perturbation budget; every active
 Contract has a witness scenario.
 
-§2.0 introduced **tiny in miniature** — one C library, one OCaml
-binding, one const + one function — as the touchstone for §2's
-theory tables. §3 develops the **full tiny**: three binding
-mechanisms (OCaml cstubs, Python cext, Python ctypes), a
-downstream `tiny_helper` application, and packaging considerations
-that surface gaps in the canary implementation itself. Tiny-as-
-object is presupposed; this chapter is about tiny-as-evidence.
+§2 (Tiny-tiny) introduced **tiny in miniature** — one C library,
+one OCaml binding, one const + one function — as the touchstone
+for §3's theory tables. This chapter develops the **full tiny**:
+three binding mechanisms (OCaml cstubs, Python cext, Python
+ctypes), a downstream `tiny_helper` application, and packaging
+considerations that surface gaps in the canary implementation
+itself. Tiny-as-object is presupposed (§2); this chapter is about
+tiny-as-evidence.
 
-### 3.1 Why a synthetic witness
+### 4.1 Why a synthetic witness
 
 - **Tiny's role: pivot.** A *pivot* — canary/smoke testing for
   tools and systems. Aims to be **mechanism-complete but
@@ -435,13 +453,13 @@ object is presupposed; this chapter is about tiny-as-evidence.
   tiny exists so we can run it deterministically.
 - If tiny passes both positive and negative cases, every concrete
   trace aligns with surface theory for the mechanisms tiny covers.
-- **What §3 adds beyond §2.0's touchstone**: the two Python
+- **What §4 adds beyond §2's touchstone**: the two Python
   binding mechanisms (cext + ctypes) alongside OCaml, the
   downstream `tiny_helper` app exercising the full user-side
   chain, and packaging considerations (apt / opam / pip) — the
   last of which is a known gap in canary's implementation today.
 
-### 3.2 The perturbation matrix
+### 4.2 The perturbation matrix
 
 - The harness ↔ canary mapping table (13 entries) is the load-
   bearing artifact.
@@ -449,10 +467,10 @@ object is presupposed; this chapter is about tiny-as-evidence.
   which check mechanism caught it.
 - Honest split: comparator-driven rows (c1/c2/c4/c5/c6) vs
   probe-runner rows (c3/c7).
-- *How* perturbations are mechanically produced is §6.1 (the two
+- *How* perturbations are mechanically produced is §7.1 (the two
   engines).
 
-### 3.3 What tiny demonstrates and what it doesn't
+### 4.3 What tiny demonstrates and what it doesn't
 
 - **Demonstrates.** Every active rule has at least one fire.
 - **Doesn't (mechanism scope).** Real-world ABI complexity (no
@@ -470,7 +488,7 @@ object is presupposed; this chapter is about tiny-as-evidence.
 
 ---
 
-## §4 — Canary
+## §5 — Canary
 
 **Goal.** Describe canary as a **store / runner / producer**
 parameterised framework that consumes per-kind artifact stores.
@@ -480,9 +498,9 @@ managers (opam / pip / apt). The chapter walks the framework's
 design, its methodological validation against tiny's concrete
 traces, then its application to natural producers. How the
 framework is realised in code (inspectors, check mechanisms,
-engine boundary) lives in §6 Implementation.
+engine boundary) lives in §7 Implementation.
 
-### 4.1 The three concerns
+### 5.1 The three concerns
 
 - **Stores** — content-only abstractions providing artifacts of
   declared kinds. No state of their own beyond "here are some
@@ -492,7 +510,7 @@ engine boundary) lives in §6 Implementation.
 - **Producers** — populate stores. Tiny's harness is one
   producer; opam / pip / apt are others.
 
-### 4.2 Per-artifact-kind stores
+### 5.2 Per-artifact-kind stores
 
 - `tiny_stores = { source ; lib_dir ; python_cext_root ;
   lib_filename }`.
@@ -500,21 +518,21 @@ engine boundary) lives in §6 Implementation.
   naturally.
 - One store per surface kind, not one store per scenario.
 
-### 4.3 The spec model as parameterisation
+### 5.3 The spec model as parameterisation
 
 - `make_*_script_spec ~stores` and `?probe_exe`.
 - Variants as parameterised specs, not enum tags.
 - The spec is uniform across variants; the producer-specific
   mapping lives outside the spec.
 
-### 4.4 Scan_sources as polymorphic placement
+### 5.4 Scan_sources as polymorphic placement
 
 - Source-derived inspects need to run before any build step that
   might fail. `scan_sources_after` lets projects declare placement.
 - Matters for real projects (z3-style generated bindings need the
   post-build-lib placement).
 
-### 4.5 Validation against tiny — the credibility bridge
+### 5.5 Validation against tiny — the credibility bridge
 
 - Canary's variant matrix walks the abstract-trace space generated
   by tiny's per-kind stores.
@@ -523,9 +541,9 @@ engine boundary) lives in §6 Implementation.
   the framework is sound for the rules tiny exercises.
 - Implementation factoring and known leaks tracked in
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md);
-  the manuscript view sits in §6.5.
+  the manuscript view sits in §7.5.
 
-### 4.6 Application to natural producers
+### 5.6 Application to natural producers
 
 - The bridge sentence: tiny's harness IS a package manager that
   ships perturbed artifacts. opam / pip / apt are the natural
@@ -534,7 +552,7 @@ engine boundary) lives in §6 Implementation.
   dirs, pip site-packages, apt install paths.
 - Producer-agnosticism falls out by construction.
 
-### 4.7 Real-project case studies
+### 5.7 Real-project case studies
 
 - llvm: the existing `Opcode.UncondBr` demo (c2 OCaml) lifted to
   the post-Phase-15 framework.
@@ -542,27 +560,27 @@ engine boundary) lives in §6 Implementation.
 - sqlite: candidate for c4 (Homebrew vs apt SONAME differences).
 - For each: what perturbation surfaces, which rule fires.
 
-### 4.8 What's needed to write this section honestly
+### 5.8 What's needed to write this section honestly
 
 - Lift the existing real-project specs (z3, llvm, sqlite) through
-  the post-Phase-15 framework before §4.6 / §4.7 can be honest.
+  the post-Phase-15 framework before §5.6 / §5.7 can be honest.
 - "Real-project audit" — the work the project paused for.
 
 ---
 
-## §5 — Miscellaneous (MM)
+## §6 — Miscellaneous (MM)
 
 **Goal.** A deliberately loose gather for topics that don't fit the
 SS / TT / CC spine cleanly. Some live here permanently (working
 principles in full, related work, calculus sketch); some are
 cross-cutting concerns visible from all three pillars but
 canonical-source-of-truth nowhere else (packaging, versioning).
-Hidden dependencies, originally slated here, moved to §2.5 as an
+Hidden dependencies, originally slated here, moved to §3.5 as an
 example of the framework's extension targets. The "extensions"
 pattern from PL papers is **held in mind** here — we may or may
 not commit to it as prose lands.
 
-### 5.1 Principles (full discussion)
+### 6.1 Principles (full discussion)
 
 - Expand each principle from §1.3 with rationale, alternatives
   considered, prior art.
@@ -570,7 +588,7 @@ not commit to it as prose lands.
   notes (when they matter for the methodological claim); scoping
   principles (mechanism-complete material-naive).
 
-### 5.2 Packaging as a trace source
+### 6.2 Packaging as a trace source
 
 - **Reframe.** Packaging isn't an extension of the framework; it's
   what gives natural producers their real-world trace possibility.
@@ -579,19 +597,19 @@ not commit to it as prose lands.
 - Co-providers, multi-PM scenarios, pip-wheel-bundling-native-lib
   cases (PyTorch-style).
 - A future `package_theory.md` is one home; covering it as a
-  section in §5 is another.
+  section in §6 is another.
 
-### 5.3 Versioning as cross-cutting
+### 6.3 Versioning as cross-cutting
 
 - Versioning isn't a single rule — it cuts across c1 Symbol, c4
   ABI, c5 SymbolVersion, and the version-script work.
 - Glibc / musl as one canonical example.
 - Why this gets its own section: it threads through SS, TT, and
   CC equally. (Hidden dependencies, which are also cross-cutting,
-  moved to §2.5 as an example of the framework's extension
+  moved to §3.5 as an example of the framework's extension
   targets.)
 
-### 5.4 Extensions [held in mind]
+### 6.4 Extensions [held in mind]
 
 - PL-paper convention: a section enumerating directions of
   generalisation (other binding mechanisms — ctypes / Rust FFI /
@@ -600,18 +618,18 @@ not commit to it as prose lands.
   needing it; otherwise the extensions get inlined where
   relevant.
 
-### 5.5 Related work
+### 6.5 Related work
 
 - Compiler correctness, type-preserving compilation, linking
   calculi, ELF semantics, FFI semantics, ABI tooling.
 
-### 5.6 Calculus sketch
+### 6.6 Calculus sketch
 
 - Speculative formal direction; depth depends on venue.
 
 ---
 
-## §6 — Implementation (Impl)
+## §7 — Implementation (Impl)
 
 **Goal.** How the theory is realised in code. Two engines
 (mutation, combinator), the inspectors and check mechanisms,
@@ -619,7 +637,7 @@ where each piece lives in the canary tree, and the boundary
 between harness (tiny's producer) and canary (the runner). Skip
 this chapter if you only want the conceptual narrative.
 
-### 6.1 The two engines
+### 7.1 The two engines
 
 Where harness and canary plug into the rule/trace framework. The
 slots aren't part of the theory; they record how each piece is
@@ -639,7 +657,7 @@ mutation gives depth (controlled, reproducible perturbations);
 combinator gives breadth (configurations sourced from independent
 producers).
 
-### 6.2 Inspectors and the `inspect_input` ADT
+### 7.2 Inspectors and the `inspect_input` ADT
 
 - Comparators consume JSON; agnostic to how the JSON was produced
   (real AST tool, regex grep, `nm` output, …).
@@ -647,7 +665,7 @@ producers).
   `Native_lib`, `Typed_header`, …).
 - This decoupling is what makes the framework producer-agnostic.
 
-### 6.3 Check mechanisms
+### 7.3 Check mechanisms
 
 - Static comparators: predict failure substrings from cached
   JSONs; runner greps probe.log for them.
@@ -656,7 +674,7 @@ producers).
 - The two mechanisms are independent; some rules use one, some
   the other, occasionally both.
 
-### 6.4 What's general vs what's framework-private
+### 7.4 What's general vs what's framework-private
 
 - General: store model, spec model, scan_sources, inspect ADT,
   comparator / runner layering, producer-agnosticism.
@@ -665,7 +683,7 @@ producers).
   details in
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
 
-### 6.5 Engine boundary cleanness
+### 7.5 Engine boundary cleanness
 
 - The mutation engine (harness) and combinator engine (canary)
   must stay operationally separate so the methodological claim
@@ -675,7 +693,7 @@ producers).
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
 - Phase 16's refactor goal: close those leaks.
 
-### 6.6 Code-citation map
+### 7.6 Code-citation map
 
 - Pointers to the OCaml + Python files that realise each piece
   of the framework: `canary_project_tiny.ml`,

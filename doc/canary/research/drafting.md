@@ -10,48 +10,53 @@ for applying them, plus the queue for what's about to be edited.
 Convention: queued items get removed once applied (not retained as
 history); deferred / lower-priority work moves to `backlog.md`.
 
-## §2 SS — focused work area
+## §3 SS — focused work area
 
-### §2 Pull from sources
+(SS was §2 before the 2026-06-12 restructure that lifted Tiny-tiny
+to §2; theory subsections renumbered accordingly. Materials
+references — `surface_draft/surface.md §X.Y` — keep the materials'
+own numbering and are unchanged.)
 
-(§2.1 surface-roles table and §2.4 contract-definitions table
-from `surface_draft/surface.md` have been migrated to manuscript
-§2.3 / §2.4 — no longer Pull-from sources.)
+### §3 Pull from sources
 
-Remaining sources for §2 prose expansion:
+(Materials' §2.1 surface-roles table and §2.4 contract-definitions
+table have been migrated to manuscript §3.3 / §3.4 — no longer
+Pull-from sources.)
+
+Remaining sources for §3 prose expansion:
 
 - `surface_draft/surface.md` §2.2 — **language-side internal
   structure**: 3-layer breakdown (stub-facing → repacking →
   compiled artifact) + the "why the compiled artifact is the
   natural check-target" callout. Only a single-bullet summary
-  has landed in manuscript §2.3; full prose still source.
+  has landed in manuscript §3.3; full prose still source.
 - `surface_draft/surface.md` §2.4 surrounding prose —
   "Categories of invariants (cross-cutting)" subsection (NOT
-  migrated; potentially feeds §2.5 or §2.6); "Two notes on the
+  migrated; potentially feeds §3.5 or §3.6); "Two notes on the
   contracts table" (intra-language note partially migrated);
   "Currently active vs. deferred" (partial — manuscript notes
   c2 / c7 deferred and c8 retired).
-- `surface_draft/principle.md` — P1..P6 background for §2.6
-  *Properties of the theory* + §5.1 *Principles (full
+- `surface_draft/principle.md` — P1..P6 background for §3.6
+  *Properties of the theory* + §6.1 *Principles (full
   discussion)*.
 
-### §2 row from grid-cell audit (against §1.4 grid)
+### §3 row from grid-cell audit (against §1.4 grid)
 
 The §1.4 grid is now the spec. Walk each §X.Y in turn and
 confirm the prose (or current bullets) actually says what the
 grid cell promises.
 
-- §2.1 (artifact and its boundary), §2.2–2.3 (surface, presence
-  axis, role catalogue), §2.4 (contract catalogue and agreement).
+- §3.1 (artifact and its boundary), §3.2–3.3 (surface, presence
+  axis, role catalogue), §3.4 (contract catalogue and agreement).
   Apply the grid-cell audit pattern below (see *Grid-cell audit
   pattern*).
 
-### Contract-vs-check distinction (cross-section nav for §2.6 ↔ §6.3)
+### Contract-vs-check distinction (cross-section nav for §3.6 ↔ §7.3)
 
-- **Primary home**: §2.6 (theoretical insight about Contract
+- **Primary home**: §3.6 (theoretical insight about Contract
   independence, as one of the section's "properties of the
   theory").
-- **Cross-reference** from §6.3 (the implementation realises both
+- **Cross-reference** from §7.3 (the implementation realises both
   mechanisms cleanly).
 
 ### Vocabulary deliberation: contract / invariant / agreement (parked 2026-06-11)
@@ -59,7 +64,7 @@ grid cell promises.
 User flagged 2026-06-11 that **contract** carries an "explicit
 written" connotation that fits c1 / c2 / c4 / c5 / c6 but stretches
 for c3 Behavior (implicit, runtime-determined), c7 API-repacking
-(intent-only), and the hidden-deps extension target (§2.5 — no
+(intent-only), and the hidden-deps extension target (§3.5 — no
 party writes it down). The asymmetry is real.
 
 #### Options surveyed
@@ -91,27 +96,27 @@ agreement-with-a-written-carrier).
 Three live candidates:
 
 - **(a) Full rename to "agreement"** as the umbrella term across
-  §1.4 grid + §2.4 title + table + prose. Contract becomes a
+  §1.4 grid + §3.4 title + table + prose. Contract becomes a
   subtype label for the c-metas that have a written carrier.
-- **(b) Keep "contract" with reframing** in §2.4: "an agreement
+- **(b) Keep "contract" with reframing** in §3.4: "an agreement
   pinning two surfaces — most are *explicit contracts* (written
   declarations); some are implicit." Lower churn; preserves the
   established vocabulary at the cost of mild dissonance for c3 /
   c7.
-- **(c) Half-rename**: §2.4 title and the `Table —` label switch
+- **(c) Half-rename**: §3.4 title and the `Table —` label switch
   to "Agreement"; row labels and code-level vocabulary stay
   "contract" until a wider sync.
 
 #### Decision pending
 
-Postponed. Revisit when next touching §2.4 prose or the §1.4 grid.
+Postponed. Revisit when next touching §3.4 prose or the §1.4 grid.
 
 #### Scope reminder (if applied)
 
 Manuscript touchpoints: §1.4 grid header + closing paragraph;
-§1.5 §2 SS preview bullet; §2.4 section title + canonical-table
-label + definition + c2 / c7 deferred-static-check prose; §2.5
-"(surface, contract) machinery" phrase; §2.6
+§1.5 §3 SS preview bullet; §3.4 section title + canonical-table
+label + definition + c2 / c7 deferred-static-check prose; §3.5
+"(surface, contract) machinery" phrase; §3.6
 "Contract-vs-check" subsection. Materials and code remain on
 "contract" until a wider sync per "uniformity eventually."
 
@@ -120,18 +125,18 @@ label + definition + c2 / c7 deferred-static-check prose; §2.5
 User changed the §1.4 grid (was §1.5) column header from
 **contract** to **invariant**. Other places not yet synced:
 
-- Cell content in `theory (§2)` row uses "agreement between two
+- Cell content in `theory (§3)` row uses "agreement between two
   surfaces" — diverges from column header.
 - §1.4 paragraph PL parallel still uses "contract ↔ run-time
   invariant / assertion."
 - §1.4 paragraph "internal vocabulary" still uses "rules" /
   "agreements."
-- §1.5 Topics preview §2 SS bullet still uses "contract catalogue"
+- §1.5 Topics preview §3 SS bullet still uses "contract catalogue"
   / "Artifact → surface → contract along an explicit spine."
-- §2.4 section title still "Contracts"; **Table — Contract
-  catalogue**; "explicit contract" definition; "(surface,
-  contract) machinery" in §2.5; "Contract-vs-check independence"
-  in §2.6.
+- §3.4 section title still "Contracts (Agreement)"; **Table —
+  Contract catalogue**; "explicit contract" definition; "(surface,
+  contract) machinery" in §3.5; "Contract-vs-check independence"
+  in §3.6.
 
 
 
@@ -152,22 +157,25 @@ that say `surface_draft/*` are in the materials collection
   surface?), §0 (syntactic/semantic split); `tiny.md` (concrete
   witness examples); llvm/z3/sqlite project specs (real-world
   examples); worklogs (lessons that became principles).
-- **§2 SS Surface theory** — moved to **§2 SS — focused work
+- **§2 Tiny-tiny** — minimal touchstone; sourced inline from
+  `tiny.md` for canonical names (`tiny_offset`, `tiny_sum`,
+  `libtiny.so.1`).
+- **§3 SS Surface theory** — moved to **§3 SS — focused work
   area** at the top.
-- **§3 TT Tiny** — [`tiny.md`](tiny.md) (witness spec);
+- **§4 TT Tiny-complete** — [`tiny.md`](tiny.md) (witness spec);
   `worklog_2026_06.md` closing matrix.
-- **§4 CC Canary** — `worklog_2026_06.md` (Phase 14/15 mechanics);
+- **§5 CC Canary** — `worklog_2026_06.md` (Phase 14/15 mechanics);
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md)
   (orthogonal factoring); `CLAUDE.md` (orientation map);
   [`plan.md`](plan.md) Phase 17 (real-project plans); existing
   real-project specs.
-- **§5 MM** — `surface_draft/principle.md` (full principles);
+- **§6 MM** — `surface_draft/principle.md` (full principles);
   `surface_draft/package.md` (packaging);
   `surface_draft/versioning.md` (versioning cross-cuts);
   `surface_draft/surface.md` §4 (hidden deps);
   `surface_draft/main.md` §5 (related work) + §6 (calculus
   sketch); [`literature.md`](literature.md).
-- **§6 Impl** — `surface_draft/implementation.md` §2.7 (code map);
+- **§7 Impl** — `surface_draft/implementation.md` §2.7 (code map);
   `worklog_2026_06.md` (engine machinery + harness leaks);
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md)
   (engine boundary cleanness); existing code in
@@ -295,13 +303,20 @@ Kept here as content seeds; not actionable.
 
 Moved here from `surface.md` on 2026-06-04 because it wasn't yet
 useful for the manuscript's current shape: the role blockquote +
-six-part spine declaration + ASCII diagram + numbered chapter
-list. The numbered list overlaps with §1.4 Topics preview (the
-canonical reader-facing roadmap inside BB), so today we keep §1.4
-as the single source and park this abstract version here. Reinstate
-the diagram / numbered list at the top of `surface.md` when an
+spine declaration + ASCII diagram + numbered chapter list. The
+numbered list overlaps with §1.5 Topics preview (the canonical
+reader-facing roadmap inside BB), so today we keep §1.5 as the
+single source and park this abstract version here. Reinstate the
+diagram / numbered list at the top of `surface.md` when an
 end-to-end TOC or executive-summary view becomes useful (e.g.,
-once prose lands and a reader can scan the spine before diving in).
+once prose lands and a reader can scan the spine before diving
+in).
+
+**Stale numbering warning.** This parked chapter list reflects
+the pre-2026-06-12 six-part spine (§1 BB / §2 SS / §3 TT / §4 CC
+/ §5 MM / §6 Impl). The current seven-part spine inserts
+Tiny-tiny at §2 (lifting SS / TT / CC / MM / Impl by one).
+Update before reuse.
 
 ### Role blockquote
 
@@ -342,26 +357,26 @@ once prose lands and a reader can scan the spine before diving in).
 
 ## Active edit queue
 
-### §3 / §4 subsection prose audit against §1.4 grid
+### §4 / §5 subsection prose audit against §1.4 grid
 
 The §1.4 grid (manuscript) is **now the spec**. Each cell points
 at a concrete `§X.Y`. Audit task: walk those §X.Y subsections in
 turn and confirm the prose (or current bullets) actually says
-what the grid cell promises. (§2 row moved to **§2 SS — focused
+what the grid cell promises. (§3 row moved to **§3 SS — focused
 work area** at top.)
 
-- **§3 TT row.** Anatomy absorbed into §2.0 (touchstone);
-  §3 focuses on witness role + perturbation matrix (§3.2) + what
-  tiny demonstrates/doesn't (§3.3).
-- **§4 CC row.** §4.1–4.2 (stores), §4.4 (scan_sources placement
-  mechanism, §6.2 home), §4.5 (validation), §4.6 (natural
-  producers), §4.7 (real-project demos).
+- **§4 TT row** (Tiny-complete). Anatomy absorbed into §2
+  (touchstone); §4 focuses on witness role + perturbation matrix
+  (§4.2) + what tiny demonstrates/doesn't (§4.3).
+- **§5 CC row** (Canary). §5.1–5.2 (stores), §5.4 (scan_sources
+  placement mechanism, §7.2 home), §5.5 (validation), §5.6
+  (natural producers), §5.7 (real-project demos).
 
-### §5.1 Principles full discussion — reshape to match §1.3
+### §6.1 Principles full discussion — reshape to match §1.3
 
 §1.3 (manuscript, reshaped 2026-06-11) now organises four
 principles around the backbone: three rules/concrete-trace/
-abstract-trace-aligned plus one orthogonal. **§5.1 full
+abstract-trace-aligned plus one orthogonal. **§6.1 full
 discussion must adopt the same shape** next time it's touched
 (currently still a flat list expanding §1.3's old four bullets).
 
