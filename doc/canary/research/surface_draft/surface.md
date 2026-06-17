@@ -15,6 +15,55 @@ every design choice in Canary should be derivable from a principle stated
 here; (ii) it **predicts** — a new library, language, or package manager
 should fit into the model without ad-hoc extension.
 
+### More analogy: traces
+
+Continueing the PL-analogy, the tiny scenarios are **concrete traces**
+ for both correct and incorrect artifacts.
+
+The spine has a clean PL parallel: artifact ↔ *expression*,
+surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
+positioning surface theory as "a type system for binding
+interfaces" (hook for §6.6 calculus sketch). A complementary
+internal vocabulary names **rules** (the catalogue — agreements
+between surfaces) and the **traces** that observe
+them in particular **worlds** (configurations of artifacts):
+**concrete traces** are tiny + a controlled perturbation (single
+reproducible witness, §4), **abstract traces** are worlds drawn
+from per-kind stores (independent-producer combinations, §5); §7
+covers how each shape is mechanically produced. The formal
+scaffold (rule / world / trace definitions) is parked in
+[`surface_draft/notation.md`](surface_draft/notation.md) until
+the theory settles enough to need it.
+
+<!-- **Surfaces** --> Surfaces are the observable interfaces (declared or 
+extracted) at each artifact boundary; tools rely on and use these surfaces. 
+Rules pin pairs of surfaces and say what counts as agreement.
+
+- **Worlds and traces.** A configuration of artifacts is a world;
+  a trace is an observed verdict — either the rule holds or it
+  doesn't. Tiny gives controlled worlds we hand-build; canary
+  scales to worlds we don't control, drawn from natural producers.
+- **Producer-agnostic by design.** The same rules and the same
+  framework apply to synthetic worlds (tiny) and natural worlds
+  (opam / pip / apt).
+
+One-line previews of the working principles. Three align with the
+backbone (rules / concrete traces / abstract traces, introduced
+below); one is orthogonal. Full discussion in §6.1 (MM).
+
+- **Comparator + probe as complementary** — the rules-vs-traces
+  duality: comparators check rules statically; probes observe
+  traces at runtime.
+- **Synthetic witness as scaffolding, not contribution** — the
+  concrete-trace principle: tiny exists to witness each rule
+  reproducibly, not to be the result.
+- **Producer-agnostic framework** — the abstract-trace principle:
+  a rule's robustness is measured across configurations drawn from
+  natural producers (opam / pip / apt), not only hand-built ones.
+- **Test the canary, not (just) the lib** — orthogonal to the
+  backbone: an attitude about *what* we measure (the canary's
+  response to the lib, not the lib in isolation).
+
 ## Part A — Motivation & empirics
 
 *What ecosystem tools (gcc, ld, ocamlopt, pip, apt) actually check, the

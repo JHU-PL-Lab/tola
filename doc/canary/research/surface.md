@@ -3,6 +3,8 @@
 > Manuscript. See [`drafting.md`](drafting.md) for materials,
 > playbook, and the front-matter-in-waiting.
 
+
+
 ## §1 — Background & Motivation (BB)
 
 **Goal.** Reader-facing opener. Motivation + approach + principles
@@ -14,24 +16,35 @@ and that an implementation chapter sits at the back.
 
 ### 1.1 Motivation: real-world gaps
 
-- **Ubiquity.** Real-world projects with multi-language bindings
-  are critical infrastructure (torch, llvm, z3, …) and
-  error-prone in characteristic ways.
-- **Why error-prone.** Many tools and layered systems; tools are
-  largely unspecified and update frequently; package managers can
-  swap random components; many actors (project developer, package
-  maintainer, registry admin) each with limited cross-domain
-  knowledge; blame attribution across the chain is hard.
-- **Concrete contract-drift in practice.** LLVM `Opcode` shift
-  between versions, Z3 Python wheel missing `parser_context`,
-  glibc/musl symbol-versioning surprises, cross-PM SONAME
-  inconsistencies.
-- **Why these drifts evade existing testing.** Bindings test
-  their own integration; package managers test packaging; but no
-  one tests the *contract surface* between provider and consumer.
-- **Reader-facing question.** "If a binding compiles and a smoke
+> maybe we need an user text observation or movitation to refer
+
+<!-- **Ubiquity.** --> Real-world projects with multi-language 
+bindings are critical infrastructure (torch, llvm, z3, …) and 
+error-prone in characteristic ways.
+
+<!-- **Why error-prone.** --> Many tools and layered systems; tools 
+are largely unspecified and update frequently; package managers 
+can swap random components; many actors (project developer, package 
+maintainer, registry admin) each with limited cross-domain knowledge; 
+blame attribution across the chain is hard.
+
+<!-- **Versatile Agreements.**Starting observation.** --> We observe
+these tools follows some 
+agreements, however, there are far from formal and even explicit spefication. 
+It's also infeasible since some agreement is behavior-determined, so 
+we may have to live with them. LLVM `Opcode` shift between versions,
+Z3 Python wheel missing `parser_context`, glibc/musl symbol-versioning 
+surprises, cross-PM SONAME inconsistencies.
+
+<!-- **Why these drifts evade existing testing.** --> Bindings test
+their own integration; package managers test packaging; but no
+widely and principly tests for the full-chains between provider 
+and consumer. **Reader-facing question.** "If a binding compiles and a smoke
   test passes, is the artifact actually consistent with its
-  provider?"
+  provider?" Existing tools are behavior-based;
+actions are chains of involved tools; tools are best-effort, so flaws 
+may surface only at late stages. We need a way to test the chain's *agreements*
+, not just each tool's outputs.
 
 **The pipeline runs on courtesy.** Real-world package management
 doesn't ship with strict specifications. Some boundary errors get
@@ -47,76 +60,94 @@ confirms the conventions tools depend on (usually tool
 scenarios that try to be complete with respect to the rule
 catalogue.
 
-### 1.2 Approach: rules and traces
+For the artifacts in the binding chains, we observe the no things come
+and go for free (without a source), and we also observe that there
+is already extra tools that we can use to inspect into the things,
+no matter whether its source code or native binary.
 
-- **Starting observation.** Existing tools are behavior-based;
-  actions are chains of involved tools; tools are best-effort, so
-  flaws may surface only at late stages. We need a way to test
-  the chain's *agreements*, not just each tool's outputs.
-- **Surfaces and rules — a spec space.** Surfaces are the
-  observable interfaces (declared or extracted) at each artifact
-  boundary; tools rely on and use these surfaces. Rules pin pairs
-  of surfaces and say what counts as agreement.
-- **Worlds and traces.** A configuration of artifacts is a world;
-  a trace is an observed verdict — either the rule holds or it
-  doesn't. Tiny gives controlled worlds we hand-build; canary
-  scales to worlds we don't control, drawn from natural producers.
-- **Producer-agnostic by design.** The same rules and the same
-  framework apply to synthetic worlds (tiny) and natural worlds
-  (opam / pip / apt).
-- This subsection promotes the §Backbone framing into a
-  reader-facing paragraph; ~150 words.
+### 1.2 Approach
 
-### 1.3 Principles preview
+> **sw** up to §2, we don't discuss the necessary and effective of
+> why using surface checking; thought the idea is very simple, a 
+> failing bug can often by find by a simpler check based on the 
+> belief(agreement) on surface
+> **sw** maybe we should also discuss the category of bugs
 
-One-line previews of the working principles. Three align with the
-backbone (rules / concrete traces / abstract traces, introduced
-below); one is orthogonal. Full discussion in §6.1 (MM).
+Our approach is guided by two movitations that common used in testing:
+(1) to find a smallest example
+(2) to find an easier check
+For (1) the smallest example mean, if our work can a bug appearing 
+on a complex project is caused by the mechanism of any stage for the binding
+scernario, rathan than the project itself, oue work must be first
+find the same bug that appearing in a synthesis naive project
+(2) if a bug occurs in a step of a compound task e.g. building a project,
+or running a test, it should be also detect via an easy approach.
 
-- **Comparator + probe as complementary** — the rules-vs-traces
-  duality: comparators check rules statically; probes observe
-  traces at runtime.
-- **Synthetic witness as scaffolding, not contribution** — the
-  concrete-trace principle: tiny exists to witness each rule
-  reproducibly, not to be the result.
-- **Producer-agnostic framework** — the abstract-trace principle:
-  a rule's robustness is measured across configurations drawn from
-  natural producers (opam / pip / apt), not only hand-built ones.
-- **Test the canary, not (just) the lib** — orthogonal to the
-  backbone: an attitude about *what* we measure (the canary's
-  response to the lib, not the lib in isolation).
+We propose a surface theory which address the issues in real-world 
+via a PL-perspective modeling and reasoning. Informally, we would 
+treat all the related _artifacts_ and tools are records or tools on 
+records.
 
-### 1.4 Organising grid
+An artifact natually carries a _surface_. For source-code like 
+artifact, e.g. C file with a header file, the header file is a 
+syntactical surface. For the compiled object getting from the same 
+C file, it has a binary surface where a binary tool can inspect.
 
-The writeup is organised along the **artifact → surface →
-contract** spine (columns) crossed with the three pillars
-(rows). Each cell names what that pillar contributes about that
-concept; the table doubles as a reader's at-a-glance map and a
-writer's gap-check.
+We argue that a majority of real-world bugs can be detect on the 
+surface level inspectation. For example, a missing symbol in 
+compiling, API mismatch on binding language, should all imply
+some _agreements_ on the surface are violated.
+
+### 1.3 Organising grid
 
 **Table — Organising grid.** Three pillars × three spine
 concepts; cell entries name what the pillar contributes.
 
-|                 | **artifact**                                   | **surface**                                                  | **invariant**                                                |
-| --------------- | ---------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| **theory** (§3) | §3.1 — artifact and its boundary               | §3.2–3.3 — surface and the role catalogue                    | §3.4 — agreement between two surfaces                        |
-| **tiny** (§2+§4)| §2 + §4 — controllable instantiation           | §2 touchstone; §4 expands binding-mechanism diversity        | §4.2 — every agreement perturbed and broken, one at a time   |
-| **canary** (§5) | §5.1–5.2 stores; §5.6 natural-producer sources | §5.4 — extraction from real-world artifacts (mechanism §7.2) | §5.5 validated against tiny; §5.7 exercised on real projects |
+|                  | **artifact**                                   | **surface**                                                  | **invariant**                                                |
+| ---------------- | ---------------------------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| **theory** (§3)  | §3.1 — artifact and its boundary               | §3.2–3.3 — surface and the role catalogue                    | §3.4 — agreement between two surfaces                        |
+| **tiny** (§2+§4) | §2 + §4 — controllable instantiation           | §2 touchstone; §4 expands binding-mechanism diversity        | §4.2 — every agreement perturbed and broken, one at a time   |
+| **canary** (§5)  | §5.1–5.2 stores; §5.6 natural-producer sources | §5.4 — extraction from real-world artifacts (mechanism §7.2) | §5.5 validated against tiny; §5.7 exercised on real projects |
 
-The spine has a clean PL parallel: artifact ↔ *expression*,
-surface ↔ *type*, contract ↔ *run-time invariant / assertion* —
-positioning surface theory as "a type system for binding
-interfaces" (hook for §6.6 calculus sketch). A complementary
-internal vocabulary names **rules** (the catalogue — agreements
-between surfaces) and the **traces** that observe
-them in particular **worlds** (configurations of artifacts):
-**concrete traces** are tiny + a controlled perturbation (single
-reproducible witness, §4), **abstract traces** are worlds drawn
-from per-kind stores (independent-producer combinations, §5); §7
-covers how each shape is mechanically produced. The formal
-scaffold (rule / world / trace definitions) is parked in
-[`surface_draft/notation.md`](surface_draft/notation.md) until
-the theory settles enough to need it.
+**TODO**: maybe I don't need S4. We can go over all the examples of tiny in S2.
+
+The motif(rationale) from artifact, surface, agreement is like the PL 
+analogy of _expression_, _type_, and _constraint_. Since they are across 
+multiple languages toolchains and have to use platform tools, we can 
+hardly have a soundness tool; instead, we target a complete checking, 
+that is like testing.
+
+We also organize the whole writeup as a repeating motif that on a 
+theory layer, where we estabilish our definitions, rules, and assumption.
+The framework provides a complete but small example _tiny_. It's a 
+demonstrative summation code from C to language bingings we covered.
+The canary testing covers the scenarios from the creation, delivery 
+and usage for the upstream, binding, packaging and user site. We covered
+the common mechanism via static C API binding, however, it's full extensible
+to support any mechanism like dynamic ctypes. A quick glance and a fully
+explanation for tiny will be illustated in §2 and §4 respectively 
+for writing purpose.
+
+Unlike many research which is established on theretical truth, the canary is 
+based on beliefs on a set of designed behaviors (generalized testing) of
+tool operations. We will first comprehensively run all the interested 
+scanarioe steps to ensure the expected results. Then we mutates all 
+the artifacts on purpose to emulator possible errors that can occur in 
+real-world, and we will use the tools to inspect and detect these bugs.
+All these positive and negative established a set of ground truth, that this
+set of tools can empirically justify the tools we will conduct on
+other real-world examples.
+
+
+**sw**: a bit distrated for the last two sentences. Maybe can move to later places
+The work focuses on things around upstream projects and their bindings in
+different languages, and we maximize the combinations in those components; 
+however, we cannot emunerate any possible combinations of versions and
+configurations for C compilers, system loaders and linkers, binary utilies 
+on different systems. If the tools can detect our dedicated perturbated
+error in tiny e.g. one mismatch between binding and stub APIs, we assumes that
+it should also be able to find the real-world project having the 
+same case; however, we cannot assume the tools we have to use it reliable.
 
 ### 1.5 Topics preview (roadmap)
 
@@ -155,58 +186,121 @@ Every topic the rest of the writeup touches, in a sentence each
 
 ## §2 — Tiny-tiny: a running example
 
-**Goal.** Introduce a minimal concrete example — a C library and
-one binding consumer — that §3 (Surface theory) refers to by name
-and by snippet id. Six snippets follow, one per surface role,
-arranged so **syntactic** surfaces show source and **semantic**
-surfaces show inspector output. §4 (Tiny-complete) develops the
-full tiny with three binding mechanisms, a downstream app, and
-packaging considerations.
+The motivation of tiny example is to provide a comprehensive 
+artifacts with their surfaces, and possible scenarios that other
+projects may encounter. The backbone of a working tiny example
+is very simple: a C library and language bindings. In the examples,
+we will go through all the artifacts, surfaces and agreements,
+while in the next sections we will discuss them abstractly. Packaging
+brings another layer of indirection freedom, and we will discuss them 
+after going through the workflow without packages.
 
-The theory below treats artifacts and surfaces abstractly. To
-keep each table grounded, this section introduces a minimal
-concrete example — a C library and one binding consumer — that
-subsequent subsections refer to by name and by **snippet id**.
-The full witness (every binding mechanism, every perturbation,
-the 13-variant matrix) is §4.
+<!-- upstream side -->
 
-**Presentation convention.** For each artifact, we show *the
-code* when the surface is **syntactic** (declared by the
-developer) or *an inspector's output* when the surface is
-**semantic** (extracted from a compiled artifact). Semantic
-surfaces need an inspector to be visible at all. **Sn.6 is
-different** — it shows a probe input → expected output (a
-runtime observation, not an artifact's surface; see §3.3).
+**sw** we need a per-side artifact, surface, and agreement summary
+also to emphasize the record-like structures.
 
-**The tiny interface.** One mutable const and one function —
-sufficient to populate the five surface roles, exercise six
-surface contracts, and (via the runtime observation) anchor the
-c3 Behavior contract:
+**Sn.0 — `tiny.c`** (a1 native_source, syntactic).
 
-- `tiny_offset` — `extern int`, mutable, read-only to consumers.
-- `tiny_sum(a, b)` — returns `a + b + tiny_offset`.
+```c
+/* tiny.c */
+#include "tiny.h"
 
-One binding mechanism shown here (OCaml cstubs); the other two
-(Python cext, Python ctypes) follow the same shape and appear in §4.
-Six snippets follow, one per surface role.
+int tiny_offset = 42;
+
+int tiny_sum(int a, int b) {
+    return a + b + tiny_offset;
+}
+```
 
 **Sn.1 — `tiny.h`** (s1 native_header, syntactic).
 
 ```c
 /* tiny.h */
-extern int tiny_offset;       /* mutable, read-only to consumers */
-int tiny_sum(int a, int b);   /* returns a + b + tiny_offset */
+extern int tiny_offset;
+int tiny_sum(int a, int b); 
 ```
+
+Tiny as a upstream project provides implementation and header files.
+Compiling to native library correctly will generate a shared native library. For concise we assume it's on linux, so that we use `.so` file for this kind of library interactively.
+
+When looking closely, even for the step up to now can reveal the 
+error patterns that real-world project may encounter. e.g. upgraded 
+but mismatched `tiny.h`, unspecified hidden dependented libraries, mis-used compiler flags. Real-world package managers usually have 
+the flexibitility to put arbitrary files in a package, so every file 
+can be wrongly placed and used.
+
+The native library is in ELF format on common linux machine, and other binary format on other platforms. Despite its details, there 
+are usually dedicated binary utilities we can inspect them.
 
 **Sn.2 — `libtiny.so.1` inspected** (s2 native_lib, semantic).
 
-```
+```console
 $ nm -D libtiny.so.1
 00001234 D tiny_offset       (OBJECT)
 00005678 T tiny_sum          (FUNC)
 
 $ readelf -d libtiny.so.1 | grep SONAME
  (SONAME)   Library soname: [libtiny.so.1]
+```
+
+We can observe that we can see the symbols and other information, 
+and we can also find the symbols appearly forms a record-like structure 
+which is alike the C header file `{tiny_offset : OBJECT; tiny_sum: FUNC}`.
+
+The artifact includes _native\_source_ (a1/s1), _native\_header_ (a2/s2), and 
+compiled _native\_lib_ (a3/s3).
+For source-like artifact, their surface is in text format, while for binary artifact, 
+the surface is constructed from the inspectors' result.
+
+**sw** the id are global indexing in both writeup and code. The n-th artifact 
+and the coresponding n-th surface.
+
+When the actual building step succeed, their surfaces must agree with 
+each other. Some agreement are interal to a language with its compiler, 
+usually when a language is typed. If they broken, the toolchain complains
+immediately. Some agreement involves tools from multiple languages or
+systems. If they broken, they may be realized later or never, and they 
+may not have written constraints. Compilers check the validity of native 
+source against the native header, and generate a native lib which should
+have an aligned native lib. In a successful compiling step, the agreement
+between these artifacts is naturally satisfied, otherwise the compilers
+complains. (**sw: a bit verbose**). We explicit name these agreements:
+- type agreement: bewteen s1 and s2
+- source-native agreement: between s2 and s3
+
+In the real-world, not all native lib are created on the fly. Whether such 
+agreements are kept or broken, will be discuss in the next subsection.
+
+**sw** tiny can be more complex when it contains multiple libs
+
+<!-- binding create side -->
+
+**need a term for binding mechanism**
+
+Binding language sites have several mechanism to use the C binding. 
+It can be miscellenous on whether using a static or dynamic shared 
+library, need a separate compiling stub, or load the binding. While 
+understanding their core mechanisms are fun to explore, our framework 
+chooses the behavir approach, that we observes the tools in the pipeline 
+for the binding and identifier the tools and relevent artifacts.
+
+Let's demonstrate with one common practice for OCaml's method via 
+static built stub. In this mechanism, OCaml side needs a stub C file 
+which wraps the C interface and gives an OCaml interface:
+
+**Sn.? — OCaml stub (s? native_stub, syntactic).
+
+```c
+#include <caml/mlvalues.h>
+#include <caml/alloc.h>
+#include <caml/memory.h>
+#include "tiny.h"
+
+CAMLprim value caml_tiny_sum(value a, value b) {
+    CAMLparam2(a, b);
+    CAMLreturn(Val_int(tiny_sum(Int_val(a), Int_val(b))));
+}
 ```
 
 **Sn.3 — OCaml stub-facing decls** (s3 binding_stub, syntactic).
@@ -217,13 +311,88 @@ external _sum    : int -> int -> int = "caml_tiny_sum"
 external _offset : unit -> int       = "caml_tiny_get_offset"
 ```
 
+Via this stub, the OCaml side code can invoke the C side code provided by 
+external native library. 
+
 **Sn.4 — OCaml user-facing `.mli`** (s4 binding_header, syntactic).
 
 ```ocaml
 (* tiny.mli — user-facing module signature *)
-val sum    : int -> int -> int
+val sum    : int -> int -> int 
 val offset : unit -> int
 ```
+
+Some library may repack the stub layer again to provide more user-friendly 
+interface. The code is pure beyond the binding mechanism, however, 
+it makes our narrative more complete. It's possible that real-world 
+projects have mismatching in this layer, so we need to assign a stage 
+in our framework.
+
+The creation of the ocaml binding need to take both the tiny native library,
+the tiny C header from the upstream, and the stub ocaml, the stub-facing 
+OCaml code, and maybe user-facing OCaml code from the binding side.
+
+This stage introduces three new artifacts: native stub source (s?), binding
+stub-facing source (s3) and binding user-facing signature (s4). Each languages
+have its own term for type-level siganature like header, interface, signature.
+Here we treat them syntactical surface, since they are source code.
+
+The building of an OCaml binding takes the native header, native library, and 
+the stub files and other code in the binding language. A successful building 
+at least means these parts agree on some interface. We explicit name these 
+agreements:
+- native-lib-stub agreement between s2 and s?
+- stub-native-binding-lang-agreement s? and s3
+- stub-vs-user-facing: s3 and s4
+
+The binding in a language of an upstream project can be either in the project's 
+source tree of out of them, so it's common that both software evolves standalone.
+Due to the complexity of the binding, even s3 and s4 are usually in one repo, they
+may be mismatched.
+
+<!-- binding use side -->
+
+
+
+### Scenarios for tiny
+
+<!-- python scenarios.py list -->
+symbol_missing
+header_arity_bump
+symbol_version_floor
+abi_soname_bump
+type_wrong
+api_faithful
+api_repack
+api_complete
+behavior_silent
+symbol_orphan
+api_repack_python
+api_complete_python
+app_over_binding_ocaml
+app_over_helper_ocaml
+api_repack_stub_orphan
+
+--
+
+**Goal.** Introduce a minimal concrete example — a C library and
+one binding consumer — that §3 (Surface theory) refers to by name
+and by snippet id. Six snippets follow, one per surface role,
+arranged so **syntactic** surfaces show source and **semantic**
+surfaces show inspector output.
+
+**Presentation convention.** For each artifact, we show *the
+code* when the surface is **syntactic** (declared by the
+developer) or *an inspector's output* when the surface is
+**semantic** (extracted from a compiled artifact). Semantic
+surfaces need an inspector to be visible at all. **Sn.6 is
+different** — it shows a probe input → expected output (a
+runtime observation, not an artifact's surface; see §3.3).
+
+
+One binding mechanism shown here (OCaml cstubs); the other two
+(Python cext, Python ctypes) follow the same shape and appear in §4.
+Six snippets follow, one per surface role.
 
 **Sn.5 — OCaml stub `.a` inspected** (s5 binding_lib, semantic).
 
@@ -242,10 +411,6 @@ input:    set tiny_offset = 42
           call tiny_sum(2, 3)
 expected: 47          (i.e. 2 + 3 + 42)
 ```
-
-Subsequent §3 tables and prose refer to these snippets by id
-(Sn.1 … Sn.6). §4 develops the full witness — every binding
-mechanism, every perturbation, the 13-variant matrix.
 
 ---
 
@@ -317,13 +482,13 @@ name) to a snippet id from §2; reads as the concrete
 instantiation of the abstract roles in the table above. (Sn.6 is
 listed separately — runtime observation, not a surface.)
 
-| friendly name    | side    | snippet  | what it shows                                          |
-| ---------------- | ------- | -------- | ------------------------------------------------------ |
-| `native_header`  | native  | **Sn.1** | `tiny.h` source (syntactic)                            |
-| `native_lib`     | native  | **Sn.2** | `nm -D libtiny.so.1` + SONAME (semantic, inspected)    |
-| `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)         |
-| `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)             |
-| `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)          |
+| friendly name    | side    | snippet  | what it shows                                       |
+| ---------------- | ------- | -------- | --------------------------------------------------- |
+| `native_header`  | native  | **Sn.1** | `tiny.h` source (syntactic)                         |
+| `native_lib`     | native  | **Sn.2** | `nm -D libtiny.so.1` + SONAME (semantic, inspected) |
+| `binding_stub`   | binding | **Sn.3** | OCaml stub-facing `external` decls (syntactic)      |
+| `binding_header` | binding | **Sn.4** | OCaml user-facing `.mli` decls (syntactic)          |
+| `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)       |
 
 *Runtime observation* — `Sn.6` — probe input (`set tiny_offset =
 42; call tiny_sum(2, 3)`) → expected output (`47`). Used by c3
@@ -370,15 +535,15 @@ fires:
 fires). The universal contract identifiers are the cross-cutting
 names used in theory, tiny scenarios, and canary code.
 
-| Contract                | Provider surface                               | Consumer surface                                       | Kind                                  | Where it fires                                 |
-| ----------------------- | ---------------------------------------------- | ------------------------------------------------------ | ------------------------------------- | ---------------------------------------------- |
-| **c1 Symbol**           | **s2** `native_lib` — defined symbols          | **s5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                   | process link (static) / process load (dynamic) |
-| **c2 API-completeness** | **s4** `binding_header`                        | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)   | app build / probe                              |
-| **c3 Behavior** †       | provider's invocation (runtime observation)    | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                  |
-| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed   | **s5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                   | process load                                   |
-| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations      | **s5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                   | process load                                   |
-| **c6 Type**             | **s1** `native_header` — C signature           | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                 | binding build                                  |
-| **c7 API-repacking**    | **s3** `binding_stub`                          | **s4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding) | binding-author time (probe-checked today)      |
+| Contract                | Provider surface                             | Consumer surface                                       | Kind                                       | Where it fires                                 |
+| ----------------------- | -------------------------------------------- | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| **c1 Symbol**           | **s2** `native_lib` — defined symbols        | **s5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                        | process link (static) / process load (dynamic) |
+| **c2 API-completeness** | **s4** `binding_header`                      | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)        | app build / probe                              |
+| **c3 Behavior** †       | provider's invocation (runtime observation)  | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                        |
+| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed | **s5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                        | process load                                   |
+| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations    | **s5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                        | process load                                   |
+| **c6 Type**             | **s1** `native_header` — C signature         | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                      | binding build                                  |
+| **c7 API-repacking**    | **s3** `binding_stub`                        | **s4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding)      | binding-author time (probe-checked today)      |
 
 - **Universal naming.** Contract identifiers used in theory, tiny
   scenarios, and canary code — same names everywhere.
