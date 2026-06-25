@@ -66,35 +66,48 @@ movitation: tiny exists to witness each rule reproducibly
 
 ### Finding a project-level Single Source of Truth (SSOT)
 
-The writeup uses several ID prefixes that grew chapter by chapter
-without a coordinated audit:
+**Doc-side prefix scheme decided 2026-06-XX** — two-letter,
+applied to `draft.md`:
 
-- `Sn.X` — snippets (§2)
-- `s1..s5` — surfaces (§3)
-- `c1..c7` — contracts (§3)
-- `A0/A1/A2` — artifacts (§2)
-- `C0..C7` — agreements (§2, semantically overlapping with §3's `c1..c7`)
-- `S1..S6` — scenarios (§2)
+| Concept       | Old (mixed)              | New (uniform) |
+| ------------- | ------------------------ | ------------- |
+| Snippet       | `Sn.X`                   | `Sn.X` (unchanged) |
+| Artifact      | `A0..A2` / `a1..a3`      | `Ar.0..Ar.3`  |
+| Surface       | `s1..s5`                 | `Sf.1..Sf.5`  |
+| Agreement     | `c1..c7` (§3) / `C0..C7` (§2) | `Ag.0..Ag.7` |
+| Scenario      | `S1..S6`                 | `Sc.1..Sc.6`  |
 
-Plus code-side names: `Σ_*` formal notation, `cmp_*` comparator
-names, `inspect_*` script kinds, tiny scenario filenames. These
-don't map cleanly to the writeup prefixes.
+Rename applied to `draft.md` via sed; verified no old prefixes
+remain in the manuscript. Other research files (`literature.md`,
+`plan.md`, `surface_draft/*`) intentionally left on the old
+scheme — they're materials, not authoritative; rename them
+during a polish pass if needed.
 
-When tackled (probably as a coordinated pass closer to
-submission):
-- Decide which IDs are **global** (used across chapters + code)
-  vs **local** (defined within one chapter).
-- For global IDs: pick canonical prefix and tabulate the
-  writeup ↔ code mapping (e.g. `s5 binding_lib` ↔ `Σ_BL` ↔
-  `inspect_binding.py --kind stub`).
-- For local IDs: document the local scheme where introduced.
-- Address §2's `C0..C7` agreements vs §3's `c1..c7` contracts —
-  same concepts, different numbering; needs deciding which is
-  authoritative.
+**Still open after this rename:**
 
-Cross-references: ties to "Role of behavior" (s6 / Sn.6 naming
-asymmetry), runtime_trace code naming, and any future artifact
-table (§3.1).
+- **§2 vs §3 numbering overlap.** §2 has `Ag.0..Ag.7` (eight
+  agreements, starting at 0) introduced stage-by-stage; §3 has
+  `Ag.1..Ag.7` (the c1..c7 catalogue). These now share the `Ag.`
+  prefix but the numbers don't correspond — `Ag.1` means
+  "source-lib agreement" in §2 and "Symbol" in §3. Needs
+  reconciliation; the cleanest path is to make §3's catalogue
+  authoritative and renumber §2's agreements to point at the
+  matching `Ag.N`.
+- **Artifact numbering overlap.** §2 uses `Ar.0..Ar.2` in the
+  stage-summary bullets and `Ar.1..Ar.3` in the prose at L222
+  (because prose offset shifted by one). Same artifacts, two
+  numberings. Pick one.
+- **Hybrid notation `Ar.1/Sf.1` at L222–223.** The hybrid was
+  preserved by the rename (was `a1/s1`). Decide if you want to
+  keep both ids visible for the same concept or pick one.
+- **Code-side names** (`Σ_*` formal notation, `cmp_*` comparator
+  names, `inspect_*` script kinds, tiny scenario filenames) —
+  not touched. Add the writeup ↔ code mapping table when the
+  code-polish pass arrives.
+
+Cross-references: ties to "Role of behavior" (Sf.6 / Sn.6 naming
+asymmetry, since runtime observation is no longer a surface),
+runtime_trace code naming, and any future artifact table (§3.1).
 
 ### Fill bugs for SS 1.2 as eye-catcher and implementation result
   concrete bugs we found and better to be issued 

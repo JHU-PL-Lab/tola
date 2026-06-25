@@ -186,7 +186,7 @@ _scenario_ name for it.
 ## Stage for Upstream C Library
 
 ```{.c #sn-0}
-/* tiny.c (a1 native_source, syntactic) */
+/* tiny.c (Ar.1 native_source, syntactic) */
 #include "tiny.h"
 
 int tiny_offset = 42;
@@ -197,7 +197,7 @@ int tiny_sum(int a, int b) {
 ```
 
 ```{.c #sn-1}
-/* tiny.h (s1 native_header, syntactic) */
+/* tiny.h (Sf.1 native_header, syntactic) */
 extern int tiny_offset;
 int tiny_sum(int a, int b); 
 ```
@@ -219,8 +219,8 @@ error place that real-world project may encounter. e.g. upgraded
 but mismatched `tiny.h`, unspecified hidden dependented libraries, 
 mis-used compiler flags. 
 
-The artifact includes _native\_source_ (a1/s1), _native\_header_ (a2/s2), and 
-compiled _native\_lib_ (a3/s3). Artifacts can be in text format, e.g. source 
+The artifact includes _native\_source_ (Ar.1/Sf.1), _native\_header_ (Ar.2/Sf.2), and 
+compiled _native\_lib_ (Ar.3/Sf.3). Artifacts can be in text format, e.g. source 
 code, and in binary format which has its own structure. Language and 
 system tools can consume binary artifacts, and at the same time, there are 
 dedicated tools to inspect them.
@@ -245,13 +245,13 @@ source against the native header, and generate a native lib which should
 have an aligned native lib. In a successful compiling step, the agreement
 between these artifacts is naturally satisfied, otherwise the compilers
 complains. (**sw: a bit verbose**). We explicit name these agreements:
-- type agreement: bewteen s1 and s2
-- source-native agreement: between s2 and s3
+- type agreement: bewteen Sf.1 and Sf.2
+- source-native agreement: between Sf.2 and Sf.3
 
 To sum up, in this stage, we have
-- Artifacts: native source (A0), native header (A1), native lib (A2)
-- Agreement: type agreement (C0 for A0-A1), source-lib agreement (C1 for A1-A2)
-- Scenario: build-native-lib (S1 for A0-A1-A2)
+- Artifacts: native source (Ar.0), native header (Ar.1), native lib (Ar.2)
+- Agreement: type agreement (Ag.0 for Ar.0-Ar.1), source-lib agreement (Ag.1 for Ar.1-Ar.2)
+- Scenario: build-native-lib (Sc.1 for Ar.0-Ar.1-Ar.2)
 
 ## Stage for Binding Creation
 
@@ -279,7 +279,7 @@ CAMLprim value caml_tiny_sum(value a, value b) {
 }
 ```
 
-```{.ocaml #sn-3 (a3, OCaml binding stub, syntactic)}
+```{.ocaml #sn-3 (Ar.3, OCaml binding stub, syntactic)}
 (* in the binding's stub layer *)
 external _sum    : int -> int -> int = "caml_tiny_sum"
 external _offset : unit -> int       = "caml_tiny_get_offset"
@@ -305,7 +305,7 @@ the tiny C header from the upstream, and the stub ocaml, the stub-facing
 OCaml code, and maybe user-facing OCaml code from the binding side.
 
 This stage introduces three new artifacts: native stub source (s?), binding
-stub-facing source (s3) and binding user-facing signature (s4). Each languages
+stub-facing source (Sf.3) and binding user-facing signature (Sf.4). Each languages
 have its own term for type-level siganature like header, interface, signature.
 Here we treat them syntactical surface, since they are source code.
 
@@ -313,13 +313,13 @@ The building of an OCaml binding takes the native header, native library, and
 the stub files and other code in the binding language. A successful building 
 at least means these parts agree on some interface. We explicit name these 
 agreements:
-- native-lib-stub agreement between s2 and s?
-- stub-native-binding-lang-agreement s? and s3
-- stub-vs-user-facing: s3 and s4
+- native-lib-stub agreement between Sf.2 and s?
+- stub-native-binding-lang-agreement s? and Sf.3
+- stub-vs-user-facing: Sf.3 and Sf.4
 
 The binding in a language of an upstream project can be either in the project's 
 source tree of out of them, so it's common that both software evolves standalone.
-Due to the complexity of the binding, even s3 and s4 are usually in one repo, they
+Due to the complexity of the binding, even Sf.3 and Sf.4 are usually in one repo, they
 may be mismatched.
 
 ## Stage for Binding Use
@@ -353,12 +353,12 @@ a violated agreement (developed in the perturbation matrix below).
 
 | ID     | Scenario                | Stage                  | Action                                                            | Agreements verified                                                           |
 | ------ | ----------------------- | ---------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **S1** | `build_native_lib`      | Upstream               | C compiler builds A0 + A1 → A2                                    | C0 (type, s1 ↔ s2), C1 (source-lib)                                           |
-| **S2** | `build_binding`         | Binding creation       | OCaml + C compilers build `stub.c` + s3 + s4 against A1 + A2 → s5 | C2 (native-lib ↔ stub), C3 (stub ↔ binding-lang), C4 (stub ↔ user-facing)     |
-| **S3** | `link_app_with_binding` | Binding use (direct)   | OCaml linker checks `app_binding` source against s4               | C6 (API-completeness, s4 ↔ app expectations)                                  |
-| **S4** | `run_app_with_binding`  | Binding use (direct)   | dyn loader resolves s5 NEEDED → A2; `app_binding` executes        | C5 (ABI, SONAME ↔ NEEDED), Symbol (dynamic resolution), C7 (runtime behavior) |
-| **S5** | `link_app_helper`       | Binding use (indirect) | `app_helper` links against `tiny_helper`, which links against s5  | C6 transitively through the `tiny_helper` repack layer                        |
-| **S6** | `run_app_helper`        | Binding use (indirect) | dyn loader + transitive execute through `tiny_helper`             | C5 + Symbol + C7 transitively                                                 |
+| **Sc.1** | `build_native_lib`      | Upstream               | C compiler builds Ar.0 + Ar.1 → Ar.2                                    | Ag.0 (type, Sf.1 ↔ Sf.2), Ag.1 (source-lib)                                           |
+| **Sc.2** | `build_binding`         | Binding creation       | OCaml + C compilers build `stub.c` + Sf.3 + Sf.4 against Ar.1 + Ar.2 → Sf.5 | Ag.2 (native-lib ↔ stub), Ag.3 (stub ↔ binding-lang), Ag.4 (stub ↔ user-facing)     |
+| **Sc.3** | `link_app_with_binding` | Binding use (direct)   | OCaml linker checks `app_binding` source against Sf.4               | Ag.6 (API-completeness, Sf.4 ↔ app expectations)                                  |
+| **Sc.4** | `run_app_with_binding`  | Binding use (direct)   | dyn loader resolves Sf.5 NEEDED → Ar.2; `app_binding` executes        | Ag.5 (ABI, SONAME ↔ NEEDED), Symbol (dynamic resolution), Ag.7 (runtime behavior) |
+| **Sc.5** | `link_app_helper`       | Binding use (indirect) | `app_helper` links against `tiny_helper`, which links against Sf.5  | Ag.6 transitively through the `tiny_helper` repack layer                        |
+| **Sc.6** | `run_app_helper`        | Binding use (indirect) | dyn loader + transitive execute through `tiny_helper`             | Ag.5 + Symbol + Ag.7 transitively                                                 |
 
 
 **sw: with this we can argue, our framework has a better effect**
@@ -413,8 +413,8 @@ Packaging lives out of the language tool chains. Package
   bearing artifact.
 - Each row: which surface is perturbed → which Contract fires →
   which check mechanism caught it.
-- Honest split: comparator-driven rows (c1/c2/c4/c5/c6) vs
-  probe-runner rows (c3/c7).
+- Honest split: comparator-driven rows (Ag.1/Ag.2/Ag.4/Ag.5/Ag.6) vs
+  probe-runner rows (Ag.3/Ag.7).
 - *How* perturbations are mechanically produced is §7.1 (the two
   engines).
 
@@ -493,19 +493,19 @@ orthogonal to the roles.*
 
 | id     | friendly name    | formal | side    | kind      | what it is                                                                 |
 | ------ | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
-| **s1** | `native_header`  | Σ_NH   | native  | syntactic | declared C interface — function signatures, structs, macros                |
-| **s2** | `native_lib`     | Σ_NL   | native  | semantic  | compiled `.so` / `.dylib` — defined symbols, `@@VER`, SONAME, NEEDED       |
-| **s3** | `binding_stub`   | Σ_BS   | binding | syntactic | binding stub-facing decls — `external` / `argtypes` / `PyMethodDef`        |
-| **s4** | `binding_header` | Σ_BH   | binding | syntactic | binding user-facing module signature — `.mli` `val`s, Python module funcs  |
-| **s5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
+| **Sf.1** | `native_header`  | Σ_NH   | native  | syntactic | declared C interface — function signatures, structs, macros                |
+| **Sf.2** | `native_lib`     | Σ_NL   | native  | semantic  | compiled `.so` / `.dylib` — defined symbols, `@@VER`, SONAME, NEEDED       |
+| **Sf.3** | `binding_stub`   | Σ_BS   | binding | syntactic | binding stub-facing decls — `external` / `argtypes` / `PyMethodDef`        |
+| **Sf.4** | `binding_header` | Σ_BH   | binding | syntactic | binding user-facing module signature — `.mli` `val`s, Python module funcs  |
+| **Sf.5** | `binding_lib`    | Σ_BL   | binding | semantic  | compiled binding artifact — `.cmxa` + stubs `.a`, cext `.so`, ctypes (n/a) |
 
 **Runtime observation is not a surface.** Sn.6 in §2 — the probe
 input → expected output — is *not* an artifact's boundary; it is
 an observation of *execution*. We refer to it as a **runtime
 observation** (or *behavioral trace*), distinct from the five
 surfaces. It plays a role in the contract catalogue (§3.4
-c3 Behavior) and in the framework's extensibility argument (§3.5),
-but theorems about surface alignment (s1..s5) do not transfer
+Ag.3 Behavior) and in the framework's extensibility argument (§3.5),
+but theorems about surface alignment (Sf.1..Sf.5) do not transfer
 directly to it.
 
 **Table — Tiny touchstone.** Maps each surface role (by friendly
@@ -522,7 +522,7 @@ listed separately — runtime observation, not a surface.)
 | `binding_lib`    | binding | **Sn.5** | `nm` on OCaml stub `.a` (semantic, inspected)       |
 
 *Runtime observation* — `Sn.6` — probe input (`set tiny_offset =
-42; call tiny_sum(2, 3)`) → expected output (`47`). Used by c3
+42; call tiny_sum(2, 3)`) → expected output (`47`). Used by Ag.3
 Behavior (§3.4) as an *action expectation*; not a surface.
 
 Independent of how many layers the language side has, the stub-facing
@@ -533,8 +533,8 @@ calls via libffi or equivalent, with symbol lookup via `dlsym`).
 
 - **Language-side internal structure.** The binding side isn't
   one surface but several layers where *belief* can drift:
-  stub-facing (s3) → repacking (one or more user-facing layers,
-  surfacing as s4) → compiled artifact (s5). The compiled
+  stub-facing (Sf.3) → repacking (one or more user-facing layers,
+  surfacing as Sf.4) → compiled artifact (Sf.5). The compiled
   artifact is the natural check-target because every syntactic
   decision propagates into it.
 - **Binding-mechanism axis** (orthogonal to the surface roles):
@@ -575,26 +575,26 @@ names used in theory, tiny scenarios, and canary code.
 
 | Contract                | Provider surface                             | Consumer surface                                       | Kind                                       | Where it fires                                 |
 | ----------------------- | -------------------------------------------- | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------- |
-| **c1 Symbol**           | **s2** `native_lib` — defined symbols        | **s5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                        | process link (static) / process load (dynamic) |
-| **c2 API-completeness** | **s4** `binding_header`                      | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)        | app build / probe                              |
-| **c3 Behavior** †       | provider's invocation (runtime observation)  | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                        |
-| **c4 ABI**              | **s2** `native_lib` — SONAME, version-needed | **s5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                        | process load                                   |
-| **c5 SymbolVersion**    | **s2** `native_lib` — `@@VER` annotations    | **s5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                        | process load                                   |
-| **c6 Type**             | **s1** `native_header` — C signature         | **s3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                      | binding build                                  |
-| **c7 API-repacking**    | **s3** `binding_stub`                        | **s4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding)      | binding-author time (probe-checked today)      |
+| **Ag.1 Symbol**           | **Sf.2** `native_lib` — defined symbols        | **Sf.5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                        | process link (static) / process load (dynamic) |
+| **Ag.2 API-completeness** | **Sf.4** `binding_header`                      | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)        | app build / probe                              |
+| **Ag.3 Behavior** †       | provider's invocation (runtime observation)  | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                        |
+| **Ag.4 ABI**              | **Sf.2** `native_lib` — SONAME, version-needed | **Sf.5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                        | process load                                   |
+| **Ag.5 SymbolVersion**    | **Sf.2** `native_lib` — `@@VER` annotations    | **Sf.5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                        | process load                                   |
+| **Ag.6 Type**             | **Sf.1** `native_header` — C signature         | **Sf.3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                      | binding build                                  |
+| **Ag.7 API-repacking**    | **Sf.3** `binding_stub`                        | **Sf.4** `binding_header` — module signature             | syntactic ↔ syntactic (intra-binding)      | binding-author time (probe-checked today)      |
 
 **is this outdated?**
 ```
 | Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                | Comparator id + name          | Canary status                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
-| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior) (body, c3 fires); canary-added `header_arity_bump` (static c6)           | n3 + bo1 (inspect_tiny_typed.py) | **c6** `cmp_type`             | ✓ static comparator over `Typed_header` + `Typed_binding_stub` (Phase 15.5b) |
-| **Symbol**           | [e1 `symbol_missing`](tiny.md#e1-symbol_missing--symbol-contract), [e8 `symbol_orphan`](tiny.md#e8-symbol_orphan--symbol-contract-binding-side-orphan) | n4 + bo7                         | **c1** `cmp_symbol`           | ✓ `check_c_compat` — comparator over `C_stub` + `Native_lib`                 |
-| **SymbolVersion**    | `symbol_version_floor` (canary-added, e9)                                                                                                              | n4                               | **c5** `cmp_sym_version`      | ✓ static comparator over `Versioned_exports` + `Versioned_req` (Phase 15.4)  |
-| **ABI**              | [e2 `abi_soname_bump`](tiny.md#e2-abi_soname_bump--abi-contract)                                                                                       | n4 + bo6 (or bo7)                | **c4** `cmp_abi`              | ✓ comparator over `Native_lib` + `Abi_surface` (Phase 14e)                   |
-| **API-sound-repack** | [e5 `api_repack`](tiny.md#e5-api_repack--intra-binding-repacking-ocaml-only) (OCaml), e10 `api_repack_python` (Python)                                 | binding-side test                | **c7** `api_sound_repack`     | ✓ probe runner + `Expect_failure` (binding-side refutation; Phase 15.6)      |
-| **API-completeness** | [e6 `api_complete`](tiny.md#e6-api_complete--api-completeness-ocaml-only) (OCaml), e11 `api_complete_python` (Python parallel)                         | bo4 or bpc2 / bpe2               | **c2** `cmp_api_completeness` | ✓ watchlist inside `Expect_compat_failure { Ocaml_mli, Python_attrs }`       |
+| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior) (body, Ag.3 fires); canary-added `header_arity_bump` (static Ag.6)           | n3 + bo1 (inspect_tiny_typed.py) | **Ag.6** `cmp_type`             | ✓ static comparator over `Typed_header` + `Typed_binding_stub` (Phase 15.5b) |
+| **Symbol**           | [e1 `symbol_missing`](tiny.md#e1-symbol_missing--symbol-contract), [e8 `symbol_orphan`](tiny.md#e8-symbol_orphan--symbol-contract-binding-side-orphan) | n4 + bo7                         | **Ag.1** `cmp_symbol`           | ✓ `check_c_compat` — comparator over `C_stub` + `Native_lib`                 |
+| **SymbolVersion**    | `symbol_version_floor` (canary-added, e9)                                                                                                              | n4                               | **Ag.5** `cmp_sym_version`      | ✓ static comparator over `Versioned_exports` + `Versioned_req` (Phase 15.4)  |
+| **ABI**              | [e2 `abi_soname_bump`](tiny.md#e2-abi_soname_bump--abi-contract)                                                                                       | n4 + bo6 (or bo7)                | **Ag.4** `cmp_abi`              | ✓ comparator over `Native_lib` + `Abi_surface` (Phase 14e)                   |
+| **API-sound-repack** | [e5 `api_repack`](tiny.md#e5-api_repack--intra-binding-repacking-ocaml-only) (OCaml), e10 `api_repack_python` (Python)                                 | binding-side test                | **Ag.7** `api_sound_repack`     | ✓ probe runner + `Expect_failure` (binding-side refutation; Phase 15.6)      |
+| **API-completeness** | [e6 `api_complete`](tiny.md#e6-api_complete--api-completeness-ocaml-only) (OCaml), e11 `api_complete_python` (Python parallel)                         | bo4 or bpc2 / bpe2               | **Ag.2** `cmp_api_completeness` | ✓ watchlist inside `Expect_compat_failure { Ocaml_mli, Python_attrs }`       |
 | ~~API-faithfulness~~ | (no Contract — each binding is independent; cross-binding consistency isn't a canary-side agreement)                                                   | n/a                              | ~~c8~~                        | disabled 2026-06-03; candidate for removal                                   |
-| **Behavior**         | [e7 `behavior_silent`](tiny.md#e7-behavior_silent--behavior-contract) + every other scenario's probe                                                   | probe + reference                | **c3** `cmp_behavior`         | ✓ probe runner + `Expect_success` / `Expect_failure`                         |
+| **Behavior**         | [e7 `behavior_silent`](tiny.md#e7-behavior_silent--behavior-contract) + every other scenario's probe                                                   | probe + reference                | **Ag.3** `cmp_behavior`         | ✓ probe runner + `Expect_success` / `Expect_failure`                         |
 ```
 
 Two notes on the contracts table above:
@@ -607,29 +607,29 @@ Two notes on the contracts table above:
   comparator). See §2.5's "refinement lattice vs. comparator flat"
   discussion.
 - **Currently active vs. deferred.** With path-checking (n3, bo1,
-bpc1, bpe1 inspectors and the dependent c6 Type / c7 API-repacking
-comparators) and c5 SymbolVersion deferred, the live remaining work
-shrinks to: c4 ABI comparator, plus the app-chain coverage (e12, e13
+bpc1, bpe1 inspectors and the dependent Ag.6 Type / Ag.7 API-repacking
+comparators) and Ag.5 SymbolVersion deferred, the live remaining work
+shrinks to: Ag.4 ABI comparator, plus the app-chain coverage (e12, e13
 — see [`tiny.md`](tiny.md)) that exercises repacking under a
 downstream helper library.
 
 - **Universal naming.** Contract identifiers used in theory, tiny
   scenarios, and canary code — same names everywhere.
-- Two contracts (c2 API-completeness, c7 API-repacking) are
+- Two contracts (Ag.2 API-completeness, Ag.7 API-repacking) are
   *entirely within the language side*; the other five cross the
   native ↔ binding boundary.
-- **† c3 Behavior is an action expectation, not a surface
+- **† Ag.3 Behavior is an action expectation, not a surface
   alignment.** The other six contracts pin two *distinct*
-  surfaces and ask whether they agree. c3 instead asks whether
+  surfaces and ask whether they agree. Ag.3 instead asks whether
   running the binding produces the expected output — a
   trace-vs-expected-trace check (see §3.3 "Runtime observation
   is not a surface"). The framework's surface theorems
-  (covariance, refinement) apply to the surface contracts; c3
+  (covariance, refinement) apply to the surface contracts; Ag.3
   sits alongside as a complementary mode.
-- **API-repacking (c7) and API-completeness (c2) are checked via
+- **API-repacking (Ag.7) and API-completeness (Ag.2) are checked via
   probe today; static check is future work.** Their entries in
-  the catalogue exist; their static comparators don't yet (c7
-  for stub-facing layers across all binding mechanisms; c2
+  the catalogue exist; their static comparators don't yet (Ag.7
+  for stub-facing layers across all binding mechanisms; Ag.2
   partly covered by watchlist + `Expect_compat_failure`).
 - ~~c8 API-faithfulness~~ was retired (2026-06-03) as a contract
   because each binding is independent; cross-binding consistency
@@ -645,7 +645,7 @@ downstream helper library.
     NEEDED / `@@VER`. Caught by the same comparator pattern as
     declared symbols. (Absorbs the former MM Hidden dependencies
     subsection that was removed in the restructure.)
-  - **Symbol versions**: already extensively checked (c5).
+  - **Symbol versions**: already extensively checked (Ag.5).
   - **Path resolution**: to-do — the loader's filename →
     artifact resolution is another surface to make explicit.
 - **Completeness-by-construction.** The framework is complete
@@ -655,7 +655,7 @@ downstream helper library.
   illustrative, not exhaustive.
 - **Two extension modes.** The `(surface, contract)` machinery
   covers *static agreements* (the five surfaces, six surface
-  contracts). Runtime behavioral checks (c3-style action
+  contracts). Runtime behavioral checks (Ag.3-style action
   expectations) sit alongside as a compatible but separate mode.
   Adding a new behavioral check adds an action-expectation
   channel; adding a new static check adds a new
@@ -670,8 +670,8 @@ something to refer to.)
   agreement; a check is one possible implementation (static
   comparator, runtime probe, binding-side test, compile
   failure). One contract can be checked by several mechanisms;
-  one mechanism can serve several contracts (c3 probe runner
-  also detects c7). Attribution lives at the variant
+  one mechanism can serve several contracts (Ag.3 probe runner
+  also detects Ag.7). Attribution lives at the variant
   declaration, not the detection layer. Cross-reference from
   §7.3 (the implementation realises both mechanisms cleanly).
 - **Static / dynamic axis.** Some contracts are statically
@@ -781,10 +781,10 @@ engine boundary) lives in §7 Implementation.
 
 ## Real-project case studies
 
-- llvm: the existing `Opcode.UncondBr` demo (c2 OCaml) lifted to
+- llvm: the existing `Opcode.UncondBr` demo (Ag.2 OCaml) lifted to
   the post-Phase-15 framework.
-- z3: the existing `parser_context` demo (c2 Python) lifted.
-- sqlite: candidate for c4 (Homebrew vs apt SONAME differences).
+- z3: the existing `parser_context` demo (Ag.2 Python) lifted.
+- sqlite: candidate for Ag.4 (Homebrew vs apt SONAME differences).
 - For each: what perturbation surfaces, which rule fires.
 
 ## What's needed to write this section honestly
@@ -826,8 +826,8 @@ not commit to it as prose lands.
 
 ## Versioning as cross-cutting
 
-- Versioning isn't a single rule — it cuts across c1 Symbol, c4
-  ABI, c5 SymbolVersion, and the version-script work.
+- Versioning isn't a single rule — it cuts across Ag.1 Symbol, Ag.4
+  ABI, Ag.5 SymbolVersion, and the version-script work.
 - Glibc / musl as one canonical example.
 - Why this gets its own section: it threads through SS, TT, and
   CC equally. (Hidden dependencies, which are also cross-cutting,
