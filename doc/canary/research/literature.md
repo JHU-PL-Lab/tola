@@ -1,5 +1,9 @@
 # Literature — semantic preservation across language/binding boundaries
 
+- Compiler correctness, type-preserving compilation, linking
+  calculi, ELF semantics, FFI semantics, ABI tooling.
+
+
 Working bibliography for `surface.md` (manuscript) and `surface_draft/` (materials). Each entry includes a
 short note on what the work *does* and what surface theory *inherits
 from* or *departs from* it. Living doc; add as we read more.
@@ -327,14 +331,14 @@ the `.mli`. Whether the stub author's belief about the C side is still
 true at runtime is exactly what surface theory's Type / SymbolVersion
 / ABI checks try to *check* — because it can no longer be *proved*.
 
-| Classical compilation     | Surface theory                                      |
-| ------------------------- | --------------------------------------------------- |
-| Forward simulation proof  | Behavior layer — runtime canary, no proof           |
-| Type-preserving IR        | Type layer — `.cmi` digest / header parse           |
-| Calling-convention design | ABI layer — SONAME / NEEDED inspection              |
-| Symbol-table linkage      | Symbol layer — `nm -D`                              |
-| GC tag layout (within)    | (no analogue — outside surface theory's scope)      |
-| JIT speculation + guard   | Runtime canary's pass/fail dichotomy (no deopt)     |
+| Classical compilation     | Surface theory                                  |
+| ------------------------- | ----------------------------------------------- |
+| Forward simulation proof  | Behavior layer — runtime canary, no proof       |
+| Type-preserving IR        | Type layer — `.cmi` digest / header parse       |
+| Calling-convention design | ABI layer — SONAME / NEEDED inspection          |
+| Symbol-table linkage      | Symbol layer — `nm -D`                          |
+| GC tag layout (within)    | (no analogue — outside surface theory's scope)  |
+| JIT speculation + guard   | Runtime canary's pass/fail dichotomy (no deopt) |
 
 **Slogan for the paper.** Classical compilation gets semantic
 preservation by *proving* what it owns. Package management has to
@@ -370,3 +374,30 @@ CompCert proves the linker step needs its own contract.
 - libabigail's design docs — extract the algorithm they use for
   `abidiff` and compare to surface theory's `Predict`. Likely
   baseline-comparison fodder for the PLDI track.
+
+
+### 5. Relationship to other theories
+
+- **SemVer and version constraints.** Version numbers are coarse
+  proxies for surface compatibility. The surface model refines them:
+  two artifacts with the same version number may present different
+  surfaces (different PMs, build configs); two artifacts with
+  different version numbers may be surface-compatible (symbol
+  subset unchanged).
+- **Type systems for linking.** Surface theory plays the role of a
+  *gradual type system* for binary interfaces: Symbol is untyped
+  name matching; Type adds structural typing (via `.cmi` digest /
+  header parse); Behavior would be full behavioral specification.
+  The progression is gradual in granularity, not a single linear
+  chain.
+- **Nix / reproducible builds.** Nix ensures the *same* artifact is
+  produced from the same inputs. Surface theory checks whether
+  *different* artifacts (same library, different PM/version) are
+  compatible. Complementary guarantees.
+
+A fuller bibliography lives at [`literature.md`](literature.md),
+covering verified compilation (CompCert, CakeML), type-preserving
+compilation (TIL, TAL, GHC Core), linking calculi (Cardelli,
+Flatt-Felleisen, MixML), Java dynamic-linking semantics
+(Drossopoulou-Wragg-Eisenbach), ELF semantics (Kell), FFI semantics
+(Furr-Foster, Patterson-Garg-Ahmed), and ABI tooling (libabigail).

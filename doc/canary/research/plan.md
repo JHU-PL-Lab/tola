@@ -287,12 +287,12 @@ minutes).
 
 Today's testing coverage:
 
-| layer                              | tool                                | covers                                                          |
-| ---------------------------------- | ----------------------------------- | --------------------------------------------------------------- |
-| Pure unit (data shape)             | `test/canary_artifact_test.ml` pure      | watchlist matchers, JSON parsing, compat helpers — 13/13        |
-| Shell integration (primitive runs) | `test/canary_artifact_test.ml` shell     | `nm` / `ocamlobjinfo` / inspect_*.py on fixed fixtures — 15/15  |
-| Per-PM                             | `canary_pm_test.ml`                 | apt/brew/opam/pip install + verify + remove lifecycle — 14/14   |
-| Integration (heavy)                | `canary action <project>`           | full pipeline, ~10s–5min per project                            |
+| layer                              | tool                                 | covers                                                         |
+| ---------------------------------- | ------------------------------------ | -------------------------------------------------------------- |
+| Pure unit (data shape)             | `test/canary_artifact_test.ml` pure  | watchlist matchers, JSON parsing, compat helpers — 13/13       |
+| Shell integration (primitive runs) | `test/canary_artifact_test.ml` shell | `nm` / `ocamlobjinfo` / inspect_*.py on fixed fixtures — 15/15 |
+| Per-PM                             | `canary_pm_test.ml`                  | apt/brew/opam/pip install + verify + remove lifecycle — 14/14  |
+| Integration (heavy)                | `canary action <project>`            | full pipeline, ~10s–5min per project                           |
 
 Seed fixtures + runner landed 2026-05-29; per-contract case lists
 accumulated through Phase 14/15 (64 cases total at end of June; see
@@ -510,21 +510,21 @@ At end of June 2026, `canary action tiny` runs 13 variants
 end-to-end, with the following active Contracts firing (attribution
 in parentheses, mechanism in italics):
 
-| Variant | Contract | mechanism |
-|---|---|---|
-| baseline | — | every step done |
-| lib_broken | c1 (both langs) | *static comparator* |
-| binding_mli_broken | c2 OCaml | *static comparator* |
-| binding_python_attrs_broken | c2 Python | *static comparator* |
-| hybrid_lib_broken | c1 (both langs, cross-product) | *static comparator* |
-| lib_soname_bumped | c4 Python | *static comparator* |
-| lib_behavior_broken | c3 (both langs) | *probe runner* |
-| binding_overdeclares_stubs | c1 OCaml (orphan) | *static comparator* |
-| app_helper_lib_broken | c1 (both langs, chain) | *static comparator* |
-| lib_symbol_version_broken | c5 Python | *static comparator* |
-| binding_type_broken | c6 OCaml | *static comparator* |
-| binding_repack_broken | c7 OCaml | *probe runner (refutation)* |
-| binding_python_repack_broken | c7 Python | *probe runner (refutation)* |
+| Variant                      | Contract                       | mechanism                   |
+| ---------------------------- | ------------------------------ | --------------------------- |
+| baseline                     | —                              | every step done             |
+| lib_broken                   | c1 (both langs)                | *static comparator*         |
+| binding_mli_broken           | c2 OCaml                       | *static comparator*         |
+| binding_python_attrs_broken  | c2 Python                      | *static comparator*         |
+| hybrid_lib_broken            | c1 (both langs, cross-product) | *static comparator*         |
+| lib_soname_bumped            | c4 Python                      | *static comparator*         |
+| lib_behavior_broken          | c3 (both langs)                | *probe runner*              |
+| binding_overdeclares_stubs   | c1 OCaml (orphan)              | *static comparator*         |
+| app_helper_lib_broken        | c1 (both langs, chain)         | *static comparator*         |
+| lib_symbol_version_broken    | c5 Python                      | *static comparator*         |
+| binding_type_broken          | c6 OCaml                       | *static comparator*         |
+| binding_repack_broken        | c7 OCaml                       | *probe runner (refutation)* |
+| binding_python_repack_broken | c7 Python                      | *probe runner (refutation)* |
 
 c8 dormant — no Contract (each binding is independent;
 cross-binding consistency isn't a canary-side agreement).
@@ -550,11 +550,11 @@ c\*."
 **Per-project pre-existing demos** (kept here as reference for when
 the work moves to real projects after tiny):
 
-| Project | Easy wins (c\* and natural perturbation source) |
-|---|---|
-| llvm | c1 + c2 OCaml already wired (Opcode.UncondBr); add Python (llvmlite version-floor); investigate c4 (LLVM SONAME bumps across majors); investigate c5 (libLLVM.so versioned symbols). |
-| z3 | c2 Python already wired (parser_context); re-enable `has_build_binding=true` on z3-stable to add c1 (parallel to llvm); investigate c4. |
-| sqlite | Most plumbed but no live demo. apt's `libsqlite3.so.0` vs Homebrew's `libsqlite.so.0` SONAME may differ — natural c4 candidate. |
+| Project | Easy wins (c\* and natural perturbation source)                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| llvm    | c1 + c2 OCaml already wired (Opcode.UncondBr); add Python (llvmlite version-floor); investigate c4 (LLVM SONAME bumps across majors); investigate c5 (libLLVM.so versioned symbols). |
+| z3      | c2 Python already wired (parser_context); re-enable `has_build_binding=true` on z3-stable to add c1 (parallel to llvm); investigate c4.                                              |
+| sqlite  | Most plumbed but no live demo. apt's `libsqlite3.so.0` vs Homebrew's `libsqlite.so.0` SONAME may differ — natural c4 candidate.                                                      |
 
 ## 7. Operating rules
 
