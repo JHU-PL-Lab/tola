@@ -1,13 +1,31 @@
 Today's task is 
-- to finish section 2 for material 
-- and section 3 for idea pipeline
-- sync-ing a bit on SSOT
+- finish section 2 for material 
+- and section 3 for idea pipeline (testing moviation, agreement..)
+- sync-ing on Single Source Of Truth (code-doc, ocaml, testing)
+  - global naming art, sce, good/bad/surface
 
 # Issues
 
+- [ ] careful with the _complete_..
+
+agreement
+ag1: C compiler: header, source
+ag2: native-lib: header, source, --. .so
+libtiny.v1.so ... libtiny.v2.so ... v1~v2.
+ .so file.... assumed <- surface
+
+...
+...
+
+(incomplete)
+Testing/Running/Behavior-based
+   - good running result ...  not mean agreement be hold
+   - bad                 ...  agreement must be violated
+
+
 ## Material Issues
 
-### 1 Role of behavior
+### 1 Role of behavior running
 
 Manuscript reclassified the former s6 `runtime_trace` as a
 **runtime observation**, not a surface (§3.3 *The five surface
@@ -15,6 +33,13 @@ roles* + §3.4 c3 Behavior footnote). The code still treats it as
 a surface peer to s1..s5. Items to align eventually:
 
 `runtime_trace` is not a surface (from §3.3 decision)
+
+the level of belief: 
+  versioning on package is not sound nor complete
+  compiler typecheck is sound
+
+Running is the ultimate check;
+tiny exists so we can run it deterministically.
 
 - **OCaml source** (`src/canary/`):
   - `Σ_RT` / `runtime_trace` naming — rename to
@@ -32,6 +57,8 @@ a surface peer to s1..s5. Items to align eventually:
 > **sw** behaviour based compatibility
 No existing tool provides a unified answer to "is this binding compatible with this
 library?"
+
+who dictates right or wrong
 
 - Static comparators: predict failure substrings from cached
   JSONs; runner greps probe.log for them.
@@ -56,6 +83,9 @@ movitation: tiny exists to witness each rule reproducibly
 
 **sw** we use the term `compile` or `interpret` when the action is performed by one language's compiler or interpreter. We use the term build when multiple tools are used in this aciton.
 
+For tiny
+- [ ] package management tools (a known gap in tiny's code today)
+
 ### 4 Syntactical vs Semantics
 
 **syntactic** (declared by the developer) surfaces show source and 
@@ -66,16 +96,22 @@ movitation: tiny exists to witness each rule reproducibly
 
 ### Finding a project-level Single Source of Truth (SSOT)
 
+**Authoritative file:** [`../design/ssot.md`](../design/ssot.md) —
+project-wide catalogue (Artifacts / Surfaces / Agreements / Good
+scenarios / Bad scenarios / Actions) bridging manuscript ↔ code.
+The notes below are the rename/decision history; canonical tables
+live in `design/ssot.md`.
+
 **Doc-side prefix scheme decided 2026-06-XX** — two-letter,
 applied to `draft.md`:
 
-| Concept       | Old (mixed)              | New (uniform) |
-| ------------- | ------------------------ | ------------- |
-| Snippet       | `Sn.X`                   | `Sn.X` (unchanged) |
-| Artifact      | `A0..A2` / `a1..a3`      | `Ar.0..Ar.3`  |
-| Surface       | `s1..s5`                 | `Sf.1..Sf.5`  |
-| Agreement     | `c1..c7` (§3) / `C0..C7` (§2) | `Ag.0..Ag.7` |
-| Scenario      | `S1..S6`                 | `Sc.1..Sc.6`  |
+| Concept   | Old (mixed)                   | New (uniform)      |
+| --------- | ----------------------------- | ------------------ |
+| Snippet   | `Sn.X`                        | `Sn.X` (unchanged) |
+| Artifact  | `A0..A2` / `a1..a3`           | `Ar.0..Ar.3`       |
+| Surface   | `s1..s5`                      | `Sf.1..Sf.5`       |
+| Agreement | `c1..c7` (§3) / `C0..C7` (§2) | `Ag.0..Ag.7`       |
+| Scenario  | `S1..S6`                      | `Sc.1..Sc.6`       |
 
 Rename applied to `draft.md` via sed; verified no old prefixes
 remain in the manuscript. Other research files (`literature.md`,
@@ -234,6 +270,8 @@ I need to outline the introduction and developing of term _surface_
 find a good place for 
 > | **s6** | `runtime_trace`  | Σ_RT   | runtime | semantic  | observable call trace at runtime — probe input/output behaviour            |
 
+The ultimate question is which belief/agreement does a successful agreement confirm
+
 ### need a term for binding mechanism
 in spirite, static means early-binding while dynamic means later-binding (thus keep open)
 
@@ -341,3 +379,16 @@ producers).
   [`../design/harness_canary_orthogonality.md`](../design/harness_canary_orthogonality.md).
 
 tiny should have packages
+
+##
+
+
+Agreements verified                                                               |
+--------------------------------------------------------------------------------- |
+Ag.0 (type, Sf.1 ↔ Sf.2), Ag.1 (source-lib)                                       |
+Ag.2 (native-lib ↔ stub), Ag.3 (stub ↔ binding-lang), Ag.4 (stub ↔ user-facing)   |
+Ag.6 (API-completeness, Sf.4 ↔ app expectations)                                  |
+Ag.5 (ABI, SONAME ↔ NEEDED), Symbol (dynamic resolution), Ag.7 (runtime behavior) |
+Ag.6 transitively through the `tiny_helper` repack layer                          |
+Ag.5 + Symbol + Ag.7 transitively                                                 |
+
