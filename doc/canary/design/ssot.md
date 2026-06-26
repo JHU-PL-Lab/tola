@@ -29,6 +29,13 @@ arrives).
 
 ## 1. Artifacts (`Ar.X`)
 
+**Flow.** `canary_basic.ml: artifact_kind` + tiny `scenarios.py`
+artifact tree ──► SSOT §1 ──► draft.md §2 / §3; consumed by every
+project spec.
+**Co-providers.** `artifact_kind` (code) and tiny's scenario
+artifacts must agree on kinds and global Ar.X identity. Drift here
+breaks scenario→artifact mapping in §5.
+
 Status: **drift** — manuscript Ar.0..Ar.3 (4 kinds); code has 5 (adds
 `Headers`). §2's `Ar.0..Ar.2` vs §3's `Ar.1..Ar.3` is another internal
 numbering inconsistency.
@@ -47,6 +54,15 @@ numbering inconsistency.
 
 ## 2. Surfaces (`Sf.X`)
 
+**Flow.** `canary_compat.ml: inspect_input` + manuscript catalogue
+──► SSOT §2 ──► draft.md §3; `inspect_*.py` JSON `kind` field.
+**Co-providers.** code's 10 `inspect_input` variants and manuscript's
+5 Sf roles are parallel hand-curated lists; the aggregation mapping
+must be kept here.
+**Principle.** Sf.X numbering should align with Ar.X numbering
+(Sf.k is the inspectable face of Ar.k). Current draft does not
+fully honour this — see Open Reconciliation §7.
+
 Status: **drift** — manuscript 5 surfaces; code 10 inspect_input
 variants (one surface aggregates several inspect kinds).
 
@@ -64,6 +80,13 @@ variants (one surface aggregates several inspect kinds).
   observation, not a static surface). Sn.6 in snippets kept.
 
 ## 3. Agreements (`Ag.X`)
+
+**Flow.** `canary_compat.ml: contract_id` (C1..C8) + manuscript §3
+catalogue (Ag.1..Ag.7) ──► SSOT §3 ──► draft.md §3 prose;
+`Expect_compat_failure` predicate derivation.
+**Co-providers.** code's `contract_id` and manuscript's `Ag.X` are
+parallel hand-curated lists. C8 (API-faithfulness) currently has
+no manuscript Ag.
 
 Status: **drift** — manuscript Ag.1..Ag.7 (7 agreements); code
 `contract_id = C1..C8` (8 contracts).
@@ -89,6 +112,13 @@ catalogue numbering; rewrite §2 references to point at the §3 IDs.
 
 ## 4. Good Scenarios (`Sc.X`)
 
+**Flow.** manuscript Sc.1..Sc.6 (hand-curated) + canary action
+graph aggregation ──► SSOT §4 ──► draft.md §2 + §4 prose.
+**Co-providers.** the six aggregate stages and the 15-pattern path
+table (from `canary paths-md`) describe the same space at different
+granularity; their consistency is the §5 mapping (each bad scenario
+points at one Sc).
+
 Status: **stable for manuscript** — six aggregations of the action
 graph. Used in draft.md L349 table.
 
@@ -107,6 +137,15 @@ crossed with artifact kinds. The 15-pattern table from `canary paths`
 is the full enumeration.
 
 ## 5. Bad Scenarios (no ID prefix; `snake_case` names)
+
+**Flow.** `canary/examples/tiny/scenarios/scenarios.py list` ──►
+SSOT §5 ──► draft.md L382 table, tiny variant matrix.
+**Co-providers.** code is the sole producer; manuscript embeds.
+Future `make ssot-sync` regenerates the table block.
+**Open consistency.** the 13-variant perturbation matrix in §4 (and
+historically in tiny.md) is a separate enumeration shape; whether it
+aligns 1:1 with the 15 `scenarios.py` rows is not currently
+documented — see Open Reconciliation §7.
 
 Status: **stable** — `scenarios.py list` output, 15 rows. Manuscript
 L382 table mirrors this.
@@ -136,6 +175,11 @@ L382 table mirrors this.
 
 ## 6. Actions / Stages (no ID prefix; verb_object names)
 
+**Flow.** `canary_action.ml: rule` constructors (canary paths-md
+emits) ──► SSOT §6 ──► draft.md (future), backend renderers
+(GH YAML / Mermaid / HTML).
+**Co-providers.** code is the sole producer.
+
 Status: **stable in code**; not yet enumerated in manuscript.
 
 | Action name      | Kind             | Code constructor                          | Status |
@@ -161,7 +205,29 @@ dune exec src/bin/canary_main.exe -- paths-md
 
 ---
 
-## 7. Open reconciliation tasks
+## 7. Principles the SSOT should honour (awareness, not action)
+
+Captured for later; surface here so they're visible per-section.
+
+1. **Artifacts are globally named and indexed.** The Ar.X list is
+   one flat catalogue, not per-section. Any artifact mentioned in
+   any chapter resolves to the same Ar.X.
+2. **Surface IDs align with artifact IDs.** Sf.k is the inspectable
+   face of Ar.k. Current draft is not fully consistent (Sf.1
+   pointing at native_source while §2 has Ar.0 = native_source) —
+   resolving this is part of §8.
+3. **Good scenarios × perturbation matrix vs bad scenarios.** Sc.X
+   (6 stages) crossed with one perturbation per agreement should
+   reconstruct the bad-scenario set. Whether the 13-variant matrix
+   in tiny.md and the 15 `scenarios.py` rows agree, and which is
+   authoritative, is not yet documented.
+4. **Tiny does not exercise packaging errors.** Bad-scenario
+   coverage stops at the build/link/runtime layer. Packaging
+   mistakes (wrong files in opam/pip/apt artefacts; cross-PM SONAME
+   inconsistencies; metadata drift) are out of tiny's current
+   reach — see §8 reconciliation tail.
+
+## 8. Open reconciliation tasks
 
 1. **Ar.0..Ar.3 vs code's 5 kinds.** Decide if `Headers` gets an Ar
    slot or stays implicit under Ar.1.
@@ -173,10 +239,18 @@ dune exec src/bin/canary_main.exe -- paths-md
 5. **Code-side rename** (deferred to polish pass per "uniformity
    eventually"): C1..C8 → Ag.X, inspect_input renames → Sf.X
    aggregates.
+6. **Sf.X ↔ Ar.X alignment (Principle 2).** Renumber Sf so Sf.k is
+   the surface of Ar.k.
+7. **Perturbation matrix ↔ bad scenarios (Principle 3).** Document
+   the mapping between the 13-variant matrix and the 15
+   `scenarios.py` rows; declare which is authoritative.
+8. **Tiny packaging coverage (Principle 4).** Add packaging-error
+   scenarios to tiny (opam/pip/apt repackaging mistakes,
+   cross-PM SONAME drift). Tracked as project TODO.
 
 ---
 
-## 8. Downstream usage in `draft.md`
+## 9. Downstream usage in `draft.md`
 
 Tables in `draft.md` that should be replaced with references or
 generated from this file once SSOT stabilises:
