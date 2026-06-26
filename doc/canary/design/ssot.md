@@ -250,7 +250,39 @@ Captured for later; surface here so they're visible per-section.
 
 ---
 
-## 9. Downstream usage in `draft.md`
+## 9. Strategic / forward planning
+
+Larger-than-reconciliation items that shape the SSOT once
+addressed. Captured as awareness; not active work.
+
+1. **Migrate tiny's scenario engine from Python to OCaml.** Today
+   `canary/examples/tiny/scenarios/scenarios.py` is the bad-scenario
+   producer (§5); the rest of canary is OCaml. A single-language
+   codebase removes the cross-language consistency obligation
+   between `scenarios.py` and `canary_basic.ml: artifact_kind`
+   (§1 co-providers), and lets perturbation/enumeration share types
+   directly with the action graph.
+2. **One-time spec covering one scenario across both engines.**
+   The current shape has two engines — tiny-based perturbation
+   (concrete trace per agreement) and canary-based enumeration
+   (abstract trace across variants). A spec that *owns* one
+   scenario after enumeration would unify them: the same record
+   drives perturbation construction in tiny and variant selection
+   in canary. Resolves Principle 3 (perturbation × good =
+   bad) by making the mapping computable, not declarative. Ties
+   into §4/§5 flows.
+3. **Re-do expectation as per-step contract outcome.** Today
+   `Expect_failure` / `Expect_compat_failure` (§6 actions) only
+   capture *fail* shapes. Drafting surfaced that each step —
+   success or failure — should contribute to a scenario-wise
+   testing semantics: every action's outcome is evidence for or
+   against the agreements (§3) it touches. Implies a contract
+   layer between §6 (action steps) and §3 (agreements), where step
+   results are typed observations into the contract, not just
+   match-the-substring assertions. Likely the biggest manuscript
+   ↔ code structural shift on the horizon.
+
+## 10. Downstream usage in `draft.md`
 
 Tables in `draft.md` that should be replaced with references or
 generated from this file once SSOT stabilises:
