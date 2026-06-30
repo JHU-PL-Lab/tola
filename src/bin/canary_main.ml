@@ -802,6 +802,13 @@ let index_cmd =
           run found under _out/canary/projects/.")
     Term.(const run $ const ())
 
+let tiny_scenarios_cmd =
+  Cmd.v
+    (Cmd.info "tiny-scenarios"
+       ~doc:"List tiny scenario names (one per line). \
+             OCaml port of [python3 scenarios.py list].")
+    (term_of (fun () -> Canary_tiny_scenario.print_list ()))
+
 let summary_diff_cmd =
   let old_ =
     Arg.(
@@ -843,6 +850,7 @@ let () =
         artifact_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;
+        tiny_scenarios_cmd;
         compat_cmd;
         verify_cmd;
         index_cmd;
