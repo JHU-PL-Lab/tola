@@ -819,12 +819,21 @@ let tiny_scenarios_expected_cmd =
        ~doc:"Print scenario's per-step expected outcomes as JSON")
     Term.(const (fun n () -> Canary_tiny_scenario.print_expected n) $ name $ const ())
 
+let tiny_scenarios_baseline_cmd =
+  Cmd.v
+    (Cmd.info "baseline"
+       ~doc:"Build clean + run every inspector + materialize workspace \
+             under _cache/baseline/.")
+    (term_of (fun () -> Canary_tiny_baseline.run ()))
+
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny-scenarios"
        ~doc:"Tiny scenario harness — OCaml port. Phase B/C of the \
              Python→OCaml migration (see doc/canary/design/tiny_migration.md).")
-    [ tiny_scenarios_list_cmd; tiny_scenarios_expected_cmd ]
+    [ tiny_scenarios_list_cmd;
+      tiny_scenarios_expected_cmd;
+      tiny_scenarios_baseline_cmd ]
 
 let summary_diff_cmd =
   let old_ =
