@@ -802,12 +802,29 @@ let index_cmd =
           run found under _out/canary/projects/.")
     Term.(const run $ const ())
 
-let tiny_scenarios_cmd =
+let tiny_scenarios_list_cmd =
   Cmd.v
-    (Cmd.info "tiny-scenarios"
-       ~doc:"List tiny scenario names (one per line). \
-             OCaml port of [python3 scenarios.py list].")
+    (Cmd.info "list" ~doc:"Print scenario names (one per line)")
     (term_of (fun () -> Canary_tiny_scenario.print_list ()))
+
+let tiny_scenarios_expected_cmd =
+  let name =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+  in
+  Cmd.v
+    (Cmd.info "expected"
+       ~doc:"Print scenario's per-step expected outcomes as JSON")
+    Term.(const (fun n () -> Canary_tiny_scenario.print_expected n) $ name $ const ())
+
+let tiny_scenarios_cmd =
+  Cmd.group
+    (Cmd.info "tiny-scenarios"
+       ~doc:"Tiny scenario harness — OCaml port. Phase B/C of the \
+             Python→OCaml migration (see doc/canary/design/tiny_migration.md).")
+    [ tiny_scenarios_list_cmd; tiny_scenarios_expected_cmd ]
 
 let summary_diff_cmd =
   let old_ =

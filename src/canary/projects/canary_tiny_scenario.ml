@@ -340,3 +340,40 @@ let scenarios : scenario_spec list =
     [python3 canary/examples/tiny/scenarios/scenarios.py list]. *)
 let print_list () =
   List.iter scenarios ~f:(fun s -> Stdlib.print_endline s.name)
+
+(** Human-readable contract label used by the Python harness's JSON
+    output ("Symbol", "Type", "ABI", …). Distinct from
+    [Canary_compat.string_of_contract_id] which emits "c1".."c8".
+    Used by [print_expected] to preserve the JSON shape consumed by
+    [_harness/check.py]. *)
+let violates_label = function
+  | Canary_compat.C1 -> "Symbol"
+  | C2 -> "API-completeness"
+  | C3 -> "Behavior"
+  | C4 -> "ABI"
+  | C5 -> "SymbolVersion"
+  | C6 -> "Type"
+  | C7 -> "API-repacking"
+  | C8 -> "API-faithfulness"
+
+let json_of_spec (s : scenario_spec) : Yojson.Basic.t =
+  `Assoc [
+    "scenario", `String s.name;
+    "description", `String s.description;
+    "violates", `List (List.map s.violates ~f:(fun c -> `String (violates_label c)));
+    "perturbs", `List (List.map s.perturbs ~f:(fun p -> `String p));
+    "outcomes",
+      `Assoc (List.map s.expected ~f:(fun (k, v) -> k, `String (string_of_outcome v)));
+  ]
+
+(** Print one scenario's expected JSON — parity target for
+    [scenarios.py expected <name>]. Consumed by
+    [_harness/check.py]. JSON formatting is allowed to drift (Phase A
+    §7); the shape (keys, value types) must match. *)
+let print_expected (name : string) : unit =
+  match List.find scenarios ~f:(fun s -> String.equal s.name name) with
+  | None ->
+    Stdlib.prerr_endline (Printf.sprintf "unknown scenario: %S; try `list`" name);
+    Stdlib.exit 1
+  | Some s ->
+    Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_spec s))
