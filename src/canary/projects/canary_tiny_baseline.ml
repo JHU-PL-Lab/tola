@@ -60,31 +60,48 @@ let capture_json (cmd : string) : Yojson.Basic.t option =
     else (try Some (Yojson.Basic.from_string s) with _ -> None)
   | _ -> None
 
-(* ---------- builds ---------- *)
+(* ---------- artifact verification ---------- *)
 
-let build_native () : bool =
-  info "build native (cmake)";
-  run_shell (Printf.sprintf "cmake --build '%s' >/dev/null 2>&1" c_build) = 0
+(** [baseline] does not own build orchestration. It expects the
+    upstream artifacts to be present in the live tree:
+    - [c/build/libtiny.so.1] from cmake (the C library)
+    - [_build/default/canary/examples/tiny/ocaml/tiny.cmxa] +
+      [libtiny_stubs.a] from dune (the OCaml binding)
+    - [python_cext/tiny_cext/_native.cpython-*.so] from
+      [make python_cext]
 
-let build_ocaml () : bool =
-  info "build ocaml (dune)";
-  (* env -u clears INSIDE_DUNE / DUNE_* so a nested dune (parent
-     'dune exec' may still hold a lock when this runs) doesn't refuse
-     to start. Python harness avoided this because it wasn't invoked
-     under dune exec; the OCaml port is, so the unset is required. *)
-  let cmd =
-    Printf.sprintf
-      "cd '%s/ocaml' && env -u INSIDE_DUNE -u DUNE_BUILD_DIR -u DUNE_INSTRUMENT_WITH \
-       LIBRARY_PATH='%s:%s' LD_RUN_PATH='%s:%s' \
-       dune build tiny.cmxa libtiny_stubs.a >/dev/null 2>&1"
-      tiny_root c_build (Option.value (Sys.getenv "LIBRARY_PATH") ~default:"")
-      c_build (Option.value (Sys.getenv "LD_RUN_PATH") ~default:"")
+    Rationale ([tiny_migration.md] §1b update): we previously
+    shelled out [dune build] from inside [baseline], which was a
+    dune-in-dune call requiring [INSIDE_DUNE] env-strip to avoid
+    lock contention with the parent [dune exec]. Removing the
+    subprocess: build orchestration moves to the Makefile target
+    [make canary-tiny-baseline] which chains
+    [cmake → dune build tiny → dune exec canary baseline]. We
+    pulled cmake / make python_cext out symmetrically — baseline
+    either owns orchestration or it doesn't. *)
+
+let tiny_cmxa     = ocaml_build_dir ^ "/tiny.cmxa"
+let tiny_stubs_a  = ocaml_build_dir ^ "/libtiny_stubs.a"
+let tiny_libtiny  = c_build ^ "/libtiny.so.1"
+
+let verify_artifacts () : bool =
+  let missing = ref [] in
+  let check path label =
+    if not (Stdlib.Sys.file_exists path) then missing := (path, label) :: !missing
   in
-  run_shell cmd = 0
-
-let build_python_cext () : bool =
-  info "build python_cext (make)";
-  run_shell (Printf.sprintf "cd '%s' && make python_cext >/dev/null 2>&1" tiny_root) = 0
+  check tiny_libtiny  "C library (run: cmake --build canary/examples/tiny/c/build)";
+  check tiny_cmxa     "OCaml binding (run: dune build canary/examples/tiny/ocaml/tiny.cmxa)";
+  check tiny_stubs_a  "OCaml stubs (run: dune build canary/examples/tiny/ocaml/libtiny_stubs.a)";
+  match !missing with
+  | [] -> true
+  | xs ->
+    Stdlib.prerr_endline "baseline: required artifacts missing.";
+    List.iter (List.rev xs) ~f:(fun (p, label) ->
+      Stdlib.Printf.eprintf "  %s\n  -> %s\n" p label);
+    Stdlib.prerr_endline
+      "baseline: run `make canary-tiny-baseline` to orchestrate \
+       cmake + dune build + this command in sequence.";
+    false
 
 (* ---------- glob ---------- *)
 
@@ -305,10 +322,8 @@ let save_json path (j : Yojson.Basic.t) =
 
 let run () : unit =
   mkdir_p baseline_inspect;
-  info "ensuring native + bindings are built";
-  if not (build_native ()) then fail "C build failed";
-  if not (build_ocaml ()) then fail "OCaml build failed";
-  if not (build_python_cext ()) then fail "Python cext build failed";
+  if not (verify_artifacts ()) then Stdlib.exit 1;
+  info "artifacts present; running inspectors";
   List.iter inspectors ~f:(fun (alias, fn) ->
     match fn () with
     | None -> warn "WARN %s produced no JSON" alias

@@ -31,12 +31,24 @@ here for reference; not all are preserved (see §1b).
 
 ### 1b. OCaml port — revised verb set (six)
 
-Design choice (2026-06-26): adopt **sandbox-build prepare**. Each
+**Design choice — sandbox-build prepare (2026-06-26).** Each
 scenario builds into its own hermetic sandbox directory under
 `_cache/<name>/` by copying live sources first, then patching the
 copy. The live tree is never mutated; `revert` becomes structurally
 unnecessary, `prepare-all` parallelises trivially, and Ctrl-C is
 harmless.
+
+**Design choice — no dune subprocess from baseline (2026-06-26).**
+The first cut of `baseline` shelled out to `dune build tiny.cmxa
+libtiny_stubs.a` (with `env -u INSIDE_DUNE` to dodge the parent
+`dune exec` lock). That dune-in-dune call is a code smell: in OCaml
+land we should not invoke dune as an external process. Baseline now
+**verifies-only** — it asserts the upstream artifacts exist on
+disk; build orchestration lives in the Makefile target
+`make canary-tiny-baseline` which chains
+`cmake → dune build tiny → make python_cext → canary baseline`.
+`cmake` and `make python_cext` stay as external processes (allowed
+per principle); the dune build moves out of OCaml.
 
 That collapses the CLI surface from ten verbs to six:
 
