@@ -9,9 +9,12 @@ what must be preserved until parity is reached.
 
 Counterpart strategic plan: `ssot.md` §9.1, §9.2.
 
-## 1. CLI surface (must preserve)
+## 1. CLI surface
 
-Eight subcommands, invoked as `scenarios.py <cmd> [<name>]`:
+### 1a. Current (Python `scenarios.py`)
+
+Ten subcommands, invoked as `scenarios.py <cmd> [<name>]`. Listed
+here for reference; not all are preserved (see §1b).
 
 | Verb              | Args            | What it does                                                                                     | Used by                                  |
 | ----------------- | --------------- | ------------------------------------------------------------------------------------------------ | ---------------------------------------- |
@@ -25,6 +28,45 @@ Eight subcommands, invoked as `scenarios.py <cmd> [<name>]`:
 | `restore`         | `<name>`        | overlay `_cache/baseline/` + `_cache/<name>/` snapshots onto live tree → ill state at file speed | `_harness/run_cached.py`                 |
 | `expected`        | `<name>`        | print scenario's per-step expected outcomes as JSON                                              | `_harness/check.py`                      |
 | `confirm`         | `<name>`        | print cached `_cache/<name>/confirm_ill.json` (surface delta vs baseline)                        | ad-hoc inspection                        |
+
+### 1b. OCaml port — revised verb set (six)
+
+Design choice (2026-06-26): adopt **sandbox-build prepare**. Each
+scenario builds into its own hermetic sandbox directory under
+`_cache/<name>/` by copying live sources first, then patching the
+copy. The live tree is never mutated; `revert` becomes structurally
+unnecessary, `prepare-all` parallelises trivially, and Ctrl-C is
+harmless.
+
+That collapses the CLI surface from ten verbs to six:
+
+| Verb            | Args     | Notes                                                                                            |
+| --------------- | -------- | ------------------------------------------------------------------------------------------------ |
+| `list`          | —        | unchanged                                                                                        |
+| `baseline`      | —        | builds clean → `_cache/baseline/`; same shape as today                                           |
+| `prepare`       | `<name>` | copy source → sandbox → apply patch → build → snapshot → done. No live-tree mutation, no revert. |
+| `prepare-all`   | —        | sequential; safe to parallelise later                                                            |
+| `expected`      | `<name>` | unchanged                                                                                        |
+| `confirm`       | `<name>` | unchanged                                                                                        |
+
+**Retired verbs and their disposition:**
+
+- `apply` / `revert` — used only by `_harness/run.sh` (the legacy
+  live-rebuild path). Become *private OCaml helpers inside
+  `prepare`*; not exposed as canary subcommands. The Python harness
+  keeps its `apply`/`revert` for as long as `run.sh` lives. The
+  *only* meaningful remaining use of `revert` is as an optional
+  property check (proving `apply` is reversible); not workflow.
+- `restore` / `restore-baseline` — exist only so `run.sh` /
+  `run_cached.py` can materialise an ill state onto the live tree
+  without rebuilding. Sandbox prepare already produces the snapshot
+  *as* the cache directory, so canary's existing read path
+  (`cache_workspace_of`) consumes it directly. No restore needed.
+
+Implication: `_harness/run.sh` and `_harness/run_cached.py` become
+Python-only legacy until Phase E retires them with the rest of the
+Python harness. Canary's runtime path through `_cache/<scenario>/`
+is unaffected by the verb drop.
 
 Exit code: 0 on success; non-zero on failure. JSON output goes to
 stdout, logs to stderr.
@@ -201,8 +243,11 @@ When Phase B starts:
 - [ ] Wire `canary_project_tiny.ml`'s `tiny_ocaml_module_watchlist`
       and the `violates` contract IDs through `scenario_spec` rather
       than free-floating constants.
-- [ ] Decision: which Phase C verbs land first. Recommendation:
-      `list` → `apply`/`revert` → `expected` → `baseline` →
-      `prepare` → `restore`/`restore-baseline` → `confirm`. Ordered
-      by external-consumer dependency (Makefile uses list +
-      baseline + prepare first; cached harness needs restore last).
+- [ ] Decision: which Phase C verbs land first. **Revised**
+      (post-§1b sandbox decision): `list` (Phase B ✓) → `expected`
+      → `baseline` → `prepare` (sandbox-build, swallows apply
+      internally) → `prepare-all` → `confirm`. Ordered by
+      external-consumer dependency and complexity. `apply` /
+      `revert` / `restore` / `restore-baseline` are no longer
+      Phase C work — they stay Python-only and retire with the
+      harness in Phase E.
