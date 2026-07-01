@@ -330,14 +330,16 @@ Phase A is inventory only. Decisions deferred to Phase B:
         validate against the 15-entry scenarios list at
         action-cmd term evaluation and raise a helpful error
         with the full known-name list on typo.
-      - [ ] **D.2** (deferred, new-logic — post-Phase-E). Derive
+      - [ ] **D.2** (deferred, new-logic — post-§9.3). Derive
         `Expect_compat_failure { inputs = ... }` predicates from
         `scenario_spec.violates` + `scenario_spec.expected`
         instead of hand-coding them per variant in
         `canary_project_tiny.ml`'s 13 `make_*_broken_script_spec`
-        factories. This is new derivation logic, not migration,
-        so parked per the "port-only" scope guardrail. Naturally
-        follows the `ssot.md §9.3` scenario remodel.
+        factories. **Merged into `ssot.md §9.4`** with the
+        expectation-re-do work — same shift at different scales.
+        Sequenced strictly after §9.3 (scenario remodel), since
+        the good-scenario structure gives expected outcomes a
+        coherent parent to attach to.
 - [x] **Phase E** — retire the Python harness. Moved
       `canary/examples/tiny/scenarios/{scenarios.py, _harness/}`
       to `doc/_legacy_code/tiny_python_harness/` (kept as

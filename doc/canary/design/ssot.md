@@ -314,47 +314,72 @@ addressed. Captured as awareness; not active work.
    in canary. Resolves Principle 3 (perturbation × good =
    bad) by making the mapping computable, not declarative. Ties
    into §4/§5 flows.
-3. **Post-migration: remodel scenarios as good-scenario + attached
-   perturbations.** Once Phase E lands (Python retired,
-   `scenario_spec` is sole source), remodel the current flat
-   list-of-15-scenarios into a structural hierarchy: each good
-   scenario (Sc.1..Sc.6) owns its associated artifacts and the
-   set of possible perturbations at that stage. Bad scenarios
-   become `Sc.N × perturbation` cells rather than free-standing
-   flat rows.
-   Substrate (already in code):
-   `Canary_tiny_scenario.scenario_spec` carries
-   `violates`/`perturbs`/`perturbation`/`expected`. What's missing
-   structurally is *which Sc.N does this bad scenario belong to*
-   — implicit today in the draft.md L382 table's "Good counterpart"
-   column.
+3. **NEXT PHASE — remodel scenarios as good-scenario +
+   attached perturbations, backed by iterable SSOT catalogues.**
+   Migration (§9.1) is complete; `scenario_spec` is the sole
+   source for the 15-scenario list. Next step is to remodel the
+   flat list into a structural hierarchy: each good scenario
+   (Sc.1..Sc.6) owns its associated artifacts + the set of
+   possible perturbations at that stage. Bad scenarios become
+   `Sc.N × perturbation` cells rather than free-standing flat
+   rows.
+   Substrate today: `Canary_tiny_scenario.scenario_spec` carries
+   `violates`/`perturbs`/`perturbation`/`expected`. What's
+   missing structurally is *which Sc.N does this bad scenario
+   belong to* — implicit today in the draft.md L382 table's
+   "Good counterpart" column.
+   **Blocker — SSOT catalogues aren't iterable in code.** §1
+   Artifacts, §2 Surfaces, §3 Agreements each have canonical
+   tables here but the corresponding OCaml sum types
+   (`artifact_kind`, `inspect_input`, `contract_id`) can't be
+   enumerated generically — OCaml sum types don't self-iterate.
+   To remodel scenarios structurally we need
+   `let all_artifact_kinds : artifact_kind list = [...]`,
+   `let all_contract_ids : contract_id list = [...]`, etc.
+   Small mechanical work (~1 module of hand-written
+   enumerations); the substrate the scenario remodel then builds
+   on. Once these exist we can also auto-generate SSOT §1-§3
+   table content from code (or diff code vs SSOT for drift
+   detection), realising the §5 Flow "OCaml is sole producer"
+   pattern uniformly across catalogues.
    Payoffs:
    (a) Closes §8 reconciliation task #7 (Perturbation matrix ↔
-       bad scenarios) — makes the mapping computable via
-       structural composition instead of documented separately.
+       bad scenarios) — mapping becomes computable via structural
+       composition instead of documented separately.
    (b) Realises §7 Principle 3 (Good × perturbation = bad) as
        structural code, not just declarative principle.
-   (c) Enables Phase D.2 (deferred) — deriving
-       `Expect_compat_failure { inputs = ... }` from
-       `scenario_spec.violates` + `expected` becomes tractable
-       once each perturbation sits under a coherent
-       good-scenario parent.
+   (c) Enables §9.4 (expectation re-do + `Expect_compat_failure`
+       derivation) — expected outcomes attach coherently to
+       good-scenario parents.
    (d) SSOT §4 (Good) and §5 (Bad) become derivable from one
        source; both catalogues in draft.md follow.
-   **Timing**: strictly after Phase E — during migration this
-   would violate the "port-only, no new logic" scope guardrail.
-   **Not blocking anything urgent**: current data model works;
-   this is a cleanliness + composability play.
-4. **Re-do expectation as per-step contract outcome.** Today
-   `Expect_failure` / `Expect_compat_failure` (§6 actions) only
-   capture *fail* shapes. Drafting surfaced that each step —
-   success or failure — should contribute to a scenario-wise
-   testing semantics: every action's outcome is evidence for or
-   against the agreements (§3) it touches. Implies a contract
-   layer between §6 (action steps) and §3 (agreements), where step
-   results are typed observations into the contract, not just
-   match-the-substring assertions. Likely the biggest manuscript
-   ↔ code structural shift on the horizon.
+   (e) Bridges §1/§2/§3 similarly — with iteration helpers, the
+       tables here can be code-generated instead of hand-curated.
+4. **Re-do expectation as per-step contract outcome +
+   derive `Expect_compat_failure` from `scenario_spec`.**
+   *(Merged from the old §9.4 and Phase D.2 in
+   `tiny_migration.md` — they're the same shift at different
+   scales.)*
+   Today `Expect_failure` / `Expect_compat_failure` (§6 actions)
+   only capture *fail* shapes, and the predicates are hand-coded
+   per variant in `canary_project_tiny.ml`'s 13
+   `make_*_broken_script_spec` factories. Drafting surfaced that
+   each step — success or failure — should contribute to a
+   scenario-wise testing semantics: every action's outcome is
+   evidence for or against the agreements (§3) it touches.
+   Implies a contract layer between §6 (action steps) and §3
+   (agreements), where step results are typed observations into
+   the contract rather than match-the-substring assertions.
+   Payoffs: (a) canary variants derive their expectations from
+   `scenario_spec.violates` + `expected` (kills 13 hand-coded
+   `Expect_compat_failure` blocks); (b) success outcomes
+   contribute positively (not just failure), enabling
+   contract-level coverage claims; (c) resolves the manuscript's
+   §3.4 "role of behavior" discussion at the code level.
+   **Timing**: strictly after §9.3. The good-scenario structure
+   is a prerequisite — expected outcomes must attach to a
+   coherent parent, not free-floating rows. This is likely the
+   biggest manuscript ↔ code structural shift on the horizon.
 
 ## 10. Downstream usage in `draft.md`
 
