@@ -93,7 +93,10 @@ order; `projects/`, `test/`, `legacy/` consume the upper layers.
 | `src/canary/projects/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
 | `src/canary/projects/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/projects/canary_project_llvm.ml`        | LLVM spec; OCaml stable variant uses `Expect_compat_failure` for forward-incompat detection            |
-| `src/canary/projects/canary_project_tiny.ml`        | tiny in-tree spec (Phase 4 alignment milestone); api_source + OCaml + Python cext sub-arms; 12-step pipeline produces JSONs byte-equivalent to `make scenarios-cached`. See `doc/canary/worklog/phase4_2026_05.md`. |
+| `src/canary/projects/canary_project_tiny.ml`        | tiny in-tree spec (Phase 4 alignment milestone); api_source + OCaml + Python cext sub-arms; 13 hand-wired variants consume `_cache/<scenario>/workspace/` populated by `canary tiny-scenarios prepare-all`. |
+| `src/canary/projects/canary_tiny_scenario.ml`       | Tiny scenario_spec type + 15 scenarios as data (name_of_string validator); OCaml port of scenarios.py's SCENARIOS dict. See `doc/canary/design/tiny_migration.md`. |
+| `src/canary/projects/canary_tiny_baseline.ml`       | `canary tiny-scenarios baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
+| `src/canary/projects/canary_tiny_prepare.ml`        | `canary tiny-scenarios prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors Python `_surface_delta`. |
 | `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl specs                             |
 | `src/canary/projects/canary_run.ml`                 | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
 | `src/canary/legacy/canary_yaml_backend.ml`          | Parked: retired yaml-backend types + helpers (system_pkg, job_spec, canary_config, mk_canary_config, …) |

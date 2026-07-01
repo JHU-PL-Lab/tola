@@ -338,8 +338,22 @@ Phase A is inventory only. Decisions deferred to Phase B:
         factories. This is new derivation logic, not migration,
         so parked per the "port-only" scope guardrail. Naturally
         follows the `ssot.md §9.3` scenario remodel.
-- [ ] **Phase E** — delete `scenarios.py` and `_harness/`. Update
-      `tiny/Makefile`, tiny README, CLAUDE.md, `ssot.md` §5 Flow.
+- [x] **Phase E** — retire the Python harness. Moved
+      `canary/examples/tiny/scenarios/{scenarios.py, _harness/}`
+      to `doc/_legacy_code/tiny_python_harness/` (kept as
+      reference rather than deleted outright — small footprint,
+      useful for future paper/artifact discussion). Rewrote
+      `canary/examples/tiny/Makefile`: scenario-management
+      targets (`baseline`, `prepare-%`, `prepare-all`,
+      `scenario-list`) now route through `canary tiny-scenarios`;
+      `scenarios`, `scenarios-cached`, `scenario-%`,
+      `scenario-cached-%` retired (superseded by `canary action
+      tiny/<variant>`). `patches/` and `_cache/` stay in place
+      (patches still consumed by our OCaml prepare; `_cache/` is
+      the runtime output dir). Also updated `CLAUDE.md`
+      key-files rows to reflect the new module set
+      (`canary_tiny_{scenario,baseline,prepare}.ml`) and
+      `ssot.md §5 Flow` to name OCaml as the sole producer.
 
 ### Retired verbs (per §1b)
 

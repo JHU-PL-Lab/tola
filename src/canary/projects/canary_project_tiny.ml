@@ -7,7 +7,7 @@
     [tiny.md], and the canary code.
 
     {b Relationship to the standalone tiny harness.} Tiny's
-    [scenarios/scenarios.py] + [_harness/run_cached.py] is the {i golden
+    [doc/_legacy_code/tiny_python_harness/scenarios.py] (archived Phase E) + [doc/_legacy_code/tiny_python_harness/_harness/run_cached.py] (archived Phase E) is the {i golden
     truth} for what breakage can be induced and detected on this minimal
     target — the perturbation matrix runs 12 scenarios against handwritten
     comparators. canary_project_tiny.ml's job is to declare the same

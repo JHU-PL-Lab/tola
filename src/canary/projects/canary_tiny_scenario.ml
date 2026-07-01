@@ -1,5 +1,5 @@
 (** Tiny scenario specs — OCaml port of
-    [canary/examples/tiny/scenarios/scenarios.py:SCENARIOS].
+    [doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E):SCENARIOS].
 
     Phase B of the Python→OCaml migration (see
     [doc/canary/design/ssot.md] §9.1, [doc/canary/design/tiny_migration.md]).
@@ -337,7 +337,7 @@ let scenarios : scenario_spec list =
   ]
 
 (** Print scenario names, one per line — Phase B parity target for
-    [python3 canary/examples/tiny/scenarios/scenarios.py list]. *)
+    [python3 doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E) list]. *)
 let print_list () =
   List.iter scenarios ~f:(fun s -> Stdlib.print_endline s.name)
 

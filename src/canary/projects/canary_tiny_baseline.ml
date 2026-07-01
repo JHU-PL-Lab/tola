@@ -1,5 +1,5 @@
 (** Tiny baseline cache — OCaml port of
-    [canary/examples/tiny/scenarios/scenarios.py:cmd_baseline].
+    [doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E):cmd_baseline].
 
     Phase C.3 of the Python→OCaml migration
     ([doc/canary/design/tiny_migration.md] §9). Produces the clean

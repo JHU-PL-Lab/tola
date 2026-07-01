@@ -1,14 +1,26 @@
 # Build orchestration for the tiny example.
 #
 # Targets:
-#   c             build libtiny.so.1 in c/build/
-#   ocaml         build the OCaml binding   (static cstubs, depends on c)
-#   python_cext   build the Python C-ext   (static, depends on c)
-#   python_ctypes no-op (ctypes binding is pure .py — depends on c at runtime)
-#   probe         run all three baseline probes
-#   inspect       run canary inspectors on each surface
-#   scenarios     run every wired scenario
-#   clean         remove build trees
+#   c              build libtiny.so.1 in c/build/
+#   ocaml          build the OCaml binding   (static cstubs, depends on c)
+#   python_cext    build the Python C-ext    (static, depends on c)
+#   python_ctypes  no-op (ctypes binding is pure .py — depends on c at runtime)
+#   probe          run all three baseline probes
+#   inspect        run canary inspectors on each surface
+#   baseline       populate scenarios/_cache/baseline/ via `canary tiny-scenarios baseline`
+#   prepare-<name> populate scenarios/_cache/<name>/ via `canary tiny-scenarios prepare`
+#   prepare-all    populate every scenario cache
+#   scenario-list  list scenario names
+#   clean          remove build trees
+#
+# Running scenarios goes through canary directly:
+#   dune exec src/bin/canary_main.exe -- action tiny            (all variants)
+#   dune exec src/bin/canary_main.exe -- action tiny/<variant>  (one variant)
+#
+# The legacy Python harness (scenarios.py + _harness/run.sh + run_cached.py)
+# was archived under doc/_legacy_code/tiny_python_harness/ at Phase E of the
+# tiny migration (see doc/canary/design/tiny_migration.md §9); the OCaml
+# path fully supersedes it.
 
 C_BUILD := c/build
 LIB     := $(C_BUILD)/libtiny.so.1
@@ -20,9 +32,10 @@ RUNENV  := LD_LIBRARY_PATH=$(LIBPATH)$${LD_LIBRARY_PATH:+:$$LD_LIBRARY_PATH}
 PROJ_ROOT   := $(abspath ../../..)
 OCAML_BUILD := $(PROJ_ROOT)/_build/default/canary/examples/tiny/ocaml
 
-SCENARIOS := $(shell python3 scenarios/scenarios.py list 2>/dev/null)
+# Invoke canary from the tola project root.
+CANARY := cd $(PROJ_ROOT) && eval $$(opam env) && dune exec src/bin/canary_main.exe --
 
-.PHONY: all c ocaml python_cext python_ctypes probe probe-ocaml probe-python-cext probe-python-ctypes inspect clean scenarios scenario-list baseline prepare prepare-all scenarios-cached scenario-cached-%
+.PHONY: all c ocaml python_cext python_ctypes probe probe-ocaml probe-python-cext probe-python-ctypes inspect clean scenario-list baseline prepare-all
 
 all: c ocaml python_cext
 
@@ -94,57 +107,19 @@ inspect: c ocaml python_cext
 	@echo "==> Python cext binding   (dir(tiny_cext)   — API-completeness)"
 	$(RUNENV) PYTHONPATH=python_cext python3 ../../scripts/inspect_python.py --pkg tiny_cext
 
+# Scenario cache management — routes through canary (OCaml). See
+# doc/canary/design/tiny_migration.md §9 for the migration history.
 scenario-list:
-	@python3 scenarios/scenarios.py list | sed 's/^/  /'
+	@$(CANARY) tiny-scenarios list | sed 's/^/  /'
 
-# Phase 3a: prepare populates scenarios/_cache/ with per-scenario inspector
-# JSONs + confirm_ill.json showing the surface delta vs baseline.
-baseline: c ocaml python_cext
-	python3 scenarios/scenarios.py baseline
+baseline:
+	$(CANARY) tiny-scenarios baseline
 
-prepare-%: baseline
-	python3 scenarios/scenarios.py prepare $*
+prepare-%:
+	$(CANARY) tiny-scenarios prepare $*
 
-prepare-all: baseline
-	python3 scenarios/scenarios.py prepare-all
-
-# Phase 3b: scenarios-cached uses the prepared cache to skip apply / build /
-# inspect / revert. Probes + comparators still run; everything else is file copy.
-scenario-cached-%:
-	python3 scenarios/_harness/run_cached.py $*
-
-# Assumes the cache has been populated by `make prepare-all` (or per-scenario
-# `make prepare-NAME`). Doesn't re-prepare on each invocation; that would
-# defeat the speedup.
-scenarios-cached:
-	@if [ ! -d scenarios/_cache/baseline ]; then \
-	    echo "no baseline cache; run \`make prepare-all\` first" >&2; exit 2; \
-	fi
-	@fail=0; \
-	for s in $(SCENARIOS); do \
-	    out=$$(python3 scenarios/_harness/run_cached.py $$s 2>&1); \
-	    if echo "$$out" | grep -q '^PASS$$'; then \
-	      echo "PASS  $$s"; \
-	    else \
-	      echo "FAIL  $$s"; echo "$$out" | sed 's/^/    /'; fail=$$((fail+1)); \
-	    fi; \
-	done; \
-	if [ $$fail -gt 0 ]; then echo "$$fail scenario(s) failed" >&2; exit 1; fi
-
-scenario-%: c ocaml python_cext
-	bash scenarios/_harness/run.sh $*
-
-scenarios: c ocaml python_cext
-	@fail=0; \
-	for s in $(SCENARIOS); do \
-	    out=$$(bash scenarios/_harness/run.sh $$s 2>&1); \
-	    if echo "$$out" | grep -q '^PASS$$'; then \
-	      echo "PASS  $$s"; \
-	    else \
-	      echo "FAIL  $$s"; echo "$$out" | sed 's/^/    /'; fail=$$((fail+1)); \
-	    fi; \
-	done; \
-	if [ $$fail -gt 0 ]; then echo "$$fail scenario(s) failed" >&2; exit 1; fi
+prepare-all:
+	$(CANARY) tiny-scenarios prepare-all
 
 clean:
 	rm -rf $(C_BUILD)

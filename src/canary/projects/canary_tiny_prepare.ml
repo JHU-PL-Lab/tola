@@ -1,5 +1,5 @@
 (** Tiny scenario prepare — OCaml port of
-    [canary/examples/tiny/scenarios/scenarios.py:cmd_prepare].
+    [doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E):cmd_prepare].
 
     Phase C.4 of the Python→OCaml migration
     ([doc/canary/design/tiny_migration.md] §9). Applies one

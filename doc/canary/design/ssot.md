@@ -16,7 +16,7 @@ any rename/renumber happens here first and ripples out.
 this file is current):
 
 ```sh
-python3 canary/examples/tiny/scenarios/scenarios.py list  # bad-scenario names
+dune exec src/bin/canary_main.exe -- tiny-scenarios list  # bad-scenario names
 dune exec src/bin/canary_main.exe -- paths                # 15-pattern action table
 dune exec src/bin/canary_main.exe -- graph                # rule schema diagram
 ```
@@ -139,22 +139,19 @@ is the full enumeration.
 ## 5. Bad Scenarios (no ID prefix; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list`
-(OCaml, Phase B ✓) — canonical producer. Legacy
-`python3 canary/examples/tiny/scenarios/scenarios.py list` still
-runs identically until Phase E retires it.
 ──► SSOT §5 ──► draft.md L382 table, tiny variant matrix.
-**Co-providers.** during migration both producers coexist and
-must agree; verified byte-identical (see
-[`tiny_migration.md`](tiny_migration.md) §9). After Phase E, only
-OCaml remains. Future `make ssot-sync` regenerates the table
-block.
+**Co-providers.** OCaml (`Canary_tiny_scenario.scenarios`) is
+the sole producer as of Phase E; the legacy Python harness
+(`scenarios.py`) was archived under
+[`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
+Future `make ssot-sync` regenerates the table block.
 **Open consistency.** the 13-variant perturbation matrix in §4 (and
 historically in tiny.md) is a separate enumeration shape; whether it
 aligns 1:1 with the 15 `scenarios.py` rows is not currently
 documented — see Open Reconciliation §7.
 
-Status: **stable** — `scenarios.py list` output, 15 rows. Manuscript
-L382 table mirrors this.
+Status: **stable** — `canary tiny-scenarios list` output, 15 rows.
+Manuscript L382 table mirrors this.
 
 | Name                     | Good counterpart | Broken artifact                | Notes                       |
 | ------------------------ | ---------------- | ------------------------------ | --------------------------- |
