@@ -293,12 +293,21 @@ Phase A is inventory only. Decisions deferred to Phase B:
       chain → direct compiler invocation. Landed direct-compile.
       7/7 inspect JSONs + 33/33 workspace files match Python's
       output. Commits `b7ecea6`, `a64c4b4`, `2fac694`.
-- [ ] **Phase C.4** — `prepare <name>`. Sandbox-build per §1b:
-      copy live sources into `_cache/<name>/source/`, apply patch
-      in sandbox, direct-compile, snapshot artifacts + write
-      `confirm_ill.json` (surface delta vs baseline). Reuses
-      direct-compile primitives from C.3; new work is sandbox
-      setup + patch application + delta computation.
+- [x] **Phase C.4** — `prepare <name>`. Sandbox-build per §1b:
+      rsync live sources into `_cache/<name>/sandbox/`, install
+      baseline cext (so NEEDED entries stay frozen for
+      `symbol_version_floor`), apply patch (source-side) OR
+      apply SONAME bump (post-build binary surgery), direct-compile
+      C lib + OCaml binding in sandbox, run 7 inspectors, compute
+      surface delta vs baseline via `surface_delta` (mirrors
+      Python `_surface_delta`; diffs `symbols/requires/vals/attrs/
+      modules/soname/needed`), write `confirm_ill.json`,
+      materialize workspace. All 15 scenarios produce correct-shape
+      output. `confirm_ill.json` byte-shape matches Python for
+      `symbol_missing`. Sandbox model means live tree stays clean
+      across scenarios — Python's `apply → build → revert` chain
+      is prone to leaving the tree dirty on cmake failures; ours
+      isn't. Commit TBD.
 - [ ] **Phase C.4b** — `prepare-all`. Trivial loop; parallelises
       free once C.4 lands (scenarios are hermetic).
 - [ ] **Phase C.6** — `confirm <name>`. Prints

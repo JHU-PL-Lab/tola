@@ -21,14 +21,64 @@ open Base
 
 (* ---------- paths ---------- *)
 
-let tiny_root          = "canary/examples/tiny"
-let c_build            = tiny_root ^ "/c/build"
-let cache              = tiny_root ^ "/scenarios/_cache"
+(** Path context for build + inspect steps. Baseline uses live-tree
+    paths; prepare constructs sandbox paths that mirror the live-tree
+    layout under a scenario cache dir. Threading a record instead of
+    module-level constants lets both call the same primitives. *)
+type paths = {
+  tiny_root       : string;   (** dir containing c/, ocaml/, python_{cext,ctypes}/ *)
+  c_build         : string;   (** libtiny.so.* output dir *)
+  c_include       : string;   (** tiny.h dir *)
+  ocaml_src       : string;   (** tiny.ml/.mli + tiny_stubs.c dir *)
+  ocaml_build_dir : string;   (** tiny.cmxa + libtiny_stubs.a output dir *)
+  python_cext_dir : string;   (** _native.cpython-*.so location *)
+  python_cext_pkg : string;   (** dir containing python_cext/ + python_ctypes/ for PYTHONPATH *)
+}
+
+(** Live-tree paths (baseline default). *)
+let live_paths : paths = {
+  tiny_root       = "canary/examples/tiny";
+  c_build         = "canary/examples/tiny/c/build";
+  c_include       = "canary/examples/tiny/c/include";
+  ocaml_src       = "canary/examples/tiny/ocaml";
+  ocaml_build_dir = "_build/default/canary/examples/tiny/ocaml";
+  python_cext_dir = "canary/examples/tiny/python_cext/tiny_cext";
+  python_cext_pkg = "canary/examples/tiny";
+}
+
+(** Sandbox paths — [sandbox] is a copy of the tiny tree at some path.
+    All artifacts land under the sandbox, keeping it self-contained
+    and letting workspace materialization exclude the [_build/]
+    fragment naturally. *)
+let sandbox_paths ~(sandbox : string) : paths = {
+  tiny_root       = sandbox;
+  c_build         = sandbox ^ "/c/build";
+  c_include       = sandbox ^ "/c/include";
+  ocaml_src       = sandbox ^ "/ocaml";
+  ocaml_build_dir = sandbox ^ "/_build/default/canary/examples/tiny/ocaml";
+  python_cext_dir = sandbox ^ "/python_cext/tiny_cext";
+  python_cext_pkg = sandbox;
+}
+
+(* Baseline cache — always at the fixed live-tree location, regardless
+   of build paths. *)
+let cache              = "canary/examples/tiny/scenarios/_cache"
 let baseline_cache     = cache ^ "/baseline"
 let baseline_inspect   = baseline_cache ^ "/inspect"
 let baseline_workspace = baseline_cache ^ "/workspace"
+let baseline_cext      = baseline_cache ^ "/artifacts/cext"
+
+(* Scripts path — always relative to project root. *)
 let scripts            = "canary/scripts"
-let ocaml_build_dir    = "_build/default/canary/examples/tiny/ocaml"
+
+(* Backward-compatible top-level aliases for the existing baseline
+   build/inspect/workspace code, which was written before the [paths]
+   record. Reference [live_paths]. Note [c_include] and [tiny_src] /
+   [tiny_libtiny] / [tiny_cmxa] / [tiny_stubs_a] are re-derived from
+   these below and don't need aliases here. *)
+let tiny_root       = live_paths.tiny_root
+let c_build         = live_paths.c_build
+let ocaml_build_dir = live_paths.ocaml_build_dir
 
 (* ---------- subprocess helpers ---------- *)
 
@@ -421,6 +471,24 @@ let save_json path (j : Yojson.Basic.t) =
           output_char oc '\n';
           close_out oc)
 
+(** Snapshot the freshly-built cext .so to [_cache/baseline/artifacts/cext/].
+    Prepare later copies this into each scenario sandbox instead of
+    rebuilding, preserving the baseline cext's NEEDED entries — critical
+    for scenarios like [symbol_version_floor] where the sandbox libtiny
+    exports [TINY_2.0] but cext must keep referencing [TINY_1.0] for the
+    detection to fire. *)
+let snapshot_baseline_cext () : unit =
+  mkdir_p baseline_cext;
+  let src_dir = live_paths.python_cext_dir in
+  if Stdlib.Sys.file_exists src_dir then
+    Stdlib.Sys.readdir src_dir
+    |> Array.iter ~f:(fun name ->
+      if String.is_prefix name ~prefix:"_native.cpython-"
+      && String.is_suffix name ~suffix:".so" then
+        let _ = run_shell
+          (Printf.sprintf "cp -P -p '%s/%s' '%s/'" src_dir name baseline_cext)
+        in ())
+
 let run () : unit =
   if not (build_c_lib ())        then fail "C library build failed";
   if not (build_ocaml_binding ()) then fail "OCaml binding build failed";
@@ -434,5 +502,7 @@ let run () : unit =
       let path = Printf.sprintf "%s/%s.json" baseline_inspect alias in
       save_json path j;
       info "%s -> %s" alias path);
+  snapshot_baseline_cext ();
+  info "snapshot baseline cext -> %s" baseline_cext;
   let n = materialize_workspace () in
   info "snapshot workspace (%d files)" n

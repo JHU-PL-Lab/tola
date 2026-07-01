@@ -826,6 +826,19 @@ let tiny_scenarios_baseline_cmd =
              under _cache/baseline/.")
     (term_of (fun () -> Canary_tiny_baseline.run ()))
 
+let tiny_scenarios_prepare_cmd =
+  let name =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+  in
+  Cmd.v
+    (Cmd.info "prepare"
+       ~doc:"Apply scenario perturbation in a sandbox, build, inspect, \
+             compute surface delta vs baseline, materialize workspace.")
+    Term.(const (fun n () -> Canary_tiny_prepare.run ~name:n) $ name $ const ())
+
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny-scenarios"
@@ -833,7 +846,8 @@ let tiny_scenarios_cmd =
              Python→OCaml migration (see doc/canary/design/tiny_migration.md).")
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_expected_cmd;
-      tiny_scenarios_baseline_cmd ]
+      tiny_scenarios_baseline_cmd;
+      tiny_scenarios_prepare_cmd ]
 
 let summary_diff_cmd =
   let old_ =
