@@ -153,6 +153,14 @@ documented — see Open Reconciliation §7.
 Status: **stable** — `canary tiny-scenarios list` output, 15 rows.
 Manuscript L382 table mirrors this.
 
+**Note on shape (post-remodel, §9.3 pending).** The "Broken
+artifact" and "Notes" columns will be replaced by
+**Interested artifacts** (Ar.X list, derived from perturbation
+targets) + **Detected by** (contract checker id if wired; blank
+means static-invisible). Implementation details (patch file
+name, soname strings) drop out — they live in code. Current
+table stays until the remodel lands.
+
 | Name                     | Good counterpart | Broken artifact                | Notes                       |
 | ------------------------ | ---------------- | ------------------------------ | --------------------------- |
 | `symbol_missing`         | Sc.2             | native_lib                     | provider drops a symbol     |
@@ -219,16 +227,31 @@ Captured for later; surface here so they're visible per-section.
    face of Ar.k. Current draft is not fully consistent (Sf.1
    pointing at native_source while §2 has Ar.0 = native_source) —
    resolving this is part of §8.
-3. **Good scenarios × perturbation matrix vs bad scenarios.** Sc.X
-   (6 stages) crossed with one perturbation per agreement should
-   reconstruct the bad-scenario set. Whether the 13-variant matrix
-   in tiny.md and the 15 `scenarios.py` rows agree, and which is
-   authoritative, is not yet documented.
+3. **Good scenarios × perturbation matrix = bad scenarios.**
+   Bad scenarios are the projection of a scenario's interested
+   entities (artifacts) through the agreement catalogue —
+   computed, not maintained. Dual view (artifact-indexed
+   perturbations) is a checkable alignment invariant, postponed
+   to a follow-up after §9.3 scenario remodel lands.
 4. **Tiny does not exercise packaging errors.** Bad-scenario
    coverage stops at the build/link/runtime layer. Packaging
    mistakes (wrong files in opam/pip/apt artefacts; cross-PM SONAME
    inconsistencies; metadata drift) are out of tiny's current
    reach — see §8 reconciliation tail.
+5. **Anticipations are empirical, not sound.** Uninterested
+   entities (system tools, compiler settings, OS behavior,
+   hardware) are outside the model. Expected outcomes are bets
+   tested against real runs, not theorems. Two flavours worth
+   flagging: (i) emergent behavior — all static checks pass,
+   specific input triggers wrong output; (ii) environmental
+   interaction — artifacts good, uninterested-entity corner case
+   flips result. Only discoverable empirically.
+6. **Interested vs uninterested entities.** A scenario models
+   its interested entities (artifacts explicitly on the
+   perturbation/violation path). Uninterested entities exist and
+   affect outcomes but aren't enumerated in the SSOT. Boundary
+   is empirical (we add to the "interested" set when a
+   real-world case forces it).
 
 ## 8. Open reconciliation tasks
 
@@ -314,8 +337,30 @@ addressed. Captured as awareness; not active work.
    in canary. Resolves Principle 3 (perturbation × good =
    bad) by making the mapping computable, not declarative. Ties
    into §4/§5 flows.
-3. **NEXT PHASE — remodel scenarios as good-scenario +
-   attached perturbations, backed by iterable SSOT catalogues.**
+3. **NEXT PHASE — scenario remodel (scenario-centric first,
+   dual-view later).**
+
+   **Immediate scope (this phase):**
+   - Keep `scenario_spec` flat (Option B).
+   - Add `stages : sc_id list` (list, not singleton — `api_faithful`
+     spans Sc.1..Sc.6).
+   - Add `interested_artifacts : artifact_kind list` (structural,
+     derived from `perturbs` file-paths → artifact mapping).
+   - Perturbation stays as a `scenario_spec` attribute (target
+     artifact + method), not extracted as its own type yet.
+   - SSOT §5 loses `Broken artifact` + `Notes` columns; gains
+     `Interested artifacts` + `Detected by` (see §5 note).
+   - Good/bad no longer intrinsic to scenario — derived from
+     per-contract checker results.
+
+   **Postponed to a follow-up (still §9.3-family, not §9.4):**
+   - Dual-view artifact index (reading (c) — artifact knows all
+     perturbations touching it, direct + inherited).
+   - Iteration helpers over §1/§2/§3 catalogues (`canary_ssot.ml`
+     — postponed further; not blocking scenario remodel).
+   - Alignment invariant as a test — needs both views indexed.
+
+   **Motivation (unchanged):**
    Migration (§9.1) is complete; `scenario_spec` is the sole
    source for the 15-scenario list. Next step is to remodel the
    flat list into a structural hierarchy: each good scenario
@@ -328,20 +373,6 @@ addressed. Captured as awareness; not active work.
    missing structurally is *which Sc.N does this bad scenario
    belong to* — implicit today in the draft.md L382 table's
    "Good counterpart" column.
-   **Blocker — SSOT catalogues aren't iterable in code.** §1
-   Artifacts, §2 Surfaces, §3 Agreements each have canonical
-   tables here but the corresponding OCaml sum types
-   (`artifact_kind`, `inspect_input`, `contract_id`) can't be
-   enumerated generically — OCaml sum types don't self-iterate.
-   To remodel scenarios structurally we need
-   `let all_artifact_kinds : artifact_kind list = [...]`,
-   `let all_contract_ids : contract_id list = [...]`, etc.
-   Small mechanical work (~1 module of hand-written
-   enumerations); the substrate the scenario remodel then builds
-   on. Once these exist we can also auto-generate SSOT §1-§3
-   table content from code (or diff code vs SSOT for drift
-   detection), realising the §5 Flow "OCaml is sole producer"
-   pattern uniformly across catalogues.
    Payoffs:
    (a) Closes §8 reconciliation task #7 (Perturbation matrix ↔
        bad scenarios) — mapping becomes computable via structural
@@ -353,8 +384,12 @@ addressed. Captured as awareness; not active work.
        good-scenario parents.
    (d) SSOT §4 (Good) and §5 (Bad) become derivable from one
        source; both catalogues in draft.md follow.
-   (e) Bridges §1/§2/§3 similarly — with iteration helpers, the
-       tables here can be code-generated instead of hand-curated.
+
+   Iteration helpers for §1/§2/§3 catalogues (`canary_ssot.ml`)
+   are related but *not* a prerequisite — scenario-side work
+   uses hand-listed `artifact_kind` values inline where needed
+   and lifts to a shared iteration module only when the reach
+   forces it.
 4. **Re-do expectation as per-step contract outcome +
    derive `Expect_compat_failure` from `scenario_spec`.**
    *(Merged from the old §9.4 and Phase D.2 in
