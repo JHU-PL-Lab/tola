@@ -315,11 +315,29 @@ Phase A is inventory only. Decisions deferred to Phase B:
 - [x] **Phase C.6** — `confirm <name>`. Prints
       `_cache/<name>/confirm_ill.json` to stdout; exits 1 with a
       helpful message if the cache is missing.
-- [ ] **Phase D** — canary integration. Replace
-      `canary_project_tiny.ml`'s harness-shell-out with direct
-      `scenario_spec` reads. `variant_key` becomes
-      `scenario_spec.name`; `Expect_compat_failure` predicates
-      derive from `scenario_spec.expected` + `violates`.
+- [~] **Phase D** — canary integration.
+      Original framing ("replace harness-shell-out") turned out
+      to overstate the coupling — canary never shelled out to
+      Python at runtime; the handshake was always filesystem-based
+      via `_cache/<scenario>/workspace/`, which Phase C.4 prepare
+      now populates. So Phase D as originally scoped was mostly
+      already done. The remaining seams:
+      - [x] **D.1** — Type-safe scenario name references.
+        Replaced 13 bare string literals in `canary_main.ml`
+        (`ws_stores "symbol_missing"`,
+        `cache_workspace_of ~scenario:"api_repack"`, etc.) with
+        `Canary_tiny_scenario.name_of_string "..."` calls that
+        validate against the 15-entry scenarios list at
+        action-cmd term evaluation and raise a helpful error
+        with the full known-name list on typo.
+      - [ ] **D.2** (deferred, new-logic — post-Phase-E). Derive
+        `Expect_compat_failure { inputs = ... }` predicates from
+        `scenario_spec.violates` + `scenario_spec.expected`
+        instead of hand-coding them per variant in
+        `canary_project_tiny.ml`'s 13 `make_*_broken_script_spec`
+        factories. This is new derivation logic, not migration,
+        so parked per the "port-only" scope guardrail. Naturally
+        follows the `ssot.md §9.3` scenario remodel.
 - [ ] **Phase E** — delete `scenarios.py` and `_harness/`. Update
       `tiny/Makefile`, tiny README, CLAUDE.md, `ssot.md` §5 Flow.
 
