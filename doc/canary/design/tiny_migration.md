@@ -38,17 +38,52 @@ copy. The live tree is never mutated; `revert` becomes structurally
 unnecessary, `prepare-all` parallelises trivially, and Ctrl-C is
 harmless.
 
-**Design choice — no dune subprocess from baseline (2026-06-26).**
-The first cut of `baseline` shelled out to `dune build tiny.cmxa
-libtiny_stubs.a` (with `env -u INSIDE_DUNE` to dodge the parent
-`dune exec` lock). That dune-in-dune call is a code smell: in OCaml
-land we should not invoke dune as an external process. Baseline now
-**verifies-only** — it asserts the upstream artifacts exist on
-disk; build orchestration lives in the Makefile target
-`make canary-tiny-baseline` which chains
-`cmake → dune build tiny → make python_cext → canary baseline`.
-`cmake` and `make python_cext` stay as external processes (allowed
-per principle); the dune build moves out of OCaml.
+**Design choice — direct compiler invocation for tiny (2026-06-26).**
+Iterated three times to reach the current position:
+
+1. First cut: shelled out to `cmake --build`, `dune build`, and
+   `make python_cext` from inside `baseline`. Failed with a
+   dune-in-dune lock (parent `dune exec` holds the workspace),
+   fixed by `env -u INSIDE_DUNE`.
+2. Second cut: baseline became **verifies-only**; orchestration
+   moved to a `make canary-tiny-baseline` target that chained
+   cmake + dune + make. Cleaner separation but split the
+   workflow across shell and OCaml.
+3. **Current** — direct compiler invocation. For artifacts *canary
+   owns* (tiny is designed by canary, not upstream), the "owner
+   decides the build" principle picks `gcc` / `ocamlfind
+   ocamlopt` / `ar` over cmake/dune/make. Baseline is
+   self-contained again, and the dune-in-dune / build-system
+   mismatch problems dissolve — there's no external build system
+   invoked at all.
+
+Concrete build steps (~11 compiler calls):
+
+- **C lib**: `gcc -c -fPIC` for `tiny.c` → `.o`, `gcc -shared
+  -Wl,-soname,libtiny.so.1 -Wl,--version-script=c/tiny.map` for
+  `.o` → `libtiny.so.1.0`, `ln -sf` for the two symlinks.
+- **OCaml binding**: `ocamlfind ocamlopt -c` for each of the
+  four `.mli`/`.ml`; `gcc -c -fPIC -I$(ocamlc -where)` for
+  `tiny_stubs.c`; `ar rcs libtiny_stubs.a tiny_stubs.o`;
+  `ocamlfind ocamlopt -a -cclib -ltiny -cclib -ltiny_stubs`
+  archives the `.cmx` list into `tiny.cmxa`.
+- **Python cext**: `gcc -shared -fPIC -I$(sysconfig include)
+  -L<c_build> -Wl,-rpath,<c_build> _native.c -ltiny -o
+  _native<ext_suffix>`.
+
+Output paths preserved at previous cmake/dune/make locations to
+avoid rippling into canary's tiny-variant sandbox
+(`canary_project_tiny.ml` still uses the sandbox-dune model for
+probe binaries; that's a separate scope). The
+`_build/default/canary/examples/tiny/ocaml/*` paths are now
+misleading (no dune produces them) but functionally fine.
+
+**Design principle codified**: canary-owned artifacts use direct
+compilers; upstream-owned artifacts (z3, llvm, sqlite) shell out
+to their native build systems because canary is a guest there.
+
+The `make canary-tiny-baseline` chain from the previous
+iteration was retired — baseline owns its build again.
 
 That collapses the CLI surface from ten verbs to six:
 

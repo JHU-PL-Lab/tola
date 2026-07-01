@@ -32,22 +32,6 @@ canary-z3:
 canary-llvm:
 	$(CANARY) action llvm
 
-# Chain the tiny baseline: cmake builds libtiny.so, then dune builds
-# the OCaml binding artifacts (tiny.cmxa + libtiny_stubs.a) — needs
-# LIBRARY_PATH so the linker resolves -ltiny — then make builds the
-# Python cext, then canary's baseline command verifies artifacts +
-# runs inspectors + materializes the workspace. Replaces the old
-# in-process dune-in-dune call (see
-# doc/canary/design/tiny_migration.md §1b update).
-TINY_LIB_DIR := $(abspath canary/examples/tiny/c/build)
-canary-tiny-baseline:
-	cmake --build canary/examples/tiny/c/build
-	eval $$(opam env) && LIBRARY_PATH="$(TINY_LIB_DIR):$$LIBRARY_PATH" \
-	  LD_RUN_PATH="$(TINY_LIB_DIR):$$LD_RUN_PATH" \
-	  dune build canary/examples/tiny/ocaml/tiny.cmxa canary/examples/tiny/ocaml/libtiny_stubs.a
-	cd canary/examples/tiny && make python_cext
-	$(CANARY) tiny-scenarios baseline
-
 canary_local:
 	$(CANARY) local
 

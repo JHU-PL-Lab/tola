@@ -41,6 +41,14 @@ let fail fmt = Stdlib.Printf.ksprintf (fun s -> Stdlib.prerr_endline ("baseline:
 let run_shell (cmd : string) : int =
   Stdlib.Sys.command cmd
 
+let mkdir_p p =
+  if not (Stdlib.Sys.file_exists p) then
+    let _ = run_shell (Printf.sprintf "mkdir -p '%s'" p) in ()
+
+let rm_rf p =
+  if Stdlib.Sys.file_exists p then
+    let _ = run_shell (Printf.sprintf "rm -rf '%s'" p) in ()
+
 (** Run a shell pipeline and capture stdout. Returns [Some json] on
     success + parseable JSON; [None] on subprocess error or invalid
     JSON. Matches Python [_sh_json]. *)
@@ -60,48 +68,149 @@ let capture_json (cmd : string) : Yojson.Basic.t option =
     else (try Some (Yojson.Basic.from_string s) with _ -> None)
   | _ -> None
 
-(* ---------- artifact verification ---------- *)
+(* ---------- direct-compile builds ---------- *)
 
-(** [baseline] does not own build orchestration. It expects the
-    upstream artifacts to be present in the live tree:
-    - [c/build/libtiny.so.1] from cmake (the C library)
-    - [_build/default/canary/examples/tiny/ocaml/tiny.cmxa] +
-      [libtiny_stubs.a] from dune (the OCaml binding)
-    - [python_cext/tiny_cext/_native.cpython-*.so] from
-      [make python_cext]
+(** [baseline] builds tiny's artifacts by invoking compilers
+    directly (gcc, ocamlfind ocamlopt, ar). No cmake, no dune, no
+    make.
 
-    Rationale ([tiny_migration.md] §1b update): we previously
-    shelled out [dune build] from inside [baseline], which was a
-    dune-in-dune call requiring [INSIDE_DUNE] env-strip to avoid
-    lock contention with the parent [dune exec]. Removing the
-    subprocess: build orchestration moves to the Makefile target
-    [make canary-tiny-baseline] which chains
-    [cmake → dune build tiny → dune exec canary baseline]. We
-    pulled cmake / make python_cext out symmetrically — baseline
-    either owns orchestration or it doesn't. *)
+    Rationale ([tiny_migration.md] §1b update, 2026-06-26): for
+    artifacts canary *owns* (tiny is designed by canary, not an
+    upstream project), the "owner decides the build" principle
+    picks direct compilers over external build systems. This
+    dissolves the dune-in-dune lock issue definitively (no dune
+    subprocess exists), matches "less external build systems"
+    while keeping "external tools ok" (compilers are tools), and
+    makes flags visible + auditable rather than hidden inside
+    cmake/dune generators.
+
+    Output paths: preserved at their previous (cmake/dune)
+    locations to avoid rippling into workspace materialization
+    and inspector paths. The [_build/default/…] path is now
+    misleading (dune no longer produces those files) but the
+    change is contained.
+
+    For real upstream projects (z3, llvm, sqlite), canary
+    continues to shell out to their own build systems — we're a
+    guest, not the owner. *)
 
 let tiny_cmxa     = ocaml_build_dir ^ "/tiny.cmxa"
 let tiny_stubs_a  = ocaml_build_dir ^ "/libtiny_stubs.a"
 let tiny_libtiny  = c_build ^ "/libtiny.so.1"
+let tiny_src      = tiny_root ^ "/ocaml"
+let c_include     = tiny_root ^ "/c/include"
 
-let verify_artifacts () : bool =
-  let missing = ref [] in
-  let check path label =
-    if not (Stdlib.Sys.file_exists path) then missing := (path, label) :: !missing
-  in
-  check tiny_libtiny  "C library (run: cmake --build canary/examples/tiny/c/build)";
-  check tiny_cmxa     "OCaml binding (run: dune build canary/examples/tiny/ocaml/tiny.cmxa)";
-  check tiny_stubs_a  "OCaml stubs (run: dune build canary/examples/tiny/ocaml/libtiny_stubs.a)";
-  match !missing with
-  | [] -> true
-  | xs ->
-    Stdlib.prerr_endline "baseline: required artifacts missing.";
-    List.iter (List.rev xs) ~f:(fun (p, label) ->
-      Stdlib.Printf.eprintf "  %s\n  -> %s\n" p label);
-    Stdlib.prerr_endline
-      "baseline: run `make canary-tiny-baseline` to orchestrate \
-       cmake + dune build + this command in sequence.";
+(** Run a shell command; if it fails, log and return false. *)
+let run_or_warn (label : string) (cmd : string) : bool =
+  match run_shell cmd with
+  | 0 -> true
+  | rc ->
+    warn "%s failed (exit %d)" label rc;
+    warn "  cmd: %s" cmd;
     false
+
+let capture_line (cmd : string) : string =
+  let ic = Unix.open_process_in (cmd ^ " 2>/dev/null") in
+  let s = try Stdlib.input_line ic with End_of_file -> "" in
+  let _ = Unix.close_process_in ic in
+  String.strip s
+
+(** C library — libtiny.so.1.0 + symlinks libtiny.so.1, libtiny.so.
+    Symbol versioning via c/tiny.map (TINY_1.0 exports). *)
+let build_c_lib () : bool =
+  info "compile C library";
+  mkdir_p c_build;
+  run_or_warn "cc tiny.c"
+    (Printf.sprintf "gcc -c -fPIC -I%s %s/c/src/tiny.c -o %s/tiny.o"
+       c_include tiny_root c_build)
+  && run_or_warn "link libtiny.so.1.0"
+       (Printf.sprintf
+          "gcc -shared -Wl,-soname,libtiny.so.1 \
+           -Wl,--version-script=%s/c/tiny.map %s/tiny.o -o %s/libtiny.so.1.0"
+          tiny_root c_build c_build)
+  && run_or_warn "symlink libtiny.so.1"
+       (Printf.sprintf "ln -sf libtiny.so.1.0 %s/libtiny.so.1" c_build)
+  && run_or_warn "symlink libtiny.so"
+       (Printf.sprintf "ln -sf libtiny.so.1 %s/libtiny.so" c_build)
+  && (let _ = run_shell (Printf.sprintf "rm -f %s/tiny.o" c_build) in true)
+
+(** OCaml binding — tiny.cmxa + libtiny_stubs.a.
+
+    Sequence: compile the two .mli → .cmi, the two .ml → .cmx,
+    the tiny_stubs.c → .o, archive stubs → libtiny_stubs.a, pack
+    the .cmx list → tiny.cmxa with cclib flags recording the
+    consumer-side link needs (-ltiny -ltiny_stubs).
+
+    Module wrapping: dune produced [Tiny__ / Tiny__Tiny_raw /
+    Tiny] via its wrapper-module convention; direct-compile
+    produces plain [Tiny_raw / Tiny]. Simpler, no false top-level
+    module. Cosmetic drift in bo6.modules; no consumer script
+    depends on the specific names (see tiny_ocaml_module_watchlist
+    which is [Tiny; Tiny.sum; …] — [Tiny] present either way). *)
+let build_ocaml_binding () : bool =
+  info "compile OCaml binding";
+  mkdir_p ocaml_build_dir;
+  let ocaml_where = capture_line "ocamlc -where" in
+  if String.is_empty ocaml_where then begin
+    warn "ocamlc -where returned empty; is opam env set?";
+    false
+  end
+  else
+    let cmi src target =
+      Printf.sprintf "ocamlfind ocamlopt -bin-annot -I %s -c %s/%s -o %s/%s"
+        ocaml_build_dir tiny_src src ocaml_build_dir target
+    in
+    (* Compile .mli → .cmi, then .ml → .cmx. Order matters:
+       tiny.ml depends on Tiny_raw.cmi. *)
+    run_or_warn "cc tiny_raw.mli" (cmi "tiny_raw.mli" "tiny_raw.cmi")
+    && run_or_warn "cc tiny_raw.ml"  (cmi "tiny_raw.ml"  "tiny_raw.cmx")
+    && run_or_warn "cc tiny.mli"     (cmi "tiny.mli"     "tiny.cmi")
+    && run_or_warn "cc tiny.ml"      (cmi "tiny.ml"      "tiny.cmx")
+    && run_or_warn "cc tiny_stubs.c"
+         (Printf.sprintf
+            "gcc -c -fPIC -I%s -I%s %s/tiny_stubs.c -o %s/tiny_stubs.o"
+            ocaml_where c_include tiny_src ocaml_build_dir)
+    && run_or_warn "ar libtiny_stubs.a"
+         (Printf.sprintf "ar rcs %s/libtiny_stubs.a %s/tiny_stubs.o"
+            ocaml_build_dir ocaml_build_dir)
+    && run_or_warn "ar tiny.cmxa"
+         (Printf.sprintf
+            "ocamlfind ocamlopt -a %s/tiny_raw.cmx %s/tiny.cmx \
+             -cclib -ltiny -cclib -ltiny_stubs -o %s/tiny.cmxa"
+            ocaml_build_dir ocaml_build_dir ocaml_build_dir)
+
+(** Python cext — _native.cpython-*.so. Embeds NEEDED
+    libtiny.so.1 + rpath to c/build (matching setup.py's
+    runtime_library_dirs). Later workspace materialization strips
+    the rpath so LD_LIBRARY_PATH takes over. *)
+let build_python_cext () : bool =
+  info "compile Python cext";
+  (* Use sysconfig directly — python3-config is not always shipped
+     (venv installs may omit it; uv-managed Python does). *)
+  let py_include =
+    capture_line
+      "python3 -c 'import sysconfig; print(sysconfig.get_paths()[\"include\"])'"
+  in
+  let ext_suffix =
+    capture_line
+      "python3 -c 'import sysconfig; print(sysconfig.get_config_var(\"EXT_SUFFIX\"))'"
+  in
+  if String.is_empty py_include || String.is_empty ext_suffix then begin
+    warn "python3 sysconfig unavailable; skipping cext";
+    false
+  end
+  else
+    let c_build_abs =
+      capture_line (Printf.sprintf "readlink -f %s" c_build)
+    in
+    let src = tiny_root ^ "/python_cext/tiny_cext/_native.c" in
+    let dst =
+      Printf.sprintf "%s/python_cext/tiny_cext/_native%s" tiny_root ext_suffix
+    in
+    run_or_warn "cc _native.so"
+      (Printf.sprintf
+         "gcc -shared -fPIC -I%s -I%s -L%s -Wl,-rpath,%s %s -ltiny -o %s"
+         py_include c_include c_build_abs c_build_abs src dst)
 
 (* ---------- glob ---------- *)
 
@@ -214,14 +323,6 @@ let workspace_excluded_prefixes = [
   "c/build/Makefile";
 ]
 
-let mkdir_p p =
-  if not (Stdlib.Sys.file_exists p) then
-    let _ = run_shell (Printf.sprintf "mkdir -p '%s'" p) in ()
-
-let rm_rf p =
-  if Stdlib.Sys.file_exists p then
-    let _ = run_shell (Printf.sprintf "rm -rf '%s'" p) in ()
-
 let path_contains_fragment ~fragments parts =
   List.exists fragments ~f:(fun frag ->
     List.exists parts ~f:(String.equal frag))
@@ -321,9 +422,11 @@ let save_json path (j : Yojson.Basic.t) =
           close_out oc)
 
 let run () : unit =
+  if not (build_c_lib ())        then fail "C library build failed";
+  if not (build_ocaml_binding ()) then fail "OCaml binding build failed";
+  if not (build_python_cext ())   then fail "Python cext build failed";
   mkdir_p baseline_inspect;
-  if not (verify_artifacts ()) then Stdlib.exit 1;
-  info "artifacts present; running inspectors";
+  info "artifacts built; running inspectors";
   List.iter inspectors ~f:(fun (alias, fn) ->
     match fn () with
     | None -> warn "WARN %s produced no JSON" alias
