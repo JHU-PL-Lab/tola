@@ -138,10 +138,16 @@ is the full enumeration.
 
 ## 5. Bad Scenarios (no ID prefix; `snake_case` names)
 
-**Flow.** `canary/examples/tiny/scenarios/scenarios.py list` ──►
-SSOT §5 ──► draft.md L382 table, tiny variant matrix.
-**Co-providers.** code is the sole producer; manuscript embeds.
-Future `make ssot-sync` regenerates the table block.
+**Flow.** `dune exec canary_main -- tiny-scenarios list`
+(OCaml, Phase B ✓) — canonical producer. Legacy
+`python3 canary/examples/tiny/scenarios/scenarios.py list` still
+runs identically until Phase E retires it.
+──► SSOT §5 ──► draft.md L382 table, tiny variant matrix.
+**Co-providers.** during migration both producers coexist and
+must agree; verified byte-identical (see
+[`tiny_migration.md`](tiny_migration.md) §9). After Phase E, only
+OCaml remains. Future `make ssot-sync` regenerates the table
+block.
 **Open consistency.** the 13-variant perturbation matrix in §4 (and
 historically in tiny.md) is a separate enumeration shape; whether it
 aligns 1:1 with the 15 `scenarios.py` rows is not currently
@@ -275,11 +281,33 @@ addressed. Captured as awareness; not active work.
    perturbed snapshot is a natural store that happens to provide
    ill artifacts.
    **Progress** (see [`tiny_migration.md`](tiny_migration.md) §9
-   for commits): Phase A ✓ inventory, B ✓ `scenario_spec` +
-   `list`, C.5 ✓ `expected`, C.3 ✓ `baseline` (direct compilers,
-   self-contained, byte-parity with Python). **Pending**: C.4
-   `prepare` (sandbox-build), C.4b `prepare-all`, C.6 `confirm`,
-   D canary integration, E delete Python harness.
+   for commits):
+   - Phase A ✓ inventory
+   - Phase B ✓ `scenario_spec` (§9.2 one-time spec, 15 scenarios
+     as data) + `tiny-scenarios list` (byte-parity)
+   - Phase C.5 ✓ `expected <name>` (outcomes-parity 15/15)
+   - Phase C.3 ✓ `baseline` (direct compilers, self-contained,
+     7 inspect JSONs + 33-file workspace match Python)
+   - Phase C.4 ✓ `prepare <name>` (sandbox-build; 15/15 scenarios
+     produce correct-shape confirm_ill.json; `symbol_missing`
+     byte-identical to Python)
+   - Phase C.4b ✓ `prepare-all` (15/15 ok; auto-runs baseline)
+   - Phase C.6 ✓ `confirm <name>` (parity with Python cmd_confirm)
+   - Phase D ⏳ canary integration (see scoping below)
+   - Phase E ⏳ delete Python harness + `_harness/` scripts
+   **Phase D scope.** Not "port more Python" — Python is already
+   out of the runtime path. The remaining seams in
+   `src/canary/projects/canary_project_tiny.ml` +
+   `src/bin/canary_main.ml`:
+   (i) 13 canary tiny variants reference scenario names as
+   *string literals* (`cache_workspace_of ~scenario:"symbol_missing"`);
+   should reference `scenario_spec` values by name for
+   compile-time verification;
+   (ii) `Expect_compat_failure { inputs = ... }` predicates are
+   hand-coded per-variant; could derive from `scenario_spec.violates`
+   + `scenario_spec.expected` — but derivation logic is *new work*,
+   not migration, so parked for a follow-up. Phase D as scoped is
+   just (i): make the variant/scenario coupling type-safe. Small.
 2. **One-time spec covering one scenario across both engines.**
    The current shape has two engines — tiny-based perturbation
    (concrete trace per agreement) and canary-based enumeration
