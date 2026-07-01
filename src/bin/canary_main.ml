@@ -839,6 +839,26 @@ let tiny_scenarios_prepare_cmd =
              compute surface delta vs baseline, materialize workspace.")
     Term.(const (fun n () -> Canary_tiny_prepare.run ~name:n) $ name $ const ())
 
+let tiny_scenarios_prepare_all_cmd =
+  Cmd.v
+    (Cmd.info "prepare-all"
+       ~doc:"Run `prepare` for every scenario sequentially. \
+             Auto-runs baseline first if missing.")
+    (term_of (fun () -> Canary_tiny_prepare.run_all ()))
+
+let tiny_scenarios_confirm_cmd =
+  let name =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+  in
+  Cmd.v
+    (Cmd.info "confirm"
+       ~doc:"Print the cached confirm_ill.json for <name> (surface \
+             delta vs baseline; produced by `prepare`).")
+    Term.(const (fun n () -> Canary_tiny_prepare.confirm ~name:n) $ name $ const ())
+
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny-scenarios"
@@ -847,7 +867,9 @@ let tiny_scenarios_cmd =
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;
-      tiny_scenarios_prepare_cmd ]
+      tiny_scenarios_prepare_cmd;
+      tiny_scenarios_prepare_all_cmd;
+      tiny_scenarios_confirm_cmd ]
 
 let summary_diff_cmd =
   let old_ =

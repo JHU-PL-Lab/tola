@@ -529,3 +529,43 @@ let run ~(name : string) : unit =
      | [] -> "(none)"
      | xs -> String.concat ~sep:"," xs)
     ws_count
+
+(** Run [prepare] for every scenario in insertion order. If the
+    baseline cache is missing, auto-runs baseline first (matches
+    Python [cmd_prepare_all]). Continues past individual failures;
+    exits non-zero if any scenario failed. *)
+let run_all () : unit =
+  if not (Stdlib.Sys.file_exists B.baseline_inspect) then begin
+    info "no baseline cache; running baseline first";
+    B.run ()
+  end;
+  let failed = ref [] in
+  List.iter Canary_tiny_scenario.scenarios ~f:(fun s ->
+    try run ~name:s.name
+    with _ -> failed := s.name :: !failed);
+  match !failed with
+  | [] -> info "prepare-all: %d scenarios ok"
+            (List.length Canary_tiny_scenario.scenarios)
+  | xs ->
+    warn "prepare-all: %d failures: %s"
+      (List.length xs) (String.concat ~sep:", " (List.rev xs));
+    Stdlib.exit 1
+
+(** Print the cached [confirm_ill.json] for [name] to stdout, or
+    error if the cache doesn't exist. Mirrors Python [cmd_confirm]. *)
+let confirm ~(name : string) : unit =
+  let path = scen_cache_of ~name ^ "/confirm_ill.json" in
+  if not (Stdlib.Sys.file_exists path) then begin
+    Stdlib.prerr_endline
+      (Printf.sprintf
+         "confirm: no cache for %S; run `tiny-scenarios prepare %s` first"
+         name name);
+    Stdlib.exit 1
+  end;
+  let ic = Stdlib.open_in path in
+  (try
+     while true do
+       Stdlib.print_endline (Stdlib.input_line ic)
+     done
+   with End_of_file -> ());
+  Stdlib.close_in ic

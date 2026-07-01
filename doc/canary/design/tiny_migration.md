@@ -308,10 +308,13 @@ Phase A is inventory only. Decisions deferred to Phase B:
       across scenarios — Python's `apply → build → revert` chain
       is prone to leaving the tree dirty on cmake failures; ours
       isn't. Commit TBD.
-- [ ] **Phase C.4b** — `prepare-all`. Trivial loop; parallelises
-      free once C.4 lands (scenarios are hermetic).
-- [ ] **Phase C.6** — `confirm <name>`. Prints
-      `_cache/<name>/confirm_ill.json`. One file-read + stdout.
+- [x] **Phase C.4b** — `prepare-all`. Sequential loop over all
+      15 scenarios; auto-runs baseline if the cache is missing.
+      Continues past individual failures; exits non-zero if any
+      scenario failed. Verified: 15/15 ok on the current tree.
+- [x] **Phase C.6** — `confirm <name>`. Prints
+      `_cache/<name>/confirm_ill.json` to stdout; exits 1 with a
+      helpful message if the cache is missing.
 - [ ] **Phase D** — canary integration. Replace
       `canary_project_tiny.ml`'s harness-shell-out with direct
       `scenario_spec` reads. `variant_key` becomes
