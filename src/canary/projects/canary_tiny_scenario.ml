@@ -341,6 +341,30 @@ let scenarios : scenario_spec list =
 let print_list () =
   List.iter scenarios ~f:(fun s -> Stdlib.print_endline s.name)
 
+(** Validate a scenario name at start-up. Returns the string
+    unchanged if [n] is a known scenario name (one of the 15 in
+    [scenarios]) or the special sentinel ["baseline"] (referring
+    to [_cache/baseline/workspace/]). Raises [Failure] otherwise.
+
+    Used by [canary_main] to wrap string literals that reference
+    scenario names, so typos fail at load time instead of showing
+    up as missing cache paths at run time.
+
+    Phase D.1 of the tiny migration
+    ([doc/canary/design/tiny_migration.md] §9): make the
+    variant/scenario coupling type-safe. *)
+let name_of_string (n : string) : string =
+  if String.equal n "baseline" then n
+  else
+    match List.find scenarios ~f:(fun s -> String.equal s.name n) with
+    | Some _ -> n
+    | None ->
+      let known = List.map scenarios ~f:(fun s -> s.name) in
+      Stdlib.failwith
+        (Printf.sprintf
+           "unknown tiny scenario: %S. Known: %s (or \"baseline\")"
+           n (String.concat ~sep:", " known))
+
 (** Human-readable contract label used by the Python harness's JSON
     output ("Symbol", "Type", "ABI", …). Distinct from
     [Canary_compat.string_of_contract_id] which emits "c1".."c8".

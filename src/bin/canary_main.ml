@@ -179,8 +179,9 @@ let action_cmd =
        wiring proves the per-kind model actually mixes — not just the
        API surface. *)
     let symbol_missing_ws =
-      Canary_project_tiny.cache_workspace_of ~scenario:"symbol_missing" in
-    let baseline_stores = ws_stores "baseline" in
+      Canary_project_tiny.cache_workspace_of
+        ~scenario:(Canary_tiny_scenario.name_of_string "symbol_missing") in
+    let baseline_stores = ws_stores (Canary_tiny_scenario.name_of_string "baseline") in
     let hybrid_lib_broken_stores : Canary_project_tiny.tiny_stores = {
       source = baseline_stores.source;
       lib_dir = [%string "%{symbol_missing_ws}/c/build"];
@@ -190,32 +191,33 @@ let action_cmd =
     let all_variants = [
       mk ""
         (Canary_project_tiny.make_base_script_spec
-           ~stores:(ws_stores "baseline") ());
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "baseline")) ());
       mk "lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:(ws_stores "symbol_missing") ());
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_missing")) ());
       mk "binding_mli_broken"
         (Canary_project_tiny.make_binding_mli_broken_script_spec
-           ~stores:(ws_stores "api_complete"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_complete")));
       mk "binding_python_attrs_broken"
         (Canary_project_tiny.make_binding_python_attrs_broken_script_spec
-           ~stores:(ws_stores "api_complete_python"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_complete_python")));
       mk "hybrid_lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
            ~stores:hybrid_lib_broken_stores ());
       mk "lib_soname_bumped"
         (Canary_project_tiny.make_lib_soname_bumped_script_spec
-           ~stores:(ws_stores ~lib_filename:"libtiny.so.2" "abi_soname_bump"));
+           ~stores:(ws_stores ~lib_filename:"libtiny.so.2"
+                      (Canary_tiny_scenario.name_of_string "abi_soname_bump")));
       mk "lib_behavior_broken"
         (Canary_project_tiny.make_lib_behavior_broken_script_spec
-           ~stores:(ws_stores "behavior_silent"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "behavior_silent")));
       (* binding_overdeclares_stubs: c1 cmp_symbol from the orphan
          direction. The cstub references tiny_extra the lib never had;
          only OCaml is perturbed, Python cext is untouched. Maps to
          harness scenario e8 symbol_orphan. *)
       mk "binding_overdeclares_stubs"
         (Canary_project_tiny.make_binding_overdeclares_stubs_script_spec
-           ~stores:(ws_stores "symbol_orphan"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_orphan")));
       (* app_helper_lib_broken: c1 cmp_symbol fires through the
          tiny_helper chain (app_helper.exe → Tiny_helper.sum_doubled →
          Tiny.sum → libtiny.sym tiny_sum, which is missing under
@@ -224,7 +226,7 @@ let action_cmd =
          through an extra binding layer (Phase 15, 2026-06-03). *)
       mk "app_helper_lib_broken"
         (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:(ws_stores "symbol_missing")
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_missing"))
            ~probe_exe:"ocaml/examples/app_helper.exe" ());
       (* lib_symbol_version_broken: c5 cmp_sym_version fires when the
          lib's exported version tag (TINY_2.0 post-bump) doesn't match
@@ -232,7 +234,7 @@ let action_cmd =
          scenario e9 symbol_version_floor. *)
       mk "lib_symbol_version_broken"
         (Canary_project_tiny.make_lib_symbol_version_broken_script_spec
-           ~stores:(ws_stores "symbol_version_floor"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_version_floor")));
       (* binding_type_broken: c6 cmp_type fires when the perturbed
          header declares a different arity than the binding's stub
          expects. Build (Binding OCaml) fails at C compile; the c6
@@ -242,7 +244,7 @@ let action_cmd =
          Maps to harness scenario header_arity_bump. *)
       mk "binding_type_broken"
         (Canary_project_tiny.make_binding_type_broken_script_spec
-           ~stores:(ws_stores "header_arity_bump"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "header_arity_bump")));
       (* binding_repack_broken: c7 api_sound_repack — refutes the
          binding's repack of its stub layer via probe-assertion
          failure. Same Expect_failure shape as lib_behavior_broken,
@@ -251,14 +253,14 @@ let action_cmd =
          silently reverses args before calling Tiny_raw.diff). *)
       mk "binding_repack_broken"
         (Canary_project_tiny.make_binding_repack_broken_script_spec
-           ~stores:(ws_stores "api_repack"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_repack")));
       (* binding_python_repack_broken: Python parallel — same c7
          attribution, e10 api_repack_python perturbs
          python_cext/tiny_cext/__init__.py's diff. Each binding is
          independent; OCaml unaffected. *)
       mk "binding_python_repack_broken"
         (Canary_project_tiny.make_binding_python_repack_broken_script_spec
-           ~stores:(ws_stores "api_repack_python"));
+           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_repack_python")));
     ] in
     let selected = match variant_filter with
       | None -> all_variants
