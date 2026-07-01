@@ -317,7 +317,38 @@ addressed. Captured as awareness; not active work.
    in canary. Resolves Principle 3 (perturbation × good =
    bad) by making the mapping computable, not declarative. Ties
    into §4/§5 flows.
-3. **Re-do expectation as per-step contract outcome.** Today
+3. **Post-migration: remodel scenarios as good-scenario + attached
+   perturbations.** Once Phase E lands (Python retired,
+   `scenario_spec` is sole source), remodel the current flat
+   list-of-15-scenarios into a structural hierarchy: each good
+   scenario (Sc.1..Sc.6) owns its associated artifacts and the
+   set of possible perturbations at that stage. Bad scenarios
+   become `Sc.N × perturbation` cells rather than free-standing
+   flat rows.
+   Substrate (already in code):
+   `Canary_tiny_scenario.scenario_spec` carries
+   `violates`/`perturbs`/`perturbation`/`expected`. What's missing
+   structurally is *which Sc.N does this bad scenario belong to*
+   — implicit today in the draft.md L382 table's "Good counterpart"
+   column.
+   Payoffs:
+   (a) Closes §8 reconciliation task #7 (Perturbation matrix ↔
+       bad scenarios) — makes the mapping computable via
+       structural composition instead of documented separately.
+   (b) Realises §7 Principle 3 (Good × perturbation = bad) as
+       structural code, not just declarative principle.
+   (c) Enables Phase D.2 (deferred) — deriving
+       `Expect_compat_failure { inputs = ... }` from
+       `scenario_spec.violates` + `expected` becomes tractable
+       once each perturbation sits under a coherent
+       good-scenario parent.
+   (d) SSOT §4 (Good) and §5 (Bad) become derivable from one
+       source; both catalogues in draft.md follow.
+   **Timing**: strictly after Phase E — during migration this
+   would violate the "port-only, no new logic" scope guardrail.
+   **Not blocking anything urgent**: current data model works;
+   this is a cleanliness + composability play.
+4. **Re-do expectation as per-step contract outcome.** Today
    `Expect_failure` / `Expect_compat_failure` (§6 actions) only
    capture *fail* shapes. Drafting surfaced that each step —
    success or failure — should contribute to a scenario-wise
