@@ -255,25 +255,31 @@ Captured for later; surface here so they're visible per-section.
 Larger-than-reconciliation items that shape the SSOT once
 addressed. Captured as awareness; not active work.
 
-1. **Migrate tiny's scenario engine from Python to OCaml.** Today
-   `canary/examples/tiny/scenarios/scenarios.py` is the bad-scenario
-   producer (§5); the rest of canary is OCaml. A single-language
-   codebase removes the cross-language consistency obligation
-   between `scenarios.py` and `canary_basic.ml: artifact_kind`
-   (§1 co-providers), and lets perturbation/enumeration share types
-   directly with the action graph.
-   **Design note (Phase B + decision 2026-06-26).** The OCaml port
-   adopts sandbox-build prepare: each scenario builds into a
-   hermetic `_cache/<name>/` directory; the live tree is never
-   mutated. The CLI shrinks from ten verbs to six (`list`,
+1. **Migrate tiny's scenario engine from Python to OCaml.**
+   `canary/examples/tiny/scenarios/scenarios.py` was the
+   bad-scenario producer (§5); the rest of canary is OCaml. A
+   single-language codebase removes the cross-language consistency
+   obligation between `scenarios.py` and `canary_basic.ml:
+   artifact_kind` (§1 co-providers), and lets
+   perturbation/enumeration share types directly with the action
+   graph.
+   **Design decisions.** OCaml port adopts sandbox-build prepare:
+   each scenario builds into a hermetic `_cache/<name>/`; live
+   tree never mutated. CLI shrinks from ten verbs to six (`list`,
    `baseline`, `prepare`, `prepare-all`, `expected`, `confirm`).
-   `apply` / `revert` / `restore` / `restore-baseline` drop out of
-   canary's surface — they exist only because the Python harness's
-   `run.sh` mutates the live tree, which the sandbox model
-   eliminates. From canary's POV a perturbed snapshot is just a
-   natural store that happens to provide ill artifacts — same shape
-   as a real-world stale opam/pip/apt package. Details:
-   [`tiny_migration.md`](tiny_migration.md) §1b.
+   `apply`/`revert`/`restore`/`restore-baseline` retire with the
+   Python harness at Phase E. For canary-owned artifacts (tiny is
+   designed by canary, not upstream), builds use direct compilers
+   (`gcc`, `ocamlfind ocamlopt`, `ar`) rather than cmake/dune/make
+   — "owner decides the build system." From canary's POV a
+   perturbed snapshot is a natural store that happens to provide
+   ill artifacts.
+   **Progress** (see [`tiny_migration.md`](tiny_migration.md) §9
+   for commits): Phase A ✓ inventory, B ✓ `scenario_spec` +
+   `list`, C.5 ✓ `expected`, C.3 ✓ `baseline` (direct compilers,
+   self-contained, byte-parity with Python). **Pending**: C.4
+   `prepare` (sandbox-build), C.4b `prepare-all`, C.6 `confirm`,
+   D canary integration, E delete Python harness.
 2. **One-time spec covering one scenario across both engines.**
    The current shape has two engines — tiny-based perturbation
    (concrete trace per agreement) and canary-based enumeration

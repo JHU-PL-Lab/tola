@@ -278,23 +278,42 @@ Phase A is inventory only. Decisions deferred to Phase B:
   `src/canary/projects/canary_project_tiny_scenarios.ml`. The
   shorter `canary_tiny_scenario.ml` reads better.
 
-## 9. Phase B kickoff checklist
+## 9. Progress log
 
-When Phase B starts:
+- [x] **Phase A** — inventory (this doc). Commit `16ad960`.
+- [x] **Phase B** — `scenario_spec` type + 15 scenarios as data +
+      `canary tiny-scenarios list`. Byte-parity with
+      `python3 scenarios.py list`. Commit `1227426`.
+- [x] **Phase C.5** — `canary tiny-scenarios expected <name>`.
+      Outcomes-parity with `scenarios.py expected` (15/15;
+      description text shortened, harmless to `check.py`).
+      Commit `e2f1e36`.
+- [x] **Phase C.3** — `canary tiny-scenarios baseline`. Iterated
+      three times (see §1b): shell-out dune → verify-only + make
+      chain → direct compiler invocation. Landed direct-compile.
+      7/7 inspect JSONs + 33/33 workspace files match Python's
+      output. Commits `b7ecea6`, `a64c4b4`, `2fac694`.
+- [ ] **Phase C.4** — `prepare <name>`. Sandbox-build per §1b:
+      copy live sources into `_cache/<name>/source/`, apply patch
+      in sandbox, direct-compile, snapshot artifacts + write
+      `confirm_ill.json` (surface delta vs baseline). Reuses
+      direct-compile primitives from C.3; new work is sandbox
+      setup + patch application + delta computation.
+- [ ] **Phase C.4b** — `prepare-all`. Trivial loop; parallelises
+      free once C.4 lands (scenarios are hermetic).
+- [ ] **Phase C.6** — `confirm <name>`. Prints
+      `_cache/<name>/confirm_ill.json`. One file-read + stdout.
+- [ ] **Phase D** — canary integration. Replace
+      `canary_project_tiny.ml`'s harness-shell-out with direct
+      `scenario_spec` reads. `variant_key` becomes
+      `scenario_spec.name`; `Expect_compat_failure` predicates
+      derive from `scenario_spec.expected` + `violates`.
+- [ ] **Phase E** — delete `scenarios.py` and `_harness/`. Update
+      `tiny/Makefile`, tiny README, CLAUDE.md, `ssot.md` §5 Flow.
 
-- [ ] Create `src/canary/projects/canary_tiny_scenario.ml` with
-      `scenario_spec` type + the 15 scenarios as data.
-- [ ] Add `canary tiny-scenarios list` subcommand; assert output
-      matches `python3 scenarios.py list` byte-for-byte (it should —
-      same name list, same order).
-- [ ] Wire `canary_project_tiny.ml`'s `tiny_ocaml_module_watchlist`
-      and the `violates` contract IDs through `scenario_spec` rather
-      than free-floating constants.
-- [ ] Decision: which Phase C verbs land first. **Revised**
-      (post-§1b sandbox decision): `list` (Phase B ✓) → `expected`
-      → `baseline` → `prepare` (sandbox-build, swallows apply
-      internally) → `prepare-all` → `confirm`. Ordered by
-      external-consumer dependency and complexity. `apply` /
-      `revert` / `restore` / `restore-baseline` are no longer
-      Phase C work — they stay Python-only and retire with the
-      harness in Phase E.
+### Retired verbs (per §1b)
+
+`apply` / `revert` / `restore` / `restore-baseline` — remain
+Python-only in `scenarios.py` for as long as `_harness/run.sh`
+lives. No OCaml port; they retire with the whole Python harness
+at Phase E.

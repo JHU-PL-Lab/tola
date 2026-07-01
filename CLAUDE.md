@@ -483,6 +483,25 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   LAST.  Putting it first makes all patterns below unreachable.  The
   compiler warns `redundant-case` but doesn't error — the match silently
   ignores later patterns.
+- **`python3-config` not universally available**: standard on
+  systems with `python3-dev` (apt) / `python3-devel` (dnf) but
+  venvs deliberately omit the `-config` wrapper, and some
+  container distros strip `-dev` packages entirely. Use
+  `python3 -c 'import sysconfig; print(sysconfig.get_paths()["include"])'`
+  and `sysconfig.get_config_var("EXT_SUFFIX")` instead of shelling
+  to `python3-config --includes`. Sysconfig is stdlib, works
+  everywhere. See `canary_tiny_baseline.ml:build_python_cext`.
+- **OCaml module name mangling: dune wrapping vs direct
+  ocamlopt**: dune's default library-wrapping convention produces
+  module names like `Tiny__` / `Tiny__Tiny_raw` / `Tiny` in a
+  `.cmxa` (a wrapper module + submodules with underscore-doubled
+  prefix). Direct `ocamlfind ocamlopt -a` without wrapping
+  produces plain top-level modules `[Tiny_raw; Tiny]`. `bo6`
+  inspection (`ocamlobjinfo`) reports the difference; any consumer
+  that hardcodes specific mangled names (e.g. `Tiny__Foo`) will
+  break under a direct-compile path. Watchlists that reference
+  only the top-level module (`Tiny`, `Tiny.sum`) work either way.
+  See `canary_tiny_baseline.ml:build_ocaml_binding` comment.
 
 ## Conventions
 
