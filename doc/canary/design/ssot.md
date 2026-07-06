@@ -405,28 +405,51 @@ addressed. Captured as awareness; not active work.
    in canary. Resolves Principle 3 (perturbation × good =
    bad) by making the mapping computable, not declarative. Ties
    into §4/§5 flows.
-3. **NEXT PHASE — scenario remodel (scenario-centric first,
-   dual-view later).**
+3. **IN PROGRESS — scenario remodel.**
 
-   **Immediate scope (this phase):**
-   - Keep `scenario_spec` flat (Option B).
-   - Add `stages : sc_id list` (list, not singleton — `api_faithful`
-     spans Sc.1..Sc.6).
-   - Add `interested_artifacts : artifact_kind list` (structural,
-     derived from `perturbs` file-paths → artifact mapping).
-   - Perturbation stays as a `scenario_spec` attribute (target
-     artifact + method), not extracted as its own type yet.
-   - SSOT §5 loses `Broken artifact` + `Notes` columns; gains
-     `Interested artifacts` + `Detected by` (see §5 note).
-   - Good/bad no longer intrinsic to scenario — derived from
-     per-contract checker results.
+   **Task 1 (done, commit 1111ad6):** scenario-to-action split.
+   - [x] New `Canary_scenario.scenario` (name, description, actions,
+     interested_artifacts) — project-agnostic type in
+     `src/canary/action/canary_scenario.ml`.
+   - [x] Split `Canary_tiny_scenario`: `tiny_recipe` (perturbs,
+     perturbation, expected, violates) + `entry = { scenario;
+     recipe }` + `entries : entry list` (15 tiny entries).
+   - [x] Consumers updated (canary_tiny_prepare uses entries;
+     canary_main uses `name_of_string`).
+   - [x] End-to-end verified: list / expected / baseline / prepare
+     / confirm all work.
+   - [x] Coarse hand-mapping of actions + interested_artifacts
+     using 5 groupings (native cascade, ocaml only, python only,
+     abi cascade, positive coverage). Refinement queued below.
 
-   **Postponed to a follow-up (still §9.3-family, not §9.4):**
-   - Dual-view artifact index (reading (c) — artifact knows all
-     perturbations touching it, direct + inherited).
-   - Iteration helpers over §1/§2/§3 catalogues (`canary_ssot.ml`
-     — postponed further; not blocking scenario remodel).
-   - Alignment invariant as a test — needs both views indexed.
+   **Backlog (post-Task-1, still §9.3-family):**
+   - [ ] **Derive `interested_artifacts` from `actions`** —
+     currently hand-mapped; the two fields are correlated (which
+     artifacts an action touches is knowable from the action
+     verb). Add an `interested_artifacts_of_actions : rule list
+     → artifact_kind list` helper; verify it produces the
+     hand-mapped values for the 15 entries; drop the hand fields.
+   - [ ] **Regroup entries by good scenario (Sc.N)** — currently
+     flat list; group by Sc.N and see whether the 15 entries can
+     be *computed* from a small set of perturbation kinds ×
+     interested artifacts. If yes, the bad-scenario catalogue
+     becomes a projection of a smaller principled generator.
+   - [ ] **Task 2 — perturbation to project-recipe layer.**
+     Extract tiny-specific machinery (patch, soname_bump) to a
+     project-hookable interface. Tied to the perturbation ↔
+     artifact-failure mapping design (the same "how does badness
+     manifest" question).
+   - [ ] **Task 3 (deferred) — term-rename sweep** per §6.2.
+     After Tasks 1+2 land.
+   - [ ] Dual-view artifact index (reading (c) — artifact knows
+     all perturbations touching it, direct + inherited).
+   - [ ] Iteration helpers over §1/§2/§3 catalogues
+     (`canary_ssot.ml` — not blocking; lift only when reach
+     forces it).
+   - [ ] Alignment invariant as a test — needs both views indexed.
+   - [ ] SSOT §5 columns swap (`Broken artifact` + `Notes` →
+     `Interested artifacts` + `Detected by`) once `Detected by`
+     has a real source of truth (checker registry).
 
    **Motivation (unchanged):**
    Migration (§9.1) is complete; `scenario_spec` is the sole
