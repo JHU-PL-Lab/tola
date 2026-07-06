@@ -114,13 +114,12 @@ catalogue numbering; rewrite §2 references to point at the §3 IDs.
 
 **Flow.** manuscript Sc.1..Sc.6 (hand-curated) + canary action
 graph aggregation ──► SSOT §4 ──► draft.md §2 + §4 prose.
-**Co-providers.** the six aggregate stages and the 15-pattern path
-table (from `canary paths-md`) describe the same space at different
-granularity; their consistency is the §5 mapping (each bad scenario
-points at one Sc).
+**Co-providers.** the six aggregate stages and the 15-pattern
+action-path table (from `canary paths-md`) describe the same
+space at different granularity. Each Sc.N corresponds to a
+subgraph of the action catalogue (§6.5).
 
-Status: **stable for manuscript** — six aggregations of the action
-graph. Used in draft.md L349 table.
+Status: **stable for manuscript**. Used in draft.md L349 table.
 
 | ID   | Scenario name            | Stage                  | Action             | Status |
 | ---- | ------------------------ | ---------------------- | ------------------ | ------ |
@@ -131,68 +130,30 @@ graph. Used in draft.md L349 table.
 | Sc.5 | `build_app_helper`       | Binding use (indirect) | (TBD)              | stable |
 | Sc.6 | `run_app_helper`         | Binding use (indirect) | (TBD)              | stable |
 
-<!-- package-free -->
-
 **Code correspondence.** The 6 good scenarios aggregate over the
-finer action graph: `Fetch/Build_lib/Build_binding/Build_app/Probe`
-crossed with artifact kinds. The 15-pattern table from `canary paths`
-is the full enumeration.
+finer action graph (§6.5): `Fetch/Build_lib/Build_binding/Build_app/Probe`
+crossed with artifact kinds. The 15-pattern action-path table
+(`canary paths`) is the full enumeration at a finer grain.
 
 ## 5. Bad Scenarios (no ID prefix; `snake_case` names)
 
-**Flow.** `dune exec canary_main -- tiny-scenarios list`
-──► SSOT §5 ──► draft.md L382 table, tiny variant matrix.
-**Co-providers.** OCaml (`Canary_tiny_scenario.scenarios`) is
-the sole producer as of Phase E; the legacy Python harness
+**Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
+SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
+**Co-providers.** OCaml (`Canary_tiny_scenario.entries`) is the
+sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
 [`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
-Future `make ssot-sync` regenerates the table block.
-**Open consistency.** the 13-variant perturbation matrix in §4 (and
-historically in tiny.md) is a separate enumeration shape; whether it
-aligns 1:1 with the 15 `scenarios.py` rows is not currently
-documented — see Open Reconciliation §7.
+**Status.** stable — 15 rows.
 
-Status: **stable** — `canary tiny-scenarios list` output, 15 rows.
-Manuscript L382 table mirrors this.
-
-**Note on shape (post-remodel, §9.3 pending).** The "Broken
-artifact" and "Notes" columns will be replaced by
-**Interested artifacts** (Ar.X list, derived from perturbation
-targets) + **Detected by** (contract checker id if wired; blank
-means static-invisible). Implementation details (patch file
-name, soname strings) drop out — they live in code. Current
-table stays until the remodel lands.
-
-| Name                     | Good counterpart | Broken artifact                | Notes                       |
-| ------------------------ | ---------------- | ------------------------------ | --------------------------- |
-| `symbol_missing`         | Sc.2             | native_lib                     | provider drops a symbol     |
-| `header_arity_bump`      | Sc.2             | native_source                  | header signature change     |
-| `symbol_version_floor`   | Sc.4             | native_lib                     | versioned-symbol floor bump |
-| `abi_soname_bump`        | Sc.4             | native_lib                     | soname bump                 |
-| `type_wrong`             | Sc.2             | native_source / binding_source | TBD                         |
-| `api_faithful`           | Sc.1–Sc.6        | (baseline; passes)             | placeholder                 |
-| `api_repack`             | Sc.3             | binding_lib                    | repack changes layout       |
-| `api_complete`           | Sc.3             | binding_lib                    | missing API in binding      |
-| `behavior_silent`        | Sc.4             | native_lib (runtime)           | semantics-only drift        |
-| `symbol_orphan`          | Sc.2             | binding_lib                    | binding refs unused symbol  |
-| `api_repack_python`      | Sc.3             | binding_lib (Python)           | Python repack analogue      |
-| `api_complete_python`    | Sc.3             | binding_lib (Python)           | Python incompleteness       |
-| `app_over_binding_ocaml` | Sc.3             | app                            | app pinned past binding     |
-| `app_over_helper_ocaml`  | Sc.5             | app                            | app pinned past helper      |
-| `api_repack_stub_orphan` | Sc.2             | binding_lib (stub)             | stub-side orphan            |
-
-**Roadmap rows** (in manuscript only, not in `scenarios.py`):
+**Roadmap rows** (not in code yet):
 
 - `pkg_*` — packaging scenarios; placeholder for opam/pip/apt
-  repackaging mismatches.
+  repackaging mismatches. Tracked as §7 Principle 4 gap.
 
-### 5.1 Scenario grouping analysis (recorded 2026-07-06)
+### 5.1 Per-scenario detail — perturbed_at × manifests_at × detector
 
-Raw facts to review; supersedes an earlier coarser grouping in
-`canary_tiny_scenario.ml:stage_groups` that used SSOT §5's "Good
-counterpart" column as if it were a single label.
-
-Each scenario has (at least) two distinct stage attributions:
+Each scenario has *two* distinct stage attributions rather than
+one "Good counterpart":
 
 - **perturbed_at** — which stage's artifacts the perturbation
   modifies (or "post-Sc.N" for binary surgery on built
@@ -201,25 +162,23 @@ Each scenario has (at least) two distinct stage attributions:
   fail, probe fail, or "gap" = no detector wired even though the
   perturbation exists).
 
-**Per-scenario table.**
-
-| Scenario                 | perturbed_at             | manifests_at         | detector today                       |
-| ------------------------ | ------------------------ | -------------------- | ------------------------------------ |
-| `symbol_missing`         | Sc.1 (native src)        | Sc.4 (probe fail)    | c1 cmp_symbol                        |
-| `header_arity_bump`      | Sc.1 (native src)        | Sc.2 (binding build fail) | c6 cmp_type                     |
-| `symbol_version_floor`   | Sc.1 (native src.map)    | Sc.4 (dyld load fail) | c5 cmp_sym_version                  |
-| `abi_soname_bump`        | post-Sc.1 (binary surgery) | Sc.4 (dyld load fail) | c4 cmp_abi                        |
-| `type_wrong`             | Sc.1 (native src)        | Sc.4 (probe fail)    | (weak — c6 wants clang AST)          |
-| `api_faithful`           | Sc.1 (native src, adds fn) | — (nothing detects) | **gap** — c8 not wired               |
-| `api_repack`             | Sc.2 (binding src)       | Sc.4 (probe fail)    | c3 cmp_behavior via probe            |
-| `api_complete`           | Sc.2 (binding mli)       | Sc.3 (app build fail) | c2 cmp_api_completeness             |
-| `behavior_silent`        | Sc.1 (native src)        | Sc.4 (probe fail)    | c3 cmp_behavior                      |
-| `symbol_orphan`          | Sc.2 (binding src)       | Sc.2 (link fail on strict linker) | c1 cmp_symbol           |
-| `api_repack_python`      | Sc.2 (binding src)       | Sc.4 (probe fail)    | c3 cmp_behavior via probe            |
-| `api_complete_python`    | Sc.2 (binding src)       | Sc.4 (probe fail)    | c2 cmp_api_completeness              |
-| `app_over_binding_ocaml` | — (positive)             | — (all pass)         | — (positive coverage)                |
-| `app_over_helper_ocaml`  | — (positive)             | — (all pass)         | — (positive coverage)                |
-| `api_repack_stub_orphan` | Sc.2 (binding stub layer) | — (probe passes)    | **gap** — c7 exists but exercised via bo1↔bo4 comparison, not runtime probe |
+| Scenario                 | perturbed_at              | manifests_at                       | detector today                                                              |
+| ------------------------ | ------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
+| `symbol_missing`         | Sc.1 (native src)         | Sc.4 (probe fail)                  | c1 cmp_symbol                                                               |
+| `header_arity_bump`      | Sc.1 (native src)         | Sc.2 (binding build fail)          | c6 cmp_type                                                                 |
+| `symbol_version_floor`   | Sc.1 (native src.map)     | Sc.4 (dyld load fail)              | c5 cmp_sym_version                                                          |
+| `abi_soname_bump`        | post-Sc.1 (binary surgery) | Sc.4 (dyld load fail)             | c4 cmp_abi                                                                  |
+| `type_wrong`             | Sc.1 (native src)         | Sc.4 (probe fail)                  | (weak — c6 wants clang AST)                                                 |
+| `api_faithful`           | Sc.1 (native src, adds fn) | — (nothing detects)               | **gap** — c8 not wired                                                      |
+| `api_repack`             | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                                   |
+| `api_complete`           | Sc.2 (binding mli)        | Sc.3 (app build fail)              | c2 cmp_api_completeness                                                     |
+| `behavior_silent`        | Sc.1 (native src)         | Sc.4 (probe fail)                  | c3 cmp_behavior                                                             |
+| `symbol_orphan`          | Sc.2 (binding src)        | Sc.2 (link fail on strict linker)  | c1 cmp_symbol                                                               |
+| `api_repack_python`      | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                                   |
+| `api_complete_python`    | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c2 cmp_api_completeness                                                     |
+| `app_over_binding_ocaml` | — (positive)              | — (all pass)                       | — (positive coverage)                                                       |
+| `app_over_helper_ocaml`  | — (positive)              | — (all pass)                       | — (positive coverage)                                                       |
+| `api_repack_stub_orphan` | Sc.2 (binding stub layer) | — (probe passes)                   | **gap** — c7 exists but exercised via bo1↔bo4 comparison, not runtime probe |
 
 **Grouped by `perturbed_at`.**
 
@@ -233,46 +192,32 @@ Each scenario has (at least) two distinct stage attributions:
 
 **Grouped by `manifests_at`.**
 
-- **Sc.2** (build-time) — 2: header_arity_bump, symbol_orphan
-- **Sc.3** (app-build) — 1: api_complete
-- **Sc.4** (runtime probe) — 8: symbol_missing,
+- **Sc.2** (build fail) — 2: header_arity_bump, symbol_orphan
+- **Sc.3** (app-build fail) — 1: api_complete
+- **Sc.4** (runtime probe fail) — 8: symbol_missing,
   symbol_version_floor, abi_soname_bump, type_wrong, api_repack,
   behavior_silent, api_repack_python, api_complete_python
 - **detection gap** — 2: api_faithful, api_repack_stub_orphan
 - **positive coverage** — 2: app_over_binding_ocaml,
   app_over_helper_ocaml
-- **Sc.1** — 0, **Sc.5** — 0, **Sc.6** — 0
+- **Sc.1 / Sc.5 / Sc.6** — 0 each
 
 **Observations.**
 
 1. **Sc.4 (runtime probe) is the dominant manifestation stage
-   (8/15).** Static comparators catch things earlier (Sc.2 build,
-   Sc.3 app-build) when they exist; otherwise badness surfaces at
-   runtime.
-2. **Sc.1/Sc.5/Sc.6 have zero manifestations** in the current 15.
-   Not because those stages are boring — Sc.1 is where 7
-   perturbations are *applied* — but because the perturbations
-   don't target failures unique to those stages. Sc.5 (build
-   app_helper) and Sc.6 (run app_helper) are almost entirely
-   unexplored; the sole `app_over_helper_ocaml` is positive
-   coverage. Possible under-exercised area.
-3. **Two agreement gaps.** `api_faithful` (c8 not wired) and
-   `api_repack_stub_orphan` (c7 exists but only via static
-   bo1↔bo4 comparison, not probe). These are candidates for the
-   `derive_entries` experiment: the generator would emit them
-   flagged "no detector." Ideally the gaps become findable via
-   the agreement/checker registry rather than by hand-inspection.
+   (8/15).** Static comparators catch things earlier (Sc.2/Sc.3
+   build) when they exist; otherwise badness surfaces at runtime.
+2. **Sc.1/Sc.5/Sc.6 have zero manifestations, not zero
+   involvement.** Sc.1 is where 7 perturbations are *applied* but
+   the failure never surfaces at native build alone. Sc.5/Sc.6
+   (helper chain) are under-explored — sole entry is
+   `app_over_helper_ocaml` (positive).
+3. **Two detection gaps.** `api_faithful` (c8 not wired) and
+   `api_repack_stub_orphan` (c7 static-only, not probe). Ideally
+   the `derive_entries` experiment (§9.3 backlog) finds these
+   automatically as "no-detector" cells.
 4. **Detection ≠ perturbation.** Where you patch is not where the
-   badness bites. The two-view separation clarifies §7
-   Principle 3 (Good × perturbation → bad) — the projection has
-   two axes, not one.
-
-**Code state (as of `d44e7fb`).** `stage_groups` in
-`canary_tiny_scenario.ml` uses only `manifests_at` — that's the
-minority view (8/15 all at Sc.4 makes it look uninteresting).
-Revising to include both views (or renaming to
-`manifests_at_groups` + adding a `perturbed_at_groups`) is
-queued in §9.3 backlog.
+   badness bites. Two axes, not one — clarifies §7 Principle 3.
 
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
