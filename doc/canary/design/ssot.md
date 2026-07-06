@@ -43,14 +43,14 @@ numbering inconsistency.
 **Decision needed:** does the manuscript collapse `Headers` into `Lib`
 (as the table currently does) or surface it as `Ar.X`?
 
-| ID    | Manuscript name | Code (`artifact_kind`) | §2 use         | §3 use            | Status      |
-| ----- | --------------- | ---------------------- | -------------- | ----------------- | ----------- |
-| Ar.0  | native_source   | `Source`               | L189, L252     | (TBD)             | drift       |
-| Ar.1  | native_lib      | `Lib`                  | L222           | source-lib pair   | drift       |
-| Ar.2  | binding_source  | (part of `Binding L`)  | L222           | (TBD)             | drift       |
-| Ar.3  | binding_lib     | (part of `Binding L`)  | L282           | (TBD)             | drift       |
-| —     | (headers)       | `Headers`              | not in manu    | not in manu       | drift       |
-| —     | app             | `App`                  | not enumerated | not enumerated    | placeholder |
+| ID   | Manuscript name | Code (`artifact_kind`) | §2 use         | §3 use          | Status      |
+| ---- | --------------- | ---------------------- | -------------- | --------------- | ----------- |
+| Ar.0 | native_source   | `Source`               | L189, L252     | (TBD)           | drift       |
+| Ar.1 | native_lib      | `Lib`                  | L222           | source-lib pair | drift       |
+| Ar.2 | binding_source  | (part of `Binding L`)  | L222           | (TBD)           | drift       |
+| Ar.3 | binding_lib     | (part of `Binding L`)  | L282           | (TBD)           | drift       |
+| —    | (headers)       | `Headers`              | not in manu    | not in manu     | drift       |
+| —    | app             | `App`                  | not enumerated | not enumerated  | placeholder |
 
 ## 2. Surfaces (`Sf.X`)
 
@@ -66,13 +66,13 @@ fully honour this — see Open Reconciliation §7.
 Status: **drift** — manuscript 5 surfaces; code 10 inspect_input
 variants (one surface aggregates several inspect kinds).
 
-| ID   | Manuscript name | Aggregates code `inspect_input`                          | Status |
-| ---- | --------------- | -------------------------------------------------------- | ------ |
-| Sf.1 | native_source   | `Typed_header`                                           | drift  |
-| Sf.2 | native_lib      | `Native_lib`, `Versioned_exports`, `Abi_surface`         | drift  |
-| Sf.3 | binding_source  | `Ocaml_mli`, `Typed_binding_user`                        | drift  |
-| Sf.4 | binding_lib     | `C_stub`, `Typed_binding_stub`, `Versioned_req`          | drift  |
-| Sf.5 | (Python/runtime) | `Python_attrs`                                          | drift  |
+| ID   | Manuscript name  | Aggregates code `inspect_input`                  | Status |
+| ---- | ---------------- | ------------------------------------------------ | ------ |
+| Sf.1 | native_source    | `Typed_header`                                   | drift  |
+| Sf.2 | native_lib       | `Native_lib`, `Versioned_exports`, `Abi_surface` | drift  |
+| Sf.3 | binding_source   | `Ocaml_mli`, `Typed_binding_user`                | drift  |
+| Sf.4 | binding_lib      | `C_stub`, `Typed_binding_stub`, `Versioned_req`  | drift  |
+| Sf.5 | (Python/runtime) | `Python_attrs`                                   | drift  |
 
 **Roadmap / parked**
 
@@ -94,16 +94,16 @@ Status: **drift** — manuscript Ag.1..Ag.7 (7 agreements); code
 **Decision needed:** add `Ag.8` to the manuscript or fold C8 into an
 existing Ag.
 
-| ID   | Manuscript name      | Code `contract_id` | OCaml fn (`canary_compat.ml`) | Status |
-| ---- | -------------------- | ------------------ | ----------------------------- | ------ |
-| Ag.1 | Symbol               | C1 (`cmp_symbol`)  | `check_c_compat`              | drift  |
-| Ag.2 | API-completeness     | C2                 | (see compat.ml)               | drift  |
-| Ag.3 | Behavior             | C3 (`cmp_behavior`) | runtime probe                | drift  |
-| Ag.4 | ABI                  | C4 (`cmp_abi`)     | `check_abi`                   | drift  |
-| Ag.5 | SymbolVersion        | C5 (`cmp_sym_version`) | `check_sym_version`        | drift  |
-| Ag.6 | Type                 | C6 (`cmp_type`)    | `check_type`                  | drift  |
-| Ag.7 | API-repacking        | C7 (`cmp_api_repack`) | `check_api_repack`          | drift  |
-| —    | API-faithfulness     | C8 (`cmp_api_faithfulness`) | `check_api_faithfulness` | drift  |
+| ID   | Manuscript name  | Code `contract_id`          | OCaml fn (`canary_compat.ml`) | Status |
+| ---- | ---------------- | --------------------------- | ----------------------------- | ------ |
+| Ag.1 | Symbol           | C1 (`cmp_symbol`)           | `check_c_compat`              | drift  |
+| Ag.2 | API-completeness | C2                          | (see compat.ml)               | drift  |
+| Ag.3 | Behavior         | C3 (`cmp_behavior`)         | runtime probe                 | drift  |
+| Ag.4 | ABI              | C4 (`cmp_abi`)              | `check_abi`                   | drift  |
+| Ag.5 | SymbolVersion    | C5 (`cmp_sym_version`)      | `check_sym_version`           | drift  |
+| Ag.6 | Type             | C6 (`cmp_type`)             | `check_type`                  | drift  |
+| Ag.7 | API-repacking    | C7 (`cmp_api_repack`)       | `check_api_repack`            | drift  |
+| —    | API-faithfulness | C8 (`cmp_api_faithfulness`) | `check_api_faithfulness`      | drift  |
 
 **§2 vs §3 collision.** §2 currently uses `Ag.0..Ag.7` (eight
 stage-introduced agreements, numbered from 0). §3 uses `Ag.1..Ag.7`
@@ -122,14 +122,16 @@ points at one Sc).
 Status: **stable for manuscript** — six aggregations of the action
 graph. Used in draft.md L349 table.
 
-| ID   | Scenario name              | Stage                  | Action                           | Status |
-| ---- | -------------------------- | ---------------------- | -------------------------------- | ------ |
-| Sc.1 | `build_native_lib`         | Upstream               | Ar.0 + Ar.1 → Ar.2               | stable |
-| Sc.2 | `build_binding`            | Binding creation       | Ar.1 + Ar.2 → Ar.5               | stable |
-| Sc.3 | `build_app_with_binding`   | Binding use (direct)   | (TBD)                            | stable |
-| Sc.4 | `run_app_with_binding`     | Binding use (direct)   | (TBD)                            | stable |
-| Sc.5 | `build_app_helper`         | Binding use (indirect) | (TBD)                            | stable |
-| Sc.6 | `run_app_helper`           | Binding use (indirect) | (TBD)                            | stable |
+| ID   | Scenario name            | Stage                  | Action             | Status |
+| ---- | ------------------------ | ---------------------- | ------------------ | ------ |
+| Sc.1 | `build_native_lib`       | Upstream               | Ar.0 + Ar.1 → Ar.2 | stable |
+| Sc.2 | `build_binding`          | Binding creation       | Ar.1 + Ar.2 → Ar.5 | stable |
+| Sc.3 | `build_app_with_binding` | Binding use (direct)   | (TBD)              | stable |
+| Sc.4 | `run_app_with_binding`   | Binding use (direct)   | (TBD)              | stable |
+| Sc.5 | `build_app_helper`       | Binding use (indirect) | (TBD)              | stable |
+| Sc.6 | `run_app_helper`         | Binding use (indirect) | (TBD)              | stable |
+
+<!-- package-free -->
 
 **Code correspondence.** The 6 good scenarios aggregate over the
 finer action graph: `Fetch/Build_lib/Build_binding/Build_app/Probe`
@@ -184,31 +186,92 @@ table stays until the remodel lands.
 - `pkg_*` — packaging scenarios; placeholder for opam/pip/apt
   repackaging mismatches.
 
-## 6. Actions / Stages (no ID prefix; verb_object names)
+## 6. Operational taxonomy — scenario / action / step / stage / rule
 
-**Flow.** `canary_action.ml: rule` constructors (canary paths-md
-emits) ──► SSOT §6 ──► draft.md (future), backend renderers
-(GH YAML / Mermaid / HTML).
-**Co-providers.** code is the sole producer.
+**Flow.** Hand-curated here ──► reference for code renames + prose
+consistency. Code enumerations (action catalogue below) also
+consume this section for their names.
 
-Status: **stable in code**; not yet enumerated in manuscript.
+**Co-providers.** doc-side (this section) + code (`canary_action.ml`
+constructors). Code lags behind — full rename sweep is deferred
+(§8 reconciliation task, not blocking).
 
-| Action name      | Kind             | Code constructor                          | Status |
-| ---------------- | ---------------- | ----------------------------------------- | ------ |
-| `fetch_<kind>`   | per artifact     | `Fetch of artifact_kind`                  | stable |
-| `build_lib`      | native           | `Build_lib`                               | stable |
-| `build_headers`  | native           | `Build_headers`                           | stable |
-| `build_binding`  | per language     | `Build_binding of lang`                   | stable |
-| `build_app`      | downstream       | `Build_app`                               | stable |
-| `pack_<kind>`    | per artifact     | `Publish of artifact_kind`                | stable |
-| `probe_<kind>`   | per artifact     | `Probe of artifact_kind`                  | stable |
-| `configure`      | upstream         | `Configure`                               | stable |
-| `scan_sources`   | upstream         | `Scan_sources`                            | stable |
-| `install_lib`    | upstream         | `Install_lib`                             | stable |
+### 6.1 Hierarchy (big → small)
 
-**15-pattern action table.** `canary paths` enumerates the 15
-patterns (action_path strings) over these stages; that table is the
-operational SSOT for the action graph. Reproduce with:
+| Level | Term | Meaning | Code today | Rename target |
+|---|---|---|---|---|
+| High | **scenario** | Named collection of actions + interested artifacts. Sc.N. | *(new; §9.3 introduces)* | new type `scenario` |
+| Mid | **action** | Operational verb (`Build_lib`, `Probe of _`, …) | `rule` | `action` |
+| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `step` + `action_step` (split) | collapse into `step` |
+| Attribute of action | **stage** | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this) | *(new use)* |
+| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. | (currently overloaded onto action verb) | free `rule` for theory |
+
+### 6.2 Code term clashes to resolve (rename map)
+
+Deferred code sweep; agreement first, then flush.
+
+| Code today | Meaning today | Rename target | Rationale |
+|---|---|---|---|
+| `rule` (`canary_action.ml`) | Action verb variant | **`action`** | Frees `rule` for theory-level meaning |
+| `action_step` (`canary_step_model.ml`) | step + expectation | **`step`** | The runtime unit — no reason to over-qualify |
+| `step` (`canary_basic.ml`) | 10-field record with cmdline/env/produces | **`step_body`** or collapsed | Semi-redundant with action_step; decide when we rename |
+| `stage` (`canary_store.ml`) | Artifact-lifecycle state (`Built | Installed | Packed | Fetched`) | **`artifact_status`** or `lifecycle_state` | Frees `stage` for pipeline-phase meaning |
+| `probe_action` (`canary_basic.ml`) | `Compile_example | Run_example` | stays | Already appropriately scoped as one probe's sub-choice |
+| `compile_mode` | `Native | Bytecode` | stays | Fine as-is |
+
+### 6.3 Writeup ↔ code alignment (after rename)
+
+- Writeup "stage" = code `stage` (pipeline phase; Sc.N is-a stage).
+- Writeup "action" = code `action` (verb).
+- Writeup "step" = code `step` (concrete cmdline).
+- Writeup "rule" = doc-only theory; no code counterpart required.
+- Writeup "compile" / "build" = colloquial for specific `action`s
+  (`Build_lib`, `Build_binding`, `Build_app`).
+
+### 6.4 Migration sequence (agreed)
+
+1. Draft this taxonomy in SSOT (this section). ✓
+2. **Task 1** — scenario-to-action refactor: add `scenario` as a
+   code type (list of actions + interested artifacts + agreement
+   claims), using existing `rule` type without renaming yet.
+   Split current `scenario_spec`: concept fields stay, tiny
+   implementation fields (perturbation, patches, expected) move
+   off to a Task-2-side recipe layer.
+3. **Task 2** — implementation-side refactor: project-specific
+   `tiny_scenario_recipe` (or similar) owns the perturbation
+   machinery; produces `scenario` values consumable by any
+   backend.
+4. **Task 3** — deferred term-rename sweep (rule → action,
+   action_step → step, stage → artifact_status). No hurry; runs
+   after Tasks 1+2 and a full code/doc audit.
+
+### 6.5 Current action catalogue
+
+Names below stay through the code rename (they're OK regardless).
+The type name (`rule`) changes; individual constructor names
+(`Fetch`, `Build_lib`, …) don't.
+
+**Flow (unchanged from prior §6).** `canary_action.ml: rule`
+constructors (canary paths-md emits) ──► SSOT §6.5 ──►
+draft.md (future), backend renderers (GH YAML / Mermaid / HTML).
+
+Status: **stable in code**.
+
+| Action name     | Kind         | Code constructor           | Status |
+| --------------- | ------------ | -------------------------- | ------ |
+| `fetch_<kind>`  | per artifact | `Fetch of artifact_kind`   | stable |
+| `build_lib`     | native       | `Build_lib`                | stable |
+| `build_headers` | native       | `Build_headers`            | stable |
+| `build_binding` | per language | `Build_binding of lang`    | stable |
+| `build_app`     | downstream   | `Build_app`                | stable |
+| `pack_<kind>`   | per artifact | `Publish of artifact_kind` | stable |
+| `probe_<kind>`  | per artifact | `Probe of artifact_kind`   | stable |
+| `configure`     | upstream     | `Configure`                | stable |
+| `scan_sources`  | upstream     | `Scan_sources`             | stable |
+| `install_lib`   | upstream     | `Install_lib`              | stable |
+
+**15-pattern action-path table.** `canary paths` enumerates the
+15 patterns (composition strings) over these actions.
 
 ```sh
 dune exec src/bin/canary_main.exe -- paths-md
@@ -273,6 +336,11 @@ Captured for later; surface here so they're visible per-section.
 8. **Tiny packaging coverage (Principle 4).** Add packaging-error
    scenarios to tiny (opam/pip/apt repackaging mistakes,
    cross-PM SONAME drift). Tracked as project TODO.
+9. **Operational-taxonomy code sweep.** Rename `rule` → `action`,
+   `action_step` → `step`, current `stage` (artifact-lifecycle
+   state) → `artifact_status`/`lifecycle_state` per §6.2 rename
+   map. Deferred (Task 3) until Tasks 1+2 land and a full
+   code/doc audit finishes. Not blocking anything.
 
 ---
 
