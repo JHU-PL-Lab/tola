@@ -399,6 +399,105 @@ let entries : entry list =
 let find_by_name (n : string) : entry option =
   List.find entries ~f:(fun e -> String.equal e.scenario.name n)
 
+(* ================================================================
+   ENTRIES GROUPED BY GOOD SCENARIO (Sc.N) — derivability check
+   ================================================================
+
+   Purpose: expose the derivation pattern. Each group's entries
+   are (perturbation kind × interested-artifact set) applied at
+   that good scenario. If a small principled generator can
+   reproduce these entries (and possibly more), the flat
+   bad-scenario catalogue becomes a projection of that generator —
+   partial realisation of §7 Principle 3 ("Good × perturbation =
+   bad").
+
+   Observed pattern in the current 15:
+   - Sc.1 build_native_lib          — 0 entries (perturbations
+     applied to native artifacts don't manifest at *this* stage
+     alone; they surface at Sc.2+ when a consumer builds/runs).
+   - Sc.2 build_binding             — 5 entries
+       {native-source patch} × {symbol / arity / type}       = 3
+       {binding-source patch} × {orphan / stub-orphan}       = 2
+   - Sc.3 build_app_with_binding    — 5 entries
+       {binding-api patch} × {ocaml / python} × {repack / complete} = 4
+       positive-coverage                                             = 1
+   - Sc.4 run_app_with_binding      — 3 entries
+       {version-script bump / soname bump / silent-behavior}       = 3
+   - Sc.5 build_app_helper          — 1 entry (positive coverage)
+   - Sc.6 run_app_helper            — 0 entries
+   - cross_cutting                  — 1 entry (api_faithful — no
+     static detector today; positive across all stages)
+
+   The perturbation categories look project-independent
+   (patch-source, bump-soname, bump-version-script, silent-body-
+   change). The concrete parameters (which file, which symbol) are
+   project-specific. Task 2 lifts categories into a per-project
+   recipe interface.
+
+   A follow-up experiment can implement a `derive_entries : sc_id
+   × perturbation_kind × interested_artifacts → entry list`
+   generator and diff it against these 15 (must match at least;
+   extras signal broader coverage — that's fine, per the user's
+   note "principle derivation can cover more"). *)
+
+type stage_group = {
+  stage_id   : string;    (** Sc.1..Sc.6 or "cross_cutting" *)
+  stage_name : string;    (** build_native_lib etc. — matches SSOT §4 *)
+  entry_names : string list;
+}
+
+let stage_groups : stage_group list = [
+  { stage_id = "Sc.1"; stage_name = "build_native_lib";
+    entry_names = [] };
+  { stage_id = "Sc.2"; stage_name = "build_binding";
+    entry_names = [ "symbol_missing"; "header_arity_bump"; "type_wrong";
+                    "symbol_orphan"; "api_repack_stub_orphan" ] };
+  { stage_id = "Sc.3"; stage_name = "build_app_with_binding";
+    entry_names = [ "api_repack"; "api_complete";
+                    "api_repack_python"; "api_complete_python";
+                    "app_over_binding_ocaml" ] };
+  { stage_id = "Sc.4"; stage_name = "run_app_with_binding";
+    entry_names = [ "symbol_version_floor"; "abi_soname_bump";
+                    "behavior_silent" ] };
+  { stage_id = "Sc.5"; stage_name = "build_app_helper";
+    entry_names = [ "app_over_helper_ocaml" ] };
+  { stage_id = "Sc.6"; stage_name = "run_app_helper";
+    entry_names = [] };
+  { stage_id = "cross_cutting"; stage_name = "spans_all_stages";
+    entry_names = [ "api_faithful" ] };
+]
+
+(** Look up the entries belonging to a stage group. Skips any name
+    that doesn't resolve — should not happen in practice but keeps
+    the helper total. *)
+let entries_of_stage (g : stage_group) : entry list =
+  List.filter_map g.entry_names ~f:find_by_name
+
+(** For a given entry name, return the stage group it belongs to
+    (or None if not categorised — e.g. a new entry added before it
+    was placed in a group). Handy for future derivation checks. *)
+let stage_of_entry (name : string) : stage_group option =
+  List.find stage_groups ~f:(fun g ->
+    List.mem g.entry_names name ~equal:String.equal)
+
+(** Sanity check: the 15 flat entries must all appear in some
+    stage group. Called once at start-up if we want to catch
+    additions that forgot the grouping. *)
+let assert_all_entries_grouped () : unit =
+  let missing =
+    List.filter entries ~f:(fun e ->
+      Option.is_none (stage_of_entry e.scenario.name))
+  in
+  match missing with
+  | [] -> ()
+  | xs ->
+    let names = List.map xs ~f:(fun e -> e.scenario.name) in
+    Stdlib.failwith
+      (Printf.sprintf
+         "tiny scenario entries not assigned to a stage_group: %s"
+         (String.concat ~sep:", " names))
+
+
 (** Print scenario names, one per line — legacy parity target for
     [python3 doc/_legacy_code/tiny_python_harness/scenarios.py list]. *)
 let print_list () =
