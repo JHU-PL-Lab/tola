@@ -186,6 +186,94 @@ table stays until the remodel lands.
 - `pkg_*` — packaging scenarios; placeholder for opam/pip/apt
   repackaging mismatches.
 
+### 5.1 Scenario grouping analysis (recorded 2026-07-06)
+
+Raw facts to review; supersedes an earlier coarser grouping in
+`canary_tiny_scenario.ml:stage_groups` that used SSOT §5's "Good
+counterpart" column as if it were a single label.
+
+Each scenario has (at least) two distinct stage attributions:
+
+- **perturbed_at** — which stage's artifacts the perturbation
+  modifies (or "post-Sc.N" for binary surgery on built
+  artifacts).
+- **manifests_at** — which stage first observes a failure (build
+  fail, probe fail, or "gap" = no detector wired even though the
+  perturbation exists).
+
+**Per-scenario table.**
+
+| Scenario                 | perturbed_at             | manifests_at         | detector today                       |
+| ------------------------ | ------------------------ | -------------------- | ------------------------------------ |
+| `symbol_missing`         | Sc.1 (native src)        | Sc.4 (probe fail)    | c1 cmp_symbol                        |
+| `header_arity_bump`      | Sc.1 (native src)        | Sc.2 (binding build fail) | c6 cmp_type                     |
+| `symbol_version_floor`   | Sc.1 (native src.map)    | Sc.4 (dyld load fail) | c5 cmp_sym_version                  |
+| `abi_soname_bump`        | post-Sc.1 (binary surgery) | Sc.4 (dyld load fail) | c4 cmp_abi                        |
+| `type_wrong`             | Sc.1 (native src)        | Sc.4 (probe fail)    | (weak — c6 wants clang AST)          |
+| `api_faithful`           | Sc.1 (native src, adds fn) | — (nothing detects) | **gap** — c8 not wired               |
+| `api_repack`             | Sc.2 (binding src)       | Sc.4 (probe fail)    | c3 cmp_behavior via probe            |
+| `api_complete`           | Sc.2 (binding mli)       | Sc.3 (app build fail) | c2 cmp_api_completeness             |
+| `behavior_silent`        | Sc.1 (native src)        | Sc.4 (probe fail)    | c3 cmp_behavior                      |
+| `symbol_orphan`          | Sc.2 (binding src)       | Sc.2 (link fail on strict linker) | c1 cmp_symbol           |
+| `api_repack_python`      | Sc.2 (binding src)       | Sc.4 (probe fail)    | c3 cmp_behavior via probe            |
+| `api_complete_python`    | Sc.2 (binding src)       | Sc.4 (probe fail)    | c2 cmp_api_completeness              |
+| `app_over_binding_ocaml` | — (positive)             | — (all pass)         | — (positive coverage)                |
+| `app_over_helper_ocaml`  | — (positive)             | — (all pass)         | — (positive coverage)                |
+| `api_repack_stub_orphan` | Sc.2 (binding stub layer) | — (probe passes)    | **gap** — c7 exists but exercised via bo1↔bo4 comparison, not runtime probe |
+
+**Grouped by `perturbed_at`.**
+
+- **Sc.1** — 7: symbol_missing, header_arity_bump,
+  symbol_version_floor, type_wrong, api_faithful,
+  behavior_silent, abi_soname_bump (via post-Sc.1 surgery)
+- **Sc.2** — 6: api_repack, api_complete, symbol_orphan,
+  api_repack_python, api_complete_python, api_repack_stub_orphan
+- **positive coverage** — 2: app_over_binding_ocaml,
+  app_over_helper_ocaml
+
+**Grouped by `manifests_at`.**
+
+- **Sc.2** (build-time) — 2: header_arity_bump, symbol_orphan
+- **Sc.3** (app-build) — 1: api_complete
+- **Sc.4** (runtime probe) — 8: symbol_missing,
+  symbol_version_floor, abi_soname_bump, type_wrong, api_repack,
+  behavior_silent, api_repack_python, api_complete_python
+- **detection gap** — 2: api_faithful, api_repack_stub_orphan
+- **positive coverage** — 2: app_over_binding_ocaml,
+  app_over_helper_ocaml
+- **Sc.1** — 0, **Sc.5** — 0, **Sc.6** — 0
+
+**Observations.**
+
+1. **Sc.4 (runtime probe) is the dominant manifestation stage
+   (8/15).** Static comparators catch things earlier (Sc.2 build,
+   Sc.3 app-build) when they exist; otherwise badness surfaces at
+   runtime.
+2. **Sc.1/Sc.5/Sc.6 have zero manifestations** in the current 15.
+   Not because those stages are boring — Sc.1 is where 7
+   perturbations are *applied* — but because the perturbations
+   don't target failures unique to those stages. Sc.5 (build
+   app_helper) and Sc.6 (run app_helper) are almost entirely
+   unexplored; the sole `app_over_helper_ocaml` is positive
+   coverage. Possible under-exercised area.
+3. **Two agreement gaps.** `api_faithful` (c8 not wired) and
+   `api_repack_stub_orphan` (c7 exists but only via static
+   bo1↔bo4 comparison, not probe). These are candidates for the
+   `derive_entries` experiment: the generator would emit them
+   flagged "no detector." Ideally the gaps become findable via
+   the agreement/checker registry rather than by hand-inspection.
+4. **Detection ≠ perturbation.** Where you patch is not where the
+   badness bites. The two-view separation clarifies §7
+   Principle 3 (Good × perturbation → bad) — the projection has
+   two axes, not one.
+
+**Code state (as of `d44e7fb`).** `stage_groups` in
+`canary_tiny_scenario.ml` uses only `manifests_at` — that's the
+minority view (8/15 all at Sc.4 makes it look uninteresting).
+Revising to include both views (or renaming to
+`manifests_at_groups` + adding a `perturbed_at_groups`) is
+queued in §9.3 backlog.
+
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
 **Flow.** Hand-curated here ──► reference for code renames + prose
@@ -429,11 +517,26 @@ addressed. Captured as awareness; not active work.
      verb). Add an `interested_artifacts_of_actions : rule list
      → artifact_kind list` helper; verify it produces the
      hand-mapped values for the 15 entries; drop the hand fields.
-   - [ ] **Regroup entries by good scenario (Sc.N)** — currently
-     flat list; group by Sc.N and see whether the 15 entries can
-     be *computed* from a small set of perturbation kinds ×
-     interested artifacts. If yes, the bad-scenario catalogue
-     becomes a projection of a smaller principled generator.
+   - [~] **Regroup entries by good scenario (Sc.N)** — first
+     pass landed as an additive view in commit `d44e7fb`, but
+     used a single ambiguous "stage" label. §5.1 analysis
+     (2026-07-06) splits this into two views —
+     `perturbed_at_stage` and `manifests_at_stage`. Code needs
+     revising to either rename current `stage_groups` to
+     `manifests_at_groups` + add `perturbed_at_groups`, OR extend
+     each group entry with both fields. Awaiting review.
+   - [ ] **`derive_entries` experiment.** With the two views
+     documented, implement a
+     `derive_entries : perturbation_category × Sc.N ×
+     interested_artifacts → entry list`
+     and diff against the current 15. Extras welcome
+     ("principle can cover more"). Should surface the two
+     detection gaps (`api_faithful`, `api_repack_stub_orphan`) as
+     "no-detector" cells naturally.
+   - [ ] **Fill the Sc.5 / Sc.6 under-exercised areas.** Only
+     `app_over_helper_ocaml` (positive) targets the helper-chain
+     stages. No bad scenarios exercise a helper-only failure
+     mode. Not urgent; note as coverage gap for the manuscript.
    - [ ] **Task 2 — perturbation to project-recipe layer.**
      Extract tiny-specific machinery (patch, soname_bump) to a
      project-hookable interface. Tied to the perturbation ↔
