@@ -376,17 +376,19 @@ let surface_delta
 let violates_label = Canary_tiny_scenario.violates_label
 
 let confirm_of
-    ~(spec : Canary_tiny_scenario.scenario_spec)
+    ~(entry : Canary_tiny_scenario.entry)
     ~(build_status : Yojson.Basic.t)
     ~(deltas : (string * Yojson.Basic.t) list)
   : Yojson.Basic.t =
+  let scenario = entry.scenario in
+  let recipe = entry.recipe in
   let violates_json =
-    `List (List.map spec.violates ~f:(fun c -> `String (violates_label c))) in
+    `List (List.map recipe.violates ~f:(fun c -> `String (violates_label c))) in
   let perturbs_json =
-    `List (List.map spec.perturbs ~f:(fun s -> `String s)) in
+    `List (List.map recipe.perturbs ~f:(fun s -> `String s)) in
   `Assoc [
-    "scenario",    `String spec.name;
-    "description", `String spec.description;
+    "scenario",    `String scenario.name;
+    "description", `String scenario.description;
     "perturbs",    perturbs_json;
     "violates",    violates_json;
     "build",       build_status;
@@ -456,13 +458,12 @@ let run ~(name : string) : unit =
   if not (Stdlib.Sys.file_exists B.baseline_inspect) then
     fail "no baseline cache at %s — run `tiny-scenarios baseline` first"
       B.baseline_inspect;
-  let spec =
-    match List.find Canary_tiny_scenario.scenarios
-            ~f:(fun s -> String.equal s.name name)
-    with
-    | Some s -> s
+  let entry =
+    match Canary_tiny_scenario.find_by_name name with
+    | Some e -> e
     | None -> fail "unknown scenario: %s" name
   in
+  let recipe = entry.recipe in
   let sandbox = scen_sandbox_of ~name in
   let inspect_dir = scen_inspect_of ~name in
   let workspace = scen_workspace_of ~name in
@@ -472,7 +473,7 @@ let run ~(name : string) : unit =
   if not (install_baseline_cext ~sandbox) then
     fail "baseline cext install failed";
   (* Apply source-side patch BEFORE build so it flows into artifacts. *)
-  (match spec.perturbation with
+  (match recipe.perturbation with
    | Some (Patch { patch_file; _ }) ->
      info "%s: apply patch %s" name patch_file;
      if not (apply_patch ~sandbox ~patch_file) then
@@ -483,7 +484,7 @@ let run ~(name : string) : unit =
   let native_ok = build_c_lib_in ~sandbox in
   let ocaml_ok  = if native_ok then build_ocaml_binding_in ~sandbox else false in
   (* Apply SONAME bump AFTER build (mutates the built .so). *)
-  (match spec.perturbation with
+  (match recipe.perturbation with
    | Some (Soname_bump { from_so; to_so }) ->
      info "%s: apply soname bump %s -> %s" name from_so to_so;
      let _ = apply_soname_bump ~sandbox ~from_so ~to_so in ()
@@ -517,7 +518,7 @@ let run ~(name : string) : unit =
       | Some d -> Some (alias, d)
       | None -> None)
   in
-  let confirm = confirm_of ~spec ~build_status ~deltas in
+  let confirm = confirm_of ~entry ~build_status ~deltas in
   save_json (scen_cache_of ~name ^ "/confirm_ill.json") confirm;
   info "%s: materialize workspace" name;
   let ws_count = materialize_workspace ~sandbox ~target:workspace in
@@ -540,12 +541,12 @@ let run_all () : unit =
     B.run ()
   end;
   let failed = ref [] in
-  List.iter Canary_tiny_scenario.scenarios ~f:(fun s ->
-    try run ~name:s.name
-    with _ -> failed := s.name :: !failed);
+  List.iter Canary_tiny_scenario.entries ~f:(fun e ->
+    try run ~name:e.scenario.name
+    with _ -> failed := e.scenario.name :: !failed);
   match !failed with
   | [] -> info "prepare-all: %d scenarios ok"
-            (List.length Canary_tiny_scenario.scenarios)
+            (List.length Canary_tiny_scenario.entries)
   | xs ->
     warn "prepare-all: %d failures: %s"
       (List.length xs) (String.concat ~sep:", " (List.rev xs));
