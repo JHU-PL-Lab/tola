@@ -191,31 +191,6 @@ acceptable while §5.1 is still churning; once stable, IDs freeze.
 | Bs.12 | Sc.2          | binding_source (python)           | `api_complete_python`    | Sc.4 (probe fail)                 | c2 cmp_api_completeness                                  |
 | Bs.13 | Sc.2          | binding_source (ocaml stub layer) | `api_repack_stub_orphan` | — (probe passes)                  | **gap** — c7 static-only (bo1↔bo4 comparison, not probe) |
 
-**Grouped by Good scenario.**
-
-- **Sc.1** — 7: Bs.1, Bs.2, Bs.3, Bs.4 (binary surgery on Sc.1's
-  output), Bs.5, Bs.6, Bs.7
-- **Sc.2** — 6: Bs.8, Bs.9, Bs.10, Bs.11, Bs.12, Bs.13
-- **Sc.3–Sc.6** — 0 bad scenarios currently.
-
-**Grouped by Perturbation source.**
-
-- **native_source (patch)** — 5: Bs.1, Bs.2, Bs.3, Bs.5, Bs.6
-- **native_lib (binary surgery)** — 1: Bs.4
-- **behavior (native src semantics without symbol change)** — 1:
-  Bs.7
-- **binding_source (patch)** — 6: Bs.8, Bs.9, Bs.10, Bs.11,
-  Bs.12, Bs.13
-
-**Grouped by Manifests.**
-
-- **Sc.2** (build fail) — 2: Bs.2, Bs.10
-- **Sc.3** (app-build fail) — 1: Bs.9
-- **Sc.4** (runtime probe fail) — 8: Bs.1, Bs.3, Bs.4, Bs.5,
-  Bs.7, Bs.8, Bs.11, Bs.12
-- **detection gap** — 2: Bs.6, Bs.13
-- **Sc.1 / Sc.5 / Sc.6** — 0 each
-
 **Observations.**
 
 1. **Sc.4 (runtime probe) is the dominant manifestation stage
@@ -232,23 +207,14 @@ acceptable while §5.1 is still churning; once stable, IDs freeze.
    Bs.13 `api_repack_stub_orphan` (c7 static-only, not probe).
    Ideally the `derive_entries` experiment (§9.3 backlog) finds
    these automatically as "no-detector" cells.
-4. **Manifestation and detection are secondary to construction.**
-   A scenario is fully defined by (Good scenario × Perturbation)
-   — its physical setup. What agreement is expected, where the
-   badness first bites, and which checker catches it are
-   consequences, not part of the scenario definition. This
-   framing clarifies §7 Principle 3.
-5. **Two perspectives side-by-side.** `Good scenario` = *where
-   the bad artifact/behavior is constructed*
-   (perturbation-perspective). `Manifests` = *where the bad
-   artifact/behavior bites downstream*
-   (manifestation-perspective). The latter recovers the earlier
-   "dual-view" idea (§7 Principle 3 dual reading): for a given
-   bad artifact, in which downstream scenarios does trouble
-   surface? The table captures both views on each row; the
-   alignment between them across rows is the invariant that
-   §7 Principle 3 says should hold — checkable once the
-   agreement/checker registry is in place.
+4. **The two columns `Good scenario` and `Manifests` are
+   perpendicular perspectives on each row.** `Good scenario`
+   locates *where the construction happens* (perturbation
+   perspective); `Manifests` locates *where the failure surfaces
+   downstream* (manifestation perspective). The latter recovers
+   the earlier "dual-view" idea (§7 Principle 3). Their alignment
+   across rows is the invariant §7 Principle 3 wants — checkable
+   once the agreement/checker registry is in place.
 
 ### 5.2 Patterns vs instances
 
