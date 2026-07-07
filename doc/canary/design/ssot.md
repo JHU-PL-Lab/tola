@@ -135,7 +135,7 @@ finer action graph (§6.5): `Fetch/Build_lib/Build_binding/Build_app/Probe`
 crossed with artifact kinds. The 15-pattern action-path table
 (`canary paths`) is the full enumeration at a finer grain.
 
-## 5. Bad Scenarios (no ID prefix; `snake_case` names)
+## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
 SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
@@ -171,6 +171,10 @@ they're constructions that verify a good-scenario execution
 without perturbation, not bad scenarios. Attribution under §4 as
 "verified by" entries is a future cleanup.
 
+Ordering convention: rows grouped by Good scenario, then by
+perturbation similarity. Renumbering when scenarios reorder is
+acceptable while §5.1 is still churning; once stable, IDs freeze.
+
 | ID    | Good scenario | Perturbation                      | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |
 | Bs.1  | Sc.1          | native_source (c/src)             | `symbol_missing`         | Sc.4 (probe fail)                 | c1 cmp_symbol                                            |
@@ -179,9 +183,9 @@ without perturbation, not bad scenarios. Attribution under §4 as
 | Bs.4  | Sc.1          | native_lib (binary surgery)       | `abi_soname_bump`        | Sc.4 (dyld load fail)             | c4 cmp_abi                                               |
 | Bs.5  | Sc.1          | native_source (c/src signature)   | `type_wrong`             | Sc.4 (probe fail)                 | (weak — c6 wants clang AST)                              |
 | Bs.6  | Sc.1          | native_source (c adds fn)         | `api_faithful`           | — (nothing detects)               | **gap** — c8 not wired                                   |
-| Bs.7  | Sc.2          | binding_source (ocaml user)       | `api_repack`             | Sc.4 (probe fail)                 | c3 cmp_behavior via probe                                |
-| Bs.8  | Sc.2          | binding_source (ocaml mli)        | `api_complete`           | Sc.3 (app build fail)             | c2 cmp_api_completeness                                  |
-| Bs.9  | Sc.1          | behavior (native src semantics)   | `behavior_silent`        | Sc.4 (probe fail)                 | c3 cmp_behavior                                          |
+| Bs.7  | Sc.1          | behavior (native src semantics)   | `behavior_silent`        | Sc.4 (probe fail)                 | c3 cmp_behavior                                          |
+| Bs.8  | Sc.2          | binding_source (ocaml user)       | `api_repack`             | Sc.4 (probe fail)                 | c3 cmp_behavior via probe                                |
+| Bs.9  | Sc.2          | binding_source (ocaml mli)        | `api_complete`           | Sc.3 (app build fail)             | c2 cmp_api_completeness                                  |
 | Bs.10 | Sc.2          | binding_source (ocaml stub)       | `symbol_orphan`          | Sc.2 (link fail on strict linker) | c1 cmp_symbol                                            |
 | Bs.11 | Sc.2          | binding_source (python)           | `api_repack_python`      | Sc.4 (probe fail)                 | c3 cmp_behavior via probe                                |
 | Bs.12 | Sc.2          | binding_source (python)           | `api_complete_python`    | Sc.4 (probe fail)                 | c2 cmp_api_completeness                                  |
@@ -190,8 +194,8 @@ without perturbation, not bad scenarios. Attribution under §4 as
 **Grouped by Good scenario.**
 
 - **Sc.1** — 7: Bs.1, Bs.2, Bs.3, Bs.4 (binary surgery on Sc.1's
-  output), Bs.5, Bs.6, Bs.9
-- **Sc.2** — 6: Bs.7, Bs.8, Bs.10, Bs.11, Bs.12, Bs.13
+  output), Bs.5, Bs.6, Bs.7
+- **Sc.2** — 6: Bs.8, Bs.9, Bs.10, Bs.11, Bs.12, Bs.13
 - **Sc.3–Sc.6** — 0 bad scenarios currently.
 
 **Grouped by Perturbation source.**
@@ -199,16 +203,16 @@ without perturbation, not bad scenarios. Attribution under §4 as
 - **native_source (patch)** — 5: Bs.1, Bs.2, Bs.3, Bs.5, Bs.6
 - **native_lib (binary surgery)** — 1: Bs.4
 - **behavior (native src semantics without symbol change)** — 1:
-  Bs.9
-- **binding_source (patch)** — 6: Bs.7, Bs.8, Bs.10, Bs.11,
+  Bs.7
+- **binding_source (patch)** — 6: Bs.8, Bs.9, Bs.10, Bs.11,
   Bs.12, Bs.13
 
 **Grouped by Manifests.**
 
 - **Sc.2** (build fail) — 2: Bs.2, Bs.10
-- **Sc.3** (app-build fail) — 1: Bs.8
+- **Sc.3** (app-build fail) — 1: Bs.9
 - **Sc.4** (runtime probe fail) — 8: Bs.1, Bs.3, Bs.4, Bs.5,
-  Bs.7, Bs.9, Bs.11, Bs.12
+  Bs.7, Bs.8, Bs.11, Bs.12
 - **detection gap** — 2: Bs.6, Bs.13
 - **Sc.1 / Sc.5 / Sc.6** — 0 each
 
@@ -234,6 +238,17 @@ without perturbation, not bad scenarios. Attribution under §4 as
    badness first bites, and which checker catches it are
    consequences, not part of the scenario definition. This
    framing clarifies §7 Principle 3.
+5. **Two perspectives side-by-side.** `Good scenario` = *where
+   the bad artifact/behavior is constructed*
+   (perturbation-perspective). `Manifests` = *where the bad
+   artifact/behavior bites downstream*
+   (manifestation-perspective). The latter recovers the earlier
+   "dual-view" idea (§7 Principle 3 dual reading): for a given
+   bad artifact, in which downstream scenarios does trouble
+   surface? The table captures both views on each row; the
+   alignment between them across rows is the invariant that
+   §7 Principle 3 says should hold — checkable once the
+   agreement/checker registry is in place.
 
 ### 5.2 Patterns vs instances
 
