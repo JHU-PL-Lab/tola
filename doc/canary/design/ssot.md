@@ -121,14 +121,14 @@ subgraph of the action catalogue (§6.5).
 
 Status: **stable for manuscript**. Used in draft.md L349 table.
 
-| ID   | Scenario name            | Stage                  | Inputs → Outputs                | Status |
-| ---- | ------------------------ | ---------------------- | ------------------------------- | ------ |
-| Sc.1 | `build_native_lib`       | Upstream               | Ar.0 (native_source) → Ar.1 (native_lib) | stable |
-| Sc.2 | `build_binding`          | Binding creation       | Ar.1 + Ar.2 (binding_source) → Ar.3 (binding_lib) | stable |
-| Sc.3 | `build_app_with_binding` | Binding use (direct)   | Ar.3 + app_src → app_binary     | stable |
-| Sc.4 | `run_app_with_binding`   | Binding use (direct)   | app_binary + Ar.1 (runtime) → run_output | stable |
-| Sc.5 | `build_app_helper`       | Binding use (indirect) | Ar.3 + helper_src + app_src → helper + app_binary | stable |
-| Sc.6 | `run_app_helper`         | Binding use (indirect) | app_binary + helper + Ar.1 (runtime) → run_output | stable |
+| ID   | Scenario name            | Stage                  | Inputs → Outputs                                  |
+| ---- | ------------------------ | ---------------------- | ------------------------------------------------- |
+| Sc.1 | `build_native_lib`       | Upstream               | Ar.0 (native_source) → Ar.1 (native_lib)          |
+| Sc.2 | `build_binding`          | Binding creation       | Ar.1 + Ar.2 (binding_source) → Ar.3 (binding_lib) |
+| Sc.3 | `build_app_with_binding` | Binding use (direct)   | Ar.3 + app_src → app_binary                       |
+| Sc.4 | `run_app_with_binding`   | Binding use (direct)   | app_binary + Ar.1 (runtime) → run_output          |
+| Sc.5 | `build_app_helper`       | Binding use (indirect) | Ar.3 + helper_src + app_src → helper + app_binary |
+| Sc.6 | `run_app_helper`         | Binding use (indirect) | app_binary + helper + Ar.1 (runtime) → run_output |
 
 **Code correspondence.** The 6 good scenarios aggregate over the
 finer action graph (§6.5): `Fetch/Build_lib/Build_binding/Build_app/Probe`
@@ -153,90 +153,106 @@ sole producer as of Phase E; the legacy Python harness
 ### 5.1 Per-scenario detail
 
 Columns split into two:
-- **Physical facts** (constructed setup): `Good scenario` +
+- **Physical facts** (constructed setup): `ID`, `Good scenario`,
   `Perturbation`.
-- **Secondary / derived**: `Scenario` (= agreement label —
-  what's *expected* in the good scenario, and named after what
-  gets violated), `Manifests` (where the failure first surfaces
+- **Secondary / derived**: `Name` (= agreement label — what's
+  *expected* in the good scenario, named after what gets
+  violated), `Manifests` (where the failure first surfaces
   today), `Detector today` (which contract check catches it, or
   gap).
 
-| Good scenario | Perturbation                             | Scenario                 | Manifests                          | Detector today                                                          |
-| ------------- | ---------------------------------------- | ------------------------ | ---------------------------------- | ----------------------------------------------------------------------- |
-| Sc.1          | native_source (c/src)                    | `symbol_missing`         | Sc.4 (probe fail)                  | c1 cmp_symbol                                                           |
-| Sc.1          | native_source (c/{include,src})          | `header_arity_bump`      | Sc.2 (binding build fail)          | c6 cmp_type                                                             |
-| Sc.1          | native_source (c/tiny.map)               | `symbol_version_floor`   | Sc.4 (dyld load fail)              | c5 cmp_sym_version                                                      |
-| Sc.1          | native_lib (binary surgery)              | `abi_soname_bump`        | Sc.4 (dyld load fail)              | c4 cmp_abi                                                              |
-| Sc.1          | native_source (c/src signature)          | `type_wrong`             | Sc.4 (probe fail)                  | (weak — c6 wants clang AST)                                             |
-| Sc.1          | native_source (c adds fn)                | `api_faithful`           | — (nothing detects)                | **gap** — c8 not wired                                                  |
-| Sc.2          | binding_source (ocaml user)              | `api_repack`             | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                               |
-| Sc.2          | binding_source (ocaml mli)               | `api_complete`           | Sc.3 (app build fail)              | c2 cmp_api_completeness                                                 |
-| Sc.1          | behavior (native src semantics)          | `behavior_silent`        | Sc.4 (probe fail)                  | c3 cmp_behavior                                                         |
-| Sc.2          | binding_source (ocaml stub)              | `symbol_orphan`          | Sc.2 (link fail on strict linker)  | c1 cmp_symbol                                                           |
-| Sc.2          | binding_source (python)                  | `api_repack_python`      | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                               |
-| Sc.2          | binding_source (python)                  | `api_complete_python`    | Sc.4 (probe fail)                  | c2 cmp_api_completeness                                                 |
-| Sc.3–Sc.4     | — (positive)                             | `app_over_binding_ocaml` | — (all pass)                       | — (positive coverage)                                                   |
-| Sc.5–Sc.6     | — (positive)                             | `app_over_helper_ocaml`  | — (all pass)                       | — (positive coverage)                                                   |
-| Sc.2          | binding_source (ocaml stub layer)        | `api_repack_stub_orphan` | — (probe passes)                   | **gap** — c7 static-only (bo1↔bo4 comparison, not probe)                |
+`Bs.N` = **B**ad **s**cenario number N. IDs are stable — new
+scenarios append; renames don't renumber.
+
+Positive-coverage scenarios (`app_over_binding_ocaml`,
+`app_over_helper_ocaml`) live in the tiny code registry
+(`Canary_tiny_scenario.entries`) but are **not** listed here —
+they're constructions that verify a good-scenario execution
+without perturbation, not bad scenarios. Attribution under §4 as
+"verified by" entries is a future cleanup.
+
+| ID    | Good scenario | Perturbation                      | Name                     | Manifests                         | Detector today                                           |
+| ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |
+| Bs.1  | Sc.1          | native_source (c/src)             | `symbol_missing`         | Sc.4 (probe fail)                 | c1 cmp_symbol                                            |
+| Bs.2  | Sc.1          | native_source (c/{include,src})   | `header_arity_bump`      | Sc.2 (binding build fail)         | c6 cmp_type                                              |
+| Bs.3  | Sc.1          | native_source (c/tiny.map)        | `symbol_version_floor`   | Sc.4 (dyld load fail)             | c5 cmp_sym_version                                       |
+| Bs.4  | Sc.1          | native_lib (binary surgery)       | `abi_soname_bump`        | Sc.4 (dyld load fail)             | c4 cmp_abi                                               |
+| Bs.5  | Sc.1          | native_source (c/src signature)   | `type_wrong`             | Sc.4 (probe fail)                 | (weak — c6 wants clang AST)                              |
+| Bs.6  | Sc.1          | native_source (c adds fn)         | `api_faithful`           | — (nothing detects)               | **gap** — c8 not wired                                   |
+| Bs.7  | Sc.2          | binding_source (ocaml user)       | `api_repack`             | Sc.4 (probe fail)                 | c3 cmp_behavior via probe                                |
+| Bs.8  | Sc.2          | binding_source (ocaml mli)        | `api_complete`           | Sc.3 (app build fail)             | c2 cmp_api_completeness                                  |
+| Bs.9  | Sc.1          | behavior (native src semantics)   | `behavior_silent`        | Sc.4 (probe fail)                 | c3 cmp_behavior                                          |
+| Bs.10 | Sc.2          | binding_source (ocaml stub)       | `symbol_orphan`          | Sc.2 (link fail on strict linker) | c1 cmp_symbol                                            |
+| Bs.11 | Sc.2          | binding_source (python)           | `api_repack_python`      | Sc.4 (probe fail)                 | c3 cmp_behavior via probe                                |
+| Bs.12 | Sc.2          | binding_source (python)           | `api_complete_python`    | Sc.4 (probe fail)                 | c2 cmp_api_completeness                                  |
+| Bs.13 | Sc.2          | binding_source (ocaml stub layer) | `api_repack_stub_orphan` | — (probe passes)                  | **gap** — c7 static-only (bo1↔bo4 comparison, not probe) |
 
 **Grouped by Good scenario.**
 
-- **Sc.1** — 7: symbol_missing, header_arity_bump,
-  symbol_version_floor, abi_soname_bump (binary surgery on
-  Sc.1's output), type_wrong, api_faithful, behavior_silent
-- **Sc.2** — 6: api_repack, api_complete, symbol_orphan,
-  api_repack_python, api_complete_python, api_repack_stub_orphan
-- **Sc.3–Sc.6** — 2 positive-coverage constructions
-  (app_over_binding_ocaml at Sc.3–Sc.4, app_over_helper_ocaml at
-  Sc.5–Sc.6)
+- **Sc.1** — 7: Bs.1, Bs.2, Bs.3, Bs.4 (binary surgery on Sc.1's
+  output), Bs.5, Bs.6, Bs.9
+- **Sc.2** — 6: Bs.7, Bs.8, Bs.10, Bs.11, Bs.12, Bs.13
+- **Sc.3–Sc.6** — 0 bad scenarios currently.
 
 **Grouped by Perturbation source.**
 
-- **native_source (patch)** — 6: symbol_missing,
-  header_arity_bump, symbol_version_floor, type_wrong,
-  api_faithful, behavior_silent (well, semantic — see next)
-- **native_lib (binary surgery)** — 1: abi_soname_bump
+- **native_source (patch)** — 5: Bs.1, Bs.2, Bs.3, Bs.5, Bs.6
+- **native_lib (binary surgery)** — 1: Bs.4
 - **behavior (native src semantics without symbol change)** — 1:
-  behavior_silent (also patches native_source, categorised here
-  because the perturbation is behaviour-flavoured)
-- **binding_source (patch)** — 6: api_repack, api_complete,
-  symbol_orphan, api_repack_python, api_complete_python,
-  api_repack_stub_orphan
-- **positive coverage** — 2: app_over_binding_ocaml,
-  app_over_helper_ocaml
+  Bs.9
+- **binding_source (patch)** — 6: Bs.7, Bs.8, Bs.10, Bs.11,
+  Bs.12, Bs.13
 
 **Grouped by Manifests.**
 
-- **Sc.2** (build fail) — 2: header_arity_bump, symbol_orphan
-- **Sc.3** (app-build fail) — 1: api_complete
-- **Sc.4** (runtime probe fail) — 8: symbol_missing,
-  symbol_version_floor, abi_soname_bump, type_wrong, api_repack,
-  behavior_silent, api_repack_python, api_complete_python
-- **detection gap** — 2: api_faithful, api_repack_stub_orphan
-- **positive coverage** — 2: app_over_binding_ocaml,
-  app_over_helper_ocaml
+- **Sc.2** (build fail) — 2: Bs.2, Bs.10
+- **Sc.3** (app-build fail) — 1: Bs.8
+- **Sc.4** (runtime probe fail) — 8: Bs.1, Bs.3, Bs.4, Bs.5,
+  Bs.7, Bs.9, Bs.11, Bs.12
+- **detection gap** — 2: Bs.6, Bs.13
 - **Sc.1 / Sc.5 / Sc.6** — 0 each
 
 **Observations.**
 
 1. **Sc.4 (runtime probe) is the dominant manifestation stage
-   (8/15).** Static comparators catch things earlier (Sc.2/Sc.3
+   (8/13).** Static comparators catch things earlier (Sc.2/Sc.3
    build) when they exist; otherwise badness surfaces at runtime.
-2. **Sc.1/Sc.5/Sc.6 have zero manifestations, not zero
-   involvement.** Sc.1 is where 7 perturbations are *applied*
-   (physical fact), but the failure never surfaces at native
-   build alone. Sc.5/Sc.6 (helper chain) are under-explored —
-   sole entry is `app_over_helper_ocaml` (positive).
-3. **Two detection gaps.** `api_faithful` (c8 not wired) and
-   `api_repack_stub_orphan` (c7 static-only, not probe). Ideally
-   the `derive_entries` experiment (§9.3 backlog) finds these
-   automatically as "no-detector" cells.
+2. **Sc.3–Sc.6 have zero bad scenarios in the current
+   catalogue.** Sc.1 and Sc.2 hold everything — the stages where
+   sources are authored. Sc.3+ are use-and-run stages; badness
+   propagates *through* them but the *construction*
+   (perturbation) sits at Sc.1/Sc.2. Whether Sc.3–Sc.6 admit
+   their own bad scenarios (assembly-time or run-time patches) is
+   an open question.
+3. **Two detection gaps.** Bs.6 `api_faithful` (c8 not wired) and
+   Bs.13 `api_repack_stub_orphan` (c7 static-only, not probe).
+   Ideally the `derive_entries` experiment (§9.3 backlog) finds
+   these automatically as "no-detector" cells.
 4. **Manifestation and detection are secondary to construction.**
    A scenario is fully defined by (Good scenario × Perturbation)
    — its physical setup. What agreement is expected, where the
    badness first bites, and which checker catches it are
    consequences, not part of the scenario definition. This
    framing clarifies §7 Principle 3.
+
+### 5.2 Patterns vs instances
+
+Both good scenarios (§4) and bad scenarios (§5.1) here are
+**patterns** — abstract descriptions of a construction. A
+concrete project (tiny today, or a future z3/llvm equivalent)
+provides the **instances**: the actual perturbation files,
+sandbox paths, build commands, expected outcomes.
+
+The code split reflects this:
+
+- `Canary_scenario.scenario` — the pattern (project-agnostic).
+- `Canary_tiny_scenario.entry` — a tiny instance (concrete files
+  + expected outcomes for tiny).
+
+A same-shape recipe for another project would live in a
+`canary_<project>_scenario.ml` file and produce
+`Canary_scenario.scenario` patterns paired with a
+project-specific recipe.
 
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
@@ -250,26 +266,26 @@ constructors). Code lags behind — full rename sweep is deferred
 
 ### 6.1 Hierarchy (big → small)
 
-| Level | Term | Meaning | Code today | Rename target |
-|---|---|---|---|---|
-| High | **scenario** | Named collection of actions + interested artifacts. Sc.N. | *(new; §9.3 introduces)* | new type `scenario` |
-| Mid | **action** | Operational verb (`Build_lib`, `Probe of _`, …) | `rule` | `action` |
-| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `step` + `action_step` (split) | collapse into `step` |
-| Attribute of action | **stage** | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this) | *(new use)* |
-| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. | (currently overloaded onto action verb) | free `rule` for theory |
+| Level               | Term         | Meaning                                                                                                                               | Code today                              | Rename target          |
+| ------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------- |
+| High                | **scenario** | Named collection of actions + interested artifacts. Sc.N.                                                                             | *(new; §9.3 introduces)*                | new type `scenario`    |
+| Mid                 | **action**   | Operational verb (`Build_lib`, `Probe of _`, …)                                                                                       | `rule`                                  | `action`               |
+| Low                 | **step**     | Concrete instantiation of an action: cmdline + env + expectation.                                                                     | `step` + `action_step` (split)          | collapse into `step`   |
+| Attribute of action | **stage**    | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this)                              | *(new use)*            |
+| Theory              | **rule**     | *What an action is for* — operational semantics / invariants. Doc-only concept.                                                       | (currently overloaded onto action verb) | free `rule` for theory |
 
 ### 6.2 Code term clashes to resolve (rename map)
 
 Deferred code sweep; agreement first, then flush.
 
-| Code today | Meaning today | Rename target | Rationale |
-|---|---|---|---|
-| `rule` (`canary_action.ml`) | Action verb variant | **`action`** | Frees `rule` for theory-level meaning |
-| `action_step` (`canary_step_model.ml`) | step + expectation | **`step`** | The runtime unit — no reason to over-qualify |
-| `step` (`canary_basic.ml`) | 10-field record with cmdline/env/produces | **`step_body`** or collapsed | Semi-redundant with action_step; decide when we rename |
-| `stage` (`canary_store.ml`) | Artifact-lifecycle state (`Built | Installed | Packed | Fetched`) | **`artifact_status`** or `lifecycle_state` | Frees `stage` for pipeline-phase meaning |
-| `probe_action` (`canary_basic.ml`) | `Compile_example | Run_example` | stays | Already appropriately scoped as one probe's sub-choice |
-| `compile_mode` | `Native | Bytecode` | stays | Fine as-is |
+| Code today                             | Meaning today                             | Rename target                | Rationale                                              |
+| -------------------------------------- | ----------------------------------------- | ---------------------------- | ------------------------------------------------------ |
+| `rule` (`canary_action.ml`)            | Action verb variant                       | **`action`**                 | Frees `rule` for theory-level meaning                  |
+| `action_step` (`canary_step_model.ml`) | step + expectation                        | **`step`**                   | The runtime unit — no reason to over-qualify           |
+| `step` (`canary_basic.ml`)             | 10-field record with cmdline/env/produces | **`step_body`** or collapsed | Semi-redundant with action_step; decide when we rename |
+| `stage` (`canary_store.ml`)            | Artifact-lifecycle state (`Built          | Installed                    | Packed                                                 | Fetched`)                                              | **`artifact_status`** or `lifecycle_state` | Frees `stage` for pipeline-phase meaning |
+| `probe_action` (`canary_basic.ml`)     | `Compile_example                          | Run_example`                 | stays                                                  | Already appropriately scoped as one probe's sub-choice |
+| `compile_mode`                         | `Native                                   | Bytecode`                    | stays                                                  | Fine as-is                                             |
 
 ### 6.3 Writeup ↔ code alignment (after rename)
 
