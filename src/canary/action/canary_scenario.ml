@@ -92,55 +92,85 @@ type scenario = {
 
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
 
-(** The six good scenarios from SSOT §4 — project-agnostic
-    patterns. Each Sc.N describes a stage; concrete projects
-    (tiny, z3, ...) instantiate the pattern with their own
-    artifacts and probes. [perturbation = None] on all of them
-    (good = no perturbation, by definition). *)
+(** Good scenarios from SSOT §4 — project-agnostic patterns.
+    Each Sc.N describes a stage; language qualifiers appear
+    as suffixes (Sc.N.<Lang>) for language-specific stages.
+    Sc.1 is shared across languages (the native lib itself is
+    language-agnostic under the SCAB — static C API binding —
+    assumption we currently fix).
+
+    Concrete projects (tiny, z3, ...) instantiate the pattern
+    with their own artifacts and probes. [perturbation = None]
+    on all (good = no perturbation, by definition).
+
+    Mechanism dimension (SCAB vs DFFI vs …) is currently fixed
+    to SCAB; a future extension may promote it to an explicit
+    axis. *)
 let good_scenarios : scenario list =
   let open Canary_basic in
   let open Canary_lang in
   [
+    (* Shared upstream *)
     { id = "Sc.1"; name = "build_native_lib";
-      description = "Upstream — build the native library from source.";
+      description = "Upstream — build the native library from source. \
+                     Shared across languages (under the static C API \
+                     binding assumption).";
       actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
       related_artifacts = [ Source; Lib ];
       perturbation = None;
       belongs_to = [ "Sc.1" ] };
-    { id = "Sc.2"; name = "build_binding";
-      description = "Binding creation — build language bindings against \
-                     the native lib.";
-      actions = [ Build_binding OCaml; Build_binding Python ];
-      related_artifacts = [ Lib; Binding OCaml; Binding Python ];
+
+    (* OCaml side *)
+    { id = "Sc.2.OCaml"; name = "build_binding";
+      description = "Build the OCaml binding against the native lib.";
+      actions = [ Build_binding OCaml ];
+      related_artifacts = [ Lib; Binding OCaml ];
       perturbation = None;
-      belongs_to = [ "Sc.2" ] };
-    { id = "Sc.3"; name = "build_app_with_binding";
-      description = "Binding use (direct) — build an app that links \
-                     against a binding.";
-      actions = [ Build_app ];
-      related_artifacts = [ Binding OCaml; Binding Python; App ];
-      perturbation = None;
-      belongs_to = [ "Sc.3" ] };
-    { id = "Sc.4"; name = "run_app_with_binding";
-      description = "Binding use (direct) — run the app against the \
-                     binding + native lib at runtime.";
-      actions = [ Probe App ];
-      related_artifacts = [ Binding OCaml; Binding Python; Lib; App ];
-      perturbation = None;
-      belongs_to = [ "Sc.4" ] };
-    { id = "Sc.5"; name = "build_app_helper";
-      description = "Binding use (indirect) — build an app via a helper \
-                     library that wraps the binding.";
+      belongs_to = [ "Sc.2.OCaml" ] };
+    { id = "Sc.3.OCaml"; name = "build_app_with_binding";
+      description = "Build an OCaml app that links against the OCaml \
+                     binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
       perturbation = None;
-      belongs_to = [ "Sc.5" ] };
-    { id = "Sc.6"; name = "run_app_helper";
-      description = "Binding use (indirect) — run the app-via-helper chain.";
+      belongs_to = [ "Sc.3.OCaml" ] };
+    { id = "Sc.4.OCaml"; name = "run_app_with_binding";
+      description = "Run the OCaml app; loader resolves the native lib \
+                     at load time.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
       perturbation = None;
-      belongs_to = [ "Sc.6" ] };
+      belongs_to = [ "Sc.4.OCaml" ] };
+    { id = "Sc.5.OCaml"; name = "build_app_helper";
+      description = "Build the app via an intermediate helper library \
+                     that wraps the OCaml binding.";
+      actions = [ Build_app ];
+      related_artifacts = [ Binding OCaml; App ];
+      perturbation = None;
+      belongs_to = [ "Sc.5.OCaml" ] };
+    { id = "Sc.6.OCaml"; name = "run_app_helper";
+      description = "Run the app-via-helper chain.";
+      actions = [ Probe App ];
+      related_artifacts = [ Binding OCaml; Lib; App ];
+      perturbation = None;
+      belongs_to = [ "Sc.6.OCaml" ] };
+
+    (* Python side — no Sc.3.Python (.py IS the app, no build step);
+       no Sc.5/Sc.6 (no Python helper in tiny). *)
+    { id = "Sc.2.Python"; name = "build_binding";
+      description = "Build the Python binding (cext) against the \
+                     native lib.";
+      actions = [ Build_binding Python ];
+      related_artifacts = [ Lib; Binding Python ];
+      perturbation = None;
+      belongs_to = [ "Sc.2.Python" ] };
+    { id = "Sc.4.Python"; name = "run_app_with_binding";
+      description = "Run the Python probe (imports the binding; loader \
+                     resolves the native lib).";
+      actions = [ Probe App ];
+      related_artifacts = [ Binding Python; Lib; App ];
+      perturbation = None;
+      belongs_to = [ "Sc.4.Python" ] };
   ]
 
 (* ---------- validators ---------- *)

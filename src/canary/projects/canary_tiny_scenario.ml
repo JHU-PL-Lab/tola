@@ -136,18 +136,21 @@ let pert
    Pc.1, Pc.2 for positive coverage)
    ================================================================ *)
 
-(** Derive [belongs_to] from the entry id per §5.1's Grouped by
-    Good scenario view. Sc.1 = 7 native-side (Bs.1..Bs.7);
-    Sc.2 = 6 binding-side (Bs.8..Bs.13); positive coverage links
-    to the good scenarios it verifies. *)
+(** Derive [belongs_to] from the entry id, post-language-split.
+    Sc.1 stays shared (7 native perturbations Bs.1..Bs.7).
+    Sc.2 splits by language: OCaml binding-side (Bs.8, Bs.9,
+    Bs.10, Bs.13) vs Python binding-side (Bs.11, Bs.12).
+    Positive coverage points at the OCaml stages it verifies. *)
 let belongs_to_of_id (id : string) : string list =
   match id with
   | "Bs.1" | "Bs.2" | "Bs.3" | "Bs.4" | "Bs.5" | "Bs.6" | "Bs.7" ->
     [ "Sc.1" ]
-  | "Bs.8" | "Bs.9" | "Bs.10" | "Bs.11" | "Bs.12" | "Bs.13" ->
-    [ "Sc.2" ]
-  | "Pc.1" -> [ "Sc.3"; "Sc.4" ]
-  | "Pc.2" -> [ "Sc.5"; "Sc.6" ]
+  | "Bs.8" | "Bs.9" | "Bs.10" | "Bs.13" ->
+    [ "Sc.2.OCaml" ]
+  | "Bs.11" | "Bs.12" ->
+    [ "Sc.2.Python" ]
+  | "Pc.1" -> [ "Sc.3.OCaml"; "Sc.4.OCaml" ]
+  | "Pc.2" -> [ "Sc.5.OCaml"; "Sc.6.OCaml" ]
   | other ->
     Stdlib.failwith
       (Printf.sprintf "unknown id for belongs_to derivation: %S" other)
@@ -175,7 +178,7 @@ let entries : entry list =
       ~concrete_pert:(c_patch "symbol_missing")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
                         ~detector:(Wired C1))
       ~violates:[ C1 ]
       ~expected:[
@@ -198,7 +201,7 @@ let entries : entry list =
       ~concrete_pert:(c_patch "header_arity_bump")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
-                        ~manifest:(Definite "Sc.2")
+                        ~manifest:(Definite "Sc.2.OCaml")
                         ~detector:(Wired C6))
       ~violates:[ C6 ]
       ~expected:[
@@ -222,7 +225,7 @@ let entries : entry list =
       ~concrete_pert:(c_patch "symbol_version_floor")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Definite "Sc.4.Python")
                         ~detector:(Wired C5))
       ~violates:[ C5 ]
       ~expected:[
@@ -245,7 +248,7 @@ let entries : entry list =
                                            to_so = "libtiny.so.2.0" }))
       ~scenario_pert:(pert ~target:Canary_basic.Lib
                         ~kind:(On_artifact Lib)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
                         ~detector:(Wired C4))
       ~violates:[ C4 ]
       ~expected:[
@@ -267,7 +270,7 @@ let entries : entry list =
       ~concrete_pert:(c_patch "type_wrong")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
                         ~detector:(Wired C6))
       ~violates:[ C6; C3 ]
       ~expected:[
@@ -312,7 +315,7 @@ let entries : entry list =
       ~concrete_pert:(c_patch "behavior_silent")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:On_behavior
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
                         ~detector:(Wired C3))
       ~violates:[ C3 ]
       ~expected:[
@@ -334,7 +337,7 @@ let entries : entry list =
       ~concrete_pert:(ml_patch "api_repack")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Definite "Sc.4.OCaml")
                         ~detector:(Wired C3))
       ~violates:[ C7; C3 ]
       ~expected:[
@@ -357,7 +360,7 @@ let entries : entry list =
       ~concrete_pert:(ml_patch "api_complete")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
-                        ~manifest:(Definite "Sc.3")
+                        ~manifest:(Definite "Sc.3.OCaml")
                         ~detector:(Wired C2))
       ~violates:[ C2 ]
       ~expected:[
@@ -381,7 +384,7 @@ let entries : entry list =
       ~concrete_pert:(ml_patch "symbol_orphan")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
-                        ~manifest:(Possible [ "Sc.2"; "Sc.4" ])
+                        ~manifest:(Possible [ "Sc.2.OCaml"; "Sc.4.OCaml" ])
                         ~detector:(Wired C1))
       ~violates:[ C1 ]
       ~expected:[
@@ -404,7 +407,7 @@ let entries : entry list =
       ~concrete_pert:(ml_patch "api_repack_python")
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Definite "Sc.4.Python")
                         ~detector:(Wired C3))
       ~violates:[ C7; C3 ]
       ~expected:[
@@ -427,7 +430,7 @@ let entries : entry list =
       ~concrete_pert:(ml_patch "api_complete_python")
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
-                        ~manifest:(Definite "Sc.4")
+                        ~manifest:(Definite "Sc.4.Python")
                         ~detector:(Wired C2))
       ~violates:[ C2 ]
       ~expected:[
@@ -519,55 +522,74 @@ let entries : entry list =
    the baseline functions to these Sc.N ids explicitly. *)
 
 let tiny_good_scenarios : Canary_scenario.scenario list = [
+  (* Shared upstream *)
   { id = "Sc.1"; name = "build_native_lib";
     description = "Tiny: build libtiny.so from c/src/tiny.c using \
                    gcc; symbol versioning via c/tiny.map (TINY_1.0 \
-                   exports).";
+                   exports). Shared across OCaml and Python.";
     actions = acts_full;
-    related_artifacts = arts_native_cascade;
+    related_artifacts = [ Canary_basic.Source; Canary_basic.Lib ];
     perturbation = None;
     belongs_to = [ "Sc.1" ] };
-  { id = "Sc.2"; name = "build_binding";
+
+  (* OCaml side *)
+  { id = "Sc.2.OCaml"; name = "build_binding";
     description = "Tiny: build the OCaml binding (tiny.cmxa + \
-                   libtiny_stubs.a) and the Python cext against \
-                   libtiny.so.";
+                   libtiny_stubs.a) via cstubs against libtiny.so.";
     actions = acts_full;
-    related_artifacts =
-      [ Canary_basic.Lib; a_ocaml; a_python ];
+    related_artifacts = [ Canary_basic.Lib; a_ocaml ];
     perturbation = None;
-    belongs_to = [ "Sc.2" ] };
-  { id = "Sc.3"; name = "build_app_with_binding";
+    belongs_to = [ "Sc.2.OCaml" ] };
+  { id = "Sc.3.OCaml"; name = "build_app_with_binding";
     description = "Tiny: build probe_baseline.exe / app_binding.exe \
                    linking directly against the tiny OCaml binding.";
     actions = acts_full;
-    related_artifacts =
-      [ a_ocaml; a_python; Canary_basic.App ];
+    related_artifacts = [ a_ocaml; Canary_basic.App ];
     perturbation = None;
-    belongs_to = [ "Sc.3" ] };
-  { id = "Sc.4"; name = "run_app_with_binding";
+    belongs_to = [ "Sc.3.OCaml" ] };
+  { id = "Sc.4.OCaml"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline / app_binding; loader \
                    resolves libtiny.so.1 at load time.";
     actions = acts_full;
     related_artifacts =
-      [ a_ocaml; a_python; Canary_basic.Lib; Canary_basic.App ];
+      [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     perturbation = None;
-    belongs_to = [ "Sc.4" ] };
-  { id = "Sc.5"; name = "build_app_helper";
+    belongs_to = [ "Sc.4.OCaml" ] };
+  { id = "Sc.5.OCaml"; name = "build_app_helper";
     description = "Tiny: build tiny_helper + app_helper.exe — app \
                    linked through an intermediate helper library \
                    over the OCaml binding.";
     actions = acts_full;
     related_artifacts = [ a_ocaml; Canary_basic.App ];
     perturbation = None;
-    belongs_to = [ "Sc.5" ] };
-  { id = "Sc.6"; name = "run_app_helper";
+    belongs_to = [ "Sc.5.OCaml" ] };
+  { id = "Sc.6.OCaml"; name = "run_app_helper";
     description = "Tiny: exec app_helper.exe — full chain runs \
                    through tiny_helper into libtiny.so.";
     actions = acts_full;
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     perturbation = None;
-    belongs_to = [ "Sc.6" ] };
+    belongs_to = [ "Sc.6.OCaml" ] };
+
+  (* Python side (cext under SCAB; ctypes uses DFFI, mechanism
+     split deferred). No Sc.3.Python — .py IS the app. No
+     Sc.5/Sc.6 — no Python helper in tiny. *)
+  { id = "Sc.2.Python"; name = "build_binding";
+    description = "Tiny: build the Python cext (\
+                   _native.cpython-*.so) against libtiny.so.";
+    actions = acts_full;
+    related_artifacts = [ Canary_basic.Lib; a_python ];
+    perturbation = None;
+    belongs_to = [ "Sc.2.Python" ] };
+  { id = "Sc.4.Python"; name = "run_app_with_binding";
+    description = "Tiny: exec probe_baseline.py (cext and ctypes \
+                   probes); dyld resolves libtiny.so.1 at import time.";
+    actions = acts_full;
+    related_artifacts =
+      [ a_python; Canary_basic.Lib; Canary_basic.App ];
+    perturbation = None;
+    belongs_to = [ "Sc.4.Python" ] };
 ]
 
 (** United list: 6 Sc + 13 Bs + 2 Pc = 21 scenarios. Reference for
@@ -615,62 +637,96 @@ let bad_target_str (good : Canary_scenario.scenario)
      | On_behavior -> Printf.sprintf "%s (behavior)" idx_str
      | On_artifact _ -> idx_str)
 
-(** Show-list-but-no-run — the enumeration surface. Prints all
-    21 tiny scenarios grouped by Good scenario. Under each Good
-    scenario: related artifacts (numbered A1..AN), its
-    perturbations (bad scenarios) with per-artifact index +
-    detector, and any positive-coverage scenarios that verify
-    it. No filesystem side-effect.
+(** Classify a good-scenario id by its language qualifier.
+    "Sc.N" (no suffix) → Shared. "Sc.N.OCaml" → OCaml.
+    "Sc.N.Python" → Python. *)
+type lang_group = Shared | OCaml_lang | Python_lang
 
-    See SSOT §5.1 for the full detail table (perturbed_at ×
-    manifest × detector). *)
-let print_list () =
-  let pad_id id = Printf.sprintf "%-5s" id in
-  let pad_name name = Printf.sprintf "%-26s" name in
+let lang_of_id id =
+  if String.is_suffix id ~suffix:".OCaml" then OCaml_lang
+  else if String.is_suffix id ~suffix:".Python" then Python_lang
+  else Shared
+
+let pad_id id = Printf.sprintf "%-11s" id
+let pad_name name = Printf.sprintf "%-26s" name
+
+let print_one_good (good : Canary_scenario.scenario) : unit =
   Stdlib.print_endline
-    (Printf.sprintf "Scenarios (%d total: 6 good + 13 bad + 2 positive)"
-       (List.length all_scenarios));
-  Stdlib.print_endline "";
-  List.iter tiny_good_scenarios ~f:(fun good ->
-    Stdlib.print_endline
-      (Printf.sprintf "%s  %s" good.id good.name);
-    let related_strs =
-      List.mapi good.related_artifacts ~f:(fun i a ->
-        Printf.sprintf "A%d(%s)" (i + 1)
-          (Canary_basic.string_of_artifact_kind a))
-    in
-    Stdlib.print_endline
-      (Printf.sprintf "  related: %s"
-         (String.concat ~sep:", " related_strs));
-    let belongs_to_here e =
-      List.mem e.scenario.belongs_to good.id ~equal:String.equal in
-    let bads = List.filter entries ~f:(fun e ->
-      belongs_to_here e && Option.is_some e.scenario.perturbation) in
-    (if List.is_empty bads then
-       Stdlib.print_endline "  perturbations: none"
-     else begin
+    (Printf.sprintf "  %s  %s" good.id good.name);
+  let related_strs =
+    List.mapi good.related_artifacts ~f:(fun i a ->
+      Printf.sprintf "A%d(%s)" (i + 1)
+        (Canary_basic.string_of_artifact_kind a))
+  in
+  Stdlib.print_endline
+    (Printf.sprintf "    related: %s"
+       (String.concat ~sep:", " related_strs));
+  let belongs_to_here e =
+    List.mem e.scenario.belongs_to good.id ~equal:String.equal in
+  let bads = List.filter entries ~f:(fun e ->
+    belongs_to_here e && Option.is_some e.scenario.perturbation) in
+  (if List.is_empty bads then
+     Stdlib.print_endline "    perturbations: none"
+   else begin
+     Stdlib.print_endline
+       (Printf.sprintf "    perturbations (%d):" (List.length bads));
+     List.iter bads ~f:(fun e ->
+       let sc = e.scenario in
+       let p = Option.value_exn sc.perturbation in
+       let tgt = bad_target_str good sc in
+       let det = detector_short p.detector in
        Stdlib.print_endline
-         (Printf.sprintf "  perturbations (%d):" (List.length bads));
-       List.iter bads ~f:(fun e ->
-         let sc = e.scenario in
-         let p = Option.value_exn sc.perturbation in
-         let tgt = bad_target_str good sc in
-         let det = detector_short p.detector in
-         Stdlib.print_endline
-           (Printf.sprintf "    %s %s  %-14s [%s]"
-              (pad_id sc.id) (pad_name sc.name) tgt det))
-     end);
-    let pcs = List.filter entries ~f:(fun e ->
-      belongs_to_here e && Option.is_none e.scenario.perturbation) in
-    if not (List.is_empty pcs) then begin
+         (Printf.sprintf "      %s %s  %-14s [%s]"
+            (pad_id sc.id) (pad_name sc.name) tgt det))
+   end);
+  let pcs = List.filter entries ~f:(fun e ->
+    belongs_to_here e && Option.is_none e.scenario.perturbation) in
+  if not (List.is_empty pcs) then begin
+    Stdlib.print_endline
+      (Printf.sprintf "    verified by (%d):" (List.length pcs));
+    List.iter pcs ~f:(fun e ->
       Stdlib.print_endline
-        (Printf.sprintf "  verified by (%d):" (List.length pcs));
-      List.iter pcs ~f:(fun e ->
-        Stdlib.print_endline
-          (Printf.sprintf "    %s %s"
-             (pad_id e.scenario.id) e.scenario.name))
-    end;
-    Stdlib.print_endline "")
+        (Printf.sprintf "      %s %s"
+           (pad_id e.scenario.id) e.scenario.name))
+  end;
+  Stdlib.print_endline ""
+
+(** Show-list-but-no-run — the enumeration surface. Prints all
+    tiny scenarios grouped by language (Shared / OCaml / Python),
+    with each Good scenario followed by its perturbations (bad
+    scenarios) and verifiers (positive coverage).
+
+    Language-as-outer-loop reflects the user's design intent:
+    scenarios are defined per (mechanism × language × stage),
+    and grouping by language makes the mechanism-specific
+    perturbation enumeration read cleanly. Sc.1 stays shared
+    (native lib is language-agnostic under the SCAB assumption).
+
+    See SSOT §5.1 for the full detail table. *)
+let print_list () =
+  let goods_by_lang lg =
+    List.filter tiny_good_scenarios
+      ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
+  in
+  let n_bad = List.count entries ~f:(fun e ->
+    Option.is_some e.scenario.perturbation) in
+  let n_pos = List.count entries ~f:(fun e ->
+    Option.is_none e.scenario.perturbation) in
+  Stdlib.print_endline
+    (Printf.sprintf "Scenarios (%d total: %d good + %d bad + %d positive)"
+       (List.length all_scenarios)
+       (List.length tiny_good_scenarios) n_bad n_pos);
+  Stdlib.print_endline "";
+  let section title lg =
+    let goods = goods_by_lang lg in
+    if not (List.is_empty goods) then begin
+      Stdlib.print_endline (Printf.sprintf "%s:" title);
+      List.iter goods ~f:print_one_good
+    end
+  in
+  section "Shared" Shared;
+  section "OCaml" OCaml_lang;
+  section "Python" Python_lang
 
 (** Validate a scenario name at start-up. Returns the string
     unchanged if [n] is a known scenario name (one of the 15 in
