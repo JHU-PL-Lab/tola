@@ -583,71 +583,94 @@ let all_scenarios : Canary_scenario.scenario list =
 let find_by_name (n : string) : entry option =
   List.find entries ~f:(fun e -> String.equal e.scenario.name n)
 
-(** Test whether a bad scenario has a detection gap — either the
-    manifest is [Unknown_gap] or the detector is [Detector_gap]. *)
-let has_detection_gap (sc : Canary_scenario.scenario) : bool =
-  match sc.perturbation with
-  | None -> false
+(** Compact contract label — "c1".."c8" or "gap" for
+    [Detector_gap]. *)
+let detector_short = function
+  | Canary_scenario.Wired c -> Canary_compat.string_of_contract_id c
+  | Canary_scenario.Detector_gap -> "gap"
+
+(** 1-based index of an artifact in a scenario's
+    [related_artifacts], or [None] if not present. *)
+let artifact_index (sc : Canary_scenario.scenario)
+    (target : Canary_basic.artifact_kind) : int option =
+  let rec find i = function
+    | [] -> None
+    | a :: _ when Poly.equal a target -> Some i
+    | _ :: rest -> find (i + 1) rest
+  in
+  find 1 sc.related_artifacts
+
+(** For a bad scenario, format its target relative to a Good
+    scenario's [related_artifacts]: "A<idx>" or "A<idx>
+    (behavior)" for On_behavior kind. *)
+let bad_target_str (good : Canary_scenario.scenario)
+    (bad : Canary_scenario.scenario) : string =
+  match bad.perturbation with
+  | None -> ""
   | Some p ->
-    (match p.manifest with Canary_scenario.Unknown_gap -> true | _ -> false)
-    || (match p.detector with Canary_scenario.Detector_gap -> true | _ -> false)
+    let idx_str = match artifact_index good p.target with
+      | Some i -> Printf.sprintf "A%d" i
+      | None -> "A?" in
+    (match p.kind with
+     | On_behavior -> Printf.sprintf "%s (behavior)" idx_str
+     | On_artifact _ -> idx_str)
 
-(** Render belongs_to for annotations. Bad scenarios use "(Sc.X)";
-    positive coverage uses "(verifies Sc.X, Sc.Y)". *)
-let render_belongs_bad (belongs : string list) : string =
-  Printf.sprintf "(%s)" (String.concat ~sep:", " belongs)
+(** Show-list-but-no-run — the enumeration surface. Prints all
+    21 tiny scenarios grouped by Good scenario. Under each Good
+    scenario: related artifacts (numbered A1..AN), its
+    perturbations (bad scenarios) with per-artifact index +
+    detector, and any positive-coverage scenarios that verify
+    it. No filesystem side-effect.
 
-let render_belongs_pc (belongs : string list) : string =
-  Printf.sprintf "(verifies %s)" (String.concat ~sep:", " belongs)
-
-(** Show-list-but-no-run — the enumeration surface. Prints all 21
-    tiny scenarios in three sections: good / bad / positive.
-    Structural annotations (belongs_to, detection gap) shown; no
-    filesystem side-effect. See SSOT §5.1 for the full detail
-    table.
-
-    For scripting that wants just names (grep-friendly), pipe
-    through [awk] or [sed]; alternate views (grouped by
-    manifest, by artifact) can be added as flags later. *)
+    See SSOT §5.1 for the full detail table (perturbed_at ×
+    manifest × detector). *)
 let print_list () =
-  let pad_id id =
-    Printf.sprintf "%-5s" id in
-  let pad_name name =
-    Printf.sprintf "%-26s" name in
-  (* Good scenarios *)
+  let pad_id id = Printf.sprintf "%-5s" id in
+  let pad_name name = Printf.sprintf "%-26s" name in
   Stdlib.print_endline
-    (Printf.sprintf "Good scenarios (%d):"
-       (List.length tiny_good_scenarios));
-  List.iter tiny_good_scenarios ~f:(fun s ->
-    Stdlib.print_endline
-      (Printf.sprintf "  %s %s"
-         (pad_id s.Canary_scenario.id) s.Canary_scenario.name));
+    (Printf.sprintf "Scenarios (%d total: 6 good + 13 bad + 2 positive)"
+       (List.length all_scenarios));
   Stdlib.print_endline "";
-  (* Bad scenarios *)
-  let bads = List.filter entries ~f:(fun e ->
-    Option.is_some e.scenario.perturbation) in
-  Stdlib.print_endline
-    (Printf.sprintf "Bad scenarios (%d):" (List.length bads));
-  List.iter bads ~f:(fun e ->
-    let sc = e.scenario in
-    let gap_tag =
-      if has_detection_gap sc then "  [detection gap]" else "" in
+  List.iter tiny_good_scenarios ~f:(fun good ->
     Stdlib.print_endline
-      (Printf.sprintf "  %s %s %s%s"
-         (pad_id sc.id) (pad_name sc.name)
-         (render_belongs_bad sc.belongs_to) gap_tag));
-  Stdlib.print_endline "";
-  (* Positive coverage *)
-  let positives = List.filter entries ~f:(fun e ->
-    Option.is_none e.scenario.perturbation) in
-  Stdlib.print_endline
-    (Printf.sprintf "Positive coverage (%d):" (List.length positives));
-  List.iter positives ~f:(fun e ->
-    let sc = e.scenario in
+      (Printf.sprintf "%s  %s" good.id good.name);
+    let related_strs =
+      List.mapi good.related_artifacts ~f:(fun i a ->
+        Printf.sprintf "A%d(%s)" (i + 1)
+          (Canary_basic.string_of_artifact_kind a))
+    in
     Stdlib.print_endline
-      (Printf.sprintf "  %s %s %s"
-         (pad_id sc.id) (pad_name sc.name)
-         (render_belongs_pc sc.belongs_to)))
+      (Printf.sprintf "  related: %s"
+         (String.concat ~sep:", " related_strs));
+    let belongs_to_here e =
+      List.mem e.scenario.belongs_to good.id ~equal:String.equal in
+    let bads = List.filter entries ~f:(fun e ->
+      belongs_to_here e && Option.is_some e.scenario.perturbation) in
+    (if List.is_empty bads then
+       Stdlib.print_endline "  perturbations: none"
+     else begin
+       Stdlib.print_endline
+         (Printf.sprintf "  perturbations (%d):" (List.length bads));
+       List.iter bads ~f:(fun e ->
+         let sc = e.scenario in
+         let p = Option.value_exn sc.perturbation in
+         let tgt = bad_target_str good sc in
+         let det = detector_short p.detector in
+         Stdlib.print_endline
+           (Printf.sprintf "    %s %s  %-14s [%s]"
+              (pad_id sc.id) (pad_name sc.name) tgt det))
+     end);
+    let pcs = List.filter entries ~f:(fun e ->
+      belongs_to_here e && Option.is_none e.scenario.perturbation) in
+    if not (List.is_empty pcs) then begin
+      Stdlib.print_endline
+        (Printf.sprintf "  verified by (%d):" (List.length pcs));
+      List.iter pcs ~f:(fun e ->
+        Stdlib.print_endline
+          (Printf.sprintf "    %s %s"
+             (pad_id e.scenario.id) e.scenario.name))
+    end;
+    Stdlib.print_endline "")
 
 (** Validate a scenario name at start-up. Returns the string
     unchanged if [n] is a known scenario name (one of the 15 in
