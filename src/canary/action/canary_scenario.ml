@@ -81,3 +81,102 @@ type scenario = {
   related_artifacts : Canary_basic.artifact_kind list;
   perturbation : perturbation option;
 }
+
+(* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
+
+(** The six good scenarios from SSOT §4 — project-agnostic
+    patterns. Each Sc.N describes a stage; concrete projects
+    (tiny, z3, ...) instantiate the pattern with their own
+    artifacts and probes. [perturbation = None] on all of them
+    (good = no perturbation, by definition). *)
+let good_scenarios : scenario list =
+  let open Canary_basic in
+  let open Canary_lang in
+  [
+    { id = "Sc.1"; name = "build_native_lib";
+      description = "Upstream — build the native library from source.";
+      actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
+      related_artifacts = [ Source; Lib ];
+      perturbation = None };
+    { id = "Sc.2"; name = "build_binding";
+      description = "Binding creation — build language bindings against \
+                     the native lib.";
+      actions = [ Build_binding OCaml; Build_binding Python ];
+      related_artifacts = [ Lib; Binding OCaml; Binding Python ];
+      perturbation = None };
+    { id = "Sc.3"; name = "build_app_with_binding";
+      description = "Binding use (direct) — build an app that links \
+                     against a binding.";
+      actions = [ Build_app ];
+      related_artifacts = [ Binding OCaml; Binding Python; App ];
+      perturbation = None };
+    { id = "Sc.4"; name = "run_app_with_binding";
+      description = "Binding use (direct) — run the app against the \
+                     binding + native lib at runtime.";
+      actions = [ Probe App ];
+      related_artifacts = [ Binding OCaml; Binding Python; Lib; App ];
+      perturbation = None };
+    { id = "Sc.5"; name = "build_app_helper";
+      description = "Binding use (indirect) — build an app via a helper \
+                     library that wraps the binding.";
+      actions = [ Build_app ];
+      related_artifacts = [ Binding OCaml; App ];
+      perturbation = None };
+    { id = "Sc.6"; name = "run_app_helper";
+      description = "Binding use (indirect) — run the app-via-helper chain.";
+      actions = [ Probe App ];
+      related_artifacts = [ Binding OCaml; Lib; App ];
+      perturbation = None };
+  ]
+
+(* ---------- validators ---------- *)
+
+(** Validate a Sc.N string against the [good_scenarios] catalogue.
+    Returns [s] unchanged if valid; raises [Failure] with a
+    helpful message otherwise. Used to catch typos in
+    [manifest = Definite "Sc.4"] etc. at start-up.
+
+    Closes drift risk #1 from the status report. *)
+let sc_id_of_string (s : string) : string =
+  match Base.List.find good_scenarios
+          ~f:(fun g -> Base.String.equal g.id s) with
+  | Some _ -> s
+  | None ->
+    let known = Base.List.map good_scenarios ~f:(fun g -> g.id) in
+    Stdlib.failwith
+      (Printf.sprintf "unknown Sc.N: %S. Known: %s"
+         s (Base.String.concat ~sep:", " known))
+
+(** Invariant check: if a scenario has a [perturbation], its
+    [target] must be in [related_artifacts]. Raises [Failure] on
+    violation. Closes drift risk #3 from the status report. *)
+let validate_perturbation_target (s : scenario) : unit =
+  match s.perturbation with
+  | None -> ()
+  | Some p ->
+    if not (Base.List.mem s.related_artifacts p.target
+              ~equal:Base.Poly.equal) then
+      Stdlib.failwith
+        (Printf.sprintf
+           "scenario %s (%s): perturbation.target not in \
+            related_artifacts" s.id s.name)
+
+(** Validate that all Sc.N strings in a scenario's manifest are
+    known. Combined with [validate_perturbation_target], gives a
+    full structural check per scenario. *)
+let validate_manifest_sc_ids (s : scenario) : unit =
+  match s.perturbation with
+  | None -> ()
+  | Some p ->
+    match p.manifest with
+    | Definite sc -> let _ = sc_id_of_string sc in ()
+    | Possible xs ->
+      Base.List.iter xs ~f:(fun sc ->
+        let _ = sc_id_of_string sc in ())
+    | Unknown_gap -> ()
+
+(** Full structural check on a scenario. Raises on any
+    invariant violation. *)
+let validate_scenario (s : scenario) : unit =
+  validate_perturbation_target s;
+  validate_manifest_sc_ids s

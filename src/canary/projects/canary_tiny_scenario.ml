@@ -554,3 +554,18 @@ let print_expected (name : string) : unit =
   | Some e ->
     Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
 
+(* ================================================================
+   STARTUP VALIDATION
+
+   Runs at module load. Catches at start-up:
+   - unknown Sc.N in a manifest ([Definite "Sc.4"] typo, etc.);
+   - perturbation.target that isn't in the scenario's
+     related_artifacts.
+
+   Failure here means the entries above are structurally wrong;
+   the module fails to initialise rather than silently
+   propagating the bug through prepare / canary variants. *)
+
+let () =
+  List.iter entries ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
+
