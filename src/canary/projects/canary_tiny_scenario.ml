@@ -1,17 +1,26 @@
 (** Tiny scenario entries — hand-curated list of the 15 tiny scenarios.
 
-    Task 1 of [ssot.md] §9.3: each entry pairs a general
-    [Canary_scenario.scenario] (name / description / actions /
-    interested_artifacts — the concept) with a project-specific
-    [tiny_recipe] (perturbs / perturbation / expected / violates —
-    how tiny constructs and observes this scenario). The split
-    replaces the pre-Task-1 monolithic [scenario_spec] that mixed
-    concept and impl.
+    Each entry pairs a [Canary_scenario.scenario] (concept: id,
+    name, description, actions, related_artifacts, optional
+    abstract perturbation) with a [tiny_recipe] (implementation:
+    patch files, expected step outcomes for the tiny probes).
+
+    Post-§9.3 Task 1 shape update:
+    - Scenario type unified (good = no perturbation; bad = has
+      perturbation). Field renamed [interested_artifacts] →
+      [related_artifacts].
+    - Scenario carries [id] (Bs.N or Pc.N).
+    - The abstract perturbation on [Canary_scenario.scenario]
+      records target artifact / kind / manifest / detector — the
+      annotations we can *reason* about generically. The tiny
+      [tiny_recipe] still holds the concrete implementation
+      details (which patch file, which step outcomes).
 
     Origin: OCaml port of
     [doc/_legacy_code/tiny_python_harness/scenarios.py (archived
-    Phase E):SCENARIOS]. Order preserved for parity with
-    [scenarios.py list]. *)
+    Phase E):SCENARIOS]. Order changed post-migration — now
+    grouped by SSOT §5.1 (Bs.1..Bs.13 by Good scenario, then
+    Pc.1, Pc.2 for positive coverage). *)
 
 open Base
 
@@ -78,15 +87,15 @@ let ml_patch name =
    ================================================================
 
    Coarse first-pass hand-mapping. Refinement (per-scenario
-   accurate action lists, more precise cascade) is a follow-up. *)
+   accurate action lists, more precise cascade) is a follow-up.
+   [related_artifacts] will eventually be derivable from actions
+   via a [consumes/produces] helper on rule; deferred. *)
 
 let a_ocaml = Canary_basic.Binding Canary_lang.OCaml
 let a_python = Canary_basic.Binding Canary_lang.Python
 
 (** Actions exercised by a full tiny run (configure → build → probe
-    across both bindings + the downstream app). Most scenarios use
-    this shape; per-scenario refinement to only the affected subset
-    is a follow-up. *)
+    across both bindings + the downstream app). *)
 let acts_full : Canary_basic.rule list = [
   Configure; Scan_sources;
   Build_lib;
@@ -98,7 +107,7 @@ let acts_full : Canary_basic.rule list = [
   Probe App;
 ]
 
-(** Interested-artifact groupings. Coarse; refine as the model bites. *)
+(** Related-artifact groupings. Coarse; refine as the model bites. *)
 let arts_native_cascade : Canary_basic.artifact_kind list =
   [ Source; Lib; a_ocaml; a_python; App ]
 let arts_ocaml_only : Canary_basic.artifact_kind list =
@@ -110,25 +119,47 @@ let arts_abi_cascade : Canary_basic.artifact_kind list =
 let arts_positive : Canary_basic.artifact_kind list =
   [ Source; Lib; a_ocaml; a_python; App ]
 
+(* ----- abstract-perturbation helper ----- *)
+
+(** Build a [Canary_scenario.perturbation]. Wraps in Some for the
+    scenario's optional field. *)
+let pert
+    ~(target : Canary_basic.artifact_kind)
+    ~(kind : Canary_scenario.perturbation_kind)
+    ~(manifest : Canary_scenario.manifest)
+    ~(detector : Canary_scenario.detector)
+    : Canary_scenario.perturbation option =
+  Some { target; kind; manifest; detector }
+
 (* ================================================================
-   THE 15 ENTRIES (order = scenarios.py:SCENARIOS insertion order)
+   THE 15 ENTRIES — ordered per SSOT §5.1 (Bs.1..Bs.13, then
+   Pc.1, Pc.2 for positive coverage)
    ================================================================ *)
 
 let entries : entry list =
   let open Canary_compat in
-  let mk ~name ~description ~arts ~perturbs ~perturbation ~expected ~violates =
-    { scenario = { name; description; actions = acts_full;
-                   interested_artifacts = arts };
-      recipe = { perturbs; perturbation; expected; violates };
+  let open Canary_scenario in
+  let mk ~id ~name ~description ~arts ~perturbs ~concrete_pert
+         ~scenario_pert ~expected ~violates =
+    { scenario = { id; name; description; actions = acts_full;
+                   related_artifacts = arts;
+                   perturbation = scenario_pert };
+      recipe = { perturbs; perturbation = concrete_pert;
+                 expected; violates };
     }
   in
   [
-    mk ~name:"symbol_missing"
+    (* Bs.1 *)
+    mk ~id:"Bs.1" ~name:"symbol_missing"
       ~description:"Source patch renames tiny_sum -> tiny_total in C only; \
                     binding artifacts still expect tiny_sum."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/src/tiny.c" ]
-      ~perturbation:(c_patch "symbol_missing")
+      ~concrete_pert:(c_patch "symbol_missing")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:(On_artifact Source)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C1))
       ~violates:[ C1 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
@@ -139,14 +170,19 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Skip;
       ];
 
-    mk ~name:"header_arity_bump"
+    (* Bs.2 *)
+    mk ~id:"Bs.2" ~name:"header_arity_bump"
       ~description:"tiny.h declares tiny_sum with an extra (int c) parameter; \
                     tiny.c matches the new signature so the lib still builds. \
                     The cstub calls tiny_sum(a, b) — only 2 args. c6 cmp_type \
                     catches the static mismatch."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/include/tiny.h"; "c/src/tiny.c" ]
-      ~perturbation:(c_patch "header_arity_bump")
+      ~concrete_pert:(c_patch "header_arity_bump")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:(On_artifact Source)
+                        ~manifest:(Definite "Sc.2")
+                        ~detector:(Wired C6))
       ~violates:[ C6 ]
       ~expected:[
         "ocaml_build", Fail; "ocaml_probe", Skip;
@@ -157,7 +193,8 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"symbol_version_floor"
+    (* Bs.3 *)
+    mk ~id:"Bs.3" ~name:"symbol_version_floor"
       ~description:"Lib's tiny.map version script is bumped from TINY_1.0 to \
                     TINY_2.0; rebuild emits libtiny.so with tiny_sum@@TINY_2.0. \
                     Cached cext records @TINY_1.0 in its NEEDED — dyld can't \
@@ -165,7 +202,11 @@ let entries : entry list =
                     catches the mismatch."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/tiny.map" ]
-      ~perturbation:(c_patch "symbol_version_floor")
+      ~concrete_pert:(c_patch "symbol_version_floor")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:(On_artifact Source)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C5))
       ~violates:[ C5 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
@@ -176,14 +217,19 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"abi_soname_bump"
+    (* Bs.4 *)
+    mk ~id:"Bs.4" ~name:"abi_soname_bump"
       ~description:"SONAME bumped libtiny.so.1 -> libtiny.so.2 and file renamed; \
                     binding NEEDED libtiny.so.1 has nothing to resolve against. \
                     Symbols themselves unchanged."
       ~arts:arts_abi_cascade
       ~perturbs:[ "c/build/libtiny.so.1" ]
-      ~perturbation:(Some (Soname_bump { from_so = "libtiny.so.1";
-                                          to_so = "libtiny.so.2.0" }))
+      ~concrete_pert:(Some (Soname_bump { from_so = "libtiny.so.1";
+                                           to_so = "libtiny.so.2.0" }))
+      ~scenario_pert:(pert ~target:Canary_basic.Lib
+                        ~kind:(On_artifact Lib)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C4))
       ~violates:[ C4 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
@@ -194,13 +240,18 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Skip;
       ];
 
-    mk ~name:"type_wrong"
+    (* Bs.5 *)
+    mk ~id:"Bs.5" ~name:"type_wrong"
       ~description:"tiny_sum body takes (double, double); header still says \
                     (int, int). Symbol names unchanged; no static comparator \
                     catches this today."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/src/tiny.c" ]
-      ~perturbation:(c_patch "type_wrong")
+      ~concrete_pert:(c_patch "type_wrong")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:(On_artifact Source)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C6))
       ~violates:[ C6; C3 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
@@ -211,13 +262,18 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"api_faithful"
+    (* Bs.6 — detection gap *)
+    mk ~id:"Bs.6" ~name:"api_faithful"
       ~description:"C adds tiny_max; bindings don't wrap it. Build and probe \
                     all succeed; no static comparator catches the missing \
                     wrapper (c8 cmp_api_faithfulness doesn't exist yet)."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/include/tiny.h"; "c/src/tiny.c" ]
-      ~perturbation:(c_patch "api_faithful")
+      ~concrete_pert:(c_patch "api_faithful")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:(On_artifact Source)
+                        ~manifest:Unknown_gap
+                        ~detector:Detector_gap)
       ~violates:[ C8 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
@@ -228,49 +284,19 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"api_repack"
-      ~description:"OCaml user-facing Tiny.diff reverses arguments before \
-                    delegating. Stub-facing layer correct; intra-binding \
-                    repack wrong; c7 cmp_api_repack doesn't exist yet."
-      ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny.ml" ]
-      ~perturbation:(ml_patch "api_repack")
-      ~violates:[ C7; C3 ]
-      ~expected:[
-        "ocaml_build", Ok; "ocaml_probe", Fail;
-        "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
-        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
-        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
-        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
-        "cmp_api_complete_ctypes", Pass;
-      ];
-
-    mk ~name:"api_complete"
-      ~description:"OCaml user-facing Tiny.mli drops 'val sum'. The library \
-                    still compiles (tiny's dune sets -w -32) but every \
-                    consumer that references Tiny.sum fails at compile time. \
-                    c2 cmp_api_completeness statically catches the missing val."
-      ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny.mli" ]
-      ~perturbation:(ml_patch "api_complete")
-      ~violates:[ C2 ]
-      ~expected:[
-        "ocaml_build", Ok; "ocaml_probe", Fail;
-        "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
-        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
-        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
-        "cmp_api_complete_ocaml", Fail; "cmp_api_complete_cext", Pass;
-        "cmp_api_complete_ctypes", Pass;
-      ];
-
-    mk ~name:"behavior_silent"
+    (* Bs.7 — behavior-flavoured perturbation *)
+    mk ~id:"Bs.7" ~name:"behavior_silent"
       ~description:"tiny_sum body computes a-b-tiny_offset instead of \
                     a+b+tiny_offset. Every static contract still holds; only \
                     the running probe notices. Canonical demonstration that \
                     c3 cmp_behavior is non-redundant."
       ~arts:arts_native_cascade
       ~perturbs:[ "c/src/tiny.c" ]
-      ~perturbation:(c_patch "behavior_silent")
+      ~concrete_pert:(c_patch "behavior_silent")
+      ~scenario_pert:(pert ~target:Canary_basic.Source
+                        ~kind:On_behavior
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C3))
       ~violates:[ C3 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Fail;
@@ -281,7 +307,53 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"symbol_orphan"
+    (* Bs.8 *)
+    mk ~id:"Bs.8" ~name:"api_repack"
+      ~description:"OCaml user-facing Tiny.diff reverses arguments before \
+                    delegating. Stub-facing layer correct; intra-binding \
+                    repack wrong; c7 cmp_api_repack doesn't exist yet."
+      ~arts:arts_ocaml_only
+      ~perturbs:[ "ocaml/tiny.ml" ]
+      ~concrete_pert:(ml_patch "api_repack")
+      ~scenario_pert:(pert ~target:a_ocaml
+                        ~kind:(On_artifact a_ocaml)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C3))
+      ~violates:[ C7; C3 ]
+      ~expected:[
+        "ocaml_build", Ok; "ocaml_probe", Fail;
+        "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
+        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
+        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
+        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
+        "cmp_api_complete_ctypes", Pass;
+      ];
+
+    (* Bs.9 *)
+    mk ~id:"Bs.9" ~name:"api_complete"
+      ~description:"OCaml user-facing Tiny.mli drops 'val sum'. The library \
+                    still compiles (tiny's dune sets -w -32) but every \
+                    consumer that references Tiny.sum fails at compile time. \
+                    c2 cmp_api_completeness statically catches the missing val."
+      ~arts:arts_ocaml_only
+      ~perturbs:[ "ocaml/tiny.mli" ]
+      ~concrete_pert:(ml_patch "api_complete")
+      ~scenario_pert:(pert ~target:a_ocaml
+                        ~kind:(On_artifact a_ocaml)
+                        ~manifest:(Definite "Sc.3")
+                        ~detector:(Wired C2))
+      ~violates:[ C2 ]
+      ~expected:[
+        "ocaml_build", Ok; "ocaml_probe", Fail;
+        "ocaml_app_binding", Fail; "ocaml_app_helper", Fail;
+        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
+        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
+        "cmp_api_complete_ocaml", Fail; "cmp_api_complete_cext", Pass;
+        "cmp_api_complete_ctypes", Pass;
+      ];
+
+    (* Bs.10 *)
+    mk ~id:"Bs.10" ~name:"symbol_orphan"
       ~description:"OCaml stub introduces a caml_tiny_extra wrapper that calls \
                     tiny_extra; the C side never had tiny_extra. Dual of \
                     symbol_missing. On strict linkers ocaml_build fails; on \
@@ -289,7 +361,11 @@ let entries : entry list =
       ~arts:arts_ocaml_only
       ~perturbs:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
-      ~perturbation:(ml_patch "symbol_orphan")
+      ~concrete_pert:(ml_patch "symbol_orphan")
+      ~scenario_pert:(pert ~target:a_ocaml
+                        ~kind:(On_artifact a_ocaml)
+                        ~manifest:(Possible [ "Sc.2"; "Sc.4" ])
+                        ~detector:(Wired C1))
       ~violates:[ C1 ]
       ~expected:[
         "ocaml_build", Fail; "ocaml_probe", Skip;
@@ -300,14 +376,19 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"api_repack_python"
+    (* Bs.11 *)
+    mk ~id:"Bs.11" ~name:"api_repack_python"
       ~description:"Python user-facing layer (both cext and ctypes \
                     __init__.py) reverses arguments on diff before \
                     delegating. Same shape as api_repack but on the Python side."
       ~arts:arts_python_only
       ~perturbs:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
-      ~perturbation:(ml_patch "api_repack_python")
+      ~concrete_pert:(ml_patch "api_repack_python")
+      ~scenario_pert:(pert ~target:a_python
+                        ~kind:(On_artifact a_python)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C3))
       ~violates:[ C7; C3 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
@@ -318,14 +399,19 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    mk ~name:"api_complete_python"
+    (* Bs.12 *)
+    mk ~id:"Bs.12" ~name:"api_complete_python"
       ~description:"Python user-facing layer drops the sum function. Probes \
                     raise AttributeError at runtime; c2 cmp_api_completeness \
                     catches it statically via watchlist {sum, diff, offset}."
       ~arts:arts_python_only
       ~perturbs:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
-      ~perturbation:(ml_patch "api_complete_python")
+      ~concrete_pert:(ml_patch "api_complete_python")
+      ~scenario_pert:(pert ~target:a_python
+                        ~kind:(On_artifact a_python)
+                        ~manifest:(Definite "Sc.4")
+                        ~detector:(Wired C2))
       ~violates:[ C2 ]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
@@ -336,42 +422,8 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Fail;
       ];
 
-    mk ~name:"app_over_binding_ocaml"
-      ~description:"Positive-coverage: an app linking directly against the \
-                    Tiny OCaml binding builds and runs; transitive dependency \
-                    on libtiny.so resolves. No perturbation."
-      ~arts:arts_positive
-      ~perturbs:[]
-      ~perturbation:None
-      ~violates:[]
-      ~expected:[
-        "ocaml_build", Ok; "ocaml_probe", Ok;
-        "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
-        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
-        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
-        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
-        "cmp_api_complete_ctypes", Pass;
-      ];
-
-    mk ~name:"app_over_helper_ocaml"
-      ~description:"Positive-coverage: longest-interesting chain — app -> \
-                    tiny_helper -> Tiny binding -> libtiny.so. Confirms \
-                    intra-binding repacking composes across a downstream \
-                    library layer. No perturbation."
-      ~arts:arts_positive
-      ~perturbs:[]
-      ~perturbation:None
-      ~violates:[]
-      ~expected:[
-        "ocaml_build", Ok; "ocaml_probe", Ok;
-        "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
-        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
-        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
-        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
-        "cmp_api_complete_ctypes", Pass;
-      ];
-
-    mk ~name:"api_repack_stub_orphan"
+    (* Bs.13 — manifestation gap (c7 static-only, no probe manifestation) *)
+    mk ~id:"Bs.13" ~name:"api_repack_stub_orphan"
       ~description:"Stub-side orphan: Tiny_raw.mli adds external alias_sum \
                     with a matching caml_tiny_alias_sum C wrapper, but \
                     Tiny.mli doesn't surface it. Binding compiles + links + \
@@ -380,8 +432,51 @@ let entries : entry list =
       ~arts:arts_ocaml_only
       ~perturbs:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
-      ~perturbation:(ml_patch "api_repack_stub_orphan")
+      ~concrete_pert:(ml_patch "api_repack_stub_orphan")
+      ~scenario_pert:(pert ~target:a_ocaml
+                        ~kind:(On_artifact a_ocaml)
+                        ~manifest:Unknown_gap
+                        ~detector:(Wired C7))
       ~violates:[ C7 ]
+      ~expected:[
+        "ocaml_build", Ok; "ocaml_probe", Ok;
+        "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
+        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
+        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
+        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
+        "cmp_api_complete_ctypes", Pass;
+      ];
+
+    (* Pc.1 — positive coverage of Sc.3-Sc.4 *)
+    mk ~id:"Pc.1" ~name:"app_over_binding_ocaml"
+      ~description:"Positive-coverage: an app linking directly against the \
+                    Tiny OCaml binding builds and runs; transitive dependency \
+                    on libtiny.so resolves. No perturbation."
+      ~arts:arts_positive
+      ~perturbs:[]
+      ~concrete_pert:None
+      ~scenario_pert:None
+      ~violates:[]
+      ~expected:[
+        "ocaml_build", Ok; "ocaml_probe", Ok;
+        "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
+        "python_cext_probe", Ok; "python_ctypes_probe", Ok;
+        "cmp_symbol_ocaml", Pass; "cmp_symbol_cext", Pass;
+        "cmp_api_complete_ocaml", Pass; "cmp_api_complete_cext", Pass;
+        "cmp_api_complete_ctypes", Pass;
+      ];
+
+    (* Pc.2 — positive coverage of Sc.5-Sc.6 *)
+    mk ~id:"Pc.2" ~name:"app_over_helper_ocaml"
+      ~description:"Positive-coverage: longest-interesting chain — app -> \
+                    tiny_helper -> Tiny binding -> libtiny.so. Confirms \
+                    intra-binding repacking composes across a downstream \
+                    library layer. No perturbation."
+      ~arts:arts_positive
+      ~perturbs:[]
+      ~concrete_pert:None
+      ~scenario_pert:None
+      ~violates:[]
       ~expected:[
         "ocaml_build", Ok; "ocaml_probe", Ok;
         "ocaml_app_binding", Ok; "ocaml_app_helper", Ok;
@@ -399,117 +494,16 @@ let entries : entry list =
 let find_by_name (n : string) : entry option =
   List.find entries ~f:(fun e -> String.equal e.scenario.name n)
 
-(* ================================================================
-   ENTRIES GROUPED BY GOOD SCENARIO (Sc.N) — derivability check
-   ================================================================
-
-   Purpose: expose the derivation pattern. Each group's entries
-   are (perturbation kind × interested-artifact set) applied at
-   that good scenario. If a small principled generator can
-   reproduce these entries (and possibly more), the flat
-   bad-scenario catalogue becomes a projection of that generator —
-   partial realisation of §7 Principle 3 ("Good × perturbation =
-   bad").
-
-   Observed pattern in the current 15:
-   - Sc.1 build_native_lib          — 0 entries (perturbations
-     applied to native artifacts don't manifest at *this* stage
-     alone; they surface at Sc.2+ when a consumer builds/runs).
-   - Sc.2 build_binding             — 5 entries
-       {native-source patch} × {symbol / arity / type}       = 3
-       {binding-source patch} × {orphan / stub-orphan}       = 2
-   - Sc.3 build_app_with_binding    — 5 entries
-       {binding-api patch} × {ocaml / python} × {repack / complete} = 4
-       positive-coverage                                             = 1
-   - Sc.4 run_app_with_binding      — 3 entries
-       {version-script bump / soname bump / silent-behavior}       = 3
-   - Sc.5 build_app_helper          — 1 entry (positive coverage)
-   - Sc.6 run_app_helper            — 0 entries
-   - cross_cutting                  — 1 entry (api_faithful — no
-     static detector today; positive across all stages)
-
-   The perturbation categories look project-independent
-   (patch-source, bump-soname, bump-version-script, silent-body-
-   change). The concrete parameters (which file, which symbol) are
-   project-specific. Task 2 lifts categories into a per-project
-   recipe interface.
-
-   A follow-up experiment can implement a `derive_entries : sc_id
-   × perturbation_kind × interested_artifacts → entry list`
-   generator and diff it against these 15 (must match at least;
-   extras signal broader coverage — that's fine, per the user's
-   note "principle derivation can cover more"). *)
-
-type stage_group = {
-  stage_id   : string;    (** Sc.1..Sc.6 or "cross_cutting" *)
-  stage_name : string;    (** build_native_lib etc. — matches SSOT §4 *)
-  entry_names : string list;
-}
-
-let stage_groups : stage_group list = [
-  { stage_id = "Sc.1"; stage_name = "build_native_lib";
-    entry_names = [] };
-  { stage_id = "Sc.2"; stage_name = "build_binding";
-    entry_names = [ "symbol_missing"; "header_arity_bump"; "type_wrong";
-                    "symbol_orphan"; "api_repack_stub_orphan" ] };
-  { stage_id = "Sc.3"; stage_name = "build_app_with_binding";
-    entry_names = [ "api_repack"; "api_complete";
-                    "api_repack_python"; "api_complete_python";
-                    "app_over_binding_ocaml" ] };
-  { stage_id = "Sc.4"; stage_name = "run_app_with_binding";
-    entry_names = [ "symbol_version_floor"; "abi_soname_bump";
-                    "behavior_silent" ] };
-  { stage_id = "Sc.5"; stage_name = "build_app_helper";
-    entry_names = [ "app_over_helper_ocaml" ] };
-  { stage_id = "Sc.6"; stage_name = "run_app_helper";
-    entry_names = [] };
-  { stage_id = "cross_cutting"; stage_name = "spans_all_stages";
-    entry_names = [ "api_faithful" ] };
-]
-
-(** Look up the entries belonging to a stage group. Skips any name
-    that doesn't resolve — should not happen in practice but keeps
-    the helper total. *)
-let entries_of_stage (g : stage_group) : entry list =
-  List.filter_map g.entry_names ~f:find_by_name
-
-(** For a given entry name, return the stage group it belongs to
-    (or None if not categorised — e.g. a new entry added before it
-    was placed in a group). Handy for future derivation checks. *)
-let stage_of_entry (name : string) : stage_group option =
-  List.find stage_groups ~f:(fun g ->
-    List.mem g.entry_names name ~equal:String.equal)
-
-(** Sanity check: the 15 flat entries must all appear in some
-    stage group. Called once at start-up if we want to catch
-    additions that forgot the grouping. *)
-let assert_all_entries_grouped () : unit =
-  let missing =
-    List.filter entries ~f:(fun e ->
-      Option.is_none (stage_of_entry e.scenario.name))
-  in
-  match missing with
-  | [] -> ()
-  | xs ->
-    let names = List.map xs ~f:(fun e -> e.scenario.name) in
-    Stdlib.failwith
-      (Printf.sprintf
-         "tiny scenario entries not assigned to a stage_group: %s"
-         (String.concat ~sep:", " names))
-
-
-(** Print scenario names, one per line — legacy parity target for
-    [python3 doc/_legacy_code/tiny_python_harness/scenarios.py list]. *)
+(** Print scenario names, one per line — parity target for the
+    legacy [python3 scenarios.py list]. Order is now Bs.1..Bs.13,
+    Pc.1, Pc.2 (was scenarios.py insertion order). *)
 let print_list () =
   List.iter entries ~f:(fun e -> Stdlib.print_endline e.scenario.name)
 
 (** Validate a scenario name at start-up. Returns the string
     unchanged if [n] is a known scenario name (one of the 15 in
     [entries]) or the special sentinel ["baseline"] (referring
-    to [_cache/baseline/workspace/]). Raises [Failure] otherwise.
-
-    Phase D.1 of the tiny migration: make the variant/scenario
-    coupling type-safe. *)
+    to [_cache/baseline/workspace/]). Raises [Failure] otherwise. *)
 let name_of_string (n : string) : string =
   if String.equal n "baseline" then n
   else
@@ -525,8 +519,7 @@ let name_of_string (n : string) : string =
 (** Human-readable contract label used by the Python harness's JSON
     output ("Symbol", "Type", "ABI", …). Distinct from
     [Canary_compat.string_of_contract_id] which emits "c1".."c8".
-    Used by [print_expected] to preserve the JSON shape consumed by
-    [_harness/check.py]. *)
+    Used by [print_expected] to preserve the JSON shape. *)
 let violates_label = function
   | Canary_compat.C1 -> "Symbol"
   | C2 -> "API-completeness"
@@ -551,9 +544,7 @@ let json_of_entry (e : entry) : Yojson.Basic.t =
   ]
 
 (** Print one scenario's expected JSON — parity target for
-    [scenarios.py expected <name>]. Consumed by
-    [_harness/check.py]. JSON formatting is allowed to drift; the
-    shape (keys, value types) must match. *)
+    [scenarios.py expected <name>]. *)
 let print_expected (name : string) : unit =
   match find_by_name name with
   | None ->
@@ -562,3 +553,59 @@ let print_expected (name : string) : unit =
     Stdlib.exit 1
   | Some e ->
     Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
+
+(* ================================================================
+   ENTRIES GROUPED BY GOOD SCENARIO (Sc.N) — see SSOT §5.1
+
+   Kept as a manifests_at-flavoured lens over the flat entries;
+   for the more accurate two-view analysis see SSOT §5.1 which
+   distinguishes perturbed_at from manifests_at.
+   ================================================================ *)
+
+type stage_group = {
+  stage_id : string;
+  stage_name : string;
+  entry_names : string list;
+}
+
+let stage_groups : stage_group list = [
+  { stage_id = "Sc.1"; stage_name = "build_native_lib";
+    entry_names = [] };
+  { stage_id = "Sc.2"; stage_name = "build_binding";
+    entry_names = [ "symbol_missing"; "header_arity_bump"; "type_wrong";
+                    "symbol_orphan"; "api_repack_stub_orphan" ] };
+  { stage_id = "Sc.3"; stage_name = "build_app_with_binding";
+    entry_names = [ "api_repack"; "api_complete";
+                    "api_repack_python"; "api_complete_python";
+                    "app_over_binding_ocaml" ] };
+  { stage_id = "Sc.4"; stage_name = "run_app_with_binding";
+    entry_names = [ "symbol_version_floor"; "abi_soname_bump";
+                    "behavior_silent" ] };
+  { stage_id = "Sc.5"; stage_name = "build_app_helper";
+    entry_names = [ "app_over_helper_ocaml" ] };
+  { stage_id = "Sc.6"; stage_name = "run_app_helper";
+    entry_names = [] };
+  { stage_id = "cross_cutting"; stage_name = "spans_all_stages";
+    entry_names = [ "api_faithful" ] };
+]
+
+let entries_of_stage (g : stage_group) : entry list =
+  List.filter_map g.entry_names ~f:find_by_name
+
+let stage_of_entry (name : string) : stage_group option =
+  List.find stage_groups ~f:(fun g ->
+    List.mem g.entry_names name ~equal:String.equal)
+
+let assert_all_entries_grouped () : unit =
+  let missing =
+    List.filter entries ~f:(fun e ->
+      Option.is_none (stage_of_entry e.scenario.name))
+  in
+  match missing with
+  | [] -> ()
+  | xs ->
+    let names = List.map xs ~f:(fun e -> e.scenario.name) in
+    Stdlib.failwith
+      (Printf.sprintf
+         "tiny scenario entries not assigned to a stage_group: %s"
+         (String.concat ~sep:", " names))
