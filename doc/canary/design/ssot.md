@@ -134,6 +134,9 @@ Status: **stable for manuscript**. Used in draft.md L349 table.
 finer action graph (§6.5): `Fetch/Build_lib/Build_binding/Build_app/Probe`
 crossed with artifact kinds. The 15-pattern action-path table
 (`canary paths`) is the full enumeration at a finer grain.
+Project-agnostic patterns live at `Canary_scenario.good_scenarios`;
+tiny's instances (same ids, tiny-specific descriptions) at
+`Canary_tiny_scenario.tiny_good_scenarios`.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
@@ -174,6 +177,14 @@ without perturbation, not bad scenarios. Attribution under §4 as
 Ordering convention: rows grouped by Good scenario, then by
 perturbation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
+
+**Code correspondence.** The 13 Bs + 2 Pc entries live at
+`Canary_tiny_scenario.entries`. Each carries a `belongs_to`
+field naming the good scenario(s) it relates to — for Bs.N this
+is the `perturbed_at` Sc.N; for Pc.N this is the Sc.N(s) it
+verifies. `Canary_tiny_scenario.all_scenarios` unions the 6
+tiny good + 13 Bs + 2 Pc = **21 scenarios** as the reference
+list for the `derive_entries` experiment (§9.3 backlog).
 
 | ID    | Good scenario | Perturbation                      | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |

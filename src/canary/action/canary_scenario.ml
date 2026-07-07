@@ -74,12 +74,20 @@ type perturbation = {
 (** Unified scenario — good scenarios have [perturbation = None];
     bad scenarios attach a [perturbation]. *)
 type scenario = {
-  id : string;                       (** "Sc.N" or "Bs.N" *)
+  id : string;                       (** "Sc.N" or "Bs.N" or "Pc.N" *)
   name : string;
   description : string;
   actions : Canary_basic.rule list;
   related_artifacts : Canary_basic.artifact_kind list;
   perturbation : perturbation option;
+  belongs_to : string list;          (** which Sc.N(s) this scenario
+                                         relates to. For a Good scenario:
+                                         its own id. For a Bad scenario:
+                                         the Good scenario whose
+                                         artifacts are perturbed
+                                         (perturbed_at). For a Positive-
+                                         coverage scenario: the Good
+                                         scenarios it verifies. *)
 }
 
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
@@ -97,36 +105,42 @@ let good_scenarios : scenario list =
       description = "Upstream — build the native library from source.";
       actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
       related_artifacts = [ Source; Lib ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.1" ] };
     { id = "Sc.2"; name = "build_binding";
       description = "Binding creation — build language bindings against \
                      the native lib.";
       actions = [ Build_binding OCaml; Build_binding Python ];
       related_artifacts = [ Lib; Binding OCaml; Binding Python ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.2" ] };
     { id = "Sc.3"; name = "build_app_with_binding";
       description = "Binding use (direct) — build an app that links \
                      against a binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; Binding Python; App ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.3" ] };
     { id = "Sc.4"; name = "run_app_with_binding";
       description = "Binding use (direct) — run the app against the \
                      binding + native lib at runtime.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Binding Python; Lib; App ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.4" ] };
     { id = "Sc.5"; name = "build_app_helper";
       description = "Binding use (indirect) — build an app via a helper \
                      library that wraps the binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.5" ] };
     { id = "Sc.6"; name = "run_app_helper";
       description = "Binding use (indirect) — run the app-via-helper chain.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
-      perturbation = None };
+      perturbation = None;
+      belongs_to = [ "Sc.6" ] };
   ]
 
 (* ---------- validators ---------- *)
@@ -175,8 +189,14 @@ let validate_manifest_sc_ids (s : scenario) : unit =
         let _ = sc_id_of_string sc in ())
     | Unknown_gap -> ()
 
+(** Validate that all Sc.N strings in [belongs_to] are known. *)
+let validate_belongs_to (s : scenario) : unit =
+  Base.List.iter s.belongs_to ~f:(fun sc ->
+    let _ = sc_id_of_string sc in ())
+
 (** Full structural check on a scenario. Raises on any
     invariant violation. *)
 let validate_scenario (s : scenario) : unit =
   validate_perturbation_target s;
-  validate_manifest_sc_ids s
+  validate_manifest_sc_ids s;
+  validate_belongs_to s

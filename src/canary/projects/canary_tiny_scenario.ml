@@ -136,6 +136,22 @@ let pert
    Pc.1, Pc.2 for positive coverage)
    ================================================================ *)
 
+(** Derive [belongs_to] from the entry id per §5.1's Grouped by
+    Good scenario view. Sc.1 = 7 native-side (Bs.1..Bs.7);
+    Sc.2 = 6 binding-side (Bs.8..Bs.13); positive coverage links
+    to the good scenarios it verifies. *)
+let belongs_to_of_id (id : string) : string list =
+  match id with
+  | "Bs.1" | "Bs.2" | "Bs.3" | "Bs.4" | "Bs.5" | "Bs.6" | "Bs.7" ->
+    [ "Sc.1" ]
+  | "Bs.8" | "Bs.9" | "Bs.10" | "Bs.11" | "Bs.12" | "Bs.13" ->
+    [ "Sc.2" ]
+  | "Pc.1" -> [ "Sc.3"; "Sc.4" ]
+  | "Pc.2" -> [ "Sc.5"; "Sc.6" ]
+  | other ->
+    Stdlib.failwith
+      (Printf.sprintf "unknown id for belongs_to derivation: %S" other)
+
 let entries : entry list =
   let open Canary_compat in
   let open Canary_scenario in
@@ -143,7 +159,8 @@ let entries : entry list =
          ~scenario_pert ~expected ~violates =
     { scenario = { id; name; description; actions = acts_full;
                    related_artifacts = arts;
-                   perturbation = scenario_pert };
+                   perturbation = scenario_pert;
+                   belongs_to = belongs_to_of_id id };
       recipe = { perturbs; perturbation = concrete_pert;
                  expected; violates };
     }
@@ -555,6 +572,92 @@ let print_expected (name : string) : unit =
     Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
 
 (* ================================================================
+   TINY GOOD SCENARIOS (Phase 1 of tiny–SSOT integration)
+   ================================================================
+
+   Tiny's instance of the 6 good scenarios (SSOT §4). Same ids as
+   [Canary_scenario.good_scenarios]; tiny-specific descriptions.
+   Actions/related_artifacts follow the same coarse palette as
+   [entries] (acts_full / arts_*_cascade / arts_positive) so a
+   generator can iterate over them uniformly.
+
+   No [tiny_recipe] paired here — per user design note (Q1):
+   "a scenario doesn't need to remember recipe; scenarios are
+   meta-functions to prepare a tiny project artifact." Tiny's
+   good-scenario preparation IS the baseline flow in
+   [canary_tiny_baseline.ml]; a future task (Q5, deferred) ties
+   the baseline functions to these Sc.N ids explicitly. *)
+
+let tiny_good_scenarios : Canary_scenario.scenario list = [
+  { id = "Sc.1"; name = "build_native_lib";
+    description = "Tiny: build libtiny.so from c/src/tiny.c using \
+                   gcc; symbol versioning via c/tiny.map (TINY_1.0 \
+                   exports).";
+    actions = acts_full;
+    related_artifacts = arts_native_cascade;
+    perturbation = None;
+    belongs_to = [ "Sc.1" ] };
+  { id = "Sc.2"; name = "build_binding";
+    description = "Tiny: build the OCaml binding (tiny.cmxa + \
+                   libtiny_stubs.a) and the Python cext against \
+                   libtiny.so.";
+    actions = acts_full;
+    related_artifacts =
+      [ Canary_basic.Lib; a_ocaml; a_python ];
+    perturbation = None;
+    belongs_to = [ "Sc.2" ] };
+  { id = "Sc.3"; name = "build_app_with_binding";
+    description = "Tiny: build probe_baseline.exe / app_binding.exe \
+                   linking directly against the tiny OCaml binding.";
+    actions = acts_full;
+    related_artifacts =
+      [ a_ocaml; a_python; Canary_basic.App ];
+    perturbation = None;
+    belongs_to = [ "Sc.3" ] };
+  { id = "Sc.4"; name = "run_app_with_binding";
+    description = "Tiny: exec probe_baseline / app_binding; loader \
+                   resolves libtiny.so.1 at load time.";
+    actions = acts_full;
+    related_artifacts =
+      [ a_ocaml; a_python; Canary_basic.Lib; Canary_basic.App ];
+    perturbation = None;
+    belongs_to = [ "Sc.4" ] };
+  { id = "Sc.5"; name = "build_app_helper";
+    description = "Tiny: build tiny_helper + app_helper.exe — app \
+                   linked through an intermediate helper library \
+                   over the OCaml binding.";
+    actions = acts_full;
+    related_artifacts = [ a_ocaml; Canary_basic.App ];
+    perturbation = None;
+    belongs_to = [ "Sc.5" ] };
+  { id = "Sc.6"; name = "run_app_helper";
+    description = "Tiny: exec app_helper.exe — full chain runs \
+                   through tiny_helper into libtiny.so.";
+    actions = acts_full;
+    related_artifacts =
+      [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
+    perturbation = None;
+    belongs_to = [ "Sc.6" ] };
+]
+
+(* ================================================================
+   ALL SCENARIOS (united-list view)
+   ================================================================
+
+   6 Sc + 13 Bs + 2 Pc = 21 scenarios. Reference list for the
+   `derive_entries` experiment (§9.3 backlog): a generator will
+   enumerate valid (Good scenario × perturbation_kind ×
+   related_artifact) tuples and diff against these 21. The list
+   is "old incomplete" per the user's framing — hand-listed, and
+   the derivation may propose additional scenarios we haven't
+   named yet (which is fine per §7 Principle 3's "principle can
+   cover more"). *)
+
+let all_scenarios : Canary_scenario.scenario list =
+  tiny_good_scenarios
+  @ List.map entries ~f:(fun e -> e.scenario)
+
+(* ================================================================
    STARTUP VALIDATION
 
    Runs at module load. Catches at start-up:
@@ -567,5 +670,6 @@ let print_expected (name : string) : unit =
    propagating the bug through prepare / canary variants. *)
 
 let () =
+  List.iter tiny_good_scenarios ~f:Canary_scenario.validate_scenario;
   List.iter entries ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
 
