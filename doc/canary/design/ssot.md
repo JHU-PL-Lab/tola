@@ -121,14 +121,14 @@ subgraph of the action catalogue (§6.5).
 
 Status: **stable for manuscript**. Used in draft.md L349 table.
 
-| ID   | Scenario name            | Stage                  | Action             | Status |
-| ---- | ------------------------ | ---------------------- | ------------------ | ------ |
-| Sc.1 | `build_native_lib`       | Upstream               | Ar.0 + Ar.1 → Ar.2 | stable |
-| Sc.2 | `build_binding`          | Binding creation       | Ar.1 + Ar.2 → Ar.5 | stable |
-| Sc.3 | `build_app_with_binding` | Binding use (direct)   | (TBD)              | stable |
-| Sc.4 | `run_app_with_binding`   | Binding use (direct)   | (TBD)              | stable |
-| Sc.5 | `build_app_helper`       | Binding use (indirect) | (TBD)              | stable |
-| Sc.6 | `run_app_helper`         | Binding use (indirect) | (TBD)              | stable |
+| ID   | Scenario name            | Stage                  | Inputs → Outputs                | Status |
+| ---- | ------------------------ | ---------------------- | ------------------------------- | ------ |
+| Sc.1 | `build_native_lib`       | Upstream               | Ar.0 (native_source) → Ar.1 (native_lib) | stable |
+| Sc.2 | `build_binding`          | Binding creation       | Ar.1 + Ar.2 (binding_source) → Ar.3 (binding_lib) | stable |
+| Sc.3 | `build_app_with_binding` | Binding use (direct)   | Ar.3 + app_src → app_binary     | stable |
+| Sc.4 | `run_app_with_binding`   | Binding use (direct)   | app_binary + Ar.1 (runtime) → run_output | stable |
+| Sc.5 | `build_app_helper`       | Binding use (indirect) | Ar.3 + helper_src + app_src → helper + app_binary | stable |
+| Sc.6 | `run_app_helper`         | Binding use (indirect) | app_binary + helper + Ar.1 (runtime) → run_output | stable |
 
 **Code correspondence.** The 6 good scenarios aggregate over the
 finer action graph (§6.5): `Fetch/Build_lib/Build_binding/Build_app/Probe`
@@ -150,47 +150,62 @@ sole producer as of Phase E; the legacy Python harness
 - `pkg_*` — packaging scenarios; placeholder for opam/pip/apt
   repackaging mismatches. Tracked as §7 Principle 4 gap.
 
-### 5.1 Per-scenario detail — perturbed_at × manifests_at × detector
+### 5.1 Per-scenario detail
 
-Each scenario has *two* distinct stage attributions rather than
-one "Good counterpart":
+Columns split into two:
+- **Physical facts** (constructed setup): `Good scenario` +
+  `Perturbation`.
+- **Secondary / derived**: `Scenario` (= agreement label —
+  what's *expected* in the good scenario, and named after what
+  gets violated), `Manifests` (where the failure first surfaces
+  today), `Detector today` (which contract check catches it, or
+  gap).
 
-- **perturbed_at** — which stage's artifacts the perturbation
-  modifies (or "post-Sc.N" for binary surgery on built
-  artifacts).
-- **manifests_at** — which stage first observes a failure (build
-  fail, probe fail, or "gap" = no detector wired even though the
-  perturbation exists).
+| Good scenario | Perturbation                             | Scenario                 | Manifests                          | Detector today                                                          |
+| ------------- | ---------------------------------------- | ------------------------ | ---------------------------------- | ----------------------------------------------------------------------- |
+| Sc.1          | native_source (c/src)                    | `symbol_missing`         | Sc.4 (probe fail)                  | c1 cmp_symbol                                                           |
+| Sc.1          | native_source (c/{include,src})          | `header_arity_bump`      | Sc.2 (binding build fail)          | c6 cmp_type                                                             |
+| Sc.1          | native_source (c/tiny.map)               | `symbol_version_floor`   | Sc.4 (dyld load fail)              | c5 cmp_sym_version                                                      |
+| Sc.1          | native_lib (binary surgery)              | `abi_soname_bump`        | Sc.4 (dyld load fail)              | c4 cmp_abi                                                              |
+| Sc.1          | native_source (c/src signature)          | `type_wrong`             | Sc.4 (probe fail)                  | (weak — c6 wants clang AST)                                             |
+| Sc.1          | native_source (c adds fn)                | `api_faithful`           | — (nothing detects)                | **gap** — c8 not wired                                                  |
+| Sc.2          | binding_source (ocaml user)              | `api_repack`             | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                               |
+| Sc.2          | binding_source (ocaml mli)               | `api_complete`           | Sc.3 (app build fail)              | c2 cmp_api_completeness                                                 |
+| Sc.1          | behavior (native src semantics)          | `behavior_silent`        | Sc.4 (probe fail)                  | c3 cmp_behavior                                                         |
+| Sc.2          | binding_source (ocaml stub)              | `symbol_orphan`          | Sc.2 (link fail on strict linker)  | c1 cmp_symbol                                                           |
+| Sc.2          | binding_source (python)                  | `api_repack_python`      | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                               |
+| Sc.2          | binding_source (python)                  | `api_complete_python`    | Sc.4 (probe fail)                  | c2 cmp_api_completeness                                                 |
+| Sc.3–Sc.4     | — (positive)                             | `app_over_binding_ocaml` | — (all pass)                       | — (positive coverage)                                                   |
+| Sc.5–Sc.6     | — (positive)                             | `app_over_helper_ocaml`  | — (all pass)                       | — (positive coverage)                                                   |
+| Sc.2          | binding_source (ocaml stub layer)        | `api_repack_stub_orphan` | — (probe passes)                   | **gap** — c7 static-only (bo1↔bo4 comparison, not probe)                |
 
-| Scenario                 | perturbed_at              | manifests_at                       | detector today                                                              |
-| ------------------------ | ------------------------- | ---------------------------------- | --------------------------------------------------------------------------- |
-| `symbol_missing`         | Sc.1 (native src)         | Sc.4 (probe fail)                  | c1 cmp_symbol                                                               |
-| `header_arity_bump`      | Sc.1 (native src)         | Sc.2 (binding build fail)          | c6 cmp_type                                                                 |
-| `symbol_version_floor`   | Sc.1 (native src.map)     | Sc.4 (dyld load fail)              | c5 cmp_sym_version                                                          |
-| `abi_soname_bump`        | post-Sc.1 (binary surgery) | Sc.4 (dyld load fail)             | c4 cmp_abi                                                                  |
-| `type_wrong`             | Sc.1 (native src)         | Sc.4 (probe fail)                  | (weak — c6 wants clang AST)                                                 |
-| `api_faithful`           | Sc.1 (native src, adds fn) | — (nothing detects)               | **gap** — c8 not wired                                                      |
-| `api_repack`             | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                                   |
-| `api_complete`           | Sc.2 (binding mli)        | Sc.3 (app build fail)              | c2 cmp_api_completeness                                                     |
-| `behavior_silent`        | Sc.1 (native src)         | Sc.4 (probe fail)                  | c3 cmp_behavior                                                             |
-| `symbol_orphan`          | Sc.2 (binding src)        | Sc.2 (link fail on strict linker)  | c1 cmp_symbol                                                               |
-| `api_repack_python`      | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c3 cmp_behavior via probe                                                   |
-| `api_complete_python`    | Sc.2 (binding src)        | Sc.4 (probe fail)                  | c2 cmp_api_completeness                                                     |
-| `app_over_binding_ocaml` | — (positive)              | — (all pass)                       | — (positive coverage)                                                       |
-| `app_over_helper_ocaml`  | — (positive)              | — (all pass)                       | — (positive coverage)                                                       |
-| `api_repack_stub_orphan` | Sc.2 (binding stub layer) | — (probe passes)                   | **gap** — c7 exists but exercised via bo1↔bo4 comparison, not runtime probe |
-
-**Grouped by `perturbed_at`.**
+**Grouped by Good scenario.**
 
 - **Sc.1** — 7: symbol_missing, header_arity_bump,
-  symbol_version_floor, type_wrong, api_faithful,
-  behavior_silent, abi_soname_bump (via post-Sc.1 surgery)
+  symbol_version_floor, abi_soname_bump (binary surgery on
+  Sc.1's output), type_wrong, api_faithful, behavior_silent
 - **Sc.2** — 6: api_repack, api_complete, symbol_orphan,
   api_repack_python, api_complete_python, api_repack_stub_orphan
+- **Sc.3–Sc.6** — 2 positive-coverage constructions
+  (app_over_binding_ocaml at Sc.3–Sc.4, app_over_helper_ocaml at
+  Sc.5–Sc.6)
+
+**Grouped by Perturbation source.**
+
+- **native_source (patch)** — 6: symbol_missing,
+  header_arity_bump, symbol_version_floor, type_wrong,
+  api_faithful, behavior_silent (well, semantic — see next)
+- **native_lib (binary surgery)** — 1: abi_soname_bump
+- **behavior (native src semantics without symbol change)** — 1:
+  behavior_silent (also patches native_source, categorised here
+  because the perturbation is behaviour-flavoured)
+- **binding_source (patch)** — 6: api_repack, api_complete,
+  symbol_orphan, api_repack_python, api_complete_python,
+  api_repack_stub_orphan
 - **positive coverage** — 2: app_over_binding_ocaml,
   app_over_helper_ocaml
 
-**Grouped by `manifests_at`.**
+**Grouped by Manifests.**
 
 - **Sc.2** (build fail) — 2: header_arity_bump, symbol_orphan
 - **Sc.3** (app-build fail) — 1: api_complete
@@ -208,16 +223,20 @@ one "Good counterpart":
    (8/15).** Static comparators catch things earlier (Sc.2/Sc.3
    build) when they exist; otherwise badness surfaces at runtime.
 2. **Sc.1/Sc.5/Sc.6 have zero manifestations, not zero
-   involvement.** Sc.1 is where 7 perturbations are *applied* but
-   the failure never surfaces at native build alone. Sc.5/Sc.6
-   (helper chain) are under-explored — sole entry is
-   `app_over_helper_ocaml` (positive).
+   involvement.** Sc.1 is where 7 perturbations are *applied*
+   (physical fact), but the failure never surfaces at native
+   build alone. Sc.5/Sc.6 (helper chain) are under-explored —
+   sole entry is `app_over_helper_ocaml` (positive).
 3. **Two detection gaps.** `api_faithful` (c8 not wired) and
    `api_repack_stub_orphan` (c7 static-only, not probe). Ideally
    the `derive_entries` experiment (§9.3 backlog) finds these
    automatically as "no-detector" cells.
-4. **Detection ≠ perturbation.** Where you patch is not where the
-   badness bites. Two axes, not one — clarifies §7 Principle 3.
+4. **Manifestation and detection are secondary to construction.**
+   A scenario is fully defined by (Good scenario × Perturbation)
+   — its physical setup. What agreement is expected, where the
+   badness first bites, and which checker catches it are
+   consequences, not part of the scenario definition. This
+   framing clarifies §7 Principle 3.
 
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
