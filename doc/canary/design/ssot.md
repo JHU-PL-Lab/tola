@@ -279,20 +279,24 @@ Deferred code sweep; agreement first, then flush.
 
 ### 6.4 Migration sequence (agreed)
 
-1. Draft this taxonomy in SSOT (this section). ✓
-2. **Task 1** — scenario-to-action refactor: add `scenario` as a
-   code type (list of actions + interested artifacts + agreement
-   claims), using existing `rule` type without renaming yet.
-   Split current `scenario_spec`: concept fields stay, tiny
-   implementation fields (perturbation, patches, expected) move
-   off to a Task-2-side recipe layer.
-3. **Task 2** — implementation-side refactor: project-specific
-   `tiny_scenario_recipe` (or similar) owns the perturbation
-   machinery; produces `scenario` values consumable by any
-   backend.
+1. ✓ Draft this taxonomy in SSOT (this section).
+2. ✓ **Task 1** — scenario-to-action refactor. Landed in
+   1111ad6 (initial split: `Canary_scenario.scenario` + tiny
+   `entry = { scenario; recipe }`) and refined in 13df74e
+   (unified shape: added `id`, `perturbation option` with
+   target / kind / manifest / detector; renamed
+   `interested_artifacts` → `related_artifacts`; populated
+   Bs.1–Bs.13 + Pc.1–Pc.2). Existing `rule` type reused —
+   rename deferred to Task 3. Explicitly not part of Task 1:
+   agreement_claims field, deriving related_artifacts from
+   actions (both deferred to §9.3 backlog).
+3. **Task 2** — implementation-side refactor: unify
+   `tiny_recipe` with `scenario.perturbation` so the two
+   layers stop duplicating info; project-hookable interface so
+   z3/llvm/sqlite can supply their own recipes.
 4. **Task 3** — deferred term-rename sweep (rule → action,
    action_step → step, stage → artifact_status). No hurry; runs
-   after Tasks 1+2 and a full code/doc audit.
+   after Task 2 and a full code/doc audit.
 
 ### 6.5 Current action catalogue
 
@@ -379,9 +383,12 @@ Captured for later; surface here so they're visible per-section.
    aggregates.
 6. **Sf.X ↔ Ar.X alignment (Principle 2).** Renumber Sf so Sf.k is
    the surface of Ar.k.
-7. **Perturbation matrix ↔ bad scenarios (Principle 3).** Document
-   the mapping between the 13-variant matrix and the 15
-   `scenarios.py` rows; declare which is authoritative.
+7. **Perturbation matrix ↔ bad scenarios (Principle 3).** Doc
+   half ✓ — §5.1 documents the 13 Bs.N entries with per-row
+   `Good scenario` × `Perturbation` × `Manifests`. Code half
+   still open: `derive_entries` experiment to test whether the
+   13 reproduce from a smaller (Good × perturbation kind ×
+   related_artifacts) generator (§9.3 backlog).
 8. **Tiny packaging coverage (Principle 4).** Add packaging-error
    scenarios to tiny (opam/pip/apt repackaging mistakes,
    cross-PM SONAME drift). Tracked as project TODO.
@@ -456,97 +463,101 @@ addressed. Captured as awareness; not active work.
    into §4/§5 flows.
 3. **IN PROGRESS — scenario remodel.**
 
-   **Task 1 (done, commit 1111ad6):** scenario-to-action split.
-   - [x] New `Canary_scenario.scenario` (name, description, actions,
-     interested_artifacts) — project-agnostic type in
-     `src/canary/action/canary_scenario.ml`.
-   - [x] Split `Canary_tiny_scenario`: `tiny_recipe` (perturbs,
-     perturbation, expected, violates) + `entry = { scenario;
-     recipe }` + `entries : entry list` (15 tiny entries).
+   **Task 1 done** (commits `1111ad6` + `13df74e` + `bfc075c`):
+   unified scenario shape.
+   - [x] `Canary_scenario.scenario` — project-agnostic type at
+     `src/canary/action/canary_scenario.ml` — with `id`,
+     `name`, `description`, `actions`,
+     `related_artifacts`, `perturbation option`.
+   - [x] `perturbation` record: target + kind + manifest +
+     detector. Reuses `artifact_kind` for artifact-flavoured
+     perturbations (`On_artifact`), with `On_behavior` as the
+     source-patch-no-surface-diff case. `manifest` and
+     `detector` are possibilistic (`Definite` / `Possible` /
+     `Unknown_gap`; `Wired of contract_id` / `Detector_gap`).
+   - [x] Tiny `entry = { scenario; recipe }` populated with 13
+     Bs.N + 2 Pc.N entries, ordered per §5.1.
+     `tiny_recipe` carries the concrete impl (patch files,
+     expected step outcomes) alongside the abstract
+     annotations on `scenario.perturbation`.
+   - [x] Coarse hand-mapping of `actions` + `related_artifacts`
+     using 5 groupings. Refinement queued below.
    - [x] Consumers updated (canary_tiny_prepare uses entries;
      canary_main uses `name_of_string`).
-   - [x] End-to-end verified: list / expected / baseline / prepare
-     / confirm all work.
-   - [x] Coarse hand-mapping of actions + interested_artifacts
-     using 5 groupings (native cascade, ocaml only, python only,
-     abi cascade, positive coverage). Refinement queued below.
+   - [x] End-to-end verified: list / expected / baseline /
+     prepare / confirm all work.
 
-   **Backlog (post-Task-1, still §9.3-family):**
-   - [ ] **Derive `interested_artifacts` from `actions`** —
-     currently hand-mapped; the two fields are correlated (which
-     artifacts an action touches is knowable from the action
-     verb). Add an `interested_artifacts_of_actions : rule list
-     → artifact_kind list` helper; verify it produces the
-     hand-mapped values for the 15 entries; drop the hand fields.
-   - [~] **Regroup entries by good scenario (Sc.N)** — first
-     pass landed as an additive view in commit `d44e7fb`, but
-     used a single ambiguous "stage" label. §5.1 analysis
-     (2026-07-06) splits this into two views —
-     `perturbed_at_stage` and `manifests_at_stage`. Code needs
-     revising to either rename current `stage_groups` to
-     `manifests_at_groups` + add `perturbed_at_groups`, OR extend
-     each group entry with both fields. Awaiting review.
-   - [ ] **`derive_entries` experiment.** With the two views
-     documented, implement a
-     `derive_entries : perturbation_category × Sc.N ×
-     interested_artifacts → entry list`
-     and diff against the current 15. Extras welcome
-     ("principle can cover more"). Should surface the two
-     detection gaps (`api_faithful`, `api_repack_stub_orphan`) as
-     "no-detector" cells naturally.
-   - [ ] **Fill the Sc.5 / Sc.6 under-exercised areas.** Only
-     `app_over_helper_ocaml` (positive) targets the helper-chain
-     stages. No bad scenarios exercise a helper-only failure
-     mode. Not urgent; note as coverage gap for the manuscript.
-   - [ ] **Task 2 — perturbation to project-recipe layer.**
-     Extract tiny-specific machinery (patch, soname_bump) to a
-     project-hookable interface. Tied to the perturbation ↔
-     artifact-failure mapping design (the same "how does badness
-     manifest" question).
-   - [ ] **Task 3 (deferred) — term-rename sweep** per §6.2.
-     After Tasks 1+2 land.
-   - [ ] Dual-view artifact index (reading (c) — artifact knows
-     all perturbations touching it, direct + inherited).
-   - [ ] Iteration helpers over §1/§2/§3 catalogues
-     (`canary_ssot.ml` — not blocking; lift only when reach
-     forces it).
-   - [ ] Alignment invariant as a test — needs both views indexed.
-   - [ ] SSOT §5 columns swap (`Broken artifact` + `Notes` →
-     `Interested artifacts` + `Detected by`) once `Detected by`
-     has a real source of truth (checker registry).
+   **Backlog (queued or in-progress):**
 
-   **Motivation (unchanged):**
-   Migration (§9.1) is complete; `scenario_spec` is the sole
-   source for the 15-scenario list. Next step is to remodel the
-   flat list into a structural hierarchy: each good scenario
-   (Sc.1..Sc.6) owns its associated artifacts + the set of
-   possible perturbations at that stage. Bad scenarios become
-   `Sc.N × perturbation` cells rather than free-standing flat
-   rows.
-   Substrate today: `Canary_tiny_scenario.scenario_spec` carries
-   `violates`/`perturbs`/`perturbation`/`expected`. What's
-   missing structurally is *which Sc.N does this bad scenario
-   belong to* — implicit today in the draft.md L382 table's
-   "Good counterpart" column.
-   Payoffs:
-   (a) Closes §8 reconciliation task #7 (Perturbation matrix ↔
-       bad scenarios) — mapping becomes computable via structural
-       composition instead of documented separately.
+   Confirmed next (user approved 2026-07-06):
+   - [ ] **`sc_id_of_string` validator** — the `manifest` field
+     uses raw `Sc.N` strings; nothing catches typos. Cheap
+     validator, analogous to `name_of_string` for scenarios.
+     Closes drift risk #1 from the status report.
+   - [ ] **`target ∈ related_artifacts` invariant check** —
+     design intent; not enforced today. Cheap.
+   - [ ] **Good scenarios (Sc.1..Sc.6) as code entries** —
+     currently only in SSOT §4. Add `canary_scenario_registry`
+     (or similar) with `sc1..sc6 : scenario list`; bad
+     scenarios can reference their good scenario by ID instead
+     of embedding a `Sc.N` string in `manifest`.
+   - [ ] **`derive_entries` experiment.** With good scenarios
+     as code entries and validated Sc.N IDs, implement a
+     `derive_entries : (good_scenario × perturbation_kind ×
+     artifact_kind) → scenario list` generator. Diff against
+     the current 13 Bs. Extras welcome ("principle can cover
+     more"). Should surface the two detection gaps (Bs.6, Bs.13)
+     naturally.
+
+   Later:
+   - [ ] **Derive `related_artifacts` from `actions`** —
+     currently hand-mapped; correlated with action verbs. Add a
+     `consumes/produces` helper on `rule`, verify against the 15
+     hand values, then drop the hand field.
+   - [ ] **Task 2 — recipe / perturbation integration.** Unify
+     `tiny_recipe.perturbation` with `scenario.perturbation`;
+     project-hookable recipe interface so z3/llvm/sqlite can
+     supply their own.
+   - [ ] **Fill Sc.3–Sc.6 areas.** Observation 2 in §5.1 flags
+     these as zero-bad-scenario. Whether assembly-time /
+     run-time perturbations belong at Sc.3+ is open; either
+     confirm they don't or add scenarios that do. Manuscript
+     concern too.
+   - [ ] **Add `Package` perturbation source.** SSOT §5
+     `pkg_*` roadmap; needs either a `Package` case on
+     `artifact_kind` or a new `perturbation_kind` variant.
+     Deferred until a project needs it.
+
+   Deferred, not-blocking:
+   - [ ] **Task 3 — term-rename sweep** per §6.2. After Task 2.
+   - [ ] Dual-view artifact index (artifact-centric perturbation
+     list, direct + inherited).
+   - [ ] Iteration helpers over §1/§2/§3 (`canary_ssot.ml`).
+   - [ ] Alignment invariant as a runtime test — needs
+     `derive_entries` and both views indexed.
+
+   **Motivation (updated after Task 1 landed).** Remodel goal
+   was: each bad scenario names its Good scenario, its perturbed
+   artifact, its manifestation, and its detector — as data on
+   one record. Task 1 delivered that shape. Remaining backlog is
+   about (a) making implicit strings type-safe, (b) representing
+   Good scenarios in code, (c) validating the pattern against a
+   generator (`derive_entries`), and (d) principled derivation
+   of `related_artifacts` from `actions`.
+
+   Payoffs (unchanged):
+   (a) Closes §8 reconciliation task #7 — mapping becomes
+       computable via structural composition. Doc half of #7 is
+       done in §5.1; code half remains via `derive_entries`.
    (b) Realises §7 Principle 3 (Good × perturbation = bad) as
        structural code, not just declarative principle.
    (c) Enables §9.4 (expectation re-do + `Expect_compat_failure`
        derivation) — expected outcomes attach coherently to
-       good-scenario parents.
+       Good scenario / perturbation pairs.
    (d) SSOT §4 (Good) and §5 (Bad) become derivable from one
        source; both catalogues in draft.md follow.
-
-   Iteration helpers for §1/§2/§3 catalogues (`canary_ssot.ml`)
-   are related but *not* a prerequisite — scenario-side work
-   uses hand-listed `artifact_kind` values inline where needed
-   and lifts to a shared iteration module only when the reach
-   forces it.
 4. **Re-do expectation as per-step contract outcome +
-   derive `Expect_compat_failure` from `scenario_spec`.**
+   derive `Expect_compat_failure` from scenario / recipe.**
    *(Merged from the old §9.4 and Phase D.2 in
    `tiny_migration.md` — they're the same shift at different
    scales.)*
@@ -561,15 +572,16 @@ addressed. Captured as awareness; not active work.
    (agreements), where step results are typed observations into
    the contract rather than match-the-substring assertions.
    Payoffs: (a) canary variants derive their expectations from
-   `scenario_spec.violates` + `expected` (kills 13 hand-coded
+   `entry.recipe.violates` + `entry.recipe.expected` +
+   `scenario.perturbation.detector` (kills 13 hand-coded
    `Expect_compat_failure` blocks); (b) success outcomes
    contribute positively (not just failure), enabling
    contract-level coverage claims; (c) resolves the manuscript's
    §3.4 "role of behavior" discussion at the code level.
-   **Timing**: strictly after §9.3. The good-scenario structure
-   is a prerequisite — expected outcomes must attach to a
-   coherent parent, not free-floating rows. This is likely the
-   biggest manuscript ↔ code structural shift on the horizon.
+   **Timing**: strictly after §9.3. The Good-scenario /
+   perturbation structure is a prerequisite — expected outcomes
+   must attach to a coherent parent. Likely the biggest
+   manuscript ↔ code structural shift on the horizon.
 
 ## 10. Downstream usage in `draft.md`
 
