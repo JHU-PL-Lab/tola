@@ -96,16 +96,36 @@ type scenario = {
     Each Sc.N describes a stage; language qualifiers appear
     as suffixes (Sc.N.<Lang>) for language-specific stages.
     Sc.1 is shared across languages (the native lib itself is
-    language-agnostic under the SCAB — static C API binding —
-    assumption we currently fix).
+    language-agnostic).
 
     Concrete projects (tiny, z3, ...) instantiate the pattern
     with their own artifacts and probes. [perturbation = None]
     on all (good = no perturbation, by definition).
 
-    Mechanism dimension (SCAB vs DFFI vs …) is currently fixed
-    to SCAB; a future extension may promote it to an explicit
-    axis. *)
+    {b Mechanism dimension — hardcoded to SCAB for now.} Binding
+    mechanisms (SCAB = static C API binding via cext/cstubs;
+    DFFI = dynamic FFI via ctypes; ...) currently collapse under
+    a single SCAB assumption. Practical consequences:
+
+    - Sc.1 stays shared even if we promote mechanism to an
+      explicit axis later — the native lib is mechanism-agnostic.
+    - OCaml scenarios (Sc.2.OCaml..Sc.6.OCaml) are all SCAB
+      (tiny uses cstubs, no DFFI on the OCaml side).
+    - Python scenarios (Sc.2.Python, Sc.4.Python) are the SCAB
+      case (cext). ctypes = DFFI is not modeled today; when we
+      add it, Sc.4.Python.cext (SCAB) and Sc.4.Python.ctypes
+      (DFFI) become distinct, with an explicit mechanism →
+      {stage × language} mapping replacing today's hardcoded
+      list.
+
+    Absence semantics (per user, 2026-07-07): a scenario is
+    "shared" only when it's *exactly duplicated* across
+    languages (Sc.1 case). Scenarios that don't exist for a
+    language because the language has no such step (e.g. no
+    Sc.3.Python — .py IS the app) are simply absent, not
+    "skipped". Same for Sc.5/Sc.6 on the Python side — no
+    Python helper in tiny, so those combinations don't
+    exist. *)
 let good_scenarios : scenario list =
   let open Canary_basic in
   let open Canary_lang in
@@ -165,8 +185,10 @@ let good_scenarios : scenario list =
       perturbation = None;
       belongs_to = [ "Sc.2.Python" ] };
     { id = "Sc.4.Python"; name = "run_app_with_binding";
-      description = "Run the Python probe (imports the binding; loader \
-                     resolves the native lib).";
+      description = "Run the Python cext probe under SCAB (import \
+                     the binding; loader resolves the native lib). \
+                     ctypes probe would be a same-shape run under \
+                     DFFI, not modeled today.";
       actions = [ Probe App ];
       related_artifacts = [ Binding Python; Lib; App ];
       perturbation = None;

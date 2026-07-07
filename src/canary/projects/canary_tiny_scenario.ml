@@ -583,8 +583,12 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     perturbation = None;
     belongs_to = [ "Sc.2.Python" ] };
   { id = "Sc.4.Python"; name = "run_app_with_binding";
-    description = "Tiny: exec probe_baseline.py (cext and ctypes \
-                   probes); dyld resolves libtiny.so.1 at import time.";
+    description = "Tiny: exec probe_baseline.py for the cext path \
+                   (SCAB); dyld resolves libtiny.so.1 at import time. \
+                   The ctypes probe (DFFI) would be a separate \
+                   Sc.4.Python.ctypes once the mechanism axis is \
+                   promoted; today it runs but isn't modeled as its \
+                   own scenario.";
     actions = acts_full;
     related_artifacts =
       [ a_python; Canary_basic.Lib; Canary_basic.App ];
