@@ -505,87 +505,17 @@ let entries : entry list =
   ]
 
 (* ================================================================
-   HELPERS
-   ================================================================ *)
-
-let find_by_name (n : string) : entry option =
-  List.find entries ~f:(fun e -> String.equal e.scenario.name n)
-
-(** Print scenario names, one per line — parity target for the
-    legacy [python3 scenarios.py list]. Order is now Bs.1..Bs.13,
-    Pc.1, Pc.2 (was scenarios.py insertion order). *)
-let print_list () =
-  List.iter entries ~f:(fun e -> Stdlib.print_endline e.scenario.name)
-
-(** Validate a scenario name at start-up. Returns the string
-    unchanged if [n] is a known scenario name (one of the 15 in
-    [entries]) or the special sentinel ["baseline"] (referring
-    to [_cache/baseline/workspace/]). Raises [Failure] otherwise. *)
-let name_of_string (n : string) : string =
-  if String.equal n "baseline" then n
-  else
-    match find_by_name n with
-    | Some _ -> n
-    | None ->
-      let known = List.map entries ~f:(fun e -> e.scenario.name) in
-      Stdlib.failwith
-        (Printf.sprintf
-           "unknown tiny scenario: %S. Known: %s (or \"baseline\")"
-           n (String.concat ~sep:", " known))
-
-(** Human-readable contract label used by the Python harness's JSON
-    output ("Symbol", "Type", "ABI", …). Distinct from
-    [Canary_compat.string_of_contract_id] which emits "c1".."c8".
-    Used by [print_expected] to preserve the JSON shape. *)
-let violates_label = function
-  | Canary_compat.C1 -> "Symbol"
-  | C2 -> "API-completeness"
-  | C3 -> "Behavior"
-  | C4 -> "ABI"
-  | C5 -> "SymbolVersion"
-  | C6 -> "Type"
-  | C7 -> "API-repacking"
-  | C8 -> "API-faithfulness"
-
-let json_of_entry (e : entry) : Yojson.Basic.t =
-  `Assoc [
-    "scenario", `String e.scenario.name;
-    "description", `String e.scenario.description;
-    "violates", `List (List.map e.recipe.violates
-                         ~f:(fun c -> `String (violates_label c)));
-    "perturbs", `List (List.map e.recipe.perturbs
-                         ~f:(fun p -> `String p));
-    "outcomes",
-      `Assoc (List.map e.recipe.expected
-                ~f:(fun (k, v) -> k, `String (string_of_outcome v)));
-  ]
-
-(** Print one scenario's expected JSON — parity target for
-    [scenarios.py expected <name>]. *)
-let print_expected (name : string) : unit =
-  match find_by_name name with
-  | None ->
-    Stdlib.prerr_endline
-      (Printf.sprintf "unknown scenario: %S; try `list`" name);
-    Stdlib.exit 1
-  | Some e ->
-    Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
-
-(* ================================================================
    TINY GOOD SCENARIOS (Phase 1 of tiny–SSOT integration)
    ================================================================
 
    Tiny's instance of the 6 good scenarios (SSOT §4). Same ids as
    [Canary_scenario.good_scenarios]; tiny-specific descriptions.
-   Actions/related_artifacts follow the same coarse palette as
-   [entries] (acts_full / arts_*_cascade / arts_positive) so a
-   generator can iterate over them uniformly.
 
    No [tiny_recipe] paired here — per user design note (Q1):
    "a scenario doesn't need to remember recipe; scenarios are
    meta-functions to prepare a tiny project artifact." Tiny's
    good-scenario preparation IS the baseline flow in
-   [canary_tiny_baseline.ml]; a future task (Q5, deferred) ties
+   [canary_tiny_baseline.ml]; a future task (deferred) ties
    the baseline functions to these Sc.N ids explicitly. *)
 
 let tiny_good_scenarios : Canary_scenario.scenario list = [
@@ -640,22 +570,138 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     belongs_to = [ "Sc.6" ] };
 ]
 
-(* ================================================================
-   ALL SCENARIOS (united-list view)
-   ================================================================
-
-   6 Sc + 13 Bs + 2 Pc = 21 scenarios. Reference list for the
-   `derive_entries` experiment (§9.3 backlog): a generator will
-   enumerate valid (Good scenario × perturbation_kind ×
-   related_artifact) tuples and diff against these 21. The list
-   is "old incomplete" per the user's framing — hand-listed, and
-   the derivation may propose additional scenarios we haven't
-   named yet (which is fine per §7 Principle 3's "principle can
-   cover more"). *)
-
+(** United list: 6 Sc + 13 Bs + 2 Pc = 21 scenarios. Reference for
+    the `derive_entries` experiment (§9.3 backlog). *)
 let all_scenarios : Canary_scenario.scenario list =
   tiny_good_scenarios
   @ List.map entries ~f:(fun e -> e.scenario)
+
+(* ================================================================
+   HELPERS
+   ================================================================ *)
+
+let find_by_name (n : string) : entry option =
+  List.find entries ~f:(fun e -> String.equal e.scenario.name n)
+
+(** Test whether a bad scenario has a detection gap — either the
+    manifest is [Unknown_gap] or the detector is [Detector_gap]. *)
+let has_detection_gap (sc : Canary_scenario.scenario) : bool =
+  match sc.perturbation with
+  | None -> false
+  | Some p ->
+    (match p.manifest with Canary_scenario.Unknown_gap -> true | _ -> false)
+    || (match p.detector with Canary_scenario.Detector_gap -> true | _ -> false)
+
+(** Render belongs_to for annotations. Bad scenarios use "(Sc.X)";
+    positive coverage uses "(verifies Sc.X, Sc.Y)". *)
+let render_belongs_bad (belongs : string list) : string =
+  Printf.sprintf "(%s)" (String.concat ~sep:", " belongs)
+
+let render_belongs_pc (belongs : string list) : string =
+  Printf.sprintf "(verifies %s)" (String.concat ~sep:", " belongs)
+
+(** Show-list-but-no-run — the enumeration surface. Prints all 21
+    tiny scenarios in three sections: good / bad / positive.
+    Structural annotations (belongs_to, detection gap) shown; no
+    filesystem side-effect. See SSOT §5.1 for the full detail
+    table.
+
+    For scripting that wants just names (grep-friendly), pipe
+    through [awk] or [sed]; alternate views (grouped by
+    manifest, by artifact) can be added as flags later. *)
+let print_list () =
+  let pad_id id =
+    Printf.sprintf "%-5s" id in
+  let pad_name name =
+    Printf.sprintf "%-26s" name in
+  (* Good scenarios *)
+  Stdlib.print_endline
+    (Printf.sprintf "Good scenarios (%d):"
+       (List.length tiny_good_scenarios));
+  List.iter tiny_good_scenarios ~f:(fun s ->
+    Stdlib.print_endline
+      (Printf.sprintf "  %s %s"
+         (pad_id s.Canary_scenario.id) s.Canary_scenario.name));
+  Stdlib.print_endline "";
+  (* Bad scenarios *)
+  let bads = List.filter entries ~f:(fun e ->
+    Option.is_some e.scenario.perturbation) in
+  Stdlib.print_endline
+    (Printf.sprintf "Bad scenarios (%d):" (List.length bads));
+  List.iter bads ~f:(fun e ->
+    let sc = e.scenario in
+    let gap_tag =
+      if has_detection_gap sc then "  [detection gap]" else "" in
+    Stdlib.print_endline
+      (Printf.sprintf "  %s %s %s%s"
+         (pad_id sc.id) (pad_name sc.name)
+         (render_belongs_bad sc.belongs_to) gap_tag));
+  Stdlib.print_endline "";
+  (* Positive coverage *)
+  let positives = List.filter entries ~f:(fun e ->
+    Option.is_none e.scenario.perturbation) in
+  Stdlib.print_endline
+    (Printf.sprintf "Positive coverage (%d):" (List.length positives));
+  List.iter positives ~f:(fun e ->
+    let sc = e.scenario in
+    Stdlib.print_endline
+      (Printf.sprintf "  %s %s %s"
+         (pad_id sc.id) (pad_name sc.name)
+         (render_belongs_pc sc.belongs_to)))
+
+(** Validate a scenario name at start-up. Returns the string
+    unchanged if [n] is a known scenario name (one of the 15 in
+    [entries]) or the special sentinel ["baseline"] (referring
+    to [_cache/baseline/workspace/]). Raises [Failure] otherwise. *)
+let name_of_string (n : string) : string =
+  if String.equal n "baseline" then n
+  else
+    match find_by_name n with
+    | Some _ -> n
+    | None ->
+      let known = List.map entries ~f:(fun e -> e.scenario.name) in
+      Stdlib.failwith
+        (Printf.sprintf
+           "unknown tiny scenario: %S. Known: %s (or \"baseline\")"
+           n (String.concat ~sep:", " known))
+
+(** Human-readable contract label used by the Python harness's JSON
+    output ("Symbol", "Type", "ABI", …). Distinct from
+    [Canary_compat.string_of_contract_id] which emits "c1".."c8".
+    Used by [print_expected] to preserve the JSON shape. *)
+let violates_label = function
+  | Canary_compat.C1 -> "Symbol"
+  | C2 -> "API-completeness"
+  | C3 -> "Behavior"
+  | C4 -> "ABI"
+  | C5 -> "SymbolVersion"
+  | C6 -> "Type"
+  | C7 -> "API-repacking"
+  | C8 -> "API-faithfulness"
+
+let json_of_entry (e : entry) : Yojson.Basic.t =
+  `Assoc [
+    "scenario", `String e.scenario.name;
+    "description", `String e.scenario.description;
+    "violates", `List (List.map e.recipe.violates
+                         ~f:(fun c -> `String (violates_label c)));
+    "perturbs", `List (List.map e.recipe.perturbs
+                         ~f:(fun p -> `String p));
+    "outcomes",
+      `Assoc (List.map e.recipe.expected
+                ~f:(fun (k, v) -> k, `String (string_of_outcome v)));
+  ]
+
+(** Print one scenario's expected JSON — parity target for
+    [scenarios.py expected <name>]. *)
+let print_expected (name : string) : unit =
+  match find_by_name name with
+  | None ->
+    Stdlib.prerr_endline
+      (Printf.sprintf "unknown scenario: %S; try `list`" name);
+    Stdlib.exit 1
+  | Some e ->
+    Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
 
 (* ================================================================
    STARTUP VALIDATION
