@@ -302,9 +302,26 @@ let action_cmd =
      already materialised by [tiny-scenarios prepare <name>]. *)
   let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
     let name = Canary_tiny_scenario.name_of_string name in
+    (* Auto-init: materialise baseline + this scenario's
+       workspace if missing. Makes `canary action
+       tiny-scenario/<name>` a single-command experience.
+       Existing workspaces are trusted; no re-prepare on
+       repeat runs. *)
+    let workspace =
+      Canary_project_tiny.cache_workspace_of ~scenario:name in
+    if not (Sys.file_exists workspace) then begin
+      if not (Sys.file_exists Canary_tiny_baseline.baseline_workspace) then begin
+        Fmt.pr "[auto-init] preparing baseline workspace...@.";
+        Canary_tiny_baseline.run ()
+      end;
+      if not (String.equal name "baseline") then begin
+        Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
+        Canary_tiny_prepare.run ~name
+      end
+    end;
     let perturbed_stores =
       Canary_project_tiny.stores_of_workspace
-        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario:name)
+        ~workspace_root:workspace
         ()
     in
     let spec =
