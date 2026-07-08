@@ -136,152 +136,12 @@ let action_cmd =
       steps
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
-  (* Tiny is multi-variant. Each variant is a named script_spec in
-     canary_project_tiny.ml whose expectations describe which surface-
-     theory contracts canary expects to fire at which stages. The
-     harness↔canary mapping (e.g. "lib_broken matches scenario e1") is
-     a documentation concern, not encoded here.
-
-     - variant_filter = None: run all known variants via
-       Canary_run_info.run_project_multi.
-     - variant_filter = Some "<name>": run only the named variant.
-     The CLI dispatches "tiny" → None and "tiny/<name>" → Some name. *)
-  let run_tiny ~root ~failfast ~cache_path ~cli_disabled ~variant_filter =
-    let mk variant_id spec_raw =
-      let spec = with_cli_disabled cli_disabled spec_raw in
-      let project =
-        if variant_id = "" then "tiny"
-        else "tiny/" ^ variant_id
-      in
-      let steps =
-        Canary_step_builder.derive_steps ~root ~project
-          ~langs:Canary_lang.[ OCaml; Python ]
-          spec
-      in
-      let info = prebuilt_run_info ~project:"tiny" ~version:"in_tree"
-        ~extra:[] steps in
-      (variant_id, steps, Some info)
-    in
-    (* Phase 14b': each variant configures per-artifact-kind stores.
-       Today every variant's stores come from a single materialized
-       workspace via [stores_of_workspace] (single-store special case
-       of the per-kind model). Cross-product variants — e.g. baseline
-       source + perturbed lib — would construct stores with paths
-       from different workspaces; deferred to Phase 14c. *)
-    let ws_stores ?lib_filename scenario =
-      Canary_project_tiny.stores_of_workspace
-        ?lib_filename
-        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario) () in
-    (* Cross-product demo: pluck individual artifact-kind paths from
-       different scenario workspaces. [hybrid_lib_broken] = baseline
-       source/python + perturbed lib (from symbol_missing). The c1
-       expectation fires the same way as [lib_broken], but the store
-       wiring proves the per-kind model actually mixes — not just the
-       API surface. *)
-    let symbol_missing_ws =
-      Canary_project_tiny.cache_workspace_of
-        ~scenario:(Canary_tiny_scenario.name_of_string "symbol_missing") in
-    let baseline_stores = ws_stores (Canary_tiny_scenario.name_of_string "baseline") in
-    let hybrid_lib_broken_stores : Canary_project_tiny.tiny_stores = {
-      source = baseline_stores.source;
-      lib_dir = [%string "%{symbol_missing_ws}/c/build"];
-      lib_filename = baseline_stores.lib_filename;
-      python_cext_root = baseline_stores.python_cext_root;
-    } in
-    let all_variants = [
-      mk ""
-        (Canary_project_tiny.make_base_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "baseline")) ());
-      mk "lib_broken"
-        (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_missing")) ());
-      mk "binding_mli_broken"
-        (Canary_project_tiny.make_binding_mli_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_complete")));
-      mk "binding_python_attrs_broken"
-        (Canary_project_tiny.make_binding_python_attrs_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_complete_python")));
-      mk "hybrid_lib_broken"
-        (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:hybrid_lib_broken_stores ());
-      mk "lib_soname_bumped"
-        (Canary_project_tiny.make_lib_soname_bumped_script_spec
-           ~stores:(ws_stores ~lib_filename:"libtiny.so.2"
-                      (Canary_tiny_scenario.name_of_string "abi_soname_bump")));
-      mk "lib_behavior_broken"
-        (Canary_project_tiny.make_lib_behavior_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "behavior_silent")));
-      (* binding_overdeclares_stubs: c1 cmp_symbol from the orphan
-         direction. The cstub references tiny_extra the lib never had;
-         only OCaml is perturbed, Python cext is untouched. Maps to
-         harness scenario e8 symbol_orphan. *)
-      mk "binding_overdeclares_stubs"
-        (Canary_project_tiny.make_binding_overdeclares_stubs_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_orphan")));
-      (* app_helper_lib_broken: c1 cmp_symbol fires through the
-         tiny_helper chain (app_helper.exe → Tiny_helper.sum_doubled →
-         Tiny.sum → libtiny.sym tiny_sum, which is missing under
-         symbol_missing). Same store + expectation as lib_broken; only
-         the OCaml probe exe differs. Validates the model propagates
-         through an extra binding layer (Phase 15, 2026-06-03). *)
-      mk "app_helper_lib_broken"
-        (Canary_project_tiny.make_lib_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_missing"))
-           ~probe_exe:"ocaml/examples/app_helper.exe" ());
-      (* lib_symbol_version_broken: c5 cmp_sym_version fires when the
-         lib's exported version tag (TINY_2.0 post-bump) doesn't match
-         the cached cext's required tag (TINY_1.0). Maps to harness
-         scenario e9 symbol_version_floor. *)
-      mk "lib_symbol_version_broken"
-        (Canary_project_tiny.make_lib_symbol_version_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "symbol_version_floor")));
-      (* binding_type_broken: c6 cmp_type fires when the perturbed
-         header declares a different arity than the binding's stub
-         expects. Build (Binding OCaml) fails at C compile; the c6
-         predict compares scan_sources/inspect_typed_header.json
-         (3-arg) against scan_sources/inspect_typed_binding_stub_ocaml.json
-         (2-arg) and returns "tiny_sum" as the predicted substring.
-         Maps to harness scenario header_arity_bump. *)
-      mk "binding_type_broken"
-        (Canary_project_tiny.make_binding_type_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "header_arity_bump")));
-      (* binding_repack_broken: c7 api_sound_repack — refutes the
-         binding's repack of its stub layer via probe-assertion
-         failure. Same Expect_failure shape as lib_behavior_broken,
-         but a different Contract (binding-layer bug vs native-layer
-         bug). Maps to harness scenario api_repack (e5: Tiny.diff
-         silently reverses args before calling Tiny_raw.diff). *)
-      mk "binding_repack_broken"
-        (Canary_project_tiny.make_binding_repack_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_repack")));
-      (* binding_python_repack_broken: Python parallel — same c7
-         attribution, e10 api_repack_python perturbs
-         python_cext/tiny_cext/__init__.py's diff. Each binding is
-         independent; OCaml unaffected. *)
-      mk "binding_python_repack_broken"
-        (Canary_project_tiny.make_binding_python_repack_broken_script_spec
-           ~stores:(ws_stores (Canary_tiny_scenario.name_of_string "api_repack_python")));
-    ] in
-    let selected = match variant_filter with
-      | None -> all_variants
-      | Some name ->
-          List.filter (fun (vid, _, _) -> vid = name) all_variants
-    in
-    match selected with
-    | [] ->
-        let available =
-          all_variants
-          |> List.map (fun (vid, _, _) -> if vid = "" then "(baseline)" else vid)
-          |> String.concat ", " in
-        Fmt.epr "Unknown tiny variant: %s (available: %s)@."
-          (match variant_filter with Some s -> s | None -> "")
-          available
-    | variants ->
-        Canary_run_info.run_project_multi ~failfast ?cache_path ~root
-          ~project_name:"tiny"
-          ~artifact_names:Canary_project_tiny.base_script_spec.artifact_name
-          ~variants ()
-  in
+  (* Tiny runs via the A2-with-factory path
+     ({!Canary_tiny_scenario_project}); see [run_tiny_scenario]
+     and [run_tiny_scenario_all] below. The old multi-variant
+     run_tiny was retired 2026-07-08 — 13 hand-wired variants
+     replaced by 15 factory-derived scenarios matched to the
+     tiny-scenarios list. *)
   (* Register the factory route classifier so `tiny-scenarios
      list` output shows how each entry is routed today
      (derived / dispatched / base). Keeps Canary_tiny_scenario
@@ -429,19 +289,19 @@ let action_cmd =
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
-    | Some "tiny" ->
-        run_tiny ~root ~failfast ~cache_path ~cli_disabled
-          ~variant_filter:None
-    | Some p when (String.length p > 5)
-                  && (String.sub p 0 5 = "tiny/") ->
-        let variant = String.sub p 5 (String.length p - 5) in
-        run_tiny ~root ~failfast ~cache_path ~cli_disabled
-          ~variant_filter:(Some variant)
-    | Some "tiny-scenario" ->
+    | Some "tiny" | Some "tiny-scenario" ->
         run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled
-    | Some p when (String.length p > 14)
-                  && (String.sub p 0 14 = "tiny-scenario/") ->
-        let name = String.sub p 14 (String.length p - 14) in
+    | Some p
+      when ((String.length p > 5)
+              && (String.sub p 0 5 = "tiny/"))
+        || ((String.length p > 14)
+              && (String.sub p 0 14 = "tiny-scenario/")) ->
+        let name =
+          if String.length p > 14
+             && String.sub p 0 14 = "tiny-scenario/"
+          then String.sub p 14 (String.length p - 14)
+          else String.sub p 5 (String.length p - 5)
+        in
         run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
     | None ->
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
