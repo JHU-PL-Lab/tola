@@ -118,6 +118,32 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
     has a case in {!expectation_of_recipe}. Used by
     {!script_spec_of_entry} to decide whether to derive or
     fall back to the hand-coded helper. *)
+(** How is this entry routed through the factory?
+    - [`Derived]   : goes through {!expectation_of_entry}
+    - [`Dispatched]: falls back to a hand-coded helper
+    - [`Base]      : no expectation override (positive /
+                     detection-gap entries). *)
+type route = [ `Derived | `Dispatched | `Base ]
+
+let string_of_route = function
+  | `Derived -> "derived"
+  | `Dispatched -> "dispatched"
+  | `Base -> "base"
+
+let route_of_entry (entry : Canary_tiny_scenario.entry) : route =
+  if not (Base.List.is_empty entry.recipe.violates)
+     && (let module CC = Canary_compat in
+         let covered = function CC.C1 | CC.C2 -> true | _ -> false in
+         Base.List.for_all entry.recipe.violates ~f:covered)
+  then `Derived
+  else
+    match entry.scenario.name with
+    | "api_faithful"
+    | "api_repack_stub_orphan"
+    | "app_over_binding_ocaml"
+    | "app_over_helper_ocaml" -> `Base
+    | _ -> `Dispatched
+
 let recipe_is_derivable (recipe : Canary_tiny_scenario.tiny_recipe) : bool =
   let module CC = Canary_compat in
   let covered = function CC.C1 | CC.C2 -> true | _ -> false in

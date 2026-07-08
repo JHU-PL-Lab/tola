@@ -282,6 +282,16 @@ let action_cmd =
           ~artifact_names:Canary_project_tiny.base_script_spec.artifact_name
           ~variants ()
   in
+  (* Register the factory route classifier so `tiny-scenarios
+     list` output shows how each entry is routed today
+     (derived / dispatched / base). Keeps Canary_tiny_scenario
+     free of a factory dependency. *)
+  Canary_tiny_scenario.annotate_ref :=
+    (fun e ->
+      "["
+      ^ Canary_tiny_scenario_project.string_of_route
+          (Canary_tiny_scenario_project.route_of_entry e)
+      ^ "]");
   (* Task 1.6 P1 prototype: run one tiny scenario as its own
      project via the A2-with-factory path
      ({!Canary_tiny_scenario_project}).
@@ -311,6 +321,19 @@ let action_cmd =
     run_with_info ~failfast ~cache_path ~root ~project steps
       (prebuilt_run_info ~project:"tiny_scenario" ~version:"in_tree"
          ~extra:[] steps)
+  in
+  (* Run all 15 tiny scenarios through the factory, in the same
+     order as [tiny-scenarios list]. Prints a "[i/N] <id> <name>"
+     progress line before each. Uses the entries list ordering
+     directly. *)
+  let run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled =
+    let entries = Canary_tiny_scenario.entries in
+    let n = List.length entries in
+    List.iteri (fun i (entry : Canary_tiny_scenario.entry) ->
+      let sc = entry.scenario in
+      Fmt.pr "[%d/%d] %s  %s@." (i + 1) n sc.id sc.name;
+      run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name:sc.name
+    ) entries
   in
   let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_zarith.script_spec in
@@ -397,6 +420,8 @@ let action_cmd =
         let variant = String.sub p 5 (String.length p - 5) in
         run_tiny ~root ~failfast ~cache_path ~cli_disabled
           ~variant_filter:(Some variant)
+    | Some "tiny-scenario" ->
+        run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled
     | Some p when (String.length p > 14)
                   && (String.sub p 0 14 = "tiny-scenario/") ->
         let name = String.sub p 14 (String.length p - 14) in
