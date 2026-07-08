@@ -282,6 +282,36 @@ let action_cmd =
           ~artifact_names:Canary_project_tiny.base_script_spec.artifact_name
           ~variants ()
   in
+  (* Task 1.6 P1 prototype: run one tiny scenario as its own
+     project via the A2-with-factory path
+     ({!Canary_tiny_scenario_project}).
+
+     Unlike [run_tiny] (multi-variant under project_name="tiny"),
+     this runs a single project_name="tiny_scenario/<name>" — the
+     scenario is delimited end-to-end. Consumes a workspace
+     already materialised by [tiny-scenarios prepare <name>]. *)
+  let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
+    let name = Canary_tiny_scenario.name_of_string name in
+    let perturbed_stores =
+      Canary_project_tiny.stores_of_workspace
+        ~workspace_root:(Canary_project_tiny.cache_workspace_of ~scenario:name)
+        ()
+    in
+    let spec =
+      Canary_tiny_scenario_project.script_spec_of_name
+        ~perturbed_stores name
+      |> with_cli_disabled cli_disabled
+    in
+    let project = "tiny_scenario/" ^ name in
+    let steps =
+      Canary_step_builder.derive_steps ~root ~project
+        ~langs:Canary_lang.[ OCaml; Python ]
+        spec
+    in
+    run_with_info ~failfast ~cache_path ~root ~project steps
+      (prebuilt_run_info ~project:"tiny_scenario" ~version:"in_tree"
+         ~extra:[] steps)
+  in
   let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_zarith.script_spec in
     let steps =
@@ -367,6 +397,10 @@ let action_cmd =
         let variant = String.sub p 5 (String.length p - 5) in
         run_tiny ~root ~failfast ~cache_path ~cli_disabled
           ~variant_filter:(Some variant)
+    | Some p when (String.length p > 14)
+                  && (String.sub p 0 14 = "tiny-scenario/") ->
+        let name = String.sub p 14 (String.length p - 14) in
+        run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
     | None ->
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
         run_zarith ~root ~failfast ~cache_path ~cli_disabled;
