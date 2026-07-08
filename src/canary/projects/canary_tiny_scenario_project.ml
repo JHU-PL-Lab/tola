@@ -47,36 +47,69 @@ let langs_of_scenario (scenario : Canary_scenario.scenario)
   |> List.concat_map ~f:lang_of_id
   |> List.dedup_and_sort ~compare:Poly.compare
 
+(** Per-contract inputs for [Expect_compat_failure], scoped
+    to a language. Returns [None] if the contract has no
+    coverage for that language (e.g. c2 is lang-specific).
+
+    Contracts covered today: c1, c2. Grow as new scenarios
+    join. See [doc/canary/design/derivation.md]
+    §"Per-contract inputs" for the full table. *)
+let compat_inputs_of_contract ~(lang : Canary_lang.lang)
+  : Canary_compat.contract_id -> Canary_compat.inspect_input list option
+  =
+  let module CC = Canary_compat in
+  function
+  | CC.C1 ->
+    let lang_dir = Canary_lang.string_of_lang lang in
+    Some CC.[
+      C_stub
+        [ Printf.sprintf "build_binding_%s/inspect.json" lang_dir ];
+      Native_lib [ "build_lib/inspect.json" ];
+    ]
+  | CC.C2 ->
+    (match lang with
+     | Canary_lang.OCaml ->
+       Some CC.[ Ocaml_mli
+                   [ "build_binding_ocaml/inspect_mli.json" ] ]
+     | Canary_lang.Python ->
+       Some CC.[ Python_attrs
+                   [ "build_binding_python/inspect_attrs.json" ] ]
+     | _ -> None)
+  | _ -> None
+
 (** Derive an [expectation] function from the entry's
     [recipe.violates] contract list, scoped by the scenario's
     languages.
 
-    Each contract has its own inputs shape; this dispatches
-    per contract. MVP handles c1 only. Contracts not covered
+    Structure (following user 2026-07-08: outer=scenario,
+    inner=contract):
+    - At every [Probe (Binding lang)] step whose [lang] is in
+      the scenario's language set,
+    - find the first contract in [recipe.violates] that
+      yields inputs for [lang] via
+      [compat_inputs_of_contract], and
+    - emit [Expect_compat_failure] with those inputs.
+
+    Contracts without coverage or probes in other languages
     fall through to [Expect_success]. *)
 let expectation_of_entry (entry : Canary_tiny_scenario.entry)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
-  let module CC = Canary_compat in
+  let open Base in
   let scenario_langs = langs_of_scenario entry.scenario in
-  let violates_c1 =
-    Base.List.mem entry.recipe.violates CC.C1
-      ~equal:Base.Poly.equal in
+  let violates = entry.recipe.violates in
   fun rule _loc ->
     match rule with
     | Canary_basic.Probe (Binding lang)
-      when violates_c1
-        && Base.List.mem scenario_langs lang ~equal:Base.Poly.equal ->
-      let lang_dir = Canary_lang.string_of_lang lang in
-      Expect_compat_failure {
-        inputs = CC.[
-          C_stub
-            [ Printf.sprintf "build_binding_%s/inspect.json" lang_dir ];
-          Native_lib [ "build_lib/inspect.json" ];
-        ];
-        version_info = None;
-      }
+      when List.mem scenario_langs lang ~equal:Poly.equal ->
+      (match
+         List.find_map violates
+           ~f:(fun c -> compat_inputs_of_contract ~lang c)
+       with
+       | Some inputs ->
+         Expect_compat_failure { inputs; version_info = None }
+       | None -> Expect_success)
     | _ -> Expect_success
 
 (** Is a recipe covered by the structural derivation today?
@@ -87,7 +120,7 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
     fall back to the hand-coded helper. *)
 let recipe_is_derivable (recipe : Canary_tiny_scenario.tiny_recipe) : bool =
   let module CC = Canary_compat in
-  let covered = function CC.C1 -> true | _ -> false in
+  let covered = function CC.C1 | CC.C2 -> true | _ -> false in
   (not (Base.List.is_empty recipe.violates))
   && Base.List.for_all recipe.violates ~f:covered
 
