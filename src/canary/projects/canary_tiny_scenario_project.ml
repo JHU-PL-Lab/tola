@@ -136,17 +136,61 @@ let script_spec_of_entry
       expectation = expectation_of_entry entry;
     }
   else
-    (* Fall back to the hand-coded helper by name until each
-       contract's derivation lands. Cases here should shrink
-       as [expectation_of_recipe] grows. *)
+    (* Fall back to hand-coded helpers by scenario name for
+       contracts not yet derivable (c3..c8). Each case here
+       is a candidate for future derivation; the list shrinks
+       as [compat_inputs_of_contract] grows and as
+       Expect_failure-shape derivation lands. *)
+    let stores = perturbed_stores in
+    let module CPT = Canary_project_tiny in
     match entry.scenario.name with
-    | _ ->
+    | "abi_soname_bump" ->
+      (* c4: soname mismatch. Perturbation renamed
+         libtiny.so.1 -> libtiny.so.2.0 during prepare, so
+         the workspace holds libtiny.so.2 — override the
+         default lib_filename. *)
+      let stores = { stores with lib_filename = "libtiny.so.2" } in
+      CPT.make_lib_soname_bumped_script_spec ~stores
+    | "behavior_silent" ->
+      (* c3: behaviour diff surfaces at probe assertion. *)
+      CPT.make_lib_behavior_broken_script_spec ~stores
+    | "symbol_version_floor" ->
+      (* c5: versioned symbol requirements. *)
+      CPT.make_lib_symbol_version_broken_script_spec ~stores
+    | "header_arity_bump" ->
+      (* c6: header arity change; catches at Build via
+         typed-signature scan. *)
+      CPT.make_binding_type_broken_script_spec ~stores
+    | "type_wrong" ->
+      (* violates c6+c3. Same-arity float-vs-int type diff
+         isn't caught by the current c6 comparator (arity-
+         only). Route through the c3 probe assertion — same
+         Expect_failure shape as behavior_silent — since
+         wrong-type calls produce wrong runtime output. *)
+      CPT.make_lib_behavior_broken_script_spec ~stores
+    | "api_repack" ->
+      (* c7 OCaml: probe assertion catches the intra-binding
+         argument-reversal. *)
+      CPT.make_binding_repack_broken_script_spec ~stores
+    | "api_repack_python" ->
+      (* c7 Python: parallel to api_repack, on the cext /
+         ctypes __init__.py side. *)
+      CPT.make_binding_python_repack_broken_script_spec ~stores
+    | "api_faithful"
+    | "api_repack_stub_orphan"
+    | "app_over_binding_ocaml"
+    | "app_over_helper_ocaml" ->
+      (* Positive coverage (Pc entries) or detection-gap
+         scenarios (Bs.6 c8-dormant, Bs.13 c7-static-only).
+         All step outcomes are Ok / Pass — no expectation
+         override needed. Base spec runs to completion. *)
+      CPT.make_base_script_spec ~stores ()
+    | other ->
       Stdlib.failwith
         (Printf.sprintf
-           "Canary_tiny_scenario_project: recipe for %S \
-            uses contracts not yet derivable and no \
-            fallback dispatch exists"
-           entry.scenario.name)
+           "Canary_tiny_scenario_project: no dispatch for \
+            scenario %S (dispatch table exhausted)"
+           other)
 
 (** Convenience: look up the entry by scenario name and build
     the spec. Raises via [name_of_string] on unknown names. *)
