@@ -674,6 +674,17 @@ let lang_of_id id =
 let pad_id id = Printf.sprintf "%-11s" id
 let pad_name name = Printf.sprintf "%-26s" name
 
+(** Print one Good scenario with its full perturbation-cell
+    grid (from [derived_scenarios]) and the positive coverage
+    (Pc entries). Under each cell (Good × target × kind):
+    - "— empty" if no Bs entry fills the cell (a design-space
+      gap the current inventory doesn't cover);
+    - otherwise the Bs entries that instantiate the cell,
+      each with its detector tag.
+
+    Cells come from principled enumeration; Bs entries are
+    hand-listed instances. This layout makes the coverage vs
+    hardcoded diff visible inline. *)
 let print_one_good (good : Canary_scenario.scenario) : unit =
   Stdlib.print_endline
     (Printf.sprintf "  %s  %s" good.id good.name);
@@ -687,21 +698,35 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
        (String.concat ~sep:", " related_strs));
   let belongs_to_here e =
     List.mem e.scenario.belongs_to good.id ~equal:String.equal in
+  let cells_here = List.filter derived_scenarios ~f:(fun d ->
+    List.mem d.belongs_to good.id ~equal:String.equal) in
   let bads = List.filter entries ~f:(fun e ->
     belongs_to_here e && Option.is_some e.scenario.perturbation) in
-  (if List.is_empty bads then
-     Stdlib.print_endline "    perturbations: none"
+  let n_filled = List.count cells_here ~f:(fun d ->
+    List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
+  let n_empty = List.length cells_here - n_filled in
+  (if List.is_empty cells_here then
+     Stdlib.print_endline "    cells: (none)"
    else begin
      Stdlib.print_endline
-       (Printf.sprintf "    perturbations (%d):" (List.length bads));
-     List.iter bads ~f:(fun e ->
-       let sc = e.scenario in
-       let p = Option.value_exn sc.perturbation in
-       let tgt = bad_target_str good sc in
-       let det = detector_short p.detector in
-       Stdlib.print_endline
-         (Printf.sprintf "      %s %s  %-14s [%s]"
-            (pad_id sc.id) (pad_name sc.name) tgt det))
+       (Printf.sprintf "    cells (%d: %d filled, %d empty):"
+          (List.length cells_here) n_filled n_empty);
+     List.iter cells_here ~f:(fun d ->
+       let tgt = bad_target_str good d in
+       let matching = List.filter bads ~f:(fun e ->
+         matches_derived_cell e.scenario d) in
+       if List.is_empty matching then
+         Stdlib.print_endline
+           (Printf.sprintf "      %-14s — empty" tgt)
+       else
+         List.iteri matching ~f:(fun i e ->
+           let sc = e.scenario in
+           let p = Option.value_exn sc.perturbation in
+           let det = detector_short p.detector in
+           let prefix = if i = 0 then tgt else "" in
+           Stdlib.print_endline
+             (Printf.sprintf "      %-14s %s %s [%s]"
+                prefix (pad_id sc.id) (pad_name sc.name) det)))
    end);
   let pcs = List.filter entries ~f:(fun e ->
     belongs_to_here e && Option.is_none e.scenario.perturbation) in
@@ -715,70 +740,11 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
   end;
   Stdlib.print_endline ""
 
-(** Show the derived enumeration and coverage against
-    hand-listed Bs entries. For each derived cell (Good ×
-    target × kind), report:
-    - which Bs entries fill it (by name);
-    - "GAP" if no Bs fills it;
-    - "EXTRAS" section at the end for any Bs that didn't fit any
-      derived cell (should be empty if [applicable_perturbations]
-      is complete).
-
-    Purpose (per §9.3 backlog): validate the hand-listed
-    enumeration is consistent with a principled generator; find
-    under-covered (Good × target × kind) cells. *)
-let print_derive () =
-  let bads = List.filter entries ~f:(fun e ->
-    Option.is_some e.scenario.perturbation) in
-  let bad_scenarios = List.map bads ~f:(fun e -> e.scenario) in
-  Stdlib.print_endline
-    (Printf.sprintf "Derived cells (%d) vs hand-listed Bs (%d):"
-       (List.length derived_scenarios) (List.length bad_scenarios));
-  Stdlib.print_endline "";
-  let matched_bads = ref [] in
-  List.iter derived_scenarios ~f:(fun d ->
-    let target = match d.perturbation with
-      | Some p -> Canary_basic.string_of_artifact_kind p.target
-      | None -> "?" in
-    let kind = match d.perturbation with
-      | Some p -> Canary_scenario.string_of_perturbation_kind p.kind
-      | None -> "?" in
-    let matching = List.filter bad_scenarios ~f:(fun b ->
-      matches_derived_cell b d) in
-    matched_bads := (List.map matching ~f:(fun b -> b.id)) @ !matched_bads;
-    let good_id = match d.belongs_to with
-      | [ g ] -> g | _ -> "?" in
-    let tag = if List.is_empty matching then "  [GAP]" else "" in
-    let filled_by =
-      if List.is_empty matching then ""
-      else
-        Printf.sprintf " ← %s"
-          (String.concat ~sep:", "
-             (List.map matching ~f:(fun b -> b.Canary_scenario.name)))
-    in
-    Stdlib.print_endline
-      (Printf.sprintf "  %-12s  %-14s %-9s%s%s"
-         good_id target kind tag filled_by));
-  Stdlib.print_endline "";
-  let all_matched = !matched_bads in
-  let extras = List.filter bads ~f:(fun e ->
-    not (List.mem all_matched e.scenario.id ~equal:String.equal)) in
-  if not (List.is_empty extras) then begin
-    Stdlib.print_endline "Extras (Bs not fitting any derived cell):";
-    List.iter extras ~f:(fun e ->
-      Stdlib.print_endline
-        (Printf.sprintf "  %s  %s" e.scenario.id e.scenario.name))
-  end;
-  let n_gaps =
-    List.count derived_scenarios ~f:(fun d ->
-      not (List.exists bad_scenarios ~f:(fun b -> matches_derived_cell b d)))
-  in
-  Stdlib.print_endline
-    (Printf.sprintf "Summary: %d derived cells, %d filled by Bs, %d GAPs, \
-                     %d extras."
-       (List.length derived_scenarios)
-       (List.length derived_scenarios - n_gaps)
-       n_gaps (List.length extras))
+(* print_derive removed 2026-07-07: coverage view now folded
+   into print_list (Option 1). Derived cells iterated inline
+   under each Good scenario; filled cells show their Bs; empty
+   cells show "— empty". derived_scenarios /
+   matches_derived_cell helpers stay for use inside print_list. *)
 
 (** Show-list-but-no-run — the enumeration surface. Prints all
     tiny scenarios grouped by language (Shared / OCaml / Python),
@@ -797,14 +763,21 @@ let print_list () =
     List.filter tiny_good_scenarios
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
   in
-  let n_bad = List.count entries ~f:(fun e ->
+  let bads = List.filter entries ~f:(fun e ->
     Option.is_some e.scenario.perturbation) in
+  let n_bad = List.length bads in
   let n_pos = List.count entries ~f:(fun e ->
     Option.is_none e.scenario.perturbation) in
+  let n_cells = List.length derived_scenarios in
+  let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
+    List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
   Stdlib.print_endline
-    (Printf.sprintf "Scenarios (%d total: %d good + %d bad + %d positive)"
+    (Printf.sprintf
+       "Scenarios (%d total: %d good + %d bad + %d positive; \
+        %d derived cells, %d filled, %d empty)"
        (List.length all_scenarios)
-       (List.length tiny_good_scenarios) n_bad n_pos);
+       (List.length tiny_good_scenarios) n_bad n_pos
+       n_cells n_cells_filled (n_cells - n_cells_filled));
   Stdlib.print_endline "";
   let section title lg =
     let goods = goods_by_lang lg in

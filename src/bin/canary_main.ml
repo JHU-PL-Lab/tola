@@ -848,13 +848,6 @@ let tiny_scenarios_prepare_all_cmd =
              Auto-runs baseline first if missing.")
     (term_of (fun () -> Canary_tiny_prepare.run_all ()))
 
-let tiny_scenarios_derive_cmd =
-  Cmd.v
-    (Cmd.info "derive"
-       ~doc:"Enumerate derived (Good × artifact × kind) cells + \
-             coverage report vs hand-listed Bs entries.")
-    (term_of (fun () -> Canary_tiny_scenario.print_derive ()))
-
 let tiny_scenarios_confirm_cmd =
   let name =
     Arg.(
@@ -874,7 +867,6 @@ let tiny_scenarios_cmd =
        ~doc:"Tiny scenario harness — OCaml port. Phase B/C of the \
              Python→OCaml migration (see doc/canary/design/tiny_migration.md).")
     [ tiny_scenarios_list_cmd;
-      tiny_scenarios_derive_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;
       tiny_scenarios_prepare_cmd;
