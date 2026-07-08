@@ -184,3 +184,22 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `surface.md` §Implementation slots. Low priority; part of the
     post-stabilisation polish pass driven by surface.md's "uniformity
     eventually" principle.
+
+
+47. **Unify store-selection patterns across projects (z3/llvm vs tiny)** —
+    Two conventions coexist for "which artifact source drives this
+    project spec." (a) `source_repo.has_build_lib` / `has_build_binding`
+    booleans in [canary_artifact_source.ml:26-27](../../src/canary/tool/canary_artifact_source.ml)
+    plus per-project `if source.has_build_lib then …` branches in
+    `mk_script_spec` (z3, llvm, sqlite). (b) Explicit `tiny_stores`
+    record threaded per variant, each closure destructures paths from it
+    ([canary_project_tiny.ml:183-199](../../src/canary/projects/canary_project_tiny.ml)).
+    Both work; (b) reads cleaner for multi-scenario projects (tiny), (a)
+    reads cleaner for source-repo × build-toggle projects (z3 dev/stable).
+    Candidate consolidation: promote `stores` to a first-class field of
+    `script_spec`, drop the `has_build_*` boolean-branching pattern —
+    same enable/disable semantics come from closure presence. Not
+    urgent; both patterns are stable. Revisit when a project ends up
+    wanting features from both (e.g., a z3-like source-repo split with
+    tiny-like multi-scenario per source). Discovered while designing
+    §9.3 Task 1.6 factory (`worklog_2026_07.md`).
