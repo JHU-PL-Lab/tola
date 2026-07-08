@@ -474,69 +474,35 @@ addressed. Captured as awareness; not active work.
    into §4/§5 flows.
 3. **IN PROGRESS — scenario remodel.**
 
-   **Task 1 done** (commits `1111ad6` + `13df74e` + `bfc075c`):
-   unified scenario shape.
-   - [x] `Canary_scenario.scenario` — project-agnostic type at
-     `src/canary/action/canary_scenario.ml` — with `id`,
-     `name`, `description`, `actions`,
-     `related_artifacts`, `perturbation option`.
-   - [x] `perturbation` record: target + kind + manifest +
-     detector. Reuses `artifact_kind` for artifact-flavoured
-     perturbations (`On_artifact`), with `On_behavior` as the
-     source-patch-no-surface-diff case. `manifest` and
-     `detector` are possibilistic (`Definite` / `Possible` /
-     `Unknown_gap`; `Wired of contract_id` / `Detector_gap`).
-   - [x] Tiny `entry = { scenario; recipe }` populated with 13
-     Bs.N + 2 Pc.N entries, ordered per §5.1.
-     `tiny_recipe` carries the concrete impl (patch files,
-     expected step outcomes) alongside the abstract
-     annotations on `scenario.perturbation`.
-   - [x] Coarse hand-mapping of `actions` + `related_artifacts`
-     using 5 groupings. Refinement queued below.
-   - [x] Consumers updated (canary_tiny_prepare uses entries;
-     canary_main uses `name_of_string`).
-   - [x] End-to-end verified: list / expected / baseline /
-     prepare / confirm all work.
+   **Task 1 done** (commits `1111ad6` + `13df74e` + `bfc075c`,
+   late June). Unified `Canary_scenario.scenario` shape:
+   `perturbation option` record (target + kind + manifest +
+   detector; possibilistic `Definite` / `Possible` /
+   `Unknown_gap` and `Wired` / `Detector_gap`). Tiny `entry =
+   { scenario; recipe }` populated with 13 Bs + 2 Pc; recipe
+   holds the concrete impl (patches, expected outcomes)
+   alongside the abstract annotations. Consumers updated;
+   end-to-end verified.
 
-   **Task 1.5 done** (2026-07-06 → 07, commits `ab567c9`,
-   `cd92893`, `9fa470a`, `0f022fc`, `4651a81`, `7c726f5`,
-   `9bb16bc`, `e0c1399`): validators, Good scenarios as code,
-   derive_entries surfaced in `list`.
-   - [x] Manifest `Sc.N` validator + `target ∈
-     related_artifacts` invariant, both run at module load.
-   - [x] Sc.1..Sc.6 as first-class
-     `Canary_scenario.good_scenarios` — 8 entries after
-     Sc.1 shared + Sc.2..Sc.6 split by language (OCaml /
-     Python). SSOT §4 remains the doc-side view.
-   - [x] `Canary_scenario.derive_scenarios : scenario list ->
-     scenario list` — enumerates all (Good × related-artifact
-     × applicable perturbation kind) cells (20 for tiny).
-     Coverage view folded into `tiny-scenarios list`: each
-     cell shows filling Bs entries or `— empty`. Today:
-     5 filled / 15 empty / 0 extras — the enumeration
-     principle admits every hand-listed Bs and reveals the
-     Sc.3–Sc.6 stages as an under-covered slice (observation 2
-     in §5.1).
-   - [x] `belongs_to_of_id` derives `belongs_to` from
-     `Bs.N`/`Pc.N` prefix; positive coverage (Pc entries)
-     linked to good scenarios via `verified by` output.
+   **Task 1.5 done** (2026-07-05 → 07). Validators, Good
+   scenarios as code, `derive_scenarios` enumeration folded
+   into `tiny-scenarios list`. Chronicle in
+   [`worklog_2026_07.md`](../worklog/worklog_2026_07.md);
+   final state: 8-entry `good_scenarios`, 20 derived cells
+   (5 filled / 15 empty / 0 extras vs 13 Bs), drift risks #1
+   and #3 closed.
 
    **Backlog (queued):**
 
-   Next up (user approved 2026-07-07):
-   - [ ] **Coverage-tag `prepare-all` output.** After a
-     `prepare-all` run, report which derived cells the 13 Bs
-     recipes covered (e.g., "13 Bs → 5 cells filled, 15 gaps").
-     Cheap; reuses `derived_scenarios` +
-     `matches_derived_cell`. Purpose: connect a real test run
-     to the abstract coverage view.
+   Next up (Task 1.6, 2026-07-07):
+   - [ ] **Coverage-tag `prepare-all`.** Report which derived
+     cells the 13 Bs recipes covered after a run. Cheap;
+     reuses `derived_scenarios` + `matches_derived_cell`.
    - [ ] **`tiny_recipe` synthesis from an abstract cell.**
-     Today derived cells are name-only (`manifest =
-     Unknown_gap`, `detector = Detector_gap`). To *run* a
-     derived cell we'd need to generate a `tiny_recipe` (patch
-     files + expected step outcomes) from (Good × target ×
-     kind). Deferred; unblocks filling the 15 empty cells with
-     concrete instances rather than hand-listing them.
+     Generate patch files + expected outcomes from (Good ×
+     target × kind) so derived cells become runnable, not just
+     name-only. Unblocks concrete filling of the 15 empty
+     cells.
 
    Later:
    - [ ] **Derive `related_artifacts` from `actions`** —
@@ -565,26 +531,23 @@ addressed. Captured as awareness; not active work.
    - [ ] Alignment invariant as a runtime test — needs
      `derive_entries` and both views indexed.
 
-   **Motivation (updated after Task 1 landed).** Remodel goal
-   was: each bad scenario names its Good scenario, its perturbed
-   artifact, its manifestation, and its detector — as data on
-   one record. Task 1 delivered that shape. Remaining backlog is
-   about (a) making implicit strings type-safe, (b) representing
-   Good scenarios in code, (c) validating the pattern against a
-   generator (`derive_entries`), and (d) principled derivation
-   of `related_artifacts` from `actions`.
+   **Motivation.** Each bad scenario should name its Good
+   scenario, its perturbed artifact, its manifestation, and
+   its detector — as data on one record. Task 1 delivered the
+   shape; Task 1.5 added string-safety + Good-scenarios-in-code
+   + a `derive_scenarios` generator whose output the current 13
+   Bs fully occupy (0 extras). Remaining backlog is (a) making
+   `related_artifacts` derivable from `actions` rather than
+   hand-mapped, (b) unifying `tiny_recipe.perturbation` with
+   `scenario.perturbation` (Task 2), and (c) making derived
+   cells runnable (Task 1.6).
 
-   Payoffs (unchanged):
-   (a) Closes §8 reconciliation task #7 — mapping becomes
-       computable via structural composition. Doc half of #7 is
-       done in §5.1; code half remains via `derive_entries`.
-   (b) Realises §7 Principle 3 (Good × perturbation = bad) as
-       structural code, not just declarative principle.
-   (c) Enables §9.4 (expectation re-do + `Expect_compat_failure`
-       derivation) — expected outcomes attach coherently to
-       Good scenario / perturbation pairs.
-   (d) SSOT §4 (Good) and §5 (Bad) become derivable from one
-       source; both catalogues in draft.md follow.
+   Payoffs: (i) §8 task #7 mapping becomes computable, code
+   half now via `derive_scenarios`; (ii) §7 Principle 3
+   (Good × perturbation = bad) realised structurally in code;
+   (iii) unblocks §9.4 (expectation re-do — per-step contract
+   outcomes attach to a coherent Good/perturbation parent);
+   (iv) SSOT §4 (Good) and §5 (Bad) derivable from one source.
 4. **Re-do expectation as per-step contract outcome +
    derive `Expect_compat_failure` from scenario / recipe.**
    *(Merged from the old §9.4 and Phase D.2 in
