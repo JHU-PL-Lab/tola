@@ -498,27 +498,45 @@ addressed. Captured as awareness; not active work.
    - [x] End-to-end verified: list / expected / baseline /
      prepare / confirm all work.
 
-   **Backlog (queued or in-progress):**
+   **Task 1.5 done** (2026-07-06 → 07, commits `ab567c9`,
+   `cd92893`, `9fa470a`, `0f022fc`, `4651a81`, `7c726f5`,
+   `9bb16bc`, `e0c1399`): validators, Good scenarios as code,
+   derive_entries surfaced in `list`.
+   - [x] Manifest `Sc.N` validator + `target ∈
+     related_artifacts` invariant, both run at module load.
+   - [x] Sc.1..Sc.6 as first-class
+     `Canary_scenario.good_scenarios` — 8 entries after
+     Sc.1 shared + Sc.2..Sc.6 split by language (OCaml /
+     Python). SSOT §4 remains the doc-side view.
+   - [x] `Canary_scenario.derive_scenarios : scenario list ->
+     scenario list` — enumerates all (Good × related-artifact
+     × applicable perturbation kind) cells (20 for tiny).
+     Coverage view folded into `tiny-scenarios list`: each
+     cell shows filling Bs entries or `— empty`. Today:
+     5 filled / 15 empty / 0 extras — the enumeration
+     principle admits every hand-listed Bs and reveals the
+     Sc.3–Sc.6 stages as an under-covered slice (observation 2
+     in §5.1).
+   - [x] `belongs_to_of_id` derives `belongs_to` from
+     `Bs.N`/`Pc.N` prefix; positive coverage (Pc entries)
+     linked to good scenarios via `verified by` output.
 
-   Confirmed next (user approved 2026-07-06):
-   - [ ] **`sc_id_of_string` validator** — the `manifest` field
-     uses raw `Sc.N` strings; nothing catches typos. Cheap
-     validator, analogous to `name_of_string` for scenarios.
-     Closes drift risk #1 from the status report.
-   - [ ] **`target ∈ related_artifacts` invariant check** —
-     design intent; not enforced today. Cheap.
-   - [ ] **Good scenarios (Sc.1..Sc.6) as code entries** —
-     currently only in SSOT §4. Add `canary_scenario_registry`
-     (or similar) with `sc1..sc6 : scenario list`; bad
-     scenarios can reference their good scenario by ID instead
-     of embedding a `Sc.N` string in `manifest`.
-   - [ ] **`derive_entries` experiment.** With good scenarios
-     as code entries and validated Sc.N IDs, implement a
-     `derive_entries : (good_scenario × perturbation_kind ×
-     artifact_kind) → scenario list` generator. Diff against
-     the current 13 Bs. Extras welcome ("principle can cover
-     more"). Should surface the two detection gaps (Bs.6, Bs.13)
-     naturally.
+   **Backlog (queued):**
+
+   Next up (user approved 2026-07-07):
+   - [ ] **Coverage-tag `prepare-all` output.** After a
+     `prepare-all` run, report which derived cells the 13 Bs
+     recipes covered (e.g., "13 Bs → 5 cells filled, 15 gaps").
+     Cheap; reuses `derived_scenarios` +
+     `matches_derived_cell`. Purpose: connect a real test run
+     to the abstract coverage view.
+   - [ ] **`tiny_recipe` synthesis from an abstract cell.**
+     Today derived cells are name-only (`manifest =
+     Unknown_gap`, `detector = Detector_gap`). To *run* a
+     derived cell we'd need to generate a `tiny_recipe` (patch
+     files + expected step outcomes) from (Good × target ×
+     kind). Deferred; unblocks filling the 15 empty cells with
+     concrete instances rather than hand-listing them.
 
    Later:
    - [ ] **Derive `related_artifacts` from `actions`** —
