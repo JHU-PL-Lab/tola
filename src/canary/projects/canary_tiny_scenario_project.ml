@@ -75,6 +75,41 @@ let compat_inputs_of_contract ~(lang : Canary_lang.lang)
        Some CC.[ Python_attrs
                    [ "build_binding_python/inspect_attrs.json" ] ]
      | _ -> None)
+  | CC.C4 ->
+    (* Tiny store convention: only Python cext is cached from
+       baseline; OCaml binding rebuilds fresh each run and picks
+       up the new SONAME. Only Python probe sees c4 fire. *)
+    (match lang with
+     | Canary_lang.Python ->
+       Some CC.[
+         Native_lib  [ "build_lib/inspect.json" ];
+         Abi_surface [ "build_binding_python/inspect.json" ];
+       ]
+     | _ -> None)
+  | CC.C5 ->
+    (* Same lang scope as c4 (same rebuild convention). Cached
+       Python cext carries stale @VER references. *)
+    (match lang with
+     | Canary_lang.Python ->
+       Some CC.[
+         Versioned_exports [ "build_lib/inspect.json" ];
+         Versioned_req     [ "build_binding_python/inspect.json" ];
+       ]
+     | _ -> None)
+  | CC.C6 ->
+    (* Only OCaml binding rebuilds against the perturbed header;
+       cstub compile fails. Python cext cached — didn't see the
+       header change. c6 fires at Build (Binding OCaml) primarily
+       and cascades to Probe when dune rebuilds the same cstub. *)
+    (match lang with
+     | Canary_lang.OCaml ->
+       Some CC.[
+         Typed_header
+           [ "scan_sources/inspect_typed_header.json" ];
+         Typed_binding_stub
+           [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
+       ]
+     | _ -> None)
   | _ -> None
 
 (** Is this contract detected by a probe assertion (behavioral
@@ -114,12 +149,25 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
     Canary_step_model.step_expectation
   =
   let open Base in
+  let module CC = Canary_compat in
   let scenario_langs = langs_of_scenario entry.scenario in
   let violates = entry.recipe.violates in
   let expect_failure_shape =
     List.exists violates ~f:is_expect_failure_contract in
+  let violates_c6 =
+    List.mem violates CC.C6 ~equal:Poly.equal in
   fun rule _loc ->
     match rule with
+    | Canary_basic.Build_binding lang
+      when violates_c6
+        && List.mem scenario_langs lang ~equal:Poly.equal ->
+      (* c6 uniquely fires at Build (cstub compile fails
+         against perturbed header) in addition to Probe.
+         Other contracts don't fire at Build. *)
+      (match compat_inputs_of_contract ~lang CC.C6 with
+       | Some inputs ->
+         Expect_compat_failure { inputs; version_info = None }
+       | None -> Expect_success)
     | Canary_basic.Probe (Binding lang)
       when List.mem scenario_langs lang ~equal:Poly.equal ->
       (match
@@ -157,7 +205,11 @@ let string_of_route = function
 (** Which contracts have a derivation case today. Grows as
     coverage lands. *)
 let is_derivable_contract = function
-  | Canary_compat.C1 | Canary_compat.C2 -> true  (* compat *)
+  | Canary_compat.C1
+  | Canary_compat.C2
+  | Canary_compat.C4
+  | Canary_compat.C5
+  | Canary_compat.C6 -> true                     (* compat *)
   | Canary_compat.C3 | Canary_compat.C7 -> true  (* expect_failure *)
   | _ -> false
 
@@ -186,15 +238,44 @@ let route_of_entry (entry : Canary_tiny_scenario.entry) : route =
 let recipe_is_derivable (recipe : Canary_tiny_scenario.tiny_recipe) : bool =
   Base.List.exists recipe.violates ~f:is_derivable_contract
 
+(** Derive tiny_stores adjustments from the recipe's concrete
+    perturbation. Today only Soname_bump needs it: prepare
+    renames the .so to a new SONAME (e.g. [libtiny.so.2.0]),
+    and the runtime symlink canary probes is the MAJOR name
+    ([libtiny.so.2]). Strip trailing ".<minor>" digits when
+    both the last two dotted segments are numeric. *)
+let stores_of_entry
+    ~(stores : Canary_project_tiny.tiny_stores)
+    (entry : Canary_tiny_scenario.entry)
+  : Canary_project_tiny.tiny_stores
+  =
+  let open Base in
+  let is_all_digits s =
+    (not (String.is_empty s))
+    && String.for_all s ~f:Char.is_digit
+  in
+  let strip_trailing_minor s =
+    match List.rev (String.split ~on:'.' s) with
+    | last :: (second :: _ as rest_rev)
+      when is_all_digits last && is_all_digits second ->
+      String.concat ~sep:"." (List.rev rest_rev)
+    | _ -> s
+  in
+  match entry.recipe.perturbation with
+  | Some (Canary_tiny_scenario.Soname_bump { to_so; _ }) ->
+    { stores with lib_filename = strip_trailing_minor to_so }
+  | _ -> stores
+
 let script_spec_of_entry
     ~(perturbed_stores : Canary_project_tiny.tiny_stores)
     (entry : Canary_tiny_scenario.entry)
   : Canary_step_builder.script_spec
   =
+  let stores = stores_of_entry ~stores:perturbed_stores entry in
   match route_of_entry entry with
   | `Derived ->
     { (Canary_project_tiny.make_base_script_spec
-         ~stores:perturbed_stores ())
+         ~stores ())
       with
       expectation = expectation_of_entry entry;
     }
@@ -206,33 +287,19 @@ let script_spec_of_entry
     Canary_project_tiny.make_base_script_spec
       ~stores:perturbed_stores ()
   | `Dispatched ->
-    (* Fall back to hand-coded helpers by scenario name for
-       contracts not yet derivable (c4, c5, c6). Each case
-       here is a candidate for future derivation; the list
-       shrinks as [compat_inputs_of_contract] grows. *)
-    let stores = perturbed_stores in
-    let module CPT = Canary_project_tiny in
-    match entry.scenario.name with
-    | "abi_soname_bump" ->
-      (* c4: soname mismatch. Perturbation renamed
-         libtiny.so.1 -> libtiny.so.2.0 during prepare, so
-         the workspace holds libtiny.so.2 — override the
-         default lib_filename. *)
-      let stores = { stores with lib_filename = "libtiny.so.2" } in
-      CPT.make_lib_soname_bumped_script_spec ~stores
-    | "symbol_version_floor" ->
-      (* c5: versioned symbol requirements. *)
-      CPT.make_lib_symbol_version_broken_script_spec ~stores
-    | "header_arity_bump" ->
-      (* c6: header arity change; catches at Build via
-         typed-signature scan. *)
-      CPT.make_binding_type_broken_script_spec ~stores
-    | other ->
-      Stdlib.failwith
-        (Printf.sprintf
-           "Canary_tiny_scenario_project: no dispatch for \
-            scenario %S (dispatch table exhausted)"
-           other)
+    (* No dispatch fallbacks left today — all covered
+       contracts have derivation cases. If a new scenario
+       lands with an unfamiliar violates set, arrive here
+       for a clear error. Once every contract is derivable
+       this branch becomes unreachable and can be dropped
+       along with the [`Dispatched] tag on {!route}. *)
+    Stdlib.failwith
+      (Printf.sprintf
+         "Canary_tiny_scenario_project: %S needs a dispatch \
+          fallback, but the dispatch table is empty. Grow \
+          compat_inputs_of_contract or the Expect_failure \
+          branch instead."
+         entry.scenario.name)
 
 (** Convenience: look up the entry by scenario name and build
     the spec. Raises via [name_of_string] on unknown names. *)
