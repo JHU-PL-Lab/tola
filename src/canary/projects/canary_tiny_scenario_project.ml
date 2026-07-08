@@ -77,6 +77,18 @@ let compat_inputs_of_contract ~(lang : Canary_lang.lang)
      | _ -> None)
   | _ -> None
 
+(** Is this contract detected by a probe assertion (behavioral
+    shape) rather than a static comparator?
+
+    c3 cmp_behavior and c7 cmp_api_repack fire when the probe
+    exits with a "FAIL …" line. No inputs — the probe binary's
+    own assertion is the check. Distinguished from
+    [compat_inputs_of_contract] which returns inputs for
+    static comparators (c1, c2, c4, c5, c6). *)
+let is_expect_failure_contract = function
+  | Canary_compat.C3 | Canary_compat.C7 -> true
+  | _ -> false
+
 (** Derive an [expectation] function from the entry's
     [recipe.violates] contract list, scoped by the scenario's
     languages.
@@ -85,13 +97,18 @@ let compat_inputs_of_contract ~(lang : Canary_lang.lang)
     inner=contract):
     - At every [Probe (Binding lang)] step whose [lang] is in
       the scenario's language set,
-    - find the first contract in [recipe.violates] that
-      yields inputs for [lang] via
-      [compat_inputs_of_contract], and
-    - emit [Expect_compat_failure] with those inputs.
+    - try compat contracts first: first violated contract in
+      the list whose static comparator yields inputs for
+      [lang] wins;
+    - else if any violated contract is behavioural (c3/c7),
+      emit [Expect_failure { contains_any = ["FAIL "] }];
+    - else fall through to [Expect_success].
 
-    Contracts without coverage or probes in other languages
-    fall through to [Expect_success]. *)
+    Compat before behavioural: compat inputs give a specific
+    predicted substring, more precise than the generic
+    "FAIL " match. Only matters when a recipe mixes both
+    kinds (e.g., type_wrong violates c6+c3); once c6 is
+    derived, the compat side wins. *)
 let expectation_of_entry (entry : Canary_tiny_scenario.entry)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
@@ -99,6 +116,8 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
   let open Base in
   let scenario_langs = langs_of_scenario entry.scenario in
   let violates = entry.recipe.violates in
+  let expect_failure_shape =
+    List.exists violates ~f:is_expect_failure_contract in
   fun rule _loc ->
     match rule with
     | Canary_basic.Probe (Binding lang)
@@ -109,6 +128,11 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
        with
        | Some inputs ->
          Expect_compat_failure { inputs; version_info = None }
+       | None when expect_failure_shape ->
+         Expect_failure {
+           contains_any = [ "FAIL " ];
+           version_info = None;
+         }
        | None -> Expect_success)
     | _ -> Expect_success
 
@@ -130,43 +154,62 @@ let string_of_route = function
   | `Dispatched -> "dispatched"
   | `Base -> "base"
 
-let route_of_entry (entry : Canary_tiny_scenario.entry) : route =
-  if not (Base.List.is_empty entry.recipe.violates)
-     && (let module CC = Canary_compat in
-         let covered = function CC.C1 | CC.C2 -> true | _ -> false in
-         Base.List.for_all entry.recipe.violates ~f:covered)
-  then `Derived
-  else
-    match entry.scenario.name with
-    | "api_faithful"
-    | "api_repack_stub_orphan"
-    | "app_over_binding_ocaml"
-    | "app_over_helper_ocaml" -> `Base
-    | _ -> `Dispatched
+(** Which contracts have a derivation case today. Grows as
+    coverage lands. *)
+let is_derivable_contract = function
+  | Canary_compat.C1 | Canary_compat.C2 -> true  (* compat *)
+  | Canary_compat.C3 | Canary_compat.C7 -> true  (* expect_failure *)
+  | _ -> false
 
+(** Does the scenario's perturbation produce a probe-observable
+    manifestation? [Unknown_gap] means no — the derived
+    expectation would misfire (canary would expect a FAIL that
+    never comes). Base spec runs to completion. *)
+let has_probe_manifestation (scenario : Canary_scenario.scenario) : bool =
+  match scenario.perturbation with
+  | None -> false  (* positive coverage: no perturbation *)
+  | Some { manifest = Unknown_gap; _ } -> false
+  | Some _ -> true
+
+let route_of_entry (entry : Canary_tiny_scenario.entry) : route =
+  let violates_derivable =
+    Base.List.exists entry.recipe.violates ~f:is_derivable_contract
+  in
+  match has_probe_manifestation entry.scenario, violates_derivable with
+  | true, true -> `Derived
+  | false, _ -> `Base       (* Pc.* or Unknown_gap Bs.* *)
+  | true, false -> `Dispatched
+
+(* [recipe_is_derivable] retained for backwards compat with
+   [script_spec_of_entry]; superseded by [route_of_entry].
+   TODO: drop once all callers switch to [route_of_entry]. *)
 let recipe_is_derivable (recipe : Canary_tiny_scenario.tiny_recipe) : bool =
-  let module CC = Canary_compat in
-  let covered = function CC.C1 | CC.C2 -> true | _ -> false in
-  (not (Base.List.is_empty recipe.violates))
-  && Base.List.for_all recipe.violates ~f:covered
+  Base.List.exists recipe.violates ~f:is_derivable_contract
 
 let script_spec_of_entry
     ~(perturbed_stores : Canary_project_tiny.tiny_stores)
     (entry : Canary_tiny_scenario.entry)
   : Canary_step_builder.script_spec
   =
-  if recipe_is_derivable entry.recipe then
+  match route_of_entry entry with
+  | `Derived ->
     { (Canary_project_tiny.make_base_script_spec
          ~stores:perturbed_stores ())
       with
       expectation = expectation_of_entry entry;
     }
-  else
+  | `Base ->
+    (* Positive coverage (Pc entries) or detection-gap
+       scenarios (Bs.6 c8-dormant, Bs.13 c7-static-only).
+       All step outcomes are Ok / Pass — no expectation
+       override needed. Base spec runs to completion. *)
+    Canary_project_tiny.make_base_script_spec
+      ~stores:perturbed_stores ()
+  | `Dispatched ->
     (* Fall back to hand-coded helpers by scenario name for
-       contracts not yet derivable (c3..c8). Each case here
-       is a candidate for future derivation; the list shrinks
-       as [compat_inputs_of_contract] grows and as
-       Expect_failure-shape derivation lands. *)
+       contracts not yet derivable (c4, c5, c6). Each case
+       here is a candidate for future derivation; the list
+       shrinks as [compat_inputs_of_contract] grows. *)
     let stores = perturbed_stores in
     let module CPT = Canary_project_tiny in
     match entry.scenario.name with
@@ -177,9 +220,6 @@ let script_spec_of_entry
          default lib_filename. *)
       let stores = { stores with lib_filename = "libtiny.so.2" } in
       CPT.make_lib_soname_bumped_script_spec ~stores
-    | "behavior_silent" ->
-      (* c3: behaviour diff surfaces at probe assertion. *)
-      CPT.make_lib_behavior_broken_script_spec ~stores
     | "symbol_version_floor" ->
       (* c5: versioned symbol requirements. *)
       CPT.make_lib_symbol_version_broken_script_spec ~stores
@@ -187,30 +227,6 @@ let script_spec_of_entry
       (* c6: header arity change; catches at Build via
          typed-signature scan. *)
       CPT.make_binding_type_broken_script_spec ~stores
-    | "type_wrong" ->
-      (* violates c6+c3. Same-arity float-vs-int type diff
-         isn't caught by the current c6 comparator (arity-
-         only). Route through the c3 probe assertion — same
-         Expect_failure shape as behavior_silent — since
-         wrong-type calls produce wrong runtime output. *)
-      CPT.make_lib_behavior_broken_script_spec ~stores
-    | "api_repack" ->
-      (* c7 OCaml: probe assertion catches the intra-binding
-         argument-reversal. *)
-      CPT.make_binding_repack_broken_script_spec ~stores
-    | "api_repack_python" ->
-      (* c7 Python: parallel to api_repack, on the cext /
-         ctypes __init__.py side. *)
-      CPT.make_binding_python_repack_broken_script_spec ~stores
-    | "api_faithful"
-    | "api_repack_stub_orphan"
-    | "app_over_binding_ocaml"
-    | "app_over_helper_ocaml" ->
-      (* Positive coverage (Pc entries) or detection-gap
-         scenarios (Bs.6 c8-dormant, Bs.13 c7-static-only).
-         All step outcomes are Ok / Pass — no expectation
-         override needed. Base spec runs to completion. *)
-      CPT.make_base_script_spec ~stores ()
     | other ->
       Stdlib.failwith
         (Printf.sprintf
