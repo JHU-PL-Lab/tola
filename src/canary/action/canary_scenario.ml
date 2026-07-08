@@ -252,3 +252,79 @@ let validate_scenario (s : scenario) : unit =
   validate_perturbation_target s;
   validate_manifest_sc_ids s;
   validate_belongs_to s
+
+(* ---------- derivation (§9.3 backlog: derive_entries) ---------- *)
+
+(** Which perturbation kinds are applicable to a given artifact
+    kind. Encodes the Q4 constraint from the user's earlier note:
+    "perturbation_kind depends on related_artifact."
+
+    - [Source] admits both [On_artifact Source] (source patch)
+      and [On_behavior] (semantic change without surface diff).
+    - [Headers], [Lib], [Binding _], [App] admit only
+      [On_artifact <self>].
+
+    Extend when the model grows. *)
+let applicable_perturbations (a : Canary_basic.artifact_kind)
+    : perturbation_kind list =
+  match a with
+  | Source -> [ On_artifact Source; On_behavior ]
+  | Headers -> [ On_artifact Headers ]
+  | Lib -> [ On_artifact Lib ]
+  | Binding _ -> [ On_artifact a ]
+  | App -> [ On_artifact App ]
+
+(** Format a perturbation_kind for use in a derived scenario id. *)
+let string_of_perturbation_kind = function
+  | On_artifact a -> Canary_basic.string_of_artifact_kind a
+  | On_behavior -> "behavior"
+
+(** A derived cell — one (Good scenario × artifact × kind) tuple
+    turned into a candidate scenario. All derived scenarios carry
+    [manifest = Unknown_gap] and [detector = Detector_gap] since
+    the derivation is structural, not backed by any specific
+    tool observation. If a hardcoded Bs entry lands in this cell,
+    that's where the concrete detector info lives. *)
+let derive_scenario (good : scenario)
+    (target : Canary_basic.artifact_kind)
+    (kind : perturbation_kind) : scenario =
+  let id =
+    Printf.sprintf "Dv.%s.%s.%s"
+      good.id
+      (Canary_basic.string_of_artifact_kind target)
+      (string_of_perturbation_kind kind)
+  in
+  let kind_str = string_of_perturbation_kind kind in
+  let name = Printf.sprintf "perturb_%s_at_%s" kind_str good.name in
+  let description =
+    Printf.sprintf
+      "Derived candidate: perturb %s of %s (%s) — abstract cell, \
+       no concrete detector info until a hand-listed Bs fills it."
+      (Canary_basic.string_of_artifact_kind target)
+      good.id kind_str
+  in
+  { id; name; description;
+    actions = good.actions;
+    related_artifacts = good.related_artifacts;
+    perturbation = Some { target; kind;
+                          manifest = Unknown_gap;
+                          detector = Detector_gap };
+    belongs_to = [ good.id ];
+  }
+
+(** Enumerate all valid (Good × artifact × applicable-kind)
+    tuples, producing one derived scenario per cell. Input is
+    the list of good scenarios to iterate over (typically a
+    project's tiny_good_scenarios or the abstract
+    [good_scenarios]).
+
+    Diffing this against a project's hand-listed bad scenarios
+    surfaces (a) gaps — derived cells with no hand-listed
+    coverage; (b) extras — hand-listed scenarios that don't fit
+    any derived cell (should be rare if [applicable_perturbations]
+    is complete). *)
+let derive_scenarios (goods : scenario list) : scenario list =
+  Base.List.concat_map goods ~f:(fun good ->
+    Base.List.concat_map good.related_artifacts ~f:(fun a ->
+      Base.List.map (applicable_perturbations a) ~f:(fun k ->
+        derive_scenario good a k)))

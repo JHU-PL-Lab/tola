@@ -596,11 +596,31 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     belongs_to = [ "Sc.4.Python" ] };
 ]
 
-(** United list: 6 Sc + 13 Bs + 2 Pc = 21 scenarios. Reference for
-    the `derive_entries` experiment (§9.3 backlog). *)
+(** United list: 8 Sc + 13 Bs + 2 Pc = 23 scenarios. Reference
+    for the `derive_scenarios` experiment (§9.3 backlog). *)
 let all_scenarios : Canary_scenario.scenario list =
   tiny_good_scenarios
   @ List.map entries ~f:(fun e -> e.scenario)
+
+(** Derived scenarios — enumerate all (Good × artifact ×
+    applicable-kind) cells over tiny's good scenarios. Each
+    cell is a candidate perturbation; concrete Bs entries fill
+    a subset of these cells. *)
+let derived_scenarios : Canary_scenario.scenario list =
+  Canary_scenario.derive_scenarios tiny_good_scenarios
+
+(** Does a hardcoded Bs entry match a derived cell? Match rule:
+    same good scenario (via [belongs_to] intersection) + same
+    target artifact + same kind. *)
+let matches_derived_cell (bad : Canary_scenario.scenario)
+    (derived : Canary_scenario.scenario) : bool =
+  match bad.perturbation, derived.perturbation with
+  | Some bp, Some dp ->
+    Poly.equal bp.target dp.target
+    && Poly.equal bp.kind dp.kind
+    && List.exists bad.belongs_to ~f:(fun b ->
+         List.mem derived.belongs_to b ~equal:String.equal)
+  | _ -> false
 
 (* ================================================================
    HELPERS
@@ -694,6 +714,71 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
            (pad_id e.scenario.id) e.scenario.name))
   end;
   Stdlib.print_endline ""
+
+(** Show the derived enumeration and coverage against
+    hand-listed Bs entries. For each derived cell (Good ×
+    target × kind), report:
+    - which Bs entries fill it (by name);
+    - "GAP" if no Bs fills it;
+    - "EXTRAS" section at the end for any Bs that didn't fit any
+      derived cell (should be empty if [applicable_perturbations]
+      is complete).
+
+    Purpose (per §9.3 backlog): validate the hand-listed
+    enumeration is consistent with a principled generator; find
+    under-covered (Good × target × kind) cells. *)
+let print_derive () =
+  let bads = List.filter entries ~f:(fun e ->
+    Option.is_some e.scenario.perturbation) in
+  let bad_scenarios = List.map bads ~f:(fun e -> e.scenario) in
+  Stdlib.print_endline
+    (Printf.sprintf "Derived cells (%d) vs hand-listed Bs (%d):"
+       (List.length derived_scenarios) (List.length bad_scenarios));
+  Stdlib.print_endline "";
+  let matched_bads = ref [] in
+  List.iter derived_scenarios ~f:(fun d ->
+    let target = match d.perturbation with
+      | Some p -> Canary_basic.string_of_artifact_kind p.target
+      | None -> "?" in
+    let kind = match d.perturbation with
+      | Some p -> Canary_scenario.string_of_perturbation_kind p.kind
+      | None -> "?" in
+    let matching = List.filter bad_scenarios ~f:(fun b ->
+      matches_derived_cell b d) in
+    matched_bads := (List.map matching ~f:(fun b -> b.id)) @ !matched_bads;
+    let good_id = match d.belongs_to with
+      | [ g ] -> g | _ -> "?" in
+    let tag = if List.is_empty matching then "  [GAP]" else "" in
+    let filled_by =
+      if List.is_empty matching then ""
+      else
+        Printf.sprintf " ← %s"
+          (String.concat ~sep:", "
+             (List.map matching ~f:(fun b -> b.Canary_scenario.name)))
+    in
+    Stdlib.print_endline
+      (Printf.sprintf "  %-12s  %-14s %-9s%s%s"
+         good_id target kind tag filled_by));
+  Stdlib.print_endline "";
+  let all_matched = !matched_bads in
+  let extras = List.filter bads ~f:(fun e ->
+    not (List.mem all_matched e.scenario.id ~equal:String.equal)) in
+  if not (List.is_empty extras) then begin
+    Stdlib.print_endline "Extras (Bs not fitting any derived cell):";
+    List.iter extras ~f:(fun e ->
+      Stdlib.print_endline
+        (Printf.sprintf "  %s  %s" e.scenario.id e.scenario.name))
+  end;
+  let n_gaps =
+    List.count derived_scenarios ~f:(fun d ->
+      not (List.exists bad_scenarios ~f:(fun b -> matches_derived_cell b d)))
+  in
+  Stdlib.print_endline
+    (Printf.sprintf "Summary: %d derived cells, %d filled by Bs, %d GAPs, \
+                     %d extras."
+       (List.length derived_scenarios)
+       (List.length derived_scenarios - n_gaps)
+       n_gaps (List.length extras))
 
 (** Show-list-but-no-run — the enumeration surface. Prints all
     tiny scenarios grouped by language (Shared / OCaml / Python),
