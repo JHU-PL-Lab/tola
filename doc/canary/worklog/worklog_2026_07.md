@@ -151,14 +151,122 @@ concrete Bs" — they represent lib perturbations manifesting only via
 that language's binding, distinct from Bs.4 (abi_soname_bump,
 attributed to Sc.1).
 
-## Forward look — Task 1.6 (queued in SSOT §9.3)
+## Task 1.6 — A2-with-factory (2026-07-07 → 08)
 
-1. **Coverage-tag `prepare-all`.** After a `prepare-all` run,
-   report which derived cells the 13 Bs recipes covered. Cheap;
-   reuses `derived_scenarios` + `matches_derived_cell`. Purpose:
-   connect a real test run to the abstract coverage view.
-2. **`tiny_recipe` synthesis from an abstract cell.** Today derived
-   cells are name-only. To *run* a derived cell we'd need to
-   generate a `tiny_recipe` (patch files + expected step outcomes)
-   from (Good × target × kind). Would unblock filling the 15 empty
-   cells with concrete instances rather than hand-listing them.
+Retires the multi-variant `run_tiny` in favour of a factory
+that turns each `entry` into a self-contained project spec.
+Every tiny scenario now runs via
+`canary action tiny-scenario/<name>` (or the run-all
+`canary action tiny-scenario`). See
+[`derivation.md`](../design/derivation.md) for the shipped
+factory shape.
+
+### Arc
+
+- **`a1ee985` MVP factory (2026-07-07)** — new module
+  `canary_tiny_scenario_project.ml`, `script_spec_of_entry`
+  dispatches on scenario name for symbol_missing only, calls
+  `make_lib_broken_script_spec`. CLI dispatch
+  `tiny-scenario/<name>` runs one scenario via `run_project`
+  (not multi). Semantic parity with `tiny/lib_broken`.
+- **`61af683` Y direction — c1 structural derivation** —
+  `expectation_of_entry` computes the expectation from
+  `recipe.violates` (c1 only) instead of dispatching by name.
+- **`744a137` — language scoping via `belongs_to`** —
+  `langs_of_scenario` reads Sc.N.OCaml / Sc.N.Python /
+  Sc.N suffixes. Discovered `symbol_orphan` bug: firing c1 at
+  both langs was wrong; scoped to OCaml only. Design captured
+  in [`design/derivation.md`](../design/derivation.md).
+- **`c885108` — c2 derivation** — `compat_inputs_of_contract`
+  refactor. Now scenarios pick their inputs by folding over
+  `recipe.violates`. api_complete + api_complete_python
+  work. 4 derived, 11 to go.
+- **`63b1a5a` R1 — fill dispatch table for all 15** —
+  user chose "R1 first" (coverage-first) over "R2 only"
+  (derivation-only). Named dispatches for the 11 non-derivable
+  entries; 15/15 runnable via factory. Sets baseline for
+  measurable progress in subsequent commits.
+- **`dd32db8` B — run-all + factory route in list** — new
+  bare-project dispatch `canary action tiny-scenario` runs
+  all 15 in `tiny-scenarios list` order with `[i/N] <id>
+  <name>` progress. `list` output annotates each entry with
+  `[derived]` / `[dispatched]` / `[base]` via a mutable
+  `annotate_ref` on Canary_tiny_scenario (keeps the
+  scenario module free of factory dependencies).
+- **`b97dfa3` C.1 — c3 + c7 (Expect_failure shape)** —
+  second expectation shape lands. `is_expect_failure_contract`
+  covers c3 (behaviour) and c7 (repack). Manifest gate on
+  `route_of_entry`: `Unknown_gap` → base, so
+  `api_repack_stub_orphan` (c7 static-only) stays base while
+  `api_repack` moves to derived. 4 more scenarios switch to
+  derived (behavior_silent, type_wrong, api_repack,
+  api_repack_python) → 8 derived / 3 dispatched / 4 base.
+- **`c85f631` D.a — auto-init prepare workspace** —
+  `run_tiny_scenario` checks `_cache/<name>/workspace/` and
+  auto-runs baseline + prepare if missing. Single-command
+  experience: `canary action tiny-scenario/<name>` now
+  works from a clean checkout.
+- **`9152192` C.2/C.3/C.4 — c4 + c5 + c6 derivation** —
+  extends `compat_inputs_of_contract` with the three
+  remaining compat contracts. c4/c5 are Python-only in tiny's
+  store convention (cached cext, fresh OCaml binding);
+  c6 is OCaml-only (fresh binding rebuilds against
+  perturbed header). c6 uniquely fires at `Build_binding`
+  in addition to `Probe`. `stores_of_entry` derives
+  `lib_filename` override from `Soname_bump { to_so }`.
+  Dispatch table empty. 11 derived / 0 dispatched / 4 base.
+- **`6f0cd9b` A — retire run_tiny** — removes `run_tiny`
+  from canary_main.ml and 10 `make_*_broken_script_spec`
+  helpers from canary_project_tiny.ml (334 lines gone,
+  18 added — net −316 in the tiny plumbing).
+  `canary action tiny/<name>` still works, routes to
+  factory. Factory is the only path.
+
+### Final state (Task 1.6 complete)
+
+- CLI:
+  - `canary action tiny-scenario/<name>` — one scenario
+  - `canary action tiny-scenario` — all 15 in `list` order
+  - `canary action tiny/<name>` — back-compat alias
+- Factory (`canary_tiny_scenario_project.ml`):
+  - `route_of_entry` — 3-way classification
+  - `expectation_of_entry` — derives from
+    `recipe.violates × langs × rule-site`
+  - `compat_inputs_of_contract` — per-contract per-lang
+    input paths (c1, c2, c4, c5, c6)
+  - `is_expect_failure_contract` — c3, c7
+  - `stores_of_entry` — perturbation-driven store
+    adjustment (soname bump)
+  - `route_of_entry` published for `tiny-scenarios list`
+    annotation
+- Auto-init: workspace materialised on first run.
+
+Coverage:
+
+| Route | 15 entries | Notes |
+|---|---|---|
+| `Derived | 11 | All Bs with probe manifestation |
+| `Base | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1, Pc.2 |
+| `Dispatched | 0 | Empty — dispatch removed 2026-07-08 |
+
+### Design references saved for the next task
+
+- [`design/derivation.md`](../design/derivation.md) — what
+  shipped (factory shape). Slimmed from an in-progress note
+  to a landing reference after retirement.
+- [`design/bad_scenario_flavors.md`](../design/bad_scenario_flavors.md)
+  — the flavor-1 (artifact-local defect) vs flavor-2
+  (cross-artifact mismatch) split; catalogue completeness as
+  next research task; tiny as bug-categorisation foundation.
+
+### Forward look
+
+Immediate follow-ups (not in this task):
+
+1. **Fill the 15 empty derived cells** in `tiny-scenarios list`
+   with concrete flavor-1 perturbations. Mechanical once
+   `tiny_recipe` synthesis lands (SSOT §9.3 backlog item 2).
+2. **Grow the flavor-2 catalogue** — cull real-world bugs
+   for failure kinds not covered by c1..c8; propose new
+   contracts. Foundation is now stable; see
+   [`bad_scenario_flavors.md`](../design/bad_scenario_flavors.md).

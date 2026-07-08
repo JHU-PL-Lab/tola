@@ -1,156 +1,170 @@
-# Deriving expectations from `tiny_recipe`
+# Deriving `script_spec` from `tiny_recipe`
 
-Reference for Task 1.6 P1 — the A2-with-factory shape.
-Not a plan-of-record; captures the shape of "expectation as
-data" for future use, while we build tiny run-time checks
-first. See [`worklog_2026_07.md`](../worklog/worklog_2026_07.md)
-for the arc.
+Task 1.6 landing reference. Documents *what shipped* — the
+factory shape in
+[`canary_tiny_scenario_project.ml`](../../src/canary/projects/canary_tiny_scenario_project.ml)
+— not future work. For arc + rationale, see
+[`worklog_2026_07.md`](../worklog/worklog_2026_07.md).
 
-## Derivation contract
+## Factory pipeline
 
-Factory input: `entry = { scenario; recipe }` from
-`Canary_tiny_scenario`. Recipe carries `violates :
-contract_id list` — the contracts this scenario is designed
-to trigger.
+Input: `entry = { scenario; recipe }` from
+`Canary_tiny_scenario`.
+Output: `Canary_step_builder.script_spec` that canary can run
+as its own project via `run_project` (no multi-variant
+orchestration).
 
-Factory output: an `expectation` function that overrides the
-`script_spec.expectation` field. Same shape as the hand-coded
-`make_*_broken_script_spec` versions in `canary_project_tiny.ml`
-but generated instead of transcribed.
+Pipeline:
 
-## Two expectation shapes
+```
+entry
+  |> route_of_entry         : `Derived | `Base | `Dispatched
+  |> stores_of_entry ~stores : may override stores.lib_filename
+                               from recipe.perturbation
+  |> match route with
+     | `Derived    → base_spec with expectation = expectation_of_entry
+     | `Base       → base_spec (no expectation override)
+     | `Dispatched → fail (empty table today)
+```
 
-Contracts split cleanly by check mechanism:
+## `route_of_entry`
+
+Decides how the entry is realised. Two facts drive it:
+
+1. **`has_probe_manifestation`** — reads
+   `scenario.perturbation.manifest`:
+   - `None` (positive coverage) → false
+   - `Some { manifest = Unknown_gap; _ }` → false (detection
+     gap; no probe observable failure)
+   - `Some _` (Definite / Possible) → true
+
+2. **`is_derivable_contract`** — is at least one contract in
+   `recipe.violates` covered by
+   `compat_inputs_of_contract` or
+   `is_expect_failure_contract`?
+
+Result:
+
+| has_probe_manifestation | violates_derivable | route |
+|---|---|---|
+| true | true | `Derived |
+| false | * | `Base (Pc.* or Unknown_gap Bs.*) |
+| true | false | `Dispatched (empty table today) |
+
+## `expectation_of_entry` — two orthogonal axes
+
+- **Language** (outer, per-scenario constant):
+  `langs_of_scenario` reads `scenario.belongs_to` suffix:
+  - `Sc.N` (no suffix) → `[OCaml; Python]`
+  - `Sc.N.OCaml` → `[OCaml]`
+  - `Sc.N.Python` → `[Python]`
+
+- **Contract** (inner, per rule + lang): first violated
+  contract that yields inputs for the current lang wins.
+
+Two expectation shapes:
 
 | Shape | Contracts | Firing step | Payload |
 |---|---|---|---|
-| `Expect_compat_failure` — static comparator | c1, c2, c4, c5, c6 | `Probe (Binding lang)` (c6 may also fire at `Build (Binding lang)`) | `inputs : compat_input list` + `version_info : string option` |
-| `Expect_failure` — probe assertion | c3, c7 | `Probe (Binding lang)` | `contains_any : string list` (typically `["FAIL "]`) |
+| `Expect_compat_failure` — static comparator | c1, c2, c4, c5, c6 | `Probe (Binding lang)`; c6 also at `Build_binding lang` | `inputs` (per-contract) + `version_info` |
+| `Expect_failure` — probe assertion | c3, c7 | `Probe (Binding lang)` | `contains_any = ["FAIL "]` |
 
-Behavioral contracts (c3, c7) don't need `inputs` — the
-probe binary itself calls `assert` on the observed behavior.
-Static-comparator contracts need per-contract inspect JSON
-paths so `predicted_contains_any_v2` can compute the
-predicted substring set.
+Compat-first priority: at `Probe (Binding lang)`, try
+`compat_inputs_of_contract` for each violated contract in
+list order; first `Some inputs` wins. If none, fall back to
+`Expect_failure` if any behavioural contract is violated;
+else `Expect_success`.
 
-## Per-contract inputs
+`Build_binding lang` fires only when c6 is violated (unique
+site among current contracts).
 
-Static-comparator contracts each have their own inputs shape
-that reflects what they compare:
+## Per-contract inputs — the table today
 
-| Contract | Meaning | Inputs |
+`compat_inputs_of_contract ~lang c` returns the JSON paths
+canary reads to compute the predicted substring set:
+
+| Contract | Lang scope | Inputs |
 |---|---|---|
-| c1 cmp_symbol | Set inclusion: stub-required ⊆ lib-defined | `C_stub [<lang>/inspect.json]` + `Native_lib [build_lib/inspect.json]` |
-| c2 cmp_api_completeness | Watchlist ⊆ lang-surface exports | `Ocaml_mli [...]` or `Python_attrs [...]` (lang-specific input constructor) |
-| c4 cmp_abi | Soname match | `Native_lib [...]` + `Abi_surface [...]` |
-| c5 cmp_sym_version | Versioned exports satisfy versioned requirements | `Versioned_exports [...]` + `Versioned_req [...]` |
-| c6 cmp_type | Header signature matches stub signature | `Typed_header [...]` + `Typed_binding_stub [...]` (both from `scan_sources`) |
+| c1 cmp_symbol | any | `C_stub [build_binding_<lang>/inspect.json]` + `Native_lib [build_lib/inspect.json]` |
+| c2 cmp_api_completeness | OCaml | `Ocaml_mli [build_binding_ocaml/inspect_mli.json]` |
+| c2 cmp_api_completeness | Python | `Python_attrs [build_binding_python/inspect_attrs.json]` |
+| c4 cmp_abi | Python (tiny convention) | `Native_lib [build_lib/inspect.json]` + `Abi_surface [build_binding_python/inspect.json]` |
+| c5 cmp_sym_version | Python (tiny convention) | `Versioned_exports [build_lib/inspect.json]` + `Versioned_req [build_binding_python/inspect.json]` |
+| c6 cmp_type | OCaml (tiny convention) | `Typed_header` + `Typed_binding_stub` from `scan_sources/` |
 
-Payoff: the derivation is a fold over `recipe.violates` — for
-each contract, contribute a case to the expectation function.
+The "tiny convention" columns reflect tiny's store choice:
+Python cext is cached from baseline; OCaml binding rebuilds
+fresh each run. Only cached bindings see stale ABI /
+versioned-req / cext-behaviour issues; only rebuilt bindings
+see compile-time type mismatches. A different project could
+scope these differently; extend
+`compat_inputs_of_contract` at that time.
 
-## Two orthogonal axes: contract × language
+## `stores_of_entry` — perturbation-driven store adjustment
 
-Following the axes user identified 2026-07-08:
-
-- **Contract** — inner loop; drives inputs shape.
-- **Language** — outer loop; determined at scenario choice.
-
-For a given scenario, the language(s) at which its contracts
-fire is a scenario-level property, derived from
-`scenario.belongs_to` (which good scenario the entry sits
-under):
-
-| Good scenario suffix | Languages | Example scenarios |
-|---|---|---|
-| `Sc.1` (no suffix, shared) | `[OCaml; Python]` | symbol_missing, abi_soname_bump — perturb shared artifacts; every binding sees the effect |
-| `Sc.N.OCaml` | `[OCaml]` | symbol_orphan, api_repack, api_complete — perturb OCaml-only artifacts |
-| `Sc.N.Python` | `[Python]` | api_repack_python, api_complete_python — perturb Python-only artifacts |
-
-Consequence: **the expectation function must scope its
-`Probe (Binding lang)` match to the scenario's language set.**
-A c1 derivation that fires at all langs works for
-`symbol_missing` (Sc.1 → both) but misfires for
-`symbol_orphan` (Sc.2.OCaml → OCaml only, Python probe should
-succeed).
-
-## Full derivation sketch
-
-Pseudocode reflecting both axes:
+Some concrete perturbations change the store shape. Today
+only `Soname_bump { to_so; _ }`:
 
 ```
-let expectation_of_entry (entry : entry) =
-  let scenario_langs = langs_of_scenario entry.scenario in
-  let violates_c1 = List.mem entry.recipe.violates C1 in
-  let violates_c2 = List.mem entry.recipe.violates C2 in
-  (* ... one per contract *)
-  fun rule _loc ->
-    match rule with
-    | Probe (Binding lang) when List.mem scenario_langs lang ->
-      (* Priority order: strongest contract wins, or aggregate
-         inputs across contracts. TBD as more contracts land. *)
-      if violates_c1 then Expect_compat_failure { c1_inputs lang; None }
-      else if violates_c2 then Expect_compat_failure { c2_inputs lang; None }
-      else if violates_c3 then Expect_failure { contains_any = ["FAIL "] }
-      (* ... *)
-      else Expect_success
-    | _ -> Expect_success
+to_so = "libtiny.so.2.0"
+  →  strip_trailing_minor: last two dotted segments are numeric
+  →  lib_filename = "libtiny.so.2"
 ```
 
-Open questions when multiple contracts co-occur (e.g., some
-Bs entries violate both c1 and c6 in cascading fashion):
+Applied uniformly to Derived and Base routes.
 
-- Which contract's expectation wins? (Both must be observable
-  in the probe output; picking one and asserting its substring
-  may pass even if the other silently held.)
-- Or aggregate: emit an expectation that succeeds if *any*
-  cited contract's predicted substring appears.
+## Coverage today
 
-Deferred until scenarios that actually violate multiple
-contracts get their derivation. Most tiny entries today are
-single-contract.
+Distribution of the 15 tiny entries:
 
-## Failure modes noted while building the shape
+| Route | Count | Entries |
+|---|---|---|
+| `Derived | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
+| `Base | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1 (app_over_binding_ocaml), Pc.2 (app_over_helper_ocaml) |
+| `Dispatched | 0 | (empty table) |
 
-- **`c6` fires at build OR probe** — `binding_type_broken` has
-  the mismatch surface at `Build (Binding OCaml)` (C compile
-  error) rather than `Probe`. Site is per-scenario, not
-  per-contract. Encode as a site hint on the recipe, or infer
-  from where inputs are produced. Deferred; today's hand-coded
-  version fires at both sites.
+Every scenario with a probe-observable manifestation
+derives its expectation structurally from
+`recipe.violates + scenario.belongs_to + recipe.perturbation`.
+No named dispatch.
 
-- **Multi-contract recipes with different langs** — a
-  hypothetical Sc.1 scenario that violates c1 (both langs) and
-  c2 (OCaml only). The lang-scope filter must be per-contract,
-  not per-scenario. If it comes up, promote `scenario_langs`
-  to a `(contract * lang list) list` on the recipe.
+## Auto-init
 
-- **`Expect_failure` vs `Expect_compat_failure` selection** —
-  behavioral contracts (c3, c7) are `Expect_failure`, others
-  are `Expect_compat_failure`. The choice is per-contract;
-  when a recipe mixes both, we need aggregation semantics.
-  Currently deferred as recipes are single-shape.
+`run_tiny_scenario ~name` in
+[`canary_main.ml`](../../src/bin/canary_main.ml) checks
+`_cache/<name>/workspace/` and auto-runs
+`Canary_tiny_baseline.run ()` + `Canary_tiny_prepare.run ~name`
+if missing. Single-command experience:
+
+```
+canary action tiny-scenario/symbol_missing   # first run auto-inits;
+                                             # subsequent runs skip
+canary action tiny-scenario                  # all 15 in list order
+```
 
 ## Interaction with `recipe.perturbation`
 
-The perturbation drives *store synthesis* (patches, soname
-bumps — how to produce the perturbed workspace) but does not
-appear in the expectation derivation. `recipe.violates` alone
-determines the check; `scenario.perturbation.target` is
-opaque to the factory.
+The concrete perturbation drives *store synthesis*
+(prepare → workspace) plus one lib_filename adjustment via
+`stores_of_entry`. It does **not** appear in the expectation
+derivation — `recipe.violates` alone determines what to
+check.
 
-That's the payoff of Task 1.5's shape choice — perturbation
-and contract are orthogonal, and the factory only reads the
-latter.
+This orthogonality is the payoff of Task 1.5's shape choice:
+perturbation and contract are independent axes, and the
+factory reads only the latter.
 
-## Not doing yet
+## Not covered
 
-- Growing the contract coverage (this doc is reference for
-  when we do).
-- Multi-contract aggregation semantics.
-- Site hints for `c6`.
+Deferred to follow-ups — see
+[`bad_scenario_flavors.md`](bad_scenario_flavors.md) for
+future flavor-2 / contract-catalogue work.
+
+- Multi-contract aggregation semantics (which contract wins
+  when a recipe violates several with different shapes).
+  Today first-wins via list order; adequate for the 15
+  entries.
 - Structural inference of `scenario_langs` beyond the
   `belongs_to` suffix rule.
-- Retiring the hand-coded `make_*_broken_script_spec`
-  helpers — they stay as fallback until every contract is
-  derived.
+- `tiny_recipe` synthesis from an abstract derived cell
+  (SSOT §9.3 Task 1.6 backlog).

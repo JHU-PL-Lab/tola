@@ -492,17 +492,34 @@ addressed. Captured as awareness; not active work.
    (5 filled / 15 empty / 0 extras vs 13 Bs), drift risks #1
    and #3 closed.
 
+   **Task 1.6 done** (2026-07-07 → 08). A2-with-factory:
+   every tiny scenario runs via
+   `canary action tiny-scenario/<name>` through
+   `Canary_tiny_scenario_project`. `run_tiny` multi-variant
+   path retired (492 lines removed net). All 6 non-dormant
+   contracts (c1..c7 except c8) derive their expectations
+   structurally from `recipe.violates + belongs_to`. Auto-init
+   prepares workspace on first run. Distribution 11 derived
+   / 4 base / 0 dispatched. Reference:
+   [`design/derivation.md`](derivation.md).
+
    **Backlog (queued):**
 
-   Next up (Task 1.6, 2026-07-07):
-   - [ ] **Coverage-tag `prepare-all`.** Report which derived
-     cells the 13 Bs recipes covered after a run. Cheap;
-     reuses `derived_scenarios` + `matches_derived_cell`.
+   Next up:
+   - [ ] **Fill the 15 empty derived cells.** Concrete flavor-1
+     perturbations for the (Good × artifact × kind) slots
+     `tiny-scenarios list` shows empty today. Cheap once
+     recipe synthesis lands; without it, each cell is a hand
+     patch.
    - [ ] **`tiny_recipe` synthesis from an abstract cell.**
      Generate patch files + expected outcomes from (Good ×
-     target × kind) so derived cells become runnable, not just
-     name-only. Unblocks concrete filling of the 15 empty
-     cells.
+     target × kind) so filling the 15 empty cells becomes
+     data-driven, not per-cell manual authoring.
+   - [ ] **Flavor-2 catalogue extension.** Cull real-world
+     bugs for failure kinds not covered by c1..c8; propose
+     new contracts. Foundation for tiny-as-bug-categorisation.
+     Design captured in
+     [`design/bad_scenario_flavors.md`](bad_scenario_flavors.md).
 
    Later:
    - [ ] **Derive `related_artifacts` from `actions`** —
