@@ -152,17 +152,22 @@ the scenario end-to-end. A witness either:
 
 Tiny's unmutated witnesses:
 
-| Witness id           | Exercises                 | Name                     | What it does                                                |
-| -------------------- | ------------------------- | ------------------------ | ----------------------------------------------------------- |
-| `Sc.4.OCaml.pos`     | Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run   |
-| `Sc.6.OCaml.pos`     | Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
+| Witness id     | Exercises                 | Name                     | What it does                                                 |
+| -------------- | ------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `Sc.4.OCaml`   | Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run     |
+| `Sc.6.OCaml`   | Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
 
-Naming convention: `Sc.<N>.<lang>.pos` — the run-stage the
-witness reaches, `.pos` = positive (unmutated). These
-witnesses used to be catalogued as `Pc.N` (positive
+Naming convention: the id **is** the run-stage Sc.N (naming
+after the most-downstream stage exercised — the run
+implicitly includes its build prereq). A witness with
+`mutation = None` IS the Sc.N run, so it reuses the Sc.N
+id; the joint (id, mutation) is what disambiguates the
+concrete instantiation from the abstract Good scenario
+pattern of §4.
+
+These witnesses used to be catalogued as `Pc.N` (positive
 coverage) alongside the `Bs.N` bad scenarios; the category
-label is retired (the ids remain queryable by name if
-searched for as "Pc.1"/"Pc.2" in git history).
+label is retired (search for "Pc.1"/"Pc.2" in git history).
 
 Running an unmutated witness is what `probe_app_<lang>` does
 under the hood — build the app, run it, expect success. The

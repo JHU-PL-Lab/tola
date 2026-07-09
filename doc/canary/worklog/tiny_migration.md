@@ -362,17 +362,22 @@ Phase A is inventory only. Decisions deferred to Phase B:
       `app_over_helper_ocaml`) are just Sc.N runs with
       `mutation = None` — unmutated witnesses under §4.1 of
       the SSOT, not a separate species alongside `Bs.N`.
-      - [x] **F.1** — id semantics. First pass kept `Pc.1`/
-        `Pc.2` as legacy labels; user follow-up flagged that
-        the CLI (`tiny list`/`run`/`status`) still surfaced
-        them, defeating the category-collapse. Second pass
-        renamed the ids to `Sc.4.OCaml.pos` /
-        `Sc.6.OCaml.pos` — naming after the run-stage each
-        witness exercises, `.pos` = positive (unmutated).
-        `pad_id` widened from `%-11s` to `%-16s` to fit;
-        `belongs_to_of_id` match arms updated. Legacy Pc.N
-        labels only survive in a "was called…" comment on
-        each declaration for git-history discoverability.
+      - [x] **F.1** — id semantics. Three passes:
+        (i) kept `Pc.1`/`Pc.2` as legacy labels; user flagged
+        that CLI still surfaced them, defeating the collapse.
+        (ii) renamed to `Sc.4.OCaml.pos` / `Sc.6.OCaml.pos`
+        (`pad_id` widened `%-11s` → `%-16s`); user pointed
+        out `.pos` is redundant since `mutation = None`
+        already says "positive".
+        (iii) landed on `Sc.4.OCaml` / `Sc.6.OCaml` — the
+        witness id IS the Sc.N run-stage id. Same string as
+        the abstract Good scenario in §4, distinct data
+        (Canary_scenario.scenario vs scenario_spec); the
+        (id, mutation) pair is the joint disambiguator.
+        `pad_id` restored to `%-11s`. `belongs_to_of_id`
+        match arms updated. Legacy Pc.N labels only survive
+        in a "was called…" comment on each declaration for
+        git-history discoverability.
       - [x] **F.2** — `print_list` in `canary_tiny_scenario.ml`.
         Renamed the sub-section header from `verified by (N):`
         to `unmutated witnesses (N):`; renamed the internal

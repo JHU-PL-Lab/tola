@@ -10,8 +10,9 @@
       mutation). Field renamed [interested_artifacts] →
       [related_artifacts].
     - Scenario carries [id]: Bs.N for mutation-carrying
-      witnesses; Sc.N.OCaml.pos for the two unmutated Sc.N
-      witnesses catalogued in SSOT §4.1 (legacy label: Pc.N).
+      witnesses; the Sc.N (run-stage) id itself for unmutated
+      witnesses (SSOT §4.1) — a witness with mutation = None
+      IS the Sc.N run, not a separate id. Legacy label: Pc.N.
     - The abstract mutation on [Canary_scenario.scenario]
       records target artifact / kind / manifest / detector — the
       annotations we can *reason* about generically. The tiny
@@ -22,7 +23,7 @@
     [doc/_legacy_code/tiny_python_harness/scenarios.py (archived
     Phase E):SCENARIOS]. Order changed post-migration — now
     grouped by SSOT §5.1 (Bs.1..Bs.13 by Good scenario, then
-    the two unmutated witnesses Sc.4.OCaml.pos, Sc.6.OCaml.pos
+    the two unmutated witnesses Sc.4.OCaml, Sc.6.OCaml (as unmutated witnesses)
     — see SSOT §4.1). *)
 
 open Base
@@ -136,8 +137,8 @@ let belongs_to_of_id (id : string) : string list =
     [ "Sc.2.OCaml" ]
   | "Bs.11" | "Bs.12" ->
     [ "Sc.2.Python" ]
-  | "Sc.4.OCaml.pos" -> [ "Sc.3.OCaml"; "Sc.4.OCaml" ]
-  | "Sc.6.OCaml.pos" -> [ "Sc.5.OCaml"; "Sc.6.OCaml" ]
+  | "Sc.4.OCaml" -> [ "Sc.3.OCaml"; "Sc.4.OCaml" ]
+  | "Sc.6.OCaml" -> [ "Sc.5.OCaml"; "Sc.6.OCaml" ]
   | other ->
     Stdlib.failwith
       (Printf.sprintf "unknown id for belongs_to derivation: %S" other)
@@ -454,10 +455,12 @@ let scenario_specs : scenario_spec list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    (* Sc.4.OCaml.pos — unmutated witness (SSOT §4.1) exercising
-       the Sc.3.OCaml + Sc.4.OCaml chain (build_app_with_binding
-       + run_app_with_binding). Legacy id: Pc.1. *)
-    mk ~id:"Sc.4.OCaml.pos" ~name:"app_over_binding_ocaml"
+    (* Sc.4.OCaml — unmutated witness (SSOT §4.1) exercising the
+       Sc.3.OCaml + Sc.4.OCaml chain (build_app_with_binding +
+       run_app_with_binding). Shares the id string with the
+       Good scenario Sc.4.OCaml — a witness with mutation = None
+       IS the Sc.4.OCaml run, not a separate id. Legacy id: Pc.1. *)
+    mk ~id:"Sc.4.OCaml" ~name:"app_over_binding_ocaml"
       ~description:"Unmutated witness (SSOT §4.1): an app linking \
                     directly against the Tiny OCaml binding builds and \
                     runs; transitive dependency on libtiny.so resolves."
@@ -475,10 +478,11 @@ let scenario_specs : scenario_spec list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    (* Sc.6.OCaml.pos — unmutated witness (SSOT §4.1) exercising
-       the Sc.5.OCaml + Sc.6.OCaml chain (build_app_helper +
-       run_app_helper). Legacy id: Pc.2. *)
-    mk ~id:"Sc.6.OCaml.pos" ~name:"app_over_helper_ocaml"
+    (* Sc.6.OCaml — unmutated witness (SSOT §4.1) exercising the
+       Sc.5.OCaml + Sc.6.OCaml chain (build_app_helper +
+       run_app_helper). Same id shape as Sc.4.OCaml above.
+       Legacy id: Pc.2. *)
+    mk ~id:"Sc.6.OCaml" ~name:"app_over_helper_ocaml"
       ~description:"Unmutated witness (SSOT §4.1): longest-interesting \
                     chain — app -> tiny_helper -> Tiny binding -> \
                     libtiny.so. Confirms intra-binding repacking \
@@ -644,7 +648,7 @@ let lang_of_id id =
   else if String.is_suffix id ~suffix:".Python" then Python_lang
   else Shared
 
-let pad_id id = Printf.sprintf "%-16s" id
+let pad_id id = Printf.sprintf "%-11s" id
 let pad_name name = Printf.sprintf "%-26s" name
 
 (** Print one Good scenario with its full mutation-cell
