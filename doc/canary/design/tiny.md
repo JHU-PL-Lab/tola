@@ -196,18 +196,43 @@ canary tiny-scenarios confirm <name>   # print cached confirm_ill.json
 
 ## 6. Coverage today
 
-All 15 entries run through the uniform derivation. Split by
-what actually fires at probe:
+Two independent counts, easily confused.
+
+**Concrete entries** — the 15 authored entries in
+`Canary_tiny_scenario.entries` (13 Bs + 2 Pc). All 15 run
+through the uniform derivation. Split by whether their
+expectation actually fires at probe:
 
 | has probe manifestation? | Count | Entries |
 |---|---|---|
 | yes — expectation fires | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
 | no — Expect_success everywhere | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1, Pc.2 |
 
-Every scenario with a probe-observable manifestation derives
-its expectation from `recipe.violates + scenario.belongs_to
-+ recipe.perturbation`. Zero name dispatch, zero routing
-tables.
+**Derived cells** — the 20 design-space slots enumerated
+by `derive_scenarios` (Good × related-artifact × applicable
+kind). Header of `tiny-scenarios list`:
+`20 derived cells, 5 filled, 15 empty`. The 5 filled cells
+contain the 13 Bs entries (several Bs entries can share a
+cell); the 15 empty cells are candidate flavor-1
+perturbations not yet authored (see §7.1).
+
+**Two kinds of gap** to keep distinct:
+
+- **Missing-entry gap** — one of the 15 empty derived cells.
+  Design-space admits a scenario we haven't authored;
+  mechanical filling work.
+- **Detection gap** — an entry exists but no comparator
+  catches it at probe. Shows as `[gap]` in the detector
+  column (Bs.6 api_faithful; c8 dormant) or as
+  `Unknown_gap` manifest (Bs.13 api_repack_stub_orphan; c7
+  static-only). Belongs to the flavor-2 catalogue
+  extension (see
+  [`bad_scenario_flavors.md`](bad_scenario_flavors.md)).
+
+Every scenario with a probe-observable manifestation
+derives its expectation from `recipe.violates +
+scenario.belongs_to + recipe.perturbation`. Zero name
+dispatch, zero routing tables.
 
 ## 7. Wish-list
 
