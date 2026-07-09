@@ -703,10 +703,9 @@ let c2_prediction_pure_tests =
 
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
 
-(* Run a command and check the process exit code against expectation.
-   Writes output to {output_dir}/{name}.log for inspection. *)
-(* Verify that a summary.json produced by a inspect_cmd is valid JSON with
-   the expected top-level fields. Returns 0 on success, 1 on failure. *)
+(* Weak generic shape check on a summary JSON. Kept for backwards
+   compatibility with existing tests; per-script schema helpers below
+   are stricter. *)
 let summary_json_valid_cmd path =
   [%string {|python3 -c "
 import json, sys
@@ -716,6 +715,100 @@ for k in ('kind','path','counts','watchlist'):
     assert k in d, 'missing key: ' + k
 print('ok')
 " |}]
+
+(* ── Per-script JSON schema tests ────────────────────────────
+   The 4 inspect_*.py scripts are the project-standard producers of
+   summary JSONs; multiple callers (tiny's baseline/prepare + the
+   tool builders in Canary_artifact_native / _lang) all shell out to
+   them. Pinning the output shape here decouples the schema from
+   which caller invoked the script, so the R2 sub-gap 2 refactor
+   (routing tiny through tool builders instead of inlined pipes) is
+   safe by construction: as long as the same script is invoked with
+   the same arguments, the JSON is byte-identical; these tests keep
+   that invariant honest.
+
+   Each check runs `python3 -c` against a body that:
+   - loads the JSON
+   - asserts [kind] equals the expected literal
+   - asserts every required top-level key exists
+   - type-checks values (int / list / dict) for keys where the
+     shape is fixed
+   Exits 0 on success, non-zero (assertion) on any drift. *)
+
+let schema_check_cmd ~path ~kind ~asserts =
+  let body =
+    Printf.sprintf
+      "import json%s\
+       with open('%s') as f: d = json.load(f)%s\
+       assert d.get('kind') == '%s', 'wrong kind: ' + str(d.get('kind'))%s\
+       %s%s\
+       print('ok')"
+      "\n" path "\n" kind "\n" asserts "\n"
+  in
+  [%string {|python3 -c "%{body}" |}]
+
+(* inspect_native.py — kind='native'. Shape: counts.total(int) +
+   counts.by_prefix(dict), versioned_req(dict), versioned_exports(dict),
+   watchlist.{present,missing}(lists). *)
+let native_schema_cmd path =
+  schema_check_cmd ~path ~kind:"native" ~asserts:
+    "assert isinstance(d['counts']['total'], int), 'counts.total not int'\n\
+     assert isinstance(d['counts']['by_prefix'], dict), 'counts.by_prefix not dict'\n\
+     assert isinstance(d['versioned_req'], dict), 'versioned_req not dict'\n\
+     assert isinstance(d['versioned_exports'], dict), 'versioned_exports not dict'\n\
+     assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
+     assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
+     assert d['counts']['total'] > 0, 'no defined symbols in native fixture'"
+
+(* inspect_ocaml.py — kind='ocaml'. Shape: counts.modules(int),
+   counts.imports(list), modules(list), watchlist.{present,missing}. *)
+let ocaml_schema_cmd path =
+  schema_check_cmd ~path ~kind:"ocaml" ~asserts:
+    "assert isinstance(d['counts']['modules'], int), 'counts.modules not int'\n\
+     assert isinstance(d['modules'], list), 'modules not list'\n\
+     assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
+     assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
+     assert d['counts']['modules'] > 0, 'no modules in ocaml fixture'"
+
+(* inspect_binding.py --kind mli — kind='ocaml_mli'. Shape:
+   counts.{vals,externals,constructors,modules}, vals/externals/... lists,
+   externals_detail(list), watchlist.{present,missing}. *)
+let mli_schema_cmd path =
+  schema_check_cmd ~path ~kind:"ocaml_mli" ~asserts:
+    "for k in ('vals','externals','constructors','modules'):\n\
+     \    assert isinstance(d['counts'][k], int), 'counts.' + k + ' not int'\n\
+     \    assert isinstance(d[k], list), k + ' not list'\n\
+     assert isinstance(d['externals_detail'], list), 'externals_detail not list'\n\
+     assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
+     assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
+     assert d['counts']['vals'] > 0, 'no vals in mli fixture'"
+
+(* inspect_binding.py --kind stub — kind='c_stub'. Shape:
+   counts.required(int), requires(list), versioned_req(dict), watchlist. *)
+let c_stub_schema_cmd path =
+  schema_check_cmd ~path ~kind:"c_stub" ~asserts:
+    "assert isinstance(d['counts']['required'], int), 'counts.required not int'\n\
+     assert isinstance(d['requires'], list), 'requires not list'\n\
+     assert isinstance(d['versioned_req'], dict), 'versioned_req not dict'\n\
+     assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
+     assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
+     assert d['counts']['required'] > 0, 'no requires in stub fixture'"
+
+(* inspect_python.py — kind='python'. Two shapes:
+   - success: counts.attrs(int), attrs(list), version(str|None),
+     extra(dict), watchlist.{present,missing}
+   - error: only kind, path, error(str) — no counts/attrs/watchlist
+   Assumption for schema tests: fixture imports successfully, so
+   assert the success shape. *)
+let python_schema_cmd path =
+  schema_check_cmd ~path ~kind:"python" ~asserts:
+    "assert 'error' not in d, 'python fixture failed to import: ' + d.get('error','')\n\
+     assert isinstance(d['counts']['attrs'], int), 'counts.attrs not int'\n\
+     assert isinstance(d['attrs'], list), 'attrs not list'\n\
+     assert isinstance(d['extra'], dict), 'extra not dict'\n\
+     assert isinstance(d['watchlist']['present'], list), 'watchlist.present not list'\n\
+     assert isinstance(d['watchlist']['missing'], list), 'watchlist.missing not list'\n\
+     assert d['counts']['attrs'] > 0, 'no attrs in python fixture'"
 
 let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
   let prefix = if Canary_artifact_native.is_macos then "_" else "" in
@@ -736,6 +829,9 @@ let native_shell_tests ~lib ~output_dir : Canary_pm_test.test_case list =
     { name = "native.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
+    { name = "native.summary_json_schema";
+      cmd = native_schema_cmd (sum_dir ^ "/inspect.json");
+      expected_rc = 0 };
   ]
 
 let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
@@ -753,6 +849,9 @@ let ocaml_shell_tests ~pkg ~output_dir : Canary_pm_test.test_case list =
     { name = "ocaml.summary_json_valid";
       cmd = summary_json_valid_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
+    { name = "ocaml.summary_json_schema";
+      cmd = ocaml_schema_cmd (sum_dir ^ "/inspect.json");
+      expected_rc = 0 };
     (* mli-based summary (inspect_binding.py --kind mli). Verifies
        summary.json kind == ocaml_mli with non-zero counts. *)
     { name = "ocaml.mli_inspect_opam_pkg_cmd";
@@ -769,6 +868,9 @@ assert d['counts']['vals'] > 0, 'no vals'
 assert d['counts']['modules'] > 0, 'no modules'
 print('ok')
 " |}];
+      expected_rc = 0 };
+    { name = "ocaml.mli_inspect_json_schema";
+      cmd = mli_schema_cmd (mli_dir ^ "/inspect.json");
       expected_rc = 0 };
   ]
 
@@ -791,6 +893,9 @@ assert d['kind'] == 'c_stub', 'wrong kind: ' + d['kind']
 assert d['counts']['required'] > 0, 'no required symbols'
 print('ok')
 " |}];
+      expected_rc = 0 };
+    { name = "ocaml.stub_inspect_json_schema";
+      cmd = c_stub_schema_cmd (stub_dir ^ "/inspect_stub.json");
       expected_rc = 0 };
   ]
 
@@ -820,6 +925,10 @@ for k in ('kind','path'):
 assert d['kind'] == 'python'
 print('ok')
 " |}];
+      expected_rc = 0 };
+    (* Full schema check — assumes `sys` fixture imports successfully. *)
+    { name = "python.summary_json_schema";
+      cmd = python_schema_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
   ]
 
