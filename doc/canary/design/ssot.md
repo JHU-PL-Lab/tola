@@ -380,18 +380,7 @@ Captured for later; surface here so they're visible per-section.
    is empirical (we add to the "interested" set when a
    real-world case forces it).
 
-## 8. Status pointers
-
-Status tracking (open reconciliation tasks, forward planning,
-in-progress backlog) moved out of SSOT 2026-07-08. See:
-
-- [`../status.md`](../status.md) — rolling backlog
-- [`tiny.md`](tiny.md) §7 — tiny-specific wish-list
-- [`bad_scenario_flavors.md`](bad_scenario_flavors.md) —
-  post-tiny research task (flavor-2 contract catalogue)
-- [`../worklog/`](../worklog/) — done chronicles
-
-## 9. Downstream usage in `draft.md`
+## 8. Downstream usage in `draft.md`
 
 Tables in `draft.md` that should be replaced with references or
 generated from this file once SSOT stabilises:
