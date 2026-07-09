@@ -115,17 +115,32 @@ test "$COUNT" -gt 0|}]
    (e.g., passing "$LIB_Z3" from a resolve snippet). Callers using literal
    paths get the usual behavior; paths with shell metacharacters or spaces
    need escaping at the call site. *)
-let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
+(* Pipe-only variant: same nm | inspect_native.py pipeline, no
+   redirection. Callers that capture stdout (tiny's baseline/prepare
+   inspectors) use this; [inspect_cmd] below composes it with a
+   marker-file redirect for the runner path. *)
+let inspect_pipe_cmd
+    ~lib
+    ?(prefixes = [])
+    ?(watchlist = [])
+    ?(emit_symbols = true)
+    ?(elf = true)
+    () =
   let nm_flag = if is_macos then "-g" else "-D" in
   let strip_flag = if is_macos then "--strip-leading-underscore " else "" in
   let script = "canary/scripts/inspect_native.py" in
   let prefixes_csv = String.concat ~sep:"," prefixes in
   let watchlist_csv = String.concat ~sep:"," watchlist in
-  let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let emit_flag = if emit_symbols then "--emit-symbols " else "" in
+  let elf_flag = if elf then "--elf " else "" in
   [%string
     {|nm %{nm_flag} "%{lib}" 2>/dev/null \
-  | python3 %{script} %{strip_flag}--emit-symbols --elf --path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}' \
-  > %{output_dir}/%{out_file}|}]
+  | python3 %{script} %{strip_flag}%{emit_flag}%{elf_flag}--path "%{lib}" --prefixes '%{prefixes_csv}' --watchlist '%{watchlist_csv}'|}]
+
+let inspect_cmd ~lib ?(prefixes = []) ?(watchlist = []) ~output_dir ~variant_key () =
+  let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
+  let pipe = inspect_pipe_cmd ~lib ~prefixes ~watchlist () in
+  pipe ^ Printf.sprintf " \\\n  > %s/%s" output_dir out_file
 
 (* L4: ELF ABI metadata via readelf -d.  Captures SONAME, NEEDED, RPATH, RUNPATH.
    Writes inspect_elf.json to the output directory. *)

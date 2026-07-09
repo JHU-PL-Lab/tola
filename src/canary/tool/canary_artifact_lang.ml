@@ -58,18 +58,23 @@ let cmxa_stub_archive path =
   let name = Stdlib.Filename.remove_extension base in
   dir ^ "/lib" ^ name ^ ".a"
 
+(* Pipe-only variant: ocamlobjinfo | inspect_ocaml.py — no redirect.
+   Callers that capture stdout use this. *)
+let inspect_pipe_cmd ~archive ?(watchlist = []) () =
+  let script = "canary/scripts/inspect_ocaml.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    {|ocamlobjinfo '%{archive}' 2>/dev/null \
+  | python3 %{script} --path '%{archive}' --watchlist '%{watchlist_csv}'|}]
+
 (* Emit compact archive summary as summary.json.
    Module-level only (ocamlobjinfo doesn't expose constructors);
    constructor-level drift is detected via compile probes.
    See doc/canary/design/api_surface.md. *)
 let inspect_cmd ~archive ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/inspect_ocaml.py" in
-  let watchlist_csv = String.concat ~sep:"," watchlist in
   let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
-  [%string
-    {|ocamlobjinfo '%{archive}' 2>/dev/null \
-  | python3 %{script} --path '%{archive}' --watchlist '%{watchlist_csv}' \
-  > %{output_dir}/%{out_file}|}]
+  let pipe = inspect_pipe_cmd ~archive ~watchlist () in
+  pipe ^ Printf.sprintf " \\\n  > %s/%s" output_dir out_file
 
 (* Emit summary for an opam-installed OCaml package: inspects all its
    .cmxa/.cma archives via ocamlfind query + ocamlobjinfo, merged into one
@@ -107,6 +112,16 @@ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
   [ -f "$f" ] && printf '\n=== %s ===\n' "$f" && ocamlobjinfo "$f"
 done 2>&1 | tee %{output_dir}/archive.log|}]
 
+(* Pipe-only mli summary from a single .mli file (or directory) path.
+   Callers that capture stdout use this. For an opam-installed binding
+   whose .mli files live under `ocamlfind query <pkg>`, use
+   [mli_inspect_opam_pkg_cmd] below (this pipe is what it wraps). *)
+let mli_inspect_pipe_cmd ~path ?(watchlist = []) () =
+  let script = "canary/scripts/inspect_binding.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    {|python3 %{script} --kind mli --path '%{path}' --watchlist '%{watchlist_csv}'|}]
+
 (* Source-level mli summary for an opam-installed OCaml binding.
    Discovers the package's .mli files via `ocamlfind query` and parses them
    with inspect_binding.py (grep-based, no compiler needed). Output JSON
@@ -125,6 +140,14 @@ PKG_DIR=$(ocamlfind query '%{pkg}' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 %{script} --kind mli --dir "$PKG_DIR" \
   --watchlist '%{watchlist_csv}' > %{output_dir}/%{out_file}|}]
+
+(* Pipe-only c_stub summary from a .a archive path.
+   Callers that capture stdout use this. *)
+let stub_inspect_pipe_cmd ~path ?(prefix = "") ?(watchlist = []) () =
+  let script = "canary/scripts/inspect_binding.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  [%string
+    {|python3 %{script} --kind stub --path '%{path}' --prefix '%{prefix}' --watchlist '%{watchlist_csv}'|}]
 
 (* C-stub summary: undefined symbols a binding requires from its native lib.
    Discovers the binding's stub archive (lib<name>.a) via `ocamlfind query`,
@@ -187,16 +210,30 @@ let python_import_cmd ~pkg ~output_dir =
     "python3 -c 'import %{pkg}; print(\"%{pkg} ok\")' \
      > %{output_dir}/import.log 2>&1 && cat %{output_dir}/import.log"]
 
+(* Pipe-only python summary — no redirect. Optional [env] is a list of
+   (var, value) pairs prepended to the invocation (e.g.
+   [("PYTHONPATH", "..."); ("LD_LIBRARY_PATH", "...")]), which lets
+   callers point the interpreter at an out-of-tree package without
+   installing it. *)
+let python_inspect_pipe_cmd ?(env = []) ~pkg ?(watchlist = []) () =
+  let script = "canary/scripts/inspect_python.py" in
+  let watchlist_csv = String.concat ~sep:"," watchlist in
+  let env_prefix =
+    List.map env ~f:(fun (k, v) -> Printf.sprintf "%s='%s'" k v)
+    |> String.concat ~sep:" "
+  in
+  let sep = if String.is_empty env_prefix then "" else " " in
+  [%string
+    "%{env_prefix}%{sep}python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}'"]
+
 (* Emit compact Python package summary as summary.json via
    canary/scripts/inspect_python.py. Watchlist is a list of top-level
    attribute names; present/missing recorded in the JSON.
    See doc/canary/ops/python_binding_gotchas.md. *)
 let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
-  let script = "canary/scripts/inspect_python.py" in
-  let watchlist_csv = String.concat ~sep:"," watchlist in
   let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
-  [%string
-    "python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}' > %{output_dir}/%{out_file}"]
+  let pipe = python_inspect_pipe_cmd ~pkg ~watchlist () in
+  pipe ^ Printf.sprintf " > %s/%s" output_dir out_file
 
 (* L2: .cmi digest inspection for OCaml bindings.
    Runs md5sum on all .cmi files in the package directory, outputs JSON:

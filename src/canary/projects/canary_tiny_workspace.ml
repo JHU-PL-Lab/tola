@@ -312,48 +312,44 @@ let inspect_n4 ~(paths : paths) () =
   if not (Stdlib.Sys.file_exists so) then None
   else
     capture_json
-      (Printf.sprintf
-         "nm -D '%s' | python3 '%s/inspect_native.py' \
-          --path '%s' --prefixes tiny_ --elf --emit-symbols"
-         so scripts so)
+      (Canary_artifact_native.inspect_pipe_cmd
+         ~lib:so ~prefixes:[ "tiny_" ] ())
 
 let inspect_bo4 ~(paths : paths) () =
   let mli = paths.ocaml_src ^ "/tiny.mli" in
   if not (Stdlib.Sys.file_exists mli) then None
   else
     capture_json
-      (Printf.sprintf "python3 '%s/inspect_binding.py' --kind mli --path '%s'"
-         scripts mli)
+      (Canary_artifact_lang.mli_inspect_pipe_cmd ~path:mli ())
 
 let inspect_bo6 ~(paths : paths) () =
   match glob_first ~root:paths.ocaml_build_dir ~pattern:"tiny.cmxa" with
   | None -> None
   | Some cmxa ->
     capture_json
-      (Printf.sprintf "python3 '%s/inspect_ocaml.py' --path '%s'" scripts cmxa)
+      (Canary_artifact_lang.inspect_pipe_cmd ~archive:cmxa ())
 
 let inspect_bo7 ~(paths : paths) () =
   match glob_first ~root:paths.ocaml_build_dir ~pattern:"libtiny_stubs*.a" with
   | None -> None
   | Some stub_a ->
     capture_json
-      (Printf.sprintf
-         "python3 '%s/inspect_binding.py' --kind stub --path '%s' --prefix tiny_"
-         scripts stub_a)
+      (Canary_artifact_lang.stub_inspect_pipe_cmd
+         ~path:stub_a ~prefix:"tiny_" ())
 
 let inspect_bpc2 ~(paths : paths) () =
   capture_json
-    (Printf.sprintf
-       "PYTHONPATH='%s/python_ctypes' LD_LIBRARY_PATH='%s' \
-        python3 '%s/inspect_python.py' --pkg tiny_ctypes"
-       paths.python_cext_pkg paths.c_build scripts)
+    (Canary_artifact_lang.python_inspect_pipe_cmd
+       ~env:[ "PYTHONPATH", paths.python_cext_pkg ^ "/python_ctypes";
+              "LD_LIBRARY_PATH", paths.c_build ]
+       ~pkg:"tiny_ctypes" ())
 
 let inspect_bpe2 ~(paths : paths) () =
   capture_json
-    (Printf.sprintf
-       "PYTHONPATH='%s/python_cext' LD_LIBRARY_PATH='%s' \
-        python3 '%s/inspect_python.py' --pkg tiny_cext"
-       paths.python_cext_pkg paths.c_build scripts)
+    (Canary_artifact_lang.python_inspect_pipe_cmd
+       ~env:[ "PYTHONPATH", paths.python_cext_pkg ^ "/python_cext";
+              "LD_LIBRARY_PATH", paths.c_build ]
+       ~pkg:"tiny_cext" ())
 
 let inspect_bpe3 ~(paths : paths) () =
   (* nm -u + filter tiny_ + wrap as c_stub JSON. Inline Python (parity
