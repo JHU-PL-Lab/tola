@@ -137,13 +137,13 @@ let action_cmd =
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
   (* Tiny runs via the A2-with-factory path
-     ({!Canary_project_tiny}); see [run_tiny_scenario]
+     ({!Canary_tiny_scenario}); see [run_tiny_scenario]
      and [run_tiny_scenario_all] below. The old multi-variant
      run_tiny was retired 2026-07-08 — 13 hand-wired variants
      replaced by 15 factory-derived scenarios matched to the
      tiny list. *)
   (* Run one tiny scenario as its own project via
-     Canary_project_tiny's factory. project_name = "tiny/<name>"
+     Canary_tiny_scenario's factory. project_name = "tiny/<name>"
      — one derive_steps + run_graph, no multi-variant. *)
   let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
     let name = Canary_tiny_scenario.name_of_string name in
@@ -152,24 +152,24 @@ let action_cmd =
        a single-command experience. Existing workspaces are
        trusted; no re-prepare on repeat runs. *)
     let workspace =
-      Canary_project_tiny.cache_workspace_of ~scenario:name in
+      Canary_tiny_scenario.cache_workspace_of ~scenario:name in
     if not (Sys.file_exists workspace) then begin
-      if not (Sys.file_exists Canary_tiny_baseline.baseline_workspace) then begin
+      if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace) then begin
         Fmt.pr "[auto-init] preparing baseline workspace...@.";
-        Canary_tiny_baseline.run ()
+        Canary_tiny_workspace.run_baseline ()
       end;
       if not (String.equal name "baseline") then begin
         Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
-        Canary_tiny_prepare.run ~name
+        Canary_tiny_workspace.run_prepare ~name
       end
     end;
     let perturbed_stores =
-      Canary_project_tiny.stores_of_workspace
+      Canary_tiny_scenario.stores_of_workspace
         ~workspace_root:workspace
         ()
     in
     let spec =
-      Canary_project_tiny.script_spec_of_name
+      Canary_tiny_scenario.script_spec_of_name
         ~perturbed_stores name
       |> with_cli_disabled cli_disabled
     in
@@ -738,7 +738,7 @@ let tiny_scenarios_baseline_cmd =
     (Cmd.info "baseline"
        ~doc:"Build clean + run every inspector + materialize workspace \
              under _cache/baseline/.")
-    (term_of (fun () -> Canary_tiny_baseline.run ()))
+    (term_of (fun () -> Canary_tiny_workspace.run_baseline ()))
 
 let tiny_scenarios_prepare_cmd =
   let name =
@@ -751,14 +751,14 @@ let tiny_scenarios_prepare_cmd =
     (Cmd.info "prepare"
        ~doc:"Apply scenario perturbation in a sandbox, build, inspect, \
              compute surface delta vs baseline, materialize workspace.")
-    Term.(const (fun n () -> Canary_tiny_prepare.run ~name:n) $ name $ const ())
+    Term.(const (fun n () -> Canary_tiny_workspace.run_prepare ~name:n) $ name $ const ())
 
 let tiny_scenarios_prepare_all_cmd =
   Cmd.v
     (Cmd.info "prepare-all"
        ~doc:"Run `prepare` for every scenario sequentially. \
              Auto-runs baseline first if missing.")
-    (term_of (fun () -> Canary_tiny_prepare.run_all ()))
+    (term_of (fun () -> Canary_tiny_workspace.run_prepare_all ()))
 
 let tiny_scenarios_confirm_cmd =
   let name =
@@ -771,7 +771,7 @@ let tiny_scenarios_confirm_cmd =
     (Cmd.info "confirm"
        ~doc:"Print the cached confirm_ill.json for <name> (surface \
              delta vs baseline; produced by `prepare`).")
-    Term.(const (fun n () -> Canary_tiny_prepare.confirm ~name:n) $ name $ const ())
+    Term.(const (fun n () -> Canary_tiny_workspace.confirm ~name:n) $ name $ const ())
 
 let tiny_scenarios_cmd =
   Cmd.group
