@@ -62,7 +62,7 @@ type tiny_recipe = {
 
 (** Pairing of concept ([Canary_scenario.scenario]) + implementation
     ([tiny_recipe]). The unit users of the tiny harness manipulate. *)
-type entry = {
+type scenario_spec = {
   scenario : Canary_scenario.scenario;
   recipe : tiny_recipe;
 }
@@ -137,7 +137,7 @@ let belongs_to_of_id (id : string) : string list =
     Stdlib.failwith
       (Printf.sprintf "unknown id for belongs_to derivation: %S" other)
 
-let entries : entry list =
+let scenario_specs : scenario_spec list =
   let open Canary_compat in
   let open Canary_scenario in
   let mk ~id ~name ~description ~arts ~mutates ~concrete_pert
@@ -582,7 +582,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     for the `derive_scenarios` experiment (§9.3 backlog). *)
 let all_scenarios : Canary_scenario.scenario list =
   tiny_good_scenarios
-  @ List.map entries ~f:(fun e -> e.scenario)
+  @ List.map scenario_specs ~f:(fun e -> e.scenario)
 
 (** Derived scenarios — enumerate all (Good × artifact ×
     applicable-kind) cells over tiny's good scenarios. Each
@@ -601,8 +601,8 @@ let matches_derived_cell = Canary_scenario_util.matches_derived_cell
    HELPERS
    ================================================================ *)
 
-let find_by_name (n : string) : entry option =
-  List.find entries ~f:(fun e -> String.equal e.scenario.name n)
+let find_by_name (n : string) : scenario_spec option =
+  List.find scenario_specs ~f:(fun e -> String.equal e.scenario.name n)
 
 (* detector_short / artifact_index / bad_target_str moved to
    Canary_scenario_util 2026-07-08. *)
@@ -649,7 +649,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
     List.mem e.scenario.belongs_to good.id ~equal:String.equal in
   let cells_here = List.filter derived_scenarios ~f:(fun d ->
     List.mem d.belongs_to good.id ~equal:String.equal) in
-  let bads = List.filter entries ~f:(fun e ->
+  let bads = List.filter scenario_specs ~f:(fun e ->
     belongs_to_here e && Option.is_some e.scenario.mutation) in
   let n_filled = List.count cells_here ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
@@ -677,7 +677,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
              (Printf.sprintf "      %-14s %s %s [%s]"
                 prefix (pad_id sc.id) (pad_name sc.name) det)))
    end);
-  let pcs = List.filter entries ~f:(fun e ->
+  let pcs = List.filter scenario_specs ~f:(fun e ->
     belongs_to_here e && Option.is_none e.scenario.mutation) in
   if not (List.is_empty pcs) then begin
     Stdlib.print_endline
@@ -712,10 +712,10 @@ let print_list () =
     List.filter tiny_good_scenarios
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
   in
-  let bads = List.filter entries ~f:(fun e ->
+  let bads = List.filter scenario_specs ~f:(fun e ->
     Option.is_some e.scenario.mutation) in
   let n_bad = List.length bads in
-  let n_pos = List.count entries ~f:(fun e ->
+  let n_pos = List.count scenario_specs ~f:(fun e ->
     Option.is_none e.scenario.mutation) in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
@@ -741,7 +741,7 @@ let print_list () =
 
 (** Validate a scenario name at start-up. Returns the string
     unchanged if [n] is a known scenario name (one of the 15 in
-    [entries]) or the special sentinel ["baseline"] (referring
+    [scenario_specs]) or the special sentinel ["baseline"] (referring
     to [_cache/baseline/workspace/]). Raises [Failure] otherwise. *)
 let name_of_string (n : string) : string =
   if String.equal n "baseline" then n
@@ -749,7 +749,7 @@ let name_of_string (n : string) : string =
     match find_by_name n with
     | Some _ -> n
     | None ->
-      let known = List.map entries ~f:(fun e -> e.scenario.name) in
+      let known = List.map scenario_specs ~f:(fun e -> e.scenario.name) in
       Stdlib.failwith
         (Printf.sprintf
            "unknown tiny scenario: %S. Known: %s (or \"baseline\")"
@@ -762,7 +762,7 @@ let name_of_string (n : string) : string =
 (* [violates_label] moved to Canary_scenario_util 2026-07-08. *)
 let violates_label = Canary_scenario_util.violates_label
 
-let json_of_entry (e : entry) : Yojson.Basic.t =
+let json_of_entry (e : scenario_spec) : Yojson.Basic.t =
   `Assoc [
     "scenario", `String e.scenario.name;
     "description", `String e.scenario.description;
@@ -800,7 +800,7 @@ let print_expected (name : string) : unit =
 
 let () =
   List.iter tiny_good_scenarios ~f:Canary_scenario.validate_scenario;
-  List.iter entries ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
+  List.iter scenario_specs ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola
@@ -1350,7 +1350,7 @@ let is_expect_failure_contract = function
     [recipe.violates], languages, and manifest. Entries
     without probe manifestation return [Expect_success]
     uniformly (equivalent to no override). *)
-let expectation_of_entry (entry : entry)
+let expectation_of_entry (entry : scenario_spec)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
@@ -1395,7 +1395,7 @@ let expectation_of_entry (entry : entry)
     mutation. Today only Soname_bump needs it. *)
 let stores_of_entry
     ~(stores : tiny_stores)
-    (entry : entry)
+    (entry : scenario_spec)
   : tiny_stores
   =
   let open Base in
@@ -1419,7 +1419,7 @@ let stores_of_entry
     base spec with expectation derived from the entry. *)
 let project_spec_of_entry
     ~(mutated_stores : tiny_stores)
-    (entry : entry)
+    (entry : scenario_spec)
   : Canary_step_builder.project_spec
   =
   let stores = stores_of_entry ~stores:mutated_stores entry in

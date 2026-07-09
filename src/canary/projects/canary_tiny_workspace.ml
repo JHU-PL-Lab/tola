@@ -630,7 +630,7 @@ let surface_delta = Canary_artifact_mutation.surface_delta
 let violates_label = Canary_tiny_scenario.violates_label
 
 let confirm_of
-    ~(entry : Canary_tiny_scenario.entry)
+    ~(entry : Canary_tiny_scenario.scenario_spec)
     ~(build_status : Yojson.Basic.t)
     ~(deltas : (string * Yojson.Basic.t) list)
   : Yojson.Basic.t =
@@ -780,12 +780,12 @@ let run_prepare_all () : unit =
     run_baseline ()
   end;
   let failed = ref [] in
-  List.iter Canary_tiny_scenario.entries ~f:(fun e ->
+  List.iter Canary_tiny_scenario.scenario_specs ~f:(fun e ->
     try run_prepare ~name:e.scenario.name
     with _ -> failed := e.scenario.name :: !failed);
   match !failed with
   | [] -> prep_info "prepare-all: %d scenarios ok"
-            (List.length Canary_tiny_scenario.entries)
+            (List.length Canary_tiny_scenario.scenario_specs)
   | xs ->
     prep_warn "prepare-all: %d failures: %s"
       (List.length xs) (String.concat ~sep:", " (List.rev xs));

@@ -188,9 +188,9 @@ let action_cmd =
      progress line before each. Uses the entries list ordering
      directly. *)
   let run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled =
-    let entries = Canary_tiny_scenario.entries in
+    let entries = Canary_tiny_scenario.scenario_specs in
     let n = List.length entries in
-    List.iteri (fun i (entry : Canary_tiny_scenario.entry) ->
+    List.iteri (fun i (entry : Canary_tiny_scenario.scenario_spec) ->
       let sc = entry.scenario in
       Fmt.pr "[%d/%d] %s  %s@." (i + 1) n sc.id sc.name;
       run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name:sc.name

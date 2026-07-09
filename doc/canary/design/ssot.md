@@ -142,7 +142,7 @@ tiny's instances (same ids, tiny-specific descriptions) at
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
 SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
-**Co-providers.** OCaml (`Canary_tiny_scenario.entries`) is the
+**Co-providers.** OCaml (`Canary_tiny_scenario.scenario_specs`) is the
 sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
 [`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
@@ -169,7 +169,7 @@ scenarios append; renames don't renumber.
 
 Positive-coverage scenarios (`app_over_binding_ocaml`,
 `app_over_helper_ocaml`) live in the tiny code registry
-(`Canary_tiny_scenario.entries`) but are **not** listed here —
+(`Canary_tiny_scenario.scenario_specs`) but are **not** listed here —
 they're constructions that verify a good-scenario execution
 without mutation, not bad scenarios. Attribution under §4 as
 "verified by" entries is a future cleanup.
@@ -179,7 +179,7 @@ mutation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
 
 **Code correspondence.** The 13 Bs + 2 Pc entries live at
-`Canary_tiny_scenario.entries`. Each carries a `belongs_to`
+`Canary_tiny_scenario.scenario_specs`. Each carries a `belongs_to`
 field naming the good scenario(s) it relates to — for Bs.N this
 is the `mutated_at` Sc.N; for Pc.N this is the Sc.N(s) it
 verifies. `Canary_tiny_scenario.all_scenarios` unions the 6
