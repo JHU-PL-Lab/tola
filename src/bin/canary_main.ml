@@ -3,6 +3,59 @@ open Cmdliner
 let detect_distro () = Canary_basic.detect_distro ()
 let term_of f = Term.(const f $ const ())
 
+(* ── Shared run helpers — file-level so both `action` and `tiny run`
+   can invoke them uniformly ────────────────────────────────────── *)
+
+let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
+    ~root ~project steps run_info =
+  Canary_run_info.run_project ~failfast ~run_info ?cache_path ~artifact_names
+    ~root ~project steps
+
+let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
+    (spec : Canary_step_builder.project_spec)
+    : Canary_step_builder.project_spec =
+  if List.is_empty cli_disabled then spec
+  else { spec with
+         disabled_contracts = spec.disabled_contracts @ cli_disabled }
+
+let prebuilt_run_info ~project ~version ~extra steps =
+  Canary_run_info.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
+    ~extra steps
+
+let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
+  let name = Canary_tiny_scenario.name_of_string name in
+  let workspace =
+    Canary_tiny_scenario.cache_workspace_of ~scenario:name in
+  if not (Sys.file_exists workspace) then begin
+    if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace) then begin
+      Fmt.pr "[auto-init] preparing baseline workspace...@.";
+      Canary_tiny_workspace.run_baseline ()
+    end;
+    if not (String.equal name "baseline") then begin
+      Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
+      Canary_tiny_workspace.run_prepare ~name
+    end
+  end;
+  let mutated_stores =
+    Canary_tiny_scenario.stores_of_workspace
+      ~workspace_root:workspace
+      ()
+  in
+  let spec =
+    Canary_tiny_scenario.project_spec_of_name
+      ~mutated_stores name
+    |> with_cli_disabled cli_disabled
+  in
+  let project = "tiny/" ^ name in
+  let steps =
+    Canary_step_builder.derive_steps ~root ~project
+      ~langs:Canary_lang.[ OCaml; Python ]
+      spec
+  in
+  run_with_info ~failfast ~cache_path ~root ~project steps
+    (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
+       ~extra:[] steps)
+
 (* ── Subcommands ── *)
 
 let paths_cmd =
@@ -57,21 +110,9 @@ let action_cmd =
              project_spec.disabled_contracts and the registry's \
              enabled flag.")
   in
-  let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
-      ~root ~project steps run_info =
-    Canary_run_info.run_project ~failfast ~run_info ?cache_path ~artifact_names
-      ~root ~project steps
-  in
-  (* Apply the CLI's --disable-contract list to a project spec by
-     appending it to the spec's own disabled_contracts. The runner
-     reads the merged list off each action_step.disabled_contracts. *)
-  let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
-      (spec : Canary_step_builder.project_spec)
-      : Canary_step_builder.project_spec =
-    if List.is_empty cli_disabled then spec
-    else { spec with
-           disabled_contracts = spec.disabled_contracts @ cli_disabled }
-  in
+  (* run_with_info, with_cli_disabled, prebuilt_run_info, and
+     run_tiny_scenario lifted to file top-level 2026-07-09 so
+     `tiny run` can reuse them uniformly. *)
   let source_run_info ~project distro
       (repo : Canary_artifact_source.source_repo) steps =
     let (Canary_artifact_source.Git_remote url) = repo.remote in
@@ -120,10 +161,6 @@ let action_cmd =
         ]
       ()
   in
-  let prebuilt_run_info ~project ~version ~extra steps =
-    Canary_run_info.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
-      ~extra steps
-  in
   let run_sqlite ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_sqlite.project_spec in
     let steps =
@@ -145,57 +182,6 @@ let action_cmd =
   (* Run one tiny scenario as its own project via
      Canary_tiny_scenario's factory. project_name = "tiny/<name>"
      — one derive_steps + run_graph, no multi-variant. *)
-  let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
-    let name = Canary_tiny_scenario.name_of_string name in
-    (* Auto-init: materialise baseline + this scenario's
-       workspace if missing. Makes `canary action tiny/<name>`
-       a single-command experience. Existing workspaces are
-       trusted; no re-prepare on repeat runs. *)
-    let workspace =
-      Canary_tiny_scenario.cache_workspace_of ~scenario:name in
-    if not (Sys.file_exists workspace) then begin
-      if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace) then begin
-        Fmt.pr "[auto-init] preparing baseline workspace...@.";
-        Canary_tiny_workspace.run_baseline ()
-      end;
-      if not (String.equal name "baseline") then begin
-        Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
-        Canary_tiny_workspace.run_prepare ~name
-      end
-    end;
-    let mutated_stores =
-      Canary_tiny_scenario.stores_of_workspace
-        ~workspace_root:workspace
-        ()
-    in
-    let spec =
-      Canary_tiny_scenario.project_spec_of_name
-        ~mutated_stores name
-      |> with_cli_disabled cli_disabled
-    in
-    let project = "tiny/" ^ name in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec
-    in
-    run_with_info ~failfast ~cache_path ~root ~project steps
-      (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
-         ~extra:[] steps)
-  in
-  (* Run all 15 tiny scenarios through the factory, in the same
-     order as [tiny list]. Prints a "[i/N] <id> <name>"
-     progress line before each. Uses the entries list ordering
-     directly. *)
-  let run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled =
-    let entries = Canary_tiny_scenario.scenario_specs in
-    let n = List.length entries in
-    List.iteri (fun i (entry : Canary_tiny_scenario.scenario_spec) ->
-      let sc = entry.scenario in
-      Fmt.pr "[%d/%d] %s  %s@." (i + 1) n sc.id sc.name;
-      run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name:sc.name
-    ) entries
-  in
   let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_zarith.project_spec in
     let steps =
@@ -274,7 +260,9 @@ let action_cmd =
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny" ->
-        run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled
+        Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
+                 `canary tiny run` instead (runs all + collects results).@.";
+        Stdlib.exit 2
     | Some p when (String.length p > 5)
                   && (String.sub p 0 5 = "tiny/") ->
         let name = String.sub p 5 (String.length p - 5) in
@@ -783,6 +771,124 @@ let tiny_scenarios_confirm_cmd =
              delta vs baseline; produced by `prepare`).")
     Term.(const (fun n () -> Canary_tiny_workspace.confirm ~name:n) $ name $ const ())
 
+(* ── tiny run / tiny status ─────────────────────────────────────
+   Shared iteration via Canary_tiny_scenario.iter_scenario_specs so
+   the ordering is identical to `tiny list` (and any future
+   enumeration). PASS/FAIL derived from the actions.log of the
+   most recent run of each scenario. Results persist at
+   _out/canary/projects/tiny/results.json. *)
+
+let tiny_run_state_path =
+  "_out/canary/projects/tiny/-run/run_state.json"
+
+let tiny_results_path =
+  "_out/canary/projects/tiny/results.json"
+
+(* PASS iff every step's status is "done" (covers both plain success
+   and "expected failure confirmed"). Any status starting with
+   "unexpected_" is a FAIL. run_state.json is overwritten per
+   scenario by run_project, so we can trust the most recent read. *)
+let scenario_status_of_run_state () : string =
+  if not (Sys.file_exists tiny_run_state_path) then "N/A"
+  else
+    match Yojson.Basic.from_file tiny_run_state_path with
+    | `Assoc top ->
+      (match List.assoc_opt "steps" top with
+       | Some (`List steps) ->
+         let all_done =
+           List.for_all (function
+             | `Assoc a ->
+               (match List.assoc_opt "status" a with
+                | Some (`String "done") -> true
+                | _ -> false)
+             | _ -> false) steps
+         in
+         if all_done then "PASS" else "FAIL"
+       | _ -> "N/A")
+    | _ -> "N/A"
+    | exception _ -> "N/A"
+
+let save_tiny_results (results : (string * string) list) : unit =
+  let json =
+    `List (List.map (fun (name, status) ->
+      `Assoc [
+        "name", `String name;
+        "status", `String status;
+      ]) results)
+  in
+  let _ = Stdlib.Sys.command "mkdir -p _out/canary/projects/tiny" in
+  let oc = Stdlib.open_out tiny_results_path in
+  Stdlib.output_string oc (Yojson.Basic.pretty_to_string json);
+  Stdlib.output_char oc '\n';
+  Stdlib.close_out oc
+
+let load_tiny_results () : (string * string) list =
+  if not (Sys.file_exists tiny_results_path) then []
+  else
+    match Yojson.Basic.from_file tiny_results_path with
+    | `List xs ->
+      List.filter_map (function
+        | `Assoc a ->
+          (match List.assoc_opt "name" a, List.assoc_opt "status" a with
+           | Some (`String n), Some (`String s) -> Some (n, s)
+           | _ -> None)
+        | _ -> None) xs
+    | _ -> []
+
+let run_tiny_all_and_collect () : unit =
+  let root = "_out" in
+  let results = ref [] in
+  Canary_tiny_scenario.iter_scenario_specs
+    ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
+      let sc = spec.scenario in
+      Fmt.pr "[%d/%d] %-11s %-30s ... @?" index total sc.id sc.name;
+      (try
+         run_tiny_scenario ~root ~failfast:false ~cache_path:None
+           ~cli_disabled:[] ~name:sc.name
+       with _ -> ());
+      let status = scenario_status_of_run_state () in
+      Fmt.pr "%s@." status;
+      results := (sc.name, status) :: !results);
+  let results = List.rev !results in
+  save_tiny_results results;
+  Fmt.pr "@.Results saved to %s@." tiny_results_path;
+  let n_pass =
+    List.length (List.filter (fun (_, s) -> s = "PASS") results) in
+  let n_fail =
+    List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
+  Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
+
+let show_tiny_status () : unit =
+  let results = load_tiny_results () in
+  if results = [] then
+    Fmt.pr "No results yet. Run `canary tiny run` first.@."
+  else begin
+    Fmt.pr "Tiny scenario status (from %s):@." tiny_results_path;
+    Canary_tiny_scenario.iter_scenario_specs
+      ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
+        let sc = spec.scenario in
+        let status =
+          try List.assoc sc.name results
+          with Not_found -> "(not run)"
+        in
+        Fmt.pr "[%d/%d] %-11s %-30s %s@." index total sc.id sc.name status)
+  end
+
+let tiny_scenarios_run_cmd =
+  Cmd.v
+    (Cmd.info "run"
+       ~doc:"Run all tiny scenarios via the factory, collect PASS/FAIL, \
+             save to _out/canary/projects/tiny/results.json.")
+    (term_of (fun () -> run_tiny_all_and_collect ()))
+
+let tiny_scenarios_status_cmd =
+  Cmd.v
+    (Cmd.info "status"
+       ~doc:"Show the last-run status for every tiny scenario. Reads \
+             _out/canary/projects/tiny/results.json. Run `tiny run` \
+             first to populate it.")
+    (term_of (fun () -> show_tiny_status ()))
+
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny"
@@ -790,6 +896,8 @@ let tiny_scenarios_cmd =
              prepare, prepare-all, confirm. See \
              doc/canary/design/tiny.md.")
     [ tiny_scenarios_list_cmd;
+      tiny_scenarios_run_cmd;
+      tiny_scenarios_status_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;
       tiny_scenarios_prepare_cmd;

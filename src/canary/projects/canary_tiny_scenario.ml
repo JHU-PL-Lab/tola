@@ -604,6 +604,19 @@ let matches_derived_cell = Canary_scenario_util.matches_derived_cell
 let find_by_name (n : string) : scenario_spec option =
   List.find scenario_specs ~f:(fun e -> String.equal e.scenario.name n)
 
+(** Shared iteration over {!scenario_specs}. Callers pass a
+    per-spec callback receiving 1-based index + total. Guarantees
+    a single ordering source for [tiny list], [tiny run],
+    [tiny status] and any future enumeration — update the
+    ordering here (or by reordering [scenario_specs]) and the
+    change propagates to all three. *)
+let iter_scenario_specs
+    ~(f : index:int -> total:int -> spec:scenario_spec -> unit)
+  : unit =
+  let n = List.length scenario_specs in
+  List.iteri scenario_specs
+    ~f:(fun i spec -> f ~index:(i + 1) ~total:n ~spec)
+
 (* detector_short / artifact_index / bad_target_str moved to
    Canary_scenario_util 2026-07-08. *)
 let detector_short = Canary_scenario_util.detector_short
