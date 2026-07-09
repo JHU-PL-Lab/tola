@@ -61,6 +61,20 @@ Ordered rough priority.
 Structural items about the SSOT itself. Numbering preserved
 from the old §8 to keep references stable.
 
+0. **SSOT lacks `project_spec` (the code type).** The live
+   type `Canary_step_builder.project_spec` (renamed from
+   `script_spec` 2026-07-08) is what every project spec file
+   (`canary_project_<name>.ml`) produces via `mk_project_spec`
+   and what `derive_steps` walks to emit `action_step` list.
+   Zero mentions in SSOT today. Add a §6.6 (or similar)
+   documenting: a project provides a `project_spec` (per-
+   action closure record + policy fields); `derive_steps`
+   turns it into an `action_step list`; the four backends
+   consume that list. Bottom-up doc coverage of what SSOT §6.1
+   already names (scenario / action / step / stage / rule)
+   plus the code-side glue. Non-urgent; ships with the next
+   pass over §6.
+
 1. **Ar.0..Ar.3 vs code's 5 kinds.** Decide if `Headers`
    gets an Ar slot or stays implicit under Ar.1.
 2. **§2 vs §3 Ag numbering.** Renumber §2 to point at the
