@@ -586,27 +586,38 @@ let apply_patch ~sandbox ~patch_file : bool =
     prep_warn "patch file missing: %s" full_patch; false
   end
   else
-    run_shell
-      (Printf.sprintf "cd '%s' && patch -p1 < '%s/%s' > /dev/null"
-         sandbox
-         (capture_line (Printf.sprintf "readlink -f %s" patches_dir))
-         patch_file) = 0
+    let abs_patches_dir =
+      capture_line (Printf.sprintf "readlink -f %s" patches_dir) in
+    let cmd =
+      Canary_artifact_mutation.apply_patch_cmd
+        ~sandbox_dir:sandbox
+        ~patches_dir:abs_patches_dir
+        ~patch_file
+    in
+    run_shell cmd = 0
 
-let apply_soname_bump ~sandbox ~from_so:_ ~to_so : bool =
-  let c_build = sandbox ^ "/c/build" in
-  let major_so =
+let apply_soname_bump ~sandbox ~from_so ~to_so : bool =
+  (* Tiny convention: [to_so] is the new FULL filename
+     (libX.so.MAJOR.MINOR); [from_so] is the old MAJOR name
+     (libX.so.MAJOR). Derive the missing MAJOR / FULL by stripping
+     or appending ".0". Generic symlink is hardcoded [libtiny.so]. *)
+  let new_full = to_so in
+  let new_major =
     match String.chop_suffix to_so ~suffix:".0" with
     | Some s -> s
     | None -> to_so
   in
-  let steps = [
-    Printf.sprintf "mv '%s/libtiny.so.1.0' '%s/%s'" c_build c_build to_so;
-    Printf.sprintf "rm -f '%s/libtiny.so' '%s/libtiny.so.1'" c_build c_build;
-    Printf.sprintf "ln -sf '%s' '%s/%s'" to_so c_build major_so;
-    Printf.sprintf "ln -sf '%s' '%s/libtiny.so'" major_so c_build;
-    Printf.sprintf "patchelf --set-soname '%s' '%s/%s' 2>/dev/null || true"
-      major_so c_build to_so;
-  ] in
+  let old_major = from_so in
+  let old_full = from_so ^ ".0" in
+  let steps =
+    Canary_artifact_mutation.apply_soname_bump_cmds
+      ~lib_dir:(sandbox ^ "/c/build")
+      ~old_full_name:old_full
+      ~old_major_name:old_major
+      ~new_full_name:new_full
+      ~new_major_name:new_major
+      ~generic_name:"libtiny.so"
+  in
   List.for_all steps ~f:(fun cmd -> run_shell cmd = 0)
 
 (* ---------- surface delta (mirrors Python _surface_delta) ---------- *)
