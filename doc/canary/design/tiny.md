@@ -69,7 +69,7 @@ Each Bad scenario has a `tiny_recipe`:
 
 ## 3. Factory pipeline — how canary runs a scenario
 
-Source: [`src/canary/projects/canary_tiny_scenario_project.ml`](../../src/canary/projects/canary_tiny_scenario_project.ml).
+Source: [`src/canary/projects/canary_project_tiny.ml`](../../src/canary/projects/canary_project_tiny.ml) §"Scenario factory".
 
 ```
 entry
@@ -173,9 +173,8 @@ factory reads from it; no shell-out at runtime.
 CLI:
 
 ```
-canary action tiny-scenario/<name>     # one scenario, auto-init if missing
-canary action tiny-scenario            # all 15 in tiny-scenarios list order
-canary action tiny/<name>              # back-compat alias
+canary action tiny/<name>     # one scenario, auto-init if missing
+canary action tiny            # all 15 in tiny list order
 ```
 
 Auto-init: `run_tiny_scenario` in
@@ -188,10 +187,10 @@ Existing workspaces are trusted.
 Related read-only commands:
 
 ```
-canary tiny-scenarios list             # enumeration + [derived]/[base] route
-canary tiny-scenarios expected <name>  # per-step outcome JSON
-canary tiny-scenarios prepare <name>   # ad-hoc workspace prep (auto-init makes this optional)
-canary tiny-scenarios confirm <name>   # print cached confirm_ill.json
+canary tiny list             # enumeration + detector tag per entry
+canary tiny expected <name>  # per-step outcome JSON
+canary tiny prepare <name>   # ad-hoc workspace prep (auto-init makes this optional)
+canary tiny confirm <name>   # print cached confirm_ill.json
 ```
 
 ## 6. Coverage today
@@ -210,7 +209,7 @@ expectation actually fires at probe:
 
 **Derived cells** — the 20 design-space slots enumerated
 by `derive_scenarios` (Good × related-artifact × applicable
-kind). Header of `tiny-scenarios list`:
+kind). Header of `tiny list`:
 `20 derived cells, 5 filled, 15 empty`. The 5 filled cells
 contain the 13 Bs entries (several Bs entries can share a
 cell); the 15 empty cells are candidate flavor-1
@@ -241,7 +240,7 @@ Near-term, tiny-focused. See
 
 ### 7.1 Fill the 15 empty derived cells
 
-`tiny-scenarios list` shows 20 derived cells (Good × related
+`tiny list` shows 20 derived cells (Good × related
 artifact × applicable kind); 5 filled, 15 empty. Each empty
 cell is a candidate flavor-1 perturbation slot:
 
@@ -319,7 +318,7 @@ Not urgent, worth knowing:
   coverage" from "detection gap silently passed."
 
 - **Diagram invariants warn for singleton projects** —
-  `canary action tiny-scenario/<name>` produces
+  `canary action tiny/<name>` produces
   "connectivity errors" warnings from
   `check_diagram_invariant`. Semantic pass still succeeds;
   diagram-side artefact. Not blocking; ignore.
@@ -332,6 +331,6 @@ Not urgent, worth knowing:
 
 - **`recipe.expected` is documentation, not check** — the
   per-step Ok/Fail/Pass/Skip predictions in each entry are
-  emitted by `tiny-scenarios expected <name>` but the
+  emitted by `tiny expected <name>` but the
   runner doesn't verify them. Under R2 they could become a
   cross-check against canary's actual step statuses.

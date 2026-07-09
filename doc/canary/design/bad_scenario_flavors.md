@@ -34,7 +34,7 @@ Flavor 1 perturbations follow a small template family:
 Each template instantiates at any artifact layer. The
 factory's `derive_scenarios` enumeration already surfaces
 these as `(Good × related-artifact × applicable-kind)` cells
-in `tiny-scenarios list`. Today 5 cells are filled, 15 are
+in `tiny list`. Today 5 cells are filled, 15 are
 empty — the empty ones are candidate flavor-1 slots.
 
 **Reuse pattern in the code**:
@@ -157,7 +157,7 @@ is complete.
 - Multi-contract aggregation across Expect_compat_failure
   and Expect_failure shapes — awaiting a Bs entry that
   needs it.
-- Coverage tag on `tiny-scenarios list` distinguishing
+- Coverage tag on `tiny list` distinguishing
   flavor 1 vs flavor 2 cells — cheap; ship when useful.
 - Formal soundness claim for the 8-contract catalogue —
   research question.

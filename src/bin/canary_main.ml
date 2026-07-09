@@ -137,26 +137,20 @@ let action_cmd =
       (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
   in
   (* Tiny runs via the A2-with-factory path
-     ({!Canary_tiny_scenario_project}); see [run_tiny_scenario]
+     ({!Canary_project_tiny}); see [run_tiny_scenario]
      and [run_tiny_scenario_all] below. The old multi-variant
      run_tiny was retired 2026-07-08 — 13 hand-wired variants
      replaced by 15 factory-derived scenarios matched to the
-     tiny-scenarios list. *)
-  (* Task 1.6 P1 prototype: run one tiny scenario as its own
-     project via the A2-with-factory path
-     ({!Canary_tiny_scenario_project}).
-
-     Unlike [run_tiny] (multi-variant under project_name="tiny"),
-     this runs a single project_name="tiny_scenario/<name>" — the
-     scenario is delimited end-to-end. Consumes a workspace
-     already materialised by [tiny-scenarios prepare <name>]. *)
+     tiny list. *)
+  (* Run one tiny scenario as its own project via
+     Canary_project_tiny's factory. project_name = "tiny/<name>"
+     — one derive_steps + run_graph, no multi-variant. *)
   let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
     let name = Canary_tiny_scenario.name_of_string name in
     (* Auto-init: materialise baseline + this scenario's
-       workspace if missing. Makes `canary action
-       tiny-scenario/<name>` a single-command experience.
-       Existing workspaces are trusted; no re-prepare on
-       repeat runs. *)
+       workspace if missing. Makes `canary action tiny/<name>`
+       a single-command experience. Existing workspaces are
+       trusted; no re-prepare on repeat runs. *)
     let workspace =
       Canary_project_tiny.cache_workspace_of ~scenario:name in
     if not (Sys.file_exists workspace) then begin
@@ -175,22 +169,22 @@ let action_cmd =
         ()
     in
     let spec =
-      Canary_tiny_scenario_project.script_spec_of_name
+      Canary_project_tiny.script_spec_of_name
         ~perturbed_stores name
       |> with_cli_disabled cli_disabled
     in
-    let project = "tiny_scenario/" ^ name in
+    let project = "tiny/" ^ name in
     let steps =
       Canary_step_builder.derive_steps ~root ~project
         ~langs:Canary_lang.[ OCaml; Python ]
         spec
     in
     run_with_info ~failfast ~cache_path ~root ~project steps
-      (prebuilt_run_info ~project:"tiny_scenario" ~version:"in_tree"
+      (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
          ~extra:[] steps)
   in
   (* Run all 15 tiny scenarios through the factory, in the same
-     order as [tiny-scenarios list]. Prints a "[i/N] <id> <name>"
+     order as [tiny list]. Prints a "[i/N] <id> <name>"
      progress line before each. Uses the entries list ordering
      directly. *)
   let run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled =
@@ -279,19 +273,11 @@ let action_cmd =
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
-    | Some "tiny" | Some "tiny-scenario" ->
+    | Some "tiny" ->
         run_tiny_scenario_all ~root ~failfast ~cache_path ~cli_disabled
-    | Some p
-      when ((String.length p > 5)
-              && (String.sub p 0 5 = "tiny/"))
-        || ((String.length p > 14)
-              && (String.sub p 0 14 = "tiny-scenario/")) ->
-        let name =
-          if String.length p > 14
-             && String.sub p 0 14 = "tiny-scenario/"
-          then String.sub p 14 (String.length p - 14)
-          else String.sub p 5 (String.length p - 5)
-        in
+    | Some p when (String.length p > 5)
+                  && (String.sub p 0 5 = "tiny/") ->
+        let name = String.sub p 5 (String.length p - 5) in
         run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
     | None ->
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
@@ -740,7 +726,7 @@ let tiny_scenarios_expected_cmd =
     Arg.(
       required
       & pos 0 (some string) None
-      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny list`)")
   in
   Cmd.v
     (Cmd.info "expected"
@@ -759,7 +745,7 @@ let tiny_scenarios_prepare_cmd =
     Arg.(
       required
       & pos 0 (some string) None
-      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny list`)")
   in
   Cmd.v
     (Cmd.info "prepare"
@@ -779,7 +765,7 @@ let tiny_scenarios_confirm_cmd =
     Arg.(
       required
       & pos 0 (some string) None
-      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny-scenarios list`)")
+      & info [] ~docv:"NAME" ~doc:"Scenario name (see `tiny list`)")
   in
   Cmd.v
     (Cmd.info "confirm"
@@ -789,9 +775,10 @@ let tiny_scenarios_confirm_cmd =
 
 let tiny_scenarios_cmd =
   Cmd.group
-    (Cmd.info "tiny-scenarios"
-       ~doc:"Tiny scenario harness — OCaml port. Phase B/C of the \
-             Python→OCaml migration (see doc/canary/worklog/tiny_migration.md).")
+    (Cmd.info "tiny"
+       ~doc:"Tiny scenario helpers — list, expected, baseline, \
+             prepare, prepare-all, confirm. See \
+             doc/canary/design/tiny.md.")
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;

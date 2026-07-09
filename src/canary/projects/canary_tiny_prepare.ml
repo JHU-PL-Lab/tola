@@ -456,7 +456,7 @@ let bool_json b = `String (if b then "ok" else "fail")
 
 let run ~(name : string) : unit =
   if not (Stdlib.Sys.file_exists B.baseline_inspect) then
-    fail "no baseline cache at %s — run `tiny-scenarios baseline` first"
+    fail "no baseline cache at %s — run `tiny baseline` first"
       B.baseline_inspect;
   let entry =
     match Canary_tiny_scenario.find_by_name name with
@@ -559,7 +559,7 @@ let confirm ~(name : string) : unit =
   if not (Stdlib.Sys.file_exists path) then begin
     Stdlib.prerr_endline
       (Printf.sprintf
-         "confirm: no cache for %S; run `tiny-scenarios prepare %s` first"
+         "confirm: no cache for %S; run `tiny prepare %s` first"
          name name);
     Stdlib.exit 1
   end;

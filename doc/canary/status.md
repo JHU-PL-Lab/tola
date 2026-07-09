@@ -98,7 +98,7 @@ Larger design shifts. None active; awareness only.
 
 - **Dual-view artifact index.** Artifact-centric perturbation
   list, direct + inherited. Complement to the scenario-centric
-  `tiny-scenarios list`.
+  `tiny list`.
 
 - **Iteration helpers over §1/§2/§3.** `canary_ssot.ml`
   exposing typed iterators — every artifact, every surface,
