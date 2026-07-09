@@ -178,19 +178,25 @@ let capture_line (cmd : string) : string =
 let build_c_lib ~(paths : paths) () : bool =
   info "compile C library";
   mkdir_p paths.c_build;
+  let o = paths.c_build ^ "/tiny.o" in
+  let so_full = paths.c_build ^ "/libtiny.so.1.0" in
   run_or_warn "cc tiny.c"
-    (Printf.sprintf "gcc -c -fPIC -I%s %s/c/src/tiny.c -o %s/tiny.o"
-       paths.c_include paths.tiny_root paths.c_build)
+    (Canary_cc.cc_compile_obj
+       ~include_dirs:[ paths.c_include ]
+       ~src:(paths.tiny_root ^ "/c/src/tiny.c")
+       ~out:o ())
   && run_or_warn "link libtiny.so.1.0"
-       (Printf.sprintf
-          "gcc -shared -Wl,-soname,libtiny.so.1 \
-           -Wl,--version-script=%s/c/tiny.map %s/tiny.o -o %s/libtiny.so.1.0"
-          paths.tiny_root paths.c_build paths.c_build)
+       (Canary_cc.cc_link_shared
+          ~soname:"libtiny.so.1"
+          ~version_script:(paths.tiny_root ^ "/c/tiny.map")
+          ~inputs:[ o ] ~out:so_full ())
   && run_or_warn "symlink libtiny.so.1"
-       (Printf.sprintf "ln -sf libtiny.so.1.0 %s/libtiny.so.1" paths.c_build)
+       (Canary_cc.symlink ~target:"libtiny.so.1.0"
+          ~linkname:(paths.c_build ^ "/libtiny.so.1") ())
   && run_or_warn "symlink libtiny.so"
-       (Printf.sprintf "ln -sf libtiny.so.1 %s/libtiny.so" paths.c_build)
-  && (let _ = run_shell (Printf.sprintf "rm -f %s/tiny.o" paths.c_build) in true)
+       (Canary_cc.symlink ~target:"libtiny.so.1"
+          ~linkname:(paths.c_build ^ "/libtiny.so") ())
+  && (let _ = run_shell (Printf.sprintf "rm -f %s" o) in true)
 
 (** OCaml binding — tiny.cmxa + libtiny_stubs.a.
 
@@ -215,9 +221,12 @@ let build_ocaml_binding ~(paths : paths) () : bool =
   end
   else
     let cmi src target =
-      Printf.sprintf "ocamlfind ocamlopt -bin-annot -I %s -c %s/%s -o %s/%s"
-        paths.ocaml_build_dir paths.ocaml_src src paths.ocaml_build_dir target
+      Canary_cc.ocaml_compile_unit
+        ~build_dir:paths.ocaml_build_dir
+        ~src:(paths.ocaml_src ^ "/" ^ src)
+        ~target:(paths.ocaml_build_dir ^ "/" ^ target) ()
     in
+    let obld = paths.ocaml_build_dir in
     (* Compile .mli → .cmi, then .ml → .cmx. Order matters:
        tiny.ml depends on Tiny_raw.cmi. *)
     run_or_warn "cc tiny_raw.mli" (cmi "tiny_raw.mli" "tiny_raw.cmi")
@@ -225,17 +234,19 @@ let build_ocaml_binding ~(paths : paths) () : bool =
     && run_or_warn "cc tiny.mli"     (cmi "tiny.mli"     "tiny.cmi")
     && run_or_warn "cc tiny.ml"      (cmi "tiny.ml"      "tiny.cmx")
     && run_or_warn "cc tiny_stubs.c"
-         (Printf.sprintf
-            "gcc -c -fPIC -I%s -I%s %s/tiny_stubs.c -o %s/tiny_stubs.o"
-            ocaml_where paths.c_include paths.ocaml_src paths.ocaml_build_dir)
+         (Canary_cc.cc_compile_obj
+            ~include_dirs:[ ocaml_where; paths.c_include ]
+            ~src:(paths.ocaml_src ^ "/tiny_stubs.c")
+            ~out:(obld ^ "/tiny_stubs.o") ())
     && run_or_warn "ar libtiny_stubs.a"
-         (Printf.sprintf "ar rcs %s/libtiny_stubs.a %s/tiny_stubs.o"
-            paths.ocaml_build_dir paths.ocaml_build_dir)
+         (Canary_cc.ar_archive
+            ~inputs:[ obld ^ "/tiny_stubs.o" ]
+            ~out:(obld ^ "/libtiny_stubs.a") ())
     && run_or_warn "ar tiny.cmxa"
-         (Printf.sprintf
-            "ocamlfind ocamlopt -a %s/tiny_raw.cmx %s/tiny.cmx \
-             -cclib -ltiny -cclib -ltiny_stubs -o %s/tiny.cmxa"
-            paths.ocaml_build_dir paths.ocaml_build_dir paths.ocaml_build_dir)
+         (Canary_cc.ocaml_archive_cmxa
+            ~cclib_libs:[ "tiny"; "tiny_stubs" ]
+            ~inputs:[ obld ^ "/tiny_raw.cmx"; obld ^ "/tiny.cmx" ]
+            ~out:(obld ^ "/tiny.cmxa") ())
 
 (** Python cext — _native.cpython-*.so. Embeds NEEDED
     libtiny.so.1 + rpath to c/build (matching setup.py's
@@ -267,9 +278,12 @@ let build_python_cext ~(paths : paths) () : bool =
         paths.tiny_root ext_suffix
     in
     run_or_warn "cc _native.so"
-      (Printf.sprintf
-         "gcc -shared -fPIC -I%s -I%s -L%s -Wl,-rpath,%s %s -ltiny -o %s"
-         py_include paths.c_include c_build_abs c_build_abs src dst)
+      (Canary_cc.cc_link_shared
+         ~include_dirs:[ py_include; paths.c_include ]
+         ~library_dirs:[ c_build_abs ]
+         ~rpath:c_build_abs
+         ~libs:[ "tiny" ]
+         ~inputs:[ src ] ~out:dst ())
 
 (* ---------- glob ---------- *)
 
