@@ -302,6 +302,66 @@ bugs. Detailed in
 [`bad_scenario_flavors.md`](bad_scenario_flavors.md). Not
 tiny-scoped; belongs to the post-tiny research task.
 
+### 7.7 Centralize baseline / prepare commands (R2)
+
+`canary_tiny_baseline.ml` and `canary_tiny_prepare.ml` share
+~20 function names (inspector pipelines, workspace
+materialisation, direct-compile helpers), and both inline
+raw `gcc` / `ocamlfind ocamlopt` / `ar` and
+`nm | python3 inspect_*.py` instead of routing through
+`src/canary/tool/`. Three distinct sub-gaps under one
+umbrella:
+
+1. **No direct-compiler family in `tool/`.**
+   `canary_build_cmd.ml` covers cmake/ninja/dune only —
+   there is no primitive for gcc / ocamlfind / ar today.
+   The unification must first *create* the family (a
+   `canary_cc.ml`, or a direct-compile section of
+   `canary_build_cmd.ml`): `cc_compile_obj`,
+   `cc_link_shared` (soname + version-script args),
+   `ocaml_compile`, `ar_archive`, `ocaml_archive`. This is
+   the substantive half.
+2. **Inspector pipelines duplicated, not reused.**
+   `tool/` already has `Canary_artifact_native.inspect_cmd`
+   / `elf_inspect_cmd` and `Canary_artifact_lang.{inspect_cmd,
+   mli_inspect_*, stub_inspect_*}` — but baseline/prepare
+   re-inline the `nm | python3 inspect_*.py` invocations.
+   Impedance mismatch: tool builders emit "write JSON to
+   `<output_dir>/<marker>`" commands (runner path);
+   baseline/prepare want capture-JSON-to-stdout to
+   assemble the reference cache. Unifying means giving the
+   tool builders a stdout/capture variant.
+3. **baseline ↔ prepare duplicate each other.** Baseline
+   introduced a `paths` record with `sandbox_paths`
+   specifically so both could call one set of build
+   primitives (see comment at
+   [`canary_tiny_baseline.ml:24-27`](../../src/canary/projects/canary_tiny_baseline.ml#L24)),
+   but prepare never adopted it. Cheapest first step;
+   shrinks the surface the `tool/` extraction later has to
+   move.
+
+**Constraints:**
+
+- *Keep the "owner decides the build" rationale.* Tiny uses
+  direct compilers on purpose (canary-owned, not upstream).
+  The new primitives should be a first-class direct-compile
+  family, not a push to make tiny go through cmake/dune.
+- *Portability dividend.* Baseline hardcodes `nm -D`
+  (Linux-only); `Canary_artifact_native.nm_cmd` already
+  picks `nm -g` on macOS. Routing tiny's inspectors through
+  the tool builder fixes a latent macOS break.
+
+**Recommended order:** (3) share baseline ↔ prepare via
+`paths` → (1) extract direct-compile family into `tool/` →
+(2) reconcile inspector capture-vs-marker shapes. Each step
+keeps the reference cache byte-stable, so diff against a
+known-good `prepare-all` run after each.
+
+Relates to `backlog.md` #18 (audit specs for hardcoded
+shell commands routed through named primitives) and #47
+(unify store-selection patterns). Nicknamed R2 in the
+2026-07-08 conversation.
+
 ## 8. Gotchas / rough edges (state-of-code notes)
 
 Not urgent, worth knowing:
