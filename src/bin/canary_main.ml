@@ -541,6 +541,16 @@ let artifact_test_cmd =
          let ok = Canary_artifact_test.run_tests () in
          if not ok then Stdlib.exit 1))
 
+let mutation_test_cmd =
+  Cmd.v
+    (Cmd.info "mutation-test"
+       ~doc:"Test artifact mutation primitives \
+             (apply_patch_cmd, apply_soname_bump_cmds) \
+             using tiny's real .patch fixtures.")
+    (term_of (fun () ->
+         let ok = Canary_artifact_mutation_test.run_tests () in
+         if not ok then Stdlib.exit 1))
+
 let artifact_inspect_cmd =
   let kind =
     Arg.(
@@ -825,6 +835,7 @@ let () =
         cache_sync_cmd;
         pm_test_cmd;
         artifact_test_cmd;
+        mutation_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;
         tiny_scenarios_cmd;
