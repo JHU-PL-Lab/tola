@@ -352,8 +352,11 @@ let inspect_bpe2 ~(paths : paths) () =
        ~pkg:"tiny_cext" ())
 
 let inspect_bpe3 ~(paths : paths) () =
-  (* nm -u + filter tiny_ + wrap as c_stub JSON. Inline Python (parity
-     with scenarios.py's bpe3); could be ported to pure OCaml later. *)
+  (* inspect_binding.py --kind stub already handles .so files via
+     nm -D (detects .cpython-*.so). Route through the tool-builder
+     pipe primitive; JSON gains `versioned_req` + `watchlist` fields
+     that the hand-rolled version omitted, but the `requires` set is
+     identical. *)
   match
     glob_first ~root:paths.python_cext_dir
       ~pattern:"_native.cpython-*.so"
@@ -361,12 +364,8 @@ let inspect_bpe3 ~(paths : paths) () =
   | None -> None
   | Some so ->
     capture_json
-      (Printf.sprintf
-         "nm -u '%s' | awk '/^[[:space:]]*U /{print $NF}' | sort -u | \
-          python3 -c \"import json,sys; \
-          syms=[l.strip() for l in sys.stdin if l.strip() and l.strip().startswith('tiny_')]; \
-          json.dump({'kind':'c_stub','path':'%s','counts':{'required':len(syms)},'requires':sorted(syms)}, sys.stdout)\""
-         so so)
+      (Canary_artifact_lang.stub_inspect_pipe_cmd
+         ~path:so ~prefix:"tiny_" ())
 
 let inspectors ~(paths : paths)
   : (string * (unit -> Yojson.Basic.t option)) list = [
