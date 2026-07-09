@@ -152,19 +152,17 @@ the scenario end-to-end. A witness either:
 
 Tiny's unmutated witnesses:
 
-| Sc.N × lang               | Unmutated witness           | What it exercises                                        |
-| ------------------------- | --------------------------- | -------------------------------------------------------- |
-| Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml`    | App links against binding, uses it directly; build + run |
-| Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`     | App uses a helper library that uses the binding; build + run |
+| Witness id           | Exercises                 | Name                     | What it does                                                |
+| -------------------- | ------------------------- | ------------------------ | ----------------------------------------------------------- |
+| `Sc.4.OCaml.pos`     | Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run   |
+| `Sc.6.OCaml.pos`     | Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
 
-These witnesses used to be catalogued as `Pc.N` (positive
-coverage) alongside the `Bs.N` bad scenarios. They now live
-here — as unmutated instantiations of Sc.N — because the
-positive/negative split is not a category difference; it's
-whether the concrete instantiation carries a mutation. The
-underlying data (`Canary_tiny_scenario.scenario_specs`) is
-unchanged; the `mutation = None` entries just have a proper
-home in the SSOT.
+Naming convention: `Sc.<N>.<lang>.pos` — the run-stage the
+witness reaches, `.pos` = positive (unmutated). These
+witnesses used to be catalogued as `Pc.N` (positive
+coverage) alongside the `Bs.N` bad scenarios; the category
+label is retired (the ids remain queryable by name if
+searched for as "Pc.1"/"Pc.2" in git history).
 
 Running an unmutated witness is what `probe_app_<lang>` does
 under the hood — build the app, run it, expect success. The

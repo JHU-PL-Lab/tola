@@ -362,13 +362,17 @@ Phase A is inventory only. Decisions deferred to Phase B:
       `app_over_helper_ocaml`) are just Sc.N runs with
       `mutation = None` — unmutated witnesses under §4.1 of
       the SSOT, not a separate species alongside `Bs.N`.
-      - [x] **F.1** — id semantics decision: **keep the
-        `Pc.1`/`Pc.2` id label** (SSOT id-stability rule),
-        but reframe every code comment and docstring that
-        described them as "positive coverage" to
-        "unmutated witnesses (SSOT §4.1)". The id is a
-        stable historical label; the *category* is what
-        collapses.
+      - [x] **F.1** — id semantics. First pass kept `Pc.1`/
+        `Pc.2` as legacy labels; user follow-up flagged that
+        the CLI (`tiny list`/`run`/`status`) still surfaced
+        them, defeating the category-collapse. Second pass
+        renamed the ids to `Sc.4.OCaml.pos` /
+        `Sc.6.OCaml.pos` — naming after the run-stage each
+        witness exercises, `.pos` = positive (unmutated).
+        `pad_id` widened from `%-11s` to `%-16s` to fit;
+        `belongs_to_of_id` match arms updated. Legacy Pc.N
+        labels only survive in a "was called…" comment on
+        each declaration for git-history discoverability.
       - [x] **F.2** — `print_list` in `canary_tiny_scenario.ml`.
         Renamed the sub-section header from `verified by (N):`
         to `unmutated witnesses (N):`; renamed the internal

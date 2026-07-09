@@ -841,7 +841,7 @@ let run_tiny_all_and_collect () : unit =
   Canary_tiny_scenario.iter_scenario_specs
     ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
       let sc = spec.scenario in
-      Fmt.pr "[%d/%d] %-11s %-30s ... @?" index total sc.id sc.name;
+      Fmt.pr "[%d/%d] %-16s %-30s ... @?" index total sc.id sc.name;
       (try
          run_tiny_scenario ~root ~failfast:false ~cache_path:None
            ~cli_disabled:[] ~name:sc.name
