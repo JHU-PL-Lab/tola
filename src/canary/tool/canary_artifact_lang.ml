@@ -27,7 +27,7 @@ open Base
     which targets {i s2 native_lib} = {i n4}).
 
     OCaml NOTE: Richer inspectors exist in [src/binding/] (~1880 lines,
-    called from [src/bin/example_sp.ml]). Most relevant:
+    called from [doc/_legacy_code/example_sp.ml]). Most relevant:
     - [src/binding/ocaml_files.ml]   — file classification via [Objinfo.extra]
     - [src/binding/ocamls.ml]        — proper OCaml archive inspection
     - [src/binding/shared_library.ml]— ldd-style linked-dep extraction

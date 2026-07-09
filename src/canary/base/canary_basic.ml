@@ -100,7 +100,7 @@ type step = {
 (* Retired YAML/backend types (system_pkg, phase_kind, step_phase,
    job_spec, deploy_target, yaml_preamble_action, job, template_vars,
    backend_scripts, canary_paths, canary_backends, canary_opam,
-   canary_config) moved to [legacy/canary_yaml_backend.ml] on
+   canary_config) moved to [doc/_legacy_code/canary_yaml_backend.ml] on
    2026-06-01. They have no live callers — only canary_dead_code.ml
    consumed them. *)
 
@@ -132,7 +132,7 @@ let string_of_artifact_kind = function
    resolve_backend_scripts, resolve_job_scripts, checkout_step,
    setup_step, checkout_and_setup_preamble, job_of_spec, make_job,
    pp_step, pp_job, dump_step, dump_job, check_file_exists_exn
-   all moved to legacy/canary_yaml_backend.ml on 2026-06-01 —
+   all moved to doc/_legacy_code/canary_yaml_backend.ml on 2026-06-01 —
    the live pipeline never called any of them. *)
 
 let detect_distro () =

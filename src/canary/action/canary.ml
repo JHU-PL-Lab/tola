@@ -5,7 +5,7 @@
     (project_config legacy + action_rule + step model + path table +
     mermaid helpers). On 2026-06-01 (Phase 5 of the post-audit refactor):
     - dead [project_config] / [verify_of_phase] / [steps_of_phase] moved
-      to [legacy/canary_yaml_backend.ml];
+      to [doc/_legacy_code/canary_yaml_backend.ml];
     - the remaining four topics split into:
       - {!Canary_action} — rules, pools, store_rules, make_action_rule,
         nodes_of_action_rule, node_status (the action-graph schema).
