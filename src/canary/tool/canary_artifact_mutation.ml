@@ -24,35 +24,32 @@
     variant (how to actually mutate a file / SONAME). Two
     orthogonal layers of the same idea. *)
 
-(** What the harness must rebuild after applying a [Patch].
-    Tiny-flavoured today — source patches under [c/] need the
-    native C library rebuilt before probes run; patches to
-    binding source files don't (canary rebuilds the binding
-    itself as part of its own action graph). *)
-type rebuild_target =
-  | Rebuild_native_c
-  | Rebuild_none
-
 (** Concrete mutation applied to a project's world before the
     canary graph runs.
 
     - [Patch] applies a unified diff sourced from a per-project
-      patches directory (tiny: [scenarios/patches/<file>]).
+      patches directory (tiny: [scenarios/patches/<file>]). The
+      diff can touch any file (C source, OCaml source, header,
+      Python module) — the harness re-runs its full build
+      regardless, so no rebuild hint is needed.
     - [Soname_bump] renames a shared object + rewrites its
-      SONAME via patchelf (or byte surgery on distros without
-      patchelf).
+      SONAME via patchelf. Binary-level mutation — applies to
+      the built artifact, not the source.
 
     Positive-coverage scenarios carry [None] on the wrapping
-    [tiny_recipe.mutation] field — no mutation, base build. *)
+    [tiny_recipe.mutation] field — no mutation, base build.
+
+    Future direction (per user 2026-07-09): a third variant
+    like [Binutil { operation; args }] for other binary
+    mutations (strip, patchelf --set-rpath, objcopy exports
+    tweaks) that model real-world binary-level breakage. *)
 type mutation =
-  | Patch of { patch_file : string; rebuild : rebuild_target }
+  | Patch of { patch_file : string }
   | Soname_bump of { from_so : string; to_so : string }
 
-(** Constructor for a C-side patch (rebuilds the native lib). *)
-let c_patch name =
-  Some (Patch { patch_file = name ^ ".patch"; rebuild = Rebuild_native_c })
-
-(** Constructor for an OCaml-side patch (no native rebuild
-    needed — canary rebuilds the binding). *)
-let ml_patch name =
-  Some (Patch { patch_file = name ^ ".patch"; rebuild = Rebuild_none })
+(** Unified patch constructor. [name] resolves to
+    [<name>.patch] under the per-project patches dir. Prior
+    [c_patch] and [ml_patch] wrappers were dropped 2026-07-09
+    — the distinction was purely descriptive (both wrote the
+    same [Patch]; the [rebuild_target] field was never read). *)
+let patch name = Some (Patch { patch_file = name ^ ".patch" })

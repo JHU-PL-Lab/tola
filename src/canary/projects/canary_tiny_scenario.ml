@@ -42,16 +42,11 @@ let string_of_outcome = function
   | Pass -> "pass"
   | Skip -> "skip"
 
-(* rebuild_target + mutation + c_patch + ml_patch moved to
-   Canary_artifact_mutation 2026-07-09. Re-exported here as
-   manifest type equations so internal usages of [Patch] /
-   [Soname_bump] stay unqualified. *)
-type rebuild_target = Canary_artifact_mutation.rebuild_target =
-  | Rebuild_native_c
-  | Rebuild_none
-
+(* mutation + patch constructor moved to Canary_artifact_mutation
+   2026-07-09. Re-exported as manifest type equation so internal
+   uses of [Patch] / [Soname_bump] stay unqualified. *)
 type mutation = Canary_artifact_mutation.mutation =
-  | Patch of { patch_file : string; rebuild : rebuild_target }
+  | Patch of { patch_file : string }
   | Soname_bump of { from_so : string; to_so : string }
 
 (** Tiny-specific recipe: everything about how to construct this
@@ -74,8 +69,7 @@ type entry = {
 
 (* ----- recipe constructor helpers ----- *)
 
-let c_patch = Canary_artifact_mutation.c_patch
-let ml_patch = Canary_artifact_mutation.ml_patch
+let patch = Canary_artifact_mutation.patch
 
 (* ================================================================
    ACTIONS + ARTIFACTS PALETTE — for hand-mapping the 15 entries
@@ -163,7 +157,7 @@ let entries : entry list =
                     binding artifacts still expect tiny_sum."
       ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
-      ~concrete_pert:(c_patch "symbol_missing")
+      ~concrete_pert:(patch "symbol_missing")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
@@ -186,7 +180,7 @@ let entries : entry list =
                     catches the static mismatch."
       ~arts:arts_native_cascade
       ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
-      ~concrete_pert:(c_patch "header_arity_bump")
+      ~concrete_pert:(patch "header_arity_bump")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Definite "Sc.2.OCaml")
@@ -210,7 +204,7 @@ let entries : entry list =
                     catches the mismatch."
       ~arts:arts_native_cascade
       ~mutates:[ "c/tiny.map" ]
-      ~concrete_pert:(c_patch "symbol_version_floor")
+      ~concrete_pert:(patch "symbol_version_floor")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Definite "Sc.4.Python")
@@ -255,7 +249,7 @@ let entries : entry list =
                     catches this today."
       ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
-      ~concrete_pert:(c_patch "type_wrong")
+      ~concrete_pert:(patch "type_wrong")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
@@ -277,7 +271,7 @@ let entries : entry list =
                     wrapper (c8 cmp_api_faithfulness doesn't exist yet)."
       ~arts:arts_native_cascade
       ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
-      ~concrete_pert:(c_patch "api_faithful")
+      ~concrete_pert:(patch "api_faithful")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
                         ~manifest:Unknown_gap
@@ -300,7 +294,7 @@ let entries : entry list =
                     c3 cmp_behavior is non-redundant."
       ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
-      ~concrete_pert:(c_patch "behavior_silent")
+      ~concrete_pert:(patch "behavior_silent")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:On_behavior
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
@@ -322,7 +316,7 @@ let entries : entry list =
                     repack wrong; c7 cmp_api_repack doesn't exist yet."
       ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny.ml" ]
-      ~concrete_pert:(ml_patch "api_repack")
+      ~concrete_pert:(patch "api_repack")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Definite "Sc.4.OCaml")
@@ -345,7 +339,7 @@ let entries : entry list =
                     c2 cmp_api_completeness statically catches the missing val."
       ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny.mli" ]
-      ~concrete_pert:(ml_patch "api_complete")
+      ~concrete_pert:(patch "api_complete")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Definite "Sc.3.OCaml")
@@ -369,7 +363,7 @@ let entries : entry list =
       ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
-      ~concrete_pert:(ml_patch "symbol_orphan")
+      ~concrete_pert:(patch "symbol_orphan")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:(Possible [ "Sc.2.OCaml"; "Sc.4.OCaml" ])
@@ -392,7 +386,7 @@ let entries : entry list =
       ~arts:arts_python_only
       ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
-      ~concrete_pert:(ml_patch "api_repack_python")
+      ~concrete_pert:(patch "api_repack_python")
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
                         ~manifest:(Definite "Sc.4.Python")
@@ -415,7 +409,7 @@ let entries : entry list =
       ~arts:arts_python_only
       ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
-      ~concrete_pert:(ml_patch "api_complete_python")
+      ~concrete_pert:(patch "api_complete_python")
       ~scenario_pert:(pert ~target:a_python
                         ~kind:(On_artifact a_python)
                         ~manifest:(Definite "Sc.4.Python")
@@ -440,7 +434,7 @@ let entries : entry list =
       ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
-      ~concrete_pert:(ml_patch "api_repack_stub_orphan")
+      ~concrete_pert:(patch "api_repack_stub_orphan")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
                         ~manifest:Unknown_gap
