@@ -73,34 +73,19 @@ Source: [`src/canary/projects/canary_tiny_scenario_project.ml`](../../src/canary
 
 ```
 entry
-  |> route_of_entry            : `Derived | `Base | `Dispatched
-  |> stores_of_entry ~stores   : may override stores.lib_filename
-                                 from recipe.perturbation
-  |> match route with
-     | `Derived    → base_spec with expectation = expectation_of_entry
-     | `Base       → base_spec (no expectation override)
-     | `Dispatched → fail (empty table today)
+  |> stores_of_entry ~stores : may override stores.lib_filename
+                               from recipe.perturbation
+  |> { base_spec with expectation = expectation_of_entry entry }
 ```
 
-### 3.1 Route classification
+One uniform path — no per-entry routing. Positive-coverage
+(Pc) entries and detection-gap Bs entries (Unknown_gap
+manifest) get `Expect_success` for every rule because
+`expectation_of_entry` checks `has_probe_manifestation` up
+front. Equivalent to no override at all; base spec runs to
+completion.
 
-Two facts:
-
-- **`has_probe_manifestation`** — reads
-  `scenario.perturbation.manifest`:
-  `None` (positive coverage) or `Some { manifest = Unknown_gap; _ }`
-  (detection gap) → false. Otherwise true.
-- **`is_derivable_contract`** — is at least one
-  contract in `recipe.violates` covered by
-  `compat_inputs_of_contract` or `is_expect_failure_contract`?
-
-|  | has_probe_manifestation | violates_derivable | route |
-|---|---|---|---|
-|  | true  | true  | `Derived |
-|  | false | *     | `Base (Pc entries or Unknown_gap Bs entries) |
-|  | true  | false | `Dispatched (unreachable today) |
-
-### 3.2 Expectation derivation
+### 3.1 Expectation derivation
 
 Two orthogonal axes:
 
@@ -118,7 +103,7 @@ Two expectation shapes:
 | `Expect_compat_failure` — static comparator | c1, c2, c4, c5, c6 | `Probe (Binding lang)`; c6 also at `Build_binding lang` | per-contract `inputs` + `version_info` |
 | `Expect_failure` — probe assertion | c3, c7 | `Probe (Binding lang)` | `contains_any = ["FAIL "]` |
 
-### 3.3 Per-contract inputs
+### 3.2 Per-contract inputs
 
 `compat_inputs_of_contract ~lang c` returns the JSON paths
 canary reads to compute the predicted substring set:
@@ -139,7 +124,7 @@ versioned-req / cext-behaviour issues; only rebuilt bindings
 see compile-time type mismatches. A different project could
 scope these differently.
 
-### 3.4 Store adjustment
+### 3.3 Store adjustment
 
 `stores_of_entry` derives `lib_filename` from
 `recipe.perturbation.Soname_bump { to_so }` by stripping the
@@ -211,18 +196,18 @@ canary tiny-scenarios confirm <name>   # print cached confirm_ill.json
 
 ## 6. Coverage today
 
-Distribution across the 15 tiny entries
-(`tiny-scenarios list`):
+All 15 entries run through the uniform derivation. Split by
+what actually fires at probe:
 
-| Route | Count | Entries |
+| has probe manifestation? | Count | Entries |
 |---|---|---|
-| `Derived | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
-| `Base | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1, Pc.2 |
-| `Dispatched | 0 | (empty) |
+| yes — expectation fires | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
+| no — Expect_success everywhere | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1, Pc.2 |
 
 Every scenario with a probe-observable manifestation derives
 its expectation from `recipe.violates + scenario.belongs_to
-+ recipe.perturbation`. Zero name dispatch.
++ recipe.perturbation`. Zero name dispatch, zero routing
+tables.
 
 ## 7. Wish-list
 

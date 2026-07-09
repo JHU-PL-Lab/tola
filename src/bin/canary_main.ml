@@ -142,16 +142,6 @@ let action_cmd =
      run_tiny was retired 2026-07-08 — 13 hand-wired variants
      replaced by 15 factory-derived scenarios matched to the
      tiny-scenarios list. *)
-  (* Register the factory route classifier so `tiny-scenarios
-     list` output shows how each entry is routed today
-     (derived / dispatched / base). Keeps Canary_tiny_scenario
-     free of a factory dependency. *)
-  Canary_tiny_scenario.annotate_ref :=
-    (fun e ->
-      "["
-      ^ Canary_tiny_scenario_project.string_of_route
-          (Canary_tiny_scenario_project.route_of_entry e)
-      ^ "]");
   (* Task 1.6 P1 prototype: run one tiny scenario as its own
      project via the A2-with-factory path
      ({!Canary_tiny_scenario_project}).

@@ -124,26 +124,40 @@ let is_expect_failure_contract = function
   | Canary_compat.C3 | Canary_compat.C7 -> true
   | _ -> false
 
+(** Does the scenario's perturbation produce a probe-observable
+    manifestation? [Unknown_gap] means no — the derived
+    expectation returns [Expect_success] everywhere (canary
+    runs to completion; nothing is asserted).
+
+    Cases with no manifestation:
+    - positive coverage (Pc entries): [perturbation = None]
+    - detection gap Bs entries (Bs.6 c8-dormant,
+      Bs.13 c7-static-only): [manifest = Unknown_gap] *)
+let has_probe_manifestation (scenario : Canary_scenario.scenario) : bool =
+  match scenario.perturbation with
+  | None -> false
+  | Some { manifest = Unknown_gap; _ } -> false
+  | Some _ -> true
+
 (** Derive an [expectation] function from the entry's
-    [recipe.violates] contract list, scoped by the scenario's
-    languages.
+    [recipe.violates], languages, and manifest.
 
-    Structure (following user 2026-07-08: outer=scenario,
-    inner=contract):
-    - At every [Probe (Binding lang)] step whose [lang] is in
-      the scenario's language set,
-    - try compat contracts first: first violated contract in
-      the list whose static comparator yields inputs for
-      [lang] wins;
-    - else if any violated contract is behavioural (c3/c7),
-      emit [Expect_failure { contains_any = ["FAIL "] }];
-    - else fall through to [Expect_success].
+    Uniform: entries with no probe manifestation
+    ([has_probe_manifestation = false]) return
+    [Expect_success] for every rule — same behaviour as calling
+    [make_base_script_spec] with no override. Otherwise, per
+    rule:
 
-    Compat before behavioural: compat inputs give a specific
-    predicted substring, more precise than the generic
-    "FAIL " match. Only matters when a recipe mixes both
-    kinds (e.g., type_wrong violates c6+c3); once c6 is
-    derived, the compat side wins. *)
+    - At [Build_binding lang] scoped to [scenario_langs], fire
+      c6 if violated.
+    - At [Probe (Binding lang)] scoped to [scenario_langs],
+      try compat contracts first (first match wins); else
+      [Expect_failure { contains_any = ["FAIL "] }] if any
+      behavioural contract is violated; else [Expect_success].
+
+    Compat-before-behavioural priority matters when a recipe
+    mixes both (e.g., type_wrong = c6+c3); once c6 is derived,
+    the compat side wins. *)
 let expectation_of_entry (entry : Canary_tiny_scenario.entry)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
@@ -152,12 +166,17 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
   let module CC = Canary_compat in
   let scenario_langs = langs_of_scenario entry.scenario in
   let violates = entry.recipe.violates in
+  let has_manifest = has_probe_manifestation entry.scenario in
   let expect_failure_shape =
     List.exists violates ~f:is_expect_failure_contract in
   let violates_c6 =
     List.mem violates CC.C6 ~equal:Poly.equal in
   fun rule _loc ->
-    match rule with
+    (* No probe manifestation → nothing to assert; every rule
+       returns Expect_success. Same behaviour as calling
+       make_base_script_spec without an expectation override. *)
+    if not has_manifest then Expect_success
+    else match rule with
     | Canary_basic.Build_binding lang
       when violates_c6
         && List.mem scenario_langs lang ~equal:Poly.equal ->
@@ -183,60 +202,6 @@ let expectation_of_entry (entry : Canary_tiny_scenario.entry)
          }
        | None -> Expect_success)
     | _ -> Expect_success
-
-(** Is a recipe covered by the structural derivation today?
-
-    Returns [true] when every contract in [recipe.violates]
-    has a case in {!expectation_of_recipe}. Used by
-    {!script_spec_of_entry} to decide whether to derive or
-    fall back to the hand-coded helper. *)
-(** How is this entry routed through the factory?
-    - [`Derived]   : goes through {!expectation_of_entry}
-    - [`Dispatched]: falls back to a hand-coded helper
-    - [`Base]      : no expectation override (positive /
-                     detection-gap entries). *)
-type route = [ `Derived | `Dispatched | `Base ]
-
-let string_of_route = function
-  | `Derived -> "derived"
-  | `Dispatched -> "dispatched"
-  | `Base -> "base"
-
-(** Which contracts have a derivation case today. Grows as
-    coverage lands. *)
-let is_derivable_contract = function
-  | Canary_compat.C1
-  | Canary_compat.C2
-  | Canary_compat.C4
-  | Canary_compat.C5
-  | Canary_compat.C6 -> true                     (* compat *)
-  | Canary_compat.C3 | Canary_compat.C7 -> true  (* expect_failure *)
-  | _ -> false
-
-(** Does the scenario's perturbation produce a probe-observable
-    manifestation? [Unknown_gap] means no — the derived
-    expectation would misfire (canary would expect a FAIL that
-    never comes). Base spec runs to completion. *)
-let has_probe_manifestation (scenario : Canary_scenario.scenario) : bool =
-  match scenario.perturbation with
-  | None -> false  (* positive coverage: no perturbation *)
-  | Some { manifest = Unknown_gap; _ } -> false
-  | Some _ -> true
-
-let route_of_entry (entry : Canary_tiny_scenario.entry) : route =
-  let violates_derivable =
-    Base.List.exists entry.recipe.violates ~f:is_derivable_contract
-  in
-  match has_probe_manifestation entry.scenario, violates_derivable with
-  | true, true -> `Derived
-  | false, _ -> `Base       (* Pc.* or Unknown_gap Bs.* *)
-  | true, false -> `Dispatched
-
-(* [recipe_is_derivable] retained for backwards compat with
-   [script_spec_of_entry]; superseded by [route_of_entry].
-   TODO: drop once all callers switch to [route_of_entry]. *)
-let recipe_is_derivable (recipe : Canary_tiny_scenario.tiny_recipe) : bool =
-  Base.List.exists recipe.violates ~f:is_derivable_contract
 
 (** Derive tiny_stores adjustments from the recipe's concrete
     perturbation. Today only Soname_bump needs it: prepare
@@ -266,40 +231,21 @@ let stores_of_entry
     { stores with lib_filename = strip_trailing_minor to_so }
   | _ -> stores
 
+(** Build the script_spec for a scenario. Uniform code path:
+    base spec with expectation derived from the entry.
+    Entries without a probe manifestation get
+    [Expect_success] uniformly (see [has_probe_manifestation]
+    inside [expectation_of_entry]) — equivalent to no
+    override at all. *)
 let script_spec_of_entry
     ~(perturbed_stores : Canary_project_tiny.tiny_stores)
     (entry : Canary_tiny_scenario.entry)
   : Canary_step_builder.script_spec
   =
   let stores = stores_of_entry ~stores:perturbed_stores entry in
-  match route_of_entry entry with
-  | `Derived ->
-    { (Canary_project_tiny.make_base_script_spec
-         ~stores ())
-      with
-      expectation = expectation_of_entry entry;
-    }
-  | `Base ->
-    (* Positive coverage (Pc entries) or detection-gap
-       scenarios (Bs.6 c8-dormant, Bs.13 c7-static-only).
-       All step outcomes are Ok / Pass — no expectation
-       override needed. Base spec runs to completion. *)
-    Canary_project_tiny.make_base_script_spec
-      ~stores:perturbed_stores ()
-  | `Dispatched ->
-    (* No dispatch fallbacks left today — all covered
-       contracts have derivation cases. If a new scenario
-       lands with an unfamiliar violates set, arrive here
-       for a clear error. Once every contract is derivable
-       this branch becomes unreachable and can be dropped
-       along with the [`Dispatched] tag on {!route}. *)
-    Stdlib.failwith
-      (Printf.sprintf
-         "Canary_tiny_scenario_project: %S needs a dispatch \
-          fallback, but the dispatch table is empty. Grow \
-          compat_inputs_of_contract or the Expect_failure \
-          branch instead."
-         entry.scenario.name)
+  { (Canary_project_tiny.make_base_script_spec ~stores ()) with
+    expectation = expectation_of_entry entry;
+  }
 
 (** Convenience: look up the entry by scenario name and build
     the spec. Raises via [name_of_string] on unknown names. *)

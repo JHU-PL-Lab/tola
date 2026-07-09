@@ -685,12 +685,6 @@ let pad_name name = Printf.sprintf "%-26s" name
     Cells come from principled enumeration; Bs entries are
     hand-listed instances. This layout makes the coverage vs
     hardcoded diff visible inline. *)
-(** Optional per-entry annotation shown next to each Bs/Pc
-    in [print_list] output. Caller supplies the classifier —
-    keeps [Canary_tiny_scenario] free of dependencies on
-    factory / runner modules. Empty string for no annotation. *)
-let annotate_ref : (entry -> string) ref = ref (fun _ -> "")
-
 let print_one_good (good : Canary_scenario.scenario) : unit =
   Stdlib.print_endline
     (Printf.sprintf "  %s  %s" good.id good.name);
@@ -730,11 +724,9 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
            let p = Option.value_exn sc.perturbation in
            let det = detector_short p.detector in
            let prefix = if i = 0 then tgt else "" in
-           let ann = !annotate_ref e in
-           let ann_str = if String.is_empty ann then "" else " " ^ ann in
            Stdlib.print_endline
-             (Printf.sprintf "      %-14s %s %s [%s]%s"
-                prefix (pad_id sc.id) (pad_name sc.name) det ann_str)))
+             (Printf.sprintf "      %-14s %s %s [%s]"
+                prefix (pad_id sc.id) (pad_name sc.name) det)))
    end);
   let pcs = List.filter entries ~f:(fun e ->
     belongs_to_here e && Option.is_none e.scenario.perturbation) in
@@ -742,11 +734,9 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
     Stdlib.print_endline
       (Printf.sprintf "    verified by (%d):" (List.length pcs));
     List.iter pcs ~f:(fun e ->
-      let ann = !annotate_ref e in
-      let ann_str = if String.is_empty ann then "" else " " ^ ann in
       Stdlib.print_endline
-        (Printf.sprintf "      %s %s%s"
-           (pad_id e.scenario.id) e.scenario.name ann_str))
+        (Printf.sprintf "      %s %s"
+           (pad_id e.scenario.id) e.scenario.name))
   end;
   Stdlib.print_endline ""
 
