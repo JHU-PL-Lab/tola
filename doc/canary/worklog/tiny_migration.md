@@ -400,6 +400,44 @@ Phase A is inventory only. Decisions deferred to Phase B:
       Result: category concept retired, IDs stable.
       `scenario_specs` data shape unchanged.
 
+- [x] **Phase G** — unify the good/bad taxonomy across the
+      scenario type.
+      Problem: I kept using "positive coverage" / "unmutated
+      witness" / "unmutated Sc.N run" for the 2 no-mutation
+      entries. User pushed back: "unmutated" is a code-level
+      artifact (the `mutation : option` field), not the real
+      distinction. Real distinction: good vs bad, where cause
+      of badness is orthogonal (mutation for tiny; version
+      mismatch for llvm/z3 stable; packaging error on the
+      roadmap).
+      - [x] **G.1** — [`Canary_scenario`] type change.
+        Renamed `scenario.mutation` field → `scenario.origin`.
+        Added `type origin = Mutation of mutation |
+        Version_mismatch | Packaging` (record `mutation`
+        kept as the payload for the Mutation case).
+        `Version_mismatch` and `Packaging` reserved as nullary
+        variants; not wired to llvm/z3 code per user (no
+        non-tiny touches this phase).
+      - [x] **G.2** — callsite sweep across 6 files:
+        `canary_scenario.ml`, `canary_scenario_util.ml`,
+        `canary_tiny_scenario.ml`, `canary_main.ml`,
+        `canary_tiny_workspace.ml` (only recipe.mutation
+        stays — that's the recipe-side concrete pert), plus
+        `canary_artifact_mutation.ml` doc block.
+      - [x] **G.3** — SSOT §4.1 retitled "Concrete good
+        scenarios"; §5 preamble notes the three possible
+        origins (Mutation / Version_mismatch / Packaging)
+        with tiny at 100% Mutation. `tiny.md §2, §3, §6, §8`
+        vocabulary aligned.
+      - [x] **G.4** — CLI wording: "13 mutations" → "13 (all
+        Mutation-origin today)"; `tiny run` preamble:
+        "unmutated Sc.N runs" → "good (Sc.N runs)".
+      Result: good/bad is the type-level distinction; origin
+      names the cause. "Unmutated" retires as a concept; only
+      appears in the recipe's `mutation : origin option` for
+      historical reasons (recipe-side field named for tiny's
+      only origin type today).
+
 ### Retired verbs (per §1b)
 
 `apply` / `revert` / `restore` / `restore-baseline` — remain

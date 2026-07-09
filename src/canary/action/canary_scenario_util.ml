@@ -11,16 +11,17 @@
 
 open Base
 
-(** Build a {!Canary_scenario.mutation} option. Convenience
-    wrapper for the common case where callers construct a
-    scenario with a mutation. *)
+(** Build a {!Canary_scenario.origin} option wrapping a
+    Mutation. Convenience wrapper for the common case where
+    callers construct a bad scenario whose origin is a
+    mutation (all tiny Bs entries today). *)
 let pert
     ~(target : Canary_basic.artifact_kind)
     ~(kind : Canary_scenario.mutation_kind)
     ~(manifest : Canary_scenario.manifest)
     ~(detector : Canary_scenario.detector)
-    : Canary_scenario.mutation option =
-  Some { target; kind; manifest; detector }
+    : Canary_scenario.origin option =
+  Some (Canary_scenario.Mutation { target; kind; manifest; detector })
 
 (** Compact contract label — ["c1"..."c8"] via
     {!Canary_compat.string_of_contract_id}, or ["gap"] for
@@ -46,9 +47,9 @@ let artifact_index (sc : Canary_scenario.scenario)
     display code. *)
 let bad_target_str (good : Canary_scenario.scenario)
     (bad : Canary_scenario.scenario) : string =
-  match bad.mutation with
-  | None -> ""
-  | Some p ->
+  match bad.origin with
+  | None | Some (Canary_scenario.Version_mismatch | Canary_scenario.Packaging) -> ""
+  | Some (Canary_scenario.Mutation p) ->
     let idx_str = match artifact_index good p.target with
       | Some i -> Printf.sprintf "A%d" i
       | None -> "A?" in
@@ -63,8 +64,9 @@ let bad_target_str (good : Canary_scenario.scenario)
 let matches_derived_cell
     (bad : Canary_scenario.scenario)
     (derived : Canary_scenario.scenario) : bool =
-  match bad.mutation, derived.mutation with
-  | Some bp, Some dp ->
+  match bad.origin, derived.origin with
+  | Some (Canary_scenario.Mutation bp),
+    Some (Canary_scenario.Mutation dp) ->
     Poly.equal bp.target dp.target
     && Poly.equal bp.kind dp.kind
     && List.exists bad.belongs_to ~f:(fun b ->

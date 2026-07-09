@@ -47,13 +47,13 @@ today; ctypes exists but doesn't participate in canary runs
 
 SSOT §4 defines the 6 Good scenarios (Sc.1..Sc.6, split by
 language: Sc.1 shared, Sc.2..Sc.6 as .OCaml / .Python).
-SSOT §4.1 catalogues the 2 unmutated Sc.N runs
+SSOT §4.1 catalogues the 2 concrete good scenarios
 (`app_over_binding_ocaml`, `app_over_helper_ocaml`) — Sc.N
-runs with `mutation = None` that exercise Sc.3/Sc.4.OCaml
-and Sc.5/Sc.6.OCaml respectively.
-SSOT §5 defines the 13 Bad scenarios (Bs.1..Bs.13) —
-mutation-carrying scenarios. Combined: **15 concrete
-instantiations** of Sc.N in `scenario_specs`.
+runs with `origin = None` that instantiate Sc.4.OCaml (chain
+Sc.3+Sc.4) and Sc.6.OCaml (chain Sc.5+Sc.6).
+SSOT §5 defines the 13 Bad scenarios (Bs.1..Bs.13) — all
+Mutation-origin today. Combined: **15 concrete scenarios**
+in `scenario_specs`.
 
 Each Bad scenario has a `tiny_recipe`:
 
@@ -83,10 +83,10 @@ entry
   |> { base_spec with expectation = expectation_of_entry entry }
 ```
 
-One uniform path — no per-entry routing. Unmutated Sc.N runs
-(`mutation = None`, SSOT §4.1) and detection-gap Bs entries
-(`Unknown_gap` manifest) get `Expect_success` for every rule
-because `expectation_of_entry` checks
+One uniform path — no per-entry routing. Concrete good
+scenarios (`origin = None`, SSOT §4.1) and detection-gap Bs
+entries (`Unknown_gap` manifest) get `Expect_success` for
+every rule because `expectation_of_entry` checks
 `has_probe_manifestation` up front. Equivalent to no override
 at all; base spec runs to completion.
 
@@ -211,10 +211,10 @@ canary tiny confirm <name>   # print cached confirm_ill.json
 Two independent counts, easily confused.
 
 **Concrete entries** — the 15 authored entries in
-`Canary_tiny_scenario.scenario_specs` (13 Bs + 2 unmutated
-Sc.N runs per SSOT §4.1). All 15 run through the uniform
-derivation. Split by whether their expectation actually
-fires at probe:
+`Canary_tiny_scenario.scenario_specs` (13 Bs, all
+Mutation-origin, + 2 concrete good scenarios per SSOT §4.1).
+All 15 run through the uniform derivation. Split by whether
+their expectation actually fires at probe:
 
 | has probe manifestation? | Count | Entries |
 |---|---|---|
@@ -504,12 +504,13 @@ Not urgent, worth knowing:
   scenario auto-runs baseline. Second scenario is fast
   because baseline is reused. Not obvious from the prompt.
 
-- **`base` route == correct-but-quiet** — unmutated Sc.N runs
-  (§2, formerly Pc.N) and Unknown_gap Bs entries (Bs.6
-  api_faithful, Bs.13 api_repack_stub_orphan) run to completion
-  with all steps passing. No expectation fires; nothing to
-  confirm. Reading the log alone doesn't distinguish "correct
-  positive coverage" from "detection gap silently passed."
+- **`base` route == correct-but-quiet** — concrete good
+  scenarios (§2, formerly Pc.N) and Unknown_gap Bs entries
+  (Bs.6 api_faithful, Bs.13 api_repack_stub_orphan) run to
+  completion with all steps passing. No expectation fires;
+  nothing to confirm. Reading the log alone doesn't
+  distinguish "correct positive coverage" from "detection gap
+  silently passed."
 
 - **Diagram invariants warn for singleton projects** —
   `canary action tiny/<name>` produces

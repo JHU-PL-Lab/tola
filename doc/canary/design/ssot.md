@@ -138,19 +138,18 @@ Project-agnostic patterns live at `Canary_scenario.good_scenarios`;
 tiny's instances (same ids, tiny-specific descriptions) at
 `Canary_tiny_scenario.tiny_good_scenarios`.
 
-### 4.1 Concrete instantiations
+### 4.1 Concrete good scenarios
 
-Each `Sc.N × language` admits **concrete instantiations** —
+Each `Sc.N × language` admits **concrete good scenarios** —
 specific workspaces (tiny today; future project-N tomorrow)
-that run the scenario end-to-end. An instantiation either:
+that instantiate the abstract Sc.N pattern end-to-end. A
+concrete scenario is **good** (all steps `Expect_success`,
+scenario carries `origin = None`) or **bad** (one or more
+steps expected to fail; scenario carries `origin = Some _`
+naming the cause). §5 enumerates the bad ones; the good ones
+live here.
 
-- runs **unmutated** — the scenario itself works; all steps
-  reach `done` with `Expect_success`. This is the positive
-  coverage of the scenario.
-- applies a `Bs.N` mutation — expected to fail at some step
-  the mutation targets. Enumerated in §5.
-
-Tiny's unmutated Sc.N runs:
+Tiny's concrete good scenarios:
 
 | Scenario id    | Exercises                 | Name                     | What it does                                                 |
 | -------------- | ------------------------- | ------------------------ | ------------------------------------------------------------ |
@@ -159,23 +158,23 @@ Tiny's unmutated Sc.N runs:
 
 Naming convention: the id **is** the run-stage Sc.N (naming
 after the most-downstream stage exercised — the run
-implicitly includes its build prereq). An unmutated scenario
-with `mutation = None` IS the Sc.N run, so it reuses the
-Sc.N id; the joint (id, mutation) is what disambiguates the
-concrete instantiation from the abstract Good scenario
-pattern of §4.
+implicitly includes its build prereq). A concrete good
+scenario reuses the Sc.N id of the pattern it instantiates;
+the (id, origin) joint distinguishes the concrete good
+scenario from the abstract Sc.N pattern of §4 (which is a
+description, not a runnable).
 
-These unmutated runs used to be catalogued as `Pc.N`
-(positive coverage) alongside the `Bs.N` bad scenarios; the
-category label is retired (search for "Pc.1"/"Pc.2" in git
-history).
+These concrete good scenarios used to be catalogued as `Pc.N`
+(positive coverage), then briefly as "unmutated witnesses";
+those labels are retired. They're just good scenarios (search
+for "Pc.1"/"Pc.2" or "unmutated" in git history).
 
-Running an unmutated Sc.N is what `probe_app_<lang>` does
-under the hood — build the app, run it, expect success. The
-`probe_` prefix reads narrow for the app step (an app isn't
-observed from the outside; it's *used*), but the semantic is
-already the right one: the app step exercises the artifact as
-its end-user would.
+Running a concrete good scenario is what `probe_app_<lang>`
+does under the hood — build the app, run it, expect success.
+The `probe_` prefix reads narrow for the app step (an app
+isn't observed from the outside; it's *used*), but the
+semantic is already the right one: the app step exercises the
+artifact as its end-user would.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
@@ -185,8 +184,9 @@ SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
 sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
 [`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
-**Status.** stable — 13 Bs rows here + 2 unmutated Sc.N runs
-in §4.1 = 15 concrete instantiations in `scenario_specs`.
+**Status.** stable — 13 Bs rows here (all Mutation-origin) +
+2 concrete good scenarios in §4.1 = 15 concrete scenarios in
+`scenario_specs`.
 
 **Roadmap rows** (not in code yet):
 
@@ -207,21 +207,36 @@ Columns split into two:
 `Bs.N` = **B**ad **s**cenario number N. IDs are stable — new
 scenarios append; renames don't renumber.
 
-Unmutated Sc.N runs (`app_over_binding_ocaml`,
+Concrete good scenarios (`app_over_binding_ocaml`,
 `app_over_helper_ocaml`) are catalogued under §4.1, not here.
-§5 enumerates only mutation-carrying scenarios; a scenario
-with `mutation = None` belongs under the Sc.N it exercises.
+§5 enumerates only bad scenarios; a scenario with
+`origin = None` belongs under the Sc.N it instantiates.
+
+Bad scenarios can arise from several origins (all typed via
+[`Canary_scenario.origin`](../../src/canary/action/canary_scenario.ml)):
+
+- **`Mutation`** — patch the source or binary of one artifact
+  in the chain. All of tiny's 13 Bs entries today.
+- **`Version_mismatch`** — pair well-formed artifacts at
+  incompatible versions. Currently modeled ad-hoc in the
+  llvm/z3 stable variants (`llvm.19-shared` binding + LLVM 21
+  example; z3-solver pip wheel + dev example). The
+  constructor is reserved in the `origin` variant but not
+  wired through canary's factory.
+- **`Packaging`** — wrong files in an opam/pip/apt payload.
+  Roadmap row `pkg_*`; no code yet.
 
 Ordering convention: rows grouped by Good scenario, then by
 mutation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
 
 **Code correspondence.** The 13 Bs rows below plus the 2
-unmutated Sc.N runs from §4.1 (= **15 concrete instantiations**
-of Sc.N) live at `Canary_tiny_scenario.scenario_specs`. Each
-carries a `belongs_to` field naming the Good scenario(s) it
-relates to — for Bs.N this is the `mutated_at` Sc.N; for an
-unmutated Sc.N run this is the Sc.N(s) it exercises.
+concrete good scenarios from §4.1 (= **15 concrete scenarios**
+covering the tiny Sc.N patterns) live at
+`Canary_tiny_scenario.scenario_specs`. Each carries a
+`belongs_to` field naming the Good scenario(s) it relates to
+— for Bs.N this is the `mutated_at` Sc.N; for a concrete good
+scenario this is the Sc.N(s) it exercises.
 `Canary_tiny_scenario.all_scenarios` unions the 8
 language-split tiny good scenarios (Sc.1 shared + 5 .OCaml +
 2 .Python) + 15 instantiations = **23 scenarios** as the

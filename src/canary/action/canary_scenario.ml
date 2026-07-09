@@ -1,11 +1,12 @@
 (** Scenario type — project-agnostic, unified for good and bad.
 
     A [scenario] names a collection of actions over related
-    artifacts. Good scenarios (Sc.N) have [mutation = None];
-    bad scenarios (Bs.N) attach a [mutation] targeting one of
-    the related artifacts. From the artifact's perspective there
-    is no structural difference — a bad scenario is just a
-    scenario whose world has one mutation.
+    artifacts. Good scenarios (Sc.N) have [origin = None];
+    bad scenarios (Bs.N) attach an [origin] naming the cause
+    of badness (today: [Mutation]; reserved:
+    [Version_mismatch], [Packaging]). From the artifact's
+    perspective there is no structural difference — a bad
+    scenario is just a scenario whose world has one origin.
 
     Design notes (per [doc/canary/design/ssot.md] §5 / §6 / §9.3):
 
@@ -69,25 +70,40 @@ type mutation = {
   detector : detector;
 }
 
+(** Origin of a bad scenario's badness. Bad scenarios today
+    all have [Mutation] origin (tiny's 13 Bs entries). Other
+    origins are reserved for future modeling:
+    - [Version_mismatch]: pair well-formed artifacts at
+      incompatible versions (e.g. llvm 21 example against
+      llvm.19-shared binding — currently modeled ad-hoc in
+      the llvm/z3 stable variants, not through this type).
+    - [Packaging]: wrong files in an opam/pip/apt payload
+      (SSOT §5 roadmap; no code yet). *)
+type origin =
+  | Mutation of mutation
+  | Version_mismatch    (** reserved; not wired *)
+  | Packaging           (** reserved; not wired *)
+
 (* ---------- scenario ---------- *)
 
-(** Unified scenario — good scenarios have [mutation = None];
-    bad scenarios attach a [mutation]. *)
+(** Unified scenario — good scenarios have [origin = None];
+    bad scenarios attach an [origin] naming the cause of
+    badness. *)
 type scenario = {
-  id : string;                       (** "Sc.N" or "Bs.N" or "Pc.N" *)
+  id : string;                       (** "Sc.N" or "Bs.N" *)
   name : string;
   description : string;
   actions : Canary_basic.rule list;
   related_artifacts : Canary_basic.artifact_kind list;
-  mutation : mutation option;
+  origin : origin option;
   belongs_to : string list;          (** which Sc.N(s) this scenario
                                          relates to. For a Good scenario:
                                          its own id. For a Bad scenario:
                                          the Good scenario whose
-                                         artifacts are mutated
-                                         (mutated_at). For a Positive-
-                                         coverage scenario: the Good
-                                         scenarios it verifies. *)
+                                         artifacts are involved
+                                         (mutated_at, for Mutation origin;
+                                         the paired-at Sc.N for
+                                         Version_mismatch). *)
 }
 
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
@@ -99,8 +115,8 @@ type scenario = {
     language-agnostic).
 
     Concrete projects (tiny, z3, ...) instantiate the pattern
-    with their own artifacts and probes. [mutation = None]
-    on all (good = no mutation, by definition).
+    with their own artifacts and probes. [origin = None] on
+    all (good = no badness, by definition).
 
     {b Mechanism dimension — hardcoded to SCAB for now.} Binding
     mechanisms (SCAB = static C API binding via cext/cstubs;
@@ -137,7 +153,7 @@ let good_scenarios : scenario list =
                      binding assumption).";
       actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
       related_artifacts = [ Source; Lib ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.1" ] };
 
     (* OCaml side *)
@@ -145,34 +161,34 @@ let good_scenarios : scenario list =
       description = "Build the OCaml binding against the native lib.";
       actions = [ Build_binding OCaml ];
       related_artifacts = [ Lib; Binding OCaml ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.2.OCaml" ] };
     { id = "Sc.3.OCaml"; name = "build_app_with_binding";
       description = "Build an OCaml app that links against the OCaml \
                      binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.3.OCaml" ] };
     { id = "Sc.4.OCaml"; name = "run_app_with_binding";
       description = "Run the OCaml app; loader resolves the native lib \
                      at load time.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.4.OCaml" ] };
     { id = "Sc.5.OCaml"; name = "build_app_helper";
       description = "Build the app via an intermediate helper library \
                      that wraps the OCaml binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.5.OCaml" ] };
     { id = "Sc.6.OCaml"; name = "run_app_helper";
       description = "Run the app-via-helper chain.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.6.OCaml" ] };
 
     (* Python side — no Sc.3.Python (.py IS the app, no build step);
@@ -182,7 +198,7 @@ let good_scenarios : scenario list =
                      native lib.";
       actions = [ Build_binding Python ];
       related_artifacts = [ Lib; Binding Python ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.2.Python" ] };
     { id = "Sc.4.Python"; name = "run_app_with_binding";
       description = "Run the Python cext probe under SCAB (import \
@@ -191,7 +207,7 @@ let good_scenarios : scenario list =
                      DFFI, not modeled today.";
       actions = [ Probe App ];
       related_artifacts = [ Binding Python; Lib; App ];
-      mutation = None;
+      origin = None;
       belongs_to = [ "Sc.4.Python" ] };
   ]
 
@@ -217,9 +233,9 @@ let sc_id_of_string (s : string) : string =
     [target] must be in [related_artifacts]. Raises [Failure] on
     violation. Closes drift risk #3 from the status report. *)
 let validate_mutation_target (s : scenario) : unit =
-  match s.mutation with
-  | None -> ()
-  | Some p ->
+  match s.origin with
+  | None | Some (Version_mismatch | Packaging) -> ()
+  | Some (Mutation p) ->
     if not (Base.List.mem s.related_artifacts p.target
               ~equal:Base.Poly.equal) then
       Stdlib.failwith
@@ -231,9 +247,9 @@ let validate_mutation_target (s : scenario) : unit =
     known. Combined with [validate_mutation_target], gives a
     full structural check per scenario. *)
 let validate_manifest_sc_ids (s : scenario) : unit =
-  match s.mutation with
-  | None -> ()
-  | Some p ->
+  match s.origin with
+  | None | Some (Version_mismatch | Packaging) -> ()
+  | Some (Mutation p) ->
     match p.manifest with
     | Definite sc -> let _ = sc_id_of_string sc in ()
     | Possible xs ->
@@ -306,9 +322,9 @@ let derive_scenario (good : scenario)
   { id; name; description;
     actions = good.actions;
     related_artifacts = good.related_artifacts;
-    mutation = Some { target; kind;
+    origin = Some (Mutation { target; kind;
                           manifest = Unknown_gap;
-                          detector = Detector_gap };
+                          detector = Detector_gap });
     belongs_to = [ good.id ];
   }
 
@@ -350,8 +366,8 @@ let langs_of_scenario (scenario : scenario) : Canary_lang.lang list =
   |> List.dedup_and_sort ~compare:Poly.compare
 
 (** Does the scenario's mutation produce a probe-observable
-    manifestation? [Unknown_gap] means no; positive-coverage
-    entries ([mutation = None]) also count as no.
+    manifestation? [Unknown_gap] means no; good scenarios
+    ([origin = None]) also count as no.
 
     A scenario without probe manifestation would misfire under
     derivation (canary would expect a FAIL that never comes) —
@@ -359,7 +375,8 @@ let langs_of_scenario (scenario : scenario) : Canary_lang.lang list =
     General across projects — moved out of the tiny factory
     2026-07-08. *)
 let has_probe_manifestation (scenario : scenario) : bool =
-  match scenario.mutation with
+  match scenario.origin with
   | None -> false
-  | Some { manifest = Unknown_gap; _ } -> false
-  | Some _ -> true
+  | Some (Mutation { manifest = Unknown_gap; _ }) -> false
+  | Some (Mutation _) -> true
+  | Some (Version_mismatch | Packaging) -> true

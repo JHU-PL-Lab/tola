@@ -150,7 +150,7 @@ let scenario_specs : scenario_spec list =
          ~scenario_pert ~expected ~violates =
     { scenario = { id; name; description; actions = acts_full;
                    related_artifacts = arts;
-                   mutation = scenario_pert;
+                   origin = scenario_pert;
                    belongs_to = belongs_to_of_id id };
       recipe = { mutates; mutation = concrete_pert;
                  expected; violates };
@@ -525,7 +525,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    exports). Shared across OCaml and Python.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Source; Canary_basic.Lib ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.1" ] };
 
   (* OCaml side *)
@@ -534,14 +534,14 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    libtiny_stubs.a) via cstubs against libtiny.so.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Lib; a_ocaml ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.2.OCaml" ] };
   { id = "Sc.3.OCaml"; name = "build_app_with_binding";
     description = "Tiny: build probe_baseline.exe / app_binding.exe \
                    linking directly against the tiny OCaml binding.";
     actions = acts_full;
     related_artifacts = [ a_ocaml; Canary_basic.App ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.3.OCaml" ] };
   { id = "Sc.4.OCaml"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline / app_binding; loader \
@@ -549,7 +549,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.4.OCaml" ] };
   { id = "Sc.5.OCaml"; name = "build_app_helper";
     description = "Tiny: build tiny_helper + app_helper.exe — app \
@@ -557,7 +557,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    over the OCaml binding.";
     actions = acts_full;
     related_artifacts = [ a_ocaml; Canary_basic.App ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.5.OCaml" ] };
   { id = "Sc.6.OCaml"; name = "run_app_helper";
     description = "Tiny: exec app_helper.exe — full chain runs \
@@ -565,7 +565,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.6.OCaml" ] };
 
   (* Python side (cext under SCAB; ctypes uses DFFI, mechanism
@@ -576,7 +576,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    _native.cpython-*.so) against libtiny.so.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Lib; a_python ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.2.Python" ] };
   { id = "Sc.4.Python"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline.py for the cext path \
@@ -588,7 +588,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_python; Canary_basic.Lib; Canary_basic.App ];
-    mutation = None;
+    origin = None;
     belongs_to = [ "Sc.4.Python" ] };
 ]
 
@@ -684,7 +684,7 @@ let print_one_good
   let cells_here = List.filter derived_scenarios ~f:(fun d ->
     List.mem d.belongs_to good.id ~equal:String.equal) in
   let bads = List.filter scenario_specs ~f:(fun e ->
-    belongs_to_here e && Option.is_some e.scenario.mutation) in
+    belongs_to_here e && Option.is_some e.scenario.origin) in
   let n_filled = List.count cells_here ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
   let n_empty = List.length cells_here - n_filled in
@@ -704,8 +704,11 @@ let print_one_good
        else
          List.iteri matching ~f:(fun i e ->
            let sc = e.scenario in
-           let p = Option.value_exn sc.mutation in
-           let det = detector_short p.detector in
+           let m = match sc.origin with
+             | Some (Canary_scenario.Mutation m) -> m
+             | _ -> failwith "expected Mutation origin"
+           in
+           let det = detector_short m.detector in
            let prefix = if i = 0 then tgt else "" in
            Stdlib.print_endline
              (Printf.sprintf "      %-14s %s %s [%s]%s"
@@ -741,7 +744,7 @@ let print_list ?(status_of : (string -> string option) option) () =
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
   in
   let bads = List.filter scenario_specs ~f:(fun e ->
-    Option.is_some e.scenario.mutation) in
+    Option.is_some e.scenario.origin) in
   let n_bad = List.length bads in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
@@ -750,7 +753,8 @@ let print_list ?(status_of : (string -> string option) option) () =
     (Printf.sprintf "Good scenarios: %d (Sc.N patterns)"
        (List.length tiny_good_scenarios));
   Stdlib.print_endline
-    (Printf.sprintf "Bad scenarios:  %d mutations, covering %d of %d design-space cells (%d empty)"
+    (Printf.sprintf "Bad scenarios:  %d (all Mutation-origin today), \
+                     covering %d of %d design-space cells (%d empty)"
        n_bad n_cells_filled n_cells (n_cells - n_cells_filled));
   Stdlib.print_endline "";
   let section title lg =
