@@ -445,51 +445,53 @@ bugs. Detailed in
 [`bad_scenario_flavors.md`](bad_scenario_flavors.md). Not
 tiny-scoped; belongs to the post-tiny research task.
 
-### 7.7 Route tiny commands through `tool/` (R2 remainder)
+### 7.7 Route tiny commands through `tool/` (R2 — landed)
 
-The former baseline/prepare pair inlined raw compiler /
-inspector commands instead of routing through
-`src/canary/tool/`. Two sub-gaps remain (the third — baseline
-↔ prepare paths dedup, plus the file merge into
-`canary_tiny_workspace.ml` — landed 2026-07-08 in commits
-`90546b8` + `fb3ffd8`):
+**Status: complete** (2026-07-09). Both sub-gaps shipped:
 
-1. **No direct-compiler family in `tool/`.**
-   `canary_build_cmd.ml` covers cmake/ninja/dune only —
-   there is no primitive for gcc / ocamlfind / ar today.
-   The unification must first *create* the family (a
-   `canary_cc.ml`, or a direct-compile section of
-   `canary_build_cmd.ml`): `cc_compile_obj`,
-   `cc_link_shared` (soname + version-script args),
-   `ocaml_compile`, `ar_archive`, `ocaml_archive`. Substantive
-   half.
-2. **Inspector pipelines duplicated, not reused.**
-   `tool/` already has `Canary_artifact_native.inspect_cmd`
-   / `elf_inspect_cmd` and `Canary_artifact_lang.{inspect_cmd,
-   mli_inspect_*, stub_inspect_*}` — but
-   `canary_tiny_workspace.ml` re-inlines the
-   `nm | python3 inspect_*.py` invocations. Impedance
-   mismatch: tool builders emit "write JSON to
-   `<output_dir>/<marker>`" commands (runner path); tiny's
-   baseline/prepare want capture-JSON-to-stdout to assemble
-   the reference cache. Unifying means giving the tool
-   builders a stdout/capture variant.
+1. ~~**Direct-compiler family**~~ — landed in `2930a35`
+   as `src/canary/tool/canary_cc.ml` (~110 LOC).
+   Primitives: `cc_compile_obj`, `cc_link_shared`
+   (optional soname / version-script / rpath / include_dirs /
+   library_dirs / libs), `ocaml_compile_unit`,
+   `ocaml_archive_cmxa`, `ar_archive`, `symlink`.
+   `canary_tiny_workspace.ml`'s three build fns
+   (`build_c_lib`, `build_ocaml_binding`, `build_python_cext`)
+   refactored to use them. Byte-stable across 110 inspect
+   JSONs.
+2. ~~**Inspector capture-vs-marker reconciliation**~~ —
+   landed in `d0fb81e`. Tool builders in
+   `Canary_artifact_native` and `Canary_artifact_lang` gained
+   `_pipe_cmd` variants (the pipeline without the marker-file
+   redirect). Existing `_cmd` builders now compose the pipe
+   with `" > <out>"`. Tiny's 5 core inspectors
+   (`inspect_n4/bo4/bo6/bo7/bpc2/bpe2`) refactored to call
+   the pipe variants. `inspect_bpe3` (hand-rolled nm + inline
+   Python for cext undef-refs) kept as-is; no tool builder
+   covers that parity case yet — candidate follow-up.
 
-**Constraints:**
+**Ancillary fix** (shipped in the sub-gap 2 commit): the old
+`inspect_bo6` called `python3 inspect_ocaml.py --path <cmxa>`
+**without piping `ocamlobjinfo <cmxa>`** into it. Since
+`inspect_ocaml.py` reads ocamlobjinfo output from stdin, it
+saw an empty stream and always emitted
+`{"modules": [], "counts": {"modules": 0, "imports": 0}}`.
+The tool-builder pipe primitive correctly pipes, so bo6 now
+reports `["Tiny_raw", "Tiny"]` with 7 imports. Downstream
+`surface_delta` still emits `bo6: (no delta)` for the four
+spot-checked scenarios (their mutations don't add/remove
+modules).
 
-- *Keep the "owner decides the build" rationale.* Tiny uses
-  direct compilers on purpose (canary-owned, not upstream).
-  The new primitives should be a first-class direct-compile
-  family, not a push to make tiny go through cmake/dune.
-- *Portability dividend.* Tiny hardcodes `nm -D` (Linux-only);
-  `Canary_artifact_native.nm_cmd` already picks `nm -g` on
-  macOS. Routing through the tool builder fixes a latent
-  macOS break.
+**Pre-work** (also 2026-07-09, `8bf910b`): JSON schema tests
+for each `inspect_*.py` output kind (native / ocaml /
+ocaml_mli / c_stub / python) — pins the schema at the script
+level, so future refactors that keep the (script, args) pair
+unchanged stay byte-safe by construction.
 
-**Recommended order:** (1) direct-compile family → (2)
-inspector capture-vs-marker reconciliation. Each step keeps
-the reference cache byte-stable, so diff against a known-good
-`prepare-all` run after each.
+**Portability dividend** now real: tiny's inspectors use
+`Canary_artifact_native.nm_cmd` which picks `nm -g` on
+macOS. Verifying on macOS is deferred to the SSH-Mac work
+noted in CLAUDE.md.
 
 Relates to `backlog.md` #18 (audit specs for hardcoded
 shell commands routed through named primitives) and #47
