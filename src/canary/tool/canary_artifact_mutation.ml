@@ -111,3 +111,110 @@ let apply_soname_bump_cmds
     Printf.sprintf "patchelf --set-soname '%s' '%s/%s' 2>/dev/null || true"
       new_major_name lib_dir new_full_name;
   ]
+
+(* ================================================================ *)
+(* {1 Surface delta}                                                 *)
+(*                                                                    *)
+(* Diff between "baseline" and "mutated" inspector JSONs. Project-    *)
+(* agnostic JSON comparison — moved from [canary_tiny_workspace.ml]   *)
+(* 2026-07-09. Used by the harness after a mutation to compute what   *)
+(* actually changed at the surface level, and by tests to assert on   *)
+(* the shape of an observed change.                                   *)
+(*                                                                    *)
+(* The JSON shape it recognises is the [inspect_*.py] output family:  *)
+(* an [Assoc] with fields [symbols] / [requires] / [vals] / [attrs] / *)
+(* [modules] (each a [`List] of strings), plus optional [elf.soname]  *)
+(* and [elf.needed].                                                   *)
+(* ================================================================ *)
+
+let string_set_of_json = function
+  | `List xs ->
+    Base.List.filter_map xs
+      ~f:(function `String s -> Some s | _ -> None)
+    |> Base.Set.of_list (module Base.String)
+  | _ -> Base.Set.empty (module Base.String)
+
+let sorted_json_list_of_set s =
+  `List (Base.Set.to_list s |> Base.List.map ~f:(fun x -> `String x))
+
+let field_diff (b : Yojson.Basic.t) (p : Yojson.Basic.t) field
+    : (string * Yojson.Basic.t) option =
+  let open Base in
+  let b_field =
+    match b with `Assoc a -> List.Assoc.find a field ~equal:String.equal | _ -> None
+  in
+  let p_field =
+    match p with `Assoc a -> List.Assoc.find a field ~equal:String.equal | _ -> None
+  in
+  match b_field, p_field with
+  | None, None -> None
+  | _ ->
+    let b_set = Option.value_map b_field ~default:(Set.empty (module String))
+                  ~f:string_set_of_json in
+    let p_set = Option.value_map p_field ~default:(Set.empty (module String))
+                  ~f:string_set_of_json in
+    if Set.equal b_set p_set then None
+    else
+      let added   = Set.diff p_set b_set in
+      let removed = Set.diff b_set p_set in
+      Some (field,
+            `Assoc [ "added",   sorted_json_list_of_set added;
+                     "removed", sorted_json_list_of_set removed ])
+
+let elf_of (j : Yojson.Basic.t) : Yojson.Basic.t =
+  let open Base in
+  match j with
+  | `Assoc a ->
+    (match List.Assoc.find a "elf" ~equal:String.equal with
+     | Some v -> v | None -> `Assoc [])
+  | _ -> `Assoc []
+
+let string_or_null = function `String s -> Some s | `Null -> None | _ -> None
+
+let soname_of (j : Yojson.Basic.t) : string option =
+  let open Base in
+  match elf_of j with
+  | `Assoc a ->
+    (match List.Assoc.find a "soname" ~equal:String.equal with
+     | Some v -> string_or_null v | None -> None)
+  | _ -> None
+
+(** Compute the surface delta between baseline and mutated
+    inspector JSONs. Returns [None] when both sides agree on
+    every recognised field, [Some] with a summary otherwise.
+
+    Fields compared as string sets: [symbols], [requires],
+    [vals], [attrs], [modules]. Special cases: [elf.soname]
+    (before/after) and [elf.needed] (added/removed). *)
+let surface_delta
+      (baseline : Yojson.Basic.t option)
+      (mutated : Yojson.Basic.t option)
+    : Yojson.Basic.t option =
+  let open Base in
+  match baseline, mutated with
+  | None, None -> Some (`Assoc [ "status", `String "both_absent" ])
+  | None, Some p ->
+    Some (`Assoc [ "status", `String "baseline_absent"; "mutated", p ])
+  | Some _, None ->
+    Some (`Assoc [ "status", `String "mutated_absent" ])
+  | Some b, Some p ->
+    let field_deltas =
+      List.filter_map ["symbols"; "requires"; "vals"; "attrs"; "modules"]
+        ~f:(fun f -> field_diff b p f)
+    in
+    let elf_b = elf_of b and elf_p = elf_of p in
+    let soname_delta =
+      let bs = soname_of b and ps = soname_of p in
+      if Option.equal String.equal bs ps then None
+      else
+        let opt_to_json = function
+          | Some s -> `String s | None -> `Null in
+        Some ("soname",
+              `Assoc [ "baseline",  opt_to_json bs;
+                       "mutated", opt_to_json ps ])
+    in
+    let needed_delta = field_diff elf_b elf_p "needed" in
+    let all = field_deltas
+              @ Option.to_list soname_delta
+              @ Option.to_list needed_delta in
+    match all with [] -> None | xs -> Some (`Assoc xs)

@@ -95,6 +95,98 @@ let mutation_pure_tests = [
       | _ -> false };
 ]
 
+(* ── Surface-delta pure tests ───────────────────────────────────
+   surface_delta is what the harness uses AFTER a mutation to
+   compute what actually changed at the inspector-JSON level.
+   These tests feed synthetic inspector JSONs and assert on the
+   delta shape — exactly the composition the user asked for
+   ("check the artifact mutation and inspect"). *)
+
+let mk_syms names : Yojson.Basic.t =
+  `Assoc [ "symbols",
+           `List (List.map names ~f:(fun s -> `String s)) ]
+
+let has_field (j : Yojson.Basic.t) field : bool =
+  match j with
+  | `Assoc a -> Option.is_some (List.Assoc.find a field ~equal:String.equal)
+  | _ -> false
+
+let field_of (j : Yojson.Basic.t) field : Yojson.Basic.t option =
+  match j with
+  | `Assoc a -> List.Assoc.find a field ~equal:String.equal
+  | _ -> None
+
+let string_list_of_json = function
+  | `List xs ->
+    List.filter_map xs ~f:(function `String s -> Some s | _ -> None)
+  | _ -> []
+
+let surface_delta_pure_tests = [
+  { name = "surface_delta: identical JSON → None"; check = fun () ->
+      let same = mk_syms [ "tiny_sum"; "tiny_diff" ] in
+      Option.is_none
+        (Canary_artifact_mutation.surface_delta (Some same) (Some same)) };
+
+  { name = "surface_delta: both absent → status: both_absent"; check = fun () ->
+      match Canary_artifact_mutation.surface_delta None None with
+      | Some (`Assoc a) ->
+        (match List.Assoc.find a "status" ~equal:String.equal with
+         | Some (`String s) -> String.equal s "both_absent"
+         | _ -> false)
+      | _ -> false };
+
+  { name = "surface_delta: baseline absent → status: baseline_absent"; check = fun () ->
+      let p = mk_syms [ "tiny_sum" ] in
+      match Canary_artifact_mutation.surface_delta None (Some p) with
+      | Some (`Assoc a) ->
+        (match List.Assoc.find a "status" ~equal:String.equal with
+         | Some (`String s) -> String.equal s "baseline_absent"
+         | _ -> false)
+      | _ -> false };
+
+  { name = "surface_delta: mutated absent → status: mutated_absent"; check = fun () ->
+      let b = mk_syms [ "tiny_sum" ] in
+      match Canary_artifact_mutation.surface_delta (Some b) None with
+      | Some (`Assoc a) ->
+        (match List.Assoc.find a "status" ~equal:String.equal with
+         | Some (`String s) -> String.equal s "mutated_absent"
+         | _ -> false)
+      | _ -> false };
+
+  { name = "surface_delta: symbol_missing shape (tiny_sum → tiny_total)"; check = fun () ->
+      let baseline = mk_syms [ "tiny_sum"; "tiny_diff"; "tiny_offset" ] in
+      let mutated  = mk_syms [ "tiny_total"; "tiny_diff"; "tiny_offset" ] in
+      match Canary_artifact_mutation.surface_delta (Some baseline) (Some mutated) with
+      | Some delta ->
+        (match field_of delta "symbols" with
+         | Some sym_delta ->
+           let added = string_list_of_json
+             (Option.value_exn (field_of sym_delta "added")) in
+           let removed = string_list_of_json
+             (Option.value_exn (field_of sym_delta "removed")) in
+           List.mem added   "tiny_total" ~equal:String.equal
+           && List.mem removed "tiny_sum" ~equal:String.equal
+           && not (List.mem added   "tiny_diff" ~equal:String.equal)
+           && not (List.mem removed "tiny_diff" ~equal:String.equal)
+         | None -> false)
+      | None -> false };
+
+  { name = "surface_delta: SONAME bump surfaces at elf.soname"; check = fun () ->
+      let mk_soname s : Yojson.Basic.t =
+        `Assoc [ "elf", `Assoc [ "soname", `String s ] ]
+      in
+      let b = mk_soname "libtiny.so.1" in
+      let p = mk_soname "libtiny.so.2" in
+      match Canary_artifact_mutation.surface_delta (Some b) (Some p) with
+      | Some delta -> has_field delta "soname"
+      | None -> false };
+
+  { name = "surface_delta: no delta → None even for empty JSONs"; check = fun () ->
+      let empty = `Assoc [] in
+      Option.is_none
+        (Canary_artifact_mutation.surface_delta (Some empty) (Some empty)) };
+]
+
 (* ── Shell tests: apply real patches on a temp sandbox ── *)
 
 (** All 12 tiny .patch fixtures. Each name is the file basename
@@ -192,12 +284,16 @@ let run_tests ?(output_dir = "_out/canary/test/mutation-test") () : bool =
   let pass = ref 0 in
   let fail = ref 0 in
 
-  Fmt.pr "Mutation pure tests:@.";
-  List.iter mutation_pure_tests ~f:(fun t ->
-    let ok = run_pure_test t in
-    if ok then Int.incr pass else Int.incr fail;
-    Fmt.pr "  %-46s %s@." t.name (if ok then "PASS" else "FAIL"));
-  Fmt.pr "@.";
+  let run_pure_group name tests =
+    Fmt.pr "%s:@." name;
+    List.iter tests ~f:(fun t ->
+      let ok = run_pure_test t in
+      if ok then Int.incr pass else Int.incr fail;
+      Fmt.pr "  %-46s %s@." t.name (if ok then "PASS" else "FAIL"));
+    Fmt.pr "@."
+  in
+  run_pure_group "Mutation pure tests" mutation_pure_tests;
+  run_pure_group "Surface-delta pure tests" surface_delta_pure_tests;
 
   let run_shell_group name tests =
     Fmt.pr "%s:@." name;
