@@ -83,12 +83,12 @@ entry
   |> { base_spec with expectation = expectation_of_entry entry }
 ```
 
-One uniform path — no per-entry routing. Positive-coverage
-(Pc) entries and detection-gap Bs entries (Unknown_gap
-manifest) get `Expect_success` for every rule because
-`expectation_of_entry` checks `has_probe_manifestation` up
-front. Equivalent to no override at all; base spec runs to
-completion.
+One uniform path — no per-entry routing. Unmutated Sc.N runs
+(`mutation = None`, SSOT §4.1) and detection-gap Bs entries
+(`Unknown_gap` manifest) get `Expect_success` for every rule
+because `expectation_of_entry` checks
+`has_probe_manifestation` up front. Equivalent to no override
+at all; base spec runs to completion.
 
 ### 3.1 Expectation derivation
 
@@ -179,8 +179,12 @@ CLI:
 
 ```
 canary action tiny/<name>     # one scenario, auto-init if missing
-canary action tiny            # all 15 in tiny list order
+canary tiny run               # all 15 in tiny list order + save results.json
+canary tiny status            # tree view of last-run PASS/FAIL (from results.json)
 ```
+
+(`canary action tiny` — bare — was retired 2026-07-09 as
+non-uniform with other projects; use `tiny run` instead.)
 
 Auto-init: `run_tiny_scenario` in
 [`canary_main.ml`](../../src/bin/canary_main.ml) checks
@@ -188,6 +192,10 @@ Auto-init: `run_tiny_scenario` in
 `Canary_tiny_baseline.run ()` then
 `Canary_tiny_prepare.run ~name` before invoking canary.
 Existing workspaces are trusted.
+
+`tiny run`/`tiny list`/`tiny status` share iteration via
+`Canary_tiny_scenario.iter_scenario_specs`, so ordering
+stays synced by construction.
 
 Related read-only commands:
 
@@ -203,14 +211,15 @@ canary tiny confirm <name>   # print cached confirm_ill.json
 Two independent counts, easily confused.
 
 **Concrete entries** — the 15 authored entries in
-`Canary_tiny_scenario.scenario_specs` (13 Bs + 2 Pc). All 15 run
-through the uniform derivation. Split by whether their
-expectation actually fires at probe:
+`Canary_tiny_scenario.scenario_specs` (13 Bs + 2 unmutated
+Sc.N runs per SSOT §4.1). All 15 run through the uniform
+derivation. Split by whether their expectation actually
+fires at probe:
 
 | has probe manifestation? | Count | Entries |
 |---|---|---|
 | yes — expectation fires | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
-| no — Expect_success everywhere | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Pc.1, Pc.2 |
+| no — Expect_success everywhere | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Sc.4.OCaml (`app_over_binding_ocaml`), Sc.6.OCaml (`app_over_helper_ocaml`) |
 
 **Derived cells** — the 20 design-space slots enumerated
 by `derive_scenarios` (Good × related-artifact × applicable
