@@ -97,46 +97,93 @@ let mutation_pure_tests = [
 
 (* ── Shell tests: apply real patches on a temp sandbox ── *)
 
-(** Compose shell tests that use tiny's [scenarios/patches/] as
-    fixtures. Sandbox lives under [~output_dir] so it's isolated
-    and can be inspected on failure. *)
-let mutation_shell_tests ~output_dir : Canary_pm_test.test_case list =
-  let sandbox = output_dir ^ "/mutation-sandbox" in
+(** All 12 tiny .patch fixtures. Each name is the file basename
+    without the [.patch] suffix — matches the [patch <name>]
+    constructor in the recipe. *)
+let all_patch_names = [
+  "api_complete";       "api_complete_python"; "api_faithful";
+  "api_repack";         "api_repack_python";   "api_repack_stub_orphan";
+  "behavior_silent";    "header_arity_bump";   "symbol_missing";
+  "symbol_orphan";      "symbol_version_floor";"type_wrong";
+]
+
+(** Focused shell tests using [symbol_missing.patch] for content
+    verification. Isolates one well-known mutation to make sure
+    the apply + verify shape works before iterating over all
+    fixtures. *)
+let symbol_missing_shell_tests ~output_dir : Canary_pm_test.test_case list =
+  let sandbox = output_dir ^ "/mutation-focused" in
   let cwd = Stdlib.Sys.getcwd () in
   let abs_patches_dir = cwd ^ "/" ^ patches_dir in
   [
-    { name = "mutation.setup-sandbox";
+    { name = "focus.setup-sandbox";
       cmd = Printf.sprintf
-        "rm -rf '%s' && mkdir -p '%s' && cp -a '%s/c' '%s/c'"
+        "rm -rf '%s' && mkdir -p '%s' && cp -a '%s' '%s/tiny'"
         sandbox sandbox tiny_root sandbox;
       expected_rc = 0 };
 
-    { name = "mutation.pre-check-tiny_sum-present";
+    { name = "focus.pre-check-tiny_sum-present";
       cmd = Printf.sprintf
-        "grep -q 'int tiny_sum' '%s/c/src/tiny.c'" sandbox;
+        "grep -q 'int tiny_sum' '%s/tiny/c/src/tiny.c'" sandbox;
       expected_rc = 0 };
 
-    { name = "mutation.apply-symbol_missing.patch";
+    { name = "focus.apply-symbol_missing.patch";
       cmd = Canary_artifact_mutation.apply_patch_cmd
-        ~sandbox_dir:sandbox
+        ~sandbox_dir:(sandbox ^ "/tiny")
         ~patches_dir:abs_patches_dir
         ~patch_file:"symbol_missing.patch";
       expected_rc = 0 };
 
-    { name = "mutation.post-check-tiny_total-added";
+    { name = "focus.post-check-tiny_total-added";
       cmd = Printf.sprintf
-        "grep -q 'int tiny_total' '%s/c/src/tiny.c'" sandbox;
+        "grep -q 'int tiny_total' '%s/tiny/c/src/tiny.c'" sandbox;
       expected_rc = 0 };
 
-    { name = "mutation.post-check-tiny_sum-removed";
+    { name = "focus.post-check-tiny_sum-removed";
       cmd = Printf.sprintf
-        "! grep -q 'int tiny_sum' '%s/c/src/tiny.c'" sandbox;
+        "! grep -q 'int tiny_sum' '%s/tiny/c/src/tiny.c'" sandbox;
       expected_rc = 0 };
 
-    { name = "mutation.cleanup-sandbox";
+    { name = "focus.cleanup-sandbox";
       cmd = Printf.sprintf "rm -rf '%s'" sandbox;
       expected_rc = 0 };
   ]
+
+(** Iterate over all 12 patch fixtures. For each: fresh sandbox
+    (copy of tiny), apply the patch, verify [rc = 0]. Cheaper
+    than content-specific asserts and catches "does this patch
+    apply against the current tree" regressions across the whole
+    fixture set. *)
+let all_patches_shell_tests ~output_dir : Canary_pm_test.test_case list =
+  let sandbox_root = output_dir ^ "/mutation-all" in
+  let cwd = Stdlib.Sys.getcwd () in
+  let abs_patches_dir = cwd ^ "/" ^ patches_dir in
+  let per_patch p =
+    let sb = sandbox_root ^ "/" ^ p in
+    [
+      { Canary_pm_test.name = Printf.sprintf "all.setup-%s" p;
+        (* cp -a src/. dst copies contents into dst; without the /.
+           and with dst pre-existing, cp creates dst/<basename src>. *)
+        cmd = Printf.sprintf
+          "rm -rf '%s' && mkdir -p '%s' && cp -a '%s/.' '%s/'"
+          sb sb tiny_root sb;
+        expected_rc = 0 };
+      { name = Printf.sprintf "all.apply-%s.patch" p;
+        cmd = Canary_artifact_mutation.apply_patch_cmd
+          ~sandbox_dir:sb
+          ~patches_dir:abs_patches_dir
+          ~patch_file:(p ^ ".patch");
+        expected_rc = 0 };
+    ]
+  in
+  { Canary_pm_test.name = "all.mkdir-root";
+    cmd = Printf.sprintf "rm -rf '%s' && mkdir -p '%s'"
+            sandbox_root sandbox_root;
+    expected_rc = 0 }
+  :: List.concat_map all_patch_names ~f:per_patch
+  @ [ { Canary_pm_test.name = "all.cleanup-root";
+        cmd = Printf.sprintf "rm -rf '%s'" sandbox_root;
+        expected_rc = 0 } ]
 
 (* ── Runner ── *)
 
@@ -152,17 +199,22 @@ let run_tests ?(output_dir = "_out/canary/test/mutation-test") () : bool =
     Fmt.pr "  %-46s %s@." t.name (if ok then "PASS" else "FAIL"));
   Fmt.pr "@.";
 
-  Fmt.pr "Mutation shell tests:@.";
-  List.iter (mutation_shell_tests ~output_dir) ~f:(fun t ->
-    let r = Canary_pm_test.run_test t in
-    let ok = Canary_pm_test.is_pass r in
-    if ok then Int.incr pass else Int.incr fail;
-    Fmt.pr "  %-46s %s%s@."
-      t.name
-      (if ok then "PASS" else "FAIL")
-      (if ok then ""
-       else Printf.sprintf " (rc=%d)" r.actual_rc));
-  Fmt.pr "@.";
+  let run_shell_group name tests =
+    Fmt.pr "%s:@." name;
+    List.iter tests ~f:(fun t ->
+      let r = Canary_pm_test.run_test t in
+      let ok = Canary_pm_test.is_pass r in
+      if ok then Int.incr pass else Int.incr fail;
+      Fmt.pr "  %-46s %s%s@."
+        t.Canary_pm_test.name
+        (if ok then "PASS" else "FAIL")
+        (if ok then "" else Printf.sprintf " (rc=%d)" r.actual_rc));
+    Fmt.pr "@."
+  in
+  run_shell_group "Focused shell tests (symbol_missing)"
+    (symbol_missing_shell_tests ~output_dir);
+  run_shell_group "All-patches shell tests (12 fixtures × apply)"
+    (all_patches_shell_tests ~output_dir);
 
   Fmt.pr "Total: %d PASS, %d FAIL@." !pass !fail;
   !fail = 0
