@@ -10,8 +10,8 @@
       mutation). Field renamed [interested_artifacts] →
       [related_artifacts].
     - Scenario carries [id]: Bs.N for mutation-carrying
-      witnesses; the Sc.N (run-stage) id itself for unmutated
-      witnesses (SSOT §4.1) — a witness with mutation = None
+      scenarios; the Sc.N (run-stage) id itself for unmutated
+      scenarios (SSOT §4.1) — a scenario with mutation = None
       IS the Sc.N run, not a separate id. Legacy label: Pc.N.
     - The abstract mutation on [Canary_scenario.scenario]
       records target artifact / kind / manifest / detector — the
@@ -23,8 +23,8 @@
     [doc/_legacy_code/tiny_python_harness/scenarios.py (archived
     Phase E):SCENARIOS]. Order changed post-migration — now
     grouped by SSOT §5.1 (Bs.1..Bs.13 by Good scenario, then
-    the two unmutated witnesses Sc.4.OCaml, Sc.6.OCaml (as unmutated witnesses)
-    — see SSOT §4.1). *)
+    the two unmutated Sc.N runs Sc.4.OCaml, Sc.6.OCaml — see
+    SSOT §4.1). *)
 
 open Base
 open Canary_basic
@@ -120,14 +120,14 @@ let pert = Canary_scenario_util.pert
 (* ================================================================
    THE 15 CONCRETE INSTANTIATIONS — ordered per SSOT §5.1 for
    Bs.1..Bs.13 (mutation-carrying), then SSOT §4.1 for
-   Sc.4.OCaml.pos and Sc.6.OCaml.pos (unmutated Sc.N witnesses).
+   Sc.4.OCaml and Sc.6.OCaml (unmutated Sc.N runs).
    ================================================================ *)
 
 (** Derive [belongs_to] from the entry id, post-language-split.
     Sc.1 stays shared (7 native mutations Bs.1..Bs.7).
     Sc.2 splits by language: OCaml binding-side (Bs.8, Bs.9,
     Bs.10, Bs.13) vs Python binding-side (Bs.11, Bs.12).
-    Unmutated witnesses (Pc.N, SSOT §4.1) point at the OCaml
+    Unmutated Sc.N runs (Pc.N, SSOT §4.1) point at the OCaml
     stages they exercise. *)
 let belongs_to_of_id (id : string) : string list =
   match id with
@@ -455,13 +455,14 @@ let scenario_specs : scenario_spec list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    (* Sc.4.OCaml — unmutated witness (SSOT §4.1) exercising the
+    (* Sc.4.OCaml — unmutated run (SSOT §4.1) exercising the
        Sc.3.OCaml + Sc.4.OCaml chain (build_app_with_binding +
        run_app_with_binding). Shares the id string with the
-       Good scenario Sc.4.OCaml — a witness with mutation = None
-       IS the Sc.4.OCaml run, not a separate id. Legacy id: Pc.1. *)
+       Good scenario Sc.4.OCaml — a scenario with
+       mutation = None IS the Sc.4.OCaml run, not a separate
+       id. Legacy id: Pc.1. *)
     mk ~id:"Sc.4.OCaml" ~name:"app_over_binding_ocaml"
-      ~description:"Unmutated witness (SSOT §4.1): an app linking \
+      ~description:"Unmutated Sc.N run (SSOT §4.1): an app linking \
                     directly against the Tiny OCaml binding builds and \
                     runs; transitive dependency on libtiny.so resolves."
       ~arts:arts_positive
@@ -478,12 +479,12 @@ let scenario_specs : scenario_spec list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    (* Sc.6.OCaml — unmutated witness (SSOT §4.1) exercising the
+    (* Sc.6.OCaml — unmutated run (SSOT §4.1) exercising the
        Sc.5.OCaml + Sc.6.OCaml chain (build_app_helper +
        run_app_helper). Same id shape as Sc.4.OCaml above.
        Legacy id: Pc.2. *)
     mk ~id:"Sc.6.OCaml" ~name:"app_over_helper_ocaml"
-      ~description:"Unmutated witness (SSOT §4.1): longest-interesting \
+      ~description:"Unmutated Sc.N run (SSOT §4.1): longest-interesting \
                     chain — app -> tiny_helper -> Tiny binding -> \
                     libtiny.so. Confirms intra-binding repacking \
                     composes across a downstream library layer."
@@ -592,7 +593,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
 ]
 
 (** United list: 8 Sc + 15 concrete instantiations (13 Bs +
-    2 unmutated witnesses per SSOT §4.1) = 23 scenarios.
+    2 unmutated Sc.N runs per SSOT §4.1) = 23 scenarios.
     Reference for the `derive_scenarios` experiment
     (§9.3 backlog). *)
 let all_scenarios : Canary_scenario.scenario list =
@@ -722,10 +723,10 @@ let print_one_good
 (** Show-list-but-no-run — the enumeration surface. Prints all
     tiny Good scenarios grouped by language (Shared / OCaml /
     Python), with each followed by its mutations (bad
-    scenarios). Unmutated witnesses (SSOT §4.1) are omitted
-    from this view — they'd be trivial self-references
-    (`Sc.4.OCaml unmutated witnesses: Sc.4.OCaml …`);
-    `tiny run` output is the place to see their pass/fail.
+    scenarios). Unmutated Sc.N runs (SSOT §4.1) are rendered
+    separately as a top-level "Unmutated" section (not folded
+    under each Sc.N block, which would be a trivial
+    self-reference).
 
     Language-as-outer-loop reflects the user's design intent:
     scenarios are defined per (mechanism × language × stage),
@@ -741,10 +742,10 @@ let print_list ?(status_of : (string -> string option) option) () =
   in
   let bads = List.filter scenario_specs ~f:(fun e ->
     Option.is_some e.scenario.mutation) in
-  let witnesses = List.filter scenario_specs ~f:(fun e ->
+  let unmutated = List.filter scenario_specs ~f:(fun e ->
     Option.is_none e.scenario.mutation) in
   let n_bad = List.length bads in
-  let n_witness = List.length witnesses in
+  let n_unmutated = List.length unmutated in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
@@ -755,7 +756,7 @@ let print_list ?(status_of : (string -> string option) option) () =
     (Printf.sprintf "Bad scenarios:  %d mutations, covering %d of %d design-space cells (%d empty)"
        n_bad n_cells_filled n_cells (n_cells - n_cells_filled));
   Stdlib.print_endline
-    (Printf.sprintf "Witnesses:      %d unmutated Sc.N runs" n_witness);
+    (Printf.sprintf "Unmutated:      %d Sc.N runs (no mutation applied)" n_unmutated);
   Stdlib.print_endline "";
   let section title lg =
     let goods = goods_by_lang lg in
@@ -767,9 +768,9 @@ let print_list ?(status_of : (string -> string option) option) () =
   section "Shared" Shared;
   section "OCaml" OCaml_lang;
   section "Python" Python_lang;
-  if not (List.is_empty witnesses) then begin
-    Stdlib.print_endline "Witnesses (unmutated Sc.N runs):";
-    List.iter witnesses ~f:(fun e ->
+  if not (List.is_empty unmutated) then begin
+    Stdlib.print_endline "Unmutated (Sc.N runs without a mutation):";
+    List.iter unmutated ~f:(fun e ->
       let sc = e.scenario in
       let exercises = String.concat ~sep:" + " sc.belongs_to in
       let status_str = match status_of with
@@ -935,7 +936,7 @@ let tiny_api_source : Canary_artifact_api.t =
     artifacts. The harness↔canary mapping lives in
     [doc/canary/research/tiny.md] (or a wrapper script), not here.
 
-    - [base_project_spec]: unmutated witness (SSOT §4.1).
+    - [base_project_spec]: unmutated Sc.N run (SSOT §4.1).
       Every step is expected to succeed (Expect_success).
       Corresponds to the unmutated tiny build / harness
       scenarios [e12 baseline_canary] / [e13 baseline_unbroken].

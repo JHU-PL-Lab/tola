@@ -138,11 +138,11 @@ Project-agnostic patterns live at `Canary_scenario.good_scenarios`;
 tiny's instances (same ids, tiny-specific descriptions) at
 `Canary_tiny_scenario.tiny_good_scenarios`.
 
-### 4.1 Concrete witnesses
+### 4.1 Concrete instantiations
 
-Each `Sc.N × language` admits **concrete witnesses** — specific
-workspaces (tiny today; future project-N tomorrow) that run
-the scenario end-to-end. A witness either:
+Each `Sc.N × language` admits **concrete instantiations** —
+specific workspaces (tiny today; future project-N tomorrow)
+that run the scenario end-to-end. An instantiation either:
 
 - runs **unmutated** — the scenario itself works; all steps
   reach `done` with `Expect_success`. This is the positive
@@ -150,26 +150,27 @@ the scenario end-to-end. A witness either:
 - applies a `Bs.N` mutation — expected to fail at some step
   the mutation targets. Enumerated in §5.
 
-Tiny's unmutated witnesses:
+Tiny's unmutated Sc.N runs:
 
-| Witness id     | Exercises                 | Name                     | What it does                                                 |
+| Scenario id    | Exercises                 | Name                     | What it does                                                 |
 | -------------- | ------------------------- | ------------------------ | ------------------------------------------------------------ |
 | `Sc.4.OCaml`   | Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run     |
 | `Sc.6.OCaml`   | Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
 
 Naming convention: the id **is** the run-stage Sc.N (naming
 after the most-downstream stage exercised — the run
-implicitly includes its build prereq). A witness with
-`mutation = None` IS the Sc.N run, so it reuses the Sc.N
-id; the joint (id, mutation) is what disambiguates the
+implicitly includes its build prereq). An unmutated scenario
+with `mutation = None` IS the Sc.N run, so it reuses the
+Sc.N id; the joint (id, mutation) is what disambiguates the
 concrete instantiation from the abstract Good scenario
 pattern of §4.
 
-These witnesses used to be catalogued as `Pc.N` (positive
-coverage) alongside the `Bs.N` bad scenarios; the category
-label is retired (search for "Pc.1"/"Pc.2" in git history).
+These unmutated runs used to be catalogued as `Pc.N`
+(positive coverage) alongside the `Bs.N` bad scenarios; the
+category label is retired (search for "Pc.1"/"Pc.2" in git
+history).
 
-Running an unmutated witness is what `probe_app_<lang>` does
+Running an unmutated Sc.N is what `probe_app_<lang>` does
 under the hood — build the app, run it, expect success. The
 `probe_` prefix reads narrow for the app step (an app isn't
 observed from the outside; it's *used*), but the semantic is
@@ -184,7 +185,7 @@ SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
 sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
 [`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
-**Status.** stable — 13 Bs rows here + 2 unmutated witnesses
+**Status.** stable — 13 Bs rows here + 2 unmutated Sc.N runs
 in §4.1 = 15 concrete instantiations in `scenario_specs`.
 
 **Roadmap rows** (not in code yet):
@@ -206,21 +207,21 @@ Columns split into two:
 `Bs.N` = **B**ad **s**cenario number N. IDs are stable — new
 scenarios append; renames don't renumber.
 
-Unmutated witnesses (`app_over_binding_ocaml`, `app_over_helper_ocaml`)
-are catalogued under §4.1, not here. §5 enumerates only
-mutation-carrying witnesses; a witness with `mutation = None`
-belongs under the Sc.N it verifies.
+Unmutated Sc.N runs (`app_over_binding_ocaml`,
+`app_over_helper_ocaml`) are catalogued under §4.1, not here.
+§5 enumerates only mutation-carrying scenarios; a scenario
+with `mutation = None` belongs under the Sc.N it exercises.
 
 Ordering convention: rows grouped by Good scenario, then by
 mutation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
 
 **Code correspondence.** The 13 Bs rows below plus the 2
-unmutated witnesses from §4.1 (= **15 concrete instantiations**
+unmutated Sc.N runs from §4.1 (= **15 concrete instantiations**
 of Sc.N) live at `Canary_tiny_scenario.scenario_specs`. Each
 carries a `belongs_to` field naming the Good scenario(s) it
 relates to — for Bs.N this is the `mutated_at` Sc.N; for an
-unmutated witness this is the Sc.N(s) it exercises.
+unmutated Sc.N run this is the Sc.N(s) it exercises.
 `Canary_tiny_scenario.all_scenarios` unions the 8
 language-split tiny good scenarios (Sc.1 shared + 5 .OCaml +
 2 .Python) + 15 instantiations = **23 scenarios** as the

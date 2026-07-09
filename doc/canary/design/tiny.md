@@ -47,12 +47,12 @@ today; ctypes exists but doesn't participate in canary runs
 
 SSOT §4 defines the 6 Good scenarios (Sc.1..Sc.6, split by
 language: Sc.1 shared, Sc.2..Sc.6 as .OCaml / .Python).
-SSOT §4.1 catalogues the 2 unmutated witnesses
+SSOT §4.1 catalogues the 2 unmutated Sc.N runs
 (`app_over_binding_ocaml`, `app_over_helper_ocaml`) — Sc.N
-runs with `mutation = None` that verify Sc.3/Sc.4.OCaml and
-Sc.5/Sc.6.OCaml respectively.
+runs with `mutation = None` that exercise Sc.3/Sc.4.OCaml
+and Sc.5/Sc.6.OCaml respectively.
 SSOT §5 defines the 13 Bad scenarios (Bs.1..Bs.13) —
-mutation-carrying witnesses. Combined: **15 concrete
+mutation-carrying scenarios. Combined: **15 concrete
 instantiations** of Sc.N in `scenario_specs`.
 
 Each Bad scenario has a `tiny_recipe`:
@@ -495,7 +495,7 @@ Not urgent, worth knowing:
   scenario auto-runs baseline. Second scenario is fast
   because baseline is reused. Not obvious from the prompt.
 
-- **`base` route == correct-but-quiet** — unmutated witnesses
+- **`base` route == correct-but-quiet** — unmutated Sc.N runs
   (§2, formerly Pc.N) and Unknown_gap Bs entries (Bs.6
   api_faithful, Bs.13 api_repack_stub_orphan) run to completion
   with all steps passing. No expectation fires; nothing to
