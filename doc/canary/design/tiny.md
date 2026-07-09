@@ -198,7 +198,7 @@ canary tiny confirm <name>   # print cached confirm_ill.json
 Two independent counts, easily confused.
 
 **Concrete entries** — the 15 authored entries in
-`Canary_tiny_scenario.entries` (13 Bs + 2 Pc). All 15 run
+`Canary_tiny_scenario.scenario_specs` (13 Bs + 2 Pc). All 15 run
 through the uniform derivation. Split by whether their
 expectation actually fires at probe:
 
@@ -249,20 +249,144 @@ cell is a candidate flavor-1 mutation slot:
 - Sc.2.Python (lib arm), Sc.4.Python — Python-side counterparts
 
 Filling them means authoring: (i) a patch file, (ii) an
-entry in `tiny_scenario.entries`, (iii) a Bs.N id. All are
+entry in `tiny_scenario.scenario_specs`, (iii) a Bs.N id. All are
 mechanical if the recipe shape is right.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell
 
 Today derived cells are name-only. To *run* a derived cell
-we'd need to generate a `tiny_recipe` (patch + expected
+we'd need to generate a `tiny_recipe` (mutation + expected
 outcomes) from `(Good × target × kind)`. Would let the
 mechanical filling in §7.1 become data-driven — the
 enumeration `derived_scenarios` directly emits runnable
 recipes.
 
-Blockers: how to parametrise a mutation as "drop
-symbol X from artifact Y" rather than a hand-authored diff.
+Not urgent — hand-authored `.patch` files are usable today
+(15/15 fixtures pass in `mutation-test`). The plan below is
+saved for when we resume; nothing needs to happen soon.
+
+#### Design decisions locked in (2026-07-09)
+
+| Question | Decision |
+|---|---|
+| Mutation type organisation | Flat top-level `type mutation` for pattern matching, per-artifact constructor modules for authoring: `Canary_artifact_mutation.Source.drop_c_symbol ~file ~symbol`. Symmetric with the `canary_artifact_*` inspection layer without a wrapper type. |
+| Mutation → `violates` mapping | **Enumerated** for MVP. Surface/agreement-driven derivation is a later retrofit. |
+| Which cells to synthesise | **All**, then dedupe against hand-authored (hand takes precedence). Empty cells become synthesised entries automatically. |
+| Cell → sample target (which symbol) | **Parameter with hardcoded defaults**. Argument for override; default is `tiny_sum` (source) / `sum` (mli/attrs). Heuristic picking from `api_source.stable_symbols` is future work. |
+
+#### Phase 1 — Parametric mutation constructors
+
+New flat variants in `canary_artifact_mutation.ml`:
+
+```ocaml
+type mutation =
+  | Patch of { patch_file : string }                        (* existing *)
+  | Soname_bump of { from_so : string; to_so : string }     (* existing *)
+  | Drop_c_symbol of { file : string; symbol : string }        (* NEW *)
+  | Rename_c_symbol of { file : string; from_ : string; to_ : string }  (* NEW *)
+  | Drop_ocaml_val of { file : string; name : string }        (* NEW *)
+  | Drop_python_attr of { file : string; attr : string }      (* NEW *)
+```
+
+Per-artifact constructor modules (organisation, not new types):
+
+```ocaml
+module Source  = struct let drop_c_symbol ~file ~symbol = ... end
+module Native  = struct let soname_bump ~from_so ~to_so = ... end
+module Binding = struct
+  let drop_ocaml_val ~file ~name = ...
+  let drop_python_attr ~file ~attr = ...
+end
+```
+
+Tool wrappers `apply_drop_c_symbol_cmds` / `apply_rename_c_symbol_cmds`
+/ `apply_drop_ocaml_val_cmds` / `apply_drop_python_attr_cmds` return shell
+command strings (parallel to existing `apply_patch_cmd` /
+`apply_soname_bump_cmds`). Implementation uses `sed` for line-based edits
+and Python one-liners for structured edits.
+
+Tests in `mutation-test` extend to cover each new constructor
+(pure shape + shell apply on sandbox). Grand total goes from 46 → ~70.
+
+**Scope: ~250 lines. Independent commit. Doesn't touch tiny_scenario.**
+
+#### Phase 2 — Workspace dispatch
+
+Extend the mutation-dispatch in `run_prepare`:
+
+```ocaml
+match recipe.mutation with
+| Some (Patch _) -> apply_patch ...                    (* existing *)
+| Some (Soname_bump _) -> apply_soname_bump ...        (* existing *)
+| Some (Drop_c_symbol { file; symbol }) ->
+    let cmds = Canary_artifact_mutation.apply_drop_c_symbol_cmds ... in
+    List.for_all cmds ~f:(fun c -> run_shell c = 0)
+| Some (Rename_c_symbol ...) -> ...
+| ...
+```
+
+**Scope: ~30 lines. One pattern extension per variant.**
+
+#### Phase 3 — Recipe synthesis
+
+New function:
+
+```ocaml
+val recipe_of_derived_cell : Canary_scenario.scenario -> tiny_recipe option
+```
+
+Enumerated synthesis table:
+
+| (target, kind) | mutation | violates | mutates |
+|---|---|---|---|
+| Source, On_artifact Source | `Source.drop_c_symbol ~file:"c/src/tiny.c" ~symbol:"tiny_sum"` | [c1] | `["c/src/tiny.c"]` |
+| Source, On_behavior | `Source.rename_c_symbol` (behaviour swap) | [c3] | `["c/src/tiny.c"]` |
+| Lib, On_artifact Lib | `Native.soname_bump ~from_so ~to_so` | [c4] | `["c/build/libtiny.so.1"]` |
+| Binding OCaml, _ | `Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum"` | [c2] | `["ocaml/tiny.mli"]` |
+| Binding Python, _ | `Binding.drop_python_attr ~file:"python_cext/tiny_cext/__init__.py" ~attr:"sum"` | [c2] | `["python_cext/tiny_cext/__init__.py"]` |
+| App, _ | (skip — return None per Sc.3-6 retrospection) | — | — |
+
+Integration: `derived_scenarios` mapped through this to
+`derived_scenario_specs`; concatenate with hand-authored `scenario_specs`,
+dedupe via `matches_derived_cell`.
+
+**Scope: ~150 lines including table + integration.**
+
+#### Phase 4 — Runnable derived cells
+
+Fold derived cells into the entry list:
+
+```ocaml
+let all_scenario_specs =
+  let hand = scenario_specs in
+  let derived =
+    List.filter_map derived_scenarios ~f:recipe_of_derived_cell
+    |> List.filter ~f:(fun ds ->
+      not (List.exists hand ~f:(fun h ->
+        matches_derived_cell h.scenario ds.scenario)))
+  in
+  hand @ derived
+```
+
+`tiny list`, `tiny prepare`, `canary action tiny/<name>` all see them via
+one list. Derived cell names use their `Dv.*` ids from `derive_scenarios`.
+
+**Scope: ~50 lines. `all_scenario_specs` replaces `scenario_specs` in
+the module's exported list.**
+
+#### Commit shape
+
+1. Phase 1 — parametric mutation constructors (~250 lines)
+2. Phase 2 — workspace dispatch (~30 lines)
+3. Phase 3 — recipe synthesis (~150 lines)
+4. Phase 4 — derived cells integration (~50 lines)
+
+Each phase leaves the tree building and tests green.
+
+Open sub-questions to confirm before starting Phase 1:
+- Include `Rename_c_symbol` in Phase 1 or add later?
+- Constructor naming: `Drop_c_symbol` vs `Remove_symbol` etc.?
+- App cell handling — accept ceremonial gap, or want it?
 
 ### 7.3 Second mechanism axis — ctypes DFFI
 
