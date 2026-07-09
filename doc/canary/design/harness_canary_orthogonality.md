@@ -9,7 +9,7 @@ mutation / combinator engine framing from `research/surface.md`.
 
 [`research/surface.md`](../research/surface.md) names two engines that
 probe the rule catalogue: the **mutation engine** (the harness on
-tiny, perturbing one fixed world via `scenarios.py apply` /
+tiny, mutating one fixed world via `scenarios.py apply` /
 `revert`) and the **combinator engine** (canary, traversing a space
 of worlds composed from per-kind stores via the variant matrix in
 `canary_project_tiny.ml`).
@@ -45,7 +45,7 @@ workspace model is converging on:
   (`canary_project_tiny.ml`) declares how to drive it.
 
 - **Producers** — *how stores are populated*. For tiny that's the
-  perturbation harness in `scenarios.py` ("apply this patch, build,
+  mutation harness in `scenarios.py` ("apply this patch, build,
   snapshot"). For real projects it's the package manager
   ("opam install z3.4.13" produces one store; "opam install z3.dev"
   produces another).
@@ -58,9 +58,9 @@ Under this factoring:
 | Store | `_cache/<scenario>/workspace/` | opam switch / pip env / apt-installed prefix | — |
 | Runner | canary's per-variant pipeline | canary's per-version pipeline | `_out/canary/projects/<project>/<step>/` |
 
-The synthetic-vs-natural axis maps cleanly: tiny's perturbations
+The synthetic-vs-natural axis maps cleanly: tiny's mutations
 *mimic* the divergences that arise naturally between real-world
-package versions. Synthetic stores (perturbed-tiny caches) and
+package versions. Synthetic stores (mutated-tiny caches) and
 natural stores (different package installs) feed the same runner
 through the same store-shaped interface. **If canary catches the
 synthetic divergences on tiny, the same checks catch real-world
@@ -146,7 +146,7 @@ combinator engine's runner has no such cache. A self-describing
 store should be usable for *fresh* consumers too. Fixes:
 
 - **Workspace materialization synthesizes the symlink** (current).
-  After capturing the perturbed lib, the materializer adds back the
+  After capturing the mutated lib, the materializer adds back the
   plain `libtiny.so` symlink pointing at the highest-versioned
   file. Works, in `scenarios.py`.
 - **Producer always emits a usable store.** The apply rule keeps
@@ -173,7 +173,7 @@ complete on tiny) probably wants:
 2. **Lift workspace fixups out of `scenarios.py` into a
    canary-owned "store sanitiser."** The RUNPATH-strip and
    libtiny.so-synthesis logic is about *making a store usable by
-   canary's runner*, not about *implementing tiny's perturbations*.
+   canary's runner*, not about *implementing tiny's mutations*.
    It belongs on the runner side.
 
 3. **Express real-project package-manager outputs as canary

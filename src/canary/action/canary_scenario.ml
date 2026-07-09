@@ -1,8 +1,8 @@
 (** Scenario type — project-agnostic, unified for good and bad.
 
     A [scenario] names a collection of actions over related
-    artifacts. Good scenarios (Sc.N) have [perturbation = None];
-    bad scenarios (Bs.N) attach a [perturbation] targeting one of
+    artifacts. Good scenarios (Sc.N) have [mutation = None];
+    bad scenarios (Bs.N) attach a [mutation] targeting one of
     the related artifacts. From the artifact's perspective there
     is no structural difference — a bad scenario is just a
     scenario whose world has one mutation.
@@ -14,22 +14,22 @@
       the action graph will let us derive it — postponed.
     - [id] is a string. [Sc_id.t] as a distinct type is deferred
       until the Sc.N / Bs.N enumeration stabilises.
-    - [manifest] and [detector] on [perturbation] are
+    - [manifest] and [detector] on [mutation] are
       possibilistic — they depend on tool strictness and probe
       design. Encoded here so the code can talk about
       "may-manifest" and "detection-gap" cases; they're
       annotations on the constructed scenario, not part of the
       physical setup.
-    - [perturbation_kind] reuses [artifact_kind] for
-      artifact-flavoured perturbations, with [On_behavior] as the
+    - [mutation_kind] reuses [artifact_kind] for
+      artifact-flavoured mutations, with [On_behavior] as the
       one artifact-agnostic case (source patch with no surface
-      change). Package perturbations use
+      change). Package mutations use
       [On_artifact <package-flavoured-kind>] once tiny grows a
       package variant. *)
 
-(* ---------- perturbation ---------- *)
+(* ---------- mutation ---------- *)
 
-type perturbation_kind =
+type mutation_kind =
   | On_artifact of Canary_basic.artifact_kind
       (** [Source] → source patch;
           [Lib] → binary surgery on the built lib;
@@ -42,7 +42,7 @@ type perturbation_kind =
           because no surface comparator can catch it; only
           runtime probes can. *)
 
-(** Where the failure produced by a perturbation surfaces.
+(** Where the failure produced by a mutation surfaces.
     Possibilistic — depends on tool strictness (e.g. mold vs
     permissive linker) and probe design. *)
 type manifest =
@@ -50,42 +50,42 @@ type manifest =
   | Possible of string list  (** one of these, tool-dependent *)
   | Unknown_gap              (** no known manifestation today (agreement gap) *)
 
-(** Which checker catches the perturbation, if any. Also
+(** Which checker catches the mutation, if any. Also
     possibilistic — [Detector_gap] means no checker is wired for
-    this perturbation today; the perturbation constructs a bad
+    this mutation today; the mutation constructs a bad
     artifact that no comparator observes. *)
 type detector =
   | Wired of Canary_compat.contract_id
   | Detector_gap
 
-type perturbation = {
+type mutation = {
   target   : Canary_basic.artifact_kind;
-                             (** the perturbed artifact —
+                             (** the mutated artifact —
                                  invariant: must appear in the
                                  owning scenario's
                                  [related_artifacts]. *)
-  kind     : perturbation_kind;
+  kind     : mutation_kind;
   manifest : manifest;
   detector : detector;
 }
 
 (* ---------- scenario ---------- *)
 
-(** Unified scenario — good scenarios have [perturbation = None];
-    bad scenarios attach a [perturbation]. *)
+(** Unified scenario — good scenarios have [mutation = None];
+    bad scenarios attach a [mutation]. *)
 type scenario = {
   id : string;                       (** "Sc.N" or "Bs.N" or "Pc.N" *)
   name : string;
   description : string;
   actions : Canary_basic.rule list;
   related_artifacts : Canary_basic.artifact_kind list;
-  perturbation : perturbation option;
+  mutation : mutation option;
   belongs_to : string list;          (** which Sc.N(s) this scenario
                                          relates to. For a Good scenario:
                                          its own id. For a Bad scenario:
                                          the Good scenario whose
-                                         artifacts are perturbed
-                                         (perturbed_at). For a Positive-
+                                         artifacts are mutated
+                                         (mutated_at). For a Positive-
                                          coverage scenario: the Good
                                          scenarios it verifies. *)
 }
@@ -99,8 +99,8 @@ type scenario = {
     language-agnostic).
 
     Concrete projects (tiny, z3, ...) instantiate the pattern
-    with their own artifacts and probes. [perturbation = None]
-    on all (good = no perturbation, by definition).
+    with their own artifacts and probes. [mutation = None]
+    on all (good = no mutation, by definition).
 
     {b Mechanism dimension — hardcoded to SCAB for now.} Binding
     mechanisms (SCAB = static C API binding via cext/cstubs;
@@ -137,7 +137,7 @@ let good_scenarios : scenario list =
                      binding assumption).";
       actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
       related_artifacts = [ Source; Lib ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.1" ] };
 
     (* OCaml side *)
@@ -145,34 +145,34 @@ let good_scenarios : scenario list =
       description = "Build the OCaml binding against the native lib.";
       actions = [ Build_binding OCaml ];
       related_artifacts = [ Lib; Binding OCaml ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.2.OCaml" ] };
     { id = "Sc.3.OCaml"; name = "build_app_with_binding";
       description = "Build an OCaml app that links against the OCaml \
                      binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.3.OCaml" ] };
     { id = "Sc.4.OCaml"; name = "run_app_with_binding";
       description = "Run the OCaml app; loader resolves the native lib \
                      at load time.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.4.OCaml" ] };
     { id = "Sc.5.OCaml"; name = "build_app_helper";
       description = "Build the app via an intermediate helper library \
                      that wraps the OCaml binding.";
       actions = [ Build_app ];
       related_artifacts = [ Binding OCaml; App ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.5.OCaml" ] };
     { id = "Sc.6.OCaml"; name = "run_app_helper";
       description = "Run the app-via-helper chain.";
       actions = [ Probe App ];
       related_artifacts = [ Binding OCaml; Lib; App ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.6.OCaml" ] };
 
     (* Python side — no Sc.3.Python (.py IS the app, no build step);
@@ -182,7 +182,7 @@ let good_scenarios : scenario list =
                      native lib.";
       actions = [ Build_binding Python ];
       related_artifacts = [ Lib; Binding Python ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.2.Python" ] };
     { id = "Sc.4.Python"; name = "run_app_with_binding";
       description = "Run the Python cext probe under SCAB (import \
@@ -191,7 +191,7 @@ let good_scenarios : scenario list =
                      DFFI, not modeled today.";
       actions = [ Probe App ];
       related_artifacts = [ Binding Python; Lib; App ];
-      perturbation = None;
+      mutation = None;
       belongs_to = [ "Sc.4.Python" ] };
   ]
 
@@ -213,25 +213,25 @@ let sc_id_of_string (s : string) : string =
       (Printf.sprintf "unknown Sc.N: %S. Known: %s"
          s (Base.String.concat ~sep:", " known))
 
-(** Invariant check: if a scenario has a [perturbation], its
+(** Invariant check: if a scenario has a [mutation], its
     [target] must be in [related_artifacts]. Raises [Failure] on
     violation. Closes drift risk #3 from the status report. *)
-let validate_perturbation_target (s : scenario) : unit =
-  match s.perturbation with
+let validate_mutation_target (s : scenario) : unit =
+  match s.mutation with
   | None -> ()
   | Some p ->
     if not (Base.List.mem s.related_artifacts p.target
               ~equal:Base.Poly.equal) then
       Stdlib.failwith
         (Printf.sprintf
-           "scenario %s (%s): perturbation.target not in \
+           "scenario %s (%s): mutation.target not in \
             related_artifacts" s.id s.name)
 
 (** Validate that all Sc.N strings in a scenario's manifest are
-    known. Combined with [validate_perturbation_target], gives a
+    known. Combined with [validate_mutation_target], gives a
     full structural check per scenario. *)
 let validate_manifest_sc_ids (s : scenario) : unit =
-  match s.perturbation with
+  match s.mutation with
   | None -> ()
   | Some p ->
     match p.manifest with
@@ -249,15 +249,15 @@ let validate_belongs_to (s : scenario) : unit =
 (** Full structural check on a scenario. Raises on any
     invariant violation. *)
 let validate_scenario (s : scenario) : unit =
-  validate_perturbation_target s;
+  validate_mutation_target s;
   validate_manifest_sc_ids s;
   validate_belongs_to s
 
 (* ---------- derivation (§9.3 backlog: derive_entries) ---------- *)
 
-(** Which perturbation kinds are applicable to a given artifact
+(** Which mutation kinds are applicable to a given artifact
     kind. Encodes the Q4 constraint from the user's earlier note:
-    "perturbation_kind depends on related_artifact."
+    "mutation_kind depends on related_artifact."
 
     - [Source] admits both [On_artifact Source] (source patch)
       and [On_behavior] (semantic change without surface diff).
@@ -265,8 +265,8 @@ let validate_scenario (s : scenario) : unit =
       [On_artifact <self>].
 
     Extend when the model grows. *)
-let applicable_perturbations (a : Canary_basic.artifact_kind)
-    : perturbation_kind list =
+let applicable_mutations (a : Canary_basic.artifact_kind)
+    : mutation_kind list =
   match a with
   | Source -> [ On_artifact Source; On_behavior ]
   | Headers -> [ On_artifact Headers ]
@@ -274,8 +274,8 @@ let applicable_perturbations (a : Canary_basic.artifact_kind)
   | Binding _ -> [ On_artifact a ]
   | App -> [ On_artifact App ]
 
-(** Format a perturbation_kind for use in a derived scenario id. *)
-let string_of_perturbation_kind = function
+(** Format a mutation_kind for use in a derived scenario id. *)
+let string_of_mutation_kind = function
   | On_artifact a -> Canary_basic.string_of_artifact_kind a
   | On_behavior -> "behavior"
 
@@ -287,18 +287,18 @@ let string_of_perturbation_kind = function
     that's where the concrete detector info lives. *)
 let derive_scenario (good : scenario)
     (target : Canary_basic.artifact_kind)
-    (kind : perturbation_kind) : scenario =
+    (kind : mutation_kind) : scenario =
   let id =
     Printf.sprintf "Dv.%s.%s.%s"
       good.id
       (Canary_basic.string_of_artifact_kind target)
-      (string_of_perturbation_kind kind)
+      (string_of_mutation_kind kind)
   in
-  let kind_str = string_of_perturbation_kind kind in
-  let name = Printf.sprintf "perturb_%s_at_%s" kind_str good.name in
+  let kind_str = string_of_mutation_kind kind in
+  let name = Printf.sprintf "mutate_%s_at_%s" kind_str good.name in
   let description =
     Printf.sprintf
-      "Derived candidate: perturb %s of %s (%s) — abstract cell, \
+      "Derived candidate: mutate %s of %s (%s) — abstract cell, \
        no concrete detector info until a hand-listed Bs fills it."
       (Canary_basic.string_of_artifact_kind target)
       good.id kind_str
@@ -306,7 +306,7 @@ let derive_scenario (good : scenario)
   { id; name; description;
     actions = good.actions;
     related_artifacts = good.related_artifacts;
-    perturbation = Some { target; kind;
+    mutation = Some { target; kind;
                           manifest = Unknown_gap;
                           detector = Detector_gap };
     belongs_to = [ good.id ];
@@ -321,12 +321,12 @@ let derive_scenario (good : scenario)
     Diffing this against a project's hand-listed bad scenarios
     surfaces (a) gaps — derived cells with no hand-listed
     coverage; (b) extras — hand-listed scenarios that don't fit
-    any derived cell (should be rare if [applicable_perturbations]
+    any derived cell (should be rare if [applicable_mutations]
     is complete). *)
 let derive_scenarios (goods : scenario list) : scenario list =
   Base.List.concat_map goods ~f:(fun good ->
     Base.List.concat_map good.related_artifacts ~f:(fun a ->
-      Base.List.map (applicable_perturbations a) ~f:(fun k ->
+      Base.List.map (applicable_mutations a) ~f:(fun k ->
         derive_scenario good a k)))
 
 (** Language set a scenario's contracts fire at, derived from
@@ -349,9 +349,9 @@ let langs_of_scenario (scenario : scenario) : Canary_lang.lang list =
   |> List.concat_map ~f:lang_of_id
   |> List.dedup_and_sort ~compare:Poly.compare
 
-(** Does the scenario's perturbation produce a probe-observable
+(** Does the scenario's mutation produce a probe-observable
     manifestation? [Unknown_gap] means no; positive-coverage
-    entries ([perturbation = None]) also count as no.
+    entries ([mutation = None]) also count as no.
 
     A scenario without probe manifestation would misfire under
     derivation (canary would expect a FAIL that never comes) —
@@ -359,7 +359,7 @@ let langs_of_scenario (scenario : scenario) : Canary_lang.lang list =
     General across projects — moved out of the tiny factory
     2026-07-08. *)
 let has_probe_manifestation (scenario : scenario) : bool =
-  match scenario.perturbation with
+  match scenario.mutation with
   | None -> false
   | Some { manifest = Unknown_gap; _ } -> false
   | Some _ -> true

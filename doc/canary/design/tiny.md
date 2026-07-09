@@ -52,14 +52,14 @@ SSOT §5 defines the 13 Bad scenarios (Bs.1..Bs.13) and
 
 Each Bad scenario has a `tiny_recipe`:
 
-- `perturbs : string list` — which files under `canary/examples/tiny/`
-  the perturbation touches (closed universe of ~15 files:
+- `mutates : string list` — which files under `canary/examples/tiny/`
+  the mutation touches (closed universe of ~15 files:
   `c/src/tiny.c`, `c/include/tiny.h`, `c/tiny.map`,
   `ocaml/tiny*.ml{,i}`, `ocaml/tiny_stubs.c`,
   `ocaml/tiny_helper/*.ml{,i}`,
   `python_cext/tiny_cext/{__init__.py, _native.c}`,
   `python_ctypes/tiny_ctypes/{__init__.py, _raw.py}`)
-- `perturbation : concrete_pert option` — either
+- `mutation : concrete_pert option` — either
   `C_patch <name>` / `Ml_patch <name>` (a diff to apply
   under `scenarios/patches/`) or `Soname_bump { from_so; to_so }`
 - `violates : contract_id list` — which surface-theory
@@ -74,7 +74,7 @@ Source: [`src/canary/projects/canary_project_tiny.ml`](../../src/canary/projects
 ```
 entry
   |> stores_of_entry ~stores : may override stores.lib_filename
-                               from recipe.perturbation
+                               from recipe.mutation
   |> { base_spec with expectation = expectation_of_entry entry }
 ```
 
@@ -127,14 +127,14 @@ scope these differently.
 ### 3.3 Store adjustment
 
 `stores_of_entry` derives `lib_filename` from
-`recipe.perturbation.Soname_bump { to_so }` by stripping the
+`recipe.mutation.Soname_bump { to_so }` by stripping the
 trailing minor version:
 
 ```
 to_so = "libtiny.so.2.0"  →  lib_filename = "libtiny.so.2"
 ```
 
-Other perturbations (patches) don't adjust stores.
+Other mutations (patches) don't adjust stores.
 
 ## 4. Cache layout
 
@@ -151,10 +151,10 @@ _cache/
 │   │   ├── cext/_native.cpython-*.so
 │   │   └── ocaml/examples/{probe_baseline.exe,
 │   │                       app_binding.exe, app_helper.exe}
-│   ├── source/                  snapshot of PERTURBABLE_SOURCES
+│   ├── source/                  snapshot of MUTABLE_SOURCES
 │   └── workspace/               materialised workspace
 └── <scenario>/
-    ├── inspect/<alias>.json     perturbed inspector outputs
+    ├── inspect/<alias>.json     mutated inspector outputs
     ├── confirm_ill.json         surface delta vs baseline
     ├── artifacts/, source/      snapshots
     └── workspace/               materialised workspace (consumed by canary)
@@ -213,7 +213,7 @@ kind). Header of `tiny list`:
 `20 derived cells, 5 filled, 15 empty`. The 5 filled cells
 contain the 13 Bs entries (several Bs entries can share a
 cell); the 15 empty cells are candidate flavor-1
-perturbations not yet authored (see §7.1).
+mutations not yet authored (see §7.1).
 
 **Two kinds of gap** to keep distinct:
 
@@ -230,7 +230,7 @@ perturbations not yet authored (see §7.1).
 
 Every scenario with a probe-observable manifestation
 derives its expectation from `recipe.violates +
-scenario.belongs_to + recipe.perturbation`. Zero name
+scenario.belongs_to + recipe.mutation`. Zero name
 dispatch, zero routing tables.
 
 ## 7. Wish-list
@@ -242,10 +242,10 @@ Near-term, tiny-focused. See
 
 `tiny list` shows 20 derived cells (Good × related
 artifact × applicable kind); 5 filled, 15 empty. Each empty
-cell is a candidate flavor-1 perturbation slot:
+cell is a candidate flavor-1 mutation slot:
 
-- Sc.3.OCaml, Sc.4.OCaml — app-level perturbations
-- Sc.5.OCaml, Sc.6.OCaml — helper-chain perturbations
+- Sc.3.OCaml, Sc.4.OCaml — app-level mutations
+- Sc.5.OCaml, Sc.6.OCaml — helper-chain mutations
 - Sc.2.Python (lib arm), Sc.4.Python — Python-side counterparts
 
 Filling them means authoring: (i) a patch file, (ii) an
@@ -261,7 +261,7 @@ mechanical filling in §7.1 become data-driven — the
 enumeration `derived_scenarios` directly emits runnable
 recipes.
 
-Blockers: how to parametrise a perturbation as "drop
+Blockers: how to parametrise a mutation as "drop
 symbol X from artifact Y" rather than a hand-authored diff.
 
 ### 7.3 Second mechanism axis — ctypes DFFI
@@ -282,7 +282,7 @@ Deferred; hardcoded SCAB per user 2026-07-06.
 
 Observation 2 in SSOT §5.1 flags Sc.3–Sc.6 as
 zero-bad-scenario stages. Whether assembly-time / run-time
-perturbations belong at Sc.3+ is open; either confirm they
+mutations belong at Sc.3+ is open; either confirm they
 don't or add scenarios that do. Overlaps §7.1 (empty cells
 are exactly these) but also a manuscript concern —
 `research/tiny.md` needs the answer for the paper's
@@ -293,7 +293,7 @@ completeness argument.
 Add packaging-error scenarios: opam/pip/apt repackaging
 mistakes, cross-PM SONAME drift. Required for Principle 4
 (cross-PM interop) to have a concrete witness. Blocker: a
-`Package` perturbation source (SSOT status §2 near-term).
+`Package` mutation source (SSOT status §2 near-term).
 
 ### 7.6 Contract catalogue extension
 

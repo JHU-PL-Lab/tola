@@ -2,15 +2,15 @@
 
     Each entry pairs a [Canary_scenario.scenario] (concept: id,
     name, description, actions, related_artifacts, optional
-    abstract perturbation) with a [tiny_recipe] (implementation:
+    abstract mutation) with a [tiny_recipe] (implementation:
     patch files, expected step outcomes for the tiny probes).
 
     Post-§9.3 Task 1 shape update:
-    - Scenario type unified (good = no perturbation; bad = has
-      perturbation). Field renamed [interested_artifacts] →
+    - Scenario type unified (good = no mutation; bad = has
+      mutation). Field renamed [interested_artifacts] →
       [related_artifacts].
     - Scenario carries [id] (Bs.N or Pc.N).
-    - The abstract perturbation on [Canary_scenario.scenario]
+    - The abstract mutation on [Canary_scenario.scenario]
       records target artifact / kind / manifest / detector — the
       annotations we can *reason* about generically. The tiny
       [tiny_recipe] still holds the concrete implementation
@@ -42,7 +42,7 @@ let string_of_outcome = function
   | Pass -> "pass"
   | Skip -> "skip"
 
-(** Build target a patch perturbation should rebuild before probes
+(** Build target a patch mutation should rebuild before probes
     run. Source patches under [c/] need a cmake rebuild; OCaml /
     Python source patches don't (canary rebuilds the binding itself). *)
 type rebuild_target =
@@ -54,7 +54,7 @@ type rebuild_target =
     - [Soname_bump] renames the shared object + rewrites its SONAME
       (patchelf or byte surgery).
     Positive-coverage scenarios carry [None]. *)
-type perturbation =
+type mutation =
   | Patch of { patch_file : string; rebuild : rebuild_target }
   | Soname_bump of { from_so : string; to_so : string }
 
@@ -63,8 +63,8 @@ type perturbation =
     [Canary_scenario.scenario] type because it's tiny-project
     machinery — other projects would have different recipes. *)
 type tiny_recipe = {
-  perturbs : string list;
-  perturbation : perturbation option;
+  mutates : string list;
+  mutation : mutation option;
   expected : (string * outcome) list;
   violates : Canary_compat.contract_id list;
 }
@@ -121,7 +121,7 @@ let arts_abi_cascade : Canary_basic.artifact_kind list =
 let arts_positive : Canary_basic.artifact_kind list =
   [ Source; Lib; a_ocaml; a_python; App ]
 
-(* ----- abstract-perturbation helper ----- *)
+(* ----- abstract-mutation helper ----- *)
 
 (* [pert] moved to Canary_scenario_util 2026-07-08. *)
 let pert = Canary_scenario_util.pert
@@ -132,7 +132,7 @@ let pert = Canary_scenario_util.pert
    ================================================================ *)
 
 (** Derive [belongs_to] from the entry id, post-language-split.
-    Sc.1 stays shared (7 native perturbations Bs.1..Bs.7).
+    Sc.1 stays shared (7 native mutations Bs.1..Bs.7).
     Sc.2 splits by language: OCaml binding-side (Bs.8, Bs.9,
     Bs.10, Bs.13) vs Python binding-side (Bs.11, Bs.12).
     Positive coverage points at the OCaml stages it verifies. *)
@@ -153,13 +153,13 @@ let belongs_to_of_id (id : string) : string list =
 let entries : entry list =
   let open Canary_compat in
   let open Canary_scenario in
-  let mk ~id ~name ~description ~arts ~perturbs ~concrete_pert
+  let mk ~id ~name ~description ~arts ~mutates ~concrete_pert
          ~scenario_pert ~expected ~violates =
     { scenario = { id; name; description; actions = acts_full;
                    related_artifacts = arts;
-                   perturbation = scenario_pert;
+                   mutation = scenario_pert;
                    belongs_to = belongs_to_of_id id };
-      recipe = { perturbs; perturbation = concrete_pert;
+      recipe = { mutates; mutation = concrete_pert;
                  expected; violates };
     }
   in
@@ -169,7 +169,7 @@ let entries : entry list =
       ~description:"Source patch renames tiny_sum -> tiny_total in C only; \
                     binding artifacts still expect tiny_sum."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/src/tiny.c" ]
+      ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(c_patch "symbol_missing")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
@@ -192,7 +192,7 @@ let entries : entry list =
                     The cstub calls tiny_sum(a, b) — only 2 args. c6 cmp_type \
                     catches the static mismatch."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/include/tiny.h"; "c/src/tiny.c" ]
+      ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
       ~concrete_pert:(c_patch "header_arity_bump")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
@@ -216,7 +216,7 @@ let entries : entry list =
                     satisfy the version tag at load time. c5 cmp_sym_version \
                     catches the mismatch."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/tiny.map" ]
+      ~mutates:[ "c/tiny.map" ]
       ~concrete_pert:(c_patch "symbol_version_floor")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
@@ -238,7 +238,7 @@ let entries : entry list =
                     binding NEEDED libtiny.so.1 has nothing to resolve against. \
                     Symbols themselves unchanged."
       ~arts:arts_abi_cascade
-      ~perturbs:[ "c/build/libtiny.so.1" ]
+      ~mutates:[ "c/build/libtiny.so.1" ]
       ~concrete_pert:(Some (Soname_bump { from_so = "libtiny.so.1";
                                            to_so = "libtiny.so.2.0" }))
       ~scenario_pert:(pert ~target:Canary_basic.Lib
@@ -261,7 +261,7 @@ let entries : entry list =
                     (int, int). Symbol names unchanged; no static comparator \
                     catches this today."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/src/tiny.c" ]
+      ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(c_patch "type_wrong")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
@@ -283,7 +283,7 @@ let entries : entry list =
                     all succeed; no static comparator catches the missing \
                     wrapper (c8 cmp_api_faithfulness doesn't exist yet)."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/include/tiny.h"; "c/src/tiny.c" ]
+      ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
       ~concrete_pert:(c_patch "api_faithful")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:(On_artifact Source)
@@ -299,14 +299,14 @@ let entries : entry list =
         "cmp_api_complete_ctypes", Pass;
       ];
 
-    (* Bs.7 — behavior-flavoured perturbation *)
+    (* Bs.7 — behavior-flavoured mutation *)
     mk ~id:"Bs.7" ~name:"behavior_silent"
       ~description:"tiny_sum body computes a-b-tiny_offset instead of \
                     a+b+tiny_offset. Every static contract still holds; only \
                     the running probe notices. Canonical demonstration that \
                     c3 cmp_behavior is non-redundant."
       ~arts:arts_native_cascade
-      ~perturbs:[ "c/src/tiny.c" ]
+      ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(c_patch "behavior_silent")
       ~scenario_pert:(pert ~target:Canary_basic.Source
                         ~kind:On_behavior
@@ -328,7 +328,7 @@ let entries : entry list =
                     delegating. Stub-facing layer correct; intra-binding \
                     repack wrong; c7 cmp_api_repack doesn't exist yet."
       ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny.ml" ]
+      ~mutates:[ "ocaml/tiny.ml" ]
       ~concrete_pert:(ml_patch "api_repack")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
@@ -351,7 +351,7 @@ let entries : entry list =
                     consumer that references Tiny.sum fails at compile time. \
                     c2 cmp_api_completeness statically catches the missing val."
       ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny.mli" ]
+      ~mutates:[ "ocaml/tiny.mli" ]
       ~concrete_pert:(ml_patch "api_complete")
       ~scenario_pert:(pert ~target:a_ocaml
                         ~kind:(On_artifact a_ocaml)
@@ -374,7 +374,7 @@ let entries : entry list =
                     symbol_missing. On strict linkers ocaml_build fails; on \
                     permissive linkers only c1 catches it."
       ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
+      ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
       ~concrete_pert:(ml_patch "symbol_orphan")
       ~scenario_pert:(pert ~target:a_ocaml
@@ -397,7 +397,7 @@ let entries : entry list =
                     __init__.py) reverses arguments on diff before \
                     delegating. Same shape as api_repack but on the Python side."
       ~arts:arts_python_only
-      ~perturbs:[ "python_cext/tiny_cext/__init__.py";
+      ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
       ~concrete_pert:(ml_patch "api_repack_python")
       ~scenario_pert:(pert ~target:a_python
@@ -420,7 +420,7 @@ let entries : entry list =
                     raise AttributeError at runtime; c2 cmp_api_completeness \
                     catches it statically via watchlist {sum, diff, offset}."
       ~arts:arts_python_only
-      ~perturbs:[ "python_cext/tiny_cext/__init__.py";
+      ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
       ~concrete_pert:(ml_patch "api_complete_python")
       ~scenario_pert:(pert ~target:a_python
@@ -445,7 +445,7 @@ let entries : entry list =
                     probes pass; c7 cmp_api_repack catches via \
                     bo1.externals \\ bo4.vals."
       ~arts:arts_ocaml_only
-      ~perturbs:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
+      ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
       ~concrete_pert:(ml_patch "api_repack_stub_orphan")
       ~scenario_pert:(pert ~target:a_ocaml
@@ -466,9 +466,9 @@ let entries : entry list =
     mk ~id:"Pc.1" ~name:"app_over_binding_ocaml"
       ~description:"Positive-coverage: an app linking directly against the \
                     Tiny OCaml binding builds and runs; transitive dependency \
-                    on libtiny.so resolves. No perturbation."
+                    on libtiny.so resolves. No mutation."
       ~arts:arts_positive
-      ~perturbs:[]
+      ~mutates:[]
       ~concrete_pert:None
       ~scenario_pert:None
       ~violates:[]
@@ -486,9 +486,9 @@ let entries : entry list =
       ~description:"Positive-coverage: longest-interesting chain — app -> \
                     tiny_helper -> Tiny binding -> libtiny.so. Confirms \
                     intra-binding repacking composes across a downstream \
-                    library layer. No perturbation."
+                    library layer. No mutation."
       ~arts:arts_positive
-      ~perturbs:[]
+      ~mutates:[]
       ~concrete_pert:None
       ~scenario_pert:None
       ~violates:[]
@@ -524,7 +524,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    exports). Shared across OCaml and Python.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Source; Canary_basic.Lib ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.1" ] };
 
   (* OCaml side *)
@@ -533,14 +533,14 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    libtiny_stubs.a) via cstubs against libtiny.so.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Lib; a_ocaml ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.2.OCaml" ] };
   { id = "Sc.3.OCaml"; name = "build_app_with_binding";
     description = "Tiny: build probe_baseline.exe / app_binding.exe \
                    linking directly against the tiny OCaml binding.";
     actions = acts_full;
     related_artifacts = [ a_ocaml; Canary_basic.App ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.3.OCaml" ] };
   { id = "Sc.4.OCaml"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline / app_binding; loader \
@@ -548,7 +548,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.4.OCaml" ] };
   { id = "Sc.5.OCaml"; name = "build_app_helper";
     description = "Tiny: build tiny_helper + app_helper.exe — app \
@@ -556,7 +556,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    over the OCaml binding.";
     actions = acts_full;
     related_artifacts = [ a_ocaml; Canary_basic.App ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.5.OCaml" ] };
   { id = "Sc.6.OCaml"; name = "run_app_helper";
     description = "Tiny: exec app_helper.exe — full chain runs \
@@ -564,7 +564,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.6.OCaml" ] };
 
   (* Python side (cext under SCAB; ctypes uses DFFI, mechanism
@@ -575,7 +575,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    _native.cpython-*.so) against libtiny.so.";
     actions = acts_full;
     related_artifacts = [ Canary_basic.Lib; a_python ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.2.Python" ] };
   { id = "Sc.4.Python"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline.py for the cext path \
@@ -587,7 +587,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     actions = acts_full;
     related_artifacts =
       [ a_python; Canary_basic.Lib; Canary_basic.App ];
-    perturbation = None;
+    mutation = None;
     belongs_to = [ "Sc.4.Python" ] };
 ]
 
@@ -599,7 +599,7 @@ let all_scenarios : Canary_scenario.scenario list =
 
 (** Derived scenarios — enumerate all (Good × artifact ×
     applicable-kind) cells over tiny's good scenarios. Each
-    cell is a candidate perturbation; concrete Bs entries fill
+    cell is a candidate mutation; concrete Bs entries fill
     a subset of these cells. *)
 let derived_scenarios : Canary_scenario.scenario list =
   Canary_scenario.derive_scenarios tiny_good_scenarios
@@ -636,7 +636,7 @@ let lang_of_id id =
 let pad_id id = Printf.sprintf "%-11s" id
 let pad_name name = Printf.sprintf "%-26s" name
 
-(** Print one Good scenario with its full perturbation-cell
+(** Print one Good scenario with its full mutation-cell
     grid (from [derived_scenarios]) and the positive coverage
     (Pc entries). Under each cell (Good × target × kind):
     - "— empty" if no Bs entry fills the cell (a design-space
@@ -663,7 +663,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
   let cells_here = List.filter derived_scenarios ~f:(fun d ->
     List.mem d.belongs_to good.id ~equal:String.equal) in
   let bads = List.filter entries ~f:(fun e ->
-    belongs_to_here e && Option.is_some e.scenario.perturbation) in
+    belongs_to_here e && Option.is_some e.scenario.mutation) in
   let n_filled = List.count cells_here ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
   let n_empty = List.length cells_here - n_filled in
@@ -683,7 +683,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
        else
          List.iteri matching ~f:(fun i e ->
            let sc = e.scenario in
-           let p = Option.value_exn sc.perturbation in
+           let p = Option.value_exn sc.mutation in
            let det = detector_short p.detector in
            let prefix = if i = 0 then tgt else "" in
            Stdlib.print_endline
@@ -691,7 +691,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
                 prefix (pad_id sc.id) (pad_name sc.name) det)))
    end);
   let pcs = List.filter entries ~f:(fun e ->
-    belongs_to_here e && Option.is_none e.scenario.perturbation) in
+    belongs_to_here e && Option.is_none e.scenario.mutation) in
   if not (List.is_empty pcs) then begin
     Stdlib.print_endline
       (Printf.sprintf "    verified by (%d):" (List.length pcs));
@@ -710,13 +710,13 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
 
 (** Show-list-but-no-run — the enumeration surface. Prints all
     tiny scenarios grouped by language (Shared / OCaml / Python),
-    with each Good scenario followed by its perturbations (bad
+    with each Good scenario followed by its mutations (bad
     scenarios) and verifiers (positive coverage).
 
     Language-as-outer-loop reflects the user's design intent:
     scenarios are defined per (mechanism × language × stage),
     and grouping by language makes the mechanism-specific
-    perturbation enumeration read cleanly. Sc.1 stays shared
+    mutation enumeration read cleanly. Sc.1 stays shared
     (native lib is language-agnostic under the SCAB assumption).
 
     See SSOT §5.1 for the full detail table. *)
@@ -726,10 +726,10 @@ let print_list () =
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
   in
   let bads = List.filter entries ~f:(fun e ->
-    Option.is_some e.scenario.perturbation) in
+    Option.is_some e.scenario.mutation) in
   let n_bad = List.length bads in
   let n_pos = List.count entries ~f:(fun e ->
-    Option.is_none e.scenario.perturbation) in
+    Option.is_none e.scenario.mutation) in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
@@ -781,7 +781,7 @@ let json_of_entry (e : entry) : Yojson.Basic.t =
     "description", `String e.scenario.description;
     "violates", `List (List.map e.recipe.violates
                          ~f:(fun c -> `String (violates_label c)));
-    "perturbs", `List (List.map e.recipe.perturbs
+    "mutates", `List (List.map e.recipe.mutates
                          ~f:(fun p -> `String p));
     "outcomes",
       `Assoc (List.map e.recipe.expected
@@ -804,7 +804,7 @@ let print_expected (name : string) : unit =
 
    Runs at module load. Catches at start-up:
    - unknown Sc.N in a manifest ([Definite "Sc.4"] typo, etc.);
-   - perturbation.target that isn't in the scenario's
+   - mutation.target that isn't in the scenario's
      related_artifacts.
 
    Failure here means the entries above are structurally wrong;
@@ -908,7 +908,7 @@ let tiny_api_source : Canary_artifact_api.t =
     [doc/canary/research/tiny.md] (or a wrapper script), not here.
 
     - [base_project_spec]: positive coverage. Every step is expected to
-      succeed (Expect_success). Corresponds to the unperturbed tiny
+      succeed (Expect_success). Corresponds to the unmutated tiny
       build / harness scenarios [e12 baseline_canary] / [e13
       baseline_unbroken].
     - [lib_broken_project_spec]: at probe_binding_ocaml, expect c1
@@ -950,7 +950,7 @@ let tiny_api_source : Canary_artifact_api.t =
 
     For today's three variants every store points into the same
     materialized workspace (via [stores_of_workspace]). Cross-product
-    variants — e.g. baseline source + perturbed lib — would construct
+    variants — e.g. baseline source + mutated lib — would construct
     stores with paths from different workspaces. Cross-products are
     parked under Phase 14c in [plan.md]; this layout opens the door. *)
 type tiny_stores = {
@@ -994,7 +994,7 @@ let make_base_project_spec
        verifies the cached artifact rather than re-running cmake — the
        workspace deliberately omits CMakeCache.txt because it encodes
        the live tree's absolute source path. This matches the long-term
-       "store provides artifacts" model: a perturbed-lib variant just
+       "store provides artifacts" model: a mutated-lib variant just
        points at a different store. *)
     configure = Some (fun ~output_dir ~variant_key ->
       Printf.sprintf
@@ -1014,7 +1014,7 @@ let make_base_project_spec
        source files (Phase 15.5a). Runs after Configure (the default
        scan_sources_after), so it's available to any downstream step
        — critically including Build_binding_<lang>, which is where c6's
-       type-mismatch perturbations cause compile failure. *)
+       type-mismatch mutations cause compile failure. *)
     scan_sources = Some (fun ~output_dir ~variant_key ->
       let mk base layer src =
         let out = Canary_basic.filename ~variant_key ~base ~ext:"json" in
@@ -1280,7 +1280,7 @@ let project_spec = base_project_spec
     {[
       entry
         |> stores_of_entry ~stores : may override stores.lib_filename
-                                     from recipe.perturbation
+                                     from recipe.mutation
         |> { base with expectation = expectation_of_entry entry }
     ]}
 
@@ -1337,7 +1337,7 @@ let compat_inputs_of_contract ~(lang : Canary_lang.lang)
        ]
      | _ -> None)
   | CC.C6 ->
-    (* Only OCaml binding rebuilds against the perturbed header;
+    (* Only OCaml binding rebuilds against the mutated header;
        cstub compile fails. Python cext cached — didn't see the
        header change. c6 fires at Build (Binding OCaml) primarily
        and cascades to Probe when dune rebuilds the same cstub. *)
@@ -1383,7 +1383,7 @@ let expectation_of_entry (entry : entry)
       when violates_c6
         && List.mem scenario_langs lang ~equal:Poly.equal ->
       (* c6 uniquely fires at Build (cstub compile fails
-         against perturbed header) in addition to Probe. *)
+         against mutated header) in addition to Probe. *)
       (match compat_inputs_of_contract ~lang CC.C6 with
        | Some inputs ->
          Expect_compat_failure { inputs; version_info = None }
@@ -1405,7 +1405,7 @@ let expectation_of_entry (entry : entry)
     | _ -> Expect_success
 
 (** Derive tiny_stores adjustments from the recipe's concrete
-    perturbation. Today only Soname_bump needs it. *)
+    mutation. Today only Soname_bump needs it. *)
 let stores_of_entry
     ~(stores : tiny_stores)
     (entry : entry)
@@ -1423,7 +1423,7 @@ let stores_of_entry
       String.concat ~sep:"." (List.rev rest_rev)
     | _ -> s
   in
-  match entry.recipe.perturbation with
+  match entry.recipe.mutation with
   | Some (Soname_bump { to_so; _ }) ->
     { stores with lib_filename = strip_trailing_minor to_so }
   | _ -> stores
@@ -1431,11 +1431,11 @@ let stores_of_entry
 (** Build the project_spec for a scenario. Uniform code path:
     base spec with expectation derived from the entry. *)
 let project_spec_of_entry
-    ~(perturbed_stores : tiny_stores)
+    ~(mutated_stores : tiny_stores)
     (entry : entry)
   : Canary_step_builder.project_spec
   =
-  let stores = stores_of_entry ~stores:perturbed_stores entry in
+  let stores = stores_of_entry ~stores:mutated_stores entry in
   { (make_base_project_spec ~stores ()) with
     expectation = expectation_of_entry entry;
   }
@@ -1443,13 +1443,13 @@ let project_spec_of_entry
 (** Convenience: look up entry by scenario name and build
     the spec. *)
 let project_spec_of_name
-    ~(perturbed_stores : tiny_stores)
+    ~(mutated_stores : tiny_stores)
     (name : string)
   : Canary_step_builder.project_spec
   =
   let name = name_of_string name in
   match find_by_name name with
-  | Some entry -> project_spec_of_entry ~perturbed_stores entry
+  | Some entry -> project_spec_of_entry ~mutated_stores entry
   | None ->
     Stdlib.failwith
       (Printf.sprintf

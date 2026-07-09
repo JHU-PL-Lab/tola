@@ -23,7 +23,7 @@ flavor 2 = **cross-artifact mismatch**.
 
 ## Flavor 1 — reuse across Good scenarios
 
-Flavor 1 perturbations follow a small template family:
+Flavor 1 mutations follow a small template family:
 
 - *drop a field* — remove a symbol from lib source; remove a
   `val` from mli; remove an attribute from `__init__.py`
@@ -39,17 +39,17 @@ empty — the empty ones are candidate flavor-1 slots.
 
 **Reuse pattern in the code**:
 
-- Same `(perturbation kind, target artifact)` shape reused
+- Same `(mutation kind, target artifact)` shape reused
   across different Good scenarios by picking different
   cells.
-- Same perturbed store consumed as input by *downstream*
+- Same mutated store consumed as input by *downstream*
   Good scenarios (a lib missing symbol X cascades into
   build_binding's build failure, into build_app_with_binding's
   probe failure, and so on).
 
-**The reuse gap today**: perturbations are hand-written
+**The reuse gap today**: mutations are hand-written
 patch files (`c/src/tiny.c`) naming specific symbols.
-Parametric perturbations — "drop symbol `<X>` from artifact
+Parametric mutations — "drop symbol `<X>` from artifact
 `<A>`" as data, generating the patch on demand — is the
 last unresolved axis. SSOT §9.3 Task 1.6 backlog item 2
 (`tiny_recipe synthesis from an abstract cell`) is this
@@ -108,11 +108,11 @@ categorising real-world binding failures. To move toward it:
    Linux ELF `SONAME`; Windows DLL exports; C++ symbol
    mangling variants. c4 assumes ELF SONAME today.
 
-5. **Config-time perturbations**. cmake `-DHAVE_FOO=0` vs
+5. **Config-time mutations**. cmake `-DHAVE_FOO=0` vs
    `-DHAVE_FOO=1` at build time exposes different symbol
    sets. Not really a *contract* — a store-synthesis
    parameter that changes what artifact is even built. Might
-   be modelled as a perturbation flavour parallel to
+   be modelled as a mutation flavour parallel to
    `Patch` / `Soname_bump`.
 
 6. **Behavioural divergence under upgrades**. Same C API,

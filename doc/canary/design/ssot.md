@@ -157,7 +157,7 @@ sole producer as of Phase E; the legacy Python harness
 
 Columns split into two:
 - **Physical facts** (constructed setup): `ID`, `Good scenario`,
-  `Perturbation`.
+  `Mutation`.
 - **Secondary / derived**: `Name` (= agreement label — what's
   *expected* in the good scenario, named after what gets
   violated), `Manifests` (where the failure first surfaces
@@ -171,22 +171,22 @@ Positive-coverage scenarios (`app_over_binding_ocaml`,
 `app_over_helper_ocaml`) live in the tiny code registry
 (`Canary_tiny_scenario.entries`) but are **not** listed here —
 they're constructions that verify a good-scenario execution
-without perturbation, not bad scenarios. Attribution under §4 as
+without mutation, not bad scenarios. Attribution under §4 as
 "verified by" entries is a future cleanup.
 
 Ordering convention: rows grouped by Good scenario, then by
-perturbation similarity. Renumbering when scenarios reorder is
+mutation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
 
 **Code correspondence.** The 13 Bs + 2 Pc entries live at
 `Canary_tiny_scenario.entries`. Each carries a `belongs_to`
 field naming the good scenario(s) it relates to — for Bs.N this
-is the `perturbed_at` Sc.N; for Pc.N this is the Sc.N(s) it
+is the `mutated_at` Sc.N; for Pc.N this is the Sc.N(s) it
 verifies. `Canary_tiny_scenario.all_scenarios` unions the 6
 tiny good + 13 Bs + 2 Pc = **21 scenarios** as the reference
 list for the `derive_entries` experiment (§9.3 backlog).
 
-| ID    | Good scenario | Perturbation                      | Name                     | Manifests                         | Detector today                                           |
+| ID    | Good scenario | Mutation                      | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |
 | Bs.1  | Sc.1          | native_source (c/src)             | `symbol_missing`         | Sc.4 (probe fail)                 | c1 cmp_symbol                                            |
 | Bs.2  | Sc.1          | native_source (c/{include,src})   | `header_arity_bump`      | Sc.2 (binding build fail)         | c6 cmp_type                                              |
@@ -211,7 +211,7 @@ list for the `derive_entries` experiment (§9.3 backlog).
    catalogue.** Sc.1 and Sc.2 hold everything — the stages where
    sources are authored. Sc.3+ are use-and-run stages; badness
    propagates *through* them but the *construction*
-   (perturbation) sits at Sc.1/Sc.2. Whether Sc.3–Sc.6 admit
+   (mutation) sits at Sc.1/Sc.2. Whether Sc.3–Sc.6 admit
    their own bad scenarios (assembly-time or run-time patches) is
    an open question.
 3. **Two detection gaps.** Bs.6 `api_faithful` (c8 not wired) and
@@ -220,7 +220,7 @@ list for the `derive_entries` experiment (§9.3 backlog).
    these automatically as "no-detector" cells.
 4. **The two columns `Good scenario` and `Manifests` are
    perpendicular perspectives on each row.** `Good scenario`
-   locates *where the construction happens* (perturbation
+   locates *where the construction happens* (mutation
    perspective); `Manifests` locates *where the failure surfaces
    downstream* (manifestation perspective). The latter recovers
    the earlier "dual-view" idea (§7 Principle 3). Their alignment
@@ -232,7 +232,7 @@ list for the `derive_entries` experiment (§9.3 backlog).
 Both good scenarios (§4) and bad scenarios (§5.1) here are
 **patterns** — abstract descriptions of a construction. A
 concrete project (tiny today, or a future z3/llvm equivalent)
-provides the **instances**: the actual perturbation files,
+provides the **instances**: the actual mutation files,
 sandbox paths, build commands, expected outcomes.
 
 The code split reflects this:
@@ -294,7 +294,7 @@ Deferred code sweep; agreement first, then flush.
 2. ✓ **Task 1** — scenario-to-action refactor. Landed in
    1111ad6 (initial split: `Canary_scenario.scenario` + tiny
    `entry = { scenario; recipe }`) and refined in 13df74e
-   (unified shape: added `id`, `perturbation option` with
+   (unified shape: added `id`, `mutation option` with
    target / kind / manifest / detector; renamed
    `interested_artifacts` → `related_artifacts`; populated
    Bs.1–Bs.13 + Pc.1–Pc.2). Existing `rule` type reused —
@@ -302,7 +302,7 @@ Deferred code sweep; agreement first, then flush.
    agreement_claims field, deriving related_artifacts from
    actions (both deferred to §9.3 backlog).
 3. **Task 2** — implementation-side refactor: unify
-   `tiny_recipe` with `scenario.perturbation` so the two
+   `tiny_recipe` with `scenario.mutation` so the two
    layers stop duplicating info; project-hookable interface so
    z3/llvm/sqlite can supply their own recipes.
 4. **Task 3** — deferred term-rename sweep (rule → action,
@@ -354,11 +354,11 @@ Captured for later; surface here so they're visible per-section.
    face of Ar.k. Current draft is not fully consistent (Sf.1
    pointing at native_source while §2 has Ar.0 = native_source) —
    resolving this is part of §8.
-3. **Good scenarios × perturbation matrix = bad scenarios.**
+3. **Good scenarios × mutation matrix = bad scenarios.**
    Bad scenarios are the projection of a scenario's interested
    entities (artifacts) through the agreement catalogue —
    computed, not maintained. Dual view (artifact-indexed
-   perturbations) is a checkable alignment invariant, postponed
+   mutations) is a checkable alignment invariant, postponed
    to a follow-up after §9.3 scenario remodel lands.
 4. **Tiny does not exercise packaging errors.** Bad-scenario
    coverage stops at the build/link/runtime layer. Packaging
@@ -375,7 +375,7 @@ Captured for later; surface here so they're visible per-section.
    flips result. Only discoverable empirically.
 6. **Interested vs uninterested entities.** A scenario models
    its interested entities (artifacts explicitly on the
-   perturbation/violation path). Uninterested entities exist and
+   mutation/violation path). Uninterested entities exist and
    affect outcomes but aren't enumerated in the SSOT. Boundary
    is empirical (we add to the "interested" set when a
    real-world case forces it).

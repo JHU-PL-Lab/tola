@@ -32,17 +32,17 @@ Ordered rough priority.
   covered by c1..c8; propose new contracts. Foundation for
   tiny-as-bug-categorisation. Explicitly after tiny wish-list.
 
-- **`Package` perturbation source.** SSOT §5 `pkg_*` roadmap
+- **`Package` mutation source.** SSOT §5 `pkg_*` roadmap
   needs either a `Package` case on `artifact_kind` or a new
-  `perturbation_kind` variant. Deferred until a project needs
+  `mutation_kind` variant. Deferred until a project needs
   it — PyTorch Tier-1 canary target
   (`design/new_project.md`) is the likely trigger.
 
-- **Task 2 — recipe / perturbation integration.** Unify
-  `tiny_recipe.perturbation` with `scenario.perturbation`;
+- **Task 2 — recipe / mutation integration.** Unify
+  `tiny_recipe.mutation` with `scenario.mutation`;
   project-hookable recipe interface so z3/llvm/sqlite can
   supply their own. Tiny's factory already reads
-  `recipe.perturbation` for store synthesis; the
+  `recipe.mutation` for store synthesis; the
   z3/llvm/sqlite side has no analogue yet.
 
 - **Re-do expectation as per-step contract outcome.**
@@ -88,7 +88,7 @@ from the old §8 to keep references stable.
    renames → Sf.X aggregates.
 6. **Sf.X ↔ Ar.X alignment (Principle 2).** Renumber Sf so
    Sf.k is the surface of Ar.k.
-7. ~~**Perturbation matrix ↔ bad scenarios (Principle 3).**~~
+7. ~~**Mutation matrix ↔ bad scenarios (Principle 3).**~~
    Doc half ✓ SSOT §5.1. Code half ✓ Task 1.5's
    `derive_scenarios`. Closed 2026-07-07.
 8. **Tiny packaging coverage** — see
@@ -101,16 +101,16 @@ from the old §8 to keep references stable.
 Larger design shifts. None active; awareness only.
 
 - **One-time spec covering one scenario across both engines.**
-  The current shape has two engines — tiny-based perturbation
+  The current shape has two engines — tiny-based mutation
   (concrete trace per agreement) and canary-based enumeration
   (abstract trace across variants). Task 1.5 delivered the
   unified `Canary_scenario.scenario` shape used by both.
-  What remains: making perturbation record itself drive both
+  What remains: making mutation record itself drive both
   sides symmetrically (today the tiny factory reads
-  `recipe.perturbation` but z3/llvm variants don't have a
+  `recipe.mutation` but z3/llvm variants don't have a
   parallel).
 
-- **Dual-view artifact index.** Artifact-centric perturbation
+- **Dual-view artifact index.** Artifact-centric mutation
   list, direct + inherited. Complement to the scenario-centric
   `tiny list`.
 

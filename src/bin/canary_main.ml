@@ -163,14 +163,14 @@ let action_cmd =
         Canary_tiny_workspace.run_prepare ~name
       end
     end;
-    let perturbed_stores =
+    let mutated_stores =
       Canary_tiny_scenario.stores_of_workspace
         ~workspace_root:workspace
         ()
     in
     let spec =
       Canary_tiny_scenario.project_spec_of_name
-        ~perturbed_stores name
+        ~mutated_stores name
       |> with_cli_disabled cli_disabled
     in
     let project = "tiny/" ^ name in
@@ -749,7 +749,7 @@ let tiny_scenarios_prepare_cmd =
   in
   Cmd.v
     (Cmd.info "prepare"
-       ~doc:"Apply scenario perturbation in a sandbox, build, inspect, \
+       ~doc:"Apply scenario mutation in a sandbox, build, inspect, \
              compute surface delta vs baseline, materialize workspace.")
     Term.(const (fun n () -> Canary_tiny_workspace.run_prepare ~name:n) $ name $ const ())
 

@@ -1,5 +1,5 @@
 (** Tiny workspace materialisation — both baseline (clean
-    reference) and prepare (per-scenario perturbed sandbox).
+    reference) and prepare (per-scenario mutated sandbox).
     Merged from the former [Canary_tiny_baseline] +
     [Canary_tiny_prepare] modules 2026-07-08.
 
@@ -7,7 +7,7 @@
     - {!run_baseline} builds tiny cleanly from the live tree,
       inspects, snapshots the cext, and materialises
       [_cache/baseline/workspace/].
-    - {!run_prepare} applies one scenario's perturbation in a
+    - {!run_prepare} applies one scenario's mutation in a
       hermetic sandbox ([_cache/<name>/sandbox/]), builds,
       inspects, computes surface deltas vs baseline, writes
       [confirm_ill.json], and materialises
@@ -521,7 +521,7 @@ let run_baseline () : unit =
   info "snapshot workspace (%d files)" n
 
 (* ================================================================== *)
-(* {1 Prepare — perturbed sandbox per scenario}                       *)
+(* {1 Prepare — mutated sandbox per scenario}                       *)
 (* ================================================================== *)
 
 (** Prepare-side log helpers use a "prepare:" prefix so output is
@@ -578,7 +578,7 @@ let install_baseline_cext ~sandbox : bool =
     = 0
   end
 
-(* ---------- perturbation application ---------- *)
+(* ---------- mutation application ---------- *)
 
 let apply_patch ~sandbox ~patch_file : bool =
   let full_patch = patches_dir ^ "/" ^ patch_file in
@@ -661,14 +661,14 @@ let soname_of (j : Yojson.Basic.t) : string option =
 
 let surface_delta
       (baseline : Yojson.Basic.t option)
-      (perturbed : Yojson.Basic.t option)
+      (mutated : Yojson.Basic.t option)
     : Yojson.Basic.t option =
-  match baseline, perturbed with
+  match baseline, mutated with
   | None, None -> Some (`Assoc [ "status", `String "both_absent" ])
   | None, Some p ->
-    Some (`Assoc [ "status", `String "baseline_absent"; "perturbed", p ])
+    Some (`Assoc [ "status", `String "baseline_absent"; "mutated", p ])
   | Some _, None ->
-    Some (`Assoc [ "status", `String "perturbed_absent" ])
+    Some (`Assoc [ "status", `String "mutated_absent" ])
   | Some b, Some p ->
     let field_deltas =
       List.filter_map ["symbols"; "requires"; "vals"; "attrs"; "modules"]
@@ -683,7 +683,7 @@ let surface_delta
           | Some s -> `String s | None -> `Null in
         Some ("soname",
               `Assoc [ "baseline",  opt_to_json bs;
-                       "perturbed", opt_to_json ps ])
+                       "mutated", opt_to_json ps ])
     in
     let needed_delta = field_diff elf_b elf_p "needed" in
     let all = field_deltas
@@ -704,12 +704,12 @@ let confirm_of
   let recipe = entry.recipe in
   let violates_json =
     `List (List.map recipe.violates ~f:(fun c -> `String (violates_label c))) in
-  let perturbs_json =
-    `List (List.map recipe.perturbs ~f:(fun s -> `String s)) in
+  let mutates_json =
+    `List (List.map recipe.mutates ~f:(fun s -> `String s)) in
   `Assoc [
     "scenario",    `String scenario.name;
     "description", `String scenario.description;
-    "perturbs",    perturbs_json;
+    "mutates",    mutates_json;
     "violates",    violates_json;
     "build",       build_status;
     "deltas",      `Assoc deltas;
@@ -762,7 +762,7 @@ let materialize_sandbox_workspace ~(sandbox : string) ~(target : string) : int =
 
 let bool_json b = `String (if b then "ok" else "fail")
 
-(** Prepare one scenario: sandbox setup, apply perturbation, build,
+(** Prepare one scenario: sandbox setup, apply mutation, build,
     run inspectors, compute deltas, write [confirm_ill.json],
     materialise workspace. *)
 let run_prepare ~(name : string) : unit =
@@ -783,7 +783,7 @@ let run_prepare ~(name : string) : unit =
   prep_info "%s: install baseline cext -> sandbox" name;
   if not (install_baseline_cext ~sandbox) then
     prep_fail "baseline cext install failed";
-  (match recipe.perturbation with
+  (match recipe.mutation with
    | Some (Patch { patch_file; _ }) ->
      prep_info "%s: apply patch %s" name patch_file;
      if not (apply_patch ~sandbox ~patch_file) then
@@ -792,7 +792,7 @@ let run_prepare ~(name : string) : unit =
   let paths = sandbox_paths ~sandbox in
   let native_ok = build_c_lib ~paths () in
   let ocaml_ok  = if native_ok then build_ocaml_binding ~paths () else false in
-  (match recipe.perturbation with
+  (match recipe.mutation with
    | Some (Soname_bump { from_so; to_so }) ->
      prep_info "%s: apply soname bump %s -> %s" name from_so to_so;
      let _ = apply_soname_bump ~sandbox ~from_so ~to_so in ()
@@ -803,7 +803,7 @@ let run_prepare ~(name : string) : unit =
   ] in
   mkdir_p inspect_dir;
   prep_info "%s: run inspectors" name;
-  let perturbed : (string * Yojson.Basic.t option) list =
+  let mutated : (string * Yojson.Basic.t option) list =
     List.map (inspectors ~paths) ~f:(fun (alias, fn) ->
       let j = fn () in
       (match j with
@@ -819,7 +819,7 @@ let run_prepare ~(name : string) : unit =
     else None
   in
   let deltas =
-    List.filter_map perturbed ~f:(fun (alias, p) ->
+    List.filter_map mutated ~f:(fun (alias, p) ->
       match surface_delta (baseline_of alias) p with
       | Some d -> Some (alias, d)
       | None -> None)
