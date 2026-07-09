@@ -224,7 +224,7 @@ let render_opam_in ~tola_root =
   in
   write_file (opam_in_path ~tola_root) rendered
 
-(* ── Action steps (derived from script_spec) ── *)
+(* ── Action steps (derived from project_spec) ── *)
 
 (* Resolve the native lib path based on whether we built it or fetched it.
    build tree: {build}/libz3.so  (or .dylib)
@@ -253,11 +253,11 @@ test -d "$BINDING_DIR"|}]
 BINDING_DIR=$(ocamlfind query z3 2>/dev/null)
 test -d "$BINDING_DIR"|}
 
-let mk_script_spec ~source
+let mk_project_spec ~source
     ?(binding_configs = [ Ocaml_config z3_ocaml_config; z3_python_config ])
     ?(tola_root = Unix.getcwd ())
     ?(cmake_build_binding = source.has_build_binding) distro :
-    Canary_step_builder.script_spec =
+    Canary_step_builder.project_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -287,7 +287,7 @@ let mk_script_spec ~source
       | Ocaml_config c -> Some c
       | Python_config _ -> None)
     |> Option.value_exn
-         ~message:"z3 mk_script_spec: no Ocaml_config in binding_configs"
+         ~message:"z3 mk_project_spec: no Ocaml_config in binding_configs"
   in
   let example = tola_root ^ "/" ^ ocaml_tc.ocaml.example_file in
   let target = ocaml_tc.ocaml.example_target in
@@ -299,7 +299,7 @@ let mk_script_spec ~source
     binding_dir_cmd_of_source ~has_build_binding:source.has_build_binding ~build
   in
   {
-    Canary_step_builder.empty_script_spec with
+    Canary_step_builder.empty_project_spec with
     api_source = source.api_source;
     (* Skip fetch_source when opam will handle source fetching (pack_binding remote flow) *)
     fetch_source =
@@ -560,7 +560,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       (fun rule _loc ->
         let api =
           Option.value_exn source.api_source
-            ~message:"z3 mk_script_spec: api_source not set"
+            ~message:"z3 mk_project_spec: api_source not set"
         in
         let warn =
           if not source.has_build_binding then

@@ -41,4 +41,4 @@ let decl : Canary_pattern_a.t = {
   ocaml_module_watchlist = [ "Ssl"; "Ssl_threads" ];
 }
 
-let script_spec = Canary_pattern_a.script_spec decl
+let project_spec = Canary_pattern_a.project_spec decl

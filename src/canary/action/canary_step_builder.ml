@@ -1,7 +1,7 @@
 (** [Canary_runner] — the action-graph runner.
 
     The {i second} of the two main action-layer files. Takes the
-    project's {!script_spec} (per-rule shell commands + api_source +
+    project's {!project_spec} (per-rule shell commands + api_source +
     expectations), translates the action-graph schema in
     {!Canary_action} into concrete [action_step]s via {!derive_steps},
     and executes them with {!run_step} / {!run_graph}.
@@ -11,7 +11,7 @@
     (rules + pools), [Canary_runner] holds the execution.
 
     Holds:
-    - [type script_spec] + [empty_script_spec] + [no_source]: the
+    - [type project_spec] + [empty_project_spec] + [no_source]: the
       per-rule contract every project fills in.
     - [run_step], [run_graph], [merge_step_statuses]: the step
       executor.
@@ -72,10 +72,10 @@ let probe_from_store = function
 
 
 
-(* DESIGN NOTE — adding new per-rule fields to script_spec:
+(* DESIGN NOTE — adding new per-rule fields to project_spec:
    When a property of an action_step varies per-location for multi-probe
    rules (probe_binding has multiple location entries), the property's
-   accessor in script_spec MUST take `location option` from the start.
+   accessor in project_spec MUST take `location option` from the start.
    Both [expectation] and [summary] originally took only [rule] and had
    to be retrofitted to [rule -> location option -> ...] when their first
    per-location use case appeared (sqlite/z3/llvm pip probes). Mismatch
@@ -85,7 +85,7 @@ let probe_from_store = function
    If yes, take location option upfront. [check_post] and [symbol_check]
    are still rule-only because no current project needs per-location
    variation; revisit when one does. *)
-type script_spec = {
+type project_spec = {
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
   (* Declarative API spec for this source version. When present, derive_steps
      checks consistency: binding_api.source_dir = Some _ ↔ build_binding = Some _. *)
@@ -175,7 +175,7 @@ type script_spec = {
   disabled_contracts : Canary_compat.contract_id list;
 }
 
-let empty_script_spec = {
+let empty_project_spec = {
   fetch_source = None;
   api_source = None;
   scan_source = None;
@@ -245,7 +245,7 @@ let script_of_rule spec = function
    - run_step, run_graph
    - merge_step_statuses
 
-   This file now keeps the step-building half only — script_spec,
+   This file now keeps the step-building half only — project_spec,
    derive_steps, shared command templates, check_post compositors,
    defaults, and dep helpers. Renamed to canary_step_builder.ml in
    the same commit. *)
@@ -318,7 +318,7 @@ let has_file ~output_dir name =
 
 (* ── check_post compositors ──
    Thin functions for common check_post patterns used by project specs.
-   Each returns a bool; project specs wire them into [script_spec.check_post]. *)
+   Each returns a bool; project specs wire them into [project_spec.check_post]. *)
 
 (** Marker file present AND a native .so/.dylib exists at [lib_path]. *)
 let check_build_lib ~marker ~lib_path ~output_dir ~variant_key =
@@ -336,7 +336,7 @@ let check_markers markers ~output_dir ~variant_key =
     has_file ~output_dir (Canary_basic.variant_file ~variant_key m))
 
 (* ── Default check_post per rule category ──
-   Derived from the rule type. Projects can override via script_spec.check_post.
+   Derived from the rule type. Projects can override via project_spec.check_post.
 
    | Rule category | Marker file | What it means |
    |---------------|-------------|---------------|
@@ -392,7 +392,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     check_post;
   }
 
-(* ── Derive action steps from store_rules + script_spec ── *)
+(* ── Derive action steps from store_rules + project_spec ── *)
 
 let deps_of_rule spec rule =
   let has r = Option.is_some (script_of_rule spec r) in
@@ -517,7 +517,7 @@ let deps_of_probe_lib_entry spec loc =
   in
   List.filter_opt [ produce_dep ]
 
-let check_api_consistency (spec : script_spec) =
+let check_api_consistency (spec : project_spec) =
   match spec.api_source with
   | None -> ()
   | Some api ->
@@ -530,9 +530,9 @@ let check_api_consistency (spec : script_spec) =
             ~f:(fun b -> Option.is_some b.Canary_artifact_api.source_dir)
         in
         if not any_source_dir then
-          failwith "api_source: script_spec has build_binding but no binding_api declares source_dir"
+          failwith "api_source: project_spec has build_binding but no binding_api declares source_dir"
 
-let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : script_spec) : action_step list =
+let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : project_spec) : action_step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
   let mk_one ~tag ~rule ~deps ~cmd =

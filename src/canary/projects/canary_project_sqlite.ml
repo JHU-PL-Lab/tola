@@ -57,11 +57,11 @@ let sqlite_python_config : Canary_toolchain.binding_config =
         {|import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')|};
     }
 
-let script_spec : Canary_step_builder.script_spec =
+let project_spec : Canary_step_builder.project_spec =
   let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
   {
-    Canary_step_builder.empty_script_spec with
+    Canary_step_builder.empty_project_spec with
     fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
       (Canary_lang.OCaml, Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)

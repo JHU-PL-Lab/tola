@@ -389,7 +389,7 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     probe's exit-code check; canary surfaces it via
     [Expect_failure { contains_any = ["FAIL "] }] on Probe steps (the
     tiny probe prints [FAIL …] on assertion mismatch).
-    See [Canary_tiny_scenario.make_lib_behavior_broken_script_spec]
+    See [Canary_tiny_scenario.make_lib_behavior_broken_project_spec]
     for the demo against harness scenario [e7 behavior_silent].
     [c3_predict] returns [] honestly: there's nothing static to
     predict. Status stays [Blocked []] to reflect the {b predict} side
@@ -401,8 +401,8 @@ let c4_predict ~resolve (inputs : inspect_input list) : string list =
     use [Expect_failure { contains_any = ["FAIL "] }] same as c3.
     [c7_predict] returns []; registry entry stays in place for
     documentation only (status = Stubbed, enabled = false). See
-    [Canary_tiny_scenario.make_binding_repack_broken_script_spec] and
-    [make_binding_python_repack_broken_script_spec] for live demos
+    [Canary_tiny_scenario.make_binding_repack_broken_project_spec] and
+    [make_binding_python_repack_broken_project_spec] for live demos
     against scenarios [api_repack] and [api_repack_python].
 
     c8 is disabled — no Contract for canary to maintain. Each binding
@@ -469,7 +469,7 @@ let registered_checks : contract_check list = [
      binding-side test; predict returns []. The variant declaration
      attributes the failure to c7 — canary doesn't disambiguate at
      the detection layer. See
-     [Canary_tiny_scenario.make_binding_repack_broken_script_spec]
+     [Canary_tiny_scenario.make_binding_repack_broken_project_spec]
      for the demo against harness scenario [api_repack] (e5). *)
   { id = C7; name = "api_sound_repack";      layer = "dyn"; status = Stubbed;
     enabled = false; predict = c7_predict };
@@ -491,7 +491,7 @@ let registered_checks : contract_check list = [
 
     [?disabled] is the per-call list of contracts to skip on top of
     the registry's own [enabled] flag. Typical sources:
-    - per-project: [script_spec.disabled_contracts]
+    - per-project: [project_spec.disabled_contracts]
     - per-CLI: the [--disable-contract c5,c4] flag on canary action / compat / verify
     A contract fires iff its registry [enabled] is true AND its id is
     not in [disabled].
