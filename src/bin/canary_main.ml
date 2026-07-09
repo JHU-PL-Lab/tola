@@ -838,6 +838,18 @@ let load_tiny_results () : (string * string) list =
 let run_tiny_all_and_collect () : unit =
   let root = "_out" in
   let results = ref [] in
+  let n_total = List.length Canary_tiny_scenario.scenario_specs in
+  let n_bad =
+    List.length (List.filter
+      (fun (e : Canary_tiny_scenario.scenario_spec) ->
+        Option.is_some e.scenario.mutation)
+      Canary_tiny_scenario.scenario_specs) in
+  let n_unmut = n_total - n_bad in
+  Fmt.pr
+    "Running %d tiny scenarios: %d bad (Bs.N mutations — canary \
+     should catch each) + %d unmutated Sc.N runs (canary should \
+     stay quiet).@.@."
+    n_total n_bad n_unmut;
   Canary_tiny_scenario.iter_scenario_specs
     ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
       let sc = spec.scenario in
