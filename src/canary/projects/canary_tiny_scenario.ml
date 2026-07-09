@@ -652,9 +652,7 @@ let pad_id id = Printf.sprintf "%-11s" id
 let pad_name name = Printf.sprintf "%-26s" name
 
 (** Print one Good scenario with its full mutation-cell
-    grid (from [derived_scenarios]) plus any unmutated
-    witnesses (scenario_specs with [mutation = None] that
-    exercise this Sc.N — see SSOT §4.1). Under each cell
+    grid (from [derived_scenarios]). Under each cell
     (Good × target × kind):
     - "— empty" if no Bs entry fills the cell (a design-space
       gap the current inventory doesn't cover);
@@ -713,17 +711,6 @@ let print_one_good
                 prefix (pad_id sc.id) (pad_name sc.name) det
                 (status_suffix sc.name))))
    end);
-  let witnesses = List.filter scenario_specs ~f:(fun e ->
-    belongs_to_here e && Option.is_none e.scenario.mutation) in
-  if not (List.is_empty witnesses) then begin
-    Stdlib.print_endline
-      (Printf.sprintf "    unmutated witnesses (%d):" (List.length witnesses));
-    List.iter witnesses ~f:(fun e ->
-      Stdlib.print_endline
-        (Printf.sprintf "      %s %s%s"
-           (pad_id e.scenario.id) e.scenario.name
-           (status_suffix e.scenario.name)))
-  end;
   Stdlib.print_endline ""
 
 (* print_derive removed 2026-07-07: coverage view now folded
@@ -733,9 +720,12 @@ let print_one_good
    matches_derived_cell helpers stay for use inside print_list. *)
 
 (** Show-list-but-no-run — the enumeration surface. Prints all
-    tiny scenarios grouped by language (Shared / OCaml / Python),
-    with each Good scenario followed by its mutations (bad
-    scenarios) and unmutated witnesses (SSOT §4.1).
+    tiny Good scenarios grouped by language (Shared / OCaml /
+    Python), with each followed by its mutations (bad
+    scenarios). Unmutated witnesses (SSOT §4.1) are omitted
+    from this view — they'd be trivial self-references
+    (`Sc.4.OCaml unmutated witnesses: Sc.4.OCaml …`);
+    `tiny run` output is the place to see their pass/fail.
 
     Language-as-outer-loop reflects the user's design intent:
     scenarios are defined per (mechanism × language × stage),
@@ -752,17 +742,13 @@ let print_list ?(status_of : (string -> string option) option) () =
   let bads = List.filter scenario_specs ~f:(fun e ->
     Option.is_some e.scenario.mutation) in
   let n_bad = List.length bads in
-  let n_witness = List.count scenario_specs ~f:(fun e ->
-    Option.is_none e.scenario.mutation) in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
   Stdlib.print_endline
     (Printf.sprintf
-       "Scenarios (%d total: %d good + %d bad + %d unmutated; \
-        %d derived cells, %d filled, %d empty)"
-       (List.length all_scenarios)
-       (List.length tiny_good_scenarios) n_bad n_witness
+       "Scenarios (%d good + %d bad; %d derived cells, %d filled, %d empty)"
+       (List.length tiny_good_scenarios) n_bad
        n_cells n_cells_filled (n_cells - n_cells_filled));
   Stdlib.print_endline "";
   let section title lg =
