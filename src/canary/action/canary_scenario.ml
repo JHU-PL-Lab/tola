@@ -328,3 +328,38 @@ let derive_scenarios (goods : scenario list) : scenario list =
     Base.List.concat_map good.related_artifacts ~f:(fun a ->
       Base.List.map (applicable_perturbations a) ~f:(fun k ->
         derive_scenario good a k)))
+
+(** Language set a scenario's contracts fire at, derived from
+    [scenario.belongs_to] (the Good scenarios the entry
+    attributes to). Suffix convention:
+    - [Sc.N] (no suffix) = shared → both OCaml and Python
+    - [Sc.N.OCaml] → OCaml only
+    - [Sc.N.Python] → Python only
+
+    Union over multiple [belongs_to] entries. General across
+    projects — moved out of the tiny factory 2026-07-08. *)
+let langs_of_scenario (scenario : scenario) : Canary_lang.lang list =
+  let open Base in
+  let lang_of_id id =
+    if String.is_suffix id ~suffix:".OCaml" then [ Canary_lang.OCaml ]
+    else if String.is_suffix id ~suffix:".Python" then [ Canary_lang.Python ]
+    else [ Canary_lang.OCaml; Canary_lang.Python ]
+  in
+  scenario.belongs_to
+  |> List.concat_map ~f:lang_of_id
+  |> List.dedup_and_sort ~compare:Poly.compare
+
+(** Does the scenario's perturbation produce a probe-observable
+    manifestation? [Unknown_gap] means no; positive-coverage
+    entries ([perturbation = None]) also count as no.
+
+    A scenario without probe manifestation would misfire under
+    derivation (canary would expect a FAIL that never comes) —
+    the factory falls through to [Expect_success] uniformly.
+    General across projects — moved out of the tiny factory
+    2026-07-08. *)
+let has_probe_manifestation (scenario : scenario) : bool =
+  match scenario.perturbation with
+  | None -> false
+  | Some { manifest = Unknown_gap; _ } -> false
+  | Some _ -> true

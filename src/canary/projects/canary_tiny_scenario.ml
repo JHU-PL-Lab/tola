@@ -1335,26 +1335,6 @@ let script_spec = base_script_spec
     module 2026-07-08. See [doc/canary/design/tiny.md] §3 for
     the derivation shape. *)
 
-(** Language set a scenario's contracts should fire at.
-    Derived from [scenario.belongs_to] — the Good scenarios
-    the entry attributes to. Suffix rule:
-    - [Sc.N] (no suffix) = shared → both OCaml and Python
-    - [Sc.N.OCaml] → OCaml only
-    - [Sc.N.Python] → Python only
-
-    Union over multiple [belongs_to] entries. *)
-let langs_of_scenario (scenario : Canary_scenario.scenario)
-  : Canary_lang.lang list =
-  let open Base in
-  let lang_of_id id =
-    if String.is_suffix id ~suffix:".OCaml" then [ Canary_lang.OCaml ]
-    else if String.is_suffix id ~suffix:".Python" then [ Canary_lang.Python ]
-    else [ Canary_lang.OCaml; Canary_lang.Python ]
-  in
-  scenario.belongs_to
-  |> List.concat_map ~f:lang_of_id
-  |> List.dedup_and_sort ~compare:Poly.compare
-
 (** Per-contract inputs for [Expect_compat_failure], scoped
     to a language. Returns [None] if the contract has no
     coverage for that language.
@@ -1426,15 +1406,6 @@ let is_expect_failure_contract = function
   | Canary_compat.C3 | Canary_compat.C7 -> true
   | _ -> false
 
-(** Does the scenario's perturbation produce a probe-observable
-    manifestation? [Unknown_gap] means no; positive-coverage
-    entries (perturbation = None) also count as no. *)
-let has_probe_manifestation (scenario : Canary_scenario.scenario) : bool =
-  match scenario.perturbation with
-  | None -> false
-  | Some { manifest = Unknown_gap; _ } -> false
-  | Some _ -> true
-
 (** Derive an [expectation] function from the entry's
     [recipe.violates], languages, and manifest. Entries
     without probe manifestation return [Expect_success]
@@ -1445,9 +1416,9 @@ let expectation_of_entry (entry : entry)
   =
   let open Base in
   let module CC = Canary_compat in
-  let scenario_langs = langs_of_scenario entry.scenario in
+  let scenario_langs = Canary_scenario.langs_of_scenario entry.scenario in
   let violates = entry.recipe.violates in
-  let has_manifest = has_probe_manifestation entry.scenario in
+  let has_manifest = Canary_scenario.has_probe_manifestation entry.scenario in
   let expect_failure_shape =
     List.exists violates ~f:is_expect_failure_contract in
   let violates_c6 =
