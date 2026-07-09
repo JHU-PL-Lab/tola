@@ -42,19 +42,15 @@ let string_of_outcome = function
   | Pass -> "pass"
   | Skip -> "skip"
 
-(** Build target a patch mutation should rebuild before probes
-    run. Source patches under [c/] need a cmake rebuild; OCaml /
-    Python source patches don't (canary rebuilds the binding itself). *)
-type rebuild_target =
+(* rebuild_target + mutation + c_patch + ml_patch moved to
+   Canary_artifact_mutation 2026-07-09. Re-exported here as
+   manifest type equations so internal usages of [Patch] /
+   [Soname_bump] stay unqualified. *)
+type rebuild_target = Canary_artifact_mutation.rebuild_target =
   | Rebuild_native_c
   | Rebuild_none
 
-(** How a scenario mutates the tiny tree in the sandbox.
-    - [Patch] applies [scenarios/patches/<patch_file>] as a unified diff.
-    - [Soname_bump] renames the shared object + rewrites its SONAME
-      (patchelf or byte surgery).
-    Positive-coverage scenarios carry [None]. *)
-type mutation =
+type mutation = Canary_artifact_mutation.mutation =
   | Patch of { patch_file : string; rebuild : rebuild_target }
   | Soname_bump of { from_so : string; to_so : string }
 
@@ -78,11 +74,8 @@ type entry = {
 
 (* ----- recipe constructor helpers ----- *)
 
-let c_patch name =
-  Some (Patch { patch_file = name ^ ".patch"; rebuild = Rebuild_native_c })
-
-let ml_patch name =
-  Some (Patch { patch_file = name ^ ".patch"; rebuild = Rebuild_none })
+let c_patch = Canary_artifact_mutation.c_patch
+let ml_patch = Canary_artifact_mutation.ml_patch
 
 (* ================================================================
    ACTIONS + ARTIFACTS PALETTE — for hand-mapping the 15 entries
