@@ -265,6 +265,11 @@ Not urgent — hand-authored `.patch` files are usable today
 (15/15 fixtures pass in `mutation-test`). The plan below is
 saved for when we resume; nothing needs to happen soon.
 
+*Prerequisite already done (`77f36ad`):* the pair (scenario +
+recipe) was renamed from `entry` to `scenario_spec` throughout
+the tiny code + design docs. The plan below uses those names
+directly.
+
 #### Design decisions locked in (2026-07-09)
 
 | Question | Decision |
