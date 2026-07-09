@@ -123,15 +123,8 @@ let arts_positive : Canary_basic.artifact_kind list =
 
 (* ----- abstract-perturbation helper ----- *)
 
-(** Build a [Canary_scenario.perturbation]. Wraps in Some for the
-    scenario's optional field. *)
-let pert
-    ~(target : Canary_basic.artifact_kind)
-    ~(kind : Canary_scenario.perturbation_kind)
-    ~(manifest : Canary_scenario.manifest)
-    ~(detector : Canary_scenario.detector)
-    : Canary_scenario.perturbation option =
-  Some { target; kind; manifest; detector }
+(* [pert] moved to Canary_scenario_util 2026-07-08. *)
+let pert = Canary_scenario_util.pert
 
 (* ================================================================
    THE 15 ENTRIES — ordered per SSOT §5.1 (Bs.1..Bs.13, then
@@ -614,15 +607,8 @@ let derived_scenarios : Canary_scenario.scenario list =
 (** Does a hardcoded Bs entry match a derived cell? Match rule:
     same good scenario (via [belongs_to] intersection) + same
     target artifact + same kind. *)
-let matches_derived_cell (bad : Canary_scenario.scenario)
-    (derived : Canary_scenario.scenario) : bool =
-  match bad.perturbation, derived.perturbation with
-  | Some bp, Some dp ->
-    Poly.equal bp.target dp.target
-    && Poly.equal bp.kind dp.kind
-    && List.exists bad.belongs_to ~f:(fun b ->
-         List.mem derived.belongs_to b ~equal:String.equal)
-  | _ -> false
+(* [matches_derived_cell] moved to Canary_scenario_util 2026-07-08. *)
+let matches_derived_cell = Canary_scenario_util.matches_derived_cell
 
 (* ================================================================
    HELPERS
@@ -631,37 +617,11 @@ let matches_derived_cell (bad : Canary_scenario.scenario)
 let find_by_name (n : string) : entry option =
   List.find entries ~f:(fun e -> String.equal e.scenario.name n)
 
-(** Compact contract label — "c1".."c8" or "gap" for
-    [Detector_gap]. *)
-let detector_short = function
-  | Canary_scenario.Wired c -> Canary_compat.string_of_contract_id c
-  | Canary_scenario.Detector_gap -> "gap"
-
-(** 1-based index of an artifact in a scenario's
-    [related_artifacts], or [None] if not present. *)
-let artifact_index (sc : Canary_scenario.scenario)
-    (target : Canary_basic.artifact_kind) : int option =
-  let rec find i = function
-    | [] -> None
-    | a :: _ when Poly.equal a target -> Some i
-    | _ :: rest -> find (i + 1) rest
-  in
-  find 1 sc.related_artifacts
-
-(** For a bad scenario, format its target relative to a Good
-    scenario's [related_artifacts]: "A<idx>" or "A<idx>
-    (behavior)" for On_behavior kind. *)
-let bad_target_str (good : Canary_scenario.scenario)
-    (bad : Canary_scenario.scenario) : string =
-  match bad.perturbation with
-  | None -> ""
-  | Some p ->
-    let idx_str = match artifact_index good p.target with
-      | Some i -> Printf.sprintf "A%d" i
-      | None -> "A?" in
-    (match p.kind with
-     | On_behavior -> Printf.sprintf "%s (behavior)" idx_str
-     | On_artifact _ -> idx_str)
+(* detector_short / artifact_index / bad_target_str moved to
+   Canary_scenario_util 2026-07-08. *)
+let detector_short = Canary_scenario_util.detector_short
+let artifact_index = Canary_scenario_util.artifact_index
+let bad_target_str = Canary_scenario_util.bad_target_str
 
 (** Classify a good-scenario id by its language qualifier.
     "Sc.N" (no suffix) → Shared. "Sc.N.OCaml" → OCaml.
@@ -812,15 +772,8 @@ let name_of_string (n : string) : string =
     output ("Symbol", "Type", "ABI", …). Distinct from
     [Canary_compat.string_of_contract_id] which emits "c1".."c8".
     Used by [print_expected] to preserve the JSON shape. *)
-let violates_label = function
-  | Canary_compat.C1 -> "Symbol"
-  | C2 -> "API-completeness"
-  | C3 -> "Behavior"
-  | C4 -> "ABI"
-  | C5 -> "SymbolVersion"
-  | C6 -> "Type"
-  | C7 -> "API-repacking"
-  | C8 -> "API-faithfulness"
+(* [violates_label] moved to Canary_scenario_util 2026-07-08. *)
+let violates_label = Canary_scenario_util.violates_label
 
 let json_of_entry (e : entry) : Yojson.Basic.t =
   `Assoc [
