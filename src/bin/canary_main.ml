@@ -863,15 +863,18 @@ let show_tiny_status () : unit =
   if results = [] then
     Fmt.pr "No results yet. Run `canary tiny run` first.@."
   else begin
-    Fmt.pr "Tiny scenario status (from %s):@." tiny_results_path;
-    Canary_tiny_scenario.iter_scenario_specs
-      ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
-        let sc = spec.scenario in
-        let status =
-          try List.assoc sc.name results
-          with Not_found -> "(not run)"
-        in
-        Fmt.pr "[%d/%d] %-11s %-30s %s@." index total sc.id sc.name status)
+    Fmt.pr "Tiny scenario status (from %s):@.@." tiny_results_path;
+    let status_of name =
+      match List.assoc_opt name results with
+      | Some s -> Some s
+      | None -> Some "(not run)"
+    in
+    Canary_tiny_scenario.print_list ~status_of ();
+    let n_pass =
+      List.length (List.filter (fun (_, s) -> s = "PASS") results) in
+    let n_fail =
+      List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
+    Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
   end
 
 let tiny_scenarios_run_cmd =

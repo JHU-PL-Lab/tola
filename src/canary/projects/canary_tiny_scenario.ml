@@ -647,7 +647,12 @@ let pad_name name = Printf.sprintf "%-26s" name
     Cells come from principled enumeration; Bs entries are
     hand-listed instances. This layout makes the coverage vs
     hardcoded diff visible inline. *)
-let print_one_good (good : Canary_scenario.scenario) : unit =
+let print_one_good
+    ?(status_of : (string -> string option) option) (good : Canary_scenario.scenario) : unit =
+  let status_suffix name =
+    match status_of with
+    | None -> ""
+    | Some f -> (match f name with Some s -> " " ^ s | None -> "") in
   Stdlib.print_endline
     (Printf.sprintf "  %s  %s" good.id good.name);
   let related_strs =
@@ -687,8 +692,9 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
            let det = detector_short p.detector in
            let prefix = if i = 0 then tgt else "" in
            Stdlib.print_endline
-             (Printf.sprintf "      %-14s %s %s [%s]"
-                prefix (pad_id sc.id) (pad_name sc.name) det)))
+             (Printf.sprintf "      %-14s %s %s [%s]%s"
+                prefix (pad_id sc.id) (pad_name sc.name) det
+                (status_suffix sc.name))))
    end);
   let pcs = List.filter scenario_specs ~f:(fun e ->
     belongs_to_here e && Option.is_none e.scenario.mutation) in
@@ -697,8 +703,9 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
       (Printf.sprintf "    verified by (%d):" (List.length pcs));
     List.iter pcs ~f:(fun e ->
       Stdlib.print_endline
-        (Printf.sprintf "      %s %s"
-           (pad_id e.scenario.id) e.scenario.name))
+        (Printf.sprintf "      %s %s%s"
+           (pad_id e.scenario.id) e.scenario.name
+           (status_suffix e.scenario.name)))
   end;
   Stdlib.print_endline ""
 
@@ -720,7 +727,7 @@ let print_one_good (good : Canary_scenario.scenario) : unit =
     (native lib is language-agnostic under the SCAB assumption).
 
     See SSOT §5.1 for the full detail table. *)
-let print_list () =
+let print_list ?(status_of : (string -> string option) option) () =
   let goods_by_lang lg =
     List.filter tiny_good_scenarios
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
@@ -745,7 +752,7 @@ let print_list () =
     let goods = goods_by_lang lg in
     if not (List.is_empty goods) then begin
       Stdlib.print_endline (Printf.sprintf "%s:" title);
-      List.iter goods ~f:print_one_good
+      List.iter goods ~f:(print_one_good ?status_of)
     end
   in
   section "Shared" Shared;
