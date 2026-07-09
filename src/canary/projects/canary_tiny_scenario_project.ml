@@ -33,7 +33,7 @@
     - [Sc.N.Python] → Python only
 
     Union over multiple [belongs_to] entries. Rationale in
-    [doc/canary/design/derivation.md] §"Two orthogonal axes:
+    [doc/canary/design/tiny.md] §"Two orthogonal axes:
     contract × language." *)
 let langs_of_scenario (scenario : Canary_scenario.scenario)
   : Canary_lang.lang list =
@@ -52,7 +52,7 @@ let langs_of_scenario (scenario : Canary_scenario.scenario)
     coverage for that language (e.g. c2 is lang-specific).
 
     Contracts covered today: c1, c2. Grow as new scenarios
-    join. See [doc/canary/design/derivation.md]
+    join. See [doc/canary/design/tiny.md]
     §"Per-contract inputs" for the full table. *)
 let compat_inputs_of_contract ~(lang : Canary_lang.lang)
   : Canary_compat.contract_id -> Canary_compat.inspect_input list option

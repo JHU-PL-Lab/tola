@@ -2,7 +2,7 @@
     [doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E):cmd_prepare].
 
     Phase C.4 of the Python→OCaml migration
-    ([doc/canary/design/tiny_migration.md] §9). Applies one
+    ([doc/canary/worklog/tiny_migration.md] §9). Applies one
     scenario's perturbation in a hermetic sandbox
     ([_cache/<name>/sandbox/]), builds direct-compile artifacts
     there, runs the 7 inspectors on the sandbox, computes surface
@@ -10,7 +10,7 @@
     under [_cache/<name>/workspace/] that canary's tiny variants
     consume.
 
-    Sandbox-build design (per [tiny_migration.md] §1b): the live
+    Sandbox-build design (per [worklog/tiny_migration.md] §1b): the live
     tree is never mutated. Each scenario copies the live sources
     into its own sandbox; patches / rebuilds / SONAME bumps all
     happen inside the sandbox; positive-coverage scenarios still

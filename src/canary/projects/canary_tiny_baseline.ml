@@ -2,12 +2,12 @@
     [doc/_legacy_code/tiny_python_harness/scenarios.py (archived Phase E):cmd_baseline].
 
     Phase C.3 of the Python→OCaml migration
-    ([doc/canary/design/tiny_migration.md] §9). Produces the clean
+    ([doc/canary/worklog/tiny_migration.md] §9). Produces the clean
     reference cache that [prepare <name>] later diffs against and
     that canary's tiny variants read via
     [Canary_project_tiny.cache_workspace_of].
 
-    Per the sandbox-build decision ([tiny_migration.md] §1b):
+    Per the sandbox-build decision ([worklog/tiny_migration.md] §1b):
     - artifacts/ and source/ snapshots are NOT produced (their only
       consumer was [restore-baseline], which the OCaml port drops).
     - inspect/ JSONs and workspace/ remain — consumed by prepare
@@ -124,7 +124,7 @@ let capture_json (cmd : string) : Yojson.Basic.t option =
     directly (gcc, ocamlfind ocamlopt, ar). No cmake, no dune, no
     make.
 
-    Rationale ([tiny_migration.md] §1b update, 2026-06-26): for
+    Rationale ([worklog/tiny_migration.md] §1b update, 2026-06-26): for
     artifacts canary *owns* (tiny is designed by canary, not an
     upstream project), the "owner decides the build" principle
     picks direct compilers over external build systems. This

@@ -158,7 +158,7 @@ that turns each `entry` into a self-contained project spec.
 Every tiny scenario now runs via
 `canary action tiny-scenario/<name>` (or the run-all
 `canary action tiny-scenario`). See
-[`derivation.md`](../design/derivation.md) for the shipped
+[`tiny.md`](../design/tiny.md) for the shipped
 factory shape.
 
 ### Arc
@@ -176,7 +176,7 @@ factory shape.
   `langs_of_scenario` reads Sc.N.OCaml / Sc.N.Python /
   Sc.N suffixes. Discovered `symbol_orphan` bug: firing c1 at
   both langs was wrong; scoped to OCaml only. Design captured
-  in [`design/derivation.md`](../design/derivation.md).
+  in [`design/tiny.md`](../design/tiny.md).
 - **`c885108` — c2 derivation** — `compat_inputs_of_contract`
   refactor. Now scenarios pick their inputs by folding over
   `recipe.violates`. api_complete + api_complete_python
@@ -251,7 +251,7 @@ Coverage:
 
 ### Design references saved for the next task
 
-- [`design/derivation.md`](../design/derivation.md) — what
+- [`design/tiny.md`](../design/tiny.md) — what
   shipped (factory shape). Slimmed from an in-progress note
   to a landing reference after retirement.
 - [`design/bad_scenario_flavors.md`](../design/bad_scenario_flavors.md)
