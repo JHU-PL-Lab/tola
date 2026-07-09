@@ -445,53 +445,26 @@ bugs. Detailed in
 [`bad_scenario_flavors.md`](bad_scenario_flavors.md). Not
 tiny-scoped; belongs to the post-tiny research task.
 
-### 7.7 Route tiny commands through `tool/` (R2 — landed)
+### 7.7 Route tiny commands through `tool/` — done, macOS follow-up
 
-**Status: complete** (2026-07-09). Both sub-gaps shipped:
+**Landed 2026-07-09.** Both sub-gaps shipped: direct-compile
+family in `src/canary/tool/canary_cc.ml`, inspector
+`_pipe_cmd` variants in `Canary_artifact_native` /
+`Canary_artifact_lang`, all 6 tiny inspectors refactored,
+110 inspect JSONs byte-verified. Full arc + byte-stability
+notes + the incidental `inspect_bo6` bug fix recorded in
+[`worklog/worklog_2026_07.md` — R2 arc](../worklog/worklog_2026_07.md#r2-arc--route-tiny-through-tool-2026-07-09).
 
-1. ~~**Direct-compiler family**~~ — landed in `2930a35`
-   as `src/canary/tool/canary_cc.ml` (~110 LOC).
-   Primitives: `cc_compile_obj`, `cc_link_shared`
-   (optional soname / version-script / rpath / include_dirs /
-   library_dirs / libs), `ocaml_compile_unit`,
-   `ocaml_archive_cmxa`, `ar_archive`, `symlink`.
-   `canary_tiny_workspace.ml`'s three build fns
-   (`build_c_lib`, `build_ocaml_binding`, `build_python_cext`)
-   refactored to use them. Byte-stable across 110 inspect
-   JSONs.
-2. ~~**Inspector capture-vs-marker reconciliation**~~ —
-   landed in `d0fb81e`. Tool builders in
-   `Canary_artifact_native` and `Canary_artifact_lang` gained
-   `_pipe_cmd` variants (the pipeline without the marker-file
-   redirect). Existing `_cmd` builders now compose the pipe
-   with `" > <out>"`. Tiny's 5 core inspectors
-   (`inspect_n4/bo4/bo6/bo7/bpc2/bpe2`) refactored to call
-   the pipe variants. `inspect_bpe3` (hand-rolled nm + inline
-   Python for cext undef-refs) kept as-is; no tool builder
-   covers that parity case yet — candidate follow-up.
-
-**Ancillary fix** (shipped in the sub-gap 2 commit): the old
-`inspect_bo6` called `python3 inspect_ocaml.py --path <cmxa>`
-**without piping `ocamlobjinfo <cmxa>`** into it. Since
-`inspect_ocaml.py` reads ocamlobjinfo output from stdin, it
-saw an empty stream and always emitted
-`{"modules": [], "counts": {"modules": 0, "imports": 0}}`.
-The tool-builder pipe primitive correctly pipes, so bo6 now
-reports `["Tiny_raw", "Tiny"]` with 7 imports. Downstream
-`surface_delta` still emits `bo6: (no delta)` for the four
-spot-checked scenarios (their mutations don't add/remove
-modules).
-
-**Pre-work** (also 2026-07-09, `8bf910b`): JSON schema tests
-for each `inspect_*.py` output kind (native / ocaml /
-ocaml_mli / c_stub / python) — pins the schema at the script
-level, so future refactors that keep the (script, args) pair
-unchanged stay byte-safe by construction.
-
-**Portability dividend** now real: tiny's inspectors use
-`Canary_artifact_native.nm_cmd` which picks `nm -g` on
-macOS. Verifying on macOS is deferred to the SSH-Mac work
-noted in CLAUDE.md.
+**Remaining open item — macOS verification (separate session).**
+Tiny's inspectors now inherit
+`Canary_artifact_native.nm_cmd`'s `nm -g` on macOS via the
+pipe primitives; `canary_cc.ml` gives a single site to patch
+for Mach-O differences. Running `tiny baseline` +
+`tiny prepare-all` + `canary artifact-test` on a Mac and
+diffing `_cache/*/inspect/*.json` against a known-good
+Linux snapshot is the natural next step. Couples with the
+broader macOS-support work called out in
+[`CLAUDE.md` Known-Gap](../../CLAUDE.md).
 
 Relates to `backlog.md` #18 (audit specs for hardcoded
 shell commands routed through named primitives) and #47
