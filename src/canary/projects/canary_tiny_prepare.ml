@@ -37,15 +37,11 @@ let fail fmt =
   Stdlib.Printf.ksprintf
     (fun s -> Stdlib.prerr_endline ("prepare: " ^ s); Stdlib.exit 1) fmt
 
-let run_shell = B.run_shell
-let mkdir_p = B.mkdir_p
-let rm_rf = B.rm_rf
+let run_shell   = B.run_shell
+let mkdir_p     = B.mkdir_p
+let rm_rf       = B.rm_rf
 let capture_json = B.capture_json
-let capture_line cmd =
-  let ic = Unix.open_process_in (cmd ^ " 2>/dev/null") in
-  let s = try Stdlib.input_line ic with End_of_file -> "" in
-  let _ = Unix.close_process_in ic in
-  String.strip s
+let capture_line = B.capture_line
 
 let scen_cache_of ~name =
   Printf.sprintf "%s/%s" B.cache name
@@ -132,159 +128,11 @@ let apply_soname_bump ~sandbox ~from_so:_ ~to_so : bool =
   ] in
   List.for_all steps ~f:(fun cmd -> run_shell cmd = 0)
 
-(* ---------- direct-compile in sandbox ----------
-   These mirror baseline's build_c_lib / build_ocaml_binding but with
-   sandbox paths. cext is NOT rebuilt (see install_baseline_cext). *)
-
-let build_c_lib_in ~sandbox : bool =
-  let c_build = sandbox ^ "/c/build" in
-  let c_include = sandbox ^ "/c/include" in
-  info "compile C lib in sandbox";
-  mkdir_p c_build;
-  let steps = [
-    Printf.sprintf "gcc -c -fPIC -I%s %s/c/src/tiny.c -o %s/tiny.o"
-      c_include sandbox c_build;
-    Printf.sprintf
-      "gcc -shared -Wl,-soname,libtiny.so.1 \
-       -Wl,--version-script=%s/c/tiny.map %s/tiny.o -o %s/libtiny.so.1.0"
-      sandbox c_build c_build;
-    Printf.sprintf "ln -sf libtiny.so.1.0 %s/libtiny.so.1" c_build;
-    Printf.sprintf "ln -sf libtiny.so.1 %s/libtiny.so" c_build;
-    Printf.sprintf "rm -f %s/tiny.o" c_build;
-  ] in
-  List.for_all steps ~f:(fun cmd -> run_shell (cmd ^ " 2>&1") = 0)
-
-let build_ocaml_binding_in ~sandbox : bool =
-  let c_build = sandbox ^ "/c/build" in
-  let c_include = sandbox ^ "/c/include" in
-  let ocaml_src = sandbox ^ "/ocaml" in
-  let ocaml_out = sandbox ^ "/_build/default/canary/examples/tiny/ocaml" in
-  info "compile OCaml binding in sandbox";
-  mkdir_p ocaml_out;
-  let ocaml_where = capture_line "ocamlc -where" in
-  if String.is_empty ocaml_where then begin
-    warn "ocamlc -where returned empty"; false
-  end
-  else
-    let cmi src target =
-      Printf.sprintf
-        "ocamlfind ocamlopt -bin-annot -I %s -c %s/%s -o %s/%s"
-        ocaml_out ocaml_src src ocaml_out target
-    in
-    (* Ensure the sandbox tiny_stubs.c is on disk before invoking cc. *)
-    let steps = [
-      cmi "tiny_raw.mli" "tiny_raw.cmi";
-      cmi "tiny_raw.ml"  "tiny_raw.cmx";
-      cmi "tiny.mli"     "tiny.cmi";
-      cmi "tiny.ml"      "tiny.cmx";
-      Printf.sprintf
-        "gcc -c -fPIC -I%s -I%s %s/tiny_stubs.c -o %s/tiny_stubs.o"
-        ocaml_where c_include ocaml_src ocaml_out;
-      Printf.sprintf
-        "ar rcs %s/libtiny_stubs.a %s/tiny_stubs.o" ocaml_out ocaml_out;
-      Printf.sprintf
-        "ocamlfind ocamlopt -a %s/tiny_raw.cmx %s/tiny.cmx \
-         -cclib -ltiny -cclib -ltiny_stubs -o %s/tiny.cmxa"
-        ocaml_out ocaml_out ocaml_out;
-    ] in
-    (* Silence per-scenario noise but capture failures. *)
-    let ok = List.for_all steps ~f:(fun cmd ->
-      run_shell (cmd ^ " > /dev/null 2>&1") = 0)
-    in
-    let _ = c_build in (* not used at compile time; recorded for symmetry *)
-    ok
-
-(* ---------- inspectors in sandbox ---------- *)
-
-let glob_first ~root ~pattern =
-  let cmd = Printf.sprintf "find '%s' -name '%s' 2>/dev/null | head -1" root pattern in
-  let ic = Unix.open_process_in cmd in
-  let r = try Some (Stdlib.input_line ic) with End_of_file -> None in
-  let _ = Unix.close_process_in ic in
-  match r with
-  | Some s when not (String.is_empty (String.strip s)) -> Some (String.strip s)
-  | _ -> None
-
-let inspect_n4 ~sandbox =
-  let c_build = sandbox ^ "/c/build" in
-  let so = c_build ^ "/libtiny.so.1" in
-  let so =
-    if Stdlib.Sys.file_exists so then so
-    else Option.value (glob_first ~root:c_build ~pattern:"libtiny.so.*.0")
-           ~default:so
-  in
-  if not (Stdlib.Sys.file_exists so) then None
-  else
-    capture_json
-      (Printf.sprintf
-         "nm -D '%s' | python3 '%s/inspect_native.py' \
-          --path '%s' --prefixes tiny_ --elf --emit-symbols"
-         so B.scripts so)
-
-let inspect_bo4 ~sandbox =
-  let mli = sandbox ^ "/ocaml/tiny.mli" in
-  if not (Stdlib.Sys.file_exists mli) then None
-  else
-    capture_json
-      (Printf.sprintf "python3 '%s/inspect_binding.py' --kind mli --path '%s'"
-         B.scripts mli)
-
-let inspect_bo6 ~sandbox =
-  let ocaml_out = sandbox ^ "/_build/default/canary/examples/tiny/ocaml" in
-  match glob_first ~root:ocaml_out ~pattern:"tiny.cmxa" with
-  | None -> None
-  | Some cmxa ->
-    capture_json (Printf.sprintf "python3 '%s/inspect_ocaml.py' --path '%s'"
-                    B.scripts cmxa)
-
-let inspect_bo7 ~sandbox =
-  let ocaml_out = sandbox ^ "/_build/default/canary/examples/tiny/ocaml" in
-  match glob_first ~root:ocaml_out ~pattern:"libtiny_stubs*.a" with
-  | None -> None
-  | Some stub_a ->
-    capture_json
-      (Printf.sprintf
-         "python3 '%s/inspect_binding.py' --kind stub --path '%s' --prefix tiny_"
-         B.scripts stub_a)
-
-let inspect_bpc2 ~sandbox =
-  let c_build = sandbox ^ "/c/build" in
-  capture_json
-    (Printf.sprintf
-       "PYTHONPATH='%s/python_ctypes' LD_LIBRARY_PATH='%s' \
-        python3 '%s/inspect_python.py' --pkg tiny_ctypes"
-       sandbox c_build B.scripts)
-
-let inspect_bpe2 ~sandbox =
-  let c_build = sandbox ^ "/c/build" in
-  capture_json
-    (Printf.sprintf
-       "PYTHONPATH='%s/python_cext' LD_LIBRARY_PATH='%s' \
-        python3 '%s/inspect_python.py' --pkg tiny_cext"
-       sandbox c_build B.scripts)
-
-let inspect_bpe3 ~sandbox =
-  let cext_dir = sandbox ^ "/python_cext/tiny_cext" in
-  match glob_first ~root:cext_dir ~pattern:"_native.cpython-*.so" with
-  | None -> None
-  | Some so ->
-    capture_json
-      (Printf.sprintf
-         "nm -u '%s' | awk '/^[[:space:]]*U /{print $NF}' | sort -u | \
-          python3 -c \"import json,sys; \
-          syms=[l.strip() for l in sys.stdin if l.strip() and l.strip().startswith('tiny_')]; \
-          json.dump({'kind':'c_stub','path':'%s','counts':{'required':len(syms)},'requires':sorted(syms)}, sys.stdout)\""
-         so so)
-
-let inspectors ~sandbox : (string * (unit -> Yojson.Basic.t option)) list = [
-  "n4",   (fun () -> inspect_n4 ~sandbox);
-  "bo4",  (fun () -> inspect_bo4 ~sandbox);
-  "bo6",  (fun () -> inspect_bo6 ~sandbox);
-  "bo7",  (fun () -> inspect_bo7 ~sandbox);
-  "bpc2", (fun () -> inspect_bpc2 ~sandbox);
-  "bpe2", (fun () -> inspect_bpe2 ~sandbox);
-  "bpe3", (fun () -> inspect_bpe3 ~sandbox);
-]
+(* Direct-compile in sandbox and inspectors on sandbox now
+   delegate to [B.build_*] / [B.inspectors] via
+   [B.sandbox_paths ~sandbox]. Pre-shrink these were separate
+   `_in ~sandbox`-parameterised copies of the baseline versions;
+   see git history at 25ecf30 (R1) for the pre-dedup shape. *)
 
 (* ---------- surface delta (mirrors Python _surface_delta) ---------- *)
 
@@ -481,8 +329,9 @@ let run ~(name : string) : unit =
    | _ -> ());
   (* Build C lib + OCaml binding in sandbox. cext is NOT rebuilt —
      it was copied from baseline above. *)
-  let native_ok = build_c_lib_in ~sandbox in
-  let ocaml_ok  = if native_ok then build_ocaml_binding_in ~sandbox else false in
+  let paths = B.sandbox_paths ~sandbox in
+  let native_ok = B.build_c_lib ~paths () in
+  let ocaml_ok  = if native_ok then B.build_ocaml_binding ~paths () else false in
   (* Apply SONAME bump AFTER build (mutates the built .so). *)
   (match recipe.perturbation with
    | Some (Soname_bump { from_so; to_so }) ->
@@ -497,7 +346,7 @@ let run ~(name : string) : unit =
   mkdir_p inspect_dir;
   info "%s: run inspectors" name;
   let perturbed : (string * Yojson.Basic.t option) list =
-    List.map (inspectors ~sandbox) ~f:(fun (alias, fn) ->
+    List.map (B.inspectors ~paths) ~f:(fun (alias, fn) ->
       let j = fn () in
       (match j with
        | Some jj ->

@@ -71,14 +71,12 @@ let baseline_cext      = baseline_cache ^ "/artifacts/cext"
 (* Scripts path — always relative to project root. *)
 let scripts            = "canary/scripts"
 
-(* Backward-compatible top-level aliases for the existing baseline
-   build/inspect/workspace code, which was written before the [paths]
-   record. Reference [live_paths]. Note [c_include] and [tiny_src] /
-   [tiny_libtiny] / [tiny_cmxa] / [tiny_stubs_a] are re-derived from
-   these below and don't need aliases here. *)
+(* Backward-compatible top-level aliases still used by
+   [snapshot_baseline_cext] and by consumers reading baseline
+   cache paths. Reference [live_paths]. Build/inspect/materialize
+   primitives now take [~paths] explicitly. *)
 let tiny_root       = live_paths.tiny_root
 let c_build         = live_paths.c_build
-let ocaml_build_dir = live_paths.ocaml_build_dir
 
 (* ---------- subprocess helpers ---------- *)
 
@@ -144,12 +142,6 @@ let capture_json (cmd : string) : Yojson.Basic.t option =
     continues to shell out to their own build systems — we're a
     guest, not the owner. *)
 
-let tiny_cmxa     = ocaml_build_dir ^ "/tiny.cmxa"
-let tiny_stubs_a  = ocaml_build_dir ^ "/libtiny_stubs.a"
-let tiny_libtiny  = c_build ^ "/libtiny.so.1"
-let tiny_src      = tiny_root ^ "/ocaml"
-let c_include     = tiny_root ^ "/c/include"
-
 (** Run a shell command; if it fails, log and return false. *)
 let run_or_warn (label : string) (cmd : string) : bool =
   match run_shell cmd with
@@ -167,22 +159,22 @@ let capture_line (cmd : string) : string =
 
 (** C library — libtiny.so.1.0 + symlinks libtiny.so.1, libtiny.so.
     Symbol versioning via c/tiny.map (TINY_1.0 exports). *)
-let build_c_lib () : bool =
+let build_c_lib ~(paths : paths) () : bool =
   info "compile C library";
-  mkdir_p c_build;
+  mkdir_p paths.c_build;
   run_or_warn "cc tiny.c"
     (Printf.sprintf "gcc -c -fPIC -I%s %s/c/src/tiny.c -o %s/tiny.o"
-       c_include tiny_root c_build)
+       paths.c_include paths.tiny_root paths.c_build)
   && run_or_warn "link libtiny.so.1.0"
        (Printf.sprintf
           "gcc -shared -Wl,-soname,libtiny.so.1 \
            -Wl,--version-script=%s/c/tiny.map %s/tiny.o -o %s/libtiny.so.1.0"
-          tiny_root c_build c_build)
+          paths.tiny_root paths.c_build paths.c_build)
   && run_or_warn "symlink libtiny.so.1"
-       (Printf.sprintf "ln -sf libtiny.so.1.0 %s/libtiny.so.1" c_build)
+       (Printf.sprintf "ln -sf libtiny.so.1.0 %s/libtiny.so.1" paths.c_build)
   && run_or_warn "symlink libtiny.so"
-       (Printf.sprintf "ln -sf libtiny.so.1 %s/libtiny.so" c_build)
-  && (let _ = run_shell (Printf.sprintf "rm -f %s/tiny.o" c_build) in true)
+       (Printf.sprintf "ln -sf libtiny.so.1 %s/libtiny.so" paths.c_build)
+  && (let _ = run_shell (Printf.sprintf "rm -f %s/tiny.o" paths.c_build) in true)
 
 (** OCaml binding — tiny.cmxa + libtiny_stubs.a.
 
@@ -197,9 +189,9 @@ let build_c_lib () : bool =
     module. Cosmetic drift in bo6.modules; no consumer script
     depends on the specific names (see tiny_ocaml_module_watchlist
     which is [Tiny; Tiny.sum; …] — [Tiny] present either way). *)
-let build_ocaml_binding () : bool =
+let build_ocaml_binding ~(paths : paths) () : bool =
   info "compile OCaml binding";
-  mkdir_p ocaml_build_dir;
+  mkdir_p paths.ocaml_build_dir;
   let ocaml_where = capture_line "ocamlc -where" in
   if String.is_empty ocaml_where then begin
     warn "ocamlc -where returned empty; is opam env set?";
@@ -208,7 +200,7 @@ let build_ocaml_binding () : bool =
   else
     let cmi src target =
       Printf.sprintf "ocamlfind ocamlopt -bin-annot -I %s -c %s/%s -o %s/%s"
-        ocaml_build_dir tiny_src src ocaml_build_dir target
+        paths.ocaml_build_dir paths.ocaml_src src paths.ocaml_build_dir target
     in
     (* Compile .mli → .cmi, then .ml → .cmx. Order matters:
        tiny.ml depends on Tiny_raw.cmi. *)
@@ -219,21 +211,21 @@ let build_ocaml_binding () : bool =
     && run_or_warn "cc tiny_stubs.c"
          (Printf.sprintf
             "gcc -c -fPIC -I%s -I%s %s/tiny_stubs.c -o %s/tiny_stubs.o"
-            ocaml_where c_include tiny_src ocaml_build_dir)
+            ocaml_where paths.c_include paths.ocaml_src paths.ocaml_build_dir)
     && run_or_warn "ar libtiny_stubs.a"
          (Printf.sprintf "ar rcs %s/libtiny_stubs.a %s/tiny_stubs.o"
-            ocaml_build_dir ocaml_build_dir)
+            paths.ocaml_build_dir paths.ocaml_build_dir)
     && run_or_warn "ar tiny.cmxa"
          (Printf.sprintf
             "ocamlfind ocamlopt -a %s/tiny_raw.cmx %s/tiny.cmx \
              -cclib -ltiny -cclib -ltiny_stubs -o %s/tiny.cmxa"
-            ocaml_build_dir ocaml_build_dir ocaml_build_dir)
+            paths.ocaml_build_dir paths.ocaml_build_dir paths.ocaml_build_dir)
 
 (** Python cext — _native.cpython-*.so. Embeds NEEDED
     libtiny.so.1 + rpath to c/build (matching setup.py's
     runtime_library_dirs). Later workspace materialization strips
     the rpath so LD_LIBRARY_PATH takes over. *)
-let build_python_cext () : bool =
+let build_python_cext ~(paths : paths) () : bool =
   info "compile Python cext";
   (* Use sysconfig directly — python3-config is not always shipped
      (venv installs may omit it; uv-managed Python does). *)
@@ -251,16 +243,17 @@ let build_python_cext () : bool =
   end
   else
     let c_build_abs =
-      capture_line (Printf.sprintf "readlink -f %s" c_build)
+      capture_line (Printf.sprintf "readlink -f %s" paths.c_build)
     in
-    let src = tiny_root ^ "/python_cext/tiny_cext/_native.c" in
+    let src = paths.tiny_root ^ "/python_cext/tiny_cext/_native.c" in
     let dst =
-      Printf.sprintf "%s/python_cext/tiny_cext/_native%s" tiny_root ext_suffix
+      Printf.sprintf "%s/python_cext/tiny_cext/_native%s"
+        paths.tiny_root ext_suffix
     in
     run_or_warn "cc _native.so"
       (Printf.sprintf
          "gcc -shared -fPIC -I%s -I%s -L%s -Wl,-rpath,%s %s -ltiny -o %s"
-         py_include c_include c_build_abs c_build_abs src dst)
+         py_include paths.c_include c_build_abs c_build_abs src dst)
 
 (* ---------- glob ---------- *)
 
@@ -276,14 +269,15 @@ let glob_first ~root ~pattern : string option =
 
 (* ---------- inspectors ---------- *)
 
-let inspect_n4 () =
+let inspect_n4 ~(paths : paths) () =
   (* nm -D libtiny.so.1 | inspect_native.py *)
-  let so = c_build ^ "/libtiny.so.1" in
+  let so = paths.c_build ^ "/libtiny.so.1" in
   let so =
     if Stdlib.Sys.file_exists so then so
     else
       (* SONAME-bumped fallback (libtiny.so.*.0). *)
-      Option.value (glob_first ~root:c_build ~pattern:"libtiny.so.*.0") ~default:so
+      Option.value (glob_first ~root:paths.c_build ~pattern:"libtiny.so.*.0")
+        ~default:so
   in
   if not (Stdlib.Sys.file_exists so) then None
   else
@@ -293,21 +287,23 @@ let inspect_n4 () =
           --path '%s' --prefixes tiny_ --elf --emit-symbols"
          so scripts so)
 
-let inspect_bo4 () =
-  let mli = tiny_root ^ "/ocaml/tiny.mli" in
+let inspect_bo4 ~(paths : paths) () =
+  let mli = paths.ocaml_src ^ "/tiny.mli" in
   if not (Stdlib.Sys.file_exists mli) then None
   else
     capture_json
-      (Printf.sprintf "python3 '%s/inspect_binding.py' --kind mli --path '%s'" scripts mli)
+      (Printf.sprintf "python3 '%s/inspect_binding.py' --kind mli --path '%s'"
+         scripts mli)
 
-let inspect_bo6 () =
-  match glob_first ~root:ocaml_build_dir ~pattern:"tiny.cmxa" with
+let inspect_bo6 ~(paths : paths) () =
+  match glob_first ~root:paths.ocaml_build_dir ~pattern:"tiny.cmxa" with
   | None -> None
   | Some cmxa ->
-    capture_json (Printf.sprintf "python3 '%s/inspect_ocaml.py' --path '%s'" scripts cmxa)
+    capture_json
+      (Printf.sprintf "python3 '%s/inspect_ocaml.py' --path '%s'" scripts cmxa)
 
-let inspect_bo7 () =
-  match glob_first ~root:ocaml_build_dir ~pattern:"libtiny_stubs*.a" with
+let inspect_bo7 ~(paths : paths) () =
+  match glob_first ~root:paths.ocaml_build_dir ~pattern:"libtiny_stubs*.a" with
   | None -> None
   | Some stub_a ->
     capture_json
@@ -315,26 +311,25 @@ let inspect_bo7 () =
          "python3 '%s/inspect_binding.py' --kind stub --path '%s' --prefix tiny_"
          scripts stub_a)
 
-let inspect_bpc2 () =
+let inspect_bpc2 ~(paths : paths) () =
   capture_json
     (Printf.sprintf
        "PYTHONPATH='%s/python_ctypes' LD_LIBRARY_PATH='%s' \
         python3 '%s/inspect_python.py' --pkg tiny_ctypes"
-       tiny_root c_build scripts)
+       paths.python_cext_pkg paths.c_build scripts)
 
-let inspect_bpe2 () =
+let inspect_bpe2 ~(paths : paths) () =
   capture_json
     (Printf.sprintf
        "PYTHONPATH='%s/python_cext' LD_LIBRARY_PATH='%s' \
         python3 '%s/inspect_python.py' --pkg tiny_cext"
-       tiny_root c_build scripts)
+       paths.python_cext_pkg paths.c_build scripts)
 
-let inspect_bpe3 () =
+let inspect_bpe3 ~(paths : paths) () =
   (* nm -u + filter tiny_ + wrap as c_stub JSON. Inline Python (parity
      with scenarios.py's bpe3); could be ported to pure OCaml later. *)
   match
-    glob_first
-      ~root:(tiny_root ^ "/python_cext/tiny_cext")
+    glob_first ~root:paths.python_cext_dir
       ~pattern:"_native.cpython-*.so"
   with
   | None -> None
@@ -347,14 +342,15 @@ let inspect_bpe3 () =
           json.dump({'kind':'c_stub','path':'%s','counts':{'required':len(syms)},'requires':sorted(syms)}, sys.stdout)\""
          so so)
 
-let inspectors : (string * (unit -> Yojson.Basic.t option)) list = [
-  "n4",   inspect_n4;
-  "bo4",  inspect_bo4;
-  "bo6",  inspect_bo6;
-  "bo7",  inspect_bo7;
-  "bpc2", inspect_bpc2;
-  "bpe2", inspect_bpe2;
-  "bpe3", inspect_bpe3;
+let inspectors ~(paths : paths)
+  : (string * (unit -> Yojson.Basic.t option)) list = [
+  "n4",   (fun () -> inspect_n4  ~paths ());
+  "bo4",  (fun () -> inspect_bo4 ~paths ());
+  "bo6",  (fun () -> inspect_bo6 ~paths ());
+  "bo7",  (fun () -> inspect_bo7 ~paths ());
+  "bpc2", (fun () -> inspect_bpc2 ~paths ());
+  "bpe2", (fun () -> inspect_bpe2 ~paths ());
+  "bpe3", (fun () -> inspect_bpe3 ~paths ());
 ]
 
 (* ---------- workspace materialization ---------- *)
@@ -405,16 +401,16 @@ let rec walk ~root ~rel ~f =
   | Unix.S_REG | Unix.S_LNK -> f rel abs
   | _ -> ()
 
-let materialize_workspace () : int =
-  let ws = baseline_workspace in
+let materialize_workspace ~(paths : paths) ~(target : string) : int =
+  let ws = target in
   rm_rf ws; mkdir_p ws;
   let count = ref 0 in
   (* Walk each top-level entry; skip excluded names. *)
-  Stdlib.Sys.readdir tiny_root
+  Stdlib.Sys.readdir paths.tiny_root
   |> Array.iter ~f:(fun top ->
     if List.mem workspace_excluded_top top ~equal:String.equal then ()
     else
-      walk ~root:tiny_root ~rel:top ~f:(fun rel src ->
+      walk ~root:paths.tiny_root ~rel:top ~f:(fun rel src ->
         let parts = String.split rel ~on:'/' in
         if path_contains_fragment ~fragments:workspace_excluded_fragments parts then ()
         else if starts_with_any ~prefixes:workspace_excluded_prefixes rel then ()
@@ -490,12 +486,13 @@ let snapshot_baseline_cext () : unit =
         in ())
 
 let run () : unit =
-  if not (build_c_lib ())        then fail "C library build failed";
-  if not (build_ocaml_binding ()) then fail "OCaml binding build failed";
-  if not (build_python_cext ())   then fail "Python cext build failed";
+  let paths = live_paths in
+  if not (build_c_lib ~paths ())        then fail "C library build failed";
+  if not (build_ocaml_binding ~paths ()) then fail "OCaml binding build failed";
+  if not (build_python_cext ~paths ())   then fail "Python cext build failed";
   mkdir_p baseline_inspect;
   info "artifacts built; running inspectors";
-  List.iter inspectors ~f:(fun (alias, fn) ->
+  List.iter (inspectors ~paths) ~f:(fun (alias, fn) ->
     match fn () with
     | None -> warn "WARN %s produced no JSON" alias
     | Some j ->
@@ -504,5 +501,5 @@ let run () : unit =
       info "%s -> %s" alias path);
   snapshot_baseline_cext ();
   info "snapshot baseline cext -> %s" baseline_cext;
-  let n = materialize_workspace () in
+  let n = materialize_workspace ~paths ~target:baseline_workspace in
   info "snapshot workspace (%d files)" n
