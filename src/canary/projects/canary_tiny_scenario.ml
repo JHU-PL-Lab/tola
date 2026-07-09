@@ -742,10 +742,7 @@ let print_list ?(status_of : (string -> string option) option) () =
   in
   let bads = List.filter scenario_specs ~f:(fun e ->
     Option.is_some e.scenario.mutation) in
-  let unmutated = List.filter scenario_specs ~f:(fun e ->
-    Option.is_none e.scenario.mutation) in
   let n_bad = List.length bads in
-  let n_unmutated = List.length unmutated in
   let n_cells = List.length derived_scenarios in
   let n_cells_filled = List.count derived_scenarios ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
@@ -755,8 +752,6 @@ let print_list ?(status_of : (string -> string option) option) () =
   Stdlib.print_endline
     (Printf.sprintf "Bad scenarios:  %d mutations, covering %d of %d design-space cells (%d empty)"
        n_bad n_cells_filled n_cells (n_cells - n_cells_filled));
-  Stdlib.print_endline
-    (Printf.sprintf "Unmutated:      %d Sc.N runs (no mutation applied)" n_unmutated);
   Stdlib.print_endline "";
   let section title lg =
     let goods = goods_by_lang lg in
@@ -767,19 +762,7 @@ let print_list ?(status_of : (string -> string option) option) () =
   in
   section "Shared" Shared;
   section "OCaml" OCaml_lang;
-  section "Python" Python_lang;
-  if not (List.is_empty unmutated) then begin
-    Stdlib.print_endline "Unmutated (Sc.N runs without a mutation):";
-    List.iter unmutated ~f:(fun e ->
-      let sc = e.scenario in
-      let exercises = String.concat ~sep:" + " sc.belongs_to in
-      let status_str = match status_of with
-        | None -> ""
-        | Some f -> (match f sc.name with Some s -> " " ^ s | None -> "") in
-      Stdlib.print_endline
-        (Printf.sprintf "  %s  %s  (exercises %s)%s"
-           (pad_id sc.id) sc.name exercises status_str))
-  end
+  section "Python" Python_lang
 
 (** Validate a scenario name at start-up. Returns the string
     unchanged if [n] is a known scenario name (one of the 15 in
