@@ -356,6 +356,48 @@ Phase A is inventory only. Decisions deferred to Phase B:
       key-files rows to reflect the new module set
       (`canary_tiny_{scenario,baseline,prepare}.ml`) and
       `ssot.md §5 Flow` to name OCaml as the sole producer.
+- [ ] **Phase F** — retire the `Pc.N` category. The two
+      "positive coverage" entries (`app_over_binding_ocaml`,
+      `app_over_helper_ocaml`) are just Sc.N runs with
+      `mutation = None` — unmutated witnesses under §4.1 of
+      the SSOT, not a separate species alongside `Bs.N`. Doc
+      cutover already landed (SSOT §4.1 + §5 preamble
+      rewrite + tiny.md §2). Code-side sequence:
+      - [ ] **F.1** — rewrite `Canary_tiny_scenario` id
+        semantics. Options considered:
+        (a) rename `Pc.1`/`Pc.2` id fields to
+        `Sc.4.OCaml.positive` / `Sc.6.OCaml.positive` — reads
+        as "the unmutated witness for that Sc";
+        (b) drop the id column for `mutation = None` rows and
+        surface only the name (`app_over_binding_ocaml`) —
+        the name already uniquely identifies;
+        (c) keep `Pc.N` as a legacy label but stop citing it
+        anywhere outside the code.
+        Leaning (b): the "witness id" isn't load-bearing —
+        `belongs_to` + `mutation = None` is the joint key;
+        no downstream code parses `Pc.` prefix specifically
+        (verify with grep before landing).
+      - [ ] **F.2** — `print_list` in `canary_tiny_scenario.ml`.
+        Drop the trailing `verified by (N):` sub-section per
+        Good scenario; fold the unmutated witness into the
+        Sc.N cell listing alongside its Bs.N siblings, with
+        `[no mutation]` (or blank detector column) where the
+        Bs row shows `[c1]`/`[c3]`/…. `tiny list` output
+        becomes one uniform per-Sc.N block instead of the
+        current two-part (`cells:` + `verified by:`) split.
+      - [ ] **F.3** — SSOT-side `all_scenarios` framing.
+        Rename the internal split from `bads + pcs` to
+        `mutation_carrying + unmutated_witnesses`. Recount
+        stays 21 (= 6 Good + 15 concrete instantiations).
+      - [ ] **F.4** — audit callsites for `Pc.` string
+        prefix. Confirm nothing outside doc/comments matches;
+        strip stale mentions from worklog headers, `tiny.md`
+        gotcha, and `docs/canary/projects/*` HTML if
+        emitted there.
+      Sequence rationale: F.1 is the data change; F.2 the
+      view; F.3 the SSOT bookkeeping; F.4 the audit sweep.
+      No breaking downstream — `scenario_specs` shape doesn't
+      change, only labels + view.
 
 ### Retired verbs (per §1b)
 

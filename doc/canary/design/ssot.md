@@ -138,6 +138,41 @@ Project-agnostic patterns live at `Canary_scenario.good_scenarios`;
 tiny's instances (same ids, tiny-specific descriptions) at
 `Canary_tiny_scenario.tiny_good_scenarios`.
 
+### 4.1 Concrete witnesses
+
+Each `Sc.N × language` admits **concrete witnesses** — specific
+workspaces (tiny today; future project-N tomorrow) that run
+the scenario end-to-end. A witness either:
+
+- runs **unmutated** — the scenario itself works; all steps
+  reach `done` with `Expect_success`. This is the positive
+  coverage of the scenario.
+- applies a `Bs.N` mutation — expected to fail at some step
+  the mutation targets. Enumerated in §5.
+
+Tiny's unmutated witnesses:
+
+| Sc.N × lang               | Unmutated witness           | What it exercises                                        |
+| ------------------------- | --------------------------- | -------------------------------------------------------- |
+| Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml`    | App links against binding, uses it directly; build + run |
+| Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`     | App uses a helper library that uses the binding; build + run |
+
+These witnesses used to be catalogued as `Pc.N` (positive
+coverage) alongside the `Bs.N` bad scenarios. They now live
+here — as unmutated instantiations of Sc.N — because the
+positive/negative split is not a category difference; it's
+whether the concrete instantiation carries a mutation. The
+underlying data (`Canary_tiny_scenario.scenario_specs`) is
+unchanged; the `mutation = None` entries just have a proper
+home in the SSOT.
+
+Running an unmutated witness is what `probe_app_<lang>` does
+under the hood — build the app, run it, expect success. The
+`probe_` prefix reads narrow for the app step (an app isn't
+observed from the outside; it's *used*), but the semantic is
+already the right one: the app step exercises the artifact as
+its end-user would.
+
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
@@ -146,7 +181,8 @@ SSOT §5.1 ──► draft.md L382 table, tiny variant matrix.
 sole producer as of Phase E; the legacy Python harness
 (`scenarios.py`) was archived under
 [`../_legacy_code/tiny_python_harness/`](../_legacy_code/tiny_python_harness/).
-**Status.** stable — 15 rows.
+**Status.** stable — 13 Bs rows here + 2 unmutated witnesses
+in §4.1 = 15 concrete instantiations in `scenario_specs`.
 
 **Roadmap rows** (not in code yet):
 
@@ -167,24 +203,24 @@ Columns split into two:
 `Bs.N` = **B**ad **s**cenario number N. IDs are stable — new
 scenarios append; renames don't renumber.
 
-Positive-coverage scenarios (`app_over_binding_ocaml`,
-`app_over_helper_ocaml`) live in the tiny code registry
-(`Canary_tiny_scenario.scenario_specs`) but are **not** listed here —
-they're constructions that verify a good-scenario execution
-without mutation, not bad scenarios. Attribution under §4 as
-"verified by" entries is a future cleanup.
+Unmutated witnesses (`app_over_binding_ocaml`, `app_over_helper_ocaml`)
+are catalogued under §4.1, not here. §5 enumerates only
+mutation-carrying witnesses; a witness with `mutation = None`
+belongs under the Sc.N it verifies.
 
 Ordering convention: rows grouped by Good scenario, then by
 mutation similarity. Renumbering when scenarios reorder is
 acceptable while §5.1 is still churning; once stable, IDs freeze.
 
-**Code correspondence.** The 13 Bs + 2 Pc entries live at
-`Canary_tiny_scenario.scenario_specs`. Each carries a `belongs_to`
-field naming the good scenario(s) it relates to — for Bs.N this
-is the `mutated_at` Sc.N; for Pc.N this is the Sc.N(s) it
-verifies. `Canary_tiny_scenario.all_scenarios` unions the 6
-tiny good + 13 Bs + 2 Pc = **21 scenarios** as the reference
-list for the `derive_entries` experiment (§9.3 backlog).
+**Code correspondence.** The 13 Bs rows below plus the 2
+unmutated witnesses from §4.1 (= **15 concrete instantiations**
+of Sc.N) live at `Canary_tiny_scenario.scenario_specs`. Each
+carries a `belongs_to` field naming the Good scenario(s) it
+relates to — for Bs.N this is the `mutated_at` Sc.N; for an
+unmutated witness this is the Sc.N(s) it exercises.
+`Canary_tiny_scenario.all_scenarios` unions the 6 tiny good +
+15 instantiations = **21 scenarios** as the reference list for
+the `derive_entries` experiment (§9.3 backlog).
 
 | ID    | Good scenario | Mutation                      | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |
