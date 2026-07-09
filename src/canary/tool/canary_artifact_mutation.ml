@@ -36,7 +36,7 @@
       SONAME via patchelf. Binary-level mutation — applies to
       the built artifact, not the source.
 
-    Positive-coverage scenarios carry [None] on the wrapping
+    Unmutated witnesses (SSOT §4.1) carry [None] on the wrapping
     [tiny_recipe.mutation] field — no mutation, base build.
 
     Future direction (per user 2026-07-09): a third variant

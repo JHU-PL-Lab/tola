@@ -218,9 +218,11 @@ of Sc.N) live at `Canary_tiny_scenario.scenario_specs`. Each
 carries a `belongs_to` field naming the Good scenario(s) it
 relates to — for Bs.N this is the `mutated_at` Sc.N; for an
 unmutated witness this is the Sc.N(s) it exercises.
-`Canary_tiny_scenario.all_scenarios` unions the 6 tiny good +
-15 instantiations = **21 scenarios** as the reference list for
-the `derive_entries` experiment (§9.3 backlog).
+`Canary_tiny_scenario.all_scenarios` unions the 8
+language-split tiny good scenarios (Sc.1 shared + 5 .OCaml +
+2 .Python) + 15 instantiations = **23 scenarios** as the
+reference list for the `derive_entries` experiment (§9.3
+backlog).
 
 | ID    | Good scenario | Mutation                      | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |

@@ -356,48 +356,40 @@ Phase A is inventory only. Decisions deferred to Phase B:
       key-files rows to reflect the new module set
       (`canary_tiny_{scenario,baseline,prepare}.ml`) and
       `ssot.md §5 Flow` to name OCaml as the sole producer.
-- [ ] **Phase F** — retire the `Pc.N` category. The two
+- [x] **Phase F** — retire the `Pc.N` *category* (the ID
+      label itself stays stable, per SSOT). The two
       "positive coverage" entries (`app_over_binding_ocaml`,
       `app_over_helper_ocaml`) are just Sc.N runs with
       `mutation = None` — unmutated witnesses under §4.1 of
-      the SSOT, not a separate species alongside `Bs.N`. Doc
-      cutover already landed (SSOT §4.1 + §5 preamble
-      rewrite + tiny.md §2). Code-side sequence:
-      - [ ] **F.1** — rewrite `Canary_tiny_scenario` id
-        semantics. Options considered:
-        (a) rename `Pc.1`/`Pc.2` id fields to
-        `Sc.4.OCaml.positive` / `Sc.6.OCaml.positive` — reads
-        as "the unmutated witness for that Sc";
-        (b) drop the id column for `mutation = None` rows and
-        surface only the name (`app_over_binding_ocaml`) —
-        the name already uniquely identifies;
-        (c) keep `Pc.N` as a legacy label but stop citing it
-        anywhere outside the code.
-        Leaning (b): the "witness id" isn't load-bearing —
-        `belongs_to` + `mutation = None` is the joint key;
-        no downstream code parses `Pc.` prefix specifically
-        (verify with grep before landing).
-      - [ ] **F.2** — `print_list` in `canary_tiny_scenario.ml`.
-        Drop the trailing `verified by (N):` sub-section per
-        Good scenario; fold the unmutated witness into the
-        Sc.N cell listing alongside its Bs.N siblings, with
-        `[no mutation]` (or blank detector column) where the
-        Bs row shows `[c1]`/`[c3]`/…. `tiny list` output
-        becomes one uniform per-Sc.N block instead of the
-        current two-part (`cells:` + `verified by:`) split.
-      - [ ] **F.3** — SSOT-side `all_scenarios` framing.
-        Rename the internal split from `bads + pcs` to
-        `mutation_carrying + unmutated_witnesses`. Recount
-        stays 21 (= 6 Good + 15 concrete instantiations).
-      - [ ] **F.4** — audit callsites for `Pc.` string
-        prefix. Confirm nothing outside doc/comments matches;
-        strip stale mentions from worklog headers, `tiny.md`
-        gotcha, and `docs/canary/projects/*` HTML if
-        emitted there.
-      Sequence rationale: F.1 is the data change; F.2 the
-      view; F.3 the SSOT bookkeeping; F.4 the audit sweep.
-      No breaking downstream — `scenario_specs` shape doesn't
-      change, only labels + view.
+      the SSOT, not a separate species alongside `Bs.N`.
+      - [x] **F.1** — id semantics decision: **keep the
+        `Pc.1`/`Pc.2` id label** (SSOT id-stability rule),
+        but reframe every code comment and docstring that
+        described them as "positive coverage" to
+        "unmutated witnesses (SSOT §4.1)". The id is a
+        stable historical label; the *category* is what
+        collapses.
+      - [x] **F.2** — `print_list` in `canary_tiny_scenario.ml`.
+        Renamed the sub-section header from `verified by (N):`
+        to `unmutated witnesses (N):`; renamed the internal
+        `pcs` binding to `witnesses`; renamed summary
+        `%d positive` → `%d unmutated`. Structural layout
+        preserved (two-part cells + witnesses) since the
+        witnesses genuinely don't map onto a cell — they
+        exercise the whole Sc.N.
+      - [x] **F.3** — `all_scenarios` docstring reframed
+        (`8 Sc + 13 Bs + 2 Pc = 23` → `8 Sc + 15 concrete
+        instantiations = 23`). Reconciled SSOT §5 headcount
+        wording (was `6 + 15 = 21`, code is `8 + 15 = 23`
+        because language-split multiplies the Sc.N patterns).
+      - [x] **F.4** — audit sweep: all `positive coverage` /
+        `Positive-coverage` strings in `src/` updated;
+        `canary_artifact_mutation.ml` doc block reframed;
+        `tiny.md §8 base route` gotcha reframed. `Pc.1`/`Pc.2`
+        strings retained where they carry the stable ID
+        (declarations + [belongs_to_of_id] match arms).
+      Result: category concept retired, IDs stable.
+      `scenario_specs` data shape unchanged.
 
 ### Retired verbs (per §1b)
 
