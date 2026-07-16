@@ -398,6 +398,104 @@ Status: **stable in code**.
 dune exec src/bin/canary_main.exe -- paths-md
 ```
 
+### 6.6 `project_spec` — the code-side project handoff
+
+**Flow.** Project (`canary_project_<name>.ml`) constructs a
+[`Canary_step_builder.project_spec`](../../src/canary/action/canary_step_builder.ml)
+──► `derive_steps` walks it ──► `action_step list` ──► one
+of four backends (local runner / GH YAML / Mermaid / HTML).
+
+Status: **stable in code** (2026-07-08 rename from
+`script_spec`; type shape stable since Phase 4).
+
+**Shape.** `project_spec` is a record where most fields are
+one closure per action verb from §6.5, plus a few policy /
+metadata fields. Each closure has type
+`~output_dir:string -> ~variant_key:string -> string` and
+returns the shell command for that action:
+
+- Action closures (one field per verb, all `option`):
+  `fetch_source`, `scan_source`, `scan_sources` (+ optional
+  `scan_sources_after` placement), `configure`,
+  `build_headers` / `fetch_headers`, `build_lib` /
+  `fetch_lib`, `build_binding` (per-lang list) /
+  `fetch_binding` / `pack_binding`, `install_lib`,
+  `build_app` / `fetch_app` / `pack_app`, `pack_lib`,
+  `probe_lib` / `probe_binding` / `probe_app`.
+  Missing (`None`) → the corresponding action is dropped
+  from the emitted step list.
+- Declarative surface metadata: `api_source :
+  Canary_artifact_api.t option` (native + per-language
+  binding claims — provider symbol prefixes, consumer
+  module watchlists, header paths).
+- Per-step policies: `check_post` (rule → optional
+  postcondition predicate), `expectation` (rule →
+  optional location → `step_expectation`), `symbol_check`,
+  `inspect` (per-rule override for the auto-generated
+  inspector step), `disabled_contracts`.
+- Language wiring: `binding_user_facing_pkg`
+  (`(lang * pkg_name) list` — drives auto-generated
+  inspector step after `Probe (Binding lang)`).
+- Diagram wiring: `artifact_name`, `inspect_note`.
+
+Full field list + type: [`src/canary/action/canary_step_builder.ml:88`](../../src/canary/action/canary_step_builder.ml#L88).
+
+**Composition with §6.5.** A `project_spec` is a partial
+assignment from the action catalogue (§6.5) to shell
+closures. Actions absent from the spec are absent from the
+run. Multi-instance actions (`Build_binding`, `probe_*`)
+carry per-language / per-location lists so one project can
+emit distinct steps for OCaml vs Python variants.
+
+**Derivation.** `derive_steps ~root ~project ?(langs = [OCaml])
+(spec : project_spec) : action_step list` in the same file
+(~line 535) walks the spec:
+
+1. Traverse §6.5's action verbs in dependency order.
+2. For each present closure, emit an `action_step` with:
+   - `cmd` (from the closure, instantiated with
+     `output_dir` / `variant_key`)
+   - `expectation` (from `spec.expectation` for this rule,
+     defaulting to `Expect_success`)
+   - `check_pre` / `check_post` (defaults or from
+     `spec.check_post` override)
+   - `symbol_check` (from `spec.symbol_check`)
+   - Per-artifact metadata (`variant_id`, `cache_key`, etc.)
+3. Auto-insert inspector steps after `Probe (Binding lang)`
+   using `binding_user_facing_pkg[lang]` + the language's
+   inspect command from `Canary_artifact_lang`.
+4. Cross-check declarative claims: if `api_source` names
+   header paths / binding source paths, insert a
+   `scan_source` step that verifies they exist post-fetch.
+
+**Consumers of `action_step list`** (the four backends):
+
+| Backend | File | What it does |
+|---|---|---|
+| local runner | [`backend/canary_local_runner.ml`](../../src/canary/backend/canary_local_runner.ml) | Executes each step in order, honours cache, records status |
+| GH YAML | [`backend/canary_gh.ml`](../../src/canary/backend/canary_gh.ml) | Renders as GitHub Actions job(s) |
+| Mermaid | [`backend/canary_diagram.ml`](../../src/canary/backend/canary_diagram.ml) | Renders as an action-graph diagram |
+| HTML | [`backend/canary_html.ml`](../../src/canary/backend/canary_html.ml) | Renders interactive result viewer |
+
+**Multi-variant projects.** Some projects run several
+scenarios or version variants. The pattern is: build one
+`project_spec` per variant (each with its own closures /
+`expectation`), each becomes its own `action_step list`,
+each runs independently. Examples:
+
+- **tiny**: 15 concrete scenarios (13 Bs + 2 concrete good).
+  A per-scenario factory (`Canary_tiny_scenario.project_spec_of_entry`)
+  wraps a shared chassis `make_base_project_spec ~stores` and
+  overrides `expectation` from the scenario's recipe. See
+  [`design/tiny.md §3`](tiny.md#3-factory-pipeline--how-canary-runs-a-scenario).
+- **z3 / llvm**: dev + stable variant. Each variant is a
+  hand-coded `project_spec` value in
+  `canary_project_{z3,llvm}.ml`; the stable variant carries
+  a hand-written `Expect_compat_failure` predicate for the
+  version mismatch. Task 2 ([`tiny.md §7.8`](tiny.md#78-task-2--recipemutation-integration-project-hookable-factory))
+  proposes lifting tiny's factory pattern here so these
+  projects can supply recipes analogous to tiny's.
+
 ---
 
 ## 7. Principles the SSOT should honour (awareness, not action)
