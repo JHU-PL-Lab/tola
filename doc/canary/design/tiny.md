@@ -249,8 +249,28 @@ dispatch, zero routing tables.
 
 ## 7. Wish-list
 
-Near-term, tiny-focused. See
-[`status.md`](../status.md) for the live backlog.
+Tiny-focused; see [`status.md`](../status.md) for the
+project-wide backlog.
+
+### Picking order (as of 2026-07-10)
+
+| # | Item | Cluster | Status |
+|---|---|---|---|
+| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory) | B | **active — pickup candidate** |
+| §7.9 | Derive `related_artifacts` from `actions` | C | **active — small pickup** |
+| — | SSOT §6.6 — document `project_spec` (in [`status.md §3.0`](../status.md)) | C | **active — SSOT-scoped, tiny is the reference** |
+| §7.2 | `tiny_recipe` synthesis from an abstract cell | A | **postponed** (user 2026-07-10) |
+| §7.1 | Fill the 15 empty derived cells | A | blocked by §7.2 |
+| §7.4 | Fill Sc.3–Sc.6 areas | A | overlaps §7.1 |
+| §7.3 | Second mechanism axis — ctypes DFFI | — | deferred (user 2026-07-06) |
+| §7.5 | Tiny packaging coverage | D | long-horizon; needs Package mutation source |
+| §7.6 | Contract catalogue extension | D | post-tiny research task |
+| §7.7 | Route tiny commands through `tool/` (R2) | — | **done** 2026-07-09; macOS follow-up |
+
+Clusters: A = tiny scenario coverage, B = factory sequel to
+Phase G, C = small self-contained cleanups, D = long-horizon
+research. Numbering stable — sections stay at their §7.N ids
+regardless of picking priority.
 
 ### 7.1 Fill the 15 empty derived cells
 
@@ -267,6 +287,15 @@ entry in `tiny_scenario.scenario_specs`, (iii) a Bs.N id. All are
 mechanical if the recipe shape is right.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell
+
+**Postponed** (2026-07-10, user). Cluster B (Task 2 —
+recipe/mutation integration; see §7.8 below) picks up
+ahead — it lifts the recipe abstraction across projects
+which changes the shape of any future synthesis plan.
+Resume §7.2 after Task 2 lands and re-evaluate the phase
+plan below against the new abstraction.
+
+---
 
 Today derived cells are name-only. To *run* a derived cell
 we'd need to generate a `tiny_recipe` (mutation + expected
@@ -470,6 +499,92 @@ Relates to `backlog.md` #18 (audit specs for hardcoded
 shell commands routed through named primitives) and #47
 (unify store-selection patterns). Nicknamed R2 in the
 2026-07-08 conversation.
+
+### 7.8 Task 2 — recipe/mutation integration (project-hookable factory)
+
+**Status: active pickup candidate.** Sequel to Phase G. Also
+tracked in [`status.md §2`](../status.md).
+
+Phase G unified `Canary_scenario.scenario` (`.origin` field
+replaced `.mutation`; nullary `Version_mismatch` /
+`Packaging` reserved). That was the *scenario*-side
+integration. The *recipe*-side gap remains:
+
+- Tiny defines `tiny_recipe` (a tiny-specific record with
+  `mutates`, `mutation`, `expected`, `violates`) and
+  wraps it in `scenario_spec`.
+- Tiny's factory (`stores_of_entry`, `expectation_of_entry`,
+  `project_spec_of_entry`) reads `recipe.mutation` +
+  `recipe.violates` to derive the runnable `project_spec`.
+- z3 / llvm / sqlite have **no parallel** — their variants
+  are hand-coded per file in
+  `canary_project_{z3,llvm,sqlite}.ml` with hardcoded
+  `Expect_compat_failure` predicates.
+
+Goal: lift tiny's recipe/factory pattern into a project-hookable
+interface so z3 / llvm / sqlite can supply their own recipes and
+inherit the uniform derivation. Rough shape:
+
+1. **Project-agnostic recipe interface.** Extract the shape
+   of `tiny_recipe` that isn't tiny-specific — probably
+   `type 'a recipe = { violates : contract_id list; expected :
+   (step * outcome) list; origin_details : 'a }` where `'a`
+   is the project's mutation type (tiny's `Canary_artifact_mutation.mutation`;
+   llvm's would be a version-pair record for
+   `Version_mismatch` origin).
+2. **Factory hook per project.** Each project spec module
+   exports its own `stores_of_entry` / `expectation_of_entry`
+   analogues that consume the project's recipe type. Tiny
+   becomes the reference implementation, llvm/z3/sqlite
+   grow their own.
+3. **Retire the hand-coded `Expect_compat_failure` in
+   llvm/z3.** llvm's stable variant currently spells out
+   the predicted substring by name (`Opcode.UncondBr`).
+   Under the new interface, it'd flow from
+   `Canary_scenario.origin = Version_mismatch` + a recipe
+   that names the paired versions + language.
+
+Size guess: 200-400 LOC across `canary_scenario_util.ml`,
+each `canary_project_<name>.ml`, and possibly a new
+`canary_recipe.ml`. Non-breaking if we roll it out per
+project (start with tiny as reference, add llvm, then z3,
+then sqlite).
+
+Interaction with §7.2: postponed §7.2's phase plan assumes
+tiny's current recipe shape. Task 2 will change the shape,
+so §7.2 must re-baseline after Task 2 lands.
+
+### 7.9 Derive `related_artifacts` from `actions`
+
+**Status: active pickup — small self-contained cleanup.**
+Also tracked in [`status.md §5`](../status.md).
+
+Every entry in `tiny_good_scenarios` hand-lists
+`related_artifacts` (e.g. Sc.1 → `[Source; Lib]`; Sc.2.OCaml
+→ `[Lib; Binding OCaml]`). These are derivable from the
+scenario's `actions` list via a
+`consumes / produces : Canary_basic.rule -> artifact_kind list`
+helper on the action graph:
+
+- `Configure` / `Scan_sources` — consume Source, produce nothing
+- `Build_lib` — consume Source, produce Lib
+- `Build_binding <lang>` — consume Lib, produce Binding lang
+- `Build_app` — consume Binding + App source, produce App
+- `Probe (Binding lang)` — consume Binding lang + Lib
+- `Probe Lib` — consume Lib
+- `Fetch <k>` — produce <k>
+- `Install_lib` — consume Lib, produce Lib
+
+`related_artifacts = union of consumes+produces over actions`.
+
+Validation path: compute the derived value for each of the 8
+tiny_good_scenarios, assert equality with the hand-listed
+value, then delete the hand field. Size: ~50-100 LOC
+(helper in `canary_action.ml` or `canary_basic.ml` + the
+migration + the validator).
+
+Independent of Task 2 / §7.2. Good warm-up if you want a
+low-context task first.
 
 ## 8. Gotchas / rough edges (state-of-code notes)
 

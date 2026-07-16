@@ -14,17 +14,21 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-*(Nothing in flight — Task 1.6 closed out 2026-07-08. Pick
-the next item from §2 below.)*
+*(Nothing in flight. Picking order (2026-07-10):*
+*Cluster C first — SSOT §6.6 project_spec doc (§3.0 below);*
+*then Cluster B — Task 2 recipe/mutation integration*
+*([`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory)).*
+*`tiny_recipe` synthesis (tiny.md §7.2) postponed per user.)*
 
 ## 2. Near-term
 
 Ordered rough priority.
 
 - **Tiny wish-list items** — see
-  [`design/tiny.md`](design/tiny.md) §7. Filling the 15 empty
-  derived cells + `tiny_recipe` synthesis + ctypes DFFI axis.
-  These are the immediate tiny-completion tasks.
+  [`design/tiny.md`](design/tiny.md) §7 (picking-order table
+  at the top). Filling derived cells + `tiny_recipe`
+  synthesis both postponed; §7.8 (Task 2) and §7.9 (derive
+  related_artifacts) are the active pickup candidates.
 
 - **Flavor-2 catalogue extension** —
   [`design/bad_scenario_flavors.md`](design/bad_scenario_flavors.md).
@@ -43,7 +47,8 @@ Ordered rough priority.
   project-hookable recipe interface so z3/llvm/sqlite can
   supply their own. Tiny's factory already reads
   `recipe.mutation` for store synthesis; the
-  z3/llvm/sqlite side has no analogue yet.
+  z3/llvm/sqlite side has no analogue yet. Fuller writeup
+  at [`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory).
 
 - **Re-do expectation as per-step contract outcome.**
   Every action's outcome (success or failure) should
