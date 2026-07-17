@@ -87,18 +87,11 @@ let patch = Canary_artifact_mutation.patch
 let a_ocaml = Canary_basic.Binding Canary_lang.OCaml
 let a_python = Canary_basic.Binding Canary_lang.Python
 
-(** Actions exercised by a full tiny run (configure → build → probe
-    across both bindings + the downstream app). *)
-let acts_full : Canary_basic.rule list = [
-  Configure; Scan_sources;
-  Build_lib;
-  Build_binding Canary_lang.OCaml;
-  Build_binding Canary_lang.Python;
-  Build_app { lang = Canary_lang.OCaml };
-  Probe_binding Canary_lang.OCaml;
-  Probe_binding Canary_lang.Python;
-  Probe_app { lang = Canary_lang.OCaml };
-]
+(* [acts_full] retired 2026-07-10: every scenario now carries
+   its parent Sc.N's actions (via [actions_of_parents]
+   below), not a uniform tiny-wide list. Both cargo-culted
+   uses (all Bs's + all Pc's carrying it identically) are
+   gone. *)
 
 (* arts_native_cascade / arts_ocaml_only / arts_python_only /
    arts_abi_cascade / arts_positive retired 2026-07-10: they
@@ -138,14 +131,42 @@ let belongs_to_of_id (id : string) : string list =
     Stdlib.failwith
       (Printf.sprintf "unknown id for belongs_to derivation: %S" other)
 
+(* Actions for a Bs.N or Pc entry = union of its belongs_to
+   parents' actions. Matches the "this scenario is a mutation
+   instance of Sc.N" semantic: Bs.N's derived
+   [related_artifacts] equals the parent Sc.N's, so
+   [validate_mutation_target]'s membership check passes and
+   the mutation.target sits in the parent's artifact set.
+   For Pc entries with multiple parents (Pc.1 → Sc.3+Sc.4),
+   the union covers both halves of the chain.
+
+   Static metadata note (2026-07-10): [scenario.actions] here
+   reflects the *conceptual* action scope of the mutation, not
+   what canary literally runs (canary's factory always emits
+   the full spec — every rule closure fires). Future
+   "sync-static-with-runtime" task will make the factory
+   respect [scenario.actions] and only emit steps for the
+   listed rules; until then, treat this field as metadata. *)
+let actions_of_parents (parents : string list) : Canary_basic.rule list =
+  let open Base in
+  List.concat_map parents ~f:(fun sc_id ->
+    match List.find Canary_scenario.good_scenarios
+            ~f:(fun g -> String.equal g.id sc_id) with
+    | Some g -> g.actions
+    | None -> [])
+  |> List.fold ~init:[] ~f:(fun acc r ->
+      if List.mem acc r ~equal:Poly.equal then acc else acc @ [ r ])
+
 let scenario_specs : scenario_spec list =
   let open Canary_compat in
   let open Canary_scenario in
   let mk ~id ~name ~description ~mutates ~concrete_pert
          ~scenario_pert ~expected ~violates =
-    { scenario = { id; name; description; actions = acts_full;
+    let parents = belongs_to_of_id id in
+    let actions = actions_of_parents parents in
+    { scenario = { id; name; description; actions;
                    origin = scenario_pert;
-                   belongs_to = belongs_to_of_id id };
+                   belongs_to = parents };
       recipe = { mutates; mutation = concrete_pert;
                  expected; violates };
     }

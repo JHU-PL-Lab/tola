@@ -139,15 +139,16 @@ eventually" pass.
   2026-07-10; field removed, getter derives from
   `scenario.actions`. See [`design/tiny.md §7.9`](design/tiny.md#79-derive-related_artifacts-from-actions-done-2026-07-10).
 
-- **Migrate `Bs.N.actions` to per-scenario chains** —
-  today all 13 Bs entries share `acts_full`; §7.9 derived
-  `related_artifacts` from that and it works (mutation
-  targets fall in the union). But per-Bs actions matching
-  what each scenario actually exercises would let derived
-  `related_artifacts` shrink to the specific chain and
-  match the abstract Sc.N pattern. Small refactor;
-  independent of Task 2. Companion to §7.9's `tiny_good`
-  fix.
+- **Sync `scenario.actions` with canary runtime.** Today
+  `scenario.actions` is metadata (per parent Sc.N); canary's
+  factory always emits the full spec regardless. Future
+  task: make the factory respect `scenario.actions` and only
+  emit steps for the listed rules. Would let Bs.N runs skip
+  the language chain the mutation doesn't touch (e.g.
+  Bs.10's OCaml-only mutation wouldn't run the Python
+  probe). Non-trivial — touches `derive_steps` in
+  `canary_step_builder`; couples with Task 2 (recipe
+  interface), so best done as a Task 2 follow-up.
 
 ## 6. Done — pointers
 
