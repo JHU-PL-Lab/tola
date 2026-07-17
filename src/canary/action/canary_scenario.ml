@@ -166,27 +166,27 @@ let good_scenarios : scenario list =
     { id = "Sc.3.OCaml"; name = "build_app_with_binding";
       description = "Build an OCaml app that links against the OCaml \
                      binding.";
-      actions = [ Build_app ];
+      actions = [ Build_app { lang = OCaml } ];
       related_artifacts = [ Binding OCaml; App ];
       origin = None;
       belongs_to = [ "Sc.3.OCaml" ] };
     { id = "Sc.4.OCaml"; name = "run_app_with_binding";
       description = "Run the OCaml app; loader resolves the native lib \
                      at load time.";
-      actions = [ Probe App ];
+      actions = [ Probe_app { lang = OCaml } ];
       related_artifacts = [ Binding OCaml; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.4.OCaml" ] };
     { id = "Sc.5.OCaml"; name = "build_app_helper";
       description = "Build the app via an intermediate helper library \
                      that wraps the OCaml binding.";
-      actions = [ Build_app ];
+      actions = [ Build_app { lang = OCaml } ];
       related_artifacts = [ Binding OCaml; App ];
       origin = None;
       belongs_to = [ "Sc.5.OCaml" ] };
     { id = "Sc.6.OCaml"; name = "run_app_helper";
       description = "Run the app-via-helper chain.";
-      actions = [ Probe App ];
+      actions = [ Probe_app { lang = OCaml } ];
       related_artifacts = [ Binding OCaml; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.6.OCaml" ] };
@@ -205,7 +205,7 @@ let good_scenarios : scenario list =
                      the binding; loader resolves the native lib). \
                      ctypes probe would be a same-shape run under \
                      DFFI, not modeled today.";
-      actions = [ Probe App ];
+      actions = [ Probe_app { lang = Python } ];
       related_artifacts = [ Binding Python; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.4.Python" ] };

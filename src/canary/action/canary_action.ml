@@ -57,8 +57,9 @@ let store_rules ~langs =
   [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
   @ List.concat_map langs ~f:(fun lang ->
       [ Build_binding lang; Fetch (Binding lang);
-        Publish (Binding lang); Probe (Binding lang) ])
-  @ [ Build_app; Fetch App; Publish Lib; Publish App; Probe Lib; Probe App ]
+        Publish (Binding lang); Probe_binding lang;
+        Build_app { lang }; Probe_app { lang } ])
+  @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
 
 let make_action_rule ~rules ~versions ~name ~source () =
   let vs = version_suffix in
@@ -97,14 +98,8 @@ let make_action_rule ~rules ~versions ~name ~source () =
                         ()))
             in
             add pools (Binding lang) nodes
-        | Build_app ->
-            (* App depends on OCaml binding by convention; take first Binding pool found *)
-            let bindings =
-              let ocaml_bindings = get pools (Binding OCaml) in
-              if not (List.is_empty ocaml_bindings) then ocaml_bindings
-              else List.concat_map Canary_lang.[ OCaml; Python; Rust; Cpp; CSharp; Java ]
-                     ~f:(fun l -> get pools (Binding l))
-            in
+        | Build_app { lang } ->
+            let bindings = get pools (Binding lang) in
             let libs = get pools Lib in
             let nodes =
               List.concat_map bindings ~f:(fun binding ->
@@ -123,7 +118,8 @@ let make_action_rule ~rules ~versions ~name ~source () =
         (* Scan_sources doesn't produce new artifact nodes — it just
            emits inspect JSONs into the runner's output dirs.
            Configure / Install_lib / Publish / Probe likewise. *)
-        | Configure | Scan_sources | Install_lib | Publish _ | Probe _ -> pools)
+        | Configure | Scan_sources | Install_lib | Publish _
+        | Probe_lib | Probe_binding _ | Probe_app _ -> pools)
   in
   { rules; pools }
 

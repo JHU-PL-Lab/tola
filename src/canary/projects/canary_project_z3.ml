@@ -530,7 +530,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];
     expectation = (fun rule loc -> match rule, loc with
-      | Probe (Binding _),
+      | Probe_binding (_),
         Some (Canary_store.Pm
                 (Canary_store.Lang_pm
                    { lang = Canary_lang.Python; _ })) ->
@@ -573,7 +573,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
         in
         match rule with
-        | Probe Lib ->
+        | Probe_lib ->
             Some
               (fun ~output_dir ~variant_key ->
                 let sum =

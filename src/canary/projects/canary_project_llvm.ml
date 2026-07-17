@@ -481,12 +481,12 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     expectation = (fun rule loc -> match rule, loc with
-      | Probe (Binding _), Some (Pm (Lang_pm { lang = Python; _ })) ->
+      | Probe_binding (_), Some (Pm (Lang_pm { lang = Python; _ })) ->
           (* llvmlite bundles its own libLLVM; independent of opam's LLVM
              version, so the pip probe is Expect_success regardless of
              has_build_binding. *)
           Expect_success
-      | Probe (Binding _), _ when not source.has_build_binding ->
+      | Probe_binding (_), _ when not source.has_build_binding ->
           (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared.
              contains_any is now DERIVED from cached compat summaries by the runner —
              reads mli watchlist's missing list (e.g. Llvm.Opcode.UncondBr →
@@ -530,14 +530,14 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
       in
       match rule with
-      | Probe Lib when source.has_build_lib ->
+      | Probe_lib when source.has_build_lib ->
           Some (fun ~output_dir ~variant_key ->
             prepend_warn (Canary_artifact_native.inspect_cmd
               ~lib:[%string "%{build}/lib/libLLVM.so"]
               ~prefixes:[ "LLVM" ]
               ~watchlist:(Canary_artifact_api.native_watchlist api)
               ~output_dir ~variant_key ()))
-      | Probe Lib ->
+      | Probe_lib ->
           Some (fun ~output_dir ~variant_key ->
             prepend_warn [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
 LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)

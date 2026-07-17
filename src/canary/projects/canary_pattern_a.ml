@@ -111,7 +111,7 @@ let project_spec (d : t) : Canary_step_builder.project_spec =
              ~output_dir ~variant_key));
       ];
     inspect = (fun rule loc -> match rule, loc with
-      | Probe Lib, _ ->
+      | Probe_lib, _ ->
           Some (fun ~output_dir ~variant_key ->
             let sum = Canary_artifact_native.inspect_cmd
               ~lib:"$LIB_NATIVE"
@@ -119,7 +119,7 @@ let project_spec (d : t) : Canary_step_builder.project_spec =
               ~watchlist:d.native_watchlist
               ~output_dir ~variant_key () in
             Printf.sprintf "%s\n%s" resolve sum)
-      | Probe (Binding _), _ ->
+      | Probe_binding (_), _ ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg:d.ocamlfind_pkg

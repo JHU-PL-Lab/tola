@@ -178,9 +178,26 @@ let version_suffix = function Dev -> "" | Stable -> "-stable"
 let single_version = [ Dev ]
 let two_versions = [ Dev; Stable ]
 
+(** App-flavored rules carry an [app_info] record so the app's
+    binding language is explicit at the type level (no
+    reach-into-belongs_to needed downstream). Record shape (not
+    a bare [lang]) leaves room for future fields — helper name,
+    build flags, etc. — without a second breaking change. *)
+type app_info = {
+  lang : Canary_lang.lang;
+}
+
+let string_of_app_info (a : app_info) : string =
+  Canary_lang.string_of_lang a.lang
+
 (** Rules are typed actions: each variant has implicit input/output sorts.
     Pools in the action graph are indexed by [artifact_kind], built
-    incrementally by applying rules. *)
+    incrementally by applying rules.
+
+    [Probe] was formerly [Probe of artifact_kind] with [Probe App]
+    lang-oblivious; split into three variants (2026-07-10) so
+    every probe carries its target's language explicitly.
+    [Build_app] was formerly nullary; now carries [app_info]. *)
 type rule =
   | Configure
   | Scan_sources
@@ -197,10 +214,12 @@ type rule =
   | Build_lib
   | Build_binding of Canary_lang.lang
   | Install_lib
-  | Build_app
+  | Build_app of app_info
   | Fetch of artifact_kind
   | Publish of artifact_kind
-  | Probe of artifact_kind
+  | Probe_lib
+  | Probe_binding of Canary_lang.lang
+  | Probe_app of app_info
 
 let string_of_rule = function
   | Configure -> "configure"
@@ -209,13 +228,14 @@ let string_of_rule = function
   | Build_lib -> "build_lib"
   | Build_binding lang -> [%string "build_binding_%{Canary_lang.string_of_lang lang}"]
   | Install_lib -> "install_lib"
-  | Build_app -> "build_app"
+  | Build_app a -> [%string "build_app_%{string_of_app_info a}"]
   | Fetch (Binding lang) -> [%string "fetch_binding_%{Canary_lang.string_of_lang lang}"]
   | Fetch kind -> [%string "fetch_%{string_of_artifact_kind kind}"]
   | Publish (Binding lang) -> [%string "pack_binding_%{Canary_lang.string_of_lang lang}"]
   | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
-  | Probe (Binding lang) -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
-  | Probe kind -> [%string "probe_%{string_of_artifact_kind kind}"]
+  | Probe_lib -> "probe_lib"
+  | Probe_binding lang -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
+  | Probe_app a -> [%string "probe_app_%{string_of_app_info a}"]
 
 let rule_of_string s =
   let module A = Canary_lang in
@@ -235,19 +255,19 @@ let rule_of_string s =
   | "build_headers" -> Some Build_headers
   | "build_lib"     -> Some Build_lib
   | "install_lib"   -> Some Install_lib
-  | "build_app"     -> Some Build_app
   | "fetch_source"  -> Some (Fetch Source)
   | "fetch_headers" -> Some (Fetch Headers)
   | "fetch_lib"     -> Some (Fetch Lib)
   | "fetch_app"     -> Some (Fetch App)
   | "pack_lib"      -> Some (Publish Lib)
-  | "probe_lib"     -> Some (Probe Lib)
-  | "probe_app"     -> Some (Probe App)
+  | "probe_lib"     -> Some Probe_lib
   | _ ->
       try_binding "build_binding_" (fun l -> Build_binding l)
+      |> Option.first_some (try_binding "build_app_" (fun l -> Build_app { lang = l }))
       |> Option.first_some (try_binding "fetch_binding_" (fun l -> Fetch (Binding l)))
       |> Option.first_some (try_binding "pack_binding_" (fun l -> Publish (Binding l)))
-      |> Option.first_some (try_binding "probe_binding_" (fun l -> Probe (Binding l)))
+      |> Option.first_some (try_binding "probe_binding_" (fun l -> Probe_binding l))
+      |> Option.first_some (try_binding "probe_app_" (fun l -> Probe_app { lang = l }))
 
 (* ── Output Layout v3 helpers (inlined from canary_output_path.ml on
    2026-06-01, Phase 10c) ──────────────────────────────────────────────

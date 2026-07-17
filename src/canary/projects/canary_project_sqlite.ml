@@ -93,11 +93,11 @@ let project_spec : Canary_step_builder.project_spec =
        fetch step here — Phase 3d's pre-cache benefit only kicks in for
        projects that opt into the api_source flow.) *)
     inspect = (fun rule loc -> match rule, loc with
-      | Probe (Binding _), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
+      | Probe_binding (_), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.python_inspect_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ~variant_key ())
-      | Probe (Binding _), _ ->
+      | Probe_binding (_), _ ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.inspect_opam_pkg_cmd
               ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ~variant_key ())

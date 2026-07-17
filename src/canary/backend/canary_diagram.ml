@@ -2,6 +2,21 @@ open Base
 open Canary_basic
 open Canary
 
+(* Reverse of the (Probe_lib | Probe_binding _ | Probe_app _) → kind
+   projection: given an artifact_kind we probe, return the matching
+   probe rule variant. Used where diagram code has an artifact_kind
+   in hand and needs to reconstruct the rule tag (e.g. for
+   string_of_rule). Probe_app is always emitted with OCaml as a
+   placeholder; the actual lang is recovered from step tags when
+   needed, since diagram-side callsites don't have per-lang context.
+*)
+let probe_rule_of_kind = function
+  | Lib -> Probe_lib
+  | Binding l -> Probe_binding l
+  | App -> Probe_app { lang = Canary_lang.OCaml }
+  | k -> Stdlib.failwith
+           ("probe_rule_of_kind: unexpected kind " ^ string_of_artifact_kind k)
+
 (* ── Diagram rendering ──
    Step-level Mermaid renderers and the write_project_output orchestrator.
    The schema renderer (mermaid_of_action_rule_schema) lives in canary.ml.
@@ -76,7 +91,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   let build_rules =
     List.filter rules ~f:(fun r ->
         match r with
-        | Build_headers | Build_lib | Build_binding _ | Build_app -> true
+        | Build_headers | Build_lib | Build_binding _ | Build_app _ -> true
         | _ -> false)
   in
   let install_rules =
@@ -91,7 +106,11 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   in
   let probe_kinds =
     List.filter_map rules ~f:(fun r ->
-        match r with Probe k -> Some k | _ -> None)
+        match r with
+        | Probe_lib -> Some Lib
+        | Probe_binding l -> Some (Binding l)
+        | Probe_app _ -> Some App
+        | _ -> None)
   in
   (* Artifact pool kinds: derived from rules — includes Binding lang variants *)
   let artifact_pool_kinds =
@@ -100,7 +119,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
         | Build_headers | Fetch Headers -> Some Headers
         | Build_lib | Fetch Lib -> Some Lib
         | Build_binding lang | Fetch (Binding lang) -> Some (Binding lang)
-        | Build_app | Fetch App -> Some App
+        | Build_app _ | Fetch App -> Some App
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
   in
@@ -244,7 +263,10 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      their status entry (for edge colouring) but lose the separate pill node. *)
   let is_inlined_inspect rule =
     match rule with
-    | Publish kind | Probe kind | Fetch kind -> not (is_probe_expanded kind)
+    | Publish kind | Fetch kind -> not (is_probe_expanded kind)
+    | Probe_lib -> not (is_probe_expanded Lib)
+    | Probe_binding l -> not (is_probe_expanded (Binding l))
+    | Probe_app _ -> not (is_probe_expanded App)
     | _ -> false
   in
   (* Raw int IDs from steps_by_rule_tag for a given canonical rule name. *)
@@ -293,13 +315,23 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
   (* parent_action_nid for summary edges: Fetch → artifact node (expanded-aware);
      Probe → first expanded probe node when probe is expanded. *)
   let parent_action_nid_ex rule =
+    let expanded_first kind =
+      if is_probe_expanded kind then
+        match probe_expand_items kind with
+        | (first_tag, _, _) :: _ -> Some [%string "A_%{first_tag}"]
+        | [] -> None
+      else None
+    in
+    let fallback () = [%string "A_%{string_of_rule rule}"] in
     match rule with
     | Fetch kind -> kind_nid kind
-    | Probe kind when is_probe_expanded kind ->
-        (match probe_expand_items kind with
-         | (first_tag, _, _) :: _ -> [%string "A_%{first_tag}"]
-         | [] -> [%string "A_%{string_of_rule rule}"])
-    | _ -> [%string "A_%{string_of_rule rule}"]
+    | Probe_lib ->
+        (match expanded_first Lib with Some nid -> nid | None -> fallback ())
+    | Probe_binding l ->
+        (match expanded_first (Binding l) with Some nid -> nid | None -> fallback ())
+    | Probe_app _ ->
+        (match expanded_first App with Some nid -> nid | None -> fallback ())
+    | _ -> fallback ()
   in
   (* For a summary (rule, suffix), return a list of (node_id, tag, parent_nid) triples.
      When the probe kind is expanded and per-variant summary tags exist in step_ids,
@@ -309,8 +341,14 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
     let canonical =
       (summary_nid rule suffix, summary_label rule suffix, parent_action_nid_ex rule)
     in
-    match rule with
-    | Probe kind when is_probe_expanded kind && String.equal suffix "_inspect" ->
+    let probe_kind_of = function
+      | Probe_lib -> Some Lib
+      | Probe_binding l -> Some (Binding l)
+      | Probe_app _ -> Some App
+      | _ -> None
+    in
+    match probe_kind_of rule with
+    | Some kind when is_probe_expanded kind && String.equal suffix "_inspect" ->
         let variants = List.filter_map (probe_expand_items kind) ~f:(fun (probe_tag, _, _) ->
             let stag = probe_tag ^ "_inspect" in
             let known = match step_ids with
@@ -449,8 +487,9 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
         List.iter (probe_expand_items kind) ~f:(fun (probe_tag, _vid, label) ->
             add [%string "    A_%{probe_tag}([\"%{label}\"])"])
       else begin
-        let name = string_of_rule (Probe kind) in
-        let lbl = action_label_with_inspect name (Probe kind) in
+        let probe_rule = probe_rule_of_kind kind in
+        let name = string_of_rule probe_rule in
+        let lbl = action_label_with_inspect name probe_rule in
         add [%string "    A_%{name}([\"%{lbl}\"])"]
       end);
   (* Summary actions — pill shape, one per (rule, suffix) pair.
@@ -523,14 +562,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
             [%string "%{kind_nid Headers} -.->|headers| %{action_id}"];
           add_edge ~tag:name [%string "%{kind_nid Lib} -.->|link| %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{kind_nid (Binding lang)}"]
-      | Build_app ->
-          let app_binding_nid =
-            match List.find_map rules ~f:(fun r ->
-                match r with Build_binding lang -> Some lang | _ -> None) with
-            | Some lang -> kind_nid (Binding lang)
-            | None -> kind_nid (Binding OCaml)
-          in
-          add_edge ~tag:name [%string "%{app_binding_nid} --> %{action_id}"];
+      | Build_app { lang } ->
+          add_edge ~tag:name [%string "%{kind_nid (Binding lang)} --> %{action_id}"];
           add_edge ~tag:name [%string "%{kind_nid Lib} -.->|link| %{action_id}"];
           add_edge ~tag:name [%string "%{action_id} --> %{kind_nid App}"]
       | _ -> ());
@@ -561,7 +594,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      Expanded probes emit one edge-set per variant.
      Non-expanded use the original logic (Binding+Publish routes through pack). *)
   List.iter probe_kinds ~f:(fun kind ->
-      let base_tag = string_of_rule (Probe kind) in
+      let base_tag = string_of_rule (probe_rule_of_kind kind) in
       if is_probe_expanded kind then
         (* Expanded: one edge-set per probe step variant, routed through the
            matching artifact variant node when the artifact is also expanded. *)
@@ -644,7 +677,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
             List.map (probe_expand_items k) ~f:(fun (probe_tag, _, _) ->
                 ([%string "A_%{probe_tag}"], probe_tag))
           else
-            let name = string_of_rule (Probe k) in
+            let name = string_of_rule (probe_rule_of_kind k) in
             [ ([%string "A_%{name}"], name) ])
     @ summary_entries
   in
@@ -695,7 +728,8 @@ let result_status_of_run (steps : action_step list)
     List.filter_map steps ~f:(fun s ->
         match s.rule with
         | Build_binding lang | Fetch (Binding lang)
-        | Publish (Binding lang) | Probe (Binding lang) -> Some lang
+        | Publish (Binding lang) | Probe_binding lang
+        | Build_app { lang } | Probe_app { lang } -> Some lang
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
     |> fun ls -> if List.is_empty ls then Canary_lang.[ OCaml ] else ls
@@ -738,8 +772,8 @@ let result_status_of_run (steps : action_step list)
 
 let _node_shape_of_rule rule =
   match rule with
-  | Probe _                                  -> `Pill
-  | Build_lib | Build_binding _ | Build_app
+  | Probe_lib | Probe_binding _ | Probe_app _ -> `Pill
+  | Build_lib | Build_binding _ | Build_app _
   | Build_headers | Configure | Scan_sources | Install_lib
   | Publish _                                -> `Hex
   | Fetch _                                  -> `Box
@@ -1013,7 +1047,7 @@ let _art_variant_version ~variant_infos ~steps kind vid =
   match vid with
   | "build_tree" ->
       let s = List.find steps ~f:(fun s -> match kind, s.rule with
-          | Lib, Build_lib | Headers, Build_headers | App, Build_app -> true
+          | Lib, Build_lib | Headers, Build_headers | App, Build_app _ -> true
           | Binding l, Build_binding l2 -> Poly.equal l l2
           | _ -> false) in
       Option.bind s ~f:(fun s -> version_of_run_id s.variant_id)
@@ -1225,18 +1259,22 @@ let mermaid_full
   (* Which artifact kinds have any step? *)
   let binding_langs =
     List.filter_map steps ~f:(fun s -> match s.rule with
-        | Fetch (Binding l) | Probe (Binding l) | Publish (Binding l)
-        | Build_binding l -> Some l | _ -> None)
+        | Fetch (Binding l) | Probe_binding l | Publish (Binding l)
+        | Build_binding l | Build_app { lang = l } | Probe_app { lang = l } -> Some l
+        | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
   in
   let all_kinds = [Source; Headers; Lib] @ List.map binding_langs ~f:(fun l -> Binding l) @ [App] in
   let kind_has_steps k =
     List.exists steps ~f:(fun s ->
         match s.rule with
-        | Fetch k2 | Probe k2 | Publish k2 -> Poly.equal k k2
+        | Fetch k2 | Publish k2 -> Poly.equal k k2
+        | Probe_lib -> Poly.equal k Lib
+        | Probe_binding l -> Poly.equal k (Binding l)
+        | Probe_app _ -> Poly.equal k App
         | Build_lib -> Poly.equal k Lib | Install_lib -> Poly.equal k Lib
         | Build_headers -> Poly.equal k Headers
-        | Build_binding l -> Poly.equal k (Binding l) | Build_app -> Poly.equal k App
+        | Build_binding l -> Poly.equal k (Binding l) | Build_app _ -> Poly.equal k App
         | Configure | Scan_sources -> Poly.equal k Source)
   in
   let present_kinds = List.filter all_kinds ~f:kind_has_steps in
@@ -1363,7 +1401,8 @@ let mermaid_full
         let nid = "A_" ^ s.tag in
         let lbl = id_label s.tag in
         let line = match s.rule with
-          | Probe _ -> [%string "    %{nid}([\"%{lbl}\"])"]
+          | Probe_lib | Probe_binding _ | Probe_app _ ->
+              [%string "    %{nid}([\"%{lbl}\"])"]
           | _ when String.is_suffix s.tag ~suffix:"_inspect" ->
               [%string "    %{nid}([\"%{lbl}\"])"]
           | _ -> [%string "    %{nid}{{\"%{lbl}\"}}"]
@@ -1476,7 +1515,7 @@ let mermaid_full
             Option.iter pm_variant ~f:(fun (_, pn) ->
                 add_edge ~tag:pt [%string "A_%{pt} --> %{pn}"]));
         (* probe_<kind>_<variant> → from matching artifact variant *)
-        let probe_base = string_of_rule (Probe kind) in
+        let probe_base = string_of_rule (probe_rule_of_kind kind) in
         let probe_steps = List.filter steps ~f:(fun s ->
             not (String.is_suffix s.tag ~suffix:"_inspect")
             && (String.equal s.tag probe_base
@@ -1635,8 +1674,11 @@ let mermaid_view
   in
   let all_probe_expand =
     List.filter_map steps ~f:(fun s ->
-        match s.rule with
-        | Canary_basic.Probe k when not (String.is_suffix s.tag ~suffix:"_inspect") -> Some k
+        if String.is_suffix s.tag ~suffix:"_inspect" then None
+        else match s.rule with
+        | Canary_basic.Probe_lib -> Some Canary_basic.Lib
+        | Canary_basic.Probe_binding l -> Some (Canary_basic.Binding l)
+        | Canary_basic.Probe_app _ -> Some Canary_basic.App
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
     |> (match focal_probe_kinds with
@@ -1866,7 +1908,8 @@ let write_project_output ~dir ~project_name ~variant ~steps
     List.filter_map steps ~f:(fun s ->
         match s.rule with
         | Build_binding lang | Fetch (Binding lang)
-        | Publish (Binding lang) | Probe (Binding lang) -> Some lang
+        | Publish (Binding lang) | Probe_binding lang
+        | Build_app { lang } | Probe_app { lang } -> Some lang
         | _ -> None)
     |> List.dedup_and_sort ~compare:Poly.compare
     |> fun ls -> if List.is_empty ls then Canary_lang.[ OCaml ] else ls

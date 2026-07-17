@@ -94,10 +94,10 @@ let acts_full : Canary_basic.rule list = [
   Build_lib;
   Build_binding Canary_lang.OCaml;
   Build_binding Canary_lang.Python;
-  Build_app;
-  Probe (Binding Canary_lang.OCaml);
-  Probe (Binding Canary_lang.Python);
-  Probe App;
+  Build_app { lang = Canary_lang.OCaml };
+  Probe_binding Canary_lang.OCaml;
+  Probe_binding Canary_lang.Python;
+  Probe_app { lang = Canary_lang.OCaml };
 ]
 
 (** Related-artifact groupings. Coarse; refine as the model bites. *)
@@ -1231,7 +1231,7 @@ let make_base_project_spec
               cext_so_glob output_dir stub_file
               abs_lib_dir python_cext_root
               attrs_watchlist_csv output_dir attrs_file)
-      | Probe (Binding Canary_lang.OCaml) ->
+      | Probe_binding Canary_lang.OCaml ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
               Canary_basic.filename ~variant_key
@@ -1243,7 +1243,7 @@ let make_base_project_spec
                --module-prefix Tiny \
                --path %s/ocaml/tiny.mli --watchlist '%s' > %s/%s"
               source watchlist_csv output_dir out_file)
-      | Probe (Binding Canary_lang.Python) ->
+      | Probe_binding Canary_lang.Python ->
           Some (fun ~output_dir ~variant_key ->
             let out_file =
               Canary_basic.filename ~variant_key
@@ -1404,7 +1404,7 @@ let expectation_of_entry (entry : scenario_spec)
        | Some inputs ->
          Expect_compat_failure { inputs; version_info = None }
        | None -> Expect_success)
-    | Canary_basic.Probe (Binding lang)
+    | Canary_basic.Probe_binding lang
       when List.mem scenario_langs lang ~equal:Poly.equal ->
       (match
          List.find_map violates

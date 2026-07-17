@@ -48,7 +48,7 @@ open Canary
    Build_tree/Staged use the rule's lang; Pm entries use the location's lang.
    This matches string_of_rule (Probe (Binding lang)) for the Build_tree base case. *)
 let tag_of_probe_lib_location loc =
-  let base = string_of_rule (Probe Lib) in
+  let base = string_of_rule Probe_lib in
   match loc with
   | Build_tree -> base
   | Staged -> base ^ "_staged"
@@ -56,7 +56,7 @@ let tag_of_probe_lib_location loc =
   | Pm (Lang_pm _) -> failwith "tag_of_probe_lib_location: Lang_pm is not a lib probe location"
 
 let tag_of_probe_location ~lang location =
-  let base l = string_of_rule (Probe (Binding l)) in
+  let base l = string_of_rule (Probe_binding l) in
   match location with
   | Build_tree -> base lang
   | Staged -> base lang ^ "_staged"
@@ -224,19 +224,19 @@ let script_of_rule spec = function
   | Build_lib -> spec.build_lib
   | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang
   | Install_lib -> spec.install_lib
-  | Build_app -> spec.build_app
+  | Build_app _ -> spec.build_app
   | Publish Lib -> spec.pack_lib
   | Publish (Binding lang) -> List.Assoc.find spec.pack_binding ~equal:Poly.equal lang
   | Publish App -> spec.pack_app
-  | Probe Lib ->
+  | Probe_lib ->
       (match spec.probe_lib with [] -> None | (_, cmd) :: _ -> Some cmd)
-  | Probe (Binding lang) ->
+  | Probe_binding lang ->
       (* For has-check purposes: Some _ when any probe entry exists for this lang. *)
       (match List.filter spec.probe_binding ~f:(fun (l, _, _) -> Poly.equal l lang) with
        | [] -> None
        | (_, _, cmd) :: _ -> Some cmd)
-  | Probe App -> spec.probe_app
-  | Publish Source | Probe Source | Publish Headers | Probe Headers -> None
+  | Probe_app _ -> spec.probe_app
+  | Publish Source | Publish Headers -> None
 
 (* ── Action step protocol ── *)
 
@@ -354,10 +354,10 @@ let marker_of_rule = function
   | Fetch Lib -> "lib.ok"
   | Fetch (Binding _) -> "binding.ok"
   | Fetch App -> "app.ok"
-  | Build_lib | Build_binding _ | Build_app -> "build.ok"
+  | Build_lib | Build_binding _ | Build_app _ -> "build.ok"
   | Install_lib -> "install.ok"
   | Publish _ -> "pack.ok"
-  | Probe _ -> "probe.log"
+  | Probe_lib | Probe_binding _ | Probe_app _ -> "probe.log"
 
 let default_check_post rule ~output_dir ~variant_key =
   has_file ~output_dir (Canary_basic.variant_file ~variant_key (marker_of_rule rule))
@@ -449,12 +449,10 @@ let deps_of_rule spec rule =
         else None
       in
       List.filter_opt [ configure_dep; headers_dep; lib_dep ]
-  | Build_app ->
-      (* OCaml is the primary binding lang for App by convention.
-         TODO: scan all langs when multi-lang App support is needed. *)
+  | Build_app { lang } ->
       let binding_dep =
-        if has (Build_binding OCaml) then Some (tag (Build_binding OCaml))
-        else if has (Fetch (Binding OCaml)) then Some (tag (Fetch (Binding OCaml)))
+        if has (Build_binding lang) then Some (tag (Build_binding lang))
+        else if has (Fetch (Binding lang)) then Some (tag (Fetch (Binding lang)))
         else None
       in
       let lib_dep =
@@ -463,27 +461,53 @@ let deps_of_rule spec rule =
         else None
       in
       List.filter_opt [ binding_dep; lib_dep ]
-  | Publish kind | Probe kind ->
+  | Publish kind ->
       let produce_rule = match kind with
         | Headers -> if has Build_headers then Some Build_headers else Some (Fetch Headers)
         | Lib -> if has Build_lib then Some Build_lib else Some (Fetch Lib)
         | Binding lang ->
             if has (Build_binding lang) then Some (Build_binding lang)
             else Some (Fetch (Binding lang))
-        | App -> if has Build_app then Some Build_app else Some (Fetch App)
+        | App ->
+            (* Publish App: pick OCaml Build_app if present, else any lang. *)
+            let langs = Canary_lang.[ OCaml; Python; Rust; Cpp; CSharp; Java ] in
+            (match List.find langs ~f:(fun l -> has (Build_app { lang = l })) with
+             | Some l -> Some (Build_app { lang = l })
+             | None -> Some (Fetch App))
         | Source -> Some (Fetch Source)
       in
+      Option.to_list
+        (Option.bind produce_rule ~f:(fun r ->
+             if has r then Some (tag r) else None))
+  | Probe_lib ->
       let produce_dep =
-        Option.bind produce_rule ~f:(fun r ->
-            if has r then Some (tag r) else None)
+        if has Build_lib then Some (tag Build_lib)
+        else if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else None
       in
-      (* probe_binding and probe_app also need a runtime lib *)
-      let runtime_lib_dep = match rule with
-        | Probe (Binding _) | Probe App ->
-            if has (Fetch Lib) then Some (tag (Fetch Lib))
-            else if has Build_lib then Some (tag Build_lib)
-            else None
-        | _ -> None
+      Option.to_list produce_dep
+  | Probe_binding lang ->
+      let produce_dep =
+        if has (Build_binding lang) then Some (tag (Build_binding lang))
+        else if has (Fetch (Binding lang)) then Some (tag (Fetch (Binding lang)))
+        else None
+      in
+      let runtime_lib_dep =
+        if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else if has Build_lib then Some (tag Build_lib)
+        else None
+      in
+      List.filter_opt [ produce_dep; runtime_lib_dep ]
+  | Probe_app { lang } ->
+      let produce_dep =
+        if has (Build_app { lang }) then Some (tag (Build_app { lang }))
+        else if has (Fetch App) then Some (tag (Fetch App))
+        else None
+      in
+      let runtime_lib_dep =
+        if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else if has Build_lib then Some (tag Build_lib)
+        else None
       in
       List.filter_opt [ produce_dep; runtime_lib_dep ]
 
@@ -674,7 +698,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
         (* Probe Lib / Probe Binding: expand per-location entries.
            Single entry uses the canonical rule tag; multiple expand to per-location tags. *)
         match rule with
-        | Probe Lib ->
+        | Probe_lib ->
             Hashtbl.set seen ~key:tag ~data:true;
             List.concat_map spec.probe_lib ~f:(fun (loc, cmd) ->
                 let ptag = if List.length spec.probe_lib = 1 then tag
@@ -691,7 +715,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
                 attach_inspect ~parent_tag:ptag ~rule ~loc base)
-        | Probe (Binding lang) ->
+        | Probe_binding lang ->
             Hashtbl.set seen ~key:tag ~data:true;
             let entries = List.filter spec.probe_binding
                 ~f:(fun (l, _, _) -> Poly.equal l lang) in
