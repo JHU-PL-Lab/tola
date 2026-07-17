@@ -103,24 +103,24 @@ Two orthogonal axes:
 
 Two expectation shapes:
 
-| Shape | Contracts | Firing step | Payload |
-|---|---|---|---|
+| Shape                                       | Contracts          | Firing step                                             | Payload                                |
+| ------------------------------------------- | ------------------ | ------------------------------------------------------- | -------------------------------------- |
 | `Expect_compat_failure` — static comparator | c1, c2, c4, c5, c6 | `Probe (Binding lang)`; c6 also at `Build_binding lang` | per-contract `inputs` + `version_info` |
-| `Expect_failure` — probe assertion | c3, c7 | `Probe (Binding lang)` | `contains_any = ["FAIL "]` |
+| `Expect_failure` — probe assertion          | c3, c7             | `Probe (Binding lang)`                                  | `contains_any = ["FAIL "]`             |
 
 ### 3.2 Per-contract inputs
 
 `compat_inputs_of_contract ~lang c` returns the JSON paths
 canary reads to compute the predicted substring set:
 
-| Contract | Lang scope | Inputs |
-|---|---|---|
-| c1 cmp_symbol | any | `C_stub [build_binding_<lang>/inspect.json]` + `Native_lib [build_lib/inspect.json]` |
-| c2 cmp_api_completeness | OCaml | `Ocaml_mli [build_binding_ocaml/inspect_mli.json]` |
-| c2 cmp_api_completeness | Python | `Python_attrs [build_binding_python/inspect_attrs.json]` |
-| c4 cmp_abi | Python (tiny convention) | `Native_lib` + `Abi_surface [build_binding_python/inspect.json]` |
-| c5 cmp_sym_version | Python (tiny convention) | `Versioned_exports` + `Versioned_req [build_binding_python/inspect.json]` |
-| c6 cmp_type | OCaml (tiny convention) | `Typed_header` + `Typed_binding_stub` (both from `scan_sources/`) |
+| Contract                | Lang scope               | Inputs                                                                               |
+| ----------------------- | ------------------------ | ------------------------------------------------------------------------------------ |
+| c1 cmp_symbol           | any                      | `C_stub [build_binding_<lang>/inspect.json]` + `Native_lib [build_lib/inspect.json]` |
+| c2 cmp_api_completeness | OCaml                    | `Ocaml_mli [build_binding_ocaml/inspect_mli.json]`                                   |
+| c2 cmp_api_completeness | Python                   | `Python_attrs [build_binding_python/inspect_attrs.json]`                             |
+| c4 cmp_abi              | Python (tiny convention) | `Native_lib` + `Abi_surface [build_binding_python/inspect.json]`                     |
+| c5 cmp_sym_version      | Python (tiny convention) | `Versioned_exports` + `Versioned_req [build_binding_python/inspect.json]`            |
+| c6 cmp_type             | OCaml (tiny convention)  | `Typed_header` + `Typed_binding_stub` (both from `scan_sources/`)                    |
 
 The "tiny convention" columns reflect tiny's store choice:
 Python cext is cached from baseline; OCaml binding rebuilds
@@ -216,10 +216,10 @@ Mutation-origin, + 2 concrete good scenarios per SSOT §4.1).
 All 15 run through the uniform derivation. Split by whether
 their expectation actually fires at probe:
 
-| has probe manifestation? | Count | Entries |
-|---|---|---|
-| yes — expectation fires | 11 | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
-| no — Expect_success everywhere | 4 | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Sc.4.OCaml (`app_over_binding_ocaml`), Sc.6.OCaml (`app_over_helper_ocaml`) |
+| has probe manifestation?       | Count | Entries                                                                                                                                                                                |
+| ------------------------------ | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| yes — expectation fires        | 11    | symbol_missing, symbol_orphan, api_complete, api_complete_python, behavior_silent, type_wrong, api_repack, api_repack_python, abi_soname_bump, symbol_version_floor, header_arity_bump |
+| no — Expect_success everywhere | 4     | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Sc.4.OCaml (`app_over_binding_ocaml`), Sc.6.OCaml (`app_over_helper_ocaml`)                                        |
 
 **Derived cells** — the 20 design-space slots enumerated
 by `derive_scenarios` (Good × related-artifact × applicable
@@ -254,18 +254,18 @@ project-wide backlog.
 
 ### Picking order (as of 2026-07-10)
 
-| # | Item | Cluster | Status |
-|---|---|---|---|
-| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory) | B | **active — pickup candidate** |
-| §7.9 | Derive `related_artifacts` from `actions` | C | **active — small pickup** |
-| — | SSOT §6.6 — document `project_spec` (in [`status.md §3.0`](../status.md)) | C | **active — SSOT-scoped, tiny is the reference** |
-| §7.2 | `tiny_recipe` synthesis from an abstract cell | A | **postponed** (user 2026-07-10) |
-| §7.1 | Fill the 15 empty derived cells | A | blocked by §7.2 |
-| §7.4 | Fill Sc.3–Sc.6 areas | A | overlaps §7.1 |
-| §7.3 | Second mechanism axis — ctypes DFFI | — | deferred (user 2026-07-06) |
-| §7.5 | Tiny packaging coverage | D | long-horizon; needs Package mutation source |
-| §7.6 | Contract catalogue extension | D | post-tiny research task |
-| §7.7 | Route tiny commands through `tool/` (R2) | — | **done** 2026-07-09; macOS follow-up |
+| #    | Item                                                                      | Cluster | Status                                          |
+| ---- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
+| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory)           | B       | **active — pickup candidate**                   |
+| §7.9 | Derive `related_artifacts` from `actions`                                 | C       | **done** 2026-07-10                             |
+| —    | SSOT §6.6 — document `project_spec` (in [`status.md §3.0`](../status.md)) | C       | **active — SSOT-scoped, tiny is the reference** |
+| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **postponed** (user 2026-07-10)                 |
+| §7.1 | Fill the 15 empty derived cells                                           | A       | blocked by §7.2                                 |
+| §7.4 | Fill Sc.3–Sc.6 areas                                                      | A       | overlaps §7.1                                   |
+| §7.3 | Second mechanism axis — ctypes DFFI                                       | —       | deferred (user 2026-07-06)                      |
+| §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
+| §7.6 | Contract catalogue extension                                              | D       | post-tiny research task                         |
+| §7.7 | Route tiny commands through `tool/` (R2)                                  | —       | **done** 2026-07-09; macOS follow-up            |
 
 Clusters: A = tiny scenario coverage, B = factory sequel to
 Phase G, C = small self-contained cleanups, D = long-horizon
@@ -315,12 +315,12 @@ directly.
 
 #### Design decisions locked in (2026-07-09)
 
-| Question | Decision |
-|---|---|
-| Mutation type organisation | Flat top-level `type mutation` for pattern matching, per-artifact constructor modules for authoring: `Canary_artifact_mutation.Source.drop_c_symbol ~file ~symbol`. Symmetric with the `canary_artifact_*` inspection layer without a wrapper type. |
-| Mutation → `violates` mapping | **Enumerated** for MVP. Surface/agreement-driven derivation is a later retrofit. |
-| Which cells to synthesise | **All**, then dedupe against hand-authored (hand takes precedence). Empty cells become synthesised entries automatically. |
-| Cell → sample target (which symbol) | **Parameter with hardcoded defaults**. Argument for override; default is `tiny_sum` (source) / `sum` (mli/attrs). Heuristic picking from `api_source.stable_symbols` is future work. |
+| Question                            | Decision                                                                                                                                                                                                                                            |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mutation type organisation          | Flat top-level `type mutation` for pattern matching, per-artifact constructor modules for authoring: `Canary_artifact_mutation.Source.drop_c_symbol ~file ~symbol`. Symmetric with the `canary_artifact_*` inspection layer without a wrapper type. |
+| Mutation → `violates` mapping       | **Enumerated** for MVP. Surface/agreement-driven derivation is a later retrofit.                                                                                                                                                                    |
+| Which cells to synthesise           | **All**, then dedupe against hand-authored (hand takes precedence). Empty cells become synthesised entries automatically.                                                                                                                           |
+| Cell → sample target (which symbol) | **Parameter with hardcoded defaults**. Argument for override; default is `tiny_sum` (source) / `sum` (mli/attrs). Heuristic picking from `api_source.stable_symbols` is future work.                                                                |
 
 #### Phase 1 — Parametric mutation constructors
 
@@ -385,14 +385,14 @@ val recipe_of_derived_cell : Canary_scenario.scenario -> tiny_recipe option
 
 Enumerated synthesis table:
 
-| (target, kind) | mutation | violates | mutates |
-|---|---|---|---|
-| Source, On_artifact Source | `Source.drop_c_symbol ~file:"c/src/tiny.c" ~symbol:"tiny_sum"` | [c1] | `["c/src/tiny.c"]` |
-| Source, On_behavior | `Source.rename_c_symbol` (behaviour swap) | [c3] | `["c/src/tiny.c"]` |
-| Lib, On_artifact Lib | `Native.soname_bump ~from_so ~to_so` | [c4] | `["c/build/libtiny.so.1"]` |
-| Binding OCaml, _ | `Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum"` | [c2] | `["ocaml/tiny.mli"]` |
-| Binding Python, _ | `Binding.drop_python_attr ~file:"python_cext/tiny_cext/__init__.py" ~attr:"sum"` | [c2] | `["python_cext/tiny_cext/__init__.py"]` |
-| App, _ | (skip — return None per Sc.3-6 retrospection) | — | — |
+| (target, kind)             | mutation                                                                         | violates | mutates                                 |
+| -------------------------- | -------------------------------------------------------------------------------- | -------- | --------------------------------------- |
+| Source, On_artifact Source | `Source.drop_c_symbol ~file:"c/src/tiny.c" ~symbol:"tiny_sum"`                   | [c1]     | `["c/src/tiny.c"]`                      |
+| Source, On_behavior        | `Source.rename_c_symbol` (behaviour swap)                                        | [c3]     | `["c/src/tiny.c"]`                      |
+| Lib, On_artifact Lib       | `Native.soname_bump ~from_so ~to_so`                                             | [c4]     | `["c/build/libtiny.so.1"]`              |
+| Binding OCaml, _           | `Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum"`                      | [c2]     | `["ocaml/tiny.mli"]`                    |
+| Binding Python, _          | `Binding.drop_python_attr ~file:"python_cext/tiny_cext/__init__.py" ~attr:"sum"` | [c2]     | `["python_cext/tiny_cext/__init__.py"]` |
+| App, _                     | (skip — return None per Sc.3-6 retrospection)                                    | —        | —                                       |
 
 Integration: `derived_scenarios` mapped through this to
 `derived_scenario_specs`; concatenate with hand-authored `scenario_specs`,
@@ -554,37 +554,46 @@ Interaction with §7.2: postponed §7.2's phase plan assumes
 tiny's current recipe shape. Task 2 will change the shape,
 so §7.2 must re-baseline after Task 2 lands.
 
-### 7.9 Derive `related_artifacts` from `actions`
+### 7.9 Derive `related_artifacts` from `actions` — done 2026-07-10
 
-**Status: active pickup — small self-contained cleanup.**
-Also tracked in [`status.md §5`](../status.md).
+**Status: complete.** Landed in three commits under
+Cluster C:
 
-Every entry in `tiny_good_scenarios` hand-lists
-`related_artifacts` (e.g. Sc.1 → `[Source; Lib]`; Sc.2.OCaml
-→ `[Lib; Binding OCaml]`). These are derivable from the
-scenario's `actions` list via a
-`consumes / produces : Canary_basic.rule -> artifact_kind list`
-helper on the action graph:
+1. `67d0e12` — rule type split: `Build_app of app_info`,
+   `Probe_lib` / `Probe_binding of lang` / `Probe_app of
+   app_info` (retiring `Probe of artifact_kind` and nullary
+   `Build_app`). Every rule now carries its own language
+   explicitly — no `belongs_to` suffix reach-through in
+   downstream code. 78/78 tests, 15/15 tiny run stayed
+   green.
+2. `8f6e6fc` — first-pass derivation: added
+   `Canary_scenario.artifacts_of_rule` (per-rule
+   consumes/produces table, ordered prerequisite→target)
+   and `related_artifacts_of_actions`. Reconciled
+   `tiny_good_scenarios.actions` per-scenario (was
+   `acts_full` cargo-culted across all 8). Kept the hand
+   field guarded by a startup assertion.
+3. `*this commit*` — retirement: removed
+   `related_artifacts` from `type scenario` entirely;
+   `Canary_scenario.related_artifacts s` is now the sole
+   getter; five arts_* helper values in
+   `canary_tiny_scenario.ml` and 17 field-write sites
+   deleted; per-rule spec tests replace the hand-vs-derived
+   invariant test.
 
-- `Configure` / `Scan_sources` — consume Source, produce nothing
-- `Build_lib` — consume Source, produce Lib
-- `Build_binding <lang>` — consume Lib, produce Binding lang
-- `Build_app` — consume Binding + App source, produce App
-- `Probe (Binding lang)` — consume Binding lang + Lib
-- `Probe Lib` — consume Lib
-- `Fetch <k>` — produce <k>
-- `Install_lib` — consume Lib, produce Lib
+Test surface: `scenario_derivation_pure_tests` in
+[canary_artifact_test.ml](../../src/canary/test/canary_artifact_test.ml)
+holds 7 spec cases (one per canonical Sc.N shape plus a
+chain composition case). Rules table lives in
+[SSOT §6.5.1](../design/ssot.md).
 
-`related_artifacts = union of consumes+produces over actions`.
-
-Validation path: compute the derived value for each of the 8
-tiny_good_scenarios, assert equality with the hand-listed
-value, then delete the hand field. Size: ~50-100 LOC
-(helper in `canary_action.ml` or `canary_basic.ml` + the
-migration + the validator).
-
-Independent of Task 2 / §7.2. Good warm-up if you want a
-low-context task first.
+Bad-scenario `related_artifacts` — the same getter now
+serves them too. `validate_mutation_target` derives from
+the Bs's `actions` list (tiny's `acts_full`) which produces
+`[Source; Lib; Binding OCaml; Binding Python; App]`; every
+Bs mutation target sits in that set. The pre-fix
+narrowing hints (`arts_ocaml_only`, `arts_python_only`,
+etc.) were redundant with `belongs_to` and are gone.
 
 ## 8. Gotchas / rough edges (state-of-code notes)
 

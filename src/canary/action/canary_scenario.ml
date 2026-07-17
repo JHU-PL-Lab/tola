@@ -10,9 +10,10 @@
 
     Design notes (per [doc/canary/design/ssot.md] §5 / §6 / §9.3):
 
-    - [related_artifacts] is hand-listed for now. A future
-      helper [consumes/produces : rule -> artifact_kind list] on
-      the action graph will let us derive it — postponed.
+    - [related_artifacts] is no longer a field — it derives
+      from [actions] via [related_artifacts_of_actions]
+      (§7.9, 2026-07-10). Per-rule consumes/produces table
+      lives in [artifacts_of_rule] below and in SSOT §6.5.
     - [id] is a string. [Sc_id.t] as a distinct type is deferred
       until the Sc.N / Bs.N enumeration stabilises.
     - [manifest] and [detector] on [mutation] are
@@ -62,8 +63,10 @@ type detector =
 type mutation = {
   target   : Canary_basic.artifact_kind;
                              (** the mutated artifact —
-                                 invariant: must appear in the
-                                 owning scenario's
+                                 invariant (checked by
+                                 [validate_mutation_target]):
+                                 must appear in the owning
+                                 scenario's derived
                                  [related_artifacts]. *)
   kind     : mutation_kind;
   manifest : manifest;
@@ -88,13 +91,16 @@ type origin =
 
 (** Unified scenario — good scenarios have [origin = None];
     bad scenarios attach an [origin] naming the cause of
-    badness. *)
+    badness.
+
+    [related_artifacts] is not stored — it derives from
+    [actions] via [related_artifacts_of_actions] below. See
+    §6.5 (SSOT) for the per-rule consumes/produces table. *)
 type scenario = {
   id : string;                       (** "Sc.N" or "Bs.N" *)
   name : string;
   description : string;
   actions : Canary_basic.rule list;
-  related_artifacts : Canary_basic.artifact_kind list;
   origin : origin option;
   belongs_to : string list;          (** which Sc.N(s) this scenario
                                          relates to. For a Good scenario:
@@ -152,7 +158,6 @@ let good_scenarios : scenario list =
                      Shared across languages (under the static C API \
                      binding assumption).";
       actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
-      related_artifacts = [ Source; Lib ];
       origin = None;
       belongs_to = [ "Sc.1" ] };
 
@@ -160,34 +165,29 @@ let good_scenarios : scenario list =
     { id = "Sc.2.OCaml"; name = "build_binding";
       description = "Build the OCaml binding against the native lib.";
       actions = [ Build_binding OCaml ];
-      related_artifacts = [ Lib; Binding OCaml ];
       origin = None;
       belongs_to = [ "Sc.2.OCaml" ] };
     { id = "Sc.3.OCaml"; name = "build_app_with_binding";
       description = "Build an OCaml app that links against the OCaml \
                      binding.";
       actions = [ Build_app { lang = OCaml } ];
-      related_artifacts = [ Binding OCaml; App ];
       origin = None;
       belongs_to = [ "Sc.3.OCaml" ] };
     { id = "Sc.4.OCaml"; name = "run_app_with_binding";
       description = "Run the OCaml app; loader resolves the native lib \
                      at load time.";
       actions = [ Probe_app { lang = OCaml } ];
-      related_artifacts = [ Binding OCaml; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.4.OCaml" ] };
     { id = "Sc.5.OCaml"; name = "build_app_helper";
       description = "Build the app via an intermediate helper library \
                      that wraps the OCaml binding.";
       actions = [ Build_app { lang = OCaml } ];
-      related_artifacts = [ Binding OCaml; App ];
       origin = None;
       belongs_to = [ "Sc.5.OCaml" ] };
     { id = "Sc.6.OCaml"; name = "run_app_helper";
       description = "Run the app-via-helper chain.";
       actions = [ Probe_app { lang = OCaml } ];
-      related_artifacts = [ Binding OCaml; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.6.OCaml" ] };
 
@@ -197,7 +197,6 @@ let good_scenarios : scenario list =
       description = "Build the Python binding (cext) against the \
                      native lib.";
       actions = [ Build_binding Python ];
-      related_artifacts = [ Lib; Binding Python ];
       origin = None;
       belongs_to = [ "Sc.2.Python" ] };
     { id = "Sc.4.Python"; name = "run_app_with_binding";
@@ -206,7 +205,6 @@ let good_scenarios : scenario list =
                      ctypes probe would be a same-shape run under \
                      DFFI, not modeled today.";
       actions = [ Probe_app { lang = Python } ];
-      related_artifacts = [ Binding Python; Lib; App ];
       origin = None;
       belongs_to = [ "Sc.4.Python" ] };
   ]
@@ -250,14 +248,21 @@ let artifacts_of_rule (r : Canary_basic.rule) : Canary_basic.artifact_kind list 
 
 (** Derive a scenario's [related_artifacts] from its
     [actions] list. Union in first-appearance order (no
-    dedup rearrangement) — matches the hand-listed order on
-    §4 good scenarios by construction. *)
+    dedup rearrangement) — order follows the "prerequisite
+    first, target next" convention from [artifacts_of_rule]. *)
 let related_artifacts_of_actions (actions : Canary_basic.rule list)
   : Canary_basic.artifact_kind list =
   let open Base in
   List.concat_map actions ~f:artifacts_of_rule
   |> List.fold ~init:[] ~f:(fun acc a ->
       if List.mem acc a ~equal:Poly.equal then acc else acc @ [ a ])
+
+(** Getter: what artifacts does this scenario touch? Sole
+    source of truth after §7.9 landed the type change (2026-07-10);
+    the field was removed. Used by display code
+    (A1/A2/A3 indexing) and by [validate_mutation_target]. *)
+let related_artifacts (s : scenario) : Canary_basic.artifact_kind list =
+  related_artifacts_of_actions s.actions
 
 (* ---------- validators ---------- *)
 
@@ -277,14 +282,16 @@ let sc_id_of_string (s : string) : string =
       (Printf.sprintf "unknown Sc.N: %S. Known: %s"
          s (Base.String.concat ~sep:", " known))
 
-(** Invariant check: if a scenario has a [mutation], its
-    [target] must be in [related_artifacts]. Raises [Failure] on
-    violation. Closes drift risk #3 from the status report. *)
+(** Invariant check: if a scenario has a Mutation origin,
+    its [target] must be in the scenario's derived
+    [related_artifacts] (via the actions list). Raises
+    [Failure] on violation. Closes drift risk #3 from the
+    status report. *)
 let validate_mutation_target (s : scenario) : unit =
   match s.origin with
   | None | Some (Version_mismatch | Packaging) -> ()
   | Some (Mutation p) ->
-    if not (Base.List.mem s.related_artifacts p.target
+    if not (Base.List.mem (related_artifacts s) p.target
               ~equal:Base.Poly.equal) then
       Stdlib.failwith
         (Printf.sprintf
@@ -310,41 +317,15 @@ let validate_belongs_to (s : scenario) : unit =
   Base.List.iter s.belongs_to ~f:(fun sc ->
     let _ = sc_id_of_string sc in ())
 
-(** §7.9 invariant: for **good** scenarios ([origin = None]),
-    the hand-listed [related_artifacts] must equal what
-    [related_artifacts_of_actions] derives from
-    [scenario.actions]. Bad scenarios and derived cells carry
-    a hand-picked [related_artifacts] used by
-    [validate_mutation_target] to constrain
-    [mutation.target] — that field's contents are not
-    derivable from the (typically superset) actions list, so
-    the invariant is skipped for them. Also skipped for
-    scenarios with [actions = []]. *)
-let validate_related_artifacts (s : scenario) : unit =
-  let open Base in
-  match s.origin with
-  | Some _ -> ()
-  | None ->
-    if not (List.is_empty s.actions) then
-      let derived = related_artifacts_of_actions s.actions in
-      if not (Poly.equal derived s.related_artifacts) then
-        Stdlib.failwith
-          (Printf.sprintf
-             "scenario %s (%s): related_artifacts derivation mismatch — \
-              hand=[%s] derived=[%s]"
-             s.id s.name
-             (String.concat ~sep:";"
-                (List.map s.related_artifacts ~f:Canary_basic.string_of_artifact_kind))
-             (String.concat ~sep:";"
-                (List.map derived ~f:Canary_basic.string_of_artifact_kind)))
-
 (** Full structural check on a scenario. Raises on any
-    invariant violation. *)
+    invariant violation. [related_artifacts] is now derived
+    from [actions], so no hand-vs-derived check is needed
+    (used to be [validate_related_artifacts]; retired
+    2026-07-10 with the field deletion). *)
 let validate_scenario (s : scenario) : unit =
   validate_mutation_target s;
   validate_manifest_sc_ids s;
-  validate_belongs_to s;
-  validate_related_artifacts s
+  validate_belongs_to s
 
 (* ---------- derivation (§9.3 backlog: derive_entries) ---------- *)
 
@@ -398,7 +379,6 @@ let derive_scenario (good : scenario)
   in
   { id; name; description;
     actions = good.actions;
-    related_artifacts = good.related_artifacts;
     origin = Some (Mutation { target; kind;
                           manifest = Unknown_gap;
                           detector = Detector_gap });
@@ -418,7 +398,7 @@ let derive_scenario (good : scenario)
     is complete). *)
 let derive_scenarios (goods : scenario list) : scenario list =
   Base.List.concat_map goods ~f:(fun good ->
-    Base.List.concat_map good.related_artifacts ~f:(fun a ->
+    Base.List.concat_map (related_artifacts good) ~f:(fun a ->
       Base.List.map (applicable_mutations a) ~f:(fun k ->
         derive_scenario good a k)))
 

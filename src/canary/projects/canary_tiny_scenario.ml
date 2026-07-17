@@ -100,17 +100,12 @@ let acts_full : Canary_basic.rule list = [
   Probe_app { lang = Canary_lang.OCaml };
 ]
 
-(** Related-artifact groupings. Coarse; refine as the model bites. *)
-let arts_native_cascade : Canary_basic.artifact_kind list =
-  [ Source; Lib; a_ocaml; a_python; App ]
-let arts_ocaml_only : Canary_basic.artifact_kind list =
-  [ a_ocaml; App ]
-let arts_python_only : Canary_basic.artifact_kind list =
-  [ a_python; App ]
-let arts_abi_cascade : Canary_basic.artifact_kind list =
-  [ Lib; a_ocaml; a_python; App ]
-let arts_positive : Canary_basic.artifact_kind list =
-  [ Source; Lib; a_ocaml; a_python; App ]
+(* arts_native_cascade / arts_ocaml_only / arts_python_only /
+   arts_abi_cascade / arts_positive retired 2026-07-10: they
+   were hand-picked narrowing hints for a `related_artifacts`
+   field that no longer exists. The field derives from
+   [scenario.actions] via
+   [Canary_scenario.related_artifacts_of_actions]. *)
 
 (* ----- abstract-mutation helper ----- *)
 
@@ -146,10 +141,9 @@ let belongs_to_of_id (id : string) : string list =
 let scenario_specs : scenario_spec list =
   let open Canary_compat in
   let open Canary_scenario in
-  let mk ~id ~name ~description ~arts ~mutates ~concrete_pert
+  let mk ~id ~name ~description ~mutates ~concrete_pert
          ~scenario_pert ~expected ~violates =
     { scenario = { id; name; description; actions = acts_full;
-                   related_artifacts = arts;
                    origin = scenario_pert;
                    belongs_to = belongs_to_of_id id };
       recipe = { mutates; mutation = concrete_pert;
@@ -161,7 +155,6 @@ let scenario_specs : scenario_spec list =
     mk ~id:"Bs.1" ~name:"symbol_missing"
       ~description:"Source patch renames tiny_sum -> tiny_total in C only; \
                     binding artifacts still expect tiny_sum."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(patch "symbol_missing")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -184,7 +177,6 @@ let scenario_specs : scenario_spec list =
                     tiny.c matches the new signature so the lib still builds. \
                     The cstub calls tiny_sum(a, b) — only 2 args. c6 cmp_type \
                     catches the static mismatch."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
       ~concrete_pert:(patch "header_arity_bump")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -208,7 +200,6 @@ let scenario_specs : scenario_spec list =
                     Cached cext records @TINY_1.0 in its NEEDED — dyld can't \
                     satisfy the version tag at load time. c5 cmp_sym_version \
                     catches the mismatch."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/tiny.map" ]
       ~concrete_pert:(patch "symbol_version_floor")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -230,7 +221,6 @@ let scenario_specs : scenario_spec list =
       ~description:"SONAME bumped libtiny.so.1 -> libtiny.so.2 and file renamed; \
                     binding NEEDED libtiny.so.1 has nothing to resolve against. \
                     Symbols themselves unchanged."
-      ~arts:arts_abi_cascade
       ~mutates:[ "c/build/libtiny.so.1" ]
       ~concrete_pert:(Some (Soname_bump { from_so = "libtiny.so.1";
                                            to_so = "libtiny.so.2.0" }))
@@ -253,7 +243,6 @@ let scenario_specs : scenario_spec list =
       ~description:"tiny_sum body takes (double, double); header still says \
                     (int, int). Symbol names unchanged; no static comparator \
                     catches this today."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(patch "type_wrong")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -275,7 +264,6 @@ let scenario_specs : scenario_spec list =
       ~description:"C adds tiny_max; bindings don't wrap it. Build and probe \
                     all succeed; no static comparator catches the missing \
                     wrapper (c8 cmp_api_faithfulness doesn't exist yet)."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/include/tiny.h"; "c/src/tiny.c" ]
       ~concrete_pert:(patch "api_faithful")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -298,7 +286,6 @@ let scenario_specs : scenario_spec list =
                     a+b+tiny_offset. Every static contract still holds; only \
                     the running probe notices. Canonical demonstration that \
                     c3 cmp_behavior is non-redundant."
-      ~arts:arts_native_cascade
       ~mutates:[ "c/src/tiny.c" ]
       ~concrete_pert:(patch "behavior_silent")
       ~scenario_pert:(pert ~target:Canary_basic.Source
@@ -320,7 +307,6 @@ let scenario_specs : scenario_spec list =
       ~description:"OCaml user-facing Tiny.diff reverses arguments before \
                     delegating. Stub-facing layer correct; intra-binding \
                     repack wrong; c7 cmp_api_repack doesn't exist yet."
-      ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny.ml" ]
       ~concrete_pert:(patch "api_repack")
       ~scenario_pert:(pert ~target:a_ocaml
@@ -343,7 +329,6 @@ let scenario_specs : scenario_spec list =
                     still compiles (tiny's dune sets -w -32) but every \
                     consumer that references Tiny.sum fails at compile time. \
                     c2 cmp_api_completeness statically catches the missing val."
-      ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny.mli" ]
       ~concrete_pert:(patch "api_complete")
       ~scenario_pert:(pert ~target:a_ocaml
@@ -366,7 +351,6 @@ let scenario_specs : scenario_spec list =
                     tiny_extra; the C side never had tiny_extra. Dual of \
                     symbol_missing. On strict linkers ocaml_build fails; on \
                     permissive linkers only c1 catches it."
-      ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
       ~concrete_pert:(patch "symbol_orphan")
@@ -389,7 +373,6 @@ let scenario_specs : scenario_spec list =
       ~description:"Python user-facing layer (both cext and ctypes \
                     __init__.py) reverses arguments on diff before \
                     delegating. Same shape as api_repack but on the Python side."
-      ~arts:arts_python_only
       ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
       ~concrete_pert:(patch "api_repack_python")
@@ -412,7 +395,6 @@ let scenario_specs : scenario_spec list =
       ~description:"Python user-facing layer drops the sum function. Probes \
                     raise AttributeError at runtime; c2 cmp_api_completeness \
                     catches it statically via watchlist {sum, diff, offset}."
-      ~arts:arts_python_only
       ~mutates:[ "python_cext/tiny_cext/__init__.py";
                   "python_ctypes/tiny_ctypes/__init__.py" ]
       ~concrete_pert:(patch "api_complete_python")
@@ -437,7 +419,6 @@ let scenario_specs : scenario_spec list =
                     Tiny.mli doesn't surface it. Binding compiles + links + \
                     probes pass; c7 cmp_api_repack catches via \
                     bo1.externals \\ bo4.vals."
-      ~arts:arts_ocaml_only
       ~mutates:[ "ocaml/tiny_raw.ml"; "ocaml/tiny_raw.mli";
                   "ocaml/tiny_stubs.c" ]
       ~concrete_pert:(patch "api_repack_stub_orphan")
@@ -465,7 +446,6 @@ let scenario_specs : scenario_spec list =
       ~description:"Unmutated Sc.N run (SSOT §4.1): an app linking \
                     directly against the Tiny OCaml binding builds and \
                     runs; transitive dependency on libtiny.so resolves."
-      ~arts:arts_positive
       ~mutates:[]
       ~concrete_pert:None
       ~scenario_pert:None
@@ -488,7 +468,6 @@ let scenario_specs : scenario_spec list =
                     chain — app -> tiny_helper -> Tiny binding -> \
                     libtiny.so. Confirms intra-binding repacking \
                     composes across a downstream library layer."
-      ~arts:arts_positive
       ~mutates:[]
       ~concrete_pert:None
       ~scenario_pert:None
@@ -530,7 +509,6 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    gcc; symbol versioning via c/tiny.map (TINY_1.0 \
                    exports). Shared across OCaml and Python.";
     actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
-    related_artifacts = [ Canary_basic.Source; Canary_basic.Lib ];
     origin = None;
     belongs_to = [ "Sc.1" ] };
 
@@ -539,22 +517,18 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     description = "Tiny: build the OCaml binding (tiny.cmxa + \
                    libtiny_stubs.a) via cstubs against libtiny.so.";
     actions = [ Build_binding Canary_lang.OCaml ];
-    related_artifacts = [ Canary_basic.Lib; a_ocaml ];
     origin = None;
     belongs_to = [ "Sc.2.OCaml" ] };
   { id = "Sc.3.OCaml"; name = "build_app_with_binding";
     description = "Tiny: build probe_baseline.exe / app_binding.exe \
                    linking directly against the tiny OCaml binding.";
     actions = [ Build_app { lang = Canary_lang.OCaml } ];
-    related_artifacts = [ a_ocaml; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.3.OCaml" ] };
   { id = "Sc.4.OCaml"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline / app_binding; loader \
                    resolves libtiny.so.1 at load time.";
     actions = [ Probe_app { lang = Canary_lang.OCaml } ];
-    related_artifacts =
-      [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.4.OCaml" ] };
   { id = "Sc.5.OCaml"; name = "build_app_helper";
@@ -562,15 +536,12 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    linked through an intermediate helper library \
                    over the OCaml binding.";
     actions = [ Build_app { lang = Canary_lang.OCaml } ];
-    related_artifacts = [ a_ocaml; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.5.OCaml" ] };
   { id = "Sc.6.OCaml"; name = "run_app_helper";
     description = "Tiny: exec app_helper.exe — full chain runs \
                    through tiny_helper into libtiny.so.";
     actions = [ Probe_app { lang = Canary_lang.OCaml } ];
-    related_artifacts =
-      [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.6.OCaml" ] };
 
@@ -581,7 +552,6 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     description = "Tiny: build the Python cext (\
                    _native.cpython-*.so) against libtiny.so.";
     actions = [ Build_binding Canary_lang.Python ];
-    related_artifacts = [ Canary_basic.Lib; a_python ];
     origin = None;
     belongs_to = [ "Sc.2.Python" ] };
   { id = "Sc.4.Python"; name = "run_app_with_binding";
@@ -592,8 +562,6 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    promoted; today it runs but isn't modeled as its \
                    own scenario.";
     actions = [ Probe_app { lang = Canary_lang.Python } ];
-    related_artifacts =
-      [ a_python; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.4.Python" ] };
 ]
@@ -678,7 +646,7 @@ let print_one_good
   Stdlib.print_endline
     (Printf.sprintf "  %s  %s" good.id good.name);
   let related_strs =
-    List.mapi good.related_artifacts ~f:(fun i a ->
+    List.mapi (Canary_scenario.related_artifacts good) ~f:(fun i a ->
       Printf.sprintf "A%d(%s)" (i + 1)
         (Canary_basic.string_of_artifact_kind a))
   in
@@ -837,10 +805,11 @@ let () =
   List.iter tiny_good_scenarios ~f:Canary_scenario.validate_scenario;
   List.iter scenario_specs ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
 
-(* §7.9 derivation invariant checked by
-   [Canary_scenario.validate_scenario] above (via
-   [validate_related_artifacts]); no tiny-side assertion
-   needed. *)
+(* §7.9 (2026-07-10): [related_artifacts] is no longer a
+   field on [scenario] — it derives from [scenario.actions]
+   via [Canary_scenario.related_artifacts_of_actions]. No
+   hand-vs-derived invariant to enforce; the derivation is
+   the sole source of truth. *)
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola

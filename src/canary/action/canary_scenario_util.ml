@@ -39,7 +39,7 @@ let artifact_index (sc : Canary_scenario.scenario)
     | a :: _ when Poly.equal a target -> Some i
     | _ :: rest -> find (i + 1) rest
   in
-  find 1 sc.related_artifacts
+  find 1 (Canary_scenario.related_artifacts sc)
 
 (** For a bad scenario, format its target relative to a Good
     scenario's [related_artifacts]: ["A<idx>"] or

@@ -398,6 +398,44 @@ Status: **stable in code**.
 dune exec src/bin/canary_main.exe -- paths-md
 ```
 
+### 6.5.1 Per-rule consumes/produces (§7.9 derivation)
+
+Every rule in §6.5 has an implicit input/output artifact
+set. `Canary_scenario.artifacts_of_rule` (in
+[canary_scenario.ml](../../src/canary/action/canary_scenario.ml))
+encodes it as one flat table; `related_artifacts_of_actions`
+takes a scenario's `actions` list and returns the union in
+first-appearance order.
+
+| Rule | Artifacts (ordered prerequisite → target) |
+| --- | --- |
+| `Configure`, `Scan_sources` | `[Source]` |
+| `Build_headers` | `[Source; Headers]` |
+| `Build_lib` | `[Source; Lib]` |
+| `Install_lib` | `[Lib]` |
+| `Build_binding L` | `[Lib; Binding L]` |
+| `Build_app { lang = L }` | `[Binding L; App]` |
+| `Probe_lib` | `[Lib]` |
+| `Probe_binding L` | `[Binding L; Lib]` (runtime dep last) |
+| `Probe_app { lang = L }` | `[Binding L; Lib; App]` |
+| `Fetch k` | `[k]` |
+| `Publish k` | `[k]` |
+
+**Order convention**: prerequisite first, target next.
+Runtime deps trail the direct arguments. The union across a
+scenario's `actions` follows first-appearance order (no
+dedup rearrangement), so §4 Good scenarios' displayed
+`A1(...) A2(...) A3(...)` labels stay stable across releases.
+
+**Origin & status** (2026-07-10): the `related_artifacts`
+field on `Canary_scenario.scenario` was removed; the
+derivation from `actions` is the sole source of truth.
+Consumers call `Canary_scenario.related_artifacts s` (the
+getter). Test-first spec pinned at
+[canary_artifact_test.ml](../../src/canary/test/canary_artifact_test.ml)
+under `scenario_derivation_pure_tests` — one case per
+canonical Sc.N shape plus a chain composition case.
+
 ### 6.6 `project_spec` — the code-side project handoff
 
 **Flow.** Project (`canary_project_<name>.ml`) constructs a

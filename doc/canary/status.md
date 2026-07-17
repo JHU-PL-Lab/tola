@@ -14,11 +14,10 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-*(Nothing in flight. Picking order (2026-07-10):*
-*~~Cluster C — SSOT §6.6 project_spec doc — done~~; next up*
-*is Cluster C's other half*
-*([`design/tiny.md §7.9`](design/tiny.md#79-derive-related_artifacts-from-actions),*
-*derive `related_artifacts`) then Cluster B — Task 2*
+*(Nothing in flight. Cluster C fully landed 2026-07-10:*
+*~~SSOT §6.6 project_spec doc~~ (b9e4abc); ~~tiny.md §7.9*
+*derive related_artifacts~~ (67d0e12 + 8f6e6fc + retirement).*
+*Next: Cluster B — Task 2 recipe/mutation integration*
 *([`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory)).*
 *`tiny_recipe` synthesis (tiny.md §7.2) postponed per user.)*
 
@@ -136,10 +135,19 @@ eventually" pass.
   `canary_project_tiny.ml` (combinator-side) and
   `canary/examples/tiny/scenarios/` (mutation-side; largely
   retired). See `backlog.md` #46.
-- **Derive `related_artifacts` from `actions`** — currently
-  hand-mapped in tiny entries; a `consumes/produces` helper
-  on `rule` would let the hand field be dropped once
-  verified against the current 15 values.
+- ~~**Derive `related_artifacts` from `actions`**~~ — done
+  2026-07-10; field removed, getter derives from
+  `scenario.actions`. See [`design/tiny.md §7.9`](design/tiny.md#79-derive-related_artifacts-from-actions-done-2026-07-10).
+
+- **Migrate `Bs.N.actions` to per-scenario chains** —
+  today all 13 Bs entries share `acts_full`; §7.9 derived
+  `related_artifacts` from that and it works (mutation
+  targets fall in the union). But per-Bs actions matching
+  what each scenario actually exercises would let derived
+  `related_artifacts` shrink to the specific chain and
+  match the abstract Sc.N pattern. Small refactor;
+  independent of Task 2. Companion to §7.9's `tiny_good`
+  fix.
 
 ## 6. Done — pointers
 

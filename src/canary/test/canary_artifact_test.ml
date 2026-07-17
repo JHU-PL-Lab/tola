@@ -701,27 +701,41 @@ let c2_prediction_pure_tests =
         List.is_empty r };
   ]
 
-(* ── §7.9 pre-work: derive related_artifacts from actions ──
-   For every project-agnostic Sc.N pattern in
-   [Canary_scenario.good_scenarios], assert that the
-   hand-listed [related_artifacts] equals what the
-   [related_artifacts_of_actions] helper derives from
-   [scenario.actions]. Element-wise ordered equality (order
-   matters for A1/A2/A3 display labels).
-
-   Tiny-side scenarios ([Canary_tiny_scenario.tiny_good_scenarios])
-   are validated via a start-up assertion in
-   canary_tiny_scenario.ml — they live in [canary_projects]
-   which the test module (in [canary_lib]) can't import. *)
+(* ── §7.9: related_artifacts derivation spec tests ──
+   Hand-listed [related_artifacts] was removed from the
+   [scenario] type on 2026-07-10; the derivation from
+   [actions] is now the sole source. These tests pin
+   the derivation output against small hard-coded
+   references — one per canonical Sc.N shape — so the
+   rules in [artifacts_of_rule] can't silently drift. *)
 let scenario_derivation_pure_tests =
-  let check (s : Canary_scenario.scenario) () =
-    let derived =
-      Canary_scenario.related_artifacts_of_actions s.actions
-    in
-    Poly.equal derived s.related_artifacts
+  let open Canary_basic in
+  let open Canary_lang in
+  let derived actions =
+    Canary_scenario.related_artifacts_of_actions actions
   in
-  List.map Canary_scenario.good_scenarios ~f:(fun s ->
-    { name = "derive.abstract." ^ s.id; check = check s })
+  let cases = [
+    "Sc.1", [ Configure; Scan_sources; Build_lib; Install_lib ],
+              [ Source; Lib ];
+    "Sc.2.OCaml", [ Build_binding OCaml ],
+              [ Lib; Binding OCaml ];
+    "Sc.3.OCaml", [ Build_app { lang = OCaml } ],
+              [ Binding OCaml; App ];
+    "Sc.4.OCaml", [ Probe_app { lang = OCaml } ],
+              [ Binding OCaml; Lib; App ];
+    "Sc.2.Python", [ Build_binding Python ],
+              [ Lib; Binding Python ];
+    "Sc.4.Python", [ Probe_app { lang = Python } ],
+              [ Binding Python; Lib; App ];
+    (* Chained: pieces of tiny's acts_full expected to
+       collapse under first-appearance union. *)
+    "chain.build+probe",
+      [ Build_lib; Build_binding OCaml; Probe_app { lang = OCaml } ],
+      [ Source; Lib; Binding OCaml; App ];
+  ] in
+  List.map cases ~f:(fun (name, actions, expected) ->
+    { name = "derive." ^ name;
+      check = fun () -> Poly.equal (derived actions) expected })
 
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
 
