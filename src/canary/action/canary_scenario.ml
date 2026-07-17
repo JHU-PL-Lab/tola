@@ -211,6 +211,54 @@ let good_scenarios : scenario list =
       belongs_to = [ "Sc.4.Python" ] };
   ]
 
+(* ---------- related_artifacts derivation (§7.9) ---------- *)
+
+(** Consumes-and-produces enumeration for a single rule.
+    Order convention: prerequisite first, target next. The
+    hand-listed [related_artifacts] on §4's good scenarios
+    follows the same convention, so the derivation matches
+    element-wise when the actions are given in dependency
+    order.
+
+    - [Configure] / [Scan_sources] / [Build_headers] —
+      [Source] and (for Build_headers) [Headers].
+    - [Build_lib] — [Source; Lib].
+    - [Build_binding L] — [Lib; Binding L].
+    - [Install_lib] — [Lib] (the produced lib in installed state).
+    - [Build_app { lang = L }] — [Binding L; App].
+    - [Probe_lib] — [Lib].
+    - [Probe_binding L] — [Binding L; Lib]  (runtime dep last).
+    - [Probe_app { lang = L }] — [Binding L; Lib; App]
+      (Binding to load, Lib as runtime dep, App as the entry).
+    - [Fetch k] / [Publish k] — [k].
+    A rule that touches nothing (currently none) returns []. *)
+let artifacts_of_rule (r : Canary_basic.rule) : Canary_basic.artifact_kind list =
+  let open Canary_basic in
+  match r with
+  | Configure -> [ Source ]
+  | Scan_sources -> [ Source ]
+  | Build_headers -> [ Source; Headers ]
+  | Build_lib -> [ Source; Lib ]
+  | Install_lib -> [ Lib ]
+  | Build_binding l -> [ Lib; Binding l ]
+  | Build_app { lang } -> [ Binding lang; App ]
+  | Probe_lib -> [ Lib ]
+  | Probe_binding l -> [ Binding l; Lib ]
+  | Probe_app { lang } -> [ Binding lang; Lib; App ]
+  | Fetch k -> [ k ]
+  | Publish k -> [ k ]
+
+(** Derive a scenario's [related_artifacts] from its
+    [actions] list. Union in first-appearance order (no
+    dedup rearrangement) — matches the hand-listed order on
+    §4 good scenarios by construction. *)
+let related_artifacts_of_actions (actions : Canary_basic.rule list)
+  : Canary_basic.artifact_kind list =
+  let open Base in
+  List.concat_map actions ~f:artifacts_of_rule
+  |> List.fold ~init:[] ~f:(fun acc a ->
+      if List.mem acc a ~equal:Poly.equal then acc else acc @ [ a ])
+
 (* ---------- validators ---------- *)
 
 (** Validate a Sc.N string against the [good_scenarios] catalogue.
@@ -262,12 +310,41 @@ let validate_belongs_to (s : scenario) : unit =
   Base.List.iter s.belongs_to ~f:(fun sc ->
     let _ = sc_id_of_string sc in ())
 
+(** §7.9 invariant: for **good** scenarios ([origin = None]),
+    the hand-listed [related_artifacts] must equal what
+    [related_artifacts_of_actions] derives from
+    [scenario.actions]. Bad scenarios and derived cells carry
+    a hand-picked [related_artifacts] used by
+    [validate_mutation_target] to constrain
+    [mutation.target] — that field's contents are not
+    derivable from the (typically superset) actions list, so
+    the invariant is skipped for them. Also skipped for
+    scenarios with [actions = []]. *)
+let validate_related_artifacts (s : scenario) : unit =
+  let open Base in
+  match s.origin with
+  | Some _ -> ()
+  | None ->
+    if not (List.is_empty s.actions) then
+      let derived = related_artifacts_of_actions s.actions in
+      if not (Poly.equal derived s.related_artifacts) then
+        Stdlib.failwith
+          (Printf.sprintf
+             "scenario %s (%s): related_artifacts derivation mismatch — \
+              hand=[%s] derived=[%s]"
+             s.id s.name
+             (String.concat ~sep:";"
+                (List.map s.related_artifacts ~f:Canary_basic.string_of_artifact_kind))
+             (String.concat ~sep:";"
+                (List.map derived ~f:Canary_basic.string_of_artifact_kind)))
+
 (** Full structural check on a scenario. Raises on any
     invariant violation. *)
 let validate_scenario (s : scenario) : unit =
   validate_mutation_target s;
   validate_manifest_sc_ids s;
-  validate_belongs_to s
+  validate_belongs_to s;
+  validate_related_artifacts s
 
 (* ---------- derivation (§9.3 backlog: derive_entries) ---------- *)
 
@@ -380,3 +457,4 @@ let has_probe_manifestation (scenario : scenario) : bool =
   | Some (Mutation { manifest = Unknown_gap; _ }) -> false
   | Some (Mutation _) -> true
   | Some (Version_mismatch | Packaging) -> true
+

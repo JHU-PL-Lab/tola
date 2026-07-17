@@ -701,6 +701,28 @@ let c2_prediction_pure_tests =
         List.is_empty r };
   ]
 
+(* ── §7.9 pre-work: derive related_artifacts from actions ──
+   For every project-agnostic Sc.N pattern in
+   [Canary_scenario.good_scenarios], assert that the
+   hand-listed [related_artifacts] equals what the
+   [related_artifacts_of_actions] helper derives from
+   [scenario.actions]. Element-wise ordered equality (order
+   matters for A1/A2/A3 display labels).
+
+   Tiny-side scenarios ([Canary_tiny_scenario.tiny_good_scenarios])
+   are validated via a start-up assertion in
+   canary_tiny_scenario.ml — they live in [canary_projects]
+   which the test module (in [canary_lib]) can't import. *)
+let scenario_derivation_pure_tests =
+  let check (s : Canary_scenario.scenario) () =
+    let derived =
+      Canary_scenario.related_artifacts_of_actions s.actions
+    in
+    Poly.equal derived s.related_artifacts
+  in
+  List.map Canary_scenario.good_scenarios ~f:(fun s ->
+    { name = "derive.abstract." ^ s.id; check = check s })
+
 (* ── Shell tests (reuse canary_pm_test.test_case) ── *)
 
 (* Weak generic shape check on a summary JSON. Kept for backwards
@@ -953,7 +975,8 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
     @ cmp_sym_version_pure_tests @ cmp_api_repack_pure_tests
     @ cmp_type_pure_tests @ cmp_api_faithfulness_pure_tests
     @ n3_header_inspect_pure_tests @ bo1_external_inspect_pure_tests
-    @ c2_prediction_pure_tests in
+    @ c2_prediction_pure_tests
+    @ scenario_derivation_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in

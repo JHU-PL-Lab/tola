@@ -517,13 +517,19 @@ let scenario_specs : scenario_spec list =
    [canary_tiny_baseline.ml]; a future task (deferred) ties
    the baseline functions to these Sc.N ids explicitly. *)
 
+(* Per-Sc.N actions mirror the abstract [Canary_scenario.good_scenarios]
+   list. Previously all 8 entries carried [acts_full] (the union of
+   every tiny action) — cargo-culted since only downstream copiers read
+   [actions] and none dispatched by content. Making this per-scenario
+   is the §7.9 prerequisite for [related_artifacts_of_actions] to
+   derive the correct hand-lists. *)
 let tiny_good_scenarios : Canary_scenario.scenario list = [
   (* Shared upstream *)
   { id = "Sc.1"; name = "build_native_lib";
     description = "Tiny: build libtiny.so from c/src/tiny.c using \
                    gcc; symbol versioning via c/tiny.map (TINY_1.0 \
                    exports). Shared across OCaml and Python.";
-    actions = acts_full;
+    actions = [ Configure; Scan_sources; Build_lib; Install_lib ];
     related_artifacts = [ Canary_basic.Source; Canary_basic.Lib ];
     origin = None;
     belongs_to = [ "Sc.1" ] };
@@ -532,21 +538,21 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
   { id = "Sc.2.OCaml"; name = "build_binding";
     description = "Tiny: build the OCaml binding (tiny.cmxa + \
                    libtiny_stubs.a) via cstubs against libtiny.so.";
-    actions = acts_full;
+    actions = [ Build_binding Canary_lang.OCaml ];
     related_artifacts = [ Canary_basic.Lib; a_ocaml ];
     origin = None;
     belongs_to = [ "Sc.2.OCaml" ] };
   { id = "Sc.3.OCaml"; name = "build_app_with_binding";
     description = "Tiny: build probe_baseline.exe / app_binding.exe \
                    linking directly against the tiny OCaml binding.";
-    actions = acts_full;
+    actions = [ Build_app { lang = Canary_lang.OCaml } ];
     related_artifacts = [ a_ocaml; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.3.OCaml" ] };
   { id = "Sc.4.OCaml"; name = "run_app_with_binding";
     description = "Tiny: exec probe_baseline / app_binding; loader \
                    resolves libtiny.so.1 at load time.";
-    actions = acts_full;
+    actions = [ Probe_app { lang = Canary_lang.OCaml } ];
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
@@ -555,14 +561,14 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
     description = "Tiny: build tiny_helper + app_helper.exe — app \
                    linked through an intermediate helper library \
                    over the OCaml binding.";
-    actions = acts_full;
+    actions = [ Build_app { lang = Canary_lang.OCaml } ];
     related_artifacts = [ a_ocaml; Canary_basic.App ];
     origin = None;
     belongs_to = [ "Sc.5.OCaml" ] };
   { id = "Sc.6.OCaml"; name = "run_app_helper";
     description = "Tiny: exec app_helper.exe — full chain runs \
                    through tiny_helper into libtiny.so.";
-    actions = acts_full;
+    actions = [ Probe_app { lang = Canary_lang.OCaml } ];
     related_artifacts =
       [ a_ocaml; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
@@ -574,7 +580,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
   { id = "Sc.2.Python"; name = "build_binding";
     description = "Tiny: build the Python cext (\
                    _native.cpython-*.so) against libtiny.so.";
-    actions = acts_full;
+    actions = [ Build_binding Canary_lang.Python ];
     related_artifacts = [ Canary_basic.Lib; a_python ];
     origin = None;
     belongs_to = [ "Sc.2.Python" ] };
@@ -585,7 +591,7 @@ let tiny_good_scenarios : Canary_scenario.scenario list = [
                    Sc.4.Python.ctypes once the mechanism axis is \
                    promoted; today it runs but isn't modeled as its \
                    own scenario.";
-    actions = acts_full;
+    actions = [ Probe_app { lang = Canary_lang.Python } ];
     related_artifacts =
       [ a_python; Canary_basic.Lib; Canary_basic.App ];
     origin = None;
@@ -830,6 +836,11 @@ let print_expected (name : string) : unit =
 let () =
   List.iter tiny_good_scenarios ~f:Canary_scenario.validate_scenario;
   List.iter scenario_specs ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
+
+(* §7.9 derivation invariant checked by
+   [Canary_scenario.validate_scenario] above (via
+   [validate_related_artifacts]); no tiny-side assertion
+   needed. *)
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola
