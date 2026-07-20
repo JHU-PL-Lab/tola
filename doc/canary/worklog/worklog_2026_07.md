@@ -378,3 +378,43 @@ CLAUDE.md Known-Gap on macOS).
 completion note pointing at the four commits + the macOS
 open item.
 
+
+## Task 2 prereq — baseline non-tiny projects (2026-07-17)
+
+Before starting Cluster B (Task 2 — recipe/mutation
+integration), ran the three non-tiny projects to capture
+current behavior:
+
+- `canary action sqlite` — 7/7 steps done. Fetch-only path
+  (stdlib sqlite3 + apt libsqlite3-dev); no build_lib /
+  build_binding. Positive-only, no Expect_compat_failure.
+- `canary action z3` — dev variant 22/22 + stable 7/7.
+  Stable variant fires
+  `Expect_compat_failure { inputs = Python_attrs [...] }`
+  at `Probe_binding Python`; log confirms:
+    "expected failure confirmed (derived): z3-solver pip
+     wheel predates z3.parser_context, added in Z3 4.15+
+     Python source (not yet exported in pip wheel)".
+- `canary action llvm` — dev variant 27/27 + stable /19
+  14/14. Compat-failure prediction machinery hand-coded at
+  [`canary_project_llvm.ml:495-512`](../../src/canary/projects/canary_project_llvm.ml#L495-L512)
+  with `Ocaml_mli` inputs + version_info naming
+  `Opcode.UncondBr`. Today's /19 sub-run fires
+  `probe_app_ocaml` and `probe_app_python` — different step
+  shape from the 2026-05-06 baseline where /19 fired a
+  `probe_binding_ocaml` compat check. Worth digging into
+  during Phase 3 to confirm the compat-failure path still
+  runs (may have shifted from probe_binding to probe_app
+  when the rule type split landed 67d0e12).
+
+**Fixed en route** (`1af76e8`): `probe_rule_of_kind` in
+`canary_diagram.ml` was a Phase G leftover — it
+`Stdlib.failwith`'d on Headers/Source kinds. z3's diagram
+iterates `present_kinds` (a wider set than probe_kinds)
+which surfaced the bug. Changed to return `rule option`;
+guards Source/Headers as `None`.
+
+**All three projects run clean**; Task 2 Phase 1 can start.
+Hand-coded Expect_compat_failure predicates in
+llvm (:495-512, ~18 LOC) and z3 (:541-551, ~10 LOC) are
+the retirement targets for Phase 3 and Phase 4.
