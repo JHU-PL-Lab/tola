@@ -399,13 +399,18 @@ current behavior:
   14/14. Compat-failure prediction machinery hand-coded at
   [`canary_project_llvm.ml:495-512`](../../src/canary/projects/canary_project_llvm.ml#L495-L512)
   with `Ocaml_mli` inputs + version_info naming
-  `Opcode.UncondBr`. Today's /19 sub-run fires
-  `probe_app_ocaml` and `probe_app_python` — different step
-  shape from the 2026-05-06 baseline where /19 fired a
-  `probe_binding_ocaml` compat check. Worth digging into
-  during Phase 3 to confirm the compat-failure path still
-  runs (may have shifted from probe_binding to probe_app
-  when the rule type split landed 67d0e12).
+  `Opcode.UncondBr`. Investigated apparent shape drift
+  (only 3 of 14 steps logged today vs full log on
+  2026-05-06): confirmed as
+  [`canary_local_runner.ml:302-305`](../../src/canary/backend/canary_local_runner.ml#L302-L305)
+  fast-skip pre-seed. `run_graph` seeds `status = Step_done`
+  for any step whose postcondition already passes,
+  without emitting a log line; the loop only runs steps
+  NOT in the status table. Today's run trusted the
+  2026-05-06 artifacts for probe_binding_ocaml + probe_lib
+  + others — check_post said "done from before" and
+  they were seeded silent. Not a Phase G bug. Force-verify
+  by wiping `_out/canary/projects/llvm` before running.
 
 **Fixed en route** (`1af76e8`): `probe_rule_of_kind` in
 `canary_diagram.ml` was a Phase G leftover — it
@@ -418,3 +423,12 @@ guards Source/Headers as `None`.
 Hand-coded Expect_compat_failure predicates in
 llvm (:495-512, ~18 LOC) and z3 (:541-551, ~10 LOC) are
 the retirement targets for Phase 3 and Phase 4.
+
+**Session-split decision** (per user 2026-07-17 —
+hesitant to touch llvm/z3 in the same session as new
+recipe code): Phase 1 lands alone (~50 LOC of type defs,
+nothing wired in) as a small session; Phase 2 (tiny
+refactor to use the new types) in the next session;
+Phases 3/4/5 (per-project refactors) as later, independent
+follow-ups. Small blast radius per session; easy bail-out
+mid-phase.
