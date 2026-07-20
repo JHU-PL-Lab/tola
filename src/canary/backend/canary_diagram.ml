@@ -11,11 +11,10 @@ open Canary
    needed, since diagram-side callsites don't have per-lang context.
 *)
 let probe_rule_of_kind = function
-  | Lib -> Probe_lib
-  | Binding l -> Probe_binding l
-  | App -> Probe_app { lang = Canary_lang.OCaml }
-  | k -> Stdlib.failwith
-           ("probe_rule_of_kind: unexpected kind " ^ string_of_artifact_kind k)
+  | Lib -> Some Probe_lib
+  | Binding l -> Some (Probe_binding l)
+  | App -> Some (Probe_app { lang = Canary_lang.OCaml })
+  | Source | Headers -> None    (* no Probe_source / Probe_headers *)
 
 (* ── Diagram rendering ──
    Step-level Mermaid renderers and the write_project_output orchestrator.
@@ -486,12 +485,11 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
       if is_probe_expanded kind then
         List.iter (probe_expand_items kind) ~f:(fun (probe_tag, _vid, label) ->
             add [%string "    A_%{probe_tag}([\"%{label}\"])"])
-      else begin
-        let probe_rule = probe_rule_of_kind kind in
-        let name = string_of_rule probe_rule in
-        let lbl = action_label_with_inspect name probe_rule in
-        add [%string "    A_%{name}([\"%{lbl}\"])"]
-      end);
+      else
+        Option.iter (probe_rule_of_kind kind) ~f:(fun probe_rule ->
+          let name = string_of_rule probe_rule in
+          let lbl = action_label_with_inspect name probe_rule in
+          add [%string "    A_%{name}([\"%{lbl}\"])"]));
   (* Summary actions — pill shape, one per (rule, suffix) pair.
      Covers Probe Lib (_inspect), Fetch (Binding lang) (_inspect +
      _stub_inspect), Publish (Binding lang) (same as Fetch), etc.
@@ -594,7 +592,8 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
      Expanded probes emit one edge-set per variant.
      Non-expanded use the original logic (Binding+Publish routes through pack). *)
   List.iter probe_kinds ~f:(fun kind ->
-      let base_tag = string_of_rule (probe_rule_of_kind kind) in
+      Option.iter (probe_rule_of_kind kind) ~f:(fun probe_rule ->
+      let base_tag = string_of_rule probe_rule in
       if is_probe_expanded kind then
         (* Expanded: one edge-set per probe step variant, routed through the
            matching artifact variant node when the artifact is also expanded. *)
@@ -627,7 +626,7 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
              add_edge ~tag:base_tag [%string "%{kind_nid Lib} -.->|runtime| A_%{base_tag}"]
          | _ ->
              add_edge ~tag:base_tag [%string "%{kind_nid kind} -->|test| A_%{base_tag}"])
-      end);
+      end));
   (* Summary edges: parent action → summary action.
      Dashed edge to signal "follow-up annotation" rather than data flow. *)
   List.iter summary_rules ~f:(fun (rule, suffix) ->
@@ -677,8 +676,11 @@ let mermaid_of_action_rule_schema ?status ?(has_scan = false) ?(chain_scan = fal
             List.map (probe_expand_items k) ~f:(fun (probe_tag, _, _) ->
                 ([%string "A_%{probe_tag}"], probe_tag))
           else
-            let name = string_of_rule (probe_rule_of_kind k) in
-            [ ([%string "A_%{name}"], name) ])
+            (match probe_rule_of_kind k with
+             | Some r ->
+                 let name = string_of_rule r in
+                 [ ([%string "A_%{name}"], name) ]
+             | None -> []))
     @ summary_entries
   in
   (match status with
@@ -1514,8 +1516,10 @@ let mermaid_full
             in
             Option.iter pm_variant ~f:(fun (_, pn) ->
                 add_edge ~tag:pt [%string "A_%{pt} --> %{pn}"]));
-        (* probe_<kind>_<variant> → from matching artifact variant *)
-        let probe_base = string_of_rule (probe_rule_of_kind kind) in
+        (* probe_<kind>_<variant> → from matching artifact variant.
+           Skipped for kinds with no probe (Source, Headers). *)
+        Option.iter (probe_rule_of_kind kind) ~f:(fun probe_rule ->
+        let probe_base = string_of_rule probe_rule in
         let probe_steps = List.filter steps ~f:(fun s ->
             not (String.is_suffix s.tag ~suffix:"_inspect")
             && (String.equal s.tag probe_base
@@ -1533,7 +1537,7 @@ let mermaid_full
                    | None -> art_nid_canonical Lib
                  in
                  add_edge ~tag:ps.tag [%string "%{lib_n} -.->|runtime| A_%{ps.tag}"]
-             | _ -> ()));
+             | _ -> ())));
         (* build_app: from primary ocaml_binding + lib link *)
         if Poly.equal kind App then
           Option.iter build_tag ~f:(fun bt ->
