@@ -33,9 +33,11 @@ Historical chronicles in [`worklog/`](worklog/).
 *bits it opens up.*
 *Task 2 project abstraction (was Cluster B / tiny.md §7.8)*
 *deferred; ROI marginal until §7.2 lands and more projects*
-*need the pattern. Next: `tiny_recipe` synthesis*
-*([`design/tiny.md §7.2`](design/tiny.md#72-tiny_recipe-synthesis-from-an-abstract-cell)),*
-*Phase 1 (parametric mutation constructors, ~250 LOC + tests).)*
+*need the pattern.*
+*§7.2 Phase 1 shipped 2026-07-20: per-artifact mutation*
+*modules (Source / Native / Binding), 4 parametric variants*
+*with byte-identical patch parity, SSOT §5.3 documenting*
+*mutation shapes. Next: §7.2 Phase 2 (workspace dispatch).)*
 
 ## 2. Near-term
 

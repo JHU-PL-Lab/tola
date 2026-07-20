@@ -736,7 +736,7 @@ let run_prepare ~(name : string) : unit =
   let native_ok = build_c_lib ~paths () in
   let ocaml_ok  = if native_ok then build_ocaml_binding ~paths () else false in
   (match recipe.mutation with
-   | Some (Soname_bump { from_so; to_so }) ->
+   | Some (Of_native (Soname_bump { from_so; to_so })) ->
      prep_info "%s: apply soname bump %s -> %s" name from_so to_so;
      let _ = apply_soname_bump ~sandbox ~from_so ~to_so in ()
    | _ -> ());

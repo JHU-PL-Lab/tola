@@ -47,11 +47,16 @@ let string_of_outcome = function
   | Skip -> "skip"
 
 (* mutation + patch constructor moved to Canary_artifact_mutation
-   2026-07-09. Re-exported as manifest type equation so internal
-   uses of [Patch] / [Soname_bump] stay unqualified. *)
+   2026-07-09. Per-artifact split landed 2026-07-20 (§7.2 Phase 1):
+   Source / Native / Binding modules now own their own mutation
+   types; top-level [mutation] is a thin union over them plus a
+   Patch escape hatch. Re-exported as a type equation so internal
+   uses of [Patch] and the [Of_*] wrappers stay unqualified. *)
 type mutation = Canary_artifact_mutation.mutation =
+  | Of_source of Canary_artifact_mutation.Source.t
+  | Of_native of Canary_artifact_mutation.Native.t
+  | Of_binding of Canary_artifact_mutation.Binding.t
   | Patch of { patch_file : string }
-  | Soname_bump of { from_so : string; to_so : string }
 
 (** Tiny-specific recipe: everything about how to construct this
     scenario's world in the sandbox. Kept OFF the general
@@ -243,8 +248,8 @@ let scenario_specs : scenario_spec list =
                     binding NEEDED libtiny.so.1 has nothing to resolve against. \
                     Symbols themselves unchanged."
       ~mutates:[ "c/build/libtiny.so.1" ]
-      ~concrete_pert:(Some (Soname_bump { from_so = "libtiny.so.1";
-                                           to_so = "libtiny.so.2.0" }))
+      ~concrete_pert:(Some (Of_native (Soname_bump { from_so = "libtiny.so.1";
+                                                     to_so = "libtiny.so.2.0" })))
       ~scenario_pert:(pert ~target:Canary_basic.Lib
                         ~kind:(On_artifact Lib)
                         ~manifest:(Possible [ "Sc.4.OCaml"; "Sc.4.Python" ])
@@ -1441,7 +1446,7 @@ let stores_of_entry
     | _ -> s
   in
   match entry.recipe.mutation with
-  | Some (Soname_bump { to_so; _ }) ->
+  | Some (Of_native (Soname_bump { to_so; _ })) ->
     { stores with lib_filename = strip_trailing_minor to_so }
   | _ -> stores
 

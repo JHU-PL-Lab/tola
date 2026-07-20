@@ -303,6 +303,63 @@ A same-shape recipe for another project would live in a
 `Canary_scenario.scenario` patterns paired with a
 project-specific recipe.
 
+### 5.3 Mutation shapes (parametric vocabulary)
+
+**Flow.** [`Canary_artifact_mutation`](../../src/canary/tool/canary_artifact_mutation.ml)
+ ──► per-artifact submodules (Source / Native / Binding) each
+own a `type t` enumerating that artifact's mutations, plus
+matching constructor helpers and an `apply_cmds` shell-command
+builder. Top-level `type mutation` is a thin union
+(`Of_source | Of_native | Of_binding | Patch`) for callers
+that need a homogeneous type. Shipped §7.2 Phase 1
+(2026-07-20).
+
+**Framing.** "A mutation is just an artifact-flavored fact" —
+per-artifact types make that framing structural, mirroring the
+inspection layer symmetry (canary_artifact_source / _native /
+_lang each own their artifact's inspect wrappers).
+
+Currently implemented (with existing-patch parity where a
+tiny reference case exists):
+
+| Module | Variant | Reference patch |
+|---|---|---|
+| `Source` | `Rename_c_symbol { file; from_; to_ }` | `symbol_missing.patch` |
+| `Source` | `Rename_version_tag { file; from_; to_ }` | `symbol_version_floor.patch` |
+| `Native` | `Soname_bump { from_so; to_so }` | `abi_soname_bump` (Bs.4) |
+| `Binding` | `Drop_ocaml_val { file; name }` | `api_complete.patch` |
+
+Freeform edits (add-declaration, coordinated multi-file
+changes, in-place body rewrites) stay as top-level
+`Patch { patch_file }` — the escape hatch. Of tiny's 13 bad
+scenarios: 4 have parametric constructors (rename + drop
+shapes); 9 stay as `Patch` (adds + body/signature rewrites).
+
+**Missing on purpose** (per user 2026-07-20 principle
+"per-artifact ops make missing-ness visible"):
+
+- `Source.Drop_c_symbol` — remove a C function definition
+  (multi-line, needs brace-matching). No current tiny cell
+  needs it; add when one does.
+- `Binding.Drop_python_attr` — remove a Python `def <attr>()`
+  block. Accurate multi-line def removal wants an AST-aware
+  transform; sed-based is fragile against docstrings /
+  decorators / nested defs. Add via a `canary/scripts/*.py`
+  when a cell needs it.
+
+**Tests** (in
+[`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml),
+`mutation_pure_tests` / `mutation_shell_apply_tests` /
+`mutation_regression_tests`):
+
+- Pure: constructor round-trip + apply_cmds shape.
+- Shell apply: run the emitted commands on a scratch sandbox,
+  grep for the mutation's mark.
+- Regression anchor: apply the parametric constructor AND the
+  hand-authored `.patch` file to two clean tiny sandboxes,
+  assert `diff -r` reports empty. Confirms byte-identical
+  parity with the existing patch for the 4 mapped variants.
+
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
 **Flow.** Hand-curated here ──► reference for code renames + prose

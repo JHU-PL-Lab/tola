@@ -701,6 +701,179 @@ let c2_prediction_pure_tests =
         List.is_empty r };
   ]
 
+(* ── §7.2 Phase 1: parametric mutation constructors ──
+   Two layers of test.
+
+   1. Pure — constructor round-trip. Verifies that
+      [Source.rename_c_symbol ~file ~from_ ~to_] etc. return
+      exactly the expected variant. Cheap; catches typos in
+      the helper implementations.
+
+   2. Shell — apply on a scratch sandbox + inspect result.
+      Copies a source fixture, runs [apply_cmds], greps for
+      the mutation's mark. Verifies the shell command
+      actually does what its variant claims.
+
+   3. Regression anchor — for each parametric mutation with
+      an existing tiny .patch mapping, apply BOTH to a clean
+      tiny tree (in separate sandboxes) and diff. Byte-
+      identical trees = parity confirmed. This is the strong
+      evidence that the parametric constructor faithfully
+      reproduces the hand-authored patch. *)
+
+let mutation_pure_tests =
+  let module M = Canary_artifact_mutation in
+  [
+    { name = "mut.Source.rename_c_symbol constructor";
+      check = fun () ->
+        Poly.equal
+          (M.Source.rename_c_symbol ~file:"foo.c" ~from_:"a" ~to_:"b")
+          (M.Source.Rename_c_symbol { file = "foo.c"; from_ = "a"; to_ = "b" }) };
+    { name = "mut.Source.rename_version_tag constructor";
+      check = fun () ->
+        Poly.equal
+          (M.Source.rename_version_tag ~file:"foo.map" ~from_:"V1" ~to_:"V2")
+          (M.Source.Rename_version_tag { file = "foo.map"; from_ = "V1"; to_ = "V2" }) };
+    { name = "mut.Native.soname_bump constructor";
+      check = fun () ->
+        Poly.equal
+          (M.Native.soname_bump ~from_so:"libx.so.1.0" ~to_so:"libx.so.2.0")
+          (M.Native.Soname_bump { from_so = "libx.so.1.0"; to_so = "libx.so.2.0" }) };
+    { name = "mut.Binding.drop_ocaml_val constructor";
+      check = fun () ->
+        Poly.equal
+          (M.Binding.drop_ocaml_val ~file:"x.mli" ~name:"sum")
+          (M.Binding.Drop_ocaml_val { file = "x.mli"; name = "sum" }) };
+    { name = "mut.rename_c_symbol apply_cmds shape";
+      check = fun () ->
+        let cmds = M.Source.apply_cmds ~sandbox:"/tmp/sb"
+                     (M.Source.rename_c_symbol ~file:"c/src/tiny.c"
+                        ~from_:"tiny_sum" ~to_:"tiny_total")
+        in
+        List.length cmds = 1
+        && String.is_substring (List.hd_exn cmds) ~substring:"sed -i"
+        && String.is_substring (List.hd_exn cmds) ~substring:"tiny_sum"
+        && String.is_substring (List.hd_exn cmds) ~substring:"tiny_total"
+        && String.is_substring (List.hd_exn cmds) ~substring:"/tmp/sb/c/src/tiny.c" };
+    { name = "mut.soname_bump apply_cmds shape (5 shell steps)";
+      check = fun () ->
+        let cmds = M.Native.apply_cmds ~sandbox:"/tmp/sb"
+                     (M.Native.soname_bump ~from_so:"libtiny.so.1.0"
+                        ~to_so:"libtiny.so.2.0")
+        in
+        (* mv + rm + 2 ln -sf + patchelf = 5 commands *)
+        List.length cmds = 5 };
+    { name = "mut.top-level apply_cmds dispatch: Of_native → Native.apply_cmds";
+      check = fun () ->
+        let m = M.Of_native (M.Native.soname_bump
+                               ~from_so:"libx.so.1.0" ~to_so:"libx.so.2.0") in
+        let dispatched = M.apply_cmds ~sandbox:"/tmp/sb" m in
+        let direct = M.Native.apply_cmds ~sandbox:"/tmp/sb"
+                       (M.Native.soname_bump ~from_so:"libx.so.1.0"
+                          ~to_so:"libx.so.2.0") in
+        Poly.equal dispatched direct };
+  ]
+
+(* Shell-level: apply a parametric mutation to a copy of tiny's
+   source tree in /tmp, then verify the specific change happened.
+   Fixture assumption: tiny source at canary/examples/tiny/ is
+   present (repo-local); test skips gracefully if not. *)
+let mutation_shell_apply_tests ~tiny_src ~output_dir : Canary_pm_test.test_case list =
+  let sb_root = output_dir ^ "/mut_apply" in
+  let sb1 = sb_root ^ "/rename_c_symbol" in
+  let sb2 = sb_root ^ "/rename_version_tag" in
+  let sb3 = sb_root ^ "/drop_ocaml_val" in
+  let module M = Canary_artifact_mutation in
+  let rename_c_cmds = M.Source.apply_cmds ~sandbox:sb1
+      (M.Source.rename_c_symbol ~file:"c/src/tiny.c"
+         ~from_:"tiny_sum" ~to_:"tiny_total") in
+  let rename_v_cmds = M.Source.apply_cmds ~sandbox:sb2
+      (M.Source.rename_version_tag ~file:"c/tiny.map"
+         ~from_:"TINY_1.0" ~to_:"TINY_2.0") in
+  let drop_val_cmds = M.Binding.apply_cmds ~sandbox:sb3
+      (M.Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum") in
+  let seed sb =
+    [%string "rm -rf %{sb} && mkdir -p %{sb} && cp -r %{tiny_src}/. %{sb}/"]
+  in
+  let run_seq cmds =
+    String.concat ~sep:" && " (seed sb1 :: cmds) in
+  let seq1 =
+    [%string "rm -rf %{sb1} && mkdir -p %{sb1} && cp -r %{tiny_src}/. %{sb1}/ && \
+              %{String.concat ~sep:\" && \" rename_c_cmds}"] in
+  let seq2 =
+    [%string "rm -rf %{sb2} && mkdir -p %{sb2} && cp -r %{tiny_src}/. %{sb2}/ && \
+              %{String.concat ~sep:\" && \" rename_v_cmds}"] in
+  let seq3 =
+    [%string "rm -rf %{sb3} && mkdir -p %{sb3} && cp -r %{tiny_src}/. %{sb3}/ && \
+              %{String.concat ~sep:\" && \" drop_val_cmds}"] in
+  ignore run_seq;
+  [
+    { name = "mut.apply.rename_c_symbol produces tiny_total";
+      cmd = [%string "%{seq1} && grep -q 'int tiny_total' %{sb1}/c/src/tiny.c \
+                       && ! grep -q 'int tiny_sum(' %{sb1}/c/src/tiny.c"];
+      expected_rc = 0 };
+    { name = "mut.apply.rename_version_tag produces TINY_2.0";
+      cmd = [%string "%{seq2} && grep -q '^TINY_2\\.0 {' %{sb2}/c/tiny.map \
+                       && ! grep -q '^TINY_1\\.0 {' %{sb2}/c/tiny.map"];
+      expected_rc = 0 };
+    { name = "mut.apply.drop_ocaml_val removes val sum";
+      cmd = [%string "%{seq3} && ! grep -q '^val sum' %{sb3}/ocaml/tiny.mli \
+                       && grep -q '^val diff' %{sb3}/ocaml/tiny.mli"];
+      expected_rc = 0 };
+  ]
+
+(* Regression anchor: apply the parametric constructor AND the
+   hand-authored .patch to two clean tiny sandboxes; assert the
+   resulting trees are byte-identical (diff -r empty). Proves the
+   new primitive faithfully reproduces the existing patch. *)
+let mutation_regression_tests ~tiny_src ~patches_dir ~output_dir
+  : Canary_pm_test.test_case list =
+  let anchor ~name ~patch_file ~apply_param_cmds =
+    let root = [%string "%{output_dir}/mut_regress/%{name}"] in
+    let sb_p = root ^ "/via_patch" in
+    let sb_m = root ^ "/via_mutation" in
+    (* Resolve patch path to absolute so `patch` still finds it
+       after `cd`ing into the sandbox. `readlink -f` returns the
+       absolute path; wrap with a shell subst that eval's at run
+       time (patches_dir may be a relative repo path). *)
+    (* Subshell so the `cd` doesn't leak into subsequent commands. *)
+    let patch_cmd =
+      [%string
+        "( PATCH_ABS=$(readlink -f '%{patches_dir}/%{patch_file}') && \
+           cd %{sb_p} && patch -p1 < \"$PATCH_ABS\" > /dev/null )"]
+    in
+    let seed sb =
+      [%string "rm -rf %{sb} && mkdir -p %{sb} && cp -r %{tiny_src}/. %{sb}/"]
+    in
+    let mut_seq =
+      String.concat ~sep:" && " (seed sb_m :: apply_param_cmds)
+    in
+    let cmd =
+      [%string
+        "%{seed sb_p} && %{patch_cmd} && \
+         %{mut_seq} && \
+         diff -r %{sb_p} %{sb_m}"]
+    in
+    { Canary_pm_test.name = "mut.regress." ^ name; cmd; expected_rc = 0 }
+  in
+  let module M = Canary_artifact_mutation in
+  [
+    anchor ~name:"symbol_missing"
+      ~patch_file:"symbol_missing.patch"
+      ~apply_param_cmds:(M.Source.apply_cmds ~sandbox:(output_dir ^ "/mut_regress/symbol_missing/via_mutation")
+        (M.Source.rename_c_symbol ~file:"c/src/tiny.c"
+           ~from_:"tiny_sum" ~to_:"tiny_total"));
+    anchor ~name:"symbol_version_floor"
+      ~patch_file:"symbol_version_floor.patch"
+      ~apply_param_cmds:(M.Source.apply_cmds ~sandbox:(output_dir ^ "/mut_regress/symbol_version_floor/via_mutation")
+        (M.Source.rename_version_tag ~file:"c/tiny.map"
+           ~from_:"TINY_1.0" ~to_:"TINY_2.0"));
+    anchor ~name:"api_complete"
+      ~patch_file:"api_complete.patch"
+      ~apply_param_cmds:(M.Binding.apply_cmds ~sandbox:(output_dir ^ "/mut_regress/api_complete/via_mutation")
+        (M.Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum"));
+  ]
+
 (* ── §7.9: related_artifacts derivation spec tests ──
    Hand-listed [related_artifacts] was removed from the
    [scenario] type on 2026-07-10; the derivation from
@@ -990,7 +1163,8 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
     @ cmp_type_pure_tests @ cmp_api_faithfulness_pure_tests
     @ n3_header_inspect_pure_tests @ bo1_external_inspect_pure_tests
     @ c2_prediction_pure_tests
-    @ scenario_derivation_pure_tests in
+    @ scenario_derivation_pure_tests
+    @ mutation_pure_tests in
   Fmt.pr "Pure predicate tests:@.";
   List.iter pure_all ~f:(fun t ->
       let ok = run_pure_test t in
@@ -1024,7 +1198,19 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
             python_shell_tests ~pkg:"sys" ~output_dir)
       else (Fmt.pr "python3 not found — skipping python shell tests@."; [])
     in
-    native @ ocaml_ @ ocaml_stub @ python
+    let mutation_apply =
+      let tiny_src = "canary/examples/tiny" in
+      let patches_dir = "canary/examples/tiny/scenarios/patches" in
+      if Stdlib.Sys.file_exists tiny_src
+      && Stdlib.Sys.file_exists patches_dir then
+        (Fmt.pr "tiny source present — testing mutation apply + regression@.";
+         mutation_shell_apply_tests ~tiny_src ~output_dir
+         @ mutation_regression_tests ~tiny_src ~patches_dir ~output_dir)
+      else
+        (Fmt.pr "tiny source missing — skipping mutation apply tests@.";
+         [])
+    in
+    native @ ocaml_ @ ocaml_stub @ python @ mutation_apply
   in
   let sh_pass = ref 0 in
   let sh_fail = ref 0 in
