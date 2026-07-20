@@ -34,11 +34,14 @@ Historical chronicles in [`worklog/`](worklog/).
 *Task 2 project abstraction (was Cluster B / tiny.md §7.8)*
 *deferred; ROI marginal until §7.2 lands and more projects*
 *need the pattern.*
-*§7.2 Phase 1 + 2 shipped 2026-07-20: per-artifact mutation*
-*modules (SSOT §5.3), workspace dispatch through*
-*per-artifact `apply_cmds` (tiny.md §3.4). Bs.4 continues*
-*13/13; artifact-test 98/98. Next: §7.2 Phase 3 —*
-*`recipe_of_derived_cell` synthesis.)*
+*§7.2 Phase 1 + 2 + 3 shipped 2026-07-20:*
+*per-artifact mutation modules (SSOT §5.3), workspace dispatch*
+*(tiny.md §3.4), recipe synthesis from derived cells*
+*(`recipe_of_derived_cell` — 12 of 20 cells synthesize; 8*
+*empty awaiting Drop_c_symbol / Drop_python_attr / App*
+*primitives). Bs.4 continues 13/13; artifact-test 98/98.*
+*Next: §7.2 Phase 4 — fold `derived_scenario_specs` into*
+*`all_scenario_specs`, dedup against hand-listed Bs's.)*
 
 ## 2. Near-term
 

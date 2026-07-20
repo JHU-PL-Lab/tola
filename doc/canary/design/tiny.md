@@ -292,7 +292,7 @@ untouched until this line stabilizes.
 
 | #    | Item                                                                      | Cluster | Status                                          |
 | ---- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
-| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **Phase 1 + 2 done** 2026-07-20; Phase 3 next   |
+| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **Phase 1 + 2 + 3 done** 2026-07-20; Phase 4 next |
 | §7.1 | Fill the 15 empty derived cells                                           | A       | naturally follows §7.2 (data-driven under it)   |
 | §7.4 | Fill Sc.3–Sc.6 areas                                                      | A       | overlaps §7.1                                   |
 | §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
@@ -335,9 +335,9 @@ mechanical if the recipe shape is right.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell
 
-**Status: Phase 1 + 2 done 2026-07-20; Phase 3 next.** §7.8
-(project abstraction) deferred; §7.2 picks up on its own
-merits as the natural next step in the ssot-tiny-canary
+**Status: Phase 1 + 2 + 3 done 2026-07-20; Phase 4 next.**
+§7.8 (project abstraction) deferred; §7.2 picks up on its
+own merits as the natural next step in the ssot-tiny-canary
 sync line.
 
 **Doc-sync riders** per phase — each commit lands the SSOT
@@ -347,7 +347,7 @@ sync line.
 |---|---|---|---|
 | **1 (done)** | Per-artifact modules + variants in `canary_artifact_mutation.ml` (~230 LOC + 200 test LOC) | ~~§5.3 (mutation shapes)~~ landed as new §5.3 | this row |
 | **2 (done)** | Workspace dispatch: `run_prepare` matches Of_source / Of_binding / Of_native, routes through per-artifact `apply_cmds` (~25 LOC net); Bs.4 recipe migrated to full-name SONAMEs | — | ~~§3.4 (mutation dispatch)~~ landed as new §3.4 |
-| 3 | `recipe_of_derived_cell` + (target, kind) → mutation table (~150 LOC) | §5.2 patterns-vs-instances: point at recipe synthesis as the derivation path; if C8 wiring comes up here, resolve it | §7.2 Phase 3: mark done + link |
+| **3 (done)** | `recipe_of_derived_cell` + `scenario_spec_of_derived_cell` + `derived_scenario_specs` + (target, kind) → mutation table (~100 LOC) | ~~§5.2 patterns-vs-instances: synthesis path pointer~~ landed | this row |
 | 4 | Fold `derived_scenario_specs` into `all_scenario_specs` (~50 LOC) | §5.1: add derived-cell rows once runnable | §6 coverage: recount cells filled |
 
 Total ~480 LOC across 4 phases; one phase per session.
@@ -375,6 +375,32 @@ name (`libtiny.so.1.0`) rather than the previous mixed
 major+full convention. Bs.4 continues to pass 13/13.
 Dead-code today for Of_source/Of_binding until Phase 3
 synthesizes recipes into new Bs entries that use them.
+
+**Phase 3 shipped**: `recipe_of_derived_cell` in
+`canary_tiny_scenario.ml` — takes a
+`Canary_scenario.scenario` (a derived cell), returns
+`tiny_recipe option`. The synthesis table:
+
+| (target, kind) | Mutation | Violates | Cell status |
+|---|---|---|---|
+| `(Source, On_artifact Source)` | `Source.rename_c_symbol tiny_sum→tiny_total` | c1 | synthesizes |
+| `(Source, On_behavior)` | — | — | empty (behavior_silent stays Patch) |
+| `(Headers, _)` | — | — | empty (header_arity_bump stays Patch) |
+| `(Lib, On_artifact Lib)` | `Native.soname_bump 1.0→2.0` | c4 | synthesizes |
+| `(Binding OCaml, On_artifact (Binding OCaml))` | `Binding.drop_ocaml_val sum` | c2 | synthesizes |
+| `(Binding Python, _)` | — | — | empty (Drop_python_attr not impl) |
+| `(App, _)` | — | — | empty (no App-level primitive) |
+
+Companion: `scenario_spec_of_derived_cell` wraps the recipe
+with the derived scenario; `derived_scenario_specs`
+enumerates all 20 cells and returns the 12 that
+successfully synthesize. Startup assertion checks the
+12/8 count so the table can't silently drift.
+
+Default target (which symbol to mutate) hardcoded per the
+2026-07-09 design decision (`tiny_sum` for source, `sum`
+for mli). Heuristic picking from `api_source.stable_symbols`
+is future work.
 
 ---
 

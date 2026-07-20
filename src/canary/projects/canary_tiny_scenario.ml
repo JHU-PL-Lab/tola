@@ -614,6 +614,119 @@ let derived_scenarios : Canary_scenario.scenario list =
 let matches_derived_cell = Canary_scenario_util.matches_derived_cell
 
 (* ================================================================
+   §7.2 PHASE 3 — RECIPE SYNTHESIS FROM DERIVED CELLS
+
+   Turns a derived cell (Good × artifact × mutation_kind) into a
+   runnable tiny_recipe. Uses the parametric mutation vocabulary
+   Phase 1 shipped. Cells whose (target, kind) maps to a mutation
+   variant not yet implemented (Drop_c_symbol, Drop_python_attr,
+   App-level anything) return [None] — the cell stays empty until
+   the primitive lands. Missing-ness stays visible.
+
+   Default target ("which symbol"): hardcoded per user
+   2026-07-09 design decision — [tiny_sum] for source-side
+   mutations, [sum] for mli. Heuristic picking from
+   [api_source.stable_symbols] is future work.
+   ================================================================ *)
+
+(** Synthesize a [tiny_recipe] from a derived cell. Returns [None]
+    when the cell's (target, kind) has no implemented parametric
+    primitive — the design-space slot exists but no code can fill
+    it yet. See tiny.md §7.2. *)
+let recipe_of_derived_cell (cell : Canary_scenario.scenario)
+  : tiny_recipe option =
+  let open Canary_basic in
+  let open Canary_artifact_mutation in
+  match cell.origin with
+  | None
+  | Some (Canary_scenario.Version_mismatch | Canary_scenario.Packaging) ->
+      None
+  | Some (Canary_scenario.Mutation { target; kind; _ }) ->
+    (match target, kind with
+     | Source, On_artifact Source ->
+         (* Rename a C source symbol. Default: tiny_sum → tiny_total.
+            Mirrors the existing Bs.1 (symbol_missing) recipe. *)
+         let file = "c/src/tiny.c" in
+         Some {
+           mutates = [ file ];
+           mutation = Some (Of_source (Source.rename_c_symbol
+             ~file ~from_:"tiny_sum" ~to_:"tiny_total"));
+           expected = [];
+           violates = [ Canary_compat.C1 ];
+         }
+     | Source, On_behavior ->
+         (* No parametric behavior-change primitive. behavior_silent
+            stays as freeform Patch (Bs.7). *)
+         None
+     | Headers, _ ->
+         (* No parametric header mutations. header_arity_bump stays
+            as freeform Patch (Bs.2). *)
+         None
+     | Lib, On_artifact Lib ->
+         (* Binary SONAME bump. Default: libtiny.so.1.0 →
+            libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump). *)
+         Some {
+           mutates = [ "c/build/libtiny.so.1.0" ];
+           mutation = Some (Of_native (Native.soname_bump
+             ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
+           expected = [];
+           violates = [ Canary_compat.C4 ];
+         }
+     | Binding Canary_lang.OCaml, On_artifact (Binding Canary_lang.OCaml) ->
+         (* Drop a val from tiny.mli. Default: val sum. Mirrors Bs.9
+            (api_complete). *)
+         let file = "ocaml/tiny.mli" in
+         Some {
+           mutates = [ file ];
+           mutation = Some (Of_binding (Binding.drop_ocaml_val
+             ~file ~name:"sum"));
+           expected = [];
+           violates = [ Canary_compat.C2 ];
+         }
+     | Binding Canary_lang.Python, _ ->
+         (* [Drop_python_attr] not implemented; the Python-side cells
+            stay empty until an AST-aware primitive lands. *)
+         None
+     | App, _ ->
+         (* App-level mutations not parametrized. Sc.3-Sc.6 cells
+            stay empty for now — future primitive (App_swap? patch
+            of the app source?) needed. *)
+         None
+     | _ -> None)
+
+(** Convenience: synthesize a full [scenario_spec] from a derived
+    cell — the [tiny_recipe] plus the scenario itself (from the
+    cell's inherited fields; retag id + name for uniqueness). *)
+let scenario_spec_of_derived_cell (cell : Canary_scenario.scenario)
+  : scenario_spec option =
+  Option.map (recipe_of_derived_cell cell) ~f:(fun recipe ->
+    { scenario = cell; recipe })
+
+(** All derived cells that successfully synthesize into a
+    [scenario_spec]. Enumerable design-space fills; Phase 4 will
+    fold this into [all_scenario_specs] alongside the hand-listed
+    ones. *)
+let derived_scenario_specs : scenario_spec list =
+  List.filter_map derived_scenarios ~f:scenario_spec_of_derived_cell
+
+(* Startup assertion: the synthesis table doesn't crash on any
+   derived cell; count Some vs None matches the design table in
+   tiny.md §7.2 Phase 3. Update this expected count whenever the
+   synthesis table grows a new (target, kind) entry. *)
+let () =
+  let some_n = List.length derived_scenario_specs in
+  let none_n = List.length derived_scenarios - some_n in
+  let expected_some = 12 in
+  let expected_none = 8 in
+  if some_n <> expected_some || none_n <> expected_none then
+    Stdlib.failwith
+      (Printf.sprintf
+         "recipe_of_derived_cell: synthesized %d/%d cells (expected \
+          %d Some + %d None). Update the count if the synthesis \
+          table changed."
+         some_n (some_n + none_n) expected_some expected_none)
+
+(* ================================================================
    HELPERS
    ================================================================ *)
 

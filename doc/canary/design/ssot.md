@@ -303,6 +303,21 @@ A same-shape recipe for another project would live in a
 `Canary_scenario.scenario` patterns paired with a
 project-specific recipe.
 
+**Synthesis path (§7.2 Phase 3, 2026-07-20).** For tiny, a
+derived cell (Good × artifact × applicable_kind) can now be
+turned into a concrete instance automatically via
+[`Canary_tiny_scenario.recipe_of_derived_cell`](../../src/canary/projects/canary_tiny_scenario.ml)
+— given a derived scenario, returns a `tiny_recipe option`
+built from the parametric mutation vocabulary of §5.3.
+Cells whose (target, kind) has an implemented primitive
+synthesize; cells whose primitive is missing (§5.3's
+"Missing on purpose") stay [None] — the empty slot stays
+visibly empty. Today 12 of 20 tiny cells synthesize; 8
+remain awaiting `Drop_c_symbol` / `Drop_python_attr` /
+App-level primitives. Phase 4 will fold the synthesized
+`derived_scenario_specs` into `all_scenario_specs`,
+deduping against hand-listed Bs's.
+
 ### 5.3 Mutation shapes (parametric vocabulary)
 
 **Flow.** [`Canary_artifact_mutation`](../../src/canary/tool/canary_artifact_mutation.ml)
