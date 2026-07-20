@@ -726,19 +726,42 @@ let run_prepare ~(name : string) : unit =
   prep_info "%s: install baseline cext -> sandbox" name;
   if not (install_baseline_cext ~sandbox) then
     prep_fail "baseline cext install failed";
+  (* Pre-build mutations: Patch (freeform), Of_source, Of_binding.
+     Applied to sandbox before build_c_lib runs so the compilation
+     picks up the mutation. Of_native / Soname_bump is post-build
+     (see below) — it acts on the built binary. *)
+  let run_cmds label cmds =
+    prep_info "%s: apply %s (%d cmd%s)" name label
+      (Base.List.length cmds)
+      (if Base.List.length cmds = 1 then "" else "s");
+    if not (Base.List.for_all cmds ~f:(fun c -> run_shell c = 0)) then
+      prep_fail "%s application failed" label
+  in
   (match recipe.mutation with
    | Some (Patch { patch_file; _ }) ->
      prep_info "%s: apply patch %s" name patch_file;
      if not (apply_patch ~sandbox ~patch_file) then
        prep_fail "patch application failed"
-   | _ -> ());
+   | Some (Of_source m) ->
+     run_cmds "source mutation"
+       (Canary_artifact_mutation.Source.apply_cmds ~sandbox m)
+   | Some (Of_binding m) ->
+     run_cmds "binding mutation"
+       (Canary_artifact_mutation.Binding.apply_cmds ~sandbox m)
+   | Some (Of_native _) | None -> ());
   let paths = sandbox_paths ~sandbox in
   let native_ok = build_c_lib ~paths () in
   let ocaml_ok  = if native_ok then build_ocaml_binding ~paths () else false in
+  (* Post-build mutations: Of_native (binary surgery on the built
+     lib). Dispatches through Canary_artifact_mutation.Native.apply_cmds
+     which derives major/generic names from the full sonames. *)
   (match recipe.mutation with
-   | Some (Of_native (Soname_bump { from_so; to_so })) ->
-     prep_info "%s: apply soname bump %s -> %s" name from_so to_so;
-     let _ = apply_soname_bump ~sandbox ~from_so ~to_so in ()
+   | Some (Of_native m) ->
+     let cmds = Canary_artifact_mutation.Native.apply_cmds ~sandbox m in
+     prep_info "%s: apply native mutation (%d cmd%s)" name
+       (Base.List.length cmds)
+       (if Base.List.length cmds = 1 then "" else "s");
+     let _ = Base.List.for_all cmds ~f:(fun c -> run_shell c = 0) in ()
    | _ -> ());
   let build_status = `Assoc [
     "native", bool_json native_ok;

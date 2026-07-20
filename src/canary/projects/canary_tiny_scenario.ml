@@ -248,7 +248,7 @@ let scenario_specs : scenario_spec list =
                     binding NEEDED libtiny.so.1 has nothing to resolve against. \
                     Symbols themselves unchanged."
       ~mutates:[ "c/build/libtiny.so.1" ]
-      ~concrete_pert:(Some (Of_native (Soname_bump { from_so = "libtiny.so.1";
+      ~concrete_pert:(Some (Of_native (Soname_bump { from_so = "libtiny.so.1.0";
                                                      to_so = "libtiny.so.2.0" })))
       ~scenario_pert:(pert ~target:Canary_basic.Lib
                         ~kind:(On_artifact Lib)

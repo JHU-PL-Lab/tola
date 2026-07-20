@@ -141,6 +141,26 @@ to_so = "libtiny.so.2.0"  →  lib_filename = "libtiny.so.2"
 
 Other mutations (patches) don't adjust stores.
 
+### 3.4 Mutation dispatch in workspace prep
+
+`run_prepare` in
+[`canary_tiny_workspace.ml`](../../src/canary/projects/canary_tiny_workspace.ml)
+applies `recipe.mutation` at two points around the sandbox
+build:
+
+| Timing | Variants handled | Path |
+|---|---|---|
+| Pre-build | `Patch { patch_file }` | Local `apply_patch` wrapper (resolves `patches_dir` to absolute) |
+| Pre-build | `Of_source m` / `Of_binding m` | `Canary_artifact_mutation.{Source,Binding}.apply_cmds ~sandbox m` — source-level mutations must be applied before `build_c_lib` / `build_ocaml_binding` so the compilation picks them up |
+| Post-build | `Of_native m` | `Canary_artifact_mutation.Native.apply_cmds ~sandbox m` — binary surgery on the built lib (e.g. `Soname_bump`) runs after `build_c_lib` |
+
+`Of_native.Soname_bump { from_so; to_so }` now uses full
+SONAME names for both fields (was major + full mixed
+under the retired `apply_soname_bump` wrapper); `Native.apply_cmds`
+derives major and generic symlink names via
+`strip_trailing_minor`. Bs.4 recipe updated accordingly
+(2026-07-20).
+
 ## 4. Cache layout
 
 The auto-init sandbox lives at
@@ -272,7 +292,7 @@ untouched until this line stabilizes.
 
 | #    | Item                                                                      | Cluster | Status                                          |
 | ---- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
-| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **Phase 1 done** 2026-07-20; Phase 2 next       |
+| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **Phase 1 + 2 done** 2026-07-20; Phase 3 next   |
 | §7.1 | Fill the 15 empty derived cells                                           | A       | naturally follows §7.2 (data-driven under it)   |
 | §7.4 | Fill Sc.3–Sc.6 areas                                                      | A       | overlaps §7.1                                   |
 | §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
@@ -315,7 +335,7 @@ mechanical if the recipe shape is right.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell
 
-**Status: Phase 1 done 2026-07-20; Phase 2 next.** §7.8
+**Status: Phase 1 + 2 done 2026-07-20; Phase 3 next.** §7.8
 (project abstraction) deferred; §7.2 picks up on its own
 merits as the natural next step in the ssot-tiny-canary
 sync line.
@@ -326,7 +346,7 @@ sync line.
 | Phase | Code | SSOT sync | tiny.md sync |
 |---|---|---|---|
 | **1 (done)** | Per-artifact modules + variants in `canary_artifact_mutation.ml` (~230 LOC + 200 test LOC) | ~~§5.3 (mutation shapes)~~ landed as new §5.3 | this row |
-| 2 | Extend workspace dispatch (~30 LOC) | — | §3 factory pipeline: note new mutation dispatch |
+| **2 (done)** | Workspace dispatch: `run_prepare` matches Of_source / Of_binding / Of_native, routes through per-artifact `apply_cmds` (~25 LOC net); Bs.4 recipe migrated to full-name SONAMEs | — | ~~§3.4 (mutation dispatch)~~ landed as new §3.4 |
 | 3 | `recipe_of_derived_cell` + (target, kind) → mutation table (~150 LOC) | §5.2 patterns-vs-instances: point at recipe synthesis as the derivation path; if C8 wiring comes up here, resolve it | §7.2 Phase 3: mark done + link |
 | 4 | Fold `derived_scenario_specs` into `all_scenario_specs` (~50 LOC) | §5.1: add derived-cell rows once runnable | §6 coverage: recount cells filled |
 
@@ -343,6 +363,18 @@ existing tiny patches, verified via `diff -r` regression
 tests. `Drop_c_symbol` + `Drop_python_attr` deferred as
 "missing but visible" — future variants when a cell needs
 them.
+
+**Phase 2 shipped**: `run_prepare` in
+`canary_tiny_workspace.ml` now dispatches through the new
+per-artifact `apply_cmds` for `Of_source` / `Of_binding`
+(pre-build) and `Of_native` (post-build). The retired
+ad-hoc `apply_soname_bump` local wrapper is replaced by
+`Canary_artifact_mutation.Native.apply_cmds`. Bs.4's
+recipe migrated: `from_so` now carries the full SONAME
+name (`libtiny.so.1.0`) rather than the previous mixed
+major+full convention. Bs.4 continues to pass 13/13.
+Dead-code today for Of_source/Of_binding until Phase 3
+synthesizes recipes into new Bs entries that use them.
 
 ---
 
