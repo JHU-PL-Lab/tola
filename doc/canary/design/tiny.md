@@ -505,54 +505,100 @@ shell commands routed through named primitives) and #47
 **Status: active pickup candidate.** Sequel to Phase G. Also
 tracked in [`status.md §2`](../status.md).
 
-Phase G unified `Canary_scenario.scenario` (`.origin` field
-replaced `.mutation`; nullary `Version_mismatch` /
-`Packaging` reserved). That was the *scenario*-side
+### Context
+
+Phase G (2026-07-09) unified `Canary_scenario.scenario` —
+`.origin` replaced `.mutation`; nullary `Version_mismatch` and
+`Packaging` reserved. That was the *scenario*-side
 integration. The *recipe*-side gap remains:
 
-- Tiny defines `tiny_recipe` (a tiny-specific record with
-  `mutates`, `mutation`, `expected`, `violates`) and
-  wraps it in `scenario_spec`.
-- Tiny's factory (`stores_of_entry`, `expectation_of_entry`,
-  `project_spec_of_entry`) reads `recipe.mutation` +
-  `recipe.violates` to derive the runnable `project_spec`.
-- z3 / llvm / sqlite have **no parallel** — their variants
-  are hand-coded per file in
-  `canary_project_{z3,llvm,sqlite}.ml` with hardcoded
-  `Expect_compat_failure` predicates.
+- Tiny defines `tiny_recipe` in
+  [`canary_tiny_scenario.ml:60`](../../src/canary/projects/canary_tiny_scenario.ml#L60):
+  `{ mutates; mutation; expected; violates }`. Factory
+  functions (`stores_of_entry`, `expectation_of_entry`,
+  `project_spec_of_entry`) derive the runnable `project_spec`
+  from it. `expectation_of_entry` reads `violates + language`,
+  delegates to `compat_inputs_of_contract ~lang c` for JSON
+  paths, wraps in `Expect_compat_failure { inputs;
+  version_info }`.
+- z3 / llvm / sqlite have **no parallel**. Their variants
+  hand-code `Expect_compat_failure` inline in the project
+  spec — llvm's stable variant spells out the predicted
+  substring by name
+  ([canary_project_llvm.ml:495-512](../../src/canary/projects/canary_project_llvm.ml#L495-L512),
+  18 lines: `Opcode.UncondBr` version_info); z3 stable
+  Python variant same shape
+  ([canary_project_z3.ml:541-551](../../src/canary/projects/canary_project_z3.ml#L541-L551),
+  10 lines: `parser_context`). Structurally identical to
+  tiny's derivation, just typed out inline.
 
-Goal: lift tiny's recipe/factory pattern into a project-hookable
-interface so z3 / llvm / sqlite can supply their own recipes and
-inherit the uniform derivation. Rough shape:
+Goal: lift tiny's recipe/factory pattern into a
+project-hookable interface so z3 / llvm / sqlite can supply
+their own recipes and inherit the uniform derivation.
 
-1. **Project-agnostic recipe interface.** Extract the shape
-   of `tiny_recipe` that isn't tiny-specific — probably
-   `type 'a recipe = { violates : contract_id list; expected :
-   (step * outcome) list; origin_details : 'a }` where `'a`
-   is the project's mutation type (tiny's `Canary_artifact_mutation.mutation`;
-   llvm's would be a version-pair record for
-   `Version_mismatch` origin).
-2. **Factory hook per project.** Each project spec module
-   exports its own `stores_of_entry` / `expectation_of_entry`
-   analogues that consume the project's recipe type. Tiny
-   becomes the reference implementation, llvm/z3/sqlite
-   grow their own.
-3. **Retire the hand-coded `Expect_compat_failure` in
-   llvm/z3.** llvm's stable variant currently spells out
-   the predicted substring by name (`Opcode.UncondBr`).
-   Under the new interface, it'd flow from
-   `Canary_scenario.origin = Version_mismatch` + a recipe
-   that names the paired versions + language.
+### Phased plan (~230 LOC total; non-breaking per phase)
 
-Size guess: 200-400 LOC across `canary_scenario_util.ml`,
-each `canary_project_<name>.ml`, and possibly a new
-`canary_recipe.ml`. Non-breaking if we roll it out per
-project (start with tiny as reference, add llvm, then z3,
-then sqlite).
+| Phase | Scope | LOC |
+|---|---|---|
+| **1. Generic recipe shape** | New module `Canary_recipe` (or extend `Canary_scenario`) with project-agnostic fields: `type recipe = { violates; expected; mutates }`. `tiny_recipe` becomes `{ generic : recipe; concrete_pert : mutation option }` (concrete tiny extras stay tiny-specific). No behavior change. | ~50 |
+| **2. Project hooks + generic expectation deriver** | Extract `expectation_of_scenario ~hooks ~scenario`, where `hooks : { compat_inputs_of_contract; version_info_of_origin }` is project-supplied. Tiny becomes the reference implementation. Behavior byte-identical to today. | ~80 |
+| **3. llvm refactor** | Add `llvm_recipe` (or use generic directly) + `llvm_hooks` with opam-path-flavored `compat_inputs_of_contract`. Replace the hand-coded `Expect_compat_failure` with recipe-driven derivation. `Version_mismatch` origin becomes the natural fit. | ~40 |
+| **4. z3 refactor** | Same shape as llvm. Python variant (`Probe_binding Python`). | ~40 |
+| **5. sqlite refactor** | Smallest — positive-only, so just plug in hooks; no expectation change. Sanity that the interface fits both compat-failure and positive-only projects. | ~20 |
 
-Interaction with §7.2: postponed §7.2's phase plan assumes
-tiny's current recipe shape. Task 2 will change the shape,
-so §7.2 must re-baseline after Task 2 lands.
+### Verification per phase
+
+- **Phase 1 & 2**: `canary artifact-test` (framework
+  tests) + `canary tiny run` (15/15) — behavior-preserving.
+- **Phase 3**: `canary action llvm` — dev + stable
+  variants; stable must still produce the `Opcode.UncondBr`
+  prediction and match probe.log.
+- **Phase 4**: `canary action z3` — stable variant
+  `parser_context` prediction unchanged.
+- **Phase 5**: `canary action sqlite` — plain success.
+
+### Prerequisite: baseline the non-tiny projects
+
+Before Phase 1 starts, run the non-tiny projects locally to
+capture current behavior:
+
+- `canary action sqlite`
+- `canary action z3`
+- `canary action llvm`
+
+Each project has a dev variant (build from source) and a
+stable variant (fetch pre-built or use a distro package):
+
+- **llvm**: dev builds LLVM from a locally-cloned source
+  (ninja); stable uses `apt install libllvm-19-dev`
+  + `opam install llvm.19-shared`.
+- **z3**: dev builds Z3 from source (cmake); stable uses
+  the `z3` opam package + `z3-solver` pip wheel.
+- **sqlite**: dev builds from a fetched source; stable uses
+  the system-installed `libsqlite3-dev` + Python stdlib.
+
+The prerequisite catches: (a) which builds are actually
+runnable today; (b) which cached artifacts survive from
+previous runs; (c) any bit-rot in the project specs since
+the R2 refactor / Phase G. Records go to
+[`worklog_2026_07.md`](../worklog/worklog_2026_07.md).
+
+### Interaction with §7.2
+
+Postponed §7.2's phase plan assumes tiny's current recipe
+shape. Task 2 will change the shape, so §7.2 must re-baseline
+after Task 2 lands.
+
+### Out of scope
+
+Explicitly deferred to future Task 2 follow-ups:
+
+- **Sync `scenario.actions` with runtime** — per user
+  2026-07-10 (see [`status.md §5`](../status.md)); best done
+  as a Task 2 follow-up because it touches `derive_steps`.
+- **`Package` origin variant activation** — needs a project
+  that wants it (PyTorch tier-1 target per
+  [`new_project.md`](new_project.md)).
 
 ### 7.9 Derive `related_artifacts` from `actions` — done 2026-07-10
 
