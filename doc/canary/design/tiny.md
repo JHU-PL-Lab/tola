@@ -252,25 +252,52 @@ dispatch, zero routing tables.
 Tiny-focused; see [`status.md`](../status.md) for the
 project-wide backlog.
 
-### Picking order (as of 2026-07-10)
+### Working principle — ssot-tiny-canary sync
+
+The milestone is a **complete tiny + SSOT** that other work
+can cite: sqlite/z3/llvm lift, new projects, writeup — all
+"second-tier", flush from this line once it stabilizes.
+
+Cadence: **code-first, doc-synced**. Land a concrete code
+answer in tiny; then sync SSOT and tiny.md as side effects.
+Modeling questions (Sf/Ar alignment, C8 wiring, expectation
+shape, contract-inputs interface, etc.) get resolved as
+outputs of concrete code decisions, not as up-front debates.
+
+Each wish-list phase-commit carries the SSOT + tiny.md sync
+bits it opens up. Second-tier (sqlite/z3/llvm/writeup)
+untouched until this line stabilizes.
+
+### Picking order (as of 2026-07-20)
 
 | #    | Item                                                                      | Cluster | Status                                          |
 | ---- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
-| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory)           | B       | **active — pickup candidate**                   |
-| §7.9 | Derive `related_artifacts` from `actions`                                 | C       | **done** 2026-07-10                             |
-| —    | SSOT §6.6 — document `project_spec` (in [`status.md §3.0`](../status.md)) | C       | **active — SSOT-scoped, tiny is the reference** |
-| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **postponed** (user 2026-07-10)                 |
-| §7.1 | Fill the 15 empty derived cells                                           | A       | blocked by §7.2                                 |
+| §7.2 | `tiny_recipe` synthesis from an abstract cell                             | A       | **active pickup — Phase 1 next**                |
+| §7.1 | Fill the 15 empty derived cells                                           | A       | naturally follows §7.2 (data-driven under it)   |
 | §7.4 | Fill Sc.3–Sc.6 areas                                                      | A       | overlaps §7.1                                   |
-| §7.3 | Second mechanism axis — ctypes DFFI                                       | —       | deferred (user 2026-07-06)                      |
 | §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
 | §7.6 | Contract catalogue extension                                              | D       | post-tiny research task                         |
+| §7.3 | Second mechanism axis — ctypes DFFI                                       | —       | deferred (user 2026-07-06)                      |
+| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory)           | —       | **deferred / rescoped** (user 2026-07-20) — see below |
+| §7.9 | Derive `related_artifacts` from `actions`                                 | —       | **done** 2026-07-10                             |
 | §7.7 | Route tiny commands through `tool/` (R2)                                  | —       | **done** 2026-07-09; macOS follow-up            |
+| —    | SSOT §6.6 — document `project_spec`                                       | —       | **done** 2026-07-10 (`b9e4abc`)                 |
 
-Clusters: A = tiny scenario coverage, B = factory sequel to
-Phase G, C = small self-contained cleanups, D = long-horizon
-research. Numbering stable — sections stay at their §7.N ids
-regardless of picking priority.
+Clusters: A = tiny scenario coverage / recipe machinery,
+D = long-horizon. Numbering stable — sections stay at their
+§7.N ids regardless of picking priority.
+
+**Why §7.8 (project abstraction) is deferred**: the 2026-07-17
+scoping conversation surfaced that extracting a
+project-hookable recipe/hook layer would spend ~230 LOC to
+abstract ~28 LOC of hand-coded predicates across llvm+z3
+today; ROI is marginal until we (a) have more projects using
+the pattern (PyTorch, cvc5, ...), (b) finish tiny's own
+recipe machinery (§7.2), and (c) have a settled
+expectation/contract model. All three are prerequisites, and
+sqlite/z3/llvm are second-tier per the working principle
+above. Revisit once §7.2 lands and the recipe layer is
+concrete.
 
 ### 7.1 Fill the 15 empty derived cells
 
@@ -288,12 +315,22 @@ mechanical if the recipe shape is right.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell
 
-**Postponed** (2026-07-10, user). Cluster B (Task 2 —
-recipe/mutation integration; see §7.8 below) picks up
-ahead — it lifts the recipe abstraction across projects
-which changes the shape of any future synthesis plan.
-Resume §7.2 after Task 2 lands and re-evaluate the phase
-plan below against the new abstraction.
+**Status: active pickup — Phase 1 next** (un-postponed
+2026-07-20). §7.8 (project abstraction) deferred; §7.2 is
+no longer blocked by it and picks up on its own merits as
+the natural next step in the ssot-tiny-canary sync line.
+
+**Doc-sync riders** per phase — each commit lands the SSOT
++ tiny.md updates its code opens up:
+
+| Phase | Code | SSOT sync | tiny.md sync |
+|---|---|---|---|
+| 1 | New `mutation` variants in `canary_artifact_mutation.ml` (~250 LOC) | §5 mutation column: add Drop_c_symbol / Rename_c_symbol / Drop_ocaml_val / Drop_python_attr rows; possibly a new §5.3 (mutation shapes) | §7.2 Phase 1: mark done pointer + new mutation table |
+| 2 | Extend workspace dispatch (~30 LOC) | — | §3 factory pipeline: note new mutation dispatch |
+| 3 | `recipe_of_derived_cell` + (target, kind) → mutation table (~150 LOC) | §5.2 patterns-vs-instances: point at recipe synthesis as the derivation path; possibly a new §5.3 for the table; if C8 wiring comes up here, resolve it | §7.2 Phase 3: mark done + link |
+| 4 | Fold `derived_scenario_specs` into `all_scenario_specs` (~50 LOC) | §5.1: add derived-cell rows once runnable | §6 coverage: recount cells filled |
+
+Total ~480 LOC across 4 phases; one phase per session.
 
 ---
 

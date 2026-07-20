@@ -6,6 +6,17 @@ forward planning). Kept out of `design/ssot.md` per
 2026-07-08 refactor — SSOT is truth (definitions), this file
 is status.
 
+**Operating principle (ssot-tiny-canary sync, 2026-07-20)**:
+the current milestone is a complete tiny + SSOT that
+sqlite/z3/llvm and the writeup can cite. Those three are
+"second-tier" — flush from the tiny+SSOT+code trio once it
+stabilizes; don't touch them until then. Cadence:
+code-first, doc-synced — land a concrete code answer in
+tiny, then update SSOT and tiny.md to reflect it in the
+same commit. Modeling questions (Sf/Ar alignment, C8
+wiring, expectation shape, ...) get resolved as side
+effects of code decisions.
+
 For tiny-scoped items see the wish-list in
 [`design/tiny.md`](design/tiny.md) §7. For the after-tiny
 research task see
@@ -14,12 +25,17 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-*(Nothing in flight. Cluster C fully landed 2026-07-10:*
-*~~SSOT §6.6 project_spec doc~~ (b9e4abc); ~~tiny.md §7.9*
-*derive related_artifacts~~ (67d0e12 + 8f6e6fc + retirement).*
-*Next: Cluster B — Task 2 recipe/mutation integration*
-*([`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory)).*
-*`tiny_recipe` synthesis (tiny.md §7.2) postponed per user.)*
+*(Nothing in flight. Picking order (2026-07-20 rescope):*
+*milestone is a complete tiny + SSOT that other work cites*
+*("ssot-tiny-canary sync line"; sqlite/z3/llvm + writeup are*
+*second-tier). Cadence: code-first, doc-synced —*
+*each wish-list phase commit carries the SSOT/tiny.md sync*
+*bits it opens up.*
+*Task 2 project abstraction (was Cluster B / tiny.md §7.8)*
+*deferred; ROI marginal until §7.2 lands and more projects*
+*need the pattern. Next: `tiny_recipe` synthesis*
+*([`design/tiny.md §7.2`](design/tiny.md#72-tiny_recipe-synthesis-from-an-abstract-cell)),*
+*Phase 1 (parametric mutation constructors, ~250 LOC + tests).)*
 
 ## 2. Near-term
 
@@ -27,9 +43,10 @@ Ordered rough priority.
 
 - **Tiny wish-list items** — see
   [`design/tiny.md`](design/tiny.md) §7 (picking-order table
-  at the top). Filling derived cells + `tiny_recipe`
-  synthesis both postponed; §7.8 (Task 2) and §7.9 (derive
-  related_artifacts) are the active pickup candidates.
+  at the top). Active pickup: `tiny_recipe` synthesis
+  (§7.2, un-postponed 2026-07-20), starting with Phase 1.
+  §7.1 (fill empty cells) + §7.4 (Sc.3-Sc.6) fall out
+  data-driven once §7.2 lands.
 
 - **Flavor-2 catalogue extension** —
   [`design/bad_scenario_flavors.md`](design/bad_scenario_flavors.md).
@@ -43,13 +60,17 @@ Ordered rough priority.
   it — PyTorch Tier-1 canary target
   (`design/new_project.md`) is the likely trigger.
 
-- **Task 2 — recipe / mutation integration.** Unify
-  `tiny_recipe.mutation` with `scenario.mutation`;
-  project-hookable recipe interface so z3/llvm/sqlite can
-  supply their own. Tiny's factory already reads
-  `recipe.mutation` for store synthesis; the
-  z3/llvm/sqlite side has no analogue yet. Fuller writeup
-  at [`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory).
+- **Task 2 — recipe / mutation integration.** *Deferred /
+  rescoped 2026-07-20.* Would extract project-hookable
+  recipe interface so z3/llvm/sqlite can supply their own.
+  Scoping conversation (2026-07-17) concluded ~230 LOC for
+  ~28 LOC of hand-coded predicates — ROI marginal until (a)
+  more projects use the pattern (PyTorch, cvc5, ...), (b)
+  §7.2 lands and tiny's recipe machinery is concrete, (c)
+  expectation/contract model settles. sqlite/z3/llvm are
+  "second-tier" per the ssot-tiny-canary sync line; revisit
+  once §7.2 lands. Fuller writeup at
+  [`design/tiny.md §7.8`](design/tiny.md#78-task-2--recipemutation-integration-project-hookable-factory).
 
 - **Re-do expectation as per-step contract outcome.**
   Every action's outcome (success or failure) should
