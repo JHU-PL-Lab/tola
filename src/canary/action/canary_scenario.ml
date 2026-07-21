@@ -152,24 +152,90 @@ let firing_site_of_rule : Canary_basic.rule -> firing_site option =
   | _ -> None
 
 (** How the expected observation for a (contract, lang, site) is
-    sourced. Two live families + a placeholder:
+    sourced. Two live families + a placeholder. Both live variants
+    carry an optional [version_info] (Phase C 2026-07-21) so the
+    lowering can thread human-readable provider/consumer version
+    context through to the emitted [step_expectation]:
 
-    - [From_artifact { inputs }] — the contract's [predict] closure
-      (in {!Canary_compat_run}) reads the cached inspect JSONs
-      listed in [inputs] and emits predicted failure substrings.
-      Static source, dynamic check (grep of probe.log / build.log).
-    - [From_behavior_grep { contains_any }] — no artifact prediction;
-      assert the log contains one of [contains_any]. Purely
-      behavioural (c3 [api_repack], c7 [stub_orphan] fire this way —
-      the probe emits [FAIL …] on mismatch).
+    - [From_artifact { inputs; version_info }] — the contract's
+      [predict] closure (in {!Canary_compat_run}) reads the cached
+      inspect JSONs listed in [inputs] and emits predicted failure
+      substrings. Static source, dynamic check (grep of probe.log /
+      build.log).
+    - [From_behavior_grep { contains_any; version_info }] — no
+      artifact prediction; assert the log contains one of
+      [contains_any]. Purely behavioural (c3 [api_repack], c7
+      [stub_orphan] fire this way — the probe emits [FAIL …] on
+      mismatch).
     - [Placeholder { reason }] — the binding is *declared* but not
       *wired*: the shape commits, the content is TBD. Emits
       [Expect_success] at runtime; a startup validator can catch
       attempts to declare a scenario that would rely on it. *)
 type expectation_source =
-  | From_artifact of { inputs : Canary_compat.inspect_input list }
-  | From_behavior_grep of { contains_any : string list }
+  | From_artifact of {
+      inputs : Canary_compat.inspect_input list;
+      version_info : Canary_step_model.version_info option;
+    }
+  | From_behavior_grep of {
+      contains_any : string list;
+      version_info : Canary_step_model.version_info option;
+    }
   | Placeholder of { reason : string }
+
+(** Runtime predicate on [loc] deciding whether a firing applies
+    (Phase B 2026-07-21). The lowering evaluates the filter after
+    matching by [firing_site]; a firing whose filter rejects the
+    step's [loc] is skipped. Enables per-store expectations without
+    duplicating whole bindings — e.g. llvm has c2 fire as
+    [Expect_success] under pip-python (llvmlite bundles its own
+    libLLVM) but [Expect_compat_failure] under opam-ocaml.
+
+    - [Any] — passes always; the default tiny uses.
+    - [At_pm_lang lang] — passes iff [loc] is [Pm (Lang_pm { lang })]
+      for the given lang. For "opam-installed OCaml binding" etc.
+    - [Not_pm_lang lang] — passes iff [loc] is NOT that lang's PM.
+      For "everywhere except pip-python".
+    - [Only_if p] — escape hatch; caller supplies a predicate. *)
+type loc_filter =
+  | Any
+  | At_pm_lang of Canary_lang.lang
+  | Not_pm_lang of Canary_lang.lang
+  | Only_if of (Canary_store.location option -> bool)
+
+let loc_filter_passes (f : loc_filter)
+    (loc : Canary_store.location option) : bool
+  =
+  let open Base in
+  let is_pm_lang target = function
+    | Some (Canary_store.Pm (Canary_store.Lang_pm { lang; _ })) ->
+        Poly.equal lang target
+    | _ -> false
+  in
+  match f with
+  | Any -> true
+  | At_pm_lang l -> is_pm_lang l loc
+  | Not_pm_lang l -> not (is_pm_lang l loc)
+  | Only_if p -> p loc
+
+(** One firing: where a contract's failure observation surfaces
+    ([site]), which locations it applies to ([loc_filter]), and how
+    the observation is sourced ([source]).
+
+    A [contract_binding] may carry multiple firings for the same
+    site with different [loc_filter]s — the lowering picks the
+    first firing whose filter matches the runtime [loc]. Design
+    order in a binding matters: put more specific filters (e.g.
+    [At_pm_lang Python] for llvm's pip-python override) before
+    the catch-all ([Any]).
+
+    Record shape (not a 3-tuple) so future fields — say a per-firing
+    enable flag or a per-firing note — can be added without a
+    breaking change. *)
+type firing = {
+  site : firing_site;
+  loc_filter : loc_filter;
+  source : expectation_source;
+}
 
 (** A per-(contract, lang) declaration of where and how the contract's
     failure observation shows up. [firings] is a list because one
@@ -178,7 +244,7 @@ type expectation_source =
 type contract_binding = {
   contract : Canary_compat.contract_id;
   lang     : Canary_lang.lang;
-  firings  : (firing_site * expectation_source) list;
+  firings  : firing list;
 }
 
 (** Look up whether a (contract, lang) binding is fully wired
@@ -199,8 +265,8 @@ let binding_has_live_firing
   with
   | None -> false
   | Some b ->
-    List.exists b.firings ~f:(fun (_, src) ->
-      match src with
+    List.exists b.firings ~f:(fun f ->
+      match f.source with
       | From_artifact _ | From_behavior_grep _ -> true
       | Placeholder _ -> false)
 
@@ -227,7 +293,7 @@ let lower_expectation
     Canary_step_model.step_expectation
   =
   let open Base in
-  let lookup_sources rule =
+  let lookup_sources rule loc =
     match firing_site_of_rule rule with
     | None -> []
     | Some site ->
@@ -239,32 +305,35 @@ let lower_expectation
           with
           | None -> []
           | Some b ->
-            List.filter_map b.firings ~f:(fun (s, src) ->
-              if Poly.equal s site then Some src else None)))
+            List.filter_map b.firings ~f:(fun f ->
+              if Poly.equal f.site site
+                 && loc_filter_passes f.loc_filter loc
+              then Some f.source
+              else None)))
   in
-  fun rule _loc ->
+  fun rule loc ->
     if not has_manifest then Canary_step_model.Expect_success
     else
-      let sources = lookup_sources rule in
+      let sources = lookup_sources rule loc in
       let picked_artifact =
         List.find_map sources ~f:(function
-          | From_artifact { inputs } -> Some inputs
+          | From_artifact { inputs; version_info } ->
+            Some (inputs, version_info)
           | _ -> None)
       in
       match picked_artifact with
-      | Some inputs ->
-        Canary_step_model.Expect_compat_failure
-          { inputs; version_info = None }
+      | Some (inputs, version_info) ->
+        Canary_step_model.Expect_compat_failure { inputs; version_info }
       | None ->
         let picked_grep =
           List.find_map sources ~f:(function
-            | From_behavior_grep { contains_any } -> Some contains_any
+            | From_behavior_grep { contains_any; version_info } ->
+              Some (contains_any, version_info)
             | _ -> None)
         in
         (match picked_grep with
-         | Some contains_any ->
-           Canary_step_model.Expect_failure
-             { contains_any; version_info = None }
+         | Some (contains_any, version_info) ->
+           Canary_step_model.Expect_failure { contains_any; version_info }
          | None -> Canary_step_model.Expect_success)
 
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)

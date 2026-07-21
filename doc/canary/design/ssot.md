@@ -407,15 +407,33 @@ type firing_site =
   | At_build_app of Canary_lang.lang
   | At_probe_app of Canary_lang.lang
 
+type loc_filter =              (* Task 2 Phase B, 2026-07-21 *)
+  | Any
+  | At_pm_lang of Canary_lang.lang   (* fires only at that lang's PM location *)
+  | Not_pm_lang of Canary_lang.lang  (* fires everywhere except that lang's PM *)
+  | Only_if of (Canary_store.location option -> bool)
+
 type expectation_source =
-  | From_artifact of { inputs : inspect_input list }
-  | From_behavior_grep of { contains_any : string list }
+  | From_artifact of {
+      inputs : inspect_input list;
+      version_info : version_info option;    (* Task 2 Phase C, 2026-07-21 *)
+    }
+  | From_behavior_grep of {
+      contains_any : string list;
+      version_info : version_info option;
+    }
   | Placeholder of { reason : string }
+
+type firing = {                (* record shape, not 3-tuple, for future fields *)
+  site : firing_site;
+  loc_filter : loc_filter;
+  source : expectation_source;
+}
 
 type contract_binding = {
   contract : contract_id;
   lang     : Canary_lang.lang;
-  firings  : (firing_site * expectation_source) list;
+  firings  : firing list;
 }
 ```
 
@@ -428,6 +446,17 @@ content TBD* — emits `Expect_success` at runtime, but the
 binding is registered so `binding_has_live_firing` and the
 startup validator can see it. Same "missing-ness visible"
 principle as §5.3's Missing-on-purpose mutation shapes.
+
+`loc_filter` (Phase B) lets one binding row express "fires
+at OCaml probe but not pip-python probe" without duplicating
+the whole row — llvm's inline expectation used a nested
+match on `(rule, loc)`; the same behaviour comes from
+`{ site = At_probe_binding OCaml; loc_filter = Not_pm_lang Python; ... }`.
+`version_info` (Phase C) carries the human-readable
+provider/consumer strings that today's `Expect_compat_failure`
+attaches (`provider_version = "llvm 19"; consumer_requires
+= "Opcode.UncondBr"; since = ...`); tiny sets it to `None`
+throughout, llvm/z3 populate it.
 
 **Per-project data** — a project supplies its own
 bindings table. Tiny's lives in

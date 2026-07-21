@@ -812,10 +812,11 @@ the original ~230):
   `Canary_scenario.lower_expectation`. Tiny becomes a thin
   wrapper.  ✅ shipped 2026-07-21.
 - **B** — Loc-awareness (bindings filter by Pm location; llvm's
-  Python probe is Expect_success while OCaml probe fails). Design
-  question pending user OK.
+  Python probe is Expect_success while OCaml probe fails).
+  ✅ shipped 2026-07-21 (B1: per-firing `loc_filter`).
 - **C** — `version_info` in bindings (extend `From_artifact` or
-  add per-binding field). Design question pending.
+  add per-binding field). ✅ shipped 2026-07-21 (C1: per-source
+  `version_info` on both `From_artifact` and `From_behavior_grep`).
 - **D** — llvm migration (declare `llvm_stable_contract_bindings`,
   replace inline `Expect_compat_failure`).
 - **E** — z3 migration (same shape, Python variant).
@@ -834,3 +835,58 @@ out of a `scenario_spec` and passes them + `tiny_contract_bindings`).
 Verified: tiny run 21/22 PASS unchanged, artifact-test 101/101.
 `canary_scenario.ml` gains a `Canary_step_model` dependency
 (same layer, no dune change needed).
+
+### Task 2 Phases B + C shipped — loc_filter + version_info (2026-07-21)
+
+Two small ADT extensions landed together (same touch surface):
+
+**B1 (loc-awareness)**. Added `loc_filter` variant:
+
+```ocaml
+type loc_filter =
+  | Any                                (* current default; tiny uses this *)
+  | At_pm_lang of Canary_lang.lang     (* fires only at that lang's PM *)
+  | Not_pm_lang of Canary_lang.lang    (* fires everywhere except *)
+  | Only_if of (loc option -> bool)    (* escape hatch *)
+```
+
+Firings changed from `(firing_site * expectation_source)` tuple to
+a record `{ site; loc_filter; source }` (record shape leaves room
+for future fields — enable flag, per-firing note — without a
+breaking change). The lowering evaluates `loc_filter_passes` after
+matching on `site`; a firing whose filter rejects the step's `loc`
+is skipped. This lets llvm's inline `Probe_binding (_), Some (Pm
+(Lang_pm { lang = Python }))` → `Expect_success` special case
+become `{ site = At_probe_binding OCaml; loc_filter = Not_pm_lang
+Python; source = From_artifact { ... } }` — one binding row
+instead of a nested match.
+
+**C1 (version_info threading)**. Extended both live source
+variants to carry the human-readable version bundle:
+
+```ocaml
+type expectation_source =
+  | From_artifact of { inputs; version_info : version_info option }
+  | From_behavior_grep of { contains_any; version_info : ... option }
+  | Placeholder of { reason }
+```
+
+Lowering threads `version_info` through to the emitted
+`Expect_compat_failure` / `Expect_failure`. Tiny sets it to `None`
+throughout (no version drift to report); llvm/z3 can populate
+their `provider_version = "llvm 19"; consumer_requires =
+"Opcode.UncondBr"; ...` strings when they migrate (Phase D/E).
+
+**Tiny bindings updated to record shape** — every firing now
+carries `loc_filter = Any` and `version_info = None` explicitly.
+No behavioural change; still 21/22 PASS + 101/101.
+
+Docs: SSOT §5.4 refreshed with the new type shapes + a note
+that `loc_filter` and `version_info` are what let per-project
+bindings replace the ad-hoc nested `match rule with (_, loc)`
+that z3/llvm use today.
+
+**Next**: Phases D/E/F — per-project migration
+(llvm → z3 → sqlite). Design surface is now settled; each phase
+is a per-project data addition + inline `expectation` replacement.
+Paused for user confirmation before proceeding.

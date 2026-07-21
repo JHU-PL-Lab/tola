@@ -659,19 +659,27 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        symbol vanished from the native lib. *)
     { contract = CC.C1; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.From_artifact { inputs = CC.[
-          C_stub     [ "build_binding_ocaml/inspect.json" ];
-          Native_lib [ "build_lib/inspect.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              C_stub     [ "build_binding_ocaml/inspect.json" ];
+              Native_lib [ "build_lib/inspect.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
     { contract = CC.C1; lang = Canary_lang.Python;
       firings = [
-        CS.At_probe_binding Canary_lang.Python,
-        CS.From_artifact { inputs = CC.[
-          C_stub     [ "build_binding_python/inspect.json" ];
-          Native_lib [ "build_lib/inspect.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              C_stub     [ "build_binding_python/inspect.json" ];
+              Native_lib [ "build_lib/inspect.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
 
     (* c2 — API completeness. Probe references a name the binding
@@ -679,30 +687,44 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        Python: AttributeError at import. Both surface at Probe. *)
     { contract = CC.C2; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.From_artifact { inputs = CC.[
-          Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
     { contract = CC.C2; lang = Canary_lang.Python;
       firings = [
-        CS.At_probe_binding Canary_lang.Python,
-        CS.From_artifact { inputs = CC.[
-          Python_attrs [ "build_binding_python/inspect_attrs.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              Python_attrs [ "build_binding_python/inspect_attrs.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
 
     (* c3 — API repack. Behavioral; probe emits "FAIL …" when the
        user-facing name maps to the wrong native symbol. *)
     { contract = CC.C3; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_behavior_grep {
+            contains_any = [ "FAIL " ]; version_info = None;
+          }};
       ]};
     { contract = CC.C3; lang = Canary_lang.Python;
       firings = [
-        CS.At_probe_binding Canary_lang.Python,
-        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.Any;
+          source = CS.From_behavior_grep {
+            contains_any = [ "FAIL " ]; version_info = None;
+          }};
       ]};
 
     (* c4 — ABI (SONAME). Python cext is cached from baseline; on
@@ -714,32 +736,41 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        binding would let c4 fire (Placeholder documents that). *)
     { contract = CC.C4; lang = Canary_lang.Python;
       firings = [
-        CS.At_probe_binding Canary_lang.Python,
-        CS.From_artifact { inputs = CC.[
-          Native_lib  [ "build_lib/inspect.json" ];
-          Abi_surface [ "build_binding_python/inspect.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              Native_lib  [ "build_lib/inspect.json" ];
+              Abi_surface [ "build_binding_python/inspect.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
     { contract = CC.C4; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.Placeholder { reason =
-          "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so \
-           SONAME. Awaiting SSOT §? — decide whether tiny's OCaml \
-           store convention rebuilds fresh (current: c4 silent) or \
-           caches the packed .a (future: c4 fires at Probe_binding \
-           OCaml or Build_app OCaml, depending on link timing)." };
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.Placeholder { reason =
+            "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so \
+             SONAME. Awaiting SSOT §? — decide whether tiny's OCaml \
+             store convention rebuilds fresh (current: c4 silent) or \
+             caches the packed .a (future: c4 fires at Probe_binding \
+             OCaml or Build_app OCaml, depending on link timing)." }};
       ]};
 
     (* c5 — versioned symbol floor. Same store-convention lang scope
        as c4 (cached Python cext carries stale @VER references). *)
     { contract = CC.C5; lang = Canary_lang.Python;
       firings = [
-        CS.At_probe_binding Canary_lang.Python,
-        CS.From_artifact { inputs = CC.[
-          Versioned_exports [ "build_lib/inspect.json" ];
-          Versioned_req     [ "build_binding_python/inspect.json" ];
-        ]};
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              Versioned_exports [ "build_lib/inspect.json" ];
+              Versioned_req     [ "build_binding_python/inspect.json" ];
+            ];
+            version_info = None;
+          }};
       ]};
 
     (* c6 — type/arity. Only OCaml binding rebuilds against the
@@ -747,31 +778,33 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        The Probe_binding step of tiny's factory also rebuilds the
        same cstub via dune, so the same failure surfaces there too. *)
     { contract = CC.C6; lang = Canary_lang.OCaml;
-      firings = [
-        (let inputs = CC.[
+      firings =
+        (let c6_inputs = CC.[
            Typed_header
              [ "scan_sources/inspect_typed_header.json" ];
            Typed_binding_stub
              [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
          ] in
-         CS.At_build_binding Canary_lang.OCaml,
-         CS.From_artifact { inputs });
-        (let inputs = CC.[
-           Typed_header
-             [ "scan_sources/inspect_typed_header.json" ];
-           Typed_binding_stub
-             [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
-         ] in
-         CS.At_probe_binding Canary_lang.OCaml,
-         CS.From_artifact { inputs });
-      ]};
+         [
+           { site = CS.At_build_binding Canary_lang.OCaml;
+             loc_filter = CS.Any;
+             source = CS.From_artifact {
+               inputs = c6_inputs; version_info = None } };
+           { site = CS.At_probe_binding Canary_lang.OCaml;
+             loc_filter = CS.Any;
+             source = CS.From_artifact {
+               inputs = c6_inputs; version_info = None } };
+         ])};
 
     (* c7 — stub orphan. Behavioral: static-only mismatch surfaces
        as probe "FAIL …" line (per api_repack_stub_orphan). *)
     { contract = CC.C7; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_behavior_grep {
+            contains_any = [ "FAIL " ]; version_info = None;
+          }};
       ]};
 
     (* c8 — API faithfulness. Blocked on c6+c7 per SSOT §3.4
@@ -780,11 +813,12 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        Expect_success. *)
     { contract = CC.C8; lang = Canary_lang.OCaml;
       firings = [
-        CS.At_probe_binding Canary_lang.OCaml,
-        CS.Placeholder { reason =
-          "c8 dormant — blocked on c6 + c7 detecting the cases c8 \
-           would need. Corresponds to Bs.6 api_faithful, which \
-           runs Expect_success everywhere today." };
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.Placeholder { reason =
+            "c8 dormant — blocked on c6 + c7 detecting the cases c8 \
+             would need. Corresponds to Bs.6 api_faithful, which \
+             runs Expect_success everywhere today." }};
       ]};
   ]
 
