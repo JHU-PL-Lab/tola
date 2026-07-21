@@ -509,11 +509,32 @@ constructors). Code lags behind — full rename sweep is deferred
 
 | Level               | Term         | Meaning                                                                                                                               | Code today                              | Rename target          |
 | ------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------- |
-| High                | **scenario** | Named collection of actions + interested artifacts. Sc.N.                                                                             | *(new; §9.3 introduces)*                | new type `scenario`    |
+| **Top**             | **project**  | System under test + its coverage config bundle. Owns scenarios + contract bindings. Instances: tiny, z3, llvm, sqlite.                | `Canary_project.project` (2026-07-21) | keeps `project`        |
+| High                | **scenario** | Named collection of actions + interested artifacts. Sc.N.                                                                             | `Canary_scenario.scenario`              | keeps `scenario`       |
 | Mid                 | **action**   | Operational verb (`Build_lib`, `Probe of _`, …)                                                                                       | `rule`                                  | `action`               |
 | Low                 | **step**     | Concrete instantiation of an action: cmdline + env + expectation.                                                                     | `step` + `action_step` (split)          | collapse into `step`   |
 | Attribute of action | **stage**    | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this)                              | *(new use)*            |
 | Theory              | **rule**     | *What an action is for* — operational semantics / invariants. Doc-only concept.                                                       | (currently overloaded onto action verb) | free `rule` for theory |
+
+**Naming distinction — `project` vs `project_spec`.** The two live
+on different levels of this hierarchy and should not be confused:
+
+- **`project`** (top of the hierarchy) — the [Canary_project.project]
+  value; one per system under test (tiny, z3, llvm, sqlite). Owns
+  the concrete scenarios + contract bindings.
+- **`project_spec`** ([Canary_step_builder.project_spec]) — the
+  runner-facing handoff; one per (project × variant / scenario)
+  instance, carrying the concrete `expectation` closure + build/probe
+  commands. Sits at the bottom (below "step"), not the top.
+
+`project_spec`'s current name predates the top-level `project` type;
+Task 3 renames it to `runner_spec` (or `variant_spec`) once the
+`project` type is settled. Ownership shape (2026-07-21 decision):
+**project owns scenarios**, not the reverse — a scenario is tied to
+what it exercises, and a bundle-owner is cleaner than a shared
+reference. Sc.N patterns (project-agnostic) live in
+`Canary_scenario.good_scenarios`; concrete scenarios (Bs.N, variants)
+sit under their owning project.
 
 ### 6.2 Code term clashes to resolve (rename map)
 

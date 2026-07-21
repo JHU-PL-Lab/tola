@@ -979,3 +979,74 @@ predictions. Follow-ups (not part of Task 2):
    the components of a `project`, distinct from the runner-facing
    `Canary_step_builder.project_spec`. Deferred until a real
    consumer needs it.
+
+### Task 2 follow-up: `Canary_project.project` type introduced (2026-07-21)
+
+User raised the `project` vs `project_spec` naming confusion after
+D/E/F landed. SSOT §6.1 taxonomy was missing `project` at the top;
+`Canary_step_builder.project_spec` sits at the bottom (runner-facing
+handoff) but its name suggests it's the top.
+
+**Design decision — project owns scenarios** (Model A of the
+options discussed): a project's `scenarios : 'a list` field holds
+the concrete instances. Sharing scenarios across projects isn't a
+real use case (patterns are shared via `Canary_scenario.good_scenarios`;
+instances are owned). Ownership avoids the sync problems of a
+bidirectional reference.
+
+**New type** in `src/canary/action/canary_project.ml`:
+
+```ocaml
+type 'scenario_spec project = {
+  name : string;
+  scenarios : 'scenario_spec list;
+  contract_bindings : Canary_scenario.contract_binding list;
+}
+```
+
+Parametric on `'scenario_spec` because each project has its own
+concrete recipe representation (tiny_recipe for tiny; z3/llvm will
+introduce their own once variants are recast as scenarios).
+
+`api_source` intentionally NOT a field — `source_repo` lives in the
+`tool/` layer and would create a downward dependency from `action/`.
+Callers who need it look it up per-project. Revisit if a real
+generic consumer appears.
+
+**Populated** `tiny_project : scenario_spec Canary_project.project`
+at the bottom of `canary_tiny_scenario.ml`:
+
+```ocaml
+let tiny_project = {
+  name = "tiny";
+  scenarios = all_scenario_specs;
+  contract_bindings = tiny_contract_bindings;
+}
+```
+
+Nothing else changes yet — `canary_main.ml` still walks
+`all_scenario_specs` directly. The bundle exists so (a) the
+`project` type has at least one concrete inhabitant, and (b)
+subsequent renames of `Canary_step_builder.project_spec` can
+proceed without ambiguity about which "project" means what.
+
+**z3 / llvm / sqlite project bundles** — deferred until the
+variants-vs-scenarios question is answered (per user 2026-07-21:
+"start with Step 1 project type + tiny only"). When picked up,
+each project would either (a) recast variants as scenarios with
+`origin = Some (Version_mismatch { ... })`, or (b) keep a separate
+`variants` field on the project. Decide when a real consumer forces
+the choice.
+
+**Task 3** (deferred): rename
+`Canary_step_builder.project_spec` → `runner_spec` (or
+`variant_spec`) now that `Canary_project.project` occupies the
+higher-level name. Cross-file sweep; wait until we have a stable
+plumbing story.
+
+**Verified**: build clean, tiny run 21/22 PASS unchanged,
+artifact-test 101/101 unchanged.
+
+SSOT §6.1 taxonomy updated: `project` added as top row; naming
+distinction between `project` and `project_spec` documented
+explicitly.
