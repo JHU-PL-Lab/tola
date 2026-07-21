@@ -3,22 +3,28 @@
 **Status:** working design framing. Initial draft 2026-06-02 alongside
 Phase 14e; rewritten 2026-06-03 to lead with the orthogonal vision
 rather than the leaks; 2026-06-04 cross-linked with the
-mutation / combinator engine framing from `research/surface.md`.
+mutation / combinator engine framing from `research/surface.md`;
+2026-07-20 refresh to reflect the current OCaml producer (Phase E
+retired `scenarios.py` — archived under
+`doc/_legacy_code/tiny_python_harness/`).
 
 ## Two engines (cross-reference)
 
 [`research/surface.md`](../research/surface.md) names two engines that
-probe the rule catalogue: the **mutation engine** (the harness on
-tiny, mutating one fixed world via `scenarios.py apply` /
-`revert`) and the **combinator engine** (canary, traversing a space
-of worlds composed from per-kind stores via the variant matrix in
-`canary_project_tiny.ml`).
+probe the rule catalogue: the **mutation engine** (the tiny harness,
+mutating one fixed world via `canary_tiny_prepare.ml`'s
+mutation dispatch — apply patch / rename / soname-bump / drop-val
+into a sandboxed workspace, then `canary_tiny_workspace.ml`
+materializes the resulting store) and the **combinator engine**
+(canary, traversing a space of worlds composed from per-kind
+stores via the variant matrix in `canary_project_tiny.ml`).
 
 Both engines need to consume stores; they differ in how producers
 populate them. The store / runner / producer factoring below is
 the **cross-engine abstraction**: every engine's machinery slots
 into the same three concerns. The "remaining ties" section records
-where the *mutation engine's* producer (scenarios.py) currently
+where the *mutation engine's* producer
+(`canary_tiny_prepare.ml` + workspace materializer) currently
 leaks assumptions that only the mutation engine's runner satisfies
 — so when the *combinator engine's* runner (canary) consumes the
 same store, the assumptions don't hold. Closing those leaks is the
@@ -45,16 +51,17 @@ workspace model is converging on:
   (`canary_project_tiny.ml`) declares how to drive it.
 
 - **Producers** — *how stores are populated*. For tiny that's the
-  mutation harness in `scenarios.py` ("apply this patch, build,
-  snapshot"). For real projects it's the package manager
-  ("opam install z3.4.13" produces one store; "opam install z3.dev"
-  produces another).
+  mutation harness in `canary_tiny_prepare.ml` +
+  `canary_tiny_workspace.ml` ("apply this mutation, build in a
+  sandbox, materialize the resulting workspace"). For real
+  projects it's the package manager ("opam install z3.4.13"
+  produces one store; "opam install z3.dev" produces another).
 
 Under this factoring:
 
 | Concern | Today on tiny | Today on real projects (z3/llvm) | Where the running result goes |
 |---|---|---|---|
-| Producer | `scenarios.py apply` + harness build | `opam install` / `pip install` / `apt install` | — (producer outputs feed the store) |
+| Producer | `canary tiny prepare` (mutation dispatch + workspace materialize) | `opam install` / `pip install` / `apt install` | — (producer outputs feed the store) |
 | Store | `_cache/<scenario>/workspace/` | opam switch / pip env / apt-installed prefix | — |
 | Runner | canary's per-variant pipeline | canary's per-version pipeline | `_out/canary/projects/<project>/<step>/` |
 
@@ -101,10 +108,11 @@ over:
 
 Today's tiny harness still mixes producer + runner concerns in two
 specific places. In engine terms: each is the **mutation engine's
-producer** (scenarios.py) encoding assumptions that hold under its
-own runner (the standalone harness) but not under the combinator
-engine's runner (canary). Each entry below names which engine
-boundary the leak crosses.
+producer** (`canary_tiny_prepare` + `canary_tiny_workspace`)
+encoding assumptions that hold under its own runner (the tiny
+harness path) but not under the combinator engine's runner
+(canary). Each entry below names which engine boundary the leak
+crosses.
 
 ### 1. cext's `DT_RUNPATH` baked at producer time, used at runner time
 
@@ -123,7 +131,8 @@ Fixes (in increasing order of structural correctness):
 
 - **Workspace materialization strips it** (current). Patch the
   cached cext to remove RUNPATH; runner controls path via env vars.
-  Works, but the fixup lives in the producer (`scenarios.py`).
+  Works, but the fixup lives in the producer
+  (`canary_tiny_workspace.ml:454` — `patchelf --remove-rpath`).
 - **Producer doesn't bake RUNPATH** at all. `setup.py` drops
   `runtime_library_dirs`; runners always set `LD_LIBRARY_PATH`
   explicitly. Cleaner; matches the orthogonal vision.
@@ -134,11 +143,12 @@ Fixes (in increasing order of structural correctness):
 
 ### 2. `abi_soname_bump` relies on the consumer side's cache
 
-The harness's `apply_abi_soname_bump` deletes the plain `libtiny.so`
-symlink. In the standalone flow that's harmless because dune's
-incremental build from `_build/` doesn't re-link. In canary's flow,
-each variant gets a fresh workspace with no `_build/` cache, so
-fresh dune builds need a usable `libtiny.so`.
+The harness's soname-bump mutation
+(`Native.Soname_bump { from_so; to_so }` in
+`canary_artifact_mutation.ml`, applied by
+`canary_tiny_workspace.ml`) leaves the plain `libtiny.so`
+symlink in an inconsistent state. Fresh dune builds in canary's
+per-variant workspaces need a usable `libtiny.so`.
 
 In engine terms: the mutation engine's producer leaves the store
 valid only for the mutation engine's *cached* consumers; the
@@ -146,9 +156,9 @@ combinator engine's runner has no such cache. A self-describing
 store should be usable for *fresh* consumers too. Fixes:
 
 - **Workspace materialization synthesizes the symlink** (current).
-  After capturing the mutated lib, the materializer adds back the
-  plain `libtiny.so` symlink pointing at the highest-versioned
-  file. Works, in `scenarios.py`.
+  `canary_tiny_workspace.ml:194-197` adds back the plain
+  `libtiny.so` symlink pointing at the highest-versioned file
+  after mutation. Works, but the fixup lives in the producer.
 - **Producer always emits a usable store.** The apply rule keeps
   the plain symlink (pointing at the bumped file). The runtime
   mismatch still surfaces on consumers whose cached NEEDED predates
@@ -164,17 +174,23 @@ The above are working today, so this isn't a blocker. The next
 unique-harness refactor (Phase 16-ish, once the contract matrix is
 complete on tiny) probably wants:
 
-1. **Parameterize `scenarios.py`'s output destination.** Today
-   apply() writes into the live tree's `c/build/`. If apply()
-   accepted an output dir, synthetic producers would look the same
-   as natural producers from canary's perspective: a path where the
-   store materializes.
+1. **Parameterize `canary_tiny_prepare`'s output destination.**
+   Today the sandbox-build model writes into
+   `_cache/<scenario>/workspace/`. If the destination were
+   pluggable, synthetic producers would look the same as natural
+   producers from canary's perspective: a path where the store
+   materializes. (Partially already true — sandbox path is
+   configurable via `sandbox_root_of` — but not yet routed as
+   a first-class input.)
 
-2. **Lift workspace fixups out of `scenarios.py` into a
-   canary-owned "store sanitiser."** The RUNPATH-strip and
-   libtiny.so-synthesis logic is about *making a store usable by
-   canary's runner*, not about *implementing tiny's mutations*.
-   It belongs on the runner side.
+2. **Lift workspace fixups out of `canary_tiny_workspace.ml` into
+   a canary-owned "store sanitiser."** The RUNPATH-strip
+   (`patchelf --remove-rpath`) and libtiny.so-symlink-synthesis
+   logic is about *making a store usable by canary's runner*, not
+   about *implementing tiny's mutations*. It belongs on the runner
+   side, factored out of the tiny-specific producer so real
+   projects (opam, pip, apt) can share the sanitiser when their
+   producer output has analogous leaks.
 
 3. **Express real-project package-manager outputs as canary
    stores.** opam's per-switch artifact tree, pip's site-packages,

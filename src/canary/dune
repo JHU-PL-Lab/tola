@@ -46,5 +46,6 @@
 ;
 ; Sub-libraries opt out via their own dune:
 ;   projects/ → canary_projects (live project specs)
-;   legacy/   → canary_legacy   (parked pre-canary plumbing + example_sp)
+; (The retired legacy/ sub-library was moved to
+;  doc/_legacy_code/ in commit 302f1b3.)
 (include_subdirs unqualified)

@@ -54,11 +54,14 @@ backend/   step-list consumers — local runner (executes), GH YAML, HTML,
            Mermaid, run_info orchestrator
 test/      framework self-tests
 projects/  live project specs (canary_projects sub-library)
-legacy/    parked code (canary_legacy sub-library)
 ```
 
 `base/`→`surface/`→`tool/`→`action/`→`backend/` is the dependency
-order; `projects/`, `test/`, `legacy/` consume the upper layers.
+order; `projects/` and `test/` consume the upper layers.
+(The retired `legacy/` sub-library was moved to
+`doc/_legacy_code/` in commit `302f1b3`; the retired Python
+tiny harness lives at `doc/_legacy_code/tiny_python_harness/`
+per Phase E of the tiny migration.)
 
 ### Key source files
 
@@ -94,14 +97,11 @@ order; `projects/`, `test/`, `legacy/` consume the upper layers.
 | `src/canary/projects/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/projects/canary_project_llvm.ml`        | LLVM spec; OCaml stable variant uses `Expect_compat_failure` for forward-incompat detection            |
 | `src/canary/projects/canary_project_tiny.ml`        | tiny in-tree spec (Phase 4 alignment milestone); api_source + OCaml + Python cext sub-arms; 13 hand-wired variants consume `_cache/<scenario>/workspace/` populated by `canary tiny-scenarios prepare-all`. |
-| `src/canary/projects/canary_tiny_scenario.ml`       | Tiny scenario_spec type + 15 scenarios as data (name_of_string validator); OCaml port of scenarios.py's SCENARIOS dict. See `doc/canary/design/tiny_migration.md`. |
+| `src/canary/projects/canary_tiny_scenario.ml`       | Tiny scenario_spec type + 15 hand + 6 derived scenarios in `all_scenario_specs`; OCaml port of the retired scenarios.py's SCENARIOS dict. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/projects/canary_tiny_baseline.ml`       | `canary tiny-scenarios baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/projects/canary_tiny_prepare.ml`        | `canary tiny-scenarios prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors Python `_surface_delta`. |
 | `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl specs                             |
 | `src/canary/projects/canary_run.ml`                 | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
-| `src/canary/legacy/canary_yaml_backend.ml`          | Parked: retired yaml-backend types + helpers (system_pkg, job_spec, canary_config, mk_canary_config, …) |
-| `src/canary/legacy/canary_dead_code.ml`             | Parked: pre-canary Z3/Llvm/Sqlite plumbing; consumed only by example_sp                                |
-| `src/canary/legacy/example_sp.ml`                   | Parked: legacy CLI binary using canary_dead_code                                                       |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
 | `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |
 | `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                                |
@@ -295,27 +295,25 @@ Still open:
   (2) exercise on SSH Mac to catch gaps the Linux-only runs hid →
   (3) wire up GH CI matrix only after (1) and (2) are green. Skipping
   ahead to (3) burns paid CI minutes on known failures.
-- **Retire legacy `config distro` / `project_config` / `job_spec` plumbing**
-  — now unreachable (zero callers after the yaml+shell backend removal),
-  but parked rather than deleted because it encodes the *intent* of the
-  distro × sys-PM × lang-PM enumeration that the current action-graph
-  pipeline doesn't yet model explicitly. Specifically:
-    - No distro abstraction is exercised (WSL and macOS paths untested).
+- **Missing distro × sys-PM × lang-PM enumeration model.** The retired
+  YAML/shell backend plumbing (`project_config`, `step_phase`,
+  `canary_backends`, `canary_config`, `mk_canary_config`, per-project
+  `config distro` fns) has already been moved to
+  `doc/_legacy_code/canary_yaml_backend.ml` and deleted from the live
+  tree (see the comment blocks in `canary_basic.ml:100-105` and
+  `canary.ml:5-7`). But it encoded intent the action-graph pipeline
+  still doesn't model:
+    - No distro abstraction exercised (WSL and macOS paths untested).
     - No two-OS CI (macOS matrix is the paired TODO above).
     - Sys-PM × lang-PM enumeration (apt × opam, brew × opam, apt × pip, …)
-      exists conceptually in `project_config.phases` but isn't represented
-      in the new `script_spec` → `action_step` path.
+      isn't represented in the `script_spec` → `action_step` path.
   **Revisit together with the version/symbol/interface work**: when we
-  formalise interfaces as first-class (per `doc/canary/research/surface.md` + `surface_draft/`),
-  the PM-cross-distro enumeration becomes part of "which provider (PM on
-  distro) satisfies a given interface at a given version." Delete
-  `project_config` plumbing (and each project's `config distro` fn) once
-  the replacement exists; until then it's dead code but documents the
-  missing model. Files touched when the cleanup happens:
-  `canary_basic.ml` (`job_spec`, `step_phase`, `canary_backends`,
-  `canary_config`, `mk_canary_config`), `canary.ml` (`project_config`,
-  `verify_of_phase`, `steps_of_phase`, `make_job`, `resolve_job_scripts`),
-  each project's `config distro` + `prebuilt_*_spec` helpers.
+  formalise interfaces as first-class (per
+  `doc/canary/research/surface.md` + `surface_draft/`), the
+  PM-cross-distro enumeration becomes part of "which provider (PM on
+  distro) satisfies a given interface at a given version." The retired
+  code in `doc/_legacy_code/canary_yaml_backend.ml` is the historical
+  reference for the shapes that need to come back typed.
 - **Per-step `env:` fields in GH YAML** — old yaml backend had an `env_fields`
   list per step. New backend only allows raw YAML blocks via `preamble_steps`.
   Not blocking; re-add as a typed field if a project needs it.
@@ -326,8 +324,10 @@ Still open:
   for L3 work.
 - **Migrate the old tola artifact inspectors in `src/binding/` into canary**
   (not just `ocaml_files.ml`). ~1880 lines, 15 modules, uses native OCaml
-  compiler libraries instead of shelling out. Called from
-  `src/bin/example_sp.ml`. Each module's canary-relevance:
+  compiler libraries instead of shelling out. Formerly consumed by
+  `src/bin/example_sp.ml` (retired with the yaml-backend removal); today
+  `src/binding/` is orphaned code, still building but unreferenced from any
+  live entry point. Each module's canary-relevance:
 
   | File                                                                         | Lines      | Canary-relevance                                                                                                                             |
   | ---------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
