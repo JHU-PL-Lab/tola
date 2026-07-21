@@ -1705,61 +1705,23 @@ let project_spec = base_project_spec
     module 2026-07-08. See [doc/canary/design/tiny.md] §3 for
     the derivation shape. *)
 
-(** Lowering: given a scenario's [violates] list, its languages, and
-    a runtime rule, produce the [step_expectation] the runner should
-    consume. Pure data lookup over [tiny_contract_bindings] — no
-    more per-contract [match rule with] branches in the code. *)
+(** Tiny's per-scenario expectation. Thin wrapper over
+    {!Canary_scenario.lower_expectation}: extract violates + langs +
+    has_manifest from the entry and pass tiny's bindings table.
+
+    Post-Task-2-Phase-A (2026-07-21): the lowering itself lives in
+    project-agnostic [Canary_scenario]; z3/llvm/sqlite can share the
+    same lowering by supplying their own bindings tables. *)
 let expectation_of_entry (entry : scenario_spec)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
-  let open Base in
   let module CS = Canary_scenario in
-  let scenario_langs = CS.langs_of_scenario entry.scenario in
-  let violates = entry.recipe.violates in
-  let has_manifest = CS.has_probe_manifestation entry.scenario in
-  (* For a (rule) at runtime, collect the (contract, lang, source)
-     triples whose binding firing site matches. Skip Placeholders
-     — they emit no expectation. *)
-  let lookup_sources rule =
-    match CS.firing_site_of_rule rule with
-    | None -> []
-    | Some site ->
-      List.concat_map violates ~f:(fun c ->
-        List.concat_map scenario_langs ~f:(fun l ->
-          match
-            List.find tiny_contract_bindings ~f:(fun b ->
-              Poly.equal b.CS.contract c && Poly.equal b.CS.lang l)
-          with
-          | None -> []
-          | Some b ->
-            List.filter_map b.firings ~f:(fun (s, src) ->
-              if Poly.equal s site then Some src else None)))
-  in
-  fun rule _loc ->
-    if not has_manifest then Expect_success
-    else
-      let sources = lookup_sources rule in
-      (* Prefer From_artifact if any (deterministic derivation);
-         fall through to From_behavior_grep; ignore Placeholders. *)
-      let picked_artifact =
-        List.find_map sources ~f:(function
-          | CS.From_artifact { inputs } -> Some inputs
-          | _ -> None)
-      in
-      match picked_artifact with
-      | Some inputs ->
-        Expect_compat_failure { inputs; version_info = None }
-      | None ->
-        let picked_grep =
-          List.find_map sources ~f:(function
-            | CS.From_behavior_grep { contains_any } -> Some contains_any
-            | _ -> None)
-        in
-        (match picked_grep with
-         | Some contains_any ->
-           Expect_failure { contains_any; version_info = None }
-         | None -> Expect_success)
+  CS.lower_expectation
+    ~bindings:tiny_contract_bindings
+    ~violates:entry.recipe.violates
+    ~langs:(CS.langs_of_scenario entry.scenario)
+    ~has_manifest:(CS.has_probe_manifestation entry.scenario)
 
 (** Derive tiny_stores adjustments from the recipe's concrete
     mutation. Today only Soname_bump needs it. *)

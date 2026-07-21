@@ -204,6 +204,69 @@ let binding_has_live_firing
       | From_artifact _ | From_behavior_grep _ -> true
       | Placeholder _ -> false)
 
+(** Project-agnostic expectation lowering — given a project's
+    bindings table + the (contracts × langs × has_manifest)
+    context of a scenario, produce the [rule → loc →
+    step_expectation] function the runner consumes.
+
+    Extracted from tiny's [expectation_of_entry] 2026-07-21
+    (Task 2 Phase A) so other projects (z3, llvm, sqlite) can
+    share the same lowering without re-implementing the switch.
+
+    Precedence when multiple sources fire at the same site:
+    From_artifact > From_behavior_grep > Placeholder-skip.
+    Rules with no [firing_site] equivalent (Build_lib, Fetch, …)
+    and scenarios with [has_manifest = false] fall through to
+    [Expect_success]. *)
+let lower_expectation
+    ~(bindings : contract_binding list)
+    ~(violates : Canary_compat.contract_id list)
+    ~(langs : Canary_lang.lang list)
+    ~(has_manifest : bool)
+  : Canary_basic.rule -> Canary_store.location option ->
+    Canary_step_model.step_expectation
+  =
+  let open Base in
+  let lookup_sources rule =
+    match firing_site_of_rule rule with
+    | None -> []
+    | Some site ->
+      List.concat_map violates ~f:(fun c ->
+        List.concat_map langs ~f:(fun l ->
+          match
+            List.find bindings ~f:(fun b ->
+              Poly.equal b.contract c && Poly.equal b.lang l)
+          with
+          | None -> []
+          | Some b ->
+            List.filter_map b.firings ~f:(fun (s, src) ->
+              if Poly.equal s site then Some src else None)))
+  in
+  fun rule _loc ->
+    if not has_manifest then Canary_step_model.Expect_success
+    else
+      let sources = lookup_sources rule in
+      let picked_artifact =
+        List.find_map sources ~f:(function
+          | From_artifact { inputs } -> Some inputs
+          | _ -> None)
+      in
+      match picked_artifact with
+      | Some inputs ->
+        Canary_step_model.Expect_compat_failure
+          { inputs; version_info = None }
+      | None ->
+        let picked_grep =
+          List.find_map sources ~f:(function
+            | From_behavior_grep { contains_any } -> Some contains_any
+            | _ -> None)
+        in
+        (match picked_grep with
+         | Some contains_any ->
+           Canary_step_model.Expect_failure
+             { contains_any; version_info = None }
+         | None -> Canary_step_model.Expect_success)
+
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
 
 (** Good scenarios from SSOT §4 — project-agnostic patterns.

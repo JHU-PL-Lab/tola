@@ -799,3 +799,38 @@ offenders; validator loads clean.
    (their variants don't go through tiny's lowering). Task 2's
    project-hookable factory would let them supply their own
    `<project>_contract_bindings` table; the shape is now proven.
+
+### Task 2 Phase A shipped — lowering lifted (2026-07-21)
+
+Post-structural-rewrite re-scope: the parked Task 2 plan's
+Phase 2 ("project hooks + generic expectation deriver") is
+materially done — the binding table IS the hook shape. Remaining
+Task 2 work re-planned into 6 smaller phases (A-F, ~145 LOC vs
+the original ~230):
+
+- **A** — Lift binding-lookup lowering into project-agnostic
+  `Canary_scenario.lower_expectation`. Tiny becomes a thin
+  wrapper.  ✅ shipped 2026-07-21.
+- **B** — Loc-awareness (bindings filter by Pm location; llvm's
+  Python probe is Expect_success while OCaml probe fails). Design
+  question pending user OK.
+- **C** — `version_info` in bindings (extend `From_artifact` or
+  add per-binding field). Design question pending.
+- **D** — llvm migration (declare `llvm_stable_contract_bindings`,
+  replace inline `Expect_compat_failure`).
+- **E** — z3 migration (same shape, Python variant).
+- **F** — sqlite migration (empty bindings; sanity that the
+  interface fits positive-only).
+
+**Phase A code**: `Canary_scenario.lower_expectation
+~bindings ~violates ~langs ~has_manifest : rule → loc →
+step_expectation` extracted from tiny's `expectation_of_entry`.
+Byte-preserving: same source ordering (Artifact > Grep >
+Placeholder-skip), same fallthrough to `Expect_success`, same
+handling of `has_manifest = false`. Tiny's `expectation_of_entry`
+shrinks from ~40 lines to 6 (thin wrapper that pulls fields
+out of a `scenario_spec` and passes them + `tiny_contract_bindings`).
+
+Verified: tiny run 21/22 PASS unchanged, artifact-test 101/101.
+`canary_scenario.ml` gains a `Canary_step_model` dependency
+(same layer, no dune change needed).
