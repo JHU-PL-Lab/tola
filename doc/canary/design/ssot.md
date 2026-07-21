@@ -495,105 +495,65 @@ Every hand-coded `Expect_compat_failure` in project specs
 now flows through this pattern; there is no remaining
 project-side `match rule with` on step expectation.
 
-## 6. Operational taxonomy — scenario / action / step / stage / rule
+## 6. Operational taxonomy — project / scenario / action / step
 
-**Flow.** Hand-curated here ──► reference for code renames + prose
-consistency. Code enumerations (action catalogue below) also
-consume this section for their names.
-
-**Co-providers.** doc-side (this section) + code (`canary_action.ml`
-constructors). Code lags behind — full rename sweep is deferred
-(§8 reconciliation task, not blocking).
+Canonical reference for terms used across code + writeup. Add a
+row here before introducing a term anywhere else.
 
 ### 6.1 Hierarchy (big → small)
 
-| Level               | Term         | Meaning                                                                                                                               | Code today                              | Rename target          |
-| ------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | ---------------------- |
-| **Top**             | **project**  | System under test + its coverage config bundle. Owns scenarios + contract bindings. Instances: tiny, z3, llvm, sqlite.                | `Canary_project.project` (2026-07-21) | keeps `project`        |
-| High                | **scenario** | Named collection of actions + interested artifacts. Sc.N.                                                                             | `Canary_scenario.scenario`              | keeps `scenario`       |
-| Mid                 | **action**   | Operational verb (`Build_lib`, `Probe of _`, …)                                                                                       | `rule`                                  | `action`               |
-| Low                 | **step**     | Concrete instantiation of an action: cmdline + env + expectation.                                                                     | `step` + `action_step` (split)          | collapse into `step`   |
-| Attribute of action | **stage**    | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this)                              | *(new use)*            |
-| Theory              | **rule**     | *What an action is for* — operational semantics / invariants. Doc-only concept.                                                       | (currently overloaded onto action verb) | free `rule` for theory |
+| Level | Term | Meaning | Code today |
+| --- | --- | --- | --- |
+| **Top** | **project** | System under test + coverage config bundle. Owns scenarios + contract bindings. | `Canary_project.project` (`action/`) |
+| Middle | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario` |
+| Below-middle | **runner_spec** | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario. | `Canary_step_builder.runner_spec` |
+| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `step` + `action_step` (split) |
+| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `rule` (rename pending) |
+| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only today) |
+| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. Free once code `rule` → `action`. | (currently overloaded on action verb) |
 
-**Naming distinction — `project` vs `runner_spec`.** The two live
-on different levels of this hierarchy and should not be confused:
+**Same-word-different-level pitfalls to watch.**
 
-- **`project`** (top of the hierarchy) — the [Canary_project.project]
-  value; one per system under test (tiny, z3, llvm, sqlite). Owns
-  the concrete scenarios + contract bindings.
-- **`runner_spec`** ([Canary_step_builder.runner_spec]) — the
-  runner-facing handoff; one per (project × variant / scenario)
-  instance, carrying the concrete `expectation` closure + build/probe
-  commands. Sits at the bottom (below "step"), not the top.
+- **project** (top) vs the historical **project_spec** (below-middle,
+  now called **runner_spec** after Task 3, 2026-07-21). One `project`
+  produces many `runner_spec`s — one per scenario or variant.
+- **scenario** vs **variant** — same slot; different projects use
+  different words. Tiny calls them scenarios (22 concrete),
+  z3/llvm call them variants (2-3 each). `Canary_run_info.run_project_multi`
+  consumes both under the same `variants` list.
 
-`runner_spec`'s current name predates the top-level `project` type;
-Task 3 renames it to `runner_spec` (or `variant_spec`) once the
-`project` type is settled. Ownership shape (2026-07-21 decision):
-**project owns scenarios semantically** (Model A) — a scenario is
-tied to what it exercises. But the concrete `scenario_spec` types
-(tiny_recipe for tiny; z3/llvm variants) live in `projects/`; the
-top-level `project` type sits in `action/` and can't reference them
-without a layer break or polymorphism. Resolution (2026-07-21
-concrete-monomorphic decision): the type carries only what can be
-concretely shared (`name`, `contract_bindings`); each project's own
-module owns its scenarios directly. When cross-project uniform
-iteration earns its keep (or when Task 3 rename lands + we want to
-adapt to old `runner_spec`), add a variant field to `project` and
-move the module to `projects/` if needed.
+**Ownership.** Project owns scenarios semantically (a scenario is
+tied to what it exercises), but the `Canary_project.project` type
+does *not* hold a `scenarios` field — each project's module keeps
+concrete ownership. See [`canary_project.ml`](../../src/canary/action/canary_project.ml)
+for the rationale (layer + concrete-vs-polymorphic).
 
-Sc.N patterns (project-agnostic) live in
-`Canary_scenario.good_scenarios`; concrete scenarios (Bs.N, variants)
-sit under their owning project's module.
+**Pattern vs instance.** `Sc.1..Sc.6` patterns are project-agnostic,
+live in `Canary_scenario.good_scenarios`. Concrete scenarios
+(`Bs.N`, project variants) sit under their owning project's module.
 
-**Scenario ≡ variant.** Same middle-level slot. Tiny's factory
-produces one runner_spec per scenario; z3/llvm's `mk_runner_spec
-~source` produces one per variant. `Canary_run_info.run_project_multi`
-consumes both under the same `variants` list. Whatever the
-per-project module calls them, they occupy the same taxonomy row.
+### 6.2 Rename status
 
-### 6.2 Code term clashes to resolve (rename map)
+| Rename | Status |
+| --- | --- |
+| `project_spec` → `runner_spec` | ✅ shipped 2026-07-21 (Task 3) |
+| `related_artifacts` field → derived from `actions` | ✅ shipped 2026-07-10 (§7.9) |
+| `rule` → `action` (constructor type) | ⏳ deferred; frees `rule` for theory |
+| `action_step` → `step` | ⏳ deferred; collapse redundant qualifier |
+| `stage` (in `canary_store.ml`, lifecycle state) → `artifact_status` | ⏳ deferred; frees `stage` for pipeline-phase |
 
-Deferred code sweep; agreement first, then flush.
+Deferred items wait until they're worth a cross-file sweep or a
+consumer forces the change. Not blocking.
 
-| Code today                             | Meaning today                             | Rename target                | Rationale                                              |
-| -------------------------------------- | ----------------------------------------- | ---------------------------- | ------------------------------------------------------ |
-| `rule` (`canary_action.ml`)            | Action verb variant                       | **`action`**                 | Frees `rule` for theory-level meaning                  |
-| `action_step` (`canary_step_model.ml`) | step + expectation                        | **`step`**                   | The runtime unit — no reason to over-qualify           |
-| `step` (`canary_basic.ml`)             | 10-field record with cmdline/env/produces | **`step_body`** or collapsed | Semi-redundant with action_step; decide when we rename |
-| `stage` (`canary_store.ml`)            | Artifact-lifecycle state (`Built          | Installed                    | Packed                                                 | Fetched`)                                              | **`artifact_status`** or `lifecycle_state` | Frees `stage` for pipeline-phase meaning |
-| `probe_action` (`canary_basic.ml`)     | `Compile_example                          | Run_example`                 | stays                                                  | Already appropriately scoped as one probe's sub-choice |
-| `compile_mode`                         | `Native                                   | Bytecode`                    | stays                                                  | Fine as-is                                             |
+### 6.3 Writeup ↔ code alignment
 
-### 6.3 Writeup ↔ code alignment (after rename)
-
-- Writeup "stage" = code `stage` (pipeline phase; Sc.N is-a stage).
-- Writeup "action" = code `action` (verb).
-- Writeup "step" = code `step` (concrete cmdline).
+- Writeup "stage" = pipeline phase (attribute of action; Sc.N is-a stage).
+- Writeup "action" = code `rule` today, `action` post-rename.
+- Writeup "step" = concrete cmdline (code `action_step` today,
+  `step` post-rename).
 - Writeup "rule" = doc-only theory; no code counterpart required.
-- Writeup "compile" / "build" = colloquial for specific `action`s
+- Writeup "compile" / "build" = colloquial for specific actions
   (`Build_lib`, `Build_binding`, `Build_app`).
-
-### 6.4 Migration sequence (agreed)
-
-1. ✓ Draft this taxonomy in SSOT (this section).
-2. ✓ **Task 1** — scenario-to-action refactor. Landed in
-   1111ad6 (initial split: `Canary_scenario.scenario` + tiny
-   `entry = { scenario; recipe }`) and refined in 13df74e
-   (unified shape: added `id`, `mutation option` with
-   target / kind / manifest / detector; renamed
-   `interested_artifacts` → `related_artifacts`; populated
-   Bs.1–Bs.13 + Pc.1–Pc.2). Existing `rule` type reused —
-   rename deferred to Task 3. Explicitly not part of Task 1:
-   agreement_claims field, deriving related_artifacts from
-   actions (both deferred to §9.3 backlog).
-3. **Task 2** — implementation-side refactor: unify
-   `tiny_recipe` with `scenario.mutation` so the two
-   layers stop duplicating info; project-hookable interface so
-   z3/llvm/sqlite can supply their own recipes.
-4. **Task 3** — deferred term-rename sweep (rule → action,
-   action_step → step, stage → artifact_status). No hurry; runs
-   after Task 2 and a full code/doc audit.
 
 ### 6.5 Current action catalogue
 
@@ -665,77 +625,39 @@ getter). Test-first spec pinned at
 under `scenario_derivation_pure_tests` — one case per
 canonical Sc.N shape plus a chain composition case.
 
-### 6.6 `runner_spec` — the code-side project handoff
+### 6.6 `runner_spec` — the code-side scenario handoff
 
-**Flow.** Project (`canary_project_<name>.ml`) constructs a
-[`Canary_step_builder.runner_spec`](../../src/canary/action/canary_step_builder.ml)
-──► `derive_steps` walks it ──► `action_step list` ──► one
-of four backends (local runner / GH YAML / Mermaid / HTML).
+**Flow.** Project's per-scenario factory (or per-variant hand-code)
+constructs a [`Canary_step_builder.runner_spec`](../../src/canary/action/canary_step_builder.ml)
+──► `derive_steps` walks it ──► `action_step list` ──► one of four
+backends (local runner / GH YAML / Mermaid / HTML).
 
-Status: **stable in code** (2026-07-08 rename from
-`script_spec`; type shape stable since Phase 4).
+**Shape** — a record with two kinds of fields (full list at
+[`canary_step_builder.ml:88`](../../src/canary/action/canary_step_builder.ml#L88)):
 
-**Shape.** `runner_spec` is a record where most fields are
-one closure per action verb from §6.5, plus a few policy /
-metadata fields. Each closure has type
-`~output_dir:string -> ~variant_key:string -> string` and
-returns the shell command for that action:
+- **Action closures** (one `option` field per §6.5 verb): each
+  closure has type `~output_dir -> ~variant_key -> string` and
+  emits the shell command for that action. Missing (`None`) →
+  action dropped from the step list. Multi-instance verbs
+  (`build_binding`, `probe_*`) carry per-language / per-location
+  lists.
+- **Policies + metadata**: `expectation` (per-rule /
+  per-loc `step_expectation`; today lowered from contract
+  bindings by `Canary_scenario.lower_expectation`), `check_post`,
+  `symbol_check`, `inspect`, `disabled_contracts`,
+  `api_source` (`Canary_artifact_api.t option`),
+  `binding_user_facing_pkg` (drives auto-generated inspector
+  step after `Probe_binding`), diagram wiring fields.
 
-- Action closures (one field per verb, all `option`):
-  `fetch_source`, `scan_source`, `scan_sources` (+ optional
-  `scan_sources_after` placement), `configure`,
-  `build_headers` / `fetch_headers`, `build_lib` /
-  `fetch_lib`, `build_binding` (per-lang list) /
-  `fetch_binding` / `pack_binding`, `install_lib`,
-  `build_app` / `fetch_app` / `pack_app`, `pack_lib`,
-  `probe_lib` / `probe_binding` / `probe_app`.
-  Missing (`None`) → the corresponding action is dropped
-  from the emitted step list.
-- Declarative surface metadata: `api_source :
-  Canary_artifact_api.t option` (native + per-language
-  binding claims — provider symbol prefixes, consumer
-  module watchlists, header paths).
-- Per-step policies: `check_post` (rule → optional
-  postcondition predicate), `expectation` (rule →
-  optional location → `step_expectation`), `symbol_check`,
-  `inspect` (per-rule override for the auto-generated
-  inspector step), `disabled_contracts`.
-- Language wiring: `binding_user_facing_pkg`
-  (`(lang * pkg_name) list` — drives auto-generated
-  inspector step after `Probe (Binding lang)`).
-- Diagram wiring: `artifact_name`, `inspect_note`.
+**Derivation** (`derive_steps ~root ~project ?(langs = [OCaml])
+(spec : runner_spec) : action_step list`) traverses §6.5's verbs
+in dependency order; for each present closure emits an
+`action_step` with `cmd` + `expectation` + `check_post` +
+`symbol_check` + per-artifact metadata. Auto-inserts inspector
+steps after `Probe_binding` and a `scan_source` step to verify
+`api_source` claims exist post-fetch.
 
-Full field list + type: [`src/canary/action/canary_step_builder.ml:88`](../../src/canary/action/canary_step_builder.ml#L88).
-
-**Composition with §6.5.** A `runner_spec` is a partial
-assignment from the action catalogue (§6.5) to shell
-closures. Actions absent from the spec are absent from the
-run. Multi-instance actions (`Build_binding`, `probe_*`)
-carry per-language / per-location lists so one project can
-emit distinct steps for OCaml vs Python variants.
-
-**Derivation.** `derive_steps ~root ~project ?(langs = [OCaml])
-(spec : runner_spec) : action_step list` in the same file
-(~line 535) walks the spec:
-
-1. Traverse §6.5's action verbs in dependency order.
-2. For each present closure, emit an `action_step` with:
-   - `cmd` (from the closure, instantiated with
-     `output_dir` / `variant_key`)
-   - `expectation` (from `spec.expectation` for this rule,
-     defaulting to `Expect_success`)
-   - `check_pre` / `check_post` (defaults or from
-     `spec.check_post` override)
-   - `symbol_check` (from `spec.symbol_check`)
-   - Per-artifact metadata (`variant_id`, `cache_key`, etc.)
-3. Auto-insert inspector steps after `Probe (Binding lang)`
-   using `binding_user_facing_pkg[lang]` + the language's
-   inspect command from `Canary_artifact_lang`.
-4. Cross-check declarative claims: if `api_source` names
-   header paths / binding source paths, insert a
-   `scan_source` step that verifies they exist post-fetch.
-
-**Consumers of `action_step list`** (the four backends):
+**Four backends** consume the resulting `action_step list`:
 
 | Backend | File | What it does |
 |---|---|---|
@@ -744,24 +666,18 @@ emit distinct steps for OCaml vs Python variants.
 | Mermaid | [`backend/canary_diagram.ml`](../../src/canary/backend/canary_diagram.ml) | Renders as an action-graph diagram |
 | HTML | [`backend/canary_html.ml`](../../src/canary/backend/canary_html.ml) | Renders interactive result viewer |
 
-**Multi-variant projects.** Some projects run several
-scenarios or version variants. The pattern is: build one
-`runner_spec` per variant (each with its own closures /
-`expectation`), each becomes its own `action_step list`,
-each runs independently. Examples:
+**Multi-scenario projects.** One `runner_spec` per scenario/variant;
+`run_project_multi` runs each independently. Concrete factories:
 
-- **tiny**: 15 concrete scenarios (13 Bs + 2 concrete good).
-  A per-scenario factory (`Canary_tiny_scenario.runner_spec_of_entry`)
+- **tiny** — [`Canary_tiny_scenario.runner_spec_of_entry`](../../src/canary/projects/canary_tiny_scenario.ml)
   wraps a shared chassis `make_base_runner_spec ~stores` and
-  overrides `expectation` from the scenario's recipe. See
-  [`design/tiny.md §3`](tiny.md#3-factory-pipeline--how-canary-runs-a-scenario).
-- **z3 / llvm**: dev + stable variant. Each variant is a
-  hand-coded `runner_spec` value in
-  `canary_project_{z3,llvm}.ml`; the stable variant carries
-  a hand-written `Expect_compat_failure` predicate for the
-  version mismatch. Task 2 ([`tiny.md §7.8`](tiny.md#78-task-2--recipemutation-integration-project-hookable-factory))
-  proposes lifting tiny's factory pattern here so these
-  projects can supply recipes analogous to tiny's.
+  overrides `expectation` from the scenario's recipe (22 scenarios).
+- **z3 / llvm** — `mk_runner_spec ~source` per variant (dev / stable).
+  Both project's `expectation` closures flow through
+  `Canary_scenario.lower_expectation` over their own
+  `<project>_contract_bindings` (Task 2 D/E/F, 2026-07-21).
+- **sqlite** — `runner_spec` uses `empty_runner_spec` with no
+  scenarios, no compat expectations (positive-only).
 
 ---
 
