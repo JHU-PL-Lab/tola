@@ -890,3 +890,92 @@ that z3/llvm use today.
 (llvm → z3 → sqlite). Design surface is now settled; each phase
 is a per-project data addition + inline `expectation` replacement.
 Paused for user confirmation before proceeding.
+
+### Task 2 Phases F + E + D shipped — sqlite / z3 / llvm migrated (2026-07-21)
+
+**Baseline** (from `_out/canary/projects/{sqlite,z3,llvm}/-run/`
+pre-migration, captured after user OK):
+- sqlite: 7/7 done, positive-only (no compat-failure).
+- z3: 29/29 done, 2 `expected failure confirmed` events fire
+  (both Python probes, dev + stable, `parser_context` prediction).
+- llvm: 40/40 done, 1 `expected failure confirmed` (stable OCaml
+  `Opcode.UncondBr` prediction).
+
+**Phase F — sqlite (no-op)**. sqlite's `project_spec` uses
+`empty_project_spec` with no `expectation` field. Empty bindings
+(implicit) already produce Expect_success everywhere — the
+positive-only case fits the pattern without code changes.
+Verified by re-inspection of `canary_project_sqlite.ml:60`.
+
+**Phase E — z3 (one binding)**. New `z3_contract_bindings` at
+module scope declares one binding:
+  { contract = C2; lang = Python;
+    firings = [{
+      site = At_probe_binding Python;
+      loc_filter = At_pm_lang Python;
+      source = From_artifact {
+        inputs = [Python_attrs …];
+        version_info = Some { provider_version = "z3-solver pip wheel";
+          consumer_requires = "z3.parser_context"; … };
+      }}]}
+
+The inline expectation (~20 LOC nested match on (rule, loc))
+collapses to a 5-line `Canary_scenario.lower_expectation` call
+with ~violates:[C2] ~langs:[Python] ~has_manifest:true. Shared
+across dev/latest/stable variants because Python probe always
+runs against the pip wheel (independent of native z3 lib build
+mode).
+
+Re-verified: 29/29 done, both Python compat-failures fire
+identically. `diff -u` on done-lines (timestamps stripped)
+returns empty — byte-parity with baseline.
+
+**Phase D — llvm (one binding)**. New
+`llvm_stable_contract_bindings` at module scope declares one
+binding (C2 for OCaml at At_probe_binding OCaml, loc_filter Any).
+Inputs bag intentionally merges C_stub + Native_lib + Ocaml_mli
+even though the binding is keyed on C2 — the runner's
+`predicted_contains_any_v2` iterates ALL contracts over the
+merged input pool, so multi-contract predictions work same as
+the old inline. version_info populated with the LLVM 19 →
+Opcode.UncondBr context.
+
+The inline expectation had three branches (Python override →
+Expect_success; stable non-Python → Expect_compat_failure;
+fallthrough → Expect_success). All three collapse into the
+binding-based lookup:
+- Python probe: no (C2, Python) binding → fallthrough → Expect_success.
+- Stable OCaml probe: (C2, OCaml) binding matches → Expect_compat_failure.
+- Dev variant: has_manifest = not source.has_build_binding = false
+  → whole lookup short-circuits to Expect_success.
+
+No `loc_filter` needed for the Python override (as the plan
+speculated); the absence of a (C2, Python) binding does the
+same job naturally. `~has_manifest:(not source.has_build_binding)`
+handles the dev/stable split cleanly.
+
+Re-verified: 40/40 done, one `expected failure confirmed`
+(same as baseline), diff on done-lines empty — byte-parity.
+
+**Summary**. Three project migrations, ~85 LOC net (z3 -18 +30 =
++12; llvm -30 +55 = +25; sqlite unchanged). Every hand-coded
+`Expect_compat_failure` in z3/llvm's `project_spec` now flows
+through `Canary_scenario.lower_expectation` over a
+per-project binding table. Task 2's original 5-phase plan
+(~230 LOC) landed as ~85 LOC after the structural rewrite
+absorbed the switch table.
+
+**Task 2 status**: parked plan closed. The binding-based pattern
+is now the uniform way to declare per-project failure
+predictions. Follow-ups (not part of Task 2):
+1. When a new project appears (PyTorch, cvc5, ...) or a scenario
+   needs multi-contract violations at one probe, revisit whether
+   `lower_expectation`'s single-source pick should become a merge
+   over all matching From_artifact firings.
+2. The higher-level `project`/`project_definition` type (naming
+   pressure noted in the "rename project_spec" discussion) is
+   now a natural next step — the per-project contract_bindings +
+   scenario_specs + workspace materializer + shell chassis form
+   the components of a `project`, distinct from the runner-facing
+   `Canary_step_builder.project_spec`. Deferred until a real
+   consumer needs it.

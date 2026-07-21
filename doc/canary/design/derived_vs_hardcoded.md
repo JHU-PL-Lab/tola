@@ -115,8 +115,10 @@ right upstream primitive lands:
   — each blocked on a missing App-level mutation primitive
   or on wiring the `(C4, OCaml)` Placeholder in
   `tiny_contract_bindings` (SSOT §5.4).
-- **z3/llvm hand `Expect_compat_failure` predicates**
-  (~28 LOC, see [`worklog_2026_07.md` — Task 2 parked plan](../worklog/worklog_2026_07.md)).
+- ~~**z3/llvm hand `Expect_compat_failure` predicates**~~
+  ✅ shipped Task 2 Phases D/E 2026-07-21; z3/llvm/sqlite
+  all consume `Canary_scenario.lower_expectation` over
+  per-project contract bindings.
 - **Workspace fixups** (RUNPATH strip, symlink synthesis) —
   could lift to a canary-owned "store sanitiser" per
   [`harness_canary_orthogonality.md §3`](harness_canary_orthogonality.md).

@@ -261,6 +261,53 @@ let llvm_cmake_flags =
     "-DLLVM_ENABLE_ASSERTIONS=OFF";
   ]
 
+(** llvm's contract bindings for the stable variant (Task 2 Phase D,
+    2026-07-21). Only consulted when [not source.has_build_binding]
+    — the dev variant passes [has_manifest=false] to
+    [lower_expectation] and never touches this table.
+
+    One binding: c2 (api completeness) at [At_probe_binding OCaml],
+    firing anywhere (loc_filter = Any). The inputs bag intentionally
+    includes C_stub + Native_lib + Ocaml_mli even though the
+    "official" contract is c2 — the runner's
+    [predicted_contains_any_v2] iterates ALL contracts over the
+    merged inputs, so declaring extra inputs lets c1/c6 also
+    contribute predicted substrings (same behaviour as the
+    hand-coded inline that this replaces).
+
+    Python probe: no (C2, Python) binding — lookup falls through to
+    Expect_success. Matches the "llvmlite bundles its own libLLVM"
+    override without needing an explicit loc_filter. *)
+let llvm_stable_contract_bindings
+  : Canary_scenario.contract_binding list
+  =
+  let module CC = Canary_compat in
+  let module CS = Canary_scenario in
+  [
+    { contract = CC.C2; lang = Canary_lang.OCaml;
+      firings = [
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = CC.[
+              C_stub [ "pack_binding_ocaml/summary_stub.json";
+                       "fetch_binding_ocaml/summary_stub.json" ];
+              Native_lib [ "probe_lib/inspect.json";
+                           "probe_lib_apt/inspect.json";
+                           "probe_lib_staged/inspect.json" ];
+              Ocaml_mli [ "pack_binding_ocaml/inspect.json";
+                          "fetch_binding_ocaml/inspect.json" ];
+            ];
+            version_info = Some {
+              provider_version = "llvm 19";
+              consumer_requires = "Opcode.UncondBr";
+              since = Some "LLVM 21 (dev, commit #186176)";
+              note = None;
+            };
+          }};
+      ]};
+  ]
+
 let mk_project_spec ~source
     ?(binding_configs =
         [ Ocaml_config llvm_ocaml_config; llvm_python_config ])
@@ -480,37 +527,27 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             Canary_step_builder.check_markers [ "pack.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
-    expectation = (fun rule loc -> match rule, loc with
-      | Probe_binding (_), Some (Pm (Lang_pm { lang = Python; _ })) ->
-          (* llvmlite bundles its own libLLVM; independent of opam's LLVM
-             version, so the pip probe is Expect_success regardless of
-             has_build_binding. *)
-          Expect_success
-      | Probe_binding (_), _ when not source.has_build_binding ->
-          (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); fails against llvm.19-shared.
-             contains_any is now DERIVED from cached compat summaries by the runner —
-             reads mli watchlist's missing list (e.g. Llvm.Opcode.UncondBr →
-             "Opcode.UncondBr" / "UncondBr" substrings) plus L0 missing C symbols.
-             Hand-written list retained as fallback at the variant level via
-             empty-derived → any-failure-with-probe.log. See api_interface.md §13. *)
-          Expect_compat_failure {
-            inputs = Canary_compat.[
-              C_stub [ "pack_binding_ocaml/summary_stub.json";
-                       "fetch_binding_ocaml/summary_stub.json" ];
-              Native_lib [ "probe_lib/inspect.json";
-                           "probe_lib_apt/inspect.json";
-                           "probe_lib_staged/inspect.json" ];
-              Ocaml_mli [ "pack_binding_ocaml/inspect.json";
-                          "fetch_binding_ocaml/inspect.json" ];
-            ];
-            version_info = Some {
-              provider_version = "llvm 19";
-              consumer_requires = "Opcode.UncondBr";
-              since = Some "LLVM 21 (dev, commit #186176)";
-              note = None;
-            };
-          }
-      | _ -> Expect_success);
+    (* Migrated 2026-07-21 (Task 2 Phase D) — inline nested match
+       on (rule, loc) replaced by data lookup over
+       [llvm_stable_contract_bindings] (defined below).
+
+       Behavior preserved:
+       - Stable variant (not source.has_build_binding): Probe_binding
+         OCaml fires Expect_compat_failure with the merged inputs bag
+         (predict_contains_any_v2 iterates all contracts over it,
+         same as the old inline shape).
+       - Python probe on any variant: no binding registered for
+         (C2, Python) here, so lookup finds nothing → falls through
+         to Expect_success. Matches the old "llvmlite bundles its
+         own libLLVM" branch without needing an explicit filter.
+       - Dev variant: has_manifest=false short-circuits the whole
+         lookup to Expect_success. *)
+    expectation =
+      Canary_scenario.lower_expectation
+        ~bindings:llvm_stable_contract_bindings
+        ~violates:[ Canary_compat.C2 ]
+        ~langs:[ Canary_lang.OCaml ]
+        ~has_manifest:(not source.has_build_binding);
     binding_user_facing_pkg = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
     inspect_note =
       (if not source.has_build_binding then

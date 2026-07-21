@@ -253,6 +253,37 @@ test -d "$BINDING_DIR"|}]
 BINDING_DIR=$(ocamlfind query z3 2>/dev/null)
 test -d "$BINDING_DIR"|}
 
+(** z3's contract bindings — the data half of the expectation
+    lowering (Task 2 Phase E, 2026-07-21). Shared across dev / latest
+    / stable variants because the Python probe consistently runs
+    against the z3-solver pip wheel (which lacks parser_context
+    regardless of which native z3 lib the OCaml side built against).
+
+    Only one contract wired: c2 for Python at Probe_binding Python.
+    OCaml probes fall through to Expect_success (no OCaml compat
+    failure declared for z3 today). *)
+let z3_contract_bindings : Canary_scenario.contract_binding list =
+  let module CC = Canary_compat in
+  let module CS = Canary_scenario in
+  [
+    { contract = CC.C2; lang = Canary_lang.Python;
+      firings = [
+        { site = CS.At_probe_binding Canary_lang.Python;
+          loc_filter = CS.At_pm_lang Canary_lang.Python;
+          source = CS.From_artifact {
+            inputs = CC.[
+              Python_attrs [ "fetch_binding_python/inspect.json" ];
+            ];
+            version_info = Some {
+              provider_version = "z3-solver pip wheel";
+              consumer_requires = "z3.parser_context";
+              since = Some "Z3 4.15+ Python source (not yet exported in pip wheel)";
+              note = None;
+            };
+          }};
+      ]};
+  ]
+
 let mk_project_spec ~source
     ?(binding_configs = [ Ocaml_config z3_ocaml_config; z3_python_config ])
     ?(tola_root = Unix.getcwd ())
@@ -529,27 +560,17 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];
-    expectation = (fun rule loc -> match rule, loc with
-      | Probe_binding (_),
-        Some (Canary_store.Pm
-                (Canary_store.Lang_pm
-                   { lang = Canary_lang.Python; _ })) ->
-          (* z3-solver pip wheel doesn't export `parser_context` (drift in
-             the bundled Python module surface vs Z3 4.15+ source). Probe
-             references it on purpose; expected substring is derived from
-             the cached Fetch (Binding Python) summary's missing watchlist. *)
-          Expect_compat_failure {
-            inputs = Canary_compat.[
-              Python_attrs [ "fetch_binding_python/inspect.json" ];
-            ];
-            version_info = Some {
-              provider_version = "z3-solver pip wheel";
-              consumer_requires = "z3.parser_context";
-              since = Some "Z3 4.15+ Python source (not yet exported in pip wheel)";
-              note = None;
-            };
-          }
-      | _ -> Expect_success);
+    (* Migrated 2026-07-21 (Task 2 Phase E) — inline nested match on
+       (rule, loc) replaced by data lookup over [z3_contract_bindings].
+       Same firing semantics: c2 at Probe_binding Python + pip loc →
+       Expect_compat_failure (parser_context prediction); everything
+       else → Expect_success via lower_expectation's fallthrough. *)
+    expectation =
+      Canary_scenario.lower_expectation
+        ~bindings:z3_contract_bindings
+        ~violates:[ Canary_compat.C2 ]
+        ~langs:[ Canary_lang.Python ]
+        ~has_manifest:true;
     inspect_note =
       (if not source.has_build_binding then
          Some

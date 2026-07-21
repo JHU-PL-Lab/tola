@@ -479,12 +479,21 @@ Catches "you wired a Bs entry expecting failure, but
 every contract you listed is Placeholder" — a design gap
 that would otherwise silently pass.
 
-**Task 2 hook.** z3 / llvm / sqlite still hand-code
-`Expect_compat_failure` inline in their `project_spec`.
-Task 2 (parked at `worklog_2026_07.md` — Task 2 parked
-plan) can extend the pattern by letting each project
-supply its own `<project>_contract_bindings` and inherit
-the uniform lowering.
+**Cross-project uptake** (Task 2 Phases D/E/F,
+2026-07-21). z3, llvm, sqlite now all consume the same
+lowering (`Canary_scenario.lower_expectation`) over their
+own bindings:
+- **z3** — one binding (C2 / Python at
+  `At_probe_binding Python` with `At_pm_lang Python`
+  filter, `parser_context` version_info).
+- **llvm** — one binding (C2 / OCaml, `Opcode.UncondBr`
+  version_info). Dev variant passes `has_manifest=false`
+  to short-circuit the lookup.
+- **sqlite** — no bindings (positive-only project).
+
+Every hand-coded `Expect_compat_failure` in project specs
+now flows through this pattern; there is no remaining
+project-side `match rule with` on step expectation.
 
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 
