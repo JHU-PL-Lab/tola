@@ -1,0 +1,4 @@
+; Tiny is its own dune subproject (see canary/examples/tiny/dune-project).
+; Exclude it from the top-level tola build — it needs LIBRARY_PATH
+; pointing at c/build/ and is driven via `make -C canary/examples/tiny/`.
+(dirs :standard \ tiny)

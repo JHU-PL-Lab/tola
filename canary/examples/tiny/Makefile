@@ -46,9 +46,9 @@ $(LIB): c/src/tiny.c c/include/tiny.h c/CMakeLists.txt
 	cmake --build $(C_BUILD)
 
 ocaml: c
-	cd ocaml && LIBRARY_PATH=$(LIBPATH)$${LIBRARY_PATH:+:$$LIBRARY_PATH} \
-	            LD_RUN_PATH=$(LIBPATH)$${LD_RUN_PATH:+:$$LD_RUN_PATH} \
-	            dune build
+	LIBRARY_PATH=$(LIBPATH)$${LIBRARY_PATH:+:$$LIBRARY_PATH} \
+	LD_RUN_PATH=$(LIBPATH)$${LD_RUN_PATH:+:$$LD_RUN_PATH} \
+	dune build --root . ocaml/
 
 PY_EXT_SUFFIX := $(shell python3 -c 'import sysconfig; print(sysconfig.get_config_var("EXT_SUFFIX"))')
 CEXT_SO       := python_cext/tiny_cext/_native$(PY_EXT_SUFFIX)

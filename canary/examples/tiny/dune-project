@@ -1,0 +1,14 @@
+(lang dune 3.10)
+
+; This example is a subproject isolated from the top-level tola build.
+;
+; Why: `canary/examples/tiny/ocaml/dune` uses `(c_library_flags -ltiny)`
+; which requires LIBRARY_PATH pointing at c/build/. Top-level `dune build`
+; at the tola root cannot satisfy that without env setup, and would
+; sometimes leave the shared `_build/` in a stale wrap-vs-nowrap state
+; (interference with canary scenario direct-compiles). Making this a
+; nested project confines its `_build/` and stops top-level recursion.
+;
+; Canonical entry: `make -C canary/examples/tiny/ ocaml` (sets
+; LIBRARY_PATH + LD_RUN_PATH before invoking dune). Direct
+; `dune build` from this dir works if LIBRARY_PATH is set.
