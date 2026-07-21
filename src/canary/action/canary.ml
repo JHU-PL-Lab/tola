@@ -16,7 +16,7 @@
         job_paths_of_action_rule, pattern_row, pattern_rows_of_paths,
         pp_job_path_table, pp_job_path_table_md.
 
-    The runner half (project_spec, derive_steps, run_step, run_graph)
+    The runner half (runner_spec, derive_steps, run_step, run_graph)
     lives in {!Canary_runner}.
 
     This shim [include]s each so existing [open Canary] keeps working.

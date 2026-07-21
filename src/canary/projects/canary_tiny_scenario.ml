@@ -1352,17 +1352,17 @@ let tiny_api_source : Canary_artifact_api.t =
 
 (** {1 Variants}
 
-    Tiny is multi-variant. Each variant is a named [project_spec] value
+    Tiny is multi-variant. Each variant is a named [runner_spec] value
     whose expectation field encodes which surface-theory contracts canary
     expects to fire at which stages — {i not} which scenario produced the
     artifacts. The harness↔canary mapping lives in
     [doc/canary/research/tiny.md] (or a wrapper script), not here.
 
-    - [base_project_spec]: unmutated Sc.N run (SSOT §4.1).
+    - [base_runner_spec]: unmutated Sc.N run (SSOT §4.1).
       Every step is expected to succeed (Expect_success).
       Corresponds to the unmutated tiny build / harness
       scenarios [e12 baseline_canary] / [e13 baseline_unbroken].
-    - [lib_broken_project_spec]: at probe_binding_ocaml, expect c1
+    - [lib_broken_runner_spec]: at probe_binding_ocaml, expect c1
       cmp_symbol to fire. Used when the lib at runtime lacks a symbol
       the OCaml binding stub requires. Maps to harness scenario
       [e1 symbol_missing] but doesn't know it.
@@ -1372,7 +1372,7 @@ let tiny_api_source : Canary_artifact_api.t =
     Python, [binding_overdeclares_stubs] for c1 from the orphan
     direction).
 
-    Convenience: [project_spec] aliases [base_project_spec] for callers
+    Convenience: [runner_spec] aliases [base_runner_spec] for callers
     that don't need to distinguish variants.
 *)
 
@@ -1422,9 +1422,9 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
   python_cext_root = [%string "%{workspace_root}/python_cext"];
 }
 
-let make_base_project_spec
+let make_base_runner_spec
     ?(probe_exe = "ocaml/examples/probe_baseline.exe")
-    ~(stores : tiny_stores) () : Canary_step_builder.project_spec =
+    ~(stores : tiny_stores) () : Canary_step_builder.runner_spec =
   let { source; lib_dir; lib_filename; python_cext_root } = stores in
   (* Absolute lib_dir for {LIBRARY,LD_LIBRARY,LD_RUN}_PATH — $PWD
      anchors to canary's invocation cwd (the tola root). *)
@@ -1435,7 +1435,7 @@ let make_base_project_spec
   let cext_so_glob =
     [%string "%{python_cext_root}/tiny_cext/_native.cpython-*.so"] in
   {
-    Canary_step_builder.empty_project_spec with
+    Canary_step_builder.empty_runner_spec with
 
     (* No fetch_source: workspace is pre-materialized. *)
     api_source = Some tiny_api_source;
@@ -1717,15 +1717,15 @@ let cache_workspace_of ~scenario =
     (the tola workspace root supplies dune-project), so passing
     live-tree stores works for ad-hoc invocations even though the
     canonical flow points each variant at its own materialized cache. *)
-let base_project_spec =
-  make_base_project_spec
+let base_runner_spec =
+  make_base_runner_spec
     ~stores:(stores_of_workspace ~workspace_root:tiny_root ()) ()
-let project_spec = base_project_spec
+let runner_spec = base_runner_spec
 
 (** {1 Scenario factory}
 
     Turns each {!entry} into a
-    {!Canary_step_builder.project_spec} canary can run as its
+    {!Canary_step_builder.runner_spec} canary can run as its
     own project. Uniform pipeline:
 
     {[
@@ -1781,28 +1781,28 @@ let stores_of_entry
     { stores with lib_filename = strip_trailing_minor to_so }
   | _ -> stores
 
-(** Build the project_spec for a scenario. Uniform code path:
+(** Build the runner_spec for a scenario. Uniform code path:
     base spec with expectation derived from the entry. *)
-let project_spec_of_entry
+let runner_spec_of_entry
     ~(mutated_stores : tiny_stores)
     (entry : scenario_spec)
-  : Canary_step_builder.project_spec
+  : Canary_step_builder.runner_spec
   =
   let stores = stores_of_entry ~stores:mutated_stores entry in
-  { (make_base_project_spec ~stores ()) with
+  { (make_base_runner_spec ~stores ()) with
     expectation = expectation_of_entry entry;
   }
 
 (** Convenience: look up entry by scenario name and build
     the spec. *)
-let project_spec_of_name
+let runner_spec_of_name
     ~(mutated_stores : tiny_stores)
     (name : string)
-  : Canary_step_builder.project_spec
+  : Canary_step_builder.runner_spec
   =
   let name = name_of_string name in
   match find_by_name name with
-  | Some entry -> project_spec_of_entry ~mutated_stores entry
+  | Some entry -> runner_spec_of_entry ~mutated_stores entry
   | None ->
     Stdlib.failwith
       (Printf.sprintf

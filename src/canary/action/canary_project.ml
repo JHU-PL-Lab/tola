@@ -26,19 +26,19 @@
       [projects/]), or an opaque/GADT wrapper (overkill). Revisit if
       a generic cross-project runner needs uniform iteration —
       likely alongside the {b variant} case added for adapting to
-      old [Canary_step_builder.project_spec] when Task 3 rename
+      old [Canary_step_builder.runner_spec] when Task 3 rename
       lands.
     - [api_source] — [Canary_artifact_source.source_repo] lives in
       the [tool/] layer; would create a downward dependency.
       Callers look it up per-project.
 
     {b Naming distinction} — do not confuse with
-    [Canary_step_builder.project_spec]. The two live on different
+    [Canary_step_builder.runner_spec]. The two live on different
     levels of the SSOT §6.1 taxonomy:
 
     - [project] (this type) sits at the {b top} — one per system
       under test (tiny, z3, llvm, sqlite).
-    - [project_spec] sits at the {b bottom} — the runner-facing
+    - [runner_spec] sits at the {b bottom} — the runner-facing
       handoff, one per (project × scenario / variant) instance,
       carrying the concrete [expectation : rule -> loc -> step_expectation]
       + build/probe/inspect commands. Task 3 renames it to

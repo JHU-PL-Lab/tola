@@ -58,7 +58,7 @@ Ordered rough priority.
 - **`new_project.md` revisit before onboarding a new project.**
   §2 mechanics + §2.5 three-level guidance were last touched
   in the derived-vs-hardcoded pass 2026-07-20; they still
-  describe the current `project_spec` shape but might want
+  describe the current `runner_spec` shape but might want
   another look against any upgrades (Task 2 recipe interface,
   package_locator, store_config from §3) before actually
   picking a Tier-1/Tier-2 target. Not a blocker for other
@@ -104,8 +104,8 @@ Ordered rough priority.
 Structural items about the SSOT itself. Numbering preserved
 from the old §8 to keep references stable.
 
-0. ~~**SSOT lacks `project_spec`** — done 2026-07-10.~~
-   [SSOT §6.6](design/ssot.md#66-project_spec--the-code-side-project-handoff)
+0. ~~**SSOT lacks `runner_spec`** — done 2026-07-10.~~
+   [SSOT §6.6](design/ssot.md#66-runner_spec--the-code-side-project-handoff)
    documents the type, its composition with §6.5's action
    catalogue, `derive_steps`, the four consuming backends,
    and the multi-variant pattern (tiny factory + z3/llvm

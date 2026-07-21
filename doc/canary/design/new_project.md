@@ -116,7 +116,7 @@ project's purpose:
 
 | Level | What you write | Example | When it's right |
 |---|---|---|---|
-| **A. Positive-only** | `project_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`. | sqlite (system lib works; probe compiles) | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story. |
+| **A. Positive-only** | `runner_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`. | sqlite (system lib works; probe compiles) | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story. |
 | **B. One hand-coded failure prediction** | Level A + `Expect_compat_failure` inline in the project spec with hand-authored `inputs` list + `version_info`. | z3 (~10 LOC in `canary_project_z3.ml:541-551`, `parser_context` in the wheel), llvm (~18 LOC in `canary_project_llvm.ml:495-512`, `Opcode.UncondBr`) | You want to demonstrate ONE specific version drift on this project. Cheapest way to say "here's a real API break we caught". |
 | **C. Scenario matrix** | Level B + a full `canary_<name>_scenario.ml` with per-scenario recipes. **Also needs framework-side hookable factory (Task 2, deferred).** | tiny only — nobody else | You want *systematic* coverage of Sc.N × mutation-flavor cells for research or paper-artifact purposes. Currently only justified when the project is the framework's benchmark. |
 

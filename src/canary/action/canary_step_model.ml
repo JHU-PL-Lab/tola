@@ -86,7 +86,7 @@ type action_step = {
   expectation : step_expectation;
   symbol_check : symbol_check option;
   (* Per-project surface-theory contract opt-outs (set by derive_steps
-     from project_spec.disabled_contracts). The runner combines this
+     from runner_spec.disabled_contracts). The runner combines this
      with the CLI's --disable-contract list before evaluating
      Expect_compat_failure. *)
   disabled_contracts : Canary_compat.contract_id list;

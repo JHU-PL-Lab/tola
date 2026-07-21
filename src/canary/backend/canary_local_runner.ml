@@ -15,13 +15,13 @@
     Split from [Canary_runner] on 2026-06-01: the execute-half functions
     moved here ({!run_step}, {!run_graph}, {!exec_step},
     {!run_cmd_logged}, {!output_contains_any}, {!merge_step_statuses}),
-    keeping the build-half (project_spec + derive_steps + shared command
+    keeping the build-half (runner_spec + derive_steps + shared command
     templates + check_post compositors + defaults + dep helpers) in
     {!Canary_step_builder}.
 
     Communicates with the build half through the closure firewall on
     [action_step]: this module only invokes [step.cmd] / [step.check_pre]
-    / [step.check_post] and never reads [project_spec] directly.
+    / [step.check_post] and never reads [runner_spec] directly.
     Symmetric design with the other backends. *)
 
 open Base

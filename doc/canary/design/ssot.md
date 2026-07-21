@@ -516,18 +516,18 @@ constructors). Code lags behind — full rename sweep is deferred
 | Attribute of action | **stage**    | Where/when an action happens — pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (not this)                              | *(new use)*            |
 | Theory              | **rule**     | *What an action is for* — operational semantics / invariants. Doc-only concept.                                                       | (currently overloaded onto action verb) | free `rule` for theory |
 
-**Naming distinction — `project` vs `project_spec`.** The two live
+**Naming distinction — `project` vs `runner_spec`.** The two live
 on different levels of this hierarchy and should not be confused:
 
 - **`project`** (top of the hierarchy) — the [Canary_project.project]
   value; one per system under test (tiny, z3, llvm, sqlite). Owns
   the concrete scenarios + contract bindings.
-- **`project_spec`** ([Canary_step_builder.project_spec]) — the
+- **`runner_spec`** ([Canary_step_builder.runner_spec]) — the
   runner-facing handoff; one per (project × variant / scenario)
   instance, carrying the concrete `expectation` closure + build/probe
   commands. Sits at the bottom (below "step"), not the top.
 
-`project_spec`'s current name predates the top-level `project` type;
+`runner_spec`'s current name predates the top-level `project` type;
 Task 3 renames it to `runner_spec` (or `variant_spec`) once the
 `project` type is settled. Ownership shape (2026-07-21 decision):
 **project owns scenarios semantically** (Model A) — a scenario is
@@ -539,7 +539,7 @@ concrete-monomorphic decision): the type carries only what can be
 concretely shared (`name`, `contract_bindings`); each project's own
 module owns its scenarios directly. When cross-project uniform
 iteration earns its keep (or when Task 3 rename lands + we want to
-adapt to old `project_spec`), add a variant field to `project` and
+adapt to old `runner_spec`), add a variant field to `project` and
 move the module to `projects/` if needed.
 
 Sc.N patterns (project-agnostic) live in
@@ -547,7 +547,7 @@ Sc.N patterns (project-agnostic) live in
 sit under their owning project's module.
 
 **Scenario ≡ variant.** Same middle-level slot. Tiny's factory
-produces one runner_spec per scenario; z3/llvm's `mk_project_spec
+produces one runner_spec per scenario; z3/llvm's `mk_runner_spec
 ~source` produces one per variant. `Canary_run_info.run_project_multi`
 consumes both under the same `variants` list. Whatever the
 per-project module calls them, they occupy the same taxonomy row.
@@ -665,17 +665,17 @@ getter). Test-first spec pinned at
 under `scenario_derivation_pure_tests` — one case per
 canonical Sc.N shape plus a chain composition case.
 
-### 6.6 `project_spec` — the code-side project handoff
+### 6.6 `runner_spec` — the code-side project handoff
 
 **Flow.** Project (`canary_project_<name>.ml`) constructs a
-[`Canary_step_builder.project_spec`](../../src/canary/action/canary_step_builder.ml)
+[`Canary_step_builder.runner_spec`](../../src/canary/action/canary_step_builder.ml)
 ──► `derive_steps` walks it ──► `action_step list` ──► one
 of four backends (local runner / GH YAML / Mermaid / HTML).
 
 Status: **stable in code** (2026-07-08 rename from
 `script_spec`; type shape stable since Phase 4).
 
-**Shape.** `project_spec` is a record where most fields are
+**Shape.** `runner_spec` is a record where most fields are
 one closure per action verb from §6.5, plus a few policy /
 metadata fields. Each closure has type
 `~output_dir:string -> ~variant_key:string -> string` and
@@ -707,7 +707,7 @@ returns the shell command for that action:
 
 Full field list + type: [`src/canary/action/canary_step_builder.ml:88`](../../src/canary/action/canary_step_builder.ml#L88).
 
-**Composition with §6.5.** A `project_spec` is a partial
+**Composition with §6.5.** A `runner_spec` is a partial
 assignment from the action catalogue (§6.5) to shell
 closures. Actions absent from the spec are absent from the
 run. Multi-instance actions (`Build_binding`, `probe_*`)
@@ -715,7 +715,7 @@ carry per-language / per-location lists so one project can
 emit distinct steps for OCaml vs Python variants.
 
 **Derivation.** `derive_steps ~root ~project ?(langs = [OCaml])
-(spec : project_spec) : action_step list` in the same file
+(spec : runner_spec) : action_step list` in the same file
 (~line 535) walks the spec:
 
 1. Traverse §6.5's action verbs in dependency order.
@@ -746,17 +746,17 @@ emit distinct steps for OCaml vs Python variants.
 
 **Multi-variant projects.** Some projects run several
 scenarios or version variants. The pattern is: build one
-`project_spec` per variant (each with its own closures /
+`runner_spec` per variant (each with its own closures /
 `expectation`), each becomes its own `action_step list`,
 each runs independently. Examples:
 
 - **tiny**: 15 concrete scenarios (13 Bs + 2 concrete good).
-  A per-scenario factory (`Canary_tiny_scenario.project_spec_of_entry`)
-  wraps a shared chassis `make_base_project_spec ~stores` and
+  A per-scenario factory (`Canary_tiny_scenario.runner_spec_of_entry`)
+  wraps a shared chassis `make_base_runner_spec ~stores` and
   overrides `expectation` from the scenario's recipe. See
   [`design/tiny.md §3`](tiny.md#3-factory-pipeline--how-canary-runs-a-scenario).
 - **z3 / llvm**: dev + stable variant. Each variant is a
-  hand-coded `project_spec` value in
+  hand-coded `runner_spec` value in
   `canary_project_{z3,llvm}.ml`; the stable variant carries
   a hand-written `Expect_compat_failure` predicate for the
   version mismatch. Task 2 ([`tiny.md §7.8`](tiny.md#78-task-2--recipemutation-integration-project-hookable-factory))

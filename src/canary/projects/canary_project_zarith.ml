@@ -1,7 +1,7 @@
 (* Project: zarith — Pattern A (system libgmp + opam zarith binding).
    25 reverse deps in opam (most-used Pattern A; classic A-shape benchmark).
    Spec is a thin declaration over canary_pattern_a; the real shape is in
-   canary_pattern_a.project_spec. *)
+   canary_pattern_a.runner_spec. *)
 
 let decl : Canary_pattern_a.t = {
   name = "zarith";
@@ -35,4 +35,4 @@ let decl : Canary_pattern_a.t = {
   ocaml_module_watchlist = [ "Z"; "Q"; "Big_int_Z"; "Zarith_version" ];
 }
 
-let project_spec = Canary_pattern_a.project_spec decl
+let runner_spec = Canary_pattern_a.runner_spec decl

@@ -320,7 +320,7 @@ context; full chronicles in
 [`worklog_2026_07.md`](../worklog/worklog_2026_07.md)):
 §7.2 recipe synthesis 2026-07-20, §7.9 related_artifacts
 derivation 2026-07-10, §7.7 route tiny through `tool/`
-2026-07-09, SSOT §6.6 `project_spec` doc 2026-07-10
+2026-07-09, SSOT §6.6 `runner_spec` doc 2026-07-10
 (`b9e4abc`).*
 
 ### 7.1 Fill the 8 remaining empty derived cells

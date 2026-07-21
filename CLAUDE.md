@@ -69,7 +69,7 @@ per Phase E of the tiny migration.)
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `src/bin/canary_main.ml`                            | CLI: `action`, `paths`, `graph`, `compat`, `verify`, `inspect-diff`, `artifact-test`, `pm-test`, …     |
 | `src/canary/base/canary_lang.ml`                    | `type lang = OCaml \| Python \| …`; sibling file so `canary_basic` + `canary_store` can both use it    |
-| `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `project_spec`, `rule`, `version`, `string_of_*`, `step_dir_of_tag`, `filename`, `variant_file` — live vocabulary including output-tree naming |
+| `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `runner_spec`, `rule`, `version`, `string_of_*`, `step_dir_of_tag`, `filename`, `variant_file` — live vocabulary including output-tree naming |
 | `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
 | `src/canary/surface/canary_compat.ml`               | Pure theory: `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + contract registry vocabulary (`contract_id`, `contract_status`, `contract_check`) |

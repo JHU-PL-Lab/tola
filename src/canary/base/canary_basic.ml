@@ -71,7 +71,7 @@ let all_cc_and_modes =
 
 type condition = On_runner_os of runner_os
 
-type project_spec = {
+type runner_spec = {
   root : string;
   version : string;
   commit : string;

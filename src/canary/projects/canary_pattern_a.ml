@@ -8,14 +8,14 @@ open Canary_toolchain
    cairo2 via conf-cairo, etc.
 
    This module compresses the boilerplate. A new Pattern A project becomes
-   ~25 lines of declaration vs. ~100 lines of hand-rolled project_spec.
+   ~25 lines of declaration vs. ~100 lines of hand-rolled runner_spec.
    Extracted from zarith + ssl as the second-data-point validation per
    doc/canary/design/new_project.md §1 sequencing.
 
    Coverage boundaries:
    - This template covers native_lib + ocaml binding probe only. Projects with
      additional probe variants (e.g. sqlite's stdlib pip probe, llvm's
-     llvmlite pip probe) extend the resulting project_spec rather than fitting
+     llvmlite pip probe) extend the resulting runner_spec rather than fitting
      it through the template.
    - Optional-C-dep cases (lwt + conf-libev) are NOT yet covered; would need
      a `with_optional_lib` extension.
@@ -85,13 +85,13 @@ let ocaml_config (d : t) : ocaml_tool_config =
            ~system_package_macos:d.system_pkg_macos ());
   }
 
-let project_spec (d : t) : Canary_step_builder.project_spec =
+let runner_spec (d : t) : Canary_step_builder.runner_spec =
   let cfg = ocaml_config d in
   let prebuilt = prebuilt_info_exn cfg in
   let pm = Canary_store.detect_pm () in
   let resolve = lib_resolve d.lib in
   {
-    Canary_step_builder.empty_project_spec with
+    Canary_step_builder.empty_runner_spec with
     fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
     fetch_binding =
       [ (Canary_lang.OCaml, Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec) ];

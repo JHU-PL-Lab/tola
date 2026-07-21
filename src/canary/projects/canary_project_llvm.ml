@@ -226,7 +226,7 @@ python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > %{
    - binding output: <build>/lib/ocaml/llvm.cmxa *)
 
 (* cmake flag list for LLVM (no -S/-B). The actual configure command is
-   assembled by [Canary_build_cmd.cmake_configure_cmd] in the project_spec.
+   assembled by [Canary_build_cmd.cmake_configure_cmd] in the runner_spec.
 
    Speed flags:
    - mold: 5-10x faster linking than ld (available on this machine)
@@ -308,10 +308,10 @@ let llvm_stable_contract_bindings
       ]};
   ]
 
-let mk_project_spec ~source
+let mk_runner_spec ~source
     ?(binding_configs =
         [ Ocaml_config llvm_ocaml_config; llvm_python_config ])
-    ?(tola_root = Unix.getcwd ()) distro : Canary_step_builder.project_spec =
+    ?(tola_root = Unix.getcwd ()) distro : Canary_step_builder.runner_spec =
   let local = local_for distro source in
   let root =
     match local with
@@ -331,7 +331,7 @@ let mk_project_spec ~source
       | Ocaml_config c -> Some c
       | Python_config _ -> None)
     |> Option.value_exn
-         ~message:"llvm mk_project_spec: no Ocaml_config in binding_configs"
+         ~message:"llvm mk_runner_spec: no Ocaml_config in binding_configs"
   in
   let target = ocaml_tc.ocaml.example_target in
   (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); it will fail to
@@ -342,7 +342,7 @@ let mk_project_spec ~source
   let llvm_config = [%string "%{build}/bin/llvm-config"] in
   let binding_lib = ocaml_tc.ocaml.binding_lib_name in
   {
-    Canary_step_builder.empty_project_spec with
+    Canary_step_builder.empty_runner_spec with
     api_source = source.api_source;
     fetch_source =
       Some
@@ -556,7 +556,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
        else None);
     inspect = (fun rule _loc ->
       let api = Option.value_exn source.api_source
-          ~message:"llvm mk_project_spec: api_source not set" in
+          ~message:"llvm mk_runner_spec: api_source not set" in
       let warn =
         if not source.has_build_binding then
           Some (Canary_artifact_api.stable_reuse_warning

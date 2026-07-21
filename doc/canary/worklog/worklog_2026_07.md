@@ -1119,3 +1119,42 @@ artifact-test 101/101 unchanged.
 
 SSOT §6.1 augmented: naming-distinction paragraph now explains
 the concrete-monomorphic rationale + notes scenario ≡ variant.
+
+### Task 3 — rename Canary_step_builder.project_spec → runner_spec (2026-07-21)
+
+Pure rename, no semantic change. User rationale (2026-07-21):
+"the disagreement on terms is causing trouble even during the code
+work". After Canary_project.project settled at the top of the
+taxonomy (81e6a99), the bottom-level runner-facing type keeping
+the name `project_spec` was actively confusing — the two mean
+different things at different levels but share the "project" root.
+
+**Scope**: 16 code files + 6 forward-looking doc files + CLAUDE.md.
+Blanket rename via Edit's replace_all per file (`project_spec` is
+a distinctive compound identifier; no false positives). Renames:
+
+- `Canary_step_builder.project_spec` → `Canary_step_builder.runner_spec`
+- `empty_project_spec` → `empty_runner_spec`
+- `mk_project_spec` (z3, llvm, sqlite, pattern_a) → `mk_runner_spec`
+- `project_spec_of_entry` / `project_spec_of_name` (tiny) →
+  `runner_spec_of_entry` / `runner_spec_of_name`
+- `make_base_project_spec` (tiny) → `make_base_runner_spec`
+- `make_binding_python_repack_broken_project_spec`,
+  `make_binding_repack_broken_project_spec`,
+  `make_lib_behavior_broken_project_spec`,
+  `lib_broken_project_spec` — all get `runner_spec` suffix
+- `base_project_spec` (record field, if any) → `base_runner_spec`
+
+**Historical worklog files left unchanged** — their entries
+recorded state at the time and are chronicles, not
+forward-looking docs.
+
+Verified: build clean, tiny run 21/22 PASS, artifact-test 101/101
+— parity with pre-rename.
+
+**Naming**: `runner_spec` (not `variant_spec`). Chose `runner_spec`
+because it names the role (what the runner consumes) rather than
+the instance identity (which is already covered by "scenario ≡
+variant" at the middle level). `variant_spec` remains a valid
+alternative if the reading of "one spec per variant" feels more
+natural to future maintainers — trivial rename to make later.

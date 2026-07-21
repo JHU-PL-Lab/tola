@@ -12,8 +12,8 @@ let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
     ~root ~project steps
 
 let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
-    (spec : Canary_step_builder.project_spec)
-    : Canary_step_builder.project_spec =
+    (spec : Canary_step_builder.runner_spec)
+    : Canary_step_builder.runner_spec =
   if List.is_empty cli_disabled then spec
   else { spec with
          disabled_contracts = spec.disabled_contracts @ cli_disabled }
@@ -42,7 +42,7 @@ let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
       ()
   in
   let spec =
-    Canary_tiny_scenario.project_spec_of_name
+    Canary_tiny_scenario.runner_spec_of_name
       ~mutated_stores name
     |> with_cli_disabled cli_disabled
   in
@@ -107,7 +107,7 @@ let action_cmd =
           ~doc:
             "Comma-separated surface-theory contracts to skip for this \
              run, e.g. \"c4,c5\". Layered on top of each project's \
-             project_spec.disabled_contracts and the registry's \
+             runner_spec.disabled_contracts and the registry's \
              enabled flag.")
   in
   (* run_with_info, with_cli_disabled, prebuilt_run_info, and
@@ -131,7 +131,7 @@ let action_cmd =
         Canary_project_z3.z3_source_dev
     in
     let src = Canary_project_z3.z3_source_dev in
-    let spec = Canary_project_z3.mk_project_spec ~source:src distro
+    let spec = Canary_project_z3.mk_runner_spec ~source:src distro
                |> with_cli_disabled cli_disabled in
     let spec = if quick then Canary_step_builder.no_source spec else spec in
     let steps =
@@ -141,7 +141,7 @@ let action_cmd =
     in
     let src_stable = Canary_project_z3.z3_source_stable in
     let spec_stable =
-      Canary_project_z3.mk_project_spec ~source:src_stable distro
+      Canary_project_z3.mk_runner_spec ~source:src_stable distro
       |> with_cli_disabled cli_disabled
     in
     let steps_stable =
@@ -162,7 +162,7 @@ let action_cmd =
       ()
   in
   let run_sqlite ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_sqlite.project_spec in
+    let spec = with_cli_disabled cli_disabled Canary_project_sqlite.runner_spec in
     let steps =
       Canary_step_builder.derive_steps ~root ~project:"sqlite"
         ~langs:Canary_lang.[ OCaml; Python ]
@@ -183,7 +183,7 @@ let action_cmd =
      Canary_tiny_scenario's factory. project_name = "tiny/<name>"
      — one derive_steps + run_graph, no multi-variant. *)
   let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_zarith.project_spec in
+    let spec = with_cli_disabled cli_disabled Canary_project_zarith.runner_spec in
     let steps =
       Canary_step_builder.derive_steps ~root ~project:"zarith" spec
     in
@@ -191,7 +191,7 @@ let action_cmd =
       (prebuilt_run_info ~project:"zarith" ~version:"system" ~extra:[] steps)
   in
   let run_ssl ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_ssl.project_spec in
+    let spec = with_cli_disabled cli_disabled Canary_project_ssl.runner_spec in
     let steps =
       Canary_step_builder.derive_steps ~root ~project:"ssl" spec
     in
@@ -204,7 +204,7 @@ let action_cmd =
         Canary_project_llvm.llvm_source_dev
     in
     let spec =
-      Canary_project_llvm.mk_project_spec
+      Canary_project_llvm.mk_runner_spec
         ~source:Canary_project_llvm.llvm_source_dev distro
       |> with_cli_disabled cli_disabled
     in
@@ -225,7 +225,7 @@ let action_cmd =
         steps
     in
     let src_19 = Canary_project_llvm.llvm_source_stable in
-    let spec_19 = Canary_project_llvm.mk_project_spec ~source:src_19 distro
+    let spec_19 = Canary_project_llvm.mk_runner_spec ~source:src_19 distro
                   |> with_cli_disabled cli_disabled in
     let steps_19 =
       Canary_step_builder.derive_steps ~root ~project:"llvm/19"
