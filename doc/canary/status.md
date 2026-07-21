@@ -25,23 +25,24 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-*(Nothing in flight. Picking order (2026-07-20 rescope):*
+*Nothing in flight. Picking order (2026-07-20 rescope):*
 *milestone is a complete tiny + SSOT that other work cites*
 *("ssot-tiny-canary sync line"; sqlite/z3/llvm + writeup are*
-*second-tier). Cadence: code-first, doc-synced —*
-*each wish-list phase commit carries the SSOT/tiny.md sync*
-*bits it opens up.*
-*Task 2 project abstraction (was Cluster B / tiny.md §7.8)*
+*second-tier). Cadence: code-first, doc-synced — each*
+*wish-list phase commit carries the SSOT/tiny.md sync bits*
+*it opens up. Task 2 project abstraction (tiny.md §7.8)*
 *deferred; ROI marginal until §7.2 lands and more projects*
 *need the pattern.*
-*§7.2 Phase 1 + 2 + 3 shipped 2026-07-20:*
-*per-artifact mutation modules (SSOT §5.3), workspace dispatch*
-*(tiny.md §3.4), recipe synthesis from derived cells*
-*(`recipe_of_derived_cell` — 12 of 20 cells synthesize; 8*
-*empty awaiting Drop_c_symbol / Drop_python_attr / App*
-*primitives). Bs.4 continues 13/13; artifact-test 98/98.*
-*Next: §7.2 Phase 4 — fold `derived_scenario_specs` into*
-*`all_scenario_specs`, dedup against hand-listed Bs's.)*
+
+*§7.2 Phases 1-4 shipped 2026-07-20; chronicle in*
+*[worklog_2026_07.md](worklog/worklog_2026_07.md). Final*
+*state: `all_scenario_specs = 15 hand + 6 derived = 21`,*
+*coverage 11/20 filled, `tiny run` 20/21 PASS,*
+*artifact-test 98/98.*
+
+*Next candidate: §7.1 (fill remaining 9 empty cells —*
+*needs Drop_c_symbol / Drop_python_attr / App primitives*
+*+ c4 wiring for OCaml) or §7.4 (Sc.3-Sc.6 wiring).*
 
 ## 2. Near-term
 
@@ -49,10 +50,19 @@ Ordered rough priority.
 
 - **Tiny wish-list items** — see
   [`design/tiny.md`](design/tiny.md) §7 (picking-order table
-  at the top). Active pickup: `tiny_recipe` synthesis
-  (§7.2, un-postponed 2026-07-20), starting with Phase 1.
-  §7.1 (fill empty cells) + §7.4 (Sc.3-Sc.6) fall out
-  data-driven once §7.2 lands.
+  at the top). §7.2 shipped 2026-07-20; active pickup is
+  §7.1 (fill 9 remaining empty derived cells — three
+  blocker primitives to land). §7.4 (Sc.3-Sc.6) overlaps
+  §7.1.
+
+- **`new_project.md` revisit before onboarding a new project.**
+  §2 mechanics + §2.5 three-level guidance were last touched
+  in the derived-vs-hardcoded pass 2026-07-20; they still
+  describe the current `project_spec` shape but might want
+  another look against any upgrades (Task 2 recipe interface,
+  package_locator, store_config from §3) before actually
+  picking a Tier-1/Tier-2 target. Not a blocker for other
+  work; just a checkpoint when someone wants to add a project.
 
 - **Flavor-2 catalogue extension** —
   [`design/bad_scenario_flavors.md`](design/bad_scenario_flavors.md).

@@ -107,6 +107,38 @@ After landing: move from the queue table to "Done" above and update
 
 ---
 
+## 2.5 Scenario coverage — three levels, pick one
+
+New projects choose *how much* scenario coverage they want.
+Tiny is not the reference to copy; it's the framework's
+own regression suite. Pick the level that matches the
+project's purpose:
+
+| Level | What you write | Example | When it's right |
+|---|---|---|---|
+| **A. Positive-only** | `project_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`. | sqlite (system lib works; probe compiles) | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story. |
+| **B. One hand-coded failure prediction** | Level A + `Expect_compat_failure` inline in the project spec with hand-authored `inputs` list + `version_info`. | z3 (~10 LOC in `canary_project_z3.ml:541-551`, `parser_context` in the wheel), llvm (~18 LOC in `canary_project_llvm.ml:495-512`, `Opcode.UncondBr`) | You want to demonstrate ONE specific version drift on this project. Cheapest way to say "here's a real API break we caught". |
+| **C. Scenario matrix** | Level B + a full `canary_<name>_scenario.ml` with per-scenario recipes. **Also needs framework-side hookable factory (Task 2, deferred).** | tiny only — nobody else | You want *systematic* coverage of Sc.N × mutation-flavor cells for research or paper-artifact purposes. Currently only justified when the project is the framework's benchmark. |
+
+**Do not copy tiny's workspace/prepare/baseline files.**
+`canary_tiny_workspace.ml` + `_prepare.ml` + `_baseline.ml`
+are framework infrastructure for driving tiny's 21-scenario
+matrix through sandboxed builds — a *test harness* for the
+framework itself, not a template. Level A and B need
+neither. Level C would need a Task 2 landing first, so the
+matrix machinery is project-hookable rather than tiny-forked.
+
+**Effort ballpark** (per level, per project):
+
+- **A**: ~40 LOC via `canary_pattern_a.ml` (Pattern A: system lib + opam binding), ~600 LOC hand-written for Pattern C (source-built + opam-packaged, like z3/llvm).
+- **B**: A + ~15-30 LOC for the compat-failure declaration.
+- **C**: B + ~200-400 LOC per-project (recipes, watchlist wiring), **plus** Task 2's ~230 LOC framework work as prerequisite.
+
+For scenario mechanics + the derived-vs-hardcoded map see
+[`derived_vs_hardcoded.md`](derived_vs_hardcoded.md).
+
+---
+
 ## 3. Auto-generation plan (#29, #30, #32)
 
 Trigger: worth doing when project count reaches ~10. With 3–4 projects

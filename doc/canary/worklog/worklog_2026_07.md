@@ -432,3 +432,192 @@ refactor to use the new types) in the next session;
 Phases 3/4/5 (per-project refactors) as later, independent
 follow-ups. Small blast radius per session; easy bail-out
 mid-phase.
+
+### Rescope: Task 2 postponed → §7.2 picked up (2026-07-20)
+
+Reviewing Task 2 scope: extracting a project-hookable
+recipe interface for z3/llvm/sqlite ran ~230 LOC of
+plumbing for ~28 LOC of hand-coded predicates. Concluded
+ROI marginal until (a) more projects use the pattern
+(PyTorch, cvc5, …), (b) tiny's recipe machinery is
+concrete enough to lift, (c) expectation/contract model
+settles. sqlite/z3/llvm are "second-tier" per the
+**ssot-tiny-canary sync line** — flush from the
+tiny+SSOT+code trio once it stabilises; don't touch them
+until then.
+
+Operating principle laid down: work code-first, doc-synced
+— each wish-list phase commit carries the SSOT/tiny.md
+sync bits it opens up. Modeling questions (Sf/Ar alignment,
+c8 wiring, expectation shape, …) get resolved as side
+effects of code decisions, not as prerequisite doc rounds.
+
+Task 2 parked at `design/tiny.md §7.8`. Picked §7.2
+(`tiny_recipe` synthesis from an abstract cell) as the
+next active item.
+
+**Parked plan (moved from `design/tiny.md §7.8` on 2026-07-20 as
+part of the finish-flush pass; kept here so the design intent
+survives when we come back to it):**
+
+Sequel to Phase G. Phase G (2026-07-09) unified
+`Canary_scenario.scenario` — `.origin` replaced `.mutation`;
+nullary `Version_mismatch` and `Packaging` reserved. That
+was the *scenario*-side integration. The *recipe*-side gap
+remains:
+
+- Tiny defines `tiny_recipe` in
+  `canary_tiny_scenario.ml:60`:
+  `{ mutates; mutation; expected; violates }`. Factory
+  functions (`stores_of_entry`, `expectation_of_entry`,
+  `project_spec_of_entry`) derive the runnable `project_spec`
+  from it. `expectation_of_entry` reads `violates + language`,
+  delegates to `compat_inputs_of_contract ~lang c` for JSON
+  paths, wraps in `Expect_compat_failure { inputs;
+  version_info }`.
+- z3 / llvm / sqlite have **no parallel**. Their variants
+  hand-code `Expect_compat_failure` inline in the project
+  spec — llvm's stable variant spells out the predicted
+  substring by name (`canary_project_llvm.ml:495-512`, 18
+  lines: `Opcode.UncondBr` version_info); z3 stable Python
+  variant same shape (`canary_project_z3.ml:541-551`, 10
+  lines: `parser_context`). Structurally identical to
+  tiny's derivation, just typed out inline.
+
+Goal: lift tiny's recipe/factory pattern into a
+project-hookable interface so z3 / llvm / sqlite can supply
+their own recipes and inherit the uniform derivation.
+
+Phased plan (~230 LOC total; non-breaking per phase):
+
+| Phase | Scope | LOC |
+|---|---|---|
+| **1. Generic recipe shape** | New module `Canary_recipe` (or extend `Canary_scenario`) with project-agnostic fields: `type recipe = { violates; expected; mutates }`. `tiny_recipe` becomes `{ generic : recipe; concrete_pert : mutation option }` (concrete tiny extras stay tiny-specific). No behavior change. | ~50 |
+| **2. Project hooks + generic expectation deriver** | Extract `expectation_of_scenario ~hooks ~scenario`, where `hooks : { compat_inputs_of_contract; version_info_of_origin }` is project-supplied. Tiny becomes the reference implementation. Behavior byte-identical to today. | ~80 |
+| **3. llvm refactor** | Add `llvm_recipe` (or use generic directly) + `llvm_hooks` with opam-path-flavored `compat_inputs_of_contract`. Replace the hand-coded `Expect_compat_failure` with recipe-driven derivation. `Version_mismatch` origin becomes the natural fit. | ~40 |
+| **4. z3 refactor** | Same shape as llvm. Python variant (`Probe_binding Python`). | ~40 |
+| **5. sqlite refactor** | Smallest — positive-only, so just plug in hooks; no expectation change. Sanity that the interface fits both compat-failure and positive-only projects. | ~20 |
+
+Verification per phase: (1&2) `canary artifact-test` +
+`canary tiny run` (behavior-preserving); (3) `canary action
+llvm` — stable must still produce `Opcode.UncondBr` prediction;
+(4) `canary action z3` — `parser_context` prediction unchanged;
+(5) `canary action sqlite` — plain success.
+
+Prerequisite when this is picked up: run all three non-tiny
+projects locally to capture current behavior (catches
+bit-rot in the specs since R2 / Phase G).
+
+Out of scope for Task 2 itself: `scenario.actions` runtime
+sync (best as Task 2 follow-up), `Package` origin variant
+activation (needs a project that wants it — PyTorch tier-1).
+
+Note: §7.2 shipped 2026-07-20 with the current recipe
+shape. Task 2 will change the shape, so its plan may need
+re-baselining once picked up.
+
+### §7.2 Phases 1-4 shipped (2026-07-20)
+
+Four-phase remodel of tiny's mutation vocabulary + derived
+cells. Goal: make derived cells (from
+`Canary_scenario.derive_scenarios`) *runnable* rather than
+name-only, so §7.1 (fill empty cells) becomes data-driven
+instead of hand-authoring per Bs.
+
+**Phase 1 — per-artifact mutation modules
+(`canary_artifact_mutation.ml` rewrite, ~230 LOC + 200
+test LOC)**. Replaced the flat `mutation` type with
+`module Source | Native | Binding` — each artifact-flavor
+owns its own variants, `apply_cmds`, and constructor
+naming. Top-level union
+`Of_source | Of_native | Of_binding | Patch`.  Four
+parametric variants land today: `Rename_c_symbol`,
+`Rename_version_tag`, `Soname_bump`, `Drop_ocaml_val`.
+`Drop_c_symbol` + `Drop_python_attr` deferred as
+*missing but visible* — return `None` from synthesis
+rather than fake an implementation; the design principle
+"missing-ness visible" carries through. Byte-identical
+parity to existing tiny patches verified via `diff -r`
+regression tests
+(`canary_artifact_test.ml:mutation_regression_tests`).
+Bug caught mid-flight: `patch` command couldn't find
+patch file after `cd`; fixed by absolutizing via
+`readlink -f` and wrapping in a subshell so the `cd`
+didn't leak. User feedback along the way: *"mutation is
+just our perspective; from a more artifact-centric
+perspective, it's just another artifact"* — motivated the
+per-artifact submodule layout.
+
+**Phase 2 — workspace dispatch
+(`canary_tiny_workspace.ml`, ~30 LOC net)**. `run_prepare`
+now dispatches through per-artifact `apply_cmds`: source /
+binding mutations pre-build, native mutations post-build.
+Retired the ad-hoc `apply_soname_bump` local wrapper.
+Bs.4's recipe migrated to full-name SONAMEs
+(`libtiny.so.1.0 → libtiny.so.2.0`).  Bs.4 stays 13/13.
+`Of_source` / `Of_binding` dispatch is dead-code today
+until Phase 3 emits recipes that use them.
+
+**Phase 3 — recipe synthesis
+(`recipe_of_derived_cell` in `canary_tiny_scenario.ml`,
+~150 LOC)**. Enumerated `(target, kind) → mutation` table:
+Source × On_artifact Source → `rename_c_symbol
+tiny_sum→tiny_total`; Lib × On_artifact Lib →
+`soname_bump 1.0→2.0`; Binding OCaml × On_artifact Binding
+OCaml → `drop_ocaml_val sum`. Other cells return `None`
+until their primitive lands (Binding Python needs
+`Drop_python_attr`; App has no primitive; Headers /
+On_behavior stay `Patch`-flavored).
+`derived_scenario_specs` enumerates all 20 cells and
+returns the ones that synthesize. Default target
+(`tiny_sum` for source, `sum` for mli) hardcoded per the
+2026-07-09 decision; heuristic picking from
+`api_source.stable_symbols` is future work.
+
+**Phase 4 — fold derived cells into `all_scenario_specs`
+(~50 LOC + three bug-fix rounds)**. Concatenates hand +
+derived, deduplicating derived against hand via
+`matches_derived_cell`.  Bugs hit and fixed in flight:
+
+1. **Name collision** — `derive_scenario` was using
+   `good.name` to build derived-cell names, but
+   `good.name` isn't unique across Sc.N × language (both
+   Sc.2.OCaml and Sc.2.Python name their step
+   `build_binding`). Fix: use `good.id`. Now
+   `mutate_<kind>_at_<good.id>` naming convention.
+2. **Manifest inheritance** — derived cells inherited
+   `manifest = Unknown_gap` from the base `scenario`
+   record, so `has_probe_manifestation` returned false →
+   the factory fell through to `Expect_success` → probe
+   actually failed → unexpected_failure across the board.
+   Fix: `scenario_spec_of_derived_cell` rebuilds the cell's
+   origin with `manifest = Possible cell.belongs_to;
+   detector = Wired first_violated_contract`.
+3. **OCaml Lib cells failing** —
+   `compat_inputs_of_contract ~lang:OCaml C4` returns
+   `None` (tiny convention; c4 not wired for OCaml). Fix:
+   guard `(Lib, On_artifact Lib)` synthesis on Python
+   being in the cell's langs, so Sc.2/4/6.OCaml Lib cells
+   return None until c4 wires for OCaml.
+
+Final counts: 9 cells synthesize, 3 dedup against
+Bs.1/4/8-13 → **6 net new derived cells**.
+`all_scenario_specs = 15 hand + 6 derived = 21`. Coverage
+in `tiny list`: **11/20 filled** (up from 5/20), 9 empty
+awaiting `Drop_c_symbol` / `Drop_python_attr` / App
+primitives plus OCaml-c4 wiring. Startup assertions guard
+the counts (`expected_some=9`, `expected_none=11`,
+`expected_derived_after_dedup=6`) so silent drift is
+caught at module load.
+
+`tiny run` reports **20/21 PASS**. The one fail is
+`type_wrong` (c6 flake in hand-authored Bs.5, unrelated
+to Phase 4).  `artifact-test` stays 98/98.
+
+**Doc-sync riders landed with each phase**:
+- Phase 1 → SSOT §5.3 "Mutation shapes (parametric
+  vocabulary)"
+- Phase 2 → tiny.md §3.4 "Mutation dispatch in workspace
+  prep"
+- Phase 3 → SSOT §5.2 synthesis-path pointer
+- Phase 4 → tiny.md §6 coverage recount (11/20 filled)

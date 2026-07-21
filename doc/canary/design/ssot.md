@@ -312,11 +312,15 @@ built from the parametric mutation vocabulary of §5.3.
 Cells whose (target, kind) has an implemented primitive
 synthesize; cells whose primitive is missing (§5.3's
 "Missing on purpose") stay [None] — the empty slot stays
-visibly empty. Today 12 of 20 tiny cells synthesize; 8
-remain awaiting `Drop_c_symbol` / `Drop_python_attr` /
-App-level primitives. Phase 4 will fold the synthesized
-`derived_scenario_specs` into `all_scenario_specs`,
-deduping against hand-listed Bs's.
+visibly empty. After §7.2 Phase 4 (2026-07-20)
+`all_scenario_specs = 15 hand + 6 derived = 21` and
+coverage stands at 11 of 20 cells filled; 9 remain
+awaiting `Drop_python_attr` / App-level / helper primitives
+plus c4 wiring for OCaml. See
+[`derived_vs_hardcoded.md`](derived_vs_hardcoded.md) for
+the full field-by-field derived-vs-hand map, and
+[`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
+for the blocker-primitive breakdown.
 
 ### 5.3 Mutation shapes (parametric vocabulary)
 
