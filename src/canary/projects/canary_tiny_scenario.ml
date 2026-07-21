@@ -1810,21 +1810,16 @@ let project_spec_of_name
 
 (** Tiny's top-level [project] bundle (Task 2 Step 1, 2026-07-21) —
     the [Canary_project.project] value at the top of SSOT §6.1's
-    operational taxonomy. Aggregates the pieces already defined in
-    this module so a generic runner (future work) can iterate:
+    operational taxonomy.
 
-    {[
-      tiny_project.scenarios         (* the 22 concrete scenarios *)
-      tiny_project.contract_bindings (* the 8-row binding table *)
-    ]}
-
-    Nothing else changes yet: [canary_main.ml]'s [tiny run] still
-    walks [all_scenario_specs] directly. The bundle exists so that
-    (a) the [project] type has at least one concrete inhabitant,
-    (b) subsequent renames of [Canary_step_builder.project_spec] can
-    proceed without confusion about which [project] means what. *)
-let tiny_project : scenario_spec Canary_project.project = {
+    The concrete monomorphic shape only carries [name] and
+    [contract_bindings]. Tiny's scenarios stay at the module level
+    (namespace-owned by [Canary_tiny_scenario.all_scenario_specs])
+    rather than embedded in the shared type — see the module
+    docstring in [canary_project.ml] for why. Nothing changes at
+    the runner level: [canary_main.ml]'s [tiny run] still walks
+    [all_scenario_specs] directly. *)
+let tiny_project : Canary_project.project = {
   name = "tiny";
-  scenarios = all_scenario_specs;
   contract_bindings = tiny_contract_bindings;
 }

@@ -530,11 +530,27 @@ on different levels of this hierarchy and should not be confused:
 `project_spec`'s current name predates the top-level `project` type;
 Task 3 renames it to `runner_spec` (or `variant_spec`) once the
 `project` type is settled. Ownership shape (2026-07-21 decision):
-**project owns scenarios**, not the reverse — a scenario is tied to
-what it exercises, and a bundle-owner is cleaner than a shared
-reference. Sc.N patterns (project-agnostic) live in
+**project owns scenarios semantically** (Model A) — a scenario is
+tied to what it exercises. But the concrete `scenario_spec` types
+(tiny_recipe for tiny; z3/llvm variants) live in `projects/`; the
+top-level `project` type sits in `action/` and can't reference them
+without a layer break or polymorphism. Resolution (2026-07-21
+concrete-monomorphic decision): the type carries only what can be
+concretely shared (`name`, `contract_bindings`); each project's own
+module owns its scenarios directly. When cross-project uniform
+iteration earns its keep (or when Task 3 rename lands + we want to
+adapt to old `project_spec`), add a variant field to `project` and
+move the module to `projects/` if needed.
+
+Sc.N patterns (project-agnostic) live in
 `Canary_scenario.good_scenarios`; concrete scenarios (Bs.N, variants)
-sit under their owning project.
+sit under their owning project's module.
+
+**Scenario ≡ variant.** Same middle-level slot. Tiny's factory
+produces one runner_spec per scenario; z3/llvm's `mk_project_spec
+~source` produces one per variant. `Canary_run_info.run_project_multi`
+consumes both under the same `variants` list. Whatever the
+per-project module calls them, they occupy the same taxonomy row.
 
 ### 6.2 Code term clashes to resolve (rename map)
 

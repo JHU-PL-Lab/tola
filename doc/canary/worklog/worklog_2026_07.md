@@ -1050,3 +1050,72 @@ artifact-test 101/101 unchanged.
 SSOT §6.1 taxonomy updated: `project` added as top row; naming
 distinction between `project` and `project_spec` documented
 explicitly.
+
+### Task 2 Step 1 refinement — concrete monomorphic project (2026-07-21)
+
+User feedback after the polymorphic
+`('scenario_spec, 'info) project` shape landed: prefers
+concrete types over polymorphism; the variant-vs-scenario framing
+was already unified (they occupy the same taxonomy slot), so no
+need to parametrize on `'scenario_spec`. Also flagged a
+chicken-and-egg risk in the shape (project owns scenarios ↔
+scenarios computed from project data), noting the sub-field
+pattern used for `stores` in the old project_spec as the
+resolution.
+
+**Taxonomy confirmed** (user 2026-07-21):
+- `project` = aggregation bundle.
+- `scenario ≡ variant` = middle-level runnable configuration.
+  Tiny's factory generates one runner_spec per scenario; z3/llvm
+  generate one per variant. `run_project_multi` consumes both
+  under the same `variants` list.
+- No separate "meta-project" concept — scenario is the label at
+  that level. The "meta-project" feeling comes from the current
+  name `project_spec` (Task 3 rename → `runner_spec`).
+
+**Type refined** to concrete monomorphic (drops `'a` polymorphism
+and `scenarios` field):
+
+```ocaml
+type project = {
+  name : string;
+  contract_bindings : contract_binding list;
+}
+```
+
+Rationale: `scenarios` field would need either polymorphism
+(rejected), a variant enum (needs concrete scenario_spec types
+visible → module must move to `projects/`), or an opaque wrapper
+(overkill). Deferred until it earns its keep — likely alongside
+the variant case added for adapting to old `project_spec` when
+Task 3 rename lands.
+
+Each project's own module keeps ownership of its scenarios
+(tiny: `all_scenario_specs`; z3/llvm: `mk_project_spec ~source`
+produces variants). Semantic ownership (Model A) preserved; the
+storage decision is separated from the ownership decision.
+
+`api_source` still deliberately absent (would create a downward
+layer dependency from `action/` to `tool/`).
+
+**tiny_project simplified**:
+
+```ocaml
+let tiny_project : Canary_project.project = {
+  name = "tiny";
+  contract_bindings = tiny_contract_bindings;
+}
+```
+
+**Chicken-and-egg** neutralized by this shape: no `scenarios`
+field means no derived-from-project-info circularity. When a
+project needs project-specific scenario derivation, the sub-field
+pattern applies at the per-project module level (each project's
+module can carry both raw info sub-fields and derived scenario
+lists, decoupled by its own local functions).
+
+Verified: build clean, tiny run 21/22 PASS unchanged,
+artifact-test 101/101 unchanged.
+
+SSOT §6.1 augmented: naming-distinction paragraph now explains
+the concrete-monomorphic rationale + notes scenario ≡ variant.
