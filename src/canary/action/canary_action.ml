@@ -1,21 +1,21 @@
 (** [Canary_action] — the action-graph schema.
 
     The {i first} of the two main action-layer files. Defines what an
-    action is (the [rule] vocabulary lives in {!Canary_basic}) and how
+    action is (the [action] vocabulary lives in {!Canary_basic}) and how
     artifact nodes chain together into the universal graph. The
     {i runner} half lives in {!Canary_runner}.
 
     Split from [Canary] on 2026-06-01 (Phase 5); renamed from
-    [Canary_action_rule] to [Canary_action] shortly after as part of
+    [Canary_action_graph] to [Canary_action] shortly after as part of
     the action/runner naming pass. Holds:
     - [mk_node], [node_tag]: artifact-node constructor and stable string
       tag (used for dedup + diagram labels).
-    - [type action_rule]: the rule list + materialised pools per
+    - [type action_graph]: the action list + materialised pools per
       [artifact_kind].
-    - [pool_get], [store_rules]: standard rule sets and pool access.
-    - [make_action_rule]: instantiate an action_rule by applying every
-      rule to a starting source.
-    - [nodes_of_action_rule]: flatten the pools to a deduped node list.
+    - [pool_get], [store_actions]: standard action sets and pool access.
+    - [make_action_graph]: instantiate an action_graph by applying every
+      action to a starting source.
+    - [nodes_of_action_graph]: flatten the pools to a deduped node list.
     - [type node_status]: per-step verdict for diagram rendering. *)
 
 open Base
@@ -42,18 +42,18 @@ let rec node_tag (n : artifact_node) =
   | None -> with_built
   | Some rt -> [%string "%{with_built}[rt=%{node_tag rt}]"]
 
-type action_rule = {
-  rules : rule list;
+type action_graph = {
+  actions : action list;
   pools : (artifact_kind * artifact_node list) list;
 }
 
 let pool_get ar kind =
   List.Assoc.find ar.pools ~equal:Poly.equal kind |> Option.value ~default:[]
 
-(* Standard rule sets.
+(* Standard action sets.
    ~langs: binding languages this project supports (external loop).
-   Each lang gets its own Build_binding / Fetch / Publish / Probe rules. *)
-let store_rules ~langs =
+   Each lang gets its own Build_binding / Fetch / Publish / Probe actions. *)
+let store_actions ~langs =
   [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
   @ List.concat_map langs ~f:(fun lang ->
       [ Build_binding lang; Fetch (Binding lang);
@@ -61,7 +61,7 @@ let store_rules ~langs =
         Build_app { lang }; Probe_app { lang } ])
   @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
 
-let make_action_rule ~rules ~versions ~name ~source () =
+let make_action_graph ~actions ~versions ~name ~source () =
   let vs = version_suffix in
   let get pools kind =
     List.Assoc.find pools ~equal:Poly.equal kind |> Option.value ~default:[]
@@ -71,8 +71,8 @@ let make_action_rule ~rules ~versions ~name ~source () =
     List.Assoc.add pools ~equal:Poly.equal kind (existing @ nodes)
   in
   let pools =
-    List.fold rules ~init:[] ~f:(fun pools rule ->
-        match rule with
+    List.fold actions ~init:[] ~f:(fun pools action ->
+        match action with
         | Build_lib ->
             let nodes =
               List.map versions ~f:(fun v ->
@@ -121,16 +121,16 @@ let make_action_rule ~rules ~versions ~name ~source () =
         | Configure | Scan_sources | Install_lib | Publish _
         | Probe_lib | Probe_binding _ | Probe_app _ -> pools)
   in
-  { rules; pools }
+  { actions; pools }
 
-let nodes_of_action_rule (ar : action_rule) =
+let nodes_of_action_graph (ar : action_graph) =
   List.concat_map ar.pools ~f:snd
   |> List.dedup_and_sort ~compare:(fun a b ->
       String.compare (node_tag a) (node_tag b))
 
 (** Per-step verdict the diagram renderer uses. Lives here because the
     natural place to attach status to an action graph is alongside the
-    rule/node definitions; the actual mermaid emission lives in
+    action/node definitions; the actual mermaid emission lives in
     [Canary_diagram]. *)
 type node_status =
   | Done       (* expected success, confirmed *)

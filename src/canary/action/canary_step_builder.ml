@@ -1,18 +1,18 @@
 (** [Canary_runner] — the action-graph runner.
 
     The {i second} of the two main action-layer files. Takes the
-    project's {!runner_spec} (per-rule shell commands + api_source +
+    project's {!runner_spec} (per-action shell commands + api_source +
     expectations), translates the action-graph schema in
-    {!Canary_action} into concrete [action_step]s via {!derive_steps},
+    {!Canary_action} into concrete [step]s via {!derive_steps},
     and executes them with {!run_step} / {!run_graph}.
 
     Renamed from [Canary_action] on 2026-06-01 as part of the
     action/runner naming pass: [Canary_action] now holds the schema
-    (rules + pools), [Canary_runner] holds the execution.
+    (actions + pools), [Canary_runner] holds the execution.
 
     Holds:
     - [type runner_spec] + [empty_runner_spec] + [no_source]: the
-      per-rule contract every project fills in.
+      per-action contract every project fills in.
     - [run_step], [run_graph], [merge_step_statuses]: the step
       executor.
     - [output_dir_for], [project_dir_of], logging glue.
@@ -20,10 +20,10 @@
       [probe_ocaml_cmd]) — project-spec building blocks.
     - [has_file] + [check_build_lib] / [check_build_binding] /
       [check_markers]: [check_post] compositors.
-    - [default_check_post], [marker_of_rule]: per-rule default
+    - [default_check_post], [marker_of_action]: per-action default
       verdict logic.
     - [derive_steps]: the bridge between the action-graph schema and
-      a concrete [action_step list]. *)
+      a concrete [step list]. *)
 
 open Base
 open Canary_basic
@@ -45,10 +45,10 @@ open Canary
    - Pm { lang; pm }: depends on pack_binding or fetch_binding (PM-installed) *)
 
 (* Tag for a split probe step: probe_<lang>_binding[_<pm>].
-   Build_tree/Staged use the rule's lang; Pm entries use the location's lang.
-   This matches string_of_rule (Probe (Binding lang)) for the Build_tree base case. *)
+   Build_tree/Staged use the action's lang; Pm entries use the location's lang.
+   This matches string_of_action (Probe (Binding lang)) for the Build_tree base case. *)
 let tag_of_probe_lib_location loc =
-  let base = string_of_rule Probe_lib in
+  let base = string_of_action Probe_lib in
   match loc with
   | Build_tree -> base
   | Staged -> base ^ "_staged"
@@ -56,7 +56,7 @@ let tag_of_probe_lib_location loc =
   | Pm (Lang_pm _) -> failwith "tag_of_probe_lib_location: Lang_pm is not a lib probe location"
 
 let tag_of_probe_location ~lang location =
-  let base l = string_of_rule (Probe_binding l) in
+  let base l = string_of_action (Probe_binding l) in
   match location with
   | Build_tree -> base lang
   | Staged -> base lang ^ "_staged"
@@ -72,18 +72,18 @@ let probe_from_store = function
 
 
 
-(* DESIGN NOTE — adding new per-rule fields to runner_spec:
-   When a property of an action_step varies per-location for multi-probe
-   rules (probe_binding has multiple location entries), the property's
+(* DESIGN NOTE — adding new per-action fields to runner_spec:
+   When a property of an step varies per-location for multi-probe
+   actions (probe_binding has multiple location entries), the property's
    accessor in runner_spec MUST take `location option` from the start.
-   Both [expectation] and [summary] originally took only [rule] and had
-   to be retrofitted to [rule -> location option -> ...] when their first
+   Both [expectation] and [summary] originally took only [action] and had
+   to be retrofitted to [action -> location option -> ...] when their first
    per-location use case appeared (sqlite/z3/llvm pip probes). Mismatch
-   between rule and the location entry led to silent miscategorisation
+   between action and the location entry led to silent miscategorisation
    (pip probes wrapped as Expect_failure). For any future field of shape
-   `rule -> X` ask: could two probe_binding variants want different X?
+   `action -> X` ask: could two probe_binding variants want different X?
    If yes, take location option upfront. [check_post] and [symbol_check]
-   are still rule-only because no current project needs per-location
+   are still action-only because no current project needs per-location
    variation; revisit when one does. *)
 type runner_spec = {
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
@@ -104,7 +104,7 @@ type runner_spec = {
      downstream reference [scan_sources/<file>.json] via the
      [Typed_*] inspect_input cases. *)
   scan_sources : (output_dir:string -> variant_key:string -> string) option;
-  scan_sources_after : Canary_basic.rule option;
+  scan_sources_after : Canary_basic.action option;
   configure : (output_dir:string -> variant_key:string -> string) option;
   (* Headers: public C API headers consumed by build_binding.
      build_headers: headers from the source/build tree (after configure).
@@ -124,16 +124,16 @@ type runner_spec = {
   probe_lib : (location * (output_dir:string -> variant_key:string -> string)) list;
   probe_binding : (Canary_lang.lang * location * (output_dir:string -> variant_key:string -> string)) list;
   probe_app : (output_dir:string -> variant_key:string -> string) option;
-  (* Optional per-rule check_post override. None = use default (non-empty dir). *)
-  check_post : (rule -> (output_dir:string -> variant_key:string -> bool) option);
-  (* Per-rule expectation. Default: Expect_success.
-     loc carries the per-location variant for multi-probe rules (e.g., a
+  (* Optional per-action check_post override. None = use default (non-empty dir). *)
+  check_post : (action -> (output_dir:string -> variant_key:string -> bool) option);
+  (* Per-action expectation. Default: Expect_success.
+     loc carries the per-location variant for multi-probe actions (e.g., a
      Probe Binding that has opam AND pip variants — the opam one may be
      Expect_failure while the pip one is Expect_success). None for
-     single-location rules. *)
-  expectation : rule -> location option -> step_expectation;
-  (* Optional per-rule artifact symbol check. None = no symbol check. *)
-  symbol_check : (rule -> symbol_check option);
+     single-location actions. *)
+  expectation : action -> location option -> step_expectation;
+  (* Optional per-action artifact symbol check. None = no symbol check. *)
+  symbol_check : (action -> symbol_check option);
   (** Per-language user-facing package name(s) carrying the
       {i s4 user_binding} surface for this project. Used by
       [derive_steps] to auto-generate an inspector step after each
@@ -157,12 +157,12 @@ type runner_spec = {
      Used by stable-fetch specs to warn that watchlists were declared for the
      dev version. Ignored when the explicit [summary] override is used. *)
   inspect_note : string option;
-  (* Explicit per-rule inspect override. Wins over auto-generation.
+  (* Explicit per-action inspect override. Wins over auto-generation.
      Use for native probe summaries (lib path is always project-specific)
      or any case needing custom logic beyond what api_source provides.
-     loc is Some _ for per-location probe variants, None for single-location rules.
+     loc is Some _ for per-location probe variants, None for single-location actions.
      See doc/canary/design/api_surface.md. *)
-  inspect : rule -> location option -> (output_dir:string -> variant_key:string -> string) option;
+  inspect : action -> location option -> (output_dir:string -> variant_key:string -> string) option;
   (* Human-readable artifact name per kind for diagram labels. *)
   artifact_name : artifact_kind -> string option;
   (** Per-project list of surface-theory contracts this project opts out
@@ -211,8 +211,8 @@ let no_source spec =
     probe_lib = List.filter spec.probe_lib ~f:(fun (loc, _) ->
         match loc with Build_tree | Staged -> false | _ -> true) }
 
-(* Look up the script for a rule *)
-let script_of_rule spec = function
+(* Look up the script for a action *)
+let script_of_action spec = function
   | Fetch Source -> spec.fetch_source
   | Configure -> spec.configure
   | Scan_sources -> spec.scan_sources
@@ -335,8 +335,8 @@ let check_markers markers ~output_dir ~variant_key =
   List.for_all markers ~f:(fun m ->
     has_file ~output_dir (Canary_basic.variant_file ~variant_key m))
 
-(* ── Default check_post per rule category ──
-   Derived from the rule type. Projects can override via runner_spec.check_post.
+(* ── Default check_post per action category ──
+   Derived from the action type. Projects can override via runner_spec.check_post.
 
    | Rule category | Marker file | What it means |
    |---------------|-------------|---------------|
@@ -346,7 +346,7 @@ let check_markers markers ~output_dir ~variant_key =
    | Probe _       | probe.log   | Test ran and produced output |
 *)
 
-let marker_of_rule = function
+let marker_of_action = function
   | Fetch Source -> "source.ok"
   | Configure -> "conf.ok"
   | Scan_sources -> "scan.ok"
@@ -359,13 +359,13 @@ let marker_of_rule = function
   | Publish _ -> "pack.ok"
   | Probe_lib | Probe_binding _ | Probe_app _ -> "probe.log"
 
-let default_check_post rule ~output_dir ~variant_key =
-  has_file ~output_dir (Canary_basic.variant_file ~variant_key (marker_of_rule rule))
+let default_check_post action ~output_dir ~variant_key =
+  has_file ~output_dir (Canary_basic.variant_file ~variant_key (marker_of_action action))
 
 let out_of ~root ~project ~tag =
   output_dir_for ~root ~project ~tag
 
-let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
+let mk_step ~root ~project ~cache_project ~tag ?output_tag ~action ~deps ~cmd
     ?(expectation = Expect_success) ?(symbol_check = None)
     ?(disabled_contracts = []) ~check_post () =
   let output_tag = Option.value output_tag ~default:tag in
@@ -381,7 +381,7 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     output_dir;
     project_dir;
     variant_id;
-    rule; deps;
+    action; deps;
     expectation; symbol_check;
     disabled_contracts;
     check_pre = (fun () ->
@@ -392,18 +392,18 @@ let mk_step ~root ~project ~cache_project ~tag ?output_tag ~rule ~deps ~cmd
     check_post;
   }
 
-(* ── Derive action steps from store_rules + runner_spec ── *)
+(* ── Derive action steps from store_actions + runner_spec ── *)
 
-let deps_of_rule spec rule =
-  let has r = Option.is_some (script_of_rule spec r) in
-  let tag r = string_of_rule r in
+let deps_of_action spec action =
+  let has r = Option.is_some (script_of_action spec r) in
+  let tag r = string_of_action r in
   let scan_or_fetch_source () =
     if has (Fetch Source) then
       Some (if Option.is_some spec.scan_source then "scan_source"
             else tag (Fetch Source))
     else None
   in
-  match rule with
+  match action with
   | Fetch _ -> []
   | Configure ->
       List.filter_opt [ scan_or_fetch_source () ]
@@ -462,7 +462,7 @@ let deps_of_rule spec rule =
       in
       List.filter_opt [ binding_dep; lib_dep ]
   | Publish kind ->
-      let produce_rule = match kind with
+      let produce_action = match kind with
         | Headers -> if has Build_headers then Some Build_headers else Some (Fetch Headers)
         | Lib -> if has Build_lib then Some Build_lib else Some (Fetch Lib)
         | Binding lang ->
@@ -477,7 +477,7 @@ let deps_of_rule spec rule =
         | Source -> Some (Fetch Source)
       in
       Option.to_list
-        (Option.bind produce_rule ~f:(fun r ->
+        (Option.bind produce_action ~f:(fun r ->
              if has r then Some (tag r) else None))
   | Probe_lib ->
       let produce_dep =
@@ -514,8 +514,8 @@ let deps_of_rule spec rule =
 (* Deps for a specific probe entry: Build_tree depends on build_binding,
    all other locations depend on pack_binding or fetch_binding. *)
 let deps_of_probe_entry spec ~lang loc =
-  let has r = Option.is_some (script_of_rule spec r) in
-  let tag r = string_of_rule r in
+  let has r = Option.is_some (script_of_action spec r) in
+  let tag r = string_of_action r in
   let produce_dep = match loc with
     | Build_tree ->
         if has (Build_binding lang) then Some (tag (Build_binding lang)) else None
@@ -532,8 +532,8 @@ let deps_of_probe_entry spec ~lang loc =
   List.filter_opt [ produce_dep; runtime_lib_dep ]
 
 let deps_of_probe_lib_entry spec loc =
-  let has r = Option.is_some (script_of_rule spec r) in
-  let tag r = string_of_rule r in
+  let has r = Option.is_some (script_of_action spec r) in
+  let tag r = string_of_action r in
   let produce_dep = match loc with
     | Build_tree -> if has Build_lib then Some (tag Build_lib) else None
     | Staged     -> if has Install_lib then Some (tag Install_lib) else None
@@ -556,17 +556,17 @@ let check_api_consistency (spec : runner_spec) =
         if not any_source_dir then
           failwith "api_source: runner_spec has build_binding but no binding_api declares source_dir"
 
-let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : runner_spec) : action_step list =
+let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang.[ OCaml ]) (spec : runner_spec) : step list =
   check_api_consistency spec;
   let seen = Hashtbl.create (module String) in
-  let mk_one ~tag ~rule ~deps ~cmd =
-    let check_post = match spec.check_post rule with
+  let mk_one ~tag ~action ~deps ~cmd =
+    let check_post = match spec.check_post action with
       | Some cp -> cp
-      | None -> default_check_post rule
+      | None -> default_check_post action
     in
-    let expectation = spec.expectation rule None in
-    let symbol_check = spec.symbol_check rule in
-    mk_step ~root ~project ~cache_project ~tag ~rule ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts ()
+    let expectation = spec.expectation action None in
+    let symbol_check = spec.symbol_check action in
+    mk_step ~root ~project ~cache_project ~tag ~action ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts ()
   in
   (* Optional follow-up step that writes a summary file for an artifact.
      Writes into the PARENT's output_dir (alongside probe.log) rather than
@@ -575,7 +575,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
      [tag_suffix] is appended to parent_tag (e.g. "_inspect", "_stub_inspect");
      [filename] is the basename written by [inspect_cmd] (e.g. "inspect.json",
      "stub_inspect.json"). The cmd is responsible for redirecting to that file. *)
-  let mk_inspect ~parent_tag ~rule ~tag_suffix ~base_name ~inspect_cmd =
+  let mk_inspect ~parent_tag ~action ~tag_suffix ~base_name ~inspect_cmd =
     let tag = parent_tag ^ tag_suffix in
     (* base_name is the variant-independent base (e.g. "inspect", "inspect_stub").
        The actual filename is base_name + "_" + variant_key + ".json" at run time. *)
@@ -583,7 +583,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       has_file ~output_dir (Canary_basic.filename ~variant_key ~base:base_name ~ext:"json")
     in
     mk_step ~root ~project ~cache_project ~tag
-      ~output_tag:parent_tag ~rule
+      ~output_tag:parent_tag ~action
       ~deps:[ parent_tag ]
       ~cmd:inspect_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
@@ -601,7 +601,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
      base_name is the variant-independent part of the output filename:
        "inspect"      → summary.json / summary_19.json
        "inspect_stub" → inspect_stub.json / inspect_stub_19.json   (type-first) *)
-  let auto_binding_summaries rule
+  let auto_binding_summaries action
       : (string * string * (output_dir:string -> variant_key:string -> string)) list =
     match spec.api_source with
     | None -> []
@@ -650,7 +650,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
           in
           [ ("_inspect", "inspect", py) ]
         in
-        match rule with
+        match action with
         | Fetch (Binding OCaml) | Publish (Binding OCaml) ->
             (match List.Assoc.find spec.binding_user_facing_pkg
                      ~equal:Poly.equal Canary_lang.OCaml with
@@ -665,19 +665,19 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
   in
   (* spec.inspect is the explicit override (legacy, single-summary). When
      present, it wins and we skip auto generation entirely. *)
-  let attach_inspect ~parent_tag ~rule ?loc base_step =
-    match spec.inspect rule loc with
+  let attach_inspect ~parent_tag ~action ?loc base_step =
+    match spec.inspect action loc with
     | Some c ->
         [ base_step;
-          mk_inspect ~parent_tag ~rule ~tag_suffix:"_inspect"
+          mk_inspect ~parent_tag ~action ~tag_suffix:"_inspect"
             ~base_name:"inspect" ~inspect_cmd:c ]
     | None ->
-        let summaries = auto_binding_summaries rule in
+        let summaries = auto_binding_summaries action in
         if List.is_empty summaries then [ base_step ]
         else
           base_step ::
           List.map summaries ~f:(fun (tag_suffix, base_name, inspect_cmd) ->
-              mk_inspect ~parent_tag ~rule ~tag_suffix ~base_name ~inspect_cmd)
+              mk_inspect ~parent_tag ~action ~tag_suffix ~base_name ~inspect_cmd)
   in
   (* scan_source: verifies api_source header/binding claims post-fetch.
      Shares fetch_source's output dir; configure/build depend on it. *)
@@ -686,35 +686,35 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       has_file ~output_dir (Canary_basic.variant_file ~variant_key "scan.ok")
     in
     mk_step ~root ~project ~cache_project ~tag:"scan_source"
-      ~output_tag:fetch_tag ~rule:(Fetch Source)
+      ~output_tag:fetch_tag ~action:(Fetch Source)
       ~deps:[ fetch_tag ]
       ~cmd:scan_cmd ~check_post ~expectation:Expect_success
       ~symbol_check:None ~disabled_contracts:spec.disabled_contracts ()
   in
-  let raw_steps = List.concat_map (store_rules ~langs) ~f:(fun rule ->
-      let tag = string_of_rule rule in
+  let raw_steps = List.concat_map (store_actions ~langs) ~f:(fun action ->
+      let tag = string_of_action action in
       if Hashtbl.mem seen tag then []
       else
         (* Probe Lib / Probe Binding: expand per-location entries.
-           Single entry uses the canonical rule tag; multiple expand to per-location tags. *)
-        match rule with
+           Single entry uses the canonical action tag; multiple expand to per-location tags. *)
+        match action with
         | Probe_lib ->
             Hashtbl.set seen ~key:tag ~data:true;
             List.concat_map spec.probe_lib ~f:(fun (loc, cmd) ->
                 let ptag = if List.length spec.probe_lib = 1 then tag
                            else tag_of_probe_lib_location loc in
                 let deps = deps_of_probe_lib_entry spec loc in
-                let check_post = match spec.check_post rule with
+                let check_post = match spec.check_post action with
                   | Some cp -> cp
                   | None -> fun ~output_dir ~variant_key ->
                       has_file ~output_dir
                         (Canary_basic.variant_file ~variant_key "probe.log")
                 in
-                let expectation = spec.expectation rule (Some loc) in
-                let symbol_check = spec.symbol_check rule in
-                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
+                let expectation = spec.expectation action (Some loc) in
+                let symbol_check = spec.symbol_check action in
+                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
-                attach_inspect ~parent_tag:ptag ~rule ~loc base)
+                attach_inspect ~parent_tag:ptag ~action ~loc base)
         | Probe_binding lang ->
             Hashtbl.set seen ~key:tag ~data:true;
             let entries = List.filter spec.probe_binding
@@ -723,26 +723,26 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let ptag = if List.length entries = 1 then tag
                            else tag_of_probe_location ~lang loc in
                 let deps = deps_of_probe_entry spec ~lang loc in
-                let check_post = match spec.check_post rule with
+                let check_post = match spec.check_post action with
                   | Some cp -> cp
                   | None -> fun ~output_dir ~variant_key ->
                       has_file ~output_dir
                         (Canary_basic.variant_file ~variant_key "probe.log")
                 in
-                let expectation = spec.expectation rule (Some loc) in
-                let symbol_check = spec.symbol_check rule in
-                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~rule
+                let expectation = spec.expectation action (Some loc) in
+                let symbol_check = spec.symbol_check action in
+                let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
-                attach_inspect ~parent_tag:ptag ~rule ~loc base)
+                attach_inspect ~parent_tag:ptag ~action ~loc base)
         | _ ->
-            match script_of_rule spec rule with
+            match script_of_action spec action with
             | None -> []
             | Some cmd ->
                 Hashtbl.set seen ~key:tag ~data:true;
-                let base = mk_one ~tag ~rule ~deps:(deps_of_rule spec rule) ~cmd in
-                let steps = attach_inspect ~parent_tag:tag ~rule base in
+                let base = mk_one ~tag ~action ~deps:(deps_of_action spec action) ~cmd in
+                let steps = attach_inspect ~parent_tag:tag ~action base in
                 (* Emit scan_source after fetch_source when wired *)
-                (match rule, spec.scan_source with
+                (match action, spec.scan_source with
                  | Fetch Source, Some scan_cmd
                    when not (Hashtbl.mem seen "scan_source") ->
                      Hashtbl.set seen ~key:"scan_source" ~data:true;

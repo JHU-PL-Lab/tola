@@ -112,9 +112,9 @@ act push --dry-run                   # validate workflow structure
 Custom image to pre-install opam + apt-LLVM avoids re-installing on every
 `act` run. Dockerfile lives at `canary/docker/ubuntu.Dockerfile`.
 
-## Mapping from `action_step` to GH Job
+## Mapping from `step` to GH Job
 
-Each `action_step` has:
+Each `step` has:
 - `tag`: unique identifier (e.g., `fetch_source`, `probe_binding.dev`)
 - `deps`: list of upstream step tags
 - `cmd`: shell command string
@@ -122,7 +122,7 @@ Each `action_step` has:
 - `expectation`: `Expect_success | Expect_failure {...}`
 
 GH YAML generation from `derive_steps`:
-- One workflow job per `action_step` (Option B/C).
+- One workflow job per `step` (Option B/C).
 - `needs:` = `List.map step.deps ~f:tag_to_job_id`.
 - Step body = `cmd` wrapped in `|| exit 1`.
 - `continue-on-error: true` + explicit exit-code check for `Expect_failure`
@@ -132,7 +132,7 @@ GH YAML generation from `derive_steps`:
 
 ## Implementation (2026-04-22) — Option A chosen
 
-One GH job per project variant; each `action_step` becomes one GH step within
+One GH job per project variant; each `step` becomes one GH step within
 the job. Steps share the runner filesystem — no artifact passing needed.
 
 ### Chosen per-project CI strategy

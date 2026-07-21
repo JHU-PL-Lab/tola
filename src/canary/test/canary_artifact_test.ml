@@ -910,7 +910,7 @@ let mutation_regression_tests ~tiny_src ~patches_dir ~output_dir
    [actions] is now the sole source. These tests pin
    the derivation output against small hard-coded
    references — one per canonical Sc.N shape — so the
-   rules in [artifacts_of_rule] can't silently drift. *)
+   actions in [artifacts_of_action] can't silently drift. *)
 let scenario_derivation_pure_tests =
   let open Canary_basic in
   let open Canary_lang in

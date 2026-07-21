@@ -17,7 +17,7 @@ open Base
 
 (** Write a marker file canary's default check_post looks for. Returns
     the shell snippet [echo 'ok' > <output_dir>/<variant-keyed marker>].
-    [marker] is the canonical marker name for the rule (conf.ok / build.ok
+    [marker] is the canonical marker name for the action (conf.ok / build.ok
     / install.ok / pack.ok / probe.log). *)
 let mark_step_complete ~output_dir ~variant_key marker =
   let f = Canary_basic.variant_file ~variant_key marker in

@@ -1,6 +1,6 @@
 (** [Canary_local_runner] — the local execution backend.
 
-    Consumes an [action_step list] (built by {!Canary_step_builder}'s
+    Consumes an [step list] (built by {!Canary_step_builder}'s
     [derive_steps]) and {i executes} the steps' shell commands directly,
     in-process. Sibling of:
     - {!Canary_gh} — emits GitHub Actions YAML for the same step list.
@@ -20,7 +20,7 @@
     {!Canary_step_builder}.
 
     Communicates with the build half through the closure firewall on
-    [action_step]: this module only invokes [step.cmd] / [step.check_pre]
+    [step]: this module only invokes [step.cmd] / [step.check_pre]
     / [step.check_post] and never reads [runner_spec] directly.
     Symmetric design with the other backends. *)
 
@@ -118,7 +118,7 @@ let run_cmd_logged logger ~tag cmd =
   rc = 0
 
 (* Execute a step's shell command, ensuring output_dir exists. *)
-let exec_step logger ~tag ~output_dir (step : action_step) =
+let exec_step logger ~tag ~output_dir (step : step) =
   ignore (Stdlib.Sys.command [%string "mkdir -p \"%{output_dir}\""] : int);
   let shell_cmd = step.cmd ~output_dir ~variant_key:step.variant_id in
   run_cmd_logged logger ~tag shell_cmd
@@ -140,7 +140,7 @@ let output_contains_any ~output_dir strings =
 
 (* Run a single action step.
    Skip priority: (1) global cache hit, (2) local postcondition already passes. *)
-let run_step logger ~root:_ ~project:_ ?global_cache (step : action_step) =
+let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
   let tag = step.tag in
   let out = step.output_dir in
   let log = logger.log ~tag in
@@ -294,7 +294,7 @@ let merge_step_statuses (all : (string, step_status) Hashtbl.t list)
 
 (* Run all steps in dependency order. Returns status per tag.
    ~failfast:true stops on the first failure (useful for debugging). *)
-let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : action_step list) =
+let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : step list) =
   logger.log ~tag:"*" ~event:"graph_start"
     ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
   let status = Hashtbl.create (module String) in

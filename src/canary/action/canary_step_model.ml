@@ -11,7 +11,7 @@
       assertion (currently informational only).
     - [step_expectation]: what should happen when the step runs
       ([Expect_success] / [Expect_failure] / [Expect_compat_failure]).
-    - [action_step]: the per-step record the runner consumes.
+    - [step]: the per-step record the runner consumes.
     - [logger] + [step_status] + [ensure_dir] + [now] + [create_logger]:
       the runner's logging primitive. *)
 
@@ -71,14 +71,14 @@ type step_expectation =
       version_info : version_info option;
     }
 
-type action_step = {
+type step = {
   tag : string;
   cache_key : string;
   output_tag : string;
   output_dir : string;
   project_dir : string;
   variant_id : string;
-  rule : Canary_basic.rule;
+  action : Canary_basic.action;
   deps : string list;
   cmd : output_dir:string -> variant_key:string -> string;
   check_pre : unit -> bool;

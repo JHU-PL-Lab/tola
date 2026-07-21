@@ -76,10 +76,10 @@ type artifact_kind = Source | Lib | Binding | App
 
 Every action either produces or consumes an artifact of one of these kinds.
 
-### Rules
+### Actions
 
 ```ocaml
-type rule =
+type action =
   | Fetch of artifact_kind   (* fetch from a store *)
   | Configure                (* cmake configure / build-gen *)
   | Build_lib                (* Source → Lib@build_tree *)
@@ -141,7 +141,7 @@ identical.
 ```
 canary action <project>
   ├─ project gives script_spec + api_source                ← §4
-  ├─ derive_steps spec_shape → action_step list            ← step-cache aware
+  ├─ derive_steps spec_shape → step list            ← step-cache aware
   └─ run_graph
        └─ per step (in dep order):
             check_pre  → deps present?
@@ -231,7 +231,7 @@ fifth language binding lands.
 [Compare]    canary inspect-diff between two snapshots (drift detection)
 ```
 
-The stages map to canary's action_step model: each stage produces an output
+The stages map to canary's step model: each stage produces an output
 that downstream stages can consume, all cached uniformly.
 
 ## 6. Open design questions

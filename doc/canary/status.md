@@ -165,7 +165,7 @@ Not blocking; part of the post-stabilisation "uniformity
 eventually" pass.
 
 - **Task 3 — term-rename sweep** per SSOT §6.2 (rule → action,
-  action_step → step, current `stage` → `artifact_status` /
+  step → step, current `stage` → `artifact_status` /
   `lifecycle_state`). After Task 2.
 - **Engine vocabulary alignment in code.** Add explicit
   *mutation engine* / *combinator engine* naming to

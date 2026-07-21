@@ -25,7 +25,7 @@
 ;   base/    Layer 0 — vocabulary: foundational types every other layer
 ;                      uses (lang, artifact_kind, runner_os, cmdline,
 ;                      location, distro, package_manager, pm_properties,
-;                      rule, version, output-path conventions). Pure
+;                      action, version, output-path conventions). Pure
 ;                      data, no theory of its own. canary_lang is its
 ;                      own file so canary_store and canary_basic can
 ;                      both depend on it without a cycle.
@@ -39,7 +39,7 @@
 ;                      (canary_artifact_{native,lang,source}), post-hoc
 ;                      diff (canary_inspect_diff), and build-tool +
 ;                      opam/pip command generators (canary_toolchain).
-;   action/  Layer 3 — action graph (rule, step, run, post, cache, key,
+;   action/  Layer 3 — action graph (action, step, run, post, cache, key,
 ;                      compat action-integration).
 ;   backend/ Layer 4 — output renderers (GH Actions YAML, HTML, Mermaid).
 ;   test/    Layer 5 — framework self-tests.

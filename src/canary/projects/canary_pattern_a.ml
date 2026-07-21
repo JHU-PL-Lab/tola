@@ -110,7 +110,7 @@ let runner_spec (d : t) : Canary_step_builder.runner_spec =
              ~example:d.example_file ~target:d.example_target
              ~output_dir ~variant_key));
       ];
-    inspect = (fun rule loc -> match rule, loc with
+    inspect = (fun action loc -> match action, loc with
       | Probe_lib, _ ->
           Some (fun ~output_dir ~variant_key ->
             let sum = Canary_artifact_native.inspect_cmd

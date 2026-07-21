@@ -17,9 +17,9 @@ fans out across the sibling backends.
 ```
   src/bin/canary_main.ml (or projects/canary_run.ml)
         │
-        │  Canary_step_builder.derive_steps  (script_spec → action_step list)
+        │  Canary_step_builder.derive_steps  (script_spec → step list)
         ▼
-  action/canary_step_builder.ml   ← returns action_step list
+  action/canary_step_builder.ml   ← returns step list
         │
         ▼
   src/bin/canary_main.ml          ← now holds the step list
@@ -46,10 +46,10 @@ fans out across the sibling backends.
 
 `canary_diagram` and `canary_local_runner` are leaf consumers —
 they never call back upward. `canary_run_info` orchestrates them as
-siblings, fanning out the same `action_step list` to each backend.
+siblings, fanning out the same `step list` to each backend.
 
 > **Four sibling backends.** `backend/` holds four files that each
-> consume `action_step list`, differing only in what they produce:
+> consume `step list`, differing only in what they produce:
 >
 > - [canary_local_runner.ml](../../../src/canary/backend/canary_local_runner.ml)
 >   — *executes* the steps' shell commands directly, in-process.
@@ -68,7 +68,7 @@ siblings, fanning out the same `action_step list` to each backend.
 >
 > The shared upstream is [canary_step_builder.ml](../../../src/canary/action/canary_step_builder.ml):
 > it owns `script_spec` and `derive_steps`, building the
-> `action_step list` that all four backends consume.
+> `step list` that all four backends consume.
 
 The single translator between layers is `result_status_of_run`
 ([canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml)),
@@ -136,7 +136,7 @@ Two renderers, one model:
 | Renderer | Used by | Drives nodes from | Strength |
 |---|---|---|---|
 | `mermaid_of_action_rule_schema` | overview, all focused views | `Canary_action.store_rules ~langs` + expansion params | predictable shape; non-focal kinds look the same across views |
-| `mermaid_full` (a.k.a. step renderer) | `full.mmd` only | concrete `action_step list` | every step gets its own node + subgraph; nothing is hidden |
+| `mermaid_full` (a.k.a. step renderer) | `full.mmd` only | concrete `step list` | every step gets its own node + subgraph; nothing is hidden |
 
 The schema renderer is the workhorse — overview and focused views
 share its core, differing only in which kinds are expanded. The step
@@ -231,7 +231,7 @@ hardening).
 
 | Want to know | Read |
 |---|---|
-| The exact data the renderer consumes | `Canary_step_model.action_step` ([canary_step_model.ml](../../../src/canary/action/canary_step_model.ml)) |
+| The exact data the renderer consumes | `Canary_step_model.step` ([canary_step_model.ml](../../../src/canary/action/canary_step_model.ml)) |
 | Per-renderer parameter list | top of each function in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) — `mermaid_of_action_rule_schema`, `mermaid_full`, `mermaid_view` |
 | Why the schema and full renderers differ | [canary_diagram.ml:54+ and :1128+](../../../src/canary/backend/canary_diagram.ml) — the two big blocks |
 | How the HTML viewer dispatches clicks | [canary_backend_html.ml](../../../src/canary/backend/canary_backend_html.ml) |

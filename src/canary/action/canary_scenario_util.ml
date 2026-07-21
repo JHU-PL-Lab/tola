@@ -57,7 +57,7 @@ let bad_target_str (good : Canary_scenario.scenario)
      | On_behavior -> Printf.sprintf "%s (behavior)" idx_str
      | On_artifact _ -> idx_str)
 
-(** Does a bad scenario fill a derived cell? Match rule: same
+(** Does a bad scenario fill a derived cell? Match action: same
     Good scenario (via [belongs_to] intersection) + same target
     artifact + same kind. Used to compute the "filled vs empty"
     coverage view over the [derive_scenarios] enumeration. *)

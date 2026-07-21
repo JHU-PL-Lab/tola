@@ -7,8 +7,8 @@ type runner_os = Ubuntu | MacOS
 type probe_action = Compile_example | Run_example
 type compile_mode = Native | Bytecode
 
-(** Coarse artifact grouping used for action dispatch (rule selection in
-    {!Canary.store_rules}). Each constructor here corresponds to a
+(** Coarse artifact grouping used for action dispatch (action selection in
+    {!Canary.store_actions}). Each constructor here corresponds to a
     {i group} of fine-grained artifact roles from the surface-theory
     vocabulary used in [doc/canary/research/surface_theory.md] §2.1
     and [doc/canary/research/tiny.md] "Artifact inventory":
@@ -86,7 +86,13 @@ type runner_spec = {
 
 type cmdline = string
 
-type step = {
+(* Renamed from [step] on 2026-07-21 (SSOT §6.2) to free the name
+   for the runtime [step] type (was [step] in canary_step_model.ml).
+   This shell-command record is a legacy carrier used by the retired
+   YAML backend + canary_toolchain's verify_*_step helpers (all
+   currently zero-consumer). Kept as a documented placeholder until
+   we either revive the YAML backend or delete the dead helpers. *)
+type step_body = {
   name : string;
   guard : condition option;
   shell : string option;
@@ -142,7 +148,7 @@ let detect_distro () =
 
 let run_step ?guard ?shell ?(env_fields = []) ?(requires = []) ?(produces = [])
     ~name action =
-  ({ name; guard; shell; env_fields; requires; produces; action } : step)
+  ({ name; guard; shell; env_fields; requires; produces; action } : step_body)
 
 let mk_system_dep_steps ~name ~linux_cmd ~macos_cmd =
   [
@@ -162,11 +168,11 @@ let run_cmd ?(strict = true) cmd =
 
 let run_cmd_exn cmd = run_cmd ~strict:true cmd
 
-(* ── Action rule vocabulary ──
-   Lifted from action/canary.ml on 2026-06-01: [rule] and [version] are
+(* ── Action action vocabulary ──
+   Lifted from action/canary.ml on 2026-06-01: [action] and [version] are
    vocabulary primitives every layer (surface/, tool/, action/, backend/,
-   projects/) names — the rule-as-a-type was action-graph-flavoured only
-   incidentally. [action_rule] (the rule-plus-pools structure) and the
+   projects/) names — the action-as-a-type was action-graph-flavoured only
+   incidentally. [action_graph] (the action-plus-pools structure) and the
    diagram generators remain in action/canary.ml because they're the
    action graph proper. *)
 
@@ -178,7 +184,7 @@ let version_suffix = function Dev -> "" | Stable -> "-stable"
 let single_version = [ Dev ]
 let two_versions = [ Dev; Stable ]
 
-(** App-flavored rules carry an [app_info] record so the app's
+(** App-flavored actions carry an [app_info] record so the app's
     binding language is explicit at the type level (no
     reach-into-belongs_to needed downstream). Record shape (not
     a bare [lang]) leaves room for future fields — helper name,
@@ -192,13 +198,13 @@ let string_of_app_info (a : app_info) : string =
 
 (** Rules are typed actions: each variant has implicit input/output sorts.
     Pools in the action graph are indexed by [artifact_kind], built
-    incrementally by applying rules.
+    incrementally by applying actions.
 
     [Probe] was formerly [Probe of artifact_kind] with [Probe App]
     lang-oblivious; split into three variants (2026-07-10) so
     every probe carries its target's language explicitly.
     [Build_app] was formerly nullary; now carries [app_info]. *)
-type rule =
+type action =
   | Configure
   | Scan_sources
       (** Project-specific step that inspects source files (typically
@@ -207,7 +213,7 @@ type rule =
           bindings (tiny) it runs early after Configure; for
           generated bindings (z3) the project's spec overrides the
           dep so it runs after Build_lib (which generates the
-          binding's source). The rule itself is structurally just
+          binding's source). The action itself is structurally just
           "inspect source files"; the spec decides when those
           files are available. *)
   | Build_headers
@@ -221,7 +227,7 @@ type rule =
   | Probe_binding of Canary_lang.lang
   | Probe_app of app_info
 
-let string_of_rule = function
+let string_of_action = function
   | Configure -> "configure"
   | Scan_sources -> "scan_sources"
   | Build_headers -> "build_headers"
@@ -237,7 +243,7 @@ let string_of_rule = function
   | Probe_binding lang -> [%string "probe_binding_%{Canary_lang.string_of_lang lang}"]
   | Probe_app a -> [%string "probe_app_%{string_of_app_info a}"]
 
-let rule_of_string s =
+let action_of_string s =
   let module A = Canary_lang in
   let lang_of_str = function
     | "ocaml"  -> Some A.OCaml  | "python" -> Some A.Python

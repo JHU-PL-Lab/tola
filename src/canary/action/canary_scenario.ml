@@ -12,8 +12,8 @@
 
     - [related_artifacts] is no longer a field — it derives
       from [actions] via [related_artifacts_of_actions]
-      (§7.9, 2026-07-10). Per-rule consumes/produces table
-      lives in [artifacts_of_rule] below and in SSOT §6.5.
+      (§7.9, 2026-07-10). Per-action consumes/produces table
+      lives in [artifacts_of_action] below and in SSOT §6.5.
     - [id] is a string. [Sc_id.t] as a distinct type is deferred
       until the Sc.N / Bs.N enumeration stabilises.
     - [manifest] and [detector] on [mutation] are
@@ -95,12 +95,12 @@ type origin =
 
     [related_artifacts] is not stored — it derives from
     [actions] via [related_artifacts_of_actions] below. See
-    §6.5 (SSOT) for the per-rule consumes/produces table. *)
+    §6.5 (SSOT) for the per-action consumes/produces table. *)
 type scenario = {
   id : string;                       (** "Sc.N" or "Bs.N" *)
   name : string;
   description : string;
-  actions : Canary_basic.rule list;
+  actions : Canary_basic.action list;
   origin : origin option;
   belongs_to : string list;          (** which Sc.N(s) this scenario
                                          relates to. For a Good scenario:
@@ -115,13 +115,13 @@ type scenario = {
 (* ---------- contract bindings ---------- *)
 
 (** Where a contract's failure observation surfaces at runtime —
-    which action-graph rule's step will fail when this contract is
+    which action-graph action's step will fail when this contract is
     violated. A contract may fire at multiple sites (c6 fires at
     both [Build_binding] and [Probe_binding], for example).
 
     Placeholder-friendly: [At_build_app] / [At_probe_app] carry a
     language directly rather than a full [app_info] record; the
-    binding lookup projects a concrete rule down to its
+    binding lookup projects a concrete action down to its
     lang-equivalent site. *)
 type firing_site =
   | At_build_binding of Canary_lang.lang
@@ -139,11 +139,11 @@ let string_of_firing_site = function
   | At_probe_app l ->
       "at_probe_app_" ^ Canary_lang.string_of_lang l
 
-(** Project a concrete [Canary_basic.rule] down to a [firing_site]
+(** Project a concrete [Canary_basic.action] down to a [firing_site]
     so a contract binding can be matched by lookup. Rules with no
     firing-site equivalent (Build_lib, Fetch, etc.) return [None] —
     contracts never fire at those. *)
-let firing_site_of_rule : Canary_basic.rule -> firing_site option =
+let firing_site_of_action : Canary_basic.action -> firing_site option =
   function
   | Canary_basic.Build_binding l -> Some (At_build_binding l)
   | Canary_basic.Probe_binding l -> Some (At_probe_binding l)
@@ -272,7 +272,7 @@ let binding_has_live_firing
 
 (** Project-agnostic expectation lowering — given a project's
     bindings table + the (contracts × langs × has_manifest)
-    context of a scenario, produce the [rule → loc →
+    context of a scenario, produce the [action → loc →
     step_expectation] function the runner consumes.
 
     Extracted from tiny's [expectation_of_entry] 2026-07-21
@@ -289,12 +289,12 @@ let lower_expectation
     ~(violates : Canary_compat.contract_id list)
     ~(langs : Canary_lang.lang list)
     ~(has_manifest : bool)
-  : Canary_basic.rule -> Canary_store.location option ->
+  : Canary_basic.action -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
   let open Base in
-  let lookup_sources rule loc =
-    match firing_site_of_rule rule with
+  let lookup_sources action loc =
+    match firing_site_of_action action with
     | None -> []
     | Some site ->
       List.concat_map violates ~f:(fun c ->
@@ -311,10 +311,10 @@ let lower_expectation
               then Some f.source
               else None)))
   in
-  fun rule loc ->
+  fun action loc ->
     if not has_manifest then Canary_step_model.Expect_success
     else
-      let sources = lookup_sources rule loc in
+      let sources = lookup_sources action loc in
       let picked_artifact =
         List.find_map sources ~f:(function
           | From_artifact { inputs; version_info } ->
@@ -435,7 +435,7 @@ let good_scenarios : scenario list =
 
 (* ---------- related_artifacts derivation (§7.9) ---------- *)
 
-(** Consumes-and-produces enumeration for a single rule.
+(** Consumes-and-produces enumeration for a single action.
     Order convention: prerequisite first, target next. The
     hand-listed [related_artifacts] on §4's good scenarios
     follows the same convention, so the derivation matches
@@ -453,8 +453,8 @@ let good_scenarios : scenario list =
     - [Probe_app { lang = L }] — [Binding L; Lib; App]
       (Binding to load, Lib as runtime dep, App as the entry).
     - [Fetch k] / [Publish k] — [k].
-    A rule that touches nothing (currently none) returns []. *)
-let artifacts_of_rule (r : Canary_basic.rule) : Canary_basic.artifact_kind list =
+    A action that touches nothing (currently none) returns []. *)
+let artifacts_of_action (r : Canary_basic.action) : Canary_basic.artifact_kind list =
   let open Canary_basic in
   match r with
   | Configure -> [ Source ]
@@ -473,11 +473,11 @@ let artifacts_of_rule (r : Canary_basic.rule) : Canary_basic.artifact_kind list 
 (** Derive a scenario's [related_artifacts] from its
     [actions] list. Union in first-appearance order (no
     dedup rearrangement) — order follows the "prerequisite
-    first, target next" convention from [artifacts_of_rule]. *)
-let related_artifacts_of_actions (actions : Canary_basic.rule list)
+    first, target next" convention from [artifacts_of_action]. *)
+let related_artifacts_of_actions (actions : Canary_basic.action list)
   : Canary_basic.artifact_kind list =
   let open Base in
-  List.concat_map actions ~f:artifacts_of_rule
+  List.concat_map actions ~f:artifacts_of_action
   |> List.fold ~init:[] ~f:(fun acc a ->
       if List.mem acc a ~equal:Poly.equal then acc else acc @ [ a ])
 

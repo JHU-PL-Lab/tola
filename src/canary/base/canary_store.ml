@@ -46,10 +46,13 @@ type location =
   | Staged  (** cmake --install'd into a prefix — see TODO #25 *)
   | Pm of pm_info
 
-(* Lifecycle stage of an artifact — explicit complement to location.
-   Derivable from location for now (Build_tree→Built, Staged→Installed,
-   Pm→Packed or Fetched). Will become a field on a first-class artifact type. *)
-type stage = Built | Installed | Packed | Fetched
+(* Artifact status — the lifecycle state of an artifact (explicit
+   complement to location). Renamed from [stage] on 2026-07-21 per
+   SSOT §6.2 so [stage] is free for pipeline-phase meaning (Sc.N
+   is-a stage). Derivable from location for now (Build_tree→Built,
+   Staged→Installed, Pm→Packed or Fetched). Will become a field on
+   a first-class artifact type. *)
+type artifact_status = Built | Installed | Packed | Fetched
 
 let string_of_pm = function
   | Apt -> "apt"
@@ -74,7 +77,7 @@ let is_source_location = function
   | Build_tree | Staged -> true
   | Pm _ -> false
 
-(* Placeholder location for universal action-rule enumeration (canary paths). *)
+(* Placeholder location for universal action-action enumeration (canary paths). *)
 let store = Pm (Sys_pm { pm = Apt })
 
 (* ── System package manager detection and commands ── *)

@@ -561,7 +561,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];
     (* Migrated 2026-07-21 (Task 2 Phase E) — inline nested match on
-       (rule, loc) replaced by data lookup over [z3_contract_bindings].
+       (action, loc) replaced by data lookup over [z3_contract_bindings].
        Same firing semantics: c2 at Probe_binding Python + pip loc →
        Expect_compat_failure (parser_context prediction); everything
        else → Expect_success via lower_expectation's fallthrough. *)
@@ -578,7 +578,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
               ~source_version:source.version)
        else None);
     inspect =
-      (fun rule _loc ->
+      (fun action _loc ->
         let api =
           Option.value_exn source.api_source
             ~message:"z3 mk_runner_spec: api_source not set"
@@ -593,7 +593,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         let prepend_warn cmd =
           match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
         in
-        match rule with
+        match action with
         | Probe_lib ->
             Some
               (fun ~output_dir ~variant_key ->

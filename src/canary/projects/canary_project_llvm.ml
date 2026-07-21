@@ -528,7 +528,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
     (* Migrated 2026-07-21 (Task 2 Phase D) — inline nested match
-       on (rule, loc) replaced by data lookup over
+       on (action, loc) replaced by data lookup over
        [llvm_stable_contract_bindings] (defined below).
 
        Behavior preserved:
@@ -554,7 +554,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
          Some (Canary_artifact_api.stable_reuse_warning
                  ~source_name:"llvm" ~source_version:source.version)
        else None);
-    inspect = (fun rule _loc ->
+    inspect = (fun action _loc ->
       let api = Option.value_exn source.api_source
           ~message:"llvm mk_runner_spec: api_source not set" in
       let warn =
@@ -566,7 +566,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       let prepend_warn cmd =
         match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
       in
-      match rule with
+      match action with
       | Probe_lib when source.has_build_lib ->
           Some (fun ~output_dir ~variant_key ->
             prepend_warn (Canary_artifact_native.inspect_cmd

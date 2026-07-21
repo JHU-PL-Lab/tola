@@ -92,7 +92,7 @@ let runner_spec : Canary_step_builder.runner_spec =
        override at probe time. (Python summary is at probe time rather than
        fetch step here — Phase 3d's pre-cache benefit only kicks in for
        projects that opt into the api_source flow.) *)
-    inspect = (fun rule loc -> match rule, loc with
+    inspect = (fun action loc -> match action, loc with
       | Probe_binding (_), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.python_inspect_cmd

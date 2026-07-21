@@ -1,12 +1,12 @@
 (** [Canary_path_table] — the maximal-enumeration table of every
-    structurally possible artifact + probe path that a rule list can
+    structurally possible artifact + probe path that a action list can
     produce.
 
     Split from [Canary] on 2026-06-01 (Phase 5). Drives the CLI [paths]
     and [paths-md] subcommands and is consumed by the diagram renderer
     to label nodes with their path id.
 
-    Each artifact node in the action_rule's pools has a provenance
+    Each artifact node in the action_graph's pools has a provenance
     chain (built_from, runtime_dep) back to source or store. A
     [job_path] flattens that chain into one record with depth,
     origin (built vs fetched), action-path string, and an annotation
@@ -175,10 +175,10 @@ let annotate_path ~is_probe (node : artifact_node) : path_annotation =
   | _ ->
       { description = ""; frequency = "tbd"; feasibility = "tbd" }
 
-(* Extract job paths from action rule pools, sorted by depth.
+(* Extract job paths from action action pools, sorted by depth.
    Probes are not separate rows — every artifact can be probed
    (probe = action_path + → probe_<kind>, depth = d+1). *)
-let job_paths_of_action_rule (ar : action_rule) : job_path list =
+let job_paths_of_action_graph (ar : action_graph) : job_path list =
   let counters = Hashtbl.create (module String) in
   let next_id prefix =
     let n = Hashtbl.find counters prefix |> Option.value ~default:0 in

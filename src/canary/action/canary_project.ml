@@ -40,7 +40,7 @@
       under test (tiny, z3, llvm, sqlite).
     - [runner_spec] sits at the {b bottom} — the runner-facing
       handoff, one per (project × scenario / variant) instance,
-      carrying the concrete [expectation : rule -> loc -> step_expectation]
+      carrying the concrete [expectation : action -> loc -> step_expectation]
       + build/probe/inspect commands. Task 3 renames it to
       [runner_spec] / [variant_spec] once this [project] type is
       settled.

@@ -6,7 +6,7 @@
 dune build                                                   # build everything
 dune exec src/bin/canary_main.exe -- paths                   # print 15-row action pattern table
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
-dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_rule.mmd
+dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
 dune exec src/bin/canary_main.exe -- action sqlite
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
@@ -25,7 +25,7 @@ Output layout (gitignored via `_*`):
    `action z3` writes `projects/z3/dev_<hash>/` + `projects/z3/stable/`)
 - `_out/canary/test/{artifact-test,pm-test,artifact-summary}/` — framework
   self-tests and ad-hoc dumps
-- `_out/canary/graph/action_rule.mmd` — universal schema diagram from `canary graph`
+- `_out/canary/graph/action_graph.mmd` — universal schema diagram from `canary graph`
 
 Web-viewable files (diagrams, HTML, JSON, logs) are copied to `docs/canary/`
 for GitHub Pages deployment. `docs/canary/` is tracked in git.
@@ -82,8 +82,8 @@ per Phase E of the tiny migration.)
 | `src/canary/tool/canary_inspect_diff.ml`            | `canary inspect-diff` — counts/modules/watchlist/versioned_req drift                                   |
 | `src/canary/tool/canary_pm_{apt,brew,opam,pip}.ml`  | Per-PM presence checks + install commands; `canary_pm_test.ml` runs the suite                          |
 | `src/canary/action/canary.ml`                       | 24-line `include` shim re-exporting the three step-domain modules below                                |
-| `src/canary/action/canary_action.ml`                | `action_rule`, `store_rules`, `make_action_rule`, `nodes_of_action_rule`, `node_status` — the schema   |
-| `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `action_step`, `logger`, `version_info`, `symbol_*` |
+| `src/canary/action/canary_action.ml`                | `action_graph`, `store_rules`, `make_action_graph`, `nodes_of_action_graph`, `node_status` — the schema   |
+| `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `step`, `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_step_builder.ml`          | `script_spec`, `derive_steps`, shared command templates, check_post compositors — the step list builder |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
@@ -137,7 +137,7 @@ symbol prefixes, watchlists). `derive_steps` in
 `action/canary_step_builder.ml` filters the 15 patterns by project
 capabilities, attaches per-artifact summaries (mli, stub, native,
 python) to install steps, and instantiates them with the project's
-scripts. The resulting `action_step list` is consumed by one of four
+scripts. The resulting `step list` is consumed by one of four
 sibling backends: `backend/canary_local_runner.ml` executes it
 directly (in-process); `backend/canary_gh.ml` renders it as GH
 Actions YAML; `backend/canary_diagram.ml` renders it as Mermaid;
@@ -286,7 +286,7 @@ Still open:
   `ubuntu-latest` × `macos-latest` matrix + per-step `if: runner.os == …`
   guards. The current `canary_gh.ml` hardcodes `runs-on:
   ubuntu-latest`. Add matrix support + a per-step guard field to
-  `action_step` (or extend `preamble_steps` semantics). Couples with
+  `step` (or extend `preamble_steps` semantics). Couples with
   "multi-ocaml-version matrix" (old supported `ocaml-version: ["5.4.0"]`
   in the matrix). GH macOS runners are paid minutes — ship selectively
   (sqlite + one other). Strictly a follow-up to (1) and (2).
@@ -306,7 +306,7 @@ Still open:
     - No distro abstraction exercised (WSL and macOS paths untested).
     - No two-OS CI (macOS matrix is the paired TODO above).
     - Sys-PM × lang-PM enumeration (apt × opam, brew × opam, apt × pip, …)
-      isn't represented in the `script_spec` → `action_step` path.
+      isn't represented in the `script_spec` → `step` path.
   **Revisit together with the version/symbol/interface work**: when we
   formalise interfaces as first-class (per
   `doc/canary/research/surface.md` + `surface_draft/`), the

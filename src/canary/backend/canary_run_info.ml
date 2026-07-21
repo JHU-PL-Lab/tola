@@ -60,7 +60,7 @@ let detect_env () =
   let ocaml_version = cmd_output "ocamlopt -version 2>/dev/null" in
   (distro, system_pm, opam_switch, ocaml_version)
 
-let mk_run_info ~project ~version ~ref_ ~source ?(extra = []) (steps : action_step list) =
+let mk_run_info ~project ~version ~ref_ ~source ?(extra = []) (steps : step list) =
   let distro, system_pm, opam_switch, ocaml_version = detect_env () in
   { project; version; ref_; source;
     distro; system_pm; opam_switch; ocaml_version;
@@ -112,7 +112,7 @@ let save_run_state ~dir ~project_name steps
     ?(artifact_name : (artifact_kind -> string option) = fun _ -> None)
     (run_status : (string, step_status) Hashtbl.t) =
   let path = [%string "%{dir}/run_state.json"] in
-  let step_json (s : action_step) =
+  let step_json (s : step) =
     let expect_str = match s.expectation with
       | Expect_success          -> "success"
       | Expect_failure _        -> "failure"
@@ -127,7 +127,7 @@ let save_run_state ~dir ~project_name steps
     `Assoc [
       ("tag",        `String s.tag);
       ("output_tag", `String s.output_tag);
-      ("rule",       `String (string_of_rule s.rule));
+      ("action",       `String (string_of_action s.action));
       ("variant_id", `String s.variant_id);
       ("expect",     `String expect_str);
       ("status",     `String status_str);
@@ -160,13 +160,13 @@ let load_run_state ~dir =
     let str k = sj |> member k |> to_string in
     let tag        = str "tag" in
     let output_tag = str "output_tag" in
-    let rule_str   = str "rule" in
+    let action_str   = str "action" in
     let variant_id = str "variant_id" in
     let expect_str = str "expect" in
     let status_str = str "status" in
-    let rule = match Canary_basic.rule_of_string rule_str with
+    let action = match Canary_basic.action_of_string action_str with
       | Some r -> r
-      | None   -> failwith [%string "load_run_state: unknown rule %{rule_str}"]
+      | None   -> failwith [%string "load_run_state: unknown action %{action_str}"]
     in
     let expectation = match expect_str with
       | "success"        -> Expect_success
@@ -178,9 +178,9 @@ let load_run_state ~dir =
     let output_dir =
       [%string "%{dir}/%{Canary_basic.step_dir_of_tag output_tag}"]
     in
-    let step : action_step = {
+    let step : step = {
       tag; cache_key = ""; output_tag; output_dir;
-      project_dir = dir; variant_id; rule; deps = [];
+      project_dir = dir; variant_id; action; deps = [];
       cmd          = (fun ~output_dir:_ ~variant_key:_ -> "");
       check_pre    = (fun () -> false);
       check_post   = (fun ~output_dir:_ ~variant_key:_ -> false);
@@ -302,7 +302,7 @@ let dump_run_info_multi ~dir ~project_name
    step dirs; only filenames are variant-keyed (e.g. probe_stable.log). *)
 let run_project_multi ?(failfast = false) ?cache_path ~project_name ~root
     ?(artifact_names : artifact_kind -> string option = fun _ -> None)
-    ~(variants : (string * action_step list * run_info option) list)
+    ~(variants : (string * step list * run_info option) list)
     () =
   let dir = [%string "%{root}/canary/projects/%{project_name}"] in
   ensure_dir dir;

@@ -2,8 +2,8 @@ open Base
 open Canary
 
 (* ── GH Actions YAML backend ──
-   Renders action_step lists as GH Actions workflow YAML.
-   Design: one GH job per project variant; each action_step → one GH step.
+   Renders step lists as GH Actions workflow YAML.
+   Design: one GH job per project variant; each step → one GH step.
    Steps share a runner filesystem so no artifact passing is needed. *)
 
 let indent n s =
@@ -26,9 +26,9 @@ let output_dir_of ~project ~tag =
   let step_dir = Canary_basic.step_dir_of_tag tag in
   base ^ project_name ^ "/" ^ step_dir
 
-(* Render one action_step as one or two GH step blocks.
+(* Render one step as one or two GH step blocks.
    Expect_failure yields two steps: run (continue-on-error) + verify. *)
-let render_gh_step ~project (step : action_step) =
+let render_gh_step ~project (step : step) =
   (* Use output_tag (not tag) so summary steps share the parent's directory. *)
   let out = output_dir_of ~project ~tag:step.output_tag in
   let raw_cmd = step.cmd ~output_dir:out ~variant_key:step.variant_id in
@@ -136,7 +136,7 @@ fi|}]
       render_failure_check ~contains_any
 
 let render_job ~job_id ~job_name ~runner_os ~ocaml_version ~project ~sys_deps
-    ~preamble_steps (steps : action_step list) =
+    ~preamble_steps (steps : step list) =
   let gh_steps =
     List.concat_map steps ~f:(render_gh_step ~project)
     |> String.concat ~sep:"\n"
@@ -186,7 +186,7 @@ type job_spec = {
   project : string;
   sys_deps : string list; (* apt packages to install before action steps *)
   preamble_steps : string list; (* raw yaml steps inserted after setup-ocaml *)
-  steps : action_step list;
+  steps : step list;
 }
 
 let render_workflow ?(runner_os = "ubuntu-latest") ?(ocaml_version = "5.2")

@@ -507,10 +507,10 @@ row here before introducing a term anywhere else.
 | **Top** | **project** | System under test + coverage config bundle. Owns scenarios + contract bindings. | `Canary_project.project` (`action/`) |
 | Middle | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario` |
 | Below-middle | **runner_spec** | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario. | `Canary_step_builder.runner_spec` |
-| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `step` + `action_step` (split) |
-| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `rule` (rename pending) |
-| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only today) |
-| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. Free once code `rule` → `action`. | (currently overloaded on action verb) |
+| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `Canary_step_model.step` (was `action_step` pre-2026-07-21). Also `Canary_basic.step_body` (legacy shell-command carrier). |
+| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `Canary_basic.action` (was `rule` pre-2026-07-21) |
+| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only today; freed by `stage` → `artifact_status` rename 2026-07-21) |
+| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. Freed by code `rule` → `action` rename 2026-07-21. | (no code counterpart required) |
 
 **Same-word-different-level pitfalls to watch.**
 
@@ -536,22 +536,28 @@ live in `Canary_scenario.good_scenarios`. Concrete scenarios
 
 | Rename | Status |
 | --- | --- |
-| `project_spec` → `runner_spec` | ✅ shipped 2026-07-21 (Task 3) |
-| `related_artifacts` field → derived from `actions` | ✅ shipped 2026-07-10 (§7.9) |
-| `rule` → `action` (constructor type) | ⏳ deferred; frees `rule` for theory |
-| `action_step` → `step` | ⏳ deferred; collapse redundant qualifier |
-| `stage` (in `canary_store.ml`, lifecycle state) → `artifact_status` | ⏳ deferred; frees `stage` for pipeline-phase |
+| `project_spec` → `runner_spec` | ✅ 2026-07-21 (Task 3) |
+| `rule` → `action` (constructor type + all uses) | ✅ 2026-07-21 |
+| `action_rule` → `action_graph` (rule-list-plus-pools schema) | ✅ 2026-07-21 (Phase A of `rule → action`) |
+| `action_step` → `step` (runtime step type) | ✅ 2026-07-21 |
+| `step` → `step_body` (legacy shell-command carrier, `Canary_basic`) | ✅ 2026-07-21 (frees `step` for the runtime type) |
+| `stage` → `artifact_status` (lifecycle state, `Canary_store`) | ✅ 2026-07-21 (frees `stage` for pipeline-phase) |
+| `related_artifacts` field → derived from `actions` | ✅ 2026-07-10 (§7.9) |
 
-Deferred items wait until they're worth a cross-file sweep or a
-consumer forces the change. Not blocking.
+Post-rename status: code and writeup vocabulary agree. `rule` (in
+code and writeup) refers exclusively to the theory-level concept
+(what an action IS FOR); `action` is the operational verb;
+`stage` is the pipeline phase attribute; `step` is the runtime
+unit; `action_graph` is the rules-plus-pools schema; `step_body`
+is the legacy shell-command carrier (canary_toolchain's
+`verify_*_step` helpers — currently zero live consumers).
 
 ### 6.3 Writeup ↔ code alignment
 
 - Writeup "stage" = pipeline phase (attribute of action; Sc.N is-a stage).
-- Writeup "action" = code `rule` today, `action` post-rename.
-- Writeup "step" = concrete cmdline (code `action_step` today,
-  `step` post-rename).
-- Writeup "rule" = doc-only theory; no code counterpart required.
+- Writeup "action" = code `action` (operational verb).
+- Writeup "step" = code `step` (runtime instantiation of an action).
+- Writeup "rule" = doc-only theory; no code counterpart.
 - Writeup "compile" / "build" = colloquial for specific actions
   (`Build_lib`, `Build_binding`, `Build_app`).
 
@@ -629,7 +635,7 @@ canonical Sc.N shape plus a chain composition case.
 
 **Flow.** Project's per-scenario factory (or per-variant hand-code)
 constructs a [`Canary_step_builder.runner_spec`](../../src/canary/action/canary_step_builder.ml)
-──► `derive_steps` walks it ──► `action_step list` ──► one of four
+──► `derive_steps` walks it ──► `step list` ──► one of four
 backends (local runner / GH YAML / Mermaid / HTML).
 
 **Shape** — a record with two kinds of fields (full list at
@@ -650,14 +656,14 @@ backends (local runner / GH YAML / Mermaid / HTML).
   step after `Probe_binding`), diagram wiring fields.
 
 **Derivation** (`derive_steps ~root ~project ?(langs = [OCaml])
-(spec : runner_spec) : action_step list`) traverses §6.5's verbs
-in dependency order; for each present closure emits an
-`action_step` with `cmd` + `expectation` + `check_post` +
-`symbol_check` + per-artifact metadata. Auto-inserts inspector
-steps after `Probe_binding` and a `scan_source` step to verify
-`api_source` claims exist post-fetch.
+(spec : runner_spec) : step list`) traverses §6.5's verbs in
+dependency order; for each present closure emits a `step` with
+`cmd` + `expectation` + `check_post` + `symbol_check` +
+per-artifact metadata. Auto-inserts inspector steps after
+`Probe_binding` and a `scan_source` step to verify `api_source`
+claims exist post-fetch.
 
-**Four backends** consume the resulting `action_step list`:
+**Four backends** consume the resulting `step list`:
 
 | Backend | File | What it does |
 |---|---|---|

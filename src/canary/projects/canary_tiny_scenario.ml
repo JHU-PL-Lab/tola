@@ -87,7 +87,7 @@ let patch = Canary_artifact_mutation.patch
    Coarse first-pass hand-mapping. Refinement (per-scenario
    accurate action lists, more precise cascade) is a follow-up.
    [related_artifacts] will eventually be derivable from actions
-   via a [consumes/produces] helper on rule; deferred. *)
+   via a [consumes/produces] helper on action; deferred. *)
 
 let a_ocaml = Canary_basic.Binding Canary_lang.OCaml
 let a_python = Canary_basic.Binding Canary_lang.Python
@@ -148,11 +148,11 @@ let belongs_to_of_id (id : string) : string list =
    Static metadata note (2026-07-10): [scenario.actions] here
    reflects the *conceptual* action scope of the mutation, not
    what canary literally runs (canary's factory always emits
-   the full spec — every rule closure fires). Future
+   the full spec — every action closure fires). Future
    "sync-static-with-runtime" task will make the factory
    respect [scenario.actions] and only emit steps for the
-   listed rules; until then, treat this field as metadata. *)
-let actions_of_parents (parents : string list) : Canary_basic.rule list =
+   listed actions; until then, treat this field as metadata. *)
+let actions_of_parents (parents : string list) : Canary_basic.action list =
   let open Base in
   List.concat_map parents ~f:(fun sc_id ->
     match List.find Canary_scenario.good_scenarios
@@ -607,7 +607,7 @@ let all_scenarios : Canary_scenario.scenario list =
 let derived_scenarios : Canary_scenario.scenario list =
   Canary_scenario.derive_scenarios tiny_good_scenarios
 
-(** Does a hardcoded Bs entry match a derived cell? Match rule:
+(** Does a hardcoded Bs entry match a derived cell? Match action:
     same good scenario (via [belongs_to] intersection) + same
     target artifact + same kind. *)
 (* [matches_derived_cell] moved to Canary_scenario_util 2026-07-08. *)
@@ -979,7 +979,7 @@ let () =
     Stdlib.failwith
       (Printf.sprintf
          "all_scenario_specs: %d derived cells after dedup \
-          (expected %d). Check dedup rule + synthesis table."
+          (expected %d). Check dedup action + synthesis table."
          derived_after_dedup expected_derived_after_dedup)
 
 (* Startup assertion: the synthesis table doesn't crash on any
@@ -1587,7 +1587,7 @@ let make_base_runner_spec
          with module + val watchlist. Feeds c2 cmp_api_completeness.
        - Probe (Binding Python)→ bpe2 user_binding_cext.py (dir(tiny_cext))
          with attr watchlist. Feeds c2 cmp_api_completeness (Python). *)
-    inspect = (fun rule _loc ->
+    inspect = (fun action _loc ->
       let lib_inspect_cmd ~output_dir ~variant_key =
         (* Native nm-derived inspect of libtiny.so for c1 / c4 / c5.
            typed_header.json moved to scan_sources in Phase 15.5a so
@@ -1597,7 +1597,7 @@ let make_base_runner_spec
           ~prefixes:[ "tiny_" ]
           ~watchlist:tiny_native_stable_symbols
           ~output_dir ~variant_key () in
-      match rule with
+      match action with
       | Build_lib ->
           (* Inspect the lib as soon as we've verified it exists in the
              workspace. Critical for c1 cmp_symbol ordering: the runner's
@@ -1703,7 +1703,7 @@ let make_base_runner_spec
       | App -> Some "probe_baseline.exe / .py"
       | _ -> None);
 
-    expectation = (fun _rule _loc -> Expect_success);
+    expectation = (fun _action _loc -> Expect_success);
   }
 
 
@@ -1747,7 +1747,7 @@ let runner_spec = base_runner_spec
     project-agnostic [Canary_scenario]; z3/llvm/sqlite can share the
     same lowering by supplying their own bindings tables. *)
 let expectation_of_entry (entry : scenario_spec)
-  : Canary_basic.rule -> Canary_store.location option ->
+  : Canary_basic.action -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
   let module CS = Canary_scenario in

@@ -22,7 +22,7 @@ type view_entry = {
 type step_meta = {
   id          : int option;  (* sequential action number from step_id_table — used as [N] in diagrams *)
   tag         : string;
-  rule        : string;
+  action        : string;
   output_rel  : string;  (* relative path from run dir to step output_dir (shared, no variant subdir) *)
   variant_key : string;  (* "" for single-variant, "19" for llvm/19, etc. — used to qualify file names *)
   expectation : string;  (* "Expect_success" | "Expect_failure" | "Expect_compat_failure" *)
@@ -83,9 +83,9 @@ let render_steps_data steps =
   let entries = List.map steps ~f:(fun s ->
       let id_json = match s.id with Some n -> Int.to_string n | None -> "null" in
       Printf.sprintf
-        "    %s: { id: %s, rule: %s, output_rel: %s, variant_key: %s, expectation: %s, status: %s }"
+        "    %s: { id: %s, action: %s, output_rel: %s, variant_key: %s, expectation: %s, status: %s }"
         (json_string s.tag) id_json
-        (json_string s.rule) (json_string s.output_rel)
+        (json_string s.action) (json_string s.output_rel)
         (json_string s.variant_key)
         (json_string s.expectation) (json_string s.status))
   in
