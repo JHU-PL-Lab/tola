@@ -664,14 +664,23 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
          None
      | Lib, On_artifact Lib ->
          (* Binary SONAME bump. Default: libtiny.so.1.0 →
-            libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump). *)
-         Some {
-           mutates = [ "c/build/libtiny.so.1.0" ];
-           mutation = Some (Of_native (Native.soname_bump
-             ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
-           expected = [];
-           violates = [ Canary_compat.C4 ];
-         }
+            libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump).
+            Guarded on "Python is in this cell's lang scope"
+            because c4's compat_inputs are only wired for Python
+            in tiny (see compat_inputs_of_contract). Sc.1 has
+            langs = [OCaml; Python] so passes; Sc.2/4/6.OCaml
+            have langs = [OCaml] only → skip until c4 gets
+            OCaml inputs (or the "tiny convention" changes). *)
+         let langs = Canary_scenario.langs_of_scenario cell in
+         if List.mem langs Canary_lang.Python ~equal:Poly.equal then
+           Some {
+             mutates = [ "c/build/libtiny.so.1.0" ];
+             mutation = Some (Of_native (Native.soname_bump
+               ~from_so:"libtiny.so.1.0" ~to_so:"libtiny.so.2.0"));
+             expected = [];
+             violates = [ Canary_compat.C4 ];
+           }
+         else None
      | Binding Canary_lang.OCaml, On_artifact (Binding Canary_lang.OCaml) ->
          (* Drop a val from tiny.mli. Default: val sum. Mirrors Bs.9
             (api_complete). *)
@@ -695,19 +704,74 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
      | _ -> None)
 
 (** Convenience: synthesize a full [scenario_spec] from a derived
-    cell — the [tiny_recipe] plus the scenario itself (from the
-    cell's inherited fields; retag id + name for uniqueness). *)
+    cell. Rebuilds the cell's origin with a proper manifest +
+    detector so [expectation_of_entry] can derive the right
+    [Expect_compat_failure] instead of falling through to
+    [Expect_success]. [derive_scenario] defaults to
+    [manifest = Unknown_gap] because it's project-agnostic —
+    only the project's synthesis table knows which contract
+    fires at which step. *)
 let scenario_spec_of_derived_cell (cell : Canary_scenario.scenario)
   : scenario_spec option =
   Option.map (recipe_of_derived_cell cell) ~f:(fun recipe ->
-    { scenario = cell; recipe })
+    let scenario =
+      match cell.origin, recipe.violates with
+      | Some (Canary_scenario.Mutation m), first :: _ ->
+        (* Attach the first violated contract as the detector,
+           and set manifest to Possible over the cell's belongs_to
+           (the parent Sc.N id) — that flips
+           has_probe_manifestation to true and lets the factory
+           derive Expect_compat_failure for probe steps. *)
+        { cell with origin = Some (Canary_scenario.Mutation
+          { m with
+            manifest = Canary_scenario.Possible cell.belongs_to;
+            detector = Canary_scenario.Wired first;
+          }) }
+      | _ -> cell
+    in
+    { scenario; recipe })
 
 (** All derived cells that successfully synthesize into a
-    [scenario_spec]. Enumerable design-space fills; Phase 4 will
-    fold this into [all_scenario_specs] alongside the hand-listed
-    ones. *)
+    [scenario_spec]. Enumerable design-space fills. *)
 let derived_scenario_specs : scenario_spec list =
   List.filter_map derived_scenarios ~f:scenario_spec_of_derived_cell
+
+(** §7.2 Phase 4: union of hand-listed [scenario_specs] and
+    synthesized [derived_scenario_specs], with derived cells that
+    duplicate an existing hand-listed Bs (same target + kind +
+    belongs_to intersection, per [matches_derived_cell]) dropped.
+    Hand takes precedence — a hand-authored Bs's specific mutation
+    (patch or Soname_bump) survives; the parametric would produce
+    the same design-space slot.
+
+    Concrete count (2026-07-20): 15 hand-listed + N derived after
+    dedup. Startup assertion enforces the counts as design-check.
+    Use [all_scenario_specs] instead of [scenario_specs] for
+    iteration (tiny list / tiny run / tiny status), enumeration,
+    and lookup. *)
+let all_scenario_specs : scenario_spec list =
+  let deduped =
+    List.filter derived_scenario_specs ~f:(fun (ds : scenario_spec) ->
+      not (List.exists scenario_specs ~f:(fun (h : scenario_spec) ->
+        matches_derived_cell h.scenario ds.scenario)))
+  in
+  scenario_specs @ deduped
+
+(* Startup assertion — count of derived cells after dedup. Update
+   the expected count when the synthesis table or the hand-listed
+   Bs's change. *)
+let () =
+  let derived_after_dedup =
+    List.length all_scenario_specs - List.length scenario_specs
+  in
+  (* 9 synthesized - 3 deduped by Bs.1/4/8-13 = 6 net. *)
+  let expected_derived_after_dedup = 6 in
+  if derived_after_dedup <> expected_derived_after_dedup then
+    Stdlib.failwith
+      (Printf.sprintf
+         "all_scenario_specs: %d derived cells after dedup \
+          (expected %d). Check dedup rule + synthesis table."
+         derived_after_dedup expected_derived_after_dedup)
 
 (* Startup assertion: the synthesis table doesn't crash on any
    derived cell; count Some vs None matches the design table in
@@ -716,8 +780,10 @@ let derived_scenario_specs : scenario_spec list =
 let () =
   let some_n = List.length derived_scenario_specs in
   let none_n = List.length derived_scenarios - some_n in
-  let expected_some = 12 in
-  let expected_none = 8 in
+  (* 12 minus 3 OCaml-only Lib cells (Sc.2/4/6.OCaml) that skip
+     until c4 is wired for OCaml. *)
+  let expected_some = 9 in
+  let expected_none = 11 in
   if some_n <> expected_some || none_n <> expected_none then
     Stdlib.failwith
       (Printf.sprintf
@@ -731,19 +797,21 @@ let () =
    ================================================================ *)
 
 let find_by_name (n : string) : scenario_spec option =
-  List.find scenario_specs ~f:(fun e -> String.equal e.scenario.name n)
+  List.find all_scenario_specs ~f:(fun e -> String.equal e.scenario.name n)
 
-(** Shared iteration over {!scenario_specs}. Callers pass a
-    per-spec callback receiving 1-based index + total. Guarantees
-    a single ordering source for [tiny list], [tiny run],
-    [tiny status] and any future enumeration — update the
-    ordering here (or by reordering [scenario_specs]) and the
-    change propagates to all three. *)
+(** Shared iteration over {!all_scenario_specs} — hand-listed
+    Bs's + Pc unmutated witnesses + synthesized derived cells
+    (§7.2 Phase 4). Callers pass a per-spec callback receiving
+    1-based index + total. Guarantees a single ordering source
+    for [tiny list], [tiny run], [tiny status] and any future
+    enumeration — update the ordering here (or by reordering
+    [scenario_specs] / [derived_scenario_specs]) and the change
+    propagates to all three. *)
 let iter_scenario_specs
     ~(f : index:int -> total:int -> spec:scenario_spec -> unit)
   : unit =
-  let n = List.length scenario_specs in
-  List.iteri scenario_specs
+  let n = List.length all_scenario_specs in
+  List.iteri all_scenario_specs
     ~f:(fun i spec -> f ~index:(i + 1) ~total:n ~spec)
 
 (* detector_short / artifact_index / bad_target_str moved to
@@ -796,7 +864,7 @@ let print_one_good
     List.mem e.scenario.belongs_to good.id ~equal:String.equal in
   let cells_here = List.filter derived_scenarios ~f:(fun d ->
     List.mem d.belongs_to good.id ~equal:String.equal) in
-  let bads = List.filter scenario_specs ~f:(fun e ->
+  let bads = List.filter all_scenario_specs ~f:(fun e ->
     belongs_to_here e && Option.is_some e.scenario.origin) in
   let n_filled = List.count cells_here ~f:(fun d ->
     List.exists bads ~f:(fun e -> matches_derived_cell e.scenario d)) in
@@ -856,7 +924,7 @@ let print_list ?(status_of : (string -> string option) option) () =
     List.filter tiny_good_scenarios
       ~f:(fun g -> Poly.equal (lang_of_id g.id) lg)
   in
-  let bads = List.filter scenario_specs ~f:(fun e ->
+  let bads = List.filter all_scenario_specs ~f:(fun e ->
     Option.is_some e.scenario.origin) in
   let n_bad = List.length bads in
   let n_cells = List.length derived_scenarios in
@@ -891,7 +959,7 @@ let name_of_string (n : string) : string =
     match find_by_name n with
     | Some _ -> n
     | None ->
-      let known = List.map scenario_specs ~f:(fun e -> e.scenario.name) in
+      let known = List.map all_scenario_specs ~f:(fun e -> e.scenario.name) in
       Stdlib.failwith
         (Printf.sprintf
            "unknown tiny scenario: %S. Known: %s (or \"baseline\")"
@@ -942,7 +1010,7 @@ let print_expected (name : string) : unit =
 
 let () =
   List.iter tiny_good_scenarios ~f:Canary_scenario.validate_scenario;
-  List.iter scenario_specs ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
+  List.iter all_scenario_specs ~f:(fun e -> Canary_scenario.validate_scenario e.scenario)
 
 (* §7.9 (2026-07-10): [related_artifacts] is no longer a
    field on [scenario] — it derives from [scenario.actions]

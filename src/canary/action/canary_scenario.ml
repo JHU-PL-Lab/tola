@@ -369,7 +369,11 @@ let derive_scenario (good : scenario)
       (string_of_mutation_kind kind)
   in
   let kind_str = string_of_mutation_kind kind in
-  let name = Printf.sprintf "mutate_%s_at_%s" kind_str good.name in
+  (* Use good.id (not good.name) — good.name isn't unique across
+     Sc.N × language (Sc.2.OCaml.name == Sc.2.Python.name ==
+     "build_binding"). Using good.id preserves lang suffix and
+     keeps derived scenario names collision-free. *)
+  let name = Printf.sprintf "mutate_%s_at_%s" kind_str good.id in
   let description =
     Printf.sprintf
       "Derived candidate: mutate %s of %s (%s) — abstract cell, \
