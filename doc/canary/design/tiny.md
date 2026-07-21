@@ -236,32 +236,32 @@ canary tiny confirm <name>   # print cached confirm_ill.json
 
 Two independent counts, easily confused.
 
-**Concrete entries** — 15 hand-authored + 6 derived
-= 21 in `Canary_tiny_scenario.all_scenario_specs`
-(19 Bs, all Mutation-origin, + 2 concrete good scenarios per
-SSOT §4.1). All 21 run through the uniform derivation. Split
+**Concrete entries** — 15 hand-authored + 7 derived
+= 22 in `Canary_tiny_scenario.all_scenario_specs`
+(20 Bs, all Mutation-origin, + 2 concrete good scenarios per
+SSOT §4.1). All 22 run through the uniform derivation. Split
 by whether their expectation actually fires at probe:
 
 | has probe manifestation?       | Count | Notes                                                                                                                                    |
 | ------------------------------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| yes — expectation fires        | 17    | 11 hand (symbol_missing, symbol_orphan, api_complete{,_python}, behavior_silent, type_wrong, api_repack{,_python}, abi_soname_bump, symbol_version_floor, header_arity_bump) + 6 derived (Phase 4 §7.2). |
+| yes — expectation fires        | 18    | 11 hand (symbol_missing, symbol_orphan, api_complete{,_python}, behavior_silent, type_wrong, api_repack{,_python}, abi_soname_bump, symbol_version_floor, header_arity_bump) + 7 derived (Phase 4 §7.2 + §7.1 Drop_python_attr). |
 | no — Expect_success everywhere | 4     | api_faithful (c8 dormant), api_repack_stub_orphan (c7 static-only), Sc.4.OCaml (`app_over_binding_ocaml`), Sc.6.OCaml (`app_over_helper_ocaml`) |
 
 **Derived cells** — the 20 design-space slots enumerated
 by `derive_scenarios` (Good × related-artifact × applicable
-kind). After §7.2 Phase 4, header of `tiny list`:
-`20 derived cells, 11 filled, 9 empty`. The 11 filled cells
-comprise 5 shared with hand-authored Bs entries plus 6 fresh
-synthesized (Sc.2/4/6 Source + Sc.2 Binding OCaml + Sc.2
-Binding Python + Sc.2 Lib Python; some are dedup targets of
-Bs.1/4/8-13, the rest are new coverage). The 9 empty cells
-are candidate flavor-1 mutations not yet synthesizable
-(missing Drop_c_symbol / Drop_python_attr / App primitives,
-plus OCaml Lib cells awaiting c4).
+kind). After §7.2 Phase 4 + §7.1 `Drop_python_attr`,
+`tiny list` header: `20 derived cells, 12 filled, 8 empty`.
+Filled cells comprise 5 shared with hand-authored Bs entries
+plus 7 fresh synthesized (Sc.2/4/6 Source + Sc.2 Binding
+OCaml + Sc.2/4 Binding Python + Sc.2/4 Lib Python; some are
+dedup targets of Bs.1/4/8/10/12, the rest are new coverage).
+The 8 empty cells are candidate flavor-1 mutations not yet
+synthesizable (missing App-level primitive + OCaml Lib cells
+awaiting c4 wiring).
 
 **Two kinds of gap** to keep distinct:
 
-- **Missing-entry gap** — one of the 15 empty derived cells.
+- **Missing-entry gap** — one of the 8 empty derived cells.
   Design-space admits a scenario we haven't authored;
   mechanical filling work.
 - **Detection gap** — an entry exists but no comparator
@@ -305,7 +305,7 @@ Open items only. Numbering is stable — sections keep their
 
 | #    | Item                                                                      | Cluster | Status                                          |
 | ---- | ------------------------------------------------------------------------- | ------- | ----------------------------------------------- |
-| §7.1 | Fill the 9 remaining empty derived cells                                  | A       | active pickup; three blocker primitives (see §7.1) |
+| §7.1 | Fill the 8 remaining empty derived cells                                  | A       | active; Drop_python_attr shipped 2026-07-21 + structural expectation lowering (SSOT §5.4). Remaining: wire c4-OCaml Placeholder (3 cells) + add App primitive (5 cells) |
 | §7.4 | Fill Sc.3–Sc.6 areas                                                      | A       | overlaps §7.1                                   |
 | §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
 | §7.6 | Contract catalogue extension                                              | D       | post-tiny research task                         |
@@ -323,25 +323,41 @@ derivation 2026-07-10, §7.7 route tiny through `tool/`
 2026-07-09, SSOT §6.6 `project_spec` doc 2026-07-10
 (`b9e4abc`).*
 
-### 7.1 Fill the 9 remaining empty derived cells
+### 7.1 Fill the 8 remaining empty derived cells
 
-After §7.2 Phase 4, `tiny list` shows **11 of 20 cells
-filled, 9 empty**. The 9 gaps cluster under three blockers,
-each a missing primitive that `recipe_of_derived_cell`
-currently returns `None` for:
+`tiny list` shows **12 of 20 cells filled, 8 empty** after
+§7.2 Phase 4 + §7.1's `Drop_python_attr` primitive +
+structural expectation lowering (2026-07-21). All 8 gaps
+sit on one of two remaining positions (`app` and OCaml
+`lib`), each blocked by a **Placeholder binding** in
+`tiny_contract_bindings` (SSOT §5.4) that would need to
+become live before its cells synthesize:
 
-| Blocker                         | Empty cells                                         | What's needed                                                                                                       |
-| ------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **c4 wired for OCaml**          | Sc.2.OCaml.A1 (1 cell)                              | c4 (`cmp_abi`) verifier's `compat_inputs_of_contract ~lang:OCaml` currently returns `None`; wire it so `Lib` synthesis stops skipping OCaml-only cells (see §7.2 guard). |
-| **App-level mutation primitive**| Sc.3.OCaml.A2, Sc.4.OCaml.A2/A3, Sc.6.OCaml.A2/A3 (5 cells) | No `App` case in `recipe_of_derived_cell`; needs an `App.<constructor>` in `canary_artifact_mutation.ml` plus a synthesis-table row. Scope: app fields are consumer-side, so the mutation likely mimics a downstream import breakage. |
-| **`Drop_python_attr` primitive**| Sc.4.Python.A1/A3 (2 cells)                         | Was deferred in §7.2 Phase 1 as "missing but visible". Structured edit on `python_cext/tiny_cext/__init__.py` — needs the Python one-liner or an ast-based rewrite. |
-| **Helper-chain primitive**      | Sc.5.OCaml.A2 (1 cell)                              | Helper is a downstream OCaml lib on top of the binding; needs its own mutation flavor (drop_helper_val ~name).      |
+| Blocker                          | Empty cells                                                                       | Placeholder to wire                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **c4 for OCaml**                 | Sc.2.OCaml.A1, Sc.4.OCaml.A2, Sc.6.OCaml.A2 (3 cells — `lib`)                     | `tiny_contract_bindings` entry for `(C4, OCaml)` is currently `Placeholder { reason = "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so SONAME. Awaiting SSOT §? — decide whether tiny's OCaml store convention rebuilds fresh (current: c4 silent) or caches the packed .a" }`. Wire → 3 `Lib` cells auto-synthesize (guard reads the binding table). |
+| **App-level mutation primitive** | Sc.3.OCaml.A2, Sc.4.OCaml.A3, Sc.5.OCaml.A2, Sc.6.OCaml.A3, Sc.4.Python.A3 (5 cells — `app`) | Two-step: (1) add an `App.<constructor>` in `canary_artifact_mutation.ml` (mimic downstream import breakage — one primitive per language). (2) Add `At_build_app lang` / `At_probe_app lang` firing sites for whichever contracts the App primitive triggers. Then the synthesis table's `App, _` case can emit a recipe.                     |
 
-Once a blocker's primitive lands, its cells synthesize
-automatically via §7.2's `all_scenario_specs` fold — no
-per-Bs authoring needed. This is the payoff of §7.2's
-data-driven route: authoring effort collapses from
-`per-cell` to `per-primitive`.
+**Shipped 2026-07-21:**
+- `Binding.Drop_python_attr` (sed-range primitive) — byte-parity
+  with `api_complete_python.patch` verified. Filled Sc.4.Python.A1;
+  net coverage 11/20 → 12/20.
+- **Structural expectation lowering.** Contract firing sites and
+  source-of-observation are typed data in `tiny_contract_bindings`
+  (SSOT §5.4). `expectation_of_entry` is a pure lookup. Adding a
+  new contract wiring is a data row, not a code branch. c4-OCaml
+  and c8-OCaml enter as `Placeholder` (visible-TODO); the synthesis
+  guard consults `Canary_scenario.binding_has_live_firing`
+  instead of hand-coding "Python in langs". Startup validator
+  guards against "scenario expects to fire but all contracts
+  Placeholder".
+
+Once a Placeholder's binding gets wired (Placeholder →
+`From_artifact { inputs }` or `From_behavior_grep`), its cells
+synthesize automatically via `all_scenario_specs` fold — no
+per-Bs authoring needed. Authoring effort collapses from
+`per-cell` to `per-primitive`, and now further to
+`per-binding-wiring`.
 
 ### 7.2 `tiny_recipe` synthesis from an abstract cell — shipped 2026-07-20
 

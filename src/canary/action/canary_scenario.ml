@@ -112,6 +112,98 @@ type scenario = {
                                          Version_mismatch). *)
 }
 
+(* ---------- contract bindings ---------- *)
+
+(** Where a contract's failure observation surfaces at runtime —
+    which action-graph rule's step will fail when this contract is
+    violated. A contract may fire at multiple sites (c6 fires at
+    both [Build_binding] and [Probe_binding], for example).
+
+    Placeholder-friendly: [At_build_app] / [At_probe_app] carry a
+    language directly rather than a full [app_info] record; the
+    binding lookup projects a concrete rule down to its
+    lang-equivalent site. *)
+type firing_site =
+  | At_build_binding of Canary_lang.lang
+  | At_probe_binding of Canary_lang.lang
+  | At_build_app of Canary_lang.lang
+  | At_probe_app of Canary_lang.lang
+
+let string_of_firing_site = function
+  | At_build_binding l ->
+      "at_build_binding_" ^ Canary_lang.string_of_lang l
+  | At_probe_binding l ->
+      "at_probe_binding_" ^ Canary_lang.string_of_lang l
+  | At_build_app l ->
+      "at_build_app_" ^ Canary_lang.string_of_lang l
+  | At_probe_app l ->
+      "at_probe_app_" ^ Canary_lang.string_of_lang l
+
+(** Project a concrete [Canary_basic.rule] down to a [firing_site]
+    so a contract binding can be matched by lookup. Rules with no
+    firing-site equivalent (Build_lib, Fetch, etc.) return [None] —
+    contracts never fire at those. *)
+let firing_site_of_rule : Canary_basic.rule -> firing_site option =
+  function
+  | Canary_basic.Build_binding l -> Some (At_build_binding l)
+  | Canary_basic.Probe_binding l -> Some (At_probe_binding l)
+  | Canary_basic.Build_app a     -> Some (At_build_app a.lang)
+  | Canary_basic.Probe_app a     -> Some (At_probe_app a.lang)
+  | _ -> None
+
+(** How the expected observation for a (contract, lang, site) is
+    sourced. Two live families + a placeholder:
+
+    - [From_artifact { inputs }] — the contract's [predict] closure
+      (in {!Canary_compat_run}) reads the cached inspect JSONs
+      listed in [inputs] and emits predicted failure substrings.
+      Static source, dynamic check (grep of probe.log / build.log).
+    - [From_behavior_grep { contains_any }] — no artifact prediction;
+      assert the log contains one of [contains_any]. Purely
+      behavioural (c3 [api_repack], c7 [stub_orphan] fire this way —
+      the probe emits [FAIL …] on mismatch).
+    - [Placeholder { reason }] — the binding is *declared* but not
+      *wired*: the shape commits, the content is TBD. Emits
+      [Expect_success] at runtime; a startup validator can catch
+      attempts to declare a scenario that would rely on it. *)
+type expectation_source =
+  | From_artifact of { inputs : Canary_compat.inspect_input list }
+  | From_behavior_grep of { contains_any : string list }
+  | Placeholder of { reason : string }
+
+(** A per-(contract, lang) declaration of where and how the contract's
+    failure observation shows up. [firings] is a list because one
+    contract can fire at multiple sites; empty means "this contract is
+    silent for this language". *)
+type contract_binding = {
+  contract : Canary_compat.contract_id;
+  lang     : Canary_lang.lang;
+  firings  : (firing_site * expectation_source) list;
+}
+
+(** Look up whether a (contract, lang) binding is fully wired
+    (at least one non-Placeholder firing site) in the given
+    bindings table. Used by synthesis guards to decide whether
+    a recipe for a given (contract, lang) will actually detect
+    a mutation, rather than silently emit Expect_success. *)
+let binding_has_live_firing
+    (bindings : contract_binding list)
+    (contract : Canary_compat.contract_id)
+    (lang : Canary_lang.lang)
+  : bool
+  =
+  let open Base in
+  match
+    List.find bindings ~f:(fun b ->
+      Poly.equal b.contract contract && Poly.equal b.lang lang)
+  with
+  | None -> false
+  | Some b ->
+    List.exists b.firings ~f:(fun (_, src) ->
+      match src with
+      | From_artifact _ | From_behavior_grep _ -> true
+      | Placeholder _ -> false)
+
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
 
 (** Good scenarios from SSOT §4 — project-agnostic patterns.

@@ -621,3 +621,181 @@ to Phase 4).  `artifact-test` stays 98/98.
   prep"
 - Phase 3 → SSOT §5.2 synthesis-path pointer
 - Phase 4 → tiny.md §6 coverage recount (11/20 filled)
+
+### §7.1 first primitive: Drop_python_attr shipped (2026-07-21)
+
+Cheapest of the three §7.1 blockers to land. Added
+`Binding.Drop_python_attr { file; name }` to
+`canary_artifact_mutation.ml` — a sed-range primitive that
+deletes from `^def <name>(` through the next blank line.
+Byte-parity with `api_complete_python.patch` (its
+python_cext hunk) verified in `mutation_regression_tests`
+via the same `diff -r` anchor pattern used for the other
+parametric primitives.
+
+Wired `(Binding Python, On_artifact (Binding Python))` →
+`drop_python_attr ~file:"python_cext/tiny_cext/__init__.py"
+~name:"sum"` into `recipe_of_derived_cell`. Two new
+synthesized cells: one on Sc.2.Python.A2 (dedup vs Bs.12
+api_complete_python) and one on Sc.4.Python.A1 (new
+coverage — the `mutate_python_binding_at_Sc.4.Python`
+cell).
+
+Startup counts:
+- `expected_some`: 9 → 11
+- `expected_none`: 11 → 9
+- `expected_derived_after_dedup`: 6 → 7
+
+Test surface: `artifact-test` 98 → 101 (+3: pure
+constructor, shell apply, regression parity). `tiny run`
+21/22 PASS (the one fail is still `type_wrong` c6 flake
+in Bs.5, unrelated).
+
+**Coverage**: `all_scenario_specs` = 15 hand + 7 derived
+= 22; `tiny list` shows 12/20 cells filled (up from
+11/20). Remaining 8 empty cells: 3 OCaml `lib` (blocked
+on c4 wiring for OCaml) + 5 `app` cells across
+Sc.3/4/5/6 OCaml + Sc.4.Python (blocked on App-level
+primitive).
+
+**Design decision**: sed-based rather than ast-based. The
+CLAUDE.md gotcha "sed cannot distinguish match-case scope"
+applies to sed on OCaml; on Python it's fine as long as
+we accept the limitation (blank-line-separated defs; no
+decorator support). Documented as such in the module
+docblock; upgrade to ast-based when a project needs the
+richer vocabulary.
+
+**Doc-sync riders**:
+- `derived_vs_hardcoded.md` §1 counts + §4 primitive list
+  refresh + §5 blocker recount
+- `ssot.md` §5.2 coverage + §5.3 "Missing on purpose" →
+  "Recently added"
+- `tiny.md` §6 coverage recount + §7.1 blocker table
+  (removed Drop_python_attr row, added shipped marker) +
+  picking-order status
+
+### §7.1 pause — structural expectation rewrite (2026-07-21)
+
+Motivation: two remaining §7.1 blockers (c4-OCaml wiring, App
+primitive) both push against the same seam in
+`expectation_of_entry` — an ad-hoc switch table that hardcodes
+`if c6 then Build_binding else Probe_binding`. Adding either
+blocker as-is would accumulate 2-3 more `match rule with`
+branches in the OCaml code (same accretion pressure that
+Task 2 also blocks on per its "expectation/contract model
+settles" prerequisite). User asked (2026-07-21) whether §7.1
+remainder should ride the special-case path or wait on
+unification; chose unification with placeholder tolerance.
+
+**Two-category framing** (per user, 2026-07-21): contracts
+source their observations from *both* the artifact face
+(static: symbols, mli, headers checked at build/inspect
+time) and the runtime/behavior (probe execution outcome).
+Today `Expect_compat_failure` is already a hybrid — its
+SOURCE is artifact-static (read cached JSONs, diff), its
+CHECK is behavior-dynamic (grep). Make the seam explicit.
+
+**Step 1 — behavior-preserving lowering (byte-parity)**:
+
+New vocabulary in `canary_scenario.ml` (project-agnostic):
+
+- `firing_site` — where a contract's failure observation
+  surfaces: `At_build_binding lang | At_probe_binding lang |
+  At_build_app lang | At_probe_app lang`. Companion
+  `firing_site_of_rule : rule → firing_site option` projects
+  a concrete runtime rule down for lookup.
+- `expectation_source` — how the observation is derived:
+  `From_artifact { inputs }` (read cached inspect JSONs;
+  contract's predict closure emits substrings) |
+  `From_behavior_grep { contains_any }` (assert log contains
+  substring) | `Placeholder { reason : string }` (shape
+  committed, content TBD; emits Expect_success at runtime).
+- `contract_binding` — a per-(contract, lang) declaration of
+  `firings : (firing_site * expectation_source) list`. One
+  contract can fire at multiple sites (c6 fires at both
+  Build_binding and Probe_binding).
+
+Data half in `canary_tiny_scenario.ml`: `tiny_contract_bindings :
+contract_binding list` populated with all currently-wired
+tiny contracts (c1/c2/c3/c4/c5/c6/c7). c4-OCaml and c8-OCaml
+enter as `Placeholder` bindings with the reason string
+documenting the SSOT-level question that's still open. Both
+were previously either silently-guarded-out (c4-OCaml)
+or Unknown_gap-based (c8) — the placeholder makes them
+visible.
+
+Rewrite of `expectation_of_entry` (~40 LOC → ~40 LOC):
+
+- Delete `compat_inputs_of_contract ~lang c` (subsumed by
+  the binding table).
+- Delete `is_expect_failure_contract` (subsumed).
+- New body iterates `violates × scenario_langs`, looks up
+  each pair in `tiny_contract_bindings`, filters `firings`
+  by `firing_site_of_rule rule`, picks the highest-priority
+  source (Artifact > BehaviorGrep > Placeholder-skip).
+- Falls through to `Expect_success` in the same cases as
+  before.
+
+**Behavior preserved byte-identically**: `tiny run` 21/22
+PASS (same one `type_wrong` c6 flake), `artifact-test`
+101/101 (unchanged). No new tests needed — the switch table
+is now data but produces the same step_expectation output
+for every (scenario, rule, lang) triple as the old ad-hoc
+branches did.
+
+**Step 2 — synthesis guard reads the binding table**:
+
+`recipe_of_derived_cell`'s `Lib × On_artifact Lib` guard
+used to hand-check `List.mem langs Python` — mirroring the
+fact that `compat_inputs_of_contract ~lang:OCaml C4`
+returned None. Now consults `Canary_scenario.binding_has_live_firing
+tiny_contract_bindings C4 lang`: skips synthesis when the
+lang has no live firing for c4 (Placeholder counts as
+non-live). Same output (OCaml Lib cells stay empty), but
+the *reason* is now data — when c4-OCaml gets wired later,
+the guard automatically lets the cells synthesize without
+code change. This is the payoff of the placeholder pattern:
+the guard collapses from "hand-coded Python-in-langs check"
+to "consult binding status".
+
+**Startup validator** added: any scenario claiming
+`manifest = Possible _` (expects to fire) must have at
+least one live firing across its `violates × langs`. Catches
+"you wired a Bs entry expecting failure detection, but every
+contract you listed is a Placeholder" — a design gap that
+would otherwise emit silent Expect_success.  Currently zero
+offenders; validator loads clean.
+
+**Code net**:
+- `canary_scenario.ml`: +80 LOC (types + `firing_site_of_rule` +
+  `binding_has_live_firing`)
+- `canary_tiny_scenario.ml`: +140 LOC (`tiny_contract_bindings`
+  data) - 60 LOC (deleted `compat_inputs_of_contract` +
+  `is_expect_failure_contract`) + 15 LOC net for the rewritten
+  `expectation_of_entry` + guard change + validator.
+- Net: ~+175 LOC. Larger than the 2-3 special-case branches would
+  have cost, but the accretion pressure is now data-shaped, not
+  code-shaped. Adding a contract binding for a new (contract,
+  lang) is one row. Wiring a Placeholder is a source-variant swap.
+
+**Doc-sync riders**:
+- `ssot.md` §5.4 (new) "Contract bindings" — types +
+  Placeholder principle
+- `tiny.md` §7.1 refresh (blockers now framed as Placeholder
+  wirings, not "hand-coded guard removals")
+- `derived_vs_hardcoded.md` §1/§2 update + note the parallel
+  between mutation Placeholders (§5.3) and contract binding
+  Placeholders (§5.4)
+
+**Follow-ups opened**:
+1. When c4-OCaml is wired (Placeholder → `From_artifact { inputs
+   = ... }`), the guard in `recipe_of_derived_cell` automatically
+   synthesizes Sc.2/4/6.OCaml Lib cells. No code change.
+2. When App primitive lands, need `At_build_app lang` or
+   `At_probe_app lang` bindings for whichever contracts the App
+   primitive can trigger.
+3. z3/llvm/sqlite still hand-code `Expect_compat_failure` inline
+   (their variants don't go through tiny's lowering). Task 2's
+   project-hookable factory would let them supply their own
+   `<project>_contract_bindings` table; the shape is now proven.

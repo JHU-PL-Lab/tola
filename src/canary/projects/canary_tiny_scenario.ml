@@ -629,6 +629,165 @@ let matches_derived_cell = Canary_scenario_util.matches_derived_cell
    [api_source.stable_symbols] is future work.
    ================================================================ *)
 
+(** Tiny's contract binding table — the data half of the
+    expectation lowering (§7.1 structural expectation, 2026-07-21).
+    Each entry declares, for one (contract, language) pair, the
+    firing sites where the contract's failure observation shows up
+    and how the observation is sourced (artifact prediction /
+    behavior grep / placeholder).
+
+    This replaces the ad-hoc [compat_inputs_of_contract] +
+    [is_expect_failure_contract] switch tables that used to be
+    read from inside [expectation_of_entry]. Adding a new contract
+    or wiring one for a new language is a data change: append a
+    row here, no code change in the lowering.
+
+    Convention: entries listed even when [firings = []] would be
+    valid (silent for this lang). Placeholder entries make the
+    "not wired yet" state visible instead of implicit (like
+    §5.3's "missing-ness visible" for mutation primitives).
+
+    Positioned before [recipe_of_derived_cell] so the synthesis
+    guard there can consult
+    {!Canary_scenario.binding_has_live_firing}. *)
+let tiny_contract_bindings : Canary_scenario.contract_binding list =
+  let module CC = Canary_compat in
+  let module CS = Canary_scenario in
+  [
+    (* c1 — symbol set. Fires at Probe_binding: stub link (Python
+       cext import / OCaml stub load) fails when a referenced
+       symbol vanished from the native lib. *)
+    { contract = CC.C1; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.From_artifact { inputs = CC.[
+          C_stub     [ "build_binding_ocaml/inspect.json" ];
+          Native_lib [ "build_lib/inspect.json" ];
+        ]};
+      ]};
+    { contract = CC.C1; lang = Canary_lang.Python;
+      firings = [
+        CS.At_probe_binding Canary_lang.Python,
+        CS.From_artifact { inputs = CC.[
+          C_stub     [ "build_binding_python/inspect.json" ];
+          Native_lib [ "build_lib/inspect.json" ];
+        ]};
+      ]};
+
+    (* c2 — API completeness. Probe references a name the binding
+       no longer exports. OCaml: undefined value at compile;
+       Python: AttributeError at import. Both surface at Probe. *)
+    { contract = CC.C2; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.From_artifact { inputs = CC.[
+          Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
+        ]};
+      ]};
+    { contract = CC.C2; lang = Canary_lang.Python;
+      firings = [
+        CS.At_probe_binding Canary_lang.Python,
+        CS.From_artifact { inputs = CC.[
+          Python_attrs [ "build_binding_python/inspect_attrs.json" ];
+        ]};
+      ]};
+
+    (* c3 — API repack. Behavioral; probe emits "FAIL …" when the
+       user-facing name maps to the wrong native symbol. *)
+    { contract = CC.C3; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+      ]};
+    { contract = CC.C3; lang = Canary_lang.Python;
+      firings = [
+        CS.At_probe_binding Canary_lang.Python,
+        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+      ]};
+
+    (* c4 — ABI (SONAME). Python cext is cached from baseline; on
+       lib SONAME bump the cached NEEDED still points at the old
+       filename, dyld fails to load. OCaml binding rebuilds fresh
+       against the current lib and picks up the new SONAME — c4
+       is silent for OCaml under tiny's current store convention.
+       See §7.1 remaining blocker: switching to a "packed .a" OCaml
+       binding would let c4 fire (Placeholder documents that). *)
+    { contract = CC.C4; lang = Canary_lang.Python;
+      firings = [
+        CS.At_probe_binding Canary_lang.Python,
+        CS.From_artifact { inputs = CC.[
+          Native_lib  [ "build_lib/inspect.json" ];
+          Abi_surface [ "build_binding_python/inspect.json" ];
+        ]};
+      ]};
+    { contract = CC.C4; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.Placeholder { reason =
+          "OCaml ABI-analogue: packed .a NEEDED vs libtiny.so \
+           SONAME. Awaiting SSOT §? — decide whether tiny's OCaml \
+           store convention rebuilds fresh (current: c4 silent) or \
+           caches the packed .a (future: c4 fires at Probe_binding \
+           OCaml or Build_app OCaml, depending on link timing)." };
+      ]};
+
+    (* c5 — versioned symbol floor. Same store-convention lang scope
+       as c4 (cached Python cext carries stale @VER references). *)
+    { contract = CC.C5; lang = Canary_lang.Python;
+      firings = [
+        CS.At_probe_binding Canary_lang.Python,
+        CS.From_artifact { inputs = CC.[
+          Versioned_exports [ "build_lib/inspect.json" ];
+          Versioned_req     [ "build_binding_python/inspect.json" ];
+        ]};
+      ]};
+
+    (* c6 — type/arity. Only OCaml binding rebuilds against the
+       mutated header; cstub compile fails at Build_binding OCaml.
+       The Probe_binding step of tiny's factory also rebuilds the
+       same cstub via dune, so the same failure surfaces there too. *)
+    { contract = CC.C6; lang = Canary_lang.OCaml;
+      firings = [
+        (let inputs = CC.[
+           Typed_header
+             [ "scan_sources/inspect_typed_header.json" ];
+           Typed_binding_stub
+             [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
+         ] in
+         CS.At_build_binding Canary_lang.OCaml,
+         CS.From_artifact { inputs });
+        (let inputs = CC.[
+           Typed_header
+             [ "scan_sources/inspect_typed_header.json" ];
+           Typed_binding_stub
+             [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
+         ] in
+         CS.At_probe_binding Canary_lang.OCaml,
+         CS.From_artifact { inputs });
+      ]};
+
+    (* c7 — stub orphan. Behavioral: static-only mismatch surfaces
+       as probe "FAIL …" line (per api_repack_stub_orphan). *)
+    { contract = CC.C7; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.From_behavior_grep { contains_any = [ "FAIL " ] };
+      ]};
+
+    (* c8 — API faithfulness. Blocked on c6+c7 per SSOT §3.4
+       contract_status (Blocked [C6; C7]). Placeholder here so the
+       shape commits; today's api_faithful Bs enters as
+       Expect_success. *)
+    { contract = CC.C8; lang = Canary_lang.OCaml;
+      firings = [
+        CS.At_probe_binding Canary_lang.OCaml,
+        CS.Placeholder { reason =
+          "c8 dormant — blocked on c6 + c7 detecting the cases c8 \
+           would need. Corresponds to Bs.6 api_faithful, which \
+           runs Expect_success everywhere today." };
+      ]};
+  ]
+
 (** Synthesize a [tiny_recipe] from a derived cell. Returns [None]
     when the cell's (target, kind) has no implemented parametric
     primitive — the design-space slot exists but no code can fill
@@ -665,14 +824,18 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
      | Lib, On_artifact Lib ->
          (* Binary SONAME bump. Default: libtiny.so.1.0 →
             libtiny.so.2.0. Mirrors Bs.4 (abi_soname_bump).
-            Guarded on "Python is in this cell's lang scope"
-            because c4's compat_inputs are only wired for Python
-            in tiny (see compat_inputs_of_contract). Sc.1 has
-            langs = [OCaml; Python] so passes; Sc.2/4/6.OCaml
-            have langs = [OCaml] only → skip until c4 gets
-            OCaml inputs (or the "tiny convention" changes). *)
+            Skips when c4 has no live firing for any of this
+            cell's languages — the C4/OCaml binding is a
+            Placeholder today (see tiny_contract_bindings), so
+            Sc.2/4/6.OCaml Lib cells synthesize None until the
+            placeholder is wired. Sc.1 (langs = [OCaml; Python])
+            and Sc.*.Python still synthesize because C4/Python
+            has a live From_artifact firing. *)
          let langs = Canary_scenario.langs_of_scenario cell in
-         if List.mem langs Canary_lang.Python ~equal:Poly.equal then
+         let live = List.exists langs ~f:(fun l ->
+           Canary_scenario.binding_has_live_firing
+             tiny_contract_bindings Canary_compat.C4 l) in
+         if live then
            Some {
              mutates = [ "c/build/libtiny.so.1.0" ];
              mutation = Some (Of_native (Native.soname_bump
@@ -692,10 +855,21 @@ let recipe_of_derived_cell (cell : Canary_scenario.scenario)
            expected = [];
            violates = [ Canary_compat.C2 ];
          }
-     | Binding Canary_lang.Python, _ ->
-         (* [Drop_python_attr] not implemented; the Python-side cells
-            stay empty until an AST-aware primitive lands. *)
-         None
+     | Binding Canary_lang.Python, On_artifact (Binding Canary_lang.Python) ->
+         (* Drop a top-level def from tiny_cext/__init__.py. Default:
+            def sum. Mirrors Bs.12 (api_complete_python) but on
+            python_cext only (Bs.12's patch also hits python_ctypes).
+            Byte-parity with the api_complete_python.patch
+            python_cext hunk is verified in mutation_regression_tests. *)
+         let file = "python_cext/tiny_cext/__init__.py" in
+         Some {
+           mutates = [ file ];
+           mutation = Some (Of_binding (Binding.drop_python_attr
+             ~file ~name:"sum"));
+           expected = [];
+           violates = [ Canary_compat.C2 ];
+         }
+     | Binding Canary_lang.Python, _ -> None
      | App, _ ->
          (* App-level mutations not parametrized. Sc.3-Sc.6 cells
             stay empty for now — future primitive (App_swap? patch
@@ -764,8 +938,9 @@ let () =
   let derived_after_dedup =
     List.length all_scenario_specs - List.length scenario_specs
   in
-  (* 9 synthesized - 3 deduped by Bs.1/4/8-13 = 6 net. *)
-  let expected_derived_after_dedup = 6 in
+  (* 11 synthesized - 4 deduped (Bs.1/4/8-13 + Bs.12 api_complete_python
+     on Sc.2.Python.A2) = 7 net. *)
+  let expected_derived_after_dedup = 7 in
   if derived_after_dedup <> expected_derived_after_dedup then
     Stdlib.failwith
       (Printf.sprintf
@@ -780,10 +955,13 @@ let () =
 let () =
   let some_n = List.length derived_scenario_specs in
   let none_n = List.length derived_scenarios - some_n in
-  (* 12 minus 3 OCaml-only Lib cells (Sc.2/4/6.OCaml) that skip
-     until c4 is wired for OCaml. *)
-  let expected_some = 9 in
-  let expected_none = 11 in
+  (* 14 total = 3 Source + 3 Lib (Python-in-langs only, 3 skipped OCaml)
+     + 4 Binding OCaml + 2 Binding Python + 2 On_behavior + 4 Headers +
+     App slots + N. Net Some = 11 (Source×3 + Lib×3 + BindingOCaml×3
+     + BindingPython×2); None = 9. Adjust when the synthesis table
+     changes. *)
+  let expected_some = 11 in
+  let expected_none = 9 in
   if some_n <> expected_some || none_n <> expected_none then
     Stdlib.failwith
       (Printf.sprintf
@@ -791,6 +969,42 @@ let () =
           %d Some + %d None). Update the count if the synthesis \
           table changed."
          some_n (some_n + none_n) expected_some expected_none)
+
+(* Startup validator — a scenario that claims [manifest = Possible _]
+   (expected to fire at probe) must have at least one live firing in
+   [tiny_contract_bindings] for one of its violates × langs. Catches
+   the shape "you wired a Bs entry expecting failure detection, but
+   every contract you listed is a Placeholder for the relevant
+   languages" — the mutation would apply, expectation_of_entry would
+   emit Expect_success everywhere, and the run would silently pass
+   (or unexpected_failure). Aligns with the §7.2 "missing-ness
+   visible" principle. *)
+let () =
+  let open Base in
+  let module CS = Canary_scenario in
+  let has_live entry =
+    let langs = CS.langs_of_scenario entry.scenario in
+    List.exists entry.recipe.violates ~f:(fun c ->
+      List.exists langs ~f:(fun l ->
+        CS.binding_has_live_firing tiny_contract_bindings c l))
+  in
+  let offenders =
+    List.filter all_scenario_specs ~f:(fun entry ->
+      CS.has_probe_manifestation entry.scenario
+      && not (has_live entry))
+  in
+  if not (List.is_empty offenders) then
+    Stdlib.failwith
+      (Printf.sprintf
+         "tiny_contract_bindings validator: %d scenario(s) claim \
+          manifest=Possible but no live firing exists in the \
+          bindings table for any of their (violates × langs) — \
+          probe would silently emit Expect_success. \
+          Offenders: %s. Wire the binding, mark the scenario \
+          Unknown_gap, or remove the empty violates entry."
+         (List.length offenders)
+         (String.concat ~sep:", "
+            (List.map offenders ~f:(fun e -> e.scenario.name))))
 
 (* ================================================================
    HELPERS
@@ -1491,121 +1705,61 @@ let project_spec = base_project_spec
     module 2026-07-08. See [doc/canary/design/tiny.md] §3 for
     the derivation shape. *)
 
-(** Per-contract inputs for [Expect_compat_failure], scoped
-    to a language. Returns [None] if the contract has no
-    coverage for that language.
-
-    Contracts covered: c1, c2, c4, c5, c6.
-    See [doc/canary/design/tiny.md] §"Per-contract inputs". *)
-let compat_inputs_of_contract ~(lang : Canary_lang.lang)
-  : Canary_compat.contract_id -> Canary_compat.inspect_input list option
-  =
-  let module CC = Canary_compat in
-  function
-  | CC.C1 ->
-    let lang_dir = Canary_lang.string_of_lang lang in
-    Some CC.[
-      C_stub
-        [ Printf.sprintf "build_binding_%s/inspect.json" lang_dir ];
-      Native_lib [ "build_lib/inspect.json" ];
-    ]
-  | CC.C2 ->
-    (match lang with
-     | Canary_lang.OCaml ->
-       Some CC.[ Ocaml_mli
-                   [ "build_binding_ocaml/inspect_mli.json" ] ]
-     | Canary_lang.Python ->
-       Some CC.[ Python_attrs
-                   [ "build_binding_python/inspect_attrs.json" ] ]
-     | _ -> None)
-  | CC.C4 ->
-    (* Tiny store convention: only Python cext is cached from
-       baseline; OCaml binding rebuilds fresh each run and picks
-       up the new SONAME. Only Python probe sees c4 fire. *)
-    (match lang with
-     | Canary_lang.Python ->
-       Some CC.[
-         Native_lib  [ "build_lib/inspect.json" ];
-         Abi_surface [ "build_binding_python/inspect.json" ];
-       ]
-     | _ -> None)
-  | CC.C5 ->
-    (* Same lang scope as c4 (same rebuild convention). Cached
-       Python cext carries stale @VER references. *)
-    (match lang with
-     | Canary_lang.Python ->
-       Some CC.[
-         Versioned_exports [ "build_lib/inspect.json" ];
-         Versioned_req     [ "build_binding_python/inspect.json" ];
-       ]
-     | _ -> None)
-  | CC.C6 ->
-    (* Only OCaml binding rebuilds against the mutated header;
-       cstub compile fails. Python cext cached — didn't see the
-       header change. c6 fires at Build (Binding OCaml) primarily
-       and cascades to Probe when dune rebuilds the same cstub. *)
-    (match lang with
-     | Canary_lang.OCaml ->
-       Some CC.[
-         Typed_header
-           [ "scan_sources/inspect_typed_header.json" ];
-         Typed_binding_stub
-           [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
-       ]
-     | _ -> None)
-  | _ -> None
-
-(** Is this contract detected by a probe assertion (behavioral
-    shape) rather than a static comparator? c3 / c7 fire when
-    the probe exits with a "FAIL …" line. *)
-let is_expect_failure_contract = function
-  | Canary_compat.C3 | Canary_compat.C7 -> true
-  | _ -> false
-
-(** Derive an [expectation] function from the entry's
-    [recipe.violates], languages, and manifest. Entries
-    without probe manifestation return [Expect_success]
-    uniformly (equivalent to no override). *)
+(** Lowering: given a scenario's [violates] list, its languages, and
+    a runtime rule, produce the [step_expectation] the runner should
+    consume. Pure data lookup over [tiny_contract_bindings] — no
+    more per-contract [match rule with] branches in the code. *)
 let expectation_of_entry (entry : scenario_spec)
   : Canary_basic.rule -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
   let open Base in
-  let module CC = Canary_compat in
-  let scenario_langs = Canary_scenario.langs_of_scenario entry.scenario in
+  let module CS = Canary_scenario in
+  let scenario_langs = CS.langs_of_scenario entry.scenario in
   let violates = entry.recipe.violates in
-  let has_manifest = Canary_scenario.has_probe_manifestation entry.scenario in
-  let expect_failure_shape =
-    List.exists violates ~f:is_expect_failure_contract in
-  let violates_c6 =
-    List.mem violates CC.C6 ~equal:Poly.equal in
+  let has_manifest = CS.has_probe_manifestation entry.scenario in
+  (* For a (rule) at runtime, collect the (contract, lang, source)
+     triples whose binding firing site matches. Skip Placeholders
+     — they emit no expectation. *)
+  let lookup_sources rule =
+    match CS.firing_site_of_rule rule with
+    | None -> []
+    | Some site ->
+      List.concat_map violates ~f:(fun c ->
+        List.concat_map scenario_langs ~f:(fun l ->
+          match
+            List.find tiny_contract_bindings ~f:(fun b ->
+              Poly.equal b.CS.contract c && Poly.equal b.CS.lang l)
+          with
+          | None -> []
+          | Some b ->
+            List.filter_map b.firings ~f:(fun (s, src) ->
+              if Poly.equal s site then Some src else None)))
+  in
   fun rule _loc ->
     if not has_manifest then Expect_success
-    else match rule with
-    | Canary_basic.Build_binding lang
-      when violates_c6
-        && List.mem scenario_langs lang ~equal:Poly.equal ->
-      (* c6 uniquely fires at Build (cstub compile fails
-         against mutated header) in addition to Probe. *)
-      (match compat_inputs_of_contract ~lang CC.C6 with
-       | Some inputs ->
-         Expect_compat_failure { inputs; version_info = None }
-       | None -> Expect_success)
-    | Canary_basic.Probe_binding lang
-      when List.mem scenario_langs lang ~equal:Poly.equal ->
-      (match
-         List.find_map violates
-           ~f:(fun c -> compat_inputs_of_contract ~lang c)
-       with
-       | Some inputs ->
-         Expect_compat_failure { inputs; version_info = None }
-       | None when expect_failure_shape ->
-         Expect_failure {
-           contains_any = [ "FAIL " ];
-           version_info = None;
-         }
-       | None -> Expect_success)
-    | _ -> Expect_success
+    else
+      let sources = lookup_sources rule in
+      (* Prefer From_artifact if any (deterministic derivation);
+         fall through to From_behavior_grep; ignore Placeholders. *)
+      let picked_artifact =
+        List.find_map sources ~f:(function
+          | CS.From_artifact { inputs } -> Some inputs
+          | _ -> None)
+      in
+      match picked_artifact with
+      | Some inputs ->
+        Expect_compat_failure { inputs; version_info = None }
+      | None ->
+        let picked_grep =
+          List.find_map sources ~f:(function
+            | CS.From_behavior_grep { contains_any } -> Some contains_any
+            | _ -> None)
+        in
+        (match picked_grep with
+         | Some contains_any ->
+           Expect_failure { contains_any; version_info = None }
+         | None -> Expect_success)
 
 (** Derive tiny_stores adjustments from the recipe's concrete
     mutation. Today only Soname_bump needs it. *)

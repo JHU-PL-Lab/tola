@@ -314,9 +314,9 @@ synthesize; cells whose primitive is missing (§5.3's
 "Missing on purpose") stay [None] — the empty slot stays
 visibly empty. After §7.2 Phase 4 (2026-07-20)
 `all_scenario_specs = 15 hand + 6 derived = 21` and
-coverage stands at 11 of 20 cells filled; 9 remain
-awaiting `Drop_python_attr` / App-level / helper primitives
-plus c4 wiring for OCaml. See
+coverage stands at 12 of 20 cells filled after §7.1's
+`Drop_python_attr` primitive landed (2026-07-21); 8 remain
+awaiting App-level primitives + c4 wiring for OCaml. See
 [`derived_vs_hardcoded.md`](derived_vs_hardcoded.md) for
 the full field-by-field derived-vs-hand map, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
@@ -360,11 +360,17 @@ shapes); 9 stay as `Patch` (adds + body/signature rewrites).
 - `Source.Drop_c_symbol` — remove a C function definition
   (multi-line, needs brace-matching). No current tiny cell
   needs it; add when one does.
-- `Binding.Drop_python_attr` — remove a Python `def <attr>()`
-  block. Accurate multi-line def removal wants an AST-aware
-  transform; sed-based is fragile against docstrings /
-  decorators / nested defs. Add via a `canary/scripts/*.py`
-  when a cell needs it.
+
+**Recently added:**
+
+- `Binding.Drop_python_attr` — sed-range primitive that
+  deletes from `^def <name>(` through the next blank line.
+  Byte-parity with the existing
+  `api_complete_python.patch` verified in
+  `mutation_regression_tests`. Adequate for tiny; would
+  need an [ast]-based upgrade for projects with decorators
+  / nested defs / non-blank-line-separated defs. Landed
+  §7.1 2026-07-21.
 
 **Tests** (in
 [`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml),
@@ -378,6 +384,78 @@ shapes); 9 stay as `Patch` (adds + body/signature rewrites).
   hand-authored `.patch` file to two clean tiny sandboxes,
   assert `diff -r` reports empty. Confirms byte-identical
   parity with the existing patch for the 4 mapped variants.
+
+### 5.4 Contract bindings (expectation lowering vocabulary)
+
+**Motivation.** A scenario declares which contracts its
+mutation `violates` (e.g. Bs.4 abi_soname_bump violates
+c4). Turning that high-level fact into per-step
+expectations for the runner used to happen inside
+`expectation_of_entry` via ad-hoc `match rule with`
+branches — every new contract-firing-site or lang
+extension added another branch. §7.1 (2026-07-21) lifted
+the switch table into typed data, keyed on **contract
+bindings**.
+
+**Types** (in
+[`canary_scenario.ml`](../../src/canary/action/canary_scenario.ml)):
+
+```ocaml
+type firing_site =
+  | At_build_binding of Canary_lang.lang
+  | At_probe_binding of Canary_lang.lang
+  | At_build_app of Canary_lang.lang
+  | At_probe_app of Canary_lang.lang
+
+type expectation_source =
+  | From_artifact of { inputs : inspect_input list }
+  | From_behavior_grep of { contains_any : string list }
+  | Placeholder of { reason : string }
+
+type contract_binding = {
+  contract : contract_id;
+  lang     : Canary_lang.lang;
+  firings  : (firing_site * expectation_source) list;
+}
+```
+
+Two-category framing: `From_artifact` is *static-sourced,
+dynamic-checked* (read cached inspect JSONs → compute
+predicted substrings via the contract's predict closure →
+grep probe.log). `From_behavior_grep` is *dynamic-only*
+(assert log substring). `Placeholder` is *shape committed,
+content TBD* — emits `Expect_success` at runtime, but the
+binding is registered so `binding_has_live_firing` and the
+startup validator can see it. Same "missing-ness visible"
+principle as §5.3's Missing-on-purpose mutation shapes.
+
+**Per-project data** — a project supplies its own
+bindings table. Tiny's lives in
+`canary_tiny_scenario.ml:tiny_contract_bindings`; c1-c7
+wired for the relevant langs, c4-OCaml and c8-OCaml as
+Placeholder. `expectation_of_entry` becomes a pure lookup
+over this table.
+
+**Guard consumer.** `Canary_scenario.binding_has_live_firing
+bindings contract lang` returns true iff the (contract,
+lang) has at least one non-Placeholder firing. Used by
+`recipe_of_derived_cell`'s synthesis guards to decide
+whether a mutation targeting a contract will produce a
+detectable failure or emit silent Expect_success.
+
+**Startup validator** (in `canary_tiny_scenario.ml`):
+every scenario with `manifest = Possible _` must have at
+least one live firing across its `violates × langs`.
+Catches "you wired a Bs entry expecting failure, but
+every contract you listed is Placeholder" — a design gap
+that would otherwise silently pass.
+
+**Task 2 hook.** z3 / llvm / sqlite still hand-code
+`Expect_compat_failure` inline in their `project_spec`.
+Task 2 (parked at `worklog_2026_07.md` — Task 2 parked
+plan) can extend the pattern by letting each project
+supply its own `<project>_contract_bindings` and inherit
+the uniform lowering.
 
 ## 6. Operational taxonomy — scenario / action / step / stage / rule
 

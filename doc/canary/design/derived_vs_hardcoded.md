@@ -33,7 +33,8 @@ Companion docs:
 ## 1. Scenarios (per-Bs, per-cell)
 
 Anchor: [`canary_tiny_scenario.ml`](../../src/canary/projects/canary_tiny_scenario.ml).
-Today `all_scenario_specs = 15 hand + 6 derived = 21`.
+Today `all_scenario_specs = 15 hand + 7 derived = 22`
+(coverage 12/20 cells filled).
 
 | Field                | Hand-authored (13 Bs + 2 Pc) | Derived (§7.2 Phase 4, 2026-07-20)                                                                              |
 | -------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------- |
@@ -53,7 +54,7 @@ Today `all_scenario_specs = 15 hand + 6 derived = 21`.
 | `scenario.actions`             | —                                                                                                                                                                                                                                                | Hand-set per parent Sc.N; Bs.N inherits parent Sc's actions (`e825f21` retired `acts_full`).                                            |
 | `related_artifacts`            | ✅ `Canary_scenario.related_artifacts` → `related_artifacts_of_actions` → `artifacts_of_rule` (§7.9 2026-07-10)                                                                                                                                  | Only the per-rule consumes/produces table in `artifacts_of_rule` (one table, project-agnostic).                                         |
 | `has_probe_manifestation`      | ✅ From `origin.manifest`                                                                                                                                                                                                                        | —                                                                                                                                       |
-| `expectation` per (rule, loc)  | ✅ [`expectation_of_entry`](../../src/canary/projects/canary_tiny_scenario.ml) — reads `violates + scenario_langs + has_manifest`, delegates to `compat_inputs_of_contract`, wraps in `Expect_compat_failure`. c6 special-cases Build_binding.   | `compat_inputs_of_contract ~lang c` — tiny-specific JSON-path table (~30 lines).                                                        |
+| `expectation` per (rule, loc)  | ✅ [`expectation_of_entry`](../../src/canary/projects/canary_tiny_scenario.ml) — pure data lookup over `tiny_contract_bindings` (SSOT §5.4). For each (violates × scenario_langs), matches the rule to a `firing_site` via `firing_site_of_rule` and picks the highest-priority `expectation_source` (Artifact > Grep > Placeholder-skip). Structural rewrite 2026-07-21. | `tiny_contract_bindings` per-(contract, lang) data table (~140 LOC). Placeholder rows commit the shape without wiring; startup validator catches "Possible-manifest but Placeholder-only violates". |
 | `stores.lib_filename`          | ✅ `stores_of_entry`: on `Soname_bump`, strip trailing minor from `to_so`                                                                                                                                                                        | Other stores fields hand-set                                                                                                            |
 | `project_spec`                 | ✅ `project_spec_of_entry`: base spec + derived expectation + derived stores                                                                                                                                                                     | `make_base_project_spec` chassis (build/probe/inspect via `Canary_build_cmd` primitives)                                                |
 | Step list                      | ✅ `Canary_step_builder.derive_steps` — walks action rules + project spec, filters by capabilities, attaches summaries                                                                                                                           | Shared machinery, project-agnostic                                                                                                      |
@@ -85,12 +86,16 @@ For quick reference — everything that lives on the hand side:
 
 1. 15 hand entries in `scenario_specs` + 10 `.patch` files
    under [`scenarios/patches/`](../../canary/examples/tiny/scenarios/patches/).
-2. `compat_inputs_of_contract ~lang c` — tiny-specific
-   JSON-path table (~30 lines).
+2. `tiny_contract_bindings` — per-(contract, lang) firing
+   sites + expectation sources (SSOT §5.4). Data table with
+   Placeholder entries for c4-OCaml and c8-OCaml (visible
+   TODOs, checked by startup validator). Replaces the ad-hoc
+   `compat_inputs_of_contract` switch (retired 2026-07-21).
 3. `artifacts_of_rule` per-rule table (project-agnostic).
 4. Per-artifact mutation primitives (`Rename_c_symbol`,
-   `Soname_bump`, `Drop_ocaml_val`, `Rename_version_tag`) —
-   hand shell commands routed through utility primitives.
+   `Rename_version_tag`, `Soname_bump`, `Drop_ocaml_val`,
+   `Drop_python_attr`) — hand shell commands routed through
+   utility primitives.
 5. `make_base_project_spec` — hand build/probe/inspect shell
    strings via `Canary_build_cmd` / `Canary_cc` primitives
    (not raw `Printf.sprintf`).
@@ -105,10 +110,11 @@ Not a work queue — a visibility list. Items on the
 "hardcoded" side that could plausibly become derived if the
 right upstream primitive lands:
 
-- **Empty derived cells** (9 today, see [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells))
-  — each blocked on a missing mutation primitive
-  (`Drop_python_attr`, App-level, helper-chain) or
-  `compat_inputs_of_contract` wiring (c4 for OCaml).
+- **Empty derived cells** (8 today after §7.1 shipped
+  `Drop_python_attr`; see [`tiny.md §7.1`](tiny.md#71-fill-the-8-remaining-empty-derived-cells))
+  — each blocked on a missing App-level mutation primitive
+  or on wiring the `(C4, OCaml)` Placeholder in
+  `tiny_contract_bindings` (SSOT §5.4).
 - **z3/llvm hand `Expect_compat_failure` predicates**
   (~28 LOC, see [`worklog_2026_07.md` — Task 2 parked plan](../worklog/worklog_2026_07.md)).
 - **Workspace fixups** (RUNPATH strip, symlink synthesis) —
