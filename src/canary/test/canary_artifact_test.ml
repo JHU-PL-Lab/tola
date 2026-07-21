@@ -744,6 +744,11 @@ let mutation_pure_tests =
         Poly.equal
           (M.Binding.drop_ocaml_val ~file:"x.mli" ~name:"sum")
           (M.Binding.Drop_ocaml_val { file = "x.mli"; name = "sum" }) };
+    { name = "mut.Binding.drop_python_attr constructor";
+      check = fun () ->
+        Poly.equal
+          (M.Binding.drop_python_attr ~file:"x.py" ~name:"sum")
+          (M.Binding.Drop_python_attr { file = "x.py"; name = "sum" }) };
     { name = "mut.rename_c_symbol apply_cmds shape";
       check = fun () ->
         let cmds = M.Source.apply_cmds ~sandbox:"/tmp/sb"
@@ -783,6 +788,7 @@ let mutation_shell_apply_tests ~tiny_src ~output_dir : Canary_pm_test.test_case 
   let sb1 = sb_root ^ "/rename_c_symbol" in
   let sb2 = sb_root ^ "/rename_version_tag" in
   let sb3 = sb_root ^ "/drop_ocaml_val" in
+  let sb4 = sb_root ^ "/drop_python_attr" in
   let module M = Canary_artifact_mutation in
   let rename_c_cmds = M.Source.apply_cmds ~sandbox:sb1
       (M.Source.rename_c_symbol ~file:"c/src/tiny.c"
@@ -792,6 +798,9 @@ let mutation_shell_apply_tests ~tiny_src ~output_dir : Canary_pm_test.test_case 
          ~from_:"TINY_1.0" ~to_:"TINY_2.0") in
   let drop_val_cmds = M.Binding.apply_cmds ~sandbox:sb3
       (M.Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum") in
+  let drop_attr_cmds = M.Binding.apply_cmds ~sandbox:sb4
+      (M.Binding.drop_python_attr
+         ~file:"python_cext/tiny_cext/__init__.py" ~name:"sum") in
   let seed sb =
     [%string "rm -rf %{sb} && mkdir -p %{sb} && cp -r %{tiny_src}/. %{sb}/"]
   in
@@ -806,6 +815,9 @@ let mutation_shell_apply_tests ~tiny_src ~output_dir : Canary_pm_test.test_case 
   let seq3 =
     [%string "rm -rf %{sb3} && mkdir -p %{sb3} && cp -r %{tiny_src}/. %{sb3}/ && \
               %{String.concat ~sep:\" && \" drop_val_cmds}"] in
+  let seq4 =
+    [%string "rm -rf %{sb4} && mkdir -p %{sb4} && cp -r %{tiny_src}/. %{sb4}/ && \
+              %{String.concat ~sep:\" && \" drop_attr_cmds}"] in
   ignore run_seq;
   [
     { name = "mut.apply.rename_c_symbol produces tiny_total";
@@ -819,6 +831,12 @@ let mutation_shell_apply_tests ~tiny_src ~output_dir : Canary_pm_test.test_case 
     { name = "mut.apply.drop_ocaml_val removes val sum";
       cmd = [%string "%{seq3} && ! grep -q '^val sum' %{sb3}/ocaml/tiny.mli \
                        && grep -q '^val diff' %{sb3}/ocaml/tiny.mli"];
+      expected_rc = 0 };
+    { name = "mut.apply.drop_python_attr removes def sum";
+      cmd = [%string "%{seq4} && ! grep -q '^def sum(' \
+                       %{sb4}/python_cext/tiny_cext/__init__.py \
+                       && grep -q '^def diff(' \
+                       %{sb4}/python_cext/tiny_cext/__init__.py"];
       expected_rc = 0 };
   ]
 
@@ -872,6 +890,18 @@ let mutation_regression_tests ~tiny_src ~patches_dir ~output_dir
       ~patch_file:"api_complete.patch"
       ~apply_param_cmds:(M.Binding.apply_cmds ~sandbox:(output_dir ^ "/mut_regress/api_complete/via_mutation")
         (M.Binding.drop_ocaml_val ~file:"ocaml/tiny.mli" ~name:"sum"));
+    (* api_complete_python.patch hits BOTH python_cext and
+       python_ctypes __init__.py, so parity needs both drops. *)
+    anchor ~name:"api_complete_python"
+      ~patch_file:"api_complete_python.patch"
+      ~apply_param_cmds:
+        (let sb = output_dir ^ "/mut_regress/api_complete_python/via_mutation" in
+         M.Binding.apply_cmds ~sandbox:sb
+           (M.Binding.drop_python_attr
+              ~file:"python_cext/tiny_cext/__init__.py" ~name:"sum")
+         @ M.Binding.apply_cmds ~sandbox:sb
+             (M.Binding.drop_python_attr
+                ~file:"python_ctypes/tiny_ctypes/__init__.py" ~name:"sum"));
   ]
 
 (* ── §7.9: related_artifacts derivation spec tests ──

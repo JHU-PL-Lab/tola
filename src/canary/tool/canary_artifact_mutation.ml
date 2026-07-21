@@ -148,17 +148,24 @@ module Binding = struct
         Line-based; the declaration terminates at end-of-line or
         the next [val/external/let] keyword. Reference case: tiny
         [api_complete] drops [val sum] from [ocaml/tiny.mli].
-
-      Python's [Drop_python_attr] deferred (2026-07-20 user OK):
-      accurate multi-line def-block removal wants an AST-aware
-      transform; the sed/regex-based versions are fragile against
-      docstrings, decorators, nested defs. Left as a gap in this
-      layer — a future addition (or a Python one-liner via [ast]
-      when it earns its keep). *)
+      - [Drop_python_attr] — remove a top-level [def <name>(...):]
+        block from a Python file, along with the immediately
+        following blank line. Range-based sed: matches from a line
+        beginning [def <name>(] through the next blank line, deletes
+        them. Reference case: tiny [api_complete_python] drops
+        [def sum] from [python_cext/tiny_cext/__init__.py] —
+        byte-identical to the existing patch. Limitations: assumes
+        blank-line-separated defs; does not handle decorators above
+        the def; does not remove [Assign]/[AnnAssign]/[ClassDef]
+        attributes (only [FunctionDef]). Adequate for tiny; upgrade
+        to an [ast]-based transform if a project needs the fuller
+        vocabulary. *)
   type t =
     | Drop_ocaml_val of { file : string; name : string }
+    | Drop_python_attr of { file : string; name : string }
 
   let drop_ocaml_val ~file ~name = Drop_ocaml_val { file; name }
+  let drop_python_attr ~file ~name = Drop_python_attr { file; name }
 
   let apply_cmds ~sandbox = function
     | Drop_ocaml_val { file; name } ->
@@ -170,6 +177,14 @@ module Binding = struct
            existing api_complete.patch shape. *)
         [ Printf.sprintf
             "sed -i -E '/^[[:space:]]*(val|external|let)[[:space:]]+%s([[:space:]]|:|=)/d' '%s/%s'"
+            name sandbox file ]
+    | Drop_python_attr { file; name } ->
+        (* Delete from `def <name>(` through the first blank line.
+           Matches the api_complete_python.patch shape byte-for-byte
+           on the tiny fixture. Range end pattern is a whitespace-only
+           line, so trailing-space blank lines match too. *)
+        [ Printf.sprintf
+            "sed -i -E '/^def[[:space:]]+%s[[:space:]]*\\(/,/^[[:space:]]*$/d' '%s/%s'"
             name sandbox file ]
 end
 
