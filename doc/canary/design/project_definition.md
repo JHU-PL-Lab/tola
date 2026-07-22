@@ -1,0 +1,323 @@
+# The `project` definition — detection-first, forecast-agnostic
+
+> **Status: design draft (2026-07-22).** Captures the direction agreed
+> in discussion; not yet implemented. Supersedes the minimal
+> `Canary_project.project = { name; contract_bindings }` recorded in
+> `worklog_2026_07.md` (2026-07-21, "Task 2 Step 1 refinement").
+> Condenses into `ssot.md` §6.1 once settled.
+
+Companion to [`new_project.md`](new_project.md) (§3 auto-generation plan,
+which this subsumes) and [`ssot.md`](ssot.md) §6.1 (operational taxonomy),
+§3 (the c1..c8 contracts), §6.5 (action catalogue).
+
+---
+
+## 1. Problem
+
+Two problems with the current shape:
+
+1. **`project` is inert and under-determined.** `Canary_project.project`
+   is `{ name; contract_bindings }`, has a single inhabitant
+   (`tiny_project`), and no consumer — `canary_main.ml` walks
+   `all_scenario_specs` directly. It was deliberately settled from N=1
+   (tiny only), which is exactly why it's under-determined.
+
+2. **Forecast and detection are conflated.** The runner-facing
+   `Canary_step_builder.runner_spec` (the old `project_spec`) carries
+   `expectation : action -> location option -> step_expectation`. That
+   field is a **hand-authored forecast**: for tiny it comes from a
+   scenario's `violates` list + `tiny_contract_bindings`; for z3/llvm it
+   names a specific known drift (`parser_context`, `Opcode.UncondBr`).
+   A **real-world project may not have the intended contract violations**
+   — you can't forecast what will break before you run the probes. You
+   need to **detect** drift, not declare it up front.
+
+The fix: make the `project` **detection-first and forecast-agnostic**,
+and move the forecast (the "this should break here" oracle) out to tiny,
+where it belongs as a **regression check on canary itself**.
+
+---
+
+## 2. The core separation — two verdicts
+
+Today `runner_spec.expectation` + the local runner fuse two distinct
+things. Separate them:
+
+| | **Detection result** (universal) | **Oracle check** (tiny only) |
+|---|---|---|
+| What | probe outcome + which contracts fired + what they found | does the detection result match manufactured ground truth? |
+| Source | derived from actions / `api_source` at run time | hand-authored `violates` / `expected` |
+| Who has it | every project | tiny (the "project-for-scenario" regression fixture) |
+
+- **Detection** is already discovery-based: the `predict` closures
+  (`c1_predict` etc.) compute *what* broke at run time (e.g. `c1` does a
+  set-diff `stub_requires ∖ lib_defines`). They don't need the answer up
+  front — only *which artifacts to look at*. Today the flow gates them
+  behind the hand-authored `violates`; forecast-agnostic detection
+  removes that gate and runs the in-scope contracts unconditionally.
+- **The oracle** (`violates` + `expected`) is tiny's business: tiny
+  *manufactures* a break (e.g. `patch "symbol_missing"` renames
+  `tiny_sum → tiny_total` in C only) and then asserts canary's detection
+  reproduces the expected verdict. This is "checking the checking
+  result." No real project carries it.
+
+---
+
+## 3. Target shape (strawman)
+
+The new `project` **replaces the old `project_spec`** and owns canary's
+multi-store artifact model (`Build_tree` = src, `Staged` = lib, `Pm` =
+package). Forecast-free:
+
+```ocaml
+type project = {
+  name        : string;
+  api_source  : Canary_artifact_source.t;   (* watchlists: native syms, OCaml modules, Python attrs *)
+  stores      : store_config;               (* which stores this project's artifacts live in *)
+  actions     : action list;                (* produces/consumes → derives the artifact inventory *)
+  contracts_in_scope : contract_id list;    (* which detectors run; default = all enabled *)
+  (* NO expectation, NO violates, NO contract_bindings *)
+}
+```
+
+Detection facilities are **derived**, not declared: each action's
+produces/consumes relation yields the artifact inventory; the enabled
+in-scope contracts run their `predict` over the observed artifacts at
+each applicable probe step; whatever fires is reported.
+
+**Prerequisite:** "derive facilities from actions" needs the
+produces/consumes helper on `action` that is currently deferred (the
+`related_artifacts_of_actions` note in `canary_tiny_scenario.ml`). That
+becomes a sub-task.
+
+**Transport — reuse everything (resolved).** The detection report is
+**not** a new file or schema. It rides the existing transport:
+`actions.log` (one event per finding, alongside today's
+`compat_predicted` / `done` / `failed` rows) and `run_state.json`. The
+**step model, action graph, and cross-run cache stay identical** at the
+start — the redesign changes *what drives* the verdict (derived
+detection vs hand-authored forecast), not the plumbing that carries it.
+Keeping the transport fixed also keeps the regression suite comparable
+across the migration.
+
+### 3.1 Steps — declarative by default, closure escape hatch
+
+Pure-derive is fragile: real projects have bespoke commands (z3's cmake
+build, `LIBTORCH` env, brew keg paths). So a step is either derived from
+declarative store config *or* a raw escape hatch. Closures are "working
+but dirty" — keep them where needed, don't force everything through
+them.
+
+```ocaml
+type step_source =
+  | Derived of store_slot          (* generated from store_config + locator — the clean path *)
+  | Raw of (output_dir:string -> variant_key:string -> string)  (* escape hatch for tricky commands *)
+```
+
+The declarative half is exactly `new_project.md` §3's auto-generation
+plan (`package_locator` #29, `store_config` #30,
+`mk_script_spec_from_sketch` #32). This redesign delivers it as a side
+effect rather than a separate task.
+
+### 3.2 Fail mode — per-contract reaction (resolved)
+
+Green/red is **not baked in**; it's a policy over the detection report,
+configurable like `--disable-contract`. The unit of configuration is
+**per-contract** — a general contract/expectation setting that says how
+a firing reacts:
+
+```ocaml
+type reaction = Log | Print | Raise   (* Raise = OCaml exception → fail the run *)
+```
+
+- `Log` / `Print` — warn-only; the finding is recorded/surfaced but the
+  run stays green.
+- `Raise` — fail the run (an OCaml exception, caught at the runner
+  boundary and turned into a red step/verdict).
+
+Findings still carry a natural **severity** that sets the *default*
+reaction:
+
+- **Hard** — compile / link error / probe crash: the artifact genuinely
+  does not work. Default `Raise`.
+- **Soft** — a contract fired (API / symbol / type drift) but the probe
+  still built and ran. Default `Log`/`Print`.
+
+Run-level presets are just bulk settings over the per-contract table:
+
+| Preset | Hard | Soft |
+|---|---|---|
+| `tolerate` (warn-only) | `Print` | `Log` |
+| **`default`** | **`Raise`** | **`Print`** |
+| `fail_fast` / `strict` | `Raise` | `Raise` |
+
+A positive-only project (sqlite) is green when its positive probes
+build/run; any drift the contracts happen to detect is logged/printed —
+it doesn't fail the session unless a contract is set to `Raise` or a
+probe hard-errors.
+
+---
+
+## 4. tiny — the regression sidecar
+
+tiny keeps the oracle, split *out* of the `project` type:
+
+```ocaml
+(* per scenario, owned by tiny's harness — NOT on `project` *)
+type oracle = {
+  violates : contract_id list;
+  expected : (string * outcome) list;
+}
+```
+
+tiny's `project` is forecast-free like everyone else. Its harness reads
+the sidecar and asserts `detection_report ≡ oracle` for each scenario.
+tiny's `mutation` (world-building) stays; only the forecast/oracle moves
+out of the shared type.
+
+---
+
+## 5. Scenarios / variants (Model A, unchanged)
+
+Each project's module still owns its runnable units (tiny:
+`all_scenario_specs`; z3/llvm: variants from `mk_runner_spec ~source`).
+`scenario ≡ variant` at the middle taxonomy level (confirmed 2026-07-21).
+The `project` bundle does **not** carry a `scenarios`/`variants` field —
+that stays module-owned per the concrete-over-polymorphic preference.
+The bundle earns its keep as the **detection scope** (stores + api_source
++ contracts_in_scope), not a failure-location table.
+
+---
+
+## 6. Migration / ordering (draft)
+
+This is a redesign, not a migration. **Each step ships its layer test**
+(§8) — the layers are pure, so the test lands with the code and never
+needs a project run.
+
+1. **action → artifact** — make produces/consumes first-class (the
+   deferred helper). Detection derives its inputs from this.
+   *Test:* assert the artifact inventory for a fixed `action list`.
+2. **`store_config` + `project` type** — forecast-free, multi-store,
+   declarative steps with `Raw` escape hatch.
+   *Test:* golden-string the `Derived` step commands from a `store_config`.
+3. **Detection-report runner path** — run in-scope contracts over
+   observed artifacts; emit a report; apply the fail-mode policy.
+   *Test:* feed committed inspect-JSON fixtures → assert findings; feed
+   findings + reactions → assert verdict.
+4. **sqlite as first forecast-free inhabitant** — validates the shape on
+   a real positive-only project (N=1-real).
+   *Test:* sqlite's derived steps + a positive fixture → empty/green report.
+5. **Extract tiny's oracle** into the sidecar; reconcile tiny's harness
+   to assert `detection_report ≡ oracle`. Regression suite must stay
+   green (21/22 + artifact-test 101/101).
+   *Test:* the oracle-check itself, over a mismatched fixture pair.
+6. **ssot §6.1** — condense this note into the taxonomy section.
+
+Open: whether step 1 (action→artifact) is done fully up front or grown
+alongside step 4 (sqlite as forcing function). N=2 (tiny + sqlite) is the
+right pressure to settle the derived-inputs shape.
+
+---
+
+## 7. Open questions — resolved (2026-07-22)
+
+- **Report schema → reuse existing transport.** No new report format.
+  Findings ride `actions.log` (one event each) and `run_state.json`; the
+  step model, action graph, and cache stay identical initially. See §3
+  "Transport". *Deferred:* a richer per-finding row (contract id +
+  severity + store + action) can grow later without changing the file.
+- **Per-contract severity → per-contract reaction.** Resolved as a
+  general contract/expectation setting `reaction = Log | Print | Raise`.
+  See §3.2. Hard/soft severity sets the default; presets bulk-configure.
+- **Escape-hatch boundary → stays at the action/step layer.** Both
+  `Derived` and `Raw` step forms are acceptable there; no boundary forced
+  now. A cleaner split earns its keep once more projects land (the
+  `new_project.md` §3 auto-gen threshold, ~10 projects).
+- **`api_source` layering → free to move.** The downward-dependency
+  concern (`api_source`/`Canary_artifact_api` lives in `tool/`, `project`
+  in `action/`) is not a blocker — the type may move. *Clarification for
+  context:* `api_source` is the **declarative provider/consumer surface**
+  (native symbol prefixes + header paths on the provider side; OCaml
+  module / Python attr watchlists on the consumer side). In this design
+  it is the source of the watchlists the contracts inspect against — i.e.
+  the detection scope's data. Its exact home (move into `action/`,
+  indirection, or per-project lookup) is settled during step 2.
+
+---
+
+## 8. Testability — layer tests (a first-class goal)
+
+Today canary has two testing axes (`CLAUDE.md` "Two testing axes"):
+**project tests** (`canary action <project>` — full run, installs
+packages, builds) and **framework tests** (`canary artifact-test` /
+`pm-test` — tool assumptions). Both the slow axis (project) and the
+tool-drift axis are covered; what's missing is a **fast, hermetic axis
+for the project *definition* itself** — so a layer can be tested without
+running the whole project.
+
+The redesign makes this axis natural, because detection is a chain of
+**pure** transformations between two shell boundaries:
+
+```
+[shell: fetch / build / probe]            ← the ONLY impure part
+        │  emits
+        ▼
+   inspect JSONs   ← cut here: commit these as fixtures
+        │
+        ▼  PURE from here down
+  action→artifact inventory
+        │
+        ▼
+  contract predict over artifacts  →  findings
+        │
+        ▼
+  fail-mode policy (per-contract reaction)  →  verdict
+        │
+        ▼  (tiny only)
+  oracle check: detection_report ≡ expected
+```
+
+Cut at the **inspect-JSON boundary** and everything downstream is a pure
+function of committed fixtures. No opam, no apt, no build.
+
+### 8.1 The pure layers, each independently testable
+
+| Layer | Input (fixture) | Assert |
+|---|---|---|
+| **action → artifact** | an `action list` | derived artifact inventory (stores × kinds) |
+| **step derivation** | `store_config` + locator | golden `Derived` command strings |
+| **detection** | committed inspect-JSON pair (mismatched) | the findings each in-scope contract produces |
+| **fail-mode policy** | findings + per-contract `reaction` table | the run verdict (green / warn / raise) |
+| **oracle check** (tiny) | detection report + `oracle` | pass/fail of the regression assertion |
+
+The **detection** layer already has a seed: `canary_artifact_test.ml`
+runs `predicted_contains_any_v2` against synthetic `Ocaml_mli` /
+`Python_attrs` fixtures (the compat-helper pure tests). This extends that
+pattern up the whole chain.
+
+### 8.2 Fixtures — committed inspect JSONs
+
+Layer tests need a small committed corpus of inspect outputs: at least
+one **matched** pair (green) and one **mismatched** pair (fires a
+contract) per contract in scope. This is the same artefact the deferred
+`summary-sync` / committed-cache idea wants
+(`CLAUDE.md` "Step 3 deferred — `doc/canary/artifact_inspect.json`"), so
+layer-testing and the committed cache land together: the cache *is* the
+fixture corpus.
+
+### 8.3 Where it runs
+
+Either extend `canary artifact-test` with a `project-definition` group,
+or add a `canary project-test` subcommand. Pure + fast → runs in CI on
+every commit, unlike the project runs (which need PMs and are gated).
+Resolves the standing **TODO #15b** ("Unit-test framework for
+compat/inspect logic") for the definition layers.
+
+### 8.4 Why the old design couldn't do this
+
+The forecast model fused the answer into hand-authored `expectation`
+data, so "testing the definition" meant re-running the project to see if
+the forecast matched reality. Detection-first inverts it: the definition
+is pure data + pure derivation, and the only thing that needs a real run
+is refreshing the fixtures — occasionally, not per test.
