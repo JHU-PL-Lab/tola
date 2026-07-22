@@ -310,18 +310,21 @@ Open items only. Numbering is stable — sections keep their
 | §7.5 | Tiny packaging coverage                                                   | D       | long-horizon; needs Package mutation source     |
 | §7.6 | Contract catalogue extension                                              | D       | post-tiny research task                         |
 | §7.3 | Second mechanism axis — ctypes DFFI                                       | —       | deferred (user 2026-07-06)                      |
-| §7.8 | Task 2 — recipe/mutation integration (project-hookable factory)           | —       | deferred / rescoped 2026-07-20 — see §7.8       |
-
 Clusters: A = tiny scenario coverage / recipe machinery,
 D = long-horizon.
 
 *Recently shipped (kept as one-line pointers below for
 context; full chronicles in
 [`worklog_2026_07.md`](../worklog/worklog_2026_07.md)):
-§7.2 recipe synthesis 2026-07-20, §7.9 related_artifacts
-derivation 2026-07-10, §7.7 route tiny through `tool/`
-2026-07-09, SSOT §6.6 `runner_spec` doc 2026-07-10
-(`b9e4abc`).*
+§7.8 Task 2 recipe/mutation integration 2026-07-21 (Phases
+A-F: lift lowering → loc_filter + version_info → llvm/z3/sqlite
+migrated to contract bindings); Task 3 term-rename sweep
+2026-07-21 (rule → action, action_step → step, project_spec
+→ runner_spec, action_rule → action_graph, stage →
+artifact_status); §7.2 recipe synthesis 2026-07-20; §7.9
+related_artifacts derivation 2026-07-10; §7.7 route tiny
+through `tool/` 2026-07-09; SSOT §6.6 `runner_spec` doc
+2026-07-10 (`b9e4abc`).*
 
 ### 7.1 Fill the 8 remaining empty derived cells
 
@@ -414,14 +417,25 @@ diff `_cache/*/inspect/*.json` against Linux snapshots.
 Couples with the broader macOS-support gap in
 [`CLAUDE.md`](../../CLAUDE.md).
 
-### 7.8 Task 2 — recipe/mutation integration (project-hookable factory)
+### 7.8 Task 2 — recipe/mutation integration — shipped 2026-07-21
 
-**Deferred / rescoped 2026-07-20.** Full context + phased
-plan (~230 LOC, 5 phases) parked in
-[`worklog_2026_07.md` — Task 2 parked plan](../worklog/worklog_2026_07.md).
-Revisit once §7.1 fills the derived cells and the recipe
-layer is settled enough to abstract; sqlite/z3/llvm stay
-second-tier per the working principle above.
+Phases A-F completed 2026-07-21 (chronicle in
+[`worklog_2026_07.md`](../worklog/worklog_2026_07.md)):
+- Phase A lifted the binding-lookup lowering into
+  project-agnostic `Canary_scenario.lower_expectation`.
+- Phase B added per-firing `loc_filter` (loc-aware bindings).
+- Phase C added per-source `version_info` (thread strings
+  through to the emitted `Expect_compat_failure`).
+- Phases D-E migrated llvm + z3 to the contract-binding
+  pattern.
+- Phase F confirmed sqlite (positive-only) fits without code
+  change.
+
+Every hand-coded `Expect_compat_failure` in project specs
+now flows through `Canary_scenario.lower_expectation` over a
+per-project `<name>_contract_bindings` table. Original 5-phase
+plan (~230 LOC) landed as ~85 LOC after the earlier structural
+rewrite absorbed the switch table.
 
 ### 7.9 Derive `related_artifacts` from `actions` — shipped 2026-07-10
 
