@@ -13,7 +13,9 @@
     - [related_artifacts] is no longer a field — it derives
       from [actions] via [related_artifacts_of_actions]
       (§7.9, 2026-07-10). Per-action consumes/produces table
-      lives in [artifacts_of_action] below and in SSOT §6.5.
+      lives in {!Canary_action.artifacts_of_action} (moved
+      2026-07-22 to colocate with [store_actions]) and in
+      SSOT §6.5.
     - [id] is a string. [Sc_id.t] as a distinct type is deferred
       until the Sc.N / Bs.N enumeration stabilises.
     - [manifest] and [detector] on [mutation] are
@@ -435,49 +437,14 @@ let good_scenarios : scenario list =
 
 (* ---------- related_artifacts derivation (§7.9) ---------- *)
 
-(** Consumes-and-produces enumeration for a single action.
-    Order convention: prerequisite first, target next. The
-    hand-listed [related_artifacts] on §4's good scenarios
-    follows the same convention, so the derivation matches
-    element-wise when the actions are given in dependency
-    order.
-
-    - [Configure] / [Scan_sources] / [Build_headers] —
-      [Source] and (for Build_headers) [Headers].
-    - [Build_lib] — [Source; Lib].
-    - [Build_binding L] — [Lib; Binding L].
-    - [Install_lib] — [Lib] (the produced lib in installed state).
-    - [Build_app { lang = L }] — [Binding L; App].
-    - [Probe_lib] — [Lib].
-    - [Probe_binding L] — [Binding L; Lib]  (runtime dep last).
-    - [Probe_app { lang = L }] — [Binding L; Lib; App]
-      (Binding to load, Lib as runtime dep, App as the entry).
-    - [Fetch k] / [Publish k] — [k].
-    A action that touches nothing (currently none) returns []. *)
-let artifacts_of_action (r : Canary_basic.action) : Canary_basic.artifact_kind list =
-  let open Canary_basic in
-  match r with
-  | Configure -> [ Source ]
-  | Scan_sources -> [ Source ]
-  | Build_headers -> [ Source; Headers ]
-  | Build_lib -> [ Source; Lib ]
-  | Install_lib -> [ Lib ]
-  | Build_binding l -> [ Lib; Binding l ]
-  | Build_app { lang } -> [ Binding lang; App ]
-  | Probe_lib -> [ Lib ]
-  | Probe_binding l -> [ Binding l; Lib ]
-  | Probe_app { lang } -> [ Binding lang; Lib; App ]
-  | Fetch k -> [ k ]
-  | Publish k -> [ k ]
-
-(** Derive a scenario's [related_artifacts] from its
-    [actions] list. Union in first-appearance order (no
-    dedup rearrangement) — order follows the "prerequisite
-    first, target next" convention from [artifacts_of_action]. *)
+(** Derive a scenario's [related_artifacts] from its [actions]
+    list. Union in first-appearance order (no dedup rearrangement)
+    — order follows the "prerequisite first, target next"
+    convention from {!Canary_action.artifacts_of_action}. *)
 let related_artifacts_of_actions (actions : Canary_basic.action list)
   : Canary_basic.artifact_kind list =
   let open Base in
-  List.concat_map actions ~f:artifacts_of_action
+  List.concat_map actions ~f:Canary_action.artifacts_of_action
   |> List.fold ~init:[] ~f:(fun acc a ->
       if List.mem acc a ~equal:Poly.equal then acc else acc @ [ a ])
 

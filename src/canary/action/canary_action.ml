@@ -128,6 +128,43 @@ let nodes_of_action_graph (ar : action_graph) =
   |> List.dedup_and_sort ~compare:(fun a b ->
       String.compare (node_tag a) (node_tag b))
 
+(** Consumes-and-produces enumeration for a single action.
+    Order convention: prerequisite first, target next; runtime
+    deps trail direct arguments. Companion to {!store_actions}
+    (which enumerates {i which} actions run for a project) —
+    together they form the "action catalogue" that SSOT §6.5
+    documents. See §7.9 for the derivation this feeds.
+
+    Colocated with [store_actions] on 2026-07-22 (was in
+    [Canary_scenario]) so both views of the catalogue live in one
+    place; adding a new action variant now touches one file.
+
+    - [Configure] / [Scan_sources] — [Source].
+    - [Build_headers] — [Source; Headers].
+    - [Build_lib] — [Source; Lib].
+    - [Install_lib] — [Lib].
+    - [Build_binding L] — [Lib; Binding L].
+    - [Build_app { lang = L }] — [Binding L; App].
+    - [Probe_lib] — [Lib].
+    - [Probe_binding L] — [Binding L; Lib] (runtime dep last).
+    - [Probe_app { lang = L }] — [Binding L; Lib; App]
+      (Binding to load, Lib runtime dep, App entry).
+    - [Fetch k] / [Publish k] — [k]. *)
+let artifacts_of_action (a : action) : artifact_kind list =
+  match a with
+  | Configure -> [ Source ]
+  | Scan_sources -> [ Source ]
+  | Build_headers -> [ Source; Headers ]
+  | Build_lib -> [ Source; Lib ]
+  | Install_lib -> [ Lib ]
+  | Build_binding l -> [ Lib; Binding l ]
+  | Build_app { lang } -> [ Binding lang; App ]
+  | Probe_lib -> [ Lib ]
+  | Probe_binding l -> [ Binding l; Lib ]
+  | Probe_app { lang } -> [ Binding lang; Lib; App ]
+  | Fetch k -> [ k ]
+  | Publish k -> [ k ]
+
 (** Per-step verdict the diagram renderer uses. Lives here because the
     natural place to attach status to an action graph is alongside the
     action/node definitions; the actual mermaid emission lives in

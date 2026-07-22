@@ -151,10 +151,10 @@ live here.
 
 Tiny's concrete good scenarios:
 
-| Scenario id    | Exercises                 | Name                     | What it does                                                 |
-| -------------- | ------------------------- | ------------------------ | ------------------------------------------------------------ |
-| `Sc.4.OCaml`   | Sc.3.OCaml + Sc.4.OCaml   | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run     |
-| `Sc.6.OCaml`   | Sc.5.OCaml + Sc.6.OCaml   | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
+| Scenario id  | Exercises               | Name                     | What it does                                                 |
+| ------------ | ----------------------- | ------------------------ | ------------------------------------------------------------ |
+| `Sc.4.OCaml` | Sc.3.OCaml + Sc.4.OCaml | `app_over_binding_ocaml` | App links against binding, uses it directly; build + run     |
+| `Sc.6.OCaml` | Sc.5.OCaml + Sc.6.OCaml | `app_over_helper_ocaml`  | App uses a helper library that uses the binding; build + run |
 
 Naming convention: the id **is** the run-stage Sc.N (naming
 after the most-downstream stage exercised — the run
@@ -243,7 +243,7 @@ language-split tiny good scenarios (Sc.1 shared + 5 .OCaml +
 reference list for the `derive_entries` experiment (§9.3
 backlog).
 
-| ID    | Good scenario | Mutation                      | Name                     | Manifests                         | Detector today                                           |
+| ID    | Good scenario | Mutation                          | Name                     | Manifests                         | Detector today                                           |
 | ----- | ------------- | --------------------------------- | ------------------------ | --------------------------------- | -------------------------------------------------------- |
 | Bs.1  | Sc.1          | native_source (c/src)             | `symbol_missing`         | Sc.4 (probe fail)                 | c1 cmp_symbol                                            |
 | Bs.2  | Sc.1          | native_source (c/{include,src})   | `header_arity_bump`      | Sc.2 (binding build fail)         | c6 cmp_type                                              |
@@ -341,12 +341,12 @@ _lang each own their artifact's inspect wrappers).
 Currently implemented (with existing-patch parity where a
 tiny reference case exists):
 
-| Module | Variant | Reference patch |
-|---|---|---|
-| `Source` | `Rename_c_symbol { file; from_; to_ }` | `symbol_missing.patch` |
-| `Source` | `Rename_version_tag { file; from_; to_ }` | `symbol_version_floor.patch` |
-| `Native` | `Soname_bump { from_so; to_so }` | `abi_soname_bump` (Bs.4) |
-| `Binding` | `Drop_ocaml_val { file; name }` | `api_complete.patch` |
+| Module    | Variant                                   | Reference patch              |
+| --------- | ----------------------------------------- | ---------------------------- |
+| `Source`  | `Rename_c_symbol { file; from_; to_ }`    | `symbol_missing.patch`       |
+| `Source`  | `Rename_version_tag { file; from_; to_ }` | `symbol_version_floor.patch` |
+| `Native`  | `Soname_bump { from_so; to_so }`          | `abi_soname_bump` (Bs.4)     |
+| `Binding` | `Drop_ocaml_val { file; name }`           | `api_complete.patch`         |
 
 Freeform edits (add-declaration, coordinated multi-file
 changes, in-place body rewrites) stay as top-level
@@ -506,18 +506,18 @@ Canonical name-to-code map. If a term isn't in this table, add a
 row before using it in code or writeup. Term names are shared with
 the writeup — no need for a separate alignment section.
 
-| Level | Term | Meaning | Code |
-| --- | --- | --- | --- |
-| **Top** | **project** | System under test + coverage config bundle. Owns scenarios + contract bindings. | `Canary_project.project` (`action/`) |
-| Middle | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario` |
-| Below-middle | **runner_spec** | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario. | `Canary_step_builder.runner_spec` |
-| Below-middle | **action_graph** | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them). | `Canary_action.action_graph` |
-| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends. | `Canary_step_model.step` |
-| Low (legacy) | **step_body** | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder. | `Canary_basic.step_body` |
-| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `Canary_basic.action` |
-| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only) |
-| Attribute of artifact | **artifact_status** | Lifecycle state (`Built \| Installed \| Packed \| Fetched`). Complement to `location`. | `Canary_store.artifact_status` |
-| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart. | — |
+| Level                 | Term                       | Meaning                                                                                                                                                         | Code                                 |
+| --------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| **Top**               | **project**                | System under test + coverage config bundle. Owns scenarios + contract bindings.                                                                                 | `Canary_project.project` (`action/`) |
+| Middle                | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario`           |
+| Below-middle          | **runner_spec**            | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario.                                         | `Canary_step_builder.runner_spec`    |
+| Below-middle          | **action_graph**           | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them).                                                               | `Canary_action.action_graph`         |
+| Low                   | **step**                   | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends.                                                   | `Canary_step_model.step`             |
+| Low (legacy)          | **step_body**              | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder.                | `Canary_basic.step_body`             |
+| Action verb           | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue.                                                                               | `Canary_basic.action`                |
+| Attribute of action   | **stage**                  | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings.                                                          | (doc-only)                           |
+| Attribute of artifact | **artifact_status**        | Lifecycle state (`Built \| Installed \| Packed \| Fetched`). Complement to `location`.                                                                          | `Canary_store.artifact_status`       |
+| Theory                | **rule**                   | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart.                                                            | —                                    |
 
 **Same-word-different-level pitfalls.**
 
@@ -552,56 +552,97 @@ Rename chronicle 2026-07-21 (`project_spec → runner_spec`,
 
 ### 6.5 Action catalogue
 
-Constructors on `Canary_basic.action`. Enumerated flat by
-`canary paths-md`; consumed by the four backends (GH YAML,
-Mermaid, HTML, local runner).
+Constructors on `Canary_basic.action`. Enumeration + per-action
+metadata are two views of one catalogue and live colocated in
+[`canary_action.ml`](../../src/canary/action/canary_action.ml)
+(colocated 2026-07-22):
 
-| Action name     | Constructor                | Kind         |
-| --------------- | -------------------------- | ------------ |
-| `configure`     | `Configure`                | upstream     |
-| `scan_sources`  | `Scan_sources`             | upstream     |
-| `build_headers` | `Build_headers`            | native       |
-| `build_lib`     | `Build_lib`                | native       |
-| `install_lib`   | `Install_lib`              | upstream     |
-| `build_binding` | `Build_binding of lang`    | per language |
-| `build_app`     | `Build_app of app_info`    | downstream   |
-| `fetch_<kind>`  | `Fetch of artifact_kind`   | per artifact |
-| `pack_<kind>`   | `Publish of artifact_kind` | per artifact |
-| `probe_lib`     | `Probe_lib`                | native       |
-| `probe_binding` | `Probe_binding of lang`    | per language |
-| `probe_app`     | `Probe_app of app_info`    | downstream   |
+- **Enumeration** — `store_actions ~langs` (which actions run
+  for a project). Consumed by `derive_steps`, `canary paths`
+  (15-pattern renderer), and the four backends.
+- **Per-action consumes/produces** — `artifacts_of_action`
+  (what artifacts each action touches; prereq → target). Fed
+  into `Canary_scenario.related_artifacts_of_actions` (§7.9).
+- **Categorical kind** (upstream / native / per-language /
+  per-store / downstream) — SSOT-only today; no code type
+  named `action_kind` yet.
 
-`canary paths` enumerates the 15 structural composition patterns
-over these actions (`dune exec src/bin/canary_main.exe -- paths-md`).
+The single table below is authoritative for all three views:
 
-#### 6.5.1 Per-action consumes/produces (§7.9)
+| Action name     | Constructor                | Kind         | Artifacts (prerequisite → target)      |
+| --------------- | -------------------------- | ------------ | -------------------------------------- |
+| `configure`     | `Configure`                | upstream     | `[Source]`                             |
+| `scan_sources`  | `Scan_sources`             | upstream     | `[Source]`                             |
+| `build_headers` | `Build_headers`            | native       | `[Source; Headers]`                    |
+| `build_lib`     | `Build_lib`                | native       | `[Source; Lib]`                        |
+| `install_lib`   | `Install_lib`              | native       | `[Lib]`                                |
+| `build_binding` | `Build_binding of lang`    | per language | `[Lib; Binding L]`                     |
+| `build_app`     | `Build_app of app_info`    | downstream   | `[Binding L; App]`                     |
+| `probe_lib`     | `Probe_lib`                | native       | `[Lib]`                                |
+| `probe_binding` | `Probe_binding of lang`    | per language | `[Binding L; Lib]` (runtime dep last)  |
+| `probe_app`     | `Probe_app of app_info`    | downstream   | `[Binding L; Lib; App]`                |
+| `fetch_<kind>`  | `Fetch of artifact_kind`   | per store    | `[k]`                                  |
+| `pack_<kind>`   | `Publish of artifact_kind` | per store    | `[k]`                                  |
 
-Every action has an implicit input/output artifact set. Table
-below is the authoritative source; encoded in
-`Canary_scenario.artifacts_of_action` and consumed by
-`related_artifacts_of_actions` (union in first-appearance order).
-
-| Action | Artifacts (prerequisite → target) |
-| --- | --- |
-| `Configure`, `Scan_sources` | `[Source]` |
-| `Build_headers` | `[Source; Headers]` |
-| `Build_lib` | `[Source; Lib]` |
-| `Install_lib` | `[Lib]` |
-| `Build_binding L` | `[Lib; Binding L]` |
-| `Build_app { lang = L }` | `[Binding L; App]` |
-| `Probe_lib` | `[Lib]` |
-| `Probe_binding L` | `[Binding L; Lib]` (runtime dep last) |
-| `Probe_app { lang = L }` | `[Binding L; Lib; App]` |
-| `Fetch k` | `[k]` |
-| `Publish k` | `[k]` |
-
-Order convention: prerequisite first, target next, runtime deps
-trail. Union across a scenario's `actions` follows
+**Order convention**: prerequisite first, target next, runtime
+deps trail. Union across a scenario's `actions` follows
 first-appearance order (no dedup rearrangement), so §4 Good
 scenarios' displayed `A1(...) A2(...) A3(...)` labels stay stable
 across releases. Test spec at
 [`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml)
 under `scenario_derivation_pure_tests`.
+
+`canary paths` enumerates the 15 structural composition patterns
+over these actions (`dune exec src/bin/canary_main.exe -- paths-md`).
+
+#### 6.5.a Known refinement concerns
+
+Anchor for future work on the action layer. Recorded so they
+surface when we next touch action-related code.
+
+1. **`action_kind` is doc-only.** The categorical column above
+   isn't a typed value in code. Promote to a proper type +
+   attach to `artifacts_of_action`'s return if a future backend
+   or renderer wants to group actions by kind.
+2. **Parametric vs concrete asymmetry.** `store_actions ~langs`
+   is *parametric* on language list (expands per-lang variants);
+   `artifacts_of_action` is a *concrete* projection
+   (pattern-matches on the given action). Unifying around a
+   single `action_meta_of : action → { kind; artifacts }` record
+   would collapse the two views (colocated but not yet fused).
+3. **`scan_sources` placement is project-dependent.** Canonical
+   order runs after `Configure`; z3 overrides via
+   `scan_sources_after = Some Build_lib` because z3 generates
+   binding source at build_lib time. Documented in
+   `canary_step_builder.ml`, not here — surface if a second
+   project overrides.
+4. **App has no `Fetch` / `Publish`.** Contrast with `Binding L`
+   which has both. Apps are always built in-tree today (no
+   packaged apps). `store_actions` lists `Fetch App` /
+   `Publish App` but no store wiring for them.
+5. **`action_of_string` is a fragile inverse.** Round-trip parser
+   in `canary_basic.ml`; used to deserialize actions from
+   `actions.log`. No property test — could silently break under
+   a new variant.
+6. **Backend-specific action-to-string** mappings recur across
+   `canary_gh.ml`, `canary_diagram.ml`, `canary_html.ml`. Each
+   backend rebuilds its own view rather than consuming a shared
+   catalogue projection. Small duplication.
+7. **`canary_scenario_util.ml` is a tiny grab-bag** (~90 LOC of
+   helpers extracted from tiny 2026-07-08 for future projects;
+   all consumers today are tiny via `let alias = ...`). Fold
+   back into `canary_scenario.ml` or wait for a second
+   scenario-driven project to justify the split.
+8. **The `open Canary` shim** (`canary.ml`, 27 LOC) re-exports
+   `Canary_action + Canary_step_model + Canary_path_table`.
+   Still used by `canary_project_llvm.ml` + `canary_diagram.ml`;
+   retire once those two switch to explicit module refs.
+9. **Tiny's `runner_spec` doesn't emit `build_app` / `probe_app`
+   steps.** Sc.3/4/5/6 unmutated scenarios exercise app-level
+   paths via `probe_binding`. Adding App-level mutations (§7.1
+   remaining blocker) requires extending `make_base_runner_spec`
+   with per-Sc.N app-file closures — factory-shape refactor
+   beyond a primitive add.
 
 ### 6.6 `runner_spec` — the code-side scenario handoff
 
@@ -637,12 +678,12 @@ claims exist post-fetch.
 
 **Four backends** consume the resulting `step list`:
 
-| Backend | File | What it does |
-|---|---|---|
+| Backend      | File                                                                                | What it does                                               |
+| ------------ | ----------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | local runner | [`backend/canary_local_runner.ml`](../../src/canary/backend/canary_local_runner.ml) | Executes each step in order, honours cache, records status |
-| GH YAML | [`backend/canary_gh.ml`](../../src/canary/backend/canary_gh.ml) | Renders as GitHub Actions job(s) |
-| Mermaid | [`backend/canary_diagram.ml`](../../src/canary/backend/canary_diagram.ml) | Renders as an action-graph diagram |
-| HTML | [`backend/canary_html.ml`](../../src/canary/backend/canary_html.ml) | Renders interactive result viewer |
+| GH YAML      | [`backend/canary_gh.ml`](../../src/canary/backend/canary_gh.ml)                     | Renders as GitHub Actions job(s)                           |
+| Mermaid      | [`backend/canary_diagram.ml`](../../src/canary/backend/canary_diagram.ml)           | Renders as an action-graph diagram                         |
+| HTML         | [`backend/canary_html.ml`](../../src/canary/backend/canary_html.ml)                 | Renders interactive result viewer                          |
 
 **Multi-scenario projects.** One `runner_spec` per scenario/variant;
 `run_project_multi` runs each independently. Concrete factories:
