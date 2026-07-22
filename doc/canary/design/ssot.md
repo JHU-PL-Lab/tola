@@ -500,109 +500,88 @@ project-side `match rule with` on step expectation.
 Canonical reference for terms used across code + writeup. Add a
 row here before introducing a term anywhere else.
 
-### 6.1 Hierarchy (big → small)
+### 6.1 Term ↔ code
 
-| Level | Term | Meaning | Code today |
+Canonical name-to-code map. If a term isn't in this table, add a
+row before using it in code or writeup. Term names are shared with
+the writeup — no need for a separate alignment section.
+
+| Level | Term | Meaning | Code |
 | --- | --- | --- | --- |
 | **Top** | **project** | System under test + coverage config bundle. Owns scenarios + contract bindings. | `Canary_project.project` (`action/`) |
 | Middle | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario` |
 | Below-middle | **runner_spec** | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario. | `Canary_step_builder.runner_spec` |
-| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. | `Canary_step_model.step` (was `action_step` pre-2026-07-21). Also `Canary_basic.step_body` (legacy shell-command carrier). |
-| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `Canary_basic.action` (was `rule` pre-2026-07-21) |
-| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only today; freed by `stage` → `artifact_status` rename 2026-07-21) |
-| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept. Freed by code `rule` → `action` rename 2026-07-21. | (no code counterpart required) |
+| Below-middle | **action_graph** | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them). | `Canary_action.action_graph` |
+| Low | **step** | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends. | `Canary_step_model.step` |
+| Low (legacy) | **step_body** | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder. | `Canary_basic.step_body` |
+| Action verb | **action** | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue. | `Canary_basic.action` |
+| Attribute of action | **stage** | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings. | (doc-only) |
+| Attribute of artifact | **artifact_status** | Lifecycle state (`Built \| Installed \| Packed \| Fetched`). Complement to `location`. | `Canary_store.artifact_status` |
+| Theory | **rule** | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart. | — |
 
-**Same-word-different-level pitfalls to watch.**
+**Same-word-different-level pitfalls.**
 
-- **project** (top) vs the historical **project_spec** (below-middle,
-  now called **runner_spec** after Task 3, 2026-07-21). One `project`
-  produces many `runner_spec`s — one per scenario or variant.
-- **scenario** vs **variant** — same slot; different projects use
-  different words. Tiny calls them scenarios (22 concrete),
-  z3/llvm call them variants (2-3 each). `Canary_run_info.run_project_multi`
-  consumes both under the same `variants` list.
+- **project** (top) vs the historical **project_spec** (renamed to
+  **runner_spec** 2026-07-21). One `project` produces many
+  `runner_spec`s — one per scenario/variant.
+- **scenario** ≡ **variant** — same slot; tiny calls them scenarios
+  (22 concrete), z3/llvm call them variants (2-3 each).
+  `Canary_run_info.run_project_multi` consumes both under the same
+  `variants` list.
+- **action** (verb, code) vs **rule** (theory, doc-only) — freed by
+  the 2026-07-21 rename. Pre-rename, `rule` was overloaded.
+- **stage** (pipeline phase, doc-only) vs **artifact_status**
+  (lifecycle state, code) — pre-rename, `stage` was overloaded.
+- **step** (runtime, `Canary_step_model`) vs **step_body** (legacy
+  shell carrier, `Canary_basic`) — kept apart post-rename.
 
-**Ownership.** Project owns scenarios semantically (a scenario is
-tied to what it exercises), but the `Canary_project.project` type
-does *not* hold a `scenarios` field — each project's module keeps
-concrete ownership. See [`canary_project.ml`](../../src/canary/action/canary_project.ml)
-for the rationale (layer + concrete-vs-polymorphic).
+**Ownership.** Project owns scenarios semantically (each is tied to
+what it exercises), but `Canary_project.project` does *not* hold a
+`scenarios` field — each project's module keeps concrete ownership.
+See [`canary_project.ml`](../../src/canary/action/canary_project.ml)
+for the layer + concrete-vs-polymorphic rationale.
 
-**Pattern vs instance.** `Sc.1..Sc.6` patterns are project-agnostic,
-live in `Canary_scenario.good_scenarios`. Concrete scenarios
-(`Bs.N`, project variants) sit under their owning project's module.
+**Pattern vs instance.** `Sc.1..Sc.6` patterns live project-agnostic
+in `Canary_scenario.good_scenarios`. Concrete scenarios (`Bs.N`,
+project variants) live under their owning project's module.
 
-### 6.2 Rename status
+Rename chronicle 2026-07-21 (`project_spec → runner_spec`,
+`rule → action`, `action_rule → action_graph`, `action_step → step`,
+`step → step_body`, `stage → artifact_status`) captured in
+[`worklog_2026_07.md`](../worklog/worklog_2026_07.md).
 
-| Rename | Status |
-| --- | --- |
-| `project_spec` → `runner_spec` | ✅ 2026-07-21 (Task 3) |
-| `rule` → `action` (constructor type + all uses) | ✅ 2026-07-21 |
-| `action_rule` → `action_graph` (rule-list-plus-pools schema) | ✅ 2026-07-21 (Phase A of `rule → action`) |
-| `action_step` → `step` (runtime step type) | ✅ 2026-07-21 |
-| `step` → `step_body` (legacy shell-command carrier, `Canary_basic`) | ✅ 2026-07-21 (frees `step` for the runtime type) |
-| `stage` → `artifact_status` (lifecycle state, `Canary_store`) | ✅ 2026-07-21 (frees `stage` for pipeline-phase) |
-| `related_artifacts` field → derived from `actions` | ✅ 2026-07-10 (§7.9) |
+### 6.5 Action catalogue
 
-Post-rename status: code and writeup vocabulary agree. `rule` (in
-code and writeup) refers exclusively to the theory-level concept
-(what an action IS FOR); `action` is the operational verb;
-`stage` is the pipeline phase attribute; `step` is the runtime
-unit; `action_graph` is the rules-plus-pools schema; `step_body`
-is the legacy shell-command carrier (canary_toolchain's
-`verify_*_step` helpers — currently zero live consumers).
+Constructors on `Canary_basic.action`. Enumerated flat by
+`canary paths-md`; consumed by the four backends (GH YAML,
+Mermaid, HTML, local runner).
 
-### 6.3 Writeup ↔ code alignment
+| Action name     | Constructor                | Kind         |
+| --------------- | -------------------------- | ------------ |
+| `configure`     | `Configure`                | upstream     |
+| `scan_sources`  | `Scan_sources`             | upstream     |
+| `build_headers` | `Build_headers`            | native       |
+| `build_lib`     | `Build_lib`                | native       |
+| `install_lib`   | `Install_lib`              | upstream     |
+| `build_binding` | `Build_binding of lang`    | per language |
+| `build_app`     | `Build_app of app_info`    | downstream   |
+| `fetch_<kind>`  | `Fetch of artifact_kind`   | per artifact |
+| `pack_<kind>`   | `Publish of artifact_kind` | per artifact |
+| `probe_lib`     | `Probe_lib`                | native       |
+| `probe_binding` | `Probe_binding of lang`    | per language |
+| `probe_app`     | `Probe_app of app_info`    | downstream   |
 
-- Writeup "stage" = pipeline phase (attribute of action; Sc.N is-a stage).
-- Writeup "action" = code `action` (operational verb).
-- Writeup "step" = code `step` (runtime instantiation of an action).
-- Writeup "rule" = doc-only theory; no code counterpart.
-- Writeup "compile" / "build" = colloquial for specific actions
-  (`Build_lib`, `Build_binding`, `Build_app`).
+`canary paths` enumerates the 15 structural composition patterns
+over these actions (`dune exec src/bin/canary_main.exe -- paths-md`).
 
-### 6.5 Current action catalogue
+#### 6.5.1 Per-action consumes/produces (§7.9)
 
-Names below stay through the code rename (they're OK regardless).
-The type name (`rule`) changes; individual constructor names
-(`Fetch`, `Build_lib`, …) don't.
+Every action has an implicit input/output artifact set. Table
+below is the authoritative source; encoded in
+`Canary_scenario.artifacts_of_action` and consumed by
+`related_artifacts_of_actions` (union in first-appearance order).
 
-**Flow (unchanged from prior §6).** `canary_action.ml: rule`
-constructors (canary paths-md emits) ──► SSOT §6.5 ──►
-draft.md (future), backend renderers (GH YAML / Mermaid / HTML).
-
-Status: **stable in code**.
-
-| Action name     | Kind         | Code constructor           | Status |
-| --------------- | ------------ | -------------------------- | ------ |
-| `fetch_<kind>`  | per artifact | `Fetch of artifact_kind`   | stable |
-| `build_lib`     | native       | `Build_lib`                | stable |
-| `build_headers` | native       | `Build_headers`            | stable |
-| `build_binding` | per language | `Build_binding of lang`    | stable |
-| `build_app`     | downstream   | `Build_app`                | stable |
-| `pack_<kind>`   | per artifact | `Publish of artifact_kind` | stable |
-| `probe_<kind>`  | per artifact | `Probe of artifact_kind`   | stable |
-| `configure`     | upstream     | `Configure`                | stable |
-| `scan_sources`  | upstream     | `Scan_sources`             | stable |
-| `install_lib`   | upstream     | `Install_lib`              | stable |
-
-**15-pattern action-path table.** `canary paths` enumerates the
-15 patterns (composition strings) over these actions.
-
-```sh
-dune exec src/bin/canary_main.exe -- paths-md
-```
-
-### 6.5.1 Per-rule consumes/produces (§7.9 derivation)
-
-Every rule in §6.5 has an implicit input/output artifact
-set. `Canary_scenario.artifacts_of_rule` (in
-[canary_scenario.ml](../../src/canary/action/canary_scenario.ml))
-encodes it as one flat table; `related_artifacts_of_actions`
-takes a scenario's `actions` list and returns the union in
-first-appearance order.
-
-| Rule | Artifacts (ordered prerequisite → target) |
+| Action | Artifacts (prerequisite → target) |
 | --- | --- |
 | `Configure`, `Scan_sources` | `[Source]` |
 | `Build_headers` | `[Source; Headers]` |
@@ -616,20 +595,13 @@ first-appearance order.
 | `Fetch k` | `[k]` |
 | `Publish k` | `[k]` |
 
-**Order convention**: prerequisite first, target next.
-Runtime deps trail the direct arguments. The union across a
-scenario's `actions` follows first-appearance order (no
-dedup rearrangement), so §4 Good scenarios' displayed
-`A1(...) A2(...) A3(...)` labels stay stable across releases.
-
-**Origin & status** (2026-07-10): the `related_artifacts`
-field on `Canary_scenario.scenario` was removed; the
-derivation from `actions` is the sole source of truth.
-Consumers call `Canary_scenario.related_artifacts s` (the
-getter). Test-first spec pinned at
-[canary_artifact_test.ml](../../src/canary/test/canary_artifact_test.ml)
-under `scenario_derivation_pure_tests` — one case per
-canonical Sc.N shape plus a chain composition case.
+Order convention: prerequisite first, target next, runtime deps
+trail. Union across a scenario's `actions` follows
+first-appearance order (no dedup rearrangement), so §4 Good
+scenarios' displayed `A1(...) A2(...) A3(...)` labels stay stable
+across releases. Test spec at
+[`canary_artifact_test.ml`](../../src/canary/test/canary_artifact_test.ml)
+under `scenario_derivation_pure_tests`.
 
 ### 6.6 `runner_spec` — the code-side scenario handoff
 

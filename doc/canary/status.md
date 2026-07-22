@@ -164,9 +164,10 @@ Larger design shifts. None active; awareness only.
 Not blocking; part of the post-stabilisation "uniformity
 eventually" pass.
 
-- **Task 3 — term-rename sweep** per SSOT §6.2 (rule → action,
-  step → step, current `stage` → `artifact_status` /
-  `lifecycle_state`). After Task 2.
+- ~~**Task 3 — term-rename sweep**~~ ✅ shipped 2026-07-21
+  (`rule → action`, `action_step → step`, `stage → artifact_status`,
+  plus `project_spec → runner_spec` and `action_rule → action_graph`).
+  Chronicle in [`worklog_2026_07.md`](worklog/worklog_2026_07.md).
 - **Engine vocabulary alignment in code.** Add explicit
   *mutation engine* / *combinator engine* naming to
   `canary_project_tiny.ml` (combinator-side) and
