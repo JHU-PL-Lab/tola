@@ -529,6 +529,15 @@ let artifact_test_cmd =
          let ok = Canary_artifact_test.run_tests () in
          if not ok then Stdlib.exit 1))
 
+let project_test_cmd =
+  Cmd.v
+    (Cmd.info "project-test"
+       ~doc:"Test project-definition layers (action consumes/produces, \
+             detection inventory) — pure, hermetic, no PM/build.")
+    (term_of (fun () ->
+         let ok = Canary_project_test.run_tests () in
+         if not ok then Stdlib.exit 1))
+
 let mutation_test_cmd =
   Cmd.v
     (Cmd.info "mutation-test"
@@ -958,6 +967,7 @@ let () =
         cache_sync_cmd;
         pm_test_cmd;
         artifact_test_cmd;
+        project_test_cmd;
         mutation_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;

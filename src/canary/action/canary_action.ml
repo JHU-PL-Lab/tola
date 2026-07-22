@@ -165,6 +165,62 @@ let artifacts_of_action (a : action) : artifact_kind list =
   | Fetch k -> [ k ]
   | Publish k -> [ k ]
 
+(** The explicit {b consumes}/{b produces} split of the action
+    catalogue (project-definition redesign, 2026-07-22 — see
+    [doc/canary/design/project_definition.md] §3). The flat
+    {!artifacts_of_action} above conflates the two by ordering
+    convention and is kept as-is (its exact output feeds
+    [related_artifacts], mutation-target validation, and the
+    diagrams). Detection wants the distinction: at a probe step it
+    inspects what the action {b consumes} (the consumer surface +
+    its runtime provider) and compares them via the c1..c8
+    contracts.
+
+    Invariant detection relies on: probes produce nothing, so for
+    every [Probe_*] action [consumes_of_action = artifacts_of_action].
+    [Build_app] is the one place the flat view diverges — it omits
+    the [Lib] runtime dep that [consumes_of_action] and
+    [Probe_app] both list. *)
+let consumes_of_action (a : action) : artifact_kind list =
+  match a with
+  | Configure -> [ Source ]
+  | Scan_sources -> [ Source ]
+  | Build_headers -> [ Source ]
+  | Build_lib -> [ Source ]
+  | Install_lib -> [ Lib ]
+  | Build_binding _ -> [ Lib ]
+  | Build_app { lang } -> [ Binding lang; Lib ]
+  | Probe_lib -> [ Lib ]
+  | Probe_binding l -> [ Binding l; Lib ]
+  | Probe_app { lang } -> [ Binding lang; Lib; App ]
+  | Fetch _ -> []
+  | Publish k -> [ k ]
+
+let produces_of_action (a : action) : artifact_kind list =
+  match a with
+  | Configure -> []
+  | Scan_sources -> []
+  | Build_headers -> [ Headers ]
+  | Build_lib -> [ Lib ]
+  | Install_lib -> [ Lib ]   (* relocates Lib into the Staged store *)
+  | Build_binding l -> [ Binding l ]
+  | Build_app _ -> [ App ]
+  | Probe_lib -> []
+  | Probe_binding _ -> []
+  | Probe_app _ -> []
+  | Fetch k -> [ k ]
+  | Publish k -> [ k ]   (* relocates k into a Pm store *)
+
+(** Union in first-appearance order — the deduped set of artifacts a
+    project {b inspects} across its actions. This is the detection
+    scope inventory the forecast-agnostic [project] derives instead
+    of a hand-authored watchlist of "where failures fire". Mirrors
+    {!Canary_scenario.related_artifacts_of_actions} but consumes-only. *)
+let consumed_artifacts_of_actions (actions : action list) : artifact_kind list =
+  List.concat_map actions ~f:consumes_of_action
+  |> List.fold ~init:[] ~f:(fun acc a ->
+      if List.mem acc a ~equal:Poly.equal then acc else acc @ [ a ])
+
 (** Per-step verdict the diagram renderer uses. Lives here because the
     natural place to attach status to an action graph is alongside the
     action/node definitions; the actual mermaid emission lives in
