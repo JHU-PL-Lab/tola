@@ -44,19 +44,30 @@ world. A conf-origin project runs the **fetch** path instead
 `Sc.1..Sc.6` today — not because it covers nothing, but because the
 catalogue only knows one path.
 
-Each pipeline stage has **two realizations**, selected by the dimensions:
+The full picture: an artifact moves through **stores** — source →
+**Build** (build-tree) → **Publish** (PM) → **Fetch** (local) → **Probe** —
+and the catalogue is those transitions, per artifact (lib, binding). A
+project covers the **segment** its provision-path uses; the rest is N/A,
+**symmetrically**:
 
-| pipeline stage | build path (origin `Built`) | fetch path (origin `System`/opam) |
-|---|---|---|
-| provide source | `Fetch Source` / local checkout | — (no source) |
-| provide lib | `Build_lib` (+ `Configure`, `Install_lib`) | `Fetch Lib` (system PM) |
-| provide binding | `Build_binding` | `Fetch Binding` (opam) |
-| run app | `Probe_app` | `Probe_binding` (the example *is* the app) |
+| stage (per lib / binding) | action | tiny (`Built`, local) | ssl `sys` (`Fetched`) | ssl `src` (own conf, round-trip) |
+|---|---|---|---|---|
+| **Build** (source → build-tree) | `Build_lib` / `Build_binding` | ✓ | N/A | ✓ |
+| **Publish** (build-tree → PM) | `Publish Lib` / `Publish Binding` | **N/A** | N/A | ✓ |
+| **Fetch** (PM → local) | `Fetch Lib` / `Fetch Binding` | **N/A** | ✓ | ✓ |
+| **Probe** (use) | `Probe_lib` / `Probe_binding` (the example *is* the app) | ✓ | ✓ | ✓ |
 
-**Design choice — keep the paths as distinct scenarios** (`build_lib`
-*and* `fetch_lib`), rather than merging into one `provide_lib`. That's
-what makes the coverage matrix show *which path* a project exercises and
-mark the other as N/A — the whole point.
+**tiny's N/A on Publish/Fetch is the same kind of cell as a general
+project's N/A on Build** — both just say "this provision-path doesn't use
+this transition." So Publish/Fetch belong in the core (not deferred); no
+project is special-cased. The `Built`-vs-`Fetched` origin picks which
+segment; the round-trip (`Build → Publish → Fetch`) is the "canary builds
+its own conf" case, which alone covers `Publish`.
+
+**Design choice — keep transitions as distinct scenarios** (`build_lib`
+*and* `fetch_lib`, `publish_lib`), rather than merging into one
+`provide_lib`. That's what makes the matrix show *which* transitions a
+project exercises and mark the rest N/A — the whole point.
 
 ---
 
@@ -134,8 +145,10 @@ logical scenarios + a display walk.
 
 ## 6. Scope / deferrals
 
-- **Publish/package scenario omitted** — tiny omits it too; skip for now
-  (add a `publish_binding` / `publish_conf` stage later).
+- **Publish/Fetch are in the core** (§2), not deferred: a project that
+  doesn't publish (tiny) or doesn't build (ssl `sys`) shows N/A on those
+  transitions — symmetric N/A, no special-casing. `Publish` is covered
+  only by the round-trip "build our own conf" case (ssl `src`).
 - **Failure-mutation overlay is a separate axis.** tiny's mutation
   scenarios (`Bs.N`: `symbol_missing`, `abi_mismatch`, …) sit *on top* of
   the pipeline stages — a stage can run positive or be mutated to fail.

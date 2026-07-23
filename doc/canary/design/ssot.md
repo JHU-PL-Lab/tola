@@ -213,6 +213,17 @@ variant list **is** the provision enumeration; the mutation vocabulary
 (§5.3) **is** the other axis; and provision decides which action-graph
 actions run (§6.5 — `Built` ⇒ `Build_lib`, `Fetched` ⇒ `Fetch Lib`).
 
+The provision axis spans the **store lifecycle** — an artifact moves
+source → `Build` (build-tree) → `Publish` (PM) → `Fetch` (local) →
+`Probe` (§6.5 actions across `Canary_store.location`). So `Publish` and
+`Fetch` are transitions **in** the enumeration core; a project covers the
+*segment* its provision-path uses and the rest is **symmetric N/A** —
+tiny (build + probe locally) shows N/A on `Publish`/`Fetch` exactly as a
+`Fetched` general project shows N/A on `Build`. The round-trip
+(`Build → Publish → Fetch`) is the "canary builds and publishes its own
+conf" case, the only one that covers `Publish`. No project is
+special-cased. See [`scenario_coverage.md`](scenario_coverage.md) §2.
+
 **Historical note / the "step back".** The first cut was an *abstract*
 enumeration; it was then specialised into tiny's *concrete* 22 (§5.1).
 Re-abstracting — **one enumerator over `(provision assignment) ×
