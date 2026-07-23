@@ -311,6 +311,20 @@ let action_cmd =
     Term.(const run $ project $ quick $ failfast $ cache_path_arg
           $ disable_contract_arg $ const ())
 
+let status_cmd =
+  let project =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:"Project to report: any run project (sqlite, z3, llvm, ssl-variant, …)")
+  in
+  let run project () = Canary_status.print_status ~root:"_out" ~project in
+  Cmd.v
+    (Cmd.info "status"
+       ~doc:"Print the per-variant × per-step verdict matrix from actions.log")
+    Term.(const run $ project $ const ())
+
 let view_cmd =
   let project =
     Arg.(
@@ -990,6 +1004,7 @@ let () =
         paths_md_cmd;
         graph_cmd;
         action_cmd;
+        status_cmd;
         view_cmd;
         ci_cmd;
         debug_ci_cmd;
