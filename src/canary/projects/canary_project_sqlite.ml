@@ -62,7 +62,18 @@ let runner_spec : Canary_step_builder.runner_spec =
   let ocaml = sqlite_ocaml_config.ocaml in
   {
     Canary_step_builder.empty_runner_spec with
-    fetch_lib = Some (Canary_step_builder.Raw (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package));
+    (* Declarative lib store (S3/S4): fetch_lib is Derived from this. *)
+    stores =
+      { Canary_store_config.empty_store_config with
+        lib = Some
+          { Canary_store_config.location =
+              Canary_store.Pm (Canary_store.Sys_pm { pm });
+            system_pkg = Some prebuilt.system_package;
+            components = []; headers = None } };
+    fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
+    (* fetch_binding stays Raw: Derived can't yet reproduce opam
+       install_args (--assume-depexts) — store_config carries pkg_name
+       only (PM-spec detail deferred). *)
     fetch_binding =
       (Canary_lang.OCaml, Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec))
       ::
