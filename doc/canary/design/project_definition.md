@@ -236,39 +236,47 @@ Each project's module still owns its runnable units (tiny:
 `scenario ≡ variant` at the middle taxonomy level (confirmed 2026-07-21).
 The `project` bundle does **not** carry a `scenarios`/`variants` field —
 that stays module-owned per the concrete-over-polymorphic preference.
-The bundle earns its keep as the **detection scope** (stores + api_source
+The bundle earns its keep as the **detection scope** (stores + surface
 + contracts_in_scope), not a failure-location table.
 
 ---
 
-## 6. Migration / ordering (draft)
+## 6. Migration / ordering — gradual in-place seam plan
 
-This is a redesign, not a migration. **Each step ships its layer test**
-(§8) — the layers are pure, so the test lands with the code and never
-needs a project run.
+**Strategy (decided 2026-07-22): gradual in-place evolution of
+`runner_spec`**, one seam per commit, green at every step — rather than
+a parallel type swapped in at the end. The backends consume the derived
+`step list`, not `runner_spec`, so the transport stays fixed; only *how a
+runner is authored* and *how `derive_steps` computes the verdict* change.
+Two decisions folded in: **the `derive`/compact-`project` wrapper is
+postponed** (S6) — we evolve the runner through S5 first; and
+**`store_config` is a record** with a named field per artifact's store
+(not an assoc), matching the original "field for each artifact's store"
+rationale. **Each seam ships its layer test** (§8).
 
-1. **action → artifact** — make produces/consumes first-class (the
-   deferred helper). Detection derives its inputs from this.
-   *Test:* assert the artifact inventory for a fixed `action list`.
-2. **`store_config` + `project` type** — forecast-free, multi-store,
-   declarative steps with `Raw` escape hatch.
-   *Test:* golden-string the `Derived` step commands from a `store_config`.
-3. **Detection-report runner path** — run in-scope contracts over
-   observed artifacts; emit a report; apply the fail-mode policy.
-   *Test:* feed committed inspect-JSON fixtures → assert findings; feed
-   findings + reactions → assert verdict.
-4. **sqlite as first forecast-free inhabitant** — validates the shape on
-   a real positive-only project (N=1-real).
-   *Test:* sqlite's derived steps + a positive fixture → empty/green report.
-5. **Extract tiny's oracle** into the sidecar; reconcile tiny's harness
-   to assert `detection_report ≡ oracle`. Regression suite must stay
-   green (21/22 + artifact-test 101/101).
-   *Test:* the oracle-check itself, over a mismatched fixture pair.
-6. **ssot §6.1** — condense this note into the taxonomy section.
+Prerequisite (shipped, was "step 1"): `Canary_action.consumes_of_action`
+/ `produces_of_action` / `consumed_artifacts_of_actions` + the
+`project-test` axis (`08807a4`).
 
-Open: whether step 1 (action→artifact) is done fully up front or grown
-alongside step 4 (sqlite as forcing function). N=2 (tiny + sqlite) is the
-right pressure to settle the derived-inputs shape.
+| # | Seam | Status |
+|---|---|---|
+| **S1** | `surface` type in `base/` (`Canary_surface`); route `derive_steps` watchlist reads through it (computed from `api_source`). *Test: `surface_of_api` split.* | ✅ `9186b99` |
+| **S2** | `step_source = Derived \| Raw` in `step_builder`; wrap every command closure as `Raw` (type-only, behavior-preserving). | pending |
+| **S3** | `store_config` **record** (field per `artifact_kind`) in `tool/`; wire `Derived` slots; move provenance reads (`source_dir`, `headers`) off `api_source`. *Test: golden-string a `Derived` step.* | pending |
+| **S4** | remove `api_source` (now `surface` + `store_config`). | pending |
+| **S5a** | detection runs **in parallel**, logs findings; `expectation` still decides — diff detection vs. forecast on tiny's known cases. | pending |
+| **S5b** | detection **drives** the verdict; remove `expectation`; tiny oracle → sidecar (§4); `disabled_contracts` → per-contract `reaction` table (§3.2). *Test: oracle-check over a mismatched fixture.* | pending |
+| **S6** (postponed) | rename `runner_spec` → `runner`; add compact `project` + `derive : project -> variant -> runner`. Variants stay explicit/selectable. | deferred |
+
+S1–S4 and S6 are mechanical and independently green; **S5a/S5b are the
+only semantic risk** — S5a's parallel-run is the safety net (prove
+detection reproduces every tiny oracle result *before* flipping in S5b).
+
+The strawman `canary_project_def` **dissolves** as seams land: its
+`surface`→`base/` (done S1), `store_config`→`tool/` (S3),
+`step_source`→`step_builder` (S2); the file is deleted once empty.
+
+Then: **ssot §6.1** — condense this note into the taxonomy section.
 
 ---
 
