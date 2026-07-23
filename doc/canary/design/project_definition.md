@@ -263,7 +263,8 @@ Prerequisite (shipped, was "step 1"): `Canary_action.consumes_of_action`
 | **S1** | `surface` type in `base/` (`Canary_surface`); route `derive_steps` watchlist reads through it (computed from `api_source`). *Test: `surface_of_api` split.* | ✅ `9186b99` |
 | **S2** | `step_source = Derived \| Raw` in `step_builder`; wrap every command closure as `Raw` (type-only, behavior-preserving). | pending |
 | **S3** | `store_config` **record** (field per artifact's store) in `tool/`; central `command_of_step ~store_config` resolves `Derived` (Fetch_lib + opam Fetch_binding). Strawman `canary_project_def` dissolved. *Test: `Derived` fetch_lib == helper.* | ✅ `b5c8a5b` |
-| **S4** | projects set `surface` + `store_config`; move provenance reads (`source_dir`, `headers`) off `api_source`; remove the `api_source` field. *(Provenance move deferred here from S3 to keep S3 minimal.)* | pending |
+| **S4a** | sqlite + pattern_a (→ zarith, ssl) adopt `Derived` `fetch_lib` via `store_config`. Byte-identical. z3/llvm untouched (slow to test). | ✅ `5eff5ae` |
+| **S4 rest** | `fetch_binding` → `Derived` needs `install_args` in `store_config` (deferred PM-spec detail); `api_source` field removal needs z3 (the main user besides tiny). Both **blocked** under the "don't touch z3/llvm" constraint. | deferred |
 | **S5a** | detection runs **in parallel**, logs findings; `expectation` still decides — diff detection vs. forecast on tiny's known cases. | pending |
 | **S5b** | detection **drives** the verdict; remove `expectation`; tiny oracle → sidecar (§4); `disabled_contracts` → per-contract `reaction` table (§3.2). *Test: oracle-check over a mismatched fixture.* | pending |
 | **S6** (postponed) | rename `runner_spec` → `runner`; add compact `project` + `derive : project -> variant -> runner`. Variants stay explicit/selectable. | deferred |
