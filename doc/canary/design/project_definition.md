@@ -208,6 +208,27 @@ Layering note (corrects §7): the checking type is in **`base/`**, so
 "downward dependency" worry was about `source_repo` (`tool/`), which is
 exactly the provenance half moving to the store. The concern dissolves.
 
+### 3.4 `pattern_a` ↔ the new types (convergence, not legacy)
+
+`Canary_pattern_a` is the Pattern-A **factory**: a compact declarative
+`t` (opam pkg, system pkgs, watchlists, lib locator) → a `runner_spec`.
+zarith / ssl / cairo are thin `t` clients. It predates `store_config` /
+`surface` and its `t` fields **overlap** them, so it converges rather
+than retires:
+
+| `pattern_a.t` field | new-definition target | status |
+|---|---|---|
+| `system_pkg_linux/macos` | `store_config.lib.system_pkg` | ✅ done (S4a) — `fetch_lib` is `Derived` |
+| `native_watchlist`, `ocaml_module_watchlist` | `surface` | ⏳ still fed to explicit `inspect` closures; move once the detector reads `surface` (S5 grow) |
+| `lib` locator | `store_config` probe slot | ⏳ probes still `Raw` |
+
+`new_project.md` §3 already calls `pattern_a`'s `lib_locator` *"the
+prototype"* for `package_locator` — so `pattern_a` is a **forerunner** of
+the S6 `project` + `derive` idea. End-state: `t` becomes thin sugar that
+emits `surface` + `store_config` directly, or is subsumed by the general
+`derive`. Updating the template lifts all its clients at once (S4a's
+`fetch_lib → Derived` gave zarith/ssl/cairo the new machinery for free).
+
 ---
 
 ## 4. tiny — the regression sidecar
