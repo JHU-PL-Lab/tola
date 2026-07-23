@@ -70,25 +70,31 @@ multi-store artifact model (`Build_tree` = src, `Staged` = lib, `Pm` =
 package). Forecast-free:
 
 ```ocaml
+(* NAME PLACEHOLDER: "project" here is the per-variant/scenario runnable
+   spec (it replaces runner_spec). The top bundle {name; variants} needs
+   a different name — settled during step-2 drafting (2026-07-22). *)
 type project = {
   name        : string;
-  api_source  : Canary_artifact_source.t;   (* watchlists: native syms, OCaml modules, Python attrs *)
-  stores      : store_config;               (* which stores this project's artifacts live in *)
-  actions     : action list;                (* produces/consumes → derives the artifact inventory *)
+  surface     : surface;         (* checking points — see §3.3; ex-`api_source`, split *)
+  stores      : store_config;    (* provenance: where source/headers/lib/binding-source live *)
+  steps       : step_source list;(* Derived | Raw — see §3.1 *)
   contracts_in_scope : contract_id list;    (* which detectors run; default = all enabled *)
   (* NO expectation, NO violates, NO contract_bindings *)
 }
 ```
 
-Detection facilities are **derived**, not declared: each action's
-produces/consumes relation yields the artifact inventory; the enabled
-in-scope contracts run their `predict` over the observed artifacts at
-each applicable probe step; whatever fires is reported.
+The `actions` are recovered from `steps`; each step's action drives the
+consumes/produces relation (§ shipped: `Canary_action.consumes_of_action`)
+that yields the artifact inventory. Detection facilities are **derived**,
+not declared: the enabled in-scope contracts run their `predict` over the
+observed artifacts at each probe step; whatever fires is reported.
 
-**Prerequisite:** "derive facilities from actions" needs the
-produces/consumes helper on `action` that is currently deferred (the
-`related_artifacts_of_actions` note in `canary_tiny_scenario.ml`). That
-becomes a sub-task.
+**Prerequisite — shipped (step 1, 2026-07-22).** The consumes/produces
+split now lives in `Canary_action.consumes_of_action` /
+`produces_of_action` / `consumed_artifacts_of_actions`, with the
+`canary project-test` layer-test axis. Detection pulls its inputs from
+`consumes_of_action` at probe sites (invariant: probes produce nothing,
+so `consumes = artifacts` there).
 
 **Transport — reuse everything (resolved).** The detection report is
 **not** a new file or schema. It rides the existing transport:
@@ -118,6 +124,22 @@ The declarative half is exactly `new_project.md` §3's auto-generation
 plan (`package_locator` #29, `store_config` #30,
 `mk_script_spec_from_sketch` #32). This redesign delivers it as a side
 effect rather than a separate task.
+
+**Compatibility + factory (resolved 2026-07-22).** The type is a strict
+superset of the old `runner_spec`: `old runner_spec ≈ new project with
+all-`Raw` steps, empty surface, empty contracts`. Three producers, no
+tension:
+
+- **Derivable** — `Derived` steps from `store_config` (sqlite, Pattern A).
+- **Compatible** — `Raw` *is* the old closure
+  (`output_dir:… -> variant_key:… -> string`) verbatim; migrating
+  z3/llvm is mechanical field-shuffling (each `fetch_lib`/`probe_binding`/
+  `inspect` closure → one `Raw` step), not a rewrite.
+- **Factory-generatable** — tiny's factory emits a `project` per scenario
+  instead of a `runner_spec`, and gets *simpler*: forecast-agnostic means
+  it **drops `expectation_of_entry`** entirely (the oracle moves to the
+  sidecar, §4). It fills `Raw` steps from `make_base_runner_spec` + the
+  per-scenario `surface`.
 
 ### 3.2 Fail mode — per-contract reaction (resolved)
 
@@ -155,6 +177,36 @@ A positive-only project (sqlite) is green when its positive probes
 build/run; any drift the contracts happen to detect is logged/printed —
 it doesn't fail the session unless a contract is set to `Raise` or a
 probe hard-errors.
+
+### 3.3 Surface — the checking points (ex-`api_source`, split)
+
+`api_source` (a `Canary_artifact_api.t` in `base/`) was a bad name and a
+conflation. It fused two concerns; split them along the seam:
+
+- **Provenance / structure → `store_config`.** `native_api.components`,
+  `native_api.headers` (`dir`/`files`), and `binding_api.source_dir` say
+  *where* the source / headers / binding source code live and *what*
+  components exist. A **store** owns that. `source_repo` (`tool/`, which
+  currently embeds `api_source`) is the provenance carrier and stays on
+  the store side.
+- **Checking points → `surface`.** The watchlists and expected
+  properties — `stable_symbols`, `symbol_prefixes`, `versioned_symbols`,
+  `soname`, `c_runtime`, `cxx_abi` (native) and `module_watchlist`,
+  `type_watchlist` (per binding) — are what detection inspects. This is
+  the renamed field on `project` (name chosen 2026-07-22: **`surface`**,
+  faithful to the s1..s8 surface theory these declarations instantiate).
+
+```ocaml
+type surface = {
+  native   : native_surface;                (* stable_symbols, prefixes, soname, abi … *)
+  bindings : (lang * binding_surface) list;  (* module_watchlist, type_watchlist per lang *)
+}
+```
+
+Layering note (corrects §7): the checking type is in **`base/`**, so
+`project` in `action/` referencing it is a normal upward dep — the
+"downward dependency" worry was about `source_repo` (`tool/`), which is
+exactly the provenance half moving to the store. The concern dissolves.
 
 ---
 
@@ -234,15 +286,14 @@ right pressure to settle the derived-inputs shape.
   `Derived` and `Raw` step forms are acceptable there; no boundary forced
   now. A cleaner split earns its keep once more projects land (the
   `new_project.md` §3 auto-gen threshold, ~10 projects).
-- **`api_source` layering → free to move.** The downward-dependency
-  concern (`api_source`/`Canary_artifact_api` lives in `tool/`, `project`
-  in `action/`) is not a blocker — the type may move. *Clarification for
-  context:* `api_source` is the **declarative provider/consumer surface**
-  (native symbol prefixes + header paths on the provider side; OCaml
-  module / Python attr watchlists on the consumer side). In this design
-  it is the source of the watchlists the contracts inspect against — i.e.
-  the detection scope's data. Its exact home (move into `action/`,
-  indirection, or per-project lookup) is settled during step 2.
+- **`api_source` → split + renamed `surface` (resolved 2026-07-22).**
+  The field conflated store-provenance with checking-points. Split:
+  provenance (`components`, `headers`, `source_dir`) → `store_config`;
+  checking-points (watchlists + expected symbols/soname/abi) → the new
+  `surface` field. See §3.3. The layering worry was a mislabel —
+  `Canary_artifact_api` is in `base/` (not `tool/`), so no downward
+  dependency; the `tool/` part was `source_repo`, which is the
+  provenance half that moves to the store.
 
 ---
 
