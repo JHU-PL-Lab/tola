@@ -152,9 +152,18 @@ their full pipeline (`build_lib ✓` from the dev variant, `fetch_lib ✓`
 from stable, `pack_binding_ocaml ✓` = they publish their binding), while
 sqlite/ssl/cairo stay fetch-path. `scenarios @all` walks every project.
 
+**N/A split (done).** Three marks: `✓` (Covered), **`unspec`**
+(Unspecified — N/A by definition, no path in the project's dimensions),
+**`disabled`** (N/A by config). A scenario-disable list overrides Covered
+(config wins). Wired via `--disable <action>` (repeatable) on the cmd; a
+persistent per-project disable list is the next form. Example: `scenarios
+z3 --disable build_lib` shows `build_lib disabled`, vs ssl's `build_lib
+unspec` (it has no source to build).
+
 Still to do:
-- **One N/A bucket.** The N/A-definition (dimensions) vs N/A-config
-  (disable list) split isn't wired yet.
+- **Unspecified is currently "not covered by any variant"**, which
+  coincides with the dimension-derived N/A for today's projects but should
+  be computed from `store_config` dimensions directly once they're stored.
 - **tiny** isn't in the project list (scenario-based, not a `runner_spec`
   variant list); its coverage comes from the mutation axis, not
   provisions.

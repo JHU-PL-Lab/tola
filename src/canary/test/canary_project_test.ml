@@ -175,24 +175,28 @@ let detect_simple_test : pure_test =
       (not ok.errored) && ok.output_present
       && bad.errored && (not bad.output_present)) }
 
-(* scenario coverage: an ssl-`sys`-like action set covers the fetch-path
-   stages and is N/A on build/publish — symmetric with tiny's N/A on
-   fetch/publish. *)
+(* scenario coverage, three-way: an ssl-`sys`-like action set covers the
+   fetch-path stages (Covered); build/publish are Unspecified (no path in
+   the def); a disabled stage overrides to Disabled even though it would
+   otherwise be Unspecified/Covered. *)
 let coverage_test : pure_test =
-  { name = "coverage.fetch_path_marks";
+  { name = "coverage.three_way_marks";
     check = (fun () ->
       let module CV = Canary_scenario_coverage in
       let covered =
         B.[ Fetch Lib; Fetch (Binding ocaml); Probe_binding ocaml; Probe_lib ]
       in
-      let rows = CV.coverage ~langs:[ ocaml ] ~covered in
+      (* config disables build_lib (config overrides — here it was
+         Unspecified anyway) and fetch_lib (a Covered stage → Disabled) *)
+      let disabled = [ "build_lib"; "fetch_lib" ] in
+      let rows = CV.coverage ~langs:[ ocaml ] ~covered ~disabled in
       let mark a = List.Assoc.find rows a ~equal:Poly.equal in
-      Poly.equal (mark B.(Fetch Lib)) (Some CV.Covered)
-      && Poly.equal (mark B.(Fetch (Binding ocaml))) (Some CV.Covered)
+      Poly.equal (mark B.(Fetch (Binding ocaml))) (Some CV.Covered)
       && Poly.equal (mark B.(Probe_binding ocaml)) (Some CV.Covered)
-      && Poly.equal (mark B.Build_lib) (Some CV.Na)
-      && Poly.equal (mark B.(Publish Lib)) (Some CV.Na)
-      && Poly.equal (mark B.(Build_binding ocaml)) (Some CV.Na)) }
+      && Poly.equal (mark B.(Fetch Lib)) (Some CV.Disabled)   (* config overrides Covered *)
+      && Poly.equal (mark B.Build_lib) (Some CV.Disabled)     (* config overrides Unspecified *)
+      && Poly.equal (mark B.(Publish Lib)) (Some CV.Unspecified)
+      && Poly.equal (mark B.(Build_binding ocaml)) (Some CV.Unspecified)) }
 
 let all_tests : pure_test list =
   catalogue_tests

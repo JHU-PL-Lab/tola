@@ -16,9 +16,17 @@
 open Base
 open Canary_basic
 
-type mark = Covered | Na
+(* Three marks (scenario_coverage.md §3):
+   - Covered      — a variant runs this stage.
+   - Unspecified  — N/A by *definition*: the project's dimensions provide
+                    no path (origin=System ⇒ build_lib unspecified).
+   - Disabled     — N/A by *config*: applicable, but turned off. *)
+type mark = Covered | Unspecified | Disabled
 
-let string_of_mark = function Covered -> "✓" | Na -> "N/A"
+let string_of_mark = function
+  | Covered -> "✓"
+  | Unspecified -> "unspec"
+  | Disabled -> "disabled"
 
 (** The store-lifecycle stage catalogue, ordered source → build → publish
     → fetch → probe. Lib stages first, then each binding language's. *)
@@ -28,14 +36,20 @@ let catalogue ~(langs : Canary_lang.lang list) : action list =
         [ Build_binding l; Publish (Binding l); Fetch (Binding l);
           Probe_binding l ])
 
-(** Mark each catalogue stage [Covered] if the project's action set runs
-    it, else [Na]. [covered] is the deduped set of actions the project
-    exercises (from its derived steps / a run). *)
-let coverage ~(langs : Canary_lang.lang list) ~(covered : action list) :
-    (action * mark) list =
+(** Mark each catalogue stage. [covered] is the deduped action set the
+    project exercises (its derived steps, unioned over variants).
+    [disabled] is the per-project scenario-disable list, as action-name
+    strings (e.g. ["build_lib"]); a disabled stage is [Disabled] even if a
+    variant could cover it (config overrides). Everything else uncovered
+    is [Unspecified] (no path in the definition). *)
+let coverage ~(langs : Canary_lang.lang list) ~(covered : action list)
+    ~(disabled : string list) : (action * mark) list =
   List.map (catalogue ~langs) ~f:(fun a ->
       let m =
-        if List.mem covered a ~equal:Poly.equal then Covered else Na
+        if List.mem disabled (string_of_action a) ~equal:String.equal then
+          Disabled
+        else if List.mem covered a ~equal:Poly.equal then Covered
+        else Unspecified
       in
       (a, m))
 
@@ -52,4 +66,4 @@ let langs_of_actions (acts : action list) : Canary_lang.lang list =
 let pp_rows (rows : (action * mark) list) : string =
   String.concat ~sep:"\n"
     (List.map rows ~f:(fun (a, m) ->
-         Printf.sprintf "  %-4s %s" (string_of_mark m) (string_of_action a)))
+         Printf.sprintf "  %-9s %s" (string_of_mark m) (string_of_action a)))

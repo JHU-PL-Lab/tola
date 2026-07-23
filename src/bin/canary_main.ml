@@ -310,7 +310,13 @@ let scenarios_cmd =
       & info [] ~docv:"PROJECT"
           ~doc:"Project (or @all): sqlite, zarith, ssl, cairo, z3, llvm")
   in
-  let run project () =
+  let disable =
+    Arg.(
+      value & opt_all string []
+      & info [ "disable" ] ~docv:"ACTION"
+          ~doc:"Mark a stage disabled (config N/A), e.g. --disable build_lib (repeatable)")
+  in
+  let run disabled project () =
     let root = "_out" in
     let distro = detect_distro () in
     let all_projects = [ "sqlite"; "zarith"; "ssl"; "cairo"; "z3"; "llvm" ] in
@@ -355,7 +361,9 @@ let scenarios_cmd =
             |> List.sort_uniq Stdlib.compare
           in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
-          let rows = Canary_scenario_coverage.coverage ~langs ~covered in
+          let rows =
+            Canary_scenario_coverage.coverage ~langs ~covered ~disabled
+          in
           Printf.printf
             "\n%s — scenario coverage (union of %d variant(s))\n%s\n" p
             (List.length variants)
@@ -367,8 +375,8 @@ let scenarios_cmd =
   in
   Cmd.v
     (Cmd.info "scenarios"
-       ~doc:"Print store-lifecycle scenario coverage (Covered / N/A) for a project")
-    Term.(const run $ project $ const ())
+       ~doc:"Print store-lifecycle scenario coverage (Covered / unspec / disabled)")
+    Term.(const run $ disable $ project $ const ())
 
 let status_cmd =
   let project =
