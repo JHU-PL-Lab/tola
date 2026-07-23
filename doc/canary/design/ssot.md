@@ -178,7 +178,13 @@ artifact as its end-user would.
 
 ### 4.2 Scenario enumeration — the shared abstract core
 
-Two scenario listings that look separate share one enumeration engine:
+There is **one** project enumeration. Applied to *any* project spec it
+yields that project's **project space** — the concrete set of scenarios /
+variants that spec admits. tiny is **not** a special enumeration: tiny's
+spec → tiny's designed scenarios (its project space); a general project's
+spec → its variants (its project space). Same engine, different specs.
+
+So two listings that look separate are just the engine on two specs:
 
 - **tiny's listing** (§5's `Bs.N`) = the pipeline stages (§4) × all
   **mutations**: for a fixed *build-everything-from-source* pipeline,
