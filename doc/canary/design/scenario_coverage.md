@@ -146,15 +146,18 @@ prints the store-lifecycle catalogue (`fetch_source` · `build_lib` ·
 `pack_lib` · `fetch_lib` · `probe_lib` · then per-lang binding stages)
 with `✓` / `N/A`, deriving *Covered* from the project's `derive_steps`
 action set (`Canary_scenario_coverage` + `Canary_run.ci_jobs`). No run
-needed. Known limitations, still to do:
-- **Single-variant.** It reads one derived job per project. For
-  multi-variant projects the mark should be the **union across variants**
-  (§4) — e.g. z3/llvm read their *CI* job (which fetches a prebuilt lib),
-  so they show `fetch_lib ✓` / `build_lib N/A` rather than their local
-  source-build coverage. The Pattern-A projects (sqlite/zarith/ssl/cairo)
-  are single-variant fetch-path, so accurate.
+needed. **Union across variants (done).** Coverage is the union over *all* a
+project's variants (`derive_steps` per variant, no run) — so z3/llvm show
+their full pipeline (`build_lib ✓` from the dev variant, `fetch_lib ✓`
+from stable, `pack_binding_ocaml ✓` = they publish their binding), while
+sqlite/ssl/cairo stay fetch-path. `scenarios @all` walks every project.
+
+Still to do:
 - **One N/A bucket.** The N/A-definition (dimensions) vs N/A-config
   (disable list) split isn't wired yet.
+- **tiny** isn't in the project list (scenario-based, not a `runner_spec`
+  variant list); its coverage comes from the mutation axis, not
+  provisions.
 
 ---
 

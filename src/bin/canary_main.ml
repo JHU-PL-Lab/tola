@@ -313,34 +313,57 @@ let scenarios_cmd =
   let run project () =
     let root = "_out" in
     let distro = detect_distro () in
-    let jobs = Canary_run.ci_jobs ~root distro in
-    (* the CI job derives each project's steps without running them *)
-    let show (job : Canary_gh.job_spec) =
-      let covered =
-        List.map (fun (s : Canary_step_model.step) -> s.action) job.steps
-        |> List.sort_uniq Stdlib.compare
-      in
-      let langs = Canary_scenario_coverage.langs_of_actions covered in
-      let rows = Canary_scenario_coverage.coverage ~langs ~covered in
-      Printf.printf "\n%s — scenario coverage (store lifecycle)\n%s\n"
-        job.id (Canary_scenario_coverage.pp_rows rows)
+    let all_projects = [ "sqlite"; "zarith"; "ssl"; "cairo"; "z3"; "llvm" ] in
+    (* Every variant of a project (mirrors the `action` dispatch), so
+       coverage is the UNION across variants. derive_steps only builds the
+       step list — nothing is run. *)
+    let variants_of p : (string * Canary_step_builder.runner_spec) list =
+      match p with
+      | "sqlite" -> [ ("", Canary_project_sqlite.runner_spec) ]
+      | "zarith" -> [ ("", Canary_project_zarith.runner_spec) ]
+      | "cairo" -> [ ("", Canary_project_cairo.runner_spec) ]
+      | "ssl" -> Canary_project_ssl.variants
+      | "z3" ->
+          [ ("dev",
+             Canary_project_z3.mk_runner_spec
+               ~source:Canary_project_z3.z3_source_dev distro);
+            ("stable",
+             Canary_project_z3.mk_runner_spec
+               ~source:Canary_project_z3.z3_source_stable distro) ]
+      | "llvm" ->
+          [ ("dev",
+             Canary_project_llvm.mk_runner_spec
+               ~source:Canary_project_llvm.llvm_source_dev distro);
+            ("19",
+             Canary_project_llvm.mk_runner_spec
+               ~source:Canary_project_llvm.llvm_source_stable distro) ]
+      | _ -> []
+    in
+    let show p =
+      match variants_of p with
+      | [] ->
+          Printf.printf "Unknown project %s (available: @all, %s).\n" p
+            (String.concat ", " all_projects)
+      | variants ->
+          let covered =
+            List.concat_map
+              (fun (_, spec) ->
+                Canary_step_builder.derive_steps ~root ~project:p
+                  ~langs:Canary_lang.[ OCaml; Python ] spec
+                |> List.map (fun (s : Canary_step_model.step) -> s.action))
+              variants
+            |> List.sort_uniq Stdlib.compare
+          in
+          let langs = Canary_scenario_coverage.langs_of_actions covered in
+          let rows = Canary_scenario_coverage.coverage ~langs ~covered in
+          Printf.printf
+            "\n%s — scenario coverage (union of %d variant(s))\n%s\n" p
+            (List.length variants)
+            (Canary_scenario_coverage.pp_rows rows)
     in
     match project with
-    | "@all" | "all" -> List.iter show jobs
-    | _ ->
-        let id = match project with
-          | "z3" -> "z3-dev" | "llvm" -> "llvm-19" | p -> p
-        in
-        (match
-           List.find_opt
-             (fun (j : Canary_gh.job_spec) -> String.equal j.id id) jobs
-         with
-         | None ->
-             Printf.printf "No coverage job for %s (available: @all, %s).\n"
-               project
-               (String.concat ", "
-                  (List.map (fun (j : Canary_gh.job_spec) -> j.id) jobs))
-         | Some job -> show job)
+    | "@all" | "all" -> List.iter show all_projects
+    | _ -> show project
   in
   Cmd.v
     (Cmd.info "scenarios"
