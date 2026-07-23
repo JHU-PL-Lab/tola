@@ -155,10 +155,13 @@ sqlite/ssl/cairo stay fetch-path. `scenarios @all` walks every project.
 **N/A split (done).** Three marks: `✓` (Covered), **`unspec`**
 (Unspecified — N/A by definition, no path in the project's dimensions),
 **`disabled`** (N/A by config). A scenario-disable list overrides Covered
-(config wins). Wired via `--disable <action>` (repeatable) on the cmd; a
-persistent per-project disable list is the next form. Example: `scenarios
-z3 --disable build_lib` shows `build_lib disabled`, vs ssl's `build_lib
-unspec` (it has no source to build).
+(config wins). Two sources, unioned: a **persistent per-project disable
+config** (`disabled_scenarios_of_project` — the canary config part of a
+project's spec) plus `--disable <action>` per invocation. **z3/llvm
+disable `build_lib`** (source-building the native lib is slow; the fetch
+path covers `provide lib`) — so `scenarios z3` shows `build_lib disabled`,
+while `scenarios sqlite` shows `build_lib unspec` (no source to build at
+all). The same stage, two different N/A reasons — legible.
 
 Still to do:
 - **Unspecified is currently "not covered by any variant"**, which

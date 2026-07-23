@@ -302,6 +302,15 @@ let action_cmd =
     Term.(const run $ project $ quick $ failfast $ cache_path_arg
           $ disable_contract_arg $ const ())
 
+(* Per-project scenario-disable config — the "canary config" part of a
+   project's spec: stages that are applicable by definition but turned off
+   when fulfilling the spec. z3/llvm disable building the native lib from
+   source (slow); the fetch path covers `provide lib` instead. Everything
+   else is default. (`scenarios --disable` adds to this per invocation.) *)
+let disabled_scenarios_of_project = function
+  | "z3" | "llvm" -> [ "build_lib" ]
+  | _ -> []
+
 let scenarios_cmd =
   let project =
     Arg.(
@@ -361,8 +370,11 @@ let scenarios_cmd =
             |> List.sort_uniq Stdlib.compare
           in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
+          (* project's canary config + any --disable from this invocation *)
+          let all_disabled = disabled_scenarios_of_project p @ disabled in
           let rows =
-            Canary_scenario_coverage.coverage ~langs ~covered ~disabled
+            Canary_scenario_coverage.coverage ~langs ~covered
+              ~disabled:all_disabled
           in
           Printf.printf
             "\n%s — scenario coverage (union of %d variant(s))\n%s\n" p
