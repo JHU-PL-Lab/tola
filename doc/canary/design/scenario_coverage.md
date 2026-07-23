@@ -196,12 +196,24 @@ source to build), `scenarios z3` shows `build_lib ✓` (dev builds it), and
 override, per invocation).
 
 Still to do:
+- **Logical stages, not concrete actions** ([`ssot.md` §4.2.1](ssot.md)a).
+  The catalogue currently keys off concrete actions (`Probe_binding`,
+  `Fetch Lib`), so a project that uses the *other* realization of a stage
+  looks uncovered — tiny's `Probe_app` / `Build_lib` don't map. Move the
+  catalogue to **logical stages** (`provide_lib = build|fetch`,
+  `run_app = probe_app|probe_binding`); then tiny lists cleanly and its
+  `Publish`/`Fetch` show `unspec` — the package gap, visible.
+- **Add tiny** once stages are logical: derive its build-path action set
+  and show it — the concrete way to *see* tiny's missing package scenarios.
+- **Binding = `(lang × mechanism)`** ([`ssot.md` §4.2.1](ssot.md)b). The
+  binding stages are per language today (`build_binding_ocaml`,
+  `build_binding_python`) but mechanism (cext/cstubs=SCAB vs
+  ctypes/cffi=DFFI) is collapsed. Key binding stages by `(lang, mechanism)`
+  so `python_via_cext` and `python_via_ctypes` are distinct — needed for a
+  faithful coverage row and for the enumerator's artifact identity.
 - **Unspecified is currently "not covered by any variant"**, which
   coincides with the dimension-derived N/A for today's projects but should
   be computed from `store_config` dimensions directly once they're stored.
-- **tiny** isn't in the project list (scenario-based, not a `runner_spec`
-  variant list); its coverage comes from the mutation axis, not
-  provisions.
 
 ---
 

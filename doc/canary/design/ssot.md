@@ -235,6 +235,57 @@ binding without a lib; can't fetch a source-built lib; a mutation applies
 only to a *provided* artifact; `N/A` per
 [`scenario_coverage.md`](scenario_coverage.md) §3).
 
+### 4.2.1 Two refinements the enumerator needs
+
+The first-cut `canary scenarios` view revealed two places where the model
+is still too coarse. Both must land before the enumerator is faithful.
+
+**(a) Stages are *logical*, with realizations selected by provision.**
+Each pipeline stage is one **logical stage** realized differently by the
+build vs fetch provision:
+
+| logical stage | build realization (`Built`) | fetch realization (`Fetched`) |
+|---|---|---|
+| provide source | `Fetch Source` / local | — |
+| provide lib | `Build_lib` | `Fetch Lib` |
+| provide binding | `Build_binding` | `Fetch Binding` |
+| run app | `Probe_app` | `Probe_binding` (the example *is* the app) |
+
+A project covers a *logical* stage via **whichever realization its
+provision uses** — so tiny (`Probe_app`, `Build_lib`) and sqlite
+(`Probe_binding`, `Fetch Lib`) both map to `run app` / `provide lib`,
+instead of missing each other. The current coverage catalogue keys off
+*concrete* actions, so it can't yet place tiny (its `Probe_app` looks
+"uncovered"); moving to logical stages fixes that and makes tiny's
+`Publish`/`Fetch` show `unspec` — the visible package gap.
+
+**(b) A binding artifact's identity is `(language × mechanism)`, not just
+language.** The binding carries a **mechanism** coordinate alongside its
+language (see the hardcode note at `action/canary_scenario.ml`'s
+`good_scenarios`):
+
+| mechanism | languages | today |
+|---|---|---|
+| `Cstubs` (SCAB — static C API) | OCaml | modeled |
+| `Cext` (SCAB) | Python | modeled |
+| `Ctypes` / `Cffi` (DFFI — dynamic FFI) | Python, … | **collapsed** to SCAB |
+
+So the binding artifact (Ar.3) is really `binding(lang, mechanism)` —
+`binding(Python, Cext)` and `binding(Python, Ctypes)` are **distinct
+artifacts** that build/probe differently, even though today's
+`Binding of lang` (`Canary_lang.lang`) flattens them to one. The
+enumerator therefore ranges provisions/mutations over
+`(lang × mechanism)` binding artifacts; promoting mechanism to an axis
+replaces the hardcoded SCAB assumption and makes `python_via_ctypes` /
+`ocaml_via_cffi` first-class. tiny already carries both cext and ctypes
+probe workspaces — they're two mechanisms of one language, currently
+merged into a single `Binding Python`.
+
+Net: the enumerator's **provision** side ranges over *logical stages ×
+realizations*, and its **artifact** side identifies bindings by
+*(language × mechanism)*. Both are prerequisites for the single
+`(provision × mutation)` engine above.
+
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
