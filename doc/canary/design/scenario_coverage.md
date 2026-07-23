@@ -1,8 +1,38 @@
 # Scenario coverage — generalizing tiny's scenarios to every project
 
-> **Status: design (2026-07-23).** Design-only; no code yet. Captures how
-> the per-project scenario-coverage view should work, to confirm the shape
-> before building `canary scenarios`.
+> **Status: `canary scenarios` shipped** (union coverage + three-way N/A).
+> The design below is the model it implements.
+
+## The whole picture (plain)
+
+1. **A project provides each artifact by building or fetching it.** Every
+   project has to produce a native lib and a binding. It either **builds**
+   them from source or **fetches** a prebuilt from a package manager. That
+   choice is the artifact's *origin*.
+2. **A project is a set of variants; variants can differ in origin.**
+   z3/llvm have two: a **dev** variant (builds the newest source) and a
+   **stable** variant (fetches an older prebuilt). Pattern-A projects
+   (sqlite/ssl/cairo) have only fetch-origin variants.
+3. **Coverage = which store transitions a project's variants exercise,**
+   unioned: source → **Build** → **Publish** → **Fetch** → **Probe**, per
+   artifact. `canary scenarios <p>` prints this. z3/llvm cover Build (dev)
+   *and* Fetch (stable); sqlite covers only Fetch.
+4. **Three marks.** `✓` covered · `unspec` = the definition provides no
+   path (sqlite can't Build — it has no source) · `disabled` = a config
+   turns off an available path.
+5. **"Skip the slow build" is a variant choice, not a stage disable.** For
+   z3/llvm the dev variant's whole job is to build the newest source (the
+   version-mismatch demo needs that freshly-built lib), so `build_lib` is
+   Covered, not disabled. To go fast you *pick the fetch variant* (or
+   `--quick`, which strips build steps on demand) — you don't disable a
+   stage. `disabled` is for genuine config-offs.
+
+The legacy z3/llvm knobs (`has_build_lib`, `cmake_build_binding`, the
+dev/stable `source_repo`s) are an ad-hoc version of this origin/variant
+model; the clean form is the provision axis of [`ssot.md` §4.2](ssot.md),
+which they'll converge onto.
+
+---
 
 Builds on [`new_project.md` §0](new_project.md) (project dimensions) and
 the `good_scenarios` catalogue in `action/canary_scenario.ml`. The
@@ -157,11 +187,13 @@ sqlite/ssl/cairo stay fetch-path. `scenarios @all` walks every project.
 **`disabled`** (N/A by config). A scenario-disable list overrides Covered
 (config wins). Two sources, unioned: a **persistent per-project disable
 config** (`disabled_scenarios_of_project` — the canary config part of a
-project's spec) plus `--disable <action>` per invocation. **z3/llvm
-disable `build_lib`** (source-building the native lib is slow; the fetch
-path covers `provide lib`) — so `scenarios z3` shows `build_lib disabled`,
-while `scenarios sqlite` shows `build_lib unspec` (no source to build at
-all). The same stage, two different N/A reasons — legible.
+project's spec) plus `--disable <action>` per invocation. The config is
+empty today (z3/llvm are **not** listed — they genuinely build the lib in
+their dev variant; see "The whole picture" §5). The three marks are
+legible on the same stage: `scenarios sqlite` shows `build_lib unspec` (no
+source to build), `scenarios z3` shows `build_lib ✓` (dev builds it), and
+`scenarios z3 --disable build_lib` shows `build_lib disabled` (config
+override, per invocation).
 
 Still to do:
 - **Unspecified is currently "not covered by any variant"**, which

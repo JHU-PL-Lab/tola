@@ -303,12 +303,15 @@ let action_cmd =
           $ disable_contract_arg $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
-   project's spec: stages that are applicable by definition but turned off
-   when fulfilling the spec. z3/llvm disable building the native lib from
-   source (slow); the fetch path covers `provide lib` instead. Everything
-   else is default. (`scenarios --disable` adds to this per invocation.) *)
+   project's spec: stages applicable by definition but turned off when
+   fulfilling the spec. (`scenarios --disable` adds to this per invocation.)
+
+   NOTE: z3/llvm are NOT listed. They genuinely build the lib (their dev
+   variant compiles the newest source — that build IS the point, and its
+   demo needs the freshly-built lib), so `build_lib` is Covered, not
+   disabled. "Skip the slow build" for them is a *variant/origin* choice
+   (run the fetch/stable variant, or `--quick`), not a stage disable. *)
 let disabled_scenarios_of_project = function
-  | "z3" | "llvm" -> [ "build_lib" ]
   | _ -> []
 
 let scenarios_cmd =
