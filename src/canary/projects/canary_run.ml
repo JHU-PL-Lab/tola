@@ -87,6 +87,16 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
           (no_source Canary_project_ssl.runner_spec)) };
+    (* cairo: Pattern A graphics — apt libcairo2-dev + opam cairo2 binding.
+       First new project on the post-redesign machinery (Derived fetch_lib). *)
+    { id = "cairo";
+      name = "cairo — fetch + probe";
+      project = "cairo";
+      sys_deps = [];
+      preamble_steps = [];
+      steps =
+        Canary_step_builder.(derive_steps ~root ~project:"cairo" ~cache_project:"cairo"
+          (no_source Canary_project_cairo.runner_spec)) };
   ]
 
 let sqlite_job ~root : Canary_gh.job_spec =

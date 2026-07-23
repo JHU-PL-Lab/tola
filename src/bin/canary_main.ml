@@ -198,6 +198,14 @@ let action_cmd =
     run_with_info ~failfast ~cache_path ~root ~project:"ssl" steps
       (prebuilt_run_info ~project:"ssl" ~version:"system" ~extra:[] steps)
   in
+  let run_cairo ~root ~failfast ~cache_path ~cli_disabled =
+    let spec = with_cli_disabled cli_disabled Canary_project_cairo.runner_spec in
+    let steps =
+      Canary_step_builder.derive_steps ~root ~project:"cairo" spec
+    in
+    run_with_info ~failfast ~cache_path ~root ~project:"cairo" steps
+      (prebuilt_run_info ~project:"cairo" ~version:"system" ~extra:[] steps)
+  in
   let run_llvm ~root ~failfast ~cache_path ~cli_disabled distro =
     let dev_tag =
       Canary_artifact_source.version_cache_tag distro
@@ -257,6 +265,7 @@ let action_cmd =
     | Some "sqlite" -> run_sqlite ~root ~failfast ~cache_path ~cli_disabled
     | Some "zarith" -> run_zarith ~root ~failfast ~cache_path ~cli_disabled
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
+    | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny" ->
@@ -271,11 +280,12 @@ let action_cmd =
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
         run_zarith ~root ~failfast ~cache_path ~cli_disabled;
         run_ssl ~root ~failfast ~cache_path ~cli_disabled;
+        run_cairo ~root ~failfast ~cache_path ~cli_disabled;
         run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro;
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, z3, llvm, tiny, tiny/<variant>)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny, tiny/<variant>)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
