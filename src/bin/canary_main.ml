@@ -308,32 +308,39 @@ let scenarios_cmd =
       required
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT"
-          ~doc:"Project: sqlite, zarith, ssl, cairo, z3, llvm")
+          ~doc:"Project (or @all): sqlite, zarith, ssl, cairo, z3, llvm")
   in
   let run project () =
     let root = "_out" in
     let distro = detect_distro () in
     let jobs = Canary_run.ci_jobs ~root distro in
     (* the CI job derives each project's steps without running them *)
-    let id = match project with
-      | "z3" -> "z3-dev" | "llvm" -> "llvm-19" | p -> p
+    let show (job : Canary_gh.job_spec) =
+      let covered =
+        List.map (fun (s : Canary_step_model.step) -> s.action) job.steps
+        |> List.sort_uniq Stdlib.compare
+      in
+      let langs = Canary_scenario_coverage.langs_of_actions covered in
+      let rows = Canary_scenario_coverage.coverage ~langs ~covered in
+      Printf.printf "\n%s — scenario coverage (store lifecycle)\n%s\n"
+        job.id (Canary_scenario_coverage.pp_rows rows)
     in
-    match
-      List.find_opt (fun (j : Canary_gh.job_spec) -> String.equal j.id id) jobs
-    with
-    | None ->
-        Printf.printf "No coverage job for %s (available: %s).\n" project
-          (String.concat ", "
-             (List.map (fun (j : Canary_gh.job_spec) -> j.id) jobs))
-    | Some job ->
-        let covered =
-          List.map (fun (s : Canary_step_model.step) -> s.action) job.steps
-          |> List.sort_uniq Stdlib.compare
+    match project with
+    | "@all" | "all" -> List.iter show jobs
+    | _ ->
+        let id = match project with
+          | "z3" -> "z3-dev" | "llvm" -> "llvm-19" | p -> p
         in
-        let langs = Canary_scenario_coverage.langs_of_actions covered in
-        let rows = Canary_scenario_coverage.coverage ~langs ~covered in
-        Printf.printf "\n%s — scenario coverage (store lifecycle)\n%s\n"
-          project (Canary_scenario_coverage.pp_rows rows)
+        (match
+           List.find_opt
+             (fun (j : Canary_gh.job_spec) -> String.equal j.id id) jobs
+         with
+         | None ->
+             Printf.printf "No coverage job for %s (available: @all, %s).\n"
+               project
+               (String.concat ", "
+                  (List.map (fun (j : Canary_gh.job_spec) -> j.id) jobs))
+         | Some job -> show job)
   in
   Cmd.v
     (Cmd.info "scenarios"
@@ -346,9 +353,16 @@ let status_cmd =
       required
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT"
-          ~doc:"Project to report: any run project (sqlite, z3, llvm, ssl-variant, …)")
+          ~doc:"Project to report (or @all for every project with a run)")
   in
-  let run project () = Canary_status.print_status ~root:"_out" ~project in
+  let run project () =
+    match project with
+    | "@all" | "all" ->
+        (match Canary_status.projects_with_runs ~root:"_out" with
+         | [] -> Printf.printf "No projects with runs under _out yet.\n"
+         | ps -> List.iter (fun p -> Canary_status.print_status ~root:"_out" ~project:p) ps)
+    | _ -> Canary_status.print_status ~root:"_out" ~project
+  in
   Cmd.v
     (Cmd.info "status"
        ~doc:"Print the per-variant × per-step verdict matrix from actions.log")

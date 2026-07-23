@@ -15,6 +15,18 @@ open Base
 let log_path ~root ~project =
   Printf.sprintf "%s/canary/projects/%s/-run/actions.log" root project
 
+(** Projects under [root] that have a run to report (an [actions.log]).
+    Drives `status @all`. *)
+let projects_with_runs ~root : string list =
+  let dir = Printf.sprintf "%s/canary/projects" root in
+  match Stdlib.Sys.readdir dir with
+  | exception _ -> []
+  | entries ->
+      Array.to_list entries
+      |> List.filter ~f:(fun p ->
+             Stdlib.Sys.file_exists (log_path ~root ~project:p))
+      |> List.sort ~compare:String.compare
+
 (* Split a log line into (tag, event, detail) after the "[timestamp]"
    prefix. Splits on runs of 2+ spaces so a single-spaced detail like
    "(expected failure confirmed)" stays intact. *)
