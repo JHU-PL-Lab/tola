@@ -5,23 +5,35 @@ exercises. Updated per landing. Companion to (not a replacement for)
 [`design/new_project.md`](design/new_project.md) — that doc is the
 portfolio/narrative + candidate queue; this is the capability tracker.
 
-Legend — **fetch_lib**: `Derived` (from `store_config`) | `Raw` (closure).
-**surface**: the checking-points type (`Canary_surface`) | `api_source`
-(pre-redesign) | `—`. **variants**: version/source variants run via
-`run_project_multi` | `—`. **detection**: S5a trivial detector runs on
-every executed step for all projects.
+Legend — projects are described by **dimensions**, not "Pattern A–F"
+(those are an opam-ecosystem label; see
+[new_project.md §0](design/new_project.md)).
+**origin**: `System` (distro pkg) · `Built` (canary compiles from source) ·
+mix. **discovery**: `Conf` (conf-*/pkg-config) · `Locator` · `n/a`.
+**coverage**: `positive` (happy-path) · `+failure` (a version mismatch is
+predicted) · `matrix` (scenario/variant grid).
+**fetch_lib**: `Derived` (from `store_config`) · `Raw` (closure).
+**surface**: checking type (`Canary_surface`) · `api_source` (pre-redesign)
+· `—`. **variants**: version/source variants via `run_project_multi` · `—`.
+**detection**: S5a trivial detector runs on every executed step.
 
-| project | level | pattern | fetch_lib | surface | variants | detection | local / CI |
-|---|---|---|---|---|---|---|---|
-| **tiny** | C | own factory | Raw | `api_source` | 22 scenarios | S5a | ✓ / ✓ |
-| **z3** | B | hand (source-build) | Raw | `api_source` | dev / stable | S5a | ✓ / ✓ |
-| **llvm** | A+C | hand (source-build) | Raw | `api_source` | dev / 19 | S5a | ✓ / ✓ |
-| **sqlite** | A | hand | **Derived** | — | — | S5a | ✓ / ✓ |
-| **zarith** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / ✓ |
-| **ssl** | B | hand (variant) | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) + native probe | S5a | ✓ / ✓ |
-| **cairo** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / — |
+| project | origin | discovery | coverage | fetch_lib | surface | variants | detection | local / CI |
+|---|---|---|---|---|---|---|---|---|
+| **tiny** | Built (own C) | n/a | matrix | Raw | `api_source` | 22 scenarios | S5a | ✓ / ✓ |
+| **z3** | Built | n/a | +failure | Raw | `api_source` | dev / stable | S5a | ✓ / ✓ |
+| **llvm** | Built + System | Conf/Locator | +failure | Raw | `api_source` | dev / 19 | S5a | ✓ / ✓ |
+| **sqlite** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / ✓ |
+| **zarith** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / ✓ |
+| **ssl** | System | Conf | +failure | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) + native probe | S5a | ✓ / ✓ |
+| **cairo** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / — |
 
 Notes:
+- **origin is a variant dimension, not a fixed category.** Every `System`
+  project could also grow a `Built` variant — canary fetches the library
+  source, compiles it, and generates its own conf-package pinned per
+  version, checking API compat more rigorously than the ecosystem's
+  conf-* maintainers. ssl is the natural first case (`sys` alongside
+  `src-<ver>`). Tracked in [new_project.md §0](design/new_project.md).
 - **fetch_lib Derived** landed via S4a (`pattern_a` + sqlite); it lifted
   zarith/ssl/cairo at once. z3/llvm/tiny stay `Raw` (not migrated —
   z3/llvm deliberately untouched; tiny is the regression fixture).

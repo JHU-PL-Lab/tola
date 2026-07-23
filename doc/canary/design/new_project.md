@@ -9,6 +9,51 @@ model the candidates collectively stress-test, and the
 
 ---
 
+## 0. How canary describes a project — dimensions, not letters
+
+canary describes each project by a few **orthogonal dimensions**, carried
+as data in `store_config` (see
+[project_definition.md](project_definition.md)). The opam-survey
+**"Pattern A–F"** ([opam survey](../surveys/opam.md) §2) are an
+**ecosystem taxonomy** — what packages look like *in the wild* — **not**
+canary's internal categories. They're just named points in this space,
+and hybrids (e.g. bitwuzla = "A for discovery + C for building") already
+break the letters. So below and in [projects.md](../projects.md) we say
+what dimensions a project *has*, and reserve A–F for describing opam.
+
+| dimension | values |
+|---|---|
+| **native-lib origin** | `System` (distro pkg) · `Built` (canary compiles from source) · `Vendored` (inside the binding) · `Absent` (pure OCaml) |
+| **lib discovery** | `Conf` (conf-* / pkg-config) · `Depext` (direct depexts) · `Locator` (pkg-config/llvm-config/glob) · `n/a` |
+| **binding origin** | `Opam` · `Built` (from the lib's source tree) |
+
+The survey letters are just points in this space:
+
+| survey label | dimensions |
+|---|---|
+| A `conf-*` indirection | `{System, Conf, Opam}` |
+| B direct depexts | `{System, Depext, Opam}` |
+| C self-building | `{Built, n/a, Opam \| Built}` |
+| D invisible C stubs | `{Vendored, n/a, Opam}` |
+| E `clib:` tag | `{System, clib, Opam}` |
+| F pure OCaml | `{Absent, n/a, Opam}` |
+
+Two consequences:
+
+- **A project isn't *in* a pattern; it *has* dimension values.** Pattern
+  constructors (the former `canary_pattern_a`) are just sugar that fill a
+  common combination — not categories anything branches on. B vs A is a
+  single field value (`Depext` vs `Conf`) that barely changes how canary
+  tests.
+- **Provenance is a variant dimension.** The same library can run a
+  `System` variant (conf-*) *and* a `Built` variant where canary fetches
+  the source, compiles it, and generates its own conf-package pinned per
+  version — letting canary check API compatibility more rigorously than
+  the ecosystem's conf-* maintainers do. (ssl is the natural first case:
+  `sys` alongside `src-<ver>` variants.)
+
+---
+
 ## 1. Portfolio — two-tier framework
 
 Picked from the opam survey §3 (revdep rankings) and §2 (pattern hot spots).
