@@ -165,11 +165,21 @@ let s2_raw_identity_test : pure_test =
       in
       String.equal (g ~output_dir:"O" ~variant_key:"V") "O:V") }
 
+(* S5a: the trivial detector classifies a step by its raw outcome,
+   independent of any expectation/contract. *)
+let detect_simple_test : pure_test =
+  { name = "detect.simple_finding";
+    check = (fun () ->
+      let ok = Canary_detect.simple_finding ~tag:"t" ~cmd_ok:true ~output_present:true in
+      let bad = Canary_detect.simple_finding ~tag:"t" ~cmd_ok:false ~output_present:false in
+      (not ok.errored) && ok.output_present
+      && bad.errored && (not bad.output_present)) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
-      s2_raw_identity_test ]
+      s2_raw_identity_test; detect_simple_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

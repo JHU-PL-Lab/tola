@@ -165,6 +165,16 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
     else
       try
         let cmd_ok = exec_step logger ~tag ~output_dir:out step in
+        (* S5a: forecast-agnostic detection runs alongside the verdict and
+           only reports. Trivial detector for now (errored? / output
+           present?); contract integration is postponed. The expectation
+           below still decides pass/fail — detection does not affect it. *)
+        let output_present =
+          try Stdlib.Sys.file_exists out && Array.length (Stdlib.Sys.readdir out) > 0
+          with _ -> false
+        in
+        let finding = Canary_detect.simple_finding ~tag ~cmd_ok ~output_present in
+        log ~event:"detect" ~detail:(Some (Canary_detect.string_of_finding finding));
         let expectation_ok = match step.expectation with
           | Expect_success ->
               let ok = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
