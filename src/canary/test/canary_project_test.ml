@@ -91,8 +91,85 @@ let inventory_test : pure_test =
         (A.consumed_artifacts_of_actions actions)
         B.[ Source; Lib; Binding ocaml ]) }
 
+(* ── step 2: store_config / surface / spec strawman ── *)
+
+module PD = Canary_project_def
+
+(* A Derived Fetch_lib step must emit exactly what the underlying
+   runner helper does — the compatibility guarantee (old runner_spec
+   closure == Derived slot). *)
+let derive_fetch_lib_test : pure_test =
+  { name = "derive.fetch_lib_matches_helper";
+    check = (fun () ->
+      let sys : Canary_store.system_package_spec =
+        { linux_pkg = "libsqlite3-dev"; macos_pkg = "sqlite";
+          version_tag = None; locator_hint = None;
+          behavior = Canary_store.Stateless }
+      in
+      let cfg =
+        { PD.empty_store_config with
+          lib = { PD.empty_lib_provenance with system_pkg = Some sys } }
+      in
+      match PD.derive_slot ~pm:Canary_store.Apt cfg PD.Fetch_lib with
+      | None -> false
+      | Some cmd ->
+        let derived = cmd ~output_dir:"OUT" ~variant_key:"vk" in
+        let direct =
+          Canary_step_builder.fetch_lib_cmd Canary_store.Apt sys
+            ~output_dir:"OUT" ~variant_key:"vk"
+        in
+        String.equal derived direct
+        && String.is_substring derived ~substring:"libsqlite3-dev") }
+
+(* surface_of_api keeps the watchlists and drops the provenance. *)
+let surface_split_test : pure_test =
+  { name = "surface.split_keeps_checks_drops_provenance";
+    check = (fun () ->
+      let module Api = Canary_artifact_api in
+      let native : Api.native_api =
+        { kind = Api.C;
+          components = [ Api.Headers; Api.Link_lib ];  (* provenance — must drop *)
+          headers = Some { dir = "include"; files = [ "sqlite3.h" ] };
+          symbol_prefixes = [ "sqlite3_" ];
+          stable_symbols = [ "sqlite3_open"; "sqlite3_close" ];
+          versioned_symbols = []; soname = Some "libsqlite3.so.0";
+          c_runtime = None; cxx_abi = None }
+      in
+      let binding : Api.binding_api =
+        { lang = ocaml; source_dir = Some "src";  (* provenance — must drop *)
+          module_watchlist = [ "Sqlite3" ]; type_watchlist = [] }
+      in
+      let api : Api.t = { native_api = native; binding_apis = [ binding ] } in
+      let s = PD.surface_of_api api in
+      List.equal String.equal s.native.stable_symbols
+        [ "sqlite3_open"; "sqlite3_close" ]
+      && String.equal (Option.value s.native.soname ~default:"") "libsqlite3.so.0"
+      && (match s.bindings with
+          | [ (l, bs) ] ->
+            Poly.equal l ocaml
+            && List.equal String.equal bs.module_watchlist [ "Sqlite3" ]
+          | _ -> false)) }
+
+(* detection_inventory of a small spec = consumes-inventory of its steps. *)
+let spec_inventory_test : pure_test =
+  { name = "spec.detection_inventory";
+    check = (fun () ->
+      let noop = PD.Raw (fun ~output_dir:_ ~variant_key:_ -> "true") in
+      let spec : PD.spec =
+        { name = "demo"; surface = PD.empty_surface;
+          stores = PD.empty_store_config;
+          steps = B.[ (Fetch Lib, PD.Derived PD.Fetch_lib);
+                      (Build_binding ocaml, noop);
+                      (Probe_binding ocaml, noop) ];
+          contracts_in_scope = [] }
+      in
+      same_kinds (PD.detection_inventory spec)
+        B.[ Lib; Binding ocaml ]) }
+
 let all_tests : pure_test list =
-  catalogue_tests @ [ probe_invariant; inventory_test ]
+  catalogue_tests
+  @ [ probe_invariant; inventory_test;
+      derive_fetch_lib_test; surface_split_test; spec_inventory_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in
