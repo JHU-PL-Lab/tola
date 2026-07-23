@@ -140,7 +140,7 @@ let surface_split_test : pure_test =
           module_watchlist = [ "Sqlite3" ]; type_watchlist = [] }
       in
       let api : Api.t = { native_api = native; binding_apis = [ binding ] } in
-      let s = PD.surface_of_api api in
+      let s = Canary_surface.surface_of_api api in
       List.equal String.equal s.native.stable_symbols
         [ "sqlite3_open"; "sqlite3_close" ]
       && String.equal (Option.value s.native.soname ~default:"") "libsqlite3.so.0"
@@ -156,7 +156,7 @@ let spec_inventory_test : pure_test =
     check = (fun () ->
       let noop = PD.Raw (fun ~output_dir:_ ~variant_key:_ -> "true") in
       let spec : PD.spec =
-        { name = "demo"; surface = PD.empty_surface;
+        { name = "demo"; surface = Canary_surface.empty_surface;
           stores = PD.empty_store_config;
           steps = B.[ (Fetch Lib, PD.Derived PD.Fetch_lib);
                       (Build_binding ocaml, noop);

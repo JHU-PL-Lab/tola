@@ -30,64 +30,9 @@ open Base
 module Api = Canary_artifact_api
 module SB = Canary_step_builder
 
-(* ── surface: the checking points (ex-api_source, split) ── *)
-
-type native_surface = {
-  symbol_prefixes : string list;
-  stable_symbols : string list; (* L1a: must be exported *)
-  versioned_symbols : string list; (* L1b *)
-  soname : string option; (* L4 *)
-  c_runtime : string option;
-  cxx_abi : string option;
-}
-
-type binding_surface = {
-  module_watchlist : string list; (* L3 *)
-  type_watchlist : string list; (* L2 *)
-}
-
-type surface = {
-  native : native_surface;
-  bindings : (Canary_lang.lang * binding_surface) list;
-}
-
-let empty_native_surface =
-  {
-    symbol_prefixes = [];
-    stable_symbols = [];
-    versioned_symbols = [];
-    soname = None;
-    c_runtime = None;
-    cxx_abi = None;
-  }
-
-let empty_surface = { native = empty_native_surface; bindings = [] }
-
-(** Migration helper — extract the checking-half from an existing
-    {!Canary_artifact_api.t}. The provenance half ([components],
-    [headers], [source_dir]) is dropped here because it goes to
-    {!store_config} instead. z3 / llvm / tiny already carry an
-    [api_source]; this is how they graduate to [surface]. *)
-let surface_of_api (api : Api.t) : surface =
-  let na : Api.native_api = api.native_api in
-  {
-    native =
-      {
-        symbol_prefixes = na.symbol_prefixes;
-        stable_symbols = na.stable_symbols;
-        versioned_symbols = na.versioned_symbols;
-        soname = na.soname;
-        c_runtime = na.c_runtime;
-        cxx_abi = na.cxx_abi;
-      };
-    bindings =
-      List.map api.binding_apis ~f:(fun (b : Api.binding_api) ->
-          ( b.lang,
-            {
-              module_watchlist = b.module_watchlist;
-              type_watchlist = b.type_watchlist;
-            } ));
-  }
+(* ── surface: the checking points ──
+   Moved to base/canary_surface.ml (seam S1). Referenced here as
+   Canary_surface.surface; [surface_of_api] / [empty_surface] live there. *)
 
 (* ── store_config: provenance (where artifacts live / come from) ── *)
 
@@ -129,7 +74,7 @@ type step_source =
 
 type spec = {
   name : string;
-  surface : surface;
+  surface : Canary_surface.surface;
   stores : store_config;
   steps : (Canary_basic.action * step_source) list;
   contracts_in_scope : Canary_compat.contract_id list;

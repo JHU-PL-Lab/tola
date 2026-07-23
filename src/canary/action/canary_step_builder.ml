@@ -606,6 +606,10 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
     match spec.api_source with
     | None -> []
     | Some api ->
+        (* S1: checking-reads go through the [surface] abstraction (computed
+           from api_source for now; becomes a stored field when api_source
+           is removed in a later seam). *)
+        let surf = Canary_surface.surface_of_api api in
         let ocaml_install_summaries pkg =
           (* mli summary: vals + constructors + module nesting at L3.
              stub summary: C symbols required by the binding at L0/L1.
@@ -614,7 +618,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
              (Fetch/Publish Binding) so they're cached *before*
              probe_binding evaluates Expect_compat_failure. *)
           let wl =
-            Canary_artifact_api.binding_watchlist_exn api Canary_lang.OCaml
+            Canary_surface.binding_watchlist_exn surf Canary_lang.OCaml
           in
           let mli =
             prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
@@ -622,7 +626,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 ~pkg ~watchlist:wl ~output_dir ~variant_key ())
           in
           let prefix =
-            match api.native_api.symbol_prefixes with
+            match surf.native.symbol_prefixes with
             | p :: _ -> p
             | [] -> ""
           in
@@ -640,8 +644,7 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
              Probe (Binding Python) evaluates its (possibly compat-derived)
              expectation. Mirrors the OCaml mli/stub placement. *)
           let wl =
-            Canary_artifact_api.binding_watchlist_exn api
-              Canary_lang.Python
+            Canary_surface.binding_watchlist_exn surf Canary_lang.Python
           in
           let py =
             prepend_note spec.inspect_note (fun ~output_dir ~variant_key ->
