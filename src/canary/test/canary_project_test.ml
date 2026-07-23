@@ -175,11 +175,30 @@ let detect_simple_test : pure_test =
       (not ok.errored) && ok.output_present
       && bad.errored && (not bad.output_present)) }
 
+(* scenario coverage: an ssl-`sys`-like action set covers the fetch-path
+   stages and is N/A on build/publish — symmetric with tiny's N/A on
+   fetch/publish. *)
+let coverage_test : pure_test =
+  { name = "coverage.fetch_path_marks";
+    check = (fun () ->
+      let module CV = Canary_scenario_coverage in
+      let covered =
+        B.[ Fetch Lib; Fetch (Binding ocaml); Probe_binding ocaml; Probe_lib ]
+      in
+      let rows = CV.coverage ~langs:[ ocaml ] ~covered in
+      let mark a = List.Assoc.find rows a ~equal:Poly.equal in
+      Poly.equal (mark B.(Fetch Lib)) (Some CV.Covered)
+      && Poly.equal (mark B.(Fetch (Binding ocaml))) (Some CV.Covered)
+      && Poly.equal (mark B.(Probe_binding ocaml)) (Some CV.Covered)
+      && Poly.equal (mark B.Build_lib) (Some CV.Na)
+      && Poly.equal (mark B.(Publish Lib)) (Some CV.Na)
+      && Poly.equal (mark B.(Build_binding ocaml)) (Some CV.Na)) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
-      s2_raw_identity_test; detect_simple_test ]
+      s2_raw_identity_test; detect_simple_test; coverage_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

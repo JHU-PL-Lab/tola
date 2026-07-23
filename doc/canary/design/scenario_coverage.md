@@ -141,6 +141,21 @@ Mechanics (all reuse existing data):
 No new machinery — the generalization of `good_scenarios` to path-aware
 logical scenarios + a display walk.
 
+**Status (2026-07-23): first cut shipped.** `canary scenarios <project>`
+prints the store-lifecycle catalogue (`fetch_source` · `build_lib` ·
+`pack_lib` · `fetch_lib` · `probe_lib` · then per-lang binding stages)
+with `✓` / `N/A`, deriving *Covered* from the project's `derive_steps`
+action set (`Canary_scenario_coverage` + `Canary_run.ci_jobs`). No run
+needed. Known limitations, still to do:
+- **Single-variant.** It reads one derived job per project. For
+  multi-variant projects the mark should be the **union across variants**
+  (§4) — e.g. z3/llvm read their *CI* job (which fetches a prebuilt lib),
+  so they show `fetch_lib ✓` / `build_lib N/A` rather than their local
+  source-build coverage. The Pattern-A projects (sqlite/zarith/ssl/cairo)
+  are single-variant fetch-path, so accurate.
+- **One N/A bucket.** The N/A-definition (dimensions) vs N/A-config
+  (disable list) split isn't wired yet.
+
 ---
 
 ## 6. Scope / deferrals

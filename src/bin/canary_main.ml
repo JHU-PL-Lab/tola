@@ -302,6 +302,44 @@ let action_cmd =
     Term.(const run $ project $ quick $ failfast $ cache_path_arg
           $ disable_contract_arg $ const ())
 
+let scenarios_cmd =
+  let project =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:"Project: sqlite, zarith, ssl, cairo, z3, llvm")
+  in
+  let run project () =
+    let root = "_out" in
+    let distro = detect_distro () in
+    let jobs = Canary_run.ci_jobs ~root distro in
+    (* the CI job derives each project's steps without running them *)
+    let id = match project with
+      | "z3" -> "z3-dev" | "llvm" -> "llvm-19" | p -> p
+    in
+    match
+      List.find_opt (fun (j : Canary_gh.job_spec) -> String.equal j.id id) jobs
+    with
+    | None ->
+        Printf.printf "No coverage job for %s (available: %s).\n" project
+          (String.concat ", "
+             (List.map (fun (j : Canary_gh.job_spec) -> j.id) jobs))
+    | Some job ->
+        let covered =
+          List.map (fun (s : Canary_step_model.step) -> s.action) job.steps
+          |> List.sort_uniq Stdlib.compare
+        in
+        let langs = Canary_scenario_coverage.langs_of_actions covered in
+        let rows = Canary_scenario_coverage.coverage ~langs ~covered in
+        Printf.printf "\n%s — scenario coverage (store lifecycle)\n%s\n"
+          project (Canary_scenario_coverage.pp_rows rows)
+  in
+  Cmd.v
+    (Cmd.info "scenarios"
+       ~doc:"Print store-lifecycle scenario coverage (Covered / N/A) for a project")
+    Term.(const run $ project $ const ())
+
 let status_cmd =
   let project =
     Arg.(
@@ -995,6 +1033,7 @@ let () =
         paths_md_cmd;
         graph_cmd;
         action_cmd;
+        scenarios_cmd;
         status_cmd;
         view_cmd;
         ci_cmd;
