@@ -18,9 +18,8 @@ every executed step for all projects.
 | **llvm** | A+C | hand (source-build) | Raw | `api_source` | dev / 19 | S5a | ✓ / ✓ |
 | **sqlite** | A | hand | **Derived** | — | — | S5a | ✓ / ✓ |
 | **zarith** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / ✓ |
-| **ssl** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / ✓ |
+| **ssl** | B | hand (variant) | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) + native probe | S5a | ✓ / ✓ |
 | **cairo** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / — |
-| **ssl-variant** | B | hand (variant) | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) | S5a | ✓ / — |
 
 Notes:
 - **fetch_lib Derived** landed via S4a (`pattern_a` + sqlite); it lifted
@@ -31,10 +30,15 @@ Notes:
   Moving them to `Canary_surface` waits on the detector grow (S5) that
   actually reads it. See [`design/project_definition.md`](design/project_definition.md) §3.4.
 - **variants** on a Pattern-A project (same lib, 2 opam binding versions)
-  landed as **ssl-variant**: 2 binding versions × 2 apps, realized by
+  landed as **ssl** (consolidated 2026-07-23 — the variant form *is* the
+  project; the old single-version pattern_a ssl is retired, its native-lib
+  symbol probe folded in). 2 binding versions × 2 apps, realized by
   swapping the ssl version in the shared switch per variant (fast, no new
   OCaml switch). `Ssl.native_library_version` (added 0.7.0) is the drift;
-  `app_nlv × 0.6.0` is the one expected failure. Run: `canary action
-  ssl-variant`.
+  `app_nlv × 0.6.0` is the one expected failure. Run: `canary action ssl`,
+  view with `canary status ssl`.
+- **`canary status <project>`** prints the per-variant × per-step verdict
+  matrix from `actions.log` (the `run_state.json`/`result.html` collapse
+  variants). Works for any project; expected failures render `✓xfail`.
 - **cairo CI**: `canary action cairo` green locally; CI job wired in
   `canary_run.ml` but not yet exercised on a runner.

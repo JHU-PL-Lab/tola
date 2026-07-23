@@ -191,12 +191,22 @@ let action_cmd =
       (prebuilt_run_info ~project:"zarith" ~version:"system" ~extra:[] steps)
   in
   let run_ssl ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_ssl.runner_spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:"ssl" spec
+    (* ssl is a variant project: 2 binding versions × 2 apps + native probe.
+       Build each variant's steps, run sequentially (shared switch, ssl
+       version swapped per variant). *)
+    let variants =
+      List.map
+        (fun (name, spec) ->
+          let spec = with_cli_disabled cli_disabled spec in
+          let steps =
+            Canary_step_builder.derive_steps ~root
+              ~project:[%string "ssl/%{name}"] ~cache_project:"ssl" spec
+          in
+          (name, steps, None))
+        Canary_project_ssl.variants
     in
-    run_with_info ~failfast ~cache_path ~root ~project:"ssl" steps
-      (prebuilt_run_info ~project:"ssl" ~version:"system" ~extra:[] steps)
+    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
+      ~project_name:"ssl" ~variants ()
   in
   let run_cairo ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_cairo.runner_spec in
@@ -205,24 +215,6 @@ let action_cmd =
     in
     run_with_info ~failfast ~cache_path ~root ~project:"cairo" steps
       (prebuilt_run_info ~project:"cairo" ~version:"system" ~extra:[] steps)
-  in
-  let run_ssl_variant ~root ~failfast ~cache_path ~cli_disabled =
-    (* 2 binding versions × 2 apps: build each variant's steps, then run
-       them sequentially (shared switch, ssl version swapped per variant). *)
-    let variants =
-      List.map
-        (fun (name, spec) ->
-          let spec = with_cli_disabled cli_disabled spec in
-          let steps =
-            Canary_step_builder.derive_steps ~root
-              ~project:[%string "ssl-variant/%{name}"]
-              ~cache_project:"ssl-variant" spec
-          in
-          (name, steps, None))
-        Canary_project_ssl_variant.variants
-    in
-    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
-      ~project_name:"ssl-variant" ~variants ()
   in
   let run_llvm ~root ~failfast ~cache_path ~cli_disabled distro =
     let dev_tag =
@@ -284,7 +276,6 @@ let action_cmd =
     | Some "zarith" -> run_zarith ~root ~failfast ~cache_path ~cli_disabled
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled
-    | Some "ssl-variant" -> run_ssl_variant ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny" ->
@@ -304,7 +295,7 @@ let action_cmd =
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, ssl-variant, z3, llvm, tiny, tiny/<variant>)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny, tiny/<variant>)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")

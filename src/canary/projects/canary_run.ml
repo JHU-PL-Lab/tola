@@ -86,7 +86,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       preamble_steps = [];
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"ssl" ~cache_project:"ssl"
-          (no_source Canary_project_ssl.runner_spec)) };
+          (no_source Canary_project_ssl.ci_spec)) };
     (* cairo: Pattern A graphics — apt libcairo2-dev + opam cairo2 binding.
        First new project on the post-redesign machinery (Derived fetch_lib). *)
     { id = "cairo";
