@@ -93,11 +93,13 @@ let inventory_test : pure_test =
 
 (* ── step 2: store_config / surface / spec strawman ── *)
 
-module PD = Canary_project_def
+module SC = Canary_store_config
+module SB = Canary_step_builder
 
-(* A Derived Fetch_lib step must emit exactly what the underlying
-   runner helper does — the compatibility guarantee (old runner_spec
-   closure == Derived slot). *)
+(* S3: a Derived Fetch_lib step resolves (via command_of_step ~store_config)
+   to exactly what the runner helper emits — the compatibility guarantee
+   (old Raw closure == Derived slot). command_of_step uses detect_pm ()
+   internally, so we compare against the same detect_pm-based helper call. *)
 let derive_fetch_lib_test : pure_test =
   { name = "derive.fetch_lib_matches_helper";
     check = (fun () ->
@@ -106,20 +108,21 @@ let derive_fetch_lib_test : pure_test =
           version_tag = None; locator_hint = None;
           behavior = Canary_store.Stateless }
       in
-      let cfg =
-        { PD.empty_store_config with
-          lib = { PD.empty_lib_provenance with system_pkg = Some sys } }
+      let store_config : SC.store_config =
+        { SC.empty_store_config with
+          lib = Some { location = Canary_store.Pm (Canary_store.Sys_pm { pm = Canary_store.Apt });
+                       system_pkg = Some sys; components = []; headers = None } }
       in
-      match PD.derive_slot ~pm:Canary_store.Apt cfg PD.Fetch_lib with
-      | None -> false
-      | Some cmd ->
-        let derived = cmd ~output_dir:"OUT" ~variant_key:"vk" in
-        let direct =
-          Canary_step_builder.fetch_lib_cmd Canary_store.Apt sys
-            ~output_dir:"OUT" ~variant_key:"vk"
-        in
-        String.equal derived direct
-        && String.is_substring derived ~substring:"libsqlite3-dev") }
+      let derived =
+        (SB.command_of_step ~store_config (SB.Derived SB.Fetch_lib))
+          ~output_dir:"OUT" ~variant_key:"vk"
+      in
+      let direct =
+        SB.fetch_lib_cmd (Canary_store.detect_pm ()) sys
+          ~output_dir:"OUT" ~variant_key:"vk"
+      in
+      String.equal derived direct
+      && String.is_substring derived ~substring:"libsqlite3-dev") }
 
 (* surface_of_api keeps the watchlists and drops the provenance. *)
 let surface_split_test : pure_test =
@@ -150,35 +153,22 @@ let surface_split_test : pure_test =
             && List.equal String.equal bs.module_watchlist [ "Sqlite3" ]
           | _ -> false)) }
 
-(* detection_inventory of a small spec = consumes-inventory of its steps. *)
-let spec_inventory_test : pure_test =
-  { name = "spec.detection_inventory";
-    check = (fun () ->
-      let noop = PD.Raw (fun ~output_dir:_ ~variant_key:_ -> "true") in
-      let spec : PD.spec =
-        { name = "demo"; surface = Canary_surface.empty_surface;
-          stores = PD.empty_store_config;
-          steps = B.[ (Fetch Lib, PD.Derived PD.Fetch_lib);
-                      (Build_binding ocaml, noop);
-                      (Probe_binding ocaml, noop) ];
-          contracts_in_scope = [] }
-      in
-      same_kinds (PD.detection_inventory spec)
-        B.[ Lib; Binding ocaml ]) }
-
 (* S2: command_of_step (Raw f) is f — the identity that makes wrapping
-   every existing closure as Raw behavior-preserving. *)
+   every existing closure as Raw behavior-preserving. Raw ignores the
+   store_config. *)
 let s2_raw_identity_test : pure_test =
   { name = "s2.command_of_step_raw_identity";
     check = (fun () ->
       let f ~output_dir ~variant_key = output_dir ^ ":" ^ variant_key in
-      let g = Canary_step_builder.command_of_step (Canary_step_builder.Raw f) in
+      let g =
+        SB.command_of_step ~store_config:SC.empty_store_config (SB.Raw f)
+      in
       String.equal (g ~output_dir:"O" ~variant_key:"V") "O:V") }
 
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
-      derive_fetch_lib_test; surface_split_test; spec_inventory_test;
+      derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test ]
 
 let run_tests () : bool =

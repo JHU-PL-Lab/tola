@@ -85,14 +85,11 @@ let probe_from_store = function
    If yes, take location option upfront. [check_post] and [symbol_check]
    are still action-only because no current project needs per-location
    variation; revisit when one does. *)
-(* A store-backed command slot (S2, project_definition.md §3.1). A slot is
-   either [Derived] from the project's store_config (the clean path — wired
-   in S3) or a [Raw] closure (escape hatch, identical to the pre-S2 command
-   closures). Only [Raw] is inhabited in S2; every existing closure is
-   wrapped as [Raw f], so behaviour is unchanged.
-
-   (The strawman [Canary_project_def] carries an isomorphic copy; the two
-   merge when that file dissolves in S3.) *)
+(* A store-backed command slot (S2/S3, project_definition.md §3.1). A slot
+   is either [Derived] from the project's [stores : store_config] (the
+   clean path) or a [Raw] closure (escape hatch, identical to the pre-S2
+   command closures). [command_of_step ~store_config] (defined below the
+   command templates it calls) resolves both. *)
 type store_slot =
   | Fetch_lib
   | Fetch_binding of Canary_lang.lang
@@ -104,17 +101,10 @@ type step_source =
   | Derived of store_slot
   | Raw of (output_dir:string -> variant_key:string -> string)
 
-(* Resolve a [step_source] to its command. S2: only [Raw] is reachable;
-   [Derived] resolution against store_config arrives in S3. *)
-let command_of_step (s : step_source)
-  : output_dir:string -> variant_key:string -> string =
-  match s with
-  | Raw f -> f
-  | Derived _ ->
-      failwith
-        "command_of_step: Derived not resolved until S3 (store_config)"
-
 type runner_spec = {
+  (* Provenance the store owns (S3) — drives [Derived] step slots. Empty
+     by default; projects that opt into declarative fetch populate it. *)
+  stores : Canary_store_config.store_config;
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
   (* Declarative API spec for this source version. When present, derive_steps
      checks consistency: binding_api.source_dir = Some _ ↔ build_binding = Some _. *)
@@ -205,6 +195,7 @@ type runner_spec = {
 }
 
 let empty_runner_spec = {
+  stores = Canary_store_config.empty_store_config;
   fetch_source = None;
   api_source = None;
   scan_source = None;
@@ -240,34 +231,9 @@ let no_source spec =
     probe_lib = List.filter spec.probe_lib ~f:(fun (loc, _) ->
         match loc with Build_tree | Staged -> false | _ -> true) }
 
-(* Look up the script for a action *)
-let script_of_action spec = function
-  | Fetch Source -> spec.fetch_source
-  | Configure -> spec.configure
-  | Scan_sources -> spec.scan_sources
-  | Build_headers -> spec.build_headers
-  | Fetch Headers -> spec.fetch_headers
-  | Fetch Lib -> Option.map spec.fetch_lib ~f:command_of_step
-  | Fetch (Binding lang) ->
-      Option.map (List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang)
-        ~f:command_of_step
-  | Fetch App -> spec.fetch_app
-  | Build_lib -> spec.build_lib
-  | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang
-  | Install_lib -> spec.install_lib
-  | Build_app _ -> spec.build_app
-  | Publish Lib -> spec.pack_lib
-  | Publish (Binding lang) -> List.Assoc.find spec.pack_binding ~equal:Poly.equal lang
-  | Publish App -> spec.pack_app
-  | Probe_lib ->
-      (match spec.probe_lib with [] -> None | (_, cmd) :: _ -> Some cmd)
-  | Probe_binding lang ->
-      (* For has-check purposes: Some _ when any probe entry exists for this lang. *)
-      (match List.filter spec.probe_binding ~f:(fun (l, _, _) -> Poly.equal l lang) with
-       | [] -> None
-       | (_, _, cmd) :: _ -> Some cmd)
-  | Probe_app _ -> spec.probe_app
-  | Publish Source | Publish Headers -> None
+(* [command_of_step] + [script_of_action] are defined below the command
+   templates (fetch_lib_cmd / fetch_binding_cmd), which the [Derived]
+   resolver calls. *)
 
 (* ── Action step protocol ── *)
 
@@ -327,6 +293,69 @@ let fetch_lib_cmd pm (spec : Canary_store.system_package_spec) ~output_dir ~vari
 let fetch_binding_cmd (spec : Canary_toolchain.opam_package_spec) ~output_dir ~variant_key =
   let binding_ok = Canary_basic.variant_file ~variant_key "binding.ok" in
   [%string "%{Canary_toolchain.opam_install_cmd spec} && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > %{output_dir}/%{binding_ok}"]
+
+(* Resolve a [step_source] to its command (S3). [Raw] is verbatim;
+   [Derived] generates the command from the project's [store_config] by
+   reusing the same command templates a hand-written [Raw] closure would
+   call — so a Derived slot is byte-identical to the old closure. Only the
+   two fetch slots are wired; probe/scan slots follow in a later seam. *)
+let command_of_step ~(store_config : Canary_store_config.store_config)
+    (s : step_source) : output_dir:string -> variant_key:string -> string =
+  match s with
+  | Raw f -> f
+  | Derived Fetch_lib -> (
+      match store_config.lib with
+      | Some { system_pkg = Some spec; _ } ->
+          fetch_lib_cmd (Canary_store.detect_pm ()) spec
+      | _ ->
+          failwith
+            "command_of_step: Derived Fetch_lib needs store_config.lib.system_pkg")
+  | Derived (Fetch_binding lang) -> (
+      match List.Assoc.find store_config.bindings ~equal:Poly.equal lang with
+      | Some ({ pkg_name = Some name; _ } as b) -> (
+          match Canary_store_config.binding_pm b with
+          | Some Canary_store.Opam ->
+              fetch_binding_cmd
+                (Canary_toolchain.mk_opam_package_spec ~install_name:name ())
+          | Some _ | None ->
+              failwith
+                "command_of_step: Derived Fetch_binding wires only opam (S3)")
+      | _ ->
+          failwith
+            "command_of_step: Derived Fetch_binding needs \
+             store_config.bindings[lang].pkg_name")
+  | Derived (Probe_lib | Probe_binding _ | Scan_source) ->
+      failwith "command_of_step: Derived probe/scan slots not wired yet"
+
+(* Look up the script for an action. *)
+let script_of_action spec = function
+  | Fetch Source -> spec.fetch_source
+  | Configure -> spec.configure
+  | Scan_sources -> spec.scan_sources
+  | Build_headers -> spec.build_headers
+  | Fetch Headers -> spec.fetch_headers
+  | Fetch Lib ->
+      Option.map spec.fetch_lib ~f:(command_of_step ~store_config:spec.stores)
+  | Fetch (Binding lang) ->
+      Option.map (List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang)
+        ~f:(command_of_step ~store_config:spec.stores)
+  | Fetch App -> spec.fetch_app
+  | Build_lib -> spec.build_lib
+  | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang
+  | Install_lib -> spec.install_lib
+  | Build_app _ -> spec.build_app
+  | Publish Lib -> spec.pack_lib
+  | Publish (Binding lang) -> List.Assoc.find spec.pack_binding ~equal:Poly.equal lang
+  | Publish App -> spec.pack_app
+  | Probe_lib ->
+      (match spec.probe_lib with [] -> None | (_, cmd) :: _ -> Some cmd)
+  | Probe_binding lang ->
+      (* For has-check purposes: Some _ when any probe entry exists for this lang. *)
+      (match List.filter spec.probe_binding ~f:(fun (l, _, _) -> Poly.equal l lang) with
+       | [] -> None
+       | (_, _, cmd) :: _ -> Some cmd)
+  | Probe_app _ -> spec.probe_app
+  | Publish Source | Publish Headers -> None
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
