@@ -57,13 +57,14 @@ let is_verdict = function
   | "done" | "failed" | "blocked" | "skip" | "unexpected_success" -> true
   | _ -> false
 
-(* Compact pass/fail mark from (event, detail). An expected failure is a
-   PASS ("done" whose detail mentions "expected failure"). *)
+(* Compact mark from (event, detail). `xfail` = an *expected* failure that
+   was confirmed (a pass) — the "done (expected failure confirmed)" text is
+   redundant with the mark, so the row drops it. *)
 let mark event detail =
   match event with
   | "done" -> (
       match detail with
-      | Some d when String.is_substring d ~substring:"expected failure" -> "✓xfail"
+      | Some d when String.is_substring d ~substring:"expected failure" -> "xfail"
       | _ -> "✓")
   | "failed" -> "✗"
   | "unexpected_success" -> "✗"
@@ -71,7 +72,44 @@ let mark event detail =
   | "blocked" -> "⊘"
   | _ -> "?"
 
-let print_status ~root ~project =
+let read_file_or_empty path =
+  try Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
+  with _ -> ""
+
+(* Verbose witness for a step: the output file(s) it produced for this
+   variant (openable), and — for `xfail`/`✗` — the tail of a `.log` witness
+   as the concrete failure. *)
+let print_witness ~root ~project ~variant ~tag ~mark =
+  let project_name =
+    match String.lsplit2 project ~on:'/' with Some (p, _) -> p | None -> project
+  in
+  let vk = if String.equal variant "(run)" then "" else variant in
+  let dir =
+    Printf.sprintf "%s/canary/projects/%s/%s" root project_name
+      (Canary_basic.step_dir_of_tag tag)
+  in
+  let matches =
+    match Stdlib.Sys.readdir dir with
+    | exception _ -> []
+    | files ->
+        Array.to_list files
+        |> List.filter ~f:(fun f -> String.is_substring f ~substring:vk)
+        |> List.sort ~compare:String.compare
+  in
+  List.iter matches ~f:(fun f -> Stdlib.Printf.printf "          → %s/%s\n" dir f);
+  if String.equal mark "xfail" || String.equal mark "✗" then
+    List.iter matches ~f:(fun f ->
+        if String.is_suffix f ~suffix:".log" then begin
+          let content = read_file_or_empty (Printf.sprintf "%s/%s" dir f) in
+          let lines =
+            String.split_lines content
+            |> List.filter ~f:(fun l -> not (String.is_empty (String.strip l)))
+          in
+          let tail = List.drop lines (Int.max 0 (List.length lines - 4)) in
+          List.iter tail ~f:(fun l -> Stdlib.Printf.printf "            | %s\n" l)
+        end)
+
+let print_status ?(verbose = false) ~root ~project () =
   let path = log_path ~root ~project in
   if not (Stdlib.Sys.file_exists path) then
     Stdlib.Printf.printf
@@ -122,7 +160,15 @@ let print_status ~root ~project =
         in
         Stdlib.Printf.printf "\n  %s  %s\n" overall name;
         List.iter verdicts ~f:(fun (tag, (event, detail)) ->
-            Stdlib.Printf.printf "      %-28s %-6s %s%s\n" tag (mark event detail)
-              event
-              (Option.value_map detail ~default:"" ~f:(fun d -> "  " ^ d))))
+            let m = mark event detail in
+            (* detail adds info beyond the mark only on a real failure *)
+            let extra =
+              match event with
+              | "failed" | "unexpected_success" ->
+                  Option.value_map detail ~default:"" ~f:(fun d -> "  " ^ d)
+              | _ -> ""
+            in
+            Stdlib.Printf.printf "      %-28s %-6s%s\n" tag m extra;
+            if verbose then
+              print_witness ~root ~project ~variant:name ~tag ~mark:m))
   end

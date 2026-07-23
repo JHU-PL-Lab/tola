@@ -355,18 +355,25 @@ let status_cmd =
       & info [] ~docv:"PROJECT"
           ~doc:"Project to report (or @all for every project with a run)")
   in
-  let run project () =
+  let verbose =
+    Arg.(
+      value & flag
+      & info [ "v"; "verbose" ]
+          ~doc:"Per action, show the witness output file(s) and, for xfail/✗, the concrete failure")
+  in
+  let run verbose project () =
+    let show p = Canary_status.print_status ~verbose ~root:"_out" ~project:p () in
     match project with
     | "@all" | "all" ->
         (match Canary_status.projects_with_runs ~root:"_out" with
          | [] -> Printf.printf "No projects with runs under _out yet.\n"
-         | ps -> List.iter (fun p -> Canary_status.print_status ~root:"_out" ~project:p) ps)
-    | _ -> Canary_status.print_status ~root:"_out" ~project
+         | ps -> List.iter show ps)
+    | _ -> show project
   in
   Cmd.v
     (Cmd.info "status"
        ~doc:"Print the per-variant × per-step verdict matrix from actions.log")
-    Term.(const run $ project $ const ())
+    Term.(const run $ verbose $ project $ const ())
 
 let view_cmd =
   let project =
