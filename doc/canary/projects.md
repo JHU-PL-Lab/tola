@@ -42,3 +42,17 @@ Notes:
   variants). Works for any project; expected failures render `✓xfail`.
 - **cairo CI**: `canary action cairo` green locally; CI job wired in
   `canary_run.ml` but not yet exercised on a runner.
+- **Re-runs are cache-powered (safe).** A step is skipped when its
+  `output_dir` exists and its `check_post` passes (marker / `probe.log` /
+  `inspect.json` present). Measured on ssl: first run 16.7s, re-run 0.55s
+  — a fully-cached re-run executes *nothing* (no `opam install`, no
+  compile), so the shared-switch version state is irrelevant. Full-cache
+  re-run and full-clear fresh run are both correct; only a hand-*partial*
+  cache with the shared switch could probe the wrong version.
+- **Source-building path convention** (matters only for source-built
+  projects — z3/llvm; Pattern-A projects use opam binaries):
+  source at `~/code/contrib/<project>-all/<project>`, build result at
+  `~/code/contrib/<project>-all/build/<tag>` (per-tag). z3/llvm currently
+  use the un-tagged `…/build` (one tree shared across variants) — to be
+  updated when we source-build variants. See the TODO in
+  `tool/canary_artifact_source.ml:mk_locals`.

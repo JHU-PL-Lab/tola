@@ -33,7 +33,18 @@ type source_repo = {
    e.g., mk_locals "contrib/z3-all/z3" = [
      { distro = Wsl; path = "/home/red/code/contrib/z3-all/z3" };
      { distro = MacOS_local; path = "/Users/ex/code/contrib/z3-all/z3" };
-   ] *)
+   ]
+
+   TODO (build-path convention, 2026-07-23) — source layout:
+     source : ~/code/contrib/<project>-all/<project>          (checkout)
+     build  : ~/code/contrib/<project>-all/build/<tag>        (per-tag build result)
+   The [build_dir] default "../build" yields the *un-tagged*
+   ~/code/contrib/<project>-all/build (what z3/llvm use today, one build
+   tree shared across variants). When we start source-building variants,
+   [build_dir] should incorporate the version/variant tag ("../build/<tag>")
+   so each variant's compile output is isolated. Only matters for
+   source-built projects (z3/llvm); Pattern-A projects (sqlite/ssl/cairo/…)
+   use opam binaries and never build a native lib. *)
 let mk_locals ?(build_dir = "../build") rel_path =
   List.map Canary_store.all_distros ~f:(fun distro ->
       let path = Canary_store.distro_base distro ^ "/" ^ rel_path in
