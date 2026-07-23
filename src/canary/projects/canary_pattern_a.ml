@@ -92,9 +92,9 @@ let runner_spec (d : t) : Canary_step_builder.runner_spec =
   let resolve = lib_resolve d.lib in
   {
     Canary_step_builder.empty_runner_spec with
-    fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_lib = Some (Canary_step_builder.Raw (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package));
     fetch_binding =
-      [ (Canary_lang.OCaml, Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec) ];
+      [ (Canary_lang.OCaml, Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)) ];
     probe_lib =
       [ ( Canary_store.Pm (Canary_store.Sys_pm { pm }),
           fun ~output_dir ~variant_key ->

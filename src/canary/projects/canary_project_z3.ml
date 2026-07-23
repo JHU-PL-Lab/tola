@@ -404,17 +404,19 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
     fetch_lib =
       Some
+        (Canary_step_builder.Raw
         (fun ~output_dir ~variant_key ->
           let lib_ok = Canary_basic.variant_file ~variant_key "lib.ok" in
           let install = Canary_pm.install_cmd pm ~pkg:"z3" in
-          [%string "%{install} && echo 'installed' > %{output_dir}/%{lib_ok}"]);
+          [%string "%{install} && echo 'installed' > %{output_dir}/%{lib_ok}"]));
     fetch_binding =
       (let python_entry =
          List.filter_map binding_configs ~f:(function
            | Python_config p ->
                Some (Canary_lang.Python,
-                     fun ~output_dir ~variant_key ->
-                       Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)
+                     Canary_step_builder.Raw
+                     (fun ~output_dir ~variant_key ->
+                       Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key))
            | Ocaml_config _ -> None)
        in
        python_entry);

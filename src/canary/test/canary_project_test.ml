@@ -166,10 +166,20 @@ let spec_inventory_test : pure_test =
       same_kinds (PD.detection_inventory spec)
         B.[ Lib; Binding ocaml ]) }
 
+(* S2: command_of_step (Raw f) is f — the identity that makes wrapping
+   every existing closure as Raw behavior-preserving. *)
+let s2_raw_identity_test : pure_test =
+  { name = "s2.command_of_step_raw_identity";
+    check = (fun () ->
+      let f ~output_dir ~variant_key = output_dir ^ ":" ^ variant_key in
+      let g = Canary_step_builder.command_of_step (Canary_step_builder.Raw f) in
+      String.equal (g ~output_dir:"O" ~variant_key:"V") "O:V") }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
-      derive_fetch_lib_test; surface_split_test; spec_inventory_test ]
+      derive_fetch_lib_test; surface_split_test; spec_inventory_test;
+      s2_raw_identity_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

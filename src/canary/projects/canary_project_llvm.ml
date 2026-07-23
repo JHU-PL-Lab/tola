@@ -405,15 +405,15 @@ mkdir -p "$PREFIX/lib"
 cp %{build}/lib/libLLVM*.so "$PREFIX/lib/" 2>/dev/null || true
 echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
-    fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_lib = Some (Canary_step_builder.Raw (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package));
     fetch_binding =
       (Canary_lang.OCaml,
-       Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)
+       Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec))
       :: List.filter_map binding_configs ~f:(function
         | Python_config p ->
             Some (Canary_lang.Python,
-                  fun ~output_dir ~variant_key ->
-                    Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)
+                  Canary_step_builder.Raw (fun ~output_dir ~variant_key ->
+                    Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key))
         | Ocaml_config _ -> None);
     pack_binding =
       (if source.has_build_binding then

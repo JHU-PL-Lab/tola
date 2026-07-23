@@ -85,6 +85,35 @@ let probe_from_store = function
    If yes, take location option upfront. [check_post] and [symbol_check]
    are still action-only because no current project needs per-location
    variation; revisit when one does. *)
+(* A store-backed command slot (S2, project_definition.md §3.1). A slot is
+   either [Derived] from the project's store_config (the clean path — wired
+   in S3) or a [Raw] closure (escape hatch, identical to the pre-S2 command
+   closures). Only [Raw] is inhabited in S2; every existing closure is
+   wrapped as [Raw f], so behaviour is unchanged.
+
+   (The strawman [Canary_project_def] carries an isomorphic copy; the two
+   merge when that file dissolves in S3.) *)
+type store_slot =
+  | Fetch_lib
+  | Fetch_binding of Canary_lang.lang
+  | Probe_lib
+  | Probe_binding of Canary_lang.lang
+  | Scan_source
+
+type step_source =
+  | Derived of store_slot
+  | Raw of (output_dir:string -> variant_key:string -> string)
+
+(* Resolve a [step_source] to its command. S2: only [Raw] is reachable;
+   [Derived] resolution against store_config arrives in S3. *)
+let command_of_step (s : step_source)
+  : output_dir:string -> variant_key:string -> string =
+  match s with
+  | Raw f -> f
+  | Derived _ ->
+      failwith
+        "command_of_step: Derived not resolved until S3 (store_config)"
+
 type runner_spec = {
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
   (* Declarative API spec for this source version. When present, derive_steps
@@ -115,8 +144,8 @@ type runner_spec = {
   build_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
   install_lib : (output_dir:string -> variant_key:string -> string) option;
   build_app : (output_dir:string -> variant_key:string -> string) option;
-  fetch_lib : (output_dir:string -> variant_key:string -> string) option;
-  fetch_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
+  fetch_lib : step_source option;
+  fetch_binding : (Canary_lang.lang * step_source) list;
   fetch_app : (output_dir:string -> variant_key:string -> string) option;
   pack_lib : (output_dir:string -> variant_key:string -> string) option;
   pack_binding : (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
@@ -218,8 +247,10 @@ let script_of_action spec = function
   | Scan_sources -> spec.scan_sources
   | Build_headers -> spec.build_headers
   | Fetch Headers -> spec.fetch_headers
-  | Fetch Lib -> spec.fetch_lib
-  | Fetch (Binding lang) -> List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang
+  | Fetch Lib -> Option.map spec.fetch_lib ~f:command_of_step
+  | Fetch (Binding lang) ->
+      Option.map (List.Assoc.find spec.fetch_binding ~equal:Poly.equal lang)
+        ~f:command_of_step
   | Fetch App -> spec.fetch_app
   | Build_lib -> spec.build_lib
   | Build_binding lang -> List.Assoc.find spec.build_binding ~equal:Poly.equal lang

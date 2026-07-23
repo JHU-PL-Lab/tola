@@ -62,14 +62,14 @@ let runner_spec : Canary_step_builder.runner_spec =
   let ocaml = sqlite_ocaml_config.ocaml in
   {
     Canary_step_builder.empty_runner_spec with
-    fetch_lib = Some (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package);
+    fetch_lib = Some (Canary_step_builder.Raw (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package));
     fetch_binding =
-      (Canary_lang.OCaml, Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)
+      (Canary_lang.OCaml, Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec))
       ::
       (match sqlite_python_config with
        | Python_config p ->
            [ (Canary_lang.Python,
-              fun ~output_dir ~variant_key -> Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key) ]
+              Canary_step_builder.Raw (fun ~output_dir ~variant_key -> Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)) ]
        | Ocaml_config _ -> []);
     probe_binding =
       (Canary_lang.OCaml,
