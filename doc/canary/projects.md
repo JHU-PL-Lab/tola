@@ -20,6 +20,7 @@ every executed step for all projects.
 | **zarith** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / ✓ |
 | **ssl** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / ✓ |
 | **cairo** | A | `pattern_a` | **Derived** | — | — | S5a | ✓ / — |
+| **ssl-variant** | B | hand (variant) | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) | S5a | ✓ / — |
 
 Notes:
 - **fetch_lib Derived** landed via S4a (`pattern_a` + sqlite); it lifted
@@ -30,7 +31,10 @@ Notes:
   Moving them to `Canary_surface` waits on the detector grow (S5) that
   actually reads it. See [`design/project_definition.md`](design/project_definition.md) §3.4.
 - **variants** on a Pattern-A project (same lib, 2 opam binding versions)
-  needs a variant-by-opam-version path — the first candidate is an
-  ssl 0.6.0 vs 0.7.0 binding×app matrix (`native_library_version` drift).
+  landed as **ssl-variant**: 2 binding versions × 2 apps, realized by
+  swapping the ssl version in the shared switch per variant (fast, no new
+  OCaml switch). `Ssl.native_library_version` (added 0.7.0) is the drift;
+  `app_nlv × 0.6.0` is the one expected failure. Run: `canary action
+  ssl-variant`.
 - **cairo CI**: `canary action cairo` green locally; CI job wired in
   `canary_run.ml` but not yet exercised on a runner.
