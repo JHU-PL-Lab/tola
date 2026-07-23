@@ -1,26 +1,26 @@
 (** [Canary_scenario_coverage] — the store-lifecycle stage catalogue and
-    per-project coverage marks (scenario_coverage.md / ssot §4.2).
+    per-project coverage marks (scenario_coverage.md / ssot §4.2, §4.2.1).
 
     The catalogue is the pipeline of **store transitions** an artifact
     passes through — source → Build (build-tree) → Publish (PM) → Fetch
-    (local) → Probe — per artifact (lib, then binding per language). A
-    project covers the *segment* its provision-path uses; the rest is
-    [Na], symmetrically (tiny's N/A on Publish/Fetch is the same cell as a
-    `Fetched` project's N/A on Build).
+    (local) → Probe — per artifact (lib, then binding per language).
 
-    This module is the pure core: catalogue + `covered → marks`. The
-    provision/mutation enumerator (SSOT §4.2) and the N/A-definition vs
-    N/A-config split are follow-ups; for now every uncovered stage is one
-    [Na] bucket. *)
+    Each catalogue entry is a **logical stage** (§4.2.1a): a display label
+    plus the concrete actions that *realize* it. A stage is [Covered] if
+    the project runs **any** realization. Most stages have one; `run_app`
+    has two — `Probe_app` (build path — a real app artifact) and
+    `Probe_binding` (fetch path — the example *is* the app) — so tiny
+    (`Probe_app`) and sqlite (`Probe_binding`) both map to the same stage
+    instead of missing each other.
+
+    Build vs Fetch stay *distinct* stages (they're a real provenance
+    difference — the matrix shows which path); only the run realizations
+    merge. Provision/mutation enumerator + `(lang × mechanism)` binding
+    identity are the remaining §4.2.1 refinements. *)
 
 open Base
 open Canary_basic
 
-(* Three marks (scenario_coverage.md §3):
-   - Covered      — a variant runs this stage.
-   - Unspecified  — N/A by *definition*: the project's dimensions provide
-                    no path (origin=System ⇒ build_lib unspecified).
-   - Disabled     — N/A by *config*: applicable, but turned off. *)
 type mark = Covered | Unspecified | Disabled
 
 let string_of_mark = function
@@ -28,42 +28,63 @@ let string_of_mark = function
   | Unspecified -> "unspec"
   | Disabled -> "disabled"
 
-(** The store-lifecycle stage catalogue, ordered source → build → publish
-    → fetch → probe. Lib stages first, then each binding language's. *)
-let catalogue ~(langs : Canary_lang.lang list) : action list =
-  [ Fetch Source; Build_lib; Publish Lib; Fetch Lib; Probe_lib ]
-  @ List.concat_map langs ~f:(fun l ->
-        [ Build_binding l; Publish (Binding l); Fetch (Binding l);
-          Probe_binding l ])
+(* A logical stage: display label + the actions that realize it. *)
+type stage = { label : string; realizations : action list }
 
-(** Mark each catalogue stage. [covered] is the deduped action set the
-    project exercises (its derived steps, unioned over variants).
-    [disabled] is the per-project scenario-disable list, as action-name
-    strings (e.g. ["build_lib"]); a disabled stage is [Disabled] even if a
-    variant could cover it (config overrides). Everything else uncovered
-    is [Unspecified] (no path in the definition). *)
+(** The store-lifecycle catalogue, ordered source → build → publish →
+    fetch → probe. Lib stages first, then each binding language's. *)
+let catalogue ~(langs : Canary_lang.lang list) : stage list =
+  let lib =
+    [ { label = "fetch_source"; realizations = [ Fetch Source ] };
+      { label = "build_lib"; realizations = [ Build_lib ] };
+      { label = "publish_lib"; realizations = [ Publish Lib ] };
+      { label = "fetch_lib"; realizations = [ Fetch Lib ] };
+      { label = "probe_lib"; realizations = [ Probe_lib ] };
+    ]
+  in
+  let binding l =
+    let s = Canary_lang.string_of_lang l in
+    [ { label = "build_binding_" ^ s; realizations = [ Build_binding l ] };
+      { label = "publish_binding_" ^ s; realizations = [ Publish (Binding l) ] };
+      { label = "fetch_binding_" ^ s; realizations = [ Fetch (Binding l) ] };
+      (* run the app that uses the binding: build path (Probe_app) or
+         fetch path (Probe_binding — the example is the app) *)
+      { label = "run_app_" ^ s;
+        realizations = [ Probe_binding l; Probe_app { lang = l } ] };
+    ]
+  in
+  lib @ List.concat_map langs ~f:binding
+
+(** Mark each logical stage. [covered] is the deduped action set the
+    project exercises (union over variants / good_scenarios). [disabled]
+    is the scenario-disable list, as stage labels; a disabled stage is
+    [Disabled] even if covered (config overrides). Uncovered otherwise →
+    [Unspecified] (no path in the definition). *)
 let coverage ~(langs : Canary_lang.lang list) ~(covered : action list)
-    ~(disabled : string list) : (action * mark) list =
-  List.map (catalogue ~langs) ~f:(fun a ->
+    ~(disabled : string list) : (stage * mark) list =
+  List.map (catalogue ~langs) ~f:(fun st ->
       let m =
-        if List.mem disabled (string_of_action a) ~equal:String.equal then
-          Disabled
-        else if List.mem covered a ~equal:Poly.equal then Covered
+        if List.mem disabled st.label ~equal:String.equal then Disabled
+        else if
+          List.exists st.realizations ~f:(fun a ->
+              List.mem covered a ~equal:Poly.equal)
+        then Covered
         else Unspecified
       in
-      (a, m))
+      (st, m))
 
 (** The binding languages a project touches, inferred from its action
     set (so the catalogue lists only the relevant binding stages). *)
 let langs_of_actions (acts : action list) : Canary_lang.lang list =
   List.filter_map acts ~f:(function
     | Build_binding l | Fetch (Binding l) | Publish (Binding l)
-    | Probe_binding l -> Some l
+    | Probe_binding l | Build_app { lang = l } | Probe_app { lang = l } ->
+        Some l
     | _ -> None)
   |> List.dedup_and_sort ~compare:Poly.compare
 
-(** Pretty rows: "  <mark>  <action>". *)
-let pp_rows (rows : (action * mark) list) : string =
+(** Pretty rows: "  <mark>  <stage label>". *)
+let pp_rows (rows : (stage * mark) list) : string =
   String.concat ~sep:"\n"
-    (List.map rows ~f:(fun (a, m) ->
-         Printf.sprintf "  %-9s %s" (string_of_mark m) (string_of_action a)))
+    (List.map rows ~f:(fun (st, m) ->
+         Printf.sprintf "  %-9s %s" (string_of_mark m) st.label))

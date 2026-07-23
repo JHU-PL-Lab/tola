@@ -331,7 +331,9 @@ let scenarios_cmd =
   let run disabled project () =
     let root = "_out" in
     let distro = detect_distro () in
-    let all_projects = [ "sqlite"; "zarith"; "ssl"; "cairo"; "z3"; "llvm" ] in
+    let all_projects =
+      [ "sqlite"; "zarith"; "ssl"; "cairo"; "z3"; "llvm"; "tiny" ]
+    in
     (* Every variant of a project (mirrors the `action` dispatch), so
        coverage is the UNION across variants. derive_steps only builds the
        step list — nothing is run. *)
@@ -357,21 +359,38 @@ let scenarios_cmd =
                ~source:Canary_project_llvm.llvm_source_stable distro) ]
       | _ -> []
     in
+    (* The covered action set per project. General projects union their
+       variants' derived steps; tiny uses its designed scenarios
+       (good_scenarios) — one project space, same engine (ssot §4.2). *)
+    let covered_of p : (string * Canary_basic.action list) option =
+      match p with
+      | "tiny" ->
+          Some
+            ( "designed scenarios",
+              List.concat_map
+                (fun (s : Canary_scenario.scenario) -> s.actions)
+                Canary_scenario.good_scenarios )
+      | _ -> (
+          match variants_of p with
+          | [] -> None
+          | variants ->
+              Some
+                ( Printf.sprintf "union of %d variant(s)"
+                    (List.length variants),
+                  List.concat_map
+                    (fun (_, spec) ->
+                      Canary_step_builder.derive_steps ~root ~project:p
+                        ~langs:Canary_lang.[ OCaml; Python ] spec
+                      |> List.map (fun (s : Canary_step_model.step) -> s.action))
+                    variants ))
+    in
     let show p =
-      match variants_of p with
-      | [] ->
+      match covered_of p with
+      | None ->
           Printf.printf "Unknown project %s (available: @all, %s).\n" p
             (String.concat ", " all_projects)
-      | variants ->
-          let covered =
-            List.concat_map
-              (fun (_, spec) ->
-                Canary_step_builder.derive_steps ~root ~project:p
-                  ~langs:Canary_lang.[ OCaml; Python ] spec
-                |> List.map (fun (s : Canary_step_model.step) -> s.action))
-              variants
-            |> List.sort_uniq Stdlib.compare
-          in
+      | Some (source_desc, covered0) ->
+          let covered = List.sort_uniq Stdlib.compare covered0 in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
           (* project's canary config + any --disable from this invocation *)
           let all_disabled = disabled_scenarios_of_project p @ disabled in
@@ -379,9 +398,7 @@ let scenarios_cmd =
             Canary_scenario_coverage.coverage ~langs ~covered
               ~disabled:all_disabled
           in
-          Printf.printf
-            "\n%s — scenario coverage (union of %d variant(s))\n%s\n" p
-            (List.length variants)
+          Printf.printf "\n%s — scenario coverage (%s)\n%s\n" p source_desc
             (Canary_scenario_coverage.pp_rows rows)
     in
     match project with

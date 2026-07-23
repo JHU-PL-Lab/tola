@@ -175,28 +175,29 @@ let detect_simple_test : pure_test =
       (not ok.errored) && ok.output_present
       && bad.errored && (not bad.output_present)) }
 
-(* scenario coverage, three-way: an ssl-`sys`-like action set covers the
-   fetch-path stages (Covered); build/publish are Unspecified (no path in
-   the def); a disabled stage overrides to Disabled even though it would
-   otherwise be Unspecified/Covered. *)
+(* scenario coverage — logical stages + three-way marks. The covered set
+   runs Probe_app (build path), NOT Probe_binding; the `run_app` logical
+   stage must still be Covered (the realization merge — tiny's case). *)
 let coverage_test : pure_test =
-  { name = "coverage.three_way_marks";
+  { name = "coverage.logical_and_three_way";
     check = (fun () ->
       let module CV = Canary_scenario_coverage in
       let covered =
-        B.[ Fetch Lib; Fetch (Binding ocaml); Probe_binding ocaml; Probe_lib ]
+        B.[ Fetch Lib; Fetch (Binding ocaml); Probe_app { lang = ocaml };
+            Probe_lib ]
       in
-      (* config disables build_lib (config overrides — here it was
-         Unspecified anyway) and fetch_lib (a Covered stage → Disabled) *)
-      let disabled = [ "build_lib"; "fetch_lib" ] in
+      let disabled = [ "build_lib" ] (* config overrides an unspec stage *) in
       let rows = CV.coverage ~langs:[ ocaml ] ~covered ~disabled in
-      let mark a = List.Assoc.find rows a ~equal:Poly.equal in
-      Poly.equal (mark B.(Fetch (Binding ocaml))) (Some CV.Covered)
-      && Poly.equal (mark B.(Probe_binding ocaml)) (Some CV.Covered)
-      && Poly.equal (mark B.(Fetch Lib)) (Some CV.Disabled)   (* config overrides Covered *)
-      && Poly.equal (mark B.Build_lib) (Some CV.Disabled)     (* config overrides Unspecified *)
-      && Poly.equal (mark B.(Publish Lib)) (Some CV.Unspecified)
-      && Poly.equal (mark B.(Build_binding ocaml)) (Some CV.Unspecified)) }
+      let mark label =
+        List.find_map rows ~f:(fun ((st : CV.stage), m) ->
+            if String.equal st.label label then Some m else None)
+      in
+      Poly.equal (mark "fetch_lib") (Some CV.Covered)
+      (* run_app Covered via Probe_app — the realization merge *)
+      && Poly.equal (mark "run_app_ocaml") (Some CV.Covered)
+      && Poly.equal (mark "build_lib") (Some CV.Disabled)
+      && Poly.equal (mark "publish_lib") (Some CV.Unspecified)
+      && Poly.equal (mark "build_binding_ocaml") (Some CV.Unspecified)) }
 
 let all_tests : pure_test list =
   catalogue_tests

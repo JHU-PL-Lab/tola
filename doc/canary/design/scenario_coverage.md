@@ -195,16 +195,16 @@ source to build), `scenarios z3` shows `build_lib ✓` (dev builds it), and
 `scenarios z3 --disable build_lib` shows `build_lib disabled` (config
 override, per invocation).
 
+**Logical stages + tiny (done).** The catalogue is now **logical stages**
+([`ssot.md` §4.2.1](ssot.md)a): each stage's `realizations` are the actions
+that satisfy it, and `run_app` is covered by `Probe_app` (build path) *or*
+`Probe_binding` (fetch path) — so tiny and sqlite both map. **tiny is in
+`canary scenarios`** (its action set = `good_scenarios`, its designed
+project space), and its **`publish_*`/`fetch_*` show `unspec`** — the
+package gap, visible, symmetric with sqlite's `build_lib unspec`. Build vs
+fetch stay distinct stages (real provenance).
+
 Still to do:
-- **Logical stages, not concrete actions** ([`ssot.md` §4.2.1](ssot.md)a).
-  The catalogue currently keys off concrete actions (`Probe_binding`,
-  `Fetch Lib`), so a project that uses the *other* realization of a stage
-  looks uncovered — tiny's `Probe_app` / `Build_lib` don't map. Move the
-  catalogue to **logical stages** (`provide_lib = build|fetch`,
-  `run_app = probe_app|probe_binding`); then tiny lists cleanly and its
-  `Publish`/`Fetch` show `unspec` — the package gap, visible.
-- **Add tiny** once stages are logical: derive its build-path action set
-  and show it — the concrete way to *see* tiny's missing package scenarios.
 - **Binding = `(lang × mechanism)`** ([`ssot.md` §4.2.1](ssot.md)b). The
   binding stages are per language today (`build_binding_ocaml`,
   `build_binding_python`) but mechanism (cext/cstubs=SCAB vs
