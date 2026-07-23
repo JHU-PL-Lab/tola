@@ -50,7 +50,9 @@ Two consequences:
   the source, compiles it, and generates its own conf-package pinned per
   version — letting canary check API compatibility more rigorously than
   the ecosystem's conf-* maintainers do. (ssl is the natural first case:
-  `sys` alongside `src-<ver>` variants.)
+  `sys` alongside `src-<ver>` variants.) How this determines *which
+  scenarios* each project/variant covers — and marks the rest N/A — is
+  [`scenario_coverage.md`](scenario_coverage.md).
 
 ---
 
