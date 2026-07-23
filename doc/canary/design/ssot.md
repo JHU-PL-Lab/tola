@@ -176,6 +176,54 @@ isn't observed from the outside; it's *used*), but the
 semantic is already the right one: the app step exercises the
 artifact as its end-user would.
 
+### 4.2 Scenario enumeration — the shared abstract core
+
+Two scenario listings that look separate share one enumeration engine:
+
+- **tiny's listing** (§5's `Bs.N`) = the pipeline stages (§4) × all
+  **mutations**: for a fixed *build-everything-from-source* pipeline,
+  mutate each artifact in turn (`symbol_missing` on the lib, `type_broken`
+  on the binding, …).
+- **a general project's listing** (its variants) = the *same* pipeline
+  stages × all **provisions**: which artifacts are *given*, and from where
+  (fetched from a PM, built from source, vendored, absent).
+
+The abstract core is the **artifact pipeline** (Ar.0 native_source → Ar.1
+native_lib → Ar.3 binding_lib → app; §1), where each artifact carries two
+**independent coordinates**:
+
+| coordinate | values | axis enumerated by |
+|---|---|---|
+| **provision** (provenance) | `Absent` · `Fetched`(pm) · `Built`(from source) · `Vendored` | a general project — its **variants** |
+| **mutation** | `None` · `Symbol_missing` · `Abi_mismatch` · `Type_broken` · … (§5.3) | tiny — its **`Bs.N`** |
+
+The full scenario space is **provision × mutation**. The two listings are
+**orthogonal slices** of that product:
+
+- **tiny** fixes provision = *all `Built`* (the full pipeline) and walks
+  the **mutation** axis → §5's `Bs.N`.
+- **a general project** fixes mutation = `None` (positive) and walks the
+  **provision** axis → its variants (ssl `sys` = all `Fetched`; ssl `src`
+  = all `Built`). See
+  [`scenario_coverage.md`](scenario_coverage.md).
+
+Correspondences already in place: `origin` (the project dimension,
+[`new_project.md` §0](new_project.md)) **is** the provision coordinate; the
+variant list **is** the provision enumeration; the mutation vocabulary
+(§5.3) **is** the other axis; and provision decides which action-graph
+actions run (§6.5 — `Built` ⇒ `Build_lib`, `Fetched` ⇒ `Fetch Lib`).
+
+**Historical note / the "step back".** The first cut was an *abstract*
+enumeration; it was then specialised into tiny's *concrete* 22 (§5.1).
+Re-abstracting — **one enumerator over `(provision assignment) ×
+(mutation)`, of which tiny and every general project are projections** —
+is the convergence this section names, and what the code should back out
+to instead of two hand-written enumerations. The enumerator is
+**product-then-filter**: constraints prune the product (can't build a
+binding without a lib; can't fetch a source-built lib; a mutation applies
+only to a *provided* artifact; `N/A` per
+[`scenario_coverage.md`](scenario_coverage.md) §3).
+
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►

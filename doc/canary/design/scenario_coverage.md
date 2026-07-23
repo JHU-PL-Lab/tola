@@ -5,7 +5,10 @@
 > before building `canary scenarios`.
 
 Builds on [`new_project.md` §0](new_project.md) (project dimensions) and
-the `good_scenarios` catalogue in `action/canary_scenario.ml`.
+the `good_scenarios` catalogue in `action/canary_scenario.ml`. The
+abstract enumeration behind *both* tiny's and a general project's listings
+— **provision × mutation** — is [`ssot.md` §4.2](ssot.md); this doc is the
+provision-axis (coverage) view of it.
 
 ---
 
