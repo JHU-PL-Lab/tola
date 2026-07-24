@@ -215,6 +215,20 @@ Still to do:
 - **Unspecified is currently "not covered by any variant"**, which
   coincides with the dimension-derived N/A for today's projects but should
   be computed from `store_config` dimensions directly once they're stored.
+- **Version × provision coupling (the union flattens a real asymmetry).**
+  The dev variant *builds* from source (fragile — exercises the build path);
+  the stable/known-old variant *fetches* a known-good binding/package (dev
+  builds, stable doesn't). Encoded ad-hoc today via
+  `source_repo.has_build_binding=false` / `has_build_lib` on the stable
+  repo. The union view then throws the per-variant story away: z3's
+  `build_binding_ocaml ✓` comes *entirely from dev*, but the matrix can't
+  say so. **Not a display fix — model it in the origin/variant convergence**
+  ([`ssot.md` §4.2](ssot.md) provision axis, replacing the legacy
+  `has_build_*`/`cmake_build_binding` flags): each variant declares its
+  per-artifact provision path keyed by version-stability, and the matrix can
+  render per-variant (or annotate which variant earns each ✓) with union as
+  the default. Deferred until the origin/variant model lands — doing it now
+  layers a second ad-hoc rule on the first.
 
 ---
 
