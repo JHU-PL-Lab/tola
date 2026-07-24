@@ -199,11 +199,30 @@ let coverage_test : pure_test =
       && Poly.equal (mark "publish_lib") (Some CV.Unspecified)
       && Poly.equal (mark "build_binding_ocaml") (Some CV.Unspecified)) }
 
+(* §4.2.1b round 1: mechanism/discipline vocabulary. Only Static is wired
+   (OCaml=cstubs, Python=cext); the Dynamic constructors are typed but not
+   produced. Locks the static defaults + the discipline map. *)
+let mechanism_test : pure_test =
+  { name = "mechanism.static_defaults_and_discipline";
+    check = (fun () ->
+      let module M = Canary_mechanism in
+      Poly.equal (M.default_mechanism_of_lang L.OCaml) (Some M.Cstubs)
+      && Poly.equal (M.default_mechanism_of_lang L.Python) (Some M.Cext)
+      && Poly.equal (M.discipline_of_mechanism M.Cstubs) M.Static_c_abi
+      && Poly.equal (M.discipline_of_mechanism M.Cext) M.Static_c_abi
+      && Poly.equal (M.discipline_of_mechanism M.Ctypes) M.Dynamic_ffi
+      && Poly.equal (M.discipline_of_mechanism M.Dynlink) M.Dynamic_ffi
+      && M.is_static_binding_lang L.OCaml && M.is_static_binding_lang L.Python
+      (* round 1: unmodeled languages carry no mechanism yet *)
+      && Poly.equal (M.default_mechanism_of_lang L.Rust) None
+      && not (M.is_static_binding_lang L.Rust)) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
-      s2_raw_identity_test; detect_simple_test; coverage_test ]
+      s2_raw_identity_test; detect_simple_test; coverage_test;
+      mechanism_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

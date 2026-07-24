@@ -47,14 +47,21 @@ let catalogue ~(langs : Canary_lang.lang list) : stage list =
   in
   let binding l =
     let s = Canary_lang.string_of_lang l in
-    [ { label = "build_binding_" ^ s; realizations = [ Build_binding l ] };
-      { label = "publish_binding_" ^ s; realizations = [ Publish (Binding l) ] };
-      { label = "fetch_binding_" ^ s; realizations = [ Fetch (Binding l) ] };
-      (* run the app that uses the binding: build path (Probe_app) or
-         fetch path (Probe_binding — the example is the app) *)
-      { label = "run_app_" ^ s;
-        realizations = [ Probe_binding l; Probe_app { lang = l } ] };
-    ]
+    (* [build_binding] exists only for a Static-C-ABI binding — a compiled
+       stub (OCaml cstubs, Python cext). A Dynamic-FFI binding (ctypes,
+       Dynlink) is pure source that dlopens the lib at probe time, so it has
+       no compile stage (§4.2.1b). Round 1 wires only Static, so this guard
+       is always true today; it pre-encodes the round-2 semantics. *)
+    (if Canary_mechanism.is_static_binding_lang l then
+       [ { label = "build_binding_" ^ s; realizations = [ Build_binding l ] } ]
+     else [])
+    @ [ { label = "publish_binding_" ^ s; realizations = [ Publish (Binding l) ] };
+        { label = "fetch_binding_" ^ s; realizations = [ Fetch (Binding l) ] };
+        (* run the app that uses the binding: build path (Probe_app) or
+           fetch path (Probe_binding — the example is the app) *)
+        { label = "run_app_" ^ s;
+          realizations = [ Probe_binding l; Probe_app { lang = l } ] };
+      ]
   in
   lib @ List.concat_map langs ~f:binding
 

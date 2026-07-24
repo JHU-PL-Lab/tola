@@ -205,13 +205,24 @@ project space), and its **`publish_*`/`fetch_*` show `unspec`** — the
 package gap, visible, symmetric with sqlite's `build_lib unspec`. Build vs
 fetch stay distinct stages (real provenance).
 
+**Binding = `(lang × discipline)`** ([`ssot.md` §4.2.1](ssot.md)b),
+**round 1 shipped (Static only).** The axis is the binding's *discipline*
+— `Static_c_abi` (a compiled stub: OCaml cstubs, Python cext) vs
+`Dynamic_ffi` (dlopen at runtime: ctypes/cffi, OCaml Dynlink) — not the
+mechanism name; the discipline is what decides whether a `build_binding`
+stage exists. `base/canary_mechanism.ml` types both disciplines + five
+mechanism labels; `canary_scenario_coverage` gates `build_binding` on
+`is_static_binding_lang` (always true today, since only Static is wired —
+it pre-encodes the round-2 semantics that a `Dynamic_ffi` binding shows
+`build_binding unspec` and `run_app` carries the whole check). OCaml
+Dynlink/utop is the same axis value as Python ctypes, handled for free.
+
 Still to do:
-- **Binding = `(lang × mechanism)`** ([`ssot.md` §4.2.1](ssot.md)b). The
-  binding stages are per language today (`build_binding_ocaml`,
-  `build_binding_python`) but mechanism (cext/cstubs=SCAB vs
-  ctypes/cffi=DFFI) is collapsed. Key binding stages by `(lang, mechanism)`
-  so `python_via_cext` and `python_via_ctypes` are distinct — needed for a
-  faithful coverage row and for the enumerator's artifact identity.
+- **Produce `Dynamic_ffi` bindings** — thread discipline through the
+  binding artifact (`Binding of lang` → `binding(lang, discipline)`) and
+  split tiny's ctypes probe out of its cext binding, so
+  `binding(Python, Dynamic)` is first-class. More languages / finer
+  mechanism labels are additive under the two disciplines.
 - **Unspecified is currently "not covered by any variant"**, which
   coincides with the dimension-derived N/A for today's projects but should
   be computed from `store_config` dimensions directly once they're stored.

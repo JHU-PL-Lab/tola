@@ -265,31 +265,47 @@ instead of missing each other. The current coverage catalogue keys off
 "uncovered"); moving to logical stages fixes that and makes tiny's
 `Publish`/`Fetch` show `unspec` — the visible package gap.
 
-**(b) A binding artifact's identity is `(language × mechanism)`, not just
-language.** The binding carries a **mechanism** coordinate alongside its
-language (see the hardcode note at `action/canary_scenario.ml`'s
-`good_scenarios`):
+**(b) A binding artifact's identity is `(language × discipline)`.** The
+axis the enumerator ranges over is the binding's **discipline**, *not* the
+open set of mechanism names — because what changes the pipeline shape
+(whether a `Build_binding` stage exists, and where the surface-check fires)
+is the discipline. A **mechanism** is the finer descriptive label under a
+discipline (see `base/canary_mechanism.ml`; hardcode note at
+`action/canary_scenario.ml`'s `good_scenarios`):
 
-| mechanism | languages | today |
-|---|---|---|
-| `Cstubs` (SCAB — static C API) | OCaml | modeled |
-| `Cext` (SCAB) | Python | modeled |
-| `Ctypes` / `Cffi` (DFFI — dynamic FFI) | Python, … | **collapsed** to SCAB |
+| discipline | binds by | `build_binding` | check fires | mechanisms |
+|---|---|---|---|---|
+| **`Static_c_abi`** | compiling a stub linked to the lib | **real** (needs headers+link) | build (link) *and* probe | `Cstubs` (OCaml), `Cext` (Python) |
+| **`Dynamic_ffi`** | `dlopen`ing the lib at runtime | **absent** (pure source) | probe only (resolve by name) | `Ctypes`/`Cffi` (Python), `Dynlink` (OCaml) |
 
-So the binding artifact (Ar.3) is really `binding(lang, mechanism)` —
-`binding(Python, Cext)` and `binding(Python, Ctypes)` are **distinct
-artifacts** that build/probe differently, even though today's
-`Binding of lang` (`Canary_lang.lang`) flattens them to one. The
-enumerator therefore ranges provisions/mutations over
-`(lang × mechanism)` binding artifacts; promoting mechanism to an axis
-replaces the hardcoded SCAB assumption and makes `python_via_ctypes` /
-`ocaml_via_cffi` first-class. tiny already carries both cext and ctypes
-probe workspaces — they're two mechanisms of one language, currently
-merged into a single `Binding Python`.
+The two disciplines line up across languages — the payoff of keying on
+discipline rather than name: OCaml `Dynlink`/utop is the *same axis value*
+as Python `ctypes` (both dlopen late, both break on loader-path / symbol
+resolution), so it needs no OCaml-specific machinery.
+
+So the binding artifact (Ar.3) is really `binding(lang, discipline)` —
+`binding(Python, Static)` (cext) and `binding(Python, Dynamic)` (ctypes)
+are **distinct artifacts** that build/probe differently, even though
+today's `Binding of lang` (`Canary_lang.lang`) flattens them to one. For a
+`Dynamic_ffi` binding there is no `Build_binding` stage, so `build_binding_<lang>`
+shows `unspec` and `run_app_<lang>` carries the whole check — which the
+logical-stage model (a) already renders correctly. tiny already carries
+both cext and ctypes probe workspaces — two disciplines of one language,
+currently merged into a single `Binding Python`.
+
+**Round 1 (2026-07, shipped): only `Static_c_abi` is wired** — it is what
+every current project uses (OCaml=cstubs, Python=cext). `base/canary_mechanism.ml`
+types both disciplines + the five mechanisms + `discipline_of_mechanism` +
+`default_mechanism_of_lang` (Some for OCaml/Python, None otherwise);
+`canary_scenario_coverage` gates `build_binding` on `is_static_binding_lang`
+(always true today — pre-encodes the round-2 semantics). **To-do:** produce
+`Dynamic_ffi` bindings, thread discipline through `Binding of lang`, and
+split tiny's ctypes probe out of cext. More languages / finer mechanism
+labels are additive under the two disciplines.
 
 Net: the enumerator's **provision** side ranges over *logical stages ×
 realizations*, and its **artifact** side identifies bindings by
-*(language × mechanism)*. Both are prerequisites for the single
+*(language × discipline)*. Both are prerequisites for the single
 `(provision × mutation)` engine above.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
