@@ -17,9 +17,10 @@
    unioned: source → **Build** → **Publish** → **Fetch** → **Probe**, per
    artifact. `canary scenarios <p>` prints this. z3/llvm cover Build (dev)
    *and* Fetch (stable); sqlite covers only Fetch.
-4. **Three marks.** `✓` covered · `unspec` = the definition provides no
-   path (sqlite can't Build — it has no source) · `disabled` = a config
-   turns off an available path.
+4. **Three marks** (single glyph so columns align; the command prints a
+   legend). `✓` covered · `-` = unspec, the definition provides no path
+   (sqlite can't Build — it has no source) · `⊘` = disabled, a config turns
+   off an available path.
 5. **"Skip the slow build" is a variant choice, not a stage disable.** For
    z3/llvm the dev variant's whole job is to build the newest source (the
    version-mismatch demo needs that freshly-built lib), so `build_lib` is
@@ -182,9 +183,9 @@ their full pipeline (`build_lib ✓` from the dev variant, `fetch_lib ✓`
 from stable, `pack_binding_ocaml ✓` = they publish their binding), while
 sqlite/ssl/cairo stay fetch-path. `scenarios @all` walks every project.
 
-**N/A split (done).** Three marks: `✓` (Covered), **`unspec`**
-(Unspecified — N/A by definition, no path in the project's dimensions),
-**`disabled`** (N/A by config). A scenario-disable list overrides Covered
+**N/A split (done).** Three single-glyph marks (with a legend header):
+`✓` (Covered), **`-`** (Unspecified — N/A by definition, no path in the
+project's dimensions), **`⊘`** (disabled — N/A by config). A scenario-disable list overrides Covered
 (config wins). Two sources, unioned: a **persistent per-project disable
 config** (`disabled_scenarios_of_project` — the canary config part of a
 project's spec) plus `--disable <action>` per invocation. The config is

@@ -401,6 +401,7 @@ let scenarios_cmd =
           Printf.printf "\n%s — scenario coverage (%s)\n%s\n" p source_desc
             (Canary_scenario_coverage.pp_rows rows)
     in
+    Printf.printf "%s\n" Canary_scenario_coverage.legend;
     match project with
     | "@all" | "all" -> List.iter show all_projects
     | _ -> show project

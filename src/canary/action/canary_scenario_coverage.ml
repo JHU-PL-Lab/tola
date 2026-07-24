@@ -23,10 +23,13 @@ open Canary_basic
 
 type mark = Covered | Unspecified | Disabled
 
+(* single-glyph marks so columns line up; see [legend]. *)
 let string_of_mark = function
   | Covered -> "✓"
-  | Unspecified -> "unspec"
-  | Disabled -> "disabled"
+  | Unspecified -> "-"
+  | Disabled -> "⊘"
+
+let legend = "  ✓ covered   - unspec (no path)   ⊘ disabled (config)"
 
 (* A logical stage: display label + the actions that realize it. *)
 type stage = { label : string; realizations : action list }
@@ -83,8 +86,10 @@ let langs_of_actions (acts : action list) : Canary_lang.lang list =
     | _ -> None)
   |> List.dedup_and_sort ~compare:Poly.compare
 
-(** Pretty rows: "  <mark>  <stage label>". *)
+(** Pretty rows: "  <mark>  <stage label>". Each mark is exactly one
+    display column, so a literal 2-space separator aligns the labels
+    (byte-padding via [%-Ns] would not — the glyphs differ in byte width). *)
 let pp_rows (rows : (stage * mark) list) : string =
   String.concat ~sep:"\n"
     (List.map rows ~f:(fun (st, m) ->
-         Printf.sprintf "  %-9s %s" (string_of_mark m) st.label))
+         Printf.sprintf "  %s  %s" (string_of_mark m) st.label))
