@@ -217,12 +217,59 @@ let mechanism_test : pure_test =
       && Poly.equal (M.default_mechanism_of_lang L.Rust) None
       && not (M.is_static_binding_lang L.Rust)) }
 
+(* §4.2 enumeration core: one product-then-filter engine, two orthogonal
+   projections. Pins the shape of each projection + the dependency filter. *)
+let enumerate_test : pure_test =
+  { name = "enumerate.two_projections_and_filter";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let slots = EN.[ Slot_source; Slot_lib; Slot_binding ocaml ] in
+      let all_built (p : string EN.point) =
+        List.for_all p.assignment ~f:(fun (_, pv) ->
+            EN.equal_provision pv EN.Built)
+      in
+      (* tiny projection: all-Built × (positive + 2 mutations) = 3 points,
+         one positive, every assignment all-Built. *)
+      let muts =
+        EN.[ (Slot_lib, "symbol_missing"); (Slot_binding ocaml, "type_broken") ]
+      in
+      let tiny = EN.tiny_slice ~slots ~mutations:muts in
+      let tiny_ok =
+        List.length tiny = 3
+        && List.count tiny ~f:(fun p -> Option.is_none p.EN.mutation) = 1
+        && List.for_all tiny ~f:all_built
+      in
+      (* general projection: mutation=none, walk provisions; all-Fetched
+         and all-Built assignments both present. *)
+      let gen = EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ] in
+      let has_uniform target =
+        List.exists gen ~f:(fun p ->
+            List.for_all p.EN.assignment ~f:(fun (_, pv) ->
+                EN.equal_provision pv target))
+      in
+      let gen_ok =
+        List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
+        && has_uniform EN.Fetched && has_uniform EN.Built
+      in
+      (* filter: with Absent allowed, a provided binding over an Absent lib
+         must be pruned. *)
+      let gen2 =
+        EN.general_slice ~slots ~provisions:EN.[ Absent; Fetched; Built ]
+      in
+      let no_orphan_binding =
+        List.for_all gen2 ~f:(fun p ->
+            not
+              (EN.provided p.EN.assignment (EN.Slot_binding ocaml)
+              && not (EN.provided p.EN.assignment EN.Slot_lib)))
+      in
+      tiny_ok && gen_ok && no_orphan_binding) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
-      mechanism_test ]
+      mechanism_test; enumerate_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

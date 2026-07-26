@@ -241,6 +241,20 @@ binding without a lib; can't fetch a source-built lib; a mutation applies
 only to a *provided* artifact; `N/A` per
 [`scenario_coverage.md`](scenario_coverage.md) §3).
 
+**Status (2026-07, first cut shipped): the engine exists as
+`action/canary_enumerate.ml`.** It is a pure product-then-filter core
+polymorphic in the mutation (`'m`) — `provision = Absent | Fetched | Built
+| Vendored`, `slot = Slot_source | Slot_lib | Slot_binding lang`,
+`enumerate ~slots ~provisions ~mutations` — with the dependency filter
+(`assignment_ok`: lib `Built` ⇒ source present; a provided binding ⇒ lib
+present) and the mutation-on-provided-only rule. The two projections are
+`tiny_slice` (fix all `Built`, walk mutations) and `general_slice` (fix
+mutation none, walk provisions); a layer test pins each projection's shape
++ the filter. **Deferred (the convergence):** back tiny's designed 22 and
+each project's variant list out to *be* projections of this engine
+(replace the two hand-written enumerations), and carry `(lang × discipline)`
+into `Slot_binding` once Dynamic bindings land (§4.2.1b).
+
 ### 4.2.1 Two refinements the enumerator needs
 
 The first-cut `canary scenarios` view revealed two places where the model

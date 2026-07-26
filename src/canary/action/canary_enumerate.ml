@@ -1,0 +1,105 @@
+(** [Canary_enumerate] — the shared abstract enumeration core (ssot §4.2).
+
+    **One** engine over (provision assignment) × (mutation),
+    product-then-filter. tiny and every general project are two orthogonal
+    *projections* of the same product:
+
+    - **tiny** = fix provision = all [Built], walk the mutation axis
+      (§5's `Bs.N`).
+    - **a general project** = fix mutation = none, walk the provision axis
+      (its variants; ssl `sys` = all [Fetched], ssl `src` = all [Built]).
+
+    This module is the engine; the two projections are [tiny_slice] /
+    [general_slice]. Backing tiny's designed 22 and each project's variants
+    out to *be* projections of this engine (replacing the two hand-written
+    enumerations in `canary_scenario.ml` / the per-project variant lists) is
+    the convergence named in §4.2 — a later round. For now the engine stands
+    alongside them, with tests pinning each projection's shape.
+
+    The engine is **polymorphic in the mutation** (['m]): it is pure
+    combinatorics — which artifacts are provided and from where, and which
+    provided artifact is mutated — agnostic to what a mutation *means*. tiny
+    supplies real mutations; a general project supplies none. *)
+
+open Base
+
+(** Provenance of an artifact — the **provision** coordinate (ssot §4.2; the
+    project [origin] dimension, [new_project.md §0]). Spans the store
+    lifecycle: [Absent] (not provided), [Fetched] (from a PM), [Built] (from
+    source), [Vendored] (in-tree copy). *)
+type provision = Absent | Fetched | Built | Vendored [@@deriving show]
+
+(** The provisioned slots of the abstract pipeline (Ar.0 source → Ar.1 lib →
+    Ar.3 binding). The app is the consumer (probed), not provisioned, so it
+    is not a slot here. *)
+type slot = Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
+[@@deriving show]
+
+let equal_provision (a : provision) (b : provision) : bool = Poly.equal a b
+let equal_slot (a : slot) (b : slot) : bool = Poly.equal a b
+
+(** A provision assignment: one provision per slot. *)
+type assignment = (slot * provision) list
+
+(** One point of the scenario space: a provision assignment plus an optional
+    mutation on one *provided* slot ([None] = the positive scenario). *)
+type 'm point = { assignment : assignment; mutation : (slot * 'm) option }
+
+let provision_of (a : assignment) (s : slot) : provision =
+  List.Assoc.find a s ~equal:equal_slot |> Option.value ~default:Absent
+
+let provided (a : assignment) (s : slot) : bool =
+  not (equal_provision (provision_of a s) Absent)
+
+(** Dependency filter (product-then-filter, §4.2): a lib [Built] from source
+    needs the source present; any provided binding needs the lib present. *)
+let assignment_ok (a : assignment) : bool =
+  let lib = provision_of a Slot_lib in
+  (not (equal_provision lib Built) || provided a Slot_source)
+  && List.for_all a ~f:(fun (s, pv) ->
+         match s with
+         | Slot_binding _ -> equal_provision pv Absent || provided a Slot_lib
+         | _ -> true)
+
+(* The product of provision assignments over [slots] × [provisions]. *)
+let rec assignments_of (slots : slot list) (provisions : provision list) :
+    assignment list =
+  match slots with
+  | [] -> [ [] ]
+  | s :: rest ->
+      let tails = assignments_of rest provisions in
+      List.concat_map provisions ~f:(fun pv ->
+          List.map tails ~f:(fun t -> (s, pv) :: t))
+
+(** The full engine: the product of *valid* provision assignments ×
+    (positive + each applicable mutation). A mutation is applicable to an
+    assignment only when its target slot is provided (§4.2: "a mutation
+    applies only to a provided artifact"). *)
+let enumerate ~(slots : slot list) ~(provisions : provision list)
+    ~(mutations : (slot * 'm) list) : 'm point list =
+  assignments_of slots provisions
+  |> List.filter ~f:assignment_ok
+  |> List.concat_map ~f:(fun a ->
+         let positive = { assignment = a; mutation = None } in
+         let muts =
+           List.filter_map mutations ~f:(fun (s, m) ->
+               if provided a s then Some { assignment = a; mutation = Some (s, m) }
+               else None)
+         in
+         positive :: muts)
+
+(** tiny's projection: fix provision = all [Built], walk the mutation axis.
+    With [provisions = [Built]] there is exactly one assignment (every slot
+    [Built]), so this yields (positive + each applicable mutation).
+    (Source-[Built] here just means "present locally" — the source is the
+    pipeline root; its provision is degenerate.) *)
+let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
+    'm point list =
+  enumerate ~slots ~provisions:[ Built ] ~mutations
+
+(** A general project's projection: fix mutation = none, walk the provision
+    axis. Yields one positive point per valid provision assignment (ssl
+    `sys` = all [Fetched], ssl `src` = all [Built], … among them). *)
+let general_slice ~(slots : slot list) ~(provisions : provision list) :
+    'm point list =
+  enumerate ~slots ~provisions ~mutations:[]
