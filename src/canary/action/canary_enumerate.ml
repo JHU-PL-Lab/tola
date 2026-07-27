@@ -16,6 +16,11 @@
     the convergence named in §4.2 — a later round. For now the engine stands
     alongside them, with tests pinning each projection's shape.
 
+    Separate file only while it stands alongside the hand-written
+    enumerations: once the convergence lands (this engine backing both),
+    **fold this into `canary_scenario.ml` (or a scenario util)** — it is the
+    scenario-enumeration core and belongs beside the scenario types.
+
     The engine is **polymorphic in the mutation** (['m]): it is pure
     combinatorics — which artifacts are provided and from where, and which
     provided artifact is mutated — agnostic to what a mutation *means*. tiny
@@ -27,16 +32,13 @@ open Base
     project [origin] dimension, [new_project.md §0]). Spans the store
     lifecycle: [Absent] (not provided), [Fetched] (from a PM), [Built] (from
     source), [Vendored] (in-tree copy). *)
-type provision = Absent | Fetched | Built | Vendored [@@deriving show]
+type provision = Absent | Fetched | Built | Vendored [@@deriving show, eq]
 
 (** The provisioned slots of the abstract pipeline (Ar.0 source → Ar.1 lib →
     Ar.3 binding). The app is the consumer (probed), not provisioned, so it
     is not a slot here. *)
 type slot = Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
-[@@deriving show]
-
-let equal_provision (a : provision) (b : provision) : bool = Poly.equal a b
-let equal_slot (a : slot) (b : slot) : bool = Poly.equal a b
+[@@deriving show, eq]
 
 (** A provision assignment: one provision per slot. *)
 type assignment = (slot * provision) list

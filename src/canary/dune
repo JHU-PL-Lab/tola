@@ -15,7 +15,7 @@
   fpath
   str)
  (preprocess
-  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show ppx_deriving.eq)))
 
 ; Layered subdirectory organization (2026-05-31). Subdirs are
 ; physical-only — wrapped:false + include_subdirs:unqualified means every

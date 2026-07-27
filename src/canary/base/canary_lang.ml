@@ -11,7 +11,7 @@ type lang =
   | Rust
   | CSharp
   | Java
-[@@deriving show]
+[@@deriving show, eq]
 
 let string_of_lang = function
   | Cpp -> "cpp" | OCaml -> "ocaml"
