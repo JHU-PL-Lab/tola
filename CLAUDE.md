@@ -16,8 +16,20 @@ dune exec src/bin/canary_main.exe -- artifact-summary --kind native --path X  # 
 dune exec src/bin/canary_main.exe -- inspect-diff --old A --new B            # diff two inspect.json files
 dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
 dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # cross-reference prediction vs probe.log
+dune exec src/bin/canary_main.exe -- scenarios <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
+dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as engine provision assignments (ssot §4.2)
+dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as engine mutation-axis projection
+dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
+dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
+dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 make canary                                                  # run canary via Makefile shorthand
 ```
+
+Scenario-enumeration model (ssot §4.2): one `(provision × mutation)`
+engine (`action/canary_enumerate.ml`); tiny = mutation-axis projection,
+a general project = provision-axis projection. `scenarios`/`tiny engine`
+render each old enumeration through it (correspondence demonstrated;
+full replacement deferred).
 
 Output layout (gitignored via `_*`):
 - `_out/canary/projects/<project>/<step>/` — per-project action runs
@@ -72,10 +84,13 @@ per Phase E of the tiny migration.)
 | `src/canary/base/canary_basic.ml`                   | `artifact_kind`, `kind_order`, `action` (constructor type; was `rule` pre-2026-07-21), `string_of_action`/`action_of_string`, `step_body` (legacy shell carrier), `version`, `filename`, `variant_file` — live vocabulary including output-tree naming |
 | `src/canary/base/canary_store.ml`                   | `location`, `package_manager`, `source_repo`, `distro`, `pm_properties` types (was canary_pm_types)    |
 | `src/canary/base/canary_artifact_api.ml`            | Declarative `native_api` / `binding_api` types (provider/consumer claims, watchlists) — facts about library APIs |
+| `src/canary/base/canary_mechanism.ml`               | Binding `discipline` (`Static_c_abi`\|`Dynamic_ffi`) + `mechanism` (`Cstubs`/`Cext`/`Ctypes`/`Cffi`/`Dynlink`) + `discipline_of_mechanism` + `default_mechanism_of_lang` (ssot §4.2.1b). Round 1 wires only Static. |
+| `src/canary/base/canary_surface.ml`                 | `native_surface` / `binding_surface` / `surface` + `surface_of_api` — checking-point view (watchlists), provenance dropped (S1 of the detection-first redesign) |
 | `src/canary/surface/canary_compat.ml`               | Pure theory: `inspect_input` ADT + c1..c8 comparators (`check_c_compat`, `check_abi`, `check_type`, …) + contract registry vocabulary (`contract_id`, `contract_status`, `contract_check`) |
 | `src/canary/surface/canary_compat_run.ml`           | Drives the contract: cached-summary lookup + per-contract predict closures (`c1_predict`, …) + `registered_checks` list + `predicted_contains_any_v2 ~resolve` (4-line iterator over the registry) + CLI run/verify |
 | `src/canary/tool/canary_toolchain.ml`               | OCaml toolchain types, opam packaging helpers, `pip_install_cmd` / `python_probe_only_cmd`             |
 | `src/canary/tool/canary_build_cmd.ml`               | Generic build-tool primitives: `cmake_configure_cmd`, `ninja_build_cmd`, `dune_build_cmd`, `with_marker` |
+| `src/canary/tool/canary_store_config.ml`            | `store_config` (`source`/`lib`/`bindings` stores) + `binding_store` / `lib_store` records + `binding_pm` (S3 of the detection-first redesign; where each artifact lives, per-artifact) |
 | `src/canary/tool/canary_artifact_native.ml`         | nm-based native lib summaries; `--emit-symbols` for compat cross-check                                 |
 | `src/canary/tool/canary_artifact_lang.ml`           | OCaml + Python summary helpers (mli, stub, ocamlobjinfo, `dir()`)                                      |
 | `src/canary/tool/canary_artifact_source.ml`         | Source artifact helpers; `scan_source` post-fetch verification                                         |
@@ -88,15 +103,23 @@ per Phase E of the tiny migration.)
 | `src/canary/action/canary_step_builder.ml`          | `runner_spec` (was `project_spec` pre-2026-07-21), `derive_steps`, shared command templates, check_post compositors — the step list builder |
 | `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`, `lower_expectation` — the shared expectation lowering used by tiny/z3/llvm); `derive_scenarios`; `related_artifacts_of_actions`. |
 | `src/canary/action/canary_scenario_util.ml`         | Small project-agnostic helpers extracted from tiny (`pert`, `matches_derived_cell`, `detector_short`, `violates_label`, `artifact_index`, `bad_target_str`) — currently only consumed by tiny (via `let alias = ...`). |
+| `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **logical-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
+| `src/canary/action/canary_enumerate.ml`             | The `(provision × mutation)` enumeration engine (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. `provision`/`slot`, `enumerate`, `assignment_ok`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
 | `src/canary/action/canary_project.ml`               | `Canary_project.project` — top-level bundle at the SSOT §6.1 taxonomy top (name + contract_bindings). Concrete monomorphic; each project's module owns its scenarios directly. Only `tiny_project` inhabited today (z3/llvm/sqlite bundles deferred). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
 | `src/canary/backend/canary_html.ml`         | HTML result page + index rendering                                                                     |
+| `src/canary/backend/canary_detect.ml`               | Forecast-agnostic detection (S5a): `finding` (`tag`/`errored`/`output_present`) + `simple_finding` — classify a step by its raw outcome, independent of any expectation/contract |
+| `src/canary/backend/canary_status.ml`               | `canary status` — per-scenario last-run verdict matrix (`xfail`/`✓`/`✗`/`·`) + `-v` witness lines (tails result files); `projects_with_runs` for `@all` |
 | `src/canary/backend/canary_diagram.ml`              | Mermaid diagram + view machinery (2283 LOC; biggest single file)                                       |
 | `src/canary/test/canary_artifact_test.ml`           | Framework self-tests (native, OCaml, Python, compat helpers — pure + shell)                            |
 | `src/canary/test/canary_pm_test.ml`                 | PM module self-tests                                                                                   |
+| `src/canary/test/canary_project_test.ml`            | Project-definition layer tests (`canary project-test`) — pure: action consumes/produces catalogue, surface split, store-config derive, detect, coverage logical stages, mechanism defaults, enumerate two-projections |
 | `src/canary/projects/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
+| `src/canary/projects/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
+| `src/canary/projects/canary_project_cairo.ml`       | cairo project via `Canary_pattern_a` (conf-* + opam binding); Level A                                  |
+| `src/canary/projects/canary_project_zarith.ml`      | zarith project via `Canary_pattern_a` (conf-* + opam binding); Level A                                 |
 | `src/canary/projects/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/projects/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_contract_bindings` (Task 2 Phase D 2026-07-21). |
 | `src/canary/projects/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_contract_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |

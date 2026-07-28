@@ -250,15 +250,44 @@ polymorphic in the mutation (`'m`) — `provision = Absent | Fetched | Built
 present) and the mutation-on-provided-only rule. The two projections are
 `tiny_slice` (fix all `Built`, walk mutations) and `general_slice` (fix
 mutation none, walk provisions); a layer test pins each projection's shape
-+ the filter. **Deferred (the convergence):** back tiny's designed 22 and
-each project's variant list out to *be* projections of this engine
-(replace the two hand-written enumerations), and carry `(lang × discipline)`
-into `Slot_binding` once Dynamic bindings land (§4.2.1b).
++ the filter.
+
+**Correspondence demonstrated (both projections render the old sets).**
+Each hand-written enumeration is now *rendered through* the engine, with
+the mapping shown at the CLI:
+
+- `canary tiny engine` (`c5eb473`) — tiny's mutation axis: all 20
+  mutation-carrying specs (13 `Bs` + 7 derived `Dv`) map onto a pipeline
+  slot; the engine's single positive collapses tiny's two unmutated
+  app-wiring runs (`Sc.4.OCaml` direct, `Sc.6.OCaml` via-helper).
+- `canary scenarios <p> --engine` (`a36085a`) — a general project's
+  provision axis: each variant's action set is read back to a provision
+  assignment (`provision_of_actions`) that is valid + in `general_slice`
+  (z3 dev = lib/ocaml `Built`, python `Fetched`; ssl variants all
+  `Fetched`, their version sub-axis collapsed).
+
+The recurring pattern: a project's *non-provision, non-mutation* sub-axis
+(tiny's app-wiring, ssl's version) is out of the abstract engine's scope
+and collapses — the engine is the combinatorial skeleton; rich
+per-scenario detail (recipe / `violates` / `expected`) stays on
+`scenario_spec`.
+
+**Still deferred (the *replacement*):** drive the hand-written
+enumerations *from* the engine points (not just render alongside), fold
+`canary_enumerate` into `canary_scenario.ml`, and carry
+`(lang × discipline)` into `Slot_binding` once Dynamic bindings land
+(§4.2.1b). Whether a full replacement is even desirable is open — the
+skeleton-vs-detail split means the hand-written specs still own everything
+the engine deliberately doesn't model.
 
 ### 4.2.1 Two refinements the enumerator needs
 
 The first-cut `canary scenarios` view revealed two places where the model
-is still too coarse. Both must land before the enumerator is faithful.
+was still too coarse. **Both have now landed** — (a) logical stages
+(shipped `9a844ed`) and (b) the binding discipline axis (round 1, Static
+only, shipped `d04714f`) — so the enumerator's provision and artifact
+sides are both faithful for today's Static-only projects. Producing
+`Dynamic_ffi` bindings is the remaining piece of (b).
 
 **(a) Stages are *logical*, with realizations selected by provision.**
 Each pipeline stage is one **logical stage** realized differently by the
