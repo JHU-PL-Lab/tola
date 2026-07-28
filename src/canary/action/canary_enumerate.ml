@@ -40,6 +40,12 @@ type provision = Absent | Fetched | Built | Vendored [@@deriving show, eq]
 type slot = Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
 [@@deriving show, eq]
 
+(** Concise slot label for display (the derived [show_slot] is verbose). *)
+let string_of_slot = function
+  | Slot_source -> "source"
+  | Slot_lib -> "lib"
+  | Slot_binding l -> "binding:" ^ Canary_lang.string_of_lang l
+
 (** A provision assignment: one provision per slot. *)
 type assignment = (slot * provision) list
 

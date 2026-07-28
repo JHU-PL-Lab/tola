@@ -1070,14 +1070,23 @@ let tiny_scenarios_status_cmd =
              first to populate it.")
     (term_of (fun () -> show_tiny_status ()))
 
+let tiny_scenarios_engine_cmd =
+  Cmd.v
+    (Cmd.info "engine"
+       ~doc:"Render tiny's scenarios as a projection of the shared \
+             enumeration engine (all Built × mutation axis); reports the \
+             tiny↔engine correspondence. See ssot §4.2.")
+    (term_of (fun () -> Canary_tiny_scenario.print_engine_render ()))
+
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny"
        ~doc:"Tiny scenario helpers — list, expected, baseline, \
-             prepare, prepare-all, confirm. See \
+             prepare, prepare-all, confirm, engine. See \
              doc/canary/design/tiny.md.")
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_run_cmd;
+      tiny_scenarios_engine_cmd;
       tiny_scenarios_status_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;
