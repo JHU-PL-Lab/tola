@@ -111,3 +111,41 @@ let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
 let general_slice ~(slots : slot list) ~(provisions : provision list) :
     'm point list =
   enumerate ~slots ~provisions ~mutations:[]
+
+let string_of_provision = function
+  | Absent -> "absent"
+  | Fetched -> "fetched"
+  | Built -> "built"
+  | Vendored -> "vendored"
+
+(** Read a slot's provision off a concrete action set (which action-graph
+    verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
+    [Absent]. This is the inverse of §6.5's "provision decides which actions
+    run" — recovering the provision coordinate from a variant's steps, so a
+    general project's hand-written variants can be rendered as engine
+    assignments. *)
+let provision_of_actions (acts : Canary_basic.action list) (s : slot) :
+    provision =
+  let has a = List.mem acts a ~equal:Poly.equal in
+  match s with
+  | Slot_source -> if has (Canary_basic.Fetch Canary_basic.Source) then Fetched else Absent
+  | Slot_lib ->
+      if has Canary_basic.Build_lib then Built
+      else if has (Canary_basic.Fetch Canary_basic.Lib) then Fetched
+      else Absent
+  | Slot_binding l ->
+      if has (Canary_basic.Build_binding l) then Built
+      else if has (Canary_basic.Fetch (Canary_basic.Binding l)) then Fetched
+      else Absent
+
+(** The provision assignment a variant's action set implies (one provision
+    per slot, via [provision_of_actions]). *)
+let assignment_of_actions ~(slots : slot list)
+    (acts : Canary_basic.action list) : assignment =
+  List.map slots ~f:(fun s -> (s, provision_of_actions acts s))
+
+(** Pretty an assignment as "source=fetched lib=built binding:ocaml=built". *)
+let string_of_assignment (a : assignment) : string =
+  String.concat ~sep:" "
+    (List.map a ~f:(fun (s, pv) ->
+         string_of_slot s ^ "=" ^ string_of_provision pv))

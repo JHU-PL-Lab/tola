@@ -328,7 +328,14 @@ let scenarios_cmd =
       & info [ "disable" ] ~docv:"ACTION"
           ~doc:"Mark a stage disabled (config N/A), e.g. --disable build_lib (repeatable)")
   in
-  let run disabled project () =
+  let engine =
+    Arg.(
+      value & flag
+      & info [ "engine" ]
+          ~doc:"Render each variant as a provision assignment (engine \
+                projection, ssot §4.2) instead of the coverage matrix")
+  in
+  let run engine_mode disabled project () =
     let root = "_out" in
     let distro = detect_distro () in
     let all_projects =
@@ -401,15 +408,70 @@ let scenarios_cmd =
           Printf.printf "\n%s — scenario coverage (%s)\n%s\n" p source_desc
             (Canary_scenario_coverage.pp_rows rows)
     in
-    Printf.printf "%s\n" Canary_scenario_coverage.legend;
+    (* Engine projection (§4.2 provision axis): render each variant as the
+       provision assignment its action set implies, and check it is a valid
+       engine assignment appearing in general_slice. The general-project
+       analogue of `canary tiny engine` (the mutation axis). *)
+    let show_engine p =
+      match (variants_of p, covered_of p) with
+      | [], _ | _, None ->
+          Printf.printf
+            "%s: no general-project variants to render (tiny's engine \
+             projection is `canary tiny engine`).\n" p
+      | variants, Some (_, covered0) ->
+          let covered = List.sort_uniq Stdlib.compare covered0 in
+          let langs = Canary_scenario_coverage.langs_of_actions covered in
+          let slots =
+            Canary_enumerate.Slot_source :: Canary_enumerate.Slot_lib
+            :: List.map (fun l -> Canary_enumerate.Slot_binding l) langs
+          in
+          let slice =
+            Canary_enumerate.general_slice ~slots
+              ~provisions:Canary_enumerate.[ Absent; Fetched; Built ]
+          in
+          let slice_assignments =
+            List.filter_map
+              (fun (pt : string Canary_enumerate.point) ->
+                match pt.mutation with None -> Some pt.assignment | _ -> None)
+              slice
+          in
+          Printf.printf
+            "\n%s — engine projection (general_slice: provision axis)\n" p;
+          Printf.printf "  slots: %s\n"
+            (String.concat ", "
+               (List.map Canary_enumerate.string_of_slot slots));
+          List.iter
+            (fun (vk, spec) ->
+              let acts =
+                Canary_step_builder.derive_steps ~root ~project:p
+                  ~langs:Canary_lang.[ OCaml; Python ] spec
+                |> List.map (fun (s : Canary_step_model.step) -> s.action)
+              in
+              let a = Canary_enumerate.assignment_of_actions ~slots acts in
+              let valid = Canary_enumerate.assignment_ok a in
+              let in_slice = List.exists (fun sa -> sa = a) slice_assignments in
+              Printf.printf "  [%-6s] %s   (%s, %s)\n"
+                (if String.equal vk "" then "-" else vk)
+                (Canary_enumerate.string_of_assignment a)
+                (if valid then "valid" else "INVALID")
+                (if in_slice then "in-slice \xE2\x9C\x93"
+                 else "NOT in slice \xE2\x9C\x97"))
+            variants;
+          Printf.printf
+            "  general_slice over {absent,fetched,built}: %d valid assignments\n"
+            (List.length slice_assignments)
+    in
+    if not engine_mode then
+      Printf.printf "%s\n" Canary_scenario_coverage.legend;
+    let render = if engine_mode then show_engine else show in
     match project with
-    | "@all" | "all" -> List.iter show all_projects
-    | _ -> show project
+    | "@all" | "all" -> List.iter render all_projects
+    | _ -> render project
   in
   Cmd.v
     (Cmd.info "scenarios"
        ~doc:"Print store-lifecycle scenario coverage (Covered / unspec / disabled)")
-    Term.(const run $ disable $ project $ const ())
+    Term.(const run $ engine $ disable $ project $ const ())
 
 let status_cmd =
   let project =
