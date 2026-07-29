@@ -57,11 +57,12 @@ per use). This tracks what's actually wired.
   `assignment_ok` (lib `Built`⇒source; provided binding⇒lib),
   `provision_of_actions`. (Named "engine" in early commits — prefer
   "enumeration algorithm".)
-- **Configs are still two hardcoded functions**, not yet a `level`/config
-  object: `tiny_slice` (provision all-`Built`, walk mutations) and
-  `general_slice` (mutation none, walk provisions). The `Free`/`Subset`/
-  `Full` config object from the model is **not implemented yet** — next
-  step.
+- **Config object implemented** (`type 'a level = Free | Subset of _ |
+  Full`; `type 'm config = { provision; mutation }`; `run_config ~slots
+  ~all_provisions ~all_mutations cfg`). `tiny_slice` (provision `Free`,
+  mutation `Full`) and `general_slice` (provision `Full`, mutation `Free`)
+  are now thin wrappers over `run_config`, byte-identical to before (a
+  layer test pins the agreement). Only two axes are ranged so far.
 - **Axes wired:** provision ✓, mutation ✓ (polymorphic). **Not wired:**
   version (ssl's variants differ here), mechanism as a live axis (typed
   in `base/canary_mechanism.ml`, Static-only today — Dynamic/ctypes/
@@ -74,8 +75,8 @@ per use). This tracks what's actually wired.
   enumerations (`canary_scenario.good_scenarios`, tiny's
   `all_scenario_specs`, per-project variant lists) still *own* the
   concrete detail (recipe / `violates` / `expected`).
-- **To-do:** (1) the `level`/config object unifying the two configs;
-  (2) add the version / mechanism / app-wiring axes; (3) drive the
+- **To-do:** (1) add the version / mechanism / app-wiring axes (each a
+  new field on `config` + universe arg to `run_config`); (2) drive the
   hand-written enumerations *from* the algorithm and fold
   `canary_enumerate` into `canary_scenario.ml`.
 

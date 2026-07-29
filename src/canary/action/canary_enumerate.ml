@@ -9,8 +9,10 @@
     - **a general project** = fix mutation = none, walk the provision axis
       (its variants; ssl `sys` = all [Fetched], ssl `src` = all [Built]).
 
-    This module is the enumeration algorithm; the two projections are [tiny_slice] /
-    [general_slice]. Backing tiny's designed 22 and each project's variants
+    This module is the enumeration algorithm. [run_config] instantiates it
+    with a [config] — one [level] (`Free`/`Subset`/`Full`) per axis (ssot
+    §4.2); [tiny_slice] and [general_slice] are the two canonical configs.
+    Backing tiny's designed 22 and each project's variants
     out to *be* projections of this enumeration algorithm (replacing the two hand-written
     enumerations in `canary_scenario.ml` / the per-project variant lists) is
     the convergence named in §4.2 — a later round. For now the enumeration algorithm stands
@@ -96,21 +98,58 @@ let enumerate ~(slots : slot list) ~(provisions : provision list)
          in
          positive :: muts)
 
-(** tiny's projection: fix provision = all [Built], walk the mutation axis.
-    With [provisions = [Built]] there is exactly one assignment (every slot
-    [Built]), so this yields (positive + each applicable mutation).
-    (Source-[Built] here just means "present locally" — the source is the
-    pipeline root; its provision is degenerate.) *)
+(** How much of an axis a config expands (ssot §4.2): [Free] collapses to
+    one representative; [Subset] is a curated list; [Full] is every value. *)
+type 'a level = Free | Subset of 'a list | Full
+
+(** A config assigns one [level] per axis. Instantiating the algorithm with
+    a config yields a project's concrete scenarios (ssot §4.2 — "every use
+    is one config"). Today the ranged axes are provision and mutation;
+    version / mechanism / app-wiring are axes still to add, each becoming a
+    field here. *)
+type 'm config = {
+  provision : provision level;
+  mutation : (slot * 'm) level;
+}
+
+(** Instantiate the algorithm with a config, given each axis's universe (its
+    full value set). Provision [Free] = one representative (the head of
+    [all_provisions] — a project orders its universe so the representative
+    is first); mutation [Free] = the [None] baseline, i.e. no injected fault
+    (the positive point is always present), so it resolves to no placements. *)
+let run_config ~(slots : slot list) ~(all_provisions : provision list)
+    ~(all_mutations : (slot * 'm) list) (cfg : 'm config) : 'm point list =
+  let provisions =
+    match cfg.provision with
+    | Free -> ( match all_provisions with x :: _ -> [ x ] | [] -> [] )
+    | Subset vs -> vs
+    | Full -> all_provisions
+  in
+  let mutations =
+    match cfg.mutation with
+    | Free -> []  (* the None baseline — positive point only *)
+    | Subset vs -> vs
+    | Full -> all_mutations
+  in
+  enumerate ~slots ~provisions ~mutations
+
+(** tiny's config: provision [Free] (collapse to one representative,
+    [Built] — the whole pipeline built locally), mutation [Full] (walk every
+    defect). Source-[Built] here just means "present locally" — the source
+    is the pipeline root, its provision degenerate. *)
 let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
     'm point list =
-  enumerate ~slots ~provisions:[ Built ] ~mutations
+  run_config ~slots ~all_provisions:[ Built ] ~all_mutations:mutations
+    { provision = Free; mutation = Full }
 
-(** A general project's projection: fix mutation = none, walk the provision
-    axis. Yields one positive point per valid provision assignment (ssl
-    `sys` = all [Fetched], ssl `src` = all [Built], … among them). *)
+(** A general project's config: provision [Full] (walk the provision axis
+    over the project's universe), mutation [Free] (positive only). Yields
+    one positive point per valid provision assignment (ssl `sys` = all
+    [Fetched], ssl `src` = all [Built], … among them). *)
 let general_slice ~(slots : slot list) ~(provisions : provision list) :
     'm point list =
-  enumerate ~slots ~provisions ~mutations:[]
+  run_config ~slots ~all_provisions:provisions ~all_mutations:[]
+    { provision = Full; mutation = Free }
 
 let string_of_provision = function
   | Absent -> "absent"

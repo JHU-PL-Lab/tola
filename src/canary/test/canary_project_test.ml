@@ -264,12 +264,54 @@ let enumerate_test : pure_test =
       in
       tiny_ok && gen_ok && no_orphan_binding) }
 
+(* §4.2 config levels: one algorithm, per-axis Free/Subset/Full. tiny and
+   general are two configs; a mixed Subset config sits between them. *)
+let config_level_test : pure_test =
+  { name = "enumerate.config_levels";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let slots = EN.[ Slot_source; Slot_lib; Slot_binding ocaml ] in
+      let muts =
+        EN.[ (Slot_lib, "m1"); (Slot_binding ocaml, "m2") ]
+      in
+      (* tiny config: provision Free (→[Built]), mutation Full → 1 pos + 2 *)
+      let tiny =
+        EN.run_config ~slots ~all_provisions:[ EN.Built ] ~all_mutations:muts
+          { provision = EN.Free; mutation = EN.Full }
+      in
+      (* general config: provision Full, mutation Free → all positive *)
+      let gen =
+        EN.run_config ~slots ~all_provisions:EN.[ Fetched; Built ]
+          ~all_mutations:muts { provision = EN.Full; mutation = EN.Free }
+      in
+      (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
+         Subset [m1] (positive + exactly m1) *)
+      let mixed =
+        EN.run_config ~slots ~all_provisions:EN.[ Absent; Fetched; Built ]
+          ~all_mutations:muts
+          { provision = EN.Subset [ EN.Fetched ];
+            mutation = EN.Subset [ List.hd_exn muts ] }
+      in
+      (* the two canonical wrappers equal their configs (backward compat) *)
+      let wrappers_agree =
+        Poly.equal tiny (EN.tiny_slice ~slots ~mutations:muts)
+        && Poly.equal gen (EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ])
+      in
+      List.length tiny = 3
+      && List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
+      && List.for_all mixed ~f:(fun p ->
+             List.for_all p.EN.assignment ~f:(fun (_, pv) ->
+                 EN.equal_provision pv EN.Fetched))
+      && List.count mixed ~f:(fun p -> Option.is_some p.EN.mutation) = 1
+      && List.count mixed ~f:(fun p -> Option.is_none p.EN.mutation) = 1
+      && wrappers_agree) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
-      mechanism_test; enumerate_test ]
+      mechanism_test; enumerate_test; config_level_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in
