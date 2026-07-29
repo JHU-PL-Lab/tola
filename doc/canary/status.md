@@ -80,6 +80,16 @@ per use). This tracks what's actually wired.
   hand-written enumerations *from* the algorithm and fold
   `canary_enumerate` into `canary_scenario.ml`.
 
+- **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
+  with a bad result**. A scenario is not inherently bad; the enumeration
+  is *uniform* (one scenario space over the axes), and good/bad is the
+  **result** of a scenario — a separate outcome/oracle coordinate, not a
+  scenario category. tiny's role is **result coverage**: confirm the
+  checking + tooling produce the expected result per scenario (tiny's
+  `expected` table already *is* that per-checking-point oracle; cf.
+  `canary_detect` = raw outcome vs the expected oracle). Keep in mind
+  when §5 gets the same principle-rewrite §4.2 received.
+
 ## 2. Near-term
 
 Ordered rough priority.
