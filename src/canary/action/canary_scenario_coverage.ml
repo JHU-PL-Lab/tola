@@ -5,7 +5,7 @@
     passes through — source → Build (build-tree) → Publish (PM) → Fetch
     (local) → Probe — per artifact (lib, then binding per language).
 
-    Each catalogue entry is a **logical stage** (§4.2.1a): a display label
+    Each catalogue entry is a **abstract stage** (§4.2.1a): a display label
     plus the concrete actions that *realize* it. A stage is [Covered] if
     the project runs **any** realization. Most stages have one; `run_app`
     has two — `Probe_app` (build path — a real app artifact) and
@@ -31,7 +31,7 @@ let string_of_mark = function
 
 let legend = "  ✓ covered   - unspec (no path)   ⊘ disabled (config)"
 
-(* A logical stage: display label + the actions that realize it. *)
+(* A abstract stage: display label + the actions that realize it. *)
 type stage = { label : string; realizations : action list }
 
 (** The store-lifecycle catalogue, ordered source → build → publish →
@@ -65,7 +65,7 @@ let catalogue ~(langs : Canary_lang.lang list) : stage list =
   in
   lib @ List.concat_map langs ~f:binding
 
-(** Mark each logical stage. [covered] is the deduped action set the
+(** Mark each abstract stage. [covered] is the deduped action set the
     project exercises (union over variants / good_scenarios). [disabled]
     is the scenario-disable list, as stage labels; a disabled stage is
     [Disabled] even if covered (config overrides). Uncovered otherwise →

@@ -44,6 +44,41 @@ Historical chronicles in [`worklog/`](worklog/).
 *needs Drop_c_symbol / Drop_python_attr / App primitives*
 *+ c4 wiring for OCaml) or §7.4 (Sc.3-Sc.6 wiring).*
 
+## 1b. Scenario enumeration — implementation state
+
+Model: [`design/ssot.md` §4.2 / §4.2.1](design/ssot.md) (principle —
+one abstract algorithm; per-axis level `Free`/`Subset`/`Full`; a config
+per use). This tracks what's actually wired.
+
+- **Algorithm module** — `action/canary_enumerate.ml`: pure
+  product-then-filter, polymorphic in the mutation. `provision`
+  (`Absent`/`Fetched`/`Built`/`Vendored`), `slot`
+  (`Slot_source`/`Slot_lib`/`Slot_binding lang`), `enumerate`,
+  `assignment_ok` (lib `Built`⇒source; provided binding⇒lib),
+  `provision_of_actions`. (Named "engine" in early commits — prefer
+  "enumeration algorithm".)
+- **Configs are still two hardcoded functions**, not yet a `level`/config
+  object: `tiny_slice` (provision all-`Built`, walk mutations) and
+  `general_slice` (mutation none, walk provisions). The `Free`/`Subset`/
+  `Full` config object from the model is **not implemented yet** — next
+  step.
+- **Axes wired:** provision ✓, mutation ✓ (polymorphic). **Not wired:**
+  version (ssl's variants differ here), mechanism as a live axis (typed
+  in `base/canary_mechanism.ml`, Static-only today — Dynamic/ctypes/
+  Dynlink not produced), app-wiring (tiny Sc.4 vs Sc.6). Each is a
+  *missing axis to add*, per the model.
+- **Rendered through the algorithm (demonstration, not replacement):**
+  `canary tiny engine` renders tiny's mutation axis; `canary scenarios
+  <p> --engine` renders a general project's provision axis and checks
+  each variant is a valid, in-slice assignment. The hand-written
+  enumerations (`canary_scenario.good_scenarios`, tiny's
+  `all_scenario_specs`, per-project variant lists) still *own* the
+  concrete detail (recipe / `violates` / `expected`).
+- **To-do:** (1) the `level`/config object unifying the two configs;
+  (2) add the version / mechanism / app-wiring axes; (3) drive the
+  hand-written enumerations *from* the algorithm and fold
+  `canary_enumerate` into `canary_scenario.ml`.
+
 ## 2. Near-term
 
 Ordered rough priority.

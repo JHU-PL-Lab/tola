@@ -1,6 +1,6 @@
 (** [Canary_enumerate] — the shared abstract enumeration core (ssot §4.2).
 
-    **One** engine over (provision assignment) × (mutation),
+    **One** enumeration algorithm over (provision assignment) × (mutation),
     product-then-filter. tiny and every general project are two orthogonal
     *projections* of the same product:
 
@@ -9,19 +9,19 @@
     - **a general project** = fix mutation = none, walk the provision axis
       (its variants; ssl `sys` = all [Fetched], ssl `src` = all [Built]).
 
-    This module is the engine; the two projections are [tiny_slice] /
+    This module is the enumeration algorithm; the two projections are [tiny_slice] /
     [general_slice]. Backing tiny's designed 22 and each project's variants
-    out to *be* projections of this engine (replacing the two hand-written
+    out to *be* projections of this enumeration algorithm (replacing the two hand-written
     enumerations in `canary_scenario.ml` / the per-project variant lists) is
-    the convergence named in §4.2 — a later round. For now the engine stands
+    the convergence named in §4.2 — a later round. For now the enumeration algorithm stands
     alongside them, with tests pinning each projection's shape.
 
     Separate file only while it stands alongside the hand-written
-    enumerations: once the convergence lands (this engine backing both),
+    enumerations: once the convergence lands (this enumeration algorithm backing both),
     **fold this into `canary_scenario.ml` (or a scenario util)** — it is the
     scenario-enumeration core and belongs beside the scenario types.
 
-    The engine is **polymorphic in the mutation** (['m]): it is pure
+    The enumeration algorithm is **polymorphic in the mutation** (['m]): it is pure
     combinatorics — which artifacts are provided and from where, and which
     provided artifact is mutated — agnostic to what a mutation *means*. tiny
     supplies real mutations; a general project supplies none. *)
@@ -79,7 +79,7 @@ let rec assignments_of (slots : slot list) (provisions : provision list) :
       List.concat_map provisions ~f:(fun pv ->
           List.map tails ~f:(fun t -> (s, pv) :: t))
 
-(** The full engine: the product of *valid* provision assignments ×
+(** The full enumeration algorithm: the product of *valid* provision assignments ×
     (positive + each applicable mutation). A mutation is applicable to an
     assignment only when its target slot is provided (§4.2: "a mutation
     applies only to a provided artifact"). *)
@@ -122,7 +122,7 @@ let string_of_provision = function
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
     [Absent]. This is the inverse of §6.5's "provision decides which actions
     run" — recovering the provision coordinate from a variant's steps, so a
-    general project's hand-written variants can be rendered as engine
+    general project's hand-written variants can be rendered as enumeration algorithm
     assignments. *)
 let provision_of_actions (acts : Canary_basic.action list) (s : slot) :
     provision =

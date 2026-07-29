@@ -170,7 +170,7 @@ Mechanics (all reuse existing data):
 - **N/A-config** ← the per-project scenario-disable list.
 
 No new machinery — the generalization of `good_scenarios` to path-aware
-logical scenarios + a display walk.
+abstract scenarios + a display walk.
 
 **Status (2026-07-23): first cut shipped.** `canary scenarios <project>`
 prints the store-lifecycle catalogue (`fetch_source` · `build_lib` ·
@@ -196,7 +196,7 @@ source to build), `scenarios z3` shows `build_lib ✓` (dev builds it), and
 `scenarios z3 --disable build_lib` shows `build_lib disabled` (config
 override, per invocation).
 
-**Logical stages + tiny (done).** The catalogue is now **logical stages**
+**Abstract stages + tiny (done).** The catalogue is now **abstract stages**
 ([`ssot.md` §4.2.1](ssot.md)a): each stage's `realizations` are the actions
 that satisfy it, and `run_app` is covered by `Probe_app` (build path) *or*
 `Probe_binding` (fetch path) — so tiny and sqlite both map. **tiny is in

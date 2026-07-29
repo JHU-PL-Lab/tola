@@ -176,42 +176,63 @@ isn't observed from the outside; it's *used*), but the
 semantic is already the right one: the app step exercises the
 artifact as its end-user would.
 
-### 4.2 Scenario enumeration — the shared abstract core
+### 4.2 Scenario enumeration — one abstract algorithm
 
-There is **one** project enumeration. Applied to *any* project spec it
-yields that project's **project space** — the concrete set of scenarios /
-variants that spec admits. tiny is **not** a special enumeration: tiny's
-spec → tiny's designed scenarios (its project space); a general project's
-spec → its variants (its project space). Same engine, different specs.
+There is **one** scenario enumeration. It is *abstract*: applied to a
+project it yields that project's **concrete scenarios** — the set the
+project admits. tiny is not a special case — tiny's inputs give tiny's
+concrete scenarios; a general project's inputs give its variants. One
+abstract algorithm, different inputs; the two listings that look separate
+are the same algorithm under two configs (below).
 
-So two listings that look separate are just the engine on two specs:
+**The scenario space is a product.** The abstract core is the artifact
+pipeline (Ar.0 native_source → Ar.1 native_lib → Ar.3 binding_lib → app;
+§1). Each artifact carries several **independent axes**:
 
-- **tiny's listing** (§5's `Bs.N`) = the pipeline stages (§4) × all
-  **mutations**: for a fixed *build-everything-from-source* pipeline,
-  mutate each artifact in turn (`symbol_missing` on the lib, `type_broken`
-  on the binding, …).
-- **a general project's listing** (its variants) = the *same* pipeline
-  stages × all **provisions**: which artifacts are *given*, and from where
-  (fetched from a PM, built from source, vendored, absent).
-
-The abstract core is the **artifact pipeline** (Ar.0 native_source → Ar.1
-native_lib → Ar.3 binding_lib → app; §1), where each artifact carries two
-**independent coordinates**:
-
-| coordinate | values | axis enumerated by |
+| axis | values | note |
 |---|---|---|
-| **provision** (provenance) | `Absent` · `Fetched`(pm) · `Built`(from source) · `Vendored` | a general project — its **variants** |
-| **mutation** | `None` · `Symbol_missing` · `Abi_mismatch` · `Type_broken` · … (§5.3) | tiny — its **`Bs.N`** |
+| **provision** (which store) | `Absent` · from a PM · `Built` (from source) · `Vendored` | a supplied copy at a path — local *or* remote — not built here and not PM-resolved |
+| **version** | stable · dev · a tag | which upstream version |
+| **mechanism** (bindings) | static (cstubs/cext) · dynamic (ctypes/dynlink) | §4.2.1(b) |
+| **mutation** (defect) | `None` · `symbol_missing` · `abi_mismatch` · … (§5.3) | the injected fault |
 
-The full scenario space is **provision × mutation**. The two listings are
-**orthogonal slices** of that product:
+A project may carry further **structural axes** — e.g. *app wiring* (link
+the app directly vs. through a helper library, tiny's Sc.4 vs Sc.6). These
+are not outside the algorithm; they are simply more axes, handled by the
+same mechanism below. The complete space is the product of every axis over
+every artifact — exhaustive, and verbose.
 
-- **tiny** fixes provision = *all `Built`* (the full pipeline) and walks
-  the **mutation** axis → §5's `Bs.N`.
-- **a general project** fixes mutation = `None` (positive) and walks the
-  **provision** axis → its variants (ssl `sys` = all `Fetched`; ssl `src`
-  = all `Built`). See
-  [`scenario_coverage.md`](scenario_coverage.md).
+**A config tames the product by setting a *level* per axis.** Each axis
+gets one of:
+
+- **Free** — collapse to a single representative value.
+- **Subset [..]** — a curated list (the *interesting* values).
+- **Full** — every value.
+
+A **config** assigns one level to each axis; instantiating the abstract
+algorithm with a config gives a project's concrete scenarios. The
+algorithm is **product-then-filter**: the config's levels form the
+product, then constraints prune it (a binding needs a lib; a lib `Built`
+from source needs the source; a mutation applies only to a *provided*
+artifact).
+
+**Every use is one config** — this is what unifies tiny and a real
+project: not two enumerations, but one algorithm under two configs.
+
+| use | provision | version | mechanism | mutation |
+|---|---|---|---|---|
+| **tiny — defect coverage** | Free (all `Built`) | Free | Subset (cext + ctypes — both must be tooling-tested) | **Full** (all defects) |
+| **a real project — variants** | Subset (its PMs + source) | Subset (stable, dev) | Free | Free (`None`) |
+| **model completeness** | Free (one PM stands in) | Free | Free | Full (all defect patterns) |
+| **PM-coverage testing** | **Full/Subset** (every interesting PM) | Free | Free | Free |
+
+tiny pins provision and walks mutation; a real project pins mutation and
+walks provision. The levels are independent per axis — Full on mutation
+with Free on provision (tiny), or Subset on provision with Free on
+mutation (a real project's variants). The two extremes have names worth
+keeping: **all-Free** (one representative per axis — the smallest set that
+still exercises every scenario *pattern*) and **all-Full** (the complete
+product).
 
 Correspondences already in place: `origin` (the project dimension,
 [`new_project.md` §0](new_project.md)) **is** the provision coordinate; the
@@ -230,126 +251,66 @@ tiny (build + probe locally) shows N/A on `Publish`/`Fetch` exactly as a
 conf" case, the only one that covers `Publish`. No project is
 special-cased. See [`scenario_coverage.md`](scenario_coverage.md) §2.
 
-**Historical note / the "step back".** The first cut was an *abstract*
-enumeration; it was then specialised into tiny's *concrete* 22 (§5.1).
-Re-abstracting — **one enumerator over `(provision assignment) ×
-(mutation)`, of which tiny and every general project are projections** —
-is the convergence this section names, and what the code should back out
-to instead of two hand-written enumerations. The enumerator is
-**product-then-filter**: constraints prune the product (can't build a
-binding without a lib; can't fetch a source-built lib; a mutation applies
-only to a *provided* artifact; `N/A` per
-[`scenario_coverage.md`](scenario_coverage.md) §3).
+Every axis of a project's concrete scenarios is one the algorithm can
+range or pin; nothing a project needs sits "outside" it — a coordinate the
+algorithm doesn't yet range (a version, an app wiring) is a *missing axis
+to add*, not a reason to keep a second, hand-written enumeration. The
+target is a single algorithm that, given a project's available values per
+axis and a config, produces the concrete scenarios that today's
+hand-written specs list by hand.
 
-**Status (2026-07, first cut shipped): the engine exists as
-`action/canary_enumerate.ml`.** It is a pure product-then-filter core
-polymorphic in the mutation (`'m`) — `provision = Absent | Fetched | Built
-| Vendored`, `slot = Slot_source | Slot_lib | Slot_binding lang`,
-`enumerate ~slots ~provisions ~mutations` — with the dependency filter
-(`assignment_ok`: lib `Built` ⇒ source present; a provided binding ⇒ lib
-present) and the mutation-on-provided-only rule. The two projections are
-`tiny_slice` (fix all `Built`, walk mutations) and `general_slice` (fix
-mutation none, walk provisions); a layer test pins each projection's shape
-+ the filter.
+> Implementation state (algorithm module, which axes are wired, what each
+> `canary` subcommand renders today) lives in
+> [`../status.md`](../status.md), not here — this section is the model.
 
-**Correspondence demonstrated (both projections render the old sets).**
-Each hand-written enumeration is now *rendered through* the engine, with
-the mapping shown at the CLI:
+### 4.2.1 Two refinements: abstract stages, and binding discipline
 
-- `canary tiny engine` (`c5eb473`) — tiny's mutation axis: all 20
-  mutation-carrying specs (13 `Bs` + 7 derived `Dv`) map onto a pipeline
-  slot; the engine's single positive collapses tiny's two unmutated
-  app-wiring runs (`Sc.4.OCaml` direct, `Sc.6.OCaml` via-helper).
-- `canary scenarios <p> --engine` (`a36085a`) — a general project's
-  provision axis: each variant's action set is read back to a provision
-  assignment (`provision_of_actions`) that is valid + in `general_slice`
-  (z3 dev = lib/ocaml `Built`, python `Fetched`; ssl variants all
-  `Fetched`, their version sub-axis collapsed).
+Two places where the naive model is too coarse. Both are properties of the
+abstract algorithm, not of any one project.
 
-The recurring pattern: a project's *non-provision, non-mutation* sub-axis
-(tiny's app-wiring, ssl's version) is out of the abstract engine's scope
-and collapses — the engine is the combinatorial skeleton; rich
-per-scenario detail (recipe / `violates` / `expected`) stays on
-`scenario_spec`.
+**(a) A pipeline stage is *abstract*; its *realizations* are the concrete
+actions, chosen by provision.** One abstract stage is realized differently
+by the build vs the PM provision:
 
-**Still deferred (the *replacement*):** drive the hand-written
-enumerations *from* the engine points (not just render alongside), fold
-`canary_enumerate` into `canary_scenario.ml`, and carry
-`(lang × discipline)` into `Slot_binding` once Dynamic bindings land
-(§4.2.1b). Whether a full replacement is even desirable is open — the
-skeleton-vs-detail split means the hand-written specs still own everything
-the engine deliberately doesn't model.
-
-### 4.2.1 Two refinements the enumerator needs
-
-The first-cut `canary scenarios` view revealed two places where the model
-was still too coarse. **Both have now landed** — (a) logical stages
-(shipped `9a844ed`) and (b) the binding discipline axis (round 1, Static
-only, shipped `d04714f`) — so the enumerator's provision and artifact
-sides are both faithful for today's Static-only projects. Producing
-`Dynamic_ffi` bindings is the remaining piece of (b).
-
-**(a) Stages are *logical*, with realizations selected by provision.**
-Each pipeline stage is one **logical stage** realized differently by the
-build vs fetch provision:
-
-| logical stage | build realization (`Built`) | fetch realization (`Fetched`) |
+| abstract stage | build realization (`Built`) | fetch realization (from a PM) |
 |---|---|---|
 | provide source | `Fetch Source` / local | — |
 | provide lib | `Build_lib` | `Fetch Lib` |
 | provide binding | `Build_binding` | `Fetch Binding` |
 | run app | `Probe_app` | `Probe_binding` (the example *is* the app) |
 
-A project covers a *logical* stage via **whichever realization its
-provision uses** — so tiny (`Probe_app`, `Build_lib`) and sqlite
-(`Probe_binding`, `Fetch Lib`) both map to `run app` / `provide lib`,
-instead of missing each other. The current coverage catalogue keys off
-*concrete* actions, so it can't yet place tiny (its `Probe_app` looks
-"uncovered"); moving to logical stages fixes that and makes tiny's
-`Publish`/`Fetch` show `unspec` — the visible package gap.
+A project covers an abstract stage via **whichever realization its
+provision uses** — so tiny (`Probe_app`, `Build_lib`) and a PM-provisioned
+project (`Probe_binding`, `Fetch Lib`) both map to *run app* / *provide
+lib* instead of missing each other. Keying coverage off abstract stages
+(not concrete actions) is what lets one catalogue place every project, and
+makes an unused segment of the pipeline show as a visible gap rather than a
+spurious mismatch.
 
-**(b) A binding artifact's identity is `(language × discipline)`.** The
-axis the enumerator ranges over is the binding's **discipline**, *not* the
-open set of mechanism names — because what changes the pipeline shape
-(whether a `Build_binding` stage exists, and where the surface-check fires)
-is the discipline. A **mechanism** is the finer descriptive label under a
-discipline (see `base/canary_mechanism.ml`; hardcode note at
-`action/canary_scenario.ml`'s `good_scenarios`):
+**(b) A binding's identity is `(language × discipline)`.** The axis is the
+binding's **discipline** — *not* the open set of mechanism names — because
+the discipline is what changes the pipeline shape (whether a *provide
+binding* build stage exists, and where the surface-check fires). A
+**mechanism** is the finer descriptive label under a discipline:
 
-| discipline | binds by | `build_binding` | check fires | mechanisms |
+| discipline | binds by | *provide binding* build stage | check fires | mechanisms |
 |---|---|---|---|---|
-| **`Static_c_abi`** | compiling a stub linked to the lib | **real** (needs headers+link) | build (link) *and* probe | `Cstubs` (OCaml), `Cext` (Python) |
-| **`Dynamic_ffi`** | `dlopen`ing the lib at runtime | **absent** (pure source) | probe only (resolve by name) | `Ctypes`/`Cffi` (Python), `Dynlink` (OCaml) |
+| **static (C-ABI)** | compiling a stub linked to the lib | a real build (needs headers + link) | build (link) *and* probe | cstubs (OCaml), cext (Python) |
+| **dynamic (FFI)** | `dlopen`ing the lib at runtime | none (pure source) | probe only (resolve by name) | ctypes/cffi (Python), Dynlink (OCaml) |
 
 The two disciplines line up across languages — the payoff of keying on
-discipline rather than name: OCaml `Dynlink`/utop is the *same axis value*
-as Python `ctypes` (both dlopen late, both break on loader-path / symbol
-resolution), so it needs no OCaml-specific machinery.
+discipline, not name: OCaml `Dynlink`/utop is the *same value* as Python
+`ctypes` (both dlopen late, both break on loader-path / symbol resolution),
+so it needs no per-language machinery. A dynamic binding has no *provide
+binding* build stage, so that stage shows as a gap and *run app* carries
+the whole check — which (a) already renders. So `binding(Python, static)`
+(cext) and `binding(Python, dynamic)` (ctypes) are **distinct artifacts**
+that build and probe differently.
 
-So the binding artifact (Ar.3) is really `binding(lang, discipline)` —
-`binding(Python, Static)` (cext) and `binding(Python, Dynamic)` (ctypes)
-are **distinct artifacts** that build/probe differently, even though
-today's `Binding of lang` (`Canary_lang.lang`) flattens them to one. For a
-`Dynamic_ffi` binding there is no `Build_binding` stage, so `build_binding_<lang>`
-shows `unspec` and `run_app_<lang>` carries the whole check — which the
-logical-stage model (a) already renders correctly. tiny already carries
-both cext and ctypes probe workspaces — two disciplines of one language,
-currently merged into a single `Binding Python`.
-
-**Round 1 (2026-07, shipped): only `Static_c_abi` is wired** — it is what
-every current project uses (OCaml=cstubs, Python=cext). `base/canary_mechanism.ml`
-types both disciplines + the five mechanisms + `discipline_of_mechanism` +
-`default_mechanism_of_lang` (Some for OCaml/Python, None otherwise);
-`canary_scenario_coverage` gates `build_binding` on `is_static_binding_lang`
-(always true today — pre-encodes the round-2 semantics). **To-do:** produce
-`Dynamic_ffi` bindings, thread discipline through `Binding of lang`, and
-split tiny's ctypes probe out of cext. More languages / finer mechanism
-labels are additive under the two disciplines.
-
-Net: the enumerator's **provision** side ranges over *logical stages ×
-realizations*, and its **artifact** side identifies bindings by
-*(language × discipline)*. Both are prerequisites for the single
-`(provision × mutation)` engine above.
+Together these make two axes of §4.2 faithful: the **provision** axis
+ranges over abstract stages × realizations, and a binding's **identity**
+carries `(language × discipline)` — so the mechanism axis is a real axis,
+not a flattened assumption.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 

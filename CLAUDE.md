@@ -17,19 +17,20 @@ dune exec src/bin/canary_main.exe -- inspect-diff --old A --new B            # d
 dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
 dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # cross-reference prediction vs probe.log
 dune exec src/bin/canary_main.exe -- scenarios <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
-dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as engine provision assignments (ssot §4.2)
-dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as engine mutation-axis projection
+dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as enumeration-algorithm provision assignments (ssot §4.2)
+dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as enumeration-algorithm mutation-axis projection
 dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 make canary                                                  # run canary via Makefile shorthand
 ```
 
-Scenario-enumeration model (ssot §4.2): one `(provision × mutation)`
-engine (`action/canary_enumerate.ml`); tiny = mutation-axis projection,
-a general project = provision-axis projection. `scenarios`/`tiny engine`
-render each old enumeration through it (correspondence demonstrated;
-full replacement deferred).
+Scenario-enumeration model (ssot §4.2): one abstract enumeration
+algorithm (`action/canary_enumerate.ml`) over per-artifact axes
+(provision / version / mechanism / mutation), each axis set to a config
+level (Free / Subset / Full). tiny and a real project are two configs of
+the one algorithm. `scenarios`/`tiny engine` render each hand-written
+enumeration through it; implementation state in `doc/canary/status.md`.
 
 Output layout (gitignored via `_*`):
 - `_out/canary/projects/<project>/<step>/` — per-project action runs
@@ -103,7 +104,7 @@ per Phase E of the tiny migration.)
 | `src/canary/action/canary_step_builder.ml`          | `runner_spec` (was `project_spec` pre-2026-07-21), `derive_steps`, shared command templates, check_post compositors — the step list builder |
 | `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`, `lower_expectation` — the shared expectation lowering used by tiny/z3/llvm); `derive_scenarios`; `related_artifacts_of_actions`. |
 | `src/canary/action/canary_scenario_util.ml`         | Small project-agnostic helpers extracted from tiny (`pert`, `matches_derived_cell`, `detector_short`, `violates_label`, `artifact_index`, `bad_target_str`) — currently only consumed by tiny (via `let alias = ...`). |
-| `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **logical-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
+| `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
 | `src/canary/action/canary_enumerate.ml`             | The `(provision × mutation)` enumeration engine (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. `provision`/`slot`, `enumerate`, `assignment_ok`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
 | `src/canary/action/canary_project.ml`               | `Canary_project.project` — top-level bundle at the SSOT §6.1 taxonomy top (name + contract_bindings). Concrete monomorphic; each project's module owns its scenarios directly. Only `tiny_project` inhabited today (z3/llvm/sqlite bundles deferred). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
@@ -115,7 +116,7 @@ per Phase E of the tiny migration.)
 | `src/canary/backend/canary_diagram.ml`              | Mermaid diagram + view machinery (2283 LOC; biggest single file)                                       |
 | `src/canary/test/canary_artifact_test.ml`           | Framework self-tests (native, OCaml, Python, compat helpers — pure + shell)                            |
 | `src/canary/test/canary_pm_test.ml`                 | PM module self-tests                                                                                   |
-| `src/canary/test/canary_project_test.ml`            | Project-definition layer tests (`canary project-test`) — pure: action consumes/produces catalogue, surface split, store-config derive, detect, coverage logical stages, mechanism defaults, enumerate two-projections |
+| `src/canary/test/canary_project_test.ml`            | Project-definition layer tests (`canary project-test`) — pure: action consumes/produces catalogue, surface split, store-config derive, detect, coverage abstract stages, mechanism defaults, enumerate two-projections |
 | `src/canary/projects/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
 | `src/canary/projects/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
 | `src/canary/projects/canary_project_cairo.ml`       | cairo project via `Canary_pattern_a` (conf-* + opam binding); Level A                                  |
