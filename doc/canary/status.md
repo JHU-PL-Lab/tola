@@ -80,14 +80,19 @@ per use). This tracks what's actually wired.
   hand-written enumerations *from* the algorithm and fold
   `canary_enumerate` into `canary_scenario.ml`.
 
-  - **version axis — design done (ssot §4.2.2), code pending.** Reuse
-    `Canary_basic.version` (`Dev | Stable`; `single_version` = Free preset,
-    `two_versions` = Subset preset). Per-slot version + source-primary
-    constraint (`Built ⇒ version = source.version`); cross-slot mismatch =
-    the z3/llvm demo. Package version ≠ artifact version (track the
-    artifact-content's version, not the package's). Extends the assignment
-    to `(slot × provision × version)`. Vocabulary stays in `canary_basic`
-    unless it grows (a separate `canary_version.ml` is fine if so).
+  - **version axis — shipped.** Reuses `Canary_basic.version` (`Dev |
+    Stable`; `single_version` = Free preset, `two_versions` = Subset/Full).
+    The assignment cell is now a `placement = { provision; version }`
+    (per-slot); `config` has a `version` field; source-primary is a filter
+    (`Built lib ⇒ lib.version = source.version`). Cross-slot mismatch
+    (lib@Dev / binding@Stable) is a valid assignment — the z3/llvm demo as
+    an algorithm instance (layer test `enumerate.version_axis`). Renders
+    show `@dev`/`@stable` (`scenarios <p> --engine`); a variant picks one
+    version (actions don't encode it) — per-slot mismatch is a *capability*
+    the hand-written variants don't yet exercise. Package version ≠
+    artifact version still holds (the axis is the artifact-content's
+    version; package→artifact is provision-side). Version vocab stays in
+    `canary_basic`. **Next axis:** mechanism-live / app-wiring.
 
 - **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
   with a bad result**. A scenario is not inherently bad; the enumeration

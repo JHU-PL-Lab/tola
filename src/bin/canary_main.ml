@@ -428,6 +428,7 @@ let scenarios_cmd =
           let slice =
             Canary_enumerate.general_slice ~slots
               ~provisions:Canary_enumerate.[ Absent; Fetched; Built ]
+              ~versions:Canary_basic.two_versions
           in
           let slice_assignments =
             List.filter_map
@@ -447,7 +448,15 @@ let scenarios_cmd =
                   ~langs:Canary_lang.[ OCaml; Python ] spec
                 |> List.map (fun (s : Canary_step_model.step) -> s.action)
               in
-              let a = Canary_enumerate.assignment_of_actions ~slots acts in
+              (* a variant picks one version (actions don't encode it);
+                 dev-keyed variants = Dev, else Stable. *)
+              let version =
+                if String.equal vk "dev" then Canary_basic.Dev
+                else Canary_basic.Stable
+              in
+              let a =
+                Canary_enumerate.assignment_of_actions ~slots ~version acts
+              in
               let valid = Canary_enumerate.assignment_ok a in
               let in_slice = List.exists (fun sa -> sa = a) slice_assignments in
               Printf.printf "  [%-6s] %s   (%s, %s)\n"

@@ -225,8 +225,8 @@ let enumerate_test : pure_test =
       let module EN = Canary_enumerate in
       let slots = EN.[ Slot_source; Slot_lib; Slot_binding ocaml ] in
       let all_built (p : string EN.point) =
-        List.for_all p.assignment ~f:(fun (_, pv) ->
-            EN.equal_provision pv EN.Built)
+        List.for_all p.assignment ~f:(fun (_, pl) ->
+            EN.equal_provision pl.EN.provision EN.Built)
       in
       (* tiny projection: all-Built × (positive + 2 mutations) = 3 points,
          one positive, every assignment all-Built. *)
@@ -241,11 +241,14 @@ let enumerate_test : pure_test =
       in
       (* general projection: mutation=none, walk provisions; all-Fetched
          and all-Built assignments both present. *)
-      let gen = EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ] in
+      let gen =
+        EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
+          ~versions:B.single_version
+      in
       let has_uniform target =
         List.exists gen ~f:(fun p ->
-            List.for_all p.EN.assignment ~f:(fun (_, pv) ->
-                EN.equal_provision pv target))
+            List.for_all p.EN.assignment ~f:(fun (_, pl) ->
+                EN.equal_provision pl.EN.provision target))
       in
       let gen_ok =
         List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
@@ -255,6 +258,7 @@ let enumerate_test : pure_test =
          must be pruned. *)
       let gen2 =
         EN.general_slice ~slots ~provisions:EN.[ Absent; Fetched; Built ]
+          ~versions:B.single_version
       in
       let no_orphan_binding =
         List.for_all gen2 ~f:(fun p ->
@@ -274,44 +278,87 @@ let config_level_test : pure_test =
       let muts =
         EN.[ (Slot_lib, "m1"); (Slot_binding ocaml, "m2") ]
       in
-      (* tiny config: provision Free (→[Built]), mutation Full → 1 pos + 2 *)
+      (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
-        EN.run_config ~slots ~all_provisions:[ EN.Built ] ~all_mutations:muts
-          { provision = EN.Free; mutation = EN.Full }
+        EN.run_config ~slots ~all_provisions:[ EN.Built ]
+          ~all_versions:B.single_version ~all_mutations:muts
+          { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~slots ~all_provisions:EN.[ Fetched; Built ]
-          ~all_mutations:muts { provision = EN.Full; mutation = EN.Free }
+          ~all_versions:B.single_version ~all_mutations:muts
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
         EN.run_config ~slots ~all_provisions:EN.[ Absent; Fetched; Built ]
-          ~all_mutations:muts
-          { provision = EN.Subset [ EN.Fetched ];
+          ~all_versions:B.single_version ~all_mutations:muts
+          { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
         Poly.equal tiny (EN.tiny_slice ~slots ~mutations:muts)
-        && Poly.equal gen (EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ])
+        && Poly.equal gen
+             (EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
+                ~versions:B.single_version)
       in
       List.length tiny = 3
       && List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
       && List.for_all mixed ~f:(fun p ->
-             List.for_all p.EN.assignment ~f:(fun (_, pv) ->
-                 EN.equal_provision pv EN.Fetched))
+             List.for_all p.EN.assignment ~f:(fun (_, pl) ->
+                 EN.equal_provision pl.EN.provision EN.Fetched))
       && List.count mixed ~f:(fun p -> Option.is_some p.EN.mutation) = 1
       && List.count mixed ~f:(fun p -> Option.is_none p.EN.mutation) = 1
       && wrappers_agree) }
+
+(* §4.2.2 version axis: per-slot version enables cross-slot mismatch, and
+   the source-primary filter keeps a Built lib's version = its source's. *)
+let version_axis_test : pure_test =
+  { name = "enumerate.version_axis";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      (* two fetched slots, two versions each → the mismatch lib@Dev /
+         binding@Stable is a valid assignment (the z3/llvm case). *)
+      let mm_slots = EN.[ Slot_lib; Slot_binding ocaml ] in
+      let mm =
+        EN.run_config ~slots:mm_slots ~all_provisions:[ EN.Fetched ]
+          ~all_versions:B.two_versions ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+      in
+      let has_mismatch =
+        List.exists mm ~f:(fun p ->
+            EN.equal_version (EN.version_of p.EN.assignment EN.Slot_lib) B.Dev
+            && EN.equal_version
+                 (EN.version_of p.EN.assignment (EN.Slot_binding ocaml))
+                 B.Stable)
+      in
+      (* source-primary: a Built lib inherits the source's version, so every
+         surviving assignment has lib.version = source.version (the
+         Dev-lib-over-Stable-source combos are pruned). *)
+      let built =
+        EN.run_config ~slots:EN.[ Slot_source; Slot_lib ]
+          ~all_provisions:[ EN.Built ] ~all_versions:B.two_versions
+          ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+      in
+      let source_primary_holds =
+        (not (List.is_empty built))
+        && List.for_all built ~f:(fun p ->
+               EN.equal_version
+                 (EN.version_of p.EN.assignment EN.Slot_lib)
+                 (EN.version_of p.EN.assignment EN.Slot_source))
+      in
+      has_mismatch && source_primary_holds) }
 
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
-      mechanism_test; enumerate_test; config_level_test ]
+      mechanism_test; enumerate_test; config_level_test; version_axis_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in
