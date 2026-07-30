@@ -187,11 +187,11 @@ are the same algorithm under two configs (below).
 
 **The scenario space is a product.** The abstract core is the artifact
 pipeline (Ar.0 native_source → Ar.1 native_lib → Ar.3 binding_lib → app;
-§1). Each provisionable artifact position — source, lib, or a binding — is
-a **slot** (`Canary_basic.slot`; the term is the artifact *position*, not a
-scenario). A **scenario/variant** assigns every slot its coordinates, so a
-scenario is one point *across* all slots — a different level from a slot.
-Each artifact carries several **independent axes**:
+§1). The provisionable **artifacts** are source, lib, and each binding. A
+**scenario/variant** assigns every artifact its coordinates, so a scenario
+is one point *across* all the artifacts — a different level from a single
+artifact. (In code these positions are `Canary_basic.slot`; "artifact" is
+the doc term.) Each artifact carries several **independent axes**:
 
 | axis | values | note |
 |---|---|---|
@@ -346,13 +346,14 @@ provision, version takes a per-axis level:
 - `Subset` → `two_versions = [Dev; Stable]` — the meaningful test set
 - `Full` → the project spec's declared versions
 
-**Per-slot ⇒ mismatch is the interesting result.** Because each slot
-carries its own version, a cross-slot version *mismatch* — a binding built
-against lib `v1` but resolved against lib `v2` — is representable. That is
-exactly the z3/llvm dev-vs-stable demo, now a version-axis instance rather
-than a hand-written variant. Source-primary prunes incoherent assignments,
-so the surviving differences are the real mismatches (e.g. a fetched
-binding at one version over a built lib at another).
+**Per-artifact ⇒ mismatch is the interesting result.** Because each
+artifact carries its own version, a cross-artifact version *mismatch* — a
+binding built against lib `v1` but resolved against lib `v2` — is
+representable. That is exactly the z3/llvm dev-vs-stable demo, now a
+version-axis instance rather than a hand-written variant. Source-primary
+prunes incoherent assignments, so the surviving differences are the real
+mismatches (e.g. a fetched binding at one version over a built lib at
+another).
 
 **Package version ≠ artifact version.** The axis is the *artifact's*
 version. A package (a `provision`) delivers artifacts, each carrying its
