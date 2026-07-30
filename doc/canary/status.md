@@ -210,6 +210,16 @@ Larger design shifts. None active; awareness only.
 Not blocking; part of the post-stabilisation "uniformity
 eventually" pass.
 
+- **First-class `artifact_details` (parked, not enumeration-related).**
+  `base/canary_store.ml` has two related-but-distinct artifact axes:
+  `provision` (origin — where it came FROM / blame; fixed) and
+  `artifact_status` + `location` (whereabouts — where it is NOW; moves).
+  Plan is a first-class `artifact_details` record `{ provision; status;
+  location; … }` so an artifact can be blamed to its origin while its
+  state is tracked. Deferred until a consumer needs provenance/blame
+  tracking; intent captured in the `artifact_status` comment. `provision`
+  is wired now (enumeration); `artifact_status` stays unused until then.
+
 - ~~**Task 3 — term-rename sweep**~~ ✅ shipped 2026-07-21
   (`rule → action`, `action_step → step`, `stage → artifact_status`,
   plus `project_spec → runner_spec` and `action_rule → action_graph`).

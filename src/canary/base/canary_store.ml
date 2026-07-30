@@ -50,8 +50,17 @@ type location =
    complement to location). Renamed from [stage] on 2026-07-21 per
    SSOT §6.2 so [stage] is free for pipeline-phase meaning (Sc.N
    is-a stage). Derivable from location for now (Build_tree→Built,
-   Staged→Installed, Pm→Packed or Fetched). Will become a field on
-   a first-class artifact type. *)
+   Staged→Installed, Pm→Packed or Fetched).
+
+   Planned: a first-class [artifact_details] record pairing this with
+   [provision] and [location] — two axes, one for origin, one for
+   whereabouts:
+     - [provision]              = where the artifact came FROM (how it was
+                                  created / blame; fixed once it exists).
+     - [artifact_status] + [location] = where it is NOW (moves as it is
+                                  installed / packed / fetched).
+   Deferred until a consumer needs provenance/blame tracking — not
+   enumeration-related, so no type yet. *)
 type artifact_status = Built | Installed | Packed | Fetched
 
 (** Provenance of an artifact — the *provision* coordinate (ssot §4.2):
