@@ -187,7 +187,11 @@ are the same algorithm under two configs (below).
 
 **The scenario space is a product.** The abstract core is the artifact
 pipeline (Ar.0 native_source → Ar.1 native_lib → Ar.3 binding_lib → app;
-§1). Each artifact carries several **independent axes**:
+§1). Each provisionable artifact position — source, lib, or a binding — is
+a **slot** (`Canary_basic.slot`; the term is the artifact *position*, not a
+scenario). A **scenario/variant** assigns every slot its coordinates, so a
+scenario is one point *across* all slots — a different level from a slot.
+Each artifact carries several **independent axes**:
 
 | axis | values | note |
 |---|---|---|
@@ -329,6 +333,12 @@ are *separate artifacts / axes* — combinatorially checked in their own
 right, but **not part of this artifact's identity**: a dep is respected as
 a dependency, not used to tag the lib.
 
+**Each version is an id.** A `Dev` version is identified by its commit
+**hash**; a `Stable` version by its **tag / release name**. Attaching a
+version to an artifact means recording that id on the artifact; enumerating
+each artifact at **two** versions (one `Dev`, one `Stable`) is already
+adequate coverage.
+
 **A `level` axis, reusing `Canary_basic.version` (`Dev | Stable`).** Like
 provision, version takes a per-axis level:
 
@@ -354,16 +364,16 @@ mapping is a provision-side resolution detail, and one package may bundle
 artifacts at differing versions (e.g. a `z3-dev` package's header+lib at
 one version, a prebuilt binding built against another).
 
-**"A package provides several artifacts" is spec-authoring, not
-enumeration.** That a single package supplies both a header and a lib is
-captured where a project lists an artifact's **`components`** (the api
-surface), not by any special co-provision concept in the algorithm. The
-enumeration treats each artifact's provision independently — "this package
-provides the lib" and, separately, "this package provides the header";
-their sharing a package is incidental. *(Do not confuse this with ssot's
-"**Co-providers**" blocks above — that is a documentation convention naming
-the co-defining sources of an SSOT ID, e.g. code vs manuscript vs tiny; it
-is unrelated to package provision.)*
+**A *co-package* is spec-authoring, not enumeration.** A **co-package** is
+one package that supplies several artifacts at once (e.g. `z3-dev` ships
+both a header and a lib). That is captured where a project lists an
+artifact's **`components`** (the api surface), not by any special concept
+in the algorithm: the enumeration treats each artifact's provision
+independently — "this package provides the lib" and, separately, "this
+package provides the header"; their sharing a package is incidental. *(A
+co-**package** — one package, many artifacts — is unrelated to ssot's
+"**Co-providers**" blocks, which are a documentation convention naming the
+co-defining sources of an SSOT ID, e.g. code vs manuscript vs tiny.)*
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
@@ -500,7 +510,7 @@ turned into a concrete instance automatically via
 built from the parametric mutation vocabulary of §5.3.
 Cells whose (target, kind) has an implemented primitive
 synthesize; cells whose primitive is missing (§5.3's
-"Missing on purpose") stay [None] — the empty slot stays
+"Missing on purpose") stay [None] — the empty cell stays
 visibly empty. After §7.2 Phase 4 (2026-07-20)
 `all_scenario_specs = 15 hand + 6 derived = 21` and
 coverage stands at 12 of 20 cells filled after §7.1's
@@ -713,7 +723,7 @@ the writeup — no need for a separate alignment section.
 - **project** (top) vs the historical **project_spec** (renamed to
   **runner_spec** 2026-07-21). One `project` produces many
   `runner_spec`s — one per scenario/variant.
-- **scenario** ≡ **variant** — same slot; tiny calls them scenarios
+- **scenario** ≡ **variant** — same taxonomy position; tiny calls them scenarios
   (22 concrete), z3/llvm call them variants (2-3 each).
   `Canary_run_info.run_project_multi` consumes both under the same
   `variants` list.
