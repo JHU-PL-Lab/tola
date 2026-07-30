@@ -428,7 +428,7 @@ let scenarios_cmd =
           let slice =
             Canary_enumerate.general_slice ~slots
               ~provisions:Canary_enumerate.[ Absent; Fetched; Built ]
-              ~versions:Canary_basic.two_versions
+              ~versions:Canary_basic.two_channels
           in
           let slice_assignments =
             List.filter_map

@@ -243,7 +243,7 @@ let enumerate_test : pure_test =
          and all-Built assignments both present. *)
       let gen =
         EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
-          ~versions:B.single_version
+          ~versions:B.single_channel
       in
       let has_uniform target =
         List.exists gen ~f:(fun p ->
@@ -258,7 +258,7 @@ let enumerate_test : pure_test =
          must be pruned. *)
       let gen2 =
         EN.general_slice ~slots ~provisions:EN.[ Absent; Fetched; Built ]
-          ~versions:B.single_version
+          ~versions:B.single_channel
       in
       let no_orphan_binding =
         List.for_all gen2 ~f:(fun p ->
@@ -281,20 +281,20 @@ let config_level_test : pure_test =
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
         EN.run_config ~slots ~all_provisions:[ EN.Built ]
-          ~all_versions:B.single_version ~all_mutations:muts
+          ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~slots ~all_provisions:EN.[ Fetched; Built ]
-          ~all_versions:B.single_version ~all_mutations:muts
+          ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
         EN.run_config ~slots ~all_provisions:EN.[ Absent; Fetched; Built ]
-          ~all_versions:B.single_version ~all_mutations:muts
+          ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
       in
@@ -303,7 +303,7 @@ let config_level_test : pure_test =
         Poly.equal tiny (EN.tiny_slice ~slots ~mutations:muts)
         && Poly.equal gen
              (EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
-                ~versions:B.single_version)
+                ~versions:B.single_channel)
       in
       List.length tiny = 3
       && List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
@@ -325,7 +325,7 @@ let version_axis_test : pure_test =
       let mm_slots = EN.[ Slot_lib; Slot_binding ocaml ] in
       let mm =
         EN.run_config ~slots:mm_slots ~all_provisions:[ EN.Fetched ]
-          ~all_versions:B.two_versions ~all_mutations:[]
+          ~all_versions:B.two_channels ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let has_mismatch =
@@ -340,7 +340,7 @@ let version_axis_test : pure_test =
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
         EN.run_config ~slots:EN.[ Slot_source; Slot_lib ]
-          ~all_provisions:[ EN.Built ] ~all_versions:B.two_versions
+          ~all_provisions:[ EN.Built ] ~all_versions:B.two_channels
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in

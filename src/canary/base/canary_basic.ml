@@ -189,13 +189,25 @@ let run_cmd_exn cmd = run_cmd ~strict:true cmd
    diagram generators remain in action/canary.ml because they're the
    action graph proper. *)
 
-type version = Dev | Stable
+(* [channel] is the coarse release channel / role — the *version axis* the
+   scenario enumeration ranges over ("two versions adequate" = Dev vs
+   Stable; ssot §4.2.2). Renamed from [version] 2026-07-30 to free that name
+   for the concrete [version] record below. *)
+type channel = Dev | Stable [@@deriving show, eq]
 
-let version_suffix = function Dev -> "" | Stable -> "-stable"
+let channel_suffix = function Dev -> "" | Stable -> "-stable"
 
-(* Common version-list configurations *)
-let single_version = [ Dev ]
-let two_versions = [ Dev; Stable ]
+(* Common channel-list configurations (enumeration axis presets). *)
+let single_channel = [ Dev ]
+let two_channels = [ Dev; Stable ]
+
+(* A concrete artifact version (ssot §4.2.2): its [channel] plus the
+   identifying [id] — a commit hash for [Dev], a tag / release name for
+   [Stable]. This is the typed replacement for the string version/commit
+   fields on a concrete artifact (e.g. [Canary_store.source_repo]); wiring
+   the live source_repo/runner_spec onto it is a follow-up (status.md §1b),
+   as those strings are interpolated throughout the project specs. *)
+type version = { channel : channel; id : string } [@@deriving show, eq]
 
 (** App-flavored actions carry an [app_info] record so the app's
     binding language is explicit at the type level (no

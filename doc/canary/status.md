@@ -80,19 +80,27 @@ per use). This tracks what's actually wired.
   hand-written enumerations *from* the algorithm and fold
   `canary_enumerate` into `canary_scenario.ml`.
 
-  - **version axis — shipped.** Reuses `Canary_basic.version` (`Dev |
-    Stable`; `single_version` = Free preset, `two_versions` = Subset/Full).
-    The assignment cell is now a `placement = { provision; version }`
-    (per-slot); `config` has a `version` field; source-primary is a filter
-    (`Built lib ⇒ lib.version = source.version`). Cross-slot mismatch
-    (lib@Dev / binding@Stable) is a valid assignment — the z3/llvm demo as
-    an algorithm instance (layer test `enumerate.version_axis`). Renders
-    show `@dev`/`@stable` (`scenarios <p> --engine`); a variant picks one
-    version (actions don't encode it) — per-slot mismatch is a *capability*
-    the hand-written variants don't yet exercise. Package version ≠
-    artifact version still holds (the axis is the artifact-content's
-    version; package→artifact is provision-side). Version vocab stays in
-    `canary_basic`. **Next axis:** mechanism-live / app-wiring.
+  - **version axis — shipped.** The enumeration ranges over the release
+    **channel** `Canary_basic.channel` (`Dev | Stable`; presets
+    `single_channel` = Free, `two_channels` = Subset/Full). The assignment
+    cell is a `placement = { provision; version }` (per-slot; `version`
+    here holds the channel); `config` has a `version` field; source-primary
+    is a filter (`Built lib ⇒ lib.version = source.version`). Cross-slot
+    mismatch (lib@Dev / binding@Stable) is a valid assignment — the z3/llvm
+    demo as an algorithm instance (test `enumerate.version_axis`). Renders
+    show `@dev`/`@stable`; a variant picks one version (actions don't
+    encode it) — per-slot mismatch is a *capability* the hand-written
+    variants don't yet exercise. **Next axis:** mechanism-live / app-wiring.
+  - **channel vs concrete version split (done).** `Canary_basic.version`
+    (`Dev | Stable`) → renamed **`channel`** (the coarse role the
+    enumeration ranges over; `single_channel`/`two_channels`/
+    `channel_suffix`). New concrete **`Canary_basic.version = { channel;
+    id : string }`** (id = commit hash for Dev, tag/release for Stable) —
+    the typed replacement for string version/commit on a concrete
+    artifact. **Deferred:** wire the live `Canary_store.source_repo`
+    (`version`/`ref_` strings, interpolated throughout z3/llvm specs) onto
+    the typed `version`; the dead `canary_basic.runner_spec` version/commit
+    strings aren't worth wiring.
 
 - **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
   with a bad result**. A scenario is not inherently bad; the enumeration

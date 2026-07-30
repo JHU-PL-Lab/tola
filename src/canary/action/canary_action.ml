@@ -62,7 +62,7 @@ let store_actions ~langs =
   @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
 
 let make_action_graph ~actions ~versions ~name ~source () =
-  let vs = version_suffix in
+  let vs = channel_suffix in
   let get pools kind =
     List.Assoc.find pools ~equal:Poly.equal kind |> Option.value ~default:[]
   in

@@ -47,7 +47,7 @@ let string_of_slot = Canary_basic.string_of_slot
 (** A per-slot cell: how the artifact is provided, and at which version
     (ssot §4.2.2). Version is only meaningful when provided (ignored for
     [Absent]). *)
-type placement = { provision : provision; version : Canary_basic.version }
+type placement = { provision : provision; version : Canary_basic.channel }
 
 (** An assignment: one placement per slot. *)
 type assignment = (slot * placement) list
@@ -56,7 +56,7 @@ type assignment = (slot * placement) list
     on one *provided* slot ([None] = the positive scenario). *)
 type 'm point = { assignment : assignment; mutation : (slot * 'm) option }
 
-let equal_version (a : Canary_basic.version) (b : Canary_basic.version) : bool =
+let equal_version (a : Canary_basic.channel) (b : Canary_basic.channel) : bool =
   Poly.equal a b
 
 let string_of_version = function
@@ -69,7 +69,7 @@ let placement_of (a : assignment) (s : slot) : placement option =
 let provision_of (a : assignment) (s : slot) : provision =
   match placement_of a s with Some p -> p.provision | None -> Absent
 
-let version_of (a : assignment) (s : slot) : Canary_basic.version =
+let version_of (a : assignment) (s : slot) : Canary_basic.channel =
   match placement_of a s with Some p -> p.version | None -> Canary_basic.Dev
 
 let provided (a : assignment) (s : slot) : bool =
@@ -93,7 +93,7 @@ let assignment_ok (a : assignment) : bool =
 
 (* The product over [slots] of (provision × version) placements. *)
 let rec assignments_of (slots : slot list) (provisions : provision list)
-    (versions : Canary_basic.version list) : assignment list =
+    (versions : Canary_basic.channel list) : assignment list =
   match slots with
   | [] -> [ [] ]
   | s :: rest ->
@@ -108,7 +108,7 @@ let rec assignments_of (slots : slot list) (provisions : provision list)
     assignment only when its target slot is provided (§4.2: "a mutation
     applies only to a provided artifact"). *)
 let enumerate ~(slots : slot list) ~(provisions : provision list)
-    ~(versions : Canary_basic.version list) ~(mutations : (slot * 'm) list) :
+    ~(versions : Canary_basic.channel list) ~(mutations : (slot * 'm) list) :
     'm point list =
   assignments_of slots provisions versions
   |> List.filter ~f:assignment_ok
@@ -132,7 +132,7 @@ type 'a level = Free | Subset of 'a list | Full
     field here. *)
 type 'm config = {
   provision : provision level;
-  version : Canary_basic.version level;
+  version : Canary_basic.channel level;
   mutation : (slot * 'm) level;
 }
 
@@ -142,7 +142,7 @@ type 'm config = {
     first); mutation [Free] = the [None] baseline, i.e. no injected fault
     (the positive point is always present), so it resolves to no placements. *)
 let run_config ~(slots : slot list) ~(all_provisions : provision list)
-    ~(all_versions : Canary_basic.version list)
+    ~(all_versions : Canary_basic.channel list)
     ~(all_mutations : (slot * 'm) list) (cfg : 'm config) : 'm point list =
   let resolve lvl all =
     match lvl with
@@ -167,7 +167,7 @@ let run_config ~(slots : slot list) ~(all_provisions : provision list)
 let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
     'm point list =
   run_config ~slots ~all_provisions:[ Built ]
-    ~all_versions:Canary_basic.single_version ~all_mutations:mutations
+    ~all_versions:Canary_basic.single_channel ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full }
 
 (** A general project's config: provision [Full] (walk the provision axis
@@ -175,7 +175,7 @@ let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
     one positive point per valid provision assignment (ssl `sys` = all
     [Fetched], ssl `src` = all [Built], … among them). *)
 let general_slice ~(slots : slot list) ~(provisions : provision list)
-    ~(versions : Canary_basic.version list) : 'm point list =
+    ~(versions : Canary_basic.channel list) : 'm point list =
   run_config ~slots ~all_provisions:provisions ~all_versions:versions
     ~all_mutations:[] { provision = Full; version = Full; mutation = Free }
 
@@ -207,7 +207,7 @@ let provision_of_actions (acts : Canary_basic.action list) (s : slot) :
     in; per-slot version *mismatch* is a capability of the algorithm the
     hand-written variants don't yet exercise, §4.2.2). *)
 let assignment_of_actions ~(slots : slot list)
-    ~(version : Canary_basic.version) (acts : Canary_basic.action list) :
+    ~(version : Canary_basic.channel) (acts : Canary_basic.action list) :
     assignment =
   List.map slots ~f:(fun s ->
       (s, { provision = provision_of_actions acts s; version }))

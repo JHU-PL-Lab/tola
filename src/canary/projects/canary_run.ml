@@ -135,7 +135,7 @@ let dump_job_paths_with ~pp =
   Fmt.pr "how many version combinations instantiate that pattern (with 2 versions).@.";
   Fmt.pr "Every artifact can be probed (probe = action_path → probe_<kind>, d+1).@.@.";
   let ar =
-    make_action_graph ~actions:(store_actions ~langs:[ OCaml ]) ~versions:two_versions ~name:"pkg"
+    make_action_graph ~actions:(store_actions ~langs:[ OCaml ]) ~versions:two_channels ~name:"pkg"
       ~source:Canary_store.store ()
   in
   let paths = job_paths_of_action_graph ar in
