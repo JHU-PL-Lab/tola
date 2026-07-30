@@ -64,11 +64,25 @@ per use). This tracks what's actually wired.
   mutation `Full`) and `general_slice` (provision `Full`, mutation `Free`)
   are now thin wrappers over `run_config`, byte-identical to before (a
   layer test pins the agreement). Only two axes are ranged so far.
-- **Axes wired:** provision ✓, mutation ✓ (polymorphic). **Not wired:**
-  version (ssl's variants differ here), mechanism as a live axis (typed
-  in `base/canary_mechanism.ml`, Static-only today — Dynamic/ctypes/
-  Dynlink not produced), app-wiring (tiny Sc.4 vs Sc.6). Each is a
-  *missing axis to add*, per the model.
+- **Axes wired:** provision ✓ (coarse origin only), version ✓ (as
+  channel), mutation ✓. **Remaining axes + their code gaps** (decisions in
+  ssot §4.2.3):
+  - **mechanism** — binding identity must become `(lang × mechanism)`, and
+    a lib may hold *several* bindings. Needs `artifact_kind`'s `Binding of
+    lang` to carry a mechanism (a **base** change); config gains a
+    `mechanism` field; tiny-factory produces all mechanisms.
+  - **app-wiring** — App must carry a wiring/identity (direct vs via-helper,
+    0/1/many apps), paralleling `Binding of lang` — also an `artifact_kind`
+    (**base**) change; both wirings enumerated.
+  - **provision sub-structure** — provision must carry PM (apt/opam/pip/
+    brew) + distro (one local, many on GH CI); the provision level ranges
+    over `(PM × distro)` combos.
+  - **Headers provision** — Headers is a real artifact with its own
+    provision (standalone / co-package / `Built` via `Build_headers`);
+    `provision_of_actions` must handle `Build_headers → Built` (today it
+    returns `Absent` for Headers).
+  Two of these (mechanism, app-wiring) require refining `artifact_kind` in
+  `base/` — the artifact identity gets richer. See ssot §4.2.3.
 - **Rendered through the algorithm (demonstration, not replacement):**
   `canary tiny engine` renders tiny's mutation axis; `canary scenarios
   <p> --engine` renders a general project's provision axis and checks

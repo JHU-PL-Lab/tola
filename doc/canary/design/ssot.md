@@ -376,6 +376,45 @@ co-**package** — one package, many artifacts — is unrelated to ssot's
 "**Co-providers**" blocks, which are a documentation convention naming the
 co-defining sources of an SSOT ID, e.g. code vs manuscript vs tiny.)*
 
+### 4.2.3 The artifact & axis model — decisions
+
+Decisions from the 2026-07-30 review, refining §4.2's axes. (Most are not
+yet wired — see [`status.md`](../status.md) for the code state.)
+
+- **A binding carries its mechanism; a lib may expose several bindings.**
+  The binding artifact's identity is `(language × mechanism)` (§4.2.1b).
+  A single lib can expose *multiple* bindings at once — a Python `cext`
+  binding and a Python `ctypes` binding are two distinct artifacts. A
+  language offers several mechanisms, not all implemented for a given
+  project; **tiny-factory supports them all**. So the artifact set can hold
+  several `Binding` entries, each with its own mechanism.
+
+- **App is a first-class artifact (0 / 1 / many), and its wiring is
+  enumerated.** Like Lib/Headers, a project has zero, one, or several apps.
+  An app that links the library **directly** and an app that goes **via a
+  helper** are *both* enumerated — distinct app artifacts. So App carries a
+  wiring/identity, paralleling `Binding of lang`.
+
+- **Provision carries PM and distro.** `Fetched` names *which* PM
+  (apt / opam / pip / brew), and provision spans a **distro** dimension
+  (WSL / macOS / CI images). The enumeration ranges over one distro locally
+  and several on GH CI — the provision axis's level picks one or many
+  `(PM × distro)` combinations.
+
+- **Headers are a flexible artifact, not always derived.** A project may
+  ship a **standalone** header, a **package** may co-provide it (a
+  co-package), or the header may be a **build result** — produced by
+  compiling the source (`Build_headers`) and fetched from there. So Headers
+  has its own provision, including `Built`.
+
+**Meta note — mutation & result (still being refined).** Mutating a lib to
+drop a symbol does **not** create a new scenario: it is the *same* scenario
+with a **bad artifact**, whose badness surfaces at a later stage (the
+result / oracle). So **tiny-factory is a *meta-scenario computation*** over
+the structural scenario space (provision × version × mechanism × app), not
+a generator of new scenarios; mutation + result sit *over* that space
+rather than expanding it as a peer axis.
+
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
 **Flow.** `dune exec canary_main -- tiny-scenarios list` ──►
