@@ -30,23 +30,19 @@
 
 open Base
 
-(** Provenance of an artifact — the **provision** coordinate (ssot §4.2; the
-    project [origin] dimension, [new_project.md §0]). Spans the store
-    lifecycle: [Absent] (not provided), [Fetched] (from a PM), [Built] (from
-    source), [Vendored] (in-tree copy). *)
-type provision = Absent | Fetched | Built | Vendored [@@deriving show, eq]
-
-(** The provisioned slots of the abstract pipeline (Ar.0 source → Ar.1 lib →
-    Ar.3 binding). The app is the consumer (probed), not provisioned, so it
-    is not a slot here. *)
-type slot = Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
+(* [provision] and [slot] are base vocabulary — defined in
+   [Canary_store] / [Canary_basic] and re-exported here (constructor
+   re-export keeps existing [Canary_enumerate.Built] / [.Slot_source]
+   references working). See those base modules for the docs. *)
+type provision = Canary_store.provision =
+  | Absent | Fetched | Built | Vendored
 [@@deriving show, eq]
 
-(** Concise slot label for display (the derived [show_slot] is verbose). *)
-let string_of_slot = function
-  | Slot_source -> "source"
-  | Slot_lib -> "lib"
-  | Slot_binding l -> "binding:" ^ Canary_lang.string_of_lang l
+type slot = Canary_basic.slot =
+  | Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
+[@@deriving show, eq]
+
+let string_of_slot = Canary_basic.string_of_slot
 
 (** A provision assignment: one provision per slot. *)
 type assignment = (slot * provision) list
@@ -151,11 +147,7 @@ let general_slice ~(slots : slot list) ~(provisions : provision list) :
   run_config ~slots ~all_provisions:provisions ~all_mutations:[]
     { provision = Full; mutation = Free }
 
-let string_of_provision = function
-  | Absent -> "absent"
-  | Fetched -> "fetched"
-  | Built -> "built"
-  | Vendored -> "vendored"
+let string_of_provision = Canary_store.string_of_provision
 
 (** Read a slot's provision off a concrete action set (which action-graph
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else

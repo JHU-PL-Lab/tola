@@ -76,6 +76,28 @@ order; `projects/` and `test/` consume the upper layers.
 tiny harness lives at `doc/_legacy_code/tiny_python_harness/`
 per Phase E of the tiny migration.)
 
+**Read `src/canary/base/` before writing code that introduces a type.**
+`base/` is the shared vocabulary every layer reuses; a new vocabulary
+type belongs there (in `canary_basic`/`canary_store`/`canary_lang`/
+`canary_mechanism`/`canary_surface`/`canary_artifact_api`), not invented
+in an upper layer — and check base/ for an existing type before adding
+one. The base vocabulary types:
+
+| module | types |
+| --- | --- |
+| `base/canary_lang.ml` | `lang` |
+| `base/canary_basic.ml` | `artifact_kind`, `slot` (provisionable subset of `artifact_kind`), `action`, `runner_os`, `probe_action`, `compile_mode`, output-tree naming (`version`, `filename`, `variant_file`) |
+| `base/canary_store.ml` | `location`, `artifact_status` (lifecycle state), `provision` (provenance axis — ssot §4.2), `package_manager`, `pm_info`, `system_package_spec`, `distro`, `source_repo` |
+| `base/canary_artifact_api.ml` | `native_api`, `binding_api` (provider/consumer claims) |
+| `base/canary_mechanism.ml` | `discipline`, `mechanism` (binding identity — ssot §4.2.1b) |
+| `base/canary_surface.ml` | `native_surface`, `binding_surface`, `surface` (checking-point view) |
+
+Example of the trap this prevents: `provision`/`slot` were first defined
+in `action/canary_enumerate.ml`; they are base vocabulary and now live in
+`canary_store`/`canary_basic` (re-exported by `canary_enumerate` for
+back-compat). `canary_store.artifact_status` already existed as a related
+provenance/state type — worth reconciling with, not duplicating.
+
 ### Key source files
 
 | File                                                | Purpose                                                                                                |

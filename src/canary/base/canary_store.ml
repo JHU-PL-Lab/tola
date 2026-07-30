@@ -54,6 +54,24 @@ type location =
    a first-class artifact type. *)
 type artifact_status = Built | Installed | Packed | Fetched
 
+(** Provenance of an artifact — the *provision* coordinate (ssot §4.2):
+    which store provides it in a scenario. [Absent] (not provided) ·
+    [Fetched] (from a PM) · [Built] (from source) · [Vendored] (a supplied
+    copy at a path, local *or* remote — not built here, not PM-resolved).
+
+    Distinct axis from [artifact_status] above: provision is the *choice of
+    source*; artifact_status is the *lifecycle state* an artifact reaches
+    (Built → Installed → Packed → Fetched). The shared [Built]/[Fetched]
+    names are intentional — a [Built] provision lands in the Built state, a
+    [Fetched] provision in the Fetched state. *)
+type provision = Absent | Fetched | Built | Vendored [@@deriving show, eq]
+
+let string_of_provision = function
+  | Absent -> "absent"
+  | Fetched -> "fetched"
+  | Built -> "built"
+  | Vendored -> "vendored"
+
 let string_of_pm = function
   | Apt -> "apt"
   | Brew -> "brew"

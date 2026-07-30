@@ -40,6 +40,19 @@ type artifact_kind = Source | Headers | Lib | Binding of Canary_lang.lang | App
 let kind_order = function
   | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
 
+(** The *provisionable slots* of the artifact pipeline (ssot §4.2) — the
+    subset of [artifact_kind] that independently carries a provision:
+    source, lib, and each binding language. (Headers and App are not
+    independently provisioned, so they are not slots.) Consumed by the
+    scenario enumeration ([Canary_enumerate]). *)
+type slot = Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
+[@@deriving show, eq]
+
+let string_of_slot = function
+  | Slot_source -> "source"
+  | Slot_lib -> "lib"
+  | Slot_binding l -> "binding:" ^ Canary_lang.string_of_lang l
+
 (** A concrete artifact instance: a [kind] tag plus an identifier ([name])
     and a [location] (filesystem path / package coordinates).
 
