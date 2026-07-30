@@ -223,7 +223,7 @@ let enumerate_test : pure_test =
   { name = "enumerate.two_projections_and_filter";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let slots = EN.[ Slot_source; Slot_lib; Slot_binding ocaml ] in
+      let artifacts = EN.[ Source; Lib; Binding ocaml ] in
       let all_built (p : string EN.point) =
         List.for_all p.assignment ~f:(fun (_, pl) ->
             EN.equal_provision pl.EN.provision EN.Built)
@@ -231,9 +231,9 @@ let enumerate_test : pure_test =
       (* tiny projection: all-Built × (positive + 2 mutations) = 3 points,
          one positive, every assignment all-Built. *)
       let muts =
-        EN.[ (Slot_lib, "symbol_missing"); (Slot_binding ocaml, "type_broken") ]
+        EN.[ (Lib, "symbol_missing"); (Binding ocaml, "type_broken") ]
       in
-      let tiny = EN.tiny_slice ~slots ~mutations:muts in
+      let tiny = EN.tiny_slice ~artifacts ~mutations:muts in
       let tiny_ok =
         List.length tiny = 3
         && List.count tiny ~f:(fun p -> Option.is_none p.EN.mutation) = 1
@@ -242,7 +242,7 @@ let enumerate_test : pure_test =
       (* general projection: mutation=none, walk provisions; all-Fetched
          and all-Built assignments both present. *)
       let gen =
-        EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
+        EN.general_slice ~artifacts ~provisions:EN.[ Fetched; Built ]
           ~versions:B.single_channel
       in
       let has_uniform target =
@@ -257,14 +257,14 @@ let enumerate_test : pure_test =
       (* filter: with Absent allowed, a provided binding over an Absent lib
          must be pruned. *)
       let gen2 =
-        EN.general_slice ~slots ~provisions:EN.[ Absent; Fetched; Built ]
+        EN.general_slice ~artifacts ~provisions:EN.[ Absent; Fetched; Built ]
           ~versions:B.single_channel
       in
       let no_orphan_binding =
         List.for_all gen2 ~f:(fun p ->
             not
-              (EN.provided p.EN.assignment (EN.Slot_binding ocaml)
-              && not (EN.provided p.EN.assignment EN.Slot_lib)))
+              (EN.provided p.EN.assignment (EN.Binding ocaml)
+              && not (EN.provided p.EN.assignment EN.Lib)))
       in
       tiny_ok && gen_ok && no_orphan_binding) }
 
@@ -274,35 +274,35 @@ let config_level_test : pure_test =
   { name = "enumerate.config_levels";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let slots = EN.[ Slot_source; Slot_lib; Slot_binding ocaml ] in
+      let artifacts = EN.[ Source; Lib; Binding ocaml ] in
       let muts =
-        EN.[ (Slot_lib, "m1"); (Slot_binding ocaml, "m2") ]
+        EN.[ (Lib, "m1"); (Binding ocaml, "m2") ]
       in
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
-        EN.run_config ~slots ~all_provisions:[ EN.Built ]
+        EN.run_config ~artifacts ~all_provisions:[ EN.Built ]
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
-        EN.run_config ~slots ~all_provisions:EN.[ Fetched; Built ]
+        EN.run_config ~artifacts ~all_provisions:EN.[ Fetched; Built ]
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
-        EN.run_config ~slots ~all_provisions:EN.[ Absent; Fetched; Built ]
+        EN.run_config ~artifacts ~all_provisions:EN.[ Absent; Fetched; Built ]
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
-        Poly.equal tiny (EN.tiny_slice ~slots ~mutations:muts)
+        Poly.equal tiny (EN.tiny_slice ~artifacts ~mutations:muts)
         && Poly.equal gen
-             (EN.general_slice ~slots ~provisions:EN.[ Fetched; Built ]
+             (EN.general_slice ~artifacts ~provisions:EN.[ Fetched; Built ]
                 ~versions:B.single_channel)
       in
       List.length tiny = 3
@@ -320,26 +320,26 @@ let version_axis_test : pure_test =
   { name = "enumerate.version_axis";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      (* two fetched slots, two versions each → the mismatch lib@Dev /
+      (* two fetched artifacts, two versions each → the mismatch lib@Dev /
          binding@Stable is a valid assignment (the z3/llvm case). *)
-      let mm_slots = EN.[ Slot_lib; Slot_binding ocaml ] in
+      let mm_artifacts = EN.[ Lib; Binding ocaml ] in
       let mm =
-        EN.run_config ~slots:mm_slots ~all_provisions:[ EN.Fetched ]
+        EN.run_config ~artifacts:mm_artifacts ~all_provisions:[ EN.Fetched ]
           ~all_versions:B.two_channels ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
-            EN.equal_version (EN.version_of p.EN.assignment EN.Slot_lib) B.Dev
+            EN.equal_version (EN.version_of p.EN.assignment EN.Lib) B.Dev
             && EN.equal_version
-                 (EN.version_of p.EN.assignment (EN.Slot_binding ocaml))
+                 (EN.version_of p.EN.assignment (EN.Binding ocaml))
                  B.Stable)
       in
       (* source-primary: a Built lib inherits the source's version, so every
          surviving assignment has lib.version = source.version (the
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
-        EN.run_config ~slots:EN.[ Slot_source; Slot_lib ]
+        EN.run_config ~artifacts:EN.[ Source; Lib ]
           ~all_provisions:[ EN.Built ] ~all_versions:B.two_channels
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
@@ -348,8 +348,8 @@ let version_axis_test : pure_test =
         (not (List.is_empty built))
         && List.for_all built ~f:(fun p ->
                EN.equal_version
-                 (EN.version_of p.EN.assignment EN.Slot_lib)
-                 (EN.version_of p.EN.assignment EN.Slot_source))
+                 (EN.version_of p.EN.assignment EN.Lib)
+                 (EN.version_of p.EN.assignment EN.Source))
       in
       has_mismatch && source_primary_holds) }
 

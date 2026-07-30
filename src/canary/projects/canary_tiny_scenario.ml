@@ -986,12 +986,9 @@ let all_scenario_specs : scenario_spec list =
      [expected] table) stays on [scenario_spec]; the engine carries only
      the (provision, mutation) coordinates. *)
 
-let slot_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.slot option =
-  function
-  | Canary_basic.Source -> Some Canary_enumerate.Slot_source
-  | Canary_basic.Lib -> Some Canary_enumerate.Slot_lib
-  | Canary_basic.Binding l -> Some (Canary_enumerate.Slot_binding l)
-  | Canary_basic.Headers | Canary_basic.App -> None
+let is_pipeline_artifact : Canary_basic.artifact_kind -> bool = function
+  | Canary_basic.Source | Canary_basic.Lib | Canary_basic.Binding _ -> true
+  | Canary_basic.Headers | Canary_basic.App -> false
 
 let mutation_target_of_spec (s : scenario_spec) :
     Canary_basic.artifact_kind option =
@@ -999,57 +996,58 @@ let mutation_target_of_spec (s : scenario_spec) :
   | Some (Canary_scenario.Mutation m) -> Some m.Canary_scenario.target
   | _ -> None
 
-(** The mutation axis: one [(engine slot, scenario id)] per
-    mutation-carrying spec whose target maps to a pipeline slot. *)
-let engine_mutations : (Canary_enumerate.slot * string) list =
+(** The mutation axis: one [(artifact, scenario id)] per mutation-carrying
+    spec whose target is a pipeline artifact (source / lib / binding).
+    [artifact] is [Canary_basic.artifact_kind], re-exported by the engine. *)
+let engine_mutations : (Canary_enumerate.artifact * string) list =
   List.filter_map all_scenario_specs ~f:(fun s ->
       match mutation_target_of_spec s with
-      | None -> None
-      | Some k ->
-          Option.map (slot_of_kind k) ~f:(fun slot -> (slot, s.scenario.id)))
+      | Some k when is_pipeline_artifact k -> Some (k, s.scenario.id)
+      | _ -> None)
 
-(** The slots tiny's pipeline provisions (all [Built]): source, lib, and
+(** The artifacts tiny's pipeline provisions (all [Built]): source, lib, and
     each language's binding. *)
-let engine_slots : Canary_enumerate.slot list =
+let engine_artifacts : Canary_enumerate.artifact list =
   Canary_enumerate.
-    [ Slot_source; Slot_lib;
-      Slot_binding Canary_lang.OCaml; Slot_binding Canary_lang.Python ]
+    [ Source; Lib; Binding Canary_lang.OCaml; Binding Canary_lang.Python ]
 
 let engine_points : string Canary_enumerate.point list =
-  Canary_enumerate.tiny_slice ~slots:engine_slots ~mutations:engine_mutations
+  Canary_enumerate.tiny_slice ~artifacts:engine_artifacts
+    ~mutations:engine_mutations
 
 (** Print the tiny → engine projection + a correspondence report. *)
 let print_engine_render () : unit =
   let p = Stdlib.Printf.printf in
   p "tiny → engine projection (tiny_slice: all Built × mutation axis)\n";
-  p "  slots: %s\n"
+  p "  artifacts: %s\n"
     (String.concat ~sep:", "
-       (List.map engine_slots ~f:Canary_enumerate.string_of_slot));
+       (List.map engine_artifacts ~f:Canary_enumerate.string_of_artifact));
   List.iter engine_points ~f:(fun pt ->
       match pt.Canary_enumerate.mutation with
       | None -> p "  [positive]  all-Built pipeline\n"
-      | Some (slot, id) ->
-          p "  [mutation]  %-24s on %s\n" id (Canary_enumerate.string_of_slot slot));
+      | Some (art, id) ->
+          p "  [mutation]  %-24s on %s\n" id
+            (Canary_enumerate.string_of_artifact art));
   let n_mut = List.length engine_mutations in
   let n_points = List.length engine_points in
   let positives_tiny =
     List.count all_scenario_specs ~f:(fun s -> Option.is_none s.scenario.origin)
   in
-  (* mutation-carrying specs whose target has no pipeline slot → the engine
-     could not render them (a real gap if non-empty). *)
+  (* mutation-carrying specs whose target is not a pipeline artifact
+     (Headers/App) → the engine doesn't place them (a real gap if non-empty). *)
   let unmappable =
     List.filter_map all_scenario_specs ~f:(fun s ->
         match mutation_target_of_spec s with
-        | Some k when Option.is_none (slot_of_kind k) -> Some s.scenario.id
+        | Some k when not (is_pipeline_artifact k) -> Some s.scenario.id
         | _ -> None)
   in
   p "\n  engine: 1 positive + %d mutation points = %d\n" n_mut n_points;
   p "  tiny:   %d unmutated run(s) (app-wiring collapsed into the 1 positive) \
      + %d mutation(s)\n" positives_tiny n_mut;
   match unmappable with
-  | [] -> p "  \xE2\x9C\x93 every tiny mutation maps to a pipeline slot\n"
+  | [] -> p "  \xE2\x9C\x93 every tiny mutation maps to a pipeline artifact\n"
   | ids ->
-      p "  \xE2\x9C\x97 unrenderable (no slot): %s\n"
+      p "  \xE2\x9C\x97 unrenderable (not a pipeline artifact): %s\n"
         (String.concat ~sep:", " ids)
 
 (* Startup assertion — count of derived cells after dedup. Update

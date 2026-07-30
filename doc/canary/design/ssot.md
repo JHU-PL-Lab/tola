@@ -187,11 +187,11 @@ are the same algorithm under two configs (below).
 
 **The scenario space is a product.** The abstract core is the artifact
 pipeline (Ar.0 native_source → Ar.1 native_lib → Ar.3 binding_lib → app;
-§1). The provisionable **artifacts** are source, lib, and each binding. A
-**scenario/variant** assigns every artifact its coordinates, so a scenario
-is one point *across* all the artifacts — a different level from a single
-artifact. (In code these positions are `Canary_basic.slot`; "artifact" is
-the doc term.) Each artifact carries several **independent axes**:
+§1). The enumeration ranges over the **artifacts** (`Canary_basic.artifact_kind`
+— source, lib, each binding; and Headers/App, usually not independently
+provided). A **scenario/variant** assigns every artifact its coordinates,
+so a scenario is one point *across* all the artifacts — a different level
+from a single artifact. Each artifact carries several **independent axes**:
 
 | axis | values | note |
 |---|---|---|

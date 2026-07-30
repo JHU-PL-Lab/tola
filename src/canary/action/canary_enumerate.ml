@@ -30,31 +30,39 @@
 
 open Base
 
-(* [provision] and [slot] are base vocabulary — defined in
-   [Canary_store] / [Canary_basic] and re-exported here (constructor
-   re-export keeps existing [Canary_enumerate.Built] / [.Slot_source]
-   references working). See those base modules for the docs. *)
+(* [provision] is base vocabulary (Canary_store); the enumeration ranges
+   over [artifact] = the full artifact set (Canary_basic.artifact_kind),
+   re-exported here so [Canary_enumerate.Source] / [.Built] resolve. Every
+   artifact carries a placement (provision × version); Headers/App are
+   simply artifacts whose provision is usually [Absent] (not independently
+   provided) — no special subset type. *)
 type provision = Canary_store.provision =
   | Absent | Fetched | Built | Vendored
 [@@deriving show, eq]
 
-type slot = Canary_basic.slot =
-  | Slot_source | Slot_lib | Slot_binding of Canary_lang.lang
+type artifact = Canary_basic.artifact_kind =
+  | Source | Headers | Lib | Binding of Canary_lang.lang | App
 [@@deriving show, eq]
 
-let string_of_slot = Canary_basic.string_of_slot
+(** Concise artifact label for display. *)
+let string_of_artifact = function
+  | Source -> "source"
+  | Headers -> "headers"
+  | Lib -> "lib"
+  | Binding l -> "binding:" ^ Canary_lang.string_of_lang l
+  | App -> "app"
 
-(** A per-slot cell: how the artifact is provided, and at which version
+(** A per-artifact cell: how the artifact is provided, and at which version
     (ssot §4.2.2). Version is only meaningful when provided (ignored for
     [Absent]). *)
 type placement = { provision : provision; version : Canary_basic.channel }
 
-(** An assignment: one placement per slot. *)
-type assignment = (slot * placement) list
+(** An assignment: one placement per artifact. *)
+type assignment = (artifact * placement) list
 
 (** One point of the scenario space: an assignment plus an optional mutation
-    on one *provided* slot ([None] = the positive scenario). *)
-type 'm point = { assignment : assignment; mutation : (slot * 'm) option }
+    on one *provided* artifact ([None] = the positive scenario). *)
+type 'm point = { assignment : assignment; mutation : (artifact * 'm) option }
 
 let equal_version (a : Canary_basic.channel) (b : Canary_basic.channel) : bool =
   Poly.equal a b
@@ -63,17 +71,17 @@ let string_of_version = function
   | Canary_basic.Dev -> "dev"
   | Canary_basic.Stable -> "stable"
 
-let placement_of (a : assignment) (s : slot) : placement option =
-  List.Assoc.find a s ~equal:equal_slot
+let placement_of (a : assignment) (art : artifact) : placement option =
+  List.Assoc.find a art ~equal:equal_artifact
 
-let provision_of (a : assignment) (s : slot) : provision =
-  match placement_of a s with Some p -> p.provision | None -> Absent
+let provision_of (a : assignment) (art : artifact) : provision =
+  match placement_of a art with Some p -> p.provision | None -> Absent
 
-let version_of (a : assignment) (s : slot) : Canary_basic.channel =
-  match placement_of a s with Some p -> p.version | None -> Canary_basic.Dev
+let version_of (a : assignment) (art : artifact) : Canary_basic.channel =
+  match placement_of a art with Some p -> p.version | None -> Canary_basic.Dev
 
-let provided (a : assignment) (s : slot) : bool =
-  not (equal_provision (provision_of a s) Absent)
+let provided (a : assignment) (art : artifact) : bool =
+  not (equal_provision (provision_of a art) Absent)
 
 (** Dependency + version filter (product-then-filter, §4.2 / §4.2.2): a lib
     [Built] from source needs the source present; any provided binding needs
@@ -81,36 +89,36 @@ let provided (a : assignment) (s : slot) : bool =
     source's version. A binding's version may still differ from the lib's —
     that difference is the interesting version *mismatch*. *)
 let assignment_ok (a : assignment) : bool =
-  let lib = provision_of a Slot_lib in
-  (not (equal_provision lib Built) || provided a Slot_source)
+  let lib = provision_of a Lib in
+  (not (equal_provision lib Built) || provided a Source)
   && (not (equal_provision lib Built)
-     || equal_version (version_of a Slot_lib) (version_of a Slot_source))
-  && List.for_all a ~f:(fun (s, pl) ->
-         match s with
-         | Slot_binding _ ->
-             equal_provision pl.provision Absent || provided a Slot_lib
+     || equal_version (version_of a Lib) (version_of a Source))
+  && List.for_all a ~f:(fun (art, pl) ->
+         match art with
+         | Binding _ ->
+             equal_provision pl.provision Absent || provided a Lib
          | _ -> true)
 
-(* The product over [slots] of (provision × version) placements. *)
-let rec assignments_of (slots : slot list) (provisions : provision list)
+(* The product over [artifacts] of (provision × version) placements. *)
+let rec assignments_of (artifacts : artifact list) (provisions : provision list)
     (versions : Canary_basic.channel list) : assignment list =
-  match slots with
+  match artifacts with
   | [] -> [ [] ]
-  | s :: rest ->
+  | art :: rest ->
       let tails = assignments_of rest provisions versions in
       List.concat_map provisions ~f:(fun pv ->
           List.concat_map versions ~f:(fun ver ->
               List.map tails ~f:(fun t ->
-                  (s, { provision = pv; version = ver }) :: t)))
+                  (art, { provision = pv; version = ver }) :: t)))
 
 (** The full enumeration algorithm: the product of *valid* assignments ×
     (positive + each applicable mutation). A mutation is applicable to an
-    assignment only when its target slot is provided (§4.2: "a mutation
+    assignment only when its target artifact is provided (§4.2: "a mutation
     applies only to a provided artifact"). *)
-let enumerate ~(slots : slot list) ~(provisions : provision list)
-    ~(versions : Canary_basic.channel list) ~(mutations : (slot * 'm) list) :
+let enumerate ~(artifacts : artifact list) ~(provisions : provision list)
+    ~(versions : Canary_basic.channel list) ~(mutations : (artifact * 'm) list) :
     'm point list =
-  assignments_of slots provisions versions
+  assignments_of artifacts provisions versions
   |> List.filter ~f:assignment_ok
   |> List.concat_map ~f:(fun a ->
          let positive = { assignment = a; mutation = None } in
@@ -133,7 +141,7 @@ type 'a level = Free | Subset of 'a list | Full
 type 'm config = {
   provision : provision level;
   version : Canary_basic.channel level;
-  mutation : (slot * 'm) level;
+  mutation : (artifact * 'm) level;
 }
 
 (** Instantiate the algorithm with a config, given each axis's universe (its
@@ -141,9 +149,9 @@ type 'm config = {
     of the universe — a project orders its universe so the representative is
     first); mutation [Free] = the [None] baseline, i.e. no injected fault
     (the positive point is always present), so it resolves to no placements. *)
-let run_config ~(slots : slot list) ~(all_provisions : provision list)
+let run_config ~(artifacts : artifact list) ~(all_provisions : provision list)
     ~(all_versions : Canary_basic.channel list)
-    ~(all_mutations : (slot * 'm) list) (cfg : 'm config) : 'm point list =
+    ~(all_mutations : (artifact * 'm) list) (cfg : 'm config) : 'm point list =
   let resolve lvl all =
     match lvl with
     | Free -> ( match all with x :: _ -> [ x ] | [] -> [] )
@@ -158,15 +166,15 @@ let run_config ~(slots : slot list) ~(all_provisions : provision list)
     | Subset vs -> vs
     | Full -> all_mutations
   in
-  enumerate ~slots ~provisions ~versions ~mutations
+  enumerate ~artifacts ~provisions ~versions ~mutations
 
 (** tiny's config: provision [Free] (collapse to one representative,
     [Built] — the whole pipeline built locally), mutation [Full] (walk every
     defect). Source-[Built] here just means "present locally" — the source
     is the pipeline root, its provision degenerate. *)
-let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
-    'm point list =
-  run_config ~slots ~all_provisions:[ Built ]
+let tiny_slice ~(artifacts : artifact list) ~(mutations : (artifact * 'm) list)
+    : 'm point list =
+  run_config ~artifacts ~all_provisions:[ Built ]
     ~all_versions:Canary_basic.single_channel ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full }
 
@@ -174,9 +182,9 @@ let tiny_slice ~(slots : slot list) ~(mutations : (slot * 'm) list) :
     over the project's universe), mutation [Free] (positive only). Yields
     one positive point per valid provision assignment (ssl `sys` = all
     [Fetched], ssl `src` = all [Built], … among them). *)
-let general_slice ~(slots : slot list) ~(provisions : provision list)
+let general_slice ~(artifacts : artifact list) ~(provisions : provision list)
     ~(versions : Canary_basic.channel list) : 'm point list =
-  run_config ~slots ~all_provisions:provisions ~all_versions:versions
+  run_config ~artifacts ~all_provisions:provisions ~all_versions:versions
     ~all_mutations:[] { provision = Full; version = Full; mutation = Free }
 
 let string_of_provision = Canary_store.string_of_provision
@@ -187,36 +195,40 @@ let string_of_provision = Canary_store.string_of_provision
     run" — recovering the provision coordinate from a variant's steps, so a
     general project's hand-written variants can be rendered as enumeration algorithm
     assignments. *)
-let provision_of_actions (acts : Canary_basic.action list) (s : slot) :
+let provision_of_actions (acts : Canary_basic.action list) (art : artifact) :
     provision =
   let has a = List.mem acts a ~equal:Poly.equal in
-  match s with
-  | Slot_source -> if has (Canary_basic.Fetch Canary_basic.Source) then Fetched else Absent
-  | Slot_lib ->
+  match art with
+  | Source -> if has (Canary_basic.Fetch Canary_basic.Source) then Fetched else Absent
+  | Lib ->
       if has Canary_basic.Build_lib then Built
       else if has (Canary_basic.Fetch Canary_basic.Lib) then Fetched
       else Absent
-  | Slot_binding l ->
+  | Binding l ->
       if has (Canary_basic.Build_binding l) then Built
       else if has (Canary_basic.Fetch (Canary_basic.Binding l)) then Fetched
       else Absent
+  | Headers | App ->
+      (* not independently provisioned by an action verb (Headers ride the
+         source/lib; App is the consumer) — [Absent] in the action view. *)
+      Absent
 
-(** The assignment a variant's action set implies: one provision per slot
+(** The assignment a variant's action set implies: one provision per artifact
     (via [provision_of_actions]), all at the variant's [version] (a variant
     picks a single version — actions do not encode version, so it is passed
-    in; per-slot version *mismatch* is a capability of the algorithm the
+    in; per-artifact version *mismatch* is a capability of the algorithm the
     hand-written variants don't yet exercise, §4.2.2). *)
-let assignment_of_actions ~(slots : slot list)
+let assignment_of_actions ~(artifacts : artifact list)
     ~(version : Canary_basic.channel) (acts : Canary_basic.action list) :
     assignment =
-  List.map slots ~f:(fun s ->
-      (s, { provision = provision_of_actions acts s; version }))
+  List.map artifacts ~f:(fun art ->
+      (art, { provision = provision_of_actions acts art; version }))
 
 (** Pretty an assignment as "source=fetched@dev lib=built@dev …" (version
-    shown only where the slot is provided). *)
+    shown only where the artifact is provided). *)
 let string_of_assignment (a : assignment) : string =
   String.concat ~sep:" "
-    (List.map a ~f:(fun (s, pl) ->
-         let base = string_of_slot s ^ "=" ^ string_of_provision pl.provision in
+    (List.map a ~f:(fun (art, pl) ->
+         let base = string_of_artifact art ^ "=" ^ string_of_provision pl.provision in
          if equal_provision pl.provision Absent then base
          else base ^ "@" ^ string_of_version pl.version))

@@ -51,15 +51,16 @@ one abstract algorithm; per-axis level `Free`/`Subset`/`Full`; a config
 per use). This tracks what's actually wired.
 
 - **Algorithm module** — `action/canary_enumerate.ml`: pure
-  product-then-filter, polymorphic in the mutation. `provision`
-  (`Absent`/`Fetched`/`Built`/`Vendored`), `slot`
-  (`Slot_source`/`Slot_lib`/`Slot_binding lang`), `enumerate`,
+  product-then-filter, polymorphic in the mutation. Ranges over `artifact`
+  (= `Canary_basic.artifact_kind`, re-exported — no separate `slot` type);
+  `provision` (`Absent`/`Fetched`/`Built`/`Vendored`), `enumerate`,
   `assignment_ok` (lib `Built`⇒source; provided binding⇒lib),
   `provision_of_actions`. (Named "engine" in early commits — prefer
   "enumeration algorithm".)
 - **Config object implemented** (`type 'a level = Free | Subset of _ |
-  Full`; `type 'm config = { provision; mutation }`; `run_config ~slots
-  ~all_provisions ~all_mutations cfg`). `tiny_slice` (provision `Free`,
+  Full`; `type 'm config = { provision; version; mutation }`; `run_config
+  ~artifacts ~all_provisions ~all_versions ~all_mutations cfg`).
+  `tiny_slice` (provision `Free`,
   mutation `Full`) and `general_slice` (provision `Full`, mutation `Free`)
   are now thin wrappers over `run_config`, byte-identical to before (a
   layer test pins the agreement). Only two axes are ranged so far.
@@ -83,13 +84,13 @@ per use). This tracks what's actually wired.
   - **version axis — shipped.** The enumeration ranges over the release
     **channel** `Canary_basic.channel` (`Dev | Stable`; presets
     `single_channel` = Free, `two_channels` = Subset/Full). The assignment
-    cell is a `placement = { provision; version }` (per-slot; `version`
+    cell is a `placement = { provision; version }` (per-artifact; `version`
     here holds the channel); `config` has a `version` field; source-primary
-    is a filter (`Built lib ⇒ lib.version = source.version`). Cross-slot
+    is a filter (`Built lib ⇒ lib.version = source.version`). Cross-artifact
     mismatch (lib@Dev / binding@Stable) is a valid assignment — the z3/llvm
     demo as an algorithm instance (test `enumerate.version_axis`). Renders
     show `@dev`/`@stable`; a variant picks one version (actions don't
-    encode it) — per-slot mismatch is a *capability* the hand-written
+    encode it) — per-artifact mismatch is a *capability* the hand-written
     variants don't yet exercise. **Next axis:** mechanism-live / app-wiring.
   - **channel vs concrete version split (done).** `Canary_basic.version`
     (`Dev | Stable`) → renamed **`channel`** (the coarse role the
@@ -180,7 +181,7 @@ from the old §8 to keep references stable.
    hand-coded variants).
 
 1. **Ar.0..Ar.3 vs code's 5 kinds.** Decide if `Headers`
-   gets an Ar slot or stays implicit under Ar.1.
+   gets its own Ar id or stays implicit under Ar.1.
 2. **§2 vs §3 Ag numbering.** Renumber §2 to point at the
    §3 catalogue IDs.
 3. **Sf.5 / runtime.** Is Python/runtime its own Sf.5 or

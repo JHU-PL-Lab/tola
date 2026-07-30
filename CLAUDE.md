@@ -86,17 +86,19 @@ one. The base vocabulary types:
 | module | types |
 | --- | --- |
 | `base/canary_lang.ml` | `lang` |
-| `base/canary_basic.ml` | `artifact_kind`, `slot` (provisionable subset of `artifact_kind`), `action`, `runner_os`, `probe_action`, `compile_mode`, output-tree naming (`version`, `filename`, `variant_file`) |
+| `base/canary_basic.ml` | `artifact_kind` (what the scenario enumeration ranges over), `action`, `channel` (`Dev`/`Stable` release role) + concrete `version` record, `runner_os`, `probe_action`, `compile_mode`, output-tree naming (`filename`, `variant_file`) |
 | `base/canary_store.ml` | `location`, `artifact_status` (lifecycle state), `provision` (provenance axis — ssot §4.2), `package_manager`, `pm_info`, `system_package_spec`, `distro`, `source_repo` |
 | `base/canary_artifact_api.ml` | `native_api`, `binding_api` (provider/consumer claims) |
 | `base/canary_mechanism.ml` | `discipline`, `mechanism` (binding identity — ssot §4.2.1b) |
 | `base/canary_surface.ml` | `native_surface`, `binding_surface`, `surface` (checking-point view) |
 
-Example of the trap this prevents: `provision`/`slot` were first defined
-in `action/canary_enumerate.ml`; they are base vocabulary and now live in
-`canary_store`/`canary_basic` (re-exported by `canary_enumerate` for
-back-compat). `canary_store.artifact_status` already existed as a related
-provenance/state type — worth reconciling with, not duplicating.
+Example of the trap this prevents: `provision` and a redundant `slot`
+subset type were first defined in `action/canary_enumerate.ml`; `provision`
+is base vocabulary (now in `canary_store`), and `slot` was dropped
+entirely — the enumeration ranges over the existing `canary_basic.artifact_kind`
+(re-exported by `canary_enumerate` as `artifact`). `canary_store.artifact_status`
+likewise already existed as a related provenance/state type — worth
+reconciling with, not duplicating.
 
 ### Key source files
 
@@ -127,7 +129,7 @@ provenance/state type — worth reconciling with, not duplicating.
 | `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`, `lower_expectation` — the shared expectation lowering used by tiny/z3/llvm); `derive_scenarios`; `related_artifacts_of_actions`. |
 | `src/canary/action/canary_scenario_util.ml`         | Small project-agnostic helpers extracted from tiny (`pert`, `matches_derived_cell`, `detector_short`, `violates_label`, `artifact_index`, `bad_target_str`) — currently only consumed by tiny (via `let alias = ...`). |
 | `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
-| `src/canary/action/canary_enumerate.ml`             | The `(provision × mutation)` enumeration engine (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. `provision`/`slot`, `enumerate`, `assignment_ok`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
+| `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
 | `src/canary/action/canary_project.ml`               | `Canary_project.project` — top-level bundle at the SSOT §6.1 taxonomy top (name + contract_bindings). Concrete monomorphic; each project's module owns its scenarios directly. Only `tiny_project` inhabited today (z3/llvm/sqlite bundles deferred). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |

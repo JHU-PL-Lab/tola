@@ -421,12 +421,12 @@ let scenarios_cmd =
       | variants, Some (_, covered0) ->
           let covered = List.sort_uniq Stdlib.compare covered0 in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
-          let slots =
-            Canary_enumerate.Slot_source :: Canary_enumerate.Slot_lib
-            :: List.map (fun l -> Canary_enumerate.Slot_binding l) langs
+          let artifacts =
+            Canary_enumerate.Source :: Canary_enumerate.Lib
+            :: List.map (fun l -> Canary_enumerate.Binding l) langs
           in
           let slice =
-            Canary_enumerate.general_slice ~slots
+            Canary_enumerate.general_slice ~artifacts
               ~provisions:Canary_enumerate.[ Absent; Fetched; Built ]
               ~versions:Canary_basic.two_channels
           in
@@ -438,9 +438,9 @@ let scenarios_cmd =
           in
           Printf.printf
             "\n%s — engine projection (general_slice: provision axis)\n" p;
-          Printf.printf "  slots: %s\n"
+          Printf.printf "  artifacts: %s\n"
             (String.concat ", "
-               (List.map Canary_enumerate.string_of_slot slots));
+               (List.map Canary_enumerate.string_of_artifact artifacts));
           List.iter
             (fun (vk, spec) ->
               let acts =
@@ -455,7 +455,7 @@ let scenarios_cmd =
                 else Canary_basic.Stable
               in
               let a =
-                Canary_enumerate.assignment_of_actions ~slots ~version acts
+                Canary_enumerate.assignment_of_actions ~artifacts ~version acts
               in
               let valid = Canary_enumerate.assignment_ok a in
               let in_slice = List.exists (fun sa -> sa = a) slice_assignments in
