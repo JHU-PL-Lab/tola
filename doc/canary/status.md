@@ -80,6 +80,15 @@ per use). This tracks what's actually wired.
   hand-written enumerations *from* the algorithm and fold
   `canary_enumerate` into `canary_scenario.ml`.
 
+  - **version axis — design done (ssot §4.2.2), code pending.** Reuse
+    `Canary_basic.version` (`Dev | Stable`; `single_version` = Free preset,
+    `two_versions` = Subset preset). Per-slot version + source-primary
+    constraint (`Built ⇒ version = source.version`); cross-slot mismatch =
+    the z3/llvm demo. Package version ≠ artifact version (track the
+    artifact-content's version, not the package's). Extends the assignment
+    to `(slot × provision × version)`. Vocabulary stays in `canary_basic`
+    unless it grows (a separate `canary_version.ml` is fine if so).
+
 - **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
   with a bad result**. A scenario is not inherently bad; the enumeration
   is *uniform* (one scenario space over the axes), and good/bad is the

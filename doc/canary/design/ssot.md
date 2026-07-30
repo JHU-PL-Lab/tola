@@ -192,7 +192,7 @@ pipeline (Ar.0 native_source → Ar.1 native_lib → Ar.3 binding_lib → app;
 | axis | values | note |
 |---|---|---|
 | **provision** (which store) | `Absent` · from a PM · `Built` (from source) · `Vendored` | a supplied copy at a path — local *or* remote — not built here and not PM-resolved |
-| **version** | stable · dev · a tag | which upstream version |
+| **version** | stable · dev · a tag | which upstream version (§4.2.2) |
 | **mechanism** (bindings) | static (cstubs/cext) · dynamic (ctypes/dynlink) | §4.2.1(b) |
 | **mutation** (defect) | `None` · `symbol_missing` · `abi_mismatch` · … (§5.3) | the injected fault |
 
@@ -311,6 +311,59 @@ Together these make two axes of §4.2 faithful: the **provision** axis
 ranges over abstract stages × realizations, and a binding's **identity**
 carries `(language × discipline)` — so the mechanism axis is a real axis,
 not a flattened assumption.
+
+### 4.2.2 The version axis
+
+Version is a **per-artifact tag**, and one of the §4.2 axes.
+
+**Pre-condition — same version ⇒ identical artifact.** For source-format
+artifacts this is exact; for binary artifacts it holds *given the same
+tooling*. This reproducibility belief makes version a sufficient **identity
+key**: canary need not re-verify byte-identity — it trusts version (+
+tooling) as the artifact's identity. (A checking pre-condition; it lives
+with the compat model, not the enumeration.)
+
+**Source-primary tagging.** A built artifact's version follows its source
+(`Built ⇒ version = source.version`). Its dynamically-linked dependencies
+are *separate artifacts / axes* — combinatorially checked in their own
+right, but **not part of this artifact's identity**: a dep is respected as
+a dependency, not used to tag the lib.
+
+**A `level` axis, reusing `Canary_basic.version` (`Dev | Stable`).** Like
+provision, version takes a per-axis level:
+
+- `Free` → one representative (`single_version`)
+- `Subset` → `two_versions = [Dev; Stable]` — the meaningful test set
+- `Full` → the project spec's declared versions
+
+**Per-slot ⇒ mismatch is the interesting result.** Because each slot
+carries its own version, a cross-slot version *mismatch* — a binding built
+against lib `v1` but resolved against lib `v2` — is representable. That is
+exactly the z3/llvm dev-vs-stable demo, now a version-axis instance rather
+than a hand-written variant. Source-primary prunes incoherent assignments,
+so the surviving differences are the real mismatches (e.g. a fetched
+binding at one version over a built lib at another).
+
+**Package version ≠ artifact version.** The axis is the *artifact's*
+version. A package (a `provision`) delivers artifacts, each carrying its
+own version — every artifact can be packaged, so the tractable question is
+"what version is the artifact *content* inside this package," not "what is
+the package's version." `provision` answers *which package/store*;
+`version` answers *which artifact-version*; the package→artifact-version
+mapping is a provision-side resolution detail, and one package may bundle
+artifacts at differing versions (e.g. a `z3-dev` package's header+lib at
+one version, a prebuilt binding built against another).
+
+**"A package provides several artifacts" is spec-authoring, not
+enumeration.** That a single package supplies both a header and a lib is
+captured where a project lists an artifact's **`components`** (the api
+surface), not by any special co-provision concept in the algorithm. The
+enumeration treats each artifact's provision independently — "this package
+provides the lib" and, separately, "this package provides the header";
+their sharing a package is incidental. *(Do not confuse this with ssot's
+"**Co-providers**" blocks above — that is a documentation convention naming
+the co-defining sources of an SSOT ID, e.g. code vs manuscript vs tiny; it
+is unrelated to package provision.)*
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
