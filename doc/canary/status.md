@@ -99,36 +99,13 @@ per use). This tracks what's actually wired.
     id : string }`** (id = commit hash for Dev, tag/release for Stable) —
     the typed replacement for string version/commit on a concrete
     artifact.
-  - **Versioning-unification scope (investigated 2026-07-30; not doing it
-    now).** Vision: the typed `version = { channel; id }` is *the* artifact
-    identity, flowing through enumeration (read + print), source_repo, and
-    the cache key / provision (a version identifies the artifact resource).
-    Where version lives today (as strings):
-      - `source_repo.version`/`ref_` (`canary_artifact_source.ml`) — the
-        concrete version; **~91 interpolation sites** across z3/llvm
-        (`%{source.version}_%{source.ref_}` in build/cache dirs + opam pkg
-        names) — the bulk of the cost.
-      - `system_package_spec.version_tag` (PM pin).
-      - cache key = `"<project>:<step_tag>"` (`canary_local_runner.ml`) —
-        does **not** include version; the version rides the `output_dir`
-        path instead.
-      - enumeration `placement.version` = `channel` only (concrete id not
-        connected).
-    Work, in three pieces (rough):
-      - **A. source_repo → typed version** — *small* if additive (add a
-        `version : Canary_basic.version` field, keep the strings); *medium-
-        large* to migrate all ~91 string interpolations to accessors.
-      - **B. enumeration carries concrete version** — *medium*: placement/
-        config/run_config range over `Canary_basic.version` (project
-        supplies its `{channel; id}` list, drawn from source_repo) instead
-        of bare channel; render + tests follow.
-      - **C. cache key / provision include the version id** — *small* code
-        (`"<project>:<id>:<step_tag>"`) but needs care on cache
-        invalidation; output_dir already carries the version so it's
-        partly there.
-    Recommendation when we do it: A (additive) → B → C, migrating the 91
-    string sites lazily. The dead `canary_basic.runner_spec` version/commit
-    strings aren't worth wiring.
+  - **Versioning unification → own tracker.** The full unification (typed
+    `version` as *the* artifact identity across enumeration, source_repo,
+    and cache key) needs a global design + its own tests; tracked in
+    [`design/versioning.md`](design/versioning.md). **Decision (2026-07-30):**
+    do the typed-version enumeration for the *simple* projects first (tiny,
+    sqlite, Pattern-A ssl/cairo/zarith), leaving z3/llvm on their legacy
+    string machinery (~91 interpolation sites untouched) until later.
 
 - **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
   with a bad result**. A scenario is not inherently bad; the enumeration
