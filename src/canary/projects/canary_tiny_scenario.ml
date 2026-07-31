@@ -996,9 +996,8 @@ let mutation_target_of_spec (s : scenario_spec) :
   | Some (Canary_scenario.Mutation m) -> Some m.Canary_scenario.target
   | _ -> None
 
-(** Map a coarse [artifact_kind] to the engine's precise identity. Bindings
-    take their default (static) mechanism for now — multiple mechanisms
-    (cext + ctypes) come with the tiny-factory step. *)
+(** Default precise identity for a binding kind (used only as a fallback when
+    the mutated files don't pin a mechanism). *)
 let id_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.artifact_id =
   function
   | Canary_basic.Source -> Canary_enumerate.a_source
@@ -1014,21 +1013,52 @@ let id_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.artifact_id =
   | Canary_basic.App ->
       Canary_enumerate.{ kind = Canary_basic.App; ext = Ext_none }
 
-(** The mutation axis: one [(artifact_id, scenario id)] per mutation-carrying
-    spec whose target is a pipeline artifact (source / lib / binding). *)
-let engine_mutations : (Canary_enumerate.artifact_id * string) list =
-  List.filter_map all_scenario_specs ~f:(fun s ->
-      match mutation_target_of_spec s with
-      | Some k when is_pipeline_artifact k -> Some (id_of_kind k, s.scenario.id)
-      | _ -> None)
+(** The precise binding artifact(s) a mutation touches, read off its mutated
+    files: [ocaml/] → cstubs, [python_cext/] → cext, [python_ctypes/] →
+    ctypes. A mutation on both Python layers (e.g. api_repack_python) yields
+    both cext and ctypes. *)
+let binding_ids_of_mutates (mutates : string list) :
+    Canary_enumerate.artifact_id list =
+  let touches p = List.exists mutates ~f:(String.is_prefix ~prefix:p) in
+  List.filter_opt
+    [ (if touches "ocaml/" then
+         Some
+           (Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
+       else None);
+      (if touches "python_cext/" then
+         Some
+           (Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext)
+       else None);
+      (if touches "python_ctypes/" then
+         Some
+           (Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Ctypes)
+       else None) ]
 
-(** The artifacts tiny's pipeline provisions (all [Built]): source, lib, and
-    each language's binding (default mechanism). *)
+(** The mutation axis: each mutation-carrying spec maps to the precise
+    artifact(s) it touches — source/lib coarse, a binding to its exact
+    (lang × mechanism) instance(s). A spec that mutates both Python layers
+    yields two points (cext and ctypes). *)
+let engine_mutations : (Canary_enumerate.artifact_id * string) list =
+  List.concat_map all_scenario_specs ~f:(fun s ->
+      match mutation_target_of_spec s with
+      | Some Canary_basic.Source -> [ (Canary_enumerate.a_source, s.scenario.id) ]
+      | Some Canary_basic.Lib -> [ (Canary_enumerate.a_lib, s.scenario.id) ]
+      | Some (Canary_basic.Binding _ as k) -> (
+          match binding_ids_of_mutates s.recipe.mutates with
+          | [] -> [ (id_of_kind k, s.scenario.id) ]
+          | ids -> List.map ids ~f:(fun aid -> (aid, s.scenario.id)))
+      | Some (Canary_basic.Headers | Canary_basic.App) | None -> [])
+
+(** tiny's full artifact set (all [Built]): source, lib, all three binding
+    instances (ocaml cstubs, python cext, python ctypes), and both app
+    wirings (direct link, via a helper lib). *)
 let engine_artifacts : Canary_enumerate.artifact_id list =
   Canary_enumerate.
     [ a_source; a_lib;
       a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-      a_binding Canary_lang.Python Canary_mechanism.Cext ]
+      a_binding Canary_lang.Python Canary_mechanism.Cext;
+      a_binding Canary_lang.Python Canary_mechanism.Ctypes;
+      a_app Direct; a_app Via_helper ]
 
 let engine_points : string Canary_enumerate.point list =
   Canary_enumerate.tiny_slice ~artifacts:engine_artifacts
@@ -1047,10 +1077,13 @@ let print_engine_render () : unit =
       | Some (aid, id) ->
           p "  [mutation]  %-24s on %s\n" id
             (Canary_enumerate.string_of_id aid));
-  let n_mut = List.length engine_mutations in
-  let n_points = List.length engine_points in
-  let positives_tiny =
-    List.count all_scenario_specs ~f:(fun s -> Option.is_none s.scenario.origin)
+  let n_points_mut = List.length engine_mutations in
+  let n_specs =
+    List.count all_scenario_specs ~f:(fun s ->
+        match mutation_target_of_spec s with
+        | Some (Canary_basic.Source | Canary_basic.Lib | Canary_basic.Binding _)
+          -> true
+        | _ -> false)
   in
   (* mutation-carrying specs whose target is not a pipeline artifact
      (Headers/App) → the engine doesn't place them (a real gap if non-empty). *)
@@ -1060,11 +1093,13 @@ let print_engine_render () : unit =
         | Some k when not (is_pipeline_artifact k) -> Some s.scenario.id
         | _ -> None)
   in
-  p "\n  engine: 1 positive + %d mutation points = %d\n" n_mut n_points;
-  p "  tiny:   %d unmutated run(s) (app-wiring collapsed into the 1 positive) \
-     + %d mutation(s)\n" positives_tiny n_mut;
+  p "\n  artifacts: %d (incl. both app wirings + all 3 binding mechanisms)\n"
+    (List.length engine_artifacts);
+  p "  engine:    1 positive + %d mutation point(s)\n" n_points_mut;
+  p "  from:      %d mutation-carrying spec(s) — a spec touching both Python \
+     layers yields 2 points (cext + ctypes)\n" n_specs;
   match unmappable with
-  | [] -> p "  \xE2\x9C\x93 every tiny mutation maps to a pipeline artifact\n"
+  | [] -> p "  \xE2\x9C\x93 every tiny mutation maps to a precise pipeline artifact\n"
   | ids ->
       p "  \xE2\x9C\x97 unrenderable (not a pipeline artifact): %s\n"
         (String.concat ~sep:", " ids)

@@ -75,13 +75,25 @@ per use). This tracks what's actually wired.
     unaffected), and `artifact_ext` refines a binding by its
     `Canary_mechanism.mechanism` and an app by its `app_wiring`
     (`Direct | Via_helper`). Smart constructors `a_source`/`a_lib`/
-    `a_binding lang mech`/`a_app wiring` + `kind_of` projection. Renders
-    show `binding:ocaml:cstubs`. **Not done yet:** consumers still use the
-    *default* (static) mechanism (one binding per lang, no ctypes; no app
-    artifacts) — producing all mechanisms + both app wirings is the
-    **tiny-factory** step. And **the merge**: when this settles, fold the
-    pair into an enriched `artifact_kind` and migrate the ~200 sites (the
-    diagram, ~61 sites, last) — per the 2026-07-30 decision.
+    `a_binding lang mech`/`a_app wiring` + `kind_of` projection.
+    `artifact_id` is a record `{ kind; ext }`; `provision_of_actions`
+    dispatches per binding *instance* (static ⇒ Build_binding; dynamic ⇒
+    pure-source present).
+  - **tiny factory — done (engine projection).** `canary tiny engine` now
+    renders tiny's **full artifact set** (7): source, lib,
+    `binding:ocaml:cstubs`, `binding:python:cext`, `binding:python:ctypes`,
+    `app:direct`, `app:via_helper`. Each mutation maps to its **precise**
+    (lang × mechanism) artifact, read off the spec's mutated files
+    (`ocaml/`→cstubs, `python_cext/`→cext, `python_ctypes/`→ctypes); a spec
+    touching both Python layers (Bs.11/Bs.12) yields two points (cext +
+    ctypes) — 20 specs → 22 points. Both app wirings are distinct artifacts
+    in the positive (no longer collapsed). tiny's *running* result already
+    exercised cext/ctypes/both apps via the `expected` tables — the engine
+    view now matches it.
+  - **Still to do:** general projects still render one binding per lang at
+    the default mechanism (fine — they have one). And **the merge**: fold
+    `(artifact, artifact_ext)` into an enriched `artifact_kind` and migrate
+    the ~200 sites (diagram, ~61, last) — per the 2026-07-30 decision.
   - **provision sub-structure** — provision must carry PM (apt/opam/pip/
     brew) + distro (one local, many on GH CI); the provision level ranges
     over `(PM × distro)` combos.
