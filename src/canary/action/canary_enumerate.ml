@@ -75,28 +75,29 @@ type artifact_ext =
   | Ext_wiring of app_wiring  (** an app *)
 [@@deriving show, eq]
 
-(** The enumeration's precise artifact identity — the (artifact, artifact_ext)
-    pair. [kind_of] projects back to the coarse [Canary_basic.artifact_kind]. *)
-type artifact_id = artifact * artifact_ext [@@deriving show, eq]
+(** The enumeration's precise artifact identity — the coarse [kind] plus its
+    [ext] (≡ the (artifact, artifact_ext) pair, as a record so it extends
+    cleanly). [kind_of] projects back to the coarse [Canary_basic.artifact_kind]. *)
+type artifact_id = { kind : artifact; ext : artifact_ext } [@@deriving show, eq]
 
-let kind_of ((k, _) : artifact_id) : artifact = k
-let ext_of ((_, e) : artifact_id) : artifact_ext = e
+let kind_of (id : artifact_id) : artifact = id.kind
+let ext_of (id : artifact_id) : artifact_ext = id.ext
 
 (* smart constructors *)
-let a_source : artifact_id = (Source, Ext_none)
-let a_headers : artifact_id = (Headers, Ext_none)
-let a_lib : artifact_id = (Lib, Ext_none)
+let a_source : artifact_id = { kind = Source; ext = Ext_none }
+let a_headers : artifact_id = { kind = Headers; ext = Ext_none }
+let a_lib : artifact_id = { kind = Lib; ext = Ext_none }
 
 let a_binding (lang : Canary_lang.lang) (m : Canary_mechanism.mechanism) :
     artifact_id =
-  (Binding lang, Ext_mechanism m)
+  { kind = Binding lang; ext = Ext_mechanism m }
 
-let a_app (w : app_wiring) : artifact_id = (App, Ext_wiring w)
+let a_app (w : app_wiring) : artifact_id = { kind = App; ext = Ext_wiring w }
 
 (** Concise label for a precise identity: coarse kind + its extension. *)
-let string_of_id ((k, e) : artifact_id) : string =
-  let base = string_of_artifact k in
-  match e with
+let string_of_id (id : artifact_id) : string =
+  let base = string_of_artifact id.kind in
+  match id.ext with
   | Ext_none -> base
   | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
   | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
@@ -251,17 +252,34 @@ let string_of_provision = Canary_store.string_of_provision
 let provision_of_actions (acts : Canary_basic.action list) (id : artifact_id) :
     provision =
   let has a = List.mem acts a ~equal:Poly.equal in
-  (* keys on the coarse kind — actions are mechanism-agnostic (Build_binding
-     is per-lang, not per-mechanism), so cext and ctypes share the coarse
-     provision here; the tiny factory refines per-mechanism provision. *)
-  match kind_of id with
+  match id.kind with
   | Source -> if has (Canary_basic.Fetch Canary_basic.Source) then Fetched else Absent
   | Lib ->
       if has Canary_basic.Build_lib then Built
       else if has (Canary_basic.Fetch Canary_basic.Lib) then Fetched
       else Absent
   | Binding l ->
-      if has (Canary_basic.Build_binding l) then Built
+      (* the concrete binding *instance* (lang × mechanism): a *static*
+         binding (cext/cstubs) is compiled — [Build_binding l] ⇒ [Built],
+         else [Fetch (Binding l)] ⇒ [Fetched]. A *dynamic* binding
+         (ctypes/dynlink) has no compile verb — it is pure source that
+         dlopens the lib at runtime, so it is provided (present locally)
+         wherever the lang's binding is set up. *)
+      let dynamic =
+        match id.ext with
+        | Ext_mechanism m ->
+            (match Canary_mechanism.discipline_of_mechanism m with
+             | Canary_mechanism.Dynamic_ffi -> true
+             | Canary_mechanism.Static_c_abi -> false)
+        | _ -> false
+      in
+      if dynamic then
+        (* no Build_binding verb for it; present once the lang binding exists *)
+        if has (Canary_basic.Build_binding l)
+           || has (Canary_basic.Fetch (Canary_basic.Binding l))
+        then Built
+        else Absent
+      else if has (Canary_basic.Build_binding l) then Built
       else if has (Canary_basic.Fetch (Canary_basic.Binding l)) then Fetched
       else Absent
   | Headers | App ->

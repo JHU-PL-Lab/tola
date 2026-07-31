@@ -1011,7 +1011,8 @@ let id_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.artifact_id =
       in
       Canary_enumerate.a_binding l m
   | Canary_basic.Headers -> Canary_enumerate.a_headers
-  | Canary_basic.App -> (Canary_basic.App, Canary_enumerate.Ext_none)
+  | Canary_basic.App ->
+      Canary_enumerate.{ kind = Canary_basic.App; ext = Ext_none }
 
 (** The mutation axis: one [(artifact_id, scenario id)] per mutation-carrying
     spec whose target is a pipeline artifact (source / lib / binding). *)
