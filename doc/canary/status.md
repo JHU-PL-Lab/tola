@@ -90,10 +90,21 @@ per use). This tracks what's actually wired.
     in the positive (no longer collapsed). tiny's *running* result already
     exercised cext/ctypes/both apps via the `expected` tables — the engine
     view now matches it.
+  - **Cross-check (engine view ↔ factory) — done.** The engine projection
+    is *derived* from `all_scenario_specs` but is a separate code path from
+    the runner (`tiny run`). Startup assertions in `canary_tiny_scenario`
+    (matching the existing assertion pattern) enforce that the derivation
+    stays faithful: every mutation-carrying spec with a pipeline target
+    appears in `engine_mutations` (no drop), every engine point traces to a
+    real spec (no phantom), and a spec mutating both Python layers yields
+    the cext *and* ctypes points. Runs on every tiny command.
   - **Still to do:** general projects still render one binding per lang at
     the default mechanism (fine — they have one). And **the merge**: fold
     `(artifact, artifact_ext)` into an enriched `artifact_kind` and migrate
-    the ~200 sites (diagram, ~61, last) — per the 2026-07-30 decision.
+    the ~200 sites (diagram, ~61, last) — per the 2026-07-30 decision. The
+    deeper convergence (drive the *runner* from the algorithm) is deferred;
+    for tiny it's redundant (they agree, now enforced) — the payoff is
+    *generating* provision/version scenarios general projects lack.
   - **provision sub-structure** — provision must carry PM (apt/opam/pip/
     brew) + distro (one local, many on GH CI); the provision level ranges
     over `(PM × distro)` combos.

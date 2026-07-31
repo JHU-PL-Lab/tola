@@ -1064,6 +1064,62 @@ let engine_points : string Canary_enumerate.point list =
   Canary_enumerate.tiny_slice ~artifacts:engine_artifacts
     ~mutations:engine_mutations
 
+(* ── cross-check: engine projection ↔ hand-written factory ──
+   The runner (`tiny run`) executes [all_scenario_specs]; `tiny engine`
+   renders [engine_mutations], derived from those specs. These startup
+   assertions enforce that the derived view stays faithful as either side
+   changes — no mutation-carrying spec silently dropped, no phantom point,
+   and the multi-mechanism split (a spec mutating both Python layers ⇒ cext
+   *and* ctypes points) holds. *)
+let () =
+  let pipeline_spec_ids =
+    List.filter_map all_scenario_specs ~f:(fun s ->
+        match mutation_target_of_spec s with
+        | Some (Canary_basic.Source | Canary_basic.Lib | Canary_basic.Binding _)
+          ->
+            Some s.scenario.id
+        | _ -> None)
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let engine_ids =
+    List.map engine_mutations ~f:snd
+    |> List.dedup_and_sort ~compare:String.compare
+  in
+  let minus a b =
+    List.filter a ~f:(fun x -> not (List.mem b x ~equal:String.equal))
+  in
+  let dropped = minus pipeline_spec_ids engine_ids in
+  let phantom = minus engine_ids pipeline_spec_ids in
+  if not (List.is_empty dropped && List.is_empty phantom) then
+    Stdlib.failwith
+      (Printf.sprintf
+         "tiny engine \xE2\x86\x94 factory drift: dropped=[%s] phantom=[%s]"
+         (String.concat ~sep:";" dropped)
+         (String.concat ~sep:";" phantom))
+
+let () =
+  List.iter all_scenario_specs ~f:(fun s ->
+      let touches pfx =
+        List.exists s.recipe.mutates ~f:(String.is_prefix ~prefix:pfx)
+      in
+      if touches "python_cext/" && touches "python_ctypes/" then
+        let exts =
+          List.filter_map engine_mutations ~f:(fun (aid, id) ->
+              if String.equal id s.scenario.id then Some aid.Canary_enumerate.ext
+              else None)
+        in
+        let has e = List.mem exts e ~equal:Canary_enumerate.equal_artifact_ext in
+        if
+          not
+            (has (Canary_enumerate.Ext_mechanism Canary_mechanism.Cext)
+            && has (Canary_enumerate.Ext_mechanism Canary_mechanism.Ctypes))
+        then
+          Stdlib.failwith
+            (Printf.sprintf
+               "tiny engine: %s mutates both Python layers but its engine \
+                points miss cext/ctypes"
+               s.scenario.id))
+
 (** Print the tiny → engine projection + a correspondence report. *)
 let print_engine_render () : unit =
   let p = Stdlib.Printf.printf in
