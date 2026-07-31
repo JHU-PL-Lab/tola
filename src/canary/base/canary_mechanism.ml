@@ -40,7 +40,7 @@
 type discipline =
   | Static_c_abi  (** compiled stub linked to the lib; build-time ABI check *)
   | Dynamic_ffi  (** pure-source [dlopen] at runtime; runtime symbol check — to-do *)
-[@@deriving show]
+[@@deriving show, eq]
 
 type mechanism =
   | Cstubs  (** OCaml, static *)
@@ -48,7 +48,7 @@ type mechanism =
   | Ctypes  (** Python, dynamic — to-do *)
   | Cffi  (** Python, dynamic — to-do *)
   | Dynlink  (** OCaml, dynamic (utop / toplevel) — to-do *)
-[@@deriving show]
+[@@deriving show, eq]
 
 let discipline_of_mechanism = function
   | Cstubs | Cext -> Static_c_abi

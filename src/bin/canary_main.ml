@@ -421,9 +421,19 @@ let scenarios_cmd =
       | variants, Some (_, covered0) ->
           let covered = List.sort_uniq Stdlib.compare covered0 in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
+          (* general projects: one binding per lang at its default (static)
+             mechanism; multiple mechanisms is a tiny-factory concern. *)
           let artifacts =
-            Canary_enumerate.Source :: Canary_enumerate.Lib
-            :: List.map (fun l -> Canary_enumerate.Binding l) langs
+            Canary_enumerate.a_source :: Canary_enumerate.a_lib
+            :: List.map
+                 (fun l ->
+                   let m =
+                     Option.value
+                       (Canary_mechanism.default_mechanism_of_lang l)
+                       ~default:Canary_mechanism.Cstubs
+                   in
+                   Canary_enumerate.a_binding l m)
+                 langs
           in
           let slice =
             Canary_enumerate.general_slice ~artifacts
@@ -440,7 +450,7 @@ let scenarios_cmd =
             "\n%s — engine projection (general_slice: provision axis)\n" p;
           Printf.printf "  artifacts: %s\n"
             (String.concat ", "
-               (List.map Canary_enumerate.string_of_artifact artifacts));
+               (List.map Canary_enumerate.string_of_id artifacts));
           List.iter
             (fun (vk, spec) ->
               let acts =

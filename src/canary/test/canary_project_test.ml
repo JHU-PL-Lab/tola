@@ -15,6 +15,7 @@ open Base
 module A = Canary_action
 module B = Canary_basic
 module L = Canary_lang
+module Mech = Canary_mechanism
 
 type pure_test = { name : string; check : unit -> bool }
 
@@ -223,7 +224,7 @@ let enumerate_test : pure_test =
   { name = "enumerate.two_projections_and_filter";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let artifacts = EN.[ Source; Lib; Binding ocaml ] in
+      let artifacts = EN.[ a_source; a_lib; a_binding ocaml Mech.Cstubs ] in
       let all_built (p : string EN.point) =
         List.for_all p.assignment ~f:(fun (_, pl) ->
             EN.equal_provision pl.EN.provision EN.Built)
@@ -231,7 +232,7 @@ let enumerate_test : pure_test =
       (* tiny projection: all-Built × (positive + 2 mutations) = 3 points,
          one positive, every assignment all-Built. *)
       let muts =
-        EN.[ (Lib, "symbol_missing"); (Binding ocaml, "type_broken") ]
+        EN.[ (a_lib, "symbol_missing"); (a_binding ocaml Mech.Cstubs, "type_broken") ]
       in
       let tiny = EN.tiny_slice ~artifacts ~mutations:muts in
       let tiny_ok =
@@ -263,8 +264,8 @@ let enumerate_test : pure_test =
       let no_orphan_binding =
         List.for_all gen2 ~f:(fun p ->
             not
-              (EN.provided p.EN.assignment (EN.Binding ocaml)
-              && not (EN.provided p.EN.assignment EN.Lib)))
+              (EN.provided p.EN.assignment (EN.a_binding ocaml Mech.Cstubs)
+              && not (EN.provided p.EN.assignment EN.a_lib)))
       in
       tiny_ok && gen_ok && no_orphan_binding) }
 
@@ -274,9 +275,9 @@ let config_level_test : pure_test =
   { name = "enumerate.config_levels";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let artifacts = EN.[ Source; Lib; Binding ocaml ] in
+      let artifacts = EN.[ a_source; a_lib; a_binding ocaml Mech.Cstubs ] in
       let muts =
-        EN.[ (Lib, "m1"); (Binding ocaml, "m2") ]
+        EN.[ (a_lib, "m1"); (a_binding ocaml Mech.Cstubs, "m2") ]
       in
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
@@ -322,7 +323,7 @@ let version_axis_test : pure_test =
       let module EN = Canary_enumerate in
       (* two fetched artifacts, two versions each → the mismatch lib@Dev /
          binding@Stable is a valid assignment (the z3/llvm case). *)
-      let mm_artifacts = EN.[ Lib; Binding ocaml ] in
+      let mm_artifacts = EN.[ a_lib; a_binding ocaml Mech.Cstubs ] in
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions:[ EN.Fetched ]
           ~all_versions:B.two_channels ~all_mutations:[]
@@ -330,16 +331,16 @@ let version_axis_test : pure_test =
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
-            EN.equal_version (EN.version_of p.EN.assignment EN.Lib) B.Dev
+            EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) B.Dev
             && EN.equal_version
-                 (EN.version_of p.EN.assignment (EN.Binding ocaml))
+                 (EN.version_of p.EN.assignment (EN.a_binding ocaml Mech.Cstubs))
                  B.Stable)
       in
       (* source-primary: a Built lib inherits the source's version, so every
          surviving assignment has lib.version = source.version (the
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
-        EN.run_config ~artifacts:EN.[ Source; Lib ]
+        EN.run_config ~artifacts:EN.[ a_source; a_lib ]
           ~all_provisions:[ EN.Built ] ~all_versions:B.two_channels
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
@@ -348,8 +349,8 @@ let version_axis_test : pure_test =
         (not (List.is_empty built))
         && List.for_all built ~f:(fun p ->
                EN.equal_version
-                 (EN.version_of p.EN.assignment EN.Lib)
-                 (EN.version_of p.EN.assignment EN.Source))
+                 (EN.version_of p.EN.assignment EN.a_lib)
+                 (EN.version_of p.EN.assignment EN.a_source))
       in
       has_mismatch && source_primary_holds) }
 

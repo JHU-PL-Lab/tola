@@ -67,13 +67,21 @@ per use). This tracks what's actually wired.
 - **Axes wired:** provision ✓ (coarse origin only), version ✓ (as
   channel), mutation ✓. **Remaining axes + their code gaps** (decisions in
   ssot §4.2.3):
-  - **mechanism** — binding identity must become `(lang × mechanism)`, and
-    a lib may hold *several* bindings. Needs `artifact_kind`'s `Binding of
-    lang` to carry a mechanism (a **base** change); config gains a
-    `mechanism` field; tiny-factory produces all mechanisms.
-  - **app-wiring** — App must carry a wiring/identity (direct vs via-helper,
-    0/1/many apps), paralleling `Binding of lang` — also an `artifact_kind`
-    (**base**) change; both wirings enumerated.
+  - **mechanism / app-wiring — identity structure shipped (interim).**
+    The enumeration now keys on a precise identity — the pair
+    `(artifact, artifact_ext)` (`Canary_enumerate.artifact_id`): `artifact`
+    is the coarse `Canary_basic.artifact_kind` (untouched, so the ~200
+    mechanism-agnostic sites — diagram 61, actions, project specs — are
+    unaffected), and `artifact_ext` refines a binding by its
+    `Canary_mechanism.mechanism` and an app by its `app_wiring`
+    (`Direct | Via_helper`). Smart constructors `a_source`/`a_lib`/
+    `a_binding lang mech`/`a_app wiring` + `kind_of` projection. Renders
+    show `binding:ocaml:cstubs`. **Not done yet:** consumers still use the
+    *default* (static) mechanism (one binding per lang, no ctypes; no app
+    artifacts) — producing all mechanisms + both app wirings is the
+    **tiny-factory** step. And **the merge**: when this settles, fold the
+    pair into an enriched `artifact_kind` and migrate the ~200 sites (the
+    diagram, ~61 sites, last) — per the 2026-07-30 decision.
   - **provision sub-structure** — provision must carry PM (apt/opam/pip/
     brew) + distro (one local, many on GH CI); the provision level ranges
     over `(PM × distro)` combos.
@@ -81,8 +89,9 @@ per use). This tracks what's actually wired.
     provision (standalone / co-package / `Built` via `Build_headers`);
     `provision_of_actions` must handle `Build_headers → Built` (today it
     returns `Absent` for Headers).
-  Two of these (mechanism, app-wiring) require refining `artifact_kind` in
-  `base/` — the artifact identity gets richer. See ssot §4.2.3.
+  The interim `(artifact, artifact_ext)` avoids the base `artifact_kind`
+  refactor (~206 `Binding` + ~30 `App` sites, all mechanism-agnostic) until
+  the identity is validated. See ssot §4.2.3.
 - **Rendered through the algorithm (demonstration, not replacement):**
   `canary tiny engine` renders tiny's mutation axis; `canary scenarios
   <p> --engine` renders a general project's provision axis and checks

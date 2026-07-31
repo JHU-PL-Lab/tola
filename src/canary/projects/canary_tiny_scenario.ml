@@ -996,20 +996,38 @@ let mutation_target_of_spec (s : scenario_spec) :
   | Some (Canary_scenario.Mutation m) -> Some m.Canary_scenario.target
   | _ -> None
 
-(** The mutation axis: one [(artifact, scenario id)] per mutation-carrying
-    spec whose target is a pipeline artifact (source / lib / binding).
-    [artifact] is [Canary_basic.artifact_kind], re-exported by the engine. *)
-let engine_mutations : (Canary_enumerate.artifact * string) list =
+(** Map a coarse [artifact_kind] to the engine's precise identity. Bindings
+    take their default (static) mechanism for now — multiple mechanisms
+    (cext + ctypes) come with the tiny-factory step. *)
+let id_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.artifact_id =
+  function
+  | Canary_basic.Source -> Canary_enumerate.a_source
+  | Canary_basic.Lib -> Canary_enumerate.a_lib
+  | Canary_basic.Binding l ->
+      let m =
+        Option.value
+          (Canary_mechanism.default_mechanism_of_lang l)
+          ~default:Canary_mechanism.Cstubs
+      in
+      Canary_enumerate.a_binding l m
+  | Canary_basic.Headers -> Canary_enumerate.a_headers
+  | Canary_basic.App -> (Canary_basic.App, Canary_enumerate.Ext_none)
+
+(** The mutation axis: one [(artifact_id, scenario id)] per mutation-carrying
+    spec whose target is a pipeline artifact (source / lib / binding). *)
+let engine_mutations : (Canary_enumerate.artifact_id * string) list =
   List.filter_map all_scenario_specs ~f:(fun s ->
       match mutation_target_of_spec s with
-      | Some k when is_pipeline_artifact k -> Some (k, s.scenario.id)
+      | Some k when is_pipeline_artifact k -> Some (id_of_kind k, s.scenario.id)
       | _ -> None)
 
 (** The artifacts tiny's pipeline provisions (all [Built]): source, lib, and
-    each language's binding. *)
-let engine_artifacts : Canary_enumerate.artifact list =
+    each language's binding (default mechanism). *)
+let engine_artifacts : Canary_enumerate.artifact_id list =
   Canary_enumerate.
-    [ Source; Lib; Binding Canary_lang.OCaml; Binding Canary_lang.Python ]
+    [ a_source; a_lib;
+      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+      a_binding Canary_lang.Python Canary_mechanism.Cext ]
 
 let engine_points : string Canary_enumerate.point list =
   Canary_enumerate.tiny_slice ~artifacts:engine_artifacts
@@ -1021,13 +1039,13 @@ let print_engine_render () : unit =
   p "tiny → engine projection (tiny_slice: all Built × mutation axis)\n";
   p "  artifacts: %s\n"
     (String.concat ~sep:", "
-       (List.map engine_artifacts ~f:Canary_enumerate.string_of_artifact));
+       (List.map engine_artifacts ~f:Canary_enumerate.string_of_id));
   List.iter engine_points ~f:(fun pt ->
       match pt.Canary_enumerate.mutation with
       | None -> p "  [positive]  all-Built pipeline\n"
-      | Some (art, id) ->
+      | Some (aid, id) ->
           p "  [mutation]  %-24s on %s\n" id
-            (Canary_enumerate.string_of_artifact art));
+            (Canary_enumerate.string_of_id aid));
   let n_mut = List.length engine_mutations in
   let n_points = List.length engine_points in
   let positives_tiny =
