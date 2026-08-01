@@ -44,6 +44,38 @@ Historical chronicles in [`worklog/`](worklog/).
 *needs Drop_c_symbol / Drop_python_attr / App primitives*
 *+ c4 wiring for OCaml) or §7.4 (Sc.3-Sc.6 wiring).*
 
+## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
+
+Direction for **driving the runner from the algorithm**. Two tiers of
+tiny; trust flows tooling → algorithm → real projects.
+
+- **tiny1** (= the current tiny-factory) — many tiny projects, each **one**
+  concrete scenario (all-Built + one mutation). Hand-written = ground
+  truth; validates the **tooling / checkers** (does canary detect *this*
+  defect). Stays hand-written; driving it from the algorithm would be
+  circular.
+- **tiny-full** (new) — **one** general-project canary spec with multiple
+  choices (provision × version × mechanism); behaves as a general project.
+  The **runner iterates the algorithm's enumerated points** (materialize +
+  run each), so it validates the **algorithm / skeleton / integration** —
+  that the enumeration *derives* the right scenarios and the runner drives
+  them. Trusted because its results **cross-check against tiny1** on the
+  overlap.
+- A **real simple project** reuses tiny-full's machinery — "no harder than
+  tiny-full". This is *why* we drive from the algorithm: a human can't be
+  relied on to derive scenarios per project.
+
+**New code = an algorithm-driven materializer**: enumerated point (per-
+artifact provision × version × mechanism) → build that workspace → run the
+probes, reusing `canary_tiny_workspace`. Wired from the algorithm, not from
+a hand-written spec.
+
+**Proposed first step — tiny-full v1** (defer provision/packaging): the
+algorithm drives **version {1.0, 2.0} × mechanism {cstubs, cext, ctypes}**
+over all-Built. tiny already carries the version map (`TINY_1.0`/`TINY_2.0`,
+Bs.3) and all three mechanisms; missing only the provision axis (needs tiny
+published/fetched). Grow tiny-full to add provision once packaging exists.
+
 ## 1b. Scenario enumeration — implementation state
 
 Model: [`design/ssot.md` §4.2 / §4.2.1](design/ssot.md) (principle —
