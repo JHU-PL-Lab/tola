@@ -169,24 +169,29 @@ decoupling *is* the agnostic project spec.
   `has_manifest` role) must be settled, and c3 (behaviour) / c6 (grep-type)
   aren't inspection-discoverable — they stay oracle-fed. The run still uses the
   oracle path today; `recipe.expected` remains the tiny1 cross-check oracle.
-- **Phase 3 — combinations + fail-fast collapse.**
-  - **Step 1 — collapse logic + enumeration** ✅ (2026-08-02, `092ad70`).
-    `Canary_enumerate.earliest_bad_of` (via `dep_rank` = `kind_order`) keys a
-    combination on its earliest bad build in dependency order — the first
-    checkable failure a fail-fast run hits; downstream bad builds are masked.
-    Pure test `enumerate.earliest_bad_collapse`. `tiny_full_combinations`
-    enumerates representative multi-bad assignments along source→lib→binding
-    (the scenarios *beyond* tiny1 — one project holds what tiny1 splits); the
-    run renders the collapse projection (`{source#Bs.1, lib#Bs.4} → source#Bs.1`).
-  - **Step 2 — the multi-mutation materializer** ⏳ (still to build). Today's
-    materializer maps one bad-tag → one factory scenario name → `run_prepare`.
-    A combination has no single scenario name; it needs `run_prepare` over a
-    mutation *set* (apply all pre-build Source/Binding mutations, build, then
-    post-build Native), below the scenario-name level. Then the combination
-    workspace is actually built and canary's fail-fast is *shown* to stop at
-    the earliest failure (validating the projection). Shell-heavy (sandbox
-    naming, mutation-conflict handling); the run-side half. Coverage then ⊇
-    tiny1, cross-checked.
+- **Phase 3 — combinations (canary computes the collapse; tiny-full does
+  not).** {b Corrected 2026-08-02:} tiny-full DECLARES static artifact
+  *resources* — the tiny-factory provides each artifact's variants (good +
+  bad), and for tiny-full they are **[Vendored]** local pre-built resources
+  (not rebuilt per scenario). A scenario is an assignment of *which variant
+  each artifact takes*; a combination is several bad ones vendored together.
+  tiny-full does **not** compute the outcome: it depends on **canary** to run
+  fail-fast over the vendored resources and *discover* the first failure and
+  the expectation itself. The "collapse" is emergent from canary's run, not a
+  spec computation. (Reverted the `earliest_bad_of`/`dep_rank` collapse-key
+  prediction — that was tiny-full doing canary's job.)
+  - **Step 1 — enumeration** ✅ (2026-08-02, `092ad70` then `<this>`).
+    `tiny_full_placement` is [Vendored]; `tiny_full_combinations` enumerates
+    the multi-bad resource-sets along source→lib→binding (the scenarios
+    *beyond* tiny1 — one project holds what tiny1 splits). The run just
+    *declares* them (`{source#Bs.1, lib#Bs.4}`), no prediction.
+  - **Step 2 — the vendored-resource materializer** ⏳ (still to build). The
+    tiny-factory emits each artifact variant as a standalone resource;
+    materializing a scenario = **assembling** the chosen variants (symlink /
+    copy — no rebuild), including combinations. Then canary runs over the
+    assembly and its fail-fast + contract computation produce the outcome
+    (which it cross-checks against the tiny1 oracle). Lighter than a
+    per-combo rebuild; the run-side half.
 - **Phase 4 — structural registration.** `variants_of "tiny-full"` +
   `covered_of` so `canary scenarios tiny-full` shows the coverage matrix like
   sqlite/z3; optional bundle value. Any time after Phase 2.

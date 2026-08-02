@@ -389,52 +389,13 @@ let agnostic_expectation_test : pure_test =
       in
       derived_c1 && build_ok) }
 
-(* P3 fail-fast collapse: a combination assignment (several bad builds)
-   collapses to its EARLIEST bad artifact in dependency order (source < lib <
-   binding). [earliest_bad_of] is the collapse key the enumeration dedups on. *)
-let collapse_key_test : pure_test =
-  { name = "enumerate.earliest_bad_collapse";
-    check = (fun () ->
-      let module EN = Canary_enumerate in
-      let bad tag = EN.{ provision = Built;
-                         version = { channel = B.Dev; quality = Bad tag } } in
-      let good_pl = EN.{ provision = Built; version = EN.good B.Dev } in
-      let cstubs = EN.a_binding ocaml Mech.Cstubs in
-      (* lib bad + binding bad → collapses to the lib (earlier in dep order) *)
-      let combo = EN.[ (a_lib, bad "abi"); (cstubs, bad "api") ] in
-      let lib_wins =
-        match EN.earliest_bad_of combo with
-        | Some (id, t) ->
-            EN.equal_artifact_id id EN.a_lib && String.equal t "abi"
-        | None -> false
-      in
-      (* source bad + lib bad → collapses to the source (earliest) *)
-      let chain = EN.[ (a_source, bad "sym"); (a_lib, bad "abi") ] in
-      let source_wins =
-        match EN.earliest_bad_of chain with
-        | Some (id, _) -> EN.equal_artifact_id id EN.a_source
-        | None -> false
-      in
-      (* binding bad only (lib good) → distinct observable, keyed on binding *)
-      let downstream = EN.[ (a_lib, good_pl); (cstubs, bad "api") ] in
-      let binding_kept =
-        match EN.earliest_bad_of downstream with
-        | Some (id, _) -> EN.equal_artifact_id id cstubs
-        | None -> false
-      in
-      (* all-good → no collapse key *)
-      let none_when_good =
-        Option.is_none (EN.earliest_bad_of EN.[ (a_lib, good_pl); (cstubs, good_pl) ])
-      in
-      lib_wins && source_wins && binding_kept && none_when_good) }
-
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
-      agnostic_expectation_test; collapse_key_test ]
+      agnostic_expectation_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

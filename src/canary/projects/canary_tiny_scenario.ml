@@ -1534,12 +1534,15 @@ type tiny_full_spec = {
 let tiny_full_spec : tiny_full_spec =
   { tf_artifacts = engine_artifacts; tf_bad_tags_of = tiny_full_bad_tags_of }
 
-(* A tiny-full placement: always provision [Built] at channel [Dev]; the only
-   thing that varies is the version [quality] (Good / Bad tag). *)
+(* A tiny-full placement: the artifact is a [Vendored] local resource — the
+   tiny-factory provides each artifact's variants (good + bad) as pre-built
+   resources, and tiny-full points at the chosen one (it does not rebuild per
+   scenario). The only thing that varies is the version [quality] (Good / Bad
+   tag), i.e. WHICH vendored variant. *)
 let tiny_full_placement ?(quality = Canary_enumerate.Good) () :
     Canary_enumerate.placement =
   let open Canary_enumerate in
-  { provision = Built; version = { channel = Canary_basic.Dev; quality } }
+  { provision = Vendored; version = { channel = Canary_basic.Dev; quality } }
 
 (* P2a assignment enumeration: the good+bad space as [Canary_enumerate.assignment]s
    over one fixed artifact set — 1 all-Good + one point per (artifact, bad-tag)
@@ -1564,9 +1567,11 @@ let tiny_full_assignments (spec : tiny_full_spec) :
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
    bad-tag per bad artifact. These are the scenarios beyond tiny1 — a single
-   tiny-full project holds what tiny1 splits into separate projects. Each
-   should collapse under fail-fast to its earliest bad ([earliest_bad_of]);
-   validating that collapse (materialized) is the run half still to build. *)
+   tiny-full project holds what tiny1 splits into separate projects. tiny-full
+   just DECLARES these resource-sets; it does NOT predict the outcome. Canary
+   runs fail-fast over the vendored resources and discovers the first failure
+   itself — the "collapse" is emergent from canary's run, not a spec
+   computation. *)
 let tiny_full_combinations (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
   let first_tag aid = List.hd (spec.tf_bad_tags_of aid) in
@@ -1690,17 +1695,17 @@ let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
     detected_tags (List.length distinct_tags)
     detected_points n_bad;
 
-  (* combinations (P3): multi-bad assignments — the scenarios beyond tiny1.
-     Under fail-fast each COLLAPSES to its earliest-bad (artifact, tag): the
-     downstream bad builds are masked (canary never reaches them). Shown here
-     as the collapse PROJECTION (enumeration + keying via [earliest_bad_of]);
-     the materialized multi-mutation run that VALIDATES it — canary actually
-     stops at the earliest failure — needs [run_prepare] over a mutation SET
-     and is the run half still to build (status §1a P3). *)
+  (* combinations (P3): multi-bad assignments — the scenarios beyond tiny1
+     (one tiny-full project holds what tiny1 splits into separate projects).
+     tiny-full just DECLARES these vendored resource-sets; canary computes the
+     outcome (fail-fast naturally stops at the first failure) when it runs
+     them. The run over combos needs the vendored-resource materializer
+     (assemble the chosen variants — no rebuild); that is the run half still
+     to build (status §1a P3). *)
   let combos = tiny_full_combinations spec in
   if not (List.is_empty combos) then begin
-    p "\n  --- combinations (fail-fast collapse projection; materialized run \
-       TBD) ---\n";
+    p "\n  --- combinations (declared multi-bad resource-sets; canary computes \
+       the outcome on run — materializer TBD) ---\n";
     List.iter combos ~f:(fun a ->
         let open Canary_enumerate in
         let bad_labels =
@@ -1709,13 +1714,7 @@ let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
               | Bad t -> Some (string_of_id id ^ "#" ^ t)
               | Good -> None)
         in
-        let key =
-          match earliest_bad_of a with
-          | Some (id, t) -> string_of_id id ^ "#" ^ t
-          | None -> "(none)"
-        in
-        p "    {%-46s} collapses to  %s\n"
-          (String.concat ~sep:", " bad_labels) key)
+        p "    {%s}\n" (String.concat ~sep:", " bad_labels))
   end
 
 

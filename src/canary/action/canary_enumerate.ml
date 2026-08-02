@@ -159,24 +159,6 @@ let any_binding_provided (a : assignment) : bool =
       | Binding _ -> not (equal_provision pl.provision Absent)
       | _ -> false)
 
-(** Dependency/build rank of an artifact identity (source < headers < lib <
-    binding < app) — the order a fail-fast run reaches each. *)
-let dep_rank (id : artifact_id) : int = Canary_basic.kind_order id.kind
-
-(** Fail-fast collapse key (P3): the EARLIEST bad build in dependency order —
-    the first checkable failure a fail-fast run hits. A combination assignment
-    (several bad builds) collapses to this single (artifact, tag) observable;
-    the downstream bad builds are masked (never reached). [None] = all-good.
-    Ties (same rank, e.g. two bad bindings) break by [string_of_id] for a
-    deterministic key. *)
-let earliest_bad_of (a : assignment) : (artifact_id * string) option =
-  List.filter_map a ~f:(fun (id, pl) ->
-      match pl.version.quality with Bad t -> Some (id, t) | Good -> None)
-  |> List.min_elt ~compare:(fun (x, _) (y, _) ->
-         match Int.compare (dep_rank x) (dep_rank y) with
-         | 0 -> String.compare (string_of_id x) (string_of_id y)
-         | c -> c)
-
 (** Dependency + version filter (product-then-filter, §4.2 / §4.2.2): a lib
     [Built] from source needs the source present; any provided binding needs
     the lib present; any provided app needs a binding to consume (an app with
