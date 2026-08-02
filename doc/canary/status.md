@@ -140,13 +140,14 @@ combinations force the runner off factory scenario *names*, and that
 decoupling *is* the agnostic project spec.
 
 - **Phase 0** ✅ command-level peer (`action tiny-full`).
-- **Phase 1 — agnostic driver over variant tags.** The point's per-artifact
-  choice becomes an opaque `variant_tag` ("good" | a bad-tag), not a factory
-  `scenario_id`. Introduce a `tiny_full` spec (`artifacts`, `variants_of :
-  artifact_id → variant_tag list`, materialize-and-run) and make the driver
-  consume *only* that — no `find_by_id`/`mutation_target_of_spec`/mutation
-  types in the loop. Factory-backed impl still maps tag → workspace + oracle
-  internally. Behaviour-preserving (still 20/20).
+- **Phase 1 — agnostic driver over variant tags** ✅ (2026-08-02, `3e1bc83`).
+  The point's per-artifact choice is now an opaque `variant_tag` (`Good` |
+  `Bad of tag`), not a factory `scenario_id`. `tiny_full_spec` (`tf_artifacts`,
+  `tf_variants_of`) + `tiny_full_assignments` + `tiny_full_materialize_and_run`
+  (the ONLY place that maps tag → workspace); `run_tiny_full` rewritten to
+  consume *only* those — no `find_by_id`/`mutation_target_of_spec`/mutation
+  types in the loop (all confined to the materializer). Behaviour-preserving:
+  2 positive quiet, 20/20 (22/22 points).
 - **Phase 2 — the real spec: tag folded into the version identity.** The
   "special version string" *is* the artifact version (per `versioning.md` —
   typed version as identity). One base runner_spec + the tag catalogue; the
