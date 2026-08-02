@@ -1505,70 +1505,88 @@ let () =
    hand-vs-derived invariant to enforce; the derivation is
    the sole source of truth. *)
 
-(* ── tiny-full as a mutation-AGNOSTIC project spec (Phase 1, 2026-08-02) ──
+(* ── tiny-full as a mutation-AGNOSTIC project spec (Phase 2a, 2026-08-02) ──
 
    Core principle (status §1a): the tiny-full *runner* knows NOTHING about
-   mutations. Each artifact in an assignment is identified by a [variant_tag]
-   — [Good], or [Bad tag] where [tag] is an OPAQUE build identity (a "special
-   version string" / metadata). The runner treats a bad build exactly like a
-   good one; only the materializer (factory-backed, below) knows a bad tag
-   corresponds to a mutation. This mirrors a real project: z3 builds
-   `lib@stable` and canary *detects* the mismatch — the property that makes
-   "a real simple project is no harder than tiny-full" meaningful. *)
-type variant_tag = Good | Bad of string   (* Bad carries an opaque build tag *)
+   mutations. Badness lives in the artifact's VERSION IDENTITY — a
+   [Canary_enumerate.build_id] whose [quality] is [Bad tag], where [tag] is an
+   OPAQUE build tag (the "special version string"). The runner ranges over
+   [Canary_enumerate.assignment]s (one placement = provision × version) exactly
+   as a general project does; a bad build is just a build at a bad-quality
+   version. Only the materializer (below) knows a bad tag corresponds to a
+   mutation. This mirrors a real project: z3 builds `lib@stable` and canary
+   *detects* the mismatch. (P2a folded away the Phase-1 `variant_tag` side
+   channel — the tag is now part of `placement.version`.) *)
 
-type tiny_full_assignment = (Canary_enumerate.artifact_id * variant_tag) list
-
-type tiny_full_spec = {
-  tf_artifacts : Canary_enumerate.artifact_id list;
-  tf_variants_of : Canary_enumerate.artifact_id -> variant_tag list;
-}
-
-(* Factory-backed spec: the bad tags per artifact ARE the factory's mutation
+(* The bad build tags a project offers per artifact = the factory's mutation
    catalogue grouped by the artifact each mutation targets (from
    [engine_mutations]); the tag is the factory scenario id, but the runner
    never interprets it. *)
-let tiny_full_bad_tags_of (aid : Canary_enumerate.artifact_id) : variant_tag list =
+let tiny_full_bad_tags_of (aid : Canary_enumerate.artifact_id) : string list =
   List.filter_map engine_mutations ~f:(fun (a, sid) ->
-      if Canary_enumerate.equal_artifact_id a aid then Some (Bad sid) else None)
+      if Canary_enumerate.equal_artifact_id a aid then Some sid else None)
+
+type tiny_full_spec = {
+  tf_artifacts : Canary_enumerate.artifact_id list;
+  tf_bad_tags_of : Canary_enumerate.artifact_id -> string list;
+}
 
 let tiny_full_spec : tiny_full_spec =
-  { tf_artifacts = engine_artifacts;
-    tf_variants_of = (fun aid -> Good :: tiny_full_bad_tags_of aid) }
+  { tf_artifacts = engine_artifacts; tf_bad_tags_of = tiny_full_bad_tags_of }
 
-(* Phase-1 assignment enumeration: the [tiny_slice] good+bad space rendered as
-   tag assignments — 1 all-Good + one point per (artifact, bad-tag). Phase 3
-   generalises to several Bad tags per assignment (= combinations). *)
-let tiny_full_assignments (spec : tiny_full_spec) : tiny_full_assignment list =
-  let all_good = List.map spec.tf_artifacts ~f:(fun a -> (a, Good)) in
+(* A tiny-full placement: always provision [Built] at channel [Dev]; the only
+   thing that varies is the version [quality] (Good / Bad tag). *)
+let tiny_full_placement ?(quality = Canary_enumerate.Good) () :
+    Canary_enumerate.placement =
+  let open Canary_enumerate in
+  { provision = Built; version = { channel = Canary_basic.Dev; quality } }
+
+(* P2a assignment enumeration: the good+bad space as [Canary_enumerate.assignment]s
+   over one fixed artifact set — 1 all-Good + one point per (artifact, bad-tag)
+   with that artifact at version [dev#tag]. Phase 3 generalises to several bad
+   artifacts per assignment (= combinations). *)
+let tiny_full_assignments (spec : tiny_full_spec) :
+    Canary_enumerate.assignment list =
+  let good_for a = (a, tiny_full_placement ()) in
+  let all_good = List.map spec.tf_artifacts ~f:good_for in
   let one_bad aid tag =
     List.map spec.tf_artifacts ~f:(fun a ->
-        if Canary_enumerate.equal_artifact_id a aid then (a, Bad tag)
-        else (a, Good))
+        if Canary_enumerate.equal_artifact_id a aid then
+          (a, tiny_full_placement ~quality:(Canary_enumerate.Bad tag) ())
+        else good_for a)
   in
   let bads =
     List.concat_map spec.tf_artifacts ~f:(fun aid ->
-        List.filter_map (spec.tf_variants_of aid) ~f:(function
-          | Good -> None
-          | Bad tag -> Some (one_bad aid tag)))
+        List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> one_bad aid tag))
   in
   all_good :: bads
 
-let bad_tag_of (a : tiny_full_assignment) : string option =
-  List.find_map a ~f:(function (_, Bad t) -> Some t | (_, Good) -> None)
+(* Read the (single, in P2a) bad build's tag off an assignment — the placement
+   whose version quality is [Bad tag]. *)
+let bad_tag_of (a : Canary_enumerate.assignment) : string option =
+  let open Canary_enumerate in
+  List.find_map a ~f:(fun (_, pl) ->
+      match pl.version.quality with Bad t -> Some t | Good -> None)
 
-(* Materialize + run ONE assignment. This is the ONLY place that maps a tag to
-   a mutation/workspace — the factory-backed materializer. A bad tag → its
+let assignment_is_all_good (a : Canary_enumerate.assignment) : bool =
+  let open Canary_enumerate in
+  List.for_all a ~f:(fun (_, pl) ->
+      match pl.version.quality with Good -> true | Bad _ -> false)
+
+(* Materialize + run ONE assignment. This is the ONLY place that maps a bad-tag
+   to a mutation/workspace — the factory-backed materializer. A bad tag → its
    factory workspace ([find_by_id] → name → [run_scenario], which materialises
    + probes); the all-Good assignment → the clean tree, realised by the
    unmutated witnesses. Returns per-run (label, verdict). The runner above it
    hands over an assignment and gets verdicts — it never sees this mapping. *)
 let tiny_full_materialize_and_run
     ~(run_scenario : failfast:bool -> name:string -> string)
-    ~failfast (assignment : tiny_full_assignment) : (string * string) list =
+    ~failfast (assignment : Canary_enumerate.assignment) :
+    (string * string) list =
+  let open Canary_enumerate in
   let bad_tags =
-    List.filter_map assignment
-      ~f:(function (_, Bad t) -> Some t | (_, Good) -> None)
+    List.filter_map assignment ~f:(fun (_, pl) ->
+        match pl.version.quality with Bad t -> Some t | Good -> None)
   in
   match bad_tags with
   | [] ->
@@ -1585,21 +1603,21 @@ let tiny_full_materialize_and_run
           in
           (name, run_scenario ~failfast ~name))
 
-(* The agnostic driver: enumerate tag assignments, hand each to the
-   materializer, tally coverage. It references only [variant_tag] + the spec +
-   the materializer — no mutation type, no [find_by_id]/[recipe] here. *)
+(* The agnostic driver: enumerate the good+bad assignments, hand each to the
+   materializer, tally coverage. It references only the version [quality]
+   (via [assignment_is_all_good]/[bad_tag_of]) + the spec + the materializer —
+   no mutation type, no [find_by_id]/[recipe] here. *)
 let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
   let p = Stdlib.Printf.printf in
   let spec = tiny_full_spec in
   let assignments = tiny_full_assignments spec in
-  let is_all_good =
-    List.for_all ~f:(fun (_, t) ->
-        match t with Good -> true | Bad _ -> false)
+  let positives, bads =
+    List.partition_tf assignments ~f:assignment_is_all_good
   in
-  let positives, bads = List.partition_tf assignments ~f:is_all_good in
   let n_bad = List.length bads in
   p "\ntiny-full RUN — mutation-agnostic spec (1 positive + %d bad \
-     assignment(s); the runner sees only artifact@tag, never a mutation)\n"
+     assignment(s); the runner sees only artifact@version, badness = a \
+     bad-quality version)\n"
     n_bad;
 
   (* positive: all-Good assignments — canary should stay quiet *)

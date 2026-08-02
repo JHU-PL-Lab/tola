@@ -331,10 +331,10 @@ let version_axis_test : pure_test =
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
-            EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) B.Dev
+            EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) (EN.good B.Dev)
             && EN.equal_version
                  (EN.version_of p.EN.assignment (EN.a_binding ocaml Mech.Cstubs))
-                 B.Stable)
+                 (EN.good B.Stable))
       in
       (* source-primary: a Built lib inherits the source's version, so every
          surviving assignment has lib.version = source.version (the

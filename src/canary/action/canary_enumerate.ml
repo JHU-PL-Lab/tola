@@ -102,10 +102,30 @@ let string_of_id (id : artifact_id) : string =
   | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
   | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
 
+(** An artifact instance's version identity (ssot §4.2.2, P2a). A build is a
+    release [channel] plus a [quality]: a [Good] build, or a [Bad]-tagged
+    build that breaks a contract. The tag is OPAQUE here — the enumeration
+    treats a bad build like any other version; only a project's materializer
+    knows a tag corresponds to a mutation (the mutation-agnostic principle,
+    status §1a). This "special version string" folds the old separate
+    mutation-tag into the version identity. *)
+type quality = Good | Bad of string [@@deriving show, eq]
+
+type build_id = { channel : Canary_basic.channel; quality : quality }
+[@@deriving show, eq]
+
+let good (channel : Canary_basic.channel) : build_id = { channel; quality = Good }
+
+let string_of_build_id (b : build_id) : string =
+  (match b.channel with
+   | Canary_basic.Dev -> "dev"
+   | Canary_basic.Stable -> "stable")
+  ^ (match b.quality with Good -> "" | Bad t -> "#" ^ t)
+
 (** A per-artifact cell: how the artifact is provided, and at which version
-    (ssot §4.2.2). Version is only meaningful when provided (ignored for
-    [Absent]). *)
-type placement = { provision : provision; version : Canary_basic.channel }
+    identity (ssot §4.2.2). Version is only meaningful when provided (ignored
+    for [Absent]). *)
+type placement = { provision : provision; version : build_id }
 
 (** An assignment: one placement per (precise) artifact identity. *)
 type assignment = (artifact_id * placement) list
@@ -115,12 +135,9 @@ type assignment = (artifact_id * placement) list
 type 'm point =
   { assignment : assignment; mutation : (artifact_id * 'm) option }
 
-let equal_version (a : Canary_basic.channel) (b : Canary_basic.channel) : bool =
-  Poly.equal a b
+let equal_version : build_id -> build_id -> bool = equal_build_id
 
-let string_of_version = function
-  | Canary_basic.Dev -> "dev"
-  | Canary_basic.Stable -> "stable"
+let string_of_version : build_id -> string = string_of_build_id
 
 let placement_of (a : assignment) (id : artifact_id) : placement option =
   List.Assoc.find a id ~equal:equal_artifact_id
@@ -128,8 +145,10 @@ let placement_of (a : assignment) (id : artifact_id) : placement option =
 let provision_of (a : assignment) (id : artifact_id) : provision =
   match placement_of a id with Some p -> p.provision | None -> Absent
 
-let version_of (a : assignment) (id : artifact_id) : Canary_basic.channel =
-  match placement_of a id with Some p -> p.version | None -> Canary_basic.Dev
+let version_of (a : assignment) (id : artifact_id) : build_id =
+  match placement_of a id with
+  | Some p -> p.version
+  | None -> good Canary_basic.Dev
 
 let provided (a : assignment) (id : artifact_id) : bool =
   not (equal_provision (provision_of a id) Absent)
@@ -172,7 +191,7 @@ let rec assignments_of (artifacts : artifact_id list)
       List.concat_map provisions ~f:(fun pv ->
           List.concat_map versions ~f:(fun ver ->
               List.map tails ~f:(fun t ->
-                  (id, { provision = pv; version = ver }) :: t)))
+                  (id, { provision = pv; version = good ver }) :: t)))
 
 (** The full enumeration algorithm: the product of *valid* assignments ×
     (positive + each applicable mutation). A mutation is applicable to an
@@ -306,7 +325,7 @@ let assignment_of_actions ~(artifacts : artifact_id list)
     ~(version : Canary_basic.channel) (acts : Canary_basic.action list) :
     assignment =
   List.map artifacts ~f:(fun id ->
-      (id, { provision = provision_of_actions acts id; version }))
+      (id, { provision = provision_of_actions acts id; version = good version }))
 
 (** Pretty an assignment as "source=fetched@dev lib=built@dev …" (version
     shown only where the artifact is provided). *)
