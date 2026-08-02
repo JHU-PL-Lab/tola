@@ -47,34 +47,45 @@ Historical chronicles in [`worklog/`](worklog/).
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 
 Direction for **driving the runner from the algorithm**. Two tiers of
-tiny; trust flows tooling → algorithm → real projects.
+tiny; trust flows tooling → algorithm → real projects. **Both should be
+algorithm-derived** (a human can't be relied on to derive scenarios per
+project); **scenario coverage** is the metric for both.
 
-- **tiny1** (= the current tiny-factory) — many tiny projects, each **one**
-  concrete scenario (all-Built + one mutation). Hand-written = ground
-  truth; validates the **tooling / checkers** (does canary detect *this*
-  defect). Stays hand-written; driving it from the algorithm would be
-  circular.
+- **tiny1** (today = the hand-written tiny-factory) — many tiny projects,
+  each **one** concrete scenario: one bad artifact with **good precedents**
+  (the steps before it succeed; "bad lib use" ⇒ fetch-source + build-lib
+  were fine). Validates the **tooling / checkers**. Should *also* be
+  algorithm-derived from the ssot ideas — but **postponed until after
+  tiny-full** (hand-written is fine as the interim ground truth).
 - **tiny-full** (new) — **one** general-project canary spec with multiple
-  choices (provision × version × mechanism); behaves as a general project.
-  The **runner iterates the algorithm's enumerated points** (materialize +
-  run each), so it validates the **algorithm / skeleton / integration** —
-  that the enumeration *derives* the right scenarios and the runner drives
-  them. Trusted because its results **cross-check against tiny1** on the
-  overlap.
+  choices (provision × version; the **mechanism choice IS provision** over
+  the distinct binding artifacts — cext Built + ctypes Absent, etc.).
+  Behaves as a general project; the **runner iterates the algorithm's
+  enumerated points**. Validates the **algorithm / skeleton / integration**.
+  - Has scenarios **beyond tiny1** — real combinations (bad lib *and* bad
+    binding), which in tiny1 are separate projects.
+  - Under a **fail-fast canary config, the first checkable error stops the
+    trace**: a detectable bad lib subsumes a downstream bad binding/app —
+    they **collapse into one scenario**. So distinct observable scenarios
+    are keyed by the **earliest checkable failure**; validating that
+    collapse (and that good precedents pass) is tiny-full's job.
+  - Trusted because its coverage **cross-checks against tiny1**.
 - A **real simple project** reuses tiny-full's machinery — "no harder than
-  tiny-full". This is *why* we drive from the algorithm: a human can't be
-  relied on to derive scenarios per project.
+  tiny-full" **for canary-checkable errors** (a *project-internal* error is
+  outside that).
 
 **New code = an algorithm-driven materializer**: enumerated point (per-
-artifact provision × version × mechanism) → build that workspace → run the
-probes, reusing `canary_tiny_workspace`. Wired from the algorithm, not from
-a hand-written spec.
+artifact provision × version) → build that workspace → run the probes with
+the fail-fast config, reusing `canary_tiny_workspace`. Wired from the
+algorithm, not from a hand-written spec.
 
-**Proposed first step — tiny-full v1** (defer provision/packaging): the
-algorithm drives **version {1.0, 2.0} × mechanism {cstubs, cext, ctypes}**
-over all-Built. tiny already carries the version map (`TINY_1.0`/`TINY_2.0`,
-Bs.3) and all three mechanisms; missing only the provision axis (needs tiny
-published/fetched). Grow tiny-full to add provision once packaging exists.
+**Plan (confirmed):** tiny-full first (view, then runner); tiny1 derivation
+after; packaging deferred but **must** come back (the provision axis needs
+tiny published/fetched — until then provision is `Built`/`Absent` only).
+**First step — tiny-full v1:** the algorithm enumerates tiny's full artifact
+set over provision {Absent, Built} × version {1.0, 2.0} (tiny already has
+the `TINY_1.0`/`TINY_2.0` map + all three mechanisms); view first, then
+drive the runner with fail-fast + coverage.
 
 ## 1b. Scenario enumeration — implementation state
 
