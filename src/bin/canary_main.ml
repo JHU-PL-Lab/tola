@@ -1154,13 +1154,28 @@ let tiny_scenarios_status_cmd =
     (term_of (fun () -> show_tiny_status ()))
 
 let tiny_scenarios_full_cmd =
+  (* tiny-full = ONE spec allowing each artifact good OR bad; the algorithm
+     enumerates the good+bad points and this driver materializes + runs each
+     — no hand-written scenario list. `run` is the materialize-and-detect
+     primitive (main owns run_tiny_scenario + the status readout). *)
+  let run ~failfast ~name =
+    (try
+       run_tiny_scenario ~root:"_out" ~failfast ~cache_path:None
+         ~cli_disabled:[] ~name
+     with _ -> ());
+    scenario_status_of_run_state ()
+  in
   Cmd.v
     (Cmd.info "full"
-       ~doc:"tiny-full — enumerate tiny as ONE general project (the good+bad \
-             scenario space, algorithm-derived). View for now; the genuine \
-             algorithm-driven run is TBD. (tiny1 runs via `tiny run`.) See \
-             status.md §1a.")
-    (term_of (fun () -> Canary_tiny_scenario.print_tiny_full ()))
+       ~doc:"tiny-full — tiny as ONE general project (each artifact good OR \
+             bad). Renders the positive variant space, then RUNS the \
+             algorithm's good+bad enumeration (positive witnesses + one \
+             mutation per enumerated point), reporting detection coverage. \
+             Algorithm-driven — no hand-written scenario list. (tiny1 runs \
+             via `tiny run`.) See status.md §1a.")
+    (term_of (fun () ->
+         Canary_tiny_scenario.print_tiny_full ();
+         Canary_tiny_scenario.run_tiny_full ~run))
 
 let tiny_scenarios_engine_cmd =
   Cmd.v

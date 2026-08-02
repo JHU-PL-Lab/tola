@@ -72,7 +72,7 @@ project); **scenario coverage** is the metric for both.
   were fine). Validates the **tooling / checkers**. Should *also* be
   algorithm-derived from the ssot ideas — but **postponed until after
   tiny-full** (hand-written is fine as the interim ground truth).
-- **tiny-full** (new, **not yet built**) — **one** general-project canary
+- **tiny-full** (**run shipped** 2026-08-02) — **one** general-project canary
   spec whose spec **allows each artifact to be good *or* bad**, with
   multiple choices (provision × version; the **mechanism choice IS
   provision** over the distinct binding artifacts — cext Built + ctypes
@@ -98,6 +98,20 @@ project); **scenario coverage** is the metric for both.
 artifact provision × version) → build that workspace → run the probes with
 the fail-fast config, reusing `canary_tiny_workspace`. Wired from the
 algorithm, not from a hand-written spec.
+
+**tiny-full RUN — shipped** (2026-08-02, `canary tiny full` now runs, not just
+views). `Canary_tiny_scenario.run_tiny_full ~run` iterates the algorithm's
+good+bad enumeration (`engine_points` = the `tiny_slice` projection: 1
+positive + N mutation points over the ONE fixed artifact set) and drives each
+through the materializer — **no hand-written scenario list**. Positive point →
+the unmutated witnesses (derived: `mutation_target_of_spec = None`); each
+mutation point → resolve `scenario_id` → name → run (fail-fast), PASS =
+canary *detected* the expected failure. First run: **2 positive quiet, 20/20
+mutation scenarios detected (22/22 artifact points)** — the coverage
+cross-check against tiny1 (`tiny run`) is now a live number. *Still open* (the
+"beyond tiny1" part): real **combinations** (multi-mutation workspaces) + true
+**fail-fast collapse** (earliest checkable failure subsumes downstream); today
+each point is a single mutation, so the collapse isn't exercised yet.
 
 **Plan (confirmed):** tiny-full first (view, then runner); tiny1 derivation
 after; packaging deferred but **must** come back (the provision axis needs
@@ -276,21 +290,22 @@ per use). This tracks what's actually wired.
 
 One place to resume from. Each has a home doc with the detail.
 
-- **`canary tiny full` today is NOT the real tiny-full** (clarified
-  2026-08-02). It renders tiny-full's *positive* enumeration, but the RUN
-  **proxies via tiny1** — it calls `run_tiny_scenario` on the *factory's
-  hand-written* scenario names (positive: both app wirings PASS; mutations:
-  one per pipeline artifact, fail-fast, 4/4 detected + coverage). Useful as a
-  "a run happens end-to-end" checkpoint, but it's **tiny1 executing**, not
-  tiny-full.
-- **Build the real tiny-full** — ONE project spec that allows each artifact
-  to be **good *or* bad**; the **algorithm** enumerates the good+bad
-  scenarios (× provision × version) over that single spec, and a
-  **materializer builds the good / mutates the bad per the enumeration** (no
-  hand-written scenario names). Then run with combinations + true fail-fast
-  collapse (a detected bad lib subsumes a downstream bad binding/app into one
-  scenario). This is the actual next build; the tiny1-proxy run was the
-  stepping stone. §1a, ssot §4.2.4.
+- ✅ **tiny-full RUN — shipped** (2026-08-02). `canary tiny full` now renders
+  the positive variant space *and* runs the algorithm's good+bad enumeration
+  (`Canary_tiny_scenario.run_tiny_full ~run`): iterates `engine_points` (the
+  `tiny_slice` projection — 1 positive + N mutation points over ONE fixed
+  artifact set), derives the positive witnesses (`mutation_target_of_spec =
+  None`), resolves each mutation point `scenario_id` → name → run, fail-fast,
+  PASS = detected. **No hand-written scenario list** (the tiny1-proxy — a
+  hand-picked 4-item list — is gone). First run: 2 positive quiet, **20/20
+  mutation scenarios detected (22/22 artifact points)**. §1a.
+- **Next on tiny-full — the "beyond tiny1" part** (not yet built): real
+  **combinations** (multi-mutation workspaces — bad lib *and* bad binding, a
+  single project in tiny-full vs. separate projects in tiny1) + true
+  **fail-fast collapse** (the first checkable error stops the trace, so a
+  detected bad lib subsumes a downstream bad binding/app into one observable
+  scenario keyed by the earliest failure). Today each enumerated point is a
+  *single* mutation, so the collapse isn't exercised. §1a, ssot §4.2.4.
 - **Per-edge version model** — `placement` is per-artifact; the deploy
   mismatch (build vs run lib) needs the graph edge to carry the consumed
   instance. **The graph already exists** (`artifact_node` + `make_action_graph`)

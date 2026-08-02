@@ -1160,13 +1160,13 @@ let print_engine_render () : unit =
       p "  \xE2\x9C\x97 unrenderable (not a pipeline artifact): %s\n"
         (String.concat ~sep:", " ids)
 
-(* ── tiny-full (step A: the enumeration view) ──
+(* ── tiny-full (step A: the positive-variant enumeration view) ──
    tiny as a *general project*: the algorithm enumerates the positive
-   scenario space over which bindings/apps are present (mechanism & app
-   choice = provision Built-vs-Absent) × version. Source & lib are always
-   present (a project always ships a lib). Positive only for now —
-   mutations + fail-fast + the algorithm-driven runner come next
-   (status.md §1a). *)
+   scenario space over provider × version (a project ships its whole
+   declared artifact set; presence is not a choice). This is the *view*
+   ([print_tiny_full]); the good+bad RUN — positive witnesses + the
+   enumerated mutation points, algorithm-driven — is [run_tiny_full] below
+   (shipped 2026-08-02). status.md §1a. *)
 let tiny_full_artifacts : Canary_enumerate.artifact_id list = engine_artifacts
 
 let tiny_full_points : string Canary_enumerate.point list =
@@ -1276,6 +1276,15 @@ let () =
 
 let find_by_name (n : string) : scenario_spec option =
   List.find all_scenario_specs ~f:(fun e -> String.equal e.scenario.name n)
+
+(** Look up a spec by its scenario id ("Bs.1", …). The mutation axis
+    ([engine_mutations]) keys on [scenario.id]; the runner keys on
+    [scenario.name] — this bridges the two so the algorithm-driven
+    tiny-full run can resolve an enumerated mutation point to a runnable
+    scenario. *)
+let find_by_id (scenario_id : string) : scenario_spec option =
+  List.find all_scenario_specs ~f:(fun e ->
+      String.equal e.scenario.id scenario_id)
 
 (** Shared iteration over {!all_scenario_specs} — hand-listed
     Bs's + Pc unmutated witnesses + synthesized derived cells
@@ -1495,6 +1504,76 @@ let () =
    via [Canary_scenario.related_artifacts_of_actions]. No
    hand-vs-derived invariant to enforce; the derivation is
    the sole source of truth. *)
+
+(* ── tiny-full RUN — the genuine, algorithm-driven good+bad run ──
+
+   The distinction from the old tiny1 proxy: the driver iterates the
+   ALGORITHM's enumeration ([engine_points], the [tiny_slice] projection of
+   ONE fixed artifact set → 1 positive + N mutation points), not a
+   hand-written scenario-name list. Every scenario it runs is *derived*:
+
+   - the **positive** point (mutation = None) → the unmutated full-chain
+     witnesses (specs with no mutation target — the clean tree, both app
+     wirings); canary should stay quiet.
+   - each **mutation** point (mutation = Some (artifact_id, scenario_id)) →
+     resolve [scenario_id] → spec → name and run it; the workspace
+     materializer applies that scenario's mutation. A bad point PASSES when
+     canary *detected* the expected failure ([run] returns "PASS").
+
+   Runs dedup by scenario_id (a spec touching both Python layers yields cext
+   *and* ctypes points but one workspace); coverage still counts the artifact
+   points. Combinations (multi-mutation workspaces) + true fail-fast collapse
+   are the next step. See status.md §1a. *)
+let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
+  let p = Stdlib.Printf.printf in
+  let n_mut_points = List.length engine_mutations in
+  p "\ntiny-full RUN — algorithm-driven good+bad (tiny_slice: 1 positive + \
+     %d mutation point(s), derived — no hand-written scenario list)\n"
+    n_mut_points;
+
+  (* positive: the unmutated witnesses (clean tree) — canary stays quiet *)
+  let positive_names =
+    List.filter_map all_scenario_specs ~f:(fun s ->
+        if Option.is_none (mutation_target_of_spec s) then Some s.scenario.name
+        else None)
+  in
+  p "\n  --- positive (clean tree, unmutated witnesses; canary should stay \
+     quiet) ---\n";
+  List.iter positive_names ~f:(fun name ->
+      let s = run ~failfast:false ~name in
+      p "    [%-26s] %s\n" name s);
+
+  (* mutations: iterate the enumerated points, dedup runs by scenario_id,
+     preserving first-seen order. *)
+  let distinct_ids =
+    List.fold engine_mutations ~init:[] ~f:(fun acc (_aid, id) ->
+        if List.mem acc id ~equal:String.equal then acc else acc @ [ id ])
+  in
+  let points_of id =
+    List.count engine_mutations ~f:(fun (_aid, i) -> String.equal i id)
+  in
+  p "\n  --- mutations (fail-fast; canary should DETECT each expected \
+     failure) ---\n";
+  let detected_ids, detected_points =
+    List.fold distinct_ids ~init:(0, 0) ~f:(fun (dids, dpts) id ->
+        let name =
+          match find_by_id id with
+          | Some s -> s.scenario.name
+          | None -> id (* unreachable: engine_mutations derive from specs *)
+        in
+        let npts = points_of id in
+        let s = run ~failfast:true ~name in
+        (* a bad scenario returns "PASS" when canary *detected* the expected
+           failure; anything else means it MISSED it. *)
+        let ok = String.equal s "PASS" in
+        p "    [%-6s %-26s] %-6s %s (%d artifact point%s)\n" id name s
+          (if ok then "\xE2\x9C\x93 detected" else "\xE2\x9C\x97 MISSED")
+          npts (if npts = 1 then "" else "s");
+        if ok then (dids + 1, dpts + npts) else (dids, dpts))
+  in
+  p "\n  coverage: %d/%d mutation scenarios detected (%d/%d artifact points)\n"
+    detected_ids (List.length distinct_ids)
+    detected_points n_mut_points
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola
