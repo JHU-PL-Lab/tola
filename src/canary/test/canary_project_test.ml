@@ -354,12 +354,48 @@ let version_axis_test : pure_test =
       in
       has_mismatch && source_primary_holds) }
 
+(* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
+   from the bindings table + (action, loc) ALONE — no per-scenario [violates].
+   For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
+   inputs at the OCaml probe (canary discovers c1, nobody tells it), and
+   Expect_success at a non-firing action. *)
+let agnostic_expectation_test : pure_test =
+  { name = "scenario.lower_expectation_agnostic_c1";
+    check = (fun () ->
+      let module CS = Canary_scenario in
+      let module CC = Canary_compat in
+      let module SM = Canary_step_model in
+      let bindings =
+        CS.[ { contract = CC.C1; lang = ocaml;
+               firings =
+                 [ { site = At_probe_binding ocaml; loc_filter = Any;
+                     source = From_artifact {
+                       inputs = CC.[ C_stub [ "stub.json" ];
+                                     Native_lib [ "lib.json" ] ];
+                       version_info = None } } ] } ]
+      in
+      let lower = CS.lower_expectation_agnostic ~bindings ~langs:[ ocaml ] in
+      let derived_c1 =
+        match lower (B.Probe_binding ocaml) None with
+        | SM.Expect_compat_failure { inputs; _ } ->
+            List.exists inputs ~f:(function CC.C_stub _ -> true | _ -> false)
+            && List.exists inputs ~f:(function CC.Native_lib _ -> true | _ -> false)
+        | _ -> false
+      in
+      let build_ok =
+        match lower B.Build_lib None with
+        | SM.Expect_success -> true
+        | _ -> false
+      in
+      derived_c1 && build_ok) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
-      mechanism_test; enumerate_test; config_level_test; version_axis_test ]
+      mechanism_test; enumerate_test; config_level_test; version_axis_test;
+      agnostic_expectation_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

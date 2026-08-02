@@ -338,6 +338,68 @@ let lower_expectation
            Canary_step_model.Expect_failure { contains_any; version_info }
          | None -> Canary_step_model.Expect_success)
 
+(** {b P2b spike (2026-08-02) — mutation-agnostic expectation lowering.}
+    Like {!lower_expectation} but WITHOUT the per-scenario oracle
+    ([~violates] / [~has_manifest]): it derives the expectation from the
+    project's [bindings] table + the (action, loc) ALONE, by UNIONing every
+    contract's [From_artifact] inputs at the matching firing site and letting
+    the compat runner ([predicted_contains_any_v2]) DISCOVER which contract
+    actually breaks by inspecting the materialized artifacts. Nobody tells it
+    which contract fires — the same way a real project works (status §1a P2b).
+
+    Each contract's [predict] reads only its own input kinds, so unioning is
+    safe: c1 fires iff a symbol vanished, c2 iff the mli lost a name, etc.
+
+    {b Known limit — the empty-prediction question.} At a probe site the good
+    build ALSO matches these firings, so this emits [Expect_compat_failure]
+    with an *empty* runtime prediction for a clean artifact. Whether that
+    verifies as success (the [has_manifest = false] role in the oracle path)
+    is the semantics to settle before wiring this into the run; proven for c1
+    at the *derivation* level first (see [scenario.lower_expectation_agnostic_c1]
+    test). Generalising past statically-inspectable contracts (c3 behaviour,
+    c6 grep-type) is the follow-up. *)
+let lower_expectation_agnostic
+    ~(bindings : contract_binding list)
+    ~(langs : Canary_lang.lang list)
+  : Canary_basic.action -> Canary_store.location option ->
+    Canary_step_model.step_expectation
+  =
+  let open Base in
+  fun action loc ->
+    match firing_site_of_action action with
+    | None -> Canary_step_model.Expect_success
+    | Some site ->
+      (* every firing (ANY contract) at this site whose loc filter passes *)
+      let sources =
+        List.concat_map bindings ~f:(fun b ->
+          if not (List.mem langs b.lang ~equal:Poly.equal) then []
+          else
+            List.filter_map b.firings ~f:(fun f ->
+              if Poly.equal f.site site && loc_filter_passes f.loc_filter loc
+              then Some f.source else None))
+      in
+      let artifact_inputs =
+        List.concat_map sources ~f:(function
+          | From_artifact { inputs; _ } -> inputs | _ -> [])
+      in
+      let first_version_info =
+        List.find_map sources ~f:(function
+          | From_artifact { version_info; _ } -> version_info | _ -> None)
+      in
+      if not (List.is_empty artifact_inputs) then
+        Canary_step_model.Expect_compat_failure
+          { inputs = artifact_inputs; version_info = first_version_info }
+      else
+        (match
+           List.find_map sources ~f:(function
+             | From_behavior_grep { contains_any; version_info } ->
+               Some (contains_any, version_info)
+             | _ -> None)
+         with
+         | Some (contains_any, version_info) ->
+           Canary_step_model.Expect_failure { contains_any; version_info }
+         | None -> Canary_step_model.Expect_success)
+
 (* ---------- Good scenarios (Sc.1..Sc.6) ---------- *)
 
 (** Good scenarios from SSOT §4 — project-agnostic patterns.
