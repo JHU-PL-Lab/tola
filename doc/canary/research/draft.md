@@ -1,5 +1,5 @@
 ---
-title: Canary Testing for Packages with Language Bindings via Surfaces
+title: Complete Canary Testing of Packages with Language Bindings via Surfaces
 ---
 
 # Background
@@ -41,7 +41,7 @@ tolerated (a missing dependency that isn't exercised at load time
 looks healthy until it isn't). The tolerated errors become
 critical only at later stages, once usage finally touches them.
 The whole binding pipeline runs on mutual courtesy — each tool
-relies on conventions it can't enforce. 
+relies on conventions it can't enforce.
 
 ## Approach
 
@@ -86,8 +86,6 @@ compiling, API mismatch on binding language, should all imply
 some _agreements_ on the surface are violated.
 
 ## Organising grid
-
-[//]: # (good comment)
 
 **Table — Organising grid.** Three pillars × three spine
 concepts; cell entries name what the pillar contributes.
@@ -136,6 +134,9 @@ other real-world examples.
   downstream `tiny_helper` app, and packaging considerations.
   Includes the 13-variant perturbation matrix; per-scenario
   detail in [`tiny.md`](tiny.md).
+  - **Coverage targets.** Languages, , binding mechanisms,
+  compilation, linking, loaders. 
+
 - **§3 Surface theory (SS).** **Artifact → surface → contract**
   Surface is the unit of check
   Record is a lightweighted and uniform abstraction
@@ -346,66 +347,81 @@ This table can but not cover all possibility in the design space, e.g. publishin
 static archived library but making a dynamic app helper. Those cases are rare
 in real-world, however, we are still capabitle to check it.
 
-**Table — Good scenarios.** Each row is one stage's successful
-action. The action's success implicitly verifies the agreements
-it depends on; when the same action fails, the failure points at
-a violated agreement (developed in the perturbation matrix below).
+**Table — Good scenarios.** 
 
-| ID     | Scenario                | Stage                  | Action                                                            | Agreements verified                                                           |
-| ------ | ----------------------- | ---------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| **Sc.1** | `build_native_lib`      | Upstream               | C compiler builds Ar.0 + Ar.1 → Ar.2                                    | Ag.0 (type, Sf.1 ↔ Sf.2), Ag.1 (source-lib)                                           |
-| **Sc.2** | `build_binding`         | Binding creation       | OCaml + C compilers build `stub.c` + Sf.3 + Sf.4 against Ar.1 + Ar.2 → Sf.5 | Ag.2 (native-lib ↔ stub), Ag.3 (stub ↔ binding-lang), Ag.4 (stub ↔ user-facing)     |
-| **Sc.3** | `link_app_with_binding` | Binding use (direct)   | OCaml linker checks `app_binding` source against Sf.4               | Ag.6 (API-completeness, Sf.4 ↔ app expectations)                                  |
-| **Sc.4** | `run_app_with_binding`  | Binding use (direct)   | dyn loader resolves Sf.5 NEEDED → Ar.2; `app_binding` executes        | Ag.5 (ABI, SONAME ↔ NEEDED), Symbol (dynamic resolution), Ag.7 (runtime behavior) |
-| **Sc.5** | `link_app_helper`       | Binding use (indirect) | `app_helper` links against `tiny_helper`, which links against Sf.5  | Ag.6 transitively through the `tiny_helper` repack layer                        |
-| **Sc.6** | `run_app_helper`        | Binding use (indirect) | dyn loader + transitive execute through `tiny_helper`             | Ag.5 + Symbol + Ag.7 transitively                                                 |
+| ID       | Scenario                 | Stage                  | Action                                 |
+| -------- | ------------------------ | ---------------------- | -------------------------------------- |
+| **Sc.1** | `build_native_lib`       | Upstream               | C compiler builds Ar.0 + Ar.1 → Ar.2   |
+| **Sc.2** | `build_binding`          | Binding creation       | OCaml + C compilers Ar.1 + Ar.2 → Ar.5 |
+| **Sc.3** | `build_app_with_binding` | Binding use (direct)   |                                        |
+| **Sc.4** | `run_app_with_binding`   | Binding use (direct)   |                                        |
+| **Sc.5** | `build_app_helper`       | Binding use (indirect) |                                        |
+| **Sc.6** | `run_app_helper`         | Binding use (indirect) |                                        |
 
+## Package as a source of Indirection
 
-**sw: with this we can argue, our framework has a better effect**
+The happy path relies on an error-free and package-free settings, and 
+the scenarios look limited to have an appearence of easy question.
+Building of a lib means the compiler and the system tools 
+handles compilation and linking successful. Working
 
-<!-- python scenarios.py list -->
-symbol_missing
-header_arity_bump
-symbol_version_floor
-abi_soname_bump
-type_wrong
-api_faithful
-api_repack
-api_complete
-behavior_silent
-symbol_orphan
-api_repack_python
-api_complete_python
-app_over_binding_ocaml
-app_over_helper_ocaml
-api_repack_stub_orphan
-pkg_*...
+The root cause of indirection a.k.a multiple choices is not from packaging.
+For example, you can two sets `v1` `v2`, header, source code, and compiled libraries,
+The agreement during the compilation is checked during the process for each 
+set internally `agreement_check(h1, sc1, lib1)`, `agreement_check(h2, sc2, lib2)`,
+but with an unidentified native library `lib`, no method to precisely recover 
+the agreement it once relied, and predict the later agreement status.
 
-## Packaging use side
+h1..sc1..lib1
+h2..sc2..lib2
 
-Packaging lives out of the language tool chains. Package 
+...lib... 
+
+build/run(lib, ...)
+
+surface(lib) sym, path, ...
+testing,
+
+We can have bad artifact, that should not be provided as usable choice at all,
+_wrong artifact_. It's possible some artifact can compile but cannot be used 
+on some platform, or with some binding mechanism, _incomplete artifact_.
+
+_Anything that can go wrong will go wrong._ Murphy's Law becomes true when 
+packaging provides every component alternatives. It's a perspective to
+understand packages from the effectiveness, rather than the operations.
+Packages can have artitraty content, no limited to header files, source code, 
+native library, that can be used in other stages.
+
+## Bad Scenarios That May Happen
+
+<!-- rows from `python scenarios.py list`; some name casing inconsistent (TBD) 
+The table should be sorted as (Expected scenario with all its )
+-->
+
+| Scenario                 | Expected scenario | Broken artifact                | Notes                       |
+| ------------------------ | ----------------- | ------------------------------ | --------------------------- |
+| `symbol_missing`         | Sc.2              | native_lib                     | provider drops a symbol     |
+| `header_arity_bump`      | Sc.2              | native_source                  | header signature change     |
+| `symbol_version_floor`   | Sc.4              | native_lib                     | versioned-symbol floor bump |
+| `abi_soname_bump`        | Sc.4              | native_lib                     | soname bump                 |
+| `type_wrong`             | Sc.2              | native_source / binding_source | TBD                         |
+| `api_faithful`           | Sc.1–Sc.6         | (baseline; passes)             | placeholder                 |
+| `api_repack`             | Sc.3              | binding_lib                    | repack changes layout       |
+| `api_complete`           | Sc.3              | binding_lib                    | missing API in binding      |
+| `behavior_silent`        | Sc.4              | native_lib (runtime)           | semantics-only drift        |
+| `symbol_orphan`          | Sc.2              | binding_lib                    | binding refs unused symbol  |
+| `api_repack_python`      | Sc.3              | binding_lib (Python)           | Python repack analogue      |
+| `api_complete_python`    | Sc.3              | binding_lib (Python)           | Python incompleteness       |
+| `app_over_binding_ocaml` | Sc.3              | app                            | app pinned past binding     |
+| `app_over_helper_ocaml`  | Sc.5              | app                            | app pinned past helper      |
+| `api_repack_stub_orphan` | Sc.2              | binding_lib (stub)             | stub-side orphan            |
+| `pkg_*…`                 | Sc.1–Sc.6         | package                        | placeholder, multiple       |
+
 
 ## Why a synthetic witness
 
-- **Tiny's role: pivot.** A *pivot* — canary/smoke testing for
-  tools and systems. Aims to be **mechanism-complete but
-  material-naive**: every binding mechanism, every relevant tool,
-  every layer of the system is exercised; the library content is
-  intentionally minimal.
-- The methodological case for building tiny rather than starting
-  with a real library: control. We can perturb a single surface
-  at a time and read off which rule fires.
-- **Coverage targets.** Languages, package management tools (a
-  known gap in tiny's code today), binding mechanisms,
-  compilation, linking, loaders. Running is the ultimate check;
-  tiny exists so we can run it deterministically.
 - If tiny passes both positive and negative cases, every concrete
   trace aligns with surface theory for the mechanisms tiny covers.
-- **What §4 adds beyond §2's touchstone**: the two Python
-  binding mechanisms (cext + ctypes) alongside OCaml, the
-  downstream `tiny_helper` app exercising the full user-side
-  chain, and packaging considerations (apt / opam / pip) — the
-  last of which is a known gap in canary's implementation today.
 
 ## The perturbation matrix
 
@@ -433,8 +449,6 @@ Packaging lives out of the language tool chains. Package
   *mechanism* is real; the *materials space* is acknowledged as
   out-of-scope.
 - Setting honest expectations early serves the paper.
-
-
 
 # Surface theory
 
@@ -491,8 +505,8 @@ the outward-facing syntactic decls on each side, `native_lib` and
 the binding side non-monolithic, and the static/dynamic axis 
 orthogonal to the roles.*
 
-| id     | friendly name    | formal | side    | kind      | what it is                                                                 |
-| ------ | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
+| id       | friendly name    | formal | side    | kind      | what it is                                                                 |
+| -------- | ---------------- | ------ | ------- | --------- | -------------------------------------------------------------------------- |
 | **Sf.1** | `native_header`  | Σ_NH   | native  | syntactic | declared C interface — function signatures, structs, macros                |
 | **Sf.2** | `native_lib`     | Σ_NL   | native  | semantic  | compiled `.so` / `.dylib` — defined symbols, `@@VER`, SONAME, NEEDED       |
 | **Sf.3** | `binding_stub`   | Σ_BS   | binding | syntactic | binding stub-facing decls — `external` / `argtypes` / `PyMethodDef`        |
@@ -573,11 +587,11 @@ fires:
 fires). The universal contract identifiers are the cross-cutting
 names used in theory, tiny scenarios, and canary code.
 
-| Contract                | Provider surface                             | Consumer surface                                       | Kind                                       | Where it fires                                 |
-| ----------------------- | -------------------------------------------- | ------------------------------------------------------ | ------------------------------------------ | ---------------------------------------------- |
+| Contract                  | Provider surface                               | Consumer surface                                         | Kind                                       | Where it fires                                 |
+| ------------------------- | ---------------------------------------------- | -------------------------------------------------------- | ------------------------------------------ | ---------------------------------------------- |
 | **Ag.1 Symbol**           | **Sf.2** `native_lib` — defined symbols        | **Sf.5** `binding_lib` — link-time refs / `dlsym`        | semantic ↔ semantic                        | process link (static) / process load (dynamic) |
-| **Ag.2 API-completeness** | **Sf.4** `binding_header`                      | app expectations (watchlist or imports)                | syntactic ↔ syntactic (within lang)        | app build / probe                              |
-| **Ag.3 Behavior** †       | provider's invocation (runtime observation)  | consumer's wrapper (runtime observation)               | action expectation (not surface ↔ surface) | runtime                                        |
+| **Ag.2 API-completeness** | **Sf.4** `binding_header`                      | app expectations (watchlist or imports)                  | syntactic ↔ syntactic (within lang)        | app build / probe                              |
+| **Ag.3 Behavior** †       | provider's invocation (runtime observation)    | consumer's wrapper (runtime observation)                 | action expectation (not surface ↔ surface) | runtime                                        |
 | **Ag.4 ABI**              | **Sf.2** `native_lib` — SONAME, version-needed | **Sf.5** `binding_lib` — NEEDED entries                  | semantic ↔ semantic                        | process load                                   |
 | **Ag.5 SymbolVersion**    | **Sf.2** `native_lib` — `@@VER` annotations    | **Sf.5** `binding_lib` — `@VER` requirements             | semantic ↔ semantic                        | process load                                   |
 | **Ag.6 Type**             | **Sf.1** `native_header` — C signature         | **Sf.3** `binding_stub` — `external` / `argtypes` / decl | syntactic ↔ syntactic                      | binding build                                  |
@@ -585,15 +599,15 @@ names used in theory, tiny scenarios, and canary code.
 
 **is this outdated?**
 ```
-| Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                | Comparator id + name          | Canary status                                                                |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
-| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior) (body, Ag.3 fires); canary-added `header_arity_bump` (static Ag.6)           | n3 + bo1 (inspect_tiny_typed.py) | **Ag.6** `cmp_type`             | ✓ static comparator over `Typed_header` + `Typed_binding_stub` (Phase 15.5b) |
+| Contract             | Tiny scenario(s)                                                                                                                                       | Inspectors needed                | Comparator id + name            | Canary status                                                                |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- | ------------------------------- | ---------------------------------------------------------------------------- |
+| **Type**             | [e3 `type_wrong`](tiny.md#e3-type_wrong--type-contract-manifests-as-behavior) (body, Ag.3 fires); canary-added `header_arity_bump` (static Ag.6)       | n3 + bo1 (inspect_tiny_typed.py) | **Ag.6** `cmp_type`             | ✓ static comparator over `Typed_header` + `Typed_binding_stub` (Phase 15.5b) |
 | **Symbol**           | [e1 `symbol_missing`](tiny.md#e1-symbol_missing--symbol-contract), [e8 `symbol_orphan`](tiny.md#e8-symbol_orphan--symbol-contract-binding-side-orphan) | n4 + bo7                         | **Ag.1** `cmp_symbol`           | ✓ `check_c_compat` — comparator over `C_stub` + `Native_lib`                 |
 | **SymbolVersion**    | `symbol_version_floor` (canary-added, e9)                                                                                                              | n4                               | **Ag.5** `cmp_sym_version`      | ✓ static comparator over `Versioned_exports` + `Versioned_req` (Phase 15.4)  |
 | **ABI**              | [e2 `abi_soname_bump`](tiny.md#e2-abi_soname_bump--abi-contract)                                                                                       | n4 + bo6 (or bo7)                | **Ag.4** `cmp_abi`              | ✓ comparator over `Native_lib` + `Abi_surface` (Phase 14e)                   |
 | **API-sound-repack** | [e5 `api_repack`](tiny.md#e5-api_repack--intra-binding-repacking-ocaml-only) (OCaml), e10 `api_repack_python` (Python)                                 | binding-side test                | **Ag.7** `api_sound_repack`     | ✓ probe runner + `Expect_failure` (binding-side refutation; Phase 15.6)      |
 | **API-completeness** | [e6 `api_complete`](tiny.md#e6-api_complete--api-completeness-ocaml-only) (OCaml), e11 `api_complete_python` (Python parallel)                         | bo4 or bpc2 / bpe2               | **Ag.2** `cmp_api_completeness` | ✓ watchlist inside `Expect_compat_failure { Ocaml_mli, Python_attrs }`       |
-| ~~API-faithfulness~~ | (no Contract — each binding is independent; cross-binding consistency isn't a canary-side agreement)                                                   | n/a                              | ~~c8~~                        | disabled 2026-06-03; candidate for removal                                   |
+| ~~API-faithfulness~~ | (no Contract — each binding is independent; cross-binding consistency isn't a canary-side agreement)                                                   | n/a                              | ~~c8~~                          | disabled 2026-06-03; candidate for removal                                   |
 | **Behavior**         | [e7 `behavior_silent`](tiny.md#e7-behavior_silent--behavior-contract) + every other scenario's probe                                                   | probe + reference                | **Ag.3** `cmp_behavior`         | ✓ probe runner + `Expect_success` / `Expect_failure`                         |
 ```
 

@@ -7,6 +7,18 @@
     },
     "total": 727
   },
+  "elf": {
+    "needed": [
+      "libstdc++.so.6",
+      "libm.so.6",
+      "libgcc_s.so.1",
+      "libc.so.6",
+      "ld-linux-x86-64.so.2"
+    ],
+    "rpath": [],
+    "runpath": [],
+    "soname": "libz3.so.4"
+  },
   "kind": "native",
   "path": "/usr/lib/x86_64-linux-gnu/libz3.so",
   "symbols": [
@@ -716,6 +728,7 @@
     "Z3_update_param_value",
     "Z3_update_term"
   ],
+  "versioned_exports": {},
   "versioned_req": {
     "CXXABI_1.3": 17,
     "CXXABI_1.3.2": 1,

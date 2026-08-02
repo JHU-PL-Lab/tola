@@ -1,0 +1,22 @@
+{
+  "attrs": [
+    "diff",
+    "offset"
+  ],
+  "counts": {
+    "attrs": 2
+  },
+  "extra": {},
+  "kind": "python",
+  "path": "tiny_cext",
+  "version": null,
+  "watchlist": {
+    "missing": [
+      "sum"
+    ],
+    "present": [
+      "diff",
+      "offset"
+    ]
+  }
+}

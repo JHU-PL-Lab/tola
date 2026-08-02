@@ -421,6 +421,7 @@
     "LLVMX86FP80TypeInContext",
     "LLVMX86MMXTypeInContext"
   ],
+  "versioned_req": {},
   "watchlist": {
     "present": [],
     "missing": []

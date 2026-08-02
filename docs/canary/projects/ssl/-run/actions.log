@@ -1,0 +1,212 @@
+[2026-07-23 11:54:03.371] *                          variant_start  (060_core)
+[2026-07-23 11:54:03.371] *                          graph_start  (5 steps)
+[2026-07-23 11:54:03.371] fetch_lib                  check_pre  (pass)
+[2026-07-23 11:54:03.373] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_060_core.ok)
+[2026-07-23 11:54:03.849] fetch_lib                  detect  (ok, output present)
+[2026-07-23 11:54:03.849] fetch_lib                  check_post  (pass)
+[2026-07-23 11:54:03.849] fetch_lib                  done
+[2026-07-23 11:54:03.849] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:03.852] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_060_core.ok)
+[2026-07-23 11:54:10.084] fetch_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:10.084] fetch_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:10.084] fetch_binding_ocaml        done
+[2026-07-23 11:54:10.084] probe_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:10.087] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_core.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_core.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_core.log
+exit $RC)
+[2026-07-23 11:54:10.193] probe_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:10.193] probe_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:10.193] probe_binding_ocaml        done
+[2026-07-23 11:54:10.193] probe_lib                  check_pre  (pass)
+[2026-07-23 11:54:10.195] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_060_core.log
+test "$COUNT" -gt 0)
+[2026-07-23 11:54:10.244] probe_lib                  detect  (ok, output present)
+[2026-07-23 11:54:10.244] probe_lib                  check_post  (pass)
+[2026-07-23 11:54:10.244] probe_lib                  done
+[2026-07-23 11:54:10.244] probe_lib_inspect          check_pre  (pass)
+[2026-07-23 11:54:10.246] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_060_core.json)
+[2026-07-23 11:54:10.302] probe_lib_inspect          detect  (ok, output present)
+[2026-07-23 11:54:10.302] probe_lib_inspect          check_post  (pass)
+[2026-07-23 11:54:10.302] probe_lib_inspect          done
+[2026-07-23 11:54:10.302] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:10.302] *                          variant_start  (060_nlv)
+[2026-07-23 11:54:10.302] *                          graph_start  (5 steps)
+[2026-07-23 11:54:10.302] fetch_lib                  check_pre  (pass)
+[2026-07-23 11:54:10.304] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_060_nlv.ok)
+[2026-07-23 11:54:10.678] fetch_lib                  detect  (ok, output present)
+[2026-07-23 11:54:10.678] fetch_lib                  check_post  (pass)
+[2026-07-23 11:54:10.678] fetch_lib                  done
+[2026-07-23 11:54:10.678] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:10.680] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_060_nlv.ok)
+[2026-07-23 11:54:11.625] fetch_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:11.625] fetch_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:11.625] fetch_binding_ocaml        done
+[2026-07-23 11:54:11.625] probe_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:11.627] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_nlv.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_nlv > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_nlv.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_nlv >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_nlv.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_060_nlv.log
+exit $RC)
+[2026-07-23 11:54:11.658] probe_binding_ocaml        cmd_fail  (exit 2)
+[2026-07-23 11:54:11.658] probe_binding_ocaml        detect  (error, output present)
+[2026-07-23 11:54:11.676] probe_binding_ocaml        done  (expected failure confirmed)
+[2026-07-23 11:54:11.676] probe_lib                  check_pre  (pass)
+[2026-07-23 11:54:11.678] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_060_nlv.log
+test "$COUNT" -gt 0)
+[2026-07-23 11:54:11.722] probe_lib                  detect  (ok, output present)
+[2026-07-23 11:54:11.722] probe_lib                  check_post  (pass)
+[2026-07-23 11:54:11.722] probe_lib                  done
+[2026-07-23 11:54:11.722] probe_lib_inspect          check_pre  (pass)
+[2026-07-23 11:54:11.724] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_060_nlv.json)
+[2026-07-23 11:54:11.778] probe_lib_inspect          detect  (ok, output present)
+[2026-07-23 11:54:11.778] probe_lib_inspect          check_post  (pass)
+[2026-07-23 11:54:11.778] probe_lib_inspect          done
+[2026-07-23 11:54:11.778] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:11.778] *                          variant_start  (070_core)
+[2026-07-23 11:54:11.778] *                          graph_start  (5 steps)
+[2026-07-23 11:54:11.778] fetch_lib                  check_pre  (pass)
+[2026-07-23 11:54:11.780] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_070_core.ok)
+[2026-07-23 11:54:12.189] fetch_lib                  detect  (ok, output present)
+[2026-07-23 11:54:12.189] fetch_lib                  check_post  (pass)
+[2026-07-23 11:54:12.189] fetch_lib                  done
+[2026-07-23 11:54:12.189] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:12.191] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.7.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_070_core.ok)
+[2026-07-23 11:54:17.543] fetch_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:17.543] fetch_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:17.543] fetch_binding_ocaml        done
+[2026-07-23 11:54:17.543] probe_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:17.545] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_core.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_core >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_core.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_core.log
+exit $RC)
+[2026-07-23 11:54:17.643] probe_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:17.643] probe_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:17.643] probe_binding_ocaml        done
+[2026-07-23 11:54:17.643] probe_lib                  check_pre  (pass)
+[2026-07-23 11:54:17.645] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_070_core.log
+test "$COUNT" -gt 0)
+[2026-07-23 11:54:17.691] probe_lib                  detect  (ok, output present)
+[2026-07-23 11:54:17.691] probe_lib                  check_post  (pass)
+[2026-07-23 11:54:17.691] probe_lib                  done
+[2026-07-23 11:54:17.691] probe_lib_inspect          check_pre  (pass)
+[2026-07-23 11:54:17.693] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_070_core.json)
+[2026-07-23 11:54:17.746] probe_lib_inspect          detect  (ok, output present)
+[2026-07-23 11:54:17.746] probe_lib_inspect          check_post  (pass)
+[2026-07-23 11:54:17.746] probe_lib_inspect          done
+[2026-07-23 11:54:17.746] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:17.746] *                          variant_start  (070_nlv)
+[2026-07-23 11:54:17.746] *                          graph_start  (5 steps)
+[2026-07-23 11:54:17.746] fetch_lib                  check_pre  (pass)
+[2026-07-23 11:54:17.748] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_070_nlv.ok)
+[2026-07-23 11:54:18.123] fetch_lib                  detect  (ok, output present)
+[2026-07-23 11:54:18.123] fetch_lib                  check_post  (pass)
+[2026-07-23 11:54:18.123] fetch_lib                  done
+[2026-07-23 11:54:18.123] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:18.125] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.7.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_070_nlv.ok)
+[2026-07-23 11:54:19.042] fetch_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:19.042] fetch_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:19.042] fetch_binding_ocaml        done
+[2026-07-23 11:54:19.042] probe_binding_ocaml        check_pre  (pass)
+[2026-07-23 11:54:19.044] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_nlv.ml -o /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_nlv > /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_nlv.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/ssl_app_nlv >> /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_nlv.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_070_nlv.log
+exit $RC)
+[2026-07-23 11:54:19.139] probe_binding_ocaml        detect  (ok, output present)
+[2026-07-23 11:54:19.139] probe_binding_ocaml        check_post  (pass)
+[2026-07-23 11:54:19.139] probe_binding_ocaml        done
+[2026-07-23 11:54:19.139] probe_lib                  check_pre  (pass)
+[2026-07-23 11:54:19.141] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
+printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_070_nlv.log
+test "$COUNT" -gt 0)
+[2026-07-23 11:54:19.186] probe_lib                  detect  (ok, output present)
+[2026-07-23 11:54:19.186] probe_lib                  check_post  (pass)
+[2026-07-23 11:54:19.186] probe_lib                  done
+[2026-07-23 11:54:19.186] probe_lib_inspect          check_pre  (pass)
+[2026-07-23 11:54:19.187] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+        "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
+  > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_070_nlv.json)
+[2026-07-23 11:54:19.240] probe_lib_inspect          detect  (ok, output present)
+[2026-07-23 11:54:19.240] probe_lib_inspect          check_post  (pass)
+[2026-07-23 11:54:19.240] probe_lib_inspect          done
+[2026-07-23 11:54:19.240] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:19.241] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-07-23 11:54:19.241] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-07-23 11:54:19.241] *                          view  (lib (3 steps))
+[2026-07-23 11:54:19.241] *                          view  (probes (3 steps))
+[2026-07-23 11:54:19.241] *                          view  (binding_ocaml (2 steps))
+[2026-07-23 11:54:19.241] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-07-23 11:54:19.245] *                          index  (_out/canary/projects/index.html)
+[2026-07-23 11:54:19.245] !                          invariant  (full.mmd: connectivity errors:
+  [1]→[4]: no edge A_fetch_lib→A_probe_lib
+  [2]→[3]: no edge A_fetch_binding_ocaml→A_probe_binding_ocaml
+  [1]→[3]: no edge A_fetch_lib→A_probe_binding_ocaml)
+[2026-07-23 11:54:19.245] !                          invariant  (SOME FAILED)
+[2026-07-23 11:54:19.801] *                          variant_start  (060_core)
+[2026-07-23 11:54:19.801] *                          graph_start  (5 steps)
+[2026-07-23 11:54:19.801] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:19.801] *                          variant_start  (060_nlv)
+[2026-07-23 11:54:19.801] *                          graph_start  (5 steps)
+[2026-07-23 11:54:19.801] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:19.801] *                          variant_start  (070_core)
+[2026-07-23 11:54:19.801] *                          graph_start  (5 steps)
+[2026-07-23 11:54:19.801] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:19.801] *                          variant_start  (070_nlv)
+[2026-07-23 11:54:19.801] *                          graph_start  (5 steps)
+[2026-07-23 11:54:19.801] *                          graph_end  (5/5 completed)
+[2026-07-23 11:54:19.801] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-07-23 11:54:19.801] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-07-23 11:54:19.801] *                          view  (lib (3 steps))
+[2026-07-23 11:54:19.802] *                          view  (probes (3 steps))
+[2026-07-23 11:54:19.802] *                          view  (binding_ocaml (2 steps))
+[2026-07-23 11:54:19.802] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-07-23 11:54:19.804] *                          index  (_out/canary/projects/index.html)
+[2026-07-23 11:54:19.804] !                          invariant  (full.mmd: connectivity errors:
+  [1]→[4]: no edge A_fetch_lib→A_probe_lib
+  [2]→[3]: no edge A_fetch_binding_ocaml→A_probe_binding_ocaml
+  [1]→[3]: no edge A_fetch_lib→A_probe_binding_ocaml)
+[2026-07-23 11:54:19.804] !                          invariant  (SOME FAILED)

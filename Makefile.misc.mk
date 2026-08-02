@@ -98,3 +98,21 @@ af:
 
 tf:
 	dune exec ./src/bin/test_fix.exe
+
+
+doc-watch:
+	ls doc/canary/research/draft.md | entr -p \
+	  pandoc /_ -o _out/draft.pdf \
+	  --pdf-engine=xelatex \
+	  -V geometry:margin=1in \
+      -V fontsize=11pt \
+	  -V documentclass=article \
+  	  -V linkcolor=blue \
+      --number-sections \
+	  --highlight-style=tango
+
+doc:
+	pandoc doc/canary/research/draft.md -o _out/draft.pdf \
+	  --pdf-engine=xelatex \
+	  -V geometry:margin=1in \
+	  -V fontsize=11pt

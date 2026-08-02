@@ -1,0 +1,67 @@
+[2026-07-23 00:35:42.727] *                          graph_start  (6 steps)
+[2026-07-23 00:35:42.727] fetch_lib                  check_pre  (pass)
+[2026-07-23 00:35:42.729] fetch_lib                  cmd  (sudo apt-get install -y libcairo2-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/cairo/fetch_lib/lib.ok)
+[2026-07-23 00:35:49.445] fetch_lib                  detect  (ok, output present)
+[2026-07-23 00:35:49.445] fetch_lib                  check_post  (pass)
+[2026-07-23 00:35:49.445] fetch_lib                  done
+[2026-07-23 00:35:49.445] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-23 00:35:49.448] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install cairo2 -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/cairo/fetch_binding/ocaml/binding.ok)
+[2026-07-23 00:35:57.320] fetch_binding_ocaml        detect  (ok, output present)
+[2026-07-23 00:35:57.320] fetch_binding_ocaml        check_post  (pass)
+[2026-07-23 00:35:57.320] fetch_binding_ocaml        done
+[2026-07-23 00:35:57.320] probe_binding_ocaml        check_pre  (pass)
+[2026-07-23 00:35:57.323] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package cairo2 -linkpkg canary/examples/cairo/cairo_example.ml -o /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/cairo_example >> /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/probe.log
+exit $RC)
+[2026-07-23 00:35:57.441] probe_binding_ocaml        detect  (ok, output present)
+[2026-07-23 00:35:57.441] probe_binding_ocaml        check_post  (pass)
+[2026-07-23 00:35:57.441] probe_binding_ocaml        done
+[2026-07-23 00:35:57.442] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-07-23 00:35:57.444] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'cairo2' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'cairo2' --watchlist 'Cairo' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_binding/ocaml/inspect.json)
+[2026-07-23 00:35:57.497] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-07-23 00:35:57.497] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-07-23 00:35:57.497] probe_binding_ocaml_inspect  done
+[2026-07-23 00:35:57.497] probe_lib                  check_pre  (pass)
+[2026-07-23 00:35:57.500] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+        "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'cairo_' || echo 0)
+printf 'cairo_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/probe.log
+test "$COUNT" -gt 0)
+[2026-07-23 00:35:57.551] probe_lib                  detect  (ok, output present)
+[2026-07-23 00:35:57.551] probe_lib                  check_post  (pass)
+[2026-07-23 00:35:57.551] probe_lib                  done
+[2026-07-23 00:35:57.551] probe_lib_inspect          check_pre  (pass)
+[2026-07-23 00:35:57.553] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libcairo.so* /usr/lib*/libcairo.so* 2>/dev/null \
+        "$(brew --prefix cairo 2>/dev/null)/lib/libcairo.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'cairo_' --watchlist 'cairo_create,cairo_destroy,cairo_paint,cairo_move_to,cairo_line_to,cairo_stroke,cairo_image_surface_create,cairo_surface_destroy' \
+  > /home/red/code/research/tola/_out/canary/projects/cairo/probe_lib/inspect.json)
+[2026-07-23 00:35:57.611] probe_lib_inspect          detect  (ok, output present)
+[2026-07-23 00:35:57.611] probe_lib_inspect          check_post  (pass)
+[2026-07-23 00:35:57.611] probe_lib_inspect          done
+[2026-07-23 00:35:57.611] *                          graph_end  (6/6 completed)
+[2026-07-23 00:35:57.612] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/all.mmd)
+[2026-07-23 00:35:57.612] *                          diagram  (_out/canary/projects/cairo/-run/diagrams/full.mmd)
+[2026-07-23 00:35:57.612] *                          view  (lib (3 steps))
+[2026-07-23 00:35:57.612] *                          view  (probes (4 steps))
+[2026-07-23 00:35:57.612] *                          view  (binding_ocaml (3 steps))
+[2026-07-23 00:35:57.614] *                          html  (_out/canary/projects/cairo/-run/result.html)
+[2026-07-23 00:35:57.617] *                          index  (_out/canary/projects/index.html)
+[2026-07-23 00:35:57.617] !                          invariant  (full.mmd: connectivity errors:
+  [1]→[5]: no edge A_fetch_lib→A_probe_lib
+  [2]→[3]: no edge A_fetch_binding_ocaml→A_probe_binding_ocaml
+  [1]→[3]: no edge A_fetch_lib→A_probe_binding_ocaml)
+[2026-07-23 00:35:57.617] !                          invariant  (SOME FAILED)

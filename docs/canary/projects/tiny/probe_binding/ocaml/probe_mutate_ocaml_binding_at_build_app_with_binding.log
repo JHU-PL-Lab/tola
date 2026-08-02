@@ -1,0 +1,6 @@
+Entering directory 'canary/examples/tiny/scenarios/_cache/mutate_ocaml_binding_at_build_app_with_binding/workspace'
+File "ocaml/examples/probe_baseline.ml", line 15, characters 34-42:
+15 |   check "Tiny.sum 2 3"        47 (Tiny.sum 2 3);     (* 2 + 3 + 42 *)
+                                       ^^^^^^^^
+Error: Unbound value Tiny.sum
+Leaving directory 'canary/examples/tiny/scenarios/_cache/mutate_ocaml_binding_at_build_app_with_binding/workspace'

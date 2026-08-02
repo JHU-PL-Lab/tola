@@ -4,109 +4,107 @@
     {
       "tag": "configure",
       "output_tag": "configure",
-      "rule": "configure",
-      "variant_id": "lib_broken",
+      "action": "configure",
+      "variant_id": "api_complete",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "scan_sources",
+      "output_tag": "scan_sources",
+      "action": "scan_sources",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_lib",
       "output_tag": "build_lib",
-      "rule": "build_lib",
-      "variant_id": "lib_broken",
+      "action": "build_lib",
+      "variant_id": "api_complete",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_lib_inspect",
+      "output_tag": "build_lib",
+      "action": "build_lib",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_binding_ocaml",
       "output_tag": "build_binding_ocaml",
-      "rule": "build_binding_ocaml",
-      "variant_id": "lib_broken",
+      "action": "build_binding_ocaml",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_binding_ocaml_inspect",
       "output_tag": "build_binding_ocaml",
-      "rule": "build_binding_ocaml",
-      "variant_id": "lib_broken",
+      "action": "build_binding_ocaml",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "lib_broken",
+      "action": "probe_binding_ocaml",
+      "variant_id": "api_complete",
       "expect": "compat_failure",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml_inspect",
       "output_tag": "probe_binding_ocaml",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "lib_broken",
+      "action": "probe_binding_ocaml",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_binding_python",
       "output_tag": "build_binding_python",
-      "rule": "build_binding_python",
-      "variant_id": "lib_broken",
+      "action": "build_binding_python",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_binding_python_inspect",
       "output_tag": "build_binding_python",
-      "rule": "build_binding_python",
-      "variant_id": "lib_broken",
+      "action": "build_binding_python",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_python",
       "output_tag": "probe_binding_python",
-      "rule": "probe_binding_python",
-      "variant_id": "lib_broken",
+      "action": "probe_binding_python",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_python_inspect",
       "output_tag": "probe_binding_python",
-      "rule": "probe_binding_python",
-      "variant_id": "lib_broken",
+      "action": "probe_binding_python",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_lib",
       "output_tag": "probe_lib",
-      "rule": "probe_lib",
-      "variant_id": "lib_broken",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_lib_inspect",
-      "output_tag": "probe_lib",
-      "rule": "probe_lib",
-      "variant_id": "lib_broken",
+      "action": "probe_lib",
+      "variant_id": "api_complete",
       "expect": "success",
       "status": "done"
     }
   ],
-  "artifact_names": [
-    { "kind": "lib", "name": "lib_native.so (libtiny.so.1)" },
-    {
-      "kind": "ocaml_binding",
-      "name": "compiled_binding_ocaml (tiny.cmxa + libtiny_stubs.a)"
-    },
-    {
-      "kind": "python_binding",
-      "name": "compiled_binding_cext (_native.cpython-*.so)"
-    }
-  ]
+  "artifact_names": []
 }

@@ -1,0 +1,5 @@
+OK   tiny.offset() = 42
+OK   tiny.sum(2, 3) = 47
+OK   tiny.diff(5, 2) = 3
+OK   tiny.diff(2, 5) = -3
+all checks passed

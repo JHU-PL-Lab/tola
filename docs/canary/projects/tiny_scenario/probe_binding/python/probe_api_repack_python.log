@@ -1,0 +1,3 @@
+FAIL tiny.diff(5, 2): expected 3, got -3
+OK   tiny.offset() = 42
+OK   tiny.sum(2, 3) = 47

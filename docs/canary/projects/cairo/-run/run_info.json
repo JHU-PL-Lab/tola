@@ -1,0 +1,12 @@
+{
+  "project": "cairo",
+  "version": "system",
+  "ref": "",
+  "source": "prebuilt",
+  "distro": "linux",
+  "system_pm": "apt",
+  "opam_switch": "default",
+  "ocaml_version": "5.4.1",
+  "timestamp": "2026-07-23 00:35:42.727",
+  "actions": ["fetch_lib", "fetch_binding_ocaml", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "probe_lib", "probe_lib_inspect"]
+}

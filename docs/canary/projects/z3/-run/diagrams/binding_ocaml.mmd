@@ -16,8 +16,9 @@ graph LR
     A_build_headers{{"build_headers [4]"}}
     A_build_lib{{"build_lib [5]"}}
     A_build_binding_ocaml{{"build_binding_ocaml [8]"}}
+    A_build_app_ocaml{{"build_app_ocaml"}}
     A_build_binding_python{{"build_binding_python"}}
-    A_build_app{{"build_app"}}
+    A_build_app_python{{"build_app_python"}}
     A_install_lib{{"install_lib [6]"}}
     A_pack_binding_ocaml{{"pack_binding_ocaml [9]"}}
     A_pack_binding_python{{"pack_binding_python"}}
@@ -25,9 +26,10 @@ graph LR
     A_pack_app{{"pack_app"}}
     A_probe_binding_ocaml(["probe_binding_ocaml [12]"])
     A_probe_binding_ocaml_opam(["probe_binding_ocaml_opam [13]"])
+    A_probe_app_ocaml(["probe_app_ocaml"])
     A_probe_binding_python(["probe_binding_python [16]"])
+    A_probe_app_ocaml(["probe_app_ocaml"])
     A_probe_lib(["probe_lib [17][18][19][20][21][22]"])
-    A_probe_app(["probe_app"])
     A_pack_binding_ocaml_inspect(["inspect_ocaml [10]"])
     A_pack_binding_ocaml_stub_inspect(["inspect_ocaml_stub [11]"])
 
@@ -40,13 +42,16 @@ graph LR
     headers_node -.->|headers| A_build_binding_ocaml
     lib_node -.->|link| A_build_binding_ocaml
     A_build_binding_ocaml --> ocaml_binding_build_tree_node
+    ocaml_binding_build_tree_node --> A_build_app_ocaml
+    lib_node -.->|link| A_build_app_ocaml
+    A_build_app_ocaml --> app_node
     A_configure --> A_build_binding_python
     headers_node -.->|headers| A_build_binding_python
     lib_node -.->|link| A_build_binding_python
     A_build_binding_python --> python_binding_node
-    ocaml_binding_build_tree_node --> A_build_app
-    lib_node -.->|link| A_build_app
-    A_build_app --> app_node
+    python_binding_node --> A_build_app_python
+    lib_node -.->|link| A_build_app_python
+    A_build_app_python --> app_node
     A_build_lib --> A_install_lib
     ocaml_binding_build_tree_node --> A_pack_binding_ocaml
     A_pack_binding_ocaml --> ocaml_binding_opam_node
@@ -57,11 +62,13 @@ graph LR
     lib_node -.->|runtime| A_probe_binding_ocaml
     ocaml_binding_opam_node -->|test| A_probe_binding_ocaml_opam
     lib_node -.->|runtime| A_probe_binding_ocaml_opam
+    app_node -->|test| A_probe_app_ocaml
+    lib_node -.->|runtime| A_probe_app_ocaml
     python_binding_node -->|test| A_probe_binding_python
     lib_node -.->|runtime| A_probe_binding_python
+    app_node -->|test| A_probe_app_ocaml
+    lib_node -.->|runtime| A_probe_app_ocaml
     lib_node -->|test| A_probe_lib
-    app_node -->|test| A_probe_app
-    lib_node -.->|runtime| A_probe_app
     A_pack_binding_ocaml -.-> A_pack_binding_ocaml_inspect
     A_pack_binding_ocaml -.-> A_pack_binding_ocaml_stub_inspect
 
@@ -78,8 +85,9 @@ graph LR
     class A_build_headers st_done_ctx
     class A_build_lib st_done_ctx
     class A_build_binding_ocaml st_done
+    class A_build_app_ocaml st_nospec
     class A_build_binding_python st_nospec
-    class A_build_app st_nospec
+    class A_build_app_python st_nospec
     class A_install_lib st_done_ctx
     class A_pack_binding_ocaml st_done
     class A_pack_binding_python st_nospec
@@ -87,9 +95,10 @@ graph LR
     class A_pack_app st_nospec
     class A_probe_binding_ocaml st_done
     class A_probe_binding_ocaml_opam st_done
+    class A_probe_app_ocaml st_nospec
     class A_probe_binding_python st_expected_fail
+    class A_probe_app_ocaml st_nospec
     class A_probe_lib st_done_ctx
-    class A_probe_app st_nospec
     class A_pack_binding_ocaml_inspect st_done
     class A_pack_binding_ocaml_stub_inspect st_done
     linkStyle 0 stroke:#4caf50,stroke-width:3px
@@ -108,20 +117,25 @@ graph LR
     linkStyle 13 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 14 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 15 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 16 stroke:#4caf50,stroke-width:3px
-    linkStyle 17 stroke:#4caf50,stroke-width:3px
-    linkStyle 18 stroke:#4caf50,stroke-width:3px
-    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 22 stroke:#4caf50,stroke-width:3px
-    linkStyle 23 stroke:#4caf50,stroke-width:3px
-    linkStyle 24 stroke:#4caf50,stroke-width:3px
+    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 19 stroke:#4caf50,stroke-width:3px
+    linkStyle 20 stroke:#4caf50,stroke-width:3px
+    linkStyle 21 stroke:#4caf50,stroke-width:3px
+    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 24 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 25 stroke:#4caf50,stroke-width:3px
-    linkStyle 26 stroke:#f9a825,stroke-width:3px
-    linkStyle 27 stroke:#f9a825,stroke-width:3px
+    linkStyle 26 stroke:#4caf50,stroke-width:3px
+    linkStyle 27 stroke:#4caf50,stroke-width:3px
     linkStyle 28 stroke:#4caf50,stroke-width:3px
     linkStyle 29 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 31 stroke:#4caf50,stroke-width:3px
-    linkStyle 32 stroke:#4caf50,stroke-width:3px
+    linkStyle 31 stroke:#f9a825,stroke-width:3px
+    linkStyle 32 stroke:#f9a825,stroke-width:3px
+    linkStyle 33 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 34 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 35 stroke:#4caf50,stroke-width:3px
+    linkStyle 36 stroke:#4caf50,stroke-width:3px
+    linkStyle 37 stroke:#4caf50,stroke-width:3px

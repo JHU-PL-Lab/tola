@@ -11,29 +11,31 @@ graph LR
     end
     app_node@{ shape: docs, label: "app" }
     ocaml_binding_node@{ shape: docs, label: "ocaml binding [9][10][11]" }
-    python_binding_node@{ shape: docs, label: "python binding [17][18]" }
+    python_binding_node@{ shape: docs, label: "python binding [18][19]" }
 
     A_scan_source{{"scan_source [2]"}}
     A_configure{{"configure [3]"}}
     A_build_headers{{"build_headers [4]"}}
     A_build_lib{{"build_lib [5]"}}
     A_build_binding_ocaml{{"build_binding_ocaml [8]"}}
+    A_build_app_ocaml{{"build_app_ocaml"}}
     A_build_binding_python{{"build_binding_python"}}
-    A_build_app{{"build_app"}}
+    A_build_app_python{{"build_app_python"}}
     A_install_lib{{"install_lib [6]"}}
     A_pack_binding_ocaml{{"pack_binding_ocaml [12][13][14]"}}
     A_pack_binding_python{{"pack_binding_python"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
     A_probe_binding_ocaml(["probe_binding_ocaml [15][16]"])
-    A_probe_binding_python(["probe_binding_python [19]"])
-    A_probe_lib(["probe_lib [20]"])
-    A_probe_lib_staged(["probe_lib_staged [22]"])
-    A_probe_lib_apt(["probe_lib_apt [24]"])
-    A_probe_app(["probe_app [26]"])
-    A_probe_lib_inspect(["inspect_lib [21]"])
-    A_probe_lib_staged_inspect(["inspect_lib_staged [23]"])
-    A_probe_lib_apt_inspect(["inspect_lib_apt [25]"])
+    A_probe_app_ocaml(["probe_app_ocaml [17]"])
+    A_probe_binding_python(["probe_binding_python [20]"])
+    A_probe_app_ocaml(["probe_app_ocaml [17]"])
+    A_probe_lib(["probe_lib [22]"])
+    A_probe_lib_staged(["probe_lib_staged [24]"])
+    A_probe_lib_apt(["probe_lib_apt [26]"])
+    A_probe_lib_inspect(["inspect_lib [23]"])
+    A_probe_lib_staged_inspect(["inspect_lib_staged [25]"])
+    A_probe_lib_apt_inspect(["inspect_lib_apt [27]"])
 
     source_node -.-> A_scan_source
     source_node --> A_configure
@@ -45,13 +47,16 @@ graph LR
     headers_node -.->|headers| A_build_binding_ocaml
     lib_staged_node -.->|link| A_build_binding_ocaml
     A_build_binding_ocaml --> ocaml_binding_node
+    ocaml_binding_node --> A_build_app_ocaml
+    lib_staged_node -.->|link| A_build_app_ocaml
+    A_build_app_ocaml --> app_node
     A_configure --> A_build_binding_python
     headers_node -.->|headers| A_build_binding_python
     lib_staged_node -.->|link| A_build_binding_python
     A_build_binding_python --> python_binding_node
-    ocaml_binding_node --> A_build_app
-    lib_staged_node -.->|link| A_build_app
-    A_build_app --> app_node
+    python_binding_node --> A_build_app_python
+    lib_staged_node -.->|link| A_build_app_python
+    A_build_app_python --> app_node
     lib_build_tree_node --> A_install_lib
     A_install_lib --> lib_staged_node
     ocaml_binding_node --> A_pack_binding_ocaml
@@ -61,13 +66,15 @@ graph LR
     app_node --> A_pack_app
     ocaml_binding_node -->|test| A_probe_binding_ocaml
     lib_staged_node -.->|runtime| A_probe_binding_ocaml
+    app_node -->|test| A_probe_app_ocaml
+    lib_staged_node -.->|runtime| A_probe_app_ocaml
     python_binding_node -->|test| A_probe_binding_python
     lib_staged_node -.->|runtime| A_probe_binding_python
+    app_node -->|test| A_probe_app_ocaml
+    lib_staged_node -.->|runtime| A_probe_app_ocaml
     lib_build_tree_node -->|test| A_probe_lib
     lib_staged_node -->|test| A_probe_lib_staged
     lib_apt_node -->|test| A_probe_lib_apt
-    app_node -->|test| A_probe_app
-    lib_staged_node -.->|runtime| A_probe_app
     A_probe_lib -.-> A_probe_lib_inspect
     A_probe_lib_staged -.-> A_probe_lib_staged_inspect
     A_probe_lib_apt -.-> A_probe_lib_apt_inspect
@@ -86,19 +93,21 @@ graph LR
     class A_build_headers st_done_ctx
     class A_build_lib st_done
     class A_build_binding_ocaml st_done_ctx
+    class A_build_app_ocaml st_nospec
     class A_build_binding_python st_nospec
-    class A_build_app st_nospec
+    class A_build_app_python st_nospec
     class A_install_lib st_done
     class A_pack_binding_ocaml st_done_ctx
     class A_pack_binding_python st_nospec
     class A_pack_lib st_nospec
     class A_pack_app st_nospec
     class A_probe_binding_ocaml st_done_ctx
+    class A_probe_app_ocaml st_done_ctx
     class A_probe_binding_python st_done_ctx
+    class A_probe_app_ocaml st_done_ctx
     class A_probe_lib st_done
     class A_probe_lib_staged st_done
     class A_probe_lib_apt st_done
-    class A_probe_app st_done_ctx
     class A_probe_lib_inspect st_done
     class A_probe_lib_staged_inspect st_done
     class A_probe_lib_apt_inspect st_done
@@ -119,16 +128,16 @@ graph LR
     linkStyle 14 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 15 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 17 stroke:#4caf50,stroke-width:3px
-    linkStyle 18 stroke:#4caf50,stroke-width:3px
-    linkStyle 19 stroke:#4caf50,stroke-width:3px
-    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 20 stroke:#4caf50,stroke-width:3px
+    linkStyle 21 stroke:#4caf50,stroke-width:3px
+    linkStyle 22 stroke:#4caf50,stroke-width:3px
     linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 24 stroke:#4caf50,stroke-width:3px
-    linkStyle 25 stroke:#4caf50,stroke-width:3px
-    linkStyle 26 stroke:#4caf50,stroke-width:3px
+    linkStyle 24 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 25 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 27 stroke:#4caf50,stroke-width:3px
     linkStyle 28 stroke:#4caf50,stroke-width:3px
     linkStyle 29 stroke:#4caf50,stroke-width:3px
@@ -138,3 +147,8 @@ graph LR
     linkStyle 33 stroke:#4caf50,stroke-width:3px
     linkStyle 34 stroke:#4caf50,stroke-width:3px
     linkStyle 35 stroke:#4caf50,stroke-width:3px
+    linkStyle 36 stroke:#4caf50,stroke-width:3px
+    linkStyle 37 stroke:#4caf50,stroke-width:3px
+    linkStyle 38 stroke:#4caf50,stroke-width:3px
+    linkStyle 39 stroke:#4caf50,stroke-width:3px
+    linkStyle 40 stroke:#4caf50,stroke-width:3px

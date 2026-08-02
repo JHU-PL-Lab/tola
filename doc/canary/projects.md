@@ -17,15 +17,15 @@ predicted) · `matrix` (scenario/variant grid).
 · `—`. **variants**: version/source variants via `run_project_multi` · `—`.
 **detection**: S5a trivial detector runs on every executed step.
 
-| project | origin | discovery | coverage | fetch_lib | surface | variants | detection | local / CI |
-|---|---|---|---|---|---|---|---|---|
-| **tiny** | Built (own C) | n/a | matrix | Raw | `api_source` | 22 scenarios | S5a | ✓ / ✓ |
-| **z3** | Built | n/a | +failure | Raw | `api_source` | dev / stable | S5a | ✓ / ✓ |
-| **llvm** | Built + System | Conf/Locator | +failure | Raw | `api_source` | dev / 19 | S5a | ✓ / ✓ |
-| **sqlite** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / ✓ |
-| **zarith** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / ✓ |
-| **ssl** | System | Conf | +failure | **Derived** | — | 2×2 (0.6.0/0.7.0 × core/nlv) + native probe | S5a | ✓ / ✓ |
-| **cairo** | System | Conf | positive | **Derived** | — | — | S5a | ✓ / — |
+| project    | origin         | discovery    | coverage | fetch_lib   | surface      | variants                                    | detection | local / CI |
+| ---------- | -------------- | ------------ | -------- | ----------- | ------------ | ------------------------------------------- | --------- | ---------- |
+| **tiny**   | Built (own C)  | n/a          | matrix   | Raw         | `api_source` | 22 scenarios                                | S5a       | ✓ / ✓      |
+| **z3**     | Built          | n/a          | +failure | Raw         | `api_source` | dev / stable                                | S5a       | ✓ / ✓      |
+| **llvm**   | Built + System | Conf/Locator | +failure | Raw         | `api_source` | dev / 19                                    | S5a       | ✓ / ✓      |
+| **sqlite** | System         | Conf         | positive | **Derived** | —            | —                                           | S5a       | ✓ / ✓      |
+| **zarith** | System         | Conf         | positive | **Derived** | —            | —                                           | S5a       | ✓ / ✓      |
+| **ssl**    | System         | Conf         | +failure | **Derived** | —            | 2×2 (0.6.0/0.7.0 × core/nlv) + native probe | S5a       | ✓ / ✓      |
+| **cairo**  | System         | Conf         | positive | **Derived** | —            | —                                           | S5a       | ✓ / —      |
 
 Notes:
 - **origin is a variant dimension, not a fixed category.** Every `System`

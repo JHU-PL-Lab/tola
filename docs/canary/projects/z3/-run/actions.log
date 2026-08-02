@@ -1,44 +1,79 @@
-[2026-05-06 17:01:41.588] *                          variant_start  (dev_1d8c50)
-[2026-05-06 17:01:41.588] *                          graph_start  (22 steps)
-[2026-05-06 17:01:41.589] *                          graph_end  (22/22 completed)
-[2026-05-06 17:01:41.589] *                          variant_start  (stable)
-[2026-05-06 17:01:41.589] *                          graph_start  (7 steps)
-[2026-05-06 17:01:41.589] *                          graph_end  (7/7 completed)
-[2026-05-06 17:01:41.589] *                          diagram  (_out/canary/projects/z3/-run/diagrams/all.mmd)
-[2026-05-06 17:01:41.589] *                          diagram  (_out/canary/projects/z3/-run/diagrams/full.mmd)
-[2026-05-06 17:01:41.590] *                          view  (source (2 steps))
-[2026-05-06 17:01:41.590] *                          view  (lib (9 steps))
-[2026-05-06 17:01:41.590] *                          view  (probes (9 steps))
-[2026-05-06 17:01:41.590] *                          view  (binding_ocaml (6 steps))
-[2026-05-06 17:01:41.590] *                          view  (binding_python (3 steps))
-[2026-05-06 17:01:41.592] *                          html  (_out/canary/projects/z3/-run/result.html)
-[2026-05-06 17:01:41.592] *                          index  (_out/canary/projects/index.html)
-[2026-05-06 17:01:41.592] !                          invariant  (full.mmd: connectivity errors:
-  [14]→[16]: no edge A_fetch_binding_python→A_probe_binding_python
-  [7]→[16]: no edge A_fetch_lib→A_probe_binding_python
-  [8]→[12]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
-  [7]→[12]: no edge A_fetch_lib→A_probe_binding_ocaml
-  [4]→[8]: no edge A_build_headers→A_build_binding_ocaml
-  [5]→[8]: no edge A_build_lib→A_build_binding_ocaml
-  [5]→[17]: no edge A_build_lib→A_probe_lib
-  [6]→[19]: no edge A_install_lib→A_probe_lib_staged
-  [9]→[13]: no edge A_pack_binding_ocaml→A_probe_binding_ocaml_opam
-  [7]→[13]: no edge A_fetch_lib→A_probe_binding_ocaml_opam
-  [7]→[21]: no edge A_fetch_lib→A_probe_lib_apt
-  [1]→[2]: no edge A_fetch_source→A_scan_source)
-[2026-05-06 17:01:41.592] !                          invariant  (SOME FAILED)
-[2026-05-06 17:37:13.097] *                          variant_start  (dev_1d8c50)
-[2026-05-06 17:37:13.097] *                          graph_start  (22 steps)
-[2026-05-06 17:37:13.098] pack_binding_ocaml_inspect  check_pre  (pass)
-[2026-05-06 17:37:13.100] pack_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-07-21 14:49:39.814] *                          variant_start  (dev_1d8c50)
+[2026-07-21 14:49:39.814] *                          graph_start  (22 steps)
+[2026-07-21 14:49:39.814] fetch_source               check_pre  (pass)
+[2026-07-21 14:49:39.816] fetch_source               cmd  (test -d /home/red/code/contrib/z3-all/z3 && echo '/home/red/code/contrib/z3-all/z3' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_source/source_dev_1d8c50.ok)
+[2026-07-21 14:49:39.817] fetch_source               check_post  (pass)
+[2026-07-21 14:49:39.817] fetch_source               done
+[2026-07-21 14:49:39.817] scan_source                check_pre  (pass)
+[2026-07-21 14:49:39.818] scan_source                cmd  (test -d /home/red/code/contrib/z3-all/z3/src/api
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_algebraic.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_api.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_ast_containers.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_fixedpoint.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_fpa.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_macros.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_optimization.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_polynomial.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_rcf.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_spacer.h
+test -f /home/red/code/contrib/z3-all/z3/src/api/z3_v1.h
+test -d /home/red/code/contrib/z3-all/z3/src/api/ml
+test -d /home/red/code/contrib/z3-all/z3/src/api/python/z3
+echo 'scan ok' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_source/scan_dev_1d8c50.ok)
+[2026-07-21 14:49:39.819] scan_source                check_post  (pass)
+[2026-07-21 14:49:39.819] scan_source                done
+[2026-07-21 14:49:39.819] configure                  check_pre  (pass)
+[2026-07-21 14:49:39.821] configure                  cmd  (opam exec -- cmake -S /home/red/code/contrib/z3-all/z3 -B /home/red/code/contrib/z3-all/z3/../build -G Ninja -DCMAKE_VERBOSE_MAKEFILE=ON -DZ3_BUILD_LIBZ3_SHARED=ON -DZ3_BUILD_EXECUTABLE=OFF -DZ3_BUILD_TEST_EXECUTABLES=OFF -DZ3_LINK_TIME_OPTIMIZATION=ON -DZ3_BUILD_JAVA_BINDINGS=OFF -DZ3_BUILD_PYTHON_BINDINGS=OFF -DZ3_BUILD_OCAML_BINDINGS=ON && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/configure/conf_dev_1d8c50.ok)
+[2026-07-21 14:49:40.338] configure                  check_post  (pass)
+[2026-07-21 14:49:40.338] configure                  done
+[2026-07-21 14:49:40.338] build_headers              check_pre  (pass)
+[2026-07-21 14:49:40.341] build_headers              cmd  (test -f /home/red/code/contrib/z3-all/z3/src/api/z3.h && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/build_headers/headers_dev_1d8c50.ok)
+[2026-07-21 14:49:40.342] build_headers              check_post  (pass)
+[2026-07-21 14:49:40.342] build_headers              done
+[2026-07-21 14:49:40.342] build_lib                  check_pre  (pass)
+[2026-07-21 14:49:40.345] build_lib                  cmd  (ninja -C /home/red/code/contrib/z3-all/z3/../build libz3 && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/build_lib/build_dev_1d8c50.ok)
+[2026-07-21 14:55:34.618] build_lib                  check_post  (pass)
+[2026-07-21 14:55:34.618] build_lib                  done
+[2026-07-21 14:55:34.618] install_lib                check_pre  (pass)
+[2026-07-21 14:55:34.620] install_lib                cmd  (PREFIX="/home/red/code/contrib/z3-all/z3/../build/../install"
+mkdir -p "$PREFIX/lib"
+cp /home/red/code/contrib/z3-all/z3/../build/libz3.so* "$PREFIX/lib/" 2>/dev/null || true
+echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/install_lib/install_dev_1d8c50.ok)
+[2026-07-21 14:55:36.458] install_lib                check_post  (pass)
+[2026-07-21 14:55:36.458] install_lib                done
+[2026-07-21 14:55:36.458] fetch_lib                  check_pre  (pass)
+[2026-07-21 14:55:36.460] fetch_lib                  cmd  (sudo apt-get install -y z3 && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_lib/lib_dev_1d8c50.ok)
+[2026-07-21 14:55:36.791] fetch_lib                  check_post  (pass)
+[2026-07-21 14:55:36.791] fetch_lib                  done
+[2026-07-21 14:55:36.791] build_binding_ocaml        check_pre  (pass)
+[2026-07-21 14:55:36.794] build_binding_ocaml        cmd  (eval $(opam env) && ninja -C /home/red/code/contrib/z3-all/z3/../build build_z3_ocaml_bindings && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/build_binding/ocaml/build_dev_1d8c50.ok)
+[2026-07-21 14:55:37.096] build_binding_ocaml        check_post  (pass)
+[2026-07-21 14:55:37.096] build_binding_ocaml        done
+[2026-07-21 14:55:37.096] pack_binding_ocaml         check_pre  (pass)
+[2026-07-21 14:55:37.099] pack_binding_ocaml         cmd  (eval $(opam env)
+mkdir -p "/home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack-repo/packages/z3/z3.dev"
+cp "/home/red/code/research/tola/canary/templates/opam-local-repo/packages/z3/z3.dev/opam.in" "/home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack-repo/packages/z3/z3.dev/opam.in"
+(cd "/home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack-repo" && OPAMVAR_CANARY_Z3_SRC="git+file:///home/red/code/contrib/z3-all/z3" opam config subst "packages/z3/z3.dev/opam")
+printf 'opam-version: "2.0"\n' > "/home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack-repo/repo"
+opam repo remove canary-local-pack 2>/dev/null || true
+opam repo add canary-local-pack "file:///home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack-repo" --rank=1
+opam update canary-local-pack
+opam remove -y z3.dev || true
+OPAMVAR_Z3_PREFIX="/home/red/code/contrib/z3-all/z3/../build" OPAMVAR_Z3_LIB_DIR="/home/red/code/contrib/z3-all/z3/../build" CANARY_BUILD_DIR="/home/red/code/contrib/z3-all/z3/../build" CANARY_SRC_DIR="/home/red/code/contrib/z3-all/z3" opam install -y z3.dev --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/pack_dev_1d8c50.ok)
+[2026-07-21 14:55:53.466] pack_binding_ocaml         check_post  (pass)
+[2026-07-21 14:55:53.466] pack_binding_ocaml         done
+[2026-07-21 14:55:53.466] pack_binding_ocaml_inspect  check_pre  (pass)
+[2026-07-21 14:55:53.468] pack_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'z3' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
   --watchlist 'Z3,Z3.Solver.add,Z3.Optimize.minimize,Z3.Expr.mk_app' > /home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/inspect_dev_1d8c50.json)
-[2026-05-06 17:37:13.165] pack_binding_ocaml_inspect  check_post  (pass)
-[2026-05-06 17:37:13.165] pack_binding_ocaml_inspect  done
-[2026-05-06 17:37:13.165] pack_binding_ocaml_stub_inspect  check_pre  (pass)
-[2026-05-06 17:37:13.167] pack_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
+[2026-07-21 14:55:53.534] pack_binding_ocaml_inspect  check_post  (pass)
+[2026-07-21 14:55:53.534] pack_binding_ocaml_inspect  done
+[2026-07-21 14:55:53.535] pack_binding_ocaml_stub_inspect  check_pre  (pass)
+[2026-07-21 14:55:53.537] pack_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'z3' 2>/dev/null)
 test -n "$PKG_DIR"
 STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
@@ -46,65 +81,178 @@ test -n "$STUB"
 python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
   --prefix 'Z3_' --watchlist '' \
   > /home/red/code/research/tola/_out/canary/projects/z3/pack_binding/ocaml/inspect_stub_dev_1d8c50.json)
-[2026-05-06 17:37:13.277] pack_binding_ocaml_stub_inspect  check_post  (pass)
-[2026-05-06 17:37:13.277] pack_binding_ocaml_stub_inspect  done
-[2026-05-06 17:37:13.277] fetch_binding_python_inspect  check_pre  (pass)
-[2026-05-06 17:37:13.279] fetch_binding_python_inspect  cmd  (python3 canary/scripts/inspect_python.py --pkg 'z3' --watchlist 'Solver,BitVec,Optimize,Tactic,Context,Int,Real,Bool,parser_context' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/inspect_dev_1d8c50.json)
-[2026-05-06 17:37:13.354] fetch_binding_python_inspect  check_post  (pass)
-[2026-05-06 17:37:13.354] fetch_binding_python_inspect  done
-[2026-05-06 17:37:13.354] probe_lib_inspect          check_pre  (pass)
-[2026-05-06 17:37:13.356] probe_lib_inspect          cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
+[2026-07-21 14:55:53.643] pack_binding_ocaml_stub_inspect  check_post  (pass)
+[2026-07-21 14:55:53.643] pack_binding_ocaml_stub_inspect  done
+[2026-07-21 14:55:53.643] probe_binding_ocaml        check_pre  (pass)
+[2026-07-21 14:55:53.646] probe_binding_ocaml        cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
+test -n "$LIB_Z3"
+BINDING_DIR="/home/red/code/contrib/z3-all/z3/../build/src/api/ml"
+test -d "$BINDING_DIR"
+STUB=$(ls "$BINDING_DIR"/libz3ml.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/assert_binary_symbols.py --provided-lib "$LIB_Z3" --required-lib "$STUB" \
+  --symbol-prefix Z3_ 2>&1 | tee /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/symbols_dev_1d8c50.log
+grep -q 'OK:' /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/symbols_dev_1d8c50.log
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg \
+  -I "$BINDING_DIR" "$BINDING_DIR"/z3ml.cmxa /home/red/code/research/tola/canary/examples/z3/z3_example.ml \
+  -o /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/z3_example > /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/probe_dev_1d8c50.log 2>&1 || exit 1
+/home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/z3_example >> /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/probe_dev_1d8c50.log 2>&1)
+[2026-07-21 14:55:53.896] probe_binding_ocaml        check_post  (pass)
+[2026-07-21 14:55:53.896] probe_binding_ocaml        done
+[2026-07-21 14:55:53.896] probe_binding_ocaml_opam   check_pre  (pass)
+[2026-07-21 14:55:53.898] probe_binding_ocaml_opam   cmd  (eval $(opam env)
+ocamlfind ocamlopt -package z3 -linkpkg /home/red/code/research/tola/canary/examples/z3/z3_example.ml \
+  -o /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml_opam/z3_example > /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml_opam/probe_dev_1d8c50.log 2>&1 || exit 1
+/home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml_opam/z3_example >> /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml_opam/probe_dev_1d8c50.log 2>&1)
+[2026-07-21 14:55:54.021] probe_binding_ocaml_opam   check_post  (pass)
+[2026-07-21 14:55:54.021] probe_binding_ocaml_opam   done
+[2026-07-21 14:55:54.021] fetch_binding_python       check_pre  (pass)
+[2026-07-21 14:55:54.024] fetch_binding_python       cmd  (set -e
+INSTALL_LOG=/home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/install_dev_1d8c50.log
+if command -v pip >/dev/null 2>&1; then
+  pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif python3 -m pip --version >/dev/null 2>&1; then
+  python3 -m pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif command -v uv >/dev/null 2>&1; then
+  uv pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+else
+  echo "no pip / python3 -m pip / uv pip available" > "$INSTALL_LOG"
+  exit 1
+fi
+echo 'installed' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/binding_dev_1d8c50.ok)
+[2026-07-21 14:55:54.046] fetch_binding_python       check_post  (pass)
+[2026-07-21 14:55:54.046] fetch_binding_python       done
+[2026-07-21 14:55:54.046] fetch_binding_python_inspect  check_pre  (pass)
+[2026-07-21 14:55:54.048] fetch_binding_python_inspect  cmd  (python3 canary/scripts/inspect_python.py --pkg 'z3' --watchlist 'Solver,BitVec,Optimize,Tactic,Context,Int,Real,Bool,parser_context' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/inspect_dev_1d8c50.json)
+[2026-07-21 14:55:54.111] fetch_binding_python_inspect  check_post  (pass)
+[2026-07-21 14:55:54.111] fetch_binding_python_inspect  done
+[2026-07-21 14:55:54.111] probe_binding_python       check_pre  (pass)
+[2026-07-21 14:55:54.113] probe_binding_python       cmd  (set -e
+python3 -c "import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check()); _ = z3.parser_context" > /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_dev_1d8c50.log 2>&1 || { cat /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_dev_1d8c50.log; exit 1; }
+cat /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_dev_1d8c50.log)
+[2026-07-21 14:55:54.189] probe_binding_python       cmd_fail  (exit 1)
+[2026-07-21 14:55:54.189] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-07-21 14:55:54.189] probe_binding_python       done  (expected failure confirmed (derived): z3-solver pip wheel predates z3.parser_context, added in Z3 4.15+ Python source (not yet exported in pip wheel))
+[2026-07-21 14:55:54.189] probe_lib                  check_pre  (pass)
+[2026-07-21 14:55:54.192] probe_lib                  cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
+test -n "$LIB_Z3"
+COUNT=$(nm -D "$LIB_Z3" 2>/dev/null | grep -v ' U ' | grep -c 'Z3_' || echo 0)
+printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/z3/probe_lib/probe_dev_1d8c50.log
+test "$COUNT" -gt 0)
+[2026-07-21 14:55:54.244] probe_lib                  check_post  (pass)
+[2026-07-21 14:55:54.244] probe_lib                  done
+[2026-07-21 14:55:54.244] probe_lib_inspect          check_pre  (pass)
+[2026-07-21 14:55:54.246] probe_lib_inspect          cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
 test -n "$LIB_Z3"
 nm -D "$LIB_Z3" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
   > /home/red/code/research/tola/_out/canary/projects/z3/probe_lib/inspect_dev_1d8c50.json)
-[2026-05-06 17:37:13.417] probe_lib_inspect          check_post  (pass)
-[2026-05-06 17:37:13.417] probe_lib_inspect          done
-[2026-05-06 17:37:13.417] probe_lib_staged_inspect   check_pre  (pass)
-[2026-05-06 17:37:13.419] probe_lib_staged_inspect   cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
+[2026-07-21 14:55:54.306] probe_lib_inspect          check_post  (pass)
+[2026-07-21 14:55:54.306] probe_lib_inspect          done
+[2026-07-21 14:55:54.306] probe_lib_staged           check_pre  (pass)
+[2026-07-21 14:55:54.309] probe_lib_staged           cmd  (COUNT=$(nm -D "/home/red/code/contrib/z3-all/z3/../build/../install/lib/libz3.so" 2>/dev/null | grep -v ' U ' | grep -c 'Z3_' || echo 0)
+printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/z3/probe_lib_staged/probe_dev_1d8c50.log
+test "$COUNT" -gt 0)
+[2026-07-21 14:55:54.361] probe_lib_staged           check_post  (pass)
+[2026-07-21 14:55:54.361] probe_lib_staged           done
+[2026-07-21 14:55:54.361] probe_lib_staged_inspect   check_pre  (pass)
+[2026-07-21 14:55:54.363] probe_lib_staged_inspect   cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
 test -n "$LIB_Z3"
 nm -D "$LIB_Z3" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
   > /home/red/code/research/tola/_out/canary/projects/z3/probe_lib_staged/inspect_dev_1d8c50.json)
-[2026-05-06 17:37:13.486] probe_lib_staged_inspect   check_post  (pass)
-[2026-05-06 17:37:13.486] probe_lib_staged_inspect   done
-[2026-05-06 17:37:13.486] probe_lib_apt_inspect      check_pre  (pass)
-[2026-05-06 17:37:13.488] probe_lib_apt_inspect      cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
+[2026-07-21 14:55:54.417] probe_lib_staged_inspect   check_post  (pass)
+[2026-07-21 14:55:54.417] probe_lib_staged_inspect   done
+[2026-07-21 14:55:54.417] probe_lib_apt              check_pre  (pass)
+[2026-07-21 14:55:54.420] probe_lib_apt              cmd  (LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+test -f "$LIB_Z3"
+COUNT=$(nm -D "$LIB_Z3" 2>/dev/null | grep -v ' U ' | grep -c 'Z3_' || echo 0)
+printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/z3/probe_lib_apt/probe_dev_1d8c50.log
+test "$COUNT" -gt 0)
+[2026-07-21 14:55:54.466] probe_lib_apt              check_post  (pass)
+[2026-07-21 14:55:54.466] probe_lib_apt              done
+[2026-07-21 14:55:54.466] probe_lib_apt_inspect      check_pre  (pass)
+[2026-07-21 14:55:54.468] probe_lib_apt_inspect      cmd  (LIB_Z3=$(ls /home/red/code/contrib/z3-all/z3/../build/libz3.so /home/red/code/contrib/z3-all/z3/../build/libz3.dylib 2>/dev/null | head -1)
 test -n "$LIB_Z3"
 nm -D "$LIB_Z3" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
   > /home/red/code/research/tola/_out/canary/projects/z3/probe_lib_apt/inspect_dev_1d8c50.json)
-[2026-05-06 17:37:13.546] probe_lib_apt_inspect      check_post  (pass)
-[2026-05-06 17:37:13.546] probe_lib_apt_inspect      done
-[2026-05-06 17:37:13.546] *                          graph_end  (22/22 completed)
-[2026-05-06 17:37:13.546] *                          variant_start  (stable)
-[2026-05-06 17:37:13.546] *                          graph_start  (7 steps)
-[2026-05-06 17:37:13.547] fetch_binding_python_inspect  check_pre  (pass)
-[2026-05-06 17:37:13.549] fetch_binding_python_inspect  cmd  (echo 'NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift'
+[2026-07-21 14:55:54.521] probe_lib_apt_inspect      check_post  (pass)
+[2026-07-21 14:55:54.521] probe_lib_apt_inspect      done
+[2026-07-21 14:55:54.521] *                          graph_end  (22/22 completed)
+[2026-07-21 14:55:54.521] *                          variant_start  (stable)
+[2026-07-21 14:55:54.521] *                          graph_start  (7 steps)
+[2026-07-21 14:55:54.791] fetch_lib                  check_pre  (pass)
+[2026-07-21 14:55:54.793] fetch_lib                  cmd  (sudo apt-get install -y z3 && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_lib/lib_stable.ok)
+[2026-07-21 14:55:55.165] fetch_lib                  check_post  (pass)
+[2026-07-21 14:55:55.165] fetch_lib                  done
+[2026-07-21 14:55:55.165] probe_binding_ocaml        check_pre  (pass)
+[2026-07-21 14:55:55.167] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package z3 -linkpkg /home/red/code/research/tola/canary/examples/z3/z3_example.ml \
+  -o /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/z3_example > /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/probe_stable.log 2>&1 || exit 1
+/home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/z3_example >> /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/ocaml/probe_stable.log 2>&1)
+[2026-07-21 14:55:55.284] probe_binding_ocaml        check_post  (pass)
+[2026-07-21 14:55:55.284] probe_binding_ocaml        done
+[2026-07-21 14:55:55.553] fetch_binding_python       check_pre  (pass)
+[2026-07-21 14:55:55.555] fetch_binding_python       cmd  (set -e
+INSTALL_LOG=/home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/install_stable.log
+if command -v pip >/dev/null 2>&1; then
+  pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif python3 -m pip --version >/dev/null 2>&1; then
+  python3 -m pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+elif command -v uv >/dev/null 2>&1; then
+  uv pip install --quiet z3-solver > "$INSTALL_LOG" 2>&1
+else
+  echo "no pip / python3 -m pip / uv pip available" > "$INSTALL_LOG"
+  exit 1
+fi
+echo 'installed' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/binding_stable.ok)
+[2026-07-21 14:55:55.576] fetch_binding_python       check_post  (pass)
+[2026-07-21 14:55:55.576] fetch_binding_python       done
+[2026-07-21 14:55:55.576] fetch_binding_python_inspect  check_pre  (pass)
+[2026-07-21 14:55:55.578] fetch_binding_python_inspect  cmd  (echo 'NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift'
 python3 canary/scripts/inspect_python.py --pkg 'z3' --watchlist 'Solver,BitVec,Optimize,Tactic,Context,Int,Real,Bool,parser_context' > /home/red/code/research/tola/_out/canary/projects/z3/fetch_binding/python/inspect_stable.json)
-[2026-05-06 17:37:13.612] fetch_binding_python_inspect  check_post  (pass)
-[2026-05-06 17:37:13.612] fetch_binding_python_inspect  done
-[2026-05-06 17:37:13.612] probe_lib_inspect          check_pre  (pass)
-[2026-05-06 17:37:13.614] probe_lib_inspect          cmd  (echo 'NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift'
+[2026-07-21 14:55:55.639] fetch_binding_python_inspect  check_post  (pass)
+[2026-07-21 14:55:55.639] fetch_binding_python_inspect  done
+[2026-07-21 14:55:55.639] probe_binding_python       check_pre  (pass)
+[2026-07-21 14:55:55.641] probe_binding_python       cmd  (set -e
+python3 -c "import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check()); _ = z3.parser_context" > /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_stable.log 2>&1 || { cat /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_stable.log; exit 1; }
+cat /home/red/code/research/tola/_out/canary/projects/z3/probe_binding/python/probe_stable.log)
+[2026-07-21 14:55:55.716] probe_binding_python       cmd_fail  (exit 1)
+[2026-07-21 14:55:55.716] probe_binding_python       compat_predicted  (1 substring(s))
+[2026-07-21 14:55:55.716] probe_binding_python       done  (expected failure confirmed (derived): z3-solver pip wheel predates z3.parser_context, added in Z3 4.15+ Python source (not yet exported in pip wheel))
+[2026-07-21 14:55:55.717] probe_lib                  check_pre  (pass)
+[2026-07-21 14:55:55.718] probe_lib                  cmd  (LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
+test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
+test -f "$LIB_Z3"
+COUNT=$(nm -D "$LIB_Z3" 2>/dev/null | grep -v ' U ' | grep -c 'Z3_' || echo 0)
+printf 'Z3_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/z3/probe_lib/probe_stable.log
+test "$COUNT" -gt 0)
+[2026-07-21 14:55:55.765] probe_lib                  check_post  (pass)
+[2026-07-21 14:55:55.765] probe_lib                  done
+[2026-07-21 14:55:55.765] probe_lib_inspect          check_pre  (pass)
+[2026-07-21 14:55:55.767] probe_lib_inspect          cmd  (echo 'NOTE: api_source is the dev spec reused for stable source z3/4.15.2; watchlist may drift'
 LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so
 test -f "$LIB_Z3" || LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.dylib
 test -f "$LIB_Z3"
 nm -D "$LIB_Z3" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_Z3" --prefixes 'Z3_,Z3_mk_,Z3_solver_' --watchlist 'Z3_mk_solver,Z3_mk_optimize,Z3_mk_context,Z3_solver_check,Z3_mk_optimize_assert_soft,Z3_mk_seq_replace_re_all' \
   > /home/red/code/research/tola/_out/canary/projects/z3/probe_lib/inspect_stable.json)
-[2026-05-06 17:37:13.684] probe_lib_inspect          check_post  (pass)
-[2026-05-06 17:37:13.685] probe_lib_inspect          done
-[2026-05-06 17:37:13.685] *                          graph_end  (7/7 completed)
-[2026-05-06 17:37:13.685] *                          diagram  (_out/canary/projects/z3/-run/diagrams/all.mmd)
-[2026-05-06 17:37:13.685] *                          diagram  (_out/canary/projects/z3/-run/diagrams/full.mmd)
-[2026-05-06 17:37:13.685] *                          view  (source (2 steps))
-[2026-05-06 17:37:13.686] *                          view  (lib (9 steps))
-[2026-05-06 17:37:13.686] *                          view  (probes (9 steps))
-[2026-05-06 17:37:13.686] *                          view  (binding_ocaml (6 steps))
-[2026-05-06 17:37:13.686] *                          view  (binding_python (3 steps))
-[2026-05-06 17:37:13.688] *                          html  (_out/canary/projects/z3/-run/result.html)
-[2026-05-06 17:37:13.689] *                          index  (_out/canary/projects/index.html)
-[2026-05-06 17:37:13.689] !                          invariant  (full.mmd: connectivity errors:
+[2026-07-21 14:55:55.820] probe_lib_inspect          check_post  (pass)
+[2026-07-21 14:55:55.820] probe_lib_inspect          done
+[2026-07-21 14:55:55.820] *                          graph_end  (7/7 completed)
+[2026-07-21 14:55:55.820] *                          diagram  (_out/canary/projects/z3/-run/diagrams/all.mmd)
+[2026-07-21 14:55:55.821] *                          diagram  (_out/canary/projects/z3/-run/diagrams/full.mmd)
+[2026-07-21 14:55:55.821] *                          view  (source (2 steps))
+[2026-07-21 14:55:55.821] *                          view  (lib (9 steps))
+[2026-07-21 14:55:55.821] *                          view  (probes (9 steps))
+[2026-07-21 14:55:55.821] *                          view  (binding_ocaml (6 steps))
+[2026-07-21 14:55:55.821] *                          view  (binding_python (3 steps))
+[2026-07-21 14:55:55.824] *                          html  (_out/canary/projects/z3/-run/result.html)
+[2026-07-21 14:55:55.824] *                          index  (_out/canary/projects/index.html)
+[2026-07-21 14:55:55.824] !                          invariant  (full.mmd: connectivity errors:
   [14]→[16]: no edge A_fetch_binding_python→A_probe_binding_python
   [7]→[16]: no edge A_fetch_lib→A_probe_binding_python
   [8]→[12]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
@@ -117,33 +265,4 @@ nm -D "$LIB_Z3" 2>/dev/null \
   [7]→[13]: no edge A_fetch_lib→A_probe_binding_ocaml_opam
   [7]→[21]: no edge A_fetch_lib→A_probe_lib_apt
   [1]→[2]: no edge A_fetch_source→A_scan_source)
-[2026-05-06 17:37:13.689] !                          invariant  (SOME FAILED)
-[2026-05-06 17:40:07.730] *                          variant_start  (dev_1d8c50)
-[2026-05-06 17:40:07.730] *                          graph_start  (22 steps)
-[2026-05-06 17:40:07.731] *                          graph_end  (22/22 completed)
-[2026-05-06 17:40:07.731] *                          variant_start  (stable)
-[2026-05-06 17:40:07.731] *                          graph_start  (7 steps)
-[2026-05-06 17:40:07.731] *                          graph_end  (7/7 completed)
-[2026-05-06 17:40:07.731] *                          diagram  (_out/canary/projects/z3/-run/diagrams/all.mmd)
-[2026-05-06 17:40:07.731] *                          diagram  (_out/canary/projects/z3/-run/diagrams/full.mmd)
-[2026-05-06 17:40:07.732] *                          view  (source (2 steps))
-[2026-05-06 17:40:07.732] *                          view  (lib (9 steps))
-[2026-05-06 17:40:07.732] *                          view  (probes (9 steps))
-[2026-05-06 17:40:07.732] *                          view  (binding_ocaml (6 steps))
-[2026-05-06 17:40:07.732] *                          view  (binding_python (3 steps))
-[2026-05-06 17:40:07.734] *                          html  (_out/canary/projects/z3/-run/result.html)
-[2026-05-06 17:40:07.734] *                          index  (_out/canary/projects/index.html)
-[2026-05-06 17:40:07.735] !                          invariant  (full.mmd: connectivity errors:
-  [14]→[16]: no edge A_fetch_binding_python→A_probe_binding_python
-  [7]→[16]: no edge A_fetch_lib→A_probe_binding_python
-  [8]→[12]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
-  [7]→[12]: no edge A_fetch_lib→A_probe_binding_ocaml
-  [4]→[8]: no edge A_build_headers→A_build_binding_ocaml
-  [5]→[8]: no edge A_build_lib→A_build_binding_ocaml
-  [5]→[17]: no edge A_build_lib→A_probe_lib
-  [6]→[19]: no edge A_install_lib→A_probe_lib_staged
-  [9]→[13]: no edge A_pack_binding_ocaml→A_probe_binding_ocaml_opam
-  [7]→[13]: no edge A_fetch_lib→A_probe_binding_ocaml_opam
-  [7]→[21]: no edge A_fetch_lib→A_probe_lib_apt
-  [1]→[2]: no edge A_fetch_source→A_scan_source)
-[2026-05-06 17:40:07.735] !                          invariant  (SOME FAILED)
+[2026-07-21 14:55:55.824] !                          invariant  (SOME FAILED)

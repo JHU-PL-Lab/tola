@@ -3,6 +3,7 @@
   "path": "/home/red/.opam/default/lib/llvm",
   "counts": {
     "vals": 561,
+    "externals": 29,
     "constructors": 334,
     "modules": 63
   },
@@ -568,6 +569,177 @@
     "Llvm_target.TargetMachine.set_machine_outliner",
     "Llvm_target.TargetMachine.emit_to_file",
     "Llvm_target.TargetMachine.emit_to_memory_buffer"
+  ],
+  "externals": [
+    "Llvm_AArch64.initialize",
+    "Llvm_AMDGPU.initialize",
+    "Llvm_ARM.initialize",
+    "Llvm_AVR.initialize",
+    "Llvm_BPF.initialize",
+    "Llvm_Hexagon.initialize",
+    "Llvm_Lanai.initialize",
+    "Llvm_LoongArch.initialize",
+    "Llvm_MSP430.initialize",
+    "Llvm_Mips.initialize",
+    "Llvm_NVPTX.initialize",
+    "Llvm_PowerPC.initialize",
+    "Llvm_RISCV.initialize",
+    "Llvm_Sparc.initialize",
+    "Llvm_SystemZ.initialize",
+    "Llvm_VE.initialize",
+    "Llvm_WebAssembly.initialize",
+    "Llvm_X86.initialize",
+    "Llvm_XCore.initialize",
+    "Llvm_analysis.verify_module",
+    "Llvm_analysis.verify_function",
+    "Llvm_analysis.assert_valid_module",
+    "Llvm_analysis.assert_valid_function",
+    "Llvm_analysis.view_function_cfg",
+    "Llvm_analysis.view_function_cfg_only",
+    "Llvm_bitwriter.write_bitcode_file",
+    "Llvm_bitwriter.write_bitcode_to_fd",
+    "Llvm_bitwriter.write_bitcode_to_memory_buffer",
+    "Llvm_transform_utils.clone_module"
+  ],
+  "externals_detail": [
+    {
+      "name": "Llvm_AArch64.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_AArch64",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_AMDGPU.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_AMDGPU",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_ARM.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_ARM",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_AVR.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_AVR",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_BPF.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_BPF",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_Hexagon.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_Hexagon",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_Lanai.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_Lanai",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_LoongArch.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_LoongArch",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_MSP430.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_MSP430",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_Mips.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_Mips",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_NVPTX.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_NVPTX",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_PowerPC.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_PowerPC",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_RISCV.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_RISCV",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_Sparc.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_Sparc",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_SystemZ.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_SystemZ",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_VE.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_VE",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_WebAssembly.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_WebAssembly",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_X86.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_X86",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_XCore.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_XCore",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.verify_module",
+      "sig": "Llvm.llmodule -> string option",
+      "c_symbol": "llvm_verify_module",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.verify_function",
+      "sig": "Llvm.llvalue -> bool",
+      "c_symbol": "llvm_verify_function",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.view_function_cfg",
+      "sig": "Llvm.llvalue -> unit",
+      "c_symbol": "llvm_view_function_cfg",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_transform_utils.clone_module",
+      "sig": "Llvm.llmodule -> Llvm.llmodule",
+      "c_symbol": "llvm_clone_module",
+      "arity": 1
+    }
   ],
   "constructors": [
     "Llvm.TypeKind.Half",

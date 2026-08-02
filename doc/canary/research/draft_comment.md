@@ -1,8 +1,6 @@
 Today's task is 
 - finish section 2 for material 
 - and section 3 for idea pipeline (testing moviation, agreement..)
-- sync-ing on Single Source Of Truth (code-doc, ocaml, testing)
-  - global naming art, sce, good/bad/surface
 
 # Issues
 
@@ -101,23 +99,6 @@ project-wide catalogue (Artifacts / Surfaces / Agreements / Good
 scenarios / Bad scenarios / Actions) bridging manuscript ↔ code.
 The notes below are the rename/decision history; canonical tables
 live in `design/ssot.md`.
-
-**Doc-side prefix scheme decided 2026-06-XX** — two-letter,
-applied to `draft.md`:
-
-| Concept   | Old (mixed)                   | New (uniform)      |
-| --------- | ----------------------------- | ------------------ |
-| Snippet   | `Sn.X`                        | `Sn.X` (unchanged) |
-| Artifact  | `A0..A2` / `a1..a3`           | `Ar.0..Ar.3`       |
-| Surface   | `s1..s5`                      | `Sf.1..Sf.5`       |
-| Agreement | `c1..c7` (§3) / `C0..C7` (§2) | `Ag.0..Ag.7`       |
-| Scenario  | `S1..S6`                      | `Sc.1..Sc.6`       |
-
-Rename applied to `draft.md` via sed; verified no old prefixes
-remain in the manuscript. Other research files (`literature.md`,
-`plan.md`, `surface_draft/*`) intentionally left on the old
-scheme — they're materials, not authoritative; rename them
-during a polish pass if needed.
 
 **Still open after this rename:**
 
@@ -383,12 +364,4 @@ tiny should have packages
 ##
 
 
-Agreements verified                                                               |
---------------------------------------------------------------------------------- |
-Ag.0 (type, Sf.1 ↔ Sf.2), Ag.1 (source-lib)                                       |
-Ag.2 (native-lib ↔ stub), Ag.3 (stub ↔ binding-lang), Ag.4 (stub ↔ user-facing)   |
-Ag.6 (API-completeness, Sf.4 ↔ app expectations)                                  |
-Ag.5 (ABI, SONAME ↔ NEEDED), Symbol (dynamic resolution), Ag.7 (runtime behavior) |
-Ag.6 transitively through the `tiny_helper` repack layer                          |
-Ag.5 + Symbol + Ag.7 transitively                                                 |
 

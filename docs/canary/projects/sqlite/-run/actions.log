@@ -1,22 +1,22 @@
-[2026-05-06 16:58:16.057] *                          graph_start  (7 steps)
-[2026-05-06 16:58:16.057] *                          graph_end  (7/7 completed)
-[2026-05-06 16:58:16.057] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/all.mmd)
-[2026-05-06 16:58:16.057] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/full.mmd)
-[2026-05-06 16:58:16.058] *                          view  (lib (1 steps))
-[2026-05-06 16:58:16.058] *                          view  (probes (4 steps))
-[2026-05-06 16:58:16.058] *                          view  (binding_ocaml (3 steps))
-[2026-05-06 16:58:16.058] *                          view  (binding_python (3 steps))
-[2026-05-06 16:58:16.059] *                          html  (_out/canary/projects/sqlite/-run/result.html)
-[2026-05-06 16:58:16.060] *                          index  (_out/canary/projects/index.html)
-[2026-05-06 16:58:16.060] !                          invariant  (full.mmd: connectivity errors:
-  [5]→[6]: no edge A_fetch_binding_python→A_probe_binding_python
-  [1]→[6]: no edge A_fetch_lib→A_probe_binding_python
-  [2]→[3]: no edge A_fetch_binding_ocaml→A_probe_binding_ocaml
-  [1]→[3]: no edge A_fetch_lib→A_probe_binding_ocaml)
-[2026-05-06 16:58:16.060] !                          invariant  (SOME FAILED)
-[2026-05-06 18:10:35.488] *                          graph_start  (7 steps)
-[2026-05-06 18:10:35.489] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-05-06 18:10:35.491] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-07-21 14:35:20.119] *                          graph_start  (7 steps)
+[2026-07-21 14:35:20.119] fetch_lib                  check_pre  (pass)
+[2026-07-21 14:35:20.121] fetch_lib                  cmd  (sudo apt-get install -y sqlite3 && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/sqlite/fetch_lib/lib.ok)
+[2026-07-21 14:35:22.561] fetch_lib                  check_post  (pass)
+[2026-07-21 14:35:22.562] fetch_lib                  done
+[2026-07-21 14:35:22.562] fetch_binding_ocaml        check_pre  (pass)
+[2026-07-21 14:35:22.564] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install sqlite3 -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/sqlite/fetch_binding/ocaml/binding.ok)
+[2026-07-21 14:35:23.607] fetch_binding_ocaml        check_post  (pass)
+[2026-07-21 14:35:23.607] fetch_binding_ocaml        done
+[2026-07-21 14:35:23.607] probe_binding_ocaml        check_pre  (pass)
+[2026-07-21 14:35:23.610] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package sqlite3 -linkpkg canary/examples/sqlite3/sqlite3_example.ml -o /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/sqlite3_example > /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/probe.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/sqlite3_example >> /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/probe.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/probe.log
+exit $RC)
+[2026-07-21 14:35:23.710] probe_binding_ocaml        check_post  (pass)
+[2026-07-21 14:35:23.710] probe_binding_ocaml        done
+[2026-07-21 14:35:23.710] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-07-21 14:35:23.712] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'sqlite3' 2>/dev/null)
 test -n "$PKG_DIR"
 { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
@@ -24,24 +24,34 @@ test -n "$PKG_DIR"
   done
 } | python3 canary/scripts/inspect_ocaml.py --path 'sqlite3' --watchlist 'Sqlite3' \
   > /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/ocaml/inspect.json)
-[2026-05-06 18:10:35.552] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-05-06 18:10:35.552] probe_binding_ocaml_inspect  done
-[2026-05-06 18:10:35.552] probe_binding_python_inspect  check_pre  (pass)
-[2026-05-06 18:10:35.554] probe_binding_python_inspect  cmd  (python3 canary/scripts/inspect_python.py --pkg 'sqlite3' --watchlist 'connect,sqlite_version,sqlite_version_info,Connection,Cursor' > /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/python/inspect.json)
-[2026-05-06 18:10:35.589] probe_binding_python_inspect  check_post  (pass)
-[2026-05-06 18:10:35.589] probe_binding_python_inspect  done
-[2026-05-06 18:10:35.589] *                          graph_end  (7/7 completed)
-[2026-05-06 18:10:35.590] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/all.mmd)
-[2026-05-06 18:10:35.590] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/full.mmd)
-[2026-05-06 18:10:35.590] *                          view  (lib (1 steps))
-[2026-05-06 18:10:35.590] *                          view  (probes (4 steps))
-[2026-05-06 18:10:35.590] *                          view  (binding_ocaml (3 steps))
-[2026-05-06 18:10:35.590] *                          view  (binding_python (3 steps))
-[2026-05-06 18:10:35.592] *                          html  (_out/canary/projects/sqlite/-run/result.html)
-[2026-05-06 18:10:35.593] *                          index  (_out/canary/projects/index.html)
-[2026-05-06 18:10:35.593] !                          invariant  (full.mmd: connectivity errors:
+[2026-07-21 14:35:23.762] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-07-21 14:35:23.762] probe_binding_ocaml_inspect  done
+[2026-07-21 14:35:23.762] fetch_binding_python       check_pre  (pass)
+[2026-07-21 14:35:23.764] fetch_binding_python       cmd  (echo 'stdlib' > /home/red/code/research/tola/_out/canary/projects/sqlite/fetch_binding/python/binding.ok)
+[2026-07-21 14:35:23.765] fetch_binding_python       check_post  (pass)
+[2026-07-21 14:35:23.765] fetch_binding_python       done
+[2026-07-21 14:35:23.765] probe_binding_python       check_pre  (pass)
+[2026-07-21 14:35:23.767] probe_binding_python       cmd  (set -e
+python3 -c "import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')" > /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/python/probe.log 2>&1 || { cat /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/python/probe.log; exit 1; }
+cat /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/python/probe.log)
+[2026-07-21 14:35:23.787] probe_binding_python       check_post  (pass)
+[2026-07-21 14:35:23.787] probe_binding_python       done
+[2026-07-21 14:35:23.787] probe_binding_python_inspect  check_pre  (pass)
+[2026-07-21 14:35:23.789] probe_binding_python_inspect  cmd  (python3 canary/scripts/inspect_python.py --pkg 'sqlite3' --watchlist 'connect,sqlite_version,sqlite_version_info,Connection,Cursor' > /home/red/code/research/tola/_out/canary/projects/sqlite/probe_binding/python/inspect.json)
+[2026-07-21 14:35:23.825] probe_binding_python_inspect  check_post  (pass)
+[2026-07-21 14:35:23.825] probe_binding_python_inspect  done
+[2026-07-21 14:35:23.825] *                          graph_end  (7/7 completed)
+[2026-07-21 14:35:23.825] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/all.mmd)
+[2026-07-21 14:35:23.826] *                          diagram  (_out/canary/projects/sqlite/-run/diagrams/full.mmd)
+[2026-07-21 14:35:23.826] *                          view  (lib (1 steps))
+[2026-07-21 14:35:23.826] *                          view  (probes (4 steps))
+[2026-07-21 14:35:23.826] *                          view  (binding_ocaml (3 steps))
+[2026-07-21 14:35:23.826] *                          view  (binding_python (3 steps))
+[2026-07-21 14:35:23.828] *                          html  (_out/canary/projects/sqlite/-run/result.html)
+[2026-07-21 14:35:23.828] *                          index  (_out/canary/projects/index.html)
+[2026-07-21 14:35:23.828] !                          invariant  (full.mmd: connectivity errors:
   [5]→[6]: no edge A_fetch_binding_python→A_probe_binding_python
   [1]→[6]: no edge A_fetch_lib→A_probe_binding_python
   [2]→[3]: no edge A_fetch_binding_ocaml→A_probe_binding_ocaml
   [1]→[3]: no edge A_fetch_lib→A_probe_binding_ocaml)
-[2026-05-06 18:10:35.593] !                          invariant  (SOME FAILED)
+[2026-07-21 14:35:23.828] !                          invariant  (SOME FAILED)

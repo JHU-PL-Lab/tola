@@ -46,6 +46,21 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 
+**Definitions** (three distinct things — use the names, not descriptions):
+
+- **tiny-factory** — the *machinery* that generates + materializes tiny
+  scenarios: `canary_tiny_scenario.ml` (the scenario specs) +
+  `canary_tiny_workspace.ml` (materialize a good/mutated tiny source tree).
+  Not a runnable project — it is what tiny1 is built from.
+- **tiny1** — the set of **single-scenario** tiny projects (the factory's
+  scenarios), each *one* concrete good/bad case run individually. **`canary
+  tiny run`** runs tiny1.
+- **tiny-full** — **one** project spec that **allows each artifact to be
+  good *or* bad**; the algorithm enumerates the good+bad scenarios (×
+  provision × version) over that *single* spec and drives the runs. **`canary
+  tiny full`** — enumeration *view* today; the genuine good+bad, algorithm-
+  driven run is TBD.
+
 Direction for **driving the runner from the algorithm**. Two tiers of
 tiny; trust flows tooling → algorithm → real projects. **Both should be
 algorithm-derived** (a human can't be relied on to derive scenarios per

@@ -1117,61 +1117,6 @@ let run_tiny_all_and_collect () : unit =
     List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
   Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
 
-(* NOTE (2026-08-02): this is NOT the real tiny-full yet. It renders
-   tiny-full's *positive* enumeration (`print_tiny_full`), but the RUN below
-   PROXIES via tiny1 — it calls `run_tiny_scenario` on the factory's
-   hand-written scenario names. Real tiny-full = ONE project spec allowing
-   good *and* bad artifacts, with the algorithm enumerating the good+bad
-   scenarios and a materializer building/mutating per the enumeration (no
-   hand-written names). This proxy only confirmed "a run happens end-to-end".
-   See status.md §1a. *)
-let run_tiny_full () : unit =
-  Canary_tiny_scenario.print_tiny_full ();
-  let root = "_out" in
-  let run1 ~failfast name =
-    (try
-       run_tiny_scenario ~root ~failfast ~cache_path:None ~cli_disabled:[] ~name
-     with _ -> ());
-    scenario_status_of_run_state ()
-  in
-  Fmt.pr
-    "@.(runs below PROXY via tiny1 = the factory's hand-written scenarios; \
-     the real tiny-full run \x28one spec, algorithm-driven good+bad\x29 is \
-     not built yet \xE2\x80\x94 status.md \xC2\xA71a)@.";
-  (* positive: clean tree, all artifacts, both app wirings — canary quiet *)
-  Fmt.pr "@.--- positive (clean tree, all artifacts; canary should stay quiet) ---@.";
-  List.iter
-    (fun (wiring, name) ->
-      Fmt.pr "  [app:%-11s] %s@." wiring (run1 ~failfast:false name))
-    [ ("direct", "app_over_binding_ocaml");
-      ("via_helper", "app_over_helper_ocaml") ];
-  (* mutations, fail-fast: one per pipeline artifact — canary should detect
-     each (status xfail = expected failure confirmed). Coverage = how many
-     mutated artifacts were caught. Combinations + true fail-fast collapse
-     are the next step (multi-mutation workspaces). *)
-  Fmt.pr
-    "@.--- mutations (fail-fast; canary should DETECT each — one per artifact) ---@.";
-  let muts =
-    [ ("source", "symbol_missing");
-      ("lib", "abi_soname_bump");
-      ("binding:ocaml:cstubs", "api_complete");
-      ("binding:python", "api_complete_python") ]
-  in
-  let detected =
-    List.fold_left
-      (fun acc (label, name) ->
-        (* a bad scenario returns PASS when canary *detected* the expected
-           failure (its expected table incl. the failing probe was met);
-           FAIL means canary MISSED it. *)
-        let s = run1 ~failfast:true name in
-        let ok = String.equal s "PASS" in
-        Fmt.pr "  [%-22s -> %-22s] %-6s %s@." label name s
-          (if ok then "\xE2\x9C\x93 detected" else "\xE2\x9C\x97 MISSED");
-        if ok then acc + 1 else acc)
-      0 muts
-  in
-  Fmt.pr "@.  coverage: %d/%d mutated artifacts detected@." detected
-    (List.length muts)
 
 let show_tiny_status () : unit =
   let results = load_tiny_results () in
@@ -1195,8 +1140,9 @@ let show_tiny_status () : unit =
 let tiny_scenarios_run_cmd =
   Cmd.v
     (Cmd.info "run"
-       ~doc:"Run all tiny scenarios via the factory, collect PASS/FAIL, \
-             save to _out/canary/projects/tiny/results.json.")
+       ~doc:"Run tiny1 — every single-scenario tiny project from the \
+             factory — collect PASS/FAIL, save to \
+             _out/canary/projects/tiny/results.json. (status.md §1a.)")
     (term_of (fun () -> run_tiny_all_and_collect ()))
 
 let tiny_scenarios_status_cmd =
@@ -1210,10 +1156,11 @@ let tiny_scenarios_status_cmd =
 let tiny_scenarios_full_cmd =
   Cmd.v
     (Cmd.info "full"
-       ~doc:"tiny-full — enumerate tiny as a general project, then RUN its \
-             positive scenario (materialize + all probes across both app \
-             wirings). Driven by the algorithm. See status.md §1a.")
-    (term_of (fun () -> run_tiny_full ()))
+       ~doc:"tiny-full — enumerate tiny as ONE general project (the good+bad \
+             scenario space, algorithm-derived). View for now; the genuine \
+             algorithm-driven run is TBD. (tiny1 runs via `tiny run`.) See \
+             status.md §1a.")
+    (term_of (fun () -> Canary_tiny_scenario.print_tiny_full ()))
 
 let tiny_scenarios_engine_cmd =
   Cmd.v

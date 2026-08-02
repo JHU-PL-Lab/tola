@@ -21,22 +21,22 @@ and hybrids (e.g. bitwuzla = "A for discovery + C for building") already
 break the letters. So below and in [projects.md](../projects.md) we say
 what dimensions a project *has*, and reserve A–F for describing opam.
 
-| dimension | values |
-|---|---|
+| dimension             | values                                                                                                                  |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | **native-lib origin** | `System` (distro pkg) · `Built` (canary compiles from source) · `Vendored` (inside the binding) · `Absent` (pure OCaml) |
-| **lib discovery** | `Conf` (conf-* / pkg-config) · `Depext` (direct depexts) · `Locator` (pkg-config/llvm-config/glob) · `n/a` |
-| **binding origin** | `Opam` · `Built` (from the lib's source tree) |
+| **lib discovery**     | `Conf` (conf-* / pkg-config) · `Depext` (direct depexts) · `Locator` (pkg-config/llvm-config/glob) · `n/a`              |
+| **binding origin**    | `Opam` · `Built` (from the lib's source tree)                                                                           |
 
 The survey letters are just points in this space:
 
-| survey label | dimensions |
-|---|---|
-| A `conf-*` indirection | `{System, Conf, Opam}` |
-| B direct depexts | `{System, Depext, Opam}` |
-| C self-building | `{Built, n/a, Opam \| Built}` |
-| D invisible C stubs | `{Vendored, n/a, Opam}` |
-| E `clib:` tag | `{System, clib, Opam}` |
-| F pure OCaml | `{Absent, n/a, Opam}` |
+| survey label           | dimensions                    |
+| ---------------------- | ----------------------------- |
+| A `conf-*` indirection | `{System, Conf, Opam}`        |
+| B direct depexts       | `{System, Depext, Opam}`      |
+| C self-building        | `{Built, n/a, Opam \| Built}` |
+| D invisible C stubs    | `{Vendored, n/a, Opam}`       |
+| E `clib:` tag          | `{System, clib, Opam}`        |
+| F pure OCaml           | `{Absent, n/a, Opam}`         |
 
 Two consequences:
 
@@ -66,28 +66,28 @@ Native library is the primary artifact; the OCaml binding is one of several
 language consumers. Canary's value here is multi-language and multi-PM
 interop coverage.
 
-| #  | Library    | OCaml binding                              | Pattern         | Why interesting                                                                                  |
-| -: | ---------- | ------------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------ |
-|  1 | **Z3** ✓   | `z3`                                       | C (self-build)  | SMT solver, source-built, OCaml + Python + C# + Java bindings.                                   |
-|  2 | **LLVM** ✓ | `llvm.{19,dev}-shared`                     | A+C hybrid      | `conf-llvm-static` discovery + source build. `Opcode.UncondBr` drift demo.                       |
-|  3 | **SQLite** ✓ | `sqlite3`                                | A               | Simplest Pattern A. Python `sqlite3` is stdlib-bundled (cross-PM edge case).                     |
-|  4 | **PyTorch** | `torch` (opam) + `torch` (pip)            | A (binary-only) | pip × opam × apt libtorch matrix. Version range `[2.1, 2.2)` is a real mismatch case. See §4.    |
-|  5 | **OpenSSL** ✓ | `ssl` via `conf-libssl`                 | A               | OpenSSL 1.x → 3.x API breakage; macOS keg-only paths. Classic "C library that breaks everything." |
-|  6 | **FFmpeg** | `ffmpeg-{avcodec,avformat,swscale,…}`      | A (multi-pkg)   | One `conf-ffmpeg` drives a family of binding packages. Tests "one conf, many binding artifacts." |
+|    # | Library       | OCaml binding                         | Pattern         | Why interesting                                                                                   |
+| ---: | ------------- | ------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------- |
+|    1 | **Z3** ✓      | `z3`                                  | C (self-build)  | SMT solver, source-built, OCaml + Python + C# + Java bindings.                                    |
+|    2 | **LLVM** ✓    | `llvm.{19,dev}-shared`                | A+C hybrid      | `conf-llvm-static` discovery + source build. `Opcode.UncondBr` drift demo.                        |
+|    3 | **SQLite** ✓  | `sqlite3`                             | A               | Simplest Pattern A. Python `sqlite3` is stdlib-bundled (cross-PM edge case).                      |
+|    4 | **PyTorch**   | `torch` (opam) + `torch` (pip)        | A (binary-only) | pip × opam × apt libtorch matrix. Version range `[2.1, 2.2)` is a real mismatch case. See §4.     |
+|    5 | **OpenSSL** ✓ | `ssl` via `conf-libssl`               | A               | OpenSSL 1.x → 3.x API breakage; macOS keg-only paths. Classic "C library that breaks everything." |
+|    6 | **FFmpeg**    | `ffmpeg-{avcodec,avformat,swscale,…}` | A (multi-pkg)   | One `conf-ffmpeg` drives a family of binding packages. Tests "one conf, many binding artifacts."  |
 
 ### Tier 2 — Tricky OCaml bindings
 
 Library isn't necessarily a household name, but the packaging exposes
 structural cases canary should model.
 
-| #  | Library              | OCaml binding                  | Pattern        | Tricky-factor                                                                                                          |
-| -: | -------------------- | ------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-|  7 | **GMP** ✓            | `zarith` via `conf-gmp`        | A              | 25 revdeps — most-used Pattern A. Template-worthy.                                                                     |
-|  8 | **libev**            | `lwt` (optional `conf-libev`)  | A + optional   | `depopts: conf-libev` + `%{conf-libev:installed}%`. First real test of optional-C-dep modelling.                       |
-|  9 | **cvc5**             | `cvc5`                         | C (self-build) | SMT solver sibling of z3. Richer conf-set (`conf-cmake` + `conf-g++` + `conf-gmp`).                                    |
-| 10 | **bitwuzla**         | `bitwuzla-c` + `-cxx`          | C + A hybrid   | Vendors the solver but links system GMP via `conf-gmp`. The hybrid case neither pure A nor pure C covers.              |
-| 11 | **MariaDB / MySQL**  | `mariadb` via `conf-mariadb`   | A+C hybrid     | Database client; conf discovery + source build; cross-PM (apt vs brew). Sibling to SQLite, very different shape.       |
-| 12 | **cairo**            | `cairo2` via `conf-cairo`      | A + optional   | `freetype` is a depopt; same optional-dep pattern as lwt/libev but in graphics, choice changes runtime glyph rendering. |
+|    # | Library             | OCaml binding                 | Pattern        | Tricky-factor                                                                                                           |
+| ---: | ------------------- | ----------------------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------- |
+|    7 | **GMP** ✓           | `zarith` via `conf-gmp`       | A              | 25 revdeps — most-used Pattern A. Template-worthy.                                                                      |
+|    8 | **libev**           | `lwt` (optional `conf-libev`) | A + optional   | `depopts: conf-libev` + `%{conf-libev:installed}%`. First real test of optional-C-dep modelling.                        |
+|    9 | **cvc5**            | `cvc5`                        | C (self-build) | SMT solver sibling of z3. Richer conf-set (`conf-cmake` + `conf-g++` + `conf-gmp`).                                     |
+|   10 | **bitwuzla**        | `bitwuzla-c` + `-cxx`         | C + A hybrid   | Vendors the solver but links system GMP via `conf-gmp`. The hybrid case neither pure A nor pure C covers.               |
+|   11 | **MariaDB / MySQL** | `mariadb` via `conf-mariadb`  | A+C hybrid     | Database client; conf discovery + source build; cross-PM (apt vs brew). Sibling to SQLite, very different shape.        |
+|   12 | **cairo**           | `cairo2` via `conf-cairo`     | A + optional   | `freetype` is a depopt; same optional-dep pattern as lwt/libev but in graphics, choice changes runtime glyph rendering. |
 
 ### Sequencing recommendation
 
@@ -115,17 +115,17 @@ committing to the template up-front:
 
 ### Done
 
-| # | Project                | Landed     | Notes                                                                  |
-| - | ---------------------- | ---------- | ---------------------------------------------------------------------- |
-| 1 | z3                     | 2026-03    | Pattern C self-build; local + CI                                       |
-| 2 | llvm                   | 2026-03    | A+C hybrid; local + CI                                                 |
-| 3 | sqlite                 | 2026-03    | Pattern A; local + CI                                                  |
-| — | python primitives      | 2026-04-23 | Sqlite/z3/llvm pip probes, both local + CI                             |
-| 7 | zarith                 | 2026-04-25 | Pattern A. Surfaced `inspect_native.py` GMP `__gmp*` stripping bug   |
-| 5 | ssl                    | 2026-04-25 | Pattern A second datapoint. `Ssl.get_version` doesn't exist in v0.7.0  |
-| — | Pattern A template     | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines      |
-| — | api-compat milestone   | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [../research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md) |
-| 12 | cairo                 | 2026-07-23 | Pattern A. First project onboarded on the post-redesign machinery (`Derived` fetch_lib via `store_config`; S5a detection runs). `cairo2` 0.6.5, 420 `cairo_` symbols; probe green first try. |
+| #   | Project              | Landed     | Notes                                                                                                                                                                                        |
+| --- | -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | z3                   | 2026-03    | Pattern C self-build; local + CI                                                                                                                                                             |
+| 2   | llvm                 | 2026-03    | A+C hybrid; local + CI                                                                                                                                                                       |
+| 3   | sqlite               | 2026-03    | Pattern A; local + CI                                                                                                                                                                        |
+| —   | python primitives    | 2026-04-23 | Sqlite/z3/llvm pip probes, both local + CI                                                                                                                                                   |
+| 7   | zarith               | 2026-04-25 | Pattern A. Surfaced `inspect_native.py` GMP `__gmp*` stripping bug                                                                                                                           |
+| 5   | ssl                  | 2026-04-25 | Pattern A second datapoint. `Ssl.get_version` doesn't exist in v0.7.0                                                                                                                        |
+| —   | Pattern A template   | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines                                                                                                                            |
+| —   | api-compat milestone | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [../research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md)                         |
+| 12  | cairo                | 2026-07-23 | Pattern A. First project onboarded on the post-redesign machinery (`Derived` fetch_lib via `store_config`; S5a detection runs). `cairo2` 0.6.5, 420 `cairo_` symbols; probe green first try. |
 
 ---
 
@@ -162,11 +162,11 @@ Tiny is not the reference to copy; it's the framework's
 own regression suite. Pick the level that matches the
 project's purpose:
 
-| Level | What you write | Example | When it's right |
-|---|---|---|---|
-| **A. Positive-only** | `runner_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`. | sqlite (system lib works; probe compiles) | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story. |
-| **B. One hand-coded failure prediction** | Level A + `Expect_compat_failure` inline in the project spec with hand-authored `inputs` list + `version_info`. | z3 (~10 LOC in `canary_project_z3.ml:541-551`, `parser_context` in the wheel), llvm (~18 LOC in `canary_project_llvm.ml:495-512`, `Opcode.UncondBr`) | You want to demonstrate ONE specific version drift on this project. Cheapest way to say "here's a real API break we caught". |
-| **C. Scenario matrix** | Level B + a full `canary_<name>_scenario.ml` with per-scenario recipes. **Also needs framework-side hookable factory (Task 2, deferred).** | tiny only — nobody else | You want *systematic* coverage of Sc.N × mutation-flavor cells for research or paper-artifact purposes. Currently only justified when the project is the framework's benchmark. |
+| Level                                    | What you write                                                                                                                             | Example                                                                                                                                              | When it's right                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **A. Positive-only**                     | `runner_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`.                                             | sqlite (system lib works; probe compiles)                                                                                                            | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story.                                                    |
+| **B. One hand-coded failure prediction** | Level A + `Expect_compat_failure` inline in the project spec with hand-authored `inputs` list + `version_info`.                            | z3 (~10 LOC in `canary_project_z3.ml:541-551`, `parser_context` in the wheel), llvm (~18 LOC in `canary_project_llvm.ml:495-512`, `Opcode.UncondBr`) | You want to demonstrate ONE specific version drift on this project. Cheapest way to say "here's a real API break we caught".                                                    |
+| **C. Scenario matrix**                   | Level B + a full `canary_<name>_scenario.ml` with per-scenario recipes. **Also needs framework-side hookable factory (Task 2, deferred).** | tiny only — nobody else                                                                                                                              | You want *systematic* coverage of Sc.N × mutation-flavor cells for research or paper-artifact purposes. Currently only justified when the project is the framework's benchmark. |
 
 **Do not copy tiny's workspace/prepare/baseline files.**
 `canary_tiny_workspace.ml` + `_prepare.ml` + `_baseline.ml`
@@ -264,13 +264,13 @@ PyTorch stresses canary's model in ways z3 / llvm don't:
 
 ### Multi-PM matrix canary will exercise
 
-| libtorch source     | Python torch | OCaml torch   | Expected result                 |
-| ------------------- | ------------ | ------------- | ------------------------------- |
-| pip 2.5 (default)   | ✓ same wheel | fail          | ocaml conflicts 2.5 > 2.2       |
-| pip 2.1.2           | ✓            | ✓             | happy path                      |
-| pip CUDA wheel      | ✓ (on GPU)   | depends on ABI | libtorch_cpu vs libtorch_cuda  |
-| apt libtorch-dev    | Debian's old | fail          | debian version way too old      |
-| manual download 2.1 | none         | ✓             | OCaml-only probe                |
+| libtorch source     | Python torch | OCaml torch    | Expected result               |
+| ------------------- | ------------ | -------------- | ----------------------------- |
+| pip 2.5 (default)   | ✓ same wheel | fail           | ocaml conflicts 2.5 > 2.2     |
+| pip 2.1.2           | ✓            | ✓              | happy path                    |
+| pip CUDA wheel      | ✓ (on GPU)   | depends on ABI | libtorch_cpu vs libtorch_cuda |
+| apt libtorch-dev    | Debian's old | fail           | debian version way too old    |
+| manual download 2.1 | none         | ✓              | OCaml-only probe              |
 
 Each row is one canary action variant; together they capture the full
 "which combinations work" map.

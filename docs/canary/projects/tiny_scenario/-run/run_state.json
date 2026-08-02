@@ -1,0 +1,110 @@
+{
+  "project_name": "tiny_scenario",
+  "steps": [
+    {
+      "tag": "configure",
+      "output_tag": "configure",
+      "rule": "configure",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "scan_sources",
+      "output_tag": "scan_sources",
+      "rule": "scan_sources",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_lib",
+      "output_tag": "build_lib",
+      "rule": "build_lib",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_lib_inspect",
+      "output_tag": "build_lib",
+      "rule": "build_lib",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_ocaml",
+      "output_tag": "build_binding_ocaml",
+      "rule": "build_binding_ocaml",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_ocaml_inspect",
+      "output_tag": "build_binding_ocaml",
+      "rule": "build_binding_ocaml",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_ocaml",
+      "output_tag": "probe_binding_ocaml",
+      "rule": "probe_binding_ocaml",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_ocaml_inspect",
+      "output_tag": "probe_binding_ocaml",
+      "rule": "probe_binding_ocaml",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_python",
+      "output_tag": "build_binding_python",
+      "rule": "build_binding_python",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_python_inspect",
+      "output_tag": "build_binding_python",
+      "rule": "build_binding_python",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_python",
+      "output_tag": "probe_binding_python",
+      "rule": "probe_binding_python",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_python_inspect",
+      "output_tag": "probe_binding_python",
+      "rule": "probe_binding_python",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib",
+      "output_tag": "probe_lib",
+      "rule": "probe_lib",
+      "variant_id": "app_over_binding_ocaml",
+      "expect": "success",
+      "status": "done"
+    }
+  ],
+  "artifact_names": []
+}

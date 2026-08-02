@@ -3,6 +3,7 @@
   "path": "/home/red/.opam/default/lib/llvm",
   "counts": {
     "vals": 565,
+    "externals": 11,
     "constructors": 351,
     "modules": 45
   },
@@ -572,6 +573,51 @@
     "Llvm_target.TargetMachine.set_machine_outliner",
     "Llvm_target.TargetMachine.emit_to_file",
     "Llvm_target.TargetMachine.emit_to_memory_buffer"
+  ],
+  "externals": [
+    "Llvm_X86.initialize",
+    "Llvm_analysis.verify_module",
+    "Llvm_analysis.verify_function",
+    "Llvm_analysis.assert_valid_module",
+    "Llvm_analysis.assert_valid_function",
+    "Llvm_analysis.view_function_cfg",
+    "Llvm_analysis.view_function_cfg_only",
+    "Llvm_bitwriter.write_bitcode_file",
+    "Llvm_bitwriter.write_bitcode_to_fd",
+    "Llvm_bitwriter.write_bitcode_to_memory_buffer",
+    "Llvm_transform_utils.clone_module"
+  ],
+  "externals_detail": [
+    {
+      "name": "Llvm_X86.initialize",
+      "sig": "unit -> unit",
+      "c_symbol": "llvm_initialize_X86",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.verify_module",
+      "sig": "Llvm.llmodule -> string option",
+      "c_symbol": "llvm_verify_module",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.verify_function",
+      "sig": "Llvm.llvalue -> bool",
+      "c_symbol": "llvm_verify_function",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_analysis.view_function_cfg",
+      "sig": "Llvm.llvalue -> unit",
+      "c_symbol": "llvm_view_function_cfg",
+      "arity": 1
+    },
+    {
+      "name": "Llvm_transform_utils.clone_module",
+      "sig": "Llvm.llmodule -> Llvm.llmodule",
+      "c_symbol": "llvm_clone_module",
+      "arity": 1
+    }
   ],
   "constructors": [
     "Llvm.TypeKind.Half",

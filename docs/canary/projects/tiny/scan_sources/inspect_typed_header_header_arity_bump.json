@@ -1,0 +1,21 @@
+{
+  "functions": {
+    "tiny_diff": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    },
+    "tiny_sum": {
+      "args": [
+        "int",
+        "int",
+        "int"
+      ],
+      "return": "int"
+    }
+  },
+  "kind": "typed_header",
+  "path": "canary/examples/tiny/scenarios/_cache/header_arity_bump/workspace/c/include/tiny.h"
+}
