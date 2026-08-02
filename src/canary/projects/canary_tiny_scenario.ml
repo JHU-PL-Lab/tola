@@ -1160,6 +1160,40 @@ let print_engine_render () : unit =
       p "  \xE2\x9C\x97 unrenderable (not a pipeline artifact): %s\n"
         (String.concat ~sep:", " ids)
 
+(* ── tiny-full (step A: the enumeration view) ──
+   tiny as a *general project*: the algorithm enumerates the positive
+   scenario space over which bindings/apps are present (mechanism & app
+   choice = provision Built-vs-Absent) × version. Source & lib are always
+   present (a project always ships a lib). Positive only for now —
+   mutations + fail-fast + the algorithm-driven runner come next
+   (status.md §1a). *)
+let tiny_full_artifacts : Canary_enumerate.artifact_id list = engine_artifacts
+
+let tiny_full_points : string Canary_enumerate.point list =
+  (* version is whole-scenario for the positive space (all artifacts at one
+     version — per-artifact version *mismatch* is a bad scenario, not here);
+     enumerate provision-presence within each version. Source & lib always
+     present. *)
+  List.concat_map Canary_basic.two_channels ~f:(fun v ->
+      Canary_enumerate.general_slice ~artifacts:tiny_full_artifacts
+        ~provisions:Canary_enumerate.[ Absent; Built ] ~versions:[ v ]
+      |> List.filter ~f:(fun (pt : string Canary_enumerate.point) ->
+             Canary_enumerate.provided pt.assignment Canary_enumerate.a_source
+             && Canary_enumerate.provided pt.assignment Canary_enumerate.a_lib))
+
+let print_tiny_full () : unit =
+  let p = Stdlib.Printf.printf in
+  p "tiny-full — general-project enumeration (positive; provision × version)\n";
+  p "  artifacts: %s\n"
+    (String.concat ~sep:", "
+       (List.map tiny_full_artifacts ~f:Canary_enumerate.string_of_id));
+  List.iteri tiny_full_points ~f:(fun i pt ->
+      p "  [%3d] %s\n" (i + 1)
+        (Canary_enumerate.string_of_assignment pt.Canary_enumerate.assignment));
+  p "\n  %d positive scenarios (source & lib always present; which \
+     bindings/apps are present = the mechanism/app choice; × 2 versions)\n"
+    (List.length tiny_full_points)
+
 (* Startup assertion — count of derived cells after dedup. Update
    the expected count when the synthesis table or the hand-listed
    Bs's change. *)

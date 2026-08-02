@@ -87,6 +87,23 @@ set over provision {Absent, Built} × version {1.0, 2.0} (tiny already has
 the `TINY_1.0`/`TINY_2.0` map + all three mechanisms); view first, then
 drive the runner with fail-fast + coverage.
 
+**tiny-full v1 (view) — shipped** (`canary tiny full`), and it revealed the
+taming the enumeration still needs:
+- raw cartesian = **2048** scenarios (with duplicates: version was ranged
+  *per-artifact*, so `absent@dev`/`absent@stable` duplicated and present
+  artifacts got spurious version *mismatches*). → **fixed**: version is
+  whole-scenario for the positive space (2048 → **64**).
+- **app→binding dependency added** to `assignment_ok` (an app with no
+  binding is degenerate; general improvement, not tiny-specific): 64 → **58**.
+- **still 58** — the remaining excess is the **power-set of binding
+  presence** (cext-only / ctypes-only / both / cstubs combos …). The
+  *meaningful* choices are far fewer: a **per-lang mechanism choice** (cext
+  *xor* ctypes, or whatever the project declares it ships), not the
+  independent presence of every binding. Getting from 58 → the meaningful
+  set is the **config-level taming** (Free/Subset/Full per axis, per
+  artifact) — the next design step, and exactly what the view was meant to
+  motivate. Mutations + fail-fast + the runner follow.
+
 ## 1b. Scenario enumeration — implementation state
 
 Model: [`design/ssot.md` §4.2 / §4.2.1](design/ssot.md) (principle —

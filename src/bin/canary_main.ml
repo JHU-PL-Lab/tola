@@ -1151,6 +1151,14 @@ let tiny_scenarios_status_cmd =
              first to populate it.")
     (term_of (fun () -> show_tiny_status ()))
 
+let tiny_scenarios_full_cmd =
+  Cmd.v
+    (Cmd.info "full"
+       ~doc:"tiny-full — enumerate tiny as a general project (positive \
+             scenario space: which bindings/apps present × version), \
+             driven by the algorithm. See status.md §1a.")
+    (term_of (fun () -> Canary_tiny_scenario.print_tiny_full ()))
+
 let tiny_scenarios_engine_cmd =
   Cmd.v
     (Cmd.info "engine"
@@ -1168,6 +1176,7 @@ let tiny_scenarios_cmd =
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_run_cmd;
       tiny_scenarios_engine_cmd;
+      tiny_scenarios_full_cmd;
       tiny_scenarios_status_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;

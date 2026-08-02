@@ -134,11 +134,20 @@ let version_of (a : assignment) (id : artifact_id) : Canary_basic.channel =
 let provided (a : assignment) (id : artifact_id) : bool =
   not (equal_provision (provision_of a id) Absent)
 
+let any_binding_provided (a : assignment) : bool =
+  List.exists a ~f:(fun (id, pl) ->
+      match id.kind with
+      | Binding _ -> not (equal_provision pl.provision Absent)
+      | _ -> false)
+
 (** Dependency + version filter (product-then-filter, §4.2 / §4.2.2): a lib
     [Built] from source needs the source present; any provided binding needs
-    the lib present; and (source-primary) a [Built] lib inherits the
-    source's version. A binding's version may still differ from the lib's —
-    that difference is the interesting version *mismatch*. *)
+    the lib present; any provided app needs a binding to consume (an app with
+    no binding is a degenerate combination); and (source-primary) a [Built]
+    lib inherits the source's version. A binding's version may still differ
+    from the lib's — that difference is the interesting version *mismatch*.
+    (The app→binding dependency is "any binding" for now; making it the app's
+    *own language* binding needs App to carry a lang — ssot §4.2.3.) *)
 let assignment_ok (a : assignment) : bool =
   let lib = provision_of a a_lib in
   (not (equal_provision lib Built) || provided a a_source)
@@ -148,6 +157,7 @@ let assignment_ok (a : assignment) : bool =
          match kind_of id with
          | Binding _ ->
              equal_provision pl.provision Absent || provided a a_lib
+         | App -> equal_provision pl.provision Absent || any_binding_provided a
          | _ -> true)
 
 (* The product over [artifacts] (precise identities) of (provision × version)
