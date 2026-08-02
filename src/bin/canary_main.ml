@@ -1117,6 +1117,27 @@ let run_tiny_all_and_collect () : unit =
     List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
   Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
 
+(* tiny-full: render the algorithm-enumerated scenario space, then RUN the
+   positive scenario (all artifacts present) end-to-end — materialize the
+   clean workspace + run every probe (ocaml cstubs, python cext, python
+   ctypes) across both app wirings (direct, via-helper). Confirms the
+   algorithm-driven enumeration drives a real run. (Positive only; per-edge
+   version + mutations + fail-fast are the next steps — status.md §1a.) *)
+let run_tiny_full () : unit =
+  Canary_tiny_scenario.print_tiny_full ();
+  Fmt.pr "@.--- running tiny-full's positive (clean tree, all artifacts) ---@.";
+  let root = "_out" in
+  List.iter
+    (fun (name, wiring) ->
+      Fmt.pr "  [app:%-11s via %-24s] ... @?" wiring name;
+      (try
+         run_tiny_scenario ~root ~failfast:false ~cache_path:None
+           ~cli_disabled:[] ~name
+       with _ -> ());
+      Fmt.pr "%s@." (scenario_status_of_run_state ()))
+    [ ("app_over_binding_ocaml", "direct");
+      ("app_over_helper_ocaml", "via_helper") ]
+
 let show_tiny_status () : unit =
   let results = load_tiny_results () in
   if results = [] then
@@ -1154,10 +1175,10 @@ let tiny_scenarios_status_cmd =
 let tiny_scenarios_full_cmd =
   Cmd.v
     (Cmd.info "full"
-       ~doc:"tiny-full — enumerate tiny as a general project (positive \
-             scenario space: which bindings/apps present × version), \
-             driven by the algorithm. See status.md §1a.")
-    (term_of (fun () -> Canary_tiny_scenario.print_tiny_full ()))
+       ~doc:"tiny-full — enumerate tiny as a general project, then RUN its \
+             positive scenario (materialize + all probes across both app \
+             wirings). Driven by the algorithm. See status.md §1a.")
+    (term_of (fun () -> run_tiny_full ()))
 
 let tiny_scenarios_engine_cmd =
   Cmd.v
