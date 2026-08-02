@@ -1561,6 +1561,37 @@ let tiny_full_assignments (spec : tiny_full_spec) :
   in
   all_good :: bads
 
+(* P3 combination enumeration: representative MULTI-bad assignments along the
+   dependency chain (source → lib → ocaml binding), one representative (first)
+   bad-tag per bad artifact. These are the scenarios beyond tiny1 — a single
+   tiny-full project holds what tiny1 splits into separate projects. Each
+   should collapse under fail-fast to its earliest bad ([earliest_bad_of]);
+   validating that collapse (materialized) is the run half still to build. *)
+let tiny_full_combinations (spec : tiny_full_spec) :
+    Canary_enumerate.assignment list =
+  let first_tag aid = List.hd (spec.tf_bad_tags_of aid) in
+  let chain =
+    List.filter_map
+      Canary_enumerate.
+        [ a_source; a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ]
+      ~f:(fun aid ->
+        match first_tag aid with Some t -> Some (aid, t) | None -> None)
+  in
+  let assignment_with bads =
+    List.map spec.tf_artifacts ~f:(fun a ->
+        match
+          List.find bads ~f:(fun (aid, _) ->
+              Canary_enumerate.equal_artifact_id aid a)
+        with
+        | Some (_, tag) ->
+            (a, tiny_full_placement ~quality:(Canary_enumerate.Bad tag) ())
+        | None -> (a, tiny_full_placement ()))
+  in
+  (match chain with
+   | [ a; b; c ] -> [ [ a; b ]; [ b; c ]; [ a; c ]; [ a; b; c ] ]
+   | _ -> [])
+  |> List.map ~f:assignment_with
+
 (* Read the (single, in P2a) bad build's tag off an assignment — the placement
    whose version quality is [Bad tag]. *)
 let bad_tag_of (a : Canary_enumerate.assignment) : string option =
@@ -1657,7 +1688,35 @@ let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
   in
   p "\n  coverage: %d/%d bad scenarios detected (%d/%d artifact points)\n"
     detected_tags (List.length distinct_tags)
-    detected_points n_bad
+    detected_points n_bad;
+
+  (* combinations (P3): multi-bad assignments — the scenarios beyond tiny1.
+     Under fail-fast each COLLAPSES to its earliest-bad (artifact, tag): the
+     downstream bad builds are masked (canary never reaches them). Shown here
+     as the collapse PROJECTION (enumeration + keying via [earliest_bad_of]);
+     the materialized multi-mutation run that VALIDATES it — canary actually
+     stops at the earliest failure — needs [run_prepare] over a mutation SET
+     and is the run half still to build (status §1a P3). *)
+  let combos = tiny_full_combinations spec in
+  if not (List.is_empty combos) then begin
+    p "\n  --- combinations (fail-fast collapse projection; materialized run \
+       TBD) ---\n";
+    List.iter combos ~f:(fun a ->
+        let open Canary_enumerate in
+        let bad_labels =
+          List.filter_map a ~f:(fun (id, pl) ->
+              match pl.version.quality with
+              | Bad t -> Some (string_of_id id ^ "#" ^ t)
+              | Good -> None)
+        in
+        let key =
+          match earliest_bad_of a with
+          | Some (id, t) -> string_of_id id ^ "#" ^ t
+          | None -> "(none)"
+        in
+        p "    {%-46s} collapses to  %s\n"
+          (String.concat ~sep:", " bad_labels) key)
+  end
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola
