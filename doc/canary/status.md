@@ -53,13 +53,15 @@ Historical chronicles in [`worklog/`](worklog/).
   `canary_tiny_workspace.ml` (materialize a good/mutated tiny source tree).
   Not a runnable project — it is what tiny1 is built from.
 - **tiny1** — the set of **single-scenario** tiny projects (the factory's
-  scenarios), each *one* concrete good/bad case run individually. **`canary
-  tiny run`** runs tiny1.
-- **tiny-full** — **one** project spec that **allows each artifact to be
-  good *or* bad**; the algorithm enumerates the good+bad scenarios (×
-  provision × version) over that *single* spec and drives the runs. **`canary
-  tiny full`** — enumeration *view* today; the genuine good+bad, algorithm-
-  driven run is TBD.
+  scenarios), each *one* concrete good/bad case run individually. Carried by
+  the **tiny command family** (the harness): **`canary tiny run`** runs tiny1,
+  `tiny list`/`status`/`engine`/`baseline`/`prepare` support it.
+- **tiny-full** — a **project name**, a peer of `sqlite`/`z3`/`llvm`: **one**
+  project spec that **allows each artifact to be good *or* bad**; the algorithm
+  enumerates the good+bad scenarios (× provision × version) over that *single*
+  spec and drives the runs. Run through the **general project command** like
+  any other project: **`canary action tiny-full`** (NOT a `tiny` subcommand —
+  it is not part of the tiny/tiny1 harness).
 
 Direction for **driving the runner from the algorithm**. Two tiers of
 tiny; trust flows tooling → algorithm → real projects. **Both should be
@@ -99,8 +101,9 @@ artifact provision × version) → build that workspace → run the probes with
 the fail-fast config, reusing `canary_tiny_workspace`. Wired from the
 algorithm, not from a hand-written spec.
 
-**tiny-full RUN — shipped** (2026-08-02, `canary tiny full` now runs, not just
-views). `Canary_tiny_scenario.run_tiny_full ~run` iterates the algorithm's
+**tiny-full RUN — shipped** (2026-08-02, `canary action tiny-full` — a project
+peer of sqlite/z3, run through the general `action` command, not a `tiny`
+subcommand). `Canary_tiny_scenario.run_tiny_full ~run` iterates the algorithm's
 good+bad enumeration (`engine_points` = the `tiny_slice` projection: 1
 positive + N mutation points over the ONE fixed artifact set) and drives each
 through the materializer — **no hand-written scenario list**. Positive point →
@@ -121,7 +124,8 @@ set over provision {Absent, Built} × version {1.0, 2.0} (tiny already has
 the `TINY_1.0`/`TINY_2.0` map + all three mechanisms); view first, then
 drive the runner with fail-fast + coverage.
 
-**tiny-full v1 (view) — shipped** (`canary tiny full`), and it revealed the
+**tiny-full v1 (view) — shipped** (the positive-variant enumeration view,
+rendered at the top of `canary action tiny-full`), and it revealed the
 taming the enumeration still needs:
 - raw cartesian = **2048** scenarios (with duplicates: version was ranged
   *per-artifact*, so `absent@dev`/`absent@stable` duplicated and present
@@ -290,8 +294,10 @@ per use). This tracks what's actually wired.
 
 One place to resume from. Each has a home doc with the detail.
 
-- ✅ **tiny-full RUN — shipped** (2026-08-02). `canary tiny full` now renders
-  the positive variant space *and* runs the algorithm's good+bad enumeration
+- ✅ **tiny-full RUN — shipped** (2026-08-02). `canary action tiny-full` (a
+  project peer of sqlite/z3/llvm — run through the general `action` command,
+  not a `tiny` subcommand) renders the positive variant space *and* runs the
+  algorithm's good+bad enumeration
   (`Canary_tiny_scenario.run_tiny_full ~run`): iterates `engine_points` (the
   `tiny_slice` projection — 1 positive + N mutation points over ONE fixed
   artifact set), derives the positive witnesses (`mutation_target_of_spec =

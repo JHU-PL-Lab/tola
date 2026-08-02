@@ -56,6 +56,50 @@ let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
     (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
        ~extra:[] steps)
 
+let tiny_run_state_path =
+  "_out/canary/projects/tiny/-run/run_state.json"
+
+(* PASS iff every step's status is "done" (covers both plain success
+   and "expected failure confirmed"). Any status starting with
+   "unexpected_" is a FAIL. run_state.json is overwritten per
+   scenario by run_project, so we can trust the most recent read. *)
+let scenario_status_of_run_state () : string =
+  if not (Sys.file_exists tiny_run_state_path) then "N/A"
+  else
+    match Yojson.Basic.from_file tiny_run_state_path with
+    | `Assoc top ->
+      (match List.assoc_opt "steps" top with
+       | Some (`List steps) ->
+         let all_done =
+           List.for_all (function
+             | `Assoc a ->
+               (match List.assoc_opt "status" a with
+                | Some (`String "done") -> true
+                | _ -> false)
+             | _ -> false) steps
+         in
+         if all_done then "PASS" else "FAIL"
+       | _ -> "N/A")
+    | _ -> "N/A"
+    | exception _ -> "N/A"
+
+(* tiny-full is a *project* (peer of sqlite/z3/llvm), run through the same
+   `canary action <project>` entry point — NOT a member of the tiny harness
+   family (`tiny run`/`list`/… stay for the tiny-factory / tiny1). Its run
+   body is the algorithm-driven good+bad enumeration: the materialize-and-
+   detect primitive (`run` below = run_tiny_scenario + status readout) is
+   handed to `Canary_tiny_scenario.run_tiny_full`, which iterates the
+   enumerated points — no hand-written scenario list. status.md §1a. *)
+let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
+  let run ~failfast ~name =
+    (try
+       run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
+     with _ -> ());
+    scenario_status_of_run_state ()
+  in
+  Canary_tiny_scenario.print_tiny_full ();
+  Canary_tiny_scenario.run_tiny_full ~run
+
 (* ── Subcommands ── *)
 
 let paths_cmd =
@@ -278,6 +322,8 @@ let action_cmd =
     | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
+    | Some "tiny-full" ->
+        run_tiny_full_project ~root ~cache_path ~cli_disabled
     | Some "tiny" ->
         Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
                  `canary tiny run` instead (runs all + collects results).@.";
@@ -295,7 +341,7 @@ let action_cmd =
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny, tiny/<variant>)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny-full, tiny/<variant>)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
@@ -1025,35 +1071,8 @@ let tiny_scenarios_confirm_cmd =
    most recent run of each scenario. Results persist at
    _out/canary/projects/tiny/results.json. *)
 
-let tiny_run_state_path =
-  "_out/canary/projects/tiny/-run/run_state.json"
-
 let tiny_results_path =
   "_out/canary/projects/tiny/results.json"
-
-(* PASS iff every step's status is "done" (covers both plain success
-   and "expected failure confirmed"). Any status starting with
-   "unexpected_" is a FAIL. run_state.json is overwritten per
-   scenario by run_project, so we can trust the most recent read. *)
-let scenario_status_of_run_state () : string =
-  if not (Sys.file_exists tiny_run_state_path) then "N/A"
-  else
-    match Yojson.Basic.from_file tiny_run_state_path with
-    | `Assoc top ->
-      (match List.assoc_opt "steps" top with
-       | Some (`List steps) ->
-         let all_done =
-           List.for_all (function
-             | `Assoc a ->
-               (match List.assoc_opt "status" a with
-                | Some (`String "done") -> true
-                | _ -> false)
-             | _ -> false) steps
-         in
-         if all_done then "PASS" else "FAIL"
-       | _ -> "N/A")
-    | _ -> "N/A"
-    | exception _ -> "N/A"
 
 let save_tiny_results (results : (string * string) list) : unit =
   let json =
@@ -1153,29 +1172,6 @@ let tiny_scenarios_status_cmd =
              first to populate it.")
     (term_of (fun () -> show_tiny_status ()))
 
-let tiny_scenarios_full_cmd =
-  (* tiny-full = ONE spec allowing each artifact good OR bad; the algorithm
-     enumerates the good+bad points and this driver materializes + runs each
-     — no hand-written scenario list. `run` is the materialize-and-detect
-     primitive (main owns run_tiny_scenario + the status readout). *)
-  let run ~failfast ~name =
-    (try
-       run_tiny_scenario ~root:"_out" ~failfast ~cache_path:None
-         ~cli_disabled:[] ~name
-     with _ -> ());
-    scenario_status_of_run_state ()
-  in
-  Cmd.v
-    (Cmd.info "full"
-       ~doc:"tiny-full — tiny as ONE general project (each artifact good OR \
-             bad). Renders the positive variant space, then RUNS the \
-             algorithm's good+bad enumeration (positive witnesses + one \
-             mutation per enumerated point), reporting detection coverage. \
-             Algorithm-driven — no hand-written scenario list. (tiny1 runs \
-             via `tiny run`.) See status.md §1a.")
-    (term_of (fun () ->
-         Canary_tiny_scenario.print_tiny_full ();
-         Canary_tiny_scenario.run_tiny_full ~run))
 
 let tiny_scenarios_engine_cmd =
   Cmd.v
@@ -1194,7 +1190,6 @@ let tiny_scenarios_cmd =
     [ tiny_scenarios_list_cmd;
       tiny_scenarios_run_cmd;
       tiny_scenarios_engine_cmd;
-      tiny_scenarios_full_cmd;
       tiny_scenarios_status_cmd;
       tiny_scenarios_expected_cmd;
       tiny_scenarios_baseline_cmd;
