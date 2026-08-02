@@ -57,9 +57,14 @@ project); **scenario coverage** is the metric for both.
   were fine). Validates the **tooling / checkers**. Should *also* be
   algorithm-derived from the ssot ideas — but **postponed until after
   tiny-full** (hand-written is fine as the interim ground truth).
-- **tiny-full** (new) — **one** general-project canary spec with multiple
-  choices (provision × version; the **mechanism choice IS provision** over
-  the distinct binding artifacts — cext Built + ctypes Absent, etc.).
+- **tiny-full** (new, **not yet built**) — **one** general-project canary
+  spec whose spec **allows each artifact to be good *or* bad**, with
+  multiple choices (provision × version; the **mechanism choice IS
+  provision** over the distinct binding artifacts — cext Built + ctypes
+  Absent, etc.). The algorithm enumerates the good+bad scenarios over that
+  *single* spec and a materializer builds good / mutates bad **per the
+  enumeration** — *not* the tiny1 factory's hand-written per-scenario
+  projects.
   Behaves as a general project; the **runner iterates the algorithm's
   enumerated points**. Validates the **algorithm / skeleton / integration**.
   - Has scenarios **beyond tiny1** — real combinations (bad lib *and* bad
@@ -256,12 +261,21 @@ per use). This tracks what's actually wired.
 
 One place to resume from. Each has a home doc with the detail.
 
-- **Grow the tiny-full run** — renders + runs the positive (both app wirings
-  PASS) **and mutations** (one per pipeline artifact: source / lib / ocaml
-  cstubs / python binding, fail-fast, **4/4 detected** + coverage line).
-  Reuses `run_tiny_scenario`. Next: **combinations + true fail-fast collapse**
-  (multi-mutation workspaces — a bad lib subsumes a bad binding/app into one
-  scenario), then **per-edge version** (the mismatch). §1a, ssot §4.2.4.
+- **`canary tiny full` today is NOT the real tiny-full** (clarified
+  2026-08-02). It renders tiny-full's *positive* enumeration, but the RUN
+  **proxies via tiny1** — it calls `run_tiny_scenario` on the *factory's
+  hand-written* scenario names (positive: both app wirings PASS; mutations:
+  one per pipeline artifact, fail-fast, 4/4 detected + coverage). Useful as a
+  "a run happens end-to-end" checkpoint, but it's **tiny1 executing**, not
+  tiny-full.
+- **Build the real tiny-full** — ONE project spec that allows each artifact
+  to be **good *or* bad**; the **algorithm** enumerates the good+bad
+  scenarios (× provision × version) over that single spec, and a
+  **materializer builds the good / mutates the bad per the enumeration** (no
+  hand-written scenario names). Then run with combinations + true fail-fast
+  collapse (a detected bad lib subsumes a downstream bad binding/app into one
+  scenario). This is the actual next build; the tiny1-proxy run was the
+  stepping stone. §1a, ssot §4.2.4.
 - **Per-edge version model** — `placement` is per-artifact; the deploy
   mismatch (build vs run lib) needs the graph edge to carry the consumed
   instance. **The graph already exists** (`artifact_node` + `make_action_graph`)

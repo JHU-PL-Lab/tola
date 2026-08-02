@@ -1117,12 +1117,14 @@ let run_tiny_all_and_collect () : unit =
     List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
   Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
 
-(* tiny-full: render the algorithm-enumerated scenario space, then RUN the
-   positive scenario (all artifacts present) end-to-end — materialize the
-   clean workspace + run every probe (ocaml cstubs, python cext, python
-   ctypes) across both app wirings (direct, via-helper). Confirms the
-   algorithm-driven enumeration drives a real run. (Positive only; per-edge
-   version + mutations + fail-fast are the next steps — status.md §1a.) *)
+(* NOTE (2026-08-02): this is NOT the real tiny-full yet. It renders
+   tiny-full's *positive* enumeration (`print_tiny_full`), but the RUN below
+   PROXIES via tiny1 — it calls `run_tiny_scenario` on the factory's
+   hand-written scenario names. Real tiny-full = ONE project spec allowing
+   good *and* bad artifacts, with the algorithm enumerating the good+bad
+   scenarios and a materializer building/mutating per the enumeration (no
+   hand-written names). This proxy only confirmed "a run happens end-to-end".
+   See status.md §1a. *)
 let run_tiny_full () : unit =
   Canary_tiny_scenario.print_tiny_full ();
   let root = "_out" in
@@ -1132,6 +1134,10 @@ let run_tiny_full () : unit =
      with _ -> ());
     scenario_status_of_run_state ()
   in
+  Fmt.pr
+    "@.(runs below PROXY via tiny1 = the factory's hand-written scenarios; \
+     the real tiny-full run \x28one spec, algorithm-driven good+bad\x29 is \
+     not built yet \xE2\x80\x94 status.md \xC2\xA71a)@.";
   (* positive: clean tree, all artifacts, both app wirings — canary quiet *)
   Fmt.pr "@.--- positive (clean tree, all artifacts; canary should stay quiet) ---@.";
   List.iter
