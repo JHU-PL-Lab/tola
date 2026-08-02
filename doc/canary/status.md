@@ -116,12 +116,19 @@ taming the enumeration still needs:
     **Provision folds into location** (build⇒built, PM⇒fetched,
     staged⇒installed). Using an instance at a different location needs a
     **different command** = the `runner_spec`'s job. See ssot §4.2.4.
-  - **Open implementation question:** the deploy mismatch (app built against
-    `lib@1.0`, run against `lib@2.0`) has one consumer consume *two*
-    instances of one group across its build/run edges. Keep one `placement`
-    per instance and let the **graph edge carry the consumed instance** —
-    the concrete shape is TBD. `canary tiny full` = 2 today via the
-    per-artifact collapse.
+  - **The instance graph already exists** (2026-08-01 finding):
+    `Canary_basic.artifact_node` (`a_location` + `built_from` = Build edge +
+    `runtime_dep` = Run edge) + `Canary_action.make_action_graph` already
+    build it and already generate the deploy mismatch (`Build_app` pairs each
+    binding with *every* runtime lib). So `canary_enumerate` was about to
+    **reimplement** it. The work is a **merge**, not a new graph: one
+    `instance` = `artifact_node` + `ext` (mechanism/wiring) + a **typed**
+    version (today in `a_name`); the enumeration `config`/levels sit on top.
+    Edge ≈ action (built_from/runtime_dep are action-produced) — a known,
+    accepted smell. Design note:
+    [`design/enumeration_graph.md`](design/enumeration_graph.md). First cut:
+    full-graph shape, minimal scope (one version, no app, chain
+    source→lib→binding), extend `artifact_node` not a parallel type.
   - **cmake constraint (Staged location):** installing a cmake lib must use
     a **customized install prefix**, never the global system path (avoid
     depending on / polluting the host).

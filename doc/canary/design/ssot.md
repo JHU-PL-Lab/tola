@@ -492,9 +492,12 @@ edges may consume **different instances** of the same group — an app built
 against `lib@1.0` (build tree) and run against `lib@2.0` (PM) = the deploy
 mismatch. **Using an instance at a different location needs a different
 command** — the concern of the per-project `runner_spec` (the old one
-covered this). *(Open: how a scenario represents an artifact consumed at two
-instances — build vs run — while keeping one `placement` per instance;
-likely the graph edge carries the consumed instance.)*
+covered this). **This instance graph already exists**: `Canary_basic.artifact_node`
+(`a_location` + `built_from` = Build edge + `runtime_dep` = Run edge) and
+`Canary_action.make_action_graph` already generate it — including the deploy
+mismatch (`Build_app` pairs each binding with *every* runtime lib). The open
+work is a *merge*, not a new graph — see
+[`enumeration_graph.md`](enumeration_graph.md).
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
