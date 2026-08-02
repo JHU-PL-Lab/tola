@@ -148,13 +148,27 @@ decoupling *is* the agnostic project spec.
   consume *only* those — no `find_by_id`/`mutation_target_of_spec`/mutation
   types in the loop (all confined to the materializer). Behaviour-preserving:
   2 positive quiet, 20/20 (22/22 points).
-- **Phase 2 — the real spec: tag folded into the version identity.** The
-  "special version string" *is* the artifact version (per `versioning.md` —
-  typed version as identity). One base runner_spec + the tag catalogue; the
-  expectation derives via the **contract/compat path** (like z3's
-  `lower_expectation`) off the materialized bad artifact, not the factory's
-  hand-written `recipe.expected` (which stays as the tiny1 oracle for the
-  cross-check).
+- **Phase 2a — tag folded into the version identity** ✅ (2026-08-02,
+  `b943b1a`, grain (i) full unification). `canary_enumerate.placement.version`
+  is now `build_id = { channel; quality }`, `quality = Good | Bad of tag` — the
+  "special version string" is real; a bad artifact is a build at a bad-quality
+  version (`dev#Bs.1`). tiny-full ranges over `Canary_enumerate.assignment`
+  directly (the Phase-1 `variant_tag` side channel is deleted). The product's
+  external slice/config signatures stay channel-keyed, so the positive/general/
+  engine views are unchanged. Behaviour-preserving (20/20, 22/22).
+- **Phase 2b — contract-derived expectation** ⏳ c1 spike done (2026-08-02,
+  `5bcce8e`). `Canary_scenario.lower_expectation_agnostic` derives the
+  expectation from the bindings table + (action, loc) ALONE — no per-scenario
+  `violates`/`has_manifest` — by unioning every contract's `From_artifact`
+  inputs at the firing site and letting `predicted_contains_any_v2` DISCOVER
+  the break by inspection. Proven for c1 at the *derivation* level (test
+  `scenario.lower_expectation_agnostic_c1`). **Open before wiring into the
+  run:** the empty-prediction question — at a probe site a *good* build also
+  matches the firings, so it emits `Expect_compat_failure` with an empty
+  runtime prediction; whether that verifies as success (the old
+  `has_manifest` role) must be settled, and c3 (behaviour) / c6 (grep-type)
+  aren't inspection-discoverable — they stay oracle-fed. The run still uses the
+  oracle path today; `recipe.expected` remains the tiny1 cross-check oracle.
 - **Phase 3 — combinations + fail-fast collapse.** The assignment tags
   *several* artifacts bad; materialize applies all. No new runner logic (it's
   agnostic) — canary fails at the first broken step; the enumeration dedups
