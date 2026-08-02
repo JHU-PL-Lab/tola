@@ -107,24 +107,24 @@ taming the enumeration still needs:
   is a **product over consumption edges**, and those mismatch points are
   canary's *purpose*, not "bad". So the real tiny-full breadth is the
   per-edge version product, *not* 2.
-  - **Model chosen — the reality one (2026-08-01):** an artifact is a set of
-    **instances**, each `(version × location)` where location is the **store**
-    — build tree / staged install (a *customized* prefix, not the global
-    system path) / PM site (`Canary_store.location`). Each consumption edge
-    (create/build, use/run) **selects one instance**, independently — so
-    version *and* location mismatches (build-tree lib@1.0 vs PM lib@2.0 = the
-    deploy scenario) fall out. **Provision folds in** — it's just *which
-    location an edge selects* (build⇒built, PM⇒fetched, staged⇒installed).
-    See ssot §4.2.4.
-  - **Implementation:** replace the per-artifact `placement` with **instances
-    + edge→instance selection**. The current `placement.version` (per
-    artifact, one version) can't express two edges to the same artifact at
-    different `(version,location)`. This is the next enumeration change;
-    `canary tiny full` shows 2 today only via the per-artifact collapse.
-  - **cmake constraint (for the Staged location):** installing a cmake lib
-    must use a **customized install prefix**, never the global system path
-    (avoid depending on / polluting the host). Applies when we materialize
-    the `Staged` instance.
+  - **Model (2026-08-01, corrected):** an artifact **instance** is one
+    concrete thing = its `placement` (`provision/location × version` +
+    metadata) — **`placement` is correct**, an artifact is *not* a set of
+    instances. The cartesian **choices** for an artifact (version × store
+    **location** — build tree / staged install / PM) are carried by its
+    **artifact group**; the enumeration picks one instance per group.
+    **Provision folds into location** (build⇒built, PM⇒fetched,
+    staged⇒installed). Using an instance at a different location needs a
+    **different command** = the `runner_spec`'s job. See ssot §4.2.4.
+  - **Open implementation question:** the deploy mismatch (app built against
+    `lib@1.0`, run against `lib@2.0`) has one consumer consume *two*
+    instances of one group across its build/run edges. Keep one `placement`
+    per instance and let the **graph edge carry the consumed instance** —
+    the concrete shape is TBD. `canary tiny full` = 2 today via the
+    per-artifact collapse.
+  - **cmake constraint (Staged location):** installing a cmake lib must use
+    a **customized install prefix**, never the global system path (avoid
+    depending on / polluting the host).
 
 ## 1b. Scenario enumeration — implementation state
 
