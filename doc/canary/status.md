@@ -256,10 +256,12 @@ per use). This tracks what's actually wired.
 
 One place to resume from. Each has a home doc with the detail.
 
-- **Grow the tiny-full run** — currently renders + runs the *positive* only
-  (both app wirings PASS, `0dcbf3a`). Next: **mutations + fail-fast collapse**
-  (the coverage payoff), then **per-edge version** (the mismatch). §1a,
-  ssot §4.2.4. ← *in progress*.
+- **Grow the tiny-full run** — renders + runs the positive (both app wirings
+  PASS) **and mutations** (one per pipeline artifact: source / lib / ocaml
+  cstubs / python binding, fail-fast, **4/4 detected** + coverage line).
+  Reuses `run_tiny_scenario`. Next: **combinations + true fail-fast collapse**
+  (multi-mutation workspaces — a bad lib subsumes a bad binding/app into one
+  scenario), then **per-edge version** (the mismatch). §1a, ssot §4.2.4.
 - **Per-edge version model** — `placement` is per-artifact; the deploy
   mismatch (build vs run lib) needs the graph edge to carry the consumed
   instance. **The graph already exists** (`artifact_node` + `make_action_graph`)

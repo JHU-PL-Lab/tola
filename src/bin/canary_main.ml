@@ -1125,18 +1125,47 @@ let run_tiny_all_and_collect () : unit =
    version + mutations + fail-fast are the next steps — status.md §1a.) *)
 let run_tiny_full () : unit =
   Canary_tiny_scenario.print_tiny_full ();
-  Fmt.pr "@.--- running tiny-full's positive (clean tree, all artifacts) ---@.";
   let root = "_out" in
+  let run1 ~failfast name =
+    (try
+       run_tiny_scenario ~root ~failfast ~cache_path:None ~cli_disabled:[] ~name
+     with _ -> ());
+    scenario_status_of_run_state ()
+  in
+  (* positive: clean tree, all artifacts, both app wirings — canary quiet *)
+  Fmt.pr "@.--- positive (clean tree, all artifacts; canary should stay quiet) ---@.";
   List.iter
-    (fun (name, wiring) ->
-      Fmt.pr "  [app:%-11s via %-24s] ... @?" wiring name;
-      (try
-         run_tiny_scenario ~root ~failfast:false ~cache_path:None
-           ~cli_disabled:[] ~name
-       with _ -> ());
-      Fmt.pr "%s@." (scenario_status_of_run_state ()))
-    [ ("app_over_binding_ocaml", "direct");
-      ("app_over_helper_ocaml", "via_helper") ]
+    (fun (wiring, name) ->
+      Fmt.pr "  [app:%-11s] %s@." wiring (run1 ~failfast:false name))
+    [ ("direct", "app_over_binding_ocaml");
+      ("via_helper", "app_over_helper_ocaml") ];
+  (* mutations, fail-fast: one per pipeline artifact — canary should detect
+     each (status xfail = expected failure confirmed). Coverage = how many
+     mutated artifacts were caught. Combinations + true fail-fast collapse
+     are the next step (multi-mutation workspaces). *)
+  Fmt.pr
+    "@.--- mutations (fail-fast; canary should DETECT each — one per artifact) ---@.";
+  let muts =
+    [ ("source", "symbol_missing");
+      ("lib", "abi_soname_bump");
+      ("binding:ocaml:cstubs", "api_complete");
+      ("binding:python", "api_complete_python") ]
+  in
+  let detected =
+    List.fold_left
+      (fun acc (label, name) ->
+        (* a bad scenario returns PASS when canary *detected* the expected
+           failure (its expected table incl. the failing probe was met);
+           FAIL means canary MISSED it. *)
+        let s = run1 ~failfast:true name in
+        let ok = String.equal s "PASS" in
+        Fmt.pr "  [%-22s -> %-22s] %-6s %s@." label name s
+          (if ok then "\xE2\x9C\x93 detected" else "\xE2\x9C\x97 MISSED");
+        if ok then acc + 1 else acc)
+      0 muts
+  in
+  Fmt.pr "@.  coverage: %d/%d mutated artifacts detected@." detected
+    (List.length muts)
 
 let show_tiny_status () : unit =
   let results = load_tiny_results () in
