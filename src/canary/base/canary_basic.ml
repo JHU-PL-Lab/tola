@@ -41,13 +41,9 @@ type artifact_kind = Source | Headers | Lib | Binding of Canary_lang.lang | App
 let kind_order = function
   | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
 
-(** A concrete artifact instance: a [kind] tag plus an identifier ([name])
-    and a [location] (filesystem path / package coordinates).
-
-    Naming convention for [name]: prose-style, mirrors the canonical-name
-    forms from surface theory where applicable. For [Lib] artifacts, [name]
-    is the project name (e.g. ["libz3"]); for [Binding lang], it's the
-    binding's user-facing package label (e.g. ["z3ml"], ["z3-solver"]). *)
+(** A concrete artifact instance: a [kind] tag + [name] + [location].
+    Legacy — referenced only by [step_body] below (dead YAML/toolchain
+    helpers); slated for removal with that cascade. *)
 type artifact = { kind : artifact_kind; name : string; location : location }
 
 (** Build-graph node: an artifact plus how it was produced ([built_from])
@@ -62,8 +58,6 @@ type artifact_node = {
   runtime_dep : artifact_node option;
 }
 
-type artifact_op = Compile | Fetch | Pack | Test
-
 let all_compile_modes = [ Bytecode; Native ]
 let all_probe_actions = [ Compile_example; Run_example ]
 
@@ -72,27 +66,11 @@ let all_cc_and_modes =
 
 type condition = On_runner_os of runner_os
 
-type runner_spec = {
-  root : string;
-  version : string;
-  commit : string;
-  bindings : (Canary_lang.lang * package_manager) list;
-  (* graph capabilities *)
-  system_pm : package_manager;
-  has_source : bool;
-  has_system_pkg : bool;
-  has_lang_pkg : bool;
-  can_package : bool;
-}
-
 type cmdline = string
 
-(* Renamed from [step] on 2026-07-21 (SSOT §6.2) to free the name
-   for the runtime [step] type (was [step] in canary_step_model.ml).
-   This shell-command record is a legacy carrier used by the retired
-   YAML backend + canary_toolchain's verify_*_step helpers (all
-   currently zero-consumer). Kept as a documented placeholder until
-   we either revive the YAML backend or delete the dead helpers. *)
+(* Legacy shell-command carrier — produced by [run_step] /
+   [mk_system_dep_steps] below and consumed only by (dead) YAML-backend /
+   canary_toolchain verify helpers. Kept until that cascade is removed. *)
 type step_body = {
   name : string;
   guard : condition option;
