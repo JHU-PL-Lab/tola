@@ -218,7 +218,8 @@ algorithm with a config gives a project's concrete scenarios. The
 algorithm is **product-then-filter**: the config's levels form the
 product, then constraints prune it (a binding needs a lib; a lib `Built`
 from source needs the source; a mutation applies only to a *provided*
-artifact).
+artifact). Those constraints are the **artifact dependency graph** — the
+non-cartesian skeleton the cartesian axes decorate; see §4.2.4.
 
 **Every use is one config** — this is what unifies tiny and a real
 project: not two enumerations, but one algorithm under two configs.
@@ -414,6 +415,54 @@ result / oracle). So **tiny-factory is a *meta-scenario computation*** over
 the structural scenario space (provision × version × mechanism × app), not
 a generator of new scenarios; mutation + result sit *over* that space
 rather than expanding it as a peer axis.
+
+### 4.2.4 The scenario space = a dependency graph × per-node cartesian
+
+The scenario space has **two parts**, and keeping them separate is the
+principle the enumeration should follow.
+
+**(1) A dependency graph — the non-cartesian structure.** Artifacts form a
+DAG:
+
+- a **lib** (binary) depends on the **source** (it is built from it);
+- a **header** is either **static** — part of the source (a source
+  sub-artifact) — or **built** — a build-result of the source, so it
+  behaves like a lib (depends on the source via a build);
+- a **binding** depends on the **lib**;
+- an **app** depends on the **binding** in its language.
+
+This is the artifact dependency graph — exactly what canary's action graph
+builds dynamically (§6.5). Its **edges *are* the enumeration's filter**:
+`assignment_ok` (a provided binding needs its lib, an app needs a binding, a
+`Built` lib needs the source) *is* this graph.
+
+**(2) The cartesian axes apply per node.** Each artifact in the graph
+carries its own provision × version × mechanism × mutation. The full space
+is the cartesian product over nodes, **filtered by the graph**:
+
+```
+scenario space = (∏ over artifacts of their per-node axes)  filtered by  the dependency graph
+```
+
+So a scenario is valid iff every *provided* artifact's dependencies are
+provided (the graph is respected). This is why the raw cartesian is daunting
+but the graph-valid set is far smaller — most cartesian points violate the
+graph (tiny-full: 2048 raw → 58 graph-valid). What remains is a *choice*
+among graph-valid scenarios (e.g. one binding per lang vs several) — the
+**config-level taming** (the Free/Subset/Full levels, §4.2).
+
+**Header flavor — payload, not a new kind.** A header's flavor (static vs
+built) changes its position in the graph (part-of-source vs
+built-from-source), so it is a **payload on the `Headers` artifact** —
+`Headers of (static | built)` — the same shape as `Binding of (lang ×
+mechanism)` (§4.2.1b) and modeled the same way (an `artifact_ext` payload,
+clearer than separate variants; the two are convertible).
+
+**Principle.** The ideal enumeration is *dependency graph (skeleton) +
+per-node cartesian (decoration), the graph filtering the product*. The
+current implementations should follow this in spirit — canary's action
+graph *is* the dependency graph; z3/llvm's hand-written variants are
+particular graph-valid points that the algorithm should instead derive.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
