@@ -169,12 +169,24 @@ decoupling *is* the agnostic project spec.
   `has_manifest` role) must be settled, and c3 (behaviour) / c6 (grep-type)
   aren't inspection-discoverable — they stay oracle-fed. The run still uses the
   oracle path today; `recipe.expected` remains the tiny1 cross-check oracle.
-- **Phase 3 — combinations + fail-fast collapse.** The assignment tags
-  *several* artifacts bad; materialize applies all. No new runner logic (it's
-  agnostic) — canary fails at the first broken step; the enumeration dedups
-  points that collapse to the same observable (keyed by earliest checkable
-  failure = build/run edge order, from the `artifact_node` graph). Coverage ⊇
-  tiny1, cross-checked.
+- **Phase 3 — combinations + fail-fast collapse.**
+  - **Step 1 — collapse logic + enumeration** ✅ (2026-08-02, `092ad70`).
+    `Canary_enumerate.earliest_bad_of` (via `dep_rank` = `kind_order`) keys a
+    combination on its earliest bad build in dependency order — the first
+    checkable failure a fail-fast run hits; downstream bad builds are masked.
+    Pure test `enumerate.earliest_bad_collapse`. `tiny_full_combinations`
+    enumerates representative multi-bad assignments along source→lib→binding
+    (the scenarios *beyond* tiny1 — one project holds what tiny1 splits); the
+    run renders the collapse projection (`{source#Bs.1, lib#Bs.4} → source#Bs.1`).
+  - **Step 2 — the multi-mutation materializer** ⏳ (still to build). Today's
+    materializer maps one bad-tag → one factory scenario name → `run_prepare`.
+    A combination has no single scenario name; it needs `run_prepare` over a
+    mutation *set* (apply all pre-build Source/Binding mutations, build, then
+    post-build Native), below the scenario-name level. Then the combination
+    workspace is actually built and canary's fail-fast is *shown* to stop at
+    the earliest failure (validating the projection). Shell-heavy (sandbox
+    naming, mutation-conflict handling); the run-side half. Coverage then ⊇
+    tiny1, cross-checked.
 - **Phase 4 — structural registration.** `variants_of "tiny-full"` +
   `covered_of` so `canary scenarios tiny-full` shows the coverage matrix like
   sqlite/z3; optional bundle value. Any time after Phase 2.
