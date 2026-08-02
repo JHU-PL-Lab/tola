@@ -96,17 +96,25 @@ taming the enumeration still needs:
 - **app→binding dependency added** to `assignment_ok` (an app with no
   binding is degenerate; general improvement, not tiny-specific): 64 → **58**.
 - 64 → **58** (app→binding dependency in `assignment_ok`).
-- **58 → 2** — the real correction (2026-08-01): a project **ships its
-  whole declared set** of artifacts; the binding list is a **fixed set of
-  (lang, mechanism) pairs** (only some combos exist — tiny: 1 OCaml + 2
-  Python), *not* `lang × mechanism`, and presence is **not** a positive-
-  space choice. So the positive space = the project's **variants** =
-  provider × version, all artifacts present — the analogue of z3's
-  dev/stable. tiny-full v1 (provider fixed `Built`, version {dev,stable}) =
-  **2**. Grows with the provider axis (`Built`/`Fetched`) once tiny is
-  packaged. **The interesting space is the mutations** (bad scenarios +
-  fail-fast collapse) — step B. Config levels still apply to version /
-  provider / mutation, just not to a phantom "presence" axis.
+- **presence was the wrong axis** (2026-08-01): a project **ships its whole
+  declared set** — the binding list is a **fixed set of (lang, mechanism)
+  pairs** (only some combos exist; tiny: 1 OCaml + 2 Python), and presence
+  is **not** a choice. So the 2048→58 presence enumeration was a dead end.
+- **but "2" is an over-collapse** (2026-08-01): **version is per dependency
+  *edge*, create (build) vs use (run) apart** (ssot §4.2.4) — an OCaml
+  binding ranges header-version × lib-version = 4; an app ranges
+  build-lib-version × run-lib-version = 4 (the deploy mismatch). The count
+  is a **product over consumption edges**, and those mismatch points are
+  canary's *purpose*, not "bad". So the real tiny-full breadth is the
+  per-edge version product, *not* 2.
+  - **Implementation gap:** the current `placement.version` is **per
+    artifact** (one version each) — it **cannot** express "app built against
+    lib@dev, run against lib@stable" (two edges to the *same* artifact at
+    different versions). Per-edge version needs either multiple artifact
+    *instances* + edge→instance selection, or the consumer carrying its
+    dependencies' (build/run) versions. This is the real version model and
+    the next enumeration change. `canary tiny full` shows 2 today only
+    because it uses the per-artifact collapse.
 
 ## 1b. Scenario enumeration — implementation state
 

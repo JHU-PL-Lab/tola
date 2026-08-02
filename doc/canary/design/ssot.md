@@ -436,20 +436,39 @@ builds dynamically (§6.5). Its **edges *are* the enumeration's filter**:
 `assignment_ok` (a provided binding needs its lib, an app needs a binding, a
 `Built` lib needs the source) *is* this graph.
 
-**(2) The cartesian axes apply per node.** Each artifact in the graph
-carries its own provision × version × mechanism × mutation. The full space
-is the cartesian product over nodes, **filtered by the graph**:
+**(2) The cartesian axes apply per node — and version applies per *edge*.**
+Each artifact carries provision × mechanism × mutation. **Version, though,
+is per dependency *edge*, not per node**, and edges are typed **create
+(build) vs use (run)**: an artifact is *built at* a version, so several
+instances co-exist (source@dev/@stable; lib@dev/@stable), and **each
+consumer edge independently picks which version of the dependency it
+consumes**, build and run separately. So:
+
+- an OCaml binding built against a **header** and a **lib** ranges
+  header-version × lib-version = 4 (with two versions) — the off-diagonal
+  points are compile-time **mismatches**;
+- an app **built** with a lib and **run** with a lib ranges
+  build-lib-version × run-lib-version = 4 — the off-diagonal is the classic
+  **deploy mismatch** (a package developer builds a lib; a user runs it on a
+  different host at a different version).
+
+These mismatch points are **canary's whole purpose** (cross-version compat),
+so they are **first-class scenarios**, not "bad" ones. Collapsing version to
+one-per-scenario discards exactly the space canary checks. The full space:
 
 ```
-scenario space = (∏ over artifacts of their per-node axes)  filtered by  the dependency graph
+scenario space = (∏ over graph EDGES of the consumed version, create/use apart,
+                  × per-node provision/mechanism/mutation)   filtered by  the graph
 ```
 
-So a scenario is valid iff every *provided* artifact's dependencies are
-provided (the graph is respected). This is why the raw cartesian is daunting
-but the graph-valid set is far smaller — most cartesian points violate the
-graph (tiny-full: 2048 raw → 58 graph-valid). What remains is a *choice*
-among graph-valid scenarios (e.g. one binding per lang vs several) — the
-**config-level taming** (the Free/Subset/Full levels, §4.2).
+So the count is a **product over consumption edges** (binding = header×lib,
+app = build-lib×run-lib, …), *far* larger than "2 global versions" — that
+edge-product is the mismatch space. What remains after the graph filter is a
+*choice* among graph-valid scenarios — the **config-level taming** (the
+Free/Subset/Full levels, §4.2). *(Earlier note: the raw cartesian over
+per-artifact **presence** — 2048 → 58 — was the wrong axis; a project ships
+its whole declared set, presence is not a choice. The real breadth is the
+per-edge version product above.)*
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
