@@ -115,3 +115,64 @@ then locations (staged / PM — the provision, via `runner_spec` commands).
 - The open work is the **merge** (one instance type: `artifact_node` + `ext`
   + typed version) and connecting the enumeration `config`/levels on top of
   the existing graph — not a fresh graph.
+
+## 6. The merge — shared base definitions (info vs structure)
+
+The artifact vocabulary is scattered across parallel types; several carry
+**info** (metadata), a few carry **structure** (graph/edges). "Merge" =
+define it **once in `base`**, split cleanly, and have enumerate / action /
+step all consume it.
+
+| type | file | info / structure | status |
+|---|---|---|---|
+| `artifact_kind` | base | info (kind) | live |
+| `artifact_ext` (mechanism/wiring) | **enumerate** | info (payload) | live — *move to base* |
+| `channel` / `version` | base | info (version) | live |
+| `location`, `provision` | store | info (where / folds into location) | live |
+| `artifact_id` = {kind; ext} | enumerate | info (composite) | live |
+| `placement` = {provision; version} | enumerate | info (composite) | live |
+| `artifact_node` = {a_kind; a_name; a_location; built_from; runtime_dep} | base | **structure** (node + edges) | live |
+| `step` = {…; deps : string list; …} | step_model | **structure** (string-tag edges) | live |
+| `artifact_status` | store | info (lifecycle) | unused (intentional) |
+| `artifact`, `step_body`, `cmdline` | base | structure | **legacy** (step_body cascade → canary_toolchain) |
+
+**Target base definitions:**
+
+```ocaml
+(* base — INFO: all of an instance's metadata (subsumes artifact_id +
+   placement; artifact_ext moves here) *)
+type artifact_info = {
+  kind     : artifact_kind;
+  ext      : artifact_ext;          (* mechanism / wiring / header-flavor *)
+  version  : channel;               (* typed *)
+  location : location;              (* provision folds in *)
+}
+
+(* base — STRUCTURE: the graph node = info + dependency edges *)
+type artifact_node = {
+  info        : artifact_info;
+  built_from  : artifact_node option;   (* Build edge *)
+  runtime_dep : artifact_node option;   (* Run edge *)
+}
+```
+
+Then: `canary_enumerate` uses `artifact_info` (its `artifact_id` + `placement`
+*are* it); `canary_action`'s node = `info + edges` (gains `ext` + typed
+version, drops the untyped `a_name` version-encoding); `canary_step_model`'s
+string `deps` reconciles to **typed node refs** (Q1: the runner and the
+diagram then share one dependency relation instead of two).
+
+**Two dependency-structure representations to reconcile (Q1):**
+`artifact_node`'s typed `built_from`/`runtime_dep` (diagram) vs `step.deps :
+string list` (runner). The typed node graph should be the source; the step
+references nodes. (`built_from`/`runtime_dep` ≈ the build/run *action* — the
+known edge≈action smell; reuse consumes/produces §6.5.)
+
+**Legacy to sweep** (deferred — a cascade, not a clean pair): `artifact` +
+`step_body` + `cmdline` + base `run_step`/`mk_system_dep_steps` +
+`canary_toolchain`'s dead verify helpers. (`artifact_op`, dead base
+`runner_spec` already removed, `9f656dd`.)
+
+**Do this merge only when the shapes are confirmed** (then fold the graph
+into one ssot section + a CLAUDE.md "the artifact graph lives in base; don't
+reinvent" note — Q2).
