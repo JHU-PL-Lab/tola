@@ -95,14 +95,18 @@ taming the enumeration still needs:
   whole-scenario for the positive space (2048 → **64**).
 - **app→binding dependency added** to `assignment_ok` (an app with no
   binding is degenerate; general improvement, not tiny-specific): 64 → **58**.
-- **still 58** — the remaining excess is the **power-set of binding
-  presence** (cext-only / ctypes-only / both / cstubs combos …). The
-  *meaningful* choices are far fewer: a **per-lang mechanism choice** (cext
-  *xor* ctypes, or whatever the project declares it ships), not the
-  independent presence of every binding. Getting from 58 → the meaningful
-  set is the **config-level taming** (Free/Subset/Full per axis, per
-  artifact) — the next design step, and exactly what the view was meant to
-  motivate. Mutations + fail-fast + the runner follow.
+- 64 → **58** (app→binding dependency in `assignment_ok`).
+- **58 → 2** — the real correction (2026-08-01): a project **ships its
+  whole declared set** of artifacts; the binding list is a **fixed set of
+  (lang, mechanism) pairs** (only some combos exist — tiny: 1 OCaml + 2
+  Python), *not* `lang × mechanism`, and presence is **not** a positive-
+  space choice. So the positive space = the project's **variants** =
+  provider × version, all artifacts present — the analogue of z3's
+  dev/stable. tiny-full v1 (provider fixed `Built`, version {dev,stable}) =
+  **2**. Grows with the provider axis (`Built`/`Fetched`) once tiny is
+  packaged. **The interesting space is the mutations** (bad scenarios +
+  fail-fast collapse) — step B. Config levels still apply to version /
+  provider / mutation, just not to a phantom "presence" axis.
 
 ## 1b. Scenario enumeration — implementation state
 

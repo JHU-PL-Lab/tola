@@ -1170,16 +1170,15 @@ let print_engine_render () : unit =
 let tiny_full_artifacts : Canary_enumerate.artifact_id list = engine_artifacts
 
 let tiny_full_points : string Canary_enumerate.point list =
-  (* version is whole-scenario for the positive space (all artifacts at one
-     version — per-artifact version *mismatch* is a bad scenario, not here);
-     enumerate provision-presence within each version. Source & lib always
-     present. *)
+  (* A project ships its *whole declared set* of artifacts (the binding list
+     is a fixed set of (lang, mechanism) pairs — presence is not a choice).
+     So the positive space is the project's **variants** = provider × version,
+     all artifacts present. v1: provider fixed [Built] (Fetched needs
+     packaging); version whole-scenario (per-artifact version *mismatch* is a
+     bad scenario, not here). → the analogue of z3's dev/stable variants. *)
   List.concat_map Canary_basic.two_channels ~f:(fun v ->
       Canary_enumerate.general_slice ~artifacts:tiny_full_artifacts
-        ~provisions:Canary_enumerate.[ Absent; Built ] ~versions:[ v ]
-      |> List.filter ~f:(fun (pt : string Canary_enumerate.point) ->
-             Canary_enumerate.provided pt.assignment Canary_enumerate.a_source
-             && Canary_enumerate.provided pt.assignment Canary_enumerate.a_lib))
+        ~provisions:Canary_enumerate.[ Built ] ~versions:[ v ])
 
 let print_tiny_full () : unit =
   let p = Stdlib.Printf.printf in
@@ -1190,8 +1189,10 @@ let print_tiny_full () : unit =
   List.iteri tiny_full_points ~f:(fun i pt ->
       p "  [%3d] %s\n" (i + 1)
         (Canary_enumerate.string_of_assignment pt.Canary_enumerate.assignment));
-  p "\n  %d positive scenarios (source & lib always present; which \
-     bindings/apps are present = the mechanism/app choice; × 2 versions)\n"
+  p "\n  %d positive scenarios = tiny-full's variants (all declared \
+     artifacts present; provider fixed Built, version {dev,stable}). Grows \
+     with the provider axis (Built/Fetched) once tiny is packaged; the \
+     interesting space is the mutations (step B).\n"
     (List.length tiny_full_points)
 
 (* Startup assertion — count of derived cells after dedup. Update
