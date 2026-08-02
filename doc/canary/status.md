@@ -252,6 +252,39 @@ per use). This tracks what's actually wired.
   `canary_detect` = raw outcome vs the expected oracle). Keep in mind
   when §5 gets the same principle-rewrite §4.2 received.
 
+## 1c. Paused — pick-up list (enumeration / graph work)
+
+One place to resume from. Each has a home doc with the detail.
+
+- **Grow the tiny-full run** — currently renders + runs the *positive* only
+  (both app wirings PASS, `0dcbf3a`). Next: **mutations + fail-fast collapse**
+  (the coverage payoff), then **per-edge version** (the mismatch). §1a,
+  ssot §4.2.4. ← *in progress*.
+- **Per-edge version model** — `placement` is per-artifact; the deploy
+  mismatch (build vs run lib) needs the graph edge to carry the consumed
+  instance. **The graph already exists** (`artifact_node` + `make_action_graph`)
+  — the work is a *merge*, not a new graph. ssot §4.2.4,
+  [`design/enumeration_graph.md`](design/enumeration_graph.md).
+- **The merge** (shared base defs) — one `artifact_info` (kind+ext+version+
+  location; move `artifact_ext` to base) + `artifact_node` (info+edges);
+  reconcile `step.deps` (string) with typed edges. Do when shapes confirmed,
+  then one ssot section + CLAUDE.md note. `enumeration_graph.md` §6.
+- **Legacy sweep (cascade)** — `artifact` + `step_body` + `cmdline` + base
+  `run_step`/`mk_system_dep_steps` + `canary_toolchain` dead verify helpers.
+  (`artifact_op`, dead base `runner_spec` already gone, `9f656dd`.)
+  `enumeration_graph.md` §6.
+- **Headers static/built flavor** — `Headers` payload (like `Binding of
+  (lang×mechanism)`) + its provision (`Build_headers` → Built). ssot §4.2.4.
+- **Provider axis + packaging** — provision `Built`/`Fetched` needs tiny
+  published/fetched; cmake Staged install must use a **customized prefix**,
+  not the global system path. §1a.
+- **Provision sub-structure** — PM (apt/opam/pip/brew) + distro (local vs
+  GH CI). ssot §4.2.3, §1b.
+- **Versioning unification** — typed `version` across enumeration/store/cache,
+  simple-projects-first. [`design/versioning.md`](design/versioning.md).
+- **§5 principle-rewrite** — "bad scenario" → "scenario with a bad result"
+  (see the meta note just above).
+
 ## 2. Near-term
 
 Ordered rough priority.
