@@ -116,9 +116,61 @@ cross-check against tiny1 (`tiny run`) is now a live number. *Still open* (the
 **fail-fast collapse** (earliest checkable failure subsumes downstream); today
 each point is a single mutation, so the collapse isn't exercised yet.
 
-**Plan (confirmed):** tiny-full first (view, then runner); tiny1 derivation
-after; packaging deferred but **must** come back (the provision axis needs
-tiny published/fetched — until then provision is `Built`/`Absent` only).
+### Plan — tiny-full → a mutation-agnostic project spec (confirmed 2026-08-02)
+
+**Core principle: the tiny-full runner knows *nothing* about mutations.** A
+bad artifact is treated exactly like a normal one — its badness lives in its
+**identity** (a *special version string* / metadata tag), not in a mutation
+type the runner dispatches on. This mirrors a real project: z3 doesn't know
+its lib is "the old ABI"; it builds `lib@stable` and canary *detects* the
+mismatch. So tiny-full ranges over artifact **identities** (good tag or a
+bad-tag); the **materializer** (harness side) realizes a tag into a concrete
+artifact (applying the mutation for a bad tag); the runner only ever sees
+`artifact@tag`, opaque. Where each concern lives:
+
+| concern | owner | knows the mutation? |
+|---|---|---|
+| enumeration (assign tags to artifacts) | `canary_enumerate` / tiny-full point gen | no — just tags |
+| **runner** (materialize assignment → run canary) | tiny-full spec | **no** — agnostic |
+| materializer (tag → concrete artifact) | harness (`canary_tiny_workspace`) | yes (hidden) |
+| oracle / ground truth (tag → expected verdict) | factory (tiny1, `recipe.expected`) | yes — the cross-check |
+
+The two threads ("beyond tiny1" + "project-spec style") are **one**:
+combinations force the runner off factory scenario *names*, and that
+decoupling *is* the agnostic project spec.
+
+- **Phase 0** ✅ command-level peer (`action tiny-full`).
+- **Phase 1 — agnostic driver over variant tags.** The point's per-artifact
+  choice becomes an opaque `variant_tag` ("good" | a bad-tag), not a factory
+  `scenario_id`. Introduce a `tiny_full` spec (`artifacts`, `variants_of :
+  artifact_id → variant_tag list`, materialize-and-run) and make the driver
+  consume *only* that — no `find_by_id`/`mutation_target_of_spec`/mutation
+  types in the loop. Factory-backed impl still maps tag → workspace + oracle
+  internally. Behaviour-preserving (still 20/20).
+- **Phase 2 — the real spec: tag folded into the version identity.** The
+  "special version string" *is* the artifact version (per `versioning.md` —
+  typed version as identity). One base runner_spec + the tag catalogue; the
+  expectation derives via the **contract/compat path** (like z3's
+  `lower_expectation`) off the materialized bad artifact, not the factory's
+  hand-written `recipe.expected` (which stays as the tiny1 oracle for the
+  cross-check).
+- **Phase 3 — combinations + fail-fast collapse.** The assignment tags
+  *several* artifacts bad; materialize applies all. No new runner logic (it's
+  agnostic) — canary fails at the first broken step; the enumeration dedups
+  points that collapse to the same observable (keyed by earliest checkable
+  failure = build/run edge order, from the `artifact_node` graph). Coverage ⊇
+  tiny1, cross-checked.
+- **Phase 4 — structural registration.** `variants_of "tiny-full"` +
+  `covered_of` so `canary scenarios tiny-full` shows the coverage matrix like
+  sqlite/z3; optional bundle value. Any time after Phase 2.
+
+Dependency: P1 → P2 → P3; P4 after P2. P3 pulls in the graph/merge work
+(edges drive collapse order — §1c, `enumeration_graph.md`).
+
+**Older plan notes (kept for context):** tiny-full first (view, then runner);
+tiny1 derivation after; packaging deferred but **must** come back (the
+provision axis needs tiny published/fetched — until then provision is
+`Built`/`Absent` only).
 **First step — tiny-full v1:** the algorithm enumerates tiny's full artifact
 set over provision {Absent, Built} × version {1.0, 2.0} (tiny already has
 the `TINY_1.0`/`TINY_2.0` map + all three mechanisms); view first, then
