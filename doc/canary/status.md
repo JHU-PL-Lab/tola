@@ -107,14 +107,24 @@ taming the enumeration still needs:
   is a **product over consumption edges**, and those mismatch points are
   canary's *purpose*, not "bad". So the real tiny-full breadth is the
   per-edge version product, *not* 2.
-  - **Implementation gap:** the current `placement.version` is **per
-    artifact** (one version each) — it **cannot** express "app built against
-    lib@dev, run against lib@stable" (two edges to the *same* artifact at
-    different versions). Per-edge version needs either multiple artifact
-    *instances* + edge→instance selection, or the consumer carrying its
-    dependencies' (build/run) versions. This is the real version model and
-    the next enumeration change. `canary tiny full` shows 2 today only
-    because it uses the per-artifact collapse.
+  - **Model chosen — the reality one (2026-08-01):** an artifact is a set of
+    **instances**, each `(version × location)` where location is the **store**
+    — build tree / staged install (a *customized* prefix, not the global
+    system path) / PM site (`Canary_store.location`). Each consumption edge
+    (create/build, use/run) **selects one instance**, independently — so
+    version *and* location mismatches (build-tree lib@1.0 vs PM lib@2.0 = the
+    deploy scenario) fall out. **Provision folds in** — it's just *which
+    location an edge selects* (build⇒built, PM⇒fetched, staged⇒installed).
+    See ssot §4.2.4.
+  - **Implementation:** replace the per-artifact `placement` with **instances
+    + edge→instance selection**. The current `placement.version` (per
+    artifact, one version) can't express two edges to the same artifact at
+    different `(version,location)`. This is the next enumeration change;
+    `canary tiny full` shows 2 today only via the per-artifact collapse.
+  - **cmake constraint (for the Staged location):** installing a cmake lib
+    must use a **customized install prefix**, never the global system path
+    (avoid depending on / polluting the host). Applies when we materialize
+    the `Staged` instance.
 
 ## 1b. Scenario enumeration — implementation state
 

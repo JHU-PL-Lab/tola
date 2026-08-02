@@ -470,6 +470,28 @@ per-artifact **presence** — 2048 → 58 — was the wrong axis; a project ship
 its whole declared set, presence is not a choice. The real breadth is the
 per-edge version product above.)*
 
+**Reality — an artifact is a set of *instances* at (version × location); an
+edge selects one.** An artifact isn't a single node with a version — it
+exists as **instances**, each identified by its **version** *and* its
+**store location** (where it physically lives):
+
+- the **build tree** — built and left at the build path;
+- a **staged install** — installed to a prefix (a *customized* prefix,
+  **not** the global system path — especially for cmake, to avoid depending
+  on / polluting the global system);
+- a **package manager's site** — published.
+
+These are the store-lifecycle locations (`Canary_store.location` =
+`Build_tree | Staged | Pm`; §4.2 source→Build→Publish→Fetch). Several
+co-exist — lib@1.0 in the build tree, lib@1.0 staged, lib@2.0 in a PM, …
+**Each consumption edge selects one instance** — a `(version, location)`
+pair — at create (build) and at use (run) **independently**; that is where
+both version *and* location mismatches live (build against the build-tree
+lib@1.0, run against the PM lib@2.0 = the deploy scenario). So **provision
+is not a separate axis**: it is *which location the edge selects* (build
+tree ⇒ "built", PM ⇒ "fetched", staged ⇒ "installed"). Version + provision
+fold into **"which instance each edge consumes."**
+
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
 built-from-source), so it is a **payload on the `Headers` artifact** —
