@@ -1505,75 +1505,141 @@ let () =
    hand-vs-derived invariant to enforce; the derivation is
    the sole source of truth. *)
 
-(* ── tiny-full RUN — the genuine, algorithm-driven good+bad run ──
+(* ── tiny-full as a mutation-AGNOSTIC project spec (Phase 1, 2026-08-02) ──
 
-   The distinction from the old tiny1 proxy: the driver iterates the
-   ALGORITHM's enumeration ([engine_points], the [tiny_slice] projection of
-   ONE fixed artifact set → 1 positive + N mutation points), not a
-   hand-written scenario-name list. Every scenario it runs is *derived*:
+   Core principle (status §1a): the tiny-full *runner* knows NOTHING about
+   mutations. Each artifact in an assignment is identified by a [variant_tag]
+   — [Good], or [Bad tag] where [tag] is an OPAQUE build identity (a "special
+   version string" / metadata). The runner treats a bad build exactly like a
+   good one; only the materializer (factory-backed, below) knows a bad tag
+   corresponds to a mutation. This mirrors a real project: z3 builds
+   `lib@stable` and canary *detects* the mismatch — the property that makes
+   "a real simple project is no harder than tiny-full" meaningful. *)
+type variant_tag = Good | Bad of string   (* Bad carries an opaque build tag *)
 
-   - the **positive** point (mutation = None) → the unmutated full-chain
-     witnesses (specs with no mutation target — the clean tree, both app
-     wirings); canary should stay quiet.
-   - each **mutation** point (mutation = Some (artifact_id, scenario_id)) →
-     resolve [scenario_id] → spec → name and run it; the workspace
-     materializer applies that scenario's mutation. A bad point PASSES when
-     canary *detected* the expected failure ([run] returns "PASS").
+type tiny_full_assignment = (Canary_enumerate.artifact_id * variant_tag) list
 
-   Runs dedup by scenario_id (a spec touching both Python layers yields cext
-   *and* ctypes points but one workspace); coverage still counts the artifact
-   points. Combinations (multi-mutation workspaces) + true fail-fast collapse
-   are the next step. See status.md §1a. *)
+type tiny_full_spec = {
+  tf_artifacts : Canary_enumerate.artifact_id list;
+  tf_variants_of : Canary_enumerate.artifact_id -> variant_tag list;
+}
+
+(* Factory-backed spec: the bad tags per artifact ARE the factory's mutation
+   catalogue grouped by the artifact each mutation targets (from
+   [engine_mutations]); the tag is the factory scenario id, but the runner
+   never interprets it. *)
+let tiny_full_bad_tags_of (aid : Canary_enumerate.artifact_id) : variant_tag list =
+  List.filter_map engine_mutations ~f:(fun (a, sid) ->
+      if Canary_enumerate.equal_artifact_id a aid then Some (Bad sid) else None)
+
+let tiny_full_spec : tiny_full_spec =
+  { tf_artifacts = engine_artifacts;
+    tf_variants_of = (fun aid -> Good :: tiny_full_bad_tags_of aid) }
+
+(* Phase-1 assignment enumeration: the [tiny_slice] good+bad space rendered as
+   tag assignments — 1 all-Good + one point per (artifact, bad-tag). Phase 3
+   generalises to several Bad tags per assignment (= combinations). *)
+let tiny_full_assignments (spec : tiny_full_spec) : tiny_full_assignment list =
+  let all_good = List.map spec.tf_artifacts ~f:(fun a -> (a, Good)) in
+  let one_bad aid tag =
+    List.map spec.tf_artifacts ~f:(fun a ->
+        if Canary_enumerate.equal_artifact_id a aid then (a, Bad tag)
+        else (a, Good))
+  in
+  let bads =
+    List.concat_map spec.tf_artifacts ~f:(fun aid ->
+        List.filter_map (spec.tf_variants_of aid) ~f:(function
+          | Good -> None
+          | Bad tag -> Some (one_bad aid tag)))
+  in
+  all_good :: bads
+
+let bad_tag_of (a : tiny_full_assignment) : string option =
+  List.find_map a ~f:(function (_, Bad t) -> Some t | (_, Good) -> None)
+
+(* Materialize + run ONE assignment. This is the ONLY place that maps a tag to
+   a mutation/workspace — the factory-backed materializer. A bad tag → its
+   factory workspace ([find_by_id] → name → [run_scenario], which materialises
+   + probes); the all-Good assignment → the clean tree, realised by the
+   unmutated witnesses. Returns per-run (label, verdict). The runner above it
+   hands over an assignment and gets verdicts — it never sees this mapping. *)
+let tiny_full_materialize_and_run
+    ~(run_scenario : failfast:bool -> name:string -> string)
+    ~failfast (assignment : tiny_full_assignment) : (string * string) list =
+  let bad_tags =
+    List.filter_map assignment
+      ~f:(function (_, Bad t) -> Some t | (_, Good) -> None)
+  in
+  match bad_tags with
+  | [] ->
+      let witnesses =
+        List.filter_map all_scenario_specs ~f:(fun s ->
+            if Option.is_none (mutation_target_of_spec s) then Some s.scenario.name
+            else None)
+      in
+      List.map witnesses ~f:(fun name -> (name, run_scenario ~failfast ~name))
+  | tags ->
+      List.map tags ~f:(fun tag ->
+          let name =
+            match find_by_id tag with Some s -> s.scenario.name | None -> tag
+          in
+          (name, run_scenario ~failfast ~name))
+
+(* The agnostic driver: enumerate tag assignments, hand each to the
+   materializer, tally coverage. It references only [variant_tag] + the spec +
+   the materializer — no mutation type, no [find_by_id]/[recipe] here. *)
 let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
   let p = Stdlib.Printf.printf in
-  let n_mut_points = List.length engine_mutations in
-  p "\ntiny-full RUN — algorithm-driven good+bad (tiny_slice: 1 positive + \
-     %d mutation point(s), derived — no hand-written scenario list)\n"
-    n_mut_points;
+  let spec = tiny_full_spec in
+  let assignments = tiny_full_assignments spec in
+  let is_all_good =
+    List.for_all ~f:(fun (_, t) ->
+        match t with Good -> true | Bad _ -> false)
+  in
+  let positives, bads = List.partition_tf assignments ~f:is_all_good in
+  let n_bad = List.length bads in
+  p "\ntiny-full RUN — mutation-agnostic spec (1 positive + %d bad \
+     assignment(s); the runner sees only artifact@tag, never a mutation)\n"
+    n_bad;
 
-  (* positive: the unmutated witnesses (clean tree) — canary stays quiet *)
-  let positive_names =
-    List.filter_map all_scenario_specs ~f:(fun s ->
-        if Option.is_none (mutation_target_of_spec s) then Some s.scenario.name
-        else None)
-  in
-  p "\n  --- positive (clean tree, unmutated witnesses; canary should stay \
-     quiet) ---\n";
-  List.iter positive_names ~f:(fun name ->
-      let s = run ~failfast:false ~name in
-      p "    [%-26s] %s\n" name s);
+  (* positive: all-Good assignments — canary should stay quiet *)
+  p "\n  --- positive (clean tree; canary should stay quiet) ---\n";
+  List.iter positives ~f:(fun a ->
+      List.iter
+        (tiny_full_materialize_and_run ~run_scenario:run ~failfast:false a)
+        ~f:(fun (label, verdict) -> p "    [%-26s] %s\n" label verdict));
 
-  (* mutations: iterate the enumerated points, dedup runs by scenario_id,
-     preserving first-seen order. *)
-  let distinct_ids =
-    List.fold engine_mutations ~init:[] ~f:(fun acc (_aid, id) ->
-        if List.mem acc id ~equal:String.equal then acc else acc @ [ id ])
+  (* bad: dedup runs by tag (an assignment whose bad build touches >1 artifact
+     — e.g. both Python layers — appears once per artifact but is ONE
+     workspace); detection counts distinct runs, coverage counts assignments
+     (artifact points). *)
+  let tag_of a = Option.value (bad_tag_of a) ~default:"" in
+  let distinct_tags =
+    List.fold bads ~init:[] ~f:(fun acc a ->
+        let t = tag_of a in
+        if List.mem acc t ~equal:String.equal then acc else acc @ [ t ])
   in
-  let points_of id =
-    List.count engine_mutations ~f:(fun (_aid, i) -> String.equal i id)
-  in
-  p "\n  --- mutations (fail-fast; canary should DETECT each expected \
-     failure) ---\n";
-  let detected_ids, detected_points =
-    List.fold distinct_ids ~init:(0, 0) ~f:(fun (dids, dpts) id ->
-        let name =
-          match find_by_id id with
-          | Some s -> s.scenario.name
-          | None -> id (* unreachable: engine_mutations derive from specs *)
+  let points_of t = List.count bads ~f:(fun a -> String.equal (tag_of a) t) in
+  p "\n  --- bad (fail-fast; canary should DETECT each) ---\n";
+  let detected_tags, detected_points =
+    List.fold distinct_tags ~init:(0, 0) ~f:(fun (dtags, dpts) tag ->
+        let a = List.find_exn bads ~f:(fun a -> String.equal (tag_of a) tag) in
+        let npts = points_of tag in
+        let results =
+          tiny_full_materialize_and_run ~run_scenario:run ~failfast:true a
         in
-        let npts = points_of id in
-        let s = run ~failfast:true ~name in
-        (* a bad scenario returns "PASS" when canary *detected* the expected
-           failure; anything else means it MISSED it. *)
-        let ok = String.equal s "PASS" in
-        p "    [%-6s %-26s] %-6s %s (%d artifact point%s)\n" id name s
+        (* a bad build → "PASS" when canary *detected* the failure *)
+        let ok = List.for_all results ~f:(fun (_, v) -> String.equal v "PASS") in
+        let label = match results with (l, _) :: _ -> l | [] -> tag in
+        p "    [%-6s %-26s] %-6s %s (%d artifact point%s)\n" tag label
+          (if ok then "PASS" else "FAIL")
           (if ok then "\xE2\x9C\x93 detected" else "\xE2\x9C\x97 MISSED")
           npts (if npts = 1 then "" else "s");
-        if ok then (dids + 1, dpts + npts) else (dids, dpts))
+        if ok then (dtags + 1, dpts + npts) else (dtags, dpts))
   in
-  p "\n  coverage: %d/%d mutation scenarios detected (%d/%d artifact points)\n"
-    detected_ids (List.length distinct_ids)
-    detected_points n_mut_points
+  p "\n  coverage: %d/%d bad scenarios detected (%d/%d artifact points)\n"
+    detected_tags (List.length distinct_tags)
+    detected_points n_bad
 
 
 (** Tiny lives in-tree. All shell commands here run from the tola
