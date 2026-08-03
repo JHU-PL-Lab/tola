@@ -45,22 +45,27 @@ a type the runner dispatches on. tiny-full *declares resources*; canary
 *computes everything*. tiny-factory (tiny1) stays the oracle for the
 cross-check.
 
-**Shipped this session** (commits `b6ca255`…`94fa841`):
-P0 naming + `action tiny-full` as a project · P1 agnostic driver over variant
-tags · P2a version identity (`build_id`/`quality`) · P2b c1 contract-derived
-expectation (spike) · P3 correction (vendored resources; canary computes the
-collapse — `earliest_bad_of` reverted) · P3 step 2 **emit + assemble**
-validated for the lib (`tiny assemble-check`).
+**Shipped this session** (commits `b6ca255`…`d627890`):
+P0 naming + `action tiny-full` as a project · P1 agnostic driver · P2a version
+identity (`build_id`/`quality`) · **P2b agnostic expectation — DONE** (tiny-full
+runs with no oracle; canary computes the expectation by inspection, via the
+additive `Expect_compat_derived`) · P3 correction (vendored; canary computes the
+collapse) · **P3 step 2 — DONE**: emit + assemble + RUN over the assembly (full
+single-bad sweep **20/20 via vendored assembly**) · **combinations — DONE**
+(multi-bad resource-sets, the beyond-tiny1 scenarios; canary computes the
+collapse under fail-fast).
 
-**Command surface** (tiny work): `action tiny-full` (the project) ·
-`tiny run` (tiny1) · `tiny list/status/engine` (views) ·
-`tiny baseline/prepare/prepare-all/confirm` (harness) ·
-`tiny assemble-check --id <id> <tag>` (vendored emit+assemble, P3 step 2).
+**Command surface** (tiny work): `action tiny-full` (the project, now fully
+vendored + agnostic) · `tiny run` (tiny1) · `tiny list/status/engine` (views) ·
+`tiny baseline/prepare/prepare-all/confirm` (harness) · `tiny assemble-check`
+(list / emit+assemble) · `tiny assemble-run <TAG>` (run one over its assembly)
+· `tiny assemble-combo <TAG>...` (run a combination).
 
-**Next**: wire the RUN over the assembly (point `stores_of_workspace` +
-runner_spec at the assembled tree, confirm canary detects c4 from *assembled*
-resources) → the other two built artifacts → combinations (converges with
-P2b). Detail + phase history in §1a.
+**Next**: factor **`canary_project_tiny.ml` + the generic runner** — the
+convergence (one runner for tiny-full *and* z3/sqlite), the project_spec split
+(factory/tiny1 make ingredients · project_spec declares · tiny-full explores
+via `canary action`). Then the axes fall out: new project · two versions ·
+packages (provision=`Fetched`). Detail + phase history in §1a.
 
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 
