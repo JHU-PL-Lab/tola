@@ -258,6 +258,50 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
                   ~detail:(Some (if found then confirmed_msg
                     else "command failed but output didn't match derived predictions"));
                 found
+          | Expect_compat_derived { inputs; version_info = _ } ->
+              (* Mutation-AGNOSTIC: the inspection decides. Compute the
+                 prediction FIRST; if it is empty the artifact is fine here, so
+                 a SUCCESS is correct (unlike the oracle variant, which always
+                 expects the failure). If non-empty, the step must fail with
+                 that signature. Lets tiny-full run without being told which
+                 contract breaks — canary discovers it. *)
+              let resolve rel =
+                match String.lsplit2 rel ~on:'/' with
+                | Some (step_tag, file) ->
+                    let step_dir = Canary_basic.step_dir_of_tag step_tag in
+                    let vk_file = Canary_basic.variant_file
+                        ~variant_key:step.variant_id file in
+                    step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
+                | None ->
+                    let vk_rel = Canary_basic.variant_file
+                        ~variant_key:step.variant_id rel in
+                    step.project_dir ^ "/" ^ vk_rel
+              in
+              let derived =
+                Canary_compat_run.predicted_contains_any_v2
+                  ~disabled:step.disabled_contracts ~resolve inputs
+              in
+              if List.is_empty derived then begin
+                (* inspection predicts no failure ⇒ expect success *)
+                log ~event:(if cmd_ok then "done" else "failed")
+                  ~detail:(Some (if cmd_ok
+                    then "no compat failure predicted; success expected"
+                    else "no compat failure predicted but command failed"));
+                cmd_ok
+              end
+              else if cmd_ok then begin
+                log ~event:"unexpected_success"
+                  ~detail:(Some "compat failure predicted (derived) but command succeeded");
+                false
+              end
+              else begin
+                let found = output_contains_any ~output_dir:out derived in
+                log ~event:(if found then "done" else "failed")
+                  ~detail:(Some (if found
+                    then "expected failure confirmed (derived)"
+                    else "command failed but output didn't match derived predictions"));
+                found
+              end
         in
         (* Symbol check runs independently after command expectation is met. *)
         let symbol_ok = match step.symbol_check with

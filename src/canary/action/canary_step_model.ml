@@ -70,6 +70,19 @@ type step_expectation =
       inputs       : Canary_compat.inspect_input list;
       version_info : version_info option;
     }
+  (* Like [Expect_compat_failure] (same payload), but the runtime PREDICTION
+     decides: if the compat inspection over [inputs] predicts a failure, the
+     step must fail with that signature; if it predicts NOTHING (a good
+     artifact), the step must SUCCEED. This is the mutation-AGNOSTIC
+     expectation — canary computes whether to expect a failure by inspecting
+     the artifact, rather than being told (the oracle [Expect_compat_failure]
+     always expects the failure). Emitted by
+     [Canary_scenario.lower_expectation_agnostic]; only tiny-full uses it —
+     z3/llvm keep the oracle variant. *)
+  | Expect_compat_derived of {
+      inputs       : Canary_compat.inspect_input list;
+      version_info : version_info option;
+    }
 
 type step = {
   tag : string;

@@ -754,7 +754,8 @@ let result_status_of_run (steps : step list)
       let ns = match Hashtbl.find run_status s.tag with
         | Some Step_done ->
             (match s.expectation with
-             | Expect_failure _ | Expect_compat_failure _ -> Done_fail
+             | Expect_failure _ | Expect_compat_failure _
+             | Expect_compat_derived _ -> Done_fail
              | Expect_success -> Done)
         | Some Step_failed -> Failed
         | Some Step_skipped -> Skipped
@@ -2063,6 +2064,7 @@ let write_project_output ~dir ~project_name ~variant ~steps
           | Expect_success -> "Expect_success"
           | Expect_failure _ -> "Expect_failure"
           | Expect_compat_failure _ -> "Expect_compat_failure"
+          | Expect_compat_derived _ -> "Expect_compat_derived"
         in
         let status_str = match Hashtbl.find node_status s.tag with
           | Some Canary.Done -> "done"

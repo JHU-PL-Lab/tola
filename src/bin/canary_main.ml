@@ -27,8 +27,8 @@ let prebuilt_run_info ~project ~version ~extra steps =
    workspace — everything downstream (stores, runner_spec, derive_steps, run,
    status) is identical. This is how the vendored assembly reuses the whole
    run path. *)
-let run_tiny_scenario ?workspace_override ~root ~failfast ~cache_path
-    ~cli_disabled ~name () =
+let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
+    ~cache_path ~cli_disabled ~name () =
   let name = Canary_tiny_scenario.name_of_string name in
   let workspace =
     match workspace_override with
@@ -57,6 +57,16 @@ let run_tiny_scenario ?workspace_override ~root ~failfast ~cache_path
     Canary_tiny_scenario.runner_spec_of_name
       ~mutated_stores name
     |> with_cli_disabled cli_disabled
+  in
+  (* Agnostic mode (tiny-full): replace the oracle expectation with the
+     inspection-derived one — canary decides per step whether to expect a
+     failure, rather than being told by the scenario's recipe. *)
+  let spec =
+    if agnostic then
+      { spec with
+        Canary_step_builder.expectation =
+          Canary_tiny_scenario.tiny_expectation_agnostic }
+    else spec
   in
   let project = "tiny/" ^ name in
   let steps =
@@ -151,8 +161,8 @@ let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
              | None -> None)
          | None -> None
        in
-       run_tiny_scenario ?workspace_override:assembled ~root ~failfast
-         ~cache_path ~cli_disabled ~name ()
+       run_tiny_scenario ?workspace_override:assembled ~agnostic:true ~root
+         ~failfast ~cache_path ~cli_disabled ~name ()
      with _ -> ());
     scenario_status_of_run_state ()
   in

@@ -2208,6 +2208,19 @@ let expectation_of_entry (entry : scenario_spec)
     ~langs:(CS.langs_of_scenario entry.scenario)
     ~has_manifest:(CS.has_probe_manifestation entry.scenario)
 
+(** The mutation-AGNOSTIC expectation for tiny-full: derived from the
+    spec-level contract bindings + inspection alone — no per-scenario
+    [violates]/[has_manifest]. Canary inspects each step's artifacts and
+    decides whether to expect a failure (P2b). This is what "tiny-full
+    declares resources; canary computes the expectation" means concretely. *)
+let tiny_expectation_agnostic
+  : Canary_basic.action -> Canary_store.location option ->
+    Canary_step_model.step_expectation
+  =
+  Canary_scenario.lower_expectation_agnostic
+    ~bindings:tiny_contract_bindings
+    ~langs:Canary_lang.[ OCaml; Python ]
+
 (** Derive tiny_stores adjustments from the recipe's concrete
     mutation. Today only Soname_bump needs it. *)
 let stores_of_entry

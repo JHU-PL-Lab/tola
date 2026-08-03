@@ -117,6 +117,7 @@ let save_run_state ~dir ~project_name steps
       | Expect_success          -> "success"
       | Expect_failure _        -> "failure"
       | Expect_compat_failure _ -> "compat_failure"
+      | Expect_compat_derived _ -> "compat_derived"
     in
     let status_str = match Hashtbl.find run_status s.tag with
       | Some Step_done    -> "done"
@@ -173,6 +174,8 @@ let load_run_state ~dir =
       | "failure"        -> Expect_failure { contains_any = []; version_info = None }
       | "compat_failure" ->
           Expect_compat_failure { inputs = []; version_info = None }
+      | "compat_derived" ->
+          Expect_compat_derived { inputs = []; version_info = None }
       | s -> failwith [%string "load_run_state: unknown expect %{s}"]
     in
     let output_dir =

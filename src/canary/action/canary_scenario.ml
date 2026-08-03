@@ -387,7 +387,7 @@ let lower_expectation_agnostic
           | From_artifact { version_info; _ } -> version_info | _ -> None)
       in
       if not (List.is_empty artifact_inputs) then
-        Canary_step_model.Expect_compat_failure
+        Canary_step_model.Expect_compat_derived
           { inputs = artifact_inputs; version_info = first_version_info }
       else
         (match

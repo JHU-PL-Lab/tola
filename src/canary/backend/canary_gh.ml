@@ -108,7 +108,8 @@ fi|}]
       [ [%string {|      - name: %{step.tag}
 %{run_block full_cmd}|}] ]
       @ sym_check_step
-  | Expect_compat_failure { inputs; version_info = _ } ->
+  | Expect_compat_failure { inputs; version_info = _ }
+  | Expect_compat_derived { inputs; version_info = _ } ->
       (* Resolve predictions at YAML-generation time using locally-cached
          summaries. When cache is empty (fresh CI runner), the fallback in
          render_failure_check accepts any failure with non-empty probe.log.

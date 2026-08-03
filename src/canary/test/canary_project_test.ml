@@ -377,7 +377,7 @@ let agnostic_expectation_test : pure_test =
       let lower = CS.lower_expectation_agnostic ~bindings ~langs:[ ocaml ] in
       let derived_c1 =
         match lower (B.Probe_binding ocaml) None with
-        | SM.Expect_compat_failure { inputs; _ } ->
+        | SM.Expect_compat_derived { inputs; _ } ->
             List.exists inputs ~f:(function CC.C_stub _ -> true | _ -> false)
             && List.exists inputs ~f:(function CC.Native_lib _ -> true | _ -> false)
         | _ -> false

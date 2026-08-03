@@ -38,7 +38,7 @@
       "output_tag": "build_binding_ocaml",
       "action": "build_binding_ocaml",
       "variant_id": "api_complete_python",
-      "expect": "success",
+      "expect": "compat_derived",
       "status": "done"
     },
     {
@@ -54,7 +54,7 @@
       "output_tag": "probe_binding_ocaml",
       "action": "probe_binding_ocaml",
       "variant_id": "api_complete_python",
-      "expect": "success",
+      "expect": "compat_derived",
       "status": "done"
     },
     {
@@ -86,7 +86,7 @@
       "output_tag": "probe_binding_python",
       "action": "probe_binding_python",
       "variant_id": "api_complete_python",
-      "expect": "compat_failure",
+      "expect": "compat_derived",
       "status": "done"
     },
     {
