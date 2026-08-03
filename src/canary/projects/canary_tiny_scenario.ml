@@ -1905,10 +1905,31 @@ let make_base_runner_spec
       |> Canary_build_cmd.with_marker
            ~marker:"conf.ok" ~output_dir ~variant_key);
 
+    (* Build_lib: GUARDED REAL BUILD (provision axis). If the lib is already
+       present (Vendored — the factory pre-built it, or it was assembled),
+       skip; else BUILD it from source with `cc` (mirrors the factory's
+       build_c_lib). So the provision is expressed by what materialize placed:
+       a tree with a pre-built libtiny.so ⇒ Vendored (skip); a source-only tree
+       ⇒ Built (canary compiles + links it here, observably — a bad source
+       makes this step fail). *)
     build_lib = Some (fun ~output_dir ~variant_key ->
-      Printf.sprintf
-        "test -f %s || { echo '%s missing'; exit 1; }"
-        lib_path lib_path
+      let obj = [%string "%{lib_dir}/tiny.o"] in
+      let so_full = [%string "%{lib_dir}/libtiny.so.1.0"] in
+      let build =
+        String.concat ~sep:" && "
+          [ [%string "mkdir -p %{lib_dir}"];
+            Canary_cc.cc_compile_obj
+              ~include_dirs:[ [%string "%{source}/c/include"] ]
+              ~src:[%string "%{source}/c/src/tiny.c"] ~out:obj ();
+            Canary_cc.cc_link_shared ~soname:"libtiny.so.1"
+              ~version_script:[%string "%{source}/c/tiny.map"]
+              ~inputs:[ obj ] ~out:so_full ();
+            Canary_cc.symlink ~target:"libtiny.so.1.0"
+              ~linkname:[%string "%{lib_dir}/libtiny.so.1"] ();
+            Canary_cc.symlink ~target:"libtiny.so.1"
+              ~linkname:[%string "%{lib_dir}/libtiny.so"] () ]
+      in
+      Printf.sprintf "test -f %s || { %s ; }" lib_path build
       |> Canary_build_cmd.with_marker
            ~marker:"build.ok" ~output_dir ~variant_key);
 

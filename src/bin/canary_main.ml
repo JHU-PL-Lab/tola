@@ -133,6 +133,27 @@ let run_assembled ~root ~failfast ~tag : unit =
               = canary detected)@."
              tag s.scenario.name id (scenario_status_of_run_state ()))
 
+(* Provision = Built demo: materialize a source-only-lib tree and run canary
+   over it. canary's guarded build_lib COMPILES libtiny.so from c/src (an
+   observable action), then probes. PASS = built + green. This is "the good
+   lib, built from source" — the Built provision, distinct from Vendored. *)
+let run_built_lib ~root : unit =
+  match Canary_tiny_workspace.materialize_built_lib ~label:"lib-built-from-src" with
+  | None -> Fmt.pr "materialize (source-only lib) failed@."
+  | Some ws ->
+      Fmt.pr
+        "source-only-lib tree: %s@.  (no pre-built libtiny.so — canary must \
+         build_lib from c/src)@." ws;
+      (try
+         run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
+           ~failfast:false ~cache_path:None ~cli_disabled:[]
+           ~name:"app_over_binding_ocaml" ()
+       with _ -> ());
+      Fmt.pr
+        "@.tiny-full built-lib (provision=Built): %s  (PASS = canary compiled \
+         libtiny.so from source + probed green)@."
+        (scenario_status_of_run_state ())
+
 (* Run a COMBINATION: assemble several bad resources onto the witness base and
    run with the AGNOSTIC expectation (a combo has no single oracle scenario).
    Canary's fail-fast run stops at the first failure — the collapse is
@@ -1230,6 +1251,15 @@ let tiny_scenarios_assemble_run_cmd =
       const (fun tag () -> run_assembled ~root:"_out" ~failfast:true ~tag)
       $ tag $ const ())
 
+let tiny_scenarios_built_check_cmd =
+  Cmd.v
+    (Cmd.info "built-check"
+       ~doc:"Provision = Built demo: materialize a source-only-lib tree (no \
+             pre-built libtiny.so) and run canary — its build_lib COMPILES the \
+             lib from c/src (observable) then probes. PASS = built + green. \
+             Run `tiny prepare-all` first.")
+    (term_of (fun () -> run_built_lib ~root:"_out"))
+
 let tiny_scenarios_assemble_combo_cmd =
   let tags =
     Arg.(
@@ -1382,7 +1412,8 @@ let tiny_scenarios_cmd =
       tiny_scenarios_confirm_cmd;
       tiny_scenarios_assemble_cmd;
       tiny_scenarios_assemble_run_cmd;
-      tiny_scenarios_assemble_combo_cmd ]
+      tiny_scenarios_assemble_combo_cmd;
+      tiny_scenarios_built_check_cmd ]
 
 let summary_diff_cmd =
   let old_ =

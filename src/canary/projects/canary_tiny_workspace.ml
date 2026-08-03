@@ -937,6 +937,24 @@ let detect_lib_filename ~(workspace : string) : string =
     | Some n -> n
     | None -> "libtiny.so.1"
 
+(** Materialize a SOURCE-ONLY-lib tree (provision = Built for the lib): the
+    witness base minus the pre-built `libtiny.so*`, so canary's guarded
+    `build_lib` must compile it from `c/src` at run time. Proves the Built
+    provision (build is an observable canary action, not a vendored binary).
+    Everything else stays vendored (binding/cext, built against the good lib —
+    the rebuilt lib is the same good source, so they still match). *)
+let materialize_built_lib ~(label : string) : string option =
+  let base = witness_base_workspace () in
+  let target = cache ^ "/assembled/" ^ label in
+  rm_rf target;
+  mkdir_p target;
+  if run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" base target) <> 0 then None
+  else begin
+    (* drop the pre-built lib (keep the dir so `configure`'s test -d passes) *)
+    let _ = run_shell (Printf.sprintf "rm -f '%s/c/build/'libtiny.so*" target) in
+    Some target
+  end
+
 (** List every assemblable bad variant — its tag, scenario name, and the
     resource id it targets. The tiny-full analogue of `tiny list`; run
     `tiny assemble-check` with no tag to see it. *)

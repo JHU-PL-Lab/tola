@@ -16,5 +16,5 @@
     }
   },
   "kind": "typed_stub_ocaml",
-  "path": "canary/examples/tiny/scenarios/_cache/app_over_binding_ocaml/workspace/ocaml/tiny_raw.mli"
+  "path": "canary/examples/tiny/scenarios/_cache/assembled/lib-built-from-src/ocaml/tiny_raw.mli"
 }

@@ -16,5 +16,5 @@
     }
   },
   "kind": "typed_header",
-  "path": "canary/examples/tiny/scenarios/_cache/app_over_binding_ocaml/workspace/c/include/tiny.h"
+  "path": "canary/examples/tiny/scenarios/_cache/assembled/lib-built-from-src/c/include/tiny.h"
 }

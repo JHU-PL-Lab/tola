@@ -14,7 +14,7 @@
     "soname": "libtiny.so.1"
   },
   "kind": "native",
-  "path": "canary/examples/tiny/scenarios/_cache/app_over_binding_ocaml/workspace/c/build/libtiny.so.1",
+  "path": "canary/examples/tiny/scenarios/_cache/assembled/lib-built-from-src/c/build/libtiny.so.1",
   "symbols": [
     "tiny_diff",
     "tiny_offset",
