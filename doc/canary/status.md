@@ -185,13 +185,28 @@ decoupling *is* the agnostic project spec.
     the multi-bad resource-sets along source→lib→binding (the scenarios
     *beyond* tiny1 — one project holds what tiny1 splits). The run just
     *declares* them (`{source#Bs.1, lib#Bs.4}`), no prediction.
-  - **Step 2 — the vendored-resource materializer** ⏳ (still to build). The
-    tiny-factory emits each artifact variant as a standalone resource;
-    materializing a scenario = **assembling** the chosen variants (symlink /
-    copy — no rebuild), including combinations. Then canary runs over the
-    assembly and its fail-fast + contract computation produce the outcome
-    (which it cross-checks against the tiny1 oracle). Lighter than a
-    per-combo rebuild; the run-side half.
+  - **Step 2 — the vendored-resource materializer** ⏳ (in progress). Model:
+    **emit → assemble → run.**
+    - **Emit** (decided: *extract*, not rebuild): the factory already builds
+      every single-mutation scenario (`run_prepare_all`); each workspace holds
+      its one mutated artifact. Extract each into a resource keyed by `id#tag`
+      (`_cache/resources/<id>/<tag>/…`) — good variants from baseline. Per-
+      artifact file map: source→`c/src`+`c/include`, lib→`c/build`,
+      ocaml-cstubs→`_build/default/ocaml`, python-cext→`python_cext/tiny_cext`.
+    - **Assemble** (`assemble ~assignment`): copy the baseline tree, overlay
+      `resources/<id>/<tag>/*` for each bad artifact, re-apply the fixups
+      (`dune-project`, RUNPATH strip, `libtiny.so` symlink). No rebuild.
+    - **Run**: `stores_of_workspace` on the assembly + base runner_spec +
+      `derive_steps`, fail-fast.
+    - **First cut (decided): single-bad assemblies first** (oracle expectation),
+      proving the vendored assembly reproduces tiny1's per-scenario detection.
+    - **Two follow-ons flagged:** (i) *combinations* need the expectation from
+      canary inspecting the assembly (the P2b agnostic path — no single oracle
+      scenario), so they converge with P2b; (ii) a bad binding extracted from
+      its good-lib build, overlaid on a bad lib, is a **deploy mismatch**
+      (build-lib ≠ run-lib) — accepted as the realistic vendored semantics; a
+      faithful "binding built against the bad lib" would need a per-combo
+      rebuild (deferred).
 - **Phase 4 — structural registration.** `variants_of "tiny-full"` +
   `covered_of` so `canary scenarios tiny-full` shows the coverage matrix like
   sqlite/z3; optional bundle value. Any time after Phase 2.
