@@ -186,7 +186,14 @@ let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
           seen := ws :: !seen;
           let is_bad = not (Canary_tiny_scenario.assignment_is_all_good a) in
           let label = Filename.basename ws in
-          let project = pr.Canary_project_tiny.pr_name ^ "/" ^ label in
+          (* sanitize for the output path: ':' '#' '+' are ugly / not portable
+             (Windows) in a directory name *)
+          let safe =
+            String.map
+              (function ':' | '#' | '+' -> '-' | c -> c)
+              label
+          in
+          let project = pr.Canary_project_tiny.pr_name ^ "/" ^ safe in
           let spec = pr.Canary_project_tiny.pr_runner_spec ~workspace:ws in
           let steps =
             Canary_step_builder.derive_steps ~root ~project

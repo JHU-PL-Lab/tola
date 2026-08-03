@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Bs.3/python_cext/examples/probe_baseline.py", line 9, in <module>
-    import tiny_cext as tiny
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Bs.3/python_cext/tiny_cext/__init__.py", line 7, in <module>
-    from . import _native
-ImportError: /home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Bs.3/c/build/libtiny.so.1: version `TINY_1.0' not found (required by /home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Bs.3/python_cext/tiny_cext/_native.cpython-314-x86_64-linux-gnu.so)
