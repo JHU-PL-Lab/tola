@@ -892,6 +892,18 @@ let resource_id_of_tag (tag : string) : string option =
           | [] -> None)
       | _ -> None)
 
+(** List every assemblable bad variant — its tag, scenario name, and the
+    resource id it targets. The tiny-full analogue of `tiny list`; run
+    `tiny assemble-check` with no tag to see it. *)
+let assemble_list () : unit =
+  Stdlib.Printf.printf "assemblable resources (tag  scenario  -> resource id):\n";
+  List.iter Canary_tiny_scenario.all_scenario_specs ~f:(fun s ->
+      match resource_id_of_tag s.scenario.id with
+      | Some id ->
+          Stdlib.Printf.printf "  %-8s %-28s -> %s\n" s.scenario.id
+            s.scenario.name id
+      | None -> ())
+
 (** Debug/validation entry for the vendored-resource first cut: emit the
     resource for scenario [tag] (its target artifact, [id] auto-derived when
     empty) from that scenario's workspace, assemble it onto the unmutated
