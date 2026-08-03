@@ -1,0 +1,24 @@
+{
+  "functions": {
+    "diff": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    },
+    "offset": {
+      "args": [],
+      "return": "int"
+    },
+    "sum": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    }
+  },
+  "kind": "typed_user_ocaml",
+  "path": "canary/examples/tiny/scenarios/_cache/assembled/lib#Bs.3/ocaml/tiny.mli"
+}

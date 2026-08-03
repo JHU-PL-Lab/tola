@@ -1,0 +1,20 @@
+{
+  "functions": {
+    "tiny_diff": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    },
+    "tiny_sum": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    }
+  },
+  "kind": "typed_stub_ocaml",
+  "path": "canary/examples/tiny/scenarios/_cache/assembled/binding:python:cext#Dv.Sc.4.Python.python_binding.python_binding/ocaml/tiny_raw.mli"
+}

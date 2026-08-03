@@ -103,7 +103,21 @@ let tiny_full_run : project_run =
     pr_enumerate = assignments;
     pr_materialize =
       (fun a ->
+        (* dispatch by provision (ssot §4.2.5): the lib may be [Built] (canary
+           compiles from a source-only tree) instead of [Vendored]. *)
+        let lib_built =
+          Base.List.exists a ~f:(fun (id, pl) ->
+              Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib
+              &&
+              match pl.Canary_enumerate.provision with
+              | Canary_enumerate.Built -> true
+              | _ -> false)
+        in
         match overlays_of a with
+        | [] when lib_built ->
+            (* Built good lib → source-only tree; distinct label so it caches
+               separately from the Vendored positive. *)
+            Canary_tiny_workspace.materialize_built_lib ~label:"positive-built-lib"
         | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
         | overlays ->
             let label =

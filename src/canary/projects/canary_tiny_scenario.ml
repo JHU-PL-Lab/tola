@@ -1552,6 +1552,17 @@ let tiny_full_assignments (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
   let good_for a = (a, tiny_full_placement ()) in
   let all_good = List.map spec.tf_artifacts ~f:good_for in
+  (* positive variant: the lib provisioned [Built] (canary compiles it from
+     source) instead of [Vendored] — the provision axis (§4.2.5). Same
+     all-good scenario, a different *source of the artifact*. *)
+  let all_good_built_lib =
+    List.map spec.tf_artifacts ~f:(fun a ->
+        if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then
+          ( a,
+            { (tiny_full_placement ()) with
+              Canary_enumerate.provision = Canary_enumerate.Built } )
+        else good_for a)
+  in
   let one_bad aid tag =
     List.map spec.tf_artifacts ~f:(fun a ->
         if Canary_enumerate.equal_artifact_id a aid then
@@ -1562,7 +1573,7 @@ let tiny_full_assignments (spec : tiny_full_spec) :
     List.concat_map spec.tf_artifacts ~f:(fun aid ->
         List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> one_bad aid tag))
   in
-  all_good :: bads
+  all_good :: all_good_built_lib :: bads
 
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
