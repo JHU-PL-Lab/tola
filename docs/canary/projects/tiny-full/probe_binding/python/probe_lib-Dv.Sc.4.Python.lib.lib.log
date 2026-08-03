@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Dv.Sc.4.Python.lib.lib/python_cext/examples/probe_baseline.py", line 9, in <module>
-    import tiny_cext as tiny
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/lib#Dv.Sc.4.Python.lib.lib/python_cext/tiny_cext/__init__.py", line 7, in <module>
-    from . import _native
-ImportError: libtiny.so.1: cannot open shared object file: No such file or directory

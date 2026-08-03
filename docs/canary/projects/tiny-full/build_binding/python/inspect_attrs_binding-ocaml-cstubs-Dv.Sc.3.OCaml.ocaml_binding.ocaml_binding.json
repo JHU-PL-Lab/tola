@@ -1,5 +1,0 @@
-{
-  "error": "ModuleNotFoundError: No module named 'tiny_cext'",
-  "kind": "python",
-  "path": "tiny_cext"
-}

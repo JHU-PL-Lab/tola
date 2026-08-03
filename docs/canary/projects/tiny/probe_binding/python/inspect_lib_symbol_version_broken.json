@@ -1,5 +1,0 @@
-{
-  "error": "ImportError: /home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/symbol_version_floor/workspace/c/build/libtiny.so.1: version `TINY_1.0' not found (required by /home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/symbol_version_floor/workspace/python_cext/tiny_cext/_native.cpython-314-x86_64-linux-gnu.so)",
-  "kind": "python",
-  "path": "tiny_cext"
-}

@@ -1,2 +1,0 @@
-FAIL tiny.sum(2, 3): expected 47, got -43
-OK   tiny.offset() = 42

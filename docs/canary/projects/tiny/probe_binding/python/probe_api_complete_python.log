@@ -1,9 +1,0 @@
-OK   tiny.offset() = 42
-Traceback (most recent call last):
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/examples/probe_baseline.py", line 28, in <module>
-    main()
-    ~~~~^^
-  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/api_complete_python/workspace/python_cext/examples/probe_baseline.py", line 21, in main
-    check("tiny.sum(2, 3)", 47, tiny.sum(2, 3))
-                                ^^^^^^^^
-AttributeError: module 'tiny_cext' has no attribute 'sum'

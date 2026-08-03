@@ -26,6 +26,10 @@ _*
 docs/**/*.ok
 docs/**/pack-repo/
 docs/**/*_example*
+# tiny / tiny-full are the framework's OWN test project — their per-run output
+# (hundreds of per-scenario JSON/log files) is churn, not published diagrams.
+docs/canary/projects/tiny/
+docs/canary/projects/tiny-full/
 
 !__init__.py
 
