@@ -222,8 +222,9 @@ from the old §8 to keep references stable.
 7. ~~**Mutation matrix ↔ bad scenarios (Principle 3).**~~
    Doc half ✓ SSOT §5.1. Code half ✓ Task 1.5's
    `derive_scenarios`. Closed 2026-07-07.
-8. **Tiny packaging coverage** — see
-   [`design/tiny.md`](design/tiny.md) §7.5.
+8. **Tiny packaging coverage** — folds into §1 to-do #1's
+   Fetched provision + the §1b packaging cluster. (The old
+   `tiny.md §7.5` pointer is stale — tiny.md needs the §2 audit.)
 9. **Operational-taxonomy code sweep** — see §5 below
    ("Deferred code polish").
 
@@ -231,15 +232,12 @@ from the old §8 to keep references stable.
 
 Larger design shifts. None active; awareness only.
 
-- **One-time spec covering one scenario across both engines.**
-  The current shape has two engines — tiny-based mutation
-  (concrete trace per agreement) and canary-based enumeration
-  (abstract trace across variants). Task 1.5 delivered the
-  unified `Canary_scenario.scenario` shape used by both.
-  What remains: making mutation record itself drive both
-  sides symmetrically (today the tiny factory reads
-  `recipe.mutation` but z3/llvm variants don't have a
-  parallel).
+- **Cross-project symmetry** — *partly overtaken by the convergence.*
+  `Canary_project_tiny.project_run` + the generic `run_project_run`
+  now give the uniform enumerate→materialize→run shape this wanted;
+  what remains is z3/sqlite implementing `project_run` (§1 to-do #4)
+  so a real project's variants come from the algorithm, not a
+  hand-written list.
 
 - **Dual-view artifact index.** Artifact-centric mutation
   list, direct + inherited. Complement to the scenario-centric
