@@ -65,7 +65,7 @@ let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
     if agnostic then
       { spec with
         Canary_step_builder.expectation =
-          Canary_tiny_scenario.tiny_expectation_agnostic }
+          Canary_project_tiny.expectation_agnostic }
     else spec
   in
   let project = "tiny/" ^ name in
@@ -169,7 +169,7 @@ let run_assembled_combo ~root ~tags : unit =
    family (`tiny run`/`list`/… stay for the tiny-factory / tiny1). Its run
    body is the algorithm-driven good+bad enumeration: the materialize-and-
    detect primitive (`run` below = run_tiny_scenario + status readout) is
-   handed to `Canary_tiny_scenario.run_tiny_full`, which iterates the
+   handed to `Canary_project_tiny.run`, which iterates the
    enumerated points — no hand-written scenario list. status.md §1a. *)
 let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
   (* The materialize-and-detect primitive, now VENDORED: a bad scenario runs
@@ -197,8 +197,8 @@ let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
      with _ -> ());
     scenario_status_of_run_state ()
   in
-  Canary_tiny_scenario.print_tiny_full ();
-  Canary_tiny_scenario.run_tiny_full ~run
+  Canary_project_tiny.print_view ();
+  Canary_project_tiny.run ~run
 
 (* ── Subcommands ── *)
 
