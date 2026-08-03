@@ -21,6 +21,7 @@ dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # c
 dune exec src/bin/canary_main.exe -- scenarios <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
 dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as enumeration-algorithm provision assignments (ssot §4.2)
 dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as enumeration-algorithm mutation-axis projection
+dune exec src/bin/canary_main.exe -- tiny assemble-check --id lib Bs.4       # P3 step 2: emit+assemble a vendored resource onto the witness base (needs `tiny prepare-all`)
 dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
@@ -33,6 +34,27 @@ algorithm (`action/canary_enumerate.ml`) over per-artifact axes
 level (Free / Subset / Full). tiny and a real project are two configs of
 the one algorithm. `scenarios`/`tiny engine` render each hand-written
 enumeration through it; implementation state in `doc/canary/status.md`.
+
+**tiny-factory / tiny1 / tiny-full** (ssot §4.2.5, status §1a — the
+2026-08-02 arc). Three named things: **tiny-factory** = the machinery
+(scenario specs + workspace materializer + vendored-resource emitter/
+assembler); **tiny1** = the single-scenario projects, each a hand-written
+good/bad case = the ground-truth *oracle* (`canary tiny run`); **tiny-full**
+= *one* project (peer of sqlite/z3) that declares static artifact
+**resources** and lets **canary** compute detection/expectation/collapse
+(`canary action tiny-full`, NOT a `tiny` subcommand). Design principle
+(**mutation-agnostic**): the runner knows nothing about mutations — a bad
+artifact is a build at a **bad-quality version** (`build_id = {channel;
+quality=Good|Bad tag}` in `canary_enumerate`), the `tag` opaque to the
+runner; only the materializer knows a tag → a fault. Artifacts are
+**vendored** — scenarios are *assembled* from pre-built variant resources
+(overlay, no rebuild), so combinations are just more overlays and a
+binding-over-bad-lib is a free deploy mismatch. Key symbols:
+`Canary_enumerate.{quality,build_id,good}`; `Canary_scenario.lower_expectation`
+(oracle path) vs `lower_expectation_agnostic` (P2b — derives the expectation
+by inspection, no per-scenario `violates`); `Canary_tiny_scenario.{tiny_full_spec,
+tiny_full_assignments,run_tiny_full}`; `Canary_tiny_workspace.{emit_resource,
+assemble,assemble_check}` (P3 step 2, vendored emit+assemble).
 
 Output layout (gitignored via `_*`):
 - `_out/canary/projects/<project>/<step>/` — per-project action runs

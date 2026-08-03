@@ -25,24 +25,42 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-*Nothing in flight. Picking order (2026-07-20 rescope):*
-*milestone is a complete tiny + SSOT that other work cites*
-*("ssot-tiny-canary sync line"; sqlite/z3/llvm + writeup are*
-*second-tier). Cadence: code-first, doc-synced — each*
-*wish-list phase commit carries the SSOT/tiny.md sync bits*
-*it opens up. Task 2 project abstraction (tiny.md §7.8)*
-*deferred; ROI marginal until §7.2 lands and more projects*
-*need the pattern.*
+**Active: the tiny-factory / tiny1 / tiny-full arc** (2026-08-02). Three
+named things (§1a):
 
-*§7.2 Phases 1-4 shipped 2026-07-20; chronicle in*
-*[worklog_2026_07.md](worklog/worklog_2026_07.md). Final*
-*state: `all_scenario_specs = 15 hand + 6 derived = 21`,*
-*coverage 11/20 filled, `tiny run` 20/21 PASS,*
-*artifact-test 98/98.*
+- **tiny-factory** — the machinery: scenario specs (`canary_tiny_scenario.ml`),
+  workspace materializer (`canary_tiny_workspace.ml`), and now the
+  vendored-resource emitter/assembler.
+- **tiny1** — the single-scenario projects, each one hand-written good/bad
+  case = the ground-truth **oracle**. Command: **`canary tiny run`**.
+- **tiny-full** — **one** project (peer of sqlite/z3/llvm) that declares
+  static artifact **resources** (good + bad variants, vendored); **canary**
+  computes detection, expectation, and the fail-fast collapse. Command:
+  **`canary action tiny-full`**.
 
-*Next candidate: §7.1 (fill remaining 9 empty cells —*
-*needs Drop_c_symbol / Drop_python_attr / App primitives*
-*+ c4 wiring for OCaml) or §7.4 (Sc.3-Sc.6 wiring).*
+**The design principle** (ssot §4.2.5): the tiny-full runner knows *nothing*
+about mutations. A bad artifact is a build at a **bad-quality version**
+(`build_id = {channel; quality=Good|Bad tag}`) — the badness is identity, not
+a type the runner dispatches on. tiny-full *declares resources*; canary
+*computes everything*. tiny-factory (tiny1) stays the oracle for the
+cross-check.
+
+**Shipped this session** (commits `b6ca255`…`94fa841`):
+P0 naming + `action tiny-full` as a project · P1 agnostic driver over variant
+tags · P2a version identity (`build_id`/`quality`) · P2b c1 contract-derived
+expectation (spike) · P3 correction (vendored resources; canary computes the
+collapse — `earliest_bad_of` reverted) · P3 step 2 **emit + assemble**
+validated for the lib (`tiny assemble-check`).
+
+**Command surface** (tiny work): `action tiny-full` (the project) ·
+`tiny run` (tiny1) · `tiny list/status/engine` (views) ·
+`tiny baseline/prepare/prepare-all/confirm` (harness) ·
+`tiny assemble-check --id <id> <tag>` (vendored emit+assemble, P3 step 2).
+
+**Next**: wire the RUN over the assembly (point `stores_of_workspace` +
+runner_spec at the assembled tree, confirm canary detects c4 from *assembled*
+resources) → the other two built artifacts → combinations (converges with
+P2b). Detail + phase history in §1a.
 
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 

@@ -347,6 +347,17 @@ provision, version takes a per-axis level:
 - `Subset` → `two_versions = [Dev; Stable]` — the meaningful test set
 - `Full` → the project spec's declared versions
 
+**Quality — badness *is* a bad-quality version.** The version identity is
+richer than the channel: the enumeration's `build_id = { channel; quality }`
+with `quality = Good | Bad tag`. A **defect** (a §5.3 mutation) is not a
+separate axis the runner dispatches on — it is a **bad-quality version** of
+the artifact, the *special version string* `dev#tag`. This folds the mutation
+axis into version identity: a scenario is still an assignment of one version
+per artifact; a *bad* artifact is simply one at a `Bad` version. The `tag` is
+**opaque** to both the enumeration and the runner — only a project's
+materializer knows a bad tag corresponds to a concrete fault. That opacity is
+the mutation-agnostic principle (§4.2.5).
+
 **Per-artifact ⇒ mismatch is the interesting result.** Because each
 artifact carries its own version, a cross-artifact version *mismatch* — a
 binding built against lib `v1` but resolved against lib `v2` — is
@@ -511,6 +522,54 @@ per-node cartesian (decoration), the graph filtering the product*. The
 current implementations should follow this in spirit — canary's action
 graph *is* the dependency graph; z3/llvm's hand-written variants are
 particular graph-valid points that the algorithm should instead derive.
+
+### 4.2.5 The mutation-agnostic project spec (a project declares resources; canary computes)
+
+A project spec's job is to **declare static artifact resources**, nothing
+more. It does **not** know about mutations, predict failures, or reason about
+detection order. **Canary** does all the computation — it runs the artifacts,
+inspects them, and *discovers* what fails and what it expects. A real project
+already works this way (z3 builds `lib@stable` and canary detects the
+mismatch); the same discipline is imposed on the framework's own test project.
+
+**Badness is a version, not a type (mutation-agnostic).** The runner ranges
+over artifacts at versions (§4.2.2); a bad artifact is one at a `Bad`-quality
+version (`dev#tag`), treated identically to a good one. The runner never
+dispatches on *what* a mutation is — the `tag` is opaque. Only the
+**materializer** (below) knows a bad tag corresponds to a concrete fault. This
+is the strongest form of the §4.2 principle: not only is the enumeration one
+algorithm, the *runner* carries zero project-specific defect logic.
+
+**Resources are vendored; scenarios are assembled, not rebuilt.** Each
+artifact variant (good + each bad) is a pre-built **resource** the spec points
+at (`provision = Vendored`). Materializing a scenario is **assembling** the
+chosen variants — overlay the picked resource for each artifact onto a good
+base — *no rebuild*. A combination (several bad artifacts) is just more
+overlays. A binding built against a good lib, assembled over a bad lib, is a
+genuine **deploy mismatch** (build-lib ≠ run-lib) — a real target, obtained
+for free.
+
+**Canary computes the collapse; the spec never predicts it.** With several
+bad artifacts assembled, canary's fail-fast run stops at the first checkable
+failure — the "collapse" to a single observable is *emergent from the run*,
+not a key the spec computes. (An earlier design computed an `earliest_bad_of`
+collapse key in the spec; that was the spec doing canary's job, and was
+removed.) The spec declares the resource-set; canary discovers the outcome.
+
+**The framework's own project is *two* things** (implementation:
+[`status.md`](../status.md) §1a):
+
+| | what | role | command |
+|---|---|---|---|
+| **tiny-factory** | machinery: scenario specs + workspace materializer + resource emitter/assembler | produces the resources | — |
+| **tiny1** | single-scenario projects, each one hand-written good/bad case | the **oracle** (ground truth) that validates canary's tooling | `canary tiny run` |
+| **tiny-full** | **one** project (peer of sqlite/z3) declaring the vendored resources; canary computes | validates the **algorithm / skeleton / integration** | `canary action tiny-full` |
+
+tiny1's hand-written expectations are the cross-check: canary's *computed*
+result on tiny-full must match tiny1's *declared* oracle. "A real simple
+project is no harder than tiny-full" holds precisely because tiny-full carries
+no defect logic — it is a general project whose artifacts happen to include
+bad variants.
 
 ## 5. Bad Scenarios (`Bs.N`; `snake_case` names)
 
