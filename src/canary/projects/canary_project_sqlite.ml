@@ -180,14 +180,6 @@ let placement (prov : Canary_enumerate.provision) : Canary_enumerate.placement =
   { Canary_enumerate.provision = prov;
     version = Canary_enumerate.good Canary_basic.Stable }
 
-let lib_provision (a : Canary_enumerate.assignment) : Canary_enumerate.provision =
-  match
-    Base.List.find a ~f:(fun (id, _) ->
-        Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
-  with
-  | Some (_, pl) -> pl.Canary_enumerate.provision
-  | None -> Canary_enumerate.Fetched
-
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
@@ -201,12 +193,12 @@ let sqlite_run : Canary_project_run.project_run =
           [ (Canary_enumerate.a_lib, placement Canary_enumerate.Built) ] ]);
     pr_materialize =
       (fun a ->
-        match lib_provision a with
+        match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
         | Canary_enumerate.Built ->
             Some "_out/canary/materialized/sqlite/built-3450100"
         | _ -> Some "fetched-system");
     pr_runner_spec =
       (fun a ~workspace ->
-        match lib_provision a with
+        match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
         | Canary_enumerate.Built -> built_runner_spec ~workspace
         | _ -> runner_spec) }

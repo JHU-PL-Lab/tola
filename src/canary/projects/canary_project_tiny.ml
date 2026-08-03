@@ -92,28 +92,20 @@ let tiny_full_run : project_run =
            compiles from a source-only tree) instead of [Vendored]. The channel
            goes in the label so Dev and Stable Built libs get distinct trees +
            variant_ids (cache separately; cache.md). *)
-        let lib_placement =
-          Base.List.find a ~f:(fun (id, _) ->
-              Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
-        in
         let lib_built =
-          match lib_placement with
-          | Some (_, pl) -> (
-              match pl.Canary_enumerate.provision with
-              | Canary_enumerate.Built -> true
-              | _ -> false)
-          | None -> false
+          match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
+          | Canary_enumerate.Built -> true
+          | _ -> false
         in
         match overlays_of a with
         | [] when lib_built ->
             let chan =
-              match lib_placement with
-              | Some (_, pl) ->
-                  let open Canary_enumerate in
-                  (match pl.version.channel with
-                   | Canary_basic.Dev -> "dev"
-                   | Canary_basic.Stable -> "stable")
-              | None -> "stable"
+              match
+                (Canary_enumerate.version_of a Canary_enumerate.a_lib)
+                  .Canary_enumerate.channel
+              with
+              | Canary_basic.Dev -> "dev"
+              | Canary_basic.Stable -> "stable"
             in
             Canary_tiny_workspace.materialize_built_lib
               ~label:("positive-built-lib-" ^ chan)
@@ -129,14 +121,8 @@ let tiny_full_run : project_run =
         (* the lib's version channel drives a channel-aware build (Dev ⇒
            -DTINY_DEV + dev version script) on the Built path. *)
         let channel =
-          match
-            Base.List.find a ~f:(fun (id, _) ->
-                Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
-          with
-          | Some (_, pl) ->
-              let open Canary_enumerate in
-              pl.version.channel
-          | None -> Canary_basic.Stable
+          (Canary_enumerate.version_of a Canary_enumerate.a_lib)
+            .Canary_enumerate.channel
         in
         let lib_filename =
           Canary_tiny_workspace.detect_lib_filename ~workspace
