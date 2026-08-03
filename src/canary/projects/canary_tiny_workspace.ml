@@ -958,6 +958,14 @@ let materialize_built_lib ~(label : string) : string option =
     mkdir_p target;
     if run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" base target) <> 0 then None
     else begin
+      (* refresh the C source (src / include / version scripts) from the LIVE
+         tree — cached workspaces can predate new source files (e.g.
+         tiny.dev.map), and a Built lib must compile against current source. *)
+      let _ =
+        run_shell
+          (Printf.sprintf "cp -a '%s/c/src' '%s/c/include' '%s/c/'*.map '%s/c/'"
+             tiny_root tiny_root tiny_root target)
+      in
       (* drop the pre-built lib (keep the dir so `configure`'s test -d passes) *)
       let _ = run_shell (Printf.sprintf "rm -f '%s/c/build/'libtiny.so*" target) in
       Some target

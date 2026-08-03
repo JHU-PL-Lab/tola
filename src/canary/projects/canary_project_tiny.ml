@@ -77,7 +77,12 @@ type project_run = {
   pr_artifacts : Canary_enumerate.artifact_id list;
   pr_enumerate : unit -> Canary_enumerate.assignment list;
   pr_materialize : Canary_enumerate.assignment -> string option;
-  pr_runner_spec : workspace:string -> Canary_step_builder.runner_spec;
+  (* takes the assignment too, so version/provision-parameterized actions
+     (e.g. a Dev lib built with -DTINY_DEV) can read the per-artifact
+     placement, not just the materialized path. *)
+  pr_runner_spec :
+    Canary_enumerate.assignment -> workspace:string ->
+    Canary_step_builder.runner_spec;
 }
 
 (* ── tiny-full's implementation of the interface ── *)
@@ -104,20 +109,34 @@ let tiny_full_run : project_run =
     pr_materialize =
       (fun a ->
         (* dispatch by provision (ssot §4.2.5): the lib may be [Built] (canary
-           compiles from a source-only tree) instead of [Vendored]. *)
+           compiles from a source-only tree) instead of [Vendored]. The channel
+           goes in the label so Dev and Stable Built libs get distinct trees +
+           variant_ids (cache separately; cache.md). *)
+        let lib_placement =
+          Base.List.find a ~f:(fun (id, _) ->
+              Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
+        in
         let lib_built =
-          Base.List.exists a ~f:(fun (id, pl) ->
-              Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib
-              &&
+          match lib_placement with
+          | Some (_, pl) -> (
               match pl.Canary_enumerate.provision with
               | Canary_enumerate.Built -> true
               | _ -> false)
+          | None -> false
         in
         match overlays_of a with
         | [] when lib_built ->
-            (* Built good lib → source-only tree; distinct label so it caches
-               separately from the Vendored positive. *)
-            Canary_tiny_workspace.materialize_built_lib ~label:"positive-built-lib"
+            let chan =
+              match lib_placement with
+              | Some (_, pl) ->
+                  let open Canary_enumerate in
+                  (match pl.version.channel with
+                   | Canary_basic.Dev -> "dev"
+                   | Canary_basic.Stable -> "stable")
+              | None -> "stable"
+            in
+            Canary_tiny_workspace.materialize_built_lib
+              ~label:("positive-built-lib-" ^ chan)
         | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
         | overlays ->
             let label =
@@ -126,12 +145,24 @@ let tiny_full_run : project_run =
             in
             Canary_tiny_workspace.materialize_assembled ~overlays ~label);
     pr_runner_spec =
-      (fun ~workspace ->
+      (fun a ~workspace ->
+        (* the lib's version channel drives a channel-aware build (Dev ⇒
+           -DTINY_DEV + dev version script) on the Built path. *)
+        let channel =
+          match
+            Base.List.find a ~f:(fun (id, _) ->
+                Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
+          with
+          | Some (_, pl) ->
+              let open Canary_enumerate in
+              pl.version.channel
+          | None -> Canary_basic.Stable
+        in
         let lib_filename =
           Canary_tiny_workspace.detect_lib_filename ~workspace
         in
         let stores =
           TS.stores_of_workspace ~lib_filename ~workspace_root:workspace ()
         in
-        { (TS.make_base_runner_spec ~stores ()) with
+        { (TS.make_base_runner_spec ~channel ~stores ()) with
           Canary_step_builder.expectation = expectation_agnostic }) }

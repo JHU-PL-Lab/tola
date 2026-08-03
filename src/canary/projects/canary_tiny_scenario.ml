@@ -1539,10 +1539,11 @@ let tiny_full_spec : tiny_full_spec =
    resources, and tiny-full points at the chosen one (it does not rebuild per
    scenario). The only thing that varies is the version [quality] (Good / Bad
    tag), i.e. WHICH vendored variant. *)
-let tiny_full_placement ?(quality = Canary_enumerate.Good) () :
+let tiny_full_placement ?(provision = Canary_enumerate.Vendored)
+    ?(channel = Canary_basic.Stable) ?(quality = Canary_enumerate.Good) () :
     Canary_enumerate.placement =
   let open Canary_enumerate in
-  { provision = Vendored; version = { channel = Canary_basic.Dev; quality } }
+  { provision; version = { channel; quality } }
 
 (* P2a assignment enumeration: the good+bad space as [Canary_enumerate.assignment]s
    over one fixed artifact set — 1 all-Good + one point per (artifact, bad-tag)
@@ -1552,16 +1553,20 @@ let tiny_full_assignments (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
   let good_for a = (a, tiny_full_placement ()) in
   let all_good = List.map spec.tf_artifacts ~f:good_for in
-  (* positive variant: the lib provisioned [Built] (canary compiles it from
-     source) instead of [Vendored] — the provision axis (§4.2.5). Same
-     all-good scenario, a different *source of the artifact*. *)
-  let all_good_built_lib =
+  (* positive variants over the provision × version axes (§4.2.5): the lib
+     [Built] from source (canary compiles it) instead of [Vendored], at each
+     channel — [Stable] (base) and [Dev] (compiled with -DTINY_DEV, exports
+     tiny_scale@@TINY_2.0). Same all-good scenario, a different *source* and
+     *version* of the lib. *)
+  let all_good_built_lib_at channel =
     List.map spec.tf_artifacts ~f:(fun a ->
         if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then
-          ( a,
-            { (tiny_full_placement ()) with
-              Canary_enumerate.provision = Canary_enumerate.Built } )
+          (a, tiny_full_placement ~provision:Canary_enumerate.Built ~channel ())
         else good_for a)
+  in
+  let built_lib_variants =
+    [ all_good_built_lib_at Canary_basic.Stable;
+      all_good_built_lib_at Canary_basic.Dev ]
   in
   let one_bad aid tag =
     List.map spec.tf_artifacts ~f:(fun a ->
@@ -1573,7 +1578,7 @@ let tiny_full_assignments (spec : tiny_full_spec) :
     List.concat_map spec.tf_artifacts ~f:(fun aid ->
         List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> one_bad aid tag))
   in
-  all_good :: all_good_built_lib :: bads
+  (all_good :: built_lib_variants) @ bads
 
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
@@ -1886,8 +1891,14 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
 
 let make_base_runner_spec
     ?(probe_exe = "ocaml/examples/probe_baseline.exe")
+    ?(channel = Canary_basic.Stable)
     ~(stores : tiny_stores) () : Canary_step_builder.runner_spec =
   let { source; lib_dir; lib_filename; python_cext_root } = stores in
+  (* version axis: a [Dev] lib is compiled with -DTINY_DEV and the dev version
+     script (adds tiny_scale@@TINY_2.0); [Stable] is the base TINY_1.0. Only
+     the Built path uses this (the guarded build below); Vendored just probes a
+     pre-built lib. *)
+  let is_dev = match channel with Canary_basic.Dev -> true | Canary_basic.Stable -> false in
   (* Absolute lib_dir for {LIBRARY,LD_LIBRARY,LD_RUN}_PATH — $PWD
      anchors to canary's invocation cwd (the tola root). *)
   let abs_lib_dir = [%string "$PWD/%{lib_dir}"] in
@@ -1926,15 +1937,19 @@ let make_base_runner_spec
     build_lib = Some (fun ~output_dir ~variant_key ->
       let obj = [%string "%{lib_dir}/tiny.o"] in
       let so_full = [%string "%{lib_dir}/libtiny.so.1.0"] in
+      let version_script =
+        if is_dev then [%string "%{source}/c/tiny.dev.map"]
+        else [%string "%{source}/c/tiny.map"]
+      in
+      let defines = if is_dev then [ "TINY_DEV" ] else [] in
       let build =
         String.concat ~sep:" && "
           [ [%string "mkdir -p %{lib_dir}"];
-            Canary_cc.cc_compile_obj
+            Canary_cc.cc_compile_obj ~defines
               ~include_dirs:[ [%string "%{source}/c/include"] ]
               ~src:[%string "%{source}/c/src/tiny.c"] ~out:obj ();
             Canary_cc.cc_link_shared ~soname:"libtiny.so.1"
-              ~version_script:[%string "%{source}/c/tiny.map"]
-              ~inputs:[ obj ] ~out:so_full ();
+              ~version_script ~inputs:[ obj ] ~out:so_full ();
             Canary_cc.symlink ~target:"libtiny.so.1.0"
               ~linkname:[%string "%{lib_dir}/libtiny.so.1"] ();
             Canary_cc.symlink ~target:"libtiny.so.1"

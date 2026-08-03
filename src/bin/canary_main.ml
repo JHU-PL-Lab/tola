@@ -215,7 +215,7 @@ let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
               label
           in
           let project = pr.Canary_project_tiny.pr_name ^ "/" ^ safe in
-          let spec = pr.Canary_project_tiny.pr_runner_spec ~workspace:ws in
+          let spec = pr.Canary_project_tiny.pr_runner_spec a ~workspace:ws in
           let steps =
             Canary_step_builder.derive_steps ~root ~project
               ~langs:Canary_lang.[ OCaml; Python ] spec
