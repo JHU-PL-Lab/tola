@@ -36,34 +36,39 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
 
 **To-do, in order** (tiny adjustments first — sqlite not yet):
 
-1. **Make tiny realistic — version + provision variety** (small tiny changes):
-   - **two versions** — mimic dev/stable (a dev-only `tiny_scale` symbol, or a
-     `tiny.map` `TINY_1.0`→`TINY_2.0` bump) so `build_id.channel` is *real*. The
-     interesting point is the **deploy mismatch** (built @dev, run @stable) —
-     *one config-chosen point* (`version = Subset`), **not** a global
-     per-artifact cartesian; source-primary + the config pick the meaningful
-     subset. On-ramp to per-edge version (§1b).
-   - **provision variety** — provision selects **which build/fetch ACTIONS
-     canary runs and observes**; it is *not* a pre-run shell. `materialize`
-     places only what already exists:
-     · **Vendored** — already built → `materialize` places the pre-built
-       resource; canary only probes (a bad vendored lib = a bad *binary*).
-     · **Built** — canary runs `build_lib` from `c/src` (observable: bad source
-       → build fails / bad lib); `materialize` places only the *source*.
-     · **Fetched** — canary runs a `fetch` action from a PM at run time (no
-       pre-fetch).
-     So the good lib gains a **Built** choice (not only Vendored), and build/
-     fetch stay **runner_spec actions** (`provision_of_actions`/`store_actions`),
-     not `pr_materialize`. Same split sqlite needs. The Built *mechanism* is
-     done — guarded real `build_lib` (`tiny built-check`); wiring it into the
-     enumeration needs the provision (+version) in `variant_id` so Built and
-     Vendored cache separately ([`cache.md`](design/cache.md)).
-2. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
+1. ✅ **Make tiny realistic — provision + version-aware build** (done for the
+   milestone):
+   - **provision variety** — the good lib gained a **Built** choice (canary
+     compiles it from `c/src`, observable) alongside **Vendored** (pre-built
+     resource). `pr_materialize` dispatches; build/fetch stay runner_spec
+     **actions**; Built + Vendored cache separately via `variant_id`
+     ([`cache.md`](design/cache.md)). **Fetched** (canary fetches from a PM at
+     run time) still to add.
+   - **two versions (a) — version-aware build** — dev-only `tiny_scale` +
+     `tiny.dev.map`; `build_lib ~channel` compiles Dev with `-DTINY_DEV` + the
+     dev version script; `pr_runner_spec` reads the assignment's channel.
+     `action tiny-full` builds a Stable and a Dev lib (dev exports
+     `tiny_scale@@TINY_2.0`), cached separately.
+   - **(b) the deploy mismatch — deferred** → to-do #2.
+2. **Version deploy-mismatch coverage** (to-do; *beyond the algorithm
+   milestone*, worth its own discussion + implementation). Detecting a version
+   mismatch needs a consumer that *exercises* the differing symbols; direction
+   matters:
+   - **backward** (existing apps suffice): a stable-built consumer deployed
+     against a newer **incompatible** lib (soname / symver bump — the `Bs.4` /
+     `Bs.3` mechanism) → c4/c5. No new binding.
+   - **forward**: a consumer using a dev-only symbol (`tiny_scale`) run @stable
+     → missing → c1/c2. Needs a **dev consumer**.
+   The additive `tiny_scale` is *forward-only* (existing apps don't call it).
+   Broad coverage — **missing *and* added symbols across versions** — likely
+   wants multiple apps, or apps that call specific per-version symbols, the way
+   z3/llvm hardcode a required-symbol watchlist. Design + build together.
+3. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
    tiny-full (assignment) on the shared `Bs.N` key.
-3. **sqlite `project_run`** — one runner, two projects; the provision→actions
+4. **sqlite `project_run`** — one runner, two projects; the provision→actions
    split from (1) carries straight over (sqlite is Built/Fetched, no vendoring).
    Then the distro × sys-PM × lang-PM packaging enumeration (largest piece).
-4. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
+5. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
    `docs/canary` output volume).
 
 ## 1a. The tiny trilogy + enumeration state (design: ssot §4.2 / §4.2.5)
