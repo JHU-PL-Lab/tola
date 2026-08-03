@@ -4,63 +4,59 @@
     {
       "tag": "fetch_lib",
       "output_tag": "fetch_lib",
-      "rule": "fetch_lib",
-      "variant_id": "",
+      "action": "fetch_lib",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "fetch_binding_ocaml",
       "output_tag": "fetch_binding_ocaml",
-      "rule": "fetch_binding_ocaml",
-      "variant_id": "",
+      "action": "fetch_binding_ocaml",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "",
+      "action": "probe_binding_ocaml",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml_inspect",
       "output_tag": "probe_binding_ocaml",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "",
+      "action": "probe_binding_ocaml",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "fetch_binding_python",
       "output_tag": "fetch_binding_python",
-      "rule": "fetch_binding_python",
-      "variant_id": "",
+      "action": "fetch_binding_python",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_python",
       "output_tag": "probe_binding_python",
-      "rule": "probe_binding_python",
-      "variant_id": "",
+      "action": "probe_binding_python",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_python_inspect",
       "output_tag": "probe_binding_python",
-      "rule": "probe_binding_python",
-      "variant_id": "",
+      "action": "probe_binding_python",
+      "variant_id": "fetched-system",
       "expect": "success",
       "status": "done"
     }
   ],
-  "artifact_names": [
-    { "kind": "lib", "name": "libsqlite3.so" },
-    { "kind": "ocaml_binding", "name": "sqlite3" },
-    { "kind": "python_binding", "name": "sqlite3" }
-  ]
+  "artifact_names": []
 }

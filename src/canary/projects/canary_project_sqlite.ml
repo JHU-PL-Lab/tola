@@ -137,17 +137,76 @@ let sqlite_artifacts =
       a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
       a_binding Canary_lang.Python Canary_mechanism.Cext ]
 
+(* ── Built-from-source variant (provision = Built for the lib) ──
+   Fetch the sqlite amalgamation (a REAL source fetch) and compile a real
+   libsqlite3.so with cc — the Built provision on a real project, so canary
+   observes source-fetch + build as *actions* (unlike tiny's toy cc). Lib-only
+   for now; a binding built against the Built lib is a follow-up. *)
+let sqlite_amalg_url = "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip"
+let sqlite_amalg_dir = "sqlite-amalgamation-3450100"
+
+let built_runner_spec ~(workspace : string) : Canary_step_builder.runner_spec =
+  let src = workspace ^ "/src" in
+  let libdir = workspace ^ "/lib" in
+  let libpath = libdir ^ "/libsqlite3.so" in
+  { Canary_step_builder.empty_runner_spec with
+    fetch_source =
+      Some
+        (fun ~output_dir ~variant_key ->
+          Printf.sprintf
+            "mkdir -p %s && curl -sL %s -o %s/a.zip && (cd %s && unzip -oq a.zip)"
+            src sqlite_amalg_url src src
+          |> Canary_build_cmd.with_marker ~marker:"source.ok" ~output_dir ~variant_key);
+    build_lib =
+      Some
+        (fun ~output_dir ~variant_key ->
+          Printf.sprintf
+            "test -f %s || { mkdir -p %s && gcc -shared -fPIC %s/%s/sqlite3.c \
+             -o %s -lpthread -ldl ; }"
+            libpath libdir src sqlite_amalg_dir libpath
+          |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
+               ~variant_key);
+    probe_lib =
+      [ ( Canary_store.Build_tree,
+          fun ~output_dir ~variant_key ->
+            Printf.sprintf
+              "nm -D %s | grep -q sqlite3_open && echo 'built libsqlite3 ok (%s)'"
+              libpath libpath
+            |> Canary_build_cmd.with_marker ~marker:"probe.log" ~output_dir
+                 ~variant_key ) ];
+  }
+
+let placement (prov : Canary_enumerate.provision) : Canary_enumerate.placement =
+  { Canary_enumerate.provision = prov;
+    version = Canary_enumerate.good Canary_basic.Stable }
+
+let lib_provision (a : Canary_enumerate.assignment) : Canary_enumerate.provision =
+  match
+    Base.List.find a ~f:(fun (id, _) ->
+        Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib)
+  with
+  | Some (_, pl) -> pl.Canary_enumerate.provision
+  | None -> Canary_enumerate.Fetched
+
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
     pr_enumerate =
       (fun () ->
-        (* one positive scenario: everything Fetched at the system version *)
-        let pl =
-          Canary_enumerate.
-            { provision = Fetched;
-              version = { channel = Canary_basic.Stable; quality = Good } }
-        in
-        [ Base.List.map sqlite_artifacts ~f:(fun a -> (a, pl)) ]);
-    pr_materialize = (fun _a -> Some "fetched-system");
-    pr_runner_spec = (fun _a ~workspace:_ -> runner_spec) }
+        [ (* full positive: everything Fetched at the system version *)
+          Base.List.map sqlite_artifacts ~f:(fun a ->
+              (a, placement Canary_enumerate.Fetched));
+          (* Built-from-source: lib only (canary fetches the amalgamation +
+             compiles it) *)
+          [ (Canary_enumerate.a_lib, placement Canary_enumerate.Built) ] ]);
+    pr_materialize =
+      (fun a ->
+        match lib_provision a with
+        | Canary_enumerate.Built ->
+            Some "_out/canary/materialized/sqlite/built-3450100"
+        | _ -> Some "fetched-system");
+    pr_runner_spec =
+      (fun a ~workspace ->
+        match lib_provision a with
+        | Canary_enumerate.Built -> built_runner_spec ~workspace
+        | _ -> runner_spec) }

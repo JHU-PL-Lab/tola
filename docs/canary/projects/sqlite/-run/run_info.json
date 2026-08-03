@@ -7,6 +7,6 @@
   "system_pm": "apt",
   "opam_switch": "default",
   "ocaml_version": "5.4.1",
-  "timestamp": "2026-08-03 15:31:43.372",
-  "actions": ["fetch_lib", "fetch_binding_ocaml", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "fetch_binding_python", "probe_binding_python", "probe_binding_python_inspect"]
+  "timestamp": "2026-08-03 15:41:16.224",
+  "actions": ["fetch_source", "build_lib", "probe_lib"]
 }
