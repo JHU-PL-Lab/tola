@@ -34,7 +34,9 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
 (**ssot §4.2.5**); the full arc history is
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**To-do, in order** (tiny adjustments first — sqlite not yet):
+**To-do, in order** (sqlite pulled forward — a real project forces the
+enumeration / graph / packaging issues to surface earlier than synthetic
+tiny-full can):
 
 1. ✅ **Make tiny realistic — provision + version-aware build** (done for the
    milestone):
@@ -49,8 +51,20 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
      dev version script; `pr_runner_spec` reads the assignment's channel.
      `action tiny-full` builds a Stable and a Dev lib (dev exports
      `tiny_scale@@TINY_2.0`), cached separately.
-   - **(b) the deploy mismatch — deferred** → to-do #2.
-2. **Version deploy-mismatch coverage** (to-do; *beyond the algorithm
+   - **(b) the deploy mismatch — deferred** → to-do #3.
+2. **sqlite `project_run` — the real-world instance of the §4.2.5 model**
+   (pulled forward). Same shape as tiny-full — a `project_run` consumed by the
+   generic `run_project_run` — but real-world: provision = **Fetched** (a PM:
+   apt/opam/pip) / **Built** (source), **no vendoring**; **positive-only** (we
+   don't mutate a real project); the agnostic expectation stays quiet on the
+   good artifact. Forces early: the **Fetched materialize** (canary fetches as
+   an *action* — the packaging piece tiny lacks), the generic runner on a real
+   fetch/build, real **version** (system vs source), and the real **dependency
+   graph** (libsqlite3 → Python stdlib `sqlite3` + the OCaml binding). Start
+   positive-only Fetched → Built → version. (z3/llvm stay raw-script
+   `run_project_multi`.) Absorbs the old "sqlite = one runner, two projects"
+   convergence proof + the distro × sys-PM × lang-PM packaging enumeration.
+3. **Version deploy-mismatch coverage** (to-do; *beyond the algorithm
    milestone*, worth its own discussion + implementation). Detecting a version
    mismatch needs a consumer that *exercises* the differing symbols; direction
    matters:
@@ -63,11 +77,8 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
    Broad coverage — **missing *and* added symbols across versions** — likely
    wants multiple apps, or apps that call specific per-version symbols, the way
    z3/llvm hardcode a required-symbol watchlist. Design + build together.
-3. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
+4. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
    tiny-full (assignment) on the shared `Bs.N` key.
-4. **sqlite `project_run`** — one runner, two projects; the provision→actions
-   split from (1) carries straight over (sqlite is Built/Fetched, no vendoring).
-   Then the distro × sys-PM × lang-PM packaging enumeration (largest piece).
 5. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
    `docs/canary` output volume).
 
