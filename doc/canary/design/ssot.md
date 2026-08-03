@@ -549,6 +549,26 @@ overlays. A binding built against a good lib, assembled over a bad lib, is a
 genuine **deploy mismatch** (build-lib ≠ run-lib) — a real target, obtained
 for free.
 
+**`materialize` places; `build`/`fetch` are canary actions.** Two levels that
+must not be conflated. `Vendored` is *pre-run placement* — the artifact already
+exists, `materialize` just drops it in and canary only **probes** it (a bad
+vendored lib is a bad *binary*). `Built` and `Fetched` are **canary actions**:
+`build_lib` from source, `fetch_lib` from a PM — steps in the action graph that
+canary **runs and observes** (a bad source makes `build_lib` *fail* → detected;
+no pre-fetch — the fetch is part of the run). So `materialize` handles only
+what already exists (place vendored artifacts + set up source trees); the
+**provision axis selects which build/fetch actions run** (`provision_of_actions`
+/ `store_actions`), not a pre-run shell. This gives two distinct realistic lib
+scenarios: a *vendored* bad binary vs a lib *built from bad source*.
+
+**The version axis is config-restricted, not a global product.** The algorithm
+*can* generate per-edge version combinations (build-lib@dev × run-lib@stable),
+but a project's **config** picks the meaningful subset (`version = Subset`) and
+source-primary prunes incoherent assignments. The deploy mismatch is *one
+configured point*, not the full per-artifact cartesian — spec/config decides
+which version assignments are worth testing (z3's dev/stable "variants" are
+exactly such a hand-picked subset).
+
 **Canary computes the collapse; the spec never predicts it.** With several
 bad artifacts assembled, canary's fail-fast run stops at the first checkable
 failure — the "collapse" to a single observable is *emergent from the run*,
