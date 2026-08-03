@@ -22,20 +22,32 @@ let prebuilt_run_info ~project ~version ~extra steps =
   Canary_run_info.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
     ~extra steps
 
-let run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name =
+(* [workspace_override], when set, points the run at an already-materialized
+   tree (e.g. a tiny-full *assembled* tree) instead of the per-scenario
+   workspace — everything downstream (stores, runner_spec, derive_steps, run,
+   status) is identical. This is how the vendored assembly reuses the whole
+   run path. *)
+let run_tiny_scenario ?workspace_override ~root ~failfast ~cache_path
+    ~cli_disabled ~name () =
   let name = Canary_tiny_scenario.name_of_string name in
   let workspace =
-    Canary_tiny_scenario.cache_workspace_of ~scenario:name in
-  if not (Sys.file_exists workspace) then begin
-    if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace) then begin
-      Fmt.pr "[auto-init] preparing baseline workspace...@.";
-      Canary_tiny_workspace.run_baseline ()
-    end;
-    if not (String.equal name "baseline") then begin
-      Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
-      Canary_tiny_workspace.run_prepare ~name
-    end
-  end;
+    match workspace_override with
+    | Some w -> w
+    | None ->
+        let workspace = Canary_tiny_scenario.cache_workspace_of ~scenario:name in
+        if not (Sys.file_exists workspace) then begin
+          if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace)
+          then begin
+            Fmt.pr "[auto-init] preparing baseline workspace...@.";
+            Canary_tiny_workspace.run_baseline ()
+          end;
+          if not (String.equal name "baseline") then begin
+            Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
+            Canary_tiny_workspace.run_prepare ~name
+          end
+        end;
+        workspace
+  in
   let mutated_stores =
     Canary_tiny_scenario.stores_of_workspace
       ~workspace_root:workspace
@@ -83,6 +95,34 @@ let scenario_status_of_run_state () : string =
     | _ -> "N/A"
     | exception _ -> "N/A"
 
+(* Run canary over a VENDORED ASSEMBLY (P3 step 2): materialize the assembled
+   tree for scenario [tag] (emit its bad resource + overlay on the witness
+   base), then drive the whole normal run path over it via
+   [run_tiny_scenario ~workspace_override]. A bad scenario's PASS = canary
+   *detected* the failure from the assembled (not per-scenario-built) tree —
+   the proof the vendored assembly reproduces tiny1's detection. *)
+let run_assembled ~root ~failfast ~tag : unit =
+  match Canary_tiny_scenario.find_by_id tag with
+  | None -> Fmt.pr "unknown tag: %s (see `tiny assemble-check`)@." tag
+  | Some s ->
+      let id =
+        Option.value (Canary_tiny_workspace.resource_id_of_tag tag) ~default:"lib"
+      in
+      let label = id ^ "#" ^ tag in
+      (match
+         Canary_tiny_workspace.materialize_assembled ~overlays:[ (id, tag) ]
+           ~label
+       with
+       | None -> Fmt.pr "assemble failed for %s@." label
+       | Some assembled ->
+           Fmt.pr "assembled tree: %s@." assembled;
+           run_tiny_scenario ~workspace_override:assembled ~root ~failfast
+             ~cache_path:None ~cli_disabled:[] ~name:s.scenario.name ();
+           Fmt.pr
+             "@.tiny-full assembled run [%s %s -> %s]: %s  (bad-scenario PASS \
+              = canary detected)@."
+             tag s.scenario.name id (scenario_status_of_run_state ()))
+
 (* tiny-full is a *project* (peer of sqlite/z3/llvm), run through the same
    `canary action <project>` entry point — NOT a member of the tiny harness
    family (`tiny run`/`list`/… stay for the tiny-factory / tiny1). Its run
@@ -93,7 +133,7 @@ let scenario_status_of_run_state () : string =
 let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
   let run ~failfast ~name =
     (try
-       run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
+       run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name ()
      with _ -> ());
     scenario_status_of_run_state ()
   in
@@ -331,7 +371,7 @@ let action_cmd =
     | Some p when (String.length p > 5)
                   && (String.sub p 0 5 = "tiny/") ->
         let name = String.sub p 5 (String.length p - 5) in
-        run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name
+        run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name ()
     | None ->
         run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
         run_zarith ~root ~failfast ~cache_path ~cli_disabled;
@@ -1094,6 +1134,24 @@ let tiny_scenarios_assemble_cmd =
           | Some tag -> Canary_tiny_workspace.assemble_check ~id ~tag ())
       $ id $ tag $ const ())
 
+let tiny_scenarios_assemble_run_cmd =
+  let tag =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"TAG"
+          ~doc:"Bad-variant tag (see `tiny assemble-check`), e.g. Bs.1")
+  in
+  Cmd.v
+    (Cmd.info "assemble-run"
+       ~doc:"P3 step 2: assemble the vendored tree for <TAG> (bad resource \
+             overlaid on the witness base) and RUN canary over it; a PASS \
+             means canary detected the failure from the assembled tree. Run \
+             `tiny prepare-all` first.")
+    Term.(
+      const (fun tag () -> run_assembled ~root:"_out" ~failfast:true ~tag)
+      $ tag $ const ())
+
 (* ── tiny run / tiny status ─────────────────────────────────────
    Shared iteration via Canary_tiny_scenario.iter_scenario_specs so
    the ordering is identical to `tiny list` (and any future
@@ -1152,7 +1210,7 @@ let run_tiny_all_and_collect () : unit =
       Fmt.pr "[%d/%d] %-11s %-30s ... @?" index total sc.id sc.name;
       (try
          run_tiny_scenario ~root ~failfast:false ~cache_path:None
-           ~cli_disabled:[] ~name:sc.name
+           ~cli_disabled:[] ~name:sc.name ()
        with _ -> ());
       let status = scenario_status_of_run_state () in
       Fmt.pr "%s@." status;
@@ -1226,7 +1284,8 @@ let tiny_scenarios_cmd =
       tiny_scenarios_prepare_cmd;
       tiny_scenarios_prepare_all_cmd;
       tiny_scenarios_confirm_cmd;
-      tiny_scenarios_assemble_cmd ]
+      tiny_scenarios_assemble_cmd;
+      tiny_scenarios_assemble_run_cmd ]
 
 let summary_diff_cmd =
   let old_ =

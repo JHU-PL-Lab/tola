@@ -892,6 +892,29 @@ let resource_id_of_tag (tag : string) : string option =
           | [] -> None)
       | _ -> None)
 
+(** Materialize an assembled tree for the run: emit each [overlays] resource
+    ((id, tag)) from its scenario's workspace, then assemble them onto the
+    unmutated-witness base. Returns the assembled tree path, or [None] on
+    failure. The run-over-assembly entry — canary then runs against the path
+    exactly as it would a normal workspace. *)
+let materialize_assembled ~(overlays : (string * string) list)
+    ~(label : string) : string option =
+  let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
+  let target = cache ^ "/assembled/" ^ label in
+  let emitted =
+    List.for_all overlays ~f:(fun (id, tag) ->
+        let scen_name =
+          match Canary_tiny_scenario.find_by_id tag with
+          | Some s -> s.scenario.name
+          | None -> tag
+        in
+        emit_resource ~id ~tag
+          ~from_workspace:(scen_workspace_of ~name:scen_name))
+  in
+  if not emitted then None
+  else if assemble ~base_workspace:base ~overlays ~target then Some target
+  else None
+
 (** List every assemblable bad variant — its tag, scenario name, and the
     resource id it targets. The tiny-full analogue of `tiny list`; run
     `tiny assemble-check` with no tag to see it. *)
