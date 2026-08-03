@@ -78,14 +78,18 @@ let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
     (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
        ~extra:[] steps)
 
-let tiny_run_state_path =
-  "_out/canary/projects/tiny/-run/run_state.json"
+let run_state_path_of ~project =
+  [%string "_out/canary/projects/%{project}/-run/run_state.json"]
 
 (* PASS iff every step's status is "done" (covers both plain success
    and "expected failure confirmed"). Any status starting with
    "unexpected_" is a FAIL. run_state.json is overwritten per
-   scenario by run_project, so we can trust the most recent read. *)
-let scenario_status_of_run_state () : string =
+   scenario by run_project, so we can trust the most recent read.
+   [project] MUST match where the run wrote (project_name = the part before
+   "/"): "tiny" for the tiny1 / assemble paths, "tiny-full" for the generic
+   runner — reading the wrong one serves a stale verdict. *)
+let scenario_status_of_run_state ?(project = "tiny") () : string =
+  let tiny_run_state_path = run_state_path_of ~project in
   if not (Sys.file_exists tiny_run_state_path) then "N/A"
   else
     match Yojson.Basic.from_file tiny_run_state_path with
@@ -225,7 +229,10 @@ let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
                (prebuilt_run_info ~project:pr.Canary_project_tiny.pr_name
                   ~version:"materialized" ~extra:[] steps)
            with _ -> ());
-          let verdict = scenario_status_of_run_state () in
+          let verdict =
+            scenario_status_of_run_state
+              ~project:pr.Canary_project_tiny.pr_name ()
+          in
           Fmt.pr "  [%-44s] %-6s %s@." label verdict
             (if is_bad then "(bad)" else "(good)");
           results := (label, verdict, is_bad) :: !results)
