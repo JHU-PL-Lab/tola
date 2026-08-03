@@ -556,14 +556,15 @@ not a key the spec computes. (An earlier design computed an `earliest_bad_of`
 collapse key in the spec; that was the spec doing canary's job, and was
 removed.) The spec declares the resource-set; canary discovers the outcome.
 
-**The framework's own project is *two* things** (implementation:
-[`status.md`](../status.md) §1a):
+**The framework's own project is *three* code ingredients** (build history in
+[`worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md); current-state
+pointer in [`status.md`](../status.md) §1a):
 
-| | what | role | command |
+| | what | role | code · command |
 |---|---|---|---|
-| **tiny-factory** | machinery: scenario specs + workspace materializer + resource emitter/assembler | produces the resources | — |
-| **tiny1** | single-scenario projects, each one hand-written good/bad case | the **oracle** (ground truth) that validates canary's tooling | `canary tiny run` |
-| **tiny-full** | **one** project (peer of sqlite/z3) declaring the vendored resources; canary computes | validates the **algorithm / skeleton / integration** | `canary action tiny-full` |
+| **tiny-factory** | machinery: scenario specs + workspace materializer + resource emitter/assembler | produces the resources | `canary_tiny_scenario.ml`, `canary_tiny_workspace.ml` |
+| **tiny1** | single-scenario projects, each one hand-written good/bad case | the **oracle** (ground truth) that validates canary's tooling | factory scenarios · `canary tiny run` |
+| **tiny-full** | **one** project (peer of sqlite/z3) declaring the vendored resources; canary computes | validates the **algorithm / skeleton / integration** | `canary_project_tiny.ml` + generic `run_project_run` · `canary action tiny-full` |
 
 tiny1's hand-written expectations are the cross-check: canary's *computed*
 result on tiny-full must match tiny1's *declared* oracle. "A real simple

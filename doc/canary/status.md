@@ -25,161 +25,41 @@ Historical chronicles in [`worklog/`](worklog/).
 
 ## 1. Now
 
-**Active: the tiny-factory / tiny1 / tiny-full arc** (2026-08-02). Three
-named things (§1a):
+**tiny-full is a working mutation-agnostic project** driven by a
+project-agnostic runner. `canary action tiny-full` enumerates the good+bad
+space, assembles vendored artifact resources (no rebuild), and **canary
+computes** detection + expectation + the fail-fast collapse — 20/20, via
+`run_project_run` over a `project_run` spec. z3/llvm stay raw-script
+(`run_project_multi`), untouched. The tiny trilogy + principle are design
+(**ssot §4.2.5**); the full arc history is
+[`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-- **tiny-factory** — the machinery: scenario specs (`canary_tiny_scenario.ml`),
-  workspace materializer (`canary_tiny_workspace.ml`), and now the
-  vendored-resource emitter/assembler.
-- **tiny1** — the single-scenario projects, each one hand-written good/bad
-  case = the ground-truth **oracle**. Command: **`canary tiny run`**.
-- **tiny-full** — **one** project (peer of sqlite/z3/llvm) that declares
-  static artifact **resources** (good + bad variants, vendored); **canary**
-  computes detection, expectation, and the fail-fast collapse. Command:
-  **`canary action tiny-full`**.
+**To-do, in order:**
 
-**The design principle** (ssot §4.2.5): the tiny-full runner knows *nothing*
-about mutations. A bad artifact is a build at a **bad-quality version**
-(`build_id = {channel; quality=Good|Bad tag}`) — the badness is identity, not
-a type the runner dispatches on. tiny-full *declares resources*; canary
-*computes everything*. tiny-factory (tiny1) stays the oracle for the
-cross-check.
+1. **sqlite `project_run`** (materialize = build/fetch, not assemble) — one
+   runner, two projects: the convergence proof, and where the assemble-vs-build
+   materialization split earns its keep.
+2. **two versions** (the version axis) → **packages** (provision `Fetched`; the
+   distro × sys-PM × lang-PM enumeration — the largest remaining piece).
+3. Deferred **design** (§1c): per-edge version / the graph merge / versioning.
+4. Deferred **polish**: scenario names; tiny-full's per-scenario `docs/canary`
+   output volume (184 files/run — gitignore?).
 
-**Shipped this session** (commits `b6ca255`…`d627890`):
-P0 naming + `action tiny-full` as a project · P1 agnostic driver · P2a version
-identity (`build_id`/`quality`) · **P2b agnostic expectation — DONE** (tiny-full
-runs with no oracle; canary computes the expectation by inspection, via the
-additive `Expect_compat_derived`) · P3 correction (vendored; canary computes the
-collapse) · **P3 step 2 — DONE**: emit + assemble + RUN over the assembly (full
-single-bad sweep **20/20 via vendored assembly**) · **combinations — DONE**
-(multi-bad resource-sets, the beyond-tiny1 scenarios; canary computes the
-collapse under fail-fast).
+## 1a. The tiny trilogy (short — design in ssot §4.2.5)
 
-**Command surface** (tiny work): `action tiny-full` (the project, now fully
-vendored + agnostic) · `tiny run` (tiny1) · `tiny list/status/engine` (views) ·
-`tiny baseline/prepare/prepare-all/confirm` (harness) · `tiny assemble-check`
-(list / emit+assemble) · `tiny assemble-run <TAG>` (run one over its assembly)
-· `tiny assemble-combo <TAG>...` (run a combination).
+- **tiny-factory** — the machinery (`canary_tiny_scenario.ml` specs +
+  `canary_tiny_workspace.ml` materializer/emitter/assembler) that *makes* every
+  artifact variant as a resource + holds the tiny1 oracle.
+- **tiny1** — the single-scenario projects, each a hand-written good/bad case =
+  the ground-truth **oracle** (validates the tooling/checkers). `canary tiny run`.
+- **tiny-full** — the *one* project (peer of sqlite/z3) that **declares** those
+  vendored resources; **canary computes** detection/expectation/collapse
+  (validates the algorithm/integration). `canary action tiny-full`. Its
+  coverage cross-checks against tiny1; a real simple project is "no harder than
+  tiny-full".
 
-**Convergence — step 1 done** (`ab4bcd4`): `canary_project_tiny.ml` is the
-tiny-full PROJECT module (peer of `canary_project_z3.ml`) — `project` bundle +
-declarative surface (`artifacts`/`spec`/`assignments`/`combinations`/
-`expectation_agnostic`) + `run`. Realizes the project_spec split (factory/tiny1
-make ingredients · this declares · tiny-full explores via `canary action`) and
-pins the `project_run` interface (`{name; artifacts; enumerate; materialize;
-runner_spec}`). Thin over the factory today; behaviour-preserving (20/20).
-
-**Convergence — step 2 done** (`a620b15`): `run_project_run` is the
-project-AGNOSTIC runner — enumerate → materialize → runner_spec → run → report,
-same loop for any project; all specifics live in the `project_run` closures.
-`Canary_project_tiny.tiny_full_run` is tiny-full's value (materialize = assemble
-vendored resources, soname-aware stores via `detect_lib_filename`, agnostic
-expectation). `action tiny-full` routes through it: 1 positive quiet + **20/20
-bad detected**. **Additive** — z3/llvm keep their raw-script `run_project_multi`
-untouched (agreed strategy: new runner for tiny-full + simple projects first;
-heavy projects migrated last, by copy-modify only if ever).
-
-**Next**: give **sqlite** a `project_run` (materialize = build/fetch, not
-assemble) so **one runner drives two projects** — the real convergence proof,
-and where the materialization abstraction gets exercised. Then two versions
-(version axis) · packages (provision=`Fetched`). Deferred polish: scenario
-names; whether tiny-full's per-scenario `docs/canary` output should be
-gitignored (184 files/run). Detail in §1a.
-
-## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
-
-**Definitions** (three distinct things — use the names, not descriptions):
-
-- **tiny-factory** — the *machinery* that generates + materializes tiny
-  scenarios: `canary_tiny_scenario.ml` (the scenario specs) +
-  `canary_tiny_workspace.ml` (materialize a good/mutated tiny source tree).
-  Not a runnable project — it is what tiny1 is built from.
-- **tiny1** — the set of **single-scenario** tiny projects (the factory's
-  scenarios), each *one* concrete good/bad case run individually. Carried by
-  the **tiny command family** (the harness): **`canary tiny run`** runs tiny1,
-  `tiny list`/`status`/`engine`/`baseline`/`prepare` support it.
-- **tiny-full** — a **project name**, a peer of `sqlite`/`z3`/`llvm`: **one**
-  project spec that **allows each artifact to be good *or* bad**; the algorithm
-  enumerates the good+bad scenarios (× provision × version) over that *single*
-  spec and drives the runs. Run through the **general project command** like
-  any other project: **`canary action tiny-full`** (NOT a `tiny` subcommand —
-  it is not part of the tiny/tiny1 harness).
-
-Direction for **driving the runner from the algorithm**. Two tiers of
-tiny; trust flows tooling → algorithm → real projects. **Both should be
-algorithm-derived** (a human can't be relied on to derive scenarios per
-project); **scenario coverage** is the metric for both.
-
-- **tiny1** (today = the hand-written tiny-factory) — many tiny projects,
-  each **one** concrete scenario: one bad artifact with **good precedents**
-  (the steps before it succeed; "bad lib use" ⇒ fetch-source + build-lib
-  were fine). Validates the **tooling / checkers**. Should *also* be
-  algorithm-derived from the ssot ideas — but **postponed until after
-  tiny-full** (hand-written is fine as the interim ground truth).
-- **tiny-full** (**run shipped** 2026-08-02) — **one** general-project canary
-  spec whose spec **allows each artifact to be good *or* bad**, with
-  multiple choices (provision × version; the **mechanism choice IS
-  provision** over the distinct binding artifacts — cext Built + ctypes
-  Absent, etc.). The algorithm enumerates the good+bad scenarios over that
-  *single* spec and a materializer builds good / mutates bad **per the
-  enumeration** — *not* the tiny1 factory's hand-written per-scenario
-  projects.
-  Behaves as a general project; the **runner iterates the algorithm's
-  enumerated points**. Validates the **algorithm / skeleton / integration**.
-  - Has scenarios **beyond tiny1** — real combinations (bad lib *and* bad
-    binding), which in tiny1 are separate projects.
-  - Under a **fail-fast canary config, the first checkable error stops the
-    trace**: a detectable bad lib subsumes a downstream bad binding/app —
-    they **collapse into one scenario**. So distinct observable scenarios
-    are keyed by the **earliest checkable failure**; validating that
-    collapse (and that good precedents pass) is tiny-full's job.
-  - Trusted because its coverage **cross-checks against tiny1**.
-- A **real simple project** reuses tiny-full's machinery — "no harder than
-  tiny-full" **for canary-checkable errors** (a *project-internal* error is
-  outside that).
-
-**New code = an algorithm-driven materializer**: enumerated point (per-
-artifact provision × version) → build that workspace → run the probes with
-the fail-fast config, reusing `canary_tiny_workspace`. Wired from the
-algorithm, not from a hand-written spec.
-
-**tiny-full RUN — shipped** (2026-08-02, `canary action tiny-full` — a project
-peer of sqlite/z3, run through the general `action` command, not a `tiny`
-subcommand). `Canary_tiny_scenario.run_tiny_full ~run` iterates the algorithm's
-good+bad enumeration (`engine_points` = the `tiny_slice` projection: 1
-positive + N mutation points over the ONE fixed artifact set) and drives each
-through the materializer — **no hand-written scenario list**. Positive point →
-the unmutated witnesses (derived: `mutation_target_of_spec = None`); each
-mutation point → resolve `scenario_id` → name → run (fail-fast), PASS =
-canary *detected* the expected failure. First run: **2 positive quiet, 20/20
-mutation scenarios detected (22/22 artifact points)** — the coverage
-cross-check against tiny1 (`tiny run`) is now a live number. *Still open* (the
-"beyond tiny1" part): real **combinations** (multi-mutation workspaces) + true
-**fail-fast collapse** (earliest checkable failure subsumes downstream); today
-each point is a single mutation, so the collapse isn't exercised yet.
-
-### Plan — tiny-full → a mutation-agnostic project spec (confirmed 2026-08-02)
-
-**Core principle: the tiny-full runner knows *nothing* about mutations.** A
-bad artifact is treated exactly like a normal one — its badness lives in its
-**identity** (a *special version string* / metadata tag), not in a mutation
-type the runner dispatches on. This mirrors a real project: z3 doesn't know
-its lib is "the old ABI"; it builds `lib@stable` and canary *detects* the
-mismatch. So tiny-full ranges over artifact **identities** (good tag or a
-bad-tag); the **materializer** (harness side) realizes a tag into a concrete
-artifact (applying the mutation for a bad tag); the runner only ever sees
-`artifact@tag`, opaque. Where each concern lives:
-
-| concern | owner | knows the mutation? |
-|---|---|---|
-| enumeration (assign tags to artifacts) | `canary_enumerate` / tiny-full point gen | no — just tags |
-| **runner** (materialize assignment → run canary) | tiny-full spec | **no** — agnostic |
-| materializer (tag → concrete artifact) | harness (`canary_tiny_workspace`) | yes (hidden) |
-| oracle / ground truth (tag → expected verdict) | factory (tiny1, `recipe.expected`) | yes — the cross-check |
-
-The two threads ("beyond tiny1" + "project-spec style") are **one**:
-combinations force the runner off factory scenario *names*, and that
-decoupling *is* the agnostic project spec.
+Full principle — mutation-agnostic runner, badness = a bad-quality version,
+declare-vs-compute, the cross-check — is **ssot §4.2.5**.
 
 **The arc is done** (2026-08-01 → 2026-08-03) — full phase-by-phase history
 in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md). In one line
