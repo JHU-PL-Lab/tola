@@ -69,13 +69,22 @@ make ingredients · this declares · tiny-full explores via `canary action`) and
 pins the `project_run` interface (`{name; artifacts; enumerate; materialize;
 runner_spec}`). Thin over the factory today; behaviour-preserving (20/20).
 
-**Next (the substantive convergence)**: the **generic runner** —
-`run_project_run` doing enumerate → materialize → runner_spec → run uniformly,
-consuming a `project_run`. The genuine hard part is unifying **materialization**
-(tiny-full *assembles* vendored resources; z3 *builds* from source — dispatch by
-provision). Implement tiny-full's `project_run` value + the generic runner, then
-migrate z3/sqlite off their hand-written variant lists. Then the axes fall out:
-new project · two versions · packages (provision=`Fetched`). Detail in §1a.
+**Convergence — step 2 done** (`a620b15`): `run_project_run` is the
+project-AGNOSTIC runner — enumerate → materialize → runner_spec → run → report,
+same loop for any project; all specifics live in the `project_run` closures.
+`Canary_project_tiny.tiny_full_run` is tiny-full's value (materialize = assemble
+vendored resources, soname-aware stores via `detect_lib_filename`, agnostic
+expectation). `action tiny-full` routes through it: 1 positive quiet + **20/20
+bad detected**. **Additive** — z3/llvm keep their raw-script `run_project_multi`
+untouched (agreed strategy: new runner for tiny-full + simple projects first;
+heavy projects migrated last, by copy-modify only if ever).
+
+**Next**: give **sqlite** a `project_run` (materialize = build/fetch, not
+assemble) so **one runner drives two projects** — the real convergence proof,
+and where the materialization abstraction gets exercised. Then two versions
+(version axis) · packages (provision=`Fetched`). Deferred polish: scenario
+names; whether tiny-full's per-scenario `docs/canary` output should be
+gitignored (184 files/run). Detail in §1a.
 
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 
