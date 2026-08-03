@@ -198,8 +198,18 @@ decoupling *is* the agnostic project spec.
       (`dune-project`, RUNPATH strip, `libtiny.so` symlink). No rebuild.
     - **Run**: `stores_of_workspace` on the assembly + base runner_spec +
       `derive_steps`, fail-fast.
+    - **Scoping finding — vendored resources are the BUILT artifacts** (lib
+      `c/build/*`, ocaml binding `_build/default/ocaml/*`, cext
+      `python_cext/tiny_cext/*.so`). **Source folds into lib**: it is a build
+      input compiled *into* `libtiny.so`, so a source-bad scenario (Bs.1)
+      manifests as a bad *lib* resource, not a separate source resource. The
+      good base (all-good *built* tree) is an **unmutated witness** workspace
+      (`app_over_binding_ocaml`) — the baseline workspace has no `_build`.
     - **First cut (decided): single-bad assemblies first** (oracle expectation),
       proving the vendored assembly reproduces tiny1's per-scenario detection.
+      Narrowest start: the **lib** resource (extract Bs.4's `c/build`, overlay
+      on the witness base, run, confirm c4 ABI detection) — then ocaml-binding
+      + cext.
     - **Two follow-ons flagged:** (i) *combinations* need the expectation from
       canary inspecting the assembly (the P2b agnostic path — no single oracle
       scenario), so they converge with P2b; (ii) a bad binding extracted from
