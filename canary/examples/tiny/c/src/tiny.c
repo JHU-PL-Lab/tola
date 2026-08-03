@@ -9,3 +9,9 @@ int tiny_sum(int a, int b) {
 int tiny_diff(int a, int b) {
     return a - b;
 }
+
+#ifdef TINY_DEV
+int tiny_scale(int a, int k) {
+    return a * k;
+}
+#endif

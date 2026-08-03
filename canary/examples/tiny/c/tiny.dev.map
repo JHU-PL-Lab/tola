@@ -1,0 +1,16 @@
+TINY_1.0 {
+    global:
+        tiny_sum;
+        tiny_diff;
+        tiny_offset;
+    local:
+        *;
+};
+
+/* dev adds tiny_scale at a new version node — a consumer that requires
+   tiny_scale@@TINY_2.0 (built against dev) fails against a stable lib that
+   only exports TINY_1.0. */
+TINY_2.0 {
+    global:
+        tiny_scale;
+} TINY_1.0;

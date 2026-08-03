@@ -34,9 +34,11 @@ let squeeze s =
 (** [cc_compile_obj ~include_dirs ~src ~out ()] — compile a C
     source to a PIC object file.
     Emits: [gcc -c -fPIC -I<dir1> [-I<dir2>...] <src> -o <out>] *)
-let cc_compile_obj ?(cc = "gcc") ?(include_dirs = []) ~src ~out () : string =
+let cc_compile_obj ?(cc = "gcc") ?(include_dirs = []) ?(defines = []) ~src ~out ()
+    : string =
   let includes = List.map include_dirs ~f:(fun d -> "-I" ^ d) |> join in
-  squeeze (Printf.sprintf "%s -c -fPIC %s %s -o %s" cc includes src out)
+  let defs = List.map defines ~f:(fun d -> "-D" ^ d) |> join in
+  squeeze (Printf.sprintf "%s -c -fPIC %s %s %s -o %s" cc defs includes src out)
 
 (** [cc_link_shared] — link .o files (and/or a bare .c) into a
     shared library.
