@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/home/red/code/research/tola/canary/examples/tiny/scenarios/_cache/assembled/binding:python:cext#Dv.Sc.4.Python.python_binding.python_binding/python_cext/examples/probe_baseline.py", line 9, in <module>
+    import tiny_cext as tiny
+ModuleNotFoundError: No module named 'tiny_cext'

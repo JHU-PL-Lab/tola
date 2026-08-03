@@ -164,41 +164,50 @@ let run_assembled_combo ~root ~tags : unit =
             the failure and stopped — the collapse, computed not declared)@."
            label (scenario_status_of_run_state ()))
 
-(* tiny-full is a *project* (peer of sqlite/z3/llvm), run through the same
-   `canary action <project>` entry point — NOT a member of the tiny harness
-   family (`tiny run`/`list`/… stay for the tiny-factory / tiny1). Its run
-   body is the algorithm-driven good+bad enumeration: the materialize-and-
-   detect primitive (`run` below = run_tiny_scenario + status readout) is
-   handed to `Canary_project_tiny.run`, which iterates the
-   enumerated points — no hand-written scenario list. status.md §1a. *)
-let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
-  (* The materialize-and-detect primitive, now VENDORED: a bad scenario runs
-     over an *assembled* tree (its bad resource overlaid on the witness base —
-     no rebuild); a positive/witness scenario runs over its own good tree. The
-     resource id is derived from the scenario's tag ([resource_id_of_tag]);
-     [None] ⇒ not a mutation ⇒ positive. Falls back to the per-scenario
-     workspace if the resource can't be assembled (e.g. `prepare-all` hasn't
-     run). run_tiny_full's interface is unchanged — only *how* a name is run. *)
-  let run ~failfast ~name =
-    (try
-       let assembled =
-         match Canary_tiny_scenario.find_by_name name with
-         | Some s -> (
-             match Canary_tiny_workspace.resource_id_of_tag s.scenario.id with
-             | Some id ->
-                 Canary_tiny_workspace.materialize_assembled
-                   ~overlays:[ (id, s.scenario.id) ]
-                   ~label:(id ^ "#" ^ s.scenario.id)
-             | None -> None)
-         | None -> None
-       in
-       run_tiny_scenario ?workspace_override:assembled ~agnostic:true ~root
-         ~failfast ~cache_path ~cli_disabled ~name ()
-     with _ -> ());
-    scenario_status_of_run_state ()
+(* The GENERIC project runner (convergence step 2). Consumes a [project_run]
+   and does the SAME loop for any project: enumerate → materialize →
+   runner_spec → run → report. All project-specific logic lives in the
+   closures (tiny-full's materialize = assemble vendored resources; a real
+   project's would be build/fetch). Additive — z3/llvm keep their raw-script
+   [run_project_multi]; this drives tiny-full and simple projects. Runs dedup
+   by materialized workspace (several assignments can map to one tree). *)
+let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
+    unit =
+  Fmt.pr "@.%s — generic project run (enumerate → materialize → run)@."
+    pr.Canary_project_tiny.pr_name;
+  let seen = ref [] in
+  let results = ref [] in (* (label, verdict, is_bad) *)
+  List.iter
+    (fun a ->
+      match pr.Canary_project_tiny.pr_materialize a with
+      | None -> ()
+      | Some ws when List.mem ws !seen -> ()
+      | Some ws ->
+          seen := ws :: !seen;
+          let is_bad = not (Canary_tiny_scenario.assignment_is_all_good a) in
+          let label = Filename.basename ws in
+          let project = pr.Canary_project_tiny.pr_name ^ "/" ^ label in
+          let spec = pr.Canary_project_tiny.pr_runner_spec ~workspace:ws in
+          let steps =
+            Canary_step_builder.derive_steps ~root ~project
+              ~langs:Canary_lang.[ OCaml; Python ] spec
+          in
+          (try
+             run_with_info ~failfast ~cache_path:None ~root ~project steps
+               (prebuilt_run_info ~project:pr.Canary_project_tiny.pr_name
+                  ~version:"materialized" ~extra:[] steps)
+           with _ -> ());
+          let verdict = scenario_status_of_run_state () in
+          Fmt.pr "  [%-44s] %-6s %s@." label verdict
+            (if is_bad then "(bad)" else "(good)");
+          results := (label, verdict, is_bad) :: !results)
+    (pr.Canary_project_tiny.pr_enumerate ());
+  let bads = List.filter (fun (_, _, b) -> b) !results in
+  let detected =
+    List.length (List.filter (fun (_, v, _) -> String.equal v "PASS") bads)
   in
-  Canary_project_tiny.print_view ();
-  Canary_project_tiny.run ~run
+  Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
+    detected (List.length bads)
 
 (* ── Subcommands ── *)
 
@@ -423,7 +432,9 @@ let action_cmd =
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny-full" ->
-        run_tiny_full_project ~root ~cache_path ~cli_disabled
+        (* the generic project runner drives tiny-full (convergence step 2) *)
+        Canary_project_tiny.print_view ();
+        run_project_run Canary_project_tiny.tiny_full_run ~root ~failfast
     | Some "tiny" ->
         Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
                  `canary tiny run` instead (runs all + collects results).@.";

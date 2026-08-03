@@ -1,0 +1,110 @@
+{
+  "project_name": "tiny-full",
+  "steps": [
+    {
+      "tag": "configure",
+      "output_tag": "configure",
+      "action": "configure",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "scan_sources",
+      "output_tag": "scan_sources",
+      "action": "scan_sources",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_lib",
+      "output_tag": "build_lib",
+      "action": "build_lib",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_lib_inspect",
+      "output_tag": "build_lib",
+      "action": "build_lib",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_ocaml",
+      "output_tag": "build_binding_ocaml",
+      "action": "build_binding_ocaml",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "compat_derived",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_ocaml_inspect",
+      "output_tag": "build_binding_ocaml",
+      "action": "build_binding_ocaml",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_ocaml",
+      "output_tag": "probe_binding_ocaml",
+      "action": "probe_binding_ocaml",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "compat_derived",
+      "status": "failed"
+    },
+    {
+      "tag": "probe_binding_ocaml_inspect",
+      "output_tag": "probe_binding_ocaml",
+      "action": "probe_binding_ocaml",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "skipped"
+    },
+    {
+      "tag": "build_binding_python",
+      "output_tag": "build_binding_python",
+      "action": "build_binding_python",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "build_binding_python_inspect",
+      "output_tag": "build_binding_python",
+      "action": "build_binding_python",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_python",
+      "output_tag": "probe_binding_python",
+      "action": "probe_binding_python",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "compat_derived",
+      "status": "failed"
+    },
+    {
+      "tag": "probe_binding_python_inspect",
+      "output_tag": "probe_binding_python",
+      "action": "probe_binding_python",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "skipped"
+    },
+    {
+      "tag": "probe_lib",
+      "output_tag": "probe_lib",
+      "action": "probe_lib",
+      "variant_id": "binding:python:cext#Bs.12",
+      "expect": "success",
+      "status": "done"
+    }
+  ],
+  "artifact_names": []
+}

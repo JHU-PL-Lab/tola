@@ -915,6 +915,28 @@ let materialize_assembled ~(overlays : (string * string) list)
   else if assemble ~base_workspace:base ~overlays ~target then Some target
   else None
 
+(** The all-good BUILT tree the generic runner uses as the assembly base and
+    as the positive (all-good) scenario's workspace — the unmutated witness. *)
+let witness_base_workspace () : string =
+  scen_workspace_of ~name:"app_over_binding_ocaml"
+
+(** The lib's on-disk soname filename in [workspace] (e.g. "libtiny.so.1", or
+    "libtiny.so.2" after an abi bump) — matches "libtiny.so.<digits>" with no
+    trailing minor. Lets the generic runner point [stores] at the right file
+    without the oracle's per-mutation adjustment. Falls back to the default. *)
+let detect_lib_filename ~(workspace : string) : string =
+  let dir = workspace ^ "/c/build" in
+  let is_soname n =
+    match String.chop_prefix n ~prefix:"libtiny.so." with
+    | Some rest -> (not (String.is_empty rest)) && String.for_all rest ~f:Char.is_digit
+    | None -> false
+  in
+  if not (Stdlib.Sys.file_exists dir) then "libtiny.so.1"
+  else
+    match Array.find (Stdlib.Sys.readdir dir) ~f:is_soname with
+    | Some n -> n
+    | None -> "libtiny.so.1"
+
 (** List every assemblable bad variant — its tag, scenario name, and the
     resource id it targets. The tiny-full analogue of `tiny list`; run
     `tiny assemble-check` with no tag to see it. *)

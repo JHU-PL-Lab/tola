@@ -79,3 +79,45 @@ type project_run = {
   pr_materialize : Canary_enumerate.assignment -> string option;
   pr_runner_spec : workspace:string -> Canary_step_builder.runner_spec;
 }
+
+(* ── tiny-full's implementation of the interface ── *)
+
+(** The vendored overlays a bad assignment asks for: each [Bad]-quality
+    placement → (resource id, tag). All-good ⇒ []. *)
+let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
+  Base.List.filter_map a ~f:(fun (_, pl) ->
+      match pl.Canary_enumerate.version.quality with
+      | Canary_enumerate.Bad tag ->
+          Base.Option.map (Canary_tiny_workspace.resource_id_of_tag tag)
+            ~f:(fun rid -> (rid, tag))
+      | Canary_enumerate.Good -> None)
+
+(** tiny-full as a [project_run] the generic runner consumes. Materialize =
+    ASSEMBLE vendored resources (all-good ⇒ the witness base; bad ⇒ overlay);
+    runner_spec = the base spec over the materialized tree with the AGNOSTIC
+    expectation. This is the whole tiny-full-specific surface; the runner is
+    project-agnostic. (z3's would differ only in materialize = build.) *)
+let tiny_full_run : project_run =
+  { pr_name = "tiny-full";
+    pr_artifacts = artifacts;
+    pr_enumerate = assignments;
+    pr_materialize =
+      (fun a ->
+        match overlays_of a with
+        | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
+        | overlays ->
+            let label =
+              Base.String.concat ~sep:"+"
+                (Base.List.map overlays ~f:(fun (id, t) -> id ^ "#" ^ t))
+            in
+            Canary_tiny_workspace.materialize_assembled ~overlays ~label);
+    pr_runner_spec =
+      (fun ~workspace ->
+        let lib_filename =
+          Canary_tiny_workspace.detect_lib_filename ~workspace
+        in
+        let stores =
+          TS.stores_of_workspace ~lib_filename ~workspace_root:workspace ()
+        in
+        { (TS.make_base_runner_spec ~stores ()) with
+          Canary_step_builder.expectation = expectation_agnostic }) }
