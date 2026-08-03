@@ -236,10 +236,18 @@ decoupling *is* the agnostic project spec.
       with `libtiny.so.2` (bad lib) + the good base's cext (needs
       `libtiny.so.1`) = the c4 deploy mismatch, no rebuild. `subdir_of_resource`
       maps the three built artifacts (lib / ocaml-cstubs / cext).
-    - **Still to wire: the RUN over the assembly** — point `stores_of_workspace`
-      + the runner_spec at the assembled tree and confirm canary detects c4
-      (reproducing tiny1's `abi_soname_bump`). Then the other two built
-      artifacts, then combinations (→ P2b expectation).
+    - **RUN over the assembly — working** (2026-08-02, `dd912a7`).
+      `materialize_assembled ~overlays ~label` + `run_tiny_scenario
+      ?workspace_override` drive the whole normal run path (stores → runner_spec
+      → derive_steps → run → status) over the *assembled* tree. `run_assembled`
+      + CLI `tiny assemble-run <TAG>`. Validated single-bad (oracle
+      expectation): **Bs.1 (c1), Bs.4 (c4 deploy mismatch), Bs.8 (ocaml
+      binding) all PASS from assembled resources — no rebuild.** `tiny
+      assemble-check` (no tag) lists all assemblable resources.
+    - **Still to do:** python cext + remaining tags; then **combinations**
+      (pull in the P2b agnostic expectation — no single oracle scenario); then
+      factor into `canary_project_tiny.ml` + the generic runner (the
+      convergence — one runner for tiny-full and z3/sqlite).
     - **Two follow-ons flagged:** (i) *combinations* need the expectation from
       canary inspecting the assembly (the P2b agnostic path — no single oracle
       scenario), so they converge with P2b; (ii) a bad binding extracted from
