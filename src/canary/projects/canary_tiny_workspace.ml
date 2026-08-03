@@ -876,11 +876,30 @@ let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
             mkdir_p dst;
             run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" res dst) = 0)
 
-(** Debug/validation entry for the vendored-resource first cut: emit the [id]
-    resource from scenario [tag]'s workspace, assemble it onto the unmutated
+(** The vendored resource id a bad-tag targets, DERIVED from the factory: a
+    Source or Lib mutation manifests as the [lib] resource (source folds into
+    lib); a Binding mutation → that binding's precise id. Lets [assemble-check]
+    take just a tag. *)
+let resource_id_of_tag (tag : string) : string option =
+  match Canary_tiny_scenario.find_by_id tag with
+  | None -> None
+  | Some s -> (
+      match Canary_tiny_scenario.mutation_target_of_spec s with
+      | Some (Canary_basic.Source | Canary_basic.Lib) -> Some "lib"
+      | Some (Canary_basic.Binding _) -> (
+          match Canary_tiny_scenario.binding_ids_of_mutates s.recipe.mutates with
+          | aid :: _ -> Some (Canary_enumerate.string_of_id aid)
+          | [] -> None)
+      | _ -> None)
+
+(** Debug/validation entry for the vendored-resource first cut: emit the
+    resource for scenario [tag] (its target artifact, [id] auto-derived when
+    empty) from that scenario's workspace, assemble it onto the unmutated
     witness base, and print the assembled tree's key artifacts. Proves
-    emit+assemble before the run wiring. *)
-let assemble_check ~(id : string) ~(tag : string) : unit =
+    emit+assemble before the run wiring. Needs [tiny prepare-all] first. *)
+let assemble_check ?(id = "") ~(tag : string) () : unit =
+  let id = if String.is_empty id then Option.value (resource_id_of_tag tag) ~default:"lib" else id in
+  Stdlib.Printf.printf "(resource id = %s for tag %s)\n" id tag;
   let scen_name =
     match Canary_tiny_scenario.find_by_id tag with
     | Some s -> s.scenario.name

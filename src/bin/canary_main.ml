@@ -1067,23 +1067,26 @@ let tiny_scenarios_confirm_cmd =
 let tiny_scenarios_assemble_cmd =
   let id =
     Arg.(
-      value & opt string "lib"
+      value & opt string ""
       & info [ "id" ] ~docv:"ID"
-          ~doc:"Resource id: lib | binding:ocaml:cstubs | binding:python:cext")
+          ~doc:"Resource id (auto-derived from TAG when omitted): lib | \
+                binding:ocaml:cstubs | binding:python:cext")
   in
   let tag =
     Arg.(
       required
       & pos 0 (some string) None
-      & info [] ~docv:"TAG" ~doc:"Bad-variant tag = a scenario id, e.g. Bs.4")
+      & info [] ~docv:"TAG"
+          ~doc:"Bad-variant tag = a scenario id (see `tiny list`), e.g. Bs.4 \
+                (lib), Bs.8 (ocaml binding), Bs.11 (python cext)")
   in
   Cmd.v
     (Cmd.info "assemble-check"
-       ~doc:"P3 step 2 (vendored materializer): emit the <id> resource from \
-             scenario <TAG>'s workspace and assemble it onto the witness base; \
-             print the assembled artifacts. Needs `tiny prepare-all` first.")
+       ~doc:"P3 step 2 (vendored materializer): emit the resource scenario \
+             <TAG> targets and assemble it onto the witness base; print the \
+             assembled artifacts. Run `tiny prepare-all` first.")
     Term.(
-      const (fun id tag () -> Canary_tiny_workspace.assemble_check ~id ~tag)
+      const (fun id tag () -> Canary_tiny_workspace.assemble_check ~id ~tag ())
       $ id $ tag $ const ())
 
 (* ── tiny run / tiny status ─────────────────────────────────────
