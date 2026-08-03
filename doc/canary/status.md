@@ -54,7 +54,10 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
        pre-fetch).
      So the good lib gains a **Built** choice (not only Vendored), and build/
      fetch stay **runner_spec actions** (`provision_of_actions`/`store_actions`),
-     not `pr_materialize`. Same split sqlite needs.
+     not `pr_materialize`. Same split sqlite needs. The Built *mechanism* is
+     done — guarded real `build_lib` (`tiny built-check`); wiring it into the
+     enumeration needs the provision (+version) in `variant_id` so Built and
+     Vendored cache separately ([`cache.md`](design/cache.md)).
 2. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
    tiny-full (assignment) on the shared `Bs.N` key.
 3. **sqlite `project_run`** — one runner, two projects; the provision→actions

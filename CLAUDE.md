@@ -493,6 +493,15 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 
 ## Gotchas
 
+- **Run-cache stale hit looks like a real PASS**: a step is skipped when its
+  `.ok` marker exists and `check_post` passes (local cache), keyed by
+  `variant_id` (the part after `/` in `project`, e.g. `tiny/<name>`). Re-running
+  a *different* workspace under the **same** `variant_id` (e.g. a source-only
+  Built tree reusing a name previously run Vendored) serves the stale marker —
+  no build runs, but status reads PASS. Force a fresh run with `rm -rf
+  _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
+  Vendored, dev vs stable) put those axes in `variant_id`. See
+  [`doc/canary/design/cache.md`](doc/canary/design/cache.md).
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,
