@@ -61,11 +61,21 @@ vendored + agnostic) · `tiny run` (tiny1) · `tiny list/status/engine` (views) 
 (list / emit+assemble) · `tiny assemble-run <TAG>` (run one over its assembly)
 · `tiny assemble-combo <TAG>...` (run a combination).
 
-**Next**: factor **`canary_project_tiny.ml` + the generic runner** — the
-convergence (one runner for tiny-full *and* z3/sqlite), the project_spec split
-(factory/tiny1 make ingredients · project_spec declares · tiny-full explores
-via `canary action`). Then the axes fall out: new project · two versions ·
-packages (provision=`Fetched`). Detail + phase history in §1a.
+**Convergence — step 1 done** (`ab4bcd4`): `canary_project_tiny.ml` is the
+tiny-full PROJECT module (peer of `canary_project_z3.ml`) — `project` bundle +
+declarative surface (`artifacts`/`spec`/`assignments`/`combinations`/
+`expectation_agnostic`) + `run`. Realizes the project_spec split (factory/tiny1
+make ingredients · this declares · tiny-full explores via `canary action`) and
+pins the `project_run` interface (`{name; artifacts; enumerate; materialize;
+runner_spec}`). Thin over the factory today; behaviour-preserving (20/20).
+
+**Next (the substantive convergence)**: the **generic runner** —
+`run_project_run` doing enumerate → materialize → runner_spec → run uniformly,
+consuming a `project_run`. The genuine hard part is unifying **materialization**
+(tiny-full *assembles* vendored resources; z3 *builds* from source — dispatch by
+provision). Implement tiny-full's `project_run` value + the generic runner, then
+migrate z3/sqlite off their hand-written variant lists. Then the axes fall out:
+new project · two versions · packages (provision=`Fetched`). Detail in §1a.
 
 ## 1a. tiny1 / tiny-full — the validation architecture (2026-07-31)
 
