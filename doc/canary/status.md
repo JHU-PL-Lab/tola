@@ -210,6 +210,18 @@ decoupling *is* the agnostic project spec.
       Narrowest start: the **lib** resource (extract Bs.4's `c/build`, overlay
       on the witness base, run, confirm c4 ABI detection) — then ocaml-binding
       + cext.
+    - **Emit + assemble — validated** (2026-08-02, `<this>`).
+      `Canary_tiny_workspace.{resource_dir, emit_resource, assemble}` +
+      `assemble_check` (CLI `tiny assemble-check --id lib Bs.4`): extracts the
+      bad lib from `abi_soname_bump`'s workspace and overlays it on the
+      `app_over_binding_ocaml` (unmutated witness) base → an assembled tree
+      with `libtiny.so.2` (bad lib) + the good base's cext (needs
+      `libtiny.so.1`) = the c4 deploy mismatch, no rebuild. `subdir_of_resource`
+      maps the three built artifacts (lib / ocaml-cstubs / cext).
+    - **Still to wire: the RUN over the assembly** — point `stores_of_workspace`
+      + the runner_spec at the assembled tree and confirm canary detects c4
+      (reproducing tiny1's `abi_soname_bump`). Then the other two built
+      artifacts, then combinations (→ P2b expectation).
     - **Two follow-ons flagged:** (i) *combinations* need the expectation from
       canary inspecting the assembly (the P2b agnostic path — no single oracle
       scenario), so they converge with P2b; (ii) a bad binding extracted from

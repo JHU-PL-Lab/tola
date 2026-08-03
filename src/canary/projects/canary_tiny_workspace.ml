@@ -823,6 +823,93 @@ let run_prepare_all () : unit =
       (List.length xs) (String.concat ~sep:", " (List.rev xs));
     Stdlib.exit 1
 
+(* ── vendored-resource materializer (P3 step 2, 2026-08-02) ──
+   The factory already builds every scenario workspace; each holds its one
+   mutated BUILT artifact. EXTRACT each into a per-(artifact,tag) resource,
+   then ASSEMBLE a scenario by overlaying chosen resources onto a good base —
+   no rebuild. Vendored resources are the built artifacts; source folds into
+   lib (compiled into libtiny.so). First cut: single-bad, lib artifact. *)
+let resources_root = cache ^ "/resources"
+
+let resource_dir ~(id : string) ~(tag : string) : string =
+  Printf.sprintf "%s/%s/%s" resources_root id tag
+
+(* built-artifact id → the workspace subdir that IS that artifact *)
+let subdir_of_resource : string -> string option = function
+  | "lib" -> Some "c/build"
+  | "binding:ocaml:cstubs" -> Some "_build/default/ocaml"
+  | "binding:python:cext" -> Some "python_cext/tiny_cext"
+  | _ -> None
+
+(* Extract [id]'s built files from [from_workspace] into resources/<id>/<tag>/. *)
+let emit_resource ~(id : string) ~(tag : string) ~(from_workspace : string) :
+    bool =
+  match subdir_of_resource id with
+  | None -> false
+  | Some sub ->
+      let src = Printf.sprintf "%s/%s" from_workspace sub in
+      let dst = resource_dir ~id ~tag in
+      if not (Stdlib.Sys.file_exists src) then false
+      else begin
+        rm_rf dst;
+        mkdir_p dst;
+        run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" src dst) = 0
+      end
+
+(* Assemble a scenario: copy the good base workspace, then overlay each
+   resource (replacing the base's copy of that artifact's subdir). No rebuild.
+   [overlays] is a list of (resource-id, tag). *)
+let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
+    ~(target : string) : bool =
+  rm_rf target;
+  mkdir_p target;
+  if run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" base_workspace target) <> 0
+  then false
+  else
+    List.for_all overlays ~f:(fun (id, tag) ->
+        match subdir_of_resource id with
+        | None -> false
+        | Some sub ->
+            let res = resource_dir ~id ~tag in
+            let dst = Printf.sprintf "%s/%s" target sub in
+            rm_rf dst;
+            mkdir_p dst;
+            run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" res dst) = 0)
+
+(** Debug/validation entry for the vendored-resource first cut: emit the [id]
+    resource from scenario [tag]'s workspace, assemble it onto the unmutated
+    witness base, and print the assembled tree's key artifacts. Proves
+    emit+assemble before the run wiring. *)
+let assemble_check ~(id : string) ~(tag : string) : unit =
+  let scen_name =
+    match Canary_tiny_scenario.find_by_id tag with
+    | Some s -> s.scenario.name
+    | None -> tag
+  in
+  let from_ws = scen_workspace_of ~name:scen_name in
+  let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
+  let target = cache ^ "/assembled/" ^ id ^ "#" ^ tag in
+  Stdlib.Printf.printf "emit  %s#%s  <-  %s\n" id tag from_ws;
+  if not (emit_resource ~id ~tag ~from_workspace:from_ws) then
+    Stdlib.Printf.printf "  EMIT FAILED (missing %s or subdir)\n" from_ws
+  else begin
+    Stdlib.Printf.printf "assemble  base=%s  overlay=%s#%s  ->  %s\n" base id tag
+      target;
+    if not (assemble ~base_workspace:base ~overlays:[ (id, tag) ] ~target) then
+      Stdlib.Printf.printf "  ASSEMBLE FAILED\n"
+    else begin
+      Stdlib.Printf.printf "assembled c/build:\n";
+      let _ = run_shell (Printf.sprintf "ls %s/c/build/ | sed 's/^/    /'" target) in
+      Stdlib.Printf.printf "assembled cext (from good base):\n";
+      let _ =
+        run_shell
+          (Printf.sprintf "ls %s/python_cext/tiny_cext/*.so | sed 's/^/    /'"
+             target)
+      in
+      ()
+    end
+  end
+
 (** Print the cached [confirm_ill.json] for [name] to stdout, or
     error if the cache doesn't exist. *)
 let confirm ~(name : string) : unit =

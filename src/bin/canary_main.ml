@@ -1064,6 +1064,28 @@ let tiny_scenarios_confirm_cmd =
              delta vs baseline; produced by `prepare`).")
     Term.(const (fun n () -> Canary_tiny_workspace.confirm ~name:n) $ name $ const ())
 
+let tiny_scenarios_assemble_cmd =
+  let id =
+    Arg.(
+      value & opt string "lib"
+      & info [ "id" ] ~docv:"ID"
+          ~doc:"Resource id: lib | binding:ocaml:cstubs | binding:python:cext")
+  in
+  let tag =
+    Arg.(
+      required
+      & pos 0 (some string) None
+      & info [] ~docv:"TAG" ~doc:"Bad-variant tag = a scenario id, e.g. Bs.4")
+  in
+  Cmd.v
+    (Cmd.info "assemble-check"
+       ~doc:"P3 step 2 (vendored materializer): emit the <id> resource from \
+             scenario <TAG>'s workspace and assemble it onto the witness base; \
+             print the assembled artifacts. Needs `tiny prepare-all` first.")
+    Term.(
+      const (fun id tag () -> Canary_tiny_workspace.assemble_check ~id ~tag)
+      $ id $ tag $ const ())
+
 (* ── tiny run / tiny status ─────────────────────────────────────
    Shared iteration via Canary_tiny_scenario.iter_scenario_specs so
    the ordering is identical to `tiny list` (and any future
@@ -1195,7 +1217,8 @@ let tiny_scenarios_cmd =
       tiny_scenarios_baseline_cmd;
       tiny_scenarios_prepare_cmd;
       tiny_scenarios_prepare_all_cmd;
-      tiny_scenarios_confirm_cmd ]
+      tiny_scenarios_confirm_cmd;
+      tiny_scenarios_assemble_cmd ]
 
 let summary_diff_cmd =
   let old_ =
