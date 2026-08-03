@@ -34,18 +34,28 @@ computes** detection + expectation + the fail-fast collapse — 20/20, via
 (**ssot §4.2.5**); the full arc history is
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**To-do, in order:**
+**To-do, in order** (tiny adjustments first — sqlite not yet):
 
-1. **sqlite `project_run`** (materialize = build/fetch, not assemble) — one
-   runner, two projects: the convergence proof, and where the assemble-vs-build
-   materialization split earns its keep.
-2. **two versions** (the version axis) → **packages** (provision `Fetched`; the
-   distro × sys-PM × lang-PM enumeration — the largest remaining piece).
-3. Deferred **design** (§1c): per-edge version / the graph merge / versioning.
-4. Deferred **polish**: scenario names; tiny-full's per-scenario `docs/canary`
-   output volume (184 files/run — gitignore?).
+1. **Make tiny realistic — version + provision variety** (small tiny changes,
+   these also feed the generic runner's materialization dispatch):
+   - **two versions** — mimic dev/stable (a dev-only `tiny_scale` symbol, or a
+     `tiny.map` `TINY_1.0`→`TINY_2.0` bump) so `build_id.channel` is *real* and
+     the deploy mismatch (built @dev, run @stable) is a live scenario. On-ramp
+     to per-edge version (§1b).
+   - **provision variety** — the good artifacts get a **Built** (from `c/src`)
+     choice, not only Vendored; **Fetched** = canary's *action* fetches from a
+     PM at run time (no pre-fetch). `pr_materialize` **dispatches by provision**
+     (Built→build / Vendored→assemble / Fetched→fetch) — the same dispatch
+     sqlite needs.
+2. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
+   tiny-full (assignment) on the shared `Bs.N` key.
+3. **sqlite `project_run`** (materialize = build/fetch) — one runner, two
+   projects; the provision dispatch from (1) carries straight over. Then the
+   distro × sys-PM × lang-PM packaging enumeration (largest remaining piece).
+4. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
+   `docs/canary` output volume).
 
-## 1a. The tiny trilogy (short — design in ssot §4.2.5)
+## 1a. The tiny trilogy + enumeration state (design: ssot §4.2 / §4.2.5)
 
 - **tiny-factory** — the machinery (`canary_tiny_scenario.ml` specs +
   `canary_tiny_workspace.ml` materializer/emitter/assembler) that *makes* every
@@ -80,178 +90,49 @@ each:
   interface, `ab4bcd4`); **2** `run_project_run` — the project-agnostic runner
   drives tiny-full via closures, z3/llvm untouched (`a620b15`).
 
-**Historical exploration** (the positive-space count churn 2048→64→58, the
-per-edge version model, the "instance graph already exists" finding) moved to
-[`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md). The still-live
-*deferred* design — per-edge version / the graph merge, packaging (provision
-`Fetched`, cmake customized-prefix install) — is tracked in §1c and
-[`enumeration_graph.md`](design/enumeration_graph.md).
+**Enumeration state** (model: [ssot §4.2](design/ssot.md)). One abstract
+product-then-filter algorithm (`action/canary_enumerate.ml`); a `config` sets
+each axis to `Free`/`Subset`/`Full`. Axes wired: **provision**
+(`Absent`/`Fetched`/`Built`/`Vendored`, coarse origin), **version**
+(`build_id = {channel; quality}` — quality folds the mutation into the version
+identity), **mutation**, and **mechanism/app-wiring** (the precise
+`(artifact, ext)` identity, kept off the base `artifact_kind`). tiny pins
+`channel=Dev` + provision `Vendored` today — to-do #1 makes it exercise
+Dev/Stable + Built/Fetched. Still open (→ §1b below): fold `(artifact, ext)`
+into base `artifact_kind`; provision sub-structure (PM × distro); Headers
+provision; versioning unification ([versioning.md](design/versioning.md)); the
+§5 rewrite ("bad scenario" -> "scenario with a bad *result*").
 
-## 1b. Scenario enumeration — implementation state
+## 1b. Deferred design — one cluster (enumeration / graph / packaging)
 
-Model: [`design/ssot.md` §4.2 / §4.2.1](design/ssot.md) (principle —
-one abstract algorithm; per-axis level `Free`/`Subset`/`Full`; a config
-per use). This tracks what's actually wired.
+Not started; interrelated — pick up together when the tiny axes (to-do #1)
+force them. Home docs carry the detail.
 
-- **Algorithm module** — `action/canary_enumerate.ml`: pure
-  product-then-filter, polymorphic in the mutation. Ranges over `artifact`
-  (= `Canary_basic.artifact_kind`, re-exported — no separate `slot` type);
-  `provision` (`Absent`/`Fetched`/`Built`/`Vendored`), `enumerate`,
-  `assignment_ok` (lib `Built`⇒source; provided binding⇒lib),
-  `provision_of_actions`. (Named "engine" in early commits — prefer
-  "enumeration algorithm".)
-- **Config object implemented** (`type 'a level = Free | Subset of _ |
-  Full`; `type 'm config = { provision; version; mutation }`; `run_config
-  ~artifacts ~all_provisions ~all_versions ~all_mutations cfg`).
-  `tiny_slice` (provision `Free`,
-  mutation `Full`) and `general_slice` (provision `Full`, mutation `Free`)
-  are now thin wrappers over `run_config`, byte-identical to before (a
-  layer test pins the agreement). Only two axes are ranged so far.
-- **Axes wired:** provision ✓ (coarse origin only), version ✓ (now
-  `build_id = {channel; quality}` — quality `Good | Bad tag` folds the
-  mutation into the version identity, ssot §4.2.2/§4.2.5), mutation ✓.
-  **Remaining axes + their code gaps** (decisions in ssot §4.2.3):
-  - **mechanism / app-wiring — identity structure shipped (interim).**
-    The enumeration now keys on a precise identity — the pair
-    `(artifact, artifact_ext)` (`Canary_enumerate.artifact_id`): `artifact`
-    is the coarse `Canary_basic.artifact_kind` (untouched, so the ~200
-    mechanism-agnostic sites — diagram 61, actions, project specs — are
-    unaffected), and `artifact_ext` refines a binding by its
-    `Canary_mechanism.mechanism` and an app by its `app_wiring`
-    (`Direct | Via_helper`). Smart constructors `a_source`/`a_lib`/
-    `a_binding lang mech`/`a_app wiring` + `kind_of` projection.
-    `artifact_id` is a record `{ kind; ext }`; `provision_of_actions`
-    dispatches per binding *instance* (static ⇒ Build_binding; dynamic ⇒
-    pure-source present).
-  - **tiny factory — done (engine projection).** `canary tiny engine` now
-    renders tiny's **full artifact set** (7): source, lib,
-    `binding:ocaml:cstubs`, `binding:python:cext`, `binding:python:ctypes`,
-    `app:direct`, `app:via_helper`. Each mutation maps to its **precise**
-    (lang × mechanism) artifact, read off the spec's mutated files
-    (`ocaml/`→cstubs, `python_cext/`→cext, `python_ctypes/`→ctypes); a spec
-    touching both Python layers (Bs.11/Bs.12) yields two points (cext +
-    ctypes) — 20 specs → 22 points. Both app wirings are distinct artifacts
-    in the positive (no longer collapsed). tiny's *running* result already
-    exercised cext/ctypes/both apps via the `expected` tables — the engine
-    view now matches it.
-  - **Cross-check (engine view ↔ factory) — done.** The engine projection
-    is *derived* from `all_scenario_specs` but is a separate code path from
-    the runner (`tiny run`). Startup assertions in `canary_tiny_scenario`
-    (matching the existing assertion pattern) enforce that the derivation
-    stays faithful: every mutation-carrying spec with a pipeline target
-    appears in `engine_mutations` (no drop), every engine point traces to a
-    real spec (no phantom), and a spec mutating both Python layers yields
-    the cext *and* ctypes points. Runs on every tiny command.
-  - **Still to do:** general projects still render one binding per lang at
-    the default mechanism (fine — they have one). And **the merge**: fold
-    `(artifact, artifact_ext)` into an enriched `artifact_kind` and migrate
-    the ~200 sites (diagram, ~61, last) — per the 2026-07-30 decision. The
-    deeper convergence (drive the *runner* from the algorithm) is deferred;
-    for tiny it's redundant (they agree, now enforced) — the payoff is
-    *generating* provision/version scenarios general projects lack.
-  - **provision sub-structure** — provision must carry PM (apt/opam/pip/
-    brew) + distro (one local, many on GH CI); the provision level ranges
-    over `(PM × distro)` combos.
-  - **Headers provision** — Headers is a real artifact with its own
-    provision (standalone / co-package / `Built` via `Build_headers`);
-    `provision_of_actions` must handle `Build_headers → Built` (today it
-    returns `Absent` for Headers).
-  The interim `(artifact, artifact_ext)` avoids the base `artifact_kind`
-  refactor (~206 `Binding` + ~30 `App` sites, all mechanism-agnostic) until
-  the identity is validated. See ssot §4.2.3.
-- **Rendered through the algorithm (demonstration, not replacement):**
-  `canary tiny engine` renders tiny's mutation axis; `canary scenarios
-  <p> --engine` renders a general project's provision axis and checks
-  each variant is a valid, in-slice assignment. The hand-written
-  enumerations (`canary_scenario.good_scenarios`, tiny's
-  `all_scenario_specs`, per-project variant lists) still *own* the
-  concrete detail (recipe / `violates` / `expected`).
-- **To-do:** (1) add the version / mechanism / app-wiring axes (each a
-  new field on `config` + universe arg to `run_config`); (2) drive the
-  hand-written enumerations *from* the algorithm and fold
-  `canary_enumerate` into `canary_scenario.ml`.
-
-  - **version axis — shipped.** The enumeration ranges over the release
-    **channel** `Canary_basic.channel` (`Dev | Stable`; presets
-    `single_channel` = Free, `two_channels` = Subset/Full). The assignment
-    cell is a `placement = { provision; version }` (per-artifact; `version`
-    here holds the channel); `config` has a `version` field; source-primary
-    is a filter (`Built lib ⇒ lib.version = source.version`). Cross-artifact
-    mismatch (lib@Dev / binding@Stable) is a valid assignment — the z3/llvm
-    demo as an algorithm instance (test `enumerate.version_axis`). Renders
-    show `@dev`/`@stable`; a variant picks one version (actions don't
-    encode it) — per-artifact mismatch is a *capability* the hand-written
-    variants don't yet exercise. **Next axis:** mechanism-live / app-wiring.
-  - **channel vs concrete version split (done).** `Canary_basic.version`
-    (`Dev | Stable`) → renamed **`channel`** (the coarse role the
-    enumeration ranges over; `single_channel`/`two_channels`/
-    `channel_suffix`). New concrete **`Canary_basic.version = { channel;
-    id : string }`** (id = commit hash for Dev, tag/release for Stable) —
-    the typed replacement for string version/commit on a concrete
-    artifact.
-  - **Versioning unification → own tracker.** The full unification (typed
-    `version` as *the* artifact identity across enumeration, source_repo,
-    and cache key) needs a global design + its own tests; tracked in
-    [`design/versioning.md`](design/versioning.md). **Decision (2026-07-30):**
-    do the typed-version enumeration for the *simple* projects first (tiny,
-    sqlite, Pattern-A ssl/cairo/zarith), leaving z3/llvm on their legacy
-    string machinery (~91 interpolation sites untouched) until later.
-
-- **Reframe parked (§5 principle-rewrite):** "Bad Scenarios" → **scenario
-  with a bad result**. A scenario is not inherently bad; the enumeration
-  is *uniform* (one scenario space over the axes), and good/bad is the
-  **result** of a scenario — a separate outcome/oracle coordinate, not a
-  scenario category. tiny's role is **result coverage**: confirm the
-  checking + tooling produce the expected result per scenario (tiny's
-  `expected` table already *is* that per-checking-point oracle; cf.
-  `canary_detect` = raw outcome vs the expected oracle). Keep in mind
-  when §5 gets the same principle-rewrite §4.2 received.
-
-## 1c. Paused — pick-up list (enumeration / graph work)
-
-One place to resume from. Each has a home doc with the detail.
-
-- ✅ **The tiny-full arc is done** (naming → agnostic runner → vendored
-  resources → combinations → generic runner). See §1a +
-  [`worklog_2026_08.md`](worklog/worklog_2026_08.md). The threads below are the
-  still-open *deferred* enumeration / graph / packaging work.
-- **Next real step: sqlite `project_run`** (materialize = build/fetch) — one
-  runner, two projects (the convergence proof). Then two versions / packages.
-- **Per-edge version model** — `placement` is per-artifact; the deploy
-  mismatch (build vs run lib) needs the graph edge to carry the consumed
-  instance. **The graph already exists** (`artifact_node` + `make_action_graph`)
-  — the work is a *merge*, not a new graph. ssot §4.2.4,
-  [`design/enumeration_graph.md`](design/enumeration_graph.md).
-- **The merge** (shared base defs) — one `artifact_info` (kind+ext+version+
-  location; move `artifact_ext` to base) + `artifact_node` (info+edges);
-  reconcile `step.deps` (string) with typed edges. Do when shapes confirmed,
-  then one ssot section + CLAUDE.md note. `enumeration_graph.md` §6.
-- **Legacy sweep (cascade)** — `artifact` + `step_body` + `cmdline` + base
-  `run_step`/`mk_system_dep_steps` + `canary_toolchain` dead verify helpers.
-  (`artifact_op`, dead base `runner_spec` already gone, `9f656dd`.)
-  `enumeration_graph.md` §6.
-- **Headers static/built flavor** — `Headers` payload (like `Binding of
-  (lang×mechanism)`) + its provision (`Build_headers` → Built). ssot §4.2.4.
-- **Provider axis + packaging** — provision `Built`/`Fetched` needs tiny
-  published/fetched; cmake Staged install must use a **customized prefix**,
-  not the global system path. §1a.
-- **Provision sub-structure** — PM (apt/opam/pip/brew) + distro (local vs
-  GH CI). ssot §4.2.3, §1b.
-- **Versioning unification** — typed `version` across enumeration/store/cache,
-  simple-projects-first. [`design/versioning.md`](design/versioning.md).
-- **§5 principle-rewrite** — "bad scenario" → "scenario with a bad result"
-  (see the meta note just above).
+- **Instance graph + per-edge version + versioning** — the deploy mismatch
+  (build-version != run-version) is a per-edge property; the graph that
+  generates it **already exists** (`artifact_node` + `make_action_graph`), so
+  the work is a *merge* into one instance type (`artifact_node` + `ext` + typed
+  `version`), not a new graph — folded with the versioning unification.
+  [`enumeration_graph.md`](design/enumeration_graph.md),
+  [`versioning.md`](design/versioning.md).
+- **Packaging / provision sub-structure** — provision `Fetched` (canary fetches
+  from a PM at run time) over PM (apt/opam/pip/brew) x distro (local / GH CI);
+  cmake Staged install uses a customized prefix. (to-do #1 starts this in tiny.)
+- **Headers provision** — `Headers` payload + `Build_headers -> Built`.
+- **Legacy sweep** — `artifact` + `step_body` + `cmdline` + base
+  `run_step`/`mk_system_dep_steps` + `canary_toolchain` dead helpers.
+- **§5 principle-rewrite** — "bad scenario" -> "scenario with a bad *result*"
+  (result is a coordinate, not a category).
 
 ## 2. Near-term
 
 Ordered rough priority.
 
-- **Tiny wish-list items** — see
-  [`design/tiny.md`](design/tiny.md) §7 (picking-order table
-  at the top). §7.2 shipped 2026-07-20; active pickup is
-  §7.1 (fill 9 remaining empty derived cells — three
-  blocker primitives to land). §7.4 (Sc.3-Sc.6) overlaps
-  §7.1.
+- **`design/tiny.md` is mostly stale — audit to-do.** Its §7 wish-list
+  (picking-order table, empty-cell counts, §7.1/§7.2/§7.4 framing) predates the
+  vendored-resource model + the generic runner and no longer matches how
+  tiny-full works. Audit against ssot §4.2.5 + `worklog_2026_08.md`; rewrite the
+  still-relevant bits or retire it. (Do before leaning on tiny.md again.)
 
 - **`new_project.md` revisit before onboarding a new project.**
   §2 mechanics + §2.5 three-level guidance were last touched
@@ -395,16 +276,3 @@ eventually" pass.
   probe). Non-trivial — touches `derive_steps` in
   `canary_step_builder`; couples with Task 2 (recipe
   interface), so best done as a Task 2 follow-up.
-
-## 6. Done — pointers
-
-- **§9.1 Migrate tiny scenario engine Python → OCaml**
-  (Phases A / B / C / C.5 / C.4b / C.6 / D / E) — done by
-  end of 2026-06. Chronicles in
-  [`worklog_2026_06.md`](worklog/worklog_2026_06.md).
-- **§9.3 Scenario remodel** (Task 1 / 1.5 / 1.6) — done by
-  2026-07-08. Chronicle in
-  [`worklog_2026_07.md`](worklog/worklog_2026_07.md).
-- **§9.4 Re-do expectation** — hand-coded predicates
-  eliminated for tiny via Task 1.6. Broader per-step
-  contract framing tracked above in §2.
