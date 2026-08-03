@@ -133,6 +133,37 @@ let run_assembled ~root ~failfast ~tag : unit =
               = canary detected)@."
              tag s.scenario.name id (scenario_status_of_run_state ()))
 
+(* Run a COMBINATION: assemble several bad resources onto the witness base and
+   run with the AGNOSTIC expectation (a combo has no single oracle scenario).
+   Canary's fail-fast run stops at the first failure — the collapse is
+   emergent. PASS = canary predicted + confirmed the failure(s) and every step
+   matched (the good precedents pass, the bad ones fail as predicted). *)
+let run_assembled_combo ~root ~tags : unit =
+  let overlays =
+    List.filter_map
+      (fun tag ->
+        match Canary_tiny_workspace.resource_id_of_tag tag with
+        | Some id -> Some (id, tag)
+        | None -> None)
+      tags
+  in
+  if List.length overlays = 0 then Fmt.pr "no valid tags (see `tiny assemble-check`)@."
+  else
+    let label = String.concat "+" (List.map (fun (id, t) -> id ^ "#" ^ t) overlays) in
+    (match Canary_tiny_workspace.materialize_assembled ~overlays ~label with
+     | None -> Fmt.pr "assemble failed for %s@." label
+     | Some assembled ->
+         Fmt.pr "combo assembled: %s@." assembled;
+         (try
+            run_tiny_scenario ~workspace_override:assembled ~agnostic:true ~root
+              ~failfast:true ~cache_path:None ~cli_disabled:[]
+              ~name:"app_over_binding_ocaml" ()
+          with _ -> ());
+         Fmt.pr
+           "@.tiny-full combo [%s]: %s  (PASS = canary predicted + confirmed \
+            the failure and stopped — the collapse, computed not declared)@."
+           label (scenario_status_of_run_state ()))
+
 (* tiny-full is a *project* (peer of sqlite/z3/llvm), run through the same
    `canary action <project>` entry point — NOT a member of the tiny harness
    family (`tiny run`/`list`/… stay for the tiny-factory / tiny1). Its run
@@ -1181,6 +1212,24 @@ let tiny_scenarios_assemble_run_cmd =
       const (fun tag () -> run_assembled ~root:"_out" ~failfast:true ~tag)
       $ tag $ const ())
 
+let tiny_scenarios_assemble_combo_cmd =
+  let tags =
+    Arg.(
+      value & pos_all string []
+      & info [] ~docv:"TAG..."
+          ~doc:"Two or more bad-variant tags to assemble TOGETHER (a \
+                combination), e.g. Bs.1 Bs.8. Runs with the agnostic \
+                expectation; PASS = canary computed the collapse.")
+  in
+  Cmd.v
+    (Cmd.info "assemble-combo"
+       ~doc:"P3: assemble a MULTI-bad resource-set (the scenarios beyond \
+             tiny1) and run canary over it; the fail-fast collapse is \
+             emergent. Run `tiny prepare-all` first.")
+    Term.(
+      const (fun tags () -> run_assembled_combo ~root:"_out" ~tags)
+      $ tags $ const ())
+
 (* ── tiny run / tiny status ─────────────────────────────────────
    Shared iteration via Canary_tiny_scenario.iter_scenario_specs so
    the ordering is identical to `tiny list` (and any future
@@ -1314,7 +1363,8 @@ let tiny_scenarios_cmd =
       tiny_scenarios_prepare_all_cmd;
       tiny_scenarios_confirm_cmd;
       tiny_scenarios_assemble_cmd;
-      tiny_scenarios_assemble_run_cmd ]
+      tiny_scenarios_assemble_run_cmd;
+      tiny_scenarios_assemble_combo_cmd ]
 
 let summary_diff_cmd =
   let old_ =
