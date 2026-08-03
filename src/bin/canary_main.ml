@@ -196,15 +196,15 @@ let run_assembled_combo ~root ~tags : unit =
    project's would be build/fetch). Additive — z3/llvm keep their raw-script
    [run_project_multi]; this drives tiny-full and simple projects. Runs dedup
    by materialized workspace (several assignments can map to one tree). *)
-let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
+let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
     unit =
   Fmt.pr "@.%s — generic project run (enumerate → materialize → run)@."
-    pr.Canary_project_tiny.pr_name;
+    pr.Canary_project_run.pr_name;
   let seen = ref [] in
   let results = ref [] in (* (label, verdict, is_bad) *)
   List.iter
     (fun a ->
-      match pr.Canary_project_tiny.pr_materialize a with
+      match pr.Canary_project_run.pr_materialize a with
       | None -> ()
       | Some ws when List.mem ws !seen -> ()
       | Some ws ->
@@ -218,25 +218,25 @@ let run_project_run (pr : Canary_project_tiny.project_run) ~root ~failfast :
               (function ':' | '#' | '+' -> '-' | c -> c)
               label
           in
-          let project = pr.Canary_project_tiny.pr_name ^ "/" ^ safe in
-          let spec = pr.Canary_project_tiny.pr_runner_spec a ~workspace:ws in
+          let project = pr.Canary_project_run.pr_name ^ "/" ^ safe in
+          let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:ws in
           let steps =
             Canary_step_builder.derive_steps ~root ~project
               ~langs:Canary_lang.[ OCaml; Python ] spec
           in
           (try
              run_with_info ~failfast ~cache_path:None ~root ~project steps
-               (prebuilt_run_info ~project:pr.Canary_project_tiny.pr_name
+               (prebuilt_run_info ~project:pr.Canary_project_run.pr_name
                   ~version:"materialized" ~extra:[] steps)
            with _ -> ());
           let verdict =
             scenario_status_of_run_state
-              ~project:pr.Canary_project_tiny.pr_name ()
+              ~project:pr.Canary_project_run.pr_name ()
           in
           Fmt.pr "  [%-44s] %-6s %s@." label verdict
             (if is_bad then "(bad)" else "(good)");
           results := (label, verdict, is_bad) :: !results)
-    (pr.Canary_project_tiny.pr_enumerate ());
+    (pr.Canary_project_run.pr_enumerate ());
   let bads = List.filter (fun (_, _, b) -> b) !results in
   let detected =
     List.length (List.filter (fun (_, v, _) -> String.equal v "PASS") bads)
@@ -460,7 +460,9 @@ let action_cmd =
          (String.concat ", "
             (List.map Canary_compat.string_of_contract_id cli_disabled)));
     match project with
-    | Some "sqlite" -> run_sqlite ~root ~failfast ~cache_path ~cli_disabled
+    | Some "sqlite" ->
+        (* sqlite adopts the generic runner (the real-world project_run) *)
+        run_project_run Canary_project_sqlite.sqlite_run ~root ~failfast
     | Some "zarith" -> run_zarith ~root ~failfast ~cache_path ~cli_disabled
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled

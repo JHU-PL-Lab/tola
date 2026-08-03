@@ -119,3 +119,35 @@ let runner_spec : Canary_step_builder.runner_spec =
       | Canary_basic.Binding Canary_lang.Python -> Some "sqlite3"
       | _ -> None);
   }
+
+(* ── sqlite as a [project_run] — the real-world instance of the §4.2.5 model ──
+   Same shape as tiny-full (a [Canary_project_run.project_run] the generic
+   `run_project_run` consumes), but real-world: everything is **Fetched** —
+   canary fetches the lib (system PM) + the OCaml binding (opam) as ACTIONS
+   (the [runner_spec] above); Python sqlite3 is stdlib. So [pr_materialize]
+   places NOTHING (canary's role is to perform the fetch/build actions) — a
+   nominal per-scenario dir just labels the output. Positive-only (a real
+   project isn't mutated); the [runner_spec]'s default expectation is success. *)
+let project : Canary_project.project =
+  { name = "sqlite"; contract_bindings = [] }
+
+let sqlite_artifacts =
+  Canary_enumerate.
+    [ a_lib;
+      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+      a_binding Canary_lang.Python Canary_mechanism.Cext ]
+
+let sqlite_run : Canary_project_run.project_run =
+  { pr_name = "sqlite";
+    pr_artifacts = sqlite_artifacts;
+    pr_enumerate =
+      (fun () ->
+        (* one positive scenario: everything Fetched at the system version *)
+        let pl =
+          Canary_enumerate.
+            { provision = Fetched;
+              version = { channel = Canary_basic.Stable; quality = Good } }
+        in
+        [ Base.List.map sqlite_artifacts ~f:(fun a -> (a, pl)) ]);
+    pr_materialize = (fun _a -> Some "fetched-system");
+    pr_runner_spec = (fun _a ~workspace:_ -> runner_spec) }

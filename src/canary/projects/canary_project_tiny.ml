@@ -63,29 +63,9 @@ let print_view : unit -> unit = TS.print_tiny_full
     vendored tree and runs canary over it with [expectation_agnostic]. *)
 let run : run:(failfast:bool -> name:string -> string) -> unit = TS.run_tiny_full
 
-(* ── the convergence interface (pins the shape; not yet wired) ──
-   What a generic cross-project runner will consume: a project DECLARES its
-   artifacts, how to enumerate scenarios, how to materialize each into a
-   runnable workspace, and how to build the [runner_spec] for a materialized
-   workspace. The generic runner then does enumerate → materialize →
-   runner_spec → run, uniformly across tiny-full and z3/sqlite. tiny-full's
-   materialize is *assemble vendored resources*; z3's is *build from source*.
-   Defined here as the target; z3/sqlite fill it when they move off their
-   hand-written variant lists. *)
-type project_run = {
-  pr_name : string;
-  pr_artifacts : Canary_enumerate.artifact_id list;
-  pr_enumerate : unit -> Canary_enumerate.assignment list;
-  pr_materialize : Canary_enumerate.assignment -> string option;
-  (* takes the assignment too, so version/provision-parameterized actions
-     (e.g. a Dev lib built with -DTINY_DEV) can read the per-artifact
-     placement, not just the materialized path. *)
-  pr_runner_spec :
-    Canary_enumerate.assignment -> workspace:string ->
-    Canary_step_builder.runner_spec;
-}
-
-(* ── tiny-full's implementation of the interface ── *)
+(* ── tiny-full's implementation of the [Canary_project_run.project_run]
+   interface (shared with sqlite; the generic runner consumes it) ── *)
+type project_run = Canary_project_run.project_run
 
 (** The vendored overlays a bad assignment asks for: each [Bad]-quality
     placement → (resource id, tag). All-good ⇒ []. *)

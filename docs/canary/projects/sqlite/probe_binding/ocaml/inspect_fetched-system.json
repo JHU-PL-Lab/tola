@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "imports": 94,
+    "modules": 1
+  },
+  "kind": "ocaml",
+  "modules": [
+    "Sqlite3"
+  ],
+  "path": "sqlite3",
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "Sqlite3"
+    ]
+  }
+}

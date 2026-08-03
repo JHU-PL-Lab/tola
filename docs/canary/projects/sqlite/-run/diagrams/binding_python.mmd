@@ -6,7 +6,7 @@ graph LR
     app_node@{ shape: docs, label: "app" }
     ocaml_binding_node@{ shape: docs, label: "ocaml binding [2]" }
     subgraph python_binding_sg ["python binding"]
-      python_binding_fetch_node@{ shape: doc, label: "sqlite3 (system) [5]" }
+      python_binding_fetch_node@{ shape: doc, label: "python binding (materialized) [5]" }
     end
 
     A_configure{{"configure"}}

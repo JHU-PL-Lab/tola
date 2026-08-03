@@ -1,13 +1,13 @@
 %% view: full
 graph LR
     subgraph lib_sg ["lib"]
-      lib_node@{ shape: doc, label: "libsqlite3.so (system)" }
+      lib_node@{ shape: doc, label: "lib (materialized)" }
     end
     subgraph ocaml_binding_sg ["ocaml binding"]
-      ocaml_binding_node@{ shape: doc, label: "sqlite3 (system)" }
+      ocaml_binding_node@{ shape: doc, label: "ocaml binding (materialized)" }
     end
     subgraph python_binding_sg ["python binding"]
-      python_binding_node@{ shape: doc, label: "sqlite3 (system)" }
+      python_binding_node@{ shape: doc, label: "python binding (materialized)" }
     end
 
     apt_store@{ shape: cyl, label: "apt" }
