@@ -181,166 +181,31 @@ The two threads ("beyond tiny1" + "project-spec style") are **one**:
 combinations force the runner off factory scenario *names*, and that
 decoupling *is* the agnostic project spec.
 
-- **Phase 0** ✅ command-level peer (`action tiny-full`).
-- **Phase 1 — agnostic driver over variant tags** ✅ (2026-08-02, `3e1bc83`).
-  The point's per-artifact choice is now an opaque `variant_tag` (`Good` |
-  `Bad of tag`), not a factory `scenario_id`. `tiny_full_spec` (`tf_artifacts`,
-  `tf_variants_of`) + `tiny_full_assignments` + `tiny_full_materialize_and_run`
-  (the ONLY place that maps tag → workspace); `run_tiny_full` rewritten to
-  consume *only* those — no `find_by_id`/`mutation_target_of_spec`/mutation
-  types in the loop (all confined to the materializer). Behaviour-preserving:
-  2 positive quiet, 20/20 (22/22 points).
-- **Phase 2a — tag folded into the version identity** ✅ (2026-08-02,
-  `b943b1a`, grain (i) full unification). `canary_enumerate.placement.version`
-  is now `build_id = { channel; quality }`, `quality = Good | Bad of tag` — the
-  "special version string" is real; a bad artifact is a build at a bad-quality
-  version (`dev#Bs.1`). tiny-full ranges over `Canary_enumerate.assignment`
-  directly (the Phase-1 `variant_tag` side channel is deleted). The product's
-  external slice/config signatures stay channel-keyed, so the positive/general/
-  engine views are unchanged. Behaviour-preserving (20/20, 22/22).
-- **Phase 2b — contract-derived expectation** ⏳ c1 spike done (2026-08-02,
-  `5bcce8e`). `Canary_scenario.lower_expectation_agnostic` derives the
-  expectation from the bindings table + (action, loc) ALONE — no per-scenario
-  `violates`/`has_manifest` — by unioning every contract's `From_artifact`
-  inputs at the firing site and letting `predicted_contains_any_v2` DISCOVER
-  the break by inspection. Proven for c1 at the *derivation* level (test
-  `scenario.lower_expectation_agnostic_c1`). **Open before wiring into the
-  run:** the empty-prediction question — at a probe site a *good* build also
-  matches the firings, so it emits `Expect_compat_failure` with an empty
-  runtime prediction; whether that verifies as success (the old
-  `has_manifest` role) must be settled, and c3 (behaviour) / c6 (grep-type)
-  aren't inspection-discoverable — they stay oracle-fed. The run still uses the
-  oracle path today; `recipe.expected` remains the tiny1 cross-check oracle.
-- **Phase 3 — combinations (canary computes the collapse; tiny-full does
-  not).** {b Corrected 2026-08-02:} tiny-full DECLARES static artifact
-  *resources* — the tiny-factory provides each artifact's variants (good +
-  bad), and for tiny-full they are **[Vendored]** local pre-built resources
-  (not rebuilt per scenario). A scenario is an assignment of *which variant
-  each artifact takes*; a combination is several bad ones vendored together.
-  tiny-full does **not** compute the outcome: it depends on **canary** to run
-  fail-fast over the vendored resources and *discover* the first failure and
-  the expectation itself. The "collapse" is emergent from canary's run, not a
-  spec computation. (Reverted the `earliest_bad_of`/`dep_rank` collapse-key
-  prediction — that was tiny-full doing canary's job.)
-  - **Step 1 — enumeration** ✅ (2026-08-02, `092ad70` then `<this>`).
-    `tiny_full_placement` is [Vendored]; `tiny_full_combinations` enumerates
-    the multi-bad resource-sets along source→lib→binding (the scenarios
-    *beyond* tiny1 — one project holds what tiny1 splits). The run just
-    *declares* them (`{source#Bs.1, lib#Bs.4}`), no prediction.
-  - **Step 2 — the vendored-resource materializer** ⏳ (in progress). Model:
-    **emit → assemble → run.**
-    - **Emit** (decided: *extract*, not rebuild): the factory already builds
-      every single-mutation scenario (`run_prepare_all`); each workspace holds
-      its one mutated artifact. Extract each into a resource keyed by `id#tag`
-      (`_cache/resources/<id>/<tag>/…`) — good variants from baseline. Per-
-      artifact file map: source→`c/src`+`c/include`, lib→`c/build`,
-      ocaml-cstubs→`_build/default/ocaml`, python-cext→`python_cext/tiny_cext`.
-    - **Assemble** (`assemble ~assignment`): copy the baseline tree, overlay
-      `resources/<id>/<tag>/*` for each bad artifact, re-apply the fixups
-      (`dune-project`, RUNPATH strip, `libtiny.so` symlink). No rebuild.
-    - **Run**: `stores_of_workspace` on the assembly + base runner_spec +
-      `derive_steps`, fail-fast.
-    - **Scoping finding — vendored resources are the BUILT artifacts** (lib
-      `c/build/*`, ocaml binding `_build/default/ocaml/*`, cext
-      `python_cext/tiny_cext/*.so`). **Source folds into lib**: it is a build
-      input compiled *into* `libtiny.so`, so a source-bad scenario (Bs.1)
-      manifests as a bad *lib* resource, not a separate source resource. The
-      good base (all-good *built* tree) is an **unmutated witness** workspace
-      (`app_over_binding_ocaml`) — the baseline workspace has no `_build`.
-    - **First cut (decided): single-bad assemblies first** (oracle expectation),
-      proving the vendored assembly reproduces tiny1's per-scenario detection.
-      Narrowest start: the **lib** resource (extract Bs.4's `c/build`, overlay
-      on the witness base, run, confirm c4 ABI detection) — then ocaml-binding
-      + cext.
-    - **Emit + assemble — validated** (2026-08-02, `<this>`).
-      `Canary_tiny_workspace.{resource_dir, emit_resource, assemble}` +
-      `assemble_check` (CLI `tiny assemble-check --id lib Bs.4`): extracts the
-      bad lib from `abi_soname_bump`'s workspace and overlays it on the
-      `app_over_binding_ocaml` (unmutated witness) base → an assembled tree
-      with `libtiny.so.2` (bad lib) + the good base's cext (needs
-      `libtiny.so.1`) = the c4 deploy mismatch, no rebuild. `subdir_of_resource`
-      maps the three built artifacts (lib / ocaml-cstubs / cext).
-    - **RUN over the assembly — working** (2026-08-02, `dd912a7`).
-      `materialize_assembled ~overlays ~label` + `run_tiny_scenario
-      ?workspace_override` drive the whole normal run path (stores → runner_spec
-      → derive_steps → run → status) over the *assembled* tree. `run_assembled`
-      + CLI `tiny assemble-run <TAG>`. Validated single-bad (oracle
-      expectation): **Bs.1 (c1), Bs.4 (c4 deploy mismatch), Bs.8 (ocaml
-      binding) all PASS from assembled resources — no rebuild.** `tiny
-      assemble-check` (no tag) lists all assemblable resources.
-    - **Still to do:** python cext + remaining tags; then **combinations**
-      (pull in the P2b agnostic expectation — no single oracle scenario); then
-      factor into `canary_project_tiny.ml` + the generic runner (the
-      convergence — one runner for tiny-full and z3/sqlite).
-    - **Two follow-ons flagged:** (i) *combinations* need the expectation from
-      canary inspecting the assembly (the P2b agnostic path — no single oracle
-      scenario), so they converge with P2b; (ii) a bad binding extracted from
-      its good-lib build, overlaid on a bad lib, is a **deploy mismatch**
-      (build-lib ≠ run-lib) — accepted as the realistic vendored semantics; a
-      faithful "binding built against the bad lib" would need a per-combo
-      rebuild (deferred).
-- **Phase 4 — structural registration.** `variants_of "tiny-full"` +
-  `covered_of` so `canary scenarios tiny-full` shows the coverage matrix like
-  sqlite/z3; optional bundle value. Any time after Phase 2.
+**The arc is done** (2026-08-01 → 2026-08-03) — full phase-by-phase history
+in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md). In one line
+each:
 
-Dependency: P1 → P2 → P3; P4 after P2. P3 pulls in the graph/merge work
-(edges drive collapse order — §1c, `enumeration_graph.md`).
+- **P0** command-level peer + `action tiny-full` as a project (`b6ca255`,
+  `4b003f3`).
+- **P1** agnostic driver over an opaque tag (`3e1bc83`).
+- **P2a** tag folded into the typed version — `build_id = {channel; quality}`,
+  a bad artifact is `dev#Bs.1` (`b943b1a`).
+- **P2b** agnostic expectation — `lower_expectation_agnostic` +
+  `Expect_compat_derived`; tiny-full runs with **no oracle** (`5bcce8e`,
+  `c96eb1f`).
+- **P3** vendored resources + combinations — emit→assemble→run; `action
+  tiny-full` **20/20** via assembly; `tiny assemble-combo` for the
+  beyond-tiny1 multi-bad; canary computes the collapse (`94fa841` … `d627890`).
+- **Convergence 1** `canary_project_tiny.ml` (project module + `project_run`
+  interface, `ab4bcd4`); **2** `run_project_run` — the project-agnostic runner
+  drives tiny-full via closures, z3/llvm untouched (`a620b15`).
 
-**Older plan notes (kept for context):** tiny-full first (view, then runner);
-tiny1 derivation after; packaging deferred but **must** come back (the
-provision axis needs tiny published/fetched — until then provision is
-`Built`/`Absent` only).
-**First step — tiny-full v1:** the algorithm enumerates tiny's full artifact
-set over provision {Absent, Built} × version {1.0, 2.0} (tiny already has
-the `TINY_1.0`/`TINY_2.0` map + all three mechanisms); view first, then
-drive the runner with fail-fast + coverage.
-
-**tiny-full v1 (view) — shipped** (the positive-variant enumeration view,
-rendered at the top of `canary action tiny-full`), and it revealed the
-taming the enumeration still needs:
-- raw cartesian = **2048** scenarios (with duplicates: version was ranged
-  *per-artifact*, so `absent@dev`/`absent@stable` duplicated and present
-  artifacts got spurious version *mismatches*). → **fixed**: version is
-  whole-scenario for the positive space (2048 → **64**).
-- **app→binding dependency added** to `assignment_ok` (an app with no
-  binding is degenerate; general improvement, not tiny-specific): 64 → **58**.
-- 64 → **58** (app→binding dependency in `assignment_ok`).
-- **presence was the wrong axis** (2026-08-01): a project **ships its whole
-  declared set** — the binding list is a **fixed set of (lang, mechanism)
-  pairs** (only some combos exist; tiny: 1 OCaml + 2 Python), and presence
-  is **not** a choice. So the 2048→58 presence enumeration was a dead end.
-- **but "2" is an over-collapse** (2026-08-01): **version is per dependency
-  *edge*, create (build) vs use (run) apart** (ssot §4.2.4) — an OCaml
-  binding ranges header-version × lib-version = 4; an app ranges
-  build-lib-version × run-lib-version = 4 (the deploy mismatch). The count
-  is a **product over consumption edges**, and those mismatch points are
-  canary's *purpose*, not "bad". So the real tiny-full breadth is the
-  per-edge version product, *not* 2.
-  - **Model (2026-08-01, corrected):** an artifact **instance** is one
-    concrete thing = its `placement` (`provision/location × version` +
-    metadata) — **`placement` is correct**, an artifact is *not* a set of
-    instances. The cartesian **choices** for an artifact (version × store
-    **location** — build tree / staged install / PM) are carried by its
-    **artifact group**; the enumeration picks one instance per group.
-    **Provision folds into location** (build⇒built, PM⇒fetched,
-    staged⇒installed). Using an instance at a different location needs a
-    **different command** = the `runner_spec`'s job. See ssot §4.2.4.
-  - **The instance graph already exists** (2026-08-01 finding):
-    `Canary_basic.artifact_node` (`a_location` + `built_from` = Build edge +
-    `runtime_dep` = Run edge) + `Canary_action.make_action_graph` already
-    build it and already generate the deploy mismatch (`Build_app` pairs each
-    binding with *every* runtime lib). So `canary_enumerate` was about to
-    **reimplement** it. The work is a **merge**, not a new graph: one
-    `instance` = `artifact_node` + `ext` (mechanism/wiring) + a **typed**
-    version (today in `a_name`); the enumeration `config`/levels sit on top.
-    Edge ≈ action (built_from/runtime_dep are action-produced) — a known,
-    accepted smell. Design note:
-    [`design/enumeration_graph.md`](design/enumeration_graph.md). First cut:
-    full-graph shape, minimal scope (one version, no app, chain
-    source→lib→binding), extend `artifact_node` not a parallel type.
-  - **cmake constraint (Staged location):** installing a cmake lib must use
-    a **customized install prefix**, never the global system path (avoid
-    depending on / polluting the host).
+**Historical exploration** (the positive-space count churn 2048→64→58, the
+per-edge version model, the "instance graph already exists" finding) moved to
+[`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md). The still-live
+*deferred* design — per-edge version / the graph merge, packaging (provision
+`Fetched`, cmake customized-prefix install) — is tracked in §1c and
+[`enumeration_graph.md`](design/enumeration_graph.md).
 
 ## 1b. Scenario enumeration — implementation state
 
@@ -362,9 +227,10 @@ per use). This tracks what's actually wired.
   mutation `Full`) and `general_slice` (provision `Full`, mutation `Free`)
   are now thin wrappers over `run_config`, byte-identical to before (a
   layer test pins the agreement). Only two axes are ranged so far.
-- **Axes wired:** provision ✓ (coarse origin only), version ✓ (as
-  channel), mutation ✓. **Remaining axes + their code gaps** (decisions in
-  ssot §4.2.3):
+- **Axes wired:** provision ✓ (coarse origin only), version ✓ (now
+  `build_id = {channel; quality}` — quality `Good | Bad tag` folds the
+  mutation into the version identity, ssot §4.2.2/§4.2.5), mutation ✓.
+  **Remaining axes + their code gaps** (decisions in ssot §4.2.3):
   - **mechanism / app-wiring — identity structure shipped (interim).**
     The enumeration now keys on a precise identity — the pair
     `(artifact, artifact_ext)` (`Canary_enumerate.artifact_id`): `artifact`
@@ -465,24 +331,12 @@ per use). This tracks what's actually wired.
 
 One place to resume from. Each has a home doc with the detail.
 
-- ✅ **tiny-full RUN — shipped** (2026-08-02). `canary action tiny-full` (a
-  project peer of sqlite/z3/llvm — run through the general `action` command,
-  not a `tiny` subcommand) renders the positive variant space *and* runs the
-  algorithm's good+bad enumeration
-  (`Canary_tiny_scenario.run_tiny_full ~run`): iterates `engine_points` (the
-  `tiny_slice` projection — 1 positive + N mutation points over ONE fixed
-  artifact set), derives the positive witnesses (`mutation_target_of_spec =
-  None`), resolves each mutation point `scenario_id` → name → run, fail-fast,
-  PASS = detected. **No hand-written scenario list** (the tiny1-proxy — a
-  hand-picked 4-item list — is gone). First run: 2 positive quiet, **20/20
-  mutation scenarios detected (22/22 artifact points)**. §1a.
-- **Next on tiny-full — the "beyond tiny1" part** (not yet built): real
-  **combinations** (multi-mutation workspaces — bad lib *and* bad binding, a
-  single project in tiny-full vs. separate projects in tiny1) + true
-  **fail-fast collapse** (the first checkable error stops the trace, so a
-  detected bad lib subsumes a downstream bad binding/app into one observable
-  scenario keyed by the earliest failure). Today each enumerated point is a
-  *single* mutation, so the collapse isn't exercised. §1a, ssot §4.2.4.
+- ✅ **The tiny-full arc is done** (naming → agnostic runner → vendored
+  resources → combinations → generic runner). See §1a +
+  [`worklog_2026_08.md`](worklog/worklog_2026_08.md). The threads below are the
+  still-open *deferred* enumeration / graph / packaging work.
+- **Next real step: sqlite `project_run`** (materialize = build/fetch) — one
+  runner, two projects (the convergence proof). Then two versions / packages.
 - **Per-edge version model** — `placement` is per-artifact; the deploy
   mismatch (build vs run lib) needs the graph edge to carry the consumed
   instance. **The graph already exists** (`artifact_node` + `make_action_graph`)

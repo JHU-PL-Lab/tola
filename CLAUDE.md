@@ -483,7 +483,9 @@ compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
 derived expectation) shipped this session — see `surface_draft/implementation.md` §2.7 and
 commits `2a8d2eb`, `96b143c`, `84caf5d`, `8943ba2`, `7dfb1f2`.
 
-Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05}.md`.
+Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05,06,07,08}.md`
+(`worklog_2026_08.md` = the tiny-full arc: agnostic runner → vendored
+resources → combinations → generic runner).
 
 ## Other Work: Yelu
 
