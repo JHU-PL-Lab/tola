@@ -131,9 +131,28 @@ let run_assembled ~root ~failfast ~tag : unit =
    handed to `Canary_tiny_scenario.run_tiny_full`, which iterates the
    enumerated points — no hand-written scenario list. status.md §1a. *)
 let run_tiny_full_project ~root ~cache_path ~cli_disabled : unit =
+  (* The materialize-and-detect primitive, now VENDORED: a bad scenario runs
+     over an *assembled* tree (its bad resource overlaid on the witness base —
+     no rebuild); a positive/witness scenario runs over its own good tree. The
+     resource id is derived from the scenario's tag ([resource_id_of_tag]);
+     [None] ⇒ not a mutation ⇒ positive. Falls back to the per-scenario
+     workspace if the resource can't be assembled (e.g. `prepare-all` hasn't
+     run). run_tiny_full's interface is unchanged — only *how* a name is run. *)
   let run ~failfast ~name =
     (try
-       run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name ()
+       let assembled =
+         match Canary_tiny_scenario.find_by_name name with
+         | Some s -> (
+             match Canary_tiny_workspace.resource_id_of_tag s.scenario.id with
+             | Some id ->
+                 Canary_tiny_workspace.materialize_assembled
+                   ~overlays:[ (id, s.scenario.id) ]
+                   ~label:(id ^ "#" ^ s.scenario.id)
+             | None -> None)
+         | None -> None
+       in
+       run_tiny_scenario ?workspace_override:assembled ~root ~failfast
+         ~cache_path ~cli_disabled ~name ()
      with _ -> ());
     scenario_status_of_run_state ()
   in
