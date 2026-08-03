@@ -256,39 +256,23 @@ Larger design shifts. None active; awareness only.
 
 ## 5. Deferred code polish
 
-Not blocking; part of the post-stabilisation "uniformity
-eventually" pass.
+Not blocking; the "uniformity eventually" pass. (Newer polish — scenario
+names, tiny-full `docs/canary` output volume — is in §1 to-do #5.)
 
-- **First-class `artifact_details` (parked, not enumeration-related).**
-  `base/canary_store.ml` has two related-but-distinct artifact axes:
-  `provision` (origin — where it came FROM / blame; fixed) and
-  `artifact_status` + `location` (whereabouts — where it is NOW; moves).
-  Plan is a first-class `artifact_details` record `{ provision; status;
-  location; … }` so an artifact can be blamed to its origin while its
-  state is tracked. Deferred until a consumer needs provenance/blame
-  tracking; intent captured in the `artifact_status` comment. `provision`
-  is wired now (enumeration); `artifact_status` stays unused until then.
+- **First-class `artifact_details`.** `base/canary_store.ml` splits two
+  artifact axes: `provision` (origin / blame — wired now) and
+  `artifact_status` + `location` (whereabouts — moves). A first-class
+  `artifact_details` `{ provision; status; location; … }` would let an
+  artifact be blamed to its origin while its state is tracked. Deferred until
+  a consumer needs provenance/blame; `artifact_status` stays unused until then.
+- **Sync `scenario.actions` with the runtime.** Today `scenario.actions` is
+  metadata; canary's factory emits the full spec regardless. Making the factory
+  respect it (emit steps only for the listed actions) would let a `Bs.N` run
+  skip the language chain its mutation doesn't touch (e.g. Bs.10's OCaml-only
+  mutation wouldn't run the Python probe). Touches `derive_steps`; couples with
+  the recipe-interface work.
 
-- ~~**Task 3 — term-rename sweep**~~ ✅ shipped 2026-07-21
-  (`rule → action`, `action_step → step`, `stage → artifact_status`,
-  plus `project_spec → runner_spec` and `action_rule → action_graph`).
-  Chronicle in [`worklog_2026_07.md`](worklog/worklog_2026_07.md).
-- **Engine vocabulary alignment in code.** Add explicit
-  *mutation engine* / *combinator engine* naming to
-  `canary_project_tiny.ml` (combinator-side) and
-  `canary/examples/tiny/scenarios/` (mutation-side; largely
-  retired). See `backlog.md` #46.
-- ~~**Derive `related_artifacts` from `actions`**~~ — done
-  2026-07-10; field removed, getter derives from
-  `scenario.actions`. See [`design/tiny.md §7.9`](design/tiny.md#79-derive-related_artifacts-from-actions-done-2026-07-10).
-
-- **Sync `scenario.actions` with canary runtime.** Today
-  `scenario.actions` is metadata (per parent Sc.N); canary's
-  factory always emits the full spec regardless. Future
-  task: make the factory respect `scenario.actions` and only
-  emit steps for the listed rules. Would let Bs.N runs skip
-  the language chain the mutation doesn't touch (e.g.
-  Bs.10's OCaml-only mutation wouldn't run the Python
-  probe). Non-trivial — touches `derive_steps` in
-  `canary_step_builder`; couples with Task 2 (recipe
-  interface), so best done as a Task 2 follow-up.
+Done + chronicled in the 2026-07 worklog: Task 3 term-rename sweep, derive
+`related_artifacts` from `actions`. The old "engine vocabulary alignment" item
+is superseded — the framing is now the *enumeration algorithm*, and
+`canary_project_tiny.ml` exists as the project module.
