@@ -27,70 +27,115 @@ Historical chronicles in [`worklog/`](worklog/).
 
 **tiny-full is a working mutation-agnostic project** driven by a
 project-agnostic runner. `canary action tiny-full` enumerates the good+bad
-space, assembles vendored artifact resources (no rebuild), and **canary
-computes** detection + expectation + the fail-fast collapse — 20/20, via
-`run_project_run` over a `project_run` spec. z3/llvm stay raw-script
-(`run_project_multi`), untouched. The tiny trilogy + principle are design
-(**ssot §4.2.5**); the full arc history is
+space, assembles **cached artifacts** (no rebuild), and **canary computes**
+detection + expectation + the fail-fast collapse, via `run_project_run` over a
+`project_run` spec. Honest coverage is **12/24** (thin **12/20**), **cold ==
+warm** — the earlier "20/20"/"24/24" were warm-cache fake-green (a failed probe
+cached as success; fixed). The 12 undetected are watchlist-blind (c5/c6/abi) and
+need richer *inspectors*, not plumbing. **sqlite runs through the SAME generic
+runner** (Fetched + Built). z3/llvm stay raw-script (`run_project_multi`),
+untouched. Trilogy + principle: **ssot §4.2.5**; full arc history
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**To-do, in order** (sqlite pulled forward — a real project forces the
-enumeration / graph / packaging issues to surface earlier than synthetic
-tiny-full can):
+**Recently landed** (2026-08-03): run-cache **soundness** (Fix B — a per-step
+verdict marker; a failed probe no longer serves a cached success; `canary
+cache-test` guards it) · the **`spec`** dry-run snapshot (grouped artifacts +
+enumerated scenarios; z3/llvm read-only variant view) · **Fix A** (a cached
+artifact carries its **source**, not just the built output, so source-manifested
+drift is detectable) + **born-safe artifact ids** (`string_of_id` uses `-`, no
+`:`; the PYTHONPATH-splitting bug is gone; `safe_workspace_name` deleted) · the
+**thin** Subset config (`--thin`) · the **naming unification** (resource →
+*cached artifact*). Net: tiny-full went from a fake 24/24 to an honest, stable
+12/24.
 
-1. ✅ **Make tiny realistic — provision + version-aware build** (done for the
-   milestone):
-   - **provision variety** — the good lib gained a **Built** choice (canary
-     compiles it from `c/src`, observable) alongside **Vendored** (pre-built
-     resource). `pr_materialize` dispatches; build/fetch stay runner_spec
-     **actions**; Built + Vendored cache separately via `variant_id`
-     ([`cache.md`](design/cache.md)). **Fetched** (canary fetches from a PM at
-     run time) still to add.
-   - **two versions (a) — version-aware build** — dev-only `tiny_scale` +
-     `tiny.dev.map`; `build_lib ~channel` compiles Dev with `-DTINY_DEV` + the
-     dev version script; `pr_runner_spec` reads the assignment's channel.
-     `action tiny-full` builds a Stable and a Dev lib (dev exports
-     `tiny_scale@@TINY_2.0`), cached separately.
-   - **(b) the deploy mismatch — deferred** → to-do #3.
-2. **sqlite `project_run` — the real-world instance of the §4.2.5 model**
-   (pulled forward). Same shape as tiny-full — a `project_run` consumed by the
-   generic `run_project_run` — but real-world: provision = **Fetched** (a PM:
-   apt/opam/pip) / **Built** (source), **no vendoring**; **positive-only** (we
-   don't mutate a real project); the agnostic expectation stays quiet on the
-   good artifact. Forces early: the **Fetched materialize** (canary fetches as
-   an *action* — the packaging piece tiny lacks), the generic runner on a real
-   fetch/build, real **version** (system vs source), and the real **dependency
-   graph** (libsqlite3 → Python stdlib `sqlite3` + the OCaml binding). Start
-   positive-only Fetched → Built → version. (z3/llvm stay raw-script
-   `run_project_multi`.) Absorbs the old "sqlite = one runner, two projects"
-   convergence proof + the distro × sys-PM × lang-PM packaging enumeration.
-3. **Version deploy-mismatch coverage** (to-do; *beyond the algorithm
-   milestone*, worth its own discussion + implementation). Detecting a version
-   mismatch needs a consumer that *exercises* the differing symbols; direction
-   matters:
-   - **backward** (existing apps suffice): a stable-built consumer deployed
-     against a newer **incompatible** lib (soname / symver bump — the `Bs.4` /
-     `Bs.3` mechanism) → c4/c5. No new binding.
-   - **forward**: a consumer using a dev-only symbol (`tiny_scale`) run @stable
-     → missing → c1/c2. Needs a **dev consumer**.
-   The additive `tiny_scale` is *forward-only* (existing apps don't call it).
-   Broad coverage — **missing *and* added symbols across versions** — likely
-   wants multiple apps, or apps that call specific per-version symbols, the way
-   z3/llvm hardcode a required-symbol watchlist. Design + build together.
-4. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
+**To-do, in order:**
+
+1. ✅ **tiny realistic — provision + version-aware build** (done). Built +
+   Vendored + Dev/Stable exercised (`pr_materialize` dispatches; build/fetch stay
+   runner_spec **actions**; cache separately via `variant_id`,
+   [`cache.md`](design/cache.md)). **Fetched** (canary fetches from a PM at run
+   time) still to add.
+2. **sqlite `project_run`** — **Fetched ✅ + Built ✅** through the generic runner
+   (real fetch/build actions, no vendoring; positive-only). Remaining: an
+   OCaml/Python **binding built against the Built lib** (the Built scenario is
+   lib-only today); a **real version axis** (the amalgamation URL is hardcoded
+   `3450100` — should come from `placement.version`); then the **distro × sys-PM
+   × lang-PM** packaging enumeration.
+3. **Richer agnostic inspectors** (the lever for 12 → more). The 12 undetected
+   tiny-full scenarios fail *unexpectedly* because the **watchlist** can't
+   predict them: c5 symbol-version, c6 type, abi/soname, api-repack (build-level),
+   behavior (runtime). Wire these inspectors' output into the agnostic derivation
+   — not plumbing.
+4. **Version deploy-mismatch coverage** (deferred; *beyond the algorithm
+   milestone*). Needs a consumer that *exercises* the differing symbols:
+   - **backward** (existing apps suffice): a stable-built consumer against a newer
+     **incompatible** lib (soname / symver bump — `Bs.4` / `Bs.3`) → c4/c5.
+   - **forward**: a consumer using a dev-only symbol (`tiny_scale`) @stable →
+     missing → c1/c2. Needs a **dev consumer**.
+   Broad coverage (**missing *and* added** symbols across versions) likely wants
+   multiple apps / per-version required-symbol watchlists (like z3/llvm). Design +
+   build together.
+5. **Unification pass** (from §1c project-file review). *Quick hygiene now*:
+   delete dead `z3_source_latest` / `llvm_source_latest` / `llvm_sources`; sweep
+   the remaining "resource"/"vendored" *comments* → cached artifact; make
+   `detect_pm` lazy (it runs at module-load today). *Then the real convergence*:
+   migrate z3/llvm/ssl onto `project_run` (variants → `pr_enumerate`,
+   `mk_runner_spec` → `pr_runner_spec`), collapse `Canary_project.project` into
+   `project_run` (one project identity), retire `run_project_multi`. *Then* unify
+   the 3-way expectation model (§1c).
+6. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
    tiny-full (assignment) on the shared `Bs.N` key.
-5. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
-   `docs/canary` output volume).
+7. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
+   `docs/canary` output volume; optional `pretty_id` `-`→`:` for display).
+
+## 1c. Project-file review (2026-08-03)
+
+Read across `src/canary/projects/*.ml`. The headline: **three ways to define a
+project**, and **two** project-identity types — the core non-uniformity the
+unification pass (to-do #5) resolves.
+
+| Tier | Mechanism | Projects | Runner |
+| --- | --- | --- | --- |
+| **project_run** | declare artifacts + enumerate + materialize + runner_spec | tiny-full, sqlite | generic `run_project_run` |
+| **raw runner_spec** | `mk_runner_spec ~source` / `mk_variant` per variant | z3, llvm, ssl | `run_project_multi` |
+| **Pattern A** | ~40-line declaration → runner_spec | zarith, cairo | `run_project_multi` |
+
+Ranked issues:
+
+1. **Expectation model is 3 different things** — tiny-full **agnostic**
+   (`expectation_agnostic`, derived by inspection); z3/llvm **contract-bound**
+   (`lower_expectation` over `*_contract_bindings`); ssl **hand-written**
+   (`Expect_failure { contains_any = ["native_library_version"] }`). Unify toward
+   derived once one runner (to-do #5) is in place.
+2. **Module-init side effects** — `Canary_store.detect_pm ()` runs at *module
+   load* (`ssl.ml:56`, `sqlite.ml:61`, via pattern_a), so `spec`/`paths`/`graph`
+   probe for a PM they don't need. Make lazy.
+3. **Dead code** (0 live uses, confirmed): `z3_source_latest`,
+   `llvm_source_latest`, `llvm_sources`. Delete.
+4. **Terminology sweep** — identifiers renamed, but "vendored resource(s)" survives
+   in comments (`project_run.ml:9`, `project_tiny.ml:3-7,45,86`).
+5. **sqlite carries two shapes** — the older Fetched-only `runner_spec` (used by
+   CI) + the newer `sqlite_run` project_run; plus `built_runner_spec` uses raw
+   `gcc`/`curl` `Printf` instead of `Canary_cc`/`build_cmd`, and the version axis
+   is cosmetic (see to-do #2).
+6. **z3 / llvm are structural twins that share nothing** (~600 lines each, same
+   skeleton) — no "Pattern C" template. Lower priority (genuinely more complex:
+   cmake, `opam.in`, sccache).
+7. **Minor** — `canary_run.sqlite_job` duplicates a `ci_jobs` entry (debug-only);
+   `open Canary` shim still consumed.
+
+**Good**: `project_run` is minimal and right; Pattern A is a clean compression;
+watchlists are documented with rationale.
 
 ## 1a. The tiny trilogy + enumeration state (design: ssot §4.2 / §4.2.5)
 
 - **tiny-factory** — the machinery (`canary_tiny_scenario.ml` specs +
-  `canary_tiny_workspace.ml` materializer/emitter/assembler) that *makes* every
-  artifact variant as a resource + holds the tiny1 oracle.
+  `canary_tiny_workspace.ml` materializer / cache_artifact / assembler) that
+  *makes* every artifact variant as a **cached artifact** + holds the tiny1 oracle.
 - **tiny1** — the single-scenario projects, each a hand-written good/bad case =
   the ground-truth **oracle** (validates the tooling/checkers). `canary tiny run`.
 - **tiny-full** — the *one* project (peer of sqlite/z3) that **declares** those
-  vendored resources; **canary computes** detection/expectation/collapse
+  cached artifacts; **canary computes** detection/expectation/collapse
   (validates the algorithm/integration). `canary action tiny-full`. Its
   coverage cross-checks against tiny1; a real simple project is "no harder than
   tiny-full".
@@ -110,9 +155,10 @@ each:
 - **P2b** agnostic expectation — `lower_expectation_agnostic` +
   `Expect_compat_derived`; tiny-full runs with **no oracle** (`5bcce8e`,
   `c96eb1f`).
-- **P3** vendored resources + combinations — emit→assemble→run; `action
-  tiny-full` **20/20** via assembly; `tiny assemble-combo` for the
-  beyond-tiny1 multi-bad; canary computes the collapse (`94fa841` … `d627890`).
+- **P3** cached artifacts + combinations — cache→assemble→run; `action
+  tiny-full` reported **20/20** via assembly (later found warm-cache inflated —
+  honest **12/24** after Fix B); `tiny assemble-combo` for the beyond-tiny1
+  multi-bad; canary computes the collapse (`94fa841` … `d627890`).
 - **Convergence 1** `canary_project_tiny.ml` (project module + `project_run`
   interface, `ab4bcd4`); **2** `run_project_run` — the project-agnostic runner
   drives tiny-full via closures, z3/llvm untouched (`a620b15`).
@@ -123,9 +169,9 @@ each axis to `Free`/`Subset`/`Full`. Axes wired: **provision**
 (`Absent`/`Fetched`/`Built`/`Vendored`, coarse origin), **version**
 (`build_id = {channel; quality}` — quality folds the mutation into the version
 identity), **mutation**, and **mechanism/app-wiring** (the precise
-`(artifact, ext)` identity, kept off the base `artifact_kind`). tiny pins
-`channel=Dev` + provision `Vendored` today — to-do #1 makes it exercise
-Dev/Stable + Built/Fetched. Still open (→ §1b below): fold `(artifact, ext)`
+`(artifact, ext)` identity, kept off the base `artifact_kind`). tiny now
+exercises **Dev/Stable × Built/Vendored** (to-do #1 done); **Fetched** still to
+add. Still open (→ §1b below): fold `(artifact, ext)`
 into base `artifact_kind`; provision sub-structure (PM × distro); Headers
 provision; versioning unification ([versioning.md](design/versioning.md)); the
 §5 rewrite ("bad scenario" -> "scenario with a bad *result*").
