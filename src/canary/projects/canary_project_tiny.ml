@@ -1,10 +1,10 @@
 (** tiny-full — the PROJECT (peer of [canary_project_z3] / [_sqlite]).
 
-    The mutation-agnostic general project over tiny's vendored artifact
-    resources (ssot §4.2.5). The split this module realizes:
+    The mutation-agnostic general project over tiny's cached artifacts
+    (ssot §4.2.5). The split this module realizes:
 
     - the **factory** ([Canary_tiny_scenario] + [Canary_tiny_workspace]) MAKES
-      the ingredients — every artifact variant as a built resource — and holds
+      the ingredients — every artifact variant as a cached artifact — and holds
       the tiny1 oracle (`canary tiny run`);
     - this **project_spec** DECLARES those ingredients + the scenario space;
     - the **runner** ([canary_main]) EXPLORES them via `canary action tiny-full`:
@@ -42,8 +42,8 @@ let spec : TS.tiny_full_spec = TS.tiny_full_spec
 let assignments () : Canary_enumerate.assignment list =
   TS.tiny_full_assignments spec
 
-(** The multi-bad resource-sets — the scenarios *beyond* tiny1 (one project
-    holds what tiny1 splits). *)
+(** The multi-bad cached-artifact sets — the scenarios *beyond* tiny1 (one
+    project holds what tiny1 splits). *)
 let combinations () : Canary_enumerate.assignment list =
   TS.tiny_full_combinations spec
 
@@ -83,8 +83,8 @@ let tiny_full_run : project_run =
     pr_artifacts = artifacts;
     (* the scenario space the generic runner sweeps: good + built-lib +
        single-bad ([assignments]) AND the multi-bad [combinations] (the
-       scenarios beyond tiny1). Combos flow through the same vendored-overlay
-       materialize path ([overlays_of] → [materialize_assembled]); canary runs
+       scenarios beyond tiny1). Combos flow through the same cached-artifact
+       overlay path ([overlays_of] → [materialize_assembled]); canary runs
        fail-fast and discovers the collapse. *)
     pr_enumerate = (fun () -> assignments () @ combinations ());
     pr_materialize =

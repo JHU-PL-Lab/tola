@@ -75,14 +75,16 @@ drift is detectable) + **born-safe artifact ids** (`string_of_id` uses `-`, no
    Broad coverage (**missing *and* added** symbols across versions) likely wants
    multiple apps / per-version required-symbol watchlists (like z3/llvm). Design +
    build together.
-5. **Unification pass** (from §1c project-file review). *Quick hygiene now*:
-   delete dead `z3_source_latest` / `llvm_source_latest` / `llvm_sources`; sweep
-   the remaining "resource"/"vendored" *comments* → cached artifact; make
-   `detect_pm` lazy (it runs at module-load today). *Then the real convergence*:
-   migrate z3/llvm/ssl onto `project_run` (variants → `pr_enumerate`,
-   `mk_runner_spec` → `pr_runner_spec`), collapse `Canary_project.project` into
-   `project_run` (one project identity), retire `run_project_multi`. *Then* unify
-   the 3-way expectation model (§1c).
+5. **Unification pass** (from §1c project-file review). *Quick hygiene* — done
+   2026-08-03: swept "resource"/"vendored" *comments* → cached artifact;
+   **memoized** `detect_pm` (one PM probe per run, not ~4× at module-load). The
+   unwired `latest` channel is kept as spec data (§1c #3). *Still deferred*:
+   FULLY skip `detect_pm` for PM-irrelevant commands (needs deferring
+   runner_spec construction — the pm is baked into store_config data). *Then the
+   real convergence*: migrate z3/llvm/ssl onto `project_run` (variants →
+   `pr_enumerate`, `mk_runner_spec` → `pr_runner_spec`), collapse
+   `Canary_project.project` into `project_run` (one project identity), retire
+   `run_project_multi`. *Then* unify the 3-way expectation model (§1c #1).
 6. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
    tiny-full (assignment) on the shared `Bs.N` key.
 7. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
@@ -110,8 +112,12 @@ Ranked issues:
 2. **Module-init side effects** — `Canary_store.detect_pm ()` runs at *module
    load* (`ssl.ml:56`, `sqlite.ml:61`, via pattern_a), so `spec`/`paths`/`graph`
    probe for a PM they don't need. Make lazy.
-3. **Dead code** (0 live uses, confirmed): `z3_source_latest`,
-   `llvm_source_latest`, `llvm_sources`. Delete.
+3. **Unwired `latest` channel** (NOT dead — intended spec data). z3/llvm declare
+   a third release channel `z3_source_latest` / `llvm_source_latest`
+   (`version="latest"; ref_="HEAD"`) beside dev (pinned) and stable (released),
+   plus `llvm_sources = [dev; stable; latest]`. 0 live uses today — nothing runs
+   the `latest` variant. **Keep**; wire it when a 3rd-channel variant / the
+   version-axis work lands (§1b). Don't delete.
 4. **Terminology sweep** — identifiers renamed, but "vendored resource(s)" survives
    in comments (`project_run.ml:9`, `project_tiny.ml:3-7,45,86`).
 5. **sqlite carries two shapes** — the older Fetched-only `runner_spec` (used by

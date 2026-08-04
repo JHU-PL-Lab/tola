@@ -6,7 +6,7 @@
     - [pr_enumerate] — the scenario space as [Canary_enumerate.assignment]s
       (per-artifact provision × version [× quality for tiny]).
     - [pr_materialize] — place whatever must exist *before* the run (a
-      source tree, vendored resources); returns the runnable workspace path.
+      source tree, cached artifacts); returns the runnable workspace path.
       `Built`/`Fetched` are NOT placed here — they are canary *actions*
       (build_lib / fetch_lib) the runner runs and observes. A pure-Fetched
       project (sqlite) barely materializes anything.

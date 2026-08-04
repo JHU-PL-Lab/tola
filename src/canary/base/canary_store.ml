@@ -109,10 +109,20 @@ let store = Pm (Sys_pm { pm = Apt })
 
 (* ── System package manager detection and commands ── *)
 
-let detect_pm () =
-  if Stdlib.Sys.command "which brew > /dev/null 2>&1" = 0 then Brew
-  else if Stdlib.Sys.command "which apt-get > /dev/null 2>&1" = 0 then Apt
-  else Unsupported
+(* Memoized: the detected PM doesn't change during a run, and [detect_pm] is
+   called at MODULE LOAD by several project specs (`let pm = detect_pm ()`), so
+   without memoization every `canary` invocation spawns `which brew` + `which
+   apt-get` once per spec (~4×) at startup — even for PM-irrelevant commands
+   (`spec`/`paths`/`graph`). This caps it at one probe. (Fully SKIPPING it for
+   PM-irrelevant commands needs deferring runner_spec construction — the pm is
+   baked into store_config data, not a closure — tracked in status.) *)
+let detected_pm =
+  lazy
+    (if Stdlib.Sys.command "which brew > /dev/null 2>&1" = 0 then Brew
+     else if Stdlib.Sys.command "which apt-get > /dev/null 2>&1" = 0 then Apt
+     else Unsupported)
+
+let detect_pm () = Lazy.force detected_pm
 
 let store_behavior_of_pm = function
   | Apt | Brew -> Stateful_global
