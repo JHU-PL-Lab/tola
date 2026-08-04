@@ -450,6 +450,34 @@ let project_spec_test : pure_test =
              EN.equal_provision (lib_is a) EN.Built
              && EN.equal_provision (EN.provision_of a a_oc) EN.Fetched)) }
 
+(* Seam (dynamic_enumeration.md §7): a flat assignment's build edges read off the
+   ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
+   binding←Lib; a Fetched artifact has no edge. Injects
+   Canary_action.consumes_of_action, proving the two representations are one. *)
+let built_from_test : pure_test =
+  { name = "enumerate.built_from_of_assignment";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let module CA = Canary_action in
+      let built_from_kinds (k : B.artifact_kind) : B.artifact_kind list =
+        match k with
+        | B.Lib -> CA.consumes_of_action B.Build_lib
+        | B.Binding l -> CA.consumes_of_action (B.Build_binding l)
+        | _ -> []
+      in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let pl p : EN.placement = { provision = p; version = EN.good B.Stable } in
+      let a =
+        EN.[ (a_source, pl Fetched); (a_lib, pl Built); (a_oc, pl Built) ]
+      in
+      let edges id = EN.built_from_of_assignment ~built_from_kinds a id in
+      let one_edge id target =
+        match edges id with [ e ] -> EN.equal_artifact_id e target | _ -> false
+      in
+      one_edge EN.a_lib EN.a_source           (* Built lib ← Source *)
+      && one_edge a_oc EN.a_lib                (* Built binding ← Lib *)
+      && List.is_empty (edges EN.a_source)) }  (* Fetched source: no edge *)
+
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
    For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
@@ -492,6 +520,7 @@ let all_tests : pure_test list =
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
       per_artifact_provisions_test; point_fold_test; project_spec_test;
+      built_from_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =

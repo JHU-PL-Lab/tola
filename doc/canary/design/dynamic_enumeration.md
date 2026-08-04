@@ -145,6 +145,31 @@ the two representations WITHOUT the big `instance`-type merge (the ~61-site
 change enumeration_graph.md flags as last), and is the seam the full merge builds
 on.
 
+## 7b. The compiler view (runner_spec : graph :: codegen : IR)
+
+The `runner_spec` relates to the graph like **codegen to an IR** — a clarifying
+frame (2026-08-04):
+
+```
+store_actions + consumes_of_action / produces_of_action  =  GRAMMAR (action IR — what each action eats/makes)
+the enumeration / instance graph                         =  PROGRAM (instances + edges + realizing actions)
+runner_spec                                              =  per-action CODEGEN (this project's shell per action)
+derive_steps                                             =  the COMPILER pass (grammar + program + codegen → step list)
+local_runner / gh / diagram / html                       =  TARGETS (execute / CI YAML / render)
+```
+
+Consequence for the merge: it lives in the **IR** (fold the two graph
+representations into one `instance`). Codegen (`runner_spec`) stays keyed on
+**actions**, the stable bridge — so unifying the IR barely touches it. This is
+why the graph-model work is *adaptation*, not a rewrite, and why the flat
+A1/A2/A3a work (the degenerate IR view) is reused, not discarded.
+
+Auxiliary utilities that DUPLICATE across the two halves — merge candidates when
+the `instance` type lands: version-mismatch (`make_action_graph` Build_app
+cartesian vs `assignment_ok`'s filter); node/placement helpers (`mk_node` /
+`node_tag` vs `placement` / `provision_of`); provision derivation
+(`provision_of_actions` vs the action graph's location choices).
+
 ## 8. Status
 
 A3b (flip sqlite's run) and A4 (wire tiny + multi-mutation) **wait on this design

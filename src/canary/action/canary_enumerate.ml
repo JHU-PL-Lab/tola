@@ -183,6 +183,30 @@ let any_binding_provided (a : assignment) : bool =
       | Binding _ -> not (equal_provision pl.provision Absent)
       | _ -> false)
 
+(** The build edges of a flat assignment, read off the action catalogue (§6.5) —
+    the SEAM to the action graph ([make_action_graph]), with NO new edge
+    vocabulary. A [Built] artifact's [built_from] = the assignment's other
+    artifacts whose kind its Build action CONSUMES (`Build_lib` consumes Source,
+    `Build_binding` consumes Lib, …). [built_from_kinds] is INJECTED (the caller
+    composes kind→Build-action→[Canary_action.consumes_of_action]) so this layer
+    stays free of an action-catalogue dependency. A non-[Built] artifact (Fetched
+    from a PM, Vendored) has no build edge. This is the read that proves the flat
+    `assignment` and the action graph are the same graph (dynamic_enumeration.md
+    §7). *)
+let built_from_of_assignment
+    ~(built_from_kinds :
+       Canary_basic.artifact_kind -> Canary_basic.artifact_kind list)
+    (a : assignment) (id : artifact_id) : artifact_id list =
+  match provision_of a id with
+  | Built ->
+      let ks = built_from_kinds id.kind in
+      List.filter_map a ~f:(fun (other, _) ->
+          if (not (equal_artifact_id other id))
+             && List.mem ks other.kind ~equal:Poly.equal
+          then Some other
+          else None)
+  | _ -> []
+
 (** Dependency + version filter (product-then-filter, §4.2 / §4.2.2): a lib
     [Built] from source needs the source present; any provided binding needs
     the lib present; any provided app needs a binding to consume (an app with
