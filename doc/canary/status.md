@@ -334,12 +334,20 @@ scenarios it runs, both statically (before a run) and from the result (after).
   migrated. `store_config.source` stays `source_repo option` (no Derived-build
   consumer yet; `provider` already folds it via `Built_from`). project-test 32/32,
   runs unchanged. **Unification done for the live path.**
-- **NEXT (user-raised): unit tests for artifact spec + consumption ops.** Now that
-  `provider` has settled, test: `provision_of_provider` coverage, `string_of_provider`
-  round-trips, `command_of_step` Derived==Raw for both fetch slots (extend the one
-  existing lib test to fetch_binding), and each project's `pr_provenance` provider
-  matches its baseline provision (the drift invariant, as a test not just a ⚠).
-  *Then* the `derived` discussion (pr_provenance derived-from vs declared).
+- **`spec @all [--json]` ✅** (`03a2c1e`): every project (tiny-full/sqlite project_run
+  + z3/llvm variant view) in one command; `--json` → `{ projects: [...] }` tagged by
+  `kind`. The refactor cross-check.
+- **`derived` — resolved ✅** (`d10a875`). Scope check first: the ONLY duplication was
+  sqlite's lib provider (both `store_config.lib.provider` and `pr_provenance`);
+  bindings + all of tiny aren't in `store_config` (Raw fetch closures / `tiny_stores`),
+  so full store_config-as-single-source is NOT straightforward. Natural fix: a single
+  `sqlite_provider : artifact_id -> provider option`; the runner's `store_config.lib`
+  AND `pr_provenance` both derive from it — can't drift. tiny already single-source
+  (only `pr_provenance`).
+- **NEXT (user-raised): unit tests — GENERAL artifact ops only** (scope per user:
+  `command_of_step` is project/graph-edge, NOT here). Test `provision_of_provider`
+  coverage, `string_of_provider` rendering, and the drift invariant (each project's
+  `pr_provenance` provider ⇒ its baseline provision) as a test not just a ⚠.
 
 **Pipeline map (pre / prepare / run / post — where to read):**
 - **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
