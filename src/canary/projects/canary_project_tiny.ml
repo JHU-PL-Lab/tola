@@ -133,3 +133,35 @@ let tiny_full_run : project_run =
         in
         { (TS.make_base_runner_spec ~channel ~stores ()) with
           Canary_step_builder.expectation = expectation_agnostic }) }
+
+(* ── THIN subset config (ssot §4.2 config level = Subset) ──
+   A small, debuggable slice of the SAME enumeration: Stable channel only (drop
+   the built-lib Dev positive), single-bad (no combinations), and the
+   python:ctypes scenarios dropped (ctypes is intentionally not canary-driven,
+   so those are noise that alias cext). Same materialize / runner_spec — only
+   the scenario set narrows. Selected by `action tiny-full --thin` /
+   `spec tiny-full --thin`. *)
+let thin_assignments () : Canary_enumerate.assignment list =
+  let is_dev (pl : Canary_enumerate.placement) =
+    match pl.Canary_enumerate.version.channel with
+    | Canary_basic.Dev -> true
+    | Canary_basic.Stable -> false
+  in
+  let bad_on_ctypes (a : Canary_enumerate.assignment) =
+    Base.List.exists a ~f:(fun (id, pl) ->
+        (match pl.Canary_enumerate.version.quality with
+         | Canary_enumerate.Bad _ -> true
+         | Canary_enumerate.Good -> false)
+        && Base.String.is_substring
+             (Canary_enumerate.string_of_id id) ~substring:"ctypes")
+  in
+  Base.List.filter (assignments ()) ~f:(fun a ->
+      (not (Base.List.exists a ~f:(fun (_, pl) -> is_dev pl)))
+      && not (bad_on_ctypes a))
+
+(* Same project_run as [tiny_full_run] with the narrowed enumeration and a
+   distinct name (so its run cache never clashes with the full run's). *)
+let tiny_full_thin_run : project_run =
+  { tiny_full_run with
+    pr_name = "tiny-full-thin";
+    pr_enumerate = thin_assignments }

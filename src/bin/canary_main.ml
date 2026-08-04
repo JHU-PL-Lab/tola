@@ -488,6 +488,13 @@ let action_cmd =
              runner_spec.disabled_contracts and the registry's \
              enabled flag.")
   in
+  let thin_arg =
+    Arg.(
+      value & flag
+      & info [ "thin" ]
+          ~doc:"tiny-full only: run the thin Subset enumeration (Stable, \
+                single-bad, no ctypes/combos).")
+  in
   (* run_with_info, with_cli_disabled, prebuilt_run_info, and
      run_tiny_scenario lifted to file top-level 2026-07-09 so
      `tiny run` can reuse them uniformly. *)
@@ -639,7 +646,7 @@ let action_cmd =
         ]
       ()
   in
-  let run project quick failfast cache_path disable_contract_csv () =
+  let run project quick failfast cache_path disable_contract_csv thin () =
     let root = "_out" in
     let distro = detect_distro () in
     let cli_disabled =
@@ -659,9 +666,13 @@ let action_cmd =
     | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny-full" ->
-        (* the generic project runner drives tiny-full (convergence step 2) *)
-        Canary_project_tiny.print_view ();
-        run_project_run Canary_project_tiny.tiny_full_run ~root ~failfast
+        (* the generic project runner drives tiny-full (convergence step 2);
+           --thin narrows to the Subset enumeration *)
+        let pr =
+          if thin then Canary_project_tiny.tiny_full_thin_run
+          else (Canary_project_tiny.print_view (); Canary_project_tiny.tiny_full_run)
+        in
+        run_project_run pr ~root ~failfast
     | Some "tiny" ->
         Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
                  `canary tiny run` instead (runs all + collects results).@.";
@@ -684,7 +695,7 @@ let action_cmd =
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ cache_path_arg
-          $ disable_contract_arg $ const ())
+          $ disable_contract_arg $ thin_arg $ const ())
 
 let spec_cmd =
   let project =
@@ -693,9 +704,15 @@ let spec_cmd =
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT" ~doc:"Project to snapshot: tiny-full | sqlite")
   in
-  let run proj () =
+  let thin =
+    Arg.(value & flag & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
+  in
+  let run proj thin () =
     match proj with
-    | Some "tiny-full" -> print_spec Canary_project_tiny.tiny_full_run
+    | Some "tiny-full" ->
+        print_spec
+          (if thin then Canary_project_tiny.tiny_full_thin_run
+           else Canary_project_tiny.tiny_full_run)
     | Some "sqlite" -> print_spec Canary_project_sqlite.sqlite_run
     | Some "z3" ->
         let d = detect_distro () in
@@ -726,7 +743,7 @@ let spec_cmd =
        ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
              scenarios (project_run: tiny-full/sqlite) or per-variant \
              provisions (raw runner_spec: z3/llvm). No execution.")
-    Term.(const run $ project $ const ())
+    Term.(const run $ project $ thin $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
    project's spec: stages applicable by definition but turned off when
