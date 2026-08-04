@@ -286,11 +286,17 @@ scenarios it runs, both statically (before a run) and from the result (after).
    (below); needs the node graph.
 
 **Plan (in order; F1 is the prerequisite):**
-- **F1 — persist per-scenario results.** `run_state` carries the scenario list +
-  each scenario's verdict (and steps), not just the last. Unblocks F2–F4.
-- **F2 — `status` per-scenario matrix**, aligned to `spec`'s scenario keys
-  (baseline / `Bs.N` / combos) with ✓/✗ detection, artifact-grouped. This is the
-  pre/post pairing: `spec` lists the scenarios, `status` shows which ran + verdict.
+- **F1 — persist per-scenario results ✅** (2026-08-04, `db0fe97`).
+  `run_project_run` writes `_out/canary/projects/<pj>/-run/scenarios.tsv` (one
+  TAB line per scenario that ran: verdict, good|bad, label), keyed by a shared
+  `scenario_label` (delta-from-baseline) — the join key between pre and post.
+- **F2 — per-scenario matrix ✅** (folded into `spec`, not a separate `status`):
+  `spec <pj>` now reads the summary and annotates each enumerated scenario with
+  its last-run verdict — good `✓`/`✗ REGRESSED`, bad `✓ detected`/`✗ missed`,
+  `·` = not run (deduped workspace) — plus a `N/M bad detected · K ran` line. So
+  `spec` is the pre AND post artifact×scenario view (tiny-full 12/24 matches the
+  run; sqlite 0/0). *Remaining polish:* still delta-labelled, not artifact-grouped
+  in the scenario section; a `status`-side matrix is optional now that `spec` shows it.
 - **F3 — artifact-centric cut**: per artifact, which scenarios touched it (direct +
   inherited) — the dual view (ties to §4 "Dual-view artifact index").
 - **F4 — run-closure (realised graph) view** *(gated on the node graph, §A / A5)*:
