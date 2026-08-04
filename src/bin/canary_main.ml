@@ -6,10 +6,20 @@ let term_of f = Term.(const f $ const ())
 (* ── Shared run helpers — file-level so both `action` and `tiny run`
    can invoke them uniformly ────────────────────────────────────── *)
 
-let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
+(* Runs the graph and RETURNS the per-step status table (for callers that need
+   the verdict directly, without re-reading the shared run_state.json). *)
+let run_with_info_status ?(artifact_names = fun _ -> None) ~failfast ~cache_path
     ~root ~project steps run_info =
   Canary_run_info.run_project ~failfast ~run_info ?cache_path ~artifact_names
     ~root ~project steps
+
+let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
+    ~root ~project steps run_info =
+  let _ =
+    run_with_info_status ~artifact_names ~failfast ~cache_path ~root ~project
+      steps run_info
+  in
+  ()
 
 let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
     (spec : Canary_step_builder.runner_spec)
@@ -224,17 +234,34 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
             Canary_step_builder.derive_steps ~root ~project
               ~langs:Canary_lang.[ OCaml; Python ] spec
           in
-          (try
-             run_with_info ~failfast ~cache_path:None ~root ~project steps
-               (prebuilt_run_info ~project:pr.Canary_project_run.pr_name
-                  ~version:"materialized" ~extra:[] steps)
-           with _ -> ());
-          let verdict =
-            scenario_status_of_run_state
-              ~project:pr.Canary_project_run.pr_name ()
+          (* verdict from the RETURNED status table — robust against the shared
+             run_state.json being overwritten by the next scenario. On FAIL,
+             name the non-done steps (diagnostic). *)
+          let verdict, culprits =
+            try
+              let status =
+                run_with_info_status ~failfast ~cache_path:None ~root ~project
+                  steps
+                  (prebuilt_run_info ~project:pr.Canary_project_run.pr_name
+                     ~version:"materialized" ~extra:[] steps)
+              in
+              let not_done =
+                List.filter_map
+                  (fun (s : Canary_step_model.step) ->
+                    match Base.Hashtbl.find status s.tag with
+                    | Some Canary_step_model.Step_done -> None
+                    | Some Canary_step_model.Step_failed -> Some (s.tag ^ ":failed")
+                    | Some Canary_step_model.Step_skipped -> Some (s.tag ^ ":skipped")
+                    | None -> Some (s.tag ^ ":not_run"))
+                  steps
+              in
+              if not_done = [] then ("PASS", "") else ("FAIL", String.concat " " not_done)
+            with _ -> ("FAIL", "exn")
           in
-          Fmt.pr "  [%-44s] %-6s %s@." label verdict
-            (if is_bad then "(bad)" else "(good)");
+          Fmt.pr "  [%-44s] %-6s %s%s@." label verdict
+            (if is_bad then "(bad)" else "(good)")
+            (if String.equal verdict "FAIL" && not (String.equal culprits "")
+             then "  <- " ^ culprits else "");
           results := (label, verdict, is_bad) :: !results)
     (pr.Canary_project_run.pr_enumerate ());
   let bads = List.filter (fun (_, _, b) -> b) !results in

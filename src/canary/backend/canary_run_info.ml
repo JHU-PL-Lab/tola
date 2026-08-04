@@ -257,7 +257,19 @@ let run_project ?(failfast = false) ?run_info ?cache_path
   Canary_diagram.write_project_output ~dir ~project_name ~variant:variant_id ~steps
     ~run_status:status ~artifact_names ~root logger;
   save_run_state ~dir:run_dir ~project_name steps ~artifact_name:artifact_names status;
-  logger.close ()
+  logger.close ();
+  status
+
+(* A run's verdict straight from the returned status table (no fragile re-read
+   of the shared, per-scenario-overwritten run_state.json): every step must have
+   reached [Step_done] (a met expectation). A step absent from the table never
+   ran ⇒ not done. *)
+let all_steps_done (steps : step list)
+    (status : (string, step_status) Hashtbl.t) : bool =
+  List.for_all steps ~f:(fun s ->
+      match Hashtbl.find status s.tag with
+      | Some Step_done -> true
+      | _ -> false)
 
 (* Write a single run_info.json covering all variants of a multi-variant run.
    Format: { "project": ..., "variants": [ { "id": ..., <run_info fields> }, ... ] } *)
