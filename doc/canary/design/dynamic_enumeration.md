@@ -177,37 +177,37 @@ The target type is already sketched in
 `artifact_node` merge — reuse it, don't re-sketch). Consolidated + refined with
 this session's findings:
 
-```ocaml
-(* base — INFO: an instance's metadata (subsumes artifact_id + placement) *)
-type artifact_info = {
-  id        : artifact_id;   (* {kind; ext} — the PAIR, kept as-is *)
-  version   : build_id;      (* {channel; quality} — typed; carries Bad tag (A2) *)
-  provision : provision;     (* the per-EDGE provider: Fetched | Built | Vendored
-                                | Contained (bundle — the one NEW case) *)
-}
+The final type reuses the name **`artifact_node`** (extend the existing type — no
+"instance"). It is FLAT over the two justified nested identities; the `artifact_info`
+/ `placement` middle layers are dropped as unnecessary.
 
-(* base — STRUCTURE: node = info + dependency edges (= today's artifact_node) *)
-type instance = {
-  info        : artifact_info;
-  built_from  : instance option;   (* Build edge — populated by the seam
-                                      (built_from_of_assignment) *)
-  runtime_dep : instance option;   (* Run edge — the deploy mismatch *)
+```ocaml
+(* base — the merged node = today's [artifact_node], extended.
+   Justified nesting: only the two REUSED identities — artifact_id (kind×ext) and
+   build_id (channel×quality). No artifact_info / placement middle layer. *)
+type artifact_node = {
+  id          : artifact_id;          (* {kind; ext} — the identity pair, kept *)
+  version     : build_id;             (* {channel; quality} — typed; Bad tag (A2) *)
+  provision   : provision;            (* per-EDGE provider: Fetched|Built|Vendored
+                                         |Contained (bundle — the one NEW case) *)
+  built_from  : artifact_node option; (* Build edge — read via the seam *)
+  runtime_dep : artifact_node option; (* Run edge — the deploy mismatch *)
 }
 ```
 
-Refinements over §3: `version` carries `quality` (A2 fold); `provision` is the
-per-edge provider (A1's per-artifact provision + the new `Contained`); `built_from`
-is read via the seam. `location` derives from `provision` (§6). The flat
-`assignment`/`placement` is the **degenerate** `instance` set (nodes, edges
-implicit); `assignment_of_point` + `built_from_of_assignment` already lift it.
+vs today's `artifact_node = {a_kind; a_name; origin; a_location; built_from;
+runtime_dep}`: `a_kind` → `id` (gains `ext`); the `a_name` channel-suffix → typed
+`version` (gains `quality`); `provision` added (`a_location` derives from it, §6).
+Edges unchanged. The flat `assignment`/`placement` is the **degenerate** node set
+(no edges); `assignment_of_point` + `built_from_of_assignment` already lift it —
+`placement` stays transitionally, then drops.
 
 ### The migration is TWO things — only one is "~61 sites"
 
-1. **The instance merge (this work) — SMALL.** Reconcile `artifact_node` (used in
-   only **3 files**: `base/canary_basic`, `action/canary_path_table`,
-   `action/canary_action`) with `artifact_id + placement + typed version` into one
-   `instance`. Keeps `id = {kind; ext}` (the pair). Modest, mechanical once the
-   seam is in.
+1. **The node merge (this work) — SMALL.** Extend the existing `artifact_node`
+   (used in only **3 files**: `base/canary_basic`, `action/canary_path_table`,
+   `action/canary_action`) with `id` (adds ext) + typed `version` + `provision`.
+   Keeps `id = {kind; ext}` (the pair). Modest, mechanical once the seam is in.
 2. **The "~61-site move" — SEPARATE, later, DECOUPLED.** Folding the `(kind × ext)`
    PAIR into a single **enriched `artifact_kind`** (so `Binding OCaml Cstubs` is
    *one* constructor, not a pair). That rewrites every `match` on the coarse kind
@@ -219,6 +219,32 @@ implicit); `assignment_of_point` + `built_from_of_assignment` already lift it.
 
 So the sketch is enumeration_graph.md §3 refined (above); "~61 sites" is the
 *optional* pair→enriched-kind fold, not the merge.
+
+## 7d. First-cut migration draft (source → lib → binding, one version)
+
+The correct structure (the extended `artifact_node`) at a **small graph** scope,
+staged so **no run behavior changes** (`enumeration_graph.md` §4). Each step is
+additive/mechanical and independently testable:
+
+- **M1 — extend `artifact_node`** (base): `a_kind` → `id : artifact_id`; the
+  `a_name` channel-suffix → `version : build_id`; add `provision`. Keep the edges.
+  Update the 3 users — `base/canary_basic` (def), `action/canary_action`
+  (`mk_node` / `make_action_graph`), `action/canary_path_table`. Derive the old
+  `a_name` / `a_location` where display still needs them, so **`paths` + diagram
+  output is byte-identical** (pure refactor).
+- **M2 — `node_of_assignment`**: build the `artifact_node` graph from a flat
+  `assignment`, edges via the seam (`built_from_of_assignment`). The flat→node
+  lift; the run keeps consuming assignments (unchanged).
+- **M3 — cross-check test**: `node_of_assignment` on a chain assignment
+  (source→lib→binding, one version) has the same `built_from`/`runtime_dep` edges
+  as `make_action_graph` on the same chain. Proves the two graphs are one, in
+  code, at the node level (upgrades the M-less seam test).
+- **then grow** (each additive, later): versions → the mismatch cartesian; app →
+  the build-vs-run edge; provision breadth (Staged/PM/Contained) → the run.
+
+Non-goals (reiterate): no new `edge` type; don't re-enumerate the mismatch
+(`make_action_graph` already does — derive, don't duplicate); the ~61-site
+pair→enriched-kind fold stays a **later cleanup**, decoupled from this.
 
 ## 8. Status
 
