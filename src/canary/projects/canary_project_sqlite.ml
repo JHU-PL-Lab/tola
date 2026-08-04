@@ -145,11 +145,18 @@ let sqlite_artifacts =
 let sqlite_amalg_url = "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip"
 let sqlite_amalg_dir = "sqlite-amalgamation-3450100"
 
-let built_runner_spec ~(workspace : string) : Canary_step_builder.runner_spec =
+(* A3b: the Built scenario UNIFIES the lib build with the bindings — extend the
+   Fetched [runner_spec] (which carries fetch_binding/probe_binding), swapping the
+   lib from fetched to built-from-source. The bindings run against the SYSTEM lib
+   for now (Python sqlite3 is stdlib — can't be repointed; OCaml binding-over-
+   BUILT-lib via LD_LIBRARY_PATH is a follow-up). This makes the run consistent
+   with the enumeration ({lib=Built, bindings=Fetched}), not lib-only. *)
+let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
   let src = workspace ^ "/src" in
   let libdir = workspace ^ "/lib" in
   let libpath = libdir ^ "/libsqlite3.so" in
-  { Canary_step_builder.empty_runner_spec with
+  { runner_spec with
+    fetch_lib = None;   (* built from source, not fetched *)
     fetch_source =
       Some
         (fun ~output_dir ~variant_key ->
@@ -176,21 +183,31 @@ let built_runner_spec ~(workspace : string) : Canary_step_builder.runner_spec =
                  ~variant_key ) ];
   }
 
-let placement (prov : Canary_enumerate.provision) : Canary_enumerate.placement =
-  { Canary_enumerate.provision = prov;
-    version = Canary_enumerate.good Canary_basic.Stable }
+(* A3b: sqlite DECLARES its enumeration axes; the generic runner ENUMERATES via
+   [assignments_of_spec] — retiring the hand-built pr_enumerate list. Positive-only
+   (no mutations, ['m = unit]). Per-artifact provisions: the lib may be Fetched
+   (system PM) or Built (source); bindings Fetched. Self-contained Built (no
+   a_source artifact — the amalgamation is fetched inside build_lib). *)
+let sqlite_spec : unit Canary_enumerate.project_spec =
+  { ps_artifacts = sqlite_artifacts;
+    ps_provisions_of =
+      (fun id ->
+        if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
+          Canary_enumerate.[ Fetched; Built ]
+        else Canary_enumerate.[ Fetched ]);
+    ps_versions = [ Canary_basic.Stable ];
+    ps_mutations = [];
+    ps_config =
+      Canary_enumerate.
+        { provision = Full; version = Full; mutation = Free } }
 
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
+    (* ENUMERATE from the declared spec, not a hand-built list *)
     pr_enumerate =
       (fun () ->
-        [ (* full positive: everything Fetched at the system version *)
-          Base.List.map sqlite_artifacts ~f:(fun a ->
-              (a, placement Canary_enumerate.Fetched));
-          (* Built-from-source: lib only (canary fetches the amalgamation +
-             compiles it) *)
-          [ (Canary_enumerate.a_lib, placement Canary_enumerate.Built) ] ]);
+        Canary_enumerate.assignments_of_spec ~tag:(fun () -> "") sqlite_spec);
     pr_materialize =
       (fun a ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
@@ -200,5 +217,5 @@ let sqlite_run : Canary_project_run.project_run =
     pr_runner_spec =
       (fun a ~workspace ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-        | Canary_enumerate.Built -> built_runner_spec ~workspace
+        | Canary_enumerate.Built -> built_spec ~workspace
         | _ -> runner_spec) }
