@@ -258,14 +258,49 @@ comment sweep (resource → cached artifact in the 2229-line
 `detect_pm` · wire the `latest` channel (§1c #3) · scenario names + `docs/canary`
 output volume.
 
-**Static-spec vs run-closure inspection** (gated on the graph, §7 of
-`dynamic_enumeration.md`): two kind-grouped views of the node graph — `spec <pj>`
-= the DECLARED graph (potentials: a source that *can* build a lib sits in the
-source group), and a new post-run **closure** view read off `actions.log` /
-`run_state.json` (realised: the lib built-from-source is promoted into the lib
-group with its `built_from` edge, source retained). Potential vs realised; a
-`closure <pj>` / `status --graph` command renders the run view. Do when the graph
-lands.
+### F. Inspection — show a project's artifacts × scenarios, pre and post (2026-08-04)
+
+Motivation: make it easy to see WHICH artifacts a project involves and WHICH
+scenarios it runs, both statically (before a run) and from the result (after).
+`spec` + `status` already exist; this plan closes the post-run half.
+
+**Landed:**
+- **`spec <pj>` — PRE / static (good).** Artifacts grouped `source / native /
+  bindings / app` with each baseline `provision@version`, plus every enumerated
+  scenario as a good/bad delta from baseline. (tiny-full: 7 artifacts, 29
+  scenarios; sqlite: 3, 2.) This IS the static "artifacts + scenarios" view.
+- **`status <pj>` — POST / run (thin).** Last-run step-verdict tree for ONE
+  variant.
+
+**Gaps (all post-run):**
+1. **`run_state.json` keeps only ONE run state** (`project_name`/`steps`/
+   `artifact_names`) — a multi-scenario run (tiny-full's 24) overwrites to the
+   *last* scenario. So the `12/24` coverage is printed but NOT inspectable
+   per-scenario. This is the root gap.
+2. **`status` shows steps, not a scenario×verdict matrix**, and isn't
+   artifact-grouped — no way to see which of the 24 scenarios detected, keyed to
+   `spec`'s scenario list.
+3. **`scenarios <pj>` is legacy** — errors `Unknown project tiny-full` (knows only
+   the old sqlite/z3/llvm/… list, not the `project_run` path).
+4. **No run-closure (realised) view** — the built lib promoted into the lib group
+   (below); needs the node graph.
+
+**Plan (in order; F1 is the prerequisite):**
+- **F1 — persist per-scenario results.** `run_state` carries the scenario list +
+  each scenario's verdict (and steps), not just the last. Unblocks F2–F4.
+- **F2 — `status` per-scenario matrix**, aligned to `spec`'s scenario keys
+  (baseline / `Bs.N` / combos) with ✓/✗ detection, artifact-grouped. This is the
+  pre/post pairing: `spec` lists the scenarios, `status` shows which ran + verdict.
+- **F3 — artifact-centric cut**: per artifact, which scenarios touched it (direct +
+  inherited) — the dual view (ties to §4 "Dual-view artifact index").
+- **F4 — run-closure (realised graph) view** *(gated on the node graph, §A / A5)*:
+  two kind-grouped views — `spec <pj>` = the DECLARED graph (potentials: a source
+  that *can* build a lib sits in the source group), and a post-run **closure** read
+  off `run_state`/`actions.log` (realised: the lib built-from-source promoted into
+  the lib group with its `built_from` edge, source retained). Potential vs realised;
+  a `closure <pj>` / `status --graph` renders the run view.
+- **F5 — retire/rewire legacy `scenarios`** onto the `project_run` path, or fold
+  into `status`.
 
 ## 1c. Project-file review (2026-08-03)
 
