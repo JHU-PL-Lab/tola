@@ -138,8 +138,32 @@ let output_contains_any ~output_dir strings =
         with _ -> false)
   with _ -> false
 
+(* A step's VERDICT marker: written by the runner only when the step actually
+   MET its expectation (a build/fetch succeeded, or a probe's predicted/expected
+   outcome held). The local cache keys on this — NOT on [check_post], which for
+   a probe is merely "probe.log exists" and is satisfied by a FAILED probe too
+   (a failed probe still writes its log). Without this, a rerun serves the
+   failed probe as a cached success and the detection metric silently inflates
+   (cache.md; the warm-run "fake green"). Tag-prefixed + variant-keyed so it is
+   unique even where steps share an output_dir (build_binding + its inspect). *)
+let verdict_marker (step : step) : string =
+  step.output_dir ^ "/"
+  ^ Canary_basic.variant_file ~variant_key:step.variant_id
+      (step.tag ^ ".verdict.ok")
+
+let write_verdict (step : step) ~(ok : bool) : unit =
+  let path = verdict_marker step in
+  if ok then (
+    try
+      ignore (Stdlib.Sys.command [%string "mkdir -p \"%{step.output_dir}\""] : int);
+      Stdlib.close_out (Stdlib.open_out path)
+    with _ -> ())
+  else if Stdlib.Sys.file_exists path then
+    (try Stdlib.Sys.remove path with _ -> ())
+
 (* Run a single action step.
-   Skip priority: (1) global cache hit, (2) local postcondition already passes. *)
+   Skip priority: (1) global cache hit, (2) prior run met its expectation
+   (verdict marker present — NOT mere output presence). *)
 let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
   let tag = step.tag in
   let out = step.output_dir in
@@ -152,16 +176,18 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
   if global_hit then (
     log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
     true)
-  (* Local cache: if postcondition already passes, skip *)
-  else if Stdlib.Sys.file_exists out && step.check_post ~output_dir:out ~variant_key:step.variant_id then (
-    log ~event:"skip" ~detail:(Some "postcondition ok");
+  (* Local cache: skip only if a PRIOR run recorded a met expectation here
+     (verdict marker), so a failed probe is never served as cached success. *)
+  else if Stdlib.Sys.file_exists (verdict_marker step) then (
+    log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
     true)
   else (
     let pre_ok = step.check_pre () in
     log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
-    if not pre_ok then (
-      log ~event:"blocked" ~detail:(Some "precondition failed");
-      false)
+    let result =
+      (if not pre_ok then (
+        log ~event:"blocked" ~detail:(Some "precondition failed");
+        false)
     else
       try
         let cmd_ok = exec_step logger ~tag ~output_dir:out step in
@@ -333,6 +359,11 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
         let msg = Exn.to_string exn in
         log ~event:"error" ~detail:(Some msg);
         false)
+    in
+    (* record the verdict so the local cache can key on a MET expectation, not
+       mere output presence (a failed probe still leaves probe.log). *)
+    write_verdict step ~ok:result;
+    result)
 
 (* Merge multiple per-variant status tables. Done > Failed > Skipped. *)
 let merge_step_statuses (all : (string, step_status) Hashtbl.t list)
@@ -352,10 +383,11 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
   logger.log ~tag:"*" ~event:"graph_start"
     ~detail:(Some [%string "%{Int.to_string (List.length steps)} steps"]);
   let status = Hashtbl.create (module String) in
-  (* Seed with already-done steps (postcondition passes) *)
+  (* Seed with steps a PRIOR run recorded as meeting their expectation
+     (verdict marker) — not mere output presence, so a failed probe isn't
+     seeded as done. *)
   List.iter steps ~f:(fun s ->
-      let out = s.output_dir in
-      if Stdlib.Sys.file_exists out && s.check_post ~output_dir:out ~variant_key:s.variant_id then
+      if Stdlib.Sys.file_exists (verdict_marker s) then
         Hashtbl.set status ~key:s.tag ~data:Step_done);
   (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in

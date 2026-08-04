@@ -47,6 +47,30 @@ markers and the real `cc` build ran. **Fix when wiring Built into the
 enumeration: put provision (+ version) in `variant_id`.** No cache change
 needed.
 
+## Soundness: the skip must key on a MET expectation, not output presence (bug B, 2026-08-03)
+
+The local-cache short-circuit and the `run_graph` seed originally skipped a step
+when `check_post` passed. For a **probe**, `check_post` is only "`probe.log`
+exists" — and a probe writes `probe.log` *even when it fails* (`> probe.log
+2>&1`). So a **failed** probe was served as a cached success on the next run:
+the step was skipped and reported `done`. Effect: warm reruns painted
+**every** bad scenario green (`tiny-full` read a fake `24/24`; the honest cold
+number was `3/24`), silently inflating the detection metric.
+
+**Fix:** the runner writes a per-step **verdict marker**
+(`<tag>.verdict_<variant>.ok` in the step's output dir) *only when the step met
+its expectation* (`Canary_local_runner.write_verdict`, gated on
+`expectation_ok && symbol_ok`). Both skip sites — the `run_step` local cache and
+the `run_graph` `Step_done` seed — now key on **that marker**, not on
+`check_post`. A failed probe leaves no marker, so it re-runs; a genuine success
+caches (cold `316` → warm `35` command events on `tiny-full`). Old caches carry
+no marker, so the first run after this change re-runs once (self-healing).
+
+Guarded by `canary cache-test` (`test/canary_cache_test.ml`): asserts a failed
+step re-runs (probe.log present, ran twice, no marker) while a success caches
+(ran once, marker present). Reverting the skip condition to `check_post` fails
+the first case — a real regression guard, per the two-testing-axes philosophy.
+
 ## Forcing a fresh run
 
 - clear the local markers: `rm -rf _out/canary/projects/<name>` (or the step's

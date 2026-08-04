@@ -970,6 +970,15 @@ let project_test_cmd =
          let ok = Canary_project_test.run_tests () in
          if not ok then Stdlib.exit 1))
 
+let cache_test_cmd =
+  Cmd.v
+    (Cmd.info "cache-test"
+       ~doc:"Run-cache soundness: a failed step must not be served as a \
+             cached success on rerun (bug B / cache.md).")
+    (term_of (fun () ->
+         let ok = Canary_cache_test.run_tests () in
+         if not ok then Stdlib.exit 1))
+
 let mutation_test_cmd =
   Cmd.v
     (Cmd.info "mutation-test"
@@ -1466,6 +1475,7 @@ let () =
         pm_test_cmd;
         artifact_test_cmd;
         project_test_cmd;
+        cache_test_cmd;
         mutation_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;

@@ -13,7 +13,8 @@ dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) +
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): algorithm-driven good+bad run + coverage
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
-dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests (apt/brew/opam/pip)
+dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests
+dune exec src/bin/canary_main.exe -- cache-test              # run-cache soundness (failed step must not cache as success — bug B) (apt/brew/opam/pip)
 dune exec src/bin/canary_main.exe -- artifact-summary --kind native --path X  # ad-hoc summary dump
 dune exec src/bin/canary_main.exe -- inspect-diff --old A --new B            # diff two inspect.json files
 dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
