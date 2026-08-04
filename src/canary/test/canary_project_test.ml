@@ -384,6 +384,45 @@ let per_artifact_provisions_test : pure_test =
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Fetched)
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Built)) }
 
+(* A2: point→assignment fold — the mutation folds into the target artifact's
+   version quality=Bad tag; other artifacts stay Good; a positive point is
+   unchanged. *)
+let point_fold_test : pure_test =
+  { name = "enumerate.point_to_assignment_fold";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      (* a_source needed: tiny_slice is all-Built, and a Built lib requires the
+         source present (assignment_ok). *)
+      let artifacts = EN.[ a_source; a_lib; a_ocaml ] in
+      let pts =
+        EN.tiny_slice ~artifacts ~mutations:EN.[ (a_lib, "Bs.4") ]
+      in
+      let is_bad a id t =
+        match EN.placement_of a id with
+        | Some { EN.version = { EN.quality = EN.Bad tag; _ }; _ } ->
+            String.equal tag t
+        | _ -> false
+      in
+      let is_good a id =
+        match EN.placement_of a id with
+        | Some { EN.version = { EN.quality = EN.Good; _ }; _ } -> true
+        | _ -> false
+      in
+      let fold = EN.assignment_of_point ~tag:Fn.id in
+      let mutated =
+        List.find pts ~f:(fun p -> Option.is_some p.EN.mutation)
+      in
+      let positive =
+        List.find pts ~f:(fun p -> Option.is_none p.EN.mutation)
+      in
+      match mutated, positive with
+      | Some pm, Some pp ->
+          let am = fold pm and ap = fold pp in
+          is_bad am EN.a_lib "Bs.4" && is_good am a_ocaml  (* target Bad, rest Good *)
+          && is_good ap EN.a_lib && is_good ap a_ocaml     (* positive all Good *)
+      | _ -> false) }
+
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
    For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
@@ -425,7 +464,7 @@ let all_tests : pure_test list =
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
-      per_artifact_provisions_test;
+      per_artifact_provisions_test; point_fold_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =

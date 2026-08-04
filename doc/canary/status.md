@@ -65,12 +65,12 @@ projects pass `mutations = []`. The universal spec has no `bad_tags`.
 
 Steps:
 
-- **A1 — per-artifact provisions.** `enumerate`/`run_config`/`assignments_of`
-  take a per-artifact universe (`provisions_of : artifact_id -> provision list`)
-  instead of one global `provision list` (a tiny-shaped simplification — real
-  projects need source=Fetched, lib={Fetched,Built}, binding=Fetched). `tiny_slice`
-  / `general_slice` keep their sigs (pass a constant fn), so no caller ripple.
-  Pure — changes no run. + `project-test`.
+- **A1 — per-artifact provisions.** ✅ done 2026-08-04 (`828e105`).
+  `enumerate`/`run_config`/`assignments_of` take a per-artifact universe
+  (`provisions_of : artifact_id -> provision list`) instead of one global
+  `provision list`. `tiny_slice`/`general_slice` keep their sigs (constant fn), no
+  caller ripple. Pure — changed no run; `project-test` `per_artifact_provisions`
+  proves the sqlite shape.
 - **A2 — point → assignment fold.** `assignment_of_point : ('m -> string) -> 'm
   point -> assignment` (folds `mutation = Some (aid, m)` → that artifact's
   `quality = Bad (tag m)`) — bridges the algorithm's `point` (mutation separate)

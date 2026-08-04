@@ -304,6 +304,21 @@ let general_slice ~(artifacts : artifact_id list)
     ~all_versions:versions ~all_mutations:[]
     { provision = Full; version = Full; mutation = Free }
 
+(** A2 — fold a [point] into a concrete [assignment], the form the run/materialize
+    consume. The algorithm keeps the mutation SEPARATE from the all-Good
+    assignment ([point.mutation]); the run wants it FOLDED into the target
+    artifact's version [quality = Bad tag] (the mutation-agnostic identity, §4.2.2
+    P2a). [tag] projects the polymorphic mutation to its opaque string tag. A
+    positive point ([mutation = None]) is already an all-Good assignment. *)
+let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
+  match p.mutation with
+  | None -> p.assignment
+  | Some (aid, m) ->
+      List.map p.assignment ~f:(fun (id, pl) ->
+          if equal_artifact_id id aid then
+            (id, { pl with version = { pl.version with quality = Bad (tag m) } })
+          else (id, pl))
+
 let string_of_provision = Canary_store.string_of_provision
 
 (** Read a slot's provision off a concrete action set (which action-graph
