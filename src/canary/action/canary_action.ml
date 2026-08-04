@@ -30,6 +30,9 @@ open Canary_basic
     {!Canary.run_graph}. *)
 type artifact_node = {
   a_kind : artifact_kind;
+  ext : Canary_enumerate.artifact_ext;  (* M1: a_kind × ext = the precise id *)
+  version : Canary_enumerate.build_id;  (* M1: typed version; a_name keeps the display suffix *)
+  provision : Canary_store.provision;   (* M1: per-edge provider (Built/Fetched/…) *)
   a_name : string;
   origin : location;
   a_location : location;
@@ -37,9 +40,14 @@ type artifact_node = {
   runtime_dep : artifact_node option;
 }
 
-let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
-    artifact_node =
-  { a_kind; a_name; origin; a_location = location; built_from; runtime_dep }
+(* M1: [~version] + [~provision] required (populated from the producing action —
+   Build_* ⇒ Built, Fetch ⇒ Fetched); [~ext] defaults to none (make_action_graph
+   is coarse-kind). a_kind/a_name kept as display so node_tag stays byte-identical. *)
+let mk_node a_kind a_name ~origin ~location
+    ?(ext = Canary_enumerate.Ext_none) ~version ~provision ?built_from
+    ?runtime_dep () : artifact_node =
+  { a_kind; ext; version; provision; a_name; origin; a_location = location;
+    built_from; runtime_dep }
 
 let rec node_tag (n : artifact_node) =
   let name = n.a_name in
@@ -93,13 +101,15 @@ let make_action_graph ~actions ~versions ~name ~source () =
               List.map versions ~f:(fun v ->
                   mk_node Lib
                     (name ^ vs v)
-                    ~origin:Build_tree ~location:Build_tree ())
+                    ~origin:Build_tree ~location:Build_tree
+                    ~version:(Canary_enumerate.good v) ~provision:Built ())
             in
             add pools Lib nodes
         | Fetch kind ->
             let nodes =
               List.map versions ~f:(fun v ->
-                  mk_node kind (name ^ vs v) ~origin:source ~location:source ())
+                  mk_node kind (name ^ vs v) ~origin:source ~location:source
+                    ~version:(Canary_enumerate.good v) ~provision:Fetched ())
             in
             add pools kind nodes
         | Build_binding lang ->
@@ -110,7 +120,7 @@ let make_action_graph ~actions ~versions ~name ~source () =
                       mk_node (Binding lang)
                         (name ^ vs v)
                         ~origin:Build_tree ~location:Build_tree ~built_from:lib
-                        ()))
+                        ~version:(Canary_enumerate.good v) ~provision:Built ()))
             in
             add pools (Binding lang) nodes
         | Build_app { lang } ->
@@ -120,14 +130,16 @@ let make_action_graph ~actions ~versions ~name ~source () =
               List.concat_map bindings ~f:(fun binding ->
                   List.map libs ~f:(fun runtime_lib ->
                       mk_node App name ~origin:Build_tree ~location:Build_tree
-                        ~built_from:binding ~runtime_dep:runtime_lib ()))
+                        ~built_from:binding ~runtime_dep:runtime_lib
+                        ~version:binding.version ~provision:Built ()))
             in
             add pools App nodes
         | Build_headers ->
             let nodes =
               List.map versions ~f:(fun v ->
                   mk_node Headers (name ^ vs v)
-                    ~origin:Build_tree ~location:Build_tree ())
+                    ~origin:Build_tree ~location:Build_tree
+                    ~version:(Canary_enumerate.good v) ~provision:Built ())
             in
             add pools Headers nodes
         (* Scan_sources doesn't produce new artifact nodes — it just
