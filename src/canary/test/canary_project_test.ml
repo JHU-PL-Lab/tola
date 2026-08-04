@@ -281,20 +281,20 @@ let config_level_test : pure_test =
       in
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
-        EN.run_config ~artifacts ~all_provisions:[ EN.Built ]
+        EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
-        EN.run_config ~artifacts ~all_provisions:EN.[ Fetched; Built ]
+        EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
-        EN.run_config ~artifacts ~all_provisions:EN.[ Absent; Fetched; Built ]
+        EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
           ~all_versions:B.single_channel ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
@@ -325,7 +325,7 @@ let version_axis_test : pure_test =
          binding@Stable is a valid assignment (the z3/llvm case). *)
       let mm_artifacts = EN.[ a_lib; a_binding ocaml Mech.Cstubs ] in
       let mm =
-        EN.run_config ~artifacts:mm_artifacts ~all_provisions:[ EN.Fetched ]
+        EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions:B.two_channels ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
@@ -341,7 +341,7 @@ let version_axis_test : pure_test =
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
-          ~all_provisions:[ EN.Built ] ~all_versions:B.two_channels
+          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions:B.two_channels
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
@@ -353,6 +353,36 @@ let version_axis_test : pure_test =
                  (EN.version_of p.EN.assignment EN.a_source))
       in
       has_mismatch && source_primary_holds) }
+
+(* A1: PER-ARTIFACT provisions — the sqlite shape (source Fetched-only, lib
+   {Fetched,Built}, binding Fetched). Only lib varies; source/binding are never
+   Built. A single GLOBAL provision universe couldn't express this — it would
+   also emit Built source / Built binding. *)
+let per_artifact_provisions_test : pure_test =
+  { name = "enumerate.per_artifact_provisions";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      let artifacts = EN.[ a_source; a_lib; a_ocaml ] in
+      let provisions_of id =
+        if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
+        else EN.[ Fetched ]
+      in
+      let pts =
+        EN.run_config ~artifacts ~all_provisions_of:provisions_of
+          ~all_versions:B.single_channel ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+      in
+      let always target id =
+        List.for_all pts ~f:(fun p ->
+            EN.equal_provision (EN.provision_of p.EN.assignment id) target)
+      in
+      let lib_is p = EN.provision_of p.EN.assignment EN.a_lib in
+      (not (List.is_empty pts))
+      && always EN.Fetched EN.a_source          (* source never Built *)
+      && always EN.Fetched a_ocaml              (* binding never Built *)
+      && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Fetched)
+      && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Built)) }
 
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
@@ -395,6 +425,7 @@ let all_tests : pure_test list =
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
+      per_artifact_provisions_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =

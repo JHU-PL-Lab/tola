@@ -204,15 +204,18 @@ let assignment_ok (a : assignment) : bool =
          | _ -> true)
 
 (* The product over [artifacts] (precise identities) of (provision × version)
-   placements. *)
+   placements. [provisions_of] is PER-ARTIFACT (A1): each artifact draws from its
+   own provision universe — real projects are heterogeneous (source=Fetched,
+   lib={Fetched,Built}, binding=Fetched); a single global list was a tiny-shaped
+   simplification (tiny is uniform). *)
 let rec assignments_of (artifacts : artifact_id list)
-    (provisions : provision list) (versions : Canary_basic.channel list) :
-    assignment list =
+    (provisions_of : artifact_id -> provision list)
+    (versions : Canary_basic.channel list) : assignment list =
   match artifacts with
   | [] -> [ [] ]
   | id :: rest ->
-      let tails = assignments_of rest provisions versions in
-      List.concat_map provisions ~f:(fun pv ->
+      let tails = assignments_of rest provisions_of versions in
+      List.concat_map (provisions_of id) ~f:(fun pv ->
           List.concat_map versions ~f:(fun ver ->
               List.map tails ~f:(fun t ->
                   (id, { provision = pv; version = good ver }) :: t)))
@@ -221,10 +224,11 @@ let rec assignments_of (artifacts : artifact_id list)
     (positive + each applicable mutation). A mutation is applicable to an
     assignment only when its target artifact is provided (§4.2: "a mutation
     applies only to a provided artifact"). *)
-let enumerate ~(artifacts : artifact_id list) ~(provisions : provision list)
+let enumerate ~(artifacts : artifact_id list)
+    ~(provisions_of : artifact_id -> provision list)
     ~(versions : Canary_basic.channel list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
-  assignments_of artifacts provisions versions
+  assignments_of artifacts provisions_of versions
   |> List.filter ~f:assignment_ok
   |> List.concat_map ~f:(fun a ->
          let positive = { assignment = a; mutation = None } in
@@ -255,7 +259,8 @@ type 'm config = {
     of the universe — a project orders its universe so the representative is
     first); mutation [Free] = the [None] baseline, i.e. no injected fault
     (the positive point is always present), so it resolves to no placements. *)
-let run_config ~(artifacts : artifact_id list) ~(all_provisions : provision list)
+let run_config ~(artifacts : artifact_id list)
+    ~(all_provisions_of : artifact_id -> provision list)
     ~(all_versions : Canary_basic.channel list)
     ~(all_mutations : (artifact_id * 'm) list) (cfg : 'm config) : 'm point list =
   let resolve lvl all =
@@ -264,7 +269,8 @@ let run_config ~(artifacts : artifact_id list) ~(all_provisions : provision list
     | Subset vs -> vs
     | Full -> all
   in
-  let provisions = resolve cfg.provision all_provisions in
+  (* provision level applies PER-ARTIFACT to that artifact's own universe *)
+  let provisions_of id = resolve cfg.provision (all_provisions_of id) in
   let versions = resolve cfg.version all_versions in
   let mutations =
     match cfg.mutation with
@@ -272,7 +278,7 @@ let run_config ~(artifacts : artifact_id list) ~(all_provisions : provision list
     | Subset vs -> vs
     | Full -> all_mutations
   in
-  enumerate ~artifacts ~provisions ~versions ~mutations
+  enumerate ~artifacts ~provisions_of ~versions ~mutations
 
 (** tiny's config: provision [Free] (collapse to one representative,
     [Built] — the whole pipeline built locally), mutation [Full] (walk every
@@ -280,7 +286,7 @@ let run_config ~(artifacts : artifact_id list) ~(all_provisions : provision list
     is the pipeline root, its provision degenerate. *)
 let tiny_slice ~(artifacts : artifact_id list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
-  run_config ~artifacts ~all_provisions:[ Built ]
+  run_config ~artifacts ~all_provisions_of:(fun _ -> [ Built ])
     ~all_versions:Canary_basic.single_channel ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full }
 
@@ -288,11 +294,15 @@ let tiny_slice ~(artifacts : artifact_id list)
     over the project's universe), mutation [Free] (positive only). Yields
     one positive point per valid provision assignment (ssl `sys` = all
     [Fetched], ssl `src` = all [Built], … among them). *)
+(* [~provisions] here is the GLOBAL convenience form (all artifacts share one
+   universe); [run_config] itself is per-artifact (A1). A project with
+   heterogeneous provisions calls [run_config ~all_provisions_of] directly. *)
 let general_slice ~(artifacts : artifact_id list)
     ~(provisions : provision list)
     ~(versions : Canary_basic.channel list) : 'm point list =
-  run_config ~artifacts ~all_provisions:provisions ~all_versions:versions
-    ~all_mutations:[] { provision = Full; version = Full; mutation = Free }
+  run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
+    ~all_versions:versions ~all_mutations:[]
+    { provision = Full; version = Full; mutation = Free }
 
 let string_of_provision = Canary_store.string_of_provision
 

@@ -45,22 +45,50 @@ detail in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
 **To-do, regrouped.**
 
-### A. Convergence — one project spec, one runner (next; the current focus)
+### A. Convergence — one enumeration algorithm, one project spec (current focus)
 
-tiny-full + sqlite **already** share `project_run` + `run_project_run` +
-`print_spec` (both `spec` outputs come from the SAME `pr_artifacts` +
-`pr_enumerate` data). The goal is to extend that to the rest and collapse the
-duplicate identities (§1c: three project-definition tiers, two identity types).
+**Two paths today.** The enumeration ALGORITHM (`canary_enumerate.run_config`)
+is already shared by config — `tiny_slice` (mutation axis) and `general_slice`
+(provision/version) are both presets — but only the **display** (`tiny engine`,
+`scenarios`) + tests call it. The **run** hand-builds a list (`pr_enumerate`
+closure → `tiny_full_assignments` / sqlite's list), which isn't guaranteed to
+match what the algorithm would produce (e.g. sqlite hand-builds `lib-only-Built`
+where the algorithm gives `lib=Built + bindings=Fetched`). Converge the run onto
+the algorithm.
 
-- Migrate **z3 / llvm / ssl** onto `project_run` (variants → `pr_enumerate`,
-  `mk_runner_spec` → `pr_runner_spec`); retire `run_project_multi` +
+**Roles** (one algorithm, not one runner): general projects (tiny-full, sqlite,
+z3…) **GENERATE** scenarios from `run_config`; **tiny1 stays STANDALONE** (the
+hand-authored oracle, `canary tiny run`) and `run_config` **PROJECTS** it for
+cross-check (already the `tiny engine` view). The mutation axis (`bad_tags`) is
+tiny-only — a polymorphic `'m` overlay on the all-Good `point.assignment`; real
+projects pass `mutations = []`. The universal spec has no `bad_tags`.
+
+Steps:
+
+- **A1 — per-artifact provisions.** `enumerate`/`run_config`/`assignments_of`
+  take a per-artifact universe (`provisions_of : artifact_id -> provision list`)
+  instead of one global `provision list` (a tiny-shaped simplification — real
+  projects need source=Fetched, lib={Fetched,Built}, binding=Fetched). `tiny_slice`
+  / `general_slice` keep their sigs (pass a constant fn), so no caller ripple.
+  Pure — changes no run. + `project-test`.
+- **A2 — point → assignment fold.** `assignment_of_point : ('m -> string) -> 'm
+  point -> assignment` (folds `mutation = Some (aid, m)` → that artifact's
+  `quality = Bad (tag m)`) — bridges the algorithm's `point` (mutation separate)
+  to the run's `assignment` (Bad folded). Pure. + `project-test`.
+- **A3 — declared `project_spec`** (artifacts + `provisions_of` + versions +
+  config + optional `'m` mutation universe); `run_project_run` calls `run_config`
+  + A2 fold instead of `pr_enumerate`. **Wire sqlite first** (no mutations;
+  forces A1) — enumeration comes from the algorithm; the `lib=Built +
+  bindings=Fetched` scenario appears for free (subsumes coverage-C
+  binding-vs-built-lib).
+- **A4 — wire tiny-full** (the `'m=string` mutation instantiation via A2);
+  `--thin` becomes `config.mutation = Subset`, not a separate `thin_assignments`
+  filter. Cross-check generated tiny-full vs projected tiny1.
+- **A5 — wire z3/llvm/ssl** onto `project_spec`; retire `run_project_multi` +
   `print_spec_variants`.
-- Collapse `Canary_project.project` into `project_run` — **one** project identity.
-- **Derive `pr_enumerate`** from a declared spec (absorb `tiny_full_assignments`
-  / `_combinations` into the general enumeration algorithm) rather than a
-  hand-built closure.
-- Unify the **3-way expectation model** (agnostic / contract-bound / hand-written
-  → derived; §1c #1) once one runner is in place.
+- **A6 — collapse** `Canary_project.project` into `project_run` — one identity.
+- **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
+  hand-written → derived; §1c #1).
 
 ### B. Coverage — make canary detect more
 
