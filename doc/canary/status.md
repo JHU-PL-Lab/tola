@@ -249,6 +249,15 @@ comment sweep (resource → cached artifact in the 2229-line
 `detect_pm` · wire the `latest` channel (§1c #3) · scenario names + `docs/canary`
 output volume.
 
+**Static-spec vs run-closure inspection** (gated on the graph, §7 of
+`dynamic_enumeration.md`): two kind-grouped views of the node graph — `spec <pj>`
+= the DECLARED graph (potentials: a source that *can* build a lib sits in the
+source group), and a new post-run **closure** view read off `actions.log` /
+`run_state.json` (realised: the lib built-from-source is promoted into the lib
+group with its `built_from` edge, source retained). Potential vs realised; a
+`closure <pj>` / `status --graph` command renders the run view. Do when the graph
+lands.
+
 ## 1c. Project-file review (2026-08-03)
 
 Read across `src/canary/projects/*.ml`. The headline: **three ways to define a

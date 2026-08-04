@@ -242,3 +242,26 @@ of one `close_deps`, and `node_of_assignment`'s chain becomes the `Lockstep` cas
 - **A5/A6/A7 gate:** onboard z3/llvm/ssl against this node model (v1), NOT the flat
   product — why flat `pr_spec` onboarding was reordered *after* the graph. Tracked
   in `status.md` §A.
+
+## 9. Inspection — static spec vs run closure (two views of the node graph)
+
+**Gated on §7 (do when the graph lands).** The same node graph has two views,
+both grouped by artifact kind — the difference is **potential vs realised**:
+
+- **Static (`spec <pj>`)** — the DECLARED graph: nodes are *potentials*. A source
+  that *can* build a lib is listed in the **source** group with its build-edge
+  capability noted; the lib is a potential node, not yet its own realised entry.
+  This is what `spec` shows today (enumerated assignments), reframed as
+  kind-grouped static node info.
+- **Run closure (post-run, from the result log)** — the REALISED graph: after a
+  dynamic run, parse `actions.log` / `run_state.json` and render the **closure** —
+  the lib that was actually built-from-source now appears in the **lib** group as a
+  realised node (carrying its `built_from` edge back to the source), while the
+  source *stays* in the **source** group. The closure is the instantiated
+  `close_deps` output reconstructed from what actually ran.
+
+So static lists what a project COULD touch (one node per declared kind, edges as
+capability); the closure lists what a run DID touch (a built artifact *promoted*
+into its kind-group, the source retained). A new/extended command (`closure <pj>`
+or `status --graph`) renders the post-run view off the logs. Ties into the
+deferred tri-view (`status.md` §A E/C polish).
