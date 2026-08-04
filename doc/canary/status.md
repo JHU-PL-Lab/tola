@@ -297,8 +297,26 @@ scenarios it runs, both statically (before a run) and from the result (after).
   `spec` is the pre AND post artifact×scenario view (tiny-full 12/24 matches the
   run; sqlite 0/0). *Remaining polish:* still delta-labelled, not artifact-grouped
   in the scenario section; a `status`-side matrix is optional now that `spec` shows it.
-- **F3 — artifact-centric cut**: per artifact, which scenarios touched it (direct +
-  inherited) — the dual view (ties to §4 "Dual-view artifact index").
+- **F3 — artifact-centric cut ✅** (2026-08-04, `7c288c4`). `print_artifacts` —
+  the dual of `print_spec` (rows = artifacts): per artifact, the scenarios that
+  directly mutate it (`✓ detected`/`✗ missed`/`·`) + a per-artifact detection
+  rate + a `+M upstream` count (scenarios mutating an upstream artifact). Surfaces
+  what the scenario list buried — e.g. tiny-full **lib 0/6 detected** (every lib
+  mutation missed), ocaml cstubs 7/11.
+- **Project-first CLI ✅** (`7c288c4`): `canary <pj> spec|run|status` groups the
+  pre/run/post triad (mirrors `canary tiny …`) — spec = scenario-centric, status =
+  artifact-centric (F3), run = execute. Wired for tiny-full + sqlite; coexists with
+  verb-first `spec`/`action`/`status`.
+
+**Pipeline map (pre/run/post — where to read):** `canary <pj> spec` → `print_spec`
+(`canary_main.ml`) → `pr.pr_enumerate ()` → `Canary_enumerate.enumerate ~policy`
+(stage 2) over the declared `project_spec` (stage 1). `canary <pj> run` →
+`run_project_run` (`canary_main.ml`) → per scenario `pr_materialize` (tiny:
+`Canary_tiny_workspace` assemble; sqlite: build/fetch actions) → `pr_runner_spec`
+→ `derive_steps` (`canary_step_builder`) → `Canary_local_runner` executes → writes
+`scenarios.tsv` (F1). `canary <pj> status` → `load_scenario_post` + `print_artifacts`.
+Project bundles: `canary_project_tiny.tiny_full_run` / `canary_project_sqlite.sqlite_run`
+(the `Canary_project_run.project_run` records).
 - **F4 — run-closure (realised graph) view** *(gated on the node graph, §A / A5)*:
   two kind-grouped views — `spec <pj>` = the DECLARED graph (potentials: a source
   that *can* build a lib sits in the source group), and a post-run **closure** read
