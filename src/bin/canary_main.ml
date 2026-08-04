@@ -244,45 +244,67 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
     detected (List.length bads)
 
-(* Dry-run snapshot of a [project_run]: the declared artifacts + the enumerated
-   scenarios (each artifact's provision@version[#bad-tag]), WITHOUT executing
-   anything — [pr_materialize] is NOT called (it would build/assemble/fetch).
-   A shared view to confirm what canary will enumerate before a run. Renders
-   each scenario as its DELTA from the all-good baseline (printed once) so the
-   table stays readable. *)
+(* Coarse artifact GROUP for the spec listing (ssot §4.2 kinds). *)
+let group_of_kind : Canary_basic.artifact_kind -> string = function
+  | Canary_basic.Source -> "source"
+  | Canary_basic.Headers | Canary_basic.Lib -> "native"
+  | Canary_basic.Binding _ -> "bindings"
+  | Canary_basic.App -> "app"
+
+let group_order = [ "source"; "native"; "bindings"; "app" ]
+
+let prov_short : Canary_enumerate.provision -> string = function
+  | Canary_enumerate.Vendored -> "V"
+  | Canary_enumerate.Built -> "B"
+  | Canary_enumerate.Fetched -> "F"
+  | Canary_enumerate.Absent -> "A"
+
+(* Dry-run snapshot of a [project_run]: declared artifacts (grouped, each with
+   its baseline provision@version) + the enumerated scenarios as deltas from
+   that baseline. Pure — [pr_materialize] is NOT called (it would build/
+   assemble/fetch). A shared view to confirm what canary will enumerate. *)
 let print_spec (pr : Canary_project_run.project_run) : unit =
   let module E = Canary_enumerate in
   let placement_str (pl : E.placement) =
-    Printf.sprintf "%s:%s"
-      (match pl.provision with
-       | E.Vendored -> "V" | E.Built -> "B" | E.Fetched -> "F" | E.Absent -> "A")
+    Printf.sprintf "%s:%s" (prov_short pl.provision)
       (E.string_of_build_id pl.version)
   in
-  Fmt.pr "@.spec: %s — dry-run snapshot (no execution)@."
-    pr.Canary_project_run.pr_name;
-  let arts = pr.Canary_project_run.pr_artifacts in
-  Fmt.pr "@.artifacts (%d):@." (List.length arts);
-  List.iter (fun a -> Fmt.pr "  %s@." (E.string_of_id a)) arts;
   let scenarios = pr.Canary_project_run.pr_enumerate () in
   let all_good = Canary_tiny_scenario.assignment_is_all_good in
-  let ngood = List.length (List.filter all_good scenarios) in
-  let total = List.length scenarios in
-  Fmt.pr "@.scenarios (%d: %d good, %d bad):@." total ngood (total - ngood);
   let baseline =
     try List.find all_good scenarios
-    with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
+    with Not_found -> ( match scenarios with a :: _ -> a | [] -> [])
   in
   let baseline_str id =
     match E.placement_of baseline id with
-    | Some pl -> Some (placement_str pl)
-    | None -> None
+    | Some pl -> placement_str pl
+    | None -> "\xE2\x80\x94" (* em dash *)
   in
-  Fmt.pr "  baseline: %s@."
-    (String.concat "  "
-       (List.map
-          (fun (id, pl) ->
-            Printf.sprintf "%s=%s" (E.string_of_id id) (placement_str pl))
-          baseline));
+  Fmt.pr "@.spec: %s — dry-run snapshot (no execution)@."
+    pr.Canary_project_run.pr_name;
+  (* artifacts, grouped, each with its baseline provision@version *)
+  let arts = pr.Canary_project_run.pr_artifacts in
+  Fmt.pr "@.artifacts (%d), by group [baseline provision@@version]:@."
+    (List.length arts);
+  List.iter
+    (fun grp ->
+      let in_grp =
+        List.filter
+          (fun a -> String.equal (group_of_kind (E.kind_of a)) grp)
+          arts
+      in
+      if in_grp <> [] then begin
+        Fmt.pr "  %s:@." grp;
+        List.iter
+          (fun a -> Fmt.pr "    %-26s %s@." (E.string_of_id a) (baseline_str a))
+          in_grp
+      end)
+    group_order;
+  (* scenarios as deltas from the all-good baseline *)
+  let ngood = List.length (List.filter all_good scenarios) in
+  let total = List.length scenarios in
+  Fmt.pr "@.scenarios (%d: %d good, %d bad) — delta from baseline:@." total ngood
+    (total - ngood);
   List.iter
     (fun a ->
       let good = all_good a in
@@ -290,7 +312,7 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
         List.filter_map
           (fun (id, pl) ->
             let s = placement_str pl in
-            if baseline_str id = Some s then None
+            if String.equal (baseline_str id) s then None
             else Some (Printf.sprintf "%s=%s" (E.string_of_id id) s))
           a
       in
@@ -305,6 +327,85 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
     "  note: this is the ENUMERATION; at run time the runner dedups scenarios \
      that materialize to the same workspace, so run coverage counts distinct \
      workspaces (≤ scenarios above).@."
+
+(* Read each artifact's provision from which [runner_spec] closures are set —
+   the spec's own declaration, WITHOUT running (build_lib set ⇒ Built, fetch_lib
+   ⇒ Fetched, …). Lets `spec` read z3/llvm (raw runner_spec, no project_run)
+   without executing or touching their code. build wins over fetch per lang. *)
+let provisions_of_runner_spec (rs : Canary_step_builder.runner_spec) :
+    (Canary_basic.artifact_kind * Canary_enumerate.provision) list =
+  let has = function Some _ -> true | None -> false in
+  let src =
+    if has rs.fetch_source then [ (Canary_basic.Source, Canary_enumerate.Fetched) ]
+    else []
+  in
+  let lib =
+    if has rs.build_lib then [ (Canary_basic.Lib, Canary_enumerate.Built) ]
+    else if has rs.fetch_lib then [ (Canary_basic.Lib, Canary_enumerate.Fetched) ]
+    else []
+  in
+  let built_langs = List.map fst rs.build_binding in
+  let bind_built =
+    List.map
+      (fun (l, _) -> (Canary_basic.Binding l, Canary_enumerate.Built))
+      rs.build_binding
+  in
+  let bind_fetched =
+    List.filter_map
+      (fun (l, _) ->
+        if List.mem l built_langs then None
+        else Some (Canary_basic.Binding l, Canary_enumerate.Fetched))
+      rs.fetch_binding
+  in
+  src @ lib @ bind_built @ bind_fetched
+
+(* Variant view for projects that expose raw [runner_spec]s per source variant
+   (z3/llvm) instead of a [project_run]. Read-only: each variant's runner_spec
+   is built from its source record (pure) and its provisions inferred. No
+   quality/bad-tag axis — a z3/llvm "defect" is a version-compat EXPECTATION,
+   not a mutated artifact, so it doesn't appear as a scenario here. *)
+let print_spec_variants ~(name : string)
+    ~(variants : (string * Canary_step_builder.runner_spec) list) : unit =
+  let module E = Canary_enumerate in
+  Fmt.pr
+    "@.spec: %s — dry-run snapshot (no execution) [variant view: raw \
+     runner_spec, not project_run]@."
+    name;
+  let all_kinds =
+    List.fold_left
+      (fun acc (_, rs) ->
+        List.fold_left
+          (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
+          acc
+          (provisions_of_runner_spec rs))
+      [] variants
+  in
+  Fmt.pr "@.artifacts (%d), by group:@." (List.length all_kinds);
+  List.iter
+    (fun grp ->
+      let in_grp =
+        List.filter (fun k -> String.equal (group_of_kind k) grp) all_kinds
+      in
+      if in_grp <> [] then
+        Fmt.pr "  %s: %s@." grp
+          (String.concat ", " (List.map E.string_of_artifact in_grp)))
+    group_order;
+  Fmt.pr "@.variants (%d) — per-artifact provision:@." (List.length variants);
+  List.iter
+    (fun (vname, rs) ->
+      let cells =
+        List.map
+          (fun (k, p) ->
+            Printf.sprintf "%s=%s" (E.string_of_artifact k) (prov_short p))
+          (provisions_of_runner_spec rs)
+      in
+      Fmt.pr "  [%-8s] %s@." vname (String.concat "  " cells))
+    variants;
+  Fmt.pr "@.  legend: V=vendored B=built F=fetched A=absent@.";
+  Fmt.pr
+    "  note: read-only projection of each variant's runner_spec; the version \
+     mismatch these projects test lives in the probe EXPECTATION, not shown \
+     here.@."
 
 (* ── Subcommands ── *)
 
@@ -569,14 +670,35 @@ let spec_cmd =
     match proj with
     | Some "tiny-full" -> print_spec Canary_project_tiny.tiny_full_run
     | Some "sqlite" -> print_spec Canary_project_sqlite.sqlite_run
+    | Some "z3" ->
+        let d = detect_distro () in
+        print_spec_variants ~name:"z3"
+          ~variants:
+            [ ( "dev",
+                Canary_project_z3.mk_runner_spec
+                  ~source:Canary_project_z3.z3_source_dev d );
+              ( "stable",
+                Canary_project_z3.mk_runner_spec
+                  ~source:Canary_project_z3.z3_source_stable d ) ]
+    | Some "llvm" ->
+        let d = detect_distro () in
+        print_spec_variants ~name:"llvm"
+          ~variants:
+            [ ( "dev",
+                Canary_project_llvm.mk_runner_spec
+                  ~source:Canary_project_llvm.llvm_source_dev d );
+              ( "stable",
+                Canary_project_llvm.mk_runner_spec
+                  ~source:Canary_project_llvm.llvm_source_stable d ) ]
     | _ ->
-        Fmt.epr "usage: canary spec <tiny-full|sqlite>@.";
+        Fmt.epr "usage: canary spec <tiny-full|sqlite|z3|llvm>@.";
         Stdlib.exit 2
   in
   Cmd.v
     (Cmd.info "spec"
-       ~doc:"Dry-run snapshot of a project_run: declared artifacts + enumerated \
-             scenarios (provision@version[#bad-tag]), no execution.")
+       ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
+             scenarios (project_run: tiny-full/sqlite) or per-variant \
+             provisions (raw runner_spec: z3/llvm). No execution.")
     Term.(const run $ project $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a

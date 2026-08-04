@@ -11,7 +11,7 @@ dune exec src/bin/canary_main.exe -- action sqlite
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): algorithm-driven good+bad run + coverage
-dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: declared artifacts + enumerated scenarios (no execution); also `spec sqlite`
+dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). project_run: tiny-full/sqlite; variant view (raw runner_spec, read-only): z3/llvm
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
 dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests
