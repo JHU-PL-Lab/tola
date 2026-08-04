@@ -344,6 +344,19 @@ scenarios it runs, both statically (before a run) and from the result (after).
   `sqlite_provider : artifact_id -> provider option`; the runner's `store_config.lib`
   AND `pr_provenance` both derive from it — can't drift. tiny already single-source
   (only `pr_provenance`).
+- **Uniform variant view ✅** (2026-08-04, `9d904e7`). z3/llvm `spec` now matches
+  `print_spec`'s look: a **source artifact = a configured repo** — a "source repos"
+  section shows each variant's repo (name @version, ref, remote) + what it *builds*
+  (`has_build_lib`/`has_build_binding`), then artifacts grouped with provision per
+  variant + catalogue builds. Printing-only: the `source_repo` is threaded into the
+  variant tuple; the runner (`mk_runner_spec ~source`) is untouched. `spec @all`
+  [+`--json`] is now uniform across all four projects. *Honest limit:* fetched-artifact
+  package detail is in shell closures (coarse).
+  - **TO-DO (deeper unification):** a `Source_repo of source_repo` provider variant
+    (sibling of `Built_from`, maps to `Fetched`) so z3/llvm expose a real
+    `pr_provenance`/`provider` per artifact like `project_run` — folding the variant
+    view fully into the typed provider model. Deferred (needs the runner to carry the
+    repo, or the viewer to derive providers not just provisions).
 - **NEXT (user-raised): unit tests — GENERAL artifact ops only** (scope per user:
   `command_of_step` is project/graph-edge, NOT here). Test `provision_of_provider`
   coverage, `string_of_provider` rendering, and the drift invariant (each project's
