@@ -605,7 +605,7 @@ let provisions_of_runner_spec (rs : Canary_step_builder.runner_spec) :
    Reuses the exact pre/post data print_spec renders (same [scenario_label] join,
    same catalogue [builds_of], same typed provider) — a second projection, not a
    second source of truth. *)
-let spec_json (pr : Canary_project_run.project_run) : string =
+let spec_json_t (pr : Canary_project_run.project_run) : Yojson.Basic.t =
   let module E = Canary_enumerate in
   let scenarios = pr.Canary_project_run.pr_enumerate () in
   let baseline = baseline_of scenarios in
@@ -644,12 +644,15 @@ let spec_json (pr : Canary_project_run.project_run) : string =
     in
     `Assoc fields
   in
-  Yojson.Basic.pretty_to_string
-    (`Assoc
-       [ ("project", `String pr.Canary_project_run.pr_name);
-         ( "artifacts",
-           `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
-         ("scenarios", `List (List.map scenario_json scenarios)) ])
+  `Assoc
+    [ ("project", `String pr.Canary_project_run.pr_name);
+      ("kind", `String "project_run");
+      ( "artifacts",
+        `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
+      ("scenarios", `List (List.map scenario_json scenarios)) ]
+
+let spec_json (pr : Canary_project_run.project_run) : string =
+  Yojson.Basic.pretty_to_string (spec_json_t pr)
 
 (* Variant view for projects that expose raw [runner_spec]s per source variant
    (z3/llvm) instead of a [project_run]. Read-only: each variant's runner_spec
@@ -698,6 +701,49 @@ let print_spec_variants ~(name : string)
     "  note: read-only projection of each variant's runner_spec; the version \
      mismatch these projects test lives in the probe EXPECTATION, not shown \
      here.@."
+
+(* JSON form of the variant view (z3/llvm) — for `spec @all --json`. *)
+let spec_variants_json_t ~(name : string)
+    ~(variants : (string * Canary_step_builder.runner_spec) list) :
+    Yojson.Basic.t =
+  let module E = Canary_enumerate in
+  let all_kinds =
+    List.fold_left
+      (fun acc (_, rs) ->
+        List.fold_left
+          (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
+          acc
+          (provisions_of_runner_spec rs))
+      [] variants
+  in
+  `Assoc
+    [ ("project", `String name);
+      ("kind", `String "variants");
+      ( "artifacts",
+        `List
+          (List.map
+             (fun k ->
+               `Assoc
+                 [ ("id", `String (E.pretty_artifact k));
+                   ("group", `String (group_of_kind k)) ])
+             all_kinds) );
+      ( "variants",
+        `List
+          (List.map
+             (fun (vname, rs) ->
+               `Assoc
+                 [ ("name", `String vname);
+                   ( "provisions",
+                     `List
+                       (List.map
+                          (fun (k, p) ->
+                            `Assoc
+                              [ ("artifact", `String (E.pretty_artifact k));
+                                ( "provision",
+                                  `String (Canary_store.string_of_provision p)
+                                ) ])
+                          (provisions_of_runner_spec rs)) ) ])
+             variants) ) ]
 
 (* ── Subcommands ── *)
 
@@ -967,7 +1013,8 @@ let spec_cmd =
     Arg.(
       value
       & pos 0 (some string) None
-      & info [] ~docv:"PROJECT" ~doc:"Project to snapshot: tiny-full | sqlite")
+      & info [] ~docv:"PROJECT"
+          ~doc:"Project to snapshot: @all (default) | tiny-full | sqlite | z3 | llvm")
   in
   let thin =
     Arg.(value & flag & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
@@ -985,14 +1032,32 @@ let spec_cmd =
       value & flag
       & info [ "json" ]
           ~doc:
-            "Emit the artifacts × scenarios as JSON (project_run projects only). \
-             Machine-readable; supersedes --by-artifact.")
+            "Emit JSON (machine-readable; supersedes --by-artifact). With @all, \
+             one object keyed by project — the refactor cross-check.")
   in
   let run proj thin by_artifact json () =
+    let d = lazy (detect_distro ()) in
+    let z3_variants () =
+      let d = Lazy.force d in
+      [ ("dev", Canary_project_z3.mk_runner_spec ~source:Canary_project_z3.z3_source_dev d);
+        ("stable", Canary_project_z3.mk_runner_spec ~source:Canary_project_z3.z3_source_stable d) ]
+    in
+    let llvm_variants () =
+      let d = Lazy.force d in
+      [ ("dev", Canary_project_llvm.mk_runner_spec ~source:Canary_project_llvm.llvm_source_dev d);
+        ("stable", Canary_project_llvm.mk_runner_spec ~source:Canary_project_llvm.llvm_source_stable d) ]
+    in
     let show pr =
       if json then print_string (spec_json pr ^ "\n")
       else if by_artifact then print_artifacts pr
       else print_spec pr
+    in
+    let show_variants name variants =
+      if json then
+        print_string
+          (Yojson.Basic.pretty_to_string (spec_variants_json_t ~name ~variants)
+          ^ "\n")
+      else print_spec_variants ~name ~variants
     in
     match proj with
     | Some "tiny-full" ->
@@ -1000,28 +1065,28 @@ let spec_cmd =
           (if thin then Canary_project_tiny.tiny_full_thin_run
            else Canary_project_tiny.tiny_full_run)
     | Some "sqlite" -> show Canary_project_sqlite.sqlite_run
-    | Some "z3" ->
-        let d = detect_distro () in
-        print_spec_variants ~name:"z3"
-          ~variants:
-            [ ( "dev",
-                Canary_project_z3.mk_runner_spec
-                  ~source:Canary_project_z3.z3_source_dev d );
-              ( "stable",
-                Canary_project_z3.mk_runner_spec
-                  ~source:Canary_project_z3.z3_source_stable d ) ]
-    | Some "llvm" ->
-        let d = detect_distro () in
-        print_spec_variants ~name:"llvm"
-          ~variants:
-            [ ( "dev",
-                Canary_project_llvm.mk_runner_spec
-                  ~source:Canary_project_llvm.llvm_source_dev d );
-              ( "stable",
-                Canary_project_llvm.mk_runner_spec
-                  ~source:Canary_project_llvm.llvm_source_stable d ) ]
+    | Some "z3" -> show_variants "z3" (z3_variants ())
+    | Some "llvm" -> show_variants "llvm" (llvm_variants ())
+    | Some "@all" | None ->
+        (* every project's spec in one command — the refactor cross-check *)
+        let prs =
+          [ Canary_project_tiny.tiny_full_run; Canary_project_sqlite.sqlite_run ]
+        in
+        let vs = [ ("z3", z3_variants ()); ("llvm", llvm_variants ()) ] in
+        if json then
+          let projects =
+            List.map spec_json_t prs
+            @ List.map (fun (n, v) -> spec_variants_json_t ~name:n ~variants:v) vs
+          in
+          print_string
+            (Yojson.Basic.pretty_to_string (`Assoc [ ("projects", `List projects) ])
+            ^ "\n")
+        else begin
+          List.iter show prs;
+          List.iter (fun (n, v) -> print_spec_variants ~name:n ~variants:v) vs
+        end
     | _ ->
-        Fmt.epr "usage: canary spec <tiny-full|sqlite|z3|llvm>@.";
+        Fmt.epr "usage: canary spec <@@all|tiny-full|sqlite|z3|llvm>@.";
         Stdlib.exit 2
   in
   Cmd.v
