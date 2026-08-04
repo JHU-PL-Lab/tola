@@ -154,12 +154,18 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     generalizes to full graphs (mismatch) later — the flat form is subsumed, not
     kept as a weaker sibling. Both `pr_enumerate` AND the flat-only path are planned
     retirements toward that single engine.
-  - **ACTIVE next: A3b/A4.** Retire the hand-built `pr_enumerate` → a declared
-    `pr_spec : project_spec`; `run_project_run` enumerates via `assignments_of_spec`
-    (the engine's current, degenerate/flat form) → run tiny-full + sqlite off the
-    spec. Sufficient because their scenarios are one-instance-per-kind (the node
-    graph's extra power — two instances = deploy mismatch — is z3/llvm only). Then
-    enhance/check on more projects.
+  - **A3b — sqlite ✅ done** (`5393cb4`): declared `sqlite_spec : unit project_spec`;
+    `pr_enumerate = assignments_of_spec sqlite_spec` (hand-built list retired). The
+    algorithm gives `{lib=Built, bindings=Fetched}` (not lib-only), so `built_spec`
+    unifies the lib build with the bindings (extend the Fetched spec, swap
+    fetched-lib → built-from-source). Both scenarios PASS. *Follow-up:* bindings run
+    against the SYSTEM lib (Python sqlite3 stdlib can't repoint; OCaml
+    binding-over-built-lib via `LD_LIBRARY_PATH` is coverage-C proper).
+  - **ACTIVE next: A4 — tiny-full.** Same declare→enumerate (`pr_spec` +
+    `assignments_of_spec`, `'m = string`); needs the **multi-mutation** extension for
+    combinations (the single-`option` `point.mutation`); `--thin` becomes a config
+    level. Then enhance/check on more projects. (Flat is sufficient — one instance
+    per kind; the node graph's two-instance mismatch is z3/llvm only.)
   - **Deferred — generalize the engine** to full node graphs (mismatch), subsuming
     the flat form (retiring the flat-only path) and teaching the run to consume node
     graphs. Triggered by the first real deploy-mismatch project (z3/llvm version
