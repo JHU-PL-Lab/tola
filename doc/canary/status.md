@@ -205,7 +205,18 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     `node_of_assignment` (flat projects byte-identical). This unifies the two graphs:
     `make_action_graph`'s App cartesian = the `Independent` case; the chain =
     `Lockstep`. **v1** (drives z3/llvm): `Lockstep`/`Independent` + `close_deps`.
-    **Next BUILD milestone; A5–A7 onboard against it, not the flat product.**
+    **A5–A7 onboard against it, not the flat product.**
+  - **Stage-3 v1 machinery ✅** (2026-08-04): `dep_mode = Lockstep | Independent |
+    Ambient str` + `close_deps ~run_versions_of ~mode_of : assignment ->
+    artifact_node list list` (`canary_action.ml`, after `node_of_assignment`).
+    `Independent` branches an App's `runtime_dep` over `run_versions_of Lib` → the
+    build×run cartesian (the mismatch); `Lockstep` = build-lib (today's chain);
+    App-less assignment ⇒ `[node_of_assignment a]` (flat projects byte-identical,
+    verified: sqlite PASS, tiny-full 12/24, paths unchanged). `project-test`
+    `close_deps_deploy_mismatch` (32/32): build@Stable × run∈{Stable,Dev} → 2
+    graphs, the Dev one built@Stable/run@Dev. **Pure — not yet wired into a run;
+    the live z3/llvm rewire is A5–A7.** Open: where the mode bit is carried (lean:
+    a field on the probe spec) — `dynamic_enumeration.md` §8.
   - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
     points (the curated chain policy); `--thin` as a `config` level; built-lib
     variants routed through the spec (source-primary resolution above).

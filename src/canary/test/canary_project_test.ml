@@ -551,6 +551,76 @@ let node_of_assignment_test : pure_test =
       in
       seam_chain && mag_lib_from_source) }
 
+(* Stage-3 v1: [close_deps] resolves an App's runtime_dep by its dep_mode.
+   [Independent] over run-versions {Stable,Dev} on a build@Stable assignment
+   BRANCHES into two graphs — one running against lib@Stable (matched), one
+   against lib@Dev (the deploy mismatch) — while the build chain (app←binding←
+   lib@Stable) is fixed. [Lockstep] collapses to one graph; an App-less
+   assignment reduces to [node_of_assignment] (flat projects unchanged). *)
+let close_deps_test : pure_test =
+  { name = "action.close_deps_deploy_mismatch";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let module CA = Canary_action in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let a_ap = EN.a_app EN.Direct in
+      let pl p v : EN.placement = { provision = p; version = EN.good v } in
+      (* build side all @Stable (incl. the build-lib) *)
+      let a =
+        EN.[ (a_source, pl Fetched B.Stable); (a_lib, pl Built B.Stable);
+             (a_oc, pl Built B.Stable); (a_ap, pl Built B.Stable) ]
+      in
+      let run_versions_of _ = [ B.Stable; B.Dev ] in
+      let app_of g =
+        List.find g ~f:(fun (n : CA.artifact_node) -> Poly.equal n.CA.a_kind B.App)
+      in
+      let run_ver g =
+        match app_of g with
+        | Some app -> Option.map app.CA.runtime_dep ~f:(fun rl -> rl.CA.version)
+        | None -> None
+      in
+      (* build chain fixed at Stable in every graph: app ← binding ← lib@Stable *)
+      let build_lib_stable g =
+        match app_of g with
+        | Some app -> (
+            match app.CA.built_from with
+            | Some bind -> (
+                match bind.CA.built_from with
+                | Some lib -> EN.equal_version lib.CA.version (EN.good B.Stable)
+                | None -> false)
+            | None -> false)
+        | None -> false
+      in
+      (* Independent: 2 graphs, run-lib @Stable and @Dev (the mismatch) *)
+      let indep =
+        let gs =
+          CA.close_deps ~run_versions_of
+            ~mode_of:(function B.App -> CA.Independent | _ -> CA.Lockstep) a
+        in
+        let run_vers = List.filter_map gs ~f:run_ver in
+        let has v = List.exists run_vers ~f:(EN.equal_version (EN.good v)) in
+        List.length gs = 2 && has B.Stable && has B.Dev
+        && List.for_all gs ~f:build_lib_stable
+      in
+      (* Lockstep: 1 graph, run-lib = build-lib @Stable *)
+      let lock =
+        let gs =
+          CA.close_deps ~run_versions_of ~mode_of:(fun _ -> CA.Lockstep) a
+        in
+        match gs with
+        | [ g ] -> Option.value_map (run_ver g) ~default:false
+                     ~f:(EN.equal_version (EN.good B.Stable))
+        | _ -> false
+      in
+      (* App-less assignment ⇒ exactly [node_of_assignment] (one graph) *)
+      let degenerate =
+        let a' = EN.[ (a_source, pl Fetched B.Stable); (a_lib, pl Built B.Stable);
+                      (a_oc, pl Built B.Stable) ] in
+        List.length
+          (CA.close_deps ~run_versions_of ~mode_of:(fun _ -> CA.Lockstep) a') = 1
+      in
+      indep && lock && degenerate) }
+
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
    For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
@@ -594,7 +664,7 @@ let all_tests : pure_test list =
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
-      built_from_test; node_of_assignment_test;
+      built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =

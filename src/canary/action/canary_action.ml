@@ -276,6 +276,72 @@ let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
   in
   List.map a ~f:(fun (id, _) -> build id)
 
+(** Stage 3 (dynamic_enumeration.md §7): the per-runtime-edge resolution mode. The
+    node ALREADY carries [runtime_dep]; this says how [close_deps] fills it.
+    [Lockstep] (the default) = run-lib is the build-lib — today's chain;
+    [Independent] = run-lib is a SECOND instance ranging over the lib's version
+    universe ⇒ deploy mismatch (= [make_action_graph]'s App build×run cartesian);
+    [Ambient s] = an un-enumerated external lib (libc), shape only in v1. NOT a
+    [project_spec] field — the runtime edge is grammatical; only its resolution
+    is the knob, defaulting so every current project is unchanged. *)
+type dep_mode = Lockstep | Independent | Ambient of string
+
+(** Stage 3 — lift a flat assignment to REALISED node graph(s), resolving each
+    App's [runtime_dep] by [mode_of] its kind. Build edges reuse
+    [node_of_assignment] (the seam); the runtime edge (the flat view's one
+    documented divergence — [consumes_of_action Build_app] lists [Lib] but
+    [node_of_assignment] drops it) is added here. [Independent] BRANCHES — one
+    graph per run-version in [run_versions_of Lib]; combined with the
+    build-version axis already enumerated into [a], the full build×run cartesian
+    appears (the mismatch). An assignment with NO App has no runtime edge to
+    resolve ⇒ [[node_of_assignment a]] — so flat projects (sqlite/tiny) are
+    byte-identical. v1: App→Lib edge only; a finer per-app-wiring key is later. *)
+let close_deps
+    ~(run_versions_of : artifact_kind -> Canary_basic.channel list)
+    ~(mode_of : artifact_kind -> dep_mode)
+    (a : Canary_enumerate.assignment) : artifact_node list list =
+  let module EN = Canary_enumerate in
+  let base = node_of_assignment a in
+  let is_app (n : artifact_node) = match n.a_kind with App -> true | _ -> false in
+  let apps = List.filter base ~f:is_app in
+  let non_apps = List.filter base ~f:(fun n -> not (is_app n)) in
+  let lib_node = List.find base ~f:(fun n -> Poly.equal n.a_kind Lib) in
+  let binding_node =
+    List.find base ~f:(fun n ->
+        match n.a_kind with Binding _ -> true | _ -> false)
+  in
+  (* faithful app edges: built_from = the binding (generates); runtime = Lib (per
+     mode). node_of_assignment leaves App built_from = None (built_from_kinds has
+     no App case), so set it here. *)
+  let resolve (app : artifact_node) : artifact_node list =
+    let app = { app with built_from = binding_node } in
+    match mode_of app.a_kind with
+    | Lockstep -> [ { app with runtime_dep = lib_node } ]
+    | Independent -> (
+        match lib_node with
+        | None -> [ app ]
+        | Some lib ->
+            List.map (run_versions_of Lib) ~f:(fun vr ->
+                { app with runtime_dep = Some { lib with version = EN.good vr } }))
+    | Ambient s ->
+        let ext =
+          mk_node Lib s ~origin:Build_tree ~location:Build_tree
+            ~version:(EN.good Canary_basic.Dev) ~provision:EN.Fetched ()
+        in
+        [ { app with runtime_dep = Some ext } ]
+  in
+  match apps with
+  | [] -> [ base ]
+  | _ ->
+      let variants = List.map apps ~f:resolve in
+      let rec cart = function
+        | [] -> [ [] ]
+        | xs :: rest ->
+            List.concat_map xs ~f:(fun x ->
+                List.map (cart rest) ~f:(fun t -> x :: t))
+      in
+      List.map (cart variants) ~f:(fun avs -> non_apps @ avs)
+
 (** Union in first-appearance order — the deduped set of artifacts a
     project {b inspects} across its actions. This is the detection
     scope inventory the forecast-agnostic [project] derives instead
