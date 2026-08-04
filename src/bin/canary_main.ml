@@ -871,13 +871,22 @@ let spec_cmd =
   let thin =
     Arg.(value & flag & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
   in
-  let run proj thin () =
+  let by_artifact =
+    Arg.(
+      value & flag
+      & info [ "by-artifact" ]
+          ~doc:
+            "Artifact-centric view (which scenarios touch each artifact + \
+             detection rate) instead of the scenario-centric listing.")
+  in
+  let run proj thin by_artifact () =
+    let show pr = if by_artifact then print_artifacts pr else print_spec pr in
     match proj with
     | Some "tiny-full" ->
-        print_spec
+        show
           (if thin then Canary_project_tiny.tiny_full_thin_run
            else Canary_project_tiny.tiny_full_run)
-    | Some "sqlite" -> print_spec Canary_project_sqlite.sqlite_run
+    | Some "sqlite" -> show Canary_project_sqlite.sqlite_run
     | Some "z3" ->
         let d = detect_distro () in
         print_spec_variants ~name:"z3"
@@ -907,7 +916,7 @@ let spec_cmd =
        ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
              scenarios (project_run: tiny-full/sqlite) or per-variant \
              provisions (raw runner_spec: z3/llvm). No execution.")
-    Term.(const run $ project $ thin $ const ())
+    Term.(const run $ project $ thin $ by_artifact $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
    project's spec: stages applicable by definition but turned off when
@@ -1867,61 +1876,6 @@ let summary_diff_cmd =
           versioned_req)")
     Term.(const run $ old_ $ new_ $ const ())
 
-(* ── project-first convenience: `canary <project> spec|run|status` ──
-   Mirrors `canary tiny …`: groups the pre/run/post triad under a project so
-   you stay on one project. spec = scenario-centric snapshot (pre + last-run
-   marks); status = artifact-centric (F3, which scenarios touch each artifact +
-   detection rate); run = execute. Coexists with the verb-first `spec` /
-   `action` / `status`. Wired for the two project_run projects. *)
-let project_run_of name ~thin =
-  match name with
-  | "tiny-full" ->
-      if thin then Canary_project_tiny.tiny_full_thin_run
-      else Canary_project_tiny.tiny_full_run
-  | "sqlite" -> Canary_project_sqlite.sqlite_run
-  | _ -> invalid_arg ("project_run_of: " ^ name)
-
-let mk_project_cmd name =
-  let thin =
-    Arg.(
-      value & flag
-      & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
-  in
-  let failfast =
-    Arg.(value & flag & info [ "failfast"; "ff" ] ~doc:"Stop on first failure.")
-  in
-  let spec_sub =
-    Cmd.v
-      (Cmd.info "spec"
-         ~doc:"Scenario-centric snapshot: artifacts + scenarios (pre + last-run verdicts).")
-      Term.(
-        const (fun thin () -> print_spec (project_run_of name ~thin))
-        $ thin $ const ())
-  in
-  let status_sub =
-    Cmd.v
-      (Cmd.info "status"
-         ~doc:"Artifact-centric view: which scenarios touch each artifact + detection rate.")
-      Term.(
-        const (fun thin () -> print_artifacts (project_run_of name ~thin))
-        $ thin $ const ())
-  in
-  let run_sub =
-    Cmd.v
-      (Cmd.info "run"
-         ~doc:"Enumerate → materialize → run; persists per-scenario verdicts for the post view.")
-      Term.(
-        const (fun thin ff () ->
-            run_project_run (project_run_of name ~thin) ~root:"_out" ~failfast:ff)
-        $ thin $ failfast $ const ())
-  in
-  Cmd.group
-    (Cmd.info name ~doc:[%string "%{name}: spec | run | status (project-first)"])
-    [ spec_sub; run_sub; status_sub ]
-
-let tiny_full_group_cmd = mk_project_cmd "tiny-full"
-let sqlite_group_cmd = mk_project_cmd "sqlite"
-
 (* ── Main ── *)
 
 let () =
@@ -1952,8 +1906,6 @@ let () =
         compat_cmd;
         verify_cmd;
         index_cmd;
-        tiny_full_group_cmd;
-        sqlite_group_cmd;
       ]
   in
   Stdlib.exit (Cmd.eval cmd)
