@@ -177,6 +177,21 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     dev-build-flag resolution (tiny's Dev is a `-DTINY_DEV` build flag, not a source
     version), so those variants stay hand-built for now — this delivers the axis, not
     that routing.
+  - **Spec/policy split + stage names ✅** (2026-08-04): the smell was `ps_mutations`
+    + `ps_config` living inside `project_spec` — they describe *how you explore this
+    run*, not *what the project is*. Split into two stages:
+    - **Stage 1 `project_spec`** (now monomorphic, no `'m`): `{ ps_artifacts;
+      ps_provisions_of; ps_versions_of }` — the project's real option space, a
+      static fact an author writes / the tiny-factory generates.
+    - **Stage 2 `'m policy`** `{ config; mutations }` + `enumerate ~tag ~policy spec`:
+      the exploration policy (config levels + injected faults). `full_policy ()` =
+      the real-project policy (Full everywhere, no mutation). The mutation universe
+      is INJECTED (a testing policy), so it left the spec; provision/version
+      universes are project facts, so they stayed.
+    - Renames: low-level `enumerate` → `enumerate_points`; spec consumer
+      `assignments_of_spec` → `enumerate`. Pure — no run change (tiny-full 12/24,
+      sqlite PASS, 31/31). Stage-3 (dynamic discovery / faithful dep-graph, incl.
+      libc/systemlib edges) is the next milestone; `ps_deps` will extend stage 1.
   - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
     points (the curated chain policy); `--thin` as a `config` level; built-lib
     variants routed through the spec (source-primary resolution above).

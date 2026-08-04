@@ -1551,27 +1551,33 @@ let tiny_full_placement ?(provision = Canary_enumerate.Vendored)
    artifacts per assignment (= combinations). *)
 let tiny_full_assignments (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
-  (* A4: the good baseline + single-bads come from the DECLARED spec via the
-     enumeration algorithm ([assignments_of_spec]), not a hand-built list. The
-     mutation universe = (artifact, bad-tag) pairs; all Vendored @ Stable. *)
-  let tiny_enum_spec : string Canary_enumerate.project_spec =
+  (* A4: the good baseline + single-bads come from a DECLARED spec (stage 1)
+     enumerated under a POLICY (stage 2), not a hand-built list. The spec is the
+     project fact — the artifacts, all Vendored @ Stable. The mutation universe
+     (the (artifact, bad-tag) fault injection) is the tiny-factory's testing
+     POLICY, so it lives in the policy, not the spec. *)
+  let tiny_enum_spec : Canary_enumerate.project_spec =
     { ps_artifacts = spec.tf_artifacts;
       ps_provisions_of = (fun _ -> [ Canary_enumerate.Vendored ]);
-      ps_versions_of = (fun _ -> [ Canary_basic.Stable ]);
-      ps_mutations =
+      ps_versions_of = (fun _ -> [ Canary_basic.Stable ]) }
+  in
+  let tiny_policy : string Canary_enumerate.policy =
+    { config =
+        Canary_enumerate.{ provision = Free; version = Free; mutation = Full };
+      mutations =
         List.concat_map spec.tf_artifacts ~f:(fun aid ->
-            List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag)));
-      ps_config =
-        Canary_enumerate.{ provision = Free; version = Free; mutation = Full } }
+            List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag))) }
   in
   let good_and_bads =
-    Canary_enumerate.assignments_of_spec ~tag:Fn.id tiny_enum_spec
+    Canary_enumerate.enumerate ~tag:Fn.id ~policy:tiny_policy tiny_enum_spec
   in
   (* Built-lib provision/version variants — KEPT hand-built: the lib is [Built]
      (canary compiles it) at [Stable] and [Dev] (with -DTINY_DEV) while the other
-     artifacts stay [Vendored]@[Stable]. That's PER-ARTIFACT provision+version,
-     which the global spec axes can't express yet (a per-artifact version axis,
-     like A1 did for provision, is the follow-up). *)
+     artifacts stay [Vendored]@[Stable]. The per-artifact provision+version axes
+     CAN now express this shape (A1 + per-artifact version), but routing it
+     through the spec needs the source-primary resolution first: tiny's [Dev] is
+     a -DTINY_DEV build flag, not a source version, so a Built@Dev lib over a
+     Stable source violates source-primary. Hand-built until that's resolved. *)
   let all_good_built_lib_at channel =
     List.map spec.tf_artifacts ~f:(fun a ->
         if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then

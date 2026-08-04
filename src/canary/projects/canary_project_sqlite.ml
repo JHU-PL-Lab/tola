@@ -183,23 +183,20 @@ let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
                  ~variant_key ) ];
   }
 
-(* A3b: sqlite DECLARES its enumeration axes; the generic runner ENUMERATES via
-   [assignments_of_spec] — retiring the hand-built pr_enumerate list. Positive-only
-   (no mutations, ['m = unit]). Per-artifact provisions: the lib may be Fetched
+(* A3b: sqlite DECLARES its static axes (stage 1: [project_spec]); the generic
+   runner ENUMERATES via [enumerate ~policy] (stage 2) under [full_policy] —
+   retiring the hand-built pr_enumerate list. Positive-only (no mutations — the
+   policy injects none). Per-artifact provisions: the lib may be Fetched
    (system PM) or Built (source); bindings Fetched. Self-contained Built (no
    a_source artifact — the amalgamation is fetched inside build_lib). *)
-let sqlite_spec : unit Canary_enumerate.project_spec =
+let sqlite_spec : Canary_enumerate.project_spec =
   { ps_artifacts = sqlite_artifacts;
     ps_provisions_of =
       (fun id ->
         if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
           Canary_enumerate.[ Fetched; Built ]
         else Canary_enumerate.[ Fetched ]);
-    ps_versions_of = (fun _ -> [ Canary_basic.Stable ]);
-    ps_mutations = [];
-    ps_config =
-      Canary_enumerate.
-        { provision = Full; version = Full; mutation = Free } }
+    ps_versions_of = (fun _ -> [ Canary_basic.Stable ]) }
 
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
@@ -207,7 +204,8 @@ let sqlite_run : Canary_project_run.project_run =
     (* ENUMERATE from the declared spec, not a hand-built list *)
     pr_enumerate =
       (fun () ->
-        Canary_enumerate.assignments_of_spec ~tag:(fun () -> "") sqlite_spec);
+        Canary_enumerate.enumerate ~tag:(fun () -> "")
+          ~policy:(Canary_enumerate.full_policy ()) sqlite_spec);
     pr_materialize =
       (fun a ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with

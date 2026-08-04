@@ -256,10 +256,12 @@ let rec assignments_of (artifacts : artifact_id list)
                   (id, { provision = pv; version = good ver }) :: t)))
 
 (** The full enumeration algorithm: the product of *valid* assignments ×
-    (positive + each applicable mutation). A mutation is applicable to an
-    assignment only when its target artifact is provided (§4.2: "a mutation
-    applies only to a provided artifact"). *)
-let enumerate ~(artifacts : artifact_id list)
+    (positive + each applicable mutation), producing [point]s. A mutation is
+    applicable to an assignment only when its target artifact is provided
+    (§4.2: "a mutation applies only to a provided artifact"). Low-level: takes
+    already-resolved universes; [run_config] resolves config levels into these,
+    and [enumerate] (stage 2) drives it from a declared [project_spec]. *)
+let enumerate_points ~(artifacts : artifact_id list)
     ~(provisions_of : artifact_id -> provision list)
     ~(versions_of : artifact_id -> Canary_basic.channel list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
@@ -313,7 +315,7 @@ let run_config ~(artifacts : artifact_id list)
     | Subset vs -> vs
     | Full -> all_mutations
   in
-  enumerate ~artifacts ~provisions_of ~versions_of ~mutations
+  enumerate_points ~artifacts ~provisions_of ~versions_of ~mutations
 
 (** tiny's config: provision [Free] (collapse to one representative,
     [Built] — the whole pipeline built locally), mutation [Full] (walk every
@@ -353,26 +355,49 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
             (id, { pl with version = { pl.version with quality = Bad (tag m) } })
           else (id, pl)))
 
-(** A3 — a project's DECLARED enumeration axes (static data): its artifacts, each
-    artifact's provision universe (A1), the version channels, the mutation
-    universe ([[]] for a positive-only real project; tiny is the only one that
-    populates it, [’m = string] bad-tags), and a [config] level per axis. The
-    consumer computes the scenarios — a project DECLARES, canary ENUMERATES. This
-    is what replaces a hand-built [pr_enumerate] closure. *)
-type 'm project_spec = {
+(** STAGE 1 — a project's static declaration: WHAT the project is. Its
+    artifacts, each artifact's provision universe (A1), and each artifact's
+    version universe. These are *project facts* — sqlite's lib really can be
+    fetched or built; it really ships at Stable. No mutation, no config: those
+    are exploration policy (stage 2), not facts about the project, so this type
+    is monomorphic (no ['m]). A real project author writes exactly this; the
+    tiny-factory GENERATES it from its axes. Replaces a hand-built enumerate
+    closure. (Future: [ps_deps] — declared dependency edges — turns this flat
+    artifact set into the faithful dependency graph; see dynamic_enumeration.md.) *)
+type project_spec = {
   ps_artifacts : artifact_id list;
   ps_provisions_of : artifact_id -> provision list;
   ps_versions_of : artifact_id -> Canary_basic.channel list;
-  ps_mutations : (artifact_id * 'm) list;
-  ps_config : 'm config;
 }
 
-(** Enumerate a declared spec into concrete assignments: run the algorithm over
-    the axes, then fold each point's mutation into its version quality (A2). *)
-let assignments_of_spec ~(tag : 'm -> string) (s : 'm project_spec) :
+(** STAGE 2 input — the exploration policy: HOW MUCH of the declared space to
+    walk THIS run, plus any faults to inject. [config] sets a [level] per axis
+    (Free/Subset/Full); [mutations] is the fault universe — [[]] for a real
+    project, ([’m = string] bad-tags) for the tiny-factory. Unlike
+    provision/version (whose universes are project facts in the spec), the
+    mutation universe is INJECTED — it's a testing policy, so it lives here. *)
+type 'm policy = {
+  config : 'm config;
+  mutations : (artifact_id * 'm) list;
+}
+
+(** A real project: walk the whole declared space ([Full] on every axis), inject
+    nothing. Every declared provision×version combo becomes one positive
+    scenario. (A function, not a value, so its ['m] doesn't get locked by the
+    value restriction across projects.) *)
+let full_policy () : 'm policy =
+  { config = { provision = Full; version = Full; mutation = Free }; mutations = [] }
+
+(** STAGE 2 — enumerate a declared [project_spec] under a [policy] into concrete
+    assignments: resolve the config levels over the spec's per-artifact universes
+    (+ the policy's mutation universe), then fold each point's mutation into its
+    target's version [quality = Bad tag] (A2). A project DECLARES (stage 1),
+    canary ENUMERATES (here). [tag] projects the polymorphic mutation to its
+    opaque string tag; unused for a positive-only project ([mutations = []]). *)
+let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     assignment list =
   run_config ~artifacts:s.ps_artifacts ~all_provisions_of:s.ps_provisions_of
-    ~all_versions_of:s.ps_versions_of ~all_mutations:s.ps_mutations s.ps_config
+    ~all_versions_of:s.ps_versions_of ~all_mutations:policy.mutations policy.config
   |> List.map ~f:(assignment_of_point ~tag)
 
 let string_of_provision = Canary_store.string_of_provision

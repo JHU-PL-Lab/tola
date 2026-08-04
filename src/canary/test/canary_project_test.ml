@@ -461,17 +461,17 @@ let project_spec_test : pure_test =
     check = (fun () ->
       let module EN = Canary_enumerate in
       let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let spec : unit EN.project_spec =
+      let spec : EN.project_spec =
         { ps_artifacts = [ EN.a_lib; a_oc ];
           ps_provisions_of =
             (fun id ->
               if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
               else EN.[ Fetched ]);
-          ps_versions_of = (fun _ -> B.single_channel);
-          ps_mutations = [];
-          ps_config = { provision = EN.Full; version = EN.Full; mutation = EN.Free } }
+          ps_versions_of = (fun _ -> B.single_channel) }
       in
-      let asgs = EN.assignments_of_spec ~tag:(fun () -> "") spec in
+      let asgs =
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
+      in
       let lib_is a = EN.provision_of a EN.a_lib in
       List.length asgs = 2
       && List.exists asgs ~f:(fun a -> EN.equal_provision (lib_is a) EN.Fetched)
