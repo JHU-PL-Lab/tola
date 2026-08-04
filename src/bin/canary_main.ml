@@ -435,6 +435,90 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
      that materialize to the same workspace, so run coverage counts distinct \
      workspaces (≤ scenarios above).@."
 
+(* Is artifact [id] DIRECTLY mutated (Bad quality) in scenario [a]? *)
+let artifact_bad_in (a : Canary_enumerate.assignment)
+    (id : Canary_enumerate.artifact_id) : bool =
+  match Canary_enumerate.placement_of a id with
+  | Some { version = { quality = Canary_enumerate.Bad _; _ }; _ } -> true
+  | _ -> false
+
+(* F3 — the ARTIFACT-centric dual of [print_spec]: for each artifact, the
+   scenarios that directly mutate it (with post verdict + a per-artifact
+   detection rate), then a compact count of scenarios that mutate an UPSTREAM
+   artifact (this one is downstream-affected). Same pre/post join by
+   [scenario_label]. Rows = artifacts, whereas [print_spec]'s rows = scenarios. *)
+let print_artifacts (pr : Canary_project_run.project_run) : unit =
+  let module E = Canary_enumerate in
+  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let baseline = baseline_of scenarios in
+  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
+  let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
+  let is_detected a =
+    match verdict a with Some ("PASS", _) -> true | _ -> false
+  in
+  let bads =
+    List.filter
+      (fun a -> not (Canary_tiny_scenario.assignment_is_all_good a))
+      scenarios
+  in
+  Fmt.pr "@.artifacts: %s — %s (scenarios that touch each)@."
+    pr.Canary_project_run.pr_name
+    (if post = [] then "enumeration (no run yet)"
+     else "enumeration + last-run verdicts");
+  List.iter
+    (fun grp ->
+      let in_grp =
+        List.filter
+          (fun id -> String.equal (group_of_kind (E.kind_of id)) grp)
+          pr.Canary_project_run.pr_artifacts
+      in
+      if in_grp <> [] then begin
+        Fmt.pr "  %s:@." grp;
+        List.iter
+          (fun id ->
+            let ord = Canary_basic.kind_order (E.kind_of id) in
+            let direct = List.filter (fun a -> artifact_bad_in a id) bads in
+            let upstream =
+              List.filter
+                (fun a ->
+                  List.exists
+                    (fun (other, (pl : E.placement)) ->
+                      Canary_basic.kind_order other.E.kind < ord
+                      && match pl.version.quality with E.Bad _ -> true | _ -> false)
+                    a)
+                bads
+            in
+            let rate =
+              if post = [] then ""
+              else
+                Printf.sprintf " · %d/%d detected"
+                  (List.length (List.filter is_detected direct))
+                  (List.length direct)
+            in
+            let up =
+              if upstream = [] then ""
+              else Printf.sprintf " · +%d upstream" (List.length upstream)
+            in
+            Fmt.pr "    %-26s %d mutated%s%s@." (E.pretty_id id)
+              (List.length direct) rate up;
+            List.iter
+              (fun a ->
+                let mark =
+                  match verdict a with
+                  | None -> if post = [] then "" else "·"
+                  | Some ("PASS", _) -> "✓ detected"
+                  | Some _ -> "✗ missed"
+                in
+                Fmt.pr "      %-46s %s@." (scenario_label ~baseline a) mark)
+              direct)
+          in_grp
+      end)
+    group_order;
+  Fmt.pr
+    "@.  legend: N mutated = scenarios with THIS artifact at a Bad version; \
+     +M upstream = scenarios mutating an upstream artifact (downstream-affected); \
+     ✓ detected / ✗ missed / · not run.@."
+
 (* Read each artifact's provision from which [runner_spec] closures are set —
    the spec's own declaration, WITHOUT running (build_lib set ⇒ Built, fetch_lib
    ⇒ Fetched, …). Lets `spec` read z3/llvm (raw runner_spec, no project_run)
@@ -1783,6 +1867,61 @@ let summary_diff_cmd =
           versioned_req)")
     Term.(const run $ old_ $ new_ $ const ())
 
+(* ── project-first convenience: `canary <project> spec|run|status` ──
+   Mirrors `canary tiny …`: groups the pre/run/post triad under a project so
+   you stay on one project. spec = scenario-centric snapshot (pre + last-run
+   marks); status = artifact-centric (F3, which scenarios touch each artifact +
+   detection rate); run = execute. Coexists with the verb-first `spec` /
+   `action` / `status`. Wired for the two project_run projects. *)
+let project_run_of name ~thin =
+  match name with
+  | "tiny-full" ->
+      if thin then Canary_project_tiny.tiny_full_thin_run
+      else Canary_project_tiny.tiny_full_run
+  | "sqlite" -> Canary_project_sqlite.sqlite_run
+  | _ -> invalid_arg ("project_run_of: " ^ name)
+
+let mk_project_cmd name =
+  let thin =
+    Arg.(
+      value & flag
+      & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
+  in
+  let failfast =
+    Arg.(value & flag & info [ "failfast"; "ff" ] ~doc:"Stop on first failure.")
+  in
+  let spec_sub =
+    Cmd.v
+      (Cmd.info "spec"
+         ~doc:"Scenario-centric snapshot: artifacts + scenarios (pre + last-run verdicts).")
+      Term.(
+        const (fun thin () -> print_spec (project_run_of name ~thin))
+        $ thin $ const ())
+  in
+  let status_sub =
+    Cmd.v
+      (Cmd.info "status"
+         ~doc:"Artifact-centric view: which scenarios touch each artifact + detection rate.")
+      Term.(
+        const (fun thin () -> print_artifacts (project_run_of name ~thin))
+        $ thin $ const ())
+  in
+  let run_sub =
+    Cmd.v
+      (Cmd.info "run"
+         ~doc:"Enumerate → materialize → run; persists per-scenario verdicts for the post view.")
+      Term.(
+        const (fun thin ff () ->
+            run_project_run (project_run_of name ~thin) ~root:"_out" ~failfast:ff)
+        $ thin $ failfast $ const ())
+  in
+  Cmd.group
+    (Cmd.info name ~doc:[%string "%{name}: spec | run | status (project-first)"])
+    [ spec_sub; run_sub; status_sub ]
+
+let tiny_full_group_cmd = mk_project_cmd "tiny-full"
+let sqlite_group_cmd = mk_project_cmd "sqlite"
+
 (* ── Main ── *)
 
 let () =
@@ -1813,6 +1952,8 @@ let () =
         compat_cmd;
         verify_cmd;
         index_cmd;
+        tiny_full_group_cmd;
+        sqlite_group_cmd;
       ]
   in
   Stdlib.exit (Cmd.eval cmd)
