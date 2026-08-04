@@ -1,5 +1,24 @@
 # Tiny — how it works today, how we want it to work
 
+> **Reframing banner (2026-08-04) — read first.** This doc predates the
+> **tiny-factory / tiny1 / tiny-full** split and the enumerate engine, so it
+> describes one undifferentiated "tiny." Current reality:
+> - **tiny-factory** = the machinery (scenario specs + workspace materializer);
+>   **tiny1** = the single-scenario oracle projects (`canary tiny run`); the §3–§5
+>   mechanics here are tiny1-accurate.
+> - **tiny-full** = one project, peer of sqlite (`canary action tiny-full`), whose
+>   good+bad scenarios now come from a declared spec via
+>   `Canary_enumerate.enumerate ~tag ~policy tiny_enum_spec`
+>   (`canary_tiny_scenario.ml`). Absent from this doc entirely.
+> - **§6 counts** (`15 hand + 7 derived = 22`, `12/20 cells`) are **tiny1-scoped**;
+>   the honest project-level number is **tiny-full's 12/24** (status §Now), and the
+>   cold==warm fake-green was fixed.
+> - **§7 wish-list** (fill the 8 empty derived cells) is **superseded** by the
+>   enumerate-convergence in status §A — the hand-fill picking order is retired, not pursued.
+>
+> Canonical truth is now `ssot.md` §4/§5 + `status.md` §A; treat this file as tiny1
+> mechanics + history.
+
 Canonical description of tiny's implementation state and
 near-term wish-list. Complements:
 

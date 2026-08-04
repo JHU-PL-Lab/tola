@@ -31,7 +31,8 @@
 The legacy z3/llvm knobs (`has_build_lib`, `cmake_build_binding`, the
 dev/stable `source_repo`s) are an ad-hoc version of this origin/variant
 model; the clean form is the provision axis of [`ssot.md` §4.2](ssot.md),
-which they'll converge onto.
+which they'll converge onto. (2026-08-04: that provision axis has since
+landed — `ps_provisions_of`/`ps_versions_of` in `Canary_enumerate`.)
 
 ---
 

@@ -48,8 +48,8 @@ fans out across the sibling backends.
 they never call back upward. `canary_run_info` orchestrates them as
 siblings, fanning out the same `step list` to each backend.
 
-> **Four sibling backends.** `backend/` holds four files that each
-> consume `step list`, differing only in what they produce:
+> **Four step-list backends.** Four files in `backend/` each consume
+> `step list`, differing only in what they produce:
 >
 > - [canary_local_runner.ml](../../../src/canary/backend/canary_local_runner.ml)
 >   — *executes* the steps' shell commands directly, in-process.
@@ -60,6 +60,13 @@ siblings, fanning out the same `step list` to each backend.
 >   `result.html`.
 > - [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) —
 >   renders `.mmd` diagram files.
+>
+> `backend/` also holds three non-rendering siblings:
+> [canary_run_info.ml](../../../src/canary/backend/canary_run_info.ml)
+> (the run orchestrator), [canary_detect.ml](../../../src/canary/backend/canary_detect.ml)
+> (forecast-agnostic outcome classification), and
+> [canary_status.ml](../../../src/canary/backend/canary_status.ml)
+> (the `canary status` verdict matrix).
 >
 > Three of them write a file for someone else to consume; the local
 > runner does the work itself. The retired yaml-and-shell backend pair
@@ -175,7 +182,7 @@ files are copied to `docs/canary/projects/<project>/` for GitHub Pages.
 
 ## The HTML viewer (result.html)
 
-[`Canary_backend_html`](../../../src/canary/backend/canary_backend_html.ml)
+[`Canary_html`](../../../src/canary/backend/canary_html.ml)
 emits a single self-contained HTML file per run.
 
 - **Left pane** — view selector tabs + Mermaid block.
@@ -234,5 +241,5 @@ hardening).
 | The exact data the renderer consumes | `Canary_step_model.step` ([canary_step_model.ml](../../../src/canary/action/canary_step_model.ml)) |
 | Per-renderer parameter list | top of each function in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) — `mermaid_of_action_rule_schema`, `mermaid_full`, `mermaid_view` |
 | Why the schema and full renderers differ | [canary_diagram.ml:54+ and :1128+](../../../src/canary/backend/canary_diagram.ml) — the two big blocks |
-| How the HTML viewer dispatches clicks | [canary_backend_html.ml](../../../src/canary/backend/canary_backend_html.ml) |
+| How the HTML viewer dispatches clicks | [canary_html.ml](../../../src/canary/backend/canary_html.ml) |
 | Status-to-colour mapping | `result_status_of_run` in [canary_diagram.ml](../../../src/canary/backend/canary_diagram.ml) |

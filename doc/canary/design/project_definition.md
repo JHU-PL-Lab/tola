@@ -1,10 +1,21 @@
 # The `project` definition — detection-first, forecast-agnostic
 
-> **Status: design draft (2026-07-22).** Captures the direction agreed
+> **Status update (2026-08-04).** The detection-first *direction* here SHIPPED,
+> but through a **different architecture** than the §3 target type: the runtime
+> is `project_run` (`projects/canary_project_run.ml`) + `Canary_enumerate`
+> (enumeration) + `backend/canary_detect.ml` (forecast-agnostic detection). The §3
+> `type project = {name; surface; stores; steps; contracts_in_scope}` did NOT
+> land — `action/canary_project.ml` is still the minimal `{name; contract_bindings}`.
+> The §3.3 `api_source`→`surface` split and **S5a detection** (§6 seam table) HAVE
+> shipped (`Canary_surface`, `canary_detect.ml`), so mark those done. **This doc is
+> now a reconcile-then-fold candidate: fold the surviving taxonomy into `ssot.md`
+> §6.1.** Original draft banner below, kept for context.
+>
+> ~~**Status: design draft (2026-07-22).** Captures the direction agreed
 > in discussion; not yet implemented. Supersedes the minimal
 > `Canary_project.project = { name; contract_bindings }` recorded in
 > `worklog_2026_07.md` (2026-07-21, "Task 2 Step 1 refinement").
-> Condenses into `ssot.md` §6.1 once settled.
+> Condenses into `ssot.md` §6.1 once settled.~~
 
 Companion to [`new_project.md`](new_project.md) (§3 auto-generation plan,
 which this subsumes) and [`ssot.md`](ssot.md) §6.1 (operational taxonomy),

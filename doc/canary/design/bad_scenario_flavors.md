@@ -34,8 +34,9 @@ Flavor 1 mutations follow a small template family:
 Each template instantiates at any artifact layer. The
 factory's `derive_scenarios` enumeration already surfaces
 these as `(Good × related-artifact × applicable-kind)` cells
-in `tiny list`. Today 5 cells are filled, 15 are
-empty — the empty ones are candidate flavor-1 slots.
+in `tiny list`. (The cell-counting model is being superseded by the
+`Canary_enumerate.enumerate` engine — see status §A; tiny-full's honest
+project-level number is 12/24. The empty cells are candidate flavor-1 slots.)
 
 **Reuse pattern in the code**:
 
@@ -51,9 +52,8 @@ empty — the empty ones are candidate flavor-1 slots.
 patch files (`c/src/tiny.c`) naming specific symbols.
 Parametric mutations — "drop symbol `<X>` from artifact
 `<A>`" as data, generating the patch on demand — is the
-last unresolved axis. SSOT §9.3 Task 1.6 backlog item 2
-(`tiny_recipe synthesis from an abstract cell`) is this
-work.
+last unresolved axis. (`status.md` — the old SSOT §9.3 Task 1.6 backlog,
+`tiny_recipe synthesis from an abstract cell`, moved there — is this work.)
 
 Once parametric, filling the 15 empty cells becomes
 mechanical.
@@ -132,7 +132,7 @@ Sketch, not committed:
 2. **Propose new c_i** per uncovered kind. Or extend an
    existing contract's scope (e.g., c4 → transitive c4).
 3. **Add a Bs entry to tiny** for each newly-added contract.
-   The mechanical loop from §9.3 Task 1.6 continues:
+   The mechanical loop from the old SSOT §9.3 Task 1.6 (now in `status.md`) continues:
    `compat_inputs_of_contract` gains a case; tiny gains a
    fixture; regression coverage grows.
 4. **Contract completeness** is validated *empirically* — "we

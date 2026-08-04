@@ -5,6 +5,13 @@ hand-written, and *why*. Update this file whenever a
 hardcoded item moves to derived, or a new hardcoded input
 lands.
 
+> **Scope note (2026-08-04):** the counts below are **tiny1-scoped** (the
+> single-scenario factory). The project-level number is now tiny-full's honest
+> **12/24** (status §Now). The biggest "could move to derived" item — the
+> per-artifact provision/version axes — has **landed** as the
+> `Canary_enumerate.enumerate` engine (`ps_provisions_of`/`ps_versions_of`); §5
+> reads it as still-hypothetical. See status §A.
+
 **Guiding principle.** Two rules:
 
 1. **Everything that can be derived from a small hand input

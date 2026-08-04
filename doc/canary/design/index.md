@@ -9,6 +9,14 @@ expansion roadmap and per-target plans see
 [new_project.md](new_project.md). Doc map at
 [../README.md](../README.md).
 
+> **Current kernel (2026-08-04), not yet folded into the narrative below:**
+> scenarios are enumerated by `Canary_enumerate.enumerate ~policy` over a static
+> `project_spec` (per-artifact provision/version axes), then lifted to the
+> `artifact_node` graph (`action/canary_action.ml`: `node_of_assignment` /
+> `close_deps` / `dep_mode`). Detection is forecast-agnostic (`backend/canary_detect.ml`).
+> The §4 `api_source` metadata model has split into `surface` (`base/canary_surface.ml`)
+> + store_config (`tool/`). See [`ssot.md`](ssot.md) and [`dynamic_enumeration.md`](dynamic_enumeration.md).
+
 ## 1. Research vision
 
 Popular native libraries — LLVM, Z3, PyTorch, SQLite — are consumed through

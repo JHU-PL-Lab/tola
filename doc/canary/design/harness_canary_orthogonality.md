@@ -17,7 +17,9 @@ mutation dispatch — apply patch / rename / soname-bump / drop-val
 into a sandboxed workspace, then `canary_tiny_workspace.ml`
 materializes the resulting store) and the **combinator engine**
 (canary, traversing a space of worlds composed from per-kind
-stores via the variant matrix in `canary_project_tiny.ml`).
+stores — since 2026-08-04 this is the `Canary_enumerate.enumerate`
+engine over `ps_provisions_of`/`ps_versions_of`, which replaced the
+hand-built variant matrix this doc describes).
 
 Both engines need to consume stores; they differ in how producers
 populate them. The store / runner / producer factoring below is
