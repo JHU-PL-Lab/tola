@@ -494,15 +494,33 @@ let node_of_assignment_test : pure_test =
       let find k =
         List.find nodes ~f:(fun (n : CA.artifact_node) -> Poly.equal n.CA.a_kind k)
       in
-      match find (B.Binding ocaml) with
-      | Some bind -> (
-          match bind.CA.built_from with
-          | Some libn when Poly.equal libn.CA.a_kind B.Lib -> (
-              match libn.CA.built_from with
-              | Some srcn -> Poly.equal srcn.CA.a_kind B.Source
-              | None -> false)
-          | _ -> false)
-      | None -> false) }
+      let seam_chain =
+        match find (B.Binding ocaml) with
+        | Some bind -> (
+            match bind.CA.built_from with
+            | Some libn when Poly.equal libn.CA.a_kind B.Lib -> (
+                match libn.CA.built_from with
+                | Some srcn -> Poly.equal srcn.CA.a_kind B.Source
+                | None -> false)
+            | _ -> false)
+        | None -> false
+      in
+      (* make_action_graph now AGREES: its Build_lib node is built_from Source
+         (the source-edge fix) — the two representations match on lib←source. *)
+      let ar =
+        CA.make_action_graph
+          ~actions:(CA.store_actions ~langs:[ ocaml ])
+          ~versions:[ B.Stable ] ~name:"pkg" ~source:Canary_store.store ()
+      in
+      let mag_lib_from_source =
+        match CA.pool_get ar B.Lib with
+        | libn :: _ -> (
+            match libn.CA.built_from with
+            | Some s -> Poly.equal s.CA.a_kind B.Source
+            | None -> false)
+        | [] -> false
+      in
+      seam_chain && mag_lib_from_source) }
 
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].

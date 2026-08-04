@@ -97,12 +97,23 @@ let make_action_graph ~actions ~versions ~name ~source () =
     List.fold actions ~init:[] ~f:(fun pools action ->
         match action with
         | Build_lib ->
+            let sources = get pools Source in
             let nodes =
               List.map versions ~f:(fun v ->
+                  (* source-primary: lib@v is built FROM source@v (same version) —
+                     the same [get pools _] + [~built_from] pattern Build_binding
+                     uses for lib. Was missing (source-as-implicit-root); degrades
+                     to that when no Source is in the graph. *)
+                  let built_from =
+                    List.find sources ~f:(fun s ->
+                        Canary_enumerate.equal_build_id s.version
+                          (Canary_enumerate.good v))
+                  in
                   mk_node Lib
                     (name ^ vs v)
                     ~origin:Build_tree ~location:Build_tree
-                    ~version:(Canary_enumerate.good v) ~provision:Built ())
+                    ~version:(Canary_enumerate.good v) ~provision:Built
+                    ?built_from ())
             in
             add pools Lib nodes
         | Fetch kind ->
