@@ -21,6 +21,18 @@ A bad scenario has to be one of two shapes:
 Naming (informal): flavor 1 = **artifact-local defect**;
 flavor 2 = **cross-artifact mismatch**.
 
+**Mapping onto the current engine (2026-08-04).** The distinction is now the
+enumerate/graph split (ssot §4.2):
+- **Flavor 1 = the `mutation` axis** — a single artifact at a `Bad` version
+  (`Canary_enumerate` `quality = Bad tag`), a flat `assignment`. This is
+  **implemented**: tiny-full's `Bs.N` scenarios, shown by `canary spec`
+  (26 bad = flavor-1 single-artifact + a few curated combinations).
+- **Flavor 2 = a version/provision mismatch across a dependency edge** — two
+  well-formed artifacts that don't fit (build-lib ≠ run-lib). This is the node
+  graph's runtime edge (`dep_mode = Independent` / `close_deps`, ssot §4.2.4):
+  **machinery built, not yet wired to a live run** (the z3/llvm deploy-mismatch
+  case). So flavor 1 runs today; flavor 2 is the graph engine's next live step.
+
 ## Flavor 1 — reuse across Good scenarios
 
 Flavor 1 mutations follow a small template family:

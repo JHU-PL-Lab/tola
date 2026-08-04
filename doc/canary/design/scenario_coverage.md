@@ -3,6 +3,18 @@
 > **Status: `canary scenarios` shipped** (union coverage + three-way N/A).
 > The design below is the model it implements.
 
+> **Two scenario views — don't conflate (2026-08-04).** This doc is ONE of two:
+> - **`canary scenarios`** (here) = store-lifecycle **stage coverage** — which
+>   abstract stages (`build_lib`/`fetch_lib`/`run_app`/…) a project's variants
+>   exercise, `✓`/`-`/`⊘`, unioned. The **provision-axis** view.
+> - **`canary spec <pj>`** = the enumerated **good/bad scenario set** (one
+>   `Canary_enumerate.assignment` per scenario; the **mutation** axis makes a
+>   scenario bad). The view `spec` and (post-run) `status` use.
+>
+> Same §4.2 space, two projections. Caveat: `canary scenarios` still knows the
+> **pre-convergence** project list (sqlite/z3/llvm/zarith/ssl/cairo/`tiny`) — NOT
+> `tiny-full` or the `project_run` path (rewiring is status §F5).
+
 ## The whole picture (plain)
 
 1. **A project provides each artifact by building or fetching it.** Every
@@ -250,10 +262,12 @@ Still to do:
   doesn't publish (tiny) or doesn't build (ssl `sys`) shows N/A on those
   transitions — symmetric N/A, no special-casing. `Publish` is covered
   only by the round-trip "build our own conf" case (ssl `src`).
-- **Failure-mutation overlay is a separate axis.** tiny's mutation
-  scenarios (`Bs.N`: `symbol_missing`, `abi_mismatch`, …) sit *on top* of
-  the pipeline stages — a stage can run positive or be mutated to fail.
-  This design covers the **pipeline stages** (what runs); which *failure
-  modes* a project exercises is a further axis, deferred.
+- **Failure-mutation overlay is a separate axis** — *now implemented.* tiny's
+  mutation scenarios (`Bs.N`: `symbol_missing`, `abi_mismatch`, …) sit *on top* of
+  the pipeline stages — a stage can run positive or be mutated to fail. This is
+  the **mutation** axis of the enumerate engine (§4.2), shown by **`canary spec`**
+  (tiny-full's 29 scenarios = 3 good + 26 bad). This `scenarios` command still
+  covers only the **pipeline stages** (what runs); the good/bad set is the `spec`
+  view. Wiring `canary scenarios` onto the `project_run` path is status §F5.
 - **Helper scenarios** (`Sc.5/Sc.6`, app-via-helper) are tiny-specific;
   not generalized here.

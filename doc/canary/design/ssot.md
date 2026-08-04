@@ -206,6 +206,27 @@ are not outside the algorithm; they are simply more axes, handled by the
 same mechanism below. The complete space is the product of every axis over
 every artifact — exhaustive, and verbose.
 
+**Observing scenarios — two projections of this one space** (the code produces
+both; keep them distinct):
+- **`canary spec <pj>`** — the enumerated scenario SET: every point of the
+  product above, as good/bad deltas from the baseline (one `Canary_enumerate.
+  assignment` per scenario; the **mutation** axis is what makes a scenario *bad*).
+  Static, pre-run. tiny-full: 29 scenarios (3 good, 26 bad); sqlite: 2 (both good).
+- **`canary scenarios <pj>`** — the store-lifecycle **stage-coverage** projection:
+  which abstract stages (`build_lib`/`fetch_lib`/…) a project's variants exercise,
+  `✓`/`-`/`⊘`, unioned. A *different* view of the same space (the **provision**
+  axis, [`scenario_coverage.md`](scenario_coverage.md)), not the good/bad set.
+  (Knows the pre-convergence project list, not yet `tiny-full`/`project_run` —
+  status §F5.)
+- **`canary status <pj>`** — post-run verdicts (status §F extends this to a
+  per-scenario matrix keyed to the `spec` set).
+
+The two *bad*-scenario shapes (bad_scenario_flavors.md) map onto the axes:
+**flavor 1** (defect *in* one artifact) = the **mutation** axis (a single
+artifact at a `Bad` version — tiny-full's `Bs.N`); **flavor 2** (mismatch
+*between* two artifacts) = a **version/provision mismatch** across the
+dependency edge (§4.2.4; `dep_mode = Independent` / `close_deps`).
+
 **A config tames the product by setting a *level* per axis.** Each axis
 gets one of:
 
