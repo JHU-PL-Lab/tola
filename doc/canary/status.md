@@ -352,11 +352,18 @@ scenarios it runs, both statically (before a run) and from the result (after).
   variant tuple; the runner (`mk_runner_spec ~source`) is untouched. `spec @all`
   [+`--json`] is now uniform across all four projects. *Honest limit:* fetched-artifact
   package detail is in shell closures (coarse).
-  - **TO-DO (deeper unification):** a `Source_repo of source_repo` provider variant
-    (sibling of `Built_from`, maps to `Fetched`) so z3/llvm expose a real
-    `pr_provenance`/`provider` per artifact like `project_run` — folding the variant
-    view fully into the typed provider model. Deferred (needs the runner to carry the
-    repo, or the viewer to derive providers not just provisions).
+- **Source-as-artifact-group + sqlite remote repo ✅** (2026-08-04, `edd5d6a`).
+  `provider` gains `Source_repo of source_repo` (the SOURCE artifact from a repo →
+  Fetched; sibling of `Built_from` = Built). Every project now prints **source as
+  one artifact group** with its provider: tiny-full vendored (local), sqlite a
+  remote repo (`github.com/sqlite/sqlite` @`version-3.45.1` — the amalgamation it
+  builds + the libsqlite3 the opam binding links; `sqlite_source_dev` = trunk
+  declared too), z3/llvm per-variant repos (the "source repos" section folded into
+  the source row). sqlite gained `a_source` (enumeration stays 2 scenarios; run
+  unchanged). *Remaining:* sqlite shows the STABLE source only — enumerating its
+  **dev** version (the z3-style version-mismatch) needs a dev build / `close_deps`
+  (graph work); z3/llvm still don't expose a real per-artifact `pr_provenance`
+  (their fetched detail is in shell closures) — both fold in when the graph lands.
 - **NEXT (user-raised): unit tests — GENERAL artifact ops only** (scope per user:
   `command_of_step` is project/graph-edge, NOT here). Test `provision_of_provider`
   coverage, `string_of_provider` rendering, and the drift invariant (each project's
