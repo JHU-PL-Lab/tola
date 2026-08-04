@@ -75,12 +75,28 @@ Steps:
   point -> assignment` (folds `mutation = Some (aid, m)` → that artifact's
   `quality = Bad (tag m)`) — bridges the algorithm's `point` (mutation separate)
   to the run's `assignment` (Bad folded). Pure. + `project-test`.
-- **A3 — declared `project_spec`** (artifacts + `provisions_of` + versions +
-  config + optional `'m` mutation universe); `run_project_run` calls `run_config`
-  + A2 fold instead of `pr_enumerate`. **Wire sqlite first** (no mutations;
-  forces A1) — enumeration comes from the algorithm; the `lib=Built +
-  bindings=Fetched` scenario appears for free (subsumes coverage-C
-  binding-vs-built-lib).
+- **A3a — declared `project_spec` + `assignments_of_spec`.** ✅ done 2026-08-04
+  (`5473c8a`). The declared-axes type + `run_config`+fold; plus `assignment_ok`'s
+  Built-lib source requirement made conditional on `a_source` being *declared*
+  (sqlite models Built as self-contained). Pure; `project-test`
+  `project_spec_sqlite_shape`. Reading the code surfaced two **modeling
+  findings** that A3b/A4 must decide:
+  - *sqlite provision-coupling*: the algorithm's product gives `lib=Built +
+    bindings=Fetched` (bindings present) — sqlite's hand-built list had lib-only
+    Built. So converging sqlite **changes** it: the binding runs *over the
+    built lib* (= coverage-C). It also can't reproduce "bindings absent iff lib
+    Fetched" (that's a cross-artifact coupling the independent per-artifact
+    product doesn't express) — arguably correct (drop the coupling).
+  - *tiny multi-mutation*: `point.mutation` is a single `option`, but tiny's
+    **combinations** are multi-bad. The algorithm can't yet emit multi-mutation
+    points → A4 needs a multi-mutation extension (or combinations stay a
+    tiny-only overlay).
+- **A3b — flip sqlite's run** onto `assignments_of_spec`. **Behavior change** (not
+  a drop-in): the Built scenario gains a binding-over-built-lib probe, so sqlite's
+  two runner_specs (`runner_spec` Fetched / `built_runner_spec` Built) must
+  **unify** into one provision-dispatched spec that always fetches+probes the
+  bindings (with `LD_LIBRARY_PATH` → the built lib). This IS coverage-C; do it
+  deliberately.
 - **A4 — wire tiny-full** (the `'m=string` mutation instantiation via A2);
   `--thin` becomes `config.mutation = Subset`, not a separate `thin_assignments`
   filter. Cross-check generated tiny-full vs projected tiny1.
