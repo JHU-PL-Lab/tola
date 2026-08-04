@@ -37,58 +37,63 @@ runner** (Fetched + Built). z3/llvm stay raw-script (`run_project_multi`),
 untouched. Trilogy + principle: **ssot §4.2.5**; full arc history
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**Recently landed** (2026-08-03): run-cache **soundness** (Fix B — a per-step
-verdict marker; a failed probe no longer serves a cached success; `canary
-cache-test` guards it) · the **`spec`** dry-run snapshot (grouped artifacts +
-enumerated scenarios; z3/llvm read-only variant view) · **Fix A** (a cached
-artifact carries its **source**, not just the built output, so source-manifested
-drift is detectable) + **born-safe artifact ids** (`string_of_id` uses `-`, no
-`:`; the PYTHONPATH-splitting bug is gone; `safe_workspace_name` deleted) · the
-**thin** Subset config (`--thin`) · the **naming unification** (resource →
-*cached artifact*). Net: tiny-full went from a fake 24/24 to an honest, stable
-12/24.
+**Recently landed** (2026-08-03/04, the honest-coverage arc): Fix B (cache
+soundness) · `spec` dry-run · Fix A (cached artifact carries source) + born-safe
+ids + robust verdict · thin `--thin` · naming unification + `pretty_id` · quick
+hygiene. Net: tiny-full went from a fake 24/24 to an honest, stable 12/24. Full
+detail in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**To-do, in order:**
+**To-do, regrouped.**
 
-1. ✅ **tiny realistic — provision + version-aware build** (done). Built +
-   Vendored + Dev/Stable exercised (`pr_materialize` dispatches; build/fetch stay
-   runner_spec **actions**; cache separately via `variant_id`,
-   [`cache.md`](design/cache.md)). **Fetched** (canary fetches from a PM at run
-   time) still to add.
-2. **sqlite `project_run`** — **Fetched ✅ + Built ✅** through the generic runner
-   (real fetch/build actions, no vendoring; positive-only). Remaining: an
-   OCaml/Python **binding built against the Built lib** (the Built scenario is
-   lib-only today); a **real version axis** (the amalgamation URL is hardcoded
-   `3450100` — should come from `placement.version`); then the **distro × sys-PM
-   × lang-PM** packaging enumeration.
-3. **Richer agnostic inspectors** (the lever for 12 → more). The 12 undetected
-   tiny-full scenarios fail *unexpectedly* because the **watchlist** can't
-   predict them: c5 symbol-version, c6 type, abi/soname, api-repack (build-level),
-   behavior (runtime). Wire these inspectors' output into the agnostic derivation
-   — not plumbing.
-4. **Version deploy-mismatch coverage** (deferred; *beyond the algorithm
-   milestone*). Needs a consumer that *exercises* the differing symbols:
-   - **backward** (existing apps suffice): a stable-built consumer against a newer
-     **incompatible** lib (soname / symver bump — `Bs.4` / `Bs.3`) → c4/c5.
-   - **forward**: a consumer using a dev-only symbol (`tiny_scale`) @stable →
-     missing → c1/c2. Needs a **dev consumer**.
-   Broad coverage (**missing *and* added** symbols across versions) likely wants
-   multiple apps / per-version required-symbol watchlists (like z3/llvm). Design +
-   build together.
-5. **Unification pass** (from §1c project-file review). *Quick hygiene* — done
-   2026-08-03: swept "resource"/"vendored" *comments* → cached artifact;
-   **memoized** `detect_pm` (one PM probe per run, not ~4× at module-load). The
-   unwired `latest` channel is kept as spec data (§1c #3). *Still deferred*:
-   FULLY skip `detect_pm` for PM-irrelevant commands (needs deferring
-   runner_spec construction — the pm is baked into store_config data). *Then the
-   real convergence*: migrate z3/llvm/ssl onto `project_run` (variants →
-   `pr_enumerate`, `mk_runner_spec` → `pr_runner_spec`), collapse
-   `Canary_project.project` into `project_run` (one project identity), retire
-   `run_project_multi`. *Then* unify the 3-way expectation model (§1c #1).
-6. **Tri-view command** — one table joining factory (spec) / tiny1 (verdict) /
-   tiny-full (assignment) on the shared `Bs.N` key.
-7. Deferred **design** (§1b) · deferred **polish** (scenario names; tiny-full's
-   `docs/canary` output volume; optional `pretty_id` `-`→`:` for display).
+### A. Convergence — one project spec, one runner (next; the current focus)
+
+tiny-full + sqlite **already** share `project_run` + `run_project_run` +
+`print_spec` (both `spec` outputs come from the SAME `pr_artifacts` +
+`pr_enumerate` data). The goal is to extend that to the rest and collapse the
+duplicate identities (§1c: three project-definition tiers, two identity types).
+
+- Migrate **z3 / llvm / ssl** onto `project_run` (variants → `pr_enumerate`,
+  `mk_runner_spec` → `pr_runner_spec`); retire `run_project_multi` +
+  `print_spec_variants`.
+- Collapse `Canary_project.project` into `project_run` — **one** project identity.
+- **Derive `pr_enumerate`** from a declared spec (absorb `tiny_full_assignments`
+  / `_combinations` into the general enumeration algorithm) rather than a
+  hand-built closure.
+- Unify the **3-way expectation model** (agnostic / contract-bound / hand-written
+  → derived; §1c #1) once one runner is in place.
+
+### B. Coverage — make canary detect more
+
+- **Richer agnostic inspectors** (the lever for 12 → more): c5 symbol-version, c6
+  type, abi/soname wired into the agnostic derivation. The remaining 12 undetected
+  fail *unexpectedly* because the watchlist can't predict them.
+- **Version deploy-mismatch** (*beyond the algorithm milestone*): **backward** (a
+  stable consumer @ newer incompatible lib — soname/symver, `Bs.4`/`Bs.3` → c4/c5)
+  + **forward** (a dev-only symbol `tiny_scale` @stable → c1/c2, needs a dev
+  consumer). Broad = **missing *and* added** symbols → multi-app / per-version
+  required-symbol watchlists (like z3/llvm). Design + build together.
+- **Fetched provision for tiny** — canary fetches from a PM at run time, the one
+  provision tiny still lacks (Built + Vendored + Dev/Stable done).
+
+### C. Real-project breadth (sqlite)
+
+- Binding **built against the Built lib** (the Built scenario is lib-only today).
+- **Real version axis** — the amalgamation URL is hardcoded `3450100`; derive it
+  from `placement.version`.
+- **distro × sys-PM × lang-PM** packaging enumeration (couples with §1b).
+
+### D. Deferred design cluster
+
+§1b (instance graph / per-edge version / versioning / packaging / headers
+provision / §5 rewrite). Pick up when B/C force it.
+
+### E. Polish
+
+Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key) · factory
+comment sweep (resource → cached artifact in the 2229-line
+`canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*) · full-lazy
+`detect_pm` · wire the `latest` channel (§1c #3) · scenario names + `docs/canary`
+output volume.
 
 ## 1c. Project-file review (2026-08-03)
 
@@ -110,16 +115,20 @@ Ranked issues:
    (`Expect_failure { contains_any = ["native_library_version"] }`). Unify toward
    derived once one runner (to-do #5) is in place.
 2. **Module-init side effects** — `Canary_store.detect_pm ()` runs at *module
-   load* (`ssl.ml:56`, `sqlite.ml:61`, via pattern_a), so `spec`/`paths`/`graph`
-   probe for a PM they don't need. Make lazy.
+   load* (`ssl.ml:56`, `sqlite.ml:61`, via pattern_a). ~ **Memoized** 2026-08-04
+   (one PM probe per run, not ~4×). *Still open*: fully SKIP it for PM-irrelevant
+   commands (`spec`/`paths`/`graph`) — needs deferring runner_spec construction
+   (pm is baked into store_config data). → E.
 3. **Unwired `latest` channel** (NOT dead — intended spec data). z3/llvm declare
    a third release channel `z3_source_latest` / `llvm_source_latest`
    (`version="latest"; ref_="HEAD"`) beside dev (pinned) and stable (released),
    plus `llvm_sources = [dev; stable; latest]`. 0 live uses today — nothing runs
    the `latest` variant. **Keep**; wire it when a 3rd-channel variant / the
    version-axis work lands (§1b). Don't delete.
-4. **Terminology sweep** — identifiers renamed, but "vendored resource(s)" survives
-   in comments (`project_run.ml:9`, `project_tiny.ml:3-7,45,86`).
+4. **Terminology sweep** — identifiers renamed; spec-file comments swept
+   2026-08-04. *Remaining*: the factory (`canary_tiny_scenario.ml`,
+   `canary_tiny_workspace.ml`) still mixes "resource" with the legit `Vendored`
+   *provision* in comments. → E.
 5. **sqlite carries two shapes** — the older Fetched-only `runner_spec` (used by
    CI) + the newer `sqlite_run` project_run; plus `built_runner_spec` uses raw
    `gcc`/`curl` `Printf` instead of `Canary_cc`/`build_cmd`, and the version axis

@@ -92,3 +92,43 @@ mismatch; ssot §4.2.4) and the finding that the instance graph **already
 exists** (`artifact_node` + `make_action_graph`) remain live *deferred* design
 — see [`enumeration_graph.md`](../design/enumeration_graph.md) and
 [`versioning.md`](../design/versioning.md), tracked in `status.md` §1c.
+
+## 2026-08-03/04 — honest-coverage arc (Fix B → 12/24 → naming unification)
+
+Cold-testing the generic runner revealed the "20/20"/"24/24" was **warm-cache
+fake-green**, and the honest number was gated by two bugs. Fixing them took
+tiny-full agnostic detection from a real 3/24 to an honest, stable **12/24**
+(thin 12/20), cold == warm. Commits, in order:
+
+- **Fix B — run-cache soundness** (`c88a7a9`). A probe writes `probe.log` even on
+  failure, so `check_post` ("probe.log exists") served a failed probe as a cached
+  success on rerun. The runner now writes a per-step **verdict marker** only when
+  the step met its expectation; both skip sites key on it. `canary cache-test`
+  guards the invariant (proven to fail under the old condition). Metric stopped
+  lying: 3/24 cold == warm.
+- **`spec` dry-run** (`e812edb`, `d049349`). A pre-run snapshot over a
+  `project_run`: grouped artifacts + enumerated scenarios (delta from baseline),
+  no execution. z3/llvm get a read-only variant view via `provisions_of_runner_spec`
+  (inferred from which runner_spec closures are set — no code change to them).
+  Surfaced 26-enumerated vs 24-run (ctypes aliases cext).
+- **Fix A + `:` bug + robust verdict** (`abd9785`, `8ada9d4`). (1) A cached
+  artifact now carries its **source** (`subdirs_of_artifact` = built subdir +
+  mli/headers), so source-manifested drift is detectable. (2) The assembled dir
+  name embedded `binding:ocaml:cstubs`, and `:` is the PYTHONPATH separator, so
+  only lib scenarios (no `:`) ever detected — a workspace-naming bug, not a compat
+  one. (3) `run_project` returns its status table; the runner derives the verdict
+  from it (not the shared, overwritten `run_state.json`) + names non-done steps on
+  FAIL. Net 3 → 12/24. Remaining 12 are watchlist-blind (c5/c6/abi/behavior).
+- **thin Subset config** (`141c00f`). `--thin`: Stable, single-bad, no
+  ctypes/combos → 22 scenarios, 12/20 cold == warm.
+- **Naming unification** (`2117d60`, `a1dc6a5`). Born-safe ids — `string_of_id`
+  uses `-` not `:`, so `safe_workspace_name` is deleted (safe by construction); a
+  display-only `pretty_id` restores the `:` form for `spec`. resource → **cached
+  artifact** (ssot term): `cache_artifact` / `cached_artifact_dir` /
+  `subdirs_of_artifact` / `artifact_key_of_tag`.
+- **Quick hygiene** (`8f1d8bd`). Memoized `detect_pm` (one PM probe per run, not
+  ~4× at module-load); swept resource→cached-artifact in the spec-file comments;
+  confirmed the `*_latest` sources are an intended-but-unwired channel (kept).
+
+Project-file review recorded in `status.md` §1c (three-tier project-definition
+split; the convergence target).
