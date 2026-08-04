@@ -313,11 +313,20 @@ scenarios it runs, both statically (before a run) and from the result (after).
   artifact list is `pr_artifacts` (spec); provenance is a new declared accessor
   `pr_provenance` on `project_run`, filled from REAL spec data (sqlite from
   `prebuilt`; tiny from the `canary/examples/tiny/*` layout).
-  - *Honest caveats:* (1) `pr_provenance` is a DISPLAY string, sourced from the
-    same spec values but not yet *derived from / checked against* the actual
-    store_config + fetch closures the runner uses — mild drift risk, a follow-up.
-    (2) z3/llvm use the **variant view** (`print_spec_variants`, not `project_run`)
-    so they show per-variant provision only, no provenance — the next increment.
+  - *Caveat (2):* z3/llvm use the **variant view** (`print_spec_variants`, not
+    `project_run`) so they show per-variant provision only, no provider — next.
+- **Provider unification (steps 1–2) ✅** (2026-08-04, `f1f2ad8`). `canary_store_config`
+  gains a typed `provider = Absent | Vendored path | Cached path | Built_from
+  source_repo | Sys_pkg spec | Lang_pkg {lang;pm;package}` — the one place the old
+  five shapes (lib_store/binding_store/source_repo/tiny_stores/the pr_provenance
+  string) converge. `provision_of_provider` derives the coarse axis so the two
+  **can't drift**; `pr_provenance` retyped to `provider option`; `print_spec`
+  cross-checks provider-provision == baseline (⚠ on mismatch) — **closes caveat (1)**.
+  `spec --json` emits parseable artifacts × scenarios. Consumer survey first
+  confirmed two clean camps (coarse via `provision_of_provider`, detail via
+  `provider`). **Step 3 (migrate `store_config`/`command_of_step` onto `provider`,
+  fold `source_repo` through it) is the remaining unification** — bigger, touches
+  the runner's fetch-command derivation. Then the `derived` discussion (deferred).
 
 **Pipeline map (pre / prepare / run / post — where to read):**
 - **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
