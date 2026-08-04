@@ -244,6 +244,68 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
     detected (List.length bads)
 
+(* Dry-run snapshot of a [project_run]: the declared artifacts + the enumerated
+   scenarios (each artifact's provision@version[#bad-tag]), WITHOUT executing
+   anything — [pr_materialize] is NOT called (it would build/assemble/fetch).
+   A shared view to confirm what canary will enumerate before a run. Renders
+   each scenario as its DELTA from the all-good baseline (printed once) so the
+   table stays readable. *)
+let print_spec (pr : Canary_project_run.project_run) : unit =
+  let module E = Canary_enumerate in
+  let placement_str (pl : E.placement) =
+    Printf.sprintf "%s:%s"
+      (match pl.provision with
+       | E.Vendored -> "V" | E.Built -> "B" | E.Fetched -> "F" | E.Absent -> "A")
+      (E.string_of_build_id pl.version)
+  in
+  Fmt.pr "@.spec: %s — dry-run snapshot (no execution)@."
+    pr.Canary_project_run.pr_name;
+  let arts = pr.Canary_project_run.pr_artifacts in
+  Fmt.pr "@.artifacts (%d):@." (List.length arts);
+  List.iter (fun a -> Fmt.pr "  %s@." (E.string_of_id a)) arts;
+  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let all_good = Canary_tiny_scenario.assignment_is_all_good in
+  let ngood = List.length (List.filter all_good scenarios) in
+  let total = List.length scenarios in
+  Fmt.pr "@.scenarios (%d: %d good, %d bad):@." total ngood (total - ngood);
+  let baseline =
+    try List.find all_good scenarios
+    with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
+  in
+  let baseline_str id =
+    match E.placement_of baseline id with
+    | Some pl -> Some (placement_str pl)
+    | None -> None
+  in
+  Fmt.pr "  baseline: %s@."
+    (String.concat "  "
+       (List.map
+          (fun (id, pl) ->
+            Printf.sprintf "%s=%s" (E.string_of_id id) (placement_str pl))
+          baseline));
+  List.iter
+    (fun a ->
+      let good = all_good a in
+      let deltas =
+        List.filter_map
+          (fun (id, pl) ->
+            let s = placement_str pl in
+            if baseline_str id = Some s then None
+            else Some (Printf.sprintf "%s=%s" (E.string_of_id id) s))
+          a
+      in
+      let desc =
+        match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
+      in
+      Fmt.pr "  [%-4s] %s@." (if good then "good" else "bad") desc)
+    scenarios;
+  Fmt.pr
+    "@.  legend: V=vendored B=built F=fetched A=absent · version=channel[#bad-tag]@.";
+  Fmt.pr
+    "  note: this is the ENUMERATION; at run time the runner dedups scenarios \
+     that materialize to the same workspace, so run coverage counts distinct \
+     workspaces (≤ scenarios above).@."
+
 (* ── Subcommands ── *)
 
 let paths_cmd =
@@ -495,6 +557,27 @@ let action_cmd =
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(const run $ project $ quick $ failfast $ cache_path_arg
           $ disable_contract_arg $ const ())
+
+let spec_cmd =
+  let project =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT" ~doc:"Project to snapshot: tiny-full | sqlite")
+  in
+  let run proj () =
+    match proj with
+    | Some "tiny-full" -> print_spec Canary_project_tiny.tiny_full_run
+    | Some "sqlite" -> print_spec Canary_project_sqlite.sqlite_run
+    | _ ->
+        Fmt.epr "usage: canary spec <tiny-full|sqlite>@.";
+        Stdlib.exit 2
+  in
+  Cmd.v
+    (Cmd.info "spec"
+       ~doc:"Dry-run snapshot of a project_run: declared artifacts + enumerated \
+             scenarios (provision@version[#bad-tag]), no execution.")
+    Term.(const run $ project $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
    project's spec: stages applicable by definition but turned off when
@@ -1476,6 +1559,7 @@ let () =
         artifact_test_cmd;
         project_test_cmd;
         cache_test_cmd;
+        spec_cmd;
         mutation_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;
