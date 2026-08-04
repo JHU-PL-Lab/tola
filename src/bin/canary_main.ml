@@ -372,10 +372,9 @@ let langs_of arts =
     arts
   |> List.sort_uniq compare
 
-(* What an artifact can be USED TO BUILD — derived from the action catalogue:
-   the products of every Build action that CONSUMES this artifact's kind. *)
-let builds_of ~langs a =
-  let k = Canary_enumerate.kind_of a in
+(* What an artifact KIND can be USED TO BUILD — from the action catalogue:
+   the products of every Build action that CONSUMES this kind. *)
+let builds_of_kind ~langs k =
   (Canary_basic.[ Build_lib; Build_headers ]
   @ List.concat_map
       (fun l -> Canary_basic.[ Build_binding l; Build_app { lang = l } ])
@@ -385,6 +384,17 @@ let builds_of ~langs a =
            Canary_action.produces_of_action act
          else [])
   |> List.sort_uniq compare
+
+let builds_of ~langs a = builds_of_kind ~langs (Canary_enumerate.kind_of a)
+
+let langs_of_kinds kinds =
+  List.filter_map
+    (function Canary_basic.Binding l -> Some l | _ -> None)
+    kinds
+  |> List.sort_uniq compare
+
+let kinds_string ks =
+  String.concat ", " (List.map Canary_basic.string_of_artifact_kind ks)
 
 (* Snapshot of a [project_run]: declared artifacts (grouped, each with its
    baseline provision@version) + the enumerated scenarios as deltas from that
@@ -654,83 +664,141 @@ let spec_json_t (pr : Canary_project_run.project_run) : Yojson.Basic.t =
 let spec_json (pr : Canary_project_run.project_run) : string =
   Yojson.Basic.pretty_to_string (spec_json_t pr)
 
+(* All artifact kinds any variant provisions, group-ordered (dedup, first seen). *)
+let variant_kinds variants =
+  List.fold_left
+    (fun acc (_, _, rs) ->
+      List.fold_left
+        (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
+        acc
+        (provisions_of_runner_spec rs))
+    [] variants
+
+(* A source artifact = a configured repo: what it BUILDS (has_build_* flags). *)
+let source_repo_builds (src : Canary_artifact_source.source_repo) : string list =
+  (if src.Canary_artifact_source.has_build_lib then [ "lib" ] else [])
+  @ (if src.Canary_artifact_source.has_build_binding then [ "binding" ] else [])
+
+let source_repo_url (src : Canary_artifact_source.source_repo) : string =
+  let (Canary_artifact_source.Git_remote url) = src.Canary_artifact_source.remote in
+  url
+
 (* Variant view for projects that expose raw [runner_spec]s per source variant
-   (z3/llvm) instead of a [project_run]. Read-only: each variant's runner_spec
-   is built from its source record (pure) and its provisions inferred. No
-   quality/bad-tag axis — a z3/llvm "defect" is a version-compat EXPECTATION,
-   not a mutated artifact, so it doesn't appear as a scenario here. *)
+   (z3/llvm) instead of a [project_run] — now UNIFORM with print_spec: a source
+   artifact is shown as a configured repo (+ what it builds), and each artifact
+   shows its provision per variant + what it can build (action catalogue). The
+   runner is untouched — this only READS the source_repo + runner_spec. (The
+   deeper unification — a `Source_repo` provider variant so z3/llvm expose
+   `pr_provenance` like project_run — is a to-do; status §F.) *)
 let print_spec_variants ~(name : string)
-    ~(variants : (string * Canary_step_builder.runner_spec) list) : unit =
+    ~(variants :
+       (string * Canary_artifact_source.source_repo
+       * Canary_step_builder.runner_spec)
+       list) : unit =
   let module E = Canary_enumerate in
+  let vnames = List.map (fun (v, _, _) -> v) variants in
   Fmt.pr
-    "@.spec: %s — dry-run snapshot (no execution) [variant view: raw \
-     runner_spec, not project_run]@."
-    name;
-  let all_kinds =
-    List.fold_left
-      (fun acc (_, rs) ->
-        List.fold_left
-          (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
-          acc
-          (provisions_of_runner_spec rs))
-      [] variants
-  in
-  Fmt.pr "@.artifacts (%d), by group:@." (List.length all_kinds);
+    "@.spec: %s — variant view (raw runner_spec, not project_run; %d source \
+     configs: %s)@."
+    name (List.length variants) (String.concat ", " vnames);
+  (* source repos — a source artifact = a configured repo *)
+  Fmt.pr "@.source repos (a source artifact = a configured repo):@.";
+  List.iter
+    (fun (vname, src, _) ->
+      Fmt.pr "  [%-8s] %s @%s (ref %s)  %s  →  %s@." vname
+        src.Canary_artifact_source.name src.Canary_artifact_source.version
+        src.Canary_artifact_source.ref_ (source_repo_url src)
+        (match source_repo_builds src with
+         | [] -> "builds nothing (fetches lib + binding)"
+         | bs -> "builds " ^ String.concat ", " bs))
+    variants;
+  (* artifacts — grouped, per-variant provision + what each can build *)
+  let all_kinds = variant_kinds variants in
+  let langs = langs_of_kinds all_kinds in
+  Fmt.pr "@.artifacts (%d), by group [provision per variant: %s]:@."
+    (List.length all_kinds) (String.concat "|" vnames);
   List.iter
     (fun grp ->
       let in_grp =
         List.filter (fun k -> String.equal (group_of_kind k) grp) all_kinds
       in
-      if in_grp <> [] then
-        Fmt.pr "  %s: %s@." grp
-          (String.concat ", " (List.map E.pretty_artifact in_grp)))
+      if in_grp <> [] then begin
+        Fmt.pr "  %s:@." grp;
+        List.iter
+          (fun k ->
+            let cells =
+              List.map
+                (fun (_, _, rs) ->
+                  match
+                    List.assoc_opt k (provisions_of_runner_spec rs)
+                  with
+                  | Some p -> prov_short p
+                  | None -> "·")
+                variants
+            in
+            let builds = builds_of_kind ~langs k in
+            Fmt.pr "    %-22s %s%s@." (E.pretty_artifact k)
+              (String.concat "|" cells)
+              (match builds with
+               | [] -> ""
+               | bs -> "     builds → " ^ kinds_string bs))
+          in_grp
+      end)
     group_order;
-  Fmt.pr "@.variants (%d) — per-artifact provision:@." (List.length variants);
-  List.iter
-    (fun (vname, rs) ->
-      let cells =
-        List.map
-          (fun (k, p) ->
-            Printf.sprintf "%s=%s" (E.pretty_artifact k) (prov_short p))
-          (provisions_of_runner_spec rs)
-      in
-      Fmt.pr "  [%-8s] %s@." vname (String.concat "  " cells))
-    variants;
-  Fmt.pr "@.  legend: V=vendored B=built F=fetched A=absent@.";
   Fmt.pr
-    "  note: read-only projection of each variant's runner_spec; the version \
-     mismatch these projects test lives in the probe EXPECTATION, not shown \
-     here.@."
+    "@.  legend: V=vendored B=built F=fetched A=absent · = not in that variant \
+     · columns = %s@."
+    (String.concat "|" vnames);
+  Fmt.pr
+    "  note: the version-mismatch these projects test lives in the probe \
+     EXPECTATION (not shown); fetched-artifact package detail is in shell \
+     closures (coarse here).@."
 
 (* JSON form of the variant view (z3/llvm) — for `spec @all --json`. *)
 let spec_variants_json_t ~(name : string)
-    ~(variants : (string * Canary_step_builder.runner_spec) list) :
-    Yojson.Basic.t =
+    ~(variants :
+       (string * Canary_artifact_source.source_repo
+       * Canary_step_builder.runner_spec)
+       list) : Yojson.Basic.t =
   let module E = Canary_enumerate in
-  let all_kinds =
-    List.fold_left
-      (fun acc (_, rs) ->
-        List.fold_left
-          (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
-          acc
-          (provisions_of_runner_spec rs))
-      [] variants
-  in
+  let all_kinds = variant_kinds variants in
+  let langs = langs_of_kinds all_kinds in
   `Assoc
     [ ("project", `String name);
       ("kind", `String "variants");
+      ( "source_repos",
+        `List
+          (List.map
+             (fun (vname, src, _) ->
+               `Assoc
+                 [ ("variant", `String vname);
+                   ("name", `String src.Canary_artifact_source.name);
+                   ("version", `String src.Canary_artifact_source.version);
+                   ("ref", `String src.Canary_artifact_source.ref_);
+                   ("remote", `String (source_repo_url src));
+                   ( "builds",
+                     `List
+                       (List.map (fun s -> `String s) (source_repo_builds src))
+                   ) ])
+             variants) );
       ( "artifacts",
         `List
           (List.map
              (fun k ->
                `Assoc
                  [ ("id", `String (E.pretty_artifact k));
-                   ("group", `String (group_of_kind k)) ])
+                   ("group", `String (group_of_kind k));
+                   ( "builds",
+                     `List
+                       (List.map
+                          (fun bk ->
+                            `String (Canary_basic.string_of_artifact_kind bk))
+                          (builds_of_kind ~langs k)) ) ])
              all_kinds) );
       ( "variants",
         `List
           (List.map
-             (fun (vname, rs) ->
+             (fun (vname, _, rs) ->
                `Assoc
                  [ ("name", `String vname);
                    ( "provisions",
@@ -1037,15 +1105,17 @@ let spec_cmd =
   in
   let run proj thin by_artifact json () =
     let d = lazy (detect_distro ()) in
+    (* each variant carries its source_repo (a source artifact = a configured
+       repo) so the viewer can show it uniformly; the runner is unchanged. *)
     let z3_variants () =
       let d = Lazy.force d in
-      [ ("dev", Canary_project_z3.mk_runner_spec ~source:Canary_project_z3.z3_source_dev d);
-        ("stable", Canary_project_z3.mk_runner_spec ~source:Canary_project_z3.z3_source_stable d) ]
+      let mk s = (s.Canary_artifact_source.version, s, Canary_project_z3.mk_runner_spec ~source:s d) in
+      [ mk Canary_project_z3.z3_source_dev; mk Canary_project_z3.z3_source_stable ]
     in
     let llvm_variants () =
       let d = Lazy.force d in
-      [ ("dev", Canary_project_llvm.mk_runner_spec ~source:Canary_project_llvm.llvm_source_dev d);
-        ("stable", Canary_project_llvm.mk_runner_spec ~source:Canary_project_llvm.llvm_source_stable d) ]
+      let mk s = (s.Canary_artifact_source.version, s, Canary_project_llvm.mk_runner_spec ~source:s d) in
+      [ mk Canary_project_llvm.llvm_source_dev; mk Canary_project_llvm.llvm_source_stable ]
     in
     let show pr =
       if json then print_string (spec_json pr ^ "\n")
