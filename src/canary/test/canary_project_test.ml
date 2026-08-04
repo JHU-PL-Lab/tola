@@ -282,20 +282,20 @@ let config_level_test : pure_test =
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
-          ~all_versions:B.single_channel ~all_mutations:muts
+          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
-          ~all_versions:B.single_channel ~all_mutations:muts
+          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
-          ~all_versions:B.single_channel ~all_mutations:muts
+          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
       in
@@ -326,7 +326,7 @@ let version_axis_test : pure_test =
       let mm_artifacts = EN.[ a_lib; a_binding ocaml Mech.Cstubs ] in
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
-          ~all_versions:B.two_channels ~all_mutations:[]
+          ~all_versions_of:(fun _ -> B.two_channels) ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let has_mismatch =
@@ -341,7 +341,7 @@ let version_axis_test : pure_test =
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
-          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions:B.two_channels
+          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ -> B.two_channels)
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
@@ -370,7 +370,7 @@ let per_artifact_provisions_test : pure_test =
       in
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
-          ~all_versions:B.single_channel ~all_mutations:[]
+          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let always target id =
@@ -383,6 +383,35 @@ let per_artifact_provisions_test : pure_test =
       && always EN.Fetched a_ocaml              (* binding never Built *)
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Fetched)
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Built)) }
+
+(* PER-ARTIFACT versions — the version-axis analogue of
+   [per_artifact_provisions_test]. Only the lib ranges over two channels; the
+   binding is pinned Stable-only. A single GLOBAL version universe couldn't
+   express this — it would also emit a Dev binding. Confirms the mismatch
+   lib@Dev / binding@Stable survives while binding@Dev never appears. *)
+let per_artifact_versions_test : pure_test =
+  { name = "enumerate.per_artifact_versions";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      let artifacts = EN.[ a_lib; a_ocaml ] in
+      let versions_of id =
+        if EN.equal_artifact_id id EN.a_lib then B.two_channels
+        else B.single_channel                        (* binding: Dev only *)
+      in
+      let pts =
+        EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
+          ~all_versions_of:versions_of ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+      in
+      let binding_ver p = EN.version_of p.EN.assignment a_ocaml in
+      (not (List.is_empty pts))
+      (* binding is pinned Dev in every assignment (its per-artifact axis) *)
+      && List.for_all pts ~f:(fun p ->
+             EN.equal_version (binding_ver p) (EN.good B.Dev))
+      (* the lib@Stable / binding@Dev mismatch is present (lib's wider axis) *)
+      && List.exists pts ~f:(fun p ->
+             EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) (EN.good B.Stable))) }
 
 (* A2: point→assignment fold — the mutation folds into the target artifact's
    version quality=Bad tag; other artifacts stay Good; a positive point is
@@ -438,7 +467,7 @@ let project_spec_test : pure_test =
             (fun id ->
               if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
               else EN.[ Fetched ]);
-          ps_versions = B.single_channel;
+          ps_versions_of = (fun _ -> B.single_channel);
           ps_mutations = [];
           ps_config = { provision = EN.Full; version = EN.Full; mutation = EN.Free } }
       in
@@ -563,7 +592,8 @@ let all_tests : pure_test list =
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
-      per_artifact_provisions_test; point_fold_test; project_spec_test;
+      per_artifact_provisions_test; per_artifact_versions_test;
+      point_fold_test; project_spec_test;
       built_from_test; node_of_assignment_test;
       agnostic_expectation_test ]
 

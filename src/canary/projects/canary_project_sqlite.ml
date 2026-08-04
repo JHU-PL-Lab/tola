@@ -195,7 +195,7 @@ let sqlite_spec : unit Canary_enumerate.project_spec =
         if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
           Canary_enumerate.[ Fetched; Built ]
         else Canary_enumerate.[ Fetched ]);
-    ps_versions = [ Canary_basic.Stable ];
+    ps_versions_of = (fun _ -> [ Canary_basic.Stable ]);
     ps_mutations = [];
     ps_config =
       Canary_enumerate.

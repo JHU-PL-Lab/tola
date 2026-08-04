@@ -166,11 +166,20 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     universe = (artifact, bad-tag) pairs). Coverage unchanged (12/24). `point.mutation`
     → `mutations : list` landed (`cbd980b`) — enables combinations. **Both sqlite +
     tiny-full now enumerate their good/singles from declared specs — the convergence
-    core is proven on both.** *A4 follow-ups (kept hand-built):* the built-lib
-    provision/version variants (need a **per-artifact version axis**, like A1 did for
-    provision — the global `ps_versions` can't express "lib Built@Dev, others
-    Vendored@Stable"); the **combinations** wired as multi-mutation points (the
-    curated chain policy); `--thin` as a `config` level.
+    core is proven on both.**
+  - **Per-artifact version axis ✅** (2026-08-04): `ps_versions : channel list`
+    → `ps_versions_of : artifact_id -> channel list`; `enumerate`/`run_config`/
+    `assignments_of`/`assignments_of_spec` take `versions_of` (mirrors A1's
+    per-artifact provisions). Now expressible: "lib @{Dev,Stable}, binding pinned
+    Dev-only" (the deploy-mismatch shape, one artifact's axis wider than another's).
+    Pure — no run change; `project-test` `per_artifact_versions` proves it. Wiring
+    tiny's **built-lib** variants *through* the spec still needs the source-primary/
+    dev-build-flag resolution (tiny's Dev is a `-DTINY_DEV` build flag, not a source
+    version), so those variants stay hand-built for now — this delivers the axis, not
+    that routing.
+  - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
+    points (the curated chain policy); `--thin` as a `config` level; built-lib
+    variants routed through the spec (source-primary resolution above).
   - **ACTIVE next: A4 follow-ups → then enhance/check on more projects; A5–A7**
     (z3/llvm/ssl onto `pr_spec`; collapse `Canary_project.project`; unify expectation).
   - **Deferred — generalize the engine** to full node graphs (mismatch), subsuming

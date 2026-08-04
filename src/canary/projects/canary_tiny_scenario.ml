@@ -1557,7 +1557,7 @@ let tiny_full_assignments (spec : tiny_full_spec) :
   let tiny_enum_spec : string Canary_enumerate.project_spec =
     { ps_artifacts = spec.tf_artifacts;
       ps_provisions_of = (fun _ -> [ Canary_enumerate.Vendored ]);
-      ps_versions = [ Canary_basic.Stable ];
+      ps_versions_of = (fun _ -> [ Canary_basic.Stable ]);
       ps_mutations =
         List.concat_map spec.tf_artifacts ~f:(fun aid ->
             List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag)));
