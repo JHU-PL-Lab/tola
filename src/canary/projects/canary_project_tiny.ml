@@ -63,18 +63,18 @@ let print_view : unit -> unit = TS.print_tiny_full
    interface (shared with sqlite; the generic runner consumes it) ── *)
 type project_run = Canary_project_run.project_run
 
-(** The vendored overlays a bad assignment asks for: each [Bad]-quality
-    placement → (resource id, tag). All-good ⇒ []. *)
+(** The cached-artifact overlays a bad assignment asks for: each [Bad]-quality
+    placement → (artifact key, tag). All-good ⇒ []. *)
 let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
   Base.List.filter_map a ~f:(fun (_, pl) ->
       match pl.Canary_enumerate.version.quality with
       | Canary_enumerate.Bad tag ->
-          Base.Option.map (Canary_tiny_workspace.resource_id_of_tag tag)
-            ~f:(fun rid -> (rid, tag))
+          Base.Option.map (Canary_tiny_workspace.artifact_key_of_tag tag)
+            ~f:(fun key -> (key, tag))
       | Canary_enumerate.Good -> None)
 
 (** tiny-full as a [project_run] the generic runner consumes. Materialize =
-    ASSEMBLE vendored resources (all-good ⇒ the witness base; bad ⇒ overlay);
+    ASSEMBLE cached artifacts (all-good ⇒ the witness base; bad ⇒ overlay);
     runner_spec = the base spec over the materialized tree with the AGNOSTIC
     expectation. This is the whole tiny-full-specific surface; the runner is
     project-agnostic. (z3's would differ only in materialize = build.) *)

@@ -823,39 +823,41 @@ let run_prepare_all () : unit =
       (List.length xs) (String.concat ~sep:", " (List.rev xs));
     Stdlib.exit 1
 
-(* ── vendored-resource materializer (P3 step 2, 2026-08-02) ──
-   The factory already builds every scenario workspace; each holds its one
-   mutated BUILT artifact. EXTRACT each into a per-(artifact,tag) resource,
-   then ASSEMBLE a scenario by overlaying chosen resources onto a good base —
-   no rebuild. Vendored resources are the built artifacts; source folds into
-   lib (compiled into libtiny.so). First cut: single-bad, lib artifact. *)
-let resources_root = cache ^ "/resources"
+(* ── cached-artifact store + assembler (P3 step 2, 2026-08-02) ──
+   The factory builds every scenario workspace; each holds its one mutated BUILT
+   artifact. EXTRACT each into a per-(artifact,tag) CACHED ARTIFACT under the
+   artifact cache, then ASSEMBLE a scenario by overlaying chosen cached artifacts
+   onto a good base — no rebuild. (ssot uses "artifact"/"artifact_kind", not
+   "resource": a cached artifact is a concrete built+source bundle for one
+   artifact_kind at one variant.) source folds into lib (compiled into
+   libtiny.so). *)
+let artifact_cache_root = cache ^ "/artifacts"
 
-let resource_dir ~(id : string) ~(tag : string) : string =
-  Printf.sprintf "%s/%s/%s" resources_root id tag
+let cached_artifact_dir ~(key : string) ~(tag : string) : string =
+  Printf.sprintf "%s/%s/%s" artifact_cache_root key tag
 
-(* built-artifact id → the workspace subdirs that constitute that artifact AS
-   THE INSPECTORS SEE IT: the built output PLUS the SOURCE the compat inspectors
-   read (mli / headers / py source). Fix A (2026-08-03): overlaying only the
-   built subdir left the base's GOOD source in place, so source-manifested drift
-   (a dropped .mli val = C2, a changed header = C6) was invisible to the
-   agnostic inspection — the assembled tree looked good and the real failure
-   read as UNEXPECTED (not detected). Carrying the source too makes the vendored
+(* artifact key → the workspace subdirs that constitute that artifact AS THE
+   INSPECTORS SEE IT: the built output PLUS the SOURCE the compat inspectors read
+   (mli / headers / py source). Fix A (2026-08-03): overlaying only the built
+   subdir left the base's GOOD source in place, so source-manifested drift (a
+   dropped .mli val = C2, a changed header = C6) was invisible to the agnostic
+   inspection — the assembled tree looked good and the real failure read as
+   UNEXPECTED (not detected). Carrying the source too makes the cached-artifact
    overlay faithful to what the scenario actually mutated. First subdir is the
    built artifact (always present); later ones are source (present when the
-   scenario touches them). *)
-let subdirs_of_resource : string -> string list = function
+   scenario touches them). Keys are the born-safe [string_of_id] form. *)
+let subdirs_of_artifact : string -> string list = function
   | "lib" -> [ "c/build"; "c/include" ]
-  | "binding:ocaml:cstubs" -> [ "_build/default/ocaml"; "ocaml" ]
-  | "binding:python:cext" -> [ "python_cext/tiny_cext" ]
+  | "binding-ocaml-cstubs" -> [ "_build/default/ocaml"; "ocaml" ]
+  | "binding-python-cext" -> [ "python_cext/tiny_cext" ]
   | _ -> []
 
-(* Extract [id]'s subdirs from [from_workspace] into resources/<id>/<tag>/<sub>,
+(* Extract [key]'s subdirs from [from_workspace] into the cached-artifact dir,
    preserving each sub's path. Needs at least one subdir present (the built
    one); source subdirs are copied when the scenario workspace has them. *)
-let emit_resource ~(id : string) ~(tag : string) ~(from_workspace : string) :
+let cache_artifact ~(key : string) ~(tag : string) ~(from_workspace : string) :
     bool =
-  match subdirs_of_resource id with
+  match subdirs_of_artifact key with
   | [] -> false
   | subs ->
       let present =
@@ -864,7 +866,7 @@ let emit_resource ~(id : string) ~(tag : string) ~(from_workspace : string) :
       in
       if List.is_empty present then false
       else begin
-        let dst_root = resource_dir ~id ~tag in
+        let dst_root = cached_artifact_dir ~key ~tag in
         rm_rf dst_root;
         List.for_all present ~f:(fun sub ->
             let src = Printf.sprintf "%s/%s" from_workspace sub in
@@ -873,10 +875,10 @@ let emit_resource ~(id : string) ~(tag : string) ~(from_workspace : string) :
             run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" src dst) = 0)
       end
 
-(* Assemble a scenario: copy the good base workspace, then overlay each
-   resource's subdirs (replacing the base's copy of each). No rebuild.
-   [overlays] is a list of (resource-id, tag). A source subdir absent from the
-   emitted resource is skipped (the scenario didn't mutate it). *)
+(* Assemble a scenario: copy the good base workspace, then overlay each cached
+   artifact's subdirs (replacing the base's copy of each). No rebuild.
+   [overlays] is a list of (artifact-key, tag). A source subdir absent from the
+   cached artifact is skipped (the scenario didn't mutate it). *)
 let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
     ~(target : string) : bool =
   rm_rf target;
@@ -884,11 +886,11 @@ let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
   if run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" base_workspace target) <> 0
   then false
   else
-    List.for_all overlays ~f:(fun (id, tag) ->
-        match subdirs_of_resource id with
+    List.for_all overlays ~f:(fun (key, tag) ->
+        match subdirs_of_artifact key with
         | [] -> false
         | subs ->
-            let res_root = resource_dir ~id ~tag in
+            let res_root = cached_artifact_dir ~key ~tag in
             List.for_all subs ~f:(fun sub ->
                 let res = Printf.sprintf "%s/%s" res_root sub in
                 if not (Stdlib.Sys.file_exists res) then true
@@ -899,11 +901,11 @@ let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
                   run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" res dst) = 0
                 end))
 
-(** The vendored resource id a bad-tag targets, DERIVED from the factory: a
-    Source or Lib mutation manifests as the [lib] resource (source folds into
-    lib); a Binding mutation → that binding's precise id. Lets [assemble-check]
-    take just a tag. *)
-let resource_id_of_tag (tag : string) : string option =
+(** The cached-artifact KEY a bad-tag targets, DERIVED from the factory: a Source
+    or Lib mutation manifests as the [lib] artifact (source folds into lib); a
+    Binding mutation → that binding's precise id. Lets [assemble-check] take just
+    a tag. The key is the born-safe [string_of_id] form. *)
+let artifact_key_of_tag (tag : string) : string option =
   match Canary_tiny_scenario.find_by_id tag with
   | None -> None
   | Some s -> (
@@ -915,36 +917,26 @@ let resource_id_of_tag (tag : string) : string option =
           | [] -> None)
       | _ -> None)
 
-(* Directory-safe form of a scenario label. ':' '#' '+' break env vars that use
-   them as separators — the runner interpolates the ASSEMBLED WORKSPACE path into
-   PYTHONPATH / LD_LIBRARY_PATH, both ':'-separated, so a resource id like
-   "binding:ocaml:cstubs" in the dir name would split the path and the module /
-   lib would not be found (bug: only lib scenarios detected because "lib" has no
-   ':'). Matches canary_main's output-path sanitizer. The resource-STORE dirs may
-   keep ':' — they are only ever cp source/dest, never an env-var value. *)
-let safe_workspace_name (label : string) : string =
-  String.map label ~f:(function ':' | '#' | '+' -> '-' | c -> c)
-
-(** Materialize an assembled tree for the run: emit each [overlays] resource
-    ((id, tag)) from its scenario's workspace, then assemble them onto the
+(** Materialize an assembled tree for the run: cache each [overlays] artifact
+    ((key, tag)) from its scenario's workspace, then assemble them onto the
     unmutated-witness base. Returns the assembled tree path, or [None] on
-    failure. The run-over-assembly entry — canary then runs against the path
-    exactly as it would a normal workspace. *)
+    failure. The label is BORN-SAFE by construction ([string_of_id] uses no ':'),
+    so it drops straight into the dir name / PYTHONPATH with no sanitizer. *)
 let materialize_assembled ~(overlays : (string * string) list)
     ~(label : string) : string option =
   let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
-  let target = cache ^ "/assembled/" ^ safe_workspace_name label in
-  let emitted =
-    List.for_all overlays ~f:(fun (id, tag) ->
+  let target = cache ^ "/assembled/" ^ label in
+  let cached =
+    List.for_all overlays ~f:(fun (key, tag) ->
         let scen_name =
           match Canary_tiny_scenario.find_by_id tag with
           | Some s -> s.scenario.name
           | None -> tag
         in
-        emit_resource ~id ~tag
+        cache_artifact ~key ~tag
           ~from_workspace:(scen_workspace_of ~name:scen_name))
   in
-  if not emitted then None
+  if not cached then None
   else if assemble ~base_workspace:base ~overlays ~target then Some target
   else None
 
@@ -977,7 +969,7 @@ let detect_lib_filename ~(workspace : string) : string =
     Everything else stays vendored (binding/cext, built against the good lib —
     the rebuilt lib is the same good source, so they still match). *)
 let materialize_built_lib ~(label : string) : string option =
-  let target = cache ^ "/assembled/" ^ safe_workspace_name label in
+  let target = cache ^ "/assembled/" ^ label in
   let built = [%string "%{target}/c/build/libtiny.so.1"] in
   (* IDEMPOTENT: once canary has built the lib into this tree, reuse it — so
      the tree and the run's cache marker stay consistent across re-runs (a
@@ -1005,26 +997,26 @@ let materialize_built_lib ~(label : string) : string option =
     end
   end
 
-(** List every assemblable bad variant — its tag, scenario name, and the
-    resource id it targets. The tiny-full analogue of `tiny list`; run
+(** List every assemblable bad variant — its tag, scenario name, and the cached
+    artifact key it targets. The tiny-full analogue of `tiny list`; run
     `tiny assemble-check` with no tag to see it. *)
 let assemble_list () : unit =
-  Stdlib.Printf.printf "assemblable resources (tag  scenario  -> resource id):\n";
+  Stdlib.Printf.printf "assemblable cached artifacts (tag  scenario  -> artifact key):\n";
   List.iter Canary_tiny_scenario.all_scenario_specs ~f:(fun s ->
-      match resource_id_of_tag s.scenario.id with
-      | Some id ->
+      match artifact_key_of_tag s.scenario.id with
+      | Some key ->
           Stdlib.Printf.printf "  %-8s %-28s -> %s\n" s.scenario.id
-            s.scenario.name id
+            s.scenario.name key
       | None -> ())
 
-(** Debug/validation entry for the vendored-resource first cut: emit the
-    resource for scenario [tag] (its target artifact, [id] auto-derived when
-    empty) from that scenario's workspace, assemble it onto the unmutated
-    witness base, and print the assembled tree's key artifacts. Proves
-    emit+assemble before the run wiring. Needs [tiny prepare-all] first. *)
-let assemble_check ?(id = "") ~(tag : string) () : unit =
-  let id = if String.is_empty id then Option.value (resource_id_of_tag tag) ~default:"lib" else id in
-  Stdlib.Printf.printf "(resource id = %s for tag %s)\n" id tag;
+(** Debug/validation entry for the cached-artifact assembly: cache the artifact
+    for scenario [tag] (its target artifact, [key] auto-derived when empty) from
+    that scenario's workspace, assemble it onto the unmutated witness base, and
+    print the assembled tree's key artifacts. Proves cache+assemble before the
+    run wiring. Needs [tiny prepare-all] first. *)
+let assemble_check ?(key = "") ~(tag : string) () : unit =
+  let key = if String.is_empty key then Option.value (artifact_key_of_tag tag) ~default:"lib" else key in
+  Stdlib.Printf.printf "(artifact key = %s for tag %s)\n" key tag;
   let scen_name =
     match Canary_tiny_scenario.find_by_id tag with
     | Some s -> s.scenario.name
@@ -1032,14 +1024,14 @@ let assemble_check ?(id = "") ~(tag : string) () : unit =
   in
   let from_ws = scen_workspace_of ~name:scen_name in
   let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
-  let target = cache ^ "/assembled/" ^ safe_workspace_name (id ^ "#" ^ tag) in
-  Stdlib.Printf.printf "emit  %s#%s  <-  %s\n" id tag from_ws;
-  if not (emit_resource ~id ~tag ~from_workspace:from_ws) then
-    Stdlib.Printf.printf "  EMIT FAILED (missing %s or subdir)\n" from_ws
+  let target = cache ^ "/assembled/" ^ (key ^ "#" ^ tag) in
+  Stdlib.Printf.printf "cache  %s#%s  <-  %s\n" key tag from_ws;
+  if not (cache_artifact ~key ~tag ~from_workspace:from_ws) then
+    Stdlib.Printf.printf "  CACHE FAILED (missing %s or subdir)\n" from_ws
   else begin
-    Stdlib.Printf.printf "assemble  base=%s  overlay=%s#%s  ->  %s\n" base id tag
+    Stdlib.Printf.printf "assemble  base=%s  overlay=%s#%s  ->  %s\n" base key tag
       target;
-    if not (assemble ~base_workspace:base ~overlays:[ (id, tag) ] ~target) then
+    if not (assemble ~base_workspace:base ~overlays:[ (key, tag) ] ~target) then
       Stdlib.Printf.printf "  ASSEMBLE FAILED\n"
     else begin
       Stdlib.Printf.printf "assembled c/build:\n";

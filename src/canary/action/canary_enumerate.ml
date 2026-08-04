@@ -49,7 +49,7 @@ let string_of_artifact = function
   | Source -> "source"
   | Headers -> "headers"
   | Lib -> "lib"
-  | Binding l -> "binding:" ^ Canary_lang.string_of_lang l
+  | Binding l -> "binding-" ^ Canary_lang.string_of_lang l
   | App -> "app"
 
 (* ── precise artifact identity (ssot §4.2.3) ──
@@ -95,12 +95,18 @@ let a_binding (lang : Canary_lang.lang) (m : Canary_mechanism.mechanism) :
 let a_app (w : app_wiring) : artifact_id = { kind = App; ext = Ext_wiring w }
 
 (** Concise label for a precise identity: coarse kind + its extension. *)
+(* The canonical id string is BORN-SAFE (filesystem + env-var safe): the ext
+   delimiter is '-', not ':'. ':' is the PYTHONPATH/LD_LIBRARY_PATH separator, so
+   a ':' here would split those vars when the id lands in a workspace dir name
+   (the bug that made only lib scenarios detect). Safe by construction ⇒ no
+   downstream sanitizer needed; a prettier display form can be a separate pp if
+   ever wanted. Nothing parses this string back, so the delimiter is free. *)
 let string_of_id (id : artifact_id) : string =
   let base = string_of_artifact id.kind in
   match id.ext with
   | Ext_none -> base
-  | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
-  | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
+  | Ext_mechanism m -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
+  | Ext_wiring w -> base ^ "-" ^ string_of_app_wiring w
 
 (** An artifact instance's version identity (ssot §4.2.2, P2a). A build is a
     release [channel] plus a [quality]: a [Good] build, or a [Bad]-tagged

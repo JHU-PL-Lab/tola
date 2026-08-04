@@ -604,22 +604,25 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 
 ## Gotchas (continued)
 
-- **`:` in a workspace dir name breaks `PYTHONPATH`/`LD_LIBRARY_PATH`**: the
-  runner interpolates the assembled-workspace path into those env vars, which are
-  **`:`-separated**. A resource id like `binding:ocaml:cstubs` in the dir name
-  (`_cache/assembled/binding:ocaml:cstubs#Bs.9`) made Python split PYTHONPATH into
-  `.../binding`, `ocaml`, `cstubs#…/python_cext` → `ModuleNotFoundError`. Symptom
-  was subtle: only **lib** scenarios detected (`lib#Bs.N` has no `:`), binding
-  scenarios silently failed at an *infrastructure* step, not a compat one. Fix:
-  `Canary_tiny_workspace.safe_workspace_name` sanitizes `:` `#` `+` → `-` on every
-  assembled-tree dir name (matches `canary_main`'s output-path sanitizer). Keep
-  env-var-interpolated paths free of separator chars.
-- **Vendored resource must carry SOURCE, not just the built artifact** (Fix A):
-  `subdirs_of_resource` returns the built subdir **plus** the source the compat
+- **Artifact ids are BORN-SAFE — never put `:` in a path/env-var id**: the
+  runner interpolates the assembled-workspace path into `PYTHONPATH`/
+  `LD_LIBRARY_PATH`, which are **`:`-separated**. `string_of_id` originally used
+  `:` (`binding:ocaml:cstubs`), so an assembled dir `.../binding:ocaml:cstubs#Bs.9`
+  made Python split PYTHONPATH into `.../binding`, `ocaml`, `cstubs#…` →
+  `ModuleNotFoundError`; symptom was subtle (only **lib** scenarios detected —
+  `lib` has no `:`). Fix (naming unification): `Canary_enumerate.string_of_id`
+  now uses `-` (`binding-ocaml-cstubs`), so ids drop straight into dir names /
+  env vars with **no sanitizer** (the old `safe_workspace_name` was removed).
+  Keep the born-safe convention; add a pretty-printer if a `:`-form display is
+  ever wanted, don't reintroduce `:` in the canonical id.
+- **A cached artifact must carry SOURCE, not just the built output** (Fix A):
+  `subdirs_of_artifact` returns the built subdir **plus** the source the compat
   inspectors read (mli/headers/py). Overlaying only the built subdir left the
   base's good `.mli`/header in place, so source-manifested drift (a dropped val =
-  C2) was invisible and the real failure read as *unexpected*. See
-  `canary_tiny_workspace.ml`.
+  C2) was invisible and the real failure read as *unexpected*. Terminology: the
+  vendored bundle is a **cached artifact** (`cache_artifact`/`cached_artifact_dir`
+  in `canary_tiny_workspace.ml`), NOT a "resource" — ssot uses artifact /
+  artifact_kind.
 
 ## Conventions
 

@@ -129,12 +129,12 @@ let run_assembled ~root ~failfast ~tag : unit =
   match Canary_tiny_scenario.find_by_id tag with
   | None -> Fmt.pr "unknown tag: %s (see `tiny assemble-check`)@." tag
   | Some s ->
-      let id =
-        Option.value (Canary_tiny_workspace.resource_id_of_tag tag) ~default:"lib"
+      let key =
+        Option.value (Canary_tiny_workspace.artifact_key_of_tag tag) ~default:"lib"
       in
-      let label = id ^ "#" ^ tag in
+      let label = key ^ "#" ^ tag in
       (match
-         Canary_tiny_workspace.materialize_assembled ~overlays:[ (id, tag) ]
+         Canary_tiny_workspace.materialize_assembled ~overlays:[ (key, tag) ]
            ~label
        with
        | None -> Fmt.pr "assemble failed for %s@." label
@@ -145,7 +145,7 @@ let run_assembled ~root ~failfast ~tag : unit =
            Fmt.pr
              "@.tiny-full assembled run [%s %s -> %s]: %s  (bad-scenario PASS \
               = canary detected)@."
-             tag s.scenario.name id (scenario_status_of_run_state ()))
+             tag s.scenario.name key (scenario_status_of_run_state ()))
 
 (* Provision = Built demo: materialize a source-only-lib tree and run canary
    over it. canary's guarded build_lib COMPILES libtiny.so from c/src (an
@@ -177,14 +177,14 @@ let run_assembled_combo ~root ~tags : unit =
   let overlays =
     List.filter_map
       (fun tag ->
-        match Canary_tiny_workspace.resource_id_of_tag tag with
-        | Some id -> Some (id, tag)
+        match Canary_tiny_workspace.artifact_key_of_tag tag with
+        | Some key -> Some (key, tag)
         | None -> None)
       tags
   in
   if List.length overlays = 0 then Fmt.pr "no valid tags (see `tiny assemble-check`)@."
   else
-    let label = String.concat "+" (List.map (fun (id, t) -> id ^ "#" ^ t) overlays) in
+    let label = String.concat "+" (List.map (fun (key, t) -> key ^ "#" ^ t) overlays) in
     (match Canary_tiny_workspace.materialize_assembled ~overlays ~label with
      | None -> Fmt.pr "assemble failed for %s@." label
      | Some assembled ->
@@ -1489,15 +1489,15 @@ let tiny_scenarios_assemble_cmd =
   in
   Cmd.v
     (Cmd.info "assemble-check"
-       ~doc:"P3 step 2 (vendored materializer): with no TAG, list all \
-             assemblable resources; with a TAG, emit the resource it targets \
-             and assemble it onto the witness base. Run `tiny prepare-all` \
-             first.")
+       ~doc:"P3 step 2 (cached-artifact assembler): with no TAG, list all \
+             assemblable cached artifacts; with a TAG, cache the artifact it \
+             targets and assemble it onto the witness base. Run `tiny \
+             prepare-all` first.")
     Term.(
       const (fun id tag () ->
           match tag with
           | None -> Canary_tiny_workspace.assemble_list ()
-          | Some tag -> Canary_tiny_workspace.assemble_check ~id ~tag ())
+          | Some tag -> Canary_tiny_workspace.assemble_check ~key:id ~tag ())
       $ id $ tag $ const ())
 
 let tiny_scenarios_assemble_run_cmd =
