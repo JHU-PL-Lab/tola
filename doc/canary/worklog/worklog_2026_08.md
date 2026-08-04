@@ -90,7 +90,7 @@ choice, a project ships its whole declared set" made presence-enumeration a
 dead end. The **per-edge version** model (build vs run version = the deploy
 mismatch; ssot §4.2.4) and the finding that the instance graph **already
 exists** (`artifact_node` + `make_action_graph`) remain live *deferred* design
-— see [`enumeration_graph.md`](../design/enumeration_graph.md) and
+— see [`dynamic_enumeration.md`](../design/dynamic_enumeration.md) and
 [`versioning.md`](../design/versioning.md), tracked in `status.md` §1c.
 
 ## 2026-08-03/04 — honest-coverage arc (Fix B → 12/24 → naming unification)

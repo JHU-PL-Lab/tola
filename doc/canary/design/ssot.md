@@ -506,9 +506,9 @@ command** — the concern of the per-project `runner_spec` (the old one
 covered this). **This instance graph already exists**: `Canary_basic.artifact_node`
 (`a_location` + `built_from` = Build edge + `runtime_dep` = Run edge) and
 `Canary_action.make_action_graph` already generate it — including the deploy
-mismatch (`Build_app` pairs each binding with *every* runtime lib). The open
-work is a *merge*, not a new graph — see
-[`enumeration_graph.md`](enumeration_graph.md).
+mismatch (`Build_app` pairs each binding with *every* runtime lib). The
+enumerate↔graph merge is done (the seam + `node_of_assignment` + `close_deps`);
+the model is [`dynamic_enumeration.md`](dynamic_enumeration.md).
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs

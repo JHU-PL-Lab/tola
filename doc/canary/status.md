@@ -191,41 +191,39 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     - Renames: low-level `enumerate` → `enumerate_points`; spec consumer
       `assignments_of_spec` → `enumerate`. Pure — no run change (tiny-full 12/24,
       sqlite PASS, 31/31).
-  - **Stage-3 design nailed ✅** (2026-08-04, `dynamic_enumeration.md` §7):
-    runtime edges live on `artifact_node`, NOT in a project-level list. First cut
-    (`ps_deps : dep_edge list` field on the spec) was **rejected** — it re-declares
-    a fact the grammar already holds (`make_action_graph` puts `runtime_dep` on
-    every App node) and can't be filled by discovery. Instead: the runtime edge
-    stays grammatical; a small per-edge `dep_mode = Lockstep | Independent | Ambient
-    str` (defaulting `Lockstep` = today) resolves it. **Deploy mismatch needs NO new
-    declaration** — it's `runtime_dep` resolved `Independent` over the lib's already-
-    declared `ps_versions_of` axis (the per-artifact version work above). Ambient
-    libs (libc) come from a grammar default or `ldd` discovery, not a project decl.
-    Stage 3 = `close_deps assignment → artifact_node graph`; all-`Lockstep` ⇒ today's
-    `node_of_assignment` (flat projects byte-identical). This unifies the two graphs:
-    `make_action_graph`'s App cartesian = the `Independent` case; the chain =
-    `Lockstep`. **v1** (drives z3/llvm): `Lockstep`/`Independent` + `close_deps`.
-    **A5–A7 onboard against it, not the flat product.**
-  - **Stage-3 v1 machinery ✅** (2026-08-04): `dep_mode = Lockstep | Independent |
-    Ambient str` + `close_deps ~run_versions_of ~mode_of : assignment ->
-    artifact_node list list` (`canary_action.ml`, after `node_of_assignment`).
-    `Independent` branches an App's `runtime_dep` over `run_versions_of Lib` → the
-    build×run cartesian (the mismatch); `Lockstep` = build-lib (today's chain);
-    App-less assignment ⇒ `[node_of_assignment a]` (flat projects byte-identical,
-    verified: sqlite PASS, tiny-full 12/24, paths unchanged). `project-test`
-    `close_deps_deploy_mismatch` (32/32): build@Stable × run∈{Stable,Dev} → 2
-    graphs, the Dev one built@Stable/run@Dev. **Pure — not yet wired into a run;
-    the live z3/llvm rewire is A5–A7.** Open: where the mode bit is carried (lean:
-    a field on the probe spec) — `dynamic_enumeration.md` §8.
+  - **Stage-3 (graph) — model settled + v1 built ✅** (2026-08-04). Model:
+    [`dynamic_enumeration.md`](design/dynamic_enumeration.md) (short canonical
+    description; absorbed the retired `enumeration_graph.md`). Key decision:
+    runtime edges live on `artifact_node` via a per-edge `dep_mode = Lockstep |
+    Independent | Ambient str` (default `Lockstep` = today), NOT a `project_spec`
+    field — deploy mismatch is `runtime_dep` resolved `Independent` over the lib's
+    `ps_versions_of` axis, needing no new declaration. **Built:** `dep_mode` +
+    `close_deps ~run_versions_of ~mode_of : assignment -> artifact_node list list`
+    (`canary_action.ml`); `Independent` = `make_action_graph`'s App cartesian
+    reached from the flat form; App-less ⇒ `[node_of_assignment a]` (flat projects
+    byte-identical). Pure — not wired into a run yet (sqlite PASS, tiny-full 12/24,
+    paths unchanged; `project-test close_deps_deploy_mismatch`, 32/32).
+  - **Stage-3 to-do:**
+    - **A5 (meaningful, not urgent)** — wire z3/llvm onto `enumerate` + `close_deps`
+      with `Independent`; retires `make_action_graph`'s hardcoded App cartesian.
+      Blocked on the `dep_mode` VALUE source = the **probe / action-variant revisit**
+      (separate topic: who declares "this project wants the mismatch"). Until then
+      `close_deps` is tested machinery whose only consumer is its test.
+    - **v2** — `Ambient` external libs (grammar default + `ldd` slot) + `Contained`
+      bundle provision.
+    - **deferred** — dynamic `ldd` discovery (fill `Ambient` / promote to
+      `Independent` at run time; the postpone/readiness tracker); run-closure
+      inspection view (§E).
+  - **Merge cleanup (rescued from the retired `enumeration_graph.md`):**
+    - reconcile `step.deps : string list` (the runner's string-tag edges) with the
+      typed `built_from`/`runtime_dep` node graph — one dependency relation, not two.
+    - legacy artifact-vocab sweep — `artifact` + `step_body` + `cmdline` + base
+      `run_step`/`mk_system_dep_steps` + `canary_toolchain` dead verify helpers.
+    - the `(kind × ext)`→enriched-`artifact_kind` fold (~200 coarse-kind matches,
+      diagram ~61) — the node merge does NOT need it (keeps the pair); decoupled.
   - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
     points (the curated chain policy); `--thin` as a `config` level; built-lib
-    variants routed through the spec (source-primary resolution above).
-  - **ACTIVE next: A4 follow-ups → then enhance/check on more projects; A5–A7**
-    (z3/llvm/ssl onto `pr_spec`; collapse `Canary_project.project`; unify expectation).
-  - **Deferred — generalize the engine** to full node graphs (mismatch), subsuming
-    the flat form (retiring the flat-only path) and teaching the run to consume node
-    graphs. Triggered by the first real deploy-mismatch project (z3/llvm version
-    work). A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled cleanup.
+    variants routed through the spec (source-primary resolution).
 
 ### B. Coverage — make canary detect more
 
@@ -378,7 +376,6 @@ force them. Home docs carry the detail.
   built result — `provision` is a per-edge provider, a resource generates/contains
   other artifacts) is the same cluster and now gates the convergence's project
   run-flips (§A A3b/A4). [`dynamic_enumeration.md`](design/dynamic_enumeration.md),
-  [`enumeration_graph.md`](design/enumeration_graph.md),
   [`versioning.md`](design/versioning.md).
 - **Packaging / provision sub-structure** — provision `Fetched` (canary fetches
   from a PM at run time) over PM (apt/opam/pip/brew) x distro (local / GH CI);

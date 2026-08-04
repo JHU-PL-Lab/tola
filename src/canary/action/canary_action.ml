@@ -276,7 +276,7 @@ let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
   in
   List.map a ~f:(fun (id, _) -> build id)
 
-(** Stage 3 (dynamic_enumeration.md §7): the per-runtime-edge resolution mode. The
+(** Stage 3 (dynamic_enumeration.md): the per-runtime-edge resolution mode. The
     node ALREADY carries [runtime_dep]; this says how [close_deps] fills it.
     [Lockstep] (the default) = run-lib is the build-lib — today's chain;
     [Independent] = run-lib is a SECOND instance ranging over the lib's version

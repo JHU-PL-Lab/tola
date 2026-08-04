@@ -479,7 +479,7 @@ let project_spec_test : pure_test =
              EN.equal_provision (lib_is a) EN.Built
              && EN.equal_provision (EN.provision_of a a_oc) EN.Fetched)) }
 
-(* Seam (dynamic_enumeration.md §7): a flat assignment's build edges read off the
+(* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
    ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
    binding←Lib; a Fetched artifact has no edge. Injects
    Canary_action.consumes_of_action, proving the two representations are one. *)

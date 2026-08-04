@@ -196,8 +196,7 @@ let any_binding_provided (a : assignment) : bool =
     composes kind→Build-action→[Canary_action.consumes_of_action]) so this layer
     stays free of an action-catalogue dependency. A non-[Built] artifact (Fetched
     from a PM, Vendored) has no build edge. This is the read that proves the flat
-    `assignment` and the action graph are the same graph (dynamic_enumeration.md
-    §7). *)
+    `assignment` and the action graph are the same graph (dynamic_enumeration.md). *)
 let built_from_of_assignment
     ~(built_from_kinds :
        Canary_basic.artifact_kind -> Canary_basic.artifact_kind list)
