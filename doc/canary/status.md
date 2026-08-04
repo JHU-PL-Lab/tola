@@ -161,11 +161,18 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     fetched-lib → built-from-source). Both scenarios PASS. *Follow-up:* bindings run
     against the SYSTEM lib (Python sqlite3 stdlib can't repoint; OCaml
     binding-over-built-lib via `LD_LIBRARY_PATH` is coverage-C proper).
-  - **ACTIVE next: A4 — tiny-full.** Same declare→enumerate (`pr_spec` +
-    `assignments_of_spec`, `'m = string`); needs the **multi-mutation** extension for
-    combinations (the single-`option` `point.mutation`); `--thin` becomes a config
-    level. Then enhance/check on more projects. (Flat is sufficient — one instance
-    per kind; the node graph's two-instance mismatch is z3/llvm only.)
+  - **A4 — tiny-full core ✅** (`aac490f`): good baseline + single-bads now come
+    from a declared `string project_spec` via `assignments_of_spec` (mutation
+    universe = (artifact, bad-tag) pairs). Coverage unchanged (12/24). `point.mutation`
+    → `mutations : list` landed (`cbd980b`) — enables combinations. **Both sqlite +
+    tiny-full now enumerate their good/singles from declared specs — the convergence
+    core is proven on both.** *A4 follow-ups (kept hand-built):* the built-lib
+    provision/version variants (need a **per-artifact version axis**, like A1 did for
+    provision — the global `ps_versions` can't express "lib Built@Dev, others
+    Vendored@Stable"); the **combinations** wired as multi-mutation points (the
+    curated chain policy); `--thin` as a `config` level.
+  - **ACTIVE next: A4 follow-ups → then enhance/check on more projects; A5–A7**
+    (z3/llvm/ssl onto `pr_spec`; collapse `Canary_project.project`; unify expectation).
   - **Deferred — generalize the engine** to full node graphs (mismatch), subsuming
     the flat form (retiring the flat-only path) and teaching the run to consume node
     graphs. Triggered by the first real deploy-mismatch project (z3/llvm version
