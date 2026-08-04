@@ -834,31 +834,49 @@ let resources_root = cache ^ "/resources"
 let resource_dir ~(id : string) ~(tag : string) : string =
   Printf.sprintf "%s/%s/%s" resources_root id tag
 
-(* built-artifact id → the workspace subdir that IS that artifact *)
-let subdir_of_resource : string -> string option = function
-  | "lib" -> Some "c/build"
-  | "binding:ocaml:cstubs" -> Some "_build/default/ocaml"
-  | "binding:python:cext" -> Some "python_cext/tiny_cext"
-  | _ -> None
+(* built-artifact id → the workspace subdirs that constitute that artifact AS
+   THE INSPECTORS SEE IT: the built output PLUS the SOURCE the compat inspectors
+   read (mli / headers / py source). Fix A (2026-08-03): overlaying only the
+   built subdir left the base's GOOD source in place, so source-manifested drift
+   (a dropped .mli val = C2, a changed header = C6) was invisible to the
+   agnostic inspection — the assembled tree looked good and the real failure
+   read as UNEXPECTED (not detected). Carrying the source too makes the vendored
+   overlay faithful to what the scenario actually mutated. First subdir is the
+   built artifact (always present); later ones are source (present when the
+   scenario touches them). *)
+let subdirs_of_resource : string -> string list = function
+  | "lib" -> [ "c/build"; "c/include" ]
+  | "binding:ocaml:cstubs" -> [ "_build/default/ocaml"; "ocaml" ]
+  | "binding:python:cext" -> [ "python_cext/tiny_cext" ]
+  | _ -> []
 
-(* Extract [id]'s built files from [from_workspace] into resources/<id>/<tag>/. *)
+(* Extract [id]'s subdirs from [from_workspace] into resources/<id>/<tag>/<sub>,
+   preserving each sub's path. Needs at least one subdir present (the built
+   one); source subdirs are copied when the scenario workspace has them. *)
 let emit_resource ~(id : string) ~(tag : string) ~(from_workspace : string) :
     bool =
-  match subdir_of_resource id with
-  | None -> false
-  | Some sub ->
-      let src = Printf.sprintf "%s/%s" from_workspace sub in
-      let dst = resource_dir ~id ~tag in
-      if not (Stdlib.Sys.file_exists src) then false
+  match subdirs_of_resource id with
+  | [] -> false
+  | subs ->
+      let present =
+        List.filter subs ~f:(fun sub ->
+            Stdlib.Sys.file_exists (Printf.sprintf "%s/%s" from_workspace sub))
+      in
+      if List.is_empty present then false
       else begin
-        rm_rf dst;
-        mkdir_p dst;
-        run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" src dst) = 0
+        let dst_root = resource_dir ~id ~tag in
+        rm_rf dst_root;
+        List.for_all present ~f:(fun sub ->
+            let src = Printf.sprintf "%s/%s" from_workspace sub in
+            let dst = Printf.sprintf "%s/%s" dst_root sub in
+            mkdir_p dst;
+            run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" src dst) = 0)
       end
 
 (* Assemble a scenario: copy the good base workspace, then overlay each
-   resource (replacing the base's copy of that artifact's subdir). No rebuild.
-   [overlays] is a list of (resource-id, tag). *)
+   resource's subdirs (replacing the base's copy of each). No rebuild.
+   [overlays] is a list of (resource-id, tag). A source subdir absent from the
+   emitted resource is skipped (the scenario didn't mutate it). *)
 let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
     ~(target : string) : bool =
   rm_rf target;
@@ -867,14 +885,19 @@ let assemble ~(base_workspace : string) ~(overlays : (string * string) list)
   then false
   else
     List.for_all overlays ~f:(fun (id, tag) ->
-        match subdir_of_resource id with
-        | None -> false
-        | Some sub ->
-            let res = resource_dir ~id ~tag in
-            let dst = Printf.sprintf "%s/%s" target sub in
-            rm_rf dst;
-            mkdir_p dst;
-            run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" res dst) = 0)
+        match subdirs_of_resource id with
+        | [] -> false
+        | subs ->
+            let res_root = resource_dir ~id ~tag in
+            List.for_all subs ~f:(fun sub ->
+                let res = Printf.sprintf "%s/%s" res_root sub in
+                if not (Stdlib.Sys.file_exists res) then true
+                else begin
+                  let dst = Printf.sprintf "%s/%s" target sub in
+                  rm_rf dst;
+                  mkdir_p dst;
+                  run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" res dst) = 0
+                end))
 
 (** The vendored resource id a bad-tag targets, DERIVED from the factory: a
     Source or Lib mutation manifests as the [lib] resource (source folds into
@@ -892,6 +915,16 @@ let resource_id_of_tag (tag : string) : string option =
           | [] -> None)
       | _ -> None)
 
+(* Directory-safe form of a scenario label. ':' '#' '+' break env vars that use
+   them as separators — the runner interpolates the ASSEMBLED WORKSPACE path into
+   PYTHONPATH / LD_LIBRARY_PATH, both ':'-separated, so a resource id like
+   "binding:ocaml:cstubs" in the dir name would split the path and the module /
+   lib would not be found (bug: only lib scenarios detected because "lib" has no
+   ':'). Matches canary_main's output-path sanitizer. The resource-STORE dirs may
+   keep ':' — they are only ever cp source/dest, never an env-var value. *)
+let safe_workspace_name (label : string) : string =
+  String.map label ~f:(function ':' | '#' | '+' -> '-' | c -> c)
+
 (** Materialize an assembled tree for the run: emit each [overlays] resource
     ((id, tag)) from its scenario's workspace, then assemble them onto the
     unmutated-witness base. Returns the assembled tree path, or [None] on
@@ -900,7 +933,7 @@ let resource_id_of_tag (tag : string) : string option =
 let materialize_assembled ~(overlays : (string * string) list)
     ~(label : string) : string option =
   let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
-  let target = cache ^ "/assembled/" ^ label in
+  let target = cache ^ "/assembled/" ^ safe_workspace_name label in
   let emitted =
     List.for_all overlays ~f:(fun (id, tag) ->
         let scen_name =
@@ -944,7 +977,7 @@ let detect_lib_filename ~(workspace : string) : string =
     Everything else stays vendored (binding/cext, built against the good lib —
     the rebuilt lib is the same good source, so they still match). *)
 let materialize_built_lib ~(label : string) : string option =
-  let target = cache ^ "/assembled/" ^ label in
+  let target = cache ^ "/assembled/" ^ safe_workspace_name label in
   let built = [%string "%{target}/c/build/libtiny.so.1"] in
   (* IDEMPOTENT: once canary has built the lib into this tree, reuse it — so
      the tree and the run's cache marker stay consistent across re-runs (a
@@ -999,7 +1032,7 @@ let assemble_check ?(id = "") ~(tag : string) () : unit =
   in
   let from_ws = scen_workspace_of ~name:scen_name in
   let base = scen_workspace_of ~name:"app_over_binding_ocaml" in
-  let target = cache ^ "/assembled/" ^ id ^ "#" ^ tag in
+  let target = cache ^ "/assembled/" ^ safe_workspace_name (id ^ "#" ^ tag) in
   Stdlib.Printf.printf "emit  %s#%s  <-  %s\n" id tag from_ws;
   if not (emit_resource ~id ~tag ~from_workspace:from_ws) then
     Stdlib.Printf.printf "  EMIT FAILED (missing %s or subdir)\n" from_ws

@@ -601,6 +601,25 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   only the top-level module (`Tiny`, `Tiny.sum`) work either way.
   See `canary_tiny_baseline.ml:build_ocaml_binding` comment.
 
+## Gotchas (continued)
+
+- **`:` in a workspace dir name breaks `PYTHONPATH`/`LD_LIBRARY_PATH`**: the
+  runner interpolates the assembled-workspace path into those env vars, which are
+  **`:`-separated**. A resource id like `binding:ocaml:cstubs` in the dir name
+  (`_cache/assembled/binding:ocaml:cstubs#Bs.9`) made Python split PYTHONPATH into
+  `.../binding`, `ocaml`, `cstubs#…/python_cext` → `ModuleNotFoundError`. Symptom
+  was subtle: only **lib** scenarios detected (`lib#Bs.N` has no `:`), binding
+  scenarios silently failed at an *infrastructure* step, not a compat one. Fix:
+  `Canary_tiny_workspace.safe_workspace_name` sanitizes `:` `#` `+` → `-` on every
+  assembled-tree dir name (matches `canary_main`'s output-path sanitizer). Keep
+  env-var-interpolated paths free of separator chars.
+- **Vendored resource must carry SOURCE, not just the built artifact** (Fix A):
+  `subdirs_of_resource` returns the built subdir **plus** the source the compat
+  inspectors read (mli/headers/py). Overlaying only the built subdir left the
+  base's good `.mli`/header in place, so source-manifested drift (a dropped val =
+  C2) was invisible and the real failure read as *unexpected*. See
+  `canary_tiny_workspace.ml`.
+
 ## Conventions
 
 - `cc` = Claude Code (user shorthand)
