@@ -1,6 +1,6 @@
 (** [Canary_store_config] — provenance the store owns, one field per
     artifact's store (project-definition redesign, seam S3 —
-    [doc/canary/design/project_definition.md] §3). Absorbs the
+    [doc/canary/design/ssot.md] §6.1). Absorbs the
     provenance half of [api_source] (components / headers / source_dir);
     the checking half is {!Canary_surface}.
 

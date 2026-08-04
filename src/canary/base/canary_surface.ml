@@ -1,6 +1,6 @@
 (** [Canary_surface] — the checking-points surface, split out of
     {!Canary_artifact_api} (project-definition redesign, seam S1 —
-    [doc/canary/design/project_definition.md] §3.3).
+    [doc/canary/design/ssot.md] §6.1).
 
     [Canary_artifact_api.t] conflated two concerns: {b provenance}
     (components / headers / binding source_dir — where artifacts live)

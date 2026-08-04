@@ -12,8 +12,7 @@ model the candidates collectively stress-test, and the
 ## 0. How canary describes a project — dimensions, not letters
 
 canary describes each project by a few **orthogonal dimensions**, carried
-as data in `store_config` (see
-[project_definition.md](project_definition.md)). The opam-survey
+as data in `store_config` (taxonomy in [`ssot.md`](ssot.md) §6.1). The opam-survey
 **"Pattern A–F"** ([opam survey](../surveys/opam.md) §2) are an
 **ecosystem taxonomy** — what packages look like *in the wild* — **not**
 canary's internal categories. They're just named points in this space,
@@ -182,8 +181,8 @@ matrix machinery is project-hookable rather than tiny-forked.
 - **B**: A + ~15-30 LOC for the compat-failure declaration.
 - **C**: B + ~200-400 LOC per-project (recipes, watchlist wiring), **plus** Task 2's ~230 LOC framework work as prerequisite.
 
-For scenario mechanics + the derived-vs-hardcoded map see
-[`derived_vs_hardcoded.md`](derived_vs_hardcoded.md).
+For scenario mechanics + the derived-vs-hand principle see
+[`dynamic_enumeration.md`](dynamic_enumeration.md).
 
 ---
 

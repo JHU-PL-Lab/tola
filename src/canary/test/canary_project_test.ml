@@ -1,6 +1,6 @@
 open Base
 
-(* Project-definition layer tests (project_definition.md §8).
+(* Project-definition layer tests (design: ssot.md §6.1).
 
    The third testing axis: fast, hermetic, pure tests of the
    project *definition* layers — no PM installs, no builds. Step 1

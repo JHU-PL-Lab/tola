@@ -85,7 +85,7 @@ let probe_from_store = function
    If yes, take location option upfront. [check_post] and [symbol_check]
    are still action-only because no current project needs per-location
    variation; revisit when one does. *)
-(* A store-backed command slot (S2/S3, project_definition.md §3.1). A slot
+(* A store-backed command slot (S2/S3; design: ssot.md §6.1). A slot
    is either [Derived] from the project's [stores : store_config] (the
    clean path) or a [Raw] closure (escape hatch, identical to the pre-S2
    command closures). [command_of_step ~store_config] (defined below the

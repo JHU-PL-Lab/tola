@@ -80,3 +80,45 @@ machinery ahead of its consumer.
 - **`artifact_node` lives in the action layer** (relocated from base, M1.0), and
   is the *only* graph node — no `artifact_info` middle layer (that first-cut idea
   was dropped). The flat `assignment`/`placement` is the degenerate node graph.
+
+## Two engines, one store/runner/producer factoring
+
+*(Absorbed 2026-08-04 from the retired `harness_canary_orthogonality.md`.)*
+Canary's methodology runs **two independent engines** over the same rules — if
+both agree, the rules are validated (the surface.md claim):
+
+- **Mutation engine** — the tiny-factory mutates ONE fixed world (apply patch /
+  rename / soname-bump / drop-val in a sandbox via `canary_tiny_prepare.ml` +
+  `canary_tiny_workspace.ml`), the ground-truth oracle.
+- **Combinator (enumeration) engine** — canary traverses a *space* of worlds via
+  `Canary_enumerate.enumerate` over `ps_provisions_of`/`ps_versions_of` (this doc).
+
+Both slot into one cross-engine abstraction — the three concerns to keep
+orthogonal:
+
+- **Stores** — *what artifacts are available* (a self-describing dir/package of
+  source/lib/binding/app; provides the artifact-kind surfaces the spec consumes).
+- **Runners** — *what computation runs* (build/probe/inspect steps reading stores,
+  emitting to a shared output dir; `run_project_run` is the runner).
+- **Producers** — *how stores are populated* (mutation engine: sandbox-build a
+  mutated workspace; real project: a PM — `opam install z3.4.13` vs `z3.dev` are
+  two producers of two stores).
+
+The open operational work is keeping producers self-describing so a store built by
+the mutation engine's producer is consumable by the combinator engine's runner
+without leaking assumptions only the former satisfies.
+
+## Derived vs hand-written
+
+*(Absorbed from the retired `derived_vs_hardcoded.md`; tiny1-scoped status entries
+dropped.)* Two rules govern what is machinery vs project input:
+
+1. **Everything derivable from a small hand input should be derived** — the hand
+   input is the source of truth, the derivation is machinery. Adding a scenario /
+   project / contract should touch the *hand input*, not the machinery. (The
+   enumerate engine is the current high-water mark: per-artifact provision/version
+   axes are now derived, not hand-listed.)
+2. **What stays hand-written stays project-specific** — framework infra is never
+   copied per-project (see the tiny workspace materializer); reusable primitives
+   are consumed, not forked; only the per-project spec + surface + optional
+   contract-bindings are hand-authored.

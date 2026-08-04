@@ -1,5 +1,5 @@
 (** [Canary_detect] — the forecast-agnostic detection pass (seam S5a —
-    [doc/canary/design/project_definition.md] §2, §3.2).
+    [doc/canary/design/ssot.md] §6.1).
 
     Detection observes what a step actually did, independent of the
     hand-authored [step_expectation] verdict. This is the S5a skeleton:

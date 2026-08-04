@@ -302,6 +302,22 @@ scenarios it runs, both statically (before a run) and from the result (after).
 - **F5 — retire/rewire legacy `scenarios`** onto the `project_run` path, or fold
   into `status`.
 
+### G. Design-doc consolidation (2026-08-04)
+
+Done this pass — `doc/canary/design/` now 10 docs (4 retired this session):
+- retired `enumeration_graph.md` (→ `dynamic_enumeration.md`).
+- retired `harness_canary_orthogonality.md` + `derived_vs_hardcoded.md` — their live
+  principles (two engines; store/runner/producer factoring; derived-vs-hand)
+  absorbed into `dynamic_enumeration.md`; stale tiny1 status entries dropped.
+- retired `project_definition.md` (superseded draft; the detection-first design
+  shipped via `project_run`+`enumerate`+`canary_detect`) — 6 source-comment
+  citations + doc links repointed to `ssot.md` §6.1.
+- `scenario_coverage.md` kept; `ssot.md` §4.2 already cross-links it.
+
+**To-do (per user): regenerate `tiny.md` from current code** — the existing doc has
+a reframing banner but is otherwise tiny1-era; a fresh writeup should describe
+tiny-factory / tiny1 / tiny-full + the enumerate engine as they stand.
+
 ## 1c. Project-file review (2026-08-03)
 
 Read across `src/canary/projects/*.ml`. The headline: **three ways to define a

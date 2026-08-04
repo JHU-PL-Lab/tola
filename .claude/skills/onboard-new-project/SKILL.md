@@ -27,8 +27,8 @@ questions you'd otherwise ask):
    §1 Artifacts (`Ar.X`), §2 Surfaces (`Sf.X`), §3 Agreements (`Ag.X`
    ↔ c1..c8), §6.1 Term↔code taxonomy (project / scenario / action /
    step), §6.5 Action catalogue (12 verbs + kinds + prereq→target).
-4. **[`doc/canary/design/derived_vs_hardcoded.md`](../../../doc/canary/design/derived_vs_hardcoded.md)** —
-   §3 the three-layer boundary: **framework infra never gets copied**;
+4. **[`doc/canary/design/dynamic_enumeration.md`](../../../doc/canary/design/dynamic_enumeration.md)** —
+   the "Derived vs hand-written" section: the three-layer boundary — **framework infra never gets copied**;
    **reusable primitives are consumed, not forked**; only **per-project
    hand-written** (project_spec + api_source + optional bindings) is
    yours to write.

@@ -733,8 +733,8 @@ visibly empty. After §7.2 Phase 4 (2026-07-20)
 coverage stands at 12 of 20 cells filled after §7.1's
 `Drop_python_attr` primitive landed (2026-07-21); 8 remain
 awaiting App-level primitives + c4 wiring for OCaml. See
-[`derived_vs_hardcoded.md`](derived_vs_hardcoded.md) for
-the full field-by-field derived-vs-hand map, and
+[`dynamic_enumeration.md`](dynamic_enumeration.md) for
+the derived-vs-hand principle, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
 for the blocker-primitive breakdown.
 

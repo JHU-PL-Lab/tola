@@ -205,7 +205,7 @@ let artifacts_of_action (a : action) : artifact_kind list =
 
 (** The explicit {b consumes}/{b produces} split of the action
     catalogue (project-definition redesign, 2026-07-22 — see
-    [doc/canary/design/project_definition.md] §3). The flat
+    [doc/canary/design/ssot.md] §6.1). The flat
     {!artifacts_of_action} above conflates the two by ordering
     convention and is kept as-is (its exact output feeds
     [related_artifacts], mutation-target validation, and the

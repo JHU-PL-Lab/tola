@@ -292,9 +292,10 @@ the implementation path yet.
 
 ## 8. Related design notes
 
-- [harness_canary_orthogonality.md](harness_canary_orthogonality.md) —
-  current store/runner factoring between the standalone tiny harness and
-  canary's workspace model. Captures two implicit-coupling leaks fixed in
-  Phase 14e (cext RUNPATH pointing at the live tree;
+- [dynamic_enumeration.md](dynamic_enumeration.md) — the enumeration→node-graph
+  model, plus (absorbed from the retired `harness_canary_orthogonality.md`) the
+  two-engines and store/runner/producer factoring between the standalone tiny
+  harness and canary's workspace model. Historical note: two implicit-coupling
+  leaks were fixed in Phase 14e (cext RUNPATH pointing at the live tree;
   `abi_soname_bump` deleting `libtiny.so` and relying on dune's cache)
   and what an "ideal" orthogonal factoring would look like.

@@ -23,9 +23,9 @@ Canonical description of tiny's implementation state and
 near-term wish-list. Complements:
 
 - [`ssot.md`](ssot.md) — truth (definitions, scenario tables)
-- [`derived_vs_hardcoded.md`](derived_vs_hardcoded.md) — status map
-  of what's derived vs hand-written in tiny + the "utility not raw"
-  principle
+- [`dynamic_enumeration.md`](dynamic_enumeration.md) — the derived-vs-hand
+  principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
+  enumeration model
 - [`new_project.md §2.5`](new_project.md) — three levels of scenario
   coverage a new project can pick (A positive-only / B one hand-coded
   failure / C matrix — tiny is C, don't copy)

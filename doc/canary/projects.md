@@ -40,7 +40,7 @@ Notes:
 - **surface** is unpopulated on the Derived projects: their watchlists
   still ride explicit `inspect` closures (or `pattern_a`'s `t` fields).
   Moving them to `Canary_surface` waits on the detector grow (S5) that
-  actually reads it. See [`design/project_definition.md`](design/project_definition.md) §3.4.
+  actually reads it. See [`design/ssot.md`](design/ssot.md) §6.1.
 - **variants** on a Pattern-A project (same lib, 2 opam binding versions)
   landed as **ssl** (consolidated 2026-07-23 — the variant form *is* the
   project; the old single-version pattern_a ssl is retired, its native-lib

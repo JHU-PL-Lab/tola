@@ -178,7 +178,7 @@ reconciling with, not duplicating.
 | `src/canary/projects/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/projects/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/projects/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/projects/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `derived_vs_hardcoded.md §3`). |
+| `src/canary/projects/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
 | `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl specs                             |
 | `src/canary/projects/canary_run.ml`                 | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
@@ -240,7 +240,7 @@ per project; tiny's factory (`canary_tiny_scenario.ml`) restricts
 each `runner_spec` to one scenario's world, z3/llvm build one
 `runner_spec` per source variant. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
-`derived_vs_hardcoded.md` for what's data vs code.
+`dynamic_enumeration.md` ("Derived vs hand-written") for what's data vs code.
 
 ### Two testing axes
 
