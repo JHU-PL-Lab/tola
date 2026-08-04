@@ -105,8 +105,51 @@ Two shapes of *one resource → many artifacts*:
 - **Merge point:** fold `project_spec` (§4) + `enumeration_graph.md`'s `instance`
   into one type; retire the flat `assignment` product as the degenerate case.
 
-## 7. Status
+## 7. Inventory — what we HAVE vs what we IMPLEMENT (code map, 2026-08-04)
+
+We already have **both halves** of the graph model, LIVE — but disconnected in
+code. The merge REUSES them; the only genuinely new piece is *contains/bundle*.
+
+| Concern | Where (LIVE) | Used for |
+|---|---|---|
+| instance node + build/run EDGES + version-mismatch cartesian | `artifact_node` (`base/canary_basic.ml:52`) + `make_action_graph` (`action/canary_action.ml:64`) | `paths` table + diagram (DISPLAY) |
+| `ext` (mechanism/wiring) + typed `version` + mutation + config + per-artifact provision | `action/canary_enumerate.ml` (placement / assignment / enumerate / run_config) | `scenarios` / `tiny engine` + tests (DISPLAY) |
+| bridge: provision ⇄ producing-action ⇄ edge | `store_actions` / `consumes_of_action` / `produces_of_action` (`canary_action.ml`), `provision_of_actions` (`canary_enumerate.ml:358`) | the seam (§6.5) |
+| the RUN's scenarios | hand-built `pr_enumerate` closures | run (the smell the A-track removes) |
+| generated-artifact readiness / cache | cached artifacts + `.verdict` markers | run |
+
+**`canary_enumerate` has 0 references to `artifact_node`/`make_action_graph`** —
+the two graphs never meet in code (confirms enumeration_graph.md §3).
+
+**The unifying fact (no new edges to invent): provision = which ACTION produces
+the artifact; that action's consumed input IS the `built_from` edge.** `Build_lib`
+⇒ Built + built_from=source; `Fetch Lib` ⇒ Fetched + no build edge. So provision
+(enumerate) and `built_from` (action graph) are one thing seen twice, bridged by
+the §6.5 action catalogue — we *read* edges off the producing action, not invent
+them.
+
+**Implement (merge, reuse):**
+1. one `instance` = `artifact_node` (kind + edges + location) + `ext` + typed
+   `version` (enumeration_graph.md's target type);
+2. enumerator emits instance-**graphs** — reuse `make_action_graph`'s
+   Build_binding/Build_app edge cartesian; the provision axis picks the producing
+   action per artifact;
+3. per-edge provider = the provision (already bridged);
+4. **NEW:** contains/bundle (one fetch → many artifacts).
+
+**Proposed first step (minimal, no reinvention):** a pure `edges_of_assignment`
+that reads a flat `assignment`'s `built_from`/`runtime_dep` off the action
+catalogue (`consumes_of_action` / `provision_of_actions`), with a `project-test`
+cross-checking it against `make_action_graph` on a shared example. This connects
+the two representations WITHOUT the big `instance`-type merge (the ~61-site
+change enumeration_graph.md flags as last), and is the seam the full merge builds
+on.
+
+## 8. Status
 
 A3b (flip sqlite's run) and A4 (wire tiny + multi-mutation) **wait on this design
 settling** — they should be built against the graph model, not the flat product.
-A1/A2/A3a stand as the entry rung. Tracked in `status.md` §A / §1b.
+A1/A2/A3a stand as the entry rung. Tiny is flat/static *by nature* (it
+pre-materializes every cached artifact); real projects are dynamic *by nature*
+(they generate on demand) — the flat model fit tiny and breaks on sqlite, which
+is why the graph model is a real-project need. Tracked in `status.md` §A / §1b.
