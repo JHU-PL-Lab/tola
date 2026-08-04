@@ -299,8 +299,17 @@ scenarios it runs, both statically (before a run) and from the result (after).
   off `run_state`/`actions.log` (realised: the lib built-from-source promoted into
   the lib group with its `built_from` edge, source retained). Potential vs realised;
   a `closure <pj>` / `status --graph` renders the run view.
-- **F5 — retire/rewire legacy `scenarios`** onto the `project_run` path, or fold
-  into `status`.
+- **F5 — rewire `canary scenarios` onto the core enumeration.** Diagnosis
+  (2026-08-04): `canary_scenario_coverage.ml` (102 L) is a **parallel** impl with
+  ZERO refs to `Canary_enumerate` — it walks each project's `derive_steps` action
+  set against a hand-listed `stage` catalogue, keyed to a hardcoded
+  pre-convergence project list (hence `Unknown project tiny-full`). The *view*
+  (which store-lifecycle stages a project exercises — the provision-axis
+  projection) is worth keeping and is NOT redundant with `spec`'s good/bad set;
+  the *plumbing* is stale. Clean end-state: derive stage coverage from the
+  enumerated assignments' provision axis (`provision_of_actions`/`store_actions`,
+  ssot §4.2) so it's core-backed and knows every `project_run` project — then the
+  hardcoded lookup + parallel catalogue retire together.
 
 ### G. Design-doc consolidation (2026-08-04)
 
