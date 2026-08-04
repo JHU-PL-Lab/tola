@@ -33,6 +33,28 @@ let sqlite_ocaml_config : ocaml_tool_config =
 
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
+(* THE single per-artifact provider declaration (from the real [prebuilt] data).
+   ONE source of truth: the runner's [store_config] (fetch commands) AND `spec`'s
+   [pr_provenance] both DERIVE from this, so the display and the runner can't
+   drift. (The Built-from-amalgamation alt for the lib is the [lib=B:stable]
+   scenario, not a baseline provider.) *)
+let sqlite_provider (id : Canary_enumerate.artifact_id) :
+    Canary_store_config.provider option =
+  match Canary_enumerate.kind_of id with
+  | Canary_basic.Lib ->
+      Some (Canary_store_config.Sys_pkg prebuilt.system_package)
+  | Canary_basic.Binding Canary_lang.OCaml ->
+      Some
+        (Canary_store_config.Lang_pkg
+           { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+             package = prebuilt.opam_package })
+  | Canary_basic.Binding Canary_lang.Python ->
+      Some
+        (Canary_store_config.Lang_pkg
+           { lang = Canary_lang.Python; pm = Canary_store.Pip;
+             package = "sqlite3 (stdlib, pip no-op)" })
+  | _ -> None
+
 (* Module-level watchlist for the sqlite3 opam package. Module names from
    ocamlobjinfo Name: fields; constructor-level drift is caught by compile probes. *)
 let sqlite_ocaml_watchlist = [ "Sqlite3" ]
@@ -66,7 +88,9 @@ let runner_spec : Canary_step_builder.runner_spec =
       { Canary_store_config.empty_store_config with
         lib = Some
           { Canary_store_config.provider =
-              Canary_store_config.Sys_pkg prebuilt.system_package;
+              (match sqlite_provider Canary_enumerate.a_lib with
+               | Some p -> p
+               | None -> Canary_store_config.Absent);
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
     (* fetch_binding stays Raw: Derived can't yet reproduce opam
@@ -215,22 +239,6 @@ let sqlite_run : Canary_project_run.project_run =
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
         | Canary_enumerate.Built -> built_spec ~workspace
         | _ -> runner_spec);
-    (* Static provider (typed, from the real spec data — [prebuilt]). The
-       baseline is Fetched; the Built-from-amalgamation alternative shows as the
-       [lib=B:stable] scenario, not here. *)
-    pr_provenance =
-      (fun id ->
-        match Canary_enumerate.kind_of id with
-        | Canary_basic.Lib ->
-            Some (Canary_store_config.Sys_pkg prebuilt.system_package)
-        | Canary_basic.Binding Canary_lang.OCaml ->
-            Some
-              (Canary_store_config.Lang_pkg
-                 { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-                   package = prebuilt.opam_package })
-        | Canary_basic.Binding Canary_lang.Python ->
-            Some
-              (Canary_store_config.Lang_pkg
-                 { lang = Canary_lang.Python; pm = Canary_store.Pip;
-                   package = "sqlite3 (stdlib, pip no-op)" })
-        | _ -> None) }
+    (* DERIVED from the single [sqlite_provider] declaration — same source the
+       runner's store_config reads, so display and runner can't drift. *)
+    pr_provenance = sqlite_provider }
