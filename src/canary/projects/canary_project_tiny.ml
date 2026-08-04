@@ -73,6 +73,25 @@ let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
             ~f:(fun key -> (key, tag))
       | Canary_enumerate.Good -> None)
 
+(* Static per-artifact provenance (the real vendored layout —
+   canary_tiny_workspace.ml paths). All Vendored: assembled from the witness
+   base + cached artifact variants. *)
+let tiny_provenance (id : Canary_enumerate.artifact_id) : string option =
+  match Canary_enumerate.kind_of id with
+  | Canary_basic.Source ->
+      Some "vendored: canary/examples/tiny/c (C source + include)"
+  | Canary_basic.Lib ->
+      Some
+        "vendored: pre-built libtiny.so.1 (cached artifact, \
+         canary/examples/tiny/scenarios/_cache)"
+  | Canary_basic.Binding Canary_lang.OCaml ->
+      Some "vendored: canary/examples/tiny/ocaml (cstubs source)"
+  | Canary_basic.Binding Canary_lang.Python ->
+      Some "vendored: canary/examples/tiny/python_cext/tiny_cext (cext + ctypes)"
+  | Canary_basic.App ->
+      Some "vendored: tiny probe example (assembled with the binding)"
+  | _ -> None
+
 (** tiny-full as a [project_run] the generic runner consumes. Materialize =
     ASSEMBLE cached artifacts (all-good ⇒ the witness base; bad ⇒ overlay);
     runner_spec = the base spec over the materialized tree with the AGNOSTIC
@@ -132,7 +151,8 @@ let tiny_full_run : project_run =
           TS.stores_of_workspace ~lib_filename ~workspace_root:workspace ()
         in
         { (TS.make_base_runner_spec ~channel ~stores ()) with
-          Canary_step_builder.expectation = expectation_agnostic }) }
+          Canary_step_builder.expectation = expectation_agnostic });
+    pr_provenance = tiny_provenance }
 
 (* ── THIN subset config (ssot §4.2 config level = Subset) ──
    A small, debuggable slice of the SAME enumeration: Stable channel only (drop

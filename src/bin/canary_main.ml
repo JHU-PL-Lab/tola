@@ -381,9 +381,32 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
   Fmt.pr "@.spec: %s — %s@." pr.Canary_project_run.pr_name
     (if post = [] then "enumeration (no run yet)"
      else "enumeration + last-run verdicts");
-  (* artifacts, grouped, each with its baseline provision@version *)
+  (* artifacts, grouped, each with its baseline provision@version, the
+     project-declared provenance detail, and what it can BUILD (derived from the
+     action catalogue: which Build actions consume this kind → what they produce). *)
   let arts = pr.Canary_project_run.pr_artifacts in
-  Fmt.pr "@.artifacts (%d), by group [baseline provision@@version]:@."
+  let langs =
+    List.filter_map
+      (fun a -> match E.kind_of a with Canary_basic.Binding l -> Some l | _ -> None)
+      arts
+    |> List.sort_uniq compare
+  in
+  let build_actions =
+    Canary_basic.[ Build_lib; Build_headers ]
+    @ List.concat_map
+        (fun l -> Canary_basic.[ Build_binding l; Build_app { lang = l } ])
+        langs
+  in
+  let builds_of a =
+    let k = E.kind_of a in
+    build_actions
+    |> List.concat_map (fun act ->
+           if List.mem k (Canary_action.consumes_of_action act) then
+             Canary_action.produces_of_action act
+           else [])
+    |> List.sort_uniq compare
+  in
+  Fmt.pr "@.artifacts (%d), by group [baseline provision@@version + provenance]:@."
     (List.length arts);
   List.iter
     (fun grp ->
@@ -395,7 +418,17 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
       if in_grp <> [] then begin
         Fmt.pr "  %s:@." grp;
         List.iter
-          (fun a -> Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a))
+          (fun a ->
+            Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a);
+            (match pr.Canary_project_run.pr_provenance a with
+             | Some d -> Fmt.pr "        provision: %s@." d
+             | None -> Fmt.pr "        provision: (undeclared — spec carries no detail)@.");
+            match builds_of a with
+            | [] -> ()
+            | ks ->
+                Fmt.pr "        builds → %s@."
+                  (String.concat ", "
+                     (List.map Canary_basic.string_of_artifact_kind ks)))
           in_grp
       end)
     group_order;
