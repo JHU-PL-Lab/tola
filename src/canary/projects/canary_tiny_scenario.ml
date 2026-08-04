@@ -1551,34 +1551,36 @@ let tiny_full_placement ?(provision = Canary_enumerate.Vendored)
    artifacts per assignment (= combinations). *)
 let tiny_full_assignments (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
-  let good_for a = (a, tiny_full_placement ()) in
-  let all_good = List.map spec.tf_artifacts ~f:good_for in
-  (* positive variants over the provision × version axes (§4.2.5): the lib
-     [Built] from source (canary compiles it) instead of [Vendored], at each
-     channel — [Stable] (base) and [Dev] (compiled with -DTINY_DEV, exports
-     tiny_scale@@TINY_2.0). Same all-good scenario, a different *source* and
-     *version* of the lib. *)
+  (* A4: the good baseline + single-bads come from the DECLARED spec via the
+     enumeration algorithm ([assignments_of_spec]), not a hand-built list. The
+     mutation universe = (artifact, bad-tag) pairs; all Vendored @ Stable. *)
+  let tiny_enum_spec : string Canary_enumerate.project_spec =
+    { ps_artifacts = spec.tf_artifacts;
+      ps_provisions_of = (fun _ -> [ Canary_enumerate.Vendored ]);
+      ps_versions = [ Canary_basic.Stable ];
+      ps_mutations =
+        List.concat_map spec.tf_artifacts ~f:(fun aid ->
+            List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag)));
+      ps_config =
+        Canary_enumerate.{ provision = Free; version = Free; mutation = Full } }
+  in
+  let good_and_bads =
+    Canary_enumerate.assignments_of_spec ~tag:Fn.id tiny_enum_spec
+  in
+  (* Built-lib provision/version variants — KEPT hand-built: the lib is [Built]
+     (canary compiles it) at [Stable] and [Dev] (with -DTINY_DEV) while the other
+     artifacts stay [Vendored]@[Stable]. That's PER-ARTIFACT provision+version,
+     which the global spec axes can't express yet (a per-artifact version axis,
+     like A1 did for provision, is the follow-up). *)
   let all_good_built_lib_at channel =
     List.map spec.tf_artifacts ~f:(fun a ->
         if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then
           (a, tiny_full_placement ~provision:Canary_enumerate.Built ~channel ())
-        else good_for a)
+        else (a, tiny_full_placement ()))
   in
-  let built_lib_variants =
-    [ all_good_built_lib_at Canary_basic.Stable;
+  good_and_bads
+  @ [ all_good_built_lib_at Canary_basic.Stable;
       all_good_built_lib_at Canary_basic.Dev ]
-  in
-  let one_bad aid tag =
-    List.map spec.tf_artifacts ~f:(fun a ->
-        if Canary_enumerate.equal_artifact_id a aid then
-          (a, tiny_full_placement ~quality:(Canary_enumerate.Bad tag) ())
-        else good_for a)
-  in
-  let bads =
-    List.concat_map spec.tf_artifacts ~f:(fun aid ->
-        List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> one_bad aid tag))
-  in
-  (all_good :: built_lib_variants) @ bads
 
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
