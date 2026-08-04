@@ -67,8 +67,8 @@ let mk_variant ~version ~vkey ~(app : app) ~expect : string * SB.runner_spec =
       stores =
         { SC.empty_store_config with
           lib = Some
-            { SC.location = Canary_store.Pm (Canary_store.Sys_pm { pm });
-              system_pkg = Some libssl_spec; components = []; headers = None } };
+            { SC.provider = SC.Sys_pkg libssl_spec;
+              components = []; headers = None } };
       fetch_lib = Some (SB.Derived SB.Fetch_lib);
       (* Binding version dimension: install the pinned ssl version. *)
       fetch_binding =

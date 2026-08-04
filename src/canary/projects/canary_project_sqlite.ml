@@ -58,7 +58,6 @@ let sqlite_python_config : Canary_toolchain.binding_config =
     }
 
 let runner_spec : Canary_step_builder.runner_spec =
-  let pm = Canary_store.detect_pm () in
   let ocaml = sqlite_ocaml_config.ocaml in
   {
     Canary_step_builder.empty_runner_spec with
@@ -66,9 +65,8 @@ let runner_spec : Canary_step_builder.runner_spec =
     stores =
       { Canary_store_config.empty_store_config with
         lib = Some
-          { Canary_store_config.location =
-              Canary_store.Pm (Canary_store.Sys_pm { pm });
-            system_pkg = Some prebuilt.system_package;
+          { Canary_store_config.provider =
+              Canary_store_config.Sys_pkg prebuilt.system_package;
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
     (* fetch_binding stays Raw: Derived can't yet reproduce opam

@@ -111,8 +111,7 @@ let derive_fetch_lib_test : pure_test =
       in
       let store_config : SC.store_config =
         { SC.empty_store_config with
-          lib = Some { location = Canary_store.Pm (Canary_store.Sys_pm { pm = Canary_store.Apt });
-                       system_pkg = Some sys; components = []; headers = None } }
+          lib = Some { SC.provider = SC.Sys_pkg sys; components = []; headers = None } }
       in
       let derived =
         (SB.command_of_step ~store_config (SB.Derived SB.Fetch_lib))

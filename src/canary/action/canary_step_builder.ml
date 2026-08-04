@@ -305,25 +305,21 @@ let command_of_step ~(store_config : Canary_store_config.store_config)
   | Raw f -> f
   | Derived Fetch_lib -> (
       match store_config.lib with
-      | Some { system_pkg = Some spec; _ } ->
+      | Some { provider = Canary_store_config.Sys_pkg spec; _ } ->
           fetch_lib_cmd (Canary_store.detect_pm ()) spec
       | _ ->
           failwith
-            "command_of_step: Derived Fetch_lib needs store_config.lib.system_pkg")
+            "command_of_step: Derived Fetch_lib needs store_config.lib.provider \
+             = Sys_pkg")
   | Derived (Fetch_binding lang) -> (
       match List.Assoc.find store_config.bindings ~equal:Poly.equal lang with
-      | Some ({ pkg_name = Some name; _ } as b) -> (
-          match Canary_store_config.binding_pm b with
-          | Some Canary_store.Opam ->
-              fetch_binding_cmd
-                (Canary_toolchain.mk_opam_package_spec ~install_name:name ())
-          | Some _ | None ->
-              failwith
-                "command_of_step: Derived Fetch_binding wires only opam (S3)")
+      | Some { provider = Canary_store_config.Lang_pkg { pm = Canary_store.Opam; package = name; _ }; _ } ->
+          fetch_binding_cmd
+            (Canary_toolchain.mk_opam_package_spec ~install_name:name ())
       | _ ->
           failwith
             "command_of_step: Derived Fetch_binding needs \
-             store_config.bindings[lang].pkg_name")
+             store_config.bindings[lang].provider = Lang_pkg (opam)")
   | Derived (Probe_lib | Probe_binding _ | Scan_source) ->
       failwith "command_of_step: Derived probe/scan slots not wired yet"
 

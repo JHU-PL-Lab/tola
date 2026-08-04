@@ -14,46 +14,6 @@
     Lives in [tool/] because {!Canary_artifact_source.source_repo} does;
     everything else it references is [base/]. *)
 
-type binding_store = {
-  location : Canary_store.location;
-      (** the store: [Pm (Lang_pm { lang; pm })] — [pm] is the PM
-          (Opam/Pip/…); or [Build_tree] for built-from-source. *)
-  pkg_name : string option;
-      (** package name; [None] = built from source (no fetch). The PM is
-          read from [location] → drives the [Derived] fetch. *)
-  source_dir : string option;
-      (** moved off [binding_api]: gates [Build_binding] + the scan
-          check. *)
-}
-
-type lib_store = {
-  location : Canary_store.location;
-      (** the store: [Pm (Sys_pm { pm })] | [Build_tree] | [Staged]. *)
-  system_pkg : Canary_store.system_package_spec option;
-      (** → [Derived] fetch_lib; one spec carries both apt+brew names,
-          OS-selected at runtime. *)
-  components : Canary_artifact_api.api_component list;
-      (** moved off [native_api]: Headers / Link_lib / Runtime_lib /
-          Pc_file. *)
-  headers : Canary_artifact_api.headers_spec option;
-      (** moved off [native_api]: header dir + files. *)
-}
-
-type store_config = {
-  source : Canary_artifact_source.source_repo option; (* Source store *)
-  lib : lib_store option; (* Lib store *)
-  bindings : (Canary_lang.lang * binding_store) list; (* Binding store, per lang *)
-}
-
-let empty_store_config = { source = None; lib = None; bindings = [] }
-
-(** The package manager of a binding's store, if it lives in a lang PM
-    (rather than being built from source). *)
-let binding_pm (b : binding_store) : Canary_store.package_manager option =
-  match b.location with
-  | Canary_store.Pm (Canary_store.Lang_pm { pm; _ }) -> Some pm
-  | _ -> None
-
 (* ── Unified per-artifact provider — "where an artifact comes from" ──
    The typed detail behind an artifact's [Canary_store.provision] axis value
    (ssot §4.2): a vendored/cached PATH, a [source_repo] to build from, or a PM +
@@ -62,8 +22,10 @@ let binding_pm (b : binding_store) : Canary_store.package_manager option =
    ([provision_of_provider]) so the axis and the detail can't drift. [Cached] ≈
    [Vendored] on the axis (both are pre-existing local copies canary just probes).
 
-   This is the one place the five old shapes (lib_store / binding_store /
-   source_repo / tiny_stores / the pr_provenance string) converge onto. *)
+   This is the ONE store shape the old five (lib_store / binding_store /
+   source_repo / tiny_stores / the pr_provenance string) converge onto: it now
+   backs [lib_store] and [binding_store] directly (was [location] + [system_pkg]
+   / [pkg_name]) and drives [command_of_step]'s Derived fetch. *)
 type provider =
   | Absent
   | Vendored of string
@@ -97,3 +59,37 @@ let string_of_provider : provider -> string = function
         spec.Canary_store.macos_pkg
   | Lang_pkg { pm; package; _ } ->
       Printf.sprintf "%s:%s" (Canary_store.string_of_pm pm) package
+
+type binding_store = {
+  provider : provider;
+      (** where the binding comes from: [Lang_pkg {pm; package}] (opam/pip) or
+          [Vendored]/[Built_from] (built from source). Drives the [Derived] fetch;
+          the coarse provision is [provision_of_provider]. *)
+  source_dir : string option;
+      (** moved off [binding_api]: gates [Build_binding] + the scan check.
+          Metadata (how it's built), not provenance. *)
+}
+
+type lib_store = {
+  provider : provider;
+      (** where the lib comes from: [Sys_pkg spec] (apt/brew) | [Built_from repo]
+          | [Vendored]/[Cached] path. Drives [Derived] fetch_lib. *)
+  components : Canary_artifact_api.api_component list;
+      (** moved off [native_api]: Headers / Link_lib / Runtime_lib / Pc_file.
+          Metadata (what it exposes), not provenance. *)
+  headers : Canary_artifact_api.headers_spec option;
+      (** moved off [native_api]: header dir + files. Metadata. *)
+}
+
+type store_config = {
+  source : Canary_artifact_source.source_repo option; (* Source store *)
+  lib : lib_store option; (* Lib store *)
+  bindings : (Canary_lang.lang * binding_store) list; (* Binding store, per lang *)
+}
+
+let empty_store_config = { source = None; lib = None; bindings = [] }
+
+(** The package manager of a binding's store, if it lives in a lang PM
+    (rather than being built from source). *)
+let binding_pm (b : binding_store) : Canary_store.package_manager option =
+  match b.provider with Lang_pkg { pm; _ } -> Some pm | _ -> None

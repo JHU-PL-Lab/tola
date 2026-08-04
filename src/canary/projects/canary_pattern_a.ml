@@ -96,9 +96,8 @@ let runner_spec (d : t) : Canary_step_builder.runner_spec =
     stores =
       { Canary_store_config.empty_store_config with
         lib = Some
-          { Canary_store_config.location =
-              Canary_store.Pm (Canary_store.Sys_pm { pm });
-            system_pkg = Some prebuilt.system_package;
+          { Canary_store_config.provider =
+              Canary_store_config.Sys_pkg prebuilt.system_package;
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
     (* fetch_binding stays Raw (Derived can't reproduce opam install_args yet). *)
