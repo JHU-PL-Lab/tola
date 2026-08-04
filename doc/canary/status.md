@@ -303,10 +303,21 @@ scenarios it runs, both statically (before a run) and from the result (after).
   rate + a `+M upstream` count (scenarios mutating an upstream artifact). Surfaces
   what the scenario list buried — e.g. tiny-full **lib 0/6 detected** (every lib
   mutation missed), ocaml cstubs 7/11.
-- **Project-first CLI ✅** (`7c288c4`): `canary <pj> spec|run|status` groups the
-  pre/run/post triad (mirrors `canary tiny …`) — spec = scenario-centric, status =
-  artifact-centric (F3), run = execute. Wired for tiny-full + sqlite; coexists with
-  verb-first `spec`/`action`/`status`.
+- **Project-first CLI — REVERTED** (`18f1797`): per-project groups felt unnatural;
+  back to general verb-first (`canary spec <pj>`, project trailing). The
+  artifact-centric view is now `canary spec <pj> --by-artifact`.
+- **Per-artifact provenance + build capability ✅** (2026-08-04, `087767b`).
+  Confidence step (no execution): `spec` shows, per artifact, its
+  provision@version + a **provenance** line (a vendored PATH, or a PM + PACKAGE,
+  or build-from-source) + **builds → kinds** (from the action catalogue). The
+  artifact list is `pr_artifacts` (spec); provenance is a new declared accessor
+  `pr_provenance` on `project_run`, filled from REAL spec data (sqlite from
+  `prebuilt`; tiny from the `canary/examples/tiny/*` layout).
+  - *Honest caveats:* (1) `pr_provenance` is a DISPLAY string, sourced from the
+    same spec values but not yet *derived from / checked against* the actual
+    store_config + fetch closures the runner uses — mild drift risk, a follow-up.
+    (2) z3/llvm use the **variant view** (`print_spec_variants`, not `project_run`)
+    so they show per-variant provision only, no provenance — the next increment.
 
 **Pipeline map (pre / prepare / run / post — where to read):**
 - **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
