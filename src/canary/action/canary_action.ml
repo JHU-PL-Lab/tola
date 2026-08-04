@@ -238,6 +238,33 @@ let produces_of_action (a : action) : artifact_kind list =
   | Fetch k -> [ k ]
   | Publish k -> [ k ]   (* relocates k into a Pm store *)
 
+(* M2: lift a flat [Canary_enumerate.assignment] to the artifact_node graph — the
+   [built_from] edges come from the SEAM ([built_from_of_assignment]) via the
+   action catalogue ([consumes_of_action], §6.5), reused, not a new edge
+   vocabulary. Chain scope (source→lib→binding, one version); [runtime_dep] (an
+   app's run-lib) is deferred. The flat→node lift the graph merge builds on; the
+   run still consumes assignments (unchanged). *)
+let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
+  let module EN = Canary_enumerate in
+  let built_from_kinds (k : artifact_kind) : artifact_kind list =
+    match k with
+    | Lib -> consumes_of_action Build_lib
+    | Binding l -> consumes_of_action (Build_binding l)
+    | Headers -> consumes_of_action Build_headers
+    | _ -> []
+  in
+  let rec build (id : EN.artifact_id) : artifact_node =
+    let built_from =
+      match EN.built_from_of_assignment ~built_from_kinds a id with
+      | dep :: _ -> Some (build dep)   (* seam returns deps present in [a] *)
+      | [] -> None
+    in
+    mk_node (EN.kind_of id) (EN.string_of_id id) ~origin:Build_tree
+      ~location:Build_tree ~ext:(EN.ext_of id) ~version:(EN.version_of a id)
+      ~provision:(EN.provision_of a id) ?built_from ()
+  in
+  List.map a ~f:(fun (id, _) -> build id)
+
 (** Union in first-appearance order — the deduped set of artifacts a
     project {b inspects} across its actions. This is the detection
     scope inventory the forecast-agnostic [project] derives instead

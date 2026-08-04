@@ -478,6 +478,32 @@ let built_from_test : pure_test =
       && one_edge a_oc EN.a_lib                (* Built binding ← Lib *)
       && List.is_empty (edges EN.a_source)) }  (* Fetched source: no edge *)
 
+(* M3: node_of_assignment lifts a flat chain assignment to the artifact_node
+   graph with the full catalogue-derived chain — binding ← lib ← source. (Note:
+   make_action_graph under-records this — its Build_lib node omits built_from=
+   source, treating source as an implicit root; the seam is the complete view.) *)
+let node_of_assignment_test : pure_test =
+  { name = "action.node_of_assignment_chain";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let module CA = Canary_action in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let pl p : EN.placement = { provision = p; version = EN.good B.Stable } in
+      let a = EN.[ (a_source, pl Fetched); (a_lib, pl Built); (a_oc, pl Built) ] in
+      let nodes = CA.node_of_assignment a in
+      let find k =
+        List.find nodes ~f:(fun (n : CA.artifact_node) -> Poly.equal n.CA.a_kind k)
+      in
+      match find (B.Binding ocaml) with
+      | Some bind -> (
+          match bind.CA.built_from with
+          | Some libn when Poly.equal libn.CA.a_kind B.Lib -> (
+              match libn.CA.built_from with
+              | Some srcn -> Poly.equal srcn.CA.a_kind B.Source
+              | None -> false)
+          | _ -> false)
+      | None -> false) }
+
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
    For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
@@ -520,7 +546,7 @@ let all_tests : pure_test list =
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
       per_artifact_provisions_test; point_fold_test; project_spec_test;
-      built_from_test;
+      built_from_test; node_of_assignment_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =
