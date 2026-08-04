@@ -100,10 +100,18 @@ coarse-kind `match` sites — see §6.
 
 ## 5. First-cut migration (source → lib → binding, one version) — no run change
 
-- **M1 — extend `artifact_node`** (base): `a_kind`→`id`, `a_name`→`version`,
-  `+provision`; update its **3 users** (`canary_basic` def, `canary_action`
-  `mk_node`/`make_action_graph`, `canary_path_table`); derive old `a_name`/
-  `a_location` so **`paths`+diagram stay byte-identical** (pure refactor).
+- **M1.0 — relocate `artifact_node` out of base** (layering fact, 2026-08-04):
+  the identity types it must merge with (`artifact_id`/`build_id`/`ext`/`quality`/
+  `app_wiring`) all live in the ACTION layer (`canary_enumerate`), and **base never
+  uses `artifact_node`** (only its own recursive edges) — its real users are
+  `canary_action` + `canary_path_table` (action). So `artifact_node` is action
+  vocabulary, not base: move it (+ `mk_node`, `node_tag`) up to the action layer,
+  update those 2 users to `Canary_action.artifact_node`. Pure move, byte-identical.
+- **M1 — extend `artifact_node`**: `a_kind`→`id` (+ext), `a_name`-suffix→typed
+  `version` (+quality), `+provision`; keep `a_name`/`a_location` as DISPLAY fields
+  so `node_tag` (and thus `paths`+diagram) stays **byte-identical** — note `a_name`
+  conflates project-name + version, so it can't be *replaced* by `version` yet, only
+  augmented. (Identity types available in-layer after M1.0.)
 - **M2 — `node_of_assignment`**: lift a flat `assignment` to the node graph, edges
   via the seam. Run still consumes assignments (unchanged).
 - **M3 — cross-check**: `node_of_assignment` edges == `make_action_graph` edges on
