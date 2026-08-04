@@ -117,12 +117,19 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
 
 - **✅ seam** — `built_from_of_assignment` reads edges off the action catalogue
   (proves the flat assignment == the action graph).
-- **First-cut node merge (next, no run change):** **M1** extend `artifact_node`
-  (3 files; `paths`/diagram byte-identical) · **M2** `node_of_assignment`
-  (flat→node via the seam) · **M3** cross-check vs `make_action_graph`.
-- Then **A3b + A4** (the run-flips) build on the node model, not the flat product.
-  A1/A2/A3a stand as the entry rung; the ~61-site pair→enriched-kind fold is a
-  later cleanup, decoupled.
+- **✅ first-cut node merge (2026-08-04, no run change):** **M1.0** relocated
+  `artifact_node` base→action (`fa85cd6`); **M1** extended it with `ext` + typed
+  `version` + `provision`, populated from the producing action, `paths`/diagram
+  byte-identical (`1f3a24f`); **M2/M3** `node_of_assignment` lifts flat→node graph
+  via the seam + chain cross-check (`64ed970`). The node model is now real in code.
+  - **Finding:** `make_action_graph` UNDER-records the `lib ← source` edge (its
+    `Build_lib` node omits `built_from=source`, source-as-implicit-root), while the
+    catalogue + seam include it. Reconciling that source edge is a follow-up for
+    the full merge.
+- **Next — grow the node model** (still no run change): versions → the mismatch
+  cartesian; app → build-vs-run edge; provision breadth (Staged/PM/Contained).
+  Then **A3b + A4** (the run-flips) build on it. A1/A2/A3a are the entry rung; the
+  ~61-site pair→enriched-kind fold is a decoupled later cleanup.
 
 ### B. Coverage — make canary detect more
 
