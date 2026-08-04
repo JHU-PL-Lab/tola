@@ -1128,9 +1128,9 @@ let print_engine_render () : unit =
     (String.concat ~sep:", "
        (List.map engine_artifacts ~f:Canary_enumerate.string_of_id));
   List.iter engine_points ~f:(fun pt ->
-      match pt.Canary_enumerate.mutation with
-      | None -> p "  [positive]  all-Built pipeline\n"
-      | Some (aid, id) ->
+      match pt.Canary_enumerate.mutations with
+      | [] -> p "  [positive]  all-Built pipeline\n"
+      | (aid, id) :: _ ->
           p "  [mutation]  %-24s on %s\n" id
             (Canary_enumerate.string_of_id aid));
   let n_points_mut = List.length engine_mutations in

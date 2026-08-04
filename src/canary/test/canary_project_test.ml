@@ -237,7 +237,7 @@ let enumerate_test : pure_test =
       let tiny = EN.tiny_slice ~artifacts ~mutations:muts in
       let tiny_ok =
         List.length tiny = 3
-        && List.count tiny ~f:(fun p -> Option.is_none p.EN.mutation) = 1
+        && List.count tiny ~f:(fun p -> List.is_empty p.EN.mutations) = 1
         && List.for_all tiny ~f:all_built
       in
       (* general projection: mutation=none, walk provisions; all-Fetched
@@ -252,7 +252,7 @@ let enumerate_test : pure_test =
                 EN.equal_provision pl.EN.provision target))
       in
       let gen_ok =
-        List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
+        List.for_all gen ~f:(fun p -> List.is_empty p.EN.mutations)
         && has_uniform EN.Fetched && has_uniform EN.Built
       in
       (* filter: with Absent allowed, a provided binding over an Absent lib
@@ -307,12 +307,12 @@ let config_level_test : pure_test =
                 ~versions:B.single_channel)
       in
       List.length tiny = 3
-      && List.for_all gen ~f:(fun p -> Option.is_none p.EN.mutation)
+      && List.for_all gen ~f:(fun p -> List.is_empty p.EN.mutations)
       && List.for_all mixed ~f:(fun p ->
              List.for_all p.EN.assignment ~f:(fun (_, pl) ->
                  EN.equal_provision pl.EN.provision EN.Fetched))
-      && List.count mixed ~f:(fun p -> Option.is_some p.EN.mutation) = 1
-      && List.count mixed ~f:(fun p -> Option.is_none p.EN.mutation) = 1
+      && List.count mixed ~f:(fun p -> not (List.is_empty p.EN.mutations)) = 1
+      && List.count mixed ~f:(fun p -> List.is_empty p.EN.mutations) = 1
       && wrappers_agree) }
 
 (* §4.2.2 version axis: per-slot version enables cross-slot mismatch, and
@@ -411,10 +411,10 @@ let point_fold_test : pure_test =
       in
       let fold = EN.assignment_of_point ~tag:Fn.id in
       let mutated =
-        List.find pts ~f:(fun p -> Option.is_some p.EN.mutation)
+        List.find pts ~f:(fun p -> not (List.is_empty p.EN.mutations))
       in
       let positive =
-        List.find pts ~f:(fun p -> Option.is_none p.EN.mutation)
+        List.find pts ~f:(fun p -> List.is_empty p.EN.mutations)
       in
       match mutated, positive with
       | Some pm, Some pp ->

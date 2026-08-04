@@ -156,8 +156,13 @@ type assignment = (artifact_id * placement) list
 
 (** One point of the scenario space: an assignment plus an optional mutation
     on one *provided* artifact ([None] = the positive scenario). *)
+(* [mutations] is a LIST (not a single option): a positive point is [[]], a
+   single-bad is one, a COMBINATION is several (multiple bad artifacts in one
+   scenario). [assignment_of_point] folds them all into their targets' Bad
+   quality. enumerate emits 0/1-element lists today; multi-element (curated
+   combinations) is the project-policy layer (A4, retiring tiny_full_combinations). *)
 type 'm point =
-  { assignment : assignment; mutation : (artifact_id * 'm) option }
+  { assignment : assignment; mutations : (artifact_id * 'm) list }
 
 let equal_version : build_id -> build_id -> bool = equal_build_id
 
@@ -261,10 +266,10 @@ let enumerate ~(artifacts : artifact_id list)
   assignments_of artifacts provisions_of versions
   |> List.filter ~f:assignment_ok
   |> List.concat_map ~f:(fun a ->
-         let positive = { assignment = a; mutation = None } in
+         let positive = { assignment = a; mutations = [] } in
          let muts =
            List.filter_map mutations ~f:(fun (s, m) ->
-               if provided a s then Some { assignment = a; mutation = Some (s, m) }
+               if provided a s then Some { assignment = a; mutations = [ (s, m) ] }
                else None)
          in
          positive :: muts)
@@ -341,13 +346,11 @@ let general_slice ~(artifacts : artifact_id list)
     P2a). [tag] projects the polymorphic mutation to its opaque string tag. A
     positive point ([mutation = None]) is already an all-Good assignment. *)
 let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
-  match p.mutation with
-  | None -> p.assignment
-  | Some (aid, m) ->
-      List.map p.assignment ~f:(fun (id, pl) ->
+  List.fold p.mutations ~init:p.assignment ~f:(fun a (aid, m) ->
+      List.map a ~f:(fun (id, pl) ->
           if equal_artifact_id id aid then
             (id, { pl with version = { pl.version with quality = Bad (tag m) } })
-          else (id, pl))
+          else (id, pl)))
 
 (** A3 — a project's DECLARED enumeration axes (static data): its artifacts, each
     artifact's provision universe (A1), the version channels, the mutation

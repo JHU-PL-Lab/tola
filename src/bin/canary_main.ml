@@ -886,7 +886,7 @@ let scenarios_cmd =
           let slice_assignments =
             List.filter_map
               (fun (pt : string Canary_enumerate.point) ->
-                match pt.mutation with None -> Some pt.assignment | _ -> None)
+                match pt.mutations with [] -> Some pt.assignment | _ -> None)
               slice
           in
           Printf.printf
