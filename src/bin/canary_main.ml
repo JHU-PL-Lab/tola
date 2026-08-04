@@ -199,6 +199,48 @@ let run_assembled_combo ~root ~tags : unit =
             the failure and stopped — the collapse, computed not declared)@."
            label (scenario_status_of_run_state ()))
 
+let prov_short : Canary_enumerate.provision -> string = function
+  | Canary_enumerate.Vendored -> "V"
+  | Canary_enumerate.Built -> "B"
+  | Canary_enumerate.Fetched -> "F"
+  | Canary_enumerate.Absent -> "A"
+
+let placement_str (pl : Canary_enumerate.placement) =
+  Printf.sprintf "%s:%s" (prov_short pl.provision)
+    (Canary_enumerate.string_of_build_id pl.version)
+
+(* The all-good baseline of an enumerated scenario set (the assignment every
+   delta is measured against). *)
+let baseline_of (scenarios : Canary_enumerate.assignment list) =
+  try List.find Canary_tiny_scenario.assignment_is_all_good scenarios
+  with Not_found -> ( match scenarios with a :: _ -> a | [] -> [])
+
+(* The delta-from-baseline label for a scenario — the JOIN KEY between the pre
+   view (`spec`) and the persisted post view (the run summary). Same string in
+   both so a scenario can be looked up across pre/post. *)
+let scenario_label ~baseline (a : Canary_enumerate.assignment) : string =
+  let baseline_str id =
+    match Canary_enumerate.placement_of baseline id with
+    | Some pl -> placement_str pl
+    | None -> "\xE2\x80\x94"
+  in
+  let deltas =
+    List.filter_map
+      (fun (id, pl) ->
+        let s = placement_str pl in
+        if String.equal (baseline_str id) s then None
+        else Some (Printf.sprintf "%s=%s" (Canary_enumerate.pretty_id id) s))
+      a
+  in
+  match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
+
+(* Per-scenario run summary (F1): one line per scenario, TAB-separated
+   [verdict \t good|bad \t label]. Written by [run_project_run], read by
+   [print_spec] to annotate the pre view with post verdicts. Sibling of
+   run_state.json (which is per-step and overwritten per scenario). *)
+let scenario_summary_path_of ~project =
+  [%string "_out/canary/projects/%{project}/-run/scenarios.tsv"]
+
 (* The GENERIC project runner (convergence step 2). Consumes a [project_run]
    and does the SAME loop for any project: enumerate → materialize →
    runner_spec → run → report. All project-specific logic lives in the
@@ -210,8 +252,10 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
     unit =
   Fmt.pr "@.%s — generic project run (enumerate → materialize → run)@."
     pr.Canary_project_run.pr_name;
+  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let baseline = baseline_of scenarios in
   let seen = ref [] in
-  let results = ref [] in (* (label, verdict, is_bad) *)
+  let results = ref [] in (* (key, verdict, is_bad) — key = scenario_label *)
   List.iter
     (fun a ->
       match pr.Canary_project_run.pr_materialize a with
@@ -220,6 +264,7 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
       | Some ws ->
           seen := ws :: !seen;
           let is_bad = not (Canary_tiny_scenario.assignment_is_all_good a) in
+          let key = scenario_label ~baseline a in
           let label = Filename.basename ws in
           (* sanitize for the output path: ':' '#' '+' are ugly / not portable
              (Windows) in a directory name *)
@@ -262,14 +307,27 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
             (if is_bad then "(bad)" else "(good)")
             (if String.equal verdict "FAIL" && not (String.equal culprits "")
              then "  <- " ^ culprits else "");
-          results := (label, verdict, is_bad) :: !results)
-    (pr.Canary_project_run.pr_enumerate ());
+          results := (key, verdict, is_bad) :: !results)
+    scenarios;
   let bads = List.filter (fun (_, _, b) -> b) !results in
   let detected =
     List.length (List.filter (fun (_, v, _) -> String.equal v "PASS") bads)
   in
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
-    detected (List.length bads)
+    detected (List.length bads);
+  (* F1: persist the per-scenario verdicts so a post view can annotate the
+     `spec` (pre) listing. One TAB-separated line per scenario that RAN
+     (deduped workspaces are omitted → shown "·" in the post view). *)
+  (let path = scenario_summary_path_of ~project:pr.Canary_project_run.pr_name in
+   try
+     let oc = open_out path in
+     List.iter
+       (fun (key, verdict, is_bad) ->
+         Printf.fprintf oc "%s\t%s\t%s\n" verdict
+           (if is_bad then "bad" else "good") key)
+       (List.rev !results);
+     close_out oc
+   with Sys_error _ -> () (* run dir may not exist on a no-op run; non-fatal *))
 
 (* Coarse artifact GROUP for the spec listing (ssot §4.2 kinds). *)
 let group_of_kind : Canary_basic.artifact_kind -> string = function
@@ -280,35 +338,49 @@ let group_of_kind : Canary_basic.artifact_kind -> string = function
 
 let group_order = [ "source"; "native"; "bindings"; "app" ]
 
-let prov_short : Canary_enumerate.provision -> string = function
-  | Canary_enumerate.Vendored -> "V"
-  | Canary_enumerate.Built -> "B"
-  | Canary_enumerate.Fetched -> "F"
-  | Canary_enumerate.Absent -> "A"
+(* Load the persisted per-scenario run summary (F1) as a [label -> (verdict,
+   is_bad)] map — the POST view joined to the pre listing by [scenario_label].
+   [] when no run has happened. *)
+let load_scenario_post ~project : (string * (string * bool)) list =
+  let path = scenario_summary_path_of ~project in
+  if not (Sys.file_exists path) then []
+  else
+    let ic = open_in path in
+    let rec loop acc =
+      match input_line ic with
+      | line -> (
+          match String.split_on_char '\t' line with
+          | verdict :: bad :: rest ->
+              (* label may itself contain no tabs (it uses spaces), so rest is
+                 a singleton; be defensive and rejoin. *)
+              let label = String.concat "\t" rest in
+              loop ((label, (verdict, String.equal bad "bad")) :: acc)
+          | _ -> loop acc)
+      | exception End_of_file ->
+          close_in ic;
+          acc
+    in
+    loop []
 
-(* Dry-run snapshot of a [project_run]: declared artifacts (grouped, each with
-   its baseline provision@version) + the enumerated scenarios as deltas from
-   that baseline. Pure — [pr_materialize] is NOT called (it would build/
-   assemble/fetch). A shared view to confirm what canary will enumerate. *)
+(* Snapshot of a [project_run]: declared artifacts (grouped, each with its
+   baseline provision@version) + the enumerated scenarios as deltas from that
+   baseline. PRE (dry-run — [pr_materialize] is NOT called). If a run summary
+   exists, each scenario is also annotated with its last-run verdict (POST):
+   good ✓/✗REGRESSED, bad ✓detected/✗missed, · = not run (deduped workspace). *)
 let print_spec (pr : Canary_project_run.project_run) : unit =
   let module E = Canary_enumerate in
-  let placement_str (pl : E.placement) =
-    Printf.sprintf "%s:%s" (prov_short pl.provision)
-      (E.string_of_build_id pl.version)
-  in
   let scenarios = pr.Canary_project_run.pr_enumerate () in
   let all_good = Canary_tiny_scenario.assignment_is_all_good in
-  let baseline =
-    try List.find all_good scenarios
-    with Not_found -> ( match scenarios with a :: _ -> a | [] -> [])
-  in
+  let baseline = baseline_of scenarios in
   let baseline_str id =
     match E.placement_of baseline id with
     | Some pl -> placement_str pl
     | None -> "\xE2\x80\x94" (* em dash *)
   in
-  Fmt.pr "@.spec: %s — dry-run snapshot (no execution)@."
-    pr.Canary_project_run.pr_name;
+  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
+  Fmt.pr "@.spec: %s — %s@." pr.Canary_project_run.pr_name
+    (if post = [] then "enumeration (no run yet)"
+     else "enumeration + last-run verdicts");
   (* artifacts, grouped, each with its baseline provision@version *)
   let arts = pr.Canary_project_run.pr_artifacts in
   Fmt.pr "@.artifacts (%d), by group [baseline provision@@version]:@."
@@ -327,29 +399,37 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
           in_grp
       end)
     group_order;
-  (* scenarios as deltas from the all-good baseline *)
+  (* scenarios as deltas from the all-good baseline, + post verdict if any *)
   let ngood = List.length (List.filter all_good scenarios) in
   let total = List.length scenarios in
-  Fmt.pr "@.scenarios (%d: %d good, %d bad) — delta from baseline:@." total ngood
-    (total - ngood);
+  Fmt.pr "@.scenarios (%d: %d good, %d bad) — delta from baseline%s:@." total
+    ngood (total - ngood)
+    (if post = [] then "" else " + last-run verdict");
   List.iter
     (fun a ->
       let good = all_good a in
-      let deltas =
-        List.filter_map
-          (fun (id, pl) ->
-            let s = placement_str pl in
-            if String.equal (baseline_str id) s then None
-            else Some (Printf.sprintf "%s=%s" (E.pretty_id id) s))
-          a
+      let desc = scenario_label ~baseline a in
+      let mark =
+        if post = [] then ""
+        else
+          match List.assoc_opt desc post with
+          | None -> "·"                     (* enumerated but not run (deduped) *)
+          | Some ("PASS", _) -> if good then "✓" else "✓ detected"
+          | Some (_, _) -> if good then "✗ REGRESSED" else "✗ missed"
       in
-      let desc =
-        match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
-      in
-      Fmt.pr "  [%-4s] %s@." (if good then "good" else "bad") desc)
+      Fmt.pr "  [%-4s] %-52s %s@." (if good then "good" else "bad") desc mark)
     scenarios;
+  (if post <> [] then
+     let bads = List.filter (fun (_, (_, b)) -> b) post in
+     let detected =
+       List.length
+         (List.filter (fun (_, (v, _)) -> String.equal v "PASS") bads)
+     in
+     Fmt.pr "@.  last run: %d/%d bad detected · %d scenario(s) ran (rest ·=deduped)@."
+       detected (List.length bads) (List.length post));
   Fmt.pr
-    "@.  legend: V=vendored B=built F=fetched A=absent · version=channel[#bad-tag]@.";
+    "@.  legend: V=vendored B=built F=fetched A=absent · version=channel[#bad-tag] \
+     · ✓/✗=last-run verdict · ·=not run@.";
   Fmt.pr
     "  note: this is the ENUMERATION; at run time the runner dedups scenarios \
      that materialize to the same workspace, so run coverage counts distinct \
