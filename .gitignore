@@ -30,6 +30,7 @@ docs/**/*_example*
 # (hundreds of per-scenario JSON/log files) is churn, not published diagrams.
 docs/canary/projects/tiny/
 docs/canary/projects/tiny-full/
+docs/canary/projects/tiny-full-thin/
 docs/canary/projects/sqlite/
 
 !__init__.py
