@@ -148,17 +148,22 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     deploy-mismatch / version work (z3/llvm), where it's actually needed. M1's richer
     `artifact_node` + the source-edge fix stand (they improved the live
     `make_action_graph`); M2/M3 are the parked seam.
-  - **ACTIVE next: A3b/A4 — flip tiny-full + sqlite runs onto the FLAT enumeration.**
-    Mechanics: **retire `pr_enumerate`** (the hand-built closure = project computes)
-    → a declared **`pr_spec : project_spec`** (project declares); `run_project_run`
-    calls **`assignments_of_spec pr_spec`** (KEEP — the flat engine) → flat
-    assignments → run. Criterion for "flat is enough": a scenario has ONE instance
-    per artifact-kind — true for sqlite/tiny-full (the node graph is strictly needed
-    only when canary enumerates TWO instances of one kind = deploy mismatch, z3/llvm).
-    Then enhance/check on more projects. A node-graph `project_spec → node-graphs`
-    engine is a later SIBLING of `assignments_of_spec` for the mismatch case, not a
-    replacement. A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled
-    cleanup.
+  - **ONE engine, not two.** End state: `pr_spec (declared) → enumerate → node graph
+    → run`, where a flat `assignment` IS the **degenerate node graph** (one instance
+    per kind, no mismatch edges). The engine produces degenerate graphs today,
+    generalizes to full graphs (mismatch) later — the flat form is subsumed, not
+    kept as a weaker sibling. Both `pr_enumerate` AND the flat-only path are planned
+    retirements toward that single engine.
+  - **ACTIVE next: A3b/A4.** Retire the hand-built `pr_enumerate` → a declared
+    `pr_spec : project_spec`; `run_project_run` enumerates via `assignments_of_spec`
+    (the engine's current, degenerate/flat form) → run tiny-full + sqlite off the
+    spec. Sufficient because their scenarios are one-instance-per-kind (the node
+    graph's extra power — two instances = deploy mismatch — is z3/llvm only). Then
+    enhance/check on more projects.
+  - **Deferred — generalize the engine** to full node graphs (mismatch), subsuming
+    the flat form (retiring the flat-only path) and teaching the run to consume node
+    graphs. Triggered by the first real deploy-mismatch project (z3/llvm version
+    work). A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled cleanup.
 
 ### B. Coverage — make canary detect more
 
