@@ -128,10 +128,20 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     source-primary (`lib@v ← source@v`), like `Build_binding` links lib. No new
     machinery; `paths`/`graph` byte-identical (they render path-table/schema, not
     per-node edges); M3 upgraded to cross-check both graphs now agree.
-- **Next — grow the node model** (still no run change): versions → the mismatch
-  cartesian; app → build-vs-run edge; provision breadth (Staged/PM/Contained).
-  Then **A3b + A4** (the run-flips) build on it. A1/A2/A3a are the entry rung; the
-  ~61-site pair→enriched-kind fold is a decoupled later cleanup.
+- **Next — NOT incremental tweaks; the substantive merge.** `make_action_graph`
+  already has versions-mismatch + app build/run edges + locations. `node_of_assignment`
+  can't catch up while it's derived from a FLAT assignment — each hits a real gap:
+  - *mismatch* — structural: a flat assignment has one lib placement per kind, but
+    build-lib ≠ run-lib needs TWO lib instances. Only a node-graph object expresses
+    it (the whole reason for the graph). ⇒ the enumeration must EMIT node-graphs,
+    not flat assignments — the real fold.
+  - *app runtime_dep* — blocked: App's identity carries no lang (ssot §4.2.3), so
+    an App node can't map to its `Build_app {lang}` action without a heuristic.
+  - *location breadth* — Fetched's `a_location = Pm` needs `pm_info` the flat
+    assignment lacks; *Contained/bundle* is a new concept needing design.
+  So the next real step is the **fold** (enumeration object = the node graph),
+  coupled to **A3b/A4** flipping the run — a deliberate design/build, not a quick
+  add. A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled cleanup.
 
 ### B. Coverage — make canary detect more
 
