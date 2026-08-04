@@ -106,16 +106,23 @@ Steps:
 - **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
   hand-written → derived; §1c #1).
 
-**Design gate (2026-08-04).** The two modeling findings above are one deeper
-model: **an artifact can be a built result — a resource generates (`built_from`)
-or contains (a bundle) other artifacts, so `provision` is a per-EDGE provider
-choice, not a flat per-artifact label.** sqlite's "source → Built lib" is that
-`built_from` edge; tiny's combinations are multi-node mutations on the graph. The
-instance graph already exists (`artifact_node` + `make_action_graph`;
-[`enumeration_graph.md`](design/enumeration_graph.md)). New SSOT capturing this +
-the `project_spec` shape: [`design/dynamic_enumeration.md`](design/dynamic_enumeration.md).
-**A3b + A4 (the project run-flips) wait on that design** — build them against the
-graph model, not the flat product. A1/A2/A3a stand as the entry rung.
+**Graph-model recap + gate (2026-08-04).** The two findings are one model: **an
+artifact can be a built result — a resource generates (`built_from`) or contains
+(a bundle) other artifacts, so `provision` is a per-EDGE provider, not a flat
+label.** The instance graph already exists (`artifact_node` + `make_action_graph`);
+the merge is to **extend `artifact_node`** with `ext` + typed `version` +
+`provision` and drive the run off it — `runner_spec` is keyed on actions and
+barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
+[`design/dynamic_enumeration.md`](design/dynamic_enumeration.md).
+
+- **✅ seam** — `built_from_of_assignment` reads edges off the action catalogue
+  (proves the flat assignment == the action graph).
+- **First-cut node merge (next, no run change):** **M1** extend `artifact_node`
+  (3 files; `paths`/diagram byte-identical) · **M2** `node_of_assignment`
+  (flat→node via the seam) · **M3** cross-check vs `make_action_graph`.
+- Then **A3b + A4** (the run-flips) build on the node model, not the flat product.
+  A1/A2/A3a stand as the entry rung; the ~61-site pair→enriched-kind fold is a
+  later cleanup, decoupled.
 
 ### B. Coverage — make canary detect more
 

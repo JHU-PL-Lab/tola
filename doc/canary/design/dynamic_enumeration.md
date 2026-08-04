@@ -1,256 +1,128 @@
 # Canary dynamic enumeration — artifacts that generate / contain artifacts
 
-> **Purpose:** design note (companion to
-> [`enumeration_graph.md`](enumeration_graph.md)) for the model where an
-> artifact is itself a *built result* — a resource **generates** or **contains**
-> other artifacts. Surfaced 2026-08-04 while converging the run onto the
-> enumeration algorithm (status §A, A3a): the flat per-artifact `provision`
-> product is an entry-level view; the real object is a **dependency graph with a
-> provider choice per edge**. This note is the SSOT for that model + the
-> `project_spec` shape it implies. Nothing here is built yet — A3b/A4 wait on it.
+> **SSOT** (companion to [`enumeration_graph.md`](enumeration_graph.md)) for the
+> model where an artifact is itself a *built result* — a resource **generates**
+> or **contains** other artifacts, so `provision` is a per-EDGE provider choice,
+> not a flat label. Surfaced 2026-08-04 converging the run onto the enumeration
+> algorithm (status §A). The seam is built (`built_from_of_assignment`); the node
+> merge (M1–M3) is drafted; A3b/A4 wait on it.
 
-## 1. The insight — `provision` is a per-edge provider, not a flat label
+## 1. The model
 
-"Provision" reads like a scalar tag on an artifact (Fetched / Built / Vendored).
-But **Built means "this artifact is *generated* by an action from a *dependency*
-artifact"** — it is an edge, not a label. So the enumeration axis isn't "pick a
-provision per artifact independently"; it's "pick a **provider** for each
-dependency edge," and some providers pull in more artifacts.
+**Built means "this artifact is *generated* by an action from a *dependency*
+artifact"** — it's an edge, not a label. So the enumeration axis is "pick a
+**provider** per dependency edge," and some providers pull in more artifacts. Two
+shapes of *one resource → many artifacts*:
 
-Two shapes of *one resource → many artifacts*:
+- **generates** (build edge = `artifact_node.built_from`): source → lib
+  (`build_lib`); lib + binding-src → binding (`build_binding`).
+- **contains** (a bundle — the one NEW case): one *fetch* yields several artifacts
+  (a pip/opam package shipping a binding AND a lib), and the binding may be
+  *configurable* to a different lib provider (bundled vs system-PM).
 
-- **GENERATES** (a build edge — already `artifact_node.built_from`): a source
-  generates a lib (`build_lib`); a lib + binding-source generate a built binding
-  (`build_binding`). The dependency is the edge; the cache holds the result.
-- **CONTAINS** (a bundle — new here): one *fetch* yields several artifacts — a
-  pip/opam package that ships **both** a binding **and** a lib; and the binding
-  may be *configurable* to use a different lib provider (the package's own bundled
-  lib, or a system-PM lib). One provision, multiple artifacts / a provider choice
-  on the binding's lib-edge.
+Cases that motivate it: **old binding × dev-source** (dev source builds a new lib;
+old binding over it = deploy mismatch, `built_from ≠ runtime_dep`); **bundled
+binding + configurable lib** (provider choice {bundled, system}); **sqlite** (Built
+lib `built_from = amalgamation source`; binding lib-edge ∈ {system-PM, built-lib}
+— my A3a "conditional source" *is* that edge, not a hack).
 
-## 2. Motivating cases (from the 2026-08-04 discussion)
+**Static declaration, dynamic closure.** A project declares a **dependency graph**
+(artifacts + edges + a per-edge provider universe); the enumerator walks the
+closure — a Built node pulls in its source, a Contained node its bundle, a provider
+choice branches the world — **postponing** a task until its inputs exist / tracking
+readiness via the **cache map**. The runner topo-orders actions; the cache holds
+generated artifacts (already how tiny's cached artifacts + `.verdict` markers
+work). The enumerated object is the graph, so the deploy mismatch comes for free.
 
-- **Old binding × dev-version source.** The dev source builds a new lib (and dev
-  libs get published readily); the *old* binding deployed against the *new* lib is
-  the deploy mismatch — `built_from` (binding's build lib) ≠ `runtime_dep` (run
-  lib). Already enumerated by `make_action_graph`'s `Build_app` cartesian.
-- **Bundled binding + configurable lib.** A pip/opam package contains a binding
-  AND a lib, but the binding can be pointed at a **system-PM** lib instead. The
-  binding's lib-edge has a **provider choice** {bundled-lib, system-lib} — two
-  valid worlds from one declared package.
-- **sqlite (the case that surfaced this).** Its Built lib is generated from the
-  amalgamation *source* (`built_from = source`); the OCaml/Python binding's
-  lib-edge can be {system-PM lib (Fetched), the built lib}. My A3a "make the
-  Built-lib source requirement conditional" is really "the `built_from` edge is
-  present only when source is a declared dependency." The provision-coupling I
-  flagged **is the edge**, not a hack.
+## 2. Inventory — what we HAVE vs what we IMPLEMENT (code map)
 
-## 3. What already exists — don't re-solve
-
-- **The instance graph** (`Canary_basic.artifact_node` + `make_action_graph`)
-  already has `built_from` (build edge), `runtime_dep` (run edge), `a_location`,
-  and enumerates the version-mismatch cartesian. See
-  [`enumeration_graph.md`](enumeration_graph.md).
-- **z3/llvm** already hit "an artifact is built from another," and the current
-  solution is to **enforce step-execution order**. Ideally **action ≈ artifact**:
-  an action *produces* an artifact the cache holds, and ordering is topological
-  over the dependency graph — the cache map is the tracker.
-- **The flat work (A1/A2/A3a)** is the **degenerate view** of this graph: nodes =
-  `(artifact_id × placement)`, edges *implicit* in `assignment_ok`. Not wasted —
-  it is the entry rung and the `point → assignment` fold still applies — but the
-  target is the explicit graph.
-
-## 4. The model
-
-- **Static declaration.** A project declares a **dependency graph**: artifacts +
-  edges (binding → lib, lib → source, app → binding × runtime-lib) + a
-  **per-edge provider universe** (Fetched from a PM / Built from a dependency /
-  Vendored / **Contained** in a bundle). This is the real `project_spec` — not a
-  flat `provisions_of`.
-- **Dynamic enumeration.** Walk the graph closure: a Built node pulls in its
-  source dependency (expand); a Contained node is provided by its bundle; a
-  provider choice on an edge branches the world. The "smarter" part is graph
-  traversal — **postpone** a task until its inputs exist, or track readiness with
-  a **cache map** — so the closure completes. The runner topo-orders the actions;
-  the artifact cache holds generated artifacts (already how tiny's cached
-  artifacts + the `.verdict` markers work).
-- **Enumerated object = the instance graph**, not a flat assignment. The deploy
-  mismatch then "comes for free" (it already does in `make_action_graph`).
-
-## 5. What it lands
-
-- **sqlite (A3b):** Built lib `built_from = source(amalgamation)`; binding lib-edge
-  provider ∈ {system-PM, built-lib}. Flipping the run = walk this graph, not a
-  flat product; the binding-over-built-lib scenario is a provider choice, not an
-  ad-hoc coupling (= coverage-C).
-- **tiny (A4):** combinations (multi-bad) = several mutated nodes in the graph.
-  Multi-mutation is natural once the enumerated object is the graph rather than a
-  single-`option` `point.mutation`.
-- **project_spec evolution:** `provisions_of` (A3a) → declare the dependency graph
-  + per-edge providers. `assignments_of_spec` becomes "enumerate the instance
-  graphs," merging with `enumeration_graph.md`'s target `instance` type
-  (`artifact_node` + `ext` + typed `version`).
-
-## 6. Open questions
-
-- **Contained / bundle:** how to represent "one fetch → many artifacts" — a
-  `Contained` provision? a package artifact that yields sub-artifacts? where does
-  the binding's configurable lib-edge live?
-- **Provider choice granularity:** per-edge vs per-artifact (two apps sharing one
-  binding may want the same or different runtime lib).
-- **Static vs dynamic dependencies:** the note assumes deps are *statically*
-  declared (true today — no dynamic artifact creation). If usage ever computes a
-  dependency at run time, the enumeration needs the postpone/tracker machinery to
-  stay closed.
-- **Merge point:** fold `project_spec` (§4) + `enumeration_graph.md`'s `instance`
-  into one type; retire the flat `assignment` product as the degenerate case.
-
-## 7. Inventory — what we HAVE vs what we IMPLEMENT (code map, 2026-08-04)
-
-We already have **both halves** of the graph model, LIVE — but disconnected in
-code. The merge REUSES them; the only genuinely new piece is *contains/bundle*.
+Both halves exist, LIVE, but disconnected in code; the merge REUSES them. The only
+genuinely new piece is *contains/bundle*.
 
 | Concern | Where (LIVE) | Used for |
 |---|---|---|
-| instance node + build/run EDGES + version-mismatch cartesian | `artifact_node` (`base/canary_basic.ml:52`) + `make_action_graph` (`action/canary_action.ml:64`) | `paths` table + diagram (DISPLAY) |
-| `ext` (mechanism/wiring) + typed `version` + mutation + config + per-artifact provision | `action/canary_enumerate.ml` (placement / assignment / enumerate / run_config) | `scenarios` / `tiny engine` + tests (DISPLAY) |
-| bridge: provision ⇄ producing-action ⇄ edge | `store_actions` / `consumes_of_action` / `produces_of_action` (`canary_action.ml`), `provision_of_actions` (`canary_enumerate.ml:358`) | the seam (§6.5) |
-| the RUN's scenarios | hand-built `pr_enumerate` closures | run (the smell the A-track removes) |
-| generated-artifact readiness / cache | cached artifacts + `.verdict` markers | run |
+| node + build/run EDGES + version-mismatch cartesian | `artifact_node` (`base/canary_basic.ml:52`) + `make_action_graph` (`action/canary_action.ml:64`) | `paths` + diagram |
+| `ext` + typed `version` + mutation + config + per-artifact provision | `action/canary_enumerate.ml` (placement/assignment/enumerate/run_config) | `scenarios`/`tiny engine` + tests |
+| bridge: provision ⇄ producing-action ⇄ edge | `consumes_of_action`/`store_actions` (`canary_action`), `provision_of_actions` (`canary_enumerate:358`) | the seam (§6.5) |
+| the RUN's scenarios | hand-built `pr_enumerate` | run (the smell A-track removes) |
+| generated-artifact readiness | cached artifacts + `.verdict` markers | run |
 
-**`canary_enumerate` has 0 references to `artifact_node`/`make_action_graph`** —
-the two graphs never meet in code (confirms enumeration_graph.md §3).
+`canary_enumerate` has **0 refs** to `artifact_node`/`make_action_graph` — the two
+graphs never meet in code. **The unifying fact: provision = which ACTION produces
+the artifact; that action's consumed input IS the `built_from` edge** (`Build_lib`
+⇒ Built + from=source; `Fetch Lib` ⇒ Fetched + no edge). We *read* edges off the
+producing action — no new edge vocabulary. **Done:** `built_from_of_assignment`
+(the seam) proves the flat assignment and the action graph are one graph.
 
-**The unifying fact (no new edges to invent): provision = which ACTION produces
-the artifact; that action's consumed input IS the `built_from` edge.** `Build_lib`
-⇒ Built + built_from=source; `Fetch Lib` ⇒ Fetched + no build edge. So provision
-(enumerate) and `built_from` (action graph) are one thing seen twice, bridged by
-the §6.5 action catalogue — we *read* edges off the producing action, not invent
-them.
+**Implement (merge, reuse):** (1) extend `artifact_node` with `ext` + typed
+`version` + `provision`; (2) enumerator emits node-graphs, reusing
+`make_action_graph`'s edge cartesian; (3) per-edge provider = provision (bridged);
+(4) **NEW** contains/bundle.
 
-**Implement (merge, reuse):**
-1. one `instance` = `artifact_node` (kind + edges + location) + `ext` + typed
-   `version` (enumeration_graph.md's target type);
-2. enumerator emits instance-**graphs** — reuse `make_action_graph`'s
-   Build_binding/Build_app edge cartesian; the provision axis picks the producing
-   action per artifact;
-3. per-edge provider = the provision (already bridged);
-4. **NEW:** contains/bundle (one fetch → many artifacts).
-
-**Proposed first step (minimal, no reinvention):** a pure `edges_of_assignment`
-that reads a flat `assignment`'s `built_from`/`runtime_dep` off the action
-catalogue (`consumes_of_action` / `provision_of_actions`), with a `project-test`
-cross-checking it against `make_action_graph` on a shared example. This connects
-the two representations WITHOUT the big `instance`-type merge (the ~61-site
-change enumeration_graph.md flags as last), and is the seam the full merge builds
-on.
-
-## 7b. The compiler view (runner_spec : graph :: codegen : IR)
-
-The `runner_spec` relates to the graph like **codegen to an IR** — a clarifying
-frame (2026-08-04):
+## 3. The compiler view (runner_spec : graph :: codegen : IR)
 
 ```
-store_actions + consumes_of_action / produces_of_action  =  GRAMMAR (action IR — what each action eats/makes)
-the enumeration / instance graph                         =  PROGRAM (instances + edges + realizing actions)
-runner_spec                                              =  per-action CODEGEN (this project's shell per action)
-derive_steps                                             =  the COMPILER pass (grammar + program + codegen → step list)
-local_runner / gh / diagram / html                       =  TARGETS (execute / CI YAML / render)
+store_actions + consumes/produces_of_action  =  GRAMMAR (action IR)
+the enumeration / node graph                 =  PROGRAM (nodes + edges + realizing actions)
+runner_spec                                  =  per-action CODEGEN
+derive_steps                                 =  the COMPILER pass → step list
+local_runner / gh / diagram / html           =  TARGETS
 ```
 
-Consequence for the merge: it lives in the **IR** (fold the two graph
-representations into one `instance`). Codegen (`runner_spec`) stays keyed on
-**actions**, the stable bridge — so unifying the IR barely touches it. This is
-why the graph-model work is *adaptation*, not a rewrite, and why the flat
-A1/A2/A3a work (the degenerate IR view) is reused, not discarded.
+The merge lives in the **IR**; codegen (`runner_spec`) stays keyed on actions (the
+stable bridge), so it barely moves — *adaptation, not rewrite*. Duplicate utilities
+that collapse when the node lands: version-mismatch (`make_action_graph` cartesian
+vs `assignment_ok`), node/placement helpers (`mk_node`/`node_tag` vs
+`placement`/`provision_of`), provision derivation (`provision_of_actions` vs the
+graph's location choices).
 
-Auxiliary utilities that DUPLICATE across the two halves — merge candidates when
-the `instance` type lands: version-mismatch (`make_action_graph` Build_app
-cartesian vs `assignment_ok`'s filter); node/placement helpers (`mk_node` /
-`node_tag` vs `placement` / `provision_of`); provision derivation
-(`provision_of_actions` vs the action graph's location choices).
+## 4. The `artifact_node` sketch (extend, don't rename)
 
-## 7c. The `instance` sketch + why it's *smaller* than "~61 sites"
-
-The target type is already sketched in
-[`enumeration_graph.md`](enumeration_graph.md) §3/§6 (the base `artifact_info` +
-`artifact_node` merge — reuse it, don't re-sketch). Consolidated + refined with
-this session's findings:
-
-The final type reuses the name **`artifact_node`** (extend the existing type — no
-"instance"). It is FLAT over the two justified nested identities; the `artifact_info`
-/ `placement` middle layers are dropped as unnecessary.
+Flat over the two justified reused identities (`artifact_id`, `build_id`); the
+`artifact_info`/`placement` middle layers are dropped.
 
 ```ocaml
-(* base — the merged node = today's [artifact_node], extended.
-   Justified nesting: only the two REUSED identities — artifact_id (kind×ext) and
-   build_id (channel×quality). No artifact_info / placement middle layer. *)
-type artifact_node = {
-  id          : artifact_id;          (* {kind; ext} — the identity pair, kept *)
+type artifact_node = {                (* today's artifact_node, extended *)
+  id          : artifact_id;          (* {kind; ext}       — the identity pair, kept *)
   version     : build_id;             (* {channel; quality} — typed; Bad tag (A2) *)
-  provision   : provision;            (* per-EDGE provider: Fetched|Built|Vendored
-                                         |Contained (bundle — the one NEW case) *)
+  provision   : provision;            (* per-EDGE provider: Fetched|Built|Vendored|Contained(new) *)
   built_from  : artifact_node option; (* Build edge — read via the seam *)
-  runtime_dep : artifact_node option; (* Run edge — the deploy mismatch *)
+  runtime_dep : artifact_node option; (* Run edge — deploy mismatch *)
 }
 ```
 
-vs today's `artifact_node = {a_kind; a_name; origin; a_location; built_from;
-runtime_dep}`: `a_kind` → `id` (gains `ext`); the `a_name` channel-suffix → typed
-`version` (gains `quality`); `provision` added (`a_location` derives from it, §6).
-Edges unchanged. The flat `assignment`/`placement` is the **degenerate** node set
-(no edges); `assignment_of_point` + `built_from_of_assignment` already lift it —
-`placement` stays transitionally, then drops.
+vs today's `{a_kind; a_name; origin; a_location; built_from; runtime_dep}`:
+`a_kind`→`id` (+ext); `a_name`-suffix→typed `version` (+quality); `+provision`
+(`a_location` derives). The flat `assignment` is the degenerate node set (no edges)
+— `assignment_of_point` + `built_from_of_assignment` lift it; `placement` drops
+after. Keeping `id = {kind; ext}` as a **pair** means the merge does NOT touch the
+coarse-kind `match` sites — see §6.
 
-### The migration is TWO things — only one is "~61 sites"
+## 5. First-cut migration (source → lib → binding, one version) — no run change
 
-1. **The node merge (this work) — SMALL.** Extend the existing `artifact_node`
-   (used in only **3 files**: `base/canary_basic`, `action/canary_path_table`,
-   `action/canary_action`) with `id` (adds ext) + typed `version` + `provision`.
-   Keeps `id = {kind; ext}` (the pair). Modest, mechanical once the seam is in.
-2. **The "~61-site move" — SEPARATE, later, DECOUPLED.** Folding the `(kind × ext)`
-   PAIR into a single **enriched `artifact_kind`** (so `Binding OCaml Cstubs` is
-   *one* constructor, not a pair). That rewrites every `match` on the coarse kind
-   `Source | Headers | Lib | Binding | App` — ~200 mechanism-agnostic sites, the
-   diagram the biggest single consumer (~61). **The instance merge does NOT need
-   it** — `instance` keeps the pair — so the ~61-site move is a cosmetic
-   "collapse the pair" cleanup, do-never/last, and it does **not** gate the graph
-   model.
+- **M1 — extend `artifact_node`** (base): `a_kind`→`id`, `a_name`→`version`,
+  `+provision`; update its **3 users** (`canary_basic` def, `canary_action`
+  `mk_node`/`make_action_graph`, `canary_path_table`); derive old `a_name`/
+  `a_location` so **`paths`+diagram stay byte-identical** (pure refactor).
+- **M2 — `node_of_assignment`**: lift a flat `assignment` to the node graph, edges
+  via the seam. Run still consumes assignments (unchanged).
+- **M3 — cross-check**: `node_of_assignment` edges == `make_action_graph` edges on
+  the chain (upgrades the seam test to node level).
+- **then grow** (later, additive): versions→mismatch; app→build/run edge; provision
+  breadth (Staged/PM/Contained).
 
-So the sketch is enumeration_graph.md §3 refined (above); "~61 sites" is the
-*optional* pair→enriched-kind fold, not the merge.
+Non-goals: no new `edge` type; don't re-enumerate the mismatch (`make_action_graph`
+does — derive); the **~61-site move is a later cleanup, decoupled** — it's folding
+the `(kind × ext)` pair into a single enriched `artifact_kind` (~200 coarse-kind
+matches, diagram ~61), which the node merge does NOT need (it keeps the pair).
 
-## 7d. First-cut migration draft (source → lib → binding, one version)
+## 6. Open questions
 
-The correct structure (the extended `artifact_node`) at a **small graph** scope,
-staged so **no run behavior changes** (`enumeration_graph.md` §4). Each step is
-additive/mechanical and independently testable:
-
-- **M1 — extend `artifact_node`** (base): `a_kind` → `id : artifact_id`; the
-  `a_name` channel-suffix → `version : build_id`; add `provision`. Keep the edges.
-  Update the 3 users — `base/canary_basic` (def), `action/canary_action`
-  (`mk_node` / `make_action_graph`), `action/canary_path_table`. Derive the old
-  `a_name` / `a_location` where display still needs them, so **`paths` + diagram
-  output is byte-identical** (pure refactor).
-- **M2 — `node_of_assignment`**: build the `artifact_node` graph from a flat
-  `assignment`, edges via the seam (`built_from_of_assignment`). The flat→node
-  lift; the run keeps consuming assignments (unchanged).
-- **M3 — cross-check test**: `node_of_assignment` on a chain assignment
-  (source→lib→binding, one version) has the same `built_from`/`runtime_dep` edges
-  as `make_action_graph` on the same chain. Proves the two graphs are one, in
-  code, at the node level (upgrades the M-less seam test).
-- **then grow** (each additive, later): versions → the mismatch cartesian; app →
-  the build-vs-run edge; provision breadth (Staged/PM/Contained) → the run.
-
-Non-goals (reiterate): no new `edge` type; don't re-enumerate the mismatch
-(`make_action_graph` already does — derive, don't duplicate); the ~61-site
-pair→enriched-kind fold stays a **later cleanup**, decoupled from this.
-
-## 8. Status
-
-A3b (flip sqlite's run) and A4 (wire tiny + multi-mutation) **wait on this design
-settling** — they should be built against the graph model, not the flat product.
-A1/A2/A3a stand as the entry rung. Tiny is flat/static *by nature* (it
-pre-materializes every cached artifact); real projects are dynamic *by nature*
-(they generate on demand) — the flat model fit tiny and breaks on sqlite, which
-is why the graph model is a real-project need. Tracked in `status.md` §A / §1b.
+- **contains/bundle:** a `Contained` provision? a package artifact yielding
+  sub-artifacts? where does the configurable lib-edge live?
+- **provider granularity:** per-edge vs per-artifact (two apps sharing a binding).
+- **static vs dynamic deps:** deps are statically declared today (no dynamic
+  artifact creation); dynamic ones would need the postpone/tracker machinery.
+- **A3b/A4 gate:** build them against this node model, not the flat product. Tiny
+  is flat-by-nature (pre-materialized); real projects dynamic-by-nature. Tracked in
+  `status.md` §A / §1b.
