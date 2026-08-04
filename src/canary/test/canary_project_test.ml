@@ -423,6 +423,33 @@ let point_fold_test : pure_test =
           && is_good ap EN.a_lib && is_good ap a_ocaml     (* positive all Good *)
       | _ -> false) }
 
+(* A3: a DECLARED project_spec enumerates the sqlite shape — self-contained Built
+   (no a_source declared), lib={Fetched,Built}, binding=Fetched. Two assignments;
+   the Built one carries the binding (Fetched) — NOT lib-only. This is the
+   convergence changing sqlite: the binding-over-built-lib scenario appears. *)
+let project_spec_test : pure_test =
+  { name = "enumerate.project_spec_sqlite_shape";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let spec : unit EN.project_spec =
+        { ps_artifacts = [ EN.a_lib; a_oc ];
+          ps_provisions_of =
+            (fun id ->
+              if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
+              else EN.[ Fetched ]);
+          ps_versions = B.single_channel;
+          ps_mutations = [];
+          ps_config = { provision = EN.Full; version = EN.Full; mutation = EN.Free } }
+      in
+      let asgs = EN.assignments_of_spec ~tag:(fun () -> "") spec in
+      let lib_is a = EN.provision_of a EN.a_lib in
+      List.length asgs = 2
+      && List.exists asgs ~f:(fun a -> EN.equal_provision (lib_is a) EN.Fetched)
+      && List.exists asgs ~f:(fun a ->
+             EN.equal_provision (lib_is a) EN.Built
+             && EN.equal_provision (EN.provision_of a a_oc) EN.Fetched)) }
+
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
    For a c1-OCaml binding it must produce Expect_compat_failure carrying c1's
@@ -464,7 +491,7 @@ let all_tests : pure_test list =
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
-      per_artifact_provisions_test; point_fold_test;
+      per_artifact_provisions_test; point_fold_test; project_spec_test;
       agnostic_expectation_test ]
 
 let run_tests () : bool =

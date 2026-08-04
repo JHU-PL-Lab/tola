@@ -193,8 +193,14 @@ let any_binding_provided (a : assignment) : bool =
     *own language* binding needs App to carry a lang — ssot §4.2.3.) *)
 let assignment_ok (a : assignment) : bool =
   let lib = provision_of a a_lib in
-  (not (equal_provision lib Built) || provided a a_source)
-  && (not (equal_provision lib Built)
+  (* A Built lib needs its source present AND at the same version — but only when
+     [a_source] is a DECLARED artifact (tiny models source as a separate vendored
+     artifact). A project that models Built as self-contained (fetches source
+     internally, e.g. sqlite's amalgamation) omits [a_source], and the check is
+     moot. *)
+  let source_declared = Option.is_some (placement_of a a_source) in
+  (not (equal_provision lib Built) || not source_declared || provided a a_source)
+  && (not (equal_provision lib Built) || not source_declared
      || equal_version (version_of a a_lib) (version_of a a_source))
   && List.for_all a ~f:(fun (id, pl) ->
          match kind_of id with
@@ -318,6 +324,28 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
           if equal_artifact_id id aid then
             (id, { pl with version = { pl.version with quality = Bad (tag m) } })
           else (id, pl))
+
+(** A3 — a project's DECLARED enumeration axes (static data): its artifacts, each
+    artifact's provision universe (A1), the version channels, the mutation
+    universe ([[]] for a positive-only real project; tiny is the only one that
+    populates it, [’m = string] bad-tags), and a [config] level per axis. The
+    consumer computes the scenarios — a project DECLARES, canary ENUMERATES. This
+    is what replaces a hand-built [pr_enumerate] closure. *)
+type 'm project_spec = {
+  ps_artifacts : artifact_id list;
+  ps_provisions_of : artifact_id -> provision list;
+  ps_versions : Canary_basic.channel list;
+  ps_mutations : (artifact_id * 'm) list;
+  ps_config : 'm config;
+}
+
+(** Enumerate a declared spec into concrete assignments: run the algorithm over
+    the axes, then fold each point's mutation into its version quality (A2). *)
+let assignments_of_spec ~(tag : 'm -> string) (s : 'm project_spec) :
+    assignment list =
+  run_config ~artifacts:s.ps_artifacts ~all_provisions_of:s.ps_provisions_of
+    ~all_versions:s.ps_versions ~all_mutations:s.ps_mutations s.ps_config
+  |> List.map ~f:(assignment_of_point ~tag)
 
 let string_of_provision = Canary_store.string_of_provision
 
