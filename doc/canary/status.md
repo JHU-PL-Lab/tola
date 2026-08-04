@@ -122,10 +122,12 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
   `version` + `provision`, populated from the producing action, `paths`/diagram
   byte-identical (`1f3a24f`); **M2/M3** `node_of_assignment` lifts flat→node graph
   via the seam + chain cross-check (`64ed970`). The node model is now real in code.
-  - **Finding:** `make_action_graph` UNDER-records the `lib ← source` edge (its
-    `Build_lib` node omits `built_from=source`, source-as-implicit-root), while the
-    catalogue + seam include it. Reconciling that source edge is a follow-up for
-    the full merge.
+  - **Finding → ✅ fixed** (`11954e8`): `make_action_graph` under-recorded the
+    `lib ← source` edge (its `Build_lib` omitted `built_from=source`). Fixed by
+    reusing the in-file pattern — `Build_lib` now `get pools Source` + links
+    source-primary (`lib@v ← source@v`), like `Build_binding` links lib. No new
+    machinery; `paths`/`graph` byte-identical (they render path-table/schema, not
+    per-node edges); M3 upgraded to cross-check both graphs now agree.
 - **Next — grow the node model** (still no run change): versions → the mismatch
   cartesian; app → build-vs-run edge; provision breadth (Staged/PM/Contained).
   Then **A3b + A4** (the run-flips) build on it. A1/A2/A3a are the entry rung; the
