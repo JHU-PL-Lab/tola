@@ -22,6 +22,21 @@ open Base
 open Canary_store
 open Canary_basic
 
+(** Build-graph node: an artifact plus how it was produced ([built_from]) and what
+    it needs at runtime ([runtime_dep]). Relocated from base (M1.0, 2026-08-04):
+    base never used it — it is action-layer vocabulary, and lives here beside
+    [make_action_graph] so it can (M1) merge with the enumerate-layer identity
+    types (`artifact_id` / `build_id`). The graph is materialised by
+    {!Canary.run_graph}. *)
+type artifact_node = {
+  a_kind : artifact_kind;
+  a_name : string;
+  origin : location;
+  a_location : location;
+  built_from : artifact_node option;
+  runtime_dep : artifact_node option;
+}
+
 let mk_node a_kind a_name ~origin ~location ?built_from ?runtime_dep () :
     artifact_node =
   { a_kind; a_name; origin; a_location = location; built_from; runtime_dep }

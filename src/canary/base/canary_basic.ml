@@ -46,17 +46,6 @@ let kind_order = function
     helpers); slated for removal with that cascade. *)
 type artifact = { kind : artifact_kind; name : string; location : location }
 
-(** Build-graph node: an artifact plus how it was produced ([built_from])
-    and what it needs at runtime ([runtime_dep]). The graph is materialised
-    by {!Canary.run_graph}. *)
-type artifact_node = {
-  a_kind : artifact_kind;
-  a_name : string;
-  origin : location;
-  a_location : location;
-  built_from : artifact_node option;
-  runtime_dep : artifact_node option;
-}
 
 let all_compile_modes = [ Bytecode; Native ]
 let all_probe_actions = [ Compile_example; Run_example ]
