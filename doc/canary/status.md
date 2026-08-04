@@ -106,6 +106,17 @@ Steps:
 - **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
   hand-written → derived; §1c #1).
 
+**Design gate (2026-08-04).** The two modeling findings above are one deeper
+model: **an artifact can be a built result — a resource generates (`built_from`)
+or contains (a bundle) other artifacts, so `provision` is a per-EDGE provider
+choice, not a flat per-artifact label.** sqlite's "source → Built lib" is that
+`built_from` edge; tiny's combinations are multi-node mutations on the graph. The
+instance graph already exists (`artifact_node` + `make_action_graph`;
+[`enumeration_graph.md`](design/enumeration_graph.md)). New SSOT capturing this +
+the `project_spec` shape: [`design/dynamic_enumeration.md`](design/dynamic_enumeration.md).
+**A3b + A4 (the project run-flips) wait on that design** — build them against the
+graph model, not the flat product. A1/A2/A3a stand as the entry rung.
+
 ### B. Coverage — make canary detect more
 
 - **Richer agnostic inspectors** (the lever for 12 → more): c5 symbol-version, c6
@@ -240,11 +251,14 @@ provision; versioning unification ([versioning.md](design/versioning.md)); the
 Not started; interrelated — pick up together when the tiny axes (to-do #1)
 force them. Home docs carry the detail.
 
-- **Instance graph + per-edge version + versioning** — the deploy mismatch
-  (build-version != run-version) is a per-edge property; the graph that
-  generates it **already exists** (`artifact_node` + `make_action_graph`), so
+- **Instance graph + per-edge version + versioning + dynamic enumeration** — the
+  deploy mismatch (build-version != run-version) is a per-edge property; the graph
+  that generates it **already exists** (`artifact_node` + `make_action_graph`), so
   the work is a *merge* into one instance type (`artifact_node` + `ext` + typed
-  `version`), not a new graph — folded with the versioning unification.
+  `version`), not a new graph. The **2026-08-04 refinement** (an artifact can be a
+  built result — `provision` is a per-edge provider, a resource generates/contains
+  other artifacts) is the same cluster and now gates the convergence's project
+  run-flips (§A A3b/A4). [`dynamic_enumeration.md`](design/dynamic_enumeration.md),
   [`enumeration_graph.md`](design/enumeration_graph.md),
   [`versioning.md`](design/versioning.md).
 - **Packaging / provision sub-structure** — provision `Fetched` (canary fetches
