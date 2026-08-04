@@ -20,11 +20,20 @@ shapes of *one resource → many artifacts*:
   (a pip/opam package shipping a binding AND a lib), and the binding may be
   *configurable* to a different lib provider (bundled vs system-PM).
 
-Cases that motivate it: **old binding × dev-source** (dev source builds a new lib;
-old binding over it = deploy mismatch, `built_from ≠ runtime_dep`); **bundled
-binding + configurable lib** (provider choice {bundled, system}); **sqlite** (Built
-lib `built_from = amalgamation source`; binding lib-edge ∈ {system-PM, built-lib}
-— my A3a "conditional source" *is* that edge, not a hack).
+**What strictly needs the graph vs what flat already does (clarified 2026-08-04).**
+The criterion: **does canary enumerate TWO instances of one artifact-kind in one
+scenario?** If yes → node graph; if one-each → the flat `assignment` suffices.
+- **Flat suffices**: sqlite's `{lib=Built, binding=Fetched}` has ONE canary lib; the
+  fetched binding's own build-lib is EXTERNAL (opam's, not enumerated) → implicit.
+  Its provider choice {system-PM, built} is just the lib's provision across two
+  single-lib scenarios. tiny-full is likewise single-instance. So these run on flat
+  (`assignments_of_spec`); they don't need the graph.
+- **Node graph strictly needed** = a **deploy mismatch** where canary controls BOTH
+  the build-lib and a different run-lib in ONE scenario: **old binding × dev-source**,
+  and z3/llvm (build a binding against `lib@v1`, run against `lib@v2`). Two lib
+  instances → the flat one-slot-per-kind model can't; the graph can (`built_from ≠
+  runtime_dep`). **contains/bundle** (one fetch → many artifacts) is the other
+  genuinely-new case.
 
 **Static declaration, dynamic closure.** A project declares a **dependency graph**
 (artifacts + edges + a per-edge provider universe); the enumerator walks the
