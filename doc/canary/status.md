@@ -308,15 +308,35 @@ scenarios it runs, both statically (before a run) and from the result (after).
   artifact-centric (F3), run = execute. Wired for tiny-full + sqlite; coexists with
   verb-first `spec`/`action`/`status`.
 
-**Pipeline map (pre/run/post — where to read):** `canary <pj> spec` → `print_spec`
-(`canary_main.ml`) → `pr.pr_enumerate ()` → `Canary_enumerate.enumerate ~policy`
-(stage 2) over the declared `project_spec` (stage 1). `canary <pj> run` →
-`run_project_run` (`canary_main.ml`) → per scenario `pr_materialize` (tiny:
-`Canary_tiny_workspace` assemble; sqlite: build/fetch actions) → `pr_runner_spec`
-→ `derive_steps` (`canary_step_builder`) → `Canary_local_runner` executes → writes
-`scenarios.tsv` (F1). `canary <pj> status` → `load_scenario_post` + `print_artifacts`.
+**Pipeline map (pre / prepare / run / post — where to read):**
+- **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
+  → `Canary_enumerate.enumerate ~policy` (stage 2) over the declared `project_spec`
+  (stage 1). `--by-artifact` → `print_artifacts` (F3).
+- **prepare** `pr_materialize a` — PLACES pre-run artifacts (ssot §4.2.5:
+  "materialize places; build/fetch are canary actions"). tiny-full: *assemble* the
+  vendored resources into a workspace (`Canary_tiny_workspace`). sqlite: places
+  NOTHING (its lib/binding come from canary *actions*). **Not a canary action** —
+  scenario setup. (Current code calls it inside `run_project_run`'s loop; it is
+  logically the prepare phase, not the run.)
+- **run** `canary action <pj>` → `run_project_run` → `pr_runner_spec a` →
+  `derive_steps` (`canary_step_builder`) → `Canary_local_runner` executes the
+  build/fetch/**probe** actions → writes `scenarios.tsv` (F1). For tiny-full (all
+  Vendored) the run is only PROBE; for sqlite it is build/fetch + probe.
+- **post** `canary spec <pj>` (re-run) → `load_scenario_post` + `print_spec`/
+  `print_artifacts`.
 Project bundles: `canary_project_tiny.tiny_full_run` / `canary_project_sqlite.sqlite_run`
-(the `Canary_project_run.project_run` records).
+(`Canary_project_run.project_run` records).
+
+**KNOWN GAP — honest status (2026-08-04): the graph enumeration is UNWIRED.**
+`close_deps`/`dep_mode`/`node_of_assignment` appear in **nothing but the unit
+test** — no project enumerates via the graph. So today's scenarios are the FLAT
+stage-2 product only: tiny-full 29 (mutation axis), **sqlite 2** (provision axis:
+lib Fetched|Built, one version, no mutations). What "graph discover" would add and
+does NOT yet exist: the deploy mismatch (binding built @lib.vX, run @lib.vY —
+needs `close_deps Independent` + ≥2 lib versions), external/ambient dep discovery
+(libc/pthread via `ldd`), and richer per-project version axes. sqlite is small
+because it declares one version + no mutation, AND the graph half is scaffolding.
+**This is the real A5/stage-3-live work — the promised capability, not delivered.**
 - **F4 — run-closure (realised graph) view** *(gated on the node graph, §A / A5)*:
   two kind-grouped views — `spec <pj>` = the DECLARED graph (potentials: a source
   that *can* build a lib sits in the source group), and a post-run **closure** read
