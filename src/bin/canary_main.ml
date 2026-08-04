@@ -362,6 +362,30 @@ let load_scenario_post ~project : (string * (string * bool)) list =
     in
     loop []
 
+(* The binding languages a project's artifacts span. *)
+let langs_of arts =
+  List.filter_map
+    (fun a ->
+      match Canary_enumerate.kind_of a with
+      | Canary_basic.Binding l -> Some l
+      | _ -> None)
+    arts
+  |> List.sort_uniq compare
+
+(* What an artifact can be USED TO BUILD — derived from the action catalogue:
+   the products of every Build action that CONSUMES this artifact's kind. *)
+let builds_of ~langs a =
+  let k = Canary_enumerate.kind_of a in
+  (Canary_basic.[ Build_lib; Build_headers ]
+  @ List.concat_map
+      (fun l -> Canary_basic.[ Build_binding l; Build_app { lang = l } ])
+      langs)
+  |> List.concat_map (fun act ->
+         if List.mem k (Canary_action.consumes_of_action act) then
+           Canary_action.produces_of_action act
+         else [])
+  |> List.sort_uniq compare
+
 (* Snapshot of a [project_run]: declared artifacts (grouped, each with its
    baseline provision@version) + the enumerated scenarios as deltas from that
    baseline. PRE (dry-run — [pr_materialize] is NOT called). If a run summary
@@ -385,27 +409,8 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
      project-declared provenance detail, and what it can BUILD (derived from the
      action catalogue: which Build actions consume this kind → what they produce). *)
   let arts = pr.Canary_project_run.pr_artifacts in
-  let langs =
-    List.filter_map
-      (fun a -> match E.kind_of a with Canary_basic.Binding l -> Some l | _ -> None)
-      arts
-    |> List.sort_uniq compare
-  in
-  let build_actions =
-    Canary_basic.[ Build_lib; Build_headers ]
-    @ List.concat_map
-        (fun l -> Canary_basic.[ Build_binding l; Build_app { lang = l } ])
-        langs
-  in
-  let builds_of a =
-    let k = E.kind_of a in
-    build_actions
-    |> List.concat_map (fun act ->
-           if List.mem k (Canary_action.consumes_of_action act) then
-             Canary_action.produces_of_action act
-           else [])
-    |> List.sort_uniq compare
-  in
+  let langs = langs_of arts in
+  let builds_of a = builds_of ~langs a in
   Fmt.pr "@.artifacts (%d), by group [baseline provision@@version + provenance]:@."
     (List.length arts);
   List.iter
@@ -421,8 +426,21 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
           (fun a ->
             Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a);
             (match pr.Canary_project_run.pr_provenance a with
-             | Some d -> Fmt.pr "        provision: %s@." d
-             | None -> Fmt.pr "        provision: (undeclared — spec carries no detail)@.");
+             | Some p ->
+                 (* drift check: the provider's coarse provision must equal the
+                    baseline's — if not, the declared detail contradicts the axis. *)
+                 let drift =
+                   if
+                     Canary_store.equal_provision
+                       (Canary_store_config.provision_of_provider p)
+                       (E.provision_of baseline a)
+                   then ""
+                   else "   ⚠ provider≠baseline provision"
+                 in
+                 Fmt.pr "        provider: %s%s@."
+                   (Canary_store_config.string_of_provider p) drift
+             | None ->
+                 Fmt.pr "        provider: (undeclared — spec carries no detail)@.");
             match builds_of a with
             | [] -> ()
             | ks ->
@@ -582,6 +600,56 @@ let provisions_of_runner_spec (rs : Canary_step_builder.runner_spec) :
       rs.fetch_binding
   in
   src @ lib @ bind_built @ bind_fetched
+
+(* Machine-readable `spec --json`: the same artifacts × scenarios, parseable.
+   Reuses the exact pre/post data print_spec renders (same [scenario_label] join,
+   same catalogue [builds_of], same typed provider) — a second projection, not a
+   second source of truth. *)
+let spec_json (pr : Canary_project_run.project_run) : string =
+  let module E = Canary_enumerate in
+  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let baseline = baseline_of scenarios in
+  let all_good = Canary_tiny_scenario.assignment_is_all_good in
+  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
+  let langs = langs_of pr.Canary_project_run.pr_artifacts in
+  let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
+  let artifact_json a =
+    `Assoc
+      [ ("id", `String (E.pretty_id a));
+        ("group", `String (group_of_kind (E.kind_of a)));
+        ( "provision",
+          `String
+            (Canary_store.string_of_provision (E.provision_of baseline a)) );
+        ("version", `String (E.string_of_build_id (E.version_of baseline a)));
+        ( "provider",
+          match pr.Canary_project_run.pr_provenance a with
+          | Some p -> `String (Canary_store_config.string_of_provider p)
+          | None -> `Null );
+        ( "builds",
+          `List
+            (List.map
+               (fun k -> `String (Canary_basic.string_of_artifact_kind k))
+               (builds_of ~langs a)) ) ]
+  in
+  let scenario_json a =
+    let good = all_good a in
+    let fields =
+      [ ("good", `Bool good); ("label", `String (scenario_label ~baseline a)) ]
+      @
+      match verdict a with
+      | None -> []
+      | Some (v, _) ->
+          ("verdict", `String v)
+          :: (if good then [] else [ ("detected", `Bool (String.equal v "PASS")) ])
+    in
+    `Assoc fields
+  in
+  Yojson.Basic.pretty_to_string
+    (`Assoc
+       [ ("project", `String pr.Canary_project_run.pr_name);
+         ( "artifacts",
+           `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
+         ("scenarios", `List (List.map scenario_json scenarios)) ])
 
 (* Variant view for projects that expose raw [runner_spec]s per source variant
    (z3/llvm) instead of a [project_run]. Read-only: each variant's runner_spec
@@ -912,8 +980,20 @@ let spec_cmd =
             "Artifact-centric view (which scenarios touch each artifact + \
              detection rate) instead of the scenario-centric listing.")
   in
-  let run proj thin by_artifact () =
-    let show pr = if by_artifact then print_artifacts pr else print_spec pr in
+  let json =
+    Arg.(
+      value & flag
+      & info [ "json" ]
+          ~doc:
+            "Emit the artifacts × scenarios as JSON (project_run projects only). \
+             Machine-readable; supersedes --by-artifact.")
+  in
+  let run proj thin by_artifact json () =
+    let show pr =
+      if json then print_string (spec_json pr ^ "\n")
+      else if by_artifact then print_artifacts pr
+      else print_spec pr
+    in
     match proj with
     | Some "tiny-full" ->
         show
@@ -949,7 +1029,7 @@ let spec_cmd =
        ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
              scenarios (project_run: tiny-full/sqlite) or per-variant \
              provisions (raw runner_spec: z3/llvm). No execution.")
-    Term.(const run $ project $ thin $ by_artifact $ const ())
+    Term.(const run $ project $ thin $ by_artifact $ json $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
    project's spec: stages applicable by definition but turned off when

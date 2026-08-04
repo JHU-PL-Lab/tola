@@ -53,3 +53,47 @@ let binding_pm (b : binding_store) : Canary_store.package_manager option =
   match b.location with
   | Canary_store.Pm (Canary_store.Lang_pm { pm; _ }) -> Some pm
   | _ -> None
+
+(* ── Unified per-artifact provider — "where an artifact comes from" ──
+   The typed detail behind an artifact's [Canary_store.provision] axis value
+   (ssot §4.2): a vendored/cached PATH, a [source_repo] to build from, or a PM +
+   package. [source_repo] is used AS-IS (its [remote] | [locals] already models
+   "make it local to use"). The coarse [provision] is DERIVED
+   ([provision_of_provider]) so the axis and the detail can't drift. [Cached] ≈
+   [Vendored] on the axis (both are pre-existing local copies canary just probes).
+
+   This is the one place the five old shapes (lib_store / binding_store /
+   source_repo / tiny_stores / the pr_provenance string) converge onto. *)
+type provider =
+  | Absent
+  | Vendored of string
+  | Cached of string
+  | Built_from of Canary_artifact_source.source_repo
+  | Sys_pkg of Canary_store.system_package_spec
+  | Lang_pkg of {
+      lang : Canary_lang.lang;
+      pm : Canary_store.package_manager;
+      package : string;
+    }
+
+let provision_of_provider : provider -> Canary_store.provision = function
+  | Absent -> Canary_store.Absent
+  | Vendored _ | Cached _ -> Canary_store.Vendored
+  | Built_from _ -> Canary_store.Built
+  | Sys_pkg _ | Lang_pkg _ -> Canary_store.Fetched
+
+let string_of_provider : provider -> string = function
+  | Absent -> "absent"
+  | Vendored p -> "vendored: " ^ p
+  | Cached p -> "cached: " ^ p
+  | Built_from repo ->
+      let (Canary_artifact_source.Git_remote url) =
+        repo.Canary_artifact_source.remote
+      in
+      Printf.sprintf "built from source: %s @%s (%s)"
+        repo.Canary_artifact_source.name repo.Canary_artifact_source.version url
+  | Sys_pkg spec ->
+      Printf.sprintf "sys-pm linux:%s macos:%s" spec.Canary_store.linux_pkg
+        spec.Canary_store.macos_pkg
+  | Lang_pkg { pm; package; _ } ->
+      Printf.sprintf "%s:%s" (Canary_store.string_of_pm pm) package

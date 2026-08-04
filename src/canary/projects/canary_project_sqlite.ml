@@ -217,18 +217,22 @@ let sqlite_run : Canary_project_run.project_run =
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
         | Canary_enumerate.Built -> built_spec ~workspace
         | _ -> runner_spec);
-    (* Static provenance (from the real spec data — [prebuilt] + [built_spec]). *)
+    (* Static provider (typed, from the real spec data — [prebuilt]). The
+       baseline is Fetched; the Built-from-amalgamation alternative shows as the
+       [lib=B:stable] scenario, not here. *)
     pr_provenance =
       (fun id ->
         match Canary_enumerate.kind_of id with
         | Canary_basic.Lib ->
-            Some
-              (Printf.sprintf
-                 "sys-pm linux:%s macos:%s (fetch_lib); or Built from %s"
-                 prebuilt.system_package_linux prebuilt.system_package_macos
-                 sqlite_amalg_url)
+            Some (Canary_store_config.Sys_pkg prebuilt.system_package)
         | Canary_basic.Binding Canary_lang.OCaml ->
-            Some (Printf.sprintf "opam:%s (fetch_binding)" prebuilt.opam_package)
+            Some
+              (Canary_store_config.Lang_pkg
+                 { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+                   package = prebuilt.opam_package })
         | Canary_basic.Binding Canary_lang.Python ->
-            Some "python stdlib sqlite3 (bundled — no pip package)"
+            Some
+              (Canary_store_config.Lang_pkg
+                 { lang = Canary_lang.Python; pm = Canary_store.Pip;
+                   package = "sqlite3 (stdlib, pip no-op)" })
         | _ -> None) }
