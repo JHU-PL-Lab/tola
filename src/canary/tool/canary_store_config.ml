@@ -30,6 +30,10 @@ type provider =
   | Absent
   | Vendored of string
   | Cached of string
+  | Source_repo of Canary_artifact_source.source_repo
+      (** the SOURCE artifact itself, obtained from a repo (git clone / local
+          checkout) — Fetched on the axis. Sibling of [Built_from] (a lib/binding
+          BUILT from that source, which is Built). *)
   | Built_from of Canary_artifact_source.source_repo
   | Sys_pkg of Canary_store.system_package_spec
   | Lang_pkg of {
@@ -41,13 +45,20 @@ type provider =
 let provision_of_provider : provider -> Canary_store.provision = function
   | Absent -> Canary_store.Absent
   | Vendored _ | Cached _ -> Canary_store.Vendored
+  | Source_repo _ -> Canary_store.Fetched
   | Built_from _ -> Canary_store.Built
   | Sys_pkg _ | Lang_pkg _ -> Canary_store.Fetched
+
+let string_of_source_repo (repo : Canary_artifact_source.source_repo) : string =
+  let (Canary_artifact_source.Git_remote url) = repo.Canary_artifact_source.remote in
+  Printf.sprintf "%s @%s (ref %s) %s" repo.Canary_artifact_source.name
+    repo.Canary_artifact_source.version repo.Canary_artifact_source.ref_ url
 
 let string_of_provider : provider -> string = function
   | Absent -> "absent"
   | Vendored p -> "vendored: " ^ p
   | Cached p -> "cached: " ^ p
+  | Source_repo repo -> "source repo: " ^ string_of_source_repo repo
   | Built_from repo ->
       let (Canary_artifact_source.Git_remote url) =
         repo.Canary_artifact_source.remote

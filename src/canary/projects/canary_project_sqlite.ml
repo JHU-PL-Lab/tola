@@ -33,6 +33,27 @@ let sqlite_ocaml_config : ocaml_tool_config =
 
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
+(* sqlite's source is a remote git repo with two versions — a general mimic of
+   z3 (dev / stable), but declared cleanly on the project_run spec. The STABLE
+   tag (3.45.1 = the amalgamation 3450100 canary builds, and the libsqlite3 the
+   opam `sqlite3` binding links against) is the one that "made the binding";
+   dev is trunk. The native lib is buildable from source; the OCaml binding is
+   NOT (it's the opam `sqlite3` package — [has_build_binding = false]). *)
+let sqlite_source_stable : Canary_artifact_source.source_repo =
+  { Canary_artifact_source.name = "sqlite";
+    remote = Canary_artifact_source.Git_remote "https://github.com/sqlite/sqlite.git";
+    locals = [];
+    version = "3.45.1";
+    ref_ = "version-3.45.1";
+    official = true;
+    has_build_lib = true;
+    has_build_binding = false;
+    build_sys_deps = [];
+    api_source = None }
+
+let sqlite_source_dev : Canary_artifact_source.source_repo =
+  { sqlite_source_stable with version = "dev"; ref_ = "master" }
+
 (* THE single per-artifact provider declaration (from the real [prebuilt] data).
    ONE source of truth: the runner's [store_config] (fetch commands) AND `spec`'s
    [pr_provenance] both DERIVE from this, so the display and the runner can't
@@ -41,6 +62,8 @@ let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 let sqlite_provider (id : Canary_enumerate.artifact_id) :
     Canary_store_config.provider option =
   match Canary_enumerate.kind_of id with
+  | Canary_basic.Source ->
+      Some (Canary_store_config.Source_repo sqlite_source_stable)
   | Canary_basic.Lib ->
       Some (Canary_store_config.Sys_pkg prebuilt.system_package)
   | Canary_basic.Binding Canary_lang.OCaml ->
@@ -155,7 +178,8 @@ let project : Canary_project.project =
 
 let sqlite_artifacts =
   Canary_enumerate.
-    [ a_lib;
+    [ a_source;
+      a_lib;
       a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
       a_binding Canary_lang.Python Canary_mechanism.Cext ]
 

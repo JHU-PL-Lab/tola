@@ -701,18 +701,9 @@ let print_spec_variants ~(name : string)
     "@.spec: %s — variant view (raw runner_spec, not project_run; %d source \
      configs: %s)@."
     name (List.length variants) (String.concat ", " vnames);
-  (* source repos — a source artifact = a configured repo *)
-  Fmt.pr "@.source repos (a source artifact = a configured repo):@.";
-  List.iter
-    (fun (vname, src, _) ->
-      Fmt.pr "  [%-8s] %s @%s (ref %s)  %s  →  %s@." vname
-        src.Canary_artifact_source.name src.Canary_artifact_source.version
-        src.Canary_artifact_source.ref_ (source_repo_url src)
-        (match source_repo_builds src with
-         | [] -> "builds nothing (fetches lib + binding)"
-         | bs -> "builds " ^ String.concat ", " bs))
-    variants;
-  (* artifacts — grouped, per-variant provision + what each can build *)
+  (* artifacts — grouped, per-variant provision + builds. The SOURCE artifact
+     shows its configured repo per variant (a source artifact = a repo), so
+     source appears as one artifact group — uniform with print_spec. *)
   let all_kinds = variant_kinds variants in
   let langs = langs_of_kinds all_kinds in
   Fmt.pr "@.artifacts (%d), by group [provision per variant: %s]:@."
@@ -729,9 +720,7 @@ let print_spec_variants ~(name : string)
             let cells =
               List.map
                 (fun (_, _, rs) ->
-                  match
-                    List.assoc_opt k (provisions_of_runner_spec rs)
-                  with
+                  match List.assoc_opt k (provisions_of_runner_spec rs) with
                   | Some p -> prov_short p
                   | None -> "·")
                 variants
@@ -741,7 +730,18 @@ let print_spec_variants ~(name : string)
               (String.concat "|" cells)
               (match builds with
                | [] -> ""
-               | bs -> "     builds → " ^ kinds_string bs))
+               | bs -> "     builds → " ^ kinds_string bs);
+            match k with
+            | Canary_basic.Source ->
+                List.iter
+                  (fun (vname, src, _) ->
+                    Fmt.pr "        [%-6s] provider: source repo: %s%s@." vname
+                      (Canary_store_config.string_of_source_repo src)
+                      (match source_repo_builds src with
+                       | [] -> "  (fetches lib+binding)"
+                       | bs -> "  builds " ^ String.concat ", " bs))
+                  variants
+            | _ -> ())
           in_grp
       end)
     group_order;
