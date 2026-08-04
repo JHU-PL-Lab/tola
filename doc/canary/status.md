@@ -191,20 +191,21 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     - Renames: low-level `enumerate` → `enumerate_points`; spec consumer
       `assignments_of_spec` → `enumerate`. Pure — no run change (tiny-full 12/24,
       sqlite PASS, 31/31).
-  - **Stage-3 design nailed ✅** (2026-08-04, `dynamic_enumeration.md` §7): the
-    `ps_deps` edge type that turns stage 1 into a faithful dependency graph.
-    Principle — **build edges (`Generates`) come from the action grammar (the seam
-    already reads them); runtime edges (`Loads`) are declared.** `ps_deps : dep_edge
-    list` (`{ de_from; de_lib = Enumerated aid | Ambient str; de_provisions;
-    de_versions }`) expresses deploy-mismatch (run-lib ≠ build-lib, its own version
-    axis), ambient system libs (libc), and contains/bundle (a `Contained` provision)
-    with one edge. It **generalises + replaces** `make_action_graph`'s hardcoded
-    `Build_app` `built_from × runtime_dep` cartesian — the merge that unifies the two
-    graphs. Stage 3 = `close_deps ~deps assignment → artifact_node graph`; `ps_deps
-    = []` ⇒ degenerate ⇒ today's `node_of_assignment` (flat projects unchanged).
-    **v1** (drives z3/llvm): `Enumerated` mismatch + `close_deps` + retire the App
-    cartesian. **This is the next BUILD milestone, and A5–A7 onboard against it, not
-    the flat product.**
+  - **Stage-3 design nailed ✅** (2026-08-04, `dynamic_enumeration.md` §7):
+    runtime edges live on `artifact_node`, NOT in a project-level list. First cut
+    (`ps_deps : dep_edge list` field on the spec) was **rejected** — it re-declares
+    a fact the grammar already holds (`make_action_graph` puts `runtime_dep` on
+    every App node) and can't be filled by discovery. Instead: the runtime edge
+    stays grammatical; a small per-edge `dep_mode = Lockstep | Independent | Ambient
+    str` (defaulting `Lockstep` = today) resolves it. **Deploy mismatch needs NO new
+    declaration** — it's `runtime_dep` resolved `Independent` over the lib's already-
+    declared `ps_versions_of` axis (the per-artifact version work above). Ambient
+    libs (libc) come from a grammar default or `ldd` discovery, not a project decl.
+    Stage 3 = `close_deps assignment → artifact_node graph`; all-`Lockstep` ⇒ today's
+    `node_of_assignment` (flat projects byte-identical). This unifies the two graphs:
+    `make_action_graph`'s App cartesian = the `Independent` case; the chain =
+    `Lockstep`. **v1** (drives z3/llvm): `Lockstep`/`Independent` + `close_deps`.
+    **Next BUILD milestone; A5–A7 onboard against it, not the flat product.**
   - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
     points (the curated chain policy); `--thin` as a `config` level; built-lib
     variants routed through the spec (source-primary resolution above).

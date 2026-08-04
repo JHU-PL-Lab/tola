@@ -7,8 +7,9 @@
 > algorithm (status §A). **Done since:** the seam (`built_from_of_assignment`),
 > the node merge (M1–M3), A3b/A4, and the stage-1/2 split
 > (`project_spec` = static declaration; `'m policy` = exploration). **This doc's
-> live question is now §7 — the `ps_deps` edge type that turns stage 1 into a
-> faithful dependency graph (stage 3 = dynamic discovery).**
+> live design is §7 — runtime edges live on `artifact_node` (a per-edge resolution
+> mode), NOT in a project-level list; deploy mismatch falls out of the existing
+> runtime edge × the per-artifact version axis. Stage 3 = `close_deps`.**
 
 ## 1. The model
 
@@ -136,105 +137,108 @@ does — derive); the **~61-site move is a later cleanup, decoupled** — it's f
 the `(kind × ext)` pair into a single enriched `artifact_kind` (~200 coarse-kind
 matches, diagram ~61), which the node merge does NOT need (it keeps the pair).
 
-## 7. `ps_deps` — the declared runtime-edge type (stage 1 → stage 3)
+## 7. Runtime edges live on the node, not in a project-level list
 
-**The load-bearing decision.** Stage 1 (`project_spec`) is a flat artifact set
-today. To make it a *faithful dependency graph* we add ONE field, `ps_deps`. The
-design rests on a clean division of labour:
+**Decision (2026-08-04, revised).** The first cut put runtime edges in a
+project-level `ps_deps : dep_edge list` field. **Rejected** — it re-declares a
+fact the grammar *already* holds: `make_action_graph` puts `runtime_dep:
+runtime_lib` on every App node (action layer, ~L137). A project list that names
+those edges duplicates the grammar and is statically bound (can't be filled by
+discovery). Instead, **move the flexibility to `artifact_node`**: the runtime edge
+stays grammatical; what varies is a small per-edge **resolution mode** on the
+node — and its value comes from data already present, a grammar default, or
+dynamic discovery, *not* a project edge list.
 
-> **Build edges (`Generates`) come from the action grammar; runtime edges
-> (`Loads`) are declared.** A `Build_lib`/`Build_binding` build edge is universal
-> — the seam (`built_from_of_assignment`, §2) already reads it off
-> `consumes_of_action`, so the flat spec + grammar gives every build edge for
-> free. What the grammar CANNOT give is a runtime edge that *differs from* the
-> build input: a run-lib ≠ build-lib (deploy mismatch), or an ambient lib nobody
-> builds (libc). Those, and only those, are what a project declares.
+> **Both build and runtime edges are grammatical node structure.** What a project
+> varies is the version/provider **universe** (already in `project_spec` —
+> `ps_versions_of`/`ps_provisions_of`) and, per runtime edge, one **mode** bit. The
+> edges themselves are never re-declared. This is why deploy mismatch needs *no*
+> new declaration: it is `runtime_dep` resolved `Independent` over the lib's
+> already-declared version axis.
 
-This is exactly the edge `make_action_graph` already hardcodes for `Build_app`
-(action layer, ~L137): the App node's `built_from:binding` × `runtime_dep:
-runtime_lib` cartesian. `ps_deps` **generalises and replaces** that one hardcoded
-cartesian — same edge, now declared, version-aware, and reaching external libs.
-That is the merge that unifies the two graphs (§2's stated goal).
-
-### The type
+### The extension — a mode on the runtime edge
 
 ```ocaml
-(* Stage 1 gains one field — the flat set stays; edges are additive.
-   [ps_deps = []] ⇒ degenerate node graph ⇒ byte-identical to today. *)
-type project_spec = {
-  ps_artifacts     : artifact_id list;
-  ps_provisions_of : artifact_id -> provision list;
-  ps_versions_of   : artifact_id -> Canary_basic.channel list;
-  ps_deps          : dep_edge list;              (* NEW — declared runtime edges *)
-}
-
-(* A runtime dependency the action grammar can't derive: [de_from] LOADS
-   [de_lib] at run time, and that lib is NOT its build input. The per-edge
-   provider (§1: "provision is a per-EDGE provider") is [de_provisions]; the
-   run-lib's version universe is its OWN axis [de_versions] (≠ the build-lib's
-   ps_versions_of), which is what makes the mismatch enumerable. *)
-type dep_edge = {
-  de_from       : artifact_id;               (* the dependent — an app or binding *)
-  de_lib        : dep_lib;                   (* what it loads at run time *)
-  de_provisions : provision list;            (* per-edge provider universe *)
-  de_versions   : Canary_basic.channel list; (* run-lib version universe (its own axis) *)
-}
-and dep_lib =
-  | Enumerated of artifact_id  (* a canary-controlled lib — a SECOND instance ⇒ mismatch *)
-  | Ambient    of string       (* external, not enumerated — "c", "pthread", "stdc++" *)
+(* How a node's runtime_dep is resolved. The node ALREADY carries [runtime_dep :
+   artifact_node option] (action layer); this says how the enumerator fills it. *)
+type dep_mode =
+  | Lockstep           (* run-lib = build-lib (the same node) — the chain default;
+                          exactly today's [node_of_assignment]. *)
+  | Independent        (* run-lib is a SECOND instance ranging over the lib's own
+                          [ps_versions_of] universe ⇒ deploy mismatch. This is what
+                          [make_action_graph]'s App build×run cartesian already does. *)
+  | Ambient of string  (* an un-enumerated external lib ("c","pthread"): a node for
+                          faithfulness/discovery, contributing NO scenarios. *)
 ```
 
-### It expresses all three cases with one edge
+`dep_mode` is a knob on the (dependent-kind → lib) runtime edge — carried by the
+node/mechanism, **defaulting to `Lockstep`** (so every current project is
+unchanged). It is NOT a `project_spec` field. Where its non-default value comes
+from, per case:
 
-| Case | `de_from` | `de_lib` | `de_provisions` | `de_versions` |
-|---|---|---|---|---|
-| **deploy mismatch** (z3/llvm) | the probe app | `Enumerated a_lib` | `[Fetched]` | `[Stable; Dev]` — the run-lib's axis, distinct from the build-lib's |
-| **ambient / system lib** (libc) | the binding | `Ambient "c"` | `[Fetched]` (system PM) | `[…]` or a pinned singleton |
-| **contains / bundle** | the binding | `Enumerated a_lib` | `[Contained; Fetched]` — bundled vs system, the configurable lib-edge | `[…]` |
+| Case | edge carrier | mode | source of the mode |
+|---|---|---|---|
+| **deploy mismatch** (z3/llvm) | App's existing `runtime_dep` | `Independent` | one bit on the mechanism/probe — the *only* new project intent; the version universe is `ps_versions_of a_lib`, already declared |
+| **ambient / system lib** (libc) | binding/app `runtime_dep` | `Ambient "c"` | a **grammar default** (a native binding loads libc) or **`ldd` discovery** — no project decl |
+| **contains / bundle** | the fetch node's produces-set | provider on the run-lib edge | the `Contained` provision (the one new `provision` value); bundle-ness is a fetch-node property |
 
-`Contained` is the one NEW `provision` value (§6 old open q); the "configurable
-lib-edge" is just `de_provisions` with two entries. Bundle needs no new node type.
+The mismatch and ambient cases carry **no per-project edge**; only a single
+`Lockstep→Independent` flip (mismatch) or a grammar-default/discovery (ambient).
+This is the "not bound to a project-level spec" the design turns on.
 
-### How stage 3 consumes it (dynamic discovery / closure)
+### How stage 3 consumes it (closure over node modes)
 
 ```
-stage 1  project_spec (+ ps_deps)
-stage 2  enumerate ~policy spec           → flat assignment list   (build side — UNCHANGED)
-stage 3  close_deps ~deps assignment      → artifact_node graph    (attach runtime_dep)
+stage 1  project_spec  (version/provider universes — unchanged)
+stage 2  enumerate ~policy spec        → flat assignment list   (build side — UNCHANGED)
+stage 3  close_deps assignment         → artifact_node graph    (resolve runtime_dep per mode)
 ```
 
-`close_deps` folds each `dep_edge` whose `de_from` is provided in the assignment,
-taking the product over (`de_provisions` × `de_versions`) → run-lib instances,
-each attached as the dependent node's `runtime_dep`. Output is a node graph per
-scenario. **Degenerate case:** `ps_deps = []` ⇒ no runtime edges ⇒ exactly
-today's `node_of_assignment` (build edges from the seam only). So flat projects
-(sqlite, tiny) are unchanged; only a project that DECLARES a runtime edge gets
-the second lib instance. The runner then builds the binding against the build-lib
-and points `LD_LIBRARY_PATH`/`PYTHONPATH` at the run-lib instance — the mismatch
-is materialised, not asserted.
+`close_deps` walks each node whose kind has a runtime-lib edge and resolves
+`runtime_dep` by its `dep_mode`: `Lockstep` → the same lib node (today's chain);
+`Independent` → a fresh lib instance per value of the lib's version universe
+(the App cartesian, now reused for bindings too); `Ambient s` → an external node,
+no extra scenarios. **Degenerate case:** every edge `Lockstep` ⇒ exactly today's
+`node_of_assignment`, so flat projects (sqlite, tiny) are byte-identical. The
+runner then builds against the build-lib and points `LD_LIBRARY_PATH`/`PYTHONPATH`
+at the run-lib instance — the mismatch is materialised, not asserted.
+
+This is the merge that unifies the two graphs (§2's goal): `make_action_graph`'s
+hardcoded App `built_from × runtime_dep` cartesian becomes the `Independent` case
+of one `close_deps`, and `node_of_assignment`'s chain becomes the `Lockstep` case.
+
+### The node/action revisit this needs (kept minimal — §"we don't handle these now")
+
+- **v1 (drives z3/llvm):** add `dep_mode` + teach `close_deps`/`node_of_assignment`
+  the `Independent` resolution (reuse `make_action_graph`'s existing lib-cartesian);
+  carry the mode on the mechanism/probe. This is the only node-layer change v1
+  needs — `runtime_dep` already exists, so it is an *extension*, not a revisit.
+- **deferred (NOT now):** the fuller graph-node/action revisit — collapsing
+  `make_action_graph`'s bespoke pool cartesian and `node_of_assignment` into one
+  `close_deps`, and the `(kind×ext)`→enriched-kind fold (§5 non-goals). Touch only
+  what v1 forces.
 
 ### MVP vs deferred
 
-- **v1 (drives z3/llvm):** `Enumerated` mismatch + `close_deps` + retire the
-  `Build_app` hardcoded cartesian in favour of an implicit `ps_deps` edge for the
-  probe app. This is the first real deploy-mismatch acceptance test.
-- **v2:** `Ambient` external libs + `Contained` bundle provision.
-- **deferred:** build edges declared per-project (only if a non-grammatical build
-  appears — two libs into one binding); truly-*dynamic* discovery (`ldd` the built
-  artifact to AUGMENT `ps_deps` with edges found at run time — the
-  postpone/readiness tracker). Statically-declared `ps_deps` needs neither yet.
+- **v1:** `Lockstep`/`Independent` + `close_deps`; z3/llvm mismatch as the first
+  acceptance test. No project edge list.
+- **v2:** `Ambient` external libs (grammar default + a place for discovery) +
+  `Contained` bundle provision.
+- **deferred:** truly-*dynamic* discovery (`ldd` the built artifact → fill
+  `Ambient`/promote to `Independent` at run time — the postpone/readiness tracker).
 
 ## 8. Remaining open questions
 
-- **`enumerate` return type at the seam:** stage 2 stays `assignment list`; a new
-  stage-3 `close_deps : deps:dep_edge list -> assignment -> artifact_node list`
-  produces the graph. Does `project_run` consume assignments (flat) + deps
-  separately, or a unified `scenario = node graph`? Lean: unified, once v1 lands.
-- **`de_from` for probe vs binding:** z3/llvm run the *example app* against the
-  run-lib, so `de_from` = the app (`a_app`); confirm no project wants the binding
-  itself as `de_from` (a binding dlopen-ing a lib directly, no app).
-- **provider granularity:** per-edge (as typed). Two apps sharing one binding =
-  two `de_from` edges — confirm that's the wanted grain, not per-artifact.
+- **Where the mode is carried:** on the `mechanism`, on the probe/app node, or a
+  single per-project `mismatch : bool`? Lean: a field on the probe spec (one bit),
+  since "run the example against a different lib version" is a probe intent.
+- **Stage-3 seam / return type:** stage 2 stays `assignment list`; `close_deps :
+  assignment -> artifact_node list` produces the graph. Does `project_run` consume
+  flat assignments and close per-run, or a unified `scenario = node graph`? Lean:
+  unified, once v1 lands.
+- **Edge carrier — app vs binding:** z3/llvm run the *example app* against the
+  run-lib, so the edge sits on the App node; confirm no project wants a binding
+  dlopen-ing a lib directly with no app node.
 - **A5/A6/A7 gate:** onboard z3/llvm/ssl against this node model (v1), NOT the flat
-  product — that's why the flat `pr_spec` onboarding was reordered *after* the
-  graph. Tracked in `status.md` §A.
+  product — why flat `pr_spec` onboarding was reordered *after* the graph. Tracked
+  in `status.md` §A.
