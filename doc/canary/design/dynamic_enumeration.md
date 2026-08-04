@@ -170,6 +170,56 @@ cartesian vs `assignment_ok`'s filter); node/placement helpers (`mk_node` /
 `node_tag` vs `placement` / `provision_of`); provision derivation
 (`provision_of_actions` vs the action graph's location choices).
 
+## 7c. The `instance` sketch + why it's *smaller* than "~61 sites"
+
+The target type is already sketched in
+[`enumeration_graph.md`](enumeration_graph.md) §3/§6 (the base `artifact_info` +
+`artifact_node` merge — reuse it, don't re-sketch). Consolidated + refined with
+this session's findings:
+
+```ocaml
+(* base — INFO: an instance's metadata (subsumes artifact_id + placement) *)
+type artifact_info = {
+  id        : artifact_id;   (* {kind; ext} — the PAIR, kept as-is *)
+  version   : build_id;      (* {channel; quality} — typed; carries Bad tag (A2) *)
+  provision : provision;     (* the per-EDGE provider: Fetched | Built | Vendored
+                                | Contained (bundle — the one NEW case) *)
+}
+
+(* base — STRUCTURE: node = info + dependency edges (= today's artifact_node) *)
+type instance = {
+  info        : artifact_info;
+  built_from  : instance option;   (* Build edge — populated by the seam
+                                      (built_from_of_assignment) *)
+  runtime_dep : instance option;   (* Run edge — the deploy mismatch *)
+}
+```
+
+Refinements over §3: `version` carries `quality` (A2 fold); `provision` is the
+per-edge provider (A1's per-artifact provision + the new `Contained`); `built_from`
+is read via the seam. `location` derives from `provision` (§6). The flat
+`assignment`/`placement` is the **degenerate** `instance` set (nodes, edges
+implicit); `assignment_of_point` + `built_from_of_assignment` already lift it.
+
+### The migration is TWO things — only one is "~61 sites"
+
+1. **The instance merge (this work) — SMALL.** Reconcile `artifact_node` (used in
+   only **3 files**: `base/canary_basic`, `action/canary_path_table`,
+   `action/canary_action`) with `artifact_id + placement + typed version` into one
+   `instance`. Keeps `id = {kind; ext}` (the pair). Modest, mechanical once the
+   seam is in.
+2. **The "~61-site move" — SEPARATE, later, DECOUPLED.** Folding the `(kind × ext)`
+   PAIR into a single **enriched `artifact_kind`** (so `Binding OCaml Cstubs` is
+   *one* constructor, not a pair). That rewrites every `match` on the coarse kind
+   `Source | Headers | Lib | Binding | App` — ~200 mechanism-agnostic sites, the
+   diagram the biggest single consumer (~61). **The instance merge does NOT need
+   it** — `instance` keeps the pair — so the ~61-site move is a cosmetic
+   "collapse the pair" cleanup, do-never/last, and it does **not** gate the graph
+   model.
+
+So the sketch is enumeration_graph.md §3 refined (above); "~61 sites" is the
+*optional* pair→enriched-kind fold, not the merge.
+
 ## 8. Status
 
 A3b (flip sqlite's run) and A4 (wire tiny + multi-mutation) **wait on this design
