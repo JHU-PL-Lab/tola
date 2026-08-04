@@ -139,9 +139,20 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     an App node can't map to its `Build_app {lang}` action without a heuristic.
   - *location breadth* — Fetched's `a_location = Pm` needs `pm_info` the flat
     assignment lacks; *Contained/bundle* is a new concept needing design.
-  So the next real step is the **fold** (enumeration object = the node graph),
-  coupled to **A3b/A4** flipping the run — a deliberate design/build, not a quick
-  add. A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled cleanup.
+  So the node-graph fold is a deliberate design/build, not a quick add.
+- **Re-prioritization (2026-08-04): the node graph is needed ONLY for the deploy
+  mismatch** (build-lib ≠ run-lib) — and **tiny-full + sqlite have no mismatch**, so
+  the FLAT `assignments_of_spec` (A3a) is sufficient to run them. `node_of_assignment`
+  has **0 runtime users** (test-only); the run path touches no node graphs. So:
+  - **PARK the node-graph merge** (the fold + `node_of_assignment` growth) until the
+    deploy-mismatch / version work (z3/llvm), where it's actually needed. M1's richer
+    `artifact_node` + the source-edge fix stand (they improved the live
+    `make_action_graph`); M2/M3 are the parked seam.
+  - **ACTIVE next: A3b/A4 — flip tiny-full + sqlite runs onto the FLAT enumeration**
+    (`project_spec → assignments_of_spec → run`), then enhance/check on more projects.
+    This gets the convergence *running* for the real projects with the object that
+    suffices for them. A1/A2/A3a are the entry rung; the ~61-site fold is a decoupled
+    cleanup.
 
 ### B. Coverage — make canary detect more
 
