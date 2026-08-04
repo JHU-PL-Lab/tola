@@ -1591,10 +1591,19 @@ let tiny_full_assignments (spec : tiny_full_spec) :
 let tiny_full_combinations (spec : tiny_full_spec) :
     Canary_enumerate.assignment list =
   let first_tag aid = List.hd (spec.tf_bad_tags_of aid) in
+  (* combinations range over DISTINCT vendored resources (ssot §4.2.5): source
+     and lib collapse to the same "lib" resource in the vendored model
+     ([resource_id_of_tag]), so a source+lib pair would overlay the SAME slot
+     and degenerate to a single bad variant. The real multi-bad axis is
+     lib × ocaml-binding × python-binding — three separate overlay slots.
+     canary runs fail-fast and detects the FIRST failure down the chain; the
+     later badness is masked — the emergent "collapse". *)
   let chain =
     List.filter_map
       Canary_enumerate.
-        [ a_source; a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ]
+        [ a_lib;
+          a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+          a_binding Canary_lang.Python Canary_mechanism.Cext ]
       ~f:(fun aid ->
         match first_tag aid with Some t -> Some (aid, t) | None -> None)
   in
@@ -1613,126 +1622,10 @@ let tiny_full_combinations (spec : tiny_full_spec) :
    | _ -> [])
   |> List.map ~f:assignment_with
 
-(* Read the (single, in P2a) bad build's tag off an assignment — the placement
-   whose version quality is [Bad tag]. *)
-let bad_tag_of (a : Canary_enumerate.assignment) : string option =
-  let open Canary_enumerate in
-  List.find_map a ~f:(fun (_, pl) ->
-      match pl.version.quality with Bad t -> Some t | Good -> None)
-
 let assignment_is_all_good (a : Canary_enumerate.assignment) : bool =
   let open Canary_enumerate in
   List.for_all a ~f:(fun (_, pl) ->
       match pl.version.quality with Good -> true | Bad _ -> false)
-
-(* Materialize + run ONE assignment. This is the ONLY place that maps a bad-tag
-   to a mutation/workspace — the factory-backed materializer. A bad tag → its
-   factory workspace ([find_by_id] → name → [run_scenario], which materialises
-   + probes); the all-Good assignment → the clean tree, realised by the
-   unmutated witnesses. Returns per-run (label, verdict). The runner above it
-   hands over an assignment and gets verdicts — it never sees this mapping. *)
-let tiny_full_materialize_and_run
-    ~(run_scenario : failfast:bool -> name:string -> string)
-    ~failfast (assignment : Canary_enumerate.assignment) :
-    (string * string) list =
-  let open Canary_enumerate in
-  let bad_tags =
-    List.filter_map assignment ~f:(fun (_, pl) ->
-        match pl.version.quality with Bad t -> Some t | Good -> None)
-  in
-  match bad_tags with
-  | [] ->
-      let witnesses =
-        List.filter_map all_scenario_specs ~f:(fun s ->
-            if Option.is_none (mutation_target_of_spec s) then Some s.scenario.name
-            else None)
-      in
-      List.map witnesses ~f:(fun name -> (name, run_scenario ~failfast ~name))
-  | tags ->
-      List.map tags ~f:(fun tag ->
-          let name =
-            match find_by_id tag with Some s -> s.scenario.name | None -> tag
-          in
-          (name, run_scenario ~failfast ~name))
-
-(* The agnostic driver: enumerate the good+bad assignments, hand each to the
-   materializer, tally coverage. It references only the version [quality]
-   (via [assignment_is_all_good]/[bad_tag_of]) + the spec + the materializer —
-   no mutation type, no [find_by_id]/[recipe] here. *)
-let run_tiny_full ~(run : failfast:bool -> name:string -> string) : unit =
-  let p = Stdlib.Printf.printf in
-  let spec = tiny_full_spec in
-  let assignments = tiny_full_assignments spec in
-  let positives, bads =
-    List.partition_tf assignments ~f:assignment_is_all_good
-  in
-  let n_bad = List.length bads in
-  p "\ntiny-full RUN — mutation-agnostic spec (1 positive + %d bad \
-     assignment(s); the runner sees only artifact@version, badness = a \
-     bad-quality version)\n"
-    n_bad;
-
-  (* positive: all-Good assignments — canary should stay quiet *)
-  p "\n  --- positive (clean tree; canary should stay quiet) ---\n";
-  List.iter positives ~f:(fun a ->
-      List.iter
-        (tiny_full_materialize_and_run ~run_scenario:run ~failfast:false a)
-        ~f:(fun (label, verdict) -> p "    [%-26s] %s\n" label verdict));
-
-  (* bad: dedup runs by tag (an assignment whose bad build touches >1 artifact
-     — e.g. both Python layers — appears once per artifact but is ONE
-     workspace); detection counts distinct runs, coverage counts assignments
-     (artifact points). *)
-  let tag_of a = Option.value (bad_tag_of a) ~default:"" in
-  let distinct_tags =
-    List.fold bads ~init:[] ~f:(fun acc a ->
-        let t = tag_of a in
-        if List.mem acc t ~equal:String.equal then acc else acc @ [ t ])
-  in
-  let points_of t = List.count bads ~f:(fun a -> String.equal (tag_of a) t) in
-  p "\n  --- bad (fail-fast; canary should DETECT each) ---\n";
-  let detected_tags, detected_points =
-    List.fold distinct_tags ~init:(0, 0) ~f:(fun (dtags, dpts) tag ->
-        let a = List.find_exn bads ~f:(fun a -> String.equal (tag_of a) tag) in
-        let npts = points_of tag in
-        let results =
-          tiny_full_materialize_and_run ~run_scenario:run ~failfast:true a
-        in
-        (* a bad build → "PASS" when canary *detected* the failure *)
-        let ok = List.for_all results ~f:(fun (_, v) -> String.equal v "PASS") in
-        let label = match results with (l, _) :: _ -> l | [] -> tag in
-        p "    [%-6s %-26s] %-6s %s (%d artifact point%s)\n" tag label
-          (if ok then "PASS" else "FAIL")
-          (if ok then "\xE2\x9C\x93 detected" else "\xE2\x9C\x97 MISSED")
-          npts (if npts = 1 then "" else "s");
-        if ok then (dtags + 1, dpts + npts) else (dtags, dpts))
-  in
-  p "\n  coverage: %d/%d bad scenarios detected (%d/%d artifact points)\n"
-    detected_tags (List.length distinct_tags)
-    detected_points n_bad;
-
-  (* combinations (P3): multi-bad assignments — the scenarios beyond tiny1
-     (one tiny-full project holds what tiny1 splits into separate projects).
-     tiny-full just DECLARES these vendored resource-sets; canary computes the
-     outcome (fail-fast naturally stops at the first failure) when it runs
-     them. The run over combos needs the vendored-resource materializer
-     (assemble the chosen variants — no rebuild); that is the run half still
-     to build (status §1a P3). *)
-  let combos = tiny_full_combinations spec in
-  if not (List.is_empty combos) then begin
-    p "\n  --- combinations (declared multi-bad resource-sets; canary computes \
-       the outcome on run — materializer TBD) ---\n";
-    List.iter combos ~f:(fun a ->
-        let open Canary_enumerate in
-        let bad_labels =
-          List.filter_map a ~f:(fun (id, pl) ->
-              match pl.version.quality with
-              | Bad t -> Some (string_of_id id ^ "#" ^ t)
-              | Good -> None)
-        in
-        p "    {%s}\n" (String.concat ~sep:", " bad_labels))
-  end
-
 
 (** Tiny lives in-tree. All shell commands here run from the tola
     repository root (canary's runner inherits the invoker's cwd, which

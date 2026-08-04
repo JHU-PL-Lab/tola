@@ -11,12 +11,14 @@
       enumerate → materialize (assemble) → run, with canary computing the
       expectation ([expectation_agnostic]).
 
-    A project DECLARES; canary COMPUTES. The declarative surface a generic
-    cross-project runner needs is gathered here ([project_run] below); wiring
-    that generic runner (so z3/sqlite share one run path) is the next
-    convergence step — today `action tiny-full` still calls [run]. The spec
-    internals physically live in the factory file for now (they are tightly
-    coupled to its [engine_*] data); relocating them is follow-up polish. *)
+    A project DECLARES; canary COMPUTES. The declarative surface is the
+    [project_run] below ([tiny_full_run]); `action tiny-full` runs it through
+    the generic [canary_main.run_project_run] — the SAME path sqlite uses (the
+    convergence: one runner, per-project specs). Remaining convergence work:
+    derive [pr_enumerate] from a declared spec (absorb [tiny_full_assignments]/
+    [_combinations] into the general enumeration) and relocate the spec
+    internals, which physically live in the factory file for now (tightly
+    coupled to its [engine_*] data). *)
 
 module TS = Canary_tiny_scenario
 
@@ -57,12 +59,6 @@ let expectation_agnostic
 (** Render the positive-variant enumeration view. *)
 let print_view : unit -> unit = TS.print_tiny_full
 
-(** The algorithm-driven good+bad run: iterate the enumerated assignments and
-    hand each to the caller's materialize-and-detect primitive. The runner
-    ([canary_main.run_tiny_full_project]) supplies a [run] that assembles the
-    vendored tree and runs canary over it with [expectation_agnostic]. *)
-let run : run:(failfast:bool -> name:string -> string) -> unit = TS.run_tiny_full
-
 (* ── tiny-full's implementation of the [Canary_project_run.project_run]
    interface (shared with sqlite; the generic runner consumes it) ── *)
 type project_run = Canary_project_run.project_run
@@ -85,7 +81,12 @@ let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
     pr_artifacts = artifacts;
-    pr_enumerate = assignments;
+    (* the scenario space the generic runner sweeps: good + built-lib +
+       single-bad ([assignments]) AND the multi-bad [combinations] (the
+       scenarios beyond tiny1). Combos flow through the same vendored-overlay
+       materialize path ([overlays_of] → [materialize_assembled]); canary runs
+       fail-fast and discovers the collapse. *)
+    pr_enumerate = (fun () -> assignments () @ combinations ());
     pr_materialize =
       (fun a ->
         (* dispatch by provision (ssot §4.2.5): the lib may be [Built] (canary
