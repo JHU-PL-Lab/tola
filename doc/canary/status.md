@@ -324,9 +324,22 @@ scenarios it runs, both statically (before a run) and from the result (after).
   cross-checks provider-provision == baseline (⚠ on mismatch) — **closes caveat (1)**.
   `spec --json` emits parseable artifacts × scenarios. Consumer survey first
   confirmed two clean camps (coarse via `provision_of_provider`, detail via
-  `provider`). **Step 3 (migrate `store_config`/`command_of_step` onto `provider`,
-  fold `source_repo` through it) is the remaining unification** — bigger, touches
-  the runner's fetch-command derivation. Then the `derived` discussion (deferred).
+  `provider`).
+- **Provider unification (step 3) ✅** (2026-08-04, `c0f43b3`). The RUNNER now reads
+  `provider`, not `location`+`system_pkg`/`pkg_name`: `lib_store = { provider;
+  components; headers }`, `binding_store = { provider; source_dir }`;
+  `command_of_step` derives fetch commands from `provider` (`Sys_pkg`→fetch_lib,
+  `Lang_pkg opam`→fetch_binding) — **byte-identical** (the `project-test`
+  Derived==Raw fetch_lib test still passes). Constructors (sqlite/pattern_a/ssl)
+  migrated. `store_config.source` stays `source_repo option` (no Derived-build
+  consumer yet; `provider` already folds it via `Built_from`). project-test 32/32,
+  runs unchanged. **Unification done for the live path.**
+- **NEXT (user-raised): unit tests for artifact spec + consumption ops.** Now that
+  `provider` has settled, test: `provision_of_provider` coverage, `string_of_provider`
+  round-trips, `command_of_step` Derived==Raw for both fetch slots (extend the one
+  existing lib test to fetch_binding), and each project's `pr_provenance` provider
+  matches its baseline provision (the drift invariant, as a test not just a ⚠).
+  *Then* the `derived` discussion (pr_provenance derived-from vs declared).
 
 **Pipeline map (pre / prepare / run / post — where to read):**
 - **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
