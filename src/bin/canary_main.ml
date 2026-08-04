@@ -323,7 +323,7 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
       if in_grp <> [] then begin
         Fmt.pr "  %s:@." grp;
         List.iter
-          (fun a -> Fmt.pr "    %-26s %s@." (E.string_of_id a) (baseline_str a))
+          (fun a -> Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a))
           in_grp
       end)
     group_order;
@@ -340,7 +340,7 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
           (fun (id, pl) ->
             let s = placement_str pl in
             if String.equal (baseline_str id) s then None
-            else Some (Printf.sprintf "%s=%s" (E.string_of_id id) s))
+            else Some (Printf.sprintf "%s=%s" (E.pretty_id id) s))
           a
       in
       let desc =
@@ -415,7 +415,7 @@ let print_spec_variants ~(name : string)
       in
       if in_grp <> [] then
         Fmt.pr "  %s: %s@." grp
-          (String.concat ", " (List.map E.string_of_artifact in_grp)))
+          (String.concat ", " (List.map E.pretty_artifact in_grp)))
     group_order;
   Fmt.pr "@.variants (%d) — per-artifact provision:@." (List.length variants);
   List.iter
@@ -423,7 +423,7 @@ let print_spec_variants ~(name : string)
       let cells =
         List.map
           (fun (k, p) ->
-            Printf.sprintf "%s=%s" (E.string_of_artifact k) (prov_short p))
+            Printf.sprintf "%s=%s" (E.pretty_artifact k) (prov_short p))
           (provisions_of_runner_spec rs)
       in
       Fmt.pr "  [%-8s] %s@." vname (String.concat "  " cells))

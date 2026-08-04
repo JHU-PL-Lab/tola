@@ -108,6 +108,24 @@ let string_of_id (id : artifact_id) : string =
   | Ext_mechanism m -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
   | Ext_wiring w -> base ^ "-" ^ string_of_app_wiring w
 
+(* DISPLAY-ONLY pretty form: the ':' delimiter reads the kind:lang:mechanism
+   hierarchy (binding:ocaml:cstubs). NEVER use for keys/paths/labels — those take
+   the born-safe [string_of_id]/[string_of_artifact] above. Only human-facing
+   views (e.g. `canary spec`) should call these. *)
+let pretty_artifact = function
+  | Source -> "source"
+  | Headers -> "headers"
+  | Lib -> "lib"
+  | Binding l -> "binding:" ^ Canary_lang.string_of_lang l
+  | App -> "app"
+
+let pretty_id (id : artifact_id) : string =
+  let base = pretty_artifact id.kind in
+  match id.ext with
+  | Ext_none -> base
+  | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
+  | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
+
 (** An artifact instance's version identity (ssot §4.2.2, P2a). A build is a
     release [channel] plus a [quality]: a [Good] build, or a [Bad]-tagged
     build that breaks a contract. The tag is OPAQUE here — the enumeration
