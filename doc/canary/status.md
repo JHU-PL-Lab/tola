@@ -149,6 +149,23 @@ edges resolved via `dep_mode`). Open:
   against the system lib by design; a build-against-built variant means a
   source build of the binding — heavier, likely with the action-variant
   table).
+- **sqlite API-mismatch feasibility (measured 2026-08-05).** `nm` diff of
+  the two built amalgamations: **3.45.1 ↔ 3.46.1 export IDENTICAL symbol
+  sets** (zero added, zero removed) — so with the current version pair
+  neither mismatch direction is expressible at the symbol level (the
+  built-dev scenario is correctly a pure deploy-repoint demo, all green).
+  - **Forward IS addable with a real pair**: `sqlite3_get_clientdata`/
+    `set_clientdata` were added in 3.44.0 (present in our 3.45.1 build) —
+    declare an older Built version (e.g. 3.43.x amalgamation) on the lib
+    axis + a dev CONSUMER calling `get_clientdata` (a C-level probe app;
+    the opam binding doesn't wrap it and Python stdlib can't) → fails over
+    3.43, passes over 3.45+; predictable via a required-symbol watchlist.
+  - **Backward is NOT available from upstream** — sqlite's compatibility
+    promise means no C API is ever removed (the empty "removed" diff is
+    the promise, measured). A synthetic removal would be a mutation =
+    tiny's role. Honest division: tiny designs breaks in both directions;
+    a real project contributes only the breaks it actually has (z3/llvm:
+    real removals/renames; sqlite: additive-only ⇒ forward only).
 - **distro × sys-PM × lang-PM** packaging enumeration (couples with §1b).
 
 ## D. Deferred design cluster
