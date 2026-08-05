@@ -86,7 +86,32 @@ edges resolved via `dep_mode`). Open:
   placement doesn't model; (ii) the **`dep_mode` value source** — who
   declares "this probe runs over lib@Y while built against lib@X"
   (`close_deps Independent`'s owner). Both land naturally with A9-step-2.
-  ssl/zarith/cairo follow once the shape exists. *Related finding
+  ssl/zarith/cairo follow once the shape exists.
+  **Execution plan (2026-08-05; user: zero-cache rebuild cost is acceptable
+  — and z3/llvm's guarded external build trees mean scenario-id changes
+  don't force full rebuilds anyway). z3 first, llvm after the shape
+  settles. Phases, each shippable:**
+  1. *Declared spec, no behavior change*: `z3_spec` ps_universe (source
+     Fetched@{Dev,Stable}; lib/binding Built following source — the
+     source-primary filter already yields exactly the current 2 variants
+     as scenarios); project-test pins enumerated set == variant list.
+  2. *dispatch/realize*: `scenario_case = Dev_chain | Stable_chain`;
+     `realize` = the existing `mk_runner_spec ~source:…` (the whole raw
+     spec becomes the realization — command churn ~zero); `z3_run :
+     project_run` (+ providers, + mismatch-probe roles for the
+     stable-wheel demo); `action z3` → `run_project_run`.
+  3. *Locations stay INSIDE the realization* (3 probe_lib steps per
+     scenario, as today) — the location sub-axis is deliberately NOT
+     modeled here; it's A9-step-2's acceptance test.
+  4. *Expectations unchanged* (contract-bound `lower_expectation` in the
+     realization; A7 comes AFTER) — verify the stable compat-failure demos
+     surface as xfail in `status`/`spec`.
+  5. *llvm same shape*; then retire `run_project_multi` +
+     `print_spec_variants` (ssl/zarith/cairo last).
+  **A5↔A7 order settled: A5 first** — migration needs no expectation
+  change (the runner consumes any expectation closure; Expect_compat_
+  failure already maps to xfail), and A7 is best done once all three
+  expectation styles sit on ONE runner. *Related finding
   (2026-08-05)*: an **Ambient** runtime edge makes a step
   SCENARIO-INVARIANT — sqlite's python probe/inspect run identically in
   all 3 scenarios (placement F:stable + bundled lib never vary with the
