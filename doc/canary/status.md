@@ -415,7 +415,14 @@ output volume · **terminology sweep: `variant_*` code identifiers →
 `scenario_*`** (2026-08-05 unified the DISPLAY term to `scenario` — ssot §6.1
 scenario ≡ variant ≡ "world"; the mechanical id rename
 (`variant_id`/`variant_key`/`variant_file`/`print_spec_variants`/…) is queued —
-touches cache/filename keys, so do it as one deliberate pass, not ad hoc).
+touches cache/filename keys, so do it as one deliberate pass, not ad hoc) ·
+**"scenario" is STILL overloaded vs the abstract senses** — `Sc.N`
+good-scenario *patterns* + the coverage command's lifecycle *stages* (and the
+`canary scenarios` CLI shows stages, not scenarios, with a stale count). Full
+audit + options (T0 document / T1 rename command to `stages` / T2 split the
+dual-use `Canary_scenario.scenario` type, riding F5) + open questions:
+[`design/scenario_terms.md`](design/scenario_terms.md). OPEN — no decision
+yet; do T2 together with F5 + the `variant_*` sweep as ONE terminology pass.
 
 ### F. Inspection — show a project's artifacts × scenarios, pre and post (2026-08-04)
 
