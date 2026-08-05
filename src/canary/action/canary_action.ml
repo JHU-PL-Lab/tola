@@ -92,7 +92,7 @@ let store_actions ~langs =
 type dep_mode = Lockstep | Independent | Ambient of string
 
 let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
-    () =
+    ?(vendored = false) () =
   let vs = channel_suffix in
   let get pools kind =
     List.Assoc.find pools ~equal:Poly.equal kind |> Option.value ~default:[]
@@ -194,6 +194,21 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
            Configure / Install_lib / Publish / Probe likewise. *)
         | Configure | Scan_sources | Install_lib | Publish _
         | Probe_lib | Probe_binding _ | Probe_app _ -> pools)
+  in
+  (* [Vendored] provision: a supplied pre-built copy — NOT action-generated, an
+     initial node (materialize places it). Universal (every kind can be
+     vendored); the project marking keeps only what it declares. Off by default
+     so `paths` (build/fetch job paths) is unchanged. *)
+  let pools =
+    if not vendored then pools
+    else
+      List.fold (List.map pools ~f:fst) ~init:pools ~f:(fun pools kind ->
+          add pools kind
+            (List.map versions ~f:(fun v ->
+                 mk_node kind
+                   (name ^ vs v)
+                   ~origin:Build_tree ~location:Build_tree
+                   ~version:(Canary_enumerate.good v) ~provision:Vendored ())))
   in
   { actions; pools }
 

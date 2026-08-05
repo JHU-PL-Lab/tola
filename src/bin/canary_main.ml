@@ -2132,7 +2132,7 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
   let g =
     CA.make_action_graph
       ~actions:(CA.store_actions ~langs:Canary_lang.[ OCaml; Python ])
-      ~versions ~name ~source:Canary_store.store ~app_mode ()
+      ~versions ~name ~source:Canary_store.store ~app_mode ~vendored:true ()
   in
   let applicable = CA.node_applicable ~provisions_of_kind in
   Fmt.pr "@.graph construction: %s (source versions: %s; app runtime = %s)@." name
