@@ -577,6 +577,27 @@ let dispatch_reads_test : pure_test =
           | [ (id, "Bs.4") ] -> EN.equal_artifact_id id EN.a_lib
           | _ -> false)) }
 
+(* Mismatch direction (named from the CONSUMER's position): consumer@Dev over
+   provider@Stable = Forward; consumer@Stable over provider@Dev = Backward;
+   same channel or absent = None. *)
+let mismatch_direction_test : pure_test =
+  { name = "enumerate.mismatch_direction";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let pl ch : EN.placement =
+        { provision = EN.Vendored; version = { channel = ch; quality = EN.Good } }
+      in
+      let mk oc lib = EN.[ (a_oc, pl oc); (a_lib, pl lib) ] in
+      let dir a = EN.mismatch_direction_of a ~consumer:a_oc ~provider:EN.a_lib in
+      Poly.equal (dir (mk B.Dev B.Stable)) (Some EN.Forward)
+      && Poly.equal (dir (mk B.Stable B.Dev)) (Some EN.Backward)
+      && Poly.equal (dir (mk B.Stable B.Stable)) None
+      && Poly.equal
+           (EN.mismatch_direction_of [ (a_oc, pl B.Dev) ] ~consumer:a_oc
+              ~provider:EN.a_lib)
+           None) }
+
 (* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
    ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
    binding←Lib; a Fetched artifact has no edge. Injects
@@ -824,7 +845,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
-      dispatch_reads_test;
+      dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]
 

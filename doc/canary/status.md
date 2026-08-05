@@ -36,7 +36,11 @@ dedup (`scenario_dir_of`; Fetched is version-ambient), per-scenario verdicts
 - **tiny-full**: 6 spec-derived scenarios = lib {V:S, B:S, B:D} × ocaml
   binding {V:S, V:D}. The two binding@dev-over-stable-lib scenarios are the
   **forward API mismatch** (dev consumer of `tiny_scale`), c1-predicted
-  agnostically → detected xfail; binding@dev × built-dev-lib green.
+  agnostically → detected xfail; binding@dev × built-dev-lib green. The dev
+  binding is DECLARED a forward probe (`pr_mismatch_probes` design-intent
+  table, 2026-08-05); `spec` marks the designed scenarios
+  `[forward-mismatch probe]`, gated by the computed direction
+  (`mismatch_direction_of`: consumer channel vs provider channel).
 - **sqlite**: 3 scenarios = lib {F, B:3.45.1, B:3.46.1}. Built scenarios
   probe OVER the built lib with the runtime version ASSERTED; built-dev is a
   real verified run-lib ≠ build-lib deploy scenario. Python's runtime sqlite

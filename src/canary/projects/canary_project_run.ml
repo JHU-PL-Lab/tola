@@ -65,6 +65,18 @@ type project_run = {
     Canary_step_builder.runner_spec;
   pr_provenance :
     (Canary_enumerate.artifact_id * Canary_store_config.provider) list;
+  pr_mismatch_probes :
+    (Canary_enumerate.artifact_id * Canary_basic.channel
+     * Canary_enumerate.mismatch_direction) list;
+      (** DESIGN-INTENT table (data): consumer variants deliberately built to
+          reveal a mismatch direction — [(consumer, channel, direction)]
+          means "this consumer artifact at this channel carries a
+          version-sensitive requirement designed to detect <direction>
+          mismatches" (e.g. tiny's dev cstubs binding requires the dev-only
+          [tiny_scale] ⇒ Forward). The per-scenario direction itself is
+          computed ([Canary_enumerate.mismatch_direction_of]); this table
+          says which pairings are DESIGNED probes vs incidental. [] = none
+          declared (a positive-only real project). *)
 }
 
 (** Lookup over the [pr_provenance] table ([None] = undeclared artifact). *)

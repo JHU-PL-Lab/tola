@@ -527,6 +527,15 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
                    (Canary_store_config.string_of_provider p) drift
              | None ->
                  Fmt.pr "        provider: (undeclared — spec carries no detail)@.");
+            List.iter
+              (fun (id, ch, dir) ->
+                if E.equal_artifact_id id a then
+                  Fmt.pr "        mismatch probe: %s variant designed to reveal %s mismatch@."
+                    (match ch with
+                     | Canary_basic.Dev -> "dev"
+                     | Canary_basic.Stable -> "stable")
+                    (E.string_of_mismatch_direction dir))
+              pr.Canary_project_run.pr_mismatch_probes;
             match builds_of a with
             | [] -> ()
             | ks ->
@@ -574,7 +583,29 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
                Printf.sprintf "%s=%s" (E.pretty_id id) (placement_str pl))
              a)
       in
-      Fmt.pr "  %-10s %s%s@." mark world
+      (* designed-probe mark: a declared (consumer, channel, direction) probe
+         is ACTIVE in this scenario when the consumer is placed at that
+         channel AND the computed consumer↔lib pairing direction matches. *)
+      let probe_marks =
+        List.filter_map
+          (fun (id, ch, dir) ->
+            let placed =
+              match E.placement_of a id with
+              | Some pl -> pl.E.version.E.channel = ch
+              | None -> false
+            in
+            if
+              placed
+              && E.mismatch_direction_of a ~consumer:id ~provider:E.a_lib
+                 = Some dir
+            then Some (E.string_of_mismatch_direction dir)
+            else None)
+          pr.Canary_project_run.pr_mismatch_probes
+      in
+      Fmt.pr "  %-10s %s%s%s@." mark world
+        (match probe_marks with
+         | [] -> ""
+         | ms -> "   [" ^ String.concat "+" ms ^ "-mismatch probe]")
         (if String.equal label "(baseline)" then "   (baseline)" else ""))
     scenarios;
   (if post <> [] then begin

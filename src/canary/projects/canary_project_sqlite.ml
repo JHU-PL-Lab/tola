@@ -98,6 +98,22 @@ let sqlite_python_watchlist = [
   "Cursor";
 ]
 
+(* Modern-C-API watchlist on the NATIVE lib (the per-version symbol-watchlist
+   primitive, status §B/§C): the Built-world lib inspect records, per built
+   version, whether recent API additions are exported — all present in ≥3.44;
+   a future ≤3.43 Built version would show them MISSING (the forward-mismatch
+   axis, measured 2026-08-05: 3.45.1↔3.46.1 export identical sets). Also the
+   LIB half of the binding-lag observation: the opam binding and Python
+   stdlib wrap NONE of these — the full lib↔binding lag check (c7/c8) needs
+   a declared native↔binding name correspondence (A5/A9 design). *)
+let sqlite_native_modern_watchlist = [
+  "sqlite3_get_clientdata";
+  "sqlite3_set_clientdata";
+  "sqlite3_error_offset";
+  "sqlite3_value_encoding";
+  "sqlite3_stmt_explain";
+]
+
 let sqlite_python_config : Canary_toolchain.binding_config =
   Python_config
     {
@@ -271,6 +287,20 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
               libpath libpath
             |> Canary_build_cmd.with_marker ~marker:"probe.log" ~output_dir
                  ~variant_key ) ];
+    (* Built worlds additionally INSPECT the built lib against the modern-API
+       watchlist (observation: per-version export presence); the base spec's
+       probe-time binding inspects are kept. *)
+    inspect =
+      (fun action loc ->
+        match action with
+        | Canary_basic.Build_lib ->
+            Some
+              (fun ~output_dir ~variant_key ->
+                Canary_artifact_native.inspect_cmd ~lib:libpath
+                  ~prefixes:[ "sqlite3_" ]
+                  ~watchlist:sqlite_native_modern_watchlist ~output_dir
+                  ~variant_key ())
+        | _ -> runner_spec.Canary_step_builder.inspect action loc);
     (* Binding probes OVER the built lib (repointed loader + version assert). *)
     probe_binding =
       [ ( Canary_lang.OCaml,
@@ -368,4 +398,9 @@ let sqlite_run : Canary_project_run.project_run =
     pr_runner_spec = (fun a ~workspace -> realize (dispatch a) ~workspace);
     (* the single [sqlite_providers] table — same source the runner's
        store_config reads, so display and runner can't drift. *)
-    pr_provenance = sqlite_providers }
+    pr_provenance = sqlite_providers;
+    (* No designed mismatch probes: sqlite is additive-only upstream (no
+       backward breaks exist — measured, status §C) and no consumer here
+       requires a version-sensitive API yet (a forward probe needs a ≤3.43
+       lib version + a C-level consumer of sqlite3_get_clientdata). *)
+    pr_mismatch_probes = [] }

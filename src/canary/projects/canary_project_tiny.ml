@@ -208,7 +208,15 @@ let tiny_full_run : project_run =
     (* tiny-full ignores the runner-provided [workspace]: its realizations
        assemble the vendored tree themselves (tiny-factory concern). *)
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a));
-    pr_provenance = tiny_providers }
+    pr_provenance = tiny_providers;
+    (* the ocaml_dev cstubs variant is the DESIGNED forward probe: it
+       requires the dev-only [tiny_scale], so deploying it over a stable lib
+       reveals the forward mismatch (shipped 2026-08-05; status §B). No
+       backward probe in the general run — backward breaks are tiny1's
+       mutations (Bs.3/Bs.4). *)
+    pr_mismatch_probes =
+      [ ( Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
+          Canary_basic.Dev, Canary_enumerate.Forward ) ] }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──
    The thin slice is a RUNNER policy ([Canary_project_run.thin_policy] —

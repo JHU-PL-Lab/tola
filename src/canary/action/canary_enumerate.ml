@@ -207,6 +207,32 @@ let bad_placements (a : assignment) : (artifact_id * string) list =
       | Bad tag -> Some (id, tag)
       | Good -> None)
 
+(* ── mismatch direction (general vocabulary) ──
+   Named from the CONSUMER's position relative to the provider:
+   [Forward] = consumer ahead (built against a newer API, deployed over an
+   older provider — fails on a not-yet-added requirement, c1/c2);
+   [Backward] = consumer behind (deployed over a newer provider that BROKE
+   compatibility — removed/renamed symbol, soname/symver, c4/c5). *)
+type mismatch_direction = Forward | Backward
+
+let string_of_mismatch_direction = function
+  | Forward -> "forward"
+  | Backward -> "backward"
+
+(** The direction of the consumer↔provider version pairing in scenario [a]
+    ([None] = same channel, or either artifact absent). DERIVABLE per
+    scenario — what is NOT derivable is whether a consumer variant was
+    DESIGNED to carry a version-sensitive requirement; that intent is
+    declared data ([Canary_project_run.pr_mismatch_probes]). *)
+let mismatch_direction_of (a : assignment) ~(consumer : artifact_id)
+    ~(provider : artifact_id) : mismatch_direction option =
+  if not (provided a consumer && provided a provider) then None
+  else
+    match (channel_of a consumer, channel_of a provider) with
+    | Canary_basic.Dev, Canary_basic.Stable -> Some Forward
+    | Canary_basic.Stable, Canary_basic.Dev -> Some Backward
+    | _ -> None
+
 let any_binding_provided (a : assignment) : bool =
   List.exists a ~f:(fun (id, pl) ->
       match id.kind with
