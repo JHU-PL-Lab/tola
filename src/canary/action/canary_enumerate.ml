@@ -360,10 +360,19 @@ let run_config ~(artifacts : artifact_id list)
     ~(all_provisions_of : artifact_id -> provision list)
     ~(all_versions_of : artifact_id -> provision -> Canary_basic.channel list)
     ~(all_mutations : (artifact_id * 'm) list) (cfg : 'm config) : 'm point list =
+  (* [Subset] INTERSECTS the axis universe (preserving universe order): a
+     config level selects from the declared facts, it never invents a value
+     the universe doesn't contain. (Found via z3 + thin_policy, A5 phase 2:
+     z3's Built lib ranges over [Dev] only; the verbatim Subset [Stable]
+     fabricated a lib Built@Stable world no realization backs — exactly the
+     over-generation the per-provision version axis exists to prevent.
+     Per-artifact: an artifact whose universe misses every Subset value
+     contributes no placement for that provision — e.g. thin z3 drops the
+     Built provision entirely and keeps only the fetch chain.) *)
   let resolve lvl all =
     match lvl with
     | Free -> ( match all with x :: _ -> [ x ] | [] -> [] )
-    | Subset vs -> vs
+    | Subset vs -> List.filter all ~f:(fun x -> List.mem vs x ~equal:Poly.equal)
     | Full -> all
   in
   (* provision + version levels apply PER-ARTIFACT (version additionally

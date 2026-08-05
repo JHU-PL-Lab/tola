@@ -661,3 +661,103 @@ let z3_spec : Canary_enumerate.project_spec =
               (Built, [ Canary_basic.Dev ]) ] );
           ( a_binding Canary_lang.Python Canary_mechanism.Cext,
             [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+
+(* ── A5 phase 2: dispatch / realization split + the [project_run] ── *)
+
+(** The DISPLAY artifact set for `spec` — wider than [z3_spec.ps_universe]:
+    the OCaml binding is shown (with its provider) even though it is not an
+    enumerated axis yet (see the [z3_spec] comment — it follows the chain). *)
+let z3_artifacts : Canary_enumerate.artifact_id list =
+  Canary_enumerate.
+    [ a_source;
+      a_lib;
+      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+      a_binding Canary_lang.Python Canary_mechanism.Cext ]
+
+(* Static per-artifact provider TABLE (typed data, A8) — the detail behind
+   each artifact's BASELINE provision (the all-Fetched stable chain), which
+   is what `spec`'s drift check compares against. Per-CHANNEL providers (the
+   arbipher fork the dev chain fetches, the dev-built lib) are the
+   realization's concern below; a provider table keyed by (artifact ×
+   channel) — which would also let a project PIN a Fetched version — is the
+   not-yet-wired provenance refinement (status §A / the Fetched-ambient
+   gotcha). The OCaml binding row is display-only detail (no baseline
+   placement → no drift check): the opam `z3` package the stable chain's
+   probe compiles against. *)
+let z3_providers :
+    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
+  Canary_enumerate.
+    [ (a_source, Canary_store_config.Source_repo z3_source_stable);
+      ( a_lib,
+        Canary_store_config.Sys_pkg
+          (Canary_store.mk_system_package_spec ~linux_pkg:"z3" ~macos_pkg:"z3"
+             ()) );
+      ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
+        Canary_store_config.Lang_pkg
+          { lang = Canary_lang.OCaml; pm = Canary_store.Opam; package = "z3" }
+      );
+      ( a_binding Canary_lang.Python Canary_mechanism.Cext,
+        Canary_store_config.Lang_pkg
+          { lang = Canary_lang.Python; pm = Canary_store.Pip;
+            package = "z3-solver" } ) ]
+
+(* ── dispatch / realization split (the A9-step-1 structure) ──
+   [scenario_case] is the PURE dispatch result — inspectable data computed
+   from enumeration coordinates only ([Canary_enumerate.provision_of]);
+   [realize] maps a case to its command templates, which are EXACTLY the
+   existing [mk_runner_spec ~source:…] raw specs (command churn zero — the
+   whole hand-written spec IS the realization; decomposing it into shared
+   templates is A9-step-2). *)
+type scenario_case =
+  | Dev_chain     (* build chain: source@Dev fetched, lib + OCaml binding
+                     built from it (cmake/ninja), opam-packed *)
+  | Stable_chain  (* fetch chain: sys-PM lib, opam binding, pip wheel *)
+
+(* Dispatch reads the LIB placement only: [Built] identifies the build
+   chain (the universe declares Built@Dev exclusively). NOT the source
+   channel — the stable world's assignment may carry either source channel
+   (the Fetched source is version-ambient; the two all-Fetched assignments
+   are one scenario), so the source coordinate is not a chain signal. *)
+let dispatch (a : Canary_enumerate.assignment) : scenario_case =
+  match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
+  | Canary_enumerate.Built -> Dev_chain
+  | _ -> Stable_chain
+
+let realize (c : scenario_case) distro : Canary_step_builder.runner_spec =
+  match c with
+  | Dev_chain -> mk_runner_spec ~source:z3_source_dev distro
+  | Stable_chain -> mk_runner_spec ~source:z3_source_stable distro
+
+(** z3 as a [Canary_project_run.project_run] — the generic path (`action z3`
+    → [canary_main.run_project_run]: enumerate → runner_spec → run), same as
+    sqlite/tiny-full. [z3_run] IS the project identity (ssot §6.1). A
+    function of [distro] (the realizations resolve local checkouts + PM
+    commands per distro); the closures stay lazy — nothing shells out until
+    a step runs.
+
+    The runner-provided [workspace] is IGNORED by the realizations: z3
+    builds into its guarded external trees (the contrib checkout's
+    build dir, `test -f`-guarded cmake — see the opam-sandbox gotcha), so a
+    scenario-id change never forces a z3 rebuild. Probe LOCATIONS
+    (build-tree / staged / sys-PM, 3 probe_lib steps in the dev chain) stay
+    INSIDE the realization — the location sub-axis is deliberately not
+    modeled (A5 phase 3; it is A9-step-2's acceptance test).
+
+    [pr_mismatch_probes] is EMPTY, deliberately: the stable-wheel demo (the
+    Python probe requires [z3.parser_context]; the z3-solver wheel doesn't
+    export it) does NOT fit the (consumer × channel × direction-vs-lib)
+    frame — its version-sensitive requirement is in the PROBE CODE against
+    the BINDING (the wheel, which bundles its own libz3), not a
+    binding↔native-lib channel pairing, and it is SCENARIO-INVARIANT (the
+    wheel is Fetched@Stable everywhere, so the xfail fires in every world —
+    the Ambient-edge finding). It stays declared where it is consumed:
+    [z3_contract_bindings] → [lower_expectation] → Expect_compat_failure →
+    xfail in `action`/`status`/`spec`. Folding probe-level roles into the
+    design-intent table is A7 material. *)
+let z3_run distro : Canary_project_run.project_run =
+  { pr_name = "z3";
+    pr_artifacts = z3_artifacts;
+    pr_spec = z3_spec;
+    pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
+    pr_provenance = z3_providers;
+    pr_mismatch_probes = [] }

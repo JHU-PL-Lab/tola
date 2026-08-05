@@ -1062,42 +1062,12 @@ let action_cmd =
         ]
       steps
   in
-  let run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro =
-    let dev_tag =
-      Canary_artifact_source.version_cache_tag distro
-        Canary_project_z3.z3_source_dev
-    in
-    let src = Canary_project_z3.z3_source_dev in
-    let spec = Canary_project_z3.mk_runner_spec ~source:src distro
-               |> with_cli_disabled cli_disabled in
-    let spec = if quick then Canary_step_builder.no_source spec else spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:[%string "z3/%{dev_tag}"]
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec
-    in
-    let src_stable = Canary_project_z3.z3_source_stable in
-    let spec_stable =
-      Canary_project_z3.mk_runner_spec ~source:src_stable distro
-      |> with_cli_disabled cli_disabled
-    in
-    let steps_stable =
-      Canary_step_builder.derive_steps ~root ~project:"z3/stable"
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec_stable
-    in
-    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
-      ~project_name:"z3" ~artifact_names:spec.artifact_name
-      ~variants:
-        [
-          (dev_tag, steps, Some (source_run_info ~project:"z3" distro src steps));
-          ( "stable",
-            steps_stable,
-            Some (source_run_info ~project:"z3" distro src_stable steps_stable)
-          );
-        ]
-      ()
-  in
+  (* run_z3 (raw-script run_project_multi over 2 hand-derived variants)
+     retired 2026-08-05, A5 phase 2 — `action z3` now goes through the
+     generic [run_project_run] over [Canary_project_z3.z3_run] (enumerate →
+     dispatch/realize → derive_steps → run). Casualties of the migration:
+     the z3-only `--quick` (no_source) and `--cache-path`/`--disable-contract`
+     plumbing, which the generic path doesn't carry (same as sqlite). *)
   let run_sqlite ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_sqlite.runner_spec in
     let steps =
@@ -1198,7 +1168,9 @@ let action_cmd =
         ]
       ()
   in
-  let run project quick failfast cache_path disable_contract_csv thin () =
+  (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
+     the flag stays parsed so existing invocations don't break. *)
+  let run project _quick failfast cache_path disable_contract_csv thin () =
     let root = "_out" in
     let distro = detect_distro () in
     let cli_disabled =
@@ -1215,7 +1187,15 @@ let action_cmd =
     | Some "zarith" -> run_zarith ~root ~failfast ~cache_path ~cli_disabled
     | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
     | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled
-    | Some "z3" -> run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro
+    | Some "z3" ->
+        (* z3 on the generic path (A5 phase 2): enumerate z3_spec →
+           dispatch/realize → run. --thin = the runner's Subset[Stable]
+           policy (drops the dev chain), free on any project_run. *)
+        if thin then
+          run_project_run
+            ~policy:(Canary_project_run.thin_policy ())
+            (Canary_project_z3.z3_run distro) ~root ~failfast
+        else run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny-full" ->
         (* the generic project runner drives tiny-full (convergence step 2);
@@ -1242,7 +1222,7 @@ let action_cmd =
         run_zarith ~root ~failfast ~cache_path ~cli_disabled;
         run_ssl ~root ~failfast ~cache_path ~cli_disabled;
         run_cairo ~root ~failfast ~cache_path ~cli_disabled;
-        run_z3 ~root ~quick ~failfast ~cache_path ~cli_disabled distro;
+        run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast;
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
@@ -1262,7 +1242,7 @@ let spec_cmd =
           ~doc:"Project to snapshot: @all (default) | tiny-full | sqlite | z3 | llvm")
   in
   let thin =
-    Arg.(value & flag & info [ "thin" ] ~doc:"tiny-full only: the thin Subset enumeration.")
+    Arg.(value & flag & info [ "thin" ] ~doc:"project_run projects (tiny-full, z3): the thin Subset[Stable] enumeration.")
   in
   let by_artifact =
     Arg.(
@@ -1283,12 +1263,9 @@ let spec_cmd =
   let run proj thin by_artifact json () =
     let d = lazy (detect_distro ()) in
     (* each variant carries its source_repo (a source artifact = a configured
-       repo) so the viewer can show it uniformly; the runner is unchanged. *)
-    let z3_variants () =
-      let d = Lazy.force d in
-      let mk s = (s.Canary_artifact_source.version, s, Canary_project_z3.mk_runner_spec ~source:s d) in
-      [ mk Canary_project_z3.z3_source_dev; mk Canary_project_z3.z3_source_stable ]
-    in
+       repo) so the viewer can show it uniformly; the runner is unchanged.
+       (z3 left this view 2026-08-05, A5 phase 2 — it is a project_run now;
+       llvm follows in phase 5, then print_spec_variants retires.) *)
     let llvm_variants () =
       let d = Lazy.force d in
       let mk s = (s.Canary_artifact_source.version, s, Canary_project_llvm.mk_runner_spec ~source:s d) in
@@ -1316,14 +1293,22 @@ let spec_cmd =
             Canary_project_tiny.tiny_full_thin_run
         else show Canary_project_tiny.tiny_full_run
     | Some "sqlite" -> show Canary_project_sqlite.sqlite_run
-    | Some "z3" -> show_variants "z3" (z3_variants ())
+    | Some "z3" ->
+        (* the generic project_run view (A5 phase 2); --thin works here as
+           on any project_run *)
+        if thin then
+          show
+            ~policy:(Canary_project_run.thin_policy ())
+            (Canary_project_z3.z3_run (Lazy.force d))
+        else show (Canary_project_z3.z3_run (Lazy.force d))
     | Some "llvm" -> show_variants "llvm" (llvm_variants ())
     | Some "@all" | None ->
         (* every project's spec in one command — the refactor cross-check *)
         let prs =
-          [ Canary_project_tiny.tiny_full_run; Canary_project_sqlite.sqlite_run ]
+          [ Canary_project_tiny.tiny_full_run; Canary_project_sqlite.sqlite_run;
+            Canary_project_z3.z3_run (Lazy.force d) ]
         in
-        let vs = [ ("z3", z3_variants ()); ("llvm", llvm_variants ()) ] in
+        let vs = [ ("llvm", llvm_variants ()) ] in
         if json then
           let projects =
             List.map (fun pr -> spec_json_t pr) prs

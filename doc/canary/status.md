@@ -113,11 +113,44 @@ edges resolved via `dep_mode`). Open:
      2 scenario identities; the ambient dedup is load-bearing, and the
      stable-first universe order keeps both surviving representatives
      channel-coherent (baseline = all-Fetched chain, as sqlite).
-  2. *dispatch/realize*: `scenario_case = Dev_chain | Stable_chain`;
-     `realize` = the existing `mk_runner_spec ~source:…` (the whole raw
-     spec becomes the realization — command churn ~zero); `z3_run :
-     project_run` (+ providers, + mismatch-probe roles for the
-     stable-wheel demo); `action z3` → `run_project_run`.
+  2. ~~*dispatch/realize*~~ — **DONE 2026-08-05.** `scenario_case =
+     Dev_chain | Stable_chain`; `dispatch` reads the LIB placement ONLY
+     (Built ⇒ dev chain — the source coordinate is no chain signal: the
+     stable world's representative may carry either ambient source
+     channel); `realize` = the existing `mk_runner_spec ~source:…`
+     verbatim (command churn zero); `z3_run : distro → project_run`
+     (realizations ignore the runner workspace — z3's guarded external
+     build trees). `action z3` + `spec z3` (+ `@all`, `--json`, `--thin`)
+     → the generic path; retired: `run_z3`, z3's `spec` variant view,
+     z3-only `--quick`/`--cache-path` plumbing. Run order is now
+     stable-chain-first (baseline = fetch chain, as sqlite). Pins added:
+     dispatch coordinates, provider↔baseline drift. Verified live:
+     `action z3 --thin` runs the stable chain via `run_project_run`,
+     parser_context surfaces as `xfail probe_binding_python`, and
+     `spec z3` joins the verdict (`✓ xfail` baseline) — most of phase 4's
+     acceptance, ahead of schedule. THREE findings:
+     (a) **`pr_mismatch_probes = []`, deliberately** — the plan wanted
+     "mismatch-probe roles for the stable-wheel demo", but the demo does
+     not fit the (consumer × channel × direction-vs-lib) frame: its
+     version-sensitive requirement is PROBE CODE vs the BINDING (the
+     wheel bundles its own libz3), and it is SCENARIO-INVARIANT (wheel
+     Fetched@Stable everywhere — the Ambient-edge finding), so no row
+     would ever fire. It stays declared where consumed
+     (`z3_contract_bindings` → xfail). Probe-level roles in the
+     design-intent table = A7 material.
+     (b) **`Subset` config bug found+fixed in the enumerate core**:
+     `resolve` returned the Subset list VERBATIM, so `thin_policy`
+     fabricated a `lib Built@Stable` world z3's universe never declared
+     (Built ranges over [Dev] only) — dispatch would have realized the
+     dev chain under a stable-labeled scenario id. Fix: Subset now
+     INTERSECTS the declared universe (policy selects facts, never
+     invents; universe order preserved). tiny-full thin unchanged (its
+     Built axis contains Stable). Pinned:
+     `enumerate.subset_intersects_universe`.
+     (c) `compat`/`verify` still glob the OLD variant dirs (`dev_*`,
+     `stable`) under `projects/z3/`; new runs are keyed by scenario dirs
+     (`lib-fetched_…`). Reconcile in phase 4/5 (old cached dirs still
+     satisfy them meanwhile).
   3. *Locations stay INSIDE the realization* (3 probe_lib steps per
      scenario, as today) — the location sub-axis is deliberately NOT
      modeled here; it's A9-step-2's acceptance test.

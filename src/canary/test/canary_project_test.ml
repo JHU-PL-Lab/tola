@@ -552,6 +552,34 @@ let thin_config_level_test : pure_test =
                  | B.Stable -> true
                  | B.Dev -> false))) }
 
+(* Subset INTERSECTS the universe (found via z3 + thin, A5 phase 2): on a
+   z3-shaped spec (lib Fetched@Stable | Built@Dev — Built has NO Stable),
+   version Subset [Stable] must NOT fabricate a Built@Stable world; the Built
+   provision simply contributes nothing and only the fetch chain remains. *)
+let subset_intersects_universe_test : pure_test =
+  { name = "enumerate.subset_intersects_universe";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let spec : EN.project_spec =
+        { ps_universe =
+            [ (EN.a_source, EN.[ (Fetched, B.[ Stable; Dev ]) ]);
+              ( EN.a_lib,
+                EN.[ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ] ) ] }
+      in
+      let thin =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config =
+                EN.{ provision = Full;
+                     version = Subset [ B.Stable ];
+                     mutation = Free };
+              mutations = [] }
+          spec
+      in
+      List.length thin = 1
+      && List.for_all thin ~f:(fun a ->
+             EN.equal_provision (EN.provision_of a EN.a_lib) EN.Fetched)) }
+
 (* Dispatch-coordinate utilities (the dispatch/realization split): a project's
    runner dispatch reads ONLY these general coordinates. [channel_of] reads the
    placed channel; [bad_placements] extracts the Bad-quality (artifact, tag)
@@ -845,6 +873,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
+      subset_intersects_universe_test;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]

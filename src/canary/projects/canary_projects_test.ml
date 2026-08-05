@@ -80,4 +80,58 @@ let z3_spec_pins_variants : Canary_project_test.pure_test =
       (* baseline (enumeration head) = the all-Fetched stable chain *)
       && match asgs with first :: _ -> is_stable_world first | [] -> false) }
 
-let tests : Canary_project_test.pure_test list = [ z3_spec_pins_variants ]
+(* A5 phase 2: the dispatch is pure data over enumeration coordinates —
+   pin that it reads the LIB placement only (Built ⇒ the dev build chain;
+   anything else ⇒ the stable fetch chain), so BOTH all-Fetched assignments
+   (either source channel) dispatch to Stable_chain: the dedup-surviving
+   representative realizes the same chain no matter which one runs.
+   [realize] (= mk_runner_spec) is deliberately NOT called here — command
+   templates shell into distro/PM detection; dispatch must stay testable
+   without any of that. *)
+let z3_dispatch_pins_chains : Canary_project_test.pure_test =
+  { name = "z3.dispatch_reads_lib_placement_only";
+    check = (fun () ->
+      let asgs =
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ())
+          Canary_project_z3.z3_spec
+      in
+      let cases = List.map asgs ~f:Canary_project_z3.dispatch in
+      let n_dev =
+        List.count cases ~f:(function
+          | Canary_project_z3.Dev_chain -> true
+          | Canary_project_z3.Stable_chain -> false)
+      in
+      let n_stable = List.length cases - n_dev in
+      n_dev = 1 && n_stable = 2
+      (* the dev chain is exactly the Built-lib assignment *)
+      && List.for_all2_exn asgs cases ~f:(fun a c ->
+             match c with
+             | Canary_project_z3.Dev_chain ->
+                 EN.equal_provision (EN.provision_of a EN.a_lib) EN.Built
+             | Canary_project_z3.Stable_chain ->
+                 not
+                   (EN.equal_provision (EN.provision_of a EN.a_lib) EN.Built))) }
+
+(* A5 phase 2: the provider table backs the BASELINE provisions — pin the
+   drift check `spec` performs at display time (provider's coarse provision
+   == the enumerated baseline placement, for every artifact the enumeration
+   places), so the declared detail can't contradict the axis. *)
+let z3_providers_match_baseline : Canary_project_test.pure_test =
+  { name = "z3.providers_match_baseline_provisions";
+    check = (fun () ->
+      match
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ())
+          Canary_project_z3.z3_spec
+      with
+      | [] -> false
+      | baseline :: _ ->
+          List.for_all Canary_project_z3.z3_providers ~f:(fun (id, p) ->
+              match EN.placement_of baseline id with
+              | None -> true (* display-only artifact — no axis to contradict *)
+              | Some pl ->
+                  EN.equal_provision
+                    (Canary_store_config.provision_of_provider p)
+                    pl.EN.provision)) }
+
+let tests : Canary_project_test.pure_test list =
+  [ z3_spec_pins_variants; z3_dispatch_pins_chains; z3_providers_match_baseline ]
