@@ -62,9 +62,12 @@ runner; only the materializer knows a tag → a fault. Artifacts are
 **vendored** — scenarios are *assembled* from pre-built variant resources
 (overlay, no rebuild), so combinations are just more overlays and a
 binding-over-bad-lib is a free deploy mismatch. Key symbols:
-`Canary_enumerate.{quality,build_id,good}`; `Canary_scenario.lower_expectation`
-(oracle path) vs `lower_expectation_agnostic` (P2b — derives the expectation
-by inspection, no per-scenario `violates`); `Canary_tiny_scenario.{tiny_full_spec,
+`Canary_enumerate.{quality,build_id,good}`;
+`Canary_scenario.lower_expectation_agnostic` — THE one framework lowering
+since A7 (derives the expectation by inspection); the ORACLE is a
+tiny-factory combinator over it (`expectation_of_entry`: restrict to the
+recipe's violated contracts + gate on manifestation + strengthen
+Derived→must-fail); `Canary_tiny_scenario.{tiny_full_spec,
 tiny_full_assignments,run_tiny_full}`; `Canary_tiny_workspace.{emit_resource,
 assemble,assemble_check}` (P3 step 2, vendored emit+assemble).
 
@@ -164,7 +167,7 @@ reconciling with, not duplicating.
 | `src/canary/action/canary_step_model.ml`            | `step_expectation` (incl. `Expect_compat_failure`), `step` (was `action_step` pre-2026-07-21), `logger`, `version_info`, `symbol_*` |
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_step_builder.ml`          | `runner_spec` (was `project_spec` pre-2026-07-21), `derive_steps`, shared command templates, check_post compositors — the step list builder |
-| `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`, `lower_expectation` — the shared expectation lowering used by tiny/z3/llvm); `derive_scenarios`; `related_artifacts_of_actions`. |
+| `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`); `lower_expectation_agnostic` — THE one expectation lowering since A7 (the oracle variant retired; tiny1 composes it as a factory combinator); `derive_scenarios`; `related_artifacts_of_actions`. |
 | ~~`canary_scenario_util.ml`~~ (deleted 2026-08-05)  | Folded back into `canary_tiny_scenario.ml` — the "project-agnostic scenario helpers" never gained a second consumer. |
 | `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
 | `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |

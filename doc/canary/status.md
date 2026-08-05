@@ -291,6 +291,18 @@ edges resolved via `dep_mode`). Open:
      red being `type_wrong`'s build-site c6 expectation
      (unexpected_success — pre-existing per the committed docs
      results.json; a §B inspector/firing-site question, not A7).
+  3b. **Oracle = a combinator, not a sibling (user-settled 2026-08-05).**
+     `lower_expectation` DELETED from the framework: with one consumer
+     left, its content decomposed into (restrict bindings to the recipe's
+     violated contracts) + (gate on manifestation) + (strengthen
+     Derived → must-fail) — all ORACLE POLICY, now composed
+     tiny-factory-locally over the ONE framework lowering
+     (`Canary_tiny_scenario.expectation_of_entry`). The framework owns
+     exactly the framework-agnostic question — how a check derives from
+     declared bindings at a firing site. Verified cold on all three
+     oracle paths: c1 must-fail confirmed, grep-path confirmed,
+     type_wrong still red (`unexpected_success` — the answer-key
+     property). tiny run 21/22 unchanged.
   4. *ssl hand-written → derived From_artifact*: add an mli inspect to
      ssl's fetch_binding + a binding watchlist (`native_library_version`),
      declare `ssl_contract_bindings` (c2 at probe_binding OCaml), replace

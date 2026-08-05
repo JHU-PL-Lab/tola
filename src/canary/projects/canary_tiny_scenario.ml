@@ -2254,23 +2254,46 @@ let runner_spec = base_runner_spec
     module 2026-07-08. See [doc/canary/design/tiny.md] §3 for
     the derivation shape. *)
 
-(** Tiny's per-scenario expectation. Thin wrapper over
-    {!Canary_scenario.lower_expectation}: extract violates + langs +
-    has_manifest from the entry and pass tiny's bindings table.
+(** Tiny's per-scenario ORACLE expectation — a tiny-factory COMBINATOR over
+    the one framework derivation (A7 refactor, 2026-08-05: the old sibling
+    [Canary_scenario.lower_expectation] is retired; how a check derives
+    from declared bindings at a firing site is framework machinery, and
+    the oracle-ness is factory POLICY layered on top). Three policy moves:
 
-    Post-Task-2-Phase-A (2026-07-21): the lowering itself lives in
-    project-agnostic [Canary_scenario]; z3/llvm/sqlite can share the
-    same lowering by supplying their own bindings tables. *)
+    - RESTRICT: consult only the contracts this scenario's recipe VIOLATES
+      (a plain filter on the bindings data — the recipe made the fault, so
+      it knows which contract it broke);
+    - GATE: a scenario whose fault has no probe manifestation expects
+      success everywhere ([has_probe_manifestation]);
+    - STRENGTHEN: [Expect_compat_derived] (inspection decides) →
+      [Expect_compat_failure] (failure REQUIRED). This is the answer-key
+      property: a watchlist-blind inspector must go RED here (see
+      type_wrong / the c6 gap), where the derived path would silently
+      expect success. Grep-sourced firings are already must-fail
+      ([Expect_failure]) and pass through unchanged. *)
 let expectation_of_entry (entry : scenario_spec)
   : Canary_basic.action -> Canary_store.location option ->
     Canary_step_model.step_expectation
   =
   let module CS = Canary_scenario in
-  CS.lower_expectation
-    ~bindings:tiny_contract_bindings
-    ~violates:entry.recipe.violates
-    ~langs:(CS.langs_of_scenario entry.scenario)
-    ~has_manifest:(CS.has_probe_manifestation entry.scenario)
+  let module SM = Canary_step_model in
+  if not (CS.has_probe_manifestation entry.scenario) then
+    fun _ _ -> SM.Expect_success
+  else
+    let bindings =
+      Base.List.filter tiny_contract_bindings ~f:(fun (b : CS.contract_binding) ->
+          Base.List.mem entry.recipe.violates b.CS.contract
+            ~equal:Base.Poly.equal)
+    in
+    let derive =
+      CS.lower_expectation_agnostic ~bindings
+        ~langs:(CS.langs_of_scenario entry.scenario)
+    in
+    fun action loc ->
+      match derive action loc with
+      | SM.Expect_compat_derived { inputs; version_info } ->
+          SM.Expect_compat_failure { inputs; version_info }
+      | e -> e
 
 (** The mutation-AGNOSTIC expectation for tiny-full: derived from the
     spec-level contract bindings + inspection alone — no per-scenario

@@ -272,80 +272,22 @@ let binding_has_live_firing
       | From_artifact _ | From_behavior_grep _ -> true
       | Placeholder _ -> false)
 
-(** Project-agnostic expectation lowering — given a project's
-    bindings table + the (contracts × langs × has_manifest)
-    context of a scenario, produce the [action → loc →
-    step_expectation] function the runner consumes.
+(* [lower_expectation] — the ORACLE lowering (~violates/~has_manifest, emitted
+   must-fail [Expect_compat_failure]) — was RETIRED here 2026-08-05 (A7): its
+   last consumer, tiny1, now composes the same behavior as a factory-local
+   COMBINATOR over {!lower_expectation_agnostic} (restrict the bindings data
+   to the recipe's violated contracts, gate on manifestation, strengthen
+   Derived → must-fail) — see [Canary_tiny_scenario.expectation_of_entry].
+   The framework keeps ONE lowering: how a check DERIVES from declared
+   bindings at a firing site; oracle-ness is caller policy, not machinery. *)
 
-    Extracted from tiny's [expectation_of_entry] 2026-07-21
-    (Task 2 Phase A) so other projects (z3, llvm, sqlite) can
-    share the same lowering without re-implementing the switch.
-
-    Precedence when multiple sources fire at the same site:
-    From_artifact > From_behavior_grep > Placeholder-skip.
-    Rules with no [firing_site] equivalent (Build_lib, Fetch, …)
-    and scenarios with [has_manifest = false] fall through to
-    [Expect_success]. *)
-let lower_expectation
-    ~(bindings : contract_binding list)
-    ~(violates : Canary_compat.contract_id list)
-    ~(langs : Canary_lang.lang list)
-    ~(has_manifest : bool)
-  : Canary_basic.action -> Canary_store.location option ->
-    Canary_step_model.step_expectation
-  =
-  let open Base in
-  let lookup_sources action loc =
-    match firing_site_of_action action with
-    | None -> []
-    | Some site ->
-      List.concat_map violates ~f:(fun c ->
-        List.concat_map langs ~f:(fun l ->
-          match
-            List.find bindings ~f:(fun b ->
-              Poly.equal b.contract c && Poly.equal b.lang l)
-          with
-          | None -> []
-          | Some b ->
-            List.filter_map b.firings ~f:(fun f ->
-              if Poly.equal f.site site
-                 && loc_filter_passes f.loc_filter loc
-              then Some f.source
-              else None)))
-  in
-  fun action loc ->
-    if not has_manifest then Canary_step_model.Expect_success
-    else
-      let sources = lookup_sources action loc in
-      let picked_artifact =
-        List.find_map sources ~f:(function
-          | From_artifact { inputs; version_info } ->
-            Some (inputs, version_info)
-          | _ -> None)
-      in
-      match picked_artifact with
-      | Some (inputs, version_info) ->
-        Canary_step_model.Expect_compat_failure { inputs; version_info }
-      | None ->
-        let picked_grep =
-          List.find_map sources ~f:(function
-            | From_behavior_grep { contains_any; version_info } ->
-              Some (contains_any, version_info)
-            | _ -> None)
-        in
-        (match picked_grep with
-         | Some (contains_any, version_info) ->
-           Canary_step_model.Expect_failure { contains_any; version_info }
-         | None -> Canary_step_model.Expect_success)
-
-(** {b P2b spike (2026-08-02) — mutation-agnostic expectation lowering.}
-    Like {!lower_expectation} but WITHOUT the per-scenario oracle
-    ([~violates] / [~has_manifest]): it derives the expectation from the
-    project's [bindings] table + the (action, loc) ALONE, by UNIONing every
-    contract's [From_artifact] inputs at the matching firing site and letting
-    the compat runner ([predicted_contains_any_v2]) DISCOVER which contract
-    actually breaks by inspecting the materialized artifacts. Nobody tells it
-    which contract fires — the same way a real project works (status §1a P2b).
+(** {b The expectation lowering} (P2b, 2026-08-02; THE framework lowering
+    since A7 phase 3): derives the expectation from the project's [bindings]
+    table + the (action, loc) ALONE, by UNIONing every contract's
+    [From_artifact] inputs at the matching firing site and letting the compat
+    runner ([predicted_by_contract_v2]) DISCOVER which contract actually
+    breaks by inspecting the materialized artifacts. Nobody tells it which
+    contract fires — the same way a real project works (status §1a P2b).
 
     Each contract's [predict] reads only its own input kinds, so unioning is
     safe: c1 fires iff a symbol vanished, c2 iff the mli lost a name, etc.
