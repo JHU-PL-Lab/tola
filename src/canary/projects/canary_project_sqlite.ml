@@ -180,9 +180,9 @@ let runner_spec : Canary_step_builder.runner_spec =
    (the [runner_spec] above); Python sqlite3 is stdlib. So sqlite pre-places
    NOTHING — canary's role is to perform the fetch/build actions into the
    runner-provided scenario dir. Positive-only (a real project isn't mutated);
-   the [runner_spec]'s default expectation is success. *)
-let project : Canary_project.project =
-  { name = "sqlite"; contract_bindings = [] }
+   the [runner_spec]'s default expectation is success. [sqlite_run] below IS
+   the project identity (A6: the never-read [Canary_project.project] bundle
+   was deleted 2026-08-05). *)
 
 let sqlite_artifacts =
   Canary_enumerate.

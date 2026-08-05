@@ -23,10 +23,10 @@
 
 module TS = Canary_tiny_scenario
 
-(** Project identity (SSOT §6.1 bundle): name + the contract firing table
-    canary lowers expectations through. *)
-let project : Canary_project.project =
-  { name = "tiny-full"; contract_bindings = TS.tiny_contract_bindings }
+(* Project identity IS [tiny_full_run] below (SSOT §6.1 top level; A6: the
+   never-read [Canary_project.project] bundle was deleted 2026-08-05). The
+   contract firing table stays where it is consumed:
+   [TS.tiny_contract_bindings] → [tiny_expectation_agnostic]. *)
 
 (* ── the declarative project surface ── *)
 

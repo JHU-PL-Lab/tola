@@ -12,16 +12,18 @@
     This module is the enumeration algorithm. [run_config] instantiates it
     with a [config] — one [level] (`Free`/`Subset`/`Full`) per axis (ssot
     §4.2); [tiny_slice] and [general_slice] are the two canonical configs.
-    Backing tiny's designed 22 and each project's variants
-    out to *be* projections of this enumeration algorithm (replacing the two hand-written
-    enumerations in `canary_scenario.ml` / the per-project variant lists) is
-    the convergence named in §4.2 — a later round. For now the enumeration algorithm stands
-    alongside them, with tests pinning each projection's shape.
+    The convergence LANDED (2026-08-05): sqlite + tiny-full enumerate their
+    entire scenario set from declared [project_spec]s through [enumerate];
+    z3/llvm's hand-written variant lists remain until A5.
 
-    Separate file only while it stands alongside the hand-written
-    enumerations: once the convergence lands (this enumeration algorithm backing both),
-    **fold this into `canary_scenario.ml` (or a scenario util)** — it is the
-    scenario-enumeration core and belongs beside the scenario types.
+    FILE PLACEMENT (revised 2026-08-05 — supersedes the old "fold this into
+    canary_scenario.ml" note): this module STAYS the standalone
+    concrete-scenario core. `canary_scenario.ml` holds the *abstract*
+    Sc.N pattern catalogue + expectation vocabulary — a different sense of
+    "scenario" (design/scenario_terms.md); merging the two files would fuse
+    exactly what that note wants separated. If anything, the pattern half
+    migrates out of canary_scenario.ml when the terminology split (T2)
+    rides F5.
 
     The enumeration algorithm is **polymorphic in the mutation** (['m]): it is pure
     combinatorics — which artifacts are provided and from where, and which

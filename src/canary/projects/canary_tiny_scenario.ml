@@ -107,8 +107,19 @@ let a_python = Canary_basic.Binding Canary_lang.Python
 
 (* ----- abstract-mutation helper ----- *)
 
-(* [pert] moved to Canary_scenario_util 2026-07-08. *)
-let pert = Canary_scenario_util.pert
+(* (was Canary_scenario_util 2026-07-08 → folded back 2026-08-05: the
+   "project-agnostic scenario helpers" file never gained a second consumer —
+   these are tiny's display/oracle helpers.) *)
+
+(** Build a {!Canary_scenario.origin} option wrapping a Mutation — the common
+    case where a bad scenario's origin is a mutation (all tiny Bs entries). *)
+let pert
+    ~(target : Canary_basic.artifact_kind)
+    ~(kind : Canary_scenario.mutation_kind)
+    ~(manifest : Canary_scenario.manifest)
+    ~(detector : Canary_scenario.detector)
+    : Canary_scenario.origin option =
+  Some (Canary_scenario.Mutation { target; kind; manifest; detector })
 
 (* ================================================================
    THE 15 CONCRETE INSTANTIATIONS — ordered per SSOT §5.1 for
@@ -610,8 +621,21 @@ let derived_scenarios : Canary_scenario.scenario list =
 (** Does a hardcoded Bs entry match a derived cell? Match action:
     same good scenario (via [belongs_to] intersection) + same
     target artifact + same kind. *)
-(* [matches_derived_cell] moved to Canary_scenario_util 2026-07-08. *)
-let matches_derived_cell = Canary_scenario_util.matches_derived_cell
+(** Does a bad scenario fill a derived cell? Match action: same Good scenario
+    (via [belongs_to] intersection) + same target artifact + same kind. Used
+    to compute the "filled vs empty" coverage view over the
+    [derive_scenarios] enumeration. *)
+let matches_derived_cell
+    (bad : Canary_scenario.scenario)
+    (derived : Canary_scenario.scenario) : bool =
+  match bad.origin, derived.origin with
+  | Some (Canary_scenario.Mutation bp),
+    Some (Canary_scenario.Mutation dp) ->
+    Poly.equal bp.target dp.target
+    && Poly.equal bp.kind dp.kind
+    && List.exists bad.belongs_to ~f:(fun b ->
+         List.mem derived.belongs_to b ~equal:String.equal)
+  | _ -> false
 
 (* ================================================================
    §7.2 PHASE 3 — RECIPE SYNTHESIS FROM DERIVED CELLS
@@ -1301,11 +1325,37 @@ let iter_scenario_specs
   List.iteri all_scenario_specs
     ~f:(fun i spec -> f ~index:(i + 1) ~total:n ~spec)
 
-(* detector_short / artifact_index / bad_target_str moved to
-   Canary_scenario_util 2026-07-08. *)
-let detector_short = Canary_scenario_util.detector_short
-let artifact_index = Canary_scenario_util.artifact_index
-let bad_target_str = Canary_scenario_util.bad_target_str
+(** Compact contract label — ["c1"..."c8"] via
+    {!Canary_compat.string_of_contract_id}, or ["gap"] for [Detector_gap]. *)
+let detector_short = function
+  | Canary_scenario.Wired c -> Canary_compat.string_of_contract_id c
+  | Canary_scenario.Detector_gap -> "gap"
+
+(** 1-based index of an artifact in a scenario's [related_artifacts], or
+    [None] if not present. *)
+let artifact_index (sc : Canary_scenario.scenario)
+    (target : Canary_basic.artifact_kind) : int option =
+  let rec find i = function
+    | [] -> None
+    | a :: _ when Poly.equal a target -> Some i
+    | _ :: rest -> find (i + 1) rest
+  in
+  find 1 (Canary_scenario.related_artifacts sc)
+
+(** For a bad scenario, format its target relative to a Good scenario's
+    [related_artifacts]: ["A<idx>"] or ["A<idx> (behavior)"] for
+    [On_behavior] kind. Used by display code. *)
+let bad_target_str (good : Canary_scenario.scenario)
+    (bad : Canary_scenario.scenario) : string =
+  match bad.origin with
+  | None | Some (Canary_scenario.Version_mismatch | Canary_scenario.Packaging) -> ""
+  | Some (Canary_scenario.Mutation p) ->
+    let idx_str = match artifact_index good p.target with
+      | Some i -> Printf.sprintf "A%d" i
+      | None -> "A?" in
+    (match p.kind with
+     | On_behavior -> Printf.sprintf "%s (behavior)" idx_str
+     | On_artifact _ -> idx_str)
 
 (** Classify a good-scenario id by its language qualifier.
     "Sc.N" (no suffix) → Shared. "Sc.N.OCaml" → OCaml.
@@ -1456,8 +1506,19 @@ let name_of_string (n : string) : string =
     output ("Symbol", "Type", "ABI", …). Distinct from
     [Canary_compat.string_of_contract_id] which emits "c1".."c8".
     Used by [print_expected] to preserve the JSON shape. *)
-(* [violates_label] moved to Canary_scenario_util 2026-07-08. *)
-let violates_label = Canary_scenario_util.violates_label
+(** Human-readable contract label — ["Symbol"], ["ABI"], ["Type"], …
+    Distinct from {!Canary_compat.string_of_contract_id} (["c1"..."c8"]).
+    Used by tiny's [confirm_ill.json] and [tiny expected] output for legacy
+    parity with the Python harness. *)
+let violates_label = function
+  | Canary_compat.C1 -> "Symbol"
+  | C2 -> "API-completeness"
+  | C3 -> "Behavior"
+  | C4 -> "ABI"
+  | C5 -> "SymbolVersion"
+  | C6 -> "Type"
+  | C7 -> "API-repacking"
+  | C8 -> "API-faithfulness"
 
 let json_of_entry (e : scenario_spec) : Yojson.Basic.t =
   `Assoc [
@@ -2275,18 +2336,7 @@ let runner_spec_of_name
       (Printf.sprintf
          "Canary_project_tiny: no entry with name %S" name)
 
-(** Tiny's top-level [project] bundle (Task 2 Step 1, 2026-07-21) —
-    the [Canary_project.project] value at the top of SSOT §6.1's
-    operational taxonomy.
-
-    The concrete monomorphic shape only carries [name] and
-    [contract_bindings]. Tiny's scenarios stay at the module level
-    (namespace-owned by [Canary_tiny_scenario.all_scenario_specs])
-    rather than embedded in the shared type — see the module
-    docstring in [canary_project.ml] for why. Nothing changes at
-    the runner level: [canary_main.ml]'s [tiny run] still walks
-    [all_scenario_specs] directly. *)
-let tiny_project : Canary_project.project = {
-  name = "tiny";
-  contract_bindings = tiny_contract_bindings;
-}
+(* (A6, 2026-08-05: the [tiny_project : Canary_project.project] bundle that
+   lived here was deleted with the never-read [Canary_project] type — tiny1's
+   runner walks [all_scenario_specs] directly and always did; tiny-full's
+   identity is [Canary_project_tiny.tiny_full_run].) *)

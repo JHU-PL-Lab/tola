@@ -206,7 +206,22 @@ Steps:
   filter. Cross-check generated tiny-full vs projected tiny1.
 - **A5 — wire z3/llvm/ssl** onto `project_spec`; retire `run_project_multi` +
   `print_spec_variants`.
-- **A6 — collapse** `Canary_project.project` into `project_run` — one identity.
+- **A6 — one project identity ✅** (2026-08-05). Audit found
+  `Canary_project.project` was WRITE-ONLY ceremony — nothing read the three
+  bundle values or their `contract_bindings` field (projects pass their
+  `*_contract_bindings` lists straight to expectation lowering). Resolved by
+  DELETION, not merge: `action/canary_project.ml` + the dead values removed;
+  `Canary_project_run.project_run` IS the §6.1 top-level identity for
+  generic projects (z3/llvm's stays their variant list until A5). Same pass:
+  `canary_scenario_util.ml` (tiny-only despite its "project-agnostic" hope,
+  no second consumer since 2026-07-08) folded back into
+  `canary_tiny_scenario.ml`; `canary_enumerate.ml`'s stale "fold into
+  canary_scenario.ml" header REVERSED (it stays the standalone
+  concrete-scenario core — merging would fuse the two senses
+  scenario_terms.md separates). action/ scenario files now:
+  `canary_scenario.ml` (Sc.N patterns + expectation vocab; split queued with
+  T2/F5) · `canary_scenario_coverage.ml` (legacy, F5) · `canary_enumerate.ml`
+  (the concrete core).
 - **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
   hand-written → derived; §1c #1).
 - **A8 — spec tables as DATA ✅** (2026-08-05). `project_spec` is now ONE

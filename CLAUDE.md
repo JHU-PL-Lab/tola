@@ -163,10 +163,10 @@ reconciling with, not duplicating.
 | `src/canary/action/canary_path_table.ml`            | 15-pattern table + `pp_job_path_table` / `pp_job_path_table_md` (CLI `paths` / `paths-md`)             |
 | `src/canary/action/canary_step_builder.ml`          | `runner_spec` (was `project_spec` pre-2026-07-21), `derive_steps`, shared command templates, check_post compositors — the step list builder |
 | `src/canary/action/canary_scenario.ml`              | `scenario` type + Sc.1..Sc.6 patterns (`good_scenarios`); mutation vocab (`mutation_kind`, `origin`); contract binding vocab (`firing_site`, `loc_filter`, `expectation_source`, `firing`, `contract_binding`, `lower_expectation` — the shared expectation lowering used by tiny/z3/llvm); `derive_scenarios`; `related_artifacts_of_actions`. |
-| `src/canary/action/canary_scenario_util.ml`         | Small project-agnostic helpers extracted from tiny (`pert`, `matches_derived_cell`, `detector_short`, `violates_label`, `artifact_index`, `bad_target_str`) — currently only consumed by tiny (via `let alias = ...`). |
+| ~~`canary_scenario_util.ml`~~ (deleted 2026-08-05)  | Folded back into `canary_tiny_scenario.ml` — the "project-agnostic scenario helpers" never gained a second consumer. |
 | `src/canary/action/canary_scenario_coverage.ml`     | Store-lifecycle **abstract-stage** catalogue + per-project coverage marks (`Covered`/`Unspecified`/`Disabled` → `✓`/`-`/`⊘`). `run_app` realized by `Probe_app`\|`Probe_binding`; `build_binding` gated on `is_static_binding_lang`. Drives `canary scenarios`. |
 | `src/canary/action/canary_enumerate.ml`             | The `(provision × version × mutation)` enumeration algorithm (ssot §4.2) — pure product-then-filter, polymorphic in the mutation. Ranges over `artifact` (= `Canary_basic.artifact_kind`); `placement` (per-artifact provision + version), `run_config`/`level`/`config`, `tiny_slice`/`general_slice`, `provision_of_actions`. Folds into `canary_scenario.ml` when the convergence's replacement lands. |
-| `src/canary/action/canary_project.ml`               | `Canary_project.project` — top-level bundle at the SSOT §6.1 taxonomy top (name + contract_bindings). Concrete monomorphic; each project's module owns its scenarios directly. Only `tiny_project` inhabited today (z3/llvm/sqlite bundles deferred). |
+| ~~`canary_project.ml`~~ (deleted 2026-08-05, A6)    | The `Canary_project.project` bundle was never read by anything — `Canary_project_run.project_run` IS the project identity (§6.1 top) for generic projects; contract bindings live where consumed (`*_contract_bindings` → expectation lowering). |
 | `src/canary/backend/canary_local_runner.ml`         | `run_step`, `run_graph`, `merge_step_statuses` + the cross-run cache (`load_cache`, `cache_is_success`, …) — executes the step list locally (in-process backend) |
 | `src/canary/backend/canary_run_info.ml`              | `run_info` + `run_project` / `run_project_multi` orchestrators + `save_run_state` / `view_project`     |
 | `src/canary/backend/canary_gh.ml`           | GitHub Actions YAML rendering; resolves `Expect_compat_failure` predictions at gen time                |
@@ -241,11 +241,11 @@ version_info }` — the compat-failure inputs are read at runtime by
 `surface/canary_compat_run.ml`'s `predicted_contains_any_v2 ~resolve`
 which iterates the registered contracts over the inputs bag to compute
 predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
-etc.). `Canary_project.project` (`action/canary_project.ml`) is the
-top-level bundle name + contract_bindings; each project's module owns
-its scenarios directly (tiny has 22 scenarios via factory; z3/llvm have
-2-3 variants each via `mk_runner_spec ~source`; sqlite has none —
-positive-only). `run_project_multi` runs the scenarios/variants list
+etc.). The top-level project identity is `Canary_project_run.project_run`
+for generic projects (A6 2026-08-05: the never-read `Canary_project.project`
+bundle was deleted); each project's module owns its scenarios directly
+(tiny1 has 22 via factory; z3/llvm have 2-3 variants each via
+`mk_runner_spec ~source`). `run_project_multi` runs the scenarios/variants list
 per project; tiny's factory (`canary_tiny_scenario.ml`) restricts
 each `runner_spec` to one scenario's world, z3/llvm build one
 `runner_spec` per source variant. **The generic path** (sqlite +
