@@ -20,7 +20,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 14. **z3 cmake `Z3_BUILD_LIBZ3_CORE=OFF` bug** — cmake ignores `Z3_ROOT`
     and binding flags. Workaround: always build libz3 from source in opam
-    template. See `doc/z3_bug_api.md`.
+    template. See `doc/note/z3_bug_api.md`.
 
 16, 20, 31, 35, 41, 42. **API compatibility model** — binding_api.deps
     split, C API surface (consumer/provider cross-check + provider-vs-
@@ -29,23 +29,24 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     documented in `doc/canary/research/surface_draft/implementation.md` §2.7. Open items
     (#35, #20, #41, #42) remain.
 
-43. **L1b — versioned symbol requirements in compat check** — `inspect_native.py`
-    already records `versioned_req` (e.g. `{"GLIBC_2.31": 3}`) per artifact.
-    Today's `check_c_compat` is L0 only (set inclusion of names). Lift it to
-    L1b: a binding requires a specific @VER suffix on a symbol, the lib must
-    provide that or higher. Adds glibc/libstdc++ floor checking — predicts
-    failures from binaries built on newer distros that won't run on older
-    ones, even when symbol names match. See
-    `doc/canary/research/surface_draft/implementation.md` §2.7 (c5 cmp_sym_version).
+~~43. **L1b — versioned symbol requirements in compat check**~~ —
+    **SHIPPED** (Phase 15.4). `check_sym_version` (c5 `cmp_sym_version`)
+    lives at `surface/canary_compat.ml:305`; the lib gained a `tiny.map`
+    version script and canary diffs `Versioned_exports` vs `Versioned_req`.
+    Demoed via the `lib_symbol_version_broken` variant.
 
-44. **L2 — typed signatures via clang AST or libclang** — today's compat
-    check is name-level (L0/L3 set inclusion). Lift to L2 by extracting
-    typed signatures from C headers (clang AST dump, similar to the dead-code
-    example at `canary_dead_code` line 47) and OCaml/Python signatures from
-    compiler output. Then `check_compat` is real subtyping with contravariance
-    on argument types, covariance on results, refinement on value domains.
-    Gives a decidable-but-conservative type-system over artifact interfaces;
-    catches "same name, different signature" version drift. See
+~~44. **L2 — typed signatures**~~ — **SHIPPED** (Phase 15.5b) via a
+    trivial-grep inspector: `check_type` (c6 `cmp_type`) at
+    `surface/canary_compat.ml:417`; `inspect_tiny_typed.py`'s `header`
+    layer uses a regex, other layers are hardcoded. Demoed via the
+    `binding_type_broken` variant.
+
+    **Still open (the deferred half)** — replace the grep with a real
+    clang-AST / libclang extraction, so `check_type` becomes true subtyping
+    (contravariance on arguments, covariance on results, refinement on
+    value domains) rather than name+shape matching. Not a blocker for
+    anything. Prior art: the dead-code example at
+    `doc/_legacy_code/canary_dead_code.ml`. See
     `doc/canary/research/surface_draft/surface.md` §2.4 (Type contract) and
     §10.3 (Toward a formal model).
 
@@ -117,37 +118,35 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 34. **GH CI multi-platform support** — `detect_pm ()` is called at derivation
     time on the local machine, baking Apt/Brew into the generated YAML. For
-    macOS CI, `mk_script_spec` needs a `~target_pm` parameter (alongside
-    `~tola_root`) so CI jobs can specify the target PM independently of the
-    local host. Follow-on: add OS-conditional step support to
+    macOS CI, the per-project spec constructors (`mk_runner_spec` and the
+    `project_run` `realize` functions) need a `~target_pm` parameter
+    (alongside `~tola_root`) so CI jobs can specify the target PM
+    independently of the local host. Follow-on: add OS-conditional step support to
     `canary_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
 
-36. **Diagram fidelity: `scan_source` and `_inspect` steps have no nodes** —
-    `scan_source` runs as a post-fetch check (verifying header/binding-dir
-    claims) but shares the `fetch_source` output dir and is invisible in
-    `result.mmd`. Similarly, `*_inspect` introspection steps are emitted by
-    `derive_steps` as follow-ups after each probe but are not rendered in the
-    diagram. Both gaps make the diagram an incomplete view of what canary
-    actually runs. When the diagram is redesigned, add dedicated action nodes
-    for `scan_source` and per-probe `*_inspect` steps. May require extending
-    `store_rules` with new rule variants or a separate "annotation step" layer.
+~~36. **Diagram fidelity: `scan_source` and `_inspect` steps have no nodes**~~
+    — **SHIPPED.** Both now render dedicated nodes: `A_scan_source`
+    (`backend/canary_diagram.ml:126`) and one summary node per
+    (parent action, tag suffix) pair — `summary_nid` / `summary_label`,
+    covering `_inspect` and `_stub_inspect` (`:57`).
 
-37. **HTML diagram viewer with node-group visibility toggles and log drill-down** —
-    The static `.mmd` output works for quick review but becomes hard to read
-    as more node groups are added (stores, summary steps, scan_source, etc.).
-    Replace or augment with a self-contained HTML page that:
-    (a) Renders the Mermaid diagram inline (via mermaid.js CDN or bundled);
-    (b) Provides checkboxes / toggle buttons to show/hide node groups:
-        stores, summary steps, `scan_source`, disabled/`st_nospec` actions;
-    (c) Makes each action node clickable to open (or inline) the corresponding
-        log file (`probe.log`, `inspect.json`, `actions.log`) from the run
-        output directory — enables reading results without leaving the viewer.
-    The HTML file would live alongside `result.mmd` in each run's output dir.
-    Consider whether a single template (`canary_html.ml`) can serve
-    all projects by embedding the per-run step list and output-dir paths as a
-    JSON blob. Pairs with TODO #36 (scan_source / summary node fidelity) since
-    toggling visibility makes those extra nodes practical to add.
+    The *live* diagram problem is a different one: the drawn `.mmd` does
+    not reproduce every `step.deps` edge, in all four projects. That check
+    is muted behind `CANARY_DIAGRAM_CONN=1` and the real fix is reconciling
+    `step.deps` with the typed node graph into one relation — see
+    `status.md` §A "Merge cleanup", not this entry.
+
+~~37. **HTML diagram viewer with node-group visibility toggles and log drill-down**~~
+    — **SHIPPED** as `backend/canary_html.ml` (see its header comment, `:5-8`):
+    renders the selected view inline via mermaid.js (CDN by default), lists
+    the available views (overview + per-slice `.mmd`) as selector buttons,
+    and opens output-dir files (`probe.log`, `summary.json`, …) in a side
+    drawer.
+
+    **Residue** (`design/diagram.md` "Backlog refs" calls this #37
+    hardening): the viewer uses the mermaid CDN, so offline use needs a
+    `--bundle-mermaid` flag — not yet wired.
 
 38. **`pack_python` action — local pip wheel packaging** — `pack_binding` is
     currently OCaml-only (opam packaging). A Python equivalent would build a
@@ -193,11 +192,15 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     wheel. This makes it a *co-provider*: one pip install delivers both the
     native lib and the Python extension. Two gaps follow:
 
-    **Diagram**: the current `lib -.->|runtime|` edge from `lib_build_tree_node`
-    into `A_fetch_binding_python` and `A_probe_binding_python` is misleading —
-    z3-solver does not consume the externally built lib at runtime; it carries
-    its own. The correct diagram would show the python binding node as
-    self-contained (no runtime edge from the lib kind).
+    **Diagram**: a `lib -.->|runtime|` edge into the python fetch/probe
+    nodes is misleading — z3-solver does not consume the externally built
+    lib at runtime; it carries its own. The correct diagram would show the
+    python binding node as self-contained (no runtime edge from the lib
+    kind). (The entry originally named `lib_build_tree_node`; that symbol
+    no longer exists — re-locate the edge in `backend/canary_diagram.ml`
+    before acting. Note the runtime edge is exactly what `dep_mode`
+    now models — `Ambient` is this case — so the fix may be to declare
+    it rather than to special-case the drawing.)
 
     **Action enumeration**: `derive_steps` models Python bindings as always
     depending on the native lib for runtime. A co-provider package violates
@@ -211,34 +214,42 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     co-provider shape on the producer side).
 
 46. **Engine vocabulary alignment in code (post-stabilisation polish)** —
-    After `doc/canary/research/surface.md` (the manuscript) stabilises, audit
-    OCaml / Python sources for engine vocabulary alignment. The
+    After `doc/canary/research/draft.md` (the manuscript) stabilises, audit
+    OCaml sources for engine vocabulary alignment. The
     store / runner / producer factoring already permeates the code; adding
     explicit *mutation engine* / *combinator engine* naming would clarify
-    `src/canary/projects/canary_project_tiny.ml` (combinator-side) and
-    `canary/examples/tiny/scenarios/scenarios.py` (mutation-side) header
-    comments. Background: the engine framing is the surface.md backbone
-    distinction between concrete-trace (mutation, harness on tiny) and
-    abstract-trace (combinator, canary on per-kind stores) machinery; see
-    `surface.md` §Implementation slots. Low priority; part of the
-    post-stabilisation polish pass driven by surface.md's "uniformity
-    eventually" principle.
+    the header comments of `src/canary/projects/canary_project_tiny.ml`
+    (combinator-side) and `canary_tiny_workspace.ml` (mutation-side).
+    Background: the engine framing is the manuscript's backbone distinction
+    between concrete-trace (mutation, the tiny factory) and abstract-trace
+    (combinator, canary on per-kind stores) machinery; see
+    `draft.md` §Implementation slots. Low priority; part of the
+    post-stabilisation polish pass driven by the "uniformity eventually"
+    principle.
+
+    (Was written against `research/surface.md` and the Python harness at
+    `canary/examples/tiny/scenarios/scenarios.py`; the manuscript is now
+    `draft.md` and the Python harness was retired to
+    `doc/_legacy_code/tiny_python_harness/` in Phase E of the tiny
+    migration, so the mutation side is OCaml now.)
 
 
-47. **Unify store-selection patterns across projects (z3/llvm vs tiny)** —
-    Two conventions coexist for "which artifact source drives this
-    project spec." (a) `source_repo.has_build_lib` / `has_build_binding`
-    booleans in [canary_artifact_source.ml:26-27](../../src/canary/tool/canary_artifact_source.ml)
-    plus per-project `if source.has_build_lib then …` branches in
-    `mk_script_spec` (z3, llvm, sqlite). (b) Explicit `tiny_stores`
-    record threaded per variant, each closure destructures paths from it
-    ([canary_project_tiny.ml:183-199](../../src/canary/projects/canary_project_tiny.ml)).
-    Both work; (b) reads cleaner for multi-scenario projects (tiny), (a)
-    reads cleaner for source-repo × build-toggle projects (z3 dev/stable).
-    Candidate consolidation: promote `stores` to a first-class field of
-    `script_spec`, drop the `has_build_*` boolean-branching pattern —
-    same enable/disable semantics come from closure presence. Not
-    urgent; both patterns are stable. Revisit when a project ends up
-    wanting features from both (e.g., a z3-like source-repo split with
-    tiny-like multi-scenario per source). Discovered while designing
-    §9.3 Task 1.6 factory (`worklog_2026_07.md`).
+47. **`has_build_*` boolean-branching residue** — the entry's original
+    framing ("two store-selection conventions; promote `stores` to a
+    first-class field of `script_spec`") is **superseded**: `store_config`
+    (S3, 2026-07-23) made provenance a typed `provider`, and A8 made the
+    whole project spec DATA (`pr_spec` universe table + `pr_provenance`).
+    `script_spec` and `mk_script_spec` no longer exist.
+
+    What remains is the narrow residue: `source_repo.has_build_lib` /
+    `has_build_binding` booleans
+    ([canary_artifact_source.ml:26-27](../../src/canary/tool/canary_artifact_source.ml))
+    plus per-project `if source.has_build_lib then … else None` branches
+    in z3/llvm's `realize`. On the generic path that information is
+    already carried by the spec — an artifact's `Built` provision in
+    `ps_universe` says the same thing — so the booleans are a second,
+    unreconciled encoding of build capability. Fold them into the
+    provision axis; the enable/disable semantics then come from the
+    declared universe rather than a flag. Not urgent. Originally
+    discovered while designing the §9.3 Task 1.6 factory
+    (`worklog_2026_07.md`).

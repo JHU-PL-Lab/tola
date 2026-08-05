@@ -53,7 +53,7 @@ updated as the model evolves.
 | [index.md](design/index.md)             | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles                                                                          |
 | ~~[api_surface.md](design/api_surface.md)~~ | **Retired.** Theory + implementation pointers folded into the surface theory materials at [`research/surface_draft/`](research/surface_draft/); packaging sections deferred to a future `package_theory.md`.       |
 | [project_pytorch.md](design/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`)                                              |
-| [diagram.md](design/diagram.md)         | Diagram improvements plan: summary node fidelity (#36), multi-view per project, HTML viewer (#37)                                                                          |
+| [diagram.md](design/diagram.md)         | Diagram pipeline + design ideas as built (multi-view per project, HTML viewer); remaining hardening tracked as #36/#37                                                     |
 
 ## surveys/ — background research
 

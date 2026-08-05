@@ -519,7 +519,12 @@ Still open:
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #25, #26, #28.
+Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #28.
+Mostly done, residue tracked in `doc/canary/backlog.md`: #36, #37, #43, #44.
+(#25 and #26 used to be listed here AND in the active TODO list above — the
+active listing is the correct one, verified 2026-08-05: z3's `install_lib`
+still `cp`s (`canary_project_z3.ml:395`) and `build_binding` still runs
+`ninja build_z3_ocaml_bindings` with no `test -f z3ml.cmxa ||` guard.)
 The api-compat milestone (Phases 1–3e: `inspect_binding.py`, `canary
 compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
 derived expectation) shipped this session — see `surface_draft/implementation.md` §2.7 and
