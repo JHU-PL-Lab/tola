@@ -377,9 +377,13 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
   API-mismatch demo now runs through the generic enumerate path. Still open:
   **backward** (a stable consumer @ newer incompatible lib — soname/symver,
   `Bs.4`/`Bs.3` → c4/c5); broad = missing *and* added symbols → per-version
-  required-symbol watchlists. *Polish:* `spec`/run summary shows a detected
-  mismatch world as a plain good "✓" — the xfail nature (which step
-  expected-failed) isn't surfaced per-world yet.
+  required-symbol watchlists. ~~*Polish:* the xfail nature isn't surfaced
+  per-world~~ → ✅ done (2026-08-05): `step_status` gained `Step_done_xfail`
+  (persisted in the verdict-marker CONTENT so warm runs keep it); `action`
+  world lines print `xfail: <steps>` + a "mismatch worlds: N passed via
+  confirmed expected failure" summary; `spec` marks those worlds `✓ xfail`
+  and lists the xfail steps under "last run" (scenarios.tsv gained an
+  xfail column; `--json` gets an `"xfail"` field).
 - **Fetched provision for tiny** — canary fetches from a PM at run time, the one
   provision tiny still lacks (Built + Vendored + Dev/Stable done).
 

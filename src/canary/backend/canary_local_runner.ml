@@ -151,23 +151,39 @@ let verdict_marker (step : step) : string =
   ^ Canary_basic.variant_file ~variant_key:step.variant_id
       (step.tag ^ ".verdict.ok")
 
-let write_verdict (step : step) ~(ok : bool) : unit =
+(* The marker's CONTENT records how the expectation was met: "xfail" = a
+   confirmed expected failure, "" (or "ok") = plain success — so a warm run
+   re-seeds [Step_done_xfail] rather than flattening it into [Step_done]. *)
+let write_verdict (step : step) ~(ok : bool) ~(xfail : bool) : unit =
   let path = verdict_marker step in
   if ok then (
     try
       ignore (Stdlib.Sys.command [%string "mkdir -p \"%{step.output_dir}\""] : int);
-      Stdlib.close_out (Stdlib.open_out path)
+      let oc = Stdlib.open_out path in
+      if xfail then Stdlib.output_string oc "xfail\n";
+      Stdlib.close_out oc
     with _ -> ())
   else if Stdlib.Sys.file_exists path then
     (try Stdlib.Sys.remove path with _ -> ())
 
-(* Run a single action step.
+let verdict_is_xfail (path : string) : bool =
+  try
+    Stdlib.In_channel.with_open_text path (fun ic ->
+        match Stdlib.In_channel.input_line ic with
+        | Some l -> String.is_prefix (String.strip l) ~prefix:"xfail"
+        | None -> false)
+  with _ -> false
+
+(* Run a single action step; returns its [step_status] ([Step_done_xfail] =
+   passed via a confirmed expected failure).
    Skip priority: (1) global cache hit, (2) prior run met its expectation
    (verdict marker present — NOT mere output presence). *)
-let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
+let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status =
   let tag = step.tag in
   let out = step.output_dir in
   let log = logger.log ~tag in
+  (* set when the met expectation was a CONFIRMED failure (declared or derived) *)
+  let xfail = ref false in
   (* Global cache: skip if a previous CI run recorded success for this key *)
   let global_hit = match global_cache with
     | Some cache -> cache_is_success cache ~key:step.cache_key
@@ -175,12 +191,16 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
   in
   if global_hit then (
     log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
-    true)
+    Step_done)
   (* Local cache: skip only if a PRIOR run recorded a met expectation here
      (verdict marker), so a failed probe is never served as cached success. *)
-  else if Stdlib.Sys.file_exists (verdict_marker step) then (
-    log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
-    true)
+  else if Stdlib.Sys.file_exists (verdict_marker step) then
+    if verdict_is_xfail (verdict_marker step) then (
+      log ~event:"skip" ~detail:(Some "verdict marker (prior xfail)");
+      Step_done_xfail)
+    else (
+      log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
+      Step_done)
   else (
     let pre_ok = step.check_pre () in
     log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
@@ -222,6 +242,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
                       Printf.sprintf "expected failure confirmed: %s predates %s%s"
                         vi.provider_version vi.consumer_requires since
                 in
+                if found then xfail := true;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found then confirmed_msg
                     else "command failed but output didn't match expected strings"));
@@ -280,6 +301,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
                         "expected failure confirmed (derived): %s predates %s%s"
                         vi.provider_version vi.consumer_requires since
                 in
+                if found then xfail := true;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found then confirmed_msg
                     else "command failed but output didn't match derived predictions"));
@@ -322,6 +344,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
               end
               else begin
                 let found = output_contains_any ~output_dir:out derived in
+                if found then xfail := true;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found
                     then "expected failure confirmed (derived)"
@@ -362,13 +385,16 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) =
     in
     (* record the verdict so the local cache can key on a MET expectation, not
        mere output presence (a failed probe still leaves probe.log). *)
-    write_verdict step ~ok:result;
-    result)
+    write_verdict step ~ok:result ~xfail:!xfail;
+    if result then (if !xfail then Step_done_xfail else Step_done)
+    else Step_failed)
 
-(* Merge multiple per-variant status tables. Done > Failed > Skipped. *)
+(* Merge multiple per-variant status tables. Done > xfail > Failed > Skipped. *)
 let merge_step_statuses (all : (string, step_status) Hashtbl.t list)
     : (string, step_status) Hashtbl.t =
-  let priority = function Step_done -> 3 | Step_failed -> 2 | Step_skipped -> 1 in
+  let priority = function
+    | Step_done -> 4 | Step_done_xfail -> 3 | Step_failed -> 2 | Step_skipped -> 1
+  in
   let out = Hashtbl.create (module String) in
   List.iter all ~f:(fun tbl ->
       Hashtbl.iteri tbl ~f:(fun ~key ~data ->
@@ -385,10 +411,12 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
   let status = Hashtbl.create (module String) in
   (* Seed with steps a PRIOR run recorded as meeting their expectation
      (verdict marker) — not mere output presence, so a failed probe isn't
-     seeded as done. *)
+     seeded as done. Marker content preserves the xfail distinction. *)
   List.iter steps ~f:(fun s ->
       if Stdlib.Sys.file_exists (verdict_marker s) then
-        Hashtbl.set status ~key:s.tag ~data:Step_done);
+        Hashtbl.set status ~key:s.tag
+          ~data:(if verdict_is_xfail (verdict_marker s) then Step_done_xfail
+                 else Step_done));
   (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in
   let aborted = ref false in
@@ -399,18 +427,19 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
           let deps_ok =
             List.for_all s.deps ~f:(fun dep ->
                 match Hashtbl.find status dep with
-                | Some Step_done -> true
+                | Some (Step_done | Step_done_xfail) -> true
                 | _ -> false)
           in
           if deps_ok then (
-            let ok = run_step logger ~project ~root ?global_cache s in
-            Hashtbl.set status ~key:s.tag
-              ~data:(if ok then Step_done else Step_failed);
-            if ok then changed := true
-            else if failfast then (
-              logger.log ~tag:"*" ~event:"failfast"
-                ~detail:(Some [%string "stopped after %{s.tag}"]);
-              aborted := true)))
+            let st = run_step logger ~project ~root ?global_cache s in
+            Hashtbl.set status ~key:s.tag ~data:st;
+            match st with
+            | Step_done | Step_done_xfail -> changed := true
+            | _ ->
+                if failfast then (
+                  logger.log ~tag:"*" ~event:"failfast"
+                    ~detail:(Some [%string "stopped after %{s.tag}"]);
+                  aborted := true)))
   done;
   if failfast && !aborted then (
     logger.close ();
@@ -422,7 +451,9 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
   (* Report *)
   let total = List.length steps in
   let done_count =
-    Hashtbl.count status ~f:(fun v -> Poly.equal v Step_done)
+    Hashtbl.count status ~f:(function
+      | Step_done | Step_done_xfail -> true
+      | _ -> false)
   in
   logger.log ~tag:"*" ~event:"graph_end"
     ~detail:(Some [%string "%{Int.to_string done_count}/%{Int.to_string total} completed"]);

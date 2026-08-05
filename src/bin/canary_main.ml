@@ -293,7 +293,10 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
   let scenarios = Canary_project_run.scenarios_of ?policy pr in
   let baseline = baseline_of scenarios in
   let seen = ref [] in
-  let results = ref [] in (* (key, verdict, is_bad) — key = scenario_label *)
+  (* (key, verdict, is_bad, xfail-step tags) — key = scenario_label. The
+     xfail list is where a world DETECTED a mismatch: steps that passed via a
+     confirmed expected failure ([Step_done_xfail]). *)
+  let results = ref [] in
   List.iter
     (fun a ->
       let ws = scenario_dir_of ~pr_name:pr.Canary_project_run.pr_name a in
@@ -316,8 +319,10 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
           in
           (* verdict from the RETURNED status table — robust against the shared
              run_state.json being overwritten by the next scenario. On FAIL,
-             name the non-done steps (diagnostic). *)
-          let verdict, culprits =
+             name the non-done steps (diagnostic); on PASS, name the steps
+             that passed via a CONFIRMED expected failure ([Step_done_xfail]
+             — where the world DETECTED a mismatch). *)
+          let verdict, culprits, xfails =
             try
               let status =
                 run_with_info_status ~failfast ~cache_path:None ~root ~project
@@ -329,38 +334,61 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
                 List.filter_map
                   (fun (s : Canary_step_model.step) ->
                     match Base.Hashtbl.find status s.tag with
-                    | Some Canary_step_model.Step_done -> None
+                    | Some (Canary_step_model.Step_done
+                           | Canary_step_model.Step_done_xfail) -> None
                     | Some Canary_step_model.Step_failed -> Some (s.tag ^ ":failed")
                     | Some Canary_step_model.Step_skipped -> Some (s.tag ^ ":skipped")
                     | None -> Some (s.tag ^ ":not_run"))
                   steps
               in
-              if not_done = [] then ("PASS", "") else ("FAIL", String.concat " " not_done)
-            with _ -> ("FAIL", "exn")
+              let xfails =
+                List.filter_map
+                  (fun (s : Canary_step_model.step) ->
+                    match Base.Hashtbl.find status s.tag with
+                    | Some Canary_step_model.Step_done_xfail -> Some s.tag
+                    | _ -> None)
+                  steps
+              in
+              if not_done = [] then ("PASS", "", xfails)
+              else ("FAIL", String.concat " " not_done, xfails)
+            with _ -> ("FAIL", "exn", [])
           in
-          Fmt.pr "  [%-44s] %-6s %s%s@." safe verdict
+          Fmt.pr "  [%-44s] %-6s %s%s%s@." safe verdict
             (if is_bad then "(bad)" else "(good)")
+            (match xfails with
+             | [] -> ""
+             | xs -> "  xfail: " ^ String.concat "," xs)
             (if String.equal verdict "FAIL" && not (String.equal culprits "")
              then "  <- " ^ culprits else "");
-          results := (key, verdict, is_bad) :: !results
+          results := (key, verdict, is_bad, xfails) :: !results
       end)
     scenarios;
-  let bads = List.filter (fun (_, _, b) -> b) !results in
+  let bads = List.filter (fun (_, _, b, _) -> b) !results in
   let detected =
-    List.length (List.filter (fun (_, v, _) -> String.equal v "PASS") bads)
+    List.length (List.filter (fun (_, v, _, _) -> String.equal v "PASS") bads)
   in
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
     detected (List.length bads);
+  (let n_xfail_worlds =
+     List.length (List.filter (fun (_, _, _, xs) -> xs <> []) !results)
+   in
+   if n_xfail_worlds > 0 then
+     Fmt.pr "  mismatch worlds: %d passed via confirmed expected failure (xfail)@."
+       n_xfail_worlds);
   (* F1: persist the per-scenario verdicts so a post view can annotate the
      `spec` (pre) listing. One TAB-separated line per scenario that RAN
-     (deduped workspaces are omitted → shown "·" in the post view). *)
+     (deduped workspaces are omitted → shown "·" in the post view). Format:
+     verdict TAB good|bad TAB xfail-steps(comma, "-" if none) TAB label —
+     label LAST so older 3-field files still parse (see load_scenario_post). *)
   (let path = scenario_summary_path_of ~project:pr.Canary_project_run.pr_name in
    try
      let oc = open_out path in
      List.iter
-       (fun (key, verdict, is_bad) ->
-         Printf.fprintf oc "%s\t%s\t%s\n" verdict
-           (if is_bad then "bad" else "good") key)
+       (fun (key, verdict, is_bad, xfails) ->
+         Printf.fprintf oc "%s\t%s\t%s\t%s\n" verdict
+           (if is_bad then "bad" else "good")
+           (match xfails with [] -> "-" | xs -> String.concat "," xs)
+           key)
        (List.rev !results);
      close_out oc
    with Sys_error _ -> () (* run dir may not exist on a no-op run; non-fatal *))
@@ -375,9 +403,10 @@ let group_of_kind : Canary_basic.artifact_kind -> string = function
 let group_order = [ "source"; "native"; "bindings"; "app" ]
 
 (* Load the persisted per-scenario run summary (F1) as a [label -> (verdict,
-   is_bad)] map — the POST view joined to the pre listing by [scenario_label].
-   [] when no run has happened. *)
-let load_scenario_post ~project : (string * (string * bool)) list =
+   is_bad, xfail_steps)] map — the POST view joined to the pre listing by
+   [scenario_label]. [xfail_steps] = comma-joined step tags that passed via a
+   confirmed expected failure ("" if none). [] when no run has happened. *)
+let load_scenario_post ~project : (string * (string * bool * string)) list =
   let path = scenario_summary_path_of ~project in
   if not (Sys.file_exists path) then []
   else
@@ -386,11 +415,15 @@ let load_scenario_post ~project : (string * (string * bool)) list =
       match input_line ic with
       | line -> (
           match String.split_on_char '\t' line with
-          | verdict :: bad :: rest ->
-              (* label may itself contain no tabs (it uses spaces), so rest is
-                 a singleton; be defensive and rejoin. *)
+          | verdict :: bad :: xf :: rest when rest <> [] ->
+              (* current 4-field format: label LAST (no tabs in labels; be
+                 defensive and rejoin) *)
               let label = String.concat "\t" rest in
-              loop ((label, (verdict, String.equal bad "bad")) :: acc)
+              let xf = if String.equal xf "-" then "" else xf in
+              loop ((label, (verdict, String.equal bad "bad", xf)) :: acc)
+          | verdict :: bad :: [ label ] ->
+              (* legacy 3-field format (pre-xfail column) *)
+              loop ((label, (verdict, String.equal bad "bad", "")) :: acc)
           | _ -> loop acc)
       | exception End_of_file ->
           close_in ic;
@@ -526,8 +559,12 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
       let is_bad = not (all_good a) in
       let mark =
         match List.assoc_opt label post with
-        | Some ("PASS", _) -> if is_bad then "✓ detected" else "✓"
-        | Some (_, _) -> if is_bad then "✗ missed" else "✗ REGRESSED"
+        | Some ("PASS", _, xf) when not (String.equal xf "") ->
+            (* the world PASSED via a confirmed expected failure — a
+               DETECTED mismatch (the xfail steps name where) *)
+            "✓ xfail"
+        | Some ("PASS", _, _) -> if is_bad then "✓ detected" else "✓"
+        | Some (_, _, _) -> if is_bad then "✗ missed" else "✗ REGRESSED"
         | None -> if post = [] then " " else "·"
       in
       let world =
@@ -540,15 +577,24 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
       Fmt.pr "  %-10s %s%s@." mark world
         (if String.equal label "(baseline)" then "   (baseline)" else ""))
     scenarios;
-  (if post <> [] then
-     let bads = List.filter (fun (_, (_, b)) -> b) post in
+  (if post <> [] then begin
+     let bads = List.filter (fun (_, (_, b, _)) -> b) post in
      let detected =
        List.length
-         (List.filter (fun (_, (v, _)) -> String.equal v "PASS") bads)
+         (List.filter (fun (_, (v, _, _)) -> String.equal v "PASS") bads)
+     in
+     let xfail_worlds =
+       List.filter (fun (_, (_, _, xf)) -> not (String.equal xf "")) post
      in
      Fmt.pr "  last run (`action %s`): %d/%d bad detected · %d scenario(s) ran.@."
        pr.Canary_project_run.pr_name detected (List.length bads)
-       (List.length post));
+       (List.length post);
+     List.iter
+       (fun (label, (_, _, xf)) ->
+         Fmt.pr "    xfail %s — %s@." xf
+           (if String.equal label "(baseline)" then "(baseline)" else label))
+       xfail_worlds
+   end);
   Fmt.pr
     "@.  note: this is the DECLARED artifact set + the scenarios the general \
      algorithm (enumerate over `pr_spec`) \
@@ -577,7 +623,7 @@ let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
   let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
   let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
   let is_detected a =
-    match verdict a with Some ("PASS", _) -> true | _ -> false
+    match verdict a with Some ("PASS", _, _) -> true | _ -> false
   in
   let bads =
     List.filter
@@ -629,7 +675,7 @@ let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
                 let mark =
                   match verdict a with
                   | None -> if post = [] then "" else "·"
-                  | Some ("PASS", _) -> "✓ detected"
+                  | Some ("PASS", _, _) -> "✓ detected"
                   | Some _ -> "✗ missed"
                 in
                 Fmt.pr "      %-46s %s@." (scenario_label ~baseline a) mark)
@@ -710,9 +756,11 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
       @
       match verdict a with
       | None -> []
-      | Some (v, _) ->
+      | Some (v, _, xf) ->
           ("verdict", `String v)
-          :: (if good then [] else [ ("detected", `Bool (String.equal v "PASS")) ])
+          :: (if String.equal xf "" then []
+              else [ ("xfail", `String xf) ])
+          @ (if good then [] else [ ("detected", `Bool (String.equal v "PASS")) ])
     in
     `Assoc fields
   in

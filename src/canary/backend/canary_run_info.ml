@@ -120,10 +120,11 @@ let save_run_state ~dir ~project_name steps
       | Expect_compat_derived _ -> "compat_derived"
     in
     let status_str = match Hashtbl.find run_status s.tag with
-      | Some Step_done    -> "done"
-      | Some Step_failed  -> "failed"
-      | Some Step_skipped -> "skipped"
-      | None              -> "not_run"
+      | Some Step_done       -> "done"
+      | Some Step_done_xfail -> "xfail"
+      | Some Step_failed     -> "failed"
+      | Some Step_skipped    -> "skipped"
+      | None                 -> "not_run"
     in
     `Assoc [
       ("tag",        `String s.tag);
@@ -198,6 +199,7 @@ let load_run_state ~dir =
   List.iter pairs ~f:(fun (s, st) ->
       match st with
       | "done"    -> Hashtbl.set run_status ~key:s.tag ~data:Step_done
+      | "xfail"   -> Hashtbl.set run_status ~key:s.tag ~data:Step_done_xfail
       | "failed"  -> Hashtbl.set run_status ~key:s.tag ~data:Step_failed
       | "skipped" -> Hashtbl.set run_status ~key:s.tag ~data:Step_skipped
       | _         -> ());
@@ -268,7 +270,7 @@ let all_steps_done (steps : step list)
     (status : (string, step_status) Hashtbl.t) : bool =
   List.for_all steps ~f:(fun s ->
       match Hashtbl.find status s.tag with
-      | Some Step_done -> true
+      | Some (Step_done | Step_done_xfail) -> true
       | _ -> false)
 
 (* Write a single run_info.json covering all variants of a multi-variant run.

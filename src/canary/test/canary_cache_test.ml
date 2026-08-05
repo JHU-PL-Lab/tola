@@ -63,7 +63,9 @@ let run ~dir ~rc : bool =
   let logger = SM.create_logger ~log_path:(root ^ "/actions.log") in
   let r = LR.run_step logger ~root ~project:"cache-test" (mk_step ~dir ~rc) in
   logger.close ();
-  r
+  match r with
+  | SM.Step_done | SM.Step_done_xfail -> true
+  | SM.Step_failed | SM.Step_skipped -> false
 
 let reset dir = ignore (Stdlib.Sys.command (Stdlib.Printf.sprintf "rm -rf %s" dir) : int)
 

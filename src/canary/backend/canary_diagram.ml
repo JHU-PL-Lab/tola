@@ -753,10 +753,14 @@ let result_status_of_run (steps : step list)
   List.iter steps ~f:(fun s ->
       let ns = match Hashtbl.find run_status s.tag with
         | Some Step_done ->
+            (* [Step_done_xfail] now carries the confirmed-expected-failure
+               fact, so a plain Done with a derived expectation is a CLEAN
+               pass (prediction was empty) — only the always-expect-failure
+               declared forms still map to Done_fail here. *)
             (match s.expectation with
-             | Expect_failure _ | Expect_compat_failure _
-             | Expect_compat_derived _ -> Done_fail
-             | Expect_success -> Done)
+             | Expect_failure _ | Expect_compat_failure _ -> Done_fail
+             | Expect_compat_derived _ | Expect_success -> Done)
+        | Some Step_done_xfail -> Done_fail
         | Some Step_failed -> Failed
         | Some Step_skipped -> Skipped
         | None -> Skipped

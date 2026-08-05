@@ -110,7 +110,11 @@ type logger = {
   close : unit -> unit;
 }
 
-type step_status = Step_done | Step_failed | Step_skipped
+(* [Step_done_xfail]: the step PASSED via a CONFIRMED expected failure — the
+   command failed and the failure matched the (declared or derived)
+   prediction. A pass for run purposes, but the distinction is surfaced (the
+   world lines / spec views show WHERE a mismatch was detected). *)
+type step_status = Step_done | Step_done_xfail | Step_failed | Step_skipped
 
 let rec ensure_dir path =
   if not (Stdlib.Sys.file_exists path) then (
