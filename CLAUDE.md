@@ -252,8 +252,20 @@ each `runner_spec` to one scenario's world, z3/llvm build one
 tiny-full) is `run_project_run` over a `Canary_project_run.project_run`
 (`pr_spec → scenarios_of (the general enumerate; ?policy, --thin =
 thin_policy) → pr_runner_spec → derive_steps → run`): a project declares
-only its static `pr_spec` — there is NO per-project enumeration closure
-(`pr_enumerate` retired 2026-08-05); the runner
+only DATA — `pr_spec` is ONE fused table (`ps_universe : artifact ×
+(provision × versions) list`; old accessor names are functions over it),
+`pr_provenance` a provider table (+ `provenance_of` lookup),
+`pr_mismatch_probes` a design-intent table (which consumer variants are
+designed forward/backward probes; per-scenario direction is COMPUTED via
+`mismatch_direction_of`). `pr_runner_spec` must be `realize ∘ dispatch`
+(pure project-local `scenario_case` data reading only
+`Canary_enumerate.{provision_of,channel_of,provided,bad_placements}`;
+`realize` holds the command templates — the only functions left). xfail
+(`Step_done_xfail`, persisted in verdict-marker content) + watchlist
+verdicts surface in `action`/`spec`/`status` (status rows show
+`watchlist N/N` / `⚠ MISSING …`; sqlite's python watchlist carries
+declared binding-lag markers). There is NO per-project enumeration
+closure (`pr_enumerate` retired 2026-08-05); the runner
 computes `scenario_dir_of a` (a born-safe per-scenario dir = output
 path + dedup key; a `Fetched` artifact is version-ambient so its
 declared version is NOT part of scenario identity — two `Fetched@v`
