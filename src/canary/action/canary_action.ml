@@ -267,8 +267,8 @@ let rec node_applicable
     off its provision (the forward-construction rule inverted: Built ⇒ a Build_*,
     Fetched ⇒ a Fetch, Vendored ⇒ no action, it's a supplied initial node). The
     lang for a binding/app edge comes from the node's kind (App borrows it from
-    its binding [built_from]). [None] = an initial node (Vendored/Absent): the
-    materialize layer places it; the run doesn't produce it. *)
+    its binding [built_from]). [None] = an initial node (Vendored/Absent): it is
+    supplied, not produced by any run action. *)
 let producing_action_of_node (n : artifact_node) : action option =
   let app_lang () =
     match n.built_from with

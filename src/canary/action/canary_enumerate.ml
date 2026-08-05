@@ -341,8 +341,8 @@ let general_slice ~(artifacts : artifact_id list)
     ~all_versions_of:(fun _ -> versions) ~all_mutations:[]
     { provision = Full; version = Full; mutation = Free }
 
-(** A2 — fold a [point] into a concrete [assignment], the form the run/materialize
-    consume. The algorithm keeps the mutation SEPARATE from the all-Good
+(** A2 — fold a [point] into a concrete [assignment], the form the run
+    consumes. The algorithm keeps the mutation SEPARATE from the all-Good
     assignment ([point.mutation]); the run wants it FOLDED into the target
     artifact's version [quality = Bad tag] (the mutation-agnostic identity, §4.2.2
     P2a). [tag] projects the polymorphic mutation to its opaque string tag. A

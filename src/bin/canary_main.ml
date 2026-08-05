@@ -241,16 +241,51 @@ let scenario_label ~baseline (a : Canary_enumerate.assignment) : string =
 let scenario_summary_path_of ~project =
   [%string "_out/canary/projects/%{project}/-run/scenarios.tsv"]
 
+(* A born-safe per-SCENARIO directory: the identity of ONE assignment (one
+   placement per artifact). It is what the runner uses for the scenario's output
+   dir AND its dedup key — computed generically here, no longer a project field.
+
+   IDENTITY RULE (general, from provision semantics): a [Fetched] artifact is
+   version-AMBIENT — the PM decides the concrete version — so its declared
+   version is dropped from the id; [Built]/[Vendored] versions ARE identity
+   (canary produces/supplies exactly that version). Two scenarios with the same
+   id are the same real world → they dedup to one run. (A project that pins a
+   Fetched version would override via its provider [pr_provenance]; not needed
+   yet — see status §A.) *)
+let scenario_dir_of ~pr_name (a : Canary_enumerate.assignment) : string =
+  let chan_s = function
+    | Canary_basic.Stable -> "stable"
+    | Canary_basic.Dev -> "dev"
+  in
+  let part (id, (pl : Canary_enumerate.placement)) =
+    let k =
+      String.map (function ':' -> '-' | c -> c)
+        (Canary_basic.string_of_artifact_kind (Canary_enumerate.kind_of id))
+    in
+    match pl.Canary_enumerate.provision with
+    | Canary_store.Fetched -> Printf.sprintf "%s-fetched" k
+    | prov ->
+        Printf.sprintf "%s-%s-%s" k
+          (Canary_store.string_of_provision prov)
+          (chan_s pl.Canary_enumerate.version.Canary_enumerate.channel)
+  in
+  (* sort_uniq → a CANONICAL id: identical parts (same-kind artifacts at the
+     same placement — e.g. two app wirings both vendored) collapse, and order is
+     stable. Uniqueness is preserved (differing placements keep distinct parts). *)
+  Printf.sprintf "_out/canary/scenarios/%s/%s" pr_name
+    (String.concat "_" (List.sort_uniq compare (List.map part a)))
+
 (* The GENERIC project runner (convergence step 2). Consumes a [project_run]
-   and does the SAME loop for any project: enumerate → materialize →
-   runner_spec → run → report. All project-specific logic lives in the
-   closures (tiny-full's materialize = assemble vendored resources; a real
-   project's would be build/fetch). Additive — z3/llvm keep their raw-script
-   [run_project_multi]; this drives tiny-full and simple projects. Runs dedup
-   by materialized workspace (several assignments can map to one tree). *)
+   and does the SAME loop for any project: enumerate → runner_spec → run →
+   report. All project-specific logic lives in the closures (a real project's
+   runner_spec build/fetches; tiny-full's runner_spec assembles its vendored
+   tree internally — the tiny-factory concern, invisible here). Additive —
+   z3/llvm keep their raw-script [run_project_multi]; this drives tiny-full and
+   simple projects. Dedup + output dir keyed by [scenario_dir_of] (several
+   assignments can share one scenario identity — e.g. Fetched across versions). *)
 let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
     unit =
-  Fmt.pr "@.%s — generic project run (enumerate → materialize → run)@."
+  Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
   let scenarios = pr.Canary_project_run.pr_enumerate () in
   let baseline = baseline_of scenarios in
@@ -258,20 +293,17 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
   let results = ref [] in (* (key, verdict, is_bad) — key = scenario_label *)
   List.iter
     (fun a ->
-      match pr.Canary_project_run.pr_materialize a with
-      | None -> ()
-      | Some ws when List.mem ws !seen -> ()
-      | Some ws ->
+      let ws = scenario_dir_of ~pr_name:pr.Canary_project_run.pr_name a in
+      if List.mem ws !seen then ()
+      else begin
           seen := ws :: !seen;
           let is_bad = not (Canary_tiny_scenario.assignment_is_all_good a) in
           let key = scenario_label ~baseline a in
-          let label = Filename.basename ws in
-          (* sanitize for the output path: ':' '#' '+' are ugly / not portable
-             (Windows) in a directory name *)
+          (* [scenario_dir_of] is already born-safe; keep the map defensively. *)
           let safe =
             String.map
               (function ':' | '#' | '+' -> '-' | c -> c)
-              label
+              (Filename.basename ws)
           in
           let project = pr.Canary_project_run.pr_name ^ "/" ^ safe in
           let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:ws in
@@ -288,7 +320,7 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
                 run_with_info_status ~failfast ~cache_path:None ~root ~project
                   steps
                   (prebuilt_run_info ~project:pr.Canary_project_run.pr_name
-                     ~version:"materialized" ~extra:[] steps)
+                     ~version:"scenario" ~extra:[] steps)
               in
               let not_done =
                 List.filter_map
@@ -303,11 +335,12 @@ let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
               if not_done = [] then ("PASS", "") else ("FAIL", String.concat " " not_done)
             with _ -> ("FAIL", "exn")
           in
-          Fmt.pr "  [%-44s] %-6s %s%s@." label verdict
+          Fmt.pr "  [%-44s] %-6s %s%s@." safe verdict
             (if is_bad then "(bad)" else "(good)")
             (if String.equal verdict "FAIL" && not (String.equal culprits "")
              then "  <- " ^ culprits else "");
-          results := (key, verdict, is_bad) :: !results)
+          results := (key, verdict, is_bad) :: !results
+      end)
     scenarios;
   let bads = List.filter (fun (_, _, b) -> b) !results in
   let detected =
@@ -398,7 +431,7 @@ let kinds_string ks =
 
 (* Snapshot of a [project_run]: declared artifacts (grouped, each with its
    baseline provision@version) + the enumerated scenarios as deltas from that
-   baseline. PRE (dry-run — [pr_materialize] is NOT called). If a run summary
+   baseline. PRE (dry-run — no [pr_runner_spec]/run is invoked). If a run summary
    exists, each scenario is also annotated with its last-run verdict (POST):
    good ✓/✗REGRESSED, bad ✓detected/✗missed, · = not run (deduped workspace). *)
 let print_spec (pr : Canary_project_run.project_run) : unit =
@@ -2225,7 +2258,7 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
       let edge =
         match CA.producing_action_of_node n with
         | Some _ -> CA.edge_label_of_node n
-        | None -> CA.edge_label_of_node n ^ " (initial — materialize, no build)"
+        | None -> CA.edge_label_of_node n ^ " (initial — supplied, no build)"
       in
       Fmt.pr "    %2d. %-32s %s@%s%s@." (i + 1) edge
         (Canary_basic.string_of_artifact_kind n.CA.a_kind)

@@ -660,7 +660,7 @@ let agnostic_expectation_test : pure_test =
    so every built_from/runtime_dep (always a lower kind) precedes its consumer;
    (2) [producing_action_of_node] inverts the provision — a Built node has a
    Build_* edge, a Fetched node a Fetch edge, a Vendored node NO edge (an initial
-   node the materialize layer places). Marks a tiny-shaped project (Lib may be
+   node that is supplied, not built). Marks a tiny-shaped project (Lib may be
    Built OR Vendored; everything else Vendored) so both a real build edge and
    initial nodes appear in one plan. *)
 let execution_plan_test : pure_test =

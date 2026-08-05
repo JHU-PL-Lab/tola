@@ -75,6 +75,21 @@ first mis-called as generic-runner gaps turned out not to be:
   2. **No enumeration collapse** — 2 workspaces IS sqlite's declared world count
      (run == enumerate == declared). Nothing to widen.
 
+**`pr_materialize` PURGED from the general interface (2026-08-05).** The
+`materialize`/`pr_materialize` symbol was tiny-factory's (assemble vendored
+artifacts) but had leaked into the general `project_run` interface. Removed: the
+generic runner now computes `canary_main.scenario_dir_of a` — a born-safe per-
+scenario dir used for the output path AND dedup. tiny-full's assembly folded
+INTO its `pr_runner_spec` closure (the assemble/materialize vocabulary now lives
+only in `canary_tiny_workspace`); sqlite builds into the runner-given dir.
+**Scenario-identity rule** (general, from provision semantics): a `Fetched`
+artifact is version-AMBIENT (the PM picks the version), so its declared version
+is dropped from the id — two `Fetched@v` scenarios dedup; `Built`/`Vendored`
+versions ARE identity. A project that pins a Fetched version would override via
+its provider (`pr_provenance`) — not needed yet. sqlite `Fetched@Stable ≡
+Fetched@Dev` ⇒ 3 runs (not 4). Also: sqlite now runs **3 worlds** (two built
+amalgamation versions 3.45.1/3.46.1); all 6 worlds (3 sqlite + 3 tiny-full) green.
+
 **Two paths today.** The enumeration ALGORITHM (`canary_enumerate.run_config`)
 is already shared by config — `tiny_slice` (mutation axis) and `general_slice`
 (provision/version) are both presets — but only the **display** (`tiny engine`,

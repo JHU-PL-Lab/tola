@@ -169,10 +169,10 @@ let runner_spec : Canary_step_builder.runner_spec =
    Same shape as tiny-full (a [Canary_project_run.project_run] the generic
    `run_project_run` consumes), but real-world: everything is **Fetched** —
    canary fetches the lib (system PM) + the OCaml binding (opam) as ACTIONS
-   (the [runner_spec] above); Python sqlite3 is stdlib. So [pr_materialize]
-   places NOTHING (canary's role is to perform the fetch/build actions) — a
-   nominal per-scenario dir just labels the output. Positive-only (a real
-   project isn't mutated); the [runner_spec]'s default expectation is success. *)
+   (the [runner_spec] above); Python sqlite3 is stdlib. So sqlite pre-places
+   NOTHING — canary's role is to perform the fetch/build actions into the
+   runner-provided scenario dir. Positive-only (a real project isn't mutated);
+   the [runner_spec]'s default expectation is success. *)
 let project : Canary_project.project =
   { name = "sqlite"; contract_bindings = [] }
 
@@ -285,19 +285,10 @@ let sqlite_run : Canary_project_run.project_run =
       (fun () ->
         Canary_enumerate.enumerate ~tag:(fun () -> "")
           ~policy:(Canary_enumerate.full_policy ()) sqlite_spec);
-    pr_materialize =
-      (fun a ->
-        match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-        | Canary_enumerate.Built ->
-            (* per-VERSION workspace so Built@Stable and Built@Dev are distinct
-               worlds (else they collapse to one dir + dedup to one run). *)
-            let chan =
-              (Canary_enumerate.version_of a Canary_enumerate.a_lib)
-                .Canary_enumerate.channel
-            in
-            let numeric, _ = sqlite_amalg chan in
-            Some ("_out/canary/materialized/sqlite/built-" ^ numeric)
-        | _ -> Some "fetched-system");
+    (* No pre-placement: sqlite builds/fetches into the runner-provided
+       [workspace] (canary_main.scenario_dir_of — per-version for Built, so
+       Built@Stable and Built@Dev get distinct dirs; Fetched collapses across
+       versions there). The built_spec reads the version from the assignment. *)
     pr_runner_spec =
       (fun a ~workspace ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with

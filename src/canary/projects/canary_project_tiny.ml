@@ -8,8 +8,8 @@
       the tiny1 oracle (`canary tiny run`);
     - this **project_spec** DECLARES those ingredients + the scenario space;
     - the **runner** ([canary_main]) EXPLORES them via `canary action tiny-full`:
-      enumerate → materialize (assemble) → run, with canary computing the
-      expectation ([expectation_agnostic]).
+      enumerate → runner_spec (which assembles tiny's vendored tree) → run, with
+      canary computing the expectation ([expectation_agnostic]).
 
     A project DECLARES; canary COMPUTES. The declarative surface is the
     [project_run] below ([tiny_full_run]); `action tiny-full` runs it through
@@ -93,11 +93,14 @@ let tiny_provenance (id : Canary_enumerate.artifact_id) :
       Some (Canary_store_config.Vendored "tiny probe example (assembled)")
   | _ -> None
 
-(** tiny-full as a [project_run] the generic runner consumes. Materialize =
-    ASSEMBLE cached artifacts (all-good ⇒ the witness base; bad ⇒ overlay);
-    runner_spec = the base spec over the materialized tree with the AGNOSTIC
-    expectation. This is the whole tiny-full-specific surface; the runner is
-    project-agnostic. (z3's would differ only in materialize = build.) *)
+(** tiny-full as a [project_run] the generic runner consumes. Its [pr_runner_spec]
+    ASSEMBLES tiny's vendored cached artifacts into a tree (all-good ⇒ the witness
+    base; built-lib ⇒ compiled source tree; bad ⇒ overlay) and returns the base
+    spec over that tree with the AGNOSTIC expectation. The assemble step is the
+    tiny-factory concern ([Canary_tiny_workspace]) — it lives INSIDE the runner_spec
+    closure and the general interface has no pre-placement hook for it. tiny-full
+    ignores the runner-provided [workspace] dir (it runs over its assembled tree);
+    a real project (sqlite) builds into that dir instead. *)
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
     pr_artifacts = artifacts;
@@ -105,49 +108,52 @@ let tiny_full_run : project_run =
        mutations — those are tiny1's oracle). Like sqlite, a positive-only
        general project_run. *)
     pr_enumerate = (fun () -> general_assignments ());
-    pr_materialize =
-      (fun a ->
-        (* dispatch by provision (ssot §4.2.5): the lib may be [Built] (canary
-           compiles from a source-only tree) instead of [Vendored]. The channel
-           goes in the label so Dev and Stable Built libs get distinct trees +
-           variant_ids (cache separately; cache.md). *)
+    pr_runner_spec =
+      (fun a ~workspace:_ ->
+        (* ASSEMBLE tiny's vendored tree (tiny-factory). dispatch by provision
+           (ssot §4.2.5): the lib may be [Built] (canary compiles from a
+           source-only tree) instead of [Vendored]. The channel goes in the label
+           so Dev and Stable Built libs get distinct trees + variant_ids (cache
+           separately; cache.md). *)
         let lib_built =
           match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
           | Canary_enumerate.Built -> true
           | _ -> false
         in
-        match overlays_of a with
-        | [] when lib_built ->
-            let chan =
-              match
-                (Canary_enumerate.version_of a Canary_enumerate.a_lib)
-                  .Canary_enumerate.channel
-              with
-              | Canary_basic.Dev -> "dev"
-              | Canary_basic.Stable -> "stable"
-            in
-            Canary_tiny_workspace.materialize_built_lib
-              ~label:("positive-built-lib-" ^ chan)
-        | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
-        | overlays ->
-            let label =
-              Base.String.concat ~sep:"+"
-                (Base.List.map overlays ~f:(fun (id, t) -> id ^ "#" ^ t))
-            in
-            Canary_tiny_workspace.materialize_assembled ~overlays ~label);
-    pr_runner_spec =
-      (fun a ~workspace ->
-        (* the lib's version channel drives a channel-aware build (Dev ⇒
-           -DTINY_DEV + dev version script) on the Built path. *)
         let channel =
           (Canary_enumerate.version_of a Canary_enumerate.a_lib)
             .Canary_enumerate.channel
         in
+        let assembled =
+          match overlays_of a with
+          | [] when lib_built ->
+              let chan =
+                match channel with
+                | Canary_basic.Dev -> "dev"
+                | Canary_basic.Stable -> "stable"
+              in
+              Canary_tiny_workspace.materialize_built_lib
+                ~label:("positive-built-lib-" ^ chan)
+          | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
+          | overlays ->
+              let label =
+                Base.String.concat ~sep:"+"
+                  (Base.List.map overlays ~f:(fun (id, t) -> id ^ "#" ^ t))
+              in
+              Canary_tiny_workspace.materialize_assembled ~overlays ~label
+        in
+        let tree =
+          match assembled with
+          | Some w -> w
+          | None -> failwith "tiny-full: workspace assembly failed"
+        in
+        (* the lib's version channel drives a channel-aware build (Dev ⇒
+           -DTINY_DEV + dev version script) on the Built path. *)
         let lib_filename =
-          Canary_tiny_workspace.detect_lib_filename ~workspace
+          Canary_tiny_workspace.detect_lib_filename ~workspace:tree
         in
         let stores =
-          TS.stores_of_workspace ~lib_filename ~workspace_root:workspace ()
+          TS.stores_of_workspace ~lib_filename ~workspace_root:tree ()
         in
         { (TS.make_base_runner_spec ~channel ~stores ()) with
           Canary_step_builder.expectation = expectation_agnostic });
@@ -155,7 +161,7 @@ let tiny_full_run : project_run =
 
 (* ── THIN subset config (ssot §4.2 config level = Subset) ──
    A small, debuggable slice of the general enumeration: Stable channel only
-   (drop the built-lib Dev positive). Same materialize / runner_spec — only the
+   (drop the built-lib Dev positive). Same runner_spec — only the
    scenario set narrows. Selected by `action tiny-full --thin` /
    `spec tiny-full --thin`. (Mutation faults are tiny1's, so there's nothing
    mutation-specific to thin here anymore.) *)
