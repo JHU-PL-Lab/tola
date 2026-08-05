@@ -151,12 +151,19 @@ edges resolved via `dep_mode`). Open:
      `stable`) under `projects/z3/`; new runs are keyed by scenario dirs
      (`lib-fetched_…`). Reconcile in phase 4/5 (old cached dirs still
      satisfy them meanwhile).
-  3. *Locations stay INSIDE the realization* (3 probe_lib steps per
-     scenario, as today) — the location sub-axis is deliberately NOT
-     modeled here; it's A9-step-2's acceptance test.
-  4. *Expectations unchanged* (contract-bound `lower_expectation` in the
-     realization; A7 comes AFTER) — verify the stable compat-failure demos
-     surface as xfail in `status`/`spec`.
+  3. ~~*Locations stay INSIDE the realization*~~ — **satisfied by
+     construction** (phase 2's realize = the raw spec verbatim): the dev
+     chain's full run probed the lib at all 3 locations (build-tree 793 /
+     staged 793 / sys-PM 705 Z3_ symbols). The location sub-axis remains
+     unmodeled — A9-step-2's acceptance test.
+  4. ~~*Expectations unchanged*~~ — **VERIFIED for z3, 2026-08-05** (full
+     `action z3` through the generic runner): both chains PASS; the
+     parser_context demo fires as `xfail probe_binding_python` in BOTH
+     scenarios (the Ambient-edge scenario-invariance, measured); dev chain
+     C-symbol cross-check 776 required / 793 provided / 0 missing;
+     `spec z3` joins both verdicts (`✓ xfail` ×2, `·` for the deduped
+     assignment); `status z3` shows the xfail row. llvm's Opcode.UncondBr
+     half rides phase 5.
   5. *llvm same shape*; then retire `run_project_multi` +
      `print_spec_variants` (ssl/zarith/cairo last).
   **A5↔A7 order settled: A5 first** — migration needs no expectation
