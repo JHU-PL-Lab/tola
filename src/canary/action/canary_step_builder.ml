@@ -354,17 +354,41 @@ let script_of_action spec = function
   | Publish Source | Publish Headers -> None
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
-let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
+let probe_ocaml_env_cmd ~env ~log_grep ~binding_lib ~example ~target
+    ~output_dir ~variant_key =
   (* On failure (compile or run), dump probe.log to stdout and re-raise the
      original exit code. Without this, CI step failures show only "exit 127"
      with no context — the actual ocamlfind / dynamic-link error is hidden in
-     the file. Successful runs print probe.log too (cheap, useful confirmation). *)
+     the file. Successful runs print probe.log too (cheap, useful confirmation).
+
+     [env] — extra "VAR=value" bindings exported before compile+run. The run
+     half is what they exist for: e.g. [LD_LIBRARY_PATH=<built libdir>:...]
+     repoints the loader so the probe exercises a canary-BUILT lib instead of
+     the system one (the deploy world: binding fetched/compiled against the
+     system lib, run against another).
+     [log_grep] — a substring probe.log must contain for the step to pass
+     (e.g. the runtime-reported lib version in a built-lib world: the run's
+     world must MATCH the declared placement, not just not-crash). *)
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+  let exports =
+    String.concat ~sep:""
+      (List.map env ~f:(fun e -> [%string "export %{e}\n"]))
+  in
+  let grep =
+    match log_grep with
+    | None -> ""
+    | Some s -> [%string {| && grep -qF "%{s}" %{output_dir}/%{probe_log}|}]
+  in
   [%string {|eval $(opam env)
-ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1
+%{exports}ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1%{grep}
 RC=$?
 cat %{output_dir}/%{probe_log}
 exit $RC|}]
+
+(* The plain form every existing spec uses: no extra env, no log assertion. *)
+let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
+  probe_ocaml_env_cmd ~env:[] ~log_grep:None ~binding_lib ~example ~target
+    ~output_dir ~variant_key
 
 (* ── Convenience helpers for building steps ── *)
 

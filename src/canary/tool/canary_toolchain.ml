@@ -337,12 +337,29 @@ echo 'installed' > %{output_dir}/%{binding_ok}|}]
 
 (* Probe only — runs at Probe (Binding Python) time, assuming pip install
    has already happened in the Fetch (Binding Python) step. *)
-let python_probe_only_cmd ?(toolchain = default_python_toolchain)
-    (p : python_binding) ~output_dir ~variant_key =
+let python_probe_only_cmd ?(toolchain = default_python_toolchain) ?(env = [])
+    ?log_grep (p : python_binding) ~output_dir ~variant_key =
+  (* [env] — "VAR=value" bindings exported before the interpreter runs (e.g.
+     [LD_LIBRARY_PATH=<built libdir>:...] repoints the loader so the probe's
+     C extension binds a canary-BUILT lib instead of the system one).
+     [log_grep] — substring probe.log must contain for the step to pass
+     (e.g. the runtime-reported lib version in a built-lib world). *)
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+  let exports =
+    String.concat ~sep:""
+      (List.map env ~f:(fun e -> [%string "export %{e}\n"]))
+  in
+  let grep =
+    match log_grep with
+    | None -> ""
+    | Some s ->
+        [%string
+          {|
+grep -qF "%{s}" %{output_dir}/%{probe_log} || { echo "probe log missing expected '%{s}'"; cat %{output_dir}/%{probe_log}; exit 1; }|}]
+  in
   [%string
     {|set -e
-%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/%{probe_log} 2>&1 || { cat %{output_dir}/%{probe_log}; exit 1; }
+%{exports}%{toolchain.interpreter} -c "%{p.probe_snippet}" > %{output_dir}/%{probe_log} 2>&1 || { cat %{output_dir}/%{probe_log}; exit 1; }%{grep}
 cat %{output_dir}/%{probe_log}|}]
 
 (* Backward-compatible single-step variant: install + probe in one go.

@@ -98,8 +98,12 @@ let sqlite_python_config : Canary_toolchain.binding_config =
   Python_config
     {
       pip_package = None;
+      (* Prints the RUNTIME library version first (sqlite3.sqlite_version =
+         the C library the loader actually bound, not the stdlib wrapper
+         version) — built-lib worlds assert this against the declared built
+         version via [log_grep]. *)
       probe_snippet =
-        {|import sqlite3; sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')|};
+        {|import sqlite3; print('sqlite_version=' + sqlite3.sqlite_version); sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')|};
     }
 
 let runner_spec : Canary_step_builder.runner_spec =
@@ -195,27 +199,45 @@ let sqlite_artifacts =
    version-independent (`sqlite3.c` + `sqlite3_open` exist in every release), so
    both worlds build + probe green. This is the honest "run more cases" for a
    positive project: the same chain over two source versions. *)
-let sqlite_amalg (chan : Canary_basic.channel) : string * string =
-  (* (numeric version, amalgamation zip URL) *)
+let sqlite_amalg (chan : Canary_basic.channel) :
+    string * string * string =
+  (* (dotted runtime version, numeric amalgamation id, zip URL). The dotted
+     form is what the RUNTIME reports (sqlite3_libversion / Python
+     sqlite3.sqlite_version) — the probes assert it, so the run verifiably
+     exercises the world the enumeration declared. *)
   match chan with
   | Canary_basic.Stable ->
-      ("3450100", "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip")
+      ( "3.45.1", "3450100",
+        "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip" )
   | Canary_basic.Dev ->
-      ("3460100", "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip")
+      ( "3.46.1", "3460100",
+        "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip" )
 
 (* A3b: the Built scenario UNIFIES the lib build with the bindings — extend the
    Fetched [runner_spec] (which carries fetch_binding/probe_binding), swapping the
-   lib from fetched to built-from-source. The bindings run against the SYSTEM lib
-   for now (Python sqlite3 is stdlib — can't be repointed; OCaml binding-over-
-   BUILT-lib via LD_LIBRARY_PATH is a follow-up). This makes the run consistent
-   with the enumeration ({lib=Built, bindings=Fetched}), not lib-only. *)
+   lib from fetched to built-from-source. Coverage-C proper: the binding PROBES
+   run against the BUILT lib — [build_lib] plants a `libsqlite3.so.0` soname
+   symlink and each probe exports [LD_LIBRARY_PATH=<built libdir>] so the loader
+   binds the canary-built lib (the bindings themselves stay Fetched — the opam
+   binding was compiled against the system lib; run-lib ≠ build-lib is the real
+   deploy world). Each probe also ASSERTS the runtime-reported version equals the
+   declared built version ([log_grep "sqlite_version=<dotted>"]) — the run
+   verifiably exercises the enumerated world, not silently the system lib. *)
 let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
     Canary_step_builder.runner_spec =
-  let numeric, amalg_url = sqlite_amalg chan in
+  let dotted, numeric, amalg_url = sqlite_amalg chan in
   let amalg_dir = "sqlite-amalgamation-" ^ numeric in
   let src = workspace ^ "/src" in
   let libdir = workspace ^ "/lib" in
   let libpath = libdir ^ "/libsqlite3.so" in
+  (* Loader repoint for the probes: the workspace path is repo-relative, and
+     probes run from the repo root — anchor with $PWD so the exported path is
+     absolute wherever the probe binary itself chdirs. *)
+  let probe_env =
+    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH" libdir ]
+  in
+  let version_line = "sqlite_version=" ^ dotted in
+  let ocaml = sqlite_ocaml_config.ocaml in
   { runner_spec with
     fetch_lib = None;   (* built from source, not fetched *)
     fetch_source =
@@ -228,10 +250,13 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
     build_lib =
       Some
         (fun ~output_dir ~variant_key ->
+          (* the .so.0 symlink satisfies the bindings' NEEDED entry
+             (libsqlite3.so.0 — the system lib's soname) when the loader is
+             repointed at [libdir]. *)
           Printf.sprintf
             "test -f %s || { mkdir -p %s && gcc -shared -fPIC %s/%s/sqlite3.c \
-             -o %s -lpthread -ldl ; }"
-            libpath libdir src amalg_dir libpath
+             -o %s -lpthread -ldl ; } && ln -sfn libsqlite3.so %s/libsqlite3.so.0"
+            libpath libdir src amalg_dir libpath libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
                ~variant_key);
     probe_lib =
@@ -242,6 +267,35 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
               libpath libpath
             |> Canary_build_cmd.with_marker ~marker:"probe.log" ~output_dir
                  ~variant_key ) ];
+    (* Binding probes OVER the built lib (repointed loader + version assert). *)
+    probe_binding =
+      [ ( Canary_lang.OCaml,
+          Canary_store.Pm
+            (Canary_store.Lang_pm
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
+          fun ~output_dir ~variant_key ->
+            Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
+              ~log_grep:(Some version_line)
+              ~binding_lib:ocaml.binding_lib_name ~example:ocaml.example_file
+              ~target:ocaml.example_target ~output_dir ~variant_key );
+        (* Python's runtime sqlite is AMBIENT (dep_mode [Ambient], not
+           [Independent]): a distro python links the system lib, and a
+           standalone/uv python STATICALLY bundles its own (e.g. 3.50.4,
+           [_sqlite3] a builtin — no .so to repoint). Either way the loader
+           can't be pointed at the canary-built lib, so the probe OBSERVES
+           the runtime version (printed to probe.log) without asserting the
+           built one. The OCaml probe above is the [Independent] runtime
+           edge; this is the [Ambient] one — both real, on one project. *)
+        ( Canary_lang.Python,
+          Canary_store.Pm
+            (Canary_store.Lang_pm
+               { lang = Canary_lang.Python; pm = Canary_store.Pip }),
+          fun ~output_dir ~variant_key ->
+            match sqlite_python_config with
+            | Python_config p ->
+                Canary_toolchain.python_probe_only_cmd p ~output_dir
+                  ~variant_key
+            | Ocaml_config _ -> assert false ) ];
   }
 
 (* A3b: sqlite DECLARES its static axes (stage 1: [project_spec]); the generic
