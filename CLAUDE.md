@@ -7,7 +7,7 @@ dune build                                                   # build everything
 dune exec src/bin/canary_main.exe -- paths                   # print 15-row action pattern table
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
 dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
-dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 worlds: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each)
+dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 worlds: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built worlds probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): algorithm-driven good+bad run + coverage
@@ -34,9 +34,16 @@ make canary                                                  # run canary via Ma
 Scenario-enumeration model (ssot §4.2): one abstract enumeration
 algorithm (`action/canary_enumerate.ml`) over per-artifact axes
 (provision / version / mechanism / mutation), each axis set to a config
-level (Free / Subset / Full). tiny and a real project are two configs of
-the one algorithm. `scenarios`/`tiny engine` render each hand-written
-enumeration through it; implementation state in `doc/canary/status.md`.
+level (Free / Subset / Full). The version universe is per
+`(artifact × provision)` (`ps_versions_of id pv`): Fetched is
+version-ambient (one representative), Built ranges over buildable
+versions, Vendored over cached variants — so declared worlds == run
+worlds. tiny and a real project are two configs of the one algorithm;
+sqlite + tiny-full enumerate their ENTIRE scenario set (baseline +
+built-lib version variants) from declared `project_spec`s
+(`--thin` = `version Subset [Stable]`, a config level).
+`scenarios`/`tiny engine` render each hand-written enumeration through
+it; implementation state in `doc/canary/status.md`.
 
 **tiny-factory / tiny1 / tiny-full** (ssot §4.2.5, status §1a — the
 2026-08-02 arc). Three named things: **tiny-factory** = the machinery
@@ -519,8 +526,10 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 - **`Fetched` is version-ambient in scenario identity**: `scenario_dir_of`
   (`canary_main.ml`) drops a `Fetched` placement's declared version from the
   scenario id (the PM picks the actual version), so `Fetched@Stable ≡ Fetched@Dev`
-  dedup to one run; `Built`/`Vendored` versions ARE identity. This is why sqlite's
-  `{Fetched,Built}×{Stable,Dev}` declares 4 but runs 3. A project that pins a
+  dedup to one run; `Built`/`Vendored` versions ARE identity. Since the
+  per-provision version axis (2026-08-05) specs no longer declare versions a
+  Fetched artifact can't pin (sqlite declares 3, runs 3 — no dedup needed);
+  the identity rule stays as the generic backstop. A project that pins a
   Fetched version would override via its provider (`pr_provenance`) — not wired yet.
 - **Run-cache stale hit looks like a real PASS**: a step is skipped when its
   `.ok` marker exists and `check_post` passes (local cache), keyed by

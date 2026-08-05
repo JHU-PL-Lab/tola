@@ -66,6 +66,36 @@ combination should be *derived* from the declared spec (the A-convergence below)
 "raw-script vs generic" collapses to one path. Faithful = the run's scenario set
 matches what the enumeration algorithm + graph say the project's worlds are.
 
+**Milestone progress (2026-08-05, the faithful-worlds arc — sqlite + tiny-full
+first):**
+- **(a) DONE for sqlite + tiny-full** — both projects' *entire* scenario set
+  (baseline + built-lib version variants) is now enumerated from a declared
+  `project_spec`; no hand-built assignment list remains on the generic path.
+  Enabler: **per-provision version universes** (`ps_versions_of` is per
+  `(artifact × provision)`) — a Fetched artifact is version-ambient (one
+  representative), Built ranges over buildable versions, Vendored over cached
+  variants, so declared worlds == run worlds (sqlite 3==3, the dedup-reliant
+  4th declaration gone; tiny-full's built-lib variants derived, the old
+  source-primary blocker resolved the sqlite way — self-contained Built,
+  `a_source` display-only). `--thin` is now a real config level
+  (`version = Subset [Stable]`), not a hand filter.
+- **(b) FIRST REAL MISMATCH WORLD, verified** — sqlite's Built worlds now
+  probe **over the built lib** (build_lib plants a `libsqlite3.so.0` soname
+  symlink; probes export `LD_LIBRARY_PATH=<built libdir>`), and each probe
+  PRINTS the runtime-reported version, ASSERTED against the declared built
+  version (`log_grep sqlite_version=<dotted>`, derived from the channel
+  axis). The built-dev world is discriminating: the opam binding (compiled
+  against system 3.45.1) runs against built 3.46.1 — a real, checked
+  run-lib ≠ build-lib deploy world. **Finding:** the Python stdlib binding's
+  runtime sqlite is `Ambient` — a uv/standalone python STATICALLY bundles
+  its own (3.50.4, `_sqlite3` a builtin, no .so to repoint) — so sqlite now
+  exhibits BOTH runtime-edge modes of `dynamic_enumeration.md` on one
+  project: OCaml = `Independent` (asserted), Python = `Ambient` (observed
+  in probe.log, not asserted). What (b) still needs: the mismatch as a
+  *declared/enumerated* world (`close_deps Independent` wired into
+  `pr_enumerate`), not a per-world runner_spec construction.
+- **(c) NOT STARTED** — z3/llvm still raw-script (`run_project_multi`).
+
 **To-do, regrouped.**
 
 ### A. Convergence — one enumeration algorithm, one project spec (current focus)
@@ -289,7 +319,10 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
       declared mismatch edge. Keep `ps_versions_of` for tiny (all-vendored, versions
       = labels); general projects get graph-structural versions. (This is why
       sqlite's `ps_versions_of source = [dev; stable]` felt off — dev isn't
-      graph-wired.)
+      graph-wired.) *Partial mitigation 2026-08-05:* `ps_versions_of` is now
+      per `(artifact × provision)`, which kills the worst over-generation
+      (version axes only where the provision really ranges: Built) — but
+      version *propagation* along build edges is still the graph work.
     - **A5 prerequisite:** z3/llvm produce ZERO scenarios today (variant view, not
       `project_run`). The graph work needs them on the `enumerate`/`project_run`
       path first — that IS most of A5, not an afterthought.
@@ -311,9 +344,12 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
       `run_step`/`mk_system_dep_steps` + `canary_toolchain` dead verify helpers.
     - the `(kind × ext)`→enriched-`artifact_kind` fold (~200 coarse-kind matches,
       diagram ~61) — the node merge does NOT need it (keeps the pair); decoupled.
-  - *A4 follow-ups (kept hand-built):* the **combinations** wired as multi-mutation
-    points (the curated chain policy); `--thin` as a `config` level; built-lib
-    variants routed through the spec (source-primary resolution).
+  - *A4 follow-ups:* ✅ `--thin` as a `config` level (`version = Subset
+    [Stable]`, 2026-08-05); ✅ built-lib variants routed through the spec
+    (per-provision versions + self-contained Built resolved source-primary,
+    2026-08-05). Still hand-built: the **combinations** wired as
+    multi-mutation points (the curated chain policy) — tiny1/factory-only
+    since the flavor-1 decoupling.
 
 ### B. Coverage — make canary detect more
 
@@ -330,9 +366,15 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
 
 ### C. Real-project breadth (sqlite)
 
-- Binding **built against the Built lib** (the Built scenario is lib-only today).
-- **Real version axis** — the amalgamation URL is hardcoded `3450100`; derive it
-  from `placement.version`.
+- ✅ **Binding probes RUN against the Built lib** (2026-08-05): soname symlink
+  + `LD_LIBRARY_PATH` repoint + runtime-version assert (see milestone
+  progress (b) above). Still open: the binding *compile* against the built
+  lib's headers (the opam binding is compiled against the system lib — which
+  is exactly what makes the current world the honest deploy mismatch; a
+  build-against-built variant would be a *different* declared world).
+- ✅ **Real version axis** — amalgamation (dotted, numeric, URL) derived from
+  `placement.version.channel` (`sqlite_amalg`); Built worlds assert the
+  runtime-reported dotted version.
 - **distro × sys-PM × lang-PM** packaging enumeration (couples with §1b).
 
 ### D. Deferred design cluster
