@@ -153,14 +153,25 @@ let verdict_marker (step : step) : string =
 
 (* The marker's CONTENT records how the expectation was met: "xfail" = a
    confirmed expected failure, "" (or "ok") = plain success — so a warm run
-   re-seeds [Step_done_xfail] rather than flattening it into [Step_done]. *)
-let write_verdict (step : step) ~(ok : bool) ~(xfail : bool) : unit =
+   re-seeds [Step_done_xfail] rather than flattening it into [Step_done].
+   A7 phase 2: an xfail line also names the CONFIRMING contract ids —
+   "xfail c2" (space-separated after the keyword; prefix-compatible with
+   the [verdict_is_xfail] parser). [] = confirmed without a contract
+   attribution (a hand-written Expect_failure, or the empty-prediction
+   fallback). *)
+let write_verdict (step : step) ~(ok : bool) ~(xfail : bool)
+    ~(xfail_contracts : string list) : unit =
   let path = verdict_marker step in
   if ok then (
     try
       ignore (Stdlib.Sys.command [%string "mkdir -p \"%{step.output_dir}\""] : int);
       let oc = Stdlib.open_out path in
-      if xfail then Stdlib.output_string oc "xfail\n";
+      if xfail then (
+        let ids = match xfail_contracts with
+          | [] -> ""
+          | ids -> " " ^ String.concat ~sep:" " ids
+        in
+        Stdlib.output_string oc ("xfail" ^ ids ^ "\n"));
       Stdlib.close_out oc
     with _ -> ())
   else if Stdlib.Sys.file_exists path then
@@ -174,6 +185,32 @@ let verdict_is_xfail (path : string) : bool =
         | None -> false)
   with _ -> false
 
+(** The contract ids a marker's xfail line names ("xfail c2" → ["c2"]);
+    [] for a plain / non-xfail / absent marker. *)
+let verdict_xfail_contracts (path : string) : string list =
+  try
+    Stdlib.In_channel.with_open_text path (fun ic ->
+        match Stdlib.In_channel.input_line ic with
+        | Some l -> (
+            match String.split (String.strip l) ~on:' ' with
+            | "xfail" :: ids ->
+                List.filter ids ~f:(fun s -> not (String.is_empty s))
+            | _ -> [])
+        | None -> [])
+  with _ -> []
+
+(** Display form of a contract-id list: " [c2,c5]", "" when empty. *)
+let xfail_id_suffix (ids : string list) : string =
+  match ids with
+  | [] -> ""
+  | ids -> " [" ^ String.concat ~sep:"," ids ^ "]"
+
+(** The confirming-contract ids recorded for [step]'s xfail verdict — the
+    read display layers use (`action`'s xfail list → scenarios.tsv → `spec`;
+    warm and cold runs alike, since the marker is the persistence). *)
+let step_xfail_contracts (step : step) : string list =
+  verdict_xfail_contracts (verdict_marker step)
+
 (* Run a single action step; returns its [step_status] ([Step_done_xfail] =
    passed via a confirmed expected failure).
    Skip priority: (1) global cache hit, (2) prior run met its expectation
@@ -184,6 +221,11 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
   let log = logger.log ~tag in
   (* set when the met expectation was a CONFIRMED failure (declared or derived) *)
   let xfail = ref false in
+  (* A7 phase 2: the contract ids whose predicted substrings the failing
+     output actually matched — persisted in the verdict marker so every
+     display layer can name WHICH contract confirmed. [] = no attribution
+     (hand-written Expect_failure / empty-prediction fallback). *)
+  let xfail_ids : string list ref = ref [] in
   (* Global cache: skip if a previous CI run recorded success for this key *)
   let global_hit = match global_cache with
     | Some cache -> cache_is_success cache ~key:step.cache_key
@@ -196,7 +238,9 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
      (verdict marker), so a failed probe is never served as cached success. *)
   else if Stdlib.Sys.file_exists (verdict_marker step) then
     if verdict_is_xfail (verdict_marker step) then (
-      log ~event:"skip" ~detail:(Some "verdict marker (prior xfail)");
+      log ~event:"skip"
+        ~detail:(Some ("verdict marker (prior xfail)"
+                       ^ xfail_id_suffix (step_xfail_contracts step)));
       Step_done_xfail)
     else (
       log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
@@ -241,9 +285,10 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
         (* A7 phase 1 (was plan.md Step 6c): per-contract prediction — one
            [compat_predicted] event per FIRED contract row ("c1 cmp_symbol:
            3 substring(s)") + one [contract_skipped] per disabled/stubbed
-           entry, instead of a single collapsed count. Returns the flat
-           substring union the expectation check greps for (identical to
-           the old [predicted_contains_any_v2] result). *)
+           entry, instead of a single collapsed count. Returns the fired
+           rows; [flat_predictions] is the substring union the expectation
+           check greps for (identical to the old
+           [predicted_contains_any_v2] result). *)
         let derived_predictions inputs =
           let fired =
             Canary_compat_run.predicted_by_contract_v2
@@ -265,8 +310,22 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                 ~detail:(Some (Printf.sprintf "%s %s: %s"
                                  (Canary_compat.string_of_contract_id c.id)
                                  c.name reason)));
+          fired
+        in
+        let flat_predictions fired =
           List.concat_map fired ~f:snd
           |> List.dedup_and_sort ~compare:String.compare
+        in
+        (* A7 phase 2: which fired contracts does the failing output
+           actually match? Those are the CONFIRMING contracts — recorded in
+           the verdict + named in the done event. Evaluated only on a
+           confirmed expected failure. *)
+        let confirming_contracts fired =
+          List.filter_map fired
+            ~f:(fun ((c : Canary_compat.contract_check), subs) ->
+              if output_contains_any ~output_dir:out subs then
+                Some (Canary_compat.string_of_contract_id c.id)
+              else None)
         in
         let expectation_ok = match step.expectation with
           | Expect_success ->
@@ -300,7 +359,8 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                   ~detail:(Some "expected failure (derived) but command succeeded");
                 false)
               else
-                let derived = derived_predictions inputs in
+                let fired = derived_predictions inputs in
+                let derived = flat_predictions fired in
                 let found =
                   if List.is_empty derived then
                     (* No prediction available — fall back to "any failure
@@ -317,9 +377,13 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                         "expected failure confirmed (derived): %s predates %s%s"
                         vi.provider_version vi.consumer_requires since
                 in
-                if found then xfail := true;
+                if found then begin
+                  xfail := true;
+                  xfail_ids := confirming_contracts fired
+                end;
                 log ~event:(if found then "done" else "failed")
-                  ~detail:(Some (if found then confirmed_msg
+                  ~detail:(Some (if found
+                    then confirmed_msg ^ xfail_id_suffix !xfail_ids
                     else "command failed but output didn't match derived predictions"));
                 found
           | Expect_compat_derived { inputs; version_info = _ } ->
@@ -329,7 +393,8 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                  expects the failure). If non-empty, the step must fail with
                  that signature. Lets tiny-full run without being told which
                  contract breaks — canary discovers it. *)
-              let derived = derived_predictions inputs in
+              let fired = derived_predictions inputs in
+              let derived = flat_predictions fired in
               if List.is_empty derived then begin
                 (* inspection predicts no failure ⇒ expect success *)
                 log ~event:(if cmd_ok then "done" else "failed")
@@ -345,10 +410,14 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
               end
               else begin
                 let found = output_contains_any ~output_dir:out derived in
-                if found then xfail := true;
+                if found then begin
+                  xfail := true;
+                  xfail_ids := confirming_contracts fired
+                end;
                 log ~event:(if found then "done" else "failed")
                   ~detail:(Some (if found
                     then "expected failure confirmed (derived)"
+                         ^ xfail_id_suffix !xfail_ids
                     else "command failed but output didn't match derived predictions"));
                 found
               end
@@ -386,7 +455,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
     in
     (* record the verdict so the local cache can key on a MET expectation, not
        mere output presence (a failed probe still leaves probe.log). *)
-    write_verdict step ~ok:result ~xfail:!xfail;
+    write_verdict step ~ok:result ~xfail:!xfail ~xfail_contracts:!xfail_ids;
     if result then (if !xfail then Step_done_xfail else Step_done)
     else Step_failed)
 
@@ -420,7 +489,9 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
       if Stdlib.Sys.file_exists (verdict_marker s) then begin
         let xf = verdict_is_xfail (verdict_marker s) in
         logger.log ~tag:s.tag ~event:"skip"
-          ~detail:(Some (if xf then "verdict marker (prior xfail)"
+          ~detail:(Some (if xf then
+                           "verdict marker (prior xfail)"
+                           ^ xfail_id_suffix (step_xfail_contracts s)
                          else "verdict marker (prior success)"));
         Hashtbl.set status ~key:s.tag
           ~data:(if xf then Step_done_xfail else Step_done)

@@ -130,6 +130,30 @@ let compat_pure_tests =
           |> List.dedup_and_sort ~compare:String.compare
         in
         List.equal String.equal flat mixed };
+    (* A7 phase 2 — verdict-marker content round-trip: "xfail c2 c5" is
+       still an xfail to the prefix parser AND yields its contract ids;
+       a plain "xfail" yields []; an empty (plain-success) marker is not
+       an xfail. Pins the cross-run persistence format. *)
+    { name = "compat.verdict_xfail_contract_roundtrip";
+      check = fun () ->
+        let write name content =
+          let p = tmp_root ^ "/" ^ name in
+          let oc = Stdlib.open_out p in
+          Stdlib.output_string oc content;
+          Stdlib.close_out oc;
+          p
+        in
+        let attributed = write "verdict_attr.ok" "xfail c2 c5\n" in
+        let plain = write "verdict_plain.ok" "xfail\n" in
+        let success = write "verdict_success.ok" "" in
+        Canary_local_runner.verdict_is_xfail attributed
+        && List.equal String.equal
+             (Canary_local_runner.verdict_xfail_contracts attributed)
+             [ "c2"; "c5" ]
+        && Canary_local_runner.verdict_is_xfail plain
+        && List.is_empty (Canary_local_runner.verdict_xfail_contracts plain)
+        && not (Canary_local_runner.verdict_is_xfail success)
+        && List.is_empty (Canary_local_runner.verdict_xfail_contracts success) };
     (* per-call disable drops the row AND shows up as a skip with the
        per-call reason (registry-disabled rows carry their status) *)
     { name = "compat.by_contract_disabled_skips";

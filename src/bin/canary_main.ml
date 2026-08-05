@@ -345,7 +345,17 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
                 List.filter_map
                   (fun (s : Canary_step_model.step) ->
                     match Base.Hashtbl.find status s.tag with
-                    | Some Canary_step_model.Step_done_xfail -> Some s.tag
+                    | Some Canary_step_model.Step_done_xfail ->
+                        (* A7 phase 2: name the confirming contract(s) from
+                           the verdict marker — "probe_binding_python[c2]".
+                           Flows to the console line, scenarios.tsv and the
+                           `spec` post view unchanged. *)
+                        let ids = Canary_local_runner.step_xfail_contracts s in
+                        Some
+                          (s.tag
+                           ^ (match ids with
+                              | [] -> ""
+                              | ids -> "[" ^ String.concat "," ids ^ "]"))
                     | _ -> None)
                   steps
               in

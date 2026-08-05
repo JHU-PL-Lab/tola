@@ -57,14 +57,31 @@ let is_verdict = function
   | "done" | "failed" | "blocked" | "skip" | "unexpected_success" -> true
   | _ -> false
 
+(* A7 phase 2: the confirming-contract suffix the runner appends to xfail
+   details (" [c2]" / " [c2,c5]") — extracted so the mark itself can name
+   the contract ("xfail[c2]"). "" when the detail carries none (an
+   unattributed xfail, or a pre-phase-2 log line). *)
+let contract_suffix (detail : string option) : string =
+  match detail with
+  | None -> ""
+  | Some d -> (
+      match String.substr_index d ~pattern:"[c" with
+      | None -> ""
+      | Some i -> (
+          match String.index_from d i ']' with
+          | Some j -> String.sub d ~pos:i ~len:(j - i + 1)
+          | None -> ""))
+
 (* Compact mark from (event, detail). `xfail` = an *expected* failure that
    was confirmed (a pass) — the "done (expected failure confirmed)" text is
-   redundant with the mark, so the row drops it. *)
+   redundant with the mark, so the row drops it; the confirming contract
+   (if the runner named one) rides the mark: "xfail[c2]". *)
 let mark event detail =
   match event with
   | "done" -> (
       match detail with
-      | Some d when String.is_substring d ~substring:"expected failure" -> "xfail"
+      | Some d when String.is_substring d ~substring:"expected failure" ->
+          "xfail" ^ contract_suffix detail
       | _ -> "✓")
   | "failed" -> "✗"
   | "unexpected_success" -> "✗"
@@ -72,7 +89,8 @@ let mark event detail =
       (* a cache skip on a MET expectation is a pass, not a not-run: the
          verdict marker's flavor tells which pass. *)
       match detail with
-      | Some d when String.is_substring d ~substring:"prior xfail" -> "xfail"
+      | Some d when String.is_substring d ~substring:"prior xfail" ->
+          "xfail" ^ contract_suffix detail
       | Some d when String.is_substring d ~substring:"prior success" -> "✓"
       | _ -> "·")
   | "blocked" -> "⊘"
@@ -174,7 +192,7 @@ let print_witness ~root ~project ~variant ~tag ~mark =
                 (List.length present)
                 (String.concat ~sep:"," missing)
         with _ -> ());
-  if String.equal mark "xfail" || String.equal mark "✗" then
+  if String.is_prefix mark ~prefix:"xfail" || String.equal mark "✗" then
     List.iter matches ~f:(fun f ->
         if String.is_suffix f ~suffix:".log" then begin
           let content = read_file_or_empty (Printf.sprintf "%s/%s" dir f) in
@@ -257,7 +275,7 @@ let print_status ?(verbose = false) ~root ~project () =
                 | None -> ""
               else ""
             in
-            Stdlib.Printf.printf "      %-28s %-6s%s%s\n" tag m extra wnote;
+            Stdlib.Printf.printf "      %-28s %-10s%s%s\n" tag m extra wnote;
             if verbose then
               print_witness ~root ~project ~variant:name ~tag ~mark:m))
   end

@@ -242,11 +242,23 @@ edges resolved via `dep_mode`). Open:
      xfail now logs "c2 cmp_api_completeness: 1 substring(s)" + c3/c7/c8
      skip reasons. 3 new pure pins (attribution / flatten / disable+skip);
      104/104 artifact-tests.
-  2. *Typed contract outcome in the verdict*: record WHICH contract(s)
-     confirmed an xfail (verdict-marker content "xfail c2 …" —
-     prefix-compatible with the existing parser); surface in
-     `action`/`status`/`spec` xfail lines (`xfail probe_binding_python
-     [c2]`). The §2 per-step typed-observation seed.
+  2. ~~*Typed contract outcome in the verdict*~~ — **DONE 2026-08-05.**
+     A CONFIRMING contract = a fired registry row whose own substrings
+     the failing output matched (`confirming_contracts`, evaluated on
+     confirmation only). Persisted in the verdict-marker content
+     ("xfail c2" — prefix-compatible; old plain markers/logs degrade
+     gracefully), re-emitted on warm-run skips/seeds, and surfaced
+     everywhere: `action` console + scenarios.tsv + `spec` show the
+     decorated tag (`xfail probe_binding_python[c2]`), `status` puts it
+     on the mark (`xfail[c2]`). Verified live on BOTH branches: z3's
+     oracle-path wheel demo → `[c2]` (api completeness); tiny-full's
+     derived forward mismatch → `[c1]` (cmp_symbol) — the two demos now
+     name DIFFERENT contracts end-to-end, which is the §2 typed-outcome
+     payoff. An unattributed confirmation stays possible ([] — the
+     hand-written Expect_failure and the empty-prediction fallback).
+     Pins: `compat.verdict_xfail_contract_roundtrip`; 105/105
+     artifact-tests, 44/44 project-tests, 2/2 cache-soundness (the
+     marker machinery is what the cache keys on).
   3. *z3 + llvm oracle → derived*: swap both realizations to
      `lower_expectation_agnostic` (the violates/has_manifest knobs die at
      those call sites). The semantics change is the honest one: dev
