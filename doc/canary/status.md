@@ -207,8 +207,12 @@ edges resolved via `dep_mode`). Open:
   lib axis); once `dep_mode` is declared per edge, the runner can
   share/dedup such steps across scenarios (the step-level analogue of the
   Fetched whole-scenario dedup).
-- **A7 — unify the 3-way expectation model** (§1c #1; couples with §2
-  "per-step contract outcome").
+- **A7 — unify the 3-way expectation model — DONE 2026-08-05** (phases
+  1–5 + 3b below; §1c #1 resolved; the §2 "per-step contract outcome"
+  seed shipped as phases 1–2). Residue: typed per-probe `asserts` field;
+  z3/llvm probe assertions (shared-switch hardening); probe-level roles
+  in the design-intent table; gh's Derived-with-empty-gen-time-prediction
+  rendering.
   **Inventory (2026-08-05, exact).** The three styles are:
   (1) ORACLE contract-bound — `lower_expectation ~bindings ~violates
   ~has_manifest` (the project TELLS which contract breaks per scenario):
@@ -303,18 +307,33 @@ edges resolved via `dep_mode`). Open:
      oracle paths: c1 must-fail confirmed, grep-path confirmed,
      type_wrong still red (`unexpected_success` — the answer-key
      property). tiny run 21/22 unchanged.
-  4. *ssl hand-written → derived From_artifact*: add an mli inspect to
-     ssl's fetch_binding + a binding watchlist (`native_library_version`),
-     declare `ssl_contract_bindings` (c2 at probe_binding OCaml), replace
-     the four per-variant expect closures with the agnostic lowering —
-     0.6.0's mli lacks the name ⇒ derived must-fail; 0.7.0 has it ⇒
-     derived success. Expectation unification only — ssl STAYS on
-     `run_project_multi` (runner migration is A5 residue, separate).
-  5. *sqlite `log_grep` reclassified + documented*: name the
-     world-identity-assertion concept (the assert side of §2's typed
-     observations; a positive-scenario invariant, not an expected
-     failure); mechanism unchanged; ssot note. Optional typed
-     `assert_log` field later.
+  4. ~~*ssl hand-written → derived From_artifact*~~ — **DONE 2026-08-05.**
+     The consumer requirement is DATA (`app.requires` mli watchlist per
+     app), the evidence is an mli inspect on the fetched binding
+     (`mli_inspect_opam_pkg_cmd`, watchlisted per variant), and
+     `ssl_contract_bindings` (c2 at probe_binding OCaml) + the one
+     framework lowering replace all four hand-written per-variant
+     expects. Verified live, full fresh 2×2: 060_core "no contract
+     fired"→✓, 060_nlv inspect "⚠ MISSING Ssl.native_library_version" →
+     c2 predicts → `xfail[c2]`, 070_core/070_nlv ✓ — evidence and
+     outcome now sit side by side in `status`. The probe also gained a
+     WORLD-IDENTITY ASSERTION (switch must hold the variant's pinned ssl
+     version before compiling — the loud fix for the shared-switch
+     hazard, finding (a), on the project where version-swapping makes it
+     acutest). ssl stays on `run_project_multi` (A5 residue). **The
+     3-way unification is COMPLETE: every real project derives; the
+     oracle is a tiny-factory combinator; zero hand-written failure
+     expectations remain.**
+  5. ~~*sqlite `log_grep` reclassified + documented*~~ — **DONE
+     2026-08-05.** Named WORLD-IDENTITY ASSERTION at its definition
+     (`probe_ocaml_env_cmd`'s log_grep doc) + sqlite's use site: a
+     positive-scenario invariant ("the run really exercised the
+     enumerated world"), opposite polarity from an expected failure —
+     deliberately OUTSIDE the contract lowering. ssl's switch-version
+     prefix is the binding-side sibling. Deferred (A7 residue): a typed
+     per-probe `asserts` field `spec` can display; extending the
+     assertion to z3/llvm binding probes (their probes span two
+     packages; needs the per-chain version to assert).
 - **A9 step 2 — dispatch as DECLARATION** (the action-variant table).
   Step 1 (the dispatch/realization split; pure `scenario_case` data +
   general coordinate reads) shipped 2026-08-05. Remaining: replace the
@@ -485,7 +504,10 @@ Open:
 
 Open issues (original numbering kept):
 
-1. **Expectation model is 3 different things** → A7.
+1. ~~**Expectation model is 3 different things**~~ — RESOLVED (A7 phases
+   1–5, 2026-08-05): every real project derives via the ONE lowering;
+   the oracle is a tiny-factory combinator; sqlite's log_grep
+   reclassified as a world-identity assertion.
 2. **Module-init side effects** — `detect_pm` memoized 2026-08-04; still
    open: fully SKIP for PM-irrelevant commands (`spec`/`paths`/`graph`). → E.
 3. **Unwired `latest` channel** (NOT dead — intended spec data; z3/llvm

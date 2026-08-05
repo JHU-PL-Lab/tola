@@ -250,9 +250,12 @@ let sqlite_amalg (chan : Canary_basic.channel) :
    symlink and each probe exports [LD_LIBRARY_PATH=<built libdir>] so the loader
    binds the canary-built lib (the bindings themselves stay Fetched — the opam
    binding was compiled against the system lib; run-lib ≠ build-lib is the real
-   deploy world). Each probe also ASSERTS the runtime-reported version equals the
-   declared built version ([log_grep "sqlite_version=<dotted>"]) — the run
-   verifiably exercises the enumerated world, not silently the system lib. *)
+   deploy world). Each probe also carries a WORLD-IDENTITY ASSERTION (the A7
+   phase 5 term): [log_grep "sqlite_version=<dotted>"] — the runtime-reported
+   version must equal the declared built version, so the run verifiably
+   exercises the enumerated world, not silently the system lib. NOT an
+   expectation (opposite polarity — a positive invariant, not an expected
+   failure); it deliberately stays out of the contract lowering. *)
 let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
     Canary_step_builder.runner_spec =
   let dotted, numeric, amalg_url = sqlite_amalg chan in

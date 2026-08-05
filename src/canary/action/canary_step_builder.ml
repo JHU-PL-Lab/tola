@@ -368,7 +368,19 @@ let probe_ocaml_env_cmd ~env ~log_grep ~binding_lib ~example ~target
      system lib, run against another).
      [log_grep] — a substring probe.log must contain for the step to pass
      (e.g. the runtime-reported lib version in a built-lib world: the run's
-     world must MATCH the declared placement, not just not-crash). *)
+     world must MATCH the declared placement, not just not-crash).
+
+     TERMINOLOGY (A7 phase 5): this is a WORLD-IDENTITY ASSERTION — a
+     positive-scenario invariant ("the run really exercised the enumerated
+     world"), the OPPOSITE polarity from an expected failure. It therefore
+     stays OUT of the contract/expectation unification: expectations say
+     what a mismatched world must do; this asserts which world it is.
+     Siblings: sqlite's built-lib probes grep the runtime lib version;
+     ssl's binding probe asserts the switch's pinned binding version
+     inline (its own shell prefix — the same concept on the binding side,
+     the loud fix for the shared-switch scenario-crossing hazard). A typed
+     per-probe `asserts` field that `spec` could display is the deferred
+     follow-up (status §A A7). *)
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
   let exports =
     String.concat ~sep:""
