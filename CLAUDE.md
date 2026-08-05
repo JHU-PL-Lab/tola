@@ -7,11 +7,11 @@ dune build                                                   # build everything
 dune exec src/bin/canary_main.exe -- paths                   # print 15-row action pattern table
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
 dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
-dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 worlds: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built worlds probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
+dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 scenarios: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built scenarios probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
-dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived worlds = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
-dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 worlds (drops both dev axes)
+dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
+dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). project_run: tiny-full/sqlite; variant view (raw runner_spec, read-only): z3/llvm
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
@@ -37,8 +37,10 @@ algorithm (`action/canary_enumerate.ml`) over per-artifact axes
 level (Free / Subset / Full). The version universe is per
 `(artifact × provision)` (`ps_versions_of id pv`): Fetched is
 version-ambient (one representative), Built ranges over buildable
-versions, Vendored over cached variants — so declared worlds == run
-worlds. tiny and a real project are two configs of the one algorithm;
+versions, Vendored over cached variants — so declared scenarios == run
+scenarios. ("scenario" is THE term — ssot §6.1 unified scenario ≡ variant ≡
+the old display word "world"; code ids `variant_*` = a scenario's cache
+key.) tiny and a real project are two configs of the one algorithm;
 sqlite + tiny-full enumerate their ENTIRE scenario set (baseline +
 built-lib version variants) from declared `project_spec`s
 (`--thin` = `version Subset [Stable]`, a config level).

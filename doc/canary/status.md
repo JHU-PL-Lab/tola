@@ -411,7 +411,11 @@ Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key) · factory
 comment sweep (resource → cached artifact in the 2229-line
 `canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*) · full-lazy
 `detect_pm` · wire the `latest` channel (§1c #3) · scenario names + `docs/canary`
-output volume.
+output volume · **terminology sweep: `variant_*` code identifiers →
+`scenario_*`** (2026-08-05 unified the DISPLAY term to `scenario` — ssot §6.1
+scenario ≡ variant ≡ "world"; the mechanical id rename
+(`variant_id`/`variant_key`/`variant_file`/`print_spec_variants`/…) is queued —
+touches cache/filename keys, so do it as one deliberate pass, not ad hoc).
 
 ### F. Inspection — show a project's artifacts × scenarios, pre and post (2026-08-04)
 

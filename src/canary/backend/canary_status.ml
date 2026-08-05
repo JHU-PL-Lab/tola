@@ -154,7 +154,10 @@ let print_status ?(verbose = false) ~root ~project () =
               @ [ (tag, (event, detail)) ]
         | _ -> ());
     let variants = List.rev !order in
-    Stdlib.Printf.printf "\n%s — %d variant(s)\n" project (List.length variants);
+    (* "scenario" is THE display term (ssot §6.1: scenario ≡ variant; the
+       enumerated "world" was the same thing) — code ids like [variant_id]
+       remain the scenario's cache/filename key. *)
+    Stdlib.Printf.printf "\n%s — %d scenario(s)\n" project (List.length variants);
     List.iter variants ~f:(fun name ->
         let verdicts = match Hashtbl.find table name with Some r -> !r | None -> [] in
         (* one-line summary mark for the variant = worst of its steps *)

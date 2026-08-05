@@ -373,7 +373,7 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
      List.length (List.filter (fun (_, _, _, xs) -> xs <> []) !results)
    in
    if n_xfail_worlds > 0 then
-     Fmt.pr "  mismatch worlds: %d passed via confirmed expected failure (xfail)@."
+     Fmt.pr "  mismatch scenarios: %d passed via confirmed expected failure (xfail)@."
        n_xfail_worlds);
   (* F1: persist the per-scenario verdicts so a post view can annotate the
      `spec` (pre) listing. One TAB-separated line per scenario that RAN
@@ -545,7 +545,7 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
   let ngood = List.length (List.filter all_good scenarios) in
   let total = List.length scenarios in
   Fmt.pr
-    "@.worlds — %d enumerated (%d good, %d bad); ONE placement per artifact \
+    "@.scenarios — %d enumerated (%d good, %d bad); ONE placement per artifact \
      (the flat assignment the run walks):@."
     total ngood (total - ngood);
   Fmt.pr
@@ -805,7 +805,7 @@ let print_spec_variants ~(name : string)
   let module E = Canary_enumerate in
   let vnames = List.map (fun (v, _, _) -> v) variants in
   Fmt.pr
-    "@.spec: %s — variant view (raw runner_spec, not project_run; %d source \
+    "@.spec: %s — scenario view (raw runner_spec, not project_run; %d source \
      configs: %s)@."
     name (List.length variants) (String.concat ", " vnames);
   (* artifacts — grouped, per-variant provision + builds. The SOURCE artifact
@@ -813,7 +813,7 @@ let print_spec_variants ~(name : string)
      source appears as one artifact group — uniform with print_spec. *)
   let all_kinds = variant_kinds variants in
   let langs = langs_of_kinds all_kinds in
-  Fmt.pr "@.artifacts (%d), by group [provision per variant: %s]:@."
+  Fmt.pr "@.artifacts (%d), by group [provision per scenario: %s]:@."
     (List.length all_kinds) (String.concat "|" vnames);
   List.iter
     (fun grp ->
@@ -853,7 +853,7 @@ let print_spec_variants ~(name : string)
       end)
     group_order;
   Fmt.pr
-    "@.  legend: V=vendored B=built F=fetched A=absent · = not in that variant \
+    "@.  legend: V=vendored B=built F=fetched A=absent · = not in that scenario \
      · columns = %s@."
     (String.concat "|" vnames);
   Fmt.pr
@@ -1180,7 +1180,7 @@ let action_cmd =
         run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some p ->
         Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny-full, tiny/<variant>)@." p
+          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny-full, tiny/<scenario>)@." p
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
@@ -1277,7 +1277,7 @@ let spec_cmd =
   Cmd.v
     (Cmd.info "spec"
        ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
-             scenarios (project_run: tiny-full/sqlite) or per-variant \
+             scenarios (project_run: tiny-full/sqlite) or per-scenario \
              provisions (raw runner_spec: z3/llvm). No execution.")
     Term.(const run $ project $ thin $ by_artifact $ json $ const ())
 
@@ -1361,7 +1361,7 @@ let scenarios_cmd =
           | [] -> None
           | variants ->
               Some
-                ( Printf.sprintf "union of %d variant(s)"
+                ( Printf.sprintf "union of %d scenario(s)"
                     (List.length variants),
                   List.concat_map
                     (fun (_, spec) ->
@@ -1496,7 +1496,7 @@ let status_cmd =
   in
   Cmd.v
     (Cmd.info "status"
-       ~doc:"Print the per-variant × per-step verdict matrix from actions.log")
+       ~doc:"Print the per-scenario × per-step verdict matrix from actions.log")
     Term.(const run $ verbose $ project $ const ())
 
 let view_cmd =

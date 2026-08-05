@@ -971,8 +971,15 @@ the writeup — no need for a separate alignment section.
 - **project** (top) vs the historical **project_spec** (renamed to
   **runner_spec** 2026-07-21). One `project` produces many
   `runner_spec`s — one per scenario/variant.
-- **scenario** ≡ **variant** — same taxonomy position; tiny calls them scenarios
-  (22 concrete), z3/llvm call them variants (2-3 each).
+- **scenario** ≡ **variant** ≡ **world** — same taxonomy position; tiny calls
+  them scenarios (22 concrete), z3/llvm historically called them variants (2-3
+  each), and the 2026-08-05 enumeration printing briefly said "world" (one
+  enumerated flat assignment). **Unified 2026-08-05: the display term is
+  `scenario`, everywhere** (`spec`/`status`/`action` output). "variant"
+  survives only in code identifiers (`variant_id`/`variant_key`/
+  `variant_file` — a scenario's cache/filename key) and `print_spec_variants`
+  internals; renaming those is a queued mechanical sweep (status §E), not a
+  display concern.
   `Canary_run_info.run_project_multi` consumes both under the same
   `variants` list.
 - **action** (verb, code) vs **rule** (theory, doc-only) — freed by
