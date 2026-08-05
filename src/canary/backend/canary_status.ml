@@ -82,6 +82,55 @@ let read_file_or_empty path =
   try Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
   with _ -> ""
 
+(* Compact watchlist verdict for a step row, aggregated over the step's
+   .json witnesses for this variant: "watchlist 5/5" when all present,
+   "⚠ watchlist MISSING a,b" otherwise. [None] = no watchlist data. Gated
+   to inspect-ish tags by the caller (avoid reading files for every row). *)
+let watchlist_note ~root ~project ~variant ~tag : string option =
+  let project_name =
+    match String.lsplit2 project ~on:'/' with Some (p, _) -> p | None -> project
+  in
+  let vk = if String.equal variant "(run)" then "" else variant in
+  (* an inspect step writes its JSON into the PARENT action's output dir
+     (build_lib_inspect → build_lib/, probe_binding_ocaml_inspect →
+     probe_binding/ocaml/) — strip the suffix before the dir mapping. *)
+  let parent_tag =
+    match String.chop_suffix tag ~suffix:"_inspect" with
+    | Some t -> t
+    | None -> tag
+  in
+  let dir =
+    Printf.sprintf "%s/canary/projects/%s/%s" root project_name
+      (Canary_basic.step_dir_of_tag parent_tag)
+  in
+  match Stdlib.Sys.readdir dir with
+  | exception _ -> None
+  | files ->
+      let present, missing =
+        Array.fold files ~init:(0, []) ~f:(fun (np, miss) f ->
+            if
+              String.is_suffix f ~suffix:".json"
+              && String.is_substring f ~substring:vk
+            then
+              try
+                let j = Yojson.Basic.from_file (Printf.sprintf "%s/%s" dir f) in
+                let open Yojson.Basic.Util in
+                let strs k =
+                  j |> member "watchlist" |> member k |> to_list
+                  |> List.map ~f:to_string
+                in
+                (np + List.length (strs "present"), miss @ strs "missing")
+              with _ -> (np, miss)
+            else (np, miss))
+      in
+      if present = 0 && List.is_empty missing then None
+      else if List.is_empty missing then
+        Some (Printf.sprintf "watchlist %d/%d" present present)
+      else
+        Some
+          (Printf.sprintf "⚠ watchlist MISSING %s"
+             (String.concat ~sep:"," missing))
+
 (* Verbose witness for a step: the output file(s) it produced for this
    variant (openable), and — for `xfail`/`✗` — the tail of a `.log` witness
    as the concrete failure. *)
@@ -199,7 +248,16 @@ let print_status ?(verbose = false) ~root ~project () =
                   Option.value_map detail ~default:"" ~f:(fun d -> "  " ^ d)
               | _ -> ""
             in
-            Stdlib.Printf.printf "      %-28s %-6s%s\n" tag m extra;
+            let wnote =
+              if String.is_substring tag ~substring:"inspect"
+                 || String.is_substring tag ~substring:"scan"
+              then
+                match watchlist_note ~root ~project ~variant:name ~tag with
+                | Some s -> "  " ^ s
+                | None -> ""
+              else ""
+            in
+            Stdlib.Printf.printf "      %-28s %-6s%s%s\n" tag m extra wnote;
             if verbose then
               print_witness ~root ~project ~variant:name ~tag ~mark:m))
   end
