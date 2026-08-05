@@ -460,41 +460,29 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
           in_grp
       end)
     group_order;
-  (* scenarios as deltas from the all-good baseline, + post verdict if any *)
+  (* Scenarios are NOT listed here. With the declared graph, the RUN constructs
+     them — build/fetch actions generate artifact nodes — so the interesting set
+     EMERGES from the run, not a pre-enumerated static product. Show only the
+     declared-scenario count + the last run's coverage; the run is the source. *)
   let ngood = List.length (List.filter all_good scenarios) in
   let total = List.length scenarios in
-  Fmt.pr "@.scenarios (%d: %d good, %d bad) — delta from baseline%s:@." total
-    ngood (total - ngood)
-    (if post = [] then "" else " + last-run verdict");
-  List.iter
-    (fun a ->
-      let good = all_good a in
-      let desc = scenario_label ~baseline a in
-      let mark =
-        if post = [] then ""
-        else
-          match List.assoc_opt desc post with
-          | None -> "·"                     (* enumerated but not run (deduped) *)
-          | Some ("PASS", _) -> if good then "✓" else "✓ detected"
-          | Some (_, _) -> if good then "✗ REGRESSED" else "✗ missed"
-      in
-      Fmt.pr "  [%-4s] %-52s %s@." (if good then "good" else "bad") desc mark)
-    scenarios;
+  Fmt.pr "@.declared scenarios: %d (%d good, %d bad) — the run constructs the rest.@."
+    total ngood (total - ngood);
   (if post <> [] then
      let bads = List.filter (fun (_, (_, b)) -> b) post in
      let detected =
        List.length
          (List.filter (fun (_, (v, _)) -> String.equal v "PASS") bads)
      in
-     Fmt.pr "@.  last run: %d/%d bad detected · %d scenario(s) ran (rest ·=deduped)@."
-       detected (List.length bads) (List.length post));
+     Fmt.pr "  last run (`action %s`): %d/%d bad detected · %d scenario(s) ran.@."
+       pr.Canary_project_run.pr_name detected (List.length bads)
+       (List.length post));
   Fmt.pr
-    "@.  legend: V=vendored B=built F=fetched A=absent · version=channel[#bad-tag] \
-     · ✓/✗=last-run verdict · ·=not run@.";
-  Fmt.pr
-    "  note: this is the ENUMERATION; at run time the runner dedups scenarios \
-     that materialize to the same workspace, so run coverage counts distinct \
-     workspaces (≤ scenarios above).@."
+    "@.  note: these are the DECLARED (static) artifacts + scenario count; the run \
+     dynamically constructs the artifact graph (build/fetch actions generate \
+     nodes), so it may exercise MORE than the declared count — the run is the \
+     source of truth. Use `spec %s --by-artifact` for the per-artifact cut.@."
+    pr.Canary_project_run.pr_name
 
 (* Is artifact [id] DIRECTLY mutated (Bad quality) in scenario [a]? *)
 let artifact_bad_in (a : Canary_enumerate.assignment)
