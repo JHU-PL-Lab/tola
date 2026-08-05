@@ -174,12 +174,23 @@ function — they're bugs to fix in it, benefiting both consumers.
   `construct sqlite` 50 apps → `--matched` 18. `dep_mode` moved before
   `make_action_graph` so it and `close_deps` share ONE knob. The mismatch is now a
   choice, not forced.
-- **Remaining (localized, next):** (i) **project-aware** — the run-caller passes the
-  *project's* actions + providers, not the universal `store_actions` (this is what
-  drops sqlite's 18/50 to a handful: sqlite has no `build_binding`, so its built
-  bindings shouldn't exist); (ii) **`Vendored` nodes** (a provision input, for
-  tiny). Then `make_action_graph` IS the forward engine: universal for `paths`,
-  project-scoped + declared-mismatch for the run, one function.
+- **Fixed (`4b67b52`): project-aware by N/A MARKING, not filtering.** `make_action_graph`
+  stays universal; `node_applicable ~provisions_of_kind` marks a node applicable iff
+  the project declares its `(kind, provision)` AND its build/runtime deps are — the
+  mark **cascades along edges** (the `canary scenarios` idiom on nodes, reusing
+  `ps_provisions_of`). `construct` shows "applicable / total (n/a)": sqlite bindings
+  6→2 applicable (built ones n/a — it fetches opam), lib 4/4. This is cleaner than
+  filtering (algorithm stays universal; coverage is visible).
+- **Remaining: `Vendored` nodes** (a provision input). `construct tiny-full` marks
+  **everything n/a** — `make_action_graph` only does build/fetch, so tiny's vendored
+  source is `Fetched` there, n/a to tiny's `[Vendored]`, and the mark cascades. So
+  the universal graph must gain `Vendored` provisions for tiny to have any applicable
+  node. Then `make_action_graph` IS the forward engine (universal for `paths`,
+  marked-per-project for the run) — one function.
+- *Also seen (minor):* the applicable App set still has duplicates (a `make_action_graph`
+  dedup), and the deploy-mismatch marker doesn't fire on a FETCHED binding (its
+  build-lib is implicit/system, not a `built_from` edge) — refinements for when the
+  run consumes the graph.
 
 ## The path-table (pattern) approach — a post-graph scenario enumeration (warm-up)
 
