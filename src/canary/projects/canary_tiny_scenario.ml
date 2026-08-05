@@ -1557,9 +1557,9 @@ let tiny_full_assignments (spec : tiny_full_spec) :
      (the (artifact, bad-tag) fault injection) is the tiny-factory's testing
      POLICY, so it lives in the policy, not the spec. *)
   let tiny_enum_spec : Canary_enumerate.project_spec =
-    { ps_artifacts = spec.tf_artifacts;
-      ps_provisions_of = (fun _ -> [ Canary_enumerate.Vendored ]);
-      ps_versions_of = (fun _ _ -> [ Canary_basic.Stable ]) }
+    { ps_universe =
+        List.map spec.tf_artifacts ~f:(fun a ->
+            (a, [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ])) }
   in
   let tiny_policy : string Canary_enumerate.policy =
     { config =
@@ -1619,23 +1619,24 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
   let a_oc =
     Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
   in
-  { ps_artifacts =
-      List.filter spec.tf_artifacts ~f:(fun a ->
-          not (Canary_enumerate.equal_artifact_id a Canary_enumerate.a_source));
-    ps_provisions_of =
-      (fun id ->
-        if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
-          [ Canary_enumerate.Vendored; Canary_enumerate.Built ]
-        else [ Canary_enumerate.Vendored ]);
-    ps_versions_of =
-      (fun id pv ->
-        if
-          Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib
-          && Canary_enumerate.equal_provision pv Canary_enumerate.Built
-        then Canary_basic.[ Stable; Dev ]
-        else if Canary_enumerate.equal_artifact_id id a_oc then
-          Canary_basic.[ Stable; Dev ]
-        else [ Canary_basic.Stable ]) }
+  (* ONE data table (A8): per artifact, (provision × versions). Derived from
+     [tf_artifacts] so the factory stays the artifact-set source. *)
+  { ps_universe =
+      List.filter_map spec.tf_artifacts ~f:(fun a ->
+          if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_source
+          then None
+          else if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib
+          then
+            Some
+              ( a,
+                [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]);
+                  (Canary_enumerate.Built, Canary_basic.[ Stable; Dev ]) ] )
+          else if Canary_enumerate.equal_artifact_id a a_oc then
+            Some
+              (a, [ (Canary_enumerate.Vendored, Canary_basic.[ Stable; Dev ]) ])
+          else
+            Some
+              (a, [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ])) }
 
 (* No assignment-list wrappers here: the general algorithm
    ([Canary_project_run.scenarios_of] over [tiny_full_general_spec]) is the

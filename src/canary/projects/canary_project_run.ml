@@ -45,12 +45,14 @@
       ([canary_tiny_workspace]) and never appears in this general interface.
       `Built`/`Fetched` artifacts are NOT pre-placed — they are canary *actions*
       (build_lib / fetch_lib) the runner runs and observes.
-    - [pr_provenance] — STATIC, per-artifact provider for `spec` (no execution):
-      the typed [Canary_store_config.provider] backing the abstract [artifact_id]
-      + [placement] can't carry — a vendored PATH, a source_repo to build from, or
-      a PM + PACKAGE. [None] = undeclared. A project DECLARES this; `spec` displays
-      it (and cross-checks [provision_of_provider] against the baseline provision,
-      so the two can't drift) — the artifact list is verifiably spec-sourced.
+    - [pr_provenance] — STATIC, per-artifact provider TABLE for `spec` (no
+      execution): the typed [Canary_store_config.provider] backing the abstract
+      [artifact_id] + [placement] can't carry — a vendored PATH, a source_repo
+      to build from, or a PM + PACKAGE. Plain DATA (A8) — an artifact absent
+      from the table is undeclared; read via [provenance_of]. A project
+      DECLARES this; `spec` displays it (and cross-checks
+      [provision_of_provider] against the baseline provision, so the two can't
+      drift) — the artifact list is verifiably spec-sourced.
 
     tiny-full and sqlite both fill this; z3/llvm stay on the raw-script
     [run_project_multi] until/unless they adopt it (copy-modify). *)
@@ -62,8 +64,16 @@ type project_run = {
     Canary_enumerate.assignment -> workspace:string ->
     Canary_step_builder.runner_spec;
   pr_provenance :
-    Canary_enumerate.artifact_id -> Canary_store_config.provider option;
+    (Canary_enumerate.artifact_id * Canary_store_config.provider) list;
 }
+
+(** Lookup over the [pr_provenance] table ([None] = undeclared artifact). *)
+let provenance_of (pr : project_run) (id : Canary_enumerate.artifact_id) :
+    Canary_store_config.provider option =
+  List.find_opt
+    (fun (a, _) -> Canary_enumerate.equal_artifact_id a id)
+    pr.pr_provenance
+  |> Option.map snd
 
 (** The THIN exploration policy (ssot §4.2 config level): version
     [Subset [Stable]] — drop every Dev world, keep the provision axis Full.

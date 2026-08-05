@@ -461,12 +461,10 @@ let project_spec_test : pure_test =
       let module EN = Canary_enumerate in
       let a_oc = EN.a_binding ocaml Mech.Cstubs in
       let spec : EN.project_spec =
-        { ps_artifacts = [ EN.a_lib; a_oc ];
-          ps_provisions_of =
-            (fun id ->
-              if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
-              else EN.[ Fetched ]);
-          ps_versions_of = (fun _ _ -> B.single_channel) }
+        { ps_universe =
+            [ ( EN.a_lib,
+                EN.[ (Fetched, B.single_channel); (Built, B.single_channel) ] );
+              (a_oc, EN.[ (Fetched, B.single_channel) ]) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -489,18 +487,10 @@ let per_provision_versions_test : pure_test =
       let module EN = Canary_enumerate in
       let a_oc = EN.a_binding ocaml Mech.Cstubs in
       let spec : EN.project_spec =
-        { ps_artifacts = [ EN.a_lib; a_oc ];
-          ps_provisions_of =
-            (fun id ->
-              if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
-              else EN.[ Fetched ]);
-          ps_versions_of =
-            (fun id pv ->
-              if
-                EN.equal_artifact_id id EN.a_lib
-                && EN.equal_provision pv EN.Built
-              then B.two_channels
-              else B.single_channel) }
+        { ps_universe =
+            [ ( EN.a_lib,
+                EN.[ (Fetched, B.single_channel); (Built, B.two_channels) ] );
+              (a_oc, EN.[ (Fetched, B.single_channel) ]) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -528,19 +518,10 @@ let thin_config_level_test : pure_test =
       let module EN = Canary_enumerate in
       let a_oc = EN.a_binding ocaml Mech.Cstubs in
       let spec : EN.project_spec =
-        { ps_artifacts = [ EN.a_lib; a_oc ];
-          ps_provisions_of =
-            (fun id ->
-              if EN.equal_artifact_id id EN.a_lib then
-                EN.[ Vendored; Built ]
-              else [ EN.Vendored ]);
-          ps_versions_of =
-            (fun id pv ->
-              if
-                EN.equal_artifact_id id EN.a_lib
-                && EN.equal_provision pv EN.Built
-              then [ B.Stable; B.Dev ]
-              else [ B.Stable ]) }
+        { ps_universe =
+            [ ( EN.a_lib,
+                EN.[ (Vendored, [ B.Stable ]); (Built, [ B.Stable; B.Dev ]) ] );
+              (a_oc, EN.[ (Vendored, [ B.Stable ]) ]) ] }
       in
       let full =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec

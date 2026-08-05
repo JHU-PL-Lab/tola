@@ -504,7 +504,7 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
         List.iter
           (fun a ->
             Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a);
-            (match pr.Canary_project_run.pr_provenance a with
+            (match Canary_project_run.provenance_of pr a with
              | Some p ->
                  (* drift check: the provider's coarse provision must equal the
                     baseline's — if not, the declared detail contradicts the
@@ -740,7 +740,7 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
             (Canary_store.string_of_provision (E.provision_of baseline a)) );
         ("version", `String (E.string_of_build_id (E.version_of baseline a)));
         ( "provider",
-          match pr.Canary_project_run.pr_provenance a with
+          match Canary_project_run.provenance_of pr a with
           | Some p -> `String (Canary_store_config.string_of_provider p)
           | None -> `Null );
         ( "builds",
@@ -2378,9 +2378,9 @@ let construct_cmd =
     match
       List.find_opt
         (fun aid -> Canary_enumerate.kind_of aid = k)
-        spec.Canary_enumerate.ps_artifacts
+        (Canary_enumerate.ps_artifacts spec)
     with
-    | Some aid -> spec.Canary_enumerate.ps_provisions_of aid
+    | Some aid -> Canary_enumerate.ps_provisions_of spec aid
     | None -> []
   in
   (* tiny-full's real capability (its spec's ps_provisions_of is Vendored-only;

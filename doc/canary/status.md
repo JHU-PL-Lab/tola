@@ -209,11 +209,19 @@ Steps:
 - **A6 — collapse** `Canary_project.project` into `project_run` — one identity.
 - **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
   hand-written → derived; §1c #1).
-- **A8 — spec tables as DATA** (postponed pending discussion, 2026-08-05):
-  `ps_provisions_of` / `ps_versions_of` / `pr_provenance` are functions only
-  as table encodings (finite declared domain = the artifact list); flipping
-  them to assoc-list data would make the declaration printable/serializable/
-  diffable and side-effect-free. Cheap; do when the spec type next moves.
+- **A8 — spec tables as DATA ✅** (2026-08-05). `project_spec` is now ONE
+  fused data table — `ps_universe : (artifact × (provision × channel list)
+  list) list` (per artifact: its provisions, each with the versions that
+  provision realizes) — killing the provisions-vs-versions two-table drift
+  and making the declaration printable/serializable/side-effect-free. The
+  old accessor names survive as functions OVER the table
+  (`ps_artifacts`/`ps_provisions_of`/`ps_versions_of`), so `run_config`/
+  `construct` barely changed. `pr_provenance` likewise flipped to an assoc
+  table (+ `provenance_of` lookup); sqlite's `sqlite_providers` /
+  tiny's `tiny_providers` are the single data sources (sqlite's store_config
+  reads the same table). ORDER stays meaningful (head = the `Free`
+  representative; artifact order = enumeration/baseline order). Behavior
+  identical (6/3/2 scenarios; project-test 36/36).
 - **A9 — dispatch as DECLARATION** (the action-variant table). ✅ *Step 1
   done 2026-08-05*: the dispatch/realization SPLIT — both generic projects now
   implement `pr_runner_spec = realize ∘ dispatch` with a pure project-local

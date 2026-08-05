@@ -398,14 +398,39 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
     tiny-factory GENERATES it from its axes. Replaces a hand-built enumerate
     closure. (Future: [ps_deps] — declared dependency edges — turns this flat
     artifact set into the faithful dependency graph; see dynamic_enumeration.md.) *)
+(* A8 (2026-08-05): the spec is DATA, not functions. The old
+   [ps_provisions_of]/[ps_versions_of] closures were functions only as table
+   encodings (finite domain = the declared artifacts); one fused table makes
+   the declaration printable/serializable/diffable, kills the
+   provisions-vs-versions drift possibility, and cannot hide side effects.
+   ORDER IS MEANINGFUL where a [Free] config level picks a representative:
+   the head of each list is the representative (artifact order also fixes
+   the enumeration/baseline order). The old accessor names survive as
+   functions OVER the table below. *)
 type project_spec = {
-  ps_artifacts : artifact_id list;
-  ps_provisions_of : artifact_id -> provision list;
-  ps_versions_of : artifact_id -> provision -> Canary_basic.channel list;
-      (** per (artifact × provision): how it's provided decides which versions
-          exist for it (Fetched = ambient representative; Built = buildable
-          versions; Vendored = cached variants). *)
+  ps_universe :
+    (artifact_id * (provision * Canary_basic.channel list) list) list;
+      (** per artifact: its provisions, each with the version channels that
+          provision can realize (Fetched = ambient representative; Built =
+          buildable versions; Vendored = cached variants). *)
 }
+
+let ps_artifacts (s : project_spec) : artifact_id list =
+  List.map s.ps_universe ~f:fst
+
+let ps_provisions_of (s : project_spec) (id : artifact_id) : provision list =
+  match List.Assoc.find s.ps_universe id ~equal:equal_artifact_id with
+  | Some u -> List.map u ~f:fst
+  | None -> []
+
+let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
+    Canary_basic.channel list =
+  match List.Assoc.find s.ps_universe id ~equal:equal_artifact_id with
+  | None -> []
+  | Some u -> (
+      match List.Assoc.find u pv ~equal:equal_provision with
+      | Some cs -> cs
+      | None -> [])
 
 (** STAGE 2 input — the exploration policy: HOW MUCH of the declared space to
     walk THIS run, plus any faults to inject. [config] sets a [level] per axis
@@ -433,8 +458,10 @@ let full_policy () : 'm policy =
     opaque string tag; unused for a positive-only project ([mutations = []]). *)
 let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     assignment list =
-  run_config ~artifacts:s.ps_artifacts ~all_provisions_of:s.ps_provisions_of
-    ~all_versions_of:s.ps_versions_of ~all_mutations:policy.mutations policy.config
+  run_config ~artifacts:(ps_artifacts s)
+    ~all_provisions_of:(ps_provisions_of s)
+    ~all_versions_of:(ps_versions_of s) ~all_mutations:policy.mutations
+    policy.config
   |> List.map ~f:(assignment_of_point ~tag)
 
 let string_of_provision = Canary_store.string_of_provision
