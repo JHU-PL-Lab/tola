@@ -655,6 +655,67 @@ let agnostic_expectation_test : pure_test =
       in
       derived_c1 && build_ok) }
 
+(* Stage-4 v1: [execution_plan] flattens the applicable DAG into the run's walk
+   order. Invariants: (1) it is a valid topological order — kinds never decrease,
+   so every built_from/runtime_dep (always a lower kind) precedes its consumer;
+   (2) [producing_action_of_node] inverts the provision — a Built node has a
+   Build_* edge, a Fetched node a Fetch edge, a Vendored node NO edge (an initial
+   node the materialize layer places). Marks a tiny-shaped project (Lib may be
+   Built OR Vendored; everything else Vendored) so both a real build edge and
+   initial nodes appear in one plan. *)
+let execution_plan_test : pure_test =
+  { name = "action.execution_plan_topo_and_edges";
+    check = (fun () ->
+      let module CA = Canary_action in
+      let g =
+        CA.make_action_graph
+          ~actions:(CA.store_actions ~langs:[ ocaml ])
+          ~versions:[ B.Stable ] ~name:"pkg" ~source:Canary_store.store
+          ~vendored:true ()
+      in
+      (* tiny-shaped: lib Built|Vendored, source/binding/app Vendored, no headers *)
+      let provisions_of_kind : B.artifact_kind -> Canary_store.provision list =
+        function
+        | B.Source -> [ Canary_store.Vendored ]
+        | B.Lib -> Canary_store.[ Built; Vendored ]
+        | B.Binding _ -> [ Canary_store.Vendored ]
+        | B.App -> [ Canary_store.Vendored ]
+        | B.Headers -> []
+      in
+      let plan = CA.execution_plan ~provisions_of_kind g in
+      (* (1) topo: kind_order non-decreasing down the plan *)
+      let orders = List.map plan ~f:(fun n -> B.kind_order n.CA.a_kind) in
+      let rec nondecreasing = function
+        | a :: (b :: _ as t) -> a <= b && nondecreasing t
+        | _ -> true
+      in
+      let topo_ok = nondecreasing orders in
+      (* (2) each node's producing action inverts its provision *)
+      let edges_ok =
+        List.for_all plan ~f:(fun (n : CA.artifact_node) ->
+            match (n.CA.provision, CA.producing_action_of_node n) with
+            | Canary_store.Vendored, None -> true
+            | Canary_store.Built, Some (B.Build_lib | B.Build_headers)
+            | Canary_store.Built, Some (B.Build_binding _)
+            | Canary_store.Built, Some (B.Build_app _) -> true
+            | Canary_store.Fetched, Some (B.Fetch _) -> true
+            | _ -> false)
+      in
+      (* a real Built lib edge is present (from the vendored source) alongside
+         initial vendored nodes — the plan mixes both, as tiny does *)
+      let has_built_lib =
+        List.exists plan ~f:(fun (n : CA.artifact_node) ->
+            Poly.equal n.CA.a_kind B.Lib
+            && Poly.equal n.CA.provision Canary_store.Built
+            && Option.is_some (CA.producing_action_of_node n))
+      in
+      let has_initial =
+        List.exists plan ~f:(fun (n : CA.artifact_node) ->
+            Poly.equal n.CA.provision Canary_store.Vendored
+            && Option.is_none (CA.producing_action_of_node n))
+      in
+      topo_ok && edges_ok && has_built_lib && has_initial) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -664,7 +725,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       built_from_test; node_of_assignment_test; close_deps_test;
-      agnostic_expectation_test ]
+      agnostic_expectation_test; execution_plan_test ]
 
 let run_tests () : bool =
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in

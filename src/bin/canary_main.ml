@@ -2204,7 +2204,32 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
   Fmt.pr
     "@.  note: n/a = a (kind, provision) the project doesn't declare (its \
      ps_provisions_of) or whose deps are n/a — the mark cascades along edges. \
-     make_action_graph stays universal; the project filters after.@."
+     make_action_graph stays universal; the project filters after.@.";
+  (* EXECUTION PLAN: the applicable DAG flattened into the run's walk order.
+     Each line is one node = one edge (action) the run executes, with the
+     upstream it consumes and its per-node cache key (node_tag). This is what
+     the graph-walking run will follow. *)
+  let plan = CA.execution_plan ~provisions_of_kind g in
+  Fmt.pr "@.  execution plan (topo order — the run walks these edges):@.";
+  List.iteri
+    (fun i n ->
+      let dep =
+        match n.CA.built_from with
+        | Some b ->
+            Printf.sprintf " ← %s@%s"
+              (Canary_basic.string_of_artifact_kind b.CA.a_kind)
+              (bid b.CA.version)
+        | None -> ""
+      in
+      let edge =
+        match CA.producing_action_of_node n with
+        | Some _ -> CA.edge_label_of_node n
+        | None -> CA.edge_label_of_node n ^ " (initial — materialize, no build)"
+      in
+      Fmt.pr "    %2d. %-32s %s@%s%s@." (i + 1) edge
+        (Canary_basic.string_of_artifact_kind n.CA.a_kind)
+        (bid n.CA.version) dep)
+    plan
 
 let construct_cmd =
   let project =

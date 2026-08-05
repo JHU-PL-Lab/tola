@@ -263,6 +263,51 @@ let rec node_applicable
       | Some r -> node_applicable ~provisions_of_kind r
       | None -> true)
 
+(** The producing EDGE of a node — the action whose result IS this node, read
+    off its provision (the forward-construction rule inverted: Built ⇒ a Build_*,
+    Fetched ⇒ a Fetch, Vendored ⇒ no action, it's a supplied initial node). The
+    lang for a binding/app edge comes from the node's kind (App borrows it from
+    its binding [built_from]). [None] = an initial node (Vendored/Absent): the
+    materialize layer places it; the run doesn't produce it. *)
+let producing_action_of_node (n : artifact_node) : action option =
+  let app_lang () =
+    match n.built_from with
+    | Some { a_kind = Binding l; _ } -> Some l
+    | _ -> None
+  in
+  match n.provision with
+  | Canary_store.Vendored | Canary_store.Absent -> None
+  | Canary_store.Fetched -> Some (Fetch n.a_kind)
+  | Canary_store.Built -> (
+      match n.a_kind with
+      | Source -> None (* a Built source is degenerate; treat as initial *)
+      | Headers -> Some Build_headers
+      | Lib -> Some Build_lib
+      | Binding l -> Some (Build_binding l)
+      | App -> Option.map (app_lang ()) ~f:(fun l -> Build_app { lang = l }))
+
+(** A short edge verb for a node: "vendor_source" / "fetch_lib" / "build_lib" /
+    "build_ocaml_binding" — the label the execution plan and the run trace use. *)
+let edge_label_of_node (n : artifact_node) : string =
+  let verb = Canary_store.string_of_provision n.provision in
+  let verb = match verb with "vendored" -> "vendor" | "built" -> "build" | "fetched" -> "fetch" | v -> v in
+  Printf.sprintf "%s_%s" verb (string_of_artifact_kind n.a_kind)
+
+(** EXECUTION PLAN: the applicable nodes in a valid topological (build) order —
+    source → headers → lib → binding → app, which respects every [built_from]/
+    [runtime_dep] edge (a dep is always a lower kind). This is the exact order
+    the run walks; each node's [node_tag] is its per-node cache key, its
+    [producing_action_of_node] the edge to execute. Deduped already (the pools
+    are), so the plan length IS the execution-set size. *)
+let execution_plan
+    ~(provisions_of_kind : artifact_kind -> Canary_store.provision list)
+    (g : action_graph) : artifact_node list =
+  List.concat_map g.pools ~f:(fun (_, nodes) ->
+      List.filter nodes ~f:(node_applicable ~provisions_of_kind))
+  |> List.sort ~compare:(fun a b ->
+         let c = Int.compare (kind_order a.a_kind) (kind_order b.a_kind) in
+         if c <> 0 then c else String.compare (node_tag a) (node_tag b))
+
 (** Consumes-and-produces enumeration for a single action.
     Order convention: prerequisite first, target next; runtime
     deps trail direct arguments. Companion to {!store_actions}
