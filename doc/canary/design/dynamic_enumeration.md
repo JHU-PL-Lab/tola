@@ -156,3 +156,23 @@ version propagation on build edges, (c) mismatch as a declared runtime edge only
 target and a diagnostic (`construct`) to check it against. (An interactive
 `--step` mode — prompt per node as the run walks the DAG — is a natural follow-up
 once the node set is correct; today's 82-node graph is too explosive to step.)
+
+### Verdict: improve `make_action_graph` in place (no new function)
+
+Analysis of the consumers settled it. `make_action_graph`'s only real consumer is
+`job_paths_of_action_graph` (the `canary paths` table) — and that table was
+**already wrong** for the same root reason as the `construct` explosion:
+`Build_binding` paired a binding with *every* lib version (cartesian), so
+`binding@stable ← lib@dev`. So the defects aren't a reason to route around the
+function — they're bugs to fix in it, benefiting both consumers.
+
+- **Fixed (`9b0e76d`): source-primary `Build_binding`** — `binding@v` builds only
+  against `lib@v`. `paths` combo counts corrected (7/8: 4→2, 15: 8→4; total 62→42);
+  `construct` bindings 10→6, apps 82→50. Both consumers now correct; test green.
+- **Remaining (localized, next):** (i) `Build_app` runtime axis = a **declared**
+  mismatch for the engine vs the full cartesian `paths` wants — a parameter (the
+  `dep_mode`), not a rewrite; (ii) **`Vendored` nodes** (a provision input, for
+  tiny); (iii) **project-aware** via the caller passing the *project's* actions +
+  providers (not the universal `store_actions`). Then `make_action_graph` IS the
+  forward engine: universal for `paths`, project-scoped + declared-mismatch for the
+  run, one function.
