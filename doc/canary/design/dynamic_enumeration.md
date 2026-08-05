@@ -122,3 +122,37 @@ dropped.)* Two rules govern what is machinery vs project input:
    copied per-project (see the tiny workspace materializer); reusable primitives
    are consumed, not forked; only the per-project spec + surface + optional
    contract-bindings are hand-authored.
+
+## Forward construction — assessment (`canary construct`, 2026-08-04)
+
+The graph is best built **forward**: artifacts are NODES, build/fetch actions are
+EDGES that generate new nodes (with variants). `make_action_graph` already does
+this (diagram-only); `canary construct <pj>` makes it visible. The experiment
+**confirms the forward idea is right** (the deploy mismatch — an App whose
+build-lib ≠ runtime-lib — falls out) but **`make_action_graph` is NOT usable as
+the engine as-is**. On a 2-version project it emits **82 App nodes**, *identical
+for sqlite and tiny-full* (it's driven by the universal `store_actions`, not the
+project). Concrete defects the output exposes:
+
+1. **Not project-aware.** Ignores the project's real capabilities (sqlite doesn't
+   build the OCaml binding — it's opam — nor headers, yet both appear as `built`).
+   → the construction must be driven by the project's declared actions/providers.
+2. **Not source-primary for bindings.** It makes `binding@stable ← lib@dev` — a
+   binding *built against* a mismatched lib, which is nonsense at BUILD time. The
+   only legitimate cross-version pairing is the **runtime** mismatch (build-lib vs
+   run-lib) at the App/probe edge. → build edges must **propagate version**
+   (`source@v → lib@v → binding@v`); the mismatch lives ONLY on the runtime edge.
+3. **Full cartesian + duplicates.** `binding × lib` for every App, `Build_app`
+   added per-lang, no dedup → the 82. → generate the matched chain by
+   source-primary propagation, and add the mismatch as a *declared* runtime edge
+   (`close_deps Independent`), not a blind product.
+4. **No `Vendored` nodes.** Only build/fetch; tiny's vendored/cached artifacts
+   aren't modelled → tiny-full's real graph is missing.
+
+**Conclusion:** a real forward-construction engine = `make_action_graph`'s shape,
+but (a) driven by the project (capabilities + providers), (b) **source-primary**
+version propagation on build edges, (c) mismatch as a declared runtime edge only,
+(d) `Vendored` nodes. That is the `close_deps`/graph work — now with a concrete
+target and a diagnostic (`construct`) to check it against. (An interactive
+`--step` mode — prompt per node as the run walks the DAG — is a natural follow-up
+once the node set is correct; today's 82-node graph is too explosive to step.)
