@@ -997,6 +997,58 @@ let materialize_built_lib ~(label : string) : string option =
     end
   end
 
+(** Materialize a tree whose OCAML BINDING SOURCE is the DEV variant — a
+    consumer requiring the dev-only [tiny_scale] (the [ocaml_dev/] overlay;
+    the forward/deploy mismatch, status §B). The binding is source-in-tree:
+    the run's Build_binding recompiles it (the copied [_build] is dropped so
+    the dev source builds cleanly), and the Probe_binding consumer link
+    resolves against the WORLD's lib — over a stable libtiny the link fails
+    with an undefined [tiny_scale], which c1 PREDICTS agnostically from the
+    stub-vs-lib inspects; over a Built dev lib it succeeds. [lib_built]
+    mirrors [materialize_built_lib]: strip the prebuilt lib so the run's
+    guarded build_lib compiles it at the world's channel. *)
+let materialize_dev_binding ~(lib_built : bool) ~(label : string) :
+    string option =
+  let target = cache ^ "/assembled/" ^ label in
+  let marker = target ^ "/.dev-binding" in
+  (* IDEMPOTENT (same reasoning as [materialize_built_lib]): once built, the
+     tree must persist across re-runs so it stays consistent with the run's
+     cache markers. *)
+  if Stdlib.Sys.file_exists marker then Some target
+  else begin
+    let base = witness_base_workspace () in
+    rm_rf target;
+    mkdir_p target;
+    if run_shell (Printf.sprintf "cp -a '%s/.' '%s/'" base target) <> 0 then
+      None
+    else begin
+      (* refresh the C source from the LIVE tree (dev version script etc.) —
+         cached workspaces can predate newer source files. *)
+      let _ =
+        run_shell
+          (Printf.sprintf "cp -a '%s/c/src' '%s/c/include' '%s/c/'*.map '%s/c/'"
+             tiny_root tiny_root tiny_root target)
+      in
+      let ok =
+        run_shell
+          (Printf.sprintf "cp -a '%s/ocaml_dev/.' '%s/ocaml/'" tiny_root target)
+        = 0
+      in
+      (* stale dune artifacts were compiled from the STABLE source *)
+      let _ = run_shell (Printf.sprintf "rm -rf '%s/_build'" target) in
+      if lib_built then
+        (let _ =
+           run_shell (Printf.sprintf "rm -f '%s/c/build/'libtiny.so*" target)
+         in
+         ());
+      if ok then begin
+        let _ = run_shell (Printf.sprintf "touch '%s'" marker) in
+        Some target
+      end
+      else None
+    end
+  end
+
 (** List every assemblable bad variant — its tag, scenario name, and the cached
     artifact key it targets. The tiny-full analogue of `tiny list`; run
     `tiny assemble-check` with no tag to see it. *)

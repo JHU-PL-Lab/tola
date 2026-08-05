@@ -127,16 +127,36 @@ let tiny_full_run : project_run =
           (Canary_enumerate.version_of a Canary_enumerate.a_lib)
             .Canary_enumerate.channel
         in
+        let chan_str =
+          match channel with
+          | Canary_basic.Dev -> "dev"
+          | Canary_basic.Stable -> "stable"
+        in
+        (* the OCaml binding's version channel: Dev selects the ocaml_dev
+           source variant (the tiny_scale consumer — the mismatch axis). *)
+        let binding_dev =
+          match
+            Canary_enumerate.placement_of a
+              (Canary_enumerate.a_binding Canary_lang.OCaml
+                 Canary_mechanism.Cstubs)
+          with
+          | Some pl -> (
+              match pl.Canary_enumerate.version.Canary_enumerate.channel with
+              | Canary_basic.Dev -> true
+              | Canary_basic.Stable -> false)
+          | None -> false
+        in
         let assembled =
           match overlays_of a with
-          | [] when lib_built ->
-              let chan =
-                match channel with
-                | Canary_basic.Dev -> "dev"
-                | Canary_basic.Stable -> "stable"
+          | [] when binding_dev ->
+              let lib_desc =
+                if lib_built then "built-lib-" ^ chan_str else "vendored-lib"
               in
+              Canary_tiny_workspace.materialize_dev_binding ~lib_built
+                ~label:("dev-binding-over-" ^ lib_desc)
+          | [] when lib_built ->
               Canary_tiny_workspace.materialize_built_lib
-                ~label:("positive-built-lib-" ^ chan)
+                ~label:("positive-built-lib-" ^ chan_str)
           | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
           | overlays ->
               let label =

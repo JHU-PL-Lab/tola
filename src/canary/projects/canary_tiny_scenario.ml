@@ -1606,10 +1606,19 @@ let tiny_full_assignments (spec : tiny_full_spec) :
      [tiny_full_artifacts] for the spec display.)
    - PER-PROVISION versions: the Vendored lib exists only as the Stable cached
      artifact; the Built lib ranges over {Stable, Dev} (the -DTINY_DEV build).
-     The product then yields exactly the 3 real worlds — no Vendored@Dev that
-     nothing backs. *)
+   - The OCAML BINDING carries its own version axis {Stable, Dev}: the Dev
+     binding is the [ocaml_dev/] source variant — a consumer requiring the
+     dev-only [tiny_scale] (the forward/deploy MISMATCH, status §B; tiny's
+     analogue of llvm_example_dev.ml). Binding version ≠ lib version is a
+     legal world by design ("that difference is the interesting mismatch"):
+     binding@dev × lib@stable FAILS at the probe link (c1 predicts
+     "tiny_scale" agnostically → detected xfail); binding@dev × lib built@dev
+     passes. Product: 3 lib instances × 2 binding versions = 6 worlds. *)
 let tiny_full_general_spec (spec : tiny_full_spec) :
     Canary_enumerate.project_spec =
+  let a_oc =
+    Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+  in
   { ps_artifacts =
       List.filter spec.tf_artifacts ~f:(fun a ->
           not (Canary_enumerate.equal_artifact_id a Canary_enumerate.a_source));
@@ -1624,6 +1633,8 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
           Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib
           && Canary_enumerate.equal_provision pv Canary_enumerate.Built
         then Canary_basic.[ Stable; Dev ]
+        else if Canary_enumerate.equal_artifact_id id a_oc then
+          Canary_basic.[ Stable; Dev ]
         else [ Canary_basic.Stable ]) }
 
 (* No assignment-list wrappers here: the general algorithm

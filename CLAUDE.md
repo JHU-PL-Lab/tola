@@ -10,8 +10,8 @@ dune exec src/bin/canary_main.exe -- graph                   # write docs/canary
 dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 worlds: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built worlds probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
-dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): algorithm-driven good+bad run + coverage
-dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin Subset config: Stable, single-bad, no ctypes/combos (12/20 cold==warm)
+dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived worlds = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
+dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 worlds (drops both dev axes)
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). project_run: tiny-full/sqlite; variant view (raw runner_spec, read-only): z3/llvm
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)

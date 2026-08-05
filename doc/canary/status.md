@@ -91,10 +91,14 @@ first):**
   its own (3.50.4, `_sqlite3` a builtin, no .so to repoint) — so sqlite now
   exhibits BOTH runtime-edge modes of `dynamic_enumeration.md` on one
   project: OCaml = `Independent` (asserted), Python = `Ambient` (observed
-  in probe.log, not asserted). What (b) still needs: the mismatch as a
-  *declared/enumerated* world (`close_deps Independent` wired into the
-  general enumeration, `scenarios_of`), not a per-world runner_spec
-  construction.
+  in probe.log, not asserted). **tiny-full now ENUMERATES mismatch worlds
+  from the spec** (2026-08-05, the forward mismatch — §B): the OCaml binding's
+  {Stable, Dev} version axis × 3 lib instances = 6 worlds; the two
+  binding@dev-over-stable-lib worlds fail at the probe link and c1 predicts
+  it agnostically (detected xfail) — the z3/llvm API-mismatch demo through
+  the generic path, using only the FLAT form (binding-version ≠ lib-version
+  is flat-expressible; TWO lib instances in ONE world — build-lib ≠ run-lib
+  proper — still needs `close_deps Independent` wired into `scenarios_of`).
 - **(c) NOT STARTED** — z3/llvm still raw-script (`run_project_multi`).
 
 **To-do, regrouped.**
@@ -361,11 +365,21 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
 - **Richer agnostic inspectors** (the lever for 12 → more): c5 symbol-version, c6
   type, abi/soname wired into the agnostic derivation. The remaining 12 undetected
   fail *unexpectedly* because the watchlist can't predict them.
-- **Version deploy-mismatch** (*beyond the algorithm milestone*): **backward** (a
-  stable consumer @ newer incompatible lib — soname/symver, `Bs.4`/`Bs.3` → c4/c5)
-  + **forward** (a dev-only symbol `tiny_scale` @stable → c1/c2, needs a dev
-  consumer). Broad = **missing *and* added** symbols → multi-app / per-version
-  required-symbol watchlists (like z3/llvm). Design + build together.
+- **Version deploy-mismatch**: ✅ **forward half SHIPPED** (2026-08-05) — the
+  dev consumer exists (`canary/examples/tiny/ocaml_dev/`: the cstubs binding
+  gains `Tiny.scale` → native `tiny_scale`, dev-only). The OCaml binding
+  carries a version axis {Stable, Dev} in `tiny_full_general_spec`, so the
+  flat product yields **6 worlds** (2 binding versions × 3 lib instances):
+  `binding@dev × lib@{V:stable, B:stable}` FAILS at the probe link
+  (`undefined symbol: tiny_scale`) and c1 PREDICTS it agnostically from the
+  stub-vs-lib inspects (`expected failure confirmed (derived)` — detected
+  xfail); `binding@dev × lib@B:dev` links + runs green. The z3/llvm-style
+  API-mismatch demo now runs through the generic enumerate path. Still open:
+  **backward** (a stable consumer @ newer incompatible lib — soname/symver,
+  `Bs.4`/`Bs.3` → c4/c5); broad = missing *and* added symbols → per-version
+  required-symbol watchlists. *Polish:* `spec`/run summary shows a detected
+  mismatch world as a plain good "✓" — the xfail nature (which step
+  expected-failed) isn't surfaced per-world yet.
 - **Fetched provision for tiny** — canary fetches from a PM at run time, the one
   provision tiny still lacks (Built + Vendored + Dev/Stable done).
 
