@@ -169,13 +169,17 @@ function — they're bugs to fix in it, benefiting both consumers.
 - **Fixed (`9b0e76d`): source-primary `Build_binding`** — `binding@v` builds only
   against `lib@v`. `paths` combo counts corrected (7/8: 4→2, 15: 8→4; total 62→42);
   `construct` bindings 10→6, apps 82→50. Both consumers now correct; test green.
-- **Remaining (localized, next):** (i) `Build_app` runtime axis = a **declared**
-  mismatch for the engine vs the full cartesian `paths` wants — a parameter (the
-  `dep_mode`), not a rewrite; (ii) **`Vendored` nodes** (a provision input, for
-  tiny); (iii) **project-aware** via the caller passing the *project's* actions +
-  providers (not the universal `store_actions`). Then `make_action_graph` IS the
-  forward engine: universal for `paths`, project-scoped + declared-mismatch for the
-  run, one function.
+- **Fixed (`01cd05e`): `Build_app ~app_mode` (dep_mode).** `Independent` (default)
+  = the mismatch cartesian (`paths` unchanged, 42); `Lockstep` = the matched chain.
+  `construct sqlite` 50 apps → `--matched` 18. `dep_mode` moved before
+  `make_action_graph` so it and `close_deps` share ONE knob. The mismatch is now a
+  choice, not forced.
+- **Remaining (localized, next):** (i) **project-aware** — the run-caller passes the
+  *project's* actions + providers, not the universal `store_actions` (this is what
+  drops sqlite's 18/50 to a handful: sqlite has no `build_binding`, so its built
+  bindings shouldn't exist); (ii) **`Vendored` nodes** (a provision input, for
+  tiny). Then `make_action_graph` IS the forward engine: universal for `paths`,
+  project-scoped + declared-mismatch for the run, one function.
 
 ## The path-table (pattern) approach — a post-graph scenario enumeration (warm-up)
 
