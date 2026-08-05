@@ -2184,7 +2184,23 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
           (if na > 0 then Printf.sprintf " (%d n/a)" na else "");
         List.iter (fun n -> Fmt.pr "    %s@." (node_line n)) app_nodes
       end)
-    g.CA.pools;
+    (* dependency (execution) order: source → headers → lib → binding → app,
+       so the applicable listing reads as the trace the run would follow. *)
+    (List.sort
+       (fun (k1, _) (k2, _) ->
+         compare (Canary_basic.kind_order k1) (Canary_basic.kind_order k2))
+       g.CA.pools);
+  let total_app =
+    List.fold_left
+      (fun acc (_, nodes) -> acc + List.length (List.filter applicable nodes))
+      0 g.CA.pools
+  in
+  let total = List.fold_left (fun acc (_, ns) -> acc + List.length ns) 0 g.CA.pools in
+  Fmt.pr
+    "@.  execution set: %d applicable / %d total nodes (deduped by node_tag). \
+     The run walks the APPLICABLE nodes in the order above; the %d-node \
+     universal is generation only, never executed.@."
+    total_app total total;
   Fmt.pr
     "@.  note: n/a = a (kind, provision) the project doesn't declare (its \
      ps_provisions_of) or whose deps are n/a — the mark cascades along edges. \
