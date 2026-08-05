@@ -54,8 +54,9 @@
       [provision_of_provider] against the baseline provision, so the two can't
       drift) — the artifact list is verifiably spec-sourced.
 
-    tiny-full and sqlite both fill this; z3/llvm stay on the raw-script
-    [run_project_multi] until/unless they adopt it (copy-modify). *)
+    tiny-full, sqlite, z3 and llvm all fill this (A5 phases 2+5); ssl is the
+    last raw-script [run_project_multi] holdout (migrates with
+    zarith/cairo). *)
 type project_run = {
   pr_name : string;
   pr_artifacts : Canary_enumerate.artifact_id list;

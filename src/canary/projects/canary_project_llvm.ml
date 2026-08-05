@@ -591,3 +591,91 @@ test -n "$LLVM_LIB"
       | Canary_basic.Binding Canary_lang.Python -> Some "llvmlite"
       | _ -> None);
   }
+
+(* ── A5 phase 5: llvm on the generic path — SAME SHAPE AS Z3 ──
+   See [Canary_project_z3.z3_spec]'s comment for the full rationale (the
+   shape is deliberately identical): source Fetched@{Stable,Dev} (ambient in
+   scenario identity); lib Fetched@Stable (apt llvm-19-dev) | Built@Dev
+   (ninja, guarded external build tree); llvmlite Fetched@Stable (constant
+   row). Three assignments → the current 2 variants as scenarios
+   (source-primary + the Fetched-ambient dedup); Stable-first so the
+   baseline is the fetch chain. The OCaml binding follows the chain
+   (Built@Dev dev / opam llvm.19-shared stable) and stays OUT of the
+   enumerated universe until graph-structural version propagation. *)
+let llvm_spec : Canary_enumerate.project_spec =
+  { ps_universe =
+      Canary_enumerate.
+        [ (a_source, [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
+          ( a_lib,
+            [ (Fetched, [ Canary_basic.Stable ]);
+              (Built, [ Canary_basic.Dev ]) ] );
+          ( a_binding Canary_lang.Python Canary_mechanism.Cext,
+            [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+
+let llvm_artifacts : Canary_enumerate.artifact_id list =
+  Canary_enumerate.
+    [ a_source;
+      a_lib;
+      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+      a_binding Canary_lang.Python Canary_mechanism.Cext ]
+
+(* Baseline (fetch-chain) providers, from the real [prebuilt] data; the OCaml
+   binding row is display-only detail (not an enumerated axis). Per-channel
+   providers (the arbipher monorepo fork, the dev-built lib, llvm.dev-shared)
+   are the realization's concern. *)
+let llvm_providers :
+    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
+  Canary_enumerate.
+    [ (a_source, Canary_store_config.Source_repo llvm_source_stable);
+      (a_lib, Canary_store_config.Sys_pkg prebuilt.system_package);
+      ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
+        Canary_store_config.Lang_pkg
+          { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+            package = prebuilt.opam_package } );
+      ( a_binding Canary_lang.Python Canary_mechanism.Cext,
+        Canary_store_config.Lang_pkg
+          { lang = Canary_lang.Python; pm = Canary_store.Pip;
+            package = "llvmlite" } ) ]
+
+(* dispatch/realize — the z3 shape verbatim: dispatch reads the LIB
+   placement only (Built ⇒ dev chain; the ambient source channel is no
+   chain signal); realize = the existing [mk_runner_spec ~source:…] raw
+   specs (command churn zero). *)
+type scenario_case =
+  | Dev_chain     (* build chain: dev monorepo checkout, ninja LLVM +
+                     ocaml_all, llvm.dev-shared opam pack *)
+  | Stable_chain  (* fetch chain: apt llvm-19-dev + opam llvm.19-shared +
+                     pip llvmlite; the Opcode.UncondBr xfail lives here *)
+
+let dispatch (a : Canary_enumerate.assignment) : scenario_case =
+  match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
+  | Canary_enumerate.Built -> Dev_chain
+  | _ -> Stable_chain
+
+let realize (c : scenario_case) distro : Canary_step_builder.runner_spec =
+  match c with
+  | Dev_chain -> mk_runner_spec ~source:llvm_source_dev distro
+  | Stable_chain -> mk_runner_spec ~source:llvm_source_stable distro
+
+(** llvm as a [Canary_project_run.project_run] (`action llvm` →
+    [run_project_run]) — the z3 shape verbatim; see [Canary_project_z3.z3_run]
+    for the shared rationale (workspace ignored — guarded external build
+    trees; locations inside the realization).
+
+    [pr_mismatch_probes] is EMPTY for the same reason as z3's: the stable
+    demo (llvm_example_dev.ml requires [Opcode.UncondBr], LLVM 21+, against
+    the fetched 19 binding) is PROBE CODE vs the BINDING — not a
+    binding↔native-lib channel pairing, and the OCaml binding isn't an
+    enumerated axis. It stays declared where consumed
+    ([llvm_stable_contract_bindings] → Expect_compat_failure → xfail; the
+    dev chain's [has_manifest=false] keeps it Expect_success there). Unlike
+    z3's scenario-invariant wheel demo, this one is chain-LOCAL (fires only
+    in the stable chain) — but the discriminating axis is the binding's
+    provision, which only joins the universe with version propagation. *)
+let llvm_run distro : Canary_project_run.project_run =
+  { pr_name = "llvm";
+    pr_artifacts = llvm_artifacts;
+    pr_spec = llvm_spec;
+    pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
+    pr_provenance = llvm_providers;
+    pr_mismatch_probes = [] }

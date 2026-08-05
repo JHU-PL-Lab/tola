@@ -279,9 +279,9 @@ let scenario_dir_of ~pr_name (a : Canary_enumerate.assignment) : string =
    and does the SAME loop for any project: enumerate → runner_spec → run →
    report. All project-specific logic lives in the closures (a real project's
    runner_spec build/fetches; tiny-full's runner_spec assembles its vendored
-   tree internally — the tiny-factory concern, invisible here). Additive —
-   z3/llvm keep their raw-script [run_project_multi]; this drives tiny-full and
-   simple projects. Dedup + output dir keyed by [scenario_dir_of] (several
+   tree internally — the tiny-factory concern, invisible here). Drives
+   tiny-full, sqlite, z3 and llvm (A5); ssl is [run_project_multi]'s last
+   raw-script holdout. Dedup + output dir keyed by [scenario_dir_of] (several
    assignments can share one scenario identity — e.g. Fetched across versions). *)
 let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
     ~failfast : unit =
@@ -481,14 +481,7 @@ let builds_of_kind ~langs k =
 
 let builds_of ~langs a = builds_of_kind ~langs (Canary_enumerate.kind_of a)
 
-let langs_of_kinds kinds =
-  List.filter_map
-    (function Canary_basic.Binding l -> Some l | _ -> None)
-    kinds
-  |> List.sort_uniq compare
-
-let kinds_string ks =
-  String.concat ", " (List.map Canary_basic.string_of_artifact_kind ks)
+(* (langs_of_kinds / kinds_string retired with the variant view, A5 ph. 5.) *)
 
 (* Snapshot of a [project_run]: declared artifacts (grouped, each with its
    baseline provision@version) + the enumerated scenarios as deltas from that
@@ -754,36 +747,8 @@ let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
      +M upstream = scenarios mutating an upstream artifact (downstream-affected); \
      ✓ detected / ✗ missed / · not run.@."
 
-(* Read each artifact's provision from which [runner_spec] closures are set —
-   the spec's own declaration, WITHOUT running (build_lib set ⇒ Built, fetch_lib
-   ⇒ Fetched, …). Lets `spec` read z3/llvm (raw runner_spec, no project_run)
-   without executing or touching their code. build wins over fetch per lang. *)
-let provisions_of_runner_spec (rs : Canary_step_builder.runner_spec) :
-    (Canary_basic.artifact_kind * Canary_enumerate.provision) list =
-  let has = function Some _ -> true | None -> false in
-  let src =
-    if has rs.fetch_source then [ (Canary_basic.Source, Canary_enumerate.Fetched) ]
-    else []
-  in
-  let lib =
-    if has rs.build_lib then [ (Canary_basic.Lib, Canary_enumerate.Built) ]
-    else if has rs.fetch_lib then [ (Canary_basic.Lib, Canary_enumerate.Fetched) ]
-    else []
-  in
-  let built_langs = List.map fst rs.build_binding in
-  let bind_built =
-    List.map
-      (fun (l, _) -> (Canary_basic.Binding l, Canary_enumerate.Built))
-      rs.build_binding
-  in
-  let bind_fetched =
-    List.filter_map
-      (fun (l, _) ->
-        if List.mem l built_langs then None
-        else Some (Canary_basic.Binding l, Canary_enumerate.Fetched))
-      rs.fetch_binding
-  in
-  src @ lib @ bind_built @ bind_fetched
+(* (provisions_of_runner_spec — the closure-sniffing provision read for the
+   raw z3/llvm variant view — retired with that view, A5 phase 5.) *)
 
 (* Machine-readable `spec --json`: the same artifacts × scenarios, parseable.
    Reuses the exact pre/post data print_spec renders (same [scenario_label] join,
@@ -837,154 +802,10 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
         `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
       ("scenarios", `List (List.map scenario_json scenarios)) ]
 
-(* All artifact kinds any variant provisions, group-ordered (dedup, first seen). *)
-let variant_kinds variants =
-  List.fold_left
-    (fun acc (_, _, rs) ->
-      List.fold_left
-        (fun acc (k, _) -> if List.mem k acc then acc else acc @ [ k ])
-        acc
-        (provisions_of_runner_spec rs))
-    [] variants
-
-(* A source artifact = a configured repo: what it BUILDS (has_build_* flags). *)
-let source_repo_builds (src : Canary_artifact_source.source_repo) : string list =
-  (if src.Canary_artifact_source.has_build_lib then [ "lib" ] else [])
-  @ (if src.Canary_artifact_source.has_build_binding then [ "binding" ] else [])
-
-let source_repo_url (src : Canary_artifact_source.source_repo) : string =
-  let (Canary_artifact_source.Git_remote url) = src.Canary_artifact_source.remote in
-  url
-
-(* Variant view for projects that expose raw [runner_spec]s per source variant
-   (z3/llvm) instead of a [project_run] — now UNIFORM with print_spec: a source
-   artifact is shown as a configured repo (+ what it builds), and each artifact
-   shows its provision per variant + what it can build (action catalogue). The
-   runner is untouched — this only READS the source_repo + runner_spec. (The
-   deeper unification — a `Source_repo` provider variant so z3/llvm expose
-   `pr_provenance` like project_run — is a to-do; status §F.) *)
-let print_spec_variants ~(name : string)
-    ~(variants :
-       (string * Canary_artifact_source.source_repo
-       * Canary_step_builder.runner_spec)
-       list) : unit =
-  let module E = Canary_enumerate in
-  let vnames = List.map (fun (v, _, _) -> v) variants in
-  Fmt.pr
-    "@.spec: %s — scenario view (raw runner_spec, not project_run; %d source \
-     configs: %s)@."
-    name (List.length variants) (String.concat ", " vnames);
-  (* artifacts — grouped, per-variant provision + builds. The SOURCE artifact
-     shows its configured repo per variant (a source artifact = a repo), so
-     source appears as one artifact group — uniform with print_spec. *)
-  let all_kinds = variant_kinds variants in
-  let langs = langs_of_kinds all_kinds in
-  Fmt.pr "@.artifacts (%d), by group [provision per scenario: %s]:@."
-    (List.length all_kinds) (String.concat "|" vnames);
-  List.iter
-    (fun grp ->
-      let in_grp =
-        List.filter (fun k -> String.equal (group_of_kind k) grp) all_kinds
-      in
-      if in_grp <> [] then begin
-        Fmt.pr "  %s:@." grp;
-        List.iter
-          (fun k ->
-            let cells =
-              List.map
-                (fun (_, _, rs) ->
-                  match List.assoc_opt k (provisions_of_runner_spec rs) with
-                  | Some p -> prov_short p
-                  | None -> "·")
-                variants
-            in
-            let builds = builds_of_kind ~langs k in
-            Fmt.pr "    %-22s %s%s@." (E.pretty_artifact k)
-              (String.concat "|" cells)
-              (match builds with
-               | [] -> ""
-               | bs -> "     builds → " ^ kinds_string bs);
-            match k with
-            | Canary_basic.Source ->
-                List.iter
-                  (fun (vname, src, _) ->
-                    Fmt.pr "        [%-6s] provider: source repo: %s%s@." vname
-                      (Canary_store_config.string_of_source_repo src)
-                      (match source_repo_builds src with
-                       | [] -> "  (fetches lib+binding)"
-                       | bs -> "  builds " ^ String.concat ", " bs))
-                  variants
-            | _ -> ())
-          in_grp
-      end)
-    group_order;
-  Fmt.pr
-    "@.  legend: V=vendored B=built F=fetched A=absent · = not in that scenario \
-     · columns = %s@."
-    (String.concat "|" vnames);
-  Fmt.pr
-    "  note: the version-mismatch these projects test lives in the probe \
-     EXPECTATION (not shown); fetched-artifact package detail is in shell \
-     closures (coarse here).@."
-
-(* JSON form of the variant view (z3/llvm) — for `spec @all --json`. *)
-let spec_variants_json_t ~(name : string)
-    ~(variants :
-       (string * Canary_artifact_source.source_repo
-       * Canary_step_builder.runner_spec)
-       list) : Yojson.Basic.t =
-  let module E = Canary_enumerate in
-  let all_kinds = variant_kinds variants in
-  let langs = langs_of_kinds all_kinds in
-  `Assoc
-    [ ("project", `String name);
-      ("kind", `String "variants");
-      ( "source_repos",
-        `List
-          (List.map
-             (fun (vname, src, _) ->
-               `Assoc
-                 [ ("variant", `String vname);
-                   ("name", `String src.Canary_artifact_source.name);
-                   ("version", `String src.Canary_artifact_source.version);
-                   ("ref", `String src.Canary_artifact_source.ref_);
-                   ("remote", `String (source_repo_url src));
-                   ( "builds",
-                     `List
-                       (List.map (fun s -> `String s) (source_repo_builds src))
-                   ) ])
-             variants) );
-      ( "artifacts",
-        `List
-          (List.map
-             (fun k ->
-               `Assoc
-                 [ ("id", `String (E.pretty_artifact k));
-                   ("group", `String (group_of_kind k));
-                   ( "builds",
-                     `List
-                       (List.map
-                          (fun bk ->
-                            `String (Canary_basic.string_of_artifact_kind bk))
-                          (builds_of_kind ~langs k)) ) ])
-             all_kinds) );
-      ( "variants",
-        `List
-          (List.map
-             (fun (vname, _, rs) ->
-               `Assoc
-                 [ ("name", `String vname);
-                   ( "provisions",
-                     `List
-                       (List.map
-                          (fun (k, p) ->
-                            `Assoc
-                              [ ("artifact", `String (E.pretty_artifact k));
-                                ( "provision",
-                                  `String (Canary_store.string_of_provision p)
-                                ) ])
-                          (provisions_of_runner_spec rs)) ) ])
-             variants) ) ]
+(* (print_spec_variants + spec_variants_json_t — the raw z3/llvm variant
+   view and its JSON twin, with their variant_kinds/source_repo_* helpers —
+   retired 2026-08-05, A5 phase 5: every project `spec` serves is a
+   [project_run] now, rendered by [print_spec]/[spec_json_t] above.) *)
 
 (* ── Subcommands ── *)
 
@@ -1044,30 +865,21 @@ let action_cmd =
     Arg.(
       value & flag
       & info [ "thin" ]
-          ~doc:"tiny-full only: run the thin Subset enumeration (Stable, \
-                single-bad, no ctypes/combos).")
+          ~doc:"project_run projects (tiny-full, z3, llvm): run the thin \
+                Subset[Stable] enumeration (drops every Dev world).")
   in
   (* run_with_info, with_cli_disabled, prebuilt_run_info, and
      run_tiny_scenario lifted to file top-level 2026-07-09 so
      `tiny run` can reuse them uniformly. *)
-  let source_run_info ~project distro
-      (repo : Canary_artifact_source.source_repo) steps =
-    let (Canary_artifact_source.Git_remote url) = repo.remote in
-    Canary_run_info.mk_run_info ~project ~version:repo.version ~ref_:repo.ref_
-      ~source:(Canary_artifact_source.source_desc distro repo)
-      ~extra:
-        [
-          ("official", if repo.official then "true" else "false");
-          ("remote", url);
-        ]
-      steps
-  in
-  (* run_z3 (raw-script run_project_multi over 2 hand-derived variants)
-     retired 2026-08-05, A5 phase 2 — `action z3` now goes through the
-     generic [run_project_run] over [Canary_project_z3.z3_run] (enumerate →
-     dispatch/realize → derive_steps → run). Casualties of the migration:
-     the z3-only `--quick` (no_source) and `--cache-path`/`--disable-contract`
-     plumbing, which the generic path doesn't carry (same as sqlite). *)
+  (* run_z3 / run_llvm (raw-script run_project_multi over hand-derived
+     variants) + their source_run_info retired 2026-08-05, A5 phases 2+5 —
+     `action z3`/`action llvm` go through the generic [run_project_run]
+     over [Canary_project_z3.z3_run] / [Canary_project_llvm.llvm_run]
+     (enumerate → dispatch/realize → derive_steps → run). Casualties of the
+     migration: the z3-only `--quick` (no_source), the per-variant
+     `--cache-path`/`--disable-contract` plumbing, and the source/prebuilt
+     run_info extras, which the generic path doesn't carry (same as
+     sqlite). [run_project_multi]'s last consumer is ssl (migrates last). *)
   let run_sqlite ~root ~failfast ~cache_path ~cli_disabled =
     let spec = with_cli_disabled cli_disabled Canary_project_sqlite.runner_spec in
     let steps =
@@ -1123,51 +935,6 @@ let action_cmd =
     run_with_info ~failfast ~cache_path ~root ~project:"cairo" steps
       (prebuilt_run_info ~project:"cairo" ~version:"system" ~extra:[] steps)
   in
-  let run_llvm ~root ~failfast ~cache_path ~cli_disabled distro =
-    let dev_tag =
-      Canary_artifact_source.version_cache_tag distro
-        Canary_project_llvm.llvm_source_dev
-    in
-    let spec =
-      Canary_project_llvm.mk_runner_spec
-        ~source:Canary_project_llvm.llvm_source_dev distro
-      |> with_cli_disabled cli_disabled
-    in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:[%string "llvm/%{dev_tag}"]
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec
-    in
-    let pb = Canary_project_llvm.prebuilt in
-    let ver = Option.value pb.system_package.version_tag ~default:"system" in
-    let dev_run_info =
-      prebuilt_run_info ~project:"llvm" ~version:ver
-        ~extra:
-          [
-            ("system_package", pb.system_package_linux);
-            ("opam_package", pb.opam_package);
-          ]
-        steps
-    in
-    let src_19 = Canary_project_llvm.llvm_source_stable in
-    let spec_19 = Canary_project_llvm.mk_runner_spec ~source:src_19 distro
-                  |> with_cli_disabled cli_disabled in
-    let steps_19 =
-      Canary_step_builder.derive_steps ~root ~project:"llvm/19"
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec_19
-    in
-    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
-      ~project_name:"llvm" ~artifact_names:spec.artifact_name
-      ~variants:
-        [
-          (dev_tag, steps, Some dev_run_info);
-          ( "19",
-            steps_19,
-            Some (source_run_info ~project:"llvm" distro src_19 steps_19) );
-        ]
-      ()
-  in
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
   let run project _quick failfast cache_path disable_contract_csv thin () =
@@ -1196,7 +963,14 @@ let action_cmd =
             ~policy:(Canary_project_run.thin_policy ())
             (Canary_project_z3.z3_run distro) ~root ~failfast
         else run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast
-    | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
+    | Some "llvm" ->
+        (* llvm on the generic path (A5 phase 5) — same shape as z3 *)
+        if thin then
+          run_project_run
+            ~policy:(Canary_project_run.thin_policy ())
+            (Canary_project_llvm.llvm_run distro) ~root ~failfast
+        else
+          run_project_run (Canary_project_llvm.llvm_run distro) ~root ~failfast
     | Some "tiny-full" ->
         (* the generic project runner drives tiny-full (convergence step 2);
            --thin = the RUNNER's thin_policy over the same declared spec
@@ -1223,7 +997,7 @@ let action_cmd =
         run_ssl ~root ~failfast ~cache_path ~cli_disabled;
         run_cairo ~root ~failfast ~cache_path ~cli_disabled;
         run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast;
-        run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
+        run_project_run (Canary_project_llvm.llvm_run distro) ~root ~failfast
     | Some p ->
         Fmt.pr
           "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny-full, tiny/<scenario>)@." p
@@ -1242,7 +1016,7 @@ let spec_cmd =
           ~doc:"Project to snapshot: @all (default) | tiny-full | sqlite | z3 | llvm")
   in
   let thin =
-    Arg.(value & flag & info [ "thin" ] ~doc:"project_run projects (tiny-full, z3): the thin Subset[Stable] enumeration.")
+    Arg.(value & flag & info [ "thin" ] ~doc:"project_run projects (tiny-full, sqlite, z3, llvm): the thin Subset[Stable] enumeration.")
   in
   let by_artifact =
     Arg.(
@@ -1262,15 +1036,9 @@ let spec_cmd =
   in
   let run proj thin by_artifact json () =
     let d = lazy (detect_distro ()) in
-    (* each variant carries its source_repo (a source artifact = a configured
-       repo) so the viewer can show it uniformly; the runner is unchanged.
-       (z3 left this view 2026-08-05, A5 phase 2 — it is a project_run now;
-       llvm follows in phase 5, then print_spec_variants retires.) *)
-    let llvm_variants () =
-      let d = Lazy.force d in
-      let mk s = (s.Canary_artifact_source.version, s, Canary_project_llvm.mk_runner_spec ~source:s d) in
-      [ mk Canary_project_llvm.llvm_source_dev; mk Canary_project_llvm.llvm_source_stable ]
-    in
+    (* Every project is a [project_run] now (A5 phase 5: llvm was the last
+       raw-variant holdout; the variant view [print_spec_variants] retired
+       with it). ssl/zarith/cairo join this command when they migrate. *)
     let show ?policy pr =
       if json then
         print_string
@@ -1278,12 +1046,10 @@ let spec_cmd =
       else if by_artifact then print_artifacts ?policy pr
       else print_spec ?policy pr
     in
-    let show_variants name variants =
-      if json then
-        print_string
-          (Yojson.Basic.pretty_to_string (spec_variants_json_t ~name ~variants)
-          ^ "\n")
-      else print_spec_variants ~name ~variants
+    (* --thin is a runner policy, valid on any project_run *)
+    let show_thin pr =
+      if thin then show ~policy:(Canary_project_run.thin_policy ()) pr
+      else show pr
     in
     match proj with
     | Some "tiny-full" ->
@@ -1292,35 +1058,22 @@ let spec_cmd =
             ~policy:(Canary_project_run.thin_policy ())
             Canary_project_tiny.tiny_full_thin_run
         else show Canary_project_tiny.tiny_full_run
-    | Some "sqlite" -> show Canary_project_sqlite.sqlite_run
-    | Some "z3" ->
-        (* the generic project_run view (A5 phase 2); --thin works here as
-           on any project_run *)
-        if thin then
-          show
-            ~policy:(Canary_project_run.thin_policy ())
-            (Canary_project_z3.z3_run (Lazy.force d))
-        else show (Canary_project_z3.z3_run (Lazy.force d))
-    | Some "llvm" -> show_variants "llvm" (llvm_variants ())
+    | Some "sqlite" -> show_thin Canary_project_sqlite.sqlite_run
+    | Some "z3" -> show_thin (Canary_project_z3.z3_run (Lazy.force d))
+    | Some "llvm" -> show_thin (Canary_project_llvm.llvm_run (Lazy.force d))
     | Some "@all" | None ->
         (* every project's spec in one command — the refactor cross-check *)
         let prs =
           [ Canary_project_tiny.tiny_full_run; Canary_project_sqlite.sqlite_run;
-            Canary_project_z3.z3_run (Lazy.force d) ]
+            Canary_project_z3.z3_run (Lazy.force d);
+            Canary_project_llvm.llvm_run (Lazy.force d) ]
         in
-        let vs = [ ("llvm", llvm_variants ()) ] in
         if json then
-          let projects =
-            List.map (fun pr -> spec_json_t pr) prs
-            @ List.map (fun (n, v) -> spec_variants_json_t ~name:n ~variants:v) vs
-          in
+          let projects = List.map (fun pr -> spec_json_t pr) prs in
           print_string
             (Yojson.Basic.pretty_to_string (`Assoc [ ("projects", `List projects) ])
             ^ "\n")
-        else begin
-          List.iter show prs;
-          List.iter (fun (n, v) -> print_spec_variants ~name:n ~variants:v) vs
-        end
+        else List.iter show prs
     | _ ->
         Fmt.epr "usage: canary spec <@@all|tiny-full|sqlite|z3|llvm>@.";
         Stdlib.exit 2

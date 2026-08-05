@@ -49,8 +49,11 @@ dedup (`scenario_dir_of`; Fetched is version-ambient), per-scenario verdicts
 - **tiny1** (`canary tiny run`): the standalone mutation ORACLE; factory
   coverage 12/24 — the 12 undetected are watchlist-blind (c5/c6/abi) and
   need richer *inspectors* (§B), not plumbing.
-- **z3/llvm**: still raw-script (`run_project_multi`), 2 variants each with
-  contract-bound expectations. Migration = A5.
+- **z3/llvm**: on the GENERIC path since A5 (2026-08-05) — each declares a
+  two-chain spec (source F@{S,D}; lib F@S|B@D; python wheel F@S) enumerating
+  to its 2 scenarios; contract-bound expectations unchanged, surfacing as
+  xfail (z3's wheel demo scenario-invariant, llvm's Opcode.UncondBr
+  chain-local). ssl is `run_project_multi`'s last consumer.
 
 Trilogy + principle: **ssot §4.2.5**; arc history:
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
@@ -59,14 +62,17 @@ Trilogy + principle: **ssot §4.2.5**; arc history:
 scenario combination** (derived from the declared spec; the run's scenario
 set == what the algorithm + graph say the project's worlds are).
 - **(a) combination derived from the spec — DONE** for sqlite + tiny-full
-  (no hand-built scenario list can exist: `pr_enumerate` is retired).
+  + z3 + llvm (no hand-built scenario list can exist: `pr_enumerate` is
+  retired).
 - **(b) real mismatch/failure scenarios — HALF DONE.** Shipped: sqlite's
   verified deploy scenario (runner-realized repoint) + tiny-full's
   enumerated, c1-detected forward mismatch (flat form: binding-version ≠
   lib-version). Still open: TWO lib instances in ONE scenario (build-lib ≠
   run-lib proper) needs `close_deps Independent` wired into `scenarios_of`
   — the node-graph half (§A).
-- **(c) z3/llvm on the generic path — NOT STARTED** (= A5).
+- **(c) z3/llvm on the generic path — DONE 2026-08-05** (= A5 phases 1–5;
+  both verified live end-to-end, xfail demos surfacing). Residue tracked
+  under A5: ssl/zarith/cairo migration, `compat`/`verify` old-dir globs.
 
 ## A. Convergence — one enumeration algorithm, one project spec
 
@@ -79,14 +85,21 @@ design lives in
 mid-layer VIEW, `derive_steps` = engine; build edges grammatical, runtime
 edges resolved via `dep_mode`). Open:
 
-- **A5 — wire z3/llvm onto `project_run`** (retire `run_project_multi` +
-  `print_spec_variants`). The forcing function for two missing
-  abstractions: (i) the **location sub-axis** — one z3 variant probes the
+- **A5 — wire z3/llvm onto `project_run` — CORE DONE 2026-08-05** (phases
+  1–5 below; both projects verified live). Remaining under this id:
+  ssl/zarith/cairo migration (retires `run_project_multi`), the
+  `compat`/`verify` old-dir glob reconciliation, and the two abstractions
+  A5 was the forcing function for — still open, now with concrete
+  evidence: (i) the **location sub-axis** — one z3 scenario probes the
   lib at three locations (build-tree / staged / apt), a dimension the flat
   placement doesn't model; (ii) the **`dep_mode` value source** — who
   declares "this probe runs over lib@Y while built against lib@X"
   (`close_deps Independent`'s owner). Both land naturally with A9-step-2.
-  ssl/zarith/cairo follow once the shape exists.
+  A third joined during execution: (iii) **binding-follows-chain** — the
+  OCaml binding could not be declared as an enumerated axis in either
+  project (flat product can't express "follows the built chain" without
+  minting mismatch worlds) = the graph-structural version propagation
+  below.
   **Execution plan (2026-08-05; user: zero-cache rebuild cost is acceptable
   — and z3/llvm's guarded external build trees mean scenario-id changes
   don't force full rebuilds anyway). z3 first, llvm after the shape
@@ -164,8 +177,26 @@ edges resolved via `dep_mode`). Open:
      `spec z3` joins both verdicts (`✓ xfail` ×2, `·` for the deduped
      assignment); `status z3` shows the xfail row. llvm's Opcode.UncondBr
      half rides phase 5.
-  5. *llvm same shape*; then retire `run_project_multi` +
-     `print_spec_variants` (ssl/zarith/cairo last).
+  5. ~~*llvm same shape*~~ — **DONE 2026-08-05.** `llvm_spec` +
+     `Dev_chain | Stable_chain` dispatch/realize + `llvm_run : distro →
+     project_run`, the z3 shape verbatim; pins shared via the
+     parameterized `two_chain_pins` generator (`canary_projects_test.ml`,
+     44/44 pass). Verified live end-to-end: both chains PASS via
+     `run_project_run`; the Opcode.UncondBr demo fires as
+     `xfail probe_binding_ocaml` in the STABLE chain only (chain-LOCAL,
+     vs z3's scenario-invariant wheel demo — the two demos now
+     demonstrate both xfail localities on one runner); dev chain symbol
+     check 418/1201/0, llvmlite ok. RETIRED: `run_llvm`, `run_z3`,
+     `source_run_info`, `print_spec_variants` + `spec_variants_json_t` +
+     `provisions_of_runner_spec`/`variant_kinds`/`source_repo_*` (the
+     whole raw variant view — every `spec` project is a project_run now).
+     `run_project_multi` NOT yet retired: ssl is its last consumer
+     (4 hand-listed variants) — retires when ssl/zarith/cairo migrate.
+     llvm's `pr_mismatch_probes` also [] (same frame reasoning as z3;
+     the discriminating axis is the BINDING's provision, not enumerated
+     until version propagation). Still open under A5: ssl/zarith/cairo
+     migration; `compat`/`verify` glob pre-A5 dirs (`dev_*`/`stable`/`19`)
+     while runs now write scenario-keyed dirs.
   **A5↔A7 order settled: A5 first** — migration needs no expectation
   change (the runner consumes any expectation closure; Expect_compat_
   failure already maps to xfail), and A7 is best done once all three

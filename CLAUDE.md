@@ -8,11 +8,11 @@ dune exec src/bin/canary_main.exe -- paths                   # print 15-row acti
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
 dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
 dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 scenarios: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built scenarios probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
-dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
-dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
+dune exec src/bin/canary_main.exe -- action z3               # GENERIC path (A5): enumerate z3_spec → 2 scenarios (stable fetch chain baseline + dev build chain); parser_context xfail fires in BOTH (scenario-invariant). --thin = stable chain only
+dune exec src/bin/canary_main.exe -- action llvm             # GENERIC path (A5): same two-chain shape as z3; Opcode.UncondBr xfail in the stable chain
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
-dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). project_run: tiny-full/sqlite; variant view (raw runner_spec, read-only): z3/llvm
+dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). ALL of tiny-full/sqlite/z3/llvm are project_run now (the raw variant view retired with A5 phase 5)
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
 dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests
@@ -70,8 +70,10 @@ assemble,assemble_check}` (P3 step 2, vendored emit+assemble).
 
 Output layout (gitignored via `_*`):
 - `_out/canary/projects/<project>/<step>/` — per-project action runs
-  (`action llvm` writes `projects/llvm/dev_<hash>/` + `projects/llvm/19/`;
-   `action z3` writes `projects/z3/dev_<hash>/` + `projects/z3/stable/`)
+  (z3/llvm write per-SCENARIO dirs since A5, e.g.
+   `projects/z3/lib-built-dev_python_binding-fetched_source-fetched/`;
+   pre-A5 `dev_<hash>/`/`stable/`/`19/` dirs may linger from old runs —
+   `compat`/`verify` still glob those old names, a pending reconciliation)
 - `_out/canary/test/{artifact-test,pm-test,artifact-summary}/` — framework
   self-tests and ad-hoc dumps
 - `_out/canary/graph/action_graph.mmd` — universal schema diagram from `canary graph`
@@ -244,12 +246,11 @@ predicted failure substrings (L0 C-symbol diff + L3 watchlist-missing
 etc.). The top-level project identity is `Canary_project_run.project_run`
 for generic projects (A6 2026-08-05: the never-read `Canary_project.project`
 bundle was deleted); each project's module owns its scenarios directly
-(tiny1 has 22 via factory; z3/llvm have 2-3 variants each via
-`mk_runner_spec ~source`). `run_project_multi` runs the scenarios/variants list
-per project; tiny's factory (`canary_tiny_scenario.ml`) restricts
-each `runner_spec` to one scenario's world, z3/llvm build one
-`runner_spec` per source variant. **The generic path** (sqlite +
-tiny-full) is `run_project_run` over a `Canary_project_run.project_run`
+(tiny1 has 22 via factory). `run_project_multi`'s last consumer is ssl
+(4 hand-listed variants); tiny's factory (`canary_tiny_scenario.ml`)
+restricts each `runner_spec` to one scenario's world. **The generic
+path** (tiny-full + sqlite + z3 + llvm since A5, 2026-08-05)
+is `run_project_run` over a `Canary_project_run.project_run`
 (`pr_spec → scenarios_of (the general enumerate; ?policy, --thin =
 thin_policy) → pr_runner_spec → derive_steps → run`): a project declares
 only DATA — `pr_spec` is ONE fused table (`ps_universe : artifact ×
