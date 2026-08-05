@@ -289,9 +289,11 @@ type 'a level = Free | Subset of 'a list | Full
 
 (** A config assigns one [level] per axis. Instantiating the algorithm with
     a config yields a project's concrete scenarios (ssot §4.2 — "every use
-    is one config"). Today the ranged axes are provision and mutation;
-    version / mechanism / app-wiring are axes still to add, each becoming a
-    field here. *)
+    is one config"). Today the ranged axes are provision, version (per
+    artifact × provision) and mutation; mechanism / app-wiring are ranged via
+    the artifact-identity set (each [a_binding lang mech] / [a_app wiring] is
+    its own enumerated artifact) — a dedicated config axis for them is still
+    open. *)
 type 'm config = {
   provision : provision level;
   version : Canary_basic.channel level;
