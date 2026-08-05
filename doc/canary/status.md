@@ -151,6 +151,16 @@ edges resolved via `dep_mode`). Open:
   build together.
 - **Fetched provision for tiny** — canary fetches from a PM at run time;
   the one provision tiny still lacks (Built + Vendored + Dev/Stable done).
+- **Watchlist ROLES: expected-present vs expected-missing** (user, 2026-08-05).
+  sqlite's binding-lag markers currently ride the expected-present watchlist,
+  so status shows `✓ ⚠ watchlist MISSING …`; it SHOULD be an `xfail`-style
+  mark (expected absence, confirmed). Needs the role declared — an
+  `expect_missing` list through `inspect_python.py` → JSON
+  (`expected_missing: confirmed|violated`) → status marks confirmed lag as
+  xfail and a REAPPEARED lag name as ✗ (binding caught up; declaration
+  stale). A blanket "missing→xfail" is wrong (tiny's watchlists are
+  expected-PRESENT; missing there = drift, must stay alarming). This is the
+  seed of the c7/c8 lag contract (A7-adjacent).
 
 ## C. Real-project breadth (sqlite)
 
