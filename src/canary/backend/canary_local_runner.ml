@@ -411,12 +411,19 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
   let status = Hashtbl.create (module String) in
   (* Seed with steps a PRIOR run recorded as meeting their expectation
      (verdict marker) — not mere output presence, so a failed probe isn't
-     seeded as done. Marker content preserves the xfail distinction. *)
+     seeded as done. Marker content preserves the xfail distinction. Each
+     seed is LOGGED (a seeded step never reaches [run_step], so without this
+     a warm run leaves no per-step trace and `canary status` can't
+     reconstruct the variant's matrix). *)
   List.iter steps ~f:(fun s ->
-      if Stdlib.Sys.file_exists (verdict_marker s) then
+      if Stdlib.Sys.file_exists (verdict_marker s) then begin
+        let xf = verdict_is_xfail (verdict_marker s) in
+        logger.log ~tag:s.tag ~event:"skip"
+          ~detail:(Some (if xf then "verdict marker (prior xfail)"
+                         else "verdict marker (prior success)"));
         Hashtbl.set status ~key:s.tag
-          ~data:(if verdict_is_xfail (verdict_marker s) then Step_done_xfail
-                 else Step_done));
+          ~data:(if xf then Step_done_xfail else Step_done)
+      end);
   (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in
   let aborted = ref false in

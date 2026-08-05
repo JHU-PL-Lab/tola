@@ -68,7 +68,13 @@ let mark event detail =
       | _ -> "✓")
   | "failed" -> "✗"
   | "unexpected_success" -> "✗"
-  | "skip" -> "·"
+  | "skip" -> (
+      (* a cache skip on a MET expectation is a pass, not a not-run: the
+         verdict marker's flavor tells which pass. *)
+      match detail with
+      | Some d when String.is_substring d ~substring:"prior xfail" -> "xfail"
+      | Some d when String.is_substring d ~substring:"prior success" -> "✓"
+      | _ -> "·")
   | "blocked" -> "⊘"
   | _ -> "?"
 

@@ -255,6 +255,12 @@ let run_project ?(failfast = false) ?run_info ?cache_path
   let global_cache = Option.map cache_path ~f:(fun p -> Canary_local_runner.load_cache ~path:p) in
   let log_path = [%string "%{run_dir}/actions.log"] in
   let logger = create_logger ~log_path in
+  (* mark the variant/world in the log — `canary status` reconstructs its
+     per-variant × per-step matrix from these markers (a generic-runner world
+     is a variant like any z3/llvm one; without the marker all worlds
+     collapsed into one "(run)" group). *)
+  if not (String.is_empty variant_id) then
+    logger.log ~tag:"*" ~event:"variant_start" ~detail:(Some variant_id);
   let status = run_graph ~failfast ?global_cache logger ~project ~root steps in
   Canary_diagram.write_project_output ~dir ~project_name ~variant:variant_id ~steps
     ~run_status:status ~artifact_names ~root logger;
