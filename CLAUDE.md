@@ -336,13 +336,6 @@ Numbers below are still the canonical TODO ids; plan.md is the
 sequencing / progress doc that absorbs them.
 
 - **#15b** — Unit-test framework for compat/inspect logic. Plan: §6 Step 3b.
-- ~~**#43**~~ — c5 cmp_sym_version: **shipped Phase 15.4**. Lib gained
-  `tiny.map` version script; canary diffs `Versioned_exports` vs
-  `Versioned_req`. Demoed via `lib_symbol_version_broken` variant.
-- ~~**#44**~~ — c6 cmp_type: **shipped Phase 15.5b** via trivial-grep
-  inspector (`inspect_tiny_typed.py`'s `header` layer uses regex; other
-  layers hardcoded). Clang-AST replacement is future work, not blocker.
-  Demoed via `binding_type_broken` variant.
 - **#18** — Audit project specs for hardcoded shell commands. Plan: §6 Step 4
   (b) "Project-spec command decoupling". The build-primitive extraction
   half is done (commits `952498e` Step 4(b) + `800108d` Phase 3): the
@@ -357,7 +350,6 @@ sequencing / progress doc that absorbs them.
   4 (b) "Project-spec command decoupling".
 - **#26** — z3 cmake `build_z3_ocaml_bindings` PHONY guard. Plan: §6 Step 4
   (b).
-- **#16b** — Older redundant entry, superseded by #43 in the absorbed plan.
 
 Backlog (lower priority, paper-orthogonal): #5, #9, #11, #13b, #14, #17, #27,
 #29/#32 (#30 shipped), #33, #34, #38, #39, #45; #16, #20, #31,
@@ -519,10 +511,13 @@ Still open:
 
 ### Done
 
-Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #21, #23, #24, #28.
-Mostly done, residue tracked in `doc/canary/backlog.md`: #36, #37, #43, #44.
-(#25 and #26 used to be listed here AND in the active TODO list above — the
-active listing is the correct one, verified 2026-08-05: z3's `install_lib`
+Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #16b, #21, #23, #24,
+#28, #36, #43. Shipped entries are DELETED from `doc/canary/backlog.md`
+(the landing task writes the worklog; the backlog only carries open work),
+so #44 and #37 remain there scoped to what is genuinely left — clang-AST
+`cmp_type` and bundled mermaid.js respectively.
+(#25 and #26 used to be listed here AND on this Done line — the active
+listing above is the correct one, verified 2026-08-05: z3's `install_lib`
 still `cp`s (`canary_project_z3.ml:395`) and `build_binding` still runs
 `ninja build_z3_ocaml_bindings` with no `test -f z3ml.cmxa ||` guard.)
 The api-compat milestone (Phases 1–3e: `inspect_binding.py`, `canary

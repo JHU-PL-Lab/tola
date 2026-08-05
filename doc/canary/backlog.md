@@ -29,22 +29,14 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     documented in `doc/canary/research/surface_draft/implementation.md` §2.7. Open items
     (#35, #20, #41, #42) remain.
 
-~~43. **L1b — versioned symbol requirements in compat check**~~ —
-    **SHIPPED** (Phase 15.4). `check_sym_version` (c5 `cmp_sym_version`)
-    lives at `surface/canary_compat.ml:305`; the lib gained a `tiny.map`
-    version script and canary diffs `Versioned_exports` vs `Versioned_req`.
-    Demoed via the `lib_symbol_version_broken` variant.
-
-~~44. **L2 — typed signatures**~~ — **SHIPPED** (Phase 15.5b) via a
-    trivial-grep inspector: `check_type` (c6 `cmp_type`) at
-    `surface/canary_compat.ml:417`; `inspect_tiny_typed.py`'s `header`
-    layer uses a regex, other layers are hardcoded. Demoed via the
-    `binding_type_broken` variant.
-
-    **Still open (the deferred half)** — replace the grep with a real
-    clang-AST / libclang extraction, so `check_type` becomes true subtyping
-    (contravariance on arguments, covariance on results, refinement on
-    value domains) rather than name+shape matching. Not a blocker for
+44. **L2 — typed signatures via clang AST or libclang** — c6 `cmp_type`
+    ships today as a trivial-grep inspector (`check_type` in
+    `surface/canary_compat.ml`; `inspect_tiny_typed.py`'s `header` layer
+    is a regex, other layers hardcoded). Replace the grep with real
+    clang-AST / libclang extraction so `check_type` becomes true subtyping
+    — contravariance on argument types, covariance on results, refinement
+    on value domains — rather than name+shape matching. Catches "same name,
+    different signature" drift the grep can miss. Not a blocker for
     anything. Prior art: the dead-code example at
     `doc/_legacy_code/canary_dead_code.ml`. See
     `doc/canary/research/surface_draft/surface.md` §2.4 (Type contract) and
@@ -125,28 +117,12 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     `canary_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
 
-~~36. **Diagram fidelity: `scan_source` and `_inspect` steps have no nodes**~~
-    — **SHIPPED.** Both now render dedicated nodes: `A_scan_source`
-    (`backend/canary_diagram.ml:126`) and one summary node per
-    (parent action, tag suffix) pair — `summary_nid` / `summary_label`,
-    covering `_inspect` and `_stub_inspect` (`:57`).
-
-    The *live* diagram problem is a different one: the drawn `.mmd` does
-    not reproduce every `step.deps` edge, in all four projects. That check
-    is muted behind `CANARY_DIAGRAM_CONN=1` and the real fix is reconciling
-    `step.deps` with the typed node graph into one relation — see
-    `status.md` §A "Merge cleanup", not this entry.
-
-~~37. **HTML diagram viewer with node-group visibility toggles and log drill-down**~~
-    — **SHIPPED** as `backend/canary_html.ml` (see its header comment, `:5-8`):
-    renders the selected view inline via mermaid.js (CDN by default), lists
-    the available views (overview + per-slice `.mmd`) as selector buttons,
-    and opens output-dir files (`probe.log`, `summary.json`, …) in a side
-    drawer.
-
-    **Residue** (`design/diagram.md` "Backlog refs" calls this #37
-    hardening): the viewer uses the mermaid CDN, so offline use needs a
-    `--bundle-mermaid` flag — not yet wired.
+37. **Bundled mermaid.js for the HTML viewer** — `backend/canary_html.ml`
+    loads mermaid from a CDN, so a run's `result.html` needs network access
+    to render. Add a `--bundle-mermaid` flag that inlines the library for
+    offline / archived viewing. (All the rest of the original #37 — inline
+    render, per-view selector, log drill-down in a side drawer — shipped;
+    see `design/diagram.md`.)
 
 38. **`pack_python` action — local pip wheel packaging** — `pack_binding` is
     currently OCaml-only (opam packaging). A Python equivalent would build a

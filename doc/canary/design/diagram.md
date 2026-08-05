@@ -229,8 +229,9 @@ Each item is tracked elsewhere; this section is the diagram-side index.
 - **Bundled mermaid.js** — viewer uses the CDN by default; offline
   use needs a `--bundle-mermaid` flag (not yet wired).
 
-Backlog refs: #36 (summary node fidelity), #37 (HTML viewer
-hardening).
+Backlog ref: #37 (bundled mermaid.js for offline viewing). Summary-node
+fidelity (old #36) shipped — `scan_source` and each `*_inspect` follow-up
+now render dedicated nodes.
 
 ---
 
