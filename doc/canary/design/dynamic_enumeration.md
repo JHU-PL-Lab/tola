@@ -181,16 +181,20 @@ function — they're bugs to fix in it, benefiting both consumers.
   `ps_provisions_of`). `construct` shows "applicable / total (n/a)": sqlite bindings
   6→2 applicable (built ones n/a — it fetches opam), lib 4/4. This is cleaner than
   filtering (algorithm stays universal; coverage is visible).
-- **Remaining: `Vendored` nodes** (a provision input). `construct tiny-full` marks
-  **everything n/a** — `make_action_graph` only does build/fetch, so tiny's vendored
-  source is `Fetched` there, n/a to tiny's `[Vendored]`, and the mark cascades. So
-  the universal graph must gain `Vendored` provisions for tiny to have any applicable
-  node. Then `make_action_graph` IS the forward engine (universal for `paths`,
-  marked-per-project for the run) — one function.
-- *Also seen (minor):* the applicable App set still has duplicates (a `make_action_graph`
-  dedup), and the deploy-mismatch marker doesn't fire on a FETCHED binding (its
-  build-lib is implicit/system, not a `built_from` edge) — refinements for when the
-  run consumes the graph.
+- **Fixed (`c5ea578`): `Vendored` nodes.** `make_action_graph ~vendored` adds, per
+  kind per version, a `Vendored` node (a supplied copy — an initial node, not
+  action-generated). Universal (default off, `paths` unchanged); the project
+  N/A-marking filters. `construct tiny-full` now lights up — every kind has 2
+  applicable vendored nodes (its all-vendored scenario), where it was all-n/a.
+  So `make_action_graph` carries all three provisions (Built/Fetched/Vendored)
+  universally, marked per-project — **it IS the forward engine now** (universal for
+  `paths`, marked for the run), one function.
+- **Follow-ups (for when the run consumes the graph):** (a) tiny's BUILT lib is
+  n/a because `Build_lib` builds from the FETCHED source, not tiny's *vendored*
+  source — `Build_lib` should build from any source@v (a source-provision
+  refinement); (b) App duplicates (a `make_action_graph` dedup); (c) the mismatch
+  marker doesn't fire on a FETCHED binding (its build-lib is implicit/system, not a
+  `built_from` edge).
 
 ## The path-table (pattern) approach — a post-graph scenario enumeration (warm-up)
 
