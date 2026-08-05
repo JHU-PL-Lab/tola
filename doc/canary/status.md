@@ -259,16 +259,38 @@ edges resolved via `dep_mode`). Open:
      Pins: `compat.verdict_xfail_contract_roundtrip`; 105/105
      artifact-tests, 44/44 project-tests, 2/2 cache-soundness (the
      marker machinery is what the cache keys on).
-  3. *z3 + llvm oracle → derived*: swap both realizations to
-     `lower_expectation_agnostic` (the violates/has_manifest knobs die at
-     those call sites). The semantics change is the honest one: dev
-     chains expect success because the INSPECTION predicts nothing (not
-     because a knob said so), and if upstream ever ships the missing API
-     the expectation self-heals. RISK to verify live: input-path
-     resolution per chain — the first-existing rule must pick the
-     pack-side inspect in the dev chain even though fetch-side inspects
-     coexist in the same scenario dir (llvm runs BOTH fetch_binding and
-     pack_binding in the dev chain).
+  3. ~~*z3 + llvm oracle → derived*~~ — **DONE 2026-08-05.** Both
+     realizations now use `lower_expectation_agnostic`; the
+     violates/has_manifest knobs are GONE from real projects — the
+     oracle lowering's only consumer is tiny1 (the intended end shape).
+     llvm's has_manifest knob dissolved into input-path resolution:
+     PACK-SIDE FIRST per input (order is load-bearing, documented on the
+     bindings table + pinned by `llvm.lowering_derived_pack_side_first`)
+     — verified live: dev chain probes log "no compat failure predicted;
+     success expected" (empty derived prediction) at BOTH probe
+     locations while the fetched-19 inspects coexist in the same
+     scenario dir; stable chain → `xfail [c2]`. z3: both chains
+     `xfail [c2]` derived. gh backend already renders Derived like
+     compat-failure (gen-time resolution) — residue: an EMPTY gen-time
+     prediction still renders as must-fail-any (can't distinguish
+     "no local cache" from "clean artifact"); fine for current CI jobs.
+     TWO findings out of the live verification:
+     (a) **shared-opam-switch state is scenario-CROSSING**: warm-skipping
+     fetch/pack while re-running a probe means the probe compiles
+     against whatever the LAST install left in the switch (observed:
+     stable probe against the dev binding → unexpected_success). NOT a
+     phase-3 regression (the oracle fails identically); the honest fix
+     is the phase-5 concept pointed the other way — probes should
+     ASSERT which provider version they ran against (sqlite's
+     `log_grep` analogue for bindings), plus shared-store modeling
+     (A5/A9 residue).
+     (b) **`tiny run` verdicts under-reported since xfail landed** —
+     `scenario_status_of_run_state` counted only `"done"`, so every
+     DETECTING bad scenario read FAIL ("5 PASS, 17 FAIL"). Fixed (xfail
+     counts as done); the oracle's real state is **21/22 PASS**, the one
+     red being `type_wrong`'s build-site c6 expectation
+     (unexpected_success — pre-existing per the committed docs
+     results.json; a §B inspector/firing-site question, not A7).
   4. *ssl hand-written → derived From_artifact*: add an mli inspect to
      ssl's fetch_binding + a binding watchlist (`native_library_version`),
      declare `ssl_contract_bindings` (c2 at probe_binding OCaml), replace

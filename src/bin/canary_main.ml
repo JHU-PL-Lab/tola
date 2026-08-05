@@ -110,7 +110,12 @@ let scenario_status_of_run_state ?(project = "tiny") () : string =
            List.for_all (function
              | `Assoc a ->
                (match List.assoc_opt "status" a with
-                | Some (`String "done") -> true
+                (* "xfail" IS a pass — a confirmed expected failure
+                   ([Step_done_xfail], serialized "xfail" since the xfail
+                   surfacing landed). Counting only "done" made every
+                   DETECTING bad scenario read FAIL in `tiny run` — the
+                   oracle totals under-reported until A7 phase 3 caught it. *)
+                | Some (`String ("done" | "xfail")) -> true
                 | _ -> false)
              | _ -> false) steps
          in

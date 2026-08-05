@@ -136,4 +136,69 @@ let llvm_pins : Canary_project_test.pure_test list =
       | Canary_project_llvm.Dev_chain -> true
       | Canary_project_llvm.Stable_chain -> false)
 
-let tests : Canary_project_test.pure_test list = z3_pins @ llvm_pins
+(* ── A7 phase 3 pins: z3/llvm run the DERIVED lowering ──
+   Pure shape of the expectation closure over the REAL binding tables (no
+   runner_spec construction — that shells into PM detection). *)
+
+let sm_is_success = function
+  | Canary_step_model.Expect_success -> true
+  | _ -> false
+
+let pip_loc =
+  Some
+    (Canary_store.Pm
+       (Canary_store.Lang_pm { lang = Canary_lang.Python; pm = Canary_store.Pip }))
+
+(* z3: derived at the (python probe × pip) firing site, success everywhere
+   else — the oracle knobs (violates/has_manifest) are gone; the runner's
+   inspection of the wheel decides at run time. *)
+let z3_lowering_derived : Canary_project_test.pure_test =
+  { name = "z3.lowering_derived_at_python_probe";
+    check = (fun () ->
+      let lower =
+        Canary_scenario.lower_expectation_agnostic
+          ~bindings:Canary_project_z3.z3_contract_bindings
+          ~langs:[ Canary_lang.Python ]
+      in
+      (match lower (B.Probe_binding Canary_lang.Python) pip_loc with
+       | Canary_step_model.Expect_compat_derived { inputs; _ } ->
+           List.exists inputs ~f:(function
+             | Canary_compat.Python_attrs _ -> true
+             | _ -> false)
+       | _ -> false)
+      && sm_is_success (lower (B.Probe_binding Canary_lang.OCaml) None)
+      && sm_is_success (lower B.Build_lib None)) }
+
+(* llvm: derived at the OCaml probe (any loc) with the full merged inputs
+   bag; python probe stays success (llvmlite bundles its own lib). The
+   PACK-FIRST input order is LOAD-BEARING — it is what exempts the dev
+   chain (first-existing resolution reads the dev-built binding's inspects
+   → empty prediction → success expected), replacing the retired
+   has_manifest knob. *)
+let llvm_lowering_derived : Canary_project_test.pure_test =
+  { name = "llvm.lowering_derived_pack_side_first";
+    check = (fun () ->
+      let lower =
+        Canary_scenario.lower_expectation_agnostic
+          ~bindings:Canary_project_llvm.llvm_stable_contract_bindings
+          ~langs:[ Canary_lang.OCaml ]
+      in
+      (match lower (B.Probe_binding Canary_lang.OCaml) None with
+       | Canary_step_model.Expect_compat_derived { inputs; _ } ->
+           let has p = List.exists inputs ~f:p in
+           has (function Canary_compat.C_stub _ -> true | _ -> false)
+           && has (function Canary_compat.Native_lib _ -> true | _ -> false)
+           && has (function Canary_compat.Ocaml_mli _ -> true | _ -> false)
+           (* dev-chain exemption: pack/build-tree path FIRST per input *)
+           && List.for_all inputs ~f:(function
+                | Canary_compat.C_stub (p :: _)
+                | Canary_compat.Ocaml_mli (p :: _) ->
+                    String.is_prefix p ~prefix:"pack_binding_ocaml/"
+                | Canary_compat.Native_lib (p :: _) ->
+                    String.is_prefix p ~prefix:"probe_lib/"
+                | _ -> true)
+       | _ -> false)
+      && sm_is_success (lower (B.Probe_binding Canary_lang.Python) pip_loc)) }
+
+let tests : Canary_project_test.pure_test list =
+  z3_pins @ llvm_pins @ [ z3_lowering_derived; llvm_lowering_derived ]

@@ -261,19 +261,25 @@ let llvm_cmake_flags =
     "-DLLVM_ENABLE_ASSERTIONS=OFF";
   ]
 
-(** llvm's contract bindings for the stable variant (Task 2 Phase D,
-    2026-07-21). Only consulted when [not source.has_build_binding]
-    — the dev variant passes [has_manifest=false] to
-    [lower_expectation] and never touches this table.
+(** llvm's contract bindings (Task 2 Phase D, 2026-07-21; consulted in
+    BOTH chains since A7 phase 3 — the agnostic lowering replaced the
+    per-variant [has_manifest] knob, and the dev chain now derives an
+    EMPTY prediction instead of being exempted).
 
     One binding: c2 (api completeness) at [At_probe_binding OCaml],
     firing anywhere (loc_filter = Any). The inputs bag intentionally
     includes C_stub + Native_lib + Ocaml_mli even though the
-    "official" contract is c2 — the runner's
-    [predicted_contains_any_v2] iterates ALL contracts over the
-    merged inputs, so declaring extra inputs lets c1/c6 also
-    contribute predicted substrings (same behaviour as the
-    hand-coded inline that this replaces).
+    "official" contract is c2 — the runner's per-contract iterator reads
+    ALL contracts over the merged inputs, so declaring extra inputs lets
+    c1/c6 also contribute predicted substrings (and the confirming
+    contract is attributed per-id in the verdict since phase 2).
+
+    ORDER IS LOAD-BEARING (the phase-3 dev-chain exemption): each input
+    lists the pack-side (dev-built) artifact BEFORE the fetch-side one;
+    the resolution's first-existing rule therefore reads the dev
+    binding's inspects in the dev chain — empty prediction, success
+    expected — even though the fetched 19 binding's inspects coexist in
+    the same scenario dir.
 
     Python probe: no (C2, Python) binding — lookup falls through to
     Expect_success. Matches the "llvmlite bundles its own libLLVM"
@@ -527,27 +533,24 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             Canary_step_builder.check_markers [ "pack.ok" ] ~output_dir ~variant_key
             || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
       | _ -> None);
-    (* Migrated 2026-07-21 (Task 2 Phase D) — inline nested match
-       on (action, loc) replaced by data lookup over
-       [llvm_stable_contract_bindings] (defined below).
-
-       Behavior preserved:
-       - Stable variant (not source.has_build_binding): Probe_binding
-         OCaml fires Expect_compat_failure with the merged inputs bag
-         (predict_contains_any_v2 iterates all contracts over it,
-         same as the old inline shape).
-       - Python probe on any variant: no binding registered for
-         (C2, Python) here, so lookup finds nothing → falls through
-         to Expect_success. Matches the old "llvmlite bundles its
-         own libLLVM" branch without needing an explicit filter.
-       - Dev variant: has_manifest=false short-circuits the whole
-         lookup to Expect_success. *)
+    (* A7 phase 3 (2026-08-05) — ORACLE → DERIVED. Was [lower_expectation
+       ~violates:[C2] ~has_manifest:(not has_build_binding)]: the
+       has_manifest KNOB suppressed the whole lookup in the dev chain. Now
+       the agnostic lowering emits [Expect_compat_derived] with the merged
+       inputs bag at Probe_binding OCaml in BOTH chains, and the knob's job
+       is done by input-path RESOLUTION instead: each input lists the
+       pack-side artifact FIRST (see [llvm_stable_contract_bindings]), so
+       in the dev chain the first-existing rule reads the dev-built
+       binding's inspects — no name missing, EMPTY prediction, success
+       expected (even though the fetched 19 binding's inspects coexist in
+       the same scenario dir); in the stable chain only the fetch-side
+       files exist — Opcode.UncondBr missing, must-fail (xfail [c2]).
+       Python probe: no (c2, Python) row → Expect_success (llvmlite
+       bundles its own libLLVM), as before. *)
     expectation =
-      Canary_scenario.lower_expectation
+      Canary_scenario.lower_expectation_agnostic
         ~bindings:llvm_stable_contract_bindings
-        ~violates:[ Canary_compat.C2 ]
-        ~langs:[ Canary_lang.OCaml ]
-        ~has_manifest:(not source.has_build_binding);
+        ~langs:[ Canary_lang.OCaml ];
     binding_user_facing_pkg = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
     inspect_note =
       (if not source.has_build_binding then

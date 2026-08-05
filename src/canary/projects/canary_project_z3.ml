@@ -562,17 +562,20 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
               || Canary_pm_opam.is_installed ~pkg)
       | _ -> None);
     binding_user_facing_pkg = [ (OCaml, "z3"); (Python, "z3") ];
-    (* Migrated 2026-07-21 (Task 2 Phase E) — inline nested match on
-       (action, loc) replaced by data lookup over [z3_contract_bindings].
-       Same firing semantics: c2 at Probe_binding Python + pip loc →
-       Expect_compat_failure (parser_context prediction); everything
-       else → Expect_success via lower_expectation's fallthrough. *)
+    (* A7 phase 3 (2026-08-05) — ORACLE → DERIVED. Was
+       [lower_expectation ~violates:[C2] ~has_manifest:true] (the project
+       TOLD the runner which contract breaks); now the agnostic lowering
+       emits [Expect_compat_derived] at the declared firing site and the
+       RUNNER decides by inspecting the cached wheel inspect: parser_context
+       missing → must-fail with that signature (xfail [c2], both chains —
+       the wheel is scenario-invariant); if a future wheel exports it, the
+       prediction comes back empty and the probe is expected to SUCCEED
+       (self-healing — no spec edit). Everything outside the declared
+       firing site falls through to Expect_success as before. *)
     expectation =
-      Canary_scenario.lower_expectation
+      Canary_scenario.lower_expectation_agnostic
         ~bindings:z3_contract_bindings
-        ~violates:[ Canary_compat.C2 ]
-        ~langs:[ Canary_lang.Python ]
-        ~has_manifest:true;
+        ~langs:[ Canary_lang.Python ];
     inspect_note =
       (if not source.has_build_binding then
          Some
@@ -751,9 +754,10 @@ let realize (c : scenario_case) distro : Canary_step_builder.runner_spec =
     binding↔native-lib channel pairing, and it is SCENARIO-INVARIANT (the
     wheel is Fetched@Stable everywhere, so the xfail fires in every world —
     the Ambient-edge finding). It stays declared where it is consumed:
-    [z3_contract_bindings] → [lower_expectation] → Expect_compat_failure →
-    xfail in `action`/`status`/`spec`. Folding probe-level roles into the
-    design-intent table is A7 material. *)
+    [z3_contract_bindings] → [lower_expectation_agnostic] →
+    Expect_compat_derived → xfail [c2] in `action`/`status`/`spec` (A7
+    phases 2+3). Folding probe-level roles into the design-intent table is
+    A7 residue. *)
 let z3_run distro : Canary_project_run.project_run =
   { pr_name = "z3";
     pr_artifacts = z3_artifacts;
