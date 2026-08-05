@@ -96,6 +96,16 @@ let sqlite_python_watchlist = [
   "sqlite_version_info";
   "Connection";
   "Cursor";
+  (* BINDING-LAG markers (2026-08-05): canonical wrapper names for modern C
+     APIs the lib exports (see [sqlite_native_modern_watchlist]) that the
+     stdlib binding does NOT wrap — EXPECTED missing; the inspect reports
+     them (status: "⚠ watchlist MISSING …") as the measured binding↔lib
+     surface lag. Safe here because sqlite's probes carry no
+     Expect_compat_* inputs (nothing turns watchlist-missing into a failure
+     prediction). The OCaml-side analogue needs an mli inspect over the
+     installed sqlite3.mli — c7/c8 territory, with A5/A9. *)
+  "get_clientdata";
+  "error_offset";
 ]
 
 (* Modern-C-API watchlist on the NATIVE lib (the per-version symbol-watchlist
