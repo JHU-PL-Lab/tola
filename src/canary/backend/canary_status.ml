@@ -102,7 +102,29 @@ let print_witness ~root ~project ~variant ~tag ~mark =
         |> List.filter ~f:(fun f -> String.is_substring f ~substring:vk)
         |> List.sort ~compare:String.compare
   in
-  List.iter matches ~f:(fun f -> Stdlib.Printf.printf "          → %s/%s\n" dir f);
+  List.iter matches ~f:(fun f ->
+      Stdlib.Printf.printf "          → %s/%s\n" dir f;
+      (* inspect JSONs: summarize the native-watchlist verdict inline (the
+         content, not just the path — e.g. build_lib_inspect's per-version
+         symbol watchlist). *)
+      if String.is_suffix f ~suffix:".json" then
+        try
+          let j = Yojson.Basic.from_file (Printf.sprintf "%s/%s" dir f) in
+          let open Yojson.Basic.Util in
+          let strs k =
+            j |> member "watchlist" |> member k |> to_list |> List.map ~f:to_string
+          in
+          match (strs "present", strs "missing") with
+          | [], [] -> ()
+          | present, [] ->
+              Stdlib.Printf.printf "            | watchlist: %d/%d present\n"
+                (List.length present) (List.length present)
+          | present, missing ->
+              Stdlib.Printf.printf
+                "            | watchlist: %d present, MISSING %s\n"
+                (List.length present)
+                (String.concat ~sep:"," missing)
+        with _ -> ());
   if String.equal mark "xfail" || String.equal mark "✗" then
     List.iter matches ~f:(fun f ->
         if String.is_suffix f ~suffix:".log" then begin
