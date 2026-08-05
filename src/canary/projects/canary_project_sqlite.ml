@@ -96,14 +96,20 @@ let sqlite_python_watchlist = [
   "sqlite_version_info";
   "Connection";
   "Cursor";
-  (* BINDING-LAG markers (2026-08-05): canonical wrapper names for modern C
-     APIs the lib exports (see [sqlite_native_modern_watchlist]) that the
-     stdlib binding does NOT wrap — EXPECTED missing; the inspect reports
-     them (status: "⚠ watchlist MISSING …") as the measured binding↔lib
-     surface lag. Safe here because sqlite's probes carry no
-     Expect_compat_* inputs (nothing turns watchlist-missing into a failure
-     prediction). The OCaml-side analogue needs an mli inspect over the
-     installed sqlite3.mli — c7/c8 territory, with A5/A9. *)
+]
+
+(* BINDING-LAG markers (2026-08-05; role split per status §B): canonical
+   wrapper names for modern C APIs the lib exports (see
+   [sqlite_native_modern_watchlist]) that the stdlib binding does NOT wrap.
+   Declared in the EXPECTED-MISSING role — the inspect reports them as
+   expected_missing.confirmed (the measured binding↔lib surface lag, an
+   xfail-style pass in `status`), and a name that APPEARS reads as
+   .violated (the binding caught up; this declaration is stale — alarming).
+   They must NOT ride the expected-present watchlist: there, missing =
+   drift and stays alarming (tiny's semantics). The OCaml-side analogue
+   needs an mli inspect over the installed sqlite3.mli — c7/c8 territory.
+   This role split is the seed of the c7/c8 lag contract. *)
+let sqlite_python_expect_missing = [
   "get_clientdata";
   "error_offset";
 ]
@@ -186,7 +192,9 @@ let runner_spec : Canary_step_builder.runner_spec =
       | Probe_binding (_), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.python_inspect_cmd
-              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist ~output_dir ~variant_key ())
+              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist
+              ~expect_missing:sqlite_python_expect_missing
+              ~output_dir ~variant_key ())
       | Probe_binding (_), _ ->
           Some (fun ~output_dir ~variant_key ->
             Canary_artifact_lang.inspect_opam_pkg_cmd

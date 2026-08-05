@@ -1235,6 +1235,28 @@ print('ok')
     { name = "python.summary_json_schema";
       cmd = python_schema_cmd (sum_dir ^ "/inspect.json");
       expected_rc = 0 };
+    (* Watchlist ROLES (status §B): expected-missing names classify as
+       confirmed (still absent) vs violated (present — declaration stale).
+       Fixture: `sys` has `argv` (→ violated) and lacks the bogus name
+       (→ confirmed); the expected-present watchlist is unaffected. *)
+    { name = "python.inspect_cmd(expect_missing)";
+      cmd = Canary_artifact_lang.python_inspect_cmd
+              ~pkg ~watchlist:[ "argv" ]
+              ~expect_missing:[ "canary_lag_marker_bogus"; "argv" ]
+              ~output_dir:(output_dir ^ "/py_inspect_roles") ~variant_key:"" ();
+      expected_rc = 0 };
+    { name = "python.expected_missing_roles";
+      cmd = [%string {|python3 -c "
+import json
+with open('%{output_dir}/py_inspect_roles/inspect.json') as f:
+    d = json.load(f)
+em = d['expected_missing']
+assert em['confirmed'] == ['canary_lag_marker_bogus'], em
+assert em['violated'] == ['argv'], em
+assert d['watchlist']['present'] == ['argv'], d['watchlist']
+print('ok')
+" |}];
+      expected_rc = 0 };
   ]
 
 (* ── Runner ── *)
@@ -1245,7 +1267,7 @@ let run_tests ?(output_dir = "_out/canary/test/artifact-test") () =
     [ ""; "/native_probe"; "/native_inspect";
       "/ocaml_inspect"; "/ocaml_inspect";
       "/ocaml_mli_inspect"; "/ocaml_stub_inspect";
-      "/py_import"; "/py_import_bad"; "/py_inspect" ]
+      "/py_import"; "/py_import_bad"; "/py_inspect"; "/py_inspect_roles" ]
     ~f:(fun sub ->
       ignore (Stdlib.Sys.command [%string "mkdir -p %{output_dir}%{sub}"] : int));
 

@@ -124,8 +124,17 @@ let watchlist_note ~root ~project ~variant ~tag : string option =
   match Stdlib.Sys.readdir dir with
   | exception _ -> None
   | files ->
-      let present, missing =
-        Array.fold files ~init:(0, []) ~f:(fun (np, miss) f ->
+      (* Two watchlist ROLES per inspect JSON (status.md §B, 2026-08-05):
+         - watchlist.{present,missing} — EXPECTED-PRESENT: missing = drift,
+           alarming ("⚠ MISSING");
+         - expected_missing.{confirmed,violated} — EXPECTED-MISSING (e.g.
+           sqlite's binding-lag markers): confirmed = the declared absence
+           holds (an xfail-style pass, "lag confirmed"); violated = the
+           name APPEARED (binding caught up; declaration stale — "✗ lag
+           REAPPEARED"). Older JSONs lack the section — read as empty. *)
+      let present, missing, confirmed, violated =
+        Array.fold files ~init:(0, [], [], [])
+          ~f:(fun (np, miss, conf, viol) f ->
             if
               String.is_suffix f ~suffix:".json"
               && String.is_substring f ~substring:vk
@@ -133,21 +142,45 @@ let watchlist_note ~root ~project ~variant ~tag : string option =
               try
                 let j = Yojson.Basic.from_file (Printf.sprintf "%s/%s" dir f) in
                 let open Yojson.Basic.Util in
-                let strs k =
-                  j |> member "watchlist" |> member k |> to_list
-                  |> List.map ~f:to_string
+                let strs sect k =
+                  try
+                    j |> member sect |> member k |> to_list
+                    |> List.map ~f:to_string
+                  with _ -> []
                 in
-                (np + List.length (strs "present"), miss @ strs "missing")
-              with _ -> (np, miss)
-            else (np, miss))
+                ( np + List.length (strs "watchlist" "present"),
+                  miss @ strs "watchlist" "missing",
+                  conf @ strs "expected_missing" "confirmed",
+                  viol @ strs "expected_missing" "violated" )
+              with _ -> (np, miss, conf, viol)
+            else (np, miss, conf, viol))
       in
-      if present = 0 && List.is_empty missing then None
-      else if List.is_empty missing then
-        Some (Printf.sprintf "watchlist %d/%d" present present)
+      if
+        present = 0 && List.is_empty missing && List.is_empty confirmed
+        && List.is_empty violated
+      then None
       else
-        Some
-          (Printf.sprintf "⚠ watchlist MISSING %s"
-             (String.concat ~sep:"," missing))
+        let base =
+          if List.is_empty missing then
+            Printf.sprintf "watchlist %d/%d" present present
+          else
+            Printf.sprintf "⚠ watchlist MISSING %s"
+              (String.concat ~sep:"," missing)
+        in
+        let parts =
+          [ Some base;
+            (if List.is_empty violated then None
+             else
+               Some
+                 (Printf.sprintf "✗ lag REAPPEARED %s (declaration stale)"
+                    (String.concat ~sep:"," violated)));
+            (if List.is_empty confirmed then None
+             else
+               Some
+                 (Printf.sprintf "xfail lag %s"
+                    (String.concat ~sep:"," confirmed))) ]
+        in
+        Some (String.concat ~sep:" · " (List.filter_opt parts))
 
 (* Verbose witness for a step: the output file(s) it produced for this
    variant (openable), and — for `xfail`/`✗` — the tail of a `.log` witness

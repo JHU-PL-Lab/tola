@@ -215,24 +215,39 @@ let python_import_cmd ~pkg ~output_dir =
    [("PYTHONPATH", "..."); ("LD_LIBRARY_PATH", "...")]), which lets
    callers point the interpreter at an out-of-tree package without
    installing it. *)
-let python_inspect_pipe_cmd ?(env = []) ~pkg ?(watchlist = []) () =
+let python_inspect_pipe_cmd ?(env = []) ~pkg ?(watchlist = [])
+    ?(expect_missing = []) () =
   let script = "canary/scripts/inspect_python.py" in
   let watchlist_csv = String.concat ~sep:"," watchlist in
+  (* [expect_missing] — the EXPECTED-MISSING watchlist role (status §B):
+     names DECLARED absent from the binding (e.g. sqlite's binding-lag
+     markers). The JSON reports them as expected_missing.confirmed (still
+     absent — an xfail-style pass) / .violated (appeared — declaration
+     stale, alarming). Omitted when empty, so existing commands are
+     byte-identical. *)
+  let expect_missing_arg =
+    if List.is_empty expect_missing then ""
+    else
+      Printf.sprintf " --expect-missing '%s'"
+        (String.concat ~sep:"," expect_missing)
+  in
   let env_prefix =
     List.map env ~f:(fun (k, v) -> Printf.sprintf "%s='%s'" k v)
     |> String.concat ~sep:" "
   in
   let sep = if String.is_empty env_prefix then "" else " " in
   [%string
-    "%{env_prefix}%{sep}python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}'"]
+    "%{env_prefix}%{sep}python3 %{script} --pkg '%{pkg}' --watchlist '%{watchlist_csv}'%{expect_missing_arg}"]
 
 (* Emit compact Python package summary as summary.json via
    canary/scripts/inspect_python.py. Watchlist is a list of top-level
-   attribute names; present/missing recorded in the JSON.
+   attribute names; present/missing recorded in the JSON (and
+   expected-missing role names via [expect_missing]).
    See doc/canary/ops/python_binding_gotchas.md. *)
-let python_inspect_cmd ~pkg ?(watchlist = []) ~output_dir ~variant_key () =
+let python_inspect_cmd ~pkg ?(watchlist = []) ?(expect_missing = [])
+    ~output_dir ~variant_key () =
   let out_file = Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json" in
-  let pipe = python_inspect_pipe_cmd ~pkg ~watchlist () in
+  let pipe = python_inspect_pipe_cmd ~pkg ~watchlist ~expect_missing () in
   pipe ^ Printf.sprintf " > %s/%s" output_dir out_file
 
 (* L2: .cmi digest inspection for OCaml bindings.

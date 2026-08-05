@@ -8,6 +8,13 @@ interface:
 - version: __version__ if defined, else null
 - extra: module-specific facts (e.g., sqlite3.sqlite_version)
 - watchlist.{present,missing}: presence check against a fixed name list
+  (the EXPECTED-PRESENT role: missing = drift, alarming)
+- expected_missing.{confirmed,violated}: the EXPECTED-MISSING role
+  (watchlist roles, status.md section B): names DECLARED absent — e.g.
+  sqlite3's binding-lag markers, canonical wrappers for modern C APIs the
+  stdlib binding does not wrap. confirmed = still absent (the lag holds,
+  an xfail-style pass); violated = the name APPEARED (binding caught up —
+  the declaration is stale, alarming).
 
 Public attrs filter: excludes dunder names (`__*__`) by default. Single-
 underscore private names (`_foo`) are also excluded. Override via
@@ -15,6 +22,7 @@ underscore private names (`_foo`) are also excluded. Override via
 
 Usage: summarize_python.py --pkg sqlite3 \\
          --watchlist connect,version_info,sqlite_version_info \\
+         --expect-missing get_clientdata,error_offset \\
          [--include-private]
 """
 import argparse
@@ -54,6 +62,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--pkg", required=True, help="python package / module name to import")
     ap.add_argument("--watchlist", default="", help="comma-separated attribute names to check")
+    ap.add_argument("--expect-missing", default="",
+                    help="comma-separated attribute names DECLARED absent "
+                         "(expected-missing role: confirmed if still absent, "
+                         "violated if present)")
     ap.add_argument("--include-private", action="store_true",
                     help="include underscore-prefixed names in attrs")
     args = ap.parse_args()
@@ -80,6 +92,9 @@ def main():
     aset = set(attrs) | (set(dir(mod)) if args.include_private else set(attrs))
     present = [w for w in watchlist if w in aset]
     missing = [w for w in watchlist if w not in aset]
+    expect_missing = [w for w in args.expect_missing.split(",") if w]
+    lag_confirmed = [w for w in expect_missing if w not in aset]
+    lag_violated = [w for w in expect_missing if w in aset]
 
     summary = {
         "kind": "python",
@@ -89,6 +104,8 @@ def main():
         "version": module_version(mod),
         "extra": extras_for(args.pkg, mod),
         "watchlist": {"present": present, "missing": missing},
+        "expected_missing": {"confirmed": lag_confirmed,
+                             "violated": lag_violated},
     }
     json.dump(summary, sys.stdout, indent=2, sort_keys=True)
     sys.stdout.write("\n")
