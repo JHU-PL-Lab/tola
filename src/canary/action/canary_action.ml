@@ -125,13 +125,25 @@ let make_action_graph ~actions ~versions ~name ~source () =
             add pools kind nodes
         | Build_binding lang ->
             let libs = get pools Lib in
+            (* SOURCE-PRIMARY: binding@v is built against lib@v (its OWN version),
+               not every lib — a binding built against a mismatched lib is nonsense
+               at BUILD time. A binding@v still has a build-variant per lib@v that
+               EXISTS (built lib@v and/or fetched lib@v — paths 7 vs 8); the
+               cross-version mismatch lives ONLY on the App's runtime edge. *)
             let nodes =
               List.concat_map versions ~f:(fun v ->
-                  List.map libs ~f:(fun lib ->
-                      mk_node (Binding lang)
-                        (name ^ vs v)
-                        ~origin:Build_tree ~location:Build_tree ~built_from:lib
-                        ~version:(Canary_enumerate.good v) ~provision:Built ()))
+                  List.filter_map libs ~f:(fun lib ->
+                      if
+                        Canary_enumerate.equal_build_id lib.version
+                          (Canary_enumerate.good v)
+                      then
+                        Some
+                          (mk_node (Binding lang)
+                             (name ^ vs v)
+                             ~origin:Build_tree ~location:Build_tree
+                             ~built_from:lib ~version:(Canary_enumerate.good v)
+                             ~provision:Built ())
+                      else None))
             in
             add pools (Binding lang) nodes
         | Build_app { lang } ->
