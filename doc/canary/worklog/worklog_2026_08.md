@@ -221,3 +221,111 @@ combination through the generic runner.
   was write-only; `project_run` IS the top-level identity.
   `canary_scenario_util.ml` folded back into the tiny factory;
   `canary_enumerate`'s stale fold-into note reversed.
+
+## 2026-08-05 — A5: z3 + llvm onto the generic path
+
+Order settled A5-before-A7 (migration needs no expectation change; A7 is
+best done once all styles sit on ONE runner). z3 first, llvm the shape
+verbatim; both verified live end-to-end. Every `spec`/`action` project is
+a `project_run` now; ssl is `run_project_multi`'s last consumer.
+
+- **Phase 1 — declared spec, no behavior change** (`b97060b`): `z3_spec`
+  ps_universe (source F@{S,D}; lib F@S|B@D; wheel F@S, constant row) →
+  THREE assignments → the current 2 variants as scenarios (source-primary
+  prunes source@S × lib B@D; the two all-Fetched assignments collapse
+  under the Fetched-ambient identity rule — the dedup is LOAD-BEARING,
+  and stable-first universe order keeps both surviving representatives
+  channel-coherent). NEW projects-layer pin suite
+  `canary_projects_test.ml` (`project-test` runs it via
+  `run_tests ~extra`; the pure suite sits below `canary_projects`).
+  **Finding — binding-follows-chain**: the OCaml binding cannot be an
+  enumerated axis (any single option is wrong for one chain; both options
+  mint the 2 mixed mismatch worlds) — it rides the realization until
+  graph-structural version propagation; A5 confirmed as that work's
+  forcing function.
+- **Phase 2 — dispatch/realize + z3_run** (`cf44d1e`): `scenario_case =
+  Dev_chain | Stable_chain`; dispatch reads the LIB placement ONLY (the
+  ambient source channel is no chain signal); realize = the existing
+  `mk_runner_spec ~source` verbatim (command churn zero); `z3_run :
+  distro → project_run` (+ providers table; workspace ignored — guarded
+  external build trees). `action z3`/`spec z3` (+ `@all`/`--json`/
+  `--thin`) generic; retired `run_z3`, z3's variant view, z3-only
+  `--quick`/cache plumbing. `pr_mismatch_probes = []` DELIBERATE: the
+  stable-wheel demo is probe-code-vs-BINDING and scenario-invariant (the
+  Ambient-edge finding) — no (consumer × channel × direction-vs-lib) row
+  could fire. **Core bug found+fixed**: `Subset` config levels were taken
+  VERBATIM — `thin_policy` fabricated `lib Built@Stable` worlds no
+  realization backs; Subset now INTERSECTS the declared universe
+  (pinned: `enumerate.subset_intersects_universe`).
+- **Phases 3+4 — locations + expectations verified** (`ba71517`): full
+  `action z3` through the generic runner — 3 probe_lib locations
+  (793/793/705 Z3_ symbols) inside the realization; parser_context fires
+  `xfail` in BOTH chains (scenario-invariance measured); C-symbol
+  cross-check 776/793/0; `spec`/`status` join the verdicts.
+- **Phase 5 — llvm same shape; variant view retired** (`b3444cb`):
+  `llvm_spec`/dispatch/realize/`llvm_run` = the z3 shape verbatim; pins
+  factored into the parameterized `two_chain_pins` generator. Opcode.
+  UncondBr fires `xfail` in the STABLE chain only — chain-LOCAL vs z3's
+  scenario-invariant demo: both xfail localities on one runner. RETIRED:
+  `run_llvm`/`run_z3`/`source_run_info` + the whole raw variant view
+  (`print_spec_variants`, `spec_variants_json_t`,
+  `provisions_of_runner_spec`, `variant_kinds`, `source_repo_*`).
+
+## 2026-08-05 — A7: the expectation unification (3-way → derived + oracle-combinator)
+
+End state: every REAL project derives via the ONE framework lowering
+(`lower_expectation_agnostic`); the oracle is a tiny-factory combinator;
+zero hand-written failure expectations remain; xfails name their
+contract on every surface. sqlite's `log_grep` reclassified OUT of the
+unification as a WORLD-IDENTITY ASSERTION (positive invariant — "the run
+really exercised the enumerated world" — opposite polarity from an
+expected failure).
+
+- **Phase 1 — per-contract prediction API** (`a79e7bf`):
+  `predicted_by_contract_v2` (fired registry rows × substrings;
+  `predicted_contains_any_v2` = its flatten, pinned identical) +
+  `skipped_checks`; the runner's two compat branches share one
+  `derived_predictions` helper logging one `compat_predicted` per fired
+  contract + `contract_skipped` per disabled entry (plan.md Step 6c TODO
+  discharged).
+- **Phase 2 — typed contract outcome in the verdict** (`b7ea340`): a
+  CONFIRMING contract = a fired row whose own substrings the failing
+  output matched; persisted in marker content ("xfail c2",
+  prefix-compatible), re-emitted on warm skips, surfaced everywhere
+  (`action`/tsv/`spec`: `probe_binding_python[c2]`; `status`:
+  `xfail[c2]`). z3 attributes [c2], tiny-full's forward mismatch [c1] —
+  different contracts named end-to-end through one mechanism.
+- **Phase 3 — z3 + llvm oracle → derived** (`17f3efc`): the
+  violates/has_manifest knobs die at real projects; llvm's dev-chain
+  exemption dissolves into input-path resolution (PACK-SIDE FIRST per
+  input — order load-bearing, pinned) — dev chains derive EMPTY
+  predictions ("success expected") while fetched-19 inspects coexist in
+  the same scenario dir; stable chains derive the same xfails;
+  expectations self-heal if upstream ships the missing API.
+  **Finding (a) — shared-opam-switch state is scenario-CROSSING**:
+  warm-skipped fetch/pack + live probe = probe compiles against whatever
+  the last install left (observed `unexpected_success`; identical under
+  the oracle). **Finding (b) — `tiny run` under-reported since xfail
+  landed**: the verdict reader counted only `"done"`, so every DETECTING
+  scenario read FAIL ("5 PASS, 17 FAIL"); fixed — real oracle state
+  **21/22 PASS**, the one red = `type_wrong`'s build-site c6
+  (pre-existing; §B inspector question).
+- **Phase 3b — oracle = a combinator, not a sibling** (user-settled;
+  `4898e85`): `lower_expectation` DELETED from the framework — its
+  content decomposed into restrict-to-violated-contracts + gate-on-
+  manifestation + strengthen Derived→must-fail, all ORACLE POLICY, now
+  composed tiny-factory-locally over the one lowering
+  (`expectation_of_entry`). Verified cold on all three oracle paths;
+  `type_wrong` still red (the answer-key property: a blind inspector
+  goes RED under the oracle where derived would be silently green).
+- **Phases 4+5 — ssl derived; world-identity assertion named**
+  (`c8e4ab8`): ssl's four hand-written per-variant expects retired — the
+  consumer requirement is DATA (`app.requires` mli watchlist), the
+  evidence an mli inspect of the fetched binding per variant, c2 +
+  the one lowering derive the 2×2 (060_nlv: "⚠ MISSING
+  Ssl.native_library_version" → `xfail[c2]`; the rest "no contract
+  fired" → ✓ — evidence and outcome adjacent in `status`). ssl's probe
+  gained the first binding-side world-identity assertion (switch must
+  hold the variant's pinned version — the loud fix for finding (a) where
+  version-swapping makes it acutest). `log_grep` named at definition +
+  sqlite's use site.

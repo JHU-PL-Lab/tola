@@ -24,39 +24,40 @@ For tiny-scoped items see the wish-list in
 
 ## 1. Now
 
-**Current state (2026-08-05).** Two projects run through the fully generic
-path: `pr_spec` (ONE data table: artifact × (provision × versions)) →
-`scenarios_of ?policy` (the general enumeration; `--thin` = a runner policy)
-→ per-scenario `pr_runner_spec = realize ∘ dispatch` (pure `scenario_case`
-data + command templates) → `derive_steps` → run, with scenario identity/
-dedup (`scenario_dir_of`; Fetched is version-ambient), per-scenario verdicts
-(`scenarios.tsv`), xfail surfaced end-to-end, and pre/post views (`spec`,
-`spec --by-artifact`, `status` per-scenario, `--json`).
+**Current state (2026-08-05, post A5+A7 — arcs chronicled in
+[`worklog_2026_08.md`](worklog/worklog_2026_08.md)).** FOUR projects run
+through the fully generic path (tiny-full, sqlite, z3, llvm): `pr_spec`
+(ONE data table) → `scenarios_of ?policy` (`--thin` = a runner policy) →
+`pr_runner_spec = realize ∘ dispatch` → `derive_steps` → run, with
+scenario identity/dedup (Fetched version-ambient), per-scenario verdicts,
+xfail surfaced end-to-end, and pre/post views (`spec [--by-artifact]
+[--json]`, `status`). The EXPECTATION layer is unified (A7): every real
+project derives via the ONE lowering (`lower_expectation_agnostic` —
+evidence-based, self-healing, contract-ATTRIBUTED: `xfail[c2]` on every
+surface); the oracle is a tiny-factory combinator over it; sqlite's
+`log_grep` is a named WORLD-IDENTITY ASSERTION (outside the unification);
+ssl carries the first binding-side world assertion. Snapshot per project:
 
-- **tiny-full**: 6 spec-derived scenarios = lib {V:S, B:S, B:D} × ocaml
-  binding {V:S, V:D}. The two binding@dev-over-stable-lib scenarios are the
-  **forward API mismatch** (dev consumer of `tiny_scale`), c1-predicted
-  agnostically → detected xfail; binding@dev × built-dev-lib green. The dev
-  binding is DECLARED a forward probe (`pr_mismatch_probes` design-intent
-  table, 2026-08-05); `spec` marks the designed scenarios
-  `[forward-mismatch probe]`, gated by the computed direction
-  (`mismatch_direction_of`: consumer channel vs provider channel).
-- **sqlite**: 3 scenarios = lib {F, B:3.45.1, B:3.46.1}. Built scenarios
-  probe OVER the built lib with the runtime version ASSERTED; built-dev is a
-  real verified run-lib ≠ build-lib deploy scenario. Python's runtime sqlite
-  is **Ambient** (uv python statically bundles its own — observed, not
-  asserted); OCaml's is **Independent** (repointed + asserted).
-- **tiny1** (`canary tiny run`): the standalone mutation ORACLE; factory
-  coverage 12/24 — the 12 undetected are watchlist-blind (c5/c6/abi) and
-  need richer *inspectors* (§B), not plumbing.
-- **z3/llvm**: on the GENERIC path since A5 (2026-08-05) — each declares a
-  two-chain spec (source F@{S,D}; lib F@S|B@D; python wheel F@S) enumerating
-  to its 2 scenarios; contract-bound expectations unchanged, surfacing as
-  xfail (z3's wheel demo scenario-invariant, llvm's Opcode.UncondBr
-  chain-local). ssl is `run_project_multi`'s last consumer.
+- **tiny-full**: 6 spec-derived scenarios; the binding@dev-over-stable-lib
+  forward API mismatch derives + attributes `xfail[c1]`; dev binding
+  declared a forward probe (`pr_mismatch_probes`), `spec` marks it.
+- **sqlite**: 3 scenarios; Built worlds probe OVER the built lib with the
+  runtime version asserted (world identity); Python runtime edge Ambient,
+  OCaml Independent.
+- **z3 / llvm**: two-chain specs (source F@{S,D}; lib F@S|B@D; wheel F@S)
+  → 2 scenarios each; derived xfails: z3's wheel demo `[c2]`
+  scenario-INVARIANT, llvm's Opcode.UncondBr `[c2]` chain-LOCAL (both
+  localities on one runner).
+- **ssl** (still `run_project_multi`, its last consumer): the 2×2 matrix
+  derives from `app.requires` + per-variant mli evidence — `060_nlv` =
+  `xfail[c2]`; probe asserts the switch's pinned version.
+- **tiny1** (`canary tiny run`): the mutation ORACLE — **21/22 PASS**
+  (verdict reader fixed 2026-08-05); the 1 red = `type_wrong`'s build-site
+  c6 (§B inspector gap, the oracle doing its job). Factory coverage
+  12/24 — the undetected are watchlist-blind (c5/c6/abi), need richer
+  inspectors (§B), not plumbing.
 
-Trilogy + principle: **ssot §4.2.5**; arc history:
-[`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
+Trilogy + principle: **ssot §4.2.5**.
 
 **MILESTONE — enough projects really run as z3/llvm did, with a FAITHFUL
 scenario combination** (derived from the declared spec; the run's scenario
@@ -70,9 +71,9 @@ set == what the algorithm + graph say the project's worlds are).
   lib-version). Still open: TWO lib instances in ONE scenario (build-lib ≠
   run-lib proper) needs `close_deps Independent` wired into `scenarios_of`
   — the node-graph half (§A).
-- **(c) z3/llvm on the generic path — DONE 2026-08-05** (= A5 phases 1–5;
-  both verified live end-to-end, xfail demos surfacing). Residue tracked
-  under A5: ssl/zarith/cairo migration, `compat`/`verify` old-dir globs.
+- **(c) z3/llvm on the generic path — DONE 2026-08-05** (A5; worklog).
+- **(d) expectations unified + reportable — DONE 2026-08-05** (A7;
+  worklog).
 
 ## A. Convergence — one enumeration algorithm, one project spec
 
@@ -85,255 +86,39 @@ design lives in
 mid-layer VIEW, `derive_steps` = engine; build edges grammatical, runtime
 edges resolved via `dep_mode`). Open:
 
-- **A5 — wire z3/llvm onto `project_run` — CORE DONE 2026-08-05** (phases
-  1–5 below; both projects verified live). Remaining under this id:
-  ssl/zarith/cairo migration (retires `run_project_multi`), the
-  `compat`/`verify` old-dir glob reconciliation, and the two abstractions
-  A5 was the forcing function for — still open, now with concrete
-  evidence: (i) the **location sub-axis** — one z3 scenario probes the
-  lib at three locations (build-tree / staged / apt), a dimension the flat
-  placement doesn't model; (ii) the **`dep_mode` value source** — who
-  declares "this probe runs over lib@Y while built against lib@X"
-  (`close_deps Independent`'s owner). Both land naturally with A9-step-2.
-  A third joined during execution: (iii) **binding-follows-chain** — the
-  OCaml binding could not be declared as an enumerated axis in either
-  project (flat product can't express "follows the built chain" without
-  minting mismatch worlds) = the graph-structural version propagation
-  below.
-  **Execution plan (2026-08-05; user: zero-cache rebuild cost is acceptable
-  — and z3/llvm's guarded external build trees mean scenario-id changes
-  don't force full rebuilds anyway). z3 first, llvm after the shape
-  settles. Phases, each shippable:**
-  1. ~~*Declared spec, no behavior change*~~ — **DONE 2026-08-05.**
-     `z3_spec` ps_universe (`canary_project_z3.ml`): source
-     Fetched@{Stable,Dev}, lib Fetched@Stable | Built@Dev, python wheel
-     Fetched@Stable (constant row). Enumerates to THREE assignments →
-     exactly the current 2 variants as *scenarios*: source-primary prunes
-     (source@Stable × lib Built@Dev); the two all-Fetched assignments
-     collapse under the Fetched-ambient identity rule (`scenario_dir_of`)
-     into ONE stable world. Pinned by `z3.spec_enumerates_current_variants`
-     in NEW `canary_projects_test.ml` (projects-layer pins, appended to
-     `canary project-test` via `run_tests ~extra` — the pure suite sits
-     below `canary_projects` and can't see live specs). Two findings:
-     (a) the **OCaml binding is NOT in the enumerated universe** — its
-     provision follows the chain (Built@Dev dev / opam-fetched stable),
-     and the flat product can't express "follows the built chain": either
-     single option is wrong for one chain, both options mint the 2 mixed
-     mismatch worlds. It joins the universe with graph-structural version
-     propagation (§A below) — confirming A5 as that work's forcing
-     function; until then it rides inside the realization (phase 2).
-     (b) plan said "filter yields exactly 2" — actually 3 assignments,
-     2 scenario identities; the ambient dedup is load-bearing, and the
-     stable-first universe order keeps both surviving representatives
-     channel-coherent (baseline = all-Fetched chain, as sqlite).
-  2. ~~*dispatch/realize*~~ — **DONE 2026-08-05.** `scenario_case =
-     Dev_chain | Stable_chain`; `dispatch` reads the LIB placement ONLY
-     (Built ⇒ dev chain — the source coordinate is no chain signal: the
-     stable world's representative may carry either ambient source
-     channel); `realize` = the existing `mk_runner_spec ~source:…`
-     verbatim (command churn zero); `z3_run : distro → project_run`
-     (realizations ignore the runner workspace — z3's guarded external
-     build trees). `action z3` + `spec z3` (+ `@all`, `--json`, `--thin`)
-     → the generic path; retired: `run_z3`, z3's `spec` variant view,
-     z3-only `--quick`/`--cache-path` plumbing. Run order is now
-     stable-chain-first (baseline = fetch chain, as sqlite). Pins added:
-     dispatch coordinates, provider↔baseline drift. Verified live:
-     `action z3 --thin` runs the stable chain via `run_project_run`,
-     parser_context surfaces as `xfail probe_binding_python`, and
-     `spec z3` joins the verdict (`✓ xfail` baseline) — most of phase 4's
-     acceptance, ahead of schedule. THREE findings:
-     (a) **`pr_mismatch_probes = []`, deliberately** — the plan wanted
-     "mismatch-probe roles for the stable-wheel demo", but the demo does
-     not fit the (consumer × channel × direction-vs-lib) frame: its
-     version-sensitive requirement is PROBE CODE vs the BINDING (the
-     wheel bundles its own libz3), and it is SCENARIO-INVARIANT (wheel
-     Fetched@Stable everywhere — the Ambient-edge finding), so no row
-     would ever fire. It stays declared where consumed
-     (`z3_contract_bindings` → xfail). Probe-level roles in the
-     design-intent table = A7 material.
-     (b) **`Subset` config bug found+fixed in the enumerate core**:
-     `resolve` returned the Subset list VERBATIM, so `thin_policy`
-     fabricated a `lib Built@Stable` world z3's universe never declared
-     (Built ranges over [Dev] only) — dispatch would have realized the
-     dev chain under a stable-labeled scenario id. Fix: Subset now
-     INTERSECTS the declared universe (policy selects facts, never
-     invents; universe order preserved). tiny-full thin unchanged (its
-     Built axis contains Stable). Pinned:
-     `enumerate.subset_intersects_universe`.
-     (c) `compat`/`verify` still glob the OLD variant dirs (`dev_*`,
-     `stable`) under `projects/z3/`; new runs are keyed by scenario dirs
-     (`lib-fetched_…`). Reconcile in phase 4/5 (old cached dirs still
-     satisfy them meanwhile).
-  3. ~~*Locations stay INSIDE the realization*~~ — **satisfied by
-     construction** (phase 2's realize = the raw spec verbatim): the dev
-     chain's full run probed the lib at all 3 locations (build-tree 793 /
-     staged 793 / sys-PM 705 Z3_ symbols). The location sub-axis remains
-     unmodeled — A9-step-2's acceptance test.
-  4. ~~*Expectations unchanged*~~ — **VERIFIED for z3, 2026-08-05** (full
-     `action z3` through the generic runner): both chains PASS; the
-     parser_context demo fires as `xfail probe_binding_python` in BOTH
-     scenarios (the Ambient-edge scenario-invariance, measured); dev chain
-     C-symbol cross-check 776 required / 793 provided / 0 missing;
-     `spec z3` joins both verdicts (`✓ xfail` ×2, `·` for the deduped
-     assignment); `status z3` shows the xfail row. llvm's Opcode.UncondBr
-     half rides phase 5.
-  5. ~~*llvm same shape*~~ — **DONE 2026-08-05.** `llvm_spec` +
-     `Dev_chain | Stable_chain` dispatch/realize + `llvm_run : distro →
-     project_run`, the z3 shape verbatim; pins shared via the
-     parameterized `two_chain_pins` generator (`canary_projects_test.ml`,
-     44/44 pass). Verified live end-to-end: both chains PASS via
-     `run_project_run`; the Opcode.UncondBr demo fires as
-     `xfail probe_binding_ocaml` in the STABLE chain only (chain-LOCAL,
-     vs z3's scenario-invariant wheel demo — the two demos now
-     demonstrate both xfail localities on one runner); dev chain symbol
-     check 418/1201/0, llvmlite ok. RETIRED: `run_llvm`, `run_z3`,
-     `source_run_info`, `print_spec_variants` + `spec_variants_json_t` +
-     `provisions_of_runner_spec`/`variant_kinds`/`source_repo_*` (the
-     whole raw variant view — every `spec` project is a project_run now).
-     `run_project_multi` NOT yet retired: ssl is its last consumer
-     (4 hand-listed variants) — retires when ssl/zarith/cairo migrate.
-     llvm's `pr_mismatch_probes` also [] (same frame reasoning as z3;
-     the discriminating axis is the BINDING's provision, not enumerated
-     until version propagation). Still open under A5: ssl/zarith/cairo
-     migration; `compat`/`verify` glob pre-A5 dirs (`dev_*`/`stable`/`19`)
-     while runs now write scenario-keyed dirs.
-  **A5↔A7 order settled: A5 first** — migration needs no expectation
-  change (the runner consumes any expectation closure; Expect_compat_
-  failure already maps to xfail), and A7 is best done once all three
-  expectation styles sit on ONE runner. *Related finding
-  (2026-08-05)*: an **Ambient** runtime edge makes a step
-  SCENARIO-INVARIANT — sqlite's python probe/inspect run identically in
-  all 3 scenarios (placement F:stable + bundled lib never vary with the
-  lib axis); once `dep_mode` is declared per edge, the runner can
-  share/dedup such steps across scenarios (the step-level analogue of the
-  Fetched whole-scenario dedup).
-- **A7 — unify the 3-way expectation model — DONE 2026-08-05** (phases
-  1–5 + 3b below; §1c #1 resolved; the §2 "per-step contract outcome"
-  seed shipped as phases 1–2). Residue: typed per-probe `asserts` field;
-  z3/llvm probe assertions (shared-switch hardening); probe-level roles
-  in the design-intent table; gh's Derived-with-empty-gen-time-prediction
-  rendering.
-  **Inventory (2026-08-05, exact).** The three styles are:
-  (1) ORACLE contract-bound — `lower_expectation ~bindings ~violates
-  ~has_manifest` (the project TELLS which contract breaks per scenario):
-  z3 (violates=[c2] python, has_manifest=true both chains), llvm
-  (has_manifest = stable-chain-only), tiny1's factory;
-  (2) DERIVED-agnostic — `lower_expectation_agnostic ~bindings` →
-  `Expect_compat_derived` (runner computes the prediction; EMPTY ⇒ expect
-  success — self-healing; non-empty ⇒ must fail with that signature):
-  tiny-full only;
-  (3) HAND-WRITTEN — ssl's four per-variant `Expect_failure
-  { contains_any = ["native_library_version"] }` closures; PLUS sqlite's
-  `log_grep` — which analysis reclassifies: it is a world-identity
-  ASSERTION (the probe must OBSERVE the enumerated world's version), not
-  a failure expectation, and stays out of the unification.
-  **End state: derived for every REAL project; the oracle survives with
-  exactly ONE consumer — tiny1, where being told the answer IS the point
-  (ground truth). Contracts become REPORTABLE: per-contract predictions
-  logged, the confirming contract persisted per step, surfaced in
-  status/spec.**
-  **Execution plan (2026-08-05). Phases, each shippable:**
-  1. ~~*Per-contract prediction API, no behavior change*~~ — **DONE
-     2026-08-05.** `Canary_compat_run.predicted_by_contract_v2 : … →
-     (contract_check × substrings) list` + `skipped_checks` (per-call vs
-     registry-disabled, reason from `string_of_contract_status`);
-     `predicted_contains_any_v2` is now its flatten (identical result —
-     pinned by `compat.by_contract_flatten_equals_v2`). The runner's two
-     compat branches share one `derived_predictions` helper (duplicated
-     `resolve` folded too) logging ONE `compat_predicted` per fired
-     contract + `contract_skipped` per disabled entry — the plan.md Step
-     6c TODO is discharged. Verified live (z3 stable chain): the wheel
-     xfail now logs "c2 cmp_api_completeness: 1 substring(s)" + c3/c7/c8
-     skip reasons. 3 new pure pins (attribution / flatten / disable+skip);
-     104/104 artifact-tests.
-  2. ~~*Typed contract outcome in the verdict*~~ — **DONE 2026-08-05.**
-     A CONFIRMING contract = a fired registry row whose own substrings
-     the failing output matched (`confirming_contracts`, evaluated on
-     confirmation only). Persisted in the verdict-marker content
-     ("xfail c2" — prefix-compatible; old plain markers/logs degrade
-     gracefully), re-emitted on warm-run skips/seeds, and surfaced
-     everywhere: `action` console + scenarios.tsv + `spec` show the
-     decorated tag (`xfail probe_binding_python[c2]`), `status` puts it
-     on the mark (`xfail[c2]`). Verified live on BOTH branches: z3's
-     oracle-path wheel demo → `[c2]` (api completeness); tiny-full's
-     derived forward mismatch → `[c1]` (cmp_symbol) — the two demos now
-     name DIFFERENT contracts end-to-end, which is the §2 typed-outcome
-     payoff. An unattributed confirmation stays possible ([] — the
-     hand-written Expect_failure and the empty-prediction fallback).
-     Pins: `compat.verdict_xfail_contract_roundtrip`; 105/105
-     artifact-tests, 44/44 project-tests, 2/2 cache-soundness (the
-     marker machinery is what the cache keys on).
-  3. ~~*z3 + llvm oracle → derived*~~ — **DONE 2026-08-05.** Both
-     realizations now use `lower_expectation_agnostic`; the
-     violates/has_manifest knobs are GONE from real projects — the
-     oracle lowering's only consumer is tiny1 (the intended end shape).
-     llvm's has_manifest knob dissolved into input-path resolution:
-     PACK-SIDE FIRST per input (order is load-bearing, documented on the
-     bindings table + pinned by `llvm.lowering_derived_pack_side_first`)
-     — verified live: dev chain probes log "no compat failure predicted;
-     success expected" (empty derived prediction) at BOTH probe
-     locations while the fetched-19 inspects coexist in the same
-     scenario dir; stable chain → `xfail [c2]`. z3: both chains
-     `xfail [c2]` derived. gh backend already renders Derived like
-     compat-failure (gen-time resolution) — residue: an EMPTY gen-time
-     prediction still renders as must-fail-any (can't distinguish
-     "no local cache" from "clean artifact"); fine for current CI jobs.
-     TWO findings out of the live verification:
-     (a) **shared-opam-switch state is scenario-CROSSING**: warm-skipping
-     fetch/pack while re-running a probe means the probe compiles
-     against whatever the LAST install left in the switch (observed:
-     stable probe against the dev binding → unexpected_success). NOT a
-     phase-3 regression (the oracle fails identically); the honest fix
-     is the phase-5 concept pointed the other way — probes should
-     ASSERT which provider version they ran against (sqlite's
-     `log_grep` analogue for bindings), plus shared-store modeling
-     (A5/A9 residue).
-     (b) **`tiny run` verdicts under-reported since xfail landed** —
-     `scenario_status_of_run_state` counted only `"done"`, so every
-     DETECTING bad scenario read FAIL ("5 PASS, 17 FAIL"). Fixed (xfail
-     counts as done); the oracle's real state is **21/22 PASS**, the one
-     red being `type_wrong`'s build-site c6 expectation
-     (unexpected_success — pre-existing per the committed docs
-     results.json; a §B inspector/firing-site question, not A7).
-  3b. **Oracle = a combinator, not a sibling (user-settled 2026-08-05).**
-     `lower_expectation` DELETED from the framework: with one consumer
-     left, its content decomposed into (restrict bindings to the recipe's
-     violated contracts) + (gate on manifestation) + (strengthen
-     Derived → must-fail) — all ORACLE POLICY, now composed
-     tiny-factory-locally over the ONE framework lowering
-     (`Canary_tiny_scenario.expectation_of_entry`). The framework owns
-     exactly the framework-agnostic question — how a check derives from
-     declared bindings at a firing site. Verified cold on all three
-     oracle paths: c1 must-fail confirmed, grep-path confirmed,
-     type_wrong still red (`unexpected_success` — the answer-key
-     property). tiny run 21/22 unchanged.
-  4. ~~*ssl hand-written → derived From_artifact*~~ — **DONE 2026-08-05.**
-     The consumer requirement is DATA (`app.requires` mli watchlist per
-     app), the evidence is an mli inspect on the fetched binding
-     (`mli_inspect_opam_pkg_cmd`, watchlisted per variant), and
-     `ssl_contract_bindings` (c2 at probe_binding OCaml) + the one
-     framework lowering replace all four hand-written per-variant
-     expects. Verified live, full fresh 2×2: 060_core "no contract
-     fired"→✓, 060_nlv inspect "⚠ MISSING Ssl.native_library_version" →
-     c2 predicts → `xfail[c2]`, 070_core/070_nlv ✓ — evidence and
-     outcome now sit side by side in `status`. The probe also gained a
-     WORLD-IDENTITY ASSERTION (switch must hold the variant's pinned ssl
-     version before compiling — the loud fix for the shared-switch
-     hazard, finding (a), on the project where version-swapping makes it
-     acutest). ssl stays on `run_project_multi` (A5 residue). **The
-     3-way unification is COMPLETE: every real project derives; the
-     oracle is a tiny-factory combinator; zero hand-written failure
-     expectations remain.**
-  5. ~~*sqlite `log_grep` reclassified + documented*~~ — **DONE
-     2026-08-05.** Named WORLD-IDENTITY ASSERTION at its definition
-     (`probe_ocaml_env_cmd`'s log_grep doc) + sqlite's use site: a
-     positive-scenario invariant ("the run really exercised the
-     enumerated world"), opposite polarity from an expected failure —
-     deliberately OUTSIDE the contract lowering. ssl's switch-version
-     prefix is the binding-side sibling. Deferred (A7 residue): a typed
-     per-probe `asserts` field `spec` can display; extending the
-     assertion to z3/llvm binding probes (their probes span two
-     packages; needs the per-chain version to assert).
+- **A5 residue** (core DONE 2026-08-05 — z3+llvm generic; worklog):
+  - ssl/zarith/cairo migration to `project_run` (retires
+    `run_project_multi`; ssl is its last consumer). No hurry per user.
+  - `compat`/`verify` still glob pre-A5 dirs (`dev_*`/`stable`/`19`);
+    runs now write scenario-keyed dirs (old cached dirs satisfy them
+    meanwhile).
+  - The three abstractions A5 was the forcing function for, now with
+    concrete evidence: (i) the **location sub-axis** (one z3 scenario
+    probes the lib at build-tree/staged/apt — unmodeled; A9-step-2's
+    acceptance test); (ii) the **`dep_mode` value source** (who declares
+    "runs over lib@Y, built against lib@X" — `close_deps Independent`'s
+    owner); (iii) **binding-follows-chain** (neither z3 nor llvm could
+    enumerate its OCaml binding: the flat product can't express "follows
+    the built chain" without minting mismatch worlds) = the
+    graph-structural version propagation below.
+- **A7 residue** (DONE 2026-08-05 — 3-way unification complete; §1c #1
+  resolved; worklog):
+  - typed per-probe `asserts` field (world-identity assertions as data
+    `spec` can display, instead of shell-inline `log_grep`/prefixes);
+  - world assertions for z3/llvm binding probes (the shared-switch
+    scenario-crossing hardening; their probes span two packages — needs
+    the per-chain version to assert);
+  - probe-level mismatch roles in the design-intent table
+    (`pr_mismatch_probes` can't express probe-code-vs-binding demos);
+  - gh backend renders a Derived expectation with an EMPTY gen-time
+    prediction as must-fail-any (can't distinguish "no local cache" from
+    "clean artifact"); fine for current CI jobs.
+- **Ambient-edge step dedup** (finding 2026-08-05): an Ambient runtime
+  edge makes a step SCENARIO-INVARIANT (sqlite's python probe runs
+  identically in all 3 scenarios; z3's wheel xfail fires in both chains).
+  Once `dep_mode` is declared per edge, the runner can share/dedup such
+  steps across scenarios — the step-level analogue of the Fetched
+  whole-scenario dedup.
 - **A9 step 2 — dispatch as DECLARATION** (the action-variant table).
   Step 1 (the dispatch/realization split; pure `scenario_case` data +
   general coordinate reads) shipped 2026-08-05. Remaining: replace the
@@ -345,7 +130,9 @@ edges resolved via `dep_mode`). Open:
   executing). Design against z3's complexity (A5), not sqlite's simplicity;
   `Raw` escape hatch required. HELD for now per user (affects the action
   verb design).
-- **Node-graph enumeration — PARKED until A5 needs it.** End state: ONE
+- **Node-graph enumeration — PARKED; its forcing functions are now the
+  A5-residue abstractions** (deploy mismatch / two lib instances,
+  binding-follows-chain propagation, `dep_mode` ownership). End state: ONE
   engine, `pr_spec → enumerate → node graph → run`, where a flat
   `assignment` is the degenerate node graph (one instance per kind). The
   fold is a deliberate design (not incremental): a flat assignment cannot
@@ -397,7 +184,9 @@ edges resolved via `dep_mode`). Open:
   xfail and a REAPPEARED lag name as ✗ (binding caught up; declaration
   stale). A blanket "missing→xfail" is wrong (tiny's watchlists are
   expected-PRESENT; missing there = drift, must stay alarming). This is the
-  seed of the c7/c8 lag contract (A7-adjacent).
+  seed of the c7/c8 lag contract (the natural next expectation-layer work
+  now that A7 is done — same lowering, a new declared ROLE per watchlist
+  entry).
 
 ## C. Real-project breadth (sqlite)
 
@@ -480,8 +269,6 @@ Open:
 - **Unit tests — general artifact ops** (user-raised):
   `provision_of_provider` coverage, `string_of_provider` rendering, the
   provider⇒baseline-provision drift invariant as a test, not just a ⚠.
-- **z3/llvm provider exposure** — their fetched detail is in shell
-  closures; a real per-artifact provenance table comes with A5.
 - Minor: `run_state.json` still holds only the LAST scenario's step state
   (the per-scenario truth is `scenarios.tsv` + `actions.log`); `spec`'s
   scenario section is flat-listed, not artifact-grouped.
@@ -498,9 +285,9 @@ Open:
 
 | Tier | Mechanism | Projects | Runner |
 | --- | --- | --- | --- |
-| **project_run** | `pr_spec` data table + provider table + `realize ∘ dispatch` | tiny-full, sqlite | generic `run_project_run` |
-| **raw runner_spec** | `mk_runner_spec ~source` / `mk_variant` per variant | z3, llvm, ssl | `run_project_multi` |
-| **Pattern A** | ~40-line declaration → runner_spec | zarith, cairo | `run_project_multi` |
+| **project_run** | `pr_spec` data table + provider table + `realize ∘ dispatch` | tiny-full, sqlite, z3, llvm | generic `run_project_run` |
+| **raw runner_spec** | `mk_variant` per variant (expectations derived since A7) | ssl | `run_project_multi` |
+| **Pattern A** | ~40-line declaration → runner_spec | zarith, cairo | `run_with_info` |
 
 Open issues (original numbering kept):
 
@@ -518,8 +305,11 @@ Open issues (original numbering kept):
    (used by CI / `canary_run`) + the newer `sqlite_run`; `built_spec` uses
    raw `gcc`/`curl` `Printf` instead of `Canary_cc`/`build_cmd` (A9-step-2
    territory).
-6. **z3 / llvm are structural twins that share nothing** (~600 lines each)
-   — no "Pattern C" template; fold into A5.
+6. **z3 / llvm are structural twins that share nothing** (~600 lines each;
+   A5 made the SHAPE identical — spec/dispatch/realize/pins are shared or
+   parameterized — but the realizations' command templates remain twin
+   code). The sharing comes with A9-step-2's action-variant table, not a
+   "Pattern C" template.
 7. **Minor** — `canary_run.sqlite_job` duplicates a `ci_jobs` entry
    (debug-only); `open Canary` shim still consumed.
 
@@ -582,10 +372,13 @@ Not started; interrelated — pick up together when §B/§C force them.
 - **Task 2 — recipe / mutation integration** (project-hookable factory) —
   deferred; largely SUBSUMED by A9-step-2 (the action-variant table is the
   general form of "projects supply their own recipes"); revisit after A9.
-- **Per-step contract outcome** — every action's result (success AND
-  failure) as a typed observation into the contract layer, not substring
-  assertions. Partially realised (agnostic derivation, xfail); the broader
-  per-step framing across all projects couples with A7.
+- **Per-step contract outcome** — the FAILURE half shipped with A7
+  phases 1–2 (per-contract predictions logged; the confirming contract
+  persisted per step and surfaced as `xfail[cN]`). Remaining: the
+  SUCCESS half — a passing step as a typed "contract held" observation
+  (today success is just silence), plus the world-identity assertions as
+  typed observations (A7 residue `asserts` field). Couples with §B
+  watchlist roles.
 
 ## 3. SSOT reconciliation
 
@@ -606,8 +399,9 @@ closed — chronicled).
 
 ## 4. Structural in-flight
 
-- **Cross-project symmetry** — LARGELY DONE via the generic path; what
-  remains is exactly A5 (z3/llvm) — tracked there, not here.
+- **Cross-project symmetry** — DONE for the four generic projects; what
+  remains is exactly the A5 residue (ssl/zarith/cairo) — tracked there,
+  not here.
 - **Iteration helpers over §1/§2/§3** — `canary_ssot.ml` typed iterators
   (every artifact / surface / agreement) for validators, once leaned on.
 - **Alignment invariant as a runtime test** — assert the two
