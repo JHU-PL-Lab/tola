@@ -466,7 +466,7 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
      declared-scenario count + the last run's coverage; the run is the source. *)
   let ngood = List.length (List.filter all_good scenarios) in
   let total = List.length scenarios in
-  Fmt.pr "@.declared scenarios: %d (%d good, %d bad) — the run constructs the rest.@."
+  Fmt.pr "@.declared scenarios: %d (%d good, %d bad).@."
     total ngood (total - ngood);
   (if post <> [] then
      let bads = List.filter (fun (_, (_, b)) -> b) post in
@@ -478,11 +478,12 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
        pr.Canary_project_run.pr_name detected (List.length bads)
        (List.length post));
   Fmt.pr
-    "@.  note: these are the DECLARED (static) artifacts + scenario count; the run \
-     dynamically constructs the artifact graph (build/fetch actions generate \
-     nodes), so it may exercise MORE than the declared count — the run is the \
-     source of truth. Use `spec %s --by-artifact` for the per-artifact cut.@."
-    pr.Canary_project_run.pr_name
+    "@.  note: this is the DECLARED artifact set + the scenarios `pr_enumerate` \
+     produces. The run executes exactly these (each via derive_steps → the full \
+     source→lib→binding→probe chain); `construct %s` shows the wider applicable \
+     graph these are drawn from. Use `spec %s --by-artifact` for the per-artifact \
+     cut.@."
+    pr.Canary_project_run.pr_name pr.Canary_project_run.pr_name
 
 (* Is artifact [id] DIRECTLY mutated (Bad quality) in scenario [a]? *)
 let artifact_bad_in (a : Canary_enumerate.assignment)

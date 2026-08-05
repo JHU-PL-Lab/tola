@@ -47,6 +47,29 @@ detail in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
 ### A. Convergence — one enumeration algorithm, one project spec (current focus)
 
+**Layering settled (2026-08-04).** The node graph (`make_action_graph` /
+`execution_plan` / `construct`) is a **mid-layer VIEW** (enumerate worlds + mark
+applicability + visualise); the **engine** is `derive_steps → step list → 4
+backends`. `derive_steps` already walks the §6.5 catalogue; `execution_plan` is
+its node-rendering, carries no commands, executes nothing — do NOT grow it into a
+node-driven executor (duplicates `derive_steps`, loses GH/Mermaid/HTML). Written
+up in [`design/dynamic_enumeration.md`](design/dynamic_enumeration.md) ("The graph
+is a mid-layer VIEW"). `execution_plan` (pure, topo-ordered, tested:
+`action.execution_plan_topo_and_edges`) shipped as the construct plan view.
+
+**Run milestone — "really run as z3/llvm did" (next).** Ground truth (2026-08-04):
+sqlite/tiny-full DO run the full `source→lib→binding(×langs)→probe` chain through
+the generic runner (sqlite: 7 steps Fetched / 9 Built, both bindings; run_info +
+html + diagrams produced). Two real gaps separate them from z3/llvm:
+  1. **Dep edges unwired → connectivity invariant FAILS every run** (`no edge
+     A_fetch_source→A_build_lib`, `…→A_probe_lib`, `fetch_binding→probe_binding`).
+     Steps run+pass but their `deps` don't render as graph edges → disconnected
+     diagram. This is the "Merge cleanup" item below: reconcile `step.deps` with
+     the typed node graph. **First fix.**
+  2. **Enumeration collapse** — `pr_materialize` keys only on lib provision, so
+     every assignment folds to 2 workspaces (the `construct` applicable set never
+     runs). Widen materialize to distinct worlds. **Second.**
+
 **Two paths today.** The enumeration ALGORITHM (`canary_enumerate.run_config`)
 is already shared by config — `tiny_slice` (mutation axis) and `general_slice`
 (provision/version) are both presets — but only the **display** (`tiny engine`,

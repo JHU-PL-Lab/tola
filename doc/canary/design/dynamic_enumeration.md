@@ -32,6 +32,43 @@ provision×version×mutation combinatorics live); the node graph is one renderin
 of it that adds edges. They're program vs backend, not duplicates. The flat form
 can't hold *two* instances of one kind — which is the whole reason stage 3 exists.
 
+## The graph is a mid-layer VIEW; `derive_steps` is the engine (settled 2026-08-04)
+
+A recurring confusion, resolved here so it isn't re-litigated. The node graph
+(`make_action_graph` / `execution_plan` / `construct`) is **not** the execution
+engine and must not become one. The layering:
+
+```
+graph / enumerate   the SET of (provision × version) worlds + applicability mark    ← mid-layer VIEW
+                    (make_action_graph, execution_plan, construct)                     enumerate + visualise
+        │  pick a scenario/variant  →  build a runner_spec for it
+        ▼
+derive_steps        render ONE world's runner_spec → step list (§6.6)                ← ENGINE
+        │           walks the §6.5 catalogue in dep order, drops actions the
+        ▼           project has no closure for, attaches cmd/expectation/check_post
+step list  →  { local runner (executes, caches per step) | GH YAML | Mermaid | HTML }
+```
+
+- **`derive_steps` already walks the graph.** Its own docstring: *"the bridge
+  between the action-graph schema in `Canary_action` and a concrete step list."*
+  It emits the full `source→lib→binding(×langs)→probe` chain (proven: sqlite runs
+  7 steps Fetched / 9 Built, both bindings). The closure-present check IS the
+  capability filter — the same intent as the node view's `ps_provisions_of` mark.
+- **`execution_plan` is the node-rendering of that same catalogue.** It carries no
+  commands and executes nothing; it exists for `construct` (which artifacts /
+  scenarios a project draws from) and applicability reasoning. Promoting it to an
+  executor would duplicate `derive_steps` *and* lose the GH/Mermaid/HTML backends,
+  which consume the step list, not nodes.
+- **A node-driven executor is the wrong move.** The engine exists and is good; the
+  graph feeds it worlds, it doesn't replace it. Reconciling the two capability
+  notions (node `ps_provisions_of` ↔ `derive_steps` closure-present) is a cleanup,
+  not a rewrite.
+
+What the graph *is* good for: enumeration (which worlds), applicability marking
+(universal catalogue + project filter), and visualisation. What the run needs from
+it is a *set of assignments*; the flat-enumerate loop in `run_project_run` already
+supplies that (`pr_enumerate → pr_materialize → pr_runner_spec → derive_steps`).
+
 ## Build edges are grammatical; runtime edges are resolved
 
 The one settled principle:

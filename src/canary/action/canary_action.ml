@@ -295,10 +295,19 @@ let edge_label_of_node (n : artifact_node) : string =
 
 (** EXECUTION PLAN: the applicable nodes in a valid topological (build) order —
     source → headers → lib → binding → app, which respects every [built_from]/
-    [runtime_dep] edge (a dep is always a lower kind). This is the exact order
-    the run walks; each node's [node_tag] is its per-node cache key, its
-    [producing_action_of_node] the edge to execute. Deduped already (the pools
-    are), so the plan length IS the execution-set size. *)
+    [runtime_dep] edge (a dep is always a lower kind). Each node's [node_tag] is
+    its per-node cache key, its [producing_action_of_node] the edge that makes it.
+
+    A VIEW, NOT THE ENGINE. The actual run engine is
+    [Canary_step_builder.derive_steps] → [step list] → four backends (§6.6);
+    that is what fetches/builds/probes and caches per step. This plan is the
+    node-rendering of the same catalogue [derive_steps] walks — used by `construct`
+    to visualise which artifacts/scenarios a project draws from, and to reason
+    about applicability. It carries no commands and executes nothing; do not grow
+    it into a second engine (that duplicates [derive_steps] and loses the
+    GH/Mermaid/HTML backends). Reconciling this node view's applicability mark
+    with [derive_steps]' closure-present capability filter is a cleanup, not a
+    replacement. *)
 let execution_plan
     ~(provisions_of_kind : artifact_kind -> Canary_store.provision list)
     (g : action_graph) : artifact_node list =
