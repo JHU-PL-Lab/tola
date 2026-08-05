@@ -188,8 +188,20 @@ let sqlite_artifacts =
    libsqlite3.so with cc — the Built provision on a real project, so canary
    observes source-fetch + build as *actions* (unlike tiny's toy cc). Lib-only
    for now; a binding built against the Built lib is a follow-up. *)
-let sqlite_amalg_url = "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip"
-let sqlite_amalg_dir = "sqlite-amalgamation-3450100"
+(* Two REAL amalgamation versions so the lib's Built provision enumerates over a
+   version axis (see [ps_versions_of] lib = [Stable; Dev]): Stable = 3.45.1 (the
+   version the opam `sqlite3` binding links against), Dev = 3.46.1 (a newer
+   release). Both are real sqlite amalgamation zips; the build/probe commands are
+   version-independent (`sqlite3.c` + `sqlite3_open` exist in every release), so
+   both worlds build + probe green. This is the honest "run more cases" for a
+   positive project: the same chain over two source versions. *)
+let sqlite_amalg (chan : Canary_basic.channel) : string * string =
+  (* (numeric version, amalgamation zip URL) *)
+  match chan with
+  | Canary_basic.Stable ->
+      ("3450100", "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip")
+  | Canary_basic.Dev ->
+      ("3460100", "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip")
 
 (* A3b: the Built scenario UNIFIES the lib build with the bindings — extend the
    Fetched [runner_spec] (which carries fetch_binding/probe_binding), swapping the
@@ -197,7 +209,10 @@ let sqlite_amalg_dir = "sqlite-amalgamation-3450100"
    for now (Python sqlite3 is stdlib — can't be repointed; OCaml binding-over-
    BUILT-lib via LD_LIBRARY_PATH is a follow-up). This makes the run consistent
    with the enumeration ({lib=Built, bindings=Fetched}), not lib-only. *)
-let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
+let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
+    Canary_step_builder.runner_spec =
+  let numeric, amalg_url = sqlite_amalg chan in
+  let amalg_dir = "sqlite-amalgamation-" ^ numeric in
   let src = workspace ^ "/src" in
   let libdir = workspace ^ "/lib" in
   let libpath = libdir ^ "/libsqlite3.so" in
@@ -208,7 +223,7 @@ let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
         (fun ~output_dir ~variant_key ->
           Printf.sprintf
             "mkdir -p %s && curl -sL %s -o %s/a.zip && (cd %s && unzip -oq a.zip)"
-            src sqlite_amalg_url src src
+            src amalg_url src src
           |> Canary_build_cmd.with_marker ~marker:"source.ok" ~output_dir ~variant_key);
     build_lib =
       Some
@@ -216,7 +231,7 @@ let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
           Printf.sprintf
             "test -f %s || { mkdir -p %s && gcc -shared -fPIC %s/%s/sqlite3.c \
              -o %s -lpthread -ldl ; }"
-            libpath libdir src sqlite_amalg_dir libpath
+            libpath libdir src amalg_dir libpath
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
                ~variant_key);
     probe_lib =
@@ -236,13 +251,31 @@ let built_spec ~(workspace : string) : Canary_step_builder.runner_spec =
    (system PM) or Built (source); bindings Fetched. Self-contained Built (no
    a_source artifact — the amalgamation is fetched inside build_lib). *)
 let sqlite_spec : Canary_enumerate.project_spec =
-  { ps_artifacts = sqlite_artifacts;
+  { (* enumeration OMITS a_source: sqlite's Built lib is self-contained
+       (build_lib fetches the amalgamation), so source is not a separately
+       provisioned artifact here. a_source stays in [sqlite_artifacts] =
+       [pr_artifacts] for the spec DISPLAY. Omitting it also lets the Built lib
+       carry its own version axis without the unsatisfiable source@version chain
+       constraint [assignment_ok] would otherwise impose. *)
+    ps_artifacts =
+      Canary_enumerate.
+        [ a_lib;
+          a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+          a_binding Canary_lang.Python Canary_mechanism.Cext ];
     ps_provisions_of =
       (fun id ->
         if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
           Canary_enumerate.[ Fetched; Built ]
         else Canary_enumerate.[ Fetched ]);
-    ps_versions_of = (fun _ -> [ Canary_basic.Stable ]) }
+    (* The lib carries a VERSION axis (Stable=3.45.1, Dev=3.46.1 amalgamations)
+       so its Built provision enumerates two source versions; other artifacts are
+       single-version. Fetched@Stable/@Dev both map to the system apt lib, so they
+       dedup to one run — net worlds: fetched-system, built@3.45.1, built@3.46.1. *)
+    ps_versions_of =
+      (fun id ->
+        if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
+          Canary_basic.[ Stable; Dev ]
+        else [ Canary_basic.Stable ]) }
 
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
@@ -256,12 +289,24 @@ let sqlite_run : Canary_project_run.project_run =
       (fun a ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
         | Canary_enumerate.Built ->
-            Some "_out/canary/materialized/sqlite/built-3450100"
+            (* per-VERSION workspace so Built@Stable and Built@Dev are distinct
+               worlds (else they collapse to one dir + dedup to one run). *)
+            let chan =
+              (Canary_enumerate.version_of a Canary_enumerate.a_lib)
+                .Canary_enumerate.channel
+            in
+            let numeric, _ = sqlite_amalg chan in
+            Some ("_out/canary/materialized/sqlite/built-" ^ numeric)
         | _ -> Some "fetched-system");
     pr_runner_spec =
       (fun a ~workspace ->
         match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-        | Canary_enumerate.Built -> built_spec ~workspace
+        | Canary_enumerate.Built ->
+            let chan =
+              (Canary_enumerate.version_of a Canary_enumerate.a_lib)
+                .Canary_enumerate.channel
+            in
+            built_spec ~workspace ~chan
         | _ -> runner_spec);
     (* DERIVED from the single [sqlite_provider] declaration — same source the
        runner's store_config reads, so display and runner can't drift. *)
