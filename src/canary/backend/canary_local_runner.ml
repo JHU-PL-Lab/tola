@@ -364,8 +364,18 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                 let found =
                   if List.is_empty derived then
                     (* No prediction available — fall back to "any failure
-                       with non-empty probe.log is acceptable". *)
-                    Stdlib.Sys.file_exists (out ^ "/probe.log")
+                       that left a probe log is acceptable". v3 layout keys
+                       log names by variant (probe_<vk>.log), so resolve
+                       via [variant_file], with the bare name as the legacy
+                       fallback (fixed 2026-08-05 — the literal "probe.log"
+                       check never matched v3 names, so an empty-prediction
+                       must-fail could not confirm; surfaced by type_wrong
+                       once its build-site over-strengthening was removed). *)
+                    Stdlib.Sys.file_exists
+                      (out ^ "/"
+                       ^ Canary_basic.variant_file
+                           ~variant_key:step.variant_id "probe.log")
+                    || Stdlib.Sys.file_exists (out ^ "/probe.log")
                   else output_contains_any ~output_dir:out derived
                 in
                 let confirmed_msg = match version_info with

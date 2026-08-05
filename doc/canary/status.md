@@ -51,11 +51,14 @@ ssl carries the first binding-side world assertion. Snapshot per project:
 - **ssl** (still `run_project_multi`, its last consumer): the 2×2 matrix
   derives from `app.requires` + per-variant mli evidence — `060_nlv` =
   `xfail[c2]`; probe asserts the switch's pinned version.
-- **tiny1** (`canary tiny run`): the mutation ORACLE — **21/22 PASS**
-  (verdict reader fixed 2026-08-05); the 1 red = `type_wrong`'s build-site
-  c6 (§B inspector gap, the oracle doing its job). Factory coverage
-  12/24 — the undetected are watchlist-blind (c5/c6/abi), need richer
-  inspectors (§B), not plumbing.
+- **tiny1** (`canary tiny run`): the mutation ORACLE — **22/22 PASS**
+  (2026-08-05: verdict reader fixed; type_wrong triaged — the oracle's
+  strengthening now applies at PROBE-class sites only, and the runner's
+  empty-prediction fallback resolves v3 variant-keyed log names).
+  type_wrong's probe xfail is UNATTRIBUTED ([]) — honest: no static
+  contract predicts a body-only c6 lie; the gap stays visible in
+  attribution/coverage. Factory coverage 12/24 — the undetected are
+  watchlist-blind (c5/c6/abi), need richer inspectors (§B), not plumbing.
 
 Trilogy + principle: **ssot §4.2.5**.
 

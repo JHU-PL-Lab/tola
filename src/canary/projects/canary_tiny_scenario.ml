@@ -2265,12 +2265,20 @@ let runner_spec = base_runner_spec
       it knows which contract it broke);
     - GATE: a scenario whose fault has no probe manifestation expects
       success everywhere ([has_probe_manifestation]);
-    - STRENGTHEN: [Expect_compat_derived] (inspection decides) →
-      [Expect_compat_failure] (failure REQUIRED). This is the answer-key
-      property: a watchlist-blind inspector must go RED here (see
-      type_wrong / the c6 gap), where the derived path would silently
-      expect success. Grep-sourced firings are already must-fail
-      ([Expect_failure]) and pass through unchanged. *)
+    - STRENGTHEN — at PROBE-class sites only: [Expect_compat_derived]
+      (inspection decides) → [Expect_compat_failure] (failure REQUIRED).
+      This is the answer-key property: a watchlist-blind inspector must go
+      RED at the terminal detector (the probe), where the derived path
+      would silently expect success. BUILD-class sites stay Derived — the
+      evidence decides: a declaration-level c6 lie (header_arity_bump)
+      derives a non-empty prediction and still must-fail at build, while a
+      body-only c6 lie (type_wrong: header/stub agree, the .c body lies)
+      legitimately BUILDS GREEN (its own expected table says
+      `"ocaml_build", Ok`; the manifestation is Sc.4 — the probe). The
+      pre-A7 blanket build-site strengthening made type_wrong demand a
+      build failure that the mutation never produces (the oracle's one
+      standing red, triaged 2026-08-05). Grep-sourced firings are already
+      must-fail ([Expect_failure]) and pass through unchanged. *)
 let expectation_of_entry (entry : scenario_spec)
   : Canary_basic.action -> Canary_store.location option ->
     Canary_step_model.step_expectation
@@ -2291,8 +2299,11 @@ let expectation_of_entry (entry : scenario_spec)
     in
     fun action loc ->
       match derive action loc with
-      | SM.Expect_compat_derived { inputs; version_info } ->
-          SM.Expect_compat_failure { inputs; version_info }
+      | SM.Expect_compat_derived { inputs; version_info } as e -> (
+          match action with
+          | Canary_basic.Probe_binding _ | Canary_basic.Probe_app _ ->
+              SM.Expect_compat_failure { inputs; version_info }
+          | _ -> e)
       | e -> e
 
 (** The mutation-AGNOSTIC expectation for tiny-full: derived from the
