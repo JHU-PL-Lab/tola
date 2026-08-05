@@ -431,6 +431,31 @@ let load_scenario_post ~project : (string * (string * bool * string)) list =
     in
     loop []
 
+(* POST view of a scenario's built-lib NATIVE WATCHLIST (the per-version
+   symbol watchlist): read the build_lib inspect JSON the run produced for
+   this scenario's variant key, and summarize present/missing. None = no
+   inspect ran (no run yet, or the project attaches none). *)
+let lib_watchlist_post ~pr_name (a : Canary_enumerate.assignment) :
+    (int * string list) option =
+  let safe =
+    String.map
+      (function ':' | '#' | '+' -> '-' | c -> c)
+      (Filename.basename (scenario_dir_of ~pr_name a))
+  in
+  let path =
+    Printf.sprintf "_out/canary/projects/%s/build_lib/inspect_%s.json" pr_name
+      safe
+  in
+  if not (Sys.file_exists path) then None
+  else
+    try
+      let j = Yojson.Basic.from_file path in
+      let open Yojson.Basic.Util in
+      let w = j |> member "watchlist" in
+      let strs k = w |> member k |> to_list |> List.map to_string in
+      Some (List.length (strs "present"), strs "missing")
+    with _ -> None
+
 (* The binding languages a project's artifacts span. *)
 let langs_of arts =
   List.filter_map
@@ -602,10 +627,20 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
             else None)
           pr.Canary_project_run.pr_mismatch_probes
       in
-      Fmt.pr "  %-10s %s%s%s@." mark world
+      let watchlist_note =
+        match lib_watchlist_post ~pr_name:pr.Canary_project_run.pr_name a with
+        | None -> ""
+        | Some (npresent, []) ->
+            Printf.sprintf "   [lib watchlist: %d/%d]" npresent npresent
+        | Some (npresent, missing) ->
+            Printf.sprintf "   [lib watchlist: %d present, missing %s]"
+              npresent (String.concat "," missing)
+      in
+      Fmt.pr "  %-10s %s%s%s%s@." mark world
         (match probe_marks with
          | [] -> ""
          | ms -> "   [" ^ String.concat "+" ms ^ "-mismatch probe]")
+        watchlist_note
         (if String.equal label "(baseline)" then "   (baseline)" else ""))
     scenarios;
   (if post <> [] then begin
