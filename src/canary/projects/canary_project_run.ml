@@ -25,7 +25,19 @@
       self-contained Built lib).
     - [pr_runner_spec] — the runner_spec for one scenario (assignment), given
       the assignment (so version/provision-parameterized actions read the
-      per-artifact placement) and a runner-chosen [workspace] dir
+      per-artifact placement) and a runner-chosen [workspace] dir.
+      STRUCTURE (the dispatch/realization split, 2026-08-05): implement it as
+      [realize ∘ dispatch] — a PURE project-local [dispatch : assignment ->
+      scenario_case] (a small case type = inspectable data) reading ONLY the
+      general enumeration coordinates ([Canary_enumerate.provision_of] /
+      [channel_of] / [provided] / [bad_placements]), and [realize :
+      scenario_case -> ... -> runner_spec] holding the command templates.
+      Command templates must be functions (they late-bind workspace/
+      output_dir and stay lazy for the non-executing backends); the dispatch
+      must not be — keep it data-shaped so it can be read and tested without
+      running anything. (Making the dispatch fully DECLARED — a placement →
+      template table instead of per-project code — is the open action-variant
+      design; this split is its precondition.)
       ([canary_main.scenario_dir_of] — the scenario's output + identity dir).
       A project builds/fetches into that dir (sqlite); a project that needs a
       pre-assembled tree (tiny-full) assembles it INSIDE its own runner_spec

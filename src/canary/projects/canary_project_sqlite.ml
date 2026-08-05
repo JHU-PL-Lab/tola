@@ -335,6 +335,28 @@ let sqlite_spec : Canary_enumerate.project_spec =
         then Canary_basic.[ Stable; Dev ]
         else [ Canary_basic.Stable ]) }
 
+(* ── dispatch / realization split ──
+   [scenario_case] is the PURE dispatch result — inspectable data computed
+   from enumeration coordinates only (general reads:
+   [Canary_enumerate.provision_of]/[channel_of]); the realizations
+   ([runner_spec] / [built_spec]) are the command templates. [pr_runner_spec]
+   is just their composition — no placement digging inside it. *)
+type scenario_case =
+  | Fetched_lib                        (* system lib; bindings fetched *)
+  | Built_lib of Canary_basic.channel  (* canary-built lib @channel *)
+
+let dispatch (a : Canary_enumerate.assignment) : scenario_case =
+  match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
+  | Canary_enumerate.Built ->
+      Built_lib (Canary_enumerate.channel_of a Canary_enumerate.a_lib)
+  | _ -> Fetched_lib
+
+let realize (c : scenario_case) ~(workspace : string) :
+    Canary_step_builder.runner_spec =
+  match c with
+  | Fetched_lib -> runner_spec
+  | Built_lib chan -> built_spec ~workspace ~chan
+
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
@@ -345,16 +367,7 @@ let sqlite_run : Canary_project_run.project_run =
        [workspace] (canary_main.scenario_dir_of — per-version for Built, so
        Built@Stable and Built@Dev get distinct dirs; Fetched collapses across
        versions there). The built_spec reads the version from the assignment. *)
-    pr_runner_spec =
-      (fun a ~workspace ->
-        match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-        | Canary_enumerate.Built ->
-            let chan =
-              (Canary_enumerate.version_of a Canary_enumerate.a_lib)
-                .Canary_enumerate.channel
-            in
-            built_spec ~workspace ~chan
-        | _ -> runner_spec);
+    pr_runner_spec = (fun a ~workspace -> realize (dispatch a) ~workspace);
     (* DERIVED from the single [sqlite_provider] declaration — same source the
        runner's store_config reads, so display and runner can't drift. *)
     pr_provenance = sqlite_provider }

@@ -64,14 +64,13 @@ let print_view : unit -> unit = TS.print_tiny_full
 type project_run = Canary_project_run.project_run
 
 (** The cached-artifact overlays a bad assignment asks for: each [Bad]-quality
-    placement → (artifact key, tag). All-good ⇒ []. *)
+    placement → (artifact key, tag). All-good ⇒ []. The general half is
+    [Canary_enumerate.bad_placements]; only the tag → cache-key mapping is
+    tiny's. *)
 let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
-  Base.List.filter_map a ~f:(fun (_, pl) ->
-      match pl.Canary_enumerate.version.quality with
-      | Canary_enumerate.Bad tag ->
-          Base.Option.map (Canary_tiny_workspace.artifact_key_of_tag tag)
-            ~f:(fun key -> (key, tag))
-      | Canary_enumerate.Good -> None)
+  Base.List.filter_map (Canary_enumerate.bad_placements a) ~f:(fun (_, tag) ->
+      Base.Option.map (Canary_tiny_workspace.artifact_key_of_tag tag)
+        ~f:(fun key -> (key, tag)))
 
 (* Static per-artifact provider (typed; the real vendored layout —
    canary_tiny_workspace.ml paths). All Vendored (the lib is a Cached built
@@ -103,6 +102,94 @@ let tiny_provenance (id : Canary_enumerate.artifact_id) :
     closure and the general interface has no pre-placement hook for it. tiny-full
     ignores the runner-provided [workspace] dir (it runs over its assembled tree);
     a real project (sqlite) builds into that dir instead. *)
+(* ── dispatch / realization split ──
+   [scenario_case] is the PURE dispatch result — inspectable data computed
+   from enumeration coordinates only (general reads:
+   [Canary_enumerate.provision_of]/[channel_of]/[provided]/[bad_placements]);
+   [realize] maps a case to its realization: WHICH tiny-factory materializer
+   assembles the tree + the base command templates. [pr_runner_spec] is just
+   their composition — no placement digging inside it. *)
+type scenario_case =
+  | Base                               (* the all-vendored good witness *)
+  | Built_lib of Canary_basic.channel  (* lib compiled from source @channel *)
+  | Dev_binding of { lib_built : Canary_basic.channel option }
+      (* dev OCaml cstubs binding (the tiny_scale consumer — the mismatch
+         axis); [lib_built = Some ch] when the lib is also Built @ch,
+         [None] = over the vendored stable lib *)
+  | Assembled of (string * string) list
+      (* bad-overlay scenarios: (cache key, tag) — tiny1/factory machinery *)
+
+let dispatch (a : Canary_enumerate.assignment) : scenario_case =
+  let module E = Canary_enumerate in
+  let a_oc = E.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
+  match overlays_of a with
+  | (_ :: _) as overlays -> Assembled overlays
+  | [] ->
+      let lib_built =
+        match E.provision_of a E.a_lib with E.Built -> true | _ -> false
+      in
+      let binding_dev =
+        E.provided a a_oc
+        && (match E.channel_of a a_oc with
+            | Canary_basic.Dev -> true
+            | Canary_basic.Stable -> false)
+      in
+      if binding_dev then
+        Dev_binding
+          { lib_built =
+              (if lib_built then Some (E.channel_of a E.a_lib) else None) }
+      else if lib_built then Built_lib (E.channel_of a E.a_lib)
+      else Base
+
+let realize (c : scenario_case) : Canary_step_builder.runner_spec =
+  let chan_str = function
+    | Canary_basic.Dev -> "dev"
+    | Canary_basic.Stable -> "stable"
+  in
+  (* the lib's channel drives the channel-aware build (Dev ⇒ -DTINY_DEV +
+     dev version script) on the Built path; Stable otherwise. *)
+  let channel =
+    match c with
+    | Built_lib ch | Dev_binding { lib_built = Some ch } -> ch
+    | Base | Dev_binding { lib_built = None } | Assembled _ ->
+        Canary_basic.Stable
+  in
+  (* WHICH materializer assembles the tree (tiny-factory; labels carry the
+     axes so distinct cases get distinct trees + variant_ids — cache.md). *)
+  let assembled =
+    match c with
+    | Base -> Some (Canary_tiny_workspace.witness_base_workspace ())
+    | Built_lib ch ->
+        Canary_tiny_workspace.materialize_built_lib
+          ~label:("positive-built-lib-" ^ chan_str ch)
+    | Dev_binding { lib_built } ->
+        let lib_desc =
+          match lib_built with
+          | Some ch -> "built-lib-" ^ chan_str ch
+          | None -> "vendored-lib"
+        in
+        Canary_tiny_workspace.materialize_dev_binding
+          ~lib_built:(Base.Option.is_some lib_built)
+          ~label:("dev-binding-over-" ^ lib_desc)
+    | Assembled overlays ->
+        let label =
+          Base.String.concat ~sep:"+"
+            (Base.List.map overlays ~f:(fun (id, t) -> id ^ "#" ^ t))
+        in
+        Canary_tiny_workspace.materialize_assembled ~overlays ~label
+  in
+  let tree =
+    match assembled with
+    | Some w -> w
+    | None -> failwith "tiny-full: workspace assembly failed"
+  in
+  let lib_filename =
+    Canary_tiny_workspace.detect_lib_filename ~workspace:tree
+  in
+  let stores = TS.stores_of_workspace ~lib_filename ~workspace_root:tree () in
+  { (TS.make_base_runner_spec ~channel ~stores ()) with
+    Canary_step_builder.expectation = expectation_agnostic }
+
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
     pr_artifacts = artifacts;
@@ -111,75 +198,9 @@ let tiny_full_run : project_run =
        ([Canary_project_run.scenarios_of]) — like sqlite, a positive-only
        general project_run with no scenario list of its own. *)
     pr_spec = general_spec;
-    pr_runner_spec =
-      (fun a ~workspace:_ ->
-        (* ASSEMBLE tiny's vendored tree (tiny-factory). dispatch by provision
-           (ssot §4.2.5): the lib may be [Built] (canary compiles from a
-           source-only tree) instead of [Vendored]. The channel goes in the label
-           so Dev and Stable Built libs get distinct trees + variant_ids (cache
-           separately; cache.md). *)
-        let lib_built =
-          match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-          | Canary_enumerate.Built -> true
-          | _ -> false
-        in
-        let channel =
-          (Canary_enumerate.version_of a Canary_enumerate.a_lib)
-            .Canary_enumerate.channel
-        in
-        let chan_str =
-          match channel with
-          | Canary_basic.Dev -> "dev"
-          | Canary_basic.Stable -> "stable"
-        in
-        (* the OCaml binding's version channel: Dev selects the ocaml_dev
-           source variant (the tiny_scale consumer — the mismatch axis). *)
-        let binding_dev =
-          match
-            Canary_enumerate.placement_of a
-              (Canary_enumerate.a_binding Canary_lang.OCaml
-                 Canary_mechanism.Cstubs)
-          with
-          | Some pl -> (
-              match pl.Canary_enumerate.version.Canary_enumerate.channel with
-              | Canary_basic.Dev -> true
-              | Canary_basic.Stable -> false)
-          | None -> false
-        in
-        let assembled =
-          match overlays_of a with
-          | [] when binding_dev ->
-              let lib_desc =
-                if lib_built then "built-lib-" ^ chan_str else "vendored-lib"
-              in
-              Canary_tiny_workspace.materialize_dev_binding ~lib_built
-                ~label:("dev-binding-over-" ^ lib_desc)
-          | [] when lib_built ->
-              Canary_tiny_workspace.materialize_built_lib
-                ~label:("positive-built-lib-" ^ chan_str)
-          | [] -> Some (Canary_tiny_workspace.witness_base_workspace ())
-          | overlays ->
-              let label =
-                Base.String.concat ~sep:"+"
-                  (Base.List.map overlays ~f:(fun (id, t) -> id ^ "#" ^ t))
-              in
-              Canary_tiny_workspace.materialize_assembled ~overlays ~label
-        in
-        let tree =
-          match assembled with
-          | Some w -> w
-          | None -> failwith "tiny-full: workspace assembly failed"
-        in
-        (* the lib's version channel drives a channel-aware build (Dev ⇒
-           -DTINY_DEV + dev version script) on the Built path. *)
-        let lib_filename =
-          Canary_tiny_workspace.detect_lib_filename ~workspace:tree
-        in
-        let stores =
-          TS.stores_of_workspace ~lib_filename ~workspace_root:tree ()
-        in
-        { (TS.make_base_runner_spec ~channel ~stores ()) with
-          Canary_step_builder.expectation = expectation_agnostic });
+    (* tiny-full ignores the runner-provided [workspace]: its realizations
+       assemble the vendored tree themselves (tiny-factory concern). *)
+    pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a));
     pr_provenance = tiny_provenance }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──

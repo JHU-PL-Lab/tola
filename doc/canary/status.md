@@ -209,6 +209,21 @@ Steps:
 - **A6 — collapse** `Canary_project.project` into `project_run` — one identity.
 - **A7 — unify** the 3-way expectation model (agnostic / contract-bound /
   hand-written → derived; §1c #1).
+- **A8 — spec tables as DATA** (postponed pending discussion, 2026-08-05):
+  `ps_provisions_of` / `ps_versions_of` / `pr_provenance` are functions only
+  as table encodings (finite declared domain = the artifact list); flipping
+  them to assoc-list data would make the declaration printable/serializable/
+  diffable and side-effect-free. Cheap; do when the spec type next moves.
+- **A9 — dispatch as DECLARATION** (the action-variant table). ✅ *Step 1
+  done 2026-08-05*: the dispatch/realization SPLIT — both generic projects now
+  implement `pr_runner_spec = realize ∘ dispatch` with a pure project-local
+  `scenario_case` type (sqlite: `Fetched_lib | Built_lib ch`; tiny:
+  `Base | Built_lib ch | Dev_binding {lib_built} | Assembled overlays`),
+  dispatch reading only the general coordinates
+  (`Canary_enumerate.channel_of`/`bad_placements`/`provision_of`/`provided` —
+  new utilities). Remaining: replace the per-project `dispatch` CODE with a
+  declared placement→template TABLE + shared templates (needs the
+  action-variant design; z3's location sub-axis is the hard case).
 
 **Graph-model recap + gate (2026-08-04).** The two findings are one model: **an
 artifact can be a built result — a resource generates (`built_from`) or contains

@@ -571,6 +571,31 @@ let thin_config_level_test : pure_test =
                  | B.Stable -> true
                  | B.Dev -> false))) }
 
+(* Dispatch-coordinate utilities (the dispatch/realization split): a project's
+   runner dispatch reads ONLY these general coordinates. [channel_of] reads the
+   placed channel; [bad_placements] extracts the Bad-quality (artifact, tag)
+   pairs and is [] for a positive scenario. *)
+let dispatch_reads_test : pure_test =
+  { name = "enumerate.dispatch_coordinate_reads";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let pl ?(q = EN.Good) ch : EN.placement =
+        { provision = EN.Vendored; version = { channel = ch; quality = q } }
+      in
+      let good =
+        EN.[ (a_lib, pl B.Stable); (a_oc, pl B.Dev) ]
+      in
+      let bad =
+        EN.[ (a_lib, pl ~q:(EN.Bad "Bs.4") B.Stable); (a_oc, pl B.Stable) ]
+      in
+      Poly.equal (EN.channel_of good EN.a_lib) B.Stable
+      && Poly.equal (EN.channel_of good a_oc) B.Dev
+      && List.is_empty (EN.bad_placements good)
+      && (match EN.bad_placements bad with
+          | [ (id, "Bs.4") ] -> EN.equal_artifact_id id EN.a_lib
+          | _ -> false)) }
+
 (* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
    ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
    binding←Lib; a Fetched artifact has no edge. Injects
@@ -818,6 +843,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
+      dispatch_reads_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]
 

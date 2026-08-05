@@ -182,6 +182,29 @@ let version_of (a : assignment) (id : artifact_id) : build_id =
 let provided (a : assignment) (id : artifact_id) : bool =
   not (equal_provision (provision_of a id) Absent)
 
+(* ── dispatch-coordinate reads (general utilities) ──
+   A project's runner DISPATCH (which realization a scenario gets) must read
+   only these enumeration coordinates — provision / channel / quality of the
+   declared artifacts — never dig placement records by hand. Keeping the
+   reads here (general) and the case analysis in the project (a pure,
+   project-local `case` type) is the dispatch/realization split: dispatch is
+   enumeration vocabulary; realizations are the project's command templates. *)
+
+(** The release channel [id] is placed at (Dev when the artifact is absent —
+    matches [version_of]'s default; dispatch on provided artifacts only). *)
+let channel_of (a : assignment) (id : artifact_id) : Canary_basic.channel =
+  (version_of a id).channel
+
+(** The Bad-quality placements of a scenario: [(artifact, opaque tag)] per
+    artifact whose version quality is [Bad tag] — [] for a positive scenario.
+    The general half of a bad-overlay dispatch (a project maps the tags to
+    its own cached-artifact keys). *)
+let bad_placements (a : assignment) : (artifact_id * string) list =
+  List.filter_map a ~f:(fun (id, pl) ->
+      match pl.version.quality with
+      | Bad tag -> Some (id, tag)
+      | Good -> None)
+
 let any_binding_provided (a : assignment) : bool =
   List.exists a ~f:(fun (id, pl) ->
       match id.kind with
