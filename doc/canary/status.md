@@ -33,15 +33,38 @@ detection + expectation + the fail-fast collapse, via `run_project_run` over a
 warm** — the earlier "20/20"/"24/24" were warm-cache fake-green (a failed probe
 cached as success; fixed). The 12 undetected are watchlist-blind (c5/c6/abi) and
 need richer *inspectors*, not plumbing. **sqlite runs through the SAME generic
-runner** (Fetched + Built). z3/llvm stay raw-script (`run_project_multi`),
-untouched. Trilogy + principle: **ssot §4.2.5**; full arc history
+runner** — now **3 worlds** (system-fetched lib + two built amalgamation versions
+3.45.1/3.46.1), full source→lib→binding(ocaml+python)→probe chain each. z3/llvm
+stay raw-script (`run_project_multi`), untouched. Trilogy + principle: **ssot
+§4.2.5**; full arc history [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
+
+**Recently landed** (2026-08-05, the layering + purge arc): graph-view vs
+`derive_steps`-engine layering settled (`execution_plan` is a VIEW, `construct`
+renders the plan; `dynamic_enumeration.md`) · run parity with z3/llvm verified
+(both mis-called "gaps" not real) · diagram **connectivity invariant MUTED** by
+default (`CANARY_DIAGRAM_CONN=1` re-enables — it fails for all four projects, a
+`step.deps`↔node-graph drift, not a run bug) · sqlite runs **3 worlds** (two
+built versions) · **`pr_materialize` PURGED** from the general interface — the
+generic runner computes `scenario_dir_of` (born-safe per-scenario dir + dedup
+key; `Fetched` is version-ambient so its version isn't identity), tiny-full's
+assembly folded into its `pr_runner_spec` (the `materialize` symbol now lives
+ONLY in tiny-factory). All 6 worlds green; project-test 33/33, artifact-test
+101/101. Earlier (2026-08-03/04, honest-coverage arc): Fix B cache soundness ·
+`spec` dry-run · Fix A · thin `--thin` · naming unification. Detail in
 [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
-**Recently landed** (2026-08-03/04, the honest-coverage arc): Fix B (cache
-soundness) · `spec` dry-run · Fix A (cached artifact carries source) + born-safe
-ids + robust verdict · thin `--thin` · naming unification + `pretty_id` · quick
-hygiene. Net: tiny-full went from a fake 24/24 to an honest, stable 12/24. Full
-detail in [`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md).
+**NEXT MILESTONE — enough projects really run as z3/llvm did, with a FAITHFUL
+scenario combination.** sqlite + tiny-full now run their declared scenario sets
+through the generic runner, but the *combination* is still thin/hand-tuned
+per project. The milestone: pick a small set of real projects and make each
+enumerate + run a faithful `(provision × version × mechanism)` scenario
+combination — the deploy-mismatch and cross-version worlds z3/llvm demonstrate —
+through the generic runner, not raw-script. Concretely: (a) the scenario
+combination should be *derived* from the declared spec (the A-convergence below),
+(b) exercise real mismatch/failure worlds (needs the runtime edge — A5
+`close_deps`/`dep_mode`), (c) migrate z3/llvm onto the generic `project_run` so
+"raw-script vs generic" collapses to one path. Faithful = the run's scenario set
+matches what the enumeration algorithm + graph say the project's worlds are.
 
 **To-do, regrouped.**
 

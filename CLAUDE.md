@@ -7,7 +7,7 @@ dune build                                                   # build everything
 dune exec src/bin/canary_main.exe -- paths                   # print 15-row action pattern table
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
 dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
-dune exec src/bin/canary_main.exe -- action sqlite
+dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 worlds: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each)
 dune exec src/bin/canary_main.exe -- action z3               # runs z3 (dev) + z3/stable
 dune exec src/bin/canary_main.exe -- action llvm             # runs llvm (dev) + llvm/19
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): algorithm-driven good+bad run + coverage
@@ -238,7 +238,17 @@ its scenarios directly (tiny has 22 scenarios via factory; z3/llvm have
 positive-only). `run_project_multi` runs the scenarios/variants list
 per project; tiny's factory (`canary_tiny_scenario.ml`) restricts
 each `runner_spec` to one scenario's world, z3/llvm build one
-`runner_spec` per source variant. See SSOT §6.1 for the taxonomy
+`runner_spec` per source variant. **The generic path** (sqlite +
+tiny-full) is `run_project_run` over a `Canary_project_run.project_run`
+(`pr_enumerate → pr_runner_spec → derive_steps → run`): the runner
+computes `scenario_dir_of a` (a born-safe per-scenario dir = output
+path + dedup key; a `Fetched` artifact is version-ambient so its
+declared version is NOT part of scenario identity — two `Fetched@v`
+scenarios dedup). There is **no** `pr_materialize`/pre-place field:
+tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
+(the `materialize` symbol lives only in tiny-factory,
+`canary_tiny_workspace`); a real project builds/fetches into the
+runner-given dir. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
 `dynamic_enumeration.md` ("Derived vs hand-written") for what's data vs code.
 
@@ -496,6 +506,22 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 
 ## Gotchas
 
+- **Diagram connectivity invariant is MUTED by default** (2026-08-05): the
+  diagram self-check "does the drawn `.mmd` reproduce every `step.deps` edge?"
+  fails for **all four** projects (z3/llvm/sqlite/tiny-full) — the diagram's
+  hand-built edge topology (`canary_diagram.ml`) and the runner's `step.deps` are
+  two separate dependency relations that drifted. It is NOT a run bug (every step
+  `check_pre` enforces its real deps; execution is sound) — only the picture
+  under-connects. Gated behind `CANARY_DIAGRAM_CONN=1` (default off) so runs don't
+  print "connectivity errors … SOME FAILED"; the coverage invariant still runs.
+  Real fix = reconcile `step.deps` with the typed node graph into one relation
+  (status §A "Merge cleanup"); diagram work is on hold.
+- **`Fetched` is version-ambient in scenario identity**: `scenario_dir_of`
+  (`canary_main.ml`) drops a `Fetched` placement's declared version from the
+  scenario id (the PM picks the actual version), so `Fetched@Stable ≡ Fetched@Dev`
+  dedup to one run; `Built`/`Vendored` versions ARE identity. This is why sqlite's
+  `{Fetched,Built}×{Stable,Dev}` declares 4 but runs 3. A project that pins a
+  Fetched version would override via its provider (`pr_provenance`) — not wired yet.
 - **Run-cache stale hit looks like a real PASS**: a step is skipped when its
   `.ok` marker exists and `check_post` passes (local cache), keyed by
   `variant_id` (the part after `/` in `project`, e.g. `tiny/<name>`). Re-running

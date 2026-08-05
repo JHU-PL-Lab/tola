@@ -570,17 +570,27 @@ overlays. A binding built against a good lib, assembled over a bad lib, is a
 genuine **deploy mismatch** (build-lib ≠ run-lib) — a real target, obtained
 for free.
 
-**`materialize` places; `build`/`fetch` are canary actions.** Two levels that
-must not be conflated. `Vendored` is *pre-run placement* — the artifact already
-exists, `materialize` just drops it in and canary only **probes** it (a bad
-vendored lib is a bad *binary*). `Built` and `Fetched` are **canary actions**:
-`build_lib` from source, `fetch_lib` from a PM — steps in the action graph that
-canary **runs and observes** (a bad source makes `build_lib` *fail* → detected;
-no pre-fetch — the fetch is part of the run). So `materialize` handles only
-what already exists (place vendored artifacts + set up source trees); the
-**provision axis selects which build/fetch actions run** (`provision_of_actions`
-/ `store_actions`), not a pre-run shell. This gives two distinct realistic lib
-scenarios: a *vendored* bad binary vs a lib *built from bad source*.
+**Pre-run placement vs `build`/`fetch` actions.** Two levels that must not be
+conflated. `Vendored` is *pre-run placement* — the artifact already exists, a
+project just drops it in and canary only **probes** it (a bad vendored lib is a
+bad *binary*). `Built` and `Fetched` are **canary actions**: `build_lib` from
+source, `fetch_lib` from a PM — steps in the action graph that canary **runs and
+observes** (a bad source makes `build_lib` *fail* → detected; no pre-fetch — the
+fetch is part of the run). So pre-placement handles only what already exists
+(place vendored artifacts + set up source trees); the **provision axis selects
+which build/fetch actions run** (`provision_of_actions` / `store_actions`), not a
+pre-run shell. This gives two distinct realistic lib scenarios: a *vendored* bad
+binary vs a lib *built from bad source*.
+
+> **Where pre-placement lives (2026-08-05).** This vendored-artifact
+> *assembly* (the "materialize" step) is **tiny-factory's** concern
+> (`canary_tiny_workspace`), invoked inside tiny-full's `pr_runner_spec` closure.
+> The general `project_run` interface has **no** materialize/pre-place field: the
+> generic runner (`canary_main.run_project_run`) computes a per-scenario dir
+> (`scenario_dir_of` — output path + dedup key; a `Fetched` artifact is
+> version-ambient, so its declared version is not part of scenario identity) and
+> a real project builds/fetches into it. `materialize` is therefore a
+> tiny-factory symbol, not general vocabulary.
 
 **The version axis is config-restricted, not a global product.** The algorithm
 *can* generate per-edge version combinations (build-lib@dev × run-lib@stable),
