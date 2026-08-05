@@ -2124,6 +2124,8 @@ let chan_str = function
   | Canary_basic.Stable -> "stable"
 
 let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
+    ~(provisions_of_kind :
+       Canary_basic.artifact_kind -> Canary_store.provision list)
     ~(versions : Canary_basic.channel list) : unit =
   let module CA = Canary_action in
   let bid = Canary_enumerate.string_of_build_id in
@@ -2132,6 +2134,7 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
       ~actions:(CA.store_actions ~langs:Canary_lang.[ OCaml; Python ])
       ~versions ~name ~source:Canary_store.store ~app_mode ()
   in
+  let applicable = CA.node_applicable ~provisions_of_kind in
   Fmt.pr "@.graph construction: %s (source versions: %s; app runtime = %s)@." name
     (String.concat ", " (List.map chan_str versions))
     (match app_mode with
@@ -2139,48 +2142,53 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
      | CA.Independent -> "Independent (mismatch cartesian)"
      | CA.Ambient _ -> "Ambient");
   Fmt.pr
-    "  artifacts = NODES; build/fetch actions = EDGES that generate nodes \
-     (make_action_graph, forward).@.";
+    "  UNIVERSAL graph (make_action_graph), marked by the project's \
+     ps_provisions_of — APPLICABLE nodes = the project's real scenarios; the \
+     rest are n/a.@.";
+  let node_line (n : CA.artifact_node) =
+    let prov = Canary_store.string_of_provision n.CA.provision in
+    let edge =
+      match n.CA.built_from with
+      | Some b ->
+          Printf.sprintf " ← %s@%s"
+            (Canary_basic.string_of_artifact_kind b.CA.a_kind)
+            (bid b.CA.version)
+      | None -> ""
+    in
+    let rt =
+      match n.CA.runtime_dep with
+      | Some r -> Printf.sprintf "  [runtime: lib@%s]" (bid r.CA.version)
+      | None -> ""
+    in
+    let mism =
+      match (n.CA.built_from, n.CA.runtime_dep) with
+      | Some bind, Some rl -> (
+          match bind.CA.built_from with
+          | Some build_lib
+            when not
+                   (Canary_enumerate.equal_version build_lib.CA.version
+                      rl.CA.version) -> "   ⚠ DEPLOY MISMATCH"
+          | _ -> "")
+      | _ -> ""
+    in
+    Printf.sprintf "@%s (%s)%s%s%s" (bid n.CA.version) prov edge rt mism
+  in
   List.iter
     (fun (kind, nodes) ->
       if nodes <> [] then begin
-        Fmt.pr "@.  %s (%d):@." (Canary_basic.string_of_artifact_kind kind)
-          (List.length nodes);
-        List.iter
-          (fun (n : CA.artifact_node) ->
-            let prov = Canary_store.string_of_provision n.CA.provision in
-            let edge =
-              match n.CA.built_from with
-              | Some b ->
-                  Printf.sprintf " ← %s@%s"
-                    (Canary_basic.string_of_artifact_kind b.CA.a_kind)
-                    (bid b.CA.version)
-              | None -> ""
-            in
-            let rt =
-              match n.CA.runtime_dep with
-              | Some r -> Printf.sprintf "  [runtime: lib@%s]" (bid r.CA.version)
-              | None -> ""
-            in
-            (* mismatch: an App's build-lib (via its binding) ≠ its runtime lib *)
-            let mism =
-              match (n.CA.built_from, n.CA.runtime_dep) with
-              | Some bind, Some rl -> (
-                  match bind.CA.built_from with
-                  | Some build_lib
-                    when not
-                           (Canary_enumerate.equal_version build_lib.CA.version
-                              rl.CA.version) -> "   ⚠ DEPLOY MISMATCH"
-                  | _ -> "")
-              | _ -> ""
-            in
-            Fmt.pr "    @%s (%s)%s%s%s@." (bid n.CA.version) prov edge rt mism)
-          nodes
+        let app_nodes = List.filter applicable nodes in
+        let na = List.length nodes - List.length app_nodes in
+        Fmt.pr "@.  %s — %d applicable / %d total%s:@."
+          (Canary_basic.string_of_artifact_kind kind)
+          (List.length app_nodes) (List.length nodes)
+          (if na > 0 then Printf.sprintf " (%d n/a)" na else "");
+        List.iter (fun n -> Fmt.pr "    %s@." (node_line n)) app_nodes
       end)
     g.CA.pools;
   Fmt.pr
-    "@.  note: this is the UNIVERSAL construction (all catalogue actions, full \
-     cartesian) — NOT yet project-capability-filtered; see the design notes.@."
+    "@.  note: n/a = a (kind, provision) the project doesn't declare (its \
+     ps_provisions_of) or whose deps are n/a — the mark cascades along edges. \
+     make_action_graph stays universal; the project filters after.@."
 
 let construct_cmd =
   let project =
@@ -2196,15 +2204,36 @@ let construct_cmd =
             "Lockstep App runtime (matched chain, no mismatch) instead of the \
              default Independent (mismatch cartesian).")
   in
+  (* the project's capability = its ps_provisions_of, keyed by kind (the mark). *)
+  let prov_of_spec (spec : Canary_enumerate.project_spec)
+      (k : Canary_basic.artifact_kind) : Canary_store.provision list =
+    match
+      List.find_opt
+        (fun aid -> Canary_enumerate.kind_of aid = k)
+        spec.Canary_enumerate.ps_artifacts
+    with
+    | Some aid -> spec.Canary_enumerate.ps_provisions_of aid
+    | None -> []
+  in
+  (* tiny-full's real capability (its spec's ps_provisions_of is Vendored-only;
+     the lib is also Built via the hand-built variants). *)
+  let tiny_prov = function
+    | Canary_basic.Lib -> Canary_enumerate.[ Vendored; Built ]
+    | _ -> Canary_enumerate.[ Vendored ]
+  in
   let run proj matched () =
     let vs = Canary_basic.[ Stable; Dev ] in
     let app_mode =
       if matched then Canary_action.Lockstep else Canary_action.Independent
     in
     match proj with
-    | Some "sqlite" -> print_construction ~name:"sqlite" ~app_mode ~versions:vs
+    | Some "sqlite" ->
+        print_construction ~name:"sqlite" ~app_mode
+          ~provisions_of_kind:(prov_of_spec Canary_project_sqlite.sqlite_spec)
+          ~versions:vs
     | Some "tiny-full" ->
-        print_construction ~name:"tiny-full" ~app_mode ~versions:vs
+        print_construction ~name:"tiny-full" ~app_mode
+          ~provisions_of_kind:tiny_prov ~versions:vs
     | _ ->
         Fmt.epr "usage: canary construct <tiny-full|sqlite> [--matched]@.";
         Stdlib.exit 2

@@ -202,6 +202,27 @@ let nodes_of_action_graph (ar : action_graph) =
   |> List.dedup_and_sort ~compare:(fun a b ->
       String.compare (node_tag a) (node_tag b))
 
+(** Project-aware coverage mark on the UNIVERSAL graph (the `canary scenarios`
+    idiom, applied to nodes): a node is APPLICABLE to a project iff the project
+    declares its (kind, provision) AND its build/runtime deps are applicable —
+    the mark cascades along the edges. Undeclared kinds (App/Headers — no
+    provision axis) are decided by their endpoints alone. Keeps
+    [make_action_graph] universal; the project just filters after.
+    [provisions_of_kind] = the project's [ps_provisions_of] keyed by kind
+    ([[]] = kind not declared). *)
+let rec node_applicable
+    ~(provisions_of_kind : artifact_kind -> Canary_store.provision list)
+    (n : artifact_node) : bool =
+  (match provisions_of_kind n.a_kind with
+   | [] -> true (* undeclared kind: endpoint-decided *)
+   | provs -> List.mem provs n.provision ~equal:Canary_store.equal_provision)
+  && (match n.built_from with
+      | Some b -> node_applicable ~provisions_of_kind b
+      | None -> true)
+  && (match n.runtime_dep with
+      | Some r -> node_applicable ~provisions_of_kind r
+      | None -> true)
+
 (** Consumes-and-produces enumeration for a single action.
     Order convention: prerequisite first, target next; runtime
     deps trail direct arguments. Companion to {!store_actions}
