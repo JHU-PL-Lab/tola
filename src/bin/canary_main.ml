@@ -1816,9 +1816,12 @@ let project_test_cmd =
   Cmd.v
     (Cmd.info "project-test"
        ~doc:"Test project-definition layers (action consumes/produces, \
-             detection inventory) — pure, hermetic, no PM/build.")
+             detection inventory) + live project-spec pins (z3) — pure, \
+             hermetic, no PM/build.")
     (term_of (fun () ->
-         let ok = Canary_project_test.run_tests () in
+         let ok =
+           Canary_project_test.run_tests ~extra:Canary_projects_test.tests ()
+         in
          if not ok then Stdlib.exit 1))
 
 let cache_test_cmd =

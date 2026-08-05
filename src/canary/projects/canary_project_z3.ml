@@ -613,3 +613,51 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
       | Canary_basic.Binding Canary_lang.Python -> Some "z3-solver"
       | _ -> None);
   }
+
+(* ── A5 phase 1: the DECLARED spec (stage 1, ssot §4.2) — no behavior change ──
+   z3's static option space as ONE data table ([ps_universe], A8). The general
+   enumerate ([full_policy]) + the source-primary filter ([assignment_ok]:
+   a Built lib inherits the source's version) yield exactly the CURRENT two
+   variants as scenarios:
+
+     - dev    = source Fetched@Dev + lib Built@Dev        (the build chain)
+     - stable = source Fetched@Stable + lib Fetched@Stable (the fetch chain)
+
+   Three assignments survive the product-then-filter: the pruned one is
+   (source@Stable × lib Built@Dev) — the incoherent build the source-primary
+   filter exists for. The third, (source@Dev × lib Fetched@Stable), is the
+   SAME world as stable under scenario identity: a Fetched artifact is
+   version-ambient (the PM/opam picks), so its declared channel is dropped
+   from the scenario id ([canary_main.scenario_dir_of]) and the two
+   all-Fetched assignments dedup to ONE stable scenario. Order is meaningful
+   (head = Free-level representative / baseline): Stable-first, so the
+   baseline is the all-Fetched chain (as sqlite) and both surviving
+   representatives are channel-coherent.
+
+   The Python wheel (z3-solver) is Fetched@Stable in BOTH variants — a
+   constant, variant-invariant row. (Declared with the lang's default
+   mechanism [Cext], matching every existing view — `scenarios --engine`
+   renders bindings via [default_mechanism_of_lang]; the wheel is really
+   ctypes-based, so flipping this rides the deferred Dynamic_ffi round,
+   ssot §4.2.1b.)
+
+   The OCaml binding is deliberately NOT in the enumerated universe yet: its
+   provision follows the chain (Built@Dev in dev, opam-fetched in stable),
+   and the flat product cannot express "follows the built chain" — declaring
+   both options would mint the two mixed worlds (dev binding over stable
+   lib / opam binding over dev-built lib), i.e. mismatch scenarios that are
+   NOT the current variant set. It joins the universe with graph-structural
+   version propagation (build edges propagate source@v → lib@v → binding@v;
+   cross-version pairing only on a declared mismatch edge — status §A),
+   which is exactly the abstraction A5 is the forcing function for. Until
+   then the binding rides INSIDE the realization (phase 2's
+   dispatch/realize), like the probe locations (phase 3). *)
+let z3_spec : Canary_enumerate.project_spec =
+  { ps_universe =
+      Canary_enumerate.
+        [ (a_source, [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
+          ( a_lib,
+            [ (Fetched, [ Canary_basic.Stable ]);
+              (Built, [ Canary_basic.Dev ]) ] );
+          ( a_binding Canary_lang.Python Canary_mechanism.Cext,
+            [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }

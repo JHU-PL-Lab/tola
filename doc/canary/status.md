@@ -91,10 +91,28 @@ edges resolved via `dep_mode`). Open:
   — and z3/llvm's guarded external build trees mean scenario-id changes
   don't force full rebuilds anyway). z3 first, llvm after the shape
   settles. Phases, each shippable:**
-  1. *Declared spec, no behavior change*: `z3_spec` ps_universe (source
-     Fetched@{Dev,Stable}; lib/binding Built following source — the
-     source-primary filter already yields exactly the current 2 variants
-     as scenarios); project-test pins enumerated set == variant list.
+  1. ~~*Declared spec, no behavior change*~~ — **DONE 2026-08-05.**
+     `z3_spec` ps_universe (`canary_project_z3.ml`): source
+     Fetched@{Stable,Dev}, lib Fetched@Stable | Built@Dev, python wheel
+     Fetched@Stable (constant row). Enumerates to THREE assignments →
+     exactly the current 2 variants as *scenarios*: source-primary prunes
+     (source@Stable × lib Built@Dev); the two all-Fetched assignments
+     collapse under the Fetched-ambient identity rule (`scenario_dir_of`)
+     into ONE stable world. Pinned by `z3.spec_enumerates_current_variants`
+     in NEW `canary_projects_test.ml` (projects-layer pins, appended to
+     `canary project-test` via `run_tests ~extra` — the pure suite sits
+     below `canary_projects` and can't see live specs). Two findings:
+     (a) the **OCaml binding is NOT in the enumerated universe** — its
+     provision follows the chain (Built@Dev dev / opam-fetched stable),
+     and the flat product can't express "follows the built chain": either
+     single option is wrong for one chain, both options mint the 2 mixed
+     mismatch worlds. It joins the universe with graph-structural version
+     propagation (§A below) — confirming A5 as that work's forcing
+     function; until then it rides inside the realization (phase 2).
+     (b) plan said "filter yields exactly 2" — actually 3 assignments,
+     2 scenario identities; the ambient dedup is load-bearing, and the
+     stable-first universe order keeps both surviving representatives
+     channel-coherent (baseline = all-Fetched chain, as sqlite).
   2. *dispatch/realize*: `scenario_case = Dev_chain | Stable_chain`;
      `realize` = the existing `mk_runner_spec ~source:…` (the whole raw
      spec becomes the realization — command churn ~zero); `z3_run :

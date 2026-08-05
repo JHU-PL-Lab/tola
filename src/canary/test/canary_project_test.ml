@@ -849,7 +849,12 @@ let all_tests : pure_test list =
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]
 
-let run_tests () : bool =
+(* [extra] — pure tests appended by upper layers that this suite cannot see
+   (layering: test/ is canary_lib; the live project specs are the
+   canary_projects sub-library ON TOP of it). `canary project-test` passes
+   the project-spec pin tests ([Canary_projects_test.tests]) through here. *)
+let run_tests ?(extra : pure_test list = []) () : bool =
+  let all_tests = all_tests @ extra in
   let results = List.map all_tests ~f:(fun t -> (t, run_pure_test t)) in
   List.iter results ~f:(fun (t, ok) ->
     Fmt.pr "[%s] %s@." (if ok then "PASS" else "FAIL") t.name;
