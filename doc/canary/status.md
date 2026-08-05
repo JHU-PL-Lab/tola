@@ -203,6 +203,30 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     reached from the flat form; App-less ⇒ `[node_of_assignment a]` (flat projects
     byte-identical). Pure — not wired into a run yet (sqlite PASS, tiny-full 12/24,
     paths unchanged; `project-test close_deps_deploy_mismatch`, 32/32).
+  - **Pre-graph sync — design decisions (2026-08-04, before the graph goes live):**
+    - **The graph is DECLARED + STATIC, not dynamic-discovered.** A project declares
+      its dependency graph (artifacts + edges + version/provider axes); the
+      enumerator walks it; *every* scenario is knowable pre-run — **including the
+      flavor-2 mismatch** (a *declared* runtime edge over a *declared* version axis).
+      Earlier "static declared-closure + dynamic discovered-closure" framing was
+      wrong — `ldd`-discovery is a *future convenience*, not the core. So `spec`
+      shows all scenarios pre-run once the graph is declared.
+    - **flavor-1 (mutation) is NOT a general algorithm** — it's tiny1's fault ORACLE.
+      **Done (`48afff2`):** tiny-full decoupled — its general `project_run` is
+      positive-only (good + built-lib, like sqlite, 3 scenarios); mutations live
+      ONLY in tiny1 (`canary tiny run`) + the tiny-factory machinery (dormant).
+    - **`ps_versions_of` is tiny-flat, wrong for general projects.** A flat
+      per-artifact version axis over-generates for a build graph (`source@dev ×
+      lib@stable` is nonsense unless a *declared* mismatch). General versioning is
+      **graph-structural**: enumerate the source node, propagate through build edges
+      (`source@v → lib@v → binding`), and the only cross-version pairing is the
+      declared mismatch edge. Keep `ps_versions_of` for tiny (all-vendored, versions
+      = labels); general projects get graph-structural versions. (This is why
+      sqlite's `ps_versions_of source = [dev; stable]` felt off — dev isn't
+      graph-wired.)
+    - **A5 prerequisite:** z3/llvm produce ZERO scenarios today (variant view, not
+      `project_run`). The graph work needs them on the `enumerate`/`project_run`
+      path first — that IS most of A5, not an afterthought.
   - **Stage-3 to-do:**
     - **A5 (meaningful, not urgent)** — wire z3/llvm onto `enumerate` + `close_deps`
       with `Independent`; retires `make_action_graph`'s hardcoded App cartesian.
