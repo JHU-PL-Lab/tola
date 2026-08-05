@@ -471,14 +471,21 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
             (match pr.Canary_project_run.pr_provenance a with
              | Some p ->
                  (* drift check: the provider's coarse provision must equal the
-                    baseline's — if not, the declared detail contradicts the axis. *)
+                    baseline's — if not, the declared detail contradicts the
+                    axis. Skipped for an artifact the enumeration doesn't
+                    place (baseline "—"): a display-only artifact (e.g. the
+                    source behind a self-contained Built lib) has no axis to
+                    contradict. *)
                  let drift =
-                   if
-                     Canary_store.equal_provision
-                       (Canary_store_config.provision_of_provider p)
-                       (E.provision_of baseline a)
-                   then ""
-                   else "   ⚠ provider≠baseline provision"
+                   match E.placement_of baseline a with
+                   | None -> ""
+                   | Some _ ->
+                       if
+                         Canary_store.equal_provision
+                           (Canary_store_config.provision_of_provider p)
+                           (E.provision_of baseline a)
+                       then ""
+                       else "   ⚠ provider≠baseline provision"
                  in
                  Fmt.pr "        provider: %s%s@."
                    (Canary_store_config.string_of_provider p) drift

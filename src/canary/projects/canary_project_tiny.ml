@@ -160,19 +160,13 @@ let tiny_full_run : project_run =
     pr_provenance = tiny_provenance }
 
 (* ── THIN subset config (ssot §4.2 config level = Subset) ──
-   A small, debuggable slice of the general enumeration: Stable channel only
-   (drop the built-lib Dev positive). Same runner_spec — only the
-   scenario set narrows. Selected by `action tiny-full --thin` /
-   `spec tiny-full --thin`. (Mutation faults are tiny1's, so there's nothing
-   mutation-specific to thin here anymore.) *)
+   A small, debuggable slice of the general enumeration: version
+   [Subset [Stable]] on the SAME declared spec (drop the built-lib Dev
+   positive) — a policy/config narrowing, not a hand-written filter. Same
+   runner_spec — only the scenario set narrows. Selected by
+   `action tiny-full --thin` / `spec tiny-full --thin`. *)
 let thin_assignments () : Canary_enumerate.assignment list =
-  let is_dev (pl : Canary_enumerate.placement) =
-    match pl.Canary_enumerate.version.channel with
-    | Canary_basic.Dev -> true
-    | Canary_basic.Stable -> false
-  in
-  Base.List.filter (general_assignments ()) ~f:(fun a ->
-      not (Base.List.exists a ~f:(fun (_, pl) -> is_dev pl)))
+  TS.tiny_full_thin_assignments spec
 
 (* Same project_run as [tiny_full_run] with the narrowed enumeration and a
    distinct name (so its run cache never clashes with the full run's). *)

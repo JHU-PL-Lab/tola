@@ -321,14 +321,18 @@ let sqlite_spec : Canary_enumerate.project_spec =
         if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
           Canary_enumerate.[ Fetched; Built ]
         else Canary_enumerate.[ Fetched ]);
-    (* The lib carries a VERSION axis (Stable=3.45.1, Dev=3.46.1 amalgamations)
-       so its Built provision enumerates two source versions; other artifacts are
-       single-version. Fetched@Stable/@Dev both map to the system apt lib, so they
-       dedup to one run — net worlds: fetched-system, built@3.45.1, built@3.46.1. *)
+    (* PER-PROVISION version axis: only the BUILT lib ranges over versions
+       (Stable=3.45.1, Dev=3.46.1 amalgamations — versions canary can build);
+       the Fetched lib is version-AMBIENT (the system PM picks) so it declares
+       one representative — no spurious Fetched@Dev that would only dedup away
+       downstream. Declared worlds == run worlds: fetched-system,
+       built@3.45.1, built@3.46.1. *)
     ps_versions_of =
-      (fun id ->
-        if Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib then
-          Canary_basic.[ Stable; Dev ]
+      (fun id pv ->
+        if
+          Canary_enumerate.equal_artifact_id id Canary_enumerate.a_lib
+          && Canary_enumerate.equal_provision pv Canary_enumerate.Built
+        then Canary_basic.[ Stable; Dev ]
         else [ Canary_basic.Stable ]) }
 
 let sqlite_run : Canary_project_run.project_run =

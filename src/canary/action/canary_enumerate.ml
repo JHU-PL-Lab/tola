@@ -241,16 +241,24 @@ let assignment_ok (a : assignment) : bool =
    [provisions_of] and [versions_of] are PER-ARTIFACT (A1 + the version axis):
    each artifact draws from its own universe — real projects are heterogeneous
    (lib={Fetched,Built} at {Stable,Dev}; a binding only Fetched@Stable). A single
-   global list for either was a tiny-shaped simplification. *)
+   global list for either was a tiny-shaped simplification.
+
+   [versions_of] is additionally PER-PROVISION: an artifact's version universe
+   depends on HOW it is provided — a [Fetched] lib is version-ambient (the PM
+   picks; declare one representative), a [Built] lib ranges over the versions
+   canary can build, a [Vendored] one over the cached variants. Without this the
+   flat provision × version product over-generates (e.g. a Vendored@Dev world no
+   cached artifact backs, or a Fetched@Dev that only dedups away downstream). *)
 let rec assignments_of (artifacts : artifact_id list)
     (provisions_of : artifact_id -> provision list)
-    (versions_of : artifact_id -> Canary_basic.channel list) : assignment list =
+    (versions_of : artifact_id -> provision -> Canary_basic.channel list) :
+    assignment list =
   match artifacts with
   | [] -> [ [] ]
   | id :: rest ->
       let tails = assignments_of rest provisions_of versions_of in
       List.concat_map (provisions_of id) ~f:(fun pv ->
-          List.concat_map (versions_of id) ~f:(fun ver ->
+          List.concat_map (versions_of id pv) ~f:(fun ver ->
               List.map tails ~f:(fun t ->
                   (id, { provision = pv; version = good ver }) :: t)))
 
@@ -262,7 +270,7 @@ let rec assignments_of (artifacts : artifact_id list)
     and [enumerate] (stage 2) drives it from a declared [project_spec]. *)
 let enumerate_points ~(artifacts : artifact_id list)
     ~(provisions_of : artifact_id -> provision list)
-    ~(versions_of : artifact_id -> Canary_basic.channel list)
+    ~(versions_of : artifact_id -> provision -> Canary_basic.channel list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
   assignments_of artifacts provisions_of versions_of
   |> List.filter ~f:assignment_ok
@@ -297,7 +305,7 @@ type 'm config = {
     (the positive point is always present), so it resolves to no placements. *)
 let run_config ~(artifacts : artifact_id list)
     ~(all_provisions_of : artifact_id -> provision list)
-    ~(all_versions_of : artifact_id -> Canary_basic.channel list)
+    ~(all_versions_of : artifact_id -> provision -> Canary_basic.channel list)
     ~(all_mutations : (artifact_id * 'm) list) (cfg : 'm config) : 'm point list =
   let resolve lvl all =
     match lvl with
@@ -305,9 +313,10 @@ let run_config ~(artifacts : artifact_id list)
     | Subset vs -> vs
     | Full -> all
   in
-  (* provision + version levels apply PER-ARTIFACT to each artifact's own universe *)
+  (* provision + version levels apply PER-ARTIFACT (version additionally
+     per-provision) to each artifact's own universe *)
   let provisions_of id = resolve cfg.provision (all_provisions_of id) in
-  let versions_of id = resolve cfg.version (all_versions_of id) in
+  let versions_of id pv = resolve cfg.version (all_versions_of id pv) in
   let mutations =
     match cfg.mutation with
     | Free -> []  (* the None baseline — positive point only *)
@@ -323,7 +332,8 @@ let run_config ~(artifacts : artifact_id list)
 let tiny_slice ~(artifacts : artifact_id list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
   run_config ~artifacts ~all_provisions_of:(fun _ -> [ Built ])
-    ~all_versions_of:(fun _ -> Canary_basic.single_channel) ~all_mutations:mutations
+    ~all_versions_of:(fun _ _ -> Canary_basic.single_channel)
+    ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full }
 
 (** A general project's config: provision [Full] (walk the provision axis
@@ -338,7 +348,7 @@ let general_slice ~(artifacts : artifact_id list)
     ~(provisions : provision list)
     ~(versions : Canary_basic.channel list) : 'm point list =
   run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
-    ~all_versions_of:(fun _ -> versions) ~all_mutations:[]
+    ~all_versions_of:(fun _ _ -> versions) ~all_mutations:[]
     { provision = Full; version = Full; mutation = Free }
 
 (** A2 — fold a [point] into a concrete [assignment], the form the run
@@ -366,7 +376,10 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
 type project_spec = {
   ps_artifacts : artifact_id list;
   ps_provisions_of : artifact_id -> provision list;
-  ps_versions_of : artifact_id -> Canary_basic.channel list;
+  ps_versions_of : artifact_id -> provision -> Canary_basic.channel list;
+      (** per (artifact × provision): how it's provided decides which versions
+          exist for it (Fetched = ambient representative; Built = buildable
+          versions; Vendored = cached variants). *)
 }
 
 (** STAGE 2 input — the exploration policy: HOW MUCH of the declared space to

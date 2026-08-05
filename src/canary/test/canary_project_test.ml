@@ -281,20 +281,20 @@ let config_level_test : pure_test =
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
-          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
+          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Free; version = EN.Free; mutation = EN.Full }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
-          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
+          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
-          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:muts
+          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
             mutation = EN.Subset [ List.hd_exn muts ] }
       in
@@ -325,7 +325,7 @@ let version_axis_test : pure_test =
       let mm_artifacts = EN.[ a_lib; a_binding ocaml Mech.Cstubs ] in
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
-          ~all_versions_of:(fun _ -> B.two_channels) ~all_mutations:[]
+          ~all_versions_of:(fun _ _ -> B.two_channels) ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let has_mismatch =
@@ -340,7 +340,7 @@ let version_axis_test : pure_test =
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
-          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ -> B.two_channels)
+          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> B.two_channels)
           ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
@@ -369,7 +369,7 @@ let per_artifact_provisions_test : pure_test =
       in
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
-          ~all_versions_of:(fun _ -> B.single_channel) ~all_mutations:[]
+          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:[]
           { provision = EN.Full; version = EN.Full; mutation = EN.Free }
       in
       let always target id =
@@ -394,7 +394,7 @@ let per_artifact_versions_test : pure_test =
       let module EN = Canary_enumerate in
       let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
       let artifacts = EN.[ a_lib; a_ocaml ] in
-      let versions_of id =
+      let versions_of id _pv =
         if EN.equal_artifact_id id EN.a_lib then B.two_channels
         else B.single_channel                        (* binding: Dev only *)
       in
@@ -466,7 +466,7 @@ let project_spec_test : pure_test =
             (fun id ->
               if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
               else EN.[ Fetched ]);
-          ps_versions_of = (fun _ -> B.single_channel) }
+          ps_versions_of = (fun _ _ -> B.single_channel) }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -477,6 +477,99 @@ let project_spec_test : pure_test =
       && List.exists asgs ~f:(fun a ->
              EN.equal_provision (lib_is a) EN.Built
              && EN.equal_provision (EN.provision_of a a_oc) EN.Fetched)) }
+
+(* PER-PROVISION versions — the version universe depends on HOW the artifact
+   is provided (the faithful-combination refinement): a Fetched lib is
+   version-ambient (one representative), only the Built lib ranges over
+   channels. The sqlite shape: exactly 3 worlds (F@S, B@S, B@D) — no
+   Fetched@Dev that would only dedup away downstream, and no Dev binding. *)
+let per_provision_versions_test : pure_test =
+  { name = "enumerate.per_provision_versions";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let spec : EN.project_spec =
+        { ps_artifacts = [ EN.a_lib; a_oc ];
+          ps_provisions_of =
+            (fun id ->
+              if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
+              else EN.[ Fetched ]);
+          ps_versions_of =
+            (fun id pv ->
+              if
+                EN.equal_artifact_id id EN.a_lib
+                && EN.equal_provision pv EN.Built
+              then B.two_channels
+              else B.single_channel) }
+      in
+      let asgs =
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
+      in
+      let lib_pl a = Option.value_exn (EN.placement_of a EN.a_lib) in
+      let has prov chan =
+        List.exists asgs ~f:(fun a ->
+            let pl = lib_pl a in
+            EN.equal_provision pl.EN.provision prov
+            && EN.equal_version pl.EN.version (EN.good chan))
+      in
+      List.length asgs = 3
+      && has EN.Fetched B.Dev              (* the ambient representative *)
+      && has EN.Built B.Dev && has EN.Built B.Stable
+      (* Fetched never ranges: no second Fetched world *)
+      && List.count asgs ~f:(fun a ->
+             EN.equal_provision (lib_pl a).EN.provision EN.Fetched) = 1) }
+
+(* THIN as a CONFIG level, not a filter: version [Subset [Stable]] on the tiny
+   shape (lib {Vendored,Built}, Vendored Stable-only, Built {Stable,Dev})
+   narrows 3 worlds → 2; the Full policy keeps all 3 with no Vendored@Dev. *)
+let thin_config_level_test : pure_test =
+  { name = "enumerate.thin_is_version_subset";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let spec : EN.project_spec =
+        { ps_artifacts = [ EN.a_lib; a_oc ];
+          ps_provisions_of =
+            (fun id ->
+              if EN.equal_artifact_id id EN.a_lib then
+                EN.[ Vendored; Built ]
+              else [ EN.Vendored ]);
+          ps_versions_of =
+            (fun id pv ->
+              if
+                EN.equal_artifact_id id EN.a_lib
+                && EN.equal_provision pv EN.Built
+              then [ B.Stable; B.Dev ]
+              else [ B.Stable ]) }
+      in
+      let full =
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
+      in
+      let thin =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config =
+                EN.{ provision = Full;
+                     version = Subset [ B.Stable ];
+                     mutation = Free };
+              mutations = [] }
+          spec
+      in
+      let no_dev asgs =
+        List.for_all asgs ~f:(fun a ->
+            List.for_all a ~f:(fun (_, (pl : EN.placement)) ->
+                match pl.EN.version.EN.channel with
+                | B.Stable -> true
+                | B.Dev ->
+                    EN.equal_provision pl.EN.provision EN.Built))
+      in
+      List.length full = 3 && no_dev full   (* Dev only on the Built lib *)
+      && List.length thin = 2
+      && List.for_all thin ~f:(fun a ->
+             List.for_all a ~f:(fun (_, (pl : EN.placement)) ->
+                 match pl.EN.version.EN.channel with
+                 | B.Stable -> true
+                 | B.Dev -> false))) }
 
 (* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
    ACTION catalogue agree with the graph's built_from — Built lib←Source, Built
@@ -724,6 +817,7 @@ let all_tests : pure_test list =
       mechanism_test; enumerate_test; config_level_test; version_axis_test;
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
+      per_provision_versions_test; thin_config_level_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]
 
