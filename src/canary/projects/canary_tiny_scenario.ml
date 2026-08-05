@@ -1588,6 +1588,39 @@ let tiny_full_assignments (spec : tiny_full_spec) :
   @ [ all_good_built_lib_at Canary_basic.Stable;
       all_good_built_lib_at Canary_basic.Dev ]
 
+(* tiny-full's GENERAL scenarios (NO mutations): just the good baseline + the
+   built-lib provision/version variants — the general axes, like sqlite. The
+   mutation faults (flavor-1, the fault ORACLE) are tiny1's job (`canary tiny
+   run`), NOT a general project_run mechanism. So tiny-full's project_run uses
+   THIS; [tiny_full_assignments]/[tiny_full_combinations] stay here as
+   tiny-factory machinery (for tiny1 / a future tiny-full post-process), not
+   coupled into tiny-full's general run. *)
+let tiny_full_general_assignments (spec : tiny_full_spec) :
+    Canary_enumerate.assignment list =
+  let tiny_enum_spec : Canary_enumerate.project_spec =
+    { ps_artifacts = spec.tf_artifacts;
+      ps_provisions_of = (fun _ -> [ Canary_enumerate.Vendored ]);
+      ps_versions_of = (fun _ -> [ Canary_basic.Stable ]) }
+  in
+  let good =
+    Canary_enumerate.enumerate ~tag:(fun () -> "")
+      ~policy:
+        { config =
+            Canary_enumerate.
+              { provision = Free; version = Free; mutation = Free };
+          mutations = [] }
+      tiny_enum_spec
+  in
+  let all_good_built_lib_at channel =
+    List.map spec.tf_artifacts ~f:(fun a ->
+        if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then
+          (a, tiny_full_placement ~provision:Canary_enumerate.Built ~channel ())
+        else (a, tiny_full_placement ()))
+  in
+  good
+  @ [ all_good_built_lib_at Canary_basic.Stable;
+      all_good_built_lib_at Canary_basic.Dev ]
+
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
    bad-tag per bad artifact. These are the scenarios beyond tiny1 — a single

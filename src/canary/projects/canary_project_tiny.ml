@@ -37,15 +37,13 @@ let artifacts : Canary_enumerate.artifact_id list = TS.tiny_full_artifacts
     (tags) per artifact. *)
 let spec : TS.tiny_full_spec = TS.tiny_full_spec
 
-(** The good+bad scenario space as assignments (1 all-good + one per
-    (artifact, bad-tag)). *)
-let assignments () : Canary_enumerate.assignment list =
-  TS.tiny_full_assignments spec
-
-(** The multi-bad cached-artifact sets — the scenarios *beyond* tiny1 (one
-    project holds what tiny1 splits). *)
-let combinations () : Canary_enumerate.assignment list =
-  TS.tiny_full_combinations spec
+(** tiny-full's GENERAL scenario space (NO mutations): good baseline +
+    built-lib variants — the general axes, like sqlite. The mutation faults
+    (flavor-1) are tiny1's oracle (`canary tiny run`), decoupled from tiny-full;
+    [TS.tiny_full_assignments]/[TS.tiny_full_combinations] remain in the
+    tiny-factory for tiny1 / a future post-process. *)
+let general_assignments () : Canary_enumerate.assignment list =
+  TS.tiny_full_general_assignments spec
 
 (** The expectation canary uses: derived by inspection alone (no oracle) —
     canary decides per step whether to expect a failure. *)
@@ -103,12 +101,10 @@ let tiny_provenance (id : Canary_enumerate.artifact_id) :
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
     pr_artifacts = artifacts;
-    (* the scenario space the generic runner sweeps: good + built-lib +
-       single-bad ([assignments]) AND the multi-bad [combinations] (the
-       scenarios beyond tiny1). Combos flow through the same cached-artifact
-       overlay path ([overlays_of] → [materialize_assembled]); canary runs
-       fail-fast and discovers the collapse. *)
-    pr_enumerate = (fun () -> assignments () @ combinations ());
+    (* the general scenario space: good baseline + built-lib variants (no
+       mutations — those are tiny1's oracle). Like sqlite, a positive-only
+       general project_run. *)
+    pr_enumerate = (fun () -> general_assignments ());
     pr_materialize =
       (fun a ->
         (* dispatch by provision (ssot §4.2.5): the lib may be [Built] (canary
@@ -158,29 +154,19 @@ let tiny_full_run : project_run =
     pr_provenance = tiny_provenance }
 
 (* ── THIN subset config (ssot §4.2 config level = Subset) ──
-   A small, debuggable slice of the SAME enumeration: Stable channel only (drop
-   the built-lib Dev positive), single-bad (no combinations), and the
-   python:ctypes scenarios dropped (ctypes is intentionally not canary-driven,
-   so those are noise that alias cext). Same materialize / runner_spec — only
-   the scenario set narrows. Selected by `action tiny-full --thin` /
-   `spec tiny-full --thin`. *)
+   A small, debuggable slice of the general enumeration: Stable channel only
+   (drop the built-lib Dev positive). Same materialize / runner_spec — only the
+   scenario set narrows. Selected by `action tiny-full --thin` /
+   `spec tiny-full --thin`. (Mutation faults are tiny1's, so there's nothing
+   mutation-specific to thin here anymore.) *)
 let thin_assignments () : Canary_enumerate.assignment list =
   let is_dev (pl : Canary_enumerate.placement) =
     match pl.Canary_enumerate.version.channel with
     | Canary_basic.Dev -> true
     | Canary_basic.Stable -> false
   in
-  let bad_on_ctypes (a : Canary_enumerate.assignment) =
-    Base.List.exists a ~f:(fun (id, pl) ->
-        (match pl.Canary_enumerate.version.quality with
-         | Canary_enumerate.Bad _ -> true
-         | Canary_enumerate.Good -> false)
-        && Base.String.is_substring
-             (Canary_enumerate.string_of_id id) ~substring:"ctypes")
-  in
-  Base.List.filter (assignments ()) ~f:(fun a ->
-      (not (Base.List.exists a ~f:(fun (_, pl) -> is_dev pl)))
-      && not (bad_on_ctypes a))
+  Base.List.filter (general_assignments ()) ~f:(fun a ->
+      not (Base.List.exists a ~f:(fun (_, pl) -> is_dev pl)))
 
 (* Same project_run as [tiny_full_run] with the narrowed enumeration and a
    distinct name (so its run cache never clashes with the full run's). *)
