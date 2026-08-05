@@ -176,3 +176,60 @@ function — they're bugs to fix in it, benefiting both consumers.
   providers (not the universal `store_actions`). Then `make_action_graph` IS the
   forward engine: universal for `paths`, project-scoped + declared-mismatch for the
   run, one function.
+
+## The path-table (pattern) approach — a post-graph scenario enumeration (warm-up)
+
+**Three scenario representations exist; the path table is the post-graph one.**
+
+1. **`good_scenarios` (Sc.1..Sc.6)** — `action/canary_scenario.ml`. The EARLIEST
+   model (2026-03): a hand-listed catalogue of good scenarios (build native lib,
+   build binding, build/run app). Alive today only as the **abstract-stage
+   catalogue** behind `canary scenarios` (coverage matrix).
+2. **The path table (`job_path` / `pattern_row`)** — `action/canary_path_table.ml`
+   (2026-06-01, Phase 5). Takes `make_action_graph`'s constructed nodes and, for
+   each node, flattens its `built_from`/`runtime_dep` chain into a **job_path**
+   (action-path string + depth + origin + a mismatch annotation); `pattern_row`
+   then **groups structurally-identical paths and counts version combos**. This is
+   the `canary paths` / `paths-md` table (17 patterns) + the diagram node labels.
+   It is **post-graph** (construct → flatten → group) and, as its own docstring
+   says, *"independent of any project spec — the universal enumeration of what
+   could be built."*
+3. **`enumerate` (assignments)** — `action/canary_enumerate.ml` (current). The
+   per-artifact **axis product** (provision × version × mutation), PRE-graph. This
+   is what drives runs today.
+
+**Status:** the path table is **display-only** — consumed only by `canary paths`
+and the diagram, never by a run. It was an early *structural* scenario view;
+`enumerate` (axis product) superseded it for the run. But your observation is the
+key one: the path table is literally *"a post-graph scenario enumeration with
+fixed patterns"* — and each pattern IS a scenario shape (`fetch_lib`,
+`fetch_source → build_lib → build_binding`, `bind(build) + rt(build) mismatch`,
+…). The **mismatch is a first-class pattern there** (patterns 10/12/13/15/16,
+"version mismatch possible") — which the flat `enumerate` can't express.
+
+### Suitability for sqlite / tiny-full
+
+The path table is **universal** (every pattern). To be a *project's* scenarios it
+needs one thing — **project-filtering** by the project's real capabilities — and
+then the un-grouped `job_path`s (one per node) ARE the runnable scenarios.
+
+- **sqlite — suitable now** (after the source-primary fix). Its capabilities:
+  `fetch_source`(git) · `build_lib`(amalgamation) · `fetch_lib`(system PM) ·
+  `fetch_binding`(opam OCaml / stdlib Python), and **no `build_binding`** (the
+  binding is opam). Filtering the 17 patterns to those leaves ≈6: `fetch_lib`,
+  `fetch_source→build_lib`, `fetch_binding`, and the app patterns with a **fetched
+  (opam) binding × built/fetched runtime lib** — the last of which IS the deploy
+  mismatch (opam binding built against system libsqlite3, run against
+  `lib_built@dev`). A clean handful, not 82.
+- **tiny-full — needs the `Vendored` node first.** Its artifacts are Vendored
+  (source/lib/bindings) plus a `Built` lib (`cc`), and it **fetches nothing**. The
+  path table today only models Build/Fetch, so tiny-full's vendored nodes are
+  absent — it's suitable once `make_action_graph` gains `Vendored` provisions
+  (improvement #2).
+
+**So the path-table approach and the forward-construction engine are the SAME
+thing** — `make_action_graph` builds the nodes; the path table flattens+groups
+them. Fixing `make_action_graph` (source-primary ✓, + `Build_app` declared
+mismatch, + `Vendored`, + project-scoped `~actions`) makes that one construction
+serve *both* the universal `paths` table AND the per-project run — and the flat
+`enumerate` product becomes the pre-graph degenerate that can retire.
