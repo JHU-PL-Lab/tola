@@ -221,6 +221,53 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
         in
         let finding = Canary_detect.simple_finding ~tag ~cmd_ok ~output_present in
         log ~event:"detect" ~detail:(Some (Canary_detect.string_of_finding finding));
+        (* Resolve a declared relative input path (e.g.
+           "pack_binding_ocaml/inspect_stub.json") to its
+           project-dir-absolute form, applying v3 layout's step_dir mapping
+           and variant-key suffix. The comparator runner picks the first
+           existing path per input. Shared by both compat branches below. *)
+        let resolve_input rel =
+          match String.lsplit2 rel ~on:'/' with
+          | Some (step_tag, file) ->
+              let step_dir = Canary_basic.step_dir_of_tag step_tag in
+              let vk_file = Canary_basic.variant_file
+                  ~variant_key:step.variant_id file in
+              step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
+          | None ->
+              let vk_rel = Canary_basic.variant_file
+                  ~variant_key:step.variant_id rel in
+              step.project_dir ^ "/" ^ vk_rel
+        in
+        (* A7 phase 1 (was plan.md Step 6c): per-contract prediction — one
+           [compat_predicted] event per FIRED contract row ("c1 cmp_symbol:
+           3 substring(s)") + one [contract_skipped] per disabled/stubbed
+           entry, instead of a single collapsed count. Returns the flat
+           substring union the expectation check greps for (identical to
+           the old [predicted_contains_any_v2] result). *)
+        let derived_predictions inputs =
+          let fired =
+            Canary_compat_run.predicted_by_contract_v2
+              ~disabled:step.disabled_contracts ~resolve:resolve_input inputs
+          in
+          List.iter fired
+            ~f:(fun ((c : Canary_compat.contract_check), subs) ->
+              log ~event:"compat_predicted"
+                ~detail:(Some (Printf.sprintf "%s %s: %d substring(s)"
+                                 (Canary_compat.string_of_contract_id c.id)
+                                 c.name (List.length subs))));
+          if List.is_empty fired then
+            log ~event:"compat_predicted" ~detail:(Some "no contract fired");
+          List.iter
+            (Canary_compat_run.skipped_checks
+               ~disabled:step.disabled_contracts ())
+            ~f:(fun ((c : Canary_compat.contract_check), reason) ->
+              log ~event:"contract_skipped"
+                ~detail:(Some (Printf.sprintf "%s %s: %s"
+                                 (Canary_compat.string_of_contract_id c.id)
+                                 c.name reason)));
+          List.concat_map fired ~f:snd
+          |> List.dedup_and_sort ~compare:String.compare
+        in
         let expectation_ok = match step.expectation with
           | Expect_success ->
               let ok = cmd_ok && step.check_post ~output_dir:out ~variant_key:step.variant_id in
@@ -253,38 +300,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                   ~detail:(Some "expected failure (derived) but command succeeded");
                 false)
               else
-                (* Resolve each declared relative path (e.g.
-                   "pack_binding_ocaml/inspect_stub.json") to its
-                   project-dir-absolute form, applying v3 layout's
-                   step_dir mapping and variant-key suffix. The
-                   comparator runner picks the first existing path
-                   per input. *)
-                let resolve rel =
-                  match String.lsplit2 rel ~on:'/' with
-                  | Some (step_tag, file) ->
-                      let step_dir = Canary_basic.step_dir_of_tag step_tag in
-                      let vk_file = Canary_basic.variant_file
-                          ~variant_key:step.variant_id file in
-                      step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
-                  | None ->
-                      let vk_rel = Canary_basic.variant_file
-                          ~variant_key:step.variant_id rel in
-                      step.project_dir ^ "/" ^ vk_rel
-                in
-                let derived =
-                  Canary_compat_run.predicted_contains_any_v2
-                    ~disabled:step.disabled_contracts ~resolve inputs
-                in
-                (* TODO (plan.md Step 6c): replace this single
-                   collapsed line with one event per contract row
-                   ("c1 cmp_symbol (3 symbols)", …), plus a
-                   contract_skipped event for each disabled / stubbed
-                   / blocked entry. Needs a per-contract variant of
-                   predicted_contains_any_v2 that returns
-                   (contract_id * string list) list. *)
-                log ~event:"compat_predicted"
-                  ~detail:(Some (Printf.sprintf "%d substring(s)"
-                                   (List.length derived)));
+                let derived = derived_predictions inputs in
                 let found =
                   if List.is_empty derived then
                     (* No prediction available — fall back to "any failure
@@ -313,22 +329,7 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
                  expects the failure). If non-empty, the step must fail with
                  that signature. Lets tiny-full run without being told which
                  contract breaks — canary discovers it. *)
-              let resolve rel =
-                match String.lsplit2 rel ~on:'/' with
-                | Some (step_tag, file) ->
-                    let step_dir = Canary_basic.step_dir_of_tag step_tag in
-                    let vk_file = Canary_basic.variant_file
-                        ~variant_key:step.variant_id file in
-                    step.project_dir ^ "/" ^ step_dir ^ "/" ^ vk_file
-                | None ->
-                    let vk_rel = Canary_basic.variant_file
-                        ~variant_key:step.variant_id rel in
-                    step.project_dir ^ "/" ^ vk_rel
-              in
-              let derived =
-                Canary_compat_run.predicted_contains_any_v2
-                  ~disabled:step.disabled_contracts ~resolve inputs
-              in
+              let derived = derived_predictions inputs in
               if List.is_empty derived then begin
                 (* inspection predicts no failure ⇒ expect success *)
                 log ~event:(if cmd_ok then "done" else "failed")

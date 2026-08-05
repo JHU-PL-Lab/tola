@@ -672,6 +672,18 @@ type contract_status =
   | Blocked of contract_id list
   | Stubbed
 
+(** Human label for a wiring status (the runner's [contract_skipped]
+    events name WHY a registry-disabled contract didn't fire). *)
+let string_of_contract_status = function
+  | Wired -> "wired"
+  | Inspect_only -> "inspect-only"
+  | Comparator_only -> "comparator-only"
+  | Blocked [] -> "blocked"
+  | Blocked deps ->
+      "blocked on "
+      ^ String.concat ~sep:"," (List.map deps ~f:string_of_contract_id)
+  | Stubbed -> "stubbed"
+
 (** One entry in the contract registry. [predict] consumes the same
     [inspect_input list + ~resolve] that {!Canary_compat_run}'s top-
     level dispatcher does, and returns the substrings this contract

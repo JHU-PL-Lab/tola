@@ -503,12 +503,42 @@ let registered_checks : contract_check list = [
     c1, c2, c5 fire as before; c4 returns [].
 
     Phase 13 (2026-06-02): per-call [?disabled] override added. *)
+(** Per-contract form (A7 phase 1): the registry rows that FIRED — each
+    enabled, not-disabled contract whose [predict] returned substrings —
+    paired with its (deduped) substrings. {!predicted_contains_any_v2} is
+    its flatten; keeping the grouping lets the runner log and report
+    per-contract firings instead of one collapsed count (the status-§2
+    "per-step contract outcome" seed). *)
+let predicted_by_contract_v2 ?(disabled = []) ~resolve
+    (inputs : inspect_input list) : (contract_check * string list) list =
+  List.filter_map registered_checks ~f:(fun c ->
+    if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal) then
+      match c.predict ~resolve inputs with
+      | [] -> None
+      | subs -> Some (c, List.dedup_and_sort ~compare:String.compare subs)
+    else None)
+
+(** The registry rows a [predicted_by_contract_v2] call does NOT consult,
+    each with its human reason — the per-call [?disabled] override (a
+    project's [disabled_contracts] / --disable-contract) vs the registry's
+    own [enabled] flag (status names why). For the runner's
+    [contract_skipped] events. *)
+let skipped_checks ?(disabled = []) () : (contract_check * string) list =
+  List.filter_map registered_checks ~f:(fun c ->
+    if List.mem disabled c.id ~equal:Poly.equal then
+      Some (c, "disabled per call")
+    else if not c.enabled then
+      Some
+        ( c,
+          "disabled in registry ("
+          ^ Canary_compat.string_of_contract_status c.status
+          ^ ")" )
+    else None)
+
 let predicted_contains_any_v2 ?(disabled = []) ~resolve
     (inputs : inspect_input list) : string list =
-  List.concat_map registered_checks ~f:(fun c ->
-    if c.enabled && not (List.mem disabled c.id ~equal:Poly.equal)
-    then c.predict ~resolve inputs
-    else [])
+  predicted_by_contract_v2 ~disabled ~resolve inputs
+  |> List.concat_map ~f:snd
   |> List.dedup_and_sort ~compare:String.compare
 
 (* Best-effort: ".ok" marker file alongside cmd success implies probe step

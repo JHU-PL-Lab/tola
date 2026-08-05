@@ -207,10 +207,68 @@ edges resolved via `dep_mode`). Open:
   lib axis); once `dep_mode` is declared per edge, the runner can
   share/dedup such steps across scenarios (the step-level analogue of the
   Fetched whole-scenario dedup).
-- **A7 — unify the 3-way expectation model** (tiny-full derived-agnostic /
-  z3-llvm contract-bound / ssl + sqlite's inline `log_grep` hand-written) →
-  derived, with declared contracts canary can *report* as firings (§1c #1;
-  couples with §2 "per-step contract outcome").
+- **A7 — unify the 3-way expectation model** (§1c #1; couples with §2
+  "per-step contract outcome").
+  **Inventory (2026-08-05, exact).** The three styles are:
+  (1) ORACLE contract-bound — `lower_expectation ~bindings ~violates
+  ~has_manifest` (the project TELLS which contract breaks per scenario):
+  z3 (violates=[c2] python, has_manifest=true both chains), llvm
+  (has_manifest = stable-chain-only), tiny1's factory;
+  (2) DERIVED-agnostic — `lower_expectation_agnostic ~bindings` →
+  `Expect_compat_derived` (runner computes the prediction; EMPTY ⇒ expect
+  success — self-healing; non-empty ⇒ must fail with that signature):
+  tiny-full only;
+  (3) HAND-WRITTEN — ssl's four per-variant `Expect_failure
+  { contains_any = ["native_library_version"] }` closures; PLUS sqlite's
+  `log_grep` — which analysis reclassifies: it is a world-identity
+  ASSERTION (the probe must OBSERVE the enumerated world's version), not
+  a failure expectation, and stays out of the unification.
+  **End state: derived for every REAL project; the oracle survives with
+  exactly ONE consumer — tiny1, where being told the answer IS the point
+  (ground truth). Contracts become REPORTABLE: per-contract predictions
+  logged, the confirming contract persisted per step, surfaced in
+  status/spec.**
+  **Execution plan (2026-08-05). Phases, each shippable:**
+  1. ~~*Per-contract prediction API, no behavior change*~~ — **DONE
+     2026-08-05.** `Canary_compat_run.predicted_by_contract_v2 : … →
+     (contract_check × substrings) list` + `skipped_checks` (per-call vs
+     registry-disabled, reason from `string_of_contract_status`);
+     `predicted_contains_any_v2` is now its flatten (identical result —
+     pinned by `compat.by_contract_flatten_equals_v2`). The runner's two
+     compat branches share one `derived_predictions` helper (duplicated
+     `resolve` folded too) logging ONE `compat_predicted` per fired
+     contract + `contract_skipped` per disabled entry — the plan.md Step
+     6c TODO is discharged. Verified live (z3 stable chain): the wheel
+     xfail now logs "c2 cmp_api_completeness: 1 substring(s)" + c3/c7/c8
+     skip reasons. 3 new pure pins (attribution / flatten / disable+skip);
+     104/104 artifact-tests.
+  2. *Typed contract outcome in the verdict*: record WHICH contract(s)
+     confirmed an xfail (verdict-marker content "xfail c2 …" —
+     prefix-compatible with the existing parser); surface in
+     `action`/`status`/`spec` xfail lines (`xfail probe_binding_python
+     [c2]`). The §2 per-step typed-observation seed.
+  3. *z3 + llvm oracle → derived*: swap both realizations to
+     `lower_expectation_agnostic` (the violates/has_manifest knobs die at
+     those call sites). The semantics change is the honest one: dev
+     chains expect success because the INSPECTION predicts nothing (not
+     because a knob said so), and if upstream ever ships the missing API
+     the expectation self-heals. RISK to verify live: input-path
+     resolution per chain — the first-existing rule must pick the
+     pack-side inspect in the dev chain even though fetch-side inspects
+     coexist in the same scenario dir (llvm runs BOTH fetch_binding and
+     pack_binding in the dev chain).
+  4. *ssl hand-written → derived From_artifact*: add an mli inspect to
+     ssl's fetch_binding + a binding watchlist (`native_library_version`),
+     declare `ssl_contract_bindings` (c2 at probe_binding OCaml), replace
+     the four per-variant expect closures with the agnostic lowering —
+     0.6.0's mli lacks the name ⇒ derived must-fail; 0.7.0 has it ⇒
+     derived success. Expectation unification only — ssl STAYS on
+     `run_project_multi` (runner migration is A5 residue, separate).
+  5. *sqlite `log_grep` reclassified + documented*: name the
+     world-identity-assertion concept (the assert side of §2's typed
+     observations; a positive-scenario invariant, not an expected
+     failure); mechanism unchanged; ssot note. Optional typed
+     `assert_log` field later.
 - **A9 step 2 — dispatch as DECLARATION** (the action-variant table).
   Step 1 (the dispatch/realization split; pure `scenario_case` data +
   general coordinate reads) shipped 2026-08-05. Remaining: replace the

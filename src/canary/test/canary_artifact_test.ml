@@ -105,6 +105,48 @@ let compat_pure_tests =
     { name = "compat.empty_inputs";
       check = fun () ->
         List.is_empty (Canary_compat_run.predicted_contains_any_v2 ~resolve:Fn.id []) };
+    (* A7 phase 1 — the per-contract form. Both fixture inputs are L3
+       completeness, so exactly ONE registry row fires (c2) and it carries
+       the union of both inputs' expansions. *)
+    { name = "compat.by_contract_attribution";
+      check = fun () ->
+        match
+          Canary_compat_run.predicted_by_contract_v2 ~resolve:Fn.id
+            [ Canary_compat.Ocaml_mli [ mli_path ];
+              Canary_compat.Python_attrs [ py_path ] ]
+        with
+        | [ (c, subs) ] ->
+            Poly.equal c.Canary_compat.id Canary_compat.C2
+            && mem subs "UncondBr" && mem subs "BitVec"
+        | _ -> false };
+    (* the flat form is exactly the flatten of the per-contract form *)
+    { name = "compat.by_contract_flatten_equals_v2";
+      check = fun () ->
+        let flat =
+          Canary_compat_run.predicted_by_contract_v2 ~resolve:Fn.id
+            [ Canary_compat.Ocaml_mli [ mli_path ];
+              Canary_compat.Python_attrs [ py_path ] ]
+          |> List.concat_map ~f:snd
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        List.equal String.equal flat mixed };
+    (* per-call disable drops the row AND shows up as a skip with the
+       per-call reason (registry-disabled rows carry their status) *)
+    { name = "compat.by_contract_disabled_skips";
+      check = fun () ->
+        List.is_empty
+          (Canary_compat_run.predicted_by_contract_v2
+             ~disabled:[ Canary_compat.C2 ] ~resolve:Fn.id
+             [ Canary_compat.Ocaml_mli [ mli_path ] ])
+        && List.exists
+             (Canary_compat_run.skipped_checks ~disabled:[ Canary_compat.C2 ] ())
+             ~f:(fun (c, reason) ->
+               Poly.equal c.Canary_compat.id Canary_compat.C2
+               && String.equal reason "disabled per call")
+        && List.exists (Canary_compat_run.skipped_checks ())
+             ~f:(fun (c, reason) ->
+               Poly.equal c.Canary_compat.id Canary_compat.C3
+               && String.is_substring reason ~substring:"registry") };
   ]
 
 (* Step 3b — Unit-test layer for primitives.
