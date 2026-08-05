@@ -86,7 +86,13 @@ edges resolved via `dep_mode`). Open:
   placement doesn't model; (ii) the **`dep_mode` value source** — who
   declares "this probe runs over lib@Y while built against lib@X"
   (`close_deps Independent`'s owner). Both land naturally with A9-step-2.
-  ssl/zarith/cairo follow once the shape exists.
+  ssl/zarith/cairo follow once the shape exists. *Related finding
+  (2026-08-05)*: an **Ambient** runtime edge makes a step
+  SCENARIO-INVARIANT — sqlite's python probe/inspect run identically in
+  all 3 scenarios (placement F:stable + bundled lib never vary with the
+  lib axis); once `dep_mode` is declared per edge, the runner can
+  share/dedup such steps across scenarios (the step-level analogue of the
+  Fetched whole-scenario dedup).
 - **A7 — unify the 3-way expectation model** (tiny-full derived-agnostic /
   z3-llvm contract-bound / ssl + sqlite's inline `log_grep` hand-written) →
   derived, with declared contracts canary can *report* as firings (§1c #1;
