@@ -363,15 +363,19 @@ Not started; interrelated — pick up together when §B/§C force them.
 - **`design/tiny.md` audit** — §7 wish-list predates the vendored-artifact
   model + generic runner; rewrite the still-relevant bits or retire. (Do
   before leaning on tiny.md again.)
-- **`new_project.md` revisit before onboarding a new project** — checkpoint
-  against the current `project_run` shape (data spec + dispatch/realize)
-  before picking a Tier-1/Tier-2 target.
+- ~~**`new_project.md` revisit before onboarding a new project**~~ — DONE
+  2026-08-05: de-staled against the current `project_run` shape, then
+  merged into [`projects.md`](projects.md) (one project doc: dimensions,
+  status matrix, portfolio, landing mechanics, coverage levels).
+  `new_project.md` is retired; its PyTorch case study is
+  [`design/project_pytorch.md`](design/project_pytorch.md) and its
+  auto-generation plan is [`backlog.md`](backlog.md) #29/#32.
 - **Flavor-2 catalogue extension** —
   [`design/bad_scenario_flavors.md`](design/bad_scenario_flavors.md): cull
   bug trackers for failure kinds beyond c1..c8.
 - **`Package` mutation source** — needs a `Package` case on `artifact_kind`
   or a new `mutation_kind`; likely trigger = PyTorch target
-  (`design/new_project.md`).
+  ([`design/project_pytorch.md`](design/project_pytorch.md)).
 - **Task 2 — recipe / mutation integration** (project-hookable factory) —
   deferred; largely SUBSUMED by A9-step-2 (the action-variant table is the
   general form of "projects supply their own recipes"); revisit after A9.

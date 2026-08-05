@@ -6,7 +6,7 @@ design principles. For surface theory see
 [../research/surface_draft/](../research/surface_draft/) (materials,
 with `implementation.md` for the compat-check implementation). For the
 expansion roadmap and per-target plans see
-[new_project.md](new_project.md). Doc map at
+[../projects.md](../projects.md). Doc map at
 [../README.md](../README.md).
 
 > **Current kernel (2026-08-04), not yet folded into the narrative below:**
@@ -39,7 +39,7 @@ Canary's two-track approach:
 
 - **Track 1 — Empirical coverage.** Run the real compatibility matrix.
   Current core targets: z3, llvm, sqlite (smoke test). Extended targets
-  per [new_project.md §1](new_project.md). Track 1's
+  per [../projects.md §3](../projects.md). Track 1's
   machinery: action graph, runner, summary system.
 - **Track 2 — Interface theory.** Behind the messy practice lies a clean
   abstraction: the *surface* between a library and a binding. If we can

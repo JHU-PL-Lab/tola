@@ -360,7 +360,7 @@ sequencing / progress doc that absorbs them.
 - **#16b** — Older redundant entry, superseded by #43 in the absorbed plan.
 
 Backlog (lower priority, paper-orthogonal): #5, #9, #11, #13b, #14, #17, #27,
-#29–32 (see design/new_project.md), #33, #34, #38, #39, #45; #16, #20, #31,
+#29/#32 (#30 shipped), #33, #34, #38, #39, #45; #16, #20, #31,
 #35, #41, #42 (api-compat — see research/surface_draft/implementation.md §2.7).
 Details in `doc/canary/backlog.md`.
 
@@ -482,12 +482,12 @@ Still open:
   off into `Fetch (Binding Python)` so the summary is cached before the
   probe runs. `python_binding.md` tracker has been deleted.
 - **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
-  primitives landing first. Plan at `doc/canary/design/new_project.md` §4
+  primitives landing first. Plan at `doc/canary/design/project_pytorch.md`
   covers the pip × opam × apt libtorch matrix and the OCaml `torch`
   version-conflict case. Motivated by multi-PM interop (same libtorch
   shipped by many PMs).
 - **Two-tier candidate queue for canary expansion** —
-  `doc/canary/design/new_project.md` §1 holds a dozen tracked targets (Tier 1:
+  `doc/canary/projects.md` §3 holds a dozen tracked targets (Tier 1:
   famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
   zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
   opam survey; living doc, updated as candidates land.

@@ -85,7 +85,7 @@ the milestone log; the gotchas below are durable.
    `Fetch (Binding Python)` step in 2026-05 (`pip_install_cmd` /
    `python_probe_only_cmd`); summary now caches before probe runs.
    PyTorch (~200 MB wheel) benefits more from this; see
-   [`../design/new_project.md`](../design/new_project.md) §4.
+   [`../design/project_pytorch.md`](../design/project_pytorch.md).
 
 ## Step D — llvmlite probe
 

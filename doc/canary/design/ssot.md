@@ -193,12 +193,12 @@ provided). A **scenario/variant** assigns every artifact its coordinates,
 so a scenario is one point *across* all the artifacts — a different level
 from a single artifact. Each artifact carries several **independent axes**:
 
-| axis | values | note |
-|---|---|---|
+| axis                        | values                                                    | note                                                                               |
+| --------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **provision** (which store) | `Absent` · from a PM · `Built` (from source) · `Vendored` | a supplied copy at a path — local *or* remote — not built here and not PM-resolved |
-| **version** | stable · dev · a tag | which upstream version (§4.2.2) |
-| **mechanism** (bindings) | static (cstubs/cext) · dynamic (ctypes/dynlink) | §4.2.1(b) |
-| **mutation** (defect) | `None` · `symbol_missing` · `abi_mismatch` · … (§5.3) | the injected fault |
+| **version**                 | stable · dev · a tag                                      | which upstream version (§4.2.2)                                                    |
+| **mechanism** (bindings)    | static (cstubs/cext) · dynamic (ctypes/dynlink)           | §4.2.1(b)                                                                          |
+| **mutation** (defect)       | `None` · `symbol_missing` · `abi_mismatch` · … (§5.3)     | the injected fault                                                                 |
 
 A project may carry further **structural axes** — e.g. *app wiring* (link
 the app directly vs. through a helper library, tiny's Sc.4 vs Sc.6). These
@@ -245,12 +245,12 @@ non-cartesian skeleton the cartesian axes decorate; see §4.2.4.
 **Every use is one config** — this is what unifies tiny and a real
 project: not two enumerations, but one algorithm under two configs.
 
-| use | provision | version | mechanism | mutation |
-|---|---|---|---|---|
-| **tiny — defect coverage** | Free (all `Built`) | Free | Subset (cext + ctypes — both must be tooling-tested) | **Full** (all defects) |
-| **a real project — variants** | Subset (its PMs + source) | Subset (stable, dev) | Free | Free (`None`) |
-| **model completeness** | Free (one PM stands in) | Free | Free | Full (all defect patterns) |
-| **PM-coverage testing** | **Full/Subset** (every interesting PM) | Free | Free | Free |
+| use                           | provision                              | version              | mechanism                                            | mutation                   |
+| ----------------------------- | -------------------------------------- | -------------------- | ---------------------------------------------------- | -------------------------- |
+| **tiny — defect coverage**    | Free (all `Built`)                     | Free                 | Subset (cext + ctypes — both must be tooling-tested) | **Full** (all defects)     |
+| **a real project — variants** | Subset (its PMs + source)              | Subset (stable, dev) | Free                                                 | Free (`None`)              |
+| **model completeness**        | Free (one PM stands in)                | Free                 | Free                                                 | Full (all defect patterns) |
+| **PM-coverage testing**       | **Full/Subset** (every interesting PM) | Free                 | Free                                                 | Free                       |
 
 tiny pins provision and walks mutation; a real project pins mutation and
 walks provision. The levels are independent per axis — Full on mutation
@@ -261,7 +261,7 @@ still exercises every scenario *pattern*) and **all-Full** (the complete
 product).
 
 Correspondences already in place: `origin` (the project dimension,
-[`new_project.md` §0](new_project.md)) **is** the provision coordinate; the
+[`projects.md` §1](../projects.md)) **is** the provision coordinate; the
 variant list **is** the provision enumeration; the mutation vocabulary
 (§5.3) **is** the other axis; and provision decides which action-graph
 actions run (§6.5 — `Built` ⇒ `Build_lib`, `Fetched` ⇒ `Fetch Lib`).
@@ -298,12 +298,12 @@ abstract algorithm, not of any one project.
 actions, chosen by provision.** One abstract stage is realized differently
 by the build vs the PM provision:
 
-| abstract stage | build realization (`Built`) | fetch realization (from a PM) |
-|---|---|---|
-| provide source | `Fetch Source` / local | — |
-| provide lib | `Build_lib` | `Fetch Lib` |
-| provide binding | `Build_binding` | `Fetch Binding` |
-| run app | `Probe_app` | `Probe_binding` (the example *is* the app) |
+| abstract stage  | build realization (`Built`) | fetch realization (from a PM)              |
+| --------------- | --------------------------- | ------------------------------------------ |
+| provide source  | `Fetch Source` / local      | —                                          |
+| provide lib     | `Build_lib`                 | `Fetch Lib`                                |
+| provide binding | `Build_binding`             | `Fetch Binding`                            |
+| run app         | `Probe_app`                 | `Probe_binding` (the example *is* the app) |
 
 A project covers an abstract stage via **whichever realization its
 provision uses** — so tiny (`Probe_app`, `Build_lib`) and a PM-provisioned
@@ -319,10 +319,10 @@ the discipline is what changes the pipeline shape (whether a *provide
 binding* build stage exists, and where the surface-check fires). A
 **mechanism** is the finer descriptive label under a discipline:
 
-| discipline | binds by | *provide binding* build stage | check fires | mechanisms |
-|---|---|---|---|---|
-| **static (C-ABI)** | compiling a stub linked to the lib | a real build (needs headers + link) | build (link) *and* probe | cstubs (OCaml), cext (Python) |
-| **dynamic (FFI)** | `dlopen`ing the lib at runtime | none (pure source) | probe only (resolve by name) | ctypes/cffi (Python), Dynlink (OCaml) |
+| discipline         | binds by                           | *provide binding* build stage       | check fires                  | mechanisms                            |
+| ------------------ | ---------------------------------- | ----------------------------------- | ---------------------------- | ------------------------------------- |
+| **static (C-ABI)** | compiling a stub linked to the lib | a real build (needs headers + link) | build (link) *and* probe     | cstubs (OCaml), cext (Python)         |
+| **dynamic (FFI)**  | `dlopen`ing the lib at runtime     | none (pure source)                  | probe only (resolve by name) | ctypes/cffi (Python), Dynlink (OCaml) |
 
 The two disciplines line up across languages — the payoff of keying on
 discipline, not name: OCaml `Dynlink`/utop is the *same value* as Python
@@ -611,11 +611,11 @@ removed.) The spec declares the resource-set; canary discovers the outcome.
 [`worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md); current-state
 pointer in [`status.md`](../status.md) §1a):
 
-| | what | role | code · command |
-|---|---|---|---|
-| **tiny-factory** | machinery: scenario specs + workspace materializer + resource emitter/assembler | produces the resources | `canary_tiny_scenario.ml`, `canary_tiny_workspace.ml` |
-| **tiny1** | single-scenario projects, each one hand-written good/bad case | the **oracle** (ground truth) that validates canary's tooling | factory scenarios · `canary tiny run` |
-| **tiny-full** | **one** project (peer of sqlite/z3) declaring the vendored resources; canary computes | validates the **algorithm / skeleton / integration** | `canary_project_tiny.ml` + generic `run_project_run` · `canary action tiny-full` |
+|                  | what                                                                                  | role                                                          | code · command                                                                   |
+| ---------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| **tiny-factory** | machinery: scenario specs + workspace materializer + resource emitter/assembler       | produces the resources                                        | `canary_tiny_scenario.ml`, `canary_tiny_workspace.ml`                            |
+| **tiny1**        | single-scenario projects, each one hand-written good/bad case                         | the **oracle** (ground truth) that validates canary's tooling | factory scenarios · `canary tiny run`                                            |
+| **tiny-full**    | **one** project (peer of sqlite/z3) declaring the vendored resources; canary computes | validates the **algorithm / skeleton / integration**          | `canary_project_tiny.ml` + generic `run_project_run` · `canary action tiny-full` |
 
 tiny1's hand-written expectations are the cross-check: canary's *computed*
 result on tiny-full must match tiny1's *declared* oracle. "A real simple
@@ -953,15 +953,17 @@ Canonical name-to-code map. If a term isn't in this table, add a
 row before using it in code or writeup. Term names are shared with
 the writeup — no need for a separate alignment section.
 
-| Level                 | Term                       | Meaning                                                                                                                                                         | Code                                 |
-| --------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **Top**               | **project**                | System under test + coverage config bundle. Owns scenarios + contract bindings.                                                                                 | `Canary_project_run.project_run` (`projects/`) — A6 2026-08-05: the never-read `Canary_project.project` bundle was deleted; z3/llvm's identity stays their variant list until A5 |
-| Middle                | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario`           |
-| Below-middle          | **runner_spec**            | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario.                                         | `Canary_step_builder.runner_spec`    |
-| Below-middle          | **action_graph**           | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them).                                                               | `Canary_action.action_graph`         |
-| Low                   | **step**                   | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends.                                                   | `Canary_step_model.step`             |
-| Low (legacy)          | **step_body**              | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder.                | `Canary_basic.step_body`             |
-| Action verb           | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue.                                                                               | `Canary_basic.action`                |
+| Level        | Term                       | Meaning                                                                                                                                                         | Code                                                                                                                                                                             |
+| ------------ | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Top**      | **project**                | System under test + coverage config bundle. Owns scenarios + contract bindings.                                                                                 | `Canary_project_run.project_run` (`projects/`) — A6 2026-08-05: the never-read `Canary_project.project` bundle was deleted; z3/llvm's identity stays their variant list until A5 |
+| Middle       | **scenario** ≡ **variant** | One runnable configuration. Named collection of actions + interested artifacts. `Sc.N` (pattern) / `Bs.N` (mutation instance) / dev, stable (llvm/z3 variants). | `Canary_scenario.scenario`                                                                                                                                                       |
+| Below-middle | **runner_spec**            | Runner-facing handoff for one scenario/variant: `expectation` closure + build/probe/inspect commands. One per scenario.                                         | `Canary_step_builder.runner_spec`                                                                                                                                                |
+| Below-middle | **action_graph**           | Actions-plus-pools schema (declared actions + the artifact-node pools produced by applying them).                                                               | `Canary_action.action_graph`                                                                                                                                                     |
+| Low          | **step**                   | Concrete instantiation of an action: cmdline + env + expectation. Runtime unit consumed by the four backends.                                                   | `Canary_step_model.step`                                                                                                                                                         |
+| Low (legacy) | **step_body**              | Shell-command record used by the retired YAML backend + `canary_toolchain`'s `verify_*_step` helpers (zero live consumers). Kept as placeholder.                | `Canary_basic.step_body`                                                                                                                                                         |
+| Action verb  | **action**                 | Operational verb (`Build_lib`, `Probe_binding L`, …). See §6.5 for the catalogue.                                                                               | `Canary_basic.action`                                                                                                                                                            |
+
+...
 | Attribute of action   | **stage**                  | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings.                                                          | (doc-only)                           |
 | Attribute of artifact | **artifact_status**        | Lifecycle state (`Built \| Installed \| Packed \| Fetched`). Complement to `location`.                                                                          | `Canary_store.artifact_status`       |
 | Theory                | **rule**                   | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart.                                                            | —                                    |
@@ -1023,20 +1025,20 @@ metadata are two views of one catalogue and live colocated in
 
 The single table below is authoritative for all three views:
 
-| Action name     | Constructor                | Kind         | Artifacts (prerequisite → target)      |
-| --------------- | -------------------------- | ------------ | -------------------------------------- |
-| `configure`     | `Configure`                | upstream     | `[Source]`                             |
-| `scan_sources`  | `Scan_sources`             | upstream     | `[Source]`                             |
-| `build_headers` | `Build_headers`            | native       | `[Source; Headers]`                    |
-| `build_lib`     | `Build_lib`                | native       | `[Source; Lib]`                        |
-| `install_lib`   | `Install_lib`              | native       | `[Lib]`                                |
-| `build_binding` | `Build_binding of lang`    | per language | `[Lib; Binding L]`                     |
-| `build_app`     | `Build_app of app_info`    | downstream   | `[Binding L; App]`                     |
-| `probe_lib`     | `Probe_lib`                | native       | `[Lib]`                                |
-| `probe_binding` | `Probe_binding of lang`    | per language | `[Binding L; Lib]` (runtime dep last)  |
-| `probe_app`     | `Probe_app of app_info`    | downstream   | `[Binding L; Lib; App]`                |
-| `fetch_<kind>`  | `Fetch of artifact_kind`   | per store    | `[k]`                                  |
-| `pack_<kind>`   | `Publish of artifact_kind` | per store    | `[k]`                                  |
+| Action name     | Constructor                | Kind         | Artifacts (prerequisite → target)     |
+| --------------- | -------------------------- | ------------ | ------------------------------------- |
+| `configure`     | `Configure`                | upstream     | `[Source]`                            |
+| `scan_sources`  | `Scan_sources`             | upstream     | `[Source]`                            |
+| `build_headers` | `Build_headers`            | native       | `[Source; Headers]`                   |
+| `build_lib`     | `Build_lib`                | native       | `[Source; Lib]`                       |
+| `install_lib`   | `Install_lib`              | native       | `[Lib]`                               |
+| `build_binding` | `Build_binding of lang`    | per language | `[Lib; Binding L]`                    |
+| `build_app`     | `Build_app of app_info`    | downstream   | `[Binding L; App]`                    |
+| `probe_lib`     | `Probe_lib`                | native       | `[Lib]`                               |
+| `probe_binding` | `Probe_binding of lang`    | per language | `[Binding L; Lib]` (runtime dep last) |
+| `probe_app`     | `Probe_app of app_info`    | downstream   | `[Binding L; Lib; App]`               |
+| `fetch_<kind>`  | `Fetch of artifact_kind`   | per store    | `[k]`                                 |
+| `pack_<kind>`   | `Publish of artifact_kind` | per store    | `[k]`                                 |
 
 **Order convention**: prerequisite first, target next, runtime
 deps trail. Union across a scenario's `actions` follows

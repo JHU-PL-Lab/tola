@@ -11,7 +11,7 @@ materials collection (split across `main.md`, `surface.md`,
 `versioning.md`) — mine for content, but `surface.md` (the
 manuscript) is authoritative for current framing.
 `design/index.md` is the older project narrative;
-`design/new_project.md` covers the expansion roadmap. See
+`projects.md` covers project status + the expansion roadmap. See
 `CLAUDE.md` (project root) for live status, gaps, and current
 gotchas.
 
@@ -52,12 +52,12 @@ updated as the model evolves.
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [index.md](design/index.md)             | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles                                                                          |
 | ~~[api_surface.md](design/api_surface.md)~~ | **Retired.** Theory + implementation pointers folded into the surface theory materials at [`research/surface_draft/`](research/surface_draft/); packaging sections deferred to a future `package_theory.md`.       |
-| [new_project.md](design/new_project.md) | Expansion portfolio (two-tier candidate framework), mechanics for adding a project, auto-generation plan (#29/#30/#32), PyTorch case study                                 |
+| [project_pytorch.md](design/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`)                                              |
 | [diagram.md](design/diagram.md)         | Diagram improvements plan: summary node fidelity (#36), multi-view per project, HTML viewer (#37)                                                                          |
 
 ## surveys/ — background research
 
-Pre-code survey data. Source of truth for `design/new_project.md`
+Pre-code survey data. Source of truth for `projects.md` §3
 candidate selection and the failure taxonomy now in
 `research/surface.md` (and materials in `research/surface_draft/`).
 

@@ -114,7 +114,7 @@ categorising real-world binding failures. To move toward it:
 3. **Package-management-layer mismatches**. Same lib supplied
    by opam / apt / pip may have divergent build flags,
    patches, or ABI. Motivates PyTorch as a Tier-1 canary
-   target (see `design/new_project.md`).
+   target (see `design/project_pytorch.md`).
 
 4. **Platform-specific ABI**. macOS Mach-O `install_name` vs
    Linux ELF `SONAME`; Windows DLL exports; C++ symbol

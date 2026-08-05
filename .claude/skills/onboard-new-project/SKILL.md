@@ -19,8 +19,8 @@ questions you'd otherwise ask):
 
 1. **[`CLAUDE.md`](../../../CLAUDE.md)** — Build/Run commands +
    the "Key source files" table + "Architecture in one paragraph".
-2. **[`doc/canary/design/new_project.md`](../../../doc/canary/design/new_project.md)** —
-   Especially **§2 Mechanics** and **§2.5 Scenario coverage — three
+2. **[`doc/canary/projects.md`](../../../doc/canary/projects.md)** —
+   Especially **§4 Mechanics** and **§5 Scenario coverage — three
    levels**. Picking one of A / B / C at the start decides everything
    downstream.
 3. **[`doc/canary/design/ssot.md`](../../../doc/canary/design/ssot.md)** —
@@ -37,13 +37,13 @@ questions you'd otherwise ask):
    baseline` modules are a **regression harness for canary itself**;
    they are NOT a template for real projects. Don't copy them.
 
-## Pick your coverage level (`new_project.md §2.5`)
+## Pick your coverage level (`projects.md §5`)
 
 | Level | What you write | Effort | Example |
 |---|---|---|---|
-| **A. Positive-only** | `runner_spec` (build/probe/inspect commands) + `api_source` (surface claims). No `Expect_compat_failure`, no `contract_bindings`. | ~40 LOC (Pattern A helper) or ~600 LOC (hand-written like z3/llvm) | sqlite |
-| **B. One hand-coded failure prediction** | A + one `contract_binding` row for the (contract, lang) pair that fires + `version_info` strings. | A + ~15-30 LOC | z3, llvm |
-| **C. Scenario matrix** | B + a full `<project>_scenario.ml` (recipes, workspace materializer, factory). | B + ~500-1500 LOC + Task 2 prerequisites. Currently only tiny. | — |
+| **A. Positive-only** | `runner_spec` (build/probe/inspect commands) + `api_source` (surface claims). No failure prediction. | ~40 LOC (Pattern A helper) or ~600 LOC (hand-written like z3/llvm) | zarith, cairo |
+| **B. A derived failure prediction** | A + enough declared evidence (watchlists / `api_source`) for the shared lowering to find the break. Since A7 you do NOT hand-write the substring. | A + ~10-20 LOC, no expectation code | z3, llvm, ssl |
+| **C. Scenario matrix** | B + a `pr_spec` universe table (artifact × provision × versions) + `pr_runner_spec = realize ∘ dispatch`; the general enumeration produces the scenarios. | B + ~200-300 LOC | tiny-full, sqlite, z3, llvm |
 
 **Default recommendation: pick A or B unless you have a research
 reason for C.** C requires copying tiny's framework infra (which
@@ -57,7 +57,7 @@ Create `src/canary/projects/canary_project_<name>.ml`.
 Look at `canary_project_sqlite.ml` (A) or `canary_project_z3.ml` /
 `canary_project_llvm.ml` (B) as templates.
 
-**Per-project plan checklist** (from `new_project.md §2`, write this
+**Per-project plan checklist** (from `projects.md §4`, write this
 BEFORE implementation):
 
 1. **Which native library + which binding(s)** — explicit about artifact kinds.
@@ -134,8 +134,8 @@ probe against; pick correctly per variant.
 
 - One commit: `canary: add <name> project (Level A/B) + <count>-line contract binding`
 - Diff summary: the project file (~40-800 LOC), the CLI wiring
-  (~5-20 LOC), any small `new_project.md` update if a rough edge
-  surfaced.
+  (~5-20 LOC), the `projects.md` status-matrix row + Done entry, and any
+  small `projects.md` update if a rough edge surfaced.
 - `canary action <name>` output at the bottom of the commit message
   (last 3-5 lines showing the pass/fail summary).
 

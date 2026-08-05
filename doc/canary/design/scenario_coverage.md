@@ -48,7 +48,7 @@ landed — `ps_provisions_of`/`ps_versions_of` in `Canary_enumerate`.)
 
 ---
 
-Builds on [`new_project.md` §0](new_project.md) (project dimensions) and
+Builds on [`projects.md` §1](../projects.md) (project dimensions) and
 the `good_scenarios` catalogue in `action/canary_scenario.ml`. The
 abstract enumeration behind *both* tiny's and a general project's listings
 — **provision × mutation** — is [`ssot.md` §4.2](ssot.md); this doc is the
@@ -151,7 +151,7 @@ A project's variants can each cover different scenarios:
 So **adding a `Built` variant to a `System` project extends its coverage
 up the pipeline** — the concrete payoff of the "canary builds its own conf,
 checked more rigorously than the ecosystem maintainers" idea
-([`new_project.md` §0](new_project.md)). The project's total coverage is
+([`projects.md` §1](../projects.md)). The project's total coverage is
 the **union across its variants**; a scenario is N/A for the project only
 if *no* variant covers it (and it isn't disabled).
 

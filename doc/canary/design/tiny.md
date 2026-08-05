@@ -26,7 +26,7 @@ near-term wish-list. Complements:
 - [`dynamic_enumeration.md`](dynamic_enumeration.md) — the derived-vs-hand
   principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
   enumeration model
-- [`new_project.md §2.5`](new_project.md) — three levels of scenario
+- [`projects.md §5`](../projects.md) — three levels of scenario
   coverage a new project can pick (A positive-only / B one hand-coded
   failure / C matrix — tiny is C, don't copy)
 - [`bad_scenario_flavors.md`](bad_scenario_flavors.md) —

@@ -59,9 +59,48 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     Distinguish by a header comment convention or directory structure so the
     intent is explicit and future templates know which pattern to follow.
 
-29–30, 32. **New project spec auto-generation** — package locator, store
-    config type, and auto-generated `script_spec` from a project sketch.
-    Grouped into `doc/canary/design/new_project.md` §3.
+29, 32. **New project spec auto-generation.** (#30 — the `store_config`
+    type — **shipped** as S3 on 2026-07-23, `tool/canary_store_config.ml`:
+    artifact provenance is a typed `provider` and `fetch_lib` resolves as
+    `Derived` from it. The remaining half is `fetch_binding`, where
+    `Derived` can't yet reproduce opam `install_args`
+    (`--assume-depexts`).)
+
+    Trigger: worth doing when project count reaches ~10. At 8 projects
+    (2026-08-05) the hand-written approach still holds — and the
+    `project_run` data-spec shape already moved much of what step 2 below
+    wanted from code into declared tables, so **re-scope before acting**.
+
+    **Step 1 — `package_locator` as a first-class type (#29).** Locator
+    logic (`llvm-config`, `pkg-config`, `brew --prefix`) is currently
+    ad-hoc shell inside each project's `probe_lib`. Factor into:
+
+    ```ocaml
+    type discovery_method =
+      | Pkg_config of string          (* pkg-config --variable=libdir <name> *)
+      | Llvm_config of string         (* llvm-config-N --libdir *)
+      | Brew_prefix of string         (* $(brew --prefix <name>)/lib *)
+      | Glob of string                (* ls /usr/lib/.../lib<name>.so* *)
+
+    type package_locator = { linux : discovery_method; macos : discovery_method }
+    ```
+
+    `probe_lib` shell becomes derivable. `lib_locator` in
+    `canary_pattern_a.ml` is the prototype.
+
+    **Step 2 — auto-generated `runner_spec` (#32).** Given a sketch +
+    locator + store_config, generate the full `runner_spec`:
+
+    ```ocaml
+    val mk_runner_spec_from_sketch :
+      name:string -> locator:package_locator -> stores:store_config ->
+      api_source:Canary_artifact_api.t -> source:source_repo ->
+      unit -> runner_spec
+    ```
+
+    Covers the Pattern A case. Source-build projects (z3, llvm) stay
+    hand-written but adopted `store_config` for their provider tables in
+    A8. Project shapes + landing mechanics: `doc/canary/projects.md` §4.
 
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —

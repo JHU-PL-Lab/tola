@@ -10,7 +10,7 @@ open Canary_toolchain
    This module compresses the boilerplate. A new Pattern A project becomes
    ~25 lines of declaration vs. ~100 lines of hand-rolled runner_spec.
    Extracted from zarith + ssl as the second-data-point validation per
-   doc/canary/design/new_project.md §1 sequencing.
+   doc/canary/projects.md §3 sequencing.
 
    Coverage boundaries:
    - This template covers native_lib + ocaml binding probe only. Projects with
