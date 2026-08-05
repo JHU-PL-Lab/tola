@@ -1,10 +1,28 @@
 (** [project_run] — the interface a generic cross-project runner consumes
     (ssot §4.2.5 / the convergence). A project DECLARES these; the generic
     runner ([canary_main.run_project_run]) does the uniform
-    enumerate → runner_spec → run for any project:
+    enumerate → runner_spec → run for any project.
 
-    - [pr_enumerate] — the scenario space as [Canary_enumerate.assignment]s
-      (per-artifact provision × version [× quality for tiny]).
+    THE PRINCIPLE (derive_steps-style, 2026-08-05): a project spec does NOT
+    carry its enumeration. The project declares its static option space
+    ([pr_spec] — stage 1, ssot §4.2); the GENERAL algorithm
+    ([Canary_enumerate.enumerate], exposed here as [scenarios_of]) outputs the
+    scenario list under an exploration [policy] (stage 2 — a RUNNER knob,
+    [full_policy] by default, [thin_policy] for the `--thin` slice). Each
+    enumerated case then runs through `derive_steps` with the project's
+    expectations (the [runner_spec.expectation] closure — tiny-full's agnostic
+    derivation, z3/llvm's contract lowering when they migrate); a case with no
+    declared expectation simply must not fail ([Expect_success]). This mirrors
+    `runner_spec → derive_steps → step list`: declaration in, derivation out —
+    there is no per-project enumeration closure to hand-build (the old
+    [pr_enumerate] field is retired).
+
+    - [pr_spec] — the project's STATIC declaration ([Canary_enumerate.
+      project_spec]): artifacts + per-artifact provision universes +
+      per-(artifact × provision) version universes. Facts, not scenarios.
+    - [pr_artifacts] — the DISPLAY artifact set for `spec` (may be wider than
+      [pr_spec.ps_artifacts]: e.g. the display-only source behind a
+      self-contained Built lib).
     - [pr_runner_spec] — the runner_spec for one scenario (assignment), given
       the assignment (so version/provision-parameterized actions read the
       per-artifact placement) and a runner-chosen [workspace] dir
@@ -27,10 +45,34 @@
 type project_run = {
   pr_name : string;
   pr_artifacts : Canary_enumerate.artifact_id list;
-  pr_enumerate : unit -> Canary_enumerate.assignment list;
+  pr_spec : Canary_enumerate.project_spec;
   pr_runner_spec :
     Canary_enumerate.assignment -> workspace:string ->
     Canary_step_builder.runner_spec;
   pr_provenance :
     Canary_enumerate.artifact_id -> Canary_store_config.provider option;
 }
+
+(** The THIN exploration policy (ssot §4.2 config level): version
+    [Subset [Stable]] — drop every Dev world, keep the provision axis Full.
+    Project-agnostic; any [project_run] can be run thin. *)
+let thin_policy () : unit Canary_enumerate.policy =
+  { config =
+      Canary_enumerate.
+        { provision = Full;
+          version = Subset [ Canary_basic.Stable ];
+          mutation = Free };
+    mutations = [] }
+
+(** THE general algorithm: spec in, scenarios out. [policy] defaults to
+    [full_policy] (walk the whole declared space, inject nothing — a real
+    project's run). The runner and every `spec` view call THIS — no project
+    supplies a scenario list. *)
+let scenarios_of ?policy (pr : project_run) :
+    Canary_enumerate.assignment list =
+  let policy =
+    match policy with
+    | Some p -> p
+    | None -> Canary_enumerate.full_policy ()
+  in
+  Canary_enumerate.enumerate ~tag:(fun () -> "") ~policy pr.pr_spec

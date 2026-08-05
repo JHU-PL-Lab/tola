@@ -338,11 +338,9 @@ let sqlite_spec : Canary_enumerate.project_spec =
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
-    (* ENUMERATE from the declared spec, not a hand-built list *)
-    pr_enumerate =
-      (fun () ->
-        Canary_enumerate.enumerate ~tag:(fun () -> "")
-          ~policy:(Canary_enumerate.full_policy ()) sqlite_spec);
+    (* the STATIC declaration; the generic runner enumerates it
+       ([Canary_project_run.scenarios_of]) — no scenario list here *)
+    pr_spec = sqlite_spec;
     (* No pre-placement: sqlite builds/fetches into the runner-provided
        [workspace] (canary_main.scenario_dir_of — per-version for Built, so
        Built@Stable and Built@Dev get distinct dirs; Fetched collapses across

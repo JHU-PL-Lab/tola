@@ -247,7 +247,10 @@ per project; tiny's factory (`canary_tiny_scenario.ml`) restricts
 each `runner_spec` to one scenario's world, z3/llvm build one
 `runner_spec` per source variant. **The generic path** (sqlite +
 tiny-full) is `run_project_run` over a `Canary_project_run.project_run`
-(`pr_enumerate → pr_runner_spec → derive_steps → run`): the runner
+(`pr_spec → scenarios_of (the general enumerate; ?policy, --thin =
+thin_policy) → pr_runner_spec → derive_steps → run`): a project declares
+only its static `pr_spec` — there is NO per-project enumeration closure
+(`pr_enumerate` retired 2026-08-05); the runner
 computes `scenario_dir_of a` (a born-safe per-scenario dir = output
 path + dedup key; a `Fetched` artifact is version-ambient so its
 declared version is NOT part of scenario identity — two `Fetched@v`

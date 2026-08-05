@@ -92,8 +92,9 @@ first):**
   exhibits BOTH runtime-edge modes of `dynamic_enumeration.md` on one
   project: OCaml = `Independent` (asserted), Python = `Ambient` (observed
   in probe.log, not asserted). What (b) still needs: the mismatch as a
-  *declared/enumerated* world (`close_deps Independent` wired into
-  `pr_enumerate`), not a per-world runner_spec construction.
+  *declared/enumerated* world (`close_deps Independent` wired into the
+  general enumeration, `scenarios_of`), not a per-world runner_spec
+  construction.
 - **(c) NOT STARTED** — z3/llvm still raw-script (`run_project_multi`).
 
 **To-do, regrouped.**
@@ -143,14 +144,17 @@ its provider (`pr_provenance`) — not needed yet. sqlite `Fetched@Stable ≡
 Fetched@Dev` ⇒ 3 runs (not 4). Also: sqlite now runs **3 worlds** (two built
 amalgamation versions 3.45.1/3.46.1); all 6 worlds (3 sqlite + 3 tiny-full) green.
 
-**Two paths today.** The enumeration ALGORITHM (`canary_enumerate.run_config`)
-is already shared by config — `tiny_slice` (mutation axis) and `general_slice`
-(provision/version) are both presets — but only the **display** (`tiny engine`,
-`scenarios`) + tests call it. The **run** hand-builds a list (`pr_enumerate`
-closure → `tiny_full_assignments` / sqlite's list), which isn't guaranteed to
-match what the algorithm would produce (e.g. sqlite hand-builds `lib-only-Built`
-where the algorithm gives `lib=Built + bindings=Fetched`). Converge the run onto
-the algorithm.
+**~~Two paths today~~ → ONE path (2026-08-05).** The old gap — the run
+hand-building a list (`pr_enumerate` closure) that wasn't guaranteed to match
+the algorithm — is CLOSED at the interface level: **`pr_enumerate` is retired**.
+`project_run` now carries the STATIC declaration (`pr_spec :
+Canary_enumerate.project_spec`) and the general algorithm
+(`Canary_project_run.scenarios_of` = `enumerate ~policy` — `derive_steps`-style:
+declaration in, derivation out) is the only producer of a project's scenario
+list; the runner and every `spec` view call it. The exploration `policy` is a
+RUNNER argument (`full_policy` default; `--thin` =
+`Canary_project_run.thin_policy`, version `Subset [Stable]`) — a project cannot
+hand over a scenario list at all.
 
 **Roles** (one algorithm, not one runner): general projects (tiny-full, sqlite,
 z3…) **GENERATE** scenarios from `run_config`; **tiny1 stays STANDALONE** (the
@@ -248,8 +252,9 @@ barely moves (`runner_spec : graph :: codegen : IR`). Design SSOT:
     → run`, where a flat `assignment` IS the **degenerate node graph** (one instance
     per kind, no mismatch edges). The engine produces degenerate graphs today,
     generalizes to full graphs (mismatch) later — the flat form is subsumed, not
-    kept as a weaker sibling. Both `pr_enumerate` AND the flat-only path are planned
-    retirements toward that single engine.
+    kept as a weaker sibling. (`pr_enumerate` retired 2026-08-05 — `pr_spec` +
+    `scenarios_of` IS the `pr_spec (declared) → enumerate` half; the node-graph
+    half remains.)
   - **A3b — sqlite ✅ done** (`5393cb4`): declared `sqlite_spec : unit project_spec`;
     `pr_enumerate = assignments_of_spec sqlite_spec` (hand-built list retired). The
     algorithm gives `{lib=Built, bindings=Fetched}` (not lib-only), so `built_spec`
@@ -502,15 +507,14 @@ scenarios it runs, both statically (before a run) and from the result (after).
   `pr_provenance` provider ⇒ its baseline provision) as a test not just a ⚠.
 
 **Pipeline map (pre / prepare / run / post — where to read):**
-- **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) → `pr.pr_enumerate ()`
-  → `Canary_enumerate.enumerate ~policy` (stage 2) over the declared `project_spec`
-  (stage 1). `--by-artifact` → `print_artifacts` (F3).
-- **prepare** `pr_materialize a` — PLACES pre-run artifacts (ssot §4.2.5:
-  "materialize places; build/fetch are canary actions"). tiny-full: *assemble* the
-  vendored resources into a workspace (`Canary_tiny_workspace`). sqlite: places
-  NOTHING (its lib/binding come from canary *actions*). **Not a canary action** —
-  scenario setup. (Current code calls it inside `run_project_run`'s loop; it is
-  logically the prepare phase, not the run.)
+- **pre** `canary spec <pj>` → `print_spec` (`canary_main.ml`) →
+  `Canary_project_run.scenarios_of ?policy pr` = `Canary_enumerate.enumerate
+  ~policy` (stage 2) over the declared `pr_spec` (stage 1).
+  `--by-artifact` → `print_artifacts` (F3).
+- **prepare** — NOT a general-interface concern (`pr_materialize` purged
+  2026-08-05): tiny-full *assembles* its vendored tree INSIDE its
+  `pr_runner_spec` closure (`Canary_tiny_workspace`, tiny-factory machinery);
+  sqlite places nothing (its lib/binding come from canary *actions*).
 - **run** `canary action <pj>` → `run_project_run` → `pr_runner_spec a` →
   `derive_steps` (`canary_step_builder`) → `Canary_local_runner` executes the
   build/fetch/**probe** actions → writes `scenarios.tsv` (F1). For tiny-full (all

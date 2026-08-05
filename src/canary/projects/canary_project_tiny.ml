@@ -14,11 +14,12 @@
     A project DECLARES; canary COMPUTES. The declarative surface is the
     [project_run] below ([tiny_full_run]); `action tiny-full` runs it through
     the generic [canary_main.run_project_run] — the SAME path sqlite uses (the
-    convergence: one runner, per-project specs). Remaining convergence work:
-    derive [pr_enumerate] from a declared spec (absorb [tiny_full_assignments]/
-    [_combinations] into the general enumeration) and relocate the spec
-    internals, which physically live in the factory file for now (tightly
-    coupled to its [engine_*] data). *)
+    convergence: one runner, per-project specs). The scenario set is NOT
+    declared here: [pr_spec] is the static declaration and the general
+    algorithm ([Canary_project_run.scenarios_of]) enumerates it. Remaining
+    convergence work: relocate the spec internals, which physically live in
+    the factory file for now (tightly coupled to its [engine_*] data); the
+    multi-bad [tiny_full_combinations] stay tiny-factory machinery. *)
 
 module TS = Canary_tiny_scenario
 
@@ -37,13 +38,14 @@ let artifacts : Canary_enumerate.artifact_id list = TS.tiny_full_artifacts
     (tags) per artifact. *)
 let spec : TS.tiny_full_spec = TS.tiny_full_spec
 
-(** tiny-full's GENERAL scenario space (NO mutations): good baseline +
-    built-lib variants — the general axes, like sqlite. The mutation faults
-    (flavor-1) are tiny1's oracle (`canary tiny run`), decoupled from tiny-full;
+(** tiny-full's GENERAL declared spec (NO mutations): the good baseline +
+    built-lib variants all fall out of enumerating this — the general axes,
+    like sqlite. The mutation faults (flavor-1) are tiny1's oracle
+    (`canary tiny run`), decoupled from tiny-full;
     [TS.tiny_full_assignments]/[TS.tiny_full_combinations] remain in the
     tiny-factory for tiny1 / a future post-process. *)
-let general_assignments () : Canary_enumerate.assignment list =
-  TS.tiny_full_general_assignments spec
+let general_spec : Canary_enumerate.project_spec =
+  TS.tiny_full_general_spec spec
 
 (** The expectation canary uses: derived by inspection alone (no oracle) —
     canary decides per step whether to expect a failure. *)
@@ -104,10 +106,11 @@ let tiny_provenance (id : Canary_enumerate.artifact_id) :
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
     pr_artifacts = artifacts;
-    (* the general scenario space: good baseline + built-lib variants (no
-       mutations — those are tiny1's oracle). Like sqlite, a positive-only
-       general project_run. *)
-    pr_enumerate = (fun () -> general_assignments ());
+    (* the STATIC declaration (good baseline + built-lib axes; no mutations —
+       those are tiny1's oracle). The generic runner enumerates it
+       ([Canary_project_run.scenarios_of]) — like sqlite, a positive-only
+       general project_run with no scenario list of its own. *)
+    pr_spec = general_spec;
     pr_runner_spec =
       (fun a ~workspace:_ ->
         (* ASSEMBLE tiny's vendored tree (tiny-factory). dispatch by provision
@@ -159,18 +162,11 @@ let tiny_full_run : project_run =
           Canary_step_builder.expectation = expectation_agnostic });
     pr_provenance = tiny_provenance }
 
-(* ── THIN subset config (ssot §4.2 config level = Subset) ──
-   A small, debuggable slice of the general enumeration: version
-   [Subset [Stable]] on the SAME declared spec (drop the built-lib Dev
-   positive) — a policy/config narrowing, not a hand-written filter. Same
-   runner_spec — only the scenario set narrows. Selected by
-   `action tiny-full --thin` / `spec tiny-full --thin`. *)
-let thin_assignments () : Canary_enumerate.assignment list =
-  TS.tiny_full_thin_assignments spec
-
-(* Same project_run as [tiny_full_run] with the narrowed enumeration and a
-   distinct name (so its run cache never clashes with the full run's). *)
+(* ── THIN subset run (ssot §4.2 config level = Subset) ──
+   The thin slice is a RUNNER policy ([Canary_project_run.thin_policy] —
+   version [Subset [Stable]]) applied to the SAME declared spec; nothing
+   thin-specific lives in the project. This record only renames the run so
+   its cache never clashes with the full run's; `action/spec tiny-full
+   --thin` pairs it with [thin_policy]. *)
 let tiny_full_thin_run : project_run =
-  { tiny_full_run with
-    pr_name = "tiny-full-thin";
-    pr_enumerate = thin_assignments }
+  { tiny_full_run with pr_name = "tiny-full-thin" }

@@ -67,7 +67,9 @@ step list  →  { local runner (executes, caches per step) | GH YAML | Mermaid |
 What the graph *is* good for: enumeration (which worlds), applicability marking
 (universal catalogue + project filter), and visualisation. What the run needs from
 it is a *set of assignments*; the flat-enumerate loop in `run_project_run` already
-supplies that (`pr_enumerate → pr_materialize → pr_runner_spec → derive_steps`).
+supplies that (`pr_spec → scenarios_of (enumerate) → pr_runner_spec →
+derive_steps` — since 2026-08-05 the project declares only `pr_spec`; the
+general algorithm produces the scenario list, `derive_steps`-style).
 
 ## Build edges are grammatical; runtime edges are resolved
 

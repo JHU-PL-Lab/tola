@@ -283,11 +283,14 @@ let scenario_dir_of ~pr_name (a : Canary_enumerate.assignment) : string =
    z3/llvm keep their raw-script [run_project_multi]; this drives tiny-full and
    simple projects. Dedup + output dir keyed by [scenario_dir_of] (several
    assignments can share one scenario identity — e.g. Fetched across versions). *)
-let run_project_run (pr : Canary_project_run.project_run) ~root ~failfast :
-    unit =
+let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
+    ~failfast : unit =
   Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
-  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  (* THE general algorithm: the runner enumerates the project's declared
+     [pr_spec] under the exploration [policy] (full by default; `--thin` =
+     [Canary_project_run.thin_policy]). Projects hand over no scenario list. *)
+  let scenarios = Canary_project_run.scenarios_of ?policy pr in
   let baseline = baseline_of scenarios in
   let seen = ref [] in
   let results = ref [] in (* (key, verdict, is_bad) — key = scenario_label *)
@@ -434,9 +437,9 @@ let kinds_string ks =
    baseline. PRE (dry-run — no [pr_runner_spec]/run is invoked). If a run summary
    exists, each scenario is also annotated with its last-run verdict (POST):
    good ✓/✗REGRESSED, bad ✓detected/✗missed, · = not run (deduped workspace). *)
-let print_spec (pr : Canary_project_run.project_run) : unit =
+let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
   let module E = Canary_enumerate in
-  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let scenarios = Canary_project_run.scenarios_of ?policy pr in
   let all_good = Canary_tiny_scenario.assignment_is_all_good in
   let baseline = baseline_of scenarios in
   let baseline_str id =
@@ -518,7 +521,8 @@ let print_spec (pr : Canary_project_run.project_run) : unit =
        pr.Canary_project_run.pr_name detected (List.length bads)
        (List.length post));
   Fmt.pr
-    "@.  note: this is the DECLARED artifact set + the scenarios `pr_enumerate` \
+    "@.  note: this is the DECLARED artifact set + the scenarios the general \
+     algorithm (enumerate over `pr_spec`) \
      produces. The run executes exactly these (each via derive_steps → the full \
      source→lib→binding→probe chain); `construct %s` shows the wider applicable \
      graph these are drawn from. Use `spec %s --by-artifact` for the per-artifact \
@@ -537,9 +541,9 @@ let artifact_bad_in (a : Canary_enumerate.assignment)
    detection rate), then a compact count of scenarios that mutate an UPSTREAM
    artifact (this one is downstream-affected). Same pre/post join by
    [scenario_label]. Rows = artifacts, whereas [print_spec]'s rows = scenarios. *)
-let print_artifacts (pr : Canary_project_run.project_run) : unit =
+let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
   let module E = Canary_enumerate in
-  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let scenarios = Canary_project_run.scenarios_of ?policy pr in
   let baseline = baseline_of scenarios in
   let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
   let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
@@ -644,9 +648,9 @@ let provisions_of_runner_spec (rs : Canary_step_builder.runner_spec) :
    Reuses the exact pre/post data print_spec renders (same [scenario_label] join,
    same catalogue [builds_of], same typed provider) — a second projection, not a
    second source of truth. *)
-let spec_json_t (pr : Canary_project_run.project_run) : Yojson.Basic.t =
+let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
   let module E = Canary_enumerate in
-  let scenarios = pr.Canary_project_run.pr_enumerate () in
+  let scenarios = Canary_project_run.scenarios_of ?policy pr in
   let baseline = baseline_of scenarios in
   let all_good = Canary_tiny_scenario.assignment_is_all_good in
   let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
@@ -689,9 +693,6 @@ let spec_json_t (pr : Canary_project_run.project_run) : Yojson.Basic.t =
       ( "artifacts",
         `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
       ("scenarios", `List (List.map scenario_json scenarios)) ]
-
-let spec_json (pr : Canary_project_run.project_run) : string =
-  Yojson.Basic.pretty_to_string (spec_json_t pr)
 
 (* All artifact kinds any variant provisions, group-ordered (dedup, first seen). *)
 let variant_kinds variants =
@@ -1075,12 +1076,16 @@ let action_cmd =
     | Some "llvm" -> run_llvm ~root ~failfast ~cache_path ~cli_disabled distro
     | Some "tiny-full" ->
         (* the generic project runner drives tiny-full (convergence step 2);
-           --thin narrows to the Subset enumeration *)
-        let pr =
-          if thin then Canary_project_tiny.tiny_full_thin_run
-          else (Canary_project_tiny.print_view (); Canary_project_tiny.tiny_full_run)
-        in
-        run_project_run pr ~root ~failfast
+           --thin = the RUNNER's thin_policy over the same declared spec
+           (plus the thin-named run for cache separation) *)
+        if thin then
+          run_project_run
+            ~policy:(Canary_project_run.thin_policy ())
+            Canary_project_tiny.tiny_full_thin_run ~root ~failfast
+        else begin
+          Canary_project_tiny.print_view ();
+          run_project_run Canary_project_tiny.tiny_full_run ~root ~failfast
+        end
     | Some "tiny" ->
         Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
                  `canary tiny run` instead (runs all + collects results).@.";
@@ -1146,10 +1151,12 @@ let spec_cmd =
       let mk s = (s.Canary_artifact_source.version, s, Canary_project_llvm.mk_runner_spec ~source:s d) in
       [ mk Canary_project_llvm.llvm_source_dev; mk Canary_project_llvm.llvm_source_stable ]
     in
-    let show pr =
-      if json then print_string (spec_json pr ^ "\n")
-      else if by_artifact then print_artifacts pr
-      else print_spec pr
+    let show ?policy pr =
+      if json then
+        print_string
+          (Yojson.Basic.pretty_to_string (spec_json_t ?policy pr) ^ "\n")
+      else if by_artifact then print_artifacts ?policy pr
+      else print_spec ?policy pr
     in
     let show_variants name variants =
       if json then
@@ -1160,9 +1167,11 @@ let spec_cmd =
     in
     match proj with
     | Some "tiny-full" ->
-        show
-          (if thin then Canary_project_tiny.tiny_full_thin_run
-           else Canary_project_tiny.tiny_full_run)
+        if thin then
+          show
+            ~policy:(Canary_project_run.thin_policy ())
+            Canary_project_tiny.tiny_full_thin_run
+        else show Canary_project_tiny.tiny_full_run
     | Some "sqlite" -> show Canary_project_sqlite.sqlite_run
     | Some "z3" -> show_variants "z3" (z3_variants ())
     | Some "llvm" -> show_variants "llvm" (llvm_variants ())
@@ -1174,7 +1183,7 @@ let spec_cmd =
         let vs = [ ("z3", z3_variants ()); ("llvm", llvm_variants ()) ] in
         if json then
           let projects =
-            List.map spec_json_t prs
+            List.map (fun pr -> spec_json_t pr) prs
             @ List.map (fun (n, v) -> spec_variants_json_t ~name:n ~variants:v) vs
           in
           print_string

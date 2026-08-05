@@ -1626,26 +1626,10 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
         then Canary_basic.[ Stable; Dev ]
         else [ Canary_basic.Stable ]) }
 
-let tiny_full_general_assignments (spec : tiny_full_spec) :
-    Canary_enumerate.assignment list =
-  Canary_enumerate.enumerate ~tag:(fun () -> "")
-    ~policy:(Canary_enumerate.full_policy ())
-    (tiny_full_general_spec spec)
-
-(* THIN = a CONFIG LEVEL on the same declared spec (ssot §4.2), not a
-   hand-written filter: version [Subset [Stable]] narrows the built-lib axis to
-   Stable (drops the Dev positive), everything else identical. *)
-let tiny_full_thin_assignments (spec : tiny_full_spec) :
-    Canary_enumerate.assignment list =
-  Canary_enumerate.enumerate ~tag:(fun () -> "")
-    ~policy:
-      { config =
-          Canary_enumerate.
-            { provision = Full;
-              version = Subset [ Canary_basic.Stable ];
-              mutation = Free };
-        mutations = [] }
-    (tiny_full_general_spec spec)
+(* No assignment-list wrappers here: the general algorithm
+   ([Canary_project_run.scenarios_of] over [tiny_full_general_spec]) is the
+   only producer of tiny-full's scenario list — full or thin
+   ([Canary_project_run.thin_policy]) is the RUNNER's policy choice. *)
 
 (* P3 combination enumeration: representative MULTI-bad assignments along the
    dependency chain (source → lib → ocaml binding), one representative (first)
