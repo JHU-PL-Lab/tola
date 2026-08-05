@@ -125,19 +125,34 @@ committing to the template up-front:
 | —   | Pattern A template   | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines                                                                                                                            |
 | —   | api-compat milestone | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [../research/surface_draft/implementation.md §2.7](../research/surface_draft/implementation.md)                         |
 | 12  | cairo                | 2026-07-23 | Pattern A. First project onboarded on the post-redesign machinery (`Derived` fetch_lib via `store_config`; S5a detection runs). `cairo2` 0.6.5, 420 `cairo_` symbols; probe green first try. |
+| —   | tiny-full            | 2026-08-02 | tiny-full becomes a PROJECT (peer of z3/sqlite), not a `tiny` subcommand. 6 spec-derived scenarios; forward API mismatch derived as `xfail[c1]`.                                              |
+| 3   | sqlite → generic     | 2026-08-05 | sqlite gains a `Built` provision (canary compiles libsqlite3 from two amalgamation versions) and moves to `project_run`. 3 scenarios; Built worlds assert the runtime version.               |
+| 1,2 | z3 + llvm → generic  | 2026-08-05 | A5: both move off raw `run_project_multi` onto `project_run` (`pr_spec` + `realize ∘ dispatch`). 2 scenarios each; their xfails are now *derived* and contract-attributed.                   |
 
 ---
 
 ## 2. Mechanics — adding a new project today
 
-Each project is a `script_spec` plus an `api_source`. Lives in
-`src/canary/projects/canary_project_<name>.ml`. Wired in
-`src/bin/canary_main.ml` and `src/canary/projects/canary_run.ml`.
+Each project lives in `src/canary/projects/canary_project_<name>.ml` and is
+wired in `src/bin/canary_main.ml` and `src/canary/projects/canary_run.ml`.
+There are three shapes, cheapest first:
 
-For Pattern A (system lib + opam binding, no source build), the
-template `canary_pattern_a.ml` brings each spec down to ~40 lines.
-Pattern C (source-built lib + opam-packaged binding) is hand-written
-today; z3 is ~600 lines, llvm ~470.
+- **Pattern A** (system lib + opam binding, no source build) — the
+  `canary_pattern_a.ml` template brings each spec down to ~40 lines
+  (`runner_spec` + `api_source`). zarith, cairo.
+- **Raw `runner_spec`** — a hand-written spec per variant, run by
+  `run_project_multi`. ssl only; not the shape to copy for new work.
+- **`project_run`** (the generic path, and where new projects should
+  land) — the project declares DATA: a `pr_spec` universe table
+  (artifact × (provision × versions)), a `pr_provenance` provider table,
+  and `pr_runner_spec = realize ∘ dispatch`. The general enumeration
+  computes the scenario list; `run_project_run` executes it. tiny-full,
+  sqlite, z3, llvm. See [`ssot.md`](ssot.md) §6.1 and
+  [`dynamic_enumeration.md`](dynamic_enumeration.md).
+
+Source-built projects are still the expensive ones — z3 ~600 lines, llvm
+~470 — and A5 made their *shape* identical without yet sharing their
+command templates (`status.md` §1c #6).
 
 Per-project plan checklist (write this BEFORE implementation):
 
@@ -164,32 +179,36 @@ project's purpose:
 | Level                                    | What you write                                                                                                                             | Example                                                                                                                                              | When it's right                                                                                                                                                                 |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **A. Positive-only**                     | `runner_spec` + `api_source` + probe examples that must build/run. No `Expect_compat_failure`.                                             | sqlite (system lib works; probe compiles)                                                                                                            | The project is a demo that a canary session terminates cleanly on a known-good setup. No version-mismatch or breakage story.                                                    |
-| **B. One hand-coded failure prediction** | Level A + `Expect_compat_failure` inline in the project spec with hand-authored `inputs` list + `version_info`.                            | z3 (~10 LOC in `canary_project_z3.ml:541-551`, `parser_context` in the wheel), llvm (~18 LOC in `canary_project_llvm.ml:495-512`, `Opcode.UncondBr`) | You want to demonstrate ONE specific version drift on this project. Cheapest way to say "here's a real API break we caught".                                                    |
-| **C. Scenario matrix**                   | Level B + a full `canary_<name>_scenario.ml` with per-scenario recipes. **Also needs framework-side hookable factory (Task 2, deferred).** | tiny only — nobody else                                                                                                                              | You want *systematic* coverage of Sc.N × mutation-flavor cells for research or paper-artifact purposes. Currently only justified when the project is the framework's benchmark. |
+| **B. A derived failure prediction**      | Level A + enough declared **evidence** (watchlists / `api_source`) for the shared lowering to find the break itself. Since A7 you do *not* hand-write the substring. | z3 (`parser_context` missing from the wheel → `xfail[c2]`), llvm (`Opcode.UncondBr` → `xfail[c2]`), ssl (`060_nlv` → `xfail[c2]`)                     | You want to demonstrate a real version drift on this project. Cheapest way to say "here's an API break canary *computed*".                                                       |
+| **C. Scenario matrix**                   | Level B + a `pr_spec` universe declaring the provision/version axes; the general enumeration produces the scenarios.                       | tiny-full (6), sqlite (3), z3 / llvm (2 each)                                                                                                         | You want *systematic* coverage across an artifact's provision/version axes. No longer exotic — it is the default shape for a `project_run` project.                             |
 
 **Do not copy tiny's workspace/prepare/baseline files.**
 `canary_tiny_workspace.ml` + `_prepare.ml` + `_baseline.ml`
-are framework infrastructure for driving tiny's 21-scenario
-matrix through sandboxed builds — a *test harness* for the
-framework itself, not a template. Level A and B need
-neither. Level C would need a Task 2 landing first, so the
-matrix machinery is project-hookable rather than tiny-forked.
+are framework infrastructure for driving tiny1's 22-scenario
+mutation **oracle** through sandboxed builds — a *test harness* for the
+framework itself, not a template. No level needs them: a Level C project
+declares axes in its `pr_spec` and the general enumeration does the rest
+(tiny-full, the project, is itself a `project_run` peer of sqlite — it
+does not fork the factory).
 
 **Effort ballpark** (per level, per project):
 
-- **A**: ~40 LOC via `canary_pattern_a.ml` (Pattern A: system lib + opam binding), ~600 LOC hand-written for Pattern C (source-built + opam-packaged, like z3/llvm).
-- **B**: A + ~15-30 LOC for the compat-failure declaration.
-- **C**: B + ~200-400 LOC per-project (recipes, watchlist wiring), **plus** Task 2's ~230 LOC framework work as prerequisite.
+- **A**: ~40 LOC via `canary_pattern_a.ml` (Pattern A: system lib + opam binding), ~600 LOC hand-written for a source-built project (z3/llvm shape).
+- **B**: A + the watchlist/`api_source` entries that carry the evidence — usually ~10-20 LOC, no expectation code.
+- **C**: B + the `pr_spec` universe table + `realize ∘ dispatch` (sqlite: ~300 LOC including the from-source build; z3/llvm: the bulk is their build commands, not the scenario machinery).
 
 For scenario mechanics + the derived-vs-hand principle see
 [`dynamic_enumeration.md`](dynamic_enumeration.md).
 
 ---
 
-## 3. Auto-generation plan (#29, #30, #32)
+## 3. Auto-generation plan (#29, ~~#30~~ shipped, #32)
 
-Trigger: worth doing when project count reaches ~10. With 3–4 projects
-the current hand-written approach is fine.
+Trigger: worth doing when project count reaches ~10. At 8 projects
+(2026-08-05) the hand-written approach still holds, but #30 has since
+shipped on its own and the `project_run` data-spec shape (§2) already
+moved most of what §Step 3 wanted from code into declared tables — so
+re-scope this section before acting on it.
 
 The three pieces needed:
 
@@ -213,35 +232,30 @@ type package_locator = {
 `probe_lib` shell becomes derivable. `lib_locator` in
 `canary_pattern_a.ml` is the prototype.
 
-**Step 2 — `store_config` type (#30).** `fetch_*` and `pack_*` slot
-scripts call shared helpers (`fetch_lib_cmd`, `fetch_binding_cmd`,
-`opam_pack_cmd`). Make declarations explicit:
+**Step 2 — `store_config` type (#30). ✅ SHIPPED** (S3, 2026-07-23;
+`tool/canary_store_config.ml`). Artifact provenance is a typed `provider`
+(`Sys_pkg` / `Lang_pkg` / `Source_repo` / `Vendored` / `Cached`), and
+`fetch_lib` resolves as `Derived` from it instead of a hand-written
+closure — adopted by sqlite + `pattern_a`, which lifted zarith/ssl/cairo
+at once (S4a). z3/llvm/tiny keep `Raw` closures. The remaining half is
+`fetch_binding`: `Derived` can't yet reproduce opam `install_args`
+(`--assume-depexts`).
+
+**Step 3 — auto-generated `runner_spec` (#32).** Given a sketch +
+locator + store_config, generate the full `runner_spec`:
 
 ```ocaml
-type store_entry =
-  | Sys_fetch of system_package_spec         (* → fetch_lib slot *)
-  | Lang_fetch of lang * opam_package_spec   (* → fetch_binding slot *)
-  | Lang_pack  of lang * opam_spec           (* → pack_binding slot *)
-```
-
-`derive_steps` generates slot commands from `store_config` instead of
-reading pre-filled closures from `script_spec`.
-
-**Step 3 — auto-generated `script_spec` (#32).** Given a sketch +
-locator + store_config, generate the full `script_spec`:
-
-```ocaml
-val mk_script_spec_from_sketch :
+val mk_runner_spec_from_sketch :
   name:string ->
   locator:package_locator ->
   stores:store_config ->
   api_source:Canary_artifact_api.t ->
   source:source_repo ->
-  unit -> script_spec
+  unit -> runner_spec
 ```
 
 Covers the Pattern A case. Source-build projects (z3, llvm) stay
-hand-written but could adopt `store_config` for fetch/pack slots.
+hand-written but adopted `store_config` for their provider tables in A8.
 
 ---
 
