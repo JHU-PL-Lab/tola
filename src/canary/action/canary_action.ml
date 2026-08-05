@@ -84,7 +84,15 @@ let store_actions ~langs =
         Build_app { lang }; Probe_app { lang } ])
   @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
 
-let make_action_graph ~actions ~versions ~name ~source () =
+(** The per-runtime-edge resolution mode (dynamic_enumeration.md), shared by the
+    FORWARD construction ([make_action_graph]'s [Build_app]) and the lift
+    ([close_deps]). [Lockstep] = run-lib is the build-lib (the matched chain);
+    [Independent] = run-lib ranges over every lib ⇒ the deploy-mismatch cartesian
+    (what `paths` wants — the default); [Ambient s] = an external lib (libc). *)
+type dep_mode = Lockstep | Independent | Ambient of string
+
+let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
+    () =
   let vs = channel_suffix in
   let get pools kind =
     List.Assoc.find pools ~equal:Poly.equal kind |> Option.value ~default:[]
@@ -149,9 +157,25 @@ let make_action_graph ~actions ~versions ~name ~source () =
         | Build_app { lang } ->
             let bindings = get pools (Binding lang) in
             let libs = get pools Lib in
+            (* the runtime lib(s) an App links against, per [app_mode]:
+               - [Independent] (default, `paths`): EVERY lib → the deploy-mismatch
+                 cartesian (all patterns).
+               - [Lockstep] (engine): the binding's build-lib (matched chain), or —
+                 for a fetched binding with no build-lib — the same-VERSION lib. *)
+            let runtime_libs (binding : artifact_node) =
+              match app_mode with
+              | Independent | Ambient _ -> libs
+              | Lockstep -> (
+                  match binding.built_from with
+                  | Some bl -> [ bl ]
+                  | None ->
+                      List.filter libs ~f:(fun l ->
+                          Canary_enumerate.equal_build_id l.version
+                            binding.version))
+            in
             let nodes =
               List.concat_map bindings ~f:(fun binding ->
-                  List.map libs ~f:(fun runtime_lib ->
+                  List.map (runtime_libs binding) ~f:(fun runtime_lib ->
                       mk_node App name ~origin:Build_tree ~location:Build_tree
                         ~built_from:binding ~runtime_dep:runtime_lib
                         ~version:binding.version ~provision:Built ()))
@@ -288,15 +312,8 @@ let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
   in
   List.map a ~f:(fun (id, _) -> build id)
 
-(** Stage 3 (dynamic_enumeration.md): the per-runtime-edge resolution mode. The
-    node ALREADY carries [runtime_dep]; this says how [close_deps] fills it.
-    [Lockstep] (the default) = run-lib is the build-lib — today's chain;
-    [Independent] = run-lib is a SECOND instance ranging over the lib's version
-    universe ⇒ deploy mismatch (= [make_action_graph]'s App build×run cartesian);
-    [Ambient s] = an un-enumerated external lib (libc), shape only in v1. NOT a
-    [project_spec] field — the runtime edge is grammatical; only its resolution
-    is the knob, defaulting so every current project is unchanged. *)
-type dep_mode = Lockstep | Independent | Ambient of string
+(* [dep_mode] is defined before [make_action_graph] (both consume it: the forward
+   construction and [close_deps] share one runtime-edge resolution knob). *)
 
 (** Stage 3 — lift a flat assignment to REALISED node graph(s), resolving each
     App's [runtime_dep] by [mode_of] its kind. Build edges reuse
