@@ -101,27 +101,60 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
     let existing = get pools kind in
     List.Assoc.add pools ~equal:Poly.equal kind (existing @ nodes)
   in
+  (* Initial VENDORED nodes, seeded BEFORE the fold so build actions can consume
+     them (a vendored source IS a legit build input — that's what tiny does).
+     Vendored has no action (a supplied copy, not built/fetched by canary) — it's
+     an initial node. Universal per kind; the project N/A-marking filters. Off by
+     default so `paths` (build/fetch job paths) is unchanged. *)
+  let vend_langs =
+    List.filter_map actions ~f:(function
+      | Build_binding l | Fetch (Binding l) -> Some l
+      | _ -> None)
+    |> List.dedup_and_sort ~compare:Poly.compare
+  in
+  let vend_kinds =
+    [ Source; Headers; Lib; App ] @ List.map vend_langs ~f:(fun l -> Binding l)
+  in
+  let initial =
+    if not vendored then []
+    else
+      List.fold vend_kinds ~init:[] ~f:(fun pools kind ->
+          add pools kind
+            (List.map versions ~f:(fun v ->
+                 mk_node kind
+                   (name ^ vs v)
+                   ~origin:Build_tree ~location:Build_tree
+                   ~version:(Canary_enumerate.good v) ~provision:Vendored ())))
+  in
   let pools =
-    List.fold actions ~init:[] ~f:(fun pools action ->
+    List.fold actions ~init:initial ~f:(fun pools action ->
         match action with
         | Build_lib ->
             let sources = get pools Source in
+            (* lib@v is built FROM each source@v that EXISTS (fetched or vendored
+               — source-primary by version), so tiny builds from its vendored
+               source and a git project from its fetched source. No source ⇒
+               implicit root. *)
             let nodes =
-              List.map versions ~f:(fun v ->
-                  (* source-primary: lib@v is built FROM source@v (same version) —
-                     the same [get pools _] + [~built_from] pattern Build_binding
-                     uses for lib. Was missing (source-as-implicit-root); degrades
-                     to that when no Source is in the graph. *)
-                  let built_from =
-                    List.find sources ~f:(fun s ->
+              List.concat_map versions ~f:(fun v ->
+                  let srcs_v =
+                    List.filter sources ~f:(fun s ->
                         Canary_enumerate.equal_build_id s.version
                           (Canary_enumerate.good v))
                   in
-                  mk_node Lib
-                    (name ^ vs v)
-                    ~origin:Build_tree ~location:Build_tree
-                    ~version:(Canary_enumerate.good v) ~provision:Built
-                    ?built_from ())
+                  match srcs_v with
+                  | [] ->
+                      [ mk_node Lib
+                          (name ^ vs v)
+                          ~origin:Build_tree ~location:Build_tree
+                          ~version:(Canary_enumerate.good v) ~provision:Built () ]
+                  | srcs ->
+                      List.map srcs ~f:(fun s ->
+                          mk_node Lib
+                            (name ^ vs v)
+                            ~origin:Build_tree ~location:Build_tree
+                            ~version:(Canary_enumerate.good v) ~provision:Built
+                            ~built_from:s ()))
             in
             add pools Lib nodes
         | Fetch kind ->
@@ -195,20 +228,12 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
         | Configure | Scan_sources | Install_lib | Publish _
         | Probe_lib | Probe_binding _ | Probe_app _ -> pools)
   in
-  (* [Vendored] provision: a supplied pre-built copy — NOT action-generated, an
-     initial node (materialize places it). Universal (every kind can be
-     vendored); the project marking keeps only what it declares. Off by default
-     so `paths` (build/fetch job paths) is unchanged. *)
+  (* dedup each pool (a kind can be reached by more than one action path). *)
   let pools =
-    if not vendored then pools
-    else
-      List.fold (List.map pools ~f:fst) ~init:pools ~f:(fun pools kind ->
-          add pools kind
-            (List.map versions ~f:(fun v ->
-                 mk_node kind
-                   (name ^ vs v)
-                   ~origin:Build_tree ~location:Build_tree
-                   ~version:(Canary_enumerate.good v) ~provision:Vendored ())))
+    List.map pools ~f:(fun (kind, nodes) ->
+        ( kind,
+          List.dedup_and_sort nodes ~compare:(fun a b ->
+              String.compare (node_tag a) (node_tag b)) ))
   in
   { actions; pools }
 
