@@ -503,14 +503,43 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
           in_grp
       end)
     group_order;
-  (* Scenarios are NOT listed here. With the declared graph, the RUN constructs
-     them — build/fetch actions generate artifact nodes — so the interesting set
-     EMERGES from the run, not a pre-enumerated static product. Show only the
-     declared-scenario count + the last run's coverage; the run is the source. *)
+  (* The WORLDS, each in FULL flat form (the assignment the run walks): one
+     placement per artifact identity — this is the enumerated object itself,
+     not a delta. Cross-instance combinations (two libs in one world = the
+     build-lib ≠ run-lib mismatch) are NOT expressible here — that is the
+     node-graph enumeration (`construct`, close_deps). Annotated with the
+     last-run verdict where a run summary exists (join by [scenario_label]). *)
   let ngood = List.length (List.filter all_good scenarios) in
   let total = List.length scenarios in
-  Fmt.pr "@.declared scenarios: %d (%d good, %d bad).@."
+  Fmt.pr
+    "@.worlds — %d enumerated (%d good, %d bad); ONE placement per artifact \
+     (the flat assignment the run walks):@."
     total ngood (total - ngood);
+  Fmt.pr
+    "  key: F=fetched (a PM provides the consumable artifact — apt ships a \
+     binary, opam BUILDS the package source at install; version ambient, the \
+     PM picks)@.       B=built (canary builds it — version IS identity)  \
+     V=vendored (supplied local artifact — version IS identity)@.";
+  List.iter
+    (fun a ->
+      let label = scenario_label ~baseline a in
+      let is_bad = not (all_good a) in
+      let mark =
+        match List.assoc_opt label post with
+        | Some ("PASS", _) -> if is_bad then "✓ detected" else "✓"
+        | Some (_, _) -> if is_bad then "✗ missed" else "✗ REGRESSED"
+        | None -> if post = [] then " " else "·"
+      in
+      let world =
+        String.concat "  "
+          (List.map
+             (fun (id, pl) ->
+               Printf.sprintf "%s=%s" (E.pretty_id id) (placement_str pl))
+             a)
+      in
+      Fmt.pr "  %-10s %s%s@." mark world
+        (if String.equal label "(baseline)" then "   (baseline)" else ""))
+    scenarios;
   (if post <> [] then
      let bads = List.filter (fun (_, (_, b)) -> b) post in
      let detected =
