@@ -37,7 +37,12 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     — contravariance on argument types, covariance on results, refinement
     on value domains — rather than name+shape matching. Catches "same name,
     different signature" drift the grep can miss. Not a blocker for
-    anything. Prior art: the dead-code example at
+    anything, but the type_wrong triage (2026-08-05, status §B) sharpened
+    the payoff: a BODY-only c6 lie (header/stub declarations agree, the .c
+    body lies) is invisible to every static layer today — the oracle
+    confirms it only as an UNATTRIBUTED xfail. A body-reading inspector is
+    what turns that `[]` into `[c6]` and moves tiny1 coverage past 12/24.
+    Prior art: the dead-code example at
     `doc/_legacy_code/canary_dead_code.ml`. See
     `doc/canary/research/surface_draft/surface.md` §2.4 (Type contract) and
     §10.3 (Toward a formal model).
@@ -116,6 +121,10 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     independently of the local host. Follow-on: add OS-conditional step support to
     `canary_gh.ml` (render `if: runner.os == 'Linux'` guards) and a
     matrix strategy (ubuntu-latest × macos-latest, OCaml version axis).
+    *A5 note (2026-08-05):* the entry points are now distro-parametric
+    (`z3_run`/`llvm_run : distro → project_run`), so `~target_pm` has a
+    natural seam; the remaining local bind is `detect_pm ()` inside
+    `mk_runner_spec` bodies.
 
 37. **Bundled mermaid.js for the HTML viewer** — `backend/canary_html.ml`
     loads mermaid from a CDN, so a run's `result.html` needs network access
@@ -189,6 +198,14 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     backlog #38 (`pack_python` wheel packaging, which has the same
     co-provider shape on the producer side).
 
+    *2026-08-05 evidence (A5/A7, status §A):* the co-provider behavior is
+    now MEASURED on the generic runner — z3's parser_context xfail fires
+    identically in both chains because the wheel's bundled libz3 never
+    varies with the lib axis (the Ambient-edge scenario-invariance).
+    "Declare the package self-contained" is the Ambient instance of the
+    `dep_mode` value-source question (status §A, A5 residue (ii)) — solve
+    them as one declaration.
+
 46. **Engine vocabulary alignment in code (post-stabilisation polish)** —
     After `doc/canary/research/draft.md` (the manuscript) stabilises, audit
     OCaml sources for engine vocabulary alignment. The
@@ -229,3 +246,9 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     declared universe rather than a flag. Not urgent. Originally
     discovered while designing the §9.3 Task 1.6 factory
     (`worklog_2026_07.md`).
+
+    *A5 note (2026-08-05, promoted to status §A A5 residue):* z3/llvm now
+    declare `ps_universe` AND still branch on the booleans inside their
+    realizations — the double encoding is live on the generic path, and
+    `has_build_binding` is exactly the binding-follows-chain information
+    (A5 residue (iii)) in boolean disguise. Fold them together.

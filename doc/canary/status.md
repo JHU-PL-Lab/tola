@@ -100,10 +100,19 @@ edges resolved via `dep_mode`). Open:
     probes the lib at build-tree/staged/apt — unmodeled; A9-step-2's
     acceptance test); (ii) the **`dep_mode` value source** (who declares
     "runs over lib@Y, built against lib@X" — `close_deps Independent`'s
-    owner); (iii) **binding-follows-chain** (neither z3 nor llvm could
-    enumerate its OCaml binding: the flat product can't express "follows
-    the built chain" without minting mismatch worlds) = the
-    graph-structural version propagation below.
+    owner; backlog **#45**'s "declare a pip package self-contained
+    (co-provider)" is the Ambient instance of the same question); (iii)
+    **binding-follows-chain** (neither z3 nor llvm could enumerate its
+    OCaml binding: the flat product can't express "follows the built
+    chain" without minting mismatch worlds) = the graph-structural
+    version propagation below.
+  - **Fold `source_repo.has_build_lib`/`has_build_binding` into the
+    provision axis** (backlog **#47**, now A5-adjacent): the booleans are
+    a second encoding of what `ps_universe` already declares (an
+    artifact's `Built` provision), and z3/llvm's realizations still
+    branch on them internally. Tractable now that dispatch reads
+    placements; the `has_build_binding` boolean is exactly
+    binding-follows-chain (iii) in boolean disguise — fold them together.
 - **A7 residue** (DONE 2026-08-05 — 3-way unification complete; §1c #1
   resolved; worklog):
   - typed per-probe `asserts` field (world-identity assertions as data
@@ -121,7 +130,11 @@ edges resolved via `dep_mode`). Open:
   identically in all 3 scenarios; z3's wheel xfail fires in both chains).
   Once `dep_mode` is declared per edge, the runner can share/dedup such
   steps across scenarios — the step-level analogue of the Fetched
-  whole-scenario dedup.
+  whole-scenario dedup. The z3-solver CO-PROVIDER entry (backlog **#45**:
+  the wheel bundles its own libz3; diagram runtime edge misleading;
+  `derive_steps` assumes bindings consume the external lib) is the same
+  fact needing the same declaration — A5/A7 measured it live (the
+  scenario-invariant wheel xfail IS the bundled lib observed).
 - **A9 step 2 — dispatch as DECLARATION** (the action-variant table).
   Step 1 (the dispatch/realization split; pure `scenario_case` data +
   general coordinate reads) shipped 2026-08-05. Remaining: replace the
@@ -131,7 +144,10 @@ edges resolved via `dep_mode`). Open:
   dialects — `sqlite_amalg` URLs, tiny's `-DTINY_DEV`, z3's `ref_` — into
   declared rows; makes `spec` able to show per-scenario commands without
   executing). Design against z3's complexity (A5), not sqlite's simplicity;
-  `Raw` escape hatch required. HELD for now per user (affects the action
+  `Raw` escape hatch required. Largely SUBSUMES backlog **#29/#32** step 2
+  (auto-generated runner_spec — that entry already says "re-scope before
+  acting" post-A8) and is where the typed per-probe `asserts` field (A7
+  residue) naturally lands. HELD for now per user (affects the action
   verb design).
 - **Node-graph enumeration — PARKED; its forcing functions are now the
   A5-residue abstractions** (deploy mismatch / two lib instances,
@@ -170,7 +186,11 @@ edges resolved via `dep_mode`). Open:
 - **Richer agnostic inspectors** (the lever for tiny1's 12/24 → more): c5
   symbol-version, c6 type, abi/soname wired into the agnostic derivation.
   The 12 undetected fail *unexpectedly* because the watchlists can't
-  predict them.
+  predict them. For c6 the concrete path is backlog **#44** (clang-AST /
+  libclang extraction replacing the trivial-grep inspector) — and the
+  type_wrong triage (2026-08-05) sharpened its payoff: a body-only c6 lie
+  today confirms only as an UNATTRIBUTED xfail (nothing static predicts
+  it); a body-reading c6 inspector turns that `[]` into `[c6]`.
 - **Version deploy-mismatch, backward half** (forward half shipped
   2026-08-05 — worklog): a stable consumer @ newer incompatible lib
   (soname/symver, `Bs.4`/`Bs.3` → c4/c5). Broad = missing *and* added
