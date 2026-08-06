@@ -301,68 +301,6 @@ provision / §5 rewrite). Pick up when B/C force it.
   scattered mechanism-coupled fragments (probe shapes, build recipes,
   inspector selection): rows in A9-step-2's action-variant table.
 
-## E. Polish
-
-- **Env/PATH discipline utility** (user, 2026-08-06; no hurry). Step
-  commands splice PATH-like variables ad hoc (`LD_LIBRARY_PATH=$PWD/…:$…`
-  probe repoints, `PYTHONPATH` in the tiny workspace, `OCAMLPATH`,
-  `eval $(opam env)` sprinkled per command) — string surgery on
-  `:`-separated variables is exactly what produced the born-safe-id bug
-  (a `:` in a workspace name silently split PYTHONPATH; see Gotchas).
-  Wanted: a small tool/ utility for typed env manipulation (prepend/set
-  per variable, emitted as the command's export preamble — the
-  `probe_ocaml_env_cmd ~env` list is the seed) + a ratchet-style guard
-  against new raw `VAR=…:$VAR` splices in project specs. Do when a case
-  next touches probe envs.
-- **Version definitions + printers: centralize** (user, 2026-08-05).
-  Multiple version-ish notions (`Canary_basic.channel` + `version`,
-  `Canary_enumerate.build_id`/`quality`, `source_repo.version` strings,
-  opam `package_version`, `version_cache_tag`) and ≥5 hand-rolled
-  Dev/Stable printers (`canary_enumerate.ml:147`, tiny's `chan_str`,
-  `canary_main`'s `chan_s` + an inline match at ~577, sqlite's
-  `sqlite_amalg` match) — `Canary_basic` exports no `string_of_channel`
-  at all. Slice 1 (standalone hygiene): one `string_of_channel` (+
-  channel-keyed helpers) in base, migrate the call sites, ratchet-style
-  guard against new inline matches. The DEEPER typed unification
-  (version as artifact identity across enumeration/store/cache) stays
-  [`design/versioning.md`](design/versioning.md)'s tracker — not this
-  item.
-- **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
-  to-do: `harness.tool_routing_ratchet` in `project-test` freezes
-  per-file counts of raw shell verbs in `projects/` — cmake / ninja /
-  gcc / curl / unzip / pip install / opam install / nm -D / git clone /
-  tar; any NEW raw use fails: route it through a `src/canary/tool`
-  primitive). Remaining = shrink the baseline to zero — sqlite
-  `built_spec`'s raw gcc/curl/unzip + nm (§1c #5), llvm's pip/opam
-  raws — the cleanup half of TODO #18, natural with A9-step-2; lower
-  the baseline in the same commit as each cleanup. (sqlite burned to
-  ZERO 2026-08-05 via new `curl_unzip_cmd`/`cc_shared_lib_cmd` +
-  `native_lib_probe_cmd`; remaining: llvm pip chain — needs a
-  pip-install-any primitive with the uv fallback — and the opam-install
-  raws.)
-- Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key).
-- Factory comment sweep (resource → cached artifact in
-  `canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*).
-- Full-lazy `detect_pm` (skip entirely for `spec`/`paths`/`graph` — needs
-  deferring runner_spec construction; §1c #2).
-- Wire the `latest` channel (§1c #3).
-- Scenario names + `docs/canary` output volume.
-- **Terminology sweep: `variant_*` code identifiers → `scenario_*`**
-  (display unified 2026-08-05; the id rename touches cache/filename keys —
-  one deliberate pass, not ad hoc).
-- **"scenario" overload vs the abstract senses** (`Sc.N` patterns, coverage
-  *stages*; the `canary scenarios` CLI shows stages with a stale count) —
-  audit + T0/T1/T2 options + open questions in
-  [`design/scenario_terms.md`](design/scenario_terms.md). OPEN — no
-  decision; do T2 together with F5 + the `variant_*` sweep as ONE
-  terminology pass. **Deliberately LAST (user, 2026-08-05, bottom-up):**
-  the canonical scenario↔action relation should be WRITTEN DOWN only
-  after the near-term concrete actions land (build-for-install, probe
-  roles, two-instance scenarios) — the added cases decide the terms,
-  not the reverse. (Candidate frame to test against them, kept in mind
-  not committed: action = a pattern with slots; scenario = a consistent
-  slot-filling; dep_mode = a constraint on fillings.)
-
 ## F. Inspection — artifacts × scenarios, pre and post
 
 What exists (F1–F3 + provider unification chronicled in worklog): `spec
