@@ -45,27 +45,41 @@
       ([canary_tiny_workspace]) and never appears in this general interface.
       `Built`/`Fetched` artifacts are NOT pre-placed — they are canary *actions*
       (build_lib / fetch_lib) the runner runs and observes.
-    - [pr_provenance] — STATIC, per-artifact provider TABLE for `spec` (no
-      execution): the typed [Canary_store_config.provider] backing the abstract
-      [artifact_id] + [placement] can't carry — a vendored PATH, a source_repo
-      to build from, or a PM + PACKAGE. Plain DATA (A8) — an artifact absent
-      from the table is undeclared; read via [provenance_of]. A project
-      DECLARES this; `spec` displays it (and cross-checks
-      [provision_of_provider] against the baseline provision, so the two can't
-      drift) — the artifact list is verifiably spec-sourced.
+    - [pr_artifacts] — THE artifact table (2026-08-06, user-directed: the
+      old separate [pr_provenance] assoc merged in — a provider is a
+      per-ARTIFACT fact, so it rides the artifact row; only genuinely
+      project-level information stays as project fields). Each
+      [artifact_decl] = the identity + the typed
+      [Canary_store_config.provider] detail the abstract [artifact_id] +
+      [placement] can't carry (a vendored PATH, a source_repo, a PM +
+      PACKAGE). Structural invariant the two parallel tables lacked: a
+      provider can only be declared on a declared artifact. `spec`
+      displays the provider per row and cross-checks
+      [provision_of_provider] against the baseline provision (drift
+      check). The table may be WIDER than [pr_spec.ps_universe]
+      (display-only artifacts — sqlite's source behind the self-contained
+      Built lib, z3/llvm's chain-following OCaml binding — carry
+      providers too, which is why the provider does NOT live on the
+      enumerated spec rows / [artifact_axes]).
 
     tiny-full, sqlite, z3 and llvm all fill this (A5 phases 2+5); ssl is the
     last raw-script [run_project_multi] holdout (migrates with
     zarith/cairo). *)
+(** One row of the project's artifact table: identity + the typed
+    provenance detail behind its baseline provision ([None] = declared
+    artifact, provider not (yet) specified — `spec` prints "(undeclared)"). *)
+type artifact_decl = {
+  ad_artifact : Canary_enumerate.artifact_id;
+  ad_provider : Canary_store_config.provider option;
+}
+
 type project_run = {
   pr_name : string;
-  pr_artifacts : Canary_enumerate.artifact_id list;
+  pr_artifacts : artifact_decl list;
   pr_spec : Canary_enumerate.project_spec;
   pr_runner_spec :
     Canary_enumerate.assignment -> workspace:string ->
     Canary_step_builder.runner_spec;
-  pr_provenance :
-    (Canary_enumerate.artifact_id * Canary_store_config.provider) list;
   pr_mismatch_probes :
     (Canary_enumerate.artifact_id * Canary_basic.channel
      * Canary_enumerate.mismatch_direction) list;
@@ -86,13 +100,18 @@ type project_run = {
    the brief [pr_runtime_edges] project table was the parallel-table smell
    this interface should not grow.) *)
 
-(** Lookup over the [pr_provenance] table ([None] = undeclared artifact). *)
+(** The bare artifact identities of the table (display loops, langs). *)
+let artifact_ids (pr : project_run) : Canary_enumerate.artifact_id list =
+  List.map (fun d -> d.ad_artifact) pr.pr_artifacts
+
+(** Provider lookup over the artifact table ([None] = artifact absent from
+    the table OR declared without a provider). *)
 let provenance_of (pr : project_run) (id : Canary_enumerate.artifact_id) :
     Canary_store_config.provider option =
   List.find_opt
-    (fun (a, _) -> Canary_enumerate.equal_artifact_id a id)
-    pr.pr_provenance
-  |> Option.map snd
+    (fun d -> Canary_enumerate.equal_artifact_id d.ad_artifact id)
+    pr.pr_artifacts
+  |> fun d -> Option.bind d (fun d -> d.ad_provider)
 
 (** The THIN exploration policy (ssot §4.2 config level): version
     [Subset [Stable]] — drop every Dev world, keep the provision axis Full.

@@ -520,7 +520,7 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
   (* artifacts, grouped, each with its baseline provision@version, the
      project-declared provenance detail, and what it can BUILD (derived from the
      action catalogue: which Build actions consume this kind → what they produce). *)
-  let arts = pr.Canary_project_run.pr_artifacts in
+  let arts = Canary_project_run.artifact_ids pr in
   let langs = langs_of arts in
   let builds_of a = builds_of ~langs a in
   Fmt.pr "@.artifacts (%d), by group [baseline provision@@version + provenance]:@."
@@ -748,7 +748,7 @@ let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
       let in_grp =
         List.filter
           (fun id -> String.equal (group_of_kind (E.kind_of id)) grp)
-          pr.Canary_project_run.pr_artifacts
+          (Canary_project_run.artifact_ids pr)
       in
       if in_grp <> [] then begin
         Fmt.pr "  %s:@." grp;
@@ -810,7 +810,7 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
   let baseline = baseline_of scenarios in
   let all_good = Canary_tiny_scenario.assignment_is_all_good in
   let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
-  let langs = langs_of pr.Canary_project_run.pr_artifacts in
+  let langs = langs_of (Canary_project_run.artifact_ids pr) in
   let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
   let artifact_json a =
     `Assoc
@@ -849,7 +849,8 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
     [ ("project", `String pr.Canary_project_run.pr_name);
       ("kind", `String "project_run");
       ( "artifacts",
-        `List (List.map artifact_json pr.Canary_project_run.pr_artifacts) );
+        `List
+          (List.map artifact_json (Canary_project_run.artifact_ids pr)) );
       ("scenarios", `List (List.map scenario_json scenarios)) ]
 
 (* (print_spec_variants + spec_variants_json_t — the raw z3/llvm variant

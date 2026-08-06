@@ -622,30 +622,32 @@ let llvm_spec : Canary_enumerate.project_spec =
               ~runtime:(Canary_store.Ambient "bundled libLLVM (llvmlite wheel)")
               [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
 
-let llvm_artifacts : Canary_enumerate.artifact_id list =
+(* THE artifact table (2026-08-06: identity + provider per row — the old
+   separate [llvm_providers] assoc merged in). Providers = baseline
+   (fetch-chain) detail from the real [prebuilt] data; the OCaml binding
+   row is display-only (not an enumerated axis). Per-channel providers
+   (the arbipher monorepo fork, the dev-built lib, llvm.dev-shared) are
+   the realization's concern. *)
+let llvm_artifacts : Canary_project_run.artifact_decl list =
   Canary_enumerate.
-    [ a_source;
-      a_lib;
-      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-      a_binding Canary_lang.Python Canary_mechanism.Cext ]
-
-(* Baseline (fetch-chain) providers, from the real [prebuilt] data; the OCaml
-   binding row is display-only detail (not an enumerated axis). Per-channel
-   providers (the arbipher monorepo fork, the dev-built lib, llvm.dev-shared)
-   are the realization's concern. *)
-let llvm_providers :
-    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
-  Canary_enumerate.
-    [ (a_source, Canary_store_config.Source_repo llvm_source_stable);
-      (a_lib, Canary_store_config.Sys_pkg prebuilt.system_package);
-      ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-            package = prebuilt.opam_package } );
-      ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.Python; pm = Canary_store.Pip;
-            package = "llvmlite" } ) ]
+    [ { Canary_project_run.ad_artifact = a_source;
+        ad_provider = Some (Canary_store_config.Source_repo llvm_source_stable)
+      };
+      { ad_artifact = a_lib;
+        ad_provider = Some (Canary_store_config.Sys_pkg prebuilt.system_package)
+      };
+      { ad_artifact = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+                 package = prebuilt.opam_package }) };
+      { ad_artifact = a_binding Canary_lang.Python Canary_mechanism.Cext;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.Python; pm = Canary_store.Pip;
+                 package = "llvmlite" }) } ]
 
 (* dispatch/realize — the z3 shape verbatim: dispatch reads the LIB
    placement only (Built ⇒ dev chain; the ambient source channel is no
@@ -687,5 +689,4 @@ let llvm_run distro : Canary_project_run.project_run =
     pr_artifacts = llvm_artifacts;
     pr_spec = llvm_spec;
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
-    pr_provenance = llvm_providers;
     pr_mismatch_probes = [] }

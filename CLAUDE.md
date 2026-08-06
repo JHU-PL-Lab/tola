@@ -258,7 +258,9 @@ is `run_project_run` over a `Canary_project_run.project_run`
 thin_policy) → pr_runner_spec → derive_steps → run`): a project declares
 only DATA — `pr_spec` is ONE fused table (`ps_universe : artifact ×
 (provision × versions) list`; old accessor names are functions over it),
-`pr_provenance` a provider table (+ `provenance_of` lookup),
+`pr_artifacts` THE artifact table (`artifact_decl` rows: identity +
+provider — the old separate `pr_provenance` assoc merged in 2026-08-06;
+`provenance_of`/`artifact_ids` read it),
 `pr_mismatch_probes` a design-intent table (which consumer variants are
 designed forward/backward probes; per-scenario direction is COMPUTED via
 `mismatch_direction_of`). `pr_runner_spec` must be `realize ∘ dispatch`
@@ -552,7 +554,7 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   per-provision version axis (2026-08-05) specs no longer declare versions a
   Fetched artifact can't pin (sqlite declares 3, runs 3 — no dedup needed);
   the identity rule stays as the generic backstop. A project that pins a
-  Fetched version would override via its provider (`pr_provenance`) — not wired yet.
+  Fetched version would override via its provider (`pr_artifacts` row) — not wired yet.
 - **Run-cache stale hit looks like a real PASS**: a step is skipped when its
   `.ok` marker exists and `check_post` passes (local cache), keyed by
   `variant_id` (the part after `/` in `project`, e.g. `tiny/<name>`). Re-running

@@ -42,7 +42,7 @@ let enumerate_full (spec : EN.project_spec) : EN.assignment list =
    [dispatch_is_dev] projects the project's own [scenario_case] dispatch to
    "is the dev build chain". *)
 let two_chain_pins ~(prefix : string) ~(spec : EN.project_spec)
-    ~(providers : (EN.artifact_id * Canary_store_config.provider) list)
+    ~(artifacts : Canary_project_run.artifact_decl list)
     ~(dispatch_is_dev : EN.assignment -> bool) :
     Canary_project_test.pure_test list =
   let lib_prov a = EN.provision_of a EN.a_lib in
@@ -112,17 +112,23 @@ let two_chain_pins ~(prefix : string) ~(spec : EN.project_spec)
         match enumerate_full spec with
         | [] -> false
         | baseline :: _ ->
-            List.for_all providers ~f:(fun (id, p) ->
-                match EN.placement_of baseline id with
-                | None -> true (* display-only — no axis to contradict *)
-                | Some pl ->
+            List.for_all artifacts
+              ~f:(fun (d : Canary_project_run.artifact_decl) ->
+                match
+                  ( d.Canary_project_run.ad_provider,
+                    EN.placement_of baseline d.Canary_project_run.ad_artifact )
+                with
+                | None, _ -> true (* no provider declared — nothing to check *)
+                | Some _, None ->
+                    true (* display-only — no axis to contradict *)
+                | Some p, Some pl ->
                     EN.equal_provision
                       (Canary_store_config.provision_of_provider p)
                       pl.EN.provision)) } ]
 
 let z3_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"z3" ~spec:Canary_project_z3.z3_spec
-    ~providers:Canary_project_z3.z3_providers
+    ~artifacts:Canary_project_z3.z3_artifacts
     ~dispatch_is_dev:(fun a ->
       match Canary_project_z3.dispatch a with
       | Canary_project_z3.Dev_chain -> true
@@ -130,7 +136,7 @@ let z3_pins : Canary_project_test.pure_test list =
 
 let llvm_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"llvm" ~spec:Canary_project_llvm.llvm_spec
-    ~providers:Canary_project_llvm.llvm_providers
+    ~artifacts:Canary_project_llvm.llvm_artifacts
     ~dispatch_is_dev:(fun a ->
       match Canary_project_llvm.dispatch a with
       | Canary_project_llvm.Dev_chain -> true

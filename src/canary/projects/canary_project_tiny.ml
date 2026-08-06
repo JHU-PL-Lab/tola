@@ -72,13 +72,13 @@ let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
       Base.Option.map (Canary_tiny_workspace.artifact_key_of_tag tag)
         ~f:(fun key -> (key, tag)))
 
-(* Static per-artifact provider TABLE (typed data, A8; the real vendored
-   layout — canary_tiny_workspace.ml paths). All Vendored (the lib is a
-   Cached built artifact); tiny-full is agnostic to tiny's prepare layer
-   beyond these paths. Built from the declared artifact list via a per-kind
-   map so the artifact set stays single-source. *)
-let tiny_providers :
-    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
+(* THE artifact table (typed data, A8; 2026-08-06: identity + provider per
+   row — the old separate [tiny_providers] assoc merged in; the real
+   vendored layout — canary_tiny_workspace.ml paths). All Vendored (the
+   lib is a Cached built artifact); tiny-full is agnostic to tiny's
+   prepare layer beyond these paths. Built from the declared artifact list
+   via a per-kind map so the artifact set stays single-source. *)
+let tiny_artifact_table : Canary_project_run.artifact_decl list =
   let provider_of_kind : Canary_basic.artifact_kind ->
       Canary_store_config.provider option = function
     | Canary_basic.Source ->
@@ -97,9 +97,9 @@ let tiny_providers :
         Some (Canary_store_config.Vendored "tiny probe example (assembled)")
     | _ -> None
   in
-  Base.List.filter_map artifacts ~f:(fun id ->
-      Base.Option.map (provider_of_kind (Canary_enumerate.kind_of id))
-        ~f:(fun p -> (id, p)))
+  Base.List.map artifacts ~f:(fun id ->
+      { Canary_project_run.ad_artifact = id;
+        ad_provider = provider_of_kind (Canary_enumerate.kind_of id) })
 
 (** tiny-full as a [project_run] the generic runner consumes. Its [pr_runner_spec]
     ASSEMBLES tiny's vendored cached artifacts into a tree (all-good ⇒ the witness
@@ -199,7 +199,7 @@ let realize (c : scenario_case) : Canary_step_builder.runner_spec =
 
 let tiny_full_run : project_run =
   { pr_name = "tiny-full";
-    pr_artifacts = artifacts;
+    pr_artifacts = tiny_artifact_table;
     (* the STATIC declaration (good baseline + built-lib axes; no mutations —
        those are tiny1's oracle). The generic runner enumerates it
        ([Canary_project_run.scenarios_of]) — like sqlite, a positive-only
@@ -208,7 +208,6 @@ let tiny_full_run : project_run =
     (* tiny-full ignores the runner-provided [workspace]: its realizations
        assemble the vendored tree themselves (tiny-factory concern). *)
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a));
-    pr_provenance = tiny_providers;
     (* the ocaml_dev cstubs variant is the DESIGNED forward probe: it
        requires the dev-only [tiny_scale], so deploying it over a stable lib
        reveals the forward mismatch (shipped 2026-08-05; status §B). No

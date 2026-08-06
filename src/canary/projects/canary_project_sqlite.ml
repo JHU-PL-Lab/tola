@@ -54,33 +54,44 @@ let sqlite_source_stable : Canary_artifact_source.source_repo =
 let sqlite_source_dev : Canary_artifact_source.source_repo =
   { sqlite_source_stable with version = "dev"; ref_ = "master" }
 
-(* THE single per-artifact provider declaration (from the real [prebuilt]
-   data) — a DATA table (A8). ONE source of truth: the runner's
-   [store_config] (fetch commands) AND `spec`'s [pr_provenance] both read
-   THIS list, so the display and the runner can't drift. (The
-   Built-from-amalgamation alt for the lib is the [lib=B:stable] scenario,
-   not a baseline provider.) *)
-let sqlite_providers :
-    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
+(* THE artifact table (from the real [prebuilt] data): identity + provider
+   per row — ONE source of truth (2026-08-06: the old separate
+   [sqlite_providers] assoc merged into the artifact rows, user-directed).
+   The runner's [store_config] (fetch commands) AND `spec`'s display both
+   read THIS list, so the two can't drift. (The Built-from-amalgamation
+   alt for the lib is the [lib=B:stable] scenario, not a baseline
+   provider.) *)
+let sqlite_artifacts : Canary_project_run.artifact_decl list =
   Canary_enumerate.
-    [ (a_source, Canary_store_config.Source_repo sqlite_source_stable);
-      (a_lib, Canary_store_config.Sys_pkg prebuilt.system_package);
-      ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-            package = prebuilt.opam_package } );
-      ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.Python; pm = Canary_store.Pip;
-            package = "sqlite3 (stdlib, pip no-op)" } ) ]
+    [ { Canary_project_run.ad_artifact = a_source;
+        ad_provider =
+          Some (Canary_store_config.Source_repo sqlite_source_stable) };
+      { ad_artifact = a_lib;
+        ad_provider = Some (Canary_store_config.Sys_pkg prebuilt.system_package)
+      };
+      { ad_artifact = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+                 package = prebuilt.opam_package }) };
+      { ad_artifact = a_binding Canary_lang.Python Canary_mechanism.Cext;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.Python; pm = Canary_store.Pip;
+                 package = "sqlite3 (stdlib, pip no-op)" }) } ]
 
 (* derived lookup over the table (internal consumers, e.g. store_config) *)
 let sqlite_provider (id : Canary_enumerate.artifact_id) :
     Canary_store_config.provider option =
   List.find_opt
-    (fun (a, _) -> Canary_enumerate.equal_artifact_id a id)
-    sqlite_providers
-  |> Option.map snd
+    (fun (d : Canary_project_run.artifact_decl) ->
+      Canary_enumerate.equal_artifact_id d.Canary_project_run.ad_artifact id)
+    sqlite_artifacts
+  |> fun d ->
+  Option.bind d (fun (d : Canary_project_run.artifact_decl) ->
+      d.Canary_project_run.ad_provider)
 
 (* Module-level watchlist for the sqlite3 opam package. Module names from
    ocamlobjinfo Name: fields; constructor-level drift is caught by compile probes. *)
@@ -218,12 +229,8 @@ let runner_spec : Canary_step_builder.runner_spec =
    the project identity (A6: the never-read [Canary_project.project] bundle
    was deleted 2026-08-05). *)
 
-let sqlite_artifacts =
-  Canary_enumerate.
-    [ a_source;
-      a_lib;
-      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-      a_binding Canary_lang.Python Canary_mechanism.Cext ]
+(* (The separate bare-id artifact list is gone — [sqlite_artifacts] above
+   IS the artifact table: identity + provider per row, 2026-08-06.) *)
 
 (* ── Built-from-source variant (provision = Built for the lib) ──
    Fetch the sqlite amalgamation (a REAL source fetch) and compile a real
@@ -435,9 +442,6 @@ let sqlite_run : Canary_project_run.project_run =
        Built@Stable and Built@Dev get distinct dirs; Fetched collapses across
        versions there). The built_spec reads the version from the assignment. *)
     pr_runner_spec = (fun a ~workspace -> realize (dispatch a) ~workspace);
-    (* the single [sqlite_providers] table — same source the runner's
-       store_config reads, so display and runner can't drift. *)
-    pr_provenance = sqlite_providers;
     (* No designed mismatch probes: sqlite is additive-only upstream (no
        backward breaks exist — measured, status §C) and no consumer here
        requires a version-sensitive API yet (a forward probe needs a ≤3.43

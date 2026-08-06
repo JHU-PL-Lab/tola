@@ -676,42 +676,42 @@ let z3_spec : Canary_enumerate.project_spec =
 
 (* ── A5 phase 2: dispatch / realization split + the [project_run] ── *)
 
-(** The DISPLAY artifact set for `spec` — wider than [z3_spec.ps_universe]:
-    the OCaml binding is shown (with its provider) even though it is not an
-    enumerated axis yet (see the [z3_spec] comment — it follows the chain). *)
-let z3_artifacts : Canary_enumerate.artifact_id list =
+(** THE artifact table (2026-08-06: identity + provider per row — the old
+    separate [z3_providers] assoc merged in, user-directed). Wider than
+    [z3_spec.ps_universe]: the OCaml binding row is display-only (no
+    baseline placement → no drift check) — the opam `z3` package the
+    stable chain's probe compiles against; it is not an enumerated axis
+    yet (see the [z3_spec] comment — it follows the chain). Providers are
+    the detail behind each artifact's BASELINE provision (the all-Fetched
+    stable chain), which is what `spec`'s drift check compares against.
+    Per-CHANNEL providers (the arbipher fork the dev chain fetches, the
+    dev-built lib) are the realization's concern below; a provider keyed
+    by (artifact × channel) — which would also let a project PIN a
+    Fetched version — is the not-yet-wired provenance refinement
+    (status §A / the Fetched-ambient gotcha). *)
+let z3_artifacts : Canary_project_run.artifact_decl list =
   Canary_enumerate.
-    [ a_source;
-      a_lib;
-      a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-      a_binding Canary_lang.Python Canary_mechanism.Cext ]
-
-(* Static per-artifact provider TABLE (typed data, A8) — the detail behind
-   each artifact's BASELINE provision (the all-Fetched stable chain), which
-   is what `spec`'s drift check compares against. Per-CHANNEL providers (the
-   arbipher fork the dev chain fetches, the dev-built lib) are the
-   realization's concern below; a provider table keyed by (artifact ×
-   channel) — which would also let a project PIN a Fetched version — is the
-   not-yet-wired provenance refinement (status §A / the Fetched-ambient
-   gotcha). The OCaml binding row is display-only detail (no baseline
-   placement → no drift check): the opam `z3` package the stable chain's
-   probe compiles against. *)
-let z3_providers :
-    (Canary_enumerate.artifact_id * Canary_store_config.provider) list =
-  Canary_enumerate.
-    [ (a_source, Canary_store_config.Source_repo z3_source_stable);
-      ( a_lib,
-        Canary_store_config.Sys_pkg
-          (Canary_store.mk_system_package_spec ~linux_pkg:"z3" ~macos_pkg:"z3"
-             ()) );
-      ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.OCaml; pm = Canary_store.Opam; package = "z3" }
-      );
-      ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-        Canary_store_config.Lang_pkg
-          { lang = Canary_lang.Python; pm = Canary_store.Pip;
-            package = "z3-solver" } ) ]
+    [ { Canary_project_run.ad_artifact = a_source;
+        ad_provider = Some (Canary_store_config.Source_repo z3_source_stable)
+      };
+      { ad_artifact = a_lib;
+        ad_provider =
+          Some
+            (Canary_store_config.Sys_pkg
+               (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
+                  ~macos_pkg:"z3" ())) };
+      { ad_artifact = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+                 package = "z3" }) };
+      { ad_artifact = a_binding Canary_lang.Python Canary_mechanism.Cext;
+        ad_provider =
+          Some
+            (Canary_store_config.Lang_pkg
+               { lang = Canary_lang.Python; pm = Canary_store.Pip;
+                 package = "z3-solver" }) } ]
 
 (* ── dispatch / realization split (the A9-step-1 structure) ──
    [scenario_case] is the PURE dispatch result — inspectable data computed
@@ -772,5 +772,4 @@ let z3_run distro : Canary_project_run.project_run =
     pr_artifacts = z3_artifacts;
     pr_spec = z3_spec;
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
-    pr_provenance = z3_providers;
     pr_mismatch_probes = [] }
