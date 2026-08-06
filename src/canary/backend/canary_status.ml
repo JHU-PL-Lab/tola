@@ -100,6 +100,62 @@ let read_file_or_empty path =
   try Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_all
   with _ -> ""
 
+(* ── install-diff (status §B build-config divergence, slice (ii)) ──
+   Compare the BUILD-TREE native inspect against the STAGED one for a
+   variant: with `install_lib` a real `cmake --install`, the staged
+   artifact is a genuinely transformed copy — this note surfaces whether
+   the transformation changed what the inspects capture (symbol counts,
+   SONAME, RPATH/RUNPATH, NEEDED). "identical" is itself a finding (no
+   install-time drift for this project/flags); a difference is the
+   build-config divergence made visible. [None] = either side missing. *)
+let install_diff_note ~root ~project ~variant : string option =
+  let project_name =
+    match String.lsplit2 project ~on:'/' with Some (p, _) -> p | None -> project
+  in
+  let inspect_of step_dir =
+    let file =
+      Canary_basic.filename ~variant_key:variant ~base:"inspect" ~ext:"json"
+    in
+    let path =
+      Printf.sprintf "%s/canary/projects/%s/%s/%s" root project_name step_dir
+        file
+    in
+    try Some (Yojson.Basic.from_file path) with _ -> None
+  in
+  match (inspect_of "probe_lib", inspect_of "probe_lib_staged") with
+  | Some bt, Some st ->
+      let open Yojson.Basic.Util in
+      let total j =
+        try j |> member "counts" |> member "total" |> to_int with _ -> -1
+      in
+      let elf_str j k =
+        try
+          match j |> member "elf" |> member k with
+          | `String s -> s
+          | `Null -> "-"
+          | `List xs ->
+              String.concat ~sep:","
+                (List.filter_map xs ~f:(function `String s -> Some s | _ -> None))
+          | _ -> "-"
+        with _ -> "-"
+      in
+      let diffs =
+        List.filter_map
+          [ ("symbols", Int.to_string (total bt), Int.to_string (total st));
+            ("soname", elf_str bt "soname", elf_str st "soname");
+            ("runpath", elf_str bt "runpath", elf_str st "runpath");
+            ("rpath", elf_str bt "rpath", elf_str st "rpath");
+            ("needed", elf_str bt "needed", elf_str st "needed") ]
+          ~f:(fun (k, b, s) ->
+            if String.equal b s then None
+            else Some (Printf.sprintf "%s %s→%s" k b s))
+      in
+      Some
+        (match diffs with
+         | [] -> "install-diff vs build-tree: identical"
+         | ds -> "⚠ install-diff: " ^ String.concat ~sep:"; " ds)
+  | _ -> None
+
 (* Compact watchlist verdict for a step row, aggregated over the step's
    .json witnesses for this variant: "watchlist 5/5" when all present,
    "⚠ watchlist MISSING a,b" otherwise. [None] = no watchlist data. Gated
@@ -308,7 +364,16 @@ let print_status ?(verbose = false) ~root ~project () =
                 | None -> ""
               else ""
             in
-            Stdlib.Printf.printf "      %-28s %-10s%s%s\n" tag m extra wnote;
+            (* build-tree vs staged comparison rides the STAGED inspect row *)
+            let inote =
+              if String.equal tag "probe_lib_staged_inspect" then
+                match install_diff_note ~root ~project ~variant:name with
+                | Some s -> "  " ^ s
+                | None -> ""
+              else ""
+            in
+            Stdlib.Printf.printf "      %-28s %-10s%s%s%s\n" tag m extra wnote
+              inote;
             if verbose then
               print_witness ~root ~project ~variant:name ~tag ~mark:m))
   end

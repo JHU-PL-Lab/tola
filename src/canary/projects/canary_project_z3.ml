@@ -396,10 +396,25 @@ let mk_runner_spec ~source
       (if source.has_build_lib then
          Some (fun ~output_dir ~variant_key ->
            let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
+           (* REAL install (2026-08-06; was a fake `cp` — TODO #40 / status
+              §B build-config divergence slice (i)): [cmake_install_cmd]
+              exercises the install-time transformations (headers + z3.pc +
+              the Z3Config/-Version files land in the prefix; versioned
+              symlink chain; RPATH handling), so the Staged probe tests a
+              genuinely
+              transformed artifact, not a hand-copied one. Safe for z3: the
+              OCaml binding has NO install() rules
+              (ops/install_targets.md) — nothing touches the opam switch.
+              Guarded (`test -f`) per the PHONY-target / opam-sandbox
+              gotchas. llvm deliberately NOT migrated: its install() rules
+              auto-install the OCaml binding into the switch — needs
+              component filtering first. *)
+           let install =
+             Canary_build_cmd.cmake_install_cmd ~build ~prefix:"$PREFIX" ()
+           in
            [%string
              {|PREFIX="%{build}/../install"
-mkdir -p "$PREFIX/lib"
-cp %{build}/libz3.so* "$PREFIX/lib/" 2>/dev/null || true
+test -f "$PREFIX/lib/libz3.so" || %{install}
 echo 'ok' > %{output_dir}/%{install_ok}|}])
        else None);
     fetch_lib =

@@ -62,6 +62,14 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
     everything in scope. [root] is the dune workspace root (passed via
     [--root <root>]); used by tiny variants whose materialized
     workspace lives outside the tola dune-project. *)
+(* REAL install: the build system's own install step ("cmake --install
+   <build> --prefix <prefix>") — applies the install-time transformations
+   (config files, versioned symlinks, RPATH handling) a hand `cp` skips
+   (TODO #40 / status §B build-config divergence). Caller owns the
+   idempotence guard. *)
+let cmake_install_cmd ?(cmake_exec = "cmake") ~build ~prefix () =
+  Printf.sprintf "%s --install %s --prefix \"%s\"" cmake_exec build prefix
+
 (* Fetch a zip archive and extract it into [dest] (curl + unzip). The
    caller owns idempotence guards; this is just the named verb pair so
    project specs don't hand-roll curl/unzip (tool-routing ratchet). *)

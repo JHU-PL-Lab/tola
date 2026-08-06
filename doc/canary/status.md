@@ -242,15 +242,25 @@ edges resolved via `dep_mode`). Open:
   canary should cover as a first-class failure class. Today it is
   INVISIBLE: the Staged location probes the same build output copied by
   a fake `cp` install (backlog **#40**), so build-tree ≡ staged by
-  construction. Shape, in slices: (i) make install REAL (#40,
-  `cmake --install --prefix`) so Staged is a genuinely transformed
-  artifact; (ii) `inspect-diff` build-tree vs staged per scenario
-  (symbol visibility, versioned refs, RPATH — the diff tool exists);
+  construction. Slices:
+  (i) ~~make install REAL~~ — **DONE for z3 2026-08-06**
+  (`cmake_install_cmd` tool primitive; the prefix now carries headers +
+  z3.pc + Z3Config files + the versioned symlink chain — verified live,
+  staged probe green over the transformed artifact). llvm deliberately
+  NOT migrated: its install() rules auto-install the OCaml binding into
+  the opam switch (ops/install_targets.md) — needs component filtering
+  first (#40 residue).
+  (ii) ~~surface build-tree vs staged~~ — **DONE 2026-08-06**: `status`
+  prints an install-diff note on the staged inspect row (symbol counts +
+  ELF soname/rpath/runpath/needed, already captured by the native
+  inspect). z3 today: "identical" — itself a finding (the dev build
+  links with final SONAME, no build-tree RUNPATH); a project/flags combo
+  that rewrites RPATH will go `⚠`. Prefix-LAYOUT diffs (pc/cmake files,
+  symlinks) need a staged-tree inspect — rides (iii).
   (iii) declare build CONFIG as part of a Built artifact's identity
   (couples with the location sub-axis, A5 residue (i), and A9-step-2 — a
   flags column in the action-variant table; `versioning.md`'s `build_id`
-  is the natural carrier). Demo target: z3 (already probes build-tree /
-  staged / sys-PM in one scenario).
+  is the natural carrier). Open.
 - **Version deploy-mismatch, backward half** (forward half shipped
   2026-08-05 — worklog): a stable consumer @ newer incompatible lib
   (soname/symver, `Bs.4`/`Bs.3` → c4/c5). Broad = missing *and* added
