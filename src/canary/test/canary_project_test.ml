@@ -886,6 +886,72 @@ let execution_plan_test : pure_test =
       in
       topo_ok && edges_ok && has_built_lib && has_initial) }
 
+(* ── Tool-routing RATCHET (user, 2026-08-05) ──
+   Shell verbs that have (or should get) a named primitive in
+   `src/canary/tool` must not spread as raw strings through the project
+   specs — that is exactly the code scattering TODO #18 fights. The
+   baseline below freezes TODAY's per-file line counts; a count ABOVE
+   baseline fails the suite (route the new use through a tool/ primitive
+   instead); a count below baseline means cleanup happened — lower the
+   baseline in the same commit. Comments count too (crude by design: a
+   ratchet, not a parser). *)
+let tool_routing_ratchet_test : pure_test =
+  { name = "harness.tool_routing_ratchet";
+    check = (fun () ->
+      let dir = "src/canary/projects" in
+      let lines_with ~needle path =
+        try
+          Stdlib.In_channel.with_open_text path (fun ic ->
+              let rec loop n =
+                match Stdlib.In_channel.input_line ic with
+                | None -> n
+                | Some l ->
+                    loop (if String.is_substring l ~substring:needle then n + 1 else n)
+              in
+              loop 0)
+        with _ -> 0
+      in
+      (* verb → per-file baseline (absent file = 0 allowed) *)
+      let baseline =
+        [ ("cmake ",
+           [ ("canary_project_llvm.ml", 5); ("canary_tiny_scenario.ml", 4);
+             ("canary_project_z3.ml", 3); ("canary_run.ml", 1) ]);
+          ("ninja ", [ ("canary_project_llvm.ml", 1) ]);
+          ("gcc ", [ ("canary_project_sqlite.ml", 1) ]);
+          ("curl ", [ ("canary_project_sqlite.ml", 1) ]);
+          ("unzip", [ ("canary_project_sqlite.ml", 1) ]);
+          ("pip install", [ ("canary_project_llvm.ml", 3) ]);
+          ("opam install",
+           [ ("canary_pattern_a.ml", 1); ("canary_project_ssl.ml", 1);
+             ("canary_project_llvm.ml", 1); ("canary_project_z3.ml", 2) ]);
+          ("nm -D",
+           [ ("canary_tiny_workspace.ml", 2); ("canary_project_sqlite.ml", 1);
+             ("canary_tiny_scenario.ml", 1) ]);
+          ("git clone", []);
+          ("tar ", []) ]
+      in
+      match Stdlib.Sys.readdir dir with
+      | exception _ -> false
+      | files ->
+          let ok = ref true in
+          Array.iter files ~f:(fun f ->
+              if String.is_suffix f ~suffix:".ml" then
+                List.iter baseline ~f:(fun (verb, per_file) ->
+                    let allowed =
+                      Option.value
+                        (List.Assoc.find per_file f ~equal:String.equal)
+                        ~default:0
+                    in
+                    let n = lines_with ~needle:verb (dir ^ "/" ^ f) in
+                    if n > allowed then begin
+                      ok := false;
+                      Fmt.pr
+                        "    RATCHET %s: %d line(s) with %S (baseline %d) — \
+                         route new uses through src/canary/tool@."
+                        f n verb allowed
+                    end));
+          !ok) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -898,7 +964,8 @@ let all_tests : pure_test list =
       subset_intersects_universe_test; mechanism_catalogue_test;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
-      agnostic_expectation_test; execution_plan_test ]
+      agnostic_expectation_test; execution_plan_test;
+      tool_routing_ratchet_test ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the live project specs are the

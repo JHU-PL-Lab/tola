@@ -191,6 +191,23 @@ edges resolved via `dep_mode`). Open:
   type_wrong triage (2026-08-05) sharpened its payoff: a body-only c6 lie
   today confirms only as an UNATTRIBUTED xfail (nothing static predicts
   it); a body-reading c6 inspector turns that `[]` into `[c6]`.
+- **Build-config divergence: build-tree vs installed artifact** (user,
+  2026-08-05). Real projects routinely compile the local/build-tree
+  artifact and the installed/packaged one with DIFFERENT flag sets (dev:
+  assertions/`-g`; install/package: `-O2 -DNDEBUG`, RPATH rewritten at
+  `cmake --install`, distro hardening flags) — an error-prone divergence
+  canary should cover as a first-class failure class. Today it is
+  INVISIBLE: the Staged location probes the same build output copied by
+  a fake `cp` install (backlog **#40**), so build-tree ≡ staged by
+  construction. Shape, in slices: (i) make install REAL (#40,
+  `cmake --install --prefix`) so Staged is a genuinely transformed
+  artifact; (ii) `inspect-diff` build-tree vs staged per scenario
+  (symbol visibility, versioned refs, RPATH — the diff tool exists);
+  (iii) declare build CONFIG as part of a Built artifact's identity
+  (couples with the location sub-axis, A5 residue (i), and A9-step-2 — a
+  flags column in the action-variant table; `versioning.md`'s `build_id`
+  is the natural carrier). Demo target: z3 (already probes build-tree /
+  staged / sys-PM in one scenario).
 - **Version deploy-mismatch, backward half** (forward half shipped
   2026-08-05 — worklog): a stable consumer @ newer incompatible lib
   (soname/symver, `Bs.4`/`Bs.3` → c4/c5). Broad = missing *and* added
@@ -258,6 +275,15 @@ provision / §5 rewrite). Pick up when B/C force it.
 
 ## E. Polish
 
+- **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
+  to-do: `harness.tool_routing_ratchet` in `project-test` freezes
+  per-file counts of raw shell verbs in `projects/` — cmake / ninja /
+  gcc / curl / unzip / pip install / opam install / nm -D / git clone /
+  tar; any NEW raw use fails: route it through a `src/canary/tool`
+  primitive). Remaining = shrink the baseline to zero — sqlite
+  `built_spec`'s raw gcc/curl/unzip + nm (§1c #5), llvm's pip/opam
+  raws — the cleanup half of TODO #18, natural with A9-step-2; lower
+  the baseline in the same commit as each cleanup.
 - Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key).
 - Factory comment sweep (resource → cached artifact in
   `canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*).
