@@ -242,6 +242,20 @@ edges resolved via `dep_mode`). Open:
 = §1b (instance graph / per-edge version / versioning / packaging / headers
 provision / §5 rewrite). Pick up when B/C force it.
 
+- **Mechanism & PM design from first principles** (user, 2026-08-05;
+  [`design/mechanism.md`](design/mechanism.md)). The mechanism CATALOGUE
+  shipped (`base/canary_mechanism.ml`: per-mechanism `mechanism_info`
+  data; project specs reference by name, `spec` displays from the
+  catalogue; pinned total+consistent). OPEN research direction: today's
+  mechanisms are found objects — with the design-space axes explicit as
+  data (checking-point placement, surface carrier, version-identity
+  transport, lib co-provision) and tiny as the controlled instrument
+  (one lib × three mechanisms × 22 mutations = a per-mechanism
+  manifestation matrix), can a better binding mechanism — then a better
+  PM — be DERIVED rather than found? Migration path for the remaining
+  scattered mechanism-coupled fragments (probe shapes, build recipes,
+  inspector selection): rows in A9-step-2's action-variant table.
+
 ## E. Polish
 
 - Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key).

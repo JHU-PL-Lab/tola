@@ -552,6 +552,28 @@ let thin_config_level_test : pure_test =
                  | B.Stable -> true
                  | B.Dev -> false))) }
 
+(* The mechanism CATALOGUE (base/canary_mechanism.ml, 2026-08-05): total
+   over the mechanism constructors; stored discipline == the derived one
+   (the catalogue cannot drift from the vocabulary); each language's
+   default mechanism is catalogued as wired; every entry names at least
+   one artifact form and one checking point. *)
+let mechanism_catalogue_test : pure_test =
+  { name = "mechanism.catalogue_total_and_consistent";
+    check = (fun () ->
+      let all =
+        Mech.[ Cstubs; Cext; Ctypes; Cffi; Dynlink ]
+      in
+      List.for_all all ~f:(fun m ->
+          let i = Mech.info_of_mechanism m in
+          Poly.equal i.Mech.mi_mechanism m
+          && Poly.equal i.Mech.mi_discipline (Mech.discipline_of_mechanism m)
+          && (not (List.is_empty i.Mech.mi_artifact_shape))
+          && not (List.is_empty i.Mech.mi_check_points))
+      && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
+             match Mech.default_mechanism_of_lang l with
+             | Some m -> (Mech.info_of_mechanism m).Mech.mi_wired
+             | None -> false)) }
+
 (* Subset INTERSECTS the universe (found via z3 + thin, A5 phase 2): on a
    z3-shaped spec (lib Fetched@Stable | Built@Dev — Built has NO Stable),
    version Subset [Stable] must NOT fabricate a Built@Stable world; the Built
@@ -873,7 +895,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
-      subset_intersects_universe_test;
+      subset_intersects_universe_test; mechanism_catalogue_test;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       agnostic_expectation_test; execution_plan_test ]
