@@ -62,6 +62,24 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
     everything in scope. [root] is the dune workspace root (passed via
     [--root <root>]); used by tiny variants whose materialized
     workspace lives outside the tola dune-project. *)
+(* Fetch a zip archive and extract it into [dest] (curl + unzip). The
+   caller owns idempotence guards; this is just the named verb pair so
+   project specs don't hand-roll curl/unzip (tool-routing ratchet). *)
+let curl_unzip_cmd ~url ~dest () =
+  Printf.sprintf
+    "mkdir -p %s && curl -sL %s -o %s/a.zip && (cd %s && unzip -oq a.zip)"
+    dest url dest dest
+
+(* Compile one C translation unit into a shared library. Defaults produce
+   "gcc -shared -fPIC <src> -o <out> <ldlibs>"; guards/symlinks stay with
+   the caller (project-shaped), the compiler verb lives here. *)
+let cc_shared_lib_cmd ?(cc = "gcc") ?(flags = [ "-shared"; "-fPIC" ])
+    ?(ldlibs = []) ~c_src ~out () =
+  Printf.sprintf "%s %s %s -o %s %s" cc
+    (String.concat ~sep:" " flags)
+    c_src out
+    (String.concat ~sep:" " ldlibs)
+
 let dune_build_cmd ?(env_extra = []) ?root ?target () =
   let env_prefix = match env_extra with
     | [] -> ""

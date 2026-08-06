@@ -281,12 +281,15 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
   let ocaml = sqlite_ocaml_config.ocaml in
   { runner_spec with
     fetch_lib = None;   (* built from source, not fetched *)
+    (* Shell verbs routed through tool/ primitives (tool-routing ratchet,
+       2026-08-05): the archive fetch+extract via [curl_unzip_cmd], the
+       compile via [cc_shared_lib_cmd], the symbol probe via
+       [native_lib_probe_cmd] — guards + soname symlink stay
+       project-shaped. *)
     fetch_source =
       Some
         (fun ~output_dir ~variant_key ->
-          Printf.sprintf
-            "mkdir -p %s && curl -sL %s -o %s/a.zip && (cd %s && unzip -oq a.zip)"
-            src amalg_url src src
+          Canary_build_cmd.curl_unzip_cmd ~url:amalg_url ~dest:src ()
           |> Canary_build_cmd.with_marker ~marker:"source.ok" ~output_dir ~variant_key);
     build_lib =
       Some
@@ -294,20 +297,22 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
           (* the .so.0 symlink satisfies the bindings' NEEDED entry
              (libsqlite3.so.0 — the system lib's soname) when the loader is
              repointed at [libdir]. *)
+          let cc =
+            Canary_build_cmd.cc_shared_lib_cmd
+              ~c_src:(Printf.sprintf "%s/%s/sqlite3.c" src amalg_dir)
+              ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ()
+          in
           Printf.sprintf
-            "test -f %s || { mkdir -p %s && gcc -shared -fPIC %s/%s/sqlite3.c \
-             -o %s -lpthread -ldl ; } && ln -sfn libsqlite3.so %s/libsqlite3.so.0"
-            libpath libdir src amalg_dir libpath libdir
+            "test -f %s || { mkdir -p %s && %s ; } && ln -sfn libsqlite3.so \
+             %s/libsqlite3.so.0"
+            libpath libdir cc libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
                ~variant_key);
     probe_lib =
       [ ( Canary_store.Build_tree,
           fun ~output_dir ~variant_key ->
-            Printf.sprintf
-              "nm -D %s | grep -q sqlite3_open && echo 'built libsqlite3 ok (%s)'"
-              libpath libpath
-            |> Canary_build_cmd.with_marker ~marker:"probe.log" ~output_dir
-                 ~variant_key ) ];
+            Canary_artifact_native.native_lib_probe_cmd ~lib:libpath
+              ~prefix:"sqlite3_" ~output_dir ~variant_key ) ];
     (* Built worlds additionally INSPECT the built lib against the modern-API
        watchlist (observation: per-version export presence); the base spec's
        probe-time binding inspects are kept. *)

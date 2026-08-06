@@ -912,20 +912,28 @@ let tool_routing_ratchet_test : pure_test =
         with _ -> 0
       in
       (* verb → per-file baseline (absent file = 0 allowed) *)
+      (* Burn-down log: sqlite's gcc/curl/unzip/nm went to ZERO 2026-08-05
+         (routed via curl_unzip_cmd / cc_shared_lib_cmd /
+         native_lib_probe_cmd). Next candidates: llvm's pip-install chain
+         (needs a pip_install_any primitive with the uv fallback) and the
+         opam-install raws (A9-step-2 territory). *)
       let baseline =
         [ ("cmake ",
            [ ("canary_project_llvm.ml", 5); ("canary_tiny_scenario.ml", 4);
              ("canary_project_z3.ml", 3); ("canary_run.ml", 1) ]);
           ("ninja ", [ ("canary_project_llvm.ml", 1) ]);
-          ("gcc ", [ ("canary_project_sqlite.ml", 1) ]);
-          ("curl ", [ ("canary_project_sqlite.ml", 1) ]);
-          ("unzip", [ ("canary_project_sqlite.ml", 1) ]);
+          ("gcc ", []);
+          ("curl ", []);
+          (* "unzip -" (flag form): the bare word also appears in the tool
+             primitive's NAME (curl_unzip_cmd), which is exactly the
+             routing we want — only raw invocations should count. *)
+          ("unzip -", []);
           ("pip install", [ ("canary_project_llvm.ml", 3) ]);
           ("opam install",
            [ ("canary_pattern_a.ml", 1); ("canary_project_ssl.ml", 1);
              ("canary_project_llvm.ml", 1); ("canary_project_z3.ml", 2) ]);
           ("nm -D",
-           [ ("canary_tiny_workspace.ml", 2); ("canary_project_sqlite.ml", 1);
+           [ ("canary_tiny_workspace.ml", 2);
              ("canary_tiny_scenario.ml", 1) ]);
           ("git clone", []);
           ("tar ", []) ]

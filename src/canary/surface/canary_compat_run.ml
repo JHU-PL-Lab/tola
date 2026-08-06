@@ -108,7 +108,56 @@ let resolve_variant ~root ~project variant =
       "fetch_binding/python"; "build_binding/python";
       "probe_binding/ocaml"; "probe_binding/python";
     ] in
-    let resolved = List.find_map step_candidates ~f:find_variant_in_step in
+    (* A5 layout (2026-08-05): generic-runner variant_ids are SCENARIO ids
+       (e.g. "lib-built-dev_python_binding-fetched_source-fetched"), so the
+       legacy prefix rule above ("dev" → "dev_<hash>") finds nothing in a
+       post-A5 cache. Second pass: collect every variant id embedded in the
+       step dirs' JSON names (known base prefixes stripped) and pick the
+       newest id CONTAINING the requested token — with the fetch-chain
+       aliases ("stable"/"19" name a chain whose id says "lib-fetched":
+       a Fetched artifact is version-ambient, so its channel never appears
+       in the scenario id). "dev" matches "lib-built-dev…" by substring. *)
+    let scenario_needle =
+      match variant with
+      | "stable" | "19" | "fetched" -> "lib-fetched"
+      | v -> v
+    in
+    let scenario_ids_in_step step_dir_name =
+      let step_dir = [%string "%{project_dir}/%{step_dir_name}"] in
+      match Stdlib.Sys.readdir step_dir with
+      | exception _ -> []
+      | files ->
+          let bases =
+            [ "summary_stub_"; "summary_"; "inspect_mli_"; "inspect_stub_";
+              "inspect_cmi_"; "inspect_" ]
+          in
+          Array.to_list files
+          |> List.filter_map ~f:(fun f ->
+                 if not (String.is_suffix f ~suffix:".json") then None
+                 else
+                   List.find_map bases ~f:(fun b ->
+                       match String.chop_prefix f ~prefix:b with
+                       | Some rest ->
+                           let id = String.chop_suffix_exn rest ~suffix:".json" in
+                           if String.is_substring id ~substring:scenario_needle
+                           then
+                             Some
+                               ( (Unix.stat [%string "%{step_dir}/%{f}"]).st_mtime,
+                                 id )
+                           else None
+                       | None -> None))
+    in
+    let resolved =
+      match List.find_map step_candidates ~f:find_variant_in_step with
+      | Some v -> Some v
+      | None -> (
+          match List.concat_map step_candidates ~f:scenario_ids_in_step with
+          | [] -> None
+          | ids ->
+              List.sort ids ~compare:(fun (a, _) (b, _) -> Float.compare b a)
+              |> List.hd
+              |> Option.map ~f:snd)
+    in
     Some (project_dir, Option.value resolved ~default:variant)
   end
 

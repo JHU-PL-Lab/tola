@@ -92,9 +92,11 @@ edges resolved via `dep_mode`). Open:
 - **A5 residue** (core DONE 2026-08-05 — z3+llvm generic; worklog):
   - ssl/zarith/cairo migration to `project_run` (retires
     `run_project_multi`; ssl is its last consumer). No hurry per user.
-  - `compat`/`verify` still glob pre-A5 dirs (`dev_*`/`stable`/`19`);
-    runs now write scenario-keyed dirs (old cached dirs satisfy them
-    meanwhile).
+  - ~~`compat`/`verify` glob pre-A5 dirs~~ — DONE 2026-08-05:
+    `resolve_variant` gained a scenario-id pass (known JSON base prefixes
+    stripped; newest id containing the token; "stable"/"19" alias to
+    "lib-fetched" since a Fetched channel never appears in scenario ids).
+    Verified: `compat z3 dev`, `verify z3 stable`.
   - The three abstractions A5 was the forcing function for, now with
     concrete evidence: (i) the **location sub-axis** (one z3 scenario
     probes the lib at build-tree/staged/apt — unmodeled; A9-step-2's
@@ -113,6 +115,9 @@ edges resolved via `dep_mode`). Open:
     branch on them internally. Tractable now that dispatch reads
     placements; the `has_build_binding` boolean is exactly
     binding-follows-chain (iii) in boolean disguise — fold them together.
+    PINNED meanwhile (2026-08-05):
+    `z3/llvm.build_flags_match_declared_provisions` keeps the two
+    encodings consistent until the fold.
 - **A7 residue** (DONE 2026-08-05 — 3-way unification complete; §1c #1
   resolved; worklog):
   - typed per-probe `asserts` field (world-identity assertions as data
@@ -290,7 +295,11 @@ provision / §5 rewrite). Pick up when B/C force it.
   primitive). Remaining = shrink the baseline to zero — sqlite
   `built_spec`'s raw gcc/curl/unzip + nm (§1c #5), llvm's pip/opam
   raws — the cleanup half of TODO #18, natural with A9-step-2; lower
-  the baseline in the same commit as each cleanup.
+  the baseline in the same commit as each cleanup. (sqlite burned to
+  ZERO 2026-08-05 via new `curl_unzip_cmd`/`cc_shared_lib_cmd` +
+  `native_lib_probe_cmd`; remaining: llvm pip chain — needs a
+  pip-install-any primitive with the uv fallback — and the opam-install
+  raws.)
 - Tri-view command (factory / tiny1 / tiny-full on the `Bs.N` key).
 - Factory comment sweep (resource → cached artifact in
   `canary_tiny_scenario.ml`, minding the legit `Vendored` *provision*).

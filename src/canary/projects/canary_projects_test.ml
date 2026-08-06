@@ -200,5 +200,30 @@ let llvm_lowering_derived : Canary_project_test.pure_test =
        | _ -> false)
       && sm_is_success (lower (B.Probe_binding Canary_lang.Python) pip_loc)) }
 
+(* ── #47 drift guard ──
+   Until the has_build_* → provision-axis fold lands (status §A A5
+   residue), the source flags and the declared universe are TWO encodings
+   of build capability. Pin them consistent per chain: the lib's declared
+   Built channels must say exactly what the per-chain source flags say —
+   so neither encoding can drift silently while both are live. *)
+let flags_match_spec_pin ~prefix ~(spec : EN.project_spec)
+    ~(dev_src : Canary_artifact_source.source_repo)
+    ~(stable_src : Canary_artifact_source.source_repo) :
+    Canary_project_test.pure_test =
+  { name = prefix ^ ".build_flags_match_declared_provisions";
+    check = (fun () ->
+      let built = EN.ps_versions_of spec EN.a_lib EN.Built in
+      let has ch = List.mem built ch ~equal:Poly.equal in
+      Bool.equal dev_src.Canary_artifact_source.has_build_lib (has B.Dev)
+      && Bool.equal stable_src.Canary_artifact_source.has_build_lib
+           (has B.Stable)) }
+
 let tests : Canary_project_test.pure_test list =
-  z3_pins @ llvm_pins @ [ z3_lowering_derived; llvm_lowering_derived ]
+  z3_pins @ llvm_pins
+  @ [ z3_lowering_derived; llvm_lowering_derived;
+      flags_match_spec_pin ~prefix:"z3" ~spec:Canary_project_z3.z3_spec
+        ~dev_src:Canary_project_z3.z3_source_dev
+        ~stable_src:Canary_project_z3.z3_source_stable;
+      flags_match_spec_pin ~prefix:"llvm" ~spec:Canary_project_llvm.llvm_spec
+        ~dev_src:Canary_project_llvm.llvm_source_dev
+        ~stable_src:Canary_project_llvm.llvm_source_stable ]
