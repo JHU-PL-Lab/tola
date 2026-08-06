@@ -444,30 +444,104 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
    the head of each list is the representative (artifact order also fixes
    the enumeration/baseline order). The old accessor names survive as
    functions OVER the table below. *)
-type project_spec = {
-  ps_universe :
-    (artifact_id * (provision * Canary_basic.channel list) list) list;
-      (** per artifact: its provisions, each with the version channels that
+(** A declared artifact's AXES — the per-ARTIFACT record the spec row
+    carries (user-directed 2026-08-05: per-artifact facts belong ON the
+    artifact, not in parallel project-level tables). Today: the
+    provision×version universe + the optional runtime-edge mode. Future
+    per-artifact config (a provider, a mechanism ref, …) extends THIS
+    record, not the project. *)
+type artifact_axes = {
+  ax_universe : (provision * Canary_basic.channel list) list;
+      (** the artifact's provisions, each with the version channels that
           provision can realize (Fetched = ambient representative; Built =
           buildable versions; Vendored = cached variants). *)
+  ax_runtime : Canary_store.dep_mode option;
+      (** milestone-(b) slice (2026-08-05): for a CONSUMER artifact, how
+          its runtime provider relates to the enumerated placement —
+          [Independent] (runs over the scenario's lib, independent of its
+          own build-lib: run-lib ≠ build-lib made explicit), [Ambient s]
+          (bundled/co-provider lib outside the enumeration — backlog #45
+          declared), [Lockstep] (matched chain). [None] = undeclared. An
+          edge whose mode differs per chain/variant stays [None] until a
+          finer key exists. *)
+}
+
+(** Row constructor: [axes u] = universe only; [axes ~runtime:m u] also
+    declares the runtime-edge mode. *)
+let axes ?runtime (u : (provision * Canary_basic.channel list) list) :
+    artifact_axes =
+  { ax_universe = u; ax_runtime = runtime }
+
+type project_spec = {
+  ps_universe : (artifact_id * artifact_axes) list;
+      (** ONE fused per-artifact table (A8): each declared artifact with
+          its [artifact_axes]. *)
 }
 
 let ps_artifacts (s : project_spec) : artifact_id list =
   List.map s.ps_universe ~f:fst
 
+let ps_axes_of (s : project_spec) (id : artifact_id) : artifact_axes option =
+  List.Assoc.find s.ps_universe id ~equal:equal_artifact_id
+
 let ps_provisions_of (s : project_spec) (id : artifact_id) : provision list =
-  match List.Assoc.find s.ps_universe id ~equal:equal_artifact_id with
-  | Some u -> List.map u ~f:fst
+  match ps_axes_of s id with
+  | Some ax -> List.map ax.ax_universe ~f:fst
   | None -> []
 
 let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
     Canary_basic.channel list =
-  match List.Assoc.find s.ps_universe id ~equal:equal_artifact_id with
+  match ps_axes_of s id with
   | None -> []
-  | Some u -> (
-      match List.Assoc.find u pv ~equal:equal_provision with
+  | Some ax -> (
+      match List.Assoc.find ax.ax_universe pv ~equal:equal_provision with
       | Some cs -> cs
       | None -> [])
+
+(* ── runtime pairings (milestone-(b) slice, general processing) ──
+   Resolve each declared [ax_runtime] against ONE enumerated scenario: the
+   two-instance structure (what a consumer RUNS over vs what it was built
+   against) surfaced from spec data + enumeration coordinates alone — the
+   runner's realization is not consulted. GENERAL machinery (this layer),
+   not a project-level special case; the node graph ([close_deps]) can
+   read the same [ax_runtime] when it wakes. *)
+
+(** One resolved pairing: [rp_run] = the scenario's lib placement
+    ([None] for [Ambient] — its lib is outside the enumeration);
+    [rp_deploy] = the run-lib is canary-supplied (Built/Vendored) while
+    the consumer's own build-lib came from its provider — run-lib ≠
+    build-lib, the deploy pairing (v1 rule; refines when a consumer's
+    build-lib becomes declarable data). *)
+type runtime_pairing = {
+  rp_consumer : artifact_id;
+  rp_mode : Canary_store.dep_mode;
+  rp_run : placement option;
+  rp_deploy : bool;
+}
+
+let runtime_pairings_of (s : project_spec) (a : assignment) :
+    runtime_pairing list =
+  let lib_pl = placement_of a a_lib in
+  List.filter_map s.ps_universe ~f:(fun (id, ax) ->
+      Option.map ax.ax_runtime ~f:(fun mode ->
+          match (mode : Canary_store.dep_mode) with
+          | Canary_store.Ambient _ ->
+              { rp_consumer = id; rp_mode = mode; rp_run = None;
+                rp_deploy = false }
+          | Canary_store.Lockstep ->
+              { rp_consumer = id; rp_mode = mode; rp_run = lib_pl;
+                rp_deploy = false }
+          | Canary_store.Independent ->
+              let deploy =
+                match lib_pl with
+                | Some pl -> (
+                    match pl.provision with
+                    | Built | Vendored -> true
+                    | Fetched | Absent -> false)
+                | None -> false
+              in
+              { rp_consumer = id; rp_mode = mode; rp_run = lib_pl;
+                rp_deploy = deploy }))
 
 (** STAGE 2 input — the exploration policy: HOW MUCH of the declared space to
     walk THIS run, plus any faults to inject. [config] sets a [level] per axis

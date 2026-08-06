@@ -83,10 +83,14 @@ set == what the algorithm + graph say the project's worlds are).
 - **(b) real mismatch/failure scenarios — MOSTLY DONE.** Shipped: sqlite's
   verified deploy scenario (runner-realized repoint) + tiny-full's
   enumerated, c1-detected forward mismatch (flat form: binding-version ≠
-  lib-version). **First two-instance slice landed 2026-08-05 (bottom-up)**:
-  `pr_runtime_edges` declares each consumer's runtime-edge mode
-  (Independent / Ambient / Lockstep) and `runtime_pairings_of` resolves
-  the pairing per scenario — `spec` now prints, per world, what each
+  lib-version). **First two-instance slice landed 2026-08-05 (bottom-up;
+  relocated the same day per user)**: each consumer's runtime-edge mode
+  (Independent / Ambient / Lockstep) is declared per-ARTIFACT on its spec
+  row — `Canary_enumerate.artifact_axes.ax_runtime`; spec rows are
+  per-artifact RECORDS now, the home for future artifact config (the
+  brief `pr_runtime_edges` project table was a parallel-table smell) —
+  and the GENERAL `Canary_enumerate.runtime_pairings_of` resolves the
+  pairing per scenario — `spec` prints, per world, what each
   binding RUNS over vs was built against (`binding:ocaml → lib B:dev
   [build-lib ≠ run-lib: DEPLOY]`; python → ambient bundled). The second
   lib instance is enumeration DATA now, not realization folklore; the
@@ -155,8 +159,9 @@ edges resolved via `dep_mode`). Open:
 - **Ambient-edge step dedup** (finding 2026-08-05): an Ambient runtime
   edge makes a step SCENARIO-INVARIANT (sqlite's python probe runs
   identically in all 3 scenarios; z3's wheel xfail fires in both chains).
-  The per-edge declaration NOW EXISTS (`pr_runtime_edges`, milestone-(b)
-  slice — sqlite/z3/llvm python edges declared Ambient), so the runner
+  The per-edge declaration NOW EXISTS (`artifact_axes.ax_runtime`,
+  milestone-(b) slice — sqlite/z3/llvm python edges declared Ambient;
+  `dep_mode` is base vocabulary now, `canary_store`), so the runner
   CAN learn to share/dedup those steps across scenarios — the step-level
   analogue of the Fetched whole-scenario dedup; unblocked, not yet
   implemented. The z3-solver CO-PROVIDER entry (backlog **#45**:

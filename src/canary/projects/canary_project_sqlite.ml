@@ -378,16 +378,29 @@ let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
      one representative — no spurious Fetched@Dev that would only dedup away
      downstream. Declared scenarios == run scenarios: fetched-system,
      built@3.45.1, built@3.46.1. *)
+(* Runtime-edge modes live ON the artifact rows (2026-08-05, user-directed
+   relocation off the project): the OCaml binding is [Independent] — opam
+   compiled it against the system lib, but it RUNS over whatever lib the
+   scenario places (the Built worlds' loader repoint): build-lib ≠ run-lib
+   is explicit axis data. Python is [Ambient] — uv/standalone python
+   statically bundles its own sqlite (`_sqlite3` builtin), so the
+   scenario's lib axis never reaches it (probes observe, never assert). *)
 let sqlite_spec : Canary_enumerate.project_spec =
   { ps_universe =
       Canary_enumerate.
         [ ( a_lib,
-            [ (Fetched, [ Canary_basic.Stable ]);
-              (Built, Canary_basic.[ Stable; Dev ]) ] );
+            axes
+              [ (Fetched, [ Canary_basic.Stable ]);
+                (Built, Canary_basic.[ Stable; Dev ]) ] );
           ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-            [ (Fetched, [ Canary_basic.Stable ]) ] );
+            axes ~runtime:Canary_store.Independent
+              [ (Fetched, [ Canary_basic.Stable ]) ] );
           ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-            [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+            axes
+              ~runtime:
+                (Canary_store.Ambient
+                   "python-bundled sqlite (uv: static _sqlite3)")
+              [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
 
 (* ── dispatch / realization split ──
    [scenario_case] is the PURE dispatch result — inspectable data computed
@@ -429,18 +442,4 @@ let sqlite_run : Canary_project_run.project_run =
        backward breaks exist — measured, status §C) and no consumer here
        requires a version-sensitive API yet (a forward probe needs a ≤3.43
        lib version + a C-level consumer of sqlite3_get_clientdata). *)
-    pr_mismatch_probes = [];
-    (* Milestone-(b) first slice: the runtime edges DECLARED. The OCaml
-       binding is [Independent] — opam compiled it against the system lib,
-       but it RUNS over whatever lib the scenario places (the Built worlds'
-       loader repoint): build-lib ≠ run-lib is now explicit enumeration
-       data, not realization folklore. Python is [Ambient] — uv/standalone
-       python statically bundles its own sqlite (`_sqlite3` builtin), so
-       the scenario's lib axis never reaches it (probes observe, never
-       assert — measured 2026-08-05). *)
-    pr_runtime_edges =
-      [ ( Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-          Canary_action.Independent );
-        ( Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext,
-          Canary_action.Ambient "python-bundled sqlite (uv: static _sqlite3)"
-        ) ] }
+    pr_mismatch_probes = [] }

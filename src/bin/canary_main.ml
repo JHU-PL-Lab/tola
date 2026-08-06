@@ -661,25 +661,25 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
         watchlist_note
         (if String.equal label "(baseline)" then "   (baseline)" else "");
       (* Milestone-(b) first slice: the scenario's RUNTIME pairings from the
-         declared [pr_runtime_edges] — the second lib instance (what a
-         consumer RUNS over vs what it was built against) as enumeration
-         data, not realization folklore. Printed only when declared. *)
-      (match Canary_project_run.runtime_pairings_of pr a with
+         spec rows' [ax_runtime] — the second lib instance (what a consumer
+         RUNS over vs what it was built against) as enumeration data, not
+         realization folklore. Printed only when declared. *)
+      (match E.runtime_pairings_of pr.Canary_project_run.pr_spec a with
        | [] -> ()
        | ps ->
-           let part (p : Canary_project_run.runtime_pairing) =
-             let name = E.pretty_id p.Canary_project_run.rp_consumer in
-             match p.Canary_project_run.rp_mode with
-             | Canary_action.Ambient s ->
+           let part (p : E.runtime_pairing) =
+             let name = E.pretty_id p.E.rp_consumer in
+             match p.E.rp_mode with
+             | Canary_store.Ambient s ->
                  Printf.sprintf "%s → ambient (%s)" name s
              | _ ->
                  let run =
-                   match p.Canary_project_run.rp_run with
+                   match p.E.rp_run with
                    | Some pl -> placement_str pl
                    | None -> "—"
                  in
                  Printf.sprintf "%s → lib %s%s" name run
-                   (if p.Canary_project_run.rp_deploy then
+                   (if p.E.rp_deploy then
                       "  [build-lib ≠ run-lib: DEPLOY]"
                     else "")
            in

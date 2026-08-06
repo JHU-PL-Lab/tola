@@ -78,74 +78,13 @@ type project_run = {
           computed ([Canary_enumerate.mismatch_direction_of]); this table
           says which pairings are DESIGNED probes vs incidental. [] = none
           declared (a positive-only real project). *)
-  pr_runtime_edges :
-    (Canary_enumerate.artifact_id * Canary_action.dep_mode) list;
-      (** Milestone-(b) first slice (2026-08-05, bottom-up): the declared
-          RUNTIME-EDGE mode per consumer artifact — who provides the lib a
-          binding actually RUNS over, distinct from the lib it was BUILT
-          against. This is the [dep_mode] value source A5 asked for, at
-          binding granularity (the case the live projects actually have —
-          none enumerates an App yet; [Canary_action.close_deps] stays the
-          App-level machinery):
-          - [Independent] — runs over the SCENARIO's lib placement, which
-            is independent of the binding's own build-lib (a Fetched
-            binding was compiled against its provider's lib). The two lib
-            INSTANCES of one scenario become explicit: build-lib vs
-            run-lib ([runtime_pairings_of] computes the pairing; a
-            canary-supplied run-lib ⇒ the deploy pairing).
-          - [Ambient s] — runs over its own bundled/external lib [s]; the
-            scenario's lib axis never reaches it (sqlite's uv-python
-            bundled sqlite; z3-solver / llvmlite wheels bundling their
-            native lib — backlog #45's co-provider, DECLARED).
-          - [Lockstep] — run-lib = build-lib (the matched chain).
-          [] = undeclared (edges unresolved, as before). Declarations are
-          per-edge STATIC data; an edge whose mode differs per chain (z3's
-          OCaml binding) stays undeclared until a finer key is needed. *)
 }
-
-(** One resolved runtime pairing for a consumer in a concrete scenario:
-    what it runs over ([rp_run] — the scenario's lib placement for
-    [Independent]/[Lockstep]; [None] for [Ambient], whose lib is outside
-    the enumeration), and whether the pairing is a DEPLOY pairing
-    ([rp_deploy]: the run-lib is canary-supplied — Built/Vendored — while
-    the consumer's own build-lib came from its provider; run-lib ≠
-    build-lib made explicit). v1 rule, honest for the live cases; refines
-    when a project declares a consumer's build-lib as data. *)
-type runtime_pairing = {
-  rp_consumer : Canary_enumerate.artifact_id;
-  rp_mode : Canary_action.dep_mode;
-  rp_run : Canary_enumerate.placement option;
-  rp_deploy : bool;
-}
-
-(** Resolve [pr_runtime_edges] against ONE enumerated scenario — the
-    two-instance structure (build-lib vs run-lib) surfaced from declared
-    data + enumeration coordinates only; the runner's realization
-    (loader repoint etc.) is unchanged. *)
-let runtime_pairings_of (pr : project_run) (a : Canary_enumerate.assignment) :
-    runtime_pairing list =
-  List.map
-    (fun (consumer, mode) ->
-      let lib_pl = Canary_enumerate.placement_of a Canary_enumerate.a_lib in
-      match (mode : Canary_action.dep_mode) with
-      | Canary_action.Ambient _ ->
-          { rp_consumer = consumer; rp_mode = mode; rp_run = None;
-            rp_deploy = false }
-      | Canary_action.Lockstep ->
-          { rp_consumer = consumer; rp_mode = mode; rp_run = lib_pl;
-            rp_deploy = false }
-      | Canary_action.Independent ->
-          let deploy =
-            match lib_pl with
-            | Some pl -> (
-                match pl.Canary_enumerate.provision with
-                | Canary_store.Built | Canary_store.Vendored -> true
-                | Canary_store.Fetched | Canary_store.Absent -> false)
-            | None -> false
-          in
-          { rp_consumer = consumer; rp_mode = mode; rp_run = lib_pl;
-            rp_deploy = deploy })
-    pr.pr_runtime_edges
+(* (Runtime-edge modes are NOT a project field: they live per-ARTIFACT on
+   the spec rows — [Canary_enumerate.artifact_axes.ax_runtime], resolved by
+   the general [Canary_enumerate.runtime_pairings_of]. Relocated
+   2026-08-05, user-directed: per-artifact facts belong on the artifact;
+   the brief [pr_runtime_edges] project table was the parallel-table smell
+   this interface should not grow.) *)
 
 (** Lookup over the [pr_provenance] table ([None] = undeclared artifact). *)
 let provenance_of (pr : project_run) (id : Canary_enumerate.artifact_id) :

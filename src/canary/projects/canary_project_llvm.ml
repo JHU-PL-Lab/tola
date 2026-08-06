@@ -608,12 +608,19 @@ test -n "$LLVM_LIB"
 let llvm_spec : Canary_enumerate.project_spec =
   { ps_universe =
       Canary_enumerate.
-        [ (a_source, [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
+        [ (a_source, axes [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
           ( a_lib,
-            [ (Fetched, [ Canary_basic.Stable ]);
-              (Built, [ Canary_basic.Dev ]) ] );
+            axes
+              [ (Fetched, [ Canary_basic.Stable ]);
+                (Built, [ Canary_basic.Dev ]) ] );
           ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-            [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+            (* llvmlite bundles its own libLLVM (co-provider, backlog #45)
+               — declared on the artifact axis; the OCaml edge is
+               chain-dependent (dev lockstep / stable opam-built),
+               undeclared until a finer key. *)
+            axes
+              ~runtime:(Canary_store.Ambient "bundled libLLVM (llvmlite wheel)")
+              [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
 
 let llvm_artifacts : Canary_enumerate.artifact_id list =
   Canary_enumerate.
@@ -681,10 +688,4 @@ let llvm_run distro : Canary_project_run.project_run =
     pr_spec = llvm_spec;
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
     pr_provenance = llvm_providers;
-    pr_mismatch_probes = [];
-    (* llvmlite bundles its own libLLVM (the co-provider shape, backlog
-       #45) — declared Ambient; the OCaml edge is chain-dependent (dev
-       lockstep / stable opam-built), undeclared until a finer key. *)
-    pr_runtime_edges =
-      [ ( Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext,
-          Canary_action.Ambient "bundled libLLVM (llvmlite wheel)" ) ] }
+    pr_mismatch_probes = [] }

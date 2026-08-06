@@ -1620,7 +1620,9 @@ let tiny_full_assignments (spec : tiny_full_spec) :
   let tiny_enum_spec : Canary_enumerate.project_spec =
     { ps_universe =
         List.map spec.tf_artifacts ~f:(fun a ->
-            (a, [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ])) }
+            ( a,
+              Canary_enumerate.axes
+                [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ] )) }
   in
   let tiny_policy : string Canary_enumerate.policy =
     { config =
@@ -1680,8 +1682,10 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
   let a_oc =
     Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
   in
-  (* ONE data table (A8): per artifact, (provision × versions). Derived from
-     [tf_artifacts] so the factory stays the artifact-set source. *)
+  (* ONE data table (A8): per artifact, its [artifact_axes]. Derived from
+     [tf_artifacts] so the factory stays the artifact-set source. Runtime
+     modes undeclared (tiny's vendored bindings carry a per-VARIANT
+     build-lib the static per-artifact axis can't express yet). *)
   { ps_universe =
       List.filter_map spec.tf_artifacts ~f:(fun a ->
           if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_source
@@ -1690,14 +1694,21 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
           then
             Some
               ( a,
-                [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]);
-                  (Canary_enumerate.Built, Canary_basic.[ Stable; Dev ]) ] )
+                Canary_enumerate.axes
+                  [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]);
+                    (Canary_enumerate.Built, Canary_basic.[ Stable; Dev ]) ] )
           else if Canary_enumerate.equal_artifact_id a a_oc then
             Some
-              (a, [ (Canary_enumerate.Vendored, Canary_basic.[ Stable; Dev ]) ])
+              ( a,
+                Canary_enumerate.axes
+                  [ (Canary_enumerate.Vendored, Canary_basic.[ Stable; Dev ]) ]
+              )
           else
             Some
-              (a, [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ])) }
+              ( a,
+                Canary_enumerate.axes
+                  [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ] ))
+  }
 
 (* No assignment-list wrappers here: the general algorithm
    ([Canary_project_run.scenarios_of] over [tiny_full_general_spec]) is the

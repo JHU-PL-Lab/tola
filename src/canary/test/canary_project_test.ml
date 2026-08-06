@@ -463,8 +463,8 @@ let project_spec_test : pure_test =
       let spec : EN.project_spec =
         { ps_universe =
             [ ( EN.a_lib,
-                EN.[ (Fetched, B.single_channel); (Built, B.single_channel) ] );
-              (a_oc, EN.[ (Fetched, B.single_channel) ]) ] }
+                EN.(axes [ (Fetched, B.single_channel); (Built, B.single_channel) ]) );
+              (a_oc, EN.(axes [ (Fetched, B.single_channel) ])) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -489,8 +489,8 @@ let per_provision_versions_test : pure_test =
       let spec : EN.project_spec =
         { ps_universe =
             [ ( EN.a_lib,
-                EN.[ (Fetched, B.single_channel); (Built, B.two_channels) ] );
-              (a_oc, EN.[ (Fetched, B.single_channel) ]) ] }
+                EN.(axes [ (Fetched, B.single_channel); (Built, B.two_channels) ]) );
+              (a_oc, EN.(axes [ (Fetched, B.single_channel) ])) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -520,8 +520,8 @@ let thin_config_level_test : pure_test =
       let spec : EN.project_spec =
         { ps_universe =
             [ ( EN.a_lib,
-                EN.[ (Vendored, [ B.Stable ]); (Built, [ B.Stable; B.Dev ]) ] );
-              (a_oc, EN.[ (Vendored, [ B.Stable ]) ]) ] }
+                EN.(axes [ (Vendored, [ B.Stable ]); (Built, [ B.Stable; B.Dev ]) ]) );
+              (a_oc, EN.(axes [ (Vendored, [ B.Stable ]) ])) ] }
       in
       let full =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -584,9 +584,9 @@ let subset_intersects_universe_test : pure_test =
       let module EN = Canary_enumerate in
       let spec : EN.project_spec =
         { ps_universe =
-            [ (EN.a_source, EN.[ (Fetched, B.[ Stable; Dev ]) ]);
+            [ (EN.a_source, EN.(axes [ (Fetched, B.[ Stable; Dev ]) ]));
               ( EN.a_lib,
-                EN.[ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ] ) ] }
+                EN.(axes [ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ]) ) ] }
       in
       let thin =
         EN.enumerate ~tag:(fun () -> "")

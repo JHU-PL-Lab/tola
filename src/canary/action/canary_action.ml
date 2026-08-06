@@ -88,8 +88,11 @@ let store_actions ~langs =
     FORWARD construction ([make_action_graph]'s [Build_app]) and the lift
     ([close_deps]). [Lockstep] = run-lib is the build-lib (the matched chain);
     [Independent] = run-lib ranges over every lib ⇒ the deploy-mismatch cartesian
-    (what `paths` wants — the default); [Ambient s] = an external lib (libc). *)
-type dep_mode = Lockstep | Independent | Ambient of string
+    (what `paths` wants — the default); [Ambient s] = an external lib (libc).
+    BASE vocabulary since 2026-08-05 (a project declares it per-artifact in
+    its spec axes); re-exported here so existing action-layer consumers
+    keep their spelling. *)
+type dep_mode = Canary_store.dep_mode = Lockstep | Independent | Ambient of string
 
 let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
     ?(vendored = false) () =

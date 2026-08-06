@@ -216,12 +216,7 @@ let tiny_full_run : project_run =
        mutations (Bs.3/Bs.4). *)
     pr_mismatch_probes =
       [ ( Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-          Canary_basic.Dev, Canary_enumerate.Forward ) ];
-    (* Undeclared this slice: tiny's vendored bindings carry their build-lib
-       identity inside the cached artifact (V:S built against stable lib,
-       V:D against dev) — a per-VARIANT build-lib, which the static
-       per-edge table can't express yet. Declare when the finer key lands. *)
-    pr_runtime_edges = [] }
+          Canary_basic.Dev, Canary_enumerate.Forward ) ] }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──
    The thin slice is a RUNNER policy ([Canary_project_run.thin_policy] —

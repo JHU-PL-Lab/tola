@@ -218,8 +218,8 @@ let flags_match_spec_pin ~prefix ~(spec : EN.project_spec)
       && Bool.equal stable_src.Canary_artifact_source.has_build_lib
            (has B.Stable)) }
 
-(* ── milestone-(b) first slice pin: declared runtime edges resolve to the
-   two-instance pairing per scenario ──
+(* ── milestone-(b) first slice pin: declared runtime edges (on the spec
+   rows' [ax_runtime]) resolve to the two-instance pairing per scenario ──
    sqlite (the live case): python is Ambient in EVERY world (bundled lib —
    no run placement, never a deploy pairing); the OCaml pairing's run-lib
    IS the scenario's lib placement, and exactly the two Built worlds are
@@ -228,29 +228,28 @@ let flags_match_spec_pin ~prefix ~(spec : EN.project_spec)
 let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
   { name = "sqlite.runtime_edges_two_instance_slice";
     check = (fun () ->
-      let module PR = Canary_project_run in
-      let pr = Canary_project_sqlite.sqlite_run in
-      let asgs = enumerate_full pr.PR.pr_spec in
+      let spec = Canary_project_sqlite.sqlite_spec in
+      let asgs = enumerate_full spec in
       let oc = EN.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
       let find c a =
-        List.find (PR.runtime_pairings_of pr a) ~f:(fun p ->
-            EN.equal_artifact_id p.PR.rp_consumer c)
+        List.find (EN.runtime_pairings_of spec a) ~f:(fun p ->
+            EN.equal_artifact_id p.EN.rp_consumer c)
       in
       List.length asgs = 3
       && List.for_all asgs ~f:(fun a ->
              (match find py_cext a with
               | Some p -> (
-                  match p.PR.rp_mode with
-                  | Canary_action.Ambient _ ->
-                      Option.is_none p.PR.rp_run && not p.PR.rp_deploy
+                  match p.EN.rp_mode with
+                  | Canary_store.Ambient _ ->
+                      Option.is_none p.EN.rp_run && not p.EN.rp_deploy
                   | _ -> false)
               | None -> false)
              && (match find oc a with
                  | Some p ->
-                     Poly.equal p.PR.rp_run (EN.placement_of a EN.a_lib)
+                     Poly.equal p.EN.rp_run (EN.placement_of a EN.a_lib)
                  | None -> false))
       && List.count asgs ~f:(fun a ->
-             match find oc a with Some p -> p.PR.rp_deploy | None -> false)
+             match find oc a with Some p -> p.EN.rp_deploy | None -> false)
          = 2) }
 
 let tests : Canary_project_test.pure_test list =
