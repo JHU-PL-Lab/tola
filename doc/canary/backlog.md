@@ -42,6 +42,13 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     body lies) is invisible to every static layer today — the oracle
     confirms it only as an UNATTRIBUTED xfail. A body-reading inspector is
     what turns that `[]` into `[c6]` and moves tiny1 coverage past 12/24.
+    *Deprioritized (user, 2026-08-05)*: enhancement, not milestone work —
+    no real project's derived contracts consume typed inputs today, and
+    the proper clang path drags preprocessor/include/typedef handling;
+    revisit when a real project needs a typed C surface. (If it is ever
+    picked up: the impl/body layer must feed the PROBE firing only —
+    type_wrong's build is legitimately green, per the 2026-08-05
+    probe-class strengthening.)
     Prior art: the dead-code example at
     `doc/_legacy_code/canary_dead_code.ml`. See
     `doc/canary/research/surface_draft/surface.md` §2.4 (Type contract) and

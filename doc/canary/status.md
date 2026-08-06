@@ -191,6 +191,13 @@ edges resolved via `dep_mode`). Open:
   type_wrong triage (2026-08-05) sharpened its payoff: a body-only c6 lie
   today confirms only as an UNATTRIBUTED xfail (nothing static predicts
   it); a body-reading c6 inspector turns that `[]` into `[c6]`.
+  **DEPRIORITIZED (user, 2026-08-05): enhancement, not milestone work.**
+  Assessed before starting: no recent check lost precision to the grep —
+  the real projects' derived contracts use no typed inputs at all, and
+  type_wrong is correctly handled by the oracle (22/22); the gain today
+  is attribution polish + a tiny-coverage bump, while a PROPER clang
+  path drags preprocessor/include/typedef handling. Stays in backlog
+  #44; revisit when a real project needs a typed C surface.
 - **Build-config divergence: build-tree vs installed artifact** (user,
   2026-08-05). Real projects routinely compile the local/build-tree
   artifact and the installed/packaged one with DIFFERENT flag sets (dev:
