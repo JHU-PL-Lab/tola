@@ -681,4 +681,10 @@ let llvm_run distro : Canary_project_run.project_run =
     pr_spec = llvm_spec;
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
     pr_provenance = llvm_providers;
-    pr_mismatch_probes = [] }
+    pr_mismatch_probes = [];
+    (* llvmlite bundles its own libLLVM (the co-provider shape, backlog
+       #45) — declared Ambient; the OCaml edge is chain-dependent (dev
+       lockstep / stable opam-built), undeclared until a finer key. *)
+    pr_runtime_edges =
+      [ ( Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext,
+          Canary_action.Ambient "bundled libLLVM (llvmlite wheel)" ) ] }

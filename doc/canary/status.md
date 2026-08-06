@@ -80,12 +80,22 @@ set == what the algorithm + graph say the project's worlds are).
 - **(a) combination derived from the spec — DONE** for sqlite + tiny-full
   + z3 + llvm (no hand-built scenario list can exist: `pr_enumerate` is
   retired).
-- **(b) real mismatch/failure scenarios — HALF DONE.** Shipped: sqlite's
+- **(b) real mismatch/failure scenarios — MOSTLY DONE.** Shipped: sqlite's
   verified deploy scenario (runner-realized repoint) + tiny-full's
   enumerated, c1-detected forward mismatch (flat form: binding-version ≠
-  lib-version). Still open: TWO lib instances in ONE scenario (build-lib ≠
-  run-lib proper) needs `close_deps Independent` wired into `scenarios_of`
-  — the node-graph half (§A).
+  lib-version). **First two-instance slice landed 2026-08-05 (bottom-up)**:
+  `pr_runtime_edges` declares each consumer's runtime-edge mode
+  (Independent / Ambient / Lockstep) and `runtime_pairings_of` resolves
+  the pairing per scenario — `spec` now prints, per world, what each
+  binding RUNS over vs was built against (`binding:ocaml → lib B:dev
+  [build-lib ≠ run-lib: DEPLOY]`; python → ambient bundled). The second
+  lib instance is enumeration DATA now, not realization folklore; the
+  co-provider wheels (backlog #45) are DECLARED (z3/llvm python =
+  Ambient). Still open, next slices as cases force them: a per-VARIANT
+  build-lib key (tiny's vendored bindings, z3/llvm's chain-dependent
+  OCaml edges — undeclared today); RANGING the run-lib beyond the
+  scenario's lib placement (`close_deps Independent`'s cartesian — the
+  App-level machinery stays parked, §A).
 - **(c) z3/llvm on the generic path — DONE 2026-08-05** (A5; worklog).
 - **(d) expectations unified + reportable — DONE 2026-08-05** (A7;
   worklog).
@@ -145,9 +155,11 @@ edges resolved via `dep_mode`). Open:
 - **Ambient-edge step dedup** (finding 2026-08-05): an Ambient runtime
   edge makes a step SCENARIO-INVARIANT (sqlite's python probe runs
   identically in all 3 scenarios; z3's wheel xfail fires in both chains).
-  Once `dep_mode` is declared per edge, the runner can share/dedup such
-  steps across scenarios — the step-level analogue of the Fetched
-  whole-scenario dedup. The z3-solver CO-PROVIDER entry (backlog **#45**:
+  The per-edge declaration NOW EXISTS (`pr_runtime_edges`, milestone-(b)
+  slice — sqlite/z3/llvm python edges declared Ambient), so the runner
+  CAN learn to share/dedup those steps across scenarios — the step-level
+  analogue of the Fetched whole-scenario dedup; unblocked, not yet
+  implemented. The z3-solver CO-PROVIDER entry (backlog **#45**:
   the wheel bundles its own libz3; diagram runtime edge misleading;
   `derive_steps` assumes bindings consume the external lib) is the same
   fact needing the same declaration — A5/A7 measured it live (the

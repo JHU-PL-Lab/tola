@@ -764,4 +764,13 @@ let z3_run distro : Canary_project_run.project_run =
     pr_spec = z3_spec;
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
     pr_provenance = z3_providers;
-    pr_mismatch_probes = [] }
+    pr_mismatch_probes = [];
+    (* The wheel is a CO-PROVIDER (backlog #45), now DECLARED: z3-solver
+       bundles its own libz3, so the scenario's lib axis never reaches the
+       python probe — the measured scenario-invariance of the wheel xfail.
+       The OCaml edge stays undeclared: its mode differs per chain
+       (dev = lockstep with the built lib; stable = opam's own build) and
+       the static per-edge table can't say that yet. *)
+    pr_runtime_edges =
+      [ ( Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext,
+          Canary_action.Ambient "bundled libz3 (z3-solver wheel)" ) ] }
