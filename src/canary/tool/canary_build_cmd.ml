@@ -66,9 +66,20 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
    <build> --prefix <prefix>") — applies the install-time transformations
    (config files, versioned symlinks, RPATH handling) a hand `cp` skips
    (TODO #40 / status §B build-config divergence). Caller owns the
-   idempotence guard. *)
+   idempotence guard.
+
+   SAFETY (user, 2026-08-06): a prefix is REQUIRED (labelled, no default)
+   so no caller can omit it at compile time, AND the emitted shell guards
+   against an EMPTY expansion at run time — a shell-var prefix ("$PREFIX")
+   whose assignment went missing would otherwise fall back to
+   CMAKE_INSTALL_PREFIX = /usr/local, a global-path install canary must
+   never perform. (Fetch actions are the only intended global-store
+   writes, per the PM's declared [Canary_store.store_behavior].) *)
 let cmake_install_cmd ?(cmake_exec = "cmake") ~build ~prefix () =
-  Printf.sprintf "%s --install %s --prefix \"%s\"" cmake_exec build prefix
+  Printf.sprintf
+    "{ test -n \"%s\" || { echo 'cmake_install_cmd: empty prefix — refusing \
+     global install'; exit 1; }; } && %s --install %s --prefix \"%s\""
+    prefix cmake_exec build prefix
 
 (* Fetch a zip archive and extract it into [dest] (curl + unzip). The
    caller owns idempotence guards; this is just the named verb pair so

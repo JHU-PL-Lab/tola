@@ -5,7 +5,7 @@ SSOT §8 (open reconciliation tasks) and §9 (strategic /
 forward planning). Kept out of `design/ssot.md` per
 2026-07-08 refactor — SSOT is truth (definitions), this file
 is status. Completed work is FLUSHED to
-[`worklog/`](worklog/) (last flush 2026-08-05); only open
+[`worklog/`](worklog/) (last flush 2026-08-06); only open
 items + just-enough context live here.
 
 **Operating principle** (updated 2026-08-05; supersedes the
@@ -83,23 +83,15 @@ set == what the algorithm + graph say the project's worlds are).
 - **(b) real mismatch/failure scenarios — MOSTLY DONE.** Shipped: sqlite's
   verified deploy scenario (runner-realized repoint) + tiny-full's
   enumerated, c1-detected forward mismatch (flat form: binding-version ≠
-  lib-version). **First two-instance slice landed 2026-08-05 (bottom-up;
-  relocated the same day per user)**: each consumer's runtime-edge mode
-  (Independent / Ambient / Lockstep) is declared per-ARTIFACT on its spec
-  row — `Canary_enumerate.artifact_axes.ax_runtime`; spec rows are
-  per-artifact RECORDS now, the home for future artifact config (the
-  brief `pr_runtime_edges` project table was a parallel-table smell) —
-  and the GENERAL `Canary_enumerate.runtime_pairings_of` resolves the
-  pairing per scenario — `spec` prints, per world, what each
-  binding RUNS over vs was built against (`binding:ocaml → lib B:dev
-  [build-lib ≠ run-lib: DEPLOY]`; python → ambient bundled). The second
-  lib instance is enumeration DATA now, not realization folklore; the
-  co-provider wheels (backlog #45) are DECLARED (z3/llvm python =
-  Ambient). Still open, next slices as cases force them: a per-VARIANT
-  build-lib key (tiny's vendored bindings, z3/llvm's chain-dependent
-  OCaml edges — undeclared today); RANGING the run-lib beyond the
-  scenario's lib placement (`close_deps Independent`'s cartesian — the
-  App-level machinery stays parked, §A).
+  lib-version). **Two-instance slice 1 — DONE 2026-08-05** (worklog): the
+  runtime edge is per-ARTIFACT spec data (`artifact_axes.ax_runtime`,
+  Independent/Ambient/Lockstep; general `runtime_pairings_of`; `spec`
+  prints build-lib vs run-lib per world; #45 co-provider wheels declared
+  Ambient). Still open, as cases force them: a per-VARIANT build-lib key
+  (tiny's vendored bindings, z3/llvm's chain-dependent OCaml edges —
+  undeclared today); RANGING the run-lib beyond the scenario's lib
+  placement (`close_deps Independent`'s cartesian — App-level machinery
+  stays parked, §A).
 - **(c) z3/llvm on the generic path — DONE 2026-08-05** (A5; worklog).
 - **(d) expectations unified + reportable — DONE 2026-08-05** (A7;
   worklog).
@@ -118,11 +110,6 @@ edges resolved via `dep_mode`). Open:
 - **A5 residue** (core DONE 2026-08-05 — z3+llvm generic; worklog):
   - ssl/zarith/cairo migration to `project_run` (retires
     `run_project_multi`; ssl is its last consumer). No hurry per user.
-  - ~~`compat`/`verify` glob pre-A5 dirs~~ — DONE 2026-08-05:
-    `resolve_variant` gained a scenario-id pass (known JSON base prefixes
-    stripped; newest id containing the token; "stable"/"19" alias to
-    "lib-fetched" since a Fetched channel never appears in scenario ids).
-    Verified: `compat z3 dev`, `verify z3 stable`.
   - The three abstractions A5 was the forcing function for, now with
     concrete evidence: (i) the **location sub-axis** (one z3 scenario
     probes the lib at build-tree/staged/apt — unmodeled; A9-step-2's
@@ -242,25 +229,18 @@ edges resolved via `dep_mode`). Open:
   canary should cover as a first-class failure class. Today it is
   INVISIBLE: the Staged location probes the same build output copied by
   a fake `cp` install (backlog **#40**), so build-tree ≡ staged by
-  construction. Slices:
-  (i) ~~make install REAL~~ — **DONE for z3 2026-08-06**
-  (`cmake_install_cmd` tool primitive; the prefix now carries headers +
-  z3.pc + Z3Config files + the versioned symlink chain — verified live,
-  staged probe green over the transformed artifact). llvm deliberately
-  NOT migrated: its install() rules auto-install the OCaml binding into
-  the opam switch (ops/install_targets.md) — needs component filtering
-  first (#40 residue).
-  (ii) ~~surface build-tree vs staged~~ — **DONE 2026-08-06**: `status`
-  prints an install-diff note on the staged inspect row (symbol counts +
-  ELF soname/rpath/runpath/needed, already captured by the native
-  inspect). z3 today: "identical" — itself a finding (the dev build
-  links with final SONAME, no build-tree RUNPATH); a project/flags combo
-  that rewrites RPATH will go `⚠`. Prefix-LAYOUT diffs (pc/cmake files,
-  symlinks) need a staged-tree inspect — rides (iii).
-  (iii) declare build CONFIG as part of a Built artifact's identity
-  (couples with the location sub-axis, A5 residue (i), and A9-step-2 — a
-  flags column in the action-variant table; `versioning.md`'s `build_id`
-  is the natural carrier). Open.
+  construction. Slices (i) real install + (ii) install-diff surfacing —
+  **DONE for z3 2026-08-06** (worklog; `cmake_install_cmd` primitive with
+  compile-time-required + empty-expansion-guarded prefix — canary never
+  global-installs; `status` prints the build-tree↔staged ELF/count diff
+  on the staged inspect row, z3 reading "identical" — itself a finding).
+  OPEN:
+  - (iii) build CONFIG as part of a Built artifact's identity (couples
+    with the location sub-axis, A5 residue (i), and A9-step-2's flags
+    column; `versioning.md`'s `build_id` is the carrier). Prefix-LAYOUT
+    diffs (pc/cmake files, symlinks) ride this via a staged-tree inspect.
+  - llvm's real install (#40 residue): its install() rules auto-install
+    the OCaml binding into the opam switch — needs component filtering.
 - **Version deploy-mismatch, backward half** (forward half shipped
   2026-08-05 — worklog): a stable consumer @ newer incompatible lib
   (soname/symver, `Bs.4`/`Bs.3` → c4/c5). Broad = missing *and* added
@@ -268,18 +248,13 @@ edges resolved via `dep_mode`). Open:
   build together.
 - **Fetched provision for tiny** — canary fetches from a PM at run time;
   the one provision tiny still lacks (Built + Vendored + Dev/Stable done).
-- **Watchlist ROLES: expected-present vs expected-missing** (user, 2026-08-05).
-  sqlite's binding-lag markers currently ride the expected-present watchlist,
-  so status shows `✓ ⚠ watchlist MISSING …`; it SHOULD be an `xfail`-style
-  mark (expected absence, confirmed). Needs the role declared — an
-  `expect_missing` list through `inspect_python.py` → JSON
-  (`expected_missing: confirmed|violated`) → status marks confirmed lag as
-  xfail and a REAPPEARED lag name as ✗ (binding caught up; declaration
-  stale). A blanket "missing→xfail" is wrong (tiny's watchlists are
-  expected-PRESENT; missing there = drift, must stay alarming). This is the
-  seed of the c7/c8 lag contract (the natural next expectation-layer work
-  now that A7 is done — same lowering, a new declared ROLE per watchlist
-  entry).
+- **Watchlist ROLES — DONE 2026-08-05** (worklog): expected-present vs
+  expected-missing split shipped (sqlite lag reads `xfail lag …`, a
+  reappeared name alarms). REMAINING here: this role split is the SEED of
+  the c7/c8 lag contract — turning "confirmed lag" into a declared,
+  attributable contract firing (same lowering, a ROLE per watchlist
+  entry) is the natural next expectation-layer work; python-only today,
+  the OCaml side needs an mli inspect over the installed sqlite3.mli.
 
 ## C. Real-project breadth (sqlite)
 
@@ -328,6 +303,17 @@ provision / §5 rewrite). Pick up when B/C force it.
 
 ## E. Polish
 
+- **Env/PATH discipline utility** (user, 2026-08-06; no hurry). Step
+  commands splice PATH-like variables ad hoc (`LD_LIBRARY_PATH=$PWD/…:$…`
+  probe repoints, `PYTHONPATH` in the tiny workspace, `OCAMLPATH`,
+  `eval $(opam env)` sprinkled per command) — string surgery on
+  `:`-separated variables is exactly what produced the born-safe-id bug
+  (a `:` in a workspace name silently split PYTHONPATH; see Gotchas).
+  Wanted: a small tool/ utility for typed env manipulation (prepend/set
+  per variable, emitted as the command's export preamble — the
+  `probe_ocaml_env_cmd ~env` list is the seed) + a ratchet-style guard
+  against new raw `VAR=…:$VAR` splices in project specs. Do when a case
+  next touches probe envs.
 - **Version definitions + printers: centralize** (user, 2026-08-05).
   Multiple version-ish notions (`Canary_basic.channel` + `version`,
   `Canary_enumerate.build_id`/`quality`, `source_repo.version` strings,

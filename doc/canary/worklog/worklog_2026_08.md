@@ -329,3 +329,82 @@ expected failure).
   hold the variant's pinned version — the loud fix for finding (a) where
   version-swapping makes it acutest). `log_grep` named at definition +
   sqlite's use site.
+
+## 2026-08-05→06 — the bottom-up increments arc (post-A5/A7)
+
+Working mode settled (user): no top-down design passes — concrete
+increments with the action frame in mind; design consolidation
+(A9-step-2, terminology) LAST; every increment ships its harness guard.
+The arc's increments, in order:
+
+- **Watchlist ROLES** (`07e81f1`): expected-present vs expected-missing
+  split — `inspect_python.py --expect-missing` classifies declared-absent
+  names as `expected_missing.confirmed` (binding lag, an xfail-style
+  pass) vs `.violated` (name appeared — declaration stale, alarming);
+  sqlite's two lag markers moved off the alarming watchlist; `status`
+  reads both roles ("watchlist 5/5 · xfail lag get_clientdata,…").
+- **type_wrong triaged; oracle 22/22** (`8eef1fe`): TWO compounding bugs —
+  the oracle's blanket Derived→must-fail strengthening applied at
+  BUILD-class sites (c6 has two shapes: declaration-level lies fail at
+  build via EVIDENCE; body-only lies legitimately build green, manifest
+  Sc.4) → strengthening now probe-class only; and the runner's
+  empty-prediction fallback checked a literal `probe.log` that never
+  matches v3 variant-keyed names → resolves via `variant_file`.
+  type_wrong: build green, probe xfail UNATTRIBUTED ([] — honest; the
+  c6-body gap stays visible in attribution).
+- **#44 clang-AST deprioritized** (user; `aa8f31c`): enhancement, not
+  milestone work — no real project's derived contracts consume typed
+  inputs; type_wrong is correctly oracle-handled. Design note kept: an
+  impl/body layer must feed the PROBE firing only.
+- **Mechanism CATALOGUE** (`b074df6`): mechanism detail as standalone
+  data in base/canary_mechanism.ml (per-mechanism artifact shape, lib
+  coupling, checking points, wiring); projects reference by name; `spec`
+  displays from the catalogue; `design/mechanism.md` records the
+  first-principles research question (derive a better mechanism/PM;
+  tiny = one lib × three mechanisms × 22 mutations, the instrument).
+- **Tool-routing RATCHET** (`5afa390`): per-file raw-shell-verb baselines
+  in projects/; new raw uses fail. Burned sqlite to zero (`178589c`:
+  curl_unzip_cmd + cc_shared_lib_cmd + native_lib_probe_cmd). The
+  ratchet later caught its own author twice during the install work.
+- **Small-residue batch** (`178589c`): `compat`/`verify` resolve
+  scenario-keyed caches (token containment + "stable"/"19" →
+  "lib-fetched" aliases); #47 drift pins
+  (build_flags_match_declared_provisions).
+- **Milestone-(b) slice 1 — runtime edges** (`f638f67`, relocated
+  `f95f552` per user): the second lib instance as enumeration data. The
+  live runtime edge is the BINDING's (no project enumerates an App);
+  declared per-ARTIFACT as `artifact_axes.ax_runtime` (spec rows became
+  per-artifact RECORDS; `dep_mode` moved to base beside provision);
+  general `runtime_pairings_of` resolves per scenario; `spec` prints
+  "binding:ocaml → lib B:dev [build-lib ≠ run-lib: DEPLOY] ·
+  binding:python → ambient (bundled …)". Co-provider wheels (#45)
+  DECLARED Ambient (z3/llvm python) — matching the measured
+  scenario-invariant xfails. Undeclared where a static axis can't say it
+  (tiny per-variant vendored build-libs; z3/llvm chain-dependent OCaml
+  edges).
+- **pr_provenance merged into pr_artifacts** (`ef6d7c3`, user analysis):
+  THE artifact table — `artifact_decl` rows (identity + provider
+  option); provider keys equaled pr_artifacts in all four projects;
+  providers can't live on spec rows (the table is WIDER than
+  ps_universe: display-only artifacts carry providers). Parity kept:
+  pr_spec / pr_mismatch_probes / pr_runner_spec stay project fields.
+- **The ARROW unification** (`ea00d65`, user): provider → action →
+  artifact; FETCH IS THE SAME SHAPE AS BUILD (building = the provider is
+  itself an enumerated artifact; vendored = no producing action, the
+  boundary). `providing_action_of`, dual to `provision_of_actions`,
+  pinned consistent over every live table; `spec` renders the arrow
+  ("provider: sys-pm … ⟶ fetch_lib"). Next case-forced step: provider as
+  an explicit upstream NODE (#45 co-provider = one arrow, two outputs).
+- **Build-config divergence slices (i)+(ii)** (`791393e` + guard):
+  z3's install is REAL (`cmake_install_cmd`; prefix carries headers +
+  z3.pc + Z3Config files + versioned symlink chain; llvm NOT migrated —
+  its install() rules touch the opam switch, needs component filtering);
+  `status` prints an install-diff note on the staged inspect row (ELF
+  soname/rpath/runpath/needed + counts; z3 today "identical" — itself a
+  finding). Prefix REQUIRED at compile time + empty-expansion shell
+  guard (an empty --prefix would fall back to /usr/local — canary must
+  never global-install; fetch actions are the only intended
+  global-store writes, typed via store_behavior).
+- Also filed (user): version definitions/printers centralization (§E),
+  env/PATH discipline utility (§E, the born-safe-`:` lesson), build-for-
+  install as a §B failure class with slice (iii) open.
