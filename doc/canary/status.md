@@ -16,6 +16,18 @@ current milestone is the **faithful scenario combination**
 concrete code answer, update SSOT/docs in the same commit;
 modeling questions get resolved as side effects of code
 decisions.
+**BOTTOM-UP (user, 2026-08-05, post-A5/A7):** keep the
+action frame in mind but no top-down design passes — grow by
+concrete increments (add an action like build-for-install,
+reconsider the probe ROLE, onboard projects, audit a
+project's missing cases), regroup actions when evidence
+forces it. Design consolidation (A9-step-2 table, the
+scenario↔action terminology) comes LAST, from the
+accumulated cases. Every increment ships its harness guard
+(ratchet / pin / world-identity assertion) so the project
+grows stably. Near-term concrete track: two-instance
+scenarios (milestone (b)) + build-for-install as a side
+task.
 
 For tiny-scoped items see the wish-list in
 [`design/tiny.md`](design/tiny.md) §7 (stale — audit queued,
@@ -152,8 +164,10 @@ edges resolved via `dep_mode`). Open:
   `Raw` escape hatch required. Largely SUBSUMES backlog **#29/#32** step 2
   (auto-generated runner_spec — that entry already says "re-scope before
   acting" post-A8) and is where the typed per-probe `asserts` field (A7
-  residue) naturally lands. HELD for now per user (affects the action
-  verb design).
+  residue) naturally lands. **HELD — deliberately LAST (user,
+  2026-08-05, bottom-up order):** the table consolidates from
+  accumulated concrete actions (build-for-install, probe roles, new
+  projects), it does not pre-structure them.
 - **Node-graph enumeration — PARKED; its forcing functions are now the
   A5-residue abstractions** (deploy mismatch / two lib instances,
   binding-follows-chain propagation, `dep_mode` ownership). End state: ONE
@@ -315,7 +329,13 @@ provision / §5 rewrite). Pick up when B/C force it.
   audit + T0/T1/T2 options + open questions in
   [`design/scenario_terms.md`](design/scenario_terms.md). OPEN — no
   decision; do T2 together with F5 + the `variant_*` sweep as ONE
-  terminology pass.
+  terminology pass. **Deliberately LAST (user, 2026-08-05, bottom-up):**
+  the canonical scenario↔action relation should be WRITTEN DOWN only
+  after the near-term concrete actions land (build-for-install, probe
+  roles, two-instance scenarios) — the added cases decide the terms,
+  not the reverse. (Candidate frame to test against them, kept in mind
+  not committed: action = a pattern with slots; scenario = a consistent
+  slot-filling; dep_mode = a constraint on fillings.)
 
 ## F. Inspection — artifacts × scenarios, pre and post
 
