@@ -479,7 +479,14 @@ Not started; interrelated — pick up together when §B/§C force them.
 - **Packaging / provision sub-structure** — `Fetched` over PM
   (apt/opam/pip/brew) × distro; also "PM ships binary" (apt) vs "PM builds
   source at install" (opam) — the provider refinement surfaced by the
-  fetched-binding question 2026-08-05.
+  fetched-binding question 2026-08-05. **Its key frame landed 2026-08-06
+  (user): providers are ARROWS — provider → action → artifact, fetch the
+  same shape as build** (`providing_action_of`, dual to
+  `provision_of_actions`, pinned consistent; `spec` renders the arrow per
+  row; dynamic_enumeration.md §"Providers are arrows"). Next, when a case
+  forces it: the provider as an explicit upstream NODE (every artifact
+  gets its incoming arrow uniformly; #45's co-provider = one arrow, two
+  outputs).
 - **Headers provision** — `Headers` payload + `Build_headers → Built`.
 - **§5 principle-rewrite** — "bad scenario" → "scenario with a bad
   *result*" (result is a coordinate, not a category).

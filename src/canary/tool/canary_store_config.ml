@@ -49,6 +49,31 @@ let provision_of_provider : provider -> Canary_store.provision = function
   | Built_from _ -> Canary_store.Built
   | Sys_pkg _ | Lang_pkg _ -> Canary_store.Fetched
 
+(** The ARROW unification (user, 2026-08-06): an artifact COMES FROM its
+    provider via an ACTION — [provider → action → artifact] — and fetching
+    is the SAME SHAPE as building. Building is the case where the provider
+    is itself an enumerated artifact (a [Built_from] repo whose checkout is
+    the Source artifact the Build action consumes); fetching is the case
+    where the provider (a PM package, a repo to clone) sits at the
+    enumeration's BOUNDARY. [None] = a supplied local copy
+    ([Vendored]/[Cached]): no canary action produces it — the arrow starts
+    outside the run entirely (an initial node in the graph view).
+
+    Dual of [Canary_enumerate.provision_of_actions] (which reads the
+    provision back off a variant's action set); the projects-test pins the
+    two consistent through [provision_of_provider] so they cannot drift. *)
+let providing_action_of (k : Canary_basic.artifact_kind) (p : provider) :
+    Canary_basic.action option =
+  match p with
+  | Absent | Vendored _ | Cached _ -> None
+  | Source_repo _ | Sys_pkg _ | Lang_pkg _ -> Some (Canary_basic.Fetch k)
+  | Built_from _ -> (
+      match k with
+      | Canary_basic.Lib -> Some Canary_basic.Build_lib
+      | Canary_basic.Binding l -> Some (Canary_basic.Build_binding l)
+      | Canary_basic.Headers -> Some Canary_basic.Build_headers
+      | Canary_basic.Source | Canary_basic.App -> None)
+
 let string_of_source_repo (repo : Canary_artifact_source.source_repo) : string =
   let (Canary_artifact_source.Git_remote url) = repo.Canary_artifact_source.remote in
   Printf.sprintf "%s @%s (ref %s) %s" repo.Canary_artifact_source.name

@@ -71,6 +71,32 @@ supplies that (`pr_spec → scenarios_of (enumerate) → pr_runner_spec →
 derive_steps` — since 2026-08-05 the project declares only `pr_spec`; the
 general algorithm produces the scenario list, `derive_steps`-style).
 
+## Providers are arrows: provider → action → artifact (2026-08-06)
+
+The unification (user-settled): an artifact COMES FROM its provider via an
+action, and **fetching is the same shape as building**. Building is the
+case where the provider is itself an enumerated artifact (a `Built_from`
+repo whose checkout is the Source the Build action consumes); fetching is
+the case where the provider (a PM package, a repo to clone) sits at the
+enumeration's **boundary**; a Vendored/Cached copy is the degenerate arrow
+with no producing action at all (an initial node in the graph view — the
+arrow starts outside the run).
+
+Typed as `Canary_store_config.providing_action_of : kind → provider →
+action option` — the FORWARD direction, dual to
+`Canary_enumerate.provision_of_actions` (the inverse read: a variant's
+action set implies its provision). Both pinned consistent through
+`provision_of_provider` (`arrow.providing_action_total_and_consistent`).
+`spec` renders the arrow per artifact row (`provider: sys-pm … ⟶
+fetch_lib` / `(supplied — no producing action)`).
+
+Where this frame goes next (as cases force it, bottom-up): a provider as
+an explicit upstream NODE gives every artifact an incoming arrow uniformly
+— the packaging cluster's key (Fetched over PM × distro; "PM ships binary"
+vs "PM builds source at install" become arrow properties), and the
+co-provider (#45) becomes one arrow with two outputs (the wheel provides
+binding AND lib).
+
 ## Build edges are grammatical; runtime edges are resolved
 
 The one settled principle:

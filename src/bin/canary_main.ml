@@ -556,8 +556,19 @@ let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
                        then ""
                        else "   ⚠ provider≠baseline provision"
                  in
-                 Fmt.pr "        provider: %s%s@."
-                   (Canary_store_config.string_of_provider p) drift
+                 (* the ARROW: provider → action → artifact (fetch and build
+                    are the same shape; a vendored copy has no producing
+                    action — the provider is the boundary). *)
+                 let arrow =
+                   match
+                     Canary_store_config.providing_action_of (E.kind_of a) p
+                   with
+                   | Some act ->
+                       "  ⟶ " ^ Canary_basic.string_of_action act
+                   | None -> "  (supplied — no producing action)"
+                 in
+                 Fmt.pr "        provider: %s%s%s@."
+                   (Canary_store_config.string_of_provider p) arrow drift
              | None ->
                  Fmt.pr "        provider: (undeclared — spec carries no detail)@.");
             (* mechanism detail comes from THE catalogue
@@ -823,6 +834,15 @@ let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
         ( "provider",
           match Canary_project_run.provenance_of pr a with
           | Some p -> `String (Canary_store_config.string_of_provider p)
+          | None -> `Null );
+        ( "providing_action",
+          match Canary_project_run.provenance_of pr a with
+          | Some p -> (
+              match
+                Canary_store_config.providing_action_of (E.kind_of a) p
+              with
+              | Some act -> `String (Canary_basic.string_of_action act)
+              | None -> `Null)
           | None -> `Null );
         ( "builds",
           `List

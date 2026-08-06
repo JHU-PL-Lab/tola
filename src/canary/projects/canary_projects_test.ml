@@ -258,6 +258,50 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
              match find oc a with Some p -> p.EN.rp_deploy | None -> false)
          = 2) }
 
+(* ── The ARROW unification pin (user, 2026-08-06) ──
+   provider → action → artifact, with fetch and build the same shape.
+   Over EVERY live artifact table: the providing action must agree with
+   the provider's coarse provision ([Fetched] ⇒ [Fetch kind]; [Built] ⇒
+   the kind's Build action; [Vendored]/[Cached] ⇒ None — supplied, the
+   boundary), and round-trip through the enumeration's INVERSE read
+   ([provision_of_actions]: the action set implies the provision back). *)
+let providing_arrow_pin : Canary_project_test.pure_test =
+  { name = "arrow.providing_action_total_and_consistent";
+    check = (fun () ->
+      let tables =
+        Canary_project_sqlite.sqlite_artifacts
+        @ Canary_project_z3.z3_artifacts @ Canary_project_llvm.llvm_artifacts
+        @ Canary_project_tiny.tiny_full_run.Canary_project_run.pr_artifacts
+      in
+      List.for_all tables
+        ~f:(fun (d : Canary_project_run.artifact_decl) ->
+          match d.Canary_project_run.ad_provider with
+          | None -> true
+          | Some p -> (
+              let id = d.Canary_project_run.ad_artifact in
+              let k = EN.kind_of id in
+              let act = Canary_store_config.providing_action_of k p in
+              match
+                (Canary_store_config.provision_of_provider p, act)
+              with
+              | Canary_store.Fetched, Some (B.Fetch k') -> Poly.equal k k'
+              | Canary_store.Built, Some a ->
+                  (match a with
+                   | B.Build_lib | B.Build_binding _ | B.Build_headers -> true
+                   | _ -> false)
+                  (* the inverse read agrees: the arrow's action implies
+                     the provision back (Fetch/Build → Fetched/Built) *)
+                  && Poly.equal
+                       (EN.provision_of_actions [ a ] id)
+                       EN.Built
+              | Canary_store.Vendored, None -> true
+              | Canary_store.Absent, None -> true
+              | _ -> false))
+      (* and the Fetched half of the round-trip on a concrete row *)
+      && Poly.equal
+           (EN.provision_of_actions [ B.Fetch B.Lib ] EN.a_lib)
+           EN.Fetched) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -267,4 +311,4 @@ let tests : Canary_project_test.pure_test list =
       flags_match_spec_pin ~prefix:"llvm" ~spec:Canary_project_llvm.llvm_spec
         ~dev_src:Canary_project_llvm.llvm_source_dev
         ~stable_src:Canary_project_llvm.llvm_source_stable;
-      sqlite_runtime_edges_pin ]
+      sqlite_runtime_edges_pin; providing_arrow_pin ]
