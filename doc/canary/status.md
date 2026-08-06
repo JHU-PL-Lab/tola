@@ -301,6 +301,19 @@ provision / §5 rewrite). Pick up when B/C force it.
 
 ## E. Polish
 
+- **Version definitions + printers: centralize** (user, 2026-08-05).
+  Multiple version-ish notions (`Canary_basic.channel` + `version`,
+  `Canary_enumerate.build_id`/`quality`, `source_repo.version` strings,
+  opam `package_version`, `version_cache_tag`) and ≥5 hand-rolled
+  Dev/Stable printers (`canary_enumerate.ml:147`, tiny's `chan_str`,
+  `canary_main`'s `chan_s` + an inline match at ~577, sqlite's
+  `sqlite_amalg` match) — `Canary_basic` exports no `string_of_channel`
+  at all. Slice 1 (standalone hygiene): one `string_of_channel` (+
+  channel-keyed helpers) in base, migrate the call sites, ratchet-style
+  guard against new inline matches. The DEEPER typed unification
+  (version as artifact identity across enumeration/store/cache) stays
+  [`design/versioning.md`](design/versioning.md)'s tracker — not this
+  item.
 - **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
   to-do: `harness.tool_routing_ratchet` in `project-test` freezes
   per-file counts of raw shell verbs in `projects/` — cmake / ninja /
