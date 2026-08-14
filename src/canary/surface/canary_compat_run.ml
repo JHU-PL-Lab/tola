@@ -741,3 +741,58 @@ let verify_for_project ~root ~project ~variant =
           if not (String.equal entry matched) then
             Fmt.pr "    note: '%s' matched as substring '%s'@." entry matched);
       0
+
+(* ── M2 step 2+3: the contract×lang×mechanism input template ──
+   WHAT each contract's predict closure reads (input KINDS), with the
+   STANDARD inspect-file paths per language (tiny's convention: inspect
+   attached to build_binding/build_lib, files inspect.json /
+   inspect_mli.json / inspect_attrs.json). A project whose layout
+   deviates (z3's fetch-step attrs inspect, llvm's summary_stub.json +
+   location-suffixed probe_lib) keeps hand-writing those rows — the
+   template covers the common case, not every case.
+
+   Mechanism refinement (dynamic bindings have no stub input) comes
+   with the mechanism axis (M2 step 3). *)
+
+let inputs_of_contract ?mechanism (c : Canary_compat.contract_id)
+    (l : Canary_lang.lang) : Canary_compat.inspect_input list =
+  let open Canary_compat in
+  (* mechanism defaults to the language's default (static for OCaml/Python
+     today) — current callers unchanged; a dynamic binding (ctypes/dynlink)
+     has NO stub input (it dlopens at runtime). *)
+  let m =
+    Option.value mechanism
+      ~default:
+        (Option.value (Canary_mechanism.default_mechanism_of_lang l)
+           ~default:Canary_mechanism.Cstubs)
+  in
+  let is_dynamic =
+    Poly.equal (Canary_mechanism.discipline_of_mechanism m)
+      Canary_mechanism.Dynamic_ffi
+  in
+  let tag action = Canary_basic.string_of_action action in
+  let build_binding_tag = tag (Canary_basic.Build_binding l) in
+  let build_lib_tag = tag Canary_basic.Build_lib in
+  match c, l with
+  | C1, (Canary_lang.OCaml | Canary_lang.Python) when not is_dynamic ->
+      [ C_stub [ build_binding_tag ^ "/inspect.json" ];
+        Native_lib [ build_lib_tag ^ "/inspect.json" ] ]
+  | C1, (Canary_lang.OCaml | Canary_lang.Python) ->
+      (* dynamic: no compiled stub to inspect — the runtime fallback
+         (probe.log presence) catches missing-symbol failures *)
+      []
+  | C2, Canary_lang.OCaml ->
+      [ Ocaml_mli [ build_binding_tag ^ "/inspect_mli.json" ] ]
+  | C2, Canary_lang.Python ->
+      [ Python_attrs [ build_binding_tag ^ "/inspect_attrs.json" ] ]
+  | C4, Canary_lang.Python when not is_dynamic ->
+      [ Native_lib [ build_lib_tag ^ "/inspect.json" ];
+        Abi_surface [ build_binding_tag ^ "/inspect.json" ] ]
+  | C5, Canary_lang.Python when not is_dynamic ->
+      [ Versioned_exports [ build_lib_tag ^ "/inspect.json" ];
+        Versioned_req [ build_binding_tag ^ "/inspect.json" ] ]
+  | C6, Canary_lang.OCaml when not is_dynamic ->
+      [ Typed_header [ "scan_sources/inspect_typed_header.json" ];
+        Typed_binding_stub
+          [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
+  | _ -> []  (* placeholder / unwired / behavior-grep / dynamic — no inputs *)

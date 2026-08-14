@@ -160,8 +160,8 @@ the payload absorption types the Primitive params as payload fields.
 
 ## Sequence
 
-1. Add `binding_decl`/`binding_facts`/`coupling` types (surface/, next
-   to the catalogue).
+1. Add `binding_decl`/`binding_facts`/`coupling` types — in base/ beside
+   the mechanism vocabulary (2026-08-14 reunion).
 2. Add the declaration to the project layer (artifact row / a
    `binding_decl` field) — mechanism name stays identity.
 3. Derive the absorbable runner_spec fields from the declaration (the

@@ -689,7 +689,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C1 Canary_lang.OCaml;
+              Canary_compat_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -699,7 +699,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C1 Canary_lang.Python;
+              Canary_compat_run.inputs_of_contract CC.C1 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -713,7 +713,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C2 Canary_lang.OCaml;
+              Canary_compat_run.inputs_of_contract CC.C2 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -723,7 +723,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C2 Canary_lang.Python;
+              Canary_compat_run.inputs_of_contract CC.C2 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -760,7 +760,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C4 Canary_lang.Python;
+              Canary_compat_run.inputs_of_contract CC.C4 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -784,7 +784,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
           loc_filter = CS.Any;
           source = CS.From_artifact {
             inputs =
-              Canary_mechanism_catalogue.inputs_of_contract CC.C5 Canary_lang.Python;
+              Canary_compat_run.inputs_of_contract CC.C5 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -796,7 +796,7 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
     { contract = CC.C6; lang = Canary_lang.OCaml;
       firings =
         (let c6_inputs =
-           Canary_mechanism_catalogue.inputs_of_contract CC.C6 Canary_lang.OCaml in
+           Canary_compat_run.inputs_of_contract CC.C6 Canary_lang.OCaml in
          [
            { site = CS.At_build_binding Canary_lang.OCaml;
              loc_filter = CS.Any;

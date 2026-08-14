@@ -85,7 +85,10 @@ General code quality: testing coverage, dead-code elimination, refactoring.
   build_tree glob / staged / pm). All 37 `Primitive` sites in z3/llvm/sqlite
   converted; `templates.source_fetch_local_skips_clone` pins the restored
   locals behavior (M3 item 1 folded in).
-- [ ] **Module-init side effects** — skip PM detection for PM-irrelevant commands.
+- [x] **Module-init side effects** (2026-08-14) — `detect_pm` made
+  per-call everywhere (ssl's `pm ()` thunk + templates realize-time call;
+  no top-level `let pm =` sites left; the detection itself stays
+  memoized). Registry loads touch no PM.
 - [ ] **Confirm the general pre/post-checking picture** (user, 2026-08-12) —
   the user originally wanted pre + post checking for ALL actions in slow
   mode. Current state: `check_pre` is the AUTOMATIC dependency check
@@ -104,18 +107,24 @@ Formalize artifact invariants, contracts, expectations, and mechanism. Grow chec
 reliability so the current checks and future bindings (Java, Rust, etc.) are consistent.
 Flash back and sync with SSOT.
 
-**Centralization target** (agreed 2026-08-12): one directory holds the
-interface (WHAT each contract checks, by layer) + the design (HOW each
-mechanism realizes it). A project declares its mechanism per binding —
-the lowering derives the concrete checking from contract × mechanism.
+**Centralization target** (agreed 2026-08-12; mechanism moved to base
+2026-08-14, user-directed): the mechanism vocabulary (identity +
+catalogue + binding_decl payload) lives in base/ as WORKING code the
+lowering reads; the contracts (WHAT each contract checks, by layer)
+stay in surface/ with the contract×mechanism bridge. A project declares
+its mechanism per binding — the lowering derives the concrete checking
+from contract × mechanism.
 
 ```
-  surface+mechanism/   contract × layer = WHAT to check (abstract)
-                       mechanism = HOW it manifests:
+  base/                mechanism = HOW it manifests (vocabulary the
+                       lowering consumes):
                        - which steps fire (Static: build_binding + probe;
                          Dynamic: probe only — no compile stage)
                        - which inputs (Cstubs → stub .a; Cext → cext .so;
                          Ctypes → dlopen at probe, no static inputs)
+                       - the binding_decl payload (typed facts + coupling)
+  surface/             contract × layer = WHAT to check (abstract) +
+                       inputs_of_contract (the contract×mechanism bridge)
   project/             declares binding lang → mechanism (already in
                        artifact_id's Ext_mechanism)
   lowering/            contract × mechanism → concrete firing + inputs
@@ -128,14 +137,15 @@ produce the same firings as the templated ones.
 
 Steps (each step keeps the suite green before the next):
 
-1. [x] **Merge `surface/` + `mechanism/` into one directory** (2026-08-12) —
-   `canary_mechanism.ml` (base/) split: identity vocabulary (`discipline`,
-   `mechanism`, defaults) stays in base (artifact identity's `Ext_mechanism`
-   needs it); the catalogue + stage-existence predicate move to
-   `surface/canary_mechanism_catalogue.ml` — contracts (WHAT) and mechanism
-   design (HOW) now sit side by side in surface/. No behavior change.
+1. [x] **Mechanism vocabulary reunited in base** (2026-08-12 split,
+   2026-08-14 reunited, user-directed) — `canary_mechanism.ml` (base/) now
+   holds identity + catalogue + stage-existence predicate, and
+   `canary_binding_decl.ml` (the typed payload) moved to base/ beside it:
+   mechanism is BASE vocabulary the lowering works with, not display prose.
+   The contract×mechanism bridge (`inputs_of_contract`) stays in surface/
+   with the contracts it feeds. No behavior change.
 2. [x] **Mechanism input template** (2026-08-12) — `inputs_of_contract
-   (contract, lang)` in `surface/canary_mechanism_catalogue.ml` produces the
+   (contract, lang)` in `surface/canary_compat_run.ml` produces the
    input KINDS + standard inspect paths (tiny's convention). tiny's binding
    table now calls it; `inputs_template_pin` locks the template equal to the
    former hand-written rows (no behavior change). Deviating layouts (z3's

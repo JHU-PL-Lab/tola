@@ -509,8 +509,8 @@ let print_spec ?policy (pr : project_run) : unit =
             (match Canary_artifact.ext_of a with
              | Canary_artifact.Ext_mechanism m ->
                  Fmt.pr "        mechanism: %s@."
-                   (Canary_mechanism_catalogue.one_line_of_info
-                      (Canary_mechanism_catalogue.info_of_mechanism m))
+                   (Canary_mechanism.one_line_of_info
+                      (Canary_mechanism.info_of_mechanism m))
              | _ -> ());
             List.iter
               (fun (id, ch, dir) ->

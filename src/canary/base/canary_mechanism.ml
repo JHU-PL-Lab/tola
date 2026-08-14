@@ -82,3 +82,118 @@ let default_mechanism_of_lang : Canary_lang.lang -> mechanism option = function
       (* not modeled yet (to-do); these never appear as binding artifacts
          in any current project. *)
       None
+
+(* ── The mechanism CATALOGUE (reunited in base 2026-08-14) ──
+   Mechanism DETAIL as standalone DATA, in the same file as the identity
+   vocabulary — mechanism is BASE vocabulary: artifact identity carries
+   [Ext_mechanism m] and the catalogue's facts are working code the
+   lowering reads (not display-only prose). A project references a
+   mechanism by name and never inlines mechanism facts; display layers
+   ([spec]) read this catalogue.
+
+   Mechanisms today are FOUND objects — cstubs / cext / ctypes grew
+   historically. Making each one a structured record turns the design
+   space into data canary can range over (design/mechanism.md). *)
+
+open Base
+
+(** Structured per-mechanism facts. [discipline] is stored AND derivable
+    ([discipline_of_mechanism]) — the project-test pins them equal so the
+    catalogue cannot drift from the vocabulary. *)
+type mechanism_info = {
+  mi_mechanism : mechanism;
+  mi_lang : Canary_lang.lang;
+  mi_discipline : discipline;
+  mi_artifact_shape : string list;
+      (** the file forms that embody a binding of this mechanism *)
+  mi_lib_coupling : string;
+      (** how the native lib is bound: link-time undefined-symbol
+          requirements vs a runtime dlopen by path/name *)
+  mi_check_points : string list;
+      (** where surface agreements manifest for this mechanism (prose;
+          upper layers own the typed firing sites) *)
+  mi_wired : bool;  (** round-1 wiring state (produced by live projects) *)
+}
+
+let mechanism_catalogue : mechanism_info list =
+  [
+    { mi_mechanism = Cstubs; mi_lang = Canary_lang.OCaml;
+      mi_discipline = Static_c_abi;
+      mi_artifact_shape =
+        [ "lib<pkg>_stubs.a (C stubs)"; "<pkg>.cmxa/.cma"; "*.mli"; "META" ];
+      mi_lib_coupling =
+        "link-time: stub archive carries undefined C symbols the lib must \
+         provide (c1's consumer side)";
+      mi_check_points =
+        [ "build_binding (stub compile/link)"; "probe (link + run)" ];
+      mi_wired = true };
+    { mi_mechanism = Cext; mi_lang = Canary_lang.Python;
+      mi_discipline = Static_c_abi;
+      mi_artifact_shape =
+        [ "_native.<EXT_SUFFIX>.so (compiled extension)"; "__init__.py" ];
+      mi_lib_coupling =
+        "link-time: extension .so carries NEEDED + undefined symbols \
+         against the lib";
+      mi_check_points =
+        [ "build_binding (cc of the extension)"; "probe (import + run)" ];
+      mi_wired = true };
+    { mi_mechanism = Ctypes; mi_lang = Canary_lang.Python;
+      mi_discipline = Dynamic_ffi;
+      mi_artifact_shape = [ "pure .py source (no build product)" ];
+      mi_lib_coupling =
+        "load-time: dlopen by lib name/path at import; symbols resolved \
+         per call";
+      mi_check_points =
+        [ "probe only (no build stage; missing symbol surfaces at \
+           first call)" ];
+      mi_wired = true (* tiny's ctypes probe; z3-solver is ctypes-based *) };
+    { mi_mechanism = Cffi; mi_lang = Canary_lang.Python;
+      mi_discipline = Dynamic_ffi;
+      mi_artifact_shape = [ "pure .py + cdef declarations" ];
+      mi_lib_coupling = "load-time: dlopen; cdef re-declares the C surface";
+      mi_check_points = [ "probe only" ];
+      mi_wired = false };
+    { mi_mechanism = Dynlink; mi_lang = Canary_lang.OCaml;
+      mi_discipline = Dynamic_ffi;
+      mi_artifact_shape = [ ".cmxs (plugin)"; "toplevel/utop load" ];
+      mi_lib_coupling = "load-time: OCaml Dynlink of a cmxs that dlopens";
+      mi_check_points = [ "probe only" ];
+      mi_wired = false };
+  ]
+
+(** Catalogue lookup — total over the [mechanism] constructors (pinned by
+    the project-test, together with discipline consistency). *)
+let info_of_mechanism (m : mechanism) : mechanism_info =
+  match
+    List.find mechanism_catalogue ~f:(fun i -> Poly.equal i.mi_mechanism m)
+  with
+  | Some i -> i
+  | None ->
+      (* unreachable while the totality pin holds *)
+      { mi_mechanism = m; mi_lang = Canary_lang.OCaml;
+        mi_discipline = discipline_of_mechanism m;
+        mi_artifact_shape = []; mi_lib_coupling = "(uncatalogued)";
+        mi_check_points = []; mi_wired = false }
+
+(** One-line display form for [spec] — the project spec REFERENCES the
+    mechanism; the facts printed come from here, never from the project. *)
+let one_line_of_info (i : mechanism_info) : string =
+  Printf.sprintf "%s (%s%s) — %s; checks: %s"
+    (string_of_mechanism i.mi_mechanism)
+    (string_of_discipline i.mi_discipline)
+    (if i.mi_wired then "" else "; unwired")
+    i.mi_lib_coupling
+    (String.concat ~sep:", " i.mi_check_points)
+
+(** Does language [l]'s (default) binding compile against the native
+    surface? True for OCaml/Python today. The coverage catalogue uses
+    this to decide whether a [build_binding] stage exists — a
+    [Dynamic_ffi] binding would have none. (The HOW: which stages a
+    mechanism realizes.) *)
+let is_static_binding_lang (l : Canary_lang.lang) : bool =
+  match default_mechanism_of_lang l with
+  | Some m -> (match discipline_of_mechanism m with
+      | Static_c_abi -> true
+      | Dynamic_ffi -> false)
+  | None -> false
+

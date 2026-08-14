@@ -23,6 +23,9 @@
 ; action/canary_action.ml → module Canary_action). Layers:
 ;
 ;   base/    Layer 0 — vocabulary: foundational types every other layer
+;                      incl. the mechanism vocabulary (identity + catalogue +
+;                      binding_decl payload — working code the lowering reads,
+;                      reunited here 2026-08-14).
 ;                      uses (lang, artifact_kind, runner_os, cmdline,
 ;                      location, distro, package_manager, pm_properties,
 ;                      action, version, output-path conventions). Pure
@@ -31,10 +34,8 @@
 ;                      both depend on it without a cycle.
 ;   surface/ Layer 1 — surface theory: the API-surface declaration types,
 ;                      the c1..c8 contracts (WHAT to check — canary_compat,
-;                      canary_compat_run), and the mechanism catalogue (HOW
-;                      each mechanism realizes the checks — which stages
-;                      exist, where checking points lie —
-;                      canary_mechanism_catalogue). Pure, no I/O beyond
+;                      canary_compat_run, incl. the contract×mechanism input
+;                      template inputs_of_contract). Pure, no I/O beyond
 ;                      Yojson.from_file.
 ;   tool/    Layer 2 — real-world tool wrappers: per-PM drivers
 ;                      (canary_pm_{apt,brew,opam,pip}), inspector drivers

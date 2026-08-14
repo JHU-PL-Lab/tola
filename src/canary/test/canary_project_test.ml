@@ -212,10 +212,10 @@ let mechanism_test : pure_test =
       && Poly.equal (M.discipline_of_mechanism M.Cext) M.Static_c_abi
       && Poly.equal (M.discipline_of_mechanism M.Ctypes) M.Dynamic_ffi
       && Poly.equal (M.discipline_of_mechanism M.Dynlink) M.Dynamic_ffi
-      && Canary_mechanism_catalogue.is_static_binding_lang L.OCaml && Canary_mechanism_catalogue.is_static_binding_lang L.Python
+      && Canary_mechanism.is_static_binding_lang L.OCaml && Canary_mechanism.is_static_binding_lang L.Python
       (* round 1: unmodeled languages carry no mechanism yet *)
       && Poly.equal (M.default_mechanism_of_lang L.Rust) None
-      && not (Canary_mechanism_catalogue.is_static_binding_lang L.Rust)) }
+      && not (Canary_mechanism.is_static_binding_lang L.Rust)) }
 
 (* §4.2 enumeration core: one product-then-filter engine, two orthogonal
    projections. Pins the shape of each projection + the dependency filter. *)
@@ -564,14 +564,14 @@ let mechanism_catalogue_test : pure_test =
         Mech.[ Cstubs; Cext; Ctypes; Cffi; Dynlink ]
       in
       List.for_all all ~f:(fun m ->
-          let i = Canary_mechanism_catalogue.info_of_mechanism m in
-          Poly.equal i.Canary_mechanism_catalogue.mi_mechanism m
-          && Poly.equal i.Canary_mechanism_catalogue.mi_discipline (Mech.discipline_of_mechanism m)
-          && (not (List.is_empty i.Canary_mechanism_catalogue.mi_artifact_shape))
-          && not (List.is_empty i.Canary_mechanism_catalogue.mi_check_points))
+          let i = Canary_mechanism.info_of_mechanism m in
+          Poly.equal i.Canary_mechanism.mi_mechanism m
+          && Poly.equal i.Canary_mechanism.mi_discipline (Mech.discipline_of_mechanism m)
+          && (not (List.is_empty i.Canary_mechanism.mi_artifact_shape))
+          && not (List.is_empty i.Canary_mechanism.mi_check_points))
       && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
              match Mech.default_mechanism_of_lang l with
-             | Some m -> (Canary_mechanism_catalogue.info_of_mechanism m).Canary_mechanism_catalogue.mi_wired
+             | Some m -> (Canary_mechanism.info_of_mechanism m).Canary_mechanism.mi_wired
              | None -> false)) }
 
 (* M2 step 2 pin (2026-08-12): the contract×lang input template equals
@@ -606,7 +606,7 @@ let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
       let module CC = Canary_compat in
-      let template = Canary_mechanism_catalogue.inputs_of_contract in
+      let template = Canary_compat_run.inputs_of_contract in
       let eq c l expected =
         Poly.equal (template c l) expected
       in
