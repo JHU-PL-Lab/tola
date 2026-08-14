@@ -56,4 +56,6 @@ vendor/z3_dev
 !canary/examples/tiny/scenarios/_harness/**
 
 # setuptools-generated metadata
-*.egg-info/
+*.egg-info
+
+vendor/tola-m3
