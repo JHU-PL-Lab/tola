@@ -69,6 +69,13 @@ let probe_from_store = function
   | Build_tree -> false
   | _ -> true
 
+(* Wrap a probe command with world-identity assertion greps.
+   Each assertion = a string that probe.log MUST contain. *)
+let with_world_asserts ~asserts ~output_dir ~variant_key cmd =
+  let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+  List.fold_left asserts ~init:cmd ~f:(fun acc s ->
+      [%string "%{acc} && grep -qF \"%{s}\" %{output_dir}/%{probe_log}"])
+
 
 
 
@@ -91,6 +98,7 @@ let probe_from_store = function
    command closures). [command_of_step ~store_config] (defined below the
    command templates it calls) resolves both. *)
 type store_slot =
+  | Fetch_source
   | Fetch_lib
   | Fetch_binding of Canary_lang.lang
   | Probe_lib
@@ -108,7 +116,7 @@ type runner_spec = {
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
   (* Declarative API spec for this source version. When present, derive_steps
      checks consistency: binding_api.source_dir = Some _ ↔ build_binding = Some _. *)
-  api_source : Canary_artifact_api.t option;
+  api_source : Canary_artifact.t option;
   (* Scan step: verifies api_source header/binding claims against the fetched
      source tree. Emitted after fetch_source; configure/build depend on it.
      None when no source build (stable fetch-only sources). *)
@@ -142,7 +150,11 @@ type runner_spec = {
   pack_app : (output_dir:string -> variant_key:string -> string) option;
   probe_lib : (location * (output_dir:string -> variant_key:string -> string)) list;
   probe_binding : (Canary_lang.lang * location * (output_dir:string -> variant_key:string -> string)) list;
-  probe_app : (output_dir:string -> variant_key:string -> string) option;
+  probe_app :
+    (Canary_lang.lang * (output_dir:string -> variant_key:string -> string)) list;
+      (** per-lang (2026-08-12, ssl's two-app shape): the catalogue has
+          Probe_app per language; the old single [option] let a Probe_app
+          Python step pull the OCaml command. *)
   (* Optional per-action check_post override. None = use default (non-empty dir). *)
   check_post : (action -> (output_dir:string -> variant_key:string -> bool) option);
   (* Per-action expectation. Default: Expect_success.
@@ -192,6 +204,10 @@ type runner_spec = {
       [--disable-contract] flag — both contribute to the per-run
       disabled set. *)
   disabled_contracts : Canary_compat.contract_id list;
+  (** World-identity assertions: per-(action, location) strings that
+      probe.log MUST contain for the step to pass (positive-polarity
+      counterpart to [expectation]). Empty list = no assertions. *)
+  asserts : (Canary_basic.action * Canary_store.location option * string) list;
 }
 
 let empty_runner_spec = {
@@ -208,7 +224,7 @@ let empty_runner_spec = {
   fetch_lib = None; fetch_binding = []; fetch_app = None;
   pack_lib = None; pack_binding = []; pack_app = None;
   probe_lib = []; probe_binding = [];
-  probe_app = None;
+  probe_app = [];
   check_post = (fun _ -> None);
   expectation = (fun _ _ -> Expect_success);
   symbol_check = (fun _ -> None);
@@ -217,6 +233,7 @@ let empty_runner_spec = {
   inspect = (fun _ _ -> None);
   artifact_name = (fun _ -> None);
   disabled_contracts = [];
+  asserts = [];
 }
 
 (* Remove build-from-source actions. Keeps fetch + probe only. *)
@@ -320,6 +337,15 @@ let command_of_step ~(store_config : Canary_store_config.store_config)
           failwith
             "command_of_step: Derived Fetch_binding needs \
              store_config.bindings[lang].provider = Lang_pkg (opam)")
+  | Derived Fetch_source -> (
+      match store_config.source with
+      | Some repo ->
+          let distro = Canary_basic.detect_distro () in
+          fun ~output_dir ~variant_key ->
+            Canary_artifact_source.source_fetch_cmd distro repo ~output_dir ~variant_key
+      | None ->
+          failwith
+            "command_of_step: Derived Fetch_source needs store_config.source = Some repo")
   | Derived (Probe_lib | Probe_binding _ | Scan_source) ->
       failwith "command_of_step: Derived probe/scan slots not wired yet"
 
@@ -350,7 +376,9 @@ let script_of_action spec = function
       (match List.filter spec.probe_binding ~f:(fun (l, _, _) -> Poly.equal l lang) with
        | [] -> None
        | (_, _, cmd) :: _ -> Some cmd)
-  | Probe_app _ -> spec.probe_app
+  | Probe_app a ->
+      Option.map (List.Assoc.find spec.probe_app ~equal:Poly.equal a.Canary_basic.lang)
+        ~f:(fun cmd -> cmd)
   | Publish Source | Publish Headers -> None
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
@@ -426,6 +454,16 @@ let check_build_binding ~marker ~archive_path ~output_dir ~variant_key =
 let check_markers markers ~output_dir ~variant_key =
   List.for_all markers ~f:(fun m ->
     has_file ~output_dir (Canary_basic.variant_file ~variant_key m))
+
+(** STORE-PIN check_post (2026-08-12): passes iff the fetch's marker exists
+    AND the store provably holds the pinned version — the warm-cache skip
+    therefore only fires when the switch still holds the pin. If another
+    scenario switched the store since the marker was written, this fails
+    and the fetch re-runs (re-pins). The shell half is
+    [Canary_pm_opam.holds_pin_cmd]. *)
+let pin_check_post ~pkg ~pin ~marker ~output_dir ~variant_key =
+  has_file ~output_dir (Canary_basic.variant_file ~variant_key marker)
+  && Stdlib.Sys.command (Canary_pm_opam.holds_pin_cmd ~pkg ~pin) = 0
 
 (* ── Default check_post per action category ──
    Derived from the action type. Projects can override via runner_spec.check_post.
@@ -642,8 +680,8 @@ let check_api_consistency (spec : runner_spec) =
          run configuration may use a prebuilt binding instead of building it. *)
       if not (List.is_empty spec.build_binding) then
         let any_source_dir =
-          List.exists api.Canary_artifact_api.binding_apis
-            ~f:(fun b -> Option.is_some b.Canary_artifact_api.source_dir)
+          List.exists api.Canary_artifact.binding_apis
+            ~f:(fun b -> Option.is_some b.Canary_artifact.source_dir)
         in
         if not any_source_dir then
           failwith "api_source: runner_spec has build_binding but no binding_api declares source_dir"
@@ -807,6 +845,19 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 in
                 let expectation = spec.expectation action (Some loc) in
                 let symbol_check = spec.symbol_check action in
+                (* World-identity assertions: grep probe.log for required strings *)
+                let asserts =
+                  List.filter_map spec.asserts ~f:(fun (a, l, s) ->
+                      if Poly.equal a action
+                         && (Option.is_none l || Option.equal Poly.equal l (Some loc))
+                      then Some s else None)
+                in
+                let cmd =
+                  if List.is_empty asserts then cmd
+                  else fun ~output_dir ~variant_key ->
+                    with_world_asserts ~asserts ~output_dir ~variant_key
+                      (cmd ~output_dir ~variant_key)
+                in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
@@ -826,6 +877,19 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 in
                 let expectation = spec.expectation action (Some loc) in
                 let symbol_check = spec.symbol_check action in
+                (* World-identity assertions: grep probe.log for required strings *)
+                let asserts =
+                  List.filter_map spec.asserts ~f:(fun (a, l, s) ->
+                      if Poly.equal a action
+                         && (Option.is_none l || Option.equal Poly.equal l (Some loc))
+                      then Some s else None)
+                in
+                let cmd =
+                  if List.is_empty asserts then cmd
+                  else fun ~output_dir ~variant_key ->
+                    with_world_asserts ~asserts ~output_dir ~variant_key
+                      (cmd ~output_dir ~variant_key)
+                in
                 let base = mk_step ~root ~project ~cache_project ~tag:ptag ~action
                   ~deps ~cmd ~check_post ~expectation ~symbol_check ~disabled_contracts:spec.disabled_contracts () in
                 attach_inspect ~parent_tag:ptag ~action ~loc base)
@@ -865,3 +929,10 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
       in
       { s with check_pre })
 
+
+
+(* Moved from bin 2026-08-10 *)
+let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
+    (spec : runner_spec) : runner_spec =
+  if List.is_empty cli_disabled then spec
+  else { spec with disabled_contracts = spec.disabled_contracts @ cli_disabled }

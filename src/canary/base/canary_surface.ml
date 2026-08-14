@@ -1,14 +1,14 @@
 (** [Canary_surface] — the checking-points surface, split out of
-    {!Canary_artifact_api} (project-definition redesign, seam S1 —
+    {!Canary_artifact} (project-definition redesign, seam S1 —
     [doc/canary/design/ssot.md] §6.1).
 
-    [Canary_artifact_api.t] conflated two concerns: {b provenance}
+    [Canary_artifact.t] conflated two concerns: {b provenance}
     (components / headers / binding source_dir — where artifacts live)
     and {b checking points} (watchlists + expected symbols/soname/abi —
     what detection inspects). This module is the checking half. The
     provenance half moves to the store side.
 
-    Lives in a sibling module rather than inside [Canary_artifact_api]
+    Lives in a sibling module rather than inside [Canary_artifact]
     because [native_surface] would otherwise shadow the identically-named
     record labels on [native_api] within one module. It sits below
     [Canary_step_builder] so [runner_spec] can reference [surface]
@@ -51,8 +51,8 @@ let empty_surface = { native = empty_native_surface; bindings = [] }
     ([components] / [headers] / [source_dir]) is dropped — it belongs to
     the store. This is the migration path for projects that still carry
     an [api_source] (z3 / llvm / tiny). *)
-let surface_of_api (api : Canary_artifact_api.t) : surface =
-  let na : Canary_artifact_api.native_api = api.native_api in
+let surface_of_api (api : Canary_artifact.t) : surface =
+  let na : Canary_artifact.native_api = api.native_api in
   {
     native =
       {
@@ -64,7 +64,7 @@ let surface_of_api (api : Canary_artifact_api.t) : surface =
         cxx_abi = na.cxx_abi;
       };
     bindings =
-      List.map api.binding_apis ~f:(fun (b : Canary_artifact_api.binding_api) ->
+      List.map api.binding_apis ~f:(fun (b : Canary_artifact.binding_api) ->
           ( b.lang,
             {
               module_watchlist = b.module_watchlist;

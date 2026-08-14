@@ -23,13 +23,13 @@ Canonical description of tiny's implementation state and
 near-term wish-list. Complements:
 
 - [`ssot.md`](ssot.md) — truth (definitions, scenario tables)
-- [`dynamic_enumeration.md`](dynamic_enumeration.md) — the derived-vs-hand
+- [`algorithm_explainer.md`](algorithm_explainer.md) — the derived-vs-hand
   principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
   enumeration model
-- [`projects.md §5`](../projects.md) — three levels of scenario
+- [`projects.md §5`](../project/index.md) — three levels of scenario
   coverage a new project can pick (A positive-only / B one hand-coded
   failure / C matrix — tiny is C, don't copy)
-- [`bad_scenario_flavors.md`](bad_scenario_flavors.md) —
+- the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle" —
   after-tiny research task (flavor-2 catalogue completeness)
 - [`status.md`](../status.md) — rolling backlog
 - [`worklog_2026_07.md`](../worklog/worklog_2026_07.md) —
@@ -289,7 +289,7 @@ awaiting c4 wiring).
   `Unknown_gap` manifest (Bs.13 api_repack_stub_orphan; c7
   static-only). Belongs to the flavor-2 catalogue
   extension (see
-  [`bad_scenario_flavors.md`](bad_scenario_flavors.md)).
+  the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle").
 
 Every scenario with a probe-observable manifestation
 derives its expectation from `recipe.violates +
@@ -423,7 +423,7 @@ mistakes, cross-PM SONAME drift. Required for Principle 4
 
 After tiny fills out: extend c1..c8 based on real-world
 bugs. Detailed in
-[`bad_scenario_flavors.md`](bad_scenario_flavors.md). Not
+the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle". Not
 tiny-scoped; belongs to the post-tiny research task.
 
 ### 7.7 Route tiny commands through `tool/` — shipped 2026-07-09

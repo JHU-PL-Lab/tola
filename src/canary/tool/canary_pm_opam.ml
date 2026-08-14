@@ -30,6 +30,20 @@ let is_installed ~pkg =
 let query_version_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} --field=version 2>/dev/null"]
 
+(* The version the switch currently HOLDS for [pkg] (installed-version
+   query, not the repo's available version). The store-pin check (2026-08-12):
+   shell half of [Canary_step_builder.pin_check_post] — the check_post
+   compares this against the pin. The OPAM package version is the store's
+   OWN record (robust across packages whose findlib META version differs
+   from the opam version — e.g. z3.dev's META carries the source version
+   while opam reports "dev"). *)
+let version_of_cmd ~pkg =
+  [%string "eval $(opam env) && opam list %{pkg} --installed --short --columns=version 2>/dev/null"]
+
+(* A shell test: the switch holds exactly [pin] for [pkg]. *)
+let holds_pin_cmd ~pkg ~pin =
+  [%string "test \"$(%{version_of_cmd ~pkg})\" = \"%{pin}\""]
+
 let check_available_cmd ~pkg =
   [%string "eval $(opam env) && opam show %{pkg} >/dev/null 2>&1"]
 

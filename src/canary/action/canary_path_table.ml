@@ -212,12 +212,6 @@ let job_paths_of_action_graph (ar : action_graph) : job_path list =
       let c = Int.compare a.depth b.depth in
       if c <> 0 then c else String.compare a.path_id b.path_id)
 
-(* Find path_id for a node by matching node_tag *)
-let path_id_of_node paths (n : artifact_node) =
-  List.find_map paths ~f:(fun p ->
-      if String.equal (node_tag p.node) (node_tag n) then Some p.path_id
-      else None)
-  |> Option.value ~default:"?"
 
 (* A pattern row: one structural action pattern with version combo count *)
 type pattern_row = {

@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+    import z3; s = z3.Solver(); x = z3.Int('x'); s.add(x > 0); print('z3 ok:', s.check()); _ = z3.parser_context
+                                                                                               ^^^^^^^^^^^^^^^^^
+AttributeError: module 'z3' has no attribute 'parser_context'
+z3 ok: sat

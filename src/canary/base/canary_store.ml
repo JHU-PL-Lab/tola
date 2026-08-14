@@ -27,7 +27,7 @@ type pm_properties = {
    artifact is PROVIDED at build/fetch time). Base vocabulary since
    2026-08-05 (was action-layer only, on [close_deps]); the action layer
    re-exports it, and a project declares it per-ARTIFACT in its spec axes
-   ([Canary_enumerate.artifact_axes]).
+   ([Canary_artifact.artifact_axes]).
    - [Lockstep]    — run provider = build provider (the matched chain).
    - [Independent] — the run provider is whatever the scenario places,
                      independent of the consumer's own build-time provider

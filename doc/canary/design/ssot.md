@@ -212,10 +212,10 @@ both; keep them distinct):
   product above, as good/bad deltas from the baseline (one `Canary_enumerate.
   assignment` per scenario; the **mutation** axis is what makes a scenario *bad*).
   Static, pre-run. tiny-full: 29 scenarios (3 good, 26 bad); sqlite: 2 (both good).
-- **`canary scenarios <pj>`** — the store-lifecycle **stage-coverage** projection:
+- **`canary stages <pj>`** — the store-lifecycle **stage-coverage** projection:
   which abstract stages (`build_lib`/`fetch_lib`/…) a project's variants exercise,
   `✓`/`-`/`⊘`, unioned. A *different* view of the same space (the **provision**
-  axis, [`scenario_coverage.md`](scenario_coverage.md)), not the good/bad set.
+  axis, the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle"), not the good/bad set.
   (Knows the pre-convergence project list, not yet `tiny-full`/`project_run` —
   status §F5.)
 - **`canary status <pj>`** — post-run verdicts (status §F extends this to a
@@ -261,7 +261,7 @@ still exercises every scenario *pattern*) and **all-Full** (the complete
 product).
 
 Correspondences already in place: `origin` (the project dimension,
-[`projects.md` §1](../projects.md)) **is** the provision coordinate; the
+[`project/index.md` §1](../project/index.md)) **is** the provision coordinate; the
 variant list **is** the provision enumeration; the mutation vocabulary
 (§5.3) **is** the other axis; and provision decides which action-graph
 actions run (§6.5 — `Built` ⇒ `Build_lib`, `Fetched` ⇒ `Fetch Lib`).
@@ -275,7 +275,7 @@ tiny (build + probe locally) shows N/A on `Publish`/`Fetch` exactly as a
 `Fetched` general project shows N/A on `Build`. The round-trip
 (`Build → Publish → Fetch`) is the "canary builds and publishes its own
 conf" case, the only one that covers `Publish`. No project is
-special-cased. See [`scenario_coverage.md`](scenario_coverage.md) §2.
+special-cased. See the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle".
 
 Every axis of a project's concrete scenarios is one the algorithm can
 range or pin; nothing a project needs sits "outside" it — a coordinate the
@@ -529,7 +529,7 @@ covered this). **This instance graph already exists**: `Canary_basic.artifact_no
 `Canary_action.make_action_graph` already generate it — including the deploy
 mismatch (`Build_app` pairs each binding with *every* runtime lib). The
 enumerate↔graph merge is done (the seam + `node_of_assignment` + `close_deps`);
-the model is [`dynamic_enumeration.md`](dynamic_enumeration.md).
+the model is [`algorithm_explainer.md`](algorithm_explainer.md).
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
@@ -764,7 +764,7 @@ visibly empty. After §7.2 Phase 4 (2026-07-20)
 coverage stands at 12 of 20 cells filled after §7.1's
 `Drop_python_attr` primitive landed (2026-07-21); 8 remain
 awaiting App-level primitives + c4 wiring for OCaml. See
-[`dynamic_enumeration.md`](dynamic_enumeration.md) for
+[`algorithm_explainer.md`](algorithm_explainer.md) for
 the derived-vs-hand principle, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
 for the blocker-primitive breakdown.

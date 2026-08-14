@@ -1,1 +1,2 @@
-(data_only_dirs reference vendor _*)
+(dirs :standard \ {docs,_out})
+(data_only_dirs reference vendor _pm _cache _legacy_code _opam _not_used _not_yet _harness _build)

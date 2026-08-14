@@ -88,7 +88,8 @@
       "Bash(/home/red/code/research/tola/_build/default/src/bin/canary_main.exe artifact-test *)",
       "Bash(/home/red/code/research/tola/_build/default/src/bin/canary_main.exe view *)",
       "Bash(chmod +x /home/red/code/research/tola/canary/scripts/inspect_elf.py)",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://jhu-pl-lab.github.io/tola/canary/projects/llvm/-run/result.html\")"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://jhu-pl-lab.github.io/tola/canary/projects/llvm/-run/result.html\")",
+      "Bash(good\\\\b\" /home/red/code/research/tola/src/canary/action/canary_enumerate.ml | head -20)"
     ],
     "additionalDirectories": [
       "/home/red/code/research/tola/_out/canary/projects/sqlite",
@@ -100,5 +101,17 @@
       "/home/red/code/research/tola/.claude/memory",
       "/home/red/code/research/tola/.claude"
     ]
+  },
+  "autoCompactWindow": 800000,
+  "env": {
+    "USE_DEEPSEEK": "1",
+    "ANTHROPIC_BASE_URL": "https://api.deepseek.com/anthropic",
+    "ANTHROPIC_AUTH_TOKEN": "***REMOVED***",
+    "ANTHROPIC_MODEL": "deepseek-v4-pro[1m]",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "deepseek-v4-pro[1m]",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "deepseek-v4-pro[1m]",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "deepseek-v4-flash",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "deepseek-v4-flash",
+    "CLAUDE_CODE_EFFORT_LEVEL": "max"
   }
 }

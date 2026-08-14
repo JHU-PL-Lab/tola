@@ -2,42 +2,21 @@
 
     **One** enumeration algorithm over (provision assignment) × (mutation),
     product-then-filter. tiny and every general project are two orthogonal
-    *projections* of the same product:
+    *projections* of the same product.
 
-    - **tiny** = fix provision = all [Built], walk the mutation axis
-      (§5's `Bs.N`).
-    - **a general project** = fix mutation = none, walk the provision axis
-      (its variants; ssl `sys` = all [Fetched], ssl `src` = all [Built]).
-
-    This module is the enumeration algorithm. [run_config] instantiates it
-    with a [config] — one [level] (`Free`/`Subset`/`Full`) per axis (ssot
-    §4.2); [tiny_slice] and [general_slice] are the two canonical configs.
-    The convergence LANDED (2026-08-05): sqlite + tiny-full enumerate their
-    entire scenario set from declared [project_spec]s through [enumerate];
-    z3/llvm's hand-written variant lists remain until A5.
-
-    FILE PLACEMENT (revised 2026-08-05 — supersedes the old "fold this into
-    canary_scenario.ml" note): this module STAYS the standalone
-    concrete-scenario core. `canary_scenario.ml` holds the *abstract*
-    Sc.N pattern catalogue + expectation vocabulary — a different sense of
-    "scenario" (design/scenario_terms.md); merging the two files would fuse
-    exactly what that note wants separated. If anything, the pattern half
-    migrates out of canary_scenario.ml when the terminology split (T2)
-    rides F5.
-
-    The enumeration algorithm is **polymorphic in the mutation** (['m]): it is pure
-    combinatorics — which artifacts are provided and from where, and which
-    provided artifact is mutated — agnostic to what a mutation *means*. tiny
-    supplies real mutations; a general project supplies none. *)
+    Stage 1 (project declaration) lives in [Canary_project_spec]; stage 2
+    (the enumeration engine) lives here. The dependency is one-way: this
+    module consumes [Canary_project_spec] types; [Canary_project_spec] does
+    NOT depend on this module. *)
 
 open Base
+open Canary_artifact
+open Canary_project_spec
 
-(* [provision] is base vocabulary (Canary_store); the enumeration ranges
-   over [artifact] = the full artifact set (Canary_basic.artifact_kind),
-   re-exported here so [Canary_enumerate.Source] / [.Built] resolve. Every
-   artifact carries a placement (provision × version); Headers/App are
-   simply artifacts whose provision is usually [Absent] (not independently
-   provided) — no special subset type. *)
+(* ── base vocabulary (re-exported for backward compat) ──
+   Defined independently from [Canary_project_spec] but equal to the same
+   store types — the two definitions are the same type via [Canary_store]. *)
+
 type provision = Canary_store.provision =
   | Absent | Fetched | Built | Vendored
 [@@deriving show, eq]
@@ -46,115 +25,43 @@ type artifact = Canary_basic.artifact_kind =
   | Source | Headers | Lib | Binding of Canary_lang.lang | App
 [@@deriving show, eq]
 
-(** Concise artifact label for display (coarse kind only). *)
-let string_of_artifact = function
-  | Source -> "source"
-  | Headers -> "headers"
-  | Lib -> "lib"
-  | Binding l -> "binding-" ^ Canary_lang.string_of_lang l
-  | App -> "app"
+let string_of_provision = Canary_store.string_of_provision
 
-(* ── precise artifact identity (ssot §4.2.3) ──
-   The coarse [artifact] (= Canary_basic.artifact_kind) can't tell two
-   bindings of one lib apart (cext vs ctypes) or two apps apart (direct vs
-   via-helper), and enriching it would touch ~200 mechanism-agnostic sites.
-   So the enumeration's identity is the pair (artifact, artifact_ext) — the
-   coarse kind + an [ext] that refines a binding by its mechanism and an app
-   by its wiring. When this settles, the pair folds into an enriched
-   artifact_kind and the rest of the project migrates (the diagram, ~61
-   sites, last). *)
+(* Re-export [Canary_project_spec] symbols that call sites use via
+   [Canary_enumerate.xxx]. *)
+let string_of_artifact = Canary_artifact.string_of_artifact
+let string_of_id = Canary_artifact.string_of_id
+let string_of_app_wiring = Canary_artifact.string_of_app_wiring
+let pretty_artifact = Canary_artifact.pretty_artifact
+let pretty_id = Canary_artifact.pretty_id
+let a_source = Canary_artifact.a_source
+let a_headers = Canary_artifact.a_headers
+let a_lib = Canary_artifact.a_lib
+let a_binding = Canary_artifact.a_binding
+let a_app = Canary_artifact.a_app
+let kind_of = Canary_artifact.kind_of
+let ext_of = Canary_artifact.ext_of
 
-(** How an app consumes the library (decision 2, ssot §4.2.3). *)
-type app_wiring = Direct | Via_helper [@@deriving show, eq]
+(* ────────────────────────────────────────────────────────────────────
+   Dynamic — used / updated during enumeration.
+   Types produced by the enumeration or configuring its behaviour.
+   ──────────────────────────────────────────────────────────────────── *)
 
-let string_of_app_wiring = function Direct -> "direct" | Via_helper -> "via_helper"
+(* ── re-exports from base/ ──
+   [build_id], [quality], [good] live in [Canary_basic];
+   [placement], [assignment] live in [Canary_artifact].
+   Re-exported as type aliases for backward compat. *)
 
-(** Per-kind extension distinguishing several artifacts of the same coarse
-    kind: a binding by its mechanism, an app by its wiring. *)
-type artifact_ext =
-  | Ext_none  (** source / headers / lib *)
-  | Ext_mechanism of Canary_mechanism.mechanism  (** a binding *)
-  | Ext_wiring of app_wiring  (** an app *)
-[@@deriving show, eq]
+type build_id = Canary_basic.build_id
+type quality = Canary_basic.quality
+let good = Canary_basic.good
+let string_of_build_id = Canary_basic.string_of_build_id
+let equal_version = Canary_basic.equal_version
+let string_of_version = Canary_basic.string_of_build_id
+let equal_build_id = Canary_basic.equal_build_id
 
-(** The enumeration's precise artifact identity — the coarse [kind] plus its
-    [ext] (≡ the (artifact, artifact_ext) pair, as a record so it extends
-    cleanly). [kind_of] projects back to the coarse [Canary_basic.artifact_kind]. *)
-type artifact_id = { kind : artifact; ext : artifact_ext } [@@deriving show, eq]
-
-let kind_of (id : artifact_id) : artifact = id.kind
-let ext_of (id : artifact_id) : artifact_ext = id.ext
-
-(* smart constructors *)
-let a_source : artifact_id = { kind = Source; ext = Ext_none }
-let a_headers : artifact_id = { kind = Headers; ext = Ext_none }
-let a_lib : artifact_id = { kind = Lib; ext = Ext_none }
-
-let a_binding (lang : Canary_lang.lang) (m : Canary_mechanism.mechanism) :
-    artifact_id =
-  { kind = Binding lang; ext = Ext_mechanism m }
-
-let a_app (w : app_wiring) : artifact_id = { kind = App; ext = Ext_wiring w }
-
-(** Concise label for a precise identity: coarse kind + its extension. *)
-(* The canonical id string is BORN-SAFE (filesystem + env-var safe): the ext
-   delimiter is '-', not ':'. ':' is the PYTHONPATH/LD_LIBRARY_PATH separator, so
-   a ':' here would split those vars when the id lands in a workspace dir name
-   (the bug that made only lib scenarios detect). Safe by construction ⇒ no
-   downstream sanitizer needed; a prettier display form can be a separate pp if
-   ever wanted. Nothing parses this string back, so the delimiter is free. *)
-let string_of_id (id : artifact_id) : string =
-  let base = string_of_artifact id.kind in
-  match id.ext with
-  | Ext_none -> base
-  | Ext_mechanism m -> base ^ "-" ^ Canary_mechanism.string_of_mechanism m
-  | Ext_wiring w -> base ^ "-" ^ string_of_app_wiring w
-
-(* DISPLAY-ONLY pretty form: the ':' delimiter reads the kind:lang:mechanism
-   hierarchy (binding:ocaml:cstubs). NEVER use for keys/paths/labels — those take
-   the born-safe [string_of_id]/[string_of_artifact] above. Only human-facing
-   views (e.g. `canary spec`) should call these. *)
-let pretty_artifact = function
-  | Source -> "source"
-  | Headers -> "headers"
-  | Lib -> "lib"
-  | Binding l -> "binding:" ^ Canary_lang.string_of_lang l
-  | App -> "app"
-
-let pretty_id (id : artifact_id) : string =
-  let base = pretty_artifact id.kind in
-  match id.ext with
-  | Ext_none -> base
-  | Ext_mechanism m -> base ^ ":" ^ Canary_mechanism.string_of_mechanism m
-  | Ext_wiring w -> base ^ ":" ^ string_of_app_wiring w
-
-(** An artifact instance's version identity (ssot §4.2.2, P2a). A build is a
-    release [channel] plus a [quality]: a [Good] build, or a [Bad]-tagged
-    build that breaks a contract. The tag is OPAQUE here — the enumeration
-    treats a bad build like any other version; only a project's materializer
-    knows a tag corresponds to a mutation (the mutation-agnostic principle,
-    status §1a). This "special version string" folds the old separate
-    mutation-tag into the version identity. *)
-type quality = Good | Bad of string [@@deriving show, eq]
-
-type build_id = { channel : Canary_basic.channel; quality : quality }
-[@@deriving show, eq]
-
-let good (channel : Canary_basic.channel) : build_id = { channel; quality = Good }
-
-let string_of_build_id (b : build_id) : string =
-  (match b.channel with
-   | Canary_basic.Dev -> "dev"
-   | Canary_basic.Stable -> "stable")
-  ^ (match b.quality with Good -> "" | Bad t -> "#" ^ t)
-
-(** A per-artifact cell: how the artifact is provided, and at which version
-    identity (ssot §4.2.2). Version is only meaningful when provided (ignored
-    for [Absent]). *)
-type placement = { provision : provision; version : build_id }
-
-(** An assignment: one placement per (precise) artifact identity. *)
-type assignment = (artifact_id * placement) list
+type placement = Canary_artifact.placement
+type assignment = Canary_artifact.assignment
 
 (** One point of the scenario space: an assignment plus an optional mutation
     on one *provided* artifact ([None] = the positive scenario). *)
@@ -165,10 +72,6 @@ type assignment = (artifact_id * placement) list
    combinations) is the project-policy layer (A4, retiring tiny_full_combinations). *)
 type 'm point =
   { assignment : assignment; mutations : (artifact_id * 'm) list }
-
-let equal_version : build_id -> build_id -> bool = equal_build_id
-
-let string_of_version : build_id -> string = string_of_build_id
 
 let placement_of (a : assignment) (id : artifact_id) : placement option =
   List.Assoc.find a id ~equal:equal_artifact_id
@@ -213,11 +116,8 @@ let bad_placements (a : assignment) : (artifact_id * string) list =
    older provider — fails on a not-yet-added requirement, c1/c2);
    [Backward] = consumer behind (deployed over a newer provider that BROKE
    compatibility — removed/renamed symbol, soname/symver, c4/c5). *)
-type mismatch_direction = Forward | Backward
-
-let string_of_mismatch_direction = function
-  | Forward -> "forward"
-  | Backward -> "backward"
+type mismatch_direction = Canary_basic.mismatch_direction
+let string_of_mismatch_direction = Canary_basic.string_of_mismatch_direction
 
 (** The direction of the consumer↔provider version pairing in scenario [a]
     ([None] = same channel, or either artifact absent). DERIVABLE per
@@ -302,7 +202,7 @@ let assignment_ok (a : assignment) : bool =
    cached artifact backs, or a Fetched@Dev that only dedups away downstream). *)
 let rec assignments_of (artifacts : artifact_id list)
     (provisions_of : artifact_id -> provision list)
-    (versions_of : artifact_id -> provision -> Canary_basic.channel list) :
+    (versions_of : artifact_id -> provision -> Canary_basic.build_id list) :
     assignment list =
   match artifacts with
   | [] -> [ [] ]
@@ -311,7 +211,7 @@ let rec assignments_of (artifacts : artifact_id list)
       List.concat_map (provisions_of id) ~f:(fun pv ->
           List.concat_map (versions_of id pv) ~f:(fun ver ->
               List.map tails ~f:(fun t ->
-                  (id, { provision = pv; version = good ver }) :: t)))
+                  (id, { provision = pv; version = ver }) :: t)))
 
 (** The full enumeration algorithm: the product of *valid* assignments ×
     (positive + each applicable mutation), producing [point]s. A mutation is
@@ -321,7 +221,7 @@ let rec assignments_of (artifacts : artifact_id list)
     and [enumerate] (stage 2) drives it from a declared [project_spec]. *)
 let enumerate_points ~(artifacts : artifact_id list)
     ~(provisions_of : artifact_id -> provision list)
-    ~(versions_of : artifact_id -> provision -> Canary_basic.channel list)
+    ~(versions_of : artifact_id -> provision -> Canary_basic.build_id list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
   assignments_of artifacts provisions_of versions_of
   |> List.filter ~f:assignment_ok
@@ -333,6 +233,8 @@ let enumerate_points ~(artifacts : artifact_id list)
                else None)
          in
          positive :: muts)
+
+type version_mode = Lockstep | Independent
 
 (** How much of an axis a config expands (ssot §4.2): [Free] collapses to
     one representative; [Subset] is a curated list; [Full] is every value. *)
@@ -348,6 +250,7 @@ type 'a level = Free | Subset of 'a list | Full
 type 'm config = {
   provision : provision level;
   version : Canary_basic.channel level;
+  version_mode : version_mode;
   mutation : (artifact_id * 'm) level;
 }
 
@@ -358,7 +261,7 @@ type 'm config = {
     (the positive point is always present), so it resolves to no placements. *)
 let run_config ~(artifacts : artifact_id list)
     ~(all_provisions_of : artifact_id -> provision list)
-    ~(all_versions_of : artifact_id -> provision -> Canary_basic.channel list)
+    ~(all_versions_of : artifact_id -> provision -> Canary_basic.build_id list)
     ~(all_mutations : (artifact_id * 'm) list) (cfg : 'm config) : 'm point list =
   (* [Subset] INTERSECTS the axis universe (preserving universe order): a
      config level selects from the declared facts, it never invents a value
@@ -375,10 +278,20 @@ let run_config ~(artifacts : artifact_id list)
     | Subset vs -> List.filter all ~f:(fun x -> List.mem vs x ~equal:Poly.equal)
     | Full -> all
   in
+  (* Version levels are channel-typed ([Subset [Stable]]) while the
+     universe is build_ids (pinned ids included) — filter by channel. *)
+  let resolve_versions lvl all =
+    match lvl with
+    | Free -> ( match all with x :: _ -> [ x ] | [] -> [] )
+    | Subset vs ->
+        List.filter all ~f:(fun (x : Canary_basic.build_id) ->
+            List.mem vs x.Canary_basic.channel ~equal:Poly.equal)
+    | Full -> all
+  in
   (* provision + version levels apply PER-ARTIFACT (version additionally
      per-provision) to each artifact's own universe *)
   let provisions_of id = resolve cfg.provision (all_provisions_of id) in
-  let versions_of id pv = resolve cfg.version (all_versions_of id pv) in
+  let versions_of id pv = resolve_versions cfg.version (all_versions_of id pv) in
   let mutations =
     match cfg.mutation with
     | Free -> []  (* the None baseline — positive point only *)
@@ -394,9 +307,9 @@ let run_config ~(artifacts : artifact_id list)
 let tiny_slice ~(artifacts : artifact_id list)
     ~(mutations : (artifact_id * 'm) list) : 'm point list =
   run_config ~artifacts ~all_provisions_of:(fun _ -> [ Built ])
-    ~all_versions_of:(fun _ _ -> Canary_basic.single_channel)
+    ~all_versions_of:(fun _ _ -> [ Canary_basic.good Canary_basic.Dev ])
     ~all_mutations:mutations
-    { provision = Free; version = Free; mutation = Full }
+    { provision = Free; version = Free; mutation = Full; version_mode = Lockstep }
 
 (** A general project's config: provision [Full] (walk the provision axis
     over the project's universe), mutation [Free] (positive only). Yields
@@ -409,9 +322,10 @@ let tiny_slice ~(artifacts : artifact_id list)
 let general_slice ~(artifacts : artifact_id list)
     ~(provisions : provision list)
     ~(versions : Canary_basic.channel list) : 'm point list =
+  let versions = List.map versions ~f:Canary_basic.good in
   run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
     ~all_versions_of:(fun _ _ -> versions) ~all_mutations:[]
-    { provision = Full; version = Full; mutation = Free }
+    { provision = Full; version = Full; mutation = Free; version_mode = Lockstep }
 
 (** A2 — fold a [point] into a concrete [assignment], the form the run
     consumes. The algorithm keeps the mutation SEPARATE from the all-Good
@@ -425,78 +339,6 @@ let assignment_of_point ~(tag : 'm -> string) (p : 'm point) : assignment =
           if equal_artifact_id id aid then
             (id, { pl with version = { pl.version with quality = Bad (tag m) } })
           else (id, pl)))
-
-(** STAGE 1 — a project's static declaration: WHAT the project is. Its
-    artifacts, each artifact's provision universe (A1), and each artifact's
-    version universe. These are *project facts* — sqlite's lib really can be
-    fetched or built; it really ships at Stable. No mutation, no config: those
-    are exploration policy (stage 2), not facts about the project, so this type
-    is monomorphic (no ['m]). A real project author writes exactly this; the
-    tiny-factory GENERATES it from its axes. Replaces a hand-built enumerate
-    closure. (Future: [ps_deps] — declared dependency edges — turns this flat
-    artifact set into the faithful dependency graph; see dynamic_enumeration.md.) *)
-(* A8 (2026-08-05): the spec is DATA, not functions. The old
-   [ps_provisions_of]/[ps_versions_of] closures were functions only as table
-   encodings (finite domain = the declared artifacts); one fused table makes
-   the declaration printable/serializable/diffable, kills the
-   provisions-vs-versions drift possibility, and cannot hide side effects.
-   ORDER IS MEANINGFUL where a [Free] config level picks a representative:
-   the head of each list is the representative (artifact order also fixes
-   the enumeration/baseline order). The old accessor names survive as
-   functions OVER the table below. *)
-(** A declared artifact's AXES — the per-ARTIFACT record the spec row
-    carries (user-directed 2026-08-05: per-artifact facts belong ON the
-    artifact, not in parallel project-level tables). Today: the
-    provision×version universe + the optional runtime-edge mode. Future
-    per-artifact config (a provider, a mechanism ref, …) extends THIS
-    record, not the project. *)
-type artifact_axes = {
-  ax_universe : (provision * Canary_basic.channel list) list;
-      (** the artifact's provisions, each with the version channels that
-          provision can realize (Fetched = ambient representative; Built =
-          buildable versions; Vendored = cached variants). *)
-  ax_runtime : Canary_store.dep_mode option;
-      (** milestone-(b) slice (2026-08-05): for a CONSUMER artifact, how
-          its runtime provider relates to the enumerated placement —
-          [Independent] (runs over the scenario's lib, independent of its
-          own build-lib: run-lib ≠ build-lib made explicit), [Ambient s]
-          (bundled/co-provider lib outside the enumeration — backlog #45
-          declared), [Lockstep] (matched chain). [None] = undeclared. An
-          edge whose mode differs per chain/variant stays [None] until a
-          finer key exists. *)
-}
-
-(** Row constructor: [axes u] = universe only; [axes ~runtime:m u] also
-    declares the runtime-edge mode. *)
-let axes ?runtime (u : (provision * Canary_basic.channel list) list) :
-    artifact_axes =
-  { ax_universe = u; ax_runtime = runtime }
-
-type project_spec = {
-  ps_universe : (artifact_id * artifact_axes) list;
-      (** ONE fused per-artifact table (A8): each declared artifact with
-          its [artifact_axes]. *)
-}
-
-let ps_artifacts (s : project_spec) : artifact_id list =
-  List.map s.ps_universe ~f:fst
-
-let ps_axes_of (s : project_spec) (id : artifact_id) : artifact_axes option =
-  List.Assoc.find s.ps_universe id ~equal:equal_artifact_id
-
-let ps_provisions_of (s : project_spec) (id : artifact_id) : provision list =
-  match ps_axes_of s id with
-  | Some ax -> List.map ax.ax_universe ~f:fst
-  | None -> []
-
-let ps_versions_of (s : project_spec) (id : artifact_id) (pv : provision) :
-    Canary_basic.channel list =
-  match ps_axes_of s id with
-  | None -> []
-  | Some ax -> (
-      match List.Assoc.find ax.ax_universe pv ~equal:equal_provision with
-      | Some cs -> cs
-      | None -> [])
 
 (* ── runtime pairings (milestone-(b) slice, general processing) ──
    Resolve each declared [ax_runtime] against ONE enumerated scenario: the
@@ -559,7 +401,7 @@ type 'm policy = {
     scenario. (A function, not a value, so its ['m] doesn't get locked by the
     value restriction across projects.) *)
 let full_policy () : 'm policy =
-  { config = { provision = Full; version = Full; mutation = Free }; mutations = [] }
+  { config = { provision = Full; version = Full; version_mode = Lockstep; mutation = Free }; mutations = [] }
 
 (** STAGE 2 — enumerate a declared [project_spec] under a [policy] into concrete
     assignments: resolve the config levels over the spec's per-artifact universes
@@ -569,13 +411,30 @@ let full_policy () : 'm policy =
     opaque string tag; unused for a positive-only project ([mutations = []]). *)
 let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     assignment list =
-  run_config ~artifacts:(ps_artifacts s)
-    ~all_provisions_of:(ps_provisions_of s)
-    ~all_versions_of:(ps_versions_of s) ~all_mutations:policy.mutations
-    policy.config
-  |> List.map ~f:(assignment_of_point ~tag)
-
-let string_of_provision = Canary_store.string_of_provision
+  let assignments =
+    run_config ~artifacts:(ps_artifacts s)
+      ~all_provisions_of:(ps_provisions_of s)
+      ~all_versions_of:(ps_versions_of s) ~all_mutations:policy.mutations
+      policy.config
+    |> List.map ~f:(assignment_of_point ~tag)
+  in
+  (* Post-filter: [ax_follows] constraint. An artifact whose [ax_follows]
+     points to a leader must match the leader's version (Lockstep only). *)
+  if Poly.equal policy.config.version_mode Lockstep then
+    List.filter assignments ~f:(fun a ->
+        List.for_all (ps_artifacts s) ~f:(fun id ->
+            match ps_axes_of s id with
+            | Some ax -> (
+                match ax.ax_follows with
+                | Some leader ->
+                    (not (provided a id))
+                    || (not (provided a leader))
+                    || Canary_basic.equal_channel
+                         (version_of a id).channel
+                         (version_of a leader).channel
+                | None -> true)
+            | None -> true))
+  else assignments
 
 (** Read a slot's provision off a concrete action set (which action-graph
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
@@ -640,3 +499,361 @@ let string_of_assignment (a : assignment) : string =
          let base = string_of_id id ^ "=" ^ string_of_provision pl.provision in
          if equal_provision pl.provision Absent then base
          else base ^ "@" ^ string_of_version pl.version))
+
+(* ── tree-structured enumeration (2026-08-07) ──
+   Walks the dependency DAG instead of flattening into a product. Children
+   are additive; version propagates along build edges; constraints are
+   embedded in the walk structure itself — no external cartesian filter.
+
+   Source is a build-dependency child of lib (not an independent root):
+   when lib is Built, source is walked inside lib's walk with lockstep
+   (this IS the source-primary constraint, structural not a filter);
+   when lib is Fetched, source is walked unconstrained. The
+   multiplication of source × lib exists because building a binding
+   needs both; without a Built lib (or without a lib at all), source
+   and lib don't need pairing. *)
+
+let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment list =
+  let artifacts = ps_artifacts s in
+  let follows_of id = match ps_axes_of s id with Some ax -> ax.ax_follows | None -> None in
+  let provisions_of id = ps_provisions_of s id in
+  let versions_of id pv = ps_versions_of s id pv in
+  let resolve lvl all =
+    match lvl with
+    | Free -> ( match all with x :: _ -> [ x ] | [] -> [] )
+    | Subset vs -> List.filter all ~f:(fun x -> List.mem vs x ~equal:Poly.equal)
+    | Full -> all
+  in
+  (* Version levels are channel-typed while the universe is build_ids —
+     filter by channel. *)
+  let resolve_versions lvl all =
+    match lvl with
+    | Free -> ( match all with x :: _ -> [ x ] | [] -> [] )
+    | Subset vs ->
+        List.filter all ~f:(fun (x : Canary_basic.build_id) ->
+            List.mem vs x.Canary_basic.channel ~equal:Poly.equal)
+    | Full -> all
+  in
+  let cfg = policy.config in
+  (* Follows children: artifacts whose [ax_follows] points to [parent]. *)
+  let follows_children_of parent =
+    List.filter artifacts ~f:(fun child ->
+        match follows_of child with
+        | Some leader -> equal_artifact_id leader parent
+        | None -> false)
+  in
+  (* An artifact is a root when it doesn't follow anyone AND it is not a
+     build-dependency of another declared artifact (source is walked
+     inside lib's sub-tree, not as a peer root). An artifact that IS
+     followed by others is the leader of a sub-tree — it stays a root;
+     its followers are children and are excluded from roots. *)
+  let is_build_dep id =
+    List.exists artifacts ~f:(fun other ->
+        List.exists (build_deps_of s other) ~f:(fun bd ->
+            equal_artifact_id bd id))
+  in
+  let is_root id =
+    Option.is_none (follows_of id)           (* doesn't follow anyone *)
+    && not (is_build_dep id)                  (* not a build-dep *)
+  in
+  let roots = List.filter artifacts ~f:is_root in
+  (* Walk: enumerate placements for an artifact, then walk its children
+     (follows-children + build-deps). Children are added via cartesian
+     product so every assignment carries ALL children (one variant per
+     child). Lockstep applies: always for follows-children, only for
+     build-deps when the parent is Built (source-primary: a Built lib
+     must be built from source at the same version). *)
+  let rec walk (ancestors : assignment) (id : artifact_id) : assignment list =
+    let pvs = resolve cfg.provision (provisions_of id) in
+    List.concat_map pvs ~f:(fun pv ->
+        let vers = resolve_versions cfg.version (versions_of id pv) in
+        List.concat_map vers ~f:(fun ver ->
+            let placement = { provision = pv; version = ver } in
+            let a = (id, placement) :: ancestors in
+            let follows_kids = follows_children_of id in
+            let build_kids = build_deps_of s id in
+            (* Source is always walked (for header inspection when lib is
+               Fetched, for build when lib is Built). The difference is
+               only in lockstep: source is lockstep'd when parent is Built
+               (source-primary), unconstrained when parent is Fetched. *)
+            let all_kids = follows_kids @ build_kids in
+            if List.is_empty all_kids then [ a ]
+            else
+              let child_results_per_kid =
+                List.map all_kids ~f:(fun kid ->
+                    let results = walk a kid in
+                    let lockstep =
+                      if Poly.equal cfg.version_mode Lockstep then
+                        match follows_of kid with
+                        | Some _ -> true
+                        | None -> equal_provision pv Built
+                      else false
+                    in
+                    if lockstep then
+                      List.filter results ~f:(fun ka ->
+                          match placement_of ka kid with
+                          | Some kp ->
+                              Canary_basic.equal_channel
+                                kp.version.channel ver.Canary_basic.channel
+                          | None -> true)
+                    else results)
+              in
+              (* Merge children into the parent. Each child's walk
+                 result includes the full ancestor chain; merge takes
+                 the union per artifact_id (last write wins — children
+                 override ancestors on their own artifact). *)
+              let merge_assignments (base : assignment)
+                  (child : assignment) : assignment =
+                List.fold child ~init:base ~f:(fun acc (id, pl) ->
+                    if List.exists acc ~f:(fun (id', _) ->
+                        equal_artifact_id id id')
+                    then acc
+                    else (id, pl) :: acc)
+              in
+              let rec merge_children = function
+                | [] -> [ a ]  (* no children: parent + ancestors *)
+                | kids :: rest ->
+                    List.concat_map kids ~f:(fun kid_a ->
+                        List.map (merge_children rest) ~f:(fun rest_a ->
+                            merge_assignments rest_a kid_a))
+              in
+              merge_children child_results_per_kid))
+  in
+  let root_results = List.map roots ~f:(walk []) in
+  (* Cartesian product of root sub-trees. No source-primary filter needed —
+     it's already encoded in the walk (source is a child of lib, lockstep'd
+     when lib is Built). *)
+  let rec cart = function
+    | [] -> [ [] ]
+    | xs :: rest ->
+        List.concat_map xs ~f:(fun x ->
+            List.map (cart rest) ~f:(fun t -> x @ t))
+  in
+  cart root_results
+
+(* ── pattern naming (2026-08-08) ──
+   Maps a concrete assignment to the abstract action-chain pattern it
+   instantiates. The pattern is determined by which artifacts are provided
+   and at which provisions — the action composition falls out from that. *)
+
+(** The abstract shape of a scenario — which actions compose to produce it. *)
+type scenario_pattern =
+  | Fetch_chain             (** every artifact Fetched — PM provides all *)
+  | Build_chain_follows     (** source@v → Built lib@v → Built binding@v *)
+  | Build_chain_independent (** Built lib, Fetched binding, no follows *)
+  | Mixed_provision         (** Fetched lib → Built binding *)
+  | No_source_build         (** Built lib, no source declared *)
+  | Deploy_mismatch         (** Fetched binding over Built lib, channels differ *)
+  | Unknown                 (** any shape not covered above *)
+
+let string_of_scenario_pattern = function
+  | Fetch_chain -> "fetch-chain"
+  | Build_chain_follows -> "build-chain(follows)"
+  | Build_chain_independent -> "build-chain(independent)"
+  | Mixed_provision -> "mixed-provision"
+  | No_source_build -> "no-source-build"
+  | Deploy_mismatch -> "deploy-mismatch"
+  | Unknown -> "unknown"
+
+(** Classify an assignment into its scenario pattern.
+    The pattern is the action chain implied by the provisions:
+    - Fetched → Fetch actions (PM provides)
+    - Built → Build actions (compiled from source)
+    - Version channels tell whether follows/lockstep holds. *)
+let pattern_of_assignment (a : assignment) : scenario_pattern =
+  let lib_prov = provision_of a a_lib in
+  let source_declared = Option.is_some (placement_of a a_source) in
+  let any_binding_built =
+    List.exists a ~f:(fun (id, pl) ->
+        match kind_of id with Binding _ -> equal_provision pl.provision Built | _ -> false)
+  in
+  let any_binding_fetched =
+    List.exists a ~f:(fun (id, pl) ->
+        match kind_of id with Binding _ -> equal_provision pl.provision Fetched | _ -> false)
+  in
+  let has_binding = any_binding_built || any_binding_fetched in
+  let all_bindings_fetched = has_binding && not any_binding_built in
+  let lib_chan = channel_of a a_lib in
+  let binding_chan =
+    match List.find a ~f:(fun (id, _) -> match kind_of id with Binding _ -> true | _ -> false) with
+    | Some (id, _) -> channel_of a id
+    | None -> lib_chan
+  in
+  let lockstep = Canary_basic.equal_channel binding_chan lib_chan in
+  if not has_binding then Unknown
+  else match lib_prov with
+  | Fetched when all_bindings_fetched -> Fetch_chain
+  | Fetched when any_binding_built -> Mixed_provision
+  | Built when any_binding_built && lockstep && source_declared ->
+      Build_chain_follows
+  | Built when any_binding_built && lockstep && not source_declared ->
+      No_source_build
+  | Built when all_bindings_fetched && lockstep ->
+      Build_chain_independent
+  | Built when all_bindings_fetched && not lockstep ->
+      Deploy_mismatch
+  | Built when any_binding_built && not lockstep ->
+      Unknown   (* cross-channel built binding over built lib — shouldn't happen *)
+  | _ -> Unknown
+
+(* ── pattern-based enumeration (2026-08-08) ──
+   Enumerates scenarios as action chains rather than artifact placements.
+   Action signatures live in [Canary_action]; this module uses them to
+   build chains and enumerate version combinations. *)
+
+(** Find the declared artifact id for a coarse [kind] in the spec. *)
+let find_artifact_of_kind (s : project_spec) (k : artifact) : artifact_id option =
+  List.find (ps_artifacts s) ~f:(fun id -> equal_artifact id.kind k)
+
+(** Whether the spec declares [kind] at all. *)
+let spec_has_kind (s : project_spec) (k : artifact) =
+  Option.is_some (find_artifact_of_kind s k)
+
+(** Does the spec declare at least one STATIC binding artifact for
+    [lang]? A build_binding chain only applies when some binding of
+    that language compiles (M2 step 3 — a Dynamic_ffi binding has no
+    build stage; the derivation reads the artifact's mechanism key). *)
+let has_static_binding (s : project_spec) (l : Canary_lang.lang) : bool =
+  List.exists (ps_artifacts s) ~f:(fun id ->
+      match id.Canary_artifact.kind with
+      | Canary_basic.Binding l' when Poly.equal l l' -> (
+          match id.Canary_artifact.ext with
+          | Canary_artifact.Ext_mechanism m ->
+              Poly.equal (Canary_mechanism.discipline_of_mechanism m)
+                Canary_mechanism.Static_c_abi
+          | _ -> false)
+      | _ -> false)
+
+(** Which build_ids the spec declares for Fetching [kind] (pins included). *)
+let fetch_versions_of (s : project_spec) (kind : artifact)
+    : Canary_basic.build_id list =
+  match find_artifact_of_kind s kind with
+  | Some id -> ps_versions_of s id Fetched
+  | None -> []
+
+(* ── universal chain table (2026-08-09) ──
+   Pre-computed from the action catalogue. Every possible ordered action
+   chain ending at a terminal (probe). A chain is valid for a project if
+   the spec declares all required artifact kinds. Version enumeration
+   happens within each valid chain. *)
+
+(** The terminal (probe) actions from the catalogue. *)
+let terminals : Canary_basic.action_sig list =
+  List.filter Canary_basic.action_catalogue ~f:(fun a ->
+      match a.Canary_basic.as_action with
+      | Canary_basic.Probe_binding _ | Canary_basic.Probe_lib
+      | Canary_basic.Probe_app _ -> true
+      | _ -> false)
+
+(** The non-terminal (Fetch/Build) actions from the catalogue. *)
+let non_terminals : Canary_basic.action_sig list =
+  List.filter Canary_basic.action_catalogue ~f:(fun a ->
+      not (List.mem terminals a ~equal:Poly.equal))
+
+(** Build all possible chains ending at [terminal] by walking backward
+    through the action catalogue. For each input kind of an action,
+    both Fetch and Build variants are tried. Returns the set of chains
+    (each chain is ordered: inputs before outputs, terminal last).
+    [seen] prevents infinite loops from circular deps. *)
+let chains_for (terminal : Canary_basic.action_sig)
+    : Canary_basic.action_sig list list =
+  let module B = Canary_basic in
+  let producers_of (kind : artifact) : B.action_sig list =
+    List.filter non_terminals ~f:(fun a ->
+        equal_artifact a.B.as_produces kind)
+  in
+  let rec build (needed : artifact list) (seen : artifact list)
+      : B.action_sig list list =
+    match needed with
+    | [] -> [ [] ]
+    | k :: rest ->
+        if List.mem seen k ~equal:equal_artifact then
+          build rest seen
+        else
+          let prods = producers_of k in
+          if List.is_empty prods then
+            build rest seen
+          else
+            List.concat_map prods ~f:(fun prod ->
+                let subs = build (prod.B.as_consumes @ rest) (k :: seen) in
+                List.map subs ~f:(fun sub -> prod :: sub))
+  in
+  let chains = build terminal.B.as_consumes [] in
+  List.map chains ~f:(fun c -> c @ [ terminal ])
+
+(** The universal chain table — all possible chains for all terminals.
+    Computed once from the action catalogue; shared across projects. *)
+let universal_chains : (Canary_basic.action_sig * Canary_basic.action_sig list) list =
+  List.concat_map terminals ~f:(fun term ->
+      List.map (chains_for term) ~f:(fun chain -> (term, chain)))
+
+(** Whether a chain is applicable to [spec]: every non-terminal action's
+    output kind must be declared with the right provision in the spec.
+    Vendored artifacts (supplied, no action) pass through — they don't
+    need Fetch or Build in the chain. *)
+let chain_applicable (s : project_spec)
+    (chain : Canary_basic.action_sig list) : bool =
+  List.for_all chain ~f:(fun act ->
+      let kind = act.Canary_basic.as_produces in
+      equal_artifact kind App  (* terminals *)
+      || ((match act.Canary_basic.as_action with
+           (* M2 step 3: a build_binding action needs a STATIC binding —
+              a dynamic binding (ctypes/dynlink) has no build stage. *)
+           | Canary_basic.Build_binding l -> has_static_binding s l
+           | _ -> true)
+         && (match find_artifact_of_kind s kind with
+             | Some id ->
+                 let provs = ps_provisions_of s id in
+                 let needed = match act.Canary_basic.as_version with
+                   | Canary_basic.Ambient -> Fetched
+                   | Canary_basic.Follows_input -> Built
+                 in
+                 List.mem provs needed ~equal:equal_provision
+                 (* Vendored is also valid: the artifact exists, just not
+                    built/fetched by canary. The chain doesn't need an action. *)
+                 || List.mem provs Vendored ~equal:equal_provision
+             | None ->
+                 equal_artifact kind Source)))
+
+(** The provision each action in a chain requires: Ambient → Fetched,
+    Follows_input → Built. Terminals (probes) are skipped. *)
+let provision_of_action (act : Canary_basic.action_sig) : provision option =
+  if List.mem terminals act ~equal:Poly.equal then None
+  else match act.Canary_basic.as_version with
+  | Canary_basic.Ambient -> Some Fetched
+  | Canary_basic.Follows_input -> Some Built
+
+(** Pattern-based enumeration using the universal chain table.
+    1. Filter universal chains applicable to the spec (provision-aware).
+    2. Enumerate version combinations via [enumerate_assignments]
+       (handles lockstep and source-primary).
+    3. Match each assignment to its chain by provision. *)
+let patterns_of ?(policy = full_policy ()) (s : project_spec)
+    : (Canary_basic.action_sig list * assignment) list =
+  let chains =
+    List.filter_map universal_chains ~f:(fun (_, chain) ->
+        if chain_applicable s chain then Some chain else None)
+  in
+  let matches a chain =
+    List.for_all chain ~f:(fun act ->
+        match provision_of_action act with
+        | None -> true
+        | Some needed ->
+            match find_artifact_of_kind s act.Canary_basic.as_produces with
+            | Some id ->
+                let pv = provision_of a id in
+                (* Vendored: artifact is supplied, the action doesn't fire *)
+                equal_provision pv Vendored
+                || equal_provision pv needed
+            | None -> true)
+  in
+  let assignments = enumerate_assignments ~policy s in
+  let seen = Hashtbl.create (module String) in
+  List.concat_map assignments ~f:(fun a ->
+      let key = string_of_assignment a in
+      if Hashtbl.mem seen key then []
+      else (
+        Hashtbl.set seen ~key ~data:();
+        match List.find chains ~f:(fun c -> matches a c) with
+        | Some chain -> [ (chain, a) ]
+        | None -> []))

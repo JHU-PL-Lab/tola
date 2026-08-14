@@ -105,7 +105,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
     Covers the Pattern A case. Source-build projects (z3, llvm) stay
     hand-written but adopted `store_config` for their provider tables in
-    A8. Project shapes + landing mechanics: `doc/canary/projects.md` §4.
+    A8. Project shapes + landing mechanics: `doc/canary/project/index.md` §4.
 
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —
@@ -238,6 +238,28 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
 No hurry — all items below are queued for when their forcing function arrives.
 
+- **Global output/cache root env var** (user, 2026-08-13). `_out` is the
+  literal string at ~10 bin-layer call sites (`canary_main.ml`
+  `~root:"_out"`), and it carries real build caches worth keeping across
+  cleanups. Wanted: one env var (`CANARY_OUT`, name TBD), default `_out`,
+  so the cache can live outside the repo or on another disk. The string
+  already flows through `~root` params everywhere — a one-helper
+  refactor. Companion to the 2026-08-13 dune fix (`(dirs :standard \
+  {docs,_out})`): an external root needs no dune change; `_out` stays
+  excluded either way.
+- **docs/canary copy bloat** (found 2026-08-13).
+  `canary_diagram.ml` L2349 `cp -r <run_dir>/* docs/canary/projects/
+  <project>/` copies WHOLE run dirs — fetched source checkouts (with
+  `.git`), build trees, install trees — into the tracked docs tree:
+  27G / 520k files today, 880 untracked files churning git status. It
+  also made dune walk docs/ on every invocation (~2-3s startup; fixed at
+  the dune level by the same-day `(dirs ...)` exclusion). **DONE
+  2026-08-13**: `write_project_output` now does a filtered recursive
+  copy (ext whitelist json/log/mmd/html + artifact-dir blocklist, in
+  OCaml — no shell), verified via `canary view llvm`; the accumulated
+  junk pruned (docs 27G → 53M, 501k → 3.2k files; untracked churn
+  868 → ~120); the 4 tracked ssl probe binaries deleted +
+  gitignored (`docs/**/ssl_app_*`).
 - **Env/PATH discipline utility** (user, 2026-08-06). Step
   commands splice PATH-like variables ad hoc (`LD_LIBRARY_PATH=$PWD/…:$…`
   probe repoints, `PYTHONPATH` in the tiny workspace, `OCAMLPATH`,
@@ -249,17 +271,12 @@ No hurry — all items below are queued for when their forcing function arrives.
   `probe_ocaml_env_cmd ~env` list is the seed) + a ratchet-style guard
   against new raw `VAR=…:$VAR` splices in project specs. Do when a case
   next touches probe envs.
-- **Version definitions + printers: centralize** (user, 2026-08-05).
-  Multiple version-ish notions (`Canary_basic.channel` + `version`,
-  `Canary_enumerate.build_id`/`quality`, `source_repo.version` strings,
-  opam `package_version`, `version_cache_tag`) and ≥5 hand-rolled
-  Dev/Stable printers (`canary_enumerate.ml:147`, tiny's `chan_str`,
-  `canary_main`'s `chan_s` + an inline match at ~577, sqlite's
-  `sqlite_amalg` match) — `Canary_basic` exports no `string_of_channel`
-  at all. Slice 1 (standalone hygiene): one `string_of_channel` (+
-  channel-keyed helpers) in base, migrate the call sites, ratchet-style
-  guard against new inline matches. The DEEPER typed unification
-  (version as artifact identity across enumeration/store/cache) stays
+- **Version definitions + printers: centralize** — **DONE 2026-08-06.**
+  `string_of_channel` + `string_of_version` in `Canary_basic`;
+  `source_repo.version` typed (`Canary_basic.version`); `build_id`
+  rebased on it; all 5 inline printers killed; `version_printer_ratchet`
+  guards against regression. The DEEPER typed unification (version as
+  artifact identity across enumeration/store/cache) stays
   [`design/versioning.md`](design/versioning.md)'s tracker — not this
   item.
 - **Tool-routing ratchet burn-down** (guard shipped 2026-08-05, user
@@ -288,7 +305,7 @@ No hurry — all items below are queued for when their forcing function arrives.
 - **"scenario" overload vs the abstract senses** (`Sc.N` patterns, coverage
   *stages*; the `canary scenarios` CLI shows stages with a stale count) —
   audit + T0/T1/T2 options + open questions in
-  [`design/scenario_terms.md`](design/scenario_terms.md). OPEN — no
+  the OPEN "scenario" terminology to-do in [`status.md`](status.md) M2 "Canonical naming settle". OPEN — no
   decision; do T2 together with F5 + the `variant_*` sweep as ONE
   terminology pass. **Deliberately LAST (user, 2026-08-05, bottom-up):**
   the canonical scenario↔action relation should be WRITTEN DOWN only
@@ -298,7 +315,14 @@ No hurry — all items below are queued for when their forcing function arrives.
   not committed: action = a pattern with slots; scenario = a consistent
   slot-filling; dep_mode = a constraint on fillings.)
 
-47. **`has_build_*` boolean-branching residue** — the entry's original
+47. **`has_build_*` boolean-branching residue** — **DONE 2026-08-06.**
+    Both `has_build_lib` and `has_build_binding` removed from
+    `source_repo`. z3/llvm `mk_runner_spec` takes explicit
+    `~build_lib`/`~build_binding` bool parameters passed from
+    `realize`; CI passes them directly. The
+    `build_flags_match_declared_provisions` pin retired.
+    `cmake_build_binding` stays as a finer CI knob.
+    The entry's original
     framing ("two store-selection conventions; promote `stores` to a
     first-class field of `script_spec`") is **superseded**: `store_config`
     (S3, 2026-07-23) made provenance a typed `provider`, and A8 made the

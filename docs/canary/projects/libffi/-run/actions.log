@@ -1,0 +1,234 @@
+[2026-08-11 21:34:37.512] *                          graph_start  (6 steps)
+[2026-08-11 21:34:37.512] fetch_lib                  check_pre  (pass)
+[2026-08-11 21:34:37.514] fetch_lib                  cmd  (sudo apt-get install -y libffi-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_lib/lib.ok)
+[2026-08-11 21:34:37.910] fetch_lib                  detect  (ok, output present)
+[2026-08-11 21:34:37.911] fetch_lib                  check_post  (pass)
+[2026-08-11 21:34:37.911] fetch_lib                  done
+[2026-08-11 21:34:37.913] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-11 21:34:37.915] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ctypes-foreign -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_binding/ocaml/binding.ok)
+[2026-08-11 21:34:38.864] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-11 21:34:38.864] fetch_binding_ocaml        check_post  (pass)
+[2026-08-11 21:34:38.864] fetch_binding_ocaml        done
+[2026-08-11 21:34:38.866] probe_binding_ocaml        check_pre  (pass)
+[2026-08-11 21:34:38.868] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe.log
+exit $RC)
+[2026-08-11 21:34:38.976] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-11 21:34:38.976] probe_binding_ocaml        check_post  (pass)
+[2026-08-11 21:34:38.976] probe_binding_ocaml        done
+[2026-08-11 21:34:38.978] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-11 21:34:38.980] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect.json)
+[2026-08-11 21:34:39.030] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-11 21:34:39.030] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-11 21:34:39.030] probe_binding_ocaml_inspect  done
+[2026-08-11 21:34:39.032] probe_lib                  check_pre  (pass)
+[2026-08-11 21:34:39.034] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/probe.log
+test "$COUNT" -gt 0)
+[2026-08-11 21:34:39.080] probe_lib                  detect  (ok, output present)
+[2026-08-11 21:34:39.080] probe_lib                  check_post  (pass)
+[2026-08-11 21:34:39.080] probe_lib                  done
+[2026-08-11 21:34:39.082] probe_lib_inspect          check_pre  (pass)
+[2026-08-11 21:34:39.084] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/inspect.json)
+[2026-08-11 21:34:39.135] probe_lib_inspect          detect  (ok, output present)
+[2026-08-11 21:34:39.135] probe_lib_inspect          check_post  (pass)
+[2026-08-11 21:34:39.135] probe_lib_inspect          done
+[2026-08-11 21:34:39.137] *                          graph_end  (6/6 completed)
+[2026-08-11 21:34:39.138] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-08-11 21:34:39.138] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-08-11 21:34:39.138] *                          view  (lib (3 steps))
+[2026-08-11 21:34:39.138] *                          view  (probes (4 steps))
+[2026-08-11 21:34:39.138] *                          view  (binding_ocaml (3 steps))
+[2026-08-11 21:34:39.140] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-08-11 21:34:39.141] *                          index  (_out/canary/projects/index.html)
+[2026-08-11 21:34:39.141] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
+[2026-08-11 21:34:39.141] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
+[2026-08-11 21:34:39.141] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
+[2026-08-11 21:34:39.141] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
+[2026-08-11 21:34:39.141] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
+[2026-08-11 21:34:39.141] *                          invariant  (ALL OK)
+[2026-08-11 21:34:44.112] *                          graph_start  (6 steps)
+[2026-08-11 21:34:44.112] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-11 21:34:44.112] *                          graph_end  (6/6 completed)
+[2026-08-11 21:34:44.112] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-08-11 21:34:44.113] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-08-11 21:34:44.113] *                          view  (lib (3 steps))
+[2026-08-11 21:34:44.113] *                          view  (probes (4 steps))
+[2026-08-11 21:34:44.113] *                          view  (binding_ocaml (3 steps))
+[2026-08-11 21:34:44.114] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-08-11 21:34:44.115] *                          index  (_out/canary/projects/index.html)
+[2026-08-11 21:34:44.115] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
+[2026-08-11 21:34:44.115] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
+[2026-08-11 21:34:44.115] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
+[2026-08-11 21:34:44.115] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
+[2026-08-11 21:34:44.116] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
+[2026-08-11 21:34:44.116] *                          invariant  (ALL OK)
+[2026-08-12 10:24:00.023] *                          variant_start  (lib-fetched_ocaml_binding-fetched)
+[2026-08-12 10:24:00.024] *                          graph_start  (6 steps)
+[2026-08-12 10:24:00.024] fetch_lib                  check_pre  (pass)
+[2026-08-12 10:24:00.026] fetch_lib                  cmd  (sudo apt-get install -y libffi-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_lib/lib_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-12 10:24:00.341] fetch_lib                  detect  (ok, output present)
+[2026-08-12 10:24:00.341] fetch_lib                  check_post  (pass)
+[2026-08-12 10:24:00.341] fetch_lib                  done
+[2026-08-12 10:24:00.343] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-12 10:24:00.344] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ctypes-foreign -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_binding/ocaml/binding_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-12 10:24:01.245] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-12 10:24:01.245] fetch_binding_ocaml        check_post  (pass)
+[2026-08-12 10:24:01.245] fetch_binding_ocaml        done
+[2026-08-12 10:24:01.247] probe_binding_ocaml        check_pre  (pass)
+[2026-08-12 10:24:01.249] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-12 10:24:01.362] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-12 10:24:01.362] probe_binding_ocaml        check_post  (pass)
+[2026-08-12 10:24:01.362] probe_binding_ocaml        done
+[2026-08-12 10:24:01.363] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-12 10:24:01.366] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-12 10:24:01.414] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-12 10:24:01.414] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-12 10:24:01.414] probe_binding_ocaml_inspect  done
+[2026-08-12 10:24:01.416] probe_lib                  check_pre  (pass)
+[2026-08-12 10:24:01.418] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/probe_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-12 10:24:01.461] probe_lib                  detect  (ok, output present)
+[2026-08-12 10:24:01.461] probe_lib                  check_post  (pass)
+[2026-08-12 10:24:01.461] probe_lib                  done
+[2026-08-12 10:24:01.463] probe_lib_inspect          check_pre  (pass)
+[2026-08-12 10:24:01.465] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/inspect_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-12 10:24:01.524] probe_lib_inspect          detect  (ok, output present)
+[2026-08-12 10:24:01.525] probe_lib_inspect          check_post  (pass)
+[2026-08-12 10:24:01.525] probe_lib_inspect          done
+[2026-08-12 10:24:01.526] *                          graph_end  (6/6 completed)
+[2026-08-12 10:24:01.527] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-08-12 10:24:01.527] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-08-12 10:24:01.527] *                          view  (lib (3 steps))
+[2026-08-12 10:24:01.527] *                          view  (probes (4 steps))
+[2026-08-12 10:24:01.527] *                          view  (binding_ocaml (3 steps))
+[2026-08-12 10:24:01.529] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-08-12 10:24:01.529] *                          index  (_out/canary/projects/index.html)
+[2026-08-12 10:24:01.529] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
+[2026-08-12 10:24:01.529] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
+[2026-08-12 10:24:01.530] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
+[2026-08-12 10:24:01.530] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
+[2026-08-12 10:24:01.530] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
+[2026-08-12 10:24:01.530] *                          invariant  (ALL OK)
+[2026-08-13 15:28:33.796] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
+[2026-08-13 15:28:33.796] *                          graph_start  (7 steps)
+[2026-08-13 15:28:33.796] fetch_source               check_pre  (pass)
+[2026-08-13 15:28:33.800] fetch_source               cmd  (if [ -d _out/canary/projects/libffi/3.8.0_v3.8.0/src/.git ]; then cd _out/canary/projects/libffi/3.8.0_v3.8.0/src && git fetch && git checkout v3.8.0; else git clone https://github.com/libffi/libffi.git _out/canary/projects/libffi/3.8.0_v3.8.0/src && cd _out/canary/projects/libffi/3.8.0_v3.8.0/src && git checkout v3.8.0; fi && echo '_out/canary/projects/libffi/3.8.0_v3.8.0/src' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-13 15:28:38.105] fetch_source               detect  (ok, output present)
+[2026-08-13 15:28:38.105] fetch_source               check_post  (pass)
+[2026-08-13 15:28:38.105] fetch_source               done
+[2026-08-13 15:28:38.107] fetch_lib                  check_pre  (pass)
+[2026-08-13 15:28:38.109] fetch_lib                  cmd  (sudo apt-get install -y libffi-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-13 15:28:38.544] fetch_lib                  detect  (ok, output present)
+[2026-08-13 15:28:38.545] fetch_lib                  check_post  (pass)
+[2026-08-13 15:28:38.545] fetch_lib                  done
+[2026-08-13 15:28:38.547] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-13 15:28:38.548] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ctypes-foreign -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/libffi/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-13 15:28:39.525] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-13 15:28:39.525] fetch_binding_ocaml        check_post  (pass)
+[2026-08-13 15:28:39.525] fetch_binding_ocaml        done
+[2026-08-13 15:28:39.527] probe_binding_ocaml        check_pre  (pass)
+[2026-08-13 15:28:39.529] probe_binding_ocaml        cmd  (eval $(opam env)
+ocamlfind ocamlopt -package ctypes-foreign -linkpkg canary/examples/libffi/libffi_example.ml -o /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/libffi_example >> /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-13 15:28:39.647] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-13 15:28:39.647] probe_binding_ocaml        check_post  (pass)
+[2026-08-13 15:28:39.647] probe_binding_ocaml        done
+[2026-08-13 15:28:39.649] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-13 15:28:39.650] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'ctypes-foreign' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'ctypes-foreign' --watchlist 'Foreign,Ctypes_foreign_basis' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-13 15:28:39.701] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-13 15:28:39.702] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-13 15:28:39.702] probe_binding_ocaml_inspect  done
+[2026-08-13 15:28:39.704] probe_lib                  check_pre  (pass)
+[2026-08-13 15:28:39.706] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ffi_' || echo 0)
+printf 'ffi_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-13 15:28:39.753] probe_lib                  detect  (ok, output present)
+[2026-08-13 15:28:39.753] probe_lib                  check_post  (pass)
+[2026-08-13 15:28:39.753] probe_lib                  done
+[2026-08-13 15:28:39.755] probe_lib_inspect          check_pre  (pass)
+[2026-08-13 15:28:39.756] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libffi.so* /usr/lib*/libffi.so* 2>/dev/null \
+        "$(brew --prefix libffi 2>/dev/null)/lib/libffi.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ffi_' --watchlist 'ffi_prep_cif,ffi_call,ffi_prep_closure_loc,ffi_closure_alloc,ffi_closure_free' \
+  > /home/red/code/research/tola/_out/canary/projects/libffi/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-13 15:28:39.810] probe_lib_inspect          detect  (ok, output present)
+[2026-08-13 15:28:39.810] probe_lib_inspect          check_post  (pass)
+[2026-08-13 15:28:39.810] probe_lib_inspect          done
+[2026-08-13 15:28:39.812] *                          graph_end  (7/7 completed)
+[2026-08-13 15:28:39.812] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/all.mmd)
+[2026-08-13 15:28:39.813] *                          diagram  (_out/canary/projects/libffi/-run/diagrams/full.mmd)
+[2026-08-13 15:28:39.813] *                          view  (source (1 steps))
+[2026-08-13 15:28:39.813] *                          view  (lib (3 steps))
+[2026-08-13 15:28:39.813] *                          view  (probes (4 steps))
+[2026-08-13 15:28:39.813] *                          view  (binding_ocaml (3 steps))
+[2026-08-13 15:28:39.815] *                          html  (_out/canary/projects/libffi/-run/result.html)
+[2026-08-13 15:28:39.816] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 15:28:39.816] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-13 15:28:39.816] *                          invariant  (ALL OK)

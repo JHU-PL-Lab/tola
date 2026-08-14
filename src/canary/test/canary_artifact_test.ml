@@ -991,11 +991,11 @@ let scenario_derivation_pure_tests =
     "Sc.3.OCaml", [ Build_app { lang = OCaml } ],
               [ Binding OCaml; App ];
     "Sc.4.OCaml", [ Probe_app { lang = OCaml } ],
-              [ Binding OCaml; Lib; App ];
+              [ App; Lib; Binding OCaml ];
     "Sc.2.Python", [ Build_binding Python ],
               [ Lib; Binding Python ];
     "Sc.4.Python", [ Probe_app { lang = Python } ],
-              [ Binding Python; Lib; App ];
+              [ App; Lib; Binding Python ];
     (* Chained: pieces of tiny's acts_full expected to
        collapse under first-appearance union. *)
     "chain.build+probe",

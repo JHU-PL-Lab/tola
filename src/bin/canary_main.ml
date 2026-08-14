@@ -8,877 +8,83 @@ let term_of f = Term.(const f $ const ())
 
 (* Runs the graph and RETURNS the per-step status table (for callers that need
    the verdict directly, without re-reading the shared run_state.json). *)
-let run_with_info_status ?(artifact_names = fun _ -> None) ~failfast ~cache_path
-    ~root ~project steps run_info =
-  Canary_run_info.run_project ~failfast ~run_info ?cache_path ~artifact_names
-    ~root ~project steps
 
-let run_with_info ?(artifact_names = fun _ -> None) ~failfast ~cache_path
-    ~root ~project steps run_info =
-  let _ =
-    run_with_info_status ~artifact_names ~failfast ~cache_path ~root ~project
-      steps run_info
-  in
-  ()
-
-let with_cli_disabled (cli_disabled : Canary_compat.contract_id list)
-    (spec : Canary_step_builder.runner_spec)
-    : Canary_step_builder.runner_spec =
-  if List.is_empty cli_disabled then spec
-  else { spec with
-         disabled_contracts = spec.disabled_contracts @ cli_disabled }
-
-let prebuilt_run_info ~project ~version ~extra steps =
-  Canary_run_info.mk_run_info ~project ~version ~ref_:"" ~source:"prebuilt"
-    ~extra steps
-
-(* [workspace_override], when set, points the run at an already-materialized
-   tree (e.g. a tiny-full *assembled* tree) instead of the per-scenario
-   workspace — everything downstream (stores, runner_spec, derive_steps, run,
-   status) is identical. This is how the vendored assembly reuses the whole
-   run path. *)
-let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
-    ~cache_path ~cli_disabled ~name () =
-  let name = Canary_tiny_scenario.name_of_string name in
-  let workspace =
-    match workspace_override with
-    | Some w -> w
-    | None ->
-        let workspace = Canary_tiny_scenario.cache_workspace_of ~scenario:name in
-        if not (Sys.file_exists workspace) then begin
-          if not (Sys.file_exists Canary_tiny_workspace.baseline_workspace)
-          then begin
-            Fmt.pr "[auto-init] preparing baseline workspace...@.";
-            Canary_tiny_workspace.run_baseline ()
-          end;
-          if not (String.equal name "baseline") then begin
-            Fmt.pr "[auto-init] preparing scenario workspace for %s...@." name;
-            Canary_tiny_workspace.run_prepare ~name
-          end
-        end;
-        workspace
-  in
-  let mutated_stores =
-    Canary_tiny_scenario.stores_of_workspace
-      ~workspace_root:workspace
-      ()
-  in
-  let spec =
-    Canary_tiny_scenario.runner_spec_of_name
-      ~mutated_stores name
-    |> with_cli_disabled cli_disabled
-  in
-  (* Agnostic mode (tiny-full): replace the oracle expectation with the
-     inspection-derived one — canary decides per step whether to expect a
-     failure, rather than being told by the scenario's recipe. *)
-  let spec =
-    if agnostic then
-      { spec with
-        Canary_step_builder.expectation =
-          Canary_project_tiny.expectation_agnostic }
-    else spec
-  in
-  let project = "tiny/" ^ name in
-  let steps =
-    Canary_step_builder.derive_steps ~root ~project
-      ~langs:Canary_lang.[ OCaml; Python ]
-      spec
-  in
-  run_with_info ~failfast ~cache_path ~root ~project steps
-    (prebuilt_run_info ~project:"tiny" ~version:"in_tree"
-       ~extra:[] steps)
-
-let run_state_path_of ~project =
-  [%string "_out/canary/projects/%{project}/-run/run_state.json"]
-
-(* PASS iff every step's status is "done" (covers both plain success
-   and "expected failure confirmed"). Any status starting with
-   "unexpected_" is a FAIL. run_state.json is overwritten per
-   scenario by run_project, so we can trust the most recent read.
-   [project] MUST match where the run wrote (project_name = the part before
-   "/"): "tiny" for the tiny1 / assemble paths, "tiny-full" for the generic
-   runner — reading the wrong one serves a stale verdict. *)
-let scenario_status_of_run_state ?(project = "tiny") () : string =
-  let tiny_run_state_path = run_state_path_of ~project in
-  if not (Sys.file_exists tiny_run_state_path) then "N/A"
-  else
-    match Yojson.Basic.from_file tiny_run_state_path with
-    | `Assoc top ->
-      (match List.assoc_opt "steps" top with
-       | Some (`List steps) ->
-         let all_done =
-           List.for_all (function
-             | `Assoc a ->
-               (match List.assoc_opt "status" a with
-                (* "xfail" IS a pass — a confirmed expected failure
-                   ([Step_done_xfail], serialized "xfail" since the xfail
-                   surfacing landed). Counting only "done" made every
-                   DETECTING bad scenario read FAIL in `tiny run` — the
-                   oracle totals under-reported until A7 phase 3 caught it. *)
-                | Some (`String ("done" | "xfail")) -> true
-                | _ -> false)
-             | _ -> false) steps
-         in
-         if all_done then "PASS" else "FAIL"
-       | _ -> "N/A")
-    | _ -> "N/A"
-    | exception _ -> "N/A"
-
-(* Run canary over a VENDORED ASSEMBLY (P3 step 2): materialize the assembled
-   tree for scenario [tag] (emit its bad resource + overlay on the witness
-   base), then drive the whole normal run path over it via
-   [run_tiny_scenario ~workspace_override]. A bad scenario's PASS = canary
-   *detected* the failure from the assembled (not per-scenario-built) tree —
-   the proof the vendored assembly reproduces tiny1's detection. *)
-let run_assembled ~root ~failfast ~tag : unit =
-  match Canary_tiny_scenario.find_by_id tag with
-  | None -> Fmt.pr "unknown tag: %s (see `tiny assemble-check`)@." tag
-  | Some s ->
-      let key =
-        Option.value (Canary_tiny_workspace.artifact_key_of_tag tag) ~default:"lib"
-      in
-      let label = key ^ "#" ^ tag in
-      (match
-         Canary_tiny_workspace.materialize_assembled ~overlays:[ (key, tag) ]
-           ~label
-       with
-       | None -> Fmt.pr "assemble failed for %s@." label
-       | Some assembled ->
-           Fmt.pr "assembled tree: %s@." assembled;
-           run_tiny_scenario ~workspace_override:assembled ~root ~failfast
-             ~cache_path:None ~cli_disabled:[] ~name:s.scenario.name ();
-           Fmt.pr
-             "@.tiny-full assembled run [%s %s -> %s]: %s  (bad-scenario PASS \
-              = canary detected)@."
-             tag s.scenario.name key (scenario_status_of_run_state ()))
-
-(* Provision = Built demo: materialize a source-only-lib tree and run canary
-   over it. canary's guarded build_lib COMPILES libtiny.so from c/src (an
-   observable action), then probes. PASS = built + green. This is "the good
-   lib, built from source" — the Built provision, distinct from Vendored. *)
-let run_built_lib ~root : unit =
-  match Canary_tiny_workspace.materialize_built_lib ~label:"lib-built-from-src" with
-  | None -> Fmt.pr "materialize (source-only lib) failed@."
-  | Some ws ->
-      Fmt.pr
-        "source-only-lib tree: %s@.  (no pre-built libtiny.so — canary must \
-         build_lib from c/src)@." ws;
-      (try
-         run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
-           ~failfast:false ~cache_path:None ~cli_disabled:[]
-           ~name:"app_over_binding_ocaml" ()
-       with _ -> ());
-      Fmt.pr
-        "@.tiny-full built-lib (provision=Built): %s  (PASS = canary compiled \
-         libtiny.so from source + probed green)@."
-        (scenario_status_of_run_state ())
-
-(* Run a COMBINATION: assemble several bad resources onto the witness base and
-   run with the AGNOSTIC expectation (a combo has no single oracle scenario).
-   Canary's fail-fast run stops at the first failure — the collapse is
-   emergent. PASS = canary predicted + confirmed the failure(s) and every step
-   matched (the good precedents pass, the bad ones fail as predicted). *)
-let run_assembled_combo ~root ~tags : unit =
-  let overlays =
-    List.filter_map
-      (fun tag ->
-        match Canary_tiny_workspace.artifact_key_of_tag tag with
-        | Some key -> Some (key, tag)
-        | None -> None)
-      tags
-  in
-  if List.length overlays = 0 then Fmt.pr "no valid tags (see `tiny assemble-check`)@."
-  else
-    let label = String.concat "+" (List.map (fun (key, t) -> key ^ "#" ^ t) overlays) in
-    (match Canary_tiny_workspace.materialize_assembled ~overlays ~label with
-     | None -> Fmt.pr "assemble failed for %s@." label
-     | Some assembled ->
-         Fmt.pr "combo assembled: %s@." assembled;
-         (try
-            run_tiny_scenario ~workspace_override:assembled ~agnostic:true ~root
-              ~failfast:true ~cache_path:None ~cli_disabled:[]
-              ~name:"app_over_binding_ocaml" ()
-          with _ -> ());
-         Fmt.pr
-           "@.tiny-full combo [%s]: %s  (PASS = canary predicted + confirmed \
-            the failure and stopped — the collapse, computed not declared)@."
-           label (scenario_status_of_run_state ()))
-
-let prov_short : Canary_enumerate.provision -> string = function
-  | Canary_enumerate.Vendored -> "V"
-  | Canary_enumerate.Built -> "B"
-  | Canary_enumerate.Fetched -> "F"
-  | Canary_enumerate.Absent -> "A"
-
-let placement_str (pl : Canary_enumerate.placement) =
-  Printf.sprintf "%s:%s" (prov_short pl.provision)
-    (Canary_enumerate.string_of_build_id pl.version)
-
-(* The all-good baseline of an enumerated scenario set (the assignment every
-   delta is measured against). *)
-let baseline_of (scenarios : Canary_enumerate.assignment list) =
-  try List.find Canary_tiny_scenario.assignment_is_all_good scenarios
-  with Not_found -> ( match scenarios with a :: _ -> a | [] -> [])
-
-(* The delta-from-baseline label for a scenario — the JOIN KEY between the pre
-   view (`spec`) and the persisted post view (the run summary). Same string in
-   both so a scenario can be looked up across pre/post. *)
-let scenario_label ~baseline (a : Canary_enumerate.assignment) : string =
-  let baseline_str id =
-    match Canary_enumerate.placement_of baseline id with
-    | Some pl -> placement_str pl
-    | None -> "\xE2\x80\x94"
-  in
-  let deltas =
-    List.filter_map
-      (fun (id, pl) ->
-        let s = placement_str pl in
-        if String.equal (baseline_str id) s then None
-        else Some (Printf.sprintf "%s=%s" (Canary_enumerate.pretty_id id) s))
-      a
-  in
-  match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
-
-(* Per-scenario run summary (F1): one line per scenario, TAB-separated
-   [verdict \t good|bad \t label]. Written by [run_project_run], read by
-   [print_spec] to annotate the pre view with post verdicts. Sibling of
-   run_state.json (which is per-step and overwritten per scenario). *)
-let scenario_summary_path_of ~project =
-  [%string "_out/canary/projects/%{project}/-run/scenarios.tsv"]
-
-(* A born-safe per-SCENARIO directory: the identity of ONE assignment (one
-   placement per artifact). It is what the runner uses for the scenario's output
-   dir AND its dedup key — computed generically here, no longer a project field.
-
-   IDENTITY RULE (general, from provision semantics): a [Fetched] artifact is
-   version-AMBIENT — the PM decides the concrete version — so its declared
-   version is dropped from the id; [Built]/[Vendored] versions ARE identity
-   (canary produces/supplies exactly that version). Two scenarios with the same
-   id are the same real world → they dedup to one run. (A project that pins a
-   Fetched version would override via its provider [pr_provenance]; not needed
-   yet — see status §A.) *)
-let scenario_dir_of ~pr_name (a : Canary_enumerate.assignment) : string =
-  let chan_s = function
-    | Canary_basic.Stable -> "stable"
-    | Canary_basic.Dev -> "dev"
-  in
-  let part (id, (pl : Canary_enumerate.placement)) =
-    let k =
-      String.map (function ':' -> '-' | c -> c)
-        (Canary_basic.string_of_artifact_kind (Canary_enumerate.kind_of id))
-    in
-    match pl.Canary_enumerate.provision with
-    | Canary_store.Fetched -> Printf.sprintf "%s-fetched" k
-    | prov ->
-        Printf.sprintf "%s-%s-%s" k
-          (Canary_store.string_of_provision prov)
-          (chan_s pl.Canary_enumerate.version.Canary_enumerate.channel)
-  in
-  (* sort_uniq → a CANONICAL id: identical parts (same-kind artifacts at the
-     same placement — e.g. two app wirings both vendored) collapse, and order is
-     stable. Uniqueness is preserved (differing placements keep distinct parts). *)
-  Printf.sprintf "_out/canary/scenarios/%s/%s" pr_name
-    (String.concat "_" (List.sort_uniq compare (List.map part a)))
-
-(* The GENERIC project runner (convergence step 2). Consumes a [project_run]
-   and does the SAME loop for any project: enumerate → runner_spec → run →
-   report. All project-specific logic lives in the closures (a real project's
-   runner_spec build/fetches; tiny-full's runner_spec assembles its vendored
-   tree internally — the tiny-factory concern, invisible here). Drives
-   tiny-full, sqlite, z3 and llvm (A5); ssl is [run_project_multi]'s last
-   raw-script holdout. Dedup + output dir keyed by [scenario_dir_of] (several
-   assignments can share one scenario identity — e.g. Fetched across versions). *)
 let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
     ~failfast : unit =
   Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
     pr.Canary_project_run.pr_name;
-  (* THE general algorithm: the runner enumerates the project's declared
-     [pr_spec] under the exploration [policy] (full by default; `--thin` =
-     [Canary_project_run.thin_policy]). Projects hand over no scenario list. *)
-  let scenarios = Canary_project_run.scenarios_of ?policy pr in
-  let baseline = baseline_of scenarios in
-  let seen = ref [] in
-  (* (key, verdict, is_bad, xfail-step tags) — key = scenario_label. The
-     xfail list is where a world DETECTED a mismatch: steps that passed via a
-     confirmed expected failure ([Step_done_xfail]). *)
-  let results = ref [] in
+  let results =
+    Canary_project_run.run_project_spec ?policy pr ~root ~failfast
+  in
   List.iter
-    (fun a ->
-      let ws = scenario_dir_of ~pr_name:pr.Canary_project_run.pr_name a in
-      if List.mem ws !seen then ()
-      else begin
-          seen := ws :: !seen;
-          let is_bad = not (Canary_tiny_scenario.assignment_is_all_good a) in
-          let key = scenario_label ~baseline a in
-          (* [scenario_dir_of] is already born-safe; keep the map defensively. *)
-          let safe =
-            String.map
-              (function ':' | '#' | '+' -> '-' | c -> c)
-              (Filename.basename ws)
-          in
-          let project = pr.Canary_project_run.pr_name ^ "/" ^ safe in
-          let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:ws in
-          let steps =
-            Canary_step_builder.derive_steps ~root ~project
-              ~langs:Canary_lang.[ OCaml; Python ] spec
-          in
-          (* verdict from the RETURNED status table — robust against the shared
-             run_state.json being overwritten by the next scenario. On FAIL,
-             name the non-done steps (diagnostic); on PASS, name the steps
-             that passed via a CONFIRMED expected failure ([Step_done_xfail]
-             — where the world DETECTED a mismatch). *)
-          let verdict, culprits, xfails =
-            try
-              let status =
-                run_with_info_status ~failfast ~cache_path:None ~root ~project
-                  steps
-                  (prebuilt_run_info ~project:pr.Canary_project_run.pr_name
-                     ~version:"scenario" ~extra:[] steps)
-              in
-              let not_done =
-                List.filter_map
-                  (fun (s : Canary_step_model.step) ->
-                    match Base.Hashtbl.find status s.tag with
-                    | Some (Canary_step_model.Step_done
-                           | Canary_step_model.Step_done_xfail) -> None
-                    | Some Canary_step_model.Step_failed -> Some (s.tag ^ ":failed")
-                    | Some Canary_step_model.Step_skipped -> Some (s.tag ^ ":skipped")
-                    | None -> Some (s.tag ^ ":not_run"))
-                  steps
-              in
-              let xfails =
-                List.filter_map
-                  (fun (s : Canary_step_model.step) ->
-                    match Base.Hashtbl.find status s.tag with
-                    | Some Canary_step_model.Step_done_xfail ->
-                        (* A7 phase 2: name the confirming contract(s) from
-                           the verdict marker — "probe_binding_python[c2]".
-                           Flows to the console line, scenarios.tsv and the
-                           `spec` post view unchanged. *)
-                        let ids = Canary_local_runner.step_xfail_contracts s in
-                        Some
-                          (s.tag
-                           ^ (match ids with
-                              | [] -> ""
-                              | ids -> "[" ^ String.concat "," ids ^ "]"))
-                    | _ -> None)
-                  steps
-              in
-              if not_done = [] then ("PASS", "", xfails)
-              else ("FAIL", String.concat " " not_done, xfails)
-            with _ -> ("FAIL", "exn", [])
-          in
-          Fmt.pr "  [%-44s] %-6s %s%s%s@." safe verdict
-            (if is_bad then "(bad)" else "(good)")
-            (match xfails with
-             | [] -> ""
-             | xs -> "  xfail: " ^ String.concat "," xs)
-            (if String.equal verdict "FAIL" && not (String.equal culprits "")
-             then "  <- " ^ culprits else "");
-          results := (key, verdict, is_bad, xfails) :: !results
-      end)
-    scenarios;
-  let bads = List.filter (fun (_, _, b, _) -> b) !results in
+    (fun (r : Canary_project_run.scenario_run_result) ->
+      let safe =
+        String.map
+          (function ':' | '#' | '+' -> '-' | c -> c)
+          (Filename.basename
+             (Canary_project_run.scenario_dir_of
+                ~pr_name:pr.Canary_project_run.pr_name
+                r.Canary_project_run.r_result_assignment))
+      in
+      let xfail_strs =
+        List.map
+          (fun (tag, ids) ->
+            tag
+            ^ match ids with [] -> "" | _ -> "[" ^ String.concat "," ids ^ "]")
+          r.Canary_project_run.r_result_xfails
+      in
+      Fmt.pr "  [%-44s] %-6s %s%s%s@." safe
+        r.Canary_project_run.r_result_verdict
+        (if r.Canary_project_run.r_result_is_bad then "(bad)" else "(good)")
+        (match xfail_strs with
+        | [] -> ""
+        | xs -> "  xfail: " ^ String.concat "," xs)
+        (if
+           String.equal r.Canary_project_run.r_result_verdict "FAIL"
+           && r.Canary_project_run.r_result_culprits <> []
+         then "  <- " ^ String.concat " " r.Canary_project_run.r_result_culprits
+         else ""))
+    results;
+  let bads =
+    List.filter (fun r -> r.Canary_project_run.r_result_is_bad) results
+  in
   let detected =
-    List.length (List.filter (fun (_, v, _, _) -> String.equal v "PASS") bads)
+    List.length
+      (List.filter
+         (fun r -> String.equal r.Canary_project_run.r_result_verdict "PASS")
+         bads)
   in
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
     detected (List.length bads);
-  (let n_xfail_worlds =
-     List.length (List.filter (fun (_, _, _, xs) -> xs <> []) !results)
+  (let n_xfail =
+     List.length
+       (List.filter
+          (fun r -> r.Canary_project_run.r_result_xfails <> [])
+          results)
    in
-   if n_xfail_worlds > 0 then
-     Fmt.pr "  mismatch scenarios: %d passed via confirmed expected failure (xfail)@."
-       n_xfail_worlds);
-  (* F1: persist the per-scenario verdicts so a post view can annotate the
-     `spec` (pre) listing. One TAB-separated line per scenario that RAN
-     (deduped workspaces are omitted → shown "·" in the post view). Format:
-     verdict TAB good|bad TAB xfail-steps(comma, "-" if none) TAB label —
-     label LAST so older 3-field files still parse (see load_scenario_post). *)
-  (let path = scenario_summary_path_of ~project:pr.Canary_project_run.pr_name in
-   try
-     let oc = open_out path in
-     List.iter
-       (fun (key, verdict, is_bad, xfails) ->
-         Printf.fprintf oc "%s\t%s\t%s\t%s\n" verdict
-           (if is_bad then "bad" else "good")
-           (match xfails with [] -> "-" | xs -> String.concat "," xs)
-           key)
-       (List.rev !results);
-     close_out oc
-   with Sys_error _ -> () (* run dir may not exist on a no-op run; non-fatal *))
-
-(* Coarse artifact GROUP for the spec listing (ssot §4.2 kinds). *)
-let group_of_kind : Canary_basic.artifact_kind -> string = function
-  | Canary_basic.Source -> "source"
-  | Canary_basic.Headers | Canary_basic.Lib -> "native"
-  | Canary_basic.Binding _ -> "bindings"
-  | Canary_basic.App -> "app"
-
-let group_order = [ "source"; "native"; "bindings"; "app" ]
-
-(* Load the persisted per-scenario run summary (F1) as a [label -> (verdict,
-   is_bad, xfail_steps)] map — the POST view joined to the pre listing by
-   [scenario_label]. [xfail_steps] = comma-joined step tags that passed via a
-   confirmed expected failure ("" if none). [] when no run has happened. *)
-let load_scenario_post ~project : (string * (string * bool * string)) list =
-  let path = scenario_summary_path_of ~project in
-  if not (Sys.file_exists path) then []
-  else
-    let ic = open_in path in
-    let rec loop acc =
-      match input_line ic with
-      | line -> (
-          match String.split_on_char '\t' line with
-          | verdict :: bad :: xf :: rest when rest <> [] ->
-              (* current 4-field format: label LAST (no tabs in labels; be
-                 defensive and rejoin) *)
-              let label = String.concat "\t" rest in
-              let xf = if String.equal xf "-" then "" else xf in
-              loop ((label, (verdict, String.equal bad "bad", xf)) :: acc)
-          | verdict :: bad :: [ label ] ->
-              (* legacy 3-field format (pre-xfail column) *)
-              loop ((label, (verdict, String.equal bad "bad", "")) :: acc)
-          | _ -> loop acc)
-      | exception End_of_file ->
-          close_in ic;
-          acc
-    in
-    loop []
-
-(* POST view of a scenario's built-lib NATIVE WATCHLIST (the per-version
-   symbol watchlist): read the build_lib inspect JSON the run produced for
-   this scenario's variant key, and summarize present/missing. None = no
-   inspect ran (no run yet, or the project attaches none). *)
-let lib_watchlist_post ~pr_name (a : Canary_enumerate.assignment) :
-    (int * string list) option =
-  let safe =
-    String.map
-      (function ':' | '#' | '+' -> '-' | c -> c)
-      (Filename.basename (scenario_dir_of ~pr_name a))
-  in
+   if n_xfail > 0 then
+     Fmt.pr
+       "  mismatch scenarios: %d passed via confirmed expected failure \
+        (xfail)@."
+       n_xfail);
   let path =
-    Printf.sprintf "_out/canary/projects/%s/build_lib/inspect_%s.json" pr_name
-      safe
+    Canary_project_run.scenario_summary_path_of
+      ~project:pr.Canary_project_run.pr_name
   in
-  if not (Sys.file_exists path) then None
-  else
-    try
-      let j = Yojson.Basic.from_file path in
-      let open Yojson.Basic.Util in
-      let w = j |> member "watchlist" in
-      let strs k = w |> member k |> to_list |> List.map to_string in
-      Some (List.length (strs "present"), strs "missing")
-    with _ -> None
-
-(* The binding languages a project's artifacts span. *)
-let langs_of arts =
-  List.filter_map
-    (fun a ->
-      match Canary_enumerate.kind_of a with
-      | Canary_basic.Binding l -> Some l
-      | _ -> None)
-    arts
-  |> List.sort_uniq compare
-
-(* What an artifact KIND can be USED TO BUILD — from the action catalogue:
-   the products of every Build action that CONSUMES this kind. *)
-let builds_of_kind ~langs k =
-  (Canary_basic.[ Build_lib; Build_headers ]
-  @ List.concat_map
-      (fun l -> Canary_basic.[ Build_binding l; Build_app { lang = l } ])
-      langs)
-  |> List.concat_map (fun act ->
-         if List.mem k (Canary_action.consumes_of_action act) then
-           Canary_action.produces_of_action act
-         else [])
-  |> List.sort_uniq compare
-
-let builds_of ~langs a = builds_of_kind ~langs (Canary_enumerate.kind_of a)
-
-(* (langs_of_kinds / kinds_string retired with the variant view, A5 ph. 5.) *)
-
-(* Snapshot of a [project_run]: declared artifacts (grouped, each with its
-   baseline provision@version) + the enumerated scenarios as deltas from that
-   baseline. PRE (dry-run — no [pr_runner_spec]/run is invoked). If a run summary
-   exists, each scenario is also annotated with its last-run verdict (POST):
-   good ✓/✗REGRESSED, bad ✓detected/✗missed, · = not run (deduped workspace). *)
-let print_spec ?policy (pr : Canary_project_run.project_run) : unit =
-  let module E = Canary_enumerate in
-  let scenarios = Canary_project_run.scenarios_of ?policy pr in
-  let all_good = Canary_tiny_scenario.assignment_is_all_good in
-  let baseline = baseline_of scenarios in
-  let baseline_str id =
-    match E.placement_of baseline id with
-    | Some pl -> placement_str pl
-    | None -> "\xE2\x80\x94" (* em dash *)
-  in
-  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
-  Fmt.pr "@.spec: %s — %s@." pr.Canary_project_run.pr_name
-    (if post = [] then "enumeration (no run yet)"
-     else "enumeration + last-run verdicts");
-  (* artifacts, grouped, each with its baseline provision@version, the
-     project-declared provenance detail, and what it can BUILD (derived from the
-     action catalogue: which Build actions consume this kind → what they produce). *)
-  let arts = Canary_project_run.artifact_ids pr in
-  let langs = langs_of arts in
-  let builds_of a = builds_of ~langs a in
-  Fmt.pr "@.artifacts (%d), by group [baseline provision@@version + provenance]:@."
-    (List.length arts);
-  List.iter
-    (fun grp ->
-      let in_grp =
-        List.filter
-          (fun a -> String.equal (group_of_kind (E.kind_of a)) grp)
-          arts
-      in
-      if in_grp <> [] then begin
-        Fmt.pr "  %s:@." grp;
-        List.iter
-          (fun a ->
-            Fmt.pr "    %-26s %s@." (E.pretty_id a) (baseline_str a);
-            (match Canary_project_run.provenance_of pr a with
-             | Some p ->
-                 (* drift check: the provider's coarse provision must equal the
-                    baseline's — if not, the declared detail contradicts the
-                    axis. Skipped for an artifact the enumeration doesn't
-                    place (baseline "—"): a display-only artifact (e.g. the
-                    source behind a self-contained Built lib) has no axis to
-                    contradict. *)
-                 let drift =
-                   match E.placement_of baseline a with
-                   | None -> ""
-                   | Some _ ->
-                       if
-                         Canary_store.equal_provision
-                           (Canary_store_config.provision_of_provider p)
-                           (E.provision_of baseline a)
-                       then ""
-                       else "   ⚠ provider≠baseline provision"
-                 in
-                 (* the ARROW: provider → action → artifact (fetch and build
-                    are the same shape; a vendored copy has no producing
-                    action — the provider is the boundary). *)
-                 let arrow =
-                   match
-                     Canary_store_config.providing_action_of (E.kind_of a) p
-                   with
-                   | Some act ->
-                       "  ⟶ " ^ Canary_basic.string_of_action act
-                   | None -> "  (supplied — no producing action)"
-                 in
-                 Fmt.pr "        provider: %s%s%s@."
-                   (Canary_store_config.string_of_provider p) arrow drift
-             | None ->
-                 Fmt.pr "        provider: (undeclared — spec carries no detail)@.");
-            (* mechanism detail comes from THE catalogue
-               (base/canary_mechanism.ml) — the spec references a mechanism
-               by name (the artifact id's [Ext_mechanism]); no project
-               inlines these facts. *)
-            (match E.ext_of a with
-             | E.Ext_mechanism m ->
-                 Fmt.pr "        mechanism: %s@."
-                   (Canary_mechanism.one_line_of_info
-                      (Canary_mechanism.info_of_mechanism m))
-             | _ -> ());
-            List.iter
-              (fun (id, ch, dir) ->
-                if E.equal_artifact_id id a then
-                  Fmt.pr "        mismatch probe: %s variant designed to reveal %s mismatch@."
-                    (match ch with
-                     | Canary_basic.Dev -> "dev"
-                     | Canary_basic.Stable -> "stable")
-                    (E.string_of_mismatch_direction dir))
-              pr.Canary_project_run.pr_mismatch_probes;
-            match builds_of a with
-            | [] -> ()
-            | ks ->
-                Fmt.pr "        builds → %s@."
-                  (String.concat ", "
-                     (List.map Canary_basic.string_of_artifact_kind ks)))
-          in_grp
-      end)
-    group_order;
-  (* The WORLDS, each in FULL flat form (the assignment the run walks): one
-     placement per artifact identity — this is the enumerated object itself,
-     not a delta. Cross-instance combinations (two libs in one world = the
-     build-lib ≠ run-lib mismatch) are NOT expressible here — that is the
-     node-graph enumeration (`construct`, close_deps). Annotated with the
-     last-run verdict where a run summary exists (join by [scenario_label]). *)
-  let ngood = List.length (List.filter all_good scenarios) in
-  let total = List.length scenarios in
-  Fmt.pr
-    "@.scenarios — %d enumerated (%d good, %d bad); ONE placement per artifact \
-     (the flat assignment the run walks):@."
-    total ngood (total - ngood);
-  Fmt.pr
-    "  key: F=fetched (a PM provides the consumable artifact — apt ships a \
-     binary, opam BUILDS the package source at install; version ambient, the \
-     PM picks)@.       B=built (canary builds it — version IS identity)  \
-     V=vendored (supplied local artifact — version IS identity)@.";
-  List.iter
-    (fun a ->
-      let label = scenario_label ~baseline a in
-      let is_bad = not (all_good a) in
-      let mark =
-        match List.assoc_opt label post with
-        | Some ("PASS", _, xf) when not (String.equal xf "") ->
-            (* the world PASSED via a confirmed expected failure — a
-               DETECTED mismatch (the xfail steps name where) *)
-            "✓ xfail"
-        | Some ("PASS", _, _) -> if is_bad then "✓ detected" else "✓"
-        | Some (_, _, _) -> if is_bad then "✗ missed" else "✗ REGRESSED"
-        | None -> if post = [] then " " else "·"
-      in
-      let world =
-        String.concat "  "
-          (List.map
-             (fun (id, pl) ->
-               Printf.sprintf "%s=%s" (E.pretty_id id) (placement_str pl))
-             a)
-      in
-      (* designed-probe mark: a declared (consumer, channel, direction) probe
-         is ACTIVE in this scenario when the consumer is placed at that
-         channel AND the computed consumer↔lib pairing direction matches. *)
-      let probe_marks =
-        List.filter_map
-          (fun (id, ch, dir) ->
-            let placed =
-              match E.placement_of a id with
-              | Some pl -> pl.E.version.E.channel = ch
-              | None -> false
-            in
-            if
-              placed
-              && E.mismatch_direction_of a ~consumer:id ~provider:E.a_lib
-                 = Some dir
-            then Some (E.string_of_mismatch_direction dir)
-            else None)
-          pr.Canary_project_run.pr_mismatch_probes
-      in
-      let watchlist_note =
-        match lib_watchlist_post ~pr_name:pr.Canary_project_run.pr_name a with
-        | None -> ""
-        | Some (npresent, []) ->
-            Printf.sprintf "   [lib watchlist: %d/%d]" npresent npresent
-        | Some (npresent, missing) ->
-            Printf.sprintf "   [lib watchlist: %d present, missing %s]"
-              npresent (String.concat "," missing)
-      in
-      Fmt.pr "  %-10s %s%s%s%s@." mark world
-        (match probe_marks with
-         | [] -> ""
-         | ms -> "   [" ^ String.concat "+" ms ^ "-mismatch probe]")
-        watchlist_note
-        (if String.equal label "(baseline)" then "   (baseline)" else "");
-      (* Milestone-(b) first slice: the scenario's RUNTIME pairings from the
-         spec rows' [ax_runtime] — the second lib instance (what a consumer
-         RUNS over vs what it was built against) as enumeration data, not
-         realization folklore. Printed only when declared. *)
-      (match E.runtime_pairings_of pr.Canary_project_run.pr_spec a with
-       | [] -> ()
-       | ps ->
-           let part (p : E.runtime_pairing) =
-             let name = E.pretty_id p.E.rp_consumer in
-             match p.E.rp_mode with
-             | Canary_store.Ambient s ->
-                 Printf.sprintf "%s → ambient (%s)" name s
-             | _ ->
-                 let run =
-                   match p.E.rp_run with
-                   | Some pl -> placement_str pl
-                   | None -> "—"
-                 in
-                 Printf.sprintf "%s → lib %s%s" name run
-                   (if p.E.rp_deploy then
-                      "  [build-lib ≠ run-lib: DEPLOY]"
-                    else "")
-           in
-           Fmt.pr "             ↳ runtime: %s@."
-             (String.concat "  ·  " (List.map part ps))))
-    scenarios;
-  (if post <> [] then begin
-     let bads = List.filter (fun (_, (_, b, _)) -> b) post in
-     let detected =
-       List.length
-         (List.filter (fun (_, (v, _, _)) -> String.equal v "PASS") bads)
-     in
-     let xfail_worlds =
-       List.filter (fun (_, (_, _, xf)) -> not (String.equal xf "")) post
-     in
-     Fmt.pr "  last run (`action %s`): %d/%d bad detected · %d scenario(s) ran.@."
-       pr.Canary_project_run.pr_name detected (List.length bads)
-       (List.length post);
-     List.iter
-       (fun (label, (_, _, xf)) ->
-         Fmt.pr "    xfail %s — %s@." xf
-           (if String.equal label "(baseline)" then "(baseline)" else label))
-       xfail_worlds
-   end);
-  Fmt.pr
-    "@.  note: this is the DECLARED artifact set + the scenarios the general \
-     algorithm (enumerate over `pr_spec`) \
-     produces. The run executes exactly these (each via derive_steps → the full \
-     source→lib→binding→probe chain); `construct %s` shows the wider applicable \
-     graph these are drawn from. Use `spec %s --by-artifact` for the per-artifact \
-     cut.@."
-    pr.Canary_project_run.pr_name pr.Canary_project_run.pr_name
-
-(* Is artifact [id] DIRECTLY mutated (Bad quality) in scenario [a]? *)
-let artifact_bad_in (a : Canary_enumerate.assignment)
-    (id : Canary_enumerate.artifact_id) : bool =
-  match Canary_enumerate.placement_of a id with
-  | Some { version = { quality = Canary_enumerate.Bad _; _ }; _ } -> true
-  | _ -> false
-
-(* F3 — the ARTIFACT-centric dual of [print_spec]: for each artifact, the
-   scenarios that directly mutate it (with post verdict + a per-artifact
-   detection rate), then a compact count of scenarios that mutate an UPSTREAM
-   artifact (this one is downstream-affected). Same pre/post join by
-   [scenario_label]. Rows = artifacts, whereas [print_spec]'s rows = scenarios. *)
-let print_artifacts ?policy (pr : Canary_project_run.project_run) : unit =
-  let module E = Canary_enumerate in
-  let scenarios = Canary_project_run.scenarios_of ?policy pr in
-  let baseline = baseline_of scenarios in
-  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
-  let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
-  let is_detected a =
-    match verdict a with Some ("PASS", _, _) -> true | _ -> false
-  in
-  let bads =
-    List.filter
-      (fun a -> not (Canary_tiny_scenario.assignment_is_all_good a))
-      scenarios
-  in
-  Fmt.pr "@.artifacts: %s — %s (scenarios that touch each)@."
-    pr.Canary_project_run.pr_name
-    (if post = [] then "enumeration (no run yet)"
-     else "enumeration + last-run verdicts");
-  List.iter
-    (fun grp ->
-      let in_grp =
-        List.filter
-          (fun id -> String.equal (group_of_kind (E.kind_of id)) grp)
-          (Canary_project_run.artifact_ids pr)
-      in
-      if in_grp <> [] then begin
-        Fmt.pr "  %s:@." grp;
-        List.iter
-          (fun id ->
-            let ord = Canary_basic.kind_order (E.kind_of id) in
-            let direct = List.filter (fun a -> artifact_bad_in a id) bads in
-            let upstream =
-              List.filter
-                (fun a ->
-                  List.exists
-                    (fun (other, (pl : E.placement)) ->
-                      Canary_basic.kind_order other.E.kind < ord
-                      && match pl.version.quality with E.Bad _ -> true | _ -> false)
-                    a)
-                bads
-            in
-            let rate =
-              if post = [] then ""
-              else
-                Printf.sprintf " · %d/%d detected"
-                  (List.length (List.filter is_detected direct))
-                  (List.length direct)
-            in
-            let up =
-              if upstream = [] then ""
-              else Printf.sprintf " · +%d upstream" (List.length upstream)
-            in
-            Fmt.pr "    %-26s %d mutated%s%s@." (E.pretty_id id)
-              (List.length direct) rate up;
-            List.iter
-              (fun a ->
-                let mark =
-                  match verdict a with
-                  | None -> if post = [] then "" else "·"
-                  | Some ("PASS", _, _) -> "✓ detected"
-                  | Some _ -> "✗ missed"
-                in
-                Fmt.pr "      %-46s %s@." (scenario_label ~baseline a) mark)
-              direct)
-          in_grp
-      end)
-    group_order;
-  Fmt.pr
-    "@.  legend: N mutated = scenarios with THIS artifact at a Bad version; \
-     +M upstream = scenarios mutating an upstream artifact (downstream-affected); \
-     ✓ detected / ✗ missed / · not run.@."
-
-(* (provisions_of_runner_spec — the closure-sniffing provision read for the
-   raw z3/llvm variant view — retired with that view, A5 phase 5.) *)
-
-(* Machine-readable `spec --json`: the same artifacts × scenarios, parseable.
-   Reuses the exact pre/post data print_spec renders (same [scenario_label] join,
-   same catalogue [builds_of], same typed provider) — a second projection, not a
-   second source of truth. *)
-let spec_json_t ?policy (pr : Canary_project_run.project_run) : Yojson.Basic.t =
-  let module E = Canary_enumerate in
-  let scenarios = Canary_project_run.scenarios_of ?policy pr in
-  let baseline = baseline_of scenarios in
-  let all_good = Canary_tiny_scenario.assignment_is_all_good in
-  let post = load_scenario_post ~project:pr.Canary_project_run.pr_name in
-  let langs = langs_of (Canary_project_run.artifact_ids pr) in
-  let verdict a = List.assoc_opt (scenario_label ~baseline a) post in
-  let artifact_json a =
-    `Assoc
-      [ ("id", `String (E.pretty_id a));
-        ("group", `String (group_of_kind (E.kind_of a)));
-        ( "provision",
-          `String
-            (Canary_store.string_of_provision (E.provision_of baseline a)) );
-        ("version", `String (E.string_of_build_id (E.version_of baseline a)));
-        ( "provider",
-          match Canary_project_run.provenance_of pr a with
-          | Some p -> `String (Canary_store_config.string_of_provider p)
-          | None -> `Null );
-        ( "providing_action",
-          match Canary_project_run.provenance_of pr a with
-          | Some p -> (
-              match
-                Canary_store_config.providing_action_of (E.kind_of a) p
-              with
-              | Some act -> `String (Canary_basic.string_of_action act)
-              | None -> `Null)
-          | None -> `Null );
-        ( "builds",
-          `List
-            (List.map
-               (fun k -> `String (Canary_basic.string_of_artifact_kind k))
-               (builds_of ~langs a)) ) ]
-  in
-  let scenario_json a =
-    let good = all_good a in
-    let fields =
-      [ ("good", `Bool good); ("label", `String (scenario_label ~baseline a)) ]
-      @
-      match verdict a with
-      | None -> []
-      | Some (v, _, xf) ->
-          ("verdict", `String v)
-          :: (if String.equal xf "" then []
-              else [ ("xfail", `String xf) ])
-          @ (if good then [] else [ ("detected", `Bool (String.equal v "PASS")) ])
-    in
-    `Assoc fields
-  in
-  `Assoc
-    [ ("project", `String pr.Canary_project_run.pr_name);
-      ("kind", `String "project_run");
-      ( "artifacts",
-        `List
-          (List.map artifact_json (Canary_project_run.artifact_ids pr)) );
-      ("scenarios", `List (List.map scenario_json scenarios)) ]
-
-(* (print_spec_variants + spec_variants_json_t — the raw z3/llvm variant
-   view and its JSON twin, with their variant_kinds/source_repo_* helpers —
-   retired 2026-08-05, A5 phase 5: every project `spec` serves is a
-   [project_run] now, rendered by [print_spec]/[spec_json_t] above.) *)
-
-(* ── Subcommands ── *)
+  try
+    let oc = open_out path in
+    List.iter
+      (fun (r : Canary_project_run.scenario_run_result) ->
+        Printf.fprintf oc "%s\t%s\t%s\t%s\n"
+          r.Canary_project_run.r_result_verdict
+          (if r.Canary_project_run.r_result_is_bad then "bad" else "good")
+          (match r.Canary_project_run.r_result_xfails with
+          | [] -> "-"
+          | xs -> String.concat "," (List.map fst xs))
+          r.Canary_project_run.r_result_key)
+      results;
+    close_out oc
+  with Sys_error _ -> ()
 
 let paths_cmd =
   Cmd.v
@@ -923,48 +129,25 @@ let action_cmd =
   in
   let disable_contract_arg =
     Arg.(
-      value
-      & opt string ""
+      value & opt string ""
       & info [ "disable-contract" ] ~docv:"CSV"
           ~doc:
-            "Comma-separated surface-theory contracts to skip for this \
-             run, e.g. \"c4,c5\". Layered on top of each project's \
-             runner_spec.disabled_contracts and the registry's \
-             enabled flag.")
+            "Comma-separated surface-theory contracts to skip for this run, \
+             e.g. \"c4,c5\". Layered on top of each project's \
+             runner_spec.disabled_contracts and the registry's enabled flag.")
   in
   let thin_arg =
     Arg.(
       value & flag
       & info [ "thin" ]
-          ~doc:"project_run projects (tiny-full, z3, llvm): run the thin \
-                Subset[Stable] enumeration (drops every Dev world).")
+          ~doc:
+            "project_run projects (tiny-full, z3, llvm): run the thin \
+             Subset[Stable] enumeration (drops every Dev world).")
   in
-  (* run_with_info, with_cli_disabled, prebuilt_run_info, and
-     run_tiny_scenario lifted to file top-level 2026-07-09 so
-     `tiny run` can reuse them uniformly. *)
-  (* run_z3 / run_llvm (raw-script run_project_multi over hand-derived
-     variants) + their source_run_info retired 2026-08-05, A5 phases 2+5 —
-     `action z3`/`action llvm` go through the generic [run_project_run]
-     over [Canary_project_z3.z3_run] / [Canary_project_llvm.llvm_run]
-     (enumerate → dispatch/realize → derive_steps → run). Casualties of the
-     migration: the z3-only `--quick` (no_source), the per-variant
-     `--cache-path`/`--disable-contract` plumbing, and the source/prebuilt
-     run_info extras, which the generic path doesn't carry (same as
-     sqlite). [run_project_multi]'s last consumer is ssl (migrates last). *)
-  let run_sqlite ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_sqlite.runner_spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:"sqlite"
-        ~langs:Canary_lang.[ OCaml; Python ]
-        spec
-    in
-    run_with_info ~artifact_names:spec.artifact_name
-      ~failfast ~cache_path ~root ~project:"sqlite"
-      steps
-      (prebuilt_run_info ~project:"sqlite" ~version:"system" ~extra:[] steps)
-  in
+  (* Project registry (2026-08-11; plain [project_run]s since 2026-08-12 —
+     the [Multi] entry kind retired with ssl's store-pin migration). *)
   (* Tiny runs via the A2-with-factory path
-     ({!Canary_tiny_scenario}); see [run_tiny_scenario]
+     ({!Canary_tiny_scenario}); see [Canary_project_tiny.run_tiny_scenario]
      and [run_tiny_scenario_all] below. The old multi-variant
      run_tiny was retired 2026-07-08 — 13 hand-wired variants
      replaced by 15 factory-derived scenarios matched to the
@@ -972,111 +155,54 @@ let action_cmd =
   (* Run one tiny scenario as its own project via
      Canary_tiny_scenario's factory. project_name = "tiny/<name>"
      — one derive_steps + run_graph, no multi-variant. *)
-  let run_zarith ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_zarith.runner_spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:"zarith" spec
-    in
-    run_with_info ~failfast ~cache_path ~root ~project:"zarith" steps
-      (prebuilt_run_info ~project:"zarith" ~version:"system" ~extra:[] steps)
-  in
-  let run_ssl ~root ~failfast ~cache_path ~cli_disabled =
-    (* ssl is a variant project: 2 binding versions × 2 apps + native probe.
-       Build each variant's steps, run sequentially (shared switch, ssl
-       version swapped per variant). *)
-    let variants =
-      List.map
-        (fun (name, spec) ->
-          let spec = with_cli_disabled cli_disabled spec in
-          let steps =
-            Canary_step_builder.derive_steps ~root
-              ~project:[%string "ssl/%{name}"] ~cache_project:"ssl" spec
-          in
-          (name, steps, None))
-        Canary_project_ssl.variants
-    in
-    Canary_run_info.run_project_multi ~failfast ?cache_path ~root
-      ~project_name:"ssl" ~variants ()
-  in
-  let run_cairo ~root ~failfast ~cache_path ~cli_disabled =
-    let spec = with_cli_disabled cli_disabled Canary_project_cairo.runner_spec in
-    let steps =
-      Canary_step_builder.derive_steps ~root ~project:"cairo" spec
-    in
-    run_with_info ~failfast ~cache_path ~root ~project:"cairo" steps
-      (prebuilt_run_info ~project:"cairo" ~version:"system" ~extra:[] steps)
-  in
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
   let run project _quick failfast cache_path disable_contract_csv thin () =
     let root = "_out" in
-    let distro = detect_distro () in
-    let cli_disabled =
-      Canary_compat.contract_ids_of_csv disable_contract_csv
-    in
-    (if cli_disabled <> [] then
-       Fmt.pr "[disable-contract] skipping: %s@."
-         (String.concat ", "
-            (List.map Canary_compat.string_of_contract_id cli_disabled)));
+    let cli_disabled = Canary_compat.contract_ids_of_csv disable_contract_csv in
+    if cli_disabled <> [] then
+      Fmt.pr "[disable-contract] skipping: %s@."
+        (String.concat ", "
+           (List.map Canary_compat.string_of_contract_id cli_disabled));
+    let policy = if thin then Some (Canary_project_run.thin_policy ()) else None in
+    let run_pr pr = run_project_run ?policy pr ~root ~failfast in
     match project with
-    | Some "sqlite" ->
-        (* sqlite adopts the generic runner (the real-world project_run) *)
-        run_project_run Canary_project_sqlite.sqlite_run ~root ~failfast
-    | Some "zarith" -> run_zarith ~root ~failfast ~cache_path ~cli_disabled
-    | Some "ssl" -> run_ssl ~root ~failfast ~cache_path ~cli_disabled
-    | Some "cairo" -> run_cairo ~root ~failfast ~cache_path ~cli_disabled
-    | Some "z3" ->
-        (* z3 on the generic path (A5 phase 2): enumerate z3_spec →
-           dispatch/realize → run. --thin = the runner's Subset[Stable]
-           policy (drops the dev chain), free on any project_run. *)
-        if thin then
-          run_project_run
-            ~policy:(Canary_project_run.thin_policy ())
-            (Canary_project_z3.z3_run distro) ~root ~failfast
-        else run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast
-    | Some "llvm" ->
-        (* llvm on the generic path (A5 phase 5) — same shape as z3 *)
-        if thin then
-          run_project_run
-            ~policy:(Canary_project_run.thin_policy ())
-            (Canary_project_llvm.llvm_run distro) ~root ~failfast
-        else
-          run_project_run (Canary_project_llvm.llvm_run distro) ~root ~failfast
-    | Some "tiny-full" ->
-        (* the generic project runner drives tiny-full (convergence step 2);
-           --thin = the RUNNER's thin_policy over the same declared spec
-           (plus the thin-named run for cache separation) *)
-        if thin then
-          run_project_run
-            ~policy:(Canary_project_run.thin_policy ())
-            Canary_project_tiny.tiny_full_thin_run ~root ~failfast
-        else begin
-          Canary_project_tiny.print_view ();
-          run_project_run Canary_project_tiny.tiny_full_run ~root ~failfast
-        end
+    | Some p when String.length p > 6 && String.sub p 0 6 = "tiny1/" ->
+        (* tiny1 scenario through the GENERAL project_run pipeline:
+           convert → enumerate → derive_steps → run (agnostic expectation).
+           The mutation is baked into the pre-built workspace; canary's
+           project spec knows nothing about it. *)
+        let name = String.sub p 6 (String.length p - 6) in
+        let pr = Canary_project_tiny.project_run_of_tiny1 ~name in
+        run_project_run pr ~root ~failfast
     | Some "tiny" ->
-        Fmt.epr "`canary action tiny` (bare) retired 2026-07-09 — use \
-                 `canary tiny run` instead (runs all + collects results).@.";
+        Fmt.epr
+          "`canary action tiny` (bare) retired 2026-07-09 — use `canary tiny \
+           run` instead (runs all + collects results).@.";
         Stdlib.exit 2
-    | Some p when (String.length p > 5)
-                  && (String.sub p 0 5 = "tiny/") ->
+    | Some p when String.length p > 5 && String.sub p 0 5 = "tiny/" ->
         let name = String.sub p 5 (String.length p - 5) in
-        run_tiny_scenario ~root ~failfast ~cache_path ~cli_disabled ~name ()
+        Canary_project_tiny.run_tiny_scenario ~root ~failfast ~cache_path
+          ~cli_disabled ~name ()
+    | Some name -> (
+        match List.assoc_opt name Canary_registry.all_projects with
+        | Some pr -> run_pr pr
+        | None ->
+            let available =
+              List.map fst Canary_registry.all_projects
+              @ [ "tiny/<scenario>"; "tiny1/<scenario>" ]
+              |> String.concat ", "
+            in
+            Fmt.pr "Unknown project: %s (available: %s)@." name available)
     | None ->
-        run_sqlite ~root ~failfast ~cache_path ~cli_disabled;
-        run_zarith ~root ~failfast ~cache_path ~cli_disabled;
-        run_ssl ~root ~failfast ~cache_path ~cli_disabled;
-        run_cairo ~root ~failfast ~cache_path ~cli_disabled;
-        run_project_run (Canary_project_z3.z3_run distro) ~root ~failfast;
-        run_project_run (Canary_project_llvm.llvm_run distro) ~root ~failfast
-    | Some p ->
-        Fmt.pr
-          "Unknown project: %s (available: sqlite, zarith, ssl, cairo, z3, llvm, tiny-full, tiny/<scenario>)@." p
+        (* run every registry project (the "all" smoke) *)
+        List.iter (fun (_name, pr) -> run_pr pr) Canary_registry.all_projects
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")
-    Term.(const run $ project $ quick $ failfast $ cache_path_arg
-          $ disable_contract_arg $ thin_arg $ const ())
+    Term.(
+      const run $ project $ quick $ failfast $ cache_path_arg
+      $ disable_contract_arg $ thin_arg $ const ())
 
 let spec_cmd =
   let project =
@@ -1084,10 +210,17 @@ let spec_cmd =
       value
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT"
-          ~doc:"Project to snapshot: @all (default) | tiny-full | sqlite | z3 | llvm")
+          ~doc:
+            "Project to snapshot: @all (default) | tiny-full | sqlite | z3 | \
+             llvm")
   in
   let thin =
-    Arg.(value & flag & info [ "thin" ] ~doc:"project_run projects (tiny-full, sqlite, z3, llvm): the thin Subset[Stable] enumeration.")
+    Arg.(
+      value & flag
+      & info [ "thin" ]
+          ~doc:
+            "project_run projects (tiny-full, sqlite, z3, llvm): the thin \
+             Subset[Stable] enumeration.")
   in
   let by_artifact =
     Arg.(
@@ -1102,20 +235,20 @@ let spec_cmd =
       value & flag
       & info [ "json" ]
           ~doc:
-            "Emit JSON (machine-readable; supersedes --by-artifact). With @all, \
-             one object keyed by project — the refactor cross-check.")
+            "Emit JSON (machine-readable; supersedes --by-artifact). With \
+             @all, one object keyed by project — the refactor cross-check.")
   in
   let run proj thin by_artifact json () =
-    let d = lazy (detect_distro ()) in
-    (* Every project is a [project_run] now (A5 phase 5: llvm was the last
-       raw-variant holdout; the variant view [print_spec_variants] retired
-       with it). ssl/zarith/cairo join this command when they migrate. *)
+    (* Every project is a [project_run] now; the registry is the single
+       source of truth. ssl is a [Multi] — no spec view yet. *)
     let show ?policy pr =
       if json then
         print_string
-          (Yojson.Basic.pretty_to_string (spec_json_t ?policy pr) ^ "\n")
-      else if by_artifact then print_artifacts ?policy pr
-      else print_spec ?policy pr
+          (Yojson.Basic.pretty_to_string
+             (Canary_project_run.spec_json_t ?policy pr)
+          ^ "\n")
+      else if by_artifact then Canary_project_run.print_artifacts ?policy pr
+      else Canary_project_run.print_spec ?policy pr
     in
     (* --thin is a runner policy, valid on any project_run *)
     let show_thin pr =
@@ -1123,38 +256,107 @@ let spec_cmd =
       else show pr
     in
     match proj with
-    | Some "tiny-full" ->
-        if thin then
-          show
-            ~policy:(Canary_project_run.thin_policy ())
-            Canary_project_tiny.tiny_full_thin_run
-        else show Canary_project_tiny.tiny_full_run
-    | Some "sqlite" -> show_thin Canary_project_sqlite.sqlite_run
-    | Some "z3" -> show_thin (Canary_project_z3.z3_run (Lazy.force d))
-    | Some "llvm" -> show_thin (Canary_project_llvm.llvm_run (Lazy.force d))
-    | Some "@all" | None ->
-        (* every project's spec in one command — the refactor cross-check *)
+    | Some p when String.length p > 6 && String.sub p 0 6 = "tiny1/" ->
+        let name = String.sub p 6 (String.length p - 6) in
+        show (Canary_project_tiny.project_run_of_tiny1 ~name)
+    | Some "@all" | None -> (
+        (* every registry project's spec — the refactor cross-check *)
         let prs =
-          [ Canary_project_tiny.tiny_full_run; Canary_project_sqlite.sqlite_run;
-            Canary_project_z3.z3_run (Lazy.force d);
-            Canary_project_llvm.llvm_run (Lazy.force d) ]
+          List.map snd Canary_registry.all_projects
         in
         if json then
-          let projects = List.map (fun pr -> spec_json_t pr) prs in
+          let projects =
+            List.map (fun pr -> Canary_project_run.spec_json_t pr) prs
+          in
           print_string
-            (Yojson.Basic.pretty_to_string (`Assoc [ ("projects", `List projects) ])
+            (Yojson.Basic.pretty_to_string
+               (`Assoc [ ("projects", `List projects) ])
             ^ "\n")
-        else List.iter show prs
-    | _ ->
-        Fmt.epr "usage: canary spec <@@all|tiny-full|sqlite|z3|llvm>@.";
-        Stdlib.exit 2
+        else List.iter show prs)
+    | Some name -> (
+        match List.assoc_opt name Canary_registry.all_projects with
+        | Some pr -> show_thin pr
+        | None ->
+            Fmt.epr
+              "usage: canary spec <@all|%s|tiny1/<name>>@."
+              (String.concat "|" (List.map fst Canary_registry.all_projects));
+            Stdlib.exit 2)
   in
   Cmd.v
     (Cmd.info "spec"
-       ~doc:"Dry-run snapshot: declared artifacts (grouped) + enumerated \
-             scenarios (project_run: tiny-full/sqlite) or per-scenario \
-             provisions (raw runner_spec: z3/llvm). No execution.")
+       ~doc:
+         "Dry-run snapshot: declared artifacts (grouped) + enumerated \
+          scenarios (project_run: tiny-full/sqlite) or per-scenario provisions \
+          (raw runner_spec: z3/llvm). No execution.")
     Term.(const run $ project $ thin $ by_artifact $ json $ const ())
+
+(* Static spec-maturity audit (2026-08-13): reads ONLY the declared
+   [project_run] (artifact rows + wrapper pkgs) — no enumeration, no
+   realization. Exit 1 when any project has errors (a gate). *)
+let spec_check_cmd =
+  let project =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:
+            "Project to audit: @all (default) | sqlite | z3 | llvm | tiny-full \
+             | zarith | cairo | libffi | ssl")
+  in
+  let json =
+    Arg.(
+      value & flag
+      & info [ "json" ]
+          ~doc:
+            "Emit JSON (machine-readable; for the web status page). With \
+             @all, an array of reports; a single project, one report object.")
+  in
+  let run proj json () =
+    let has_errors r = not (List.is_empty (Canary_spec_check.errors_of r)) in
+    let show r =
+      if json then
+        print_string
+          (Yojson.Safe.pretty_to_string (Canary_spec_check.report_to_json r)
+          ^ "\n")
+      else Fmt.pr "%s@." (Canary_spec_check.pp_report r)
+    in
+    match proj with
+    | Some "@all" | None ->
+        let reports =
+          List.map (fun (_n, pr) -> Canary_spec_check.check pr)
+            Canary_registry.all_projects
+        in
+        if json then
+          print_string
+            (Yojson.Safe.pretty_to_string
+               (`List (List.map Canary_spec_check.report_to_json reports))
+            ^ "\n")
+        else (
+          Fmt.pr "%s@." Canary_spec_check.legend;
+          List.iter
+            (fun r -> Fmt.pr "%s@.@." (Canary_spec_check.pp_report r))
+            reports;
+          let bad = List.length (List.filter has_errors reports) in
+          Fmt.pr "overall: %d project(s) with errors@." bad);
+        let bad = List.length (List.filter has_errors reports) in
+        if bad > 0 then Stdlib.exit 1
+    | Some name -> (
+        match List.assoc_opt name Canary_registry.all_projects with
+        | Some pr ->
+            let r = Canary_spec_check.check pr in
+            show r;
+            if has_errors r then Stdlib.exit 1
+        | None ->
+            Fmt.epr "usage: canary spec-check <@all|%s>@."
+              (String.concat "|" (List.map fst Canary_registry.all_projects));
+            Stdlib.exit 2)
+  in
+  Cmd.v
+    (Cmd.info "spec-check"
+       ~doc:
+         "Static spec-maturity audit against the three-version-report \
+          readiness checklist (✓/✗/⚠). No execution.")
+    Term.(const run $ project $ json $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a
    project's spec: stages applicable by definition but turned off when
@@ -1165,8 +367,7 @@ let spec_cmd =
    demo needs the freshly-built lib), so `build_lib` is Covered, not
    disabled. "Skip the slow build" for them is a *variant/origin* choice
    (run the fetch/stable variant, or `--quick`), not a stage disable. *)
-let disabled_scenarios_of_project = function
-  | _ -> []
+let disabled_scenarios_of_project = function _ -> []
 
 let scenarios_cmd =
   let project =
@@ -1174,55 +375,30 @@ let scenarios_cmd =
       required
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT"
-          ~doc:"Project (or @all): sqlite, zarith, ssl, cairo, z3, llvm")
+          ~doc:
+            "Project (or @all): sqlite, z3, llvm, tiny-full, tiny, zarith, \
+             ssl, cairo")
   in
   let disable =
     Arg.(
       value & opt_all string []
       & info [ "disable" ] ~docv:"ACTION"
-          ~doc:"Mark a stage disabled (config N/A), e.g. --disable build_lib (repeatable)")
+          ~doc:
+            "Mark a stage disabled (config N/A), e.g. --disable build_lib \
+             (repeatable)")
   in
   let engine =
     Arg.(
       value & flag
       & info [ "engine" ]
-          ~doc:"Render each variant as a provision assignment (engine \
-                projection, ssot §4.2) instead of the coverage matrix")
+          ~doc:
+            "Render each variant as a provision assignment \
+             (engine                 projection, ssot §4.2) instead of the \
+             coverage matrix")
   in
   let run engine_mode disabled project () =
-    let root = "_out" in
-    let distro = detect_distro () in
-    let all_projects =
-      [ "sqlite"; "zarith"; "ssl"; "cairo"; "z3"; "llvm"; "tiny" ]
-    in
-    (* Every variant of a project (mirrors the `action` dispatch), so
-       coverage is the UNION across variants. derive_steps only builds the
-       step list — nothing is run. *)
-    let variants_of p : (string * Canary_step_builder.runner_spec) list =
-      match p with
-      | "sqlite" -> [ ("", Canary_project_sqlite.runner_spec) ]
-      | "zarith" -> [ ("", Canary_project_zarith.runner_spec) ]
-      | "cairo" -> [ ("", Canary_project_cairo.runner_spec) ]
-      | "ssl" -> Canary_project_ssl.variants
-      | "z3" ->
-          [ ("dev",
-             Canary_project_z3.mk_runner_spec
-               ~source:Canary_project_z3.z3_source_dev distro);
-            ("stable",
-             Canary_project_z3.mk_runner_spec
-               ~source:Canary_project_z3.z3_source_stable distro) ]
-      | "llvm" ->
-          [ ("dev",
-             Canary_project_llvm.mk_runner_spec
-               ~source:Canary_project_llvm.llvm_source_dev distro);
-            ("19",
-             Canary_project_llvm.mk_runner_spec
-               ~source:Canary_project_llvm.llvm_source_stable distro) ]
-      | _ -> []
-    in
-    (* The covered action set per project. General projects union their
-       variants' derived steps; tiny uses its designed scenarios
-       (good_scenarios) — one project space, same engine (ssot §4.2). *)
+    (* F5 (2026-08-10) + registry (2026-08-12): every project derives
+       coverage from the enumeration engine ([covered_actions_of]). *)
     let covered_of p : (string * Canary_basic.action list) option =
       match p with
       | "tiny" ->
@@ -1232,28 +408,23 @@ let scenarios_cmd =
                 (fun (s : Canary_scenario.scenario) -> s.actions)
                 Canary_scenario.good_scenarios )
       | _ -> (
-          match variants_of p with
-          | [] -> None
-          | variants ->
+          match List.assoc_opt p Canary_registry.all_projects with
+          | Some pr ->
               Some
-                ( Printf.sprintf "union of %d scenario(s)"
-                    (List.length variants),
-                  List.concat_map
-                    (fun (_, spec) ->
-                      Canary_step_builder.derive_steps ~root ~project:p
-                        ~langs:Canary_lang.[ OCaml; Python ] spec
-                      |> List.map (fun (s : Canary_step_model.step) -> s.action))
-                    variants ))
+                ( "enumerated scenarios",
+                  Canary_project_run.covered_actions_of pr )
+          | None -> None)
     in
     let show p =
       match covered_of p with
       | None ->
-          Printf.printf "Unknown project %s (available: @all, %s).\n" p
-            (String.concat ", " all_projects)
+          Printf.printf
+            "Unknown project %s (available: sqlite, z3, llvm, tiny-full, tiny, \
+             zarith, ssl, cairo).\n"
+            p
       | Some (source_desc, covered0) ->
           let covered = List.sort_uniq Stdlib.compare covered0 in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
-          (* project's canary config + any --disable from this invocation *)
           let all_disabled = disabled_scenarios_of_project p @ disabled in
           let rows =
             Canary_scenario_coverage.coverage ~langs ~covered
@@ -1262,23 +433,14 @@ let scenarios_cmd =
           Printf.printf "\n%s — scenario coverage (%s)\n%s\n" p source_desc
             (Canary_scenario_coverage.pp_rows rows)
     in
-    (* Engine projection (§4.2 provision axis): render each variant as the
-       provision assignment its action set implies, and check it is a valid
-       engine assignment appearing in general_slice. The general-project
-       analogue of `canary tiny engine` (the mutation axis). *)
     let show_engine p =
-      match (variants_of p, covered_of p) with
-      | [], _ | _, None ->
-          Printf.printf
-            "%s: no general-project variants to render (tiny's engine \
-             projection is `canary tiny engine`).\n" p
-      | variants, Some (_, covered0) ->
+      match covered_of p with
+      | None -> Printf.printf "%s: no variants to render.\n" p
+      | Some (_, covered0) ->
           let covered = List.sort_uniq Stdlib.compare covered0 in
           let langs = Canary_scenario_coverage.langs_of_actions covered in
-          (* general projects: one binding per lang at its default (static)
-             mechanism; multiple mechanisms is a tiny-factory concern. *)
           let artifacts =
-            Canary_enumerate.a_source :: Canary_enumerate.a_lib
+            Canary_artifact.a_source :: Canary_enumerate.a_lib
             :: List.map
                  (fun l ->
                    let m =
@@ -1286,7 +448,7 @@ let scenarios_cmd =
                        (Canary_mechanism.default_mechanism_of_lang l)
                        ~default:Canary_mechanism.Cstubs
                    in
-                   Canary_enumerate.a_binding l m)
+                   Canary_artifact.a_binding l m)
                  langs
           in
           let slice =
@@ -1304,46 +466,22 @@ let scenarios_cmd =
             "\n%s — engine projection (general_slice: provision axis)\n" p;
           Printf.printf "  artifacts: %s\n"
             (String.concat ", "
-               (List.map Canary_enumerate.string_of_id artifacts));
-          List.iter
-            (fun (vk, spec) ->
-              let acts =
-                Canary_step_builder.derive_steps ~root ~project:p
-                  ~langs:Canary_lang.[ OCaml; Python ] spec
-                |> List.map (fun (s : Canary_step_model.step) -> s.action)
-              in
-              (* a variant picks one version (actions don't encode it);
-                 dev-keyed variants = Dev, else Stable. *)
-              let version =
-                if String.equal vk "dev" then Canary_basic.Dev
-                else Canary_basic.Stable
-              in
-              let a =
-                Canary_enumerate.assignment_of_actions ~artifacts ~version acts
-              in
-              let valid = Canary_enumerate.assignment_ok a in
-              let in_slice = List.exists (fun sa -> sa = a) slice_assignments in
-              Printf.printf "  [%-6s] %s   (%s, %s)\n"
-                (if String.equal vk "" then "-" else vk)
-                (Canary_enumerate.string_of_assignment a)
-                (if valid then "valid" else "INVALID")
-                (if in_slice then "in-slice \xE2\x9C\x93"
-                 else "NOT in slice \xE2\x9C\x97"))
-            variants;
-          Printf.printf
-            "  general_slice over {absent,fetched,built}: %d valid assignments\n"
+               (List.map Canary_artifact.string_of_id artifacts));
+          Printf.printf "  general_slice: %d valid assignments\n"
             (List.length slice_assignments)
     in
-    if not engine_mode then
-      Printf.printf "%s\n" Canary_scenario_coverage.legend;
+    if not engine_mode then Printf.printf "%s\n" Canary_scenario_coverage.legend;
     let render = if engine_mode then show_engine else show in
     match project with
-    | "@all" | "all" -> List.iter render all_projects
+    | "@all" | "all" ->
+        List.iter render
+          (List.map fst Canary_registry.all_projects @ [ "tiny" ])
     | _ -> render project
   in
   Cmd.v
     (Cmd.info "scenarios"
-       ~doc:"Print store-lifecycle scenario coverage (Covered / unspec / disabled)")
+       ~doc:
+         "Print store-lifecycle scenario coverage (Covered / unspec / disabled)")
     Term.(const run $ engine $ disable $ project $ const ())
 
 let status_cmd =
@@ -1358,15 +496,19 @@ let status_cmd =
     Arg.(
       value & flag
       & info [ "v"; "verbose" ]
-          ~doc:"Per action, show the witness output file(s) and, for xfail/✗, the concrete failure")
+          ~doc:
+            "Per action, show the witness output file(s) and, for xfail/✗, the \
+             concrete failure")
   in
   let run verbose project () =
-    let show p = Canary_status.print_status ~verbose ~root:"_out" ~project:p () in
+    let show p =
+      Canary_status.print_status ~verbose ~root:"_out" ~project:p ()
+    in
     match project with
-    | "@all" | "all" ->
-        (match Canary_status.projects_with_runs ~root:"_out" with
-         | [] -> Printf.printf "No projects with runs under _out yet.\n"
-         | ps -> List.iter show ps)
+    | "@all" | "all" -> (
+        match Canary_status.projects_with_runs ~root:"_out" with
+        | [] -> Printf.printf "No projects with runs under _out yet.\n"
+        | ps -> List.iter show ps)
     | _ -> show project
   in
   Cmd.v
@@ -1624,9 +766,10 @@ let artifact_test_cmd =
 let project_test_cmd =
   Cmd.v
     (Cmd.info "project-test"
-       ~doc:"Test project-definition layers (action consumes/produces, \
-             detection inventory) + live project-spec pins (z3) — pure, \
-             hermetic, no PM/build.")
+       ~doc:
+         "Test project-definition layers (action consumes/produces, detection \
+          inventory) + live project-spec pins (z3) — pure, hermetic, no \
+          PM/build.")
     (term_of (fun () ->
          let ok =
            Canary_project_test.run_tests ~extra:Canary_projects_test.tests ()
@@ -1636,8 +779,9 @@ let project_test_cmd =
 let cache_test_cmd =
   Cmd.v
     (Cmd.info "cache-test"
-       ~doc:"Run-cache soundness: a failed step must not be served as a \
-             cached success on rerun (bug B / cache.md).")
+       ~doc:
+         "Run-cache soundness: a failed step must not be served as a cached \
+          success on rerun (bug B / cache.md).")
     (term_of (fun () ->
          let ok = Canary_cache_test.run_tests () in
          if not ok then Stdlib.exit 1))
@@ -1645,9 +789,9 @@ let cache_test_cmd =
 let mutation_test_cmd =
   Cmd.v
     (Cmd.info "mutation-test"
-       ~doc:"Test artifact mutation primitives \
-             (apply_patch_cmd, apply_soname_bump_cmds) \
-             using tiny's real .patch fixtures.")
+       ~doc:
+         "Test artifact mutation primitives (apply_patch_cmd, \
+          apply_soname_bump_cmds) using tiny's real .patch fixtures.")
     (term_of (fun () ->
          let ok = Canary_artifact_mutation_test.run_tests () in
          if not ok then Stdlib.exit 1))
@@ -1842,13 +986,30 @@ let tiny_scenarios_expected_cmd =
   Cmd.v
     (Cmd.info "expected"
        ~doc:"Print scenario's per-step expected outcomes as JSON")
-    Term.(const (fun n () -> Canary_tiny_scenario.print_expected n) $ name $ const ())
+    Term.(
+      const (fun n () -> Canary_tiny_scenario.print_expected n)
+      $ name $ const ())
+
+let tiny_scenarios_expected_all_cmd =
+  Cmd.v
+    (Cmd.info "expected-all"
+       ~doc:
+         "Print all 22 scenarios with canary expected outcomes (shared \
+          reference)")
+    (term_of (fun () -> Canary_tiny_scenario.print_expected_table ()))
+
+let tiny_scenarios_scenario_cmd =
+  Cmd.v
+    (Cmd.info "scenario"
+       ~doc:"Print old→canonical name mapping for all 22 scenarios")
+    (term_of (fun () -> Canary_tiny_scenario.print_canonical_names ()))
 
 let tiny_scenarios_baseline_cmd =
   Cmd.v
     (Cmd.info "baseline"
-       ~doc:"Build clean + run every inspector + materialize workspace \
-             under _cache/baseline/.")
+       ~doc:
+         "Build clean + run every inspector + materialize workspace under \
+          _cache/baseline/.")
     (term_of (fun () -> Canary_tiny_workspace.run_baseline ()))
 
 let tiny_scenarios_prepare_cmd =
@@ -1860,15 +1021,19 @@ let tiny_scenarios_prepare_cmd =
   in
   Cmd.v
     (Cmd.info "prepare"
-       ~doc:"Apply scenario mutation in a sandbox, build, inspect, \
-             compute surface delta vs baseline, materialize workspace.")
-    Term.(const (fun n () -> Canary_tiny_workspace.run_prepare ~name:n) $ name $ const ())
+       ~doc:
+         "Apply scenario mutation in a sandbox, build, inspect, compute \
+          surface delta vs baseline, materialize workspace.")
+    Term.(
+      const (fun n () -> Canary_tiny_workspace.run_prepare ~name:n)
+      $ name $ const ())
 
 let tiny_scenarios_prepare_all_cmd =
   Cmd.v
     (Cmd.info "prepare-all"
-       ~doc:"Run `prepare` for every scenario sequentially. \
-             Auto-runs baseline first if missing.")
+       ~doc:
+         "Run `prepare` for every scenario sequentially. Auto-runs baseline \
+          first if missing.")
     (term_of (fun () -> Canary_tiny_workspace.run_prepare_all ()))
 
 let tiny_scenarios_confirm_cmd =
@@ -1880,33 +1045,39 @@ let tiny_scenarios_confirm_cmd =
   in
   Cmd.v
     (Cmd.info "confirm"
-       ~doc:"Print the cached confirm_ill.json for <name> (surface \
-             delta vs baseline; produced by `prepare`).")
-    Term.(const (fun n () -> Canary_tiny_workspace.confirm ~name:n) $ name $ const ())
+       ~doc:
+         "Print the cached confirm_ill.json for <name> (surface delta vs \
+          baseline; produced by `prepare`).")
+    Term.(
+      const (fun n () -> Canary_tiny_workspace.confirm ~name:n)
+      $ name $ const ())
 
 let tiny_scenarios_assemble_cmd =
   let id =
     Arg.(
       value & opt string ""
       & info [ "id" ] ~docv:"ID"
-          ~doc:"Resource id (auto-derived from TAG when omitted): lib | \
-                binding:ocaml:cstubs | binding:python:cext")
+          ~doc:
+            "Resource id (auto-derived from TAG when omitted): lib | \
+             binding:ocaml:cstubs | binding:python:cext")
   in
   let tag =
     Arg.(
       value
       & pos 0 (some string) None
       & info [] ~docv:"TAG"
-          ~doc:"Bad-variant tag = a scenario id (see `tiny list`), e.g. Bs.4 \
-                (lib), Bs.8 (ocaml binding), Bs.11 (python cext). Omit to LIST \
-                all assemblable resources.")
+          ~doc:
+            "Bad-variant tag = a scenario id (see `tiny list`), e.g. Bs.4 \
+             (lib), Bs.8 (ocaml binding), Bs.11 (python cext). Omit to LIST \
+             all assemblable resources.")
   in
   Cmd.v
     (Cmd.info "assemble-check"
-       ~doc:"P3 step 2 (cached-artifact assembler): with no TAG, list all \
-             assemblable cached artifacts; with a TAG, cache the artifact it \
-             targets and assemble it onto the witness base. Run `tiny \
-             prepare-all` first.")
+       ~doc:
+         "P3 step 2 (cached-artifact assembler): with no TAG, list all \
+          assemblable cached artifacts; with a TAG, cache the artifact it \
+          targets and assemble it onto the witness base. Run `tiny \
+          prepare-all` first.")
     Term.(
       const (fun id tag () ->
           match tag with
@@ -1924,39 +1095,45 @@ let tiny_scenarios_assemble_run_cmd =
   in
   Cmd.v
     (Cmd.info "assemble-run"
-       ~doc:"P3 step 2: assemble the vendored tree for <TAG> (bad resource \
-             overlaid on the witness base) and RUN canary over it; a PASS \
-             means canary detected the failure from the assembled tree. Run \
-             `tiny prepare-all` first.")
+       ~doc:
+         "P3 step 2: assemble the vendored tree for <TAG> (bad resource \
+          overlaid on the witness base) and RUN canary over it; a PASS means \
+          canary detected the failure from the assembled tree. Run `tiny \
+          prepare-all` first.")
     Term.(
-      const (fun tag () -> run_assembled ~root:"_out" ~failfast:true ~tag)
+      const (fun tag () ->
+          Canary_project_tiny.run_assembled ~root:"_out" ~failfast:true ~tag)
       $ tag $ const ())
 
 let tiny_scenarios_built_check_cmd =
   Cmd.v
     (Cmd.info "built-check"
-       ~doc:"Provision = Built demo: materialize a source-only-lib tree (no \
-             pre-built libtiny.so) and run canary — its build_lib COMPILES the \
-             lib from c/src (observable) then probes. PASS = built + green. \
-             Run `tiny prepare-all` first.")
-    (term_of (fun () -> run_built_lib ~root:"_out"))
+       ~doc:
+         "Provision = Built demo: materialize a source-only-lib tree (no \
+          pre-built libtiny.so) and run canary — its build_lib COMPILES the \
+          lib from c/src (observable) then probes. PASS = built + green. Run \
+          `tiny prepare-all` first.")
+    (term_of (fun () -> Canary_project_tiny.run_built_lib ~root:"_out"))
 
 let tiny_scenarios_assemble_combo_cmd =
   let tags =
     Arg.(
       value & pos_all string []
       & info [] ~docv:"TAG..."
-          ~doc:"Two or more bad-variant tags to assemble TOGETHER (a \
-                combination), e.g. Bs.1 Bs.8. Runs with the agnostic \
-                expectation; PASS = canary computed the collapse.")
+          ~doc:
+            "Two or more bad-variant tags to assemble TOGETHER (a \
+             combination), e.g. Bs.1 Bs.8. Runs with the agnostic expectation; \
+             PASS = canary computed the collapse.")
   in
   Cmd.v
     (Cmd.info "assemble-combo"
-       ~doc:"P3: assemble a MULTI-bad resource-set (the scenarios beyond \
-             tiny1) and run canary over it; the fail-fast collapse is \
-             emergent. Run `tiny prepare-all` first.")
+       ~doc:
+         "P3: assemble a MULTI-bad resource-set (the scenarios beyond tiny1) \
+          and run canary over it; the fail-fast collapse is emergent. Run \
+          `tiny prepare-all` first.")
     Term.(
-      const (fun tags () -> run_assembled_combo ~root:"_out" ~tags)
+      const (fun tags () ->
+          Canary_project_tiny.run_assembled_combo ~root:"_out" ~tags)
       $ tags $ const ())
 
 (* ── tiny run / tiny status ─────────────────────────────────────
@@ -1966,16 +1143,15 @@ let tiny_scenarios_assemble_combo_cmd =
    most recent run of each scenario. Results persist at
    _out/canary/projects/tiny/results.json. *)
 
-let tiny_results_path =
-  "_out/canary/projects/tiny/results.json"
+let tiny_results_path = "_out/canary/projects/tiny/results.json"
 
 let save_tiny_results (results : (string * string) list) : unit =
   let json =
-    `List (List.map (fun (name, status) ->
-      `Assoc [
-        "name", `String name;
-        "status", `String status;
-      ]) results)
+    `List
+      (List.map
+         (fun (name, status) ->
+           `Assoc [ ("name", `String name); ("status", `String status) ])
+         results)
   in
   let _ = Stdlib.Sys.command "mkdir -p _out/canary/projects/tiny" in
   let oc = Stdlib.open_out tiny_results_path in
@@ -1988,12 +1164,14 @@ let load_tiny_results () : (string * string) list =
   else
     match Yojson.Basic.from_file tiny_results_path with
     | `List xs ->
-      List.filter_map (function
-        | `Assoc a ->
-          (match List.assoc_opt "name" a, List.assoc_opt "status" a with
-           | Some (`String n), Some (`String s) -> Some (n, s)
-           | _ -> None)
-        | _ -> None) xs
+        List.filter_map
+          (function
+            | `Assoc a -> (
+                match (List.assoc_opt "name" a, List.assoc_opt "status" a) with
+                | Some (`String n), Some (`String s) -> Some (n, s)
+                | _ -> None)
+            | _ -> None)
+          xs
     | _ -> []
 
 let run_tiny_all_and_collect () : unit =
@@ -2001,41 +1179,39 @@ let run_tiny_all_and_collect () : unit =
   let results = ref [] in
   let n_total = List.length Canary_tiny_scenario.scenario_specs in
   let n_bad =
-    List.length (List.filter
-      (fun (e : Canary_tiny_scenario.scenario_spec) ->
-        Option.is_some e.scenario.origin)
-      Canary_tiny_scenario.scenario_specs) in
+    List.length
+      (List.filter
+         (fun (e : Canary_tiny_scenario.scenario_spec) ->
+           Option.is_some e.scenario.origin)
+         Canary_tiny_scenario.scenario_specs)
+  in
   let n_good = n_total - n_bad in
   Fmt.pr
-    "Running %d tiny scenarios: %d bad (Bs.N, all Mutation-origin \
-     today — canary should catch each) + %d good (Sc.N runs — \
-     canary should stay quiet).@.@."
+    "Running %d tiny scenarios: %d bad (Bs.N, all Mutation-origin today — \
+     canary should catch each) + %d good (Sc.N runs — canary should stay \
+     quiet).@.@."
     n_total n_bad n_good;
   Canary_tiny_scenario.iter_scenario_specs
     ~f:(fun ~index ~total ~(spec : Canary_tiny_scenario.scenario_spec) ->
       let sc = spec.scenario in
       Fmt.pr "[%d/%d] %-11s %-30s ... @?" index total sc.id sc.name;
       (try
-         run_tiny_scenario ~root ~failfast:false ~cache_path:None
-           ~cli_disabled:[] ~name:sc.name ()
+         Canary_project_tiny.run_tiny_scenario ~root ~failfast:false
+           ~cache_path:None ~cli_disabled:[] ~name:sc.name ()
        with _ -> ());
-      let status = scenario_status_of_run_state () in
+      let status = Canary_project_run.scenario_status_of_run_state () in
       Fmt.pr "%s@." status;
       results := (sc.name, status) :: !results);
   let results = List.rev !results in
   save_tiny_results results;
   Fmt.pr "@.Results saved to %s@." tiny_results_path;
-  let n_pass =
-    List.length (List.filter (fun (_, s) -> s = "PASS") results) in
-  let n_fail =
-    List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
+  let n_pass = List.length (List.filter (fun (_, s) -> s = "PASS") results) in
+  let n_fail = List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
   Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
-
 
 let show_tiny_status () : unit =
   let results = load_tiny_results () in
-  if results = [] then
-    Fmt.pr "No results yet. Run `canary tiny run` first.@."
+  if results = [] then Fmt.pr "No results yet. Run `canary tiny run` first.@."
   else begin
     Fmt.pr "Tiny scenario status (from %s):@.@." tiny_results_path;
     let status_of name =
@@ -2044,49 +1220,52 @@ let show_tiny_status () : unit =
       | None -> Some "(not run)"
     in
     Canary_tiny_scenario.print_list ~status_of ();
-    let n_pass =
-      List.length (List.filter (fun (_, s) -> s = "PASS") results) in
-    let n_fail =
-      List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
+    let n_pass = List.length (List.filter (fun (_, s) -> s = "PASS") results) in
+    let n_fail = List.length (List.filter (fun (_, s) -> s = "FAIL") results) in
     Fmt.pr "Total: %d PASS, %d FAIL@." n_pass n_fail
   end
 
 let tiny_scenarios_run_cmd =
   Cmd.v
     (Cmd.info "run"
-       ~doc:"Run tiny1 — every single-scenario tiny project from the \
-             factory — collect PASS/FAIL, save to \
-             _out/canary/projects/tiny/results.json. (status.md §1a.)")
+       ~doc:
+         "Run tiny1 — every single-scenario tiny project from the factory — \
+          collect PASS/FAIL, save to _out/canary/projects/tiny/results.json. \
+          (status.md §1a.)")
     (term_of (fun () -> run_tiny_all_and_collect ()))
 
 let tiny_scenarios_status_cmd =
   Cmd.v
     (Cmd.info "status"
-       ~doc:"Show the last-run status for every tiny scenario. Reads \
-             _out/canary/projects/tiny/results.json. Run `tiny run` \
-             first to populate it.")
+       ~doc:
+         "Show the last-run status for every tiny scenario. Reads \
+          _out/canary/projects/tiny/results.json. Run `tiny run` first to \
+          populate it.")
     (term_of (fun () -> show_tiny_status ()))
-
 
 let tiny_scenarios_engine_cmd =
   Cmd.v
     (Cmd.info "engine"
-       ~doc:"Render tiny's scenarios as a projection of the shared \
-             enumeration engine (all Built × mutation axis); reports the \
-             tiny↔engine correspondence. See ssot §4.2.")
+       ~doc:
+         "Render tiny's scenarios as a projection of the shared enumeration \
+          engine (all Built × mutation axis); reports the tiny↔engine \
+          correspondence. See ssot §4.2.")
     (term_of (fun () -> Canary_tiny_scenario.print_engine_render ()))
 
 let tiny_scenarios_cmd =
   Cmd.group
     (Cmd.info "tiny"
-       ~doc:"Tiny scenario helpers — list, expected, baseline, \
-             prepare, prepare-all, confirm, engine. See \
-             doc/canary/design/tiny.md.")
-    [ tiny_scenarios_list_cmd;
+       ~doc:
+         "Tiny scenario helpers — list, expected, baseline, prepare, \
+          prepare-all, confirm, engine. See doc/canary/design/tiny.md.")
+    [
+      tiny_scenarios_list_cmd;
       tiny_scenarios_run_cmd;
       tiny_scenarios_engine_cmd;
       tiny_scenarios_status_cmd;
       tiny_scenarios_expected_cmd;
+      tiny_scenarios_expected_all_cmd;
+      tiny_scenarios_scenario_cmd;
       tiny_scenarios_baseline_cmd;
       tiny_scenarios_prepare_cmd;
       tiny_scenarios_prepare_all_cmd;
@@ -2094,7 +1273,8 @@ let tiny_scenarios_cmd =
       tiny_scenarios_assemble_cmd;
       tiny_scenarios_assemble_run_cmd;
       tiny_scenarios_assemble_combo_cmd;
-      tiny_scenarios_built_check_cmd ]
+      tiny_scenarios_built_check_cmd;
+    ]
 
 let summary_diff_cmd =
   let old_ =
@@ -2140,12 +1320,13 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
       ~versions ~name ~source:Canary_store.store ~app_mode ~vendored:true ()
   in
   let applicable = CA.node_applicable ~provisions_of_kind in
-  Fmt.pr "@.graph construction: %s (source versions: %s; app runtime = %s)@." name
+  Fmt.pr "@.graph construction: %s (source versions: %s; app runtime = %s)@."
+    name
     (String.concat ", " (List.map chan_str versions))
     (match app_mode with
-     | CA.Lockstep -> "Lockstep (matched chain)"
-     | CA.Independent -> "Independent (mismatch cartesian)"
-     | CA.Ambient _ -> "Ambient");
+    | CA.Lockstep -> "Lockstep (matched chain)"
+    | CA.Independent -> "Independent (mismatch cartesian)"
+    | CA.Ambient _ -> "Ambient");
   Fmt.pr
     "  UNIVERSAL graph (make_action_graph), marked by the project's \
      ps_provisions_of — APPLICABLE nodes = the project's real scenarios; the \
@@ -2172,7 +1353,8 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
           | Some build_lib
             when not
                    (Canary_enumerate.equal_version build_lib.CA.version
-                      rl.CA.version) -> "   ⚠ DEPLOY MISMATCH"
+                      rl.CA.version) ->
+              "   ⚠ DEPLOY MISMATCH"
           | _ -> "")
       | _ -> ""
     in
@@ -2200,7 +1382,9 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
       (fun acc (_, nodes) -> acc + List.length (List.filter applicable nodes))
       0 g.CA.pools
   in
-  let total = List.fold_left (fun acc (_, ns) -> acc + List.length ns) 0 g.CA.pools in
+  let total =
+    List.fold_left (fun acc (_, ns) -> acc + List.length ns) 0 g.CA.pools
+  in
   Fmt.pr
     "@.  execution set: %d applicable / %d total nodes (deduped by node_tag). \
      The run walks the APPLICABLE nodes in the order above; the %d-node \
@@ -2239,7 +1423,8 @@ let print_construction ~(name : string) ~(app_mode : Canary_action.dep_mode)
 let construct_cmd =
   let project =
     Arg.(
-      value & pos 0 (some string) None
+      value
+      & pos 0 (some string) None
       & info [] ~docv:"PROJECT" ~doc:"tiny-full | sqlite")
   in
   let matched =
@@ -2251,14 +1436,14 @@ let construct_cmd =
              default Independent (mismatch cartesian).")
   in
   (* the project's capability = its ps_provisions_of, keyed by kind (the mark). *)
-  let prov_of_spec (spec : Canary_enumerate.project_spec)
+  let prov_of_spec (spec : Canary_artifact.project_spec)
       (k : Canary_basic.artifact_kind) : Canary_store.provision list =
     match
       List.find_opt
-        (fun aid -> Canary_enumerate.kind_of aid = k)
-        (Canary_enumerate.ps_artifacts spec)
+        (fun aid -> Canary_artifact.kind_of aid = k)
+        (Canary_artifact.ps_artifacts spec)
     with
-    | Some aid -> Canary_enumerate.ps_provisions_of spec aid
+    | Some aid -> Canary_artifact.ps_provisions_of spec aid
     | None -> []
   in
   (* tiny-full's real capability (its spec's ps_provisions_of is Vendored-only;
@@ -2316,6 +1501,7 @@ let () =
         project_test_cmd;
         cache_test_cmd;
         spec_cmd;
+        spec_check_cmd;
         mutation_test_cmd;
         artifact_inspect_cmd;
         summary_diff_cmd;

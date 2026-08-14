@@ -3,6 +3,60 @@
    Spec is a thin declaration over canary_pattern_a; the real shape is in
    canary_pattern_a.runner_spec. *)
 
+(* The C API declaration (2026-08-13, spec-check fulfillment): the native
+   surface is GMP (system libgmp-dev — headers come from the -dev package,
+   not the source repo, so [headers = None]; the symbol watchlists carry
+   the surface). The declared SOURCE is the ocaml/Zarith repo (the
+   binding + its C stubs — the fixable, github-reportable half; GMP's own
+   tar/mailing-list repo is a later refinement). *)
+let zarith_native_watchlist = [
+  "__gmpz_init";
+  "__gmpz_clear";
+  "__gmpz_set_str";
+  "__gmpz_add";
+  "__gmpz_mul";
+  "__gmpz_pow_ui";
+  "__gmpz_get_str";
+]
+
+let zarith_ocaml_watchlist = [ "Z"; "Q"; "Big_int_Z"; "Zarith_version" ]
+
+let zarith_api_source : Canary_artifact.t =
+  { Canary_artifact.native_api =
+      { kind = Canary_artifact.C;
+        components = [ Canary_artifact.Runtime_lib ];
+        headers = None;
+        symbol_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmp_" ];
+        stable_symbols = zarith_native_watchlist;
+        versioned_symbols = [];
+        soname = None;
+        c_runtime = None;
+        cxx_abi = None };
+    binding_apis =
+      [ { Canary_artifact.lang = Canary_lang.OCaml;
+          source_dir = None;
+          module_watchlist = zarith_ocaml_watchlist;
+          type_watchlist = [] } ] }
+
+let zarith_source_stable : Canary_artifact_source.source_repo =
+  { Canary_artifact_source.name = "zarith";
+    remote =
+      Canary_artifact_source.Git_remote "https://github.com/ocaml/Zarith.git";
+    locals = [];
+    version = Canary_basic.{ channel = Canary_basic.Stable; id = "1.14" };
+    ref_ = "release-1.14";
+    official = true;
+    build_sys_deps = [];
+    api_source = Some zarith_api_source }
+
+(* master stays declared as the unwired latest channel — the
+   per-(artifact × channel) source provider is the not-yet-wired
+   provenance refinement. *)
+let zarith_source_dev : Canary_artifact_source.source_repo =
+  { zarith_source_stable with
+    version = Canary_basic.{ channel = Canary_basic.Dev; id = "master" };
+    ref_ = "master" }
+
 let decl : Canary_pattern_a.t = {
   name = "zarith";
   opam_pkg = "zarith";
@@ -21,18 +75,16 @@ let decl : Canary_pattern_a.t = {
   native_inspect_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmp_" ];
   (* Decades-stable GMP integer ops. Removing one would be a major upstream
      break — exactly the bellwether the watchlist is for. *)
-  native_watchlist = [
-    "__gmpz_init";
-    "__gmpz_clear";
-    "__gmpz_set_str";
-    "__gmpz_add";
-    "__gmpz_mul";
-    "__gmpz_pow_ui";
-    "__gmpz_get_str";
-  ];
+  native_watchlist = zarith_native_watchlist;
   (* zarith ships four compilation units (verified via ocamlobjinfo on
      zarith.cmxa). Drift here would be a major version bump. *)
-  ocaml_module_watchlist = [ "Z"; "Q"; "Big_int_Z"; "Zarith_version" ];
+  ocaml_module_watchlist = zarith_ocaml_watchlist;
+  source = Some zarith_source_stable;
+  binding_mechanism = Canary_mechanism.Cstubs;
 }
 
 let runner_spec = Canary_pattern_a.runner_spec decl
+
+(* Registry entry: Pattern A's typed artifact table + the template's
+   runner_spec (single scenario: source + lib + binding Fetched@Stable). *)
+let zarith_run : Canary_project_run.project_run = Canary_pattern_a.run decl

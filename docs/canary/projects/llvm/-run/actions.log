@@ -1,379 +1,269 @@
-[2026-07-21 14:58:53.106] *                          variant_start  (dev_ab43cb8)
-[2026-07-21 14:58:53.106] *                          graph_start  (27 steps)
-[2026-07-21 14:58:53.106] fetch_source               check_pre  (pass)
-[2026-07-21 14:58:53.108] fetch_source               cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project && echo '/home/red/code/contrib/llvm-all/llvm-project' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/source_dev_ab43cb8.ok)
-[2026-07-21 14:58:53.109] fetch_source               check_post  (pass)
-[2026-07-21 14:58:53.109] fetch_source               done
-[2026-07-21 14:58:53.109] scan_source                check_pre  (pass)
-[2026-07-21 14:58:53.111] scan_source                cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Analysis.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/BitReader.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/BitWriter.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Comdat.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Core.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DataTypes.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DebugInfo.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Deprecated.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Disassembler.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DisassemblerTypes.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Error.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ErrorHandling.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ExecutionEngine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ExternC.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/IRReader.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/LLJIT.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/LLJITUtils.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Linker.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Object.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Orc.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/OrcEE.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Remarks.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Support.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Target.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/TargetMachine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Types.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Visibility.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/blake3.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/lto.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/AggressiveInstCombine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/IPO.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/InstCombine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/PassBuilder.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Scalar.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Utils.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Vectorize.h
-test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/bindings/ocaml
-echo 'scan ok' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/scan_dev_ab43cb8.ok)
-[2026-07-21 14:58:53.112] scan_source                check_post  (pass)
-[2026-07-21 14:58:53.112] scan_source                done
-[2026-07-21 14:58:53.112] configure                  check_pre  (pass)
-[2026-07-21 14:58:53.114] configure                  cmd  (eval $(opam env) && cmake -S /home/red/code/contrib/llvm-all/llvm-project/llvm -B /home/red/code/contrib/llvm-all/build -G Ninja -DCMAKE_C_COMPILER=clang-23 -DCMAKE_CXX_COMPILER=clang++-23 -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache -DLLVM_USE_LINKER=mold -DLLVM_OPTIMIZED_TABLEGEN=ON -DLLVM_PARALLEL_LINK_JOBS=8 -DLLVM_ENABLE_BINDINGS=ON -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_LINK_LLVM_DYLIB=ON -DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_ENABLE_PROJECTS="" -DLLVM_ENABLE_RUNTIMES="" -DLLVM_BUILD_TOOLS=OFF -DLLVM_BUILD_EXAMPLES=OFF -DLLVM_INCLUDE_TESTS=OFF -DLLVM_INCLUDE_BENCHMARKS=OFF -DLLVM_INCLUDE_DOCS=OFF -DLLVM_BUILD_RUNTIME=OFF -DLLVM_ENABLE_ASSERTIONS=OFF && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/configure/conf_dev_ab43cb8.ok)
-[2026-07-21 14:58:53.806] configure                  check_post  (pass)
-[2026-07-21 14:58:53.806] configure                  done
-[2026-07-21 14:58:53.806] build_headers              check_pre  (pass)
-[2026-07-21 14:58:53.809] build_headers              cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_headers/headers_dev_ab43cb8.ok)
-[2026-07-21 14:58:53.809] build_headers              check_post  (pass)
-[2026-07-21 14:58:53.809] build_headers              done
-[2026-07-21 14:58:53.809] build_lib                  check_pre  (pass)
-[2026-07-21 14:58:53.811] build_lib                  cmd  (ninja -C /home/red/code/contrib/llvm-all/build LLVM && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_lib/build_dev_ab43cb8.ok)
-[2026-07-21 14:58:53.924] build_lib                  check_post  (pass)
-[2026-07-21 14:58:53.924] build_lib                  done
-[2026-07-21 14:58:53.924] install_lib                check_pre  (pass)
-[2026-07-21 14:58:53.927] install_lib                cmd  (PREFIX="/home/red/code/contrib/llvm-all/build/../install"
-mkdir -p "$PREFIX/lib"
-cp /home/red/code/contrib/llvm-all/build/lib/libLLVM*.so "$PREFIX/lib/" 2>/dev/null || true
-echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/install_lib/install_dev_ab43cb8.ok)
-[2026-07-21 14:58:54.025] install_lib                check_post  (pass)
-[2026-07-21 14:58:54.025] install_lib                done
-[2026-07-21 14:58:54.025] fetch_lib                  check_pre  (pass)
-[2026-07-21 14:58:54.028] fetch_lib                  cmd  (sudo apt-get install -y llvm-19-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_lib/lib_dev_ab43cb8.ok)
-[2026-07-21 14:58:54.355] fetch_lib                  check_post  (pass)
-[2026-07-21 14:58:54.355] fetch_lib                  done
-[2026-07-21 14:58:54.355] build_binding_ocaml        check_pre  (pass)
-[2026-07-21 14:58:54.358] build_binding_ocaml        cmd  (eval $(opam env) && ninja -C /home/red/code/contrib/llvm-all/build ocaml_all && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_binding/ocaml/build_dev_ab43cb8.ok)
-[2026-07-21 14:58:54.520] build_binding_ocaml        check_post  (pass)
-[2026-07-21 14:58:54.520] build_binding_ocaml        done
-[2026-07-21 14:58:54.520] fetch_binding_ocaml        check_pre  (pass)
-[2026-07-21 14:58:54.523] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install llvm.19-shared -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/binding_dev_ab43cb8.ok)
-[2026-07-21 14:58:55.436] fetch_binding_ocaml        check_post  (pass)
-[2026-07-21 14:58:55.436] fetch_binding_ocaml        done
-[2026-07-21 14:58:55.436] fetch_binding_ocaml_inspect  check_pre  (pass)
-[2026-07-21 14:58:55.438] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
-  --watchlist 'Llvm,Llvm_analysis,Llvm_bitreader,Llvm_bitwriter,Llvm_target,Llvm_executionengine,Llvm.Opcode,Llvm.Opcode.UncondBr' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/inspect_dev_ab43cb8.json)
-[2026-07-21 14:58:55.500] fetch_binding_ocaml_inspect  check_post  (pass)
-[2026-07-21 14:58:55.500] fetch_binding_ocaml_inspect  done
-[2026-07-21 14:58:55.500] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
-[2026-07-21 14:58:55.502] fetch_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
-  --prefix 'LLVM' --watchlist '' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/inspect_stub_dev_ab43cb8.json)
-[2026-07-21 14:58:55.600] fetch_binding_ocaml_stub_inspect  check_post  (pass)
-[2026-07-21 14:58:55.600] fetch_binding_ocaml_stub_inspect  done
-[2026-07-21 14:58:55.600] pack_binding_ocaml         check_pre  (pass)
-[2026-07-21 14:58:55.603] pack_binding_ocaml         cmd  (eval $(opam env)
-printf 'opam-version: "2.0"\n' > "/home/red/code/research/tola/canary/templates/opam-local-repo/repo"
-opam repo remove canary-local 2>/dev/null || true
-opam repo add canary-local "file:///home/red/code/research/tola/canary/templates/opam-local-repo" --rank=1
-opam update canary-local
-CANARY_BUILD_DIR="/home/red/code/contrib/llvm-all/build" opam install -y conf-llvm-shared.dev --assume-depexts
-opam remove -y llvm.dev-shared || true
-CANARY_BUILD_DIR="/home/red/code/contrib/llvm-all/build" opam install -y llvm.dev-shared --verbose --keep-build-dir --assume-depexts \
-  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/pack_binding/ocaml/pack_dev_ab43cb8.ok)
-[2026-07-21 14:59:13.598] pack_binding_ocaml         check_post  (pass)
-[2026-07-21 14:59:13.598] pack_binding_ocaml         done
-[2026-07-21 14:59:13.598] pack_binding_ocaml_inspect  check_pre  (pass)
-[2026-07-21 14:59:13.600] pack_binding_ocaml_inspect  cmd  (eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
-  --watchlist 'Llvm,Llvm_analysis,Llvm_bitreader,Llvm_bitwriter,Llvm_target,Llvm_executionengine,Llvm.Opcode,Llvm.Opcode.UncondBr' > /home/red/code/research/tola/_out/canary/projects/llvm/pack_binding/ocaml/inspect_dev_ab43cb8.json)
-[2026-07-21 14:59:13.661] pack_binding_ocaml_inspect  check_post  (pass)
-[2026-07-21 14:59:13.661] pack_binding_ocaml_inspect  done
-[2026-07-21 14:59:13.661] pack_binding_ocaml_stub_inspect  check_pre  (pass)
-[2026-07-21 14:59:13.663] pack_binding_ocaml_stub_inspect  cmd  (eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
-  --prefix 'LLVM' --watchlist '' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/pack_binding/ocaml/inspect_stub_dev_ab43cb8.json)
-[2026-07-21 14:59:13.763] pack_binding_ocaml_stub_inspect  check_post  (pass)
-[2026-07-21 14:59:13.763] pack_binding_ocaml_stub_inspect  done
-[2026-07-21 14:59:13.763] probe_binding_ocaml        check_pre  (pass)
-[2026-07-21 14:59:13.765] probe_binding_ocaml        cmd  (eval $(opam env)
-STUB=$(ls /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-python3 canary/scripts/assert_binary_symbols.py --provided-lib /home/red/code/contrib/llvm-all/build/lib/libLLVM.so --required-lib "$STUB" \
-  --symbol-prefix LLVM 2>&1 | tee /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/symbols_dev_ab43cb8.log
-grep -q 'OK:' /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/symbols_dev_ab43cb8.log
-LLVM_CONFIG=/home/red/code/contrib/llvm-all/build/bin/llvm-config ocamlopt \
-  -I /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/llvm.cmxa /home/red/code/research/tola/canary/examples/llvm/llvm_example_dev.ml \
-  -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_dev_ab43cb8.log 2>&1 || exit 1
-/home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_dev_ab43cb8.log 2>&1)
-[2026-07-21 14:59:14.076] probe_binding_ocaml        check_post  (pass)
-[2026-07-21 14:59:14.076] probe_binding_ocaml        done
-[2026-07-21 14:59:14.076] probe_binding_ocaml_opam   check_pre  (pass)
-[2026-07-21 14:59:14.079] probe_binding_ocaml_opam   cmd  (eval $(opam env)
-ocamlfind ocamlopt -package llvm -linkpkg /home/red/code/research/tola/canary/examples/llvm/llvm_example_dev.ml \
-  -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml_opam/llvm_example > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml_opam/probe_dev_ab43cb8.log 2>&1 || exit 1
-/home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml_opam/llvm_example >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml_opam/probe_dev_ab43cb8.log 2>&1)
-[2026-07-21 14:59:14.188] probe_binding_ocaml_opam   check_post  (pass)
-[2026-07-21 14:59:14.188] probe_binding_ocaml_opam   done
-[2026-07-21 14:59:14.188] probe_app_ocaml            check_pre  (pass)
-[2026-07-21 14:59:14.191] probe_app_ocaml            cmd  ((pip install --quiet llvmlite 2>/dev/null \
- || python3 -m pip install --quiet llvmlite 2>/dev/null \
- || uv pip install --quiet llvmlite)
-python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_app_ocaml/probe_dev_ab43cb8.log 2>&1)
-[2026-07-21 14:59:14.282] probe_app_ocaml            check_post  (pass)
-[2026-07-21 14:59:14.282] probe_app_ocaml            done
-[2026-07-21 14:59:14.282] fetch_binding_python       check_pre  (pass)
-[2026-07-21 14:59:14.285] fetch_binding_python       cmd  (set -e
-INSTALL_LOG=/home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/python/install_dev_ab43cb8.log
-if command -v pip >/dev/null 2>&1; then
-  pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-elif python3 -m pip --version >/dev/null 2>&1; then
-  python3 -m pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-elif command -v uv >/dev/null 2>&1; then
-  uv pip install --quiet llvmlite > "$INSTALL_LOG" 2>&1
-else
-  echo "no pip / python3 -m pip / uv pip available" > "$INSTALL_LOG"
-  exit 1
-fi
-echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/python/binding_dev_ab43cb8.ok)
-[2026-07-21 14:59:14.308] fetch_binding_python       check_post  (pass)
-[2026-07-21 14:59:14.308] fetch_binding_python       done
-[2026-07-21 14:59:14.308] fetch_binding_python_inspect  check_pre  (pass)
-[2026-07-21 14:59:14.310] fetch_binding_python_inspect  cmd  (python3 canary/scripts/inspect_python.py --pkg 'llvmlite.binding' --watchlist 'initialize,initialize_native_target,parse_assembly,create_mcjit_compiler,Target' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/python/inspect_dev_ab43cb8.json)
-[2026-07-21 14:59:14.381] fetch_binding_python_inspect  check_post  (pass)
-[2026-07-21 14:59:14.381] fetch_binding_python_inspect  done
-[2026-07-21 14:59:14.381] probe_binding_python       check_pre  (pass)
-[2026-07-21 14:59:14.384] probe_binding_python       cmd  (set -e
-python3 -c "import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_dev_ab43cb8.log 2>&1 || { cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_dev_ab43cb8.log; exit 1; }
-cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_dev_ab43cb8.log)
-[2026-07-21 14:59:14.449] probe_binding_python       check_post  (pass)
-[2026-07-21 14:59:14.449] probe_binding_python       done
-[2026-07-21 14:59:14.449] probe_app_python           check_pre  (pass)
-[2026-07-21 14:59:14.452] probe_app_python           cmd  ((pip install --quiet llvmlite 2>/dev/null \
- || python3 -m pip install --quiet llvmlite 2>/dev/null \
- || uv pip install --quiet llvmlite)
-python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_app_python/probe_dev_ab43cb8.log 2>&1)
-[2026-07-21 14:59:14.535] probe_app_python           check_post  (pass)
-[2026-07-21 14:59:14.535] probe_app_python           done
-[2026-07-21 14:59:14.535] probe_lib                  check_pre  (pass)
-[2026-07-21 14:59:14.537] probe_lib                  cmd  (COUNT=$(nm -D "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" 2>/dev/null | grep -v ' U ' | grep -c 'LLVM' || echo 0)
-printf 'LLVM symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/probe_dev_ab43cb8.log
-test "$COUNT" -gt 0)
-[2026-07-21 14:59:14.612] probe_lib                  check_post  (pass)
-[2026-07-21 14:59:14.612] probe_lib                  done
-[2026-07-21 14:59:14.612] probe_lib_inspect          check_pre  (pass)
-[2026-07-21 14:59:14.614] probe_lib_inspect          cmd  (nm -D "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder,LLVMBuildAdd,LLVMBuildBr,LLVMBuildRetVoid,LLVMVerifyModule,LLVMDisposeMessage' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/inspect_dev_ab43cb8.json)
-[2026-07-21 14:59:14.768] probe_lib_inspect          check_post  (pass)
-[2026-07-21 14:59:14.769] probe_lib_inspect          done
-[2026-07-21 14:59:14.769] probe_lib_staged           check_pre  (pass)
-[2026-07-21 14:59:14.771] probe_lib_staged           cmd  (COUNT=$(nm -D "/home/red/code/contrib/llvm-all/build/../install/lib/libLLVM.so" 2>/dev/null | grep -v ' U ' | grep -c 'LLVM' || echo 0)
-printf 'LLVM symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib_staged/probe_dev_ab43cb8.log
-test "$COUNT" -gt 0)
-[2026-07-21 14:59:14.845] probe_lib_staged           check_post  (pass)
-[2026-07-21 14:59:14.845] probe_lib_staged           done
-[2026-07-21 14:59:14.845] probe_lib_staged_inspect   check_pre  (pass)
-[2026-07-21 14:59:14.846] probe_lib_staged_inspect   cmd  (nm -D "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder,LLVMBuildAdd,LLVMBuildBr,LLVMBuildRetVoid,LLVMVerifyModule,LLVMDisposeMessage' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib_staged/inspect_dev_ab43cb8.json)
-[2026-07-21 14:59:14.992] probe_lib_staged_inspect   check_post  (pass)
-[2026-07-21 14:59:14.992] probe_lib_staged_inspect   done
-[2026-07-21 14:59:14.992] probe_lib_apt              check_pre  (pass)
-[2026-07-21 14:59:14.994] probe_lib_apt              cmd  (LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
+[2026-08-12 23:48:24.206] *                          variant_start  (ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched)
+[2026-08-12 23:48:24.206] *                          graph_start  (11 steps)
+[2026-08-12 23:48:24.206] fetch_source               check_pre  (pass)
+[2026-08-12 23:48:24.209] fetch_source               cmd  (if [ -d _out/canary/projects/llvm/dev_HEAD/src/.git ]; then cd _out/canary/projects/llvm/dev_HEAD/src && git fetch && git checkout HEAD; else git clone https://github.com/arbipher/llvm-project.git _out/canary/projects/llvm/dev_HEAD/src && cd _out/canary/projects/llvm/dev_HEAD/src && git checkout HEAD; fi && echo '_out/canary/projects/llvm/dev_HEAD/src' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/source_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:06.424] fetch_source               detect  (ok, output present)
+[2026-08-12 23:52:06.424] fetch_source               check_post  (pass)
+[2026-08-12 23:52:06.424] fetch_source               done
+[2026-08-12 23:52:06.426] scan_source                check_pre  (pass)
+[2026-08-12 23:52:06.427] scan_source                cmd  (test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Core.h && echo 'scan ok' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/scan_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:06.429] scan_source                detect  (ok, output present)
+[2026-08-12 23:52:06.429] scan_source                check_post  (pass)
+[2026-08-12 23:52:06.429] scan_source                done
+[2026-08-12 23:52:06.431] configure                  check_pre  (pass)
+[2026-08-12 23:52:06.433] configure                  cmd  (cmake -S /home/red/code/contrib/llvm-all/llvm-project/llvm -B /home/red/code/contrib/llvm-all/build -G Ninja -DLLVM_ENABLE_BINDINGS=ON -DLLVM_BUILD_LLVM_DYLIB=ON -DLLVM_TARGETS_TO_BUILD=X86 && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/configure/conf_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:08.804] configure                  detect  (ok, output present)
+[2026-08-12 23:52:08.804] configure                  check_post  (pass)
+[2026-08-12 23:52:08.804] configure                  done
+[2026-08-12 23:52:08.806] build_headers              check_pre  (pass)
+[2026-08-12 23:52:08.808] build_headers              cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_headers/headers_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:08.809] build_headers              detect  (ok, output present)
+[2026-08-12 23:52:08.809] build_headers              check_post  (pass)
+[2026-08-12 23:52:08.809] build_headers              done
+[2026-08-12 23:52:08.810] build_lib                  check_pre  (pass)
+[2026-08-12 23:52:08.812] build_lib                  cmd  (ninja -C /home/red/code/contrib/llvm-all/build LLVM && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_lib/build_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:08.927] build_lib                  detect  (ok, output present)
+[2026-08-12 23:52:08.927] build_lib                  check_post  (pass)
+[2026-08-12 23:52:08.927] build_lib                  done
+[2026-08-12 23:52:08.929] install_lib                check_pre  (pass)
+[2026-08-12 23:52:08.932] install_lib                cmd  ({ test -n "/home/red/code/contrib/llvm-all/build/../install" || { echo 'cmake_install_cmd: empty prefix — refusing global install'; exit 1; }; } && cmake --install /home/red/code/contrib/llvm-all/build --prefix "/home/red/code/contrib/llvm-all/build/../install" --component LLVM && { find /home/red/code/contrib/llvm-all/build/../install -type f -o -type l 2>/dev/null | sort | while read f; do printf '{"path":"%s","type":"%s","size":%d}' "${f#/home/red/code/contrib/llvm-all/build/../install/}" $(stat -c%F "$f" 2>/dev/null || echo unknown) $(stat -c%s "$f" 2>/dev/null || echo 0); done; } > /home/red/code/research/tola/_out/canary/projects/llvm/install_lib/prefix_layout_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.json
+echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/install_lib/install_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:09.171] install_lib                detect  (ok, output present)
+[2026-08-12 23:52:09.171] install_lib                check_post  (pass)
+[2026-08-12 23:52:09.171] install_lib                done
+[2026-08-12 23:52:09.173] build_binding_ocaml        check_pre  (pass)
+[2026-08-12 23:52:09.176] build_binding_ocaml        cmd  (eval $(opam env) && ninja -C /home/red/code/contrib/llvm-all/build ocaml_all && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/llvm/build_binding/ocaml/build_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.ok)
+[2026-08-12 23:52:09.365] build_binding_ocaml        detect  (ok, output present)
+[2026-08-12 23:52:09.365] build_binding_ocaml        check_post  (pass)
+[2026-08-12 23:52:09.365] build_binding_ocaml        done
+[2026-08-12 23:52:09.367] probe_binding_ocaml        check_pre  (pass)
+[2026-08-12 23:52:09.369] probe_binding_ocaml        cmd  (eval $(opam env) && LLVM_CONFIG=/home/red/code/contrib/llvm-all/build/bin/llvm-config && python3 canary/scripts/assert_binary_symbols.py --provided-lib "$LLVM_CONFIG --libdir"/libLLVM.so --required-lib /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/libllvm.a --symbol-prefix LLVM > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/symbols_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && ocamlopt -I /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/llvm.cmxa canary/examples/llvm/llvm_example_dev.ml -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log)
+[2026-08-12 23:52:09.420] probe_binding_ocaml        cmd_fail  (exit 2)
+[2026-08-12 23:52:09.420] probe_binding_ocaml        detect  (error, output present)
+[2026-08-12 23:52:09.420] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-12 23:52:09.420] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-12 23:52:09.420] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-12 23:52:09.420] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-12 23:52:09.420] probe_binding_ocaml        failed  (no compat failure predicted but command failed (no probe.log))
+[2026-08-12 23:52:09.420] probe_lib                  check_pre  (pass)
+[2026-08-12 23:52:09.422] probe_lib                  cmd  (LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
 test -x "$LLVM_CONFIG"
-"$LLVM_CONFIG" --version > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib_apt/probe_dev_ab43cb8.log 2>&1)
-[2026-07-21 14:59:14.997] probe_lib_apt              check_post  (pass)
-[2026-07-21 14:59:14.997] probe_lib_apt              done
-[2026-07-21 14:59:14.997] probe_lib_apt_inspect      check_pre  (pass)
-[2026-07-21 14:59:14.999] probe_lib_apt_inspect      cmd  (nm -D "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "/home/red/code/contrib/llvm-all/build/lib/libLLVM.so" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder,LLVMBuildAdd,LLVMBuildBr,LLVMBuildRetVoid,LLVMVerifyModule,LLVMDisposeMessage' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib_apt/inspect_dev_ab43cb8.json)
-[2026-07-21 14:59:15.144] probe_lib_apt_inspect      check_post  (pass)
-[2026-07-21 14:59:15.144] probe_lib_apt_inspect      done
-[2026-07-21 14:59:15.144] *                          graph_end  (27/27 completed)
-[2026-07-21 14:59:15.144] *                          variant_start  (19)
-[2026-07-21 14:59:15.144] *                          graph_start  (14 steps)
-[2026-07-21 14:59:15.683] fetch_source               check_pre  (pass)
-[2026-07-21 14:59:15.685] fetch_source               cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project && echo '/home/red/code/contrib/llvm-all/llvm-project' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/source_19.ok)
-[2026-07-21 14:59:15.686] fetch_source               check_post  (pass)
-[2026-07-21 14:59:15.686] fetch_source               done
-[2026-07-21 14:59:15.686] scan_source                check_pre  (pass)
-[2026-07-21 14:59:15.688] scan_source                cmd  (test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Analysis.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/BitReader.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/BitWriter.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Comdat.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Core.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DataTypes.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DebugInfo.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Deprecated.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Disassembler.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/DisassemblerTypes.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Error.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ErrorHandling.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ExecutionEngine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/ExternC.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/IRReader.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/LLJIT.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/LLJITUtils.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Linker.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Object.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Orc.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/OrcEE.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Remarks.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Support.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Target.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/TargetMachine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Types.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Visibility.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/blake3.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/lto.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/AggressiveInstCombine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/IPO.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/InstCombine.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/PassBuilder.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Scalar.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Utils.h
-test -f /home/red/code/contrib/llvm-all/llvm-project/llvm/include/llvm-c/Transforms/Vectorize.h
-test -d /home/red/code/contrib/llvm-all/llvm-project/llvm/bindings/ocaml
-echo 'scan ok' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/scan_19.ok)
-[2026-07-21 14:59:15.689] scan_source                check_post  (pass)
-[2026-07-21 14:59:15.689] scan_source                done
-[2026-07-21 14:59:15.689] fetch_lib                  check_pre  (pass)
-[2026-07-21 14:59:15.691] fetch_lib                  cmd  (sudo apt-get install -y llvm-19-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_lib/lib_19.ok)
-[2026-07-21 14:59:16.008] fetch_lib                  check_post  (pass)
-[2026-07-21 14:59:16.008] fetch_lib                  done
-[2026-07-21 14:59:16.276] fetch_binding_ocaml        check_pre  (pass)
-[2026-07-21 14:59:16.278] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install llvm.19-shared -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/binding_19.ok)
-[2026-07-21 15:00:50.405] fetch_binding_ocaml        check_post  (pass)
-[2026-07-21 15:00:50.405] fetch_binding_ocaml        done
-[2026-07-21 15:00:50.405] fetch_binding_ocaml_inspect  check_pre  (pass)
-[2026-07-21 15:00:50.407] fetch_binding_ocaml_inspect  cmd  (echo 'NOTE: api_source is the dev spec reused for stable source llvm/19; watchlist may drift'
+"$LLVM_CONFIG" --version > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1)
+[2026-08-12 23:52:09.425] probe_lib                  detect  (ok, output present)
+[2026-08-12 23:52:09.425] probe_lib                  check_post  (pass)
+[2026-08-12 23:52:09.425] probe_lib                  done
+[2026-08-12 23:52:09.427] probe_lib_staged           check_pre  (pass)
+[2026-08-12 23:52:09.429] probe_lib_staged           cmd  (COUNT=$(nm -D "/home/red/code/contrib/llvm-all/build/../install/lib/libLLVM.so" 2>/dev/null | grep -v ' U ' | grep -c 'LLVM' || echo 0)
+printf 'LLVM symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib_staged/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-12 23:52:09.506] probe_lib_staged           detect  (ok, output present)
+[2026-08-12 23:52:09.506] probe_lib_staged           check_post  (pass)
+[2026-08-12 23:52:09.506] probe_lib_staged           done
+[2026-08-12 23:52:09.508] *                          graph_end  (9/11 completed)
+[2026-08-12 23:52:09.508] probe_binding_ocaml        failed
+[2026-08-12 23:52:09.508] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-12 23:52:09.509] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-12 23:52:09.509] *                          view  (source (2 steps))
+[2026-08-12 23:52:09.509] *                          view  (lib (5 steps))
+[2026-08-12 23:52:09.509] *                          view  (probes (4 steps))
+[2026-08-12 23:52:09.509] *                          view  (binding_ocaml (2 steps))
+[2026-08-12 23:52:09.510] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-12 23:52:09.514] *                          index  (_out/canary/projects/index.html)
+[2026-08-12 23:52:09.514] *                          invariant  (full.mmd: OK (10 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (binding_ocaml.mmd: OK (9 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (source.mmd: OK (9 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (lib.mmd: OK (12 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (all.mmd: OK (8 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (probes.mmd: OK (10 nodes, 10 IDs))
+[2026-08-12 23:52:09.515] *                          invariant  (ALL OK)
+[2026-08-12 23:52:33.574] *                          variant_start  (ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched)
+[2026-08-12 23:52:33.574] *                          graph_start  (5 steps)
+[2026-08-12 23:52:33.574] fetch_source               check_pre  (pass)
+[2026-08-12 23:52:33.576] fetch_source               cmd  (if [ -d _out/canary/projects/llvm/19_llvmorg-19.1.7/src/.git ]; then cd _out/canary/projects/llvm/19_llvmorg-19.1.7/src && git fetch && git checkout llvmorg-19.1.7; else git clone https://github.com/llvm/llvm-project.git _out/canary/projects/llvm/19_llvmorg-19.1.7/src && cd _out/canary/projects/llvm/19_llvmorg-19.1.7/src && git checkout llvmorg-19.1.7; fi && echo '_out/canary/projects/llvm/19_llvmorg-19.1.7/src' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_source/source_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.ok)
+[2026-08-12 23:57:08.675] fetch_source               detect  (ok, output present)
+[2026-08-12 23:57:08.675] fetch_source               check_post  (pass)
+[2026-08-12 23:57:08.675] fetch_source               done
+[2026-08-12 23:57:08.678] fetch_lib                  check_pre  (pass)
+[2026-08-12 23:57:08.680] fetch_lib                  cmd  (sudo apt-get install -y llvm-19-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_lib/lib_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.ok)
+[2026-08-12 23:57:09.247] fetch_lib                  detect  (ok, output present)
+[2026-08-12 23:57:09.247] fetch_lib                  check_post  (pass)
+[2026-08-12 23:57:09.247] fetch_lib                  done
+[2026-08-12 23:57:09.249] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-12 23:57:09.252] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install llvm.19-shared -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/binding_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.ok)
+[2026-08-12 23:57:10.287] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-12 23:57:10.561] fetch_binding_ocaml        check_post  (pass)
+[2026-08-12 23:57:10.561] fetch_binding_ocaml        done
+[2026-08-12 23:57:10.567] probe_binding_ocaml        check_pre  (pass)
+[2026-08-12 23:57:10.569] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED_LLVM=$(opam list llvm --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED_LLVM" = "19-shared" || { echo "WORLD MISMATCH: switch has llvm $INSTALLED_LLVM, scenario declares llvm 19-shared"; exit 1; }
 eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
-  --watchlist 'Llvm,Llvm_analysis,Llvm_bitreader,Llvm_bitwriter,Llvm_target,Llvm_executionengine,Llvm.Opcode,Llvm.Opcode.UncondBr' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/inspect_19.json)
-[2026-07-21 15:00:50.470] fetch_binding_ocaml_inspect  check_post  (pass)
-[2026-07-21 15:00:50.470] fetch_binding_ocaml_inspect  done
-[2026-07-21 15:00:50.470] fetch_binding_ocaml_stub_inspect  check_pre  (pass)
-[2026-07-21 15:00:50.472] fetch_binding_ocaml_stub_inspect  cmd  (echo 'NOTE: api_source is the dev spec reused for stable source llvm/19; watchlist may drift'
-eval $(opam env)
-PKG_DIR=$(ocamlfind query 'llvm' 2>/dev/null)
-test -n "$PKG_DIR"
-STUB=$(ls "$PKG_DIR"/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" \
-  --prefix 'LLVM' --watchlist '' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/ocaml/inspect_stub_19.json)
-[2026-07-21 15:00:50.573] fetch_binding_ocaml_stub_inspect  check_post  (pass)
-[2026-07-21 15:00:50.573] fetch_binding_ocaml_stub_inspect  done
-[2026-07-21 15:00:50.573] probe_binding_ocaml        check_pre  (pass)
-[2026-07-21 15:00:50.575] probe_binding_ocaml        cmd  (eval $(opam env)
-ocamlfind ocamlopt -package llvm -linkpkg /home/red/code/research/tola/canary/examples/llvm/llvm_example_dev.ml \
-  -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_19.log 2>&1 || exit 1
-/home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_19.log 2>&1)
-[2026-07-21 15:00:50.607] probe_binding_ocaml        cmd_fail  (exit 1)
-[2026-07-21 15:00:50.608] probe_binding_ocaml        compat_predicted  (3 substring(s))
-[2026-07-21 15:00:50.608] probe_binding_ocaml        done  (expected failure confirmed (derived): llvm 19 predates Opcode.UncondBr, added in LLVM 21 (dev, commit #186176))
-[2026-07-21 15:00:50.608] probe_app_ocaml            check_pre  (pass)
-[2026-07-21 15:00:50.610] probe_app_ocaml            cmd  ((pip install --quiet llvmlite 2>/dev/null \
- || python3 -m pip install --quiet llvmlite 2>/dev/null \
- || uv pip install --quiet llvmlite)
-python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_app_ocaml/probe_19.log 2>&1)
-[2026-07-21 15:00:50.694] probe_app_ocaml            check_post  (pass)
-[2026-07-21 15:00:50.694] probe_app_ocaml            done
-[2026-07-21 15:00:50.973] fetch_binding_python       skip  (postcondition ok)
-[2026-07-21 15:00:50.973] fetch_binding_python_inspect  check_pre  (pass)
-[2026-07-21 15:00:50.975] fetch_binding_python_inspect  cmd  (echo 'NOTE: api_source is the dev spec reused for stable source llvm/19; watchlist may drift'
-python3 canary/scripts/inspect_python.py --pkg 'llvmlite.binding' --watchlist 'initialize,initialize_native_target,parse_assembly,create_mcjit_compiler,Target' > /home/red/code/research/tola/_out/canary/projects/llvm/fetch_binding/python/inspect_19.json)
-[2026-07-21 15:00:51.048] fetch_binding_python_inspect  check_post  (pass)
-[2026-07-21 15:00:51.048] fetch_binding_python_inspect  done
-[2026-07-21 15:00:51.048] probe_binding_python       check_pre  (pass)
-[2026-07-21 15:00:51.050] probe_binding_python       cmd  (set -e
-python3 -c "import llvmlite.binding as llvm; print('llvmlite ok:', llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_19.log 2>&1 || { cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_19.log; exit 1; }
-cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/python/probe_19.log)
-[2026-07-21 15:00:51.132] probe_binding_python       check_post  (pass)
-[2026-07-21 15:00:51.132] probe_binding_python       done
-[2026-07-21 15:00:51.132] probe_app_python           check_pre  (pass)
-[2026-07-21 15:00:51.135] probe_app_python           cmd  ((pip install --quiet llvmlite 2>/dev/null \
- || python3 -m pip install --quiet llvmlite 2>/dev/null \
- || uv pip install --quiet llvmlite)
-python3 -c "import llvmlite.binding as llvm; print(llvm.llvm_version_info)" > /home/red/code/research/tola/_out/canary/projects/llvm/probe_app_python/probe_19.log 2>&1)
-[2026-07-21 15:00:51.241] probe_app_python           check_post  (pass)
-[2026-07-21 15:00:51.242] probe_app_python           done
-[2026-07-21 15:00:51.242] probe_lib                  check_pre  (pass)
-[2026-07-21 15:00:51.244] probe_lib                  cmd  (LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
+ocamlfind ocamlopt -package llvm -linkpkg canary/examples/llvm/llvm_example_dev.ml -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.log
+exit $RC)
+[2026-08-12 23:57:10.889] probe_binding_ocaml        cmd_fail  (exit 2)
+[2026-08-12 23:57:10.889] probe_binding_ocaml        detect  (error, output present)
+[2026-08-12 23:57:10.889] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-12 23:57:10.889] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-12 23:57:10.889] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-12 23:57:10.889] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-12 23:57:10.889] probe_binding_ocaml        done  (expected failure confirmed (behavioral: probe.log present despite clean artifact inspection))
+[2026-08-12 23:57:10.891] probe_lib                  check_pre  (pass)
+[2026-08-12 23:57:10.893] probe_lib                  cmd  (LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
 test -x "$LLVM_CONFIG"
-"$LLVM_CONFIG" --version > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/probe_19.log 2>&1)
-[2026-07-21 15:00:51.247] probe_lib                  check_post  (pass)
-[2026-07-21 15:00:51.247] probe_lib                  done
-[2026-07-21 15:00:51.247] probe_lib_inspect          check_pre  (pass)
-[2026-07-21 15:00:51.249] probe_lib_inspect          cmd  (echo 'NOTE: api_source is the dev spec reused for stable source llvm/19; watchlist may drift'
-LLVM_CONFIG=$(if command -v llvm-config-19 >/dev/null 2>&1; then command -v llvm-config-19; elif command -v llvm-config >/dev/null 2>&1; then command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf '%s\n' "$(brew --prefix llvm@19)/bin/llvm-config-19"; else printf '%s\n' llvm-config-19; fi)
-LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
-test -n "$LLVM_LIB"
-nm -D "$LLVM_LIB" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LLVM_LIB" --prefixes 'LLVM' --watchlist 'LLVMContextCreate,LLVMModuleCreateWithName,LLVMCreateBuilder,LLVMBuildAdd,LLVMBuildBr,LLVMBuildRetVoid,LLVMVerifyModule,LLVMDisposeMessage' \
-  > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/inspect_19.json)
-[2026-07-21 15:00:51.489] probe_lib_inspect          check_post  (pass)
-[2026-07-21 15:00:51.489] probe_lib_inspect          done
-[2026-07-21 15:00:51.489] *                          graph_end  (14/14 completed)
-[2026-07-21 15:00:51.490] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
-[2026-07-21 15:00:51.491] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
-[2026-07-21 15:00:51.491] *                          view  (source (2 steps))
-[2026-07-21 15:00:51.491] *                          view  (lib (9 steps))
-[2026-07-21 15:00:51.491] *                          view  (probes (11 steps))
-[2026-07-21 15:00:51.491] *                          view  (binding_ocaml (9 steps))
-[2026-07-21 15:00:51.492] *                          view  (binding_python (3 steps))
-[2026-07-21 15:00:51.494] *                          html  (_out/canary/projects/llvm/-run/result.html)
-[2026-07-21 15:00:51.495] *                          index  (_out/canary/projects/index.html)
-[2026-07-21 15:00:51.496] !                          invariant  (full.mmd: connectivity errors:
-  [12]→[16]: no edge A_pack_binding_ocaml→A_probe_binding_ocaml_opam
-  [7]→[16]: no edge A_fetch_lib→A_probe_binding_ocaml_opam
-  [18]→[20]: no edge A_fetch_binding_python→A_probe_binding_python
-  [7]→[20]: no edge A_fetch_lib→A_probe_binding_python
-  [6]→[24]: no edge A_install_lib→A_probe_lib_staged
-  [4]→[8]: no edge A_build_headers→A_build_binding_ocaml
-  [5]→[8]: no edge A_build_lib→A_build_binding_ocaml
-  [7]→[17]: no edge A_fetch_lib→A_probe_app_ocaml
-  [5]→[22]: no edge A_build_lib→A_probe_lib
-  [8]→[15]: no edge A_build_binding_ocaml→A_probe_binding_ocaml
-  [7]→[15]: no edge A_fetch_lib→A_probe_binding_ocaml
-  [7]→[21]: no edge A_fetch_lib→A_probe_app_python
-  [1]→[2]: no edge A_fetch_source→A_scan_source
-  [7]→[26]: no edge A_fetch_lib→A_probe_lib_apt)
-[2026-07-21 15:00:51.496] !                          invariant  (SOME FAILED)
+"$LLVM_CONFIG" --version > /home/red/code/research/tola/_out/canary/projects/llvm/probe_lib/probe_ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched.log 2>&1)
+[2026-08-12 23:57:10.897] probe_lib                  detect  (ok, output present)
+[2026-08-12 23:57:10.897] probe_lib                  check_post  (pass)
+[2026-08-12 23:57:10.897] probe_lib                  done
+[2026-08-12 23:57:10.899] *                          graph_end  (5/5 completed)
+[2026-08-12 23:57:10.899] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-12 23:57:10.899] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-12 23:57:10.899] *                          view  (source (1 steps))
+[2026-08-12 23:57:10.899] *                          view  (lib (2 steps))
+[2026-08-12 23:57:10.899] *                          view  (probes (2 steps))
+[2026-08-12 23:57:10.899] *                          view  (binding_ocaml (2 steps))
+[2026-08-12 23:57:10.901] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-12 23:57:10.901] *                          index  (_out/canary/projects/index.html)
+[2026-08-12 23:57:10.902] *                          invariant  (full.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (source.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (lib.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (all.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (probes.mmd: OK (5 nodes, 5 IDs))
+[2026-08-12 23:57:10.902] *                          invariant  (ALL OK)
+[2026-08-13 00:07:18.973] *                          variant_start  (ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched)
+[2026-08-13 00:07:18.973] *                          graph_start  (11 steps)
+[2026-08-13 00:07:18.973] fetch_source               skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] scan_source                skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] configure                  skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] build_headers              skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] build_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] install_lib                skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] probe_lib_staged           skip  (verdict marker (prior success))
+[2026-08-13 00:07:18.973] probe_binding_ocaml        check_pre  (pass)
+[2026-08-13 00:07:18.975] probe_binding_ocaml        cmd  (eval $(opam env) && LLVM_CONFIG=/home/red/code/contrib/llvm-all/build/bin/llvm-config && python3 canary/scripts/assert_binary_symbols.py --provided-lib "$($LLVM_CONFIG --libdir)"/libLLVM.so --required-lib /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/libllvm.a --symbol-prefix LLVM > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/symbols_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && ocamlopt -I /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/llvm.cmxa canary/examples/llvm/llvm_example_dev.ml -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log)
+[2026-08-13 00:07:19.031] probe_binding_ocaml        cmd_fail  (exit 2)
+[2026-08-13 00:07:19.031] probe_binding_ocaml        detect  (error, output present)
+[2026-08-13 00:07:19.031] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-13 00:07:19.031] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-13 00:07:19.031] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-13 00:07:19.031] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-13 00:07:19.031] probe_binding_ocaml        failed  (no compat failure predicted but command failed (no probe.log))
+[2026-08-13 00:07:19.031] *                          graph_end  (9/11 completed)
+[2026-08-13 00:07:19.031] probe_binding_ocaml        failed
+[2026-08-13 00:07:19.031] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-13 00:07:19.031] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-13 00:07:19.031] *                          view  (source (2 steps))
+[2026-08-13 00:07:19.032] *                          view  (lib (5 steps))
+[2026-08-13 00:07:19.032] *                          view  (probes (4 steps))
+[2026-08-13 00:07:19.032] *                          view  (binding_ocaml (2 steps))
+[2026-08-13 00:07:19.033] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-13 00:07:19.037] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 00:07:19.037] *                          invariant  (full.mmd: OK (10 nodes, 10 IDs))
+[2026-08-13 00:07:19.037] *                          invariant  (binding_ocaml.mmd: OK (9 nodes, 10 IDs))
+[2026-08-13 00:07:19.038] *                          invariant  (source.mmd: OK (9 nodes, 10 IDs))
+[2026-08-13 00:07:19.038] *                          invariant  (lib.mmd: OK (12 nodes, 10 IDs))
+[2026-08-13 00:07:19.038] *                          invariant  (all.mmd: OK (8 nodes, 10 IDs))
+[2026-08-13 00:07:19.038] *                          invariant  (probes.mmd: OK (10 nodes, 10 IDs))
+[2026-08-13 00:07:19.038] *                          invariant  (ALL OK)
+[2026-08-13 00:08:14.920] *                          variant_start  (ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched)
+[2026-08-13 00:08:14.920] *                          graph_start  (5 steps)
+[2026-08-13 00:08:14.920] fetch_source               skip  (verdict marker (prior success))
+[2026-08-13 00:08:14.920] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:08:14.920] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-13 00:08:14.920] probe_binding_ocaml        skip  (verdict marker (prior xfail))
+[2026-08-13 00:08:14.920] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:08:14.920] *                          graph_end  (5/5 completed)
+[2026-08-13 00:08:14.920] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-13 00:08:14.920] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-13 00:08:14.920] *                          view  (source (1 steps))
+[2026-08-13 00:08:14.920] *                          view  (lib (2 steps))
+[2026-08-13 00:08:14.920] *                          view  (probes (2 steps))
+[2026-08-13 00:08:14.920] *                          view  (binding_ocaml (2 steps))
+[2026-08-13 00:08:14.922] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-13 00:08:14.923] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 00:08:14.923] *                          invariant  (full.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (source.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (lib.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (all.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (probes.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:08:14.923] *                          invariant  (ALL OK)
+[2026-08-13 00:16:09.812] *                          variant_start  (ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched)
+[2026-08-13 00:16:09.812] *                          graph_start  (11 steps)
+[2026-08-13 00:16:09.812] fetch_source               skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] scan_source                skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] configure                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] build_headers              skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] build_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] install_lib                skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] probe_lib_staged           skip  (verdict marker (prior success))
+[2026-08-13 00:16:09.812] probe_binding_ocaml        check_pre  (pass)
+[2026-08-13 00:16:09.814] probe_binding_ocaml        cmd  (eval $(opam env) && python3 canary/scripts/assert_binary_symbols.py --provided-lib /home/red/code/contrib/llvm-all/build/lib/libLLVM.so --required-lib /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/libllvm.a --symbol-prefix LLVM > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/symbols_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && ocamlopt -I /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm /home/red/code/contrib/llvm-all/build/lib/ocaml/llvm/llvm.cmxa canary/examples/llvm/llvm_example_dev.ml -o /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev > /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/llvm_example_dev >> /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/llvm/probe_binding/ocaml/probe_ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched.log)
+[2026-08-13 00:16:10.131] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-13 00:16:10.131] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-13 00:16:10.131] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-13 00:16:10.131] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-13 00:16:10.131] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-13 00:16:10.131] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-08-13 00:16:10.133] *                          graph_end  (10/11 completed)
+[2026-08-13 00:16:10.133] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-13 00:16:10.133] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-13 00:16:10.133] *                          view  (source (2 steps))
+[2026-08-13 00:16:10.133] *                          view  (lib (5 steps))
+[2026-08-13 00:16:10.134] *                          view  (probes (4 steps))
+[2026-08-13 00:16:10.134] *                          view  (binding_ocaml (2 steps))
+[2026-08-13 00:16:10.135] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-13 00:16:10.136] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 00:16:10.136] *                          invariant  (full.mmd: OK (10 nodes, 10 IDs))
+[2026-08-13 00:16:10.136] *                          invariant  (binding_ocaml.mmd: OK (9 nodes, 10 IDs))
+[2026-08-13 00:16:10.136] *                          invariant  (source.mmd: OK (9 nodes, 10 IDs))
+[2026-08-13 00:16:10.136] *                          invariant  (lib.mmd: OK (12 nodes, 10 IDs))
+[2026-08-13 00:16:10.136] *                          invariant  (all.mmd: OK (8 nodes, 10 IDs))
+[2026-08-13 00:16:10.137] *                          invariant  (probes.mmd: OK (10 nodes, 10 IDs))
+[2026-08-13 00:16:10.137] *                          invariant  (ALL OK)
+[2026-08-13 00:16:47.961] *                          variant_start  (ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched)
+[2026-08-13 00:16:47.961] *                          graph_start  (5 steps)
+[2026-08-13 00:16:47.961] fetch_source               skip  (verdict marker (prior success))
+[2026-08-13 00:16:47.961] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:47.961] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-13 00:16:47.961] probe_binding_ocaml        skip  (verdict marker (prior xfail))
+[2026-08-13 00:16:47.961] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-13 00:16:47.961] *                          graph_end  (5/5 completed)
+[2026-08-13 00:16:47.961] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-13 00:16:47.962] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-13 00:16:47.962] *                          view  (source (1 steps))
+[2026-08-13 00:16:47.962] *                          view  (lib (2 steps))
+[2026-08-13 00:16:47.962] *                          view  (probes (2 steps))
+[2026-08-13 00:16:47.962] *                          view  (binding_ocaml (2 steps))
+[2026-08-13 00:16:47.964] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-13 00:16:47.964] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 00:16:47.964] *                          invariant  (full.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (source.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (lib.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (all.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (probes.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 00:16:47.965] *                          invariant  (ALL OK)
+[2026-08-13 16:10:38.578] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/all.mmd)
+[2026-08-13 16:10:38.579] *                          diagram  (_out/canary/projects/llvm/-run/diagrams/full.mmd)
+[2026-08-13 16:10:38.579] *                          view  (source (1 steps))
+[2026-08-13 16:10:38.579] *                          view  (lib (2 steps))
+[2026-08-13 16:10:38.579] *                          view  (probes (2 steps))
+[2026-08-13 16:10:38.579] *                          view  (binding_ocaml (2 steps))
+[2026-08-13 16:10:38.581] *                          html  (_out/canary/projects/llvm/-run/result.html)
+[2026-08-13 16:10:38.582] *                          index  (_out/canary/projects/index.html)
+[2026-08-13 16:10:38.582] *                          invariant  (full.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (source.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (lib.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (all.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (probes.mmd: OK (5 nodes, 5 IDs))
+[2026-08-13 16:10:38.582] *                          invariant  (ALL OK)

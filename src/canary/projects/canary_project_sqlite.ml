@@ -1,4 +1,5 @@
-open Canary_basic
+open Canary_artifact
+open Canary_project_spec
 open Canary_toolchain
 
 let sqlite_ocaml_config : ocaml_tool_config =
@@ -33,66 +34,6 @@ let sqlite_ocaml_config : ocaml_tool_config =
 
 let prebuilt = prebuilt_info_exn sqlite_ocaml_config
 
-(* sqlite's source is a remote git repo with two versions — a general mimic of
-   z3 (dev / stable), but declared cleanly on the project_run spec. The STABLE
-   tag (3.45.1 = the amalgamation 3450100 canary builds, and the libsqlite3 the
-   opam `sqlite3` binding links against) is the one that "made the binding";
-   dev is trunk. The native lib is buildable from source; the OCaml binding is
-   NOT (it's the opam `sqlite3` package — [has_build_binding = false]). *)
-let sqlite_source_stable : Canary_artifact_source.source_repo =
-  { Canary_artifact_source.name = "sqlite";
-    remote = Canary_artifact_source.Git_remote "https://github.com/sqlite/sqlite.git";
-    locals = [];
-    version = "3.45.1";
-    ref_ = "version-3.45.1";
-    official = true;
-    has_build_lib = true;
-    has_build_binding = false;
-    build_sys_deps = [];
-    api_source = None }
-
-let sqlite_source_dev : Canary_artifact_source.source_repo =
-  { sqlite_source_stable with version = "dev"; ref_ = "master" }
-
-(* THE artifact table (from the real [prebuilt] data): identity + provider
-   per row — ONE source of truth (2026-08-06: the old separate
-   [sqlite_providers] assoc merged into the artifact rows, user-directed).
-   The runner's [store_config] (fetch commands) AND `spec`'s display both
-   read THIS list, so the two can't drift. (The Built-from-amalgamation
-   alt for the lib is the [lib=B:stable] scenario, not a baseline
-   provider.) *)
-let sqlite_artifacts : Canary_project_run.artifact_decl list =
-  Canary_enumerate.
-    [ { Canary_project_run.ad_artifact = a_source;
-        ad_provider =
-          Some (Canary_store_config.Source_repo sqlite_source_stable) };
-      { ad_artifact = a_lib;
-        ad_provider = Some (Canary_store_config.Sys_pkg prebuilt.system_package)
-      };
-      { ad_artifact = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-        ad_provider =
-          Some
-            (Canary_store_config.Lang_pkg
-               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-                 package = prebuilt.opam_package }) };
-      { ad_artifact = a_binding Canary_lang.Python Canary_mechanism.Cext;
-        ad_provider =
-          Some
-            (Canary_store_config.Lang_pkg
-               { lang = Canary_lang.Python; pm = Canary_store.Pip;
-                 package = "sqlite3 (stdlib, pip no-op)" }) } ]
-
-(* derived lookup over the table (internal consumers, e.g. store_config) *)
-let sqlite_provider (id : Canary_enumerate.artifact_id) :
-    Canary_store_config.provider option =
-  List.find_opt
-    (fun (d : Canary_project_run.artifact_decl) ->
-      Canary_enumerate.equal_artifact_id d.Canary_project_run.ad_artifact id)
-    sqlite_artifacts
-  |> fun d ->
-  Option.bind d (fun (d : Canary_project_run.artifact_decl) ->
-      d.Canary_project_run.ad_provider)
-
 (* Module-level watchlist for the sqlite3 opam package. Module names from
    ocamlobjinfo Name: fields; constructor-level drift is caught by compile probes. *)
 let sqlite_ocaml_watchlist = [ "Sqlite3" ]
@@ -107,22 +48,6 @@ let sqlite_python_watchlist = [
   "sqlite_version_info";
   "Connection";
   "Cursor";
-]
-
-(* BINDING-LAG markers (2026-08-05; role split per status §B): canonical
-   wrapper names for modern C APIs the lib exports (see
-   [sqlite_native_modern_watchlist]) that the stdlib binding does NOT wrap.
-   Declared in the EXPECTED-MISSING role — the inspect reports them as
-   expected_missing.confirmed (the measured binding↔lib surface lag, an
-   xfail-style pass in `status`), and a name that APPEARS reads as
-   .violated (the binding caught up; this declaration is stale — alarming).
-   They must NOT ride the expected-present watchlist: there, missing =
-   drift and stays alarming (tiny's semantics). The OCaml-side analogue
-   needs an mli inspect over the installed sqlite3.mli — c7/c8 territory.
-   This role split is the seed of the c7/c8 lag contract. *)
-let sqlite_python_expect_missing = [
-  "get_clientdata";
-  "error_offset";
 ]
 
 (* Modern-C-API watchlist on the NATIVE lib (the per-version symbol-watchlist
@@ -141,102 +66,87 @@ let sqlite_native_modern_watchlist = [
   "sqlite3_stmt_explain";
 ]
 
-let sqlite_python_config : Canary_toolchain.binding_config =
-  Python_config
-    {
-      pip_package = None;
-      (* Prints the RUNTIME library version first (sqlite3.sqlite_version =
-         the C library the loader actually bound, not the stdlib wrapper
-         version) — built-lib worlds assert this against the declared built
-         version via [log_grep]. *)
-      probe_snippet =
-        {|import sqlite3; print('sqlite_version=' + sqlite3.sqlite_version); sqlite3.connect(':memory:').execute('SELECT 1').fetchone(); print('sqlite3 ok')|};
-    }
+(* The C API declaration (2026-08-13, spec-check fulfillment): the
+   amalgamation ships sqlite3.h at its root (the fetch unzips into
+   <workspace>/src). The native watchlist carries the modern-API symbols;
+   binding watchlists ride the existing declared lists. *)
+let sqlite_api_source : Canary_artifact.t =
+  { Canary_artifact.native_api =
+      { kind = Canary_artifact.C;
+        components = [ Canary_artifact.Headers; Canary_artifact.Runtime_lib ];
+        headers = Some { Canary_artifact.dir = "."; files = [ "sqlite3.h" ] };
+        symbol_prefixes = [ "sqlite3_" ];
+        stable_symbols = sqlite_native_modern_watchlist;
+        versioned_symbols = [];
+        soname = None;
+        c_runtime = None;
+        cxx_abi = None };
+    binding_apis =
+      [ { Canary_artifact.lang = Canary_lang.OCaml;
+          source_dir = None;
+          module_watchlist = sqlite_ocaml_watchlist;
+          type_watchlist = [] };
+        { Canary_artifact.lang = Canary_lang.Python;
+          source_dir = None;
+          module_watchlist = sqlite_python_watchlist;
+          type_watchlist = [] } ] }
 
-let runner_spec : Canary_step_builder.runner_spec =
-  let ocaml = sqlite_ocaml_config.ocaml in
-  {
-    Canary_step_builder.empty_runner_spec with
-    (* Declarative lib store (S3/S4): fetch_lib is Derived from this. *)
-    stores =
-      { Canary_store_config.empty_store_config with
-        lib = Some
-          { Canary_store_config.provider =
-              (match sqlite_provider Canary_enumerate.a_lib with
-               | Some p -> p
-               | None -> Canary_store_config.Absent);
-            components = []; headers = None } };
-    fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
-    (* fetch_binding stays Raw: Derived can't yet reproduce opam
-       install_args (--assume-depexts) — store_config carries pkg_name
-       only (PM-spec detail deferred). *)
-    fetch_binding =
-      (Canary_lang.OCaml, Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec))
-      ::
-      (match sqlite_python_config with
-       | Python_config p ->
-           [ (Canary_lang.Python,
-              Canary_step_builder.Raw (fun ~output_dir ~variant_key -> Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key)) ]
-       | Ocaml_config _ -> []);
-    probe_binding =
-      (Canary_lang.OCaml,
-       Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
-       fun ~output_dir ~variant_key ->
-         Canary_step_builder.probe_ocaml_cmd ~binding_lib:ocaml.binding_lib_name
-           ~example:ocaml.example_file ~target:ocaml.example_target
-           ~output_dir ~variant_key) ::
-      (* Python sqlite3 is stdlib-bundled — install no-ops to a marker;
-         this probe step just runs the import. *)
-      (match sqlite_python_config with
-       | Python_config p ->
-           [ (Canary_lang.Python,
-              Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; pm = Canary_store.Pip }),
-              fun ~output_dir ~variant_key ->
-                Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key) ]
-       | Ocaml_config _ -> []);
-    (* Sqlite has no api_source/binding_user_facing_pkg so auto-summary doesn't fire.
-       Both OCaml and Python summaries are produced via this explicit
-       override at probe time. (Python summary is at probe time rather than
-       fetch step here — Phase 3d's pre-cache benefit only kicks in for
-       projects that opt into the api_source flow.) *)
-    inspect = (fun action loc -> match action, loc with
-      | Probe_binding (_), Some (Canary_store.Pm (Canary_store.Lang_pm { lang = Canary_lang.Python; _ })) ->
-          Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.python_inspect_cmd
-              ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist
-              ~expect_missing:sqlite_python_expect_missing
-              ~output_dir ~variant_key ())
-      | Probe_binding (_), _ ->
-          Some (fun ~output_dir ~variant_key ->
-            Canary_artifact_lang.inspect_opam_pkg_cmd
-              ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist ~output_dir ~variant_key ())
-      | _ -> None);
-    artifact_name = (function
-      | Canary_basic.Lib -> Some "libsqlite3.so"
-      | Canary_basic.Binding Canary_lang.OCaml -> Some "sqlite3"
-      | Canary_basic.Binding Canary_lang.Python -> Some "sqlite3"
-      | _ -> None);
-  }
+(* sqlite's source is a remote git repo with two versions — a general mimic of
+   z3 (dev / stable), but declared cleanly on the project_run spec. The STABLE
+   tag (3.45.1 = the amalgamation 3450100 canary builds, and the libsqlite3 the
+   opam `sqlite3` binding links against) is the one that "made the binding";
+   dev is trunk. The native lib is buildable from source; the OCaml binding is
+   NOT (it's the opam `sqlite3` package — [has_build_binding = false]). *)
+let sqlite_source_stable : Canary_artifact_source.source_repo =
+  { Canary_artifact_source.name = "sqlite";
+    remote = Canary_artifact_source.Git_remote "https://github.com/sqlite/sqlite.git";
+    locals = [];
+    version = Canary_basic.{ channel = Stable; id = "3.45.1" };
+    ref_ = "version-3.45.1";
+    official = true;
+    build_sys_deps = [];
+    api_source = Some sqlite_api_source }
 
-(* ── sqlite as a [project_run] — the real-world instance of the §4.2.5 model ──
-   Same shape as tiny-full (a [Canary_project_run.project_run] the generic
-   `run_project_run` consumes), but real-world: everything is **Fetched** —
-   canary fetches the lib (system PM) + the OCaml binding (opam) as ACTIONS
-   (the [runner_spec] above); Python sqlite3 is stdlib. So sqlite pre-places
-   NOTHING — canary's role is to perform the fetch/build actions into the
-   runner-provided scenario dir. Positive-only (a real project isn't mutated);
-   the [runner_spec]'s default expectation is success. [sqlite_run] below IS
-   the project identity (A6: the never-read [Canary_project.project] bundle
-   was deleted 2026-08-05). *)
+let sqlite_source_dev : Canary_artifact_source.source_repo =
+  { sqlite_source_stable with version = Canary_basic.{ channel = Dev; id = "" }; ref_ = "master" }
 
-(* (The separate bare-id artifact list is gone — [sqlite_artifacts] above
-   IS the artifact table: identity + provider per row, 2026-08-06.) *)
+(* Channel-keyed source lookup (2026-08-07): projects declare per-channel
+   sources as DATA; the algorithm ranges over channels. *)
+let sqlite_source_of (ch : Canary_basic.channel) : Canary_artifact_source.source_repo =
+  match ch with Canary_basic.Dev -> sqlite_source_dev | Canary_basic.Stable -> sqlite_source_stable
 
-(* ── Built-from-source variant (provision = Built for the lib) ──
-   Fetch the sqlite amalgamation (a REAL source fetch) and compile a real
-   libsqlite3.so with cc — the Built provision on a real project, so canary
-   observes source-fetch + build as *actions* (unlike tiny's toy cc). Lib-only
-   for now; a binding built against the Built lib is a follow-up. *)
+(* THE artifact table (from the real [prebuilt] data): identity + provider
+   per row — ONE source of truth (2026-08-06: the old separate
+   [sqlite_providers] assoc merged into the artifact rows, user-directed).
+   The runner's [store_config] (fetch commands) AND `spec`'s display both
+   read THIS list, so the two can't drift. (The Built-from-amalgamation
+   alt for the lib is the [lib=B:stable] scenario, not a baseline
+   provider.) *)
+let sqlite_python_provider =
+  Canary_store_config.Lang_pkg
+    { lang = Canary_lang.Python; pm = Canary_store.Pip;
+      package = "sqlite3 (stdlib, pip no-op)"; self_contained = true; versions = None }
+
+(* BINDING-LAG markers (2026-08-05; role split per status §B): canonical
+   wrapper names for modern C APIs the lib exports (see
+   [sqlite_native_modern_watchlist]) that the stdlib binding does NOT wrap.
+   Declared in the EXPECTED-MISSING role — the inspect reports them as
+   expected_missing.confirmed (the measured binding↔lib surface lag, an
+   xfail-style pass in `status`), and a name that APPEARS reads as
+   .violated (the binding caught up; this declaration is stale — alarming).
+   They must NOT ride the expected-present watchlist: there, missing =
+   drift and stays alarming (tiny's semantics). The OCaml-side analogue
+   needs an mli inspect over the installed sqlite3.mli — c7/c8 territory.
+   This role split is the seed of the c7/c8 lag contract. *)
+let sqlite_python_expect_missing = [
+  "get_clientdata";
+  "error_offset";
+]
+
+(* The pre-action-table [runner_spec] / [built_spec] / [sqlite_python_config]
+   trio retired 2026-08-12 (registry unification): the live path is
+   [sqlite_table_rows] → [realize] → [sqlite_run] below. *)
+
 (* Two REAL amalgamation versions so the lib's Built provision enumerates over a
    version axis (see [ps_versions_of] lib = [Stable; Dev]): Stable = 3.45.1 (the
    version the opam `sqlite3` binding links against), Dev = 3.46.1 (a newer
@@ -258,156 +168,14 @@ let sqlite_amalg (chan : Canary_basic.channel) :
       ( "3.46.1", "3460100",
         "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip" )
 
-(* A3b: the Built scenario UNIFIES the lib build with the bindings — extend the
-   Fetched [runner_spec] (which carries fetch_binding/probe_binding), swapping the
-   lib from fetched to built-from-source. Coverage-C proper: the binding PROBES
-   run against the BUILT lib — [build_lib] plants a `libsqlite3.so.0` soname
-   symlink and each probe exports [LD_LIBRARY_PATH=<built libdir>] so the loader
-   binds the canary-built lib (the bindings themselves stay Fetched — the opam
-   binding was compiled against the system lib; run-lib ≠ build-lib is the real
-   deploy world). Each probe also carries a WORLD-IDENTITY ASSERTION (the A7
-   phase 5 term): [log_grep "sqlite_version=<dotted>"] — the runtime-reported
-   version must equal the declared built version, so the run verifiably
-   exercises the enumerated world, not silently the system lib. NOT an
-   expectation (opposite polarity — a positive invariant, not an expected
-   failure); it deliberately stays out of the contract lowering. *)
-let built_spec ~(workspace : string) ~(chan : Canary_basic.channel) :
-    Canary_step_builder.runner_spec =
-  let dotted, numeric, amalg_url = sqlite_amalg chan in
-  let amalg_dir = "sqlite-amalgamation-" ^ numeric in
-  let src = workspace ^ "/src" in
-  let libdir = workspace ^ "/lib" in
-  let libpath = libdir ^ "/libsqlite3.so" in
-  (* Loader repoint for the probes: the workspace path is repo-relative, and
-     probes run from the repo root — anchor with $PWD so the exported path is
-     absolute wherever the probe binary itself chdirs. *)
-  let probe_env =
-    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH" libdir ]
-  in
-  let version_line = "sqlite_version=" ^ dotted in
-  let ocaml = sqlite_ocaml_config.ocaml in
-  { runner_spec with
-    fetch_lib = None;   (* built from source, not fetched *)
-    (* Shell verbs routed through tool/ primitives (tool-routing ratchet,
-       2026-08-05): the archive fetch+extract via [curl_unzip_cmd], the
-       compile via [cc_shared_lib_cmd], the symbol probe via
-       [native_lib_probe_cmd] — guards + soname symlink stay
-       project-shaped. *)
-    fetch_source =
-      Some
-        (fun ~output_dir ~variant_key ->
-          Canary_build_cmd.curl_unzip_cmd ~url:amalg_url ~dest:src ()
-          |> Canary_build_cmd.with_marker ~marker:"source.ok" ~output_dir ~variant_key);
-    build_lib =
-      Some
-        (fun ~output_dir ~variant_key ->
-          (* the .so.0 symlink satisfies the bindings' NEEDED entry
-             (libsqlite3.so.0 — the system lib's soname) when the loader is
-             repointed at [libdir]. *)
-          let cc =
-            Canary_build_cmd.cc_shared_lib_cmd
-              ~c_src:(Printf.sprintf "%s/%s/sqlite3.c" src amalg_dir)
-              ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ()
-          in
-          Printf.sprintf
-            "test -f %s || { mkdir -p %s && %s ; } && ln -sfn libsqlite3.so \
-             %s/libsqlite3.so.0"
-            libpath libdir cc libdir
-          |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
-               ~variant_key);
-    probe_lib =
-      [ ( Canary_store.Build_tree,
-          fun ~output_dir ~variant_key ->
-            Canary_artifact_native.native_lib_probe_cmd ~lib:libpath
-              ~prefix:"sqlite3_" ~output_dir ~variant_key ) ];
-    (* Built worlds additionally INSPECT the built lib against the modern-API
-       watchlist (observation: per-version export presence); the base spec's
-       probe-time binding inspects are kept. *)
-    inspect =
-      (fun action loc ->
-        match action with
-        | Canary_basic.Build_lib ->
-            Some
-              (fun ~output_dir ~variant_key ->
-                Canary_artifact_native.inspect_cmd ~lib:libpath
-                  ~prefixes:[ "sqlite3_" ]
-                  ~watchlist:sqlite_native_modern_watchlist ~output_dir
-                  ~variant_key ())
-        | _ -> runner_spec.Canary_step_builder.inspect action loc);
-    (* Binding probes OVER the built lib (repointed loader + version assert). *)
-    probe_binding =
-      [ ( Canary_lang.OCaml,
-          Canary_store.Pm
-            (Canary_store.Lang_pm
-               { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
-          fun ~output_dir ~variant_key ->
-            Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
-              ~log_grep:(Some version_line)
-              ~binding_lib:ocaml.binding_lib_name ~example:ocaml.example_file
-              ~target:ocaml.example_target ~output_dir ~variant_key );
-        (* Python's runtime sqlite is AMBIENT (dep_mode [Ambient], not
-           [Independent]): a distro python links the system lib, and a
-           standalone/uv python STATICALLY bundles its own (e.g. 3.50.4,
-           [_sqlite3] a builtin — no .so to repoint). Either way the loader
-           can't be pointed at the canary-built lib, so the probe OBSERVES
-           the runtime version (printed to probe.log) without asserting the
-           built one. The OCaml probe above is the [Independent] runtime
-           edge; this is the [Ambient] one — both real, on one project. *)
-        ( Canary_lang.Python,
-          Canary_store.Pm
-            (Canary_store.Lang_pm
-               { lang = Canary_lang.Python; pm = Canary_store.Pip }),
-          fun ~output_dir ~variant_key ->
-            match sqlite_python_config with
-            | Python_config p ->
-                Canary_toolchain.python_probe_only_cmd p ~output_dir
-                  ~variant_key
-            | Ocaml_config _ -> assert false ) ];
-  }
-
-(* A3b: sqlite DECLARES its static axes (stage 1: [project_spec]); the generic
-   runner ENUMERATES via [enumerate ~policy] (stage 2) under [full_policy] —
-   retiring the hand-built pr_enumerate list. Positive-only (no mutations — the
-   policy injects none). Per-artifact provisions: the lib may be Fetched
-   (system PM) or Built (source); bindings Fetched. Self-contained Built (no
-   a_source artifact — the amalgamation is fetched inside build_lib). *)
-(* The spec is ONE data table (A8): per artifact, its provisions each with the
-   versions that provision realizes.
-   - enumeration OMITS a_source: sqlite's Built lib is self-contained
-     (build_lib fetches the amalgamation), so source is not a separately
-     provisioned artifact here. a_source stays in [sqlite_artifacts] =
-     [pr_artifacts] for the spec DISPLAY. Omitting it also lets the Built lib
-     carry its own version axis without the unsatisfiable source@version chain
-     constraint [assignment_ok] would otherwise impose.
-   - PER-PROVISION version axis: only the BUILT lib ranges over versions
-     (Stable=3.45.1, Dev=3.46.1 amalgamations — versions canary can build);
-     the Fetched lib is version-AMBIENT (the system PM picks) so it declares
-     one representative — no spurious Fetched@Dev that would only dedup away
-     downstream. Declared scenarios == run scenarios: fetched-system,
-     built@3.45.1, built@3.46.1. *)
-(* Runtime-edge modes live ON the artifact rows (2026-08-05, user-directed
-   relocation off the project): the OCaml binding is [Independent] — opam
-   compiled it against the system lib, but it RUNS over whatever lib the
-   scenario places (the Built worlds' loader repoint): build-lib ≠ run-lib
-   is explicit axis data. Python is [Ambient] — uv/standalone python
-   statically bundles its own sqlite (`_sqlite3` builtin), so the
-   scenario's lib axis never reaches it (probes observe, never assert). *)
-let sqlite_spec : Canary_enumerate.project_spec =
-  { ps_universe =
-      Canary_enumerate.
-        [ ( a_lib,
-            axes
-              [ (Fetched, [ Canary_basic.Stable ]);
-                (Built, Canary_basic.[ Stable; Dev ]) ] );
-          ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-            axes ~runtime:Canary_store.Independent
-              [ (Fetched, [ Canary_basic.Stable ]) ] );
-          ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-            axes
-              ~runtime:
-                (Canary_store.Ambient
-                   "python-bundled sqlite (uv: static _sqlite3)")
-              [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+(* The hand-written [sqlite_spec] + the duplicated [sqlite_artifacts] it
+   served retired 2026-08-13 (spec-check fulfillment): the source row joined
+   the artifact table, which made the old "self-contained Built omits
+   a_source" shape wrong — the source is now a declared artifact
+   (Fetched@[Stable;Dev], version-coupled to the Built lib by
+   [assignment_ok]'s source@version rule; the amalgamation fetch is its
+   fetch_source step). [sqlite_run]'s pr_artifacts below is the single
+   table. *)
 
 (* ── dispatch / realization split ──
    [scenario_case] is the PURE dispatch result — inspectable data computed
@@ -415,35 +183,194 @@ let sqlite_spec : Canary_enumerate.project_spec =
    [Canary_enumerate.provision_of]/[channel_of]); the realizations
    ([runner_spec] / [built_spec]) are the command templates. [pr_runner_spec]
    is just their composition — no placement digging inside it. *)
-type scenario_case =
-  | Fetched_lib                        (* system lib; bindings fetched *)
-  | Built_lib of Canary_basic.channel  (* canary-built lib @channel *)
+(* dispatch is now universal: [Canary_action_table.dispatch] *)
 
-let dispatch (a : Canary_enumerate.assignment) : scenario_case =
-  match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-  | Canary_enumerate.Built ->
-      Built_lib (Canary_enumerate.channel_of a Canary_enumerate.a_lib)
-  | _ -> Fetched_lib
+(* ── A9-step-2: action-variant table ── *)
+let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
+  let open Canary_action_table in
+  let ocaml = sqlite_ocaml_config.ocaml in
+  let _, _, amalg_url = sqlite_amalg chan in
+  [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
+      ar_template = Primitive ("fetch_lib",
+                      [ ("linux_pkg", "libsqlite3-dev");
+                        ("macos_pkg", "sqlite3") ]) };
+    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml);
+      ar_template = Primitive ("fetch_binding_opam", [ ("pkg", "sqlite3") ]) };
+    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
+      ar_template = Primitive ("pip_install", [ ("pkg", "stdlib") ]) };
+    { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+      ar_template = Primitive ("ocaml_probe",
+                      [ ("binding_lib", ocaml.binding_lib_name);
+                        ("example", ocaml.example_file);
+                        ("target", ocaml.example_target) ]) };
+    { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
+      ar_template = Primitive ("python_probe",
+                      [ ("snippet",
+                         "import sqlite3; print('sqlite_version=' + \
+                          sqlite3.sqlite_version); \
+                          sqlite3.connect(':memory:').execute('SELECT \
+                          1').fetchone(); print('sqlite3 ok')") ]) };
+    { ar_action = Canary_basic.Fetch Canary_basic.Source;
+      ar_template = Primitive ("curl_unzip",
+                      [ ("url", amalg_url); ("dest", workspace ^ "/src") ]) };
+    (* Self-contained Build: the amalgamation is fetched inside build_lib
+       (the Fetch Source row above is filtered — a_source not in ps_universe).
+       Fold the fetch guard into the build command. *)
+    { ar_action = Canary_basic.Build_lib;
+      ar_template = Raw (fun ~output_dir ~variant_key ->
+          let _, numeric, _ = sqlite_amalg chan in
+          let amalg_dir = "sqlite-amalgamation-" ^ numeric in
+          let src_dir = workspace ^ "/src" in
+          let libdir = workspace ^ "/lib" in
+          let libpath = libdir ^ "/libsqlite3.so" in
+          let fetch =
+            Canary_build_cmd.curl_unzip_cmd ~url:amalg_url ~dest:src_dir ()
+          in
+          Printf.sprintf
+            "test -f %s || { test -d %s/%s || { %s ; } && mkdir -p %s && %s ; } && \
+             ln -sfn libsqlite3.so %s/libsqlite3.so.0"
+            libpath src_dir amalg_dir fetch libdir
+            (Canary_build_cmd.cc_shared_lib_cmd
+               ~c_src:(Printf.sprintf "%s/%s/sqlite3.c" src_dir amalg_dir)
+               ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ())
+            libdir
+          |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
+    { ar_action = Canary_basic.Probe_lib;
+      ar_template = Primitive ("native_lib_probe",
+                      [ ("location", "build_tree");
+                        ("lib", workspace ^ "/lib/libsqlite3.so");
+                        ("prefix", "sqlite3_") ]) };
+    (* PM probe with pkg-config-less fallback (dpkg -L + ldconfig).
+       sqlite3 has no .pc file; the fallback chain resolves through the
+       apt dev package list and the dynamic linker cache. *)
+    { ar_action = Canary_basic.Probe_lib;
+      ar_template = Primitive ("native_lib_probe",
+                      [ ("location", "pm");
+                        ("pm_pkg", "sqlite3");
+                        ("lib_name", "libsqlite3.so");
+                        ("dpkg_pkg", "libsqlite3-dev");
+                        ("ldconfig_name", "libsqlite3.so");
+                        ("prefix", "sqlite3_") ]) };
+  ]
 
-let realize (c : scenario_case) ~(workspace : string) :
+(* Shared project-level configuration — inspect, artifact names, stores.
+   The action rows above provide the per-action closures on top. *)
+let base_spec : Canary_step_builder.runner_spec =
+  { Canary_step_builder.empty_runner_spec with
+    stores =
+      { Canary_store_config.empty_store_config with
+        lib = Some
+          { Canary_store_config.provider =
+              Canary_store_config.Sys_pkg prebuilt.system_package;
+            components = []; headers = None } };
+    inspect = (fun action _loc -> match action with
+      | Canary_basic.Probe_binding Canary_lang.Python ->
+          Some (fun ~output_dir ~variant_key ->
+              Canary_artifact_lang.python_inspect_cmd
+                ~pkg:"sqlite3" ~watchlist:sqlite_python_watchlist
+                ~expect_missing:sqlite_python_expect_missing
+                ~output_dir ~variant_key ())
+      | Canary_basic.Probe_binding _ ->
+          Some (fun ~output_dir ~variant_key ->
+              Canary_artifact_lang.inspect_opam_pkg_cmd
+                ~pkg:"sqlite3" ~watchlist:sqlite_ocaml_watchlist
+                ~output_dir ~variant_key ())
+      | _ -> None);
+    artifact_name = (function
+      | Canary_basic.Lib -> Some "libsqlite3.so"
+      | Canary_basic.Binding Canary_lang.OCaml -> Some "sqlite3"
+      | Canary_basic.Binding Canary_lang.Python -> Some "sqlite3"
+      | _ -> None);
+  }
+
+let realize (a : Canary_artifact.assignment) ~(workspace : string) :
     Canary_step_builder.runner_spec =
-  match c with
-  | Fetched_lib -> runner_spec
-  | Built_lib chan -> built_spec ~workspace ~chan
+  let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
+    | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib
+    | _ -> Canary_basic.Stable
+  in
+  let spec = Canary_action_table.realize (sqlite_table_rows ~workspace chan) a in
+  let dotted, _, _ = sqlite_amalg chan in
+  let version_line = "sqlite_version=" ^ dotted in
+  let ocaml = sqlite_ocaml_config.ocaml in
+  let probe_env =
+    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH"
+        (workspace ^ "/lib") ]
+  in
+  { spec with
+    probe_binding =
+      [ ( Canary_lang.OCaml,
+          Canary_store.Pm
+            (Canary_store.Lang_pm
+               { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
+          fun ~output_dir ~variant_key ->
+            Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
+              ~log_grep:None ~binding_lib:ocaml.binding_lib_name
+              ~example:ocaml.example_file ~target:ocaml.example_target
+              ~output_dir ~variant_key ) ];
+    asserts =
+      [ ( Canary_basic.Probe_binding Canary_lang.OCaml,
+          Some
+            (Canary_store.Pm
+               (Canary_store.Lang_pm
+                  { lang = Canary_lang.OCaml; pm = Canary_store.Opam })),
+          version_line ) ];
+  }
+
+let sqlite_ci_spec ~workspace =
+  let rows = sqlite_table_rows ~workspace Canary_basic.Stable in
+  let a = Canary_artifact.[ (Canary_artifact.a_lib, { provision = Canary_artifact.Fetched; version = Canary_basic.good Canary_basic.Stable }) ] in
+  Canary_action_table.realize_from_rows ~assignment:a ~base:base_spec rows
+
+let sqlite_artifacts : Canary_project_spec.artifact_row list =
+  [ (* The source row (2026-08-13, spec-check fulfillment): Fetched@
+       [Stable;Dev] with [~follows:a_lib] — the amalgamation version IS the
+       lib's version (the self-contained build fetches exactly the
+       amalgamation it builds), so the source's channel locks to the lib's.
+       That keeps the scenario set at exactly 3 (fetched-system,
+       built@3.45.1, built@3.46.1): the follows filter removes the
+       source@dev × lib@Fetched cross combos, and [assignment_ok]'s
+       source@version coupling is satisfied by construction. The run's
+       fetch_source step is the amalgamation curl_unzip that build_lib
+       previously folded into itself (its inner fetch is now a no-op
+       guard over the same workspace/src). *)
+    artifact_row ~artifact:a_source ~follows:a_lib
+      ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
+      ~provider:(Canary_store_config.Source_repo sqlite_source_stable) ();
+    artifact_row ~artifact:a_lib
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]);
+                  (Built, Canary_basic.[ Stable; Dev ]) ]
+      ~provider:(Canary_store_config.Sys_pkg prebuilt.system_package) ();
+    artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
+      ~runtime:Canary_store.Independent
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+      ~provider:
+        (Canary_store_config.Lang_pkg
+           { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+             package = prebuilt.opam_package; self_contained = false; versions = None })
+      ();
+    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+      ~provider:sqlite_python_provider () ]
+
+(* Derived view for the legacy [construct] display — the artifact table is
+   the source of truth; this is just [project_spec_of_rows] over it (the
+   hand-written duplicate retired 2026-08-13 with the source-row wiring). *)
+let sqlite_spec : Canary_artifact.project_spec =
+  Canary_project_spec.project_spec_of_rows sqlite_artifacts
 
 let sqlite_run : Canary_project_run.project_run =
   { pr_name = "sqlite";
     pr_artifacts = sqlite_artifacts;
-    (* the STATIC declaration; the generic runner enumerates it
-       ([Canary_project_run.scenarios_of]) — no scenario list here *)
-    pr_spec = sqlite_spec;
     (* No pre-placement: sqlite builds/fetches into the runner-provided
        [workspace] (canary_main.scenario_dir_of — per-version for Built, so
        Built@Stable and Built@Dev get distinct dirs; Fetched collapses across
        versions there). The built_spec reads the version from the assignment. *)
-    pr_runner_spec = (fun a ~workspace -> realize (dispatch a) ~workspace);
+    pr_runner_spec = (fun a ~workspace -> realize a ~workspace);
     (* No designed mismatch probes: sqlite is additive-only upstream (no
        backward breaks exist — measured, status §C) and no consumer here
        requires a version-sensitive API yet (a forward probe needs a ≤3.43
        lib version + a C-level consumer of sqlite3_get_clientdata). *)
-    pr_mismatch_probes = [] }
+    pr_mismatch_probes = [];
+    pr_wrapper_pkgs = [];
+    pr_api_source = None }

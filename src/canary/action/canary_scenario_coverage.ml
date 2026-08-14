@@ -52,7 +52,7 @@ let catalogue ~(langs : Canary_lang.lang list) : stage list =
        Dynlink) is pure source that dlopens the lib at probe time, so it has
        no compile stage (§4.2.1b). Round 1 wires only Static, so this guard
        is always true today; it pre-encodes the round-2 semantics. *)
-    (if Canary_mechanism.is_static_binding_lang l then
+    (if Canary_mechanism_catalogue.is_static_binding_lang l then
        [ { label = "build_binding_" ^ s; realizations = [ Build_binding l ] } ]
      else [])
     @ [ { label = "publish_binding_" ^ s; realizations = [ Publish (Binding l) ] };

@@ -2,7 +2,7 @@ open Base
 open Tola_std
 open Canary_store
 open Canary_artifact_source
-open Canary_artifact_api
+open Canary_artifact
 open Canary_lang
 open Canary_basic
 open Canary_toolchain
@@ -10,8 +10,8 @@ open Canary
 
 (* API source spec for z3 — native_api for the C API surface and in-tree
    language binding_apis with explicit requires declarations. *)
-let z3_api_source : Canary_artifact_api.t =
-  let native_api : Canary_artifact_api.native_api =
+let z3_api_source : Canary_artifact.t =
+  let native_api : Canary_artifact.native_api =
     {
       kind = C;
       components = [ Headers; Runtime_lib; Link_lib ];
@@ -51,7 +51,7 @@ let z3_api_source : Canary_artifact_api.t =
       cxx_abi   = None;
     }
   in
-  let ocaml_binding : Canary_artifact_api.binding_api =
+  let ocaml_binding : Canary_artifact.binding_api =
     {
       lang = OCaml;
       source_dir = Some "src/api/ml";
@@ -64,7 +64,7 @@ let z3_api_source : Canary_artifact_api.t =
   in
   (* z3-solver is a pre-compiled pip wheel; source_dir marks in-tree source
      but the wheel is not packaged by canary — installed directly via pip. *)
-  let python_binding : Canary_artifact_api.binding_api =
+  let python_binding : Canary_artifact.binding_api =
     {
       lang = Python;
       source_dir = Some "src/api/python/z3";
@@ -110,11 +110,9 @@ let z3_source_dev : source_repo =
     name = "z3";
     remote = Git_remote "https://github.com/arbipher/z3.git";
     locals = mk_locals "contrib/z3-all/z3";
-    version = "dev";
+    version = Canary_basic.{ channel = Dev; id = "" };
     ref_ = "HEAD";
     official = false;
-    has_build_lib = true;
-    has_build_binding = true;
     build_sys_deps = [ "cmake"; "ninja-build"; "libgmp-dev"; "python3-dev" ];
     api_source = Some z3_api_source;
   }
@@ -124,11 +122,9 @@ let z3_source_latest : source_repo =
     name = "z3";
     remote = Git_remote "https://github.com/Z3Prover/z3.git";
     locals = [];
-    version = "latest";
+    version = Canary_basic.{ channel = Dev; id = "latest" };
     ref_ = "HEAD";
     official = true;
-    has_build_lib = true;
-    has_build_binding = true;
     build_sys_deps = [ "cmake"; "ninja-build"; "libgmp-dev"; "python3-dev" ];
     api_source = Some z3_api_source;
   }
@@ -138,18 +134,26 @@ let z3_source_stable : source_repo =
     name = "z3";
     remote = Git_remote "https://github.com/Z3Prover/z3.git";
     locals = mk_locals "contrib/z3-all/z3-stable";
-    version = "4.15.2";
+    version = Canary_basic.{ channel = Stable; id = "4.15.2" };
     ref_ = "bd3e722";
     official = true;
-    has_build_lib = false;
     (* No build — use fetch_binding (opam install z3) for the stable path.
        probe_binding_pkg will compile the example against the installed binding. *)
-    has_build_binding = false;
     build_sys_deps = [];
     (* Stable sources share the dev api_source — same project, same spec.
-       Summary closures will warn when source.has_build_binding = false. *)
+       Summary closures will warn when build_binding = false. *)
     api_source = Some z3_api_source;
   }
+
+(* Channel-keyed source lookup. [Dev] = official [z3_source_latest]
+   (2026-08-13 restored — the "official HEAD binding broken" finding was
+   WRONG: the failure was the opam switch's stale dllz3ml.so shadowing
+   the fresh one in z3's POST_BUILD self-check (CAML_LD_LIBRARY_PATH
+   beats the bytecode's -dllpath); the build_binding row now guards the
+   env. The arbipher fork ([z3_source_dev]) stays declared as the
+   forked-dev candidate for the three-version report.) *)
+let z3_source_of (ch : Canary_basic.channel) : source_repo =
+  match ch with Canary_basic.Dev -> z3_source_latest | Canary_basic.Stable -> z3_source_stable
 
 let z3_opam_spec : Canary_toolchain.opam_spec =
   {
@@ -287,21 +291,24 @@ let z3_contract_bindings : Canary_scenario.contract_binding list =
 let mk_runner_spec ~source
     ?(binding_configs = [ Ocaml_config z3_ocaml_config; z3_python_config ])
     ?(tola_root = Unix.getcwd ())
-    ?(cmake_build_binding = source.has_build_binding) distro :
+    ?(build_lib = false) ?(build_binding = false)
+    ?(cmake_build_binding = build_binding) distro :
     Canary_step_builder.runner_spec =
+  let { version; _ } : source_repo = source in
+  let ver_str = Canary_basic.string_of_version version in
   let local = local_for distro source in
   let root =
     match local with
     | Some l -> l.path
     | None ->
-        [%string "_out/canary/projects/z3/%{source.version}_%{source.ref_}/src"]
+        [%string "_out/canary/projects/z3/%{ver_str}_%{source.ref_}/src"]
   in
   let build =
     match local with
     | Some l -> l.build_path
     | None ->
         [%string
-          "_out/canary/projects/z3/%{source.version}_%{source.ref_}/build"]
+          "_out/canary/projects/z3/%{ver_str}_%{source.ref_}/build"]
   in
   (* When no local checkout, opam fetches from the remote git URL directly.
      When a local checkout exists, opam installs from the local file:// path. *)
@@ -324,30 +331,30 @@ let mk_runner_spec ~source
   let target = ocaml_tc.ocaml.example_target in
   let binding_lib = ocaml_tc.ocaml.binding_lib_name in
   let lib_resolve =
-    lib_cmd_of_source ~has_build_lib:source.has_build_lib ~build
+    lib_cmd_of_source ~has_build_lib:build_lib ~build
   in
   let binding_resolve =
-    binding_dir_cmd_of_source ~has_build_binding:source.has_build_binding ~build
+    binding_dir_cmd_of_source ~has_build_binding:build_binding ~build
   in
   {
     Canary_step_builder.empty_runner_spec with
     api_source = source.api_source;
     (* Skip fetch_source when opam will handle source fetching (pack_binding remote flow) *)
     fetch_source =
-      (if source.has_build_lib || cmake_build_binding then
+      (if build_lib || cmake_build_binding then
          Some
            (fun ~output_dir ~variant_key ->
              Canary_artifact_source.source_fetch_cmd distro source ~output_dir ~variant_key)
        else None);
     scan_source =
-      (if source.has_build_lib || cmake_build_binding then
+      (if build_lib || cmake_build_binding then
          Option.map source.api_source ~f:(fun api ->
              fun ~output_dir ~variant_key ->
               Canary_artifact_source.scan_source_cmd ~source_root:root api
                 ~output_dir ~variant_key)
        else None);
     build_headers =
-      (if source.has_build_lib || cmake_build_binding then
+      (if build_lib || cmake_build_binding then
          Some
            (fun ~output_dir ~variant_key ->
              let hdr_ok = Canary_basic.variant_file ~variant_key "headers.ok" in
@@ -356,7 +363,7 @@ let mk_runner_spec ~source
                 && echo 'ok' > %{output_dir}/%{hdr_ok}"])
        else None);
     configure =
-      (if source.has_build_lib || cmake_build_binding then
+      (if build_lib || cmake_build_binding then
          let cmake_exec =
            if cmake_build_binding then "opam exec -- cmake" else "cmake"
          in
@@ -373,7 +380,7 @@ let mk_runner_spec ~source
                   ~marker:"conf.ok" ~output_dir ~variant_key)
        else None);
     build_lib =
-      (if source.has_build_lib then
+      (if build_lib then
          Some
            (fun ~output_dir ~variant_key ->
              Canary_build_cmd.ninja_build_cmd ~target:"libz3" ~build ()
@@ -393,7 +400,7 @@ let mk_runner_spec ~source
                    ~marker:"build.ok" ~output_dir ~variant_key) ]
        else []);
     install_lib =
-      (if source.has_build_lib then
+      (if build_lib then
          Some (fun ~output_dir ~variant_key ->
            let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
            (* REAL install (2026-08-06; was a fake `cp` — TODO #40 / status
@@ -436,7 +443,7 @@ echo 'ok' > %{output_dir}/%{install_ok}|}])
        in
        python_entry);
     pack_binding =
-      (if source.has_build_binding then
+      (if build_binding then
          [ (OCaml,
             fun ~output_dir ~variant_key ->
               let pkg_full = Canary_toolchain.pkg_full ocaml_tc.toolchain in
@@ -475,7 +482,7 @@ cp "%{src_template}" "%{pkg_dir}/opam.in"
     probe_lib =
       List.filter_opt
         [
-          (if source.has_build_lib then
+          (if build_lib then
              Some
                ( Build_tree,
                  fun ~output_dir ~variant_key ->
@@ -487,7 +494,7 @@ test -n "$LIB_Z3"|}]
                    [%string
                      "%{resolve}\n%{Canary_artifact_native.native_lib_probe_cmd ~lib:\"$LIB_Z3\" ~prefix:\"Z3_\" ~output_dir ~variant_key}"])
            else None);
-          (if source.has_build_lib then
+          (if build_lib then
              Some
                ( Staged,
                  fun ~output_dir ~variant_key ->
@@ -510,7 +517,7 @@ test -f "$LIB_Z3"|}
       List.filter_opt
         [
           (* Build_tree: probe against build tree artifacts (only when cmake built them) *)
-          (if source.has_build_binding && cmake_build_binding then
+          (if build_binding && cmake_build_binding then
              Some
                ( Canary_lang.OCaml, Build_tree,
                  fun ~output_dir ~variant_key ->
@@ -569,8 +576,8 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
           Some
             (Canary_step_builder.check_build_binding ~marker:"build.ok"
                ~archive_path:[%string "%{build}/src/api/ml/z3ml.cmxa"])
-      | Fetch (Binding _) when not source.has_build_binding ->
-          let pkg = [%string "z3.%{source.version}"] in
+      | Fetch (Binding _) when not build_binding ->
+          let pkg = [%string "z3.%{ver_str}"] in
           Some
             (fun ~output_dir ~variant_key ->
               Canary_step_builder.check_markers [ "binding.ok" ] ~output_dir ~variant_key
@@ -592,10 +599,10 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
         ~bindings:z3_contract_bindings
         ~langs:[ Canary_lang.Python ];
     inspect_note =
-      (if not source.has_build_binding then
+      (if not build_binding then
          Some
-           (Canary_artifact_api.stable_reuse_warning ~source_name:"z3"
-              ~source_version:source.version)
+           (Canary_artifact.stable_reuse_warning ~source_name:"z3"
+              ~source_version:ver_str)
        else None);
     inspect =
       (fun action _loc ->
@@ -604,10 +611,10 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
             ~message:"z3 mk_runner_spec: api_source not set"
         in
         let warn =
-          if not source.has_build_binding then
+          if not build_binding then
             Some
-              (Canary_artifact_api.stable_reuse_warning ~source_name:"z3"
-                 ~source_version:source.version)
+              (Canary_artifact.stable_reuse_warning ~source_name:"z3"
+                 ~source_version:ver_str)
           else None
         in
         let prepend_warn cmd =
@@ -620,7 +627,7 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
                 let sum =
                   Canary_artifact_native.inspect_cmd ~lib:"$LIB_Z3"
                     ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ]
-                    ~watchlist:(Canary_artifact_api.native_watchlist api)
+                    ~watchlist:(Canary_artifact.native_watchlist api)
                     ~output_dir ~variant_key ()
                 in
                 prepend_warn [%string "%{lib_resolve}\n%{sum}"])
@@ -670,7 +677,14 @@ ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
    which is exactly the abstraction A5 is the forcing function for. Until
    then the binding rides INSIDE the realization (phase 2's
    dispatch/realize), like the probe locations (phase 3). *)
-let z3_spec : Canary_enumerate.project_spec =
+(* Per-artifact providers — declared once, shared by [pr_artifacts] and
+   [ps_universe] so the runtime-edge mode is derivable (A5 residue (ii)). *)
+let z3_python_provider =
+  Canary_store_config.Lang_pkg
+    { lang = Canary_lang.Python; pm = Canary_store.Pip; package = "z3-solver";
+      self_contained = true; versions = None }
+
+let z3_spec : Canary_artifact.project_spec =
   { ps_universe =
       Canary_enumerate.
         [ (a_source, axes [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
@@ -679,15 +693,21 @@ let z3_spec : Canary_enumerate.project_spec =
               [ (Fetched, [ Canary_basic.Stable ]);
                 (Built, [ Canary_basic.Dev ]) ] );
           ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-            (* the wheel is a CO-PROVIDER (backlog #45), declared on the
-               artifact axis: z3-solver bundles its own libz3, so the
-               scenario's lib axis never reaches the python probe — the
-               measured scenario-invariance of the wheel xfail. The OCaml
-               binding's edge stays undeclared: its mode differs per chain
-               (dev = lockstep with the built lib; stable = opam's own
-               build), which the per-artifact axis can't say yet. *)
-            axes ~runtime:(Canary_store.Ambient "bundled libz3 (z3-solver wheel)")
-              [ (Fetched, [ Canary_basic.Stable ]) ] ) ] }
+            (* self-contained pip wheel (co-provider, backlog #45): z3-solver
+               bundles its own libz3 → Ambient derived from the provider. *)
+            let runtime =
+              Canary_store_config.dep_mode_of_provider z3_python_provider
+            in
+            axes ?runtime
+              [ (Fetched, [ Canary_basic.Stable ]) ] );
+          ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
+            (* binding-follows-chain (A5 residue (iii), 2026-08-06): the
+               OCaml binding's version follows the lib's — Built@Dev in the
+               dev chain, Fetched@Stable in the stable chain. The follows
+               constraint prunes the two cross-channel mismatch pairs. *)
+            axes ~follows:a_lib
+              [ (Built, [ Canary_basic.Dev ]);
+                (Fetched, [ Canary_basic.Stable ]) ] ) ] }
 
 (* ── A5 phase 2: dispatch / realization split + the [project_run] ── *)
 
@@ -704,29 +724,39 @@ let z3_spec : Canary_enumerate.project_spec =
     by (artifact × channel) — which would also let a project PIN a
     Fetched version — is the not-yet-wired provenance refinement
     (status §A / the Fetched-ambient gotcha). *)
-let z3_artifacts : Canary_project_run.artifact_decl list =
-  Canary_enumerate.
-    [ { Canary_project_run.ad_artifact = a_source;
-        ad_provider = Some (Canary_store_config.Source_repo z3_source_stable)
-      };
-      { ad_artifact = a_lib;
-        ad_provider =
-          Some
-            (Canary_store_config.Sys_pkg
-               (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
-                  ~macos_pkg:"z3" ())) };
-      { ad_artifact = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-        ad_provider =
-          Some
-            (Canary_store_config.Lang_pkg
-               { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-                 package = "z3" }) };
-      { ad_artifact = a_binding Canary_lang.Python Canary_mechanism.Cext;
-        ad_provider =
-          Some
-            (Canary_store_config.Lang_pkg
-               { lang = Canary_lang.Python; pm = Canary_store.Pip;
-                 package = "z3-solver" }) } ]
+let z3_artifacts : Canary_project_spec.artifact_row list =
+  let open Canary_project_spec in
+  [ artifact_row ~artifact:a_source
+      ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
+      ~provider:(Canary_store_config.Source_repo z3_source_stable) ();
+    artifact_row ~artifact:a_lib
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]);
+                  (Built, [ Canary_basic.Dev ]) ]
+      ~provider:
+        (Canary_store_config.Sys_pkg
+           (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
+              ~macos_pkg:"z3" ())) ();
+    artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
+      ~follows:a_lib
+      ~universe:[ (Built, [ Canary_basic.Dev ]);
+                  (Fetched, [ Canary_basic.Stable ]) ]
+      ~provider:
+        (Canary_store_config.Lang_pkg
+           { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
+             package = "z3"; self_contained = false;
+             (* STORE PIN (2026-08-12): the Fetched binding pins the
+                opam-repo version the stable chain probes against (the
+                opam package version — the store's own record; the dev
+                chain's z3.dev reports "dev"). The dev binding is BUILT —
+                its Publish carries its own pin-check. *)
+             versions =
+               Some
+                 [ { Canary_store_config.pin_version = "4.16.0";
+                     install_name = None } ] })
+      ();
+    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+      ~provider:z3_python_provider () ]
 
 (* ── dispatch / realization split (the A9-step-1 structure) ──
    [scenario_case] is the PURE dispatch result — inspectable data computed
@@ -735,25 +765,236 @@ let z3_artifacts : Canary_project_run.artifact_decl list =
    existing [mk_runner_spec ~source:…] raw specs (command churn zero — the
    whole hand-written spec IS the realization; decomposing it into shared
    templates is A9-step-2). *)
-type scenario_case =
-  | Dev_chain     (* build chain: source@Dev fetched, lib + OCaml binding
-                     built from it (cmake/ninja), opam-packed *)
-  | Stable_chain  (* fetch chain: sys-PM lib, opam binding, pip wheel *)
+(* dispatch is now universal: [Canary_action_table.dispatch] *)
 
-(* Dispatch reads the LIB placement only: [Built] identifies the build
-   chain (the universe declares Built@Dev exclusively). NOT the source
-   channel — the stable world's assignment may carry either source channel
-   (the Fetched source is version-ambient; the two all-Fetched assignments
-   are one scenario), so the source coordinate is not a chain signal. *)
-let dispatch (a : Canary_enumerate.assignment) : scenario_case =
-  match Canary_enumerate.provision_of a Canary_enumerate.a_lib with
-  | Canary_enumerate.Built -> Dev_chain
-  | _ -> Stable_chain
+(* ── A9-step-2: action-variant table ── *)
+let z3_table_rows ~(chan : Canary_basic.channel) ~distro =
+  let open Canary_action_table in
+  let source = z3_source_of chan in
+  let { version; ref_; name; remote; _ } : Canary_artifact_source.source_repo = source in
+  let ver_str = Canary_basic.string_of_version version in
+  let local = Canary_artifact_source.local_for distro source in
+  let root =
+    match local with
+    | Some l -> l.path
+    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/src" ver_str ref_
+  in
+  let build =
+    match local with
+    | Some l -> l.build_path
+    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/build" ver_str ref_
+  in
+  let (Canary_artifact_source.Git_remote url) = remote in
+  let cmake_build_binding =
+    match version.Canary_basic.channel with Canary_basic.Dev -> true | _ -> false
+  in
+  let shared =
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
+        ar_template = Primitive ("fetch_lib",
+                        [ ("linux_pkg", "libz3-dev"); ("macos_pkg", "z3") ]) };
+      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
+        ar_template = Primitive ("pip_install", [ ("pkg", "z3-solver") ]) };
+      { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
+        ar_template = Primitive ("python_probe",
+                        [ ("snippet", "import z3; s = z3.Solver(); s.add(z3.Int('x') > 0); \
+                           print('z3 ok:' + str(s.check()))") ]) };
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+        ar_template = Primitive ("ocaml_probe",
+                        [ ("binding_lib", "z3");
+                          ("example", "canary/examples/z3/z3_example.ml");
+                          ("target", "z3_example") ]) };
+      { ar_action = Canary_basic.Probe_lib;
+        ar_template = Primitive ("native_lib_probe",
+                        [ ("location", "pm"); ("pm_pkg", "z3"); ("prefix", "Z3_"); ("lib_name", "libz3.so") ]) };
+    ]
+  in
+  let dev =
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
+        ar_template = Primitive ("source_fetch",
+                        [ ("name", name); ("ver_str", ver_str);
+                          ("ref_", ref_); ("url", url) ]) };
+      { ar_action = Canary_basic.Scan_sources;
+        ar_template = Primitive ("scan_source",
+                        [ ("root", root); ("hdr_file", "src/api/z3.h") ]) };
+      { ar_action = Canary_basic.Build_headers;
+        ar_template = Primitive ("build_headers",
+                        [ ("root", root); ("hdr_dir", "src/api") ]) };
+      { ar_action = Canary_basic.Configure;
+        ar_template = Primitive ("cmake_configure",
+                        [ ("cmake_exec", if cmake_build_binding then "opam exec -- cmake" else "cmake");
+                          (* -G Ninja is REQUIRED: without it cmake defaults to
+                             Unix Makefiles and the ninja_build step finds no
+                             build.ninja (the old mk_runner_spec's flags had
+                             it; the table row dropped it). *)
+                          ("flags", "-G Ninja -DZ3_BUILD_LIBZ3_SHARED=TRUE -DZ3_BUILD_OCAML_BINDINGS="
+                                    ^ (if cmake_build_binding then "ON" else "OFF"));
+                          ("src", root); ("build", build) ]) };
+      { ar_action = Canary_basic.Build_lib;
+        ar_template = Primitive ("ninja_build", [ ("target", "libz3"); ("build", build) ]) };
+      { ar_action = Canary_basic.Install_lib;
+        ar_template = Primitive ("cmake_install",
+                        [ ("build", build); ("prefix", build ^ "/../install") ]) };
+      { ar_action = Canary_basic.Build_binding Canary_lang.OCaml;
+        ar_template = Primitive ("ninja_build_binding",
+                        [ ("target", "build_z3_ocaml_bindings"); ("build", build);
+                          (* The binding target's POST_BUILD self-check runs the
+                             bytecode + native examples with AMBIENT dll search:
+                             the switch's stale dllz3ml.so (pinned z3 / z3.dev)
+                             shadows the fresh one (CAML_LD_LIBRARY_PATH beats the
+                             bytecode's -dllpath — reproduced 2026-08-13 as
+                             "unknown C primitive 'n_solver_register_on_clause'"),
+                             and the native run's libz3.so needs LD_LIBRARY_PATH
+                             (the CMakeLists' DYLD_LIBRARY_PATH is a macOS no-op).
+                             Prefix the build dir so the self-check sees the
+                             artifact it just built. *)
+                          (* $(pwd): the guard paths must be ABSOLUTE — the
+                             POST_BUILD self-check runs from <build>/src/api/ml,
+                             so a relative entry resolves against the wrong cwd
+                             and the stale stublibs dll wins again. *)
+                          ("env_guard",
+                           Printf.sprintf "CAML_LD_LIBRARY_PATH=$(pwd)/%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=$(pwd)/%s"
+                             build build) ]) };
+      { ar_action = Canary_basic.Probe_lib;
+        ar_template = Primitive ("native_lib_probe",
+                        [ ("location", "build_tree"); ("build", build); ("lib_glob", "libz3.so");
+                          ("prefix", "Z3_") ]) };
+      { ar_action = Canary_basic.Probe_lib;
+        ar_template = Primitive ("native_lib_probe",
+                        [ ("location", "staged");
+                          ("lib", build ^ "/../install/lib/libz3.so");
+                          ("prefix", "Z3_") ]) };
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+        ar_template = Raw (fun ~output_dir ~variant_key ->
+            let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+            let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
+            (* -cclib "$LIB_Z3": the cmxa embeds `-L<stublibs> -L<build> -lz3`
+               — the STORE's stale libz3.so wins the -lz3 search (stublibs
+               first) and the link dies on any API the store lacks (finite-set
+               at official HEAD). The full-path arg precedes it, so the exe
+               links the BUILT lib. Same shadowing class as the env_guard. *)
+            Printf.sprintf
+              "eval $(opam env) && \
+               LIB_Z3=$(ls %s/libz3.so %s/libz3.dylib 2>/dev/null | head -1) && \
+               test -n \"$LIB_Z3\" && \
+               BINDING_DIR=%s/src/api/ml && \
+               STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
+               test -n \"$STUB\" && \
+               python3 canary/scripts/assert_binary_symbols.py \
+                 --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
+                 --symbol-prefix Z3_ > %s/%s 2>&1 && \
+               ocamlfind ocamlopt -package zarith -linkpkg \
+                 -cclib \"$LIB_Z3\" \
+                 -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
+                 canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
+               %s/z3_example >> %s/%s 2>&1 && \
+               cat %s/%s"
+              build build build output_dir symbols_log
+              output_dir output_dir probe_log
+              output_dir output_dir probe_log
+              output_dir probe_log) };
+      { ar_action = Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml);
+        ar_template = Raw (fun ~output_dir ~variant_key ->
+            (* CANARY_* must be ABSOLUTE: the z3.dev package script runs from
+               the opam sandbox build dir, where relative `_out/...` paths
+               don't exist (the configure step dies). Local checkout paths
+               are already absolute. *)
+            let abs p = if String.is_prefix p ~prefix:"/" then p else "$(pwd)/" ^ p in
+            Printf.sprintf
+              "eval $(opam env) && \
+               PREFIX=%s LIB_DIR=%s CANARY_BUILD_DIR=%s CANARY_SRC_DIR=%s opam install -y z3.dev \
+                 --verbose --keep-build-dir --assume-depexts && \
+               echo 'ok' > %s/%s"
+              (abs build) (abs build) (abs build) (abs root) output_dir
+              (Canary_basic.variant_file ~variant_key "pack.ok")) };
+    ]
+  in
+  shared @ dev
 
-let realize (c : scenario_case) distro : Canary_step_builder.runner_spec =
-  match c with
-  | Dev_chain -> mk_runner_spec ~source:z3_source_dev distro
-  | Stable_chain -> mk_runner_spec ~source:z3_source_stable distro
+let z3_binding_art =
+  Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+
+(* The STORE-PIN plumbing (2026-08-12, the ssl mechanism on z3): the
+   stable chain's binding is Fetched@pinned — its fetch is a pin
+   operation and its probe asserts the world; the dev chain's Publish
+   carries its own pin-check so a stale switch can't serve a silent
+   wrong-version probe. *)
+let z3_world_check (pin : string) =
+  [%string
+    {|eval $(opam env)
+INSTALLED_Z3=$(opam list z3 --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED_Z3" = "%{pin}" || { echo "WORLD MISMATCH: switch has z3 $INSTALLED_Z3, scenario declares z3 %{pin}"; exit 1; }
+|}]
+
+let realize a =
+  let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
+    | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib | _ -> Canary_basic.Stable
+  in
+  let spec = Canary_action_table.realize (z3_table_rows ~chan ~distro:(detect_distro ())) a in
+  let binding_fetched =
+    Canary_enumerate.equal_provision
+      (Canary_enumerate.provision_of a z3_binding_art)
+      Canary_artifact.Fetched
+  in
+  let pin =
+    (Canary_enumerate.version_of a z3_binding_art).Canary_basic.id
+  in
+  (* expectation stays hand-wired: contract bindings are project data *)
+  { spec with
+    expectation = (fun action loc ->
+        Canary_scenario.lower_expectation_agnostic
+          ~bindings:z3_contract_bindings ~langs:[ Canary_lang.Python ] action loc);
+    (* stable chain: the pinned binding fetch (was ambient pre-install —
+       unmodeled global state; now an explicit pin operation) + the
+       pin-checked postcondition. *)
+    fetch_binding =
+      (if binding_fetched then
+         [ (Canary_lang.OCaml,
+            Canary_step_builder.Raw
+              (Canary_step_builder.fetch_binding_cmd
+                 (Canary_toolchain.mk_opam_package_spec
+                    ~install_name:[%string "z3.%{pin}"] ()))) ]
+       else spec.fetch_binding);
+    check_post =
+      (fun action ->
+        match action with
+        | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml)
+          when binding_fetched ->
+            Some (Canary_step_builder.pin_check_post ~pkg:"z3" ~pin
+                    ~marker:"binding.ok")
+        | Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml) ->
+            (* the dev chain's store mutation is verified, not just "ran":
+               a warm-skipped publish only fires when the switch provably
+               holds the published state. *)
+            Some (Canary_step_builder.pin_check_post ~pkg:"z3" ~pin:"dev"
+                    ~marker:"pack.ok")
+        | _ -> spec.check_post action);
+    (* stable probe: world assertion (the switch must hold the pin) — a
+       drifted switch fails loudly instead of silently compiling against
+       the dev binding (the A7 finding (a) crossing). *)
+    probe_binding =
+      (if binding_fetched then
+         [ (Canary_lang.OCaml,
+            Canary_store.Pm
+              (Canary_store.Lang_pm
+                 { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
+            fun ~output_dir ~variant_key ->
+              let base =
+                Canary_step_builder.probe_ocaml_cmd ~binding_lib:"z3"
+                  ~example:"canary/examples/z3/z3_example.ml"
+                  ~target:"z3_example" ~output_dir ~variant_key
+              in
+              z3_world_check pin ^ base) ]
+       else spec.probe_binding);
+    inspect = (fun action _loc ->
+        match action with
+        | Canary_basic.Probe_lib ->
+            Some (fun ~output_dir ~variant_key ->
+                let lib_resolve = "LIB_Z3=$(pkg-config --variable=libdir z3 2>/dev/null)/libz3.so" in
+                Printf.sprintf "%s\n%s" lib_resolve
+                  (Canary_artifact_native.inspect_cmd ~lib:"$LIB_Z3"
+                     ~prefixes:[ "Z3_"; "Z3_mk_"; "Z3_solver_" ] ~output_dir ~variant_key ()))
+        | _ -> None);
+  }
 
 (** z3 as a [Canary_project_run.project_run] — the generic path (`action z3`
     → [canary_main.run_project_run]: enumerate → runner_spec → run), same as
@@ -782,9 +1023,27 @@ let realize (c : scenario_case) distro : Canary_step_builder.runner_spec =
     Expect_compat_derived → xfail [c2] in `action`/`status`/`spec` (A7
     phases 2+3). Folding probe-level roles into the design-intent table is
     A7 residue. *)
-let z3_run distro : Canary_project_run.project_run =
+(* CI spec: same as Dev_chain but without cmake steps (build_lib=false,
+   cmake_build_binding=false). The opam pack_binding step still runs. *)
+let z3_ci_spec _tola_root distro =
+  let open Canary_action_table in
+  let rows = z3_table_rows ~chan:Canary_basic.Dev ~distro in
+  let no_cmake (row : action_row) =
+    match row.ar_action with
+    | Configure | Build_lib | Build_headers | Install_lib -> false
+    | Fetch Source | Scan_sources -> false
+    | _ -> true
+  in
+  let filtered = List.filter rows ~f:no_cmake in
+  let a = Canary_artifact.[ (Canary_artifact.a_lib, { provision = Canary_artifact.Built; version = Canary_basic.good Canary_basic.Dev }) ] in
+  realize_from_rows ~assignment:a filtered
+
+let z3_run _distro : Canary_project_run.project_run =
   { pr_name = "z3";
     pr_artifacts = z3_artifacts;
-    pr_spec = z3_spec;
-    pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a) distro);
-    pr_mismatch_probes = [] }
+    pr_runner_spec = (fun a ~workspace:_ -> realize a);
+    pr_mismatch_probes = [];
+    (* the dev-source wrapper: the Publish row installs our z3.dev opam
+       package over the built tree (pin-checked "dev" on the store). *)
+    pr_wrapper_pkgs = [ (Canary_lang.OCaml, "z3.dev") ];
+    pr_api_source = None }

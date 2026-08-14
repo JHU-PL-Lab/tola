@@ -1,11 +1,11 @@
 %% view: binding_ocaml
 graph LR
-    source_node@{ shape: docs, label: "source" }
+    source_node@{ shape: docs, label: "source [1]" }
     headers_node@{ shape: docs, label: "headers" }
-    lib_node@{ shape: docs, label: "lib [1]" }
+    lib_node@{ shape: docs, label: "lib [2]" }
     app_node@{ shape: docs, label: "app" }
     subgraph ocaml_binding_sg ["ocaml binding"]
-      ocaml_binding_fetch_node@{ shape: doc, label: "ocaml binding [2]" }
+      ocaml_binding_fetch_node@{ shape: doc, label: "ocaml binding (scenario) [3]" }
     end
 
     A_configure{{"configure"}}
@@ -17,9 +17,10 @@ graph LR
     A_pack_binding_ocaml{{"pack_binding_ocaml"}}
     A_pack_lib{{"pack_lib"}}
     A_pack_app{{"pack_app"}}
-    A_probe_binding_ocaml(["probe_binding_ocaml [3]"])
-    A_probe_app_ocaml(["probe_app_ocaml"])
-    A_probe_lib(["probe_lib [4][5]"])
+    A_probe_binding_ocaml(["probe_binding_ocaml [5]"])
+    A_probe_app_ocaml(["probe_app_ocaml [6]"])
+    A_probe_lib(["probe_lib [7][8]"])
+    A_fetch_binding_ocaml_inspect(["inspect_ocaml [4]"])
 
     source_node --> A_configure
     A_configure --> A_build_headers
@@ -42,6 +43,7 @@ graph LR
     app_node -->|test| A_probe_app_ocaml
     lib_node -.->|runtime| A_probe_app_ocaml
     lib_node -->|test| A_probe_lib
+    ocaml_binding_fetch_node -.-> A_fetch_binding_ocaml_inspect
 
     classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px
     classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
@@ -62,8 +64,9 @@ graph LR
     class A_pack_lib st_nospec
     class A_pack_app st_nospec
     class A_probe_binding_ocaml st_done
-    class A_probe_app_ocaml st_nospec
+    class A_probe_app_ocaml st_done_ctx
     class A_probe_lib st_done_ctx
+    class A_fetch_binding_ocaml_inspect st_done
     linkStyle 0 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
@@ -82,6 +85,7 @@ graph LR
     linkStyle 15 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
     linkStyle 16 stroke:#4caf50,stroke-width:3px
     linkStyle 17 stroke:#4caf50,stroke-width:3px
-    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
-    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5
+    linkStyle 18 stroke:#4caf50,stroke-width:3px
+    linkStyle 19 stroke:#4caf50,stroke-width:3px
     linkStyle 20 stroke:#4caf50,stroke-width:3px
+    linkStyle 21 stroke:#4caf50,stroke-width:3px

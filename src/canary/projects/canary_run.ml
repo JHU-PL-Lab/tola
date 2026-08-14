@@ -1,5 +1,4 @@
 open Base
-open Canary_basic
 open Canary
 
 (* ── GH CI backend ── *)
@@ -31,10 +30,8 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
      pack_binding substitutes CANARY_Z3_SRC with the remote git URL so opam
      clones and builds from source internally.
      sccache caches C++ compilation; mold speeds up linking. *)
-  let z3_ci_source =
-    { Canary_project_z3.z3_source_dev with locals = []; has_build_lib = false }
-  in
-  let z3_ci_tag = Canary_artifact_source.version_cache_tag distro z3_ci_source in
+  let z3_ci_tag = Canary_artifact_source.version_cache_tag distro
+    (Canary_project_z3.z3_source_of Canary_basic.Dev) in
   let z3_ci_project = [%string "z3/%{z3_ci_tag}"] in
   [
     (* LLVM 19: system lib + opam binding only, no source build *)
@@ -45,20 +42,17 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       preamble_steps = [];
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"llvm/19" ~cache_project:"llvm-19"
-          (no_source (Canary_project_llvm.mk_runner_spec
-             ~source:Canary_project_llvm.llvm_source_stable
-             ~tola_root:gh_root distro))) };
+          (no_source (Canary_project_llvm.llvm_ci_spec gh_root distro))) };
     (* Z3: build from source (no prebuilt OCaml binding in opam).
        sccache caches C++ compilation across runs; mold replaces ld for faster links. *)
     { id = "z3-dev";
       name = "Z3 dev — build from source + probe";
       project = z3_ci_project;
-      sys_deps = z3_ci_source.build_sys_deps @ [ "mold" ];
+      sys_deps = (Canary_project_z3.z3_source_of Canary_basic.Dev).build_sys_deps @ [ "mold" ];
       preamble_steps = [ sccache_cache_step; sccache_step ];
       steps =
         Canary_step_builder.derive_steps ~root ~project:z3_ci_project ~cache_project:"z3-dev"
-          (Canary_project_z3.mk_runner_spec ~source:z3_ci_source
-             ~tola_root:gh_root ~cmake_build_binding:false distro) };
+          (Canary_project_z3.z3_ci_spec gh_root distro) };
     (* SQLite: system lib + opam binding *)
     { id = "sqlite";
       name = "SQLite — fetch + probe";
@@ -67,7 +61,7 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       preamble_steps = [];
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"sqlite" ~cache_project:"sqlite"
-          (no_source Canary_project_sqlite.runner_spec)) };
+          (no_source (Canary_project_sqlite.sqlite_ci_spec ~workspace:"sqlite_ci"))) };
     (* zarith: classic Pattern A — apt libgmp-dev + opam zarith binding *)
     { id = "zarith";
       name = "zarith — fetch + probe";
@@ -97,6 +91,16 @@ let ci_jobs ~root distro : Canary_gh.job_spec list =
       steps =
         Canary_step_builder.(derive_steps ~root ~project:"cairo" ~cache_project:"cairo"
           (no_source Canary_project_cairo.runner_spec)) };
+    (* libffi: Pattern A — apt libffi-dev + opam ctypes-foreign binding.
+       First Dynamic_ffi project (ctypes resolves C calls at runtime). *)
+    { id = "libffi";
+      name = "libffi — fetch + probe";
+      project = "libffi";
+      sys_deps = [];
+      preamble_steps = [];
+      steps =
+        Canary_step_builder.(derive_steps ~root ~project:"libffi" ~cache_project:"libffi"
+          (no_source Canary_project_libffi.runner_spec)) };
   ]
 
 let sqlite_job ~root : Canary_gh.job_spec =
@@ -108,7 +112,7 @@ let sqlite_job ~root : Canary_gh.job_spec =
     preamble_steps = [];
     steps =
       Canary_step_builder.(derive_steps ~root ~project:"sqlite"
-        (no_source Canary_project_sqlite.runner_spec)) }
+        (no_source (Canary_project_sqlite.sqlite_ci_spec ~workspace:"sqlite_ci"))) }
 
 let render_ci ~root distro =
   let jobs = ci_jobs ~root distro in
@@ -129,20 +133,24 @@ let dump_graph _distro =
   Tola_std.write_file path (Canary_diagram.mermaid_of_action_graph_schema (store_actions ~langs:[ OCaml ]));
   Fmt.pr "Wrote %s@." path
 
-let dump_job_paths_with ~pp =
+let dump_job_paths_with ~pp:_ =
   Fmt.pr "=== Action Pattern Table ===@.@.";
-  Fmt.pr "Each row is a structural action pattern. The `versions` column shows@.";
-  Fmt.pr "how many version combinations instantiate that pattern (with 2 versions).@.";
-  Fmt.pr "Every artifact can be probed (probe = action_path → probe_<kind>, d+1).@.@.";
-  let ar =
-    make_action_graph ~actions:(store_actions ~langs:[ OCaml ]) ~versions:two_channels ~name:"pkg"
-      ~source:Canary_store.store ()
+  Fmt.pr "Universal chains from the action catalogue (pre-computed).@.";
+  Fmt.pr "Each row is a structural action chain ending at a probe.@.@.";
+  let chains = Canary_enumerate.universal_chains in
+  let module B = Canary_basic in
+  let rows =
+    List.mapi chains ~f:(fun i (_, chain) ->
+        let path =
+          String.concat ~sep:" → "
+            (List.map chain ~f:(fun a -> B.string_of_action a.B.as_action))
+        in
+        let depth = List.length chain in
+        Printf.sprintf "%2d  d=%-2d  %s" (i + 1) depth path)
   in
-  let paths = job_paths_of_action_graph ar in
-  pp Fmt.stdout paths;
-  Fmt.pr "@.%d structural patterns, %d total artifacts@."
-    (List.length (pattern_rows_of_paths paths))
-    (List.length paths)
+  List.iter rows ~f:(fun r -> Fmt.pr "%s@." r);
+  Fmt.pr "@.%d chains (universal, pre-computed from action catalogue)@."
+    (List.length chains)
 
-let dump_job_paths () = dump_job_paths_with ~pp:pp_job_path_table
-let dump_job_paths_md () = dump_job_paths_with ~pp:pp_job_path_table_md
+let dump_job_paths () = dump_job_paths_with ~pp:()
+let dump_job_paths_md () = dump_job_paths_with ~pp:()

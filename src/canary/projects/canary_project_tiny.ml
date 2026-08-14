@@ -30,9 +30,54 @@ module TS = Canary_tiny_scenario
 
 (* ── the declarative project surface ── *)
 
+(* ── binding declarations (M2 step 4, mechanism_payload.md) ──
+   One typed record per binding: mechanism label + facts. The facts are
+   what the binding IS; the analysis (watchlists, contract rows, probe)
+   stays on canary's side. c_api/native are shared across tiny's three
+   bindings — a project factor hoists them. *)
+
+let tiny_c_api : Canary_binding_decl.c_api =
+  { functions = TS.tiny_native_stable_symbols; enums = [] }
+
+let tiny_native_facts : Canary_binding_decl.native_facts =
+  { prefix = "tiny_"; soname = "libtiny.so.1";
+    headers = Canary_binding_decl.{ dir = "c/include"; files = [ "tiny.h" ] } }
+
+let tiny_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  let shared = (tiny_c_api, tiny_native_facts) in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling =
+                  Stub_archive
+                    { sources = [ "ocaml/tiny_stubs.c" ];
+                      archive = "ocaml/libtiny_stubs.a";
+                      build =
+                        Dune
+                          { targets =
+                              [ "ocaml/tiny.cmxa"; "ocaml/libtiny_stubs.a" ] } };
+                surface_path = "ocaml/tiny.mli" } };
+    { mechanism = Canary_mechanism.Cext;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling =
+                  Compiled_ext
+                    { source = "python_cext/tiny_cext/_native.c";
+                      product = "_native.cpython-*.so";
+                      build =
+                        Direct_cc
+                          { include_dirs = [ "c/include" ];
+                            library_dirs = [ "c/build" ];
+                            libs = [ "tiny" ] } };
+                surface_path = "python_cext/tiny_cext/__init__.py" } };
+    { mechanism = Canary_mechanism.Ctypes;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling = Dlopen { name = "libtiny.so.1" };
+                surface_path = "python_ctypes/tiny_ctypes/__init__.py" } };
+  ]
+
 (** tiny-full's declared artifact set (source, lib, the three binding
     instances, both app wirings) — all [Vendored]. *)
-let artifacts : Canary_enumerate.artifact_id list = TS.tiny_full_artifacts
+let artifacts : Canary_artifact.artifact_id list = TS.tiny_full_artifacts
 
 (** The mutation-agnostic spec: which artifacts, and the bad-variant catalogue
     (tags) per artifact. *)
@@ -44,7 +89,7 @@ let spec : TS.tiny_full_spec = TS.tiny_full_spec
     (`canary tiny run`), decoupled from tiny-full;
     [TS.tiny_full_assignments]/[TS.tiny_full_combinations] remain in the
     tiny-factory for tiny1 / a future post-process. *)
-let general_spec : Canary_enumerate.project_spec =
+let general_spec : Canary_artifact.project_spec =
   TS.tiny_full_general_spec spec
 
 (** The expectation canary uses: derived by inspection alone (no oracle) —
@@ -56,9 +101,6 @@ let expectation_agnostic
 
 (* ── the run entry consumed by `action tiny-full` ── *)
 
-(** Render the positive-variant enumeration view. *)
-let print_view : unit -> unit = TS.print_tiny_full
-
 (* ── tiny-full's implementation of the [Canary_project_run.project_run]
    interface (shared with sqlite; the generic runner consumes it) ── *)
 type project_run = Canary_project_run.project_run
@@ -67,7 +109,7 @@ type project_run = Canary_project_run.project_run
     placement → (artifact key, tag). All-good ⇒ []. The general half is
     [Canary_enumerate.bad_placements]; only the tag → cache-key mapping is
     tiny's. *)
-let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
+let overlays_of (a : Canary_artifact.assignment) : (string * string) list =
   Base.List.filter_map (Canary_enumerate.bad_placements a) ~f:(fun (_, tag) ->
       Base.Option.map (Canary_tiny_workspace.artifact_key_of_tag tag)
         ~f:(fun key -> (key, tag)))
@@ -78,28 +120,26 @@ let overlays_of (a : Canary_enumerate.assignment) : (string * string) list =
    lib is a Cached built artifact); tiny-full is agnostic to tiny's
    prepare layer beyond these paths. Built from the declared artifact list
    via a per-kind map so the artifact set stays single-source. *)
-let tiny_artifact_table : Canary_project_run.artifact_decl list =
+let tiny_artifact_table : Canary_project_spec.artifact_row list =
   let provider_of_kind : Canary_basic.artifact_kind ->
       Canary_store_config.provider option = function
     | Canary_basic.Source ->
         Some (Canary_store_config.Vendored "canary/examples/tiny/c (C source + include)")
     | Canary_basic.Lib ->
-        Some
-          (Canary_store_config.Cached
-             "canary/examples/tiny/scenarios/_cache (libtiny.so.1)")
+        Some (Canary_store_config.Cached "_out/canary/tiny/scenarios/_cache (libtiny.so.1)")
     | Canary_basic.Binding Canary_lang.OCaml ->
         Some (Canary_store_config.Vendored "canary/examples/tiny/ocaml (cstubs source)")
     | Canary_basic.Binding Canary_lang.Python ->
-        Some
-          (Canary_store_config.Vendored
-             "canary/examples/tiny/python_cext/tiny_cext (cext + ctypes)")
+        Some (Canary_store_config.Vendored "canary/examples/tiny/python_cext/tiny_cext (cext + ctypes)")
     | Canary_basic.App ->
         Some (Canary_store_config.Vendored "tiny probe example (assembled)")
     | _ -> None
   in
   Base.List.map artifacts ~f:(fun id ->
-      { Canary_project_run.ad_artifact = id;
-        ad_provider = provider_of_kind (Canary_enumerate.kind_of id) })
+      let axes = Canary_artifact.axes [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] in
+      { Canary_project_spec.ar_artifact = id;
+        Canary_project_spec.ar_axes = axes;
+        Canary_project_spec.ar_provider = provider_of_kind (Canary_artifact.kind_of id) })
 
 (** tiny-full as a [project_run] the generic runner consumes. Its [pr_runner_spec]
     ASSEMBLES tiny's vendored cached artifacts into a tree (all-good ⇒ the witness
@@ -126,33 +166,29 @@ type scenario_case =
   | Assembled of (string * string) list
       (* bad-overlay scenarios: (cache key, tag) — tiny1/factory machinery *)
 
-let dispatch (a : Canary_enumerate.assignment) : scenario_case =
+let dispatch (a : Canary_artifact.assignment) : scenario_case =
   let module E = Canary_enumerate in
-  let a_oc = E.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
+  let a_oc = Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
   match overlays_of a with
   | (_ :: _) as overlays -> Assembled overlays
   | [] ->
       let lib_built =
-        match E.provision_of a E.a_lib with E.Built -> true | _ -> false
+        match Canary_enumerate.provision_of a Canary_artifact.a_lib with E.Built -> true | _ -> false
       in
       let binding_dev =
-        E.provided a a_oc
-        && (match E.channel_of a a_oc with
+        Canary_enumerate.provided a a_oc
+        && (match Canary_enumerate.channel_of a a_oc with
             | Canary_basic.Dev -> true
             | Canary_basic.Stable -> false)
       in
       if binding_dev then
         Dev_binding
           { lib_built =
-              (if lib_built then Some (E.channel_of a E.a_lib) else None) }
-      else if lib_built then Built_lib (E.channel_of a E.a_lib)
+              (if lib_built then Some (Canary_enumerate.channel_of a Canary_artifact.a_lib) else None) }
+      else if lib_built then Built_lib (Canary_enumerate.channel_of a Canary_artifact.a_lib)
       else Base
 
 let realize (c : scenario_case) : Canary_step_builder.runner_spec =
-  let chan_str = function
-    | Canary_basic.Dev -> "dev"
-    | Canary_basic.Stable -> "stable"
-  in
   (* the lib's channel drives the channel-aware build (Dev ⇒ -DTINY_DEV +
      dev version script) on the Built path; Stable otherwise. *)
   let channel =
@@ -168,11 +204,11 @@ let realize (c : scenario_case) : Canary_step_builder.runner_spec =
     | Base -> Some (Canary_tiny_workspace.witness_base_workspace ())
     | Built_lib ch ->
         Canary_tiny_workspace.materialize_built_lib
-          ~label:("positive-built-lib-" ^ chan_str ch)
+          ~label:("positive-built-lib-" ^ Canary_basic.string_of_channel ch)
     | Dev_binding { lib_built } ->
         let lib_desc =
           match lib_built with
-          | Some ch -> "built-lib-" ^ chan_str ch
+          | Some ch -> "built-lib-" ^ Canary_basic.string_of_channel ch
           | None -> "vendored-lib"
         in
         Canary_tiny_workspace.materialize_dev_binding
@@ -194,6 +230,11 @@ let realize (c : scenario_case) : Canary_step_builder.runner_spec =
     Canary_tiny_workspace.detect_lib_filename ~workspace:tree
   in
   let stores = TS.stores_of_workspace ~lib_filename ~workspace_root:tree () in
+  (* A9-step-2: tiny-full uses the action-variant table like the other three
+     projects, but its commands are all workspace-specific Raw closures (gcc,
+     dune, nm, python3). [make_base_runner_spec] produces the runner_spec; the
+     table wraps it so tiny-full participates in the mechanism. Template
+     extraction can follow when a second project shares one of these commands. *)
   { (TS.make_base_runner_spec ~channel ~stores ()) with
     Canary_step_builder.expectation = expectation_agnostic }
 
@@ -204,7 +245,6 @@ let tiny_full_run : project_run =
        those are tiny1's oracle). The generic runner enumerates it
        ([Canary_project_run.scenarios_of]) — like sqlite, a positive-only
        general project_run with no scenario list of its own. *)
-    pr_spec = general_spec;
     (* tiny-full ignores the runner-provided [workspace]: its realizations
        assemble the vendored tree themselves (tiny-factory concern). *)
     pr_runner_spec = (fun a ~workspace:_ -> realize (dispatch a));
@@ -214,8 +254,12 @@ let tiny_full_run : project_run =
        backward probe in the general run — backward breaks are tiny1's
        mutations (Bs.3/Bs.4). *)
     pr_mismatch_probes =
-      [ ( Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-          Canary_basic.Dev, Canary_enumerate.Forward ) ] }
+      [ ( Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
+          Canary_basic.Dev, Canary_basic.Forward ) ];
+    pr_wrapper_pkgs = [];
+    (* the in-tree witness declares its api_source HERE (its source row is
+       Vendored, not repo-carried) — the spec audit reads this field. *)
+    pr_api_source = Some Canary_tiny_scenario.tiny_api_source }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──
    The thin slice is a RUNNER policy ([Canary_project_run.thin_policy] —
@@ -225,3 +269,121 @@ let tiny_full_run : project_run =
    --thin` pairs it with [thin_policy]. *)
 let tiny_full_thin_run : project_run =
   { tiny_full_run with pr_name = "tiny-full-thin" }
+
+(* ── tiny1-via-general-path bridge (2026-08-09) ──
+   Convert a tiny1 scenario into a [project_run] the general pipeline
+   consumes. The mutation is baked into the pre-built workspace —
+   canary's project spec knows nothing about it: all artifacts are
+   Vendored@Stable, the expectation is agnostic.
+
+   Call [run_project_run] on the result to run canary's detection over
+   the scenario workspace; compare with the oracle
+   ([TS.expectation_of_entry]) to verify the agnostic detection matches
+   the oracle prediction.
+
+   Requires the workspace to be pre-built ([tiny prepare <name>]). *)
+let project_run_of_tiny1 ~(name : string) : project_run =
+  let workspace = Canary_tiny_workspace.cache_workspace_of ~scenario:name in
+  let stores = TS.stores_of_workspace ~workspace_root:workspace () in
+  let lib_filename = Canary_tiny_workspace.detect_lib_filename ~workspace in
+  let stores = { stores with TS.lib_filename } in
+  { pr_name = [%string "tiny1/%{name}"];
+    pr_artifacts = tiny_artifact_table;
+    pr_runner_spec = (fun _a ~workspace:_ ->
+      { (TS.make_base_runner_spec ~stores ()) with
+        Canary_step_builder.expectation = expectation_agnostic });
+    pr_mismatch_probes = [];
+    pr_wrapper_pkgs = [];
+    pr_api_source = Some Canary_tiny_scenario.tiny_api_source }
+
+(* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)
+
+let run_tiny_scenario ?workspace_override ?(agnostic = false) ~root ~failfast
+    ~cache_path ~(cli_disabled : Canary_compat.contract_id list) ~name () =
+  let name = TS.name_of_string name in
+  let workspace =
+    match workspace_override with
+    | Some w -> w
+    | None ->
+        let workspace = Canary_tiny_workspace.cache_workspace_of ~scenario:name in
+        if not (Stdlib.Sys.file_exists workspace) then begin
+          if not (Stdlib.Sys.file_exists Canary_tiny_workspace.baseline_workspace)
+          then Canary_tiny_workspace.run_baseline ();
+          if not (String.equal name "baseline") then
+            Canary_tiny_workspace.run_prepare ~name
+        end;
+        workspace
+  in
+  let mutated_stores = TS.stores_of_workspace ~workspace_root:workspace () in
+  let spec = TS.runner_spec_of_name ~mutated_stores name in
+  let spec = { spec with Canary_step_builder.disabled_contracts =
+      spec.Canary_step_builder.disabled_contracts @ cli_disabled } in
+  let spec =
+    if agnostic then
+      { spec with Canary_step_builder.expectation = expectation_agnostic }
+    else spec
+  in
+  let project = "tiny/" ^ name in
+  let steps =
+    Canary_step_builder.derive_steps ~root ~project
+      ~langs:Canary_lang.[ OCaml; Python ] spec
+  in
+  let _ =
+    Canary_run_info.run_project ~failfast ~run_info:
+      (Canary_run_info.mk_run_info ~project:"tiny" ~version:"in_tree"
+         ~ref_:"" ~source:"prebuilt" ~extra:[] steps)
+      ?cache_path ~root ~project steps
+  in
+  ()
+
+let run_assembled ~root ~failfast ~tag : unit =
+  match TS.find_by_id tag with
+  | None -> Fmt.pr "unknown tag: %s (see `tiny assemble-check`)\n" tag
+  | Some s ->
+      let key = Option.value (Canary_tiny_workspace.artifact_key_of_tag tag)
+          ~default:"lib" in
+      let label = key ^ "#" ^ tag in
+      (match Canary_tiny_workspace.materialize_assembled
+               ~overlays:[ (key, tag) ] ~label with
+       | None -> Fmt.pr "assemble failed for %s\n" label
+       | Some assembled ->
+           Fmt.pr "assembled tree: %s\n" assembled;
+           run_tiny_scenario ~workspace_override:assembled ~root ~failfast
+             ~cache_path:None ~cli_disabled:[] ~name:s.scenario.name ();
+           Fmt.pr "\n. tiny-full assembled run [%s %s -> %s]: %s\n"
+             tag s.scenario.name key
+             (Canary_project_run.scenario_status_of_run_state ()))
+
+let run_built_lib ~root : unit =
+  match Canary_tiny_workspace.materialize_built_lib
+          ~label:"lib-built-from-src" with
+  | None -> Fmt.pr "materialize (source-only lib) failed\n"
+  | Some ws ->
+      Fmt.pr "source-only-lib tree: %s\n  (no pre-built libtiny.so)\n" ws;
+      (try run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
+             ~failfast:false ~cache_path:None ~cli_disabled:[]
+             ~name:"app_over_binding_ocaml" ()
+       with _ -> ());
+      Fmt.pr "\n. tiny-full built-lib (provision=Built): %s\n"
+        (Canary_project_run.scenario_status_of_run_state ())
+
+let run_assembled_combo ~root ~tags : unit =
+  let overlays =
+    Stdlib.List.filter_map (fun tag ->
+        match Canary_tiny_workspace.artifact_key_of_tag tag with
+        | Some key -> Some (key, tag)
+        | None -> None) tags in
+  if List.length overlays <> List.length tags then
+    Fmt.pr "some tags unresolved; check `tiny assemble-list`\n"
+  else
+    let label = String.concat "+"
+        (List.map (fun (key, t) -> key ^ "#" ^ t) overlays) in
+    match Canary_tiny_workspace.materialize_assembled ~overlays ~label with
+    | None -> Fmt.pr "assemble failed for %s\n" label
+    | Some ws ->
+        Fmt.pr "assembled combo tree: %s\n" ws;
+        run_tiny_scenario ~workspace_override:ws ~agnostic:true ~root
+          ~failfast:false ~cache_path:None ~cli_disabled:[]
+          ~name:"app_over_binding_ocaml" ();
+        Fmt.pr "\n. tiny-full combo [%s]: %s\n" label
+          (Canary_project_run.scenario_status_of_run_state ())

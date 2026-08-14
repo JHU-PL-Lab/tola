@@ -29,10 +29,13 @@
 ;                      data, no theory of its own. canary_lang is its
 ;                      own file so canary_store and canary_basic can
 ;                      both depend on it without a cycle.
-;   surface/ Layer 1 — surface theory: the API-surface declaration types
-;                      (canary_artifact_api) and the c1..c8 contract
-;                      comparators (canary_compat_contract). Pure, no I/O
-;                      beyond Yojson.from_file.
+;   surface/ Layer 1 — surface theory: the API-surface declaration types,
+;                      the c1..c8 contracts (WHAT to check — canary_compat,
+;                      canary_compat_run), and the mechanism catalogue (HOW
+;                      each mechanism realizes the checks — which stages
+;                      exist, where checking points lie —
+;                      canary_mechanism_catalogue). Pure, no I/O beyond
+;                      Yojson.from_file.
 ;   tool/    Layer 2 — real-world tool wrappers: per-PM drivers
 ;                      (canary_pm_{apt,brew,opam,pip}), inspector drivers
 ;                      that shell out to inspect_*.py

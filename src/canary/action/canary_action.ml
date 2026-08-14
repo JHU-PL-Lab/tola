@@ -30,8 +30,8 @@ open Canary_basic
     {!Canary.run_graph}. *)
 type artifact_node = {
   a_kind : artifact_kind;
-  ext : Canary_enumerate.artifact_ext;  (* M1: a_kind × ext = the precise id *)
-  version : Canary_enumerate.build_id;  (* M1: typed version; a_name keeps the display suffix *)
+  ext : Canary_artifact.artifact_ext;  (* M1: a_kind × ext = the precise id *)
+  version : Canary_basic.build_id;  (* M1: typed version; a_name keeps the display suffix *)
   provision : Canary_store.provision;   (* M1: per-edge provider (Built/Fetched/…) *)
   a_name : string;
   origin : location;
@@ -44,7 +44,7 @@ type artifact_node = {
    Build_* ⇒ Built, Fetch ⇒ Fetched); [~ext] defaults to none (make_action_graph
    is coarse-kind). a_kind/a_name kept as display so node_tag stays byte-identical. *)
 let mk_node a_kind a_name ~origin ~location
-    ?(ext = Canary_enumerate.Ext_none) ~version ~provision ?built_from
+    ?(ext = Canary_artifact.Ext_none) ~version ~provision ?built_from
     ?runtime_dep () : artifact_node =
   { a_kind; ext; version; provision; a_name; origin; a_location = location;
     built_from; runtime_dep }
@@ -127,7 +127,7 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
                  mk_node kind
                    (name ^ vs v)
                    ~origin:Build_tree ~location:Build_tree
-                   ~version:(Canary_enumerate.good v) ~provision:Vendored ())))
+                   ~version:(Canary_basic.good v) ~provision:Vendored ())))
   in
   let pools =
     List.fold actions ~init:initial ~f:(fun pools action ->
@@ -142,21 +142,21 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
               List.concat_map versions ~f:(fun v ->
                   let srcs_v =
                     List.filter sources ~f:(fun s ->
-                        Canary_enumerate.equal_build_id s.version
-                          (Canary_enumerate.good v))
+                        Canary_basic.equal_build_id s.version
+                          (Canary_basic.good v))
                   in
                   match srcs_v with
                   | [] ->
                       [ mk_node Lib
                           (name ^ vs v)
                           ~origin:Build_tree ~location:Build_tree
-                          ~version:(Canary_enumerate.good v) ~provision:Built () ]
+                          ~version:(Canary_basic.good v) ~provision:Built () ]
                   | srcs ->
                       List.map srcs ~f:(fun s ->
                           mk_node Lib
                             (name ^ vs v)
                             ~origin:Build_tree ~location:Build_tree
-                            ~version:(Canary_enumerate.good v) ~provision:Built
+                            ~version:(Canary_basic.good v) ~provision:Built
                             ~built_from:s ()))
             in
             add pools Lib nodes
@@ -164,7 +164,7 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
             let nodes =
               List.map versions ~f:(fun v ->
                   mk_node kind (name ^ vs v) ~origin:source ~location:source
-                    ~version:(Canary_enumerate.good v) ~provision:Fetched ())
+                    ~version:(Canary_basic.good v) ~provision:Fetched ())
             in
             add pools kind nodes
         | Build_binding lang ->
@@ -178,14 +178,14 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
               List.concat_map versions ~f:(fun v ->
                   List.filter_map libs ~f:(fun lib ->
                       if
-                        Canary_enumerate.equal_build_id lib.version
-                          (Canary_enumerate.good v)
+                        Canary_basic.equal_build_id lib.version
+                          (Canary_basic.good v)
                       then
                         Some
                           (mk_node (Binding lang)
                              (name ^ vs v)
                              ~origin:Build_tree ~location:Build_tree
-                             ~built_from:lib ~version:(Canary_enumerate.good v)
+                             ~built_from:lib ~version:(Canary_basic.good v)
                              ~provision:Built ())
                       else None))
             in
@@ -206,7 +206,7 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
                   | Some bl -> [ bl ]
                   | None ->
                       List.filter libs ~f:(fun l ->
-                          Canary_enumerate.equal_build_id l.version
+                          Canary_basic.equal_build_id l.version
                             binding.version))
             in
             let nodes =
@@ -222,7 +222,7 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
               List.map versions ~f:(fun v ->
                   mk_node Headers (name ^ vs v)
                     ~origin:Build_tree ~location:Build_tree
-                    ~version:(Canary_enumerate.good v) ~provision:Built ())
+                    ~version:(Canary_basic.good v) ~provision:Built ())
             in
             add pools Headers nodes
         (* Scan_sources doesn't produce new artifact nodes — it just
@@ -240,10 +240,6 @@ let make_action_graph ~actions ~versions ~name ~source ?(app_mode = Independent)
   in
   { actions; pools }
 
-let nodes_of_action_graph (ar : action_graph) =
-  List.concat_map ar.pools ~f:snd
-  |> List.dedup_and_sort ~compare:(fun a b ->
-      String.compare (node_tag a) (node_tag b))
 
 (** Project-aware coverage mark on the UNIVERSAL graph (the `canary scenarios`
     idiom, applied to nodes): a node is APPLICABLE to a project iff the project
@@ -342,20 +338,6 @@ let execution_plan
     - [Probe_app { lang = L }] — [Binding L; Lib; App]
       (Binding to load, Lib runtime dep, App entry).
     - [Fetch k] / [Publish k] — [k]. *)
-let artifacts_of_action (a : action) : artifact_kind list =
-  match a with
-  | Configure -> [ Source ]
-  | Scan_sources -> [ Source ]
-  | Build_headers -> [ Source; Headers ]
-  | Build_lib -> [ Source; Lib ]
-  | Install_lib -> [ Lib ]
-  | Build_binding l -> [ Lib; Binding l ]
-  | Build_app { lang } -> [ Binding lang; App ]
-  | Probe_lib -> [ Lib ]
-  | Probe_binding l -> [ Binding l; Lib ]
-  | Probe_app { lang } -> [ Binding lang; Lib; App ]
-  | Fetch k -> [ k ]
-  | Publish k -> [ k ]
 
 (** The explicit {b consumes}/{b produces} split of the action
     catalogue (project-definition redesign, 2026-07-22 — see
@@ -373,43 +355,56 @@ let artifacts_of_action (a : action) : artifact_kind list =
     [Build_app] is the one place the flat view diverges — it omits
     the [Lib] runtime dep that [consumes_of_action] and
     [Probe_app] both list. *)
+let sig_of_action (a : Canary_basic.action) : Canary_basic.action_sig option =
+  List.find Canary_basic.action_catalogue ~f:(fun s -> Poly.equal s.as_action a)
+(* Derived from the [action_catalogue] in [Canary_basic]. Actions IN the
+   catalogue get their consumes/produces from the typed [action_sig]; actions
+   NOT in the catalogue (Configure, Scan_sources, Build_headers, Install_lib,
+   Build_app, Publish) have hand-written cases. One source of truth per action. *)
 let consumes_of_action (a : action) : artifact_kind list =
+  (* Probe_app additionally consumes the App artifact (the executable itself). *)
   match a with
-  | Configure -> [ Source ]
-  | Scan_sources -> [ Source ]
-  | Build_headers -> [ Source ]
-  | Build_lib -> [ Source ]
-  | Install_lib -> [ Lib ]
-  | Build_binding _ -> [ Lib ]
-  | Build_app { lang } -> [ Binding lang; Lib ]
-  | Probe_lib -> [ Lib ]
-  | Probe_binding l -> [ Binding l; Lib ]
-  | Probe_app { lang } -> [ Binding lang; Lib; App ]
-  | Fetch _ -> []
-  | Publish k -> [ k ]
+  | Probe_app { lang } -> [ App; Lib; Binding lang ]
+  | _ -> match sig_of_action a with
+    | Some s -> s.as_consumes
+    | None -> match a with
+      | Configure | Scan_sources | Build_headers -> [ Source ]
+      | Install_lib -> [ Lib ]
+      | Build_app { lang } -> [ Binding lang; Lib ]
+      | Publish k -> [ k ]
+      | _ -> []
 
 let produces_of_action (a : action) : artifact_kind list =
+  (* Probes consume artifacts but produce nothing — they verify, not create. *)
   match a with
-  | Configure -> []
-  | Scan_sources -> []
-  | Build_headers -> [ Headers ]
-  | Build_lib -> [ Lib ]
-  | Install_lib -> [ Lib ]   (* relocates Lib into the Staged store *)
-  | Build_binding l -> [ Binding l ]
-  | Build_app _ -> [ App ]
-  | Probe_lib -> []
-  | Probe_binding _ -> []
-  | Probe_app _ -> []
-  | Fetch k -> [ k ]
-  | Publish k -> [ k ]   (* relocates k into a Pm store *)
+  | Probe_lib | Probe_binding _ | Probe_app _ -> []
+  | _ -> match sig_of_action a with
+    | Some s -> [ s.as_produces ]
+    | None -> match a with
+      | Configure | Scan_sources -> []
+      | Build_headers -> [ Headers ]
+      | Install_lib -> [ Lib ]
+      | Build_app _ -> [ App ]
+      | Publish k -> [ k ]
+      | _ -> []
 
-(* M2: lift a flat [Canary_enumerate.assignment] to the artifact_node graph — the
+(* Derived from [consumes_of_action @ produces_of_action] with one
+   exception: [Build_app] omits [Lib] (transitive dep — the flat view
+   includes only direct artifacts; the consumes/produces split carries
+   the full set). Probes follow the catalogue order ([Lib] before
+   [Binding], matching the dependency direction). *)
+let artifacts_of_action (a : action) : artifact_kind list =
+  match a with
+  | Build_app { lang } -> [ Binding lang; App ]
+  | _ -> consumes_of_action a @ produces_of_action a
+
+(* M2: lift a flat [Canary_artifact.assignment] to the artifact_node graph — the
    [built_from] edges come from the SEAM ([built_from_of_assignment]) via the
    action catalogue ([consumes_of_action], §6.5), reused, not a new edge
    vocabulary. Chain scope (source→lib→binding, one version); [runtime_dep] (an
    app's run-lib) is deferred. The flat→node lift the graph merge builds on; the
    run still consumes assignments (unchanged). *)
-let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
+let node_of_assignment (a : Canary_artifact.assignment) : artifact_node list =
   let module EN = Canary_enumerate in
   let built_from_kinds (k : artifact_kind) : artifact_kind list =
     match k with
@@ -418,15 +413,15 @@ let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
     | Headers -> consumes_of_action Build_headers
     | _ -> []
   in
-  let rec build (id : EN.artifact_id) : artifact_node =
+  let rec build (id : Canary_artifact.artifact_id) : artifact_node =
     let built_from =
-      match EN.built_from_of_assignment ~built_from_kinds a id with
+      match Canary_enumerate.built_from_of_assignment ~built_from_kinds a id with
       | dep :: _ -> Some (build dep)   (* seam returns deps present in [a] *)
       | [] -> None
     in
-    mk_node (EN.kind_of id) (EN.string_of_id id) ~origin:Build_tree
-      ~location:Build_tree ~ext:(EN.ext_of id) ~version:(EN.version_of a id)
-      ~provision:(EN.provision_of a id) ?built_from ()
+    mk_node (Canary_artifact.kind_of id) (Canary_artifact.string_of_id id) ~origin:Build_tree
+      ~location:Build_tree ~ext:(Canary_artifact.ext_of id) ~version:(Canary_enumerate.version_of a id)
+      ~provision:(Canary_enumerate.provision_of a id) ?built_from ()
   in
   List.map a ~f:(fun (id, _) -> build id)
 
@@ -446,7 +441,7 @@ let node_of_assignment (a : Canary_enumerate.assignment) : artifact_node list =
 let close_deps
     ~(run_versions_of : artifact_kind -> Canary_basic.channel list)
     ~(mode_of : artifact_kind -> dep_mode)
-    (a : Canary_enumerate.assignment) : artifact_node list list =
+    (a : Canary_artifact.assignment) : artifact_node list list =
   let module EN = Canary_enumerate in
   let base = node_of_assignment a in
   let is_app (n : artifact_node) = match n.a_kind with App -> true | _ -> false in
@@ -469,11 +464,11 @@ let close_deps
         | None -> [ app ]
         | Some lib ->
             List.map (run_versions_of Lib) ~f:(fun vr ->
-                { app with runtime_dep = Some { lib with version = EN.good vr } }))
+                { app with runtime_dep = Some { lib with version = Canary_basic.good vr } }))
     | Ambient s ->
         let ext =
           mk_node Lib s ~origin:Build_tree ~location:Build_tree
-            ~version:(EN.good Canary_basic.Dev) ~provision:EN.Fetched ()
+            ~version:(Canary_basic.good Canary_basic.Dev) ~provision:EN.Fetched ()
         in
         [ { app with runtime_dep = Some ext } ]
   in
@@ -509,3 +504,5 @@ type node_status =
   | Failed     (* unexpected: expected success but failed, or expected failure but succeeded/mismatched *)
   | Skipped
   | Not_in_spec
+
+(** Lookup the action_sig for a concrete [Canary_basic.action]. *)

@@ -20,13 +20,11 @@ type source_repo = {
   name : string;                         (* e.g., "z3" *)
   remote : git_remote;
   locals : local_path list;
-  version : string;                      (* "dev", "4.13.4" *)
+  version : Canary_basic.version;        (* {channel=Dev|Stable; id="4.13.4"|"19"|""} *)
   ref_ : string;                         (* "HEAD", "z3-4.13.4" *)
   official : bool;
-  has_build_lib : bool;                  (* build the native lib from this source? *)
-  has_build_binding : bool;              (* build language bindings from this source? *)
   build_sys_deps : string list;          (* apt packages required to build from source *)
-  api_source : Canary_artifact_api.t option; (* hand-written API/binding spec; None = not yet declared *)
+  api_source : Canary_artifact.t option; (* hand-written API/binding spec; None = not yet declared *)
 }
 
 (* Generate local_path entries for all distros from a relative path.
@@ -78,7 +76,8 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
       let ref_ = repo.ref_ in
       (* Clone into a stable path derived from version+ref, not output_dir,
          so build_lib etc. can find it via root_of_source *)
-      let clone_dir = [%string "_out/canary/projects/%{repo.name}/%{repo.version}_%{ref_}/src"] in
+      let ver_str = Canary_basic.string_of_version repo.version in
+      let clone_dir = [%string "_out/canary/projects/%{repo.name}/%{ver_str}_%{ref_}/src"] in
       [%string "if [ -d %{clone_dir}/.git ]; then cd %{clone_dir} && git fetch && git checkout %{ref_}; else git clone %{url} %{clone_dir} && cd %{clone_dir} && git checkout %{ref_}; fi && echo '%{clone_dir}' > %{output_dir}/%{ok}"]
 
 (* Compute a cache-path tag for a source repo.
@@ -87,6 +86,7 @@ let source_fetch_cmd distro (repo : source_repo) ~output_dir ~variant_key =
    e.g., version="dev", HEAD=abc123 → "dev_abc123"
    Falls back to repo.version if the repo has no local checkout or git fails. *)
 let version_cache_tag distro (repo : source_repo) =
+  let ver_str = Canary_basic.string_of_version repo.version in
   match repo.ref_ with
   | "HEAD" -> begin
       match local_for distro repo with
@@ -101,11 +101,11 @@ let version_cache_tag distro (repo : source_repo) =
           ignore (Unix.close_process_in ic);
           (match result with
            | Some h when not (String.is_empty h) ->
-               [%string "%{repo.version}_%{h}"]
-           | _ -> repo.version)
-      | None -> repo.version
+               [%string "%{ver_str}_%{h}"]
+           | _ -> ver_str)
+      | None -> ver_str
     end
-  | _ -> repo.version
+  | _ -> ver_str
 
 (* check_post for fetch_source: read source.ok (variant-keyed) and verify the path exists *)
 let source_check_post ~output_dir ~variant_key =
@@ -135,7 +135,7 @@ let source_desc distro (repo : source_repo) =
    Moved here from surface/canary_artifact_api.ml on 2026-06-02 (Phase
    11c) — it's a CHECK shell command, not a fact-type definition; lives
    next to the other source-side helpers. *)
-let scan_source_cmd ~source_root (api : Canary_artifact_api.t)
+let scan_source_cmd ~source_root (api : Canary_artifact.t)
     ~output_dir ~variant_key =
   let ok = Canary_basic.variant_file ~variant_key "scan.ok" in
   let header_checks =

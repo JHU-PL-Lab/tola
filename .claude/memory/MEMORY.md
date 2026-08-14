@@ -3,6 +3,9 @@
 ## Canary CI
 - [GH CI backend — all 3 jobs green](project_canary_ci.md) — Z3/SQLite/LLVM passing; Z3 uses opam remote fetch (~33 min); debug.yml for fast iteration (~2 min)
 
+## Gotchas
+- [CAML_LD_LIBRARY_PATH shadows fresh dlls](gotcha_caml_ld_shadow.md) — bytecode dll search beats -dllpath; opam stublibs can fake an "upstream break" (z3 2026-08-13); env_guard on ninja_build_binding
+
 ## Quick Reference
 - **Main research**: Package management (PL perspective) + canary testing
 - `open Base` shadows `result`, `prefix`, `id`, `append` — rename in patterns

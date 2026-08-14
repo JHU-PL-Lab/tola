@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "diff": {
+      "args": [
+        "int",
+        "int"
+      ],
+      "return": "int"
+    },
+    "offset": {
+      "args": [],
+      "return": "int"
+    }
+  },
+  "kind": "typed_user_ocaml",
+  "path": "canary/examples/tiny/scenarios/_cache/api_complete/workspace/ocaml/tiny.mli"
+}

@@ -29,6 +29,8 @@
 open Base
 open Canary_basic
 open Canary
+open Canary_artifact
+[@@@warning "-33"]
 
 (* ================================================================
    TINY RECIPE — implementation-side (how tiny constructs a scenario)
@@ -686,10 +688,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              C_stub     [ "build_binding_ocaml/inspect.json" ];
-              Native_lib [ "build_lib/inspect.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C1 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -698,10 +698,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              C_stub     [ "build_binding_python/inspect.json" ];
-              Native_lib [ "build_lib/inspect.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C1 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -714,9 +712,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.OCaml;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C2 Canary_lang.OCaml;
             version_info = None;
           }};
       ]};
@@ -725,9 +722,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              Python_attrs [ "build_binding_python/inspect_attrs.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C2 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -763,10 +759,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              Native_lib  [ "build_lib/inspect.json" ];
-              Abi_surface [ "build_binding_python/inspect.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C4 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -789,10 +783,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
         { site = CS.At_probe_binding Canary_lang.Python;
           loc_filter = CS.Any;
           source = CS.From_artifact {
-            inputs = CC.[
-              Versioned_exports [ "build_lib/inspect.json" ];
-              Versioned_req     [ "build_binding_python/inspect.json" ];
-            ];
+            inputs =
+              Canary_mechanism_catalogue.inputs_of_contract CC.C5 Canary_lang.Python;
             version_info = None;
           }};
       ]};
@@ -803,12 +795,8 @@ let tiny_contract_bindings : Canary_scenario.contract_binding list =
        same cstub via dune, so the same failure surfaces there too. *)
     { contract = CC.C6; lang = Canary_lang.OCaml;
       firings =
-        (let c6_inputs = CC.[
-           Typed_header
-             [ "scan_sources/inspect_typed_header.json" ];
-           Typed_binding_stub
-             [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ];
-         ] in
+        (let c6_inputs =
+           Canary_mechanism_catalogue.inputs_of_contract CC.C6 Canary_lang.OCaml in
          [
            { site = CS.At_build_binding Canary_lang.OCaml;
              loc_filter = CS.Any;
@@ -1022,51 +1010,51 @@ let mutation_target_of_spec (s : scenario_spec) :
 
 (** Default precise identity for a binding kind (used only as a fallback when
     the mutated files don't pin a mechanism). *)
-let id_of_kind : Canary_basic.artifact_kind -> Canary_enumerate.artifact_id =
+let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_id =
   function
-  | Canary_basic.Source -> Canary_enumerate.a_source
-  | Canary_basic.Lib -> Canary_enumerate.a_lib
+  | Canary_basic.Source -> Canary_artifact.a_source
+  | Canary_basic.Lib -> a_lib
   | Canary_basic.Binding l ->
       let m =
         Option.value
           (Canary_mechanism.default_mechanism_of_lang l)
           ~default:Canary_mechanism.Cstubs
       in
-      Canary_enumerate.a_binding l m
-  | Canary_basic.Headers -> Canary_enumerate.a_headers
+      Canary_artifact.a_binding l m
+  | Canary_basic.Headers -> Canary_artifact.a_headers
   | Canary_basic.App ->
-      Canary_enumerate.{ kind = Canary_basic.App; ext = Ext_none }
+      Canary_artifact.{ kind = Canary_basic.App; ext = Ext_none }
 
 (** The precise binding artifact(s) a mutation touches, read off its mutated
     files: [ocaml/] → cstubs, [python_cext/] → cext, [python_ctypes/] →
     ctypes. A mutation on both Python layers (e.g. api_repack_python) yields
     both cext and ctypes. *)
 let binding_ids_of_mutates (mutates : string list) :
-    Canary_enumerate.artifact_id list =
+    Canary_artifact.artifact_id list =
   let touches p = List.exists mutates ~f:(String.is_prefix ~prefix:p) in
   List.filter_opt
     [ (if touches "ocaml/" then
          Some
-           (Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
+           (Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
        else None);
       (if touches "python_cext/" then
          Some
-           (Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Cext)
+           (Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Cext)
        else None);
       (if touches "python_ctypes/" then
          Some
-           (Canary_enumerate.a_binding Canary_lang.Python Canary_mechanism.Ctypes)
+           (Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Ctypes)
        else None) ]
 
 (** The mutation axis: each mutation-carrying spec maps to the precise
     artifact(s) it touches — source/lib coarse, a binding to its exact
     (lang × mechanism) instance(s). A spec that mutates both Python layers
     yields two points (cext and ctypes). *)
-let engine_mutations : (Canary_enumerate.artifact_id * string) list =
+let engine_mutations : (Canary_artifact.artifact_id * string) list =
   List.concat_map all_scenario_specs ~f:(fun s ->
       match mutation_target_of_spec s with
-      | Some Canary_basic.Source -> [ (Canary_enumerate.a_source, s.scenario.id) ]
-      | Some Canary_basic.Lib -> [ (Canary_enumerate.a_lib, s.scenario.id) ]
+      | Some Canary_basic.Source -> [ (Canary_artifact.a_source, s.scenario.id) ]
+      | Some Canary_basic.Lib -> [ (a_lib, s.scenario.id) ]
       | Some (Canary_basic.Binding _ as k) -> (
           match binding_ids_of_mutates s.recipe.mutates with
           | [] -> [ (id_of_kind k, s.scenario.id) ]
@@ -1076,8 +1064,8 @@ let engine_mutations : (Canary_enumerate.artifact_id * string) list =
 (** tiny's full artifact set (all [Built]): source, lib, all three binding
     instances (ocaml cstubs, python cext, python ctypes), and both app
     wirings (direct link, via a helper lib). *)
-let engine_artifacts : Canary_enumerate.artifact_id list =
-  Canary_enumerate.
+let engine_artifacts : Canary_artifact.artifact_id list =
+  Canary_project_spec.
     [ a_source; a_lib;
       a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
       a_binding Canary_lang.Python Canary_mechanism.Cext;
@@ -1129,14 +1117,14 @@ let () =
       if touches "python_cext/" && touches "python_ctypes/" then
         let exts =
           List.filter_map engine_mutations ~f:(fun (aid, id) ->
-              if String.equal id s.scenario.id then Some aid.Canary_enumerate.ext
+              if String.equal id s.scenario.id then Some aid.Canary_artifact.ext
               else None)
         in
-        let has e = List.mem exts e ~equal:Canary_enumerate.equal_artifact_ext in
+        let has e = List.mem exts e ~equal:Canary_artifact.equal_artifact_ext in
         if
           not
-            (has (Canary_enumerate.Ext_mechanism Canary_mechanism.Cext)
-            && has (Canary_enumerate.Ext_mechanism Canary_mechanism.Ctypes))
+            (has (Canary_artifact.Ext_mechanism Canary_mechanism.Cext)
+            && has (Canary_artifact.Ext_mechanism Canary_mechanism.Ctypes))
         then
           Stdlib.failwith
             (Printf.sprintf
@@ -1150,13 +1138,13 @@ let print_engine_render () : unit =
   p "tiny → engine projection (tiny_slice: all Built × mutation axis)\n";
   p "  artifacts: %s\n"
     (String.concat ~sep:", "
-       (List.map engine_artifacts ~f:Canary_enumerate.string_of_id));
+       (List.map engine_artifacts ~f:Canary_artifact.string_of_id));
   List.iter engine_points ~f:(fun pt ->
       match pt.Canary_enumerate.mutations with
       | [] -> p "  [positive]  all-Built pipeline\n"
       | (aid, id) :: _ ->
           p "  [mutation]  %-24s on %s\n" id
-            (Canary_enumerate.string_of_id aid));
+            (Canary_artifact.string_of_id aid));
   let n_points_mut = List.length engine_mutations in
   let n_specs =
     List.count all_scenario_specs ~f:(fun s ->
@@ -1191,7 +1179,7 @@ let print_engine_render () : unit =
    ([print_tiny_full]); the good+bad RUN — positive witnesses + the
    enumerated mutation points, algorithm-driven — is [run_tiny_full] below
    (shipped 2026-08-02). status.md §1a. *)
-let tiny_full_artifacts : Canary_enumerate.artifact_id list = engine_artifacts
+let tiny_full_artifacts : Canary_artifact.artifact_id list = engine_artifacts
 
 let tiny_full_points : string Canary_enumerate.point list =
   (* A project ships its *whole declared set* of artifacts (the binding list
@@ -1202,14 +1190,14 @@ let tiny_full_points : string Canary_enumerate.point list =
      bad scenario, not here). → the analogue of z3's dev/stable variants. *)
   List.concat_map Canary_basic.two_channels ~f:(fun v ->
       Canary_enumerate.general_slice ~artifacts:tiny_full_artifacts
-        ~provisions:Canary_enumerate.[ Built ] ~versions:[ v ])
+        ~provisions:Canary_artifact.[ Built ] ~versions:[ v ])
 
 let print_tiny_full () : unit =
   let p = Stdlib.Printf.printf in
   p "tiny-full — general-project enumeration (positive; provision × version)\n";
   p "  artifacts: %s\n"
     (String.concat ~sep:", "
-       (List.map tiny_full_artifacts ~f:Canary_enumerate.string_of_id));
+       (List.map tiny_full_artifacts ~f:Canary_artifact.string_of_id));
   List.iteri tiny_full_points ~f:(fun i pt ->
       p "  [%3d] %s\n" (i + 1)
         (Canary_enumerate.string_of_assignment pt.Canary_enumerate.assignment));
@@ -1293,6 +1281,192 @@ let () =
          (List.length offenders)
          (String.concat ~sep:", "
             (List.map offenders ~f:(fun e -> e.scenario.name))))
+
+(* ================================================================
+   SHARED EXPECTED-OUTCOME REFERENCE (2026-08-09)
+   ================================================================
+
+   The canonical bridge between tiny1 recipe outcomes and canary
+   step tags. Both the oracle test and the agnostic post-run
+   comparison use this table.
+
+   Recipe step names map to canary step tags as follows:
+   - Build steps: "ocaml_build" → "build_binding_ocaml"
+   - Probe steps: "ocaml_probe" → "probe_binding_ocaml",
+     "python_cext_probe" → "probe_binding_python",
+     "python_ctypes_probe" → "probe_binding_python"
+   - Comparators fire at the probe step they instrument:
+     cmp_symbol_ocaml → probe_binding_ocaml (c1),
+     cmp_api_complete_ocaml → probe_binding_ocaml (c2),
+     cmp_symbol_cext → probe_binding_python (c1),
+     cmp_api_complete_cext → probe_binding_python (c2),
+     cmp_api_complete_ctypes → probe_binding_python (c2)
+   - App steps ("ocaml_app_binding", "ocaml_app_helper") cascade
+     from earlier probe failures — not independently checked.
+
+   The reference: for each scenario, which canary step tags MUST
+   fail (xfail) and which MUST pass. Both oracle and agnostic
+   consumers compare against this. *)
+
+(** Which canary step tags a scenario expects to fail (xfail) vs pass. *)
+type canary_expected = {
+  ce_must_xfail : string list;   (** step tags that must confirm failure *)
+  ce_must_pass  : string list;   (** step tags that must pass clean *)
+}
+
+(** The recipe step name → canary step tag mapping for build/probe actions. *)
+let canary_tag_of_recipe_step : (string * string) list = [
+  "ocaml_build",         "build_binding_ocaml";
+  "ocaml_probe",         "probe_binding_ocaml";
+  "python_cext_probe",   "probe_binding_python";
+  "python_ctypes_probe",  "probe_binding_python";
+  (* comparators fire within probe steps, not as separate actions *)
+  "cmp_symbol_ocaml",    "probe_binding_ocaml";
+  "cmp_api_complete_ocaml","probe_binding_ocaml";
+  "cmp_symbol_cext",     "probe_binding_python";
+  "cmp_api_complete_cext","probe_binding_python";
+  "cmp_api_complete_ctypes","probe_binding_python";
+]
+
+(** Derive the canary expected outcomes from a scenario's recipe.
+    The SSOT: both oracle and agnostic post-check consume this. *)
+let canary_expected_of (entry : scenario_spec) : canary_expected =
+  let map_step (step_name, expected) =
+    match Base.List.Assoc.find canary_tag_of_recipe_step ~equal:String.equal step_name with
+    | Some tag -> Some (tag, expected)
+    | None -> None
+  in
+  let outcomes = Base.List.filter_map entry.recipe.expected ~f:map_step in
+  let must_xfail =
+    Base.List.filter_map outcomes ~f:(fun (tag, out) ->
+      match out with Fail -> Some tag | _ -> None)
+    |> Base.List.dedup_and_sort ~compare:String.compare
+  in
+  let must_pass =
+    Base.List.filter_map outcomes ~f:(fun (tag, out) ->
+      match out with Ok -> Some tag | _ -> None)
+    |> Base.List.dedup_and_sort ~compare:String.compare
+  in
+  { ce_must_xfail = must_xfail; ce_must_pass = must_pass }
+
+(* ── canonical naming (2026-08-10) ──
+   Format: Sc.<stage>.<terminal-action>_on_<deps>[.<fault>_on_<artifact>]
+
+   - stage: the primary Sc.N this scenario exercises
+   - terminal-action: the last action in the chain (probe or build)
+   - deps: key artifacts the action depends on, with provisions
+     (local= vendored, sys-pm= Fetched, built= Built)
+   - fault: concise tag for the violated contract (absent for good)
+   - artifact: which artifact the fault targets
+
+   Fault tags (contract → tag):
+     c1 sym_missing   c2 api_drop      c3 behavior
+     c4 abi_soname    c5 sym_version   c6 type_arity
+     c7 api_repack    c8 api_add *)
+
+(** Concise fault tag for a contract. *)
+let fault_tag_of_contract : Canary_compat.contract_id -> string = function
+  | Canary_compat.C1 -> "sym_missing"
+  | C2 -> "api_drop"
+  | C3 -> "behavior"
+  | C4 -> "abi_soname"
+  | C5 -> "sym_version"
+  | C6 -> "type_arity"
+  | C7 -> "api_repack"
+  | C8 -> "api_add"
+
+(** Which artifact a fault targets, using short names.
+    The binding language (OCaml/Python) is implicit from the stage. *)
+let fault_artifact_short (entry : scenario_spec) : string =
+  match entry.scenario.origin with
+  | Some (Canary_scenario.Mutation { target; _ }) -> (
+    match target with
+    | Canary_basic.Source -> "src"
+    | Canary_basic.Lib -> "lib"
+    | Canary_basic.Binding _ -> "binding"
+    | Canary_basic.Headers -> "headers"
+    | Canary_basic.App -> "app")
+  | _ -> "?"
+
+(** The terminal action of a scenario: the last action implied by
+    its [belongs_to] stages. Stages ending with "probe" or "run"
+    are probes; others are builds. *)
+let terminal_action_of_stages (stages : string list) : string =
+  let last = match List.rev stages with s :: _ -> s | [] -> "?" in
+  match last with
+  | "Sc.1" -> "build_lib"
+  | "Sc.2.OCaml" | "Sc.2.Python" -> "build_binding"
+  | "Sc.3.OCaml" | "Sc.5.OCaml" -> "build_app"
+  | "Sc.4.OCaml" | "Sc.6.OCaml" -> "probe_app"
+  | "Sc.4.Python" -> "probe_app"
+  | s -> s
+
+(** Artifact dependencies for the terminal action, with provisions.
+    For tiny1 everything is Vendored=local. For real projects the
+    provision varies per artifact. *)
+let deps_of_stages (stages : string list) : string =
+  (* The last stage determines what the terminal action depends on *)
+  let last = match List.rev stages with s :: _ -> s | [] -> "?" in
+  match last with
+  | "Sc.1" -> "src_local"
+  | "Sc.2.OCaml" | "Sc.2.Python" -> "lib_local"
+  | "Sc.3.OCaml" | "Sc.5.OCaml" -> "binding_local_lib_local"
+  | "Sc.4.OCaml" | "Sc.6.OCaml" -> "lib_local_binding_local"
+  | "Sc.4.Python" -> "lib_local"
+  | _ -> "?"
+(** Canonical name: primary stage + terminal action + artifact
+    dependencies. Bad scenarios append .<fault>_on_<artifact>. *)
+let canonical_name_of (entry : scenario_spec) : string =
+  let stages = entry.scenario.belongs_to in
+  let primary = match stages with s :: _ -> s | [] -> "?" in
+  let terminal = terminal_action_of_stages stages in
+  let deps = deps_of_stages stages in
+  let base = primary ^ "." ^ terminal ^ "_on_" ^ deps in
+  match entry.recipe.violates with
+  | [] -> base
+  | c :: _ ->
+    let artifact = fault_artifact_short entry in
+    base ^ "." ^ fault_tag_of_contract c ^ "_on_" ^ artifact
+
+(** All canonical names, disambiguated for duplicate (stage,fault)
+    pairs. *)
+let canonical_names_disambiguated () : (scenario_spec * string) list =
+  let bases =
+    List.map all_scenario_specs ~f:(fun e -> (e, canonical_name_of e))
+  in
+  let counts = Base.Hashtbl.create (module String) in
+  List.iter bases ~f:(fun (_, name) ->
+    Base.Hashtbl.update counts name ~f:(fun n ->
+      match n with None -> 1 | Some n -> n + 1));
+  List.map bases ~f:(fun (e, base) ->
+    let n = try Base.Hashtbl.find_exn counts base with _ -> 1 in
+    let has_violations = not (Base.List.is_empty e.recipe.violates) in
+    if n > 1 && has_violations then
+      let tag =
+        match String.rsplit2 e.scenario.name ~on:'_' with
+        | Some (_, suffix) -> suffix
+        | None -> e.scenario.name
+      in
+      (e, base ^ "." ^ tag)
+    else (e, base))
+
+(** Print the canonical scenario table: id, pattern, name, legacy. *)
+let print_canonical_names () : unit =
+  let p = Stdlib.Printf.printf in
+  p "%-12s %-18s %-55s %s\n" "id" "pattern" "name" "legacy";
+  p "%-12s %-18s %-55s %s\n" (String.make 12 '-') (String.make 18 '-') (String.make 55 '-') (String.make 20 '-');
+  let disambiguated = canonical_names_disambiguated () in
+  List.iter disambiguated ~f:(fun (e, name) ->
+    let kind = if Option.is_some e.scenario.origin then "bad" else "good" in
+    let pattern = match e.scenario.belongs_to with
+      | s :: _ -> s | [] -> "?"
+    in
+    let pat = pattern ^ (if String.equal kind "bad" then " (bad)" else " (good)") in
+    let legacy = e.scenario.name in
+    p "%-12s %-18s %-55s %s\n" e.scenario.id pat name legacy);
+  let n_good = List.count all_scenario_specs ~f:(fun e -> Option.is_none e.scenario.origin) in
+  let n_bad = List.length all_scenario_specs - n_good in
+  p "\n%d good, %d bad = %d total (tentative)\n" n_good n_bad (List.length all_scenario_specs)
 
 (* ================================================================
    HELPERS
@@ -1544,6 +1718,21 @@ let print_expected (name : string) : unit =
   | Some e ->
     Stdlib.print_endline (Yojson.Basic.pretty_to_string (json_of_entry e))
 
+(** Print all 22 scenarios with their canary expected outcomes —
+    the shared reference table. Each line: name, expected-xfail
+    step tags, expected-pass step tags. *)
+let print_expected_table () : unit =
+  let p = Stdlib.Printf.printf in
+  p "%-30s %-50s %s\n" "scenario" "must_xfail (canary tags)" "must_pass";
+  p "%-30s %-50s %s\n" (String.make 30 '-') (String.make 50 '-') (String.make 20 '-');
+  List.iter all_scenario_specs ~f:(fun e ->
+    let ex = canary_expected_of e in
+    let name = e.scenario.name in
+    let xf = match ex.ce_must_xfail with [] -> "(none)" | xs -> String.concat ~sep:"," xs in
+    let ps = match ex.ce_must_pass with [] -> "(none)" | xs -> String.concat ~sep:"," xs in
+    p "%-30s %-50s %s\n" name xf ps);
+  p "\n%d scenarios\n" (List.length all_scenario_specs)
+
 (* ================================================================
    STARTUP VALIDATION
 
@@ -1570,9 +1759,9 @@ let () =
 
    Core principle (status §1a): the tiny-full *runner* knows NOTHING about
    mutations. Badness lives in the artifact's VERSION IDENTITY — a
-   [Canary_enumerate.build_id] whose [quality] is [Bad tag], where [tag] is an
+   [Canary_basic.build_id] whose [quality] is [Bad tag], where [tag] is an
    OPAQUE build tag (the "special version string"). The runner ranges over
-   [Canary_enumerate.assignment]s (one placement = provision × version) exactly
+   [Canary_artifact.assignment]s (one placement = provision × version) exactly
    as a general project does; a bad build is just a build at a bad-quality
    version. Only the materializer (below) knows a bad tag corresponds to a
    mutation. This mirrors a real project: z3 builds `lib@stable` and canary
@@ -1583,13 +1772,13 @@ let () =
    catalogue grouped by the artifact each mutation targets (from
    [engine_mutations]); the tag is the factory scenario id, but the runner
    never interprets it. *)
-let tiny_full_bad_tags_of (aid : Canary_enumerate.artifact_id) : string list =
+let tiny_full_bad_tags_of (aid : Canary_artifact.artifact_id) : string list =
   List.filter_map engine_mutations ~f:(fun (a, sid) ->
-      if Canary_enumerate.equal_artifact_id a aid then Some sid else None)
+      if Canary_artifact.equal_artifact_id a aid then Some sid else None)
 
 type tiny_full_spec = {
-  tf_artifacts : Canary_enumerate.artifact_id list;
-  tf_bad_tags_of : Canary_enumerate.artifact_id -> string list;
+  tf_artifacts : Canary_artifact.artifact_id list;
+  tf_bad_tags_of : Canary_artifact.artifact_id -> string list;
 }
 
 let tiny_full_spec : tiny_full_spec =
@@ -1600,33 +1789,32 @@ let tiny_full_spec : tiny_full_spec =
    resources, and tiny-full points at the chosen one (it does not rebuild per
    scenario). The only thing that varies is the version [quality] (Good / Bad
    tag), i.e. WHICH vendored variant. *)
-let tiny_full_placement ?(provision = Canary_enumerate.Vendored)
-    ?(channel = Canary_basic.Stable) ?(quality = Canary_enumerate.Good) () :
-    Canary_enumerate.placement =
-  let open Canary_enumerate in
-  { provision; version = { channel; quality } }
+let tiny_full_placement ?(provision = Canary_artifact.Vendored)
+    ?(channel = Canary_basic.Stable) ?(quality = Canary_basic.Good) () :
+    Canary_artifact.placement =
+  { provision; version = { channel; id = ""; quality } }
 
-(* P2a assignment enumeration: the good+bad space as [Canary_enumerate.assignment]s
+(* P2a assignment enumeration: the good+bad space as [Canary_artifact.assignment]s
    over one fixed artifact set — 1 all-Good + one point per (artifact, bad-tag)
    with that artifact at version [dev#tag]. Phase 3 generalises to several bad
    artifacts per assignment (= combinations). *)
 let tiny_full_assignments (spec : tiny_full_spec) :
-    Canary_enumerate.assignment list =
+    Canary_artifact.assignment list =
   (* A4: the good baseline + single-bads come from a DECLARED spec (stage 1)
      enumerated under a POLICY (stage 2), not a hand-built list. The spec is the
      project fact — the artifacts, all Vendored @ Stable. The mutation universe
      (the (artifact, bad-tag) fault injection) is the tiny-factory's testing
      POLICY, so it lives in the policy, not the spec. *)
-  let tiny_enum_spec : Canary_enumerate.project_spec =
-    { ps_universe =
-        List.map spec.tf_artifacts ~f:(fun a ->
-            ( a,
-              Canary_enumerate.axes
-                [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ] )) }
+  let tiny_enum_spec : Canary_artifact.project_spec =
+    Canary_artifact.project_spec_of_universe
+      (List.map spec.tf_artifacts ~f:(fun a ->
+           ( a,
+             Canary_artifact.axes
+               [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] )))
   in
   let tiny_policy : string Canary_enumerate.policy =
     { config =
-        Canary_enumerate.{ provision = Free; version = Free; mutation = Full };
+        Canary_enumerate.{ provision = Free; version = Free; mutation = Full; version_mode = Lockstep };
       mutations =
         List.concat_map spec.tf_artifacts ~f:(fun aid ->
             List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag))) }
@@ -1643,8 +1831,8 @@ let tiny_full_assignments (spec : tiny_full_spec) :
      Stable source violates source-primary. Hand-built until that's resolved. *)
   let all_good_built_lib_at channel =
     List.map spec.tf_artifacts ~f:(fun a ->
-        if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib then
-          (a, tiny_full_placement ~provision:Canary_enumerate.Built ~channel ())
+        if Canary_artifact.equal_artifact_id a a_lib then
+          (a, tiny_full_placement ~provision:Canary_artifact.Built ~channel ())
         else (a, tiny_full_placement ()))
   in
   good_and_bads
@@ -1678,37 +1866,36 @@ let tiny_full_assignments (spec : tiny_full_spec) :
      "tiny_scale" agnostically → detected xfail); binding@dev × lib built@dev
      passes. Product: 3 lib instances × 2 binding versions = 6 worlds. *)
 let tiny_full_general_spec (spec : tiny_full_spec) :
-    Canary_enumerate.project_spec =
+    Canary_artifact.project_spec =
   let a_oc =
-    Canary_enumerate.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+    Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
   in
   (* ONE data table (A8): per artifact, its [artifact_axes]. Derived from
      [tf_artifacts] so the factory stays the artifact-set source. Runtime
      modes undeclared (tiny's vendored bindings carry a per-VARIANT
      build-lib the static per-artifact axis can't express yet). *)
-  { ps_universe =
-      List.filter_map spec.tf_artifacts ~f:(fun a ->
-          if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_source
-          then None
-          else if Canary_enumerate.equal_artifact_id a Canary_enumerate.a_lib
-          then
-            Some
-              ( a,
-                Canary_enumerate.axes
-                  [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]);
-                    (Canary_enumerate.Built, Canary_basic.[ Stable; Dev ]) ] )
-          else if Canary_enumerate.equal_artifact_id a a_oc then
-            Some
-              ( a,
-                Canary_enumerate.axes
-                  [ (Canary_enumerate.Vendored, Canary_basic.[ Stable; Dev ]) ]
-              )
-          else
-            Some
-              ( a,
-                Canary_enumerate.axes
-                  [ (Canary_enumerate.Vendored, [ Canary_basic.Stable ]) ] ))
-  }
+  Canary_artifact.project_spec_of_universe
+    (List.filter_map spec.tf_artifacts ~f:(fun a ->
+         if Canary_artifact.equal_artifact_id a Canary_artifact.a_source
+         then None
+         else if Canary_artifact.equal_artifact_id a a_lib
+         then
+           Some
+             ( a,
+               Canary_artifact.axes
+                 [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]);
+                   (Canary_artifact.Built, Canary_basic.[ Stable; Dev ]) ] )
+         else if Canary_artifact.equal_artifact_id a a_oc then
+           Some
+             ( a,
+               Canary_artifact.axes
+                 [ (Canary_artifact.Vendored, Canary_basic.[ Stable; Dev ]) ]
+             )
+         else
+           Some
+             ( a,
+               Canary_artifact.axes
+                 [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] )))
 
 (* No assignment-list wrappers here: the general algorithm
    ([Canary_project_run.scenarios_of] over [tiny_full_general_spec]) is the
@@ -1724,7 +1911,7 @@ let tiny_full_general_spec (spec : tiny_full_spec) :
    itself — the "collapse" is emergent from canary's run, not a spec
    computation. *)
 let tiny_full_combinations (spec : tiny_full_spec) :
-    Canary_enumerate.assignment list =
+    Canary_artifact.assignment list =
   let first_tag aid = List.hd (spec.tf_bad_tags_of aid) in
   (* combinations range over DISTINCT vendored resources (ssot §4.2.5): source
      and lib collapse to the same "lib" resource in the vendored model
@@ -1746,10 +1933,10 @@ let tiny_full_combinations (spec : tiny_full_spec) :
     List.map spec.tf_artifacts ~f:(fun a ->
         match
           List.find bads ~f:(fun (aid, _) ->
-              Canary_enumerate.equal_artifact_id aid a)
+              Canary_artifact.equal_artifact_id aid a)
         with
         | Some (_, tag) ->
-            (a, tiny_full_placement ~quality:(Canary_enumerate.Bad tag) ())
+            (a, tiny_full_placement ~quality:(Canary_basic.Bad tag) ())
         | None -> (a, tiny_full_placement ()))
   in
   (match chain with
@@ -1757,8 +1944,7 @@ let tiny_full_combinations (spec : tiny_full_spec) :
    | _ -> [])
   |> List.map ~f:assignment_with
 
-let assignment_is_all_good (a : Canary_enumerate.assignment) : bool =
-  let open Canary_enumerate in
+let assignment_is_all_good (a : Canary_artifact.assignment) : bool =
   List.for_all a ~f:(fun (_, pl) ->
       match pl.version.quality with Good -> true | Bad _ -> false)
 
@@ -1808,8 +1994,8 @@ let tiny_python_module_watchlist = [ "sum"; "diff"; "offset" ]
       {i e6 api_complete}).
     - The Python binding_api carries the attr watchlist (catches
       {i e11 api_complete_python}). *)
-let tiny_api_source : Canary_artifact_api.t =
-  let native_api : Canary_artifact_api.native_api =
+let tiny_api_source : Canary_artifact.t =
+  let native_api : Canary_artifact.native_api =
     {
       kind = C;
       components = [ Headers; Runtime_lib; Link_lib ];
@@ -1827,7 +2013,7 @@ let tiny_api_source : Canary_artifact_api.t =
       cxx_abi   = None;
     }
   in
-  let ocaml_binding : Canary_artifact_api.binding_api =
+  let ocaml_binding : Canary_artifact.binding_api =
     {
       lang = OCaml;
       source_dir = Some "ocaml";
@@ -1835,7 +2021,7 @@ let tiny_api_source : Canary_artifact_api.t =
       type_watchlist = [];
     }
   in
-  let python_binding : Canary_artifact_api.binding_api =
+  let python_binding : Canary_artifact.binding_api =
     {
       lang = Python;
       source_dir = Some "python_cext/tiny_cext";
@@ -2232,11 +2418,6 @@ let make_base_runner_spec
     expectation = (fun _action _loc -> Expect_success);
   }
 
-
-(** Default workspace path for tiny's harness-materialized caches.
-    Variants append a scenario name to this. *)
-let cache_workspace_of ~scenario =
-  [%string "%{tiny_root}/scenarios/_cache/%{scenario}/workspace"]
 
 (** Convenience aliases at the live-tree path for callers that don't
     distinguish variants. The live tree {b is} a valid dune workspace

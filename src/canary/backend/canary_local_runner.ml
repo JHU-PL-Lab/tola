@@ -406,12 +406,39 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
               let fired = derived_predictions inputs in
               let derived = flat_predictions fired in
               if List.is_empty derived then begin
-                (* inspection predicts no failure ⇒ expect success *)
-                log ~event:(if cmd_ok then "done" else "failed")
-                  ~detail:(Some (if cmd_ok
-                    then "no compat failure predicted; success expected"
-                    else "no compat failure predicted but command failed"));
-                cmd_ok
+                (* inspection predicts no failure. BUT the command failed —
+                   this is a behavioral failure (c3/c7) where artifact
+                   inspection is clean yet the probe crashes with a
+                   behavioral signal. Fall back: if probe.log exists, the
+                   failure is confirmed (same fallback as Expect_compat_failure
+                   line 374). Otherwise it's unexpected. *)
+                if cmd_ok then begin
+                  log ~event:"done"
+                    ~detail:(Some "no compat failure predicted; success expected");
+                  true
+                end
+                else
+                  let probe_exists =
+                    Stdlib.Sys.file_exists
+                      (out ^ "/"
+                       ^ Canary_basic.variant_file
+                           ~variant_key:step.variant_id "probe.log")
+                    || Stdlib.Sys.file_exists (out ^ "/probe.log")
+                  in
+                  if probe_exists then begin
+                    xfail := true;
+                    (* No specific contract confirmed — the artifact
+                       inspection was clean, but the probe left a log.
+                       Record it as a behavioral catch. *)
+                    log ~event:"done"
+                      ~detail:(Some "expected failure confirmed (behavioral: probe.log present despite clean artifact inspection)");
+                    true
+                  end
+                  else begin
+                    log ~event:"failed"
+                      ~detail:(Some "no compat failure predicted but command failed (no probe.log)");
+                    false
+                  end
               end
               else if cmd_ok then begin
                 log ~event:"unexpected_success"

@@ -1,0 +1,26 @@
+{
+  "attrs": [
+    "diff",
+    "offset",
+    "sum"
+  ],
+  "counts": {
+    "attrs": 3
+  },
+  "expected_missing": {
+    "confirmed": [],
+    "violated": []
+  },
+  "extra": {},
+  "kind": "python",
+  "path": "tiny_cext",
+  "version": null,
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "sum",
+      "diff",
+      "offset"
+    ]
+  }
+}

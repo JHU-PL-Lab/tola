@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>canary: tiny1/api_complete_python/app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #fafafa; color: #222; }
+  header { padding: 12px 24px; background: #fff; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  header h1 { margin: 0; font-size: 18px; }
+  header .meta { color: #777; font-size: 13px; }
+  main { display: flex; height: calc(100vh - 60px); }
+  .left { flex: 1; overflow: auto; padding: 16px; }
+  .right { width: 360px; border-left: 1px solid #ddd; background: #fff; display: flex; flex-direction: column; box-sizing: border-box; overflow: hidden; }
+  .view-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+  .view-btn { padding: 6px 12px; border: 1px solid #999; background: #fff; cursor: pointer; border-radius: 4px; font-size: 13px; }
+  .view-btn.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+  .view-btn:hover:not(.active) { background: #e3f2fd; }
+  .mermaid { background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 12px; }
+  .mermaid svg { max-width: 100%; }
+  .placeholder { color: #999; font-style: italic; font-size: 12px; padding: 8px 0; }
+  /* Status badges — mirrors Mermaid classDef colors */
+  .badge { display: inline-block; padding: 1px 6px; border-radius: 10px; font-size: 10px; font-weight: 700; white-space: nowrap; }
+  .badge.done          { background: #c8e6c9; color: #1b5e20; }
+  .badge.expected_fail { background: #fff9c4; color: #7a6000; }
+  .badge.failed        { background: #ffcdd2; color: #b71c1c; }
+  .badge.skipped       { background: #e0e0e0; color: #555; }
+  .badge.not_in_spec   { background: #fafafa; color: #bbb; border: 1px solid #ddd; }
+  /* Action list (right panel) */
+  .panel-hdr { padding: 10px 14px 8px; font-size: 11px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #eee; flex-shrink: 0; }
+  .action-list { flex: 1 1 0; overflow-y: auto; padding: 4px 0; }
+  .action-row { display: flex; align-items: center; gap: 6px; padding: 4px 14px; cursor: pointer; transition: opacity 0.15s; }
+  .action-row:hover { background: #f5f5f5; }
+  .action-row.selected { background: #e3f2fd; }
+  .action-row.out-of-view { opacity: 0.3; }
+  .action-id { font-family: monospace; font-size: 11px; color: #aaa; min-width: 32px; flex-shrink: 0; }
+  .action-tag { flex: 1; font-family: monospace; font-size: 11px; color: #333; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .action-row.not-in-spec .action-tag { color: #bbb; }
+  /* Step detail (bottom of right panel) */
+  .action-detail { border-top: 1px solid #eee; overflow-y: auto; max-height: 45%; padding: 10px 14px; flex-shrink: 0; font-size: 12px; }
+  .action-detail:empty { display: none; }
+  .detail-hdr { font-weight: 600; font-size: 12px; margin-bottom: 6px; }
+  .detail-meta { margin-bottom: 8px; }
+  .exp-badge { font-family: monospace; font-size: 10px; color: #888; margin-left: 6px; }
+  .detail-file { margin-bottom: 12px; }
+  .detail-file h3 { margin: 0 0 3px; font-size: 11px; color: #555; font-weight: 600; }
+  .detail-file pre { background: #f5f5f5; padding: 6px 8px; border-radius: 3px; overflow: auto; font-size: 11px; max-height: 200px; margin: 0; }
+  /* Legend */
+  .legend { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; font-size: 12px; }
+  .legend-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; color: #555; }
+  .legend-section { font-size: 10px; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 0.5px; min-width: 80px; flex-shrink: 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .ln { display: inline-block; width: 28px; height: 18px; border-radius: 3px; }
+  .ln-done     { background: #c8e6c9; border: 3px solid #4caf50; }
+  .ln-done-ctx { background: #e8f5e9; border: 1.5px solid #a5d6a7; }
+  .ln-expfail  { background: #fff9c4; border: 2px solid #f9a825; }
+  .ln-failed   { background: #ffcdd2; border: 2px solid #c62828; }
+  .ln-skipped  { background: #f5f5f5; border: 2px dashed #9e9e9e; }
+  .ln-nospec   { background: #fafafa; border: 2px dashed #bdbdbd; }
+</style>
+</head>
+<body>
+<header>
+  <a href="../../index.html" style="color:#666;text-decoration:none;font-size:13px;">← all runs</a>
+  <h1>canary <span style="color: #1976d2;">tiny1/api_complete_python/app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable</span></h1>
+  <span class="meta">run at 2026-08-09 15:18:35</span>
+</header>
+<main>
+  <div class="left">
+    <div class="view-selector">
+        <button class="view-btn active" data-view="overview">Overview</button>
+        <button class="view-btn" data-view="full">Full</button>
+        <button class="view-btn" data-view="lib">Lib</button>
+        <button class="view-btn" data-view="probes">Probes</button>
+        <button class="view-btn" data-view="binding_ocaml">Binding (OCaml)</button>
+        <button class="view-btn" data-view="binding_python">Binding (Python)</button>
+    </div>
+    <div class="legend">
+      <div class="legend-row">
+        <span class="legend-section">Nodes</span>
+        <span class="legend-item">
+          <svg width="30" height="18" viewBox="0 0 30 18" style="vertical-align:middle">
+            <polygon points="1,1 23,1 29,7 29,17 1,17" fill="#fff3e0" stroke="#ff9800" stroke-width="1.5"/>
+            <polyline points="23,1 23,7 29,7" fill="none" stroke="#ff9800" stroke-width="1.5"/>
+          </svg>Artifact
+        </span>
+        <span class="legend-item">
+          <svg width="30" height="18" viewBox="0 0 30 18" style="vertical-align:middle">
+            <polygon points="7,1 23,1 29,9 23,17 7,17 1,9" fill="#f8f8f8" stroke="#999" stroke-width="1.5"/>
+          </svg>Action
+        </span>
+        <span class="legend-item">
+          <svg width="34" height="18" viewBox="0 0 34 18" style="vertical-align:middle">
+            <rect x="1" y="1" width="32" height="16" rx="8" fill="#f8f8f8" stroke="#999" stroke-width="1.5"/>
+          </svg>Probe / follow-up
+        </span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-section">Status</span>
+        <span class="legend-item"><span class="ln ln-done"></span>Done</span>
+        <span class="legend-item"><span class="ln ln-done-ctx"></span>Done (other view)</span>
+        <span class="legend-item"><span class="ln ln-expfail"></span>Expected failure</span>
+        <span class="legend-item"><span class="ln ln-failed"></span>Unexpected outcome</span>
+        <span class="legend-item"><span class="ln ln-skipped"></span>Skipped</span>
+        <span class="legend-item"><span class="ln ln-nospec"></span>Not in spec</span>
+      </div>
+      <div class="legend-row">
+        <span class="legend-section">Edges</span>
+        <span class="legend-item">
+          <svg width="38" height="10" viewBox="0 0 38 10" style="vertical-align:middle">
+            <line x1="2" y1="5" x2="30" y2="5" stroke="#4caf50" stroke-width="2.5"/>
+            <polygon points="28,2 37,5 28,8" fill="#4caf50"/>
+          </svg>Primary data flow (color = action status)
+        </span>
+        <span class="legend-item">
+          <svg width="38" height="10" viewBox="0 0 38 10" style="vertical-align:middle">
+            <line x1="2" y1="5" x2="30" y2="5" stroke="#bdbdbd" stroke-width="1.5" stroke-dasharray="4,3"/>
+            <polygon points="28,2 37,5 28,8" fill="#bdbdbd"/>
+          </svg>Runtime / context dependency
+        </span>
+      </div>
+    </div>
+    <div id="diagram" class="mermaid"></div>
+  </div>
+  <aside class="right" id="action-panel">
+    <div class="panel-hdr">Actions</div>
+    <div class="action-list" id="action-list"></div>
+    <div class="action-detail" id="action-detail"></div>
+  </aside>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  const VIEWS = {
+    "overview": { title: "Overview", mmd: "graph LR\n    source_node@{ shape: docs, label: \"source\" }\n    headers_node@{ shape: docs, label: \"headers\" }\n    lib_node@{ shape: docs, label: \"lib\" }\n    app_node@{ shape: docs, label: \"app\" }\n    ocaml_binding_node@{ shape: docs, label: \"ocaml binding\" }\n    python_binding_node@{ shape: docs, label: \"python binding\" }\n\n    A_configure{{\"configure [1]\"}}\n    A_build_headers{{\"build_headers\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_app_ocaml{{\"build_app_ocaml\"}}\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_app_python{{\"build_app_python\"}}\n    A_install_lib{{\"install_lib\"}}\n    A_pack_binding_ocaml{{\"pack_binding_ocaml\"}}\n    A_pack_binding_python{{\"pack_binding_python\"}}\n    A_pack_lib{{\"pack_lib\"}}\n    A_pack_app{{\"pack_app\"}}\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7][8]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_binding_python([\"probe_binding_python [11][12]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_lib([\"probe_lib [13]\"])\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_headers\n    A_build_headers --> headers_node\n    A_configure --> A_build_lib\n    A_build_lib --> lib_node\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_node\n    ocaml_binding_node --> A_build_app_ocaml\n    lib_node -.->|link| A_build_app_ocaml\n    A_build_app_ocaml --> app_node\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_node\n    python_binding_node --> A_build_app_python\n    lib_node -.->|link| A_build_app_python\n    A_build_app_python --> app_node\n    A_build_lib --> A_install_lib\n    ocaml_binding_node --> A_pack_binding_ocaml\n    python_binding_node --> A_pack_binding_python\n    lib_node --> A_pack_lib\n    app_node --> A_pack_app\n    ocaml_binding_node -->|test| A_probe_binding_ocaml\n    lib_node -.->|runtime| A_probe_binding_ocaml\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    python_binding_node -->|test| A_probe_binding_python\n    lib_node -.->|runtime| A_probe_binding_python\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    lib_node -->|test| A_probe_lib\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class source_node,headers_node,lib_node,app_node,ocaml_binding_node,python_binding_node artifact\n    class A_configure st_done\n    class A_build_headers st_nospec\n    class A_build_lib st_done\n    class A_build_binding_ocaml st_done\n    class A_build_app_ocaml st_nospec\n    class A_build_binding_python st_done\n    class A_build_app_python st_nospec\n    class A_install_lib st_nospec\n    class A_pack_binding_ocaml st_nospec\n    class A_pack_binding_python st_nospec\n    class A_pack_lib st_nospec\n    class A_pack_app st_nospec\n    class A_probe_binding_ocaml st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_binding_python st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_lib st_done\n    class A_build_lib_inspect st_done\n    class A_build_binding_ocaml_inspect st_done\n    class A_build_binding_python_inspect st_done\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 24 stroke:#4caf50,stroke-width:3px\n    linkStyle 25 stroke:#4caf50,stroke-width:3px\n    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 28 stroke:#4caf50,stroke-width:3px\n    linkStyle 29 stroke:#4caf50,stroke-width:3px\n    linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 31 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 32 stroke:#4caf50,stroke-width:3px\n    linkStyle 33 stroke:#4caf50,stroke-width:3px\n    linkStyle 34 stroke:#4caf50,stroke-width:3px\n    linkStyle 35 stroke:#4caf50,stroke-width:3px\n" },
+    "full": { title: "Full", mmd: "%% view: full\ngraph LR\n    subgraph source_sg [\"source\"]\n      source_node@{ shape: doc, label: \"source\" }\n    end\n    subgraph lib_sg [\"lib\"]\n      lib_node@{ shape: doc, label: \"lib\" }\n    end\n    subgraph ocaml_binding_sg [\"ocaml binding\"]\n      ocaml_binding_node@{ shape: doc, label: \"ocaml binding\" }\n    end\n    subgraph python_binding_sg [\"python binding\"]\n      python_binding_node@{ shape: doc, label: \"python binding\" }\n    end\n\n    A_configure{{\"configure [1]\"}}\n    A_scan_sources{{\"scan_sources [2]\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7]\"])\n    A_probe_binding_ocaml_inspect([\"inspect_ocaml [8]\"])\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n    A_probe_binding_python([\"probe_binding_python [11]\"])\n    A_probe_binding_python_inspect([\"inspect_python [12]\"])\n    A_probe_lib([\"probe_lib [13]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_lib\n    A_build_lib --> lib_node\n    lib_node -->|test| A_probe_lib\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_node\n    ocaml_binding_node -->|test| A_probe_binding_ocaml\n    lib_node -.->|runtime| A_probe_binding_ocaml\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_node\n    python_binding_node -->|test| A_probe_binding_python\n    lib_node -.->|runtime| A_probe_binding_python\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n    A_probe_binding_python -.-> A_probe_binding_python_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef store fill:#e8eaf6,stroke:#3f51b5,stroke-width:1.5px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class lib_node,ocaml_binding_node,python_binding_node artifact\n    class A_configure st_done\n    class A_scan_sources st_done\n    class A_build_lib st_done\n    class A_build_lib_inspect st_done\n    class A_build_binding_ocaml st_done\n    class A_build_binding_ocaml_inspect st_done\n    class A_probe_binding_ocaml st_done\n    class A_probe_binding_ocaml_inspect st_done\n    class A_build_binding_python st_done\n    class A_build_binding_python_inspect st_done\n    class A_probe_binding_python st_done\n    class A_probe_binding_python_inspect st_done\n    class A_probe_lib st_done\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#4caf50,stroke-width:3px\n    linkStyle 2 stroke:#4caf50,stroke-width:3px\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#4caf50,stroke-width:3px\n    linkStyle 10 stroke:#4caf50,stroke-width:3px\n    linkStyle 11 stroke:#4caf50,stroke-width:3px\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#4caf50,stroke-width:3px\n    linkStyle 17 stroke:#4caf50,stroke-width:3px\n    linkStyle 18 stroke:#4caf50,stroke-width:3px\n    linkStyle 19 stroke:#4caf50,stroke-width:3px\n    linkStyle 20 stroke:#4caf50,stroke-width:3px\n" },
+    "lib": { title: "Lib", mmd: "%% view: lib\ngraph LR\n    source_node@{ shape: docs, label: \"source\" }\n    headers_node@{ shape: docs, label: \"headers\" }\n    subgraph lib_sg [\"lib\"]\n      lib_build_tree_node@{ shape: doc, label: \"lib [3]\" }\n    end\n    app_node@{ shape: docs, label: \"app\" }\n    ocaml_binding_node@{ shape: docs, label: \"ocaml binding\" }\n    python_binding_node@{ shape: docs, label: \"python binding\" }\n\n    A_configure{{\"configure [1]\"}}\n    A_build_headers{{\"build_headers\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_app_ocaml{{\"build_app_ocaml\"}}\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_app_python{{\"build_app_python\"}}\n    A_install_lib{{\"install_lib\"}}\n    A_pack_binding_ocaml{{\"pack_binding_ocaml\"}}\n    A_pack_binding_python{{\"pack_binding_python\"}}\n    A_pack_lib{{\"pack_lib\"}}\n    A_pack_app{{\"pack_app\"}}\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7][8]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_binding_python([\"probe_binding_python [11][12]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_lib([\"probe_lib [13]\"])\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_headers\n    A_build_headers --> headers_node\n    A_configure --> A_build_lib\n    A_build_lib --> lib_build_tree_node\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_build_tree_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_node\n    ocaml_binding_node --> A_build_app_ocaml\n    lib_build_tree_node -.->|link| A_build_app_ocaml\n    A_build_app_ocaml --> app_node\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_build_tree_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_node\n    python_binding_node --> A_build_app_python\n    lib_build_tree_node -.->|link| A_build_app_python\n    A_build_app_python --> app_node\n    lib_build_tree_node --> A_install_lib\n    ocaml_binding_node --> A_pack_binding_ocaml\n    python_binding_node --> A_pack_binding_python\n    lib_build_tree_node --> A_pack_lib\n    app_node --> A_pack_app\n    ocaml_binding_node -->|test| A_probe_binding_ocaml\n    lib_build_tree_node -.->|runtime| A_probe_binding_ocaml\n    app_node -->|test| A_probe_app_ocaml\n    lib_build_tree_node -.->|runtime| A_probe_app_ocaml\n    python_binding_node -->|test| A_probe_binding_python\n    lib_build_tree_node -.->|runtime| A_probe_binding_python\n    app_node -->|test| A_probe_app_ocaml\n    lib_build_tree_node -.->|runtime| A_probe_app_ocaml\n    lib_build_tree_node -->|test| A_probe_lib\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class source_node,headers_node,lib_build_tree_node,app_node,ocaml_binding_node,python_binding_node artifact\n    class A_configure st_done_ctx\n    class A_build_headers st_nospec\n    class A_build_lib st_done\n    class A_build_binding_ocaml st_done_ctx\n    class A_build_app_ocaml st_nospec\n    class A_build_binding_python st_done_ctx\n    class A_build_app_python st_nospec\n    class A_install_lib st_nospec\n    class A_pack_binding_ocaml st_nospec\n    class A_pack_binding_python st_nospec\n    class A_pack_lib st_nospec\n    class A_pack_app st_nospec\n    class A_probe_binding_ocaml st_done_ctx\n    class A_probe_app_ocaml st_nospec\n    class A_probe_binding_python st_done_ctx\n    class A_probe_app_ocaml st_nospec\n    class A_probe_lib st_done\n    class A_build_lib_inspect st_done_ctx\n    class A_build_binding_ocaml_inspect st_done_ctx\n    class A_build_binding_python_inspect st_done_ctx\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 24 stroke:#4caf50,stroke-width:3px\n    linkStyle 25 stroke:#4caf50,stroke-width:3px\n    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 28 stroke:#4caf50,stroke-width:3px\n    linkStyle 29 stroke:#4caf50,stroke-width:3px\n    linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 31 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 32 stroke:#4caf50,stroke-width:3px\n    linkStyle 33 stroke:#4caf50,stroke-width:3px\n    linkStyle 34 stroke:#4caf50,stroke-width:3px\n    linkStyle 35 stroke:#4caf50,stroke-width:3px\n" },
+    "probes": { title: "Probes", mmd: "%% view: probes\ngraph LR\n    source_node@{ shape: docs, label: \"source\" }\n    headers_node@{ shape: docs, label: \"headers\" }\n    lib_node@{ shape: docs, label: \"lib\" }\n    app_node@{ shape: docs, label: \"app\" }\n    ocaml_binding_node@{ shape: docs, label: \"ocaml binding\" }\n    python_binding_node@{ shape: docs, label: \"python binding\" }\n\n    A_configure{{\"configure [1]\"}}\n    A_build_headers{{\"build_headers\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_app_ocaml{{\"build_app_ocaml\"}}\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_app_python{{\"build_app_python\"}}\n    A_install_lib{{\"install_lib\"}}\n    A_pack_binding_ocaml{{\"pack_binding_ocaml\"}}\n    A_pack_binding_python{{\"pack_binding_python\"}}\n    A_pack_lib{{\"pack_lib\"}}\n    A_pack_app{{\"pack_app\"}}\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_binding_python([\"probe_binding_python [11]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_lib([\"probe_lib [13]\"])\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n    A_probe_binding_ocaml_inspect([\"inspect_ocaml [8]\"])\n    A_probe_binding_python_inspect([\"inspect_python [12]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_headers\n    A_build_headers --> headers_node\n    A_configure --> A_build_lib\n    A_build_lib --> lib_node\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_node\n    ocaml_binding_node --> A_build_app_ocaml\n    lib_node -.->|link| A_build_app_ocaml\n    A_build_app_ocaml --> app_node\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_node\n    python_binding_node --> A_build_app_python\n    lib_node -.->|link| A_build_app_python\n    A_build_app_python --> app_node\n    A_build_lib --> A_install_lib\n    ocaml_binding_node --> A_pack_binding_ocaml\n    python_binding_node --> A_pack_binding_python\n    lib_node --> A_pack_lib\n    app_node --> A_pack_app\n    ocaml_binding_node -->|test| A_probe_binding_ocaml\n    lib_node -.->|runtime| A_probe_binding_ocaml\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    python_binding_node -->|test| A_probe_binding_python\n    lib_node -.->|runtime| A_probe_binding_python\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    lib_node -->|test| A_probe_lib\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect\n    A_probe_binding_python -.-> A_probe_binding_python_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class source_node,headers_node,lib_node,app_node,ocaml_binding_node,python_binding_node artifact\n    class A_configure st_done_ctx\n    class A_build_headers st_nospec\n    class A_build_lib st_done_ctx\n    class A_build_binding_ocaml st_done_ctx\n    class A_build_app_ocaml st_nospec\n    class A_build_binding_python st_done_ctx\n    class A_build_app_python st_nospec\n    class A_install_lib st_nospec\n    class A_pack_binding_ocaml st_nospec\n    class A_pack_binding_python st_nospec\n    class A_pack_lib st_nospec\n    class A_pack_app st_nospec\n    class A_probe_binding_ocaml st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_binding_python st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_lib st_done\n    class A_build_lib_inspect st_done_ctx\n    class A_build_binding_ocaml_inspect st_done_ctx\n    class A_build_binding_python_inspect st_done_ctx\n    class A_probe_binding_ocaml_inspect st_done\n    class A_probe_binding_python_inspect st_done\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 24 stroke:#4caf50,stroke-width:3px\n    linkStyle 25 stroke:#4caf50,stroke-width:3px\n    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 28 stroke:#4caf50,stroke-width:3px\n    linkStyle 29 stroke:#4caf50,stroke-width:3px\n    linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 31 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 32 stroke:#4caf50,stroke-width:3px\n    linkStyle 33 stroke:#4caf50,stroke-width:3px\n    linkStyle 34 stroke:#4caf50,stroke-width:3px\n    linkStyle 35 stroke:#4caf50,stroke-width:3px\n    linkStyle 36 stroke:#4caf50,stroke-width:3px\n    linkStyle 37 stroke:#4caf50,stroke-width:3px\n" },
+    "binding_ocaml": { title: "Binding (OCaml)", mmd: "%% view: binding_ocaml\ngraph LR\n    source_node@{ shape: docs, label: \"source\" }\n    headers_node@{ shape: docs, label: \"headers\" }\n    lib_node@{ shape: docs, label: \"lib\" }\n    app_node@{ shape: docs, label: \"app\" }\n    subgraph ocaml_binding_sg [\"ocaml binding\"]\n      ocaml_binding_build_tree_node@{ shape: doc, label: \"ocaml binding [5]\" }\n    end\n    python_binding_node@{ shape: docs, label: \"python binding\" }\n\n    A_configure{{\"configure [1]\"}}\n    A_build_headers{{\"build_headers\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_app_ocaml{{\"build_app_ocaml\"}}\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_app_python{{\"build_app_python\"}}\n    A_install_lib{{\"install_lib\"}}\n    A_pack_binding_ocaml{{\"pack_binding_ocaml\"}}\n    A_pack_binding_python{{\"pack_binding_python\"}}\n    A_pack_lib{{\"pack_lib\"}}\n    A_pack_app{{\"pack_app\"}}\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_binding_python([\"probe_binding_python [11][12]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_lib([\"probe_lib [13]\"])\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n    A_probe_binding_ocaml_inspect([\"inspect_ocaml [8]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_headers\n    A_build_headers --> headers_node\n    A_configure --> A_build_lib\n    A_build_lib --> lib_node\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_build_tree_node\n    ocaml_binding_build_tree_node --> A_build_app_ocaml\n    lib_node -.->|link| A_build_app_ocaml\n    A_build_app_ocaml --> app_node\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_node\n    python_binding_node --> A_build_app_python\n    lib_node -.->|link| A_build_app_python\n    A_build_app_python --> app_node\n    A_build_lib --> A_install_lib\n    ocaml_binding_build_tree_node --> A_pack_binding_ocaml\n    python_binding_node --> A_pack_binding_python\n    lib_node --> A_pack_lib\n    app_node --> A_pack_app\n    ocaml_binding_build_tree_node -->|test| A_probe_binding_ocaml\n    lib_node -.->|runtime| A_probe_binding_ocaml\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    python_binding_node -->|test| A_probe_binding_python\n    lib_node -.->|runtime| A_probe_binding_python\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    lib_node -->|test| A_probe_lib\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n    A_probe_binding_ocaml -.-> A_probe_binding_ocaml_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class source_node,headers_node,lib_node,app_node,ocaml_binding_build_tree_node,python_binding_node artifact\n    class A_configure st_done_ctx\n    class A_build_headers st_nospec\n    class A_build_lib st_done_ctx\n    class A_build_binding_ocaml st_done\n    class A_build_app_ocaml st_nospec\n    class A_build_binding_python st_done_ctx\n    class A_build_app_python st_nospec\n    class A_install_lib st_nospec\n    class A_pack_binding_ocaml st_nospec\n    class A_pack_binding_python st_nospec\n    class A_pack_lib st_nospec\n    class A_pack_app st_nospec\n    class A_probe_binding_ocaml st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_binding_python st_done_ctx\n    class A_probe_app_ocaml st_nospec\n    class A_probe_lib st_done_ctx\n    class A_build_lib_inspect st_done_ctx\n    class A_build_binding_ocaml_inspect st_done\n    class A_build_binding_python_inspect st_done_ctx\n    class A_probe_binding_ocaml_inspect st_done\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 24 stroke:#4caf50,stroke-width:3px\n    linkStyle 25 stroke:#4caf50,stroke-width:3px\n    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 28 stroke:#4caf50,stroke-width:3px\n    linkStyle 29 stroke:#4caf50,stroke-width:3px\n    linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 31 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 32 stroke:#4caf50,stroke-width:3px\n    linkStyle 33 stroke:#4caf50,stroke-width:3px\n    linkStyle 34 stroke:#4caf50,stroke-width:3px\n    linkStyle 35 stroke:#4caf50,stroke-width:3px\n    linkStyle 36 stroke:#4caf50,stroke-width:3px\n" },
+    "binding_python": { title: "Binding (Python)", mmd: "%% view: binding_python\ngraph LR\n    source_node@{ shape: docs, label: \"source\" }\n    headers_node@{ shape: docs, label: \"headers\" }\n    lib_node@{ shape: docs, label: \"lib\" }\n    app_node@{ shape: docs, label: \"app\" }\n    ocaml_binding_node@{ shape: docs, label: \"ocaml binding\" }\n    subgraph python_binding_sg [\"python binding\"]\n      python_binding_build_tree_node@{ shape: doc, label: \"python binding [9]\" }\n    end\n\n    A_configure{{\"configure [1]\"}}\n    A_build_headers{{\"build_headers\"}}\n    A_build_lib{{\"build_lib [3]\"}}\n    A_build_binding_ocaml{{\"build_binding_ocaml [5]\"}}\n    A_build_app_ocaml{{\"build_app_ocaml\"}}\n    A_build_binding_python{{\"build_binding_python [9]\"}}\n    A_build_app_python{{\"build_app_python\"}}\n    A_install_lib{{\"install_lib\"}}\n    A_pack_binding_ocaml{{\"pack_binding_ocaml\"}}\n    A_pack_binding_python{{\"pack_binding_python\"}}\n    A_pack_lib{{\"pack_lib\"}}\n    A_pack_app{{\"pack_app\"}}\n    A_probe_binding_ocaml([\"probe_binding_ocaml [7][8]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_binding_python([\"probe_binding_python [11]\"])\n    A_probe_app_ocaml([\"probe_app_ocaml\"])\n    A_probe_lib([\"probe_lib [13]\"])\n    A_build_lib_inspect([\"inspect_lib [4]\"])\n    A_build_binding_ocaml_inspect([\"inspect_ocaml [6]\"])\n    A_build_binding_python_inspect([\"inspect_python [10]\"])\n    A_probe_binding_python_inspect([\"inspect_python [12]\"])\n\n    source_node --> A_configure\n    A_configure --> A_build_headers\n    A_build_headers --> headers_node\n    A_configure --> A_build_lib\n    A_build_lib --> lib_node\n    A_configure --> A_build_binding_ocaml\n    headers_node -.->|headers| A_build_binding_ocaml\n    lib_node -.->|link| A_build_binding_ocaml\n    A_build_binding_ocaml --> ocaml_binding_node\n    ocaml_binding_node --> A_build_app_ocaml\n    lib_node -.->|link| A_build_app_ocaml\n    A_build_app_ocaml --> app_node\n    A_configure --> A_build_binding_python\n    headers_node -.->|headers| A_build_binding_python\n    lib_node -.->|link| A_build_binding_python\n    A_build_binding_python --> python_binding_build_tree_node\n    python_binding_build_tree_node --> A_build_app_python\n    lib_node -.->|link| A_build_app_python\n    A_build_app_python --> app_node\n    A_build_lib --> A_install_lib\n    ocaml_binding_node --> A_pack_binding_ocaml\n    python_binding_build_tree_node --> A_pack_binding_python\n    lib_node --> A_pack_lib\n    app_node --> A_pack_app\n    ocaml_binding_node -->|test| A_probe_binding_ocaml\n    lib_node -.->|runtime| A_probe_binding_ocaml\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    python_binding_build_tree_node -->|test| A_probe_binding_python\n    lib_node -.->|runtime| A_probe_binding_python\n    app_node -->|test| A_probe_app_ocaml\n    lib_node -.->|runtime| A_probe_app_ocaml\n    lib_node -->|test| A_probe_lib\n    A_build_lib -.-> A_build_lib_inspect\n    A_build_binding_ocaml -.-> A_build_binding_ocaml_inspect\n    A_build_binding_python -.-> A_build_binding_python_inspect\n    A_probe_binding_python -.-> A_probe_binding_python_inspect\n\n    classDef artifact fill:#fff3e0,stroke:#ff9800,stroke-width:2px\n    classDef action fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px\n    classDef st_done fill:#c8e6c9,stroke:#4caf50,stroke-width:3px\n    classDef st_done_ctx fill:#e8f5e9,stroke:#a5d6a7,stroke-width:1.5px\n    classDef st_expected_fail fill:#fff9c4,stroke:#f9a825,stroke-width:2px\n    classDef st_failed fill:#ffcdd2,stroke:#c62828,stroke-width:2px\n    classDef st_skipped fill:#f5f5f5,stroke:#9e9e9e,stroke-dasharray:5\n    classDef st_nospec fill:#fafafa,stroke:#bdbdbd,stroke-dasharray:5\n    class source_node,headers_node,lib_node,app_node,ocaml_binding_node,python_binding_build_tree_node artifact\n    class A_configure st_done_ctx\n    class A_build_headers st_nospec\n    class A_build_lib st_done_ctx\n    class A_build_binding_ocaml st_done_ctx\n    class A_build_app_ocaml st_nospec\n    class A_build_binding_python st_done\n    class A_build_app_python st_nospec\n    class A_install_lib st_nospec\n    class A_pack_binding_ocaml st_nospec\n    class A_pack_binding_python st_nospec\n    class A_pack_lib st_nospec\n    class A_pack_app st_nospec\n    class A_probe_binding_ocaml st_done_ctx\n    class A_probe_app_ocaml st_nospec\n    class A_probe_binding_python st_done\n    class A_probe_app_ocaml st_nospec\n    class A_probe_lib st_done_ctx\n    class A_build_lib_inspect st_done_ctx\n    class A_build_binding_ocaml_inspect st_done_ctx\n    class A_build_binding_python_inspect st_done\n    class A_probe_binding_python_inspect st_done\n    linkStyle 0 stroke:#4caf50,stroke-width:3px\n    linkStyle 1 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 2 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 3 stroke:#4caf50,stroke-width:3px\n    linkStyle 4 stroke:#4caf50,stroke-width:3px\n    linkStyle 5 stroke:#4caf50,stroke-width:3px\n    linkStyle 6 stroke:#4caf50,stroke-width:3px\n    linkStyle 7 stroke:#4caf50,stroke-width:3px\n    linkStyle 8 stroke:#4caf50,stroke-width:3px\n    linkStyle 9 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 10 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 11 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 12 stroke:#4caf50,stroke-width:3px\n    linkStyle 13 stroke:#4caf50,stroke-width:3px\n    linkStyle 14 stroke:#4caf50,stroke-width:3px\n    linkStyle 15 stroke:#4caf50,stroke-width:3px\n    linkStyle 16 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 17 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 18 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 19 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 20 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 21 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 22 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 23 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 24 stroke:#4caf50,stroke-width:3px\n    linkStyle 25 stroke:#4caf50,stroke-width:3px\n    linkStyle 26 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 27 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 28 stroke:#4caf50,stroke-width:3px\n    linkStyle 29 stroke:#4caf50,stroke-width:3px\n    linkStyle 30 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 31 stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:5\n    linkStyle 32 stroke:#4caf50,stroke-width:3px\n    linkStyle 33 stroke:#4caf50,stroke-width:3px\n    linkStyle 34 stroke:#4caf50,stroke-width:3px\n    linkStyle 35 stroke:#4caf50,stroke-width:3px\n    linkStyle 36 stroke:#4caf50,stroke-width:3px\n" }
+  };
+  const STEPS = {
+    "configure": { id: 1, action: "configure", output_rel: "../configure", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "scan_sources": { id: 2, action: "scan_sources", output_rel: "../scan_sources", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "build_lib": { id: 3, action: "build_lib", output_rel: "../build_lib", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "build_lib_inspect": { id: 4, action: "build_lib", output_rel: "../build_lib", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "build_binding_ocaml": { id: 5, action: "build_binding_ocaml", output_rel: "../build_binding/ocaml", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_compat_derived", status: "done" },
+    "build_binding_ocaml_inspect": { id: 6, action: "build_binding_ocaml", output_rel: "../build_binding/ocaml", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "probe_binding_ocaml": { id: 7, action: "probe_binding_ocaml", output_rel: "../probe_binding/ocaml", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_failure", status: "done" },
+    "probe_binding_ocaml_inspect": { id: 8, action: "probe_binding_ocaml", output_rel: "../probe_binding/ocaml", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "build_binding_python": { id: 9, action: "build_binding_python", output_rel: "../build_binding/python", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "build_binding_python_inspect": { id: 10, action: "build_binding_python", output_rel: "../build_binding/python", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "probe_binding_python": { id: 11, action: "probe_binding_python", output_rel: "../probe_binding/python", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_failure", status: "done" },
+    "probe_binding_python_inspect": { id: 12, action: "probe_binding_python", output_rel: "../probe_binding/python", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" },
+    "probe_lib": { id: 13, action: "probe_lib", output_rel: "../probe_lib", variant_key: "app-vendored-stable_lib-vendored-stable_ocaml_binding-vendored-stable_python_binding-vendored-stable_source-vendored-stable", expectation: "Expect_success", status: "done" }
+  };
+  const diagramDiv = document.getElementById('diagram');
+  const actionList = document.getElementById('action-list');
+  const actionDetail = document.getElementById('action-detail');
+  let currentView = "overview";
+  let highlightedNode = null;
+
+  function escape(s) {
+    return String(s).replace(/[&<>]/g, c =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  }
+
+  // ── Action list ──────────────────────────────────────────────────────────
+  const BADGE = {
+    done:          ['done',     'done'],
+    expected_fail: ['exp.fail', 'expected_fail'],
+    failed:        ['fail',     'failed'],
+    skipped:       ['skip',     'skipped'],
+    not_in_spec:   ['n/a',      'not_in_spec'],
+  };
+
+  function buildActionList() {
+    const sorted = Object.entries(STEPS).sort(([, a], [, b]) => {
+      const ai = a.id ?? Infinity, bi = b.id ?? Infinity;
+      return ai !== bi ? ai - bi : 0;
+    });
+    let html = '';
+    for (const [tag, meta] of sorted) {
+      const idStr = meta.id != null ? '[' + meta.id + ']' : '';
+      const [btxt, bcls] = BADGE[meta.status] || [meta.status, meta.status];
+      const nisCls = meta.status === 'not_in_spec' ? ' not-in-spec' : '';
+      html += '<div class="action-row' + nisCls + '" data-tag="' + escape(tag) + '" id="row-' + escape(tag) + '">'
+            + '<span class="action-id">' + escape(idStr) + '</span>'
+            + '<span class="action-tag" title="' + escape(tag) + '">' + escape(tag) + '</span>'
+            + '<span class="badge ' + bcls + '">' + btxt + '</span>'
+            + '</div>';
+    }
+    actionList.innerHTML = html;
+    actionList.querySelectorAll('.action-row').forEach(row =>
+      row.addEventListener('click', () => showStep(row.dataset.tag)));
+  }
+
+  function selectRow(tag) {
+    actionList.querySelectorAll('.action-row.selected').forEach(r => r.classList.remove('selected'));
+    const row = document.getElementById('row-' + tag);
+    if (row) {
+      row.classList.add('selected');
+      row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }
+
+  // Highlight the diagram node corresponding to tag (drop-shadow ring).
+  function highlightDiagramNode(tag) {
+    if (highlightedNode) { highlightedNode.style.filter = ''; highlightedNode = null; }
+    document.querySelectorAll('g.node').forEach(g => {
+      const m = (g.id || '').match(/^flowchart-(.+)-\d+$/);
+      if (!m) return;
+      const nodeId = m[1];
+      if (nodeId === 'A_' + tag || nodeId === 'S_' + tag) {
+        g.style.filter = 'drop-shadow(0 0 5px #1976d2)';
+        highlightedNode = g;
+      }
+    });
+  }
+
+  // Dim rows for steps that have no node in the current rendered diagram.
+  function updateActionListForView() {
+    const inView = new Set();
+    document.querySelectorAll('g.node').forEach(g => {
+      const m = (g.id || '').match(/^flowchart-(.+)-\d+$/);
+      if (!m) return;
+      const nodeId = m[1];
+      let t = null;
+      if (nodeId.startsWith('A_')) t = nodeId.slice(2);
+      else if (nodeId.startsWith('S_')) t = nodeId.slice(2);
+      if (t && STEPS[t]) inView.add(t);
+    });
+    actionList.querySelectorAll('.action-row').forEach(row => {
+      row.classList.toggle('out-of-view', !inView.has(row.dataset.tag));
+    });
+    // scroll to first visible in-view row (skip already-selected)
+    const first = actionList.querySelector('.action-row:not(.out-of-view)');
+    if (first && !actionList.querySelector('.action-row.selected')) {
+      first.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  // ── Step detail ──────────────────────────────────────────────────────────
+  async function showStep(tag) {
+    selectRow(tag);
+    highlightDiagramNode(tag);
+    const meta = STEPS[tag];
+    if (!meta) {
+      actionDetail.innerHTML = '<p class="placeholder">No metadata for ' + escape(tag) + '</p>';
+      return;
+    }
+    const [btxt, bcls] = BADGE[meta.status] || [meta.status, meta.status];
+    actionDetail.innerHTML =
+      '<div class="detail-hdr">' + escape(tag) + '</div>'
+      + '<div class="detail-meta"><span class="badge ' + bcls + '">' + btxt + '</span>'
+      + '<span class="exp-badge">' + escape(meta.expectation) + '</span></div>'
+      + '<div style="color:#999;font-size:11px">loading…</div>';
+
+    const vk = meta.variant_key || '';
+    const vkFile = (base, ext) => vk ? base + '_' + vk + '.' + ext : base + '.' + ext;
+    const candidates = [
+      vkFile('probe', 'log'), vkFile('summary', 'json'),
+      vkFile('inspect_stub', 'json'), vkFile('install', 'log'), vkFile('symbols', 'log')
+    ];
+    let filesHtml = '';
+    for (const fname of candidates) {
+      try {
+        const resp = await fetch(meta.output_rel + '/' + fname);
+        if (resp.ok) {
+          const txt = await resp.text();
+          if (txt.length > 0)
+            filesHtml += '<div class="detail-file"><h3>' + escape(fname) + '</h3>'
+                       + '<pre>' + escape(txt) + '</pre></div>';
+        }
+      } catch (_) { }
+    }
+    actionDetail.innerHTML =
+      '<div class="detail-hdr">' + escape(tag) + '</div>'
+      + '<div class="detail-meta"><span class="badge ' + bcls + '">' + btxt + '</span>'
+      + '<span class="exp-badge">' + escape(meta.expectation) + '</span></div>'
+      + (filesHtml || '<p class="placeholder">No log files found.</p>');
+  }
+
+  // ── Diagram rendering & node clicks ─────────────────────────────────────
+  let renderCounter = 0;
+  async function renderView(name) {
+    currentView = name;
+    document.querySelectorAll('.view-btn').forEach(b =>
+      b.classList.toggle('active', b.dataset.view === name));
+    const v = VIEWS[name];
+    if (!v) { diagramDiv.textContent = '(no view: ' + name + ')'; return; }
+    diagramDiv.innerHTML = '<div style="color:#999">rendering…</div>';
+    const id = 'mmd-' + (++renderCounter);
+    highlightedNode = null;
+    try {
+      const { svg, bindFunctions } = await mermaid.render(id, v.mmd);
+      diagramDiv.innerHTML = svg;
+      if (bindFunctions) bindFunctions(diagramDiv);
+      attachClicks(diagramDiv);
+      updateActionListForView();
+    } catch (err) {
+      const msg = (err && err.message) ? err.message : String(err);
+      diagramDiv.innerHTML =
+        '<div style="color:#b71c1c;background:#ffebee;padding:12px;border-radius:4px;">'
+        + '<b>Mermaid error</b><br><pre style="white-space:pre-wrap;font-size:12px;margin-top:8px">'
+        + escape(msg) + '</pre></div>'
+        + '<details style="margin-top:8px"><summary>view source (' + escape(name) + ')</summary>'
+        + '<pre style="font-size:11px">' + escape(v.mmd) + '</pre></details>';
+    }
+  }
+
+  function attachClicks(container) {
+    container.querySelectorAll('g.node').forEach(g => {
+      const id = g.id || '';
+      // Mermaid SVG node ids: flowchart-{nodeId}-{seqIndex}
+      // Greedy (.+) correctly strips the trailing -\d+ even when nodeId contains digits.
+      const m = id.match(/^flowchart-(.+)-\d+$/);
+      if (!m) return;
+      const nodeId = m[1];
+      let tag = null;
+      if (nodeId.startsWith('S_')) {
+        // mermaid_of_steps nodes
+        const t = nodeId.slice(2);
+        if (STEPS[t]) tag = t;
+      } else if (nodeId.startsWith('A_')) {
+        // schema-view action nodes; may be collapsed (multiple steps → one node)
+        const t = nodeId.slice(2);
+        if (STEPS[t]) tag = t;
+        else tag = Object.keys(STEPS).find(k => k.startsWith(t + '_')) ?? null;
+      }
+      if (!tag) return;
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', () => showStep(tag));
+    });
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+  document.querySelectorAll('.view-btn').forEach(b =>
+    b.addEventListener('click', () => renderView(b.dataset.view)));
+
+  mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { htmlLabels: true } });
+  buildActionList();
+  renderView(currentView);
+</script>
+</body>
+</html>

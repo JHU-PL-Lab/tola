@@ -1,3 +1,30 @@
+(** LEGACY — scenario pattern catalogue (Sc.N / Bs.N).
+
+    This module holds the HAND-LISTED abstract scenario *patterns* —
+    named collections of actions over artifact kinds, with optional
+    mutation origins. It does NOT drive the enumeration engine; the
+    engine lives in {!Canary_enumerate} and produces concrete
+    [{!Canary_artifact.assignment}]s.
+
+    Role of this module (2026-08-08):
+    - The [good_scenarios] catalogue provides STABLE IDENTIFIERS
+      ("Sc.1", "Sc.2.OCaml", …) that name the abstract shape of a
+      scenario. These ids are SSOT-stable (like GitHub issue numbers)
+      and appear in the manuscript.
+    - Concrete scenarios produced by [Canary_enumerate.enumerate_assignments]
+      instantiate one or more of these patterns. The naming bridge
+      (assignment → pattern ids) is the next step.
+    - The mutation vocabulary ([mutation_kind], [manifest], [detector],
+      [origin]) and the contract-binding machinery serve the tiny
+      factory's expectation lowering and the compat surface theory.
+
+    NOT part of the enumeration pipeline. The word "pattern" (not
+    "scenario") should be used for the constructs in this file; the
+    word "scenario" belongs to concrete assignments from the engine.
+
+    See [doc/canary/design/scenario_terms.md] for the terminology
+    split (pattern vs scenario vs stage) and the retirement plan. *)
+
 (** Scenario type — project-agnostic, unified for good and bad.
 
     A [scenario] names a collection of actions over related
@@ -131,15 +158,6 @@ type firing_site =
   | At_build_app of Canary_lang.lang
   | At_probe_app of Canary_lang.lang
 
-let string_of_firing_site = function
-  | At_build_binding l ->
-      "at_build_binding_" ^ Canary_lang.string_of_lang l
-  | At_probe_binding l ->
-      "at_probe_binding_" ^ Canary_lang.string_of_lang l
-  | At_build_app l ->
-      "at_build_app_" ^ Canary_lang.string_of_lang l
-  | At_probe_app l ->
-      "at_probe_app_" ^ Canary_lang.string_of_lang l
 
 (** Project a concrete [Canary_basic.action] down to a [firing_site]
     so a contract binding can be matched by lookup. Rules with no

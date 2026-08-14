@@ -26,6 +26,24 @@
    source_repo / tiny_stores / the pr_provenance string) converge onto: it now
    backs [lib_store] and [binding_store] directly (was [location] + [system_pkg]
    / [pkg_name]) and drives [command_of_step]'s Derived fetch. *)
+(** A STORE PIN (2026-08-12) — one installable version of a lang-PM
+    package, declared as project data; the enumeration ranges over the
+    pins and the runner enforces them (identity + pin-checked fetch +
+    world assertions). The default install form is the standard
+    "<package>.<pin_version>"; [install_name] is the escape for packages
+    whose install target doesn't follow the convention. *)
+type opam_pin = {
+  pin_version : string;
+      (** the OPAM package version — the store's own record ([holds_pin]
+          verifies against `opam list --columns=version`), and the
+          scenario identity. E.g. "0.6.0", "dev". *)
+  install_name : string option;
+      (** the `opam install` target; [None] = the standard
+          "<package>.<pin_version>" (ssl.0.6.0, z3.dev). Custom for
+          irregular names (e.g. an opam package literally named
+          "llvm.19-shared" whose version isn't "19-shared"). *)
+}
+
 type provider =
   | Absent
   | Vendored of string
@@ -40,6 +58,17 @@ type provider =
       lang : Canary_lang.lang;
       pm : Canary_store.package_manager;
       package : string;
+      self_contained : bool;
+          (** the package bundles its own native lib (co-provider, backlog #45).
+              [Ambient] runtime edge is derivable from this flag. *)
+      versions : opam_pin list option;
+          (** STORE PINS: the concrete installable versions, when the
+              artifact's Fetched provision ranges over more than "whatever
+              the PM picks" (opam has no multi-version co-installation — a
+              pinned version is store status, not content; see
+              doc/canary/project/store_switching.md). [None] =
+              version-ambient as before. Opam-first; pip pins
+              (`pip install pkg==1.2.3`) are the natural future use. *)
     }
 
 let provision_of_provider : provider -> Canary_store.provision = function
@@ -74,10 +103,37 @@ let providing_action_of (k : Canary_basic.artifact_kind) (p : provider) :
       | Canary_basic.Headers -> Some Canary_basic.Build_headers
       | Canary_basic.Source | Canary_basic.App -> None)
 
+(** [dep_mode_of_provider p] returns the runtime-edge mode implied by the
+    provider's self-contained declaration: [Some (Ambient s)] for a
+    self-contained lang-PM package, [None] otherwise. A [None] result means
+    the [ax_runtime] stays undeclared or is set by the project. *)
+let dep_mode_of_provider (p : provider) : Canary_store.dep_mode option =
+  match p with
+  | Lang_pkg { self_contained = true; package; _ } ->
+      Some (Canary_store.Ambient ([%string "bundled lib (%{package})"]))
+  | _ -> None
+
+(** [versions_of_provider p] — the store pins declared on the provider
+    (2026-08-12): [Some vs] for a lang-PM package whose installable
+    versions the project declares, [None] = version-ambient. Projected
+    into the artifact's axes by [artifact_row]; the enforcement lives in
+    the enumeration (identity) + runner (pin-checked fetch + world
+    assertion). *)
+let versions_of_provider (p : provider) : opam_pin list option =
+  match p with Lang_pkg { versions; _ } -> versions | _ -> None
+
+(** The opam install target for a pin: the declared [install_name], or
+    the standard "<package>.<pin_version>". *)
+let install_name_of_pin ~(package : string) (p : opam_pin) : string =
+  match p.install_name with
+  | Some n -> n
+  | None -> package ^ "." ^ p.pin_version
+
 let string_of_source_repo (repo : Canary_artifact_source.source_repo) : string =
   let (Canary_artifact_source.Git_remote url) = repo.Canary_artifact_source.remote in
   Printf.sprintf "%s @%s (ref %s) %s" repo.Canary_artifact_source.name
-    repo.Canary_artifact_source.version repo.Canary_artifact_source.ref_ url
+    (Canary_basic.string_of_version repo.Canary_artifact_source.version)
+    repo.Canary_artifact_source.ref_ url
 
 let string_of_provider : provider -> string = function
   | Absent -> "absent"
@@ -89,7 +145,8 @@ let string_of_provider : provider -> string = function
         repo.Canary_artifact_source.remote
       in
       Printf.sprintf "built from source: %s @%s (%s)"
-        repo.Canary_artifact_source.name repo.Canary_artifact_source.version url
+        repo.Canary_artifact_source.name
+        (Canary_basic.string_of_version repo.Canary_artifact_source.version) url
   | Sys_pkg spec ->
       Printf.sprintf "sys-pm linux:%s macos:%s" spec.Canary_store.linux_pkg
         spec.Canary_store.macos_pkg
@@ -110,10 +167,10 @@ type lib_store = {
   provider : provider;
       (** where the lib comes from: [Sys_pkg spec] (apt/brew) | [Built_from repo]
           | [Vendored]/[Cached] path. Drives [Derived] fetch_lib. *)
-  components : Canary_artifact_api.api_component list;
+  components : Canary_artifact.api_component list;
       (** moved off [native_api]: Headers / Link_lib / Runtime_lib / Pc_file.
           Metadata (what it exposes), not provenance. *)
-  headers : Canary_artifact_api.headers_spec option;
+  headers : Canary_artifact.headers_spec option;
       (** moved off [native_api]: header dir + files. Metadata. *)
 }
 

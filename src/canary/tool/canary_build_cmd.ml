@@ -75,11 +75,12 @@ let ninja_build_cmd ?(ninja_exec = "ninja") ?target ~build () =
    CMAKE_INSTALL_PREFIX = /usr/local, a global-path install canary must
    never perform. (Fetch actions are the only intended global-store
    writes, per the PM's declared [Canary_store.store_behavior].) *)
-let cmake_install_cmd ?(cmake_exec = "cmake") ~build ~prefix () =
+let cmake_install_cmd ?(cmake_exec = "cmake") ?component ~build ~prefix () =
+  let comp_flag = match component with Some c -> " --component " ^ c | None -> "" in
   Printf.sprintf
     "{ test -n \"%s\" || { echo 'cmake_install_cmd: empty prefix — refusing \
-     global install'; exit 1; }; } && %s --install %s --prefix \"%s\""
-    prefix cmake_exec build prefix
+     global install'; exit 1; }; } && %s --install %s --prefix \"%s\"%s"
+    prefix cmake_exec build prefix comp_flag
 
 (* Fetch a zip archive and extract it into [dest] (curl + unzip). The
    caller owns idempotence guards; this is just the named verb pair so
@@ -109,3 +110,27 @@ let dune_build_cmd ?(env_extra = []) ?root ?target () =
   match target with
   | None -> Printf.sprintf "%sdune build%s" env_prefix root_flag
   | Some t -> Printf.sprintf "%sdune build%s %s" env_prefix root_flag t
+
+(** List the installed prefix layout (pc files, cmake configs, symlinks,
+    directory tree) into a JSON inventory. Feeds the build-tree↔staged
+    layout diff (§B build-config divergence slice (iii)). *)
+let prefix_layout_inspect_cmd ~prefix ~output_dir ~variant_key =
+  let out = output_dir ^ "/" ^ Canary_basic.variant_file ~variant_key "prefix_layout.json" in
+  Printf.sprintf
+    "{ find %s -type f -o -type l 2>/dev/null | sort | while read f; do \
+     printf '{\"path\":\"%%s\",\"type\":\"%%s\",\"size\":%%d}' \
+       \"${f#%s/}\" $(stat -c%%F \"$f\" 2>/dev/null || echo unknown) \
+       $(stat -c%%s \"$f\" 2>/dev/null || echo 0); done; } > %s"
+    prefix prefix out
+
+(** Locate llvm-config across distros: try the configured hint name, fall
+    back to bare "llvm-config", brew --prefix on macOS, absolute fallback.
+    [locator_hint] is the package-specific name (e.g. "llvm-config-19"). *)
+let llvm_config_cmd ~locator_hint ~macos_pkg =
+  [%string
+    "if command -v %{locator_hint} >/dev/null 2>&1; then command -v \
+     %{locator_hint}; elif command -v llvm-config >/dev/null 2>&1; then \
+     command -v llvm-config; elif command -v brew >/dev/null 2>&1; then printf \
+     '%s\\n' \"$(brew --prefix \
+     %{macos_pkg})/bin/%{locator_hint}\"; else \
+     printf '%s\\n' %{locator_hint}; fi"]

@@ -42,8 +42,8 @@ let catalogue : (B.action * B.artifact_kind list * B.artifact_kind list) list =
     (Build_binding ocaml,             [ Lib ],               [ Binding ocaml ]);
     (Build_app { lang = ocaml },      [ Binding ocaml; Lib ],[ App ]);
     (Probe_lib,                       [ Lib ],               []);
-    (Probe_binding ocaml,             [ Binding ocaml; Lib ],[]);
-    (Probe_app { lang = ocaml },      [ Binding ocaml; Lib; App ], []);
+    (Probe_binding ocaml,             [ Lib; Binding ocaml ],[]);
+    (Probe_app { lang = ocaml },      [ App; Lib; Binding ocaml ], []);
     (Fetch Source,                    [],                    [ Source ]);
     (Fetch Lib,                       [],                    [ Lib ]);
     (Publish Lib,                     [ Lib ],               [ Lib ]);
@@ -128,7 +128,7 @@ let derive_fetch_lib_test : pure_test =
 let surface_split_test : pure_test =
   { name = "surface.split_keeps_checks_drops_provenance";
     check = (fun () ->
-      let module Api = Canary_artifact_api in
+      let module Api = Canary_artifact in
       let native : Api.native_api =
         { kind = Api.C;
           components = [ Api.Headers; Api.Link_lib ];  (* provenance — must drop *)
@@ -212,10 +212,10 @@ let mechanism_test : pure_test =
       && Poly.equal (M.discipline_of_mechanism M.Cext) M.Static_c_abi
       && Poly.equal (M.discipline_of_mechanism M.Ctypes) M.Dynamic_ffi
       && Poly.equal (M.discipline_of_mechanism M.Dynlink) M.Dynamic_ffi
-      && M.is_static_binding_lang L.OCaml && M.is_static_binding_lang L.Python
+      && Canary_mechanism_catalogue.is_static_binding_lang L.OCaml && Canary_mechanism_catalogue.is_static_binding_lang L.Python
       (* round 1: unmodeled languages carry no mechanism yet *)
       && Poly.equal (M.default_mechanism_of_lang L.Rust) None
-      && not (M.is_static_binding_lang L.Rust)) }
+      && not (Canary_mechanism_catalogue.is_static_binding_lang L.Rust)) }
 
 (* §4.2 enumeration core: one product-then-filter engine, two orthogonal
    projections. Pins the shape of each projection + the dependency filter. *)
@@ -226,7 +226,7 @@ let enumerate_test : pure_test =
       let artifacts = EN.[ a_source; a_lib; a_binding ocaml Mech.Cstubs ] in
       let all_built (p : string EN.point) =
         List.for_all p.assignment ~f:(fun (_, pl) ->
-            EN.equal_provision pl.EN.provision EN.Built)
+            EN.equal_provision pl.Canary_artifact.provision EN.Built)
       in
       (* tiny projection: all-Built × (positive + 2 mutations) = 3 points,
          one positive, every assignment all-Built. *)
@@ -248,7 +248,7 @@ let enumerate_test : pure_test =
       let has_uniform target =
         List.exists gen ~f:(fun p ->
             List.for_all p.EN.assignment ~f:(fun (_, pl) ->
-                EN.equal_provision pl.EN.provision target))
+                EN.equal_provision pl.Canary_artifact.provision target))
       in
       let gen_ok =
         List.for_all gen ~f:(fun p -> List.is_empty p.EN.mutations)
@@ -263,8 +263,8 @@ let enumerate_test : pure_test =
       let no_orphan_binding =
         List.for_all gen2 ~f:(fun p ->
             not
-              (EN.provided p.EN.assignment (EN.a_binding ocaml Mech.Cstubs)
-              && not (EN.provided p.EN.assignment EN.a_lib)))
+              (EN.provided p.EN.assignment (Canary_artifact.a_binding ocaml Mech.Cstubs)
+              && not (EN.provided p.EN.assignment Canary_artifact.a_lib)))
       in
       tiny_ok && gen_ok && no_orphan_binding) }
 
@@ -281,22 +281,22 @@ let config_level_test : pure_test =
       (* tiny config: provision/version Free, mutation Full → 1 pos + 2 *)
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
-          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
-          { provision = EN.Free; version = EN.Free; mutation = EN.Full }
+          ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
+          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
-          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+          ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
       let mixed =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
-          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:muts
+          ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
-            mutation = EN.Subset [ List.hd_exn muts ] }
+            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
@@ -309,7 +309,7 @@ let config_level_test : pure_test =
       && List.for_all gen ~f:(fun p -> List.is_empty p.EN.mutations)
       && List.for_all mixed ~f:(fun p ->
              List.for_all p.EN.assignment ~f:(fun (_, pl) ->
-                 EN.equal_provision pl.EN.provision EN.Fetched))
+                 EN.equal_provision pl.Canary_artifact.provision EN.Fetched))
       && List.count mixed ~f:(fun p -> not (List.is_empty p.EN.mutations)) = 1
       && List.count mixed ~f:(fun p -> List.is_empty p.EN.mutations) = 1
       && wrappers_agree) }
@@ -325,31 +325,31 @@ let version_axis_test : pure_test =
       let mm_artifacts = EN.[ a_lib; a_binding ocaml Mech.Cstubs ] in
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
-          ~all_versions_of:(fun _ _ -> B.two_channels) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+          ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good) ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
-            EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) (EN.good B.Dev)
-            && EN.equal_version
-                 (EN.version_of p.EN.assignment (EN.a_binding ocaml Mech.Cstubs))
-                 (EN.good B.Stable))
+            Canary_basic.equal_version (EN.version_of p.EN.assignment Canary_artifact.a_lib) (Canary_basic.good B.Dev)
+            && Canary_basic.equal_version
+                 (EN.version_of p.EN.assignment (Canary_artifact.a_binding ocaml Mech.Cstubs))
+                 (Canary_basic.good B.Stable))
       in
       (* source-primary: a Built lib inherits the source's version, so every
          surviving assignment has lib.version = source.version (the
          Dev-lib-over-Stable-source combos are pruned). *)
       let built =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
-          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> B.two_channels)
+          ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good)
           ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
       in
       let source_primary_holds =
         (not (List.is_empty built))
         && List.for_all built ~f:(fun p ->
-               EN.equal_version
-                 (EN.version_of p.EN.assignment EN.a_lib)
-                 (EN.version_of p.EN.assignment EN.a_source))
+               Canary_basic.equal_version
+                 (EN.version_of p.EN.assignment Canary_artifact.a_lib)
+                 (EN.version_of p.EN.assignment Canary_artifact.a_source))
       in
       has_mismatch && source_primary_holds) }
 
@@ -361,24 +361,24 @@ let per_artifact_provisions_test : pure_test =
   { name = "enumerate.per_artifact_provisions";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
       let artifacts = EN.[ a_source; a_lib; a_ocaml ] in
       let provisions_of id =
-        if EN.equal_artifact_id id EN.a_lib then EN.[ Fetched; Built ]
+        if Canary_artifact.equal_artifact_id id Canary_artifact.a_lib then EN.[ Fetched; Built ]
         else EN.[ Fetched ]
       in
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
-          ~all_versions_of:(fun _ _ -> B.single_channel) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+          ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:[]
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
       in
       let always target id =
         List.for_all pts ~f:(fun p ->
             EN.equal_provision (EN.provision_of p.EN.assignment id) target)
       in
-      let lib_is p = EN.provision_of p.EN.assignment EN.a_lib in
+      let lib_is p = EN.provision_of p.EN.assignment Canary_artifact.a_lib in
       (not (List.is_empty pts))
-      && always EN.Fetched EN.a_source          (* source never Built *)
+      && always EN.Fetched Canary_artifact.a_source          (* source never Built *)
       && always EN.Fetched a_ocaml              (* binding never Built *)
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Fetched)
       && List.exists pts ~f:(fun p -> EN.equal_provision (lib_is p) EN.Built)) }
@@ -392,25 +392,26 @@ let per_artifact_versions_test : pure_test =
   { name = "enumerate.per_artifact_versions";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
       let artifacts = EN.[ a_lib; a_ocaml ] in
       let versions_of id _pv =
-        if EN.equal_artifact_id id EN.a_lib then B.two_channels
-        else B.single_channel                        (* binding: Dev only *)
+        if Canary_artifact.equal_artifact_id id Canary_artifact.a_lib
+        then List.map B.two_channels ~f:B.good
+        else [ B.good B.Dev ]                        (* binding: Dev only *)
       in
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:versions_of ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
       in
       let binding_ver p = EN.version_of p.EN.assignment a_ocaml in
       (not (List.is_empty pts))
       (* binding is pinned Dev in every assignment (its per-artifact axis) *)
       && List.for_all pts ~f:(fun p ->
-             EN.equal_version (binding_ver p) (EN.good B.Dev))
+             Canary_basic.equal_version (binding_ver p) (Canary_basic.good B.Dev))
       (* the lib@Stable / binding@Dev mismatch is present (lib's wider axis) *)
       && List.exists pts ~f:(fun p ->
-             EN.equal_version (EN.version_of p.EN.assignment EN.a_lib) (EN.good B.Stable))) }
+             Canary_basic.equal_version (EN.version_of p.EN.assignment Canary_artifact.a_lib) (Canary_basic.good B.Stable))) }
 
 (* A2: point→assignment fold — the mutation folds into the target artifact's
    version quality=Bad tag; other artifacts stay Good; a positive point is
@@ -419,7 +420,7 @@ let point_fold_test : pure_test =
   { name = "enumerate.point_to_assignment_fold";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_ocaml = EN.a_binding ocaml Mech.Cstubs in
+      let a_ocaml = Canary_artifact.a_binding ocaml Mech.Cstubs in
       (* a_source needed: tiny_slice is all-Built, and a Built lib requires the
          source present (assignment_ok). *)
       let artifacts = EN.[ a_source; a_lib; a_ocaml ] in
@@ -428,13 +429,13 @@ let point_fold_test : pure_test =
       in
       let is_bad a id t =
         match EN.placement_of a id with
-        | Some { EN.version = { EN.quality = EN.Bad tag; _ }; _ } ->
+        | Some { Canary_artifact.version = { Canary_basic.quality = Canary_basic.Bad tag; _ }; _ } ->
             String.equal tag t
         | _ -> false
       in
       let is_good a id =
         match EN.placement_of a id with
-        | Some { EN.version = { EN.quality = EN.Good; _ }; _ } -> true
+        | Some { Canary_artifact.version = { Canary_basic.quality = Canary_basic.Good; _ }; _ } -> true
         | _ -> false
       in
       let fold = EN.assignment_of_point ~tag:Fn.id in
@@ -447,8 +448,8 @@ let point_fold_test : pure_test =
       match mutated, positive with
       | Some pm, Some pp ->
           let am = fold pm and ap = fold pp in
-          is_bad am EN.a_lib "Bs.4" && is_good am a_ocaml  (* target Bad, rest Good *)
-          && is_good ap EN.a_lib && is_good ap a_ocaml     (* positive all Good *)
+          is_bad am Canary_artifact.a_lib "Bs.4" && is_good am a_ocaml  (* target Bad, rest Good *)
+          && is_good ap Canary_artifact.a_lib && is_good ap a_ocaml     (* positive all Good *)
       | _ -> false) }
 
 (* A3: a DECLARED project_spec enumerates the sqlite shape — self-contained Built
@@ -459,17 +460,17 @@ let project_spec_test : pure_test =
   { name = "enumerate.project_spec_sqlite_shape";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let spec : EN.project_spec =
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let spec : Canary_artifact.project_spec =
         { ps_universe =
-            [ ( EN.a_lib,
-                EN.(axes [ (Fetched, B.single_channel); (Built, B.single_channel) ]) );
-              (a_oc, EN.(axes [ (Fetched, B.single_channel) ])) ] }
+            [ ( Canary_artifact.a_lib,
+                Canary_artifact.(axes [ (Fetched, B.single_channel); (Built, B.single_channel) ]) );
+              (a_oc, Canary_artifact.(axes [ (Fetched, B.single_channel) ])) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
       in
-      let lib_is a = EN.provision_of a EN.a_lib in
+      let lib_is a = EN.provision_of a Canary_artifact.a_lib in
       List.length asgs = 2
       && List.exists asgs ~f:(fun a -> EN.equal_provision (lib_is a) EN.Fetched)
       && List.exists asgs ~f:(fun a ->
@@ -485,29 +486,29 @@ let per_provision_versions_test : pure_test =
   { name = "enumerate.per_provision_versions";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let spec : EN.project_spec =
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let spec : Canary_artifact.project_spec =
         { ps_universe =
-            [ ( EN.a_lib,
-                EN.(axes [ (Fetched, B.single_channel); (Built, B.two_channels) ]) );
-              (a_oc, EN.(axes [ (Fetched, B.single_channel) ])) ] }
+            [ ( Canary_artifact.a_lib,
+                Canary_artifact.(axes [ (Fetched, B.single_channel); (Built, B.two_channels) ]) );
+              (a_oc, Canary_artifact.(axes [ (Fetched, B.single_channel) ])) ] }
       in
       let asgs =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
       in
-      let lib_pl a = Option.value_exn (EN.placement_of a EN.a_lib) in
+      let lib_pl a = Option.value_exn (EN.placement_of a Canary_artifact.a_lib) in
       let has prov chan =
         List.exists asgs ~f:(fun a ->
             let pl = lib_pl a in
-            EN.equal_provision pl.EN.provision prov
-            && EN.equal_version pl.EN.version (EN.good chan))
+            EN.equal_provision pl.Canary_artifact.provision prov
+            && Canary_basic.equal_version pl.Canary_artifact.version (Canary_basic.good chan))
       in
       List.length asgs = 3
       && has EN.Fetched B.Dev              (* the ambient representative *)
       && has EN.Built B.Dev && has EN.Built B.Stable
       (* Fetched never ranges: no second Fetched world *)
       && List.count asgs ~f:(fun a ->
-             EN.equal_provision (lib_pl a).EN.provision EN.Fetched) = 1) }
+             EN.equal_provision (lib_pl a).Canary_artifact.provision EN.Fetched) = 1) }
 
 (* THIN as a CONFIG level, not a filter: version [Subset [Stable]] on the tiny
    shape (lib {Vendored,Built}, Vendored Stable-only, Built {Stable,Dev})
@@ -516,12 +517,12 @@ let thin_config_level_test : pure_test =
   { name = "enumerate.thin_is_version_subset";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let spec : EN.project_spec =
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let spec : Canary_artifact.project_spec =
         { ps_universe =
-            [ ( EN.a_lib,
-                EN.(axes [ (Vendored, [ B.Stable ]); (Built, [ B.Stable; B.Dev ]) ]) );
-              (a_oc, EN.(axes [ (Vendored, [ B.Stable ]) ])) ] }
+            [ ( Canary_artifact.a_lib,
+                Canary_artifact.(axes [ (Vendored, [ B.Stable ]); (Built, [ B.Stable; B.Dev ]) ]) );
+              (a_oc, Canary_artifact.(axes [ (Vendored, [ B.Stable ]) ])) ] }
       in
       let full =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) spec
@@ -530,25 +531,24 @@ let thin_config_level_test : pure_test =
         EN.enumerate ~tag:(fun () -> "")
           ~policy:
             { config =
-                EN.{ provision = Full;
+                Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free };
-              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep };              mutations = [] }
           spec
       in
       let no_dev asgs =
         List.for_all asgs ~f:(fun a ->
             List.for_all a ~f:(fun (_, (pl : EN.placement)) ->
-                match pl.EN.version.EN.channel with
+                match pl.Canary_artifact.version.Canary_basic.channel with
                 | B.Stable -> true
                 | B.Dev ->
-                    EN.equal_provision pl.EN.provision EN.Built))
+                    EN.equal_provision pl.Canary_artifact.provision EN.Built))
       in
       List.length full = 3 && no_dev full   (* Dev only on the Built lib *)
       && List.length thin = 2
       && List.for_all thin ~f:(fun a ->
              List.for_all a ~f:(fun (_, (pl : EN.placement)) ->
-                 match pl.EN.version.EN.channel with
+                 match pl.Canary_artifact.version.Canary_basic.channel with
                  | B.Stable -> true
                  | B.Dev -> false))) }
 
@@ -564,15 +564,95 @@ let mechanism_catalogue_test : pure_test =
         Mech.[ Cstubs; Cext; Ctypes; Cffi; Dynlink ]
       in
       List.for_all all ~f:(fun m ->
-          let i = Mech.info_of_mechanism m in
-          Poly.equal i.Mech.mi_mechanism m
-          && Poly.equal i.Mech.mi_discipline (Mech.discipline_of_mechanism m)
-          && (not (List.is_empty i.Mech.mi_artifact_shape))
-          && not (List.is_empty i.Mech.mi_check_points))
+          let i = Canary_mechanism_catalogue.info_of_mechanism m in
+          Poly.equal i.Canary_mechanism_catalogue.mi_mechanism m
+          && Poly.equal i.Canary_mechanism_catalogue.mi_discipline (Mech.discipline_of_mechanism m)
+          && (not (List.is_empty i.Canary_mechanism_catalogue.mi_artifact_shape))
+          && not (List.is_empty i.Canary_mechanism_catalogue.mi_check_points))
       && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
              match Mech.default_mechanism_of_lang l with
-             | Some m -> (Mech.info_of_mechanism m).Mech.mi_wired
+             | Some m -> (Canary_mechanism_catalogue.info_of_mechanism m).Canary_mechanism_catalogue.mi_wired
              | None -> false)) }
+
+(* M2 step 2 pin (2026-08-12): the contract×lang input template equals
+   tiny's formerly hand-written rows — the refactor is provably
+   no-behavior-change. The template IS the standard; a row added here
+   must match the paths the inspect steps actually write. *)
+let inputs_template_pin : pure_test =
+  { name = "mechanism.inputs_template_matches_tiny_convention";
+    check = (fun () ->
+      let module CC = Canary_compat in
+      let template = Canary_mechanism_catalogue.inputs_of_contract in
+      let eq c l expected =
+        Poly.equal (template c l) expected
+      in
+      eq CC.C1 L.OCaml
+        CC.[ C_stub [ "build_binding_ocaml/inspect.json" ];
+             Native_lib [ "build_lib/inspect.json" ] ]
+      && eq CC.C1 L.Python
+        CC.[ C_stub [ "build_binding_python/inspect.json" ];
+             Native_lib [ "build_lib/inspect.json" ] ]
+      && eq CC.C2 L.OCaml
+        CC.[ Ocaml_mli [ "build_binding_ocaml/inspect_mli.json" ] ]
+      && eq CC.C2 L.Python
+        CC.[ Python_attrs [ "build_binding_python/inspect_attrs.json" ] ]
+      && eq CC.C4 L.Python
+        CC.[ Native_lib [ "build_lib/inspect.json" ];
+             Abi_surface [ "build_binding_python/inspect.json" ] ]
+      && eq CC.C5 L.Python
+        CC.[ Versioned_exports [ "build_lib/inspect.json" ];
+             Versioned_req [ "build_binding_python/inspect.json" ] ]
+      && eq CC.C6 L.OCaml
+        CC.[ Typed_header [ "scan_sources/inspect_typed_header.json" ];
+             Typed_binding_stub
+               [ "scan_sources/inspect_typed_binding_stub_ocaml.json" ] ]
+      && List.is_empty (template CC.C4 L.OCaml)  (* placeholder — no inputs *)
+      && List.is_empty (template CC.C8 L.OCaml)) (* blocked — no inputs *) }
+
+(* M2 step 3 pin (2026-08-12): a spec whose ONLY binding is Dynamic_ffi
+   (ctypes) gets NO build_binding chain — the enumeration derives the
+   stage set from the mechanism key, not from a hardcoded lang guard.
+   A spec with a static binding (cext) keeps the build chain. *)
+let mechanism_chain_shape_pin : pure_test =
+  { name = "mechanism.dynamic_binding_has_no_build_chain";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let dynamic_spec =
+        Canary_project_spec.project_spec_of_rows
+          [ Canary_project_spec.artifact_row ~artifact:EN.a_lib
+              ~universe:[ (EN.Vendored, [ B.Stable ]) ] ();
+            Canary_project_spec.artifact_row
+              ~artifact:(Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Ctypes)
+              ~universe:[ (EN.Vendored, [ B.Stable ]) ] () ]
+      in
+      let static_spec =
+        Canary_project_spec.project_spec_of_rows
+          [ Canary_project_spec.artifact_row ~artifact:EN.a_lib
+              ~universe:[ (EN.Vendored, [ B.Stable ]) ] ();
+            Canary_project_spec.artifact_row
+              ~artifact:(Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Cext)
+              ~universe:[ (EN.Vendored, [ B.Stable ]) ] () ]
+      in
+      (* find a chain containing build_binding_PYTHON (the first build chain
+         is OCaml's — the specs declare Python bindings only) *)
+      let build_chain =
+        List.find_map EN.universal_chains ~f:(fun (_, chain) ->
+          let has_py_build =
+            List.exists chain ~f:(fun (a : B.action_sig) ->
+              match a.B.as_action with
+              | B.Build_binding Canary_lang.Python -> true
+              | _ -> false) in
+          if has_py_build then Some chain else None)
+        |> Option.value ~default:[]
+      in
+      (* the derivation itself: chain_applicable is the mechanism-aware gate *)
+      let dyn_app = EN.chain_applicable dynamic_spec build_chain in
+      let stat_app = EN.chain_applicable static_spec build_chain in
+      (not dyn_app)
+      && stat_app
+      && (* both specs still enumerate scenarios *)
+      List.length (EN.patterns_of dynamic_spec) > 0
+      && List.length (EN.patterns_of static_spec) > 0) }
 
 (* Subset INTERSECTS the universe (found via z3 + thin, A5 phase 2): on a
    z3-shaped spec (lib Fetched@Stable | Built@Dev — Built has NO Stable),
@@ -582,25 +662,24 @@ let subset_intersects_universe_test : pure_test =
   { name = "enumerate.subset_intersects_universe";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let spec : EN.project_spec =
+      let spec : Canary_artifact.project_spec =
         { ps_universe =
-            [ (EN.a_source, EN.(axes [ (Fetched, B.[ Stable; Dev ]) ]));
-              ( EN.a_lib,
-                EN.(axes [ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ]) ) ] }
+            [ (Canary_artifact.a_source, Canary_artifact.(axes [ (Fetched, B.[ Stable; Dev ]) ]));
+              ( Canary_artifact.a_lib,
+                Canary_artifact.(axes [ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ]) ) ] }
       in
       let thin =
         EN.enumerate ~tag:(fun () -> "")
           ~policy:
             { config =
-                EN.{ provision = Full;
+                Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free };
-              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep };              mutations = [] }
           spec
       in
       List.length thin = 1
       && List.for_all thin ~f:(fun a ->
-             EN.equal_provision (EN.provision_of a EN.a_lib) EN.Fetched)) }
+             EN.equal_provision (EN.provision_of a Canary_artifact.a_lib) EN.Fetched)) }
 
 (* Dispatch-coordinate utilities (the dispatch/realization split): a project's
    runner dispatch reads ONLY these general coordinates. [channel_of] reads the
@@ -610,21 +689,21 @@ let dispatch_reads_test : pure_test =
   { name = "enumerate.dispatch_coordinate_reads";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let pl ?(q = EN.Good) ch : EN.placement =
-        { provision = EN.Vendored; version = { channel = ch; quality = q } }
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let pl ?(q = Canary_basic.Good) ch : EN.placement =
+        { provision = EN.Vendored; version = { channel = ch; id = ""; quality = q } }
       in
       let good =
         EN.[ (a_lib, pl B.Stable); (a_oc, pl B.Dev) ]
       in
       let bad =
-        EN.[ (a_lib, pl ~q:(EN.Bad "Bs.4") B.Stable); (a_oc, pl B.Stable) ]
+        EN.[ (a_lib, pl ~q:(Canary_basic.Bad "Bs.4") B.Stable); (a_oc, pl B.Stable) ]
       in
-      Poly.equal (EN.channel_of good EN.a_lib) B.Stable
+      Poly.equal (EN.channel_of good Canary_artifact.a_lib) B.Stable
       && Poly.equal (EN.channel_of good a_oc) B.Dev
       && List.is_empty (EN.bad_placements good)
       && (match EN.bad_placements bad with
-          | [ (id, "Bs.4") ] -> EN.equal_artifact_id id EN.a_lib
+          | [ (id, "Bs.4") ] -> Canary_artifact.equal_artifact_id id Canary_artifact.a_lib
           | _ -> false)) }
 
 (* Mismatch direction (named from the CONSUMER's position): consumer@Dev over
@@ -634,18 +713,18 @@ let mismatch_direction_test : pure_test =
   { name = "enumerate.mismatch_direction";
     check = (fun () ->
       let module EN = Canary_enumerate in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
       let pl ch : EN.placement =
-        { provision = EN.Vendored; version = { channel = ch; quality = EN.Good } }
+        { provision = EN.Vendored; version = { channel = ch; id = ""; quality = Canary_basic.Good } }
       in
       let mk oc lib = EN.[ (a_oc, pl oc); (a_lib, pl lib) ] in
-      let dir a = EN.mismatch_direction_of a ~consumer:a_oc ~provider:EN.a_lib in
-      Poly.equal (dir (mk B.Dev B.Stable)) (Some EN.Forward)
-      && Poly.equal (dir (mk B.Stable B.Dev)) (Some EN.Backward)
+      let dir a = EN.mismatch_direction_of a ~consumer:a_oc ~provider:Canary_artifact.a_lib in
+      Poly.equal (dir (mk B.Dev B.Stable)) (Some Canary_basic.Forward)
+      && Poly.equal (dir (mk B.Stable B.Dev)) (Some Canary_basic.Backward)
       && Poly.equal (dir (mk B.Stable B.Stable)) None
       && Poly.equal
            (EN.mismatch_direction_of [ (a_oc, pl B.Dev) ] ~consumer:a_oc
-              ~provider:EN.a_lib)
+              ~provider:Canary_artifact.a_lib)
            None) }
 
 (* Seam (dynamic_enumeration.md): a flat assignment's build edges read off the
@@ -663,18 +742,18 @@ let built_from_test : pure_test =
         | B.Binding l -> CA.consumes_of_action (B.Build_binding l)
         | _ -> []
       in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let pl p : EN.placement = { provision = p; version = EN.good B.Stable } in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let pl p : EN.placement = { provision = p; version = Canary_basic.good B.Stable } in
       let a =
         EN.[ (a_source, pl Fetched); (a_lib, pl Built); (a_oc, pl Built) ]
       in
       let edges id = EN.built_from_of_assignment ~built_from_kinds a id in
       let one_edge id target =
-        match edges id with [ e ] -> EN.equal_artifact_id e target | _ -> false
+        match edges id with [ e ] -> Canary_artifact.equal_artifact_id e target | _ -> false
       in
-      one_edge EN.a_lib EN.a_source           (* Built lib ← Source *)
-      && one_edge a_oc EN.a_lib                (* Built binding ← Lib *)
-      && List.is_empty (edges EN.a_source)) }  (* Fetched source: no edge *)
+      one_edge Canary_artifact.a_lib Canary_artifact.a_source           (* Built lib ← Source *)
+      && one_edge a_oc Canary_artifact.a_lib                (* Built binding ← Lib *)
+      && List.is_empty (edges Canary_artifact.a_source)) }  (* Fetched source: no edge *)
 
 (* M3: node_of_assignment lifts a flat chain assignment to the artifact_node
    graph with the full catalogue-derived chain — binding ← lib ← source. (Note:
@@ -685,8 +764,8 @@ let node_of_assignment_test : pure_test =
     check = (fun () ->
       let module EN = Canary_enumerate in
       let module CA = Canary_action in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let pl p : EN.placement = { provision = p; version = EN.good B.Stable } in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let pl p : EN.placement = { provision = p; version = Canary_basic.good B.Stable } in
       let a = EN.[ (a_source, pl Fetched); (a_lib, pl Built); (a_oc, pl Built) ] in
       let nodes = CA.node_of_assignment a in
       let find k =
@@ -731,9 +810,9 @@ let close_deps_test : pure_test =
     check = (fun () ->
       let module EN = Canary_enumerate in
       let module CA = Canary_action in
-      let a_oc = EN.a_binding ocaml Mech.Cstubs in
-      let a_ap = EN.a_app EN.Direct in
-      let pl p v : EN.placement = { provision = p; version = EN.good v } in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let a_ap = Canary_artifact.a_app Canary_artifact.Direct in
+      let pl p v : EN.placement = { provision = p; version = Canary_basic.good v } in
       (* build side all @Stable (incl. the build-lib) *)
       let a =
         EN.[ (a_source, pl Fetched B.Stable); (a_lib, pl Built B.Stable);
@@ -755,7 +834,7 @@ let close_deps_test : pure_test =
             match app.CA.built_from with
             | Some bind -> (
                 match bind.CA.built_from with
-                | Some lib -> EN.equal_version lib.CA.version (EN.good B.Stable)
+                | Some lib -> Canary_basic.equal_version lib.CA.version (Canary_basic.good B.Stable)
                 | None -> false)
             | None -> false)
         | None -> false
@@ -767,7 +846,7 @@ let close_deps_test : pure_test =
             ~mode_of:(function B.App -> CA.Independent | _ -> CA.Lockstep) a
         in
         let run_vers = List.filter_map gs ~f:run_ver in
-        let has v = List.exists run_vers ~f:(EN.equal_version (EN.good v)) in
+        let has v = List.exists run_vers ~f:(Canary_basic.equal_version (Canary_basic.good v)) in
         List.length gs = 2 && has B.Stable && has B.Dev
         && List.for_all gs ~f:build_lib_stable
       in
@@ -778,7 +857,7 @@ let close_deps_test : pure_test =
         in
         match gs with
         | [ g ] -> Option.value_map (run_ver g) ~default:false
-                     ~f:(EN.equal_version (EN.good B.Stable))
+                     ~f:(Canary_basic.equal_version (Canary_basic.good B.Stable))
         | _ -> false
       in
       (* App-less assignment ⇒ exactly [node_of_assignment] (one graph) *)
@@ -789,6 +868,44 @@ let close_deps_test : pure_test =
           (CA.close_deps ~run_versions_of ~mode_of:(fun _ -> CA.Lockstep) a') = 1
       in
       indep && lock && degenerate) }
+
+(* Flavor 2 deploy-mismatch: binding with Independent runtime paired with
+   a different-version lib produces rp_deploy=true. Pin that
+   runtime_pairings_of surfaces it correctly. *)
+let deploy_mismatch_test : pure_test =
+  { name = "enumerate.deploy_mismatch";
+    check = (fun () ->
+      let open Canary_artifact in let open Canary_project_spec in let open Canary_enumerate in
+      let module B = Canary_basic in
+      let ocaml_b = a_binding Canary_lang.OCaml Canary_mechanism.Cstubs in
+      let spec =
+        project_spec_of_rows
+          [ artifact_row ~artifact:a_lib
+              ~universe:[ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ] ();
+            artifact_row ~artifact:ocaml_b
+              ~runtime:Canary_store.Independent
+              ~universe:[ (Fetched, [ B.Stable ]) ] () ]
+      in
+      let asgs = enumerate_assignments ~policy:(full_policy ()) spec in
+      (* Two independent roots: lib(2) × binding(1) = 2 scenarios *)
+      let ok_count = List.length asgs = 2 in
+      (* Find the deploy-mismatch assignment: lib=B@D, binding=F@S *)
+      let deploy =
+        List.find asgs ~f:(fun a ->
+            equal_provision (provision_of a a_lib) Built
+            && equal_provision (provision_of a ocaml_b) Fetched)
+      in
+      let ok_deploy =
+        match deploy with
+        | None -> false
+        | Some a ->
+            let pairs = runtime_pairings_of spec a in
+            List.exists pairs ~f:(fun p ->
+                equal_artifact_id p.rp_consumer ocaml_b
+                && Poly.equal p.rp_mode Canary_store.Independent
+                && p.rp_deploy)
+      in
+      ok_count && ok_deploy) }
 
 (* P2b spike: [lower_expectation_agnostic] derives a scenario's expectation
    from the bindings table + (action, loc) ALONE — no per-scenario [violates].
@@ -919,9 +1036,17 @@ let tool_routing_ratchet_test : pure_test =
          opam-install raws (A9-step-2 territory). *)
       let baseline =
         [ ("cmake ",
-           [ ("canary_project_llvm.ml", 5); ("canary_tiny_scenario.ml", 4);
-             ("canary_project_z3.ml", 3); ("canary_run.ml", 1) ]);
-          ("ninja ", [ ("canary_project_llvm.ml", 1) ]);
+           [ (* +1 vs the old 5 = the -G Ninja COMMENT; the shell goes
+                through cmake_configure_cmd *)
+             ("canary_project_llvm.ml", 6); ("canary_tiny_scenario.ml", 4);
+             (* the +1 vs the old 6 = a COMMENT noting cmake's default
+                generator; the shell goes through cmake_configure_cmd *)
+             ("canary_project_z3.ml", 7); ("canary_run.ml", 1) ]);
+          ("ninja ",
+           [ (* one COMMENT mention (the -G Ninja note above) *)
+             ("canary_project_z3.ml", 1);
+             (* one COMMENT mention (the ninja LLVM dylib note, 2026-08-13) *)
+             ("canary_project_llvm.ml", 1) ]);
           ("gcc ", []);
           ("curl ", []);
           (* "unzip -" (flag form): the bare word also appears in the tool
@@ -930,8 +1055,11 @@ let tool_routing_ratchet_test : pure_test =
           ("unzip -", []);
           ("pip install", [ ("canary_project_llvm.ml", 3) ]);
           ("opam install",
-           [ ("canary_pattern_a.ml", 1); ("canary_project_ssl.ml", 1);
-             ("canary_project_llvm.ml", 1); ("canary_project_z3.ml", 2) ]);
+           [ ("canary_pattern_a.ml", 1);
+             (* all 3 occurrences are COMMENTS describing the routed verb —
+                the shell goes through [SB.fetch_binding_cmd] *)
+             ("canary_project_ssl.ml", 3);
+             ("canary_project_llvm.ml", 1); ("canary_project_z3.ml", 3) ]);
           ("nm -D",
            [ ("canary_tiny_workspace.ml", 2);
              ("canary_tiny_scenario.ml", 1) ]);
@@ -969,9 +1097,10 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
-      subset_intersects_universe_test; mechanism_catalogue_test;
+      subset_intersects_universe_test; mechanism_catalogue_test; inputs_template_pin; mechanism_chain_shape_pin;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
+      deploy_mismatch_test;
       agnostic_expectation_test; execution_plan_test;
       tool_routing_ratchet_test ]
 

@@ -4,183 +4,123 @@
     {
       "tag": "fetch_source",
       "output_tag": "fetch_source",
-      "rule": "fetch_source",
-      "variant_id": "dev_1d8c50",
+      "action": "fetch_source",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "scan_source",
       "output_tag": "fetch_source",
-      "rule": "fetch_source",
-      "variant_id": "dev_1d8c50",
+      "action": "fetch_source",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "configure",
       "output_tag": "configure",
-      "rule": "configure",
-      "variant_id": "dev_1d8c50",
+      "action": "configure",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_headers",
       "output_tag": "build_headers",
-      "rule": "build_headers",
-      "variant_id": "dev_1d8c50",
+      "action": "build_headers",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_lib",
       "output_tag": "build_lib",
-      "rule": "build_lib",
-      "variant_id": "dev_1d8c50",
+      "action": "build_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "install_lib",
       "output_tag": "install_lib",
-      "rule": "install_lib",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "fetch_lib",
-      "output_tag": "fetch_lib",
-      "rule": "fetch_lib",
-      "variant_id": "dev_1d8c50",
+      "action": "install_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "build_binding_ocaml",
       "output_tag": "build_binding_ocaml",
-      "rule": "build_binding_ocaml",
-      "variant_id": "dev_1d8c50",
+      "action": "build_binding_ocaml",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "pack_binding_ocaml",
       "output_tag": "pack_binding_ocaml",
-      "rule": "pack_binding_ocaml",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "pack_binding_ocaml_inspect",
-      "output_tag": "pack_binding_ocaml",
-      "rule": "pack_binding_ocaml",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "pack_binding_ocaml_stub_inspect",
-      "output_tag": "pack_binding_ocaml",
-      "rule": "pack_binding_ocaml",
-      "variant_id": "dev_1d8c50",
+      "action": "pack_binding_ocaml",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_binding_ocaml_opam",
-      "output_tag": "probe_binding_ocaml_opam",
-      "rule": "probe_binding_ocaml",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "fetch_binding_python",
-      "output_tag": "fetch_binding_python",
-      "rule": "fetch_binding_python",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "fetch_binding_python_inspect",
-      "output_tag": "fetch_binding_python",
-      "rule": "fetch_binding_python",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_binding_python",
-      "output_tag": "probe_binding_python",
-      "rule": "probe_binding_python",
-      "variant_id": "dev_1d8c50",
-      "expect": "compat_failure",
-      "status": "done"
-    },
-    {
-      "tag": "probe_lib",
-      "output_tag": "probe_lib",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_lib_inspect",
-      "output_tag": "probe_lib",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_lib_staged",
-      "output_tag": "probe_lib_staged",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
-      "expect": "success",
-      "status": "done"
-    },
-    {
-      "tag": "probe_lib_staged_inspect",
-      "output_tag": "probe_lib_staged",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
+      "action": "probe_binding_ocaml",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_lib_apt",
       "output_tag": "probe_lib_apt",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
     {
       "tag": "probe_lib_apt_inspect",
       "output_tag": "probe_lib_apt",
-      "rule": "probe_lib",
-      "variant_id": "dev_1d8c50",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib",
+      "output_tag": "probe_lib",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib_inspect",
+      "output_tag": "probe_lib",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib_staged",
+      "output_tag": "probe_lib_staged",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib_staged_inspect",
+      "output_tag": "probe_lib_staged",
+      "action": "probe_lib",
+      "variant_id": "ocaml_binding-built-dev_source-fetched_lib-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     }
   ],
-  "artifact_names": [
-    { "kind": "lib", "name": "libz3.so" },
-    { "kind": "ocaml_binding", "name": "z3" },
-    { "kind": "python_binding", "name": "z3-solver" }
-  ]
+  "artifact_names": []
 }

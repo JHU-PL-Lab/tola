@@ -28,6 +28,12 @@
       Python  cext (compiled .so)             ctypes / cffi
     v}
 
+        The catalogue + stage-existence predicate moved to
+    [surface/canary_mechanism_catalogue.ml] (M2 step 1, 2026-08-12) —
+    this file keeps only the identity vocabulary that artifact
+    identity ([Canary_artifact.Ext_mechanism]) and the enumeration
+    ([Canary_enumerate.discipline_of_mechanism]) need.
+
     **Round 1 (2026-07): only [Static_c_abi] is wired** — it is what every
     current project definition uses (OCaml = cstubs, Python = cext). The
     [Dynamic_ffi] constructors are typed but not yet produced. Deferred
@@ -76,119 +82,3 @@ let default_mechanism_of_lang : Canary_lang.lang -> mechanism option = function
       (* not modeled yet (to-do); these never appear as binding artifacts
          in any current project. *)
       None
-
-(** Round-1 helper: does language [l]'s (default) binding compile against
-    the native surface? True for OCaml/Python today. The coverage catalogue
-    uses this to decide whether a [build_binding] stage exists — a
-    [Dynamic_ffi] binding would have none. *)
-let is_static_binding_lang (l : Canary_lang.lang) : bool =
-  match default_mechanism_of_lang l with
-  | Some m -> (match discipline_of_mechanism m with Static_c_abi -> true | Dynamic_ffi -> false)
-  | None -> false
-
-(* ── The mechanism CATALOGUE (2026-08-05, user-directed) ──
-   Mechanism DETAIL as standalone DATA, in this one file — the project
-   layer references a mechanism by name (an artifact id carries
-   [Ext_mechanism m]) and never inlines mechanism facts; display layers
-   (`spec`) read the catalogue. Motivation beyond tidiness
-   (design/mechanism.md): mechanisms today are FOUND objects — cstubs /
-   cext / ctypes grew historically. Making each one a structured record
-   turns the design space into data canary can range over, toward the
-   long-term question: can a better binding mechanism (or a better PM) be
-   DERIVED from first principles, using canary as the measuring
-   instrument? (tiny already binds ONE lib through three mechanisms — the
-   comparative experiment exists.)
-
-   BASE-layer discipline: descriptive fields are strings/lists here —
-   contract ids (surface/) and firing sites (action/) live in upper
-   layers; the catalogue names checking points in prose, and upper layers
-   pin their typed structures against it in tests, not by depending on
-   this file's vocabulary. *)
-
-(** Structured per-mechanism facts. [discipline] is stored AND derivable
-    ([discipline_of_mechanism]) — the project-test pins them equal so the
-    catalogue cannot drift from the vocabulary. *)
-type mechanism_info = {
-  mi_mechanism : mechanism;
-  mi_lang : Canary_lang.lang;
-  mi_discipline : discipline;
-  mi_artifact_shape : string list;
-      (** the file forms that embody a binding of this mechanism *)
-  mi_lib_coupling : string;
-      (** how the native lib is bound: link-time undefined-symbol
-          requirements vs a runtime dlopen by path/name *)
-  mi_check_points : string list;
-      (** where surface agreements manifest for this mechanism (prose;
-          upper layers own the typed firing sites) *)
-  mi_wired : bool;  (** round-1 wiring state (produced by live projects) *)
-}
-
-let mechanism_catalogue : mechanism_info list =
-  [
-    { mi_mechanism = Cstubs; mi_lang = Canary_lang.OCaml;
-      mi_discipline = Static_c_abi;
-      mi_artifact_shape =
-        [ "lib<pkg>_stubs.a (C stubs)"; "<pkg>.cmxa/.cma"; "*.mli"; "META" ];
-      mi_lib_coupling =
-        "link-time: stub archive carries undefined C symbols the lib must \
-         provide (c1's consumer side)";
-      mi_check_points =
-        [ "build_binding (stub compile/link)"; "probe (link + run)" ];
-      mi_wired = true };
-    { mi_mechanism = Cext; mi_lang = Canary_lang.Python;
-      mi_discipline = Static_c_abi;
-      mi_artifact_shape =
-        [ "_native.<EXT_SUFFIX>.so (compiled extension)"; "__init__.py" ];
-      mi_lib_coupling =
-        "link-time: extension .so carries NEEDED + undefined symbols \
-         against the lib";
-      mi_check_points =
-        [ "build_binding (cc of the extension)"; "probe (import + run)" ];
-      mi_wired = true };
-    { mi_mechanism = Ctypes; mi_lang = Canary_lang.Python;
-      mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ "pure .py source (no build product)" ];
-      mi_lib_coupling =
-        "load-time: dlopen by lib name/path at import; symbols resolved \
-         per call";
-      mi_check_points =
-        [ "probe only (no build stage; missing symbol surfaces at \
-           first call)" ];
-      mi_wired = true (* tiny's ctypes probe; z3-solver is ctypes-based *) };
-    { mi_mechanism = Cffi; mi_lang = Canary_lang.Python;
-      mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ "pure .py + cdef declarations" ];
-      mi_lib_coupling = "load-time: dlopen; cdef re-declares the C surface";
-      mi_check_points = [ "probe only" ];
-      mi_wired = false };
-    { mi_mechanism = Dynlink; mi_lang = Canary_lang.OCaml;
-      mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ ".cmxs (plugin)"; "toplevel/utop load" ];
-      mi_lib_coupling = "load-time: OCaml Dynlink of a cmxs that dlopens";
-      mi_check_points = [ "probe only" ];
-      mi_wired = false };
-  ]
-
-(** Catalogue lookup — total over the [mechanism] constructors (pinned by
-    the project-test, together with discipline consistency). *)
-let info_of_mechanism (m : mechanism) : mechanism_info =
-  match
-    List.find_opt (fun i -> i.mi_mechanism = m) mechanism_catalogue
-  with
-  | Some i -> i
-  | None ->
-      (* unreachable while the totality pin holds *)
-      { mi_mechanism = m; mi_lang = Canary_lang.OCaml;
-        mi_discipline = discipline_of_mechanism m;
-        mi_artifact_shape = []; mi_lib_coupling = "(uncatalogued)";
-        mi_check_points = []; mi_wired = false }
-
-(** One-line display form for `spec` — the project spec REFERENCES the
-    mechanism; the facts printed come from here, never from the project. *)
-let one_line_of_info (i : mechanism_info) : string =
-  Printf.sprintf "%s (%s%s) — %s; checks: %s"
-    (string_of_mechanism i.mi_mechanism)
-    (string_of_discipline i.mi_discipline)
-    (if i.mi_wired then "" else "; unwired")
-    i.mi_lib_coupling
-    (String.concat ", " i.mi_check_points)

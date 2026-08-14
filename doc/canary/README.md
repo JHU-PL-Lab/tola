@@ -11,7 +11,8 @@ materials collection (split across `main.md`, `surface.md`,
 `versioning.md`) — mine for content, but `surface.md` (the
 manuscript) is authoritative for current framing.
 `design/index.md` is the older project narrative;
-`projects.md` covers project status + the expansion roadmap. See
+`project/coverage.md` covers project status + the expansion roadmap
+(with the candidate portfolio in `project/index.md`). See
 `CLAUDE.md` (project root) for live status, gaps, and current
 gotchas.
 
@@ -52,12 +53,24 @@ updated as the model evolves.
 | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [index.md](design/index.md)             | Vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles                                                                          |
 | ~~[api_surface.md](design/api_surface.md)~~ | **Retired.** Theory + implementation pointers folded into the surface theory materials at [`research/surface_draft/`](research/surface_draft/); packaging sections deferred to a future `package_theory.md`.       |
-| [project_pytorch.md](design/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`)                                              |
 | [diagram.md](design/diagram.md)         | Diagram pipeline + design ideas as built (multi-view per project, HTML viewer); remaining hardening tracked as #37                                                         |
+
+## project/ — live projects, their status, and how to land one
+
+The project layer's home since the 2026-08-12 reorganization (was the
+top-level `projects.md` + `design/package_bug.md`).
+
+| File                                          | Topic                                                                                                   |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| [index.md](project/index.md)                  | The project index: the conceptual model (dimensions) + the candidate portfolio                           |
+| [coverage.md](project/coverage.md)            | **Current coverage status** — per-project matrix + notes + landing history                               |
+| [landing.md](project/landing.md)              | **How to land a project** — workflow, data structures, testing harness (the future skill's base)         |
+| [status_project.md](project/status_project.md) | Project bugs, issues, and todo (sqlite PM probe fix history, install gaps, M3 items, planned three-version report) |
+| [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`) |
 
 ## surveys/ — background research
 
-Pre-code survey data. Source of truth for `projects.md` §3
+Pre-code survey data. Source of truth for `project/index.md` §2
 candidate selection and the failure taxonomy now in
 `research/surface.md` (and materials in `research/surface_draft/`).
 

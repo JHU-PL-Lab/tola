@@ -78,7 +78,11 @@ let sandbox_paths ~(sandbox : string) : paths = {
 
 (* Baseline cache — always at the fixed live-tree location, regardless
    of build paths. *)
-let cache              = "canary/examples/tiny/scenarios/_cache"
+(* Cache root moved out of the source tree (2026-08-13): lives under
+   [_out/canary/tiny] beside the per-project run outputs — shareable
+   across worktrees via the [_out] symlink, no dune data_only
+   special-case. Patches stay in-tree (scenarios/patches is source). *)
+let cache              = "_out/canary/tiny/scenarios/_cache"
 let baseline_cache     = cache ^ "/baseline"
 let baseline_inspect   = baseline_cache ^ "/inspect"
 let baseline_workspace = baseline_cache ^ "/workspace"
@@ -554,6 +558,12 @@ let scen_sandbox_of ~name = scen_cache_of ~name ^ "/sandbox"
 let scen_inspect_of ~name = scen_cache_of ~name ^ "/inspect"
 let scen_workspace_of ~name = scen_cache_of ~name ^ "/workspace"
 
+(** Default workspace path for a scenario's materialized cache.
+    Consumed by [Canary_project_tiny.run_tiny_scenario] (lives here so
+    the scenario module doesn't depend on this one — a cycle). *)
+let cache_workspace_of ~scenario =
+  Printf.sprintf "%s/%s/workspace" cache scenario
+
 let patches_dir = live_paths.tiny_root ^ "/scenarios/patches"
 
 (* ---------- sandbox setup ---------- *)
@@ -564,7 +574,7 @@ let copy_live_to_sandbox ~sandbox : bool =
   let cmd =
     Printf.sprintf
       "rsync -a --exclude=_build --exclude=__pycache__ \
-       --exclude=scenarios/_cache --exclude='python_cext/build' \
+       --exclude='python_cext/build' \
        --exclude='python_cext/tiny_cext.egg-info' \
        --exclude='c/build/CMakeFiles' --exclude='c/build/CMakeCache.txt' \
        --exclude='c/build/cmake_install.cmake' --exclude='c/build/Makefile' \
@@ -913,7 +923,7 @@ let artifact_key_of_tag (tag : string) : string option =
       | Some (Canary_basic.Source | Canary_basic.Lib) -> Some "lib"
       | Some (Canary_basic.Binding _) -> (
           match Canary_tiny_scenario.binding_ids_of_mutates s.recipe.mutates with
-          | aid :: _ -> Some (Canary_enumerate.string_of_id aid)
+          | aid :: _ -> Some (Canary_artifact.string_of_id aid)
           | [] -> None)
       | _ -> None)
 

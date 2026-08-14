@@ -164,6 +164,11 @@ let two_channels = [ Dev; Stable ]
    as those strings are interpolated throughout the project specs. *)
 type version = { channel : channel; id : string } [@@deriving show, eq]
 
+let string_of_channel = function Dev -> "dev" | Stable -> "stable"
+
+let string_of_version (v : version) =
+  if String.is_empty v.id then string_of_channel v.channel else v.id
+
 (** App-flavored actions carry an [app_info] record so the app's
     binding language is explicit at the type level (no
     reach-into-belongs_to needed downstream). Record shape (not
@@ -299,3 +304,90 @@ let variant_file ~variant_key fname =
     match String.rsplit2 fname ~on:'.' with
     | Some (base, ext) -> base ^ "_" ^ variant_key ^ "." ^ ext
     | None -> fname ^ "_" ^ variant_key
+
+(* ── typed action catalogue (2026-08-08) ──
+   Each action is a typed function: inputs → output, with a version rule.
+   Lives in base/ so both [Canary_action] and [Canary_enumerate] can
+   import it without circular dependency. *)
+
+type version_rule = Ambient | Follows_input
+
+type action_sig = {
+  as_action   : action;
+  as_consumes : artifact_kind list;
+  as_produces : artifact_kind;
+  as_version  : version_rule;
+}
+
+let action_catalogue : action_sig list =
+  [ { as_action = Fetch Source; as_consumes = []; as_produces = Source;
+      as_version = Ambient };
+    { as_action = Fetch Lib; as_consumes = []; as_produces = Lib;
+      as_version = Ambient };
+    { as_action = Build_lib; as_consumes = [Source]; as_produces = Lib;
+      as_version = Follows_input };
+    { as_action = Fetch (Binding Canary_lang.OCaml); as_consumes = [];
+      as_produces = Binding Canary_lang.OCaml; as_version = Ambient };
+    { as_action = Fetch (Binding Canary_lang.Python); as_consumes = [];
+      as_produces = Binding Canary_lang.Python; as_version = Ambient };
+    { as_action = Build_binding Canary_lang.OCaml; as_consumes = [Lib];
+      as_produces = Binding Canary_lang.OCaml; as_version = Follows_input };
+    { as_action = Build_binding Canary_lang.Python; as_consumes = [Lib];
+      as_produces = Binding Canary_lang.Python; as_version = Follows_input };
+    { as_action = Probe_binding Canary_lang.OCaml;
+      as_consumes = [Lib; Binding Canary_lang.OCaml];
+      as_produces = App; as_version = Follows_input };
+    { as_action = Probe_binding Canary_lang.Python;
+      as_consumes = [Lib; Binding Canary_lang.Python];
+      as_produces = App; as_version = Follows_input };
+    { as_action = Probe_lib; as_consumes = [Lib]; as_produces = App;
+      as_version = Follows_input };
+    { as_action = Probe_app { lang = Canary_lang.OCaml };
+      as_consumes = [App; Lib; Binding Canary_lang.OCaml];
+      as_produces = App; as_version = Follows_input };
+    { as_action = Probe_app { lang = Canary_lang.Python };
+      as_consumes = [App; Lib; Binding Canary_lang.Python];
+      as_produces = App; as_version = Follows_input };
+    { as_action = Build_app { lang = Canary_lang.OCaml };
+      as_consumes = [Binding Canary_lang.OCaml; Lib];
+      as_produces = App; as_version = Follows_input };
+  ]
+
+(* ── version identity (2026-08-08) ──
+   Moved from Canary_enumerate — base vocabulary used by action graph
+   and enumeration alike. *)
+
+type quality = Good | Bad of string [@@deriving show, eq]
+
+(* [id] carries a PINNED concrete version for a Fetched artifact (the
+   store-pin mechanism, 2026-08-12): the provider declares the versions
+   its PM can install ("0.6.0"/"0.7.0"); [good] leaves it empty, so
+   unpinned artifacts keep the ambient identity rule untouched. *)
+type build_id = { channel : channel; id : string; quality : quality }
+[@@deriving show, eq]
+
+let good (channel : channel) : build_id = { channel; id = ""; quality = Good }
+
+let pinned (id : string) : build_id =
+  { channel = Stable; id; quality = Good }
+
+(* Unpinned: "stable"/"dev[#tag]" (unchanged). Pinned: the id replaces
+   the channel — "0.6.0" — mirroring [string_of_version]'s prefer-the-id
+   rule. Nothing parses build_id strings, so the format is free. *)
+let string_of_build_id (b : build_id) : string =
+  (if String.is_empty b.id then string_of_channel b.channel else b.id)
+  ^ (match b.quality with Good -> "" | Bad t -> "#" ^ t)
+
+let equal_version : build_id -> build_id -> bool = equal_build_id
+
+(* [string_of_version] on [build_id] is [string_of_build_id];
+   the name [string_of_version] is taken by the [version] type above. *)
+
+(* ── mismatch direction (2026-08-08) ──
+   Named from the CONSUMER's position relative to the provider. *)
+
+type mismatch_direction = Forward | Backward
+
+let string_of_mismatch_direction = function
+  | Forward -> "forward"
+  | Backward -> "backward"

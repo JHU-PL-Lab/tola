@@ -408,3 +408,140 @@ The arc's increments, in order:
 - Also filed (user): version definitions/printers centralization (§E),
   env/PATH discipline utility (§E, the born-safe-`:` lesson), build-for-
   install as a §B failure class with slice (iii) open.
+
+## 2026-08-06 — A5 residue arc (ds-workflow branch)
+
+Seven items landed bottom-up, each guard-pinned (53/53 project tests,
+107/107 artifact tests throughout). The `source_repo` type shed its last
+build-capability booleans; the OCaml binding joined `ps_universe`;
+version concepts unified in `Canary_basic`; the dep_mode value source
+landed on the provider; world-identity assertions became typed data;
+Ambient step dedup shipped.
+
+### #47: `has_build_lib` / `has_build_binding` → provision axis
+
+Both fields removed from `source_repo`; the type is now pure data (remote
+URL, version, ref, locals, sys deps — no build-capability flags). z3/llvm
+`mk_runner_spec` takes explicit `~build_lib:bool` and `~build_binding:bool`
+parameters passed from `realize` (`Dev_chain` → both true). CI passes them
+directly instead of mutating the source record. The
+`build_flags_match_declared_provisions` pin retired (now a tautology).
+`cmake_build_binding` stays as a finer-grained CI knob (defaults to
+`build_binding`; CI overrides both independently).
+
+### (iii) Binding-follows-chain
+
+The OCaml binding joins `ps_universe` with `~follows:a_lib`. `ax_follows`
+is a universal version constraint on `artifact_axes` — all provisions, not
+just Built. The follows constraint in `assignment_ok` prunes cross-channel
+mismatch pairs (dev binding over stable lib / stable binding over dev lib),
+yielding exactly the 2 coherent scenarios. Threaded through
+`enumerate_points` → `run_config` → `enumerate`. Two new test pins
+(`z3.binding_follows_chain`, `llvm.binding_follows_chain`).
+
+### Version definitions + printers centralize
+
+`string_of_channel` + `string_of_version` added to `Canary_basic` (where
+the `channel` and `version` types are defined). `source_repo.version`
+changed from `string` to `Canary_basic.version`; `build_id` rebased from
+`{channel; quality}` to `{version : Canary_basic.version; quality}` with
+`good` kept as a backward-compat wrapper. All 5 inline `Dev→"dev" |
+Stable→"stable"` printers killed, routed through
+`Canary_basic.string_of_channel`. `version_printer_ratchet` guards against
+regression. The deeper unified version identity stays in
+`design/versioning.md`.
+
+### (ii) dep_mode value source — self-contained provider
+
+`Lang_pkg` gained `self_contained : bool`. `dep_mode_of_provider` maps
+`self_contained = true` → `Some (Ambient "...")`. Three pip wheels
+declared self-contained (`z3-solver`, `llvmlite`, `sqlite3 stdlib`).
+Named provider values shared between `pr_artifacts` and `ps_universe` so
+`ax_runtime` is derived rather than hand-written. `providing_arrow_pin`
+extended to verify the self-contained→Ambient invariant. The `self_contained`
+flag is the stepping stone for the full co-provider model (one provider →
+two independently testable artifacts).
+
+### §E Polish items → backlog
+
+10 polish items (Env/PATH utility, version printers, tool-routing ratchet,
+tri-view command, factory comment sweep, full-lazy detect_pm, wire latest
+channel, scenario names, terminology sweep, "scenario" overload audit) moved
+from status.md §E to backlog.md — all no-hurry.
+
+### A7 residue — typed `asserts` field
+
+`runner_spec.asserts : (action * location option * string) list` added.
+`with_world_asserts` helper wraps probe commands with `grep -qF` checks.
+`derive_steps` injects assertions for matching `(action, loc)` entries in
+`Probe_lib` and `Probe_binding` expansions. sqlite's `log_grep` migrated
+from `~log_grep:(Some version_line)` on `probe_ocaml_env_cmd` to the typed
+field — the first consumer. `empty_runner_spec` defaults `asserts = []`.
+Spec display deferred (polish); ssl migration and z3/llvm world assertions
+deferred (need per-chain version identity).
+
+### Ambient-edge step dedup
+
+The runner in `run_project_run` identifies Ambient consumers from
+`runtime_pairings_of` and routes their probe steps to a shared
+(scenario-invariant) `output_dir` (`"<project>/-ambient"`). The first
+scenario runs and caches; subsequent scenarios hit the verdict marker.
+sqlite's python probe runs once instead of 3 times; z3/llvm wheel probes
+run once instead of 2 times. Non-Ambient steps unaffected.
+
+## The pattern-based enumeration arc (2026-08-07 → 2026-08-08)
+
+### Module split + tree walk
+
+Split `Canary_enumerate` into three modules:
+- `base/canary_artifact.ml` — artifact identity types, project_spec
+  (renamed from canary_artifact_api.ml, merged with identity types)
+- `action/canary_project_spec.ml` — artifact_row builder, build_deps_of
+- `action/canary_enumerate.ml` — enumeration engine
+
+`enumerate_tree` (tree-structured dependency walk) fixed:
+- `is_root` inverted (was checking followers-lead, now checks artifact-follows)
+- `build_deps_of` checks source-is-declared (sqlite no-source case)
+- Child merge uses cartesian product with dedup
+- Dead branch removed (both arms of lib-provision check were identical)
+- Renamed to `enumerate_assignments`
+
+### Pattern-based enumeration
+
+`action_catalogue` — 11 typed action signatures (consumes, produces, version rule).
+`chain_of_assignment` — derives ordered action chain from assignment provisions.
+`patterns_of` — enumerates (chain × assignment) pairs; chains are the scenarios,
+assignments are version coordinates. Wired as primary via `scenarios_of`.
+`scenarios_with_patterns` available for consumers that need chains.
+
+Pattern classification: `scenario_pattern` type (7 variants), `pattern_of_assignment`.
+
+### Terminology
+
+`canary scenarios` CLI → `canary stages`. `canary_scenario.ml` marked LEGACY.
+`assignment` = internal term for version coordinates; public term = "scenario coordinates."
+
+### Tests
+
+Audit expanded to 11 cases with pattern annotations. 5 pattern group tests (G1-G5).
+Patterns-of smoke test (P1-P2). 56/56 pass.
+
+### Bug fixes
+
+`Poly.equal` on closures in `merge_inspect` (canary_action_table.ml) — fixed by
+using `inspect_note` as proxy. `action sqlite` now works end-to-end.
+
+### Docs
+
+`algorithm_explainer.md` rewritten — full pipeline walkthrough with z3 example.
+`scenario_coverage.md`, `ssot.md`, `dynamic_enumeration.md` updated for renames.
+Status flushed. Dead code identified: `string_of_firing_site`, `nodes_of_action_graph`,
+`path_id_of_node`.
+
+### Open (next)
+
+- Merge `action_sig` into `canary_action.ml`, replace hand-written match functions
+- Remove dead code
+- Pattern naming bridge (Sc.N ids → concrete scenarios)
+- F5: replumb `canary stages` through enumeration engine
+- `patterns_of` chain dedup (same assignment with multiple terminals)

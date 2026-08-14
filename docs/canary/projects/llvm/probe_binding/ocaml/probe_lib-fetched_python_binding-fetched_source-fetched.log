@@ -1,0 +1,4 @@
+File "/home/red/code/research/tola/canary/examples/llvm/llvm_example_dev.ml", line 17, characters 33-48:
+17 |   assert (instr_opcode br_inst = Opcode.UncondBr);
+                                      ^^^^^^^^^^^^^^^
+Error: Unbound constructor Opcode.UncondBr

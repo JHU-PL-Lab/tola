@@ -1,0 +1,2 @@
+FAIL Tiny.sum 2 3: expected 47, got 42
+OK   Tiny.offset () = 42

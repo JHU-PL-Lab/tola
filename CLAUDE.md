@@ -13,6 +13,7 @@ dune exec src/bin/canary_main.exe -- action llvm             # GENERIC path (A5)
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- spec tiny-full          # DRY-RUN snapshot: grouped artifacts + enumerated scenarios (no execution). ALL of tiny-full/sqlite/z3/llvm are project_run now (the raw variant view retired with A5 phase 5)
+dune exec src/bin/canary_main.exe -- spec-check @all         # STATIC spec-maturity audit (✓/✗/⚠ per project, --json for web status, exit 1 on errors; tiny-full github/opam n/a). Reads only the declared artifact table
 dune exec src/bin/canary_main.exe -- tiny run                # tiny1: run every single-scenario tiny project (the factory/harness)
 dune exec src/bin/canary_main.exe -- artifact-test           # framework self-tests (native, ocaml, python, compat helpers)
 dune exec src/bin/canary_main.exe -- pm-test                 # PM module self-tests
@@ -21,7 +22,7 @@ dune exec src/bin/canary_main.exe -- artifact-summary --kind native --path X  # 
 dune exec src/bin/canary_main.exe -- inspect-diff --old A --new B            # diff two inspect.json files
 dune exec src/bin/canary_main.exe -- compat <project> [<variant>]            # static C-symbol cross-check
 dune exec src/bin/canary_main.exe -- verify <project> [<variant>]            # cross-reference prediction vs probe.log
-dune exec src/bin/canary_main.exe -- scenarios <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
+dune exec src/bin/canary_main.exe -- stages <project|@all>                # store-lifecycle coverage matrix (✓/-/⊘ + legend)
 dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # render variants as enumeration-algorithm provision assignments (ssot §4.2)
 dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as enumeration-algorithm mutation-axis projection
 dune exec src/bin/canary_main.exe -- tiny assemble-check --id lib Bs.4       # P3 step 2: emit+assemble a vendored resource onto the witness base (needs `tiny prepare-all`)
@@ -29,23 +30,21 @@ dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # p
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 make canary                                                  # run canary via Makefile shorthand
+	make canary-test                                             # post-change verification (project-test + artifact-test + pm-test)
+
+**Post-change verification.** After every edit that touches `src/canary/`, run
+`make canary-test`. This catches regressions in enumeration, compat theory,
+tool assumptions (nm/ocamlobjinfo/python3), and PM presence — 55 + 107 + 14
+tests, pure + shell, ~5s. The shared `Canary_project_run.run_project_spec`
+means both CLI and tests exercise the same pipeline. Before committing or
+ending a session, also run `make canary-post-check` (sqlite + tiny1 bridge,
+heavier, ~2min).
 ```
 
-Scenario-enumeration model (ssot §4.2): one abstract enumeration
-algorithm (`action/canary_enumerate.ml`) over per-artifact axes
-(provision / version / mechanism / mutation), each axis set to a config
-level (Free / Subset / Full). The version universe is per
-`(artifact × provision)` (`ps_versions_of id pv`): Fetched is
-version-ambient (one representative), Built ranges over buildable
-versions, Vendored over cached variants — so declared scenarios == run
-scenarios. ("scenario" is THE term — ssot §6.1 unified scenario ≡ variant ≡
-the old display word "world"; code ids `variant_*` = a scenario's cache
-key.) tiny and a real project are two configs of the one algorithm;
-sqlite + tiny-full enumerate their ENTIRE scenario set (baseline +
-built-lib version variants) from declared `project_spec`s
-(`--thin` = `version Subset [Stable]`, a config level).
-`scenarios`/`tiny engine` render each hand-written enumeration through
-it; implementation state in `doc/canary/status.md`.
+See [`doc/canary/design/algorithm_explainer.md`](doc/canary/design/algorithm_explainer.md)
+for the full pipeline walkthrough (project declaration → action catalogue →
+chains → assignments → execution). Current state and open items in
+[`doc/canary/status.md`](doc/canary/status.md).
 
 **tiny-factory / tiny1 / tiny-full** (ssot §4.2.5, status §1a — the
 2026-08-02 arc). Three named things: **tiny-factory** = the machinery
@@ -193,8 +192,9 @@ reconciling with, not duplicating.
 | `src/canary/projects/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/projects/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
 | `src/canary/projects/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
-| `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl specs                             |
-| `src/canary/projects/canary_run.ml`                 | Project orchestrator; runs llvm+llvm/19 and z3+z3/stable                                               |
+| `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
+| `src/canary/projects/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
+| `src/canary/projects/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
 | `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |
 | `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                                |
@@ -251,7 +251,13 @@ for generic projects (A6 2026-08-05: the never-read `Canary_project.project`
 bundle was deleted); each project's module owns its scenarios directly
 (tiny1 has 22 via factory). `run_project_multi`'s last consumer is ssl
 (4 hand-listed variants); tiny's factory (`canary_tiny_scenario.ml`)
-restricts each `runner_spec` to one scenario's world. **The generic
+restricts each `runner_spec` to one scenario's world. **The project
+registry** (`Canary_registry.all_projects`, 2026-08-12) is THE single
+source of truth for project names — `action`/`spec`/`scenarios` each do
+one `List.assoc_opt` lookup; adding a project = adding one entry
+(`Project pr` runs via `run_project_run`, `Multi (name, variants)` via
+`run_project_multi` — ssl only). Pattern A projects wrap their
+`runner_spec` via `Canary_project_run.simple`. **The generic
 path** (tiny-full + sqlite + z3 + llvm since A5, 2026-08-05)
 is `run_project_run` over a `Canary_project_run.project_run`
 (`pr_spec → scenarios_of (the general enumerate; ?policy, --thin =
@@ -330,206 +336,12 @@ missing from the z3-solver pip wheel) using
 (list-of-string-list syntax since the 2026-06-01 Phase 4 ADT unification).
 See `surface_draft/implementation.md` §2.7.
 
-### Current TODO (numbers are stable like GH issues — never renumbered)
+### Current state
 
-**Active Step 4 work — all driven from
-[`doc/canary/research/plan.md`](doc/canary/research/plan.md) §6 Step 3b + Step 4.**
-Numbers below are still the canonical TODO ids; plan.md is the
-sequencing / progress doc that absorbs them.
-
-- **#15b** — Unit-test framework for compat/inspect logic. Plan: §6 Step 3b.
-- **#18** — Audit project specs for hardcoded shell commands. Plan: §6 Step 4
-  (b) "Project-spec command decoupling". The build-primitive extraction
-  half is done (commits `952498e` Step 4(b) + `800108d` Phase 3): the
-  cmake / ninja / dune wrappers now live in `tool/canary_build_cmd.ml`
-  and z3, llvm, tiny all use them. Remaining: any project still doing
-  raw `Printf.sprintf` of shell verbs that should route through a
-  named primitive (audit pending).
-- **#19** — LLVM cross-version C-symbol check. Plan: §6 Step 4 (b) "Live
-  demos to strengthen" (belt-and-suspenders with the existing OCaml-side
-  c2 watchlist demo).
-- **#25 / #40** — Real `cmake --install` instead of fake `cp`. Plan: §6 Step
-  4 (b) "Project-spec command decoupling".
-- **#26** — z3 cmake `build_z3_ocaml_bindings` PHONY guard. Plan: §6 Step 4
-  (b).
-
-Backlog (lower priority, paper-orthogonal): #5, #9, #11, #13b, #14, #17, #27,
-#29/#32 (#30 shipped), #33, #34, #38, #39, #45; #16, #20, #31,
-#35, #41, #42 (api-compat — see research/surface_draft/implementation.md §2.7).
-Details in `doc/canary/backlog.md`.
-
-### Known Gaps (interface / expectation layer)
-
-These are tracked here rather than the backlog because they directly affect
-the `step_expectation` / interface model design.
-
-Artifact summary progress (`doc/canary/research/surface_draft/`):
-- ✅ Step 1 — `summary_cmd` for native/ocaml/python/mli/stub kinds
-- ✅ Step 2 — watchlists declared per project (z3/llvm/sqlite), `summary`
-  field on `script_spec`, install-step + probe-step summaries in
-  `derive_steps`
-- ✅ `inspect-diff` subcommand (local only; no committed cache yet)
-- ✅ Summary command coverage in `canary_artifact_test.ml` (incl. compat
-  helper pure tests)
-- ✅ Compat cross-check shipped — `canary compat`, `canary verify`,
-  `Expect_compat_failure` derive expected probe-failure substrings from
-  cached summaries. See `surface_draft/implementation.md` §2.7. Live demos on llvm/19 (OCaml
-  `Opcode.UncondBr`) and z3/stable (Python `parser_context`).
-- ⏳ Step 3 deferred — `summary-sync` into a committed
-  `doc/canary/artifact_inspect.json` will likely ride on step-cache transport
-
-Still open:
-- **macOS support (three scopes)** — each a prerequisite for the next:
-
-  **1. Code framework** — partially scaffolded, not end-to-end viable.
-  What exists: `Canary_artifact_native.is_macos` chooses `nm -g` vs `-D`
-  and handles `.dylib` alongside `.so`; `Canary_store.distro` type has
-  `MacOS_local`; `canary_pm_brew.ml` PM module defined; `distro_base` has
-  a hardcoded `/Users/ex/code` path.
-  What's missing: Mach-O ELF-analogue probes (no `.so` versioned symbols,
-  different dyld semantics), proper keg-only Homebrew path handling
-  (`PKG_CONFIG_PATH` for sqlite/openssl/libffi), project specs (Z3/LLVM)
-  have Linux-only shell pipelines, opam sandbox behavior diverges from
-  Linux (bwrap → `sandbox-exec` / different mount semantics).
-
-  **2. Local testing** — user has SSH access to a Mac. Framework tests
-  (`canary artifact-test`) should run green there against macOS fixtures:
-  `/usr/lib/libSystem.dylib` instead of `libsqlite3.so.0`, `nm -g`
-  output parsed correctly, Mach-O versioned-symbol analogue surfaced (or
-  explicitly declared N/A), `Probe Lib` summary on at least one brew
-  package. This is the cheapest way to find the framework-drift gaps
-  without waiting for CI setup.
-
-  **3. GH CI for macOS** — the retired `canary_backend_yaml.ml` had
-  `ubuntu-latest` × `macos-latest` matrix + per-step `if: runner.os == …`
-  guards. The current `canary_gh.ml` hardcodes `runs-on:
-  ubuntu-latest`. Add matrix support + a per-step guard field to
-  `step` (or extend `preamble_steps` semantics). Couples with
-  "multi-ocaml-version matrix" (old supported `ocaml-version: ["5.4.0"]`
-  in the matrix). GH macOS runners are paid minutes — ship selectively
-  (sqlite + one other). Strictly a follow-up to (1) and (2).
-
-  **Order to execute**: (1) finish core framework + parser fallbacks →
-  (2) exercise on SSH Mac to catch gaps the Linux-only runs hid →
-  (3) wire up GH CI matrix only after (1) and (2) are green. Skipping
-  ahead to (3) burns paid CI minutes on known failures.
-- **Missing distro × sys-PM × lang-PM enumeration model.** The retired
-  YAML/shell backend plumbing (`project_config`, `step_phase`,
-  `canary_backends`, `canary_config`, `mk_canary_config`, per-project
-  `config distro` fns) has already been moved to
-  `doc/_legacy_code/canary_yaml_backend.ml` and deleted from the live
-  tree (see the comment blocks in `canary_basic.ml:100-105` and
-  `canary.ml:5-7`). But it encoded intent the action-graph pipeline
-  still doesn't model:
-    - No distro abstraction exercised (WSL and macOS paths untested).
-    - No two-OS CI (macOS matrix is the paired TODO above).
-    - Sys-PM × lang-PM enumeration (apt × opam, brew × opam, apt × pip, …)
-      isn't represented in the `script_spec` → `step` path.
-  **Revisit together with the version/symbol/interface work**: when we
-  formalise interfaces as first-class (per
-  `doc/canary/research/surface.md` + `surface_draft/`), the
-  PM-cross-distro enumeration becomes part of "which provider (PM on
-  distro) satisfies a given interface at a given version." The retired
-  code in `doc/_legacy_code/canary_yaml_backend.ml` is the historical
-  reference for the shapes that need to come back typed.
-- **Per-step `env:` fields in GH YAML** — old yaml backend had an `env_fields`
-  list per step. New backend only allows raw YAML blocks via `preamble_steps`.
-  Not blocking; re-add as a typed field if a project needs it.
-- ~~**Deeper OCaml binding analysis**~~ — ✅ resolved by
-  `inspect_binding.py --kind mli`, which parses `.mli` files at the
-  vals/constructors/modules level (catches `Opcode.UncondBr` drift). The
-  ocamlobjinfo summary still exists but is superseded by the mli summary
-  for L3 work.
-- **Migrate the old tola artifact inspectors in `src/binding/` into canary**
-  (not just `ocaml_files.ml`). ~1880 lines, 15 modules, uses native OCaml
-  compiler libraries instead of shelling out. Formerly consumed by
-  `src/bin/example_sp.ml` (retired with the yaml-backend removal); today
-  `src/binding/` is orphaned code, still building but unreferenced from any
-  live entry point. Each module's canary-relevance:
-
-  | File                                                                         | Lines      | Canary-relevance                                                                                                                             |
-  | ---------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `canary.ml`                                                                  | 417        | **High** — old canary model (test case enumeration, version/API/lib mapping). Predates current canary; check overlap before re-implementing. |
-  | `ocaml_files.ml`                                                             | 330        | **High** — file classification for `.o/.cmo/.cmi/.cmx/.cmxs/.ml/.mli/.cma/.cmxa` via `Objinfo.extra` + `Fl_metascanner`.                     |
-  | `shared_library.ml`                                                          | 257        | **High** — `ldd`-style linked-dep extraction (`linked_dep` type). Directly enables loader-path analysis.                                     |
-  | `ocamls.ml`                                                                  | 137        | **High** — `Objinfo` module; proper API to `.cmxa`/`.cma` inspection (replaces shell+python in `inspect_ocaml.py`).                        |
-  | `resolve.ml`                                                                 | 125        | Medium — `Resolve_strategy` (`Via_name` / `Via_value`). Maps to watchlist vs. content-hash matching.                                         |
-  | `macho.ml`                                                                   | 102        | Medium — macOS Mach-O (dyld) inspection; paired with `shared_library.ml` for cross-platform loader paths.                                    |
-  | `structures.ml`                                                              | 100        | Medium — consumer of `resolve.ml`.                                                                                                           |
-  | `c_utils.ml`                                                                 | 87         | Medium — `yojson_conv` precedent for serialising results.                                                                                    |
-  | `path.ml`                                                                    | 76         | Low — path abstraction with roots.                                                                                                           |
-  | `fs.ml`, `opam.ml`, `package.ml`, `compilers.ml`, `platform.ml`, `config.ml` | ~250 total | Mixed — check per-module; some overlaps with existing `canary_pm_*`, `canary_store`.                                                         |
-
-  Other `src/` dirs (`ainterp`, `interp`, `langs`, `packaging`, `repl`, `std`,
-  `tola`, `versioned_maps`, `versioning`) are the tola interpreter / language
-  layer, mostly unrelated to canary — only cross-reference if a specific primitive
-  is needed (e.g., `versioning/` for version-constraint solving per the
-  interface-contract design doc).
-
-  **Do after** local summary flow stabilises; migrate incrementally per module.
-- **No source-artifact summary** — only native / ocaml / opam kinds so far.
-  Source summaries (git SHA, public header count, FFI surface via C-ABI
-  exports for other languages) are a natural next extension.
-- ~~**No python summary in any project spec**~~ — ✅ resolved. z3
-  (z3-solver), llvm (llvmlite), and sqlite (stdlib sqlite3) all have
-  Python probes with `python_inspect_cmd` attached; pip-install split
-  off into `Fetch (Binding Python)` so the summary is cached before the
-  probe runs. `python_binding.md` tracker has been deleted.
-- **PyTorch as multi-PM canary target** — batch-2 queued; depends on Python
-  primitives landing first. Plan at `doc/canary/design/project_pytorch.md`
-  covers the pip × opam × apt libtorch matrix and the OCaml `torch`
-  version-conflict case. Motivated by multi-PM interop (same libtorch
-  shipped by many PMs).
-- **Two-tier candidate queue for canary expansion** —
-  `doc/canary/projects.md` §3 holds a dozen tracked targets (Tier 1:
-  famous libs like PyTorch, OpenSSL, FFmpeg; Tier 2: tricky packaging like
-  zarith, lwt+libev, cvc5, bitwuzla, mariadb, cairo2). Picked from the
-  opam survey; living doc, updated as candidates land.
-- ~~**First-class API-source layer**~~ — ✅ implemented.
-  `canary_artifact_api.ml` types the three-layer structure (source_repo →
-  native_api → binding_api). Watchlists split into provider
-  (`stable_symbols`) and consumer (`module_watchlist`) levels.
-  `scan_source` step verifies header/binding-dir claims post-fetch. See
-  `doc/canary/research/surface_draft/surface.md` §2.1.
-- **`version_info` dropped in GH verify step** — the verify YAML just prints
-  `"PASS: expected failure confirmed"`, not the version rationale from `version_info`.
-  Should annotate the echo with the context string.
-- **`symbol_check` in CI is a plain `nm` shell snippet** — rendered in GH backend
-  now (one extra step per symbol_check), but no project spec fills the field in yet;
-  the `summary` watchlist is what's doing the real work. Decide whether to keep
-  both `symbol_check` and watchlist, or collapse.
-- **`symbol_entry.version_tag`** (`@@GLIBC_2.31` annotations) — typed field
-  exists in the OCaml model but not yet populated; `summary.versioned_req`
-  computes these at runtime via `inspect_native.py`. Connects to L1b in
-  `doc/canary/research/surface_draft/surface.md`.
-- **`Expect_failure` grep is fragile for multiline output** — `grep -qF` in the
-  verify step reads `probe.log` but the local runner scans all files in `output_dir`.
-  Should align: both should scan `probe.log` only.
-- **`Expect_compat_failure` is OCaml-shaped per language** — the variant
-  takes typed inputs (`C_stub | Native_lib | Ocaml_mli | Python_attrs`)
-  but the layer-vs-language mapping is hardcoded in
-  `predicted_contains_any_v2`. New languages need helper extension.
-  Probably fine until a fourth language joins.
-
-### Done
-
-Done: #1, #2, #3, #4, #6, #7, #8, #10, #12, #13, #15, #16b, #21, #23, #24,
-#28, #36, #43. Shipped entries are DELETED from `doc/canary/backlog.md`
-(the landing task writes the worklog; the backlog only carries open work),
-so #44 and #37 remain there scoped to what is genuinely left — clang-AST
-`cmp_type` and bundled mermaid.js respectively.
-(#25 and #26 used to be listed here AND on this Done line — the active
-listing above is the correct one, verified 2026-08-05: z3's `install_lib`
-still `cp`s (`canary_project_z3.ml:395`) and `build_binding` still runs
-`ninja build_z3_ocaml_bindings` with no `test -f z3ml.cmxa ||` guard.)
-The api-compat milestone (Phases 1–3e: `inspect_binding.py`, `canary
-compat`/`verify`, `Expect_compat_failure`, Python pip probe split, Python
-derived expectation) shipped this session — see `surface_draft/implementation.md` §2.7 and
-commits `2a8d2eb`, `96b143c`, `84caf5d`, `8943ba2`, `7dfb1f2`.
-
-Worklogs: `doc/canary/worklog/worklog_2026_{03,04,05,06,07,08}.md`
-(`worklog_2026_08.md` = the tiny-full arc: agnostic runner → vendored
-resources → combinations → generic runner).
+See [`doc/canary/status.md`](doc/canary/status.md) for current implementation
+state and open items. Lower-priority items live in
+[`doc/canary/backlog.md`](doc/canary/backlog.md). Completed work is chronicled
+in [`doc/canary/worklog/`](doc/canary/worklog/).
 
 ## Other Work: Yelu
 
@@ -563,13 +375,21 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no build runs, but status reads PASS. Force a fresh run with `rm -rf
   _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
   Vendored, dev vs stable) put those axes in `variant_id`. See
-  [`doc/canary/design/cache.md`](doc/canary/design/cache.md).
+  [`doc/canary/design/algorithm_explainer.md`](doc/canary/design/algorithm_explainer.md) §8.
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,
   verify with `dune build` at the end.
 - **`open Base` shadows stdlib**: `result`, `prefix`, `id`, `append`
   are shadowed — rename in pattern matches.
+- **`open Base` shadows `=`/`<>` as INT-only comparisons**:
+  `Int_replace_polymorphic_compare` (import0.ml) redefines `=`/`<>`/`<`/
+  `>`/`<=`/`>=` as `int -> int -> bool` externals. `a = b` on strings or
+  lists under `open Base` is a TYPE ERROR ("expected of type int/2").
+  Use `Poly.equal` / `Poly.(<>)` for polymorphic equality, or
+  `List.is_empty`/`Bool.equal` per the codebase idiom.
+- **Mermaid v11+**: User's renderer supports `@{ shape: docs }` syntax.
+  Safe to use modern Mermaid features in `.mmd` files.
 - **Mermaid v11+**: User's renderer supports `@{ shape: docs }` syntax.
   Safe to use modern Mermaid features in `.mmd` files.
 - **`opam config subst`**: expects `foo.in` → `foo`. The template must
@@ -661,19 +481,9 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   only the top-level module (`Tiny`, `Tiny.sum`) work either way.
   See `canary_tiny_baseline.ml:build_ocaml_binding` comment.
 
-## Gotchas (continued)
-
-- **Artifact ids are BORN-SAFE — never put `:` in a path/env-var id**: the
-  runner interpolates the assembled-workspace path into `PYTHONPATH`/
-  `LD_LIBRARY_PATH`, which are **`:`-separated**. `string_of_id` originally used
-  `:` (`binding:ocaml:cstubs`), so an assembled dir `.../binding:ocaml:cstubs#Bs.9`
-  made Python split PYTHONPATH into `.../binding`, `ocaml`, `cstubs#…` →
-  `ModuleNotFoundError`; symptom was subtle (only **lib** scenarios detected —
-  `lib` has no `:`). Fix (naming unification): `Canary_enumerate.string_of_id`
-  now uses `-` (`binding-ocaml-cstubs`), so ids drop straight into dir names /
-  env vars with **no sanitizer** (the old `safe_workspace_name` was removed).
-  Keep the born-safe convention; add a pretty-printer if a `:`-form display is
-  ever wanted, don't reintroduce `:` in the canonical id.
+- **Artifact ids use `-` not `:` — born-safe for `$PATH`-like env vars.**
+  `string_of_id` outputs `binding-ocaml-cstubs`, safe for `PYTHONPATH` /
+  `LD_LIBRARY_PATH` which are `:`-separated. Never reintroduce `:` in ids.
 - **A cached artifact must carry SOURCE, not just the built output** (Fix A):
   `subdirs_of_artifact` returns the built subdir **plus** the source the compat
   inspectors read (mli/headers/py). Overlaying only the built subdir left the
@@ -682,6 +492,16 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   vendored bundle is a **cached artifact** (`cache_artifact`/`cached_artifact_dir`
   in `canary_tiny_workspace.ml`), NOT a "resource" — ssot uses artifact /
   artifact_kind.
+- **Types shared by multiple `action/` modules belong in `base/`.**
+  `canary_action.ml` once depended on `canary_enumerate.ml` for `build_id`,
+  `assignment` — moved to `Canary_basic`/`Canary_artifact` (base/).
+  Rule: put every type-like thing in `base/` unless only one module consumes it.
+- **When moving types between modules, record fields and functions stay behind.**
+  `type t = NewModule.t` creates an alias, but record fields belong to the module
+  where the type is DEFINED (`pl.Canary_artifact.provision`, not
+  `pl.Canary_enumerate.provision`). Functions on the type (`placement_of`, etc.)
+  also stay in the original module unless explicitly moved. And `open Module`
+  does not re-export — aliased types are not accessible through `EN.xxx`.
 
 ## Conventions
 

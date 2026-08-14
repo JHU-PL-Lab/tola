@@ -2342,14 +2342,66 @@ let write_project_output ~dir ~project_name ~variant ~steps
     logger.log ~tag:"*" ~event:"invariant" ~detail:(Some "ALL OK")
   else
     logger.log ~tag:"!" ~event:"invariant" ~detail:(Some "SOME FAILED");
-  (* Copy web-viewable output to docs/ for GitHub Pages. *)
+  (* Copy web-viewable output to docs/ for GitHub Pages.
+
+     2026-08-13: was a blanket `cp -r <dir>/*` — it copied whole run
+     directories (fetched source checkouts incl. `.git`, build/install
+     trees) into the tracked docs tree (27G of churn; see backlog
+     "docs/canary copy bloat"). Now a filtered recursive copy: only
+     web-viewable files (json/log/mmd/html) outside known artifact
+     directories. The tracked ssl probe binaries (ssl_app_core/ssl_app_nlv)
+     predate this filter and no longer update — candidates for git rm. *)
+  let web_viewable name =
+    List.exists [ ".json"; ".log"; ".mmd"; ".html" ] ~f:(fun ext ->
+        String.is_suffix name ~suffix:ext)
+  in
+  let artifact_dir name =
+    List.mem
+      [ ".git"; "_build"; "_cache"; "_opam"; "pack-repo"; "src"; "build";
+        "install"; "lib"; "bin"; "staged"; "sandbox"; "workspace" ]
+      name ~equal:String.equal
+  in
+  let copy_file ~src ~dst =
+    let ic = Stdlib.open_in_bin src in
+    let oc = Stdlib.open_out_bin dst in
+    (try
+       let buf = Bytes.create 65536 in
+       let rec loop () =
+         match Stdlib.input ic buf 0 65536 with
+         | 0 -> ()
+         | n ->
+             Stdlib.output oc buf 0 n;
+             loop ()
+       in
+       loop ()
+     with e ->
+       Stdlib.close_in_noerr ic;
+       Stdlib.close_out_noerr oc;
+       raise e);
+    Stdlib.close_in ic;
+    Stdlib.close_out oc
+  in
+  let rec copy_web ~src ~dst =
+    match Stdlib.Sys.readdir src with
+    | exception _ -> ()
+    | entries ->
+        Array.iter entries ~f:(fun name ->
+            let s = src ^ "/" ^ name in
+            let d = dst ^ "/" ^ name in
+            if Stdlib.Sys.is_directory s then begin
+              if not (artifact_dir name) then begin
+                (try Unix.mkdir d 0o755 with _ -> ());
+                copy_web ~src:s ~dst:d
+              end
+            end
+            else if web_viewable name
+                    && not (String.is_substring name ~substring:"_example") then
+              copy_file ~src:s ~dst:d)
+  in
   let docs_projects = "docs/canary/projects" in
   let docs_dir = [%string "%{docs_projects}/%{project_name}"] in
   ignore (Stdlib.Sys.command [%string "mkdir -p \"%{docs_dir}\""]);
-  ignore (Stdlib.Sys.command [%string "cp -r \"%{dir}\"/* \"%{docs_dir}\"/"]);
-  ignore (Stdlib.Sys.command [%string "find \"%{docs_dir}\" -name '*.ok' -delete"]);
-  ignore (Stdlib.Sys.command [%string "find \"%{docs_dir}\" -name 'pack-repo' -type d -prune -exec rm -rf {} +"]);
-  ignore (Stdlib.Sys.command [%string "find \"%{docs_dir}\" -name '*_example*' -type f -delete"]);
+  copy_web ~src:dir ~dst:docs_dir;
   let entries = scan_index_entries ~projects_root:docs_projects in
   let docs_index_html = Canary_html.render_index ~entries ~generated_at:run_at in
   let docs_index_path = docs_projects ^ "/index.html" in

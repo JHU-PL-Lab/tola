@@ -6,7 +6,7 @@ design principles. For surface theory see
 [../research/surface_draft/](../research/surface_draft/) (materials,
 with `implementation.md` for the compat-check implementation). For the
 expansion roadmap and per-target plans see
-[../projects.md](../projects.md). Doc map at
+[../project/index.md](../project/index.md). Doc map at
 [../README.md](../README.md).
 
 > **Current kernel (2026-08-04), not yet folded into the narrative below:**
@@ -15,7 +15,7 @@ expansion roadmap and per-target plans see
 > `artifact_node` graph (`action/canary_action.ml`: `node_of_assignment` /
 > `close_deps` / `dep_mode`). Detection is forecast-agnostic (`backend/canary_detect.ml`).
 > The §4 `api_source` metadata model has split into `surface` (`base/canary_surface.ml`)
-> + store_config (`tool/`). See [`ssot.md`](ssot.md) and [`dynamic_enumeration.md`](dynamic_enumeration.md).
+> + store_config (`tool/`). See [`ssot.md`](ssot.md) and [`algorithm_explainer.md`](algorithm_explainer.md).
 
 ## 1. Research vision
 
@@ -39,7 +39,7 @@ Canary's two-track approach:
 
 - **Track 1 — Empirical coverage.** Run the real compatibility matrix.
   Current core targets: z3, llvm, sqlite (smoke test). Extended targets
-  per [../projects.md §3](../projects.md). Track 1's
+  per [../project/index.md §2](../project/index.md). Track 1's
   machinery: action graph, runner, summary system.
 - **Track 2 — Interface theory.** Behind the messy practice lies a clean
   abstraction: the *surface* between a library and a binding. If we can
@@ -292,7 +292,7 @@ the implementation path yet.
 
 ## 8. Related design notes
 
-- [dynamic_enumeration.md](dynamic_enumeration.md) — the enumeration→node-graph
+- [algorithm_explainer.md](algorithm_explainer.md) — the enumeration→node-graph
   model, plus (absorbed from the retired `harness_canary_orthogonality.md`) the
   two-engines and store/runner/producer factoring between the standalone tiny
   harness and canary's workspace model. Historical note: two implicit-coupling

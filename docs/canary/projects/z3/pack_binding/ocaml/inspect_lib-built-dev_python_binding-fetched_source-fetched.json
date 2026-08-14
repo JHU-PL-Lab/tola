@@ -1,0 +1,3839 @@
+{
+  "kind": "ocaml_mli",
+  "path": "/home/red/.opam/default/lib/z3",
+  "counts": {
+    "vals": 20,
+    "externals": 839,
+    "constructors": 327,
+    "modules": 2
+  },
+  "vals": [
+    "Z3enums.int_of_lbool",
+    "Z3enums.lbool_of_int",
+    "Z3enums.int_of_symbol_kind",
+    "Z3enums.symbol_kind_of_int",
+    "Z3enums.int_of_parameter_kind",
+    "Z3enums.parameter_kind_of_int",
+    "Z3enums.int_of_sort_kind",
+    "Z3enums.sort_kind_of_int",
+    "Z3enums.int_of_ast_kind",
+    "Z3enums.ast_kind_of_int",
+    "Z3enums.int_of_decl_kind",
+    "Z3enums.decl_kind_of_int",
+    "Z3enums.int_of_param_kind",
+    "Z3enums.param_kind_of_int",
+    "Z3enums.int_of_ast_print_mode",
+    "Z3enums.ast_print_mode_of_int",
+    "Z3enums.int_of_error_code",
+    "Z3enums.error_code_of_int",
+    "Z3enums.int_of_goal_prec",
+    "Z3enums.goal_prec_of_int"
+  ],
+  "externals": [
+    "Z3native.set_internal_error_handler",
+    "Z3native.global_param_set",
+    "Z3native.global_param_reset_all",
+    "Z3native.global_param_get",
+    "Z3native.mk_config",
+    "Z3native.del_config",
+    "Z3native.set_param_value",
+    "Z3native.mk_context",
+    "Z3native.mk_context_rc",
+    "Z3native.del_context",
+    "Z3native.inc_ref",
+    "Z3native.dec_ref",
+    "Z3native.update_param_value",
+    "Z3native.get_global_param_descrs",
+    "Z3native.interrupt",
+    "Z3native.enable_concurrent_dec_ref",
+    "Z3native.mk_params",
+    "Z3native.params_inc_ref",
+    "Z3native.params_dec_ref",
+    "Z3native.params_set_bool",
+    "Z3native.params_set_uint",
+    "Z3native.params_set_double",
+    "Z3native.params_set_symbol",
+    "Z3native.params_to_string",
+    "Z3native.params_validate",
+    "Z3native.param_descrs_inc_ref",
+    "Z3native.param_descrs_dec_ref",
+    "Z3native.param_descrs_get_kind",
+    "Z3native.param_descrs_size",
+    "Z3native.param_descrs_get_name",
+    "Z3native.param_descrs_get_documentation",
+    "Z3native.param_descrs_to_string",
+    "Z3native.mk_int_symbol",
+    "Z3native.mk_string_symbol",
+    "Z3native.mk_uninterpreted_sort",
+    "Z3native.mk_type_variable",
+    "Z3native.mk_bool_sort",
+    "Z3native.mk_int_sort",
+    "Z3native.mk_real_sort",
+    "Z3native.mk_bv_sort",
+    "Z3native.mk_finite_domain_sort",
+    "Z3native.mk_array_sort",
+    "Z3native.mk_array_sort_n",
+    "Z3native.mk_tuple_sort",
+    "Z3native.mk_enumeration_sort",
+    "Z3native.mk_list_sort",
+    "Z3native.mk_constructor",
+    "Z3native.constructor_num_fields",
+    "Z3native.del_constructor",
+    "Z3native.mk_datatype",
+    "Z3native.mk_polymorphic_datatype",
+    "Z3native.mk_datatype_sort",
+    "Z3native.mk_constructor_list",
+    "Z3native.del_constructor_list",
+    "Z3native.mk_datatypes",
+    "Z3native.query_constructor",
+    "Z3native.mk_func_decl",
+    "Z3native.mk_app",
+    "Z3native.mk_const",
+    "Z3native.mk_fresh_func_decl",
+    "Z3native.mk_fresh_const",
+    "Z3native.mk_rec_func_decl",
+    "Z3native.add_rec_def",
+    "Z3native.mk_true",
+    "Z3native.mk_false",
+    "Z3native.mk_eq",
+    "Z3native.mk_distinct",
+    "Z3native.mk_not",
+    "Z3native.mk_ite",
+    "Z3native.mk_iff",
+    "Z3native.mk_implies",
+    "Z3native.mk_xor",
+    "Z3native.mk_and",
+    "Z3native.mk_or",
+    "Z3native.mk_add",
+    "Z3native.mk_mul",
+    "Z3native.mk_sub",
+    "Z3native.mk_unary_minus",
+    "Z3native.mk_div",
+    "Z3native.mk_mod",
+    "Z3native.mk_rem",
+    "Z3native.mk_power",
+    "Z3native.mk_abs",
+    "Z3native.mk_lt",
+    "Z3native.mk_le",
+    "Z3native.mk_gt",
+    "Z3native.mk_ge",
+    "Z3native.mk_divides",
+    "Z3native.mk_int2real",
+    "Z3native.mk_real2int",
+    "Z3native.mk_is_int",
+    "Z3native.mk_bvnot",
+    "Z3native.mk_bvredand",
+    "Z3native.mk_bvredor",
+    "Z3native.mk_bvand",
+    "Z3native.mk_bvor",
+    "Z3native.mk_bvxor",
+    "Z3native.mk_bvnand",
+    "Z3native.mk_bvnor",
+    "Z3native.mk_bvxnor",
+    "Z3native.mk_bvneg",
+    "Z3native.mk_bvadd",
+    "Z3native.mk_bvsub",
+    "Z3native.mk_bvmul",
+    "Z3native.mk_bvudiv",
+    "Z3native.mk_bvsdiv",
+    "Z3native.mk_bvurem",
+    "Z3native.mk_bvsrem",
+    "Z3native.mk_bvsmod",
+    "Z3native.mk_bvult",
+    "Z3native.mk_bvslt",
+    "Z3native.mk_bvule",
+    "Z3native.mk_bvsle",
+    "Z3native.mk_bvuge",
+    "Z3native.mk_bvsge",
+    "Z3native.mk_bvugt",
+    "Z3native.mk_bvsgt",
+    "Z3native.mk_concat",
+    "Z3native.mk_extract",
+    "Z3native.mk_sign_ext",
+    "Z3native.mk_zero_ext",
+    "Z3native.mk_repeat",
+    "Z3native.mk_bit2bool",
+    "Z3native.mk_bvshl",
+    "Z3native.mk_bvlshr",
+    "Z3native.mk_bvashr",
+    "Z3native.mk_rotate_left",
+    "Z3native.mk_rotate_right",
+    "Z3native.mk_ext_rotate_left",
+    "Z3native.mk_ext_rotate_right",
+    "Z3native.mk_int2bv",
+    "Z3native.mk_bv2int",
+    "Z3native.mk_bvadd_no_overflow",
+    "Z3native.mk_bvadd_no_underflow",
+    "Z3native.mk_bvsub_no_overflow",
+    "Z3native.mk_bvsub_no_underflow",
+    "Z3native.mk_bvsdiv_no_overflow",
+    "Z3native.mk_bvneg_no_overflow",
+    "Z3native.mk_bvmul_no_overflow",
+    "Z3native.mk_bvmul_no_underflow",
+    "Z3native.mk_select",
+    "Z3native.mk_select_n",
+    "Z3native.mk_store",
+    "Z3native.mk_store_n",
+    "Z3native.mk_const_array",
+    "Z3native.mk_map",
+    "Z3native.mk_array_default",
+    "Z3native.mk_as_array",
+    "Z3native.mk_set_sort",
+    "Z3native.mk_empty_set",
+    "Z3native.mk_full_set",
+    "Z3native.mk_set_add",
+    "Z3native.mk_set_del",
+    "Z3native.mk_set_union",
+    "Z3native.mk_set_intersect",
+    "Z3native.mk_set_difference",
+    "Z3native.mk_set_complement",
+    "Z3native.mk_set_member",
+    "Z3native.mk_set_subset",
+    "Z3native.mk_array_ext",
+    "Z3native.mk_numeral",
+    "Z3native.mk_real",
+    "Z3native.mk_real_int64",
+    "Z3native.mk_int",
+    "Z3native.mk_unsigned_int",
+    "Z3native.mk_int64",
+    "Z3native.mk_unsigned_int64",
+    "Z3native.mk_bv_numeral",
+    "Z3native.mk_seq_sort",
+    "Z3native.is_seq_sort",
+    "Z3native.get_seq_sort_basis",
+    "Z3native.mk_re_sort",
+    "Z3native.is_re_sort",
+    "Z3native.get_re_sort_basis",
+    "Z3native.mk_string_sort",
+    "Z3native.mk_char_sort",
+    "Z3native.is_string_sort",
+    "Z3native.is_char_sort",
+    "Z3native.mk_string",
+    "Z3native.mk_lstring",
+    "Z3native.mk_u32string",
+    "Z3native.is_string",
+    "Z3native.get_string",
+    "Z3native.get_lstring",
+    "Z3native.get_string_length",
+    "Z3native.get_string_contents",
+    "Z3native.mk_seq_empty",
+    "Z3native.mk_seq_unit",
+    "Z3native.mk_seq_concat",
+    "Z3native.mk_seq_prefix",
+    "Z3native.mk_seq_suffix",
+    "Z3native.mk_seq_contains",
+    "Z3native.mk_str_lt",
+    "Z3native.mk_str_le",
+    "Z3native.mk_seq_extract",
+    "Z3native.mk_seq_replace",
+    "Z3native.mk_seq_replace_all",
+    "Z3native.mk_seq_replace_re",
+    "Z3native.mk_seq_replace_re_all",
+    "Z3native.mk_seq_at",
+    "Z3native.mk_seq_nth",
+    "Z3native.mk_seq_length",
+    "Z3native.mk_seq_index",
+    "Z3native.mk_seq_last_index",
+    "Z3native.mk_seq_map",
+    "Z3native.mk_seq_mapi",
+    "Z3native.mk_seq_foldl",
+    "Z3native.mk_seq_foldli",
+    "Z3native.mk_str_to_int",
+    "Z3native.mk_int_to_str",
+    "Z3native.mk_string_to_code",
+    "Z3native.mk_string_from_code",
+    "Z3native.mk_ubv_to_str",
+    "Z3native.mk_sbv_to_str",
+    "Z3native.mk_seq_to_re",
+    "Z3native.mk_seq_in_re",
+    "Z3native.mk_re_plus",
+    "Z3native.mk_re_star",
+    "Z3native.mk_re_option",
+    "Z3native.mk_re_union",
+    "Z3native.mk_re_concat",
+    "Z3native.mk_re_range",
+    "Z3native.mk_re_allchar",
+    "Z3native.mk_re_loop",
+    "Z3native.mk_re_power",
+    "Z3native.mk_re_intersect",
+    "Z3native.mk_re_complement",
+    "Z3native.mk_re_diff",
+    "Z3native.mk_re_empty",
+    "Z3native.mk_re_full",
+    "Z3native.mk_char",
+    "Z3native.mk_char_le",
+    "Z3native.mk_char_to_int",
+    "Z3native.mk_char_to_bv",
+    "Z3native.mk_char_from_bv",
+    "Z3native.mk_char_is_digit",
+    "Z3native.mk_linear_order",
+    "Z3native.mk_partial_order",
+    "Z3native.mk_piecewise_linear_order",
+    "Z3native.mk_tree_order",
+    "Z3native.mk_transitive_closure",
+    "Z3native.mk_pattern",
+    "Z3native.mk_bound",
+    "Z3native.mk_forall",
+    "Z3native.mk_exists",
+    "Z3native.mk_quantifier",
+    "Z3native.mk_quantifier_ex",
+    "Z3native.mk_forall_const",
+    "Z3native.mk_exists_const",
+    "Z3native.mk_quantifier_const",
+    "Z3native.mk_quantifier_const_ex",
+    "Z3native.mk_lambda",
+    "Z3native.mk_lambda_const",
+    "Z3native.get_symbol_kind",
+    "Z3native.get_symbol_int",
+    "Z3native.get_symbol_string",
+    "Z3native.get_sort_name",
+    "Z3native.get_sort_id",
+    "Z3native.sort_to_ast",
+    "Z3native.is_eq_sort",
+    "Z3native.get_sort_kind",
+    "Z3native.get_bv_sort_size",
+    "Z3native.get_finite_domain_sort_size",
+    "Z3native.get_array_arity",
+    "Z3native.get_array_sort_domain",
+    "Z3native.get_array_sort_domain_n",
+    "Z3native.get_array_sort_range",
+    "Z3native.get_tuple_sort_mk_decl",
+    "Z3native.get_tuple_sort_num_fields",
+    "Z3native.get_tuple_sort_field_decl",
+    "Z3native.is_recursive_datatype_sort",
+    "Z3native.get_datatype_sort_num_constructors",
+    "Z3native.get_datatype_sort_constructor",
+    "Z3native.get_datatype_sort_recognizer",
+    "Z3native.get_datatype_sort_constructor_accessor",
+    "Z3native.datatype_update_field",
+    "Z3native.get_relation_arity",
+    "Z3native.get_relation_column",
+    "Z3native.mk_atmost",
+    "Z3native.mk_atleast",
+    "Z3native.mk_pble",
+    "Z3native.mk_pbge",
+    "Z3native.mk_pbeq",
+    "Z3native.func_decl_to_ast",
+    "Z3native.is_eq_func_decl",
+    "Z3native.get_func_decl_id",
+    "Z3native.get_decl_name",
+    "Z3native.get_decl_kind",
+    "Z3native.get_domain_size",
+    "Z3native.get_arity",
+    "Z3native.get_domain",
+    "Z3native.get_range",
+    "Z3native.get_decl_num_parameters",
+    "Z3native.get_decl_parameter_kind",
+    "Z3native.get_decl_int_parameter",
+    "Z3native.get_decl_double_parameter",
+    "Z3native.get_decl_symbol_parameter",
+    "Z3native.get_decl_sort_parameter",
+    "Z3native.get_decl_ast_parameter",
+    "Z3native.get_decl_func_decl_parameter",
+    "Z3native.get_decl_rational_parameter",
+    "Z3native.app_to_ast",
+    "Z3native.get_app_decl",
+    "Z3native.get_app_num_args",
+    "Z3native.get_app_arg",
+    "Z3native.is_eq_ast",
+    "Z3native.get_ast_id",
+    "Z3native.get_ast_hash",
+    "Z3native.get_sort",
+    "Z3native.is_well_sorted",
+    "Z3native.get_bool_value",
+    "Z3native.get_ast_kind",
+    "Z3native.is_app",
+    "Z3native.is_ground",
+    "Z3native.get_depth",
+    "Z3native.is_numeral_ast",
+    "Z3native.is_algebraic_number",
+    "Z3native.to_app",
+    "Z3native.to_func_decl",
+    "Z3native.get_numeral_string",
+    "Z3native.get_numeral_binary_string",
+    "Z3native.get_numeral_decimal_string",
+    "Z3native.get_numeral_double",
+    "Z3native.get_numerator",
+    "Z3native.get_denominator",
+    "Z3native.get_numeral_small",
+    "Z3native.get_numeral_int",
+    "Z3native.get_numeral_uint",
+    "Z3native.get_numeral_uint64",
+    "Z3native.get_numeral_int64",
+    "Z3native.get_numeral_rational_int64",
+    "Z3native.get_algebraic_number_lower",
+    "Z3native.get_algebraic_number_upper",
+    "Z3native.pattern_to_ast",
+    "Z3native.get_pattern_num_terms",
+    "Z3native.get_pattern",
+    "Z3native.get_index_value",
+    "Z3native.is_quantifier_forall",
+    "Z3native.is_quantifier_exists",
+    "Z3native.is_lambda",
+    "Z3native.get_quantifier_weight",
+    "Z3native.get_quantifier_skolem_id",
+    "Z3native.get_quantifier_id",
+    "Z3native.get_quantifier_num_patterns",
+    "Z3native.get_quantifier_pattern_ast",
+    "Z3native.get_quantifier_num_no_patterns",
+    "Z3native.get_quantifier_no_pattern_ast",
+    "Z3native.get_quantifier_num_bound",
+    "Z3native.get_quantifier_bound_name",
+    "Z3native.get_quantifier_bound_sort",
+    "Z3native.get_quantifier_body",
+    "Z3native.simplify",
+    "Z3native.simplify_ex",
+    "Z3native.simplify_get_help",
+    "Z3native.simplify_get_param_descrs",
+    "Z3native.update_term",
+    "Z3native.substitute",
+    "Z3native.substitute_vars",
+    "Z3native.substitute_funs",
+    "Z3native.translate",
+    "Z3native.mk_model",
+    "Z3native.model_inc_ref",
+    "Z3native.model_dec_ref",
+    "Z3native.model_eval",
+    "Z3native.model_get_const_interp",
+    "Z3native.model_has_interp",
+    "Z3native.model_get_func_interp",
+    "Z3native.model_get_num_consts",
+    "Z3native.model_get_const_decl",
+    "Z3native.model_get_num_funcs",
+    "Z3native.model_get_func_decl",
+    "Z3native.model_get_num_sorts",
+    "Z3native.model_get_sort",
+    "Z3native.model_get_sort_universe",
+    "Z3native.model_translate",
+    "Z3native.is_as_array",
+    "Z3native.get_as_array_func_decl",
+    "Z3native.add_func_interp",
+    "Z3native.add_const_interp",
+    "Z3native.func_interp_inc_ref",
+    "Z3native.func_interp_dec_ref",
+    "Z3native.func_interp_get_num_entries",
+    "Z3native.func_interp_get_entry",
+    "Z3native.func_interp_get_else",
+    "Z3native.func_interp_set_else",
+    "Z3native.func_interp_get_arity",
+    "Z3native.func_interp_add_entry",
+    "Z3native.func_entry_inc_ref",
+    "Z3native.func_entry_dec_ref",
+    "Z3native.func_entry_get_value",
+    "Z3native.func_entry_get_num_args",
+    "Z3native.func_entry_get_arg",
+    "Z3native.open_log",
+    "Z3native.append_log",
+    "Z3native.close_log",
+    "Z3native.toggle_warning_messages",
+    "Z3native.set_ast_print_mode",
+    "Z3native.ast_to_string",
+    "Z3native.pattern_to_string",
+    "Z3native.sort_to_string",
+    "Z3native.func_decl_to_string",
+    "Z3native.model_to_string",
+    "Z3native.benchmark_to_smtlib_string",
+    "Z3native.parse_smtlib2_string",
+    "Z3native.parse_smtlib2_file",
+    "Z3native.eval_smtlib2_string",
+    "Z3native.mk_parser_context",
+    "Z3native.parser_context_inc_ref",
+    "Z3native.parser_context_dec_ref",
+    "Z3native.parser_context_add_sort",
+    "Z3native.parser_context_add_decl",
+    "Z3native.parser_context_from_string",
+    "Z3native.get_error_code",
+    "Z3native.set_error",
+    "Z3native.get_error_msg",
+    "Z3native.get_version",
+    "Z3native.get_full_version",
+    "Z3native.enable_trace",
+    "Z3native.disable_trace",
+    "Z3native.reset_memory",
+    "Z3native.finalize_memory",
+    "Z3native.mk_goal",
+    "Z3native.goal_inc_ref",
+    "Z3native.goal_dec_ref",
+    "Z3native.goal_precision",
+    "Z3native.goal_assert",
+    "Z3native.goal_inconsistent",
+    "Z3native.goal_depth",
+    "Z3native.goal_reset",
+    "Z3native.goal_size",
+    "Z3native.goal_formula",
+    "Z3native.goal_num_exprs",
+    "Z3native.goal_is_decided_sat",
+    "Z3native.goal_is_decided_unsat",
+    "Z3native.goal_translate",
+    "Z3native.goal_convert_model",
+    "Z3native.goal_to_string",
+    "Z3native.goal_to_dimacs_string",
+    "Z3native.mk_tactic",
+    "Z3native.tactic_inc_ref",
+    "Z3native.tactic_dec_ref",
+    "Z3native.mk_probe",
+    "Z3native.probe_inc_ref",
+    "Z3native.probe_dec_ref",
+    "Z3native.tactic_and_then",
+    "Z3native.tactic_or_else",
+    "Z3native.tactic_par_or",
+    "Z3native.tactic_par_and_then",
+    "Z3native.tactic_try_for",
+    "Z3native.tactic_when",
+    "Z3native.tactic_cond",
+    "Z3native.tactic_repeat",
+    "Z3native.tactic_skip",
+    "Z3native.tactic_fail",
+    "Z3native.tactic_fail_if",
+    "Z3native.tactic_fail_if_not_decided",
+    "Z3native.tactic_using_params",
+    "Z3native.mk_simplifier",
+    "Z3native.simplifier_inc_ref",
+    "Z3native.simplifier_dec_ref",
+    "Z3native.solver_add_simplifier",
+    "Z3native.simplifier_and_then",
+    "Z3native.simplifier_using_params",
+    "Z3native.get_num_simplifiers",
+    "Z3native.get_simplifier_name",
+    "Z3native.simplifier_get_help",
+    "Z3native.simplifier_get_param_descrs",
+    "Z3native.simplifier_get_descr",
+    "Z3native.probe_const",
+    "Z3native.probe_lt",
+    "Z3native.probe_gt",
+    "Z3native.probe_le",
+    "Z3native.probe_ge",
+    "Z3native.probe_eq",
+    "Z3native.probe_and",
+    "Z3native.probe_or",
+    "Z3native.probe_not",
+    "Z3native.get_num_tactics",
+    "Z3native.get_tactic_name",
+    "Z3native.get_num_probes",
+    "Z3native.get_probe_name",
+    "Z3native.tactic_get_help",
+    "Z3native.tactic_get_param_descrs",
+    "Z3native.tactic_get_descr",
+    "Z3native.probe_get_descr",
+    "Z3native.probe_apply",
+    "Z3native.tactic_apply",
+    "Z3native.tactic_apply_ex",
+    "Z3native.apply_result_inc_ref",
+    "Z3native.apply_result_dec_ref",
+    "Z3native.apply_result_to_string",
+    "Z3native.apply_result_get_num_subgoals",
+    "Z3native.apply_result_get_subgoal",
+    "Z3native.mk_solver",
+    "Z3native.mk_simple_solver",
+    "Z3native.mk_solver_for_logic",
+    "Z3native.mk_solver_from_tactic",
+    "Z3native.solver_translate",
+    "Z3native.solver_import_model_converter",
+    "Z3native.solver_get_help",
+    "Z3native.solver_get_param_descrs",
+    "Z3native.solver_set_params",
+    "Z3native.solver_inc_ref",
+    "Z3native.solver_dec_ref",
+    "Z3native.solver_interrupt",
+    "Z3native.solver_push",
+    "Z3native.solver_pop",
+    "Z3native.solver_reset",
+    "Z3native.solver_get_num_scopes",
+    "Z3native.solver_assert",
+    "Z3native.solver_assert_and_track",
+    "Z3native.solver_from_file",
+    "Z3native.solver_from_string",
+    "Z3native.solver_get_assertions",
+    "Z3native.solver_get_units",
+    "Z3native.solver_get_trail",
+    "Z3native.solver_get_non_units",
+    "Z3native.solver_get_levels",
+    "Z3native.solver_congruence_root",
+    "Z3native.solver_congruence_next",
+    "Z3native.solver_congruence_explain",
+    "Z3native.solver_solve_for",
+    "Z3native.solver_next_split",
+    "Z3native.solver_propagate_declare",
+    "Z3native.solver_propagate_register",
+    "Z3native.solver_propagate_register_cb",
+    "Z3native.solver_propagate_consequence",
+    "Z3native.solver_set_initial_value",
+    "Z3native.solver_check",
+    "Z3native.solver_check_assumptions",
+    "Z3native.get_implied_equalities",
+    "Z3native.solver_get_consequences",
+    "Z3native.solver_cube",
+    "Z3native.solver_get_model",
+    "Z3native.solver_get_proof",
+    "Z3native.solver_get_unsat_core",
+    "Z3native.solver_get_reason_unknown",
+    "Z3native.solver_get_statistics",
+    "Z3native.solver_to_string",
+    "Z3native.solver_to_dimacs_string",
+    "Z3native.stats_to_string",
+    "Z3native.stats_inc_ref",
+    "Z3native.stats_dec_ref",
+    "Z3native.stats_size",
+    "Z3native.stats_get_key",
+    "Z3native.stats_is_uint",
+    "Z3native.stats_is_double",
+    "Z3native.stats_get_uint_value",
+    "Z3native.stats_get_double_value",
+    "Z3native.get_estimated_alloc_size",
+    "Z3native.mk_ast_vector",
+    "Z3native.ast_vector_inc_ref",
+    "Z3native.ast_vector_dec_ref",
+    "Z3native.ast_vector_size",
+    "Z3native.ast_vector_get",
+    "Z3native.ast_vector_set",
+    "Z3native.ast_vector_resize",
+    "Z3native.ast_vector_push",
+    "Z3native.ast_vector_translate",
+    "Z3native.ast_vector_to_string",
+    "Z3native.mk_ast_map",
+    "Z3native.ast_map_inc_ref",
+    "Z3native.ast_map_dec_ref",
+    "Z3native.ast_map_contains",
+    "Z3native.ast_map_find",
+    "Z3native.ast_map_insert",
+    "Z3native.ast_map_erase",
+    "Z3native.ast_map_reset",
+    "Z3native.ast_map_size",
+    "Z3native.ast_map_keys",
+    "Z3native.ast_map_to_string",
+    "Z3native.algebraic_is_value",
+    "Z3native.algebraic_is_pos",
+    "Z3native.algebraic_is_neg",
+    "Z3native.algebraic_is_zero",
+    "Z3native.algebraic_sign",
+    "Z3native.algebraic_add",
+    "Z3native.algebraic_sub",
+    "Z3native.algebraic_mul",
+    "Z3native.algebraic_div",
+    "Z3native.algebraic_root",
+    "Z3native.algebraic_power",
+    "Z3native.algebraic_lt",
+    "Z3native.algebraic_gt",
+    "Z3native.algebraic_le",
+    "Z3native.algebraic_ge",
+    "Z3native.algebraic_eq",
+    "Z3native.algebraic_neq",
+    "Z3native.algebraic_roots",
+    "Z3native.algebraic_eval",
+    "Z3native.algebraic_get_poly",
+    "Z3native.algebraic_get_i",
+    "Z3native.polynomial_subresultants",
+    "Z3native.rcf_del",
+    "Z3native.rcf_mk_rational",
+    "Z3native.rcf_mk_small_int",
+    "Z3native.rcf_mk_pi",
+    "Z3native.rcf_mk_e",
+    "Z3native.rcf_mk_infinitesimal",
+    "Z3native.rcf_mk_roots",
+    "Z3native.rcf_add",
+    "Z3native.rcf_sub",
+    "Z3native.rcf_mul",
+    "Z3native.rcf_div",
+    "Z3native.rcf_neg",
+    "Z3native.rcf_inv",
+    "Z3native.rcf_power",
+    "Z3native.rcf_lt",
+    "Z3native.rcf_gt",
+    "Z3native.rcf_le",
+    "Z3native.rcf_ge",
+    "Z3native.rcf_eq",
+    "Z3native.rcf_neq",
+    "Z3native.rcf_num_to_string",
+    "Z3native.rcf_num_to_decimal_string",
+    "Z3native.rcf_get_numerator_denominator",
+    "Z3native.rcf_is_rational",
+    "Z3native.rcf_is_algebraic",
+    "Z3native.rcf_is_infinitesimal",
+    "Z3native.rcf_is_transcendental",
+    "Z3native.rcf_extension_index",
+    "Z3native.rcf_transcendental_name",
+    "Z3native.rcf_infinitesimal_name",
+    "Z3native.rcf_num_coefficients",
+    "Z3native.rcf_coefficient",
+    "Z3native.rcf_interval",
+    "Z3native.rcf_num_sign_conditions",
+    "Z3native.rcf_sign_condition_sign",
+    "Z3native.rcf_num_sign_condition_coefficients",
+    "Z3native.rcf_sign_condition_coefficient",
+    "Z3native.mk_fixedpoint",
+    "Z3native.fixedpoint_inc_ref",
+    "Z3native.fixedpoint_dec_ref",
+    "Z3native.fixedpoint_add_rule",
+    "Z3native.fixedpoint_add_fact",
+    "Z3native.fixedpoint_assert",
+    "Z3native.fixedpoint_query",
+    "Z3native.fixedpoint_query_relations",
+    "Z3native.fixedpoint_get_answer",
+    "Z3native.fixedpoint_get_reason_unknown",
+    "Z3native.fixedpoint_update_rule",
+    "Z3native.fixedpoint_get_num_levels",
+    "Z3native.fixedpoint_get_cover_delta",
+    "Z3native.fixedpoint_add_cover",
+    "Z3native.fixedpoint_get_statistics",
+    "Z3native.fixedpoint_register_relation",
+    "Z3native.fixedpoint_set_predicate_representation",
+    "Z3native.fixedpoint_get_rules",
+    "Z3native.fixedpoint_get_assertions",
+    "Z3native.fixedpoint_set_params",
+    "Z3native.fixedpoint_get_help",
+    "Z3native.fixedpoint_get_param_descrs",
+    "Z3native.fixedpoint_to_string",
+    "Z3native.fixedpoint_from_string",
+    "Z3native.fixedpoint_from_file",
+    "Z3native.mk_optimize",
+    "Z3native.optimize_inc_ref",
+    "Z3native.optimize_dec_ref",
+    "Z3native.optimize_assert",
+    "Z3native.optimize_assert_and_track",
+    "Z3native.optimize_assert_soft",
+    "Z3native.optimize_maximize",
+    "Z3native.optimize_minimize",
+    "Z3native.optimize_push",
+    "Z3native.optimize_pop",
+    "Z3native.optimize_set_initial_value",
+    "Z3native.optimize_check",
+    "Z3native.optimize_get_reason_unknown",
+    "Z3native.optimize_get_model",
+    "Z3native.optimize_get_unsat_core",
+    "Z3native.optimize_set_params",
+    "Z3native.optimize_get_param_descrs",
+    "Z3native.optimize_get_lower",
+    "Z3native.optimize_get_upper",
+    "Z3native.optimize_get_lower_as_vector",
+    "Z3native.optimize_get_upper_as_vector",
+    "Z3native.optimize_to_string",
+    "Z3native.optimize_from_string",
+    "Z3native.optimize_from_file",
+    "Z3native.optimize_get_help",
+    "Z3native.optimize_get_statistics",
+    "Z3native.optimize_get_assertions",
+    "Z3native.optimize_get_objectives",
+    "Z3native.optimize_translate",
+    "Z3native.mk_fpa_rounding_mode_sort",
+    "Z3native.mk_fpa_round_nearest_ties_to_even",
+    "Z3native.mk_fpa_rne",
+    "Z3native.mk_fpa_round_nearest_ties_to_away",
+    "Z3native.mk_fpa_rna",
+    "Z3native.mk_fpa_round_toward_positive",
+    "Z3native.mk_fpa_rtp",
+    "Z3native.mk_fpa_round_toward_negative",
+    "Z3native.mk_fpa_rtn",
+    "Z3native.mk_fpa_round_toward_zero",
+    "Z3native.mk_fpa_rtz",
+    "Z3native.mk_fpa_sort",
+    "Z3native.mk_fpa_sort_half",
+    "Z3native.mk_fpa_sort_16",
+    "Z3native.mk_fpa_sort_single",
+    "Z3native.mk_fpa_sort_32",
+    "Z3native.mk_fpa_sort_double",
+    "Z3native.mk_fpa_sort_64",
+    "Z3native.mk_fpa_sort_quadruple",
+    "Z3native.mk_fpa_sort_128",
+    "Z3native.mk_fpa_nan",
+    "Z3native.mk_fpa_inf",
+    "Z3native.mk_fpa_zero",
+    "Z3native.mk_fpa_fp",
+    "Z3native.mk_fpa_numeral_float",
+    "Z3native.mk_fpa_numeral_double",
+    "Z3native.mk_fpa_numeral_int",
+    "Z3native.mk_fpa_numeral_int_uint",
+    "Z3native.mk_fpa_numeral_int64_uint64",
+    "Z3native.mk_fpa_abs",
+    "Z3native.mk_fpa_neg",
+    "Z3native.mk_fpa_add",
+    "Z3native.mk_fpa_sub",
+    "Z3native.mk_fpa_mul",
+    "Z3native.mk_fpa_div",
+    "Z3native.mk_fpa_fma",
+    "Z3native.mk_fpa_sqrt",
+    "Z3native.mk_fpa_rem",
+    "Z3native.mk_fpa_round_to_integral",
+    "Z3native.mk_fpa_min",
+    "Z3native.mk_fpa_max",
+    "Z3native.mk_fpa_leq",
+    "Z3native.mk_fpa_lt",
+    "Z3native.mk_fpa_geq",
+    "Z3native.mk_fpa_gt",
+    "Z3native.mk_fpa_eq",
+    "Z3native.mk_fpa_is_normal",
+    "Z3native.mk_fpa_is_subnormal",
+    "Z3native.mk_fpa_is_zero",
+    "Z3native.mk_fpa_is_infinite",
+    "Z3native.mk_fpa_is_nan",
+    "Z3native.mk_fpa_is_negative",
+    "Z3native.mk_fpa_is_positive",
+    "Z3native.mk_fpa_to_fp_bv",
+    "Z3native.mk_fpa_to_fp_float",
+    "Z3native.mk_fpa_to_fp_real",
+    "Z3native.mk_fpa_to_fp_signed",
+    "Z3native.mk_fpa_to_fp_unsigned",
+    "Z3native.mk_fpa_to_ubv",
+    "Z3native.mk_fpa_to_sbv",
+    "Z3native.mk_fpa_to_real",
+    "Z3native.fpa_get_ebits",
+    "Z3native.fpa_get_sbits",
+    "Z3native.fpa_is_numeral",
+    "Z3native.fpa_is_numeral_nan",
+    "Z3native.fpa_is_numeral_inf",
+    "Z3native.fpa_is_numeral_zero",
+    "Z3native.fpa_is_numeral_normal",
+    "Z3native.fpa_is_numeral_subnormal",
+    "Z3native.fpa_is_numeral_positive",
+    "Z3native.fpa_is_numeral_negative",
+    "Z3native.fpa_get_numeral_sign_bv",
+    "Z3native.fpa_get_numeral_significand_bv",
+    "Z3native.fpa_get_numeral_sign",
+    "Z3native.fpa_get_numeral_significand_string",
+    "Z3native.fpa_get_numeral_significand_uint64",
+    "Z3native.fpa_get_numeral_exponent_string",
+    "Z3native.fpa_get_numeral_exponent_int64",
+    "Z3native.fpa_get_numeral_exponent_bv",
+    "Z3native.mk_fpa_to_ieee_bv",
+    "Z3native.mk_fpa_to_fp_int_real",
+    "Z3native.fixedpoint_query_from_lvl",
+    "Z3native.fixedpoint_get_ground_sat_answer",
+    "Z3native.fixedpoint_get_rules_along_trace",
+    "Z3native.fixedpoint_get_rule_names_along_trace",
+    "Z3native.fixedpoint_add_invariant",
+    "Z3native.fixedpoint_get_reachable",
+    "Z3native.qe_model_project",
+    "Z3native.qe_model_project_skolem",
+    "Z3native.qe_model_project_with_witness",
+    "Z3native.model_extrapolate",
+    "Z3native.qe_lite",
+    "Z3native.context_of_symbol",
+    "Z3native.is_null_symbol",
+    "Z3native.mk_null_symbol",
+    "Z3native.context_of_ast",
+    "Z3native.is_null_ast",
+    "Z3native.mk_null_ast",
+    "Z3native.context_of_model",
+    "Z3native.is_null_model",
+    "Z3native.mk_null_model",
+    "Z3native.context_of_constructor",
+    "Z3native.is_null_constructor",
+    "Z3native.mk_null_constructor",
+    "Z3native.context_of_constructor_list",
+    "Z3native.is_null_constructor_list",
+    "Z3native.mk_null_constructor_list",
+    "Z3native.context_of_solver",
+    "Z3native.is_null_solver",
+    "Z3native.mk_null_solver",
+    "Z3native.context_of_goal",
+    "Z3native.is_null_goal",
+    "Z3native.mk_null_goal",
+    "Z3native.context_of_tactic",
+    "Z3native.is_null_tactic",
+    "Z3native.mk_null_tactic",
+    "Z3native.context_of_simplifier",
+    "Z3native.is_null_simplifier",
+    "Z3native.mk_null_simplifier",
+    "Z3native.context_of_params",
+    "Z3native.is_null_params",
+    "Z3native.mk_null_params",
+    "Z3native.context_of_probe",
+    "Z3native.is_null_probe",
+    "Z3native.mk_null_probe",
+    "Z3native.context_of_stats",
+    "Z3native.is_null_stats",
+    "Z3native.mk_null_stats",
+    "Z3native.context_of_ast_vector",
+    "Z3native.is_null_ast_vector",
+    "Z3native.mk_null_ast_vector",
+    "Z3native.context_of_ast_map",
+    "Z3native.is_null_ast_map",
+    "Z3native.mk_null_ast_map",
+    "Z3native.context_of_apply_result",
+    "Z3native.is_null_apply_result",
+    "Z3native.mk_null_apply_result",
+    "Z3native.context_of_func_interp",
+    "Z3native.is_null_func_interp",
+    "Z3native.mk_null_func_interp",
+    "Z3native.context_of_func_entry",
+    "Z3native.is_null_func_entry",
+    "Z3native.mk_null_func_entry",
+    "Z3native.context_of_fixedpoint",
+    "Z3native.is_null_fixedpoint",
+    "Z3native.mk_null_fixedpoint",
+    "Z3native.context_of_optimize",
+    "Z3native.is_null_optimize",
+    "Z3native.mk_null_optimize",
+    "Z3native.context_of_param_descrs",
+    "Z3native.is_null_param_descrs",
+    "Z3native.mk_null_param_descrs",
+    "Z3native.context_of_rcf_num",
+    "Z3native.is_null_rcf_num",
+    "Z3native.mk_null_rcf_num"
+  ],
+  "externals_detail": [
+    {
+      "name": "Z3native.global_param_set",
+      "sig": "string -> string -> unit",
+      "c_symbol": "n_global_param_set",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.global_param_reset_all",
+      "sig": "unit -> unit",
+      "c_symbol": "n_global_param_reset_all",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.global_param_get",
+      "sig": "string -> bool * string",
+      "c_symbol": "n_global_param_get",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_config",
+      "sig": "unit -> config",
+      "c_symbol": "n_mk_config",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.del_config",
+      "sig": "config -> unit",
+      "c_symbol": "n_del_config",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_context",
+      "sig": "config -> context",
+      "c_symbol": "n_mk_context",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_context_rc",
+      "sig": "config -> context",
+      "c_symbol": "n_mk_context_rc",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.del_context",
+      "sig": "context -> unit",
+      "c_symbol": "n_del_context",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.inc_ref",
+      "sig": "context -> ast -> unit",
+      "c_symbol": "n_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.dec_ref",
+      "sig": "context -> ast -> unit",
+      "c_symbol": "n_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.interrupt",
+      "sig": "context -> unit",
+      "c_symbol": "n_interrupt",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_params",
+      "sig": "context -> params",
+      "c_symbol": "n_mk_params",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.params_inc_ref",
+      "sig": "context -> params -> unit",
+      "c_symbol": "n_params_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.params_dec_ref",
+      "sig": "context -> params -> unit",
+      "c_symbol": "n_params_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_int_symbol",
+      "sig": "context -> int -> symbol",
+      "c_symbol": "n_mk_int_symbol",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_type_variable",
+      "sig": "context -> symbol -> sort",
+      "c_symbol": "n_mk_type_variable",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bool_sort",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_bool_sort",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_int_sort",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_int_sort",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_real_sort",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_real_sort",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_bv_sort",
+      "sig": "context -> int -> sort",
+      "c_symbol": "n_mk_bv_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_array_sort",
+      "sig": "context -> sort -> sort -> sort",
+      "c_symbol": "n_mk_array_sort",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_app",
+      "sig": "context -> func_decl -> int -> ast list -> ast",
+      "c_symbol": "n_mk_app",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_const",
+      "sig": "context -> symbol -> sort -> ast",
+      "c_symbol": "n_mk_const",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_true",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_true",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_false",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_false",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_eq",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_eq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_distinct",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_distinct",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_not",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_not",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_ite",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_ite",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_iff",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_iff",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_implies",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_implies",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_xor",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_xor",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_and",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_and",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_or",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_or",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_add",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_add",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_mul",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_mul",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_sub",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_sub",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_unary_minus",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_unary_minus",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_div",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_div",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_mod",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_mod",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_rem",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_rem",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_power",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_power",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_abs",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_abs",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_lt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_le",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_gt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_gt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_ge",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_ge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_divides",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_divides",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_int2real",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_int2real",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_real2int",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_real2int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_is_int",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_is_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bvnot",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_bvnot",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bvredand",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_bvredand",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bvredor",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_bvredor",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bvand",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvand",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvor",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvor",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvxor",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvxor",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvnand",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvnand",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvnor",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvnor",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvxnor",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvxnor",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvneg",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_bvneg",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_bvadd",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvadd",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsub",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsub",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvmul",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvmul",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvudiv",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvudiv",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsdiv",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsdiv",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvurem",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvurem",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsrem",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsrem",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsmod",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsmod",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvult",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvult",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvslt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvslt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvule",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvule",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsle",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsle",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvuge",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvuge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsge",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvugt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvugt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvsgt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvsgt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_concat",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_concat",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_extract",
+      "sig": "context -> int -> int -> ast -> ast",
+      "c_symbol": "n_mk_extract",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_sign_ext",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_sign_ext",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_zero_ext",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_zero_ext",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_repeat",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_repeat",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bit2bool",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_bit2bool",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvshl",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvshl",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvlshr",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvlshr",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bvashr",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_bvashr",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_rotate_left",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_rotate_left",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_rotate_right",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_rotate_right",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_int2bv",
+      "sig": "context -> int -> ast -> ast",
+      "c_symbol": "n_mk_int2bv",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bv2int",
+      "sig": "context -> ast -> bool -> ast",
+      "c_symbol": "n_mk_bv2int",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_select",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_select",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_store",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_store",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_const_array",
+      "sig": "context -> sort -> ast -> ast",
+      "c_symbol": "n_mk_const_array",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_map",
+      "sig": "context -> func_decl -> int -> ast list -> ast",
+      "c_symbol": "n_mk_map",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_array_default",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_array_default",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_as_array",
+      "sig": "context -> func_decl -> ast",
+      "c_symbol": "n_mk_as_array",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_set_sort",
+      "sig": "context -> sort -> sort",
+      "c_symbol": "n_mk_set_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_empty_set",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_empty_set",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_full_set",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_full_set",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_set_add",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_set_add",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_set_del",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_set_del",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_set_union",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_set_union",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_set_complement",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_set_complement",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_set_member",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_set_member",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_set_subset",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_set_subset",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_array_ext",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_array_ext",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_numeral",
+      "sig": "context -> string -> sort -> ast",
+      "c_symbol": "n_mk_numeral",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_real",
+      "sig": "context -> int -> int -> ast",
+      "c_symbol": "n_mk_real",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_real_int64",
+      "sig": "context -> int64 -> int64 -> ast",
+      "c_symbol": "n_mk_real_int64",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_int",
+      "sig": "context -> int -> sort -> ast",
+      "c_symbol": "n_mk_int",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_int64",
+      "sig": "context -> int64 -> sort -> ast",
+      "c_symbol": "n_mk_int64",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_sort",
+      "sig": "context -> sort -> sort",
+      "c_symbol": "n_mk_seq_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_seq_sort",
+      "sig": "context -> sort -> bool",
+      "c_symbol": "n_is_seq_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_sort",
+      "sig": "context -> sort -> sort",
+      "c_symbol": "n_mk_re_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_re_sort",
+      "sig": "context -> sort -> bool",
+      "c_symbol": "n_is_re_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_re_sort_basis",
+      "sig": "context -> sort -> sort",
+      "c_symbol": "n_get_re_sort_basis",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_string_sort",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_string_sort",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_char_sort",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_char_sort",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_string_sort",
+      "sig": "context -> sort -> bool",
+      "c_symbol": "n_is_string_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_char_sort",
+      "sig": "context -> sort -> bool",
+      "c_symbol": "n_is_char_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_string",
+      "sig": "context -> string -> ast",
+      "c_symbol": "n_mk_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_lstring",
+      "sig": "context -> int -> string -> ast",
+      "c_symbol": "n_mk_lstring",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_u32string",
+      "sig": "context -> int -> int list -> ast",
+      "c_symbol": "n_mk_u32string",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.is_string",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_string",
+      "sig": "context -> ast -> string",
+      "c_symbol": "n_get_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_lstring",
+      "sig": "context -> ast -> string * int",
+      "c_symbol": "n_get_lstring",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_string_length",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_string_length",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_empty",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_seq_empty",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_unit",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_seq_unit",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_prefix",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_prefix",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_suffix",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_suffix",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_contains",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_contains",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_str_lt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_str_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_str_le",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_str_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_at",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_at",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_nth",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_nth",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_length",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_seq_length",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_map",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_map",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_seq_mapi",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_mapi",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_str_to_int",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_str_to_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_int_to_str",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_int_to_str",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_string_to_code",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_string_to_code",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_ubv_to_str",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_ubv_to_str",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_sbv_to_str",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_sbv_to_str",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_to_re",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_seq_to_re",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_seq_in_re",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_seq_in_re",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_plus",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_re_plus",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_star",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_re_star",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_option",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_re_option",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_union",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_re_union",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_concat",
+      "sig": "context -> int -> ast list -> ast",
+      "c_symbol": "n_mk_re_concat",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_range",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_re_range",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_allchar",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_re_allchar",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_loop",
+      "sig": "context -> ast -> int -> int -> ast",
+      "c_symbol": "n_mk_re_loop",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_re_power",
+      "sig": "context -> ast -> int -> ast",
+      "c_symbol": "n_mk_re_power",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_complement",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_re_complement",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_diff",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_re_diff",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_re_empty",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_re_empty",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_re_full",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_re_full",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_char",
+      "sig": "context -> int -> ast",
+      "c_symbol": "n_mk_char",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_char_le",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_char_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_char_to_int",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_char_to_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_char_to_bv",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_char_to_bv",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_char_from_bv",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_char_from_bv",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_char_is_digit",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_char_is_digit",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_pattern",
+      "sig": "context -> int -> ast list -> pattern",
+      "c_symbol": "n_mk_pattern",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_bound",
+      "sig": "context -> int -> sort -> ast",
+      "c_symbol": "n_mk_bound",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.get_symbol_kind",
+      "sig": "context -> symbol -> int",
+      "c_symbol": "n_get_symbol_kind",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_symbol_int",
+      "sig": "context -> symbol -> int",
+      "c_symbol": "n_get_symbol_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_sort_name",
+      "sig": "context -> sort -> symbol",
+      "c_symbol": "n_get_sort_name",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_sort_id",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_get_sort_id",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.sort_to_ast",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_sort_to_ast",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_eq_sort",
+      "sig": "context -> sort -> sort -> bool",
+      "c_symbol": "n_is_eq_sort",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.get_sort_kind",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_get_sort_kind",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_bv_sort_size",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_get_bv_sort_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_array_arity",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_get_array_arity",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_relation_arity",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_get_relation_arity",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_atmost",
+      "sig": "context -> int -> ast list -> int -> ast",
+      "c_symbol": "n_mk_atmost",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.get_decl_name",
+      "sig": "context -> func_decl -> symbol",
+      "c_symbol": "n_get_decl_name",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_decl_kind",
+      "sig": "context -> func_decl -> int",
+      "c_symbol": "n_get_decl_kind",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_domain_size",
+      "sig": "context -> func_decl -> int",
+      "c_symbol": "n_get_domain_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_arity",
+      "sig": "context -> func_decl -> int",
+      "c_symbol": "n_get_arity",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_domain",
+      "sig": "context -> func_decl -> int -> sort",
+      "c_symbol": "n_get_domain",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.get_range",
+      "sig": "context -> func_decl -> sort",
+      "c_symbol": "n_get_range",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.app_to_ast",
+      "sig": "context -> app -> ast",
+      "c_symbol": "n_app_to_ast",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_app_decl",
+      "sig": "context -> app -> func_decl",
+      "c_symbol": "n_get_app_decl",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_app_num_args",
+      "sig": "context -> app -> int",
+      "c_symbol": "n_get_app_num_args",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_app_arg",
+      "sig": "context -> app -> int -> ast",
+      "c_symbol": "n_get_app_arg",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.is_eq_ast",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_is_eq_ast",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.get_ast_id",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_ast_id",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_ast_hash",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_ast_hash",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_sort",
+      "sig": "context -> ast -> sort",
+      "c_symbol": "n_get_sort",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_well_sorted",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_well_sorted",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_bool_value",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_bool_value",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_ast_kind",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_ast_kind",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_app",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_app",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_ground",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_ground",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_depth",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_depth",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_numeral_ast",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_numeral_ast",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.to_app",
+      "sig": "context -> ast -> app",
+      "c_symbol": "n_to_app",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.to_func_decl",
+      "sig": "context -> ast -> func_decl",
+      "c_symbol": "n_to_func_decl",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_numerator",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_get_numerator",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_denominator",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_get_denominator",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_numeral_int",
+      "sig": "context -> ast -> bool * int",
+      "c_symbol": "n_get_numeral_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.pattern_to_ast",
+      "sig": "context -> pattern -> ast",
+      "c_symbol": "n_pattern_to_ast",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_pattern",
+      "sig": "context -> pattern -> int -> ast",
+      "c_symbol": "n_get_pattern",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.get_index_value",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_get_index_value",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_lambda",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_lambda",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_quantifier_id",
+      "sig": "context -> ast -> symbol",
+      "c_symbol": "n_get_quantifier_id",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.simplify",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_simplify",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.simplify_ex",
+      "sig": "context -> ast -> params -> ast",
+      "c_symbol": "n_simplify_ex",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.simplify_get_help",
+      "sig": "context -> string",
+      "c_symbol": "n_simplify_get_help",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.translate",
+      "sig": "context -> ast -> context -> ast",
+      "c_symbol": "n_translate",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_model",
+      "sig": "context -> model",
+      "c_symbol": "n_mk_model",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.model_inc_ref",
+      "sig": "context -> model -> unit",
+      "c_symbol": "n_model_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.model_dec_ref",
+      "sig": "context -> model -> unit",
+      "c_symbol": "n_model_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.is_as_array",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_is_as_array",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.open_log",
+      "sig": "string -> bool",
+      "c_symbol": "n_open_log",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.append_log",
+      "sig": "string -> unit",
+      "c_symbol": "n_append_log",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.close_log",
+      "sig": "unit -> unit",
+      "c_symbol": "n_close_log",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.toggle_warning_messages",
+      "sig": "bool -> unit",
+      "c_symbol": "n_toggle_warning_messages",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.set_ast_print_mode",
+      "sig": "context -> int -> unit",
+      "c_symbol": "n_set_ast_print_mode",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.ast_to_string",
+      "sig": "context -> ast -> string",
+      "c_symbol": "n_ast_to_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.sort_to_string",
+      "sig": "context -> sort -> string",
+      "c_symbol": "n_sort_to_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.model_to_string",
+      "sig": "context -> model -> string",
+      "c_symbol": "n_model_to_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_error_code",
+      "sig": "context -> int",
+      "c_symbol": "n_get_error_code",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.set_error",
+      "sig": "context -> int -> unit",
+      "c_symbol": "n_set_error",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_error_msg",
+      "sig": "context -> int -> string",
+      "c_symbol": "n_get_error_msg",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_version",
+      "sig": "unit -> int * int * int * int",
+      "c_symbol": "n_get_version",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.get_full_version",
+      "sig": "unit -> string",
+      "c_symbol": "n_get_full_version",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.enable_trace",
+      "sig": "string -> unit",
+      "c_symbol": "n_enable_trace",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.disable_trace",
+      "sig": "string -> unit",
+      "c_symbol": "n_disable_trace",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.reset_memory",
+      "sig": "unit -> unit",
+      "c_symbol": "n_reset_memory",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.finalize_memory",
+      "sig": "unit -> unit",
+      "c_symbol": "n_finalize_memory",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_goal",
+      "sig": "context -> bool -> bool -> bool -> goal",
+      "c_symbol": "n_mk_goal",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.goal_inc_ref",
+      "sig": "context -> goal -> unit",
+      "c_symbol": "n_goal_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_dec_ref",
+      "sig": "context -> goal -> unit",
+      "c_symbol": "n_goal_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_precision",
+      "sig": "context -> goal -> int",
+      "c_symbol": "n_goal_precision",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_assert",
+      "sig": "context -> goal -> ast -> unit",
+      "c_symbol": "n_goal_assert",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.goal_inconsistent",
+      "sig": "context -> goal -> bool",
+      "c_symbol": "n_goal_inconsistent",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_depth",
+      "sig": "context -> goal -> int",
+      "c_symbol": "n_goal_depth",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_reset",
+      "sig": "context -> goal -> unit",
+      "c_symbol": "n_goal_reset",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_size",
+      "sig": "context -> goal -> int",
+      "c_symbol": "n_goal_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_formula",
+      "sig": "context -> goal -> int -> ast",
+      "c_symbol": "n_goal_formula",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.goal_num_exprs",
+      "sig": "context -> goal -> int",
+      "c_symbol": "n_goal_num_exprs",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.goal_to_string",
+      "sig": "context -> goal -> string",
+      "c_symbol": "n_goal_to_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_tactic",
+      "sig": "context -> string -> tactic",
+      "c_symbol": "n_mk_tactic",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.tactic_inc_ref",
+      "sig": "context -> tactic -> unit",
+      "c_symbol": "n_tactic_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.tactic_dec_ref",
+      "sig": "context -> tactic -> unit",
+      "c_symbol": "n_tactic_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_probe",
+      "sig": "context -> string -> probe",
+      "c_symbol": "n_mk_probe",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.probe_inc_ref",
+      "sig": "context -> probe -> unit",
+      "c_symbol": "n_probe_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.probe_dec_ref",
+      "sig": "context -> probe -> unit",
+      "c_symbol": "n_probe_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.tactic_when",
+      "sig": "context -> probe -> tactic -> tactic",
+      "c_symbol": "n_tactic_when",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.tactic_skip",
+      "sig": "context -> tactic",
+      "c_symbol": "n_tactic_skip",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.tactic_fail",
+      "sig": "context -> tactic",
+      "c_symbol": "n_tactic_fail",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.tactic_fail_if",
+      "sig": "context -> probe -> tactic",
+      "c_symbol": "n_tactic_fail_if",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_simplifier",
+      "sig": "context -> string -> simplifier",
+      "c_symbol": "n_mk_simplifier",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_num_simplifiers",
+      "sig": "context -> int",
+      "c_symbol": "n_get_num_simplifiers",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.probe_const",
+      "sig": "context -> float -> probe",
+      "c_symbol": "n_probe_const",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.probe_lt",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_gt",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_gt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_le",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_ge",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_ge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_eq",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_eq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_and",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_and",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_or",
+      "sig": "context -> probe -> probe -> probe",
+      "c_symbol": "n_probe_or",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.probe_not",
+      "sig": "context -> probe -> probe",
+      "c_symbol": "n_probe_not",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_num_tactics",
+      "sig": "context -> int",
+      "c_symbol": "n_get_num_tactics",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.get_tactic_name",
+      "sig": "context -> int -> string",
+      "c_symbol": "n_get_tactic_name",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.get_num_probes",
+      "sig": "context -> int",
+      "c_symbol": "n_get_num_probes",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.get_probe_name",
+      "sig": "context -> int -> string",
+      "c_symbol": "n_get_probe_name",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.tactic_get_help",
+      "sig": "context -> tactic -> string",
+      "c_symbol": "n_tactic_get_help",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.probe_get_descr",
+      "sig": "context -> string -> string",
+      "c_symbol": "n_probe_get_descr",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.probe_apply",
+      "sig": "context -> probe -> goal -> float",
+      "c_symbol": "n_probe_apply",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_solver",
+      "sig": "context -> solver",
+      "c_symbol": "n_mk_solver",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_simple_solver",
+      "sig": "context -> solver",
+      "c_symbol": "n_mk_simple_solver",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.solver_get_help",
+      "sig": "context -> solver -> string",
+      "c_symbol": "n_solver_get_help",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_inc_ref",
+      "sig": "context -> solver -> unit",
+      "c_symbol": "n_solver_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_dec_ref",
+      "sig": "context -> solver -> unit",
+      "c_symbol": "n_solver_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_interrupt",
+      "sig": "context -> solver -> unit",
+      "c_symbol": "n_solver_interrupt",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_push",
+      "sig": "context -> solver -> unit",
+      "c_symbol": "n_solver_push",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_pop",
+      "sig": "context -> solver -> int -> unit",
+      "c_symbol": "n_solver_pop",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.solver_reset",
+      "sig": "context -> solver -> unit",
+      "c_symbol": "n_solver_reset",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_assert",
+      "sig": "context -> solver -> ast -> unit",
+      "c_symbol": "n_solver_assert",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.solver_check",
+      "sig": "context -> solver -> int",
+      "c_symbol": "n_solver_check",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_get_model",
+      "sig": "context -> solver -> model",
+      "c_symbol": "n_solver_get_model",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.solver_get_proof",
+      "sig": "context -> solver -> ast",
+      "c_symbol": "n_solver_get_proof",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.stats_to_string",
+      "sig": "context -> stats -> string",
+      "c_symbol": "n_stats_to_string",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.stats_inc_ref",
+      "sig": "context -> stats -> unit",
+      "c_symbol": "n_stats_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.stats_dec_ref",
+      "sig": "context -> stats -> unit",
+      "c_symbol": "n_stats_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.stats_size",
+      "sig": "context -> stats -> int",
+      "c_symbol": "n_stats_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.stats_is_uint",
+      "sig": "context -> stats -> int -> bool",
+      "c_symbol": "n_stats_is_uint",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_ast_vector",
+      "sig": "context -> ast_vector",
+      "c_symbol": "n_mk_ast_vector",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.ast_vector_size",
+      "sig": "context -> ast_vector -> int",
+      "c_symbol": "n_ast_vector_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_ast_map",
+      "sig": "context -> ast_map",
+      "c_symbol": "n_mk_ast_map",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.ast_map_inc_ref",
+      "sig": "context -> ast_map -> unit",
+      "c_symbol": "n_ast_map_inc_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.ast_map_dec_ref",
+      "sig": "context -> ast_map -> unit",
+      "c_symbol": "n_ast_map_dec_ref",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.ast_map_find",
+      "sig": "context -> ast_map -> ast -> ast",
+      "c_symbol": "n_ast_map_find",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.ast_map_reset",
+      "sig": "context -> ast_map -> unit",
+      "c_symbol": "n_ast_map_reset",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.ast_map_size",
+      "sig": "context -> ast_map -> int",
+      "c_symbol": "n_ast_map_size",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.ast_map_keys",
+      "sig": "context -> ast_map -> ast_vector",
+      "c_symbol": "n_ast_map_keys",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_is_value",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_algebraic_is_value",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_is_pos",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_algebraic_is_pos",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_is_neg",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_algebraic_is_neg",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_is_zero",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_algebraic_is_zero",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_sign",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_algebraic_sign",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.algebraic_add",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_algebraic_add",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_sub",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_algebraic_sub",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_mul",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_algebraic_mul",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_div",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_algebraic_div",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_root",
+      "sig": "context -> ast -> int -> ast",
+      "c_symbol": "n_algebraic_root",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_power",
+      "sig": "context -> ast -> int -> ast",
+      "c_symbol": "n_algebraic_power",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_lt",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_gt",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_gt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_le",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_ge",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_ge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_eq",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_eq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_neq",
+      "sig": "context -> ast -> ast -> bool",
+      "c_symbol": "n_algebraic_neq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.algebraic_get_i",
+      "sig": "context -> ast -> int",
+      "c_symbol": "n_algebraic_get_i",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_del",
+      "sig": "context -> rcf_num -> unit",
+      "c_symbol": "n_rcf_del",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_mk_rational",
+      "sig": "context -> string -> rcf_num",
+      "c_symbol": "n_rcf_mk_rational",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_mk_small_int",
+      "sig": "context -> int -> rcf_num",
+      "c_symbol": "n_rcf_mk_small_int",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_mk_pi",
+      "sig": "context -> rcf_num",
+      "c_symbol": "n_rcf_mk_pi",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.rcf_mk_e",
+      "sig": "context -> rcf_num",
+      "c_symbol": "n_rcf_mk_e",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.rcf_mk_infinitesimal",
+      "sig": "context -> rcf_num",
+      "c_symbol": "n_rcf_mk_infinitesimal",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.rcf_add",
+      "sig": "context -> rcf_num -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_add",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_sub",
+      "sig": "context -> rcf_num -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_sub",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_mul",
+      "sig": "context -> rcf_num -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_mul",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_div",
+      "sig": "context -> rcf_num -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_div",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_neg",
+      "sig": "context -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_neg",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_inv",
+      "sig": "context -> rcf_num -> rcf_num",
+      "c_symbol": "n_rcf_inv",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_power",
+      "sig": "context -> rcf_num -> int -> rcf_num",
+      "c_symbol": "n_rcf_power",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_lt",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_gt",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_gt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_le",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_le",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_ge",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_ge",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_eq",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_eq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_neq",
+      "sig": "context -> rcf_num -> rcf_num -> bool",
+      "c_symbol": "n_rcf_neq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.rcf_is_rational",
+      "sig": "context -> rcf_num -> bool",
+      "c_symbol": "n_rcf_is_rational",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.rcf_is_algebraic",
+      "sig": "context -> rcf_num -> bool",
+      "c_symbol": "n_rcf_is_algebraic",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fixedpoint",
+      "sig": "context -> fixedpoint",
+      "c_symbol": "n_mk_fixedpoint",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_optimize",
+      "sig": "context -> optimize",
+      "c_symbol": "n_mk_optimize",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.optimize_push",
+      "sig": "context -> optimize -> unit",
+      "c_symbol": "n_optimize_push",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.optimize_pop",
+      "sig": "context -> optimize -> unit",
+      "c_symbol": "n_optimize_pop",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_rne",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_fpa_rne",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_rna",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_fpa_rna",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_rtp",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_fpa_rtp",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_rtn",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_fpa_rtn",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_rtz",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_fpa_rtz",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort",
+      "sig": "context -> int -> int -> sort",
+      "c_symbol": "n_mk_fpa_sort",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_half",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_half",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_16",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_16",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_single",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_single",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_32",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_32",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_double",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_double",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_64",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_64",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_quadruple",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_quadruple",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_sort_128",
+      "sig": "context -> sort",
+      "c_symbol": "n_mk_fpa_sort_128",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_fpa_nan",
+      "sig": "context -> sort -> ast",
+      "c_symbol": "n_mk_fpa_nan",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_inf",
+      "sig": "context -> sort -> bool -> ast",
+      "c_symbol": "n_mk_fpa_inf",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_zero",
+      "sig": "context -> sort -> bool -> ast",
+      "c_symbol": "n_mk_fpa_zero",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_fp",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_fp",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_fpa_abs",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_abs",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_neg",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_neg",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_add",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_add",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_fpa_sub",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_sub",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_fpa_mul",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_mul",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_fpa_div",
+      "sig": "context -> ast -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_div",
+      "arity": 4
+    },
+    {
+      "name": "Z3native.mk_fpa_sqrt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_sqrt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_rem",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_rem",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_min",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_min",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_max",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_max",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_leq",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_leq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_lt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_lt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_geq",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_geq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_gt",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_gt",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_eq",
+      "sig": "context -> ast -> ast -> ast",
+      "c_symbol": "n_mk_fpa_eq",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.mk_fpa_is_normal",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_normal",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_is_zero",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_zero",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_is_infinite",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_infinite",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_is_nan",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_nan",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_is_negative",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_negative",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_is_positive",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_is_positive",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_to_real",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_to_real",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.fpa_get_ebits",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_fpa_get_ebits",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.fpa_get_sbits",
+      "sig": "context -> sort -> int",
+      "c_symbol": "n_fpa_get_sbits",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.fpa_is_numeral",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_fpa_is_numeral",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.fpa_is_numeral_nan",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_fpa_is_numeral_nan",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.fpa_is_numeral_inf",
+      "sig": "context -> ast -> bool",
+      "c_symbol": "n_fpa_is_numeral_inf",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.mk_fpa_to_ieee_bv",
+      "sig": "context -> ast -> ast",
+      "c_symbol": "n_mk_fpa_to_ieee_bv",
+      "arity": 2
+    },
+    {
+      "name": "Z3native.qe_lite",
+      "sig": "context -> ast_vector -> ast -> ast",
+      "c_symbol": "n_qe_lite",
+      "arity": 3
+    },
+    {
+      "name": "Z3native.context_of_symbol",
+      "sig": "symbol -> context",
+      "c_symbol": "n_context_of_symbol",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_symbol",
+      "sig": "symbol -> bool",
+      "c_symbol": "n_is_null_symbol",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_symbol",
+      "sig": "context -> symbol",
+      "c_symbol": "n_mk_null_symbol",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_ast",
+      "sig": "ast -> context",
+      "c_symbol": "n_context_of_ast",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_ast",
+      "sig": "ast -> bool",
+      "c_symbol": "n_is_null_ast",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_ast",
+      "sig": "context -> ast",
+      "c_symbol": "n_mk_null_ast",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_model",
+      "sig": "model -> context",
+      "c_symbol": "n_context_of_model",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_model",
+      "sig": "model -> bool",
+      "c_symbol": "n_is_null_model",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_model",
+      "sig": "context -> model",
+      "c_symbol": "n_mk_null_model",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_constructor",
+      "sig": "constructor -> bool",
+      "c_symbol": "n_is_null_constructor",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_solver",
+      "sig": "solver -> context",
+      "c_symbol": "n_context_of_solver",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_solver",
+      "sig": "solver -> bool",
+      "c_symbol": "n_is_null_solver",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_solver",
+      "sig": "context -> solver",
+      "c_symbol": "n_mk_null_solver",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_goal",
+      "sig": "goal -> context",
+      "c_symbol": "n_context_of_goal",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_goal",
+      "sig": "goal -> bool",
+      "c_symbol": "n_is_null_goal",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_goal",
+      "sig": "context -> goal",
+      "c_symbol": "n_mk_null_goal",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_tactic",
+      "sig": "tactic -> context",
+      "c_symbol": "n_context_of_tactic",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_tactic",
+      "sig": "tactic -> bool",
+      "c_symbol": "n_is_null_tactic",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_tactic",
+      "sig": "context -> tactic",
+      "c_symbol": "n_mk_null_tactic",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_simplifier",
+      "sig": "simplifier -> bool",
+      "c_symbol": "n_is_null_simplifier",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_simplifier",
+      "sig": "context -> simplifier",
+      "c_symbol": "n_mk_null_simplifier",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_params",
+      "sig": "params -> context",
+      "c_symbol": "n_context_of_params",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_params",
+      "sig": "params -> bool",
+      "c_symbol": "n_is_null_params",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_params",
+      "sig": "context -> params",
+      "c_symbol": "n_mk_null_params",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_probe",
+      "sig": "probe -> context",
+      "c_symbol": "n_context_of_probe",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_probe",
+      "sig": "probe -> bool",
+      "c_symbol": "n_is_null_probe",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_probe",
+      "sig": "context -> probe",
+      "c_symbol": "n_mk_null_probe",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_stats",
+      "sig": "stats -> context",
+      "c_symbol": "n_context_of_stats",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_stats",
+      "sig": "stats -> bool",
+      "c_symbol": "n_is_null_stats",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_stats",
+      "sig": "context -> stats",
+      "c_symbol": "n_mk_null_stats",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_ast_vector",
+      "sig": "ast_vector -> bool",
+      "c_symbol": "n_is_null_ast_vector",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_ast_vector",
+      "sig": "context -> ast_vector",
+      "c_symbol": "n_mk_null_ast_vector",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_ast_map",
+      "sig": "ast_map -> context",
+      "c_symbol": "n_context_of_ast_map",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_ast_map",
+      "sig": "ast_map -> bool",
+      "c_symbol": "n_is_null_ast_map",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_ast_map",
+      "sig": "context -> ast_map",
+      "c_symbol": "n_mk_null_ast_map",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_func_interp",
+      "sig": "func_interp -> bool",
+      "c_symbol": "n_is_null_func_interp",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_func_entry",
+      "sig": "func_entry -> bool",
+      "c_symbol": "n_is_null_func_entry",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_func_entry",
+      "sig": "context -> func_entry",
+      "c_symbol": "n_mk_null_func_entry",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_fixedpoint",
+      "sig": "fixedpoint -> bool",
+      "c_symbol": "n_is_null_fixedpoint",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_fixedpoint",
+      "sig": "context -> fixedpoint",
+      "c_symbol": "n_mk_null_fixedpoint",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_optimize",
+      "sig": "optimize -> context",
+      "c_symbol": "n_context_of_optimize",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_optimize",
+      "sig": "optimize -> bool",
+      "c_symbol": "n_is_null_optimize",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_optimize",
+      "sig": "context -> optimize",
+      "c_symbol": "n_mk_null_optimize",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.context_of_rcf_num",
+      "sig": "rcf_num -> context",
+      "c_symbol": "n_context_of_rcf_num",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.is_null_rcf_num",
+      "sig": "rcf_num -> bool",
+      "c_symbol": "n_is_null_rcf_num",
+      "arity": 1
+    },
+    {
+      "name": "Z3native.mk_null_rcf_num",
+      "sig": "context -> rcf_num",
+      "c_symbol": "n_mk_null_rcf_num",
+      "arity": 1
+    }
+  ],
+  "constructors": [
+    "Z3enums.PARAMETER_DOUBLE",
+    "Z3enums.PARAMETER_RATIONAL",
+    "Z3enums.PARAMETER_SYMBOL",
+    "Z3enums.PARAMETER_SORT",
+    "Z3enums.PARAMETER_AST",
+    "Z3enums.PARAMETER_FUNC_DECL",
+    "Z3enums.PARAMETER_INTERNAL",
+    "Z3enums.PARAMETER_ZSTRING",
+    "Z3enums.BOOL_SORT",
+    "Z3enums.INT_SORT",
+    "Z3enums.REAL_SORT",
+    "Z3enums.BV_SORT",
+    "Z3enums.ARRAY_SORT",
+    "Z3enums.DATATYPE_SORT",
+    "Z3enums.RELATION_SORT",
+    "Z3enums.FINITE_DOMAIN_SORT",
+    "Z3enums.FLOATING_POINT_SORT",
+    "Z3enums.ROUNDING_MODE_SORT",
+    "Z3enums.SEQ_SORT",
+    "Z3enums.RE_SORT",
+    "Z3enums.CHAR_SORT",
+    "Z3enums.TYPE_VAR",
+    "Z3enums.UNKNOWN_SORT",
+    "Z3enums.APP_AST",
+    "Z3enums.VAR_AST",
+    "Z3enums.QUANTIFIER_AST",
+    "Z3enums.SORT_AST",
+    "Z3enums.FUNC_DECL_AST",
+    "Z3enums.UNKNOWN_AST",
+    "Z3enums.OP_FALSE",
+    "Z3enums.OP_EQ",
+    "Z3enums.OP_DISTINCT",
+    "Z3enums.OP_ITE",
+    "Z3enums.OP_AND",
+    "Z3enums.OP_OR",
+    "Z3enums.OP_IFF",
+    "Z3enums.OP_XOR",
+    "Z3enums.OP_NOT",
+    "Z3enums.OP_IMPLIES",
+    "Z3enums.OP_OEQ",
+    "Z3enums.OP_ANUM",
+    "Z3enums.OP_AGNUM",
+    "Z3enums.OP_LE",
+    "Z3enums.OP_GE",
+    "Z3enums.OP_LT",
+    "Z3enums.OP_GT",
+    "Z3enums.OP_ADD",
+    "Z3enums.OP_SUB",
+    "Z3enums.OP_UMINUS",
+    "Z3enums.OP_MUL",
+    "Z3enums.OP_DIV",
+    "Z3enums.OP_IDIV",
+    "Z3enums.OP_REM",
+    "Z3enums.OP_MOD",
+    "Z3enums.OP_TO_REAL",
+    "Z3enums.OP_TO_INT",
+    "Z3enums.OP_IS_INT",
+    "Z3enums.OP_POWER",
+    "Z3enums.OP_ABS",
+    "Z3enums.OP_STORE",
+    "Z3enums.OP_SELECT",
+    "Z3enums.OP_CONST_ARRAY",
+    "Z3enums.OP_ARRAY_MAP",
+    "Z3enums.OP_ARRAY_DEFAULT",
+    "Z3enums.OP_SET_UNION",
+    "Z3enums.OP_SET_INTERSECT",
+    "Z3enums.OP_SET_DIFFERENCE",
+    "Z3enums.OP_SET_COMPLEMENT",
+    "Z3enums.OP_SET_SUBSET",
+    "Z3enums.OP_AS_ARRAY",
+    "Z3enums.OP_ARRAY_EXT",
+    "Z3enums.OP_BNUM",
+    "Z3enums.OP_BIT1",
+    "Z3enums.OP_BIT0",
+    "Z3enums.OP_BNEG",
+    "Z3enums.OP_BADD",
+    "Z3enums.OP_BSUB",
+    "Z3enums.OP_BMUL",
+    "Z3enums.OP_BSDIV",
+    "Z3enums.OP_BUDIV",
+    "Z3enums.OP_BSREM",
+    "Z3enums.OP_BUREM",
+    "Z3enums.OP_BSMOD",
+    "Z3enums.OP_BSDIV0",
+    "Z3enums.OP_BUDIV0",
+    "Z3enums.OP_BSREM0",
+    "Z3enums.OP_BUREM0",
+    "Z3enums.OP_BSMOD0",
+    "Z3enums.OP_ULEQ",
+    "Z3enums.OP_SLEQ",
+    "Z3enums.OP_UGEQ",
+    "Z3enums.OP_SGEQ",
+    "Z3enums.OP_ULT",
+    "Z3enums.OP_SLT",
+    "Z3enums.OP_UGT",
+    "Z3enums.OP_SGT",
+    "Z3enums.OP_BAND",
+    "Z3enums.OP_BOR",
+    "Z3enums.OP_BNOT",
+    "Z3enums.OP_BXOR",
+    "Z3enums.OP_BNAND",
+    "Z3enums.OP_BNOR",
+    "Z3enums.OP_BXNOR",
+    "Z3enums.OP_CONCAT",
+    "Z3enums.OP_SIGN_EXT",
+    "Z3enums.OP_ZERO_EXT",
+    "Z3enums.OP_EXTRACT",
+    "Z3enums.OP_REPEAT",
+    "Z3enums.OP_BREDOR",
+    "Z3enums.OP_BREDAND",
+    "Z3enums.OP_BCOMP",
+    "Z3enums.OP_BSHL",
+    "Z3enums.OP_BLSHR",
+    "Z3enums.OP_BASHR",
+    "Z3enums.OP_ROTATE_LEFT",
+    "Z3enums.OP_ROTATE_RIGHT",
+    "Z3enums.OP_EXT_ROTATE_LEFT",
+    "Z3enums.OP_EXT_ROTATE_RIGHT",
+    "Z3enums.OP_BIT2BOOL",
+    "Z3enums.OP_INT2BV",
+    "Z3enums.OP_BV2INT",
+    "Z3enums.OP_SBV2INT",
+    "Z3enums.OP_CARRY",
+    "Z3enums.OP_XOR3",
+    "Z3enums.OP_BSMUL_NO_OVFL",
+    "Z3enums.OP_BUMUL_NO_OVFL",
+    "Z3enums.OP_BSMUL_NO_UDFL",
+    "Z3enums.OP_BSDIV_I",
+    "Z3enums.OP_BUDIV_I",
+    "Z3enums.OP_BSREM_I",
+    "Z3enums.OP_BUREM_I",
+    "Z3enums.OP_BSMOD_I",
+    "Z3enums.OP_PR_UNDEF",
+    "Z3enums.OP_PR_TRUE",
+    "Z3enums.OP_PR_ASSERTED",
+    "Z3enums.OP_PR_GOAL",
+    "Z3enums.OP_PR_MODUS_PONENS",
+    "Z3enums.OP_PR_REFLEXIVITY",
+    "Z3enums.OP_PR_SYMMETRY",
+    "Z3enums.OP_PR_TRANSITIVITY",
+    "Z3enums.OP_PR_TRANSITIVITY_STAR",
+    "Z3enums.OP_PR_MONOTONICITY",
+    "Z3enums.OP_PR_QUANT_INTRO",
+    "Z3enums.OP_PR_BIND",
+    "Z3enums.OP_PR_DISTRIBUTIVITY",
+    "Z3enums.OP_PR_AND_ELIM",
+    "Z3enums.OP_PR_NOT_OR_ELIM",
+    "Z3enums.OP_PR_REWRITE",
+    "Z3enums.OP_PR_REWRITE_STAR",
+    "Z3enums.OP_PR_PULL_QUANT",
+    "Z3enums.OP_PR_PUSH_QUANT",
+    "Z3enums.OP_PR_ELIM_UNUSED_VARS",
+    "Z3enums.OP_PR_DER",
+    "Z3enums.OP_PR_QUANT_INST",
+    "Z3enums.OP_PR_HYPOTHESIS",
+    "Z3enums.OP_PR_LEMMA",
+    "Z3enums.OP_PR_UNIT_RESOLUTION",
+    "Z3enums.OP_PR_IFF_TRUE",
+    "Z3enums.OP_PR_IFF_FALSE",
+    "Z3enums.OP_PR_COMMUTATIVITY",
+    "Z3enums.OP_PR_DEF_AXIOM",
+    "Z3enums.OP_PR_ASSUMPTION_ADD",
+    "Z3enums.OP_PR_LEMMA_ADD",
+    "Z3enums.OP_PR_REDUNDANT_DEL",
+    "Z3enums.OP_PR_CLAUSE_TRAIL",
+    "Z3enums.OP_PR_DEF_INTRO",
+    "Z3enums.OP_PR_APPLY_DEF",
+    "Z3enums.OP_PR_IFF_OEQ",
+    "Z3enums.OP_PR_NNF_POS",
+    "Z3enums.OP_PR_NNF_NEG",
+    "Z3enums.OP_PR_SKOLEMIZE",
+    "Z3enums.OP_PR_MODUS_PONENS_OEQ",
+    "Z3enums.OP_PR_TH_LEMMA",
+    "Z3enums.OP_PR_HYPER_RESOLVE",
+    "Z3enums.OP_RA_STORE",
+    "Z3enums.OP_RA_EMPTY",
+    "Z3enums.OP_RA_IS_EMPTY",
+    "Z3enums.OP_RA_JOIN",
+    "Z3enums.OP_RA_UNION",
+    "Z3enums.OP_RA_WIDEN",
+    "Z3enums.OP_RA_PROJECT",
+    "Z3enums.OP_RA_FILTER",
+    "Z3enums.OP_RA_NEGATION_FILTER",
+    "Z3enums.OP_RA_RENAME",
+    "Z3enums.OP_RA_COMPLEMENT",
+    "Z3enums.OP_RA_SELECT",
+    "Z3enums.OP_RA_CLONE",
+    "Z3enums.OP_FD_CONSTANT",
+    "Z3enums.OP_FD_LT",
+    "Z3enums.OP_SEQ_UNIT",
+    "Z3enums.OP_SEQ_EMPTY",
+    "Z3enums.OP_SEQ_CONCAT",
+    "Z3enums.OP_SEQ_PREFIX",
+    "Z3enums.OP_SEQ_SUFFIX",
+    "Z3enums.OP_SEQ_CONTAINS",
+    "Z3enums.OP_SEQ_EXTRACT",
+    "Z3enums.OP_SEQ_REPLACE",
+    "Z3enums.OP_SEQ_REPLACE_RE",
+    "Z3enums.OP_SEQ_REPLACE_RE_ALL",
+    "Z3enums.OP_SEQ_REPLACE_ALL",
+    "Z3enums.OP_SEQ_AT",
+    "Z3enums.OP_SEQ_NTH",
+    "Z3enums.OP_SEQ_LENGTH",
+    "Z3enums.OP_SEQ_INDEX",
+    "Z3enums.OP_SEQ_LAST_INDEX",
+    "Z3enums.OP_SEQ_TO_RE",
+    "Z3enums.OP_SEQ_IN_RE",
+    "Z3enums.OP_SEQ_MAP",
+    "Z3enums.OP_SEQ_MAPI",
+    "Z3enums.OP_SEQ_FOLDL",
+    "Z3enums.OP_SEQ_FOLDLI",
+    "Z3enums.OP_STR_TO_INT",
+    "Z3enums.OP_INT_TO_STR",
+    "Z3enums.OP_UBV_TO_STR",
+    "Z3enums.OP_SBV_TO_STR",
+    "Z3enums.OP_STR_TO_CODE",
+    "Z3enums.OP_STR_FROM_CODE",
+    "Z3enums.OP_STRING_LT",
+    "Z3enums.OP_STRING_LE",
+    "Z3enums.OP_RE_PLUS",
+    "Z3enums.OP_RE_STAR",
+    "Z3enums.OP_RE_OPTION",
+    "Z3enums.OP_RE_CONCAT",
+    "Z3enums.OP_RE_UNION",
+    "Z3enums.OP_RE_RANGE",
+    "Z3enums.OP_RE_DIFF",
+    "Z3enums.OP_RE_INTERSECT",
+    "Z3enums.OP_RE_LOOP",
+    "Z3enums.OP_RE_POWER",
+    "Z3enums.OP_RE_COMPLEMENT",
+    "Z3enums.OP_RE_EMPTY_SET",
+    "Z3enums.OP_RE_FULL_SET",
+    "Z3enums.OP_RE_FULL_CHAR_SET",
+    "Z3enums.OP_RE_OF_PRED",
+    "Z3enums.OP_RE_REVERSE",
+    "Z3enums.OP_RE_DERIVATIVE",
+    "Z3enums.OP_CHAR_CONST",
+    "Z3enums.OP_CHAR_LE",
+    "Z3enums.OP_CHAR_TO_INT",
+    "Z3enums.OP_CHAR_TO_BV",
+    "Z3enums.OP_CHAR_FROM_BV",
+    "Z3enums.OP_CHAR_IS_DIGIT",
+    "Z3enums.OP_LABEL",
+    "Z3enums.OP_LABEL_LIT",
+    "Z3enums.OP_DT_CONSTRUCTOR",
+    "Z3enums.OP_DT_RECOGNISER",
+    "Z3enums.OP_DT_IS",
+    "Z3enums.OP_DT_ACCESSOR",
+    "Z3enums.OP_DT_UPDATE_FIELD",
+    "Z3enums.OP_PB_AT_MOST",
+    "Z3enums.OP_PB_AT_LEAST",
+    "Z3enums.OP_PB_LE",
+    "Z3enums.OP_PB_GE",
+    "Z3enums.OP_PB_EQ",
+    "Z3enums.OP_SPECIAL_RELATION_LO",
+    "Z3enums.OP_SPECIAL_RELATION_PO",
+    "Z3enums.OP_SPECIAL_RELATION_PLO",
+    "Z3enums.OP_SPECIAL_RELATION_TO",
+    "Z3enums.OP_SPECIAL_RELATION_TC",
+    "Z3enums.OP_SPECIAL_RELATION_TRC",
+    "Z3enums.OP_FPA_RM_NEAREST_TIES_TO_EVEN",
+    "Z3enums.OP_FPA_RM_NEAREST_TIES_TO_AWAY",
+    "Z3enums.OP_FPA_RM_TOWARD_POSITIVE",
+    "Z3enums.OP_FPA_RM_TOWARD_NEGATIVE",
+    "Z3enums.OP_FPA_RM_TOWARD_ZERO",
+    "Z3enums.OP_FPA_NUM",
+    "Z3enums.OP_FPA_PLUS_INF",
+    "Z3enums.OP_FPA_MINUS_INF",
+    "Z3enums.OP_FPA_NAN",
+    "Z3enums.OP_FPA_PLUS_ZERO",
+    "Z3enums.OP_FPA_MINUS_ZERO",
+    "Z3enums.OP_FPA_ADD",
+    "Z3enums.OP_FPA_SUB",
+    "Z3enums.OP_FPA_NEG",
+    "Z3enums.OP_FPA_MUL",
+    "Z3enums.OP_FPA_DIV",
+    "Z3enums.OP_FPA_REM",
+    "Z3enums.OP_FPA_ABS",
+    "Z3enums.OP_FPA_MIN",
+    "Z3enums.OP_FPA_MAX",
+    "Z3enums.OP_FPA_FMA",
+    "Z3enums.OP_FPA_SQRT",
+    "Z3enums.OP_FPA_ROUND_TO_INTEGRAL",
+    "Z3enums.OP_FPA_EQ",
+    "Z3enums.OP_FPA_LT",
+    "Z3enums.OP_FPA_GT",
+    "Z3enums.OP_FPA_LE",
+    "Z3enums.OP_FPA_GE",
+    "Z3enums.OP_FPA_IS_NAN",
+    "Z3enums.OP_FPA_IS_INF",
+    "Z3enums.OP_FPA_IS_ZERO",
+    "Z3enums.OP_FPA_IS_NORMAL",
+    "Z3enums.OP_FPA_IS_SUBNORMAL",
+    "Z3enums.OP_FPA_IS_NEGATIVE",
+    "Z3enums.OP_FPA_IS_POSITIVE",
+    "Z3enums.OP_FPA_FP",
+    "Z3enums.OP_FPA_TO_FP",
+    "Z3enums.OP_FPA_TO_FP_UNSIGNED",
+    "Z3enums.OP_FPA_TO_UBV",
+    "Z3enums.OP_FPA_TO_SBV",
+    "Z3enums.OP_FPA_TO_REAL",
+    "Z3enums.OP_FPA_TO_IEEE_BV",
+    "Z3enums.OP_FPA_BVWRAP",
+    "Z3enums.OP_FPA_BV2RM",
+    "Z3enums.OP_INTERNAL",
+    "Z3enums.OP_RECURSIVE",
+    "Z3enums.OP_UNINTERPRETED",
+    "Z3enums.PK_BOOL",
+    "Z3enums.PK_DOUBLE",
+    "Z3enums.PK_SYMBOL",
+    "Z3enums.PK_STRING",
+    "Z3enums.PK_OTHER",
+    "Z3enums.PK_INVALID",
+    "Z3enums.PRINT_LOW_LEVEL",
+    "Z3enums.PRINT_SMTLIB2_COMPLIANT",
+    "Z3enums.SORT_ERROR",
+    "Z3enums.IOB",
+    "Z3enums.INVALID_ARG",
+    "Z3enums.PARSER_ERROR",
+    "Z3enums.NO_PARSER",
+    "Z3enums.INVALID_PATTERN",
+    "Z3enums.MEMOUT_FAIL",
+    "Z3enums.FILE_ACCESS_ERROR",
+    "Z3enums.INTERNAL_FATAL",
+    "Z3enums.INVALID_USAGE",
+    "Z3enums.DEC_REF_ERROR",
+    "Z3enums.EXCEPTION"
+  ],
+  "modules": [
+    "Z3enums",
+    "Z3native"
+  ],
+  "watchlist": {
+    "present": [],
+    "missing": [
+      "Z3",
+      "Z3.Solver.add",
+      "Z3.Optimize.minimize",
+      "Z3.Expr.mk_app"
+    ]
+  }
+}

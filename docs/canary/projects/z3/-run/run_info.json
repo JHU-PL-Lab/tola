@@ -1,37 +1,12 @@
 {
   "project": "z3",
-  "variants": [
-    {
-      "id": "dev_1d8c50",
-      "version": "dev",
-      "ref": "HEAD",
-      "source": "local:/home/red/code/contrib/z3-all/z3",
-      "distro": "linux",
-      "system_pm": "apt",
-      "opam_switch": "default",
-      "ocaml_version": "5.4.1",
-      "timestamp": "2026-07-21 14:55:55.820",
-      "actions": ["fetch_source", "scan_source", "configure", "build_headers", "build_lib", "install_lib", "fetch_lib", "build_binding_ocaml", "pack_binding_ocaml", "pack_binding_ocaml_inspect", "pack_binding_ocaml_stub_inspect", "probe_binding_ocaml", "probe_binding_ocaml_opam", "fetch_binding_python", "fetch_binding_python_inspect", "probe_binding_python", "probe_lib", "probe_lib_inspect", "probe_lib_staged", "probe_lib_staged_inspect", "probe_lib_apt", "probe_lib_apt_inspect"],
-      "extra": {
-      "official": "false",
-      "remote": "https://github.com/arbipher/z3.git"
-      }
-    },
-    {
-      "id": "stable",
-      "version": "4.15.2",
-      "ref": "bd3e722",
-      "source": "local:/home/red/code/contrib/z3-all/z3-stable",
-      "distro": "linux",
-      "system_pm": "apt",
-      "opam_switch": "default",
-      "ocaml_version": "5.4.1",
-      "timestamp": "2026-07-21 14:55:55.820",
-      "actions": ["fetch_lib", "probe_binding_ocaml", "fetch_binding_python", "fetch_binding_python_inspect", "probe_binding_python", "probe_lib", "probe_lib_inspect"],
-      "extra": {
-      "official": "true",
-      "remote": "https://github.com/Z3Prover/z3.git"
-      }
-    }
-  ]
+  "version": "scenario",
+  "ref": "",
+  "source": "prebuilt",
+  "distro": "linux",
+  "system_pm": "apt",
+  "opam_switch": "default",
+  "ocaml_version": "5.4.1",
+  "timestamp": "2026-08-13 01:04:06.775",
+  "actions": ["fetch_source", "fetch_lib", "fetch_binding_ocaml", "probe_binding_ocaml", "probe_lib", "probe_lib_inspect"]
 }

@@ -23,6 +23,19 @@ CANARY = eval $$(opam env) && dune exec src/bin/canary_main.exe --
 canary:
 	$(CANARY) run
 
+# ── Post-check tests: run after every session / before commit ──
+# Fast pure + shell tests — always safe, always run.
+canary-test:
+	@echo "=== project-test (pure) ==="
+	@$(CANARY) project-test 2>&1 | tail -3
+	@echo ""
+	@echo "=== artifact-test (pure + shell) ==="
+	@$(CANARY) artifact-test 2>&1 | tail -2
+	@echo ""
+	@echo "=== pm-test (shell) ==="
+	@$(CANARY) pm-test 2>&1 | tail -2
+
+# Heavy integration tests — run less frequently, verify full pipeline.
 canary-sqlite:
 	$(CANARY) action sqlite
 
@@ -31,6 +44,12 @@ canary-z3:
 
 canary-llvm:
 	$(CANARY) action llvm
+
+canary-tiny1-bridge:
+	$(CANARY) action tiny1/symbol_missing
+
+canary-post-check: canary-sqlite canary-tiny1-bridge
+	@echo "post-check: sqlite + tiny1 bridge both passed"
 
 canary_local:
 	$(CANARY) local

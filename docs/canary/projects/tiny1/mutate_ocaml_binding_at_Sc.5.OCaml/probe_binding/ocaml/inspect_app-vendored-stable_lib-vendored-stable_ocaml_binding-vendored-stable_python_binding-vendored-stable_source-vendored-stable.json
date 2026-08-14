@@ -1,0 +1,30 @@
+{
+  "kind": "ocaml_mli",
+  "path": "canary/examples/tiny/scenarios/_cache/mutate_ocaml_binding_at_Sc.5.OCaml/workspace/ocaml/tiny.mli",
+  "counts": {
+    "vals": 2,
+    "externals": 0,
+    "constructors": 0,
+    "modules": 1
+  },
+  "vals": [
+    "Tiny.diff",
+    "Tiny.offset"
+  ],
+  "externals": [],
+  "externals_detail": [],
+  "constructors": [],
+  "modules": [
+    "Tiny"
+  ],
+  "watchlist": {
+    "present": [
+      "Tiny",
+      "Tiny.diff",
+      "Tiny.offset"
+    ],
+    "missing": [
+      "Tiny.sum"
+    ]
+  }
+}

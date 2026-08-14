@@ -32,6 +32,9 @@ docs/canary/projects/tiny/
 docs/canary/projects/tiny-full/
 docs/canary/projects/tiny-full-thin/
 docs/canary/projects/sqlite/
+# compiled probe binaries — copied by accident pre-2026-08-13 (the docs copy
+# is filtered now); the 4 tracked ones were removed 2026-08-13.
+docs/**/ssl_app_*
 
 !__init__.py
 
