@@ -183,36 +183,32 @@ let sqlite_amalg (chan : Canary_basic.channel) :
    [Canary_enumerate.provision_of]/[channel_of]); the realizations
    ([runner_spec] / [built_spec]) are the command templates. [pr_runner_spec]
    is just their composition — no placement digging inside it. *)
-(* dispatch is now universal: [Canary_action_table.dispatch] *)
+(* dispatch is now universal: [Canary_action_templates.dispatch] *)
 
 (* ── A9-step-2: action-variant table ── *)
 let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
-  let open Canary_action_table in
+  let open Canary_action_templates in
   let ocaml = sqlite_ocaml_config.ocaml in
   let _, _, amalg_url = sqlite_amalg chan in
   [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
-      ar_template = Primitive ("fetch_lib",
-                      [ ("linux_pkg", "libsqlite3-dev");
-                        ("macos_pkg", "sqlite3") ]) };
+      ar_template = Fetch_lib { linux_pkg = "libsqlite3-dev"; macos_pkg = "sqlite3" } };
     { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml);
-      ar_template = Primitive ("fetch_binding_opam", [ ("pkg", "sqlite3") ]) };
+      ar_template = Fetch_binding_opam { pkg = "sqlite3" } };
     { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
-      ar_template = Primitive ("pip_install", [ ("pkg", "stdlib") ]) };
+      ar_template = Pip_install { pkg = "stdlib" } };
     { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
-      ar_template = Primitive ("ocaml_probe",
-                      [ ("binding_lib", ocaml.binding_lib_name);
-                        ("example", ocaml.example_file);
-                        ("target", ocaml.example_target) ]) };
+      ar_template = Ocaml_probe { binding_lib = ocaml.binding_lib_name;
+                example = ocaml.example_file;
+                target = ocaml.example_target } };
     { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
-      ar_template = Primitive ("python_probe",
-                      [ ("snippet",
-                         "import sqlite3; print('sqlite_version=' + \
-                          sqlite3.sqlite_version); \
-                          sqlite3.connect(':memory:').execute('SELECT \
-                          1').fetchone(); print('sqlite3 ok')") ]) };
+      ar_template = Python_probe
+                { snippet =
+                    "import sqlite3; print('sqlite_version=' + \
+                     sqlite3.sqlite_version); \
+                     sqlite3.connect(':memory:').execute('SELECT \
+                     1').fetchone(); print('sqlite3 ok')" } };
     { ar_action = Canary_basic.Fetch Canary_basic.Source;
-      ar_template = Primitive ("curl_unzip",
-                      [ ("url", amalg_url); ("dest", workspace ^ "/src") ]) };
+      ar_template = Curl_unzip { url = amalg_url; dest = workspace ^ "/src" } };
     (* Self-contained Build: the amalgamation is fetched inside build_lib
        (the Fetch Source row above is filtered — a_source not in ps_universe).
        Fold the fetch guard into the build command. *)
@@ -236,21 +232,21 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
             libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
     { ar_action = Canary_basic.Probe_lib;
-      ar_template = Primitive ("native_lib_probe",
-                      [ ("location", "build_tree");
-                        ("lib", workspace ^ "/lib/libsqlite3.so");
-                        ("prefix", "sqlite3_") ]) };
+      ar_template = Native_lib_probe
+                { location = Build_tree_lib { lib = workspace ^ "/lib/libsqlite3.so" };
+                  prefix = "sqlite3_" } };
     (* PM probe with pkg-config-less fallback (dpkg -L + ldconfig).
        sqlite3 has no .pc file; the fallback chain resolves through the
        apt dev package list and the dynamic linker cache. *)
     { ar_action = Canary_basic.Probe_lib;
-      ar_template = Primitive ("native_lib_probe",
-                      [ ("location", "pm");
-                        ("pm_pkg", "sqlite3");
-                        ("lib_name", "libsqlite3.so");
-                        ("dpkg_pkg", "libsqlite3-dev");
-                        ("ldconfig_name", "libsqlite3.so");
-                        ("prefix", "sqlite3_") ]) };
+      ar_template = Native_lib_probe
+                { location =
+                    Pm_lib
+                      { pm_pkg = "sqlite3"; lib_name = "libsqlite3.so";
+                        dpkg_pkg = Some "libsqlite3-dev";
+                        ldconfig_name = Some "libsqlite3.so";
+                        brew_pkg = None };
+                  prefix = "sqlite3_" } };
   ]
 
 (* Shared project-level configuration — inspect, artifact names, stores.
@@ -289,7 +285,7 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
     | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib
     | _ -> Canary_basic.Stable
   in
-  let spec = Canary_action_table.realize (sqlite_table_rows ~workspace chan) a in
+  let spec = Canary_action_templates.realize (sqlite_table_rows ~workspace chan) a in
   let dotted, _, _ = sqlite_amalg chan in
   let version_line = "sqlite_version=" ^ dotted in
   let ocaml = sqlite_ocaml_config.ocaml in
@@ -320,7 +316,7 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
 let sqlite_ci_spec ~workspace =
   let rows = sqlite_table_rows ~workspace Canary_basic.Stable in
   let a = Canary_artifact.[ (Canary_artifact.a_lib, { provision = Canary_artifact.Fetched; version = Canary_basic.good Canary_basic.Stable }) ] in
-  Canary_action_table.realize_from_rows ~assignment:a ~base:base_spec rows
+  Canary_action_templates.realize_from_rows ~assignment:a ~base:base_spec rows
 
 let sqlite_artifacts : Canary_project_spec.artifact_row list =
   [ (* The source row (2026-08-13, spec-check fulfillment): Fetched@

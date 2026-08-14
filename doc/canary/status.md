@@ -78,8 +78,13 @@ General code quality: testing coverage, dead-code elimination, refactoring.
   rows are provision-filtered; `-G Ninja` restored. FINDING: official z3
   HEAD's OCaml binding is broken upstream — the arbipher fork restored as
   the Dev source (see `project/status_project.md`).
-- [ ] **Typed template dispatch** — A9-step-2 template dispatch is string-keyed; typed
-  variant for compile-time safety.
+- [x] **Typed template dispatch** (2026-08-14) — `canary_action_table.ml` →
+  `canary_action_templates.ml`: the 19 string-keyed primitives became typed
+  constructors (project rows name WHAT; tool/ owns HOW; a bad param is a
+  compile error). `probe_lib_location` is a typed variant (build_tree lib /
+  build_tree glob / staged / pm). All 37 `Primitive` sites in z3/llvm/sqlite
+  converted; `templates.source_fetch_local_skips_clone` pins the restored
+  locals behavior (M3 item 1 folded in).
 - [ ] **Module-init side effects** — skip PM detection for PM-irrelevant commands.
 - [ ] **Confirm the general pre/post-checking picture** (user, 2026-08-12) —
   the user originally wanted pre + post checking for ALL actions in slow

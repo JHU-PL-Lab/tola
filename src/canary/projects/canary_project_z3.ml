@@ -765,11 +765,11 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
    existing [mk_runner_spec ~source:…] raw specs (command churn zero — the
    whole hand-written spec IS the realization; decomposing it into shared
    templates is A9-step-2). *)
-(* dispatch is now universal: [Canary_action_table.dispatch] *)
+(* dispatch is now universal: [Canary_action_templates.dispatch] *)
 
 (* ── A9-step-2: action-variant table ── *)
 let z3_table_rows ~(chan : Canary_basic.channel) ~distro =
-  let open Canary_action_table in
+  let open Canary_action_templates in
   let source = z3_source_of chan in
   let { version; ref_; name; remote; _ } : Canary_artifact_source.source_repo = source in
   let ver_str = Canary_basic.string_of_version version in
@@ -790,79 +790,84 @@ let z3_table_rows ~(chan : Canary_basic.channel) ~distro =
   in
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
-        ar_template = Primitive ("fetch_lib",
-                        [ ("linux_pkg", "libz3-dev"); ("macos_pkg", "z3") ]) };
+        ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };
       { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
-        ar_template = Primitive ("pip_install", [ ("pkg", "z3-solver") ]) };
+        ar_template = Pip_install { pkg = "z3-solver" } };
       { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
-        ar_template = Primitive ("python_probe",
-                        [ ("snippet", "import z3; s = z3.Solver(); s.add(z3.Int('x') > 0); \
-                           print('z3 ok:' + str(s.check()))") ]) };
+        ar_template = Python_probe
+                { snippet =
+                    "import z3; s = z3.Solver(); s.add(z3.Int('x') > 0); \
+                     print('z3 ok:' + str(s.check()))" } };
       { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
-        ar_template = Primitive ("ocaml_probe",
-                        [ ("binding_lib", "z3");
-                          ("example", "canary/examples/z3/z3_example.ml");
-                          ("target", "z3_example") ]) };
+        ar_template = Ocaml_probe { binding_lib = "z3";
+                example = "canary/examples/z3/z3_example.ml";
+                target = "z3_example" } };
       { ar_action = Canary_basic.Probe_lib;
-        ar_template = Primitive ("native_lib_probe",
-                        [ ("location", "pm"); ("pm_pkg", "z3"); ("prefix", "Z3_"); ("lib_name", "libz3.so") ]) };
+        ar_template = Native_lib_probe
+                { location =
+                    Pm_lib { pm_pkg = "z3"; lib_name = "libz3.so";
+                             dpkg_pkg = None; ldconfig_name = None;
+                             brew_pkg = None };
+                  prefix = "Z3_" } };
     ]
   in
   let dev =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
-        ar_template = Primitive ("source_fetch",
-                        [ ("name", name); ("ver_str", ver_str);
-                          ("ref_", ref_); ("url", url) ]) };
+        ar_template = Source_fetch
+                { name; ver_str; ref_; url;
+                  local = Option.map local ~f:(fun l -> l.path) } };
       { ar_action = Canary_basic.Scan_sources;
-        ar_template = Primitive ("scan_source",
-                        [ ("root", root); ("hdr_file", "src/api/z3.h") ]) };
+        ar_template = Scan_source { root; hdr_file = "src/api/z3.h" } };
       { ar_action = Canary_basic.Build_headers;
-        ar_template = Primitive ("build_headers",
-                        [ ("root", root); ("hdr_dir", "src/api") ]) };
+        ar_template = Build_headers { root; hdr_dir = "src/api" } };
       { ar_action = Canary_basic.Configure;
-        ar_template = Primitive ("cmake_configure",
-                        [ ("cmake_exec", if cmake_build_binding then "opam exec -- cmake" else "cmake");
-                          (* -G Ninja is REQUIRED: without it cmake defaults to
-                             Unix Makefiles and the ninja_build step finds no
-                             build.ninja (the old mk_runner_spec's flags had
-                             it; the table row dropped it). *)
-                          ("flags", "-G Ninja -DZ3_BUILD_LIBZ3_SHARED=TRUE -DZ3_BUILD_OCAML_BINDINGS="
-                                    ^ (if cmake_build_binding then "ON" else "OFF"));
-                          ("src", root); ("build", build) ]) };
+        ar_template = Cmake_configure
+                { cmake_exec =
+                    (if cmake_build_binding then "opam exec -- cmake" else "cmake");
+                  (* -G Ninja is REQUIRED: without it cmake defaults to
+                     Unix Makefiles and the ninja_build step finds no
+                     build.ninja (the old mk_runner_spec's flags had
+                     it; the table row dropped it). *)
+                  flags =
+                    String.split
+                      ("-G Ninja -DZ3_BUILD_LIBZ3_SHARED=TRUE -DZ3_BUILD_OCAML_BINDINGS="
+                       ^ (if cmake_build_binding then "ON" else "OFF"))
+                      ~on:' ';
+                  src = root; build } };
       { ar_action = Canary_basic.Build_lib;
-        ar_template = Primitive ("ninja_build", [ ("target", "libz3"); ("build", build) ]) };
+        ar_template = Ninja_build { target = "libz3"; build } };
       { ar_action = Canary_basic.Install_lib;
-        ar_template = Primitive ("cmake_install",
-                        [ ("build", build); ("prefix", build ^ "/../install") ]) };
+        ar_template = Cmake_install { build; prefix = build ^ "/../install" } };
       { ar_action = Canary_basic.Build_binding Canary_lang.OCaml;
-        ar_template = Primitive ("ninja_build_binding",
-                        [ ("target", "build_z3_ocaml_bindings"); ("build", build);
-                          (* The binding target's POST_BUILD self-check runs the
-                             bytecode + native examples with AMBIENT dll search:
-                             the switch's stale dllz3ml.so (pinned z3 / z3.dev)
-                             shadows the fresh one (CAML_LD_LIBRARY_PATH beats the
-                             bytecode's -dllpath — reproduced 2026-08-13 as
-                             "unknown C primitive 'n_solver_register_on_clause'"),
-                             and the native run's libz3.so needs LD_LIBRARY_PATH
-                             (the CMakeLists' DYLD_LIBRARY_PATH is a macOS no-op).
-                             Prefix the build dir so the self-check sees the
-                             artifact it just built. *)
-                          (* $(pwd): the guard paths must be ABSOLUTE — the
-                             POST_BUILD self-check runs from <build>/src/api/ml,
-                             so a relative entry resolves against the wrong cwd
-                             and the stale stublibs dll wins again. *)
-                          ("env_guard",
-                           Printf.sprintf "CAML_LD_LIBRARY_PATH=$(pwd)/%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=$(pwd)/%s"
-                             build build) ]) };
+        ar_template = Ninja_build_binding
+                { target = "build_z3_ocaml_bindings"; build;
+                  (* The binding target's POST_BUILD self-check runs the
+                     bytecode + native examples with AMBIENT dll search:
+                     the switch's stale dllz3ml.so (pinned z3 / z3.dev)
+                     shadows the fresh one (CAML_LD_LIBRARY_PATH beats the
+                     bytecode's -dllpath — reproduced 2026-08-13 as
+                     "unknown C primitive 'n_solver_register_on_clause'"),
+                     and the native run's libz3.so needs LD_LIBRARY_PATH
+                     (the CMakeLists' DYLD_LIBRARY_PATH is a macOS no-op).
+                     Prefix the build dir so the self-check sees the
+                     artifact it just built. *)
+                  (* $(pwd): the guard paths must be ABSOLUTE — the
+                     POST_BUILD self-check runs from <build>/src/api/ml,
+                     so a relative entry resolves against the wrong cwd
+                     and the stale stublibs dll wins again. *)
+                  env_guard =
+                    Some
+                      (Printf.sprintf
+                         "CAML_LD_LIBRARY_PATH=$(pwd)/%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=$(pwd)/%s"
+                         build build) } };
       { ar_action = Canary_basic.Probe_lib;
-        ar_template = Primitive ("native_lib_probe",
-                        [ ("location", "build_tree"); ("build", build); ("lib_glob", "libz3.so");
-                          ("prefix", "Z3_") ]) };
+        ar_template = Native_lib_probe
+                { location = Build_tree_glob { lib_glob = "libz3.so"; build };
+                  prefix = "Z3_" } };
       { ar_action = Canary_basic.Probe_lib;
-        ar_template = Primitive ("native_lib_probe",
-                        [ ("location", "staged");
-                          ("lib", build ^ "/../install/lib/libz3.so");
-                          ("prefix", "Z3_") ]) };
+        ar_template = Native_lib_probe
+                { location = Staged_lib { lib = build ^ "/../install/lib/libz3.so" };
+                  prefix = "Z3_" } };
       { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
         ar_template = Raw (fun ~output_dir ~variant_key ->
             let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
@@ -929,7 +934,7 @@ let realize a =
   let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
     | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib | _ -> Canary_basic.Stable
   in
-  let spec = Canary_action_table.realize (z3_table_rows ~chan ~distro:(detect_distro ())) a in
+  let spec = Canary_action_templates.realize (z3_table_rows ~chan ~distro:(detect_distro ())) a in
   let binding_fetched =
     Canary_enumerate.equal_provision
       (Canary_enumerate.provision_of a z3_binding_art)
@@ -1026,7 +1031,7 @@ let realize a =
 (* CI spec: same as Dev_chain but without cmake steps (build_lib=false,
    cmake_build_binding=false). The opam pack_binding step still runs. *)
 let z3_ci_spec _tola_root distro =
-  let open Canary_action_table in
+  let open Canary_action_templates in
   let rows = z3_table_rows ~chan:Canary_basic.Dev ~distro in
   let no_cmake (row : action_row) =
     match row.ar_action with

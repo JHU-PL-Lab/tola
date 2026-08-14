@@ -578,6 +578,30 @@ let mechanism_catalogue_test : pure_test =
    tiny's formerly hand-written rows — the refactor is provably
    no-behavior-change. The template IS the standard; a row added here
    must match the paths the inspect steps actually write. *)
+(* M1 typed-template pin (2026-08-14): [Source_fetch]'s [local] field
+   restores the old [source_fetch_cmd] behavior — a declared local
+   checkout makes fetch a [test -d], no clone (the waste item in
+   status_project.md). *)
+let source_fetch_local_pin : pure_test =
+  { name = "templates.source_fetch_local_skips_clone";
+    check = (fun () ->
+      let mk ?local () =
+        let spec =
+          Canary_action_templates.realize_template
+            (Canary_action_templates.Source_fetch
+               { name = "z3"; ver_str = "dev"; ref_ = "HEAD";
+                 url = "https://example.invalid/z3.git"; local })
+        in
+        match spec.Canary_step_builder.fetch_source with
+        | Some cmd -> cmd ~output_dir:"OUT" ~variant_key:"vk"
+        | None -> ""
+      in
+      let with_local = mk ~local:"/home/red/code/contrib/z3-all/z3" () in
+      let without_local = mk () in
+      String.is_substring with_local ~substring:"test -d"
+      && (not (String.is_substring with_local ~substring:"git clone"))
+      && String.is_substring without_local ~substring:"git clone") }
+
 let inputs_template_pin : pure_test =
   { name = "mechanism.inputs_template_matches_tiny_convention";
     check = (fun () ->
@@ -1097,7 +1121,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
-      subset_intersects_universe_test; mechanism_catalogue_test; inputs_template_pin; mechanism_chain_shape_pin;
+      subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_pin; inputs_template_pin; mechanism_chain_shape_pin;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       deploy_mismatch_test;
