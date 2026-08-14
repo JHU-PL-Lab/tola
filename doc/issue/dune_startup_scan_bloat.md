@@ -1,8 +1,8 @@
 # Issue — dune startup scans the run-output dirs (3.5s overhead per command)
 
-**Status**: fixed 2026-08-13 — in the WORKING TREE only (uncommitted on
-`ds-workflow`, like all post-2026-08-06 work). A fresh checkout from HEAD
-(`75b067e`) has neither fix; see §5.
+**Status**: fixed 2026-08-13; committed 2026-08-14 in `b822d88`
+(checkpoint — the two-agent M2/M3 state). Worktrees based on `b822d88`
+or later inherit the fix.
 **Found**: 2026-08-13, user report: "any canary command takes time to scan
 the project directory, which is not the same as before"
 **Fix**: root `dune` `(dirs ...)` exclusion + filtered docs copy in
@@ -81,15 +81,12 @@ gitignored (`docs/**/ssl_app_*`); they show as `D` pending commit.
   per-scenario probe logs, install-diff JSONs), zero junk added
 - `make canary-test`: 60/60 + 107/107 + 14/14
 
-## 5. ⚠️ Worktree preparation
+## 5. Worktree preparation — resolved
 
-**Nothing here is committed.** HEAD is `75b067e` (2026-08-06); `ds-workflow`
-carries ~2 weeks of uncommitted work, and these fixes are part of it. A
-fresh worktree from HEAD has the old root `dune` and the old blanket
-`cp -r`. A fresh checkout is fast initially (no junk), but the first
-llvm/z3 runs will grow `_out`, and at HEAD-config dune walks it (~1.2s and
-climbing). Either commit first, or replicate the root `dune` change in the
-new worktree.
+Committed in `b822d88` (2026-08-14). Worktrees based on it or later
+inherit the root `dune` exclusion and the filtered docs copy — no
+replication needed. (Pre-commit state: nothing was committed; HEAD was
+`75b067e` and a fresh worktree had the old root `dune` + blanket `cp -r`.)
 
 ## 6. Follow-ups (filed in `doc/canary/backlog.md`)
 

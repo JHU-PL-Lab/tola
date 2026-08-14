@@ -508,6 +508,30 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
 - `cc` = Claude Code (user shorthand)
 - Allowed bash: `make *` and `dune *` only
 
+## Concurrent agents (worktrees)
+
+Two agents work on this repo: a code session (this tree, `ds-workflow`)
+and a project agent (`tola-m3`, branch `m3-agent`). Setup, 2026-08-14:
+
+- **Commit first** — a new worktree bases off HEAD, so commit the
+  working tree before `git worktree add` (the dune-scan fix and tiny
+  cache relocation live in the tree, not at HEAD).
+- `git worktree add /home/red/code/research/tola-m3 -b m3-agent`
+- **Shared `_out`** — `tola-m3/_out` is a symlink to `../tola/_out`
+  (cross-run cache + run outputs shared; the tiny factory cache lives
+  there too, `_out/canary/tiny/`). Each tree's root `dune` excludes
+  `_out` from the walk.
+- **VSCode entry** — `tola/vendor/tola-m3` symlink → `../../tola-m3`
+  (gitignored; `vendor` is dune `data_only_dirs` so no recursion).
+  Add it as a workspace folder.
+- **Merge back** — normal git: commit on `m3-agent`, then
+  `git merge m3-agent` from `ds-workflow`; `git worktree remove
+  tola-m3` and `git branch -d m3-agent` after. `_out` is gitignored
+  and shared, so merges carry source only.
+- Worktree caveats: cold dune build per tree (~minutes, done once);
+  dune-scan fix inherited only if the base commit is recent; the
+  tool-routing ratchet baselines are shared — resolve at merge time.
+
 ## Handoff Workflow
 
 This file is the serialization layer for cross-machine continuity.
