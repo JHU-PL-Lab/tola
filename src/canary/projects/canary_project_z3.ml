@@ -1046,4 +1046,7 @@ let z3_run _distro : Canary_project_run.project_run =
     (* the dev-source wrapper: the Publish row installs our z3.dev opam
        package over the built tree (pin-checked "dev" on the store). *)
     pr_wrapper_pkgs = [ (Canary_lang.OCaml, "z3.dev") ];
-    pr_api_source = None }
+    pr_api_source = None;
+    (* source-built dev chain (~15-40 min cold) — the batch default runs
+       z3 THIN (stable fetch chain only). *)
+    pr_tier = Canary_project_run.Heavy }

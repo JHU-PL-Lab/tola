@@ -16,6 +16,13 @@ store-pin migration); tiny1 rides the factory. Full matrix in
 the name list drifts, or ssl's pinned binding stops enumerating 2
 distinct scenarios.
 
+**The batch runner** (2026-08-14, user): `canary action @all` runs every
+registry project under the default config — `pr_tier` groups the runs
+(`Heavy` = z3/llvm's source-built chains → THIN, bypassing the Dev
+builds; `Light` → full). `Canary_project_run.batch_policy` is the shared
+default-config function; `--thin` forces thin everywhere; explicit
+single-project runs ignore the tier. Pinned by `registry.batch_tiers`.
+
 ## 2. Bugs & issues
 
 ### Fixed — libffi binding declared Cstubs (M2 step 3 finding)

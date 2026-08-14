@@ -197,4 +197,5 @@ let run (d : t) : Canary_project_run.project_run =
     pr_runner_spec = (fun _a ~workspace:_ -> runner_spec d);
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
-    pr_api_source = None }
+    pr_api_source = None;
+    pr_tier = Canary_project_run.Light }

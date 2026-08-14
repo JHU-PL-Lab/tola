@@ -259,7 +259,8 @@ let tiny_full_run : project_run =
     pr_wrapper_pkgs = [];
     (* the in-tree witness declares its api_source HERE (its source row is
        Vendored, not repo-carried) — the spec audit reads this field. *)
-    pr_api_source = Some Canary_tiny_scenario.tiny_api_source }
+    pr_api_source = Some Canary_tiny_scenario.tiny_api_source;
+    pr_tier = Canary_project_run.Light }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──
    The thin slice is a RUNNER policy ([Canary_project_run.thin_policy] —
@@ -294,7 +295,8 @@ let project_run_of_tiny1 ~(name : string) : project_run =
         Canary_step_builder.expectation = expectation_agnostic });
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
-    pr_api_source = Some Canary_tiny_scenario.tiny_api_source }
+    pr_api_source = Some Canary_tiny_scenario.tiny_api_source;
+    pr_tier = Canary_project_run.Light }
 
 (* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)
 

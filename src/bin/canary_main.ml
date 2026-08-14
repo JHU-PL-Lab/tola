@@ -11,40 +11,7 @@ let term_of f = Term.(const f $ const ())
 
 let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
     ~failfast : unit =
-  Fmt.pr "@.%s — generic project run (enumerate → runner_spec → run)@."
-    pr.Canary_project_run.pr_name;
-  let results =
-    Canary_project_run.run_project_spec ?policy pr ~root ~failfast
-  in
-  List.iter
-    (fun (r : Canary_project_run.scenario_run_result) ->
-      let safe =
-        String.map
-          (function ':' | '#' | '+' -> '-' | c -> c)
-          (Filename.basename
-             (Canary_project_run.scenario_dir_of
-                ~pr_name:pr.Canary_project_run.pr_name
-                r.Canary_project_run.r_result_assignment))
-      in
-      let xfail_strs =
-        List.map
-          (fun (tag, ids) ->
-            tag
-            ^ match ids with [] -> "" | _ -> "[" ^ String.concat "," ids ^ "]")
-          r.Canary_project_run.r_result_xfails
-      in
-      Fmt.pr "  [%-44s] %-6s %s%s%s@." safe
-        r.Canary_project_run.r_result_verdict
-        (if r.Canary_project_run.r_result_is_bad then "(bad)" else "(good)")
-        (match xfail_strs with
-        | [] -> ""
-        | xs -> "  xfail: " ^ String.concat "," xs)
-        (if
-           String.equal r.Canary_project_run.r_result_verdict "FAIL"
-           && r.Canary_project_run.r_result_culprits <> []
-         then "  <- " ^ String.concat " " r.Canary_project_run.r_result_culprits
-         else ""))
-    results;
+  let results = Canary_batch.run_one ?policy pr ~root ~failfast in
   let bads =
     List.filter (fun r -> r.Canary_project_run.r_result_is_bad) results
   in
@@ -107,7 +74,9 @@ let action_cmd =
       value
       & pos 0 (some string) None
       & info [] ~docv:"PROJECT"
-          ~doc:"Project to run: sqlite, z3, llvm (default: all)")
+          ~doc:
+            "Project to run: sqlite, z3, llvm, … (default: @all — the batch: \
+             heavy projects thin, light full)")
   in
   let quick =
     Arg.(value & flag & info [ "quick" ] ~doc:"Skip build-from-source actions")
@@ -141,8 +110,9 @@ let action_cmd =
       value & flag
       & info [ "thin" ]
           ~doc:
-            "project_run projects (tiny-full, z3, llvm): run the thin \
-             Subset[Stable] enumeration (drops every Dev world).")
+            "Run the thin Subset[Stable] enumeration (drops every Dev world). \
+             With @all: forces thin everywhere (the batch default already \
+             runs heavy projects thin).")
   in
   (* Project registry (2026-08-11; plain [project_run]s since 2026-08-12 —
      the [Multi] entry kind retired with ssl's store-pin migration). *)
@@ -184,6 +154,13 @@ let action_cmd =
         let name = String.sub p 5 (String.length p - 5) in
         Canary_project_tiny.run_tiny_scenario ~root ~failfast ~cache_path
           ~cli_disabled ~name ()
+    | Some "@all" | None ->
+        (* THE batch (2026-08-14): [Canary_batch.run] over the registry —
+           the default config is tier-based (Heavy thin, Light full);
+           --thin forces thin everywhere; a single-project run always
+           uses the full policy. *)
+        Canary_batch.run ~force_thin:thin ~root ~failfast
+          Canary_registry.all_projects
     | Some name -> (
         match List.assoc_opt name Canary_registry.all_projects with
         | Some pr -> run_pr pr
@@ -194,9 +171,6 @@ let action_cmd =
               |> String.concat ", "
             in
             Fmt.pr "Unknown project: %s (available: %s)@." name available)
-    | None ->
-        (* run every registry project (the "all" smoke) *)
-        List.iter (fun (_name, pr) -> run_pr pr) Canary_registry.all_projects
   in
   Cmd.v
     (Cmd.info "action" ~doc:"Run the action graph")

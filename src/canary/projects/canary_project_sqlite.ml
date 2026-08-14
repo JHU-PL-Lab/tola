@@ -373,4 +373,5 @@ let sqlite_run : Canary_project_run.project_run =
        lib version + a C-level consumer of sqlite3_get_clientdata). *)
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
-    pr_api_source = None }
+    pr_api_source = None;
+    pr_tier = Canary_project_run.Light }

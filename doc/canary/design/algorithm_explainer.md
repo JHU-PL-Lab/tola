@@ -166,6 +166,49 @@ Probe_binding     → terminal
 { source@D, lib@B@D, binding@B@D }   ← "scenario 3"
 ```
 
+### The policy's journey — thin as the worked example (2026-08-14)
+
+The enumeration policy is the ONE knob between the declared spec and the
+scenario set. `'m policy = { config : 'm config; mutations }` where
+`config = { provision : level; version : level; version_mode; mutation }`.
+`thin_policy ()` = `{provision=Full; version=Subset [Stable];
+version_mode=Lockstep; mutation=Free}` — every other part of the
+pipeline is policy-agnostic.
+
+1. **Declaration** — `project_run.pr_artifacts` rows carry
+   `ax_universe : (provision × channel list) list` per artifact (z3's lib:
+   `[(Fetched,[Stable]); (Built,[Dev])]`). `project_spec_of_rows` folds the
+   rows into the `project_spec` the enumerator consumes.
+2. **Enumerate** — `patterns_of ~policy spec` products the per-artifact
+   placements, then resolves each level through `resolve` (Full → all,
+   Subset → keep only listed entries). **`version=Subset [Stable]`
+   filters every per-provision version list to the Stable channel — each
+   Dev placement vanishes from the product.**
+3. **Thin ⇒ bypass the source-built chain, precisely**: it is NOT an
+   action-skip; it is version-subsetting. z3/llvm's Build rows are only
+   reachable when the lib is **Built**, and Built exists only on the Dev
+   channel. With the Dev placement gone, the product yields only the
+   Fetched worlds (z3: 2 scenarios → 1; llvm: 2 → 1), and the
+   Build-gated rows (Configure/Scan/Build_headers/Build_lib/
+   Build_binding/Publish — `action_requires_provision` gates them on a
+   Built lib) never materialize in any scenario's realize.
+4. **Realize** — `pr_runner_spec assignment ~workspace` (pure): reads the
+   surviving placements (`provision_of`/`channel_of`) and dispatches the
+   per-channel action rows (e.g. `z3_table_rows ~chan`), yielding the
+   per-scenario `runner_spec` (commands, expectations, pin-checks,
+   world assertions).
+5. **derive_steps** → ordered step list (action + cmd + deps +
+   check_pre/post + expectation).
+6. **run** — `run_project_spec` iterates the assignments (deduped by
+   `scenario_dir_of`), executes steps with the per-step cache, and
+   returns the verdicts the display layers consume.
+
+`batch_policy pr` (the batch default) selects `thin_policy ()` for
+`pr_tier = Heavy` (z3/llvm's source-built chains) and the full default
+otherwise — it is just a CHOOSER of the same policy values, fed through
+the same `?policy` channel as the CLI's `--thin` (which forces thin
+everywhere) and single-project runs (always full).
+
 ## 6. From scenarios to execution
 
 Each scenario goes through:

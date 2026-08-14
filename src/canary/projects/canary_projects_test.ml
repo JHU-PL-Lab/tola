@@ -453,7 +453,8 @@ let tiny1_bridge : Canary_project_test.pure_test =
               SB.expectation = Canary_project_tiny.expectation_agnostic });
           pr_mismatch_probes = [];
           pr_wrapper_pkgs = [];
-          pr_api_source = None }
+          pr_api_source = None;
+          pr_tier = Canary_project_run.Light }
       in
       let asgs = Canary_project_run.scenarios_of pr in
       (* Exactly 1 scenario: all artifacts Vendored@Stable *)
@@ -642,6 +643,26 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
              ~warns:[ "binding_dev_source"; "dev_wrapper_package" ]
              ~na:[ "github_remote"; "opam_package" ] "tiny-full") }
 
+(* The batch tier (2026-08-14): Heavy = source-built chains (z3/llvm);
+   [batch_policy] maps Heavy → thin (Subset[Stable] bypasses the Dev
+   builds), Light → full. THE pin for the batch default config. *)
+let batch_tier_pin : Canary_project_test.pure_test =
+  { name = "registry.batch_tiers";
+    check =
+      (fun () ->
+        let pr_of name =
+          List.Assoc.find_exn Canary_registry.all_projects name
+            ~equal:String.equal
+        in
+        let tier name = (pr_of name).Canary_project_run.pr_tier in
+        Poly.equal (tier "z3") Canary_project_run.Heavy
+        && Poly.equal (tier "llvm") Canary_project_run.Heavy
+        && List.for_all
+             [ "sqlite"; "ssl"; "tiny-full"; "zarith"; "cairo"; "libffi" ]
+             ~f:(fun n -> Poly.equal (tier n) Canary_project_run.Light)
+        && Option.is_some (Canary_project_run.batch_policy (pr_of "z3"))
+        && Option.is_none (Canary_project_run.batch_policy (pr_of "sqlite"))) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -652,4 +673,5 @@ let tests : Canary_project_test.pure_test list =
       integration_smoke;
       registry_pin;
       spec_check_every_project_pin;
-      spec_check_ratchet_pin ]
+      spec_check_ratchet_pin;
+      batch_tier_pin ]

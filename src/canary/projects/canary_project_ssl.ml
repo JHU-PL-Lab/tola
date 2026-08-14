@@ -340,7 +340,8 @@ let ssl_run : Canary_project_run.project_run =
     pr_runner_spec = (fun a ~workspace:_ -> realize a);
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
-    pr_api_source = None }
+    pr_api_source = None;
+    pr_tier = Canary_project_run.Light }
 
 (* One (version × app) cell → a runner_spec. *)
 let mk_variant ~version ~vkey ~(app : app) : string * SB.runner_spec =

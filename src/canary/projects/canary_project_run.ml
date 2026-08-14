@@ -65,6 +65,14 @@
     tiny-full, sqlite, z3 and llvm all fill this (A5 phases 2+5); ssl is the
     last raw-script [run_project_multi] holdout (migrates with
     zarith/cairo). *)
+(** Run-cost tier (2026-08-14, the batch runner): [Heavy] projects carry
+    long source-built chains (z3/llvm's Dev builds) — the batch
+    default runs them THIN (Subset[Stable], see [batch_policy]); [Light]
+    runs full. Explicit single-project runs ignore the tier. *)
+type project_tier = Light | Heavy
+
+let string_of_project_tier = function Light -> "light" | Heavy -> "heavy"
+
 type project_run = {
   pr_name : string;
   (** THE artifact table — one row per artifact. Each row carries identity,
@@ -90,6 +98,9 @@ type project_run = {
       Repo-carried projects (z3/llvm/sqlite) declare it on the source
       record instead. *)
   pr_api_source : Canary_artifact.t option;
+  (** Run-cost tier — the batch runner's default config key (see
+      [project_tier]). *)
+  pr_tier : project_tier;
 }
 
 (** The bare artifact identities of the table (display loops, langs). *)
@@ -124,6 +135,16 @@ let independent_policy () : unit Canary_enumerate.policy =
           version_mode = Canary_enumerate.Independent;
           mutation = Canary_enumerate.Free };
     mutations = [] }
+
+(** THE batch default config (2026-08-14): [Heavy] projects run THIN
+    (Subset[Stable] — their source-built chains are Dev worlds, so thin
+    bypasses them), [Light] projects run full. [None] = the full policy
+    ([scenarios_of]'s default). Explicit single-project runs ignore the
+    tier; the CLI's [--thin] overrides the batch config everywhere. *)
+let batch_policy (pr : project_run) : unit Canary_enumerate.policy option =
+  match pr.pr_tier with
+  | Heavy -> Some (thin_policy ())
+  | Light -> None
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from

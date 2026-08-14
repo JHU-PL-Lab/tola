@@ -883,4 +883,7 @@ let llvm_run _distro : Canary_project_run.project_run =
        pre-table era published llvm.dev-shared + conf-llvm-shared.dev);
        declare it empty so spec-check flags the gap. *)
     pr_wrapper_pkgs = [];
-    pr_api_source = None }
+    pr_api_source = None;
+    (* source-built dev chain (the heaviest of all) — the batch default
+       runs llvm THIN (stable fetch chain only). *)
+    pr_tier = Canary_project_run.Heavy }
