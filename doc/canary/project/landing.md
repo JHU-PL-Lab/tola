@@ -12,9 +12,9 @@ day). Coverage status is [`coverage.md`](coverage.md); bugs/todo in
 
 ## 1. Mechanics — adding a new project today
 
-Each project lives in `src/canary/projects/canary_project_<name>.ml` and is
+Each project lives in `src/canary/project/canary_project_<name>.ml` and is
 wired by **one registry entry** in
-`src/canary/projects/canary_registry.ml`. Three entry shapes, cheapest
+`src/canary/project/canary_registry.ml`. Three entry shapes, cheapest
 first:
 
 - **`simple` (Pattern A)** — system lib + opam binding, no source build.

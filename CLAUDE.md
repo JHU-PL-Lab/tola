@@ -36,7 +36,7 @@ make canary                                                  # run canary via Ma
 **Post-change verification.** After every edit that touches `src/canary/`, run
 `make canary-test`. This catches regressions in enumeration, compat theory,
 tool assumptions (nm/ocamlobjinfo/python3), and PM presence — 55 + 107 + 14
-tests, pure + shell, ~5s. The shared `Canary_project_run.run_project_spec`
+tests, pure + shell, ~5s. The shared `Canary_runner.run_project_spec`
 means both CLI and tests exercise the same pipeline. Before committing or
 ending a session, also run `make canary-post-check` (sqlite + tiny1 bridge,
 heavier, ~2min).
@@ -107,11 +107,25 @@ action/    action graph — rules, step model, step builder, paths
 backend/   step-list consumers — local runner (executes), GH YAML, HTML,
            Mermaid, run_info orchestrator
 test/      framework self-tests
-projects/  live project specs (canary_projects sub-library)
+project/   THE PROJECT layer (canary_project library, 2026-08-14): the
+           project DATATYPE + definition utils ([Canary_project_run]:
+           project_run, policies, run_config, spec helpers;
+           [Canary_pattern_a]: the definition template) PLUS the
+           concrete instantiation (the 8 specs + tiny's factory + the
+           entry modules that NAME projects: registry, CI jobs)
+main/      the RUNNING layer (canary_main library, 2026-08-14):
+           Canary_runner (run_project_spec + scenario_run_result),
+           batch runner, spec-check, the layer test suite — the shared
+           functions the cmd, the tests, and the batch runner consume;
+           takes project_run VALUES / project lists (the bin injects
+           Canary_registry.all_projects); references concrete projects
+           in TEST code only
 ```
 
 `base/`→`surface/`→`tool/`→`action/`→`backend/` is the dependency
-order; `projects/` and `test/` consume the upper layers.
+order; `project/`, `main/` and `test/` consume the upper layers.
+Dependency direction: canary_lib ← canary_project ← canary_main
+(never the reverse).
 (The retired `legacy/` sub-library was moved to
 `doc/_legacy_code/` in commit `302f1b3`; the retired Python
 tiny harness lives at `doc/_legacy_code/tiny_python_harness/`
@@ -182,20 +196,20 @@ reconciling with, not duplicating.
 | `src/canary/test/canary_artifact_test.ml`           | Framework self-tests (native, OCaml, Python, compat helpers — pure + shell)                            |
 | `src/canary/test/canary_pm_test.ml`                 | PM module self-tests                                                                                   |
 | `src/canary/test/canary_project_test.ml`            | Project-definition layer tests (`canary project-test`) — pure: action consumes/produces catalogue, surface split, store-config derive, detect, coverage abstract stages, mechanism defaults, enumerate two-projections |
-| `src/canary/projects/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
-| `src/canary/projects/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
-| `src/canary/projects/canary_project_cairo.ml`       | cairo project via `Canary_pattern_a` (conf-* + opam binding); Level A                                  |
-| `src/canary/projects/canary_project_zarith.ml`      | zarith project via `Canary_pattern_a` (conf-* + opam binding); Level A                                 |
-| `src/canary/projects/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
-| `src/canary/projects/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_contract_bindings` (Task 2 Phase D 2026-07-21). |
-| `src/canary/projects/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_contract_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
-| `src/canary/projects/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
-| `src/canary/projects/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
-| `src/canary/projects/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/projects/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
-| `src/canary/projects/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
-| `src/canary/projects/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
-| `src/canary/projects/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
+| `src/canary/project/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
+| `src/canary/project/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
+| `src/canary/project/canary_project_cairo.ml`       | cairo project via `Canary_pattern_a` (conf-* + opam binding); Level A                                  |
+| `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_pattern_a` (conf-* + opam binding); Level A                                 |
+| `src/canary/project/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
+| `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_contract_bindings` (Task 2 Phase D 2026-07-21). |
+| `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_contract_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
+| `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
+| `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
+| `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
+| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
+| `src/canary/project/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
+| `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
+| `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |
 | `canary/examples/llvm/llvm_example_dev.ml`     | LLVM 21+ example (Opcode.UncondBr); fails against llvm.19-shared                                       |
 | `canary/examples/llvm/llvm_example_19.ml`      | LLVM ≤20 example (Opcode.Br); fails against dev binding                                                |

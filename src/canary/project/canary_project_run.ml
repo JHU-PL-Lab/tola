@@ -94,7 +94,7 @@ type project_run = {
   pr_wrapper_pkgs : (Canary_lang.lang * string) list;
   (** Project-level api_source declaration, for projects whose source is
       NOT repo-carried (e.g. tiny-full's in-tree vendored source — its
-      [Canary_tiny_scenario.tiny_api_source] lives in the realization).
+      [Canary_project_tiny.pr_api_source] lives in the realization).
       Repo-carried projects (z3/llvm/sqlite) declare it on the source
       record instead. *)
   pr_api_source : Canary_artifact.t option;
@@ -136,15 +136,56 @@ let independent_policy () : unit Canary_enumerate.policy =
           mutation = Canary_enumerate.Free };
     mutations = [] }
 
-(** THE batch default config (2026-08-14): [Heavy] projects run THIN
-    (Subset[Stable] — their source-built chains are Dev worlds, so thin
-    bypasses them), [Light] projects run full. [None] = the full policy
-    ([scenarios_of]'s default). Explicit single-project runs ignore the
-    tier; the CLI's [--thin] overrides the batch config everywhere. *)
-let batch_policy (pr : project_run) : unit Canary_enumerate.policy option =
+(** THE run-layer policy choice (2026-08-14): ONE named variant the CLI /
+    batch set; consumers match on it exhaustively. Today two cases — the
+    open MODE LADDER extends this variant (sharing the run cache):
+
+    - [Fetch]   — only the fetch steps (warm every store + clone);
+    - [Smoke]   — build only the latest sources (project + binding
+      commands validated, no combinatorial probing);
+    - [Thin]    — today's rung: run the combinations WITHOUT extra
+      source-building (version Subset[Stable]; for source-built projects
+      this IS "don't build from source" — their builds are Dev worlds;
+      the name stays for now, per the ladder discussion);
+    - [Full]    — every enumerated world.
+
+    Each rung maps to an enumeration policy (and, later, a step-class
+    filter) via [enumeration_policy_of]. *)
+type run_policy =
+  | Full
+  | Thin
+
+let string_of_run_policy = function Full -> "full" | Thin -> "thin"
+
+(** The run config — the IMMUTABLE settings a run consumes. [policy] is
+    the first field; the space is open for the batch's future knobs
+    (scenario parallelism, forced cache cleanup, …). Deliberately NO
+    mutable global state: the config flows down the call chain — the CLI
+    / batch set its [policy] value, consumers respect the variant. *)
+type run_config = { policy : run_policy }
+
+let default_config : run_config = { policy = Full }
+
+(** The mapping to the enumeration policy — the ONE place the run layer
+    touches [Canary_enumerate.policy]. [Full] = [None] (the full default
+    of [scenarios_of]); [Thin] = the Subset[Stable] enumeration. *)
+let enumeration_policy_of (c : run_config) : unit Canary_enumerate.policy option =
+  match c.policy with
+  | Full -> None
+  | Thin -> Some (thin_policy ())
+
+(** THE batch default policy (2026-08-14): [Heavy] projects run THIN
+    (their source-built chains are Dev worlds, so thin bypasses them),
+    [Light] projects run full. The batch folds this into a [run_config].
+    Explicit single-project runs ignore the tier; the CLI's [--thin]
+    overrides the batch config everywhere. *)
+let batch_policy (pr : project_run) : run_policy =
   match pr.pr_tier with
-  | Heavy -> Some (thin_policy ())
-  | Light -> None
+  | Heavy -> Thin
+  | Light -> Full
+
+let batch_config (pr : project_run) : run_config =
+  { policy = batch_policy pr }
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from
@@ -188,8 +229,20 @@ let placement_str (pl : Canary_artifact.placement) =
   Printf.sprintf "%s:%s" (prov_short pl.Canary_artifact.provision)
     (Canary_enumerate.string_of_build_id pl.Canary_artifact.version)
 
+(* Is every placement Good-quality? Generic over assignments — previously
+   lived in the tiny factory ([Canary_tiny_scenario]), but the run layer
+   needs it too and the factory is a project-side module: it belongs here,
+   in the project-utils layer (2026-08-14, the run/main library split). *)
+let assignment_is_all_good (a : Canary_artifact.assignment) : bool =
+  List.for_all
+    (fun (_, pl) ->
+      match pl.Canary_artifact.version.Canary_basic.quality with
+      | Canary_basic.Good -> true
+      | Canary_basic.Bad _ -> false)
+    a
+
 let baseline_of (scenarios : Canary_artifact.assignment list) =
-  try List.find Canary_tiny_scenario.assignment_is_all_good scenarios
+  try List.find assignment_is_all_good scenarios
   with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
 
 (* The pre/post join key: MUST equal the run-side [r_result_key] format in
@@ -283,108 +336,6 @@ let scenario_dir_of ~pr_name (a : Canary_artifact.assignment) : string =
   in
   Printf.sprintf "_out/canary/projects/%s/%s" pr_name
     (String.concat "_" (List.map part a))
-
-(** One scenario's run result — the structured output of
-    [run_project_spec] that both CLI display and test assertions
-    consume. *)
-type scenario_run_result = {
-  r_result_assignment : Canary_artifact.assignment;
-  r_result_key : string;
-  r_result_is_bad : bool;
-  r_result_verdict : string;         (** "PASS" or "FAIL" *)
-  r_result_culprits : string list;   (** failed step tags, empty on PASS *)
-  r_result_xfails : (string * string list) list;
-      (** [(step_tag, [contract_id])] for confirmed expected failures *)
-}
-
-(** Run a project through the full pipeline: enumerate → runner_spec →
-    derive_steps → execute. Returns per-scenario results. The shared
-    payload — both [canary action] (CLI) and project tests call this;
-    display and assertions are the caller's job. *)
-let run_project_spec ?policy (pr : project_run) ~root ~failfast
-  : scenario_run_result list =
-  let module SM = Canary_step_model in
-  let module BH = Base.Hashtbl in
-  let all_good a =
-    List.for_all (fun (_, (pl : Canary_artifact.placement)) ->
-      pl.Canary_artifact.version.Canary_basic.quality = Canary_basic.Good) a
-  in
-  let scenarios = scenarios_of ?policy pr in
-  let baseline =
-    try List.find all_good scenarios
-    with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
-  in
-  let seen = Hashtbl.create 16 in
-  let results = ref [] in
-  List.iter (fun a ->
-    let ws = scenario_dir_of ~pr_name:pr.pr_name a in
-    if Hashtbl.mem seen ws then ()
-    else begin
-      Hashtbl.add seen ws ();
-      let is_bad = not (all_good a) in
-      let safe =
-        String.map (function ':' | '#' | '+' -> '-' | c -> c)
-          (Filename.basename ws)
-      in
-      let project = pr.pr_name ^ "/" ^ safe in
-      let spec = pr.pr_runner_spec a ~workspace:ws in
-      let steps =
-        Canary_step_builder.derive_steps ~root ~project
-          ~langs:Canary_lang.[ OCaml; Python ] spec
-      in
-      let status =
-        Canary_run_info.run_project ~failfast
-          ~run_info:(Canary_run_info.mk_run_info
-                       ~project:pr.pr_name
-                       ~version:"scenario" ~ref_:"" ~source:"prebuilt"
-                       ~extra:[] steps)
-          ~root ~project steps
-      in
-      let not_done =
-        List.filter_map (fun (s : SM.step) ->
-          let tag = s.SM.tag in
-          let st = try Some (BH.find_exn status tag) with _ -> None in
-          match st with
-          | Some SM.Step_done | Some SM.Step_done_xfail -> None
-          | Some SM.Step_failed -> Some (tag ^ ":failed")
-          | Some SM.Step_skipped -> Some (tag ^ ":skipped")
-          | None -> Some (tag ^ ":not_run"))
-          steps
-      in
-      let xfails =
-        List.filter_map (fun (s : SM.step) ->
-          let st = try Some (BH.find_exn status s.SM.tag) with _ -> None in
-          match st with
-          | Some SM.Step_done_xfail ->
-            let ids = Canary_local_runner.step_xfail_contracts s in
-            Some (s.SM.tag, ids)
-          | _ -> None)
-          steps
-      in
-      let verdict =
-        if not_done = [] then "PASS" else "FAIL"
-      in
-      let key =
-        let deltas =
-          List.filter_map (fun (id, pl) ->
-            let s = Canary_enumerate.string_of_assignment [ (id, pl) ] in
-            match Canary_enumerate.placement_of baseline id with
-            | Some bl ->
-              if String.equal s (Canary_enumerate.string_of_assignment [ (id, bl) ])
-              then None
-              else Some (Canary_artifact.pretty_id id ^ "=" ^ s)
-            | None -> None)
-            a
-        in
-        match deltas with [] -> "(baseline)" | _ -> String.concat "  " deltas
-      in
-      results := { r_result_assignment = a; r_result_key = key;
-                   r_result_is_bad = is_bad; r_result_verdict = verdict;
-                   r_result_culprits = not_done; r_result_xfails = xfails }
-                 :: !results
-    end)
-    scenarios;
-  List.rev !results
 
 (** The union of all actions that actually fire across all scenarios
     of a project_run. Derives the step list for each scenario via
@@ -486,7 +437,7 @@ let lib_watchlist_post ~pr_name (a : Canary_artifact.assignment) :
 let print_spec ?policy (pr : project_run) : unit =
   let module E = Canary_enumerate in
   let scenarios = scenarios_of ?policy pr in
-  let all_good = Canary_tiny_scenario.assignment_is_all_good in
+  let all_good = assignment_is_all_good in
   let baseline = baseline_of scenarios in
   let baseline_str id =
     match Canary_enumerate.placement_of baseline id with
@@ -722,7 +673,7 @@ let print_artifacts ?policy (pr : project_run) : unit =
   in
   let bads =
     List.filter
-      (fun a -> not (Canary_tiny_scenario.assignment_is_all_good a))
+      (fun a -> not (assignment_is_all_good a))
       scenarios
   in
   Fmt.pr "@.artifacts: %s — %s (scenarios that touch each)@."
@@ -795,7 +746,7 @@ let spec_json_t ?policy (pr : project_run) : Yojson.Basic.t =
   let module E = Canary_enumerate in
   let scenarios = scenarios_of ?policy pr in
   let baseline = baseline_of scenarios in
-  let all_good = Canary_tiny_scenario.assignment_is_all_good in
+  let all_good = assignment_is_all_good in
   let post = load_scenario_post ~project:pr.pr_name in
   let langs = langs_of (artifact_ids pr) in
   let verdict a = List.assoc_opt (scenario_label ~baseline a) post in

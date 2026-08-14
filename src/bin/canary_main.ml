@@ -9,16 +9,16 @@ let term_of f = Term.(const f $ const ())
 (* Runs the graph and RETURNS the per-step status table (for callers that need
    the verdict directly, without re-reading the shared run_state.json). *)
 
-let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
+let run_project_run ?config (pr : Canary_project_run.project_run) ~root
     ~failfast : unit =
-  let results = Canary_batch.run_one ?policy pr ~root ~failfast in
+  let results = Canary_batch.run_one ?config pr ~root ~failfast in
   let bads =
-    List.filter (fun r -> r.Canary_project_run.r_result_is_bad) results
+    List.filter (fun r -> r.Canary_runner.r_result_is_bad) results
   in
   let detected =
     List.length
       (List.filter
-         (fun r -> String.equal r.Canary_project_run.r_result_verdict "PASS")
+         (fun r -> String.equal r.Canary_runner.r_result_verdict "PASS")
          bads)
   in
   Fmt.pr "@.  coverage: %d/%d bad scenarios detected (generic runner)@."
@@ -26,7 +26,7 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
   (let n_xfail =
      List.length
        (List.filter
-          (fun r -> r.Canary_project_run.r_result_xfails <> [])
+          (fun r -> r.Canary_runner.r_result_xfails <> [])
           results)
    in
    if n_xfail > 0 then
@@ -41,14 +41,14 @@ let run_project_run ?policy (pr : Canary_project_run.project_run) ~root
   try
     let oc = open_out path in
     List.iter
-      (fun (r : Canary_project_run.scenario_run_result) ->
+      (fun (r : Canary_runner.scenario_run_result) ->
         Printf.fprintf oc "%s\t%s\t%s\t%s\n"
-          r.Canary_project_run.r_result_verdict
-          (if r.Canary_project_run.r_result_is_bad then "bad" else "good")
-          (match r.Canary_project_run.r_result_xfails with
+          r.Canary_runner.r_result_verdict
+          (if r.Canary_runner.r_result_is_bad then "bad" else "good")
+          (match r.Canary_runner.r_result_xfails with
           | [] -> "-"
           | xs -> String.concat "," (List.map fst xs))
-          r.Canary_project_run.r_result_key)
+          r.Canary_runner.r_result_key)
       results;
     close_out oc
   with Sys_error _ -> ()
@@ -134,8 +134,13 @@ let action_cmd =
       Fmt.pr "[disable-contract] skipping: %s@."
         (String.concat ", "
            (List.map Canary_compat.string_of_contract_id cli_disabled));
-    let policy = if thin then Some (Canary_project_run.thin_policy ()) else None in
-    let run_pr pr = run_project_run ?policy pr ~root ~failfast in
+    (* the run config: --thin sets the policy variant; the batch sets its
+       own per-project config (tier-based) inside [Canary_batch.run]. *)
+    let config =
+      if thin then { Canary_project_run.policy = Canary_project_run.Thin }
+      else Canary_project_run.default_config
+    in
+    let run_pr pr = run_project_run ~config pr ~root ~failfast in
     match project with
     | Some p when String.length p > 6 && String.sub p 0 6 = "tiny1/" ->
         (* tiny1 scenario through the GENERAL project_run pipeline:

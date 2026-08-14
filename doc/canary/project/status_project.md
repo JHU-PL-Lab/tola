@@ -16,12 +16,24 @@ store-pin migration); tiny1 rides the factory. Full matrix in
 the name list drifts, or ssl's pinned binding stops enumerating 2
 distinct scenarios.
 
-**The batch runner** (2026-08-14, user): `canary action @all` runs every
-registry project under the default config — `pr_tier` groups the runs
-(`Heavy` = z3/llvm's source-built chains → THIN, bypassing the Dev
-builds; `Light` → full). `Canary_project_run.batch_policy` is the shared
-default-config function; `--thin` forces thin everywhere; explicit
-single-project runs ignore the tier. Pinned by `registry.batch_tiers`.
+**The batch runner + run config + the main-library split** (2026-08-14,
+user): `canary action @all` runs every registry project under the
+default config — `pr_tier` groups the runs (`Heavy` = z3/llvm's
+source-built chains → THIN, bypassing the Dev builds; `Light` → full).
+The run layer has `run_config = { policy : run_policy }` (Full | Thin,
+the open mode ladder: fetch → smoke → thin → full) — the CLI/batch SET
+`config.policy`, consumers match the variant; `enumeration_policy_of`
+is the one mapping to the enumeration policy. `--thin` forces thin
+everywhere; explicit single-project runs ignore the tier. Pinned by
+`registry.batch_tiers`. The layer split (same day, user-directed):
+`src/canary/project/` (library `canary_project`) holds the project
+DATATYPE + definition utils (`Canary_project_run`,
+`Canary_pattern_a`) plus the concrete instantiation (specs, tiny
+factory, registry, CI); `src/canary/main/` (library `canary_main`) is
+the RUNNING layer (runner, batch, spec-check, layer tests) that the
+cmd/tests/batch share — it depends on canary_project for the datatype,
+never the reverse. `canary_project_run` no longer references tiny's
+factory — `assignment_is_all_good` moved to the datatype layer.
 
 ## 2. Bugs & issues
 

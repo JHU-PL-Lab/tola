@@ -99,7 +99,7 @@ Each Bad scenario has a `tiny_recipe`:
 
 ## 3. Factory pipeline — how canary runs a scenario
 
-Source: [`src/canary/projects/canary_project_tiny.ml`](../../src/canary/projects/canary_project_tiny.ml) §"Scenario factory".
+Source: [`src/canary/project/canary_project_tiny.ml`](../../src/canary/project/canary_project_tiny.ml) §"Scenario factory".
 
 ```
 entry
@@ -169,7 +169,7 @@ Other mutations (patches) don't adjust stores.
 ### 3.4 Mutation dispatch in workspace prep
 
 `run_prepare` in
-[`canary_tiny_workspace.ml`](../../src/canary/projects/canary_tiny_workspace.ml)
+[`canary_tiny_workspace.ml`](../../src/canary/project/canary_tiny_workspace.ml)
 applies `recipe.mutation` at two points around the sandbox
 build:
 

@@ -203,11 +203,16 @@ pipeline is policy-agnostic.
    `scenario_dir_of`), executes steps with the per-step cache, and
    returns the verdicts the display layers consume.
 
-`batch_policy pr` (the batch default) selects `thin_policy ()` for
-`pr_tier = Heavy` (z3/llvm's source-built chains) and the full default
-otherwise — it is just a CHOOSER of the same policy values, fed through
-the same `?policy` channel as the CLI's `--thin` (which forces thin
-everywhere) and single-project runs (always full).
+The run layer wraps the policy in a config (2026-08-14): `run_config =
+{ policy : run_policy }` — an IMMUTABLE record the CLI/batch set and
+consumers match (`run_policy = Full | Thin` today; the open mode ladder
+fetch → smoke → thin → full extends the variant). `enumeration_policy_of`
+is the ONE mapping to the enumeration policy; `batch_policy pr` (a
+`run_policy` chooser, `Heavy → Thin` / `Light → Full`) folds into
+`batch_config pr`. The same config channel carries the CLI's `--thin`
+(forces `Thin` everywhere); single-project runs use the default (Full).
+Future config fields (scenario parallelism, forced cache cleanup) ride
+the same record — no mutable global state.
 
 ## 6. From scenarios to execution
 

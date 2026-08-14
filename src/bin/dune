@@ -33,7 +33,8 @@
   logs.lwt
   lwt
   canary_lib
-  canary_projects
+  canary_project
+  canary_main
   yojson)
  (preprocess
   (pps ppx_string ppx_yojson_conv ppx_deriving.show))

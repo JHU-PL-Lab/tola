@@ -3,7 +3,7 @@ open Base
 (** Project-spec PIN tests (A5 phases 1–5) — pure, hermetic checks that a
     live project's DECLARED [project_spec] enumerates to exactly its expected
     scenario set. These reference the real project modules, so they live in
-    [canary_projects] (canary_lib's test/ sits BELOW this sub-library);
+    [canary_project] (canary_lib's test/ sits BELOW this library; src/canary/main is the framework ABOVE it);
     `canary project-test` appends them to the pure project-definition suite
     via [Canary_project_test.run_tests ~extra].
 
@@ -660,8 +660,12 @@ let batch_tier_pin : Canary_project_test.pure_test =
         && List.for_all
              [ "sqlite"; "ssl"; "tiny-full"; "zarith"; "cairo"; "libffi" ]
              ~f:(fun n -> Poly.equal (tier n) Canary_project_run.Light)
-        && Option.is_some (Canary_project_run.batch_policy (pr_of "z3"))
-        && Option.is_none (Canary_project_run.batch_policy (pr_of "sqlite"))) }
+        && Poly.equal (Canary_project_run.batch_policy (pr_of "z3"))
+             Canary_project_run.Thin
+        && Poly.equal (Canary_project_run.batch_policy (pr_of "sqlite"))
+             Canary_project_run.Full
+        && Poly.equal (Canary_project_run.batch_policy (pr_of "llvm"))
+             Canary_project_run.Thin) }
 
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins

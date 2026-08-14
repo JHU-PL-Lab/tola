@@ -1039,7 +1039,7 @@ let execution_plan_test : pure_test =
 let tool_routing_ratchet_test : pure_test =
   { name = "harness.tool_routing_ratchet";
     check = (fun () ->
-      let dir = "src/canary/projects" in
+      let dir = "src/canary/project" in
       let lines_with ~needle path =
         try
           Stdlib.In_channel.with_open_text path (fun ic ->
@@ -1129,8 +1129,8 @@ let all_tests : pure_test list =
       tool_routing_ratchet_test ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
-   (layering: test/ is canary_lib; the live project specs are the
-   canary_projects sub-library ON TOP of it). `canary project-test` passes
+   (layering: test/ is canary_lib; the concrete project specs are the
+   canary_project library ON TOP of it). `canary project-test` passes
    the project-spec pin tests ([Canary_projects_test.tests]) through here. *)
 let run_tests ?(extra : pure_test list = []) () : bool =
   let all_tests = all_tests @ extra in

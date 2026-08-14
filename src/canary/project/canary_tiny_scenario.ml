@@ -1944,9 +1944,9 @@ let tiny_full_combinations (spec : tiny_full_spec) :
    | _ -> [])
   |> List.map ~f:assignment_with
 
-let assignment_is_all_good (a : Canary_artifact.assignment) : bool =
-  List.for_all a ~f:(fun (_, pl) ->
-      match pl.version.quality with Good -> true | Bad _ -> false)
+(* [assignment_is_all_good] moved to the project-utils layer
+   ([Canary_project_run], action/) 2026-08-14 — the run/main library
+   also needs it, and the factory may not be the run layer's dependency. *)
 
 (** Tiny lives in-tree. All shell commands here run from the tola
     repository root (canary's runner inherits the invoker's cwd, which

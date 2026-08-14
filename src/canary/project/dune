@@ -1,0 +1,15 @@
+(library
+ (name canary_project)
+ (wrapped false)
+ (libraries unix base fmt tola_std canary_lib)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+
+; THE PROJECT layer (2026-08-14): the project DATATYPE + definition
+; utils ([Canary_project_run]: project_run, policies, run_config, spec
+; helpers; [Canary_pattern_a]: the definition template) PLUS the
+; concrete instantiation (the 8 specs + tiny's factory + the entry
+; modules that NAME projects: registry, CI jobs). The RUNNING layer
+; (src/canary/main, canary_main) depends on THIS library for the
+; datatype; never the reverse.
+(include_subdirs no)

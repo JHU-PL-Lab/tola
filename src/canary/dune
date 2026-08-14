@@ -48,7 +48,10 @@
 ;   test/    Layer 5 — framework self-tests.
 ;
 ; Sub-libraries opt out via their own dune:
-;   projects/ → canary_projects (live project specs)
+;   project/ → canary_project (project datatype + definition utils +
+;                the concrete instantiation: specs + registry + CI)
+;   main/    → canary_main (the running layer: runner, batch, spec-check,
+;                layer tests — depends on canary_project)
 ; (The retired legacy/ sub-library was moved to
 ;  doc/_legacy_code/ in commit 302f1b3.)
 (include_subdirs unqualified)

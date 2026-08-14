@@ -169,7 +169,10 @@ let ssl_source_of (ch : Canary_basic.channel) : Canary_artifact_source.source_re
   | Canary_basic.Dev -> ssl_source_dev
   | Canary_basic.Stable -> ssl_source_stable
 
-let pm = Canary_store.detect_pm ()
+(* Per-call (M1, 2026-08-14): PM detection must not run at MODULE INIT —
+   the registry loads every project module, so a top-level [detect_pm]
+   shelled out on every CLI command, even PM-irrelevant ones. *)
+let pm () = Canary_store.detect_pm ()
 
 (* ── THE artifact table (2026-08-12) ──
    The binding's provider declares STORE PINS ([versions]) — the axis
@@ -258,7 +261,7 @@ let realize (a : Canary_artifact.assignment) : SB.runner_spec =
       | _ -> None);
     (* Native-lib symbol probe (folded from pattern_a ssl). *)
     probe_lib =
-      [ (Canary_store.Pm (Canary_store.Sys_pm { pm }),
+      [ (Canary_store.Pm (Canary_store.Sys_pm { pm = pm () }),
          fun ~output_dir ~variant_key ->
            let probe =
              AN.native_lib_probe_cmd ~lib:"$LIB_NATIVE" ~prefix:"SSL_"
@@ -363,7 +366,7 @@ let mk_variant ~version ~vkey ~(app : app) : string * SB.runner_spec =
         [ (Canary_lang.OCaml, SB.Raw (SB.fetch_binding_cmd opam_spec)) ];
       (* Native-lib symbol probe (folded from pattern_a ssl). *)
       probe_lib =
-        [ (Canary_store.Pm (Canary_store.Sys_pm { pm }),
+        [ (Canary_store.Pm (Canary_store.Sys_pm { pm = pm () }),
            fun ~output_dir ~variant_key ->
              let probe =
                AN.native_lib_probe_cmd ~lib:"$LIB_NATIVE" ~prefix:"SSL_"

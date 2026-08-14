@@ -1,0 +1,18 @@
+(library
+ (name canary_main)
+ (wrapped false)
+ (libraries canary_lib canary_project unix base fmt tola_std yojson)
+ (preprocess
+  (pps ppx_string ppx_yojson_conv ppx_deriving.show)))
+
+; THE RUNNING layer (2026-08-14, user): running a project — the shared
+; functions the cmd, the layer tests, and the batch runner all consume
+; ([Canary_runner].run_project_spec, [Canary_batch],
+; [Canary_spec_check]). Depends on canary_project for the project
+; DATATYPE; the concrete instantiation (registry list, CI) lives in
+; canary_project and is INJECTED here (Canary_batch.run takes the
+; project list as an argument). The layer test suite
+; (canary_projects_test.ml) lives here too — it pins the whole
+; project-definition layer, which is why this library may reference
+; concrete projects in TEST code only.
+(include_subdirs no)
