@@ -2103,6 +2103,54 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
   python_cext_root = [%string "%{workspace_root}/python_cext"];
 }
 
+(* ── binding declarations (M2 step 4, mechanism_payload.md) ──
+   One typed record per binding: mechanism label + facts. The facts are
+   what the binding IS; the analysis (watchlists, contract rows, probe)
+   stays on canary's side. c_api/native are shared across tiny's three
+   bindings — a project factor hoists them. [make_base_runner_spec]
+   derives its build/probe command builders from these via
+   [Canary_binding_templates] (re-exported by [Canary_project_tiny] for
+   the project interface). *)
+
+let tiny_c_api : Canary_binding_decl.c_api =
+  { functions = tiny_native_stable_symbols; enums = [] }
+
+let tiny_native_facts : Canary_binding_decl.native_facts =
+  { prefix = "tiny_"; soname = "libtiny.so.1";
+    headers = Canary_binding_decl.{ dir = "c/include"; files = [ "tiny.h" ] } }
+
+let tiny_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  let shared = (tiny_c_api, tiny_native_facts) in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling =
+                  Stub_archive
+                    { sources = [ "ocaml/tiny_stubs.c" ];
+                      archive = "ocaml/libtiny_stubs.a";
+                      build =
+                        Dune
+                          { targets =
+                              [ "ocaml/tiny.cmxa"; "ocaml/libtiny_stubs.a" ] } };
+                surface_path = "ocaml/tiny.mli" } };
+    { mechanism = Canary_mechanism.Cext;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling =
+                  Compiled_ext
+                    { source = "python_cext/tiny_cext/_native.c";
+                      product = "_native.cpython-*.so";
+                      build =
+                        Direct_cc
+                          { include_dirs = [ "c/include" ];
+                            library_dirs = [ "c/build" ];
+                            libs = [ "tiny" ] } };
+                surface_path = "python_cext/tiny_cext/__init__.py" } };
+    { mechanism = Canary_mechanism.Ctypes;
+      facts = { c_api = fst shared; native = snd shared;
+                coupling = Dlopen { name = "libtiny.so.1" };
+                surface_path = "python_ctypes/tiny_ctypes/__init__.py" } };
+  ]
+
 let make_base_runner_spec
     ?(probe_exe = "ocaml/examples/probe_baseline.exe")
     ?(channel = Canary_basic.Stable)
@@ -2121,6 +2169,21 @@ let make_base_runner_spec
     [%string "%{source}/_build/default/ocaml"] in
   let cext_so_glob =
     [%string "%{python_cext_root}/tiny_cext/_native.cpython-*.so"] in
+  (* ── binding realization (M2 step 4, step 3) ── the four binding
+     fields below derive from the typed declarations above via
+     [Canary_binding_templates]: decl facts become commands, the stores
+     stay ctx. Pinned byte-equal to the former hand-written literals
+     ([tiny_binding_realization_pin]). *)
+  let decl_of mech =
+    List.find tiny_binding_decls ~f:(fun (d : Canary_binding_decl.binding_decl) ->
+      Poly.equal d.mechanism mech)
+    |> Option.value_exn in
+  let cstubs_decl = decl_of Canary_mechanism.Cstubs in
+  let cext_decl = decl_of Canary_mechanism.Cext in
+  let bt_ctx : Canary_binding_templates.ctx =
+    { lib_dir = abs_lib_dir; lib_path; source_root = source;
+      binding_root = python_cext_root;
+      probe_exe; probe_script = "examples/probe_baseline.py" } in
   {
     Canary_step_builder.empty_runner_spec with
 
@@ -2207,73 +2270,40 @@ let make_base_runner_spec
        source tree as workspace; targets are relative to that root.
        Consumer compile (examples/probe_baseline.exe) is deferred to
        Probe so that mli mismatches surface there rather than here. *)
+    (* Build_binding: derived from the coupling facts —
+       OCaml (Stub_archive): dune build the declared targets, capturing
+       stderr into build.log so c6's substring-match has something to
+       grep against when the cstub compile fails (header arity
+       mismatch etc.); Python (Compiled_ext): verify the prebuilt cext
+       exists in the python_cext_root store. *)
     build_binding = [
       (Canary_lang.OCaml,
-       fun ~output_dir ~variant_key ->
-         (* Capture dune's stderr into output_dir/build.log so c6's
-            substring-match has something to grep against when the
-            cstub compile fails (header arity mismatch etc.). The
-            marker echo runs only on dune success. *)
-         let build_log =
-           Canary_basic.variant_file ~variant_key "build.log" in
-         let dune_cmd =
-           Canary_build_cmd.dune_build_cmd
-             ~env_extra:[
-               [%string "LIBRARY_PATH=%{abs_lib_dir}"];
-               [%string "LD_RUN_PATH=%{abs_lib_dir}"];
-             ]
-             ~root:source
-             ~target:"ocaml/tiny.cmxa ocaml/libtiny_stubs.a" () in
-         Printf.sprintf
-           "(%s) > %s/%s 2>&1"
-           dune_cmd output_dir build_log
-         |> Canary_build_cmd.with_marker
-              ~marker:"build.ok" ~output_dir ~variant_key);
-      (* Build_binding Python: verify the prebuilt cext exists in the
-         python_cext_root store. *)
+       Option.value_exn (Canary_binding_templates.build_binding_of cstubs_decl ~ctx:bt_ctx));
       (Canary_lang.Python,
-       fun ~output_dir ~variant_key ->
-         Printf.sprintf "ls %s > /dev/null" cext_so_glob
-         |> Canary_build_cmd.with_marker
-              ~marker:"build.ok" ~output_dir ~variant_key);
+       Option.value_exn (Canary_binding_templates.build_binding_of cext_decl ~ctx:bt_ctx));
     ];
 
-    (* Probe_lib: nm against the lib_dir store's actual libtiny. *)
+    (* Probe_lib: nm against the lib_dir store's actual libtiny, for the
+       declared native prefix. *)
     probe_lib = [
       (Canary_store.Build_tree,
-       fun ~output_dir ~variant_key ->
-         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-         Printf.sprintf
-           "nm -D %s | grep -E '^[0-9a-f]+ T tiny_' \
-            > %s/%s 2>&1"
-           lib_path output_dir probe_log);
+       Canary_binding_templates.probe_lib_of tiny_native_facts ~lib_path);
     ];
 
-    (* Probe_binding OCaml: dune build + exec probe_baseline.exe with
-       source as the dune workspace root. mli mismatches surface here
-       as consumer-compile failures; runtime symbol failures show up
-       when exec runs against [abs_lib_dir]'s libtiny. *)
+    (* Probe_binding: derived from the coupling facts — OCaml
+       (Stub_archive): dune build + exec probe_baseline.exe with source
+       as the dune workspace root (mli mismatches surface here as
+       consumer-compile failures; runtime symbol failures show up when
+       exec runs against [abs_lib_dir]'s libtiny). Python
+       (Compiled_ext): the probe script lives in the binding root; the
+       cext .so it imports lives in [python_cext_root]. *)
     probe_binding = [
       (Canary_lang.OCaml,
        Canary_store.Build_tree,
-       fun ~output_dir ~variant_key ->
-         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-         Printf.sprintf
-           "(LIBRARY_PATH=%s LD_RUN_PATH=%s dune build --root %s %s \
-            && LD_LIBRARY_PATH=%s %s/_build/default/%s) > %s/%s 2>&1"
-           abs_lib_dir abs_lib_dir source probe_exe
-           abs_lib_dir source probe_exe output_dir probe_log);
-      (* Probe_binding Python (cext): the probe script lives with the
-         source tree (probes are source-coupled); the cext .so it
-         imports lives in [python_cext_root]. *)
+       Option.value_exn (Canary_binding_templates.probe_binding_of cstubs_decl ~ctx:bt_ctx));
       (Canary_lang.Python,
        Canary_store.Build_tree,
-       fun ~output_dir ~variant_key ->
-         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-         Printf.sprintf
-           "LD_LIBRARY_PATH=%s PYTHONPATH=%s python3 \
-            %s/python_cext/examples/probe_baseline.py > %s/%s 2>&1"
-           abs_lib_dir python_cext_root source output_dir probe_log);
+       Option.value_exn (Canary_binding_templates.probe_binding_of cext_decl ~ctx:bt_ctx));
     ];
 
     (* binding_user_facing_pkg drives auto-generation of inspect steps
@@ -2282,8 +2312,10 @@ let make_base_runner_spec
        inspect on bpe2 user_binding_cext.py. The pkg names match the
        package containing the user-facing surface. *)
     binding_user_facing_pkg = [
-      (Canary_lang.OCaml, "tiny");
-      (Canary_lang.Python, "tiny_cext");
+      (Canary_lang.OCaml,
+       Option.value_exn (Canary_binding_templates.user_facing_pkg_of Canary_lang.OCaml cstubs_decl));
+      (Canary_lang.Python,
+       Option.value_exn (Canary_binding_templates.user_facing_pkg_of Canary_lang.Python cext_decl));
     ];
 
     (* Inspect overrides — produce per-artifact JSON for each binding-side

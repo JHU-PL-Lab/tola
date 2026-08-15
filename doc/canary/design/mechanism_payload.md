@@ -172,3 +172,12 @@ the payload absorption types the Primitive params as payload fields.
 5. Add the raw-override harness warning; migrate or consciously declare
    each flagged Raw.
 6. Delete `mi_artifact_shape` prose (display derives from facts).
+
+**Status (2026-08-15)**: step 3 landed for tiny — the realization
+(`Canary_binding_templates`) derives build_binding / probe_binding /
+probe_lib / binding_user_facing_pkg from tiny's three declarations.
+No behavior change: the emitted strings are byte-equal to the former
+hand-written literals (pinned by `tiny1.binding_realization_matches_handwritten`
++ an actions.log diff on `tiny1/symbol_missing`). Steps 3–4 remain for
+sqlite/z3/llvm (z3's cmake-target / llvm's ninja-target coupling build
+variants need coupling cases first).

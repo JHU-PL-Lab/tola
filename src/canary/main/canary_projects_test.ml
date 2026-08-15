@@ -581,6 +581,71 @@ let binding_decl_pin : Canary_project_test.pure_test =
                "python_ctypes/tiny_ctypes/__init__.py"
       | _ -> false) }
 
+(* M2 step 4 step 3 pin (2026-08-15): the binding realization
+   ([Canary_binding_templates]) emits the EXACT command strings the
+   former hand-written [make_base_runner_spec] literals produced —
+   captured with synthetic stores (source=/WS, lib=/WS/c/build, cext
+   root=/WS/python_cext) from the pre-realization spec. When the
+   realization changes, this pin fails and the diff IS the behavior
+   change. *)
+let tiny_binding_realization_pin : Canary_project_test.pure_test =
+  { name = "tiny1.binding_realization_matches_handwritten";
+    check = (fun () ->
+      let module BT = Canary_binding_templates in
+      let module TS = Canary_tiny_scenario in
+      let decl_of mech =
+        List.find TS.tiny_binding_decls
+          ~f:(fun (d : Canary_binding_decl.binding_decl) ->
+            Poly.equal d.mechanism mech)
+        |> Option.value_exn
+      in
+      let cstubs = decl_of Canary_mechanism.Cstubs in
+      let cext = decl_of Canary_mechanism.Cext in
+      let ctypes = decl_of Canary_mechanism.Ctypes in
+      let ctx : BT.ctx =
+        { lib_dir = "$PWD//WS/c/build";
+          (* caller-anchored, as make_base_runner_spec passes it *)
+          lib_path = "/WS/c/build/libtiny.so.1";
+          source_root = "/WS";
+          binding_root = "/WS/python_cext";
+          probe_exe = "ocaml/examples/probe_baseline.exe";
+          probe_script = "examples/probe_baseline.py" }
+      in
+      let str = function
+        | Some cmd -> Some (cmd ~output_dir:"/OUT" ~variant_key:"VK")
+        | None -> None
+      in
+      List.for_all
+        [ (* build_binding: dune the declared targets / verify the cext *)
+          ( str (BT.build_binding_of cstubs ~ctx),
+            Some "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/tiny.cmxa ocaml/libtiny_stubs.a) > /OUT/build_VK.log 2>&1 && echo 'ok' > /OUT/build_VK.ok" );
+          ( str (BT.build_binding_of cext ~ctx),
+            Some "ls /WS/python_cext/tiny_cext/_native.cpython-*.so > /dev/null && echo 'ok' > /OUT/build_VK.ok" );
+          (* probe_binding: dune build+exec / cext runtime probe *)
+          ( str (BT.probe_binding_of cstubs ~ctx),
+            Some "(LIBRARY_PATH=$PWD//WS/c/build LD_RUN_PATH=$PWD//WS/c/build dune build --root /WS ocaml/examples/probe_baseline.exe && LD_LIBRARY_PATH=$PWD//WS/c/build /WS/_build/default/ocaml/examples/probe_baseline.exe) > /OUT/probe_VK.log 2>&1" );
+          ( str (BT.probe_binding_of cext ~ctx),
+            Some "LD_LIBRARY_PATH=$PWD//WS/c/build PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1" );
+          (* probe_lib: nm for the declared prefix *)
+          ( Some
+              (BT.probe_lib_of TS.tiny_native_facts
+                 ~lib_path:"/WS/c/build/libtiny.so.1"
+                 ~output_dir:"/OUT" ~variant_key:"VK"),
+            Some "nm -D /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /OUT/probe_VK.log 2>&1" );
+          (* user-facing pkg names derive from the surface path *)
+          (BT.user_facing_pkg_of Canary_lang.OCaml cstubs, Some "tiny");
+          (BT.user_facing_pkg_of Canary_lang.Python cext, Some "tiny_cext");
+          (BT.user_facing_pkg_of Canary_lang.Python ctypes,
+           Some "tiny_ctypes");
+          (* Dlopen has no compile stage and is not wired in the base
+             spec — the Cext entry serves both Python artifacts. *)
+          (BT.build_binding_of ctypes ~ctx |> Option.map ~f:(fun _ -> ""),
+           None);
+          (BT.probe_binding_of ctypes ~ctx |> Option.map ~f:(fun _ -> ""),
+           None);
+        ]
+        ~f:(fun (got, want) -> Poly.equal got want)) }
+
 (* ── spec-check pins (2026-08-13) ── *)
 
 (* (a) every registry entry yields a well-formed report (no crash, 8
@@ -678,4 +743,5 @@ let tests : Canary_project_test.pure_test list =
       registry_pin;
       spec_check_every_project_pin;
       spec_check_ratchet_pin;
-      batch_tier_pin ]
+      batch_tier_pin;
+      tiny_binding_realization_pin ]
