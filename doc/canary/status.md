@@ -173,9 +173,12 @@ Steps (each step keeps the suite green before the next):
    prose. **2026-08-15**: the derivation landed for tiny
    (`Canary_binding_templates` — build_binding / probe_binding /
    probe_lib / binding_user_facing_pkg from the three decls; byte-equal
-   to the former literals, pinned + actions.log-diffed). sqlite/z3/llvm
-   migration and the raw-override warning remain; z3/llvm need coupling
-   build variants (cmake target / ninja target) first.
+   to the former literals, pinned + actions.log-diffed). Remaining: the
+   raw-override warning, then decls-as-FACTS for sqlite/z3/llvm — the
+   mechanism identification drives checker/contract selection (no
+   matter how they build, how we check is uniform). Translating their
+   raw build commands into our templates is DEFERRED, not a to-do:
+   respect the original command in the beginning (user, 2026-08-15).
 5. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
    OCaml probe not predicted); `symbol_orphan`'s build failure has no
    contract. Known in `canary_expected_of` table. (After step 4 — these

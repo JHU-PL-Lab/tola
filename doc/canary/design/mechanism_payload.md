@@ -113,7 +113,7 @@ project factor can hoist them; the declaration itself stays per-binding.
 
 | Derives | From |
 |---|---|
-| build_binding cmd | `coupling.build` |
+| build_binding cmd | `coupling.build` (tiny — our craft; external projects keep their Raw command) |
 | c1 inspect inputs | `coupling` (archive/product) + `native` |
 | c2 inspect input path | `surface_path` |
 | c4 runtime facts | `native.soname` / `Dlopen.name` |
@@ -147,6 +147,13 @@ Analysis-side declarations (unchanged, already separate):
 
 ## Template / Raw fallback / harness warning
 
+**The uniform part is the CHECKING, not the build command** (user,
+2026-08-15): no matter HOW an external project builds its artifacts,
+HOW to use them and HOW we check them are relatively uniform — the
+mechanism identification drives checker/contract selection. The raw
+build command is respected as-is (subtle commandline issues bypassed in
+the beginning, not fixed); only on our own forked fix may we modify it.
+
 Absorb a command only when fully reusable as stub logic. Otherwise the
 project declares it **Raw**, and the landing check flags it:
 
@@ -160,24 +167,25 @@ the payload absorption types the Primitive params as payload fields.
 
 ## Sequence
 
-1. Add `binding_decl`/`binding_facts`/`coupling` types — in base/ beside
-   the mechanism vocabulary (2026-08-14 reunion).
-2. Add the declaration to the project layer (artifact row / a
-   `binding_decl` field) — mechanism name stays identity.
-3. Derive the absorbable runner_spec fields from the declaration (the
-   realization reads facts → emits today's command strings — no
-   behavior change; pin-tested per project).
-4. Migrate tiny first (three mechanisms, richest case), then
-   sqlite/z3/llvm.
-5. Add the raw-override harness warning; migrate or consciously declare
-   each flagged Raw.
-6. Delete `mi_artifact_shape` prose (display derives from facts).
+1. [x] Add `binding_decl`/`binding_facts`/`coupling` types — in base/
+   beside the mechanism vocabulary (2026-08-14 reunion).
+2. [x] Add the declaration to the project layer — mechanism name stays
+   identity (tiny's three decls, 2026-08-13).
+3. [x] Derive the absorbable runner_spec fields for TINY (2026-08-15):
+   `Canary_binding_templates` emits tiny's build_binding /
+   probe_binding / probe_lib / binding_user_facing_pkg from the decls —
+   byte-equal to the former hand-written literals (pinned by
+   `tiny1.binding_realization_matches_handwritten` + an actions.log
+   diff on `tiny1/symbol_missing`). tiny is our own craft, so
+   adjusting its commands is free.
+4. [ ] Land the raw-override harness warning FIRST — the decl-vs-Raw
+   divergence must be visible before any external project work.
+5. [ ] Declare the FACTS for external projects (sqlite/z3/llvm) — the
+   mechanism identification drives checker/contract selection (see
+   above); their build commands stay Raw, respected as-is.
+6. [ ] Delete `mi_artifact_shape` prose (display derives from facts).
 
-**Status (2026-08-15)**: step 3 landed for tiny — the realization
-(`Canary_binding_templates`) derives build_binding / probe_binding /
-probe_lib / binding_user_facing_pkg from tiny's three declarations.
-No behavior change: the emitted strings are byte-equal to the former
-hand-written literals (pinned by `tiny1.binding_realization_matches_handwritten`
-+ an actions.log diff on `tiny1/symbol_missing`). Steps 3–4 remain for
-sqlite/z3/llvm (z3's cmake-target / llvm's ninja-target coupling build
-variants need coupling cases first).
+**Deferred — NOT a to-do**: translating external projects' raw build
+commands into our templates. It has good and bad parts and needs
+discussion; in the beginning we respect the original command, and only
+on our own forked fix may we modify it.
