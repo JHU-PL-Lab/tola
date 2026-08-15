@@ -161,34 +161,39 @@ Steps (each step keeps the suite green before the next):
    catches failures). `mechanism_chain_shape_pin` locks the derivation.
    No current project's scenario count changes (all have static bindings
    alongside; tiny-full's cext keeps the build chain applicable).
-4. [ ] **Typed mechanism payload** — design in
-   [`mechanism_payload.md`](mechanism_payload.md) (2026-08-12). A project
-   declares its binding as ONE typed record (mechanism + payload); the
-   lowering derives build/inspect/probe templates from it. Absorbable
-   runner_spec fields templated; non-absorbable fall back to Raw with a
-   harness warning flagging raw-overrides. Mechanism name stays artifact
-   identity; payload rides as declaration data. Sequence: payload types →
-   declaration field → derive commands (no behavior change, pin-tested) →
-   migrate tiny first → raw-override warning → delete `mi_artifact_shape`
-   prose. **2026-08-15**: the derivation landed for tiny
-   (`Canary_binding_templates` — build_binding / probe_binding /
+4. [ ] **Typed mechanism payload — the DECLARATION** (design in
+   [`mechanism_payload.md`](mechanism_payload.md), 2026-08-12; split
+   from the command derivation 2026-08-15, user). A project declares
+   its binding as ONE typed record (mechanism + facts). This is
+   UNIVERSAL and mandatory — the payload spec should be obvious; it is
+   what checker/contract selection reads, so every project declares it
+   regardless of how it builds. Mechanism name stays artifact identity;
+   payload rides as declaration data. tiny declares (2026-08-13);
+   sqlite/z3/llvm facts-declaration remains (open: whether the
+   coupling's [build] recipe stays a mandatory field — for external
+   projects the build is their raw command's business).
+5. [ ] **Command derivation from the payload** — a SEPARATE topic: the
+   lowering derives build/probe templates from the decl only where the
+   command is mechanism-determined. tiny: done (2026-08-15 —
+   `Canary_binding_templates` derives build_binding / probe_binding /
    probe_lib / binding_user_facing_pkg from the three decls; byte-equal
-   to the former literals, pinned + actions.log-diffed). Remaining: the
-   raw-override warning, then decls-as-FACTS for sqlite/z3/llvm — the
-   mechanism identification drives checker/contract selection (no
-   matter how they build, how we check is uniform). Translating their
-   raw build commands into our templates is DEFERRED, not a to-do:
-   respect the original command in the beginning (user, 2026-08-15).
-5. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
+   to the former hand-written literals, pinned +
+   actions.log-diffed). Everywhere else commands stay Raw — external
+   projects' original commands are respected as-is (tricky commandline
+   details bypassed in the beginning). Translating external raw
+   commands into templates is DEFERRED, not a to-do (user,
+   2026-08-15). Remaining: the raw-override warning; delete
+   `mi_artifact_shape` prose.
+6. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
    OCaml probe not predicted); `symbol_orphan`'s build failure has no
-   contract. Known in `canary_expected_of` table. (After step 4 — these
-   rows land on the typed ground.)
-6. [ ] **Richer inspectors** — L1b/L2/L4 fields declared but no inspectors.
+   contract. Known in `canary_expected_of` table. (After steps 4–5 —
+   these rows land on the typed ground.)
+7. [ ] **Richer inspectors** — L1b/L2/L4 fields declared but no inspectors.
    Each needs: inspector → predict closure → binding rows.
-7. [ ] **Fault tags ↔ contracts sync** — `sym_missing`, `api_drop`,
+8. [ ] **Fault tags ↔ contracts sync** — `sym_missing`, `api_drop`,
    `behavior`, `abi_soname`, `sym_version`, `type_arity`, `api_repack`,
    `api_add`. Sync with SSOT when stable.
-8. [ ] **Canonical naming settle** — tentative scheme → final. Clean
+9. [ ] **Canonical naming settle** — tentative scheme → final. Clean
    `Sc.`-prefixed IDs. Provision-aware names for real projects.
 
 Deferred (design directions, not M2):

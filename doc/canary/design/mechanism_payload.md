@@ -1,6 +1,8 @@
 # Mechanism payload — typed binding declaration
 
-> 2026-08-13. M2 step 4 design (tentative — adjust as the code lands).
+> 2026-08-13. M2 steps 4–5 design (tentative — adjust as the code lands).
+> Step 4 = the typed DECLARATION (universal); step 5 = command derivation
+> (tiny only; external projects keep Raw commands — see below).
 > A project declares its binding as ONE record: mechanism label + facts.
 > Facts are stable (what the binding IS); analysis (watchlists, contract
 > rows, probe choice) stays on canary's side, changeable.
@@ -11,7 +13,10 @@ A project's binding declaration splits into:
 
 - **Facts** (payload) — what the binding IS: its wrapped C API, its
   files, its build, its runtime coupling. Stable. Removing a field
-  would change what the binding is.
+  would change what the binding is. **The declaration is UNIVERSAL and
+  mandatory** — every project declares its facts (that is what
+  checker/contract selection reads); only the command DERIVATION is
+  optional (Raw — see below).
 - **Analysis** (canary's side) — what we CHECK and how: watchlist
   contents, contract firing rows, which example we probe. Changeable
   as our contracts evolve. (The S1 seam: provenance vs checking
