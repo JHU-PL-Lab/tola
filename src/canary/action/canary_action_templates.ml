@@ -242,7 +242,12 @@ let realize_template (tpl : action_template) : runner_spec =
       { spec with install_lib =
                    Some (fun ~output_dir ~variant_key ->
                        let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
-                       Printf.sprintf "PREFIX=\"%s\"\n%s && %s\necho 'ok' > %s/%s"
+                       (* the marker is CONDITIONAL on the install (2026-08-16,
+                          C2 cold-audit fix): the old newline-separated echo
+                          wrote install.ok even when cmake --install died (z3's
+                          missing executable — "file INSTALL cannot find"), so a
+                          failed install cached as success (the bug-B class). *)
+                       Printf.sprintf "PREFIX=\"%s\"\n%s && %s && echo 'ok' > %s/%s"
                          prefix
                          (Canary_build_cmd.cmake_install_cmd ~build ~prefix ())
                          (Canary_build_cmd.prefix_layout_inspect_cmd ~prefix ~output_dir ~variant_key)

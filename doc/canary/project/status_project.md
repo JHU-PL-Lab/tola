@@ -172,6 +172,22 @@ recorded here, reported as-is, NOT special-cased in checker code:
   (the amalgamation version IS the lib's version) — source-follows-lib
   is a new axis direction, first used here.
 
+### Found — install step died on the missing z3 executable (2026-08-16, C2)
+
+The C2 cold run of z3's official-latest dev chain failed its
+`cmake --install`: "file INSTALL cannot find …/build/z3" — the A5 table
+migration had dropped `-DZ3_BUILD_EXECUTABLE=OFF` (the canonical
+`z3_cmake_build_flags` — still used by the z3.dev opam template) from
+the Configure row, so a fresh cmake cache defaults EXECUTABLE=ON and the
+install rule includes the never-built shell binary. Masked until C2:
+the old scenario dir's warm `.ok` markers skipped the install step, and
+the fork's contrib build tree carries a pre-A5 cache with EXECUTABLE=OFF
+(cache first-write-wins). FIXED: the Configure row carries the canonical
+what-is-built flags (EXECUTABLE/TEST_EXECUTABLES/JAVA/PYTHON = OFF).
+General lesson: a scenario-dir rename IS a cold-run audit — warm
+markers mask spec drift; the 3-way's per-repo ids re-exercised z3's
+install for the first time since A5.
+
 ### Found — Fetched-source version id is NOT in the run-cache key (2026-08-13)
 
 Flipping z3's Dev source fork→official changed the scenario DIR
@@ -184,6 +200,10 @@ wrong source; the step markers must be cleared by hand — done). A
 three-version report (official dev vs forked dev) needs the source
 version id IN the cache key, or the two scenarios collide on stale
 markers.
+**RESOLVED (2026-08-16, C1+C2)**: repo pins make every source placement
+identity-bearing (see the §3 to-do) — `source-fetched-arbipher` vs
+`source-fetched-latest` are distinct scenario dirs with distinct
+per-scenario caches; the collision can't recur.
 
 ### Investigated — build-config divergence (z3/llvm): NOT a bug
 
@@ -263,9 +283,15 @@ per-project ones.
   provider (a repo FAMILY per artifact) + `Canary_pattern_a.sources` —
   zarith runs 2 scenarios (source-fetched-1.14 / source-fetched-master)
   with per-scenario worktree dispatch; cairo/libffi sources are
-  identity-bearing as a side fix. Next: C2 — z3/llvm arbipher forks as
-  labeled third repos (their single-`Repo` rows converge to
-  `Repo_axes`; the fork slot is already representable).
+  identity-bearing as a side fix. LANDED (2026-08-16, roadmap C2):
+  z3/llvm — the arbipher forks are labeled third repos
+  (`label = Some "arbipher"`, id `"arbipher"`), the source rows are
+  `Repo_axes [stable; latest; fork]`, the realizations dispatch on the
+  SOURCE placement (the lib-channel proxy retired), and
+  `assignment_ok`'s Built-lib↔source coupling is now channel-level —
+  5 scenarios each (3 all-Fetched source worlds + 2 dev build chains),
+  `--thin` = the stable chain only. The 2026-08-13 fork↔official
+  collision is resolved by design.
 - [ ] **Repo-provider unification** — `Source_repo` vs `Built_from`
   wrap the SAME record and split by what the repo provides, which is
   redundant with the axes' provision (`Built_from` has ZERO live uses).
@@ -273,19 +299,15 @@ per-project ones.
   source OR an artifact directly (the latter has no representation
   today). One `Repo of …` variant; the axes say how. Design together
   with the 3-way.
-- [ ] **Fetched-source version id in the run-cache key** (2026-08-13) —
+- [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
-  every step over stale markers (see the Found entry in §2). The
-  assignment string must carry the Fetched source's version id — a
-  three-version-report blocker (official vs forked dev collide).
-  PARTIALLY SUPERSEDED (2026-08-16, C1): the identity half now derives
-  from repo pins — a `Repo_axes` family makes each repo's source
-  placement identity-bearing (distinct scenario dirs → distinct cache
-  keys, the runner's cache_project is the scenario dir), and the
-  remaining risk is only the z3/llvm rows that still pin `ref_ = "HEAD"`
-  with ambient identity — C2's `Repo_axes` migration resolves it.
-  Possibly in flight in another agent (2026-08-14) — WAIT before
-  picking this up.
+  every step over stale markers (see the Found entry in §2). RESOLVED
+  BY DESIGN (2026-08-16, C1+C2): repo pins make every source placement
+  identity-bearing — `Repo_axes` families pin the per-repo (channel,
+  id) into the axes, so distinct scenario dirs → distinct output dirs →
+  distinct markers/cache keys (the runner's cache_project IS the
+  scenario dir); the fork↔official collision can't recur (fork id =
+  "arbipher" ≠ "latest").
 - [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is
   a CLASS: build steps that run OCaml bytecode/native self-checks read
   the global store (stublibs/apt) unless guarded. Audit other projects'

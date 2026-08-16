@@ -8,8 +8,8 @@ dune exec src/bin/canary_main.exe -- paths                   # print 15-row acti
 dune exec src/bin/canary_main.exe -- paths-md                # same, markdown output
 dune exec src/bin/canary_main.exe -- graph                   # write docs/canary/graph/action_graph.mmd
 dune exec src/bin/canary_main.exe -- action sqlite            # runs 3 scenarios: system-fetched lib + built 3.45.1 + built 3.46.1 (full chain each; Built scenarios probe OVER the built lib — LD_LIBRARY_PATH repoint + runtime sqlite_version asserted; Python is Ambient: bundled, observed not asserted)
-dune exec src/bin/canary_main.exe -- action z3               # GENERIC path (A5): enumerate z3_spec → 2 scenarios (stable fetch chain baseline + dev build chain); parser_context xfail fires in BOTH (scenario-invariant). --thin = stable chain only
-dune exec src/bin/canary_main.exe -- action llvm             # GENERIC path (A5): same two-chain shape as z3; Opcode.UncondBr xfail in the stable chain
+dune exec src/bin/canary_main.exe -- action z3               # GENERIC path (A5 + C2 3-way): 5 scenarios = 3 all-Fetched source worlds (stable 4.15.2 / official latest / arbipher fork) + 2 dev build chains (latest + fork); parser_context xfail fires in every world (scenario-invariant). --thin = stable chain only
+dune exec src/bin/canary_main.exe -- action llvm             # GENERIC path (A5 + C2 3-way): same 5-scenario shape as z3; Opcode.UncondBr xfail in the stable chain
 dune exec src/bin/canary_main.exe -- action tiny-full        # tiny-full PROJECT (peer of z3): 6 spec-derived scenarios = {lib V:S,B:S,B:D} x {ocaml binding V:S,V:D}; binding@dev over stable lib = the forward API mismatch (undefined tiny_scale), c1-predicted xfail
 dune exec src/bin/canary_main.exe -- action tiny-full --thin # thin = version Subset [Stable] policy: 2 scenarios (drops both dev axes)
 dune exec src/bin/canary_main.exe -- action @all           # THE batch: every registry project under the default config — Heavy (z3/llvm) THIN (bypasses the source-built Dev chains), Light FULL; --thin forces thin everywhere; single-project runs always full

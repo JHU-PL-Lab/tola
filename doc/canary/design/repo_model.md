@@ -215,10 +215,19 @@ confirmation."
      Fetched-source-id" blocker turned out to be obsolete — the
      store-pin machinery (2026-08-12) already provides the identity;
      see the Fetched-source-id item in status_project.md.
-  2. **C2 z3/llvm**: arbipher forks as labeled third repos
-     (their per-channel fetch still dispatches via table rows — the
-     remaining single-`Repo` rows converge to `Repo_axes` here); the
-     three-version report shape.
+  2. **C2 z3/llvm — LANDED** (2026-08-16): the arbipher forks are
+     labeled third repos (`label = Some "arbipher"`, identity-bearing
+     `id = "arbipher"` — the 2026-08-13 fork↔official collision is
+     resolved by design), the source rows are `Repo_axes
+     [stable; latest; fork]`, and each project's realization dispatches
+     on the SOURCE placement's pinned id (`z3/llvm_source_for_assignment`
+     — the pre-C2 lib-channel proxy retired; the dev/stable ROW split
+     stays driven by the lib provision in `realize_from_rows`). The
+     Built-lib↔source coupling in `assignment_ok` relaxed to CHANNEL
+     equality (exact-id equality was right while sources were ambient;
+     with per-repo pins it would kill both dev build chains). Each
+     project now enumerates 5 scenarios: 3 all-Fetched source worlds +
+     2 dev build chains; `--thin` keeps the stable chain only.
 - **D. The web viewer** — after the 3-way (the UI over the commands).
 - **De-pattern-a** (user, 2026-08-16): `Canary_pattern_a.t` should NOT
   be a datatype — at most functions producing the general types

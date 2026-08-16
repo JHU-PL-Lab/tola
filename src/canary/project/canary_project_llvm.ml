@@ -94,12 +94,17 @@ let llvm_source_dev : source_repo =
           path = "/home/red/code/contrib/llvm-all/llvm-project";
           build_path = "/home/red/code/contrib/llvm-all/build" };
       ];
-    version = Canary_basic.{ channel = Dev; id = "" };
+    (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
+       id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
+       identity). The three-version report needs official-dev and
+       forked-dev as DISTINCT scenarios (the 2026-08-13 finding: both
+       declare ref_ = HEAD, ambient identity would collide them). *)
+    version = Canary_basic.{ channel = Dev; id = "arbipher" };
     ref_ = "HEAD";
     official = false;
     build_sys_deps = [ "cmake"; "ninja-build" ];
     api_source = Some llvm_api_source;
-    label = None;
+    label = Some "arbipher";
     (* the repo builds the lib + the in-tree OCaml binding
        (llvm/bindings/ocaml); llvmlite (pip) is off-tree *)
     artifacts =
@@ -152,12 +157,34 @@ let llvm_source_latest : source_repo =
       [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ];
   }
 
-(* [Dev] = the ARBIPHER fork (2026-08-12 restored, same as z3's — the
-   official [llvm_source_latest] HEAD's clone into _out is unusable for
-   the dev chain (no llvm/ subdir / CMakeLists at the clone root); the
-   fork's local checkout + warm build tree is the dev source. [latest]
-   stays declared as the unwired channel candidate. *)
+(* Channel-keyed source lookup — the channel DEFAULT (C2 keeps it as the
+   fallback + CI's tag lookup). [Dev] = the ARBIPHER fork (2026-08-12
+   restored, same as z3's — the official [llvm_source_latest] HEAD's
+   clone into _out was unusable for the dev chain (no llvm/ subdir /
+   CMakeLists at the clone root); the fork's local checkout + warm build
+   tree is the dev source). The per-SCENARIO dispatch
+   ([llvm_source_for_assignment]) selects the exact repo by the source
+   placement's pinned id — [latest] is a real scenario now (C2, the
+   three-version report). *)
 let llvm_source_of (ch : Canary_basic.channel) : source_repo = match ch with Canary_basic.Dev -> llvm_source_dev | Canary_basic.Stable -> llvm_source_stable
+
+(* The repo backing one scenario's source placement (C2): the [Repo_axes]
+   store pins carry each repo's (channel, id), so match the placement's
+   version against the three declared repos — exact (channel, id) first,
+   then the channel default ([llvm_source_of] — CI's synthetic
+   assignments carry no source placement). The realize ∘ dispatch idiom. *)
+let llvm_source_for_assignment (a : Canary_artifact.assignment) : source_repo =
+  let v = Canary_enumerate.version_of a Canary_artifact.a_source in
+  let open Canary_basic in
+  match
+    List.find
+      [ llvm_source_stable; llvm_source_latest; llvm_source_dev ]
+      ~f:(fun r ->
+        equal_channel r.Canary_artifact_source.version.channel v.channel
+        && String.equal r.Canary_artifact_source.version.id v.id)
+  with
+  | Some r -> r
+  | None -> llvm_source_of v.channel
 
 (* Opam package names used in pack_binding and check_post *)
 let llvm_dev_opam_pkg = "llvm.dev-shared"
@@ -332,7 +359,13 @@ let llvm_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
   [ artifact_row ~artifact:a_source
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Repo llvm_source_stable) ();
+      (* C2 (2026-08-16): the 3-way — stable, official dev (latest), and
+         the arbipher fork, as per-channel repo pins: one identity-bearing
+         scenario per repo. *)
+      ~provider:
+        (Canary_store_config.Repo_axes
+           [ llvm_source_stable; llvm_source_latest; llvm_source_dev ])
+      ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
                   (Built, [ Canary_basic.Dev ]) ]
@@ -359,9 +392,11 @@ let llvm_artifacts : Canary_project_spec.artifact_row list =
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:llvm_python_provider () ]
 
-let llvm_table_rows ~(chan : Canary_basic.channel) ~distro =
+let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
   let open Canary_action_templates in
-  let source = llvm_source_of chan in
+  (* C2: per-REPO rows — the scenario's source placement picks the repo,
+     not a channel default; the repo's own version.channel drives the
+     dev/stable row split below. *)
   let { version; ref_; name; remote; _ } : Canary_artifact_source.source_repo = source in
   let ver_str = Canary_basic.string_of_version version in
   let local = Canary_artifact_source.local_for distro source in
@@ -489,11 +524,11 @@ test "$INSTALLED_LLVM" = "%{pin}" || { echo "WORLD MISMATCH: switch has llvm $IN
 |}]
 
 let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
-  let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
-    | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib
-    | _ -> Canary_basic.Stable
-  in
-  let rows = llvm_table_rows ~chan ~distro:(detect_distro ()) in
+  (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2
+     proxy — the source row now pins per-repo identities, so the scenario's
+     repo IS the source placement's id). *)
+  let source = llvm_source_for_assignment a in
+  let rows = llvm_table_rows ~source ~distro:(detect_distro ()) in
   let spec = Canary_action_templates.realize_from_rows ~assignment:a  rows in
   let binding_fetched =
     Canary_enumerate.equal_provision
@@ -553,7 +588,7 @@ let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
     in the stable chain) — but the discriminating axis is the binding's
     provision, which only joins the universe with version propagation. *)
 let llvm_ci_spec _tola_root distro =
-  let rows = llvm_table_rows ~chan:Canary_basic.Stable ~distro in
+  let rows = llvm_table_rows ~source:llvm_source_stable ~distro in
   let a = Canary_artifact.[ (Canary_artifact.a_lib, { provision = Canary_artifact.Fetched; version = Canary_basic.good Canary_basic.Stable }) ] in
   Canary_action_templates.realize_from_rows ~assignment:a rows
 
@@ -567,6 +602,8 @@ let llvm_run _distro : Canary_project_run.project_run =
        declare it empty so spec-check flags the gap. *)
     pr_wrapper_pkgs = [];
     pr_api_source = None;
-    (* source-built dev chain (the heaviest of all) — the batch default
-       runs llvm THIN (stable fetch chain only). *)
+    (* C2: FIVE scenarios — 3 all-Fetched source worlds (stable 19 /
+       official latest / arbipher fork) + 2 source-built dev chains
+       (official latest + fork; the heaviest of all — the batch default
+       runs llvm THIN, stable fetch chain only). *)
     pr_tier = Canary_project_run.Heavy }

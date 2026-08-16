@@ -172,15 +172,26 @@ let built_from_of_assignment
     *own language* binding needs App to carry a lang — ssot §4.2.3.) *)
 let assignment_ok (a : assignment) : bool =
   let lib = provision_of a a_lib in
-  (* A Built lib needs its source present AND at the same version — but only when
-     [a_source] is a DECLARED artifact (tiny models source as a separate vendored
-     artifact). A project that models Built as self-contained (fetches source
-     internally, e.g. sqlite's amalgamation) omits [a_source], and the check is
-     moot. *)
+  (* A Built lib needs its source present AND at the same CHANNEL — but only
+     when [a_source] is a DECLARED artifact (tiny models source as a separate
+     vendored artifact). A project that models Built as self-contained
+     (fetches source internally, e.g. sqlite's amalgamation) omits
+     [a_source], and the check is moot.
+
+     CHANNEL-level, not build_id-level (2026-08-16, C2): exact-id equality
+     was right while sources were version-ambient ([id = ""]). Identity-
+     bearing sources (repo pins — a [Repo_axes] family's per-channel repos)
+     carry ids the Built lib's channel-level placement can never mirror;
+     under id-equality BOTH dev build chains would die. The lib built from
+     a checkout inherits its channel — WHICH checkout the scenario is, is
+     the source placement's id, already part of the assignment's identity
+     (two dev chains: source-fetched-latest vs source-fetched-arbipher). *)
   let source_declared = Option.is_some (placement_of a a_source) in
   (not (equal_provision lib Built) || not source_declared || provided a a_source)
   && (not (equal_provision lib Built) || not source_declared
-     || equal_version (version_of a a_lib) (version_of a a_source))
+     || Canary_basic.equal_channel
+          (version_of a a_lib).Canary_basic.channel
+          (version_of a a_source).Canary_basic.channel)
   && List.for_all a ~f:(fun (id, pl) ->
          match kind_of id with
          | Binding _ ->

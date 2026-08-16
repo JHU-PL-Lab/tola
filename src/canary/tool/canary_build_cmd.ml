@@ -119,8 +119,8 @@ let prefix_layout_inspect_cmd ~prefix ~output_dir ~variant_key =
   Printf.sprintf
     "{ find %s -type f -o -type l 2>/dev/null | sort | while read f; do \
      printf '{\"path\":\"%%s\",\"type\":\"%%s\",\"size\":%%d}' \
-       \"${f#%s/}\" $(stat -c%%F \"$f\" 2>/dev/null || echo unknown) \
-       $(stat -c%%s \"$f\" 2>/dev/null || echo 0); done; } > %s"
+       \"${f#%s/}\" \"$(stat -c%%F \"$f\" 2>/dev/null || echo unknown)\" \
+       \"$(stat -c%%s \"$f\" 2>/dev/null || echo 0)\"; done; } > %s"
     prefix prefix out
 
 (** Locate llvm-config across distros: try the configured hint name, fall

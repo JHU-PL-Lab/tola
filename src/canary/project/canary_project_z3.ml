@@ -109,12 +109,17 @@ let z3_source_dev : source_repo =
     name = "z3";
     remote = Some (Git "https://github.com/arbipher/z3.git");
     locals = mk_locals "contrib/z3-all/z3";
-    version = Canary_basic.{ channel = Dev; id = "" };
+    (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
+       id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
+       identity). The three-version report needs official-dev and
+       forked-dev as DISTINCT scenarios (the 2026-08-13 finding: both
+       declare ref_ = HEAD, ambient identity would collide them). *)
+    version = Canary_basic.{ channel = Dev; id = "arbipher" };
     ref_ = "HEAD";
     official = false;
     build_sys_deps = [ "cmake"; "ninja-build"; "libgmp-dev"; "python3-dev" ];
     api_source = Some z3_api_source;
-    label = None;
+    label = Some "arbipher";
     (* the repo builds the lib + both in-tree bindings (src/api/ml,
        src/api/python) — the all-on-tree shape *)
     artifacts =
@@ -162,15 +167,35 @@ let z3_source_stable : source_repo =
         a_binding Canary_lang.Python Canary_mechanism.Cext ];
   }
 
-(* Channel-keyed source lookup. [Dev] = official [z3_source_latest]
+(* Channel-keyed source lookup — the channel DEFAULT (C2 keeps it as the
+   fallback + CI's tag lookup). [Dev] = official [z3_source_latest]
    (2026-08-13 restored — the "official HEAD binding broken" finding was
    WRONG: the failure was the opam switch's stale dllz3ml.so shadowing
    the fresh one in z3's POST_BUILD self-check (CAML_LD_LIBRARY_PATH
    beats the bytecode's -dllpath); the build_binding row now guards the
-   env. The arbipher fork ([z3_source_dev]) stays declared as the
-   forked-dev candidate for the three-version report.) *)
+   env). The per-SCENARIO dispatch ([z3_source_for_assignment]) selects
+   the exact repo by the source placement's pinned id — the arbipher
+   fork is a real scenario now (C2, the three-version report). *)
 let z3_source_of (ch : Canary_basic.channel) : source_repo =
   match ch with Canary_basic.Dev -> z3_source_latest | Canary_basic.Stable -> z3_source_stable
+
+(* The repo backing one scenario's source placement (C2): the [Repo_axes]
+   store pins carry each repo's (channel, id), so match the placement's
+   version against the three declared repos — exact (channel, id) first,
+   then the channel default ([z3_source_of] — CI's synthetic assignments
+   carry no source placement). The realize ∘ dispatch idiom. *)
+let z3_source_for_assignment (a : Canary_artifact.assignment) : source_repo =
+  let v = Canary_enumerate.version_of a Canary_artifact.a_source in
+  let open Canary_basic in
+  match
+    List.find
+      [ z3_source_stable; z3_source_latest; z3_source_dev ]
+      ~f:(fun r ->
+        equal_channel r.Canary_artifact_source.version.channel v.channel
+        && String.equal r.Canary_artifact_source.version.id v.id)
+  with
+  | Some r -> r
+  | None -> z3_source_of v.channel
 
 let z3_opam_spec : Canary_toolchain.opam_spec =
   {
@@ -287,7 +312,13 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
   [ artifact_row ~artifact:a_source
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Repo z3_source_stable) ();
+      (* C2 (2026-08-16): the 3-way — stable, official dev (latest), and
+         the arbipher fork, as per-channel repo pins: one identity-bearing
+         scenario per repo. *)
+      ~provider:
+        (Canary_store_config.Repo_axes
+           [ z3_source_stable; z3_source_latest; z3_source_dev ])
+      ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
                   (Built, [ Canary_basic.Dev ]) ]
@@ -317,9 +348,11 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:z3_python_provider () ]
 
-let z3_table_rows ~(chan : Canary_basic.channel) ~distro =
+let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
   let open Canary_action_templates in
-  let source = z3_source_of chan in
+  (* C2: per-REPO rows — the scenario's source placement picks the repo,
+     not a channel default; the repo's own version.channel drives the
+     dev/stable row split below. *)
   let { version; ref_; name; remote; _ } : Canary_artifact_source.source_repo = source in
   let ver_str = Canary_basic.string_of_version version in
   let local = Canary_artifact_source.local_for distro source in
@@ -382,10 +415,23 @@ let z3_table_rows ~(chan : Canary_basic.channel) ~distro =
                      Unix Makefiles and the ninja_build step finds no
                      build.ninja (the old mk_runner_spec's flags had
                      it; the table row dropped it). *)
+                  (* The WHAT-is-built flags mirror the canonical
+                     [z3_cmake_build_flags] (the opam template uses them) —
+                     -DZ3_BUILD_EXECUTABLE=OFF is a FIX (2026-08-16, C2):
+                     the A5 table migration dropped it, and the install
+                     step (cmake --install) died on the missing z3
+                     executable ("file INSTALL cannot find .../build/z3")
+                     — masked until C2 renamed the scenario dirs and forced
+                     a COLD run past the warm .ok markers. *)
                   flags =
                     String.split
-                      ("-G Ninja -DZ3_BUILD_LIBZ3_SHARED=TRUE -DZ3_BUILD_OCAML_BINDINGS="
-                       ^ (if cmake_build_binding then "ON" else "OFF"))
+                      ("-G Ninja -DZ3_BUILD_LIBZ3_SHARED=TRUE \
+                        -DZ3_BUILD_OCAML_BINDINGS="
+                       ^ (if cmake_build_binding then "ON" else "OFF")
+                       ^ " -DZ3_BUILD_EXECUTABLE=OFF \
+                          -DZ3_BUILD_TEST_EXECUTABLES=OFF \
+                          -DZ3_BUILD_JAVA_BINDINGS=OFF \
+                          -DZ3_BUILD_PYTHON_BINDINGS=OFF")
                       ~on:' ';
                   src = root; build } };
       { ar_action = Canary_basic.Build_lib;
@@ -485,10 +531,11 @@ test "$INSTALLED_Z3" = "%{pin}" || { echo "WORLD MISMATCH: switch has z3 $INSTAL
 |}]
 
 let realize a =
-  let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
-    | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib | _ -> Canary_basic.Stable
-  in
-  let spec = Canary_action_templates.realize (z3_table_rows ~chan ~distro:(detect_distro ())) a in
+  (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2
+     proxy — the source row now pins per-repo identities, so the scenario's
+     repo IS the source placement's id). *)
+  let source = z3_source_for_assignment a in
+  let spec = Canary_action_templates.realize (z3_table_rows ~source ~distro:(detect_distro ())) a in
   let binding_fetched =
     Canary_enumerate.equal_provision
       (Canary_enumerate.provision_of a z3_binding_art)
@@ -586,7 +633,8 @@ let realize a =
    cmake_build_binding=false). The opam pack_binding step still runs. *)
 let z3_ci_spec _tola_root distro =
   let open Canary_action_templates in
-  let rows = z3_table_rows ~chan:Canary_basic.Dev ~distro in
+  (* CI tracks the OFFICIAL dev source (the fork is canary-local). *)
+  let rows = z3_table_rows ~source:(z3_source_of Canary_basic.Dev) ~distro in
   let no_cmake (row : action_row) =
     match row.ar_action with
     | Configure | Build_lib | Build_headers | Install_lib -> false
@@ -606,6 +654,8 @@ let z3_run _distro : Canary_project_run.project_run =
        package over the built tree (pin-checked "dev" on the store). *)
     pr_wrapper_pkgs = [ (Canary_lang.OCaml, "z3.dev") ];
     pr_api_source = None;
-    (* source-built dev chain (~15-40 min cold) — the batch default runs
-       z3 THIN (stable fetch chain only). *)
+    (* C2: FIVE scenarios — 3 all-Fetched source worlds (stable 4.15.2 /
+       official latest / arbipher fork) + 2 source-built dev chains
+       (official latest + fork, ~15-40 min cold EACH) — the batch default
+       runs z3 THIN (stable fetch chain only). *)
     pr_tier = Canary_project_run.Heavy }

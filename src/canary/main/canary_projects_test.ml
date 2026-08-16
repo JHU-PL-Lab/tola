@@ -7,11 +7,13 @@ open Base
     `canary project-test` appends them to the pure project-definition suite
     via [Canary_project_test.run_tests ~extra].
 
-    z3 (phase 1–2) and llvm (phase 5) share ONE shape — the two-chain
-    project (dev build chain / stable fetch chain) — so their pins are one
+    z3 (phase 1–2) and llvm (phase 5) share ONE shape — the 3-way project
+    (C2, 2026-08-16: source Repo_axes pins {stable, latest, arbipher-fork}
+    × {stable fetch chain / dev build chain}) — so their pins are one
     parameterized generator ([two_chain_pins]): the spec enumerates to the
-    current 2 variants BEFORE any runner change, the dispatch reads only the
-    lib placement, and the provider table backs the baseline provisions. *)
+    current 5 scenarios (3 all-Fetched source worlds + 2 dev build chains),
+    the dispatch reads the SOURCE placement's pinned repo id, and the
+    provider table backs the baseline provisions. *)
 
 module B = Canary_basic
 module EN = Canary_enumerate
@@ -41,32 +43,42 @@ let ambient_key (a : Canary_artifact.assignment) : string =
 let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assignment list =
   Canary_enumerate.enumerate ~tag:(fun () -> "") ~policy:(Canary_enumerate.full_policy ()) spec
 
-(* The three pins for a TWO-CHAIN project (the z3/llvm shape: source
-   Fetched@{Stable,Dev}, lib Fetched@Stable | Built@Dev, python binding
-   Fetched@Stable; the OCaml binding not enumerated — it follows the chain).
-   [dispatch_is_dev] projects the project's own [scenario_case] dispatch to
-   "is the dev build chain". *)
+(* The three pins for a 3-way project (the z3/llvm shape, C2: source
+   Fetched@pins {4.15.2/19, latest, arbipher}, lib Fetched@Stable |
+   Built@Dev, python binding Fetched@Stable; the OCaml binding not
+   enumerated — it follows the chain).
+   [source_of] projects the project's own [source_for_assignment]
+   dispatch; [dispatch_is_dev] is "is the dev build chain" (= lib Built —
+   [realize_from_rows] filters the build rows by the lib provision). *)
 let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(artifacts : Canary_project_spec.artifact_row list)
+    ~(source_of : Canary_artifact.assignment -> Canary_artifact_source.source_repo)
     ~(dispatch_is_dev : Canary_artifact.assignment -> bool) :
     Canary_project_test.pure_test list =
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
-  (* dev variant: the coherent build chain — source@Dev, lib Built@Dev *)
+  (* dev variant: the coherent build chain — source@Dev (ANY dev repo —
+     latest or the fork), lib Built@Dev (C2: channel-level coupling) *)
   let is_dev a =
     EN.equal_provision (lib_prov a) EN.Built
-    && Canary_basic.equal_version (Canary_enumerate.version_of a Canary_artifact.a_lib) (Canary_basic.good B.Dev)
-    && Canary_basic.equal_version (Canary_enumerate.version_of a Canary_artifact.a_source) (Canary_basic.good B.Dev)
+    && Canary_basic.equal_channel
+         (Canary_enumerate.version_of a Canary_artifact.a_lib).Canary_basic.channel
+         Canary_basic.Dev
+    && Canary_basic.equal_channel
+         (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.channel
+         Canary_basic.Dev
   in
-  (* stable variant: the all-Fetched chain (source channel ambient) *)
+  (* stable variant: the all-Fetched chain (per-repo source pins) *)
   let is_stable_world a =
     EN.equal_provision (lib_prov a) EN.Fetched
     && EN.equal_provision (Canary_enumerate.provision_of a Canary_artifact.a_source) EN.Fetched
   in
-  [ (* enumerate(spec) == the current 2 variants. Product-then-filter yields
-       THREE assignments — the source-primary filter prunes (source@Stable ×
-       lib Built@Dev), and the two all-Fetched assignments collapse under
-       the ambient identity rule into ONE stable scenario — leaving exactly
-       {dev chain, stable chain}, baseline (head) = the all-Fetched chain. *)
+  [ (* enumerate(spec) == the 3-way (C2). Product-then-filter yields FIVE
+       assignments — the source-primary filter prunes (source@Stable ×
+       lib Built@Dev), the repo pins keep every all-Fetched source world
+       identity-bearing (stable / latest / fork), and each of the two dev
+       repos pairs with the Built lib (channel coupling) — leaving exactly
+       {3 all-Fetched worlds, 2 dev chains}, baseline (head) = the stable
+       all-Fetched chain. *)
     { Canary_project_test.name =
         prefix ^ ".spec_enumerates_current_variants";
       check = (fun () ->
@@ -75,38 +87,45 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
           List.dedup_and_sort ~compare:String.compare
             (List.map asgs ~f:ambient_key)
         in
-        List.length asgs = 3
-        && List.count asgs ~f:is_dev = 1
-        && List.count asgs ~f:is_stable_world = 2
-        (* the two all-Fetched assignments are ONE world: 2 ids total *)
-        && List.length scenario_ids = 2
+        List.length asgs = 5
+        && List.count asgs ~f:is_dev = 2
+        && List.count asgs ~f:is_stable_world = 3
+        (* each repo pin is ONE identity-bearing world: 5 ids total *)
+        && List.length scenario_ids = 5
         (* the python binding row is variant-invariant: Fetched everywhere *)
         && List.for_all asgs ~f:(fun a ->
                EN.equal_provision (Canary_enumerate.provision_of a py_cext) EN.Fetched)
         (* source-primary pruned the incoherent build: no Built lib over
-           the stable source *)
+           the stable source (channel coupling) *)
         && (not
               (List.exists asgs ~f:(fun a ->
                    EN.equal_provision (lib_prov a) EN.Built
-                   && Canary_basic.equal_version (Canary_enumerate.version_of a Canary_artifact.a_source)
-                        (Canary_basic.good B.Stable))))
+                   && Canary_basic.equal_channel
+                        (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.channel
+                        Canary_basic.Stable)))
         (* baseline (enumeration head) = the all-Fetched stable chain *)
         && match asgs with x :: _ -> is_stable_world x | [] -> false) };
-    (* the dispatch is pure data over enumeration coordinates — pin that it
-       reads the LIB placement only (Built ⇒ dev build chain), so BOTH
-       all-Fetched assignments (either ambient source channel) dispatch to
-       the stable chain: the dedup-surviving representative realizes the
-       same chain no matter which one runs. [realize] is deliberately NOT
-       called (command templates shell into distro/PM detection). *)
-    { name = prefix ^ ".dispatch_reads_lib_placement_only";
+    (* the dispatch is pure data over enumeration coordinates — pin that
+       the repo selection follows the SOURCE placement's pinned id (C2:
+       the repo IS the scenario's identity — [source_of]), and that the
+       dev-CHAIN discriminator is the lib provision (Built ⇒ dev build
+       chain; [realize_from_rows] filters the build rows by exactly
+       that). [realize] is deliberately NOT called (command templates
+       shell into distro/PM detection). *)
+    { name = prefix ^ ".dispatch_reads_source_placement";
       check = (fun () ->
         let asgs = enumerate_full spec in
         let cases = List.map asgs ~f:dispatch_is_dev in
-        List.count cases ~f:Fn.id = 1
-        && List.count cases ~f:not = 2
+        List.count cases ~f:Fn.id = 2
+        && List.count cases ~f:not = 3
         && List.for_all2_exn asgs cases ~f:(fun a dev ->
                Bool.equal dev
-                 (EN.equal_provision (lib_prov a) EN.Built))) };
+                 (EN.equal_provision (lib_prov a) EN.Built))
+        && List.for_all asgs ~f:(fun a ->
+               String.equal
+                 (source_of a).Canary_artifact_source.version.Canary_basic.id
+                 (Canary_enumerate.version_of a Canary_artifact.a_source)
+                   .Canary_basic.id)) };
     (* the provider table backs the BASELINE provisions — pin the drift
        check `spec` performs at display time (provider's coarse provision
        == the enumerated baseline placement, for every artifact the
@@ -134,6 +153,7 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
 let z3_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
     ~artifacts:Canary_project_z3.z3_artifacts
+    ~source_of:Canary_project_z3.z3_source_for_assignment
     ~dispatch_is_dev:(fun a ->
       Canary_enumerate.equal_provision
         (Canary_enumerate.provision_of a Canary_artifact.a_lib)
@@ -142,6 +162,7 @@ let z3_pins : Canary_project_test.pure_test list =
 let llvm_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
     ~artifacts:Canary_project_llvm.llvm_artifacts
+    ~source_of:Canary_project_llvm.llvm_source_for_assignment
     ~dispatch_is_dev:(fun a ->
       Canary_enumerate.equal_provision
         (Canary_enumerate.provision_of a Canary_artifact.a_lib)
@@ -359,9 +380,10 @@ let integration_smoke : Canary_project_test.pure_test =
       in
       let ok1 = check ~name:"sqlite" ~want_count:3
           Canary_project_sqlite.sqlite_run in
-      let ok2 = check ~name:"z3" ~want_count:3
+      (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains *)
+      let ok2 = check ~name:"z3" ~want_count:5
           (Canary_project_z3.z3_run (Canary_basic.detect_distro ())) in
-      let ok3 = check ~name:"llvm" ~want_count:3
+      let ok3 = check ~name:"llvm" ~want_count:5
           (Canary_project_llvm.llvm_run (Canary_basic.detect_distro ())) in
       let ok4 = check ~name:"tiny-full" ~want_count:1
           Canary_project_tiny.tiny_full_run in
