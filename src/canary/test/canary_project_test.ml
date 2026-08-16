@@ -1060,9 +1060,10 @@ let tool_routing_ratchet_test : pure_test =
          opam-install raws (A9-step-2 territory). *)
       let baseline =
         [ ("cmake ",
-           [ (* +1 vs the old 5 = the -G Ninja COMMENT; the shell goes
-                through cmake_configure_cmd *)
-             ("canary_project_llvm.ml", 6); ("canary_tiny_scenario.ml", 4);
+           [ (* +1 vs the old 6 = the C2 cmake-source COMMENT (the
+                realize-time probe misdiagnosis); the shell goes through
+                cmake_configure_cmd *)
+             ("canary_project_llvm.ml", 7); ("canary_tiny_scenario.ml", 4);
              (* the +1 vs the old 6 = a COMMENT noting cmake's default
                 generator; the shell goes through cmake_configure_cmd *)
              ("canary_project_z3.ml", 7); ("canary_run.ml", 1) ]);

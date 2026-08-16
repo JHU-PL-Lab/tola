@@ -143,16 +143,18 @@ pin its own artifacts — PR candidate, needs go-ahead.
 
 ### Resolved — llvm official-HEAD clone: transient, not upstream
 
-> 2026-08-12 observed, 2026-08-13 re-checked.
+> 2026-08-12 observed, 2026-08-13 re-checked, **2026-08-16 re-diagnosed (C2)**.
 
 The 08-12 observation (the `latest_HEAD` clone "lacks the `llvm/` subdir
-and CMakeLists at the clone root") does **not** reproduce: official HEAD
-has `llvm/` (GitHub API), a fresh depth-1 clone of
-`llvm/llvm-project.git` checks out the full monorepo fine, and the
-stable chain clones the same official repo every run. The 08-12 state
-was a transient/partial clone. Dev stays on the arbipher fork for its
-local checkout + warm build tree until `source_fetch` honors locals
-(filed to-do) — then Dev can point at official with a local checkout.
+and CMakeLists at the clone root") was a MISDIAGNOSIS on both dates: the
+clone was always fine. C2's cold run of the official-latest dev chain
+reproduced the configure failure against a COMPLETE monorepo clone and
+found the real bug — the table rows probed `root/llvm/CMakeLists.txt` on
+the filesystem at REALIZE time, before the fetch step runs, so a fresh
+`_out` clone always resolved the cmake source to `root` (the local
+checkout passed only because it exists at realize time). Fixed: every
+llvm repo is the monorepo, so the cmake source is unconditionally
+`root/llvm` (canary_project_llvm.ml).
 
 ### Found — spec non-uniformities (2026-08-13, `canary spec-check`)
 

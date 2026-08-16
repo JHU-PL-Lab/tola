@@ -159,13 +159,12 @@ let llvm_source_latest : source_repo =
 
 (* Channel-keyed source lookup — the channel DEFAULT (C2 keeps it as the
    fallback + CI's tag lookup). [Dev] = the ARBIPHER fork (2026-08-12
-   restored, same as z3's — the official [llvm_source_latest] HEAD's
-   clone into _out was unusable for the dev chain (no llvm/ subdir /
-   CMakeLists at the clone root); the fork's local checkout + warm build
-   tree is the dev source). The per-SCENARIO dispatch
-   ([llvm_source_for_assignment]) selects the exact repo by the source
-   placement's pinned id — [latest] is a real scenario now (C2, the
-   three-version report). *)
+   restored, same as z3's). The 2026-08-12 "official clone unusable"
+   finding was MISDIAGNOSED — the clone was fine; the real bug was the
+   realize-time cmake-source probe (fixed 2026-08-16, see the table
+   rows). The per-SCENARIO dispatch ([llvm_source_for_assignment])
+   selects the exact repo by the source placement's pinned id —
+   [latest] is a real scenario now (C2, the three-version report). *)
 let llvm_source_of (ch : Canary_basic.channel) : source_repo = match ch with Canary_basic.Dev -> llvm_source_dev | Canary_basic.Stable -> llvm_source_stable
 
 (* The repo backing one scenario's source placement (C2): the [Repo_axes]
@@ -416,9 +415,15 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
     | Some (Canary_artifact_source.Tar u) -> u
     | None -> "https://local-only.invalid/"
   in
-  let cmake_source =
-    if Stdlib.Sys.file_exists (root ^ "/llvm/CMakeLists.txt") then root ^ "/llvm" else root
-  in
+  (* ALWAYS the llvm/ subdir (2026-08-16, C2 cold-audit fix): every llvm
+     repo (official + fork, stable + dev) is the MONOREPO — llvm/ is the
+     cmake root. The old filesystem probe here evaluated at REALIZE time,
+     BEFORE the fetch step runs, so a fresh _out clone always resolved to
+     [root] (no llvm/) and the configure died with "source directory does
+     not appear to contain CMakeLists.txt" — the 2026-08-12 "official
+     clone is unusable" finding was this bug MISDIAGNOSED (the clone was
+     always fine; only the local-checkout fork passed the probe). *)
+  let cmake_source = root ^ "/llvm" in
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
         ar_template = Source_fetch
