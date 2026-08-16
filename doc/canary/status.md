@@ -1,6 +1,6 @@
 # Canary Status
 
-> 2026-08-12. Current state, two milestone directions (M1/M2), and open items.
+> 2026-08-16. Current state, two milestone directions (M1/M2), and open items.
 > Project-level status (M3) moved to [`project/status_project.md`](project/status_project.md)
 > in the 2026-08-12 doc reorganization; the project index is
 > [`project/index.md`](project/index.md). Historical context in
@@ -28,11 +28,21 @@
 - **`action_sig` merged** — `consumes_of_action`/`produces_of_action` derived from the
   typed action catalogue. `artifacts_of_action` = `consumes @ produces` (except
   `Build_app` which omits transitive `Lib`). One source of truth per action.
-- **Module layout** — `Canary_artifact` (base/), `Canary_project_spec` (action/),
-  `Canary_enumerate` (action/), `Canary_project_run` + `Canary_registry` (projects/).
+- **Module layout** — `Canary_artifact` / `Canary_binding_decl` (base/),
+  `Canary_project_spec` / `Canary_enumerate` / `Canary_binding_templates` (action/),
+  `Canary_project_run` + `Canary_registry` (projects/).
   No circular deps (the registry lives in its own module — dune rejects the
   project_modules ↔ project_run cycle).
-- **Tests** — 58 project + 107 artifact + 14 PM = 179 total. Post-check convention in
+- **Binding declaration + realization** (M2 steps 4-5) —
+  `Canary_binding_decl.binding_decl` (base/, flat record: mechanism +
+  c_api + native + coupling + surface_path — no "facts" suffix,
+  2026-08-16) declares WHAT a binding is; `Canary_binding_templates`
+  (action/) derives the build recipe (`build_recipe` — mechanism model
+  `recipe_of_decl`) + the command builders. tiny's runner_spec derives
+  from its three decls (byte-equal to the former literals, pinned +
+  actions.log-diffed). External projects: declaration universal, build
+  commands respected as-is (Raw) — see M2 step 5.
+- **Tests** — 65 project + 107 artifact + 14 PM = 186 total. Post-check convention in
   CLAUDE.md: `make canary-test` after every edit, `make canary-post-check` before commit.
 - **Docs** — `algorithm_explainer.md` current. `scenario.md` (canonical naming +
   contract catalogue). Project docs reorganized under `project/` (index + status +
@@ -122,16 +132,18 @@ from contract × mechanism.
                          Dynamic: probe only — no compile stage)
                        - which inputs (Cstubs → stub .a; Cext → cext .so;
                          Ctypes → dlopen at probe, no static inputs)
-                       - the binding_decl payload (typed facts + coupling)
+                       - the binding_decl payload (flat record; the build
+                         HOW is a separate stage — action/ build_recipe)
   surface/             contract × layer = WHAT to check (abstract) +
                        inputs_of_contract (the contract×mechanism bridge)
   project/             declares binding lang → mechanism (already in
-                       artifact_id's Ext_mechanism)
+                       artifact_id's Ext_mechanism) + the binding_decl
+  action/              decl → build_recipe (mechanism model) → commands
   lowering/            contract × mechanism → concrete firing + inputs
 ```
 
 **Constraint**: M2 is structural reorg + dispatch. The existing checking
-and tests (55 project + 107 artifact, tiny1 22/22, sqlite/z3/llvm) must
+and tests (65 project + 107 artifact, tiny1 22/22, sqlite/z3/llvm) must
 keep working throughout — the hand-written per-project binding tables
 produce the same firings as the templated ones.
 
@@ -164,14 +176,18 @@ Steps (each step keeps the suite green before the next):
 4. [ ] **Typed mechanism payload — the DECLARATION** (design in
    [`mechanism_payload.md`](mechanism_payload.md), 2026-08-12; split
    from the command derivation 2026-08-15, user). A project declares
-   its binding as ONE typed record (mechanism + facts). This is
-   UNIVERSAL and mandatory — the payload spec should be obvious; it is
-   what checker/contract selection reads, so every project declares it
-   regardless of how it builds. Mechanism name stays artifact identity;
-   payload rides as declaration data. tiny declares (2026-08-13);
-   sqlite/z3/llvm facts-declaration remains (open: whether the
-   coupling's [build] recipe stays a mandatory field — for external
-   projects the build is their raw command's business).
+   its binding as ONE flat typed record
+   (`binding_decl = { mechanism; c_api; native; coupling; surface_path }`
+   — the build field REMOVED entirely 2026-08-16, it belongs to step
+   5's stage; no "facts" suffix — the payload is fact-level by
+   construction). This is UNIVERSAL and mandatory — the payload spec
+   should be obvious; it is what checker/contract selection reads, so
+   every project declares it regardless of how it builds. Mechanism
+   name stays artifact identity; payload rides as declaration data.
+   tiny declares (2026-08-13). Remaining: sqlite/z3/llvm declare
+   their decls, and the wiring — `pr_binding_decls` on `project_run` (the
+   spec-audit sub-object; unblocked now that the repo-model refactor
+   committed, e40c73e).
 5. [ ] **Build as a separate stage** (split from the payload 2026-08-15,
    user) — how to build is its OWN datatype, not part of the
    declaration: `Canary_binding_templates.build_recipe`
@@ -182,7 +198,10 @@ Steps (each step keeps the suite green before the next):
    build_binding / probe_binding / probe_lib /
    binding_user_facing_pkg derive from the three decls; byte-equal
    to the former hand-written literals, pinned +
-   actions.log-diffed). Everywhere else commands stay Raw — external
+   actions.log-diffed). Note the model's cstubs ⇒ Dune_targets is
+   TINY's convention — z3's cstubs builds via a cmake target, so when
+   z3 declares its decl its recipe is Raw / a project override.
+   Everywhere else commands stay Raw — external
    projects' original commands are respected as-is (tricky commandline
    details bypassed in the beginning). Translating external raw
    commands into templates is DEFERRED, not a to-do (user,
@@ -224,6 +243,10 @@ reorganization; the project index + landing mechanics in
 
 ## Docs
 
+- [x] **`repo_model.md`** (2026-08-15/16, committed e40c73e) — the
+  contrib-root + repo-contents model: `contrib_root` base-layer setting,
+  provider `Repo` unification, `Git`/`Hg`/`Tar` remotes, the repo-contents
+  invariant; retired the dead `has_build_*` code.
 - [x] **`project/` doc directory** (2026-08-12) — five files: `index.md`
   (conceptual model + portfolio, was `projects.md`), `coverage.md` (status
   matrix + landing history), `landing.md` (workflow + testing harness),
