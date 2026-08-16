@@ -310,6 +310,24 @@ per-project ones.
   distinct markers/cache keys (the runner's cache_project IS the
   scenario dir); the fork↔official collision can't recur (fork id =
   "arbipher" ≠ "latest").
+- [ ] **Pinned verdict-matrix regression (cold/warm determinism)**
+  (2026-08-16, user): the C2 5/5 verification was an ad-hoc `action`
+  run — the permanent suite pins only the enumeration SHAPE
+  (two_chain_pins 5/5/2, integration_smoke counts), NOT the per-scenario
+  VERDICTS. With the repo model declaring concrete refs, the verdict
+  matrix per project (per-scenario verdict + xfail contracts — what
+  `canary status` already renders) is deterministic in principle and
+  should be PINNED: a test reading the persisted run markers that
+  asserts the expected matrix (z3: 5 PASS + parser_context xfail in
+  every world; llvm: 5 PASS + UncondBr xfail in the 3 stable worlds;
+  zarith: 2 PASS; …). Cold/warm caveats: (a) warm markers don't record
+  WHICH ref they verified — a moved upstream tag/HEAD under the same
+  identity stays stale until a cold re-run (commit refs are immutable;
+  tag/HEAD refs are refresh-on-demand by design — recording the
+  verified content hash in the marker is the sound fix); (b) a cold
+  re-run of the heavy dev chains is ~1-2h each — CI-nightly material
+  (GH CI already runs the thin stable chains); a `--cold` audit flag
+  (clear markers + re-run) would make the cold path explicit.
 - [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is
   a CLASS: build steps that run OCaml bytecode/native self-checks read
   the global store (stublibs/apt) unless guarded. Audit other projects'
