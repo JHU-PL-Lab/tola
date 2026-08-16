@@ -40,14 +40,19 @@ let zarith_api_source : Canary_artifact.t =
 
 let zarith_source_stable : Canary_artifact_source.source_repo =
   { Canary_artifact_source.name = "zarith";
-    remote =
-      Canary_artifact_source.Git_remote "https://github.com/ocaml/Zarith.git";
+    remote = Some (Git "https://github.com/ocaml/Zarith.git");
     locals = [];
     version = Canary_basic.{ channel = Canary_basic.Stable; id = "1.14" };
     ref_ = "release-1.14";
     official = true;
     build_sys_deps = [];
-    api_source = Some zarith_api_source }
+    api_source = Some zarith_api_source;
+    label = None;
+    (* the repo builds the BINDING (caml_z.c against the system gmp);
+       the C lib itself (GMP) is off-tree — its own repo *)
+    artifacts =
+      [ Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ]
+  }
 
 (* master stays declared as the unwired latest channel — the
    per-(artifact × channel) source provider is the not-yet-wired

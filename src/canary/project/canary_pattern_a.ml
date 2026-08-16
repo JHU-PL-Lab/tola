@@ -109,13 +109,16 @@ let runner_spec (d : t) : Canary_step_builder.runner_spec =
               Canary_store_config.Sys_pkg prebuilt.system_package;
             components = []; headers = None } };
     fetch_lib = Some (Canary_step_builder.Derived Canary_step_builder.Fetch_lib);
-    (* The declared source made runnable (Pattern A never builds from it —
-       the fetch is the declaration, cached via the source.ok marker). *)
+    (* The declared source made runnable via WORKTREE checkouts
+       (2026-08-15, design/repo_model.md): the fetch IS the prepare —
+       clone once + a worktree per ref into the contrib tree
+       ([Canary_store.contrib_root]), refreshed on demand each run.
+       Pattern A never builds from it. *)
     fetch_source =
       Option.map
         (fun source ~output_dir ~variant_key ->
-          Canary_artifact_source.source_fetch_cmd
-            (Canary_basic.detect_distro ()) source ~output_dir ~variant_key)
+          Canary_artifact_source.worktree_ensure_cmd ~project:d.name
+            ~repo:source ~ref_:source.ref_ ~output_dir ~variant_key)
         d.source;
     (* fetch_binding stays Raw (Derived can't reproduce opam install_args yet). *)
     fetch_binding =
@@ -187,7 +190,7 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
     | Some source ->
         [ Canary_project_spec.artifact_row ~artifact:a_source
             ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
-            ~provider:(Canary_store_config.Source_repo source) () ]
+            ~provider:(Canary_store_config.Repo source) () ]
   in
   lib_row :: binding_row :: source_rows
 

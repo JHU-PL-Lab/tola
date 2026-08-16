@@ -492,7 +492,7 @@ let print_spec ?policy (pr : project_run) : unit =
                     action — the provider is the boundary). *)
                  let arrow =
                    match
-                     Canary_store_config.providing_action_of (Canary_artifact.kind_of a) p
+                     Canary_store_config.providing_action_of ~provision:(Canary_enumerate.provision_of baseline a) (Canary_artifact.kind_of a) p
                    with
                    | Some act ->
                        "  ⟶ " ^ Canary_basic.string_of_action act
@@ -766,7 +766,7 @@ let spec_json_t ?policy (pr : project_run) : Yojson.Basic.t =
           match provenance_of pr a with
           | Some p -> (
               match
-                Canary_store_config.providing_action_of (Canary_artifact.kind_of a) p
+                Canary_store_config.providing_action_of ~provision:(Canary_enumerate.provision_of baseline a) (Canary_artifact.kind_of a) p
               with
               | Some act -> `String (Canary_basic.string_of_action act)
               | None -> `Null)

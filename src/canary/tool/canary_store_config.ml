@@ -48,11 +48,14 @@ type provider =
   | Absent
   | Vendored of string
   | Cached of string
-  | Source_repo of Canary_artifact_source.source_repo
-      (** the SOURCE artifact itself, obtained from a repo (git clone / local
-          checkout) — Fetched on the axis. Sibling of [Built_from] (a lib/binding
-          BUILT from that source, which is Built). *)
-  | Built_from of Canary_artifact_source.source_repo
+  | Repo of Canary_artifact_source.source_repo
+      (** ANY artifact provided from a repo (2026-08-15, the unification —
+          design/repo_model.md): the AXES' provision says WHAT the repo
+          provides — [Fetched] = the repo ships/fetches the artifact (or
+          the project source, for a Source row); [Built] = the artifact is
+          BUILT from the repo's source. The old [Source_repo]/[Built_from]
+          pair split the same record by exactly that provision, which the
+          axes already declare ([Built_from] had zero live uses). *)
   | Sys_pkg of Canary_store.system_package_spec
   | Lang_pkg of {
       lang : Canary_lang.lang;
@@ -74,8 +77,11 @@ type provider =
 let provision_of_provider : provider -> Canary_store.provision = function
   | Absent -> Canary_store.Absent
   | Vendored _ | Cached _ -> Canary_store.Vendored
-  | Source_repo _ -> Canary_store.Fetched
-  | Built_from _ -> Canary_store.Built
+  | Repo _ -> Canary_store.Fetched
+      (* the baseline-display value: a repo enters at the FETCH boundary.
+         A [Repo] row whose axes carry [Built] is the built-from-source
+         case — the display drift check flags it and the arrow (below)
+         reads the axes. *)
   | Sys_pkg _ | Lang_pkg _ -> Canary_store.Fetched
 
 (** The ARROW unification (user, 2026-08-06): an artifact COMES FROM its
@@ -91,17 +97,22 @@ let provision_of_provider : provider -> Canary_store.provision = function
     Dual of [Canary_enumerate.provision_of_actions] (which reads the
     provision back off a variant's action set); the projects-test pins the
     two consistent through [provision_of_provider] so they cannot drift. *)
-let providing_action_of (k : Canary_basic.artifact_kind) (p : provider) :
-    Canary_basic.action option =
+let providing_action_of ~(provision : Canary_store.provision)
+    (k : Canary_basic.artifact_kind) (p : provider) : Canary_basic.action option =
   match p with
   | Absent | Vendored _ | Cached _ -> None
-  | Source_repo _ | Sys_pkg _ | Lang_pkg _ -> Some (Canary_basic.Fetch k)
-  | Built_from _ -> (
-      match k with
-      | Canary_basic.Lib -> Some Canary_basic.Build_lib
-      | Canary_basic.Binding l -> Some (Canary_basic.Build_binding l)
-      | Canary_basic.Headers -> Some Canary_basic.Build_headers
-      | Canary_basic.Source | Canary_basic.App -> None)
+  | Sys_pkg _ | Lang_pkg _ -> Some (Canary_basic.Fetch k)
+  | Repo _ -> (
+      (* what the repo provides IS the axes' provision (the unification) *)
+      match provision with
+      | Canary_store.Fetched -> Some (Canary_basic.Fetch k)
+      | Canary_store.Built -> (
+          match k with
+          | Canary_basic.Lib -> Some Canary_basic.Build_lib
+          | Canary_basic.Binding l -> Some (Canary_basic.Build_binding l)
+          | Canary_basic.Headers -> Some Canary_basic.Build_headers
+          | Canary_basic.Source | Canary_basic.App -> None)
+      | Canary_store.Absent | Canary_store.Vendored -> None)
 
 (** [dep_mode_of_provider p] returns the runtime-edge mode implied by the
     provider's self-contained declaration: [Some (Ambient s)] for a
@@ -130,23 +141,27 @@ let install_name_of_pin ~(package : string) (p : opam_pin) : string =
   | None -> package ^ "." ^ p.pin_version
 
 let string_of_source_repo (repo : Canary_artifact_source.source_repo) : string =
-  let (Canary_artifact_source.Git_remote url) = repo.Canary_artifact_source.remote in
-  Printf.sprintf "%s @%s (ref %s) %s" repo.Canary_artifact_source.name
+  let url =
+    match repo.Canary_artifact_source.remote with
+    | Some (Canary_artifact_source.Git u) -> u
+    | Some (Canary_artifact_source.Hg u) -> u
+    | Some (Canary_artifact_source.Tar u) -> "archive: " ^ u
+    | None -> "(no remote)"
+  in
+  let label =
+    match repo.Canary_artifact_source.label with
+    | Some l -> Printf.sprintf " (fork: %s)" l
+    | None -> ""
+  in
+  Printf.sprintf "%s @%s (ref %s) %s%s" repo.Canary_artifact_source.name
     (Canary_basic.string_of_version repo.Canary_artifact_source.version)
-    repo.Canary_artifact_source.ref_ url
+    repo.Canary_artifact_source.ref_ url label
 
 let string_of_provider : provider -> string = function
   | Absent -> "absent"
   | Vendored p -> "vendored: " ^ p
   | Cached p -> "cached: " ^ p
-  | Source_repo repo -> "source repo: " ^ string_of_source_repo repo
-  | Built_from repo ->
-      let (Canary_artifact_source.Git_remote url) =
-        repo.Canary_artifact_source.remote
-      in
-      Printf.sprintf "built from source: %s @%s (%s)"
-        repo.Canary_artifact_source.name
-        (Canary_basic.string_of_version repo.Canary_artifact_source.version) url
+  | Repo repo -> "repo: " ^ string_of_source_repo repo
   | Sys_pkg spec ->
       Printf.sprintf "sys-pm linux:%s macos:%s" spec.Canary_store.linux_pkg
         spec.Canary_store.macos_pkg

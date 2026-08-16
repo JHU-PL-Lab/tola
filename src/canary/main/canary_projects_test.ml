@@ -546,12 +546,12 @@ let binding_decl_pin : Canary_project_test.pure_test =
           Poly.equal d.mechanism m)
       in
       let c_api_matches (d : BD.binding_decl) =
-        Poly.equal d.facts.c_api.functions TS.tiny_native_stable_symbols
+        Poly.equal d.c_api.functions TS.tiny_native_stable_symbols
       in
       let native_matches (d : BD.binding_decl) =
-        String.equal d.facts.native.prefix "tiny_"
-        && String.equal d.facts.native.soname "libtiny.so.1"
-        && Poly.equal d.facts.native.headers.files [ "tiny.h" ]
+        String.equal d.native.prefix "tiny_"
+        && String.equal d.native.soname "libtiny.so.1"
+        && Poly.equal d.native.headers.files [ "tiny.h" ]
       in
       match
         ( find_mech Canary_mechanism.Cstubs,
@@ -565,26 +565,26 @@ let binding_decl_pin : Canary_project_test.pure_test =
           && (* cstubs: the stub archive the hand-written build produces
                 (the build HOW is a separate stage — recipe_of_decl,
                 pinned by tiny_binding_realization_pin) *)
-          (match cstubs.facts.BD.coupling with
+          (match cstubs.BD.coupling with
            | BD.Stub_archive sa ->
                Poly.equal sa.sources [ "ocaml/tiny_stubs.c" ]
                && String.equal sa.archive "ocaml/libtiny_stubs.a"
            | _ -> false)
           && (* cext: the .so the hand-written cc produces *)
-          (match cext.facts.BD.coupling with
+          (match cext.BD.coupling with
            | BD.Compiled_ext ce ->
                String.equal ce.source "python_cext/tiny_cext/_native.c"
                && String.equal ce.product "_native.cpython-*.so"
            | _ -> false)
           && (* ctypes: dlopen by the soname the loader resolves *)
-          (match ctypes.facts.BD.coupling with
+          (match ctypes.BD.coupling with
            | BD.Dlopen { name } -> String.equal name "libtiny.so.1"
            | _ -> false)
           && (* surface paths match the mli / py files the inspectors read *)
-          String.equal cstubs.facts.BD.surface_path "ocaml/tiny.mli"
-          && String.equal cext.facts.BD.surface_path
+          String.equal cstubs.BD.surface_path "ocaml/tiny.mli"
+          && String.equal cext.BD.surface_path
                "python_cext/tiny_cext/__init__.py"
-          && String.equal ctypes.facts.BD.surface_path
+          && String.equal ctypes.BD.surface_path
                "python_ctypes/tiny_ctypes/__init__.py"
       | _ -> false) }
 
@@ -635,7 +635,7 @@ let tiny_binding_realization_pin : Canary_project_test.pure_test =
             Some "LD_LIBRARY_PATH=$PWD//WS/c/build PYTHONPATH=/WS/python_cext python3 /WS/python_cext/examples/probe_baseline.py > /OUT/probe_VK.log 2>&1" );
           (* probe_lib: nm for the declared prefix *)
           ( Some
-              (BT.probe_lib_of TS.tiny_native_facts
+              (BT.probe_lib_of TS.tiny_native
                  ~lib_path:"/WS/c/build/libtiny.so.1"
                  ~output_dir:"/OUT" ~variant_key:"VK"),
             Some "nm -D /WS/c/build/libtiny.so.1 | grep -E '^[0-9a-f]+ T tiny_' > /OUT/probe_VK.log 2>&1" );
@@ -748,7 +748,7 @@ let repo_model_pin : Canary_project_test.pure_test =
       (fun () ->
         let repo : Canary_artifact_source.source_repo =
           { name = "Zarith";
-            remote = Some (Git_remote
+            remote = Some (Git
                 "https://github.com/ocaml/Zarith.git");
             locals = [];
             version = Canary_basic.{ channel = Canary_basic.Stable; id = "1.14" };
@@ -756,7 +756,8 @@ let repo_model_pin : Canary_project_test.pure_test =
             official = true;
             build_sys_deps = [];
             api_source = None;
-            label = None }
+            label = None;
+            artifacts = [ Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ] }
         in
         let main =
           Canary_artifact_source.repo_main_path ~project:"zarith" ~repo
@@ -791,7 +792,8 @@ let local_fork_pin : Canary_project_test.pure_test =
             official = false;
             build_sys_deps = [];
             api_source = None;
-            label = Some "local-fork" }
+            label = Some "local-fork";
+            artifacts = [ Canary_artifact.a_lib ] }
         in
         let pr : Canary_project_run.project_run =
           { pr_name = "test-fork";
@@ -813,6 +815,21 @@ let local_fork_pin : Canary_project_test.pure_test =
         | Some i -> Poly.equal i.Canary_spec_check.severity Canary_spec_check.Warn
         | None -> false) }
 
+(* The repo-contents invariant over the LIVE registry (2026-08-16): every
+   non-source artifact with a [Repo] provider must appear in that repo's
+   [artifacts] contents (the multi-repo principle — repo → artifacts). *)
+let repo_contents_pin : Canary_project_test.pure_test =
+  { name = "repo_model.contents_invariant";
+    check =
+      (fun () ->
+        List.for_all Canary_registry.all_projects ~f:(fun (n, pr) ->
+            let vs = Canary_spec_check.repo_contents_violations pr in
+            if not (List.is_empty vs) then
+              Fmt.pr "repo_model.contents_invariant: %s violates %s@." n
+                (String.concat ~sep:", "
+                   (List.map vs ~f:(fun (a, r) -> a ^ " not in " ^ r)));
+            List.is_empty vs)) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -827,4 +844,5 @@ let tests : Canary_project_test.pure_test list =
       batch_tier_pin;
       repo_model_pin;
       local_fork_pin;
+      repo_contents_pin;
       tiny_binding_realization_pin ]

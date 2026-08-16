@@ -78,19 +78,16 @@ let has_built_axis (d : Canary_project_spec.artifact_row) : bool =
     d.Canary_project_spec.ar_axes.Canary_artifact.ax_universe
     ~f:(fun (provision, _) -> Poly.equal provision Canary_artifact.Built)
 
-(* The declared source repo, wherever it is carried: on an [a_source] row
-   ([Source_repo]), or on a Built artifact's row ([Built_from] — the
-   self-contained pattern, sqlite). Per-channel sources are the
-   not-yet-wired provenance refinement, so any one repo satisfies the
-   static checks (same shape as z3's stable-repo-on-row). *)
+(* The declared source repo, wherever it is carried: ANY artifact row's
+   [Repo] provider (2026-08-15 unification — the axes' provision says
+   what the repo provides). Per-channel sources are the not-yet-wired
+   provenance refinement, so any one repo satisfies the static checks
+   (same shape as z3's stable-repo-on-row). *)
 let source_repo_of (pr : Canary_project_run.project_run) :
     Canary_artifact_source.source_repo option =
   List.find_map pr.pr_artifacts ~f:(fun d ->
       match d.Canary_project_spec.ar_provider with
-      | Some
-          (Canary_store_config.Source_repo r
-          | Canary_store_config.Built_from r) ->
-          Some r
+      | Some (Canary_store_config.Repo r) -> Some r
       | _ -> None)
 
 (* ── the eight checks (checklist order) ── *)
@@ -113,7 +110,10 @@ let check_dev_source (pr : Canary_project_run.project_run) : item =
               Printf.sprintf "built from source repo: %s (%s)"
                 r.Canary_artifact_source.name
                 (match r.Canary_artifact_source.remote with
-                | Canary_artifact_source.Git_remote u -> u)
+                | Some (Canary_artifact_source.Git u) -> u
+                | Some (Canary_artifact_source.Hg u) -> u
+                | Some (Canary_artifact_source.Tar u) -> "archive: " ^ u
+                | None -> "(no remote)")
           }
       | None ->
           { item_id = "dev_source"; label; severity = Error;
@@ -148,8 +148,21 @@ let check_github_remote (pr : Canary_project_run.project_run) : item =
       match source_repo_of pr with
       | Some r -> (
           match r.Canary_artifact_source.remote with
-          | Canary_artifact_source.Git_remote u -> Some u)
+          | Some (Canary_artifact_source.Git u) -> Some u
+          | Some (Canary_artifact_source.Hg u) -> Some u
+          (* an archive source: declared, but no forge PR workflow — a
+             warning-grade origin, like the local-only fork *)
+          | Some (Canary_artifact_source.Tar _) -> None
+          | None -> None)
       | None -> None
+    in
+    let is_archive =
+      match source_repo_of pr with
+      | Some r -> (
+          match r.Canary_artifact_source.remote with
+          | Some (Canary_artifact_source.Tar _) -> true
+          | _ -> false)
+      | None -> false
     in
     match url with
     | Some u
@@ -160,9 +173,25 @@ let check_github_remote (pr : Canary_project_run.project_run) : item =
         { item_id = "github_remote"; label; severity = Error;
           detail =
             Printf.sprintf "remote %s is not a public forge — cannot report" u }
-    | None ->
-        { item_id = "github_remote"; label; severity = Error;
-          detail = "no source repo declared — cannot report" }
+    | None when is_archive ->
+        (* an archive source (Tar): declared, but no forge PR workflow —
+           report via the upstream's preferred channel. *)
+        { item_id = "github_remote"; label; severity = Warn;
+          detail = "archive source — no forge PR workflow" }
+    | None -> (
+        (* the user's fork rule (2026-08-15): a LOCAL-ONLY fork (a label
+           but no remote) is a WARNING, not an error — we may or may not
+           find a bug worth pushing; a per-project remote on the personal
+           account is not required. An official repo without a remote
+           stays an error for now (the archive case above is the
+           declared form). *)
+        match source_repo_of pr with
+        | Some r when Option.is_some r.Canary_artifact_source.label ->
+            { item_id = "github_remote"; label; severity = Warn;
+              detail = "local fork — no remote (reportable only if pushed)" }
+        | _ ->
+            { item_id = "github_remote"; label; severity = Error;
+              detail = "no source repo declared — cannot report" })
 
 let check_stable_lib (pr : Canary_project_run.project_run) : item =
   let label = "stable lib" in
@@ -269,6 +298,29 @@ let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
   | None ->
       { item_id = "binding_dev_source"; label; severity = Warn;
         detail = "no Built axis on a binding" }
+
+(* The repo-contents invariant (2026-08-16, design/repo_model.md): a
+   NON-source artifact whose provider is [Repo r] must appear in
+   [r.artifacts] (the source itself is implicit — it IS the tree, not
+   something built from it). Returns (artifact, repo-name) violations. *)
+let repo_contents_violations (pr : Canary_project_run.project_run) :
+    (string * string) list =
+  List.filter_map pr.pr_artifacts ~f:(fun d ->
+      match d.Canary_project_spec.ar_provider with
+      | Some (Canary_store_config.Repo r)
+        when not
+               (Canary_artifact.equal_artifact_id
+                  d.Canary_project_spec.ar_artifact Canary_artifact.a_source) ->
+          if
+            List.exists r.Canary_artifact_source.artifacts
+              ~f:(Canary_artifact.equal_artifact_id
+                    d.Canary_project_spec.ar_artifact)
+          then None
+          else
+            Some
+              ( Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact,
+                r.Canary_artifact_source.name )
+      | _ -> None)
 
 let check (pr : Canary_project_run.project_run) : report =
   { project = pr.pr_name;

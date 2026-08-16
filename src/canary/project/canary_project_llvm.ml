@@ -87,7 +87,7 @@ let llvm_api_source : Canary_artifact.t =
 let llvm_source_dev : source_repo =
   {
     name = "llvm";
-    remote = Git_remote "https://github.com/arbipher/llvm-project.git";
+    remote = Some (Git "https://github.com/arbipher/llvm-project.git");
     locals =
       [
         { distro = Wsl;
@@ -99,12 +99,17 @@ let llvm_source_dev : source_repo =
     official = false;
     build_sys_deps = [ "cmake"; "ninja-build" ];
     api_source = Some llvm_api_source;
+    label = None;
+    (* the repo builds the lib + the in-tree OCaml binding
+       (llvm/bindings/ocaml); llvmlite (pip) is off-tree *)
+    artifacts =
+      [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ];
   }
 
 let llvm_source_stable : source_repo =
   {
     name = "llvm";
-    remote = Git_remote "https://github.com/llvm/llvm-project.git";
+    remote = Some (Git "https://github.com/llvm/llvm-project.git");
     (* Reuse the same local checkout as dev — fetch_source is a no-op (test -d).
        We don't build from it (has_build_lib=false, has_build_binding=false). *)
     locals =
@@ -123,18 +128,28 @@ let llvm_source_stable : source_repo =
     (* Stable sources share the dev api_source — same project, same spec.
        Summary closures will warn when build_binding = false. *)
     api_source = Some llvm_api_source;
+    label = None;
+    (* the repo builds the lib + the in-tree OCaml binding
+       (llvm/bindings/ocaml); llvmlite (pip) is off-tree *)
+    artifacts =
+      [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ];
   }
 
 let llvm_source_latest : source_repo =
   {
     name = "llvm";
-    remote = Git_remote "https://github.com/llvm/llvm-project.git";
+    remote = Some (Git "https://github.com/llvm/llvm-project.git");
     locals = [];
     version = Canary_basic.{ channel = Dev; id = "latest" };
     ref_ = "HEAD";
     official = true;
     build_sys_deps = [ "cmake"; "ninja-build" ];
     api_source = Some llvm_api_source;
+    label = None;
+    (* the repo builds the lib + the in-tree OCaml binding
+       (llvm/bindings/ocaml); llvmlite (pip) is off-tree *)
+    artifacts =
+      [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs ];
   }
 
 (* [Dev] = the ARBIPHER fork (2026-08-12 restored, same as z3's — the
@@ -308,340 +323,16 @@ let llvm_stable_contract_bindings
       ]};
   ]
 
-let mk_runner_spec ~source
-    ?(binding_configs =
-        [ Ocaml_config llvm_ocaml_config; llvm_python_config ])
-    ?(tola_root = Unix.getcwd ())
-    ?(build_lib = false) ?(build_binding = false) distro : Canary_step_builder.runner_spec =
-  let { version; _ } : source_repo = source in
-  let ver_str = Canary_basic.string_of_version version in
-  let local = local_for distro source in
-  let root =
-    match local with
-    | Some l -> l.path
-    | None ->
-        [%string "_out/canary/projects/llvm/%{ver_str}_%{source.ref_}/src"]
-  in
-  let build =
-    match local with
-    | Some l -> l.build_path
-    | None ->
-        [%string "_out/canary/projects/llvm/%{ver_str}_%{source.ref_}/build"]
-  in
-  let pm = Canary_store.detect_pm () in
-  let ocaml_tc =
-    List.find_map binding_configs ~f:(function
-      | Ocaml_config c -> Some c
-      | Python_config _ -> None)
-    |> Option.value_exn
-         ~message:"llvm mk_runner_spec: no Ocaml_config in binding_configs"
-  in
-  let target = ocaml_tc.ocaml.example_target in
-  (* llvm_example_dev.ml uses Opcode.UncondBr (LLVM 21+); it will fail to
-     compile against LLVM 19 binding, which is the mismatch we want to detect. *)
-  let example =
-    tola_root ^ "/canary/examples/llvm/llvm_example_dev.ml"
-  in
-  let llvm_config = [%string "%{build}/bin/llvm-config"] in
-  let binding_lib = ocaml_tc.ocaml.binding_lib_name in
-  {
-    Canary_step_builder.empty_runner_spec with
-    api_source = source.api_source;
-    fetch_source =
-      Some
-        (fun ~output_dir ~variant_key ->
-          Canary_artifact_source.source_fetch_cmd distro source ~output_dir ~variant_key);
-    scan_source =
-      Option.map source.api_source ~f:(fun api ->
-        fun ~output_dir ~variant_key ->
-          Canary_artifact_source.scan_source_cmd ~source_root:root api ~output_dir ~variant_key);
-    build_headers =
-      (if build_lib || build_binding then
-         Some
-           (fun ~output_dir ~variant_key ->
-             let hdr_ok = Canary_basic.variant_file ~variant_key "headers.ok" in
-             [%string
-               "test -d %{root}/llvm/include/llvm-c \
-                && echo 'ok' > %{output_dir}/%{hdr_ok}"])
-       else None);
-    configure =
-      (if build_lib || build_binding then
-         let cmake_source = cmake_source_of_root root in
-         Some
-           (fun ~output_dir ~variant_key ->
-             let cmake_cmd =
-               Canary_build_cmd.cmake_configure_cmd
-                 ~cmake_exec:"cmake" ~flags:llvm_cmake_flags
-                 ~src:cmake_source ~build ()
-             in
-             Printf.sprintf "eval $(opam env) && %s" cmake_cmd
-             |> Canary_build_cmd.with_marker
-                  ~marker:"conf.ok" ~output_dir ~variant_key)
-       else None);
-    build_lib =
-      (if build_lib then
-         Some
-           (fun ~output_dir ~variant_key ->
-             Canary_build_cmd.ninja_build_cmd ~target:"LLVM" ~build ()
-             |> Canary_build_cmd.with_marker
-                  ~marker:"build.ok" ~output_dir ~variant_key)
-       else None);
-    build_binding =
-      (if build_binding then
-         [ (OCaml,
-            fun ~output_dir ~variant_key ->
-              let ninja_cmd =
-                Canary_build_cmd.ninja_build_cmd
-                  ~target:"ocaml_all" ~build ()
-              in
-              Printf.sprintf "eval $(opam env) && %s" ninja_cmd
-              |> Canary_build_cmd.with_marker
-                   ~marker:"build.ok" ~output_dir ~variant_key) ]
-       else []);
-    install_lib =
-      (if build_lib then
-         Some (fun ~output_dir ~variant_key ->
-           let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
-           [%string
-             {|PREFIX="%{build}/../install"
-mkdir -p "$PREFIX/lib"
-cp %{build}/lib/libLLVM*.so "$PREFIX/lib/" 2>/dev/null || true
-echo 'ok' > %{output_dir}/%{install_ok}|}])
-       else None);
-    fetch_lib = Some (Canary_step_builder.Raw (Canary_step_builder.fetch_lib_cmd pm prebuilt.system_package));
-    fetch_binding =
-      (Canary_lang.OCaml,
-       Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec))
-      :: List.filter_map binding_configs ~f:(function
-        | Python_config p ->
-            Some (Canary_lang.Python,
-                  Canary_step_builder.Raw (fun ~output_dir ~variant_key ->
-                    Canary_toolchain.pip_install_cmd p ~output_dir ~variant_key))
-        | Ocaml_config _ -> None);
-    pack_binding =
-      (if build_binding then
-         [ (OCaml,
-            fun ~output_dir ~variant_key ->
-              let repo_abs = tola_root ^ "/canary/templates/opam-local-repo" in
-              let repo_name = ocaml_tc.toolchain.local_repo_name in
-              (* llvm.dev-shared and conf-llvm-shared.dev read CANARY_BUILD_DIR
-                 to locate the build tree. No opam config subst needed — these
-                 packages use shell ${VAR:-default} directly. *)
-              let env_prefix = [%string {|CANARY_BUILD_DIR="%{build}" |}] in
-              let pre_install =
-                [%string
-                  {|CANARY_BUILD_DIR="%{build}" opam install -y conf-llvm-shared.dev --assume-depexts|}]
-              in
-              opam_pack_cmd ~repo_name ~repo_abs ~pkg_full:llvm_dev_opam_pkg
-                ~pre_install ~env_prefix ~output_dir ~variant_key ()) ]
-       else []);
-    probe_lib =
-      List.filter_opt
-        [
-          (if build_lib then
-             Some
-               ( Build_tree,
-                 fun ~output_dir ~variant_key ->
-                   Canary_artifact_native.native_lib_probe_cmd
-                     ~lib:[%string "%{build}/lib/libLLVM.so"]
-                     ~prefix:"LLVM" ~output_dir ~variant_key )
-           else None);
-          (if build_lib then
-             Some
-               ( Staged,
-                 fun ~output_dir ~variant_key ->
-                   Canary_artifact_native.native_lib_probe_cmd
-                     ~lib:[%string "%{build}/../install/lib/libLLVM.so"]
-                     ~prefix:"LLVM" ~output_dir ~variant_key )
-           else None);
-          Some
-            ( Pm (Sys_pm { pm }),
-              fun ~output_dir ~variant_key ->
-                let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-                [%string
-                  {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
-test -x "$LLVM_CONFIG"
-"$LLVM_CONFIG" --version > %{output_dir}/%{probe_log} 2>&1|}] );
-        ];
-    probe_binding =
-      List.filter_opt
-        [
-          (* Build_tree: probe source-built binding against source-built lib *)
-          (if build_binding then
-             Some
-               (OCaml, Build_tree, fun ~output_dir ~variant_key ->
-                 let script = "canary/scripts/assert_binary_symbols.py" in
-                 let pkg_dir = [%string "%{build}/lib/ocaml/llvm"] in
-                 let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-                 let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
-                 [%string
-                   {|eval $(opam env)
-STUB=$(ls %{pkg_dir}/lib*.a 2>/dev/null | head -1)
-test -n "$STUB"
-python3 %{script} --provided-lib %{build}/lib/libLLVM.so --required-lib "$STUB" \
-  --symbol-prefix LLVM 2>&1 | tee %{output_dir}/%{symbols_log}
-grep -q 'OK:' %{output_dir}/%{symbols_log}
-LLVM_CONFIG=%{llvm_config} ocamlopt \
-  -I %{pkg_dir} %{pkg_dir}/llvm.cmxa %{example} \
-  -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 || exit 1
-%{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1|}])
-           else None);
-          (* Lang_pm: probe opam-installed binding (llvm.19-shared) *)
-          Some
-            (OCaml, Pm (Lang_pm { lang = OCaml; pm = Opam }), fun ~output_dir ~variant_key ->
-              let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-              [%string
-                {|eval $(opam env)
-ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} \
-  -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 || exit 1
-%{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1|}]);
-        ]
-      @ List.filter_map binding_configs ~f:(function
-          | Python_config p ->
-              (* Install moved to Fetch (Binding Python); this step is
-                 import-only so summary from fetch is pre-cached. *)
-              Some (Python, Pm (Lang_pm { lang = Python; pm = Pip }),
-                    fun ~output_dir ~variant_key ->
-                      Canary_toolchain.python_probe_only_cmd p ~output_dir ~variant_key)
-          | Ocaml_config _ -> None);
-    probe_app = [ (Canary_lang.Python, llvm_python_probe) ];
-    check_post =
-      (function
-      | Fetch Source -> Some Canary_artifact_source.source_check_post
-      | Configure ->
-          Some (fun ~output_dir ~variant_key ->
-            Canary_step_builder.check_markers [ "conf.ok" ] ~output_dir ~variant_key
-            || Stdlib.Sys.file_exists [%string "%{build}/CMakeCache.txt"])
-      | Build_lib ->
-          Some
-            (Canary_step_builder.check_build_lib ~marker:"build.ok"
-               ~lib_path:[%string "%{build}/lib/libLLVM.so"])
-      | Build_binding _ ->
-          Some
-            (Canary_step_builder.check_build_binding ~marker:"build.ok"
-               ~archive_path:[%string "%{build}/lib/ocaml/llvm/llvm.cmxa"])
-      | Fetch (Binding _) ->
-          let pkg = prebuilt.opam_package_spec.install_name in
-          Some (fun ~output_dir ~variant_key ->
-            Canary_step_builder.check_markers [ "binding.ok" ] ~output_dir ~variant_key
-            || Canary_pm_opam.is_installed ~pkg)
-      | Publish (Binding _) ->
-          Some (fun ~output_dir ~variant_key ->
-            Canary_step_builder.check_markers [ "pack.ok" ] ~output_dir ~variant_key
-            || Canary_pm_opam.is_installed ~pkg:llvm_dev_opam_pkg)
-      | _ -> None);
-    (* A7 phase 3 (2026-08-05) — ORACLE → DERIVED. Was [lower_expectation
-       ~violates:[C2] ~has_manifest:(not has_build_binding)]: the
-       has_manifest KNOB suppressed the whole lookup in the dev chain. Now
-       the agnostic lowering emits [Expect_compat_derived] with the merged
-       inputs bag at Probe_binding OCaml in BOTH chains, and the knob's job
-       is done by input-path RESOLUTION instead: each input lists the
-       pack-side artifact FIRST (see [llvm_stable_contract_bindings]), so
-       in the dev chain the first-existing rule reads the dev-built
-       binding's inspects — no name missing, EMPTY prediction, success
-       expected (even though the fetched 19 binding's inspects coexist in
-       the same scenario dir); in the stable chain only the fetch-side
-       files exist — Opcode.UncondBr missing, must-fail (xfail [c2]).
-       Python probe: no (c2, Python) row → Expect_success (llvmlite
-       bundles its own libLLVM), as before. *)
-    expectation =
-      Canary_scenario.lower_expectation_agnostic
-        ~bindings:llvm_stable_contract_bindings
-        ~langs:[ Canary_lang.OCaml ];
-    binding_user_facing_pkg = [ (OCaml, "llvm"); (Python, "llvmlite.binding") ];
-    inspect_note =
-      (if not build_binding then
-         Some (Canary_artifact.stable_reuse_warning
-                 ~source_name:"llvm" ~source_version:ver_str)
-       else None);
-    inspect = (fun action _loc ->
-      let api = Option.value_exn source.api_source
-          ~message:"llvm mk_runner_spec: api_source not set" in
-      let warn =
-        if not build_binding then
-          Some (Canary_artifact.stable_reuse_warning
-                  ~source_name:"llvm" ~source_version:ver_str)
-        else None
-      in
-      let prepend_warn cmd =
-        match warn with None -> cmd | Some w -> [%string "%{w}\n%{cmd}"]
-      in
-      match action with
-      | Probe_lib when build_lib ->
-          Some (fun ~output_dir ~variant_key ->
-            prepend_warn (Canary_artifact_native.inspect_cmd
-              ~lib:[%string "%{build}/lib/libLLVM.so"]
-              ~prefixes:[ "LLVM" ]
-              ~watchlist:(Canary_artifact.native_watchlist api)
-              ~output_dir ~variant_key ()))
-      | Probe_lib ->
-          Some (fun ~output_dir ~variant_key ->
-            prepend_warn [%string {|LLVM_CONFIG=$(%{find_llvm_config_cmd})
-LLVM_LIB=$(ls "$("$LLVM_CONFIG" --libdir)"/libLLVM*.so 2>/dev/null | head -1)
-test -n "$LLVM_LIB"
-%{Canary_artifact_native.inspect_cmd
-    ~lib:"$LLVM_LIB"
-    ~prefixes:[ "LLVM" ]
-    ~watchlist:(Canary_artifact.native_watchlist api)
-    ~output_dir ~variant_key ()}|}])
-      | _ -> None);
-    artifact_name = (function
-      | Canary_basic.Lib -> Some "libLLVM.so"
-      | Canary_basic.Binding Canary_lang.OCaml -> Some "llvm"
-      | Canary_basic.Binding Canary_lang.Python -> Some "llvmlite"
-      | _ -> None);
-  }
-
-(* ── A5 phase 5: llvm on the generic path — SAME SHAPE AS Z3 ──
-   See [Canary_project_z3.z3_spec]'s comment for the full rationale (the
-   shape is deliberately identical): source Fetched@{Stable,Dev} (ambient in
-   scenario identity); lib Fetched@Stable (apt llvm-19-dev) | Built@Dev
-   (ninja, guarded external build tree); llvmlite Fetched@Stable (constant
-   row). Three assignments → the current 2 variants as scenarios
-   (source-primary + the Fetched-ambient dedup); Stable-first so the
-   baseline is the fetch chain. The OCaml binding follows the chain
-   (Built@Dev dev / opam llvm.19-shared stable) and stays OUT of the
-   enumerated universe until graph-structural version propagation. *)
 let llvm_python_provider =
   Canary_store_config.Lang_pkg
     { lang = Canary_lang.Python; pm = Canary_store.Pip; package = "llvmlite";
       self_contained = true; versions = None }
 
-let llvm_spec : Canary_artifact.project_spec =
-  { ps_universe =
-      Canary_enumerate.
-        [ (a_source, axes [ (Fetched, Canary_basic.[ Stable; Dev ]) ]);
-          ( a_lib,
-            axes
-              [ (Fetched, [ Canary_basic.Stable ]);
-                (Built, [ Canary_basic.Dev ]) ] );
-          ( a_binding Canary_lang.Python Canary_mechanism.Cext,
-            (* llvmlite bundles its own libLLVM (co-provider, backlog #45)
-               — declared on the artifact axis; the OCaml edge is
-               chain-dependent (dev lockstep / stable opam-built),
-               undeclared until a finer key. *)
-            let runtime =
-              Canary_store_config.dep_mode_of_provider llvm_python_provider
-            in
-            axes ?runtime
-              [ (Fetched, [ Canary_basic.Stable ]) ] );
-          ( a_binding Canary_lang.OCaml Canary_mechanism.Cstubs,
-            (* binding-follows-chain (A5 residue (iii), 2026-08-06) *)
-            axes ~follows:a_lib
-              [ (Built, [ Canary_basic.Dev ]);
-                (Fetched, [ Canary_basic.Stable ]) ] ) ] }
-
-(* THE artifact table (2026-08-06: identity + provider per row — the old
-   separate [llvm_providers] assoc merged in). Providers = baseline
-   (fetch-chain) detail from the real [prebuilt] data; the OCaml binding
-   row is display-only (not an enumerated axis). Per-channel providers
-   (the arbipher monorepo fork, the dev-built lib, llvm.dev-shared) are
-   the realization's concern. *)
 let llvm_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
   [ artifact_row ~artifact:a_source
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Source_repo llvm_source_stable) ();
+      ~provider:(Canary_store_config.Repo llvm_source_stable) ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
                   (Built, [ Canary_basic.Dev ]) ]
@@ -668,13 +359,6 @@ let llvm_artifacts : Canary_project_spec.artifact_row list =
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:llvm_python_provider () ]
 
-(* dispatch/realize — the z3 shape verbatim: dispatch reads the LIB
-   placement only (Built ⇒ dev chain; the ambient source channel is no
-   chain signal); realize = the existing [mk_runner_spec ~source:…] raw
-   specs (command churn zero). *)
-(* dispatch is now universal: [Canary_action_templates.dispatch] *)
-
-(* ── A9-step-2: action-variant table ── *)
 let llvm_table_rows ~(chan : Canary_basic.channel) ~distro =
   let open Canary_action_templates in
   let source = llvm_source_of chan in
@@ -691,7 +375,12 @@ let llvm_table_rows ~(chan : Canary_basic.channel) ~distro =
     | Some l -> l.build_path
     | None -> Printf.sprintf "_out/canary/projects/llvm/%s_%s/build" ver_str ref_
   in
-  let (Canary_artifact_source.Git_remote url) = remote in
+  let url =
+    match remote with
+    | Some (Canary_artifact_source.Git u | Canary_artifact_source.Hg u) -> u
+    | Some (Canary_artifact_source.Tar u) -> u
+    | None -> "https://local-only.invalid/"
+  in
   let cmake_source =
     if Stdlib.Sys.file_exists (root ^ "/llvm/CMakeLists.txt") then root ^ "/llvm" else root
   in

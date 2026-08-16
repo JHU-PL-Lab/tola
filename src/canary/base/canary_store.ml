@@ -173,6 +173,13 @@ let distro_base : distro -> string = function
   | Wsl -> "/home/red/code"
   | MacOS_local -> "/Users/ex/code"
 
+(* THE contrib root (2026-08-15, design/repo_model.md): the shared
+   third-party checkout tree — a base-layer SETTING (data in code; the
+   user's decision — no config files in contrib, see its README; other
+   projects decide their own layout). The convention:
+   <contrib_root>/<project>-all/<repo-name>. *)
+let contrib_root : distro -> string = fun d -> distro_base d ^ "/contrib"
+
 let all_distros = [ Wsl; MacOS_local ]
 
 (* Source repo and its operations moved to canary_artifact_source.ml *)

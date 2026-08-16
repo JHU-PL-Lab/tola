@@ -99,13 +99,17 @@ let sqlite_api_source : Canary_artifact.t =
    NOT (it's the opam `sqlite3` package — [has_build_binding = false]). *)
 let sqlite_source_stable : Canary_artifact_source.source_repo =
   { Canary_artifact_source.name = "sqlite";
-    remote = Canary_artifact_source.Git_remote "https://github.com/sqlite/sqlite.git";
+    remote = Some (Git "https://github.com/sqlite/sqlite.git");
     locals = [];
     version = Canary_basic.{ channel = Stable; id = "3.45.1" };
     ref_ = "version-3.45.1";
     official = true;
     build_sys_deps = [];
-    api_source = Some sqlite_api_source }
+    api_source = Some sqlite_api_source;
+    label = None;
+    (* the repo builds the C lib (the amalgamation); both bindings are
+       off-tree (opam sqlite3 / the python stdlib) *)
+    artifacts = [ Canary_artifact.a_lib ] }
 
 let sqlite_source_dev : Canary_artifact_source.source_repo =
   { sqlite_source_stable with version = Canary_basic.{ channel = Dev; id = "" }; ref_ = "master" }
@@ -332,7 +336,7 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
        guard over the same workspace/src). *)
     artifact_row ~artifact:a_source ~follows:a_lib
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      ~provider:(Canary_store_config.Source_repo sqlite_source_stable) ();
+      ~provider:(Canary_store_config.Repo sqlite_source_stable) ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
                   (Built, Canary_basic.[ Stable; Dev ]) ]

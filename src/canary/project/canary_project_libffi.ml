@@ -41,14 +41,16 @@ let libffi_api_source : Canary_artifact.t =
 
 let libffi_source_stable : Canary_artifact_source.source_repo =
   { Canary_artifact_source.name = "libffi";
-    remote =
-      Canary_artifact_source.Git_remote "https://github.com/libffi/libffi.git";
+    remote = Some (Git "https://github.com/libffi/libffi.git");
     locals = [];
     version = Canary_basic.{ channel = Canary_basic.Stable; id = "3.8.0" };
     ref_ = "v3.8.0";
     official = true;
     build_sys_deps = [];
-    api_source = Some libffi_api_source }
+    api_source = Some libffi_api_source;
+    label = None;
+    (* the repo builds the C lib; ctypes-foreign (opam) is off-tree *)
+    artifacts = [ Canary_artifact.a_lib ] }
 
 let decl : Canary_pattern_a.t =
   { name = "libffi";

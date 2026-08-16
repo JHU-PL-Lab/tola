@@ -147,14 +147,16 @@ let ssl_api_source : Canary_artifact.t =
 
 let ssl_source_stable : Canary_artifact_source.source_repo =
   { Canary_artifact_source.name = "openssl";
-    remote =
-      Canary_artifact_source.Git_remote "https://github.com/openssl/openssl.git";
+    remote = Some (Git "https://github.com/openssl/openssl.git");
     locals = [];
     version = Canary_basic.{ channel = Canary_basic.Stable; id = "3.0.13" };
     ref_ = "openssl-3.0.13";
     official = true;
     build_sys_deps = [];
-    api_source = Some ssl_api_source }
+    api_source = Some ssl_api_source;
+    label = None;
+    (* the repo builds the C lib; the opam ssl binding is off-tree *)
+    artifacts = [ Canary_artifact.a_lib ] }
 
 (* dev (master) stays declared as the unwired latest channel — the
    per-(artifact × channel) source provider is the not-yet-wired
@@ -188,7 +190,7 @@ let ssl_artifacts : Canary_project_spec.artifact_row list =
        cached thereafter). *)
     Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_source
       ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Stable ]) ]
-      ~provider:(SC.Source_repo ssl_source_stable) ();
+      ~provider:(SC.Repo ssl_source_stable) ();
     Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_lib
       ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Stable ]) ]
       ~provider:(SC.Sys_pkg libssl_spec) ();

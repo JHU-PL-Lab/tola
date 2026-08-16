@@ -49,15 +49,17 @@ let cairo_api_source : Canary_artifact.t =
 
 let cairo_source_stable : Canary_artifact_source.source_repo =
   { Canary_artifact_source.name = "cairo";
-    remote =
-      Canary_artifact_source.Git_remote
-        "https://gitlab.freedesktop.org/cairo/cairo.git";
+    remote = Some (Git
+        "https://gitlab.freedesktop.org/cairo/cairo.git");
     locals = [];
     version = Canary_basic.{ channel = Canary_basic.Stable; id = "1.18.0" };
     ref_ = "1.18.0";
     official = true;
     build_sys_deps = [];
-    api_source = Some cairo_api_source }
+    api_source = Some cairo_api_source;
+    label = None;
+    (* the repo builds the C lib; cairo2 (opam) is off-tree *)
+    artifacts = [ Canary_artifact.a_lib ] }
 
 let decl : Canary_pattern_a.t = {
   name = "cairo";

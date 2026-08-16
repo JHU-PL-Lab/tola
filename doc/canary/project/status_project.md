@@ -222,7 +222,114 @@ from same source).
 values — one chain per project, not the enumerated scenario set. Realign
 with the registry when CI grows scenario coverage.
 
-## 3. Todo (moved from status.md §M3)
+## 3. Todo
+
+Split 2026-08-14 (user): GENERAL framework issues first, then
+per-project ones.
+
+### General (address first)
+
+- [ ] **3-way repos in the project spec** (2026-08-14, user — in
+  progress, the LIGHT-project slice landed 2026-08-15): per-project
+  stable + official-dev + forked-dev repos as first-class spec data.
+  Today each source row carries ONE repo (the stable one); the fork
+  rides a Dev-version-id workaround (the known per-(artifact ×
+  channel) provider refinement). Includes the repo-provider
+  unification below; feeds the three-version report.
+  [`design/repo_model.md`](../design/repo_model.md) holds the
+  requirements + DECIDED points (worktrees per version; properties vs
+  enumeration split — `ref_`/`official`/stable-latest markers are REPO
+  properties, WHICH repos run is config/policy; free label for the
+  fork; contrib layout as a base-layer setting; on-demand refresh; the
+  fetch IS the prepare). LANDED (2026-08-15): `Canary_store.contrib_root`
+  (base-layer setting) + `worktree_ensure_cmd`/`repo_worktree_path`
+  (clone once + worktree per ref, refresh on demand — naming scheme
+  `<pj>-all/<repo>-<ref-slug>`; the worktree `.git` is a FILE — the
+  existence test is on the dir) + pattern-A's fetch wired to it
+  (zarith/cairo/libffi verified live in `~/code/contrib/*-all/`);
+  the REPO-PROVIDER UNIFICATION (`Source_repo`/`Built_from` → one
+  `Repo of source_repo` — the axes' provision says what the repo
+  provides; `providing_action_of` now reads the provision) + the FREE
+  LABEL field on `source_repo` (`label : string option`, fork identity;
+  shown as "(fork: …)" in display). LANDED (2026-08-16, roadmap A+B):
+  the repo-type variant (`repo_remote = Git | Hg | Tar` + per-kind
+  fetch tools — not hardcoded to git; local-only forks warn), the
+  repo-CONTENTS field (`artifacts : artifact_id list` — repo →
+  artifacts, the multi-repo principle; pinned by
+  `repo_model.contents_invariant` over the registry), and the
+  RETIREMENT of the dead `mk_runner_spec` + `has_build_*` helpers in
+  z3/llvm (−810 lines; the CI was already table-based). Next slices:
+  a REAL fork repo for the light project (arbipher/Zarith does not
+  exist — create or exercise on z3/llvm where the forks exist) +
+  enumeration/config for which repos run (entangled with the
+  Fetched-source-id item — the other agent's).
+- [ ] **Repo-provider unification** — `Source_repo` vs `Built_from`
+  wrap the SAME record and split by what the repo provides, which is
+  redundant with the axes' provision (`Built_from` has ZERO live uses).
+  Any artifact can be provided remotely; a repo can ship the project
+  source OR an artifact directly (the latter has no representation
+  today). One `Repo of …` variant; the axes say how. Design together
+  with the 3-way.
+- [ ] **Fetched-source version id in the run-cache key** (2026-08-13) —
+  the fork↔official z3 flip changed the scenario dir but warm-skipped
+  every step over stale markers (see the Found entry in §2). The
+  assignment string must carry the Fetched source's version id — a
+  three-version-report blocker (official vs forked dev collide).
+  Possibly in flight in another agent (2026-08-14) — WAIT before
+  picking this up.
+- [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is
+  a CLASS: build steps that run OCaml bytecode/native self-checks read
+  the global store (stublibs/apt) unless guarded. Audit other projects'
+  build_binding steps (llvm's `ocaml_all` has no bytecode self-check —
+  believed clean); consider generalizing the `env_guard` param or
+  documenting the pattern in the action-table.
+- [ ] **`source_fetch` primitive honor locals** — the table primitive
+  always clones from the remote URL (a wasteful ~1-2 GB llvm-project
+  clone into `_out` on every fresh dev-chain run) even when the row's
+  `local` checkout exists and the build uses it. The old
+  `source_fetch_cmd distro source` skipped the clone for locals — the
+  primitive should too (an optional `local` param). Functional today;
+  pure waste.
+- [ ] **Docs-mirror cp noise** — copying fetched clones into
+  `docs/canary/projects/` fails on the read-only `.git` pack files
+  (Permission denied, non-fatal). Cosmetic: skip `.git` in the mirror
+  copy.
+- [ ] **Fetched provision for tiny** — the one provision tiny still lacks.
+- [ ] **Location sub-axis** — probe locations (build-tree/staged/pm)
+  unmodeled as a first-class scenario axis. First slice landed: PM probe
+  resolution is per-project action-table config (dpkg/ldconfig params +
+  `probe_lib_needs`). Full enumeration (location in `assignment` →
+  separate scenarios per location; location-aware `scenario_dir_of`;
+  display + test pins) waits on a project where build_tree vs staged
+  probes produce materially different results — the forcing case.
+- [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode =
+  Independent` built, not yet wired to a live run through
+  `run_project_spec`.
+- [ ] **Web results page** — extend `canary_html.ml` with per-project bug
+  reports and fixed-PR links (the `docs/canary/projects/` mirror exists;
+  content is per-run artifacts, not reports).
+- [ ] **Upstream z3 PR — POST_BUILD self-check env isolation**
+  (2026-08-13) — z3's ml CMake self-check resolves dlls ambiently (see
+  the Fixed entry in §2); a 2-line CMake patch pins the built artifacts.
+  Pushing needs an arbipher/z3 branch + PR to Z3Prover/z3 (confirm the
+  fork is ours to push). Per user (2026-08-14): do it AFTER the 3-way
+  repo work lands.
+
+### Per-project
+
+- [ ] **spec-check warns fulfillment** — the ratchet-tracked ⚠ set:
+  llvm's missing Publish row (`llvm.dev-shared`); the pattern-A trio +
+  ssl's wrapper/python/built-binding gaps; sqlite/tiny-full's binding
+  dev-source.
+- [ ] **Real-world PRs** — find a bug with canary, fix it, submit
+  upstream PR, link from the results page (the z3 PR above is the first
+  candidate).
+- [ ] **New project candidates** — OpenSSL/libressl, protobuf, grpc,
+  jq/oniguruma, lwt+libev, cvc5, PyTorch (plan in
+  [`project_pytorch.md`](project_pytorch.md)). Queue + sequencing in
+  [`index.md` §2](index.md).
+
+### Done (2026-08-12 → 14)
 
 - [x] **ssl → enumerated scenarios, `Multi` deleted** (2026-08-12) — the
   store-pin mechanism landed (`Lang_pkg.versions` → pin axis → identity;
@@ -240,54 +347,6 @@ with the registry when CI grows scenario coverage.
   the same round (2026-08-12: stable pin "4.16.0" + pinned fetch +
   pin-checked Publish + world assertions). See
   [`store_switching.md`](store_switching.md) §4 item 7.
-- [ ] **Fetched provision for tiny** — the one provision tiny still lacks.
-- [ ] **Location sub-axis** — probe locations (build-tree/staged/pm)
-  unmodeled as a first-class scenario axis. First slice landed: PM probe
-  resolution is per-project action-table config (dpkg/ldconfig params +
-  `probe_lib_needs`). Full enumeration (location in `assignment` →
-  separate scenarios per location; location-aware `scenario_dir_of`;
-  display + test pins) waits on a project where build_tree vs staged
-  probes produce materially different results — the forcing case.
-- [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode =
-  Independent` built, not yet wired to a live run through
-  `run_project_spec`.
-- [ ] **Web results page** — extend `canary_html.ml` with per-project bug
-  reports and fixed-PR links (the `docs/canary/projects/` mirror exists;
-  content is per-run artifacts, not reports).
-- [ ] **Real-world PRs** — find a bug with canary, fix it, submit
-  upstream PR, link from the results page.
-- [ ] **New project candidates** — OpenSSL/libressl, protobuf, grpc,
-  jq/oniguruma, lwt+libev, cvc5, PyTorch (plan in
-  [`project_pytorch.md`](project_pytorch.md)). Queue + sequencing in
-  [`index.md` §2](index.md).
-- [ ] **`source_fetch` primitive honor locals** — the table primitive
-  always clones from the remote URL (a wasteful ~1-2 GB llvm-project
-  clone into `_out` on every fresh dev-chain run) even when the row's
-  `local` checkout exists and the build uses it. The old
-  `source_fetch_cmd distro source` skipped the clone for locals — the
-  primitive should too (an optional `local` param). Functional today;
-  pure waste.
-- [ ] **Upstream z3 PR — POST_BUILD self-check env isolation**
-  (2026-08-13) — z3's ml CMake self-check resolves dlls ambiently (see
-  the Fixed entry in §2); a 2-line CMake patch pins the built artifacts.
-  Pushing needs an arbipher/z3 branch + PR to Z3Prover/z3 (confirm the
-  fork is ours to push). PR/report is a core motivation of the project
-  — revisit with the three-version report.
-- [ ] **Fetched-source version id in the run-cache key** (2026-08-13) —
-  the fork↔official z3 flip changed the scenario dir but warm-skipped
-  every step over stale markers (see the Found entry in §2). The
-  assignment string must carry the Fetched source's version id — a
-  three-version-report blocker (official vs forked dev collide).
-- [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is
-  a CLASS: build steps that run OCaml bytecode/native self-checks read
-  the global store (stublibs/apt) unless guarded. Audit other projects'
-  build_binding steps (llvm's `ocaml_all` has no bytecode self-check —
-  believed clean); consider generalizing the `env_guard` param or
-  documenting the pattern in the action-table.
-- [ ] **Docs-mirror cp noise** — copying fetched clones into
-  `docs/canary/projects/` fails on the read-only `.git` pack files
-  (Permission denied, non-fatal). Cosmetic: skip `.git` in the mirror
-  copy.
 - [x] **Spec-maturity checker** (2026-08-13, user) — `canary spec-check
   [PROJECT|@all]` (landed 2026-08-13): 8 static checks per project over
   the declared artifact table (`Canary_spec_check`, no realization/run),
