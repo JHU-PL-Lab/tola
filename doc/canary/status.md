@@ -9,17 +9,21 @@
 ## Current state
 
 - **Pattern-based enumeration** — `patterns_of` primary path (18 universal chains from
-  action catalogue). 3 scenarios each for z3/llvm/sqlite, 1 for tiny-full, 1 each for
-  zarith/cairo/libffi (registry `simple`).
+  action catalogue). 3 scenarios each for z3/llvm/sqlite, 1 for tiny-full,
+  2 each for zarith/ssl (zarith's per-channel source repos since the
+  repo-model C1, cd9e341), 1 each for cairo/libffi (counts
+  re-verified via `spec @all` 2026-08-16).
 - **Project registry** — `Canary_registry.all_projects` is THE single source of truth
   for project names; `action`/`spec`/`scenarios` each do one `List.assoc_opt` lookup
   (2026-08-12).
-- **Shared `run_project_spec`** — in `canary_project_run.ml`. CLI (`canary action`) and
+- **Shared `run_project_spec`** — in `canary_runner.ml` (main/; moved with the
+  project-layer reorganization, 0c6d5b8). CLI (`canary action`) and
   project tests call the same function. Returns `scenario_run_result` records. Display
   stays in bin layer.
 - **tiny1 via general path** — `project_run_of_tiny1` converts any tiny1 scenario into a
   `project_run`. `canary action tiny1/<name>` runs through the general pipeline (agnostic
-  expectation). All 22 scenarios pass. Behavioral detection (c3/c7) fixed via probe.log
+  expectation). All 22 scenarios pass (re-verified `tiny run`: 22 PASS, 0 FAIL,
+  2026-08-16). Behavioral detection (c3/c7) fixed via probe.log
   fallback in `Expect_compat_derived` runtime resolution.
 - **Canonical scenario naming** — `canonical_name_of` in `canary_tiny_scenario.ml`.
   Format: `Sc.<stage>.<terminal-action>_on_<deps>[.<fault>_on_<artifact>]`. `canary tiny
@@ -95,22 +99,15 @@ General code quality: testing coverage, dead-code elimination, refactoring.
   build_tree glob / staged / pm). All 37 `Primitive` sites in z3/llvm/sqlite
   converted; `templates.source_fetch_local_skips_clone` pins the restored
   locals behavior (M3 item 1 folded in).
+- [x] **Project-layer reorganization + lean bin** (0c6d5b8, 2026-08-14) — the
+  RUNNING layer consolidated in lib modules: `canary_runner.ml`
+  (`run_project_spec`, `scenario_run_result`), `canary_batch.ml`; the
+  status/spec/scenario command helpers + `run_with_*` moved out of
+  `canary_main.ml` into lib (testable in lib — the bin stays thin).
 - [x] **Module-init side effects** (2026-08-14) — `detect_pm` made
   per-call everywhere (ssl's `pm ()` thunk + templates realize-time call;
   no top-level `let pm =` sites left; the detection itself stays
   memoized). Registry loads touch no PM.
-- [ ] **Confirm the general pre/post-checking picture** (user, 2026-08-12) —
-  the user originally wanted pre + post checking for ALL actions in slow
-  mode. Current state: `check_pre` is the AUTOMATIC dependency check
-  ("every dep tag's output_dir contains…" — canary_step_builder.ml
-  ~L911-930, re-bound per step), `check_post` is the per-action
-  postcondition (`default_check_post` via `marker_of_action`, overridable
-  via `runner_spec.check_post`). `pin_check_post` (2026-08-12) is a
-  `check_post` OVERRIDE, not a new mechanism — the naming follows the
-  existing convention. To confirm: whether the original slow-mode idea
-  needs anything beyond today's default-marker table + per-action
-  overrides (e.g. deeper artifact verification on a slow-mode flag).
-
 ### M2 — Invariants & contracts
 
 Formalize artifact invariants, contracts, expectations, and mechanism. Grow checking
@@ -218,6 +215,18 @@ Steps (each step keeps the suite green before the next):
    `api_add`. Sync with SSOT when stable.
 9. [ ] **Canonical naming settle** — tentative scheme → final. Clean
    `Sc.`-prefixed IDs. Provision-aware names for real projects.
+10. [ ] **Pre/post-checking picture** (user 2026-08-12; moved from M1
+   2026-08-16 — the mechanism issue is now solid). The user originally
+   wanted pre + post checking for ALL actions in slow mode. Current
+   state: `check_pre` is the AUTOMATIC dependency check ("every dep
+   tag's output_dir contains…" — canary_step_builder.ml ~L911-930,
+   re-bound per step); `check_post` is the per-action postcondition
+   (`default_check_post` via `marker_of_action`, overridable via
+   `runner_spec.check_post`); `pin_check_post` (2026-08-12) is a
+   `check_post` OVERRIDE, not a new mechanism. To confirm: whether the
+   original slow-mode idea needs anything beyond today's
+   default-marker table + per-action overrides (e.g. deeper artifact
+   verification on a slow-mode flag).
 
 Deferred (design directions, not M2):
 
@@ -243,9 +252,10 @@ reorganization; the project index + landing mechanics in
 
 ## Docs
 
-- [x] **`repo_model.md`** (2026-08-15/16, committed e40c73e) — the
+- [x] **`repo_model.md`** (2026-08-15/16, e40c73e → cd9e341) — the
   contrib-root + repo-contents model: `contrib_root` base-layer setting,
-  provider `Repo` unification, `Git`/`Hg`/`Tar` remotes, the repo-contents
+  provider `Repo` unification + the `Repo_axes` per-channel source
+  repos (zarith 3-way), `Git`/`Hg`/`Tar` remotes, the repo-contents
   invariant; retired the dead `has_build_*` code.
 - [x] **`project/` doc directory** (2026-08-12) — five files: `index.md`
   (conceptual model + portfolio, was `projects.md`), `coverage.md` (status
