@@ -1,6 +1,7 @@
 # Canary Status
 
-> 2026-08-16. Current state, two milestone directions (M1/M2), and open items.
+> 2026-08-16. Current state, the M2 milestone (M1 completed — see the
+> worklog), and open items.
 > Project-level status (M3) moved to [`project/status_project.md`](project/status_project.md)
 > in the 2026-08-12 doc reorganization; the project index is
 > [`project/index.md`](project/index.md). Historical context in
@@ -55,59 +56,13 @@
 
 ## Milestone directions
 
-### M1 — Framework hardening
+### M1 — Framework hardening → COMPLETED (2026-08-16)
 
-General code quality: testing coverage, dead-code elimination, refactoring.
+All twelve items done; chronicled in
+[`worklog/worklog_2026_08.md`](worklog/worklog_2026_08.md) §2026-08-16.
+The one item that outlived the milestone (pre/post-checking picture)
+moved to M2 step 10.
 
-- [x] `run_project_spec` extraction — shared between CLI and tests
-- [x] `action_sig` merge — `consumes_of_action`/`produces_of_action` derived from catalogue
-- [x] Dead code — `nodes_of_action_graph`, `path_id_of_node`, `string_of_firing_site`
-- [x] Post-check convention — `make canary-test`, `make canary-post-check`, CLAUDE.md
-- [x] `patterns_of` dedup
-- [x] **F5: replumb `canary stages` through enumeration** — `covered_actions_of` in
-  `canary_project_run.ml` derives the action set from enumerated scenarios via
-  `derive_steps`. `canary_scenario_coverage.ml` still provides the stage catalogue
-  and display (it was never the problem — only the input source was legacy).
-- [x] **Project registry** (2026-08-12) — zarith/cairo/libffi migrate to
-  `project_run` (`Canary_project_run.simple` wrapping their Pattern A
-  `runner_spec`); `Canary_registry.all_projects` is THE single source of
-  truth for project names (dune rejected the registry inside
-  `canary_project_run` — a module cycle with the project modules that
-  reference its type; hence `canary_registry.ml`). `action`/`spec`/
-  `scenarios` each do ONE `List.assoc_opt` lookup. `run_legacy` +
-  sqlite's pre-action-table `runner_spec`/`built_spec` deleted.
-- [x] **ssl store-pin migration** (2026-08-12) — `Lang_pkg.versions` pins
-  → 2 enumerated ssl scenarios; pin-checked fetch + world assertions; the
-  registry's `Multi` entry kind deleted (all 8 entries plain
-  `project_run`s). Also fixed the spec's pre/post label join (delta
-  scenarios rendered `·` though they ran) and the lang-blind `probe_app`
-  slot. Details in `project/store_switching.md`.
-- [x] **z3 store-pin migration** (2026-08-12) — stable binding pinned
-  "4.16.0" (explicit pinned fetch + pin-check + world-checked probe);
-  dev Publish pin-checked ("dev"); `opam_pin` gained the `install_name`
-  escape + the pin-check verifies the OPAM version. En-route fixes the
-  first full dev-chain run exposed: the action-table fold now merges ALL
-  action fields (configure/scan/headers/install/build_binding/publish
-  were silently dropped); build-chain rows require a Built lib; probe
-  rows are provision-filtered; `-G Ninja` restored. FINDING: official z3
-  HEAD's OCaml binding is broken upstream — the arbipher fork restored as
-  the Dev source (see `project/status_project.md`).
-- [x] **Typed template dispatch** (2026-08-14) — `canary_action_table.ml` →
-  `canary_action_templates.ml`: the 19 string-keyed primitives became typed
-  constructors (project rows name WHAT; tool/ owns HOW; a bad param is a
-  compile error). `probe_lib_location` is a typed variant (build_tree lib /
-  build_tree glob / staged / pm). All 37 `Primitive` sites in z3/llvm/sqlite
-  converted; `templates.source_fetch_local_skips_clone` pins the restored
-  locals behavior (M3 item 1 folded in).
-- [x] **Project-layer reorganization + lean bin** (0c6d5b8, 2026-08-14) — the
-  RUNNING layer consolidated in lib modules: `canary_runner.ml`
-  (`run_project_spec`, `scenario_run_result`), `canary_batch.ml`; the
-  status/spec/scenario command helpers + `run_with_*` moved out of
-  `canary_main.ml` into lib (testable in lib — the bin stays thin).
-- [x] **Module-init side effects** (2026-08-14) — `detect_pm` made
-  per-call everywhere (ssl's `pm ()` thunk + templates realize-time call;
-  no top-level `let pm =` sites left; the detection itself stays
-  memoized). Registry loads touch no PM.
 ### M2 — Invariants & contracts
 
 Formalize artifact invariants, contracts, expectations, and mechanism. Grow checking
@@ -252,19 +207,6 @@ reorganization; the project index + landing mechanics in
 
 ## Docs
 
-- [x] **`repo_model.md`** (2026-08-15/16, e40c73e → cd9e341) — the
-  contrib-root + repo-contents model: `contrib_root` base-layer setting,
-  provider `Repo` unification + the `Repo_axes` per-channel source
-  repos (zarith 3-way), `Git`/`Hg`/`Tar` remotes, the repo-contents
-  invariant; retired the dead `has_build_*` code.
-- [x] **`project/` doc directory** (2026-08-12) — five files: `index.md`
-  (conceptual model + portfolio, was `projects.md`), `coverage.md` (status
-  matrix + landing history), `landing.md` (workflow + testing harness),
-  `status_project.md` (was `design/package_bug.md` + M3),
-  `project_pytorch.md` (was `design/`). Cross-references swept; the
-  deleted `scenario_terms.md` links now point at M2 "Canonical naming
-  settle". The stale `onboard-new-project` skill deleted — its replacement
-  will build on `landing.md`.
 - [ ] **Regenerate `tiny.md`** — current doc is tiny1-era; rewrite for tiny-factory /
   tiny1 / tiny-full split with canonical naming.
 - [ ] **`backlog.md` audit** — cross-reference with this file; retire closed items.

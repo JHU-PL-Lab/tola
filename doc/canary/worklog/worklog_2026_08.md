@@ -545,3 +545,33 @@ Status flushed. Dead code identified: `string_of_firing_site`, `nodes_of_action_
 - Pattern naming bridge (Sc.N ids → concrete scenarios)
 - F5: replumb `canary stages` through enumeration engine
 - `patterns_of` chain dedup (same assignment with multiple terminals)
+
+## 2026-08-16 — M1 completed (flushed from status.md)
+
+The whole Framework-hardening milestone closed. Twelve items, all shipped
+with the suite green at each step; final state 65 project + 107 artifact
++ 14 PM tests, `make canary-test` / `make canary-post-check` as the
+post-change convention.
+
+- `run_project_spec` extraction — shared between CLI and tests
+- `action_sig` merge — `consumes_of_action`/`produces_of_action` derived from catalogue
+- Dead code — `nodes_of_action_graph`, `path_id_of_node`, `string_of_firing_site`
+- Post-check convention — `make canary-test`, `make canary-post-check`, CLAUDE.md
+- `patterns_of` dedup
+- F5: `canary stages` replumbed through enumeration (`covered_actions_of` in `canary_project_run.ml`)
+- Project registry (2026-08-12) — `Canary_registry.all_projects` THE name SSOT; zarith/cairo/libffi migrate to `project_run`; `run_legacy` + sqlite's pre-action-table specs deleted
+- ssl store-pin migration (2026-08-12) — `Lang_pkg.versions` pins → 2 enumerated scenarios; registry's `Multi` kind deleted
+- z3 store-pin migration (2026-08-12) — stable binding pinned 4.16.0, dev Publish pin-checked; FINDING: official z3 HEAD's OCaml binding broken upstream → arbipher fork as the Dev source
+- Typed template dispatch (2026-08-14) — `canary_action_templates.ml`: 19 typed constructors replace string-keyed primitives (all 37 sites converted)
+- Project-layer reorganization + lean bin (0c6d5b8, 2026-08-14) — `canary_runner.ml`/`canary_batch.ml`; status/spec/scenario helpers + `run_with_*` out of the bin into lib
+- Module-init side effects (2026-08-14) — `detect_pm` per-call everywhere (memoized internally)
+
+The one item that outlived the milestone — the general pre/post-checking
+picture — moved to M2 step 10 (the mechanism issue it waited on is now
+solid).
+
+Also flushed: the Docs checklist's two completed entries —
+`project/` doc directory (2026-08-12) and `repo_model.md`
+(2026-08-15/16, e40c73e → cd9e341: `contrib_root`, `Repo` provider
+unification + `Repo_axes` per-channel source repos, `Git`/`Hg`/`Tar`
+remotes, repo-contents invariant; retired the dead `has_build_*` code).
