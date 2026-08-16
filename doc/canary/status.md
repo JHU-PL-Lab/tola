@@ -172,11 +172,15 @@ Steps (each step keeps the suite green before the next):
    sqlite/z3/llvm facts-declaration remains (open: whether the
    coupling's [build] recipe stays a mandatory field — for external
    projects the build is their raw command's business).
-5. [ ] **Command derivation from the payload** — a SEPARATE topic: the
-   lowering derives build/probe templates from the decl only where the
-   command is mechanism-determined. tiny: done (2026-08-15 —
-   `Canary_binding_templates` derives build_binding / probe_binding /
-   probe_lib / binding_user_facing_pkg from the three decls; byte-equal
+5. [ ] **Build as a separate stage** (split from the payload 2026-08-15,
+   user) — how to build is its OWN datatype, not part of the
+   declaration: `Canary_binding_templates.build_recipe`
+   (`Dune_targets` / `Verify_product` / `Raw`), derived by the
+   mechanism model `recipe_of_decl` from the decl's facts; `Raw` =
+   the project's own command (external projects — respected as-is,
+   tricky commandline details bypassed). tiny: done (2026-08-15 —
+   build_binding / probe_binding / probe_lib /
+   binding_user_facing_pkg derive from the three decls; byte-equal
    to the former hand-written literals, pinned +
    actions.log-diffed). Everywhere else commands stay Raw — external
    projects' original commands are respected as-is (tricky commandline

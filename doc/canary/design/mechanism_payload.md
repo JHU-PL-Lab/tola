@@ -46,18 +46,16 @@ type native_facts = {
   headers : { dir : string; files : string list };   (* L2 source *)
 }
 
-(* the glue's coupling — the ONE variant point *)
+(* the glue's coupling — the ONE variant point (WHAT, not HOW —
+   the build recipe is a separate stage, see below) *)
 type coupling =
-  | Stub_archive of {                   (* cstubs: compile .c → .a + cmxa *)
+  | Stub_archive of {                   (* cstubs: the stub .c + their .a *)
       sources : string list;            (* ocaml/tiny_stubs.c *)
       archive : string;                 (* ocaml/libtiny_stubs.a *)
-      build   : Dune of { targets : string list }
     }
-  | Compiled_ext of {                   (* cext: compile .c → .so *)
+  | Compiled_ext of {                   (* cext: the .c + the .so *)
       source  : string;                 (* python_cext/tiny_cext/_native.c *)
       product : string;                 (* _native.cpython-*.so *)
-      build   : Direct_cc of { include_dirs : string list;
-                               library_dirs : string list; libs : string list }
     }
   | Dlopen of { name : string }         (* ctypes/dynlink: resolved at load *)
 
@@ -85,9 +83,7 @@ type binding_decl = {
                        headers = { dir = "c/include"; files = ["tiny.h"] } };
             coupling = Stub_archive
               { sources = ["ocaml/tiny_stubs.c"];
-                archive = "ocaml/libtiny_stubs.a";
-                build = Dune { targets = ["ocaml/tiny.cmxa";
-                                          "ocaml/libtiny_stubs.a"] } };
+                archive = "ocaml/libtiny_stubs.a" };
             surface_path = "ocaml/tiny.mli" } }
 
 (* Python cext *)
@@ -97,9 +93,7 @@ type binding_decl = {
                        headers = { dir = "c/include"; files = ["tiny.h"] } };
             coupling = Compiled_ext
               { source = "python_cext/tiny_cext/_native.c";
-                product = "_native.cpython-*.so";
-                build = Direct_cc { include_dirs = []; library_dirs = ["c/build"];
-                                    libs = ["tiny"] } };
+                product = "_native.cpython-*.so" };
             surface_path = "python_cext/tiny_cext/__init__.py" } }
 
 (* Python ctypes *)
@@ -114,11 +108,26 @@ type binding_decl = {
 The c_api/native facts are shared across tiny's three bindings — a
 project factor can hoist them; the declaration itself stays per-binding.
 
+## The stages (2026-08-15)
+
+1. **Declare** — this record: identify the mechanism + state the facts.
+   Universal, obvious, mandatory — what checker/contract selection reads.
+2. **Build** — a SEPARATE datatype: `Canary_binding_templates.build_recipe`
+   (`Dune_targets of string list | Verify_product | Raw`). The mechanism
+   model (`recipe_of_decl`) derives it from the facts (cstubs → dune-build
+   the surface cmxa + stub archive; cext → the store provides the
+   product); `Raw` = the project's own command (external projects —
+   respected as-is, tricky commandline details bypassed). Project
+   knowledge that is not mechanism-determined (tiny's factory cc recipe)
+   stays with the factory.
+3. **Check** — project-agnostic, artifact-type dependent; applies once
+   the facts (stage 1) and the build results (stage 2) are identified.
+
 ## What the lowering derives
 
 | Derives | From |
 |---|---|
-| build_binding cmd | `coupling.build` (tiny — our craft; external projects keep their Raw command) |
+| build_binding cmd | `build_recipe` via `recipe_of_decl` (stage 2 — mechanism model; Raw = the project's own command) |
 | c1 inspect inputs | `coupling` (archive/product) + `native` |
 | c2 inspect input path | `surface_path` |
 | c4 runtime facts | `native.soname` / `Dlopen.name` |

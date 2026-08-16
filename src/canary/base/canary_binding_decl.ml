@@ -42,29 +42,27 @@ type native_facts = {
 
 (** How the glue couples the two sides. The variant part of the
     facts; a new binding mechanism adds a case here and supplies the
-    same facts — the contracts apply unchanged. *)
+    same facts — the contracts apply unchanged.
+
+    The build HOW is a SEPARATE stage (M2 step 5, 2026-08-15): the
+    declaration identifies WHAT the binding is (products, surfaces,
+    runtime coupling — what the project-agnostic checking reads); how
+    to build it is project knowledge / a mechanism-model-derived
+    recipe, living with the command derivation
+    ([Canary_binding_templates.build_recipe]), not here. *)
 type coupling =
-  | Stub_archive of {       (** cstubs: compile .c → .a (+ cmxa) *)
+  | Stub_archive of {       (** cstubs: the stub .c sources + their .a *)
       sources : string list;
       archive : string;
-      build   : dune_build;
     }
-  | Compiled_ext of {       (** cext: compile .c → .so *)
+  | Compiled_ext of {       (** cext: the .c source + the .so it builds *)
       source  : string;
       product : string;
-      build   : direct_cc_build;
     }
   | Dlopen of {             (** ctypes/dynlink: resolved at load *)
       name : string;
     }
 [@@deriving show, eq]
-
-and dune_build = Dune of { targets : string list }
-and direct_cc_build = Direct_cc of {
-  include_dirs : string list;
-  library_dirs : string list;
-  libs         : string list;
-}
 
 (* ── the declaration ── *)
 

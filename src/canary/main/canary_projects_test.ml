@@ -267,7 +267,18 @@ let providing_arrow_pin : Canary_project_test.pure_test =
           | Some p -> (
               let id = d.Canary_project_spec.ar_artifact in
               let k = Canary_artifact.kind_of id in
-              let act = Canary_store_config.providing_action_of k p in
+              (* the Repo arrow reads the AXES' provision (the
+                 unification): take the row's first declared provision —
+                 the live Repo rows are Fetched-only sources. *)
+              let provision =
+                match d.Canary_project_spec.ar_axes.Canary_artifact.ax_universe with
+                | (pv, _) :: _ -> pv
+                | [] -> Canary_artifact.Fetched
+              in
+              let act =
+                Canary_store_config.providing_action_of ~provision
+                  k p
+              in
               match
                 (Canary_store_config.provision_of_provider p, act)
               with
@@ -551,23 +562,19 @@ let binding_decl_pin : Canary_project_test.pure_test =
           (* every decl carries the shared c_api + native facts *)
           List.for_all [ cstubs; cext; ctypes ] ~f:(fun d ->
               c_api_matches d && native_matches d)
-          && (* cstubs: the stub archive the hand-written build produces *)
+          && (* cstubs: the stub archive the hand-written build produces
+                (the build HOW is a separate stage — recipe_of_decl,
+                pinned by tiny_binding_realization_pin) *)
           (match cstubs.facts.BD.coupling with
            | BD.Stub_archive sa ->
                Poly.equal sa.sources [ "ocaml/tiny_stubs.c" ]
                && String.equal sa.archive "ocaml/libtiny_stubs.a"
-               && (match sa.build with
-                   | BD.Dune { targets } ->
-                       Poly.equal targets
-                         [ "ocaml/tiny.cmxa"; "ocaml/libtiny_stubs.a" ])
            | _ -> false)
           && (* cext: the .so the hand-written cc produces *)
           (match cext.facts.BD.coupling with
            | BD.Compiled_ext ce ->
                String.equal ce.source "python_cext/tiny_cext/_native.c"
                && String.equal ce.product "_native.cpython-*.so"
-               && (match ce.build with
-                   | BD.Direct_cc dc -> Poly.equal dc.libs [ "tiny" ])
            | _ -> false)
           && (* ctypes: dlopen by the soname the loader resolves *)
           (match ctypes.facts.BD.coupling with
@@ -732,6 +739,80 @@ let batch_tier_pin : Canary_project_test.pure_test =
         && Poly.equal (Canary_project_run.batch_policy (pr_of "llvm"))
              Canary_project_run.Thin) }
 
+(* The repo-model settings (2026-08-15, design/repo_model.md): the
+   contrib-root derivation + the worktree naming scheme (official repo
+   name + ref slug; path separators slugged away). *)
+let repo_model_pin : Canary_project_test.pure_test =
+  { name = "repo_model.worktree_paths";
+    check =
+      (fun () ->
+        let repo : Canary_artifact_source.source_repo =
+          { name = "Zarith";
+            remote = Some (Git_remote
+                "https://github.com/ocaml/Zarith.git");
+            locals = [];
+            version = Canary_basic.{ channel = Canary_basic.Stable; id = "1.14" };
+            ref_ = "release-1.14";
+            official = true;
+            build_sys_deps = [];
+            api_source = None;
+            label = None }
+        in
+        let main =
+          Canary_artifact_source.repo_main_path ~project:"zarith" ~repo
+            Canary_store.Wsl
+        in
+        let wt =
+          Canary_artifact_source.repo_worktree_path ~project:"zarith" ~repo
+            ~ref_:"release-1.14" Canary_store.Wsl
+        in
+        String.is_suffix main ~suffix:"/contrib/zarith-all/Zarith"
+        && String.equal wt (main ^ "-release-1.14")
+        && String.equal
+             (Canary_artifact_source.repo_worktree_path ~project:"zarith"
+                ~repo ~ref_:"fix/bug-42" Canary_store.Wsl)
+             (main ^ "-fix-bug-42")) }
+
+(* The fork rule (2026-08-15, user): a LOCAL-ONLY fork (a label, no
+   remote) is a WARNING, not an error — a per-project remote on the
+   personal account is not required; we may not find a bug worth
+   pushing. An official repo without a remote stays an error (the
+   archive/PM-source distribution case — later refinement). *)
+let local_fork_pin : Canary_project_test.pure_test =
+  { name = "spec_check.local_fork_warns";
+    check =
+      (fun () ->
+        let repo : Canary_artifact_source.source_repo =
+          { name = "zarith";
+            remote = None;
+            locals = [];
+            version = Canary_basic.{ channel = Canary_basic.Dev; id = "" };
+            ref_ = "canary-fix";
+            official = false;
+            build_sys_deps = [];
+            api_source = None;
+            label = Some "local-fork" }
+        in
+        let pr : Canary_project_run.project_run =
+          { pr_name = "test-fork";
+            pr_artifacts =
+              [ Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_source
+                  ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Dev ]) ]
+                  ~provider:(Canary_store_config.Repo repo) () ];
+            pr_runner_spec = (fun _a ~workspace:_ -> Canary_step_builder.empty_runner_spec);
+            pr_mismatch_probes = [];
+            pr_wrapper_pkgs = [];
+            pr_api_source = None;
+            pr_tier = Canary_project_run.Light }
+        in
+        let r = Canary_spec_check.check pr in
+        match
+          List.find r.Canary_spec_check.items
+            ~f:(fun i -> String.equal i.Canary_spec_check.item_id "github_remote")
+        with
+        | Some i -> Poly.equal i.Canary_spec_check.severity Canary_spec_check.Warn
+        | None -> false) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -744,4 +825,6 @@ let tests : Canary_project_test.pure_test list =
       spec_check_every_project_pin;
       spec_check_ratchet_pin;
       batch_tier_pin;
+      repo_model_pin;
+      local_fork_pin;
       tiny_binding_realization_pin ]

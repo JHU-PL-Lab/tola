@@ -6,7 +6,10 @@
     ([Canary_binding_decl.binding_decl]); this module derives the
     absorbable [Canary_step_builder.runner_spec] fields from it —
     the build/probe command builders, the probe_lib template, the
-    user-facing pkg name. Mechanism-general FACTS (coupling, native
+    user-facing pkg name. Two stages: the [build_recipe] datatype +
+    [recipe_of_decl] mechanism model turn facts into a build recipe
+    (Raw = the project's own command), then the recipe × ctx becomes
+    command strings. Mechanism-general FACTS (coupling, native
     prefix, surface_path) become commands; store locations + the
     probe choice stay ctx (the decl cannot know where a store lives
     or which example a project probes — that is the analysis side of
@@ -52,13 +55,45 @@ let cext_product_glob (d : Canary_binding_decl.binding_decl) ~(ctx : ctx) =
   in
   [%string "%{ctx.binding_root}/%{pkg}/%{product}"]
 
-(** The build_binding command for the decl's mechanism, or [None] for a
-    coupling with no compile stage (Dlopen — probe-only chains). *)
+(* ── the build stage (M2 step 5, 2026-08-15) — the HOW, a separate
+   datatype from the declaration: a mechanism-model-derived recipe by
+   default, [Raw] where the project's own command builds (external
+   projects — their original commands are respected as-is). Project
+   knowledge that is not mechanism-determined (tiny's factory cc
+   recipe) stays with the factory. *)
+type build_recipe =
+  | Dune_targets of string list
+      (** cstubs: dune-build the user-facing cmxa + the stub archive *)
+  | Verify_product
+      (** cext: the store provides the product — verify it exists *)
+  | Raw
+      (** the project's own command — no template (external projects) *)
+
+(** The mechanism model: the decl's facts determine the recipe. *)
+let recipe_of_decl (d : Canary_binding_decl.binding_decl) : build_recipe =
+  match d.facts.coupling with
+  | Canary_binding_decl.Stub_archive sa ->
+      (* the user-facing library's cmxa shares the surface module name
+         (tiny's convention; a project with a different lib layout
+         declares Raw) *)
+      let mli = Stdlib.Filename.basename d.facts.surface_path in
+      let mod_name =
+        Option.value (String.chop_suffix mli ~suffix:".mli") ~default:mli in
+      let cmxa =
+        Stdlib.Filename.concat
+          (Stdlib.Filename.dirname d.facts.surface_path)
+          (mod_name ^ ".cmxa") in
+      Dune_targets [ cmxa; sa.archive ]
+  | Canary_binding_decl.Compiled_ext _ -> Verify_product
+  | Canary_binding_decl.Dlopen _ -> Raw
+
+(** The build_binding command for the decl's recipe, or [None] for
+    [Raw] (the project declares its own command) and for couplings with
+    no compile stage (Dlopen — probe-only chains). *)
 let build_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
   : (output_dir:string -> variant_key:string -> string) option =
-  match d.facts.coupling with
-  | Canary_binding_decl.Stub_archive
-      { build = Canary_binding_decl.Dune { targets }; _ } ->
+  match recipe_of_decl d with
+  | Dune_targets targets ->
       Some (fun ~output_dir ~variant_key ->
         let build_log = Canary_basic.variant_file ~variant_key "build.log" in
         let dune_cmd =
@@ -71,15 +106,15 @@ let build_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
         Printf.sprintf "(%s) > %s/%s 2>&1" dune_cmd output_dir build_log
         |> Canary_build_cmd.with_marker
              ~marker:"build.ok" ~output_dir ~variant_key)
-  | Canary_binding_decl.Compiled_ext _ ->
+  | Verify_product ->
       (* Verify the store-provided product exists (tiny's cext is
-         pre-built by the factory; the decl's [Direct_cc] build is the
-         factory-side recipe). *)
+         pre-built by the factory; the factory-side cc recipe is
+         project knowledge). *)
       Some (fun ~output_dir ~variant_key ->
         Printf.sprintf "ls %s > /dev/null" (cext_product_glob d ~ctx)
         |> Canary_build_cmd.with_marker
              ~marker:"build.ok" ~output_dir ~variant_key)
-  | Canary_binding_decl.Dlopen _ -> None
+  | Raw -> None
 
 (** The probe_binding command for the decl's mechanism, or [None] when
     the base spec does not wire one (Dlopen today — the Cext entry
