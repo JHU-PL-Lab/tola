@@ -12,11 +12,14 @@
 A project's binding declaration splits into:
 
 - **Facts** (payload) — what the binding IS: its wrapped C API, its
-  files, its build, its runtime coupling. Stable. Removing a field
-  would change what the binding is. **The declaration is UNIVERSAL and
-  mandatory** — every project declares its facts (that is what
-  checker/contract selection reads); only the command DERIVATION is
-  optional (Raw — see below).
+  files, its runtime coupling. Stable. Removing a field would change
+  what the binding is. The word is a CONCEPT (the facts/analysis
+  split), not a type-name suffix: binding/source/artifact are already
+  fact-level entities, so the record is flat — `binding_decl =
+  { mechanism; c_api; native; coupling; surface_path }` (2026-08-16).
+  **The declaration is UNIVERSAL and mandatory** — every project
+  declares it (that is what checker/contract selection reads); only
+  the command DERIVATION is optional (Raw — see below).
 - **Analysis** (canary's side) — what we CHECK and how: watchlist
   contents, contract firing rows, which example we probe. Changeable
   as our contracts evolve. (The S1 seam: provenance vs checking
@@ -34,13 +37,15 @@ facts; we do not design for it concretely.)
 ## The declaration
 
 ```ocaml
-(* WHAT the binding wraps + native facts — shared by all mechanisms *)
+(* WHAT the binding wraps + the native side — shared by all mechanisms.
+   Every field is a fact-level entity by construction (binding/source/
+   artifact are already facts), so no "fact" suffix (2026-08-16). *)
 type c_api = {
   functions : string list;              (* tiny_sum, tiny_diff, tiny_offset *)
   enums     : string list;
 }
 
-type native_facts = {
+type native = {
   prefix  : string;                     (* "tiny_" — nm scoping *)
   soname  : string;                     (* "libtiny.so.1" — L4 *)
   headers : { dir : string; files : string list };   (* L2 source *)
@@ -59,17 +64,13 @@ type coupling =
     }
   | Dlopen of { name : string }         (* ctypes/dynlink: resolved at load *)
 
-type binding_facts = {
-  c_api        : c_api;
-  native       : native_facts;
-  coupling     : coupling;
-  surface_path : string;                (* the user-facing FILE — a fact *)
-                                        (* ocaml/tiny.mli | python_cext/tiny_cext/__init__.py *)
-}
-
 type binding_decl = {
   mechanism : Canary_mechanism.mechanism;   (* identity label *)
-  facts     : binding_facts;
+  c_api        : c_api;
+  native       : native;
+  coupling     : coupling;
+  surface_path : string;                (* the user-facing FILE —
+                                           ocaml/tiny.mli | python_cext/tiny_cext/__init__.py *)
 }
 ```
 
@@ -78,31 +79,31 @@ type binding_decl = {
 ```ocaml
 (* OCaml cstubs *)
 { mechanism = Cstubs;
-  facts = { c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
-            native = { prefix = "tiny_"; soname = "libtiny.so.1";
-                       headers = { dir = "c/include"; files = ["tiny.h"] } };
-            coupling = Stub_archive
-              { sources = ["ocaml/tiny_stubs.c"];
-                archive = "ocaml/libtiny_stubs.a" };
-            surface_path = "ocaml/tiny.mli" } }
+  c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
+  native = { prefix = "tiny_"; soname = "libtiny.so.1";
+             headers = { dir = "c/include"; files = ["tiny.h"] } };
+  coupling = Stub_archive
+    { sources = ["ocaml/tiny_stubs.c"];
+      archive = "ocaml/libtiny_stubs.a" };
+  surface_path = "ocaml/tiny.mli" }
 
 (* Python cext *)
 { mechanism = Cext;
-  facts = { c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
-            native = { prefix = "tiny_"; soname = "libtiny.so.1";
-                       headers = { dir = "c/include"; files = ["tiny.h"] } };
-            coupling = Compiled_ext
-              { source = "python_cext/tiny_cext/_native.c";
-                product = "_native.cpython-*.so" };
-            surface_path = "python_cext/tiny_cext/__init__.py" } }
+  c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
+  native = { prefix = "tiny_"; soname = "libtiny.so.1";
+             headers = { dir = "c/include"; files = ["tiny.h"] } };
+  coupling = Compiled_ext
+    { source = "python_cext/tiny_cext/_native.c";
+      product = "_native.cpython-*.so" };
+  surface_path = "python_cext/tiny_cext/__init__.py" }
 
 (* Python ctypes *)
 { mechanism = Ctypes;
-  facts = { c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
-            native = { prefix = "tiny_"; soname = "libtiny.so.1";
-                       headers = { dir = "c/include"; files = ["tiny.h"] } };
-            coupling = Dlopen { name = "libtiny.so.1" };
-            surface_path = "python_ctypes/tiny_ctypes/__init__.py" } }
+  c_api = { functions = ["tiny_sum"; "tiny_diff"; "tiny_offset"]; enums = [] };
+  native = { prefix = "tiny_"; soname = "libtiny.so.1";
+             headers = { dir = "c/include"; files = ["tiny.h"] } };
+  coupling = Dlopen { name = "libtiny.so.1" };
+  surface_path = "python_ctypes/tiny_ctypes/__init__.py" }
 ```
 
 The c_api/native facts are shared across tiny's three bindings — a

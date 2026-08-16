@@ -9,8 +9,8 @@
     user-facing pkg name. Two stages: the [build_recipe] datatype +
     [recipe_of_decl] mechanism model turn facts into a build recipe
     (Raw = the project's own command), then the recipe × ctx becomes
-    command strings. Mechanism-general FACTS (coupling, native
-    prefix, surface_path) become commands; store locations + the
+    command strings. Mechanism-general declaration (coupling, native
+    prefix, surface_path) becomes commands; store locations + the
     probe choice stay ctx (the decl cannot know where a store lives
     or which example a project probes — that is the analysis side of
     mechanism_payload.md).
@@ -38,7 +38,7 @@ type ctx = {
    component ("python_cext/tiny_cext/_native.c" → "tiny_cext"). *)
 let cext_product_glob (d : Canary_binding_decl.binding_decl) ~(ctx : ctx) =
   let source, product =
-    match d.facts.coupling with
+    match d.coupling with
     | Canary_binding_decl.Compiled_ext ce -> (ce.source, ce.product)
     | Canary_binding_decl.Stub_archive _ | Canary_binding_decl.Dlopen _ ->
         failwith "cext_product_glob: not a Compiled_ext decl"
@@ -71,17 +71,17 @@ type build_recipe =
 
 (** The mechanism model: the decl's facts determine the recipe. *)
 let recipe_of_decl (d : Canary_binding_decl.binding_decl) : build_recipe =
-  match d.facts.coupling with
+  match d.coupling with
   | Canary_binding_decl.Stub_archive sa ->
       (* the user-facing library's cmxa shares the surface module name
          (tiny's convention; a project with a different lib layout
          declares Raw) *)
-      let mli = Stdlib.Filename.basename d.facts.surface_path in
+      let mli = Stdlib.Filename.basename d.surface_path in
       let mod_name =
         Option.value (String.chop_suffix mli ~suffix:".mli") ~default:mli in
       let cmxa =
         Stdlib.Filename.concat
-          (Stdlib.Filename.dirname d.facts.surface_path)
+          (Stdlib.Filename.dirname d.surface_path)
           (mod_name ^ ".cmxa") in
       Dune_targets [ cmxa; sa.archive ]
   | Canary_binding_decl.Compiled_ext _ -> Verify_product
@@ -121,7 +121,7 @@ let build_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
     serves both Python artifacts through the lang-keyed lookup). *)
 let probe_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
   : (output_dir:string -> variant_key:string -> string) option =
-  match d.facts.coupling with
+  match d.coupling with
   | Canary_binding_decl.Stub_archive _ ->
       Some (fun ~output_dir ~variant_key ->
         let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
@@ -142,7 +142,7 @@ let probe_binding_of (d : Canary_binding_decl.binding_decl) ~(ctx : ctx)
 
 (** probe_lib: nm the lib for the declared symbol prefix (verbatim —
     tiny's "tiny_" carries its own trailing underscore). *)
-let probe_lib_of (f : Canary_binding_decl.native_facts) ~lib_path
+let probe_lib_of (f : Canary_binding_decl.native) ~lib_path
   : output_dir:string -> variant_key:string -> string =
   fun ~output_dir ~variant_key ->
     let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
@@ -153,7 +153,7 @@ let probe_lib_of (f : Canary_binding_decl.native_facts) ~lib_path
     OCaml — the .mli's module name; Python — the surface's package dir. *)
 let user_facing_pkg_of (lang : Canary_lang.lang)
     (d : Canary_binding_decl.binding_decl) : string option =
-  let path = d.facts.surface_path in
+  let path = d.surface_path in
   match lang with
   | Canary_lang.OCaml ->
       let base = Stdlib.Filename.basename path in

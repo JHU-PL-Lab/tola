@@ -2108,7 +2108,7 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
    what the binding IS; the analysis (watchlists, contract rows, probe)
    stays on canary's side. The build HOW is a separate stage: the
    mechanism model ([Canary_binding_templates.recipe_of_decl]) derives
-   tiny's recipe from these facts. c_api/native are shared across
+   tiny's recipe from the declaration. c_api/native are shared across
    tiny's three bindings — a project factor hoists them.
    [make_base_runner_spec] derives its build/probe command builders
    via [Canary_binding_templates] (re-exported by [Canary_project_tiny]
@@ -2117,31 +2117,30 @@ let stores_of_workspace ?(lib_filename = "libtiny.so.1") ~workspace_root () = {
 let tiny_c_api : Canary_binding_decl.c_api =
   { functions = tiny_native_stable_symbols; enums = [] }
 
-let tiny_native_facts : Canary_binding_decl.native_facts =
+let tiny_native : Canary_binding_decl.native =
   { prefix = "tiny_"; soname = "libtiny.so.1";
     headers = Canary_binding_decl.{ dir = "c/include"; files = [ "tiny.h" ] } }
 
 let tiny_binding_decls : Canary_binding_decl.binding_decl list =
   let open Canary_binding_decl in
-  let shared = (tiny_c_api, tiny_native_facts) in
   [ { mechanism = Canary_mechanism.Cstubs;
-      facts = { c_api = fst shared; native = snd shared;
-                coupling =
-                  Stub_archive
-                    { sources = [ "ocaml/tiny_stubs.c" ];
-                      archive = "ocaml/libtiny_stubs.a" };
-                surface_path = "ocaml/tiny.mli" } };
+      c_api = tiny_c_api; native = tiny_native;
+      coupling =
+        Stub_archive
+          { sources = [ "ocaml/tiny_stubs.c" ];
+            archive = "ocaml/libtiny_stubs.a" };
+      surface_path = "ocaml/tiny.mli" };
     { mechanism = Canary_mechanism.Cext;
-      facts = { c_api = fst shared; native = snd shared;
-                coupling =
-                  Compiled_ext
-                    { source = "python_cext/tiny_cext/_native.c";
-                      product = "_native.cpython-*.so" };
-                surface_path = "python_cext/tiny_cext/__init__.py" } };
+      c_api = tiny_c_api; native = tiny_native;
+      coupling =
+        Compiled_ext
+          { source = "python_cext/tiny_cext/_native.c";
+            product = "_native.cpython-*.so" };
+      surface_path = "python_cext/tiny_cext/__init__.py" };
     { mechanism = Canary_mechanism.Ctypes;
-      facts = { c_api = fst shared; native = snd shared;
-                coupling = Dlopen { name = "libtiny.so.1" };
-                surface_path = "python_ctypes/tiny_ctypes/__init__.py" } };
+      c_api = tiny_c_api; native = tiny_native;
+      coupling = Dlopen { name = "libtiny.so.1" };
+      surface_path = "python_ctypes/tiny_ctypes/__init__.py" };
   ]
 
 let make_base_runner_spec
@@ -2280,7 +2279,7 @@ let make_base_runner_spec
        declared native prefix. *)
     probe_lib = [
       (Canary_store.Build_tree,
-       Canary_binding_templates.probe_lib_of tiny_native_facts ~lib_path);
+       Canary_binding_templates.probe_lib_of tiny_native ~lib_path);
     ];
 
     (* Probe_binding: derived from the coupling facts — OCaml
