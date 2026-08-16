@@ -79,15 +79,18 @@ let has_built_axis (d : Canary_project_spec.artifact_row) : bool =
     ~f:(fun (provision, _) -> Poly.equal provision Canary_artifact.Built)
 
 (* The declared source repo, wherever it is carried: ANY artifact row's
-   [Repo] provider (2026-08-15 unification — the axes' provision says
-   what the repo provides). Per-channel sources are the not-yet-wired
-   provenance refinement, so any one repo satisfies the static checks
-   (same shape as z3's stable-repo-on-row). *)
+   [Repo]/[Repo_axes] provider (2026-08-15 unification — the axes'
+   provision says what the repo provides). A [Repo_axes] family reports
+   its STABLE repo (listed first) — the reporting-oriented checks
+   (forge, api_source) read the official channel; z3/llvm/sqlite/ssl
+   still carry a single [Repo] (their per-channel dispatch lives in the
+   table rows — the C2 migration). *)
 let source_repo_of (pr : Canary_project_run.project_run) :
     Canary_artifact_source.source_repo option =
   List.find_map pr.pr_artifacts ~f:(fun d ->
       match d.Canary_project_spec.ar_provider with
       | Some (Canary_store_config.Repo r) -> Some r
+      | Some (Canary_store_config.Repo_axes (r :: _)) -> Some r
       | _ -> None)
 
 (* ── the eight checks (checklist order) ── *)
@@ -302,15 +305,21 @@ let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
 (* The repo-contents invariant (2026-08-16, design/repo_model.md): a
    NON-source artifact whose provider is [Repo r] must appear in
    [r.artifacts] (the source itself is implicit — it IS the tree, not
-   something built from it). Returns (artifact, repo-name) violations. *)
+   something built from it). A [Repo_axes] family provides the artifact
+   per channel, so EVERY repo's tree must contain it (strict form;
+   only a_source rows use [Repo_axes] today and are exempt, so no live
+   violations — the strict rule is the honest one when a family provides
+   a lib/binding). Returns (artifact, repo-name) violations. *)
 let repo_contents_violations (pr : Canary_project_run.project_run) :
     (string * string) list =
   List.filter_map pr.pr_artifacts ~f:(fun d ->
+      let not_source =
+        not
+          (Canary_artifact.equal_artifact_id d.Canary_project_spec.ar_artifact
+             Canary_artifact.a_source)
+      in
       match d.Canary_project_spec.ar_provider with
-      | Some (Canary_store_config.Repo r)
-        when not
-               (Canary_artifact.equal_artifact_id
-                  d.Canary_project_spec.ar_artifact Canary_artifact.a_source) ->
+      | Some (Canary_store_config.Repo r) when not_source ->
           if
             List.exists r.Canary_artifact_source.artifacts
               ~f:(Canary_artifact.equal_artifact_id
@@ -320,6 +329,19 @@ let repo_contents_violations (pr : Canary_project_run.project_run) :
             Some
               ( Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact,
                 r.Canary_artifact_source.name )
+      | Some (Canary_store_config.Repo_axes rs) when not_source -> (
+          match
+            List.find rs ~f:(fun r ->
+                not
+                  (List.exists r.Canary_artifact_source.artifacts
+                     ~f:(Canary_artifact.equal_artifact_id
+                           d.Canary_project_spec.ar_artifact)))
+          with
+          | Some r ->
+              Some
+                ( Canary_artifact.string_of_id d.Canary_project_spec.ar_artifact,
+                  r.Canary_artifact_source.name )
+          | None -> None)
       | _ -> None)
 
 let check (pr : Canary_project_run.project_run) : report =

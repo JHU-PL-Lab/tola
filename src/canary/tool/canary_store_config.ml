@@ -56,6 +56,15 @@ type provider =
           BUILT from the repo's source. The old [Source_repo]/[Built_from]
           pair split the same record by exactly that provision, which the
           axes already declare ([Built_from] had zero live uses). *)
+  | Repo_axes of Canary_artifact_source.source_repo list
+      (** a repo FAMILY covering the channels of one artifact (C1,
+          2026-08-16, design/repo_model.md Roadmap C): the per-channel
+          repos — official stable + official dev (+ a labeled fork when one
+          exists). Each repo's [version] record declares its channel and
+          id; [versions_of_provider] projects them into the axes' store
+          pins, so a repo with a concrete id is identity-bearing and one
+          with [id = ""] stays version-ambient. Same provision semantics
+          as [Repo]; the stable repo is listed first. *)
   | Sys_pkg of Canary_store.system_package_spec
   | Lang_pkg of {
       lang : Canary_lang.lang;
@@ -77,7 +86,7 @@ type provider =
 let provision_of_provider : provider -> Canary_store.provision = function
   | Absent -> Canary_store.Absent
   | Vendored _ | Cached _ -> Canary_store.Vendored
-  | Repo _ -> Canary_store.Fetched
+  | Repo _ | Repo_axes _ -> Canary_store.Fetched
       (* the baseline-display value: a repo enters at the FETCH boundary.
          A [Repo] row whose axes carry [Built] is the built-from-source
          case — the display drift check flags it and the arrow (below)
@@ -102,7 +111,7 @@ let providing_action_of ~(provision : Canary_store.provision)
   match p with
   | Absent | Vendored _ | Cached _ -> None
   | Sys_pkg _ | Lang_pkg _ -> Some (Canary_basic.Fetch k)
-  | Repo _ -> (
+  | Repo _ | Repo_axes _ -> (
       (* what the repo provides IS the axes' provision (the unification) *)
       match provision with
       | Canary_store.Fetched -> Some (Canary_basic.Fetch k)
@@ -125,13 +134,28 @@ let dep_mode_of_provider (p : provider) : Canary_store.dep_mode option =
   | _ -> None
 
 (** [versions_of_provider p] — the store pins declared on the provider
-    (2026-08-12): [Some vs] for a lang-PM package whose installable
-    versions the project declares, [None] = version-ambient. Projected
-    into the artifact's axes by [artifact_row]; the enforcement lives in
-    the enumeration (identity) + runner (pin-checked fetch + world
-    assertion). *)
-let versions_of_provider (p : provider) : opam_pin list option =
-  match p with Lang_pkg { versions; _ } -> versions | _ -> None
+    (2026-08-12; widened 2026-08-16): [Some vs] as [version] records
+    ([channel; id]) for a lang-PM package whose installable versions the
+    project declares (lang-PM pins carry no channel → [Stable]) or for a
+    [Repo_axes] family (each repo's own [version] record, channel
+    PRESERVED — the pins are identity-bearing and the thin policy's
+    [Subset [Stable]] drops the dev repos); [None] = version-ambient.
+    Projected into the artifact's axes by [artifact_row]; the enforcement
+    lives in the enumeration (identity) + runner (pin-checked fetch +
+    world assertion). *)
+let versions_of_provider (p : provider) : Canary_basic.version list option =
+  match p with
+  | Lang_pkg { versions = Some vs; _ } ->
+      Some
+        (List.map
+           (fun v ->
+             { Canary_basic.channel = Canary_basic.Stable; id = v.pin_version })
+           vs)
+  | Lang_pkg { versions = None; _ } -> None
+  | Repo_axes rs ->
+      Some
+        (List.map (fun r -> r.Canary_artifact_source.version) rs)
+  | Absent | Vendored _ | Cached _ | Repo _ | Sys_pkg _ -> None
 
 (** The opam install target for a pin: the declared [install_name], or
     the standard "<package>.<pin_version>". *)
@@ -162,6 +186,16 @@ let string_of_provider : provider -> string = function
   | Vendored p -> "vendored: " ^ p
   | Cached p -> "cached: " ^ p
   | Repo repo -> "repo: " ^ string_of_source_repo repo
+  | Repo_axes rs ->
+      "repo: "
+      ^ String.concat ", "
+          (List.map
+             (fun r ->
+               Printf.sprintf "%s@%s (%s)"
+                 r.Canary_artifact_source.name
+                 (Canary_basic.string_of_version r.Canary_artifact_source.version)
+                 (Canary_basic.string_of_channel r.Canary_artifact_source.version.Canary_basic.channel))
+             rs)
   | Sys_pkg spec ->
       Printf.sprintf "sys-pm linux:%s macos:%s" spec.Canary_store.linux_pkg
         spec.Canary_store.macos_pkg

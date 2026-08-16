@@ -84,12 +84,16 @@ let decl : Canary_pattern_a.t = {
   (* zarith ships four compilation units (verified via ocamlobjinfo on
      zarith.cmxa). Drift here would be a major version bump. *)
   ocaml_module_watchlist = zarith_ocaml_watchlist;
-  source = Some zarith_source_stable;
+  (* C1 (2026-08-16): the 3-way — stable release-1.14 + dev master as
+     first-class per-channel repos (one scenario each). The fork slot
+     stays empty until a dev bug worth fixing appears. *)
+  sources = [ zarith_source_stable; zarith_source_dev ];
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 
 let runner_spec = Canary_pattern_a.runner_spec decl
 
 (* Registry entry: Pattern A's typed artifact table + the template's
-   runner_spec (single scenario: source + lib + binding Fetched@Stable). *)
+   runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,
+   each over the stable lib + binding, Fetched). *)
 let zarith_run : Canary_project_run.project_run = Canary_pattern_a.run decl

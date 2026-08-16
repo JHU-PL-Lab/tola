@@ -411,7 +411,29 @@ let registry_pin : Canary_project_test.pure_test =
                     ~compare:String.compare)
                  = 2
       in
-      names_ok && projects_ok && ssl_pins_ok) }
+      (* the repo-axes axis (C1): zarith's per-channel SOURCE repos
+         enumerate 2 scenarios — one per repo's pinned version, channel
+         preserved (the thin policy drops the dev one). *)
+      let zarith_axes_ok =
+        match List.Assoc.find entries "zarith" ~equal:String.equal with
+        | None -> false
+        | Some pr ->
+            let asgs = Canary_project_run.scenarios_of pr in
+            let src (a : Canary_artifact.assignment) =
+              Canary_enumerate.version_of a Canary_artifact.a_source
+            in
+            List.length asgs = 2
+            && List.for_all asgs ~f:(fun a -> not (String.equal (src a).Canary_basic.id ""))
+            && Poly.equal
+                 (List.dedup_and_sort
+                    (List.map asgs ~f:(fun a ->
+                         Printf.sprintf "%s:%s"
+                           (Canary_basic.string_of_channel (src a).Canary_basic.channel)
+                           (src a).Canary_basic.id))
+                    ~compare:String.compare)
+                 [ "dev:master"; "stable:1.14" ]
+      in
+      names_ok && projects_ok && ssl_pins_ok && zarith_axes_ok) }
 
 (* ── tiny1-via-general-path bridge (2026-08-09) ──
    Two-part proof that tiny1 scenarios work through the general canary
@@ -830,6 +852,56 @@ let repo_contents_pin : Canary_project_test.pure_test =
                    (List.map vs ~f:(fun (a, r) -> a ^ " not in " ^ r)));
             List.is_empty vs)) }
 
+(* The repo-axes axis (C1, 2026-08-16): a [Repo_axes] family's repos
+   project into the source row's store pins — per-channel, identity-
+   bearing placements, one scenario per repo, and the realization
+   dispatches each scenario's fetch to ITS repo (the worktree ref
+   appears in the emitted command). A single-repo family (cairo)
+   becomes identity-bearing too — its worktree IS pinned to that ref. *)
+let repo_axes_pin : Canary_project_test.pure_test =
+  { name = "repo_model.axes_pins";
+    check =
+      (fun () ->
+        let source_version a =
+          Canary_enumerate.version_of a Canary_artifact.a_source
+        in
+        let zarith_asgs = Canary_project_run.scenarios_of Canary_project_zarith.zarith_run in
+        let zarith_ok =
+          List.length zarith_asgs = 2
+          && List.for_all zarith_asgs ~f:(fun a ->
+                 not (String.equal (source_version a).Canary_basic.id ""))
+          && List.length
+               (List.dedup_and_sort
+                  (List.map zarith_asgs ~f:(fun a ->
+                       Canary_project_run.scenario_dir_of ~pr_name:"zarith" a))
+                  ~compare:String.compare)
+               = 2
+        in
+        (* the realize ∘ dispatch: each scenario's fetch_source command
+           materializes ITS repo's worktree ref *)
+        let fetch_cmd_of a =
+          let spec = Canary_project_zarith.zarith_run.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/c1" in
+          match spec.Canary_step_builder.fetch_source with
+          | Some f -> f ~output_dir:"/tmp/c1" ~variant_key:"c1"
+          | None -> ""
+        in
+        let cmds_ok =
+          List.for_all zarith_asgs ~f:(fun a ->
+              let expect =
+                match (source_version a).Canary_basic.channel with
+                | Canary_basic.Stable -> "release-1.14"
+                | Canary_basic.Dev -> "master"
+              in
+              String.is_substring (fetch_cmd_of a) ~substring:expect)
+        in
+        let cairo_ok =
+          match Canary_project_run.scenarios_of Canary_project_cairo.cairo_run with
+          | [ a ] ->
+              String.equal (source_version a).Canary_basic.id "1.18.0"
+          | _ -> false
+        in
+        zarith_ok && cmds_ok && cairo_ok) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -845,4 +917,5 @@ let tests : Canary_project_test.pure_test list =
       repo_model_pin;
       local_fork_pin;
       repo_contents_pin;
+      repo_axes_pin;
       tiny_binding_realization_pin ]

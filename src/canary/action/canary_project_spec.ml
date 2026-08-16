@@ -26,10 +26,15 @@ let artifact_row ~artifact ~universe ?follows ?runtime ?provider () : artifact_r
   in
   (* STORE PINS (2026-08-12): the provider's declared versions project
      into the axes — same derivation pattern as [~runtime]. A project
-     never hand-declares the pin axis. *)
+     never hand-declares the pin axis. (2026-08-16, C1: the provider now
+     projects [version] records, not [opam_pin]s — a [Repo_axes] family
+     contributes per-channel pins with the CHANNEL PRESERVED, so the thin
+     policy's [Subset [Stable]] drops the dev repos.) *)
   let pins =
     match Option.bind provider ~f:Canary_store_config.versions_of_provider with
-    | Some vs -> List.map vs ~f:(fun p -> Canary_basic.pinned p.pin_version)
+    | Some vs ->
+        List.map vs ~f:(fun v ->
+            Canary_basic.{ channel = v.channel; id = v.id; quality = Good })
     | None -> []
   in
   let ax = axes ?runtime ?follows ~pins universe in

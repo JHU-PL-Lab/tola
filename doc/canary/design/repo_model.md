@@ -200,13 +200,29 @@ confirmation."
      — nothing to migrate.
   4. On-tree/off-tree = derived from the contents lists (display only).
 - **C. The 3-way per project**:
-  1. zarith (the light project): stable + latest worktrees declared
-     (done), the fork slot ready (local-only, warning-grade); the
-     enumeration slice (which repos a run targets) waits on the
-     Fetched-source-id work (other agent).
-  2. z3/llvm: arbipher forks as labeled third repos; the three-version
-     report shape.
+  1. **C1 zarith — LANDED** (2026-08-16): the new `Repo_axes of
+     source_repo list` provider — a repo FAMILY covering the channels
+     of one artifact. Each repo's `version` record projects into the
+     source row's store pins (channel preserved), so every repo is an
+     identity-bearing scenario and `--thin` (Subset [Stable]) drops the
+     dev repos. `Canary_pattern_a` gains `sources : source_repo list`
+     (stable first, dev, then a labeled fork when one exists) and its
+     realization dispatches per scenario — each fetch materializes ITS
+     channel's worktree. zarith now runs 2 scenarios
+     (source-fetched-1.14 / source-fetched-master). Pins:
+     `repo_model.axes_pins` (enumeration + identity + dispatch) +
+     the registry zarith block. NOTE: the old "waits on
+     Fetched-source-id" blocker turned out to be obsolete — the
+     store-pin machinery (2026-08-12) already provides the identity;
+     see the Fetched-source-id item in status_project.md.
+  2. **C2 z3/llvm**: arbipher forks as labeled third repos
+     (their per-channel fetch still dispatches via table rows — the
+     remaining single-`Repo` rows converge to `Repo_axes` here); the
+     three-version report shape.
 - **D. The web viewer** — after the 3-way (the UI over the commands).
+- **De-pattern-a** (user, 2026-08-16): `Canary_pattern_a.t` should NOT
+  be a datatype — at most functions producing the general types
+  (project_run, configs, actions). Decoupled from C1; the next task.
 
 Recommended order: B → C1 → C2 → D (B first: the contents field
 migrates the CI path before any 3-way work touches it).

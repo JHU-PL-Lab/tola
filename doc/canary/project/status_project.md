@@ -258,11 +258,14 @@ per-project ones.
   artifacts, the multi-repo principle; pinned by
   `repo_model.contents_invariant` over the registry), and the
   RETIREMENT of the dead `mk_runner_spec` + `has_build_*` helpers in
-  z3/llvm (−810 lines; the CI was already table-based). Next slices:
-  a REAL fork repo for the light project (arbipher/Zarith does not
-  exist — create or exercise on z3/llvm where the forks exist) +
-  enumeration/config for which repos run (entangled with the
-  Fetched-source-id item — the other agent's).
+  z3/llvm (−810 lines; the CI was already table-based). LANDED
+  (2026-08-16, roadmap C1): the `Repo_axes of source_repo list`
+  provider (a repo FAMILY per artifact) + `Canary_pattern_a.sources` —
+  zarith runs 2 scenarios (source-fetched-1.14 / source-fetched-master)
+  with per-scenario worktree dispatch; cairo/libffi sources are
+  identity-bearing as a side fix. Next: C2 — z3/llvm arbipher forks as
+  labeled third repos (their single-`Repo` rows converge to
+  `Repo_axes`; the fork slot is already representable).
 - [ ] **Repo-provider unification** — `Source_repo` vs `Built_from`
   wrap the SAME record and split by what the repo provides, which is
   redundant with the axes' provision (`Built_from` has ZERO live uses).
@@ -275,6 +278,12 @@ per-project ones.
   every step over stale markers (see the Found entry in §2). The
   assignment string must carry the Fetched source's version id — a
   three-version-report blocker (official vs forked dev collide).
+  PARTIALLY SUPERSEDED (2026-08-16, C1): the identity half now derives
+  from repo pins — a `Repo_axes` family makes each repo's source
+  placement identity-bearing (distinct scenario dirs → distinct cache
+  keys, the runner's cache_project is the scenario dir), and the
+  remaining risk is only the z3/llvm rows that still pin `ref_ = "HEAD"`
+  with ambient identity — C2's `Repo_axes` migration resolves it.
   Possibly in flight in another agent (2026-08-14) — WAIT before
   picking this up.
 - [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is

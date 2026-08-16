@@ -84,7 +84,7 @@ let decl : Canary_pattern_a.t = {
   (* cairo2 ships a single top-level compilation unit [Cairo]. Drift here
      would be a major version bump. *)
   ocaml_module_watchlist = cairo_ocaml_watchlist;
-  source = Some cairo_source_stable;
+  sources = [ cairo_source_stable ];
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 
