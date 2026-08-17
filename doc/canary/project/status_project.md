@@ -415,6 +415,16 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
+- [ ] **Scenario-name clarity** (user, 2026-08-17) —
+  `source-fetched-1.14_lib-fetched_ocaml_binding-fetched` doesn't say
+  WHICH source/lib: the names are born-safe artifact-kind ids
+  (a_source/a_lib), not the concrete repos/providers. Consider
+  carrying the provider/repo name (or pin) into the display name for
+  Fetched artifacts (the z3 dirs already show store pins like
+  `fetched-4.16.0`; an unpinned Fetched stays ambient and anonymous —
+  zarith's `lib-fetched` = system libgmp via apt). Also a
+  `canary scenarios`/`spec` human-readable legend mapping each
+  scenario name to its concrete world.
 - [ ] **Spec-check warning-reconsideration pass** — zarith's
   `python_binding` ⚠ is a naming-scope artifact (the LIB is gmp, whose
   python binding is gmpy2; zarith is only the OCaml binding — an
