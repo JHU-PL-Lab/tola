@@ -326,14 +326,27 @@ per-project ones.
    Materialize_source; the batch never audits); pinned by
    `enumerate.shadow_policy_drops_same_cell_built` +
    `shadow.policy_ladder`. Design in wrapper_packages.md §3.
-4. [ ] **binding_decls for zarith** — the M2 pattern (the other
-   agent's convention); one declaration record closes the
-   spec-check ⚠.
+4. [x] **binding_decls for zarith** — LANDED 2026-08-17 (active plan 4):
+   the Cstubs decl wraps the system GMP with the EMPTY-prefix convention
+   (user's call: GMP spans mpz_/mpq_/mpf_/mpn_ — `native.prefix = ""`,
+   the FULL 42-symbol stub-required watchlist is the scoping; the
+   `prefix` doc comment now allows empty); `zarith_run` carries it,
+   pinned by `zarith.binding_decls_match_declared`; spec-check zarith
+   1/1 declared (python_binding is the only remaining ⚠ — expected,
+   OCaml-only).
 
 **Design-stage** (the enumeration/config family — when dependency
 complexity arrives; config as dependency resolving, status.md design
 directions):
 
+- [ ] **ONE general rule for the enumeration's special cases** (user,
+  2026-08-17 — revisit "a bit later", the SAME topic): the shadowing
+  (gmp prebuilt-shadows-source, active plan 3's policy) and the
+  source-building bypass (z3's Heavy→Thin tier) are two instances of
+  "which special case keeps/omits which world". Prefer ONE general
+  config/policy mechanism over per-case machinery; the audit-rung
+  decision is part of this (see the decision brief,
+  wrapper_packages.md §3.1).
 - [ ] **Multi-source artifact identity + link guards**: extend source
   artifact identity with a repo discriminant (per-repo source rows)
   so a binding from ITS repo against a lib from ANOTHER repo is

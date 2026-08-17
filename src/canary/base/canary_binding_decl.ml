@@ -35,7 +35,10 @@ type headers = {
 
 (** Scoping + ABI facts, shared by every mechanism. *)
 type native = {
-  prefix  : string;         (** nm scoping, e.g. "tiny_" *)
+  prefix  : string;         (** nm scoping, e.g. "tiny_". EMPTY = no single
+                               prefix — the c_api watchlist carries the FULL
+                               scoping (multi-prefix APIs, e.g. GMP's
+                               mpz_/mpq_/mpf_/mpn_). *)
   soname  : string;         (** L4 reference, e.g. "libtiny.so.1" *)
   headers : headers;        (** L2 source *)
 }

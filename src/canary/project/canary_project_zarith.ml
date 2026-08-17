@@ -9,14 +9,58 @@
    the surface). The declared SOURCE is the ocaml/Zarith repo (the
    binding + its C stubs — the fixable, github-reportable half; GMP's own
    tar/mailing-list repo is a later refinement). *)
+(* The FULL stub-required surface (2026-08-17, the user's call for the
+   binding decl): every GMP symbol caml_z.c's stubs reference — the live
+   c1 consumer surface, taken from the built binding's inspect `requires`
+   (libzarith.a's undefined GMP symbols; 42 of libgmp's 620 exports). It
+   spans the mpz_/mpq_/mpf_/mpn_ prefixes (no single prefix scopes it —
+   hence the decl's empty prefix), and includes the low-level mpn_* half
+   (integer arithmetic the library exposes internally; a break there
+   breaks zarith just as surely). Rebuild the dev binding and re-run its
+   inspect to refresh. *)
 let zarith_native_watchlist = [
-  "__gmpz_init";
+  "__gmpn_add_n";
+  "__gmpn_divexact";
+  "__gmpn_gcd";
+  "__gmpn_gcdext";
+  "__gmpn_get_str";
+  "__gmpn_hamdist";
+  "__gmpn_lshift";
+  "__gmpn_mul";
+  "__gmpn_mul_1";
+  "__gmpn_mul_n";
+  "__gmpn_perfect_square_p";
+  "__gmpn_popcount";
+  "__gmpn_rshift";
+  "__gmpn_scan1";
+  "__gmpn_set_str";
+  "__gmpn_sqr";
+  "__gmpn_sqrtrem";
+  "__gmpn_sub_n";
+  "__gmpn_tdiv_qr";
+  "__gmpz_2fac_ui";
+  "__gmpz_bin_ui";
   "__gmpz_clear";
-  "__gmpz_set_str";
-  "__gmpz_add";
-  "__gmpz_mul";
+  "__gmpz_congruent_p";
+  "__gmpz_divisible_p";
+  "__gmpz_fac_ui";
+  "__gmpz_fib_ui";
+  "__gmpz_init";
+  "__gmpz_invert";
+  "__gmpz_jacobi";
+  "__gmpz_lucnum_ui";
+  "__gmpz_mfac_uiui";
+  "__gmpz_nextprime";
+  "__gmpz_perfect_power_p";
   "__gmpz_pow_ui";
-  "__gmpz_get_str";
+  "__gmpz_powm";
+  "__gmpz_powm_sec";
+  "__gmpz_primorial_ui";
+  "__gmpz_probab_prime_p";
+  "__gmpz_realloc2";
+  "__gmpz_remove";
+  "__gmpz_root";
+  "__gmpz_rootrem";
 ]
 
 let zarith_ocaml_watchlist = [ "Z"; "Q"; "Big_int_Z"; "Zarith_version" ]
@@ -146,7 +190,29 @@ let decl : Canary_opam_binding.t = {
 
 let runner_spec = Canary_opam_binding.runner_spec decl
 
+(* The binding declaration (2026-08-17, active plan 4 — the M2 pattern):
+   zarith's Cstubs binding wraps the system GMP. prefix = "" (GMP spans
+   mpz_/mpq_/mpf_/mpn_ — no single prefix; the FULL watchlist above is the
+   scoping, per the user's call). The stub archive is libzarith.a (the
+   built binding's inspect path — zarith links caml_z.c into it), and the
+   user surface is zarith.mli. *)
+let zarith_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      c_api = { functions = zarith_native_watchlist; enums = [] };
+      native =
+        { prefix = "";
+          soname = "libgmp.so.10";
+          headers = { dir = "."; files = [ "gmp.h" ] } };
+      coupling =
+        Stub_archive
+          { sources = [ "caml_z.c" ];
+            archive = "libzarith.a" };
+      surface_path = "zarith.mli" } ]
+
 (* Registry entry: Pattern A's typed artifact table + the template's
    runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,
    each over the stable lib + binding, Fetched). *)
-let zarith_run : Canary_project_run.project_run = Canary_opam_binding.run decl
+let zarith_run : Canary_project_run.project_run =
+  { (Canary_opam_binding.run decl) with
+    Canary_project_run.pr_binding_decls = zarith_binding_decls }

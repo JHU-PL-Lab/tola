@@ -761,11 +761,13 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
              ~na:[ "raw_build_overrides" ] "sqlite"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "ssl"
         (* C2.5 (2026-08-17): zarith's binding Built axis LANDED with the
-           2×2 — binding_dev_source went Ok; binding_decls still missing *)
+           2×2 — binding_dev_source went Ok *)
         (* active plan 2 (2026-08-17): the wrapper declaration closed the
            dev_wrapper_package gap *)
-        && want ~errs:[]
-             ~warns:[ "binding_decls"; "python_binding" ] ~na:[] "zarith"
+        (* active plan 4 (2026-08-17): the binding decl (empty-prefix +
+           full watchlist) closed binding_decls — python_binding stays
+           (OCaml-only project, expected) *)
+        && want ~errs:[] ~warns:[ "python_binding" ] ~na:[] "zarith"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "cairo"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "libffi"
         && want ~errs:[]
@@ -1134,6 +1136,36 @@ let sqlite_binding_decls_pin : Canary_project_test.pure_test =
             && String.equal cstubs.surface_path "sqlite3.mli"
         | _ -> false) }
 
+(* M2 step 4 pin (2026-08-17): zarith's decl wraps the system GMP with
+   the EMPTY-prefix convention (multi-prefix API — mpz_/mpq_/mpf_/mpn_;
+   the FULL stub-required watchlist is the scoping, not an nm prefix),
+   and the c_api = the complete stub-required surface (the 42 the built
+   binding's inspect reports), not a representative subset. *)
+let zarith_binding_decls_pin : Canary_project_test.pure_test =
+  { name = "zarith.binding_decls_match_declared";
+    check =
+      (fun () ->
+        let pr = Canary_project_zarith.zarith_run in
+        match
+          Canary_project_run.binding_decl_of pr
+            (Canary_artifact.a_binding Canary_lang.OCaml
+               Canary_mechanism.Cstubs)
+        with
+        | Some d ->
+            String.equal d.Canary_binding_decl.native.prefix ""
+            && String.equal d.native.soname "libgmp.so.10"
+            && Poly.equal d.native.headers.files [ "gmp.h" ]
+            && Poly.equal d.c_api.functions
+                 Canary_project_zarith.zarith_native_watchlist
+            && List.length d.c_api.functions = 42
+            && (match d.coupling with
+               | Canary_binding_decl.Stub_archive sa ->
+                   Poly.equal sa.sources [ "caml_z.c" ]
+                   && String.equal sa.archive "libzarith.a"
+               | _ -> false)
+            && String.equal d.surface_path "zarith.mli"
+        | None -> false) }
+
 (* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
    bundled Python bindings are Ctypes + Dlopen (the previous Cext
    declaration was wrong), the OCaml cstubs facts match the built
@@ -1214,4 +1246,5 @@ let tests : Canary_project_test.pure_test list =
       tiny_binding_realization_pin;
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;
-      z3_llvm_binding_decls_pin ]
+      z3_llvm_binding_decls_pin;
+      zarith_binding_decls_pin ]

@@ -116,6 +116,75 @@ happens is a config item used in the enumeration part):
   machinery is ready for the day a blame-driven spec change adds a
   Built column.
 
+### 3.1 Decision brief — the Audit_lib rung (for the checking/audit agent)
+
+> 2026-08-17. Handed to the agent who owns the checking/audit topic
+> (the contract-registry arc, the verdict-matrix/`--cold` ideas) to
+> decide: keep, revert, or re-key the audit rung. The shadow policy
+> itself (§3 above) is NOT in question — only the audit pass machinery
+> built on top of it.
+
+**Background.** The prebuilt-shadows-source rule (user, 2026-08-17):
+for the same (channel, version) cell, a prebuilt lib (official or
+vendored) shadows a source-built one — building an external C lib
+(GMP) proved unreliable enough that the source-built path is a
+SEPARATE, blame-driven audit pass, never automatic. The rule landed
+(commit `0c6b64c`, active plan 3) as an enumeration-policy item:
+`shadow_policy = Shadow_prebuilt | Materialize_source`
+(`src/canary/action/canary_enumerate.ml`, `shadow_filter` — a
+POST-PROCESSING pass after the product/walk, not wired into the
+enumeration core), with an identity-bearing same-version firing
+condition. To make the silent drop overridable, the plan added the
+audit rung:
+
+- `run_policy` gains `Audit_lib` (`canary_project_run.ml:199`),
+  `enumeration_policy_of` maps it to full + `Materialize_source`
+  (`canary_project_run.ml:227`), `audit_policy ()` is the literal
+  (`canary_project_run.ml:172`).
+- CLI `--audit-lib` on BOTH `action` (`canary_main.ml:117,139-153`)
+  and `spec` (dry-run view, `canary_main.ml:216,241-256`);
+  `Canary_batch.run ~force_audit` (`canary_batch.ml:65,70`) — the
+  batch itself never picks it.
+- Pins: `enumerate.shadow_policy_drops_same_cell_built`
+  (`canary_project_test.ml:565`) + `shadow.policy_ladder`
+  (`canary_projects_test.ml:807`).
+
+**Facts.** Inert today — no project declares a Built column sharing a
+prebuilt cell (zarith's lib is Fetched-only; z3/llvm's Fetched@Stable
++ Built@Dev are different cells; sqlite/tiny carry no pins). So the
+rung costs only surface: a run-policy variant, two CLI flags, a batch
+param, two pins, doc lines.
+
+**The question.** "Auditing/checking" is the OTHER topic (the
+contract-registry arc; the pending `--cold`/verdict-matrix
+enhancement), and the user reads the rung as "a small hack" — the
+shadow's override may belong there, or may not be needed at all.
+Options:
+
+1. **Keep** — tested, inert; the override is ready for blame day.
+2. **Revert the rung** (user's lean): the shadow always wins
+   (`Shadow_prebuilt` fixed); materializing the Built column is then a
+   SPEC EDIT (declare the column = the switch — zarith's state today
+   is exactly "the source is just disabled"). Revert scope: the
+   `Audit_lib` variant + `audit_policy ()` + the
+   `enumeration_policy_of` case (`canary_project_run.ml`), the two
+   CLI flags (`canary_main.ml`), `~force_audit`
+   (`canary_batch.ml`), the `shadow.policy_ladder` pin, the doc
+   lines. KEEP regardless: the `shadow` config field, `shadow_filter`,
+   `drops_same_cell_built`, the docs §3.
+3. **Re-key as per-project config** (registry-level): the shadowing
+   belief is a per-project judgment ("a lib like gmp working is kind
+   of random"), not a universal law — a per-project flag replaces the
+   global policy. Cheap: `shadow_filter` is already a post-processing
+   filter keyed by the config.
+
+**The bigger frame** (user, 2026-08-17): shadowing (gmp) and the
+source-building bypass (z3's Heavy→Thin tier) are the SAME topic —
+one general rule for the enumeration's special cases, revisited "a bit
+later" (status_project.md design-stage). Don't over-invest in the
+rung's current shape; if it survives, it's a placeholder for that
+revisit.
+
 ## 4. The Publish generalization — LANDED (2026-08-17)
 
 z3/llvm carried legacy-but-working Publish steps; the generalization is
