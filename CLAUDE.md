@@ -28,6 +28,7 @@ dune exec src/bin/canary_main.exe -- scenarios <project> --engine            # r
 dune exec src/bin/canary_main.exe -- tiny engine                             # render tiny's scenarios as enumeration-algorithm mutation-axis projection
 dune exec src/bin/canary_main.exe -- tiny assemble-check --id lib Bs.4       # P3 step 2: emit+assemble a vendored resource onto the witness base (needs `tiny prepare-all`)
 dune exec src/bin/canary_main.exe -- status <project|@all> [-v]              # per-scenario last-run verdict matrix (xfail/✓/✗/·)
+dune exec src/bin/canary_main.exe -- result [<project>] [--md|--json]        # THE result table: rows = project × scenario, columns = actions, cells = last-run verdicts (pure read); also refreshes docs/canary/projects/matrix.html (linked from the index)
 dune exec src/bin/canary_main.exe -- project-test                            # project-definition layer tests (pure; catalogue/surface/enumerate/mechanism)
 dune exec src/bin/canary_main.exe -- mutation-test                           # artifact-mutation self-tests
 make canary                                                  # run canary via Makefile shorthand

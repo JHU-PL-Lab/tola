@@ -439,6 +439,16 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
+- [x] **The result table** — LANDED 2026-08-17 (`canary result`):
+  rows = project × scenario (the enumerated worlds), columns = actions
+  (the registry union; the chain membership decides blank vs `·`),
+  cells = the last-run verdicts from the shared actions.log
+  (`Canary_status.project_matrix` — extracted from `status`,
+  behavior-preserving); text/md/json renderers + the web page
+  `docs/canary/projects/matrix.html` (linked from the index). Pinned by
+  `matrix.marks_from_log` + `matrix.registry_shape` (23 rows). FUTURE
+  shape: pre/post-check columns ("each checks") appended to the action
+  set — the user's stated extension.
 - [ ] **Scenario-name clarity** (user, 2026-08-17) —
   `source-fetched-1.14_lib-fetched_ocaml_binding-fetched` doesn't say
   WHICH source/lib: the names are born-safe artifact-kind ids

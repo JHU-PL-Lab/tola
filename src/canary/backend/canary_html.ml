@@ -525,6 +525,7 @@ let render_index ~(entries : index_entry list) ~generated_at =
 <header>
   <h1>canary runs</h1>
   <span class="meta">%d runs · %d with failures · generated %s</span>
+  <a href="matrix.html" style="font-size: 13px;">result matrix</a>
 </header>
 <main>
 %s

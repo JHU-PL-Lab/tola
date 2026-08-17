@@ -1020,6 +1020,68 @@ let index_cmd =
           run found under _out/canary/projects/.")
     Term.(const run $ const ())
 
+(* ── the result table (2026-08-17) ── *)
+let result_cmd =
+  let project =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:
+            "Project to restrict the matrix to (default @all — every \
+             registry project).")
+  in
+  let md =
+    Arg.(
+      value & flag
+      & info [ "md" ]
+          ~doc:
+            "Render as markdown tables (per-project sections) instead of \
+             the aligned text view.")
+  in
+  let json =
+    Arg.(
+      value & flag
+      & info [ "json" ]
+          ~doc:"Emit JSON (machine-readable) instead of the text view.")
+  in
+  let run project md json () =
+    let projects =
+      match project with
+      | Some p -> (
+          match List.assoc_opt p Canary_registry.all_projects with
+          | Some pr -> [ (p, pr) ]
+          | None ->
+              Fmt.epr "Unknown project: %s@." p;
+              Stdlib.exit 2)
+      | None -> Canary_registry.all_projects
+    in
+    let m = Canary_matrix.matrix_of projects in
+    if json then
+      print_string
+        (Yojson.Basic.pretty_to_string (Canary_matrix.to_json m) ^ "\n")
+    else if md then Canary_matrix.pp_md m
+    else Canary_matrix.pp_text m;
+    (* the web page refresh rides the pure read (the [canary index]
+       precedent — web copies live in docs/canary for GH Pages) *)
+    let now =
+      let t = Unix.gettimeofday () in
+      let tm = Unix.localtime t in
+      Printf.sprintf "%04d-%02d-%02d %02d:%02d:%02d" (tm.tm_year + 1900)
+        (tm.tm_mon + 1) tm.tm_mday tm.tm_hour tm.tm_min tm.tm_sec
+    in
+    Canary_matrix.write_web ~projects_root:"_out/canary/projects" m
+      ~generated_at:now
+  in
+  Cmd.v
+    (Cmd.info "result"
+       ~doc:
+         "The result table: rows = project × scenario (the enumerated \
+          worlds), columns = actions, cells = last-run verdicts \
+          (✓/✗/xfail[cN]/·/⊘). Pure read of the run artifacts; also \
+          refreshes the web page (docs/canary/projects/matrix.html).")
+    Term.(const run $ project $ md $ json $ const ())
+
 let tiny_scenarios_list_cmd =
   Cmd.v
     (Cmd.info "list" ~doc:"Print scenario names (one per line)")
@@ -1558,6 +1620,7 @@ let () =
         compat_cmd;
         verify_cmd;
         index_cmd;
+        result_cmd;
       ]
   in
   Stdlib.exit (Cmd.eval cmd)

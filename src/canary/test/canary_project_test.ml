@@ -1435,6 +1435,54 @@ let contract_fixture_tests : pure_test list =
       check = (fun () ->
           Poly.equal covered Canary_compat.[ C1; C2 ]) } ]
 
+(* The matrix's mark extraction (2026-08-17, the result table): a
+   synthetic actions.log (variant_start-scoped verdict events) drives
+   [Canary_status.project_matrix] — per-scenario × per-tag marks with
+   last-verdict-wins and the xfail contract suffix. *)
+let matrix_marks_from_log_pin : pure_test =
+  { name = "matrix.marks_from_log";
+    check = (fun () ->
+      let root = "_out/canary/test" in
+      (* [log_path] is root/canary/projects/<p>/-run/actions.log *)
+      let run_dir = root ^ "/canary/projects/matrix-fixture/-run" in
+      let rec mkdir_p dir =
+        let parent = Stdlib.Filename.dirname dir in
+        if String.equal dir parent || Stdlib.Sys.file_exists dir then ()
+        else begin
+          mkdir_p parent;
+          (try Stdlib.Sys.mkdir dir 0o755 with _ -> ())
+        end
+      in
+      mkdir_p run_dir;
+      let oc = Stdlib.open_out (run_dir ^ "/actions.log") in
+      Stdlib.output_string oc
+        "[2026-08-17 10:00:00.000] *                          variant_start  (scenA)\n\
+         [2026-08-17 10:00:01.000] fetch_source                 done  \n\
+         [2026-08-17 10:00:02.000] probe_binding_ocaml          failed  (postcondition failed)\n\
+         [2026-08-17 10:00:03.000] probe_binding_ocaml          done  (expected failure confirmed (derived) [c2])\n\
+         [2026-08-17 10:00:04.000] *                          variant_start  (scenB)\n\
+         [2026-08-17 10:00:05.000] fetch_source                 done  \n\
+         [2026-08-17 10:00:06.000] probe_binding_ocaml          done  \n";
+      Stdlib.close_out oc;
+      let m = Canary_status.project_matrix ~root ~project:"matrix-fixture" in
+      (match m with
+       | [ ( "scenA",
+             [ ("fetch_source", ("done", _));
+               ("probe_binding_ocaml", ("done", Some d)) ] );
+           ("scenB",
+            [ ("fetch_source", ("done", _));
+              ("probe_binding_ocaml", ("done", None)) ] ) ] ->
+           (* the failed-then-xfail sequence: last verdict wins; the
+              xfail mark carries the confirming contract suffix *)
+           String.is_substring d ~substring:"expected failure"
+           && String.equal
+                (Canary_status.mark "done" (Some d))
+                "xfail[c2]"
+           && String.equal
+                (Canary_status.mark "done" None)
+                "✓"
+       | _ -> false)) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -1452,7 +1500,8 @@ let all_tests : pure_test list =
       deploy_mismatch_test;
       agnostic_expectation_test; execution_plan_test;
       tool_routing_ratchet_test;
-      contract_registry_complete_pin; contract_registry_firing_pin ]
+      contract_registry_complete_pin; contract_registry_firing_pin;
+      matrix_marks_from_log_pin ]
   @ contract_fixture_tests
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see

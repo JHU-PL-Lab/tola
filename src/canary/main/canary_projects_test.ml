@@ -1291,6 +1291,36 @@ let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
         in
         ok_z3 && ok_llvm) }
 
+(* The result table's registry shape (2026-08-17): 23 rows = Σ of every
+   project's enumerated scenarios (sqlite 3, z3 7, llvm 5, tiny-full 1,
+   zarith 3, cairo 1, libffi 1, ssl 2); the column union carries the
+   install + probe actions. Hermetic — no run data (marks are pinned
+   separately by matrix.marks_from_log). *)
+let matrix_registry_shape_pin : Canary_project_test.pure_test =
+  { name = "matrix.registry_shape";
+    check =
+      (fun () ->
+        let rows =
+          List.concat_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  ( name,
+                    Stdlib.Filename.basename
+                      (Canary_project_run.scenario_dir_of ~pr_name:name a)
+                  )))
+        in
+        let columns =
+          List.concat_map Canary_registry.all_projects ~f:(fun (_, pr) ->
+              Canary_project_run.covered_actions_of pr)
+          |> Stdlib.List.sort_uniq Stdlib.compare
+          |> List.map ~f:Canary_basic.string_of_action
+        in
+        List.length rows = 23
+        && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7
+        && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 3
+        && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
+        && List.mem columns "install_lib" ~equal:String.equal
+        && List.mem columns "probe_binding_ocaml" ~equal:String.equal) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -1316,5 +1346,6 @@ let tests : Canary_project_test.pure_test list =
       sqlite_binding_decls_pin;
       z3_llvm_binding_decls_pin;
       zarith_binding_decls_pin;
-      z3_regression_pre_10549_pin ]
+      z3_regression_pre_10549_pin;
+      matrix_registry_shape_pin ]
 

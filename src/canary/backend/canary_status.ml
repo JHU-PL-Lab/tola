@@ -293,12 +293,17 @@ let print_witness ~root ~project ~variant ~tag ~mark =
           List.iter tail ~f:(fun l -> Stdlib.Printf.printf "            | %s\n" l)
         end)
 
-let print_status ?(verbose = false) ~root ~project () =
+(** The per-scenario × per-tag verdict matrix read from the shared
+    actions.log — the ONLY per-scenario run record (run_state.json
+    merges scenarios last-writer-wins; verdict markers exist only on
+    MET expectations). [(scenario, (tag, (event, detail)) list)] in
+    first-seen scenario order, first-seen tag order, last verdict
+    winning. Shared by the [status] view and the cross-project result
+    matrix ([Canary_matrix]). *)
+let project_matrix ~root ~project :
+    (string * (string * (string * string option)) list) list =
   let path = log_path ~root ~project in
-  if not (Stdlib.Sys.file_exists path) then
-    Stdlib.Printf.printf
-      "No run found for %s (expected %s).\nRun `canary action %s` first.\n"
-      project path project
+  if not (Stdlib.Sys.file_exists path) then []
   else begin
     let lines =
       Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_lines
@@ -331,13 +336,24 @@ let print_status ?(verbose = false) ~root ~project () =
               List.filter !r ~f:(fun (t, _) -> not (String.equal t tag))
               @ [ (tag, (event, detail)) ]
         | _ -> ());
-    let variants = List.rev !order in
+    List.map (List.rev !order) ~f:(fun name ->
+        ( name,
+          match Hashtbl.find table name with Some r -> !r | None -> [] ))
+  end
+
+let print_status ?(verbose = false) ~root ~project () =
+  let path = log_path ~root ~project in
+  if not (Stdlib.Sys.file_exists path) then
+    Stdlib.Printf.printf
+      "No run found for %s (expected %s).\nRun `canary action %s` first.\n"
+      project path project
+  else begin
+    let variants = project_matrix ~root ~project in
     (* "scenario" is THE display term (ssot §6.1: scenario ≡ variant; the
        enumerated "world" was the same thing) — code ids like [variant_id]
        remain the scenario's cache/filename key. *)
     Stdlib.Printf.printf "\n%s — %d scenario(s)\n" project (List.length variants);
-    List.iter variants ~f:(fun name ->
-        let verdicts = match Hashtbl.find table name with Some r -> !r | None -> [] in
+    List.iter variants ~f:(fun (name, verdicts) ->
         (* one-line summary mark for the variant = worst of its steps *)
         let overall =
           if List.exists verdicts ~f:(fun (_, (e, _)) ->
