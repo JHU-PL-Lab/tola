@@ -100,6 +100,18 @@ latency per distro bump); whether package maintainers prefer the conf
 hop because depexts were historically weaker. Deferred — not a canary
 blocker.
 
+**Refinement (user, 2026-08-16)**: "no conf-gmp" does NOT mean no
+system mapping at all. Most conf packages are merely a SYSTEM-PACKAGE
+DISPATCH across package managers (apt name vs brew name vs dnf name) —
+almost GLOBAL knowledge, not per-conf-package registration. The
+proposed shape: keep that dispatch as a GLOBAL mapping file (today
+canary-local; in the future a public URL), while anything needing
+special handling (checks beyond presence) becomes a PACKAGE-SIDE
+script or an opam-installation script. Canary's current seam: the
+per-project `linux_pkg`/`macos_pkg` pair on `system_package_spec` is
+exactly that dispatch data, declared per project — the global file is
+the same data lifted to one table keyed by the library name.
+
 ## 5. What this means for the pattern work
 
 `Canary_pattern_a` is THE ocaml/opam binding pattern: an opam binding
