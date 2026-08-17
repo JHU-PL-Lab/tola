@@ -281,6 +281,18 @@ per-project ones.
   `Built_from` deleted (zero live uses). Remaining half: a repo
   shipping an ARTIFACT directly (not source) still has no
   representation — a future shape.
+- [ ] **Multi-source artifact identity + link guards** (2026-08-16,
+  user): today ONE scenario carries ONE source placement (`a_source`
+  is a singleton artifact) — a binding built from ITS OWN repo against
+  a lib built from ANOTHER repo (the zarith/GMP off-tree shape, with
+  the lib source-built) can't be enumerated, and the config-level
+  filter "disable the binding from source B linking the lib built from
+  source A" has nothing to range over. Steps: (1) extend source
+  artifact identity with a repo discriminant (per-repo source rows);
+  (2) link-guard constraints — a declared rule on the binding row
+  (which lib channels/repos it may link), applied by the enumerate
+  filter, selectable per config. The config-as-dependency-resolving
+  framing lives in status.md's design directions.
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED

@@ -204,6 +204,22 @@ reorganization; the project index + landing mechanics in
 - **Action/artifact property unification** — `build_deps_of`, `ax_follows`, `ax_runtime`,
   `c_runtime`/`cxx_abi`, probe location all sit at the action↔artifact boundary.
 - **`(kind × ext)` → enriched `artifact_kind`** — fold identity pair into one type.
+- **Enumeration ↔ configuration split — config as dependency resolving**
+  (user, 2026-08-16): raw enumeration = the full product over
+  artifact-kind universes with ONLY uniform kind-level dependency rules
+  (Built-lib↔source CHANNEL coupling, binding↔lib, app↔binding) —
+  repo-agnostic, as C2 confirmed. Configurability = the CONSTRAINT
+  layer: the channel-coupling + `ax_follows` are today's hardwired
+  matchers; the path is to express them as declared per-project
+  constraints + config-selected constraint sets over (artifact ×
+  provision × version × repo) placements, with `version_mode` growing
+  from Lockstep/Independent into a matcher parameter — so canary's
+  config becomes a special case of GENERAL dependency resolving (the
+  same constraint vocabulary a package solver reasons over), and
+  future complex dependencies (ranges, conflicts, multi-repo sources)
+  plug into the same machinery instead of new filter code. Enabling
+  step (project layer): multi-source artifact identity — see
+  status_project.md §3.
 
 ## Docs
 
