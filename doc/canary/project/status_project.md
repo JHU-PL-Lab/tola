@@ -23,7 +23,7 @@ distinct scenarios.
 | --- | --- | --- |
 | z3 / llvm | 5 | 3 all-Fetched source worlds (stable / official latest / arbipher fork) + 2 dev build chains (latest + fork); `--thin` = 1 (stable) |
 | sqlite | 3 | system-fetched lib + 2 built amalgamation versions |
-| zarith | 2 | per-channel source repos (source-fetched-1.14 / -master) |
+| zarith | 3 | per-channel source repos + the FORWARD cell (source-fetched-1.14 / -master × binding built-dev; the lib axis is Fetched-only — prebuilt-shadows-source) |
 | ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
 | tiny-full | 1 | all-Vendored stable world |
 | cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
@@ -40,7 +40,7 @@ everywhere; explicit single-project runs ignore the tier. Pinned by
 `registry.batch_tiers`. The layer split (same day, user-directed):
 `src/canary/project/` (library `canary_project`) holds the project
 DATATYPE + definition utils (`Canary_project_run`,
-`Canary_pattern_a`) plus the concrete instantiation (specs, tiny
+`Canary_opam_binding`) plus the concrete instantiation (specs, tiny
 factory, registry, CI); `src/canary/main/` (library `canary_main`) is
 the RUNNING layer (runner, batch, spec-check, layer tests) that the
 cmd/tests/batch share — it depends on canary_project for the datatype,
@@ -57,8 +57,8 @@ factory — `assignment_is_all_good` moved to the datatype layer.
 (Static_c_abi) — but ctypes-foreign is genuinely Dynamic_ffi (resolves
 and calls C functions at RUNTIME via libffi; no compiled stub links
 against libffi). Fixed by retiring `simple` entirely: Pattern A now
-declares typed rows via `Canary_pattern_a.artifacts`/`run`, with a
-`binding_mechanism` field on `Canary_pattern_a.t` — libffi declares
+declares typed rows via `Canary_opam_binding.artifacts`/`run`, with a
+`binding_mechanism` field on `Canary_opam_binding.t` — libffi declares
 `Ctypes`, zarith/cairo `Cstubs`. (The `chain_applicable` build_binding
 gating is unaffected: none of them build the binding.)
 
@@ -353,10 +353,10 @@ per-project ones.
   verdict-matrix pin machinery; `canary inspect-diff` already does the
   comparison.
 - [ ] **Pattern reframe: ocaml/opam binding patterns, not "project-a"**
-  (2026-08-16, user): `Canary_pattern_a` is really THE ocaml/opam
+  (2026-08-16, user): `Canary_opam_binding` is really THE ocaml/opam
   binding pattern — an opam binding over a system C lib via the
   `conf-*` virtual package. Reframe + rename accordingly (together
-  with the de-pattern-a conversion: functions over the general
+  with the datatype→functions conversion: functions over the general
   types); the taxonomy is small — with the current machinery we
   should be able to describe ALL opam packages; python/pip bindings
   follow the same idea after.

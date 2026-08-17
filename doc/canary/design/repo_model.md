@@ -205,7 +205,7 @@ confirmation."
      of one artifact. Each repo's `version` record projects into the
      source row's store pins (channel preserved), so every repo is an
      identity-bearing scenario and `--thin` (Subset [Stable]) drops the
-     dev repos. `Canary_pattern_a` gains `sources : source_repo list`
+     dev repos. `Canary_opam_binding` gains `sources : source_repo list`
      (stable first, dev, then a labeled fork when one exists) and its
      realization dispatches per scenario — each fetch materializes ITS
      channel's worktree. zarith now runs 2 scenarios
@@ -229,7 +229,7 @@ confirmation."
      project now enumerates 5 scenarios: 3 all-Fetched source worlds +
      2 dev build chains; `--thin` keeps the stable chain only.
 - **D. The web viewer** — after the 3-way (the UI over the commands).
-- **De-pattern-a** (user, 2026-08-16): `Canary_pattern_a.t` should NOT
+- **The datatype→functions conversion** (user, 2026-08-16): `Canary_opam_binding.t` should NOT
   be a datatype — at most functions producing the general types
   (project_run, configs, actions). Decoupled from C1; the next task.
 

@@ -85,7 +85,7 @@ let gmp_source_master : Canary_artifact_source.source_repo =
     artifacts = [ Canary_artifact.a_lib ];
   }
 
-let decl : Canary_pattern_a.t = {
+let decl : Canary_opam_binding.t = {
   name = "zarith";
   opam_pkg = "zarith";
   ocamlfind_pkg = "zarith";
@@ -114,9 +114,9 @@ let decl : Canary_pattern_a.t = {
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 
-let runner_spec = Canary_pattern_a.runner_spec decl
+let runner_spec = Canary_opam_binding.runner_spec decl
 
 (* Registry entry: Pattern A's typed artifact table + the template's
    runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,
    each over the stable lib + binding, Fetched). *)
-let zarith_run : Canary_project_run.project_run = Canary_pattern_a.run decl
+let zarith_run : Canary_project_run.project_run = Canary_opam_binding.run decl

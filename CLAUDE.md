@@ -110,7 +110,7 @@ test/      framework self-tests
 project/   THE PROJECT layer (canary_project library, 2026-08-14): the
            project DATATYPE + definition utils ([Canary_project_run]:
            project_run, policies, run_config, spec helpers;
-           [Canary_pattern_a]: the definition template) PLUS the
+           [Canary_opam_binding]: the definition template) PLUS the
            concrete instantiation (the 8 specs + tiny's factory + the
            entry modules that NAME projects: registry, CI jobs)
 main/      the RUNNING layer (canary_main library, 2026-08-14):
@@ -199,8 +199,8 @@ reconciling with, not duplicating.
 | `src/canary/test/canary_project_test.ml`            | Project-definition layer tests (`canary project-test`) — pure: action consumes/produces catalogue, surface split, store-config derive, detect, coverage abstract stages, mechanism defaults, enumerate two-projections |
 | `src/canary/project/canary_project_sqlite.ml`      | sqlite3 project spec; OCaml + Python (stdlib) probes                                                   |
 | `src/canary/project/canary_project_ssl.ml`         | OpenSSL/`ssl` project; variant matrix (`variants` = 0.6.0/0.7.0 × core/native-lib-version) via `mk_variant`; folded native probe. All fetch-origin (Level A). |
-| `src/canary/project/canary_project_cairo.ml`       | cairo project via `Canary_pattern_a` (conf-* + opam binding); Level A                                  |
-| `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_pattern_a` (conf-* + opam binding); Level A                                 |
+| `src/canary/project/canary_project_cairo.ml`       | cairo project via `Canary_opam_binding` (conf-* + opam binding); Level A                                  |
+| `src/canary/project/canary_project_zarith.ml`      | zarith project via `Canary_opam_binding` (conf-* + opam binding); Level A                                 |
 | `src/canary/project/canary_project_z3.ml`          | z3 spec; `z3_source_stable` has `has_build_binding=false`. Python probe demonstrates derived L3 fail   |
 | `src/canary/project/canary_project_llvm.ml`        | LLVM spec; per-variant `mk_runner_spec ~source`. Stable OCaml probe expects `Opcode.UncondBr` compat-failure — flows through `Canary_scenario.lower_expectation` over `llvm_stable_contract_bindings` (Task 2 Phase D 2026-07-21). |
 | `src/canary/project/canary_project_z3.ml`          | z3 spec; per-variant `mk_runner_spec ~source`. Python probe expects `z3.parser_context` compat-failure — flows through `lower_expectation` over `z3_contract_bindings` (Task 2 Phase E 2026-07-21). `z3_source_stable` has `has_build_binding=false`. |
@@ -208,7 +208,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
 | `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `dynamic_enumeration.md` "Derived vs hand-written"). |
-| `src/canary/project/canary_pattern_a.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
+| `src/canary/project/canary_opam_binding.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
 | `canary/examples/llvm/llvm_example.ml`         | LLVM 16+ example (create_context)                                                                      |

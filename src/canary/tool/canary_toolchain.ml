@@ -364,7 +364,7 @@ cat %{output_dir}/%{probe_log}|}]
 
 (* Backward-compatible single-step variant: install + probe in one go.
    Kept so projects that haven't migrated to the split form still work
-   (and so canary_pattern_a / older specs compile). New code should
+   (and so canary_opam_binding / older specs compile). New code should
    prefer pip_install_cmd + python_probe_only_cmd. *)
 let pip_probe_cmd ?(toolchain = default_python_toolchain) (p : python_binding)
     ~output_dir ~variant_key =

@@ -7,7 +7,7 @@
 
 ; THE PROJECT layer (2026-08-14): the project DATATYPE + definition
 ; utils ([Canary_project_run]: project_run, policies, run_config, spec
-; helpers; [Canary_pattern_a]: the definition template) PLUS the
+; helpers; [Canary_opam_binding]: the definition template) PLUS the
 ; concrete instantiation (the 8 specs + tiny's factory + the entry
 ; modules that NAME projects: registry, CI jobs). The RUNNING layer
 ; (src/canary/main, canary_main) depends on THIS library for the

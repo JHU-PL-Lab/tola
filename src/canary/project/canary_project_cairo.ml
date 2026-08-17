@@ -61,7 +61,7 @@ let cairo_source_stable : Canary_artifact_source.source_repo =
     (* the repo builds the C lib; cairo2 (opam) is off-tree *)
     artifacts = [ Canary_artifact.a_lib ] }
 
-let decl : Canary_pattern_a.t = {
+let decl : Canary_opam_binding.t = {
   name = "cairo";
   opam_pkg = "cairo2";
   ocamlfind_pkg = "cairo2";
@@ -88,8 +88,8 @@ let decl : Canary_pattern_a.t = {
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 
-let runner_spec = Canary_pattern_a.runner_spec decl
+let runner_spec = Canary_opam_binding.runner_spec decl
 
 (* Registry entry: Pattern A's typed artifact table + the template's
    runner_spec (single scenario: source + lib + binding Fetched@Stable). *)
-let cairo_run : Canary_project_run.project_run = Canary_pattern_a.run decl
+let cairo_run : Canary_project_run.project_run = Canary_opam_binding.run decl

@@ -107,12 +107,12 @@ let libssl_spec : Canary_store.system_package_spec =
     behavior = Canary_store.Stateful_global }
 
 (* Native-lib symbol probe, folded from the retired pattern_a ssl. *)
-let ssl_lib_locator : Canary_pattern_a.lib_locator =
+let ssl_lib_locator : Canary_opam_binding.lib_locator =
   { linux_glob = "/usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.*";
     brew_pkg = "openssl@3";
     brew_dylib = "libssl.dylib" }
 
-let ssl_resolve = Canary_pattern_a.lib_resolve ssl_lib_locator
+let ssl_resolve = Canary_opam_binding.lib_resolve ssl_lib_locator
 let ssl_native_prefixes = [ "SSL_"; "TLS_"; "BIO_" ]
 let ssl_native_watchlist =
   [ "SSL_CTX_new"; "SSL_new"; "SSL_connect"; "SSL_read"; "SSL_write"; "TLS_method" ]

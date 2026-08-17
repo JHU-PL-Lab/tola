@@ -1,16 +1,18 @@
 open Canary_basic
 open Canary_toolchain
 
-(* ── Pattern A template ──
-   Pattern A in opam-survey terminology: a `conf-*` virtual package verifies a
-   system C library is present, and an OCaml binding (opam pkg) links against
-   that system lib. Examples: zarith via conf-gmp, ssl via conf-libssl,
-   cairo2 via conf-cairo, etc.
+(* ── The ocaml/opam binding pattern ──
+   Renamed from "Pattern A" (Canary_pattern_a) 2026-08-17: the old name
+   read like a project name; this is THE binding PATTERN — an OCaml/opam
+   binding over a system C library via the `conf-*` virtual package.
+   Examples: zarith via conf-gmp, ssl via conf-libssl, cairo2 via
+   conf-cairo, etc.
 
-   This module compresses the boilerplate. A new Pattern A project becomes
-   ~25 lines of declaration vs. ~100 lines of hand-rolled runner_spec.
-   Extracted from zarith + ssl as the second-data-point validation per
-   doc/canary/project/index.md §3 sequencing.
+   This module compresses the boilerplate. A new ocaml/opam-binding
+   project becomes ~25 lines of declaration vs. ~100 lines of
+   hand-rolled runner_spec. Extracted from zarith + ssl as the
+   second-data-point validation per doc/canary/project/index.md §3
+   sequencing.
 
    Coverage boundaries:
    - This template covers native_lib + ocaml binding probe only. Projects with
@@ -19,7 +21,7 @@ open Canary_toolchain
      it through the template.
    - Optional-C-dep cases (lwt + conf-libev) are NOT yet covered; would need
      a `with_optional_lib` extension.
-   - Self-building (Pattern C, like z3) is out of scope. *)
+   - Self-building (like z3) is out of scope. *)
 
 (* Per-project lib locator: enough info to produce a shell snippet that
    resolves $LIB_NATIVE on Linux (multilib path) and macOS (brew keg). *)
@@ -30,7 +32,7 @@ type lib_locator = {
   brew_dylib : string;     (* basename under brew prefix's lib dir, e.g. "libgmp.dylib" *)
 }
 
-(* The full Pattern A declaration. *)
+(* The full ocaml/opam-binding declaration. *)
 type t = {
   name : string;                    (* "zarith" — project tag, dir name *)
   opam_pkg : string;                (* opam package; binding to install *)
@@ -118,7 +120,7 @@ let runner_spec_with (d : t) (src : Canary_artifact_source.source_repo option) :
        clone once + a worktree per ref into the contrib tree
        ([Canary_store.contrib_root]), refreshed on demand each run.
        [src] is the SCENARIO's repo (the per-channel dispatch, C1) —
-       Pattern A never builds from it. *)
+       the pattern never builds from it. *)
     fetch_source =
       Option.map
         (fun source ~output_dir ~variant_key ->
@@ -199,7 +201,7 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
           | s :: _ -> s
           | [] ->
               failwith
-                "pattern_a source_for_assignment: no source declared"))
+                "opam_binding source_for_assignment: no source declared"))
 
 (* The per-scenario realization (2026-08-17): the dispatch over the base
    [runner_spec_with] —

@@ -51,7 +51,7 @@ The survey letters are just points in this space:
 Two consequences:
 
 - **A project isn't *in* a pattern; it *has* dimension values.** Pattern
-  constructors (the former `canary_pattern_a`) are just sugar that fill a
+  constructors (the former `canary_opam_binding`) are just sugar that fill a
   common combination — not categories anything branches on. B vs A is a
   single field value (`Depext` vs `Conf`) that barely changes how canary
   tests.
@@ -109,7 +109,7 @@ committing to the template up-front:
 1. ✓ Finish batch-1 Python side — sqlite stdlib, z3-solver, llvmlite.
 2. ✓ Add **zarith (#7)** — first new-from-survey Pattern A.
 3. ✓ Add **ssl (#5)** — second Pattern A datapoint.
-4. ✓ Extract **Pattern A template** (`canary_pattern_a.ml`) from zarith + ssl.
+4. ✓ Extract **Pattern A template** (`canary_opam_binding.ml`) from zarith + ssl.
 5. Add **lwt** with depopt **libev (#8)** — stresses the template with optional-dep.
 6. Add **cvc5 (#9)** — Pattern C second datapoint; sibling to z3.
 7. **PyTorch (#4)** — highest-leverage multi-PM case

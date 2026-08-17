@@ -114,9 +114,10 @@ the same data lifted to one table keyed by the library name.
 
 ## 5. What this means for the pattern work
 
-`Canary_pattern_a` is THE ocaml/opam binding pattern: an opam binding
+`Canary_opam_binding` is THE ocaml/opam binding pattern: an opam binding
 over a system C lib via a conf virtual package. The reframe (to-do):
-the pattern becomes FUNCTIONS over the general types (de-pattern-a),
+the pattern becomes FUNCTIONS over the general types (the recorded
+datatype→functions conversion),
 parameterized by the conf dependency — `conf-gmp` today, `None` for
 the conf-free variant — so the same helpers describe both worlds, and
 the wrapper-package declaration (`pr_wrapper_pkgs` + the local repo

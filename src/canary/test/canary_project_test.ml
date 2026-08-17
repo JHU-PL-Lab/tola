@@ -1080,7 +1080,7 @@ let tool_routing_ratchet_test : pure_test =
           ("unzip -", []);
           ("pip install", [ ("canary_project_llvm.ml", 3) ]);
           ("opam install",
-           [ ("canary_pattern_a.ml", 1);
+           [ ("canary_opam_binding.ml", 1);
              (* all 3 occurrences are COMMENTS describing the routed verb —
                 the shell goes through [SB.fetch_binding_cmd] *)
              ("canary_project_ssl.ml", 3);

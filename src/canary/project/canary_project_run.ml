@@ -837,8 +837,9 @@ let spec_json_t ?policy (pr : project_run) : Yojson.Basic.t =
    It lives in its own module, canary_registry.ml, which depends on both.) *)
 
 (* [simple] retired 2026-08-13 (spec-check fulfillment): its providerless
-   rows made Pattern A projects opaque to the spec audit. Pattern A now
-   declares typed rows + its run via [Canary_pattern_a.artifacts] /
-   [Canary_pattern_a.run] (source row + system-pkg lib + opam binding,
+   rows made the opam-binding projects opaque to the spec audit. The
+   pattern now
+   declares typed rows + its run via [Canary_opam_binding.artifacts] /
+   [Canary_opam_binding.run] (source row + system-pkg lib + opam binding,
    mechanism declared per project — libffi's honest [Ctypes] included). *)
 

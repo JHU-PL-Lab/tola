@@ -91,7 +91,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
     ```
 
     `probe_lib` shell becomes derivable. `lib_locator` in
-    `canary_pattern_a.ml` is the prototype.
+    `canary_opam_binding.ml` is the prototype.
 
     **Step 2 — auto-generated `runner_spec` (#32).** Given a sketch +
     locator + store_config, generate the full `runner_spec`:

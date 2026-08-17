@@ -78,11 +78,11 @@ Notes:
   whose 6 scenarios are spec-derived. Factory *detection* coverage is
   12/24; the undetected 12 are watchlist-blind (c5/c6/abi) and need richer
   inspectors, not plumbing.
-- **fetch_lib Derived** landed via S4a (`pattern_a` + sqlite); it lifted
+- **fetch_lib Derived** landed via S4a (`opam_binding` + sqlite); it lifted
   zarith/ssl/cairo at once. z3/llvm/tiny stay `Raw` (not migrated —
   z3/llvm deliberately untouched; tiny is the regression fixture).
 - **surface** is unpopulated on the Derived projects: their watchlists
-  still ride explicit `inspect` closures (or `pattern_a`'s `t` fields).
+  still ride explicit `inspect` closures (or `opam_binding`'s `t` fields).
   Moving them to `Canary_surface` waits on the detector grow (S5) that
   actually reads it. See [`design/ssot.md`](../design/ssot.md) §6.1.
 - **ssl's variant matrix**: 2 binding versions × 2 apps, realized by
@@ -135,7 +135,7 @@ Notes:
 | —   | python primitives    | 2026-04-23 | Sqlite/z3/llvm pip probes, both local + CI                                                                                                                                                   |
 | 7   | zarith               | 2026-04-25 | Pattern A. Surfaced `inspect_native.py` GMP `__gmp*` stripping bug                                                                                                                           |
 | 5   | ssl                  | 2026-04-25 | Pattern A second datapoint. `Ssl.get_version` doesn't exist in v0.7.0                                                                                                                        |
-| —   | Pattern A template   | 2026-04-25 | `canary_pattern_a.ml` 135 lines compresses each spec to ~40 lines                                                                                                                            |
+| —   | Pattern A template   | 2026-04-25 | `canary_opam_binding.ml` 135 lines compresses each spec to ~40 lines                                                                                                                            |
 | —   | api-compat milestone | 2026-05-01 | `Expect_compat_failure` derived expectations for OCaml + Python; see [`research/surface_draft/implementation.md`](../research/surface_draft/implementation.md) §2.7                          |
 | 12  | cairo                | 2026-07-23 | Pattern A. First project onboarded on the post-redesign machinery (`Derived` fetch_lib via `store_config`; S5a detection runs). `cairo2` 0.6.5, 420 `cairo_` symbols; probe green first try. |
 | —   | tiny-full            | 2026-08-02 | tiny-full becomes a PROJECT (peer of z3/sqlite), not a `tiny` subcommand. 6 spec-derived scenarios; forward API mismatch derived as `xfail[c1]`.                                             |
