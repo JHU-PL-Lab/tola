@@ -1,0 +1,117 @@
+# Wrapper packages, the conf-free direction, and the Publish generalization
+
+> 2026-08-17. CANARY-SIDE design: our wrapper/conf-free packages in the
+> local opam repo, the fork layering, the store-mutation consequence,
+> and the zarith matrix + shadow preference. (The opam-side survey of
+> the `conf-*` mechanism itself lives in [conf_survey.md](conf_survey.md).)
+
+## 1. The fork layering — a functional fix vs a conf-bypass
+
+We have a forked zarith (`zarith-my-fork`) carrying a functional fix;
+should the conf-bypass be a separate branch or commit in the fork?
+**Neither — it belongs in a different layer entirely.**
+
+- **The functional fix lives in the FORK** (a branch off upstream,
+  PR-ready, no packaging noise). Canary describes it with the repo
+  record (`label = Some "my-fork"`, `official = false`, `ref_`,
+  remote) as an entry in the `Repo_axes` family.
+- **The conf-bypass is PACKAGING, not source** — an opam-file-level
+  change ("build this tree without consulting `conf-gmp`"). It is
+  version-agnostic: the SAME bypass applies to stable, master, and the
+  fork alike. Putting it in the fork would (a) duplicate it per ref,
+  (b) pollute the upstream-reportable fix branch with workflow
+  concerns upstream would never merge.
+- **Canary's description of the bypass**: the `pr_wrapper_pkgs` field +
+  the local opam repo (`canary/templates/opam-local-repo/`) — the
+  dev-mode wrapper packages (`z3.dev`, `llvm.dev-shared`) that
+  override the dep graph. `zarith-no-conf` is the same shape: a local
+  package whose `build:` runs `./configure && make` over the
+  scenario's checkout and whose `depends:` omits `conf-gmp`. The fork
+  record and the wrapper declaration stay separate spec fields, so
+  canary can enumerate "fork source × conf-free packaging" freely.
+
+## 2. The store-mutation consequence (the reinstall)
+
+opam's store is global and findlib-keyed: `zarith` and `zarith-no-conf`
+both install the findlib package `zarith`, so only one can own the
+namespace at a time — installing one clobbers the other. Options:
+
+- **Distinct findlib name** (`zarith_no_conf`) — both coexist, but the
+  probe compiles against a DIFFERENT name than the real-world consumer
+  uses (weakens the realism of the check).
+- **Same findlib name, pin-switched scenarios** — the scenario that
+  needs the fork installs `zarith-no-conf`, the stable scenario
+  re-pins `zarith.1.14`; each step's `pin_check_post` verifies the
+  store provably holds the right package before probing. This is
+  EXACTLY the z3 stable/dev dance (opam pin 4.16.0 ↔ publish z3.dev),
+  and the machinery exists: pin-checked fetch, world assertions,
+  "order is a performance contract, not a correctness one"
+  (algorithm_explainer.md §10).
+
+The same-name variant is the right default — realism beats coexistence.
+
+## 3. The zarith matrix and the shadow preference
+
+The combination space: GMP has no system dev package (`libgmp-dev`
+ships only 6.3.0) and no nightly; the dev GMP is gmplib.org's hg repo
+(`Hg`/`Tar` remotes covered). Since conf-gmp constrains nothing, a
+future GMP release flows into the system path automatically — the
+ideal matrix:
+
+```
+                 gmp 6.3.0 (system)   gmp master (official repo)
+zarith 1.14      current cell          old-binding × new-lib (deploy)
+zarith master    new-binding × old-lib (forward)   new × new
+```
+
+**Prebuilt-shadows-source** (user, 2026-08-17 — the rule that came out
+of the GMP build session): building an external C lib is NOT always
+easy (GMP's hg tree: partial bootstrap, missing libtool.m4, VPATH aux
+traps, empty `$NM`). Rules:
+- If a latest PREBUILT exists (including a nightly/dev artifact — e.g.
+  a CI-built archive), USE it; it shadows the source.
+- If not, only the system PM's latest stable. NO source-built lib
+  column by default.
+- The source-built path is a SEPARATE AUDIT PASS, not automatic: it
+  runs only when we have decided to BLAME the lib (a fix to prepare or
+  confirm). The failure-triggered fallback never fires on its own.
+- The binding-language side builds are cheap and stay in the matrix —
+  that's where the fixes live.
+
+**Current zarith shape** (verified 3/3 PASS): the lib row is
+Fetched-only; the matrix collapses to `{zarith 1.14, master} × {gmp
+6.3.0}` = 3 scenarios — the current cell, the master-source world, and
+the FORWARD cell (master binding built from the worktree copy, probed
+against the system lib — the designed mismatch probe). The
+`gmp_source_master` repo record stays DECLARED but unwired (the ssl
+unwired-dev precedent); the hg checkout lives in `contrib/gmp-all/`.
+
+The general **shadow mechanism** (to-do): when a prebuilt for the same
+cell exists, the spec declares BOTH the prebuilt and the source; the
+enumeration resolves the prebuilt first (a resolution pass, not two
+scenarios); the source-built placement is a dormant FALLBACK that a
+separate audit pass (`--audit-lib <artifact>`, say) can materialize —
+fetch + build + re-probe + blame. Project-spec-level config, not meta.
+
+## 4. The Publish generalization (the next mechanism)
+
+z3/llvm carry legacy-but-working Publish steps; the time to generalize
+them is NOW (2026-08-17, user), and tiny can ride it too. Current
+state: hand-written opam files per wrapper package in
+`canary/templates/opam-local-repo/packages/{z3,llvm,zarith}/` —
+z3.dev uses an `.in.tpl` with `%%Z3_CMAKE_BUILD_FLAGS%%` substitution
+(rendered by `Canary_project_z3.render_opam_in`); llvm.dev-shared and
+zarith-no-conf are static.
+
+Open question: a GENERAL opam-template (one skeleton parameterized per
+project) vs per-project template files. The packages differ only in
+the build body (z3: cmake+ninja; llvm: cmake; zarith: configure+make);
+the skeleton is common: opam metadata, the `CANARY_*_SRC` url, the
+build/install/remove slots, the conf-free depends, the same-findlib
+conflict. Proposal: a tool-layer renderer (`canary_opam_template` or
+inside `canary_pm_opam.ml`'s orbit) that emits the skeleton with the
+project's build body + the `%%VAR%%` substitutions — the per-project
+opam files become GENERATED artifacts of the project spec (like
+z3's), one template to maintain. The Publish step for the
+ocaml/opam-binding pattern then = render + `opam install` +
+pin-checked postcondition, the z3.dev dance generalized.

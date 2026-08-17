@@ -8,6 +8,13 @@ open Canary_toolchain
    Examples: zarith via conf-gmp, ssl via conf-libssl, cairo2 via
    conf-cairo, etc.
 
+   Layer note: this is the PROJECT layer's opam-side pattern (project
+   declarations + realizations). The TOOL layer's opam PM driver is
+   [Canary_pm_opam] (src/canary/tool/) — opam as a package manager
+   (presence checks, install commands). Distinct concerns, distinct
+   layers; wrapper-package generation (Publish) is the tool-layer
+   half (see doc/canary/project/wrapper_packages.md §4).
+
    This module compresses the boilerplate. A new ocaml/opam-binding
    project becomes ~25 lines of declaration vs. ~100 lines of
    hand-rolled runner_spec. Extracted from zarith + ssl as the

@@ -333,17 +333,18 @@ per-project ones.
   our 7-op watchlist continuously verifies. Ranging over more GMP
   versions needs a versioned GMP source or vendored older libs (the
   system ships exactly ONE, 6.3.0).
-- [ ] **System-lib-shadows-source as a CONFIG item** (2026-08-16,
-  user): today a Fetched@Stable system lib is treated as THE stable
-  lib — the implicit assumption that "old publishing is feasible"
-  (the system's GMP 6.3.0 ≈ what we'd build from the 6.3.0 source).
-  But a distro lib is prebuilt with distro-chosen flags (Debian's
-  dfsg build, possibly patched/tuned) — not provably equivalent to a
-  self-built same-version lib. Make it explicit config:
-  `trust-system-lib` vs `build-ourselves-and-verify`; the verification
-  path exists TODAY (the c1..c8 compat diff over two inspect summaries
-  — build 6.3.0 once, diff its symbol surface against the system's).
-  The `Sys_pkg.version_tag` field is the declaration seam.
+- [ ] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
+  AUDIT PASS** (2026-08-17, the refined rule; design in
+  wrapper_packages.md §3): a prebuilt (incl. a nightly/dev artifact,
+  if one exists — CI archives etc.) SHADOWS the source; when no
+  prebuilt exists, only the system PM's stable. The source-built path
+  is NOT automatic — it is a separate audit pass, run only when we
+  have decided to BLAME the lib (a fix to prepare or confirm). The
+  enumeration keeps the source-built placement dormant; the audit pass
+  materializes it (fetch + build + re-probe + blame). Project-spec
+  level. (The 2026-08-16 "system-lib-shadows-source config item" is
+  folded in: the trust-system-lib vs build-and-verify choice IS the
+  audit pass's first question.)
 - [ ] **Surface-drift expectations** (2026-08-16, user — an
   enhancement): the probes record the totals (C side: `nm` count +
   per-prefix breakdown; OCaml side: `ocamlobjinfo` module list) but
@@ -352,23 +353,29 @@ per-project ones.
   symbols; a Δ beyond X is a report") as an expectation — rides the
   verdict-matrix pin machinery; `canary inspect-diff` already does the
   comparison.
-- [ ] **Pattern reframe: ocaml/opam binding patterns, not "project-a"**
-  (2026-08-16, user): `Canary_opam_binding` is really THE ocaml/opam
-  binding pattern — an opam binding over a system C lib via the
-  `conf-*` virtual package. Reframe + rename accordingly (together
-  with the datatype→functions conversion: functions over the general
-  types); the taxonomy is small — with the current machinery we
-  should be able to describe ALL opam packages; python/pip bindings
+- [ ] **Publish generalization — the next mechanism** (2026-08-17,
+  user — "this is the thing"): z3/llvm carry legacy-but-working
+  Publish steps; generalize them so the ocaml/opam-binding pattern
+  (and tiny) can publish wrapper packages. Open: a GENERAL
+  opam-template (one skeleton parameterized per project — the build
+  body is the only variable part) vs per-project template files.
+  Design in wrapper_packages.md §4; the renderer belongs in the TOOL
+  layer (`canary_pm_opam.ml`'s orbit — distinct from the project-layer
+  pattern module).
+- [ ] **Pattern reframe: the datatype→functions conversion**
+  (2026-08-16, user; RENAMED 2026-08-17 — `Canary_opam_binding` is the
+  new name): the pattern becomes FUNCTIONS over the general types
+  instead of the `t` record (the NAME is fixed; the shape is the
+  remaining work); the taxonomy is small — with the current machinery
+  we should be able to describe ALL opam packages; python/pip bindings
   follow the same idea after.
-- [ ] **conf-* mechanics survey + conf-free package templates**
-  (2026-08-16, user): survey how `conf-*` works (opam's system-dep
-  virtual packages — presence checks via pkg-config/command, per-distro
-  maintainer-approved version mappings; the human-approval bottleneck
-  vs npm's automation) and prototype a CONF-FREE package per project —
-  `zarith-no-conf` carrying its own GMP dependency, the same idea as
-  the z3.dev/llvm.dev-shared local packages in
-  `canary/templates/opam-local-repo/`. Then a template for each new
-  OCaml-binding project.
+- [x] **conf-* survey + conf-free prototype** — DONE 2026-08-17: the
+  survey is [conf_survey.md](conf_survey.md) (opam-side only, after
+  the trim); the `zarith-no-conf` prototype (lint-clean) + the
+  canary-side designs (fork layering, shadow rule, Publish plan) live
+  in [wrapper_packages.md](wrapper_packages.md). REMAINING: the live
+  install (rides the Publish generalization) and the per-project
+  template generation.
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED
