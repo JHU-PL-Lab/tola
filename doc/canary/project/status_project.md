@@ -359,6 +359,20 @@ directions):
   class; audit other build steps' store reads (env_guard
   generalization).
 
+**Pending (user, 2026-08-17 — AFTER active plans 3&4)**:
+
+- [ ] **Opam-templating gotchas as TEST CASES** — the Publish case
+  study's live-learned details (the `<name>/<name>.<version>/` dir
+  convention; `opam config subst` appends `.in` itself; `%{VAR}%`
+  reads the `OPAMVAR_`-prefixed env var; the warm-skip gate) belong in
+  the framework self-test axis (pm-test/artifact-test) — they are
+  shell + tooling knowledge that generalizes to other package managers
+  (pip etc.). A DEDICATED standalone opam switch (the user offered to
+  prepare one) keeps the tests from mutating the main switch — tests
+  would target it explicitly.
+- [ ] **Extend tiny with the Publish** — the wrapper decl + primitive
+  give tiny an opam-visible artifact when it wants one.
+
 **Housekeeping**:
 
 - [ ] **`source_fetch` primitive honor locals** — the table primitive
