@@ -48,10 +48,12 @@ type contract_row = {
                 Canary_compat.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
          the binding_decl (coupling products, surface_path) *)
-  firing      : Canary_mechanism.mechanism ->
-                Canary_enumerate.provision -> Canary_scenario.firing_site list;
-      (* WHERE it fires — the derivation that replaces the hand-written
-         per-project tables (§3) *)
+  firing      : Canary_mechanism.mechanism -> Canary_store.provision ->
+                site list;
+      (* WHERE it fires — stage-level (site = Build_site | Probe_site),
+         derived from mechanism × provision (§3); the action layer
+         refines site × lang into Canary_scenario.firing_site in phase
+         2 — surface/ cannot reference the action vocabulary *)
   fault_tags  : string list;
       (* step 9: sym_missing ↔ c1, api_drop ↔ c2, … — the tag ↔ contract
          mapping becomes data on the row, not a synced-by-hand table *)
@@ -80,7 +82,7 @@ So the firing derivation has TWO axes, both already known to the framework:
 2. **provision** (the action graph): a Fetched binding has no
    `Build_binding` step at all — the enumeration already prunes it.
 
-`cr_firing mechanism provision` states both axes per contract instead of
+`firing mechanism provision` states both axes per contract instead of
 per-project hand-listing. The pre/post conditions to check become a pure
 function of `(decl, mechanism, provision)`.
 
@@ -157,7 +159,39 @@ Registry implications:
 Everything else (inputs, firing sites, prediction wiring, tag mapping)
 derives from `(registry × decl × mechanism × provision)`.
 
-## 7. Sequence (each step keeps the suite green)
+## 7. The blame axis (open — think during the gathering)
+
+For every checking action — any role, any artifact — what does a
+correct result mean, what does an incorrect result mean, and WHO is
+blamed? Not answered here completely; the frame to carry through the
+gathering:
+
+- **Pass meanings differ per role.** Surface pass: this artifact's
+  presented facts cover the watchlist — it says NOTHING about the
+  other side (single-artifact evidence). Meeting pass: this pair
+  joined under the conditions exercised — a fact about the RELATION,
+  not about either artifact alone. Execution pass: this run behaved —
+  bounded by the run's coverage. Each is a bounded falsifier, never
+  proof (§5).
+- **Failure blame is role-shaped.** Surface failure blames the
+  artifact itself (presented ≠ declared). Meeting/Execution failures
+  are direction-ambiguous at the check level — the framework's
+  `mismatch_direction` (Forward/Backward, already computed per
+  scenario) resolves it: forward → the consumer asked too much
+  (binding/app at fault); backward → the provider regressed (lib at
+  fault).
+- **Instrumented meetings shift blame.** The fake-provider shim
+  inverts the question: the provider is a plant, so failure blames
+  the consumer's robustness — or the DECL the plant embodies. The
+  recorder shim blames nobody: it observes the actual request set.
+- **Open questions.** Does each row need a blame column (per-role
+  pass/fail semantics + the direction mapping), or does blame derive
+  uniformly from (role × direction)? Can a Surface failure ever be
+  direction-resolved (the artifact IS the provider in a Backward
+  world)? Answer during the phase-2 consumer migration, where the
+  hand-written tables show which blame distinctions actually matter.
+
+## 8. Sequence (each step keeps the suite green)
 
 1. Land the producer: `contract_registry` rows for c1..c8 (statuses,
    invariant strings, evidence kinds, fault tags, input template,

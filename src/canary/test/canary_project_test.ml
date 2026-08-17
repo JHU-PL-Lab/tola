@@ -1118,6 +1118,85 @@ let tool_routing_ratchet_test : pure_test =
                     end));
           !ok) }
 
+(* M2 step 6 (2026-08-17): the contract registry — the producer's own
+   pins. Every contract has exactly one complete row (invariant,
+   role, tags), every registered check is referenced exactly once,
+   the fault-tag mapping matches scenario.md's catalogue, and the
+   firing derivation follows mechanism × provision. *)
+let contract_registry_complete_pin : pure_test =
+  { name = "contracts.registry_complete";
+    check =
+      (fun () ->
+        let module CR = Canary_contract_registry in
+        let ids = Canary_compat.[ C1; C2; C3; C4; C5; C6; C7; C8 ] in
+        let rows = CR.contract_registry in
+        (* one row per id, non-empty invariant, exactly one tag *)
+        let rows_ok =
+          List.for_all ids ~f:(fun id ->
+              match List.filter rows ~f:(fun r ->
+                  Poly.equal r.CR.cr_check.Canary_compat.id id) with
+              | [ r ] ->
+                  (not (String.is_empty r.CR.cr_invariant))
+                  && List.length r.CR.cr_fault_tags = 1
+              | _ -> false)
+        in
+        (* every registered check referenced exactly once *)
+        let checks_ok =
+          List.for_all Canary_compat_run.registered_checks
+            ~f:(fun ck ->
+              List.count rows ~f:(fun r ->
+                  Poly.equal r.CR.cr_check.Canary_compat.id ck.id)
+              = 1)
+          && List.length rows = List.length Canary_compat_run.registered_checks
+        in
+        (* the tag mapping (scenario.md's catalogue) *)
+        let tag id =
+          match CR.row_of id with r -> List.hd_exn r.CR.cr_fault_tags
+        in
+        let tags_ok =
+          String.equal (tag C1) "sym_missing"
+          && String.equal (tag C2) "api_drop"
+          && String.equal (tag C3) "behavior"
+          && String.equal (tag C4) "abi_soname"
+          && String.equal (tag C5) "sym_version"
+          && String.equal (tag C6) "type_arity"
+          && String.equal (tag C7) "api_repack"
+          && String.equal (tag C8) "api_add"
+        in
+        (* the roles (design §4) *)
+        let role_is r exp = Poly.equal r.CR.cr_role exp in
+        let roles_ok =
+          role_is (CR.row_of C1) CR.Surface
+          && role_is (CR.row_of C2) CR.Surface
+          && role_is (CR.row_of C3) CR.Execution
+          && role_is (CR.row_of C4) CR.Surface
+          && role_is (CR.row_of C5) CR.Surface
+          && role_is (CR.row_of C6) CR.Meeting
+          && role_is (CR.row_of C7) CR.Meeting
+          && role_is (CR.row_of C8) CR.Meeting
+        in
+        rows_ok && checks_ok && tags_ok && roles_ok) }
+
+let contract_registry_firing_pin : pure_test =
+  { name = "contracts.firing_defaults";
+    check =
+      (fun () ->
+        let module CR = Canary_contract_registry in
+        let f = (CR.row_of C1).CR.cr_firing in
+        let eq got want = Poly.equal got want in
+        (* Static + Built → build + probe; Static + Fetched → probe;
+           Dynamic → probe *)
+        eq (f Canary_mechanism.Cstubs Canary_store.Built)
+          [ CR.Build_site; CR.Probe_site ]
+        && eq (f Canary_mechanism.Cstubs Canary_store.Fetched)
+             [ CR.Probe_site ]
+        && eq (f Canary_mechanism.Ctypes Canary_store.Built)
+             [ CR.Probe_site ]
+        && (* behavior fires at probe in every world *)
+        eq ((CR.row_of C3).CR.cr_firing Canary_mechanism.Cstubs
+              Canary_store.Built)
+             [ CR.Probe_site ]) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -1132,7 +1211,8 @@ let all_tests : pure_test list =
       built_from_test; node_of_assignment_test; close_deps_test;
       deploy_mismatch_test;
       agnostic_expectation_test; execution_plan_test;
-      tool_routing_ratchet_test ]
+      tool_routing_ratchet_test;
+      contract_registry_complete_pin; contract_registry_firing_pin ]
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the
