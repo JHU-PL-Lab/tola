@@ -66,6 +66,15 @@ type t = {
      genuinely Dynamic_ffi ones (libffi's ctypes-foreign resolves and
      calls C at runtime). *)
   binding_mechanism : Canary_mechanism.mechanism;
+  (* The wrapper package (2026-08-17, active plan 2): when [Some], the
+     bind_built scenarios gain a PUBLISH step installing this
+     conf-free wrapper over the scenario's worktree (the pattern's
+     Publish — pr_wrapper_pkgs derives from it), and the Fetched-binding
+     probe gains the store-dance world check (the wrapper shares the
+     findlib name, so the later opam probes must verify + restore the
+     stock package). [None] = no wrapper (cairo/libffi — the classic
+     conf-only shape). *)
+  wrapper : Canary_opam_template.wrapper_decl option;
 }
 
 (* Build the lib resolve shell snippet. Sets $LIB_NATIVE. *)
@@ -316,6 +325,36 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
       ]
     else []
   in
+  (* the store dance's world-check half (2026-08-17, active plan 2):
+     the forward cell (sorted FIRST among the dev worlds) publishes the
+     wrapper under the same findlib name; a LATER opam probe must verify
+     the store holds the STOCK package (the stable repo's version id)
+     and self-heal by reinstalling it when not — each scenario lands
+     itself in the right world (algorithm_explainer.md §10, in-run
+     instead of next-run). *)
+  let stable_id =
+    match
+      List.find_opt
+        (fun r ->
+          Canary_basic.equal_channel
+            r.Canary_artifact_source.version.Canary_basic.channel
+            Canary_basic.Stable)
+        d.sources
+    with
+    | Some r -> r.Canary_artifact_source.version.Canary_basic.id
+    | None -> ""
+  in
+  let world_check =
+    match (d.wrapper, stable_id) with
+    | Some _, id when not (String.equal id "") ->
+        Printf.sprintf
+          "eval $(opam env)\n\
+           INSTALLED=$(opam list %s --installed --short --columns=version 2>/dev/null)\n\
+           test \"$INSTALLED\" = \"%s\" || %s\n"
+          d.opam_pkg id
+          (Canary_pm_opam.install_cmd ~pkg:(d.opam_pkg ^ "." ^ id))
+    | _ -> ""
+  in
   let probe_binding =
     if bind_built then
       [ (Canary_lang.OCaml, Canary_store.Build_tree,
@@ -334,12 +373,72 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
              ld s s d.example_file output_dir output_dir log
              output_dir output_dir log output_dir log)
       ]
-    else base.Canary_step_builder.probe_binding
+    else
+      [ (Canary_lang.OCaml,
+         Canary_store.Pm
+           (Canary_store.Lang_pm
+              { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
+         fun ~output_dir ~variant_key ->
+           world_check
+           ^ Canary_step_builder.probe_ocaml_cmd ~binding_lib:d.binding_lib
+               ~example:d.example_file ~target:d.example_target
+               ~output_dir ~variant_key)
+      ]
+  in
+  let pack_binding =
+    match (d.wrapper, bind_built) with
+    | Some w, true ->
+        [ ( Canary_lang.OCaml,
+            fun ~output_dir ~variant_key ->
+              (* the scenario's worktree = the wrapper's source — the
+                 same tree the build_binding step copied from *)
+              let wt =
+                Canary_artifact_source.repo_worktree_path ~project:d.name
+                  ~repo:src ~ref_:src.Canary_artifact_source.ref_ distro
+              in
+              Canary_pm_opam.pack_wrapper_cmd ~repo_name:"canary-local"
+                ~repo_abs:"canary/templates/opam-local-repo"
+                ~pkg:w.Canary_opam_template.pkg
+                (* the repo dir: packages/<name>/<name>.<version> — the
+                   name dir is the project's opam package *)
+                ~pkg_dir:
+                  (d.opam_pkg ^ "/" ^ w.Canary_opam_template.pkg ^ ".dev")
+                ~src_var:w.src_var ~src_path:wt ~conflicts:w.conflicts
+                ~output_dir ~variant_key () ) ]
+    | _ -> []
   in
   { base with
     fetch_binding =
       (if bind_built then [] else base.Canary_step_builder.fetch_binding);
-    build_binding; probe_binding;
+    build_binding; probe_binding; pack_binding;
+    check_post =
+      (fun action ->
+        match (action, d.wrapper) with
+        | ( Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml),
+            Some w )
+          when bind_built ->
+            (* the publish's store mutation is verified, not just "ran":
+               a warm-skipped publish only fires when the switch
+               provably holds the wrapper (the z3.dev pin-check).
+               Gated on [bind_built] — the Publish step only exists in
+               the built-binding scenarios. *)
+            Some
+              (Canary_step_builder.pin_check_post ~pkg:w.Canary_opam_template.pkg
+                 ~pin:"dev" ~marker:"pack.ok")
+        | ( Canary_basic.Probe_binding Canary_lang.OCaml,
+            Some _ )
+          when (not bind_built) && not (String.equal stable_id "") ->
+            (* the store dance's verification half: a warm-skipped opam
+               probe may only fire when the switch provably holds the
+               STOCK package (the stable version) — a warm skip after
+               the publish (the wrapper sits in the store) fails this
+               check and the probe re-runs, its world check
+               reinstalling the stock package. Same doctrine as the
+               pin-check: the marker alone is not the world. *)
+            Some
+              (Canary_step_builder.pin_check_post ~pkg:d.opam_pkg
+                 ~pin:stable_id ~marker:"probe.log")
+        | _ -> base.Canary_step_builder.check_post action);
     (* the forward cell's probe carries the c1 compat-derived
        expectation (active plan 1); the other cells keep success *)
     expectation =
@@ -430,7 +529,12 @@ let run (d : t) : Canary_project_run.project_run =
          cell its LD_LIBRARY_PATH repoint *)
       (fun a ~workspace:_ -> runner_spec_for d a);
     pr_mismatch_probes = [];
-    pr_wrapper_pkgs = [];
+    (* active plan 2 (2026-08-17): the pattern's wrapper declaration —
+       spec-check's dev_wrapper_package item reads it *)
+    pr_wrapper_pkgs =
+      (match d.wrapper with
+      | Some w -> [ (Canary_lang.OCaml, w.Canary_opam_template.pkg) ]
+      | None -> []);
     pr_api_source = None;
     pr_binding_decls = [];
     pr_raw_build_overrides = [];

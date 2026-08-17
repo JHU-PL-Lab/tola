@@ -298,7 +298,15 @@ per-project ones.
    probe (forward cell only), the built-binding inspect summary the
    c1 inputs resolve from, a pin that the expectation is
    Expect_compat_derived there and Expect_success elsewhere.
-2. [ ] **Publish generalization** (user — "this is the thing"):
+2. [x] **Publish generalization** — LANDED 2026-08-17 (active plan 2):
+   the ocaml/opam-binding pattern publishes its wrapper (`zarith-no-conf`
+   live-installed over the worktree, pin-checked), the world-check +
+   self-heal keeps the store dance in-run, the opam-template renderer +
+   the pack primitive live in the tool layer, and the case study
+   produced the action playbook (action_playbook.md §3's refactoring
+   plan: the typed-catalogue fold-in, the pack-path-table gap, the
+   legacy-helper retirement, z3's renderer migration, and the FIXED
+   warm-skip gate). Remaining (follow-ups, recorded):
    generalize z3/llvm's legacy Publish so the ocaml/opam-binding
    pattern (and tiny) can publish wrapper packages. Open: a GENERAL
    opam-template (one skeleton parameterized per project — the build

@@ -81,7 +81,8 @@ let decl : Canary_opam_binding.t =
     (* ctypes-foreign resolves and calls C functions at RUNTIME via libffi —
        genuinely Dynamic_ffi, so [Ctypes] (2026-08-13; was the hardcoded
        [Cstubs] of [Canary_project_run.simple], the recorded M2 issue). *)
-    binding_mechanism = Canary_mechanism.Ctypes }
+    binding_mechanism = Canary_mechanism.Ctypes;
+    wrapper = None }
 
 let runner_spec = Canary_opam_binding.runner_spec decl
 

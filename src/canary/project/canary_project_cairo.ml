@@ -86,6 +86,7 @@ let decl : Canary_opam_binding.t = {
   ocaml_module_watchlist = cairo_ocaml_watchlist;
   sources = [ cairo_source_stable ];
   binding_mechanism = Canary_mechanism.Cstubs;
+  wrapper = None;
 }
 
 let runner_spec = Canary_opam_binding.runner_spec decl

@@ -762,9 +762,10 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "ssl"
         (* C2.5 (2026-08-17): zarith's binding Built axis LANDED with the
            2×2 — binding_dev_source went Ok; binding_decls still missing *)
+        (* active plan 2 (2026-08-17): the wrapper declaration closed the
+           dev_wrapper_package gap *)
         && want ~errs:[]
-             ~warns:[ "binding_decls"; "dev_wrapper_package"; "python_binding" ]
-             ~na:[] "zarith"
+             ~warns:[ "binding_decls"; "python_binding" ] ~na:[] "zarith"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "cairo"
         && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "libffi"
         && want ~errs:[]
@@ -976,6 +977,53 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
             | SM.Expect_compat_derived _ -> bind_built
             | _ -> not bind_built)) }
 
+(* Active plan 2 (2026-08-17): the wrapper Publish is wired on the
+   bind_built scenarios only — a pack_binding OCaml entry + the
+   pin-checked postcondition on Publish; the other cells carry none.
+   And the opam-template renderer reproduces the committed
+   zarith-no-conf file byte-equal (the M2 byte-equal discipline —
+   the committed repo file is the renderer's output). *)
+let publish_wired_pin : Canary_project_test.pure_test =
+  { name = "repo_model.publish_wired";
+    check =
+      (fun () ->
+        let pr = Canary_project_zarith.zarith_run in
+        let bind_art =
+          Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+        in
+        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+            let spec =
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/pub"
+            in
+            let bind_built =
+              Canary_enumerate.equal_provision
+                (Canary_enumerate.provision_of a bind_art)
+                Canary_artifact.Built
+            in
+            let has_pack =
+              List.exists spec.Canary_step_builder.pack_binding
+                ~f:(fun (l, _) -> Poly.equal l Canary_lang.OCaml)
+            in
+            let pin_checked =
+              Option.is_some
+                (spec.Canary_step_builder.check_post
+                   (Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml)))
+            in
+            Bool.equal has_pack bind_built && Bool.equal pin_checked bind_built)) }
+
+let opam_template_render_pin : Canary_project_test.pure_test =
+  { name = "tool.opam_template_render";
+    check =
+      (fun () ->
+        let committed =
+          Stdlib.In_channel.with_open_text
+            "canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam.in"
+            Stdlib.In_channel.input_all
+        in
+        String.equal
+          (Canary_opam_template.render Canary_project_zarith.zarith_wrapper_decl)
+          committed) }
+
 (* M2 step 4 pin (2026-08-16): the binding declarations ride on the
    [project_run] — tiny's spec exposes its three decls and the lookup
    matches by the artifact's mechanism (the decl's identity label).
@@ -1118,6 +1166,8 @@ let tests : Canary_project_test.pure_test list =
       repo_contents_pin;
       repo_axes_pin;
       forward_cell_expectation_pin;
+      publish_wired_pin;
+      opam_template_render_pin;
       tiny_binding_realization_pin;
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;

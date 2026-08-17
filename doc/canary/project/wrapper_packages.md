@@ -93,10 +93,11 @@ scenarios); the source-built placement is a dormant FALLBACK that a
 separate audit pass (`--audit-lib <artifact>`, say) can materialize —
 fetch + build + re-probe + blame. Project-spec-level config, not meta.
 
-## 4. The Publish generalization (the next mechanism)
+## 4. The Publish generalization — LANDED (2026-08-17)
 
-z3/llvm carry legacy-but-working Publish steps; the time to generalize
-them is NOW (2026-08-17, user), and tiny can ride it too. Current
+z3/llvm carried legacy-but-working Publish steps; the generalization is
+now landed for the ocaml/opam-binding pattern (active plan 2), and tiny
+can ride the same primitive. Current
 state: hand-written opam files per wrapper package in
 `canary/templates/opam-local-repo/packages/{z3,llvm,zarith}/` —
 z3.dev uses an `.in.tpl` with `%%Z3_CMAKE_BUILD_FLAGS%%` substitution
@@ -108,10 +109,16 @@ project) vs per-project template files. The packages differ only in
 the build body (z3: cmake+ninja; llvm: cmake; zarith: configure+make);
 the skeleton is common: opam metadata, the `CANARY_*_SRC` url, the
 build/install/remove slots, the conf-free depends, the same-findlib
-conflict. Proposal: a tool-layer renderer (`canary_opam_template` or
-inside `canary_pm_opam.ml`'s orbit) that emits the skeleton with the
-project's build body + the `%%VAR%%` substitutions — the per-project
-opam files become GENERATED artifacts of the project spec (like
-z3's), one template to maintain. The Publish step for the
-ocaml/opam-binding pattern then = render + `opam install` +
-pin-checked postcondition, the z3.dev dance generalized.
+conflict. LANDED shape: `Canary_opam_template` (tool/) renders the skeleton
+from a per-project `wrapper_decl` (the renderer pin asserts byte-
+equality with the committed file); the committed file is `opam.in`
+(the `.in` convention — opam indexes only `opam`; the pack primitive
+substs it with the `OPAMVAR_`-prefixed source var, the dir convention
+`packages/<name>/<name>.<version>/`); `Canary_pm_opam.pack_wrapper_cmd`
+self-registers the repo + drops the conflicts + installs + writes the
+marker; the pattern's Publish fires in the bind_built scenarios with
+the pin-checked postcondition, and the Fetched-binding probe carries
+the world check (self-heal: reinstall the stock package) with its
+check_post re-verifying the store on warm skips (the skip-gate fix in
+the playbook's findings). Verified: 3/3 PASS, the dance ends with the
+stock package restored.

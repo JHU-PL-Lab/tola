@@ -85,6 +85,35 @@ let gmp_source_master : Canary_artifact_source.source_repo =
     artifacts = [ Canary_artifact.a_lib ];
   }
 
+(* The wrapper decl (2026-08-17, active plan 2): renders the committed
+   canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam.in
+   byte-equal (pinned in the layer tests) — the pattern's Publish step
+   installs this package over the scenario's worktree. *)
+let zarith_wrapper_decl : Canary_opam_template.wrapper_decl = {
+  pkg = "zarith-no-conf";
+  src_var = "CANARY_ZARITH_SRC";
+  maintainer = "weng@cs.jhu.edu";
+  authors = "Antoine Miné, Xavier Leroy, Pascal Cuoq";
+  homepage = "https://github.com/ocaml/Zarith";
+  bug_reports = "https://github.com/ocaml/Zarith/issues";
+  license = "LGPL-2.0-only WITH OCaml-LGPL-linking-exception";
+  dev_repo = "git+https://github.com/ocaml/Zarith.git";
+  build_body = "[ \"sh\" \"-ec\" \"./configure && make\" ]";
+  install_body = "[ \"sh\" \"-ec\" \"make install\" ]";
+  remove_body = "\"ocamlfind\" \"remove\" \"zarith\"";
+  depends = [ "\"ocaml\" {>= \"4.08.0\"}"; "\"ocamlfind\"" ];
+  conflicts = [ "zarith" ];
+  synopsis = "Zarith without the conf-gmp hop — builds directly against the system GMP";
+  description =
+    "Canary-local package: zarith built WITHOUT the conf-gmp virtual package\n\
+     (the conf-free prototype — doc/canary/project/conf_survey.md). The build\n\
+     runs zarith's own ./configure, which probes GMP via pkg-config — the\n\
+     same check conf-gmp performs — so the system GMP dependency is real but\n\
+     not declared through opam's conf layer. Same findlib name (zarith), so\n\
+     it conflicts with the stock package; scenarios pin-switch between them\n\
+     (the z3 stable/dev store-pin dance, algorithm_explainer.md §10).";
+}
+
 let decl : Canary_opam_binding.t = {
   name = "zarith";
   opam_pkg = "zarith";
@@ -112,6 +141,7 @@ let decl : Canary_opam_binding.t = {
      stays empty until a dev bug worth fixing appears. *)
   sources = [ zarith_source_stable; zarith_source_dev ];
   binding_mechanism = Canary_mechanism.Cstubs;
+  wrapper = Some zarith_wrapper_decl;
 }
 
 let runner_spec = Canary_opam_binding.runner_spec decl

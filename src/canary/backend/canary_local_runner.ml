@@ -235,8 +235,15 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
     log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
     Step_done)
   (* Local cache: skip only if a PRIOR run recorded a met expectation here
-     (verdict marker), so a failed probe is never served as cached success. *)
-  else if Stdlib.Sys.file_exists (verdict_marker step) then
+     (verdict marker), so a failed probe is never served as cached success.
+     AND the postcondition must still hold (2026-08-17, the Publish case
+     study's finding — the code had drifted from the documented contract:
+     a store-mutating world's warm skip must re-verify the store, e.g. a
+     pin-checked fetch/publish whose [check_post] asserts the switch
+     provably holds the pinned state — a stale marker over a changed
+     store is otherwise a silent PASS for the wrong world). *)
+  else if Stdlib.Sys.file_exists (verdict_marker step)
+          && step.check_post ~output_dir:out ~variant_key:step.variant_id then
     if verdict_is_xfail (verdict_marker step) then (
       log ~event:"skip"
         ~detail:(Some ("verdict marker (prior xfail)"
@@ -523,7 +530,14 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
      a warm run leaves no per-step trace and `canary status` can't
      reconstruct the variant's matrix). *)
   List.iter steps ~f:(fun s ->
-      if Stdlib.Sys.file_exists (verdict_marker s) then begin
+      (* the postcondition must STILL hold for the seed (2026-08-17,
+         the Publish case study's finding — same gate as [run_step]'s
+         local-cache skip): a store-mutating step's check_post (the
+         pin-check) re-verifies the world, so a stale marker over a
+         changed store is never seeded as done. *)
+      if Stdlib.Sys.file_exists (verdict_marker s)
+         && s.check_post ~output_dir:s.output_dir ~variant_key:s.variant_id
+      then begin
         let xf = verdict_is_xfail (verdict_marker s) in
         logger.log ~tag:s.tag ~event:"skip"
           ~detail:(Some (if xf then
