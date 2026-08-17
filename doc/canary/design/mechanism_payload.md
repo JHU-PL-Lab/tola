@@ -195,9 +195,13 @@ the payload absorption types the Primitive params as payload fields.
    adjusting its commands is free.
 4. [ ] Land the raw-override harness warning FIRST — the decl-vs-Raw
    divergence must be visible before any external project work.
-5. [ ] Declare the FACTS for external projects (sqlite/z3/llvm) — the
-   mechanism identification drives checker/contract selection (see
-   above); their build commands stay Raw, respected as-is.
+5. [~] Declare the FACTS for external projects — the mechanism
+   identification drives checker/contract selection (see above); their
+   build commands stay Raw, respected as-is. Wiring landed 2026-08-16
+   (`pr_binding_decls` + `binding_decl_of` + the spec-check
+   `binding declarations` item); sqlite declares (pinned against its
+   api_source). z3/llvm remain — their wheel-bundled Python bindings
+   need a coupling convention before facts are written.
 6. [ ] Delete `mi_artifact_shape` prose (display derives from facts).
 
 **Deferred — NOT a to-do**: translating external projects' raw build
