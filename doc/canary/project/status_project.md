@@ -274,172 +274,98 @@ per-project ones.
   the per-project scenario counts in §1 above; remaining items below
   (the verdict-matrix pin, the Fetched-source-id resolution note).
   Next: Roadmap D — the web viewer.
-- [x] **Repo-provider unification** — LANDED with the 3-way (2026-08-15,
-  roadmap A): one `Repo of source_repo` variant (the axes' provision
-  says what it provides; `providing_action_of` reads the provision),
-  plus `Repo_axes of source_repo list` for per-channel families (C1).
-  `Built_from` deleted (zero live uses). Remaining half: a repo
-  shipping an ARTIFACT directly (not source) still has no
-  representation — a future shape.
-- [ ] **Multi-source artifact identity + link guards** (2026-08-16,
-  user): today ONE scenario carries ONE source placement (`a_source`
-  is a singleton artifact) — a binding built from ITS OWN repo against
-  a lib built from ANOTHER repo (the zarith/GMP off-tree shape, with
-  the lib source-built) can't be enumerated, and the config-level
-  filter "disable the binding from source B linking the lib built from
-  source A" has nothing to range over. Steps: (1) extend source
-  artifact identity with a repo discriminant (per-repo source rows);
-  (2) link-guard constraints — a declared rule on the binding row
-  (which lib channels/repos it may link), applied by the enumerate
-  filter, selectable per config. The config-as-dependency-resolving
-  framing lives in status.md's design directions.
-- [ ] **3-way mismatch probes — the checking focus** (2026-08-16,
-  user): the 3-way's value is the MISMATCH between the lib each source
-  builds and the USER side of the binding (the consumer surface). The
-  machinery exists — `mismatch_direction_of` + the c1..c8 compat
-  checks + the tiny-full forward-mismatch precedent — but no
-  pattern-A project declares `pr_mismatch_probes` (all empty), and
-  z3/llvm's is deliberately empty (the wheel demo is scenario-
-  invariant, not a cross-repo pairing). The natural 3-way probes:
-  binding built from the fork's tree over the OFFICIAL lib (cross-repo
-  ABI), binding@dev over lib@stable (the forward direction — zarith's
-  master stubs against stable GMP; needs a Built binding axis for
-  pattern A), stable binding over the dev lib (deploy mismatch). Wire
-  one per project, feed the three-version report.
-- [ ] **Historical-bug regression field** (2026-08-16, user — an
-  ENHANCEMENT, no hurry): each project records its old bugs with old
-  fixes as declared expectations — the regression suite re-finds the
-  bug in the buggy version (a pinned bad scenario) and confirms the
-  fixed version passes. Model: an extra field on the project spec
-  (e.g. `pr_known_bugs : (scenario_id × expected_contract) list`) or
-  rides the verdict-matrix pin below — the existing
-  contract-bindings/xfail machinery already demonstrates the shape
-  (parser_context, Opcode.UncondBr).
-- [ ] **Dependency-declaration field + the two combination checks**
-  (2026-08-16, user): record the BINDING→LIB dependency constraint as
-  project-spec data (a new field — the constraint regime predicts the
-  two failure modes: strict/exact deps → old bugs persist in the old
-  binding until its release, the npm case; flexible deps → a
-  previously-working combination can break when the lib moves, the
-  bundler case) AND check the two cross combinations:
-  OLD-binding-with-NEW-lib (the deploy mismatch — machinery exists:
-  `ax_runtime`/`dep_mode`, sqlite's runtime-edge slice) and
-  NEW-binding-with-OLD-lib (the forward mismatch — tiny-full's
-  precedent, c1-predicted xfail). First data point (zarith, verified
-  live): its opam file declares NO GMP version constraint — just
-  `conf-gmp` (presence via pkg-config) — the fully-flexible case;
-  justified by GMP's ABI discipline (libgmp.so.10 since 6.0/2014;
-  6.1/6.2/6.3 all binary-compatible, additive symbols only), which
-  our 7-op watchlist continuously verifies. Ranging over more GMP
-  versions needs a versioned GMP source or vendored older libs (the
-  system ships exactly ONE, 6.3.0).
-- [ ] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
-  AUDIT PASS** (2026-08-17, the refined rule; design in
-  wrapper_packages.md §3): a prebuilt (incl. a nightly/dev artifact,
-  if one exists — CI archives etc.) SHADOWS the source; when no
-  prebuilt exists, only the system PM's stable. The source-built path
-  is NOT automatic — it is a separate audit pass, run only when we
-  have decided to BLAME the lib (a fix to prepare or confirm). The
-  enumeration keeps the source-built placement dormant; the audit pass
-  materializes it (fetch + build + re-probe + blame). Project-spec
-  level. (The 2026-08-16 "system-lib-shadows-source config item" is
-  folded in: the trust-system-lib vs build-and-verify choice IS the
-  audit pass's first question.)
-- [ ] **Surface-drift expectations** (2026-08-16, user — an
-  enhancement): the probes record the totals (C side: `nm` count +
-  per-prefix breakdown; OCaml side: `ocamlobjinfo` module list) but
-  assert only the watchlists and `COUNT > 0`. Declare per-project
-  drift bounds on the TOTAL surface ("GMP exports ~N `__gmpz_`
-  symbols; a Δ beyond X is a report") as an expectation — rides the
-  verdict-matrix pin machinery; `canary inspect-diff` already does the
-  comparison.
-- [ ] **Publish generalization — the next mechanism** (2026-08-17,
-  user — "this is the thing"): z3/llvm carry legacy-but-working
-  Publish steps; generalize them so the ocaml/opam-binding pattern
-  (and tiny) can publish wrapper packages. Open: a GENERAL
-  opam-template (one skeleton parameterized per project — the build
-  body is the only variable part) vs per-project template files.
-  Design in wrapper_packages.md §4; the renderer belongs in the TOOL
-  layer (`canary_pm_opam.ml`'s orbit — distinct from the project-layer
-  pattern module).
-- [ ] **Pattern reframe: the datatype→functions conversion**
-  (2026-08-16, user; RENAMED 2026-08-17 — `Canary_opam_binding` is the
-  new name): the pattern becomes FUNCTIONS over the general types
-  instead of the `t` record (the NAME is fixed; the shape is the
-  remaining work); the taxonomy is small — with the current machinery
-  we should be able to describe ALL opam packages; python/pip bindings
-  follow the same idea after.
+- [x] **Repo-provider unification** — LANDED with the 3-way (roadmap A):
+  one `Repo of source_repo` variant + `Repo_axes` for per-channel
+  families. Remaining half: a repo shipping an ARTIFACT directly (not
+  source) has no representation — a future shape.
 - [x] **conf-* survey + conf-free prototype** — DONE 2026-08-17: the
-  survey is [conf_survey.md](conf_survey.md) (opam-side only, after
-  the trim); the `zarith-no-conf` prototype (lint-clean) + the
-  canary-side designs (fork layering, shadow rule, Publish plan) live
-  in [wrapper_packages.md](wrapper_packages.md). REMAINING: the live
-  install (rides the Publish generalization) and the per-project
-  template generation.
-- [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
-  the fork↔official z3 flip changed the scenario dir but warm-skipped
-  every step over stale markers (see the Found entry in §2). RESOLVED
-  BY DESIGN (2026-08-16, C1+C2): repo pins make every source placement
-  identity-bearing — `Repo_axes` families pin the per-repo (channel,
-  id) into the axes, so distinct scenario dirs → distinct output dirs →
-  distinct markers/cache keys (the runner's cache_project IS the
-  scenario dir); the fork↔official collision can't recur (fork id =
-  "arbipher" ≠ "latest").
-- [ ] **Pinned verdict-matrix regression (cold/warm determinism)**
-  (2026-08-16, user): the C2 5/5 verification was an ad-hoc `action`
-  run — the permanent suite pins only the enumeration SHAPE
-  (two_chain_pins 5/5/2, integration_smoke counts), NOT the per-scenario
-  VERDICTS. With the repo model declaring concrete refs, the verdict
-  matrix per project (per-scenario verdict + xfail contracts — what
-  `canary status` already renders) is deterministic in principle and
-  should be PINNED: a test reading the persisted run markers that
-  asserts the expected matrix (z3: 5 PASS + parser_context xfail in
-  every world; llvm: 5 PASS + UncondBr xfail in the 3 stable worlds;
-  zarith: 2 PASS; …). Cold/warm caveats: (a) warm markers don't record
-  WHICH ref they verified — a moved upstream tag/HEAD under the same
-  identity stays stale until a cold re-run (commit refs are immutable;
-  tag/HEAD refs are refresh-on-demand by design — recording the
-  verified content hash in the marker is the sound fix); (b) a cold
-  re-run of the heavy dev chains is ~1-2h each — CI-nightly material
-  (GH CI already runs the thin stable chains); a `--cold` audit flag
-  (clear markers + re-run) would make the cold path explicit.
-- [ ] **Build-step store-hazard audit** — the z3 self-check shadowing is
-  a CLASS: build steps that run OCaml bytecode/native self-checks read
-  the global store (stublibs/apt) unless guarded. Audit other projects'
-  build_binding steps (llvm's `ocaml_all` has no bytecode self-check —
-  believed clean); consider generalizing the `env_guard` param or
-  documenting the pattern in the action-table.
+  survey is [conf_survey.md](conf_survey.md) (opam-side only); the
+  `zarith-no-conf` prototype + the canary-side designs live in
+  [wrapper_packages.md](wrapper_packages.md). The live install rides
+  the Publish item below.
+- [x] **Fetched-source version id in the run-cache key** — RESOLVED BY
+  DESIGN (C1+C2): repo pins make every source placement
+  identity-bearing; the fork↔official collision can't recur.
+
+**The active plan** (the 2026-08-17 order, user-confirmed):
+
+1. [ ] **Forward-cell expectation** — zarith's instance of the 3-way
+   mismatch probes (below). The forward cell (master binding built
+   from the worktree, probed against the system lib) passes today;
+   a future break must surface as a PREDICTED compat finding (the
+   c1 stub↔lib check, tiny-full's precedent) instead of a raw FAIL.
+   Steps: a pattern-level contract binding for the built-binding
+   probe (forward cell only), the built-binding inspect summary the
+   c1 inputs resolve from, a pin that the expectation is
+   Expect_compat_derived there and Expect_success elsewhere.
+2. [ ] **Publish generalization** (user — "this is the thing"):
+   generalize z3/llvm's legacy Publish so the ocaml/opam-binding
+   pattern (and tiny) can publish wrapper packages. Open: a GENERAL
+   opam-template (one skeleton parameterized per project — the build
+   body is the only variable part) vs per-project files; the renderer
+   belongs in the TOOL layer (`canary_pm_opam.ml`'s orbit). Design in
+   wrapper_packages.md §4; also settles the build-body question
+   (CANARY_* env-style vs copy-into-sandbox — env-style for heavy,
+   copy for tiny).
+3. [ ] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
+   AUDIT PASS**: a prebuilt (incl. a nightly/dev artifact if one
+   exists) SHADOWS the source; no prebuilt → system PM's stable only;
+   the source-built path is a separate audit pass (blame/fix only,
+   never automatic). The enumeration keeps the placement dormant; the
+   pass materializes it. Project-spec level. Design in
+   wrapper_packages.md §3.
+4. [ ] **binding_decls for zarith** — the M2 pattern (the other
+   agent's convention); one declaration record closes the
+   spec-check ⚠.
+
+**Design-stage** (the enumeration/config family — when dependency
+complexity arrives; config as dependency resolving, status.md design
+directions):
+
+- [ ] **Multi-source artifact identity + link guards**: extend source
+  artifact identity with a repo discriminant (per-repo source rows)
+  so a binding from ITS repo against a lib from ANOTHER repo is
+  enumerable; then link-guard constraints (which lib channels/repos a
+  binding may link), selectable per config.
+- [ ] **Dependency-declaration field + the two combination checks**:
+  record the BINDING→LIB constraint regime (strict → persistent old
+  bugs; flexible → broken combinations) as spec data + the two cross
+  combinations (old-binding×new-lib deploy / new-binding×old-lib
+  forward). Zarith's live data point: no GMP version constraint
+  (conf-gmp presence only) — the fully-flexible case, resting on
+  GMP's ABI discipline.
+- [ ] **Pattern datatype→functions conversion**: `Canary_opam_binding`
+  becomes FUNCTIONS over the general types instead of the `t` record;
+  the taxonomy should cover ALL opam packages; pip follows the idea.
+
+**Enhancements** (no hurry — recorded, not scheduled):
+
+- [ ] **Historical-bug regression field** — known bugs-with-fixes as
+  declared expectations; the contract/xfail machinery shows the shape.
+- [ ] **Surface-drift expectations** — per-project drift bounds on the
+  TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
+- [ ] **Pinned verdict-matrix regression** — pin the per-scenario
+  verdict matrix (the C2 5/5 was ad-hoc); markers should record the
+  verified ref; a `--cold` audit flag; CI-nightly material.
+- [ ] **Build-step store-hazard audit** — the z3 self-check shadowing
+  class; audit other build steps' store reads (env_guard
+  generalization).
+
+**Housekeeping**:
+
 - [ ] **`source_fetch` primitive honor locals** — the table primitive
-  always clones from the remote URL (a wasteful ~1-2 GB llvm-project
-  clone into `_out` on every fresh dev-chain run) even when the row's
-  `local` checkout exists and the build uses it. The old
-  `source_fetch_cmd distro source` skipped the clone for locals — the
-  primitive should too (an optional `local` param). Functional today;
-  pure waste.
-- [ ] **Docs-mirror cp noise** — copying fetched clones into
-  `docs/canary/projects/` fails on the read-only `.git` pack files
-  (Permission denied, non-fatal). Cosmetic: skip `.git` in the mirror
-  copy.
-- [ ] **Fetched provision for tiny** — the one provision tiny still lacks.
-- [ ] **Location sub-axis** — probe locations (build-tree/staged/pm)
-  unmodeled as a first-class scenario axis. First slice landed: PM probe
-  resolution is per-project action-table config (dpkg/ldconfig params +
-  `probe_lib_needs`). Full enumeration (location in `assignment` →
-  separate scenarios per location; location-aware `scenario_dir_of`;
-  display + test pins) waits on a project where build_tree vs staged
-  probes produce materially different results — the forcing case.
-- [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode =
-  Independent` built, not yet wired to a live run through
-  `run_project_spec`.
-- [ ] **Web results page** — extend `canary_html.ml` with per-project bug
-  reports and fixed-PR links (the `docs/canary/projects/` mirror exists;
-  content is per-run artifacts, not reports).
-- [ ] **Upstream z3 PR — POST_BUILD self-check env isolation**
-  (2026-08-13) — z3's ml CMake self-check resolves dlls ambiently (see
-  the Fixed entry in §2); a 2-line CMake patch pins the built artifacts.
-  Pushing needs an arbipher/z3 branch + PR to Z3Prover/z3 (confirm the
-  fork is ours to push). Per user (2026-08-14): do it AFTER the 3-way
-  repo work lands.
+  always clones (~1-2 GB llvm-project) even when the row's `local`
+  checkout exists. Pure waste; functional today.
+- [ ] **Docs-mirror cp noise** — skip `.git` in the mirror copy.
+- [ ] **Fetched provision for tiny** — the one provision tiny lacks.
+- [ ] **Location sub-axis** — probe locations as a first-class axis;
+  waits on a forcing case.
+- [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode`
+  built, not yet wired to a live run.
+- [ ] **Web results page** — per-project bug reports + fixed-PR links
+  in `canary_html.ml`.
+- [ ] **Upstream z3 PR** — POST_BUILD self-check env isolation
+  (2-line CMake patch); per user, AFTER the 3-way repo work.
 
 ### Per-project
 
