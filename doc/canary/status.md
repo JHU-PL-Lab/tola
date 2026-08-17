@@ -162,16 +162,21 @@ Steps (each step keeps the suite green before the next):
    commands into templates is DEFERRED, not a to-do (user,
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
-6. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
+6. [ ] **Contract registry unification** — design in
+   [`contract_registry.md`](contract_registry.md) (2026-08-17): one
+   statement per contract (invariant as a FALSIFIER, tool-based inputs,
+   evidence kind, firing derived from mechanism × provision); the
+   per-project binding tables converge onto it and get deleted.
+7. [ ] **Contract wiring gaps** — c4/OCaml is Placeholder (abi_soname_bump
    OCaml probe not predicted); `symbol_orphan`'s build failure has no
-   contract. Known in `canary_expected_of` table. (After steps 4–5 —
-   these rows land on the typed ground.)
-7. [ ] **Richer inspectors** — L1b/L2/L4 fields declared but no inspectors.
+   contract. Known in `canary_expected_of` table. (Closes inside
+   step 6 — these rows land on the typed ground.)
+8. [ ] **Richer inspectors** — L1b/L2/L4 fields declared but no inspectors.
    Each needs: inspector → predict closure → binding rows.
-8. [ ] **Fault tags ↔ contracts sync** — `sym_missing`, `api_drop`,
+9. [ ] **Fault tags ↔ contracts sync** — `sym_missing`, `api_drop`,
    `behavior`, `abi_soname`, `sym_version`, `type_arity`, `api_repack`,
    `api_add`. Sync with SSOT when stable.
-9. [ ] **Canonical naming settle** — tentative scheme → final. Clean
+10. [ ] **Canonical naming settle** — tentative scheme → final. Clean
    `Sc.`-prefixed IDs. Provision-aware names for real projects.
 10. [ ] **Pre/post-checking picture** (user 2026-08-12; moved from M1
    2026-08-16 — the mechanism issue is now solid). The user originally
