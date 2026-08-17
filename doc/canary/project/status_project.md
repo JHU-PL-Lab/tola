@@ -344,6 +344,31 @@ per-project ones.
   path exists TODAY (the c1..c8 compat diff over two inspect summaries
   — build 6.3.0 once, diff its symbol surface against the system's).
   The `Sys_pkg.version_tag` field is the declaration seam.
+- [ ] **Surface-drift expectations** (2026-08-16, user — an
+  enhancement): the probes record the totals (C side: `nm` count +
+  per-prefix breakdown; OCaml side: `ocamlobjinfo` module list) but
+  assert only the watchlists and `COUNT > 0`. Declare per-project
+  drift bounds on the TOTAL surface ("GMP exports ~N `__gmpz_`
+  symbols; a Δ beyond X is a report") as an expectation — rides the
+  verdict-matrix pin machinery; `canary inspect-diff` already does the
+  comparison.
+- [ ] **Pattern reframe: ocaml/opam binding patterns, not "project-a"**
+  (2026-08-16, user): `Canary_pattern_a` is really THE ocaml/opam
+  binding pattern — an opam binding over a system C lib via the
+  `conf-*` virtual package. Reframe + rename accordingly (together
+  with the de-pattern-a conversion: functions over the general
+  types); the taxonomy is small — with the current machinery we
+  should be able to describe ALL opam packages; python/pip bindings
+  follow the same idea after.
+- [ ] **conf-* mechanics survey + conf-free package templates**
+  (2026-08-16, user): survey how `conf-*` works (opam's system-dep
+  virtual packages — presence checks via pkg-config/command, per-distro
+  maintainer-approved version mappings; the human-approval bottleneck
+  vs npm's automation) and prototype a CONF-FREE package per project —
+  `zarith-no-conf` carrying its own GMP dependency, the same idea as
+  the z3.dev/llvm.dev-shared local packages in
+  `canary/templates/opam-local-repo/`. Then a template for each new
+  OCaml-binding project.
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED
