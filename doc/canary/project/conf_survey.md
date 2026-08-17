@@ -122,3 +122,36 @@ the conf-free variant — so the same helpers describe both worlds, and
 the wrapper-package declaration (`pr_wrapper_pkgs` + the local repo
 template) is the pattern's conf-bypass leg. After ocaml/opam, pip
 follows the same idea.
+
+## 6. The zarith matrix and the shadow preference (2026-08-17)
+
+The combination space for the case study: GMP has no system dev
+package (`libgmp-dev` ships only 6.3.0) and no nightly — the dev GMP
+comes from the OFFICIAL repo (gmplib.org: release tarballs + the hg
+repository), which the repo model already covers (`Tar`/`Hg` remotes).
+Since conf-gmp constrains nothing, a future GMP release flows into the
+system path automatically — the matrix is
+
+```
+                 gmp 6.3.0 (system)   gmp master (official repo)
+zarith 1.14      current cell          old-binding × new-lib (deploy)
+zarith master    new-binding × old-lib (forward)   new × new
+```
+
+gmp master can be a fetched archive (vendored download from the
+official remote) or built from the latest source.
+
+**The shadow preference** (user's design): ALWAYS probe the latest
+prebuilt lib first — if it works, skip the source; only if it FAILS do
+we on-demand fetch the source, build, re-probe, and blame. Declared at
+PROJECT-SPEC level (not meta): the spec declares BOTH the vendored lib
+and the source repo, and the LIB SHADOWS THE SOURCE — the internet
+search is spec authoring, done once, working for all projects. Canary
+shape: the lib row declares both provisions for the same
+(channel, version); a resolution pass keeps the prebuilt placement and
+marks the Built placement as a FALLBACK; the runner escalates to the
+fallback on the preferred scenario's failure (fetch source + build +
+re-probe). This differs from z3's current shape, where the two
+provisions enumerate as two SEPARATE scenarios (Fetched@Stable vs
+Built@Dev are different cells) — the shadow applies when both
+provisions would materialize the SAME cell.
