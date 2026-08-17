@@ -114,6 +114,15 @@ let action_cmd =
              With @all: forces thin everywhere (the batch default already \
              runs heavy projects thin).")
   in
+  let audit_lib_arg =
+    Arg.(
+      value & flag
+      & info [ "audit-lib" ]
+          ~doc:
+            "The separate AUDIT PASS: full + Materialize_source — the shadowed \
+             source-built placements materialize (fetch + build + re-probe + \
+             blame). Manual, blame-driven; the batch never picks it.")
+  in
   (* Project registry (2026-08-11; plain [project_run]s since 2026-08-12 —
      the [Multi] entry kind retired with ssl's store-pin migration). *)
   (* Tiny runs via the A2-with-factory path
@@ -127,7 +136,7 @@ let action_cmd =
      — one derive_steps + run_graph, no multi-variant. *)
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
-  let run project _quick failfast cache_path disable_contract_csv thin () =
+  let run project _quick failfast cache_path disable_contract_csv thin audit_lib () =
     let root = "_out" in
     let cli_disabled = Canary_compat.contract_ids_of_csv disable_contract_csv in
     if cli_disabled <> [] then
@@ -137,7 +146,10 @@ let action_cmd =
     (* the run config: --thin sets the policy variant; the batch sets its
        own per-project config (tier-based) inside [Canary_batch.run]. *)
     let config =
-      if thin then { Canary_project_run.policy = Canary_project_run.Thin }
+      if audit_lib then
+        { Canary_project_run.policy = Canary_project_run.Audit_lib }
+      else if thin then
+        { Canary_project_run.policy = Canary_project_run.Thin }
       else Canary_project_run.default_config
     in
     let run_pr pr = run_project_run ~config pr ~root ~failfast in
@@ -164,8 +176,8 @@ let action_cmd =
            the default config is tier-based (Heavy thin, Light full);
            --thin forces thin everywhere; a single-project run always
            uses the full policy. *)
-        Canary_batch.run ~force_thin:thin ~root ~failfast
-          Canary_registry.all_projects
+        Canary_batch.run ~force_thin:thin ~force_audit:audit_lib ~root
+          ~failfast Canary_registry.all_projects
     | Some name -> (
         match List.assoc_opt name Canary_registry.all_projects with
         | Some pr -> run_pr pr
@@ -181,7 +193,7 @@ let action_cmd =
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(
       const run $ project $ quick $ failfast $ cache_path_arg
-      $ disable_contract_arg $ thin_arg $ const ())
+      $ disable_contract_arg $ thin_arg $ audit_lib_arg $ const ())
 
 let spec_cmd =
   let project =
@@ -201,6 +213,15 @@ let spec_cmd =
             "project_run projects (tiny-full, sqlite, z3, llvm): the thin \
              Subset[Stable] enumeration.")
   in
+  let audit_lib =
+    Arg.(
+      value & flag
+      & info [ "audit-lib" ]
+          ~doc:
+            "The audit view: full + Materialize_source — the shadowed \
+             source-built placements materialize. DRY-RUN ONLY (spec never \
+             executes); mirror of the action flag.")
+  in
   let by_artifact =
     Arg.(
       value & flag
@@ -217,7 +238,7 @@ let spec_cmd =
             "Emit JSON (machine-readable; supersedes --by-artifact). With \
              @all, one object keyed by project — the refactor cross-check.")
   in
-  let run proj thin by_artifact json () =
+  let run proj thin audit_lib by_artifact json () =
     (* Every project is a [project_run] now; the registry is the single
        source of truth. ssl is a [Multi] — no spec view yet. *)
     let show ?policy pr =
@@ -229,9 +250,12 @@ let spec_cmd =
       else if by_artifact then Canary_project_run.print_artifacts ?policy pr
       else Canary_project_run.print_spec ?policy pr
     in
-    (* --thin is a runner policy, valid on any project_run *)
-    let show_thin pr =
-      if thin then show ~policy:(Canary_project_run.thin_policy ()) pr
+    (* --thin / --audit-lib are runner policies, valid on any project_run
+       (audit wins, mirroring [action]'s precedence) *)
+    let show_enum pr =
+      if audit_lib then
+        show ~policy:(Canary_project_run.audit_policy ()) pr
+      else if thin then show ~policy:(Canary_project_run.thin_policy ()) pr
       else show pr
     in
     match proj with
@@ -254,7 +278,7 @@ let spec_cmd =
         else List.iter show prs)
     | Some name -> (
         match List.assoc_opt name Canary_registry.all_projects with
-        | Some pr -> show_thin pr
+        | Some pr -> show_enum pr
         | None ->
             Fmt.epr
               "usage: canary spec <@all|%s|tiny1/<name>>@."
@@ -267,7 +291,7 @@ let spec_cmd =
          "Dry-run snapshot: declared artifacts (grouped) + enumerated \
           scenarios (project_run: tiny-full/sqlite) or per-scenario provisions \
           (raw runner_spec: z3/llvm). No execution.")
-    Term.(const run $ project $ thin $ by_artifact $ json $ const ())
+    Term.(const run $ project $ thin $ audit_lib $ by_artifact $ json $ const ())
 
 (* Static spec-maturity audit (2026-08-13): reads ONLY the declared
    [project_run] (artifact rows + wrapper pkgs) — no enumeration, no

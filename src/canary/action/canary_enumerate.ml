@@ -247,6 +247,18 @@ let enumerate_points ~(artifacts : artifact_id list)
 
 type version_mode = Lockstep | Independent
 
+(** The prebuilt-shadows-source heuristic as a POLICY item (2026-08-17,
+    active plan 3 — the user's design: the project SPEC stays clean; the
+    shadowing is an enumeration-config choice). [Shadow_prebuilt]: when a
+    Built placement and a prebuilt placement (Fetched/Vendored) would
+    materialize the SAME cell — same artifact, channel, and version id,
+    everything else identical — the prebuilt wins and the Built
+    assignment is dropped (dormant): the belief that a same-version
+    prebuilt, built with an unknown script, behaves like a self-built
+    one. [Materialize_source]: both survive — the SEPARATE AUDIT PASS,
+    run only when we have decided to BLAME the lib. *)
+type shadow_policy = Shadow_prebuilt | Materialize_source
+
 (** How much of an axis a config expands (ssot §4.2): [Free] collapses to
     one representative; [Subset] is a curated list; [Full] is every value. *)
 type 'a level = Free | Subset of 'a list | Full
@@ -263,6 +275,7 @@ type 'm config = {
   version : Canary_basic.channel level;
   version_mode : version_mode;
   mutation : (artifact_id * 'm) level;
+  shadow : shadow_policy;
 }
 
 (** Instantiate the algorithm with a config, given each axis's universe (its
@@ -320,7 +333,8 @@ let tiny_slice ~(artifacts : artifact_id list)
   run_config ~artifacts ~all_provisions_of:(fun _ -> [ Built ])
     ~all_versions_of:(fun _ _ -> [ Canary_basic.good Canary_basic.Dev ])
     ~all_mutations:mutations
-    { provision = Free; version = Free; mutation = Full; version_mode = Lockstep }
+    { provision = Free; version = Free; mutation = Full; version_mode = Lockstep;
+      shadow = Shadow_prebuilt }
 
 (** A general project's config: provision [Full] (walk the provision axis
     over the project's universe), mutation [Free] (positive only). Yields
@@ -336,7 +350,63 @@ let general_slice ~(artifacts : artifact_id list)
   let versions = List.map versions ~f:Canary_basic.good in
   run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
     ~all_versions_of:(fun _ _ -> versions) ~all_mutations:[]
-    { provision = Full; version = Full; mutation = Free; version_mode = Lockstep }
+    { provision = Full; version = Full; mutation = Free; version_mode = Lockstep;
+      shadow = Shadow_prebuilt }
+
+(** The shadow resolution (2026-08-17, active plan 3): under
+    [Shadow_prebuilt], drop an assignment whose artifact has a [Built]
+    placement when an OTHERWISE-IDENTICAL assignment carries a prebuilt
+    (Fetched/Vendored) placement at the same (channel, version id) — the
+    same cell, the prebuilt wins. Conservative: only exact-cell
+    duplicates drop — a built binding over a prebuilt lib (the forward
+    cell) is a designed scenario, not a shadow duplicate.
+    [Materialize_source] keeps both (the audit pass). *)
+let shadow_filter ~(shadow : shadow_policy) (asgs : assignment list) :
+    assignment list =
+  match shadow with
+  | Materialize_source -> asgs
+  | Shadow_prebuilt ->
+      let prebuilt (pl : placement) =
+        match pl.provision with
+        | Fetched | Vendored -> true
+        | _ -> false
+      in
+      (* the built side's version identity: SOURCE-PRIMARY — a Built
+         artifact's version IS its source's (the explainer's Follows_input
+         rule), so the id inherits from the source placement's pin. An
+         unknown (empty) version never shadows: the heuristic requires
+         the SAME VERSION to be known on both sides (an ambient prebuilt
+         can't be believed equivalent to a specific built version — the
+         sqlite case: its built amalgamation versions are NOT the
+         system's). *)
+      let built_version_id (a : assignment) : string =
+        if provided a a_source then (version_of a a_source).id else ""
+      in
+      let same_cell (a : assignment) (id, (pl : placement))
+          (other : assignment) =
+        let built_id = built_version_id a in
+        if String.equal built_id "" then false
+        else
+          match placement_of other id with
+          | Some op ->
+              prebuilt op
+              && String.equal op.version.id built_id
+              && Canary_basic.equal_channel op.version.channel
+                   pl.version.channel
+              && List.for_all a ~f:(fun (id2, (pl2 : placement)) ->
+                     equal_artifact_id id2 id
+                     || (match placement_of other id2 with
+                         | Some op2 ->
+                             equal_build_id op2.version pl2.version
+                             && equal_provision op2.provision pl2.provision
+                         | None -> false))
+          | None -> false
+      in
+      List.filter asgs ~f:(fun a ->
+          not
+            (List.exists a ~f:(fun (id, (pl : placement)) ->
+                 equal_provision pl.provision Built
+                 && List.exists asgs ~f:(same_cell a (id, pl)))))
 
 (** A2 — fold a [point] into a concrete [assignment], the form the run
     consumes. The algorithm keeps the mutation SEPARATE from the all-Good
@@ -412,7 +482,8 @@ type 'm policy = {
     scenario. (A function, not a value, so its ['m] doesn't get locked by the
     value restriction across projects.) *)
 let full_policy () : 'm policy =
-  { config = { provision = Full; version = Full; version_mode = Lockstep; mutation = Free }; mutations = [] }
+  { config = { provision = Full; version = Full; version_mode = Lockstep; mutation = Free;
+               shadow = Shadow_prebuilt }; mutations = [] }
 
 (** STAGE 2 — enumerate a declared [project_spec] under a [policy] into concrete
     assignments: resolve the config levels over the spec's per-artifact universes
@@ -437,31 +508,34 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
      cell (Built binding × FETCHED lib, the designed mismatch probe)
      survives: only the source couples, the lib pairing stays free.
      (Independent mode skips both — the raw free product.) *)
-  if Poly.equal policy.config.version_mode Lockstep then
-    List.filter assignments ~f:(fun a ->
-        List.for_all (ps_artifacts s) ~f:(fun id ->
-            match ps_axes_of s id with
-            | Some ax -> (
-                match ax.ax_follows with
-                | Some leader ->
-                    (not (provided a id))
-                    || (not (provided a leader))
-                    || Canary_basic.equal_channel
-                         (version_of a id).channel
-                         (version_of a leader).channel
-                | None -> (
-                    match kind_of id with
-                    | Binding _ ->
-                        (* 2026-08-17, the zarith 2×2: a Built binding
-                           must match the source's channel *)
-                        (not (equal_provision (provision_of a id) Built))
-                        || (not (provided a a_source))
-                        || Canary_basic.equal_channel
-                             (version_of a id).channel
-                             (version_of a a_source).channel
-                    | _ -> true))
-            | None -> true))
-  else assignments
+  let assignments =
+    if Poly.equal policy.config.version_mode Lockstep then
+      List.filter assignments ~f:(fun a ->
+          List.for_all (ps_artifacts s) ~f:(fun id ->
+              match ps_axes_of s id with
+              | Some ax -> (
+                  match ax.ax_follows with
+                  | Some leader ->
+                      (not (provided a id))
+                      || (not (provided a leader))
+                      || Canary_basic.equal_channel
+                           (version_of a id).channel
+                           (version_of a leader).channel
+                  | None -> (
+                      match kind_of id with
+                      | Binding _ ->
+                          (* 2026-08-17, the zarith 2×2: a Built binding
+                             must match the source's channel *)
+                          (not (equal_provision (provision_of a id) Built))
+                          || (not (provided a a_source))
+                          || Canary_basic.equal_channel
+                               (version_of a id).channel
+                               (version_of a a_source).channel
+                      | _ -> true))
+              | None -> true))
+    else assignments
+  in
+  assignments |> shadow_filter ~shadow:policy.config.shadow
 
 (** Read a slot's provision off a concrete action set (which action-graph
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
@@ -665,18 +739,21 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
      the designed mismatch probe) survives: only the source couples,
      the lib pairing stays free. Independent mode skips it — the raw
      free product (the enumeration/config split). *)
-  if Poly.equal cfg.version_mode Lockstep then
-    List.filter assignments ~f:(fun a ->
-        List.for_all (ps_artifacts s) ~f:(fun id ->
-            match kind_of id with
-            | Binding _ ->
-                (not (equal_provision (provision_of a id) Built))
-                || (not (provided a a_source))
-                || Canary_basic.equal_channel
-                     (version_of a id).channel
-                     (version_of a a_source).channel
-            | _ -> true))
-  else assignments
+  let assignments =
+    if Poly.equal cfg.version_mode Lockstep then
+      List.filter assignments ~f:(fun a ->
+          List.for_all (ps_artifacts s) ~f:(fun id ->
+              match kind_of id with
+              | Binding _ ->
+                  (not (equal_provision (provision_of a id) Built))
+                  || (not (provided a a_source))
+                  || Canary_basic.equal_channel
+                       (version_of a id).channel
+                       (version_of a a_source).channel
+              | _ -> true))
+    else assignments
+  in
+  assignments |> shadow_filter ~shadow:cfg.shadow
 
 (* ── pattern naming (2026-08-08) ──
    Maps a concrete assignment to the abstract action-chain pattern it

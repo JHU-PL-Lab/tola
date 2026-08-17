@@ -559,8 +559,9 @@ let thin_config_level_test : pure_test =
    (Fetched@1.0.0 + Built@Stable over a 1.0.0-pinned source) drops the
    Built world under Shadow_prebuilt, keeps both under Materialize_source;
    DIFFERENT cells (Fetched@Stable + Built@Dev — the z3 shape) never
-   shadow in either policy. Independent mode (no couplings) isolates the
-   shadow from the Lockstep channel coupling. *)
+   shadow in either policy (the z3 dev chain builds from a dev checkout,
+   so the built cell's source-primary id differs from the stable prebuilt
+   pin's). *)
 let shadow_policy_drops_same_cell_built_test : pure_test =
   { name = "enumerate.shadow_policy_drops_same_cell_built";
     check = (fun () ->
@@ -591,13 +592,18 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
               mutations = [] }
           same_cell_spec
       in
-      (* DIFFERENT cells: prebuilt Stable vs built Dev — the z3 shape.
-         Independent mode so the Lockstep channel coupling doesn't filter
-         the Built@Dev world first (the shadow must be the only filter). *)
+      (* DIFFERENT cells: prebuilt Stable (pin "1.0.0") vs built Dev over a
+         Dev-pinned source ("dev-src") — the z3 shape (the dev chain builds
+         from a dev checkout; the prebuilt is the stable release). The
+         built side's id differs from the prebuilt's, so no shadowing in
+         either policy. *)
+      let pin_dev =
+        { Canary_basic.channel = B.Dev; id = "dev-src"; quality = Canary_basic.Good }
+      in
       let diff_cell_spec : Canary_artifact.project_spec =
         { ps_universe =
             [ ( Canary_artifact.a_source,
-                Canary_artifact.(axes ~pins:[ pin_1 ] [ (Fetched, [ B.Stable ]) ]) );
+                Canary_artifact.(axes ~pins:[ pin_dev ] [ (Fetched, [ B.Dev ]) ]) );
               ( Canary_artifact.a_lib,
                 Canary_artifact.(
                   axes ~pins:[ pin_1 ]
@@ -605,27 +611,17 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
               (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
       in
       let diff_shadowed =
-        EN.enumerate ~tag:(fun () -> "")
-          ~policy:
-            { config =
-                { (EN.full_policy ()).config with version_mode = EN.Independent };
-              mutations = [] }
-          diff_cell_spec
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) diff_cell_spec
       in
       let diff_materializing =
         EN.enumerate ~tag:(fun () -> "")
           ~policy:
             { config =
-                { (EN.full_policy ()).config with
-                  shadow = EN.Materialize_source; version_mode = EN.Independent };
+                { (EN.full_policy ()).config with shadow = EN.Materialize_source };
               mutations = [] }
           diff_cell_spec
       in
       let lib_prov a = EN.provision_of a Canary_artifact.a_lib in
-      Fmt.pr
-        "DEBUG shadowed=%d materializing=%d diff_shadowed=%d diff_materializing=%d@."
-        (List.length shadowed) (List.length materializing)
-        (List.length diff_shadowed) (List.length diff_materializing);
       (* same cell: the prebuilt shadows the built under Shadow_prebuilt *)
       List.length shadowed = 1
       && List.exists shadowed ~f:(fun a -> EN.equal_provision (lib_prov a) EN.Fetched)

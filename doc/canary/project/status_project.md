@@ -315,13 +315,17 @@ per-project ones.
    wrapper_packages.md §4; also settles the build-body question
    (CANARY_* env-style vs copy-into-sandbox — env-style for heavy,
    copy for tiny).
-3. [ ] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
-   AUDIT PASS**: a prebuilt (incl. a nightly/dev artifact if one
-   exists) SHADOWS the source; no prebuilt → system PM's stable only;
-   the source-built path is a separate audit pass (blame/fix only,
-   never automatic). The enumeration keeps the placement dormant; the
-   pass materializes it. Project-spec level. Design in
-   wrapper_packages.md §3.
+3. [x] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
+   AUDIT PASS** — LANDED 2026-08-17 (active plan 3), as an
+   enumeration-POLICY item per the user's correction (the spec stays
+   clean; the shadow is a config item used in the enumeration part):
+   `shadow_policy = Shadow_prebuilt | Materialize_source`; the firing
+   condition is identity-bearing same-version (built side's id =
+   SOURCE-PRIMARY, both ids non-empty and equal, channels equal);
+   `run_policy` gains the `Audit_lib` rung (`--audit-lib` = full +
+   Materialize_source; the batch never audits); pinned by
+   `enumerate.shadow_policy_drops_same_cell_built` +
+   `shadow.policy_ladder`. Design in wrapper_packages.md §3.
 4. [ ] **binding_decls for zarith** — the M2 pattern (the other
    agent's convention); one declaration record closes the
    spec-check ⚠.

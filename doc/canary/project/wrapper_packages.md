@@ -86,12 +86,35 @@ against the system lib — the designed mismatch probe). The
 `gmp_source_master` repo record stays DECLARED but unwired (the ssl
 unwired-dev precedent); the hg checkout lives in `contrib/gmp-all/`.
 
-The general **shadow mechanism** (to-do): when a prebuilt for the same
-cell exists, the spec declares BOTH the prebuilt and the source; the
-enumeration resolves the prebuilt first (a resolution pass, not two
-scenarios); the source-built placement is a dormant FALLBACK that a
-separate audit pass (`--audit-lib <artifact>`, say) can materialize —
-fetch + build + re-probe + blame. Project-spec-level config, not meta.
+The general **shadow mechanism** — LANDED (2026-08-17, active plan 3)
+as an enumeration-POLICY item, no spec changes (per the user's
+correction: the spec stays simple and clean; whether/how the shadowing
+happens is a config item used in the enumeration part):
+
+- `Canary_enumerate.shadow_policy = Shadow_prebuilt | Materialize_source`
+  on the enumeration config (default `Shadow_prebuilt`). When a spec
+  declares BOTH a prebuilt column (Fetched/Vendored) and a Built column
+  for the same artifact, the shadow RESOLVES them into one scenario —
+  the prebuilt wins, the Built placement is dropped.
+- The firing condition is IDENTITY-BEARING same-version: the Built
+  side's version id is SOURCE-PRIMARY (a Built artifact's version IS
+  its source's — the source placement's pin id), both ids must be
+  non-empty and EQUAL, channels must match, and the rest of the
+  assignment must be identical. An ambient (unpinned) prebuilt never
+  shadows — the same-version belief needs the version to be known on
+  both sides (sqlite's built amalgamations are NOT the system's).
+- `Materialize_source` keeps both worlds — the SEPARATE AUDIT PASS
+  (blame-driven): `run_policy` gains the `Audit_lib` rung (`--audit-lib`,
+  full + Materialize_source); the batch never picks it. Fetch + build +
+  re-probe + blame.
+- Pinned by `enumerate.shadow_policy_drops_same_cell_built` (same cell
+  drops under Shadow_prebuilt, survives under Materialize_source;
+  different cells — the z3 shape — never shadow) and
+  `shadow.policy_ladder` (Full/Thin shadow, Audit_lib materializes).
+- zarith/z3/llvm today: unchanged (zarith's lib row is Fetched-only;
+  z3/llvm's Fetched@Stable + Built@Dev are different cells). The
+  machinery is ready for the day a blame-driven spec change adds a
+  Built column.
 
 ## 4. The Publish generalization — LANDED (2026-08-17)
 

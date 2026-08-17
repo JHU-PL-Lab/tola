@@ -1814,7 +1814,7 @@ let tiny_full_assignments (spec : tiny_full_spec) :
   in
   let tiny_policy : string Canary_enumerate.policy =
     { config =
-        Canary_enumerate.{ provision = Free; version = Free; mutation = Full; version_mode = Lockstep };
+        Canary_enumerate.{ provision = Free; version = Free; mutation = Full; version_mode = Lockstep; shadow = Shadow_prebuilt };
       mutations =
         List.concat_map spec.tf_artifacts ~f:(fun aid ->
             List.map (spec.tf_bad_tags_of aid) ~f:(fun tag -> (aid, tag))) }

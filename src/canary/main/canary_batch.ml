@@ -62,17 +62,21 @@ let run_one ?(config = Canary_project_run.default_config)
     [Light] full; [force_thin] (the CLI's [--thin]) overrides everywhere.
     The project list is an ARGUMENT (the CLI passes the registry), so
     callers can batch any subset. *)
-let run ?(force_thin = false) ~root ~failfast
+let run ?(force_thin = false) ?(force_audit = false) ~root ~failfast
     (projects : (string * Canary_project_run.project_run) list) : unit =
   List.iter
     (fun (name, pr) ->
       let config =
-        if force_thin then { Canary_project_run.policy = Canary_project_run.Thin }
+        if force_audit then
+          { Canary_project_run.policy = Canary_project_run.Audit_lib }
+        else if force_thin then
+          { Canary_project_run.policy = Canary_project_run.Thin }
         else Canary_project_run.batch_config pr
       in
       Fmt.pr "[batch] %s: %s policy@." name
         (match config.Canary_project_run.policy with
         | Canary_project_run.Full -> "full"
-        | Canary_project_run.Thin -> "thin (heavy tier)");
+        | Canary_project_run.Thin -> "thin (heavy tier)"
+        | Canary_project_run.Audit_lib -> "audit-lib");
       ignore (run_one ~config pr ~root ~failfast))
     projects

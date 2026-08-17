@@ -151,7 +151,8 @@ let thin_policy () : unit Canary_enumerate.policy =
         { provision = Canary_enumerate.Full;
           version = Canary_enumerate.Subset [ Canary_basic.Stable ];
           version_mode = Canary_enumerate.Lockstep;
-          mutation = Canary_enumerate.Free };
+          mutation = Canary_enumerate.Free;
+          shadow = Canary_enumerate.Shadow_prebuilt };
     mutations = [] }
 
 let independent_policy () : unit Canary_enumerate.policy =
@@ -159,7 +160,22 @@ let independent_policy () : unit Canary_enumerate.policy =
       Canary_enumerate.
         { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
           version_mode = Canary_enumerate.Independent;
-          mutation = Canary_enumerate.Free };
+          mutation = Canary_enumerate.Free;
+          shadow = Canary_enumerate.Shadow_prebuilt };
+    mutations = [] }
+
+(** The AUDIT policy (2026-08-17, active plan 3): full enumeration with
+    [Materialize_source] — the shadowed source-built placements
+    materialize (fetch + build + re-probe + blame). Manual,
+    blame-driven; the batch never picks it. Inert (== full) until a
+    spec declares a Built column sharing a prebuilt cell. *)
+let audit_policy () : unit Canary_enumerate.policy =
+  { config =
+      Canary_enumerate.
+        { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
+          version_mode = Canary_enumerate.Lockstep;
+          mutation = Canary_enumerate.Free;
+          shadow = Canary_enumerate.Materialize_source };
     mutations = [] }
 
 (** THE run-layer policy choice (2026-08-14): ONE named variant the CLI /
@@ -180,8 +196,16 @@ let independent_policy () : unit Canary_enumerate.policy =
 type run_policy =
   | Full
   | Thin
+  | Audit_lib
+      (** the SEPARATE AUDIT PASS (2026-08-17, active plan 3): full +
+          [Materialize_source] — the shadowed source-built placements
+          materialize (fetch + build + re-probe + blame). Manual,
+          blame-driven; the batch never picks it. *)
 
-let string_of_run_policy = function Full -> "full" | Thin -> "thin"
+let string_of_run_policy = function
+  | Full -> "full"
+  | Thin -> "thin"
+  | Audit_lib -> "audit-lib"
 
 (** The run config — the IMMUTABLE settings a run consumes. [policy] is
     the first field; the space is open for the batch's future knobs
@@ -194,11 +218,13 @@ let default_config : run_config = { policy = Full }
 
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
-    of [scenarios_of]); [Thin] = the Subset[Stable] enumeration. *)
+    of [scenarios_of]); [Thin] = the Subset[Stable] enumeration;
+    [Audit_lib] = the full enumeration with [Materialize_source]. *)
 let enumeration_policy_of (c : run_config) : unit Canary_enumerate.policy option =
   match c.policy with
   | Full -> None
   | Thin -> Some (thin_policy ())
+  | Audit_lib -> Some (audit_policy ())
 
 (** THE batch default policy (2026-08-14): [Heavy] projects run THIN
     (their source-built chains are Dev worlds, so thin bypasses them),
