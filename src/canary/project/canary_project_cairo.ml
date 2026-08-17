@@ -85,6 +85,7 @@ let decl : Canary_pattern_a.t = {
      would be a major version bump. *)
   ocaml_module_watchlist = cairo_ocaml_watchlist;
   sources = [ cairo_source_stable ];
+  lib_sources = [];
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 

@@ -62,6 +62,25 @@ let zarith_source_dev : Canary_artifact_source.source_repo =
     version = Canary_basic.{ channel = Canary_basic.Dev; id = "master" };
     ref_ = "master" }
 
+(* GMP's own repo — the OFF-TREE lib source, the 2×2's DEV column
+   (2026-08-17, conf_survey.md §6). The system ships exactly one GMP
+   (6.3.0); the dev is gmplib.org's canonical MERCURIAL repo ([Hg]
+   remote — the hg checkout lives in contrib/gmp-all/gmp, refreshed on
+   demand). The repo builds the lib only — GMP ships no binding. *)
+let gmp_source_master : Canary_artifact_source.source_repo =
+  { Canary_artifact_source.name = "gmp";
+    remote = Some (Canary_artifact_source.Hg "https://gmplib.org/repo/gmp/");
+    locals = Canary_artifact_source.mk_locals "contrib/gmp-all/gmp";
+    version = Canary_basic.{ channel = Dev; id = "master" };
+    (* hg's default branch IS the dev line (the release tarballs branch off it) *)
+    ref_ = "default";
+    official = true;
+    build_sys_deps = [ "m4" ];
+    api_source = None;
+    label = None;
+    artifacts = [ Canary_artifact.a_lib ];
+  }
+
 let decl : Canary_pattern_a.t = {
   name = "zarith";
   opam_pkg = "zarith";
@@ -88,6 +107,10 @@ let decl : Canary_pattern_a.t = {
      first-class per-channel repos (one scenario each). The fork slot
      stays empty until a dev bug worth fixing appears. *)
   sources = [ zarith_source_stable; zarith_source_dev ];
+  (* C2.5 (2026-08-17): the 2×2 matrix — GMP's official hg master as the
+     lib's source-built Dev column (the system's 6.3.0 keeps the Fetched
+     Stable column). *)
+  lib_sources = [ gmp_source_master ];
   binding_mechanism = Canary_mechanism.Cstubs;
 }
 

@@ -429,8 +429,14 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
       policy.config
     |> List.map ~f:(assignment_of_point ~tag)
   in
-  (* Post-filter: [ax_follows] constraint. An artifact whose [ax_follows]
-     points to a leader must match the leader's version (Lockstep only). *)
+  (* Post-filter: [ax_follows] constraint + the Built-binding↔source
+     channel coupling. An artifact whose [ax_follows] points to a leader
+     must match the leader's version (Lockstep only); a BUILT binding
+     builds FROM the scenario's source (source-primary, the same rule as
+     the Built lib) so its channel must match the source's — the forward
+     cell (Built binding × FETCHED lib, the designed mismatch probe)
+     survives: only the source couples, the lib pairing stays free.
+     (Independent mode skips both — the raw free product.) *)
   if Poly.equal policy.config.version_mode Lockstep then
     List.filter assignments ~f:(fun a ->
         List.for_all (ps_artifacts s) ~f:(fun id ->
@@ -443,7 +449,17 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
                     || Canary_basic.equal_channel
                          (version_of a id).channel
                          (version_of a leader).channel
-                | None -> true)
+                | None -> (
+                    match kind_of id with
+                    | Binding _ ->
+                        (* 2026-08-17, the zarith 2×2: a Built binding
+                           must match the source's channel *)
+                        (not (equal_provision (provision_of a id) Built))
+                        || (not (provided a a_source))
+                        || Canary_basic.equal_channel
+                             (version_of a id).channel
+                             (version_of a a_source).channel
+                    | _ -> true))
             | None -> true))
   else assignments
 
@@ -640,7 +656,27 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
         List.concat_map xs ~f:(fun x ->
             List.map (cart rest) ~f:(fun t -> x @ t))
   in
-  cart root_results
+  let assignments = cart root_results in
+  (* Lockstep matching policies beyond the structural walk (2026-08-17,
+     the zarith 2×2): a BUILT binding builds FROM the scenario's source
+     (source-primary, the same rule as the Built lib), so its channel
+     must match the source's — prunes e.g. a Dev-built binding over the
+     stable source tree. The forward cell (Built binding × FETCHED lib,
+     the designed mismatch probe) survives: only the source couples,
+     the lib pairing stays free. Independent mode skips it — the raw
+     free product (the enumeration/config split). *)
+  if Poly.equal cfg.version_mode Lockstep then
+    List.filter assignments ~f:(fun a ->
+        List.for_all (ps_artifacts s) ~f:(fun id ->
+            match kind_of id with
+            | Binding _ ->
+                (not (equal_provision (provision_of a id) Built))
+                || (not (provided a a_source))
+                || Canary_basic.equal_channel
+                     (version_of a id).channel
+                     (version_of a a_source).channel
+            | _ -> true))
+  else assignments
 
 (* ── pattern naming (2026-08-08) ──
    Maps a concrete assignment to the abstract action-chain pattern it
