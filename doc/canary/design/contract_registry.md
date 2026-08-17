@@ -32,9 +32,10 @@ Extending the existing `contract_check`, one row per contract states the
 whole belief:
 
 ```ocaml
-type evidence_kind =
-  | Inspect_based   (* reads artifact SURFACES via tools — nm, objinfo, dir(), mli *)
-  | Trace_based     (* reads the probe's EXECUTION trace — c3 only *)
+type role =
+  | Surface    (* one artifact: what it presents at its boundary *)
+  | Meeting    (* two artifacts: are they compatible where they link/load *)
+  | Execution  (* two artifacts running: what the pair's trace shows *)
 
 type contract_row = {
   row_check   : Canary_compat.contract_check;
@@ -42,7 +43,7 @@ type contract_row = {
   invariant   : string;
       (* the one-sentence agreement, phrased as a FALSIFIER (§5); the
          reconciliation point for ssot's Ag.X ↔ C1..C8 drift decision *)
-  evidence    : evidence_kind;
+  role        : role;
   inputs      : Canary_mechanism.mechanism -> Canary_lang.lang ->
                 Canary_compat.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
@@ -83,40 +84,40 @@ So the firing derivation has TWO axes, both already known to the framework:
 per-project hand-listing. The pre/post conditions to check become a pure
 function of `(decl, mechanism, provision)`.
 
-## 4. The three roles — expectations, probes, and the project's own testing
+## 4. The three LOGICAL roles — slots, not a classification of methods
 
-Three things coexist today and their roles must be stated, because the
-overlap is real ("checking a lib" vs "probing a lib"):
+The roles name the structure of checking itself — the artifact-relationship
+axis the action graph already has (inspect steps / build steps / probe
+steps). Every concrete method, present or future, is PLACED into a slot:
 
-1. **Surface expectations** — the contracts (c1..c8 minus c3). They
-   check what an artifact PRESENTS at its boundary (the five surfaces,
-   Sf.1..Sf.5 in the draft): declared vs extracted, via tools. Static-
-   sourced, dynamic-checked: inspect JSON → predict → grep probe.log.
-   Evidence kind: `Inspect_based`.
+| Role | Asks | Concrete things today | Future things |
+|---|---|---|---|
+| **Surface** | what does ONE artifact present at its boundary? | nm/objinfo/dir/mli inspections (c1, c2, c4, c5) | the richer inspectors (L1b/L2/L4 — step 8) |
+| **Meeting** | are TWO artifacts compatible where they MEET (link/load)? | strict-flag compiles/links, the build_binding meeting (c6, c7, c8) | dry-run builds; the interposition shim as a RECORDER — which symbols the consumer actually requests at load (the oracle for "what the binding really needs") |
+| **Execution** | what happens when the pair RUNS? | our probe apps, behavioral greps (c3) | decl-DERIVED programs (generated from the API invariant — beyond symbol-missing); the shim as a FAKE provider (consumer robustness); upstream test suites |
 
-2. **Runtime observations** — the probes. The draft already drew the
-   line: *runtime observation is not a surface* (Sn.6 — probe input →
-   expected output — is an observation of execution). Two sub-roles:
-   - the probe as the CHECK CARRIER: probe.log is the substrate the
-     surface predictions land in (the "dynamic-checked" half) — the
-     probe step is the harness, not the check;
-   - the probe as a behavioral contract: c3 (Behavior) — the trace's
-     CONTENT is the invariant (tiny's sum outputs, sqlite's version
-     string). The only contract whose evidence is execution. Evidence
-     kind: `Trace_based`.
+**Probing vs testing — resolved.** Probing IS testing: an executing
+consumer program. The distinction I previously drew (probe vs project's
+own suite) is not a role — it is the PROVENANCE of the program inside
+the Execution slot:
 
-3. **The project's own testing** (M3 real-world) — upstream test suites
-   (z3's regression tests, llvm lit, a wheel's pytest). Role: an
-   EXTERNAL evidence source. When canary disproves compatibility, the
-   upstream suite validates the fix (the GH PR runs the project's
-   tests) and pre-screens candidate forks. It is NOT a canary contract
-   — canary cannot own upstream suites. The registry models the SLOT
-   (a `Project_suite` evidence source the landing workflow consumes),
-   so the taxonomy is complete without pretending to run the world's
-   tests.
+- hand-written (ours — the minimal deterministic canary),
+- decl-derived (generated from the API invariant — our coverage scales
+  without human effort),
+- external (upstream suites — the strongest falsifier we can borrow,
+  M3's fix-validation; canary doesn't own them, it consumes the slot).
 
-The three read as one pipeline: **surfaces say what must hold,
-traces show what happened, upstream suites vouch for the fix.**
+**Provision still gates slots, not roles.** A Fetched binding has no
+build step, but the Meeting role does not vanish — the loader's symbol
+resolution AT PROBE TIME is itself a meeting, observable with the
+recorder shim. Built worlds additionally meet at compile/link. The
+role is stable; the stages at which it manifests follow
+(mechanism × provision).
+
+**The three read as one pipeline**: surfaces say what must hold,
+meetings test whether the pair can even join, executions show what
+the joined pair did — and the upstream suite vouches for the fix
+after canary's falsifier found the break.
 
 ## 5. The falsification stance
 
@@ -139,7 +140,11 @@ Registry implications:
   this; the registry makes it explicit per row;
 - the watchlists are the disprover's ammunition: the decl's
   `c_api.functions` + the analysis watchlists ARE the test set the
-  falsifier is armed with. A richer decl = a stronger disprover.
+  falsifier is armed with. A richer decl = a stronger disprover;
+- the recorder shim narrows c1's blindness WITHOUT turning it into a
+  proof: it shows what the consumer actually requested in THIS run —
+  requests-beyond-declared are still counterexamples, but "nothing
+  beyond" holds only for the runs observed, never for all runs.
 
 ## 6. What remains project-specific (and shrinks)
 
