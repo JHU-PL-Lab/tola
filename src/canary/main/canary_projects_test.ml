@@ -19,6 +19,8 @@ module B = Canary_basic
 module EN = Canary_enumerate
 
 let py_cext = Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Cext
+let py_ctypes =
+  Canary_artifact.a_binding Canary_lang.Python Canary_mechanism.Ctypes
 
 (* The scenario-identity key: a Fetched artifact is version-AMBIENT (the
    PM/opam picks the concrete version), so its declared channel is not part
@@ -94,7 +96,7 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
         && List.length scenario_ids = 5
         (* the python binding row is variant-invariant: Fetched everywhere *)
         && List.for_all asgs ~f:(fun a ->
-               EN.equal_provision (Canary_enumerate.provision_of a py_cext) EN.Fetched)
+               EN.equal_provision (Canary_enumerate.provision_of a py_ctypes) EN.Fetched)
         (* source-primary pruned the incoherent build: no Built lib over
            the stable source (channel coupling) *)
         && (not
@@ -444,7 +446,8 @@ let registry_pin : Canary_project_test.pure_test =
             let src (a : Canary_artifact.assignment) =
               Canary_enumerate.version_of a Canary_artifact.a_source
             in
-            List.length asgs = 2
+            (* C2.5 (2026-08-17): the 2×2 — 5 scenarios (see repo_model.axes_pins) *)
+            List.length asgs = 5
             && List.for_all asgs ~f:(fun a -> not (String.equal (src a).Canary_basic.id ""))
             && Poly.equal
                  (List.dedup_and_sort
@@ -509,7 +512,8 @@ let tiny1_bridge : Canary_project_test.pure_test =
           pr_mismatch_probes = [];
           pr_wrapper_pkgs = [];
           pr_api_source = None;
-          pr_binding_decls = []; pr_tier = Canary_project_run.Light }
+          pr_binding_decls = [];
+    pr_raw_build_overrides = []; pr_tier = Canary_project_run.Light }
       in
       let asgs = Canary_project_run.scenarios_of pr in
       (* Exactly 1 scenario: all artifacts Vendored@Stable *)
@@ -708,7 +712,7 @@ let spec_check_every_project_pin : Canary_project_test.pure_test =
         List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
             let r = Canary_spec_check.check pr in
             String.equal r.project name
-            && List.length r.items = 9
+            && List.length r.items = 10
             && List.for_all r.items ~f:(fun i ->
                    not (String.equal i.item_id "")))) }
 
@@ -747,19 +751,25 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
   { name = "spec_check.ratchet_current";
     check =
       (fun () ->
-        want ~errs:[] ~warns:[ "binding_decls" ] ~na:[] "z3"
+        want ~errs:[] ~warns:[ "raw_build_overrides" ] ~na:[] "z3"
         && want ~errs:[]
-             ~warns:[ "binding_decls"; "dev_wrapper_package" ] ~na:[] "llvm"
-        && want ~errs:[]
-             ~warns:[ "binding_dev_source"; "dev_wrapper_package" ] ~na:[]
-             "sqlite"
-        && want ~errs:[] ~warns:pat_warns ~na:[] "ssl"
-        && want ~errs:[] ~warns:pat_warns ~na:[] "zarith"
-        && want ~errs:[] ~warns:pat_warns ~na:[] "cairo"
-        && want ~errs:[] ~warns:pat_warns ~na:[] "libffi"
+             ~warns:[ "dev_wrapper_package"; "raw_build_overrides" ]
+             ~na:[] "llvm"
         && want ~errs:[]
              ~warns:[ "binding_dev_source"; "dev_wrapper_package" ]
-             ~na:[ "github_remote"; "opam_package" ] "tiny-full") }
+             ~na:[ "raw_build_overrides" ] "sqlite"
+        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "ssl"
+        (* C2.5 (2026-08-17): zarith's binding Built axis LANDED with the
+           2×2 — binding_dev_source went Ok; binding_decls still missing *)
+        && want ~errs:[]
+             ~warns:[ "binding_decls"; "dev_wrapper_package"; "python_binding" ]
+             ~na:[] "zarith"
+        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "cairo"
+        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "libffi"
+        && want ~errs:[]
+             ~warns:[ "binding_dev_source"; "dev_wrapper_package" ]
+             ~na:[ "github_remote"; "opam_package";
+               "raw_build_overrides" ] "tiny-full") }
 
 (* The batch tier (2026-08-14): Heavy = source-built chains (z3/llvm);
    [batch_policy] maps Heavy → thin (Subset[Stable] bypasses the Dev
@@ -851,7 +861,8 @@ let local_fork_pin : Canary_project_test.pure_test =
             pr_mismatch_probes = [];
             pr_wrapper_pkgs = [];
             pr_api_source = None;
-            pr_binding_decls = []; pr_tier = Canary_project_run.Light }
+            pr_binding_decls = [];
+    pr_raw_build_overrides = []; pr_tier = Canary_project_run.Light }
         in
         let r = Canary_spec_check.check pr in
         match
@@ -891,7 +902,13 @@ let repo_axes_pin : Canary_project_test.pure_test =
         in
         let zarith_asgs = Canary_project_run.scenarios_of Canary_project_zarith.zarith_run in
         let zarith_ok =
-          List.length zarith_asgs = 2
+          (* C2.5 (2026-08-17): the 2×2 matrix — 5 scenarios: the current
+             cell {1.14, F lib, F bind}, the master-source world, the two
+             diagonals (forward: B bind × F lib; deploy: F bind × B lib),
+             and new×new {master, B lib, B bind}. The Built-binding↔source
+             channel coupling (enumerate's Lockstep post-filter) pruned the
+             incoherent {1.14 source, B bind} cell. *)
+          List.length zarith_asgs = 5
           && List.for_all zarith_asgs ~f:(fun a ->
                  not (String.equal (source_version a).Canary_basic.id ""))
           && List.length
@@ -899,7 +916,7 @@ let repo_axes_pin : Canary_project_test.pure_test =
                   (List.map zarith_asgs ~f:(fun a ->
                        Canary_project_run.scenario_dir_of ~pr_name:"zarith" a))
                   ~compare:String.compare)
-               = 2
+               = 5
         in
         (* the realize ∘ dispatch: each scenario's fetch_source command
            materializes ITS repo's worktree ref *)
@@ -994,6 +1011,63 @@ let sqlite_binding_decls_pin : Canary_project_test.pure_test =
             && String.equal cstubs.surface_path "sqlite3.mli"
         | _ -> false) }
 
+(* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
+   bundled Python bindings are Ctypes + Dlopen (the previous Cext
+   declaration was wrong), the OCaml cstubs facts match the built
+   products (z3's .pre code-gen template / llvm's llvm_ocaml.c), and
+   both declare their raw cmake/ninja OCaml builds. *)
+let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
+  { name = "z3_llvm.binding_decls_honest";
+    check =
+      (fun () ->
+        let d_of pr mech =
+          Canary_project_run.binding_decl_of pr
+            (Canary_artifact.a_binding Canary_lang.OCaml mech)
+        in
+        let pr = Canary_project_z3.z3_run () in
+        let ok_z3 =
+          (match d_of pr Canary_mechanism.Cstubs with
+          | Some d ->
+              String.equal d.native.prefix "Z3_"
+              && (match d.coupling with
+                 | Canary_binding_decl.Stub_archive sa ->
+                     Poly.equal sa.sources
+                       [ "src/api/ml/z3native_stubs.c.pre" ]
+                     && String.equal sa.archive "libz3ml.a"
+                 | _ -> false)
+          | None -> false)
+          && (match d_of pr Canary_mechanism.Ctypes with
+             | Some d -> (
+                 match d.coupling with
+                 | Canary_binding_decl.Dlopen { name } ->
+                     String.equal name "libz3.so"
+                 | _ -> false)
+             | None -> false)
+          && Poly.equal pr.pr_raw_build_overrides
+               [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ]
+        in
+        let pr = Canary_project_llvm.llvm_run () in
+        let ok_llvm =
+          (match d_of pr Canary_mechanism.Cstubs with
+          | Some d ->
+              String.equal d.native.prefix "LLVM"
+              && (match d.coupling with
+                 | Canary_binding_decl.Stub_archive sa ->
+                     String.equal sa.archive "libllvm.a"
+                 | _ -> false)
+          | None -> false)
+          && (match d_of pr Canary_mechanism.Ctypes with
+             | Some d -> (
+                 match d.coupling with
+                 | Canary_binding_decl.Dlopen { name } ->
+                     String.equal name "libllvmlite.so"
+                 | _ -> false)
+             | None -> false)
+          && Poly.equal pr.pr_raw_build_overrides
+               [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ]
+        in
+        ok_z3 && ok_llvm) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -1012,4 +1086,5 @@ let tests : Canary_project_test.pure_test list =
       repo_axes_pin;
       tiny_binding_realization_pin;
       binding_decls_on_project_run_pin;
-      sqlite_binding_decls_pin ]
+      sqlite_binding_decls_pin;
+      z3_llvm_binding_decls_pin ]

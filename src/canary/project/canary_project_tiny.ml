@@ -228,6 +228,7 @@ let tiny_full_run : project_run =
        Vendored, not repo-carried) — the spec audit reads this field. *)
     pr_api_source = Some Canary_tiny_scenario.tiny_api_source;
     pr_binding_decls = TS.tiny_binding_decls;
+    pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }
 
 (* ── THIN subset run (ssot §4.2 config level = Subset) ──
@@ -265,6 +266,7 @@ let project_run_of_tiny1 ~(name : string) : project_run =
     pr_wrapper_pkgs = [];
     pr_api_source = Some Canary_tiny_scenario.tiny_api_source;
     pr_binding_decls = TS.tiny_binding_decls;
+    pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }
 
 (* ── tiny1 run helpers (moved from bin 2026-08-10) ── *)

@@ -567,7 +567,7 @@ let mechanism_catalogue_test : pure_test =
           let i = Canary_mechanism.info_of_mechanism m in
           Poly.equal i.Canary_mechanism.mi_mechanism m
           && Poly.equal i.Canary_mechanism.mi_discipline (Mech.discipline_of_mechanism m)
-          && (not (List.is_empty i.Canary_mechanism.mi_artifact_shape))
+          && (not (List.is_empty i.Canary_mechanism.mi_check_points))
           && not (List.is_empty i.Canary_mechanism.mi_check_points))
       && List.for_all [ L.OCaml; L.Python ] ~f:(fun l ->
              match Mech.default_mechanism_of_lang l with
@@ -1084,12 +1084,17 @@ let tool_routing_ratchet_test : pure_test =
              (* all 3 occurrences are COMMENTS describing the routed verb —
                 the shell goes through [SB.fetch_binding_cmd] *)
              ("canary_project_ssl.ml", 3);
-             ("canary_project_llvm.ml", 1); ("canary_project_z3.ml", 3) ]);
+             ("canary_project_llvm.ml", 1);
+             (* 3 -> 2 (2026-08-17): the conf-* refactor removed one
+                mention — the shell goes through [SB.fetch_binding_cmd] *)
+             ("canary_project_z3.ml", 2) ]);
           ("nm -D",
            [ ("canary_tiny_workspace.ml", 2);
              ("canary_tiny_scenario.ml", 1) ]);
           ("git clone", []);
-          ("tar ", []) ]
+          (* one COMMENT mention (the gmp 6.2.1 Tarball remote, C2.5) —
+             the fetch goes through the Tar remote machinery *)
+          ("tar ", [ ("canary_project_zarith.ml", 1) ]) ]
       in
       match Stdlib.Sys.readdir dir with
       | exception _ -> false

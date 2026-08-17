@@ -52,6 +52,13 @@ type t = {
      source row whose store pins are the repos' own version records — each
      scenario materializes ITS channel's worktree. *)
   sources : Canary_artifact_source.source_repo list;
+  (* The LIB's own source repos (2026-08-17, the 2×2 matrix): when
+     non-empty, the lib row gains a [Built] column per repo (the
+     source-built side of the lib's version axis) — the system package
+     keeps the [Fetched] column. zarith: GMP's official release tarball
+     (6.2.1, the second column; the hg master column awaits a local
+     mercurial). Empty for the classic conf-only shape. *)
+  lib_sources : Canary_artifact_source.source_repo list;
   (* The binding's honest mechanism (2026-08-13, the recorded M2 issue):
      [Cstubs] for static stub-linked bindings (zarith/cairo), [Ctypes] for
      genuinely Dynamic_ffi ones (libffi's ctypes-foreign resolves and
@@ -209,19 +216,47 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
 
 let artifacts (d : t) : Canary_project_spec.artifact_row list =
   let open Canary_artifact in
+  (* The 2×2 matrix (2026-08-17): the binding's Built column appears when
+     the project declares a DEV source (zarith master) — the forward cell
+     (Built binding × Fetched lib) is a designed mismatch scenario, kept
+     by [assignment_ok]'s source-channel coupling (the binding builds
+     from ITS repo; only the source channel couples, the lib pairing
+     stays "any lib"). *)
+  let binding_universe =
+    let dev =
+      List.exists
+        (fun r ->
+          equal_channel r.Canary_artifact_source.version.Canary_basic.channel
+            Canary_basic.Dev)
+        d.sources
+    in
+    if dev then [ (Fetched, [ Canary_basic.Stable ]); (Built, [ Canary_basic.Dev ]) ]
+    else [ (Fetched, [ Canary_basic.Stable ]) ]
+  in
   let binding_row =
     Canary_project_spec.artifact_row
       ~artifact:(a_binding Canary_lang.OCaml d.binding_mechanism)
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+      ~universe:binding_universe
       ~provider:
         (Canary_store_config.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
              package = d.opam_pkg; self_contained = false; versions = None })
       ()
   in
+  (* the lib row: the system package keeps the [Fetched] column; each
+     [lib_sources] repo contributes a [Built] column at its channel —
+     the source-built side of the lib's version axis (the second GMP). *)
+  let lib_universe =
+    (Fetched, [ Canary_basic.Stable ])
+    :: List.map
+         (fun r ->
+           ( Built,
+             [ r.Canary_artifact_source.version.Canary_basic.channel ] ))
+         d.lib_sources
+  in
   let lib_row =
     Canary_project_spec.artifact_row ~artifact:a_lib
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+      ~universe:lib_universe
       ~provider:
         (Canary_store_config.Sys_pkg
            { Canary_store.linux_pkg = d.system_pkg_linux;
@@ -261,4 +296,5 @@ let run (d : t) : Canary_project_run.project_run =
     pr_wrapper_pkgs = [];
     pr_api_source = None;
     pr_binding_decls = [];
+    pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }

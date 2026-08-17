@@ -47,7 +47,10 @@
   from its three decls (byte-equal to the former literals, pinned +
   actions.log-diffed). External projects: declaration universal, build
   commands respected as-is (Raw) — see M2 step 5.
-- **Tests** — 67 project + 107 artifact + 14 PM = 188 total. Post-check convention in
+- **Honest binding mechanisms** (2026-08-17) — z3/llvm's wheel-bundled
+  Python bindings re-declared Ctypes (were Cext — no compiled extension
+  exists); the artifact tables + scenario identities follow the truth.
+- **Tests** — 70 project + 107 artifact + 14 PM = 191 total. Post-check convention in
   CLAUDE.md: `make canary-test` after every edit, `make canary-post-check` before commit.
 - **Docs** — `algorithm_explainer.md` current. `scenario.md` (canonical naming +
   contract catalogue). Project docs reorganized under `project/` (index + status +

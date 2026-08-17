@@ -193,16 +193,20 @@ the payload absorption types the Primitive params as payload fields.
    `tiny1.binding_realization_matches_handwritten` + an actions.log
    diff on `tiny1/symbol_missing`). tiny is our own craft, so
    adjusting its commands is free.
-4. [ ] Land the raw-override harness warning FIRST — the decl-vs-Raw
-   divergence must be visible before any external project work.
-5. [~] Declare the FACTS for external projects — the mechanism
+4. [x] Land the raw-override harness warning (2026-08-17) —
+   `pr_raw_build_overrides` + the spec-check `raw build overrides`
+   item — the decl-vs-Raw divergence is visible (z3/llvm's OCaml
+   builds flagged).
+5. [~] Declare the FACTS for external projects — sqlite (2026-08-16)
+   and z3/llvm (2026-08-17, with HONEST mechanisms) declare; the
+   pattern-A family remains. THE mechanism
    identification drives checker/contract selection (see above); their
    build commands stay Raw, respected as-is. Wiring landed 2026-08-16
    (`pr_binding_decls` + `binding_decl_of` + the spec-check
    `binding declarations` item); sqlite declares (pinned against its
    api_source). z3/llvm remain — their wheel-bundled Python bindings
    need a coupling convention before facts are written.
-6. [ ] Delete `mi_artifact_shape` prose (display derives from facts).
+6. [x] Delete `mi_artifact_shape` prose (2026-08-17).
 
 **Deferred — NOT a to-do**: translating external projects' raw build
 commands into our templates. It has good and bad parts and needs

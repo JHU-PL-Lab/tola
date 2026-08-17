@@ -104,8 +104,6 @@ type mechanism_info = {
   mi_mechanism : mechanism;
   mi_lang : Canary_lang.lang;
   mi_discipline : discipline;
-  mi_artifact_shape : string list;
-      (** the file forms that embody a binding of this mechanism *)
   mi_lib_coupling : string;
       (** how the native lib is bound: link-time undefined-symbol
           requirements vs a runtime dlopen by path/name *)
@@ -119,8 +117,6 @@ let mechanism_catalogue : mechanism_info list =
   [
     { mi_mechanism = Cstubs; mi_lang = Canary_lang.OCaml;
       mi_discipline = Static_c_abi;
-      mi_artifact_shape =
-        [ "lib<pkg>_stubs.a (C stubs)"; "<pkg>.cmxa/.cma"; "*.mli"; "META" ];
       mi_lib_coupling =
         "link-time: stub archive carries undefined C symbols the lib must \
          provide (c1's consumer side)";
@@ -129,8 +125,6 @@ let mechanism_catalogue : mechanism_info list =
       mi_wired = true };
     { mi_mechanism = Cext; mi_lang = Canary_lang.Python;
       mi_discipline = Static_c_abi;
-      mi_artifact_shape =
-        [ "_native.<EXT_SUFFIX>.so (compiled extension)"; "__init__.py" ];
       mi_lib_coupling =
         "link-time: extension .so carries NEEDED + undefined symbols \
          against the lib";
@@ -139,7 +133,6 @@ let mechanism_catalogue : mechanism_info list =
       mi_wired = true };
     { mi_mechanism = Ctypes; mi_lang = Canary_lang.Python;
       mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ "pure .py source (no build product)" ];
       mi_lib_coupling =
         "load-time: dlopen by lib name/path at import; symbols resolved \
          per call";
@@ -149,13 +142,11 @@ let mechanism_catalogue : mechanism_info list =
       mi_wired = true (* tiny's ctypes probe; z3-solver is ctypes-based *) };
     { mi_mechanism = Cffi; mi_lang = Canary_lang.Python;
       mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ "pure .py + cdef declarations" ];
       mi_lib_coupling = "load-time: dlopen; cdef re-declares the C surface";
       mi_check_points = [ "probe only" ];
       mi_wired = false };
     { mi_mechanism = Dynlink; mi_lang = Canary_lang.OCaml;
       mi_discipline = Dynamic_ffi;
-      mi_artifact_shape = [ ".cmxs (plugin)"; "toplevel/utop load" ];
       mi_lib_coupling = "load-time: OCaml Dynlink of a cmxs that dlopens";
       mi_check_points = [ "probe only" ];
       mi_wired = false };
@@ -172,7 +163,7 @@ let info_of_mechanism (m : mechanism) : mechanism_info =
       (* unreachable while the totality pin holds *)
       { mi_mechanism = m; mi_lang = Canary_lang.OCaml;
         mi_discipline = discipline_of_mechanism m;
-        mi_artifact_shape = []; mi_lib_coupling = "(uncatalogued)";
+        mi_lib_coupling = "(uncatalogued)";
         mi_check_points = []; mi_wired = false }
 
 (** One-line display form for [spec] — the project spec REFERENCES the

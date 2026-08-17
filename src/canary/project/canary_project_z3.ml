@@ -62,7 +62,15 @@ let z3_api_source : Canary_artifact.t =
     }
   in
   (* z3-solver is a pre-compiled pip wheel; source_dir marks in-tree source
-     but the wheel is not packaged by canary — installed directly via pip. *)
+     but the wheel is not packaged by canary — installed directly via pip.
+     The wheel BUNDLES libz3 and loads it via ctypes at runtime — no
+     compiled extension the binding produces — so the binding's honest
+     mechanism is Ctypes (the artifact table's previous Cext declaration
+     was wrong, fixed 2026-08-17). CODE-GEN caveat (explicit): parts of
+     src/api/python are build-generated (scripts/update_api.py) — the
+     faithful source exists only post-build. The static spec reads
+     nothing from them (declaration only); the runtime probe uses the
+     Fetched wheel, where the generated files exist. *)
   let python_binding : Canary_artifact.binding_api =
     {
       lang = Python;
@@ -89,6 +97,42 @@ let z3_api_source : Canary_artifact.t =
     }
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
+
+(* ── binding declarations (M2 step 4, 2026-08-17) ──
+   - OCaml cstubs: the FAITHFUL source is build-generated — api/ml
+     carries z3native.ml.pre / z3native_stubs.c.pre TEMPLATES
+     (scripts/update_api.py); the real z3native.ml/.c exist only in a
+     built tree. The static spec reads nothing from them (declaration
+     only); runtime inspect/probe uses the built products (z3ml.cmxa +
+     libz3ml.a, built by the project's build target).
+   - Python: wheel-bundled libz3 loaded via ctypes — Dlopen, no
+     compile stage. *)
+let z3_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  let c_api =
+    { functions =
+        [ "Z3_mk_solver"; "Z3_mk_optimize"; "Z3_mk_context";
+          "Z3_solver_check"; "Z3_mk_optimize_assert_soft";
+          "Z3_mk_seq_replace_re_all" ];
+      (* the declared stable subset (mirrors the api_source watch) *)
+      enums = [] }
+  in
+  let native =
+    { prefix = "Z3_";
+      soname = "libz3.so";
+      headers = { dir = "src/api"; files = [ "z3_api.h" ] } }
+  in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      c_api; native;
+      coupling =
+        Stub_archive
+          { sources = [ "src/api/ml/z3native_stubs.c.pre" ];
+            archive = "libz3ml.a" };
+      surface_path = "src/api/ml/z3.mli" };
+    { mechanism = Canary_mechanism.Ctypes;
+      c_api; native;
+      coupling = Dlopen { name = "libz3.so" };
+      surface_path = "src/api/python/z3/__init__.py" } ]
 
 (* ── Version specs ──
    Version is the primary key. Each version identifies both the source
@@ -124,7 +168,7 @@ let z3_source_dev : source_repo =
        src/api/python) — the all-on-tree shape *)
     artifacts =
       [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-        a_binding Canary_lang.Python Canary_mechanism.Cext ];
+        a_binding Canary_lang.Python Canary_mechanism.Ctypes ];
   }
 
 let z3_source_latest : source_repo =
@@ -142,7 +186,7 @@ let z3_source_latest : source_repo =
        src/api/python) — the all-on-tree shape *)
     artifacts =
       [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-        a_binding Canary_lang.Python Canary_mechanism.Cext ];
+        a_binding Canary_lang.Python Canary_mechanism.Ctypes ];
   }
 
 let z3_source_stable : source_repo =
@@ -164,7 +208,7 @@ let z3_source_stable : source_repo =
        src/api/python) — the all-on-tree shape *)
     artifacts =
       [ a_lib; a_binding Canary_lang.OCaml Canary_mechanism.Cstubs;
-        a_binding Canary_lang.Python Canary_mechanism.Cext ];
+        a_binding Canary_lang.Python Canary_mechanism.Ctypes ];
   }
 
 (* Channel-keyed source lookup — the channel DEFAULT (C2 keeps it as the
@@ -344,7 +388,7 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
                  [ { Canary_store_config.pin_version = "4.16.0";
                      install_name = None } ] })
       ();
-    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
+    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Ctypes)
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:z3_python_provider () ]
 
@@ -658,5 +702,9 @@ let z3_run _distro : Canary_project_run.project_run =
        official latest / arbipher fork) + 2 source-built dev chains
        (official latest + fork, ~15-40 min cold EACH) — the batch default
        runs z3 THIN (stable fetch chain only). *)
-    pr_binding_decls = [];
+    pr_binding_decls = z3_binding_decls;
+    (* the OCaml binding builds via the project's own target — raw, respected
+       as-is (the mechanism template would say Dune); the Python binding
+       is Dlopen (no template to override). *)
+    pr_raw_build_overrides = [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ];
     pr_tier = Canary_project_run.Heavy }

@@ -104,6 +104,12 @@ type project_run = {
       declared regardless of how the project builds. [] = not declared
       yet (external projects fill in as they land). *)
   pr_binding_decls : Canary_binding_decl.binding_decl list;
+  (** The bindings whose build_binding the project does NOT derive from
+      the mechanism template (M2 step 5, 2026-08-17) — it builds raw,
+      its original command respected as-is. The spec audit warns on
+      every override where a template exists. [] = templates consumed. *)
+  pr_raw_build_overrides :
+    (Canary_lang.lang * Canary_mechanism.mechanism) list;
   (** Run-cost tier — the batch runner's default config key (see
       [project_tier]). *)
   pr_tier : project_tier;

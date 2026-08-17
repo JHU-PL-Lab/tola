@@ -322,6 +322,62 @@ let check_binding_declarations (pr : Canary_project_run.project_run) : item =
             Printf.sprintf "%s — missing: %s" detail
               (String.concat ~sep:", " (List.map missing ~f:Canary_artifact.string_of_id)) }
 
+(* M2 step 5 (2026-08-17): raw build overrides — for every binding with
+   a Built axis, the mechanism model derives a recipe; when a template
+   exists (Dune_targets / Verify_product) but the project declares it
+   builds raw, that divergence is FLAGGED (visible, consciously
+   judged). Raw recipe (Dlopen) = nothing overridden. *)
+let check_raw_build_overrides (pr : Canary_project_run.project_run) : item =
+  let label = "raw build overrides" in
+  let built_bindings =
+    List.filter pr.pr_artifacts ~f:(fun d ->
+        has_built_axis d
+        &&
+        match Canary_artifact.kind_of d.Canary_project_spec.ar_artifact with
+        | Canary_basic.Binding _ -> true
+        | _ -> false)
+  in
+  match built_bindings with
+  | [] ->
+      { item_id = "raw_build_overrides"; label; severity = Na;
+        detail = "no Built axis on a binding" }
+  | _ ->
+      let overridden =
+        List.filter built_bindings ~f:(fun d ->
+            let id = d.Canary_project_spec.ar_artifact in
+            match (id.Canary_artifact.kind, id.Canary_artifact.ext) with
+            | Canary_artifact.Binding lang, Canary_artifact.Ext_mechanism mech ->
+                let templated =
+                  match Canary_project_run.binding_decl_of pr id with
+                  | Some decl -> (
+                      match Canary_binding_templates.recipe_of_decl decl with
+                      | Canary_binding_templates.Raw -> false
+                      | Canary_binding_templates.Dune_targets _
+                      | Canary_binding_templates.Verify_product -> true)
+                  | None -> false
+                in
+                templated
+                && List.exists pr.pr_raw_build_overrides
+                     ~f:(fun (l, m) ->
+                       Poly.equal l lang
+                       && Poly.equal m mech)
+            | _ -> false)
+      in
+      let detail =
+        Printf.sprintf "%d raw override(s)"
+          (List.length overridden)
+      in
+      if List.is_empty overridden then
+        { item_id = "raw_build_overrides"; label; severity = Ok; detail }
+      else
+        { item_id = "raw_build_overrides"; label; severity = Warn;
+          detail =
+            Printf.sprintf "%s — %s" detail
+              (String.concat ~sep:", "
+                 (List.map overridden ~f:(fun d ->
+                      Canary_artifact.string_of_id
+                        d.Canary_project_spec.ar_artifact))) }
+
 let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
   let label = "binding dev source" in
   let all_binding_rows =
@@ -393,7 +449,8 @@ let check (pr : Canary_project_run.project_run) : report =
         check_dev_wrapper_package pr;
         check_python_binding pr;
         check_binding_dev_source pr;
-        check_binding_declarations pr ] }
+        check_binding_declarations pr;
+        check_raw_build_overrides pr ] }
 
 (* ── rendering (CLI text + web json) ── *)
 

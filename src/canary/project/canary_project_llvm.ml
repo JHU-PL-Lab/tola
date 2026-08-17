@@ -71,7 +71,11 @@ let llvm_api_source : Canary_artifact.t =
       type_watchlist = [];
     }
   in
-  (* llvmlite bundles its own libLLVM; out-of-tree (source_dir = None). *)
+  (* llvmlite bundles its own libLLVM (libllvmlite.so) and loads it via
+     ctypes at runtime; out-of-tree (source_dir = None). No compiled
+     extension the binding produces — the honest mechanism is Ctypes
+     (the artifact table's previous Cext declaration was wrong, fixed
+     2026-08-17). *)
   let python_binding : Canary_artifact.binding_api =
     {
       lang = Python;
@@ -83,6 +87,40 @@ let llvm_api_source : Canary_artifact.t =
     }
   in
   { native_api; binding_apis = [ ocaml_binding; python_binding ] }
+
+(* ── binding declarations (M2 step 4, 2026-08-17) ──
+   - OCaml cstubs: the in-tree binding (llvm/bindings/ocaml) — llvm.ml
+     + a family of submodules (analysis/bitreader/...); surface_path
+     names the TOP module file. Built by the native build target
+     (llvm.cmxa + libllvm.a).
+   - Python: llvmlite — wheel-bundled libllvmlite.so loaded via
+     ctypes — Dlopen, no compile stage. *)
+let llvm_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  let c_api =
+    { functions =
+        [ "LLVMContextCreate"; "LLVMModuleCreateWithName"; "LLVMCreateBuilder";
+          "LLVMBuildAdd"; "LLVMBuildBr"; "LLVMBuildRetVoid";
+          "LLVMVerifyModule"; "LLVMDisposeMessage" ];
+      (* the declared stable subset (mirrors the api_source watch) *)
+      enums = [] }
+  in
+  let native =
+    { prefix = "LLVM";
+      soname = "libLLVM.so";
+      headers = { dir = "llvm/include/llvm-c"; files = [ "Core.h" ] } }
+  in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      c_api; native;
+      coupling =
+        Stub_archive
+          { sources = [ "llvm_ocaml.c" ];
+            archive = "libllvm.a" };
+      surface_path = "llvm/bindings/ocaml/llvm/llvm.mli" };
+    { mechanism = Canary_mechanism.Ctypes;
+      c_api; native;
+      coupling = Dlopen { name = "libllvmlite.so" };
+      surface_path = "llvmlite/__init__.py" } ]
 
 let llvm_source_dev : source_repo =
   {
@@ -387,7 +425,7 @@ let llvm_artifacts : Canary_project_spec.artifact_row list =
                  [ { Canary_store_config.pin_version = "19-shared";
                      install_name = None } ] })
       ();
-    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
+    artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Ctypes)
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:llvm_python_provider () ]
 
@@ -611,5 +649,9 @@ let llvm_run _distro : Canary_project_run.project_run =
        official latest / arbipher fork) + 2 source-built dev chains
        (official latest + fork; the heaviest of all — the batch default
        runs llvm THIN, stable fetch chain only). *)
-    pr_binding_decls = [];
+    pr_binding_decls = llvm_binding_decls;
+    (* the OCaml binding builds via the project's own target — raw, respected
+       as-is (the mechanism template would say Dune); the Python binding
+       is Dlopen (no template to override). *)
+    pr_raw_build_overrides = [ (Canary_lang.OCaml, Canary_mechanism.Cstubs) ];
     pr_tier = Canary_project_run.Heavy }
