@@ -315,6 +315,35 @@ per-project ones.
   rides the verdict-matrix pin below — the existing
   contract-bindings/xfail machinery already demonstrates the shape
   (parser_context, Opcode.UncondBr).
+- [ ] **Dependency-declaration field + the two combination checks**
+  (2026-08-16, user): record the BINDING→LIB dependency constraint as
+  project-spec data (a new field — the constraint regime predicts the
+  two failure modes: strict/exact deps → old bugs persist in the old
+  binding until its release, the npm case; flexible deps → a
+  previously-working combination can break when the lib moves, the
+  bundler case) AND check the two cross combinations:
+  OLD-binding-with-NEW-lib (the deploy mismatch — machinery exists:
+  `ax_runtime`/`dep_mode`, sqlite's runtime-edge slice) and
+  NEW-binding-with-OLD-lib (the forward mismatch — tiny-full's
+  precedent, c1-predicted xfail). First data point (zarith, verified
+  live): its opam file declares NO GMP version constraint — just
+  `conf-gmp` (presence via pkg-config) — the fully-flexible case;
+  justified by GMP's ABI discipline (libgmp.so.10 since 6.0/2014;
+  6.1/6.2/6.3 all binary-compatible, additive symbols only), which
+  our 7-op watchlist continuously verifies. Ranging over more GMP
+  versions needs a versioned GMP source or vendored older libs (the
+  system ships exactly ONE, 6.3.0).
+- [ ] **System-lib-shadows-source as a CONFIG item** (2026-08-16,
+  user): today a Fetched@Stable system lib is treated as THE stable
+  lib — the implicit assumption that "old publishing is feasible"
+  (the system's GMP 6.3.0 ≈ what we'd build from the 6.3.0 source).
+  But a distro lib is prebuilt with distro-chosen flags (Debian's
+  dfsg build, possibly patched/tuned) — not provably equivalent to a
+  self-built same-version lib. Make it explicit config:
+  `trust-system-lib` vs `build-ourselves-and-verify`; the verification
+  path exists TODAY (the c1..c8 compat diff over two inspect summaries
+  — build 6.3.0 once, diff its symbol surface against the system's).
+  The `Sys_pkg.version_tag` field is the declaration seam.
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED
