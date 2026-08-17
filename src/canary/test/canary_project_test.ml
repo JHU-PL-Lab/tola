@@ -282,13 +282,13 @@ let config_level_test : pure_test =
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
@@ -296,7 +296,7 @@ let config_level_test : pure_test =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
-            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
@@ -326,7 +326,7 @@ let version_axis_test : pure_test =
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
@@ -342,7 +342,7 @@ let version_axis_test : pure_test =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
           ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good)
           ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       let source_primary_holds =
         (not (List.is_empty built))
@@ -370,7 +370,7 @@ let per_artifact_provisions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       let always target id =
         List.for_all pts ~f:(fun p ->
@@ -402,7 +402,7 @@ let per_artifact_versions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:versions_of ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
       in
       let binding_ver p = EN.version_of p.EN.assignment a_ocaml in
       (not (List.is_empty pts))
@@ -533,7 +533,7 @@ let thin_config_level_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs };              mutations = [] }
           spec
       in
       let no_dev asgs =
@@ -631,6 +631,86 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
       (* different cells: no shadowing in either policy (both worlds live) *)
       && List.length diff_shadowed = 2 && List.length diff_materializing = 2) }
 
+(* REFS subset (2026-08-17, the z3 #10549 regression case): [Refs ids]
+   keeps the source-repo worlds whose pinned id is selected — the
+   [--refs latest,pre-10549] pair. Unpinned/absent sources pass through
+   (the filter selects on repo PIN identity; inert elsewhere). *)
+let refs_subset_test : pure_test =
+  { name = "enumerate.refs_subset";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let pin id =
+        { Canary_basic.channel = B.Stable; id; quality = Canary_basic.Good }
+      in
+      let spec : Canary_artifact.project_spec =
+        { ps_universe =
+            [ ( Canary_artifact.a_source,
+                Canary_artifact.(
+                  axes ~pins:[ pin "latest"; pin "pre-10549" ]
+                    [ (Fetched, [ B.Stable ]) ]) );
+              ( Canary_artifact.a_lib,
+                Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ]) );
+              (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
+      in
+      let count refs =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config = { (EN.full_policy ()).config with refs }; mutations = [] }
+          spec
+        |> List.length
+      in
+      let src_id a =
+        (EN.version_of a Canary_artifact.a_source).Canary_basic.id
+      in
+      (* All_refs: both repo worlds *)
+      count EN.All_refs = 2
+      && count (EN.Refs [ "latest" ]) = 1
+      && count (EN.Refs [ "latest"; "pre-10549" ]) = 2
+      && count (EN.Refs [ "no-such-ref" ]) = 0
+      (* the survivor is the SELECTED repo *)
+      && (match
+           EN.enumerate ~tag:(fun () -> "")
+             ~policy:
+               { config =
+                   { (EN.full_policy ()).config with refs = EN.Refs [ "pre-10549" ] };
+                 mutations = [] }
+             spec
+         with
+         | [ a ] -> String.equal (src_id a) "pre-10549"
+         | _ -> false)
+      (* DECLARED-but-UNPINNED sources pass through (inert — an ambient
+         id is no repo ref to select on) *)
+      && (let unpinned : Canary_artifact.project_spec =
+            { ps_universe =
+                [ ( Canary_artifact.a_source,
+                    Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ]) );
+                  ( Canary_artifact.a_lib,
+                    Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ]) );
+                  (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
+          in
+          EN.enumerate ~tag:(fun () -> "")
+            ~policy:
+              { config =
+                  { (EN.full_policy ()).config with refs = EN.Refs [ "latest" ] };
+                mutations = [] }
+            unpinned
+          |> List.length = 1)
+      (* an ABSENT source (self-contained world) also passes *)
+      && (let sourceless : Canary_artifact.project_spec =
+            { ps_universe =
+                [ ( Canary_artifact.a_lib,
+                    Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ]) );
+                  (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
+          in
+          EN.enumerate ~tag:(fun () -> "")
+            ~policy:
+              { config =
+                  { (EN.full_policy ()).config with refs = EN.Refs [ "latest" ] };
+                mutations = [] }
+            sourceless
+          |> List.length = 1)) }
+
 (* The mechanism CATALOGUE (base/canary_mechanism.ml, 2026-08-05): total
    over the mechanism constructors; stored discipline == the derived one
    (the catalogue cannot drift from the vocabulary); each language's
@@ -661,6 +741,30 @@ let mechanism_catalogue_test : pure_test =
    restores the old [source_fetch_cmd] behavior — a declared local
    checkout makes fetch a [test -d], no clone (the waste item in
    status_project.md). *)
+(* The Cmake_install assert_staged primitive (2026-08-17, the z3
+   #10549 regression): each prefix-relative path becomes a [test -f]
+   with the "OCAML INSTALL MISSING" signature — ALSO written into
+   install_fail.log (output_contains_any reads files, not stderr). *)
+let cmake_install_assert_staged_pin : pure_test =
+  { name = "templates.cmake_install_assert_staged";
+    check = (fun () ->
+      let spec =
+        Canary_action_templates.realize_template
+          (Canary_action_templates.Cmake_install
+             { build = "B"; prefix = "P";
+               assert_staged =
+                 Some [ "lib/ocaml/z3/META"; "lib/ocaml/z3/z3ml.cmxa" ] })
+      in
+      match spec.Canary_step_builder.install_lib with
+      | Some cmd ->
+          let cmd = cmd ~output_dir:"OUT" ~variant_key:"vk" in
+          String.is_substring cmd
+            ~substring:"test -f \"$PREFIX/lib/ocaml/z3/META\""
+          && String.is_substring cmd
+               ~substring:"OCAML INSTALL MISSING: lib/ocaml/z3/z3ml.cmxa"
+          && String.is_substring cmd ~substring:"OUT/install_fail.log"
+      | None -> false) }
+
 let source_fetch_local_pin : pure_test =
   { name = "templates.source_fetch_local_skips_clone";
     check = (fun () ->
@@ -777,7 +881,7 @@ let subset_intersects_universe_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs };              mutations = [] }
           spec
       in
       List.length thin = 1
@@ -1341,7 +1445,8 @@ let all_tests : pure_test list =
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
       shadow_policy_drops_same_cell_built_test;
-      subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_pin; inputs_template_pin; mechanism_chain_shape_pin;
+      refs_subset_test;
+      subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_pin; cmake_install_assert_staged_pin; inputs_template_pin; mechanism_chain_shape_pin;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;
       deploy_mismatch_test;

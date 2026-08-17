@@ -259,6 +259,16 @@ type version_mode = Lockstep | Independent
     run only when we have decided to BLAME the lib. *)
 type shadow_policy = Shadow_prebuilt | Materialize_source
 
+(** Which source-repo REFS a config enumerates (2026-08-17, the z3
+    regression-test case): [All_refs] keeps every declared repo; [Refs
+    ids] keeps the repos whose source placement's pinned version id is
+    in the list (e.g. ["latest"; "pre-10549"] — the bugfix-commit
+    regression pair). The SOURCE placement carries the identity (a
+    repo's pin id); projects without a declared/pinned source are
+    unaffected (nothing to filter). Orthogonal to the [version] axis:
+    thin (channel subset) and refs (id subset) compose. *)
+type source_ref_level = All_refs | Refs of string list
+
 (** How much of an axis a config expands (ssot §4.2): [Free] collapses to
     one representative; [Subset] is a curated list; [Full] is every value. *)
 type 'a level = Free | Subset of 'a list | Full
@@ -276,6 +286,7 @@ type 'm config = {
   version_mode : version_mode;
   mutation : (artifact_id * 'm) level;
   shadow : shadow_policy;
+  refs : source_ref_level;
 }
 
 (** Instantiate the algorithm with a config, given each axis's universe (its
@@ -334,7 +345,7 @@ let tiny_slice ~(artifacts : artifact_id list)
     ~all_versions_of:(fun _ _ -> [ Canary_basic.good Canary_basic.Dev ])
     ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full; version_mode = Lockstep;
-      shadow = Shadow_prebuilt }
+      shadow = Shadow_prebuilt; refs = All_refs }
 
 (** A general project's config: provision [Full] (walk the provision axis
     over the project's universe), mutation [Free] (positive only). Yields
@@ -351,7 +362,33 @@ let general_slice ~(artifacts : artifact_id list)
   run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
     ~all_versions_of:(fun _ _ -> versions) ~all_mutations:[]
     { provision = Full; version = Full; mutation = Free; version_mode = Lockstep;
-      shadow = Shadow_prebuilt }
+      shadow = Shadow_prebuilt; refs = All_refs }
+
+(** The repo-REF resolution (2026-08-17, the z3 regression-test case):
+    under [Refs ids], keep only the assignments whose SOURCE placement's
+    pinned version id is in the list — the bugfix-commit regression pair
+    ([--refs latest,pre-10549]) runs just those repos' worlds. Keyed on
+    the SOURCE (a repo's identity is its source placement's pin id);
+    assignments without a declared source (self-contained builds) pass
+    through, and so do UNPINNED sources (an ambient id is no repo ref to
+    select on — the filter is inert on projects without repo pins, as
+    the CLI flag documents). [All_refs] keeps every declared repo. The
+    two resolution passes (shadow, refs) run back to back; the product
+    itself is untouched. *)
+let ref_filter ~(refs : source_ref_level) (asgs : assignment list) :
+    assignment list =
+  match refs with
+  | All_refs -> asgs
+  | Refs ids ->
+      let keep (a : assignment) =
+        match placement_of a a_source with
+        | None -> true
+        | Some (pl : placement) ->
+            let id = pl.Canary_artifact.version.Canary_basic.id in
+            String.is_empty id
+            || List.mem ids id ~equal:String.equal
+      in
+      List.filter asgs ~f:keep
 
 (** The shadow resolution (2026-08-17, active plan 3): under
     [Shadow_prebuilt], drop an assignment whose artifact has a [Built]
@@ -483,7 +520,7 @@ type 'm policy = {
     value restriction across projects.) *)
 let full_policy () : 'm policy =
   { config = { provision = Full; version = Full; version_mode = Lockstep; mutation = Free;
-               shadow = Shadow_prebuilt }; mutations = [] }
+               shadow = Shadow_prebuilt; refs = All_refs }; mutations = [] }
 
 (** STAGE 2 — enumerate a declared [project_spec] under a [policy] into concrete
     assignments: resolve the config levels over the spec's per-artifact universes
@@ -535,7 +572,9 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
               | None -> true))
     else assignments
   in
-  assignments |> shadow_filter ~shadow:policy.config.shadow
+  assignments
+  |> shadow_filter ~shadow:policy.config.shadow
+  |> ref_filter ~refs:policy.config.refs
 
 (** Read a slot's provision off a concrete action set (which action-graph
     verbs a variant runs): [Build_*] ⇒ [Built], [Fetch _] ⇒ [Fetched], else
@@ -753,7 +792,9 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
               | _ -> true))
     else assignments
   in
-  assignments |> shadow_filter ~shadow:cfg.shadow
+  assignments
+  |> shadow_filter ~shadow:cfg.shadow
+  |> ref_filter ~refs:cfg.refs
 
 (* ── pattern naming (2026-08-08) ──
    Maps a concrete assignment to the abstract action-chain pattern it

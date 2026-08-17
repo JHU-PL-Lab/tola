@@ -228,6 +228,31 @@ confirmation."
      with per-repo pins it would kill both dev build chains). Each
      project now enumerates 5 scenarios: 3 all-Fetched source worlds +
      2 dev build chains; `--thin` keeps the stable chain only.
+  3. **C3 bugfix-commit REGRESSION refs — LANDED** (2026-08-17, the
+     z3 #10549 case): a repo can pin a commit just BEFORE a known fix
+     (`z3_source_pre_10549`, `ref_ = "bc4585e0b"` — the parent of the
+     PR's first commit; standalone checkout, ISOLATED build dir per
+     mk_locals' variant TODO). The regression CHECK is the
+     `Cmake_install.assert_staged` primitive (prefix-relative paths
+     that must exist after `cmake --install` — the named failure
+     signature "OCAML INSTALL MISSING" lands in `install_fail.log`);
+     the pre-fix world's Install_lib carries a DECLARED expected
+     failure (the historical-bug shape — xfail on confirm), every
+     other ref expects success. The ref-selection config:
+     `source_ref_level = All_refs | Refs of ids` on the enumeration
+     config (a post-product filter beside shadow_filter, keyed on the
+     source placement's pinned id; unpinned/absent sources pass
+     through), the CLI's `--refs a,b` on action + spec (the regression
+     pair run: `--refs latest,pre-10549` = 4 scenarios). z3 now
+     enumerates 7 scenarios (4 all-Fetched + 3 dev chains); the batch
+     stays thin (channel subset, unaffected). Two verification
+     findings became fixes: Install_lib now depends on the built
+     bindings (the merged rules stage the OCaml package — the old
+     order staged only META), and the assert is gated to OFFICIAL
+     repos (a fork's in-flight tree isn't held to the merged fix's
+     contract). The warm-mask lesson again: a warm "latest PASS" from
+     a PRE-MERGE clone had to be forced cold before the fix's
+     confirmation counted.
 - **D. The web viewer** — after the 3-way (the UI over the commands).
 - **The datatype→functions conversion** (user, 2026-08-16): `Canary_opam_binding.t` should NOT
   be a datatype — at most functions producing the general types

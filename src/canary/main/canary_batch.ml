@@ -68,9 +68,11 @@ let run ?(force_thin = false) ?(force_audit = false) ~root ~failfast
     (fun (name, pr) ->
       let config =
         if force_audit then
-          { Canary_project_run.policy = Canary_project_run.Audit_lib }
+          { Canary_project_run.policy = Canary_project_run.Audit_lib;
+            refs = Canary_enumerate.All_refs }
         else if force_thin then
-          { Canary_project_run.policy = Canary_project_run.Thin }
+          { Canary_project_run.policy = Canary_project_run.Thin;
+            refs = Canary_enumerate.All_refs }
         else Canary_project_run.batch_config pr
       in
       Fmt.pr "[batch] %s: %s policy@." name

@@ -223,6 +223,23 @@ let z3_source_stable : source_repo =
 let z3_source_of (ch : Canary_basic.channel) : source_repo =
   match ch with Canary_basic.Dev -> z3_source_latest | Canary_basic.Stable -> z3_source_stable
 
+(* The bugfix-commit REGRESSION ref (2026-08-17, the z3 #10549 case):
+   master at bc4585e0b — the commit immediately BEFORE 210994b "Add
+   CMake install rules for OCaml bindings". At this ref [cmake
+   --install] stages libz3 but NO OCaml package (the install rules were
+   never added) — the world the regression check must FAIL on, pinned by
+   the declared Install_lib expectation. A standalone checkout (the
+   z3-stable precedent) with an ISOLATED build dir (mk_locals' TODO:
+   per-variant builds must not share contrib/z3-all/build). The
+   [--refs latest,pre-10549] run is the regression pair. *)
+let z3_source_pre_10549 : source_repo =
+  { z3_source_latest with
+    locals =
+      mk_locals ~build_dir:"../build-pre-10549" "contrib/z3-all/z3-pre-10549";
+    version = Canary_basic.{ channel = Dev; id = "pre-10549" };
+    ref_ = "bc4585e0b";
+    label = Some "pre-10549" }
+
 (* The repo backing one scenario's source placement (C2): the [Repo_axes]
    store pins carry each repo's (channel, id), so match the placement's
    version against the three declared repos — exact (channel, id) first,
@@ -233,7 +250,8 @@ let z3_source_for_assignment (a : Canary_artifact.assignment) : source_repo =
   let open Canary_basic in
   match
     List.find
-      [ z3_source_stable; z3_source_latest; z3_source_dev ]
+      [ z3_source_stable; z3_source_latest; z3_source_dev;
+        z3_source_pre_10549 ]
       ~f:(fun r ->
         equal_channel r.Canary_artifact_source.version.channel v.channel
         && String.equal r.Canary_artifact_source.version.id v.id)
@@ -361,7 +379,8 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
          scenario per repo. *)
       ~provider:
         (Canary_store_config.Repo_axes
-           [ z3_source_stable; z3_source_latest; z3_source_dev ])
+           [ z3_source_stable; z3_source_latest; z3_source_dev;
+             z3_source_pre_10549 ])
       ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
@@ -397,7 +416,8 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
   (* C2: per-REPO rows — the scenario's source placement picks the repo,
      not a channel default; the repo's own version.channel drives the
      dev/stable row split below. *)
-  let { version; ref_; name; remote; _ } : Canary_artifact_source.source_repo = source in
+  let { version; ref_; name; remote; official; _ } :
+      Canary_artifact_source.source_repo = source in
   let ver_str = Canary_basic.string_of_version version in
   let local = Canary_artifact_source.local_for distro source in
   let root =
@@ -481,7 +501,19 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
       { ar_action = Canary_basic.Build_lib;
         ar_template = Ninja_build { target = "libz3"; build } };
       { ar_action = Canary_basic.Install_lib;
-        ar_template = Cmake_install { build; prefix = build ^ "/../install" } };
+        ar_template =
+          Cmake_install
+            { build; prefix = build ^ "/../install";
+              (* the #10549 regression (2026-08-17): the install must
+                 stage the OCaml PACKAGE (PR 93c609d's install rules);
+                 the pre-10549 ref fails these — the declared
+                 expectation below turns that failure into an xfail.
+                 OFFICIAL repos only: a fork's in-flight tree is not
+                 held to the merged fix's contract. *)
+              assert_staged =
+                (if official then
+                   Some [ "lib/ocaml/z3/META"; "lib/ocaml/z3/z3ml.cmxa" ]
+                 else None) } };
       { ar_action = Canary_basic.Build_binding Canary_lang.OCaml;
         ar_template = Ninja_build_binding
                 { target = "build_z3_ocaml_bindings"; build;
@@ -591,8 +623,25 @@ let realize a =
   (* expectation stays hand-wired: contract bindings are project data *)
   { spec with
     expectation = (fun action loc ->
-        Canary_scenario.lower_expectation_agnostic
-          ~bindings:z3_contract_bindings ~langs:[ Canary_lang.Python ] action loc);
+        (* the #10549 regression (2026-08-17): at the pre-fix ref the
+           install cannot stage the OCaml package (the install rules
+           never existed) — a DECLARED expected failure, the
+           historical-bug shape (xfail on confirm). Every other ref
+           expects the install to succeed. *)
+        match (source.Canary_artifact_source.version.Canary_basic.id, action) with
+        | "pre-10549", Canary_basic.Install_lib ->
+            Canary_step_model.Expect_failure
+              { contains_any = [ "OCAML INSTALL MISSING" ];
+                version_info =
+                  Some
+                    { provider_version = "z3 pre-10549 (bc4585e0b)";
+                      consumer_requires = "installed OCaml package";
+                      since = Some "PR #10549 (93c609d)";
+                      note = None } }
+        | _ ->
+            Canary_scenario.lower_expectation_agnostic
+              ~bindings:z3_contract_bindings ~langs:[ Canary_lang.Python ]
+              action loc);
     (* stable chain: the pinned binding fetch (was ambient pre-install —
        unmodeled global state; now an explicit pin operation) + the
        pin-checked postcondition. *)

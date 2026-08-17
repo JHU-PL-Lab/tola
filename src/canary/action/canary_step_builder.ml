@@ -561,7 +561,20 @@ let deps_of_action spec action =
         else scan_or_fetch_source ()
       ]
   | Install_lib ->
-      List.filter_opt [ if has Build_lib then Some (tag Build_lib) else None ]
+      (* the install stages WHATEVER the build produced — every built
+         binding included (2026-08-17, z3 #10549: the merged install
+         rules stage the OCaml package, so the install must wait for
+         the binding build; before the fix the install had no OCaml
+         artifacts to stage and the order didn't matter). *)
+      let langs = Canary_lang.[ OCaml; Python ] in
+      let binding_deps =
+        List.filter_map langs ~f:(fun l ->
+            if has (Build_binding l) then Some (tag (Build_binding l))
+            else None)
+      in
+      List.filter_opt
+        [ if has Build_lib then Some (tag Build_lib) else None ]
+      @ binding_deps
   | Build_binding _lang ->
       let lib_dep =
         if has Build_lib then Some (tag Build_lib)

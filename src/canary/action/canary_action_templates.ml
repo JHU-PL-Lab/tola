@@ -69,7 +69,17 @@ type action_template =
       env_guard : string option;
           (** optional env guard between `eval $(opam env)` and ninja *)
     }
-  | Cmake_install of { build : string; prefix : string }
+  | Cmake_install of {
+      build : string;
+      prefix : string;
+      assert_staged : string list option;
+          (** prefix-relative paths that must exist after [cmake
+              --install] — the bugfix-commit regression primitive
+              (2026-08-17, z3 #10549: the OCaml package was never
+              staged). The cmd fails with "OCAML INSTALL MISSING: <path>"
+              per absent path — the signature a declared expectation
+              greps. [None] = install completeness unchecked. *)
+    }
   | Native_lib_probe of { location : probe_lib_location; prefix : string }
   | Cmake_install_component of { build : string; prefix : string; component : string }
   | Raw of (output_dir:string -> variant_key:string -> string)
@@ -238,7 +248,7 @@ let realize_template (tpl : action_template) : runner_spec =
                            guard
                            (Canary_build_cmd.ninja_build_cmd ~target ~build ())
                          |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) ] }
-  | Cmake_install { build; prefix } ->
+  | Cmake_install { build; prefix; assert_staged } ->
       { spec with install_lib =
                    Some (fun ~output_dir ~variant_key ->
                        let install_ok = Canary_basic.variant_file ~variant_key "install.ok" in
@@ -247,10 +257,32 @@ let realize_template (tpl : action_template) : runner_spec =
                           wrote install.ok even when cmake --install died (z3's
                           missing executable — "file INSTALL cannot find"), so a
                           failed install cached as success (the bug-B class). *)
-                       Printf.sprintf "PREFIX=\"%s\"\n%s && %s && echo 'ok' > %s/%s"
+                       (* [assert_staged] (2026-08-17, the z3 #10549
+                          regression): each prefix-relative path must exist
+                          AFTER the install — the named failure signature is
+                          what a project's declared expectation greps (the
+                          bugfix-commit regression shape: absent pre-fix,
+                          present post-fix). *)
+                       let staged_checks =
+                         match assert_staged with
+                         | None -> ""
+                         | Some paths ->
+                             String.concat ~sep:"\n"
+                               (List.map paths ~f:(fun p ->
+                                    (* the signature ALSO lands in a file:
+                                       [output_contains_any] reads files in
+                                       the step dir (stderr isn't captured),
+                                       and a declared Expect_failure greps
+                                       them — the probe.log precedent *)
+                                    Printf.sprintf
+                                      "test -f \"$PREFIX/%s\" || { echo \"OCAML INSTALL MISSING: %s\" >&2; echo \"OCAML INSTALL MISSING: %s\" > %s/install_fail.log; exit 1; }"
+                                      p p p output_dir))
+                       in
+                       Printf.sprintf "PREFIX=\"%s\"\n%s && %s%s && echo 'ok' > %s/%s"
                          prefix
                          (Canary_build_cmd.cmake_install_cmd ~build ~prefix ())
                          (Canary_build_cmd.prefix_layout_inspect_cmd ~prefix ~output_dir ~variant_key)
+                         (if String.is_empty staged_checks then "" else "\n" ^ staged_checks)
                          output_dir install_ok) }
   | Native_lib_probe { location; prefix } ->
       let cmd =

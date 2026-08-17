@@ -55,7 +55,8 @@ let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assig
 let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(artifacts : Canary_project_spec.artifact_row list)
     ~(source_of : Canary_artifact.assignment -> Canary_artifact_source.source_repo)
-    ~(dispatch_is_dev : Canary_artifact.assignment -> bool) :
+    ~(dispatch_is_dev : Canary_artifact.assignment -> bool)
+    ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) () :
     Canary_project_test.pure_test list =
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
   (* dev variant: the coherent build chain — source@Dev (ANY dev repo —
@@ -74,13 +75,15 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     EN.equal_provision (lib_prov a) EN.Fetched
     && EN.equal_provision (Canary_enumerate.provision_of a Canary_artifact.a_source) EN.Fetched
   in
-  [ (* enumerate(spec) == the 3-way (C2). Product-then-filter yields FIVE
-       assignments — the source-primary filter prunes (source@Stable ×
-       lib Built@Dev), the repo pins keep every all-Fetched source world
-       identity-bearing (stable / latest / fork), and each of the two dev
-       repos pairs with the Built lib (channel coupling) — leaving exactly
-       {3 all-Fetched worlds, 2 dev chains}, baseline (head) = the stable
-       all-Fetched chain. *)
+  [ (* enumerate(spec) == the repo family's world set (C2; the counts are
+       PARAMETERS now — z3's 4th repo, the #10549 regression ref, makes
+       seven: 4 all-Fetched worlds + 3 dev chains; llvm keeps five).
+       Product-then-filter — the source-primary filter prunes
+       (source@Stable × lib Built@Dev), the repo pins keep every
+       all-Fetched source world identity-bearing (stable / latest / fork
+       / pre-10549), and each dev repo pairs with the Built lib (channel
+       coupling) — leaving exactly {n_stable all-Fetched worlds, n_dev dev
+       chains}, baseline (head) = the stable all-Fetched chain. *)
     { Canary_project_test.name =
         prefix ^ ".spec_enumerates_current_variants";
       check = (fun () ->
@@ -89,11 +92,11 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
           List.dedup_and_sort ~compare:String.compare
             (List.map asgs ~f:ambient_key)
         in
-        List.length asgs = 5
-        && List.count asgs ~f:is_dev = 2
-        && List.count asgs ~f:is_stable_world = 3
-        (* each repo pin is ONE identity-bearing world: 5 ids total *)
-        && List.length scenario_ids = 5
+        List.length asgs = n_worlds
+        && List.count asgs ~f:is_dev = n_dev
+        && List.count asgs ~f:is_stable_world = n_stable
+        (* each repo pin is ONE identity-bearing world *)
+        && List.length scenario_ids = n_worlds
         (* the python binding row is variant-invariant: Fetched everywhere *)
         && List.for_all asgs ~f:(fun a ->
                EN.equal_provision (Canary_enumerate.provision_of a py_ctypes) EN.Fetched)
@@ -118,8 +121,8 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
       check = (fun () ->
         let asgs = enumerate_full spec in
         let cases = List.map asgs ~f:dispatch_is_dev in
-        List.count cases ~f:Fn.id = 2
-        && List.count cases ~f:not = 3
+        List.count cases ~f:Fn.id = n_dev
+        && List.count cases ~f:not = n_stable
         && List.for_all2_exn asgs cases ~f:(fun a dev ->
                Bool.equal dev
                  (EN.equal_provision (lib_prov a) EN.Built))
@@ -153,6 +156,8 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
                       pl.Canary_artifact.provision)) } ]
 
 let z3_pins : Canary_project_test.pure_test list =
+  (* z3's 4th repo (pre-10549, the #10549 regression ref) makes SEVEN
+     worlds: 4 all-Fetched + 3 dev chains (latest / fork / pre-10549) *)
   two_chain_pins ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
     ~artifacts:Canary_project_z3.z3_artifacts
     ~source_of:Canary_project_z3.z3_source_for_assignment
@@ -160,6 +165,7 @@ let z3_pins : Canary_project_test.pure_test list =
       Canary_enumerate.equal_provision
         (Canary_enumerate.provision_of a Canary_artifact.a_lib)
         Canary_artifact.Built)
+    ~n_worlds:7 ~n_dev:3 ~n_stable:4 ()
 
 let llvm_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
@@ -169,6 +175,7 @@ let llvm_pins : Canary_project_test.pure_test list =
       Canary_enumerate.equal_provision
         (Canary_enumerate.provision_of a Canary_artifact.a_lib)
         Canary_artifact.Built)
+    ()
 
 (* ── A7 phase 3 pins: z3/llvm run the DERIVED lowering ──
    Pure shape of the expectation closure over the REAL binding tables (no
@@ -382,8 +389,9 @@ let integration_smoke : Canary_project_test.pure_test =
       in
       let ok1 = check ~name:"sqlite" ~want_count:3
           Canary_project_sqlite.sqlite_run in
-      (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains *)
-      let ok2 = check ~name:"z3" ~want_count:5
+      (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains;
+         7 since the pre-10549 regression ref (4 all-Fetched + 3 dev) *)
+      let ok2 = check ~name:"z3" ~want_count:7
           (Canary_project_z3.z3_run (Canary_basic.detect_distro ())) in
       let ok3 = check ~name:"llvm" ~want_count:5
           (Canary_project_llvm.llvm_run (Canary_basic.detect_distro ())) in
@@ -813,7 +821,7 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let module EN = Canary_enumerate in
         let ep p =
           Canary_project_run.enumeration_policy_of
-            { Canary_project_run.policy = p }
+            { Canary_project_run.policy = p; refs = EN.All_refs }
         in
         let shadow_of = function
           | None -> None
@@ -1188,6 +1196,44 @@ let zarith_binding_decls_pin : Canary_project_test.pure_test =
             && String.equal d.surface_path "zarith.mli"
         | None -> false) }
 
+(* The #10549 regression (2026-08-17): at the pre-fix ref the install
+   CANNOT stage the OCaml package (the install rules never existed) —
+   the Install_lib step carries a DECLARED expected failure (the
+   historical-bug shape: Expect_failure + the "OCAML INSTALL MISSING"
+   signature + version_info naming the fix). Every other ref expects
+   the install to succeed. *)
+let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
+  { name = "z3.regression_pre_10549_expectation";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let pr = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
+        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+            let spec =
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg"
+            in
+            let exp =
+              spec.Canary_step_builder.expectation
+                Canary_basic.Install_lib None
+            in
+            let src_id =
+              (Canary_enumerate.version_of a Canary_artifact.a_source)
+                .Canary_basic.id
+            in
+            if String.equal src_id "pre-10549" then
+              match exp with
+              | SM.Expect_failure { contains_any; version_info } ->
+                  List.mem contains_any "OCAML INSTALL MISSING"
+                    ~equal:String.equal
+                  && (match version_info with
+                      | Some vi ->
+                          String.is_substring vi.SM.provider_version
+                            ~substring:"pre-10549"
+                          && Option.is_some vi.SM.since
+                      | None -> false)
+              | _ -> false
+            else Poly.equal exp SM.Expect_success)) }
+
 (* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
    bundled Python bindings are Ctypes + Dlopen (the previous Cext
    declaration was wrong), the OCaml cstubs facts match the built
@@ -1269,5 +1315,6 @@ let tests : Canary_project_test.pure_test list =
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;
       z3_llvm_binding_decls_pin;
-      zarith_binding_decls_pin ]
+      zarith_binding_decls_pin;
+      z3_regression_pre_10549_pin ]
 

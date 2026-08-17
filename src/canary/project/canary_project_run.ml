@@ -152,7 +152,8 @@ let thin_policy () : unit Canary_enumerate.policy =
           version = Canary_enumerate.Subset [ Canary_basic.Stable ];
           version_mode = Canary_enumerate.Lockstep;
           mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Shadow_prebuilt };
+          shadow = Canary_enumerate.Shadow_prebuilt;
+          refs = Canary_enumerate.All_refs };
     mutations = [] }
 
 let independent_policy () : unit Canary_enumerate.policy =
@@ -161,7 +162,8 @@ let independent_policy () : unit Canary_enumerate.policy =
         { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
           version_mode = Canary_enumerate.Independent;
           mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Shadow_prebuilt };
+          shadow = Canary_enumerate.Shadow_prebuilt;
+          refs = Canary_enumerate.All_refs };
     mutations = [] }
 
 (** The AUDIT policy (2026-08-17, active plan 3): full enumeration with
@@ -175,7 +177,8 @@ let audit_policy () : unit Canary_enumerate.policy =
         { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
           version_mode = Canary_enumerate.Lockstep;
           mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Materialize_source };
+          shadow = Canary_enumerate.Materialize_source;
+          refs = Canary_enumerate.All_refs };
     mutations = [] }
 
 (** THE run-layer policy choice (2026-08-14): ONE named variant the CLI /
@@ -212,19 +215,38 @@ let string_of_run_policy = function
     (scenario parallelism, forced cache cleanup, …). Deliberately NO
     mutable global state: the config flows down the call chain — the CLI
     / batch set its [policy] value, consumers respect the variant. *)
-type run_config = { policy : run_policy }
+type run_config = {
+  policy : run_policy;
+  refs : Canary_enumerate.source_ref_level;
+      (** which source-repo refs the run enumerates (2026-08-17, the z3
+          regression-test case) — [All_refs] by default; the CLI's
+          [--refs a,b] narrows to the declared repos with those pinned
+          ids (e.g. ["latest"; "pre-10549"]). The batch never sets it. *)
+}
 
-let default_config : run_config = { policy = Full }
+let default_config : run_config = { policy = Full; refs = Canary_enumerate.All_refs }
 
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
     of [scenarios_of]); [Thin] = the Subset[Stable] enumeration;
-    [Audit_lib] = the full enumeration with [Materialize_source]. *)
+    [Audit_lib] = the full enumeration with [Materialize_source]. The
+    [refs] level rides on top of whichever rung: a rung-specific policy
+    gets the run's [refs] injected; [Full] (None) becomes a full policy
+    when [refs] narrows. *)
 let enumeration_policy_of (c : run_config) : unit Canary_enumerate.policy option =
+  let inject_refs (p : unit Canary_enumerate.policy) : unit Canary_enumerate.policy =
+    { p with
+      Canary_enumerate.config =
+        { p.Canary_enumerate.config with
+          Canary_enumerate.refs = c.refs } }
+  in
   match c.policy with
-  | Full -> None
-  | Thin -> Some (thin_policy ())
-  | Audit_lib -> Some (audit_policy ())
+  | Full -> (
+      match c.refs with
+      | Canary_enumerate.All_refs -> None
+      | Canary_enumerate.Refs _ -> Some (inject_refs (Canary_enumerate.full_policy ())))
+  | Thin -> Some (inject_refs (thin_policy ()))
+  | Audit_lib -> Some (inject_refs (audit_policy ()))
 
 (** THE batch default policy (2026-08-14): [Heavy] projects run THIN
     (their source-built chains are Dev worlds, so thin bypasses them),
@@ -237,7 +259,7 @@ let batch_policy (pr : project_run) : run_policy =
   | Light -> Full
 
 let batch_config (pr : project_run) : run_config =
-  { policy = batch_policy pr }
+  { policy = batch_policy pr; refs = Canary_enumerate.All_refs }
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from

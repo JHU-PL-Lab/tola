@@ -67,6 +67,25 @@ the silent-emptiness class can't recur. First verified end-to-end c1
 run: 42 required ⊆ 620 provided, `compat_note` warns POSSIBLY
 OUT-OF-DATE.
 
+### Fixed — Install_lib must wait for the built BINDINGS (the #10549
+### verification finding, 2026-08-17)
+
+The merged install rules stage the OCaml package — so the install can
+only succeed AFTER the binding build. The dev chain's old order
+(Install_lib before Build_binding) worked pre-fix (nothing OCaml to
+stage) and died post-fix: the install staged only the configure-time
+META and the `z3ml.cmxa` assert failed. Fixed in
+`deps_of_action`: Install_lib now depends on every wired
+`Build_binding` too (llvm's Cmake_install_component is unaffected in
+behavior — the dep is honest there as well). ALSO the warm-mask
+lesson again: the first "latest PASS" was a warm marker from a
+PRE-MERGE clone (08-16) — the fix's confirmation only counted after
+forcing the latest chain cold (delete its markers + clone). The
+regression pair verified cold: pre-10549 install xfails "OCAML
+INSTALL MISSING", latest stages the full `lib/ocaml/z3` package and
+passes. The assert is gated to OFFICIAL repos (the fork's in-flight
+tree is not held to the merged fix's contract).
+
 ### Fixed — the c1 coverage warning (user, 2026-08-17)
 
 Inclusion alone can't tell wrapping-a-subset (by design) from a stale
@@ -431,8 +450,16 @@ directions):
   OCaml-focused project legitimately skips it). Revisit the warning's
   semantics when a gmp-named project (or a second zarith binding)
   lands; user confirmed leaving it for now.
-- [ ] **Historical-bug regression field** — known bugs-with-fixes as
-  declared expectations; the contract/xfail machinery shows the shape.
+- [x] **Historical-bug regression — FIRST CASE LANDED** (2026-08-17,
+  the z3 #10549 install fix): a repo ref pinned BEFORE the fix
+  (`pre-10549` = `bc4585e0b`), the `Cmake_install.assert_staged`
+  primitive as the check, a declared `Expect_failure` on the pre-fix
+  world's Install_lib (xfail on confirm; latest expects success), and
+  the `--refs latest,pre-10549` ref-selection cmd (repo_model.md C3).
+  Generalization to-do when a second case lands: an id-conditional
+  `firing` filter (the expectation is currently hand-wired in z3's
+  `realize` — project-local, per the "bindings are project data"
+  doctrine).
 - [ ] **Surface-drift expectations** — per-project drift bounds on the
   TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
 - [ ] **Pinned verdict-matrix regression** — pin the per-scenario
