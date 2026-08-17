@@ -16,6 +16,18 @@ store-pin migration); tiny1 rides the factory. Full matrix in
 the name list drifts, or ssl's pinned binding stops enumerating 2
 distinct scenarios.
 
+**Scenario counts** (the enumeration snapshot, re-verified
+`spec @all` 2026-08-16, post-C2; full policy unless noted):
+
+| project | scenarios | shape |
+| --- | --- | --- |
+| z3 / llvm | 5 | 3 all-Fetched source worlds (stable / official latest / arbipher fork) + 2 dev build chains (latest + fork); `--thin` = 1 (stable) |
+| sqlite | 3 | system-fetched lib + 2 built amalgamation versions |
+| zarith | 2 | per-channel source repos (source-fetched-1.14 / -master) |
+| ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
+| tiny-full | 1 | all-Vendored stable world |
+| cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
+
 **The batch runner + run config + the main-library split** (2026-08-14,
 user): `canary action @all` runs every registry project under the
 default config — `pr_tier` groups the runs (`Heavy` = z3/llvm's
@@ -251,56 +263,24 @@ per-project ones.
 
 ### General (address first)
 
-- [ ] **3-way repos in the project spec** (2026-08-14, user — in
-  progress, the LIGHT-project slice landed 2026-08-15): per-project
+- [x] **3-way repos in the project spec** (2026-08-14, user) — per-project
   stable + official-dev + forked-dev repos as first-class spec data.
-  Today each source row carries ONE repo (the stable one); the fork
-  rides a Dev-version-id workaround (the known per-(artifact ×
-  channel) provider refinement). Includes the repo-provider
-  unification below; feeds the three-version report.
-  [`design/repo_model.md`](../design/repo_model.md) holds the
-  requirements + DECIDED points (worktrees per version; properties vs
-  enumeration split — `ref_`/`official`/stable-latest markers are REPO
-  properties, WHICH repos run is config/policy; free label for the
-  fork; contrib layout as a base-layer setting; on-demand refresh; the
-  fetch IS the prepare). LANDED (2026-08-15): `Canary_store.contrib_root`
-  (base-layer setting) + `worktree_ensure_cmd`/`repo_worktree_path`
-  (clone once + worktree per ref, refresh on demand — naming scheme
-  `<pj>-all/<repo>-<ref-slug>`; the worktree `.git` is a FILE — the
-  existence test is on the dir) + pattern-A's fetch wired to it
-  (zarith/cairo/libffi verified live in `~/code/contrib/*-all/`);
-  the REPO-PROVIDER UNIFICATION (`Source_repo`/`Built_from` → one
-  `Repo of source_repo` — the axes' provision says what the repo
-  provides; `providing_action_of` now reads the provision) + the FREE
-  LABEL field on `source_repo` (`label : string option`, fork identity;
-  shown as "(fork: …)" in display). LANDED (2026-08-16, roadmap A+B):
-  the repo-type variant (`repo_remote = Git | Hg | Tar` + per-kind
-  fetch tools — not hardcoded to git; local-only forks warn), the
-  repo-CONTENTS field (`artifacts : artifact_id list` — repo →
-  artifacts, the multi-repo principle; pinned by
-  `repo_model.contents_invariant` over the registry), and the
-  RETIREMENT of the dead `mk_runner_spec` + `has_build_*` helpers in
-  z3/llvm (−810 lines; the CI was already table-based). LANDED
-  (2026-08-16, roadmap C1): the `Repo_axes of source_repo list`
-  provider (a repo FAMILY per artifact) + `Canary_pattern_a.sources` —
-  zarith runs 2 scenarios (source-fetched-1.14 / source-fetched-master)
-  with per-scenario worktree dispatch; cairo/libffi sources are
-  identity-bearing as a side fix. LANDED (2026-08-16, roadmap C2):
-  z3/llvm — the arbipher forks are labeled third repos
-  (`label = Some "arbipher"`, id `"arbipher"`), the source rows are
-  `Repo_axes [stable; latest; fork]`, the realizations dispatch on the
-  SOURCE placement (the lib-channel proxy retired), and
-  `assignment_ok`'s Built-lib↔source coupling is now channel-level —
-  5 scenarios each (3 all-Fetched source worlds + 2 dev build chains),
-  `--thin` = the stable chain only. The 2026-08-13 fork↔official
-  collision is resolved by design.
-- [ ] **Repo-provider unification** — `Source_repo` vs `Built_from`
-  wrap the SAME record and split by what the repo provides, which is
-  redundant with the axes' provision (`Built_from` has ZERO live uses).
-  Any artifact can be provided remotely; a repo can ship the project
-  source OR an artifact directly (the latter has no representation
-  today). One `Repo of …` variant; the axes say how. Design together
-  with the 3-way.
+  Roadmap A+B+C1+C2 ALL LANDED (2026-08-15/16) — the full chronicle
+  (contrib layout, worktrees, `Repo` unification, `Repo_axes`, the
+  arbipher forks, the cold-audit fixes, the verification) is flushed
+  to [`../worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md)
+  §2026-08-16; the design lives in
+  [`../design/repo_model.md`](../design/repo_model.md). Living state:
+  the per-project scenario counts in §1 above; remaining items below
+  (the verdict-matrix pin, the Fetched-source-id resolution note).
+  Next: Roadmap D — the web viewer.
+- [x] **Repo-provider unification** — LANDED with the 3-way (2026-08-15,
+  roadmap A): one `Repo of source_repo` variant (the axes' provision
+  says what it provides; `providing_action_of` reads the provision),
+  plus `Repo_axes of source_repo list` for per-channel families (C1).
+  `Built_from` deleted (zero live uses). Remaining half: a repo
+  shipping an ARTIFACT directly (not source) still has no
+  representation — a future shape.
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED

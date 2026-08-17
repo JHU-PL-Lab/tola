@@ -1,7 +1,8 @@
 # How Canary Works
 
-> 2026-08-08. Walks through the full pipeline — declaration to execution —
-> using z3 as the concrete example.
+> 2026-08-08; updated 2026-08-16 (repo-model C2: per-repo source pins,
+> channel-level coupling, the 5-scenario 3-way). Walks through the full
+> pipeline — declaration to execution — using z3 as the concrete example.
 
 ## 1. The pipeline at a glance
 
@@ -75,18 +76,28 @@ A project declares which artifacts exist and at which provisions/versions.
 For z3:
 
 ```
-source   Fetched  @ [Stable, Dev]
+source   Fetched  @ [Stable, Dev]     ← Repo_axes pins, C2: one identity-
+                                         bearing placement PER REPO:
+                                         {Stable,"4.15.2"} (Z3Prover tag),
+                                         {Dev,"latest"}   (Z3Prover HEAD),
+                                         {Dev,"arbipher"} (the fork, HEAD)
 lib      Fetched  @ [Stable]          ← PM provides (apt install libz3-dev)
          Built    @ [Dev]             ← canary builds from source
-binding  Fetched  @ [Stable]          ← PM provides (opam install z3)
- (OCaml) Built    @ [Dev]             ← canary builds from lib
+binding  Fetched  @ [Stable]          ← PM provides (opam install z3,
+ (OCaml) Built    @ [Dev]               pinned 4.16.0 on the Fetched axis)
+                                         ← canary builds from lib
 binding  Fetched  @ [Stable]          ← PM provides (pip install z3-solver)
  (Python)
 ```
 
 This is the `ps_universe` table — per-artifact provision × version axes.
 `project_spec_of_rows` converts `artifact_row` lists into `project_spec`
-records.
+records. The source row's provider is `Repo_axes [stable; latest; fork]`
+— a repo FAMILY: `versions_of_provider` projects each repo's `version`
+record into the axes' store pins (`ax_pins`), so the Fetched source
+ranges over three CONCRETE placements instead of ambient channels. A
+pinned placement carries its id and is **identity-bearing**; a repo
+with `id = ""` stays version-ambient.
 
 ## 4. From provisions to chains
 
@@ -127,6 +138,11 @@ The chain ordering is determined by dependency: `Fetch Source` before
 `Build_lib` (Build_lib consumes Source). `Build_lib` before `Build_binding`
 (Build_binding consumes Lib). Terminal (probe) last.
 
+The dev/stable ROW split is driven by the LIB provision in
+`realize_from_rows` (Build rows require a Built lib) — the repo the
+scenario fetches is selected separately, by the source placement's
+pinned id (`z3_source_for_assignment`), the C2 dispatch.
+
 ## 5. From chains to assignments (version enumeration)
 
 Within each chain, version propagation works forward:
@@ -134,37 +150,48 @@ Within each chain, version propagation works forward:
 **Chain A (all Fetched):**
 
 ```
-Fetch Source      → version from spec: F@S, F@D     (2 choices)
-Fetch Lib         → version from spec: F@S          (1 choice)
-Fetch Binding     → version from spec: F@S          (1 choice)
+Fetch Source      → version from spec: the Repo_axes pins —
+                    F@4.15.2, F@latest, F@arbipher   (3 choices, each
+                    identity-bearing)
+Fetch Lib         → version from spec: F@S           (1 choice)
+Fetch Binding     → version from spec: F@4.16.0      (1 choice, pinned)
 Probe_binding     → terminal
 ```
 
-Cartesian product: 2 × 1 × 1 = 2 assignments:
+Cartesian product: 3 × 1 × 1 = 3 assignments:
 
 ```
-{ source@S, lib@F@S, binding@F@S }   ← "scenario 1"
-{ source@D, lib@F@S, binding@F@S }   ← "scenario 2"
+{ source@4.15.2,  lib@F@S, binding@F@4.16.0 }   ← "scenario 1"
+{ source@latest,  lib@F@S, binding@F@4.16.0 }   ← "scenario 2"
+{ source@arbipher,lib@F@S, binding@F@4.16.0 }   ← "scenario 3"
 ```
 
 **Chain B (Built):**
 
 ```
-Fetch Source      → version from spec: F@S, F@D     (2 choices)
-Build_lib         → version = source version        (Follows_input)
-                    Source@S → lib@B@S?  No — lib Built only has Dev.
-                    Source@D → lib@B@D  ✓
-                    Source@S filtered: lib has no Built@Stable provision.
+Fetch Source      → version from spec: 3 pins            (3 choices)
+Build_lib         → version = source version             (Follows_input)
+                    source@4.15.2 → lib@B@S?  No — lib Built only has Dev.
+                    source@latest, source@arbipher → lib@B@D  ✓ (2 choices)
 Build_binding     → version = lib version   (Follows_input)
                     Lib@B@D → binding@B@D  ✓
 Probe_binding     → terminal
 ```
 
-1 assignment (Source@S is pruned — lib can't be Built@Stable):
+2 assignments — the version coupling is CHANNEL-level (C2): a Built lib
+pairs with a source at the same CHANNEL, whatever the source's id.
+Exact-id equality died with C2 — identity-bearing sources carry ids the
+Built lib's channel-level placement can never mirror, and requiring it
+would have killed both dev build chains. WHICH checkout the scenario
+builds from is the source placement's id (already part of scenario
+identity); the lib placement says only "built @ Dev".
 
 ```
-{ source@D, lib@B@D, binding@B@D }   ← "scenario 3"
+{ source@latest,   lib@B@D, binding@B@D }   ← "scenario 4" (official dev)
+{ source@arbipher, lib@B@D, binding@B@D }   ← "scenario 5" (forked dev)
 ```
+
+Total: **5 scenarios** — 3 all-Fetched source worlds + 2 dev build chains.
 
 ### The policy's journey — thin as the worked example (2026-08-14)
 
@@ -187,16 +214,19 @@ pipeline is policy-agnostic.
 3. **Thin ⇒ bypass the source-built chain, precisely**: it is NOT an
    action-skip; it is version-subsetting. z3/llvm's Build rows are only
    reachable when the lib is **Built**, and Built exists only on the Dev
-   channel. With the Dev placement gone, the product yields only the
-   Fetched worlds (z3: 2 scenarios → 1; llvm: 2 → 1), and the
-   Build-gated rows (Configure/Scan/Build_headers/Build_lib/
-   Build_binding/Publish — `action_requires_provision` gates them on a
-   Built lib) never materialize in any scenario's realize.
+   channel. With the Dev placements gone, the product yields only the
+   Fetched worlds (z3/llvm: 5 scenarios → 1 — the stable source world;
+   the channel filter drops the two Dev repo pins as well as the Dev
+   lib), and the Build-gated rows (Configure/Scan/Build_headers/
+   Build_lib/Build_binding/Publish — `action_requires_provision` gates
+   them on a Built lib) never materialize in any scenario's realize.
 4. **Realize** — `pr_runner_spec assignment ~workspace` (pure): reads the
-   surviving placements (`provision_of`/`channel_of`) and dispatches the
-   per-channel action rows (e.g. `z3_table_rows ~chan`), yielding the
-   per-scenario `runner_spec` (commands, expectations, pin-checks,
-   world assertions).
+   surviving placements (`provision_of`/`version_of`) and dispatches
+   the action rows by the SOURCE placement's pinned repo
+   (e.g. `z3_table_rows ~source:(z3_source_for_assignment a)` — C2;
+   the pre-C2 lib-channel proxy retired), yielding the per-scenario
+   `runner_spec` (commands, expectations, pin-checks, world
+   assertions).
 5. **derive_steps** → ordered step list (action + cmd + deps +
    check_pre/post + expectation).
 6. **run** — `run_project_spec` iterates the assignments (deduped by
@@ -220,9 +250,13 @@ Each scenario goes through:
 
 ```
 1. scenario_dir_of(assignment) → output directory + cache key
-     e.g. "_out/canary/projects/z3/lib-built-dev_binding-fetched_source-fetched/"
-     Fetched artifacts are version-ambient: source@S and source@D share a
-     cache key → only one actually runs (dedup).
+     e.g. "_out/canary/projects/z3/ocaml_binding-built-dev_source-fetched-arbipher_lib-built-dev_python_binding-fetched/"
+     Pinned Fetched placements are IDENTITY-BEARING (C1/C2): the
+     placement's version id is part of the directory — three source
+     worlds get three dirs (…-fetched-4.15.2 / -fetched-latest /
+     -fetched-arbipher). An UNPINNED Fetched placement stays
+     version-ambient (the PM picks the actual version) and renders
+     just "fetched".
 
 2. realize_from_rows(assignment) → runner_spec
      Checks provisions: Build_lib fires when lib is Built; Fetch Lib when
@@ -278,15 +312,20 @@ verdicts. The `spec` command joins them by `scenario_label` (the assignment
 string):
 
 ```
-scenarios — 3 enumerated
-  ✓ xfail  source@S lib@F@S binding@F@S    (baseline, fetch chain)
-  ·        source@D lib@F@S binding@F@S    (Fetched-ambient dedup: same cache key)
-  ✓ xfail  source@D lib@B@D binding@B@D    (dev build chain)
+scenarios — 5 enumerated
+  ✓ xfail  source@arbipher lib@B@D binding@B@D    (fork dev build chain)
+  ✓ xfail  source@latest   lib@B@D binding@B@D    (official dev build chain)
+  ✓ xfail  source@4.15.2   lib@F@S binding@F@4.16.0  (stable fetch chain)
+  ✓ xfail  source@arbipher lib@F@S binding@F@4.16.0
+  ✓ xfail  source@latest   lib@F@S binding@F@4.16.0
 ```
 
 `✓` = ran and passed (or xfail — expected failure confirmed).
 `·` = enumerated but not run (dedup).
 No `✗` = no unexpected failure.
+
+(C2 removed the Fetched-ambient dedup: every repo pin is a distinct
+identity, so all five scenarios run.)
 
 The invariant: `ran_scenarios ⊆ enumerated_scenarios`. Every scenario that
 ran was predicted by the enumeration. A scenario that ran but wasn't
@@ -327,6 +366,24 @@ rm -rf _out/canary/projects/<project>/
 Or use a distinct `variant_id` (the normal path — different variants are
 different runs).
 
+### The warm/cold trust model (2026-08-16, the C2 cold-audit lesson)
+
+A marker certifies "this step's command worked, under THIS scenario
+identity". Two consequences:
+
+- **A scenario-dir rename IS a cold-run audit.** C2's per-repo pins
+  renamed every z3/llvm scenario dir, forcing all steps cold — and the
+  warm markers had been skipping broken steps since the A5 era. Five
+  masked bugs surfaced (the configure flags, the unconditional install
+  marker, the printf quoting, the realize-time cmake probe, the missing
+  checkout — chronicled in `worklog_2026_08.md` §2026-08-16).
+- **The marker does not record WHICH ref it verified.** A concrete
+  commit ref is immutable, but a tag/HEAD ref can move upstream under
+  the same identity; the warm hit stays stale until a cold re-run.
+  Recording the verified content hash in the marker + a `--cold`
+  audit flag are the open follow-up (status_project.md §3, the
+  verdict-matrix pin).
+
 ## 10. Store pins — writing and reading the shared store
 
 (2026-08-12. Design writeup: [`../project/store_switching.md`](../project/store_switching.md).)
@@ -348,6 +405,10 @@ for those steps.
 - A binding whose provider declares `versions : opam_pin list` (`Lang_pkg`)
   enumerates one scenario **per pin** — the pins replace the channel axis
   for that Fetched provision (`ps_versions_of`).
+- A source whose provider is `Repo_axes rs` enumerates one scenario **per
+  repo** (C1/C2): `versions_of_provider` projects each repo's `version`
+  record (channel PRESERVED) into the same pin axis, so per-channel
+  repos ride the same identity machinery as opam pins.
 - A pinned placement carries the version id in its `build_id`; it is
   **identity-bearing** (`scenario_dir_of`, the assignment string, and the
   test-mirror `ambient_key` all include it), where an unpinned Fetched
@@ -414,11 +475,11 @@ Canary_enumerate (action/)      engine: action_catalogue, patterns_of, chain_of_
 
 ## 14. Ownership
 
-| Function               | Module                           | Role                             |
-| ---------------------- | -------------------------------- | -------------------------------- |
-| `project_spec_of_rows` | `action/canary_project_spec.ml`  | rows → spec                      |
-| `patterns_of`          | `action/canary_enumerate.ml`     | spec → (chain × assignment) list |
-| `scenarios_of`         | `projects/canary_project_run.ml` | project → assignment list        |
-| `realize_from_rows`    | `action/canary_action_table.ml`  | assignment → runner_spec         |
-| `derive_steps`         | `action/canary_step_builder.ml`  | runner_spec → step list          |
-| `run_with_info_status` | `backend/canary_local_runner.ml` | step list → verdict              |
+| Function               | Module                            | Role                             |
+| ---------------------- | --------------------------------- | -------------------------------- |
+| `project_spec_of_rows` | `action/canary_project_spec.ml`   | rows → spec                      |
+| `patterns_of`          | `action/canary_enumerate.ml`      | spec → (chain × assignment) list |
+| `scenarios_of`         | `project/canary_project_run.ml`   | project → assignment list        |
+| `realize_from_rows`    | `action/canary_action_templates.ml` | assignment → runner_spec       |
+| `derive_steps`         | `action/canary_step_builder.ml`   | runner_spec → step list          |
+| `run_with_info_status` | `backend/canary_local_runner.ml`  | step list → verdict              |

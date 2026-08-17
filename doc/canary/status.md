@@ -10,10 +10,10 @@
 ## Current state
 
 - **Pattern-based enumeration** — `patterns_of` primary path (18 universal chains from
-  action catalogue). 3 scenarios each for z3/llvm/sqlite, 1 for tiny-full,
-  2 each for zarith/ssl (zarith's per-channel source repos since the
-  repo-model C1, cd9e341), 1 each for cairo/libffi (counts
-  re-verified via `spec @all` 2026-08-16).
+  action catalogue). Per-project scenario counts are PROJECT status —
+  the current snapshot lives in
+  [`project/status_project.md` §1](project/status_project.md) (C2's
+  3-way made z3/llvm 5-scenario projects).
 - **Project registry** — `Canary_registry.all_projects` is THE single source of truth
   for project names; `action`/`spec`/`scenarios` each do one `List.assoc_opt` lookup
   (2026-08-12).
@@ -47,7 +47,7 @@
   from its three decls (byte-equal to the former literals, pinned +
   actions.log-diffed). External projects: declaration universal, build
   commands respected as-is (Raw) — see M2 step 5.
-- **Tests** — 65 project + 107 artifact + 14 PM = 186 total. Post-check convention in
+- **Tests** — 67 project + 107 artifact + 14 PM = 188 total. Post-check convention in
   CLAUDE.md: `make canary-test` after every edit, `make canary-post-check` before commit.
 - **Docs** — `algorithm_explainer.md` current. `scenario.md` (canonical naming +
   contract catalogue). Project docs reorganized under `project/` (index + status +
@@ -95,7 +95,7 @@ from contract × mechanism.
 ```
 
 **Constraint**: M2 is structural reorg + dispatch. The existing checking
-and tests (65 project + 107 artifact, tiny1 22/22, sqlite/z3/llvm) must
+and tests (67 project + 107 artifact, tiny1 22/22, sqlite/z3/llvm) must
 keep working throughout — the hand-written per-project binding tables
 produce the same firings as the templated ones.
 

@@ -575,3 +575,71 @@ Also flushed: the Docs checklist's two completed entries —
 (2026-08-15/16, e40c73e → cd9e341: `contrib_root`, `Repo` provider
 unification + `Repo_axes` per-channel source repos, `Git`/`Hg`/`Tar`
 remotes, repo-contents invariant; retired the dead `has_build_*` code).
+
+## 2026-08-16 (cont.) — repo-model C1+C2: the 3-way landed, and the cold audit
+
+The 3-way arc closed (roadmap C, `repo_model.md`; commits `cd9e341` C1,
+`19077a8` C2, `dde3f10` llvm fix). Flushed here per the status
+convention (status_project.md §3 keeps the pointer + the living
+to-dos; the per-project scenario counts moved to its §1).
+
+**C1 — zarith (light, pattern-A)** (`cd9e341`): `Repo_axes of
+source_repo list` provider (a repo FAMILY covering the channels of one
+artifact), `versions_of_provider` widened to version records (channel
+PRESERVED — `Canary_basic.pinned`'s hardcoded Stable would have broken
+`--thin`), pattern-A's `t.source : option` → `t.sources : list` with
+per-scenario worktree dispatch (`source_for_assignment` — the
+realize ∘ dispatch idiom over the SOURCE placement). zarith: 2
+scenarios (source-fetched-1.14 / source-fetched-master); cairo/libffi
+sources became identity-bearing as a side fix (their dirs renamed —
+honest, the worktree IS pinned to the declared ref).
+
+**C2 — z3/llvm (heavy)** (`19077a8`): the arbipher forks became labeled
+third repos (`label = Some "arbipher"`, identity-bearing
+`id = "arbipher"` — marker-style, like "latest"; the 2026-08-13
+fork↔official cache collision resolved by design), source rows →
+`Repo_axes [stable; latest; fork]`, `z3/llvm_source_for_assignment`
+dispatch on the SOURCE placement (the pre-C2 lib-channel proxy
+retired; the dev/stable ROW split stays driven by the lib provision in
+`realize_from_rows`). `assignment_ok`'s Built-lib↔source coupling
+relaxed from exact-build_id to CHANNEL equality — exact-id was right
+while sources were ambient; with per-repo pins it would have killed
+both dev build chains. 5 scenarios each (3 all-Fetched source worlds +
+2 dev build chains); `--thin` = the stable chain only. Pins:
+two_chain_pins now locks the 3-way shape (5 scenarios / 5 ids / 2 dev
+chains / source-id dispatch correspondence), integration_smoke 3→5.
+
+**The cold audit** — the scenario-dir rename forced every step cold,
+and the warm `.ok` markers had been skipping broken steps since the A5
+era. Five masked bugs surfaced and were fixed (all OURS — the checked
+projects were innocent throughout):
+1. z3's Configure row had dropped `-DZ3_BUILD_EXECUTABLE=OFF` in the A5
+   table migration → `cmake --install` died on the never-built shell
+   binary. The fork's old cmake cache was immune (cache
+   first-write-wins); the fresh official clone exposed it. Fixed: the
+   row carries the canonical what-is-built flags.
+2. The `Cmake_install` template wrote `install.ok` UNCONDITIONALLY
+   (the bug-B class: a failed install cached as success) → marker now
+   conditional on install + layout-inspect.
+3. `prefix_layout_inspect_cmd`'s printf fed the unquoted two-word
+   "regular file" to `%d` (word-splitting) — the inspect had never
+   actually run for z3's latest chain. Substitutions quoted.
+4. llvm's table rows probed `root/llvm/CMakeLists.txt` at REALIZE
+   time, before the fetch — a fresh `_out` clone always resolved the
+   cmake source to `root`. This was the real bug behind the 2026-08-12
+   "official clone unusable" finding (misdiagnosed twice — the clone
+   was always fine). Fixed: every llvm repo is the monorepo, cmake
+   source = `root/llvm` unconditionally (`dde3f10`).
+5. `contrib/z3-all/z3-stable` (declared by the stable repo's locals)
+   didn't exist — created at the pinned commit bd3e722.
+
+General lesson (recorded in status_project.md): a scenario-dir rename
+IS a cold-run audit — warm markers mask spec drift.
+
+**Verification**: `action z3` 5/5 PASS (both dev chains cold-built, the
+install genuinely verified for the first time since A5); `action llvm`
+5/5 PASS + 3 confirmed xfails (Opcode.UncondBr in the three
+stable-binding worlds; the resumed run after a machine restart cost
+nothing — the clone, markers, and ninja's incremental state persist).
+The verdict-matrix regression pin (cold/warm determinism) is filed as
+the follow-up to-do.
