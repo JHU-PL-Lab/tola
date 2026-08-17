@@ -540,10 +540,24 @@ and a project agent (`tola-m3`, branch `m3-agent`). Setup, 2026-08-14:
 - **VSCode entry** — `tola/vendor/tola-m3` symlink → `../../tola-m3`
   (gitignored; `vendor` is dune `data_only_dirs` so no recursion).
   Add it as a workspace folder.
+- **Sync on demand, not per commit** (2026-08-17, user) — each tree
+  works independently; commits on one branch don't touch the other
+  until a merge. The main→worktree `ff-only` sync happens only when
+  the worktree agent resumes work or at merge-back time — no ritual
+  after every commit. Conflicts (if any) surface at merge time and
+  the merging side resolves them.
 - **Merge back** — normal git: commit on `m3-agent`, then
   `git merge m3-agent` from `ds-workflow`; `git worktree remove
   tola-m3` and `git branch -d m3-agent` after. `_out` is gitignored
   and shared, so merges carry source only.
+- **Overlap warning** (2026-08-17, user) — two streams touching the
+  same shared-core files (project_run, specs, spec_check) was tried
+  and judged a bad idea: parallel checkouts don't give parallel
+  development. Shared-core changes happen in the MAIN tree
+  (commit-first); the worktree is for genuinely disjoint chunks
+  (new-project landings that mostly add files). The m3 agent is
+  PAUSED (2026-08-17); its uncommitted leftovers may sit in either
+  tree.
 - Worktree caveats: cold dune build per tree (~minutes, done once);
   dune-scan fix inherited only if the base commit is recent; the
   tool-routing ratchet baselines are shared — resolve at merge time.
