@@ -52,13 +52,6 @@ type t = {
      source row whose store pins are the repos' own version records — each
      scenario materializes ITS channel's worktree. *)
   sources : Canary_artifact_source.source_repo list;
-  (* The LIB's own source repos (2026-08-17, the 2×2 matrix): when
-     non-empty, the lib row gains a [Built] column per repo (the
-     source-built side of the lib's version axis) — the system package
-     keeps the [Fetched] column. zarith: GMP's official release tarball
-     (6.2.1, the second column; the hg master column awaits a local
-     mercurial). Empty for the classic conf-only shape. *)
-  lib_sources : Canary_artifact_source.source_repo list;
   (* The binding's honest mechanism (2026-08-13, the recorded M2 issue):
      [Cstubs] for static stub-linked bindings (zarith/cairo), [Ctypes] for
      genuinely Dynamic_ffi ones (libffi's ctypes-foreign resolves and
@@ -208,6 +201,85 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
               failwith
                 "pattern_a source_for_assignment: no source declared"))
 
+(* The per-scenario realization (2026-08-17): the dispatch over the base
+   [runner_spec_with] —
+   - binding Built (the FORWARD cell: new binding over the system lib)
+     → build_binding (the scenario's worktree copied into the shared
+     build dir — the checkout stays pristine — configure+make, which
+     finds the system lib naturally) + a Build_tree probe.
+   The LIB side stays Fetched only — the prebuilt-shadows-source rule
+   (user feedback, 2026-08-17): building an external C lib (GMP's hg
+   tree: bootstrap + libtool + VPATH traps) is a LAST resort, reserved
+   for fixing the lib or confirming a blame. A second lib version
+   enters only as a prebuilt (the shadow-preference mechanism,
+   conf_survey.md §6); until one exists, the lib axis is the system
+   PM's stable. *)
+let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
+    Canary_step_builder.runner_spec =
+  let src = source_for_assignment d a in
+  let distro = Canary_basic.detect_distro () in
+  let bind_built =
+    Canary_enumerate.equal_provision
+      (Canary_enumerate.provision_of a
+         (Canary_artifact.a_binding Canary_lang.OCaml d.binding_mechanism))
+      Canary_artifact.Built
+  in
+  let base = runner_spec_with d (Some src) in
+  (* the shared build tree for a Built binding (2026-08-17 fix): the
+     build_binding and probe_binding steps have DIFFERENT output dirs
+     (projects/<p>/<step>/<lang>/), so a build dir keyed on [output_dir]
+     alone is invisible to the probe. Both closures compute the SAME dir
+     from their own output_dir: two levels up = the project dir (Output
+     Layout v3: projects/<p>/<step>/<lang>/). *)
+  let ws_src_dir output_dir variant_key =
+    Printf.sprintf "%s/../../src_%s" output_dir variant_key
+  in
+  let build_binding =
+    if bind_built then
+      [ (Canary_lang.OCaml,
+         fun ~output_dir ~variant_key ->
+           let wt =
+             Canary_artifact_source.repo_worktree_path ~project:d.name
+               ~repo:src ~ref_:src.Canary_artifact_source.ref_ distro
+           in
+           let s = ws_src_dir output_dir variant_key in
+           (* the binding builds against the SYSTEM lib (the prebuilt-
+              shadows-source rule — no source-built lib column) *)
+           Printf.sprintf
+             "eval $(opam env) && rm -rf %s && cp -r %s %s && cd %s && \
+              ./configure && make"
+             s wt s s
+           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
+                ~variant_key)
+      ]
+    else []
+  in
+  let probe_binding =
+    if bind_built then
+      [ (Canary_lang.OCaml, Canary_store.Build_tree,
+         fun ~output_dir ~variant_key ->
+           let s = ws_src_dir output_dir variant_key in
+           let log = Canary_basic.variant_file ~variant_key "probe.log" in
+           (* NO cd — the example path is repo-root-relative (the opam
+              probe's convention); the build dir enters via -I + the
+              loader path (dllzarith.so loads from the build dir). *)
+           let ld = "LD_LIBRARY_PATH=" ^ s ^ ":" in
+           Printf.sprintf
+             "eval $(opam env) && export %s && \
+              ocamlfind ocamlopt -I %s %s/zarith.cmxa %s \
+                -o %s/zarith_example > %s/%s 2>&1 && \
+              %s/zarith_example >> %s/%s 2>&1 && cat %s/%s"
+             ld s s d.example_file output_dir output_dir log
+             output_dir output_dir log output_dir log)
+      ]
+    else base.Canary_step_builder.probe_binding
+  in
+  { base with
+    fetch_binding =
+      (if bind_built then [] else base.Canary_step_builder.fetch_binding);
+    build_binding; probe_binding;
+  }
+
 (* ── THE artifact table + run (2026-08-13, spec-check fulfillment) ──
    Typed rows replacing [Canary_project_run.simple]'s providerless rows:
    source (when declared) + system-pkg lib + opam binding — the spec
@@ -243,20 +315,12 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
              package = d.opam_pkg; self_contained = false; versions = None })
       ()
   in
-  (* the lib row: the system package keeps the [Fetched] column; each
-     [lib_sources] repo contributes a [Built] column at its channel —
-     the source-built side of the lib's version axis (the second GMP). *)
-  let lib_universe =
-    (Fetched, [ Canary_basic.Stable ])
-    :: List.map
-         (fun r ->
-           ( Built,
-             [ r.Canary_artifact_source.version.Canary_basic.channel ] ))
-         d.lib_sources
-  in
+  (* the lib row: the system package's Fetched column ONLY — the
+     prebuilt-shadows-source rule (2026-08-17): no source-built lib
+     column; a second lib version enters as a prebuilt, never a build *)
   let lib_row =
     Canary_project_spec.artifact_row ~artifact:a_lib
-      ~universe:lib_universe
+      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:
         (Canary_store_config.Sys_pkg
            { Canary_store.linux_pkg = d.system_pkg_linux;
@@ -291,7 +355,10 @@ let run (d : t) : Canary_project_run.project_run =
        channel's source worktree — the dispatch reads the source
        placement's pinned version (the realize ∘ dispatch idiom) *)
     pr_runner_spec =
-      (fun a ~workspace:_ -> runner_spec_with d (Some (source_for_assignment d a)));
+      (* C2.5 (2026-08-17): the 2×2 per-scenario realization — the Built
+         columns get their build closures + build-tree probes, the deploy
+         cell its LD_LIBRARY_PATH repoint *)
+      (fun a ~workspace:_ -> runner_spec_for d a);
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
     pr_api_source = None;

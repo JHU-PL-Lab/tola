@@ -155,3 +155,21 @@ re-probe). This differs from z3's current shape, where the two
 provisions enumerate as two SEPARATE scenarios (Fetched@Stable vs
 Built@Dev are different cells) — the shadow applies when both
 provisions would materialize the SAME cell.
+
+**The 2026-08-17 correction — prebuilt shadows source, and no
+source-built lib column by default** (user, after the GMP build
+session): building an external C lib is NOT always easy — GMP's hg
+tree needed a partial bootstrap (autoreconf without libtoolize), seeded
+autotools aux files, explicit `NM`/`CC`, and still died on missing
+`Makefile.in`s (the libtool package is the hard requirement). The rule:
+if a latest prebuilt exists, USE it; if not, only the system PM's
+latest stable. Source-built lib columns are for FIXING the lib or
+confirming a blame — not routine matrix enumeration. **Concrete
+zarith shape** (verified 3/3 PASS): the lib row is Fetched-only (the
+system 6.3.0); the matrix collapses to `{zarith 1.14, master} × {gmp
+6.3.0}` = 3 scenarios — the current cell, the master-source world, and
+the FORWARD cell (master binding built from the worktree copy, probed
+against the system lib — the designed mismatch probe). The gmp master
+repo record stays DECLARED but unwired (the ssl unwired-dev precedent).
+The binding side builds are cheap and stay in the matrix (the
+binding-language side is where the fixes live).

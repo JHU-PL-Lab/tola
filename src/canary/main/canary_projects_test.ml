@@ -446,8 +446,9 @@ let registry_pin : Canary_project_test.pure_test =
             let src (a : Canary_artifact.assignment) =
               Canary_enumerate.version_of a Canary_artifact.a_source
             in
-            (* C2.5 (2026-08-17): the 2×2 — 5 scenarios (see repo_model.axes_pins) *)
-            List.length asgs = 5
+            (* C2.5 (2026-08-17): the prebuilt-shadows-source shape —
+               3 scenarios (see repo_model.axes_pins) *)
+            List.length asgs = 3
             && List.for_all asgs ~f:(fun a -> not (String.equal (src a).Canary_basic.id ""))
             && Poly.equal
                  (List.dedup_and_sort
@@ -902,13 +903,15 @@ let repo_axes_pin : Canary_project_test.pure_test =
         in
         let zarith_asgs = Canary_project_run.scenarios_of Canary_project_zarith.zarith_run in
         let zarith_ok =
-          (* C2.5 (2026-08-17): the 2×2 matrix — 5 scenarios: the current
-             cell {1.14, F lib, F bind}, the master-source world, the two
-             diagonals (forward: B bind × F lib; deploy: F bind × B lib),
-             and new×new {master, B lib, B bind}. The Built-binding↔source
-             channel coupling (enumerate's Lockstep post-filter) pruned the
-             incoherent {1.14 source, B bind} cell. *)
-          List.length zarith_asgs = 5
+          (* C2.5 (2026-08-17, the prebuilt-shadows-source shape): 3
+             scenarios — the current cell {1.14, F lib, F bind}, the
+             master-source world, and the FORWARD cell {master, F lib,
+             B bind} (the Built binding builds from the master worktree
+             against the system lib — the designed mismatch probe). The
+             lib axis stays Fetched-only: no source-built GMP column
+             (the feedback rule). The Built-binding↔source channel
+             coupling pruned the incoherent {1.14 source, B bind} cell. *)
+          List.length zarith_asgs = 3
           && List.for_all zarith_asgs ~f:(fun a ->
                  not (String.equal (source_version a).Canary_basic.id ""))
           && List.length
@@ -916,7 +919,7 @@ let repo_axes_pin : Canary_project_test.pure_test =
                   (List.map zarith_asgs ~f:(fun a ->
                        Canary_project_run.scenario_dir_of ~pr_name:"zarith" a))
                   ~compare:String.compare)
-               = 5
+               = 3
         in
         (* the realize ∘ dispatch: each scenario's fetch_source command
            materializes ITS repo's worktree ref *)
