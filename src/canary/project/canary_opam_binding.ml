@@ -210,6 +210,25 @@ let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
               failwith
                 "opam_binding source_for_assignment: no source declared"))
 
+(* The pattern's forward-cell contract (2026-08-17, active plan 1): c1 —
+   symbol set. When the binding is BUILT and the lib is FETCHED (the
+   forward cell: new binding × old lib), the probe's failure must be a
+   PREDICTED compat finding (the stub's undefined C symbols vs the
+   lib's exports — the tiny-full precedent), not a raw FAIL. The other
+   cells keep Expect_success. *)
+let opam_binding_contract_bindings : Canary_scenario.contract_binding list =
+  let module CC = Canary_compat in
+  let module CS = Canary_scenario in
+  [ { contract = CC.C1; lang = Canary_lang.OCaml;
+      firings = [
+        { site = CS.At_probe_binding Canary_lang.OCaml;
+          loc_filter = CS.Any;
+          source = CS.From_artifact {
+            inputs = Canary_compat_run.inputs_of_contract CC.C1 Canary_lang.OCaml;
+            version_info = None;
+          }};
+      ]} ]
+
 (* The per-scenario realization (2026-08-17): the dispatch over the base
    [runner_spec_with] —
    - binding Built (the FORWARD cell: new binding over the system lib)
@@ -252,12 +271,46 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                ~repo:src ~ref_:src.Canary_artifact_source.ref_ distro
            in
            let s = ws_src_dir output_dir variant_key in
+           (* the c1 summaries (active plan 1): the forward cell's compat
+              inputs resolve from the STEP-DIR summaries the runner's
+              resolve_input reads — the stub summary at
+              projects/<p>/build_binding/ and the SYSTEM lib's native
+              summary at projects/<p>/build_lib/ (both LANG-LESS,
+              variant-suffixed — [step_dir_of_tag "build_binding"] maps
+              to the lang-less dir while the step writes into
+              build_binding/ocaml, hence output_dir ^ "/.."). The lib
+              summary is the same inspect the probe_lib_inspect
+              produces — written here too because the resolver only
+              looks at build_lib/. *)
+           let stub_sum =
+             (* inline the python call — the [stub_inspect_pipe_cmd] helper
+                single-quotes its path (for literal paths), which would pass
+                the LITERAL "$STUB" to nm *)
+             Printf.sprintf
+               "STUB=$(ls %s/*.a 2>/dev/null | head -1)\n\
+                test -n \"$STUB\"\n\
+                python3 canary/scripts/inspect_binding.py --kind stub \
+                  --path \"$STUB\" --prefix '%s' --watchlist '' > %s/%s"
+               s d.native_probe_prefix (output_dir ^ "/..")
+               (Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json")
+           in
+           let lib_sum =
+             let pipe =
+               Canary_artifact_native.inspect_pipe_cmd ~lib:"$LIB_NATIVE"
+                 ~prefixes:d.native_inspect_prefixes ()
+             in
+             Printf.sprintf "%s\n%s > %s/%s" (lib_resolve d.lib) pipe
+               (output_dir ^ "/../../build_lib")
+               (Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json")
+           in
            (* the binding builds against the SYSTEM lib (the prebuilt-
-              shadows-source rule — no source-built lib column) *)
+              shadows-source rule — no source-built lib column). The
+              summaries run from the REPO ROOT (cd "$OLDPWD" — the
+              inspect scripts' paths are repo-root-relative) *)
            Printf.sprintf
              "eval $(opam env) && rm -rf %s && cp -r %s %s && cd %s && \
-              ./configure && make"
-             s wt s s
+              ./configure && make && cd \"$OLDPWD\" && %s && %s"
+             s wt s s stub_sum lib_sum
            |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir
                 ~variant_key)
       ]
@@ -287,6 +340,14 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
     fetch_binding =
       (if bind_built then [] else base.Canary_step_builder.fetch_binding);
     build_binding; probe_binding;
+    (* the forward cell's probe carries the c1 compat-derived
+       expectation (active plan 1); the other cells keep success *)
+    expectation =
+      (if bind_built then
+         Canary_scenario.lower_expectation_agnostic
+           ~bindings:opam_binding_contract_bindings
+           ~langs:[ Canary_lang.OCaml ]
+       else base.Canary_step_builder.expectation);
   }
 
 (* ── THE artifact table + run (2026-08-13, spec-check fulfillment) ──

@@ -946,6 +946,36 @@ let repo_axes_pin : Canary_project_test.pure_test =
         in
         zarith_ok && cmds_ok && cairo_ok) }
 
+(* Active plan 1 (2026-08-17): the FORWARD cell's probe carries the c1
+   compat-derived expectation — a future master×system-lib break must be
+   a PREDICTED finding, not a raw FAIL. The other cells keep
+   Expect_success. Pure — the realization builds closures only. *)
+let forward_cell_expectation_pin : Canary_project_test.pure_test =
+  { name = "repo_model.forward_cell_expectation";
+    check =
+      (fun () ->
+        let module SM = Canary_step_model in
+        let pr = Canary_project_zarith.zarith_run in
+        let bind_art =
+          Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+        in
+        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+            let spec =
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/fwd"
+            in
+            let bind_built =
+              Canary_enumerate.equal_provision
+                (Canary_enumerate.provision_of a bind_art)
+                Canary_artifact.Built
+            in
+            match
+              spec.Canary_step_builder.expectation
+                (Canary_basic.Probe_binding Canary_lang.OCaml)
+                (Some Canary_store.Build_tree)
+            with
+            | SM.Expect_compat_derived _ -> bind_built
+            | _ -> not bind_built)) }
+
 (* M2 step 4 pin (2026-08-16): the binding declarations ride on the
    [project_run] — tiny's spec exposes its three decls and the lookup
    matches by the artifact's mechanism (the decl's identity label).
@@ -1087,6 +1117,7 @@ let tests : Canary_project_test.pure_test list =
       local_fork_pin;
       repo_contents_pin;
       repo_axes_pin;
+      forward_cell_expectation_pin;
       tiny_binding_realization_pin;
       binding_decls_on_project_run_pin;
       sqlite_binding_decls_pin;
