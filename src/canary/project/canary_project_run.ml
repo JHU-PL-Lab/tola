@@ -98,10 +98,30 @@ type project_run = {
       Repo-carried projects (z3/llvm/sqlite) declare it on the source
       record instead. *)
   pr_api_source : Canary_artifact.t option;
+  (** The binding declarations (M2 step 4, 2026-08-16) — one flat typed
+      record per binding (mechanism + payload: c_api/native/coupling/
+      surface_path). UNIVERSAL: what checker/contract selection reads,
+      declared regardless of how the project builds. [] = not declared
+      yet (external projects fill in as they land). *)
+  pr_binding_decls : Canary_binding_decl.binding_decl list;
   (** Run-cost tier — the batch runner's default config key (see
       [project_tier]). *)
   pr_tier : project_tier;
 }
+
+(** The binding declaration for an artifact, if the project declares one —
+    matched by the artifact's mechanism (the decl's identity label).
+    [None] for non-binding artifacts and undeclared bindings. *)
+let binding_decl_of (pr : project_run)
+    (id : Canary_artifact.artifact_id) :
+    Canary_binding_decl.binding_decl option =
+  match (id.Canary_artifact.kind, id.Canary_artifact.ext) with
+  | Canary_artifact.Binding _, Canary_artifact.Ext_mechanism mech ->
+      List.find_opt
+        (fun (d : Canary_binding_decl.binding_decl) ->
+          Canary_mechanism.equal_mechanism d.mechanism mech)
+        pr.pr_binding_decls
+  | _ -> None
 
 (** The bare artifact identities of the table (display loops, langs). *)
 let artifact_ids (pr : project_run) : Canary_artifact.artifact_id list =

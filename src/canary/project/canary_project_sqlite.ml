@@ -91,6 +91,38 @@ let sqlite_api_source : Canary_artifact.t =
           module_watchlist = sqlite_python_watchlist;
           type_watchlist = [] } ] }
 
+(* ── binding declarations (M2 step 4, 2026-08-16) ── the two bindings
+   as typed records. The facts mirror what the spec already declares:
+   c_api = the declared stable-symbol subset
+   ([sqlite_native_modern_watchlist]), native prefix/headers =
+   [sqlite_api_source]; the coupling products are the binding-package
+   facts (opam sqlite3 = sqlite3-ocaml upstream; the Python binding is
+   CPython's compiled _sqlite3 module). *)
+let sqlite_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  let native =
+    { prefix = "sqlite3_";
+      soname = "libsqlite3.so.0";
+      (* the runner's .so.0 symlink target — the real soname *)
+      headers = { dir = "."; files = [ "sqlite3.h" ] } }
+  in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      c_api = { functions = sqlite_native_modern_watchlist; enums = [] };
+      native;
+      coupling =
+        Stub_archive
+          { sources = [ "sqlite3_stubs.c" ];      (* sqlite3-ocaml upstream *)
+            archive = "libsqlite3_stubs.a" };
+      surface_path = "sqlite3.mli" };
+    { mechanism = Canary_mechanism.Cext;
+      c_api = { functions = sqlite_native_modern_watchlist; enums = [] };
+      native;
+      coupling =
+        Compiled_ext
+          { source = "_sqlite/_sqlite3.c";        (* CPython Modules/_sqlite *)
+            product = "_sqlite3*.so" };
+      surface_path = "sqlite3/__init__.py" } ]
+
 (* sqlite's source is a remote git repo with two versions — a general mimic of
    z3 (dev / stable), but declared cleanly on the project_run spec. The STABLE
    tag (3.45.1 = the amalgamation 3450100 canary builds, and the libsqlite3 the
@@ -374,4 +406,5 @@ let sqlite_run : Canary_project_run.project_run =
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
     pr_api_source = None;
+    pr_binding_decls = sqlite_binding_decls;
     pr_tier = Canary_project_run.Light }

@@ -260,4 +260,5 @@ let run (d : t) : Canary_project_run.project_run =
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
     pr_api_source = None;
+    pr_binding_decls = [];
     pr_tier = Canary_project_run.Light }

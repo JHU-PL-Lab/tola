@@ -611,4 +611,5 @@ let llvm_run _distro : Canary_project_run.project_run =
        official latest / arbipher fork) + 2 source-built dev chains
        (official latest + fork; the heaviest of all — the batch default
        runs llvm THIN, stable fetch chain only). *)
+    pr_binding_decls = [];
     pr_tier = Canary_project_run.Heavy }

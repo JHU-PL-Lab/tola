@@ -284,6 +284,44 @@ let check_python_binding (pr : Canary_project_run.project_run) : item =
           Printf.sprintf "%d python binding(s) (%s)" (List.length rows)
             (String.concat ~sep:", " mechs) }
 
+(* M2 step 4 (2026-08-16): the binding declarations — one flat typed
+   record per binding (mechanism + payload), what checker/contract
+   selection reads. Every BINDING artifact the table declares must have
+   its decl (a Warn while external projects fill in); projects without
+   bindings are n/a. *)
+let check_binding_declarations (pr : Canary_project_run.project_run) : item =
+  let label = "binding declarations" in
+  let bindings =
+    List.filter_map pr.pr_artifacts ~f:(fun d ->
+        match Canary_artifact.kind_of d.Canary_project_spec.ar_artifact with
+        | Canary_basic.Binding _ -> Some d.Canary_project_spec.ar_artifact
+        | _ -> None)
+  in
+  match bindings with
+  | [] ->
+      { item_id = "binding_decls"; label; severity = Na;
+        detail = "no binding artifacts declared" }
+  | _ ->
+      let declared =
+        List.filter bindings ~f:(fun id ->
+            Option.is_some (Canary_project_run.binding_decl_of pr id))
+      in
+      let missing =
+        List.filter bindings ~f:(fun id ->
+            Option.is_none (Canary_project_run.binding_decl_of pr id))
+      in
+      let detail =
+        Printf.sprintf "%d/%d declared" (List.length declared)
+          (List.length bindings)
+      in
+      if List.is_empty missing then
+        { item_id = "binding_decls"; label; severity = Ok; detail }
+      else
+        { item_id = "binding_decls"; label; severity = Warn;
+          detail =
+            Printf.sprintf "%s — missing: %s" detail
+              (String.concat ~sep:", " (List.map missing ~f:Canary_artifact.string_of_id)) }
+
 let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
   let label = "binding dev source" in
   let all_binding_rows =
@@ -354,7 +392,8 @@ let check (pr : Canary_project_run.project_run) : report =
         check_opam_package pr;
         check_dev_wrapper_package pr;
         check_python_binding pr;
-        check_binding_dev_source pr ] }
+        check_binding_dev_source pr;
+        check_binding_declarations pr ] }
 
 (* ── rendering (CLI text + web json) ── *)
 

@@ -509,7 +509,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
           pr_mismatch_probes = [];
           pr_wrapper_pkgs = [];
           pr_api_source = None;
-          pr_tier = Canary_project_run.Light }
+          pr_binding_decls = []; pr_tier = Canary_project_run.Light }
       in
       let asgs = Canary_project_run.scenarios_of pr in
       (* Exactly 1 scenario: all artifacts Vendored@Stable *)
@@ -708,7 +708,7 @@ let spec_check_every_project_pin : Canary_project_test.pure_test =
         List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
             let r = Canary_spec_check.check pr in
             String.equal r.project name
-            && List.length r.items = 8
+            && List.length r.items = 9
             && List.for_all r.items ~f:(fun i ->
                    not (String.equal i.item_id "")))) }
 
@@ -741,13 +741,15 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
   (* the remaining pattern-A warns (2026-08-13 fulfillment closed the
      errors): no wrapper pkg, no python binding, no Built binding axis. *)
   let pat_warns =
-    [ "binding_dev_source"; "dev_wrapper_package"; "python_binding" ]
+    [ "binding_decls"; "binding_dev_source"; "dev_wrapper_package";
+      "python_binding" ]
   in
   { name = "spec_check.ratchet_current";
     check =
       (fun () ->
-        want ~errs:[] ~warns:[] ~na:[] "z3"
-        && want ~errs:[] ~warns:[ "dev_wrapper_package" ] ~na:[] "llvm"
+        want ~errs:[] ~warns:[ "binding_decls" ] ~na:[] "z3"
+        && want ~errs:[]
+             ~warns:[ "binding_decls"; "dev_wrapper_package" ] ~na:[] "llvm"
         && want ~errs:[]
              ~warns:[ "binding_dev_source"; "dev_wrapper_package" ] ~na:[]
              "sqlite"
@@ -849,7 +851,7 @@ let local_fork_pin : Canary_project_test.pure_test =
             pr_mismatch_probes = [];
             pr_wrapper_pkgs = [];
             pr_api_source = None;
-            pr_tier = Canary_project_run.Light }
+            pr_binding_decls = []; pr_tier = Canary_project_run.Light }
         in
         let r = Canary_spec_check.check pr in
         match
@@ -924,6 +926,74 @@ let repo_axes_pin : Canary_project_test.pure_test =
         in
         zarith_ok && cmds_ok && cairo_ok) }
 
+(* M2 step 4 pin (2026-08-16): the binding declarations ride on the
+   [project_run] — tiny's spec exposes its three decls and the lookup
+   matches by the artifact's mechanism (the decl's identity label).
+   Non-binding artifacts look up to [None]. *)
+let binding_decls_on_project_run_pin : Canary_project_test.pure_test =
+  { name = "tiny1.binding_decls_on_project_run";
+    check =
+      (fun () ->
+        let module PR = Canary_project_run in
+        let pr = Canary_project_tiny.tiny_full_run in
+        let find mech =
+          PR.binding_decl_of pr
+            (Canary_artifact.a_binding Canary_lang.OCaml mech)
+        in
+        (match find Canary_mechanism.Cstubs with
+        | Some d ->
+            Poly.equal d.c_api.functions
+              Canary_tiny_scenario.tiny_native_stable_symbols
+            && String.equal d.surface_path "ocaml/tiny.mli"
+        | None -> false)
+        && (match find Canary_mechanism.Cext with
+           | Some d ->
+               String.equal d.surface_path
+                 "python_cext/tiny_cext/__init__.py"
+           | None -> false)
+        && (match find Canary_mechanism.Ctypes with
+           | Some d ->
+               String.equal d.surface_path
+                 "python_ctypes/tiny_ctypes/__init__.py"
+           | None -> false)
+        && Option.is_none (PR.binding_decl_of pr Canary_artifact.a_lib)
+        && Option.is_none (PR.binding_decl_of pr Canary_artifact.a_source)
+        && List.length pr.pr_binding_decls = 3) }
+
+(* M2 step 4 pin (2026-08-16): sqlite's decls mirror its declared spec —
+   mechanisms match the artifact table, native prefix/headers match
+   [sqlite_api_source], c_api = the declared stable-symbol subset, and
+   the run exposes them. *)
+let sqlite_binding_decls_pin : Canary_project_test.pure_test =
+  { name = "sqlite.binding_decls_match_declared";
+    check =
+      (fun () ->
+        let pr = Canary_project_sqlite.sqlite_run in
+        let d_of mech =
+          Canary_project_run.binding_decl_of pr
+            (Canary_artifact.a_binding Canary_lang.OCaml mech)
+        in
+        match (d_of Canary_mechanism.Cstubs, d_of Canary_mechanism.Cext) with
+        | Some cstubs, Some cext ->
+            let native_matches (d : Canary_binding_decl.binding_decl) =
+              String.equal d.native.prefix "sqlite3_"
+              && String.equal d.native.soname "libsqlite3.so.0"
+              && Poly.equal d.native.headers.files [ "sqlite3.h" ]
+              && Poly.equal d.c_api.functions
+                   Canary_project_sqlite.sqlite_native_modern_watchlist
+            in
+            native_matches cstubs && native_matches cext
+            && (match cstubs.coupling with
+               | Canary_binding_decl.Stub_archive sa ->
+                   String.equal sa.archive "libsqlite3_stubs.a"
+               | _ -> false)
+            && (match cext.coupling with
+               | Canary_binding_decl.Compiled_ext ce ->
+                   String.equal ce.product "_sqlite3*.so"
+               | _ -> false)
+            && String.equal cstubs.surface_path "sqlite3.mli"
+        | _ -> false) }
+
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
@@ -940,4 +1010,6 @@ let tests : Canary_project_test.pure_test list =
       local_fork_pin;
       repo_contents_pin;
       repo_axes_pin;
-      tiny_binding_realization_pin ]
+      tiny_binding_realization_pin;
+      binding_decls_on_project_run_pin;
+      sqlite_binding_decls_pin ]
