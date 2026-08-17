@@ -630,6 +630,21 @@ let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
       else Compatible
     else Missing { symbols = missing }
 
+(** The lag's CONCRETE witnesses (2026-08-17, user): one required symbol
+    (the consumer's surface — IN) and one provided-but-unrequired symbol
+    (the rest of the provider — OUT), so the warning can show "some are
+    in and some are out" instead of bare counts. [None] = can't pick
+    (the inclusion already holds, so the IN pick always exists; the OUT
+    pick needs at least one unused symbol). *)
+let lag_examples ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
+    : (string * string) option =
+  match binding_stub.requires with
+  | [] -> None
+  | in_example :: _ ->
+      let required_set = Set.of_list (module String) binding_stub.requires in
+      List.find_map native_lib.symbols ~f:(fun s ->
+          if Set.mem required_set s then None else Some (in_example, s))
+
 (* ── Contract registry vocabulary (Phase 12, 2026-06-02) ──────────────
    The c1..c8 surface-theory contracts as a registered collection. Each
    entry pairs a contract id with its status, the action-graph layer it

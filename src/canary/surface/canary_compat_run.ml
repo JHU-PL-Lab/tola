@@ -376,12 +376,19 @@ let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
   | Some (stub, lib) -> (
       match check_c_compat ~binding_stub:stub ~native_lib:lib with
       | Compatible_lag { required; provided } ->
+          let witness =
+            match lag_examples ~binding_stub:stub ~native_lib:lib with
+            | Some (in_use, unused) ->
+                Printf.sprintf " (e.g. %s in use; %s in the unused remainder)"
+                  in_use unused
+            | None -> ""
+          in
           Some
             (Printf.sprintf
                "c1 cmp_symbol: consumer requires %d of the provider's %d \
-                symbols — POSSIBLY OUT-OF-DATE (a small consumer surface may \
+                symbols%s — POSSIBLY OUT-OF-DATE (a small consumer surface may \
                 be by design or lag)"
-               required provided)
+               required provided witness)
       | Compatible | Missing _ | Unknown -> None)
   | None -> None
 

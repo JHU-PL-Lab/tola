@@ -235,15 +235,26 @@ let cmp_symbol_pure_tests =
         (* 2 of 100 provided: inclusion passes but the consumer covers
            < 10% — the POSSIBLY OUT-OF-DATE signal (a warning, never a
            failure) *)
-        let r = Canary_compat.check_c_compat
-            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
-            ~native_lib:
-              (native_of
-                 ([ "tiny_sum"; "tiny_diff" ]
-                 @ List.init 98 ~f:(fun i -> "tiny_extra_" ^ Int.to_string i))) in
-        match r with
-        | Compatible_lag { required; provided } -> required = 2 && provided = 100
-        | _ -> false };
+        let stub = stub_of [ "tiny_sum"; "tiny_diff" ] in
+        let lib =
+          native_of
+            ([ "tiny_sum"; "tiny_diff" ]
+            @ List.init 98 ~f:(fun i -> "tiny_extra_" ^ Int.to_string i))
+        in
+        let r = Canary_compat.check_c_compat ~binding_stub:stub ~native_lib:lib in
+        (match r with
+         | Compatible_lag { required; provided } -> required = 2 && provided = 100
+         | _ -> false)
+        (* the witness pair: one IN (required) + one OUT (unused) — the
+           warning shows concrete symbols, not bare counts *)
+        && (match Canary_compat.lag_examples ~binding_stub:stub ~native_lib:lib with
+            | Some (in_use, unused) ->
+                String.equal in_use "tiny_sum"
+                && String.is_prefix unused ~prefix:"tiny_extra_"
+            | None -> false)
+        && Option.is_none
+             (Canary_compat.lag_examples ~binding_stub:stub
+                ~native_lib:(native_of [ "tiny_sum"; "tiny_diff" ])) };
     { name = "cmp_symbol.compatible_not_lag_when_healthy";
       check = fun () ->
         (* 2 of 3 provided: the consumer covers most of the provider —
