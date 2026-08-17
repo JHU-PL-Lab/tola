@@ -49,6 +49,24 @@ factory — `assignment_is_all_good` moved to the datatype layer.
 
 ## 2. Bugs & issues
 
+### Fixed — forward-cell build_binding wrote the lib summary into a
+### nonexistent dir on COLD runs
+
+> 2026-08-17, caught by the first full cold re-run of zarith (the warm
+> cache had masked it — old runs left `build_lib/` behind, and every
+> warm re-run reused it).
+
+The pattern's build_binding (the forward cell — binding Built over the
+Fetched system lib) writes TWO c1 summaries: the stub summary into
+`build_binding/` (a parent of the step dir — created by the runner's
+`mkdir -p`) and the system lib's native summary into `build_lib/` —
+but this scenario has NO build_lib step (the lib is Fetched), so
+nothing creates that dir; the redirect died with "Directory
+nonexistent" and the scenario FAILED after a perfectly good build.
+Fixed with a `mkdir -p` of the summary dir inside the cmd
+(`canary_opam_binding.ml`). Same class as the scenario-dir-rename
+lesson: a cold run IS an audit — warm markers mask layout drift.
+
 ### Fixed — libffi binding declared Cstubs (M2 step 3 finding)
 
 > 2026-08-12 surfaced, fixed 2026-08-13 with the spec-check fulfillment.
@@ -332,8 +350,11 @@ per-project ones.
    the FULL 42-symbol stub-required watchlist is the scoping; the
    `prefix` doc comment now allows empty); `zarith_run` carries it,
    pinned by `zarith.binding_decls_match_declared`; spec-check zarith
-   1/1 declared (python_binding is the only remaining ⚠ — expected,
-   OCaml-only).
+   1/1 declared. The remaining `python_binding` ⚠ is a NAMING-SCOPE
+   artifact, not a missing binding: the lib is GMP and ITS python
+   binding is gmpy2 — zarith is only the OCaml binding; the
+   OCaml-focused approach leaves it out on purpose (revisit in the
+   warning-reconsideration pass, below).
 
 **Design-stage** (the enumeration/config family — when dependency
 complexity arrives; config as dependency resolving, status.md design
@@ -365,6 +386,12 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
+- [ ] **Spec-check warning-reconsideration pass** — zarith's
+  `python_binding` ⚠ is a naming-scope artifact (the LIB is gmp, whose
+  python binding is gmpy2; zarith is only the OCaml binding — an
+  OCaml-focused project legitimately skips it). Revisit the warning's
+  semantics when a gmp-named project (or a second zarith binding)
+  lands; user confirmed leaving it for now.
 - [ ] **Historical-bug regression field** — known bugs-with-fixes as
   declared expectations; the contract/xfail machinery shows the shape.
 - [ ] **Surface-drift expectations** — per-project drift bounds on the

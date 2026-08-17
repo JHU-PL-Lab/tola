@@ -308,7 +308,16 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                Canary_artifact_native.inspect_pipe_cmd ~lib:"$LIB_NATIVE"
                  ~prefixes:d.native_inspect_prefixes ()
              in
-             Printf.sprintf "%s\n%s > %s/%s" (lib_resolve d.lib) pipe
+             (* mkdir the summary dir: this scenario has NO build_lib step
+                (the lib is Fetched — system gmp), and [exec_step] only
+                creates the step's OWN dir, so a COLD run has no
+                build_lib/ to redirect into (the warm cache masked it —
+                old runs left the dir behind; the 2026-08-17 cold-run
+                audit caught the redirect dying with "Directory
+                nonexistent") *)
+             Printf.sprintf "mkdir -p %s\n%s\n%s > %s/%s"
+               (output_dir ^ "/../../build_lib")
+               (lib_resolve d.lib) pipe
                (output_dir ^ "/../../build_lib")
                (Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json")
            in
