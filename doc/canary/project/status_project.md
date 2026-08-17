@@ -293,6 +293,28 @@ per-project ones.
   (which lib channels/repos it may link), applied by the enumerate
   filter, selectable per config. The config-as-dependency-resolving
   framing lives in status.md's design directions.
+- [ ] **3-way mismatch probes — the checking focus** (2026-08-16,
+  user): the 3-way's value is the MISMATCH between the lib each source
+  builds and the USER side of the binding (the consumer surface). The
+  machinery exists — `mismatch_direction_of` + the c1..c8 compat
+  checks + the tiny-full forward-mismatch precedent — but no
+  pattern-A project declares `pr_mismatch_probes` (all empty), and
+  z3/llvm's is deliberately empty (the wheel demo is scenario-
+  invariant, not a cross-repo pairing). The natural 3-way probes:
+  binding built from the fork's tree over the OFFICIAL lib (cross-repo
+  ABI), binding@dev over lib@stable (the forward direction — zarith's
+  master stubs against stable GMP; needs a Built binding axis for
+  pattern A), stable binding over the dev lib (deploy mismatch). Wire
+  one per project, feed the three-version report.
+- [ ] **Historical-bug regression field** (2026-08-16, user — an
+  ENHANCEMENT, no hurry): each project records its old bugs with old
+  fixes as declared expectations — the regression suite re-finds the
+  bug in the buggy version (a pinned bad scenario) and confirms the
+  fixed version passes. Model: an extra field on the project spec
+  (e.g. `pr_known_bugs : (scenario_id × expected_contract) list`) or
+  rides the verdict-matrix pin below — the existing
+  contract-bindings/xfail machinery already demonstrates the shape
+  (parser_context, Opcode.UncondBr).
 - [x] **Fetched-source version id in the run-cache key** (2026-08-13) —
   the fork↔official z3 flip changed the scenario dir but warm-skipped
   every step over stale markers (see the Found entry in §2). RESOLVED
