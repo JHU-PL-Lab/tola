@@ -282,13 +282,13 @@ let config_level_test : pure_test =
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep }
+          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
@@ -296,7 +296,7 @@ let config_level_test : pure_test =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
-            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep }
+            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
@@ -326,7 +326,7 @@ let version_axis_test : pure_test =
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
@@ -342,7 +342,7 @@ let version_axis_test : pure_test =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
           ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good)
           ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       let source_primary_holds =
         (not (List.is_empty built))
@@ -370,7 +370,7 @@ let per_artifact_provisions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       let always target id =
         List.for_all pts ~f:(fun p ->
@@ -402,7 +402,7 @@ let per_artifact_versions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:versions_of ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt }
       in
       let binding_ver p = EN.version_of p.EN.assignment a_ocaml in
       (not (List.is_empty pts))
@@ -533,7 +533,7 @@ let thin_config_level_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt };              mutations = [] }
           spec
       in
       let no_dev asgs =
@@ -551,6 +551,89 @@ let thin_config_level_test : pure_test =
                  match pl.Canary_artifact.version.Canary_basic.channel with
                  | B.Stable -> true
                  | B.Dev -> false))) }
+
+(* SHADOW policy (2026-08-17, active plan 3): a prebuilt lib shadows a
+   Built one for the SAME cell — the firing condition is identity-bearing:
+   the Built side's version id is SOURCE-PRIMARY (the source's pin), both
+   ids must be non-empty and equal, and the channels must match. Same cell
+   (Fetched@1.0.0 + Built@Stable over a 1.0.0-pinned source) drops the
+   Built world under Shadow_prebuilt, keeps both under Materialize_source;
+   DIFFERENT cells (Fetched@Stable + Built@Dev — the z3 shape) never
+   shadow in either policy. Independent mode (no couplings) isolates the
+   shadow from the Lockstep channel coupling. *)
+let shadow_policy_drops_same_cell_built_test : pure_test =
+  { name = "enumerate.shadow_policy_drops_same_cell_built";
+    check = (fun () ->
+      let module EN = Canary_enumerate in
+      let a_oc = Canary_artifact.a_binding ocaml Mech.Cstubs in
+      let pin_1 =
+        { Canary_basic.channel = B.Stable; id = "1.0.0"; quality = Canary_basic.Good }
+      in
+      (* SAME cell: prebuilt + built share the pin's id and channel. *)
+      let same_cell_spec : Canary_artifact.project_spec =
+        { ps_universe =
+            [ ( Canary_artifact.a_source,
+                Canary_artifact.(axes ~pins:[ pin_1 ] [ (Fetched, [ B.Stable ]) ]) );
+              ( Canary_artifact.a_lib,
+                Canary_artifact.(
+                  axes ~pins:[ pin_1 ]
+                    [ (Fetched, [ B.Stable ]); (Built, [ B.Stable ]) ]) );
+              (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
+      in
+      let shadowed =
+        EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) same_cell_spec
+      in
+      let materializing =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config =
+                { (EN.full_policy ()).config with shadow = EN.Materialize_source };
+              mutations = [] }
+          same_cell_spec
+      in
+      (* DIFFERENT cells: prebuilt Stable vs built Dev — the z3 shape.
+         Independent mode so the Lockstep channel coupling doesn't filter
+         the Built@Dev world first (the shadow must be the only filter). *)
+      let diff_cell_spec : Canary_artifact.project_spec =
+        { ps_universe =
+            [ ( Canary_artifact.a_source,
+                Canary_artifact.(axes ~pins:[ pin_1 ] [ (Fetched, [ B.Stable ]) ]) );
+              ( Canary_artifact.a_lib,
+                Canary_artifact.(
+                  axes ~pins:[ pin_1 ]
+                    [ (Fetched, [ B.Stable ]); (Built, [ B.Dev ]) ]) );
+              (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
+      in
+      let diff_shadowed =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config =
+                { (EN.full_policy ()).config with version_mode = EN.Independent };
+              mutations = [] }
+          diff_cell_spec
+      in
+      let diff_materializing =
+        EN.enumerate ~tag:(fun () -> "")
+          ~policy:
+            { config =
+                { (EN.full_policy ()).config with
+                  shadow = EN.Materialize_source; version_mode = EN.Independent };
+              mutations = [] }
+          diff_cell_spec
+      in
+      let lib_prov a = EN.provision_of a Canary_artifact.a_lib in
+      Fmt.pr
+        "DEBUG shadowed=%d materializing=%d diff_shadowed=%d diff_materializing=%d@."
+        (List.length shadowed) (List.length materializing)
+        (List.length diff_shadowed) (List.length diff_materializing);
+      (* same cell: the prebuilt shadows the built under Shadow_prebuilt *)
+      List.length shadowed = 1
+      && List.exists shadowed ~f:(fun a -> EN.equal_provision (lib_prov a) EN.Fetched)
+      (* …and the audit pass materializes both *)
+      && List.length materializing = 2
+      && List.exists materializing ~f:(fun a -> EN.equal_provision (lib_prov a) EN.Built)
+      (* different cells: no shadowing in either policy (both worlds live) *)
+      && List.length diff_shadowed = 2 && List.length diff_materializing = 2) }
 
 (* The mechanism CATALOGUE (base/canary_mechanism.ml, 2026-08-05): total
    over the mechanism constructors; stored discipline == the derived one
@@ -698,7 +781,7 @@ let subset_intersects_universe_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt };              mutations = [] }
           spec
       in
       List.length thin = 1
@@ -1175,7 +1258,21 @@ let contract_registry_complete_pin : pure_test =
           && role_is (CR.row_of C7) CR.Meeting
           && role_is (CR.row_of C8) CR.Meeting
         in
-        rows_ok && checks_ok && tags_ok && roles_ok) }
+        (* the expectation forms: inspection-derived for the surface
+           + meeting contracts, behavior-grep for the trace contracts,
+           placeholder while blocked *)
+        let source_is r exp = Poly.equal r.CR.cr_source exp in
+        let sources_ok =
+          source_is (CR.row_of C1) CR.Inspection
+          && source_is (CR.row_of C2) CR.Inspection
+          && source_is (CR.row_of C3) CR.Behavior_grep
+          && source_is (CR.row_of C4) CR.Inspection
+          && source_is (CR.row_of C5) CR.Inspection
+          && source_is (CR.row_of C6) CR.Inspection
+          && source_is (CR.row_of C7) CR.Behavior_grep
+          && source_is (CR.row_of C8) CR.Placeholder
+        in
+        rows_ok && checks_ok && tags_ok && roles_ok && sources_ok) }
 
 let contract_registry_firing_pin : pure_test =
   { name = "contracts.firing_defaults";
@@ -1185,17 +1282,20 @@ let contract_registry_firing_pin : pure_test =
         let f = (CR.row_of C1).CR.cr_firing in
         let eq got want = Poly.equal got want in
         (* Static + Built → build + probe; Static + Fetched → probe;
-           Dynamic → probe *)
-        eq (f Canary_mechanism.Cstubs Canary_store.Built)
-          [ CR.Build_site; CR.Probe_site ]
-        && eq (f Canary_mechanism.Cstubs Canary_store.Fetched)
-             [ CR.Probe_site ]
-        && eq (f Canary_mechanism.Ctypes Canary_store.Built)
-             [ CR.Probe_site ]
+           Dynamic → probe — over the ACTION catalogue *)
+        eq (f Canary_mechanism.Cstubs Canary_lang.OCaml Canary_store.Built)
+          [ Canary_basic.Build_binding Canary_lang.OCaml;
+            Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && eq (f Canary_mechanism.Cstubs Canary_lang.OCaml
+                 Canary_store.Fetched)
+             [ Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && eq (f Canary_mechanism.Ctypes Canary_lang.Python
+                 Canary_store.Built)
+             [ Canary_basic.Probe_binding Canary_lang.Python ]
         && (* behavior fires at probe in every world *)
         eq ((CR.row_of C3).CR.cr_firing Canary_mechanism.Cstubs
-              Canary_store.Built)
-             [ CR.Probe_site ]) }
+              Canary_lang.OCaml Canary_store.Built)
+             [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 
 let all_tests : pure_test list =
   catalogue_tests
@@ -1206,6 +1306,7 @@ let all_tests : pure_test list =
       per_artifact_provisions_test; per_artifact_versions_test;
       point_fold_test; project_spec_test;
       per_provision_versions_test; thin_config_level_test;
+      shadow_policy_drops_same_cell_built_test;
       subset_intersects_universe_test; mechanism_catalogue_test; source_fetch_local_pin; inputs_template_pin; mechanism_chain_shape_pin;
       dispatch_reads_test; mismatch_direction_test;
       built_from_test; node_of_assignment_test; close_deps_test;

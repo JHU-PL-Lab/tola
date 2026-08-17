@@ -37,6 +37,11 @@ type role =
   | Meeting    (* two artifacts: are they compatible where they link/load *)
   | Execution  (* two artifacts running: what the pair's trace shows *)
 
+type source =
+  | Inspection      (* inputs → predict → compat-derived expectation *)
+  | Behavior_grep   (* probe.log substring → failure expectation *)
+  | Placeholder     (* Expect_success until wired (missing-ness visible) *)
+
 type contract_row = {
   row_check   : Canary_compat.contract_check;
       (* id, name, layer, status, enabled, predict — already exists *)
@@ -48,12 +53,23 @@ type contract_row = {
                 Canary_compat.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
          the binding_decl (coupling products, surface_path) *)
-  firing      : Canary_mechanism.mechanism -> Canary_store.provision ->
-                site list;
-      (* WHERE it fires — stage-level (site = Build_site | Probe_site),
-         derived from mechanism × provision (§3); the action layer
-         refines site × lang into Canary_scenario.firing_site in phase
-         2 — surface/ cannot reference the action vocabulary *)
+  firing      : Canary_mechanism.mechanism -> Canary_lang.lang ->
+                Canary_store.provision -> Canary_basic.action list;
+      (* WHERE it fires — over the ACTION CATALOGUE
+         (Canary_basic.action, the general base vocabulary; SSOT §6.5).
+         Contracts are general for ALL artifacts, actions and
+         mechanisms — any action kind can carry a check (fetch,
+         configure, build, publish, probe, …); today's rows fire at the
+         build/probe actions (the wired subset). No new firing type is
+         invented; the action layer refines an action into
+         Canary_scenario.firing_site (location, loc_filter) in phase 2.
+         A row returns [] where nothing fires; the per-project
+         enabled/disabled policy is the bypass. *)
+  source      : source;
+      (* HOW the expectation comes to be: Inspection | Behavior_grep |
+         Placeholder — the three shapes of the old per-project
+         expectation_source, minus the payload. The EXPECTATION half
+         of the belief, stated per row. *)
   fault_tags  : string list;
       (* step 9: sym_missing ↔ c1, api_drop ↔ c2, … — the tag ↔ contract
          mapping becomes data on the row, not a synced-by-hand table *)
@@ -82,9 +98,15 @@ So the firing derivation has TWO axes, both already known to the framework:
 2. **provision** (the action graph): a Fetched binding has no
    `Build_binding` step at all — the enumeration already prunes it.
 
-`firing mechanism provision` states both axes per contract instead of
-per-project hand-listing. The pre/post conditions to check become a pure
-function of `(decl, mechanism, provision)`.
+`firing mechanism lang provision` states both axes per contract instead
+of per-project hand-listing, and the domain is the FULL action
+catalogue — not only build/probe: a source-integrity contract could
+fire at `Fetch Source`, a publish-verification contract at `Publish
+Lib` (the publish work lives with another agent). Today's rows return
+the wired subset; extending a row to a new action is a row change, not
+a framework change. Per-action expectation can be bypassed through the
+per-project enabled/disabled policy. The pre/post conditions to check
+become a pure function of `(decl, mechanism, provision)`.
 
 ## 4. The three LOGICAL roles — slots, not a classification of methods
 

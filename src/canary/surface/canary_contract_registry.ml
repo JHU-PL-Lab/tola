@@ -13,13 +13,14 @@
       pipeline (id/status/predict) + the input template;
     - in which LOGICAL role (Surface / Meeting / Execution — the
       artifact-relationship axis, design §4);
-    - WHERE it fires — stage-level [site] derived from mechanism ×
-      provision (design §3);
+    - WHERE it fires — over the ACTION CATALOGUE (any action kind),
+      derived from mechanism × provision (design §3);
     - the fault tags it answers to (step 9's mapping as data).
 
-    Layering: surface/ — depends only on base/ + the surface theory.
-    The action layer refines a [site] × lang into a concrete
-    [Canary_scenario.firing_site] in phase 2. *)
+    Layering: surface/ — depends only on base/ + the surface theory;
+    the firing domain is [Canary_basic.action] (base vocabulary — no
+    new firing type invented here). The action layer refines an action
+    into a concrete [Canary_scenario.firing_site] in phase 2. *)
 
 open Base
 
@@ -33,14 +34,13 @@ type role =
   | Execution  (** two artifacts running: what the trace shows *)
 [@@deriving show, eq]
 
-(** Stage-level firing: WHERE a contract's check can manifest.
-    [Build_site] — the build/link meeting ([Build_binding],
-    [Build_app]); [Probe_site] — the load/run + the inspect
-    attachments at probe. The action layer refines site × lang into
-    [Canary_scenario.firing_site] in phase 2. *)
-type site =
-  | Build_site
-  | Probe_site
+(** The expectation form per contract — HOW a check becomes an
+    expectation (the three shapes of the old per-project
+    [expectation_source], minus the payload). *)
+type source =
+  | Inspection      (** inputs → predict → compat-derived expectation *)
+  | Behavior_grep   (** probe.log substring → failure expectation *)
+  | Placeholder     (** Expect_success until wired (missing-ness visible) *)
 [@@deriving show, eq]
 
 type contract_row = {
@@ -54,32 +54,47 @@ type contract_row = {
   cr_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_compat.inspect_input list;
       (** the step-2 template ([Canary_compat_run.inputs_of_contract]) *)
-  cr_firing    : Canary_mechanism.mechanism -> Canary_store.provision ->
-                 site list;
-      (** the default stage derivation (design §3): Static + Built →
-          [build; probe]; Static + Fetched/Vendored → [probe] (no
-          build step); Dynamic → [probe] (probe-only chains).
-          Per-row refinements are the row's own function. *)
+  cr_firing    : Canary_mechanism.mechanism -> Canary_lang.lang ->
+                 Canary_store.provision -> Canary_basic.action list;
+      (** WHERE it fires — over the ACTION CATALOGUE
+          ([Canary_basic.action], the general vocabulary; SSOT §6.5).
+          Contracts are general for ALL artifacts, actions and
+          mechanisms: any action kind can carry a check (fetch,
+          configure, build, publish, probe, …); today's rows fire at
+          the build/probe actions — the wired subset. A row returns
+          [] for actions it does not fire at; the per-project
+          enabled/disabled policy is the bypass. The action layer
+          refines an action into [Canary_scenario.firing_site]
+          (location, loc_filter) in phase 2. *)
+  cr_source    : source;
+      (** HOW the expectation comes to be — the expectation half of
+          the belief, mirroring the old per-project expectation_source
+          shapes without their payload (inputs come from the template,
+          version context from the scenario). *)
   cr_fault_tags : string list;
       (** step 9: sym_missing ↔ c1, … (scenario.md's catalogue) *)
 }
 
 (* ── the firing derivations ── *)
 
-(** The default: mechanism × provision → stages. *)
-let firing_default (m : Canary_mechanism.mechanism)
-    (p : Canary_store.provision) : site list =
+(** The default: mechanism × lang × provision → actions. Static +
+    Built → build then probe; Static + Fetched/Vendored → probe (no
+    build step exists); Dynamic → probe (probe-only chains). *)
+let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
+    (p : Canary_store.provision) : Canary_basic.action list =
+  let probe = Canary_basic.Probe_binding l in
   match Canary_mechanism.discipline_of_mechanism m with
-  | Canary_mechanism.Dynamic_ffi -> [ Probe_site ]
+  | Canary_mechanism.Dynamic_ffi -> [ probe ]
   | Canary_mechanism.Static_c_abi -> (
       match p with
-      | Canary_store.Built -> [ Build_site; Probe_site ]
+      | Canary_store.Built -> [ Canary_basic.Build_binding l; probe ]
       | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent ->
-          [ Probe_site ])
+          [ probe ])
 
 (** Behavior needs a run — probe only, in every world. *)
 let firing_probe_only (_ : Canary_mechanism.mechanism)
-    (_ : Canary_store.provision) : site list = [ Probe_site ]
+    (l : Canary_lang.lang) (_ : Canary_store.provision) :
+    Canary_basic.action list = [ Canary_basic.Probe_binding l ]
 
 (* ── row assembly ── *)
 
@@ -92,7 +107,7 @@ let check_of (id : Canary_compat.contract_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_compat.string_of_contract_id id))
 
-let row ~invariant ~role ~firing ~tags
+let row ~invariant ~role ~firing ~source ~tags
     (id : Canary_compat.contract_id) : contract_row =
   { cr_check = check_of id;
     cr_invariant = invariant;
@@ -101,6 +116,7 @@ let row ~invariant ~role ~firing ~tags
       (fun m l ->
         Canary_compat_run.inputs_of_contract ~mechanism:m id l);
     cr_firing = firing;
+    cr_source = source;
     cr_fault_tags = tags }
 
 (** THE table — one row per contract (c1..c8). *)
@@ -109,32 +125,40 @@ let contract_registry : contract_row list =
       ~invariant:
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
-      ~role:Surface ~firing:firing_default ~tags:[ "sym_missing" ];
+      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~tags:[ "sym_missing" ];
     row C2
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
-      ~role:Surface ~firing:firing_default ~tags:[ "api_drop" ];
+      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~tags:[ "api_drop" ];
     row C3
       ~invariant:"the probe's trace matches the recorded expectation"
-      ~role:Execution ~firing:firing_probe_only ~tags:[ "behavior" ];
+      ~role:Execution ~firing:firing_probe_only ~source:Behavior_grep
+      ~tags:[ "behavior" ];
     row C4
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
-      ~role:Surface ~firing:firing_default ~tags:[ "abi_soname" ];
+      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~tags:[ "abi_soname" ];
     row C5
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
-      ~role:Surface ~firing:firing_default ~tags:[ "sym_version" ];
+      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~tags:[ "sym_version" ];
     row C6
       ~invariant:"C types at the header/stub boundary match"
-      ~role:Meeting ~firing:firing_default ~tags:[ "type_arity" ];
+      ~role:Meeting ~firing:firing_default ~source:Inspection
+      ~tags:[ "type_arity" ];
     row C7
       ~invariant:"repackaging preserves the API"
-      ~role:Meeting ~firing:firing_probe_only ~tags:[ "api_repack" ];
+      ~role:Meeting ~firing:firing_probe_only ~source:Behavior_grep
+      ~tags:[ "api_repack" ];
     row C8
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
-      ~role:Meeting ~firing:firing_default ~tags:[ "api_add" ] ]
+      ~role:Meeting ~firing:firing_default ~source:Placeholder
+      ~tags:[ "api_add" ] ]
 
 (** Total lookup over the table. *)
 let row_of (id : Canary_compat.contract_id) : contract_row =
