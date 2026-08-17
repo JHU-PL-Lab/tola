@@ -416,6 +416,11 @@ directions):
   config/policy mechanism over per-case machinery; the audit-rung
   decision is part of this (see the decision brief,
   wrapper_packages.md §3.1).
+- [ ] **A general SELECTION config** (user, 2026-08-17): the ref
+  subset (`--refs`) should fold into ONE selection mechanism — the
+  user freely picks which CHOICES to run (channels, refs, scenarios,
+  actions, …), policy/config-shaped, instead of one flag per axis.
+  The shadow + bypass + refs cases converge here.
 - [ ] **Multi-source artifact identity + link guards**: extend source
   artifact identity with a repo discriminant (per-repo source rows)
   so a binding from ITS repo against a lib from ANOTHER repo is
