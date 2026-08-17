@@ -1293,6 +1293,44 @@ let contract_registry_firing_pin : pure_test =
               Canary_lang.OCaml Canary_store.Built)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 
+(* M2 step 6 (2026-08-17): the spec fixtures execute AHEAD of any
+   project run — every fixture's synthetic inputs go through the
+   row's predict and must yield the expected failure substrings. A
+   new contract lands WITH its fixture; a changed predict breaks
+   this pin. *)
+let contract_fixture_tests : pure_test list =
+  let module CR = Canary_contract_registry in
+  let tmp_root = "_out/canary/test/contract-fixtures" in
+  let _ = Stdlib.Sys.command [%string "mkdir -p %{tmp_root}"] in
+  let execute (_id, (fx : CR.fixture)) : bool =
+    (* [resolve] maps input-file names to REAL files (the loaders
+       read from disk), so the fixture bodies are written out *)
+    let resolve rel = [%string "%{tmp_root}/%{rel}"] in
+    List.iter fx.CR.fx_bodies ~f:(fun (rel, body) ->
+        let oc = Stdlib.open_out (resolve rel) in
+        Stdlib.output_string oc body;
+        Stdlib.close_out oc);
+    let got =
+      (CR.row_of _id).cr_check.Canary_compat.predict ~resolve
+        fx.CR.fx_inputs
+    in
+    List.for_all fx.CR.fx_expect ~f:(fun s ->
+        List.mem got s ~equal:String.equal)
+  in
+  let covered =
+    List.map CR.contract_fixtures ~f:fst
+    |> List.dedup_and_sort ~compare:(fun a b ->
+           String.compare (Canary_compat.string_of_contract_id a)
+             (Canary_compat.string_of_contract_id b))
+  in
+  [ { name = "contracts.fixtures_execute";
+      check = (fun () -> List.for_all CR.contract_fixtures ~f:execute) };
+    (* the visible coverage set: C1, C2 today — C3/C7 blocked in the
+       registry; C4/C5/C6 pend their fixture JSON shapes *)
+    { name = "contracts.fixtures_complete";
+      check = (fun () ->
+          Poly.equal covered Canary_compat.[ C1; C2 ]) } ]
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -1310,6 +1348,7 @@ let all_tests : pure_test list =
       agnostic_expectation_test; execution_plan_test;
       tool_routing_ratchet_test;
       contract_registry_complete_pin; contract_registry_firing_pin ]
+  @ contract_fixture_tests
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see
    (layering: test/ is canary_lib; the concrete project specs are the

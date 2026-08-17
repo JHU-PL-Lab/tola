@@ -80,6 +80,16 @@ let contract_registry : contract_row list = [ ... c1 .. c8 ... ]
 
 `firing` is THE new piece. Everything else is consolidation.
 
+**Provisional naming.** The C1..C8 ids are the OLD index, kept for now
+only because the consumers still speak it. With a principled
+collection the contracts should be ENUMERATED and NATURALLY NAMED,
+following the scenario-naming style (Sc.\<stage\>.\<terminal\>_on_\<deps\>):
+once canonical names exist for artifact-surfaces (Sf.1..Sf.5), actions,
+and platforms, a contract's name derives from those primitives (user,
+2026-08-17). The rename lands with the canonical-naming settle step;
+the invariant strings carry the semantics, so the rename is mechanical
+— the `id` field is the one rename point.
+
 ## 3. Provision-gated firing — which checks apply depends on which stages we got
 
 A Fetched artifact (from the internet / a PM) and a Built artifact (from
@@ -181,7 +191,25 @@ Registry implications:
 Everything else (inputs, firing sites, prediction wiring, tag mapping)
 derives from `(registry × decl × mechanism × provision)`.
 
-## 7. The blame axis (open — think during the gathering)
+## 7. Testing AHEAD of project running — fixtures ride with the rows
+
+Each contract ships its MINIMAL COUNTEREXAMPLE — a `fixture`: synthetic
+inspect inputs (file-name references + their JSON bodies) and the
+failure substrings the row's `predict` MUST yield on them. The layer
+tests (`contracts.fixtures_execute`) run every fixture hermetically —
+no project run, the framework-test axis (same shape as the
+compat-helper tests; the loaders read real files, so the test writes
+the bodies and maps names to paths). Two consequences:
+
+- a NEW contract lands WITH its fixture — the producer self-tests
+  before any project consumes it;
+- a changed predict breaks the pin — the belief cannot drift silently.
+
+The completeness pin (`contracts.fixtures_complete`) states the covered
+set visibly: C1, C2 today; C3/C7 are blocked in the registry; C4/C5/C6
+pend their fixture JSON shapes (elf / versioned / typed loaders).
+
+## 8. The blame axis (open — think during the gathering)
 
 For every checking action — any role, any artifact — what does a
 correct result mean, what does an incorrect result mean, and WHO is
@@ -213,7 +241,7 @@ gathering:
   world)? Answer during the phase-2 consumer migration, where the
   hand-written tables show which blame distinctions actually matter.
 
-## 8. Sequence (each step keeps the suite green)
+## 9. Sequence (each step keeps the suite green)
 
 1. Land the producer: `contract_registry` rows for c1..c8 (statuses,
    invariant strings, evidence kinds, fault tags, input template,

@@ -160,6 +160,52 @@ let contract_registry : contract_row list =
       ~role:Meeting ~firing:firing_default ~source:Placeholder
       ~tags:[ "api_add" ] ]
 
+(* ── spec fixtures — testing AHEAD of project running ──
+   Each contract ships its MINIMAL COUNTEREXAMPLE: synthetic inspect
+   inputs + the failure substrings the row's predict MUST yield on
+   them. The layer tests execute every fixture hermetically (no
+   project run — the framework-test axis), so a new contract lands
+   WITH its fixture and a changed predict breaks the pin. Coverage:
+   C1, C2 today. C3/C7 are blocked in the registry; C4/C5/C6 pend
+   their fixture JSON shapes (elf/versioned/typed loaders in
+   [Canary_compat]). *)
+
+type fixture = {
+  fx_inputs : Canary_compat.inspect_input list;
+      (** input-file references ([C_stub], [Native_lib], [Ocaml_mli],
+          [Python_attrs], …) *)
+  fx_bodies : (string * string) list;
+      (** file name → synthetic inspect JSON (the [resolve] source) *)
+  fx_expect : string list;
+      (** the failure substrings [predict] must yield *)
+}
+
+let contract_fixtures : (Canary_compat.contract_id * fixture) list =
+  let c_stub_body = {|{"kind": "c_stub", "path": "fx",
+    "requires": ["tiny_sum", "tiny_offset"]}|} in
+  let native_body = {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|} in
+  let mli_body = {|{"kind": "ocaml_mli", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|} in
+  let py_body = {|{"kind": "python", "path": "fx",
+    "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|} in
+  [ ( Canary_compat.C1,
+      { fx_inputs =
+          [ Canary_compat.C_stub [ "stub.json" ];
+            Canary_compat.Native_lib [ "lib.json" ] ];
+        fx_bodies =
+          [ ("stub.json", c_stub_body); ("lib.json", native_body) ];
+        fx_expect = [ "tiny_offset" ] } );
+    ( Canary_compat.C2,
+      { fx_inputs = [ Canary_compat.Ocaml_mli [ "mli.json" ] ];
+        fx_bodies = [ ("mli.json", mli_body) ];
+        (* the dotted-name expansion variants *)
+        fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] } );
+    ( Canary_compat.C2,
+      { fx_inputs = [ Canary_compat.Python_attrs [ "py.json" ] ];
+        fx_bodies = [ ("py.json", py_body) ];
+        fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ) ]
+
 (** Total lookup over the table. *)
 let row_of (id : Canary_compat.contract_id) : contract_row =
   List.find contract_registry ~f:(fun r ->
