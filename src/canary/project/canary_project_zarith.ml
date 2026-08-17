@@ -173,7 +173,12 @@ let decl : Canary_opam_binding.t = {
     brew_dylib = "libgmp.dylib";
   };
   native_probe_prefix = "__gmp";
-  native_inspect_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmp_" ];
+  (* the FULL declared surface: __gmpn_ added 2026-08-17 — the stub-
+     required watchlist spans the mpn block, and the c1 inclusion check
+     runs against THIS prefix-filtered symbol list; without __gmpn_ the
+     list omits ~264 exports and a required mpn symbol would read as
+     MISSING when it is present. *)
+  native_inspect_prefixes = [ "__gmpz_"; "__gmpq_"; "__gmpf_"; "__gmpn_"; "__gmp_" ];
   (* Decades-stable GMP integer ops. Removing one would be a major upstream
      break — exactly the bellwether the watchlist is for. *)
   native_watchlist = zarith_native_watchlist;

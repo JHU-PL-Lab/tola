@@ -49,6 +49,35 @@ factory — `assignment_is_all_good` moved to the datatype layer.
 
 ## 2. Bugs & issues
 
+### Fixed — the forward cell's c1 NEVER actually paired (2026-08-17)
+
+The plan-1 pattern wrote the stub summary into the lang-LESS
+`build_binding/`, while its own c1 input (M2's `inputs_of_contract`
+template) references `build_binding_ocaml/inspect.json` — which
+`step_dir_of_tag` resolves to `build_binding/ocaml/`. The pair never
+resolved, so every forward-cell run's "no contract fired" was really
+"no inputs found": the c1 comparison had never executed on zarith.
+Caught while wiring the c1 coverage note (the note never fired — the
+symptom); fixed by writing the stub summary into the step's OWN dir +
+adding `__gmpn_` to zarith's inspect prefixes (without it the
+prefix-filtered lib summary omits 264 exports and a required mpn
+symbol would read as MISSING when present). `forward_cell_expectation_pin`
+now also asserts the c1 input tag maps to the step's own lang dir —
+the silent-emptiness class can't recur. First verified end-to-end c1
+run: 42 required ⊆ 620 provided, `compat_note` warns POSSIBLY
+OUT-OF-DATE.
+
+### Fixed — the c1 coverage warning (user, 2026-08-17)
+
+Inclusion alone can't tell wrapping-a-subset (by design) from a stale
+binding (by accident): `compat_result` gains `Compatible_lag
+{required; provided}` — inclusion holds but the consumer covers < 10%
+of the provider's surface. A WARNING, never a failure: logged by the
+runner as a `compat_note` event ("consumer requires 42 of the
+provider's 620 symbols — POSSIBLY OUT-OF-DATE"), printed by the compat
+CLI, pinned by `cmp_symbol.compatible_lag` +
+`cmp_symbol.compatible_not_lag_when_healthy`.
+
 ### Fixed — forward-cell build_binding wrote the lib summary into a
 ### nonexistent dir on COLD runs
 

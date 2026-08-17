@@ -283,12 +283,12 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
            (* the c1 summaries (active plan 1): the forward cell's compat
               inputs resolve from the STEP-DIR summaries the runner's
               resolve_input reads — the stub summary at
-              projects/<p>/build_binding/ and the SYSTEM lib's native
-              summary at projects/<p>/build_lib/ (both LANG-LESS,
-              variant-suffixed — [step_dir_of_tag "build_binding"] maps
-              to the lang-less dir while the step writes into
-              build_binding/ocaml, hence output_dir ^ "/.."). The lib
-              summary is the same inspect the probe_lib_inspect
+              projects/<p>/build_binding/ocaml/ (the step's OWN dir: the
+              binding's c1 input is [build_binding_ocaml/inspect.json],
+              which step_dir_of_tag maps to the lang dir) and the SYSTEM
+              lib's native summary at projects/<p>/build_lib/ (lang-less
+              — the input [build_lib/inspect.json] maps to it directly).
+              The lib summary is the same inspect the probe_lib_inspect
               produces — written here too because the resolver only
               looks at build_lib/. *)
            let stub_sum =
@@ -300,7 +300,7 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                 test -n \"$STUB\"\n\
                 python3 canary/scripts/inspect_binding.py --kind stub \
                   --path \"$STUB\" --prefix '%s' --watchlist '' > %s/%s"
-               s d.native_probe_prefix (output_dir ^ "/..")
+               s d.native_probe_prefix output_dir
                (Canary_basic.filename ~variant_key ~base:"inspect" ~ext:"json")
            in
            let lib_sum =

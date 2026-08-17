@@ -244,6 +244,12 @@ let load_typed_signatures path : typed_signatures_inspect =
 
 type compat_result =
   | Compatible
+  | Compatible_lag of { required : int; provided : int }
+      (** inclusion holds, but the consumer's required set covers only a
+          small fraction of the provider's surface — the POSSIBLY
+          OUT-OF-DATE signal (2026-08-17, user): set-inclusion alone
+          can't tell wrapping-a-subset (by design) from a stale binding
+          (by accident), so this is a WARNING, never a failure. *)
   | Missing of { symbols : string list }
   | Unknown   (* one side lacks the data needed to decide *)
 
@@ -567,7 +573,7 @@ let check_api_faithfulness
     | Type_compatible | Type_unknown -> None
     | (Type_arity_mismatch _ | Type_unmapped _) as t -> Some t in
   let symbol_bad = match symbol_verdict with
-    | Compatible | Unknown -> None
+    | Compatible | Compatible_lag _ | Unknown -> None
     | Missing _ as s -> Some s in
   let repack_bad = match repack_verdict with
     | Repack_compatible | Repack_unknown -> None
@@ -613,7 +619,15 @@ let check_c_compat ~(binding_stub : stub_inspect) ~(native_lib : native_inspect)
     let provided = Set.of_list (module String) native_lib.symbols in
     let missing = List.filter binding_stub.requires
         ~f:(fun s -> not (Set.mem provided s)) in
-    if List.is_empty missing then Compatible
+    if List.is_empty missing then
+      (* the coverage note: a consumer covering < 10% of the provider's
+         surface passes inclusion but may be OUT-OF-DATE — the warning
+         the result carries (by design or by accident; can't tell). *)
+      let required = List.length binding_stub.requires in
+      let provided_n = List.length native_lib.symbols in
+      if required * 10 < provided_n then
+        Compatible_lag { required; provided = provided_n }
+      else Compatible
     else Missing { symbols = missing }
 
 (* ── Contract registry vocabulary (Phase 12, 2026-06-02) ──────────────

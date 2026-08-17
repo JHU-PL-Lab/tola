@@ -230,6 +230,28 @@ let cmp_symbol_pure_tests =
             ~binding_stub:(stub_of [ "tiny_sum" ])
             ~native_lib:(native_of []) in
         match r with Unknown -> true | _ -> false };
+    { name = "cmp_symbol.compatible_lag";
+      check = fun () ->
+        (* 2 of 100 provided: inclusion passes but the consumer covers
+           < 10% — the POSSIBLY OUT-OF-DATE signal (a warning, never a
+           failure) *)
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
+            ~native_lib:
+              (native_of
+                 ([ "tiny_sum"; "tiny_diff" ]
+                 @ List.init 98 ~f:(fun i -> "tiny_extra_" ^ Int.to_string i))) in
+        match r with
+        | Compatible_lag { required; provided } -> required = 2 && provided = 100
+        | _ -> false };
+    { name = "cmp_symbol.compatible_not_lag_when_healthy";
+      check = fun () ->
+        (* 2 of 3 provided: the consumer covers most of the provider —
+           plain Compatible, no warning *)
+        let r = Canary_compat.check_c_compat
+            ~binding_stub:(stub_of [ "tiny_sum"; "tiny_diff" ])
+            ~native_lib:(native_of [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]) in
+        match r with Compatible -> true | _ -> false };
   ]
 
 (* c4 cmp_abi — provider.SONAME ∈ consumer.NEEDED?

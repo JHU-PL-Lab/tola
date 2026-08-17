@@ -33,6 +33,12 @@ let print_result ~(stub : stub_inspect) ~(lib : native_inspect) result =
   match result with
   | Compatible ->
       Fmt.pr "PREDICTION: COMPATIBLE — every required symbol is provided.@."
+  | Compatible_lag { required; provided } ->
+      Fmt.pr
+        "PREDICTION: COMPATIBLE — every required symbol is provided, BUT the\n\
+        \  consumer covers only %d/%d — POSSIBLY OUT-OF-DATE (a small consumer\n\
+        \  surface may be by design or lag; warning only, not a failure).@."
+        required provided
   | Missing { symbols } ->
       Fmt.pr "PREDICTION: INCOMPATIBLE — %d required symbol(s) missing:@."
         (List.length symbols);
@@ -48,7 +54,7 @@ let run ~stub_path ~lib_path =
   let result = check_c_compat ~binding_stub:stub ~native_lib:lib in
   print_result ~stub ~lib result;
   match result with
-  | Compatible | Unknown -> 0
+  | Compatible | Compatible_lag _ | Unknown -> 0
   | Missing _ -> 1
 
 (* ── Convenience: locate cached summaries for a (project, variant) pair ── *)
@@ -312,7 +318,7 @@ let predicted_contains_any
         let lib = load_native l in
         (match check_c_compat ~binding_stub:stub ~native_lib:lib with
          | Missing { symbols } -> symbols
-         | Compatible | Unknown -> [])
+         | Compatible | Compatible_lag _ | Unknown -> [])
     | _ -> []
   in
   l3_variants @ l0
@@ -331,9 +337,11 @@ let pick_existing ~resolve paths =
     let abs = resolve rel in
     if Stdlib.Sys.file_exists abs then Some abs else None)
 
-(** c1 cmp_symbol (L0). Pairs C_stub + Native_lib paths and returns
-    the missing C symbols from {!check_c_compat}. *)
-let c1_predict ~resolve (inputs : inspect_input list) : string list =
+(** The c1 input pair: the existing C_stub + Native_lib summaries among
+    [inputs], loaded. [None] = either side missing (the check can't
+    decide — [c1_predict]/[c1_lag_note] both report nothing). *)
+let c1_pair ~resolve (inputs : inspect_input list) :
+    (stub_inspect * native_inspect) option =
   let stub_path =
     List.find_map inputs
       ~f:(function C_stub ps -> pick_existing ~resolve ps | _ -> None)
@@ -343,13 +351,39 @@ let c1_predict ~resolve (inputs : inspect_input list) : string list =
       ~f:(function Native_lib ps -> pick_existing ~resolve ps | _ -> None)
   in
   match stub_path, lib_path with
-  | Some s, Some l ->
-      let stub = load_stub s in
-      let lib = load_native l in
-      (match check_c_compat ~binding_stub:stub ~native_lib:lib with
-       | Missing { symbols } -> symbols
-       | Compatible | Unknown -> [])
-  | _ -> []
+  | Some s, Some l -> Some (load_stub s, load_native l)
+  | _ -> None
+
+(** c1 cmp_symbol (L0). Pairs C_stub + Native_lib paths and returns
+    the missing C symbols from {!check_c_compat}. *)
+let c1_predict ~resolve (inputs : inspect_input list) : string list =
+  match c1_pair ~resolve inputs with
+  | Some (stub, lib) -> (
+      match check_c_compat ~binding_stub:stub ~native_lib:lib with
+      | Missing { symbols } -> symbols
+      | Compatible | Compatible_lag _ | Unknown -> [])
+  | None -> []
+
+(** The c1 coverage NOTE (2026-08-17, user): when the check passes but
+    the consumer's required set covers a small fraction of the
+    provider's surface, warn POSSIBLY OUT-OF-DATE — inclusion alone
+    can't tell wrapping-a-subset (by design) from a stale binding (by
+    accident). A WARNING, never a failure: [None] when the data is
+    missing or the coverage is healthy. Logged by the runner as a
+    [compat_note] event. *)
+let c1_lag_note ~resolve (inputs : inspect_input list) : string option =
+  match c1_pair ~resolve inputs with
+  | Some (stub, lib) -> (
+      match check_c_compat ~binding_stub:stub ~native_lib:lib with
+      | Compatible_lag { required; provided } ->
+          Some
+            (Printf.sprintf
+               "c1 cmp_symbol: consumer requires %d of the provider's %d \
+                symbols — POSSIBLY OUT-OF-DATE (a small consumer surface may \
+                be by design or lag)"
+               required provided)
+      | Compatible | Missing _ | Unknown -> None)
+  | None -> None
 
 (** c2 cmp_api_completeness (L3). Reads watchlist_missing from
     Ocaml_mli / Python_attrs JSONs and expands each missing name into
@@ -657,6 +691,14 @@ let verify_for_project ~root ~project ~variant =
             Fmt.pr "  binding requires %d symbols, lib provides %d@."
               (List.length stub.requires) (List.length lib.symbols);
             Fmt.pr "  → predicts COMPATIBLE at C ABI level@.";
+            []
+        | Some (_stub, _lib, Compatible_lag { required; provided }) ->
+            Fmt.pr "  binding requires %d symbols, lib provides %d@."
+              required provided;
+            Fmt.pr
+              "  → predicts COMPATIBLE, but POSSIBLY OUT-OF-DATE (consumer\n\
+               \     covers only %d/%d — by design or lag; warning only)@."
+              required provided;
             []
         | Some (stub, lib, Missing { symbols }) ->
             Fmt.pr "  binding requires %d symbols, lib provides %d@."

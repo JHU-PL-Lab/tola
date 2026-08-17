@@ -1004,7 +1004,29 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
         let bind_art =
           Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
         in
-        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+        (* the c1 inputs must resolve to the build_binding step's OWN dir
+           (the lang-tagged tag maps to build_binding/ocaml — the step
+           writes its summary there). The lang-LESS tag would resolve to
+           build_binding/ (a dir nothing writes) and the c1 would silently
+           never pair — the 2026-08-17 finding (the forward cell's "no
+           contract fired" was really "no inputs found"). *)
+        let binding_tag =
+          Canary_basic.string_of_action
+            (Canary_basic.Build_binding Canary_lang.OCaml)
+        in
+        let inputs_resolve_to_step_dir =
+          String.equal
+            (Canary_basic.step_dir_of_tag binding_tag)
+            "build_binding/ocaml"
+          && (match Canary_compat_run.inputs_of_contract Canary_compat.C1 Canary_lang.OCaml with
+              | [ Canary_compat.C_stub [ stub_rel ];
+                  Canary_compat.Native_lib [ lib_rel ] ] ->
+                  String.is_prefix stub_rel ~prefix:(binding_tag ^ "/")
+                  && String.equal lib_rel "build_lib/inspect.json"
+              | _ -> false)
+        in
+        inputs_resolve_to_step_dir
+        && List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
             let spec =
               pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/fwd"
             in
@@ -1248,3 +1270,4 @@ let tests : Canary_project_test.pure_test list =
       sqlite_binding_decls_pin;
       z3_llvm_binding_decls_pin;
       zarith_binding_decls_pin ]
+
