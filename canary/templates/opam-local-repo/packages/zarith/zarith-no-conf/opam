@@ -1,0 +1,34 @@
+opam-version: "2.0"
+maintainer: "weng@cs.jhu.edu"
+authors: "Antoine Miné, Xavier Leroy, Pascal Cuoq"
+homepage: "https://github.com/ocaml/Zarith"
+bug-reports: "https://github.com/ocaml/Zarith/issues"
+license: "LGPL-2.0-only WITH OCaml-LGPL-linking-exception"
+dev-repo: "git+https://github.com/ocaml/Zarith.git"
+build: [
+  [ "sh" "-ec" "./configure && make" ]
+]
+install: [
+  [ "sh" "-ec" "make install" ]
+]
+remove: ["ocamlfind" "remove" "zarith"]
+depends: [
+  "ocaml" {>= "4.08.0"}
+  "ocamlfind"
+]
+conflicts: [
+  "zarith"
+]
+synopsis: "Zarith without the conf-gmp hop — builds directly against the system GMP"
+description: """
+Canary-local package: zarith built WITHOUT the conf-gmp virtual package
+(the conf-free prototype — doc/canary/project/conf_survey.md). The build
+runs zarith's own ./configure, which probes GMP via pkg-config — the
+same check conf-gmp performs — so the system GMP dependency is real but
+not declared through opam's conf layer. Same findlib name (zarith), so
+it conflicts with the stock package; scenarios pin-switch between them
+(the z3 stable/dev store-pin dance, algorithm_explainer.md §10).
+"""
+url {
+  src: "%{CANARY_ZARITH_SRC}%"
+}
