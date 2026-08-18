@@ -309,10 +309,74 @@ let actions_of (pr : Canary_project_run.project_run)
   List.map steps ~f:(fun (s : Canary_step_model.step) -> s.action)
   |> Stdlib.List.sort_uniq Stdlib.compare
 
+(* ── the ROW order (2026-08-18, user): group by the source REF (the
+   project's declared repo family order — the source's store pins),
+   then the C lib, then each binding. Within each artifact: provision
+   strength (built → vendored → fetched), then the pinned version id.
+   Ties keep the enumeration's own order (stable sort). ── *)
+
+let prov_rank = function
+  | Canary_artifact.Built -> 0
+  | Canary_artifact.Vendored -> 1
+  | Canary_artifact.Fetched -> 2
+  | Canary_artifact.Absent -> 3
+
+(** One artifact's placement as a sort key: provision strength, then
+    the pinned version id. *)
+let placement_key (a : Canary_artifact.assignment)
+    (id : Canary_artifact.artifact_id) : int * string =
+  match Canary_enumerate.placement_of a id with
+  | None -> (9, "")
+  | Some (pl : Canary_artifact.placement) ->
+      (prov_rank pl.Canary_artifact.provision,
+       pl.Canary_artifact.version.Canary_basic.id)
+
+(** The binding placement key for one lang (its assignment id by kind —
+    mechanism-agnostic). *)
+let binding_key (a : Canary_artifact.assignment) (l : Canary_lang.lang) :
+    int * string =
+  match
+    List.find_map a ~f:(fun (id, _) ->
+        match id.Canary_artifact.kind with
+        | Canary_basic.Binding l' when Poly.equal l l' -> Some id
+        | _ -> None)
+  with
+  | Some id -> placement_key a id
+  | None -> (9, "")
+
+(** The declared REF order: the source artifact's store pins (projected
+    from the repo family in declaration order). Undeclared ids sort
+    after the declared family. *)
+let ref_rank_of (pr : Canary_project_run.project_run) : string -> int =
+  let spec = Canary_project_spec.project_spec_of_rows pr.pr_artifacts in
+  let pins =
+    Canary_artifact.ps_versions_of spec Canary_artifact.a_source
+      Canary_artifact.Fetched
+  in
+  fun id ->
+    match
+      List.findi pins ~f:(fun _ (b : Canary_basic.build_id) ->
+          String.equal b.Canary_basic.id id)
+    with
+    | Some (i, _) -> i
+    | None -> List.length pins
+
+(** The full row sort key: (source ref, c lib, OCaml binding, Python
+    binding). *)
+let row_key (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) =
+  let src_id =
+    (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.id
+  in
+  ( ref_rank_of pr src_id,
+    placement_key a Canary_artifact.a_lib,
+    binding_key a Canary_lang.OCaml,
+    binding_key a Canary_lang.Python )
+
 (** Build the matrix over a project list (the bin injects the
     registry). Columns = the sorted union of every project's covered
     actions (the action variant's declaration order); rows = every
-    enumerated scenario in registry order. *)
+    enumerated scenario in the {!row_key} order. *)
 (* ── the CANONICAL column order (2026-08-18, user): grouped by the
    ARTIFACT — the native/lib group first, then per LANGUAGE a block of
    the SAME shape (making + fetching + packing + probing the binding,
@@ -394,7 +458,12 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     List.concat_map projects ~f:(fun (project, pr) ->
         let runs = Canary_status.project_matrix ~root ~project in
         let platform = platform_label () in
-        List.map (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+        (* rows ordered by ref → c lib → bindings ({!row_key}) *)
+        let scenarios =
+          List.stable_sort (Canary_project_run.scenarios_of pr)
+            ~compare:(fun x y -> Stdlib.compare (row_key pr x) (row_key pr y))
+        in
+        List.map scenarios ~f:(fun a ->
             let chain_acts = actions_of pr a in
             let chain_tags =
               List.map chain_acts ~f:Canary_basic.string_of_action

@@ -1410,6 +1410,48 @@ let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
    links the REMOTE COMMIT (the regression case's own repo record) and
    its build_lib cell carries the provision choice B:d. Hermetic — no
    run data (marks are pinned separately by matrix.marks_from_log). *)
+(* The ROW order (2026-08-18, user): within a project, rows group by
+   the source REF (the declared repo family order), then the C lib
+   (built before fetched), then each binding. Checked on z3's 7
+   scenarios under the declared ref order [4.15.2, latest, arbipher,
+   pre-10549]: per ref the dev chain (lib built) precedes the
+   all-fetched world (lib fetched). *)
+let matrix_row_order_pin : Canary_project_test.pure_test =
+  { name = "matrix.row_order";
+    check =
+      (fun () ->
+        let z3 =
+          List.Assoc.find_exn Canary_registry.all_projects "z3"
+            ~equal:String.equal
+        in
+        let sorted =
+          List.stable_sort (Canary_project_run.scenarios_of z3)
+            ~compare:(fun x y ->
+              Stdlib.compare (Canary_matrix.row_key z3 x)
+                (Canary_matrix.row_key z3 y))
+        in
+        let keyed =
+          List.map sorted ~f:(fun a ->
+              let src_id =
+                (Canary_enumerate.version_of a Canary_artifact.a_source)
+                  .Canary_basic.id
+              in
+              let lib_prov =
+                match Canary_enumerate.placement_of a Canary_artifact.a_lib with
+                | Some pl -> pl.Canary_artifact.provision
+                | None -> Canary_artifact.Absent
+              in
+              (src_id, lib_prov))
+        in
+        Poly.equal keyed
+          [ ("4.15.2", Canary_artifact.Fetched);
+            ("latest", Canary_artifact.Built);
+            ("latest", Canary_artifact.Fetched);
+            ("arbipher", Canary_artifact.Built);
+            ("arbipher", Canary_artifact.Fetched);
+            ("pre-10549", Canary_artifact.Built);
+            ("pre-10549", Canary_artifact.Fetched) ]) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1561,5 +1603,6 @@ let tests : Canary_project_test.pure_test list =
       zarith_binding_decls_pin;
       z3_regression_pre_10549_pin;
       z3_installed_probe_consumes_prefix;
+      matrix_row_order_pin;
       matrix_registry_shape_pin ]
 
