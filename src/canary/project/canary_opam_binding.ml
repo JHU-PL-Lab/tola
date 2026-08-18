@@ -423,6 +423,34 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
     check_post =
       (fun action ->
         match (action, d.wrapper) with
+        | ( Canary_basic.Fetch Canary_basic.Source, _ )
+          when not
+                 (String.equal src.Canary_artifact_source.ref_ "HEAD") ->
+            (* the pinned-ref FRESHNESS check (2026-08-17, the warm-mask
+               fix's residual class): the worktree must still be AT the
+               declared ref — OFFLINE, via [rev-parse HEAD =
+               <ref>^{commit}] (SHAs and tags alike). A moved checkout
+               breaks the warm skip and the worktree_ensure re-pins it.
+               HEAD-refs (master) can't be checked offline. *)
+            Some
+              (fun ~output_dir ~variant_key ->
+                let ok_file =
+                  output_dir ^ "/"
+                  ^ Canary_basic.variant_file ~variant_key "source.ok"
+                in
+                let wt =
+                  Canary_artifact_source.repo_worktree_path ~project:d.name
+                    ~repo:src ~ref_:src.Canary_artifact_source.ref_
+                    (Canary_basic.detect_distro ())
+                in
+                Stdlib.Sys.command
+                  (Printf.sprintf
+                     "test -f %s && r1=$(git -C %s rev-parse HEAD) && \
+                      r2=$(git -C %s rev-parse '%s^{commit}') && \
+                      [ \"$r1\" = \"$r2\" ]"
+                     ok_file wt wt
+                     src.Canary_artifact_source.ref_)
+                = 0)
         | ( Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml),
             Some w )
           when bind_built ->

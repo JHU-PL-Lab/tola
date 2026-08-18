@@ -86,6 +86,28 @@ INSTALL MISSING", latest stages the full `lib/ocaml/z3` package and
 passes. The assert is gated to OFFICIAL repos (the fork's in-flight
 tree is not held to the merged fix's contract).
 
+### Fixed — the warm-mask class: verdict markers now carry a SPEC
+### fingerprint (2026-08-17)
+
+Three strikes this arc (z3's dying install as PASS from pre-fix
+markers; the forward cell's never-paired c1; the pre-merge clone's
+install.ok skipping the new assert) shared one root: the warm skip
+trusted a verdict marker when it existed + `check_post` held — but
+`check_post` proves the POSTCONDITION, not that the step is still the
+RIGHT step for the current spec. The cache key was `variant_id` only.
+Now: the marker's second line records a fingerprint of the step's
+realized cmd + expectation form; the warm skip requires the match —
+a spec edit invalidates exactly the affected steps (the cold audit,
+automatic and targeted). The gate is VISIBLE too: `warm_gate` (all
+passed), `marker_stale` (spec changed — marker removed, re-run),
+`warm_check_post FAIL` (postcondition no longer holds — marker
+removed, re-run) — the decisions land in actions.log and surface in
+status/result. Residual class (a HEAD-ref upstream moved): pinned
+refs now carry an OFFLINE freshness check_post (the checkout must be
+AT the declared ref — moved → re-fetch); HEAD-refs still need the
+backlogged `--cold` flag (its citation). Landing forces ONE cold
+refresh per project (old-format markers are stale by definition).
+
 ### Fixed — the c1 coverage warning (user, 2026-08-17)
 
 Inclusion alone can't tell wrapping-a-subset (by design) from a stale
@@ -479,7 +501,12 @@ directions):
   TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
 - [ ] **Pinned verdict-matrix regression** — pin the per-scenario
   verdict matrix (the C2 5/5 was ad-hoc); markers should record the
-  verified ref; a `--cold` audit flag; CI-nightly material.
+  verified ref; a `--cold` audit flag; CI-nightly material. The `--cold`
+  flag now has a CONCRETE citation (2026-08-17): the warm-mask fix's
+  fingerprint covers spec drift, and the pinned-ref check_post covers
+  pinned checkouts — a HEAD-ref upstream that MOVED (latest/fork) is
+  the remaining warm-mask case, only detectable by re-fetching
+  (network), which `--cold` would force.
 - [ ] **Build-step store-hazard audit** — the z3 self-check shadowing
   class; audit other build steps' store reads (env_guard
   generalization).

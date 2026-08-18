@@ -1483,6 +1483,96 @@ let matrix_marks_from_log_pin : pure_test =
                 "✓"
        | _ -> false)) }
 
+(* The warm-mask fix's fingerprint (2026-08-17): a verdict marker is
+   trusted for a warm skip only when its recorded spec fingerprint
+   matches the CURRENT step. A cmd change (the spec) flips the match;
+   an old-format marker (no digest line) never matches. *)
+let marker_stale_on_spec_change_pin : pure_test =
+  { name = "runner.marker_stale_on_spec_change";
+    check = (fun () ->
+      let out = "_out/canary/test" in
+      let mk_step cmd_s =
+        { Canary_step_model.tag = "build_lib";
+          cache_key = "build_lib";
+          output_tag = "build_lib";
+          output_dir = out ^ "/marker-fixture";
+          project_dir = "_out/canary/projects/marker-fixture";
+          variant_id = "scenA";
+          action = Canary_basic.Build_lib;
+          deps = [];
+          cmd = (fun ~output_dir:_ ~variant_key:_ -> cmd_s);
+          check_pre = (fun () -> true);
+          check_post = (fun ~output_dir:_ ~variant_key:_ -> true);
+          expectation = Canary_step_model.Expect_success;
+          symbol_check = None;
+          disabled_contracts = [] }
+      in
+      let s1 = mk_step "echo build v1" in
+      let marker = Canary_local_runner.verdict_marker s1 in
+      (try
+         Stdlib.Sys.mkdir (out ^ "/marker-fixture") 0o755
+       with _ -> ());
+      let write_lines lines =
+        let oc = Stdlib.open_out marker in
+        List.iter lines ~f:(fun l -> Stdlib.output_string oc (l ^ "\n"));
+        Stdlib.close_out oc
+      in
+      (* old-format marker (no digest line) — stale *)
+      write_lines [ "ok" ];
+      let old_format = not (Canary_local_runner.verdict_matches_spec s1) in
+      (* a freshly-written verdict matches *)
+      Canary_local_runner.write_verdict s1 ~ok:true ~xfail:false
+        ~xfail_contracts:[];
+      let fresh = Canary_local_runner.verdict_matches_spec s1 in
+      (* the fingerprint is stable across calls *)
+      let stable =
+        String.equal (Canary_local_runner.step_fingerprint s1)
+          (Canary_local_runner.step_fingerprint s1)
+      in
+      (* a cmd change (the spec drifted) flips the match *)
+      let s2 = mk_step "echo build v2" in
+      let drifted = not (Canary_local_runner.verdict_matches_spec s2) in
+      (* an expectation change flips it too *)
+      let s3 =
+        { s1 with
+          Canary_step_model.expectation =
+            Canary_step_model.Expect_failure
+              { contains_any = [ "SIG" ]; version_info = None } }
+      in
+      let expectation_drifted =
+        not (Canary_local_runner.verdict_matches_spec s3)
+      in
+      old_format && fresh && stable && drifted && expectation_drifted) }
+
+(* The pinned-ref freshness check_post (2026-08-17, the warm-mask
+   fix's residual class): a pinned Source_fetch carries a check_post
+   that verifies the checkout is AT the declared ref (offline
+   rev-parse); HEAD refs keep the default. The hermetic check runs the
+   closure against a non-repo fixture — it FAILS CLOSED (the gate
+   would drop the marker and re-fetch), which is the wiring the pin
+   guards; the rev-parse semantics are git's. *)
+let source_fetch_pinned_ref_check_post_pin : pure_test =
+  { name = "templates.source_fetch_pinned_ref_check_post";
+    check = (fun () ->
+      let mk ~ref_ () =
+        let spec =
+          Canary_action_templates.realize_template
+            (Canary_action_templates.Source_fetch
+               { name = "z3"; ver_str = "pre"; ref_; url = "https://x.invalid";
+                 local = None })
+        in
+        spec.Canary_step_builder.check_post (Canary_basic.Fetch Canary_basic.Source)
+      in
+      let pinned = mk ~ref_:"bc4585e0b" () in
+      let head = mk ~ref_:"HEAD" () in
+      (match pinned with
+       | Some f ->
+           not
+             (f ~output_dir:"_out/canary/test/marker-fixture"
+                ~variant_key:"scenA")
+       | None -> false)
+      && Option.is_none head) }
+
 let all_tests : pure_test list =
   catalogue_tests
   @ [ probe_invariant; inventory_test;
@@ -1501,7 +1591,9 @@ let all_tests : pure_test list =
       agnostic_expectation_test; execution_plan_test;
       tool_routing_ratchet_test;
       contract_registry_complete_pin; contract_registry_firing_pin;
-      matrix_marks_from_log_pin ]
+      matrix_marks_from_log_pin;
+      marker_stale_on_spec_change_pin;
+      source_fetch_pinned_ref_check_post_pin ]
   @ contract_fixture_tests
 
 (* [extra] — pure tests appended by upper layers that this suite cannot see

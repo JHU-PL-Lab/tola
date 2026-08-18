@@ -151,6 +151,38 @@ let verdict_marker (step : step) : string =
   ^ Canary_basic.variant_file ~variant_key:step.variant_id
       (step.tag ^ ".verdict.ok")
 
+(* ── the spec fingerprint (2026-08-17, the warm-mask fix) ──
+   The warm skip trusts a verdict marker when it exists + [check_post]
+   holds — but [check_post] proves the POSTCONDITION, not that the step
+   is still the RIGHT step for the current spec. The cache key was
+   [variant_id] only; a spec edit under a warm cache silently served
+   the OLD world's verdict (three strikes this arc: z3's dying install
+   as PASS, the forward cell's never-paired c1, the pre-merge clone's
+   install.ok skipping the new assert). The marker now records a
+   fingerprint of the step's cmd + expectation; the warm skip requires
+   it to match — spec drift invalidates exactly the affected steps. *)
+
+(** The expectation's FORM for the fingerprint: the variant + (for the
+    hand-written greps) the substrings — a change to either invalidates
+    the marker. The compat-derived variants name themselves only: their
+    greps are computed at runtime from the inputs (whose paths ride the
+    cmd, which the fingerprint also covers). *)
+let expectation_form (e : step_expectation) : string =
+  match e with
+  | Expect_success -> "success"
+  | Expect_failure { contains_any; _ } ->
+      "failure:" ^ String.concat ~sep:"," contains_any
+  | Expect_compat_failure _ -> "compat_failure"
+  | Expect_compat_derived _ -> "compat_derived"
+
+(** The step's spec fingerprint: the FULL realized cmd (it embeds every
+    spec-derived bit — the assert_staged tests, prefixes, row order)
+    plus the expectation form. MD5 (drift detection, not security). *)
+let step_fingerprint (step : step) : string =
+  let cmd = step.cmd ~output_dir:step.output_dir ~variant_key:step.variant_id in
+  Stdlib.Digest.to_hex
+    (Stdlib.Digest.string (cmd ^ "\x00" ^ expectation_form step.expectation))
+
 (* The marker's CONTENT records how the expectation was met: "xfail" = a
    confirmed expected failure, "" (or "ok") = plain success — so a warm run
    re-seeds [Step_done_xfail] rather than flattening it into [Step_done].
@@ -158,7 +190,11 @@ let verdict_marker (step : step) : string =
    "xfail c2" (space-separated after the keyword; prefix-compatible with
    the [verdict_is_xfail] parser). [] = confirmed without a contract
    attribution (a hand-written Expect_failure, or the empty-prediction
-   fallback). *)
+   fallback).
+
+   V2 (2026-08-17): the SECOND line is the spec fingerprint (see
+   [step_fingerprint]) — the warm skip requires it to match the current
+   spec. *)
 let write_verdict (step : step) ~(ok : bool) ~(xfail : bool)
     ~(xfail_contracts : string list) : unit =
   let path = verdict_marker step in
@@ -171,11 +207,26 @@ let write_verdict (step : step) ~(ok : bool) ~(xfail : bool)
           | [] -> ""
           | ids -> " " ^ String.concat ~sep:" " ids
         in
-        Stdlib.output_string oc ("xfail" ^ ids ^ "\n"));
+        Stdlib.output_string oc ("xfail" ^ ids ^ "\n"))
+      else Stdlib.output_string oc "ok\n";
+      Stdlib.output_string oc (step_fingerprint step ^ "\n");
       Stdlib.close_out oc
     with _ -> ())
   else if Stdlib.Sys.file_exists path then
     (try Stdlib.Sys.remove path with _ -> ())
+
+(** Whether [step]'s verdict marker was written by the CURRENT spec
+    (line 2 = the fingerprint). A missing line 2 (old-format marker) is
+    STALE — landing the fingerprint forces one cold refresh per step. *)
+let verdict_matches_spec (step : step) : bool =
+  let path = verdict_marker step in
+  try
+    Stdlib.In_channel.with_open_text path (fun ic ->
+        let _first = Stdlib.In_channel.input_line ic in
+        match Stdlib.In_channel.input_line ic with
+        | Some l -> String.equal (String.strip l) (step_fingerprint step)
+        | None -> false)
+  with _ -> false
 
 let verdict_is_xfail (path : string) : bool =
   try
@@ -231,6 +282,24 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
     | Some cache -> cache_is_success cache ~key:step.cache_key
     | None -> false
   in
+  (* Warm-skip gate (VISIBLE, 2026-08-17, the warm-mask fix): a verdict
+     marker is trusted only when the fingerprint matches the current
+     spec AND the postcondition still holds. Each failing gate logs its
+     reason and REMOVES the stale marker (it no longer represents a met
+     expectation in the current world), then the step EXECUTES below —
+     the state change lands in actions.log and surfaces in status/result. *)
+  let marker_path = verdict_marker step in
+  (if Stdlib.Sys.file_exists marker_path then
+     if not (verdict_matches_spec step) then (
+       log ~event:"marker_stale"
+         ~detail:(Some "spec changed since the marker — re-running");
+       (try Stdlib.Sys.remove marker_path with _ -> ()))
+     else if
+       not (step.check_post ~output_dir:out ~variant_key:step.variant_id)
+     then (
+       log ~event:"warm_check_post"
+         ~detail:(Some "FAIL — the postcondition no longer holds; re-running");
+       (try Stdlib.Sys.remove marker_path with _ -> ())));
   if global_hit then (
     log ~event:"skip" ~detail:(Some [%string "global cache hit (%{step.cache_key})"]);
     Step_done)
@@ -242,16 +311,19 @@ let run_step logger ~root:_ ~project:_ ?global_cache (step : step) : step_status
      pin-checked fetch/publish whose [check_post] asserts the switch
      provably holds the pinned state — a stale marker over a changed
      store is otherwise a silent PASS for the wrong world). *)
-  else if Stdlib.Sys.file_exists (verdict_marker step)
+  else if Stdlib.Sys.file_exists marker_path
+          && verdict_matches_spec step
           && step.check_post ~output_dir:out ~variant_key:step.variant_id then
-    if verdict_is_xfail (verdict_marker step) then (
-      log ~event:"skip"
-        ~detail:(Some ("verdict marker (prior xfail)"
-                       ^ xfail_id_suffix (step_xfail_contracts step)));
-      Step_done_xfail)
-    else (
-      log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
-      Step_done)
+    (log ~event:"warm_gate"
+       ~detail:(Some "marker + fingerprint + check_post passed");
+     if verdict_is_xfail marker_path then (
+       log ~event:"skip"
+         ~detail:(Some ("verdict marker (prior xfail)"
+                        ^ xfail_id_suffix (step_xfail_contracts step)));
+       Step_done_xfail)
+     else (
+       log ~event:"skip" ~detail:(Some "verdict marker (prior success)");
+       Step_done))
   else (
     let pre_ok = step.check_pre () in
     log ~event:"check_pre" ~detail:(Some (if pre_ok then "pass" else "FAIL"));
@@ -536,23 +608,40 @@ let run_graph ?(failfast = false) ?global_cache logger ~project ~root (steps : s
      a warm run leaves no per-step trace and `canary status` can't
      reconstruct the variant's matrix). *)
   List.iter steps ~f:(fun s ->
-      (* the postcondition must STILL hold for the seed (2026-08-17,
-         the Publish case study's finding — same gate as [run_step]'s
-         local-cache skip): a store-mutating step's check_post (the
-         pin-check) re-verifies the world, so a stale marker over a
-         changed store is never seeded as done. *)
-      if Stdlib.Sys.file_exists (verdict_marker s)
-         && s.check_post ~output_dir:s.output_dir ~variant_key:s.variant_id
-      then begin
-        let xf = verdict_is_xfail (verdict_marker s) in
-        logger.log ~tag:s.tag ~event:"skip"
-          ~detail:(Some (if xf then
-                           "verdict marker (prior xfail)"
-                           ^ xfail_id_suffix (step_xfail_contracts s)
-                         else "verdict marker (prior success)"));
-        Hashtbl.set status ~key:s.tag
-          ~data:(if xf then Step_done_xfail else Step_done)
-      end);
+      (* the warm-skip GATE (2026-08-17, the warm-mask fix): the marker
+         is trusted only when the fingerprint matches the current spec
+         AND the postcondition still holds (the Publish case study's
+         finding — a store-mutating step's check_post re-verifies the
+         world). Each failing gate logs its reason and REMOVES the
+         stale marker; the step runs fresh below. The gate is VISIBLE:
+         [warm_gate] / [marker_stale] / [warm_check_post] land in
+         actions.log and surface in status/result. *)
+      let marker_path = verdict_marker s in
+      if Stdlib.Sys.file_exists marker_path then
+        if not (verdict_matches_spec s) then (
+          logger.log ~tag:s.tag ~event:"marker_stale"
+            ~detail:(Some "spec changed since the marker — re-running");
+          (try Stdlib.Sys.remove marker_path with _ -> ()))
+        else if
+          not (s.check_post ~output_dir:s.output_dir ~variant_key:s.variant_id)
+        then (
+          logger.log ~tag:s.tag ~event:"warm_check_post"
+            ~detail:
+              (Some
+                 "FAIL — the postcondition no longer holds; re-running");
+          (try Stdlib.Sys.remove marker_path with _ -> ()))
+        else begin
+          let xf = verdict_is_xfail marker_path in
+          logger.log ~tag:s.tag ~event:"warm_gate"
+            ~detail:(Some "marker + fingerprint + check_post passed");
+          logger.log ~tag:s.tag ~event:"skip"
+            ~detail:(Some (if xf then
+                             "verdict marker (prior xfail)"
+                             ^ xfail_id_suffix (step_xfail_contracts s)
+                           else "verdict marker (prior success)"));
+          Hashtbl.set status ~key:s.tag
+            ~data:(if xf then Step_done_xfail else Step_done)
+        end);
   (* Iterate until no progress (or first failure in failfast mode) *)
   let changed = ref true in
   let aborted = ref false in

@@ -206,7 +206,45 @@ let realize_template (tpl : action_template) : runner_spec =
                              "if [ -d %s/.git ]; then cd %s && git fetch && git checkout %s; \
                               else git clone %s %s && cd %s && git checkout %s; fi && echo '%s' > %s/%s"
                              clone_dir clone_dir ref_ url clone_dir clone_dir ref_ clone_dir
-                             output_dir ok) }
+                             output_dir ok);
+                  check_post =
+                    (fun action ->
+                      if not
+                           (Poly.equal action
+                              (Canary_basic.Fetch Canary_basic.Source))
+                         || String.equal ref_ "HEAD"
+                      then spec.check_post action
+                      else
+                        (* the pinned-ref FRESHNESS check (2026-08-17, the
+                           warm-mask fix's residual class): the checkout must
+                           still be AT the declared ref — OFFLINE, via
+                           [rev-parse HEAD = <ref>^{commit}] (works for
+                           SHAs and tags alike). A moved checkout breaks
+                           the warm skip (the gate removes the marker)
+                           and the fetch re-pins it. HEAD-refs can't be
+                           checked offline (the [--cold] flag). *)
+                        Some
+                          (fun ~output_dir ~variant_key ->
+                            let ok_file =
+                              output_dir ^ "/"
+                              ^ Canary_basic.variant_file ~variant_key
+                                  "source.ok"
+                            in
+                            let checkout =
+                              match local with
+                              | Some path -> path
+                              | None ->
+                                  Printf.sprintf
+                                    "_out/canary/projects/%s/%s_%s/src"
+                                    name ver_str ref_
+                            in
+                            Stdlib.Sys.command
+                              (Printf.sprintf
+                                 "test -f %s && r1=$(git -C %s rev-parse HEAD) && \
+                                  r2=$(git -C %s rev-parse '%s^{commit}') && \
+                                  [ \"$r1\" = \"$r2\" ]"
+                                 ok_file checkout checkout ref_)
+                            = 0)) }
   | Scan_source { root; hdr_file } ->
       { spec with scan_source =
                    Some (fun ~output_dir ~variant_key ->
