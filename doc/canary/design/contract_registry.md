@@ -209,7 +209,74 @@ The completeness pin (`contracts.fixtures_complete`) states the covered
 set visibly: C1, C2 today; C3/C7 are blocked in the registry; C4/C5/C6
 pend their fixture JSON shapes (elf / versioned / typed loaders).
 
-## 8. The blame axis (open — think during the gathering)
+## 8. Belief coverage — status and plan (2026-08-17)
+
+The GOAL: every cell of the belief space has a DEFINED result — the
+pre/post-check and the expectation hold for good AND bad intended
+results (each wired cell is a disprover with a named counterexample),
+so completeness of checking is itself checkable. The space:
+
+    contract (8) × action (12 kinds × langs × app wirings)
+    × artifact-kind (5) × mechanism (5) × provision (4)
+
+**Current status — what is defined where.**
+
+1. **Per-action pre/post — TOTAL by construction.** `check_pre` (the
+   automatic dep check) and `default_check_post` (the marker table,
+   `marker_of_action` — one postcondition per action kind) cover every
+   step. The warm-mask fix (e2b4d27) made them SPEC-AWARE: the marker
+   v2 fingerprint (cmd + expectation form) means a spec edit
+   self-invalidates — pre/post results can no longer silently serve a
+   stale world.
+2. **Contract firings — the wired subset only.** The registry defaults
+   fire at `Build_binding l` / `Probe_binding l`. Declared but
+   unwired: `Probe_lib` (no row fires there — c1's lib side rides
+   inspect attachments on build_lib), `Build_app`/`Probe_app` (the
+   firing vocabulary has the sites; no row uses them — tiny's oracle
+   covers app firings today), `Scan_sources` (c6's inputs READ its
+   JSONs, c6 fires elsewhere), and the fetch/configure/install/publish
+   actions (publish belongs to the other agent's work; a fetch-side
+   integrity contract is designed, not landed).
+3. **Expectation forms — one Placeholder left.** 6 Inspection, 2
+   Behavior_grep, 1 Placeholder (c8, blocked on c6+c7); the known
+   gaps (c4-OCaml, symbol_orphan) close inside the registry.
+4. **Mechanisms/langs beyond the wired three.** Cffi/Dynlink and the
+   Rust/Java/Cpp/CSharp langs are declared in the vocabulary with no
+   belief cells yet — the row functions must answer for them too
+   (returning [] = declared-empty, distinct from un-answered).
+
+**The plan — make incompleteness visible, then close it.**
+
+1. **The matrix pin.** Extend the registry with a `cell_status` view:
+   every (contract × action × lang) in a DECLARED SCOPE is `Wired` |
+   `Declared_empty of reason` | `Blocked of deps` — a cell with no
+   status fails the pin. The scope grows as beliefs land (start: the
+   binding actions; widen to probe_lib + app sites; then fetch/publish
+   as those projects land). This is the completeness meter the user
+   reads.
+2. **Per-cell counterexamples.** The fixture harness generalizes from
+   per-contract to per-CELL (contract × firing action): each wired
+   cell ships the minimal bad-world input + its predicted substrings;
+   the good-world result is the cell's pass meaning (blame axis, §7).
+   A cell is "complete" only when both hold.
+3. **Per-action belief statements.** The marker table gives every
+   action a postcondition; the belief side adds its one-line MEANING +
+   blame (what does `build.ok` pass/fail say about which artifact —
+   e.g. the pinned-ref freshness check_post the other agent added is a
+   fetch-side postcondition with a clear fail meaning).
+4. **Order.** (a) matrix pin with the visible not-yet list → (b) fill
+   probe_lib + app cells (tiny's oracle is the reference) → (c)
+   fetch/publish cells as their projects land → (d) the new
+   mechanisms/langs as their bindings land.
+
+**Warm-mask ↔ phase 2.** The marker v2 fingerprint covers the step's
+cmd + EXPECTATION FORM — so when phase 2 switches the lowering to
+registry-derived firings, any expectation drift self-invalidates at
+the RUN level (the byte-equal pin becomes runtime-enforced, not just
+test-enforced). Phase-2 pins should pin the expectation form too, not
+only the cmd strings.
+
+## 9. The blame axis (open — think during the gathering)
 
 For every checking action — any role, any artifact — what does a
 correct result mean, what does an incorrect result mean, and WHO is
@@ -241,7 +308,7 @@ gathering:
   world)? Answer during the phase-2 consumer migration, where the
   hand-written tables show which blame distinctions actually matter.
 
-## 9. Sequence (each step keeps the suite green)
+## 10. Sequence (each step keeps the suite green)
 
 1. Land the producer: `contract_registry` rows for c1..c8 (statuses,
    invariant strings, evidence kinds, fault tags, input template,
