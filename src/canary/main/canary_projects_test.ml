@@ -1294,8 +1294,10 @@ let z3_llvm_binding_decls_pin : Canary_project_test.pure_test =
 (* The result table's registry shape (2026-08-17): 23 rows = Σ of every
    project's enumerated scenarios (sqlite 3, z3 7, llvm 5, tiny-full 1,
    zarith 3, cairo 1, libffi 1, ssl 2); the column union carries the
-   install + probe actions. Hermetic — no run data (marks are pinned
-   separately by matrix.marks_from_log). *)
+   install + probe actions. The web identity: the pre-10549 row's ref
+   links the REMOTE COMMIT (the regression case's own repo record) and
+   its build_lib cell carries the provision choice B:d. Hermetic — no
+   run data (marks are pinned separately by matrix.marks_from_log). *)
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1314,12 +1316,36 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
           |> Stdlib.List.sort_uniq Stdlib.compare
           |> List.map ~f:Canary_basic.string_of_action
         in
+        let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let pre_10549_row =
+          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+              String.equal r.Canary_matrix.scenario
+                "ocaml_binding-built-dev_source-fetched-pre-10549_lib-built-dev_python_binding-fetched")
+        in
+        let web_identity_ok =
+          match pre_10549_row with
+          | None -> false
+          | Some (r : Canary_matrix.row) ->
+              (match r.Canary_matrix.ref_url with
+               | Some url ->
+                   String.equal url
+                     "https://github.com/Z3Prover/z3/commit/bc4585e0b"
+               | None -> false)
+              && (match
+                    List.Assoc.find r.Canary_matrix.cells "build_lib"
+                      ~equal:String.equal
+                  with
+                  | Some (Some c) ->
+                      String.equal c.Canary_matrix.provision "B:d"
+                  | _ -> false)
+        in
         List.length rows = 23
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 3
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
         && List.mem columns "install_lib" ~equal:String.equal
-        && List.mem columns "probe_binding_ocaml" ~equal:String.equal) }
+        && List.mem columns "probe_binding_ocaml" ~equal:String.equal
+        && web_identity_ok) }
 
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
