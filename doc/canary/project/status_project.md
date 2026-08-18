@@ -575,6 +575,25 @@ directions):
   richer provider flexibility (project may build several different
   artifacts; `Install_lib : Lib → Lib` stays the staging semantics, not
   a second provider).
+- [ ] **The staged-parity principle** (2026-08-18, user — from the
+  experiment's follow-up question "how may a common project have these
+  different binaries"): the install is a COPY-TRANSFORM step, not a
+  mirror — its divergences (missing install rules = #10549; rpath/
+  install_name rewrites; strip/mode changes; install-only generated
+  files; baked-in build-tree paths; macOS signing) are the bug class to
+  CHECK. Generalize the z3 primitives into a staged-parity checker:
+  completeness (every declared consumer-facing build product staged —
+  `assert_staged` derived from the declared surface instead of a hand
+  list), integrity (platform invariants hold in the staged file:
+  SONAME/LC_ID_DYLIB = installed identity, no build-dir paths in
+  RPATH/RUNPATH, symlink chain + exec modes), parity (symbol-set
+  equality vs the build tree modulo declared transforms), and
+  ISOLATION (**per-world install prefixes** — the live 2026-08-18
+  finding: the contrib refs share `z3-all/install` and `cmake --install`
+  accumulates, so a stale `libz3.so.4.15.5.0` from an old run coexists
+  beside 5.1; a fork's install would merge into another world's prefix).
+  Taxonomy + the checking principle in
+  `doc/canary/design/staged_parity.md` (the cross-agent brief).
 - [ ] **Surface-drift expectations** — per-project drift bounds on the
   TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
 - [ ] **Pinned verdict-matrix regression** — pin the per-scenario
