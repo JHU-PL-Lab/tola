@@ -38,8 +38,10 @@ type role =
   | Execution  (* two artifacts running: what the pair's trace shows *)
 
 type source =
-  | Inspection      (* inputs → predict → compat-derived expectation *)
-  | Behavior_grep   (* probe.log substring → failure expectation *)
+  | Inspection      (* inspect JSONs → predict → compat-derived expectation *)
+  | Behavior_grep   (* the run's log substring → failure expectation *)
+  | Postcondition   (* the action's check_post family: markers, pin-checks,
+                       staged-parity at Install_lib, freshness *)
   | Placeholder     (* Expect_success until wired (missing-ness visible) *)
 
 type contract_row = {
@@ -49,6 +51,10 @@ type contract_row = {
       (* the one-sentence agreement, phrased as a FALSIFIER (§5); the
          reconciliation point for ssot's Ag.X ↔ C1..C8 drift decision *)
   role        : role;
+      (* PROSE tag at most (Surface/Meeting/Execution — the legacy
+         evidence vocabulary). Not a typed axis: the action column
+         already implies the cell's subject (one artifact vs a pair)
+         and its evidence flavor. *)
   inputs      : Canary_mechanism.mechanism -> Canary_lang.lang ->
                 Canary_compat.inspect_input list;
       (* the step-2 template — WHAT files the check reads, derived from
@@ -66,10 +72,12 @@ type contract_row = {
          A row returns [] where nothing fires; the per-project
          enabled/disabled policy is the bypass. *)
   source      : source;
-      (* HOW the expectation comes to be: Inspection | Behavior_grep |
-         Placeholder — the three shapes of the old per-project
-         expectation_source, minus the payload. The EXPECTATION half
-         of the belief, stated per row. *)
+      (* HOW the expectation comes to be — the expectation half of
+         the belief, stated per row; the ONE typed axis that survives
+         (§8): inspect JSONs → predict (Inspection), grep the run's
+         log (Behavior_grep), the action's check_post family
+         (Postcondition — staged-parity at Install_lib, pin-checks,
+         freshness), or not wired yet (Placeholder). *)
   fault_tags  : string list;
       (* step 9: sym_missing ↔ c1, api_drop ↔ c2, … — the tag ↔ contract
          mapping becomes data on the row, not a synced-by-hand table *)
@@ -118,7 +126,7 @@ a framework change. Per-action expectation can be bypassed through the
 per-project enabled/disabled policy. The pre/post conditions to check
 become a pure function of `(decl, mechanism, provision)`.
 
-## 4. The three LOGICAL roles — slots, not a classification of methods
+## 4. The legacy roles — prose, not typed axes (demoted 2026-08-18)
 
 The roles name the structure of checking itself — the artifact-relationship
 axis the action graph already has (inspect steps / build steps / probe
@@ -223,11 +231,21 @@ what the input template yields. So:
   cell : (contract × action) → {
     status      : Wired | Declared_empty of reason | Blocked of deps
     inputs      : mechanism -> lang -> inspect_input list
-    expect      : Inspection | Behavior_grep | Placeholder
+    source      : Inspection | Behavior_grep | Postcondition | Placeholder
     fixture     : the bad-world counterexample (predicted substrings)
-    pass_means  : the good-world reading (blame axis, §9)
+    pass_means  : the good-world reading (blame axis, §10)
   }
 ```
+
+**One typed axis.** The ACTION implies the cell's subject (one artifact
+at a lifecycle action vs a pair at a meeting — its consumes/produces
+say which artifacts) and its evidence flavor (read / join / run). The
+only typed axis that survives is the expectation MECHANICS (`source`):
+how the expectation is produced — inspect JSONs → predict
+(Inspection), grep the run's log (Behavior_grep), the action's
+check_post family (Postcondition — where staged-parity at Install_lib,
+pin-checks, and freshness live), or not wired yet (Placeholder).
+The legacy roles stay prose (§4).
 
 **The derivation rules** (keep the matrix mostly derived):
 
