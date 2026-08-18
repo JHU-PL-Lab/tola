@@ -1405,7 +1405,22 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   "probe_lib"; "build_binding_ocaml"; "fetch_binding_ocaml";
                   "pack_binding_ocaml"; "probe_binding_ocaml";
                   "probe_app_ocaml"; "build_binding_python";
-                  "probe_binding_python" ])) }
+                  "probe_binding_python" ])
+        (* the OFF-TREE binding-source slot (2026-08-18, user): the
+           order key places fetch_binding_source at the FRONT of its
+           language's block — the column appears once a project wires
+           the fetch (the zarith migration is the natural first
+           consumer) *)
+        && Canary_matrix.compare_column
+             (Canary_basic.Fetch
+                (Canary_basic.Binding_source Canary_lang.OCaml))
+             (Canary_basic.Build_binding Canary_lang.OCaml)
+           < 0
+        && Canary_matrix.compare_column
+             (Canary_basic.Fetch
+                (Canary_basic.Binding_source Canary_lang.OCaml))
+             (Canary_basic.Probe_lib)
+           > 0) }
 
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins

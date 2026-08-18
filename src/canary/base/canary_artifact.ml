@@ -132,7 +132,8 @@ type provision = Canary_store.provision =
 [@@deriving show, eq]
 
 type artifact = Canary_basic.artifact_kind =
-  | Source | Headers | Lib | Binding of Canary_lang.lang | App
+  | Source | Headers | Lib | Binding of Canary_lang.lang
+  | Binding_source of Canary_lang.lang | App
 [@@deriving show, eq]
 
 let string_of_provision = Canary_store.string_of_provision
@@ -143,6 +144,7 @@ let string_of_artifact = function
   | Headers -> "headers"
   | Lib -> "lib"
   | Binding l -> "binding-" ^ Canary_lang.string_of_lang l
+  | Binding_source l -> "binding_source-" ^ Canary_lang.string_of_lang l
   | App -> "app"
 
 (* ── precise artifact identity (ssot §4.2.3) ──
@@ -178,6 +180,9 @@ let a_source : artifact_id = { kind = Source; ext = Ext_none }
 let a_headers : artifact_id = { kind = Headers; ext = Ext_none }
 let a_lib : artifact_id = { kind = Lib; ext = Ext_none }
 
+let a_binding_source (lang : Canary_lang.lang) : artifact_id =
+  { kind = Binding_source lang; ext = Ext_none }
+
 let a_binding (lang : Canary_lang.lang) (m : Canary_mechanism.mechanism) :
     artifact_id =
   { kind = Binding lang; ext = Ext_mechanism m }
@@ -198,6 +203,7 @@ let pretty_artifact = function
   | Headers -> "headers"
   | Lib -> "lib"
   | Binding l -> "binding:" ^ Canary_lang.string_of_lang l
+  | Binding_source l -> "binding_source:" ^ Canary_lang.string_of_lang l
   | App -> "app"
 
 let pretty_id (id : artifact_id) : string =

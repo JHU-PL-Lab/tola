@@ -999,7 +999,8 @@ let all_scenario_specs : scenario_spec list =
      the (provision, mutation) coordinates. *)
 
 let is_pipeline_artifact : Canary_basic.artifact_kind -> bool = function
-  | Canary_basic.Source | Canary_basic.Lib | Canary_basic.Binding _ -> true
+  | Canary_basic.Source | Canary_basic.Lib | Canary_basic.Binding _
+  | Canary_basic.Binding_source _ -> true
   | Canary_basic.Headers | Canary_basic.App -> false
 
 let mutation_target_of_spec (s : scenario_spec) :
@@ -1021,6 +1022,7 @@ let id_of_kind : Canary_basic.artifact_kind -> Canary_artifact.artifact_id =
           ~default:Canary_mechanism.Cstubs
       in
       Canary_artifact.a_binding l m
+  | Canary_basic.Binding_source l -> Canary_artifact.a_binding_source l
   | Canary_basic.Headers -> Canary_artifact.a_headers
   | Canary_basic.App ->
       Canary_artifact.{ kind = Canary_basic.App; ext = Ext_none }
@@ -1055,6 +1057,7 @@ let engine_mutations : (Canary_artifact.artifact_id * string) list =
       match mutation_target_of_spec s with
       | Some Canary_basic.Source -> [ (Canary_artifact.a_source, s.scenario.id) ]
       | Some Canary_basic.Lib -> [ (a_lib, s.scenario.id) ]
+      | Some (Canary_basic.Binding_source _) -> []
       | Some (Canary_basic.Binding _ as k) -> (
           match binding_ids_of_mutates s.recipe.mutates with
           | [] -> [ (id_of_kind k, s.scenario.id) ]
@@ -1384,6 +1387,7 @@ let fault_artifact_short (entry : scenario_spec) : string =
     | Canary_basic.Source -> "src"
     | Canary_basic.Lib -> "lib"
     | Canary_basic.Binding _ -> "binding"
+    | Canary_basic.Binding_source _ -> "binding-src"
     | Canary_basic.Headers -> "headers"
     | Canary_basic.App -> "app")
   | _ -> "?"

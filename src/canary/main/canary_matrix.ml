@@ -186,6 +186,9 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
   | Canary_basic.Binding Canary_lang.OCaml -> "ocaml"
   | Canary_basic.Binding Canary_lang.Python -> "py"
   | Canary_basic.Binding _ -> "bind"
+  | Canary_basic.Binding_source Canary_lang.OCaml -> "ocaml-src"
+  | Canary_basic.Binding_source Canary_lang.Python -> "py-src"
+  | Canary_basic.Binding_source _ -> "bind-src"
   | Canary_basic.App -> "app"
 
 (** The live installed version of a system package (memoized dpkg
@@ -334,6 +337,7 @@ let column_group (act : Canary_basic.action) : int =
   | Canary_basic.Fetch Canary_basic.Lib | Canary_basic.Install_lib
   | Canary_basic.Publish Canary_basic.Lib | Canary_basic.Probe_lib
   | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 0
+  | Canary_basic.Fetch (Canary_basic.Binding_source l)
   | Canary_basic.Build_binding l
   | Canary_basic.Fetch (Canary_basic.Binding l)
   | Canary_basic.Publish (Canary_basic.Binding l)
@@ -342,6 +346,7 @@ let column_group (act : Canary_basic.action) : int =
   | Canary_basic.Probe_app { Canary_basic.lang = l; _ } -> binding_group l
   | Canary_basic.Fetch Canary_basic.App
   | Canary_basic.Publish Canary_basic.App -> 4
+  | Canary_basic.Publish (Canary_basic.Binding_source _) -> 4
 
 let column_stage (act : Canary_basic.action) : int =
   match act with
@@ -355,15 +360,17 @@ let column_stage (act : Canary_basic.action) : int =
   | Canary_basic.Fetch Canary_basic.Lib -> 7
   | Canary_basic.Publish Canary_basic.Lib -> 8
   | Canary_basic.Probe_lib -> 9
-  | Canary_basic.Build_binding _ -> 10
-  | Canary_basic.Fetch (Canary_basic.Binding _) -> 11
-  | Canary_basic.Publish (Canary_basic.Binding _) -> 12
-  | Canary_basic.Probe_binding _ -> 13
-  | Canary_basic.Build_app _ -> 14
-  | Canary_basic.Probe_app _ -> 15
-  | Canary_basic.Fetch Canary_basic.App -> 16
-  | Canary_basic.Publish Canary_basic.App -> 17
+  | Canary_basic.Fetch (Canary_basic.Binding_source _) -> 10
+  | Canary_basic.Build_binding _ -> 11
+  | Canary_basic.Fetch (Canary_basic.Binding _) -> 12
+  | Canary_basic.Publish (Canary_basic.Binding _) -> 13
+  | Canary_basic.Probe_binding _ -> 14
+  | Canary_basic.Build_app _ -> 15
+  | Canary_basic.Probe_app _ -> 16
+  | Canary_basic.Fetch Canary_basic.App -> 17
+  | Canary_basic.Publish Canary_basic.App -> 18
   | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 8
+  | Canary_basic.Publish (Canary_basic.Binding_source _) -> 13
 
 (** The canonical column ordering: artifact group, then the source →
     built/fetched stage. *)

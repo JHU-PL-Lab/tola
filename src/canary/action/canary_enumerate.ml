@@ -22,7 +22,8 @@ type provision = Canary_store.provision =
 [@@deriving show, eq]
 
 type artifact = Canary_basic.artifact_kind =
-  | Source | Headers | Lib | Binding of Canary_lang.lang | App
+  | Source | Headers | Lib | Binding of Canary_lang.lang
+  | Binding_source of Canary_lang.lang | App
 [@@deriving show, eq]
 
 let string_of_provision = Canary_store.string_of_provision
@@ -619,6 +620,9 @@ let provision_of_actions (acts : Canary_basic.action list) (id : artifact_id) :
       (* not independently provisioned by an action verb (Headers ride the
          source/lib; App is the consumer) — [Absent] in the action view. *)
       Absent
+  | Binding_source l ->
+      if has (Canary_basic.Fetch (Canary_basic.Binding_source l)) then Fetched
+      else Absent
 
 (** The assignment a variant's action set implies: one provision per artifact
     (via [provision_of_actions]), all at the variant's [version] (a variant

@@ -1173,6 +1173,7 @@ let execution_plan_test : pure_test =
         | B.Source -> [ Canary_store.Vendored ]
         | B.Lib -> Canary_store.[ Built; Vendored ]
         | B.Binding _ -> [ Canary_store.Vendored ]
+        | B.Binding_source _ -> [ Canary_store.Vendored ]
         | B.App -> [ Canary_store.Vendored ]
         | B.Headers -> []
       in
@@ -1573,9 +1574,31 @@ let source_fetch_pinned_ref_check_post_pin : pure_test =
        | None -> false)
       && Option.is_none head) }
 
+(* The OFF-TREE binding source vocabulary (2026-08-18, user): a
+   binding may live in a different repo than the lib (zarith vs the
+   system gmp) — its own artifact kind + fetch action, leading the
+   per-language block in the canonical column order. *)
+let binding_source_vocabulary_pin : pure_test =
+  { name = "vocab.binding_source_off_tree";
+    check = (fun () ->
+      String.equal
+        (B.string_of_action (B.Fetch (B.Binding_source L.OCaml)))
+        "fetch_binding_source_ocaml"
+      && String.equal
+           (B.string_of_artifact_kind (B.Binding_source L.OCaml))
+           "binding_source_ocaml"
+      && Canary_artifact.equal_artifact_id
+           (Canary_artifact.a_binding_source L.OCaml)
+           { kind = B.Binding_source L.OCaml; ext = Canary_artifact.Ext_none }
+      (* the catalogue carries the typed row *)
+      && List.exists B.action_catalogue ~f:(fun (s : B.action_sig) ->
+             Poly.equal s.B.as_action
+               (B.Fetch (B.Binding_source L.OCaml)))) }
+
 let all_tests : pure_test list =
   catalogue_tests
-  @ [ probe_invariant; inventory_test;
+  @ [ binding_source_vocabulary_pin;
+      probe_invariant; inventory_test;
       derive_fetch_lib_test; surface_split_test;
       s2_raw_identity_test; detect_simple_test; coverage_test;
       mechanism_test; enumerate_test; config_level_test; version_axis_test;

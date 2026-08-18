@@ -114,6 +114,14 @@ type runner_spec = {
      by default; projects that opt into declarative fetch populate it. *)
   stores : Canary_store_config.store_config;
   fetch_source : (output_dir:string -> variant_key:string -> string) option;
+  fetch_binding_source :
+    (Canary_lang.lang * (output_dir:string -> variant_key:string -> string))
+    list;
+      (** per-language OFF-TREE binding source fetches (2026-08-18, user):
+          a binding may live in a different repo than the lib (zarith vs
+          system gmp). A repo providing BOTH the source and the binding
+          source (on-tree bindings) wires the SAME idempotent command —
+          the repo is already there (the [Source_fetch] local path). *)
   (* Declarative API spec for this source version. When present, derive_steps
      checks consistency: binding_api.source_dir = Some _ ↔ build_binding = Some _. *)
   api_source : Canary_artifact.t option;
@@ -213,6 +221,7 @@ type runner_spec = {
 let empty_runner_spec = {
   stores = Canary_store_config.empty_store_config;
   fetch_source = None;
+  fetch_binding_source = [];
   api_source = None;
   scan_source = None;
   scan_sources = None;
@@ -352,6 +361,8 @@ let command_of_step ~(store_config : Canary_store_config.store_config)
 (* Look up the script for an action. *)
 let script_of_action spec = function
   | Fetch Source -> spec.fetch_source
+  | Fetch (Binding_source l) ->
+      List.Assoc.find spec.fetch_binding_source ~equal:Poly.equal l
   | Configure -> spec.configure
   | Scan_sources -> spec.scan_sources
   | Build_headers -> spec.build_headers
@@ -379,7 +390,7 @@ let script_of_action spec = function
   | Probe_app a ->
       Option.map (List.Assoc.find spec.probe_app ~equal:Poly.equal a.Canary_basic.lang)
         ~f:(fun cmd -> cmd)
-  | Publish Source | Publish Headers -> None
+  | Publish Source | Publish Headers | Publish (Binding_source _) -> None
 
 (* probe_binding (simple): compile and run an OCaml example against an opam package *)
 let probe_ocaml_env_cmd ~env ~log_grep ~binding_lib ~example ~target
@@ -478,6 +489,7 @@ let pin_check_post ~pkg ~pin ~marker ~output_dir ~variant_key =
 
 let marker_of_action = function
   | Fetch Source -> "source.ok"
+  | Fetch (Binding_source _) -> "binding_source.ok"
   | Configure -> "conf.ok"
   | Scan_sources -> "scan.ok"
   | Build_headers | Fetch Headers -> "headers.ok"
@@ -618,6 +630,7 @@ let deps_of_action spec action =
              | Some l -> Some (Build_app { lang = l })
              | None -> Some (Fetch App))
         | Source -> Some (Fetch Source)
+        | Binding_source lang -> Some (Fetch (Binding_source lang))
       in
       Option.to_list
         (Option.bind produce_action ~f:(fun r ->

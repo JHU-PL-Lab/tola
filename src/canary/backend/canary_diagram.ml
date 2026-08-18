@@ -14,7 +14,7 @@ let probe_action_of_kind = function
   | Lib -> Some Probe_lib
   | Binding l -> Some (Probe_binding l)
   | App -> Some (Probe_app { lang = Canary_lang.OCaml })
-  | Source | Headers -> None    (* no Probe_source / Probe_headers *)
+  | Source | Headers | Binding_source _ -> None    (* no probe for sources *)
 
 (* ── Diagram rendering ──
    Step-level Mermaid renderers and the write_project_output orchestrator.
@@ -1193,6 +1193,8 @@ let mermaid_full
   let kind_label = function
     | Source -> "source" | Headers -> "headers" | Lib -> "lib"
     | Binding lang -> Canary_lang.string_of_lang lang ^ " binding"
+    | Binding_source lang ->
+        Canary_lang.string_of_lang lang ^ " binding source"
     | App -> "app"
   in
   (* Artifact docs node id for (kind, variant_id).  Single-variant uses canonical. *)
@@ -1211,7 +1213,7 @@ let mermaid_full
           let t = "build_binding_" ^ Canary_lang.string_of_lang lang in
           if has_step t then Some t else None
       | App -> if has_step "build_app" then Some "build_app" else None
-      | Source -> None
+      | Source | Binding_source _ -> None
     in
     let install = Poly.equal kind Lib && has_step "install_lib" in
     let fetch_base = string_of_action (Fetch kind) in

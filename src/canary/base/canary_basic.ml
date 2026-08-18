@@ -35,11 +35,25 @@ type compile_mode = Native | Bytecode
    so [Canary_store] can use [lang] without circular import via
    [Canary_basic]. *)
 
-type artifact_kind = Source | Headers | Lib | Binding of Canary_lang.lang | App
+type artifact_kind =
+  | Source
+  | Headers
+  | Lib
+  | Binding of Canary_lang.lang
+  | Binding_source of Canary_lang.lang
+      (** the SOURCE of a binding (2026-08-18, user): a binding may live
+          in a DIFFERENT repo than the lib (zarith: the binding's repo is
+          ocaml/Zarith, the lib is the system gmp). The lib-side
+          [Source] stays the lib's; a per-language binding source gets
+          its own fetch. A repo that provides BOTH (z3/llvm's on-tree
+          bindings) makes the second fetch idempotent — the repo is
+          already there (the [Source_fetch] local path). *)
+  | App
 [@@deriving show, eq]
 
 let kind_order = function
-  | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3 | App -> 4
+  | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3
+  | Binding_source _ -> 4 | App -> 5
 
 (** A concrete artifact instance: a [kind] tag + [name] + [location].
     Legacy — referenced only by [step_body] below (dead YAML/toolchain
@@ -97,6 +111,8 @@ let string_of_artifact_kind = function
   | Headers -> "headers"
   | Lib -> "lib"
   | Binding lang -> [%string "%{Canary_lang.string_of_lang lang}_binding"]
+  | Binding_source lang ->
+      [%string "binding_source_%{Canary_lang.string_of_lang lang}"]
   | App -> "app"
 
 
@@ -221,6 +237,8 @@ let string_of_action = function
   | Install_lib -> "install_lib"
   | Build_app a -> [%string "build_app_%{string_of_app_info a}"]
   | Fetch (Binding lang) -> [%string "fetch_binding_%{Canary_lang.string_of_lang lang}"]
+  | Fetch (Binding_source lang) ->
+      [%string "fetch_binding_source_%{Canary_lang.string_of_lang lang}"]
   | Fetch kind -> [%string "fetch_%{string_of_artifact_kind kind}"]
   | Publish (Binding lang) -> [%string "pack_binding_%{Canary_lang.string_of_lang lang}"]
   | Publish kind -> [%string "pack_%{string_of_artifact_kind kind}"]
@@ -330,6 +348,16 @@ let action_catalogue : action_sig list =
       as_produces = Binding Canary_lang.OCaml; as_version = Ambient };
     { as_action = Fetch (Binding Canary_lang.Python); as_consumes = [];
       as_produces = Binding Canary_lang.Python; as_version = Ambient };
+    (* the OFF-TREE binding source (2026-08-18, user): a binding's repo
+       may differ from the lib's — its own fetch, the same shape as
+       Fetch Source. A repo providing BOTH source and binding source
+       (on-tree bindings) makes this fetch idempotent (already there). *)
+    { as_action = Fetch (Binding_source Canary_lang.OCaml);
+      as_consumes = []; as_produces = Binding_source Canary_lang.OCaml;
+      as_version = Ambient };
+    { as_action = Fetch (Binding_source Canary_lang.Python);
+      as_consumes = []; as_produces = Binding_source Canary_lang.Python;
+      as_version = Ambient };
     { as_action = Build_binding Canary_lang.OCaml; as_consumes = [Lib];
       as_produces = Binding Canary_lang.OCaml; as_version = Follows_input };
     { as_action = Build_binding Canary_lang.Python; as_consumes = [Lib];

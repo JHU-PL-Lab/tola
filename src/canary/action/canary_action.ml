@@ -79,7 +79,13 @@ let pool_get ar kind =
 let store_actions ~langs =
   [ Fetch Source; Configure; Scan_sources; Build_headers; Fetch Headers; Build_lib; Install_lib; Fetch Lib ]
   @ List.concat_map langs ~f:(fun lang ->
-      [ Build_binding lang; Fetch (Binding lang);
+      (* the OFF-TREE binding source (2026-08-18, user): a binding's
+         repo may differ from the lib's — its own fetch leads the
+         per-language block, the same shape as Fetch Source. A repo
+         providing BOTH (on-tree bindings) wires the idempotent local
+         path — already there. *)
+      [ Fetch (Binding_source lang);
+        Build_binding lang; Fetch (Binding lang);
         Publish (Binding lang); Probe_binding lang;
         Build_app { lang }; Probe_app { lang } ])
   @ [ Fetch App; Publish Lib; Publish App; Probe_lib ]
@@ -280,6 +286,7 @@ let producing_action_of_node (n : artifact_node) : action option =
   | Canary_store.Built -> (
       match n.a_kind with
       | Source -> None (* a Built source is degenerate; treat as initial *)
+      | Binding_source _ -> None (* a binding source is fetched, not built *)
       | Headers -> Some Build_headers
       | Lib -> Some Build_lib
       | Binding l -> Some (Build_binding l)

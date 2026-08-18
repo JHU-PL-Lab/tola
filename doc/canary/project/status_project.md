@@ -493,7 +493,19 @@ directions):
   artifact identity with a repo discriminant (per-repo source rows)
   so a binding from ITS repo against a lib from ANOTHER repo is
   enumerable; then link-guard constraints (which lib channels/repos a
-  binding may link), selectable per config.
+  binding may link), selectable per config. The first piece LANDED
+  (2026-08-18): `artifact_kind.Binding_source lang` + the
+  `fetch_binding_source_<lang>` action (its own catalogue row, the
+  runner's `fetch_binding_source` slot, the canonical column order's
+  per-lang block front). The idempotency: a repo providing BOTH the
+  source and the binding source (on-tree bindings) wires the SAME
+  fetch — the repo is already there (the Source_fetch local path).
+- [ ] **zarith's binding-source migration** — the natural first
+  consumer of the OFF-TREE binding source (the user's example: the
+  binding's repo is ocaml/Zarith while the lib is the system gmp):
+  declare `a_binding_source OCaml` (Fetched via the zarith repo) +
+  wire `fetch_binding_source` — the column then appears live in the
+  result matrix at the front of the ocaml block.
 - [ ] **Dependency-declaration field + the two combination checks**:
   record the BINDING→LIB constraint regime (strict → persistent old
   bugs; flexible → broken combinations) as spec data + the two cross

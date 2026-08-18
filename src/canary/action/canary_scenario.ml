@@ -558,7 +558,7 @@ let applicable_mutations (a : Canary_basic.artifact_kind)
   | Source -> [ On_artifact Source; On_behavior ]
   | Headers -> [ On_artifact Headers ]
   | Lib -> [ On_artifact Lib ]
-  | Binding _ -> [ On_artifact a ]
+  | Binding _ | Binding_source _ -> [ On_artifact a ]
   | App -> [ On_artifact App ]
 
 (** Format a mutation_kind for use in a derived scenario id. *)

@@ -120,7 +120,8 @@ let providing_action_of ~(provision : Canary_store.provision)
           | Canary_basic.Lib -> Some Canary_basic.Build_lib
           | Canary_basic.Binding l -> Some (Canary_basic.Build_binding l)
           | Canary_basic.Headers -> Some Canary_basic.Build_headers
-          | Canary_basic.Source | Canary_basic.App -> None)
+          | Canary_basic.Source | Canary_basic.Binding_source _
+          | Canary_basic.App -> None)
       | Canary_store.Absent | Canary_store.Vendored -> None)
 
 (** [dep_mode_of_provider p] returns the runtime-edge mode implied by the

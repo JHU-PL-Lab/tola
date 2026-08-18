@@ -62,6 +62,8 @@ let rec action_path_of_node (n : artifact_node) =
       | Binding lang -> [%string "build_binding_%{Canary_lang.string_of_lang lang}"]
       | App -> "build_app"
       | Source -> "build_source"
+      | Binding_source lang ->
+          [%string "fetch_binding_source_%{Canary_lang.string_of_lang lang}"]
     in
     let bf_path = match n.built_from with
       | None -> None
@@ -186,7 +188,8 @@ let job_paths_of_action_graph (ar : action_graph) : job_path list =
     [%string "%{prefix}%{Int.to_string (n + 1)}"]
   in
   let kind_prefix = function
-    | Source -> "S" | Headers -> "H" | Lib -> "L" | Binding _ -> "B" | App -> "A"
+    | Source | Binding_source _ -> "S"
+    | Headers -> "H" | Lib -> "L" | Binding _ -> "B" | App -> "A"
   in
   let paths =
     List.concat_map ar.pools ~f:(fun (kind, nodes) ->

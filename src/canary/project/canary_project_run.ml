@@ -359,6 +359,7 @@ let builds_of_kind ~(langs : Canary_lang.lang list) (k : Canary_basic.artifact_k
   | Headers -> []
   | Lib -> App :: Stdlib.List.concat_map (fun l -> [ Canary_basic.Binding l ]) langs
   | Binding _ -> [ App ]
+  | Binding_source l -> [ Canary_basic.Binding l ]
   | App -> []
 
 let builds_of ~langs a = builds_of_kind ~langs (Canary_artifact.kind_of a)
@@ -367,7 +368,7 @@ let builds_of ~langs a = builds_of_kind ~langs (Canary_artifact.kind_of a)
 let group_of_kind : Canary_basic.artifact_kind -> string = function
   | Canary_basic.Source -> "source"
   | Canary_basic.Headers | Canary_basic.Lib -> "native"
-  | Canary_basic.Binding _ -> "bindings"
+  | Canary_basic.Binding _ | Canary_basic.Binding_source _ -> "bindings"
   | Canary_basic.App -> "app"
 
 let group_order = [ "source"; "native"; "bindings"; "app" ]
