@@ -155,7 +155,7 @@ let contract_registry : contract_row list =
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
       ~reads:[ ("Sf.3", "binding"); ("Sf.2", "native") ]
-      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_missing" ];
     row C2
       ~invariant:
@@ -232,12 +232,25 @@ let contract_fixtures : (Canary_compat.contract_id * fixture) list =
     "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|} in
   let py_body = {|{"kind": "python", "path": "fx",
     "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|} in
+  let c1_lib_body = {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum", "tiny_diff"]}|} in
   let c4_lib_body = {|{"kind": "native", "path": "fx",
     "symbols": ["tiny_sum"],
     "elf": {"soname": "libtiny.so.2", "needed": []}}|} in
   let c5_lib_body = {|{"kind": "native", "path": "fx",
     "versioned_exports": {"tiny_sum": "TINY_1.0"}}|} in
-  [ ( Canary_compat.C4,
+  [ ( Canary_compat.C1,
+      (* the LIB-ONLY cell: every declared c_api function exported by
+         the built lib (sym_missing at the source, no binding) *)
+      { fx_predict =
+          Some
+            (Canary_compat_run.c1_decl_predict
+               ~declared_functions:
+                 [ "tiny_sum"; "tiny_diff"; "tiny_offset" ]);
+        fx_inputs = [ Canary_compat.Native_lib [ "lib.json" ] ];
+        fx_bodies = [ ("lib.json", c1_lib_body) ];
+        fx_expect = [ "tiny_offset" ] } );
+    ( Canary_compat.C4,
       (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
       { fx_predict =
           Some

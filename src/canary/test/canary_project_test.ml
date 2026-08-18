@@ -1384,10 +1384,12 @@ let contract_registry_firing_pin : pure_test =
         let module CR = Canary_contract_registry in
         let f = (CR.row_of C1).CR.cr_firing in
         let eq got want = Poly.equal got want in
-        (* Static + Built → build + probe; Static + Fetched → probe;
-           Dynamic → probe — over the ACTION catalogue *)
+        (* Static + Built → build_lib + build + probe (C1 carries the
+           lib-only cell); Static + Fetched → probe; Dynamic → probe —
+           over the ACTION catalogue *)
         eq (f Canary_mechanism.Cstubs Canary_lang.OCaml Canary_store.Built)
-          [ Canary_basic.Build_binding Canary_lang.OCaml;
+          [ Canary_basic.Build_lib;
+            Canary_basic.Build_binding Canary_lang.OCaml;
             Canary_basic.Probe_binding Canary_lang.OCaml ]
         && eq (f Canary_mechanism.Cstubs Canary_lang.OCaml
                  Canary_store.Fetched)
@@ -1399,8 +1401,7 @@ let contract_registry_firing_pin : pure_test =
         eq ((CR.row_of C3).CR.cr_firing Canary_mechanism.Cstubs
               Canary_lang.OCaml Canary_store.Built)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]
-        && (* c4/c5 gain the Build_lib cell in Built worlds (the
-              lib-only half); Fetched worlds keep the pair checks *)
+        && (* c4/c5 also gain the Build_lib cell in Built worlds *)
         eq ((CR.row_of C4).CR.cr_firing Canary_mechanism.Cstubs
               Canary_lang.OCaml Canary_store.Built)
              [ Canary_basic.Build_lib;

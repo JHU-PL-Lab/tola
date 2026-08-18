@@ -523,6 +523,24 @@ let c8_predict ~resolve:_ _ = []
 (** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
     (the linker's -Wl,-soname application is the black box; the
     artifact's elf is the evidence). *)
+(** c1 lib-only: every DECLARED c_api function is exported by the
+    built lib — the lib's own completeness falsifier, no binding
+    involved. (The status-level watchlist verdict is this same
+    comparison, currently recorded rather than predicted.) *)
+let c1_decl_predict ~declared_functions ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let symbols = (load_native p).symbols in
+      List.filter declared_functions ~f:(fun f ->
+          not (List.mem symbols f ~equal:String.equal))
+
 let c4_decl_predict ~declared_soname ~resolve
     (inputs : inspect_input list) : string list =
   let lib_path =
