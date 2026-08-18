@@ -1392,7 +1392,20 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
-        && web_identity_ok) }
+        && web_identity_ok
+        (* the CANONICAL column order (ratchet, 2026-08-18): the
+           native/lib group, then per language a same-shaped block
+           (binding build/fetch/pack/probe + its app) — probe_app_ocaml
+           sits INSIDE the ocaml block, not at the end *)
+        && String.equal
+             (String.concat ~sep:"," m.Canary_matrix.columns)
+             (String.concat ~sep:","
+                [ "fetch_source"; "configure"; "scan_sources";
+                  "build_headers"; "build_lib"; "install_lib"; "fetch_lib";
+                  "probe_lib"; "build_binding_ocaml"; "fetch_binding_ocaml";
+                  "pack_binding_ocaml"; "probe_binding_ocaml";
+                  "probe_app_ocaml"; "build_binding_python";
+                  "probe_binding_python" ])) }
 
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins

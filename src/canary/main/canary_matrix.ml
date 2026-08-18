@@ -309,14 +309,22 @@ let actions_of (pr : Canary_project_run.project_run)
     actions (the action variant's declaration order); rows = every
     enumerated scenario in registry order. *)
 (* ── the CANONICAL column order (2026-08-18, user): grouped by the
-   ARTIFACT — the native/lib group first, then each binding (making +
-   probing it), then the app — and within each group from the source
-   to the built / fetched artifact. Explicit, not the variant's
-   declaration order (which interleaves the groups: Probe_lib sits
-   after the binding constructors there). The scenario chains follow
-   [store_actions] (the catalogue [derive_steps] walks), which is
-   almost this shape — the deviations (Probe_lib last, Publish Lib in
-   the tail) are recorded for a future catalogue alignment. *)
+   ARTIFACT — the native/lib group first, then per LANGUAGE a block of
+   the SAME shape (making + fetching + packing + probing the binding,
+   then its app), hardcoded since the supported language/mechanism set
+   is small — and within each group from the source to the built /
+   fetched artifact. Explicit, not the variant's declaration order
+   (which interleaves the groups: Probe_lib sits after the binding
+   constructors there). The scenario chains follow [store_actions]
+   (the catalogue [derive_steps] walks), which is almost this shape —
+   the deviations (Probe_lib last, Publish Lib in the tail) are
+   recorded for a future catalogue alignment. *)
+
+let binding_group (l : Canary_lang.lang) : int =
+  match l with
+  | Canary_lang.OCaml -> 1
+  | Canary_lang.Python -> 2
+  | _ -> 3
 
 let column_group (act : Canary_basic.action) : int =
   match act with
@@ -324,22 +332,16 @@ let column_group (act : Canary_basic.action) : int =
   | Canary_basic.Scan_sources | Canary_basic.Build_headers
   | Canary_basic.Fetch Canary_basic.Headers | Canary_basic.Build_lib
   | Canary_basic.Fetch Canary_basic.Lib | Canary_basic.Install_lib
-  | Canary_basic.Publish Canary_basic.Lib | Canary_basic.Probe_lib -> 0
-  | Canary_basic.Build_binding Canary_lang.OCaml
-  | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml)
-  | Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml)
-  | Canary_basic.Probe_binding Canary_lang.OCaml -> 1
-  | Canary_basic.Build_binding Canary_lang.Python
-  | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python)
-  | Canary_basic.Publish (Canary_basic.Binding Canary_lang.Python)
-  | Canary_basic.Probe_binding Canary_lang.Python -> 2
-  | Canary_basic.Build_binding _ | Canary_basic.Fetch (Canary_basic.Binding _)
-  | Canary_basic.Publish (Canary_basic.Binding _)
-  | Canary_basic.Probe_binding _ -> 3
-  | Canary_basic.Build_app _ | Canary_basic.Probe_app _
+  | Canary_basic.Publish Canary_basic.Lib | Canary_basic.Probe_lib
+  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 0
+  | Canary_basic.Build_binding l
+  | Canary_basic.Fetch (Canary_basic.Binding l)
+  | Canary_basic.Publish (Canary_basic.Binding l)
+  | Canary_basic.Probe_binding l
+  | Canary_basic.Build_app { Canary_basic.lang = l; _ }
+  | Canary_basic.Probe_app { Canary_basic.lang = l; _ } -> binding_group l
   | Canary_basic.Fetch Canary_basic.App
   | Canary_basic.Publish Canary_basic.App -> 4
-  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 0
 
 let column_stage (act : Canary_basic.action) : int =
   match act with
