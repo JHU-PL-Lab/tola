@@ -50,7 +50,20 @@ type contract_row = {
   cr_invariant : string;
       (** the one-sentence agreement, falsifier-phrased (design §5);
           the reconciliation point for ssot's Ag.X ↔ C1..C8 drift *)
+  cr_reads     : (string * string) list;
+      (** THE GROUNDING: which artifact-surface roles the cell's
+          evidence reads — (surface_role, side), e.g. ("Sf.3",
+          "binding"). The draft's five surfaces (Sf.1 native_header,
+          Sf.2 native_lib, Sf.3 binding_stub, Sf.4 binding_header,
+          Sf.5 binding_lib) + "Trace" (the runtime observation). A
+          contract IS a named relation over these reads; the action
+          says where the read attaches. *)
   cr_role      : role;
+      (** LEGACY descriptive tag (Surface/Meeting/Execution — our old
+          vocabulary for how evidence is gathered); NOT the row's
+          organizing principle. Kept for the blame frame; derived in
+          spirit from [cr_reads] (one-artifact vs cross-artifact vs
+          the run). *)
   cr_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_compat.inspect_input list;
       (** the step-2 template ([Canary_compat_run.inputs_of_contract]) *)
@@ -107,10 +120,11 @@ let check_of (id : Canary_compat.contract_id) :
          (Printf.sprintf "contract registry: no registered check for %s"
             (Canary_compat.string_of_contract_id id))
 
-let row ~invariant ~role ~firing ~source ~tags
+let row ~invariant ~reads ~role ~firing ~source ~tags
     (id : Canary_compat.contract_id) : contract_row =
   { cr_check = check_of id;
     cr_invariant = invariant;
+    cr_reads = reads;
     cr_role = role;
     cr_inputs =
       (fun m l ->
@@ -119,44 +133,54 @@ let row ~invariant ~role ~firing ~source ~tags
     cr_source = source;
     cr_fault_tags = tags }
 
-(** THE table — one row per contract (c1..c8). *)
+(** THE table — one row per contract (c1..c8). Each row's [cr_reads]
+    grounds the evidence in the artifact surfaces it reads — the
+    contract IS a named relation over those reads. *)
 let contract_registry : contract_row list =
   [ row C1
       ~invariant:
         "every symbol the binding declares (its stub references) is \
          exported by the lib"
+      ~reads:[ ("Sf.3", "binding"); ("Sf.2", "native") ]
       ~role:Surface ~firing:firing_default ~source:Inspection
       ~tags:[ "sym_missing" ];
     row C2
       ~invariant:
         "every watchlisted entry is present on the user-facing surface"
+      ~reads:[ ("Sf.4", "binding") ]
       ~role:Surface ~firing:firing_default ~source:Inspection
       ~tags:[ "api_drop" ];
     row C3
       ~invariant:"the probe's trace matches the recorded expectation"
+      ~reads:[ ("Trace", "run") ]
       ~role:Execution ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "behavior" ];
     row C4
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
+      ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
       ~role:Surface ~firing:firing_default ~source:Inspection
       ~tags:[ "abi_soname" ];
     row C5
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
+      ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
       ~role:Surface ~firing:firing_default ~source:Inspection
       ~tags:[ "sym_version" ];
     row C6
       ~invariant:"C types at the header/stub boundary match"
+      ~reads:[ ("Sf.1", "native"); ("Sf.3", "binding") ]
       ~role:Meeting ~firing:firing_default ~source:Inspection
       ~tags:[ "type_arity" ];
     row C7
       ~invariant:"repackaging preserves the API"
+      ~reads:[ ("Sf.4", "binding") ]
       ~role:Meeting ~firing:firing_probe_only ~source:Behavior_grep
       ~tags:[ "api_repack" ];
     row C8
       ~invariant:
         "repackaging is complete — nothing the original had is lost"
+      ~reads:[ ("Sf.4", "binding") ]
       ~role:Meeting ~firing:firing_default ~source:Placeholder
       ~tags:[ "api_add" ] ]
 

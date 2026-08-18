@@ -124,11 +124,11 @@ The roles name the structure of checking itself — the artifact-relationship
 axis the action graph already has (inspect steps / build steps / probe
 steps). Every concrete method, present or future, is PLACED into a slot:
 
-| Role | Asks | Concrete things today | Future things |
-|---|---|---|---|
-| **Surface** | what does ONE artifact present at its boundary? | nm/objinfo/dir/mli inspections (c1, c2, c4, c5) | the richer inspectors (L1b/L2/L4 — step 8) |
-| **Meeting** | are TWO artifacts compatible where they MEET (link/load)? | strict-flag compiles/links, the build_binding meeting (c6, c7, c8) | dry-run builds; the interposition shim as a RECORDER — which symbols the consumer actually requests at load (the oracle for "what the binding really needs") |
-| **Execution** | what happens when the pair RUNS? | our probe apps, behavioral greps (c3) | decl-DERIVED programs (generated from the API invariant — beyond symbol-missing); the shim as a FAKE provider (consumer robustness); upstream test suites |
+| Role          | Asks                                                      | Concrete things today                                              | Future things                                                                                                                                                |
+| ------------- | --------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Surface**   | what does ONE artifact present at its boundary?           | nm/objinfo/dir/mli inspections (c1, c2, c4, c5)                    | the richer inspectors (L1b/L2/L4 — step 8)                                                                                                                   |
+| **Meeting**   | are TWO artifacts compatible where they MEET (link/load)? | strict-flag compiles/links, the build_binding meeting (c6, c7, c8) | dry-run builds; the interposition shim as a RECORDER — which symbols the consumer actually requests at load (the oracle for "what the binding really needs") |
+| **Execution** | what happens when the pair RUNS?                          | our probe apps, behavioral greps (c3)                              | decl-DERIVED programs (generated from the API invariant — beyond symbol-missing); the shim as a FAKE provider (consumer robustness); upstream test suites    |
 
 **Probing vs testing — resolved.** Probing IS testing: an executing
 consumer program. The distinction I previously drew (probe vs project's
@@ -253,16 +253,16 @@ Blocked on deps); ✗ Un-answered — the completeness pin FAILS on ✗ in
 the declared scope. Today's coarse shape (the fine per-cell marks are
 the phase-2 pin material, taken from the hand-written tables):
 
-| contract (role) | fetch | configure | scan_sources | build_lib | build_binding | build_app | publish | probe_lib | probe_binding | probe_app |
-|---|---|---|---|---|---|---|---|---|---|---|
-| c1 symbol (Surface) | ○ | ○ | ○ | ✓(lib half) | ✓ | ○ | ○ | ○ | ✓ | ○ |
-| c2 api-completeness (Surface) | ○ | ○ | ○ | ○ | ✓ | ○ | ○ | ○ | ✓ | ○ |
-| c3 behavior (Execution) | ○ | ○ | ○ | ○ | ○ | ○ | ○ | ○ | ✓ | ✓(tiny oracle) |
-| c4 soname (Surface) | ○ | ○ | ○ | ✓ | ✓ | ○ | ○ | ✓ | ✓ | ○ |
-| c5 sym-version (Surface) | ○ | ○ | ○ | ✓ | ✓ | ○ | ○ | ○ | ✓ | ○ |
-| c6 type (Meeting) | ○ | ○ | (inputs) | ○ | ✓ | ○ | ○ | ○ | ✓ | ○ |
-| c7 repack (Meeting) | ○ | ○ | ○ | ○ | ○ | ○ | ○(publish lands here) | ○ | ✓ | ○ |
-| c8 faithfulness (Meeting) | ✗ blocked(c6,c7) | … | … | … | … | … | … | … | … | … |
+| contract (role)               | fetch            | configure | scan_sources | build_lib   | build_binding | build_app | publish               | probe_lib | probe_binding | probe_app      |
+| ----------------------------- | ---------------- | --------- | ------------ | ----------- | ------------- | --------- | --------------------- | --------- | ------------- | -------------- |
+| c1 symbol (Surface)           | ○                | ○         | ○            | ✓(lib half) | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c2 api-completeness (Surface) | ○                | ○         | ○            | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c3 behavior (Execution)       | ○                | ○         | ○            | ○           | ○             | ○         | ○                     | ○         | ✓             | ✓(tiny oracle) |
+| c4 soname (Surface)           | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ✓         | ✓             | ○              |
+| c5 sym-version (Surface)      | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c6 type (Meeting)             | ○                | ○         | (inputs)     | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c7 repack (Meeting)           | ○                | ○         | ○            | ○           | ○             | ○         | ○(publish lands here) | ○         | ✓             | ○              |
+| c8 faithfulness (Meeting)     | ✗ blocked(c6,c7) | …         | …            | …           | …             | …         | …                     | …         | …             | …              |
 
 Widenings already designed, not landed: a fetch-side integrity cell
 (pinned-ref freshness is its postcondition half, e2b4d27), publish
