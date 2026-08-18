@@ -1452,6 +1452,53 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
             ("pre-10549", Canary_artifact.Built);
             ("pre-10549", Canary_artifact.Fetched) ]) }
 
+(* The GLOBAL row index (2026-08-18, user): every row carries its
+   ordinal (#N, fast pointing in the rendered order) + a stable code
+   (the digest of the row's identity — the historical pointer). Pure
+   display: the index never feeds a cache key or scenario identity.
+   Pin: ordinals are 1..N unique; codes are deterministic across two
+   matrix_of calls and unique across rows. *)
+let matrix_row_index_pin : Canary_project_test.pure_test =
+  { name = "matrix.row_index";
+    check =
+      (fun () ->
+        let m1 = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let m2 = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let n = List.length m1.Canary_matrix.rows in
+        let indexes =
+          List.map m1.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+              r.Canary_matrix.index)
+        in
+        let uniq =
+          Poly.equal (List.dedup_and_sort indexes ~compare:Int.compare)
+            indexes
+        in
+        (* sorted = [1..n] → consecutive, 1-based *)
+        let consecutive =
+          Poly.equal (List.sort indexes ~compare:Int.compare)
+            (List.init n ~f:(fun i -> i + 1))
+        in
+        let codes =
+          List.map m1.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+              (r.Canary_matrix.project, r.Canary_matrix.scenario,
+               r.Canary_matrix.code))
+        in
+        let stable =
+          Poly.equal codes
+            (List.map m2.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+                 (r.Canary_matrix.project, r.Canary_matrix.scenario,
+                  r.Canary_matrix.code)))
+        in
+        let codes_uniq =
+          List.length
+            (List.dedup_and_sort
+               (List.map codes ~f:(fun (_, _, c) -> c))
+               ~compare:String.compare)
+          = n
+        in
+        uniq && consecutive && stable && codes_uniq
+        && List.for_all codes ~f:(fun (_, _, c) -> String.length c = 6)) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1604,5 +1651,6 @@ let tests : Canary_project_test.pure_test list =
       z3_regression_pre_10549_pin;
       z3_installed_probe_consumes_prefix;
       matrix_row_order_pin;
+      matrix_row_index_pin;
       matrix_registry_shape_pin ]
 

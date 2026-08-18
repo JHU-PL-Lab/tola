@@ -30,6 +30,17 @@ type row = {
   scenario : string;
       (** the full scenario id — the cmd views' label and the web
           tooltip (the web replaces the long name with ref+platform) *)
+  index : int;
+      (** the GLOBAL row ordinal (1-based across the whole matrix, in
+          the rendered row order) — fast pointing ("z3 row 4"). PURE
+          DISPLAY: derived at render time, never part of any cache key
+          or scenario identity. *)
+  code : string;
+      (** the STABLE row code — a short digest of (project, scenario):
+          the "truly global" half of the row index. Unlike the ordinal
+          it survives row-set changes and therefore points at a
+          HISTORICAL run's row too (same row → same code, forever).
+          Also pure display. *)
   ref_label : string;
       (** the source repo's ref (e.g. "pre-10549", "release-1.14" —
           the declared [ref_]; the source pin id when no repo record
@@ -500,6 +511,8 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
             let ref_url = Option.bind repo ~f:ref_url_of in
             { project;
               scenario;
+              index = 0;
+              code = "";
               ref_label;
               ref_url;
               platform;
@@ -529,6 +542,19 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                             provision;
                             detail = detail_of_run ~run tag } )
                     else (tag, None)) }))
+  in
+  (* the GLOBAL row index: the ordinal follows the rendered row order;
+     the code is the stable digest of the row's identity (project +
+     scenario) — insertion-safe, so a historical run's row keeps its
+     code. Display-only: nothing here feeds a cache key or scenario
+     identity. *)
+  let rows =
+    List.mapi rows ~f:(fun i (r : row) ->
+        { r with
+          index = i + 1;
+          code =
+            Stdlib.Digest.string (r.project ^ "/" ^ r.scenario)
+            |> Stdlib.Digest.to_hex |> fun s -> String.prefix s 6 })
   in
   { columns; rows }
 
@@ -573,7 +599,10 @@ let pp_text (m : t) : unit =
                      | Some None -> pad ""
                      | None -> pad "")
                in
-               Fmt.pr "  %s%s@." (pad rr.scenario)
+               (* the global row index: "#N" for fast pointing; the
+                  stable code is the historical pointer (see {!row.code}) *)
+               Fmt.pr "  %s%s@."
+                 (pad (Printf.sprintf "#%d %s" rr.index rr.scenario))
                  (String.concat ~sep:"" cells))));
   let total = List.length m.rows in
   Fmt.pr "@.legend: ✓ done · not run ⊘ blocked xfail[cN] expected failure (cN confirming contracts) ✗ failed@.";
@@ -612,7 +641,7 @@ let pp_md (m : t) : unit =
                     | Some None -> " "
                     | None -> " ")
               in
-              Fmt.pr "| %s | %s |@." rr.scenario
+              Fmt.pr "| #%d %s | %s |@." rr.index rr.scenario
                 (String.concat ~sep:" | " cells));
           Fmt.pr "@.")
 
@@ -628,6 +657,8 @@ let to_json (m : t) : Yojson.Basic.t =
                `Assoc
                  [ ("project", `String r.project);
                    ("scenario", `String r.scenario);
+                   ("index", `Int r.index);
+                   ("code", `String r.code);
                    ( "cells",
                      `Assoc
                        (List.filter_map r.cells ~f:(fun (tag, c) ->
@@ -660,7 +691,7 @@ let render_html (m : t) ~(generated_at : string) : string =
     | _ -> "ok"
   in
   let header =
-    "<th>project</th><th>ref</th><th>platform</th>"
+    "<th>#</th><th>project</th><th>ref</th><th>platform</th>"
     ^ String.concat ~sep:""
         (List.map m.columns ~f:(fun c -> "<th>" ^ esc c ^ "</th>"))
   in
@@ -699,8 +730,9 @@ let render_html (m : t) ~(generated_at : string) : string =
                     | _ -> "<td class=\"blank\"></td>"))
            in
            Printf.sprintf
-             "<tr><td>%s</td><td class=\"ref\">%s</td><td class=\"platform\">%s</td>%s</tr>"
-             (esc r.project) ref_cell (esc r.platform) cells))
+             "<tr><td class=\"idx\" title=\"%s\">%d</td><td>%s</td><td class=\"ref\">%s</td><td class=\"platform\">%s</td>%s</tr>"
+             (esc r.code) r.index (esc r.project) ref_cell (esc r.platform)
+             cells))
   in
   Printf.sprintf
     {|<!doctype html>
@@ -716,6 +748,7 @@ td.ref { font-family: ui-monospace, monospace; font-size: .78rem; }
 td.ref a { color: #0969da; text-decoration: none; }
 td.ref a:hover { text-decoration: underline; }
 td.platform { color: #57606a; font-size: .75rem; }
+td.idx { color: #57606a; font-size: .75rem; text-align: right; }
 td .prov { color: #57606a; font-family: ui-monospace, monospace; font-size: .7rem; margin-right: 5px; }
 td .mk { font-weight: 600; }
 td.ok { background: #dafbe1; } td.xfail { background: #fff8c5; }
@@ -724,7 +757,7 @@ td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; 
 td.blank { background: #f6f8fa; }
 </style></head><body>
 <h1>canary result matrix</h1>
-<div class="meta">generated %s — rows = project × scenario; columns = actions, cells = provision choice + verdict (hover a cell for the full scenario id). Pre/post-check columns: future.</div>
+<div class="meta">generated %s — rows = project × scenario; columns = actions, cells = provision choice + verdict (hover a cell for the full scenario id). The # column is the global row index (hover it for the stable row code — the historical pointer). Pre/post-check columns: future.</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) header body
