@@ -15,11 +15,15 @@ open Base
 (** One matrix cell: the verdict mark (✓/✗/xfail[cN]/·/⊘ — the
     {!Canary_status} vocabulary) plus the PROVISION CHOICE of the
     action's primary artifact in this scenario (e.g. [B:d] = built
-    @dev, [F:4.16.0] = fetched at a pinned version — the information
-    the long scenario names carried, now living in the cell). The
-    cell is [None] when the action is NOT part of the scenario's
-    chain (distinct from [·] = in the chain, never run). *)
-type cell = { mark : string; provision : string }
+    @dev, [F:4.16.0] = fetched at a pinned version, [F:sys] = the
+    system PM's version — the information the long scenario names
+    carried, now living in the cell), plus the verdict DETAIL (the
+    log event's reason — the xfail's confirmed-expected-failure text
+    names the fix, a failure's postcondition message — shown in the
+    cell's tooltip). The cell is [None] when the action is NOT part
+    of the scenario's chain (distinct from [·] = in the chain, never
+    run). *)
+type cell = { mark : string; provision : string; detail : string option }
 
 type row = {
   project : string;
@@ -45,6 +49,16 @@ let mark_of_run ?(run : (string * (string * string option)) list = [])
   match List.Assoc.find run tag ~equal:String.equal with
   | Some (event, detail) -> Canary_status.mark event detail
   | None -> "·"
+
+(** The verdict's DETAIL — the log event's reason line (the xfail's
+    "expected failure confirmed: … predates …" names the fix; a
+    failure's "postcondition failed"/command output explains it). The
+    tooltip content the user asked for. *)
+let detail_of_run ?(run : (string * (string * string option)) list = [])
+    (tag : string) : string option =
+  match List.Assoc.find run tag ~equal:String.equal with
+  | Some (_, detail) -> detail
+  | None -> None
 
 (** The scenario's run verdicts keyed by tag ([] when the project has
     no actions.log or the scenario never ran). *)
@@ -174,12 +188,30 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
   | Canary_basic.Binding _ -> "bind"
   | Canary_basic.App -> "app"
 
+(** The PROVENANCE suffix for a fetched artifact WITHOUT a pin — the
+    version is the PROVIDER's (unknowable statically): [F:sys] the
+    system PM's latest, [F:opam]/[F:pip] the language PM's. A pinned
+    fetch shows the pin instead (it implies its source). *)
+let provider_suffix (pr : Canary_project_run.project_run)
+    (id : Canary_artifact.artifact_id) : string =
+  match Canary_project_run.provenance_of pr id with
+  | Some (Canary_store_config.Sys_pkg _) -> ":sys"
+  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Opam; _ }) ->
+      ":opam"
+  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Pip; _ }) ->
+      ":pip"
+  | Some (Canary_store_config.Vendored _) | Some (Canary_store_config.Cached _) ->
+      ":vendored"
+  | _ -> ""
+
 (** The provision CHOICE string for one artifact in the scenario:
     [F] fetched (with the pinned version when one exists — the binding
-    pin is identity), [B:d]/[B:s] built @dev/@stable, [V:d]/[V:s]
-    vendored. Empty when absent/unknown. *)
-let provision_choice (a : Canary_artifact.assignment)
-    (id : Canary_artifact.artifact_id) : string =
+    pin is identity — else the provider suffix, [F:sys] etc.),
+    [B:d]/[B:s] built @dev/@stable, [V:d]/[V:s] vendored. Empty when
+    absent/unknown. *)
+let provision_choice (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    string =
   match Canary_enumerate.placement_of a id with
   | None -> ""
   | Some (pl : Canary_artifact.placement) ->
@@ -195,20 +227,22 @@ let provision_choice (a : Canary_artifact.assignment)
               the ref column doesn't show *)
            let pin = pl.Canary_artifact.version.Canary_basic.id in
            if Canary_artifact.equal_artifact_id id Canary_artifact.a_source
-              || String.is_empty pin
            then "F"
+           else if String.is_empty pin then
+             "F" ^ provider_suffix pr id
            else "F:" ^ pin
        | Canary_artifact.Built -> "B" ^ ch
        | Canary_artifact.Vendored -> "V" ^ ch
        | Canary_artifact.Absent -> "")
 
 (** The full cell annotation: "<kind> <provision>" (e.g. [lib B:d],
-    [ocaml F:4.16.0]) — explicit about BOTH what the action works on
-    and how it is provided. *)
-let cell_annotation (a : Canary_artifact.assignment)
-    (id : Canary_artifact.artifact_id) : string =
+    [ocaml F:4.16.0], [lib F:sys]) — explicit about BOTH what the
+    action works on and how/at-what it is provided. *)
+let cell_annotation (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    string =
   let label = kind_label (Canary_artifact.kind_of id) in
-  let prov = provision_choice a id in
+  let prov = provision_choice pr a id in
   if String.is_empty prov then label else label ^ " " ^ prov
 
 (** The actions ONE scenario's steps carry (the {!covered_actions_of}
@@ -261,13 +295,18 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                scenario dirs already use ([source-fetched-arbipher]) —
                NOT the literal ref_: latest and the arbipher fork BOTH
                declare ref_ = "HEAD" and would render as identical rows.
-               The LINK carries the precise ref (the commit/tag). *)
+               The precise ref (the commit/tag — the VERSION the built
+               lib inherits) rides the label as a parenthetical: the
+               cell's [lib B:d] then reads as "built at this version".
+               The LINK carries the same precise ref. *)
             let ref_label =
               match repo with
               | Some r ->
                   let id = r.Canary_artifact_source.version.Canary_basic.id in
-                  if String.is_empty id then r.Canary_artifact_source.ref_
-                  else id
+                  let ref_ = r.Canary_artifact_source.ref_ in
+                  if String.is_empty id then ref_
+                  else if String.equal id ref_ then id
+                  else id ^ " (" ^ ref_ ^ ")"
               | None ->
                   (if String.is_empty src_id then "(ambient)" else src_id)
             in
@@ -293,11 +332,15 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                         with
                         | Some act -> (
                             match action_artifact act a with
-                            | Some id -> cell_annotation a id
+                            | Some id -> cell_annotation pr a id
                             | None -> "")
                         | None -> ""
                       in
-                      (tag, Some { mark = mark_of_run ~run tag; provision })
+                      ( tag,
+                        Some
+                          { mark = mark_of_run ~run tag;
+                            provision;
+                            detail = detail_of_run ~run tag } )
                     else (tag, None)) }))
   in
   { columns; rows }
@@ -453,10 +496,19 @@ let render_html (m : t) ~(generated_at : string) : string =
                       List.Assoc.find r.cells tag ~equal:String.equal
                     with
                     | Some (Some c) ->
+                        (* the tooltip's third part is the verdict's
+                           DETAIL — the reason (the xfail's
+                           confirmed-expected-failure text names the
+                           fix; a failure's postcondition message) *)
+                        let why =
+                          match c.detail with
+                          | Some d -> " · " ^ d
+                          | None -> ""
+                        in
                         Printf.sprintf
-                          "<td class=\"%s\" title=\"%s · %s\"><span class=\"prov\">%s</span><span class=\"mk\">%s</span></td>"
+                          "<td class=\"%s\" title=\"%s · %s%s\"><span class=\"prov\">%s</span><span class=\"mk\">%s</span></td>"
                           (cell_cls c.mark) (esc r.scenario) (esc tag)
-                          (esc c.provision) (esc c.mark)
+                          (esc why) (esc c.provision) (esc c.mark)
                     | _ -> "<td class=\"blank\"></td>"))
            in
            Printf.sprintf
