@@ -38,8 +38,10 @@ type role =
     expectation (the three shapes of the old per-project
     [expectation_source], minus the payload). *)
 type source =
-  | Inspection      (** inputs → predict → compat-derived expectation *)
-  | Behavior_grep   (** probe.log substring → failure expectation *)
+  | Inspection      (** inspect JSONs → predict → compat-derived expectation *)
+  | Behavior_grep   (** the run's log substring → failure expectation *)
+  | Postcondition   (** the action's check_post family (markers, pin-checks,
+                        staged-parity at Install_lib, freshness) *)
   | Placeholder     (** Expect_success until wired (missing-ness visible) *)
 [@@deriving show, eq]
 
@@ -59,11 +61,11 @@ type contract_row = {
           contract IS a named relation over these reads; the action
           says where the read attaches. *)
   cr_role      : role;
-      (** LEGACY descriptive tag (Surface/Meeting/Execution — our old
-          vocabulary for how evidence is gathered); NOT the row's
-          organizing principle. Kept for the blame frame; derived in
-          spirit from [cr_reads] (one-artifact vs cross-artifact vs
-          the run). *)
+      (** PROSE tag at most (Surface/Meeting/Execution — the legacy
+          evidence vocabulary). NOT a typed axis: the action column
+          already implies the cell's subject (one artifact vs a pair)
+          and its evidence flavor; the typed axis is [source] — how
+          the expectation is produced. *)
   cr_inputs    : Canary_mechanism.mechanism -> Canary_lang.lang ->
                  Canary_compat.inspect_input list;
       (** the step-2 template ([Canary_compat_run.inputs_of_contract]) *)
