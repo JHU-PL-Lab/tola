@@ -160,6 +160,20 @@ let action_artifact (act : Canary_basic.action)
           then Some id
           else None))
 
+(** The artifact KIND label for a cell: which artifact the action
+    operates on — [src] source, [hdr] headers, [lib], [ocaml]/[py]
+    bindings, [app]. Without it two same-ref rows (the built chain vs
+    the all-fetched world) read identically. *)
+let kind_label (k : Canary_basic.artifact_kind) : string =
+  match k with
+  | Canary_basic.Source -> "src"
+  | Canary_basic.Headers -> "hdr"
+  | Canary_basic.Lib -> "lib"
+  | Canary_basic.Binding Canary_lang.OCaml -> "ocaml"
+  | Canary_basic.Binding Canary_lang.Python -> "py"
+  | Canary_basic.Binding _ -> "bind"
+  | Canary_basic.App -> "app"
+
 (** The provision CHOICE string for one artifact in the scenario:
     [F] fetched (with the pinned version when one exists — the binding
     pin is identity), [B:d]/[B:s] built @dev/@stable, [V:d]/[V:s]
@@ -187,6 +201,15 @@ let provision_choice (a : Canary_artifact.assignment)
        | Canary_artifact.Built -> "B" ^ ch
        | Canary_artifact.Vendored -> "V" ^ ch
        | Canary_artifact.Absent -> "")
+
+(** The full cell annotation: "<kind> <provision>" (e.g. [lib B:d],
+    [ocaml F:4.16.0]) — explicit about BOTH what the action works on
+    and how it is provided. *)
+let cell_annotation (a : Canary_artifact.assignment)
+    (id : Canary_artifact.artifact_id) : string =
+  let label = kind_label (Canary_artifact.kind_of id) in
+  let prov = provision_choice a id in
+  if String.is_empty prov then label else label ^ " " ^ prov
 
 (** The actions ONE scenario's steps carry (the {!covered_actions_of}
     per-scenario derivation — derive_steps on the scenario's runner
@@ -262,7 +285,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                         with
                         | Some act -> (
                             match action_artifact act a with
-                            | Some id -> provision_choice a id
+                            | Some id -> cell_annotation a id
                             | None -> "")
                         | None -> ""
                       in

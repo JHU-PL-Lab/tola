@@ -1336,7 +1336,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                       ~equal:String.equal
                   with
                   | Some (Some c) ->
-                      String.equal c.Canary_matrix.provision "B:d"
+                      String.equal c.Canary_matrix.provision "lib B:d"
                   | _ -> false)
         in
         List.length rows = 23
