@@ -188,21 +188,70 @@ let kind_label (k : Canary_basic.artifact_kind) : string =
   | Canary_basic.Binding _ -> "bind"
   | Canary_basic.App -> "app"
 
-(** The PROVENANCE suffix for a fetched artifact WITHOUT a pin — the
-    version is the PROVIDER's (unknowable statically): [F:sys] the
-    system PM's latest, [F:opam]/[F:pip] the language PM's. A pinned
-    fetch shows the pin instead (it implies its source). *)
-let provider_suffix (pr : Canary_project_run.project_run)
-    (id : Canary_artifact.artifact_id) : string =
+(** The live installed version of a system package (memoized dpkg
+    query — the matrix's one runtime read; "" when unknown). *)
+let sys_pkg_versions : (string, string) Hashtbl.t =
+  Hashtbl.create (module String)
+
+let sys_pkg_version (pkg : string) : string =
+  match Hashtbl.find sys_pkg_versions pkg with
+  | Some v -> v
+  | None ->
+      let v =
+        let ic =
+          Unix.open_process_in
+            (Printf.sprintf "dpkg-query -W -f='${Version}' %s 2>/dev/null" pkg)
+        in
+        let line = Stdlib.In_channel.input_line ic in
+        ignore (Unix.close_process_in ic : Unix.process_status);
+        Option.value line ~default:""
+      in
+      Hashtbl.set sys_pkg_versions ~key:pkg ~data:v;
+      v
+
+(** The FETCHED annotation names the PROVIDER and the version — no
+    general ":sys": the language PM shows the package + the store pin
+    ([opam z3.4.16.0], [pip z3-solver]), the system PM shows the
+    package + its version (the declared version_tag, else the live
+    dpkg query — we DO know it), a path provider shows the path's last
+    directory. *)
+let fetched_note (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
+    string =
+  let pin =
+    (Canary_enumerate.version_of a id).Canary_basic.id
+  in
   match Canary_project_run.provenance_of pr id with
-  | Some (Canary_store_config.Sys_pkg _) -> ":sys"
-  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Opam; _ }) ->
-      ":opam"
-  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Pip; _ }) ->
-      ":pip"
-  | Some (Canary_store_config.Vendored _) | Some (Canary_store_config.Cached _) ->
-      ":vendored"
-  | _ -> ""
+  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Opam; package; _ }) ->
+      "opam " ^ package ^ (if String.is_empty pin then "" else "." ^ pin)
+  | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Pip; package; _ }) ->
+      "pip " ^ package ^ (if String.is_empty pin then "" else "." ^ pin)
+  | Some (Canary_store_config.Sys_pkg spec) ->
+      let pm, pkg =
+        match Canary_basic.detect_distro () with
+        | Canary_store.Wsl -> ("apt", spec.Canary_store.linux_pkg)
+        | Canary_store.MacOS_local -> ("brew", spec.Canary_store.macos_pkg)
+      in
+      let ver =
+        match spec.Canary_store.version_tag with
+        | Some t -> t
+        | None -> sys_pkg_version pkg
+      in
+      (* strip the Debian packaging revision (4.8.12-3.1build1 →
+         4.8.12) — the display shows the UPSTREAM version *)
+      let ver =
+        match String.lsplit2 ver ~on:'-' with
+        | Some (up, _) -> up
+        | None -> ver
+      in
+      pm ^ " " ^ pkg ^ (if String.is_empty ver then "" else "." ^ ver)
+  | Some (Canary_store_config.Vendored path)
+  | Some (Canary_store_config.Cached path) ->
+      "path:" ^ Stdlib.Filename.basename path
+  | _ ->
+      (* no provider declared (or a repo — the source case is handled
+         by the caller) *)
+      "F"
 
 (** The provision CHOICE string for one artifact in the scenario:
     [F] fetched (with the pinned version when one exists — the binding
@@ -223,14 +272,10 @@ let provision_choice (pr : Canary_project_run.project_run)
       (match pl.Canary_artifact.provision with
        | Canary_artifact.Fetched ->
            (* the SOURCE's pin repeats the ref column — keep it bare;
-              a binding's pin (e.g. 4.16.0) IS identity-bearing info
-              the ref column doesn't show *)
-           let pin = pl.Canary_artifact.version.Canary_basic.id in
+              everything else names its provider + version *)
            if Canary_artifact.equal_artifact_id id Canary_artifact.a_source
            then "F"
-           else if String.is_empty pin then
-             "F" ^ provider_suffix pr id
-           else "F:" ^ pin
+           else fetched_note pr a id
        | Canary_artifact.Built -> "B" ^ ch
        | Canary_artifact.Vendored -> "V" ^ ch
        | Canary_artifact.Absent -> "")

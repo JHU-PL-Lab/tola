@@ -1360,9 +1360,11 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                       String.equal ar.Canary_matrix.ref_label
                         "arbipher (HEAD)"
                   | None -> false)
-              (* the all-fetched world's lib is the SYSTEM PM's (the
-                 provider suffix — the version is the system's, the
-                 source is explicit) *)
+              (* the all-fetched world names its providers + versions:
+                 the lib is the SYSTEM PM's package (the live dpkg
+                 version — the pin asserts the static prefix only, the
+                 version is machine-dependent), the binding is the
+                 opam package at its store pin *)
               && (match pre_10549_fetched_row with
                   | Some fr -> (
                       match
@@ -1370,8 +1372,18 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           ~equal:String.equal
                       with
                       | Some (Some c) ->
-                          String.equal c.Canary_matrix.provision "lib F:sys"
+                          String.is_prefix c.Canary_matrix.provision
+                            ~prefix:"lib apt z3."
                       | _ -> false)
+                      && (match
+                            List.Assoc.find fr.Canary_matrix.cells
+                              "fetch_binding_ocaml"
+                              ~equal:String.equal
+                          with
+                          | Some (Some c) ->
+                              String.equal c.Canary_matrix.provision
+                                "ocaml opam z3.4.16.0"
+                          | _ -> false)
                   | None -> false)
         in
         List.length rows = 23
