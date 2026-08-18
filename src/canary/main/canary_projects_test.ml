@@ -1322,6 +1322,11 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
               String.equal r.Canary_matrix.scenario
                 "ocaml_binding-built-dev_source-fetched-pre-10549_lib-built-dev_python_binding-fetched")
         in
+        let arbipher_row =
+          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+              String.equal r.Canary_matrix.scenario
+                "ocaml_binding-built-dev_source-fetched-arbipher_lib-built-dev_python_binding-fetched")
+        in
         let web_identity_ok =
           match pre_10549_row with
           | None -> false
@@ -1331,6 +1336,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                    String.equal url
                      "https://github.com/Z3Prover/z3/commit/bc4585e0b"
                | None -> false)
+              && String.equal r.Canary_matrix.ref_label "pre-10549"
               && (match
                     List.Assoc.find r.Canary_matrix.cells "build_lib"
                       ~equal:String.equal
@@ -1338,6 +1344,13 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                   | Some (Some c) ->
                       String.equal c.Canary_matrix.provision "lib B:d"
                   | _ -> false)
+              (* the fork's label is its IDENTITY (arbipher), not the
+                 literal HEAD it shares with latest — the two HEAD-ref
+                 chains must not render as identical rows *)
+              && (match arbipher_row with
+                  | Some ar ->
+                      String.equal ar.Canary_matrix.ref_label "arbipher"
+                  | None -> false)
         in
         List.length rows = 23
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7

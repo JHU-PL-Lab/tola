@@ -257,9 +257,17 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
               (Canary_enumerate.version_of a Canary_artifact.a_source)
                 .Canary_basic.id
             in
+            (* the LABEL is the repo's version id — the identity the
+               scenario dirs already use ([source-fetched-arbipher]) —
+               NOT the literal ref_: latest and the arbipher fork BOTH
+               declare ref_ = "HEAD" and would render as identical rows.
+               The LINK carries the precise ref (the commit/tag). *)
             let ref_label =
               match repo with
-              | Some r -> r.Canary_artifact_source.ref_
+              | Some r ->
+                  let id = r.Canary_artifact_source.version.Canary_basic.id in
+                  if String.is_empty id then r.Canary_artifact_source.ref_
+                  else id
               | None ->
                   (if String.is_empty src_id then "(ambient)" else src_id)
             in
