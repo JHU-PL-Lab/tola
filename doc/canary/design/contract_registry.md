@@ -209,7 +209,70 @@ The completeness pin (`contracts.fixtures_complete`) states the covered
 set visibly: C1, C2 today; C3/C7 are blocked in the registry; C4/C5/C6
 pend their fixture JSON shapes (elf / versioned / typed loaders).
 
-## 8. Belief coverage — status and plan (2026-08-17)
+## 8. The general matrix
+
+The belief space is NOT a free product of its axes — most of it is
+DERIVED. The matrix that is actually general: **rows = contracts,
+columns = ACTIONS**, because an action already determines its
+artifacts (the action catalogue's consumes/produces). The mechanism
+and provision axes do not add cells — they REFINE them: they decide
+which actions exist in a scenario (chain shape × enumeration) and
+what the input template yields. So:
+
+```
+  cell : (contract × action) → {
+    status      : Wired | Declared_empty of reason | Blocked of deps
+    inputs      : mechanism -> lang -> inspect_input list
+    expect      : Inspection | Behavior_grep | Placeholder
+    fixture     : the bad-world counterexample (predicted substrings)
+    pass_means  : the good-world reading (blame axis, §9)
+  }
+```
+
+**The derivation rules** (keep the matrix mostly derived):
+
+1. contract → role (data): Surface / Meeting / Execution;
+2. role → default action attachment:
+   - Surface → the actions that carry the artifact's inspect
+     attachments (build_lib, build_binding, probe_binding, probe_lib,
+     fetch);
+   - Meeting → the join actions (build_binding, build_app — and the
+     load-time join at probe for dynamic mechanisms);
+   - Execution → the run actions (probe_binding, probe_app);
+3. mechanism × provision → which of those actions EXIST (the firing
+   derivation projects the cells onto a scenario);
+4. the input template → which surfaces the cell reads (per mechanism).
+
+Explicit per-row entries override the role defaults (that is where the
+hand-written tables' fine detail lands in phase 2 — every override
+pinned equal to today's tables).
+
+**The marks.** ✓ Wired (inputs + expectation + fixture defined);
+○ Declared-empty (a reason: nothing to check here by design, or
+Blocked on deps); ✗ Un-answered — the completeness pin FAILS on ✗ in
+the declared scope. Today's coarse shape (the fine per-cell marks are
+the phase-2 pin material, taken from the hand-written tables):
+
+| contract (role) | fetch | configure | scan_sources | build_lib | build_binding | build_app | publish | probe_lib | probe_binding | probe_app |
+|---|---|---|---|---|---|---|---|---|---|---|
+| c1 symbol (Surface) | ○ | ○ | ○ | ✓(lib half) | ✓ | ○ | ○ | ○ | ✓ | ○ |
+| c2 api-completeness (Surface) | ○ | ○ | ○ | ○ | ✓ | ○ | ○ | ○ | ✓ | ○ |
+| c3 behavior (Execution) | ○ | ○ | ○ | ○ | ○ | ○ | ○ | ○ | ✓ | ✓(tiny oracle) |
+| c4 soname (Surface) | ○ | ○ | ○ | ✓ | ✓ | ○ | ○ | ✓ | ✓ | ○ |
+| c5 sym-version (Surface) | ○ | ○ | ○ | ✓ | ✓ | ○ | ○ | ○ | ✓ | ○ |
+| c6 type (Meeting) | ○ | ○ | (inputs) | ○ | ✓ | ○ | ○ | ○ | ✓ | ○ |
+| c7 repack (Meeting) | ○ | ○ | ○ | ○ | ○ | ○ | ○(publish lands here) | ○ | ✓ | ○ |
+| c8 faithfulness (Meeting) | ✗ blocked(c6,c7) | … | … | … | … | … | … | … | … | … |
+
+Widenings already designed, not landed: a fetch-side integrity cell
+(pinned-ref freshness is its postcondition half, e2b4d27), publish
+verification cells (the other agent's work), probe_lib/app cells
+beyond the oracle, and the mechanisms/langs beyond the wired three —
+their cells answer `[]` = declared-empty, never un-answered.
+
+
+
+## 9. Coverage status and plan
 
 The GOAL: every cell of the belief space has a DEFINED result — the
 pre/post-check and the expectation hold for good AND bad intended
@@ -276,7 +339,7 @@ the RUN level (the byte-equal pin becomes runtime-enforced, not just
 test-enforced). Phase-2 pins should pin the expectation form too, not
 only the cmd strings.
 
-## 9. The blame axis (open — think during the gathering)
+## 10. The blame axis (open — think during the gathering)
 
 For every checking action — any role, any artifact — what does a
 correct result mean, what does an incorrect result mean, and WHO is
@@ -308,7 +371,7 @@ gathering:
   world)? Answer during the phase-2 consumer migration, where the
   hand-written tables show which blame distinctions actually matter.
 
-## 10. Sequence (each step keeps the suite green)
+## 11. Sequence (each step keeps the suite green)
 
 1. Land the producer: `contract_registry` rows for c1..c8 (statuses,
    invariant strings, evidence kinds, fault tags, input template,
