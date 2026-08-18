@@ -28,8 +28,9 @@ type scenario_run_result = {
     derive_steps → execute. Returns per-scenario results. The shared
     payload — both [canary action] (CLI) and project tests call this;
     display and assertions are the caller's job. *)
-let run_project_spec ?policy (pr : project_run) ~root ~failfast
-  : scenario_run_result list =
+let run_project_spec ?policy
+    ?(consumer_lib = Canary_basic.Build_tree) (pr : project_run) ~root
+    ~failfast : scenario_run_result list =
   let module SM = Canary_step_model in
   let module BH = Base.Hashtbl in
   let all_good = assignment_is_all_good in
@@ -52,7 +53,7 @@ let run_project_spec ?policy (pr : project_run) ~root ~failfast
             (Filename.basename ws)
         in
         let project = pr.pr_name ^ "/" ^ safe in
-        let spec = pr.pr_runner_spec a ~workspace:ws in
+        let spec = pr.pr_runner_spec a ~workspace:ws ~consumer_lib () in
         let steps =
           Canary_step_builder.derive_steps ~root ~project
             ~langs:Canary_lang.[ OCaml; Python ] spec

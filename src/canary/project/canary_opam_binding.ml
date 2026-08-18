@@ -564,7 +564,9 @@ let run (d : t) : Canary_project_run.project_run =
       (* C2.5 (2026-08-17): the 2×2 per-scenario realization — the Built
          columns get their build closures + build-tree probes, the deploy
          cell its LD_LIBRARY_PATH repoint *)
-      (fun a ~workspace:_ -> runner_spec_for d a);
+      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
+        let _ = consumer_lib in
+        runner_spec_for d a);
     pr_mismatch_probes = [];
     (* active plan 2 (2026-08-17): the pattern's wrapper declaration —
        spec-check's dev_wrapper_package item reads it *)

@@ -515,7 +515,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
       let pr : Canary_project_run.project_run =
         { pr_name = "tiny1/Bs.1";
           pr_artifacts = Canary_project_tiny.tiny_artifact_table;
-          pr_runner_spec = (fun _a ~workspace:_ ->
+          pr_runner_spec = (fun _a ~workspace:_ ?consumer_lib:_ () ->
             { SB.empty_runner_spec with
               SB.expectation = Canary_project_tiny.expectation_agnostic });
           pr_mismatch_probes = [];
@@ -541,7 +541,9 @@ let tiny1_bridge : Canary_project_test.pure_test =
       let ok_agnostic =
         match asgs with
         | a :: _ ->
-            let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp" in
+            let spec =
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp" ()
+            in
             let e = spec.SB.expectation (B.Probe_binding Canary_lang.OCaml) None in
             not (is_blind e)
         | _ -> false
@@ -821,7 +823,8 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let module EN = Canary_enumerate in
         let ep p =
           Canary_project_run.enumeration_policy_of
-            { Canary_project_run.policy = p; refs = EN.All_refs }
+            { Canary_project_run.policy = p; refs = EN.All_refs;
+              consumer_lib = B.Build_tree }
         in
         let shadow_of = function
           | None -> None
@@ -911,7 +914,9 @@ let local_fork_pin : Canary_project_test.pure_test =
               [ Canary_project_spec.artifact_row ~artifact:Canary_artifact.a_source
                   ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Dev ]) ]
                   ~provider:(Canary_store_config.Repo repo) () ];
-            pr_runner_spec = (fun _a ~workspace:_ -> Canary_step_builder.empty_runner_spec);
+            pr_runner_spec =
+              (fun _a ~workspace:_ ?consumer_lib:_ () ->
+                Canary_step_builder.empty_runner_spec);
             pr_mismatch_probes = [];
             pr_wrapper_pkgs = [];
             pr_api_source = None;
@@ -977,7 +982,10 @@ let repo_axes_pin : Canary_project_test.pure_test =
         (* the realize ∘ dispatch: each scenario's fetch_source command
            materializes ITS repo's worktree ref *)
         let fetch_cmd_of a =
-          let spec = Canary_project_zarith.zarith_run.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/c1" in
+          let spec =
+            Canary_project_zarith.zarith_run.Canary_project_run.pr_runner_spec
+              a ~workspace:"/tmp/c1" ()
+          in
           match spec.Canary_step_builder.fetch_source with
           | Some f -> f ~output_dir:"/tmp/c1" ~variant_key:"c1"
           | None -> ""
@@ -1036,7 +1044,7 @@ let forward_cell_expectation_pin : Canary_project_test.pure_test =
         inputs_resolve_to_step_dir
         && List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
             let spec =
-              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/fwd"
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/fwd" ()
             in
             let bind_built =
               Canary_enumerate.equal_provision
@@ -1067,7 +1075,7 @@ let publish_wired_pin : Canary_project_test.pure_test =
         in
         List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
             let spec =
-              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/pub"
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/pub" ()
             in
             let bind_built =
               Canary_enumerate.equal_provision
@@ -1210,7 +1218,7 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
         let pr = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
         List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
             let spec =
-              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg"
+              pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg" ()
             in
             let exp =
               spec.Canary_step_builder.expectation
@@ -1232,7 +1240,111 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
                           && Option.is_some vi.SM.since
                       | None -> false)
               | _ -> false
-            else Poly.equal exp SM.Expect_success)) }
+            else Poly.equal exp SM.Expect_success)
+        &&
+        (* the installed-consumer half (2026-08-18): the DEV chain's probe
+           (binding Built) declares the staged-prefix failure ONLY under
+           the Installed policy; the fetched world's probe (binding
+           Fetched) stays agnostic under both policies, and the Build_tree
+           probe stays agnostic too (it passes — the build tree has the
+           package). *)
+        let probe_exp ~consumer_lib a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg"
+              ~consumer_lib ()
+          in
+          spec.Canary_step_builder.expectation
+            (Canary_basic.Probe_binding Canary_lang.OCaml) None
+        in
+        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+            let src_id =
+              (Canary_enumerate.version_of a Canary_artifact.a_source)
+                .Canary_basic.id
+            in
+            let bind_built =
+              Canary_enumerate.equal_provision
+                (Canary_enumerate.provision_of a
+                   Canary_project_z3.z3_binding_art)
+                Canary_artifact.Built
+            in
+            let declared_signature e =
+              match e with
+              | SM.Expect_failure { contains_any; _ } ->
+                  List.mem contains_any "STAGED PACKAGE MISSING"
+                    ~equal:String.equal
+              | _ -> false
+            in
+            if String.equal src_id "pre-10549" && bind_built then
+              declared_signature
+                (probe_exp ~consumer_lib:Canary_basic.Installed a)
+              && not (declared_signature
+                        (probe_exp ~consumer_lib:Canary_basic.Build_tree a))
+            else
+              not (declared_signature
+                     (probe_exp ~consumer_lib:Canary_basic.Installed a))
+              && not (declared_signature
+                        (probe_exp ~consumer_lib:Canary_basic.Build_tree a)))) }
+
+(* The installed-consumer experiment (2026-08-18, user): --installed is a
+   REALIZATION policy — the scenario set is unchanged; only the dev
+   chain's probe_binding OCaml cmd changes to read the STAGED package
+   (<prefix>/lib/ocaml/z3 — the Install_lib staging prefix). Pin:
+   (a) the default (Build_tree) cmd is byte-equal whether the policy is
+   passed explicitly or left to the optional default (today's world,
+   unchanged); (b) under Installed the same scenario's cmd references
+   the install prefix's lib + OCaml package and differs from the
+   build-tree one. *)
+let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
+  { name = "z3.installed_probe_consumes_prefix";
+    check =
+      (fun () ->
+        let pr = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
+        let probe_cmd ?consumer_lib a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/inst"
+              ?consumer_lib ()
+          in
+          List.filter_map spec.Canary_step_builder.probe_binding
+            ~f:(fun (l, _, f) ->
+              if Poly.equal l Canary_lang.OCaml then
+                Some (f ~output_dir:"/tmp/inst" ~variant_key:"pin")
+              else None)
+        in
+        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+            let bt = probe_cmd a in
+            let bt_explicit =
+              probe_cmd ~consumer_lib:Canary_basic.Build_tree a
+            in
+            let inst = probe_cmd ~consumer_lib:Canary_basic.Installed a in
+            (* zip the three renders index-wise (the same spec structure,
+               so equal lengths by construction). *)
+            let zipped =
+              List.map3_exn bt bt_explicit inst ~f:(fun bt bte inst ->
+                  (bt, bte, inst))
+            in
+            let pair_ok (bt, bte, inst) =
+              if String.is_substring bt ~substring:"src/api/ml" then
+                (* the dev raw probe: (a) the default policy is byte-equal
+                   to the explicit Build_tree — today's world untouched;
+                   (b) the Installed render reads the STAGED package, not
+                   the build tree. *)
+                String.equal bt bte
+                && String.is_substring inst
+                     ~substring:"/install/lib/ocaml/z3"
+                && String.is_substring inst
+                     ~substring:"/install/lib/libz3.so"
+                && String.is_substring inst
+                     ~substring:"STAGED PACKAGE MISSING"
+                && not (String.is_substring bt ~substring:"STAGED PACKAGE")
+                && not (String.equal bt inst)
+              else
+                (* every other probe template is policy-INVARIANT (the
+                   shared opam probe etc.) — a render difference here
+                   would mean the policy leaked into the wrong cmd. *)
+                String.equal bt bte && String.equal bt inst
+            in
+            not (List.is_empty zipped)
+            && List.for_all zipped ~f:pair_ok)) }
 
 (* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
    bundled Python bindings are Ctypes + Dlopen (the previous Cext
@@ -1448,5 +1560,6 @@ let tests : Canary_project_test.pure_test list =
       z3_llvm_binding_decls_pin;
       zarith_binding_decls_pin;
       z3_regression_pre_10549_pin;
+      z3_installed_probe_consumes_prefix;
       matrix_registry_shape_pin ]
 

@@ -299,7 +299,9 @@ let cell_annotation (pr : Canary_project_run.project_run)
     honest chain comes from the step list). *)
 let actions_of (pr : Canary_project_run.project_run)
     (a : Canary_artifact.assignment) : Canary_basic.action list =
-  let spec = pr.Canary_project_run.pr_runner_spec a ~workspace:"_out/tmp" in
+  let spec =
+    pr.Canary_project_run.pr_runner_spec a ~workspace:"_out/tmp" ()
+  in
   let steps =
     Canary_step_builder.derive_steps ~root:"_out" ~project:pr.pr_name
       ~langs:Canary_lang.[ OCaml; Python ] spec

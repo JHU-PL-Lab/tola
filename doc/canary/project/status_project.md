@@ -555,6 +555,26 @@ directions):
   `firing` filter (the expectation is currently hand-wired in z3's
   `realize` — project-local, per the "bindings are project data"
   doctrine).
+- [x] **The installed-consumer experiment** (2026-08-18, user): a
+  lib-built-to-install as a SEPARATE PROVIDER for the consumer — enabled
+  via the realization policy `consumer_lib = Build_tree | Installed`
+  (`canary_basic`; default Build_tree) + the `--installed` action flag.
+  A REALIZATION choice, not an enumeration axis — the scenario set is
+  unchanged, only WHICH concrete lib the consumer reads. z3's dev-chain
+  `probe_binding OCaml` cmd dispatches on it: `Installed` compiles/links
+  against the STAGED package (`<build>/../install/lib/ocaml/z3/z3ml.cmxa`
+  + `<prefix>/lib/libz3.so` + `LD_LIBRARY_PATH=<prefix>/lib`), so the
+  probe reads the REAL artifact the `cmake --install` produced (the
+  #10549 class: pre-fix the prefix lacks the OCaml package while the
+  build tree has it — the Installed probe fails where the Build_tree
+  probe passes). One ninja build serves both policies (install is a
+  copy-out). Pin: `z3.installed_probe_consumes_prefix` (default
+  byte-equal; Installed references the prefix). Recorded future model:
+  the full cartesian — installed-consumed as an ENUMERABLE provider so
+  the binding-BUILD ranges over {build-tree, installed} — waits on
+  richer provider flexibility (project may build several different
+  artifacts; `Install_lib : Lib → Lib` stays the staging semantics, not
+  a second provider).
 - [ ] **Surface-drift expectations** — per-project drift bounds on the
   TOTAL surface (C + OCaml counts); `canary inspect-diff` exists.
 - [ ] **Pinned verdict-matrix regression** — pin the per-scenario

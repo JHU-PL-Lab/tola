@@ -411,7 +411,8 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:z3_python_provider () ]
 
-let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
+let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
+    ~(consumer_lib : Canary_basic.consumer_lib) =
   let open Canary_action_templates in
   (* C2: per-REPO rows — the scenario's source placement picks the repo,
      not a channel default; the repo's own version.channel drives the
@@ -545,34 +546,80 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
                 { location = Staged_lib { lib = build ^ "/../install/lib/libz3.so" };
                   prefix = "Z3_" } };
       { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
-        ar_template = Raw (fun ~output_dir ~variant_key ->
-            let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-            let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
-            (* -cclib "$LIB_Z3": the cmxa embeds `-L<stublibs> -L<build> -lz3`
-               — the STORE's stale libz3.so wins the -lz3 search (stublibs
-               first) and the link dies on any API the store lacks (finite-set
-               at official HEAD). The full-path arg precedes it, so the exe
-               links the BUILT lib. Same shadowing class as the env_guard. *)
-            Printf.sprintf
-              "eval $(opam env) && \
-               LIB_Z3=$(ls %s/libz3.so %s/libz3.dylib 2>/dev/null | head -1) && \
-               test -n \"$LIB_Z3\" && \
-               BINDING_DIR=%s/src/api/ml && \
-               STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
-               test -n \"$STUB\" && \
-               python3 canary/scripts/assert_binary_symbols.py \
-                 --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
-                 --symbol-prefix Z3_ > %s/%s 2>&1 && \
-               ocamlfind ocamlopt -package zarith -linkpkg \
-                 -cclib \"$LIB_Z3\" \
-                 -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
-                 canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
-               %s/z3_example >> %s/%s 2>&1 && \
-               cat %s/%s"
-              build build build output_dir symbols_log
-              output_dir output_dir probe_log
-              output_dir output_dir probe_log
-              output_dir probe_log) };
+        ar_template =
+          Raw
+            (fun ~output_dir ~variant_key ->
+              let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
+              let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in
+              (* -cclib "$LIB_Z3": the cmxa embeds `-L<stublibs> -L<build> -lz3`
+                 — the STORE's stale libz3.so wins the -lz3 search (stublibs
+                 first) and the link dies on any API the store lacks (finite-set
+                 at official HEAD). The full-path arg precedes it, so the exe
+                 links the BUILT lib. Same shadowing class as the env_guard. *)
+              match consumer_lib with
+              | Canary_basic.Build_tree ->
+                  Printf.sprintf
+                    "eval $(opam env) && \
+                     LIB_Z3=$(ls %s/libz3.so %s/libz3.dylib 2>/dev/null | head -1) && \
+                     test -n \"$LIB_Z3\" && \
+                     BINDING_DIR=%s/src/api/ml && \
+                     STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
+                     test -n \"$STUB\" && \
+                     python3 canary/scripts/assert_binary_symbols.py \
+                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
+                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
+                     ocamlfind ocamlopt -package zarith -linkpkg \
+                       -cclib \"$LIB_Z3\" \
+                       -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
+                       canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
+                     %s/z3_example >> %s/%s 2>&1 && \
+                     cat %s/%s"
+                    build build build output_dir symbols_log
+                    output_dir output_dir probe_log
+                    output_dir output_dir probe_log
+                    output_dir probe_log
+              | Canary_basic.Installed ->
+                  (* the installed-consumer experiment (2026-08-18, user):
+                     the probe consumes the STAGED package — the install
+                     prefix's lib + the installed OCaml package — the
+                     REAL concrete artifact the install produced (the
+                     #10549 class: pre-fix the prefix lacks the package
+                     while the build tree has it; this probe reads the
+                     prefix and fails where the build-tree probe passes).
+                     One build cache serves both policies — the install
+                     is a copy-out, nothing rebuilds. *)
+                  let prefix = build ^ "/../install" in
+                  (* the guard signatures feed the declared expectation
+                     ([STAGED PACKAGE MISSING] — the pre-#10549 live
+                     signature: the prefix lib stages, the OCaml package
+                     does not). Written to a variant-keyed fail log —
+                     [output_contains_any] scans the step's output dir,
+                     and the cmd's own stderr is NOT captured there. *)
+                  let staged_fail = Canary_basic.variant_file ~variant_key "probe_fail.log" in
+                  Printf.sprintf
+                    "eval $(opam env) && \
+                     LIB_Z3=$(ls %s/lib/libz3.so %s/lib/libz3.dylib 2>/dev/null | head -1) && \
+                     { test -n \"$LIB_Z3\" || { echo \"STAGED LIB MISSING: %s/lib/libz3.so\" >&2; exit 1; }; } && \
+                     BINDING_DIR=%s/lib/ocaml/z3 && \
+                     STUB=$(ls \"$BINDING_DIR\"/z3ml.a 2>/dev/null | head -1) && \
+                     { test -n \"$STUB\" || { echo \"STAGED PACKAGE MISSING: $BINDING_DIR/z3ml.a\" >&2; echo \"STAGED PACKAGE MISSING: $BINDING_DIR/z3ml.a\" > %s/%s; exit 1; }; } && \
+                     python3 canary/scripts/assert_binary_symbols.py \
+                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
+                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
+                     LD_LIBRARY_PATH=%s/lib:$LD_LIBRARY_PATH \
+                     ocamlfind ocamlopt -package zarith -linkpkg \
+                       -cclib \"$LIB_Z3\" \
+                       -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
+                       canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
+                     LD_LIBRARY_PATH=%s/lib:$LD_LIBRARY_PATH \
+                     %s/z3_example >> %s/%s 2>&1 && \
+                     cat %s/%s"
+                    prefix prefix prefix prefix
+                    output_dir staged_fail output_dir symbols_log
+                    prefix
+                    output_dir output_dir probe_log
+                    prefix output_dir output_dir probe_log
+                    output_dir probe_log) };
       { ar_action = Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml);
         ar_template = Raw (fun ~output_dir ~variant_key ->
             (* CANARY_* must be ABSOLUTE: the z3.dev package script runs from
@@ -606,12 +653,16 @@ INSTALLED_Z3=$(opam list z3 --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED_Z3" = "%{pin}" || { echo "WORLD MISMATCH: switch has z3 $INSTALLED_Z3, scenario declares z3 %{pin}"; exit 1; }
 |}]
 
-let realize a =
+let realize ~(consumer_lib : Canary_basic.consumer_lib) a =
   (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2
      proxy — the source row now pins per-repo identities, so the scenario's
      repo IS the source placement's id). *)
   let source = z3_source_for_assignment a in
-  let spec = Canary_action_templates.realize (z3_table_rows ~source ~distro:(detect_distro ())) a in
+  let spec =
+    Canary_action_templates.realize
+      (z3_table_rows ~source ~distro:(detect_distro ()) ~consumer_lib)
+      a
+  in
   let binding_fetched =
     Canary_enumerate.equal_provision
       (Canary_enumerate.provision_of a z3_binding_art)
@@ -619,6 +670,11 @@ let realize a =
   in
   let pin =
     (Canary_enumerate.version_of a z3_binding_art).Canary_basic.id
+  in
+  let binding_built =
+    Canary_enumerate.equal_provision
+      (Canary_enumerate.provision_of a z3_binding_art)
+      Canary_artifact.Built
   in
   (* expectation stays hand-wired: contract bindings are project data *)
   { spec with
@@ -638,6 +694,27 @@ let realize a =
                       consumer_requires = "installed OCaml package";
                       since = Some "PR #10549 (93c609d)";
                       note = None } }
+        (* the installed-consumer experiment (2026-08-18): under the
+           Installed policy the dev chain's probe reads the STAGED
+           prefix, which the pre-fix install never populated — the
+           same #10549 bug made visible ON THE CONSUMER (the Build_tree
+           probe passes; the build tree has the package). Fires only
+           where the binding is BUILT (the fetched world's policy-
+           invariant opam probe legitimately passes). *)
+        | "pre-10549", Canary_basic.Probe_binding Canary_lang.OCaml
+          when binding_built
+               && Poly.equal consumer_lib Canary_basic.Installed ->
+            Canary_step_model.Expect_failure
+              { contains_any = [ "STAGED PACKAGE MISSING" ];
+                version_info =
+                  Some
+                    { provider_version = "z3 pre-10549 (bc4585e0b)";
+                      consumer_requires = "installed OCaml package";
+                      since = Some "PR #10549 (93c609d)";
+                      note =
+                        Some
+                          "Installed-consumer probe: the staged prefix \
+                           lacks z3ml.a (the raw build tree has it)" } }
         | _ ->
             Canary_scenario.lower_expectation_agnostic
               ~bindings:z3_contract_bindings ~langs:[ Canary_lang.Python ]
@@ -727,7 +804,10 @@ let realize a =
 let z3_ci_spec _tola_root distro =
   let open Canary_action_templates in
   (* CI tracks the OFFICIAL dev source (the fork is canary-local). *)
-  let rows = z3_table_rows ~source:(z3_source_of Canary_basic.Dev) ~distro in
+  let rows =
+    z3_table_rows ~source:(z3_source_of Canary_basic.Dev) ~distro
+      ~consumer_lib:Canary_basic.Build_tree
+  in
   let no_cmake (row : action_row) =
     match row.ar_action with
     | Configure | Build_lib | Build_headers | Install_lib -> false
@@ -741,7 +821,9 @@ let z3_ci_spec _tola_root distro =
 let z3_run _distro : Canary_project_run.project_run =
   { pr_name = "z3";
     pr_artifacts = z3_artifacts;
-    pr_runner_spec = (fun a ~workspace:_ -> realize a);
+    pr_runner_spec =
+      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
+        realize ~consumer_lib a);
     pr_mismatch_probes = [];
     (* the dev-source wrapper: the Publish row installs our z3.dev opam
        package over the built tree (pin-checked "dev" on the store). *)

@@ -82,7 +82,13 @@ type project_run = {
   pr_artifacts : Canary_project_spec.artifact_row list;
   pr_runner_spec :
     Canary_artifact.assignment -> workspace:string ->
+    ?consumer_lib:Canary_basic.consumer_lib -> unit ->
     Canary_step_builder.runner_spec;
+      (** the optional [consumer_lib] (2026-08-18, the
+          installed-consumer experiment) — only projects whose consumer
+          side can read different concrete libs dispatch on it (z3's
+          Installed probe); every project accepts the param so the run
+          layer threads it uniformly. *)
   pr_mismatch_probes :
     (Canary_artifact.artifact_id * Canary_basic.channel
      * Canary_basic.mismatch_direction) list;
@@ -222,9 +228,18 @@ type run_config = {
           regression-test case) — [All_refs] by default; the CLI's
           [--refs a,b] narrows to the declared repos with those pinned
           ids (e.g. ["latest"; "pre-10549"]). The batch never sets it. *)
+  consumer_lib : Canary_basic.consumer_lib;
+      (** which concrete lib the consumer reads (2026-08-18, the
+          installed-consumer experiment) — [Build_tree] by default;
+          the CLI's [--installed] flips the dev chain's probe to the
+          staged prefix. A realization policy; the batch never sets
+          it. *)
 }
 
-let default_config : run_config = { policy = Full; refs = Canary_enumerate.All_refs }
+let default_config : run_config =
+  { policy = Full;
+    refs = Canary_enumerate.All_refs;
+    consumer_lib = Canary_basic.Build_tree }
 
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
@@ -259,7 +274,9 @@ let batch_policy (pr : project_run) : run_policy =
   | Light -> Full
 
 let batch_config (pr : project_run) : run_config =
-  { policy = batch_policy pr; refs = Canary_enumerate.All_refs }
+  { policy = batch_policy pr;
+    refs = Canary_enumerate.All_refs;
+    consumer_lib = Canary_basic.Build_tree }
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from
@@ -420,7 +437,7 @@ let covered_actions_of ?policy (pr : project_run) : Canary_basic.action list =
   let scenarios = scenarios_of ?policy pr in
   let actions =
     Stdlib.List.concat_map (fun a ->
-      let spec = pr.pr_runner_spec a ~workspace:"_out/tmp" in
+      let spec = pr.pr_runner_spec a ~workspace:"_out/tmp" () in
       let steps =
         Canary_step_builder.derive_steps ~root:"_out" ~project:pr.pr_name
           ~langs:Canary_lang.[ OCaml; Python ] spec

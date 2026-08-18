@@ -134,6 +134,20 @@ let action_cmd =
              ([stable, latest, ref-before-issue, fork, …]); this narrows the \
              run to a subset. Inert on projects without repo pins.")
   in
+  let installed_arg =
+    Arg.(
+      value & flag
+      & info [ "installed" ]
+          ~doc:
+            "The INSTALLED-CONSUMER policy: the consumer side (binding \
+             probes) reads the INSTALLED (staged) artifacts instead of the \
+             raw build tree — a realization choice, NOT a scenario axis (the \
+             scenario set is unchanged). Currently only z3's dev chain \
+             dispatches on it: its OCaml probe compiles/links against \
+             <prefix>/lib/ocaml/z3 (the Install_lib staging prefix). An \
+             experiment: a bug in the install choice (e.g. #10549's missing \
+             staged package) becomes visible on the consumer.")
+  in
   (* Project registry (2026-08-11; plain [project_run]s since 2026-08-12 —
      the [Multi] entry kind retired with ssl's store-pin migration). *)
   (* Tiny runs via the A2-with-factory path
@@ -147,7 +161,7 @@ let action_cmd =
      — one derive_steps + run_graph, no multi-variant. *)
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
-  let run project _quick failfast cache_path disable_contract_csv thin audit_lib refs () =
+  let run project _quick failfast cache_path disable_contract_csv thin audit_lib refs installed () =
     let root = "_out" in
     let cli_disabled = Canary_compat.contract_ids_of_csv disable_contract_csv in
     if cli_disabled <> [] then
@@ -156,7 +170,10 @@ let action_cmd =
            (List.map Canary_compat.string_of_contract_id cli_disabled));
     (* the run config: --thin/--audit-lib set the policy variant, --refs
        narrows the source-repo set (orthogonal; the batch sets its own
-       per-project config tier-based inside [Canary_batch.run]). *)
+       per-project config tier-based inside [Canary_batch.run]).
+       --installed flips the consumer realization (see [installed_arg]):
+       the scenario set is UNCHANGED, only which concrete lib the
+       consumer reads. *)
     let refs_level =
       match refs with
       | None -> Canary_enumerate.All_refs
@@ -164,14 +181,19 @@ let action_cmd =
           Canary_enumerate.Refs
             (String.split_on_char ',' csv |> List.map String.trim)
     in
+    let consumer_lib =
+      if installed then Canary_basic.Installed else Canary_basic.Build_tree
+    in
     let config =
       if audit_lib then
         { Canary_project_run.policy = Canary_project_run.Audit_lib;
-          refs = refs_level }
+          refs = refs_level; consumer_lib }
       else if thin then
         { Canary_project_run.policy = Canary_project_run.Thin;
-          refs = refs_level }
-      else { Canary_project_run.default_config with refs = refs_level }
+          refs = refs_level; consumer_lib }
+      else
+        { Canary_project_run.default_config with refs = refs_level;
+          consumer_lib }
     in
     let run_pr pr = run_project_run ~config pr ~root ~failfast in
     match project with
@@ -214,7 +236,8 @@ let action_cmd =
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(
       const run $ project $ quick $ failfast $ cache_path_arg
-      $ disable_contract_arg $ thin_arg $ audit_lib_arg $ refs_arg $ const ())
+      $ disable_contract_arg $ thin_arg $ audit_lib_arg $ refs_arg
+      $ installed_arg $ const ())
 
 let spec_cmd =
   let project =
