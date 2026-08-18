@@ -255,14 +255,14 @@ the phase-2 pin material, taken from the hand-written tables):
 
 | contract (role)               | fetch            | configure | scan_sources | build_lib   | build_binding | build_app | publish               | probe_lib | probe_binding | probe_app      |
 | ----------------------------- | ---------------- | --------- | ------------ | ----------- | ------------- | --------- | --------------------- | --------- | ------------- | -------------- |
-| c1 symbol (Surface)           | ○                | ○         | ○            | ✓(lib half) | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c2 api-completeness (Surface) | ○                | ○         | ○            | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c3 behavior (Execution)       | ○                | ○         | ○            | ○           | ○             | ○         | ○                     | ○         | ✓             | ✓(tiny oracle) |
-| c4 soname (Surface)           | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ✓         | ✓             | ○              |
-| c5 sym-version (Surface)      | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c6 type (Meeting)             | ○                | ○         | (inputs)     | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c7 repack (Meeting)           | ○                | ○         | ○            | ○           | ○             | ○         | ○(publish lands here) | ○         | ✓             | ○              |
-| c8 faithfulness (Meeting)     | ✗ blocked(c6,c7) | …         | …            | …           | …             | …         | …                     | …         | …             | …              |
+| c1 symbol (Sf.3×Sf.2)         | ○                | ○         | ○            | ✓(lib half) | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c2 api-completeness (Sf.4)   | ○                | ○         | ○            | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c3 behavior (Trace)          | ○                | ○         | ○            | ○           | ○             | ○         | ○                     | ○         | ✓             | ✓(tiny oracle) |
+| c4 soname (Sf.2×Sf.5)        | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ✓         | ✓             | ○              |
+| c5 sym-version (Sf.2×Sf.5)   | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c6 type (Sf.1×Sf.3)          | ○                | ○         | (inputs)     | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
+| c7 repack (Sf.4)             | ○                | ○         | ○            | ○           | ○             | ○         | ○(publish lands here) | ○         | ✓             | ○              |
+| c8 faithfulness (Sf.4, blocked) | ✗ blocked(c6,c7) | …         | …            | …           | …             | …         | …                     | …         | …             | …              |
 
 Widenings already designed, not landed: a fetch-side integrity cell
 (pinned-ref freshness is its postcondition half, e2b4d27), publish
