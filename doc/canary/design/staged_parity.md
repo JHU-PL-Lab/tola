@@ -77,6 +77,15 @@ satisfy:
    SONAME / `LC_ID_DYLIB` = installed identity (not the build path),
    no build-dir absolute paths in RPATH/RUNPATH or package metadata,
    symlink chain intact, exec modes correct, signature valid (macOS).
+
+   **The portability falsifier** (user, 2026-08-18): a binary staged
+   for install shall never contain ANY concrete path of the building
+   tree — a baked-in build path means the installable binary is not
+   portable (divergence class D, checked as data: grep the staged
+   artifact's metadata/strings for the build prefix). Special case
+   for mac: some Mach-O installation paths must be patched AFTER the
+   binary is moved (very hacky) — mark as a declared exception since
+   we are Linux-only for now.
 3. **Parity** — build vs staged surface equality: symbol-set diff
    (`nm -D`), version equality, hash equality MODULO declared
    transforms (strip/mode). Any divergence is either a declared

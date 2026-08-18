@@ -209,6 +209,18 @@ reorganization; the project index + landing mechanics in
 
 ### Design directions (pending more cases)
 
+- **Checks as actions — `[Pre; Action; Post]`** (user, 2026-08-18,
+  compiler perspective): promote the pre/post checks from step payloads
+  (check_pre/check_post closures) to FIRST-CLASS ACTIONS — the
+  enumeration emits `[Pre; Action; Post]` triples and the runner
+  interprets checks exactly as commands (uniform warm-mask
+  fingerprinting included). Payoff: the belief matrix (contract
+  registry) becomes a property of the enumeration — every cell IS an
+  action in the graph, and the coverage pin becomes an enumeration
+  invariant. The smoke probe / staged-parity / decl-comparison cells
+  are the natural first Check actions.
+
+
 - **Action/artifact property unification** — `build_deps_of`, `ax_follows`, `ax_runtime`,
   `c_runtime`/`cxx_abi`, probe location all sit at the action↔artifact boundary.
 - **`(kind × ext)` → enriched `artifact_kind`** — fold identity pair into one type.
