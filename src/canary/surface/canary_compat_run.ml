@@ -515,6 +515,50 @@ let c8_predict ~resolve:_ _ = []
     Names present in only one side aren't c6 — they're c1
     (cmp_symbol's domain). c6 only fires when both sides claim the
     function but disagree on its signature. *)
+(* ── decl-comparison predicts (2026-08-18) — the lib-only cells.
+   The language TOOLS (compilers, linkers, version scripts) are black
+   boxes with no bit-wise operational semantics — we inspect their
+   ARTIFACTS and compare against the DECLARED facts. *)
+
+(** c4 lib-only: the BUILT lib's own elf soname vs the declared soname
+    (the linker's -Wl,-soname application is the black box; the
+    artifact's elf is the evidence). *)
+let c4_decl_predict ~declared_soname ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Native_lib ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p -> (
+      match (load_abi_surface p).soname with
+      | Some s when not (String.equal s declared_soname) ->
+          [ Printf.sprintf "soname %s != declared %s" s declared_soname ]
+      | _ -> [])
+
+(** c5 lib-only: the built lib's versioned exports include the DECLARED
+    version tag (the version-script application is the black box; the
+    @@VER annotations are the evidence). *)
+let c5_decl_predict ~declared_tags ~resolve
+    (inputs : inspect_input list) : string list =
+  let lib_path =
+    List.find_map inputs ~f:(function
+        | Versioned_exports ps -> pick_existing ~resolve ps
+        | _ -> None)
+  in
+  match lib_path with
+  | None -> []
+  | Some p ->
+      let vs = load_versioned_symbols p in
+      let exported =
+        List.map vs.exports ~f:snd |> List.dedup_and_sort ~compare:String.compare
+      in
+      List.filter_map declared_tags ~f:(fun tag ->
+          if List.mem exported tag ~equal:String.equal then None
+          else Some (Printf.sprintf "version %s not exported" tag))
+
 let c6_predict ~resolve (inputs : inspect_input list) : string list =
   let header_path =
     List.find_map inputs

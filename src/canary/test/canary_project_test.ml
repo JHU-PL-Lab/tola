@@ -1398,6 +1398,16 @@ let contract_registry_firing_pin : pure_test =
         && (* behavior fires at probe in every world *)
         eq ((CR.row_of C3).CR.cr_firing Canary_mechanism.Cstubs
               Canary_lang.OCaml Canary_store.Built)
+             [ Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && (* c4/c5 gain the Build_lib cell in Built worlds (the
+              lib-only half); Fetched worlds keep the pair checks *)
+        eq ((CR.row_of C4).CR.cr_firing Canary_mechanism.Cstubs
+              Canary_lang.OCaml Canary_store.Built)
+             [ Canary_basic.Build_lib;
+               Canary_basic.Build_binding Canary_lang.OCaml;
+               Canary_basic.Probe_binding Canary_lang.OCaml ]
+        && eq ((CR.row_of C4).CR.cr_firing Canary_mechanism.Cstubs
+                 Canary_lang.OCaml Canary_store.Fetched)
              [ Canary_basic.Probe_binding Canary_lang.OCaml ]) }
 
 (* M2 step 6 (2026-08-17): the spec fixtures execute AHEAD of any
@@ -1417,10 +1427,11 @@ let contract_fixture_tests : pure_test list =
         let oc = Stdlib.open_out (resolve rel) in
         Stdlib.output_string oc body;
         Stdlib.close_out oc);
-    let got =
-      (CR.row_of _id).cr_check.Canary_compat.predict ~resolve
-        fx.CR.fx_inputs
+    let predict =
+      Option.value fx.CR.fx_predict
+        ~default:(CR.row_of _id).cr_check.Canary_compat.predict
     in
+    let got = predict ~resolve fx.CR.fx_inputs in
     List.for_all fx.CR.fx_expect ~f:(fun s ->
         List.mem got s ~equal:String.equal)
   in
@@ -1432,11 +1443,11 @@ let contract_fixture_tests : pure_test list =
   in
   [ { name = "contracts.fixtures_execute";
       check = (fun () -> List.for_all CR.contract_fixtures ~f:execute) };
-    (* the visible coverage set: C1, C2 today — C3/C7 blocked in the
-       registry; C4/C5/C6 pend their fixture JSON shapes *)
+    (* the visible coverage set: C1, C2 + C4/C5's LIB-ONLY cells
+       (their pair cells, C3/C7 blocked, C6 pend their fixtures) *)
     { name = "contracts.fixtures_complete";
       check = (fun () ->
-          Poly.equal covered Canary_compat.[ C1; C2 ]) } ]
+          Poly.equal covered Canary_compat.[ C1; C2; C4; C5 ]) } ]
 
 (* The matrix's mark extraction (2026-08-17, the result table): a
    synthetic actions.log (variant_start-scoped verdict events) drives

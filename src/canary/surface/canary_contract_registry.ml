@@ -104,6 +104,19 @@ let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
       | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent ->
           [ probe ])
 
+(** c4/c5's lib-only cell (2026-08-18): a BUILT lib carries its own
+    inspection — elf soname / versioned exports vs the DECLARED facts.
+    Fires at [Build_lib] in Built worlds: the tool (linker, version
+    script) is a black box; its artifact is the evidence. *)
+let firing_with_build_lib (m : Canary_mechanism.mechanism)
+    (l : Canary_lang.lang) (p : Canary_store.provision) :
+    Canary_basic.action list =
+  match (Canary_mechanism.discipline_of_mechanism m, p) with
+  | Canary_mechanism.Static_c_abi, Canary_store.Built ->
+      [ Canary_basic.Build_lib; Canary_basic.Build_binding l;
+        Canary_basic.Probe_binding l ]
+  | _ -> firing_default m l p
+
 (** Behavior needs a run — probe only, in every world. *)
 let firing_probe_only (_ : Canary_mechanism.mechanism)
     (l : Canary_lang.lang) (_ : Canary_store.provision) :
@@ -159,13 +172,13 @@ let contract_registry : contract_row list =
       ~invariant:
         "the lib's soname matches what the consumer records it needs"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "abi_soname" ];
     row C5
       ~invariant:
         "versioned symbols carry the annotations the consumer expects"
       ~reads:[ ("Sf.2", "native"); ("Sf.5", "binding") ]
-      ~role:Surface ~firing:firing_default ~source:Inspection
+      ~role:Surface ~firing:firing_with_build_lib ~source:Inspection
       ~tags:[ "sym_version" ];
     row C6
       ~invariant:"C types at the header/stub boundary match"
@@ -195,6 +208,12 @@ let contract_registry : contract_row list =
    [Canary_compat]). *)
 
 type fixture = {
+  fx_predict :
+    (resolve:(string -> string) ->
+     Canary_compat.inspect_input list -> string list) option;
+      (** the closure under test — [None] = the row's
+          [cr_check.predict]. Some = a CELL predict (e.g. the
+          decl-comparison closures for the lib-only cells). *)
   fx_inputs : Canary_compat.inspect_input list;
       (** input-file references ([C_stub], [Native_lib], [Ocaml_mli],
           [Python_attrs], …) *)
@@ -213,20 +232,46 @@ let contract_fixtures : (Canary_compat.contract_id * fixture) list =
     "watchlist": {"present": [], "missing": ["Llvm.Opcode.UncondBr"]}}|} in
   let py_body = {|{"kind": "python", "path": "fx",
     "watchlist": {"present": [], "missing": ["Solver.add", "BitVec"]}}|} in
-  [ ( Canary_compat.C1,
-      { fx_inputs =
+  let c4_lib_body = {|{"kind": "native", "path": "fx",
+    "symbols": ["tiny_sum"],
+    "elf": {"soname": "libtiny.so.2", "needed": []}}|} in
+  let c5_lib_body = {|{"kind": "native", "path": "fx",
+    "versioned_exports": {"tiny_sum": "TINY_1.0"}}|} in
+  [ ( Canary_compat.C4,
+      (* the LIB-ONLY cell: the built lib's elf soname vs the declared *)
+      { fx_predict =
+          Some
+            (Canary_compat_run.c4_decl_predict
+               ~declared_soname:"libtiny.so.1");
+        fx_inputs = [ Canary_compat.Native_lib [ "lib.json" ] ];
+        fx_bodies = [ ("lib.json", c4_lib_body) ];
+        fx_expect = [ "soname libtiny.so.2 != declared libtiny.so.1" ] } );
+    ( Canary_compat.C5,
+      (* the LIB-ONLY cell: the version script applied — the declared
+         tag must appear among the built lib's @@VER annotations *)
+      { fx_predict =
+          Some
+            (Canary_compat_run.c5_decl_predict ~declared_tags:[ "TINY_2.0" ]);
+        fx_inputs = [ Canary_compat.Versioned_exports [ "lib.json" ] ];
+        fx_bodies = [ ("lib.json", c5_lib_body) ];
+        fx_expect = [ "version TINY_2.0 not exported" ] } );
+    ( Canary_compat.C1,
+      { fx_predict = None;
+        fx_inputs =
           [ Canary_compat.C_stub [ "stub.json" ];
             Canary_compat.Native_lib [ "lib.json" ] ];
         fx_bodies =
           [ ("stub.json", c_stub_body); ("lib.json", native_body) ];
         fx_expect = [ "tiny_offset" ] } );
     ( Canary_compat.C2,
-      { fx_inputs = [ Canary_compat.Ocaml_mli [ "mli.json" ] ];
+      { fx_predict = None;
+        fx_inputs = [ Canary_compat.Ocaml_mli [ "mli.json" ] ];
         fx_bodies = [ ("mli.json", mli_body) ];
         (* the dotted-name expansion variants *)
         fx_expect = [ "Llvm.Opcode.UncondBr"; "Opcode.UncondBr"; "UncondBr" ] } );
     ( Canary_compat.C2,
-      { fx_inputs = [ Canary_compat.Python_attrs [ "py.json" ] ];
+      { fx_predict = None;
+        fx_inputs = [ Canary_compat.Python_attrs [ "py.json" ] ];
         fx_bodies = [ ("py.json", py_body) ];
         fx_expect = [ "Solver.add"; "add"; "BitVec" ] } ) ]
 
