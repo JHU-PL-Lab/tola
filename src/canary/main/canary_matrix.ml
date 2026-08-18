@@ -308,6 +308,67 @@ let actions_of (pr : Canary_project_run.project_run)
     registry). Columns = the sorted union of every project's covered
     actions (the action variant's declaration order); rows = every
     enumerated scenario in registry order. *)
+(* ── the CANONICAL column order (2026-08-18, user): grouped by the
+   ARTIFACT — the native/lib group first, then each binding (making +
+   probing it), then the app — and within each group from the source
+   to the built / fetched artifact. Explicit, not the variant's
+   declaration order (which interleaves the groups: Probe_lib sits
+   after the binding constructors there). The scenario chains follow
+   [store_actions] (the catalogue [derive_steps] walks), which is
+   almost this shape — the deviations (Probe_lib last, Publish Lib in
+   the tail) are recorded for a future catalogue alignment. *)
+
+let column_group (act : Canary_basic.action) : int =
+  match act with
+  | Canary_basic.Fetch Canary_basic.Source | Canary_basic.Configure
+  | Canary_basic.Scan_sources | Canary_basic.Build_headers
+  | Canary_basic.Fetch Canary_basic.Headers | Canary_basic.Build_lib
+  | Canary_basic.Fetch Canary_basic.Lib | Canary_basic.Install_lib
+  | Canary_basic.Publish Canary_basic.Lib | Canary_basic.Probe_lib -> 0
+  | Canary_basic.Build_binding Canary_lang.OCaml
+  | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml)
+  | Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml)
+  | Canary_basic.Probe_binding Canary_lang.OCaml -> 1
+  | Canary_basic.Build_binding Canary_lang.Python
+  | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python)
+  | Canary_basic.Publish (Canary_basic.Binding Canary_lang.Python)
+  | Canary_basic.Probe_binding Canary_lang.Python -> 2
+  | Canary_basic.Build_binding _ | Canary_basic.Fetch (Canary_basic.Binding _)
+  | Canary_basic.Publish (Canary_basic.Binding _)
+  | Canary_basic.Probe_binding _ -> 3
+  | Canary_basic.Build_app _ | Canary_basic.Probe_app _
+  | Canary_basic.Fetch Canary_basic.App
+  | Canary_basic.Publish Canary_basic.App -> 4
+  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 0
+
+let column_stage (act : Canary_basic.action) : int =
+  match act with
+  | Canary_basic.Fetch Canary_basic.Source -> 0
+  | Canary_basic.Configure -> 1
+  | Canary_basic.Scan_sources -> 2
+  | Canary_basic.Build_headers -> 3
+  | Canary_basic.Fetch Canary_basic.Headers -> 4
+  | Canary_basic.Build_lib -> 5
+  | Canary_basic.Install_lib -> 6
+  | Canary_basic.Fetch Canary_basic.Lib -> 7
+  | Canary_basic.Publish Canary_basic.Lib -> 8
+  | Canary_basic.Probe_lib -> 9
+  | Canary_basic.Build_binding _ -> 10
+  | Canary_basic.Fetch (Canary_basic.Binding _) -> 11
+  | Canary_basic.Publish (Canary_basic.Binding _) -> 12
+  | Canary_basic.Probe_binding _ -> 13
+  | Canary_basic.Build_app _ -> 14
+  | Canary_basic.Probe_app _ -> 15
+  | Canary_basic.Fetch Canary_basic.App -> 16
+  | Canary_basic.Publish Canary_basic.App -> 17
+  | Canary_basic.Publish (Canary_basic.Source | Canary_basic.Headers) -> 8
+
+(** The canonical column ordering: artifact group, then the source →
+    built/fetched stage. *)
+let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
+  let k a = (column_group a, column_stage a) in
+  Stdlib.compare (k x) (k y)
+
 let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     t =
   let root = "_out" in
@@ -315,6 +376,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     List.concat_map projects ~f:(fun (_, pr) ->
         Canary_project_run.covered_actions_of pr)
     |> Stdlib.List.sort_uniq Stdlib.compare
+    |> List.stable_sort ~compare:compare_column
     |> List.map ~f:Canary_basic.string_of_action
   in
   let rows =
