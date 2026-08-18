@@ -86,27 +86,73 @@ INSTALL MISSING", latest stages the full `lib/ocaml/z3` package and
 passes. The assert is gated to OFFICIAL repos (the fork's in-flight
 tree is not held to the merged fix's contract).
 
-### Fixed — the warm-mask class: verdict markers now carry a SPEC
-### fingerprint (2026-08-17)
+### Fixed — the warm-mask class: spec fingerprints + a visible warm-skip gate
+### (2026-08-17, commit e2b4d27) — cross-agent brief
 
-Three strikes this arc (z3's dying install as PASS from pre-fix
-markers; the forward cell's never-paired c1; the pre-merge clone's
-install.ok skipping the new assert) shared one root: the warm skip
-trusted a verdict marker when it existed + `check_post` held — but
-`check_post` proves the POSTCONDITION, not that the step is still the
-RIGHT step for the current spec. The cache key was `variant_id` only.
-Now: the marker's second line records a fingerprint of the step's
-realized cmd + expectation form; the warm skip requires the match —
-a spec edit invalidates exactly the affected steps (the cold audit,
-automatic and targeted). The gate is VISIBLE too: `warm_gate` (all
-passed), `marker_stale` (spec changed — marker removed, re-run),
-`warm_check_post FAIL` (postcondition no longer holds — marker
-removed, re-run) — the decisions land in actions.log and surface in
-status/result. Residual class (a HEAD-ref upstream moved): pinned
-refs now carry an OFFLINE freshness check_post (the checkout must be
-AT the declared ref — moved → re-fetch); HEAD-refs still need the
-backlogged `--cold` flag (its citation). Landing forces ONE cold
-refresh per project (old-format markers are stale by definition).
+**The problem.** The warm skip trusted a verdict marker
+(`<step>/<tag>.verdict_<variant>.ok`) whenever it existed and the
+step's `check_post` held. But `check_post` proves only the
+POSTCONDITION ("the output file exists") — it does NOT prove that the
+step is still the RIGHT step for the CURRENT spec. The cache key was
+`variant_id` alone; the spec (the step's cmd + expectation) was not in
+it. Consequently every spec edit under a warm cache silently served
+the OLD world's verdict. Three strikes in one arc:
+1. z3's dying `cmake --install` kept "passing" from pre-fix markers
+   (the C2 scenario-dir rename audit);
+2. the forward cell's c1 had never paired — "no contract fired" was
+   really "no inputs found" — and warm runs kept confirming it;
+3. the latest chain's install.ok from a PRE-MERGE clone skipped the
+   newly-added `assert_staged` — "latest PASS" verified nothing.
+
+Refs are isolated by design (each repo ref = its own scenario =
+its own `variant_id` + marker files); the bug is WITHIN one variant —
+a marker from a cold run at spec T1 served by a warm run at spec T2.
+
+**The solution.**
+- **Marker v2**: line 1 stays the flavor (`xfail c2 c5` / `ok`);
+  line 2 is a FINGERPRINT of the step's realized cmd + expectation
+  form (`Canary_local_runner.step_fingerprint`, MD5 — drift
+  detection, not security). The warm skip requires the match. A spec
+  edit invalidates exactly the affected steps — the cold audit is now
+  automatic and targeted (live-checked: a probe-prefix change re-ran
+  ONLY the two steps whose cmds embed it).
+- **The visible gate** (BOTH skip sites — `run_graph`'s seed and
+  `run_step`'s local cache): `warm_gate` (marker + fingerprint +
+  check_post all passed), `marker_stale` (spec changed since the
+  marker — marker REMOVED, re-run), `warm_check_post FAIL`
+  (postcondition no longer holds — marker REMOVED, re-run). Every
+  skip is now a logged decision in actions.log, surfacing in
+  `status`/`result`.
+- **The residual class** (an upstream MOVED): pinned refs carry an
+  OFFLINE freshness `check_post` — `rev-parse HEAD = <ref>^{commit}`
+  (SHAs and tags; the first cut crashed on tag-length refs and
+  couldn't match tags — the live run caught it). HEAD-refs are only
+  checkable by re-fetching → the backlogged `--cold` flag (citation
+  added to that item).
+
+**Operational consequences for the other agent (M2).**
+- **One-time cold refresh**: markers written before this commit have
+  no line 2 → stale by definition → the next run of each project
+  re-executes its steps once (z3's dev builds re-run once — expected,
+  not a bug). The shared `_out` (both worktrees) means BOTH trees see
+  this once each.
+- **Spec edits now self-invalidate**: if you change a template, a
+  cmd, or an expectation, the affected steps re-run on the next
+  `action` automatically — no manual `rm -rf` needed for spec drift.
+- **New events in actions.log**: `warm_gate` / `marker_stale` /
+  `warm_check_post` — a step that re-ran mid-"warm" run will say why.
+- **Marker file format**: line 1 unchanged (existing readers
+  `verdict_is_xfail`/`verdict_xfail_contracts` unaffected). If you
+  parse marker FILES directly, expect a second line.
+- **The gate contract** (if you add skip/cache logic): a warm skip =
+  marker exists + fingerprint matches + check_post holds; on failure
+  remove the marker and execute.
+- **Documented limitation**: `check_post` closures are NOT part of
+  the fingerprint (they can't be hashed) — a check_post-only change
+  doesn't invalidate markers; force with `rm`/`--cold`.
+- **Pinned-ref check_post**: any project fetching a pinned ref
+  through `Source_fetch` or the opam pattern inherits the freshness
+  check automatically (moved checkout → marker dropped → re-fetch).
 
 ### Fixed — the c1 coverage warning (user, 2026-08-17)
 
