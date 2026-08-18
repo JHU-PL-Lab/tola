@@ -1237,10 +1237,11 @@ let () =
   (* 14 total = 3 Source + 3 Lib (Python-in-langs only, 3 skipped OCaml)
      + 4 Binding OCaml + 2 Binding Python + 2 On_behavior + 4 Headers +
      App slots + N. Net Some = 11 (Source×3 + Lib×3 + BindingOCaml×3
-     + BindingPython×2); None = 9. Adjust when the synthesis table
-     changes. *)
+     + BindingPython×2); None = 11 (9 + 2 Binding_source cells — the
+     2026-08-18 off-tree-binding-source kind has no parametric recipe).
+     Adjust when the synthesis table changes. *)
   let expected_some = 11 in
-  let expected_none = 9 in
+  let expected_none = 11 in
   if some_n <> expected_some || none_n <> expected_none then
     Stdlib.failwith
       (Printf.sprintf

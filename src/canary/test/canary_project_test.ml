@@ -39,7 +39,7 @@ let catalogue : (B.action * B.artifact_kind list * B.artifact_kind list) list =
     (Build_headers,                   [ Source ],            [ Headers ]);
     (Build_lib,                       [ Source ],            [ Lib ]);
     (Install_lib,                     [ Lib ],               [ Lib ]);
-    (Build_binding ocaml,             [ Lib ],               [ Binding ocaml ]);
+    (Build_binding ocaml,             [ Lib; Binding_source ocaml ], [ Binding ocaml ]);
     (Build_app { lang = ocaml },      [ Binding ocaml; Lib ],[ App ]);
     (Probe_lib,                       [ Lib ],               []);
     (Probe_binding ocaml,             [ Lib; Binding ocaml ],[]);
@@ -86,11 +86,13 @@ let inventory_test : pure_test =
             Build_binding ocaml; Probe_binding ocaml; Probe_lib ]
       in
       (* Fetch consumes nothing; Build_lib→Source; Fetch Lib→(none);
-         Build_binding→Lib; Probe_binding→Binding+Lib; Probe_lib→Lib.
-         First-appearance union: Source, Lib, Binding OCaml. *)
+         Build_binding→Lib + its Binding_source (the 2026-08-18
+         off-tree edge); Probe_binding→Binding+Lib; Probe_lib→Lib.
+         First-appearance union: Source, Lib, Binding_source OCaml,
+         Binding OCaml. *)
       same_kinds
         (A.consumed_artifacts_of_actions actions)
-        B.[ Source; Lib; Binding ocaml ]) }
+        B.[ Source; Lib; Binding_source ocaml; Binding ocaml ]) }
 
 (* ── step 2: store_config / surface / spec strawman ── *)
 

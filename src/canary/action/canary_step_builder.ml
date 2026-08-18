@@ -587,10 +587,19 @@ let deps_of_action spec action =
       List.filter_opt
         [ if has Build_lib then Some (tag Build_lib) else None ]
       @ binding_deps
-  | Build_binding _lang ->
+  | Build_binding lang ->
       let lib_dep =
         if has Build_lib then Some (tag Build_lib)
         else if has (Fetch Lib) then Some (tag (Fetch Lib))
+        else None
+      in
+      (* the OFF-TREE binding source (2026-08-18): the binding build
+         consumes its source when one is wired — the DAG edge the
+         typed catalogue declares (Build_binding consumes
+         [Lib; Binding_source l]) *)
+      let bsrc_dep =
+        if has (Fetch (Binding_source lang)) then
+          Some (tag (Fetch (Binding_source lang)))
         else None
       in
       let headers_dep =
@@ -603,7 +612,7 @@ let deps_of_action spec action =
         if has Configure then Some (tag Configure)
         else None
       in
-      List.filter_opt [ configure_dep; headers_dep; lib_dep ]
+      List.filter_opt [ bsrc_dep; configure_dep; headers_dep; lib_dep ]
   | Build_app { lang } ->
       let binding_dep =
         if has (Build_binding lang) then Some (tag (Build_binding lang))

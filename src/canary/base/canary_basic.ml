@@ -296,16 +296,23 @@ let action_of_string s =
    same binding action land in a single parent directory.
    Non-binding tags are their own directory (unchanged). *)
 let step_dir_of_tag tag =
-  let verbs = [ "build"; "probe"; "fetch"; "pack" ] in
-  match
-    List.find_map verbs ~f:(fun verb ->
-        let prefix = verb ^ "_binding_" in
-        match String.chop_prefix tag ~prefix with
-        | Some rest -> Some (verb ^ "_binding/" ^ rest)
-        | None -> None)
-  with
-  | Some d -> d
-  | None -> tag
+  (* the OFF-TREE binding source (2026-08-18): "fetch_binding_source_ocaml"
+     would fall into the verb loop's "fetch_binding_" prefix and misroute
+     to fetch_binding/source_ocaml — a dedicated mapping leads it to its
+     own dir (fetch_binding_source/ocaml). *)
+  match String.chop_prefix tag ~prefix:"fetch_binding_source_" with
+  | Some rest -> "fetch_binding_source/" ^ rest
+  | None ->
+      let verbs = [ "build"; "probe"; "fetch"; "pack" ] in
+      (match
+         List.find_map verbs ~f:(fun verb ->
+             let prefix = verb ^ "_binding_" in
+             match String.chop_prefix tag ~prefix with
+             | Some rest -> Some (verb ^ "_binding/" ^ rest)
+             | None -> None)
+       with
+       | Some d -> d
+       | None -> tag)
 
 (* Variant-qualified filename.
    variant_key = ""  → "base.ext"       (single-variant: unchanged)
@@ -358,9 +365,11 @@ let action_catalogue : action_sig list =
     { as_action = Fetch (Binding_source Canary_lang.Python);
       as_consumes = []; as_produces = Binding_source Canary_lang.Python;
       as_version = Ambient };
-    { as_action = Build_binding Canary_lang.OCaml; as_consumes = [Lib];
+    { as_action = Build_binding Canary_lang.OCaml;
+      as_consumes = [Lib; Binding_source Canary_lang.OCaml];
       as_produces = Binding Canary_lang.OCaml; as_version = Follows_input };
-    { as_action = Build_binding Canary_lang.Python; as_consumes = [Lib];
+    { as_action = Build_binding Canary_lang.Python;
+      as_consumes = [Lib; Binding_source Canary_lang.Python];
       as_produces = Binding Canary_lang.Python; as_version = Follows_input };
     { as_action = Probe_binding Canary_lang.OCaml;
       as_consumes = [Lib; Binding Canary_lang.OCaml];

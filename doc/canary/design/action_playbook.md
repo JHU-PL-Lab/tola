@@ -3,7 +3,21 @@
 > 2026-08-17. Written from the Publish generalization (active plan 2):
 > the "how to add an action" checklist (the orthogonality surface), the
 > Publish worked example, and the refactoring plan the case study
-> surfaced.
+> surfaced. 2026-08-18: §4 — the lighter EXTENSION checklist (a new
+> artifact kind on an existing action), from the off-tree
+> binding-source case.
+
+## 0. New action vs extending an action — the fork in the road
+
+- **A NEW action** (a new `action` constructor) = the ten-touchpoint
+  checklist below (§1).
+- **EXTENDING an existing action with a new ARTIFACT KIND** (e.g.
+  `Fetch (Binding_source l)` — the 2026-08-18 off-tree binding source)
+  = the lighter checklist in §4. The action constructor, its
+  provision gate, its deps/marker defaults, and the execution path
+  are inherited; the work is the kind's vocabulary + its typed
+  catalogue row + the DEPENDENT actions' consumes (the DAG edge) +
+  display slots.
 
 ## 1. The checklist — the ten touch points an action passes through
 
@@ -119,3 +133,63 @@ The case study surfaced six non-orthogonal spots — the follow-up work:
 And the future uses the same shape: tiny's Publish = the same
 `wrapper_decl` + primitive when it wants an opam-visible artifact; pip
 bindings follow with a pip-side primitive.
+
+## 4. The EXTENSION checklist — a new artifact kind on an existing action
+
+> 2026-08-18, from the off-tree binding-source case (`Fetch
+> (Binding_source l)`, commit `f5db302` + its follow-ups): the binding
+> may live in a different repo than the lib (zarith vs system gmp).
+> The lighter path — no new constructor:
+
+1. **The kind** — `artifact_kind` (`canary_basic.ml` — the base
+   vocabulary) + `kind_order` + `string_of_artifact_kind`, and the
+   `artifact` alias in `canary_artifact.ml` (it re-lists the
+   constructors — keep it IN SYNC, the compiler enforces the match)
+   + the `a_<kind>` constructor + `string_of_artifact`.
+2. **The action instance's name** — a dedicated `string_of_action`
+   case when the generic `fetch_<kind>` spelling isn't the wanted tag
+   (`fetch_binding_source_ocaml`, not `fetch_ocaml_binding_source`).
+   `step_dir_of_tag` may need a dedicated mapping — the verb loop's
+   `fetch_binding_` prefix would misroute the new tag to
+   `fetch_binding/source_ocaml`.
+3. **The typed catalogue row** (THE DAG decision) —
+   `action_catalogue` (`canary_basic.ml`): the new Fetch row
+   (consumes [], produces the kind, `Ambient`). This is where
+   tree/dag membership is decided — `consumes_of_action`/
+   `produces_of_action`, `chains_for`/`universal_chains`,
+   `node_of_assignment` all read it.
+4. **The dependent actions' consumes — the DAG EDGE**: a binding
+   built from an off-tree source consumes it: `Build_binding l`
+   gains `Binding_source l`. Two consequences the pins caught:
+   - `chains_for` must branch BOTH ways for the new consume —
+     WITHOUT the fetch (on-tree specs, the source rides the lib's)
+     and WITH it (off-tree specs) — a mandatory consume would break
+     every on-tree project's chains (the `mechanism.…` + `derive.Sc.2`
+     failures were this).
+   - the derivation/inventory pins' expected kind lists shift
+     (`related_artifacts_of_actions`, `consumed_artifacts_of_actions`
+     — ORDER matters: the consume precedes the produce in the union).
+5. **The runner slot + defaults** — the per-lang slot on
+   `runner_spec` (empty in `empty_runner_spec`), `script_of_action`,
+   `marker_of_action` (`binding_source.ok`), the runner-side dep in
+   `deps_of_action` (`Build_binding` waits for the fetch when wired).
+6. **The catalogue walk** — `store_actions` gains the fetch at the
+   per-language block's front (the scenario chains' anticipation; no
+   project wiring it = no step emitted — `derive_steps` skips unwired
+   actions).
+7. **The display layers** — the path table (kind prefix + the verb),
+   the diagram (kind label + probe mapping), the matrix's canonical
+   column order (the per-language block's leading slot).
+8. **The compiler's exhaustiveness sweep** — every `match` on the
+   kind without a wildcard is a checklist item the compiler hands
+   you; work through them (enumerate, scenario, store_config,
+   tiny_scenario, project_run…).
+9. **The kind-ratchet pins** — the catalogue pin's expected
+   consumes/produces rows, the derivation pins' unions, the tiny
+   synthesis counts (`recipe_of_derived_cell`'s Some/None totals —
+   a new kind adds None cells until a parametric recipe exists).
+10. **The IDEMPOTENCY note** — a repo providing BOTH the source and
+    the binding source (on-tree bindings) wires the SAME fetch; the
+    repo is already there (the `Source_fetch` local `test -d` path).
+    The provider's `artifacts` contents list already declares
+    multi-artifact provision.

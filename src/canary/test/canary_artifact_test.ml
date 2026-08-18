@@ -1020,20 +1020,20 @@ let scenario_derivation_pure_tests =
     "Sc.1", [ Configure; Scan_sources; Build_lib; Install_lib ],
               [ Source; Lib ];
     "Sc.2.OCaml", [ Build_binding OCaml ],
-              [ Lib; Binding OCaml ];
+              [ Lib; Binding_source OCaml; Binding OCaml ];
     "Sc.3.OCaml", [ Build_app { lang = OCaml } ],
               [ Binding OCaml; App ];
     "Sc.4.OCaml", [ Probe_app { lang = OCaml } ],
               [ App; Lib; Binding OCaml ];
     "Sc.2.Python", [ Build_binding Python ],
-              [ Lib; Binding Python ];
+              [ Lib; Binding_source Python; Binding Python ];
     "Sc.4.Python", [ Probe_app { lang = Python } ],
               [ App; Lib; Binding Python ];
     (* Chained: pieces of tiny's acts_full expected to
        collapse under first-appearance union. *)
     "chain.build+probe",
       [ Build_lib; Build_binding OCaml; Probe_app { lang = OCaml } ],
-      [ Source; Lib; Binding OCaml; App ];
+      [ Source; Lib; Binding_source OCaml; Binding OCaml; App ];
   ] in
   List.map cases ~f:(fun (name, actions, expected) ->
     { name = "derive." ^ name;

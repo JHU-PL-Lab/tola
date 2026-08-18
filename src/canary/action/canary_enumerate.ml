@@ -943,9 +943,21 @@ let chains_for (terminal : Canary_basic.action_sig)
           if List.is_empty prods then
             build rest seen
           else
-            List.concat_map prods ~f:(fun prod ->
-                let subs = build (prod.B.as_consumes @ rest) (k :: seen) in
-                List.map subs ~f:(fun sub -> prod :: sub))
+            (* OPTIONAL consume (2026-08-18, the OFF-TREE binding source):
+               a Binding_source consumed by the binding build branches
+               BOTH ways — WITH its fetch (the off-tree spec: the binding
+               lives in its own repo) and WITHOUT (the on-tree spec: the
+               binding's source rides the lib's — no fetch step). A
+               mandatory consume would demand the artifact in EVERY spec
+               and break all on-tree projects. *)
+            let with_prods =
+              List.concat_map prods ~f:(fun prod ->
+                  let subs = build (prod.B.as_consumes @ rest) (k :: seen) in
+                  List.map subs ~f:(fun sub -> prod :: sub))
+            in
+            (match k with
+             | Binding_source _ -> build rest seen @ with_prods
+             | _ -> with_prods)
   in
   let chains = build terminal.B.as_consumes [] in
   List.map chains ~f:(fun c -> c @ [ terminal ])
