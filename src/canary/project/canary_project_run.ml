@@ -313,6 +313,7 @@ let scenarios_of ?policy (pr : project_run) :
 let prov_short : Canary_enumerate.provision -> string = function
   | Canary_enumerate.Vendored -> "V"
   | Canary_enumerate.Built -> "B"
+  | Canary_enumerate.Installed -> "I"
   | Canary_enumerate.Fetched -> "F"
   | Canary_enumerate.Absent -> "A"
 
@@ -423,6 +424,7 @@ let scenario_dir_of ~pr_name (a : Canary_artifact.assignment) : string =
     match pl.Canary_artifact.provision with
     | Canary_artifact.Fetched -> k ^ "-" ^ fetched_s pl
     | Canary_artifact.Built -> Printf.sprintf "%s-built-%s" k (chan_s pl.Canary_artifact.version.Canary_basic.channel)
+    | Canary_artifact.Installed -> Printf.sprintf "%s-installed-%s" k (chan_s pl.Canary_artifact.version.Canary_basic.channel)
     | Canary_artifact.Vendored -> Printf.sprintf "%s-vendored-%s" k (chan_s pl.Canary_artifact.version.Canary_basic.channel)
     | Canary_artifact.Absent -> Printf.sprintf "%s-absent" k
   in

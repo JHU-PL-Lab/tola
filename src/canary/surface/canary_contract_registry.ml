@@ -102,7 +102,10 @@ let firing_default (m : Canary_mechanism.mechanism) (l : Canary_lang.lang)
   | Canary_mechanism.Dynamic_ffi -> [ probe ]
   | Canary_mechanism.Static_c_abi -> (
       match p with
-      | Canary_store.Built -> [ Canary_basic.Build_binding l; probe ]
+      (* Installed groups with Built (2026-08-18): its chain includes
+         the real build + the staging — the build-family contracts fire. *)
+      | Canary_store.Built | Canary_store.Installed ->
+          [ Canary_basic.Build_binding l; probe ]
       | Canary_store.Fetched | Canary_store.Vendored | Canary_store.Absent ->
           [ probe ])
 

@@ -18,7 +18,7 @@ open Canary_project_spec
    store types — the two definitions are the same type via [Canary_store]. *)
 
 type provision = Canary_store.provision =
-  | Absent | Fetched | Built | Vendored
+  | Absent | Fetched | Built | Installed | Vendored
 [@@deriving show, eq]
 
 type artifact = Canary_basic.artifact_kind =
@@ -154,7 +154,9 @@ let built_from_of_assignment
        Canary_basic.artifact_kind -> Canary_basic.artifact_kind list)
     (a : assignment) (id : artifact_id) : artifact_id list =
   match provision_of a id with
-  | Built ->
+  (* Installed has the same build edges as Built (2026-08-18): it was
+     built from the same inputs, then staged *)
+  | Built | Installed ->
       let ks = built_from_kinds id.kind in
       List.filter_map a ~f:(fun (other, _) ->
           if (not (equal_artifact_id other id))
@@ -188,8 +190,13 @@ let assignment_ok (a : assignment) : bool =
      the source placement's id, already part of the assignment's identity
      (two dev chains: source-fetched-latest vs source-fetched-arbipher). *)
   let source_declared = Option.is_some (placement_of a a_source) in
-  (not (equal_provision lib Built) || not source_declared || provided a a_source)
-  && (not (equal_provision lib Built) || not source_declared
+  (* the built FAMILY (2026-08-18): an Installed lib was built from
+     source at that channel too — same coupling as Built *)
+  let lib_built_family =
+    equal_provision lib Built || equal_provision lib Installed
+  in
+  (not lib_built_family || not source_declared || provided a a_source)
+  && (not lib_built_family || not source_declared
      || Canary_basic.equal_channel
           (version_of a a_lib).Canary_basic.channel
           (version_of a a_source).Canary_basic.channel)
@@ -407,7 +414,10 @@ let shadow_filter ~(shadow : shadow_policy) (asgs : assignment list) :
       let prebuilt (pl : placement) =
         match pl.provision with
         | Fetched | Vendored -> true
-        | _ -> false
+        (* Installed is deliberately NOT prebuilt (2026-08-18): it is
+           a built artifact's staged face — the shadow heuristic only
+           collapses Fetched/Vendored onto Built same-version cells *)
+        | Built | Installed | Absent -> false
       in
       (* the built side's version identity: SOURCE-PRIMARY — a Built
          artifact's version IS its source's (the explainer's Follows_input
@@ -497,7 +507,9 @@ let runtime_pairings_of (s : project_spec) (a : assignment) :
                 match lib_pl with
                 | Some pl -> (
                     match pl.provision with
-                    | Built | Vendored -> true
+                    (* Installed deploys like Built (2026-08-18): the
+                       staged lib is a deployable concrete artifact *)
+                    | Built | Installed | Vendored -> true
                     | Fetched | Absent -> false)
                 | None -> false
               in
@@ -589,7 +601,13 @@ let provision_of_actions (acts : Canary_basic.action list) (id : artifact_id) :
   match id.kind with
   | Source -> if has (Canary_basic.Fetch Canary_basic.Source) then Fetched else Absent
   | Lib ->
-      if has Canary_basic.Build_lib then Built
+      (* Install first (2026-08-18): the single-action round-trip
+         [Install_lib] reads Installed. A REAL world's action set is
+         lossy here — the built family shares the build steps, so an
+         Installed world's set reads [Built] — this inverse is the
+         synthetic round-trip tool, not a world classifier. *)
+      if has Canary_basic.Install_lib then Installed
+      else if has Canary_basic.Build_lib then Built
       else if has (Canary_basic.Fetch Canary_basic.Lib) then Fetched
       else Absent
   | Binding l ->
@@ -730,7 +748,11 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
                       if Poly.equal cfg.version_mode Lockstep then
                         match follows_of kid with
                         | Some _ -> true
-                        | None -> equal_provision pv Built
+                        | None ->
+                            (* the built family: an Installed parent was
+                               built from source at the same channel too *)
+                            equal_provision pv Built
+                            || equal_provision pv Installed
                       else false
                     in
                     if lockstep then
@@ -853,15 +875,17 @@ let pattern_of_assignment (a : assignment) : scenario_pattern =
   else match lib_prov with
   | Fetched when all_bindings_fetched -> Fetch_chain
   | Fetched when any_binding_built -> Mixed_provision
-  | Built when any_binding_built && lockstep && source_declared ->
+  (* Installed groups with Built (2026-08-18): the staged chain IS a
+     build chain plus its staging *)
+  | (Built | Installed) when any_binding_built && lockstep && source_declared ->
       Build_chain_follows
-  | Built when any_binding_built && lockstep && not source_declared ->
+  | (Built | Installed) when any_binding_built && lockstep && not source_declared ->
       No_source_build
-  | Built when all_bindings_fetched && lockstep ->
+  | (Built | Installed) when all_bindings_fetched && lockstep ->
       Build_chain_independent
-  | Built when all_bindings_fetched && not lockstep ->
+  | (Built | Installed) when all_bindings_fetched && not lockstep ->
       Deploy_mismatch
-  | Built when any_binding_built && not lockstep ->
+  | (Built | Installed) when any_binding_built && not lockstep ->
       Unknown   (* cross-channel built binding over built lib — shouldn't happen *)
   | _ -> Unknown
 
@@ -1023,8 +1047,11 @@ let patterns_of ?(policy = full_policy ()) (s : project_spec)
             match find_artifact_of_kind s act.Canary_basic.as_produces with
             | Some id ->
                 let pv = provision_of a id in
-                (* Vendored: artifact is supplied, the action doesn't fire *)
+                (* Vendored: artifact is supplied, the action doesn't
+                   fire. Installed: provided by the staging action — the
+                   chain matches like the built family (2026-08-18). *)
                 equal_provision pv Vendored
+                || equal_provision pv Installed
                 || equal_provision pv needed
             | None -> true)
   in

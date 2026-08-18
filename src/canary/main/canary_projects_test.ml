@@ -258,7 +258,9 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
         List.find (Canary_enumerate.runtime_pairings_of spec a) ~f:(fun p ->
             Canary_artifact.equal_artifact_id p.Canary_enumerate.rp_consumer c)
       in
-      List.length asgs = 3
+      (* 5 since the Installed worlds (2026-08-18): 2 built + 2
+         installed + 1 fetched *)
+      List.length asgs = 5
       && List.for_all asgs ~f:(fun a ->
              (match find py_cext a with
               | Some p -> (
@@ -273,7 +275,7 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
                  | None -> false))
       && List.count asgs ~f:(fun a ->
              match find oc a with Some p -> p.Canary_enumerate.rp_deploy | None -> false)
-         = 2) }
+         = 4) }
 
 (* ── The ARROW unification pin (user, 2026-08-06) ──
    provider → action → artifact, with fetch and build the same shape.
@@ -324,11 +326,21 @@ let providing_arrow_pin : Canary_project_test.pure_test =
                        EN.Built
               | Canary_store.Vendored, None -> true
               | Canary_store.Absent, None -> true
+              (* Installed never arrives here: providers construct
+                 Fetched/Built only — projects declare Installed
+                 directly in the universe (the round-trip below) *)
               | _ -> false))
       (* and the Fetched half of the round-trip on a concrete row *)
       && Poly.equal
            (Canary_enumerate.provision_of_actions [ B.Fetch B.Lib ] Canary_artifact.a_lib)
            EN.Fetched
+      (* the Installed half (2026-08-18): the single-action round-trip
+         [Install_lib] reads Installed — the maker step of the staged
+         lib *)
+      && Poly.equal
+           (Canary_enumerate.provision_of_actions
+              [ B.Install_lib ] Canary_artifact.a_lib)
+           EN.Installed
       (* self-contained providers must derive an Ambient runtime edge (A5
          residue (ii), 2026-08-06): the dep_mode value source is the
          provider, not a hand-written annotation. *)
@@ -387,7 +399,9 @@ let integration_smoke : Canary_project_test.pure_test =
           Fmt.pr "  %s: want %d scenarios, got %d@." name want_count n;
         n = want_count
       in
-      let ok1 = check ~name:"sqlite" ~want_count:3
+      (* 5 since the Installed worlds (2026-08-18): fetched + 2 built
+         + 2 installed *)
+      let ok1 = check ~name:"sqlite" ~want_count:5
           Canary_project_sqlite.sqlite_run in
       (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains;
          7 since the pre-10549 regression ref (4 all-Fetched + 3 dev) *)
@@ -1499,6 +1513,80 @@ let matrix_row_index_pin : Canary_project_test.pure_test =
         uniq && consecutive && stable && codes_uniq
         && List.for_all codes ~f:(fun (_, _, c) -> String.length c = 6)) }
 
+(* The provider-exclusive rows (2026-08-18, user): sqlite's lib
+   universe ranges {Fetched, Built, Installed} × versions — 5 worlds.
+   Pin: (a) the 5-scenario shape; (b) the matrix row order
+   [B 3.45.1, I 3.45.1, B 3.46.1, I 3.46.1, F] (the lib_key: per
+   version build-then-install, fetched last — the "repo × 2 + 1
+   fetched" shape); (c) the Installed world's OCaml probe reads the
+   STAGED lib (LD_LIBRARY_PATH <ws>/install/lib) while the Built
+   world's reads the build tree — the consumer exclusivity; (d) the
+   Install_lib row fires ONLY in the Installed worlds (ar_needs). *)
+let sqlite_provider_rows_pin : Canary_project_test.pure_test =
+  { name = "sqlite.provider_rows";
+    check =
+      (fun () ->
+        let pr = Canary_project_sqlite.sqlite_run in
+        let asgs = Canary_project_run.scenarios_of pr in
+        (* (a) the 5 worlds *)
+        let ok_shape = List.length asgs = 5 in
+        (* (b) the row order *)
+        let sorted =
+          List.stable_sort asgs ~compare:(fun x y ->
+              Stdlib.compare (Canary_matrix.row_key pr x)
+                (Canary_matrix.row_key pr y))
+        in
+        let keyed =
+          List.map sorted ~f:(fun a ->
+              match
+                Canary_enumerate.placement_of a Canary_artifact.a_lib
+              with
+              | Some pl ->
+                  ( Canary_enumerate.channel_of a Canary_artifact.a_lib,
+                    pl.Canary_artifact.provision )
+              | None -> (Canary_basic.Stable, Canary_artifact.Absent))
+        in
+        let ok_order =
+          Poly.equal keyed
+            [ (Canary_basic.Stable, Canary_artifact.Built);
+              (Canary_basic.Stable, Canary_artifact.Installed);
+              (Canary_basic.Dev, Canary_artifact.Built);
+              (Canary_basic.Dev, Canary_artifact.Installed);
+              (Canary_basic.Stable, Canary_artifact.Fetched) ]
+        in
+        (* (c) the probe env per world + (d) the install gating *)
+        let probe_cmd_of a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/ws" ()
+          in
+          match
+            List.find spec.Canary_step_builder.probe_binding
+              ~f:(fun (l, _, _) -> Poly.equal l Canary_lang.OCaml)
+          with
+          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"pin"
+          | None -> ""
+        in
+        let ok_probes_gating =
+          List.for_all sorted ~f:(fun a ->
+              let acts = Canary_matrix.actions_of pr a in
+              let has_install =
+                List.mem acts Canary_basic.Install_lib ~equal:Poly.equal
+              in
+              let cmd = probe_cmd_of a in
+              match
+                Canary_enumerate.provision_of a Canary_artifact.a_lib
+              with
+              | Canary_artifact.Installed ->
+                  has_install
+                  && String.is_substring cmd ~substring:"/install/lib"
+              | Canary_artifact.Built ->
+                  (not has_install)
+                  && String.is_substring cmd ~substring:"/lib"
+                  && not (String.is_substring cmd ~substring:"install/lib")
+              | _ -> true)
+        in
+        ok_shape && ok_order && ok_probes_gating) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1587,7 +1675,8 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        List.length rows = 23
+        (* 25 since sqlite's Installed worlds (+2, 2026-08-18) *)
+        List.length rows = 25
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 3
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
@@ -1652,5 +1741,6 @@ let tests : Canary_project_test.pure_test list =
       z3_installed_probe_consumes_prefix;
       matrix_row_order_pin;
       matrix_row_index_pin;
+      sqlite_provider_rows_pin;
       matrix_registry_shape_pin ]
 

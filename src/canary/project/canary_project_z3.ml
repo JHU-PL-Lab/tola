@@ -441,20 +441,20 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
     match version.Canary_basic.channel with Canary_basic.Dev -> true | _ -> false
   in
   let shared =
-    [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };
-      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
+      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python); ar_needs = None;
         ar_template = Pip_install { pkg = "z3-solver" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.Python; ar_needs = None;
         ar_template = Python_probe
                 { snippet =
                     "import z3; s = z3.Solver(); s.add(z3.Int('x') > 0); \
                      print('z3 ok:' + str(s.check()))" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Ocaml_probe { binding_lib = "z3";
                 example = "canary/examples/z3/z3_example.ml";
                 target = "z3_example" } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location =
                     Pm_lib { pm_pkg = "z3"; lib_name = "libz3.so";
@@ -464,15 +464,15 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
     ]
   in
   let dev =
-    [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
                   local = Option.map local ~f:(fun l -> l.path) } };
-      { ar_action = Canary_basic.Scan_sources;
+      { ar_action = Canary_basic.Scan_sources; ar_needs = None;
         ar_template = Scan_source { root; hdr_file = "src/api/z3.h" } };
-      { ar_action = Canary_basic.Build_headers;
+      { ar_action = Canary_basic.Build_headers; ar_needs = None;
         ar_template = Build_headers { root; hdr_dir = "src/api" } };
-      { ar_action = Canary_basic.Configure;
+      { ar_action = Canary_basic.Configure; ar_needs = None;
         ar_template = Cmake_configure
                 { cmake_exec =
                     (if cmake_build_binding then "opam exec -- cmake" else "cmake");
@@ -499,9 +499,9 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                           -DZ3_BUILD_PYTHON_BINDINGS=OFF")
                       ~on:' ';
                   src = root; build } };
-      { ar_action = Canary_basic.Build_lib;
+      { ar_action = Canary_basic.Build_lib; ar_needs = None;
         ar_template = Ninja_build { target = "libz3"; build } };
-      { ar_action = Canary_basic.Install_lib;
+      { ar_action = Canary_basic.Install_lib; ar_needs = None;
         ar_template =
           Cmake_install
             { build; prefix = build ^ "/../install";
@@ -515,7 +515,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                 (if official then
                    Some [ "lib/ocaml/z3/META"; "lib/ocaml/z3/z3ml.cmxa" ]
                  else None) } };
-      { ar_action = Canary_basic.Build_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Build_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Ninja_build_binding
                 { target = "build_z3_ocaml_bindings"; build;
                   (* The binding target's POST_BUILD self-check runs the
@@ -537,15 +537,15 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                       (Printf.sprintf
                          "CAML_LD_LIBRARY_PATH=$(pwd)/%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=$(pwd)/%s"
                          build build) } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location = Build_tree_glob { lib_glob = "libz3.so"; build };
                   prefix = "Z3_" } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location = Staged_lib { lib = build ^ "/../install/lib/libz3.so" };
                   prefix = "Z3_" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template =
           Raw
             (fun ~output_dir ~variant_key ->
@@ -620,7 +620,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                     output_dir output_dir probe_log
                     prefix output_dir output_dir probe_log
                     output_dir probe_log) };
-      { ar_action = Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml);
+      { ar_action = Canary_basic.Publish (Canary_basic.Binding Canary_lang.OCaml); ar_needs = None;
         ar_template = Raw (fun ~output_dir ~variant_key ->
             (* CANARY_* must be ABSOLUTE: the z3.dev package script runs from
                the opam sandbox build dir, where relative `_out/...` paths

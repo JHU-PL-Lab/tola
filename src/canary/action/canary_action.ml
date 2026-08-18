@@ -283,6 +283,12 @@ let producing_action_of_node (n : artifact_node) : action option =
   match n.provision with
   | Canary_store.Vendored | Canary_store.Absent -> None
   | Canary_store.Fetched -> Some (Fetch n.a_kind)
+  | Canary_store.Installed -> (
+      (* the maker step of an Installed artifact (2026-08-18): the
+         staging that produced it *)
+      match n.a_kind with
+      | Lib -> Some Install_lib
+      | Source | Binding_source _ | Headers | Binding _ | App -> None)
   | Canary_store.Built -> (
       match n.a_kind with
       | Source -> None (* a Built source is degenerate; treat as initial *)
@@ -296,7 +302,14 @@ let producing_action_of_node (n : artifact_node) : action option =
     "build_ocaml_binding" — the label the execution plan and the run trace use. *)
 let edge_label_of_node (n : artifact_node) : string =
   let verb = Canary_store.string_of_provision n.provision in
-  let verb = match verb with "vendored" -> "vendor" | "built" -> "build" | "fetched" -> "fetch" | v -> v in
+  let verb =
+    match verb with
+    | "vendored" -> "vendor"
+    | "built" -> "build"
+    | "fetched" -> "fetch"
+    | "installed" -> "install"
+    | v -> v
+  in
   Printf.sprintf "%s_%s" verb (string_of_artifact_kind n.a_kind)
 
 (** EXECUTION PLAN: the applicable nodes in a valid topological (build) order —

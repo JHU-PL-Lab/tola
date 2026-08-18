@@ -463,28 +463,28 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
      always fine; only the local-checkout fork passed the probe). *)
   let cmake_source = root ^ "/llvm" in
   let shared =
-    [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
                   local = Option.map local ~f:(fun l -> l.path) } };
-      { ar_action = Canary_basic.Fetch Canary_basic.Lib;
+      { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "llvm-19-dev"; macos_pkg = "llvm@19" } };
-      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml);
+      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml); ar_needs = None;
         ar_template = Fetch_binding_opam { pkg = "llvm.19-shared" } };
-      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
+      { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python); ar_needs = None;
         ar_template = Pip_install { pkg = "llvmlite" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Ocaml_probe { binding_lib = "llvm";
                 example = "canary/examples/llvm/llvm_example_dev.ml";
                 target = "llvm_example_dev" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.Python; ar_needs = None;
         ar_template = Python_probe
                 { snippet =
                     "import llvmlite.binding as llvm; llvm.initialize(); \
                      llvm.initialize_native_target(); \
                      llvm.initialize_native_asmprinter(); \
                      print('llvmlite ok: ' + llvm.llvm_version_info)" } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Raw (fun ~output_dir ~variant_key ->
             let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
             Printf.sprintf
@@ -495,15 +495,15 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
     ]
   in
   let dev =
-    [ { ar_action = Canary_basic.Fetch Canary_basic.Source;
+    [ { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
         ar_template = Source_fetch
                 { name; ver_str; ref_; url;
                   local = Option.map local ~f:(fun l -> l.path) } };
-      { ar_action = Canary_basic.Scan_sources;
+      { ar_action = Canary_basic.Scan_sources; ar_needs = None;
         ar_template = Scan_source { root; hdr_file = "llvm/include/llvm-c/Core.h" } };
-      { ar_action = Canary_basic.Build_headers;
+      { ar_action = Canary_basic.Build_headers; ar_needs = None;
         ar_template = Build_headers { root; hdr_dir = "llvm/include/llvm-c" } };
-      { ar_action = Canary_basic.Configure;
+      { ar_action = Canary_basic.Configure; ar_needs = None;
         ar_template = Cmake_configure
                 { cmake_exec = "cmake";
                   (* -G Ninja required: cmake defaults to Makefiles
@@ -513,22 +513,22 @@ let llvm_table_rows ~(source : Canary_artifact_source.source_repo) ~distro =
                       "-DLLVM_BUILD_LLVM_DYLIB=ON";
                       "-DLLVM_TARGETS_TO_BUILD=X86" ];
                   src = cmake_source; build } };
-      { ar_action = Canary_basic.Build_lib;
+      { ar_action = Canary_basic.Build_lib; ar_needs = None;
         ar_template = Ninja_build { target = "LLVM"; build } };
-      { ar_action = Canary_basic.Build_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Build_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Ninja_build_binding { target = "ocaml_all"; build; env_guard = None } };
-      { ar_action = Canary_basic.Install_lib;
+      { ar_action = Canary_basic.Install_lib; ar_needs = None;
         ar_template = Cmake_install_component
                 { build; prefix = build ^ "/../install"; component = "LLVM" } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location = Build_tree_glob { lib_glob = "libLLVM.so"; build };
                   prefix = "LLVM" } };
-      { ar_action = Canary_basic.Probe_lib;
+      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location = Staged_lib { lib = build ^ "/../install/lib/libLLVM.so" };
                   prefix = "LLVM" } };
-      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+      { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template = Raw (fun ~output_dir ~variant_key ->
             let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
             let symbols_log = Canary_basic.variant_file ~variant_key "symbols.log" in

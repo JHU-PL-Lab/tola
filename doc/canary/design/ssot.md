@@ -195,7 +195,7 @@ from a single artifact. Each artifact carries several **independent axes**:
 
 | axis                        | values                                                    | note                                                                               |
 | --------------------------- | --------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **provision** (which store) | `Absent` · from a PM · `Built` (from source) · `Vendored` | a supplied copy at a path — local *or* remote — not built here and not PM-resolved |
+| **provision** (which store) | `Absent` · `Fetched` (from a PM) · `Built` (from source) · `Installed` (built, then staged into the install prefix — the consumer-facing face of a Built artifact, 2026-08-18) · `Vendored` | a supplied copy at a path — local *or* remote — not built here and not PM-resolved |
 | **version**                 | stable · dev · a tag                                      | which upstream version (§4.2.2)                                                    |
 | **mechanism** (bindings)    | static (cstubs/cext) · dynamic (ctypes/dynlink)           | §4.2.1(b)                                                                          |
 | **mutation** (defect)       | `None` · `symbol_missing` · `abi_mismatch` · … (§5.3)     | the injected fault                                                                 |

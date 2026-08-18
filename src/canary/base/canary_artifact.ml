@@ -128,7 +128,7 @@ let stable_reuse_warning ~source_name ~source_version =
 (* ── base vocabulary (re-exported from Canary_store / Canary_basic) ── *)
 
 type provision = Canary_store.provision =
-  | Absent | Fetched | Built | Vendored
+  | Absent | Fetched | Built | Installed | Vendored
 [@@deriving show, eq]
 
 type artifact = Canary_basic.artifact_kind =

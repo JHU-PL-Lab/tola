@@ -88,6 +88,13 @@ type action_template =
 type action_row = {
   ar_action : Canary_basic.action;
   ar_template : action_template;
+  ar_needs : Canary_store.provision option;
+      (** the project's per-row FIRING override (2026-08-18, the
+          provider-exclusive-rows model): the row applies only when the
+          target artifact's provision equals [ar_needs] — e.g. an
+          Install_lib row gated [Some Installed] fires only in the
+          Installed worlds. [None] = the default rule
+          ([action_requires_provision] / the probe-location rules). *)
 }
 
 (** Does [action] require the target artifact to have provision [pv]?
@@ -426,40 +433,61 @@ let realize_from_rows ?(base = empty_runner_spec)
     | _ -> None
   in
   let row_applies (row : action_row) =
-    match action_requires_provision row.ar_action with
+    (* the row's TARGET artifact — the one its firing gate refers to *)
+    let target_of_row =
+      match row.ar_action with
+      | Build_lib | Fetch Lib | Install_lib | Probe_lib
+      | Configure | Scan_sources | Build_headers ->
+          Some Canary_artifact.a_lib
+      | Build_binding l | Fetch (Binding l) | Publish (Binding l)
+      | Probe_binding l ->
+          Some (Canary_artifact.a_binding l Canary_mechanism.Cstubs)
+      | Fetch Headers -> Some Canary_artifact.a_headers
+      | Fetch Source -> Some Canary_artifact.a_source
+      | _ -> None
+    in
+    let actual_prov =
+      match target_of_row with
+      | None -> None
+      | Some id -> Some (Canary_enumerate.provision_of assignment id)
+    in
+    let gated needed =
+      match actual_prov with
+      | None -> true
+      | Some pv -> EN.equal_provision pv needed
+    in
+    (* the built FAMILY (2026-08-18): an Installed world's chain still
+       BUILDS (fetch + build + … then stage), so the default BUILD-step
+       gates fire for Installed too. The family rule applies ONLY to the
+       action gate (never the probe-location gates — the consumer
+       exclusivity: a build-tree probe stays out of the Installed world)
+       and never to [ar_needs] (the project's EXACT override). *)
+    let built_family =
+      match actual_prov with
+      | Some pv -> EN.equal_provision pv Canary_store.Installed
+      | None -> false
+    in
+    (* [ar_needs] (the project's per-row override) wins; else the
+       default rules ([action_requires_provision] /
+       [probe_lib_needs] / [probe_binding_needs] — unchanged). *)
+    match row.ar_needs with
+    | Some needed -> gated needed
     | None -> (
-        match row.ar_action with
-        | Probe_lib -> (
-            match probe_lib_needs row with
-            | Some needed ->
-                EN.equal_provision
-                  (Canary_enumerate.provision_of assignment Canary_artifact.a_lib)
-                  needed
-            | None -> true)
-        | Probe_binding l -> (
-            match probe_binding_needs row with
-            | Some needed ->
-                EN.equal_provision
-                  (Canary_enumerate.provision_of assignment
-                     (Canary_artifact.a_binding l Canary_mechanism.Cstubs))
-                  needed
-            | None -> true)
-        | _ -> true)
-    | Some needed ->
-        let target_kind =
-          match row.ar_action with
-          | Build_lib | Fetch Lib | Install_lib | Probe_lib
-          | Configure | Scan_sources | Build_headers ->
-              Some Canary_artifact.a_lib
-          | Build_binding l | Fetch (Binding l) | Publish (Binding l) ->
-              Some (Canary_artifact.a_binding l Canary_mechanism.Cstubs)
-          | Fetch Headers -> Some Canary_artifact.a_headers
-          | Fetch Source -> Some Canary_artifact.a_source
-          | _ -> None
-        in
-        (match target_kind with
-         | None -> true
-         | Some id -> EN.equal_provision (Canary_enumerate.provision_of assignment id) needed)
+        match action_requires_provision row.ar_action with
+        | None -> (
+            match row.ar_action with
+            | Probe_lib -> (
+                match probe_lib_needs row with
+                | Some needed -> gated needed
+                | None -> true)
+            | Probe_binding _ -> (
+                match probe_binding_needs row with
+                | Some needed -> gated needed
+                | None -> true)
+            | _ -> true)
+        | Some needed ->
+            gated needed
+            || (EN.equal_provision needed Canary_store.Built && built_family))
   in
   let matching = List.filter rows ~f:row_applies in
   List.fold_left matching ~init:base ~f:(fun acc row ->

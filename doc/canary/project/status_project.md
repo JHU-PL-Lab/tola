@@ -555,26 +555,39 @@ directions):
   `firing` filter (the expectation is currently hand-wired in z3's
   `realize` — project-local, per the "bindings are project data"
   doctrine).
-- [x] **The installed-consumer experiment** (2026-08-18, user): a
-  lib-built-to-install as a SEPARATE PROVIDER for the consumer — enabled
-  via the realization policy `consumer_lib = Build_tree | Installed`
-  (`canary_basic`; default Build_tree) + the `--installed` action flag.
-  A REALIZATION choice, not an enumeration axis — the scenario set is
-  unchanged, only WHICH concrete lib the consumer reads. z3's dev-chain
-  `probe_binding OCaml` cmd dispatches on it: `Installed` compiles/links
-  against the STAGED package (`<build>/../install/lib/ocaml/z3/z3ml.cmxa`
-  + `<prefix>/lib/libz3.so` + `LD_LIBRARY_PATH=<prefix>/lib`), so the
-  probe reads the REAL artifact the `cmake --install` produced (the
-  #10549 class: pre-fix the prefix lacks the OCaml package while the
-  build tree has it — the Installed probe fails where the Build_tree
-  probe passes). One ninja build serves both policies (install is a
-  copy-out). Pin: `z3.installed_probe_consumes_prefix` (default
-  byte-equal; Installed references the prefix). Recorded future model:
-  the full cartesian — installed-consumed as an ENUMERABLE provider so
-  the binding-BUILD ranges over {build-tree, installed} — waits on
-  richer provider flexibility (project may build several different
-  artifacts; `Install_lib : Lib → Lib` stays the staging semantics, not
-  a second provider).
+- [x] **The provider-exclusive rows model LANDED on sqlite**
+  (2026-08-18, user — the enumeration issue "lib providers are
+  exclusive; each takes a row"): `provision` gained **`Installed`**
+  (base vocabulary; the dormant `artifact_status.Installed` renamed
+  `Installed_state` to free the name) — the installed consumer is now
+  an ENUMERATION axis, not the `consumer_lib` realization policy. The
+  built FAMILY semantics (an Installed world's chain builds like
+  Built: source coupling, lockstep, deploy, patterns) + the per-row
+  `ar_needs` firing override (a row gated `Some Installed` fires ONLY
+  in the Installed worlds — the consumer exclusivity; the default
+  build-step gates accept the built family so the shared build fires
+  in both). sqlite: 5 worlds = `(Fetched); (Built, [Stable;Dev]);
+  (Installed, [Stable;Dev])` — the Installed worlds stage the built
+  lib into `<ws>/install` (a plain copy-out; no cmake) and probe the
+  STAGED lib; the Built worlds keep only the build-tree probe.
+  Matrix rows: [B 3.45.1, I 3.45.1, B 3.46.1, I 3.46.1, F apt] — the
+  "repo × 2 + 1 fetched" shape (the lib row-key = channel → provision
+  rank; fetched last). Pin: `sqlite.provider_rows`. The fetched row =
+  1 per platform PM (apt today; the N-PM axis when multiple coexist
+  is the future, recorded below).
+- [ ] **z3 migration + the phantom-ref-axis fix** (2026-08-18,
+  recorded — the deferred half): (a) `~follows:a_lib` on z3's source
+  row kills the 4-identical-fetched-worlds issue (the follows
+  post-filter channel-locks the source to the lib: lib-Fetched keeps
+  only the Stable pin = ONE fetched world; the dev chains keep their
+  refs; `--refs latest,pre-10549` then drops the fetched world — the
+  point of selection); (b) lib universe gains `(Installed, [Dev])` =
+  the ref×2 rows (the staged probe rows + the pre-10549 xfail move to
+  the Installed world); (c) the `consumer_lib` policy +
+  `--installed` flag RETIRE once (b) lands (or become a provision-
+  subset filter — the `Subset` machinery exists). Also: the
+  multi-provider axis (fetch/build against several libs) — covered
+  later per the user; the fetched row per PM-count is its seed.
 - [ ] **The staged-parity principle** (2026-08-18, user — from the
   experiment's follow-up question "how may a common project have these
   different binaries"): the install is a COPY-TRANSFORM step, not a

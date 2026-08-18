@@ -291,6 +291,7 @@ let provision_choice (pr : Canary_project_run.project_run)
            then "F"
            else fetched_note pr a id
        | Canary_artifact.Built -> "B" ^ ch
+       | Canary_artifact.Installed -> "I" ^ ch
        | Canary_artifact.Vendored -> "V" ^ ch
        | Canary_artifact.Absent -> "")
 
@@ -328,9 +329,10 @@ let actions_of (pr : Canary_project_run.project_run)
 
 let prov_rank = function
   | Canary_artifact.Built -> 0
-  | Canary_artifact.Vendored -> 1
-  | Canary_artifact.Fetched -> 2
-  | Canary_artifact.Absent -> 3
+  | Canary_artifact.Installed -> 1
+  | Canary_artifact.Vendored -> 2
+  | Canary_artifact.Fetched -> 3
+  | Canary_artifact.Absent -> 4
 
 (** One artifact's placement as a sort key: provision strength, then
     the pinned version id. *)
@@ -372,6 +374,27 @@ let ref_rank_of (pr : Canary_project_run.project_run) : string -> int =
     | Some (i, _) -> i
     | None -> List.length pins
 
+(** The C LIB's row-key: the channel first, so each version's
+    built/installed pair sits together (per ref: build row, then
+    install row — the "repo × 2" shape), then the provision rank, then
+    the version id. The Fetched world sorts LAST (after every built
+    family) — the "repo × 2 + 1 fetched" shape. *)
+let lib_key (a : Canary_artifact.assignment) : int * int * string =
+  match Canary_enumerate.placement_of a Canary_artifact.a_lib with
+  | None -> (9, 9, "")
+  | Some (pl : Canary_artifact.placement) -> (
+      match pl.Canary_artifact.provision with
+      | Canary_artifact.Fetched -> (2, 0, "")
+      | _ ->
+          let chan =
+            match pl.Canary_artifact.version.Canary_basic.channel with
+            | Canary_basic.Stable -> 0
+            | Canary_basic.Dev -> 1
+          in
+          ( chan,
+            prov_rank pl.Canary_artifact.provision,
+            pl.Canary_artifact.version.Canary_basic.id ))
+
 (** The full row sort key: (source ref, c lib, OCaml binding, Python
     binding). *)
 let row_key (pr : Canary_project_run.project_run)
@@ -380,7 +403,7 @@ let row_key (pr : Canary_project_run.project_run)
     (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.id
   in
   ( ref_rank_of pr src_id,
-    placement_key a Canary_artifact.a_lib,
+    lib_key a,
     binding_key a Canary_lang.OCaml,
     binding_key a Canary_lang.Python )
 

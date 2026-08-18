@@ -226,29 +226,29 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
   let open Canary_action_templates in
   let ocaml = sqlite_ocaml_config.ocaml in
   let _, _, amalg_url = sqlite_amalg chan in
-  [ { ar_action = Canary_basic.Fetch Canary_basic.Lib;
+  [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
       ar_template = Fetch_lib { linux_pkg = "libsqlite3-dev"; macos_pkg = "sqlite3" } };
-    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml);
+    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml); ar_needs = None;
       ar_template = Fetch_binding_opam { pkg = "sqlite3" } };
-    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python);
+    { ar_action = Canary_basic.Fetch (Canary_basic.Binding Canary_lang.Python); ar_needs = None;
       ar_template = Pip_install { pkg = "stdlib" } };
-    { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml;
+    { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
       ar_template = Ocaml_probe { binding_lib = ocaml.binding_lib_name;
                 example = ocaml.example_file;
                 target = ocaml.example_target } };
-    { ar_action = Canary_basic.Probe_binding Canary_lang.Python;
+    { ar_action = Canary_basic.Probe_binding Canary_lang.Python; ar_needs = None;
       ar_template = Python_probe
                 { snippet =
                     "import sqlite3; print('sqlite_version=' + \
                      sqlite3.sqlite_version); \
                      sqlite3.connect(':memory:').execute('SELECT \
                      1').fetchone(); print('sqlite3 ok')" } };
-    { ar_action = Canary_basic.Fetch Canary_basic.Source;
+    { ar_action = Canary_basic.Fetch Canary_basic.Source; ar_needs = None;
       ar_template = Curl_unzip { url = amalg_url; dest = workspace ^ "/src" } };
     (* Self-contained Build: the amalgamation is fetched inside build_lib
        (the Fetch Source row above is filtered — a_source not in ps_universe).
        Fold the fetch guard into the build command. *)
-    { ar_action = Canary_basic.Build_lib;
+    { ar_action = Canary_basic.Build_lib; ar_needs = None;
       ar_template = Raw (fun ~output_dir ~variant_key ->
           let _, numeric, _ = sqlite_amalg chan in
           let amalg_dir = "sqlite-amalgamation-" ^ numeric in
@@ -267,14 +267,33 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
                ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ())
             libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
-    { ar_action = Canary_basic.Probe_lib;
+    { ar_action = Canary_basic.Probe_lib; ar_needs = None;
       ar_template = Native_lib_probe
                 { location = Build_tree_lib { lib = workspace ^ "/lib/libsqlite3.so" };
+                  prefix = "sqlite3_" } };
+    (* the INSTALLED-consumer face (2026-08-18, the provider-exclusive-
+       rows model): the staging copies the built lib + its .so.0 symlink
+       into the install prefix, and the staged probe reads THAT lib —
+       the consumer's exclusive world. Both rows gate [Some Installed]:
+       the Built world keeps only the build-tree probe, the Installed
+       world only the staged one. (sqlite has no CMake install — the
+       staging is a plain copy-out of the amalgamation build.) *)
+    { ar_action = Canary_basic.Install_lib; ar_needs = Some Canary_store.Installed;
+      ar_template = Raw (fun ~output_dir ~variant_key ->
+          Printf.sprintf
+            "mkdir -p %s/install/lib && \
+             cp %s/lib/libsqlite3.so %s/install/lib/ && \
+             ln -sfn libsqlite3.so %s/install/lib/libsqlite3.so.0"
+            workspace workspace workspace workspace
+          |> Canary_build_cmd.with_marker ~marker:"install.ok" ~output_dir ~variant_key) };
+    { ar_action = Canary_basic.Probe_lib; ar_needs = Some Canary_store.Installed;
+      ar_template = Native_lib_probe
+                { location = Staged_lib { lib = workspace ^ "/install/lib/libsqlite3.so" };
                   prefix = "sqlite3_" } };
     (* PM probe with pkg-config-less fallback (dpkg -L + ldconfig).
        sqlite3 has no .pc file; the fallback chain resolves through the
        apt dev package list and the dynamic linker cache. *)
-    { ar_action = Canary_basic.Probe_lib;
+    { ar_action = Canary_basic.Probe_lib; ar_needs = None;
       ar_template = Native_lib_probe
                 { location =
                     Pm_lib
@@ -317,17 +336,29 @@ let base_spec : Canary_step_builder.runner_spec =
 
 let realize (a : Canary_artifact.assignment) ~(workspace : string) :
     Canary_step_builder.runner_spec =
-  let chan = match Canary_enumerate.provision_of a Canary_artifact.a_lib with
-    | Canary_artifact.Built -> Canary_enumerate.channel_of a Canary_artifact.a_lib
+  let lib_prov = Canary_enumerate.provision_of a Canary_artifact.a_lib in
+  let chan =
+    match lib_prov with
+    | Canary_artifact.Built | Canary_artifact.Installed ->
+        Canary_enumerate.channel_of a Canary_artifact.a_lib
     | _ -> Canary_basic.Stable
   in
   let spec = Canary_action_templates.realize (sqlite_table_rows ~workspace chan) a in
   let dotted, _, _ = sqlite_amalg chan in
   let version_line = "sqlite_version=" ^ dotted in
   let ocaml = sqlite_ocaml_config.ocaml in
+  (* the consumer's lib: the Installed world probes the STAGED lib
+     (2026-08-18, the provider-exclusive-rows model), the Built world
+     the build tree, the Fetched world the system default (the env
+     points at the build tree as today — harmless, nothing staged
+     there is read) *)
+  let libdir =
+    match lib_prov with
+    | Canary_artifact.Installed -> workspace ^ "/install/lib"
+    | _ -> workspace ^ "/lib"
+  in
   let probe_env =
-    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH"
-        (workspace ^ "/lib") ]
+    [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH" libdir ]
   in
   { spec with
     probe_binding =
@@ -371,7 +402,12 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
       ~provider:(Canary_store_config.Repo sqlite_source_stable) ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
-                  (Built, Canary_basic.[ Stable; Dev ]) ]
+                  (Built, Canary_basic.[ Stable; Dev ]);
+                  (* the installed-consumer worlds (2026-08-18, the
+                     provider-exclusive-rows model): the same version
+                     axis as Built — each built version gets its staged
+                     consumer face as a SEPARATE world *)
+                  (Installed, Canary_basic.[ Stable; Dev ]) ]
       ~provider:(Canary_store_config.Sys_pkg prebuilt.system_package) ();
     artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
       ~runtime:Canary_store.Independent

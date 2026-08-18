@@ -77,24 +77,32 @@ type location =
                                   installed / packed / fetched).
    Deferred until a consumer needs provenance/blame tracking — not
    enumeration-related, so no type yet. *)
-type artifact_status = Built | Installed | Packed | Fetched
+(* [Installed_state] (2026-08-18): renamed from [Installed] so the
+   dormant lifecycle constructor yields the name to the provision
+   below — the ACTIVE axis (zero consumers of the status type). *)
+type artifact_status = Built | Installed_state | Packed | Fetched
 
 (** Provenance of an artifact — the *provision* coordinate (ssot §4.2):
     which store provides it in a scenario. [Absent] (not provided) ·
-    [Fetched] (from a PM) · [Built] (from source) · [Vendored] (a supplied
-    copy at a path, local *or* remote — not built here, not PM-resolved).
+    [Fetched] (from a PM) · [Built] (from source) · [Installed] (built,
+    then staged into the install prefix — the consumer-facing face of a
+    Built artifact; 2026-08-18, the provider-exclusive-rows model) ·
+    [Vendored] (a supplied copy at a path, local *or* remote — not built
+    here, not PM-resolved).
 
     Distinct axis from [artifact_status] above: provision is the *choice of
     source*; artifact_status is the *lifecycle state* an artifact reaches
-    (Built → Installed → Packed → Fetched). The shared [Built]/[Fetched]
-    names are intentional — a [Built] provision lands in the Built state, a
-    [Fetched] provision in the Fetched state. *)
-type provision = Absent | Fetched | Built | Vendored [@@deriving show, eq]
+    (Built → Installed_state → Packed → Fetched). The shared
+    [Built]/[Fetched] names are intentional — a [Built] provision lands in
+    the Built state, a [Fetched] provision in the Fetched state. *)
+type provision = Absent | Fetched | Built | Installed | Vendored
+[@@deriving show, eq]
 
 let string_of_provision = function
   | Absent -> "absent"
   | Fetched -> "fetched"
   | Built -> "built"
+  | Installed -> "installed"
   | Vendored -> "vendored"
 
 let string_of_pm = function

@@ -122,6 +122,14 @@ let providing_action_of ~(provision : Canary_store.provision)
           | Canary_basic.Headers -> Some Canary_basic.Build_headers
           | Canary_basic.Source | Canary_basic.Binding_source _
           | Canary_basic.App -> None)
+      | Canary_store.Installed -> (
+          (* the maker step of an Installed artifact (2026-08-18, the
+             provider-exclusive-rows model) *)
+          match k with
+          | Canary_basic.Lib -> Some Canary_basic.Install_lib
+          | Canary_basic.Source | Canary_basic.Headers
+          | Canary_basic.Binding _ | Canary_basic.Binding_source _
+          | Canary_basic.App -> None)
       | Canary_store.Absent | Canary_store.Vendored -> None)
 
 (** [dep_mode_of_provider p] returns the runtime-edge mode implied by the
