@@ -78,6 +78,43 @@ The general lesson for the staged-parity item below: **isolation is a
 checking property, not just hygiene** — a shared staging area makes one
 world's artifacts answer another world's questions.
 
+### Found — the arbipher fork cannot serve a staged consumer, and
+### `assert_staged = None` let the install claim success anyway (2026-08-19)
+
+The fork's staged world FAILS at `probe_binding_ocaml` while its Built
+twin passes. Not a migration bug — a true finding, and the first one the
+Installed axis produced on its own:
+
+- Evidence: `src/api/ml/CMakeLists.txt` has **0** `install(` rules in
+  `contrib/z3-all/z3` (the fork) against **3** in the official `latest`
+  checkout. The fork's tree simply predates/lacks PR #10549's OCaml
+  install rules — the same defect `pre-10549` was constructed to hold.
+- The staged prefix confirms it: `install/lib` holds `libz3.so{,.4.15,
+  .4.15.5.0}`, `cmake/`, `pkgconfig/` — and no `lib/ocaml/z3` at all.
+- **The sharper half**: `install_lib` PASSED. Its completeness check is
+  `assert_staged = (if official then Some [...] else None)`, so a
+  non-official repo asserts NOTHING and the install reports success
+  while staging an unusable package set. The defect surfaced two steps
+  later, on the consumer, as an undeclared failure. That is a concrete
+  argument for the staged-parity item's *completeness* bullet: derive
+  `assert_staged` from the DECLARED consumer-facing surface instead of a
+  hand list gated on `official` — then the install fails where the
+  defect is, for every repo, and the consumer probe stops being the
+  detector of last resort.
+
+**Open question (needs a decision — the modeling is a fork in the road):**
+the xfail for the same defect is keyed on `src_id = "pre-10549"` and the
+install assert on `official` — two different proxies for one fact
+("does this ref's install stage the OCaml package"). Options: (a) put
+that fact on `source_repo` as a declared capability and key BOTH sides on
+it; (b) don't enumerate a staged world for refs that can't serve one
+(needs per-ref universe overrides — the universe is per-artifact today);
+(c) leave it a live finding and fix the fork upstream (it is our own
+fork — cherry-picking the install rules makes the world green and the
+finding actionable rather than modeled away). Until this is decided the
+fork's staged world stays RED in `action z3` (the default full run) —
+deliberately, since silencing it would be choosing (a) by default.
+
 ### Landed — the installed consumer is an enumerated world (2026-08-19)
 
 The 2026-08-18 `--installed` realization policy is retired; the staged
