@@ -427,6 +427,112 @@ let providing_arrow_pin : Canary_project_test.pure_test =
                  | _ -> false)
              | None -> true)) }
 
+(* THE PACKAGE-MANAGER GATE (2026-08-19, user: "add a datatype for it and
+   mark it for the current opam binding part in the project spec"). Every
+   declared binding says how its PACKAGE declares its dependency on the C
+   lib, because that — and only that — decides what it takes to force a
+   combination opam would not pick. Pinned:
+   (a) every declared binding_decl of an EXTERNAL project carries a gate
+       (tiny is exempt: in-tree, no package manager between the sides);
+   (b) the measured groups, so a spec edit that quietly reclassifies a
+       project fails here: the conf-* projects are Free (no constraint),
+       ctypes-foreign is Bounded (conf-libffi >= 2.0.0), the llvm binding
+       is Fixed (conf-llvm-shared = 19 — the only one needing a wrapper),
+       z3's opam package builds its own lib, and both wheels bundle theirs;
+   (c) the freedom derivation agrees with the group — the answer to "how
+       hard is this project's 2×2". *)
+let pm_gate_pin : Canary_project_test.pure_test =
+  { name = "spec.pm_dep_gate_groups";
+    check =
+      (fun () ->
+        let module BD = Canary_binding_decl in
+        let gate_of pr lang mech =
+          match
+            Canary_project_run.binding_decl_of pr
+              (Canary_artifact.a_binding lang mech)
+          with
+          | Some d -> d.BD.pm_gate
+          | None -> None
+        in
+        let distro = Canary_basic.detect_distro () in
+        let z3 = Canary_project_z3.z3_run distro in
+        let llvm = Canary_project_llvm.llvm_run distro in
+        let oc = Canary_lang.OCaml and py = Canary_lang.Python in
+        (* (b) the measured groups *)
+        let groups_ok =
+          Poly.equal
+            (gate_of Canary_project_sqlite.sqlite_run oc Canary_mechanism.Cstubs)
+            (Some (BD.Free_with_conf "conf-sqlite3"))
+          && Poly.equal
+               (gate_of Canary_project_zarith.zarith_run oc
+                  Canary_mechanism.Cstubs)
+               (Some (BD.Free_with_conf "conf-gmp"))
+          && Poly.equal
+               (gate_of Canary_project_ssl.ssl_run oc Canary_mechanism.Cstubs)
+               (Some (BD.Free_with_conf "conf-libssl"))
+          (* cairo/libffi carry no binding_decl yet (the opam-binding
+             template does not build one — the recorded "binding
+             declarations 0/1" warning), so their gate lives on the
+             template record, which is the opam-binding part itself *)
+          && Poly.equal Canary_project_cairo.decl.Canary_opam_binding.pm_gate
+               (BD.Free_with_conf "conf-cairo")
+          && Poly.equal Canary_project_libffi.decl.Canary_opam_binding.pm_gate
+               (BD.Bounded_with_conf
+                  { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None })
+          && Poly.equal Canary_project_zarith.decl.Canary_opam_binding.pm_gate
+               (BD.Free_with_conf "conf-gmp")
+          && Poly.equal
+               (gate_of llvm oc Canary_mechanism.Cstubs)
+               (Some
+                  (BD.Fixed_with_conf
+                     { conf = "conf-llvm-shared"; version = "19" }))
+          && Poly.equal
+               (gate_of z3 oc Canary_mechanism.Cstubs)
+               (Some BD.Package_builds_lib)
+          && (match gate_of z3 py Canary_mechanism.Ctypes with
+             | Some (BD.Bundled _) -> true
+             | _ -> false)
+          && (match gate_of llvm py Canary_mechanism.Ctypes with
+             | Some (BD.Bundled _) -> true
+             | _ -> false)
+        in
+        (* (c) the freedom derivation — the "how hard is the 2×2" answer *)
+        let freedom_ok =
+          Poly.equal
+            (BD.combination_freedom_of (BD.Free_with_conf "conf-gmp"))
+            BD.Any_version
+          && Poly.equal
+               (BD.combination_freedom_of
+                  (BD.Fixed_with_conf
+                     { conf = "conf-llvm-shared"; version = "19" }))
+               (BD.Wrapper_needed "conf-llvm-shared")
+          && (match
+                BD.combination_freedom_of
+                  (BD.Bounded_with_conf
+                     { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None })
+              with
+             | BD.Within_bound s -> String.is_substring s ~substring:"2.0.0"
+             | _ -> false)
+          && Poly.equal
+               (BD.combination_freedom_of BD.Package_builds_lib)
+               BD.No_pairing
+        in
+        (* (a) no EXTERNAL project's declared binding is left ungated *)
+        let all_gated =
+          List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
+              if
+                String.is_prefix name ~prefix:"tiny"
+                (* in-tree witness: no package manager between the sides *)
+              then true
+              else
+                List.for_all pr.Canary_project_run.pr_binding_decls
+                  ~f:(fun d ->
+                    (* CPython's stdlib extension has no PM gate either *)
+                    Option.is_some d.BD.pm_gate
+                    || Poly.equal d.BD.mechanism Canary_mechanism.Cext))
+        in
+        groups_ok && freedom_ok && all_gated) }
+
 (* THE MISMATCH MATRIX on z3 (2026-08-19, user: "for each artifact, either
    c lib or any binding, we need two choices, one stable and one latest").
    With the binding's channel freed from the lib's, each dev ref carries
@@ -939,7 +1045,13 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
         && want ~errs:[]
              ~warns:[ "binding_dev_source"; "dev_wrapper_package" ]
              ~na:[ "raw_build_overrides" ] "sqlite"
-        && want ~errs:[] ~warns:pat_warns ~na:[ "raw_build_overrides" ] "ssl"
+        (* ssl's binding_decls warn CLOSED 2026-08-19: declaring the decl
+           gave its package-manager gate a home (spec.pm_dep_gate_groups),
+           and closing the warn was the side effect *)
+        && want ~errs:[]
+             ~warns:
+               [ "binding_dev_source"; "dev_wrapper_package"; "python_binding" ]
+             ~na:[ "raw_build_overrides" ] "ssl"
         (* C2.5 (2026-08-17): zarith's binding Built axis LANDED with the
            2×2 — binding_dev_source went Ok *)
         (* active plan 2 (2026-08-17): the wrapper declaration closed the
@@ -2212,6 +2324,7 @@ let tests : Canary_project_test.pure_test list =
       (* z3's binding no longer follows the lib (2026-08-19) — the
          mismatch-matrix pin below asserts the opposite claim for it;
          llvm still follows, so the lockstep pin still applies there *)
+      pm_gate_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
       sqlite_runtime_edges_pin; providing_arrow_pin;

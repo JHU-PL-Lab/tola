@@ -116,11 +116,23 @@ let llvm_binding_decls : Canary_binding_decl.binding_decl list =
         Stub_archive
           { sources = [ "llvm_ocaml.c" ];
             archive = "libllvm.a" };
-      surface_path = "llvm/bindings/ocaml/llvm/llvm.mli" };
+      surface_path = "llvm/bindings/ocaml/llvm/llvm.mli";
+      (* measured: opam `llvm.19-shared` depends on
+         `conf-llvm-shared {build & = "19"}` — an EXACT pin, the hard case.
+         opam refuses any other LLVM generation, so pairing this binding
+         with llvm-18/23-dev needs a wrapper that drops the conf dep. Note
+         what this means for llvm's 2×2: the prebuilt lib pair is free
+         (apt ships llvm-18/19/23-dev) but the released binding cannot be
+         moved across it without the wrapper. *)
+      pm_gate =
+        Some (Fixed_with_conf { conf = "conf-llvm-shared"; version = "19" }) };
     { mechanism = Canary_mechanism.Ctypes;
       c_api; native;
+      (* llvmlite ships its own LLVM build inside the wheel *)
       coupling = Dlopen { name = "libllvmlite.so" };
-      surface_path = "llvmlite/__init__.py" } ]
+      surface_path = "llvmlite/__init__.py";
+      (* the llvmlite wheel ships its own libLLVM — no pairing to force *)
+      pm_gate = Some (Bundled "llvmlite wheel's bundled libLLVM") } ]
 
 let llvm_source_dev : source_repo =
   {

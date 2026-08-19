@@ -128,11 +128,19 @@ let z3_binding_decls : Canary_binding_decl.binding_decl list =
         Stub_archive
           { sources = [ "src/api/ml/z3native_stubs.c.pre" ];
             archive = "libz3ml.a" };
-      surface_path = "src/api/ml/z3.mli" };
+      surface_path = "src/api/ml/z3.mli";
+      (* measured: the opam `z3` package builds libz3 from its own source
+         (its depends carry conf-c++/conf-python-3 {build}, no conf for the
+         lib) — so on the RELEASED side there is no lib pairing to force.
+         canary's dev chain builds both from one checkout, which is the
+         same story from the other direction. *)
+      pm_gate = Some Package_builds_lib };
     { mechanism = Canary_mechanism.Ctypes;
       c_api; native;
       coupling = Dlopen { name = "libz3.so" };
-      surface_path = "src/api/python/z3/__init__.py" } ]
+      surface_path = "src/api/python/z3/__init__.py";
+      (* the z3-solver wheel ships its own libz3 and dlopens it *)
+      pm_gate = Some (Bundled "z3-solver wheel's bundled libz3") } ]
 
 (* ── Version specs ──
    Version is the primary key. Each version identifies both the source

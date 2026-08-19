@@ -196,6 +196,13 @@ let decl : Canary_opam_binding.t = {
      presented a binding's repo as the project's lib source. *)
   source_of_binding = Some Canary_lang.OCaml;
   binding_mechanism = Canary_mechanism.Cstubs;
+  (* measured: `opam show zarith --field=depends` carries `conf-gmp` with
+     NO version constraint — the conf proves GMP is present, it does not
+     pin a version. So opam already allows any system GMP: zarith's lib
+     axis is limited by AVAILABILITY (apt ships one), not by the gate, and
+     `zarith-no-conf` is not what buys that freedom (it publishes a
+     binding built from OUR worktree — the binding axis). *)
+  pm_gate = Canary_binding_decl.Free_with_conf "conf-gmp";
   wrapper = Some zarith_wrapper_decl;
 }
 
@@ -219,7 +226,16 @@ let zarith_binding_decls : Canary_binding_decl.binding_decl list =
         Stub_archive
           { sources = [ "caml_z.c" ];
             archive = "libzarith.a" };
-      surface_path = "zarith.mli" } ]
+      surface_path = "zarith.mli";
+      (* measured: opam `zarith` depends on `conf-gmp` with NO version
+         constraint, so any system GMP the conf check accepts is already
+         installable — the lib axis is free of opam here, and the
+         `zarith-no-conf` wrapper is NOT what buys that freedom (it
+         publishes a binding built from OUR worktree; see the wrapper
+         decl). What limits zarith's lib axis is availability: apt ships
+         exactly one GMP. *)
+      (* one source: the gate declared on [decl] above *)
+      pm_gate = Some decl.Canary_opam_binding.pm_gate } ]
 
 (* Registry entry: Pattern A's typed artifact table + the template's
    runner_spec (C1: TWO scenarios — source@release-1.14 and source@master,

@@ -113,7 +113,11 @@ let sqlite_binding_decls : Canary_binding_decl.binding_decl list =
         Stub_archive
           { sources = [ "sqlite3_stubs.c" ];      (* sqlite3-ocaml upstream *)
             archive = "libsqlite3_stubs.a" };
-      surface_path = "sqlite3.mli" };
+      surface_path = "sqlite3.mli";
+      (* measured: opam sqlite3 depends on `conf-sqlite3 {build}` with no
+         version constraint — any libsqlite3 the conf check accepts is
+         already installable, so the lib axis is free of opam *)
+      pm_gate = Some (Free_with_conf "conf-sqlite3") };
     { mechanism = Canary_mechanism.Cext;
       c_api = { functions = sqlite_native_modern_watchlist; enums = [] };
       native;
@@ -121,7 +125,10 @@ let sqlite_binding_decls : Canary_binding_decl.binding_decl list =
         Compiled_ext
           { source = "_sqlite/_sqlite3.c";        (* CPython Modules/_sqlite *)
             product = "_sqlite3*.so" };
-      surface_path = "sqlite3/__init__.py" } ]
+      surface_path = "sqlite3/__init__.py";
+      (* CPython's own stdlib extension: no package manager stands between
+         the binding and libsqlite3 — the interpreter build chose it *)
+      pm_gate = None } ]
 
 (* sqlite's source is a remote git repo with two versions — a general mimic of
    z3 (dev / stable), but declared cleanly on the project_run spec. The STABLE

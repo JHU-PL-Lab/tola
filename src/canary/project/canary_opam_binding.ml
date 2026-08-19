@@ -77,6 +77,13 @@ type t = {
      genuinely Dynamic_ffi ones (libffi's ctypes-foreign resolves and
      calls C at runtime). *)
   binding_mechanism : Canary_mechanism.mechanism;
+  (* THE PACKAGE-MANAGER GATE (2026-08-19, user): how this binding's opam
+     package declares its dependency on the C lib, measured from
+     `opam show <pkg> --field=depends`. It is what decides how hard the
+     project's 2×2 is — see [Canary_binding_decl.combination_freedom_of]:
+     a conf-* with no constraint is free, a bound is free inside it, an
+     exact pin needs a wrapper that drops the conf dep. *)
+  pm_gate : Canary_binding_decl.pm_dep_gate;
   (* The wrapper package (2026-08-17, active plan 2): when [Some], the
      bind_built scenarios gain a PUBLISH step installing this
      conf-free wrapper over the scenario's worktree (the pattern's

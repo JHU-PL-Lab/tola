@@ -88,6 +88,9 @@ let decl : Canary_opam_binding.t = {
   (* the C LIB's own repo (cairo/cairo.git) — the default *)
   source_of_binding = None;
   binding_mechanism = Canary_mechanism.Cstubs;
+  (* measured: opam `cairo2` depends on `conf-cairo`, no version
+     constraint — same free shape as zarith *)
+  pm_gate = Canary_binding_decl.Free_with_conf "conf-cairo";
   wrapper = None;
 }
 

@@ -183,6 +183,32 @@ let pm () = Canary_store.detect_pm ()
 let ssl_binding_art =
   Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
 
+(* The binding declaration (2026-08-19) — ssl was one of three projects
+   spec-check reported as "binding declarations 0/1"; declaring it also
+   gives its PACKAGE-MANAGER GATE a home.
+
+   The gate, measured: `opam show ssl --field=depends` carries
+   `conf-libssl` with NO version constraint. That contradicts the guess
+   that ssl pins a version — if it has a requirement at all it lives in
+   its dune-configurator discover (a compile test), which no opam
+   metadata shows. So the declared gate is Free_with_conf; a compile-gate
+   surprise would surface as a run finding, which is the honest place for
+   it. *)
+let ssl_binding_decls : Canary_binding_decl.binding_decl list =
+  let open Canary_binding_decl in
+  [ { mechanism = Canary_mechanism.Cstubs;
+      c_api = { functions = ssl_native_watchlist; enums = [] };
+      native =
+        { prefix = "SSL_";
+          soname = "libssl.so.3";
+          headers = { dir = "include/openssl"; files = [ "ssl.h" ] } };
+      coupling =
+        Stub_archive
+          { sources = [ "ssl_stubs.c" ];
+            archive = "libssl_stubs.a" };
+      surface_path = "ssl.mli";
+      pm_gate = Some (Free_with_conf "conf-libssl") } ]
+
 let ssl_artifacts : Canary_project_spec.artifact_row list =
   [ (* The source row (2026-08-13, spec-check fulfillment): Fetched@Stable
        (version-ambient identity — the scenario set stays the two pinned
@@ -348,7 +374,7 @@ let ssl_run : Canary_project_run.project_run =
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];
     pr_api_source = None;
-    pr_binding_decls = [];
+    pr_binding_decls = ssl_binding_decls;
     pr_raw_build_overrides = [];
     pr_tier = Canary_project_run.Light }
 

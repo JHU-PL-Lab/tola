@@ -2134,18 +2134,23 @@ let tiny_binding_decls : Canary_binding_decl.binding_decl list =
         Stub_archive
           { sources = [ "ocaml/tiny_stubs.c" ];
             archive = "ocaml/libtiny_stubs.a" };
-      surface_path = "ocaml/tiny.mli" };
+      surface_path = "ocaml/tiny.mli";
+      (* tiny is in-tree: no package manager stands between the
+         binding and the lib (2026-08-19) *)
+      pm_gate = None };
     { mechanism = Canary_mechanism.Cext;
       c_api = tiny_c_api; native = tiny_native;
       coupling =
         Compiled_ext
           { source = "python_cext/tiny_cext/_native.c";
             product = "_native.cpython-*.so" };
-      surface_path = "python_cext/tiny_cext/__init__.py" };
+      surface_path = "python_cext/tiny_cext/__init__.py";
+      pm_gate = None };
     { mechanism = Canary_mechanism.Ctypes;
       c_api = tiny_c_api; native = tiny_native;
       coupling = Dlopen { name = "libtiny.so.1" };
-      surface_path = "python_ctypes/tiny_ctypes/__init__.py" };
+      surface_path = "python_ctypes/tiny_ctypes/__init__.py";
+      pm_gate = None };
   ]
 
 let make_base_runner_spec

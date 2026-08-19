@@ -84,6 +84,14 @@ let decl : Canary_opam_binding.t =
        genuinely Dynamic_ffi, so [Ctypes] (2026-08-13; was the hardcoded
        [Cstubs] of [Canary_project_run.simple], the recorded M2 issue). *)
     binding_mechanism = Canary_mechanism.Ctypes;
+    (* measured: opam `ctypes-foreign` depends on
+       `conf-libffi {>= "2.0.0"}` — a lower BOUND, and note what it bounds:
+       the conf package's own version (opam packaging), not libffi's. Any
+       combination inside the bound is free, which per the user's
+       grouping makes this the second-easiest case after Free_with_conf. *)
+    pm_gate =
+      Canary_binding_decl.Bounded_with_conf
+        { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None };
     wrapper = None }
 
 let runner_spec = Canary_opam_binding.runner_spec decl
