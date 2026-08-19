@@ -379,7 +379,17 @@ absent). Reference world: Cstubs × OCaml × Built.
 |---|---|---|---|
 | `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27) | Postcondition | ✓ |
 | `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source) | Postcondition | ✓ |
-| — | source integrity (the tree matches its declared provenance) | — | · designed |
+| `Fetch Source` | the tree contains what its repo row declares (the repo-contents invariant, `repo_model.md`) | Postcondition | ✓ |
+
+**A source tree has no standalone property to check** (user,
+2026-08-18) — and this is a PRINCIPLED absence, not a gap in the fill
+list. Everything one might want to assert about source is really an
+assertion about one of its derived artifacts: its API is the HEADERS'
+surface, its behaviour is the LIB's. What is left is existence and
+provenance — the tree is here, at the ref it claims, containing what it
+declared — which is exactly the postcondition family above. Source is
+therefore `·` by construction, and the fill list should never chase
+it.
 
 **Headers**
 
@@ -387,6 +397,12 @@ absent). Reference world: Cstubs × OCaml × Built.
 |---|---|---|---|
 | `Build_headers` / `Fetch Headers` | the declared header set is present | Postcondition | ✓ |
 | as provider @ `Build_binding` | c6 — the C types at the header/stub boundary agree | Inspection | ~ |
+| as **carried oracle** @ `Probe_binding` | the user-facing surface's types agree with the header's (§8c) | Inspection | · designed |
+| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (§8c) | Inspection | · designed |
+
+Headers are the only artifact whose value is **syntactic form**: they
+carry the API's TYPES, which no compiled artifact does. §8c makes that
+the basis of a new cell class.
 
 **Lib** — the richest column, and the one we worked through
 
@@ -462,6 +478,67 @@ comparison as the status-level watchlist verdict** (`watchlist N/N` /
 `⚠ MISSING`). Two views of one belief — one recorded post-hoc in the
 status table, one predicted as a cell. The registry is where they
 reconcile.
+
+## 8c. The header as a carried type oracle (designed, 2026-08-18)
+
+**The gap in traditional practice.** A header is consulted exactly
+once — when the binding is COMPILED. After that it is dropped: using a
+binding, or wrapping it indirectly, involves no header at all. That is
+fine for building, but it throws away the only artifact that carries
+TYPES. A compiled component (`.so`, `.cmxa`, a cext `.so`) is
+type-free: `nm` yields names and nothing else. So every stage after
+the compile is checked namewise even though the type information
+existed a moment earlier.
+
+**The idea** (user, 2026-08-18): let LATER actions refer back to the
+header, so a compiled component can be type-checked at stages where it
+alone would be untyped — *retrofitting type information onto a compiled
+component*. The header stops being a build input and becomes a
+**carried oracle**: declared once, inspected once (`Scan_sources` →
+`inspect_typed_header.json`), then available as an input to any
+downstream cell.
+
+**Why canary can do this cheaply.** The mechanism already exists — the
+typed-header JSON is emitted early (deliberately, so c6 can cite it
+even when a later build fails) and it persists in the run's output
+tree. What is missing is not machinery but CELLS: contracts that read
+`Typed_header` at actions other than `Build_binding`.
+
+**The chain it enables.** Types can be followed hop by hop instead of
+only at the first hop:
+
+    header (Sf.1, typed)
+      → binding stub (Sf.3, typed)        ← c6 today, at build_binding
+      → user-facing surface (Sf.4, typed) ← the wrapper's own claim
+      → indirect wrapper / helper / app   ← nothing checks this today
+
+Each hop must preserve the API under the declared marshalling. The last
+hop is the interesting one: tiny already declares an indirect wiring
+(`a_app Via_helper` beside `a_app Direct`), so the "wrapper of a
+wrapper" case has a witness ready.
+
+**Cells this yields** (all `Inspection`, all reading `Typed_header`
+plus one consumer-side typed surface):
+
+| cell | falsifier |
+|---|---|
+| header × user surface @ `Probe_binding` | the user-facing signature contradicts the C signature it claims to wrap (arity, direction, ownership) |
+| header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape |
+| header × consumer usage @ app stages | the app calls the API in a way the header's types forbid |
+
+**The honest boundary.** This retrofits types onto the *consumer* side,
+not onto the compiled provider: an ELF `.so` genuinely has no type
+information (absent DWARF), so "the lib's actual ABI matches the
+header" stays unprovable by inspection — it remains a MEETING check
+(the compile/link either accepts the pairing or does not). The retrofit
+buys the consumer-side hops, which today have no type check at all.
+
+**Version skew caveat.** A header and a compiled lib that arrive by
+DIFFERENT provisions (headers from a source repo, lib from a PM) may
+not describe the same build. Then the oracle is a claim about the
+DECLARED version, and a disagreement is exactly the finding worth
+reporting — but the cell must state which artifact's version it
+assumed, or it will blame the wrong side (§10).
 
 ## 9. Coverage status and plan
 
