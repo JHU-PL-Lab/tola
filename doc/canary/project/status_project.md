@@ -740,6 +740,16 @@ directions):
   checkout exists. Pure waste; functional today.
 - [ ] **Docs-mirror cp noise** — skip `.git` in the mirror copy.
 - [ ] **Fetched provision for tiny** — the one provision tiny lacks.
+- [ ] **The matrix row's NAME** (2026-08-19, user — open, discussion
+  before change): "ref is not the only world." A row is an assignment,
+  but the matrix names it after one coordinate — and that coordinate
+  means different things per project (z3's ref is the lib's source,
+  zarith's is the BINDING's, sqlite has none and correctly prints
+  `(ambient)`), under-identifies when one ref spawns two worlds (z3 #6
+  build-tree vs #7 staged share a label), and breaks outright once a
+  project has both a lib source and an off-tree `Binding_source` — two
+  refs in one world. Analysis + options in
+  [`../design/matrix.md`](../design/matrix.md). Nothing changed yet.
 - [ ] **Location sub-axis** — probe locations as a first-class axis.
   **The forcing case arrived (2026-08-19)**: the matrix's single
   `probe_lib` column marks only the step tagged exactly `probe_lib`, so
