@@ -740,16 +740,23 @@ directions):
   checkout exists. Pure waste; functional today.
 - [ ] **Docs-mirror cp noise** — skip `.git` in the mirror copy.
 - [ ] **Fetched provision for tiny** — the one provision tiny lacks.
-- [ ] **The matrix row's NAME** (2026-08-19, user — open, discussion
-  before change): "ref is not the only world." A row is an assignment,
-  but the matrix names it after one coordinate — and that coordinate
-  means different things per project (z3's ref is the lib's source,
-  zarith's is the BINDING's, sqlite has none and correctly prints
-  `(ambient)`), under-identifies when one ref spawns two worlds (z3 #6
-  build-tree vs #7 staged share a label), and breaks outright once a
-  project has both a lib source and an off-tree `Binding_source` — two
-  refs in one world. Analysis + options in
-  [`../design/matrix.md`](../design/matrix.md). Nothing changed yet.
+- [x] **The matrix row's NAME** (2026-08-19, user — landed): "ref is not
+  the only world." The single `ref` column is replaced by a SETTING block
+  — one column per declared artifact kind, each cell its placement — so a
+  row names its world, z3's build-tree and staged twins differ visibly,
+  and a project with two sources gets two labelled source columns. Came
+  with the zarith data fix (its repos are the OCaml BINDING's source, not
+  the project's) and the per-step cell stage. Details in
+  [`../design/matrix.md`](../design/matrix.md); pins
+  `matrix.setting_block_identifies_world` +
+  `matrix.cell_stage_progression`.
+  **Still open from it**: sqlite cannot print 3.45.1/3.46.1 anywhere —
+  version ids reach the enumeration only through Fetched store pins while
+  the real versions sit in `sqlite_amalg`'s hardcoded per-channel table.
+  Declaring them (per-channel repos with real ids, the z3 `Repo_axes`
+  shape) would also let the zip URL derive from the version; it reorders
+  sqlite's rows, which is why it stayed on hold. `versioning.md` is the
+  general form (version ids on Built/Installed provisions).
 - [ ] **Location sub-axis** — probe locations as a first-class axis.
   **The forcing case arrived (2026-08-19)**: the matrix's single
   `probe_lib` column marks only the step tagged exactly `probe_lib`, so

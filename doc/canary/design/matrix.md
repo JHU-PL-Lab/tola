@@ -1,8 +1,11 @@
 # The result matrix — what a row is, and what names it
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
-> is not the only world … how do you explain #6?" This is the analysis,
-> not a decision — the column change is ON HOLD pending discussion.
+> is not the only world … how do you explain #6?" **Resolved the same
+> day** (§4 option 1, user-chosen): the row now leads with a SETTING
+> block — one column per artifact, carrying that artifact's placement —
+> and the single `ref` column is gone. §2's analysis is kept because it
+> is the reason the layout changed.
 > Renderer: [`canary_matrix.ml`](../../src/canary/main/canary_matrix.ml);
 > `canary result` writes `docs/canary/projects/matrix.html`.
 
@@ -77,7 +80,59 @@ a reader must open the tooltip (or read the scenario name) to learn which
 row is which. That is the concrete cost of naming a row after one
 coordinate.
 
-## 4. Options for the row's name (undecided)
+## 4. Options for the row's name — option 1 LANDED (2026-08-19)
+
+Chosen and implemented: **the setting block**. The leading columns are
+one per declared artifact KIND, each cell that artifact's placement in
+this world (source cells carry their own ref link); the action columns
+then hold verdict marks only, with the artifact's stage in the tooltip.
+
+```
+sqlite   | # | src | lib                | ocaml        | py          || build_lib | install_lib | probe_lib
+         | 2 |  F  | I:s                | opam sqlite3 | pip sqlite3 ||     ✓     |      ✓      |     ·
+         | 5 |  F  | apt sqlite3.3.45.1 | opam sqlite3 | pip sqlite3 ||     —     |      —      |     ✓
+
+z3       | #11 | F pre-10549 | B:d | B:d | pip z3-solver || … install_lib —     … probe_b ✓
+         | #12 | F pre-10549 | I:d | B:d | pip z3-solver || … install_lib xfail … probe_b xfail
+
+zarith   | #19 | apt libgmp-dev | B:d         | ocaml-src F master | …
+         | #20 | apt libgmp-dev | opam zarith | ocaml-src F 1.14   | …
+```
+
+Note what each fixes: z3's #11/#12 differ visibly (`B:d` vs `I:d`) where
+one `ref` column labelled them identically; zarith names its BINDING's
+source in a column that says so (§5 of the data fix below); sqlite's
+`(ambient)` src cell is honest and the lib cell carries the identity.
+
+Pinned: `matrix.setting_block_identifies_world` — one column per kind
+with no duplicates, a cell iff the project declares that kind, and no two
+rows of a project sharing their setting tuple (the property the `ref`
+column lacked).
+
+Rejected: keeping `ref` and adding `world` beside it (redundant where the
+ref IS the identity), and status quo.
+
+### The zarith data fix that came with it
+
+`Canary_opam_binding.t` gained `source_of_binding`: Pattern A projects
+say whether their declared repos are the C LIB's (cairo, libffi) or a
+BINDING's (zarith — `ocaml/Zarith.git` over an apt libgmp). zarith's
+repos now enumerate as `a_binding_source OCaml` and fetch through
+`Fetch (Binding_source ocaml)`, so §2's table entry "zarith's ref column
+names the binding's source with nothing saying so" no longer applies —
+the column is literally labelled `ocaml-src`.
+
+Three latent bugs surfaced with it, each caught by a check:
+`binding_couples` (the Built-binding↔source channel coupling) existed in
+TWO copies that disagreed once one learned about off-tree sources;
+`source_for_assignment` read `a_source` unconditionally and fell through
+to the stable head (every zarith scenario would have fetched the 1.14
+worktree while claiming master — caught by `repo_model.axes_pins`, which
+asserts the emitted command carries the scenario's ref); and
+`worktree_ensure_cmd` hardcoded the `source.ok` marker, so the first
+binding-source fetch ran fine and then failed its postcondition.
+
+## Options as they were considered (kept for the record)
 
 1. **A derived `world` column** — project the assignment onto the axes
    that VARY across that project's rows, and print those. z3:
