@@ -334,17 +334,19 @@ let enumerate_points ~(artifacts : artifact_id list)
 
 type version_mode = Lockstep | Independent
 
-(** The prebuilt-shadows-source heuristic as a POLICY item (2026-08-17,
-    active plan 3 — the user's design: the project SPEC stays clean; the
-    shadowing is an enumeration-config choice). [Shadow_prebuilt]: when a
-    Built placement and a prebuilt placement (Fetched/Vendored) would
-    materialize the SAME cell — same artifact, channel, and version id,
-    everything else identical — the prebuilt wins and the Built
-    assignment is dropped (dormant): the belief that a same-version
-    prebuilt, built with an unknown script, behaves like a self-built
-    one. [Materialize_source]: both survive — the SEPARATE AUDIT PASS,
-    run only when we have decided to BLAME the lib. *)
-type shadow_policy = Shadow_prebuilt | Materialize_source
+(* The prebuilt-shadows-source heuristic is UNCONDITIONAL (2026-08-17 as a
+   policy item; the policy dropped 2026-08-19, user: "I think we remove
+   this feature"). When a Built placement and a prebuilt placement
+   (Fetched/Vendored) would materialize the SAME cell — same artifact,
+   channel, and version id, everything else identical — the prebuilt wins
+   and the Built assignment is dropped: the belief that a same-version
+   prebuilt, built with an unknown script, behaves like a self-built one.
+
+   The [Materialize_source] variant (keep both — a separate AUDIT PASS,
+   run when we had decided to blame the lib) and its `--audit-lib` rung
+   are gone: nothing had used them, and a project that wants its
+   source-built lib visible should declare it as a distinct version
+   rather than ask a run flag to unhide it. *)
 
 (** Which source-repo REFS a config enumerates (2026-08-17, the z3
     regression-test case): [All_refs] keeps every declared repo; [Refs
@@ -372,7 +374,6 @@ type 'm config = {
   version : Canary_basic.channel level;
   version_mode : version_mode;
   mutation : (artifact_id * 'm) level;
-  shadow : shadow_policy;
   refs : source_ref_level;
 }
 
@@ -432,7 +433,7 @@ let tiny_slice ~(artifacts : artifact_id list)
     ~all_versions_of:(fun _ _ -> [ Canary_basic.good Canary_basic.Dev ])
     ~all_mutations:mutations
     { provision = Free; version = Free; mutation = Full; version_mode = Lockstep;
-      shadow = Shadow_prebuilt; refs = All_refs }
+      refs = All_refs }
 
 (** A general project's config: provision [Full] (walk the provision axis
     over the project's universe), mutation [Free] (positive only). Yields
@@ -449,7 +450,7 @@ let general_slice ~(artifacts : artifact_id list)
   run_config ~artifacts ~all_provisions_of:(fun _ -> provisions)
     ~all_versions_of:(fun _ _ -> versions) ~all_mutations:[]
     { provision = Full; version = Full; mutation = Free; version_mode = Lockstep;
-      shadow = Shadow_prebuilt; refs = All_refs }
+      refs = All_refs }
 
 (** The repo-REF resolution (2026-08-17, the z3 regression-test case):
     under [Refs ids], keep only the assignments whose SOURCE placement's
@@ -484,12 +485,10 @@ let ref_filter ~(refs : source_ref_level) (asgs : assignment list) :
     same cell, the prebuilt wins. Conservative: only exact-cell
     duplicates drop — a built binding over a prebuilt lib (the forward
     cell) is a designed scenario, not a shadow duplicate.
-    [Materialize_source] keeps both (the audit pass). *)
-let shadow_filter ~(shadow : shadow_policy) (asgs : assignment list) :
-    assignment list =
-  match shadow with
-  | Materialize_source -> asgs
-  | Shadow_prebuilt ->
+    Unconditional since 2026-08-19 (the [Materialize_source] escape and
+    its `--audit-lib` rung were removed). *)
+let shadow_filter (asgs : assignment list) : assignment list =
+  let () = () in
       let prebuilt (pl : placement) =
         match pl.provision with
         | Fetched | Vendored -> true
@@ -612,7 +611,7 @@ type 'm policy = {
     value restriction across projects.) *)
 let full_policy () : 'm policy =
   { config = { provision = Full; version = Full; version_mode = Lockstep; mutation = Free;
-               shadow = Shadow_prebuilt; refs = All_refs }; mutations = [] }
+               refs = All_refs }; mutations = [] }
 
 (** STAGE 2 — enumerate a declared [project_spec] under a [policy] into concrete
     assignments: resolve the config levels over the spec's per-artifact universes
@@ -658,7 +657,7 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
     else assignments
   in
   assignments
-  |> shadow_filter ~shadow:policy.config.shadow
+  |> shadow_filter
   |> ref_filter ~refs:policy.config.refs
 
 (** Read a slot's provision off a concrete action set (which action-graph
@@ -881,7 +880,7 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
     else assignments
   in
   assignments
-  |> shadow_filter ~shadow:cfg.shadow
+  |> shadow_filter
   |> ref_filter ~refs:cfg.refs
 
 (* ── pattern naming (2026-08-08) ──

@@ -284,13 +284,13 @@ let config_level_test : pure_test =
       let tiny =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Free; version = EN.Free; mutation = EN.Full; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       (* general config: provision Full, mutation Free → all positive *)
       let gen =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       (* mixed: provision Subset [Fetched] (all-Fetched only), mutation
          Subset [m1] (positive + exactly m1) *)
@@ -298,7 +298,7 @@ let config_level_test : pure_test =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> EN.[ Absent; Fetched; Built ])
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:muts
           { provision = EN.Subset [ EN.Fetched ]; version = EN.Free;
-            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+            mutation = EN.Subset [ List.hd_exn muts ]; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       (* the two canonical wrappers equal their configs (backward compat) *)
       let wrappers_agree =
@@ -328,7 +328,7 @@ let version_axis_test : pure_test =
       let mm =
         EN.run_config ~artifacts:mm_artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       let has_mismatch =
         List.exists mm ~f:(fun p ->
@@ -344,7 +344,7 @@ let version_axis_test : pure_test =
         EN.run_config ~artifacts:EN.[ a_source; a_lib ]
           ~all_provisions_of:(fun _ -> [ EN.Built ]) ~all_versions_of:(fun _ _ -> List.map B.two_channels ~f:B.good)
           ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       let source_primary_holds =
         (not (List.is_empty built))
@@ -372,7 +372,7 @@ let per_artifact_provisions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:provisions_of
           ~all_versions_of:(fun _ _ -> [ B.good B.Dev ]) ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       let always target id =
         List.for_all pts ~f:(fun p ->
@@ -404,7 +404,7 @@ let per_artifact_versions_test : pure_test =
       let pts =
         EN.run_config ~artifacts ~all_provisions_of:(fun _ -> [ EN.Fetched ])
           ~all_versions_of:versions_of ~all_mutations:[]
-          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs }
+          { provision = EN.Full; version = EN.Full; mutation = EN.Free; version_mode = EN.Lockstep; refs = EN.All_refs }
       in
       let binding_ver p = EN.version_of p.EN.assignment a_ocaml in
       (not (List.is_empty pts))
@@ -535,7 +535,7 @@ let thin_config_level_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; refs = EN.All_refs };              mutations = [] }
           spec
       in
       let no_dev asgs =
@@ -559,7 +559,7 @@ let thin_config_level_test : pure_test =
    the Built side's version id is SOURCE-PRIMARY (the source's pin), both
    ids must be non-empty and equal, and the channels must match. Same cell
    (Fetched@1.0.0 + Built@Stable over a 1.0.0-pinned source) drops the
-   Built world under Shadow_prebuilt, keeps both under Materialize_source;
+   Built world (unconditionally since 2026-08-19);
    DIFFERENT cells (Fetched@Stable + Built@Dev — the z3 shape) never
    shadow in either policy (the z3 dev chain builds from a dev checkout,
    so the built cell's source-primary id differs from the stable prebuilt
@@ -586,14 +586,6 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
       let shadowed =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) same_cell_spec
       in
-      let materializing =
-        EN.enumerate ~tag:(fun () -> "")
-          ~policy:
-            { config =
-                { (EN.full_policy ()).config with shadow = EN.Materialize_source };
-              mutations = [] }
-          same_cell_spec
-      in
       (* DIFFERENT cells: prebuilt Stable (pin "1.0.0") vs built Dev over a
          Dev-pinned source ("dev-src") — the z3 shape (the dev chain builds
          from a dev checkout; the prebuilt is the stable release). The
@@ -615,23 +607,15 @@ let shadow_policy_drops_same_cell_built_test : pure_test =
       let diff_shadowed =
         EN.enumerate ~tag:(fun () -> "") ~policy:(EN.full_policy ()) diff_cell_spec
       in
-      let diff_materializing =
-        EN.enumerate ~tag:(fun () -> "")
-          ~policy:
-            { config =
-                { (EN.full_policy ()).config with shadow = EN.Materialize_source };
-              mutations = [] }
-          diff_cell_spec
-      in
       let lib_prov a = EN.provision_of a Canary_artifact.a_lib in
-      (* same cell: the prebuilt shadows the built under Shadow_prebuilt *)
+      (* same cell: the prebuilt shadows the built, UNCONDITIONALLY since
+         2026-08-19 — the Materialize_source escape (and its --audit-lib
+         rung) was removed, so there is no policy under which both
+         survive *)
       List.length shadowed = 1
       && List.exists shadowed ~f:(fun a -> EN.equal_provision (lib_prov a) EN.Fetched)
-      (* …and the audit pass materializes both *)
-      && List.length materializing = 2
-      && List.exists materializing ~f:(fun a -> EN.equal_provision (lib_prov a) EN.Built)
-      (* different cells: no shadowing in either policy (both worlds live) *)
-      && List.length diff_shadowed = 2 && List.length diff_materializing = 2) }
+      (* different cells: no shadowing — both worlds live *)
+      && List.length diff_shadowed = 2) }
 
 (* REFS subset (2026-08-17, the z3 #10549 regression case): [Refs ids]
    keeps the source-repo worlds whose pinned id is selected — the
@@ -890,7 +874,7 @@ let subset_intersects_universe_test : pure_test =
             { config =
                 Canary_enumerate.{ provision = Full;
                      version = Subset [ B.Stable ];
-                     mutation = Free; version_mode = EN.Lockstep; shadow = EN.Shadow_prebuilt; refs = EN.All_refs };              mutations = [] }
+                     mutation = Free; version_mode = EN.Lockstep; refs = EN.All_refs };              mutations = [] }
           spec
       in
       List.length thin = 1

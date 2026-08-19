@@ -158,7 +158,6 @@ let thin_policy () : unit Canary_enumerate.policy =
           version = Canary_enumerate.Subset [ Canary_basic.Stable ];
           version_mode = Canary_enumerate.Lockstep;
           mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Shadow_prebuilt;
           refs = Canary_enumerate.All_refs };
     mutations = [] }
 
@@ -168,22 +167,6 @@ let independent_policy () : unit Canary_enumerate.policy =
         { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
           version_mode = Canary_enumerate.Independent;
           mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Shadow_prebuilt;
-          refs = Canary_enumerate.All_refs };
-    mutations = [] }
-
-(** The AUDIT policy (2026-08-17, active plan 3): full enumeration with
-    [Materialize_source] — the shadowed source-built placements
-    materialize (fetch + build + re-probe + blame). Manual,
-    blame-driven; the batch never picks it. Inert (== full) until a
-    spec declares a Built column sharing a prebuilt cell. *)
-let audit_policy () : unit Canary_enumerate.policy =
-  { config =
-      Canary_enumerate.
-        { provision = Canary_enumerate.Full; version = Canary_enumerate.Full;
-          version_mode = Canary_enumerate.Lockstep;
-          mutation = Canary_enumerate.Free;
-          shadow = Canary_enumerate.Materialize_source;
           refs = Canary_enumerate.All_refs };
     mutations = [] }
 
@@ -202,19 +185,18 @@ let audit_policy () : unit Canary_enumerate.policy =
 
     Each rung maps to an enumeration policy (and, later, a step-class
     filter) via [enumeration_policy_of]. *)
+(* [Audit_lib] (2026-08-17) removed 2026-08-19, user: the audit pass
+   materialized the shadowed source-built placements on demand. Nothing
+   consumed it, and prebuilt-shadows-source is now unconditional — a
+   project that wants its source-built lib visible declares it as a
+   distinct version instead of asking a flag to unhide it. *)
 type run_policy =
   | Full
   | Thin
-  | Audit_lib
-      (** the SEPARATE AUDIT PASS (2026-08-17, active plan 3): full +
-          [Materialize_source] — the shadowed source-built placements
-          materialize (fetch + build + re-probe + blame). Manual,
-          blame-driven; the batch never picks it. *)
 
 let string_of_run_policy = function
   | Full -> "full"
   | Thin -> "thin"
-  | Audit_lib -> "audit-lib"
 
 (** The run config — the IMMUTABLE settings a run consumes. [policy] is
     the first field; the space is open for the batch's future knobs
@@ -241,7 +223,7 @@ let default_config : run_config =
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
     of [scenarios_of]); [Thin] = the Subset[Stable] enumeration;
-    [Audit_lib] = the full enumeration with [Materialize_source]. The
+    (the [Audit_lib] rung retired 2026-08-19). The
     [refs] level rides on top of whichever rung: a rung-specific policy
     gets the run's [refs] injected; [Full] (None) becomes a full policy
     when [refs] narrows. *)
@@ -258,7 +240,6 @@ let enumeration_policy_of (c : run_config) : unit Canary_enumerate.policy option
       | Canary_enumerate.All_refs -> None
       | Canary_enumerate.Refs _ -> Some (inject_refs (Canary_enumerate.full_policy ())))
   | Thin -> Some (inject_refs (thin_policy ()))
-  | Audit_lib -> Some (inject_refs (audit_policy ()))
 
 (** THE batch default policy (2026-08-14): [Heavy] projects run THIN
     (their source-built chains are Dev worlds, so thin bypasses them),

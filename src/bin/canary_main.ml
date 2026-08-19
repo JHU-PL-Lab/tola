@@ -114,15 +114,10 @@ let action_cmd =
              With @all: forces thin everywhere (the batch default already \
              runs heavy projects thin).")
   in
-  let audit_lib_arg =
-    Arg.(
-      value & flag
-      & info [ "audit-lib" ]
-          ~doc:
-            "The separate AUDIT PASS: full + Materialize_source — the shadowed \
-             source-built placements materialize (fetch + build + re-probe + \
-             blame). Manual, blame-driven; the batch never picks it.")
-  in
+  (* [--audit-lib] (2026-08-17) removed 2026-08-19, user: it materialized
+     the shadowed source-built placements for a blame-driven audit pass.
+     Prebuilt-shadows-source is unconditional now; a project that wants
+     its source-built lib as a world declares it as a distinct version. *)
   let refs_arg =
     Arg.(
       value & opt (some string) None
@@ -151,14 +146,14 @@ let action_cmd =
      — one derive_steps + run_graph, no multi-variant. *)
   (* [_quick] (skip source fetch) was consumed only by the retired run_z3;
      the flag stays parsed so existing invocations don't break. *)
-  let run project _quick failfast cache_path disable_contract_csv thin audit_lib refs () =
+  let run project _quick failfast cache_path disable_contract_csv thin refs () =
     let root = "_out" in
     let cli_disabled = Canary_compat.contract_ids_of_csv disable_contract_csv in
     if cli_disabled <> [] then
       Fmt.pr "[disable-contract] skipping: %s@."
         (String.concat ", "
            (List.map Canary_compat.string_of_contract_id cli_disabled));
-    (* the run config: --thin/--audit-lib set the policy variant, --refs
+    (* the run config: --thin sets the policy variant, --refs
        narrows the source-repo set (orthogonal; the batch sets its own
        per-project config tier-based inside [Canary_batch.run]). *)
     let refs_level =
@@ -169,10 +164,7 @@ let action_cmd =
             (String.split_on_char ',' csv |> List.map String.trim)
     in
     let config =
-      if audit_lib then
-        { Canary_project_run.policy = Canary_project_run.Audit_lib;
-          refs = refs_level }
-      else if thin then
+      if thin then
         { Canary_project_run.policy = Canary_project_run.Thin;
           refs = refs_level }
       else { Canary_project_run.default_config with refs = refs_level }
@@ -201,7 +193,7 @@ let action_cmd =
            the default config is tier-based (Heavy thin, Light full);
            --thin forces thin everywhere; a single-project run always
            uses the full policy. *)
-        Canary_batch.run ~force_thin:thin ~force_audit:audit_lib ~root
+        Canary_batch.run ~force_thin:thin ~root
           ~failfast Canary_registry.all_projects
     | Some name -> (
         match List.assoc_opt name Canary_registry.all_projects with
@@ -218,7 +210,7 @@ let action_cmd =
     (Cmd.info "action" ~doc:"Run the action graph")
     Term.(
       const run $ project $ quick $ failfast $ cache_path_arg
-      $ disable_contract_arg $ thin_arg $ audit_lib_arg $ refs_arg
+      $ disable_contract_arg $ thin_arg $ refs_arg
       $ const ())
 
 let spec_cmd =
@@ -238,15 +230,6 @@ let spec_cmd =
           ~doc:
             "project_run projects (tiny-full, sqlite, z3, llvm): the thin \
              Subset[Stable] enumeration.")
-  in
-  let audit_lib =
-    Arg.(
-      value & flag
-      & info [ "audit-lib" ]
-          ~doc:
-            "The audit view: full + Materialize_source — the shadowed \
-             source-built placements materialize. DRY-RUN ONLY (spec never \
-             executes); mirror of the action flag.")
   in
   let refs =
     Arg.(
@@ -273,7 +256,7 @@ let spec_cmd =
             "Emit JSON (machine-readable; supersedes --by-artifact). With \
              @all, one object keyed by project — the refactor cross-check.")
   in
-  let run proj thin audit_lib refs by_artifact json () =
+  let run proj thin refs by_artifact json () =
     (* Every project is a [project_run] now; the registry is the single
        source of truth. ssl is a [Multi] — no spec view yet. *)
     let show ?policy pr =
@@ -285,7 +268,7 @@ let spec_cmd =
       else if by_artifact then Canary_project_run.print_artifacts ?policy pr
       else Canary_project_run.print_spec ?policy pr
     in
-    (* --thin / --audit-lib are runner policies, valid on any project_run
+    (* --thin is a runner policy, valid on any project_run
        (audit wins, mirroring [action]'s precedence); --refs narrows the
        source-repo set on top *)
     let inject_refs (p : unit Canary_enumerate.policy) :
@@ -301,9 +284,7 @@ let spec_cmd =
                     (String.split_on_char ',' csv |> List.map String.trim) } }
     in
     let show_enum pr =
-      if audit_lib then
-        show ~policy:(inject_refs (Canary_project_run.audit_policy ())) pr
-      else if thin then
+      if thin then
         show ~policy:(inject_refs (Canary_project_run.thin_policy ())) pr
       else if Option.is_some refs then
         show ~policy:(inject_refs (Canary_enumerate.full_policy ())) pr
@@ -342,7 +323,7 @@ let spec_cmd =
          "Dry-run snapshot: declared artifacts (grouped) + enumerated \
           scenarios (project_run: tiny-full/sqlite) or per-scenario provisions \
           (raw runner_spec: z3/llvm). No execution.")
-    Term.(const run $ project $ thin $ audit_lib $ refs $ by_artifact $ json $ const ())
+    Term.(const run $ project $ thin $ refs $ by_artifact $ json $ const ())
 
 (* Static spec-maturity audit (2026-08-13): reads ONLY the declared
    [project_run] (artifact rows + wrapper pkgs) — no enumeration, no

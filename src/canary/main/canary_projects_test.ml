@@ -979,13 +979,11 @@ let batch_tier_pin : Canary_project_test.pure_test =
         && Poly.equal (Canary_project_run.batch_policy (pr_of "llvm"))
              Canary_project_run.Thin) }
 
-(* The run-policy ladder's enumeration mapping (2026-08-17, active plan
-   3): Full → the enumeration default (Shadow_prebuilt), Thin → the
-   Subset[Stable] enumeration (also shadowing), Audit_lib → the full
-   enumeration with Materialize_source — the shadowed source-built
-   placements materialize (the blame-driven audit pass). The ladder
-   changes SHADOWING ONLY on the audit rung: thin is a version subset,
-   not a shadow override. *)
+(* The run-policy ladder's enumeration mapping (2026-08-17; the audit rung
+   removed 2026-08-19, user): Full → the enumeration default (no policy
+   override at all), Thin → the Subset[Stable] enumeration. Shadowing is
+   unconditional now, so the ladder is purely a VERSION-subset ladder —
+   there is no rung that changes what shadows what. *)
 let shadow_policy_ladder_pin : Canary_project_test.pure_test =
   { name = "shadow.policy_ladder";
     check =
@@ -994,10 +992,6 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let ep p =
           Canary_project_run.enumeration_policy_of
             { Canary_project_run.policy = p; refs = EN.All_refs }
-        in
-        let shadow_of = function
-          | None -> None
-          | Some (p : unit EN.policy) -> Some p.EN.config.EN.shadow
         in
         let full_like (p : unit EN.policy option) =
           match p with
@@ -1008,18 +1002,18 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
               && Poly.equal p.EN.config.EN.mutation EN.Free
               && Poly.equal p.EN.config.EN.version_mode EN.Lockstep
         in
-        Poly.equal (shadow_of (ep Canary_project_run.Full)) None
+        (* Full needs no override — the enumeration default IS full *)
+        Option.is_none (ep Canary_project_run.Full)
         && (match ep Canary_project_run.Thin with
             | None -> false
             | Some (p : unit EN.policy) ->
                 Poly.equal p.EN.config.EN.version
-                  (EN.Subset [ Canary_basic.Stable ])
-                && Poly.equal p.EN.config.EN.shadow EN.Shadow_prebuilt)
-        && (match ep Canary_project_run.Audit_lib with
-            | None -> false
-            | Some (p : unit EN.policy) ->
-                full_like (Some p)
-                && Poly.equal p.EN.config.EN.shadow EN.Materialize_source)) }
+                  (EN.Subset [ Canary_basic.Stable ]))
+        (* and a refs-narrowed Full is still full in every other axis *)
+        && full_like
+             (Canary_project_run.enumeration_policy_of
+                { Canary_project_run.policy = Canary_project_run.Full;
+                  refs = EN.Refs [ "latest" ] })) }
 
 (* The repo-model settings (2026-08-15, design/repo_model.md): the
    contrib-root derivation + the worktree naming scheme (official repo
