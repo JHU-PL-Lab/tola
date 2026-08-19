@@ -8,6 +8,11 @@
 > to be respected; a hand-written per-project table is our own data and
 > gets deleted once the derived firings pin equal.
 >
+> Companion doc: [`agreement_catalogue.md`](agreement_catalogue.md) — the
+> CATALOGUE (which agreements exist, by artifact / mechanism / real bug,
+> and the ladder that says where each is checkable). This doc is the
+> MODULE; cells get filled FROM the catalogue.
+>
 > **Why the registry exists, in one line**: today "what canary checks"
 > is knowable only by reading five scattered places — the registry makes
 > the belief PRINTABLE, and printing it shows the holes (§8's matrix,
@@ -436,6 +441,15 @@ the basis of a new cell class.
 | `Build_app` | the app builds against the binding | Postcondition | ✓ |
 | `Probe_app` | c3 — the run's trace matches the expectation | Behavior_grep | ✓ tiny's oracle only |
 
+The Lib rows above cover the SYMBOL family only. Its two other
+families — **paths** (loader/embedded/identity/language-side search,
+per platform) and **hidden dependencies** (transitive NEEDED, dlopen'd
+plugins, interposition) — are catalogued in
+[`agreement_catalogue.md`](agreement_catalogue.md) §2, together with
+the per-MECHANISM lifecycles (cstubs / cext / ctypes / dynlink), which
+are where `lang × mechanism` gives each artifact chain its own
+agreements.
+
 **What the projection makes obvious** (and §8's table does not): the
 Lib is checked at FOUR distinct stages with three different mechanics,
 and its weakest stages are the ones where the artifact merely arrives
@@ -534,7 +548,7 @@ carry much more:
 
 | tool / data | what it yields | precondition |
 |---|---|---|
-| `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | the lib was built with `-g` (or a separate `.debug` / debuginfo package is present) |
+| `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | DWARF is present (`-g`, or a separate `.debug` / debuginfo package). Often absent — use it WHEN APPLICABLE, never assume it |
 | `readelf -sW` | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check | always |
 | mangled names + `c++filt` | parameter types encoded in the symbol itself | C++ only (C symbols carry nothing) |
 
