@@ -152,7 +152,12 @@ let z3_source_dev : source_repo =
   {
     name = "z3";
     remote = Some (Git "https://github.com/arbipher/z3.git");
-    locals = mk_locals "contrib/z3-all/z3";
+    (* per-ref build dir (2026-08-19): `z3-all/build-arbipher`. The
+       checkout itself still sits at the pre-repo-model `z3-all/z3` — the
+       name the OFFICIAL main clone should own under [repo_main_path];
+       migrating the checkouts is a separate move (renaming a configured
+       build tree invalidates its cache and forces a full rebuild). *)
+    locals = mk_locals ~build_dir:"../build-arbipher" "contrib/z3-all/z3";
     (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
        id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
        identity). The three-version report needs official-dev and
@@ -193,7 +198,7 @@ let z3_source_stable : source_repo =
   {
     name = "z3";
     remote = Some (Git "https://github.com/Z3Prover/z3.git");
-    locals = mk_locals "contrib/z3-all/z3-stable";
+    locals = mk_locals ~build_dir:"../build-4.15.2" "contrib/z3-all/z3-stable";
     version = Canary_basic.{ channel = Stable; id = "4.15.2" };
     ref_ = "bd3e722";
     official = true;
@@ -457,19 +462,29 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
   let cmake_build_binding =
     match version.Canary_basic.channel with Canary_basic.Dev -> true | _ -> false
   in
-  (* the install prefix lives INSIDE the build tree (2026-08-19) — one
-     staging area per build tree, isolated by construction. It used to be
-     the build tree's SIBLING ([build/../install]), which the contrib refs
-     SHARE: arbipher builds in `z3-all/build` and pre-10549 in
-     `z3-all/build-pre-10549`, but both staged into `z3-all/install`. Two
-     hazards, one now load-bearing: `cmake --install` accumulates (a stale
-     libz3.so.4.15.5.0 outliving its world), and — since the staged
-     consumer became a world of its own — the fork's staged OCaml package
-     would satisfy the pre-10549 world's staged probe and SILENCE the
-     #10549 xfail. The build-tree probe globs [<build>/libz3.so]
-     non-recursively, so nothing reads the staged copy by accident.
-     Pinned: [z3.install_prefix_isolated]. *)
-  let install_prefix = build ^ "/install" in
+  (* PER-REF build + staging dirs (2026-08-19, user's scheme):
+     `<project>-all/build-<ref>` and `<project>-all/install-<ref>`, where
+     <ref> is the ref's IDENTITY id (4.15.2 / latest / arbipher /
+     pre-10549) — not the git ref, which would collide (`HEAD` names both
+     latest and the fork). An off-tree binding would extend the same
+     scheme: `build-<lang>-binding-<ref>`.
+
+     Why it matters beyond tidiness: the prefix used to be a bare sibling
+     (`<build>/../install`) that the contrib refs SHARED — arbipher builds
+     in `z3-all/build`, pre-10549 in `z3-all/build-pre-10549`, and both
+     staged into `z3-all/install`. Beyond `cmake --install` accumulating
+     stale sonames, the fork's staged OCaml package would satisfy the
+     pre-10549 world's staged probe and SILENCE the #10549 xfail. Naming
+     the prefix after the ref makes isolation follow from the ref id
+     being unique. Pinned: [z3.install_prefix_isolated]. *)
+  let ref_id =
+    if String.is_empty version.Canary_basic.id then
+      match version.Canary_basic.channel with
+      | Canary_basic.Dev -> "dev"
+      | Canary_basic.Stable -> "stable"
+    else version.Canary_basic.id
+  in
+  let install_prefix = build ^ "/../install-" ^ ref_id in
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };

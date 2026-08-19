@@ -1366,23 +1366,32 @@ let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
         && List.length
              (List.dedup_and_sort prefixes ~compare:String.compare)
            = List.length repos
-        (* and each stays under its OWN build tree — the property that
-           makes isolation FOLLOW from build-dir isolation, instead of
-           holding by accident of naming *)
+        (* and each is NAMED after its ref (`install-<id>`, the user's
+           2026-08-19 scheme) — the property that makes isolation FOLLOW
+           from ref ids being unique, instead of holding by accident of
+           where the build tree happens to sit. Checked on the resolved
+           basename, so a `..`-spelled sibling can't sneak past. *)
         && List.for_all repos ~f:(fun repo ->
-               match
-                 ( prefix_of repo,
-                   Canary_artifact_source.local_for distro repo )
-               with
-               | Some prefix, Some l ->
-                   String.is_prefix (normalize prefix)
-                     ~prefix:(normalize l.Canary_artifact_source.build_path ^ "/")
-               | Some prefix, None ->
-                   (* no local checkout: the build tree is the scenario's
-                      own _out dir; the prefix must still sit inside it *)
-                   String.is_substring (normalize prefix)
-                     ~substring:"/build/install"
-               | None, _ -> false)) }
+               match prefix_of repo with
+               | Some prefix ->
+                   String.equal
+                     (Stdlib.Filename.basename (normalize prefix))
+                     ("install-"
+                     ^ repo.Canary_artifact_source.version.Canary_basic.id)
+               | None -> false)
+        (* the build dirs carry the same per-ref naming — an install dir
+           beside a SHARED build dir would still be two worlds writing one
+           tree (the build half of the same hazard) *)
+        && List.length
+             (List.dedup_and_sort ~compare:String.compare
+                (List.filter_map repos ~f:(fun repo ->
+                     Option.map
+                       (Canary_artifact_source.local_for distro repo)
+                       ~f:(fun l ->
+                         normalize l.Canary_artifact_source.build_path))))
+           = List.length
+               (List.filter_map repos ~f:(fun repo ->
+                    Canary_artifact_source.local_for distro repo))) }
 
 (* z3's REALIZATION check (2026-08-18 as a policy pin; re-keyed to the
    enumerated world 2026-08-19) — the half {!provider_rows_pin} can't
@@ -1429,14 +1438,17 @@ let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
            for_alls vacuous) and each must read only its own tree *)
         (not (List.is_empty staged))
         && (not (List.is_empty build_tree))
+        (* the staged paths are per-ref (`install-<id>`, 2026-08-19), so
+           match the SHAPE rather than a literal prefix name *)
         && List.for_all staged ~f:(fun c ->
-               String.is_substring c ~substring:"/install/lib/ocaml/z3"
-               && String.is_substring c ~substring:"/install/lib/libz3.so"
+               String.is_substring c ~substring:"/install-"
+               && String.is_substring c ~substring:"/lib/ocaml/z3"
+               && String.is_substring c ~substring:"/lib/libz3.so"
                && String.is_substring c ~substring:"STAGED PACKAGE MISSING")
         && List.for_all build_tree ~f:(fun c ->
                String.is_substring c ~substring:"src/api/ml"
                && (not (String.is_substring c ~substring:"STAGED PACKAGE"))
-               && not (String.is_substring c ~substring:"/install/lib"))) }
+               && not (String.is_substring c ~substring:"/install-"))) }
 
 (* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
    bundled Python bindings are Ctypes + Dlopen (the previous Cext
