@@ -65,7 +65,8 @@ top-level `projects.md` + `design/package_bug.md`).
 | [index.md](project/index.md)                  | The project index: the conceptual model (dimensions) + the candidate portfolio                           |
 | [coverage.md](project/coverage.md)            | **Current coverage status** — per-project matrix + notes + landing history                               |
 | [landing.md](project/landing.md)              | **How to land a project** — workflow, data structures, testing harness (the future skill's base)         |
-| [status_project.md](project/status_project.md) | Project bugs, issues, and todo (sqlite PM probe fix history, install gaps, M3 items, planned three-version report) |
+| [status_project.md](project/status_project.md) | Project-layer STATUS: live projects + scenario counts, the ordered plan, framework-level to-dos, the mismatch-matrix report milestone |
+| [project/issues.md](project/issues.md) | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores) |
 | [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`) |
 
 ## surveys/ — background research

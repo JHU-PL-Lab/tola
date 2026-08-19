@@ -7,7 +7,8 @@ The project layer's home. Split 2026-08-12:
 | `index.md` (this)                        | the conceptual model (§1) + the candidate portfolio (§2)                                    |
 | [`coverage.md`](coverage.md)             | **current coverage status** — per-project matrix + notes + landing history                  |
 | [`landing.md`](landing.md)               | **how to land a project** — the workflow, data structures, and testing harness              |
-| [`status_project.md`](status_project.md) | project **bugs, issues, and todo** — moved out of [`../status.md`](../status.md) §M3        |
+| [`status_project.md`](status_project.md) | project-layer **status** — live projects, the ordered plan, framework to-dos, the milestone     |
+| [`issues.md`](issues.md)                 | **open per-project issues** — the standalone worklist (split out of status_project 2026-08-19) |
 | [`store_switching.md`](store_switching.md) | shared-store version switching — the opam survey + sequentialization plan                   |
 | [`project_pytorch.md`](project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4                    |
 
