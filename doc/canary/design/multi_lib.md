@@ -100,3 +100,74 @@ lower bound"), plus the additives it happens to have:
 | binding channel pair | opam camlzip pins | opam lmdb pins | opam mlgmpidl pins | opam bytesrw pins |
 | regression ref (additive) | if a zlib CVE/fix commit is worth pinning | — | — | — |
 | fix fork (additive) | only if we find a bug to fix | — | — | — |
+
+---
+
+## 6. Prebuilt libs without a system PM — the `Vendored` route (2026-08-19, user)
+
+The four `Free_with_conf` projects are blocked on AVAILABILITY, not on
+opam: apt ships exactly one gmp / openssl / libffi / cairo, so their lib
+axis has one point. The user's route: fetch a prebuilt from somewhere
+that is NOT the system PM and declare it **`Vendored`** — the provision
+already exists, and a vendored artifact is *supplied*, so it is prepared
+BEFORE any enumeration or checking run (tiny's precedent: a separate
+prepare command materialises vendored artifacts; the run only consumes).
+
+**Path scheme** (user): `contrib/<project>-all/prebuilt/<tag>/…`, e.g.
+`contrib/gmp-all/prebuilt/gmp-6.1.2/`. Same shape as the per-ref build
+and staging dirs (`build-<ref>` / `install-<ref>`), so one convention
+covers checkouts, builds, staging areas and now prebuilts. The provider is
+`Canary_store_config.Vendored <path>`; the universe entry is
+`(Vendored, [Stable])` — no new provider kind is needed.
+
+### 6a. What conda-forge actually has (measured 2026-08-19 via api.anaconda.org)
+
+| lib | apt here | conda-forge linux-64 versions | a pair worth running |
+| --- | --- | --- | --- |
+| gmp | 6.3.0 only | 5.1.2, 6.1.0, 6.1.1, 6.1.2, 6.2.0, 6.2.1, 6.3.0 | 6.3.0 vs 6.1.2 |
+| openssl | 3.0.13 only | 1.0.2h…1.0.2u, 1.1.1a…1.1.1w, 3.0.0…3.0.21, 3.1.x, 3.2.x, 3.3.x, 3.4.x, 3.5.x, 3.6.x, **4.0.1** | 3.0.13 vs **4.0.1** — a MAJOR bump, which is where OpenSSL's breaks actually live (within 3.x the ABI is stable by policy, so my earlier "ABI churn" claim was wrong for the apt-only pair) |
+| cairo | 1.18.0 only | 1.12.18, 1.14.6/10/12, 1.15.12, 1.16.0, 1.18.0, 1.18.2, 1.18.4 | 1.18.0 vs 1.14.12 |
+| libffi | 3.4.6 only | 3.2.1, 3.3, 3.4.2, 3.4.6, 3.5.2, **3.7.0** | 3.4.6 vs 3.7.0 |
+| sqlite | (built from amalgamation) | 36 versions, 3.39.2 … 3.53.4 | not needed — sqlite.org ships every amalgamation, and the 3.43.2 pair landed without any prebuilt |
+
+So every one of the four has a real prebuilt pair available. Two look
+especially promising: **openssl 3.0 vs 4.0** (a major bump against a
+binding whose gate is `Free_with_conf`, so opam will not object) and
+**libffi 3.4 vs 3.7** (whose Dynamic_ffi binding fails at `dlsym` time —
+a failure mode nothing else in the registry exercises).
+
+### 6b. The blocker: `zstd` is not installed, and cannot be installed here
+
+Modern conda packages are `.conda` = a ZIP whose members are
+**zstd**-compressed tarballs. On this box:
+
+```
+unzip  ✓      curl ✓      tar 1.35 ✓ (has --zstd, which shells out)
+zstd   MISSING          sudo: a password is required  → cannot apt-get it
+```
+
+So `.conda` extraction is impossible today. What IS possible:
+
+- **the `.tar.bz2` era** (pre-2023 conda-forge builds) — plain tar, works
+  now. It covers the OLDER half of each pair, which is the half we want:
+  gmp 6.2.1, cairo 1.14.12, libffi 3.3/3.4.2 are all `.tar.bz2`.
+- **anything with `zstd` present** — one `apt-get install zstd` (or
+  `pip install zstandard`) unlocks the whole table, including
+  openssl 4.0.1 and libffi 3.7.0.
+
+Recommendation: ask for `zstd` when the openssl-4.0 pair is wanted; start
+with the `.tar.bz2` half meanwhile, since it already gives gmp/cairo/libffi
+their second point.
+
+### 6c. Shape of the prepare step
+
+A `prebuilt` prepare command (peer of `tiny prepare-all`), NOT a run
+action: resolve the archive URL, download into
+`contrib/<project>-all/prebuilt/<tag>/`, unpack, and verify the expected
+`lib/lib*.so*` appeared. The spec then declares
+`(Vendored, [Stable])` with `~provider:(Vendored "<that path>")` and the
+existing machinery does the rest — `shadow_filter` already treats
+Vendored as prebuilt, `scenario_dir_of` renders `lib-vendored-<chan>`,
+and the matrix's setting block prints `V:s`. Using the conda CLI
+(micromamba) to resolve the exact build string is the natural refinement
+once it is available; the first cut can carry the URL in the declaration.
