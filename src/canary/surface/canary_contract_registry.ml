@@ -301,3 +301,111 @@ let row_of (id : Canary_compat.contract_id) : contract_row =
        ~message:
          (Printf.sprintf "contract registry: no row for %s"
             (Canary_compat.string_of_contract_id id))
+
+(* ── THE BELIEF MATRIX (2026-08-18) ──
+   The registry's motivation made visible: enumerate every
+   (contract × action) cell and give each a STATUS. The matrix is
+   TOTAL by construction — every cell has a status, so "the possible
+   invariant matrix" is a table you can read rather than an idea, and
+   "filling it" is a concrete list of [Declared] cells.
+
+   Reading the marks:
+   - [Wired]    ✓ fires here AND ships a counterexample fixture;
+   - [Declared] ~ fires here, predict exists, NO fixture yet — the
+                  fill list;
+   - [Blocked]  ⊘ the contract itself is blocked on deps;
+   - [Empty]    · does not fire here (by the firing derivation) —
+                  the reason is the derivation, not an omission. *)
+
+type cell_status =
+  | Wired
+  | Declared
+  | Blocked of Canary_compat.contract_id list
+  | Empty
+
+let mark_of_status = function
+  | Wired -> "✓"
+  | Declared -> "~"
+  | Blocked _ -> "⊘"
+  | Empty -> "·"
+
+(** The COLUMNS — the general action space one lang's chain can carry
+    (the action catalogue, SSOT §6.5). Actions with no cell wired yet
+    still appear: the empty columns ARE the picture. *)
+let matrix_actions (l : Canary_lang.lang) : Canary_basic.action list =
+  [ Canary_basic.Fetch Canary_basic.Source;
+    Canary_basic.Configure;
+    Canary_basic.Scan_sources;
+    Canary_basic.Build_headers;
+    Canary_basic.Fetch Canary_basic.Lib;
+    Canary_basic.Build_lib;
+    Canary_basic.Install_lib;
+    Canary_basic.Fetch (Canary_basic.Binding l);
+    Canary_basic.Build_binding l;
+    Canary_basic.Publish Canary_basic.Lib;
+    Canary_basic.Probe_lib;
+    Canary_basic.Probe_binding l;
+    Canary_basic.Build_app { Canary_basic.lang = l };
+    Canary_basic.Probe_app { Canary_basic.lang = l } ]
+
+let has_fixture (id : Canary_compat.contract_id) : bool =
+  List.exists contract_fixtures ~f:(fun (i, _) -> Poly.equal i id)
+
+(** One cell's status under a concrete world. *)
+let cell_status_of (r : contract_row) ~(mechanism : Canary_mechanism.mechanism)
+    ~(lang : Canary_lang.lang) ~(provision : Canary_store.provision)
+    (a : Canary_basic.action) : cell_status =
+  let fires =
+    List.exists (r.cr_firing mechanism lang provision) ~f:(fun x ->
+        Poly.equal x a)
+  in
+  if not fires then Empty
+  else
+    match r.cr_check.Canary_compat.status with
+    | Canary_compat.Blocked deps -> Blocked deps
+    | _ -> if has_fixture r.cr_check.Canary_compat.id then Wired else Declared
+
+(** THE matrix: rows = contracts, columns = actions, under one world. *)
+let belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
+    (contract_row * (Canary_basic.action * cell_status) list) list =
+  List.map contract_registry ~f:(fun r ->
+      ( r,
+        List.map (matrix_actions lang) ~f:(fun a ->
+            (a, cell_status_of r ~mechanism ~lang ~provision a)) ))
+
+(** Render the matrix as a text table (the CLI view). *)
+let pp_belief_matrix ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () : string =
+  let m = belief_matrix ~mechanism ~lang ~provision () in
+  let cols = matrix_actions lang in
+  let head =
+    "contract | "
+    ^ String.concat ~sep:" | "
+        (List.map cols ~f:Canary_basic.string_of_action)
+  in
+  let body =
+    List.map m ~f:(fun (r, cells) ->
+        Printf.sprintf "%-4s     | %s"
+          (Canary_compat.string_of_contract_id r.cr_check.Canary_compat.id)
+          (String.concat ~sep:" | "
+             (List.map cells ~f:(fun (a, st) ->
+                  let w =
+                    String.length (Canary_basic.string_of_action a)
+                  in
+                  let mk = mark_of_status st in
+                  mk ^ String.make (max 0 (w - 1)) ' '))))
+  in
+  String.concat ~sep:"\n" (head :: body)
+
+(** The fill list — every [Declared] cell (fires, but no counterexample
+    fixture yet). The concrete answer to "what is left to fill". *)
+let fill_list ?(mechanism = Canary_mechanism.Cstubs)
+    ?(lang = Canary_lang.OCaml) ?(provision = Canary_store.Built) () :
+    (Canary_compat.contract_id * Canary_basic.action) list =
+  List.concat_map (belief_matrix ~mechanism ~lang ~provision ())
+    ~f:(fun (r, cells) ->
+      List.filter_map cells ~f:(fun (a, st) ->
+          match st with
+          | Declared -> Some (r.cr_check.Canary_compat.id, a)
+          | Wired | Blocked _ | Empty -> None))
