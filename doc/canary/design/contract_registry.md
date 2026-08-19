@@ -220,7 +220,7 @@ inspect inputs (file-name references + their JSON bodies) and the
 failure substrings a `predict` MUST yield on them. A fixture may carry
 its OWN closure (`fx_predict`) instead of the row's — that is how a
 per-CELL predict is tested (the lib-only cells' decl-comparison
-closures, §8a); `None` means "the row's `cr_check.predict`". The layer
+closures, §8b); `None` means "the row's `cr_check.predict`". The layer
 tests (`contracts.fixtures_execute`) run every fixture hermetically —
 no project run, the framework-test axis (same shape as the
 compat-helper tests; the loaders read real files, so the test writes
@@ -319,6 +319,11 @@ read off the firing functions:
 | c7 repack (Sf.4) | · | · | · | · | · | · | · | · | · | · | · | ⊘ | · | · |
 | c8 faithfulness (Sf.4) | · | · | · | · | · | · | · | · | ⊘ | · | · | ⊘ | · | · |
 
+**This table shows only ONE of the three axes' pairings** — contract ×
+action, with the artifact left implicit (the action determines it).
+For the per-artifact reading — and for the `Postcondition` families,
+which have no contract and therefore no row here at all — see §8a.
+
 Reading it: the ✓ cells are the belief that is both stated AND
 falsifier-tested; `~` (c6) is the whole current fill list; the `·`
 majority is the honest picture — most of the action space carries no
@@ -345,7 +350,85 @@ their cells answer `[]` = declared-empty, never un-answered.
 
 
 
-## 8a. The lib-only cells — the first fills (2026-08-18)
+## 8a. The artifact-centred view — the same cells, re-projected
+
+Three axes are in play — **artifact, action, contract** — and a single
+2-D table cannot show all three. They are not independent, though:
+**the action determines the artifact** (the catalogue's
+consumes/produces), so `contract × action` loses no information. What
+it loses is READABILITY per artifact, and one whole cell kind: the
+`Postcondition` families (markers, pin-checks, staged parity,
+freshness) never appear in it, because they belong to no contract.
+
+So the belief has TWO views of one cell set:
+
+- **contract × action** (§8) — "where does this belief fire?" The
+  contract is the subject; good for seeing a contract's whole reach.
+- **artifact × stage** (here) — "what do we believe about THIS
+  artifact, end to end?" The artifact is the subject; the actions
+  where it is PRODUCED or EXERCISED are its lifecycle stages, and the
+  actions where it merely participates are listed as provider rows.
+  Both cell kinds appear.
+
+Marks as in §8 (`✓` wired + counterexample, `~` declared/designed, `·`
+absent). Reference world: Cstubs × OCaml × Built.
+
+**Source**
+
+| stage | belief | kind | |
+|---|---|---|---|
+| `Fetch Source` | the tree is there; a pinned ref is AT its pin (`rev-parse HEAD = <ref>^{commit}`, e2b4d27) | Postcondition | ✓ |
+| `Scan_sources` | the typed-signature JSONs exist (they are c6's inputs, not a belief about source) | Postcondition | ✓ |
+| — | source integrity (the tree matches its declared provenance) | — | · designed |
+
+**Headers**
+
+| stage | belief | kind | |
+|---|---|---|---|
+| `Build_headers` / `Fetch Headers` | the declared header set is present | Postcondition | ✓ |
+| as provider @ `Build_binding` | c6 — the C types at the header/stub boundary agree | Inspection | ~ |
+
+**Lib** — the richest column, and the one we worked through
+
+| stage | belief | kind | |
+|---|---|---|---|
+| `Fetch Lib` | the PM package is installed, AT the pinned version | Postcondition | ✓ |
+| `Build_lib` | c1 — every declared `c_api` function is exported | Inspection (decl-cmp) | ✓ |
+| `Build_lib` | c4 — the elf soname equals the declared soname | Inspection (decl-cmp) | ✓ |
+| `Build_lib` | c5 — the declared version tags are exported | Inspection (decl-cmp) | ✓ |
+| `Install_lib` | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition | ~ designed |
+| `Probe_lib` | the declared prefix's symbols are exported (nm) | Inspection | ✓ project-side |
+| `Probe_lib` | it LOADS and each declared function can be entered (the smoke cell) | Behavior_grep | · postponed |
+| as provider @ `Build_binding` | c1 / c4 / c5 / c6 against the consumer | Inspection | ✓ / ~ |
+| as provider @ `Probe_binding` | c1..c5 at load/run | Inspection | ✓ |
+
+**Binding**
+
+| stage | belief | kind | |
+|---|---|---|---|
+| `Fetch (Binding l)` | the package is installed, AT the pinned version | Postcondition | ✓ |
+| `Build_binding l` | c1 (stub refs vs lib), c2 (user surface), c6 (types) | Inspection | ✓ ✓ ~ |
+| `Publish (Binding l)` | the package materialises (publish verification is the other agent's) | Postcondition | ~ |
+| `Probe_binding l` | c1..c5 at load/run; c3's trace | Inspection / Behavior_grep | ✓ / ⊘ |
+| as provider @ `Build_app` | the app compiles against the binding's surface | — | · |
+
+**App**
+
+| stage | belief | kind | |
+|---|---|---|---|
+| `Build_app` | the app builds against the binding | Postcondition | ✓ |
+| `Probe_app` | c3 — the run's trace matches the expectation | Behavior_grep | ✓ tiny's oracle only |
+
+**What the projection makes obvious** (and §8's table does not): the
+Lib is checked at FOUR distinct stages with three different mechanics,
+and its weakest stages are the ones where the artifact merely arrives
+or is transformed — `Fetch` (identity only) and `Install_lib` (parity
+still designed). The Binding is well covered at build/probe and
+uncovered at publish. Source and App are nearly bare. That is the
+development picture per artifact, which is what "fill the matrix"
+should be steered by.
+
+## 8b. The lib-only cells — the first fills (2026-08-18)
 
 Three cells landed as the first deliberate fill, all on the ONE
 artifact (the binary C lib) at `Build_lib`, all sharing one shape:
@@ -401,7 +484,7 @@ so completeness of checking is itself checkable. The space:
    stale world.
 2. **Contract firings — the wired subset.** The registry defaults fire
    at `Build_binding l` / `Probe_binding l`, PLUS `Build_lib` for the
-   three lib-only cells (§8a). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
+   three lib-only cells (§8b). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
    inspect attachments on build_lib), `Build_app`/`Probe_app` (the
    firing vocabulary has the sites; no row uses them — tiny's oracle
    covers app firings today), `Scan_sources` (c6's inputs READ its
@@ -517,7 +600,7 @@ gathering:
 
 1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
    for c1..c8 (invariant, reads, source, fault tags, input template,
-   firing derivation) + the fixture harness + the first fills (§8a) +
+   firing derivation) + the fixture harness + the first fills (§8b) +
    the matrix view (§8). Consumers untouched — `registered_checks` and
    the per-project tables keep working; 4 pins green. Still open
    inside this step: the ssot Ag.X ↔ C1..C8 reconciliation (the Ag.8
