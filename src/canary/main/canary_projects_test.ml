@@ -1329,6 +1329,23 @@ let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
       (fun () ->
         let module AT = Canary_action_templates in
         let distro = Canary_basic.detect_distro () in
+        (* Compare RESOLVED paths: the property is about directories, not
+           spellings. The bug this pin guards spelled two prefixes
+           differently (`z3-all/z3/../build/../install` vs
+           `z3-all/z3-pre-10549/../build-pre-10549/../install`) while
+           naming ONE directory, so a string comparison would have called
+           them isolated and the pin would have been decorative. Collapse
+           `..` segments first. *)
+        let normalize p =
+          String.split p ~on:'/'
+          |> List.fold ~init:[] ~f:(fun acc seg ->
+                 match (seg, acc) with
+                 | "", _ :: _ -> acc (* keep a leading "" = the root *)
+                 | ".", _ -> acc
+                 | "..", _ :: rest -> rest
+                 | _ -> seg :: acc)
+          |> List.rev |> String.concat ~sep:"/"
+        in
         let prefix_of (repo : Canary_artifact_source.source_repo) =
           List.find_map
             (Canary_project_z3.z3_table_rows ~source:repo ~distro
@@ -1344,25 +1361,27 @@ let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
             Canary_project_z3.z3_source_dev;
             Canary_project_z3.z3_source_pre_10549 ]
         in
-        let prefixes = List.filter_map repos ~f:prefix_of in
+        let prefixes = List.filter_map repos ~f:prefix_of |> List.map ~f:normalize in
         List.length prefixes = List.length repos
         && List.length
              (List.dedup_and_sort prefixes ~compare:String.compare)
            = List.length repos
         (* and each stays under its OWN build tree — the property that
-           makes isolation follow from build-dir isolation *)
+           makes isolation FOLLOW from build-dir isolation, instead of
+           holding by accident of naming *)
         && List.for_all repos ~f:(fun repo ->
                match
                  ( prefix_of repo,
                    Canary_artifact_source.local_for distro repo )
                with
                | Some prefix, Some l ->
-                   String.is_prefix prefix
-                     ~prefix:l.Canary_artifact_source.build_path
+                   String.is_prefix (normalize prefix)
+                     ~prefix:(normalize l.Canary_artifact_source.build_path ^ "/")
                | Some prefix, None ->
                    (* no local checkout: the build tree is the scenario's
                       own _out dir; the prefix must still sit inside it *)
-                   String.is_substring prefix ~substring:"/build/install"
+                   String.is_substring (normalize prefix)
+                     ~substring:"/build/install"
                | None, _ -> false)) }
 
 (* z3's REALIZATION check (2026-08-18 as a policy pin; re-keyed to the
