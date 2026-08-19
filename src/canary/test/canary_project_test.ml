@@ -652,7 +652,14 @@ let refs_subset_test : pure_test =
                   axes ~pins:[ pin "latest"; pin "pre-10549" ]
                     [ (Fetched, [ B.Stable ]) ]) );
               ( Canary_artifact.a_lib,
-                Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ]) );
+                (* the lib BUILDS from the source (2026-08-19): the refs
+                   axis only exists in a world that reads the source. With
+                   a Fetched lib and a Fetched binding nothing is built,
+                   the unread-source collapse
+                   ({!Canary_enumerate.source_ref_ok}) folds the declared
+                   refs into the canonical one, and this fixture would be
+                   testing the collapse instead of the refs filter. *)
+                Canary_artifact.(axes [ (Built, [ B.Stable ]) ]) );
               (a_oc, Canary_artifact.(axes [ (Fetched, [ B.Stable ]) ])) ] }
       in
       let count refs =

@@ -206,6 +206,52 @@ let binding_couples (s : project_spec) (a : assignment) (id : artifact_id) :
            (version_of a src).Canary_basic.channel
   | _ -> true
 
+(** Is anything in this world BUILT FROM [src]? (2026-08-19) The lib
+    builds from the project source; a Built binding builds from its own
+    source ({!binding_source_of}). Nothing else consumes a source. *)
+let source_is_read (s : project_spec) (a : assignment) (src : artifact_id) :
+    bool =
+  let lib_builds =
+    equal_artifact_id src a_source
+    && (equal_provision (provision_of a a_lib) Built
+       || equal_provision (provision_of a a_lib) Installed)
+  in
+  let a_binding_builds =
+    List.exists (ps_artifacts s) ~f:(fun id ->
+        match kind_of id with
+        | Canary_basic.Binding l ->
+            equal_provision (provision_of a id) Built
+            && equal_artifact_id (binding_source_of s l) src
+        | _ -> false)
+  in
+  lib_builds || a_binding_builds
+
+(** The UNREAD-SOURCE collapse (2026-08-19, the phantom-ref-axis rule
+    stated precisely). A world where nothing is built from a source still
+    fetches it, but WHICH ref it names changes nothing observable — so N
+    declared refs would give N identical runs. Such a world keeps only the
+    source's canonical pin (the first declared, stable-first by
+    convention).
+
+    This replaces the blunt [~follows:a_lib] the source rows carried: that
+    locked the source's channel to the LIB's, which killed the phantoms
+    but also forbade the FORWARD cell — a binding built from a dev tree
+    probed against the released lib, which is a genuine world precisely
+    because something IS built from the dev source there. *)
+let source_ref_ok (s : project_spec) (a : assignment) (id : artifact_id) :
+    bool =
+  match kind_of id with
+  | Canary_basic.Source | Canary_basic.Binding_source _ ->
+      (not (provided a id))
+      || source_is_read s a id
+      ||
+      (* unread: only the canonical ref survives *)
+      (match ps_versions_of s id Fetched with
+      | canonical :: _ ->
+          Canary_basic.equal_build_id (version_of a id) canonical
+      | [] -> true)
+  | _ -> true
+
 let assignment_ok (a : assignment) : bool =
   let lib = provision_of a a_lib in
   (* A Built lib needs its source present AND at the same CHANNEL — but only
@@ -605,8 +651,9 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
                            (version_of a id).channel
                            (version_of a leader).channel
                   (* the shared coupling ({!binding_couples}) — a Built
-                     binding matches its own source's channel *)
-                  | None -> binding_couples s a id)
+                     binding matches its own source's channel — plus the
+                     unread-source collapse ({!source_ref_ok}) *)
+                  | None -> binding_couples s a id && source_ref_ok s a id)
               | None -> true))
     else assignments
   in
@@ -829,7 +876,8 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
   let assignments =
     if Poly.equal cfg.version_mode Lockstep then
       List.filter assignments ~f:(fun a ->
-          List.for_all (ps_artifacts s) ~f:(binding_couples s a))
+          List.for_all (ps_artifacts s) ~f:(fun id ->
+              binding_couples s a id && source_ref_ok s a id))
     else assignments
   in
   assignments

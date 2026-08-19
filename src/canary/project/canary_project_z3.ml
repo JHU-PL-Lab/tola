@@ -381,20 +381,20 @@ let z3_python_provider =
 
 let z3_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
-  [ artifact_row ~artifact:a_source ~follows:a_lib
+  [ artifact_row ~artifact:a_source
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
-      (* C2 (2026-08-16): the 3-way — stable, official dev (latest), and
-         the arbipher fork, as per-channel repo pins: one identity-bearing
-         scenario per repo.
+      (* C2 (2026-08-16): per-channel repo pins — stable, official dev
+         (latest), the arbipher fork, and the pre-10549 ref: one
+         identity-bearing scenario per repo.
 
-         [~follows:a_lib] (2026-08-19): the source's channel LOCKS to the
-         lib's — the phantom-ref-axis fix. Without it every declared repo
-         crossed the Fetched lib, giving 4 all-Fetched worlds identical
-         except a source ref nothing in them reads (lib=F:stable,
-         binding=F:4.16.0 four times over: four runs, one world). With it
-         the Fetched lib keeps only the Stable pin (ONE fetched world =
-         4.15.2, the version the opam binding was built against) and the
-         Dev refs stay with the chains that actually build from them. *)
+         NO [~follows:a_lib] (2026-08-19): it was added this morning to
+         kill the phantom ref axis (4 all-Fetched worlds identical except
+         a source ref nothing read) and removed the same day because it
+         also forbade the FORWARD cell — a binding built from the dev tree
+         probed against the released lib, where the dev source IS read.
+         The precise rule replaced it in the enumeration
+         ({!Canary_enumerate.source_ref_ok}): a world that builds nothing
+         from the source keeps only the canonical ref. *)
       ~provider:
         (Canary_store_config.Repo_axes
            [ z3_source_stable; z3_source_latest; z3_source_dev;
@@ -416,7 +416,13 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
            (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
               ~macos_pkg:"z3" ())) ();
     artifact_row ~artifact:(a_binding Canary_lang.OCaml Canary_mechanism.Cstubs)
-      ~follows:a_lib
+      (* NO [~follows:a_lib] (2026-08-19, user — the mismatch matrix): the
+         binding's channel is its OWN axis, so the lib pair × the binding
+         pair is a 2×2. The follows locked them together, which made the
+         two baselines the only reachable cells and the forward/backward
+         cells unrepresentable. What still couples is the binding to the
+         SOURCE it is built from ({!Canary_enumerate.binding_couples}) —
+         you cannot build a dev binding from the stable tree. *)
       ~universe:[ (Built, [ Canary_basic.Dev ]);
                   (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:
@@ -437,6 +443,38 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
       ~provider:z3_python_provider () ]
 
+(** ONE derivation of a ref's three paths — checkout, build tree, staging
+    prefix (2026-08-19). [z3_table_rows] builds commands from them and
+    [realize] needs the same answers for the backward cell's runtime env;
+    a second copy of this arithmetic is how the shared-install-prefix bug
+    got in, so there is exactly one. *)
+let z3_paths ~(source : Canary_artifact_source.source_repo) ~distro :
+    string * string * string =
+  let { version; ref_; _ } : Canary_artifact_source.source_repo = source in
+  let ver_str = Canary_basic.string_of_version version in
+  let local = Canary_artifact_source.local_for distro source in
+  let root =
+    match local with
+    | Some l -> l.Canary_artifact_source.path
+    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/src" ver_str ref_
+  in
+  let build =
+    match local with
+    | Some l -> l.Canary_artifact_source.build_path
+    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/build" ver_str ref_
+  in
+  (* PER-REF staging (the user's scheme): <project>-all/install-<ref>,
+     keyed on the ref's identity id — never the git ref, which collides
+     (HEAD names both latest and the fork). *)
+  let ref_id =
+    if String.is_empty version.Canary_basic.id then
+      match version.Canary_basic.channel with
+      | Canary_basic.Dev -> "dev"
+      | Canary_basic.Stable -> "stable"
+    else version.Canary_basic.id
+  in
+  (root, build, build ^ "/../install-" ^ ref_id)
+
 let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
     ~(lib_prov : Canary_artifact.provision) =
   let open Canary_action_templates in
@@ -447,16 +485,8 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
       Canary_artifact_source.source_repo = source in
   let ver_str = Canary_basic.string_of_version version in
   let local = Canary_artifact_source.local_for distro source in
-  let root =
-    match local with
-    | Some l -> l.path
-    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/src" ver_str ref_
-  in
-  let build =
-    match local with
-    | Some l -> l.build_path
-    | None -> Printf.sprintf "_out/canary/projects/z3/%s_%s/build" ver_str ref_
-  in
+  let root, build, install_prefix = z3_paths ~source ~distro in
+  ignore local;
   let url =
     match remote with
     | Some (Canary_artifact_source.Git u | Canary_artifact_source.Hg u) -> u
@@ -466,29 +496,12 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
   let cmake_build_binding =
     match version.Canary_basic.channel with Canary_basic.Dev -> true | _ -> false
   in
-  (* PER-REF build + staging dirs (2026-08-19, user's scheme):
-     `<project>-all/build-<ref>` and `<project>-all/install-<ref>`, where
-     <ref> is the ref's IDENTITY id (4.15.2 / latest / arbipher /
-     pre-10549) — not the git ref, which would collide (`HEAD` names both
-     latest and the fork). An off-tree binding would extend the same
-     scheme: `build-<lang>-binding-<ref>`.
-
-     Why it matters beyond tidiness: the prefix used to be a bare sibling
-     (`<build>/../install`) that the contrib refs SHARED — arbipher builds
-     in `z3-all/build`, pre-10549 in `z3-all/build-pre-10549`, and both
-     staged into `z3-all/install`. Beyond `cmake --install` accumulating
-     stale sonames, the fork's staged OCaml package would satisfy the
-     pre-10549 world's staged probe and SILENCE the #10549 xfail. Naming
-     the prefix after the ref makes isolation follow from the ref id
-     being unique. Pinned: [z3.install_prefix_isolated]. *)
-  let ref_id =
-    if String.is_empty version.Canary_basic.id then
-      match version.Canary_basic.channel with
-      | Canary_basic.Dev -> "dev"
-      | Canary_basic.Stable -> "stable"
-    else version.Canary_basic.id
-  in
-  let install_prefix = build ^ "/../install-" ^ ref_id in
+  (* the per-ref build tree + staging prefix come from {!z3_paths}: the
+     `<project>-all/build-<ref>` / `install-<ref>` scheme (2026-08-19,
+     user), keyed on the ref's IDENTITY id. Why per-ref matters beyond
+     tidiness: a SHARED prefix let the fork's staged OCaml package satisfy
+     the pre-10549 world's staged probe, which would have silenced the
+     #10549 xfail. Pinned: [z3.install_prefix_isolated]. *)
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };
@@ -619,8 +632,59 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                  realization policy ([consumer_lib]); the two command
                  bodies are unchanged — only the key. *)
               match lib_prov with
-              | Canary_artifact.Built | Canary_artifact.Fetched
-              | Canary_artifact.Vendored | Canary_artifact.Absent ->
+              | Canary_artifact.Fetched ->
+                  (* THE FORWARD CELL (2026-08-19, the mismatch matrix):
+                     the binding is BUILT from a dev tree while the lib is
+                     the RELEASED one the platform ships — "does today's
+                     binding still work against the lib users have?".
+
+                     The check that answers it is the symbol assert, run
+                     with provided = the SYSTEM lib and required = the
+                     freshly built stub: a stub compiled against HEAD
+                     headers requires whatever HEAD added, and apt's older
+                     libz3 does not provide it. That is a c1 finding
+                     produced before any link.
+
+                     The runtime half needs care in the other direction:
+                     the cmxa embeds `-L<build> -lz3`, so the BUILD tree
+                     could shadow the system lib at load time and the
+                     probe would silently test the wrong world. The
+                     system libdir goes FIRST on LD_LIBRARY_PATH, and the
+                     example's version line lands in probe.log as
+                     evidence of which lib actually answered. *)
+                  let sys_resolve =
+                    "LIB_Z3=$(pkg-config --variable=libdir z3 \
+                     2>/dev/null)/libz3.so\n\
+                     test -f \"$LIB_Z3\" || LIB_Z3=$(dpkg -L libz3-dev \
+                     2>/dev/null | grep '/libz3\\.so' | head -1)\n\
+                     test -f \"$LIB_Z3\" || LIB_Z3=$(ldconfig -p \
+                     2>/dev/null | grep 'libz3\\.so' | head -1 | awk \
+                     '{print $NF}')\n\
+                     test -n \"$LIB_Z3\" -a -e \"$LIB_Z3\" || { echo \
+                     \"SYSTEM LIB MISSING: libz3.so\" >&2; exit 1; }\n\
+                     SYS_LIBDIR=$(dirname \"$LIB_Z3\")\n"
+                  in
+                  Printf.sprintf
+                    "%seval $(opam env) && \
+                     BINDING_DIR=%s/src/api/ml && \
+                     STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
+                     test -n \"$STUB\" && \
+                     python3 canary/scripts/assert_binary_symbols.py \
+                       --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
+                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
+                     LD_LIBRARY_PATH=\"$SYS_LIBDIR\" \
+                     ocamlfind ocamlopt -package zarith -linkpkg \
+                       -cclib \"$LIB_Z3\" \
+                       -I \"$BINDING_DIR\" \"$BINDING_DIR\"/z3ml.cmxa \
+                       canary/examples/z3/z3_example.ml -o %s/z3_example > %s/%s 2>&1 && \
+                     LD_LIBRARY_PATH=\"$SYS_LIBDIR\" \
+                     %s/z3_example >> %s/%s 2>&1 && \
+                     cat %s/%s"
+                    sys_resolve build output_dir symbols_log output_dir
+                    output_dir probe_log output_dir output_dir probe_log
+                    output_dir probe_log
+              | Canary_artifact.Built | Canary_artifact.Vendored
+              | Canary_artifact.Absent ->
                   Printf.sprintf
                     "eval $(opam env) && \
                      LIB_Z3=$(ls %s/libz3.so %s/libz3.dylib 2>/dev/null | head -1) && \
@@ -728,6 +792,11 @@ let realize a =
   let lib_installed =
     Canary_enumerate.equal_provision lib_prov Canary_artifact.Installed
   in
+  (* the same three paths the rows use — the backward cell's runtime env
+     needs the dev lib's directory ({!z3_paths}, one derivation) *)
+  let _root, build, install_prefix =
+    z3_paths ~source ~distro:(detect_distro ())
+  in
   let spec =
     Canary_action_templates.realize
       (z3_table_rows ~source ~distro:(detect_distro ()) ~lib_prov)
@@ -824,10 +893,37 @@ let realize a =
               (Canary_store.Lang_pm
                  { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
             fun ~output_dir ~variant_key ->
+              (* THE BACKWARD CELL (2026-08-19, the mismatch matrix): a
+                 RELEASED binding over a lib canary built from a dev tree
+                 — "does the binding people already installed still work
+                 against tomorrow's lib?". The released binding's stubs
+                 were compiled against ITS libz3, so the question is a
+                 load-time one: point LD_LIBRARY_PATH at the dev lib and
+                 a symbol the dev tree removed or renamed fails there.
+
+                 Without the env this cell would be a lie: the exe would
+                 load the ambient system libz3 and re-run the stable
+                 baseline while claiming to test the dev lib. *)
+              let dev_libdir =
+                match lib_prov with
+                | Canary_artifact.Built -> Some build
+                | Canary_artifact.Installed -> Some (install_prefix ^ "/lib")
+                | _ -> None
+              in
               let base =
-                Canary_step_builder.probe_ocaml_cmd ~binding_lib:"z3"
-                  ~example:"canary/examples/z3/z3_example.ml"
-                  ~target:"z3_example" ~output_dir ~variant_key
+                match dev_libdir with
+                | Some dir ->
+                    Canary_step_builder.probe_ocaml_env_cmd
+                      ~env:
+                        [ Printf.sprintf "LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH"
+                            dir ]
+                      ~log_grep:None ~binding_lib:"z3"
+                      ~example:"canary/examples/z3/z3_example.ml"
+                      ~target:"z3_example" ~output_dir ~variant_key
+                | None ->
+                    Canary_step_builder.probe_ocaml_cmd ~binding_lib:"z3"
+                      ~example:"canary/examples/z3/z3_example.ml"
+                      ~target:"z3_example" ~output_dir ~variant_key
               in
               z3_world_check pin ^ base) ]
        else spec.probe_binding);

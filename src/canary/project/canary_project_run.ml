@@ -423,8 +423,29 @@ let scenario_dir_of ~pr_name (a : Canary_artifact.assignment) : string =
     | Canary_artifact.Vendored -> Printf.sprintf "%s-vendored-%s" k (chan_s pl.Canary_artifact.version.Canary_basic.channel)
     | Canary_artifact.Absent -> Printf.sprintf "%s-absent" k
   in
+  (* KIND ORDER, not list order (2026-08-19). The parts used to be
+     concatenated in the assignment's own order, which is an artifact of
+     how the enumeration happened to build it — so an enumeration change
+     (removing a [follows], say) silently RENAMED every scenario dir, and
+     the dir name is the cache key: every warm marker orphaned, every
+     project re-run cold, with nothing in the diff pointing at it. Sorting
+     by artifact kind makes the name a function of the assignment's
+     CONTENT, and it reads in pipeline order (source → lib → binding →
+     app) as a bonus. *)
+  let ordered =
+    List.stable_sort
+      (fun (x, _) (y, _) ->
+        let k id = Canary_basic.kind_order (Canary_artifact.kind_of id) in
+        match compare (k x) (k y) with
+        | 0 ->
+            String.compare
+              (Canary_artifact.string_of_id x)
+              (Canary_artifact.string_of_id y)
+        | c -> c)
+      a
+  in
   Printf.sprintf "_out/canary/projects/%s/%s" pr_name
-    (String.concat "_" (List.map part a))
+    (String.concat "_" (List.map part ordered))
 
 (** The union of all actions that actually fire across all scenarios
     of a project_run. Derives the step list for each scenario via

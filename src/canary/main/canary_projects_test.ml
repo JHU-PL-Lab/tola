@@ -75,8 +75,8 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(artifacts : Canary_project_spec.artifact_row list)
     ~(source_of : Canary_artifact.assignment -> Canary_artifact_source.source_repo)
     ~(dispatch_is_dev : Canary_artifact.assignment -> bool)
-    ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) ?(n_staged = 0) () :
-    Canary_project_test.pure_test list =
+    ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) ?(n_staged = 0)
+    ?(n_forward = 0) () : Canary_project_test.pure_test list =
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
   (* dev variant: the coherent build chain — source@Dev (ANY dev repo —
      latest or the fork), lib Built@Dev (C2: channel-level coupling) *)
@@ -97,10 +97,25 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
          (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.channel
          Canary_basic.Dev
   in
-  (* stable variant: the all-Fetched chain (per-repo source pins) *)
+  let ocaml_binding =
+    Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs
+  in
+  let binding_built a =
+    EN.equal_provision (Canary_enumerate.provision_of a ocaml_binding) EN.Built
+  in
+  (* stable baseline: everything released — a Fetched lib under a Fetched
+     binding. The binding clause matters since 2026-08-19: with the
+     binding's channel freed, a Fetched lib also pairs with a BUILT
+     binding, and that world is the FORWARD cell, not a baseline. *)
   let is_stable_world a =
     EN.equal_provision (lib_prov a) EN.Fetched
     && EN.equal_provision (Canary_enumerate.provision_of a Canary_artifact.a_source) EN.Fetched
+    && not (binding_built a)
+  in
+  (* the FORWARD cell: the released lib under a binding built from a dev
+     tree — "does today's binding still work against the lib users have?" *)
+  let is_forward a =
+    EN.equal_provision (lib_prov a) EN.Fetched && binding_built a
   in
   [ (* enumerate(spec) == the repo family's world set (C2; the counts are
        PARAMETERS now — z3's 4th repo, the #10549 regression ref, makes
@@ -123,10 +138,11 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
         && List.count asgs ~f:is_dev = n_dev
         && List.count asgs ~f:is_stable_world = n_stable
         && List.count asgs ~f:is_staged = n_staged
-        (* the three buckets PARTITION the world set — a world that is
-           neither an all-Fetched chain nor a build chain nor its staged
-           face would slip past the counts otherwise *)
-        && n_dev + n_stable + n_staged = n_worlds
+        && List.count asgs ~f:is_forward = n_forward
+        (* the buckets PARTITION the world set — a world that is none of
+           {all-Fetched baseline, build chain, staged face, forward cell}
+           would slip past the counts otherwise *)
+        && n_dev + n_stable + n_staged + n_forward = n_worlds
         (* each repo pin is ONE identity-bearing world *)
         && List.length scenario_ids = n_worlds
         (* the python binding row is variant-invariant: Fetched everywhere *)
@@ -155,7 +171,10 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
         let asgs = enumerate_full spec in
         let cases = List.map asgs ~f:dispatch_is_dev in
         List.count cases ~f:Fn.id = n_dev + n_staged
-        && List.count cases ~f:not = n_stable
+        (* the non-building worlds: the stable baseline plus the FORWARD
+           cells, whose lib is the platform's even though their binding is
+           built (the build there is the binding's, keyed on the source) *)
+        && List.count cases ~f:not = n_stable + n_forward
         && List.for_all2_exn asgs cases ~f:(fun a dev ->
                Bool.equal dev
                  (EN.equal_provision (lib_prov a) EN.Built
@@ -195,22 +214,35 @@ let built_family a =
   || Canary_enumerate.equal_provision pv Canary_artifact.Installed
 
 let z3_pins : Canary_project_test.pure_test list =
-  (* SEVEN worlds (2026-08-19): ONE all-Fetched chain (the stable repo —
-     the source follows the lib's channel) + each of the 3 dev repos
-     twice, build-tree and staged (latest / fork / pre-10549). Before the
-     Installed axis it was 4 all-Fetched + 3 dev chains, where 3 of those
-     fetched worlds were the same world under different source refs. *)
+  (* SIXTEEN worlds (2026-08-19, the mismatch matrix): the binding's
+     channel became its own axis, so each of the 3 dev refs carries the
+     2×2 — dev baseline (lib B × binding B), BACKWARD (lib B × binding
+     F:4.16.0), FORWARD (lib F:apt × binding B) — plus the staged face of
+     each lib-built cell. The 4th cell of the matrix, both-released, is
+     ref-INDEPENDENT (nothing is built, so the source ref is unread) and
+     is therefore the single collapsed all-Fetched world.
+       3 refs × {(B,B), (B,F)} = 6 dev
+     + 3 refs × {(I,B), (I,F)} = 6 staged
+     + 3 refs × {(F,B)}        = 3 forward
+     + 1 both-released baseline           = 16 *)
   two_chain_pins ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
     ~artifacts:Canary_project_z3.z3_artifacts
     ~source_of:Canary_project_z3.z3_source_for_assignment
     ~dispatch_is_dev:built_family
-    ~n_worlds:7 ~n_dev:3 ~n_stable:1 ~n_staged:3 ()
+    ~n_worlds:16 ~n_dev:6 ~n_stable:1 ~n_staged:6 ~n_forward:3 ()
 
 let llvm_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
     ~artifacts:Canary_project_llvm.llvm_artifacts
     ~source_of:Canary_project_llvm.llvm_source_for_assignment
-    ~dispatch_is_dev:built_family ()
+    ~dispatch_is_dev:built_family
+    (* THREE worlds (2026-08-19): 2 dev build chains + ONE both-released
+       baseline. It was 5 — the three all-Fetched worlds differed only in a
+       source ref none of them read, and the unread-source collapse
+       ({!Canary_enumerate.source_ref_ok}) folded them into one. llvm keeps
+       its binding `follows` for now, so it has no forward/backward cells:
+       opening its 2×2 needs the same two probe realizations z3 grew. *)
+    ~n_worlds:3 ~n_dev:2 ~n_stable:1 ()
 
 (* ── A7 phase 3 pins: z3/llvm run the DERIVED lowering ──
    Pure shape of the expectation closure over the REAL binding tables (no
@@ -395,6 +427,85 @@ let providing_arrow_pin : Canary_project_test.pure_test =
                  | _ -> false)
              | None -> true)) }
 
+(* THE MISMATCH MATRIX on z3 (2026-08-19, user: "for each artifact, either
+   c lib or any binding, we need two choices, one stable and one latest").
+   With the binding's channel freed from the lib's, each dev ref carries
+   the 2×2. This pin states the four cells POSITIVELY — that they exist,
+   which is the whole point of freeing the axis — and states what still
+   couples:
+   (a) per dev ref: a FORWARD cell (released lib × built binding) and a
+       BACKWARD cell (built lib × released binding) both exist;
+   (b) the both-released baseline exists exactly ONCE — it is
+       ref-independent, since nothing is built from the source there;
+   (c) cross-channel pairs DO survive (the inverse of the old lockstep);
+   (d) a BUILT binding still matches its SOURCE's channel — you cannot
+       build a dev binding from the stable tree ({!binding_couples}).
+   The realizations those cells need are pinned separately
+   ([z3.mismatch_cells_probe_their_own_world]). *)
+let z3_mismatch_matrix_pin : Canary_project_test.pure_test =
+  { name = "z3.mismatch_matrix_cells";
+    check =
+      (fun () ->
+        let spec =
+          Canary_project_spec.project_spec_of_rows
+            Canary_project_z3.z3_artifacts
+        in
+        let asgs = enumerate_full spec in
+        let oc = Canary_project_z3.z3_binding_art in
+        let prov a id = Canary_enumerate.provision_of a id in
+        let src_id a =
+          (Canary_enumerate.version_of a Canary_artifact.a_source)
+            .Canary_basic.id
+        in
+        let dev_refs = [ "latest"; "arbipher"; "pre-10549" ] in
+        let cell ~lib_pv ~bind_pv ref_ =
+          List.exists asgs ~f:(fun a ->
+              String.equal (src_id a) ref_
+              && Canary_artifact.equal_provision (prov a Canary_artifact.a_lib)
+                   lib_pv
+              && Canary_artifact.equal_provision (prov a oc) bind_pv)
+        in
+        (* (a) both cross cells, for every dev ref *)
+        let cross_ok =
+          List.for_all dev_refs ~f:(fun r ->
+              cell ~lib_pv:Canary_artifact.Fetched ~bind_pv:Canary_artifact.Built
+                r
+              && cell ~lib_pv:Canary_artifact.Built
+                   ~bind_pv:Canary_artifact.Fetched r)
+        in
+        (* (b) one both-released baseline, and none on a dev ref *)
+        let baselines =
+          List.filter asgs ~f:(fun a ->
+              Canary_artifact.equal_provision (prov a Canary_artifact.a_lib)
+                Canary_artifact.Fetched
+              && Canary_artifact.equal_provision (prov a oc)
+                   Canary_artifact.Fetched)
+        in
+        let baseline_ok =
+          List.length baselines = 1
+          && List.for_all baselines ~f:(fun a ->
+                 not (List.mem dev_refs (src_id a) ~equal:String.equal))
+        in
+        (* (c) the lockstep is really gone *)
+        let cross_channel_exists =
+          List.exists asgs ~f:(fun a ->
+              not
+                (Canary_basic.equal_channel
+                   (Canary_enumerate.channel_of a oc)
+                   (Canary_enumerate.channel_of a Canary_artifact.a_lib)))
+        in
+        (* (d) what still couples: a built binding's source channel *)
+        let source_coupled =
+          List.for_all asgs ~f:(fun a ->
+              (not
+                 (Canary_artifact.equal_provision (prov a oc)
+                    Canary_artifact.Built))
+              || Canary_basic.equal_channel
+                   (Canary_enumerate.channel_of a oc)
+                   (Canary_enumerate.channel_of a Canary_artifact.a_source))
+        in
+        cross_ok && baseline_ok && cross_channel_exists && source_coupled) }
+
 (* ── A5 residue (iii) pin: binding-follows-chain ──
    The OCaml binding's [ax_follows:a_lib] constrains its version channel to
    the lib's in every assignment. Pins this for z3 and llvm (the two projects
@@ -442,11 +553,14 @@ let integration_smoke : Canary_project_test.pure_test =
          2×2 the mismatch matrix wants, crossed with the staged faces *)
       let ok1 = check ~name:"sqlite" ~want_count:10
           Canary_project_sqlite.sqlite_run in
-      (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains;
-         7 since the pre-10549 regression ref (4 all-Fetched + 3 dev) *)
-      let ok2 = check ~name:"z3" ~want_count:7
+      (* 16 since the mismatch matrix (2026-08-19): per dev ref the 2×2's
+         three ref-dependent cells plus the staged faces, and ONE
+         both-released baseline (ref-independent). See z3_pins. *)
+      let ok2 = check ~name:"z3" ~want_count:16
           (Canary_project_z3.z3_run (Canary_basic.detect_distro ())) in
-      let ok3 = check ~name:"llvm" ~want_count:5
+      (* 3: 2 dev chains + the collapsed baseline — llvm's three
+         all-Fetched worlds differed only in an unread source ref *)
+      let ok3 = check ~name:"llvm" ~want_count:3
           (Canary_project_llvm.llvm_run (Canary_basic.detect_distro ())) in
       let ok4 = check ~name:"tiny-full" ~want_count:1
           Canary_project_tiny.tiny_full_run in
@@ -508,9 +622,11 @@ let registry_pin : Canary_project_test.pure_test =
               (* zarith's declared source is the BINDING's (2026-08-19) *)
               Canary_enumerate.version_of a (source_artifact_of pr)
             in
-            (* C2.5 (2026-08-17): the prebuilt-shadows-source shape —
-               3 scenarios (see repo_model.axes_pins) *)
-            List.length asgs = 3
+            (* 2 since the unread-source collapse (2026-08-19): the
+               forward cell (binding built from master) + the both-released
+               baseline; the third world had an unread master worktree
+               (see repo_model.axes_pins) *)
+            List.length asgs = 2
             && List.for_all asgs ~f:(fun a -> not (String.equal (src a).Canary_basic.id ""))
             && Poly.equal
                  (List.dedup_and_sort
@@ -1024,7 +1140,13 @@ let repo_axes_pin : Canary_project_test.pure_test =
              lib axis stays Fetched-only: no source-built GMP column
              (the feedback rule). The Built-binding↔source channel
              coupling pruned the incoherent {1.14 source, B bind} cell. *)
-          List.length zarith_asgs = 3
+          (* 2 since the unread-source collapse (2026-08-19): the third
+             world was `binding Fetched × source master` — an opam-installed
+             binding beside a master worktree nothing built from, i.e. the
+             same run as `binding Fetched × source 1.14` with a different
+             unread ref. What remains is the forward cell (binding built
+             from master) and the both-released baseline. *)
+          List.length zarith_asgs = 2
           && List.for_all zarith_asgs ~f:(fun a ->
                  not
                    (String.equal
@@ -1035,7 +1157,7 @@ let repo_axes_pin : Canary_project_test.pure_test =
                   (List.map zarith_asgs ~f:(fun a ->
                        Canary_project_run.scenario_dir_of ~pr_name:"zarith" a))
                   ~compare:String.compare)
-               = 3
+               = 2
         in
         (* the realize ∘ dispatch: each scenario's fetch command
            materializes ITS repo's worktree ref. zarith's source is the
@@ -1335,6 +1457,11 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
                 ~equal:String.equal
           | _ -> false
         in
+        (* the staged world of the pre-fix ref AND a built binding: since
+           the mismatch matrix opened (2026-08-19) the staged face carries
+           two cells, and only the built-binding one consumes the staged
+           OCaml package. The other cell's consumer is the released opam
+           package, which the missing install rules cannot affect. *)
         let is_staged_world a =
           String.equal
             (Canary_enumerate.version_of a Canary_artifact.a_source)
@@ -1342,6 +1469,10 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
           && Canary_enumerate.equal_provision
                (Canary_enumerate.provision_of a Canary_artifact.a_lib)
                Canary_artifact.Installed
+          && Canary_enumerate.equal_provision
+               (Canary_enumerate.provision_of a
+                  Canary_project_z3.z3_binding_art)
+               Canary_artifact.Built
         in
         (* the world must EXIST — otherwise the implication below is
            vacuously true and the pin would pass on a lost scenario *)
@@ -1454,10 +1585,18 @@ let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
               else None)
         in
         let raw_probe_of a =
-          (* the dev chains' raw probe (the only one that reads a concrete
-             tree; the fetched worlds' opam probe is prefix-agnostic) *)
-          List.find (probe_cmds a) ~f:(fun c ->
-              String.is_substring c ~substring:"z3_example")
+          (* the BUILT binding's probe — the only one that reads a concrete
+             tree. Keyed on the binding's provision since the matrix opened
+             (2026-08-19): a staged world also hosts the released binding,
+             whose probe is the opam one and names no tree. *)
+          if
+            Canary_enumerate.equal_provision
+              (Canary_enumerate.provision_of a Canary_project_z3.z3_binding_art)
+              Canary_artifact.Built
+          then
+            List.find (probe_cmds a) ~f:(fun c ->
+                String.is_substring c ~substring:"z3_example")
+          else None
         in
         let scenarios = Canary_project_run.scenarios_of pr in
         let of_provision pv =
@@ -1584,19 +1723,20 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
               in
               (src_id, lib_prov))
         in
-        (* 2026-08-19 (the z3 landing): each dev ref now shows its
-           build/install PAIR instead of a build row plus a phantom
-           fetched row (four all-Fetched worlds that differed only in a
-           source ref none of them read). The stable ref keeps the single
-           fetched row — the source follows the lib's channel. *)
+        (* 2026-08-19, the mismatch matrix: per dev ref FIVE rows — the
+           built lib under each binding (dev baseline, then BACKWARD), the
+           staged lib under each binding, and the released lib under the
+           built binding (FORWARD, sorting last because a Fetched lib is
+           last in the lib key). The both-released baseline leads, on the
+           stable ref, and is ref-independent. *)
+        let per_ref r =
+          [ (r, Canary_artifact.Built); (r, Canary_artifact.Built);
+            (r, Canary_artifact.Installed); (r, Canary_artifact.Installed);
+            (r, Canary_artifact.Fetched) ]
+        in
         Poly.equal keyed
-          [ ("4.15.2", Canary_artifact.Fetched);
-            ("latest", Canary_artifact.Built);
-            ("latest", Canary_artifact.Installed);
-            ("arbipher", Canary_artifact.Built);
-            ("arbipher", Canary_artifact.Installed);
-            ("pre-10549", Canary_artifact.Built);
-            ("pre-10549", Canary_artifact.Installed) ]) }
+          (("4.15.2", Canary_artifact.Fetched)
+          :: (per_ref "latest" @ per_ref "arbipher" @ per_ref "pre-10549"))) }
 
 (* The GLOBAL row index (2026-08-18, user): every row carries its
    ordinal (#N, fast pointing in the rendered order) + a stable code
@@ -1935,12 +2075,12 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         let pre_10549_row =
           List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
-                "ocaml_binding-built-dev_source-fetched-pre-10549_lib-built-dev_python_binding-fetched")
+                "source-fetched-pre-10549_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
         let arbipher_row =
           List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
-                "ocaml_binding-built-dev_source-fetched-arbipher_lib-built-dev_python_binding-fetched")
+                "source-fetched-arbipher_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
         (* z3's ONE all-fetched world (2026-08-19): the source follows the
            lib's channel, so the Fetched lib pairs only with the stable
@@ -1949,7 +2089,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         let stable_fetched_row =
           List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
-                "ocaml_binding-fetched-4.16.0_source-fetched-4.15.2_lib-fetched_python_binding-fetched")
+                "source-fetched-4.15.2_lib-fetched_ocaml_binding-fetched-4.16.0_python_binding-fetched")
         in
         (* the staged twin of the pre-fix ref: the row exists, its
            install_lib cell names the INSTALLED lib, and the Built twin
@@ -1958,7 +2098,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         let pre_10549_installed_row =
           List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
-                "ocaml_binding-built-dev_source-fetched-pre-10549_lib-installed-dev_python_binding-fetched")
+                "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
         let staged_cells_ok =
           let cell (r : Canary_matrix.row) tag =
@@ -2027,10 +2167,13 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        (* 30 since sqlite's binding channel pair (+5, 2026-08-19) *)
-        List.length rows = 30
-        && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7
-        && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 3
+        (* 36 (2026-08-19): sqlite 10 + z3 16 + llvm 3 + tiny-full 1 +
+           zarith 2 + cairo 1 + libffi 1 + ssl 2 — the channel pairs added
+           worlds (sqlite +5, z3 +9) and the unread-source collapse removed
+           phantoms (llvm −2, zarith −1) *)
+        List.length rows = 36
+        && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 16
+        && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 2
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
@@ -2072,7 +2215,10 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
 let tests : Canary_project_test.pure_test list =
   z3_pins @ llvm_pins
   @ [ z3_lowering_derived; llvm_lowering_derived;
-      binding_follows_chain_pin ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts);
+      (* z3's binding no longer follows the lib (2026-08-19) — the
+         mismatch-matrix pin below asserts the opposite claim for it;
+         llvm still follows, so the lockstep pin still applies there *)
+      z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
       sqlite_runtime_edges_pin; providing_arrow_pin;
       tiny1_bridge;

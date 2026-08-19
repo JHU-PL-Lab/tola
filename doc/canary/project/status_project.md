@@ -23,10 +23,10 @@ table cannot drift silently.
 
 | project | scenarios | shape |
 | --- | --- | --- |
-| z3 | 7 | ONE all-Fetched world (the stable repo — the source follows the lib's channel) + each of the 3 dev repos TWICE, build-tree and staged (latest / arbipher fork / pre-10549); `--thin` = 1 (stable). `--refs latest,pre-10549` = the regression pair, 4 = 2 builds + their 2 staged faces |
-| llvm | 5 | 3 all-Fetched source worlds (stable 19 / official latest / arbipher fork) + 2 dev build chains (latest + fork); no Installed axis declared yet — its install still rides the Built world; `--thin` = 1 |
-| sqlite | 5 | system-fetched lib + 2 built amalgamation versions + their 2 staged faces |
-| zarith | 3 | per-channel source repos + the FORWARD cell (source-fetched-1.14 / -master × binding built-dev; the lib axis is Fetched-only — prebuilt-shadows-source) |
+| z3 | 16 | **the mismatch matrix** (2026-08-19): per dev ref (latest / arbipher / pre-10549) the 2×2's three ref-dependent cells — dev baseline (lib B × binding B), BACKWARD (lib B × binding F:4.16.0), FORWARD (lib F:apt × binding B) — plus the staged face of each lib-built cell, and ONE both-released baseline (ref-independent, since nothing is built from the source there). `--thin` = 1 |
+| llvm | 3 | 2 dev build chains + ONE both-released baseline. Was 5: its three all-Fetched worlds differed only in an unread source ref, folded by the collapse rule. No Installed axis and no cross cells yet — opening its 2×2 needs the same two probe realizations z3 grew |
+| sqlite | 10 | the lib's 5 placements (system-fetched + 2 built amalgamation versions + their 2 staged faces) × the binding's 2 opam pins (5.1.0 / 5.4.1) — the first full 2×2, all cells green by construction |
+| zarith | 2 | the FORWARD cell (binding built from master over apt libgmp) + the both-released baseline. Was 3: the third had an opam binding beside an unread master worktree. The lib axis is Fetched-only — prebuilt-shadows-source |
 | ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
 | tiny-full | 1 | all-Vendored stable world |
 | cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
@@ -114,6 +114,45 @@ fork — cherry-picking the install rules makes the world green and the
 finding actionable rather than modeled away). Until this is decided the
 fork's staged world stays RED in `action z3` (the default full run) —
 deliberately, since silencing it would be choosing (a) by default.
+
+### Landed — the mismatch matrix opens (2026-08-19)
+
+Per the corrected model (§4): every artifact gets a stable/latest pair,
+so lib × binding is a 2×2. Two projects landed it — sqlite by declaring a
+second opam pin, z3 by freeing its binding's channel — and three things
+came out of the work that are worth keeping.
+
+**1. The blunt `follows` had to become a precise rule.** z3's source row
+carried `~follows:a_lib` (added the same morning to kill the phantom ref
+axis: four all-Fetched worlds differing only in a source ref nothing
+read). It also forbade the FORWARD cell, where a binding IS built from the
+dev source while the lib is the platform's. The replacement states the
+real property in the enumeration — `Canary_enumerate.source_ref_ok`: a
+world that builds NOTHING from a source keeps only that source's
+canonical ref. Phantoms stay dead; the forward cell lives. It also
+generalized for free: **llvm 5 → 3** and **zarith 3 → 2**, both shedding
+worlds whose only distinction was an unread ref.
+
+**2. A cross cell needs its own probe realization, or it lies.** The
+enumeration opened four new cell kinds before the commands could serve
+them, and the default realizations would have reported confidently on the
+wrong world: the forward cell's probe read the BUILT lib (the world says
+apt's), and the backward cell's opam probe would have loaded the ambient
+system lib while claiming to test a HEAD-built one. Both now resolve their
+own world — the forward cell resolves the system lib and puts its dir
+first on `LD_LIBRARY_PATH` (the cmxa embeds `-L<build>`, so the build tree
+could otherwise shadow it at load time), and the backward cell injects the
+dev lib's dir. The forward cell's real check is the symbol assert with
+provided = the system lib and required = the freshly built stub: a c1
+finding before any link.
+
+**3. The scenario dir name was order-dependent — and it is the cache
+key.** `scenario_dir_of` concatenated the assignment's parts in LIST
+order, which is an artifact of how the enumeration built it. Removing one
+`follows` silently renamed every z3 scenario dir; every warm marker was
+orphaned and nothing in the diff said so. Now sorted by artifact kind, so
+the name is a function of content (and reads source → lib → binding → app
+as a bonus). This class can't recur; the one-time rename is already paid.
 
 ### Landed — the installed consumer is an enumerated world (2026-08-19)
 
@@ -853,15 +892,31 @@ matrix, not a dump of run artifacts — `canary_html.ml`'s output changes
 accordingly. Full design discussion still deferred; what is settled is
 the axis vocabulary.
 
-**Where the registry stands against this shape** (2026-08-19 audit): NO
-project reaches a full 2×2 yet. z3/llvm declare both channels for both
-artifacts but `~follows:a_lib` on the binding row locks the binding's
-channel to the lib's, so the two cross cells are forbidden by
-construction; sqlite has the lib pair (3.45.1 / 3.46.1) but only one
-binding choice; zarith and ssl have a binding pair but a single lib
-(1×2 — zarith's forward cell, ssl's two store pins); cairo and libffi are
-1×1. The cheapest full 2×2 in the current registry is sqlite (add a
-second opam `sqlite3` pin — the ssl mechanism — against the two
-amalgamation versions it already builds); the highest-value one is
-relaxing z3/llvm's binding `follows`, which costs no new declarations and
-opens the forward/backward cells on a real project.
+**Where the registry stands against this shape** (2026-08-19, after the
+first two landings):
+
+- **sqlite — full 2×2, all green.** Two opam pins (5.1.0 / 5.4.1) × two
+  built amalgamation versions. Green by construction: the lib pair is
+  narrow (3.45.1 and 3.46.1 export identical symbol sets), so this is the
+  machinery proof. Widening the lib side to a ≤3.43 amalgamation, which
+  lacks the modern watchlist APIs, is what makes its forward cell a real
+  question.
+- **z3 — full 2×2 per dev ref, on real artifacts.** The binding's
+  `~follows:a_lib` is gone, so the cross cells enumerate: FORWARD (a
+  binding built from HEAD linked against apt's libz3) and BACKWARD (the
+  released opam binding run against a HEAD-built libz3). Both needed new
+  probe realizations to be honest — see the Landed entry in §2.
+- **llvm — collapse only.** 5 → 3 (phantoms gone); it keeps its binding
+  `follows`, so no cross cells. Opening them needs the same two probe
+  realizations, complicated by its llvm-config indirection.
+- **zarith — 1×2 (the forward cell) + baseline**, and no second lib
+  choice by policy (prebuilt-shadows-source: apt ships one GMP).
+- **ssl — 1×2** via two store pins on the binding; no second lib choice.
+- **cairo, libffi — 1×1.** Both axes single.
+
+What the two landings cost in machinery, worth knowing before opening
+more: a channel pair on a *fetched* artifact needs the store-pin trio
+(pinned fetch + `pin_check_post` + a world assertion on the probe), or
+the scenarios silently share one installed version; a channel pair that
+CROSSES needs a probe realization per cell, or the cell tests a world it
+does not name.
