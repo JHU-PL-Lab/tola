@@ -1,22 +1,35 @@
-# Contract registry — the belief module
+# Contract registry — the belief module and the agreement catalogue
 
-> 2026-08-17, refreshed 2026-08-18. M2 step 6 (producer-first; consumers
-> migrate in phase 2, currently HELD). One statement per contract: WHAT
-> the invariant is, HOW we check it (tool-based), WHERE it fires
-> (derived from mechanism × lang × provision). The expectations are
-> entirely OUR machinery — unlike build commands, nothing external has
-> to be respected; a hand-written per-project table is our own data and
-> gets deleted once the derived firings pin equal.
+> 2026-08-17, merged 2026-08-18. ONE doc: the belief MODULE (rows,
+> firing, fixtures — §§1–8) and the agreement CATALOGUE (which
+> agreements exist, by artifact / mechanism / real bug, and where each
+> is checkable — §§9–14), because they are read together and a split
+> only lost the thread. M2 step 6; consumers migrate in phase 2,
+> currently HELD.
 >
-> Companion doc: [`agreement_catalogue.md`](agreement_catalogue.md) — the
-> CATALOGUE (which agreements exist, by artifact / mechanism / real bug,
-> and the ladder that says where each is checkable). This doc is the
-> MODULE; cells get filled FROM the catalogue.
+> One statement per agreement: WHAT the invariant is, HOW we check it
+> (tool-based), WHERE it fires (derived from mechanism × lang ×
+> provision). The expectations are entirely OUR machinery — unlike
+> build commands, nothing external has to be respected; a hand-written
+> per-project table is our own data and gets deleted once the derived
+> firings pin equal.
 >
 > **Why the registry exists, in one line**: today "what canary checks"
-> is knowable only by reading five scattered places — the registry makes
-> the belief PRINTABLE, and printing it shows the holes (§8's matrix,
-> §8a's first fills, §9's fill list).
+> is knowable only by reading five scattered places — the registry
+> makes the belief PRINTABLE, and printing it shows the holes (§8's
+> matrix, §9's per-artifact view, §13's first fills, §15's fill list).
+
+## 0. Terminology — "agreement" is the umbrella
+
+`invariant`, `contract`, and `agreement` are all in use for the same
+idea. The preferred umbrella is **agreement** (it is also the
+manuscript's term — ssot §3's `Ag.X`); `contract` survives in the code
+as `contract_id`/`contract_row`, `invariant` in prose. **Unification is
+a later task** — it rides with the canonical-naming settle (M2 step 10),
+where the `c1..c8` index is replaced by names derived from the
+artifact-surface / action primitives. Until then the three words mean
+the same thing here, and no code is renamed.
+
 
 ## 1. Producer-first, two-agent-safe
 
@@ -35,6 +48,7 @@ Consumers (the lowering, the per-project binding tables, spec-check, the
 tiny oracle) migrate in a SECOND phase, one at a time, each pinned. The
 only rendezvous with the other agent is this module's exposed type, fixed
 here — so the producer side can land while project work continues.
+
 
 ## 2. The row
 
@@ -108,6 +122,7 @@ and platforms, a contract's name derives from those primitives (user,
 the invariant strings carry the semantics, so the rename is mechanical
 — the `id` field is the one rename point.
 
+
 ## 3. Provision-gated firing — which checks apply depends on which stages we got
 
 A Fetched artifact (from the internet / a PM) and a Built artifact (from
@@ -141,6 +156,7 @@ the wired subset; extending a row to a new action is a row change, not
 a framework change. Per-action expectation can be bypassed through the
 per-project enabled/disabled policy. The pre/post conditions to check
 become a pure function of `(decl, mechanism, provision)`.
+
 
 ## 4. The legacy roles — prose, not typed axes (demoted 2026-08-18)
 
@@ -180,6 +196,7 @@ meetings test whether the pair can even join, executions show what
 the joined pair did — and the upstream suite vouches for the fix
 after canary's falsifier found the break.
 
+
 ## 5. The falsification stance
 
 Version compatibility is hard to prove and easy to disprove — every
@@ -207,6 +224,7 @@ Registry implications:
   requests-beyond-declared are still counterexamples, but "nothing
   beyond" holds only for the runs observed, never for all runs.
 
+
 ## 6. What remains project-specific (and shrinks)
 
 - `enabled` / `disabled_contracts` — policy, already declarative;
@@ -218,6 +236,7 @@ Registry implications:
 Everything else (inputs, firing sites, prediction wiring, tag mapping)
 derives from `(registry × decl × mechanism × provision)`.
 
+
 ## 7. Testing AHEAD of project running — fixtures ride with the rows
 
 Each contract ships its MINIMAL COUNTEREXAMPLE — a `fixture`: synthetic
@@ -225,7 +244,7 @@ inspect inputs (file-name references + their JSON bodies) and the
 failure substrings a `predict` MUST yield on them. A fixture may carry
 its OWN closure (`fx_predict`) instead of the row's — that is how a
 per-CELL predict is tested (the lib-only cells' decl-comparison
-closures, §8b); `None` means "the row's `cr_check.predict`". The layer
+closures, §13); `None` means "the row's `cr_check.predict`". The layer
 tests (`contracts.fixtures_execute`) run every fixture hermetically —
 no project run, the framework-test axis (same shape as the
 compat-helper tests; the loaders read real files, so the test writes
@@ -240,6 +259,7 @@ set visibly: **C1, C2 + C4/C5's lib-only cells** (2026-08-18). C3/C7
 are disabled in the registry (`Blocked []` / `Stubbed`); C6 pends its
 typed-loader fixture; C4/C5's PAIR cells pend theirs (only their
 lib-only halves are covered).
+
 
 ## 8. The general matrix
 
@@ -257,7 +277,7 @@ what the input template yields. So:
     inputs      : mechanism -> lang -> inspect_input list
     source      : Inspection | Behavior_grep | Postcondition | Placeholder
     fixture     : the bad-world counterexample (predicted substrings)
-    pass_means  : the good-world reading (blame axis, §10)
+    pass_means  : the good-world reading (blame axis, §16)
   }
 ```
 
@@ -280,7 +300,7 @@ NOT part of it; they were demoted to prose, §4):
      in Built/Installed worlds, `[Probe_binding l]` where nothing is
      built; Dynamic ⇒ `[Probe_binding l]` (no compile stage);
    - `firing_with_build_lib` — the same PLUS `Build_lib` in Built
-     worlds: the row also has a lib-only cell (§8a);
+     worlds: the row also has a lib-only cell (§9);
    - `firing_probe_only` — a run is required, so probe only, in every
      world.
 2. the input template (`inputs_of_contract ?mechanism`) says which
@@ -327,7 +347,7 @@ read off the firing functions:
 **This table shows only ONE of the three axes' pairings** — contract ×
 action, with the artifact left implicit (the action determines it).
 For the per-artifact reading — and for the `Postcondition` families,
-which have no contract and therefore no row here at all — see §8a.
+which have no contract and therefore no row here at all — see §9.
 
 Reading it: the ✓ cells are the belief that is both stated AND
 falsifier-tested; `~` (c6) is the whole current fill list; the `·`
@@ -355,7 +375,8 @@ their cells answer `[]` = declared-empty, never un-answered.
 
 
 
-## 8a. The artifact-centred view — the same cells, re-projected
+
+## 9. The artifact-centred view — the same cells, re-projected
 
 Three axes are in play — **artifact, action, contract** — and a single
 2-D table cannot show all three. They are not independent, though:
@@ -402,11 +423,11 @@ it.
 |---|---|---|---|
 | `Build_headers` / `Fetch Headers` | the declared header set is present | Postcondition | ✓ |
 | as provider @ `Build_binding` | c6 — the C types at the header/stub boundary agree | Inspection | ~ |
-| as **carried oracle** @ `Probe_binding` | the user-facing surface's types agree with the header's (§8c) | Inspection | · designed |
-| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (§8c) | Inspection | · designed |
+| as **carried oracle** @ `Probe_binding` | the user-facing surface's types agree with the header's (§12) | Inspection | · designed |
+| as **carried oracle** @ `Build_app` / `Probe_app` | an INDIRECT wrapper (helper/app) still agrees with the original C API's types (§12) | Inspection | · designed |
 
 Headers are the only artifact whose value is **syntactic form**: they
-carry the API's TYPES, which no compiled artifact does. §8c makes that
+carry the API's TYPES, which no compiled artifact does. §12 makes that
 the basis of a new cell class.
 
 **Lib** — the richest column, and the one we worked through
@@ -417,7 +438,7 @@ the basis of a new cell class.
 | `Build_lib` | c1 — every declared `c_api` function is exported | Inspection (decl-cmp) | ✓ |
 | `Build_lib` | c4 — the elf soname equals the declared soname | Inspection (decl-cmp) | ✓ |
 | `Build_lib` | c5 — the declared version tags are exported | Inspection (decl-cmp) | ✓ |
-| `Build_lib` | the DWARF signatures of the built lib match the declared header (§8c; canary controls `-g` here) | Inspection (decl-cmp) | · designed |
+| `Build_lib` | the DWARF signatures of the built lib match the declared header (§12; canary controls `-g` here) | Inspection (decl-cmp) | · designed |
 | `Install_lib` | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition | ~ designed |
 | `Probe_lib` | the declared prefix's symbols are exported (nm) | Inspection | ✓ project-side |
 | `Probe_lib` | it LOADS and each declared function can be entered (the smoke cell) | Behavior_grep | · postponed |
@@ -445,7 +466,7 @@ The Lib rows above cover the SYMBOL family only. Its two other
 families — **paths** (loader/embedded/identity/language-side search,
 per platform) and **hidden dependencies** (transitive NEEDED, dlopen'd
 plugins, interposition) — are catalogued in
-[`agreement_catalogue.md`](agreement_catalogue.md) §2, together with
+§10, together with
 the per-MECHANISM lifecycles (cstubs / cext / ctypes / dynlink), which
 are where `lang × mechanism` gives each artifact chain its own
 agreements.
@@ -459,42 +480,101 @@ uncovered at publish. Source and App are nearly bare. That is the
 development picture per artifact, which is what "fill the matrix"
 should be steered by.
 
-## 8b. The lib-only cells — the first fills (2026-08-18)
 
-Three cells landed as the first deliberate fill, all on the ONE
-artifact (the binary C lib) at `Build_lib`, all sharing one shape:
+## 10. The lib — symbols, paths, hidden dependencies
 
-| cell | falsifier | evidence |
+Symbols are the best-developed family; two others are open and
+substantial.
+
+### 10a. Symbols (developed)
+
+Exports vs declared API (c1), versioned symbols (c5), the soname (c4),
+and the coarse `readelf -sW` shape. See the registry's §13 lib-only
+cells.
+
+### 10b. Paths — the biggest untouched family
+
+Every stage of a lib's life is mediated by a path mechanism, and they
+differ per platform. The inventory (to be developed WITH the user's
+pre-existing study, which predates this work and should be brought in
+before designing cells):
+
+| kind | Linux/ELF | macOS/Mach-O | where it bites |
+|---|---|---|---|
+| loader search | `LD_LIBRARY_PATH`, `/etc/ld.so.conf`, `ldconfig` cache | `DYLD_LIBRARY_PATH` (stripped by SIP for protected binaries) | which lib actually loads — a system copy can shadow the built one |
+| embedded search | `DT_RPATH` / `DT_RUNPATH` (`-Wl,-rpath`, `LD_RUN_PATH`) | `LC_RPATH` + `@rpath` / `@loader_path` / `@executable_path` | a build-tree path baked into a staged artifact (the portability falsifier) |
+| identity | `DT_SONAME` | `LC_ID_DYLIB` / install_name | what dependents record; must be the INSTALLED identity |
+| language-side | `CAML_LD_LIBRARY_PATH` (OCaml stublibs), `PYTHONPATH`, `OCAMLPATH` | same | the binding's own artifacts, not the C lib |
+| build-time discovery | `PKG_CONFIG_PATH`, `LIBRARY_PATH`, cmake prefix paths | same | which headers/libs the BUILD picked — often not the ones we think |
+| tool lookup | `PATH` | `PATH` | which compiler/linker/tool ran at all |
+
+Known trap classes to turn into agreements: `DT_RUNPATH` does NOT
+apply to transitive dependencies (unlike `DT_RPATH`) — a lib that
+works standalone can fail as a dependency; ordering/shadowing between
+a system lib and a built one; `LD_LIBRARY_PATH` ignored for
+setuid/setgid; macOS install_name that must be patched AFTER the move.
+
+### 10c. Hidden dependencies
+
+Things `nm` on the lib does not reveal:
+
+- **transitive `NEEDED`** — a dependency of a dependency that must be
+  present at load;
+- **`dlopen`'d plugins** — resolved by name at run time, invisible to
+  static inspection (this is exactly what the ctypes/cffi mechanisms
+  ARE, so the binding side has the same shape);
+- **symbol interposition** — another loaded object providing the same
+  symbol first (LD_PRELOAD, link order, a system copy);
+- **weak symbols and default version resolution** — which definition
+  wins when several exist.
+
+These are the natural home for the interposition-shim RECORDER idea
+(observe what is actually requested/resolved at load) — see the
+§16.
+
+
+## 11. Per-mechanism lifecycles
+
+"The lib" above implicitly means the **C lib**. Once `lang × mechanism`
+is in play, each mechanism has its OWN artifact chain and its own
+agreements. This is the second group of tables; sketches, to be filled
+the same way (from real bugs, up the ladder).
+
+### 11a. Cstubs (OCaml, `Static_c_abi`)
+
+| stage | artifacts | agreements |
 |---|---|---|
-| c1 @ build_lib | a declared `c_api` function is missing from the built lib's exports | nm symbols vs the decl |
-| c4 @ build_lib | the built lib's elf soname ≠ the declared soname | elf vs the decl |
-| c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
+| build stub | `*_stubs.c` → `.o` → `lib<pkg>_stubs.a` (+ `dll<pkg>_stubs.so` for bytecode) | the stub compiles against the header (types); the archive's undefined refs ⊆ the lib's exports |
+| build OCaml | `.cmi/.cmx/.cmxa/.cma` | the `.mli` surface is what the package claims; module names survive dune's wrapping convention |
+| link | linkopts inside the `.cmxa` | the recorded `-L`/`-l` resolve OUTSIDE the build tree (the `$CAMLORIGIN/../..` trap) |
+| install | ocamlfind layout, `META` | `directory`/`archive(native)`/`requires` describe the real layout; `dll*_stubs.so` lands in the switch's `stublibs` |
+| use | `CAML_LD_LIBRARY_PATH`, RPATH | the stub `.so` that loads is THIS package's (a stale one in the switch shadows it) |
 
-Their closures (`c1_decl_predict`, `c4_decl_predict`,
-`c5_decl_predict` in `canary_compat_run.ml`) are **decl-comparison**
-predicts: they read ONE artifact's inspected surface and compare it
-against the project's DECLARED facts (`binding_decl`), with no
-consumer involved.
+### 11b. Cext (Python, `Static_c_abi`)
 
-**Why this shape is the general one** (user, 2026-08-18): the language
-tools — compilers, linkers, version scripts, install rules — are
-BLACK BOXES with no bit-wise operational semantics we can reason
-about. A linker may silently drop a version script; a build system may
-not re-run; an install may skip a rule. So we do not trust the tool's
-exit code beyond its marker postcondition: we inspect the ARTIFACT it
-produced and compare against what was declared. Every lifecycle cell
-(make / transform / exercise) is an instance of that stance, which is
-why `staged_parity.md`'s install checks and these build checks have
-the same skeleton — different artifact stage, same "inspect the
-product, compare to the declaration".
+| stage | artifacts | agreements |
+|---|---|---|
+| build | `_native.c` → `_native.<EXT_SUFFIX>.so` | the `EXT_SUFFIX` matches the interpreter that will import it (ABI tag + version); `PyInit_<name>` exists and matches the module name |
+| link | NEEDED + RPATH of the extension | the C lib is resolvable from the extension's own search path |
+| package | `__init__.py`, wheel metadata | the user-facing surface is the package's, not the extension's |
+| import | the load meeting | no unresolved symbol at import; the right interpreter |
 
-An observation the fill produced: **c1's lib-only cell is the same
-comparison as the status-level watchlist verdict** (`watchlist N/N` /
-`⚠ MISSING`). Two views of one belief — one recorded post-hoc in the
-status table, one predicted as a cell. The registry is where they
-reconcile.
+### 11c. Ctypes / Cffi (Python, `Dynamic_ffi`)
 
-## 8c. The header as a carried type oracle (designed, 2026-08-18)
+| stage | artifacts | agreements |
+|---|---|---|
+| (no build) | pure `.py` | — the absence of a build stage is itself the point: no build-time falsifier exists |
+| load | `dlopen` by name | the declared soname/path resolves at import |
+| call | `argtypes`/`restype` declarations | the DECLARED types match the C signatures — checkable only against the header: this is the prime consumer-side case for the carried type oracle (registry §12) |
+| failure mode | per-call resolution | a missing symbol surfaces at FIRST CALL, not at import — so coverage of the declared API determines what is caught at all |
+
+### 11d. Dynlink (OCaml, `Dynamic_ffi`) — not wired
+
+`.cmxs` plugin loading; the same shape as 3c (load-time resolution, no
+build-time falsifier).
+
+
+## 12. The header as a carried type oracle (designed, 2026-08-18)
 
 **The gap in traditional practice.** A header is consulted exactly
 once — when the binding is COMPILED. After that it is dropped: using a
@@ -577,7 +657,83 @@ can indict the wrong artifact. The cell must record which artifact's
 version the oracle came from; blame then follows §10's direction rule.
 Not designed further yet — a future to-do.
 
-## 9. Coverage status and plan
+
+## 13. The lib-only cells — the first fills (2026-08-18)
+
+Three cells landed as the first deliberate fill, all on the ONE
+artifact (the binary C lib) at `Build_lib`, all sharing one shape:
+
+| cell | falsifier | evidence |
+|---|---|---|
+| c1 @ build_lib | a declared `c_api` function is missing from the built lib's exports | nm symbols vs the decl |
+| c4 @ build_lib | the built lib's elf soname ≠ the declared soname | elf vs the decl |
+| c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
+
+Their closures (`c1_decl_predict`, `c4_decl_predict`,
+`c5_decl_predict` in `canary_compat_run.ml`) are **decl-comparison**
+predicts: they read ONE artifact's inspected surface and compare it
+against the project's DECLARED facts (`binding_decl`), with no
+consumer involved.
+
+**Why this shape is the general one** (user, 2026-08-18): the language
+tools — compilers, linkers, version scripts, install rules — are
+BLACK BOXES with no bit-wise operational semantics we can reason
+about. A linker may silently drop a version script; a build system may
+not re-run; an install may skip a rule. So we do not trust the tool's
+exit code beyond its marker postcondition: we inspect the ARTIFACT it
+produced and compare against what was declared. Every lifecycle cell
+(make / transform / exercise) is an instance of that stance, which is
+why `staged_parity.md`'s install checks and these build checks have
+the same skeleton — different artifact stage, same "inspect the
+product, compare to the declaration".
+
+An observation the fill produced: **c1's lib-only cell is the same
+comparison as the status-level watchlist verdict** (`watchlist N/N` /
+`⚠ MISSING`). Two views of one belief — one recorded post-hoc in the
+status table, one predicted as a cell. The registry is where they
+reconcile.
+
+
+## 14. The regression-driven ladder — the mindset (user, 2026-08-18)
+
+The catalogue is populated the way a regression suite is: **from real
+bugs, backwards**. For each issue found in the world:
+
+1. name the AGREEMENT it violated;
+2. find the EARLIEST place that violation is observable;
+3. record which place we actually check today.
+
+The ladder, cheapest/earliest first — a bug should be caught as far up
+as it can be:
+
+| rung | place | evidence | example of what it catches |
+|---|---|---|---|
+| 1 | **one artifact, statically** | inspect that artifact's surface, compare to the declaration | a declared symbol missing from the built lib; a soname that is not the declared one; a build-tree path baked into a staged binary |
+| 2 | **two declarations, statically** | pair two artifacts' surfaces without running anything | the binding's stub references a symbol the lib does not export; header types vs the wrapper's declared types |
+| 3 | **one action's postcondition** | the action produced what it must | the install did not stage a declared file (#10549); a fetched package is not at its pinned version |
+| 4 | **the meeting** | the compile/link/load either accepts the pairing or refuses | an ABI shape the static surfaces cannot express; a loader failure from a broken NEEDED closure |
+| 5 | **the run** — last resort | execute and observe | behaviour changes with identical surfaces; ordering/timing; anything the four rungs above cannot express |
+
+Two rules follow:
+
+- **Escalate only when forced.** A bug catchable at rung 1 must not be
+  left to rung 5: a run-time failure is slower, flakier, and blames
+  less precisely.
+- **A rung-5-only bug is a finding about the FRAMEWORK**, not just
+  about the project — it names a surface we do not yet inspect. Those
+  are the entries that generate new agreements.
+
+The collection itself (real bugs → agreement → rung) is future work;
+`project/status_project.md` holds the bug list to mine.
+
+**How the catalogue feeds the matrix.** Every row in §§10–12 is a
+candidate CELL: an agreement + the artifact whose surface carries the
+evidence + the action where it is observable (its rung). Filling the
+registry = promoting a row from there into §8's matrix with a
+falsifier fixture attached (§7).
+
+
+## 15. Coverage status and plan
 
 The GOAL: every cell of the belief space has a DEFINED result — the
 pre/post-check and the expectation hold for good AND bad intended
@@ -598,7 +754,7 @@ so completeness of checking is itself checkable. The space:
    stale world.
 2. **Contract firings — the wired subset.** The registry defaults fire
    at `Build_binding l` / `Probe_binding l`, PLUS `Build_lib` for the
-   three lib-only cells (§8b). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
+   three lib-only cells (§13). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
    inspect attachments on build_lib), `Build_app`/`Probe_app` (the
    firing vocabulary has the sites; no row uses them — tiny's oracle
    covers app firings today), `Scan_sources` (c6's inputs READ its
@@ -668,7 +824,7 @@ so completeness of checking is itself checkable. The space:
   belief family one artifact-stage later; it lives with the other
   agent's brief (`staged_parity.md`) and needs no new vocabulary
   here. Its portability falsifier — a staged binary must contain no
-  build-tree path — is the transform-stage analogue of §8a's
+  build-tree path — is the transform-stage analogue of §9's
   decl-comparison.
 
 **Warm-mask ↔ phase 2.** The marker v2 fingerprint covers the step's
@@ -678,7 +834,8 @@ the RUN level (the byte-equal pin becomes runtime-enforced, not just
 test-enforced). Phase-2 pins should pin the expectation form too, not
 only the cmd strings.
 
-## 10. The blame axis (open — think during the gathering)
+
+## 16. The blame axis (open — think during the gathering)
 
 For every checking action — any role, any artifact — what does a
 correct result mean, what does an incorrect result mean, and WHO is
@@ -710,11 +867,12 @@ gathering:
   world)? Answer during the phase-2 consumer migration, where the
   hand-written tables show which blame distinctions actually matter.
 
-## 11. Sequence (each step keeps the suite green)
+
+## 17. Sequence (each step keeps the suite green)
 
 1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
    for c1..c8 (invariant, reads, source, fault tags, input template,
-   firing derivation) + the fixture harness + the first fills (§8b) +
+   firing derivation) + the fixture harness + the first fills (§13) +
    the matrix view (§8). Consumers untouched — `registered_checks` and
    the per-project tables keep working; 4 pins green. Still open
    inside this step: the ssot Ag.X ↔ C1..C8 reconciliation (the Ag.8
