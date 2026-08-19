@@ -525,6 +525,83 @@ with the registry when CI grows scenario coverage.
 Split 2026-08-14 (user): GENERAL framework issues first, then
 per-project ones.
 
+### THE ORDERED PLAN (2026-08-19, user asked for the action list)
+
+Everything below is agreed; the order is what matters. A–C are small and
+unblock the rest; D is a real arc.
+
+**A. Make a finding readable from the run log** — the requirement behind
+"the project report must also be produced from the running log, so next
+time you can identify the same issue". Today the z3 forward cell's
+evidence (`required(791) provided(705) missing(100)` plus the names) sits
+in `symbols_<variant>.log`, which nothing reads: `actions.log` records
+only `probe_binding_ocaml check_post (FAIL)`. The precedent to copy is the
+inspect note — `probe_lib_staged_inspect` already surfaces
+"install-diff vs build-tree: identical" through a log EVENT, so
+`status`/`result`/the HTML page all carry it.
+
+- [ ] **A1. The symbol assert emits a note event** — counts always, plus
+  the first N missing names on failure, so the finding lands in
+  `actions.log` → the matrix cell's detail → the report. Whether it
+  passes or fails: "provided ⊇ required" is evidence too.
+- [ ] **A2. The cross cells ASSERT their world, not just observe it.** The
+  backward cell's `z3 version: 5.1.0.0` line proves the dev lib answered,
+  but nothing fails if the ambient lib does instead — it is evidence, not
+  enforcement. sqlite already asserts its version line via `asserts`; give
+  the forward and backward cells the same, so a shadowing regression is a
+  failure rather than a footnote.
+- [ ] **A3. Witness lines for a plain failure** — `status -v` tails
+  markers today; on a FAIL it should tail the step's own log, so the
+  reason is one command away without knowing which file to open.
+
+**B. Declare the z3 forward mismatch as an xfail** (user: "we shall fix it
+as xfail"). It is explained, reproducible and c1-shaped. Derived, not
+hardcoded: the predicted substrings come from the symbol evidence, not a
+literal in the spec. The condition is WORLD-shaped (lib Fetched × binding
+Built), which `contract_binding`'s `loc_filter` cannot express — so either
+it rides z3's expectation closure (like the pre-10549 xfails) or `firing`
+grows a world predicate. Prefer the closure first, and record the
+`firing`-predicate idea as the generalization if a second project wants it.
+
+**C. Run the additive refs' new cells** — `arbipher` and `pre-10549` have
+never run their forward/backward cells. Per the user (2026-08-19) the 2×2
+is the LOWER BOUND for any project; a regression ref is an ADDITIVE any
+project may have, and a fix fork is an additive when we have one. So these
+are not optional extras of z3 — they are the additives z3 happens to
+carry, and their cross cells are as meaningful as latest's. Expect the
+same forward finding on both (same HEAD-ish binding vs apt's 4.8.12); the
+fork's staged world keeps its known ✗ (user: leave it).
+
+**D. More projects, and the dependency question** — design note in
+[`../design/multi_lib.md`](../design/multi_lib.md). Short version: one C
+lib per project is baked into `artifact_kind` (`Lib` carries no name), so:
+
+- [ ] **D1. zlib / camlzip** — lands now; the cheapest real lib channel
+  pair in the registry (apt vs a source build measured in seconds), so the
+  third project with a 2×2 and the first where both sides are cheap.
+- [ ] **D2. lmdb** — lands now; Pattern B1+E (direct depexts + a `clib:`
+  tag, no conf-*), so it tests the no-conf-indirection style. Its pair
+  comes from the binding's opam pins.
+- [ ] **D3. mpfr / mlgmpidl** — lands now under option (B): gmp declared
+  as a depext, not enumerated. That is honest on this platform (apt ships
+  one GMP; prebuilt-shadows-source forbids building a second), and it
+  gives the first project whose C lib depends on a C lib we already cover.
+- [ ] **D4. Named lib artifacts** (the multi-provider axis) — `Lib` gains
+  an identity so a project can declare several C libs with their own
+  universes. Wide but mechanical; its own arc, with a pin per invariant it
+  touches.
+- [ ] **D5. bytesrw** — after D4. Needs D4 plus two more pieces: optional
+  deps as `Absent` placements (the provision exists, no project uses it,
+  and `assignment_ok`'s "a binding's lib must be provided" has to become
+  per-artifact), and a combination POLICY (all-off + each-alone + all-on =
+  7 worlds, not 2⁵ = 32).
+
+**Also queued, unchanged**: llvm's 2×2 (needs the same two probe
+realizations z3 grew, complicated by llvm-config indirection); widening
+sqlite's lib pair to a ≤3.43 amalgamation so its forward cell becomes a
+real question; migrating z3/llvm/ssl/the opam template to the shared
+`opam_world_check`.
+
 ### General (address first)
 
 - [x] **3-way repos in the project spec** (2026-08-14, user) — per-project
