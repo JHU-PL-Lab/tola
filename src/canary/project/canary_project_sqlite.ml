@@ -205,8 +205,21 @@ let sqlite_amalg (chan : Canary_basic.channel) :
      exercises the world the enumeration declared. *)
   match chan with
   | Canary_basic.Stable ->
-      ( "3.45.1", "3450100",
-        "https://sqlite.org/2024/sqlite-amalgamation-3450100.zip" )
+      (* 3.45.1 → 3.43.2 (2026-08-19): the pair was NARROW by accident —
+         3.45.1 and 3.46.1 export identical symbol sets, so every cell of
+         the 2×2 was green by construction and the forward cell asked
+         nothing. 3.43.2 is the last release BEFORE 3.44.0, which added
+         [sqlite3_get_clientdata] / [sqlite3_set_clientdata] /
+         [sqlite3_stmt_explain] — three of the five symbols this project
+         declares as its modern C API. So the stable side genuinely lacks
+         part of the declared surface, the lib inspect reports it, and the
+         pair is a real question instead of a formality.
+
+         The system (apt) world still provides 3.45.1, so dropping it here
+         loses no coverage: the three lib versions in play become
+         3.43.2 (built, pre-3.44), 3.45.1 (apt), 3.46.1 (built). *)
+      ( "3.43.2", "3430200",
+        "https://sqlite.org/2023/sqlite-amalgamation-3430200.zip" )
   | Canary_basic.Dev ->
       ( "3.46.1", "3460100",
         "https://sqlite.org/2024/sqlite-amalgamation-3460100.zip" )
@@ -257,7 +270,7 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
        Fold the fetch guard into the build command. *)
     { ar_action = Canary_basic.Build_lib; ar_needs = None;
       ar_template = Raw (fun ~output_dir ~variant_key ->
-          let _, numeric, _ = sqlite_amalg chan in
+          let dotted, numeric, _ = sqlite_amalg chan in
           let amalg_dir = "sqlite-amalgamation-" ^ numeric in
           let src_dir = workspace ^ "/src" in
           let libdir = workspace ^ "/lib" in
@@ -265,14 +278,24 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
           let fetch =
             Canary_build_cmd.curl_unzip_cmd ~url:amalg_url ~dest:src_dir ()
           in
+          (* The rebuild guard is keyed on the VERSION, not on the file's
+             existence (2026-08-19). `test -f <lib>` was the guard, and it
+             defeated the whole spec-invalidation chain: changing the
+             declared amalgamation re-ran the step (the marker fingerprint
+             covers the cmd) but the cmd itself said "the lib is already
+             there" and skipped the compile — so the world kept the OLD
+             lib while reporting PASS. The fingerprint protects the
+             MARKER; only a version-aware guard protects the ARTIFACT. *)
+          let stamp = Printf.sprintf "%s/.built-%s" libdir dotted in
           Printf.sprintf
-            "test -f %s || { test -d %s/%s || { %s ; } && mkdir -p %s && %s ; } && \
+            "test -f %s || { test -d %s/%s || { %s ; } && mkdir -p %s && %s && \
+             rm -f %s/.built-* && touch %s ; } && \
              ln -sfn libsqlite3.so %s/libsqlite3.so.0"
-            libpath src_dir amalg_dir fetch libdir
+            stamp src_dir amalg_dir fetch libdir
             (Canary_build_cmd.cc_shared_lib_cmd
                ~c_src:(Printf.sprintf "%s/%s/sqlite3.c" src_dir amalg_dir)
                ~out:libpath ~ldlibs:[ "-lpthread"; "-ldl" ] ())
-            libdir
+            libdir stamp libdir
           |> Canary_build_cmd.with_marker ~marker:"build.ok" ~output_dir ~variant_key) };
     { ar_action = Canary_basic.Probe_lib; ar_needs = None;
       ar_template = Native_lib_probe
@@ -287,11 +310,22 @@ let sqlite_table_rows ~(workspace : string) (chan : Canary_basic.channel) =
        staging is a plain copy-out of the amalgamation build.) *)
     { ar_action = Canary_basic.Install_lib; ar_needs = Some Canary_store.Installed;
       ar_template = Raw (fun ~output_dir ~variant_key ->
+          (* the staged copy carries the VERSION in its command (2026-08-19):
+             a copy-out step's text otherwise says nothing about its input,
+             so the marker fingerprint could not tell a re-stage was needed
+             — the staged prefix kept an older lib while the build tree had
+             moved on, and the world's own probe (once its assert was no
+             longer dead) caught it. Naming the version here makes the
+             fingerprint input-aware, and the stamp makes the copy
+             idempotent. *)
+          let dotted, _, _ = sqlite_amalg chan in
           Printf.sprintf
             "mkdir -p %s/install/lib && \
              cp %s/lib/libsqlite3.so %s/install/lib/ && \
-             ln -sfn libsqlite3.so %s/install/lib/libsqlite3.so.0"
-            workspace workspace workspace workspace
+             ln -sfn libsqlite3.so %s/install/lib/libsqlite3.so.0 && \
+             rm -f %s/install/lib/.staged-* && \
+             touch %s/install/lib/.staged-%s"
+            workspace workspace workspace workspace workspace workspace dotted
           |> Canary_build_cmd.with_marker ~marker:"install.ok" ~output_dir ~variant_key) };
     { ar_action = Canary_basic.Probe_lib; ar_needs = Some Canary_store.Installed;
       ar_template = Native_lib_probe
@@ -416,13 +450,25 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
                 ~pkg:prebuilt.opam_package ~pin
               ^ base
             else base ) ];
+    (* the runtime version assertion — ONLY where canary controls the
+       version (2026-08-19). The Fetched world runs apt's libsqlite3,
+       whose version is ambient (the matrix cell shows it:
+       `lib apt sqlite3.3.45.1`), so asserting an AMALGAMATION version
+       there was simply wrong. It went unnoticed because the assert was
+       dead code (appended after `exit $RC`, fixed in
+       [with_world_asserts]) and because Stable happened to name apt's
+       version — the moment the built pair widened, the bogus assert
+       fired. *)
     asserts =
-      [ ( Canary_basic.Probe_binding Canary_lang.OCaml,
-          Some
-            (Canary_store.Pm
-               (Canary_store.Lang_pm
-                  { lang = Canary_lang.OCaml; pm = Canary_store.Opam })),
-          version_line ) ];
+      (match lib_prov with
+      | Canary_artifact.Built | Canary_artifact.Installed ->
+          [ ( Canary_basic.Probe_binding Canary_lang.OCaml,
+              Some
+                (Canary_store.Pm
+                   (Canary_store.Lang_pm
+                      { lang = Canary_lang.OCaml; pm = Canary_store.Opam })),
+              version_line ) ]
+      | _ -> []);
   }
 
 let sqlite_ci_spec ~workspace =
@@ -469,14 +515,13 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
                 two baselines plus the forward (new binding, old lib) and
                 backward (new lib, old binding) cells.
 
-                The pair is deliberately WIDE on the binding side (5.1.0
-                vs 5.4.1, ~3 minor releases apart) and NARROW on the lib
-                side (3.45.1 vs 3.46.1 export identical symbol sets —
-                measured 2026-08-05), so all four cells are expected
-                GREEN today: this is the machinery proof. Widening the lib
-                side to a ≤3.43 amalgamation — which lacks the modern
-                watchlist APIs (sqlite3_get_clientdata et al.) — is what
-                would make the forward cell a real question. *)
+                Both sides are now WIDE (2026-08-19): the binding pair is
+                5.1.0 vs 5.4.1 (~3 minor releases), and the lib pair is
+                3.43.2 vs 3.46.1 — 3.43.2 predates 3.44.0, which added
+                three of the five symbols this project declares as its
+                modern C API. So the lib side has a real asymmetry the
+                inspect reports, rather than the identical symbol sets
+                3.45.1/3.46.1 gave. *)
              versions =
                Some
                  [ { Canary_store_config.pin_version = "5.1.0";

@@ -70,11 +70,25 @@ let probe_from_store = function
   | _ -> true
 
 (* Wrap a probe command with world-identity assertion greps.
-   Each assertion = a string that probe.log MUST contain. *)
+   Each assertion = a string that probe.log MUST contain.
+
+   The command runs in a SUBSHELL (2026-08-19). It used to be appended to
+   directly, and any probe whose command ends in `exit $RC` — every
+   env-wrapped probe ([probe_ocaml_env_cmd] captures the rc, cats the log,
+   then exits) — killed the shell before the grep ever ran. The asserts
+   were DEAD for those probes: sqlite declared a runtime
+   `sqlite_version=<v>` assertion that had never once executed, which is
+   how a stale lib passed a world it did not belong to. A subshell's exit
+   ends only the subshell and its status still drives the `&&`. *)
 let with_world_asserts ~asserts ~output_dir ~variant_key cmd =
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
-  List.fold_left asserts ~init:cmd ~f:(fun acc s ->
-      [%string "%{acc} && grep -qF \"%{s}\" %{output_dir}/%{probe_log}"])
+  match asserts with
+  | [] -> cmd
+  | _ ->
+      List.fold_left asserts
+        ~init:[%string "( %{cmd} )"]
+        ~f:(fun acc s ->
+          [%string "%{acc} && grep -qF \"%{s}\" %{output_dir}/%{probe_log}"])
 
 
 
