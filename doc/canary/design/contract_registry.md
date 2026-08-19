@@ -412,6 +412,7 @@ the basis of a new cell class.
 | `Build_lib` | c1 — every declared `c_api` function is exported | Inspection (decl-cmp) | ✓ |
 | `Build_lib` | c4 — the elf soname equals the declared soname | Inspection (decl-cmp) | ✓ |
 | `Build_lib` | c5 — the declared version tags are exported | Inspection (decl-cmp) | ✓ |
+| `Build_lib` | the DWARF signatures of the built lib match the declared header (§8c; canary controls `-g` here) | Inspection (decl-cmp) | · designed |
 | `Install_lib` | staged parity: completeness / integrity / parity / isolation, incl. no build-tree path in a staged binary | Postcondition | ~ designed |
 | `Probe_lib` | the declared prefix's symbols are exported (nm) | Inspection | ✓ project-side |
 | `Probe_lib` | it LOADS and each declared function can be entered (the smoke cell) | Behavior_grep | · postponed |
@@ -526,19 +527,41 @@ plus one consumer-side typed surface):
 | header × wrapper surface @ `Build_app` / `Probe_app` | an indirect wrapper re-exports the API with a changed shape |
 | header × consumer usage @ app stages | the app calls the API in a way the header's types forbid |
 
-**The honest boundary.** This retrofits types onto the *consumer* side,
-not onto the compiled provider: an ELF `.so` genuinely has no type
-information (absent DWARF), so "the lib's actual ABI matches the
-header" stays unprovable by inspection — it remains a MEETING check
-(the compile/link either accepts the pairing or does not). The retrofit
-buys the consumer-side hops, which today have no type check at all.
+**The provider side too — with binutils** (user, 2026-08-18). An
+earlier draft called the compiled provider untypeable; that
+understates the tools. `nm -D` gives names only, but the ELF file can
+carry much more:
 
-**Version skew caveat.** A header and a compiled lib that arrive by
-DIFFERENT provisions (headers from a source repo, lib from a PM) may
-not describe the same build. Then the oracle is a claim about the
-DECLARED version, and a disagreement is exactly the finding worth
-reporting — but the cell must state which artifact's version it
-assumed, or it will blame the wrong side (§10).
+| tool / data | what it yields | precondition |
+|---|---|---|
+| `readelf --debug-dump=info` / `objdump --dwarf=info` | **full signatures** — `DW_TAG_subprogram` with return type + formal parameter types, struct layouts, sizes | the lib was built with `-g` (or a separate `.debug` / debuginfo package is present) |
+| `readelf -sW` | symbol TYPE (FUNC/OBJECT) + size — a coarse shape check | always |
+| mangled names + `c++filt` | parameter types encoded in the symbol itself | C++ only (C symbols carry nothing) |
+
+So provider-side type retrofit is not impossible — it is
+**provision-dependent**, which fits the rest of the matrix:
+
+- **Built worlds**: canary compiles the lib itself, so canary controls
+  the flags — building with `-g` GUARANTEES the oracle. The strongest
+  form of the idea lands here: compare the header's declared
+  signatures against the DWARF of the artifact actually produced. That
+  catches header/source skew (the header claims `f(int)`, the object
+  was compiled from a source where `f` takes two) — today only caught
+  if some consumer compile happens to fail.
+- **Fetched worlds**: distro releases are usually stripped, so the
+  oracle needs the matching `-dbg`/`debuginfo` package declared as an
+  extra. Where it is absent, the cell degrades to the coarse
+  `readelf -sW` shape check and the meeting check (the link accepts
+  the pairing or does not) — a weaker but still non-empty belief.
+
+**Version skew — a future to-do.** Plainly: the header and the lib can
+come from DIFFERENT provisions — headers from the source repo, the lib
+from a package manager — and then they may not describe the same
+build. A type check pairing them tests the consumer against the
+SOURCE's API while the run uses the PACKAGE's lib, so a disagreement
+can indict the wrong artifact. The cell must record which artifact's
+version the oracle came from; blame then follows §10's direction rule.
+Not designed further yet — a future to-do.
 
 ## 9. Coverage status and plan
 
