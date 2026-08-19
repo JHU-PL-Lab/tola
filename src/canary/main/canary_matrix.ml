@@ -267,12 +267,30 @@ let fetched_note (pr : Canary_project_run.project_run)
          by the caller) *)
       "F"
 
+(** The stage a step LEAVES its primary artifact in (2026-08-19, user).
+    A staged world's lib is [Installed] for the WORLD, but its
+    [Build_lib] step still produced a BUILT tree — annotating every cell
+    with the world's provision made all three of build/install/probe read
+    [lib I:s], which hid the progression the row is there to show. Only
+    the build family needs the override: [Install_lib] and the probes
+    already agree with the world. *)
+let stage_provision_of_action (act : Canary_basic.action) :
+    Canary_artifact.provision option =
+  match act with
+  | Canary_basic.Configure | Canary_basic.Scan_sources | Canary_basic.Build_lib
+  | Canary_basic.Build_headers | Canary_basic.Build_binding _ ->
+      Some Canary_artifact.Built
+  | _ -> None
+
 (** The provision CHOICE string for one artifact in the scenario:
     [F] fetched (with the pinned version when one exists — the binding
     pin is identity — else the provider suffix, [F:sys] etc.),
     [B:d]/[B:s] built @dev/@stable, [V:d]/[V:s] vendored. Empty when
-    absent/unknown. *)
-let provision_choice (pr : Canary_project_run.project_run)
+    absent/unknown. [?stage] is the step's own stage
+    ({!stage_provision_of_action}) — it downgrades an [Installed] world's
+    build-step cells to [B], and is ignored everywhere else. *)
+let provision_choice ?stage
+    (pr : Canary_project_run.project_run)
     (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
     string =
   match Canary_enumerate.placement_of a id with
@@ -291,18 +309,24 @@ let provision_choice (pr : Canary_project_run.project_run)
            then "F"
            else fetched_note pr a id
        | Canary_artifact.Built -> "B" ^ ch
-       | Canary_artifact.Installed -> "I" ^ ch
+       | Canary_artifact.Installed -> (
+           (* the build steps of a staged world name the tree they built;
+              install + probe name the staged face *)
+           match stage with
+           | Some Canary_artifact.Built -> "B" ^ ch
+           | _ -> "I" ^ ch)
        | Canary_artifact.Vendored -> "V" ^ ch
        | Canary_artifact.Absent -> "")
 
 (** The full cell annotation: "<kind> <provision>" (e.g. [lib B:d],
     [ocaml F:4.16.0], [lib F:sys]) — explicit about BOTH what the
     action works on and how/at-what it is provided. *)
-let cell_annotation (pr : Canary_project_run.project_run)
+let cell_annotation ?stage
+    (pr : Canary_project_run.project_run)
     (a : Canary_artifact.assignment) (id : Canary_artifact.artifact_id) :
     string =
   let label = kind_label (Canary_artifact.kind_of id) in
-  let prov = provision_choice pr a id in
+  let prov = provision_choice ?stage pr a id in
   if String.is_empty prov then label else label ^ " " ^ prov
 
 (** The actions ONE scenario's steps carry (the {!covered_actions_of}
@@ -555,7 +579,10 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
                         with
                         | Some act -> (
                             match action_artifact act a with
-                            | Some id -> cell_annotation pr a id
+                            | Some id ->
+                                cell_annotation
+                                  ?stage:(stage_provision_of_action act) pr a
+                                  id
                             | None -> "")
                         | None -> ""
                       in

@@ -1746,6 +1746,65 @@ let sqlite_staged_probe_paths_pin : Canary_project_test.pure_test =
                 && not (String.is_substring cmd ~substring:"install/lib")
             | _ -> true)) }
 
+(* The CELL STAGE progression (2026-08-19, user): in a staged world the
+   build step names the tree it BUILT and only install/probe name the
+   staged face, so a row reads left-to-right as the artifact's
+   progression. Before, every cell carried the world's provision and all
+   three read [lib I:s] — the row said "installed" three times and never
+   said a build happened. Derived over every registry project that
+   enumerates an Installed lib. *)
+let matrix_cell_stage_pin : Canary_project_test.pure_test =
+  { name = "matrix.cell_stage_progression";
+    check =
+      (fun () ->
+        let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let cell (r : Canary_matrix.row) tag =
+          match
+            List.Assoc.find r.Canary_matrix.cells tag ~equal:String.equal
+          with
+          | Some (Some c) -> Some c.Canary_matrix.provision
+          | _ -> None
+        in
+        let staged_rows =
+          List.concat_map Canary_registry.all_projects ~f:(fun (name, pr) ->
+              List.filter_map (Canary_project_run.scenarios_of pr)
+                ~f:(fun a ->
+                  if
+                    Canary_enumerate.equal_provision
+                      (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+                      Canary_artifact.Installed
+                  then
+                    Some
+                      ( name,
+                        Stdlib.Filename.basename
+                          (Canary_project_run.scenario_dir_of ~pr_name:name a)
+                      )
+                  else None))
+        in
+        (* the staged worlds must EXIST — else every for_all below is
+           vacuous and the pin would pass on a lost axis *)
+        (not (List.is_empty staged_rows))
+        && List.for_all staged_rows ~f:(fun (proj, scen) ->
+               match
+                 List.find m.Canary_matrix.rows ~f:(fun r ->
+                     String.equal r.Canary_matrix.project proj
+                     && String.equal r.Canary_matrix.scenario scen)
+               with
+               | None -> false
+               | Some r ->
+                   (* built by the build step … *)
+                   (match cell r "build_lib" with
+                   | Some c -> String.is_prefix c ~prefix:"lib B:"
+                   | None -> false)
+                   (* … staged by the install step … *)
+                   && (match cell r "install_lib" with
+                      | Some c -> String.is_prefix c ~prefix:"lib I:"
+                      | None -> false)
+                   (* … and read from the staged face by the probe *)
+                   && (match cell r "probe_lib" with
+                      | Some c -> String.is_prefix c ~prefix:"lib I:"
+                      | None -> true))) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1934,5 +1993,6 @@ let tests : Canary_project_test.pure_test list =
       provider_rows_pin ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;
+      matrix_cell_stage_pin;
       matrix_registry_shape_pin ]
 
