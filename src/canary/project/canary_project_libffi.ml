@@ -78,6 +78,8 @@ let decl : Canary_opam_binding.t =
        major ctypes version bump. *)
     ocaml_module_watchlist = libffi_ocaml_watchlist;
     sources = [ libffi_source_stable ];
+    (* the C LIB's own repo (libffi/libffi.git) — the default *)
+    source_of_binding = None;
     (* ctypes-foreign resolves and calls C functions at RUNTIME via libffi —
        genuinely Dynamic_ffi, so [Ctypes] (2026-08-13; was the hardcoded
        [Cstubs] of [Canary_project_run.simple], the recorded M2 issue). *)

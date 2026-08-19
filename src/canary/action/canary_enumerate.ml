@@ -173,6 +173,39 @@ let built_from_of_assignment
     from the lib's — that difference is the interesting version *mismatch*.
     (The app→binding dependency is "any binding" for now; making it the app's
     *own language* binding needs App to carry a lang — ssot §4.2.3.) *)
+(** The source a BUILT binding is built FROM (2026-08-19): its OWN
+    declared [Binding_source lang] when the project has one — an off-tree
+    binding repo over a prebuilt lib, e.g. zarith's repo above an apt
+    libgmp — else the project's lib source, which is the on-tree case
+    (z3/llvm build lib and bindings from one checkout). *)
+let binding_source_of (s : project_spec) (l : Canary_lang.lang) : artifact_id =
+  let own = a_binding_source l in
+  if Option.is_some (ps_axes_of s own) then own else a_source
+
+(** The Built-binding↔source channel coupling, for ONE artifact: a binding
+    canary builds must match the channel of the source it builds from
+    (a Dev-built binding over a stable worktree is not a world). The
+    forward cell (Built binding × FETCHED lib — the designed mismatch
+    probe) survives: only the source couples, the lib pairing stays free.
+
+    ONE definition, called from both enumeration paths. It was written
+    twice — in the product path's post-filter and in the walk's — and the
+    copies silently disagreed the moment one learned about off-tree
+    binding sources (the walk's copy is the one that runs for zarith, so
+    fixing only the other left a Dev binding paired with the 1.14
+    worktree). *)
+let binding_couples (s : project_spec) (a : assignment) (id : artifact_id) :
+    bool =
+  match kind_of id with
+  | Canary_basic.Binding l ->
+      let src = binding_source_of s l in
+      (not (equal_provision (provision_of a id) Built))
+      || (not (provided a src))
+      || Canary_basic.equal_channel
+           (version_of a id).Canary_basic.channel
+           (version_of a src).Canary_basic.channel
+  | _ -> true
+
 let assignment_ok (a : assignment) : bool =
   let lib = provision_of a a_lib in
   (* A Built lib needs its source present AND at the same CHANNEL — but only
@@ -571,17 +604,9 @@ let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :
                       || Canary_basic.equal_channel
                            (version_of a id).channel
                            (version_of a leader).channel
-                  | None -> (
-                      match kind_of id with
-                      | Binding _ ->
-                          (* 2026-08-17, the zarith 2×2: a Built binding
-                             must match the source's channel *)
-                          (not (equal_provision (provision_of a id) Built))
-                          || (not (provided a a_source))
-                          || Canary_basic.equal_channel
-                               (version_of a id).channel
-                               (version_of a a_source).channel
-                      | _ -> true))
+                  (* the shared coupling ({!binding_couples}) — a Built
+                     binding matches its own source's channel *)
+                  | None -> binding_couples s a id)
               | None -> true))
     else assignments
   in
@@ -797,25 +822,14 @@ let enumerate_assignments ~(policy : 'm policy) (s : project_spec) : assignment 
   in
   let assignments = cart root_results in
   (* Lockstep matching policies beyond the structural walk (2026-08-17,
-     the zarith 2×2): a BUILT binding builds FROM the scenario's source
-     (source-primary, the same rule as the Built lib), so its channel
-     must match the source's — prunes e.g. a Dev-built binding over the
-     stable source tree. The forward cell (Built binding × FETCHED lib,
-     the designed mismatch probe) survives: only the source couples,
-     the lib pairing stays free. Independent mode skips it — the raw
-     free product (the enumeration/config split). *)
+     the zarith 2×2): the shared {!binding_couples} — a BUILT binding
+     matches the channel of the source it builds from (its own
+     [Binding_source] when declared, else the lib's). Independent mode
+     skips it — the raw free product (the enumeration/config split). *)
   let assignments =
     if Poly.equal cfg.version_mode Lockstep then
       List.filter assignments ~f:(fun a ->
-          List.for_all (ps_artifacts s) ~f:(fun id ->
-              match kind_of id with
-              | Binding _ ->
-                  (not (equal_provision (provision_of a id) Built))
-                  || (not (provided a a_source))
-                  || Canary_basic.equal_channel
-                       (version_of a id).channel
-                       (version_of a a_source).channel
-              | _ -> true))
+          List.for_all (ps_artifacts s) ~f:(binding_couples s a))
     else assignments
   in
   assignments

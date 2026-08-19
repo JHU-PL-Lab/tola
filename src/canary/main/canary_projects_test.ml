@@ -45,6 +45,21 @@ let ambient_key (a : Canary_artifact.assignment) : string =
 let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assignment list =
   Canary_enumerate.enumerate ~tag:(fun () -> "") ~policy:(Canary_enumerate.full_policy ()) spec
 
+(** A project's declared SOURCE artifact — [a_source] for a project whose
+    repos carry the C lib (cairo, libffi, z3, llvm), or
+    [a_binding_source lang] when the repos carry a BINDING's source
+    (zarith's ocaml/Zarith.git over an apt libgmp, 2026-08-19). Pins that
+    ask "the source's pinned ref" must ask the project, not assume
+    [a_source]. *)
+let source_artifact_of (pr : Canary_project_run.project_run) :
+    Canary_artifact.artifact_id =
+  Option.value
+    (List.find (Canary_project_run.artifact_ids pr) ~f:(fun id ->
+         match Canary_artifact.kind_of id with
+         | Canary_basic.Source | Canary_basic.Binding_source _ -> true
+         | _ -> false))
+    ~default:Canary_artifact.a_source
+
 (* The three pins for a 3-way project (the z3/llvm shape, C2: source
    Fetched@pins {4.15.2/19, latest, arbipher}, lib Fetched@Stable |
    Built@Dev (| Installed@Dev where the project declares a staged face),
@@ -486,7 +501,8 @@ let registry_pin : Canary_project_test.pure_test =
         | Some pr ->
             let asgs = Canary_project_run.scenarios_of pr in
             let src (a : Canary_artifact.assignment) =
-              Canary_enumerate.version_of a Canary_artifact.a_source
+              (* zarith's declared source is the BINDING's (2026-08-19) *)
+              Canary_enumerate.version_of a (source_artifact_of pr)
             in
             (* C2.5 (2026-08-17): the prebuilt-shadows-source shape —
                3 scenarios (see repo_model.axes_pins) *)
@@ -989,8 +1005,10 @@ let repo_axes_pin : Canary_project_test.pure_test =
   { name = "repo_model.axes_pins";
     check =
       (fun () ->
-        let source_version a =
-          Canary_enumerate.version_of a Canary_artifact.a_source
+        (* the version of the project's OWN source artifact — zarith's is
+           the OCaml binding's source ([source_artifact_of], 2026-08-19) *)
+        let source_version pr a =
+          Canary_enumerate.version_of a (source_artifact_of pr)
         in
         let zarith_asgs = Canary_project_run.scenarios_of Canary_project_zarith.zarith_run in
         let zarith_ok =
@@ -1004,7 +1022,10 @@ let repo_axes_pin : Canary_project_test.pure_test =
              coupling pruned the incoherent {1.14 source, B bind} cell. *)
           List.length zarith_asgs = 3
           && List.for_all zarith_asgs ~f:(fun a ->
-                 not (String.equal (source_version a).Canary_basic.id ""))
+                 not
+                   (String.equal
+                      (source_version Canary_project_zarith.zarith_run a)
+                        .Canary_basic.id ""))
           && List.length
                (List.dedup_and_sort
                   (List.map zarith_asgs ~f:(fun a ->
@@ -1012,21 +1033,30 @@ let repo_axes_pin : Canary_project_test.pure_test =
                   ~compare:String.compare)
                = 3
         in
-        (* the realize ∘ dispatch: each scenario's fetch_source command
-           materializes ITS repo's worktree ref *)
+        (* the realize ∘ dispatch: each scenario's fetch command
+           materializes ITS repo's worktree ref. zarith's source is the
+           BINDING's (2026-08-19), so the cmd lives in the
+           [fetch_binding_source] slot — the [Fetch (Binding_source ocaml)]
+           action — not [fetch_source]. *)
         let fetch_cmd_of a =
           let spec =
             Canary_project_zarith.zarith_run.Canary_project_run.pr_runner_spec
               a ~workspace:"/tmp/c1" ()
           in
-          match spec.Canary_step_builder.fetch_source with
-          | Some f -> f ~output_dir:"/tmp/c1" ~variant_key:"c1"
+          match
+            List.find spec.Canary_step_builder.fetch_binding_source
+              ~f:(fun (l, _) -> Poly.equal l Canary_lang.OCaml)
+          with
+          | Some (_, f) -> f ~output_dir:"/tmp/c1" ~variant_key:"c1"
           | None -> ""
         in
         let cmds_ok =
           List.for_all zarith_asgs ~f:(fun a ->
               let expect =
-                match (source_version a).Canary_basic.channel with
+                match
+                  (source_version Canary_project_zarith.zarith_run a)
+                    .Canary_basic.channel
+                with
                 | Canary_basic.Stable -> "release-1.14"
                 | Canary_basic.Dev -> "master"
               in
@@ -1035,7 +1065,10 @@ let repo_axes_pin : Canary_project_test.pure_test =
         let cairo_ok =
           match Canary_project_run.scenarios_of Canary_project_cairo.cairo_run with
           | [ a ] ->
-              String.equal (source_version a).Canary_basic.id "1.18.0"
+              (* cairo's repo IS the C lib's — it keeps [a_source] *)
+              String.equal
+                (source_version Canary_project_cairo.cairo_run a)
+                  .Canary_basic.id "1.18.0"
           | _ -> false
         in
         zarith_ok && cmds_ok && cairo_ok) }
@@ -1999,10 +2032,15 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
              (String.concat ~sep:","
                 [ "fetch_source"; "configure"; "scan_sources";
                   "build_headers"; "build_lib"; "install_lib"; "fetch_lib";
-                  "probe_lib"; "build_binding_ocaml"; "fetch_binding_ocaml";
-                  "pack_binding_ocaml"; "probe_binding_ocaml";
-                  "probe_app_ocaml"; "build_binding_python";
-                  "probe_binding_python" ])
+                  "probe_lib";
+                  (* the off-tree binding-source fetch (2026-08-19): the
+                     column appears now that zarith declares its binding's
+                     repo as [Binding_source ocaml], and the order key puts
+                     it at the FRONT of the ocaml block *)
+                  "fetch_binding_source_ocaml"; "build_binding_ocaml";
+                  "fetch_binding_ocaml"; "pack_binding_ocaml";
+                  "probe_binding_ocaml"; "probe_app_ocaml";
+                  "build_binding_python"; "probe_binding_python" ])
         (* the OFF-TREE binding-source slot (2026-08-18, user): the
            order key places fetch_binding_source at the FRONT of its
            language's block — the column appears once a project wires

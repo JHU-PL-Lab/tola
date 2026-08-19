@@ -105,12 +105,17 @@ let repo_worktree_path ~(project : string) ~(repo : source_repo) ~(ref_ : string
     in
     Printf.sprintf "%s-%s" (repo_main_path ~project ~repo distro) slug
 
-let worktree_ensure_cmd ~project ~(repo : source_repo) ~(ref_ : string)
-    ~output_dir ~variant_key : string =
+let worktree_ensure_cmd ?(marker = "source.ok") ~project ~(repo : source_repo)
+    ~(ref_ : string) ~output_dir ~variant_key () : string =
   let distro = Canary_basic.detect_distro () in
   let main = repo_main_path ~project ~repo distro in
   let wt = repo_worktree_path ~project ~repo ~ref_ distro in
-  let ok = Canary_basic.variant_file ~variant_key "source.ok" in
+  (* the marker must be the one the ACTION's postcondition looks for
+     ({!Canary_step_builder.marker_of_action}): [source.ok] for
+     [Fetch Source], [binding_source.ok] for [Fetch (Binding_source l)].
+     Hardcoding "source.ok" made the first off-tree binding-source fetch
+     run fine and then fail its postcondition. *)
+  let ok = Canary_basic.variant_file ~variant_key marker in
   match repo.remote with
   | Some (Git url) ->
       (* the worktree shape: clone once, worktree-add once, then refresh

@@ -61,6 +61,17 @@ type t = {
      source row whose store pins are the repos' own version records — each
      scenario materializes ITS channel's worktree. *)
   sources : Canary_artifact_source.source_repo list;
+  (* WHOSE source [sources] is (2026-08-19, user: "a ref is used to mark a
+     source who provides a lib or a binding"). Pattern A projects differ:
+     cairo/libffi declare the C LIB's repo (cairo/cairo.git,
+     libffi/libffi.git), while zarith declares the OCaml BINDING's repo
+     (ocaml/Zarith.git — its C lib is apt libgmp). Both used to land in
+     [a_source], so the matrix's ref column claimed zarith's binding repo
+     was the project's lib source. [None] = the lib's source (the
+     default); [Some lang] = that binding's source, which enumerates as
+     [a_binding_source lang] and fetches through the
+     [Fetch (Binding_source lang)] action. *)
+  source_of_binding : Canary_lang.lang option;
   (* The binding's honest mechanism (2026-08-13, the recorded M2 issue):
      [Cstubs] for static stub-linked bindings (zarith/cairo), [Ctypes] for
      genuinely Dynamic_ffi ones (libffi's ctypes-foreign resolves and
@@ -76,6 +87,15 @@ type t = {
      conf-only shape). *)
   wrapper : Canary_opam_template.wrapper_decl option;
 }
+
+(** The artifact the declared [sources] provide — the lib's source by
+    default, a binding's source when the project says so
+    ([source_of_binding]). The enumeration, the artifact table and the
+    matrix's setting block all read this one answer. *)
+let source_artifact_of (d : t) : Canary_artifact.artifact_id =
+  match d.source_of_binding with
+  | None -> Canary_artifact.a_source
+  | Some lang -> Canary_artifact.a_binding_source lang
 
 (* Build the lib resolve shell snippet. Sets $LIB_NATIVE. *)
 let lib_resolve (l : lib_locator) =
@@ -137,12 +157,29 @@ let runner_spec_with (d : t) (src : Canary_artifact_source.source_repo option) :
        ([Canary_store.contrib_root]), refreshed on demand each run.
        [src] is the SCENARIO's repo (the per-channel dispatch, C1) —
        the pattern never builds from it. *)
+    (* the fetch lands in the slot for the artifact the source PROVIDES
+       (2026-08-19): a lib source fetches through [Fetch Source], a
+       binding's through [Fetch (Binding_source lang)] — same command,
+       different action, so the step's gating and its marker follow the
+       artifact the project actually declared. *)
     fetch_source =
-      Option.map
-        (fun source ~output_dir ~variant_key ->
-          Canary_artifact_source.worktree_ensure_cmd ~project:d.name
-            ~repo:source ~ref_:source.ref_ ~output_dir ~variant_key)
-        src;
+      (match d.source_of_binding with
+       | Some _ -> None
+       | None ->
+           Option.map
+             (fun source ~output_dir ~variant_key ->
+               Canary_artifact_source.worktree_ensure_cmd ~project:d.name
+                 ~repo:source ~ref_:source.ref_ ~output_dir ~variant_key ())
+             src);
+    fetch_binding_source =
+      (match (d.source_of_binding, src) with
+       | Some lang, Some source ->
+           [ ( lang,
+               fun ~output_dir ~variant_key ->
+                 Canary_artifact_source.worktree_ensure_cmd
+                   ~marker:"binding_source.ok" ~project:d.name ~repo:source
+                   ~ref_:source.ref_ ~output_dir ~variant_key () ) ]
+       | _ -> []);
     (* fetch_binding stays Raw (Derived can't reproduce opam install_args yet). *)
     fetch_binding =
       [ (Canary_lang.OCaml, Canary_step_builder.Raw (Canary_step_builder.fetch_binding_cmd prebuilt.opam_package_spec)) ];
@@ -194,7 +231,12 @@ let runner_spec (d : t) : Canary_step_builder.runner_spec =
    The realize ∘ dispatch idiom (canary_project_z3.ml). *)
 let source_for_assignment (d : t) (a : Canary_artifact.assignment) :
     Canary_artifact_source.source_repo =
-  let v = Canary_enumerate.version_of a Canary_artifact.a_source in
+  (* read the placement of the artifact THESE repos provide (2026-08-19):
+     the lib's source, or a binding's when the project declares one —
+     reading [a_source] unconditionally left zarith's dispatch with an
+     absent placement and it fell through to the stable head, so every
+     scenario fetched the 1.14 worktree. *)
+  let v = Canary_enumerate.version_of a (source_artifact_of d) in
   let open Canary_basic in
   match
     List.find_opt
@@ -548,7 +590,8 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
                (fun r -> r.Canary_artifact_source.version.Canary_basic.channel)
                sources)
         in
-        [ Canary_project_spec.artifact_row ~artifact:a_source
+        [ Canary_project_spec.artifact_row
+            ~artifact:(source_artifact_of d)
             ~universe:[ (Fetched, channels) ]
             ~provider:(Canary_store_config.Repo_axes sources) () ]
   in

@@ -189,6 +189,12 @@ let decl : Canary_opam_binding.t = {
      first-class per-channel repos (one scenario each). The fork slot
      stays empty until a dev bug worth fixing appears. *)
   sources = [ zarith_source_stable; zarith_source_dev ];
+  (* ocaml/Zarith.git is the OCAML BINDING's repo, not the lib's
+     (2026-08-19, user): the C lib here is apt libgmp, and GMP's own repo
+     is declared separately + unwired. Before this, zarith's refs
+     (1.14 / master) landed in [a_source], so the matrix's ref column
+     presented a binding's repo as the project's lib source. *)
+  source_of_binding = Some Canary_lang.OCaml;
   binding_mechanism = Canary_mechanism.Cstubs;
   wrapper = Some zarith_wrapper_decl;
 }

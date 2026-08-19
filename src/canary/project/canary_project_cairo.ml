@@ -85,6 +85,8 @@ let decl : Canary_opam_binding.t = {
      would be a major version bump. *)
   ocaml_module_watchlist = cairo_ocaml_watchlist;
   sources = [ cairo_source_stable ];
+  (* the C LIB's own repo (cairo/cairo.git) — the default *)
+  source_of_binding = None;
   binding_mechanism = Canary_mechanism.Cstubs;
   wrapper = None;
 }

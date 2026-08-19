@@ -407,10 +407,20 @@ let check_binding_dev_source (pr : Canary_project_run.project_run) : item =
 let repo_contents_violations (pr : Canary_project_run.project_run) :
     (string * string) list =
   List.filter_map pr.pr_artifacts ~f:(fun d ->
+      (* A repo's [artifacts] records the CONSUMABLE artifacts it can
+         provide (lib, binding). A SOURCE row's provider being that repo
+         is tautological — the repo IS the source — so source-kind rows
+         are exempt. Extended 2026-08-19 from [a_source] alone to any
+         source kind, when an off-tree BINDING source became a declared
+         artifact (zarith's repo provides the binding; demanding it also
+         list "binding_source-ocaml" among its contents asks it to
+         declare itself). *)
       let not_source =
-        not
-          (Canary_artifact.equal_artifact_id d.Canary_project_spec.ar_artifact
-             Canary_artifact.a_source)
+        match
+          Canary_artifact.kind_of d.Canary_project_spec.ar_artifact
+        with
+        | Canary_basic.Source | Canary_basic.Binding_source _ -> false
+        | _ -> true
       in
       match d.Canary_project_spec.ar_provider with
       | Some (Canary_store_config.Repo r) when not_source ->
