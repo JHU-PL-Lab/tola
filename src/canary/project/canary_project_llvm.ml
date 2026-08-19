@@ -639,8 +639,7 @@ let llvm_run _distro : Canary_project_run.project_run =
   { pr_name = "llvm";
     pr_artifacts = llvm_artifacts;
     pr_runner_spec =
-      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
-        let _ = consumer_lib in
+      (fun a ~workspace:_ () ->
         realize a);
     pr_mismatch_probes = [];
     (* the table-era dev chain has no Publish row (known omission — the

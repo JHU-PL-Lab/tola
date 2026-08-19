@@ -53,7 +53,7 @@ let run_one ?(config = Canary_project_run.default_config)
   let results =
     Canary_runner.run_project_spec
       ?policy:(Canary_project_run.enumeration_policy_of config)
-      ~consumer_lib:config.Canary_project_run.consumer_lib pr ~root ~failfast
+      pr ~root ~failfast
   in
   List.iter (fun r -> Fmt.pr "%s@." (verdict_lines pr r)) results;
   results
@@ -69,12 +69,10 @@ let run ?(force_thin = false) ?(force_audit = false) ~root ~failfast
       let config =
         if force_audit then
           { Canary_project_run.policy = Canary_project_run.Audit_lib;
-            refs = Canary_enumerate.All_refs;
-            consumer_lib = Canary_basic.Build_tree }
+            refs = Canary_enumerate.All_refs }
         else if force_thin then
           { Canary_project_run.policy = Canary_project_run.Thin;
-            refs = Canary_enumerate.All_refs;
-            consumer_lib = Canary_basic.Build_tree }
+            refs = Canary_enumerate.All_refs }
         else Canary_project_run.batch_config pr
       in
       Fmt.pr "[batch] %s: %s policy@." name

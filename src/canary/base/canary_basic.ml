@@ -51,20 +51,14 @@ type artifact_kind =
   | App
 [@@deriving show, eq]
 
-(** Which CONCRETE lib the consumer side (the binding's probe, later
-    its build) reads in a built chain (2026-08-18, user — the
-    installed-consumer experiment): [Build_tree] = the raw ninja build
-    output ([build/libz3.so]); [Installed] = the staged prefix
-    ([install/lib/libz3.so] + the installed OCaml package). A
-    REALIZATION policy, not an enumeration axis — the scenario set is
-    unchanged; the choice flips the consumer's referenced paths. The
-    two artifacts coexist on disk ([cmake --install] copies; the
-    build tree is untouched), so one build cache serves both. *)
-type consumer_lib = Build_tree | Installed [@@deriving show, eq]
-
-let string_of_consumer_lib = function
-  | Build_tree -> "build_tree"
-  | Installed -> "installed"
+(* [consumer_lib = Build_tree | Installed] lived here from 2026-08-18
+   (the installed-consumer experiment: WHICH concrete lib the consumer
+   side reads, as a run policy) and retired 2026-08-19 — the question is
+   answered by the lib's PROVISION ([Canary_store.Installed] = the
+   staged face), so the staged consumer is an enumerated world with its
+   own scenario instead of a flag over the same one. The probe LOCATION
+   vocabulary that survives is [Canary_store.location]
+   ([Build_tree]/[Staged]/[Pm]). *)
 
 let kind_order = function
   | Source -> 0 | Headers -> 1 | Lib -> 2 | Binding _ -> 3

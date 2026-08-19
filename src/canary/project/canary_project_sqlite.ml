@@ -435,9 +435,7 @@ let sqlite_run : Canary_project_run.project_run =
        Built@Stable and Built@Dev get distinct dirs; Fetched collapses across
        versions there). The built_spec reads the version from the assignment. *)
     pr_runner_spec =
-      (fun a ~workspace ?(consumer_lib = Canary_basic.Build_tree) () ->
-        let _ = consumer_lib in
-        realize a ~workspace);
+      (fun a ~workspace () -> realize a ~workspace);
     (* No designed mismatch probes: sqlite is additive-only upstream (no
        backward breaks exist — measured, status §C) and no consumer here
        requires a version-sensitive API yet (a forward probe needs a ≤3.43

@@ -47,16 +47,20 @@ let enumerate_full (spec : Canary_artifact.project_spec) : Canary_artifact.assig
 
 (* The three pins for a 3-way project (the z3/llvm shape, C2: source
    Fetched@pins {4.15.2/19, latest, arbipher}, lib Fetched@Stable |
-   Built@Dev, python binding Fetched@Stable; the OCaml binding not
-   enumerated — it follows the chain).
+   Built@Dev (| Installed@Dev where the project declares a staged face),
+   python binding Fetched@Stable; the OCaml binding not enumerated — it
+   follows the chain).
    [source_of] projects the project's own [source_for_assignment]
-   dispatch; [dispatch_is_dev] is "is the dev build chain" (= lib Built —
-   [realize_from_rows] filters the build rows by the lib provision). *)
+   dispatch; [dispatch_is_dev] is "does this world build from source" —
+   the BUILT FAMILY (Built or Installed: an Installed world builds and
+   then stages), which is exactly what [realize_from_rows] fires the
+   build rows for. [n_staged] (2026-08-19) counts the Installed worlds;
+   0 for a project without a staged face. *)
 let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     ~(artifacts : Canary_project_spec.artifact_row list)
     ~(source_of : Canary_artifact.assignment -> Canary_artifact_source.source_repo)
     ~(dispatch_is_dev : Canary_artifact.assignment -> bool)
-    ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) () :
+    ?(n_worlds = 5) ?(n_dev = 2) ?(n_stable = 3) ?(n_staged = 0) () :
     Canary_project_test.pure_test list =
   let lib_prov a = Canary_enumerate.provision_of a Canary_artifact.a_lib in
   (* dev variant: the coherent build chain — source@Dev (ANY dev repo —
@@ -66,6 +70,14 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     && Canary_basic.equal_channel
          (Canary_enumerate.version_of a Canary_artifact.a_lib).Canary_basic.channel
          Canary_basic.Dev
+    && Canary_basic.equal_channel
+         (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.channel
+         Canary_basic.Dev
+  in
+  (* staged variant (2026-08-19): the same build chain, consumed through
+     the install prefix — an Installed lib over a dev source *)
+  let is_staged a =
+    EN.equal_provision (lib_prov a) Canary_artifact.Installed
     && Canary_basic.equal_channel
          (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.channel
          Canary_basic.Dev
@@ -95,6 +107,11 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
         List.length asgs = n_worlds
         && List.count asgs ~f:is_dev = n_dev
         && List.count asgs ~f:is_stable_world = n_stable
+        && List.count asgs ~f:is_staged = n_staged
+        (* the three buckets PARTITION the world set — a world that is
+           neither an all-Fetched chain nor a build chain nor its staged
+           face would slip past the counts otherwise *)
+        && n_dev + n_stable + n_staged = n_worlds
         (* each repo pin is ONE identity-bearing world *)
         && List.length scenario_ids = n_worlds
         (* the python binding row is variant-invariant: Fetched everywhere *)
@@ -113,19 +130,21 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
     (* the dispatch is pure data over enumeration coordinates — pin that
        the repo selection follows the SOURCE placement's pinned id (C2:
        the repo IS the scenario's identity — [source_of]), and that the
-       dev-CHAIN discriminator is the lib provision (Built ⇒ dev build
-       chain; [realize_from_rows] filters the build rows by exactly
-       that). [realize] is deliberately NOT called (command templates
-       shell into distro/PM detection). *)
+       source-BUILDING discriminator is the lib provision's built FAMILY
+       (Built or Installed ⇒ the build rows fire; [realize_from_rows]
+       gates them by exactly that, so a staged world builds like a built
+       one and then stages). [realize] is deliberately NOT called
+       (command templates shell into distro/PM detection). *)
     { name = prefix ^ ".dispatch_reads_source_placement";
       check = (fun () ->
         let asgs = enumerate_full spec in
         let cases = List.map asgs ~f:dispatch_is_dev in
-        List.count cases ~f:Fn.id = n_dev
+        List.count cases ~f:Fn.id = n_dev + n_staged
         && List.count cases ~f:not = n_stable
         && List.for_all2_exn asgs cases ~f:(fun a dev ->
                Bool.equal dev
-                 (EN.equal_provision (lib_prov a) EN.Built))
+                 (EN.equal_provision (lib_prov a) EN.Built
+                 || EN.equal_provision (lib_prov a) Canary_artifact.Installed))
         && List.for_all asgs ~f:(fun a ->
                String.equal
                  (source_of a).Canary_artifact_source.version.Canary_basic.id
@@ -155,27 +174,28 @@ let two_chain_pins ~(prefix : string) ~(spec : Canary_artifact.project_spec)
                       (Canary_store_config.provision_of_provider p)
                       pl.Canary_artifact.provision)) } ]
 
+let built_family a =
+  let pv = Canary_enumerate.provision_of a Canary_artifact.a_lib in
+  Canary_enumerate.equal_provision pv Canary_artifact.Built
+  || Canary_enumerate.equal_provision pv Canary_artifact.Installed
+
 let z3_pins : Canary_project_test.pure_test list =
-  (* z3's 4th repo (pre-10549, the #10549 regression ref) makes SEVEN
-     worlds: 4 all-Fetched + 3 dev chains (latest / fork / pre-10549) *)
+  (* SEVEN worlds (2026-08-19): ONE all-Fetched chain (the stable repo —
+     the source follows the lib's channel) + each of the 3 dev repos
+     twice, build-tree and staged (latest / fork / pre-10549). Before the
+     Installed axis it was 4 all-Fetched + 3 dev chains, where 3 of those
+     fetched worlds were the same world under different source refs. *)
   two_chain_pins ~prefix:"z3" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_z3.z3_artifacts)
     ~artifacts:Canary_project_z3.z3_artifacts
     ~source_of:Canary_project_z3.z3_source_for_assignment
-    ~dispatch_is_dev:(fun a ->
-      Canary_enumerate.equal_provision
-        (Canary_enumerate.provision_of a Canary_artifact.a_lib)
-        Canary_artifact.Built)
-    ~n_worlds:7 ~n_dev:3 ~n_stable:4 ()
+    ~dispatch_is_dev:built_family
+    ~n_worlds:7 ~n_dev:3 ~n_stable:1 ~n_staged:3 ()
 
 let llvm_pins : Canary_project_test.pure_test list =
   two_chain_pins ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts)
     ~artifacts:Canary_project_llvm.llvm_artifacts
     ~source_of:Canary_project_llvm.llvm_source_for_assignment
-    ~dispatch_is_dev:(fun a ->
-      Canary_enumerate.equal_provision
-        (Canary_enumerate.provision_of a Canary_artifact.a_lib)
-        Canary_artifact.Built)
-    ()
+    ~dispatch_is_dev:built_family ()
 
 (* ── A7 phase 3 pins: z3/llvm run the DERIVED lowering ──
    Pure shape of the expectation closure over the REAL binding tables (no
@@ -529,7 +549,7 @@ let tiny1_bridge : Canary_project_test.pure_test =
       let pr : Canary_project_run.project_run =
         { pr_name = "tiny1/Bs.1";
           pr_artifacts = Canary_project_tiny.tiny_artifact_table;
-          pr_runner_spec = (fun _a ~workspace:_ ?consumer_lib:_ () ->
+          pr_runner_spec = (fun _a ~workspace:_ () ->
             { SB.empty_runner_spec with
               SB.expectation = Canary_project_tiny.expectation_agnostic });
           pr_mismatch_probes = [];
@@ -837,8 +857,7 @@ let shadow_policy_ladder_pin : Canary_project_test.pure_test =
         let module EN = Canary_enumerate in
         let ep p =
           Canary_project_run.enumeration_policy_of
-            { Canary_project_run.policy = p; refs = EN.All_refs;
-              consumer_lib = B.Build_tree }
+            { Canary_project_run.policy = p; refs = EN.All_refs }
         in
         let shadow_of = function
           | None -> None
@@ -929,7 +948,7 @@ let local_fork_pin : Canary_project_test.pure_test =
                   ~universe:[ (Canary_artifact.Fetched, [ Canary_basic.Dev ]) ]
                   ~provider:(Canary_store_config.Repo repo) () ];
             pr_runner_spec =
-              (fun _a ~workspace:_ ?consumer_lib:_ () ->
+              (fun _a ~workspace:_ () ->
                 Canary_step_builder.empty_runner_spec);
             pr_mismatch_probes = [];
             pr_wrapper_pkgs = [];
@@ -1256,67 +1275,60 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
               | _ -> false
             else Poly.equal exp SM.Expect_success)
         &&
-        (* the installed-consumer half (2026-08-18): the DEV chain's probe
-           (binding Built) declares the staged-prefix failure ONLY under
-           the Installed policy; the fetched world's probe (binding
-           Fetched) stays agnostic under both policies, and the Build_tree
-           probe stays agnostic too (it passes — the build tree has the
-           package). *)
-        let probe_exp ~consumer_lib a =
+        (* the installed-consumer half (2026-08-18; keyed on the WORLD
+           since 2026-08-19): the staged-prefix failure is declared in
+           exactly the INSTALLED world of the pre-fix ref — the Built
+           world's probe stays agnostic (it passes; the build tree has the
+           package) and so does every fetched world. The old form toggled
+           the [--installed] policy on one scenario; now the two faces
+           ARE two scenarios, so the pin quantifies over the enumeration
+           and no policy argument exists to pass. *)
+        let probe_exp a =
           let spec =
-            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg"
-              ~consumer_lib ()
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/reg" ()
           in
           spec.Canary_step_builder.expectation
             (Canary_basic.Probe_binding Canary_lang.OCaml) None
         in
-        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
-            let src_id =
-              (Canary_enumerate.version_of a Canary_artifact.a_source)
-                .Canary_basic.id
-            in
-            let bind_built =
-              Canary_enumerate.equal_provision
-                (Canary_enumerate.provision_of a
-                   Canary_project_z3.z3_binding_art)
-                Canary_artifact.Built
-            in
-            let declared_signature e =
-              match e with
-              | SM.Expect_failure { contains_any; _ } ->
-                  List.mem contains_any "STAGED PACKAGE MISSING"
-                    ~equal:String.equal
-              | _ -> false
-            in
-            if String.equal src_id "pre-10549" && bind_built then
-              declared_signature
-                (probe_exp ~consumer_lib:Canary_basic.Installed a)
-              && not (declared_signature
-                        (probe_exp ~consumer_lib:Canary_basic.Build_tree a))
-            else
-              not (declared_signature
-                     (probe_exp ~consumer_lib:Canary_basic.Installed a))
-              && not (declared_signature
-                        (probe_exp ~consumer_lib:Canary_basic.Build_tree a)))) }
+        let scenarios = Canary_project_run.scenarios_of pr in
+        let declared_signature e =
+          match e with
+          | SM.Expect_failure { contains_any; _ } ->
+              List.mem contains_any "STAGED PACKAGE MISSING"
+                ~equal:String.equal
+          | _ -> false
+        in
+        let is_staged_world a =
+          String.equal
+            (Canary_enumerate.version_of a Canary_artifact.a_source)
+              .Canary_basic.id "pre-10549"
+          && Canary_enumerate.equal_provision
+               (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+               Canary_artifact.Installed
+        in
+        (* the world must EXIST — otherwise the implication below is
+           vacuously true and the pin would pass on a lost scenario *)
+        List.exists scenarios ~f:is_staged_world
+        && List.for_all scenarios ~f:(fun a ->
+               Bool.equal (declared_signature (probe_exp a))
+                 (is_staged_world a))) }
 
-(* The installed-consumer experiment (2026-08-18, user): --installed is a
-   REALIZATION policy — the scenario set is unchanged; only the dev
-   chain's probe_binding OCaml cmd changes to read the STAGED package
-   (<prefix>/lib/ocaml/z3 — the Install_lib staging prefix). Pin:
-   (a) the default (Build_tree) cmd is byte-equal whether the policy is
-   passed explicitly or left to the optional default (today's world,
-   unchanged); (b) under Installed the same scenario's cmd references
-   the install prefix's lib + OCaml package and differs from the
-   build-tree one. *)
+(* z3's REALIZATION check (2026-08-18 as a policy pin; re-keyed to the
+   enumerated world 2026-08-19) — the half {!provider_rows_pin} can't
+   derive, the sqlite.staged_probe_paths analogue: the Installed world's
+   OCaml probe consumes the STAGED package (<prefix>/lib/ocaml/z3 +
+   <prefix>/lib/libz3.so, with the STAGED-PACKAGE-MISSING guard the
+   declared expectation greps), while the Built world's reads the build
+   tree (src/api/ml) and mentions no prefix at all. Both worlds' probes
+   must be DISTINCT commands — the consumer exclusivity realized. *)
 let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
   { name = "z3.installed_probe_consumes_prefix";
     check =
       (fun () ->
         let pr = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
-        let probe_cmd ?consumer_lib a =
+        let probe_cmds a =
           let spec =
-            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/inst"
-              ?consumer_lib ()
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/inst" ()
           in
           List.filter_map spec.Canary_step_builder.probe_binding
             ~f:(fun (l, _, f) ->
@@ -1324,41 +1336,36 @@ let z3_installed_probe_consumes_prefix : Canary_project_test.pure_test =
                 Some (f ~output_dir:"/tmp/inst" ~variant_key:"pin")
               else None)
         in
-        List.for_all (Canary_project_run.scenarios_of pr) ~f:(fun a ->
-            let bt = probe_cmd a in
-            let bt_explicit =
-              probe_cmd ~consumer_lib:Canary_basic.Build_tree a
-            in
-            let inst = probe_cmd ~consumer_lib:Canary_basic.Installed a in
-            (* zip the three renders index-wise (the same spec structure,
-               so equal lengths by construction). *)
-            let zipped =
-              List.map3_exn bt bt_explicit inst ~f:(fun bt bte inst ->
-                  (bt, bte, inst))
-            in
-            let pair_ok (bt, bte, inst) =
-              if String.is_substring bt ~substring:"src/api/ml" then
-                (* the dev raw probe: (a) the default policy is byte-equal
-                   to the explicit Build_tree — today's world untouched;
-                   (b) the Installed render reads the STAGED package, not
-                   the build tree. *)
-                String.equal bt bte
-                && String.is_substring inst
-                     ~substring:"/install/lib/ocaml/z3"
-                && String.is_substring inst
-                     ~substring:"/install/lib/libz3.so"
-                && String.is_substring inst
-                     ~substring:"STAGED PACKAGE MISSING"
-                && not (String.is_substring bt ~substring:"STAGED PACKAGE")
-                && not (String.equal bt inst)
-              else
-                (* every other probe template is policy-INVARIANT (the
-                   shared opam probe etc.) — a render difference here
-                   would mean the policy leaked into the wrong cmd. *)
-                String.equal bt bte && String.equal bt inst
-            in
-            not (List.is_empty zipped)
-            && List.for_all zipped ~f:pair_ok)) }
+        let raw_probe_of a =
+          (* the dev chains' raw probe (the only one that reads a concrete
+             tree; the fetched worlds' opam probe is prefix-agnostic) *)
+          List.find (probe_cmds a) ~f:(fun c ->
+              String.is_substring c ~substring:"z3_example")
+        in
+        let scenarios = Canary_project_run.scenarios_of pr in
+        let of_provision pv =
+          List.filter_map scenarios ~f:(fun a ->
+              if
+                Canary_enumerate.equal_provision
+                  (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+                  pv
+              then raw_probe_of a
+              else None)
+        in
+        let staged = of_provision Canary_artifact.Installed in
+        let build_tree = of_provision Canary_artifact.Built in
+        (* both faces must be POPULATED (a lost world would make the
+           for_alls vacuous) and each must read only its own tree *)
+        (not (List.is_empty staged))
+        && (not (List.is_empty build_tree))
+        && List.for_all staged ~f:(fun c ->
+               String.is_substring c ~substring:"/install/lib/ocaml/z3"
+               && String.is_substring c ~substring:"/install/lib/libz3.so"
+               && String.is_substring c ~substring:"STAGED PACKAGE MISSING")
+        && List.for_all build_tree ~f:(fun c ->
+               String.is_substring c ~substring:"src/api/ml"
+               && (not (String.is_substring c ~substring:"STAGED PACKAGE"))
+               && not (String.is_substring c ~substring:"/install/lib"))) }
 
 (* M2 step 4 pin (2026-08-17): z3/llvm's decls are HONEST — the wheel-
    bundled Python bindings are Ctypes + Dlopen (the previous Cext
@@ -1457,14 +1464,19 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
               in
               (src_id, lib_prov))
         in
+        (* 2026-08-19 (the z3 landing): each dev ref now shows its
+           build/install PAIR instead of a build row plus a phantom
+           fetched row (four all-Fetched worlds that differed only in a
+           source ref none of them read). The stable ref keeps the single
+           fetched row — the source follows the lib's channel. *)
         Poly.equal keyed
           [ ("4.15.2", Canary_artifact.Fetched);
             ("latest", Canary_artifact.Built);
-            ("latest", Canary_artifact.Fetched);
+            ("latest", Canary_artifact.Installed);
             ("arbipher", Canary_artifact.Built);
-            ("arbipher", Canary_artifact.Fetched);
+            ("arbipher", Canary_artifact.Installed);
             ("pre-10549", Canary_artifact.Built);
-            ("pre-10549", Canary_artifact.Fetched) ]) }
+            ("pre-10549", Canary_artifact.Installed) ]) }
 
 (* The GLOBAL row index (2026-08-18, user): every row carries its
    ordinal (#N, fast pointing in the rendered order) + a stable code
@@ -1521,14 +1533,23 @@ let matrix_row_index_pin : Canary_project_test.pure_test =
    ordering, the realized chains) — no hand-listed scenarios:
    (a) the pair axis — the Built and Installed universes declare the
        SAME channel list (each built version gets its staged face);
-   (b) the row order — per channel build-then-install, fetched LAST
-       (the "repo × 2 + 1 fetched" shape);
-   (c) the exclusivity — the Install_lib action fires IFF the lib
+   (b) the row order, PER SOURCE-REF GROUP — build-then-install in
+       declared channel order, fetched LAST (the "repo × 2 + 1 fetched"
+       shape). Grouping by ref is what makes the check general
+       (2026-08-19, the z3 landing): a single-ref project like sqlite is
+       one group and reduces to the original check, while a multi-ref
+       project like z3 repeats the shape per declared repo. The
+       global-order-only form asserted one row per (channel, provision)
+       and could not describe z3's three dev refs at all;
+   (c) the twin count per group — as many Installed rows as Built rows.
+       Without it (b) is satisfiable by a group that LOST its staged
+       row (the filtered expectation would shrink with it);
+   (d) the exclusivity — the Install_lib action fires IFF the lib
        provision is Installed (the rows' [ar_needs] gates).
    The row REALIZATION (what the staging/probe commands ARE) stays
-   project data. Projects opt in by declaring Installed; z3 applies
-   the factory once its migration lands (its built world still runs
-   install under the legacy default). *)
+   project data — see [sqlite_staged_probe_paths_pin] /
+   [z3_installed_probe_consumes_prefix]. Projects opt in by declaring
+   an Installed universe. *)
 let provider_rows_pin ~prefix (pr : Canary_project_run.project_run) :
     Canary_project_test.pure_test =
   { name = prefix ^ ".provider_rows";
@@ -1555,27 +1576,48 @@ let provider_rows_pin ~prefix (pr : Canary_project_run.project_run) :
         let fetched_chs = channels_of Canary_artifact.Fetched in
         (* (a) the pair axis *)
         let ok_pair_axis = Poly.equal built_chs installed_chs in
-        (* (b) the row order, derived *)
+        (* (b) + (c) the row order and twin count, PER REF GROUP *)
         let sorted =
           List.stable_sort asgs ~compare:(fun x y ->
               Stdlib.compare (Canary_matrix.row_key pr x)
                 (Canary_matrix.row_key pr y))
         in
-        let expected =
+        let ref_of a =
+          (Canary_enumerate.version_of a Canary_artifact.a_source)
+            .Canary_basic.id
+        in
+        let pair_of a =
+          (Canary_enumerate.channel_of a Canary_artifact.a_lib, lib_prov a)
+        in
+        (* the canonical shape one ref group may show, in order *)
+        let canonical =
           List.concat_map built_chs ~f:(fun ch ->
               [ (ch, Canary_artifact.Built);
                 (ch, Canary_artifact.Installed) ])
           @ List.map fetched_chs ~f:(fun ch ->
                 (ch, Canary_artifact.Fetched))
         in
-        let ok_order =
-          Poly.equal
-            (List.map sorted ~f:(fun a ->
-                 (Canary_enumerate.channel_of a Canary_artifact.a_lib,
-                  lib_prov a)))
-            expected
+        let groups =
+          List.group sorted ~break:(fun x y ->
+              not (String.equal (ref_of x) (ref_of y)))
         in
-        (* (c) the install exclusivity *)
+        let group_ok g =
+          let pairs = List.map g ~f:pair_of in
+          let count pv =
+            List.count pairs ~f:(fun (_, p) ->
+                Canary_artifact.equal_provision p pv)
+          in
+          (* the group's rows appear in the canonical order … *)
+          Poly.equal pairs
+            (List.filter canonical ~f:(fun p ->
+                 List.mem pairs p ~equal:Poly.equal))
+          (* … and every built row in it kept its staged twin *)
+          && count Canary_artifact.Built = count Canary_artifact.Installed
+        in
+        let ok_order =
+          (not (List.is_empty groups)) && List.for_all groups ~f:group_ok
+        in
+        (* (d) the install exclusivity *)
         let ok_gating =
           List.for_all asgs ~f:(fun a ->
               let has_install =
@@ -1650,10 +1692,36 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
               String.equal r.Canary_matrix.scenario
                 "ocaml_binding-built-dev_source-fetched-arbipher_lib-built-dev_python_binding-fetched")
         in
-        let pre_10549_fetched_row =
+        (* z3's ONE all-fetched world (2026-08-19): the source follows the
+           lib's channel, so the Fetched lib pairs only with the stable
+           repo — the pre-10549/latest/arbipher fetched rows it used to
+           name were phantoms (same lib, same binding, unread source). *)
+        let stable_fetched_row =
           List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
-                "ocaml_binding-fetched-4.16.0_source-fetched-pre-10549_lib-fetched_python_binding-fetched")
+                "ocaml_binding-fetched-4.16.0_source-fetched-4.15.2_lib-fetched_python_binding-fetched")
+        in
+        (* the staged twin of the pre-fix ref: the row exists, its
+           install_lib cell names the INSTALLED lib, and the Built twin
+           above carries no install_lib cell (the exclusivity, read off
+           the rendered matrix rather than the action list) *)
+        let pre_10549_installed_row =
+          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+              String.equal r.Canary_matrix.scenario
+                "ocaml_binding-built-dev_source-fetched-pre-10549_lib-installed-dev_python_binding-fetched")
+        in
+        let staged_cells_ok =
+          let cell (r : Canary_matrix.row) tag =
+            match List.Assoc.find r.Canary_matrix.cells tag ~equal:String.equal with
+            | Some (Some c) -> Some c.Canary_matrix.provision
+            | _ -> None
+          in
+          match (pre_10549_installed_row, pre_10549_row) with
+          | Some inst, Some built ->
+              Poly.equal (cell inst "install_lib") (Some "lib I:d")
+              && Poly.equal (cell inst "probe_lib") (Some "lib I:d")
+              && Option.is_none (cell built "install_lib")
+          | _ -> false
         in
         let web_identity_ok =
           match pre_10549_row with
@@ -1688,7 +1756,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                  version — the pin asserts the static prefix only, the
                  version is machine-dependent), the binding is the
                  opam package at its store pin *)
-              && (match pre_10549_fetched_row with
+              && (match stable_fetched_row with
                   | Some fr -> (
                       match
                         List.Assoc.find fr.Canary_matrix.cells "fetch_lib"
@@ -1716,7 +1784,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
-        && web_identity_ok
+        && web_identity_ok && staged_cells_ok
         (* the CANONICAL column order (ratchet, 2026-08-18): the
            native/lib group, then per language a same-shaped block
            (binding build/fetch/pack/probe + its app) — probe_app_ocaml
@@ -1776,8 +1844,11 @@ let tests : Canary_project_test.pure_test list =
       matrix_row_order_pin;
       matrix_row_index_pin;
       (* the GENERAL factory, instantiated per project that declares an
-         Installed universe (z3 joins after its migration) *)
+         Installed universe: sqlite (one ref group) and z3 (one group per
+         declared repo) — the same derived invariants over both shapes *)
       provider_rows_pin ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
       sqlite_staged_probe_paths_pin;
+      provider_rows_pin ~prefix:"z3"
+        (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       matrix_registry_shape_pin ]
 

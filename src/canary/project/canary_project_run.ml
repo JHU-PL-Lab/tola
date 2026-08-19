@@ -81,14 +81,14 @@ type project_run = {
       providers. Replaces the separate [pr_spec] + [pr_artifacts] tables. *)
   pr_artifacts : Canary_project_spec.artifact_row list;
   pr_runner_spec :
-    Canary_artifact.assignment -> workspace:string ->
-    ?consumer_lib:Canary_basic.consumer_lib -> unit ->
+    Canary_artifact.assignment -> workspace:string -> unit ->
     Canary_step_builder.runner_spec;
-      (** the optional [consumer_lib] (2026-08-18, the
-          installed-consumer experiment) — only projects whose consumer
-          side can read different concrete libs dispatch on it (z3's
-          Installed probe); every project accepts the param so the run
-          layer threads it uniformly. *)
+      (** the realization of ONE enumerated world. Which concrete lib the
+          consumer reads is a coordinate of the [assignment] (an
+          [Installed] lib provision = the staged face), never a run
+          policy — the [?consumer_lib] parameter of the 2026-08-18
+          installed-consumer experiment retired 2026-08-19 when the
+          provision axis absorbed it. *)
   pr_mismatch_probes :
     (Canary_artifact.artifact_id * Canary_basic.channel
      * Canary_basic.mismatch_direction) list;
@@ -228,18 +228,15 @@ type run_config = {
           regression-test case) — [All_refs] by default; the CLI's
           [--refs a,b] narrows to the declared repos with those pinned
           ids (e.g. ["latest"; "pre-10549"]). The batch never sets it. *)
-  consumer_lib : Canary_basic.consumer_lib;
-      (** which concrete lib the consumer reads (2026-08-18, the
-          installed-consumer experiment) — [Build_tree] by default;
-          the CLI's [--installed] flips the dev chain's probe to the
-          staged prefix. A realization policy; the batch never sets
-          it. *)
+  (* [consumer_lib] (2026-08-18) retired 2026-08-19: which concrete lib
+     the consumer reads is an ENUMERATION coordinate (an [Installed] lib
+     provision = the staged face), so it belongs to the scenario, not to
+     the run config. Selecting a subset of worlds is [refs]-shaped
+     work — see the selection-config item in status_project. *)
 }
 
 let default_config : run_config =
-  { policy = Full;
-    refs = Canary_enumerate.All_refs;
-    consumer_lib = Canary_basic.Build_tree }
+  { policy = Full; refs = Canary_enumerate.All_refs }
 
 (** The mapping to the enumeration policy — the ONE place the run layer
     touches [Canary_enumerate.policy]. [Full] = [None] (the full default
@@ -274,9 +271,7 @@ let batch_policy (pr : project_run) : run_policy =
   | Light -> Full
 
 let batch_config (pr : project_run) : run_config =
-  { policy = batch_policy pr;
-    refs = Canary_enumerate.All_refs;
-    consumer_lib = Canary_basic.Build_tree }
+  { policy = batch_policy pr; refs = Canary_enumerate.All_refs }
 
 (** Pattern-annotated scenarios: each assignment paired with its action
     chain. The chain IS the pattern — the ordered list of actions from

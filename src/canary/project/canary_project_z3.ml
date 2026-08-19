@@ -372,11 +372,20 @@ let z3_python_provider =
 
 let z3_artifacts : Canary_project_spec.artifact_row list =
   let open Canary_project_spec in
-  [ artifact_row ~artifact:a_source
+  [ artifact_row ~artifact:a_source ~follows:a_lib
       ~universe:[ (Fetched, Canary_basic.[ Stable; Dev ]) ]
       (* C2 (2026-08-16): the 3-way — stable, official dev (latest), and
          the arbipher fork, as per-channel repo pins: one identity-bearing
-         scenario per repo. *)
+         scenario per repo.
+
+         [~follows:a_lib] (2026-08-19): the source's channel LOCKS to the
+         lib's — the phantom-ref-axis fix. Without it every declared repo
+         crossed the Fetched lib, giving 4 all-Fetched worlds identical
+         except a source ref nothing in them reads (lib=F:stable,
+         binding=F:4.16.0 four times over: four runs, one world). With it
+         the Fetched lib keeps only the Stable pin (ONE fetched world =
+         4.15.2, the version the opam binding was built against) and the
+         Dev refs stay with the chains that actually build from them. *)
       ~provider:
         (Canary_store_config.Repo_axes
            [ z3_source_stable; z3_source_latest; z3_source_dev;
@@ -384,7 +393,15 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
       ();
     artifact_row ~artifact:a_lib
       ~universe:[ (Fetched, [ Canary_basic.Stable ]);
-                  (Built, [ Canary_basic.Dev ]) ]
+                  (Built, [ Canary_basic.Dev ]);
+                  (* the installed-consumer worlds (2026-08-19, the
+                     provider-exclusive-rows model — the `--installed`
+                     realization policy promoted to an ENUMERATION axis):
+                     same channel axis as Built, so each built ref gets a
+                     staged consumer face as its own world. The chain
+                     builds like Built (the built family) and then stages;
+                     the probe reads the install prefix. *)
+                  (Installed, [ Canary_basic.Dev ]) ]
       ~provider:
         (Canary_store_config.Sys_pkg
            (Canary_store.mk_system_package_spec ~linux_pkg:"z3"
@@ -412,7 +429,7 @@ let z3_artifacts : Canary_project_spec.artifact_row list =
       ~provider:z3_python_provider () ]
 
 let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
-    ~(consumer_lib : Canary_basic.consumer_lib) =
+    ~(lib_prov : Canary_artifact.provision) =
   let open Canary_action_templates in
   (* C2: per-REPO rows — the scenario's source placement picks the repo,
      not a channel default; the repo's own version.channel drives the
@@ -501,7 +518,14 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                   src = root; build } };
       { ar_action = Canary_basic.Build_lib; ar_needs = None;
         ar_template = Ninja_build { target = "libz3"; build } };
-      { ar_action = Canary_basic.Install_lib; ar_needs = None;
+      (* the INSTALLED-consumer face (2026-08-19, the provider-exclusive-
+         rows model): staging + the staged probe gate [Some Installed], so
+         the Built world runs neither (it keeps the build-tree probe) and
+         the Installed world runs both. The build steps above stay
+         ungated — the built FAMILY fires them in either world, so one
+         build serves both faces. *)
+      { ar_action = Canary_basic.Install_lib;
+        ar_needs = Some Canary_store.Installed;
         ar_template =
           Cmake_install
             { build; prefix = build ^ "/../install";
@@ -541,7 +565,8 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
         ar_template = Native_lib_probe
                 { location = Build_tree_glob { lib_glob = "libz3.so"; build };
                   prefix = "Z3_" } };
-      { ar_action = Canary_basic.Probe_lib; ar_needs = None;
+      { ar_action = Canary_basic.Probe_lib;
+        ar_needs = Some Canary_store.Installed;
         ar_template = Native_lib_probe
                 { location = Staged_lib { lib = build ^ "/../install/lib/libz3.so" };
                   prefix = "Z3_" } };
@@ -556,8 +581,14 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                  first) and the link dies on any API the store lacks (finite-set
                  at official HEAD). The full-path arg precedes it, so the exe
                  links the BUILT lib. Same shadowing class as the env_guard. *)
-              match consumer_lib with
-              | Canary_basic.Build_tree ->
+              (* the consumer's lib is the ENUMERATED one (2026-08-19):
+                 the Installed world's probe reads the STAGED prefix, every
+                 other world the build tree. Was the `--installed`
+                 realization policy ([consumer_lib]); the two command
+                 bodies are unchanged — only the key. *)
+              match lib_prov with
+              | Canary_artifact.Built | Canary_artifact.Fetched
+              | Canary_artifact.Vendored | Canary_artifact.Absent ->
                   Printf.sprintf
                     "eval $(opam env) && \
                      LIB_Z3=$(ls %s/libz3.so %s/libz3.dylib 2>/dev/null | head -1) && \
@@ -578,8 +609,9 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                     output_dir output_dir probe_log
                     output_dir output_dir probe_log
                     output_dir probe_log
-              | Canary_basic.Installed ->
-                  (* the installed-consumer experiment (2026-08-18, user):
+              | Canary_artifact.Installed ->
+                  (* the installed-consumer world (2026-08-18, user; an
+                     enumeration axis since 2026-08-19):
                      the probe consumes the STAGED package — the install
                      prefix's lib + the installed OCaml package — the
                      REAL concrete artifact the install produced (the
@@ -653,14 +685,20 @@ INSTALLED_Z3=$(opam list z3 --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED_Z3" = "%{pin}" || { echo "WORLD MISMATCH: switch has z3 $INSTALLED_Z3, scenario declares z3 %{pin}"; exit 1; }
 |}]
 
-let realize ~(consumer_lib : Canary_basic.consumer_lib) a =
+let realize a =
   (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2
      proxy — the source row now pins per-repo identities, so the scenario's
      repo IS the source placement's id). *)
   let source = z3_source_for_assignment a in
+  (* the consumer's lib coordinate (2026-08-19): read off the assignment,
+     not a run policy — the Installed world is enumerated. *)
+  let lib_prov = Canary_enumerate.provision_of a Canary_artifact.a_lib in
+  let lib_installed =
+    Canary_enumerate.equal_provision lib_prov Canary_artifact.Installed
+  in
   let spec =
     Canary_action_templates.realize
-      (z3_table_rows ~source ~distro:(detect_distro ()) ~consumer_lib)
+      (z3_table_rows ~source ~distro:(detect_distro ()) ~lib_prov)
       a
   in
   let binding_fetched =
@@ -694,16 +732,16 @@ let realize ~(consumer_lib : Canary_basic.consumer_lib) a =
                       consumer_requires = "installed OCaml package";
                       since = Some "PR #10549 (93c609d)";
                       note = None } }
-        (* the installed-consumer experiment (2026-08-18): under the
-           Installed policy the dev chain's probe reads the STAGED
+        (* the installed-consumer world (2026-08-18; enumerated since
+           2026-08-19): the Installed world's probe reads the STAGED
            prefix, which the pre-fix install never populated — the
-           same #10549 bug made visible ON THE CONSUMER (the Build_tree
-           probe passes; the build tree has the package). Fires only
-           where the binding is BUILT (the fetched world's policy-
-           invariant opam probe legitimately passes). *)
+           same #10549 bug made visible ON THE CONSUMER (the Built
+           world's probe passes; the build tree has the package). The
+           binding-Built guard is now implied by the world (the lib's
+           Installed channel is Dev and the binding follows it) and kept
+           explicit: the expectation reads its own preconditions. *)
         | "pre-10549", Canary_basic.Probe_binding Canary_lang.OCaml
-          when binding_built
-               && Poly.equal consumer_lib Canary_basic.Installed ->
+          when binding_built && lib_installed ->
             Canary_step_model.Expect_failure
               { contains_any = [ "STAGED PACKAGE MISSING" ];
                 version_info =
@@ -806,7 +844,7 @@ let z3_ci_spec _tola_root distro =
   (* CI tracks the OFFICIAL dev source (the fork is canary-local). *)
   let rows =
     z3_table_rows ~source:(z3_source_of Canary_basic.Dev) ~distro
-      ~consumer_lib:Canary_basic.Build_tree
+      ~lib_prov:Canary_artifact.Built
   in
   let no_cmake (row : action_row) =
     match row.ar_action with
@@ -821,9 +859,7 @@ let z3_ci_spec _tola_root distro =
 let z3_run _distro : Canary_project_run.project_run =
   { pr_name = "z3";
     pr_artifacts = z3_artifacts;
-    pr_runner_spec =
-      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
-        realize ~consumer_lib a);
+    pr_runner_spec = (fun a ~workspace:_ () -> realize a);
     pr_mismatch_probes = [];
     (* the dev-source wrapper: the Publish row installs our z3.dev opam
        package over the built tree (pin-checked "dev" on the store). *)

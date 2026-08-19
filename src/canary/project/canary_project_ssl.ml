@@ -343,8 +343,7 @@ let ssl_run : Canary_project_run.project_run =
   { pr_name = "ssl";
     pr_artifacts = ssl_artifacts;
     pr_runner_spec =
-      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
-        let _ = consumer_lib in
+      (fun a ~workspace:_ () ->
         realize a);
     pr_mismatch_probes = [];
     pr_wrapper_pkgs = [];

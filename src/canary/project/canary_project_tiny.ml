@@ -215,9 +215,7 @@ let tiny_full_run : project_run =
     (* tiny-full ignores the runner-provided [workspace]: its realizations
        assemble the vendored tree themselves (tiny-factory concern). *)
     pr_runner_spec =
-      (fun a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
-        let _ = consumer_lib in
-        realize (dispatch a));
+      (fun a ~workspace:_ () -> realize (dispatch a));
     (* the ocaml_dev cstubs variant is the DESIGNED forward probe: it
        requires the dev-only [tiny_scale], so deploying it over a stable lib
        reveals the forward mismatch (shipped 2026-08-05; status §B). No
@@ -263,8 +261,7 @@ let project_run_of_tiny1 ~(name : string) : project_run =
   { pr_name = [%string "tiny1/%{name}"];
     pr_artifacts = tiny_artifact_table;
     pr_runner_spec =
-      (fun _a ~workspace:_ ?(consumer_lib = Canary_basic.Build_tree) () ->
-        let _ = consumer_lib in
+      (fun _a ~workspace:_ () ->
         { (TS.make_base_runner_spec ~stores ()) with
           Canary_step_builder.expectation = expectation_agnostic });
     pr_mismatch_probes = [];
