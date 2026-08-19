@@ -160,9 +160,13 @@ let z3_source_dev : source_repo =
     locals = mk_locals ~build_dir:"../build-arbipher" "contrib/z3-all/z3";
     (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
        id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
-       identity). The three-version report needs official-dev and
-       forked-dev as DISTINCT scenarios (the 2026-08-13 finding: both
-       declare ref_ = HEAD, ambient identity would collide them). *)
+       identity). Official-dev and forked-dev must be DISTINCT scenarios
+       (the 2026-08-13 finding: both declare ref_ = HEAD, ambient identity
+       would collide them). NOTE the fork's ROLE (user, 2026-08-19): it is
+       where a local bug FIX lives, not a third channel — the axis per
+       artifact is the stable/latest pair (design/repo_model.md). It is
+       enumerated here because a fix must be run to be believed, not
+       because it adds a version. *)
     version = Canary_basic.{ channel = Dev; id = "arbipher" };
     ref_ = "HEAD";
     official = false;
@@ -224,7 +228,7 @@ let z3_source_stable : source_repo =
    beats the bytecode's -dllpath); the build_binding row now guards the
    env). The per-SCENARIO dispatch ([z3_source_for_assignment]) selects
    the exact repo by the source placement's pinned id — the arbipher
-   fork is a real scenario now (C2, the three-version report). *)
+   fork is a real scenario now (C2). *)
 let z3_source_of (ch : Canary_basic.channel) : source_repo =
   match ch with Canary_basic.Dev -> z3_source_latest | Canary_basic.Stable -> z3_source_stable
 

@@ -408,8 +408,10 @@ let spec_check_cmd =
   Cmd.v
     (Cmd.info "spec-check"
        ~doc:
-         "Static spec-maturity audit against the three-version-report \
-          readiness checklist (✓/✗/⚠). No execution.")
+         "Static spec-maturity audit against the mismatch-matrix \
+          readiness checklist (✓/✗/⚠): does the project declare enough to \
+          run the checks — a channel pair per artifact (stable + latest), \
+          a C API, providers, binding declarations. No execution.")
     Term.(const run $ project $ json $ const ())
 
 (* Per-project scenario-disable config — the "canary config" part of a

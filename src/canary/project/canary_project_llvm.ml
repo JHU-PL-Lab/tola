@@ -134,9 +134,11 @@ let llvm_source_dev : source_repo =
       ];
     (* C2 (2026-08-16): [id = "arbipher"] — identity-bearing, a marker-style
        id like "latest" (the fork tracks HEAD; the FORK ITSELF is the
-       identity). The three-version report needs official-dev and
-       forked-dev as DISTINCT scenarios (the 2026-08-13 finding: both
-       declare ref_ = HEAD, ambient identity would collide them). *)
+       identity). Official-dev and forked-dev must be DISTINCT scenarios
+       (the 2026-08-13 finding: both declare ref_ = HEAD, ambient identity
+       would collide them). The fork's ROLE is a local bug FIX, not a
+       third channel — the per-artifact axis is the stable/latest pair
+       (user 2026-08-19, design/repo_model.md). *)
     version = Canary_basic.{ channel = Dev; id = "arbipher" };
     ref_ = "HEAD";
     official = false;
@@ -202,7 +204,7 @@ let llvm_source_latest : source_repo =
    realize-time cmake-source probe (fixed 2026-08-16, see the table
    rows). The per-SCENARIO dispatch ([llvm_source_for_assignment])
    selects the exact repo by the source placement's pinned id —
-   [latest] is a real scenario now (C2, the three-version report). *)
+   [latest] is a real scenario now (C2). *)
 let llvm_source_of (ch : Canary_basic.channel) : source_repo = match ch with Canary_basic.Dev -> llvm_source_dev | Canary_basic.Stable -> llvm_source_stable
 
 (* The repo backing one scenario's source placement (C2): the [Repo_axes]

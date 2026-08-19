@@ -1,7 +1,10 @@
 (* ── Static spec-maturity audit (2026-08-13, `canary spec-check`) ──
 
-   Audits a registry project's DECLARED spec against the three-version-report
-   readiness checklist. PURELY STATIC: reads only [project_run.pr_artifacts]
+   Audits a registry project's DECLARED spec against the mismatch-matrix
+   readiness checklist (the term was "three-version report" until
+   2026-08-19; the axis is a per-artifact CHANNEL PAIR — stable + latest —
+   and the fork is a fix vehicle, not a third version. See
+   design/repo_model.md). PURELY STATIC: reads only [project_run.pr_artifacts]
    (rows: identity, axes, providers) + [pr_wrapper_pkgs]. No enumeration, no
    realization, no filesystem, no shell — runtime facts (a package renamed,
    a remote moved, actual probe results) belong to run status, not here.

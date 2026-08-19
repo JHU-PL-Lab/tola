@@ -825,14 +825,43 @@ directions):
   row, and the pattern-A trio + ssl + sqlite + tiny-full's
   wrapper/python/built-binding gaps.
 
-## 4. Planned milestone — the three-version report (discuss later)
+## 4. Planned milestone — the mismatch-matrix report (discuss later)
 
-> 2026-08-12, user. Overall milestone; not scheduled.
+> 2026-08-12, user; reframed 2026-08-19, user.
 
 Prettify the checking output into a user-friendly report: what we check
-per project, what failed, and how we may help fix it. Shape: **three
-versions per project** — a stable to test against, a current official
-dev/latest, and a forked dev with the issue fixed. The report then tells
-the maintainer "your HEAD broke X against your stable; our fork with the
-fix passes". This changes `canary_html.ml`'s output from run-artifact
-dumps to a maintained narrative — full design discussion deferred.
+per project, what failed, and how we may help fix it.
+
+**The shape, corrected.** It was written as "three versions per project"
+(stable, official dev/latest, forked dev with the fix). That counted
+three repos as three points on one axis, which they are not. The right
+shape (see [`../design/repo_model.md`](../design/repo_model.md), "The
+channel pair"):
+
+- every artifact — the C lib, and each binding per (lang × mechanism) —
+  offers **two** choices, stable and latest;
+- so one lib × one binding is a **2×2**: two baselines that must pass,
+  plus the FORWARD cell (new binding, old lib) and the BACKWARD cell
+  (new lib, old binding). More bindings multiply it further;
+- the **fork is not a version** — it is where the fix lives. It sits
+  outside the matrix and supplies the report's second half.
+
+The report then tells the maintainer: "your HEAD binding broke against
+your released lib (the forward cell); here is the failing check, and here
+is our fork with the fix passing it." That is a narrative over the
+matrix, not a dump of run artifacts — `canary_html.ml`'s output changes
+accordingly. Full design discussion still deferred; what is settled is
+the axis vocabulary.
+
+**Where the registry stands against this shape** (2026-08-19 audit): NO
+project reaches a full 2×2 yet. z3/llvm declare both channels for both
+artifacts but `~follows:a_lib` on the binding row locks the binding's
+channel to the lib's, so the two cross cells are forbidden by
+construction; sqlite has the lib pair (3.45.1 / 3.46.1) but only one
+binding choice; zarith and ssl have a binding pair but a single lib
+(1×2 — zarith's forward cell, ssl's two store pins); cairo and libffi are
+1×1. The cheapest full 2×2 in the current registry is sqlite (add a
+second opam `sqlite3` pin — the ssl mechanism — against the two
+amalgamation versions it already builds); the highest-value one is
+relaxing z3/llvm's binding `follows`, which costs no new declarations and
+opens the forward/backward cells on a real project.

@@ -163,11 +163,55 @@ repo's contents).
   source) — recognized as a real case, DEFERRED: all current projects
   have remotes.
 
-## Open decisions left for the 3-way design
+## The channel pair, and the fork's separate role (user, 2026-08-19)
 
-1. **The variant vocabulary** — what names/carriers distinguish the
-   three repos (stable / latest / fork) in the enumeration and the
-   scenario identity; the fork's label (repo name? owner?).
+**The "3-way" / "three-version" framing is retired.** It counted three
+repos — official-stable, official-latest, our fork — as if they were
+three points on one axis. They are not; the three collapse into two
+different ideas:
+
+1. **The channel pair, PER ARTIFACT.** Every artifact — the C lib, and
+   each binding at a given (lang × mechanism) — offers **two** choices:
+   a **stable** and a **latest**. Two, not three.
+2. **The fork is not a version.** It is where a local bug **fix** lives.
+   It carries no coverage of its own; it is the vehicle that turns a
+   failing cell into a passing one.
+
+The consequence is the shape the whole project is aimed at: for one lib
+and one binding, the channel pairs multiply into a **2×2**, and each cell
+is a distinct question.
+
+| | binding stable | binding latest |
+| --- | --- | --- |
+| **lib stable** | baseline — both released, must pass | **FORWARD**: the new binding wants API the old lib lacks |
+| **lib latest** | **BACKWARD**: the new lib dropped/renamed what the old binding uses | dev baseline — both HEAD, must pass |
+
+More bindings multiply further: with an OCaml and a Python binding it is
+2×2×2, and each (lang × mechanism) pair adds an axis. The fork then sits
+*outside* the matrix: when a cell fails, the fork holds the fix, and the
+same cell re-run against the fork is the "and here is the repair" half of
+the report.
+
+**Realizing a channel pair** — three ways, cheapest first:
+- **two store pins** of the same Fetched provision (ssl does this today:
+  opam `ssl` at 0.6.0 and 0.7.0) — no build, no source, just declaration;
+- **two prebuilt versions** from the platform PM, where the distro ships
+  more than one (llvm's `llvm-19-dev` vs a newer `llvm-N-dev`);
+- **prebuilt vs source-built** — the expensive one, and the only option
+  when the ecosystem ships exactly one version (sqlite's amalgamation;
+  z3/llvm's HEAD builds). The prebuilt-shadows-source rule applies: pick
+  this last.
+
+Naming: say **channel** (`Stable` / `Dev`) for the axis — which the code
+already does — and **fix fork** for the repair repo. Do not call the fork
+a channel, a version, or a third way.
+
+## Open decisions left
+
+1. ~~**The variant vocabulary**~~ — resolved above (2026-08-19): the
+   axis is the per-artifact channel pair; the fork is a fix vehicle with
+   no axis of its own. What remains is the fork's *label* in output
+   (repo name? owner? — `arbipher` today).
 2. **Config carrier** — base-layer setting (data in code) vs run-config
    policy field — the user allows either; pick at implementation.
 3. **Naming scheme fallback** — when a repo has no official name:
