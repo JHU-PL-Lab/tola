@@ -25,6 +25,25 @@ open Base
     run). *)
 type cell = { mark : string; provision : string; detail : string option }
 
+(** One SETTING cell (2026-08-19, user: "move all the provider ahead, so
+    we have source ref, fetched lib and ocaml ones … more clear to
+    readers on which is the setting for this row"): the placement of ONE
+    declared artifact in this world — the row's WORLD, printed once per
+    artifact instead of repeated inside every action cell.
+
+    This is also the answer to "ref is not the only world": the old
+    single [ref] column named a row after one coordinate, and which
+    artifact that coordinate belonged to varied per project (z3's ref is
+    the lib's source, zarith's is the BINDING's). A column per artifact
+    says which is which, and a project with two sources gets two source
+    columns. *)
+type setting = {
+  text : string;
+      (** the placement, e.g. [F pre-10549] / [B:dev] / [apt sqlite3.3.45.1] *)
+  url : string option;  (** the commit/tree link, for source artifacts *)
+  title : string option;  (** hover detail (the full ref label) *)
+}
+
 type row = {
   project : string;
   scenario : string;
@@ -49,11 +68,20 @@ type row = {
       (** the remote link to the exact commit/tree, when the repo has
           a Git remote *)
   platform : string;
+  settings : (string * setting option) list;
+      (** per SETTING column (artifact label) in column order; [None] =
+          the project does not declare that artifact *)
   cells : (string * cell option) list;
       (** per column tag in column order; [None] = not in the chain *)
 }
 
-type t = { columns : string list; rows : row list }
+type t = {
+  setting_columns : string list;
+      (** the leading block: one artifact label per declared artifact,
+          union across the table's projects in kind order *)
+  columns : string list;
+  rows : row list;
+}
 
 let mark_of_run ?(run : (string * (string * string option)) list = [])
     (tag : string) : string =
@@ -92,22 +120,27 @@ let run_of_scenario ~scenario
     pinned version id — the generic read of the per-repo identity (the
     project-local [*_source_for_assignment] dispatches use the same
     data). *)
-let source_repo_of (pr : Canary_project_run.project_run)
-    (a : Canary_artifact.assignment) :
+let repo_of_source (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) (src : Canary_artifact.artifact_id) :
     Canary_artifact_source.source_repo option =
-  let src_id =
-    (Canary_enumerate.version_of a Canary_artifact.a_source).Canary_basic.id
-  in
+  let src_id = (Canary_enumerate.version_of a src).Canary_basic.id in
   let repos =
-    match
-      Canary_project_run.provenance_of pr Canary_artifact.a_source
-    with
+    match Canary_project_run.provenance_of pr src with
     | Some (Canary_store_config.Repo r) -> [ r ]
     | Some (Canary_store_config.Repo_axes rs) -> rs
     | _ -> []
   in
   List.find repos ~f:(fun (r : Canary_artifact_source.source_repo) ->
       String.equal r.Canary_artifact_source.version.Canary_basic.id src_id)
+
+(** The PRIMARY source's repo — the row-level [ref_label]/[ref_url]
+    carrier. A project may declare several sources (a lib's and an
+    off-tree binding's); each gets its own SETTING column, and this one
+    stays the row's headline provenance. *)
+let source_repo_of (pr : Canary_project_run.project_run)
+    (a : Canary_artifact.assignment) :
+    Canary_artifact_source.source_repo option =
+  repo_of_source pr a Canary_artifact.a_source
 
 (** A 7+ char all-hex ref is a commit SHA; anything else (tags,
     branches) is a tree. *)
@@ -235,11 +268,19 @@ let fetched_note (pr : Canary_project_run.project_run)
   let pin =
     (Canary_enumerate.version_of a id).Canary_basic.id
   in
+  (* the NAME only: a declared package may carry a parenthetical gloss
+     (sqlite's python row is "sqlite3 (stdlib, pip no-op)") which is
+     useful in `spec` prose but wrecks a table column. *)
+  let name pkg =
+    match String.substr_index pkg ~pattern:" (" with
+    | Some i -> String.prefix pkg i
+    | None -> pkg
+  in
   match Canary_project_run.provenance_of pr id with
   | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Opam; package; _ }) ->
-      "opam " ^ package ^ (if String.is_empty pin then "" else "." ^ pin)
+      "opam " ^ name package ^ (if String.is_empty pin then "" else "." ^ pin)
   | Some (Canary_store_config.Lang_pkg { pm = Canary_store.Pip; package; _ }) ->
-      "pip " ^ package ^ (if String.is_empty pin then "" else "." ^ pin)
+      "pip " ^ name package ^ (if String.is_empty pin then "" else "." ^ pin)
   | Some (Canary_store_config.Sys_pkg spec) ->
       let pm, pkg =
         match Canary_basic.detect_distro () with
@@ -302,12 +343,16 @@ let provision_choice ?stage
         | Canary_basic.Dev -> ":d"
       in
       (match pl.Canary_artifact.provision with
-       | Canary_artifact.Fetched ->
-           (* the SOURCE's pin repeats the ref column — keep it bare;
-              everything else names its provider + version *)
-           if Canary_artifact.equal_artifact_id id Canary_artifact.a_source
-           then "F"
-           else fetched_note pr a id
+       | Canary_artifact.Fetched -> (
+           (* a SOURCE names its ref (2026-08-19: it used to be kept bare
+              because the row-level [ref] column repeated it — that column
+              is now the source's own SETTING cell, so the id belongs
+              here); everything else names its provider + version *)
+           match Canary_artifact.kind_of id with
+           | Canary_basic.Source | Canary_basic.Binding_source _ ->
+               let v = pl.Canary_artifact.version.Canary_basic.id in
+               if String.is_empty v then "F" else "F " ^ v
+           | _ -> fetched_note pr a id)
        | Canary_artifact.Built -> "B" ^ ch
        | Canary_artifact.Installed -> (
            (* the build steps of a staged world name the tree they built;
@@ -502,9 +547,32 @@ let compare_column (x : Canary_basic.action) (y : Canary_basic.action) : int =
   let k a = (column_group a, column_stage a) in
   Stdlib.compare (k x) (k y)
 
+(** The SETTING block's columns: one per declared artifact, union across
+    the table's projects in kind order ([kind_order] — source, headers,
+    lib, binding, binding-source, app), labelled by {!kind_label}. A
+    project that doesn't declare an artifact leaves its cell empty. *)
+let setting_columns_of
+    (projects : (string * Canary_project_run.project_run) list) :
+    (string * Canary_basic.artifact_kind) list =
+  (* Keyed by KIND, not by artifact id: the mechanism rides the id's ext
+     (binding:ocaml:cstubs vs binding:ocaml:ctypes), so deduping by id
+     would give one project's Cstubs binding and another's Ctypes binding
+     two columns with the same label. One column per artifact kind (+
+     lang); the mechanism is a property of the artifact, not a column. *)
+  List.concat_map projects ~f:(fun (_, pr) ->
+      List.map (Canary_project_run.artifact_ids pr)
+        ~f:Canary_artifact.kind_of)
+  |> List.dedup_and_sort ~compare:Stdlib.compare
+  |> List.stable_sort ~compare:(fun x y ->
+         Stdlib.compare
+           (Canary_basic.kind_order x)
+           (Canary_basic.kind_order y))
+  |> List.map ~f:(fun k -> (kind_label k, k))
+
 let matrix_of (projects : (string * Canary_project_run.project_run) list) :
     t =
   let root = "_out" in
+  let setting_cols = setting_columns_of projects in
   let columns =
     List.concat_map projects ~f:(fun (_, pr) ->
         Canary_project_run.covered_actions_of pr)
@@ -563,6 +631,42 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
               ref_label;
               ref_url;
               platform;
+              (* the SETTING block: this world's placement per artifact.
+                 A source artifact carries its own repo link — so a
+                 project with a lib source AND an off-tree binding source
+                 gets two linked cells instead of one ambiguous [ref]. *)
+              settings =
+                List.map setting_cols ~f:(fun (label, kind) ->
+                    (* the project's artifact of this KIND, whatever its
+                       mechanism — the row's placement for the column *)
+                    match
+                      List.find_map a ~f:(fun (id, _) ->
+                          if
+                            Poly.equal (Canary_artifact.kind_of id) kind
+                          then Some id
+                          else None)
+                    with
+                    | None -> (label, None)
+                    | Some id ->
+                        let text = provision_choice pr a id in
+                        let is_src =
+                          match kind with
+                          | Canary_basic.Source
+                          | Canary_basic.Binding_source _ ->
+                              true
+                          | _ -> false
+                        in
+                        let repo_here =
+                          if is_src then repo_of_source pr a id else None
+                        in
+                        ( label,
+                          Some
+                            { text;
+                              url = Option.bind repo_here ~f:ref_url_of;
+                              title =
+                                Option.map repo_here ~f:(fun r ->
+                                    r.Canary_artifact_source.name ^ " @ "
+                                    ^ r.Canary_artifact_source.ref_) } ));
               cells =
                 List.map columns ~f:(fun tag ->
                     if List.mem chain_tags tag ~equal:String.equal then
@@ -606,7 +710,7 @@ let matrix_of (projects : (string * Canary_project_run.project_run) list) :
             Stdlib.Digest.string (r.project ^ "/" ^ r.scenario)
             |> Stdlib.Digest.to_hex |> fun s -> String.prefix s 6 })
   in
-  { columns; rows }
+  { setting_columns = List.map setting_cols ~f:fst; columns; rows }
 
 (* ── text renderer ── *)
 
@@ -636,8 +740,27 @@ let pp_text (m : t) : unit =
              if String.length s >= width then s ^ " "
              else s ^ String.make (width - String.length s) ' '
            in
+           (* the terminal view is column-aligned, so an over-long setting
+              (a verbose declared package) is elided rather than allowed to
+              shift the row; md/html/json carry it in full *)
+           let fit s =
+             if String.length s <= width - 1 then s
+             else String.prefix s (width - 2) ^ "…"
+           in
+           (* the SETTING block, elided per group like the action columns:
+              only the artifacts THIS project declares *)
+           let set_used =
+             List.filter m.setting_columns ~f:(fun label ->
+                 List.exists group ~f:(fun (rr : row) ->
+                     match
+                       List.Assoc.find rr.settings label ~equal:String.equal
+                     with
+                     | Some (Some _) -> true
+                     | _ -> false))
+           in
            Fmt.pr "@.%s — %d scenario(s)@." r.project (List.length group);
-           Fmt.pr "  %s%s@." (pad "scenario")
+           Fmt.pr "  %s%s| %s@." (pad "#")
+             (String.concat ~sep:"" (List.map set_used ~f:pad))
              (String.concat ~sep:"" (List.map used ~f:pad));
            List.iter group ~f:(fun (rr : row) ->
                let cells =
@@ -649,10 +772,19 @@ let pp_text (m : t) : unit =
                      | Some None -> pad ""
                      | None -> pad "")
                in
+               let sets =
+                 List.map set_used ~f:(fun label ->
+                     match
+                       List.Assoc.find rr.settings label ~equal:String.equal
+                     with
+                     | Some (Some s) -> pad (fit s.text)
+                     | _ -> pad "—")
+               in
                (* the global row index: "#N" for fast pointing; the
                   stable code is the historical pointer (see {!row.code}) *)
-               Fmt.pr "  %s%s@."
-                 (pad (Printf.sprintf "#%d %s" rr.index rr.scenario))
+               Fmt.pr "  %s%s| %s@."
+                 (pad (Printf.sprintf "#%d" rr.index))
+                 (String.concat ~sep:"" sets)
                  (String.concat ~sep:"" cells))));
   let total = List.length m.rows in
   Fmt.pr "@.legend: ✓ done · not run ⊘ blocked xfail[cN] expected failure (cN confirming contracts) ✗ failed@.";
@@ -676,10 +808,21 @@ let pp_md (m : t) : unit =
                     | Some (Some _) -> true
                     | _ -> false))
           in
+          let set_used =
+            List.filter m.setting_columns ~f:(fun label ->
+                List.exists group ~f:(fun (rr : row) ->
+                    match
+                      List.Assoc.find rr.settings label ~equal:String.equal
+                    with
+                    | Some (Some _) -> true
+                    | _ -> false))
+          in
           Fmt.pr "### %s@." r.project;
-          Fmt.pr "| scenario | %s |@."
+          Fmt.pr "| # | %s | %s | scenario |@."
+            (String.concat ~sep:" | " set_used)
             (String.concat ~sep:" | " used);
-          Fmt.pr "| --- | %s |@."
+          Fmt.pr "| --- | %s | %s | --- |@."
+            (String.concat ~sep:" | " (List.map set_used ~f:(fun _ -> "---")))
             (String.concat ~sep:" | " (List.map used ~f:(fun _ -> "---")));
           List.iter group ~f:(fun (rr : row) ->
               let cells =
@@ -691,15 +834,30 @@ let pp_md (m : t) : unit =
                     | Some None -> " "
                     | None -> " ")
               in
-              Fmt.pr "| #%d %s | %s |@." rr.index rr.scenario
-                (String.concat ~sep:" | " cells));
+              let sets =
+                List.map set_used ~f:(fun label ->
+                    match
+                      List.Assoc.find rr.settings label ~equal:String.equal
+                    with
+                    | Some (Some s) -> s.text
+                    | _ -> "—")
+              in
+              (* the scenario id stays as the LAST column: the setting
+                 block names the world, but the id is what `_out` dirs and
+                 `canary status` are keyed by *)
+              Fmt.pr "| #%d | %s | %s | %s |@." rr.index
+                (String.concat ~sep:" | " sets)
+                (String.concat ~sep:" | " cells)
+                rr.scenario);
           Fmt.pr "@.")
 
 (* ── JSON ── *)
 
 let to_json (m : t) : Yojson.Basic.t =
   `Assoc
-    [ ( "columns",
+    [ ( "setting_columns",
+        `List (List.map m.setting_columns ~f:(fun c -> `String c)) );
+      ( "columns",
         `List (List.map m.columns ~f:(fun c -> `String c)) );
       ( "rows",
         `List
@@ -709,6 +867,12 @@ let to_json (m : t) : Yojson.Basic.t =
                    ("scenario", `String r.scenario);
                    ("index", `Int r.index);
                    ("code", `String r.code);
+                   ( "settings",
+                     `Assoc
+                       (List.filter_map r.settings ~f:(fun (label, s) ->
+                            match s with
+                            | Some s -> Some (label, `String s.text)
+                            | None -> None)) );
                    ( "cells",
                      `Assoc
                        (List.filter_map r.cells ~f:(fun (tag, c) ->
@@ -740,22 +904,48 @@ let render_html (m : t) ~(generated_at : string) : string =
     | s when String.is_prefix s ~prefix:"xfail" -> "xfail"
     | _ -> "ok"
   in
+  (* the SETTING block leads (2026-08-19, user): the world first — one
+     column per artifact — then the actions. The old single [ref] column
+     is gone: the source artifacts' own setting cells carry the ref and
+     its link, so a project with two sources shows two labelled refs
+     instead of one column that meant a different artifact per project. *)
   let header =
-    "<th>#</th><th>project</th><th>ref</th><th>platform</th>"
+    "<th>#</th><th>project</th>"
+    ^ String.concat ~sep:""
+        (List.map m.setting_columns ~f:(fun c ->
+             "<th class=\"seth\">" ^ esc c ^ "</th>"))
+    ^ "<th class=\"platform\">platform</th>"
     ^ String.concat ~sep:""
         (List.map m.columns ~f:(fun c -> "<th>" ^ esc c ^ "</th>"))
   in
   let body =
     String.concat ~sep:""
       (List.map m.rows ~f:(fun (r : row) ->
-           let ref_cell =
-             match r.ref_url with
-             | Some url ->
-                 Printf.sprintf "<a href=\"%s\" title=\"%s\">%s</a>"
-                   (esc url) (esc r.scenario) (esc r.ref_label)
-             | None ->
-                 Printf.sprintf "<span title=\"%s\">%s</span>"
-                   (esc r.scenario) (esc r.ref_label)
+           let setting_cells =
+             String.concat ~sep:""
+               (List.map m.setting_columns ~f:(fun label ->
+                    match
+                      List.Assoc.find r.settings label ~equal:String.equal
+                    with
+                    | Some (Some s) ->
+                        let title =
+                          match s.title with
+                          | Some t -> t ^ " · " ^ r.scenario
+                          | None -> r.scenario
+                        in
+                        let inner =
+                          match s.url with
+                          | Some url ->
+                              Printf.sprintf "<a href=\"%s\">%s</a>" (esc url)
+                                (esc s.text)
+                          | None -> esc s.text
+                        in
+                        Printf.sprintf
+                          "<td class=\"set\" title=\"%s\">%s</td>" (esc title)
+                          inner
+                    (* the project doesn't declare this artifact — an
+                       honest blank, not a glyph *)
+                    | _ -> "<td class=\"blank\"></td>"))
            in
            let cells =
              String.concat ~sep:""
@@ -773,16 +963,22 @@ let render_html (m : t) ~(generated_at : string) : string =
                           | Some d -> " · " ^ d
                           | None -> ""
                         in
+                        (* the action cell is a MARK (2026-08-19): the
+                           artifact's provision moved to the setting
+                           block, so it no longer repeats in every cell —
+                           it stays in the tooltip, where the per-STEP
+                           stage still distinguishes "built it" from
+                           "staged it" *)
                         Printf.sprintf
-                          "<td class=\"%s\" title=\"%s · %s%s\"><span class=\"prov\">%s</span><span class=\"mk\">%s</span></td>"
+                          "<td class=\"%s\" title=\"%s · %s · %s%s\"><span class=\"mk\">%s</span></td>"
                           (cell_cls c.mark) (esc r.scenario) (esc tag)
-                          (esc why) (esc c.provision) (esc c.mark)
+                          (esc c.provision) (esc why) (esc c.mark)
                     | _ -> "<td class=\"blank\"></td>"))
            in
            Printf.sprintf
-             "<tr><td class=\"idx\" title=\"%s\">%d</td><td>%s</td><td class=\"ref\">%s</td><td class=\"platform\">%s</td>%s</tr>"
-             (esc r.code) r.index (esc r.project) ref_cell (esc r.platform)
-             cells))
+             "<tr><td class=\"idx\" title=\"%s\">%d</td><td>%s</td>%s<td class=\"platform\">%s</td>%s</tr>"
+             (esc r.code) r.index (esc r.project) setting_cells
+             (esc r.platform) cells))
   in
   Printf.sprintf
     {|<!doctype html>
@@ -794,9 +990,10 @@ h1 { font-size: 1.4rem; } .meta { color: #6a737d; font-size: .85rem; margin-bott
 table { border-collapse: collapse; font-size: .82rem; }
 th, td { padding: 4px 8px; border-bottom: 1px solid #eaeef2; white-space: nowrap; text-align: left; }
 th { background: #f6f8fa; position: sticky; top: 0; }
-td.ref { font-family: ui-monospace, monospace; font-size: .78rem; }
-td.ref a { color: #0969da; text-decoration: none; }
-td.ref a:hover { text-decoration: underline; }
+td.set { font-family: ui-monospace, monospace; font-size: .78rem; background: #f6f8fa88; }
+td.set a { color: #0969da; text-decoration: none; }
+td.set a:hover { text-decoration: underline; }
+th.seth { background: #eef1f4; }
 td.platform { color: #57606a; font-size: .75rem; }
 td.idx { color: #57606a; font-size: .75rem; text-align: right; }
 td .prov { color: #57606a; font-family: ui-monospace, monospace; font-size: .7rem; margin-right: 5px; }
@@ -807,7 +1004,7 @@ td.notrun { color: #8c959f; } td.blocked { color: #57606a; background: #f6f8fa; 
 td.blank { background: #f6f8fa; }
 </style></head><body>
 <h1>canary result matrix</h1>
-<div class="meta">generated %s — rows = project × scenario; columns = actions, cells = provision choice + verdict (hover a cell for the full scenario id). The # column is the global row index (hover it for the stable row code — the historical pointer). Pre/post-check columns: future.</div>
+<div class="meta">generated %s — rows = project × scenario (one enumerated world each). The SHADED leading columns are the world's SETTING: one per declared artifact, showing its placement (F = fetched, B = built, I = installed/staged, V = vendored; source cells link to the ref). The action columns then carry verdicts only — hover a cell for the scenario id, the artifact's stage, and the reason. The # column is the global row index (hover it for the stable row code — the historical pointer). Pre/post-check columns: future.</div>
 <div class="wrap"><table><thead><tr>%s</tr></thead><tbody>%s</tbody></table></div>
 </body></html>|}
     (esc generated_at) header body

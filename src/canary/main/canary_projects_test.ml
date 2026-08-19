@@ -1805,6 +1805,69 @@ let matrix_cell_stage_pin : Canary_project_test.pure_test =
                       | Some c -> String.is_prefix c ~prefix:"lib I:"
                       | None -> true))) }
 
+(* The SETTING block (2026-08-19, user: "move all the provider ahead …
+   more clear to readers on which is the setting for this row"): the
+   leading columns are one per artifact KIND, and a row's setting cells
+   ARE its assignment — so the row identifies its world without the old
+   single `ref` column (which named a different artifact's source per
+   project and could not tell z3's build-tree world from its staged one).
+   Pinned: (a) one column per kind, no duplicates — the mechanism rides
+   the artifact id, so deduping by id would double `ocaml`/`py`;
+   (b) a cell exists exactly when the project declares that kind;
+   (c) the block DISTINGUISHES worlds — no two rows of a project share
+   their full setting tuple, which is the property the ref column
+   lacked. *)
+let matrix_setting_block_pin : Canary_project_test.pure_test =
+  { name = "matrix.setting_block_identifies_world";
+    check =
+      (fun () ->
+        let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        let labels = m.Canary_matrix.setting_columns in
+        (* (a) *)
+        let no_dups =
+          List.length
+            (List.dedup_and_sort labels ~compare:String.compare)
+          = List.length labels
+        in
+        (* (b) — the declared kinds of each row's project *)
+        let declared_ok =
+          List.for_all Canary_registry.all_projects ~f:(fun (name, pr) ->
+              let kinds =
+                List.map (Canary_project_run.artifact_ids pr)
+                  ~f:Canary_artifact.kind_of
+              in
+              let want =
+                List.map kinds ~f:(fun k -> Canary_matrix.kind_label k)
+                |> List.dedup_and_sort ~compare:String.compare
+              in
+              List.for_all m.Canary_matrix.rows ~f:(fun r ->
+                  if not (String.equal r.Canary_matrix.project name) then true
+                  else
+                    List.for_all r.Canary_matrix.settings
+                      ~f:(fun (label, s) ->
+                        Bool.equal (Option.is_some s)
+                          (List.mem want label ~equal:String.equal))))
+        in
+        (* (c) the block is an IDENTITY: distinct worlds, distinct tuples *)
+        let identifies =
+          List.for_all Canary_registry.all_projects ~f:(fun (name, _) ->
+              let tuples =
+                List.filter_map m.Canary_matrix.rows ~f:(fun r ->
+                    if String.equal r.Canary_matrix.project name then
+                      Some
+                        (List.map r.Canary_matrix.settings
+                           ~f:(fun (_, s) ->
+                             match s with
+                             | Some s -> s.Canary_matrix.text
+                             | None -> ""))
+                    else None)
+              in
+              List.length
+                (List.dedup_and_sort tuples ~compare:Poly.compare)
+              = List.length tuples)
+        in
+        (not (List.is_empty labels)) && no_dups && declared_ok && identifies) }
+
 let matrix_registry_shape_pin : Canary_project_test.pure_test =
   { name = "matrix.registry_shape";
     check =
@@ -1994,5 +2057,6 @@ let tests : Canary_project_test.pure_test list =
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;
       matrix_cell_stage_pin;
+      matrix_setting_block_pin;
       matrix_registry_shape_pin ]
 
