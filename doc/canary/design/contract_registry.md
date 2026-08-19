@@ -1,12 +1,17 @@
 # Contract registry — the belief module
 
-> 2026-08-17. M2 step 6 design (producer-first; consumers migrate after).
-> One statement per contract: WHAT the invariant is, HOW we check it
-> (tool-based), WHERE it fires (derived from mechanism × provision ×
-> stage). The expectations are entirely OUR machinery — unlike build
-> commands, nothing external has to be respected; a hand-written
-> per-project table is our own data and gets deleted once the derived
-> firings pin equal.
+> 2026-08-17, refreshed 2026-08-18. M2 step 6 (producer-first; consumers
+> migrate in phase 2, currently HELD). One statement per contract: WHAT
+> the invariant is, HOW we check it (tool-based), WHERE it fires
+> (derived from mechanism × lang × provision). The expectations are
+> entirely OUR machinery — unlike build commands, nothing external has
+> to be respected; a hand-written per-project table is our own data and
+> gets deleted once the derived firings pin equal.
+>
+> **Why the registry exists, in one line**: today "what canary checks"
+> is knowable only by reading five scattered places — the registry makes
+> the belief PRINTABLE, and printing it shows the holes (§8's matrix,
+> §8a's first fills, §9's fill list).
 
 ## 1. Producer-first, two-agent-safe
 
@@ -105,6 +110,12 @@ source) are different WORLDS for checking, because different stages exist:
 
 - **Built**: build sites exist — build-time contracts fire (c6's
   header/stub type match at `build_binding`), then link + probe sites.
+- **Installed** (2026-08-18): groups WITH Built — its chain includes the
+  real build plus the staging step, so the build-family contracts fire;
+  what differs is which concrete artifact the consumer reads (the
+  staged prefix). The staging step's own checks are the
+  `Install_lib × Postcondition` family (staged parity — see
+  [`staged_parity.md`](staged_parity.md)).
 - **Fetched / Vendored / Cached**: the product was given, nothing was
   built — build sites do not exist, and build-time contracts have nothing
   to fire on; probe-side checks (c1/c2/c4 at probe) still apply.
@@ -128,9 +139,12 @@ become a pure function of `(decl, mechanism, provision)`.
 
 ## 4. The legacy roles — prose, not typed axes (demoted 2026-08-18)
 
-The roles name the structure of checking itself — the artifact-relationship
-axis the action graph already has (inspect steps / build steps / probe
-steps). Every concrete method, present or future, is PLACED into a slot:
+The roles were our first attempt to name the structure of checking. They
+remain a useful DESCRIPTION — but not a typed axis: the action already
+implies a cell's subject (one artifact vs a pair) and its evidence
+flavor, so nothing decides on them (§8's "one typed axis"). The table
+below is kept because it still places concrete methods, present and
+future, in an intuitive way:
 
 | Role          | Asks                                                      | Concrete things today                                              | Future things                                                                                                                                                |
 | ------------- | --------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -203,7 +217,10 @@ derives from `(registry × decl × mechanism × provision)`.
 
 Each contract ships its MINIMAL COUNTEREXAMPLE — a `fixture`: synthetic
 inspect inputs (file-name references + their JSON bodies) and the
-failure substrings the row's `predict` MUST yield on them. The layer
+failure substrings a `predict` MUST yield on them. A fixture may carry
+its OWN closure (`fx_predict`) instead of the row's — that is how a
+per-CELL predict is tested (the lib-only cells' decl-comparison
+closures, §8a); `None` means "the row's `cr_check.predict`". The layer
 tests (`contracts.fixtures_execute`) run every fixture hermetically —
 no project run, the framework-test axis (same shape as the
 compat-helper tests; the loaders read real files, so the test writes
@@ -214,8 +231,10 @@ the bodies and maps names to paths). Two consequences:
 - a changed predict breaks the pin — the belief cannot drift silently.
 
 The completeness pin (`contracts.fixtures_complete`) states the covered
-set visibly: C1, C2 today; C3/C7 are blocked in the registry; C4/C5/C6
-pend their fixture JSON shapes (elf / versioned / typed loaders).
+set visibly: **C1, C2 + C4/C5's lib-only cells** (2026-08-18). C3/C7
+are disabled in the registry (`Blocked []` / `Stubbed`); C6 pends its
+typed-loader fixture; C4/C5's PAIR cells pend theirs (only their
+lib-only halves are covered).
 
 ## 8. The general matrix
 
@@ -247,40 +266,76 @@ check_post family (Postcondition — where staged-parity at Install_lib,
 pin-checks, and freshness live), or not wired yet (Placeholder).
 The legacy roles stay prose (§4).
 
-**The derivation rules** (keep the matrix mostly derived):
+**The derivation rules** (what the code actually does — the roles are
+NOT part of it; they were demoted to prose, §4):
 
-1. contract → role (data): Surface / Meeting / Execution;
-2. role → default action attachment:
-   - Surface → the actions that carry the artifact's inspect
-     attachments (build_lib, build_binding, probe_binding, probe_lib,
-     fetch);
-   - Meeting → the join actions (build_binding, build_app — and the
-     load-time join at probe for dynamic mechanisms);
-   - Execution → the run actions (probe_binding, probe_app);
-3. mechanism × provision → which of those actions EXIST (the firing
-   derivation projects the cells onto a scenario);
-4. the input template → which surfaces the cell reads (per mechanism).
+1. each row names a FIRING FUNCTION — `mechanism × lang × provision →
+   action list`. Three exist today:
+   - `firing_default` — Static ⇒ `[Build_binding l; Probe_binding l]`
+     in Built/Installed worlds, `[Probe_binding l]` where nothing is
+     built; Dynamic ⇒ `[Probe_binding l]` (no compile stage);
+   - `firing_with_build_lib` — the same PLUS `Build_lib` in Built
+     worlds: the row also has a lib-only cell (§8a);
+   - `firing_probe_only` — a run is required, so probe only, in every
+     world.
+2. the input template (`inputs_of_contract ?mechanism`) says which
+   surfaces the cell reads — the mechanism refinement lives there
+   (a dynamic binding has no stub to inspect).
+3. everything else about a cell (its subject, its evidence flavor) is
+   implied by the ACTION, not stored.
 
-Explicit per-row entries override the role defaults (that is where the
-hand-written tables' fine detail lands in phase 2 — every override
-pinned equal to today's tables).
+A new firing shape is a new small function, not a framework change;
+phase 2's per-project overrides land as row-level firing functions,
+each pinned equal to today's hand-written tables.
 
-**The marks.** ✓ Wired (inputs + expectation + fixture defined);
-○ Declared-empty (a reason: nothing to check here by design, or
-Blocked on deps); ✗ Un-answered — the completeness pin FAILS on ✗ in
-the declared scope. Today's coarse shape (the fine per-cell marks are
-the phase-2 pin material, taken from the hand-written tables):
+**The marks — and why there is no "un-answered".** The matrix is TOTAL
+by construction: the firing function answers for every action, so
+every cell has a status. (An earlier draft posited an `✗ Un-answered`
+mark; it cannot occur — dropped 2026-08-18.)
 
-| contract (role)               | fetch            | configure | scan_sources | build_lib   | build_binding | build_app | publish               | probe_lib | probe_binding | probe_app      |
-| ----------------------------- | ---------------- | --------- | ------------ | ----------- | ------------- | --------- | --------------------- | --------- | ------------- | -------------- |
-| c1 symbol (Sf.3×Sf.2)         | ○                | ○         | ○            | ✓(lib half) | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c2 api-completeness (Sf.4)   | ○                | ○         | ○            | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c3 behavior (Trace)          | ○                | ○         | ○            | ○           | ○             | ○         | ○                     | ○         | ✓             | ✓(tiny oracle) |
-| c4 soname (Sf.2×Sf.5)        | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ✓         | ✓             | ○              |
-| c5 sym-version (Sf.2×Sf.5)   | ○                | ○         | ○            | ✓           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c6 type (Sf.1×Sf.3)          | ○                | ○         | (inputs)     | ○           | ✓             | ○         | ○                     | ○         | ✓             | ○              |
-| c7 repack (Sf.4)             | ○                | ○         | ○            | ○           | ○             | ○         | ○(publish lands here) | ○         | ✓             | ○              |
-| c8 faithfulness (Sf.4, blocked) | ✗ blocked(c6,c7) | …         | …            | …           | …             | …         | …                     | …         | …             | …              |
+| mark | status | meaning |
+|---|---|---|
+| `✓` | `Wired` | fires here AND ships a counterexample fixture |
+| `~` | `Declared` | fires here, predict exists, NO fixture yet — **the fill list** |
+| `⊘` | `Blocked` | the contract itself is disabled/blocked on deps |
+| `·` | `Empty` | does not fire here — the firing derivation says so; a principled absence, not an omission |
+
+**"Filling the matrix" therefore has a bounded, concrete meaning**:
+turn `~` into `✓` — attach a counterexample to a cell that already
+fires. The job is finite and enumerable (`fill_list` returns exactly
+the `~` cells), not open-ended.
+
+Today's shape under the reference world (Cstubs × OCaml × Built),
+read off the firing functions:
+
+| contract | fetch_src | conf | scan | hdrs | fetch_lib | **build_lib** | install | fetch_bind | **build_bind** | pack | probe_lib | **probe_bind** | build_app | probe_app |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| c1 symbol (Sf.3×Sf.2) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
+| c2 api-completeness (Sf.4) | · | · | · | · | · | · | · | · | ✓ | · | · | ✓ | · | · |
+| c3 behavior (Trace) | · | · | · | · | · | · | · | · | · | · | · | ⊘ | · | · |
+| c4 soname (Sf.2×Sf.5) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
+| c5 sym-version (Sf.2×Sf.5) | · | · | · | · | · | ✓ | · | · | ✓ | · | · | ✓ | · | · |
+| c6 type (Sf.1×Sf.3) | · | · | (reads) | · | · | · | · | · | ~ | · | · | ~ | · | · |
+| c7 repack (Sf.4) | · | · | · | · | · | · | · | · | · | · | · | ⊘ | · | · |
+| c8 faithfulness (Sf.4) | · | · | · | · | · | · | · | · | ⊘ | · | · | ⊘ | · | · |
+
+Reading it: the ✓ cells are the belief that is both stated AND
+falsifier-tested; `~` (c6) is the whole current fill list; the `·`
+majority is the honest picture — most of the action space carries no
+contract yet, and the widenings below name which of those we intend
+to populate. The `install_lib` column is where the staged-parity
+family lands (`Postcondition` source, not a contract predict).
+
+**Two doc↔code drifts this table exposed** (fix in the code, not by
+re-wording):
+
+1. `Stubbed` has no distinct mark — `cell_status_of` maps everything
+   that is not `Blocked` to Wired/Declared, so c7/c8 currently render
+   as `~` (a fill candidate) when in truth their predicts return `[]`
+   by construction. `Stubbed` deserves its own status.
+2. c8's registered status is `Stubbed`, while this design and
+   `scenario.md` both say it is blocked on c6+c7. Reconcile to
+   `Blocked [C6; C7]` so the dependency is data, not prose.
 
 Widenings already designed, not landed: a fetch-side integrity cell
 (pinned-ref freshness is its postcondition half, e2b4d27), publish
@@ -289,6 +344,41 @@ beyond the oracle, and the mechanisms/langs beyond the wired three —
 their cells answer `[]` = declared-empty, never un-answered.
 
 
+
+## 8a. The lib-only cells — the first fills (2026-08-18)
+
+Three cells landed as the first deliberate fill, all on the ONE
+artifact (the binary C lib) at `Build_lib`, all sharing one shape:
+
+| cell | falsifier | evidence |
+|---|---|---|
+| c1 @ build_lib | a declared `c_api` function is missing from the built lib's exports | nm symbols vs the decl |
+| c4 @ build_lib | the built lib's elf soname ≠ the declared soname | elf vs the decl |
+| c5 @ build_lib | a declared version tag is absent from `versioned_exports` | `@@VER` vs the decl |
+
+Their closures (`c1_decl_predict`, `c4_decl_predict`,
+`c5_decl_predict` in `canary_compat_run.ml`) are **decl-comparison**
+predicts: they read ONE artifact's inspected surface and compare it
+against the project's DECLARED facts (`binding_decl`), with no
+consumer involved.
+
+**Why this shape is the general one** (user, 2026-08-18): the language
+tools — compilers, linkers, version scripts, install rules — are
+BLACK BOXES with no bit-wise operational semantics we can reason
+about. A linker may silently drop a version script; a build system may
+not re-run; an install may skip a rule. So we do not trust the tool's
+exit code beyond its marker postcondition: we inspect the ARTIFACT it
+produced and compare against what was declared. Every lifecycle cell
+(make / transform / exercise) is an instance of that stance, which is
+why `staged_parity.md`'s install checks and these build checks have
+the same skeleton — different artifact stage, same "inspect the
+product, compare to the declaration".
+
+An observation the fill produced: **c1's lib-only cell is the same
+comparison as the status-level watchlist verdict** (`watchlist N/N` /
+`⚠ MISSING`). Two views of one belief — one recorded post-hoc in the
+status table, one predicted as a cell. The registry is where they
+reconcile.
 
 ## 9. Coverage status and plan
 
@@ -309,18 +399,22 @@ so completeness of checking is itself checkable. The space:
    v2 fingerprint (cmd + expectation form) means a spec edit
    self-invalidates — pre/post results can no longer silently serve a
    stale world.
-2. **Contract firings — the wired subset only.** The registry defaults
-   fire at `Build_binding l` / `Probe_binding l`. Declared but
-   unwired: `Probe_lib` (no row fires there — c1's lib side rides
+2. **Contract firings — the wired subset.** The registry defaults fire
+   at `Build_binding l` / `Probe_binding l`, PLUS `Build_lib` for the
+   three lib-only cells (§8a). Declared but unwired: `Probe_lib` (no row fires there — c1's lib side rides
    inspect attachments on build_lib), `Build_app`/`Probe_app` (the
    firing vocabulary has the sites; no row uses them — tiny's oracle
    covers app firings today), `Scan_sources` (c6's inputs READ its
    JSONs, c6 fires elsewhere), and the fetch/configure/install/publish
    actions (publish belongs to the other agent's work; a fetch-side
    integrity contract is designed, not landed).
-3. **Expectation forms — one Placeholder left.** 6 Inspection, 2
-   Behavior_grep, 1 Placeholder (c8, blocked on c6+c7); the known
-   gaps (c4-OCaml, symbol_orphan) close inside the registry.
+3. **Expectation forms.** 5 Inspection, 2 Behavior_grep, 1
+   Placeholder (c8) + the `Postcondition` form reserved for the
+   check_post families (markers, pin-checks, staged parity). The known
+   gaps (c4-OCaml's Placeholder firing, `symbol_orphan`'s
+   contract-less build failure) close inside the registry; c8's
+   registered status needs the `Blocked [C6; C7]` reconciliation
+   (§8's drift 2).
 4. **Mechanisms/langs beyond the wired three.** Cffi/Dynlink and the
    Rust/Java/Cpp/CSharp langs are declared in the vocabulary with no
    belief cells yet — the row functions must answer for them too
@@ -328,13 +422,13 @@ so completeness of checking is itself checkable. The space:
 
 **The plan — make incompleteness visible, then close it.**
 
-1. **The matrix pin.** Extend the registry with a `cell_status` view:
-   every (contract × action × lang) in a DECLARED SCOPE is `Wired` |
-   `Declared_empty of reason` | `Blocked of deps` — a cell with no
-   status fails the pin. The scope grows as beliefs land (start: the
-   binding actions; widen to probe_lib + app sites; then fetch/publish
-   as those projects land). This is the completeness meter the user
-   reads.
+1. **The matrix view** — `belief_matrix` / `fill_list` /
+   `pp_belief_matrix` (written 2026-08-18): the cells as data, the
+   `~` set as an explicit fill list, and a rendered table. The matrix
+   is total, so the pin is not "no un-answered cell" (impossible) but
+   the fill-list SHAPE: the pin states today's `~` set exactly, so a
+   new unfixtured cell shows up as a diff. Two code refinements the
+   table exposed are listed in §8.
 2. **Per-cell counterexamples.** The fixture harness generalizes from
    per-contract to per-CELL (contract × firing action): each wired
    cell ships the minimal bad-world input + its predicted substrings;
@@ -345,10 +439,40 @@ so completeness of checking is itself checkable. The space:
    blame (what does `build.ok` pass/fail say about which artifact —
    e.g. the pinned-ref freshness check_post the other agent added is a
    fetch-side postcondition with a clear fail meaning).
-4. **Order.** (a) matrix pin with the visible not-yet list → (b) fill
+4. **Order.** (a) the matrix view + its fill-list pin → (b) fill
    probe_lib + app cells (tiny's oracle is the reference) → (c)
    fetch/publish cells as their projects land → (d) the new
    mechanisms/langs as their bindings land.
+
+**Decided and deferred** (2026-08-18, user):
+
+- **The C smoke probe** (`Probe_lib` Execution cell — compile a
+  minimal program against the lib, load it, enter each declared
+  function once). VERDICT: worth it, because it is the only check
+  that exercises the LOADER — the lib's own undefined closure, broken
+  NEEDED/RPATH, constructor (`.init_array`) failures, load-time
+  version resolution. That class is structurally invisible to nm/elf
+  tools: a lib can be perfectly formed and still fail to load. The
+  program is decl-DERIVED (`c_api.functions`), so it carries no
+  hand-written payload. Deeper behavior stays with the App actions.
+  POSTPONED — it needs action-layer probe machinery.
+- **Where an expectation is declared** (user, 2026-08-18): an
+  expectation is project-AGNOSTIC whenever artifact/action/mechanism
+  determine it (those live in the registry); when it is genuinely
+  project-dependent it belongs in the STATIC project spec as a
+  declared field — never hidden inside a realization closure. The
+  smoke probe's expected-output patterns are the first case of the
+  latter.
+- **Checks as actions** (`[Pre; Action; Post]`, recorded in
+  `status.md` design directions): would make every matrix cell an
+  action in the enumeration, and the coverage pin an enumeration
+  invariant. POSTPONED — the IR layer is uniform enough to wait.
+- **Staged parity** (`Install_lib × Postcondition`) is the same
+  belief family one artifact-stage later; it lives with the other
+  agent's brief (`staged_parity.md`) and needs no new vocabulary
+  here. Its portability falsifier — a staged binary must contain no
+  build-tree path — is the transform-stage analogue of §8a's
+  decl-comparison.
 
 **Warm-mask ↔ phase 2.** The marker v2 fingerprint covers the step's
 cmd + EXPECTATION FORM — so when phase 2 switches the lowering to
@@ -391,12 +515,13 @@ gathering:
 
 ## 11. Sequence (each step keeps the suite green)
 
-1. Land the producer: `contract_registry` rows for c1..c8 (statuses,
-   invariant strings, evidence kinds, fault tags, input template,
-   firing derivation). Consumers untouched — `registered_checks` and
-   the per-project tables keep working. Pins: every row complete; the
-   fault-tag mapping equals `canary_expected_of`; the invariant
-   strings resolve the ssot Ag.X drift (the Ag.8 decision).
+1. [x] **Land the producer** (2026-08-17/18): `contract_registry` rows
+   for c1..c8 (invariant, reads, source, fault tags, input template,
+   firing derivation) + the fixture harness + the first fills (§8a) +
+   the matrix view (§8). Consumers untouched — `registered_checks` and
+   the per-project tables keep working; 4 pins green. Still open
+   inside this step: the ssot Ag.X ↔ C1..C8 reconciliation (the Ag.8
+   decision) and §8's two drifts.
 2. Switch `lower_expectation_agnostic` to derive firings from the
    registry; pin the derived firings equal to the hand-written tables
    (tiny first — richest case — then z3/llvm/sqlite).
