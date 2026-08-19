@@ -457,6 +457,19 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
   let cmake_build_binding =
     match version.Canary_basic.channel with Canary_basic.Dev -> true | _ -> false
   in
+  (* the install prefix lives INSIDE the build tree (2026-08-19) — one
+     staging area per build tree, isolated by construction. It used to be
+     the build tree's SIBLING ([build/../install]), which the contrib refs
+     SHARE: arbipher builds in `z3-all/build` and pre-10549 in
+     `z3-all/build-pre-10549`, but both staged into `z3-all/install`. Two
+     hazards, one now load-bearing: `cmake --install` accumulates (a stale
+     libz3.so.4.15.5.0 outliving its world), and — since the staged
+     consumer became a world of its own — the fork's staged OCaml package
+     would satisfy the pre-10549 world's staged probe and SILENCE the
+     #10549 xfail. The build-tree probe globs [<build>/libz3.so]
+     non-recursively, so nothing reads the staged copy by accident.
+     Pinned: [z3.install_prefix_isolated]. *)
+  let install_prefix = build ^ "/install" in
   let shared =
     [ { ar_action = Canary_basic.Fetch Canary_basic.Lib; ar_needs = None;
         ar_template = Fetch_lib { linux_pkg = "libz3-dev"; macos_pkg = "z3" } };
@@ -528,7 +541,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
         ar_needs = Some Canary_store.Installed;
         ar_template =
           Cmake_install
-            { build; prefix = build ^ "/../install";
+            { build; prefix = install_prefix;
               (* the #10549 regression (2026-08-17): the install must
                  stage the OCaml PACKAGE (PR 93c609d's install rules);
                  the pre-10549 ref fails these — the declared
@@ -568,7 +581,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
       { ar_action = Canary_basic.Probe_lib;
         ar_needs = Some Canary_store.Installed;
         ar_template = Native_lib_probe
-                { location = Staged_lib { lib = build ^ "/../install/lib/libz3.so" };
+                { location = Staged_lib { lib = install_prefix ^ "/lib/libz3.so" };
                   prefix = "Z3_" } };
       { ar_action = Canary_basic.Probe_binding Canary_lang.OCaml; ar_needs = None;
         ar_template =
@@ -620,7 +633,7 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      prefix and fails where the build-tree probe passes).
                      One build cache serves both policies — the install
                      is a copy-out, nothing rebuilds. *)
-                  let prefix = build ^ "/../install" in
+                  let prefix = install_prefix in
                   (* the guard signatures feed the declared expectation
                      ([STAGED PACKAGE MISSING] — the pre-#10549 live
                      signature: the prefix lib stages, the OCaml package

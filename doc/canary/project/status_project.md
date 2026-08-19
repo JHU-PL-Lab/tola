@@ -1,6 +1,6 @@
 # Project status — bugs, issues, todo
 
-> 2026-08-12. What's wrong, what's fixed, what's next — for the *projects*
+> 2026-08-19. What's wrong, what's fixed, what's next — for the *projects*
 > layer only. Framework status stays in [`../status.md`](../status.md);
 > what projects exist and how they land is
 > [`coverage.md`](coverage.md) + [`landing.md`](landing.md); historical context in
@@ -16,13 +16,16 @@ store-pin migration); tiny1 rides the factory. Full matrix in
 the name list drifts, or ssl's pinned binding stops enumerating 2
 distinct scenarios.
 
-**Scenario counts** (the enumeration snapshot, re-verified
-`spec @all` 2026-08-16, post-C2; full policy unless noted):
+**Scenario counts** (the enumeration snapshot, re-verified 2026-08-19
+after the Installed axis; full policy unless noted). The total is pinned:
+`matrix.registry_shape` asserts 25 rows across the registry, so this
+table cannot drift silently.
 
 | project | scenarios | shape |
 | --- | --- | --- |
-| z3 / llvm | 5 | 3 all-Fetched source worlds (stable / official latest / arbipher fork) + 2 dev build chains (latest + fork); `--thin` = 1 (stable) |
-| sqlite | 3 | system-fetched lib + 2 built amalgamation versions |
+| z3 | 7 | ONE all-Fetched world (the stable repo — the source follows the lib's channel) + each of the 3 dev repos TWICE, build-tree and staged (latest / arbipher fork / pre-10549); `--thin` = 1 (stable). `--refs latest,pre-10549` = the regression pair, 4 = 2 builds + their 2 staged faces |
+| llvm | 5 | 3 all-Fetched source worlds (stable 19 / official latest / arbipher fork) + 2 dev build chains (latest + fork); no Installed axis declared yet — its install still rides the Built world; `--thin` = 1 |
+| sqlite | 5 | system-fetched lib + 2 built amalgamation versions + their 2 staged faces |
 | zarith | 3 | per-channel source repos + the FORWARD cell (source-fetched-1.14 / -master × binding built-dev; the lib axis is Fetched-only — prebuilt-shadows-source) |
 | ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
 | tiny-full | 1 | all-Vendored stable world |
@@ -48,6 +51,57 @@ never the reverse. `canary_project_run` no longer references tiny's
 factory — `assignment_is_all_good` moved to the datatype layer.
 
 ## 2. Bugs & issues
+
+### Fixed — the shared install prefix could have SILENCED the #10549 xfail
+### (2026-08-19, found by the z3 migration's live run)
+
+z3's install prefix was the build tree's SIBLING (`<build>/../install`),
+and the contrib refs share that sibling: arbipher builds in
+`z3-all/build`, pre-10549 in `z3-all/build-pre-10549` — both staged into
+`z3-all/install`. Recorded earlier as an accumulation nuisance (a stale
+`libz3.so.4.15.5.0` outliving its world). It became load-bearing the
+moment the staged consumer became a world of its own: the fork's staged
+OCaml package sits in the prefix that the pre-10549 world's staged probe
+reads, so `STAGED PACKAGE MISSING` would stop firing and the regression
+xfail would report an unexpected PASS — the regression test quietly
+testing nothing. Fixed by moving the prefix INSIDE the build tree
+(`<build>/install`): one staging area per build tree, isolated by
+construction wherever build dirs are. The build-tree lib probe globs
+`<build>/libz3.so` non-recursively, so nothing reads the staged copy by
+accident. Pinned by `z3.install_prefix_isolated` — read off the
+`Cmake_install` row's own prefix field (not a parsed command): the three
+dev repos' prefixes are pairwise distinct AND each sits under its own
+build path. Live-verified: pre-10549 stages into `build-pre-10549/install`
+and double-xfails; latest passes against its staged package.
+
+The general lesson for the staged-parity item below: **isolation is a
+checking property, not just hygiene** — a shared staging area makes one
+world's artifacts answer another world's questions.
+
+### Landed — the installed consumer is an enumerated world (2026-08-19)
+
+The 2026-08-18 `--installed` realization policy is retired; the staged
+lib is a provision (`Installed`) and its consumer face is a scenario.
+sqlite (5 worlds) and z3 (7) both derive their run set from the declared
+spec + the enumeration algorithm — no run flag decides which artifacts a
+scenario consumes. Details + the pin list in
+[`../design/staged_parity.md` §1](../design/staged_parity.md); the
+retirement removed `Canary_basic.consumer_lib`,
+`run_config.consumer_lib`, the `--installed` flag, and the
+`?consumer_lib` parameter from `pr_runner_spec` (7 project specs).
+
+Two things worth remembering:
+- **The xfail MOVED worlds, deliberately.** pre-10549's
+  `OCAML INSTALL MISSING` used to ride the Built world (install fired
+  there); install now fires only where the lib is Installed, so the
+  provider-side xfail and the consumer-side `STAGED PACKAGE MISSING`
+  both live in the staged world. Its Built twin passes — the same bug,
+  visible or invisible depending on which face you consume. That
+  contrast IS the finding the pair reports.
+- **The counts didn't move, the content did.** z3 stayed at 7 (and 4
+  under `--refs latest,pre-10549`), but 3 of the old all-Fetched worlds
+  were the same world under source refs none of them read — the
+  phantom ref axis, killed by `~follows:a_lib` on the source row.
 
 ### Fixed — the forward cell's c1 NEVER actually paired (2026-08-17)
 
@@ -575,19 +629,22 @@ directions):
   rank; fetched last). Pin: `sqlite.provider_rows`. The fetched row =
   1 per platform PM (apt today; the N-PM axis when multiple coexist
   is the future, recorded below).
-- [ ] **z3 migration + the phantom-ref-axis fix** (2026-08-18,
-  recorded — the deferred half): (a) `~follows:a_lib` on z3's source
-  row kills the 4-identical-fetched-worlds issue (the follows
-  post-filter channel-locks the source to the lib: lib-Fetched keeps
-  only the Stable pin = ONE fetched world; the dev chains keep their
-  refs; `--refs latest,pre-10549` then drops the fetched world — the
-  point of selection); (b) lib universe gains `(Installed, [Dev])` =
-  the ref×2 rows (the staged probe rows + the pre-10549 xfail move to
-  the Installed world); (c) the `consumer_lib` policy +
-  `--installed` flag RETIRE once (b) lands (or become a provision-
-  subset filter — the `Subset` machinery exists). Also: the
-  multi-provider axis (fetch/build against several libs) — covered
-  later per the user; the fetched row per PM-count is its seed.
+- [x] **z3 migration + the phantom-ref-axis fix** (landed 2026-08-19,
+  commit `2f36e2d`): (a) `~follows:a_lib` on the source row killed the
+  4-identical-fetched-worlds issue; (b) the lib universe gained
+  `(Installed, [Dev])` — the ref×2 rows, with the staged probe and both
+  pre-10549 xfails in the Installed world; (c) the `consumer_lib` policy
+  and `--installed` flag RETIRED outright rather than becoming a
+  provision subset — narrowing worlds is `--refs`-shaped work, and the
+  selection-config unification below is where a `--provision` filter
+  would belong if one is ever wanted. See the Landed entry in §2.
+  **Still open from this arc**: the multi-provider axis (fetch/build
+  against several libs) — covered later per the user; the fetched row
+  per PM-count is its seed. And llvm has NOT adopted the Installed axis
+  (its install still rides the Built world): the general machinery is
+  there, so it is one universe row plus two `ar_needs` gates when its
+  staged face is wanted — the reason to do it is a staged-parity check
+  worth running on LLVM's much larger install surface.
 - [ ] **The staged-parity principle** (2026-08-18, user — from the
   experiment's follow-up question "how may a common project have these
   different binaries"): the install is a COPY-TRANSFORM step, not a
@@ -601,10 +658,14 @@ directions):
   SONAME/LC_ID_DYLIB = installed identity, no build-dir paths in
   RPATH/RUNPATH, symlink chain + exec modes), parity (symbol-set
   equality vs the build tree modulo declared transforms), and
-  ISOLATION (**per-world install prefixes** — the live 2026-08-18
-  finding: the contrib refs share `z3-all/install` and `cmake --install`
-  accumulates, so a stale `libz3.so.4.15.5.0` from an old run coexists
-  beside 5.1; a fork's install would merge into another world's prefix).
+  ISOLATION (per-world install prefixes — **done for z3 2026-08-19**,
+  and it turned out to be a correctness property, not hygiene: the
+  shared `z3-all/install` would have let the fork's staged package
+  answer the pre-10549 world's staged probe and silence the regression
+  xfail. See the Fixed entry in §2. What remains here is the GENERAL
+  form: no project's two worlds may share a staging area — a derived
+  check over the install rows rather than z3's hand pin, and the same
+  question for any other write-shared location a realization names).
   Taxonomy + the checking principle in
   `doc/canary/design/staged_parity.md` (the cross-agent brief).
 - [ ] **Surface-drift expectations** — per-project drift bounds on the
@@ -642,8 +703,17 @@ directions):
   checkout exists. Pure waste; functional today.
 - [ ] **Docs-mirror cp noise** — skip `.git` in the mirror copy.
 - [ ] **Fetched provision for tiny** — the one provision tiny lacks.
-- [ ] **Location sub-axis** — probe locations as a first-class axis;
-  waits on a forcing case.
+- [ ] **Location sub-axis** — probe locations as a first-class axis.
+  **The forcing case arrived (2026-08-19)**: the matrix's single
+  `probe_lib` column marks only the step tagged exactly `probe_lib`, so
+  an Installed world — whose ONLY lib probe is `probe_lib_staged` —
+  renders as "not run" in the column while `canary status` shows it
+  passed (live: z3 #3/#7, sqlite's staged rows). Display-only today, but
+  the deliverable matrix under-reports a world's actual checking. Two
+  ways out: a column per location (the location axis proper), or marking
+  the column from any `probe_lib*` step — the latter conflates a
+  build-tree pass with a staged fail, which is exactly the distinction
+  the Installed worlds exist to draw. So: the axis, not the shortcut.
 - [ ] **Flavor 2 (deploy-mismatch)** — `close_deps`/`dep_mode`
   built, not yet wired to a live run.
 - [ ] **Web results page** — per-project bug reports + fixed-PR links

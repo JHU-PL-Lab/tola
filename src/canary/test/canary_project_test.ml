@@ -1250,9 +1250,11 @@ let tool_routing_ratchet_test : pure_test =
                 realize-time probe misdiagnosis); the shell goes through
                 cmake_configure_cmd *)
              ("canary_project_llvm.ml", 7); ("canary_tiny_scenario.ml", 4);
-             (* the +1 vs the old 6 = a COMMENT noting cmake's default
-                generator; the shell goes through cmake_configure_cmd *)
-             ("canary_project_z3.ml", 7); ("canary_run.ml", 1) ]);
+             (* 7 -> 8 (2026-08-19): both extras are COMMENTS — cmake's
+                default generator, and the install-prefix isolation note
+                naming the staging verb. The shell goes through
+                cmake_configure_cmd / cmake_install_cmd. *)
+             ("canary_project_z3.ml", 8); ("canary_run.ml", 1) ]);
           ("ninja ",
            [ (* one COMMENT mention (the -G Ninja note above) *)
              ("canary_project_z3.ml", 1);

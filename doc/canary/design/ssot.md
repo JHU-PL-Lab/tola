@@ -965,7 +965,7 @@ the writeup — no need for a separate alignment section.
 
 ...
 | Attribute of action   | **stage**                  | Pipeline phase (Upstream / Binding-creation / Downstream-use). Matches writeup "Stage for …" headings.                                                          | (doc-only)                           |
-| Attribute of artifact | **artifact_status**        | Lifecycle state (`Built \| Installed \| Packed \| Fetched`). Complement to `location`.                                                                          | `Canary_store.artifact_status`       |
+| Attribute of artifact | **artifact_status**        | Lifecycle state (`Built \| Installed_state \| Packed \| Fetched`). Complement to `location`. (Dormant; its `Installed` was renamed `Installed_state` 2026-08-18 to free the name for the *provision*, which is the live axis.) | `Canary_store.artifact_status`       |
 | Theory                | **rule**                   | *What an action is for* — operational semantics / invariants. Doc-only concept; no code counterpart.                                                            | —                                    |
 
 **Same-word-different-level pitfalls.**

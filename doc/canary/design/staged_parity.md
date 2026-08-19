@@ -1,38 +1,55 @@
 # Staged parity — build vs install as a checking principle
 
-**2026-08-18. A cross-agent brief: what landed, what it means, what to track.**
+**2026-08-18, revised 2026-08-19. A cross-agent brief: what landed, what
+it means, what to track.**
 
-## 1. What just landed (commit `9083d3b`)
+## 1. What landed — the staged consumer is a WORLD
 
-The **installed-consumer experiment** (user directive: "whether a
+The **installed-consumer** arc (user directive: "whether a
 lib-built-to-install is a separate provider, so that the binding also
-needs to be built from it"):
+needs to be built from it") landed in two steps, and the second one
+answers the directive literally: the staged lib IS a separate provider,
+so it takes its own row.
 
-- `consumer_lib = Build_tree | Installed` in `canary_basic` — a
-  REALIZATION policy, not an enumeration axis. The scenario set is
-  unchanged; only WHICH concrete lib the consumer reads flips.
-- `run_config.consumer_lib` (default Build_tree; the batch never sets
-  it) + the `--installed` flag on `canary action`.
-- `pr_runner_spec`'s signature gained an OPTIONAL param:
-  `assignment -> workspace:string -> ?consumer_lib:consumer_lib -> unit
-  -> runner_spec`.
+**Step 1 (`9083d3b`, retired)** made it a realization policy:
+`consumer_lib = Build_tree | Installed` in `canary_basic`,
+`run_config.consumer_lib`, a `--installed` flag, and an optional
+`?consumer_lib` parameter on every project's `pr_runner_spec`. One
+scenario, two possible realizations.
 
-  **⚠ Compile-facing for any in-flight project landing**: every project
-  closure must accept the optional param (mechanical:
-  `?consumer_lib:_`); only z3's `realize` dispatches on it. Any new
-  project spec written against the old signature breaks the build.
-- z3's dev-chain `probe_binding OCaml` under `Installed` reads the
-  STAGED prefix (`<build>/../install/lib/libz3.so` +
-  `<prefix>/lib/ocaml/z3/z3ml.cmxa`, `LD_LIBRARY_PATH=<prefix>/lib`).
-  The `Build_tree` cmd is byte-equal to before (pinned:
-  `z3.installed_probe_consumes_prefix`).
-- The #10549 bug is now declared ON THE CONSUMER: pre-10549 + Installed
-  xfails at install AND probe (`STAGED PACKAGE MISSING: .../z3ml.a`,
-  guard-emitted signature + `Expect_failure` keyed on binding-Built AND
-  Installed).
+**Step 2 (`bf5e892` general + sqlite, `2f36e2d` z3)** made it an
+enumeration axis and deleted step 1 entirely:
 
-Live: default unchanged; `--installed` pair = latest PASS against the
-staged package, pre-10549 double-xfail.
+- `provision` gained `Installed` (base vocabulary) with **built-family**
+  semantics — an Installed world fetches and builds exactly like a Built
+  one, then stages. One build serves both faces.
+- A project opts in by declaring it: sqlite's lib row carries
+  `(Installed, [Stable; Dev])`, z3's `(Installed, [Dev])`.
+- Row-level exclusivity is `ar_needs : provision option` on
+  `action_row`: the `Install_lib` row and the staged probe gate
+  `Some Installed`, so the Built world runs neither and keeps the
+  build-tree probe. The build rows stay ungated (the family fires them).
+- The consumer's paths come off the assignment: sqlite's probe env
+  points at `<ws>/install/lib`, z3's OCaml probe reads
+  `<prefix>/lib/ocaml/z3/z3ml.cmxa` + `<prefix>/lib/libz3.so`.
+- The #10549 bug is declared ON THE CONSUMER: the pre-10549 **Installed
+  world** xfails at install and at probe (`STAGED PACKAGE MISSING:
+  .../z3ml.a`), while its Built twin passes — the same bug, visible or
+  invisible depending on which face you consume.
+- `pr_runner_spec` is back to
+  `assignment -> workspace:string -> unit -> runner_spec`. **⚠
+  Compile-facing for in-flight landings**: drop the `?consumer_lib`
+  parameter (it no longer exists); nothing replaces it — read the lib's
+  provision from the assignment if a realization needs to branch.
+
+Pins: `sqlite.provider_rows` + `z3.provider_rows` (the general factory,
+derived per source-ref group), `sqlite.staged_probe_paths` +
+`z3.installed_probe_consumes_prefix` (the realizations),
+`z3.regression_pre_10549_expectation` (the declared xfails, quantified
+over worlds).
+
+Live: sqlite 5/5; z3's `--refs latest,pre-10549` = 2 builds + their 2
+staged faces (latest passes staged, pre-10549 double-xfails).
 
 ## 2. The general question
 

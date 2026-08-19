@@ -1313,6 +1313,58 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
                Bool.equal (declared_signature (probe_exp a))
                  (is_staged_world a))) }
 
+(* ISOLATION of the staging area (2026-08-19, the live finding): no two
+   of z3's declared repos may stage into the same install prefix. They
+   used to — arbipher builds in `z3-all/build`, pre-10549 in
+   `z3-all/build-pre-10549`, and the prefix was each build tree's SIBLING
+   `z3-all/install`. Harmless while install was a build-world side
+   effect; load-bearing once the staged consumer became a world, because
+   the fork's staged OCaml package would satisfy the pre-10549 world's
+   staged probe and the #10549 xfail would silently stop firing. Read off
+   the ROW DATA (the [Cmake_install] template's own prefix field), not a
+   parsed command. *)
+let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
+  { name = "z3.install_prefix_isolated";
+    check =
+      (fun () ->
+        let module AT = Canary_action_templates in
+        let distro = Canary_basic.detect_distro () in
+        let prefix_of (repo : Canary_artifact_source.source_repo) =
+          List.find_map
+            (Canary_project_z3.z3_table_rows ~source:repo ~distro
+               ~lib_prov:Canary_artifact.Installed)
+            ~f:(fun (row : AT.action_row) ->
+              match (row.AT.ar_action, row.AT.ar_template) with
+              | Canary_basic.Install_lib, AT.Cmake_install { prefix; _ } ->
+                  Some prefix
+              | _ -> None)
+        in
+        let repos =
+          [ Canary_project_z3.z3_source_latest;
+            Canary_project_z3.z3_source_dev;
+            Canary_project_z3.z3_source_pre_10549 ]
+        in
+        let prefixes = List.filter_map repos ~f:prefix_of in
+        List.length prefixes = List.length repos
+        && List.length
+             (List.dedup_and_sort prefixes ~compare:String.compare)
+           = List.length repos
+        (* and each stays under its OWN build tree — the property that
+           makes isolation follow from build-dir isolation *)
+        && List.for_all repos ~f:(fun repo ->
+               match
+                 ( prefix_of repo,
+                   Canary_artifact_source.local_for distro repo )
+               with
+               | Some prefix, Some l ->
+                   String.is_prefix prefix
+                     ~prefix:l.Canary_artifact_source.build_path
+               | Some prefix, None ->
+                   (* no local checkout: the build tree is the scenario's
+                      own _out dir; the prefix must still sit inside it *)
+                   String.is_substring prefix ~substring:"/build/install"
+               | None, _ -> false)) }
+
 (* z3's REALIZATION check (2026-08-18 as a policy pin; re-keyed to the
    enumerated world 2026-08-19) — the half {!provider_rows_pin} can't
    derive, the sqlite.staged_probe_paths analogue: the Installed world's
@@ -1850,5 +1902,6 @@ let tests : Canary_project_test.pure_test list =
       sqlite_staged_probe_paths_pin;
       provider_rows_pin ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
+      z3_install_prefix_isolated_pin;
       matrix_registry_shape_pin ]
 
