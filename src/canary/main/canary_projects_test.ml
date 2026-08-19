@@ -293,9 +293,9 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
         List.find (Canary_enumerate.runtime_pairings_of spec a) ~f:(fun p ->
             Canary_artifact.equal_artifact_id p.Canary_enumerate.rp_consumer c)
       in
-      (* 5 since the Installed worlds (2026-08-18): 2 built + 2
-         installed + 1 fetched *)
-      List.length asgs = 5
+      (* 10 since the binding's channel pair (2026-08-19): the lib's 5
+         placements (2 built + 2 installed + 1 fetched) × 2 opam pins *)
+      List.length asgs = 10
       && List.for_all asgs ~f:(fun a ->
              (match find py_cext a with
               | Some p -> (
@@ -310,7 +310,10 @@ let sqlite_runtime_edges_pin : Canary_project_test.pure_test =
                  | None -> false))
       && List.count asgs ~f:(fun a ->
              match find oc a with Some p -> p.Canary_enumerate.rp_deploy | None -> false)
-         = 4) }
+         (* the deploy pairings are the built-family lib worlds (canary
+            supplies the run lib under a fetched binding): 4 lib
+            placements × 2 binding pins *)
+         = 8) }
 
 (* ── The ARROW unification pin (user, 2026-08-06) ──
    provider → action → artifact, with fetch and build the same shape.
@@ -434,9 +437,10 @@ let integration_smoke : Canary_project_test.pure_test =
           Fmt.pr "  %s: want %d scenarios, got %d@." name want_count n;
         n = want_count
       in
-      (* 5 since the Installed worlds (2026-08-18): fetched + 2 built
-         + 2 installed *)
-      let ok1 = check ~name:"sqlite" ~want_count:5
+      (* 10 since the binding's channel pair (2026-08-19): the lib's 5
+         placements (fetched + 2 built + 2 installed) × 2 opam pins — the
+         2×2 the mismatch matrix wants, crossed with the staged faces *)
+      let ok1 = check ~name:"sqlite" ~want_count:10
           Canary_project_sqlite.sqlite_run in
       (* C2: 5 = 3 all-Fetched source worlds + 2 dev build chains;
          7 since the pre-10549 regression ref (4 all-Fetched + 3 dev) *)
@@ -1723,11 +1727,19 @@ let provider_rows_pin ~prefix (pr : Canary_project_run.project_run) :
             List.count pairs ~f:(fun (_, p) ->
                 Canary_artifact.equal_provision p pv)
           in
-          (* the group's rows appear in the canonical order … *)
-          Poly.equal pairs
+          (* One (channel, provision) may now own SEVERAL adjacent rows —
+             a second axis on another artifact multiplies them (sqlite's
+             two binding pins, 2026-08-19). The ORDER claim is about the
+             lib's blocks, so compare the sequence of distinct blocks;
+             the twin COUNT below still uses every row, so a lost staged
+             row is caught whatever the multiplicity. *)
+          let blocks =
+            List.remove_consecutive_duplicates pairs
+              ~equal:(fun x y -> Poly.equal x y)
+          in
+          Poly.equal blocks
             (List.filter canonical ~f:(fun p ->
-                 List.mem pairs p ~equal:Poly.equal))
-          (* … and every built row in it kept its staged twin *)
+                 List.mem blocks p ~equal:Poly.equal))
           && count Canary_artifact.Built = count Canary_artifact.Installed
         in
         let ok_order =
@@ -2015,8 +2027,8 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        (* 25 since sqlite's Installed worlds (+2, 2026-08-18) *)
-        List.length rows = 25
+        (* 30 since sqlite's binding channel pair (+5, 2026-08-19) *)
+        List.length rows = 30
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 7
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 3
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2

@@ -360,17 +360,55 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
   let probe_env =
     [ Printf.sprintf "LD_LIBRARY_PATH=$PWD/%s:$LD_LIBRARY_PATH" libdir ]
   in
+  (* THE BINDING PIN (2026-08-19): the scenario's opam version. With two
+     pins declared, the switch is shared state the scenarios take turns
+     owning — so the fetch must INSTALL this pin, its check_post must
+     prove the switch still holds it, and the probe must assert the world
+     before compiling. Without all three a warm marker would let one
+     scenario's probe run against the other's binding, and the 2×2 would
+     be four runs of one cell. Same mechanism as ssl's pins. *)
+  let pin =
+    (Canary_enumerate.version_of a
+       (Canary_artifact.a_binding Canary_lang.OCaml Canary_mechanism.Cstubs))
+      .Canary_basic.id
+  in
+  let pinned = String.length pin > 0 in
   { spec with
+    fetch_binding =
+      (if pinned then
+         [ ( Canary_lang.OCaml,
+             Canary_step_builder.Raw
+               (Canary_step_builder.fetch_binding_cmd
+                  (Canary_toolchain.mk_opam_package_spec
+                     ~install_name:(prebuilt.opam_package ^ "." ^ pin) ())) )
+         ]
+       else spec.fetch_binding);
+    check_post =
+      (fun action ->
+        match action with
+        | Canary_basic.Fetch (Canary_basic.Binding Canary_lang.OCaml)
+          when pinned ->
+            Some
+              (Canary_step_builder.pin_check_post ~pkg:prebuilt.opam_package
+                 ~pin ~marker:"binding.ok")
+        | _ -> spec.check_post action);
     probe_binding =
       [ ( Canary_lang.OCaml,
           Canary_store.Pm
             (Canary_store.Lang_pm
                { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
           fun ~output_dir ~variant_key ->
-            Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
-              ~log_grep:None ~binding_lib:ocaml.binding_lib_name
-              ~example:ocaml.example_file ~target:ocaml.example_target
-              ~output_dir ~variant_key ) ];
+            let base =
+              Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
+                ~log_grep:None ~binding_lib:ocaml.binding_lib_name
+                ~example:ocaml.example_file ~target:ocaml.example_target
+                ~output_dir ~variant_key
+            in
+            if pinned then
+              Canary_step_builder.opam_world_check
+                ~pkg:prebuilt.opam_package ~pin
+              ^ base
+            else base ) ];
     asserts =
       [ ( Canary_basic.Probe_binding Canary_lang.OCaml,
           Some
@@ -415,7 +453,29 @@ let sqlite_artifacts : Canary_project_spec.artifact_row list =
       ~provider:
         (Canary_store_config.Lang_pkg
            { lang = Canary_lang.OCaml; pm = Canary_store.Opam;
-             package = prebuilt.opam_package; self_contained = false; versions = None })
+             package = prebuilt.opam_package; self_contained = false;
+             (* THE BINDING'S CHANNEL PAIR (2026-08-19, user — the
+                mismatch matrix): two published opam versions, the
+                CHEAPEST way to realize a pair (no source build, no repo:
+                just two store pins — the ssl mechanism). Crossed with the
+                lib's own pair this is the 2×2 the checking is aimed at:
+                two baselines plus the forward (new binding, old lib) and
+                backward (new lib, old binding) cells.
+
+                The pair is deliberately WIDE on the binding side (5.1.0
+                vs 5.4.1, ~3 minor releases apart) and NARROW on the lib
+                side (3.45.1 vs 3.46.1 export identical symbol sets —
+                measured 2026-08-05), so all four cells are expected
+                GREEN today: this is the machinery proof. Widening the lib
+                side to a ≤3.43 amalgamation — which lacks the modern
+                watchlist APIs (sqlite3_get_clientdata et al.) — is what
+                would make the forward cell a real question. *)
+             versions =
+               Some
+                 [ { Canary_store_config.pin_version = "5.1.0";
+                     install_name = None };
+                   { Canary_store_config.pin_version = "5.4.1";
+                     install_name = None } ] })
       ();
     artifact_row ~artifact:(a_binding Canary_lang.Python Canary_mechanism.Cext)
       ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]

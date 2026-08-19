@@ -476,6 +476,26 @@ let pin_check_post ~pkg ~pin ~marker ~output_dir ~variant_key =
   has_file ~output_dir (Canary_basic.variant_file ~variant_key marker)
   && Stdlib.Sys.command (Canary_pm_opam.holds_pin_cmd ~pkg ~pin) = 0
 
+(** The WORLD ASSERTION for a pinned opam package (2026-08-19): a shell
+    prelude a probe prepends, so a drifted switch fails loudly instead of
+    silently compiling against whatever version happens to be installed.
+    The store-pin siblings: [pin_check_post] proves the fetch left the pin
+    in place; this proves the PROBE ran in that world.
+
+    z3, llvm, ssl and the opam-binding template each hand-wrote this same
+    shell before this helper existed (four copies, differing only in the
+    package name); sqlite is the first user. Migrating the other four is
+    recorded in status_project — it changes their emitted probe text, so
+    those steps re-run once. *)
+let opam_world_check ~(pkg : string) ~(pin : string) : string =
+  Printf.sprintf
+    "eval $(opam env)\n\
+     INSTALLED=$(opam list %s --installed --short --columns=version \
+     2>/dev/null)\n\
+     test \"$INSTALLED\" = \"%s\" || { echo \"WORLD MISMATCH: switch has \
+     %s $INSTALLED, scenario declares %s %s\"; exit 1; }\n"
+    pkg pin pkg pkg pin
+
 (* ── Default check_post per action category ──
    Derived from the action type. Projects can override via runner_spec.check_post.
 
