@@ -495,6 +495,16 @@ step's duration. `Canary_world.Opam_pin` is the verification half of that
 lock; §1's "opam does not allow two versions of one package in one
 switch" is the same fact stated as a constraint.
 
+> **What §4 already solved, and what it did not.** Item 2 ("Run order as
+> the contract", `[x]`) decided *how* the order is chosen — "the
+> enumerated list IS the run order" — i.e. deliberately no scheduler. It
+> did not claim to minimise anything. Item 3 (`pin_check_post`, `[x]`)
+> solved the **hazard**: a fetch re-pins when the pin is not held, and a
+> warm skip fires only when the switch provably holds it, so no scenario
+> ever runs on the wrong pin. What follows is therefore a **cost**
+> finding, not a correctness one — the hazard has been closed since
+> 2026-08-12.
+
 What follows is a scheduling property nothing exploits yet. **Scenarios
 that need the same state should run together.** Measured on the sqlite
 run of 2026-08-20:
@@ -522,11 +532,15 @@ Three things to note before implementing it:
    only the sequence differs. That keeps it out of the enumeration's
    semantics — a sort key, derived from each assignment's stateful-store
    placements.
-2. **The world assertion is what makes reordering safe.** Reordering runs
-   is only sound if a scenario cannot silently inherit a neighbour's
-   state — which is exactly what `Opam_pin` now checks on every affected
-   step. Without it, grouping would make the shared-state hazard *more*
-   likely by leaving the switch on one pin for longer.
+2. **Reordering is already safe; the assertion is the backstop.**
+   `pin_check_post` re-pins whenever the pin is not held, so grouping
+   cannot make a scenario inherit a neighbour's state — the correctness
+   does not depend on the ordering. `Opam_pin` is a runtime confirmation
+   on top of that, and per the user (2026-08-20) it is redundant in
+   principle: the result is known at dispatch because canary itself
+   performed the pin. It earns its place only against dispatch bugs and
+   against mutation from OUTSIDE canary — which happened the same day,
+   when a stray interrupted batch left the switch on `sqlite3.5.1.0`.
 3. **It composes with the tier work (§5c).** Tier 1 pins (single-package
    downgrades) get cheaper by exactly this factor. Tier 3 pins do not
    become acceptable — grouping does not make a compiler downgrade

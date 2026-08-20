@@ -76,6 +76,44 @@
     they need}. Nothing does that yet — the enumerated list IS the run
     order. Tracked in [doc/canary/project/store_switching.md].
 
+    {1 These are CONFIRMATIONS, not derivations (user, 2026-08-20)}
+
+    An honest statement of this module's status, because it overlaps
+    {!Canary_store} and the overlap is not accidental:
+
+    {b in principle none of this is necessary.} The store's state is
+    canary's OWN output. {!Canary_step_builder.pin_check_post} already
+    ESTABLISHES it — a scenario's fetch re-pins the switch when the pin is
+    not held, and a warm skip fires only when the switch provably holds
+    it. So by the time a probe runs, the pin is known by construction. The
+    shell prelude re-checks work canary itself did. If dispatch is
+    correct, {!Opam_pin} can only ever pass.
+
+    It is kept for what "if dispatch is correct" is doing in that
+    sentence. The assumption is violated by: canary's own ordering or
+    dispatch bugs; a partially-failed step leaving the store between
+    states; and — not hypothetically — anything OUTSIDE canary touching a
+    shared switch, including the operator's own shell. On 2026-08-20 a
+    stray batch run was interrupted mid-pin and left the switch on
+    [sqlite3.5.1.0]; nothing in canary caused or recorded that.
+
+    {b The two constructors do not have equal standing.} {!Opam_pin}
+    checks a state canary SET, so it is genuinely redundant given correct
+    dispatch. {!Log_names} checks a resolution canary did NOT make: the
+    dynamic loader chose, following RPATH/RUNPATH, [ld.so.cache],
+    already-mapped libraries and symlink resolution — rules canary does
+    not model. It is derivable in principle only under a loader model we
+    do not have, and the zlib pair shows the rules are subtler than "the
+    env var wins": same soname, [LD_LIBRARY_PATH] set, and an ELF
+    version-requirement gate can still refuse the consumer at load time.
+
+    So: the authoritative knowledge belongs in DISPATCH, and anything
+    these checks discover is a bug in dispatch or an intrusion from
+    outside it. Treat a firing assertion as a finding about canary or the
+    machine, never as routine. If dispatch ever becomes trustworthy enough
+    that keeping them costs more than it catches, deleting {!Opam_pin} is
+    the correct move and this note is the argument for it.
+
     {1 What this is not}
 
     A world assertion is a POSITIVE-scenario invariant about identity. It
