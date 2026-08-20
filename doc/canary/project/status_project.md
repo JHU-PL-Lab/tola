@@ -74,6 +74,13 @@ GENERAL framework issues live here; per-project ones live in
 Everything below is agreed; the order is what matters. A–C are small and
 unblock the rest; D is a real arc.
 
+> **Model revisit (2026-08-20)** — the reruns that filled z3's
+> `pre-10549` cells surfaced enough about the running/enumeration model to
+> warrant its own note:
+> [`../design/run_model_revisit.md`](../design/run_model_revisit.md). Its
+> ordered change list supersedes nothing here; items A3 and the artifact
+> fingerprint appear in both, now with measured cost attached.
+
 **A. Make a finding readable from the run log** — the requirement behind
 "the project report must also be produced from the running log, so next
 time you can identify the same issue". Today the z3 forward cell's

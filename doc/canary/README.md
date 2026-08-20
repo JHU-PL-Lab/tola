@@ -69,6 +69,7 @@ top-level `projects.md` + `design/package_bug.md`).
 | [surveys/conda_forge.md](surveys/conda_forge.md) | conda-forge as a prebuilt-binary channel — feature/issue/experience, with the measured dependency-closure results (cairo, libffi, openssl) |
 | [design/artifact_cache.md](design/artifact_cache.md) | Artifact-cache design — keying on what was MADE (identity + input identity) so a new action doesn't force rebuilds |
 | [design/multi_lib.md](design/multi_lib.md) | Multiple C libs per project + the Vendored-prebuilt route (conda-forge measured) |
+| [design/run_model_revisit.md](design/run_model_revisit.md) | **Model revisit driven by the 2026-08-20 reruns** — `·` is not a neutral cell; cost is an unnamed scenario property; two caches agreed about a wrong artifact; a ref is a perturbation whose rows ~92% restate the baseline. Ordered change list |
 | [project/issues.md](project/issues.md) | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores) |
 | [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`) |
 
