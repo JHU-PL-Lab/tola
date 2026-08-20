@@ -177,6 +177,18 @@ conda-forge). Short version: one C lib per project is baked into
   per-artifact), and a combination POLICY (all-off + each-alone + all-on =
   7 worlds, not 2⁵ = 32).
 
+**E. The binding axis on the template projects** (2026-08-20, from the
+user's matrix reading). cairo/libffi/zlib/zstd have a lib pair and NO
+binding pair — half a 2×2 each; ssl/zarith are the mirror half. The
+template hardcodes `versions = None` so it cannot express the axis, and
+the pins are shared state: zlib/cairo are single-package downgrades,
+libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
+downgrades 37 packages. Recorded, not started — the measurements and the
+A-vs-B consequences are in
+[`store_switching.md` §5](store_switching.md), the declaration gap in
+[`issues.md`](issues.md). Blocks on the canary-switch decision for two
+of the four.
+
 **Also queued, unchanged**: llvm's 2×2 (needs the same two probe
 realizations z3 grew, complicated by llvm-config indirection); widening
 sqlite's lib pair to a ≤3.43 amalgamation so its forward cell becomes a

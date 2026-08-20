@@ -239,3 +239,110 @@ Implementation status (updated 2026-08-12):
 
 Tracked in [`status_project.md`](status_project.md) §3 ("ssl → per-variant
 project_runs", "shared-store sequentialization").
+
+---
+
+## 5. The binding axis makes the A-vs-B choice concrete (2026-08-20)
+
+> Opened by the user reading the result matrix: *"for rows 33-40 I can see
+> two versions of the c lib, but shall it contain two versions of ocaml
+> binding, or just one ocaml binding against two c libs?"* — the answer is
+> that it should be two, and finding out why it is not produced the first
+> hard number for §4's open choice.
+
+### 5a. Every template project is half a 2×2, and ssl is the other half
+
+The 2×2 lower bound needs a pair on BOTH axes (lib × binding). Measured
+across the registry as it stands:
+
+| project | lib axis | binding axis | rows | which half |
+| --- | --- | --- | --- | --- |
+| cairo, libffi, zlib, zstd | apt vs conda-forge prebuilt | **one** | 2 | lib only |
+| ssl | apt only | 0.6.0 vs 0.7.0 | 2 | binding only |
+| zarith | apt only (apt ships upstream's newest) | opam vs built worktree | 2 | binding only |
+| sqlite | 5 placements | 5.1.0 vs 5.4.1 | 10 | **both** |
+| z3 | built vs apt | built vs 4.16.0 | 16 | **both** |
+
+So the four Vendored-lib projects have exactly the axis the prebuilt work
+gave them, and none of the axis ssl has. The two halves have never been
+combined on the same project outside sqlite and z3.
+
+The immediate blocker is small: ssl declares its axis by hand as
+`SC.Lang_pkg { versions = Some [pins] }`, while
+`Canary_opam_binding` hardcodes `versions = None`, so no template project
+can carry one. That is a field and some threading.
+
+### 5b. The real blocker: an opam pin is not project-local
+
+The lib axis and the binding axis are not the same KIND of axis, and the
+prebuilt work hid the difference. A Vendored `.so` lives under
+`contrib/<p>-all/prebuilt/` and is read by one project; adding it changes
+nothing for anyone else. An opam pin lives in the ONE switch all ten
+projects share.
+
+Measured cost of installing the older half of each candidate pair
+(`opam install <pkg>.<v> --show-actions --dry-run`, 2026-08-20):
+
+| project | pair | what the pin does to the switch |
+| --- | --- | --- |
+| zlib / camlzip | 1.13 → 1.14 | downgrade **1** package |
+| cairo / cairo2 | 0.6.4 → 0.6.5 | downgrade **1** package |
+| libffi / ctypes-foreign | 0.23.0 → 0.24.0 | downgrades `ctypes` too, and **recompiles `llvm.19-shared`, `yaml`, `zstd`** |
+| zstd / zstd | 0.3 → 0.4 | **removes `ocaml-compiler` 5.4.1**, `base-effects`, `ocaml-index`; **downgrades 37 packages** (zstd 0.3 wants `ctypes` 0.20.2) |
+
+Two of the four are single-package downgrades — design A's implicit
+assumption, and the reason ssl and sqlite have worked. The other two
+break it:
+
+- **libffi's pin recompiles another project's binding.** `zstd` is a
+  `ctypes` consumer, so pinning ctypes-foreign for libffi's backward cell
+  rebuilds zstd's binding underneath it. The two projects' binding axes
+  are coupled through a shared dependency neither declares.
+- **zstd's pin removes the compiler.** A scenario that downgrades
+  `ocaml-compiler` invalidates every other project's build in the switch,
+  and the recovery is a full reinstall.
+
+Design A's mitigation is a world assertion — the probe checks the switch
+holds its declared pin and fails loudly otherwise. That catches *crossing*
+(scenario X running under scenario Y's pin). It does not help here: the
+switch would be correct for zstd@0.3 and unusable for everything else.
+
+### 5c. What this does to §4's recommendation
+
+§4 said "**A now, B documented as the fallback**", with B (per-version
+lightweight switches) becoming attractive "only if we want scenario
+parallelism or find the world assertions too fragile". Neither condition
+fired — a third one did: **A only works while pins are self-contained,
+and that is a property of the dependency graph, not of our design.** It
+held for the four projects that have a binding axis today and fails for
+two of the four that want one next.
+
+Revised reading, not yet a decision:
+
+1. **A remains right for self-contained pins.** zlib and cairo could take
+   their binding axis today, in the shared switch, with the existing
+   `pin_check_post` + world assertion. That is two more full 2×2s for a
+   field on the template.
+2. **B (or one dedicated canary switch) is now REQUIRED, not optional**,
+   for any project whose pin is not self-contained — and self-containment
+   is measurable up front with the dry-run above, so it can be a landing
+   check rather than a discovery.
+3. **The cheap middle** is one canary-owned switch rather than one per
+   version: it removes the "some other tool's switch" hazard and lets a
+   destructive pin be destructive in a switch nothing else needs, without
+   paying B's per-scenario switch cost. It does not give parallelism.
+
+Whichever is chosen, the landing rule gains a step: **before declaring a
+binding pair, dry-run the older pin and record what it moves.** A pair
+that removes the compiler is not a pair, it is a switch requirement.
+
+### 5d. Open items this leaves
+
+- [ ] `Canary_opam_binding` cannot express a binding version axis
+  (`versions = None`, hardcoded) — the field plus threading, small.
+- [ ] Decide A-for-safe-pins vs one canary switch vs B (§5c). The binding
+  axis on zstd and libffi is blocked until then.
+- [ ] Add the dry-run self-containment check to the landing checklist
+  (`landing.md` §3b is where the other measured gate checks live).
+- [ ] zarith's and ssl's lib axes are single-point for stated reasons; if
+  either gains a prebuilt they become full 2×2s with no new machinery.

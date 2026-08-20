@@ -65,6 +65,33 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
+### Found — every template project is HALF a 2×2, and the template
+### cannot express the other half (2026-08-20)
+
+Reading the result matrix, rows 33–40 (cairo, libffi, zlib, zstd) show
+two C-lib versions against **one** OCaml binding; ssl's rows show two
+bindings against **one** lib. Both are half of the 2×2 the user set as
+every project's lower bound, and the halves are complementary — nothing
+outside sqlite and z3 has both axes.
+
+The mechanical part is small: ssl declares its binding axis as
+`SC.Lang_pkg { versions = Some [pins] }`, while `Canary_opam_binding`
+hardcodes `versions = None`
+([canary_opam_binding.ml](../../src/canary/project/canary_opam_binding.ml)),
+so no template project can carry one. A field plus threading.
+
+The part that is not small is that an opam pin is shared state — measured
+costs and the design consequences are in
+[`store_switching.md` §5](store_switching.md). Short version: zlib's and
+cairo's pins are single-package downgrades and could land today;
+libffi's recompiles zstd's binding; zstd's removes `ocaml-compiler` and
+downgrades 37 packages. The last two need the switch decision first.
+
+**Do not land a partial fix that adds the field and declares all four
+pairs.** zstd's pair would make the switch unusable for every other
+project.
+
+
 ### Open — supplying the DEV half from a prebuilt (the zstd route we
 ### did not need)
 
