@@ -496,27 +496,27 @@ Incomplete coverage (common in Pattern B packages):
 
 Raw survey data saved in `doc/canary/raw/`:
 
-| File                       | Contents                                                |
-| -------------------------- | ------------------------------------------------------- |
-| `conf_survey.tsv`          | All 333 conf-* packages with pkg-config/depexts flags   |
-| `conf_clib.txt`            | 205 C library conf package names                        |
-| `conf_tools.txt`           | 128 tool conf package names                             |
-| `conf_clib_detail.tsv`     | C lib conf packages with debian/brew depext names       |
-| `binding_packages.tsv`     | 452 packages depending on conf-*, with their conf deps  |
-| `direct_depexts.tsv`       | 91 packages with depexts but no conf-* dependency       |
-| `builds_c_from_source.tsv` | 30 packages using C/C++ build-tool confs                |
-| `dune_conf_no_markers.tsv` | 43 packages with dune-configurator but no other markers |
-| `clib_no_conf.tsv`         | 18 packages with clib: tags but no conf-* dependency    |
-| `conf_revdeps_classified.tsv` | All 370 conf-* packages: revdep count, category      |
-| `conf_revdeps_classified.md`  | Same as above, formatted as markdown table            |
+| File                          | Contents                                                |
+| ----------------------------- | ------------------------------------------------------- |
+| `conf_survey.tsv`             | All 333 conf-* packages with pkg-config/depexts flags   |
+| `conf_clib.txt`               | 205 C library conf package names                        |
+| `conf_tools.txt`              | 128 tool conf package names                             |
+| `conf_clib_detail.tsv`        | C lib conf packages with debian/brew depext names       |
+| `binding_packages.tsv`        | 452 packages depending on conf-*, with their conf deps  |
+| `direct_depexts.tsv`          | 91 packages with depexts but no conf-* dependency       |
+| `builds_c_from_source.tsv`    | 30 packages using C/C++ build-tool confs                |
+| `dune_conf_no_markers.tsv`    | 43 packages with dune-configurator but no other markers |
+| `clib_no_conf.tsv`            | 18 packages with clib: tags but no conf-* dependency    |
+| `conf_revdeps_classified.tsv` | All 370 conf-* packages: revdep count, category         |
+| `conf_revdeps_classified.md`  | Same as above, formatted as markdown table              |
 
 ### Scripts
 
-| Script                     | Purpose                                                 |
-| -------------------------- | ------------------------------------------------------- |
-| `survey.sh`                | Main survey: counts, TSV data files, package lists      |
-| `classify_conf.sh`         | Classify conf-* by build complexity (pkg-config, version check, compile test, custom script, etc.) |
-| `conf_revdeps.sh`          | Count reverse deps per conf-* package, merge with classification |
+| Script             | Purpose                                                                                            |
+| ------------------ | -------------------------------------------------------------------------------------------------- |
+| `survey.sh`        | Main survey: counts, TSV data files, package lists                                                 |
+| `classify_conf.sh` | Classify conf-* by build complexity (pkg-config, version check, compile test, custom script, etc.) |
+| `conf_revdeps.sh`  | Count reverse deps per conf-* package, merge with classification                                   |
 
 To reproduce:
 ```bash

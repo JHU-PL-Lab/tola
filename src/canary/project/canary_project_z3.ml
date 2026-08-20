@@ -799,12 +799,10 @@ let z3_binding_art =
    operation and its probe asserts the world; the dev chain's Publish
    carries its own pin-check so a stale switch can't serve a silent
    wrong-version probe. *)
+(* Unified 2026-08-20: one of three byte-identical copies (ssl / z3 /
+   llvm). The rendering lives in [Canary_world]. *)
 let z3_world_check (pin : string) =
-  [%string
-    {|eval $(opam env)
-INSTALLED_Z3=$(opam list z3 --installed --short --columns=version 2>/dev/null)
-test "$INSTALLED_Z3" = "%{pin}" || { echo "WORLD MISMATCH: switch has z3 $INSTALLED_Z3, scenario declares z3 %{pin}"; exit 1; }
-|}]
+  Canary_world.pre_shell [ Canary_world.Opam_pin { pkg = "z3"; version = pin } ]
 
 let realize a =
   (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2
@@ -942,7 +940,7 @@ let realize a =
                       ~env:
                         [ Printf.sprintf "LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH"
                             dir ]
-                      ~log_grep:None ~binding_lib:"z3"
+                      ~log_grep:[] ~binding_lib:"z3"
                       ~example:"canary/examples/z3/z3_example.ml"
                       ~target:"z3_example" ~output_dir ~variant_key
                 | None ->

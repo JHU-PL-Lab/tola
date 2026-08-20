@@ -65,6 +65,41 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
+### Fixed — one world-assertion vocabulary (2026-08-20)
+
+"Did this step run in the world its scenario names?" had FIVE
+implementations, and by 2026-08-20 four of them had failed:
+
+| was | failure |
+| --- | --- |
+| `ssl_world_check` / `z3_world_check` / `llvm_world_check` | three byte-identical copies, differing only in a shell variable name |
+| sqlite's `asserts` + `with_world_asserts` | appended after `exit $RC` — had NEVER run (fixed 2026-08-19) |
+| the opam template's `world_check` + `~log_grep` | never wired for Vendored lib worlds, so cairo/libffi pointed the loader and never checked it obeyed (found 2026-08-20) |
+| z3's `assert_staged` | `None` let an install claim success (2026-08-19) |
+
+Now one type: `Canary_world.t` in `base/`, with `Opam_pin` (checked
+BEFORE the command, aborts on mismatch) and `Log_names` (checked AFTER,
+greped from the step's own log). `pre_shell` / `log_substrings` route the
+two kinds to their enforcement points, so a caller can no longer honour
+one and silently drop the other — which is exactly the `log_grep:None`
+shape that left cairo unchecked. Every assertion carries a `why`.
+
+Pinned as `world.one_vocabulary`: the same claim renders the same shell
+wherever declared, the shared builder entry point agrees with the
+vocabulary, the two kinds do not leak into each other, the post-hoc form
+survives a command ending in `exit $RC`, and every assertion has a
+non-empty reason. Falsified two ways (drop the subshell; leak a log claim
+into the pre-command shell) and verified at runtime on all three paths —
+including hiding the vendored libzstd and watching the world assert turn
+the run red.
+
+**Still outside the vocabulary**: z3's `assert_staged` is a `check_post`
+on the install step rather than a step-world claim, so it was left alone;
+folding it in wants a `File_present` constructor and a look at whether
+`check_post` and world assertions should be one thing. Not urgent — it
+has a live guard now.
+
+
 ### Found — ninja will not relink a binding whose lib bumped SONAME
 ### (2026-08-20, surfaced by running the pre-10549 ref)
 

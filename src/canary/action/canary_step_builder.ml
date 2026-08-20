@@ -80,13 +80,21 @@ let probe_from_store = function
    `sqlite_version=<v>` assertion that had never once executed, which is
    how a stale lib passed a world it did not belong to. A subshell's exit
    ends only the subshell and its status still drives the `&&`. *)
-let with_world_asserts ~asserts ~output_dir ~variant_key cmd =
+let with_world_asserts ~(asserts : Canary_world.t list) ~output_dir
+    ~variant_key cmd =
   let probe_log = Canary_basic.variant_file ~variant_key "probe.log" in
   match asserts with
   | [] -> cmd
   | _ ->
-      List.fold_left asserts
-        ~init:[%string "( %{cmd} )"]
+      (* PRE assertions guard the command; POST assertions grep its log.
+         Both come from the same [Canary_world.t list], so a caller can no
+         longer enforce one kind and silently drop the other — the
+         [log_grep:None] shape that left cairo's vendored world pointed
+         but unchecked. *)
+      let pre = Canary_world.pre_shell asserts in
+      List.fold_left
+        (Canary_world.log_substrings asserts)
+        ~init:[%string "%{pre}( %{cmd} )"]
         ~f:(fun acc s ->
           [%string "%{acc} && grep -qF \"%{s}\" %{output_dir}/%{probe_log}"])
 
@@ -226,10 +234,17 @@ type runner_spec = {
       [--disable-contract] flag — both contribute to the per-run
       disabled set. *)
   disabled_contracts : Canary_compat.contract_id list;
-  (** World-identity assertions: per-(action, location) strings that
-      probe.log MUST contain for the step to pass (positive-polarity
-      counterpart to [expectation]). Empty list = no assertions. *)
-  asserts : (Canary_basic.action * Canary_store.location option * string) list;
+  (** World-identity assertions: per-(action, location) claims that the
+      step must satisfy for it to pass — the positive-polarity
+      counterpart to [expectation]. Empty list = no assertions.
+
+      Carries [Canary_world.t] since 2026-08-20 rather than a bare
+      substring: the same field can now express a pre-command switch pin
+      and a post-hoc log claim, which is what let ssl / z3 / llvm /
+      sqlite / the opam template collapse onto one vocabulary. *)
+  asserts :
+    (Canary_basic.action * Canary_store.location option * Canary_world.t list)
+    list;
 }
 
 let empty_runner_spec = {
@@ -439,10 +454,16 @@ let probe_ocaml_env_cmd ~env ~log_grep ~binding_lib ~example ~target
     String.concat ~sep:""
       (List.map env ~f:(fun e -> [%string "export %{e}\n"]))
   in
+  (* [log_grep] is a [Canary_world.t list] since 2026-08-20 — the same
+     vocabulary sqlite's [asserts] and ssl/z3/llvm's pin checks use, so
+     "which world did this probe run in" has ONE spelling. A list, not an
+     option: zstd's probe carries two witnesses (a runtime
+     ZSTD_versionNumber() call AND the loader's mapped path) and the old
+     shape could hold only one. *)
   let grep =
-    match log_grep with
-    | None -> ""
-    | Some s -> [%string {| && grep -qF "%{s}" %{output_dir}/%{probe_log}|}]
+    String.concat ~sep:""
+      (List.map (Canary_world.log_substrings log_grep) ~f:(fun s ->
+           [%string {| && grep -qF "%{s}" %{output_dir}/%{probe_log}|}]))
   in
   [%string {|eval $(opam env)
 %{exports}ocamlfind ocamlopt -package %{binding_lib} -linkpkg %{example} -o %{output_dir}/%{target} > %{output_dir}/%{probe_log} 2>&1 && %{output_dir}/%{target} >> %{output_dir}/%{probe_log} 2>&1%{grep}
@@ -452,7 +473,7 @@ exit $RC|}]
 
 (* The plain form every existing spec uses: no extra env, no log assertion. *)
 let probe_ocaml_cmd ~binding_lib ~example ~target ~output_dir ~variant_key =
-  probe_ocaml_env_cmd ~env:[] ~log_grep:None ~binding_lib ~example ~target
+  probe_ocaml_env_cmd ~env:[] ~log_grep:[] ~binding_lib ~example ~target
     ~output_dir ~variant_key
 
 (* ── Convenience helpers for building steps ── *)
@@ -501,14 +522,13 @@ let pin_check_post ~pkg ~pin ~marker ~output_dir ~variant_key =
     package name); sqlite is the first user. Migrating the other four is
     recorded in status_project — it changes their emitted probe text, so
     those steps re-run once. *)
+(* Thin alias over the one world-assertion vocabulary (2026-08-20). The
+   rendering lives in [Canary_world] so that ssl / z3 / llvm / sqlite /
+   the opam template share ONE implementation instead of the five they
+   had — three of which were byte-identical copies of this function, and
+   four of which had failed. *)
 let opam_world_check ~(pkg : string) ~(pin : string) : string =
-  Printf.sprintf
-    "eval $(opam env)\n\
-     INSTALLED=$(opam list %s --installed --short --columns=version \
-     2>/dev/null)\n\
-     test \"$INSTALLED\" = \"%s\" || { echo \"WORLD MISMATCH: switch has \
-     %s $INSTALLED, scenario declares %s %s\"; exit 1; }\n"
-    pkg pin pkg pkg pin
+  Canary_world.pre_shell [ Canary_world.Opam_pin { pkg; version = pin } ]
 
 (* ── Default check_post per action category ──
    Derived from the action type. Projects can override via runner_spec.check_post.
@@ -916,10 +936,10 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let symbol_check = spec.symbol_check action in
                 (* World-identity assertions: grep probe.log for required strings *)
                 let asserts =
-                  List.filter_map spec.asserts ~f:(fun (a, l, s) ->
+                  List.concat_map spec.asserts ~f:(fun (a, l, ws) ->
                       if Poly.equal a action
                          && (Option.is_none l || Option.equal Poly.equal l (Some loc))
-                      then Some s else None)
+                      then ws else [])
                 in
                 let cmd =
                   if List.is_empty asserts then cmd
@@ -948,10 +968,10 @@ let derive_steps ~root ~project ?(cache_project = project) ?(langs = Canary_lang
                 let symbol_check = spec.symbol_check action in
                 (* World-identity assertions: grep probe.log for required strings *)
                 let asserts =
-                  List.filter_map spec.asserts ~f:(fun (a, l, s) ->
+                  List.concat_map spec.asserts ~f:(fun (a, l, ws) ->
                       if Poly.equal a action
                          && (Option.is_none l || Option.equal Poly.equal l (Some loc))
-                      then Some s else None)
+                      then ws else [])
                 in
                 let cmd =
                   if List.is_empty asserts then cmd

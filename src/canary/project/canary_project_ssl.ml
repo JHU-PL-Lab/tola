@@ -245,13 +245,13 @@ let ssl_pin_of (a : Canary_artifact.assignment) : string =
 
 (* The world-identity assertion prefix (generalized 2026-08-12): the
    switch must hold THIS scenario's pin before any probe compiles —
-   checked against the OPAM version (the store's own record). *)
+   checked against the OPAM version (the store's own record).
+
+   Unified 2026-08-20: this was one of three byte-identical copies (ssl /
+   z3 / llvm), differing only in a shell variable name. The rendering now
+   comes from [Canary_world], the single world-assertion vocabulary. *)
 let ssl_world_check (pin : string) =
-  [%string
-    {|eval $(opam env)
-INSTALLED_SSL=$(opam list ssl --installed --short --columns=version 2>/dev/null)
-test "$INSTALLED_SSL" = "%{pin}" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED_SSL, scenario declares ssl %{pin}"; exit 1; }
-|}]
+  Canary_world.pre_shell [ Canary_world.Opam_pin { pkg = "ssl"; version = pin } ]
 
 (* One pinned scenario → a runner_spec with BOTH apps as different probe
    actions (core = probe_binding, nlv = probe_app), each with its own

@@ -441,7 +441,7 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
           fun ~output_dir ~variant_key ->
             let base =
               Canary_step_builder.probe_ocaml_env_cmd ~env:probe_env
-                ~log_grep:None ~binding_lib:ocaml.binding_lib_name
+                ~log_grep:[] ~binding_lib:ocaml.binding_lib_name
                 ~example:ocaml.example_file ~target:ocaml.example_target
                 ~output_dir ~variant_key
             in
@@ -467,7 +467,12 @@ let realize (a : Canary_artifact.assignment) ~(workspace : string) :
                 (Canary_store.Pm
                    (Canary_store.Lang_pm
                       { lang = Canary_lang.OCaml; pm = Canary_store.Opam })),
-              version_line ) ]
+              [ Canary_world.Log_names
+                  { text = version_line;
+                    why =
+                      "the probe must report the amalgamation version this \
+                       world declares — a Fetched lib is version-ambient \
+                       and would answer with apt's instead" } ] ) ]
       | _ -> []);
   }
 

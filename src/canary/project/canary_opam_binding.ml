@@ -521,8 +521,15 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                       says which file it resolved (2026-08-20) *)
                    ~log_grep:
                      (if d.probe_names_lib then
-                        Some (Canary_prebuilt.libdir_of pb distro)
-                      else None)
+                        [ Canary_world.Log_names
+                            { text = Canary_prebuilt.libdir_of pb distro;
+                              why =
+                                "the probe must report a library inside \
+                                 this world's prebuilt libdir — \
+                                 LD_LIBRARY_PATH is a preference, and a \
+                                 loader that fell back to the system copy \
+                                 would pass for the wrong reason" } ]
+                      else [])
                    ~binding_lib:d.binding_lib
                    ~example:d.example_file ~target:d.example_target
                    ~output_dir ~variant_key)

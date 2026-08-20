@@ -573,12 +573,11 @@ let llvm_binding_art =
    stable chain's binding is Fetched@pinned — its fetch is a pin operation
    and its probe asserts the world. The dev binding probes the build tree
    (no store read) and the table-era dev chain has no Publish row. *)
+(* Unified 2026-08-20: one of three byte-identical copies (ssl / z3 /
+   llvm). The rendering lives in [Canary_world]. *)
 let llvm_world_check (pin : string) =
-  [%string
-    {|eval $(opam env)
-INSTALLED_LLVM=$(opam list llvm --installed --short --columns=version 2>/dev/null)
-test "$INSTALLED_LLVM" = "%{pin}" || { echo "WORLD MISMATCH: switch has llvm $INSTALLED_LLVM, scenario declares llvm %{pin}"; exit 1; }
-|}]
+  Canary_world.pre_shell
+    [ Canary_world.Opam_pin { pkg = "llvm"; version = pin } ]
 
 let realize (a : Canary_artifact.assignment) : Canary_step_builder.runner_spec =
   (* C2: dispatch on the SOURCE placement (the lib channel was the pre-C2

@@ -1756,6 +1756,88 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
    staged probe and the #10549 xfail would silently stop firing. Read off
    the ROW DATA (the [Cmake_install] template's own prefix field), not a
    parsed command. *)
+(* ONE WORLD-ASSERTION VOCABULARY (2026-08-20).
+
+   "Did this step run in the world its scenario names?" existed in five
+   implementations, four of which had failed: three byte-identical
+   `<project>_world_check` copies (ssl / z3 / llvm), sqlite's `asserts`
+   greped after `exit $RC` so it never ran, and the opam template's
+   `world_check` + `log_grep` pair that was never wired for Vendored lib
+   worlds. They now all render through [Canary_world].
+
+   The pin asserts the property that made them worth unifying — that the
+   SAME claim produces the SAME shell wherever it is declared — plus the
+   two things each old copy got individually wrong: a pre-command guard
+   must be able to abort (it names `exit 1`), and a post-hoc claim must be
+   greped from the log rather than appended after the command's own exit. *)
+let world_assertion_vocabulary_pin : Canary_project_test.pure_test =
+  { name = "world.one_vocabulary";
+    check =
+      (fun () ->
+        let module W = Canary_world in
+        (* (1) the three former copies now render identically for the same
+           claim — the dedup is real, not a rename *)
+        let pin_shell pkg =
+          W.pre_shell [ W.Opam_pin { pkg; version = "1.2.3" } ]
+        in
+        let same_shape =
+          List.for_all [ "ssl"; "z3"; "llvm" ] ~f:(fun pkg ->
+              let a = pin_shell pkg in
+              String.is_substring a ~substring:"opam list"
+              && String.is_substring a ~substring:"WORLD MISMATCH"
+              (* it must be able to FAIL — a guard that cannot abort is
+                 the class of bug this whole exercise is about *)
+              && String.is_substring a ~substring:"exit 1"
+              && String.is_substring a ~substring:pkg
+              && String.is_substring a ~substring:"1.2.3")
+        in
+        (* and the shared step-builder entry point agrees with the
+           vocabulary, so a caller cannot pick a different spelling *)
+        let builder_agrees =
+          String.equal
+            (Canary_step_builder.opam_world_check ~pkg:"ssl" ~pin:"0.6.0")
+            (W.pre_shell [ W.Opam_pin { pkg = "ssl"; version = "0.6.0" } ])
+        in
+        (* (2) the two kinds are routed to different enforcement points and
+           NEITHER is silently dropped *)
+        let ws =
+          [ W.Opam_pin { pkg = "zstd"; version = "0.4" };
+            W.Log_names { text = "zstd version: 1.5.7"; why = "witness" } ]
+        in
+        let split_ok =
+          Poly.equal (List.map ws ~f:W.is_pre) [ true; false ]
+          && List.length (W.log_substrings ws) = 1
+          && String.is_substring (W.pre_shell ws) ~substring:"zstd"
+          (* a log claim must NOT leak into the pre-command shell, and a
+             pin must NOT be looked for in the log *)
+          && (not
+                (String.is_substring (W.pre_shell ws)
+                   ~substring:"zstd version: 1.5.7"))
+          && List.for_all (W.log_substrings ws) ~f:(fun s ->
+                 not (String.is_substring s ~substring:"opam list"))
+        in
+        (* (3) the post-hoc form is greped from the log, inside a subshell,
+           so a command ending in `exit $RC` cannot kill the check — the
+           exact bug that made sqlite's assert dead code *)
+        let post_ok =
+          let cmd =
+            Canary_step_builder.with_world_asserts
+              ~asserts:[ W.Log_names { text = "MARK"; why = "w" } ]
+              ~output_dir:"/tmp/o" ~variant_key:"k" "echo hi; exit $RC"
+          in
+          String.is_substring cmd ~substring:"( echo hi; exit $RC )"
+          && String.is_substring cmd ~substring:"&& grep -qF \"MARK\""
+        in
+        (* (4) every assertion carries a reason — a check whose failure
+           message says nothing is barely a check (the prebuilt guard that
+           printed "run  first") *)
+        let reasons_ok =
+          List.length (W.reasons ws) = 2
+          && List.for_all (W.reasons ws) ~f:(fun (_, why) ->
+                 not (String.is_empty why))
+        in
+        same_shape && builder_agrees && split_ok && post_ok && reasons_ok) }
+
 (* THE ENV GUARD MUST NAME A REAL DIRECTORY (2026-08-20).
 
    z3's Build_binding row carries an [env_guard] that puts the freshly
@@ -2656,6 +2738,7 @@ let tests : Canary_project_test.pure_test list =
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
+      world_assertion_vocabulary_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin ]
