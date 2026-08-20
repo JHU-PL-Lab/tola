@@ -469,6 +469,14 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
             ~f:(fun acc (_, f) ->
               acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"pin")
         in
+        let binding_probe_cmd pr a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/pb" ()
+          in
+          List.fold spec.Canary_step_builder.probe_binding ~init:""
+            ~f:(fun acc (_, _, f) ->
+              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"pin")
+        in
         let pair_ok (pr : Canary_project_run.project_run) (pb : PB.t) =
           let asgs = Canary_project_run.scenarios_of pr in
           let of_prov pv =
@@ -482,13 +490,25 @@ let vendored_prebuilt_pin : Canary_project_test.pure_test =
           (* (a) both points enumerate *)
           (not (List.is_empty fetched))
           && (not (List.is_empty vendored))
-          (* (b) and they read DIFFERENT files *)
+          (* (b) and they read DIFFERENT files — the LIB probe … *)
           && List.for_all vendored ~f:(fun a ->
                  String.is_substring (lib_probe_cmd pr a)
                    ~substring:pb.PB.tag)
           && List.for_all fetched ~f:(fun a ->
                  not
                    (String.is_substring (lib_probe_cmd pr a)
+                      ~substring:pb.PB.tag))
+          (* … AND the CONSUMER. Added after the consumer half was found
+             silently testing the system lib in both worlds (2026-08-19):
+             a plain `ocamlfind -package` run resolves the ambient copy, so
+             the vendored world's binding probe must carry the prebuilt on
+             LD_LIBRARY_PATH or the cell tests a world it does not name. *)
+          && List.for_all vendored ~f:(fun a ->
+                 String.is_substring (binding_probe_cmd pr a)
+                   ~substring:pb.PB.tag)
+          && List.for_all fetched ~f:(fun a ->
+                 not
+                   (String.is_substring (binding_probe_cmd pr a)
                       ~substring:pb.PB.tag))
         in
         let rationale_ok (pr : Canary_project_run.project_run) =

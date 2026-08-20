@@ -222,6 +222,11 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
             let probe = Canary_artifact_native.native_lib_probe_cmd
               ~lib:"$LIB_NATIVE" ~prefix:d.native_probe_prefix ~output_dir ~variant_key in
             Printf.sprintf "%s\n%s" resolve probe ) ];
+    (* NOTE: [runner_spec_for] REBUILDS probe_binding per scenario (the
+       world-check + the vendored env), so this entry is the
+       assignment-less default only — do not put per-world logic here, it
+       would be discarded. (Learned the hard way 2026-08-19: an edit here
+       looked right and never ran.) *)
     probe_binding =
       [
         (Canary_lang.OCaml,
@@ -471,10 +476,29 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
            (Canary_store.Lang_pm
               { lang = Canary_lang.OCaml; pm = Canary_store.Opam }),
          fun ~output_dir ~variant_key ->
-           world_check
-           ^ Canary_step_builder.probe_ocaml_cmd ~binding_lib:d.binding_lib
-               ~example:d.example_file ~target:d.example_target
-               ~output_dir ~variant_key)
+           (* THE CONSUMER RUNS AGAINST THE WORLD'S LIB (2026-08-19). A
+              plain `ocamlfind -package <pkg>` run resolves shared
+              libraries the ambient way — the SYSTEM copy — so in a
+              VENDORED world the consumer half was silently a duplicate of
+              the fetched world's: both passed because both tested the
+              same lib. Caught by reading the emitted command, not by a
+              failure. Same class as z3's cross cells and sqlite's staged
+              probe: put the world's libdir FIRST on LD_LIBRARY_PATH. *)
+           match vendored_lib with
+           | None ->
+               world_check
+               ^ Canary_step_builder.probe_ocaml_cmd
+                   ~binding_lib:d.binding_lib ~example:d.example_file
+                   ~target:d.example_target ~output_dir ~variant_key
+           | Some pb ->
+               world_check
+               ^ Canary_step_builder.probe_ocaml_env_cmd
+                   ~env:
+                     [ Printf.sprintf "LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH"
+                         (Canary_prebuilt.libdir_of pb distro) ]
+                   ~log_grep:None ~binding_lib:d.binding_lib
+                   ~example:d.example_file ~target:d.example_target
+                   ~output_dir ~variant_key)
       ]
   in
   let pack_binding =
