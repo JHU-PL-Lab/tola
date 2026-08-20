@@ -109,19 +109,149 @@ let cache_is_success tbl ~key =
 
 (* ── Execution ─────────────────────────────────────────────────────── *)
 
-(* Run one shell command, log it, return whether it exit-zeroed. *)
-let run_cmd_logged logger ~tag cmd =
+(* How many trailing output lines a failing step contributes to
+   actions.log. Enough to carry a compiler error or a ninja FAILED block;
+   small enough that a long build's tail does not bury the run. The whole
+   output is always on disk — the [cmd_log] event names the file. *)
+let fail_tail_lines = 25
+
+(* THE EVIDENCE MARKER (2026-08-20, plan item A1). A step that learns
+   something worth keeping prints a line beginning with this prefix, and
+   the runner lifts it into actions.log as a [note] event — whether the
+   step passed or failed.
+
+   The need: z3's forward cell computes exactly the evidence a reader
+   wants — `required(776), provided(705), missing(85)` and the names —
+   into `symbols_<variant>.log`, which nothing reads. actions.log recorded
+   only `check_post (FAIL)`. And on a PASS the numbers never surfaced at
+   all, though "provided ⊇ required" is evidence too.
+
+   A marker rather than a per-project hook because any step can have
+   something to say, and because it keeps the knowledge in the command
+   that computed it instead of in a parser that has to guess. *)
+let note_marker = "CANARY-NOTE:"
+
+(* At most this many notes per step — a runaway loop printing the marker
+   should not be able to bury actions.log. *)
+let max_notes = 12
+
+(* Lines a step marked as evidence, marker stripped, in order. *)
+let note_lines path =
+  match Stdlib.Sys.file_exists path with
+  | false -> []
+  | true -> (
+      try
+        let ic = Stdlib.open_in path in
+        let acc = ref [] in
+        (try
+           while List.length !acc < max_notes do
+             let line = Stdlib.input_line ic in
+             match String.substr_index line ~pattern:note_marker with
+             | Some i ->
+                 acc :=
+                   String.strip
+                     (String.subo line ~pos:(i + String.length note_marker))
+                   :: !acc
+             | None -> ()
+           done
+         with End_of_file -> ());
+        Stdlib.close_in ic;
+        List.rev !acc
+      with _ -> [])
+
+(* Read the last [n] lines of a file, oldest first. Bounded read: a build
+   log can be large and we only ever want its tail. *)
+let tail_lines ~n path =
+  match Stdlib.Sys.file_exists path with
+  | false -> []
+  | true -> (
+      try
+        let ic = Stdlib.open_in path in
+        let q = Queue.create () in
+        (try
+           while true do
+             Queue.enqueue q (Stdlib.input_line ic);
+             if Queue.length q > n then ignore (Queue.dequeue q : string option)
+           done
+         with End_of_file -> ());
+        Stdlib.close_in ic;
+        Queue.to_list q
+      with _ -> [])
+
+(* Run one shell command, CAPTURE its output, log it, return whether it
+   exit-zeroed.
+
+   Why the capture (2026-08-20, user: "I wish that we can just check the
+   log to retrieve that information"). This used to be a bare
+   [Sys.command], so a step's stdout and stderr went to the terminal and
+   nowhere else: on failure actions.log recorded `cmd_fail (exit 1)` and
+   the reason was gone the moment the scrollback was. Diagnosing z3's
+   pre-10549 binding failure that day took three run/diagnose cycles
+   because the error had to be reproduced by re-running ninja by hand.
+
+   The shell form streams AND captures. A plain `cmd | tee f` would lose
+   the exit status (the pipeline reports tee's), and `pipefail` is not
+   POSIX — dash does not have it. So the status is parked in a file
+   inside the group and re-raised after the pipe:
+
+     { ( cmd ) ; echo $? > RC ; } 2>&1 | tee LOG ; exit $(cat RC)
+
+   [echo $? > RC] writes to a file rather than the pipe, so it never
+   pollutes LOG. The INNER parentheses are load-bearing and were missing
+   in the first cut: many probe commands end in `exit $RC` (they capture
+   the status, cat their log, then exit), and without a nested subshell
+   that `exit` ends the whole group — [echo $?] never runs, the rc file
+   never appears, and every such step reports failure. That is the same
+   trap [with_world_asserts] hit on 2026-08-19, found again here within
+   the hour by running zstd. *)
+let run_cmd_logged logger ~tag ~output_dir ~variant_key cmd =
   logger.log ~tag ~event:"cmd" ~detail:(Some cmd);
-  let rc = Stdlib.Sys.command cmd in
-  if rc <> 0 then
-    logger.log ~tag ~event:"cmd_fail" ~detail:(Some [%string "exit %{Int.to_string rc}"]);
+  let out_log = Canary_basic.variant_file ~variant_key (tag ^ ".out.log") in
+  let out_path = output_dir ^ "/" ^ out_log in
+  let rc_path = output_dir ^ "/." ^ out_log ^ ".rc" in
+  (* capture to the file AND mirror to the terminal, so a long build still
+     shows progress while the evidence lands on disk *)
+  let wrapped =
+    Printf.sprintf
+      "rm -f %s\n{ (\n%s\n)\n  echo $? > %s\n} 2>&1 | tee %s\nexit $(cat %s \
+       2>/dev/null || echo 1)"
+      (Stdlib.Filename.quote rc_path) cmd (Stdlib.Filename.quote rc_path)
+      (Stdlib.Filename.quote out_path) (Stdlib.Filename.quote rc_path)
+  in
+  let rc = Stdlib.Sys.command wrapped in
+  (* the rc file is scaffolding for the pipeline, not a witness — leaving
+     it behind puts a `.rc` line in every `status -v` step *)
+  (try Stdlib.Sys.remove rc_path with _ -> ());
+  (* the log points at its own evidence: the full output is always on
+     disk, whether the step passed or failed *)
+  logger.log ~tag ~event:"cmd_log" ~detail:(Some out_log);
+  (* evidence the step chose to keep, pass or fail (A1) *)
+  List.iter (note_lines out_path) ~f:(fun n ->
+      logger.log ~tag ~event:"note" ~detail:(Some n));
+  if rc <> 0 then begin
+    logger.log ~tag ~event:"cmd_fail"
+      ~detail:(Some [%string "exit %{Int.to_string rc}"]);
+    (* THE POINT OF ALL THIS: the reason lands in actions.log itself, one
+       event per line so the "[ts] tag event detail" shape survives and
+       `grep cmd_out` gives a reader the failure directly. Everything that
+       already parses actions.log — status, result, the HTML page — picks
+       it up with no further work. *)
+    List.iter
+      (tail_lines ~n:fail_tail_lines out_path
+      (* a marked line is already a [note] event; repeating it here would
+         print the same evidence twice in `status -v` and double it in
+         the log *)
+      |> List.filter ~f:(fun l ->
+             not (String.is_substring l ~substring:note_marker)))
+      ~f:(fun line -> logger.log ~tag ~event:"cmd_out" ~detail:(Some line))
+  end;
   rc = 0
 
 (* Execute a step's shell command, ensuring output_dir exists. *)
 let exec_step logger ~tag ~output_dir (step : step) =
   ignore (Stdlib.Sys.command [%string "mkdir -p \"%{output_dir}\""] : int);
   let shell_cmd = step.cmd ~output_dir ~variant_key:step.variant_id in
-  run_cmd_logged logger ~tag shell_cmd
+  run_cmd_logged logger ~tag ~output_dir ~variant_key:step.variant_id shell_cmd
 
 (* Check if any file in output_dir contains any of the expected strings.
    Used by Expect_failure / Expect_compat_failure expectation evaluation. *)

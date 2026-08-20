@@ -1756,6 +1756,54 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
    staged probe and the #10549 xfail would silently stop firing. Read off
    the ROW DATA (the [Cmake_install] template's own prefix field), not a
    parsed command. *)
+(* z3's CROSS CELLS ASSERT THEIR WORLD (2026-08-20, plan item A2).
+
+   z3 exists to put a DIFFERENT libz3 in front of the same binding — the
+   dev build tree, the staged install prefix, apt's 4.8.12. Until now the
+   probe's `z3 version:` line was evidence a reader could check, not a
+   condition the run enforced: an ambient lib answering still went green.
+
+   Two properties, and the second is the one with teeth: the Built and
+   Installed worlds must assert DIFFERENT directories (else the pair is
+   one world twice — the same check sqlite.staged_probe_paths makes on
+   emitted commands), and no asserted path may carry a `..` segment,
+   because the probe reports what the loader RESOLVED and a spelling
+   comparison against an unnormalised path silently never matches. That
+   exact mismatch turned all five z3 cells red on the first attempt. *)
+let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
+  { name = "z3.cross_cells_assert_world";
+    check =
+      (fun () ->
+        let pr = Canary_project_z3.z3_run Canary_store.Wsl in
+        let asserted_dirs a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/ws" ()
+          in
+          List.concat_map spec.Canary_step_builder.asserts
+            ~f:(fun (_, _, ws) -> Canary_world.log_substrings ws)
+        in
+        let by_prov prov =
+          List.filter (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+              Canary_enumerate.equal_provision
+                (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+                prov)
+          |> List.concat_map ~f:asserted_dirs
+          |> List.dedup_and_sort ~compare:String.compare
+        in
+        let built = by_prov Canary_artifact.Built in
+        let installed = by_prov Canary_artifact.Installed in
+        (* both worlds must actually declare something — otherwise every
+           check below is vacuous and the pin passes on a lost assertion *)
+        (not (List.is_empty built))
+        && (not (List.is_empty installed))
+        (* ...and they must not name the same place *)
+        && List.for_all built ~f:(fun b ->
+               not (List.mem installed b ~equal:String.equal))
+        (* ...and nothing may carry an unresolved `..`, which is what the
+           loader's report can never match *)
+        && List.for_all (built @ installed) ~f:(fun d ->
+               not (String.is_substring d ~substring:".."))) }
+
 (* ONE WORLD-ASSERTION VOCABULARY (2026-08-20).
 
    "Did this step run in the world its scenario names?" existed in five
@@ -2739,6 +2787,7 @@ let tests : Canary_project_test.pure_test list =
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
       world_assertion_vocabulary_pin;
+      z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin ]

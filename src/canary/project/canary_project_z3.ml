@@ -694,9 +694,12 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      BINDING_DIR=%s/src/api/ml && \
                      STUB=$(ls \"$BINDING_DIR\"/libz3ml.a 2>/dev/null | head -1) && \
                      test -n \"$STUB\" && \
-                     python3 canary/scripts/assert_binary_symbols.py \
+                     { python3 canary/scripts/assert_binary_symbols.py \
                        --provided-lib \"$LIB_Z3\" --required-lib \"$STUB\" \
-                       --symbol-prefix Z3_ > %s/%s 2>&1 && \
+                       --symbol-prefix Z3_ > %s/%s 2>&1 ; SYMRC=$? ; \
+                       sed -n '1p' %s/%s | sed 's/^/CANARY-NOTE: symbols /' ; \
+                       sed -n '3,7p' %s/%s | sed 's/^/CANARY-NOTE: missing /' ; \
+                       exit $SYMRC ; } && \
                      LD_LIBRARY_PATH=\"$SYS_LIBDIR\" \
                      ocamlfind ocamlopt -package zarith -linkpkg \
                        -cclib \"$LIB_Z3\" \
@@ -706,8 +709,9 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      %s/z3_example >> %s/%s 2>&1 && \
                      cat %s/%s"
                     sys_resolve build output_dir symbols_log output_dir
-                    output_dir probe_log output_dir output_dir probe_log
-                    output_dir probe_log
+                    symbols_log output_dir symbols_log output_dir output_dir
+                    probe_log output_dir output_dir probe_log output_dir
+                    probe_log
               | Canary_artifact.Built | Canary_artifact.Vendored
               | Canary_artifact.Absent ->
                   Printf.sprintf
@@ -840,6 +844,56 @@ let realize a =
   in
   (* expectation stays hand-wired: contract bindings are project data *)
   { spec with
+    (* A2 (2026-08-20): the cross cells ASSERT their world rather than
+       merely printing it. z3's whole point is putting a DIFFERENT libz3
+       in front of the same binding — the dev build tree, the staged
+       install prefix, or apt's 4.8.12 — and until now the probe's
+       `z3 version:` line was evidence a reader could check, not a
+       condition the run enforced: if the ambient lib answered, the cell
+       still went green.
+
+       The probe now also prints `z3 resolved: <path>` from
+       /proc/self/maps (the loader's own record, the same convention zlib
+       and zstd use), and the world's declared libdir must appear in it.
+       Asserted where canary CONTROLS which lib is in front: the Built
+       world's build tree and the Installed world's staging prefix. The
+       Fetched (apt) world is left unasserted — it is the forward cell,
+       which fails at link time before a probe log exists. *)
+    asserts =
+      (let dir_of_world =
+         match lib_prov with
+         | Canary_artifact.Built -> Some build
+         | Canary_artifact.Installed -> Some (install_prefix ^ "/lib")
+         | _ -> None
+       in
+       (* the declared dir is how the SPEC spells it — relative, and with
+          `..` segments from the per-ref build/install arithmetic. The
+          probe reports what the LOADER mapped: absolute and resolved. So
+          collapse `..` and match on the bare directory as a substring,
+          not on the whole line — a spelling comparison would fail on two
+          names for one directory, which is the trap
+          [z3.install_prefix_isolated] documents. *)
+       let normalize p =
+         String.split p ~on:'/'
+         |> List.fold ~init:[] ~f:(fun acc seg ->
+                match (seg, acc) with
+                | "", _ :: _ -> acc
+                | ".", _ -> acc
+                | "..", _ :: rest -> rest
+                | _ -> seg :: acc)
+         |> List.rev |> String.concat ~sep:"/"
+       in
+       match dir_of_world with
+       | None -> []
+       | Some dir ->
+           [ ( Canary_basic.Probe_binding Canary_lang.OCaml,
+               None,
+               [ Canary_world.Log_names
+                   { text = normalize dir;
+                     why =
+                       "the probe must report the libz3 this world places \
+                        in front of the binding; an ambient one answering \
+                        would pass for the wrong reason" } ] ) ]);
     expectation = (fun action loc ->
         (* the #10549 regression (2026-08-17): at the pre-fix ref the
            install cannot stage the OCaml package (the install rules

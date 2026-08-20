@@ -91,19 +91,42 @@ inspect note — `probe_lib_staged_inspect` already surfaces
 "install-diff vs build-tree: identical" through a log EVENT, so
 `status`/`result`/the HTML page all carry it.
 
-- [ ] **A1. The symbol assert emits a note event** — counts always, plus
-  the first N missing names on failure, so the finding lands in
-  `actions.log` → the matrix cell's detail → the report. Whether it
-  passes or fails: "provided ⊇ required" is evidence too.
-- [ ] **A2. The cross cells ASSERT their world, not just observe it.** The
-  backward cell's `z3 version: 5.1.0.0` line proves the dev lib answered,
-  but nothing fails if the ambient lib does instead — it is evidence, not
-  enforcement. sqlite already asserts its version line via `asserts`; give
-  the forward and backward cells the same, so a shadowing regression is a
-  failure rather than a footnote.
-- [ ] **A3. Witness lines for a plain failure** — `status -v` tails
-  markers today; on a FAIL it should tail the step's own log, so the
-  reason is one command away without knowing which file to open.
+**DONE 2026-08-20.** The root cause was upstream of all three items:
+`run_cmd_logged` used a bare `Sys.command`, so every step's stdout and
+stderr went to the terminal and nowhere else. On failure `actions.log`
+recorded `cmd_fail (exit 1)` and the reason vanished with the scrollback.
+
+- [x] **A0 (the enabler). Every step's output is captured.** The command
+  is wrapped `{ ( cmd ) ; echo $? > RC ; } 2>&1 | tee LOG ; exit $(cat RC)`
+  — streams to the terminal AND lands on disk. The inner parentheses are
+  load-bearing: many probes end in `exit $RC`, and without a nested
+  subshell that exits the group before the status is recorded (found
+  within the hour by running zstd — the same trap `with_world_asserts`
+  hit on 2026-08-19). A `cmd_log` event names the file; on failure the
+  last 25 lines are emitted as `cmd_out` events, one per line, so the
+  `[ts] tag event detail` shape survives and `grep cmd_out` gives a
+  reader the failure directly.
+- [x] **A1. The symbol assert emits a note event** — generalised beyond
+  z3: a step prints `CANARY-NOTE: …` and the runner lifts it into
+  `actions.log` as a `note` event, pass or fail, capped at 12 per step.
+  z3's forward cell now logs `symbols required(791), provided(705),
+  missing(100)` plus the first five missing names — the evidence that
+  used to sit unread in `symbols_<variant>.log`.
+- [x] **A2. The cross cells ASSERT their world.** `z3_example` now prints
+  `z3 resolved: <path>` from /proc/self/maps (the same convention zlib
+  and zstd use), and the Built / Installed worlds assert their own libdir
+  through `Canary_world.Log_names`. Pinned as
+  `z3.cross_cells_assert_world`: the two worlds must name DIFFERENT
+  directories and no asserted path may carry a `..` segment — the probe
+  reports what the loader RESOLVED, so an unnormalised path never
+  matches, which turned all five cells red on the first attempt.
+  Falsified both ways.
+- [x] **A3. Witness lines for a plain failure** — `status -v` renders the
+  log's own evidence FIRST: `● note` lines on any verdict, the `│`
+  failure tail only when the step is red. Reading from actions.log rather
+  than from files on disk is deliberate — the log is what gets attached
+  to an issue. Evidence resets per variant visit, so a fixed run's output
+  does not linger from the append-only history.
 
 **B. Declare the z3 forward mismatch as an xfail** (user: "we shall fix it
 as xfail"). It is explained, reproducible and c1-shaped. Derived, not

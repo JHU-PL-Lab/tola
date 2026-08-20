@@ -238,6 +238,42 @@ let watchlist_note ~root ~project ~variant ~tag : string option =
         in
         Some (String.concat ~sep:" · " (List.filter_opt parts))
 
+(* THE EVIDENCE A STEP LEFT IN THE LOG (2026-08-20, plan item A1/A3).
+
+   [project_matrix] keeps one verdict per tag — it is a matrix. Evidence
+   is the opposite shape: several lines per step, order-significant. So
+   this re-scans actions.log and returns, for one (variant, tag), the
+   [note] lines a step chose to keep and the [cmd_out] tail of a failure.
+
+   The point of reading it from the LOG rather than from files on disk:
+   the log is what gets attached to an issue, and what a rerun compares
+   against. If the reason is not in there, it is not reportable. *)
+let evidence_of ~root ~project ~variant ~tag =
+  let path = log_path ~root ~project in
+  if not (Stdlib.Sys.file_exists path) then []
+  else
+    let lines =
+      Stdlib.In_channel.with_open_text path Stdlib.In_channel.input_lines
+    in
+    let cur = ref "(run)" in
+    let acc = ref [] in
+    List.iter lines ~f:(fun line ->
+        match parse_line line with
+        | Some (_, "variant_start", detail) ->
+            cur := Option.value_map detail ~default:"(run)" ~f:strip_parens;
+            (* actions.log is APPEND-ONLY across runs, so a variant appears
+               once per run and its evidence accumulates. Only the LAST
+               visit describes the current state — re-entering the variant
+               discards what earlier runs said, the same "last verdict
+               wins" rule [project_matrix] uses for marks. Without this a
+               step shows evidence from a run whose bug is already fixed. *)
+            if String.equal !cur variant then acc := []
+        | Some (t, (("note" | "cmd_out") as event), Some detail)
+          when String.equal t tag && String.equal !cur variant ->
+            acc := (event, strip_parens detail) :: !acc
+        | _ -> ());
+    List.rev !acc
+
 (* Verbose witness for a step: the output file(s) it produced for this
    variant (openable), and — for `xfail`/`✗` — the tail of a `.log` witness
    as the concrete failure. *)
@@ -258,6 +294,17 @@ let print_witness ~root ~project ~variant ~tag ~mark =
         |> List.filter ~f:(fun f -> String.is_substring f ~substring:vk)
         |> List.sort ~compare:String.compare
   in
+  (* the log's own evidence comes FIRST — it is the reason, where the file
+     list is only where to look next (A1/A3, 2026-08-20). Notes show on
+     any verdict ("provided ⊇ required" is evidence too); the captured
+     failure tail shows only when the step is red. *)
+  let evidence = evidence_of ~root ~project ~variant ~tag in
+  let is_red = String.is_prefix mark ~prefix:"xfail" || String.equal mark "✗" in
+  List.iter evidence ~f:(fun (event, detail) ->
+      match event with
+      | "note" -> Stdlib.Printf.printf "          ● %s\n" detail
+      | "cmd_out" when is_red -> Stdlib.Printf.printf "          │ %s\n" detail
+      | _ -> ());
   List.iter matches ~f:(fun f ->
       Stdlib.Printf.printf "          → %s/%s\n" dir f;
       (* inspect JSONs: summarize the native-watchlist verdict inline (the
