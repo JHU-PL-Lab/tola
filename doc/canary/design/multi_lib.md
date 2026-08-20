@@ -122,6 +122,10 @@ covers checkouts, builds, staging areas and now prebuilts. The provider is
 
 ### 6a. What conda-forge actually has (measured 2026-08-19 via api.anaconda.org)
 
+> The full study — discovery API, archive formats, the measured dependency
+> closures, the openssl soname finding, and the to-do list for correct use —
+> is [`../surveys/conda_forge.md`](../surveys/conda_forge.md).
+
 | lib | apt here | conda-forge linux-64 versions | a pair worth running |
 | --- | --- | --- | --- |
 | gmp | 6.3.0 only | 5.1.2, 6.1.0, 6.1.1, 6.1.2, 6.2.0, 6.2.1, 6.3.0 | 6.3.0 vs 6.1.2 |

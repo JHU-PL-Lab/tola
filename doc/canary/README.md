@@ -66,6 +66,7 @@ top-level `projects.md` + `design/package_bug.md`).
 | [coverage.md](project/coverage.md)            | **Current coverage status** — per-project matrix + notes + landing history                               |
 | [landing.md](project/landing.md)              | **How to land a project** — workflow, data structures, testing harness (the future skill's base)         |
 | [status_project.md](project/status_project.md) | Project-layer STATUS: live projects + scenario counts, the ordered plan, framework-level to-dos, the mismatch-matrix report milestone |
+| [surveys/conda_forge.md](surveys/conda_forge.md) | conda-forge as a prebuilt-binary channel — feature/issue/experience, with the measured dependency-closure results (cairo, libffi, openssl) |
 | [design/artifact_cache.md](design/artifact_cache.md) | Artifact-cache design — keying on what was MADE (identity + input identity) so a new action doesn't force rebuilds |
 | [design/multi_lib.md](design/multi_lib.md) | Multiple C libs per project + the Vendored-prebuilt route (conda-forge measured) |
 | [project/issues.md](project/issues.md) | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores) |
