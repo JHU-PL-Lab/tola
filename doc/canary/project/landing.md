@@ -109,3 +109,103 @@ does not fork the factory).
 
 For scenario mechanics + the derived-vs-hand principle see
 [`design/algorithm_explainer.md`](../design/algorithm_explainer.md).
+
+## 3. Sourcing the lib channel pair (rule, user 2026-08-19)
+
+Every project needs a stable/latest pair per artifact (the 2×2 lower
+bound). For the C lib the pair is sourced in a FIXED order — the point is
+to test against what users have and what is coming, never against
+archaeology:
+
+1. **stable = the system PM.** Whatever apt/brew ships is the version
+   real users link against. That is the pair's stable side, always.
+2. **latest = the official download, if the project publishes a prebuilt
+   binary for our platform.** Check the project's own site / GitHub
+   releases first — it is the authoritative artifact.
+3. **latest = conda-forge's newest versioned release**, when upstream
+   publishes source only (the common case on Linux). Prebuilt, versioned,
+   and extractable; declared `Vendored` at
+   `contrib/<project>-all/prebuilt/<tag>/` (see
+   [`../design/multi_lib.md` §6](../design/multi_lib.md)).
+
+**Do not reach for an OLD version to manufacture a gap.** An earlier draft
+of this table proposed cairo 1.18.0 vs 1.14.12; that is backwards. The
+question a pair asks is "does today's binding still work with tomorrow's
+lib, and does yesterday's binding still work with today's" — both are
+answered by pairing the system version with the NEWEST. An older lib
+answers a question nobody has (the binding predates it).
+
+### What the rule yields for the current projects (measured 2026-08-19)
+
+| lib | official newest | official Linux prebuilt? | apt = stable | conda-forge newest | pair |
+| --- | --- | --- | --- | --- | --- |
+| **gmp** | 6.3.0 (2023-07-30) | no — source only (lz/xz/zstd) | 6.3.0 | 6.3.0 | **none possible**: apt already ships upstream's newest |
+| **openssl** | 4.0.1 (2026-06-09) | no — source only | 3.0.13 | 4.0.1 | **3.0.13 vs 4.0.1** — a major bump |
+| **libffi** | 3.8.0 | no Linux (MSVC/Windows assets only) | 3.4.6 | 3.7.0 | **3.4.6 vs 3.7.0** |
+| **cairo** | 1.18.4 (2025-03-08) | no — source `.tar.xz` | 1.18.0 | 1.18.4 | **1.18.0 vs 1.18.4** |
+
+Three consequences worth carrying into every landing:
+
+- **zarith cannot have a lib pair at all.** Not an oversight and not an
+  opam problem (`conf-gmp` constrains nothing): GMP's newest release is
+  three years old and apt already ships it. When upstream and the distro
+  agree, the axis has one point — the honest spec says so.
+- **No Linux C library in this set ships an official prebuilt.** On Linux
+  the distro *is* the binary channel, so step 2 will usually fall through
+  to step 3. Keep step 2 anyway: it is authoritative where it applies
+  (llvm's apt.llvm.org, and any project shipping release binaries).
+- **conda-forge can lag upstream.** Measured: current for openssl (4.0.1),
+  current for cairo (1.18.4), one release behind for libffi (3.7.0 vs
+  3.8.0). Good enough to be the fallback, not good enough to be assumed —
+  record the version you actually vendored.
+
+## 4. Landing lessons — the bug classes that bit us (keep re-reading)
+
+Recorded because they recur, and a new project with a similar shape will
+hit them (user, 2026-08-19: "any fix is worth recording since we need to
+learn from them on how to land more projects which may have similar
+issues"). Each is a check that did not check.
+
+**A fingerprint protects the MARKER, not the ARTIFACT.** The warm-skip
+gate hashes a step's realized command + expectation form, so a spec edit
+re-runs the step. It cannot know whether the step then did anything. Two
+ways that bites, both live:
+
+- *a guard inside the command*: sqlite's `build_lib` was
+  `test -f <lib> || build`. Changing the declared amalgamation version
+  re-ran the step, and the command said "the lib is already there" and
+  skipped the compile — the world kept the OLD lib and reported PASS.
+  Fix: make the guard carry the identity (`.built-<version>` stamp).
+- *a command that doesn't name its input*: sqlite's staging copy-out
+  (`cp <ws>/lib/... <ws>/install/lib/`) has identical text whatever it
+  copies, so its fingerprint could not change when the lib did — the
+  staged prefix kept a stale lib. Fix: name the version in the command.
+
+Rule for a new project: **every build/copy/install command must encode
+the identity of what it produces**, or its cache entry is a lie.
+
+**A check appended after an `exit` never runs.** `with_world_asserts`
+appended `&& grep …` to probe commands that end in `exit $RC` (every
+env-wrapped probe), so sqlite's declared runtime version assertion had
+never once executed. It was invisible precisely because it "passed".
+Fix: the wrapped command runs in a subshell. Rule: when you add a check
+by string concatenation, verify it RAN — make it fail once on purpose.
+
+**A shared staging area lets one world answer another's question.** z3's
+install prefix was the build tree's sibling, shared by two refs, so the
+fork's staged package would have satisfied the pre-10549 world's staged
+probe and silenced its xfail. Rule: any write location a realization
+names must be per-world (`build-<ref>`, `install-<ref>`,
+`prebuilt/<tag>`).
+
+**A declared check whose inputs never resolve is silent.** The forward
+cell's c1 wrote its summary into a lang-less directory while its own
+input template read the lang-suffixed one; the pair never resolved and
+"no contract fired" read like "nothing to report". Rule: a new contract
+wiring is not done until it has FIRED once.
+
+**Assert the world, don't observe it.** The backward cell's probe prints
+the lib version it loaded, which is evidence a human can read — but
+nothing fails if the wrong lib answers. Where canary controls the version,
+assert it (and where it does not — a system lib — assert nothing rather
+than assert a version you only hope for).
