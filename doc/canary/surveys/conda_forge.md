@@ -123,6 +123,65 @@ names `.so.3`: pointing `LD_LIBRARY_PATH` at a directory containing
 `.so.3`. A pair across a soname bump therefore requires the CONSUMER to be
 **rebuilt** against the new lib, not merely re-pointed.
 
+#### What a soname actually IS (measured 2026-08-20, user's question)
+
+It is **a string in the library's `.dynamic` section** (`DT_SONAME`),
+baked in at link time by `-Wl,-soname,...`. The mechanic that matters:
+
+1. when a consumer links against `libfoo.so`, the linker copies the
+   PROVIDER's `DT_SONAME` into the consumer's `DT_NEEDED` — not the
+   filename it happened to link against;
+2. at load time the loader resolves each `DT_NEEDED` **string** by name
+   through the search path.
+
+So there is **no version comparison anywhere in the loader**. Nothing
+parses `3` and compares it to `4`. The "rejection" people attribute to
+soname is just a name lookup that finds a different file or none at all.
+`libfoo.so.MAJOR` is a *convention* — bump the major when you break the
+ABI — enforced only by naming and lookup.
+
+**Which means yes, it is hackable, and we tried it.** Symlinking conda's
+OpenSSL 4 under the old name, then running the system `openssl` CLI
+(whose `DT_NEEDED` says `libssl.so.3`):
+
+```
+$ ln -s .../libssl.so.4 hack/libssl.so.3
+$ ln -s .../libcrypto.so.4 hack/libcrypto.so.3
+$ LD_LIBRARY_PATH=hack openssl version
+openssl: hack/libssl.so.3: version `OPENSSL_3.0.0' not found (required by openssl)
+openssl: hack/libcrypto.so.3: version `OPENSSL_3.0.9' not found (required by openssl)
+```
+
+The soname gate was **defeated** — the loader opened our file happily (the
+error names our path, so it got that far). What rejected the pairing was a
+SECOND, finer mechanism: **ELF symbol versioning**. OpenSSL's exports
+carry `OPENSSL_3.0.0` / `OPENSSL_4.0.0` labels, the consumer's relocations
+demand specific labels, and the loader does check those.
+
+**But not every library has that second gate**, measured on this box —
+the `GLIBC_*` entries below are imports from libc, not the library's own
+exported versions:
+
+| lib | soname | own versioned exports? | so a soname hack would be… |
+| --- | --- | --- | --- |
+| libssl / libcrypto | `.so.3` | **yes** — `OPENSSL_3.0.0` | caught at load |
+| libz | `.so.1` | **yes** — `ZLIB_1.2.x` | caught at load |
+| libffi | `.so.8` | **yes** — `LIBFFI_BASE_8.0` | caught at load |
+| libcairo | `.so.2` | no | **silently accepted** |
+| libgmp | `.so.10` | no | **silently accepted** |
+| libzstd | `.so.1` | no | **silently accepted** |
+
+The unversioned half is the dangerous half: forcing a soname there gets no
+error, and a changed struct layout or calling convention becomes a wrong
+answer or a crash rather than a refusal. So the honest options for pairing
+across a soname bump are, in order: **rebuild the consumer** (correct);
+`patchelf --replace-needed` / a symlink **only where the ABI is genuinely
+compatible and we say why** (a declared, recorded hack); never as a
+default. For canary this is a checkable property in its own right —
+soname equality is a rung-1 decl-comparison, and "does the pair even carry
+symbol versions" decides whether a mispairing would be *caught* or
+*silent*.
+
 That splits our three candidates into two kinds of work:
 
 | pair | soname | what the consumer needs |
