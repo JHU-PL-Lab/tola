@@ -20,5 +20,5 @@
     }
   },
   "kind": "typed_user_python",
-  "path": "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/__init__.py"
+  "path": "_out/canary/tiny/scenarios/_cache/symbol_missing/workspace/python_cext/tiny_cext/__init__.py"
 }

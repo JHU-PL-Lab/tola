@@ -202,6 +202,36 @@ immediately followed (`zstd`) pulled `conf-zstd.1.3.8`, whose build is
 `--atleast-version=1.3.8`. Same shape as §4's lessons: the check ran, and
 had nothing in front of it.
 
+## 3c. A vendored world must NAME what answered (rule, 2026-08-20)
+
+Checklist step 6 said "point the CONSUMER at the world's lib". Pointing
+is not checking. `LD_LIBRARY_PATH` is a *preference*: if the directory is
+wrong, missing, or the loader prefers an already-mapped copy, the probe
+runs happily against the system library and the world passes for the
+wrong reason. cairo is the specimen — its two versions export identical
+symbol counts, so no verdict anywhere could distinguish them.
+
+So the rule for any Vendored lib axis:
+
+1. **The example prints the library it resolved.** The portable way needs
+   no API from the library: read `/proc/self/maps` after the first call
+   and print the mapped path whose basename matches `lib<name>.so`. zlib
+   does this (`zlib resolved: <path>`) and it works even for a library
+   with no version accessor on the binding's surface.
+2. **The project declares `probe_names_lib = true`**, which makes the
+   vendored probe `grep -qF` for the prebuilt's libdir. Pointing becomes
+   asserting.
+3. **Falsify it before trusting it** — twice, because there are two ways
+   to be wrong: break the libdir (the repoint fails) and remove the assert
+   while keeping the repoint (the check silently stops checking). The pin
+   `vendored.probe_names_the_world` covers both and every registry project
+   with a prebuilt.
+
+Why the path beats a version string: it is the identity of the answering
+artifact, and it exists for every library. A version string only exists
+if the binding exposes one — camlzip does not expose `zlibVersion()` at
+all, so zlib's world would have been unassertable by the version route.
+
 ## 4. Landing lessons — the bug classes that bit us (keep re-reading)
 
 Recorded because they recur, and a new project with a similar shape will

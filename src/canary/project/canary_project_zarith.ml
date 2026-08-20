@@ -212,6 +212,10 @@ let decl : Canary_opam_binding.t = {
      pair therefore lives on the BINDING axis (opam release vs the
      worktree build) alone. *)
   prebuilt_latest = None;
+  (* no Vendored lib world exists here (apt already ships upstream's
+     newest GMP), so there is nothing for a resolved-library assert to
+     guard *)
+  probe_names_lib = false;
   wrapper = Some zarith_wrapper_decl;
 }
 

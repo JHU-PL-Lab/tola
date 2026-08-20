@@ -22,6 +22,7 @@ let all_projects : (string * Canary_project_run.project_run) list =
     ("zarith", Canary_project_zarith.zarith_run);
     ("cairo", Canary_project_cairo.cairo_run);
     ("libffi", Canary_project_libffi.libffi_run);
+    ("zlib", Canary_project_zlib.zlib_run);
     ("ssl", Canary_project_ssl.ssl_run) ]
 
 (** The declared prebuilt (Vendored) libs, per project (2026-08-19). The
@@ -35,4 +36,5 @@ let declared_prebuilts () : (string * Canary_prebuilt.t) list =
       | None -> None)
     [ ("libffi", Canary_project_libffi.decl);
       ("cairo", Canary_project_cairo.decl);
+      ("zlib", Canary_project_zlib.decl);
       ("zarith", Canary_project_zarith.decl) ]

@@ -802,7 +802,8 @@ let registry_pin : Canary_project_test.pure_test =
       let entries = Canary_registry.all_projects in
       let names = List.map entries ~f:fst in
       let want_names =
-        [ "sqlite"; "z3"; "llvm"; "tiny-full"; "zarith"; "cairo"; "libffi"; "ssl" ]
+        [ "sqlite"; "z3"; "llvm"; "tiny-full"; "zarith"; "cairo"; "libffi";
+          "zlib"; "ssl" ]
       in
       let sorted_names = List.sort names ~compare:String.compare in
       let sorted_want = List.sort want_names ~compare:String.compare in
@@ -2167,6 +2168,79 @@ let sqlite_staged_probe_paths_pin : Canary_project_test.pure_test =
                 && not (String.is_substring cmd ~substring:"install/lib")
             | _ -> true)) }
 
+(* THE VENDORED-WORLD PIN (2026-08-20, the zlib landing). The landing
+   checklist's step with teeth: a project whose lib pair is
+   "apt vs a downloaded prebuilt" is only testing two worlds if the two
+   worlds' realized probe commands NAME DIFFERENT FILES. cairo is why —
+   its two cairo versions export identical symbol counts, so a probe that
+   silently resolved the system copy passed for the wrong reason and no
+   verdict could tell.
+
+   Three things are asserted, and each one failed somewhere before:
+
+   1. the Vendored world's probe carries the PREBUILT's libdir
+      (the repoint exists at all — the cairo bug);
+   2. the Fetched world's probe does NOT (they are distinguishable, so
+      the pair is a pair);
+   3. when the project says its probe NAMES the library it resolved
+      ([probe_names_lib]), the Vendored probe also GREPS for that libdir
+      — pointing the loader is not the same as checking it obeyed.
+
+   Derived over the registry: every project declaring a prebuilt is
+   checked, so a new Vendored landing inherits the pin instead of
+   re-deriving it. *)
+let vendored_world_probe_pin : Canary_project_test.pure_test =
+  { name = "vendored.probe_names_the_world";
+    check =
+      (fun () ->
+        let distro = Canary_basic.detect_distro () in
+        let decls =
+          [ ("zlib", Canary_project_zlib.decl, Canary_project_zlib.zlib_run);
+            ("cairo", Canary_project_cairo.decl, Canary_project_cairo.cairo_run);
+            ("libffi", Canary_project_libffi.decl,
+             Canary_project_libffi.libffi_run) ]
+        in
+        let probe_cmd_of pr a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/ws" ()
+          in
+          match
+            List.find spec.Canary_step_builder.probe_binding
+              ~f:(fun (l, _, _) -> Poly.equal l Canary_lang.OCaml)
+          with
+          | Some (_, _, f) -> f ~output_dir:"/tmp/ws" ~variant_key:"pin"
+          | None -> ""
+        in
+        let checked = ref 0 in
+        let ok =
+          List.for_all decls ~f:(fun (_name, d, pr) ->
+              match d.Canary_opam_binding.prebuilt_latest with
+              | None -> true
+              | Some pb ->
+                  let libdir = Canary_prebuilt.libdir_of pb distro in
+                  List.for_all (Canary_project_run.scenarios_of pr)
+                    ~f:(fun a ->
+                      let cmd = probe_cmd_of pr a in
+                      match
+                        Canary_enumerate.provision_of a Canary_artifact.a_lib
+                      with
+                      | Canary_artifact.Vendored ->
+                          Int.incr checked;
+                          (* (1) the repoint, and (3) the assert when the
+                             probe can name what answered *)
+                          String.is_substring cmd ~substring:libdir
+                          && ((not d.Canary_opam_binding.probe_names_lib)
+                             || String.is_substring cmd ~substring:"grep -qF")
+                      | _ ->
+                          (* (2) the OTHER world must not carry it, or the
+                             pair is one world twice *)
+                          not (String.is_substring cmd ~substring:libdir)))
+        in
+        (* the Vendored worlds must EXIST — otherwise every for_all above
+           is vacuous and this passes on a lost axis (the same trap
+           matrix.cell_stage_progression guards) *)
+        ok && !checked >= 3) }
+
 (* The CELL STAGE progression (2026-08-19, user): in a staged world the
    build step names the tree it BUILT and only install/probe name the
    staged face, so a row reads left-to-right as the artifact's
@@ -2407,11 +2481,15 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            zarith 2 + cairo 2 + libffi 2 + ssl 2 — cairo and libffi gained
            their VENDORED prebuilt point (the lib pair's latest, downloaded
            from conda-forge), on top of the channel pairs (sqlite +5,
-           z3 +9) and the unread-source collapse (llvm −2, zarith −1) *)
-        List.length rows = 38
+           z3 +9) and the unread-source collapse (llvm −2, zarith −1).
+           +2 on 2026-08-20: zlib lands with BOTH lib points at once
+           (apt Fetched 1.3 + conda-forge Vendored 1.3.2), the first
+           project whose 2×2 lib axis needed no build. *)
+        List.length rows = 40
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 16
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 2
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
+        && List.count rows ~f:(fun (n, _) -> String.equal n "zlib") = 2
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
         && web_identity_ok && staged_cells_ok
@@ -2488,6 +2566,7 @@ let tests : Canary_project_test.pure_test list =
          declared repo) — the same derived invariants over both shapes *)
       provider_rows_pin ~prefix:"sqlite" Canary_project_sqlite.sqlite_run;
       sqlite_staged_probe_paths_pin;
+      vendored_world_probe_pin;
       provider_rows_pin ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;

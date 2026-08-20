@@ -91,6 +91,20 @@ type t = {
      [None] = no pair is possible, and the row's rationale must say why
      (apt already ships upstream's newest, as with GMP). *)
   prebuilt_latest : Canary_prebuilt.t option;
+  (* DOES THE PROBE NAME THE LIB IT RESOLVED? (2026-08-20, the zlib
+     landing.) A Vendored world repoints LD_LIBRARY_PATH at the prebuilt,
+     but nothing checked that the loader obeyed — cairo passes identically
+     either way, which is how the missing repoint stayed invisible until
+     someone read the command. When the example prints the resolved
+     library path (the /proc/self/maps convention: `zlib resolved: <path>`),
+     set this and the vendored probe ASSERTS the printed path is inside the
+     prebuilt's libdir. That turns "the loader silently fell back to the
+     system copy" from a passing run into a failing one.
+
+     [false] = the probe prints no such line, so the vendored world is
+     pointed but not asserted — an honest gap, visible in the declaration
+     rather than buried in the runner. *)
+  probe_names_lib : bool;
   (* The wrapper package (2026-08-17, active plan 2): when [Some], the
      bind_built scenarios gain a PUBLISH step installing this
      conf-free wrapper over the scenario's worktree (the pattern's
@@ -166,10 +180,17 @@ let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
     | None -> lib_resolve d.lib
     | Some pb ->
         let dir = Canary_prebuilt.libdir_of pb (Canary_basic.detect_distro ()) in
+        (* the hint used to wrap the command in BACKTICKS inside a
+           double-quoted shell string, so sh ran `canary prebuilt zlib` as
+           command substitution: the guard fired correctly and then printed
+           "run  first" over a stray "sh: canary: not found" (2026-08-20,
+           surfaced by deliberately breaking the libdir to falsify the
+           world assert). A diagnostic that destroys itself is the same
+           class as the checks in landing.md §4 — single quotes now. *)
         Printf.sprintf
           "LIB_NATIVE=$(ls %s/%s 2>/dev/null | head -1)\n\
            test -n \"$LIB_NATIVE\" -a -e \"$LIB_NATIVE\" || { echo \
-           \"PREBUILT MISSING: %s — run `canary prebuilt %s` first\" >&2; \
+           \"PREBUILT MISSING: %s — run 'canary prebuilt %s' first\" >&2; \
            exit 1; }"
           (Canary_prebuilt.path_of pb (Canary_basic.detect_distro ()))
           pb.Canary_prebuilt.lib_glob dir pb.Canary_prebuilt.project
@@ -496,7 +517,13 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
                    ~env:
                      [ Printf.sprintf "LD_LIBRARY_PATH=%s:$LD_LIBRARY_PATH"
                          (Canary_prebuilt.libdir_of pb distro) ]
-                   ~log_grep:None ~binding_lib:d.binding_lib
+                   (* assert the loader OBEYED the repoint, when the probe
+                      says which file it resolved (2026-08-20) *)
+                   ~log_grep:
+                     (if d.probe_names_lib then
+                        Some (Canary_prebuilt.libdir_of pb distro)
+                      else None)
+                   ~binding_lib:d.binding_lib
                    ~example:d.example_file ~target:d.example_target
                    ~output_dir ~variant_key)
       ]

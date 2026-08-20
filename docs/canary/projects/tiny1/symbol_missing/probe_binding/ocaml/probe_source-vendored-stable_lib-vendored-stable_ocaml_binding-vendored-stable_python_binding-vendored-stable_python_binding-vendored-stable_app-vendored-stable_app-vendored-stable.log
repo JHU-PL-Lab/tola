@@ -1,4 +1,4 @@
-Entering directory 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace'
+Entering directory '_out/canary/tiny/scenarios/_cache/symbol_missing/workspace'
 File "ocaml/examples/dune", line 2, characters 7-21:
 2 |  (name probe_baseline)
            ^^^^^^^^^^^^^^
@@ -8,4 +8,4 @@ mold: error: undefined symbol: tiny_sum
 collect2: error: ld returned 1 exit status
 File "caml_startup", line 1:
 Error: Error during linking (exit code 1)
-Leaving directory 'canary/examples/tiny/scenarios/_cache/symbol_missing/workspace'
+Leaving directory '_out/canary/tiny/scenarios/_cache/symbol_missing/workspace'

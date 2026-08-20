@@ -1,0 +1,21 @@
+{
+  "counts": {
+    "imports": 106,
+    "modules": 3
+  },
+  "kind": "ocaml",
+  "modules": [
+    "Zlib",
+    "Zip",
+    "Gzip"
+  ],
+  "path": "zip",
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "Zlib",
+      "Gzip",
+      "Zip"
+    ]
+  }
+}

@@ -16,5 +16,5 @@
     }
   },
   "kind": "typed_header",
-  "path": "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/include/tiny.h"
+  "path": "_out/canary/tiny/scenarios/_cache/symbol_missing/workspace/c/include/tiny.h"
 }

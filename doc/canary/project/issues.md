@@ -65,6 +65,61 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
+### Found — zstd cannot land here: conf-zstd needs a dev package we
+### cannot install (2026-08-20)
+
+The survey ranked zstd #2 and it is blocked on availability, not on
+design. `opam install zstd` fails at `conf-zstd 1.3.8`, whose build is
+`pkg-config --atleast-version=1.3.8 libzstd`: this box has the RUNTIME
+package (`libzstd1` 1.5.5) but not `libzstd-dev`, so there is no
+`libzstd.pc` and no `zstd.h`. Installing it needs sudo, which is not
+available here.
+
+Two routes when it is picked up:
+
+- **Install `libzstd-dev`** (one apt command) and the landing is the same
+  declaration-only shape as zlib: apt 1.5.5 → conda-forge 1.5.7, same
+  soname `libzstd.so.1`, closure = libc + libpthread (measured).
+- **Supply the dev half from the prebuilt.** conda-forge's `zstd` package
+  ships `include/zstd.h` and `lib/pkgconfig/libzstd.pc` alongside the
+  runtime object, so pointing `PKG_CONFIG_PATH` and the include path at
+  the prepared prebuilt would satisfy conf-zstd with no system package at
+  all. That is more interesting than a workaround — it is how a project
+  would test a lib version the distro does not ship in ANY form — but it
+  is new machinery (the prepare step currently supplies runtime only) and
+  it changes which world is "stable". Do not fold it into the zstd
+  landing; it is its own small arc.
+
+Note for whoever takes it: conf-zstd is one of the 8 conf packages that
+DO enforce a lib version (§G1a). Both candidate points clear the 1.3.8
+floor, so the gate does not bite — but the project's `pm_gate` should be
+declared `Bounded_with_conf { lower = Some "1.3.8"; tracks_lib = true }`
+rather than `Free_with_conf`, because the floor is real and comes from
+the conf package rather than from the binding's constraint.
+
+### Found — a vendored world can be POINTED without being CHECKED
+### (2026-08-20; cairo and libffi still are)
+
+`Canary_opam_binding.probe_names_lib` (added with the zlib landing) makes
+the Vendored probe assert that the library the loader actually mapped is
+inside the prebuilt's libdir. It requires the project's example to PRINT
+what it resolved — zlib reads `/proc/self/maps` and prints
+`zlib resolved: <path>`.
+
+`cairo` and `libffi` declare `probe_names_lib = false`: their vendored
+worlds set `LD_LIBRARY_PATH` and nothing verifies the loader obeyed.
+cairo is the worse of the two (its two versions export identical symbol
+counts, so a fallback is invisible in every verdict); libffi is the more
+interesting (a `Dynamic_ffi` consumer resolves through `dlsym` at
+runtime, so "which libffi answered" is the entire question).
+
+**Fix**: teach each example to print its resolved library — the same
+`/proc/self/maps` scan zlib uses, matching on `libcairo.so` /
+`libffi.so` — then flip the flag. The pin
+`vendored.probe_names_the_world` already covers all three projects and
+will start enforcing the assert as soon as the flag turns true.
+
+
 ### Found — a gate can live in the BINDING's own build, and `pm_dep_gate`
 ### cannot express it (2026-08-20, from the conf-* survey sampling)
 

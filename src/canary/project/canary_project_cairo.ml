@@ -109,6 +109,14 @@ let decl : Canary_opam_binding.t = {
         note =
           "conda-forge 1.18.4 = upstream's newest (2025-03-08); apt ships \
            1.18.0. cairographics.org publishes source only." };
+  (* cairo_example prints "cairo ok" and nothing about which libcairo
+     answered — the vendored world is pointed (LD_LIBRARY_PATH) but NOT
+     asserted. This is the gap the zlib landing closed for itself
+     (2026-08-20): cairo's two versions export identical symbol counts, so
+     a loader fallback would be invisible. Closing it here means teaching
+     the example to print its resolved library, tracked in
+     project/issues.md. *)
+  probe_names_lib = false;
   wrapper = None;
 }
 

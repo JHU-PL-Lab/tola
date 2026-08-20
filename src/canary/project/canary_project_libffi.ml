@@ -119,6 +119,13 @@ let decl : Canary_opam_binding.t =
              pair tests version drift WITHIN an ABI generation — which is \
              what a ctypes-foreign consumer resolving symbols at dlsym \
              time would notice first." };
+    (* libffi_example calls libc's abs() through ctypes-foreign and prints
+       only the round-tripped value — it names no library, so libffi's
+       vendored world is pointed but not asserted. Doubly worth fixing
+       here: a Dynamic_ffi consumer resolves through dlsym at RUNTIME, so
+       "which libffi answered" is the whole question. Tracked in
+       project/issues.md. *)
+    probe_names_lib = false;
     wrapper = None }
 
 let runner_spec = Canary_opam_binding.runner_spec decl

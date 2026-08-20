@@ -1,0 +1,23 @@
+{
+  "counts": {
+    "imports": 265,
+    "modules": 4
+  },
+  "kind": "ocaml",
+  "modules": [
+    "Zarith_version",
+    "Z",
+    "Q",
+    "Big_int_Z"
+  ],
+  "path": "zarith",
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "Z",
+      "Q",
+      "Big_int_Z",
+      "Zarith_version"
+    ]
+  }
+}

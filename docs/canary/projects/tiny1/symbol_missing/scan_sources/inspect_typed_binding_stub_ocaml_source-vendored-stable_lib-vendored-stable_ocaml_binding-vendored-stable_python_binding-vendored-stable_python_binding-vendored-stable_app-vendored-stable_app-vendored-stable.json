@@ -16,5 +16,5 @@
     }
   },
   "kind": "typed_stub_ocaml",
-  "path": "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny_raw.mli"
+  "path": "_out/canary/tiny/scenarios/_cache/symbol_missing/workspace/ocaml/tiny_raw.mli"
 }

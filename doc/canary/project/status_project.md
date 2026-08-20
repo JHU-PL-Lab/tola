@@ -8,7 +8,7 @@
 
 ## 1. Live projects
 
-8 projects on the registry (`Canary_registry.all_projects`) — all plain
+9 projects on the registry (`Canary_registry.all_projects`) — all plain
 `project_run`s since 2026-08-12 (ssl's `Multi` entry retired with the
 store-pin migration); tiny1 rides the factory. Full matrix in
 [`coverage.md` §1](coverage.md). The `registry.entries_enumerate` pin
@@ -18,7 +18,7 @@ distinct scenarios.
 
 **Scenario counts** (the enumeration snapshot, re-verified 2026-08-19
 after the mismatch matrix; full policy unless noted). The total is
-pinned: `matrix.registry_shape` asserts 36 rows across the registry, so
+pinned: `matrix.registry_shape` asserts 40 rows across the registry, so
 this table cannot drift silently.
 
 | project | scenarios | shape |
@@ -30,6 +30,7 @@ this table cannot drift silently.
 | ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
 | tiny-full | 1 | all-Vendored stable world |
 | cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
+| zlib | 2 | **landed 2026-08-20** — the lib pair with no build: `F:stable` (apt libz 1.3) + `V:dev` (conda-forge libzlib 1.3.2, same soname). The probe names the library the loader mapped and the vendored world asserts it (`probe_names_lib`) |
 
 **The batch runner + run config + the main-library split** (2026-08-14,
 user): `canary action @all` runs every registry project under the
@@ -123,17 +124,26 @@ the conf packages' own build sections, libs cross-checked against apt and
 conda-forge). Short version: one C lib per project is baked into
 `artifact_kind` (`Lib` carries no name), so:
 
-- [ ] **D1. zlib / camlzip** — lands now; the cheapest real lib channel
-  pair in the registry (apt vs a source build measured in seconds), so the
-  third project with a 2×2 and the first where both sides are cheap.
-  Confirmed by the survey sampling (2026-08-20): highest uncovered revdep
-  count (56), a bare `"conf-zlib"` gate, apt 1.3 → conda-forge 1.3.2, and
-  a libc-only closure. `zlib` (2 opam versions) is an alternative binding
-  to `camlzip` (4) if a smaller surface is wanted.
-- [ ] **D2. zstd / zstandard** — promoted to second by the survey: same
-  shape as zlib (bare `"conf-zstd"`, apt 1.5.5 → conda-forge 1.5.7, small
-  closure), and it is one of `bytesrw`'s five optional backends, so
-  landing it standalone de-risks D5.
+- [x] **D1. zlib / camlzip — LANDED 2026-08-20.** 2 scenarios, both
+  green: lib `F:stable` (apt 1.3) and `V:dev` (conda-forge 1.3.2), the
+  first project whose lib pair needed no build at all. The probe reads
+  `/proc/self/maps` and prints which libz answered, and the vendored
+  world ASSERTS it (`probe_names_lib`) — pinned by
+  `vendored.probe_names_the_world`, falsified two ways (drop the
+  repoint; keep the repoint but drop the assert). Measured evidence the
+  two worlds are really two: 15 vs 17 exported `deflate*` symbols.
+  Follow-on available: zlib 1.3.2 adds ELF version nodes `ZLIB_1.3.1.2`
+  / `ZLIB_1.3.2`, so a probe calling `deflateUsed` xfails against apt's
+  1.3 at LOAD time — the cheapest natural forward cell in the registry
+  (measured in `surveys/conda_forge.md`).
+- [ ] **D2. zstd** — BLOCKED on `libzstd-dev`, not on design (issue in
+  [`issues.md`](issues.md)). This box has `libzstd1` but no dev package,
+  so `conf-zstd` cannot run its `pkg-config --atleast-version=1.3.8`
+  check and `opam install zstd` fails. One apt command unblocks it; the
+  rest is zlib's shape (apt 1.5.5 → conda-forge 1.5.7, same soname,
+  libc+libpthread closure). Use the `zstd` binding (ctypes + integers),
+  not `zstandard` — the latter pulls the whole Jane Street core stack.
+  Also one of `bytesrw`'s five optional backends, so it still de-risks D5.
 - [ ] **D2b. lmdb** — still worth landing; Pattern B1+E (direct depexts +
   a `clib:` tag, no conf-*), so it tests the no-conf-indirection style.
   Its pair comes from the binding's opam pins. `ocurl` is a second

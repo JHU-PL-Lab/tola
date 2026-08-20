@@ -35,11 +35,12 @@ e.g. `xfail[c2]`) · `matrix` (multi-scenario grid).
 | **zarith**    | System           | Conf         | positive             | **`simple`**      | **Derived** | —            | 1              | ✓ / ✓      |
 | **cairo**     | System           | Conf         | positive             | **`simple`**      | **Derived** | —            | 1              | ✓ / —      |
 | **libffi**    | System           | Conf         | positive             | **`simple`**      | **Derived** | —            | 1              | ✓ / ✓      |
+| **zlib**      | System + Vendored | Conf        | positive (2×2 lib axis) | **`simple`**   | **Derived** | —            | 2              | ✓ / —      |
 
 Notes:
 - **The registry is the single source of truth** (2026-08-12):
   `Canary_registry.all_projects` — `action`/`spec`/`scenarios` each do one
-  `List.assoc_opt` lookup; adding a project = adding one entry. All 8
+  `List.assoc_opt` lookup; adding a project = adding one entry. All 9
   projects are plain `project_run` entries (ssl migrated off the retired
   `Multi` via store pins, 2026-08-12).
 - **ssl's store-pin shape**: 2 scenarios (binding pinned 0.6.0/0.7.0 via
@@ -144,3 +145,4 @@ Notes:
 | —   | libffi               | 2026-08-11 | Pattern A. First Dynamic_ffi project (ctypes-foreign uses libffi at runtime — Ctypes mechanism vs the Static_c_abi of existing projects). 38 `ffi_` symbols; probe green first try.          |
 | —   | registry             | 2026-08-12 | `Canary_registry.all_projects` becomes the single source of truth; zarith/cairo/libffi migrate to `project_run` via `simple`; `run_legacy` deleted everywhere.                                         |
 | —   | ssl store pins       | 2026-08-12 | ssl migrates off `Multi`: `Lang_pkg.versions` pins → 2 enumerated scenarios; pin-checked fetch (`SB.pin_check_post`) + world assertions; the 2×2 red cell derives as `probe_app_ocaml` xfail[c2]. |
+| —   | zlib                 | 2026-08-20 | First landing chosen by the MEASURED conf-* survey ranking (§G5) rather than by hand. The lib pair needs no build: apt libz 1.3 vs conda-forge libzlib 1.3.2, same soname. Introduces `probe_names_lib` — the probe reads `/proc/self/maps` and the vendored world ASSERTS which libz answered, closing the "pointed but not checked" gap cairo/libffi still have. |

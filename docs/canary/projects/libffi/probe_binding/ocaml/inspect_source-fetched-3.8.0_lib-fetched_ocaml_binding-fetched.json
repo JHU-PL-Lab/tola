@@ -1,0 +1,26 @@
+{
+  "counts": {
+    "imports": 463,
+    "modules": 9
+  },
+  "kind": "ocaml",
+  "modules": [
+    "Libffi_abi",
+    "Ctypes_closure_properties",
+    "Ctypes_ffi_stubs",
+    "Ctypes_weak_ref",
+    "Ctypes_ffi",
+    "Dl",
+    "Ctypes_foreign_basis",
+    "Ctypes_foreign_threaded_stubs",
+    "Foreign"
+  ],
+  "path": "ctypes-foreign",
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "Foreign",
+      "Ctypes_foreign_basis"
+    ]
+  }
+}

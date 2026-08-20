@@ -14,7 +14,7 @@
     "soname": "libtiny.so.1"
   },
   "kind": "native",
-  "path": "canary/examples/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1",
+  "path": "_out/canary/tiny/scenarios/_cache/symbol_missing/workspace/c/build/libtiny.so.1",
   "symbols": [
     "tiny_diff",
     "tiny_offset"

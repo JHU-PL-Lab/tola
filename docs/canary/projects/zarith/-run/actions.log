@@ -1,339 +1,1558 @@
-[2026-08-12 10:23:23.991] *                          variant_start  (lib-fetched_ocaml_binding-fetched)
-[2026-08-12 10:23:23.991] *                          graph_start  (6 steps)
-[2026-08-12 10:23:23.991] fetch_lib                  check_pre  (pass)
-[2026-08-12 10:23:23.993] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-12 10:23:24.345] fetch_lib                  detect  (ok, output present)
-[2026-08-12 10:23:24.345] fetch_lib                  check_post  (pass)
-[2026-08-12 10:23:24.345] fetch_lib                  done
-[2026-08-12 10:23:24.347] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-12 10:23:24.349] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-12 10:23:25.352] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-12 10:23:25.352] fetch_binding_ocaml        check_post  (pass)
-[2026-08-12 10:23:25.352] fetch_binding_ocaml        done
-[2026-08-12 10:23:25.354] probe_binding_ocaml        check_pre  (pass)
-[2026-08-12 10:23:25.356] probe_binding_ocaml        cmd  (eval $(opam env)
-ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log 2>&1
+[2026-08-17 19:14:08.744] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:14:08.744] *                          graph_start  (7 steps)
+[2026-08-17 19:14:08.745] fetch_source               check_pre  (pass)
+[2026-08-17 19:14:08.749] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin release-1.14 && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-release-1.14 ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-release-1.14 release-1.14; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-release-1.14 checkout -q -f release-1.14 && \
+echo '/home/red/code/contrib/zarith-all/zarith-release-1.14' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_source/source_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:09.089] fetch_source               detect  (ok, output present)
+[2026-08-17 19:14:09.096] fetch_source               check_post  (pass)
+[2026-08-17 19:14:09.096] fetch_source               done
+[2026-08-17 19:14:09.100] fetch_lib                  check_pre  (pass)
+[2026-08-17 19:14:09.102] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:09.515] fetch_lib                  detect  (ok, output present)
+[2026-08-17 19:14:09.515] fetch_lib                  check_post  (pass)
+[2026-08-17 19:14:09.515] fetch_lib                  done
+[2026-08-17 19:14:09.517] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:09.520] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:10.596] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:10.596] fetch_binding_ocaml        check_post  (pass)
+[2026-08-17 19:14:10.596] fetch_binding_ocaml        done
+[2026-08-17 19:14:10.598] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:10.601] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log 2>&1
 RC=$?
-cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched.log
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log
 exit $RC)
-[2026-08-12 10:23:25.449] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-12 10:23:25.449] probe_binding_ocaml        check_post  (pass)
-[2026-08-12 10:23:25.449] probe_binding_ocaml        done
-[2026-08-12 10:23:25.451] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-12 10:23:25.453] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-08-17 19:14:11.523] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:11.846] probe_binding_ocaml        check_post  (pass)
+[2026-08-17 19:14:11.846] probe_binding_ocaml        done
+[2026-08-17 19:14:11.848] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-17 19:14:11.850] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
 test -n "$PKG_DIR"
 { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
     [ -f "$f" ] && ocamlobjinfo "$f"
   done
 } | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
-  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-12 10:23:25.501] probe_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-12 10:23:25.501] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-08-12 10:23:25.501] probe_binding_ocaml_inspect  done
-[2026-08-12 10:23:25.503] probe_lib                  check_pre  (pass)
-[2026-08-12 10:23:25.505] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-17 19:14:11.927] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-17 19:14:11.927] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-17 19:14:11.927] probe_binding_ocaml_inspect  done
+[2026-08-17 19:14:11.929] probe_lib                  check_pre  (pass)
+[2026-08-17 19:14:11.932] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
         "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
-printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched.log
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log
 test "$COUNT" -gt 0)
-[2026-08-12 10:23:25.550] probe_lib                  detect  (ok, output present)
-[2026-08-12 10:23:25.550] probe_lib                  check_post  (pass)
-[2026-08-12 10:23:25.550] probe_lib                  done
-[2026-08-12 10:23:25.552] probe_lib_inspect          check_pre  (pass)
-[2026-08-12 10:23:25.554] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+[2026-08-17 19:14:11.994] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:14:11.994] probe_lib                  check_post  (pass)
+[2026-08-17 19:14:11.994] probe_lib                  done
+[2026-08-17 19:14:11.996] probe_lib_inspect          check_pre  (pass)
+[2026-08-17 19:14:11.998] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
         "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 nm -D "$LIB_NATIVE" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmp_' --watchlist '__gmpz_init,__gmpz_clear,__gmpz_set_str,__gmpz_add,__gmpz_mul,__gmpz_pow_ui,__gmpz_get_str' \
-  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-12 10:23:25.605] probe_lib_inspect          detect  (ok, output present)
-[2026-08-12 10:23:25.605] probe_lib_inspect          check_post  (pass)
-[2026-08-12 10:23:25.605] probe_lib_inspect          done
-[2026-08-12 10:23:25.607] *                          graph_end  (6/6 completed)
-[2026-08-12 10:23:25.607] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-12 10:23:25.607] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-12 10:23:25.607] *                          view  (lib (3 steps))
-[2026-08-12 10:23:25.608] *                          view  (probes (4 steps))
-[2026-08-12 10:23:25.608] *                          view  (binding_ocaml (3 steps))
-[2026-08-12 10:23:25.609] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-12 10:23:25.613] *                          index  (_out/canary/projects/index.html)
-[2026-08-12 10:23:25.613] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 10:23:25.613] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 10:23:25.613] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 10:23:25.613] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
-[2026-08-12 10:23:25.613] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 10:23:25.613] *                          invariant  (ALL OK)
-[2026-08-12 10:27:22.866] *                          variant_start  (lib-fetched_ocaml_binding-fetched)
-[2026-08-12 10:27:22.866] *                          graph_start  (6 steps)
-[2026-08-12 10:27:22.866] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.866] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.866] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.866] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.866] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.866] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-12 10:27:22.867] *                          graph_end  (6/6 completed)
-[2026-08-12 10:27:22.867] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-12 10:27:22.867] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-12 10:27:22.867] *                          view  (lib (3 steps))
-[2026-08-12 10:27:22.867] *                          view  (probes (4 steps))
-[2026-08-12 10:27:22.867] *                          view  (binding_ocaml (3 steps))
-[2026-08-12 10:27:22.870] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-12 10:27:22.871] *                          index  (_out/canary/projects/index.html)
-[2026-08-12 10:27:22.871] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 10:27:22.871] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 10:27:22.872] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 10:27:22.872] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
-[2026-08-12 10:27:22.872] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 10:27:22.872] *                          invariant  (ALL OK)
-[2026-08-12 15:07:36.980] *                          variant_start  (lib-fetched_ocaml_binding-fetched)
-[2026-08-12 15:07:36.980] *                          graph_start  (6 steps)
-[2026-08-12 15:07:36.980] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-12 15:07:36.980] *                          graph_end  (6/6 completed)
-[2026-08-12 15:07:36.980] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-12 15:07:36.980] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-12 15:07:36.980] *                          view  (lib (3 steps))
-[2026-08-12 15:07:36.980] *                          view  (probes (4 steps))
-[2026-08-12 15:07:36.981] *                          view  (binding_ocaml (3 steps))
-[2026-08-12 15:07:36.982] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-12 15:07:36.983] *                          index  (_out/canary/projects/index.html)
-[2026-08-12 15:07:36.983] *                          invariant  (full.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 15:07:36.983] *                          invariant  (binding_ocaml.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 15:07:36.983] *                          invariant  (lib.mmd: OK (5 nodes, 6 IDs))
-[2026-08-12 15:07:36.983] *                          invariant  (all.mmd: OK (4 nodes, 6 IDs))
-[2026-08-12 15:07:36.983] *                          invariant  (probes.mmd: OK (6 nodes, 6 IDs))
-[2026-08-12 15:07:36.983] *                          invariant  (ALL OK)
-[2026-08-13 15:28:11.426] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-13 15:28:11.426] *                          graph_start  (7 steps)
-[2026-08-13 15:28:11.426] fetch_source               check_pre  (pass)
-[2026-08-13 15:28:11.431] fetch_source               cmd  (if [ -d _out/canary/projects/zarith/1.14_release-1.14/src/.git ]; then cd _out/canary/projects/zarith/1.14_release-1.14/src && git fetch && git checkout release-1.14; else git clone https://github.com/ocaml/Zarith.git _out/canary/projects/zarith/1.14_release-1.14/src && cd _out/canary/projects/zarith/1.14_release-1.14/src && git checkout release-1.14; fi && echo '_out/canary/projects/zarith/1.14_release-1.14/src' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-13 15:28:12.155] fetch_source               detect  (ok, output present)
-[2026-08-13 15:28:12.155] fetch_source               check_post  (pass)
-[2026-08-13 15:28:12.155] fetch_source               done
-[2026-08-13 15:28:12.156] fetch_lib                  check_pre  (pass)
-[2026-08-13 15:28:12.158] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-13 15:28:12.576] fetch_lib                  detect  (ok, output present)
-[2026-08-13 15:28:12.576] fetch_lib                  check_post  (pass)
-[2026-08-13 15:28:12.576] fetch_lib                  done
-[2026-08-13 15:28:12.578] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-13 15:28:12.580] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-13 15:28:13.542] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-13 15:28:13.542] fetch_binding_ocaml        check_post  (pass)
-[2026-08-13 15:28:13.542] fetch_binding_ocaml        done
-[2026-08-13 15:28:13.544] probe_binding_ocaml        check_pre  (pass)
-[2026-08-13 15:28:13.546] probe_binding_ocaml        cmd  (eval $(opam env)
-ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log 2>&1
-RC=$?
-cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log
-exit $RC)
-[2026-08-13 15:28:13.649] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-13 15:28:13.649] probe_binding_ocaml        check_post  (pass)
-[2026-08-13 15:28:13.649] probe_binding_ocaml        done
-[2026-08-13 15:28:13.651] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-13 15:28:13.653] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-17 19:14:12.062] probe_lib_inspect          detect  (ok, output present)
+[2026-08-17 19:14:12.062] probe_lib_inspect          check_post  (pass)
+[2026-08-17 19:14:12.062] probe_lib_inspect          done
+[2026-08-17 19:14:12.064] *                          graph_end  (7/7 completed)
+[2026-08-17 19:14:12.065] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:14:12.065] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:14:12.065] *                          view  (source (1 steps))
+[2026-08-17 19:14:12.065] *                          view  (lib (3 steps))
+[2026-08-17 19:14:12.065] *                          view  (probes (4 steps))
+[2026-08-17 19:14:12.065] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:14:12.067] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:14:12.068] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:14:12.068] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:12.068] *                          invariant  (ALL OK)
+[2026-08-17 19:14:12.104] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-17 19:14:12.104] *                          graph_start  (8 steps)
+[2026-08-17 19:14:12.104] fetch_source               check_pre  (pass)
+[2026-08-17 19:14:12.109] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_source/source_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:14:12.388] fetch_source               detect  (ok, output present)
+[2026-08-17 19:14:12.395] fetch_source               check_post  (pass)
+[2026-08-17 19:14:12.395] fetch_source               done
+[2026-08-17 19:14:12.400] fetch_lib                  check_pre  (pass)
+[2026-08-17 19:14:12.402] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:14:12.826] fetch_lib                  detect  (ok, output present)
+[2026-08-17 19:14:12.826] fetch_lib                  check_post  (pass)
+[2026-08-17 19:14:12.826] fetch_lib                  done
+[2026-08-17 19:14:12.828] build_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:12.831] build_binding_ocaml        cmd  (eval $(opam env) && rm -rf /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cp -r /home/red/code/contrib/zarith-all/zarith-master /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cd /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && ./configure && make && cd "$OLDPWD" && STUB=$(ls /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev/*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" --prefix '__gmp' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && mkdir -p /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib
+LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/build_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:14:14.995] build_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:14.995] build_binding_ocaml        check_post  (pass)
+[2026-08-17 19:14:14.995] build_binding_ocaml        done
+[2026-08-17 19:14:14.998] pack_binding_ocaml         check_pre  (pass)
+[2026-08-17 19:14:15.000] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:14:25.933] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-17 19:14:26.213] pack_binding_ocaml         check_post  (pass)
+[2026-08-17 19:14:26.213] pack_binding_ocaml         done
+[2026-08-17 19:14:26.215] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:26.218] probe_binding_ocaml        cmd  (eval $(opam env) && export LD_LIBRARY_PATH=/home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev: && ocamlfind ocamlopt -I /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev/zarith.cmxa canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log)
+[2026-08-17 19:14:26.353] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:26.353] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-17 19:14:26.354] probe_binding_ocaml        compat_note  (c1 cmp_symbol: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-08-17 19:14:26.354] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-17 19:14:26.354] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-17 19:14:26.354] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-17 19:14:26.354] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-08-17 19:14:26.356] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-17 19:14:26.358] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
 test -n "$PKG_DIR"
 { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
     [ -f "$f" ] && ocamlobjinfo "$f"
   done
 } | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
-  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-13 15:28:13.717] probe_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-13 15:28:13.717] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-08-13 15:28:13.717] probe_binding_ocaml_inspect  done
-[2026-08-13 15:28:13.719] probe_lib                  check_pre  (pass)
-[2026-08-13 15:28:13.721] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json)
+[2026-08-17 19:14:26.423] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-17 19:14:26.423] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-17 19:14:26.423] probe_binding_ocaml_inspect  done
+[2026-08-17 19:14:26.426] probe_lib                  check_pre  (pass)
+[2026-08-17 19:14:26.429] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
         "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
-printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched.log
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log
 test "$COUNT" -gt 0)
-[2026-08-13 15:28:13.768] probe_lib                  detect  (ok, output present)
-[2026-08-13 15:28:13.768] probe_lib                  check_post  (pass)
-[2026-08-13 15:28:13.768] probe_lib                  done
-[2026-08-13 15:28:13.770] probe_lib_inspect          check_pre  (pass)
-[2026-08-13 15:28:13.772] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+[2026-08-17 19:14:26.490] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:14:26.490] probe_lib                  check_post  (pass)
+[2026-08-17 19:14:26.490] probe_lib                  done
+[2026-08-17 19:14:26.492] probe_lib_inspect          check_pre  (pass)
+[2026-08-17 19:14:26.495] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
         "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 nm -D "$LIB_NATIVE" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmp_' --watchlist '__gmpz_init,__gmpz_clear,__gmpz_set_str,__gmpz_add,__gmpz_mul,__gmpz_pow_ui,__gmpz_get_str' \
-  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-13 15:28:13.827] probe_lib_inspect          detect  (ok, output present)
-[2026-08-13 15:28:13.827] probe_lib_inspect          check_post  (pass)
-[2026-08-13 15:28:13.827] probe_lib_inspect          done
-[2026-08-13 15:28:13.829] *                          graph_end  (7/7 completed)
-[2026-08-13 15:28:13.829] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-13 15:28:13.829] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-13 15:28:13.829] *                          view  (source (1 steps))
-[2026-08-13 15:28:13.829] *                          view  (lib (3 steps))
-[2026-08-13 15:28:13.829] *                          view  (probes (4 steps))
-[2026-08-13 15:28:13.829] *                          view  (binding_ocaml (3 steps))
-[2026-08-13 15:28:13.831] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-13 15:28:13.832] *                          index  (_out/canary/projects/index.html)
-[2026-08-13 15:28:13.832] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-13 15:28:13.832] *                          invariant  (ALL OK)
-[2026-08-14 09:23:58.022] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 09:23:58.022] *                          graph_start  (7 steps)
-[2026-08-14 09:23:58.022] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 09:23:58.022] *                          graph_end  (7/7 completed)
-[2026-08-14 09:23:58.022] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 09:23:58.023] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 09:23:58.023] *                          view  (source (1 steps))
-[2026-08-14 09:23:58.023] *                          view  (lib (3 steps))
-[2026-08-14 09:23:58.023] *                          view  (probes (4 steps))
-[2026-08-14 09:23:58.024] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 09:23:58.024] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 09:23:58.025] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 09:23:58.025] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 09:23:58.025] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 09:23:58.025] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 09:23:58.025] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 09:23:58.025] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 09:23:58.026] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 09:23:58.026] *                          invariant  (ALL OK)
-[2026-08-14 09:31:47.921] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 09:31:47.921] *                          graph_start  (7 steps)
-[2026-08-14 09:31:47.921] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 09:31:47.921] *                          graph_end  (7/7 completed)
-[2026-08-14 09:31:47.922] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 09:31:47.922] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 09:31:47.922] *                          view  (source (1 steps))
-[2026-08-14 09:31:47.922] *                          view  (lib (3 steps))
-[2026-08-14 09:31:47.922] *                          view  (probes (4 steps))
-[2026-08-14 09:31:47.922] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 09:31:47.923] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 09:31:47.924] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 09:31:47.924] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 09:31:47.924] *                          invariant  (ALL OK)
-[2026-08-14 13:37:11.358] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 13:37:11.359] *                          graph_start  (7 steps)
-[2026-08-14 13:37:11.359] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 13:37:11.359] *                          graph_end  (7/7 completed)
-[2026-08-14 13:37:11.359] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 13:37:11.360] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 13:37:11.360] *                          view  (source (1 steps))
-[2026-08-14 13:37:11.360] *                          view  (lib (3 steps))
-[2026-08-14 13:37:11.360] *                          view  (probes (4 steps))
-[2026-08-14 13:37:11.360] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 13:37:11.361] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 13:37:11.361] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 13:37:11.361] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 13:37:11.362] *                          invariant  (ALL OK)
-[2026-08-14 14:05:56.116] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 14:05:56.116] *                          graph_start  (7 steps)
-[2026-08-14 14:05:56.116] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 14:05:56.116] *                          graph_end  (7/7 completed)
-[2026-08-14 14:05:56.116] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 14:05:56.116] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 14:05:56.116] *                          view  (source (1 steps))
-[2026-08-14 14:05:56.117] *                          view  (lib (3 steps))
-[2026-08-14 14:05:56.117] *                          view  (probes (4 steps))
-[2026-08-14 14:05:56.117] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 14:05:56.118] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 14:05:56.118] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 14:05:56.118] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:05:56.119] *                          invariant  (ALL OK)
-[2026-08-14 14:18:42.880] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 14:18:42.880] *                          graph_start  (7 steps)
-[2026-08-14 14:18:42.880] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 14:18:42.880] *                          graph_end  (7/7 completed)
-[2026-08-14 14:18:42.881] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 14:18:42.881] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 14:18:42.881] *                          view  (source (1 steps))
-[2026-08-14 14:18:42.881] *                          view  (lib (3 steps))
-[2026-08-14 14:18:42.881] *                          view  (probes (4 steps))
-[2026-08-14 14:18:42.881] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 14:18:42.882] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 14:18:42.882] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 14:18:42.882] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:18:42.883] *                          invariant  (ALL OK)
-[2026-08-14 14:31:36.351] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched)
-[2026-08-14 14:31:36.351] *                          graph_start  (7 steps)
-[2026-08-14 14:31:36.351] fetch_source               skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] fetch_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] fetch_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] probe_binding_ocaml        skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] probe_lib                  skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] probe_lib_inspect          skip  (verdict marker (prior success))
-[2026-08-14 14:31:36.351] *                          graph_end  (7/7 completed)
-[2026-08-14 14:31:36.351] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
-[2026-08-14 14:31:36.352] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
-[2026-08-14 14:31:36.352] *                          view  (source (1 steps))
-[2026-08-14 14:31:36.352] *                          view  (lib (3 steps))
-[2026-08-14 14:31:36.352] *                          view  (probes (4 steps))
-[2026-08-14 14:31:36.352] *                          view  (binding_ocaml (3 steps))
-[2026-08-14 14:31:36.352] *                          html  (_out/canary/projects/zarith/-run/result.html)
-[2026-08-14 14:31:36.353] *                          index  (_out/canary/projects/index.html)
-[2026-08-14 14:31:36.353] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:31:36.353] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:31:36.353] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:31:36.354] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-14 14:31:36.354] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-14 14:31:36.354] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-14 14:31:36.354] *                          invariant  (ALL OK)
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json)
+[2026-08-17 19:14:26.564] probe_lib_inspect          detect  (ok, output present)
+[2026-08-17 19:14:26.565] probe_lib_inspect          check_post  (pass)
+[2026-08-17 19:14:26.565] probe_lib_inspect          done
+[2026-08-17 19:14:26.567] *                          graph_end  (8/8 completed)
+[2026-08-17 19:14:26.567] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:14:26.567] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:14:26.567] *                          view  (source (1 steps))
+[2026-08-17 19:14:26.568] *                          view  (lib (3 steps))
+[2026-08-17 19:14:26.568] *                          view  (probes (4 steps))
+[2026-08-17 19:14:26.568] *                          view  (binding_ocaml (4 steps))
+[2026-08-17 19:14:26.569] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:14:26.570] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:14:26.570] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:26.570] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:26.570] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:14:26.570] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-17 19:14:26.570] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:14:26.571] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:26.571] *                          invariant  (ALL OK)
+[2026-08-17 19:14:26.608] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:14:26.608] *                          graph_start  (7 steps)
+[2026-08-17 19:14:26.608] fetch_source               check_pre  (pass)
+[2026-08-17 19:14:26.612] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_source/source_source-fetched-master_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:26.921] fetch_source               detect  (ok, output present)
+[2026-08-17 19:14:26.928] fetch_source               check_post  (pass)
+[2026-08-17 19:14:26.928] fetch_source               done
+[2026-08-17 19:14:26.932] fetch_lib                  check_pre  (pass)
+[2026-08-17 19:14:26.934] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_source-fetched-master_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:27.345] fetch_lib                  detect  (ok, output present)
+[2026-08-17 19:14:27.345] fetch_lib                  check_post  (pass)
+[2026-08-17 19:14:27.345] fetch_lib                  done
+[2026-08-17 19:14:27.347] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:27.349] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_source-fetched-master_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-17 19:14:34.865] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:34.865] fetch_binding_ocaml        check_post  (pass)
+[2026-08-17 19:14:34.865] fetch_binding_ocaml        done
+[2026-08-17 19:14:34.867] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:34.869] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-17 19:14:35.782] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:14:36.065] probe_binding_ocaml        check_post  (pass)
+[2026-08-17 19:14:36.065] probe_binding_ocaml        done
+[2026-08-17 19:14:36.067] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-17 19:14:36.069] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_source-fetched-master_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-17 19:14:36.124] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-17 19:14:36.124] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-17 19:14:36.124] probe_binding_ocaml_inspect  done
+[2026-08-17 19:14:36.127] probe_lib                  check_pre  (pass)
+[2026-08-17 19:14:36.129] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:14:36.179] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:14:36.179] probe_lib                  check_post  (pass)
+[2026-08-17 19:14:36.179] probe_lib                  done
+[2026-08-17 19:14:36.182] probe_lib_inspect          check_pre  (pass)
+[2026-08-17 19:14:36.184] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_source-fetched-master_lib-fetched_ocaml_binding-fetched.json)
+[2026-08-17 19:14:36.243] probe_lib_inspect          detect  (ok, output present)
+[2026-08-17 19:14:36.243] probe_lib_inspect          check_post  (pass)
+[2026-08-17 19:14:36.243] probe_lib_inspect          done
+[2026-08-17 19:14:36.245] *                          graph_end  (7/7 completed)
+[2026-08-17 19:14:36.245] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:14:36.245] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:14:36.245] *                          view  (source (1 steps))
+[2026-08-17 19:14:36.245] *                          view  (lib (3 steps))
+[2026-08-17 19:14:36.246] *                          view  (probes (4 steps))
+[2026-08-17 19:14:36.246] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:14:36.246] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:14:36.247] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:14:36.247] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:36.247] *                          invariant  (ALL OK)
+[2026-08-17 19:14:43.141] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:14:43.141] *                          graph_start  (7 steps)
+[2026-08-17 19:14:43.150] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.151] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.151] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.151] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.151] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.151] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.444] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.444] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.444] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.444] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.444] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.444] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.444] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.444] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.444] *                          graph_end  (7/7 completed)
+[2026-08-17 19:14:43.444] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:14:43.444] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:14:43.444] *                          view  (source (1 steps))
+[2026-08-17 19:14:43.444] *                          view  (lib (3 steps))
+[2026-08-17 19:14:43.445] *                          view  (probes (4 steps))
+[2026-08-17 19:14:43.445] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:14:43.446] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:14:43.447] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:14:43.447] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:43.447] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:43.447] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:43.448] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:14:43.448] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:14:43.448] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:14:43.448] *                          invariant  (ALL OK)
+[2026-08-17 19:14:43.483] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-17 19:14:43.483] *                          graph_start  (8 steps)
+[2026-08-17 19:14:43.492] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.492] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.492] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.492] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.492] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.492] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.789] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:14:43.789] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.790] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.790] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.790] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.790] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.790] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.790] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:43.790] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:14:43.790] pack_binding_ocaml         check_pre  (pass)
+[2026-08-17 19:14:43.792] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:14:55.631] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-17 19:14:55.938] pack_binding_ocaml         check_post  (pass)
+[2026-08-17 19:14:55.938] pack_binding_ocaml         done
+[2026-08-17 19:14:55.940] *                          graph_end  (8/8 completed)
+[2026-08-17 19:14:55.941] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:14:55.941] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:14:55.941] *                          view  (source (1 steps))
+[2026-08-17 19:14:55.941] *                          view  (lib (3 steps))
+[2026-08-17 19:14:55.941] *                          view  (probes (4 steps))
+[2026-08-17 19:14:55.941] *                          view  (binding_ocaml (4 steps))
+[2026-08-17 19:14:55.942] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:14:55.943] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:14:55.943] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:14:55.943] *                          invariant  (ALL OK)
+[2026-08-17 19:14:55.980] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:14:55.980] *                          graph_start  (7 steps)
+[2026-08-17 19:14:55.989] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:55.989] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:14:55.989] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:55.989] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:55.989] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:55.989] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:14:56.308] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:14:56.308] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:56.308] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:14:56.308] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:56.308] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:14:56.309] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:14:56.309] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:14:56.309] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:14:56.311] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-17 19:15:03.702] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:15:04.008] probe_binding_ocaml        check_post  (pass)
+[2026-08-17 19:15:04.008] probe_binding_ocaml        done
+[2026-08-17 19:15:04.010] *                          graph_end  (7/7 completed)
+[2026-08-17 19:15:04.011] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:15:04.011] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:15:04.011] *                          view  (source (1 steps))
+[2026-08-17 19:15:04.011] *                          view  (lib (3 steps))
+[2026-08-17 19:15:04.011] *                          view  (probes (4 steps))
+[2026-08-17 19:15:04.011] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:15:04.012] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:15:04.013] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:15:04.013] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:04.013] *                          invariant  (ALL OK)
+[2026-08-17 19:15:19.976] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:15:19.976] *                          graph_start  (7 steps)
+[2026-08-17 19:15:19.985] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:19.985] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:15:19.985] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:19.985] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:15:19.985] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:19.985] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.284] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.284] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.284] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.284] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.284] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:20.285] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.285] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.285] probe_lib                  check_pre  (pass)
+[2026-08-17 19:15:20.287] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp_' || echo 0)
+printf '__gmp_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:15:20.350] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:15:20.350] probe_lib                  check_post  (pass)
+[2026-08-17 19:15:20.350] probe_lib                  done
+[2026-08-17 19:15:20.352] *                          graph_end  (7/7 completed)
+[2026-08-17 19:15:20.353] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:15:20.353] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:15:20.353] *                          view  (source (1 steps))
+[2026-08-17 19:15:20.353] *                          view  (lib (3 steps))
+[2026-08-17 19:15:20.353] *                          view  (probes (4 steps))
+[2026-08-17 19:15:20.353] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:15:20.356] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:15:20.357] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:15:20.357] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:20.357] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:20.357] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:20.358] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:20.358] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:20.358] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:20.358] *                          invariant  (ALL OK)
+[2026-08-17 19:15:20.402] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-17 19:15:20.402] *                          graph_start  (8 steps)
+[2026-08-17 19:15:20.411] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.411] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.411] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.411] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.411] build_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:20.708] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:15:20.708] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.708] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.709] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.709] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.709] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:20.709] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:20.709] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:15:20.709] build_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:15:20.711] build_binding_ocaml        cmd  (eval $(opam env) && rm -rf /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cp -r /home/red/code/contrib/zarith-all/zarith-master /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cd /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && ./configure && make && cd "$OLDPWD" && STUB=$(ls /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev/*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" --prefix '__gmp_' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && mkdir -p /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib
+LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/build_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:15:22.970] build_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:15:22.970] build_binding_ocaml        check_post  (pass)
+[2026-08-17 19:15:22.970] build_binding_ocaml        done
+[2026-08-17 19:15:22.972] pack_binding_ocaml         check_pre  (pass)
+[2026-08-17 19:15:22.974] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:15:34.025] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-17 19:15:34.309] pack_binding_ocaml         check_post  (pass)
+[2026-08-17 19:15:34.309] pack_binding_ocaml         done
+[2026-08-17 19:15:34.311] probe_lib                  check_pre  (pass)
+[2026-08-17 19:15:34.313] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp_' || echo 0)
+printf '__gmp_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:15:34.365] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:15:34.366] probe_lib                  check_post  (pass)
+[2026-08-17 19:15:34.366] probe_lib                  done
+[2026-08-17 19:15:34.368] *                          graph_end  (8/8 completed)
+[2026-08-17 19:15:34.368] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:15:34.368] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:15:34.368] *                          view  (source (1 steps))
+[2026-08-17 19:15:34.368] *                          view  (lib (3 steps))
+[2026-08-17 19:15:34.369] *                          view  (probes (4 steps))
+[2026-08-17 19:15:34.369] *                          view  (binding_ocaml (4 steps))
+[2026-08-17 19:15:34.369] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:15:34.370] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:15:34.370] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:15:34.370] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:15:34.370] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:15:34.370] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-17 19:15:34.370] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:15:34.371] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:15:34.371] *                          invariant  (ALL OK)
+[2026-08-17 19:15:34.408] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:15:34.408] *                          graph_start  (7 steps)
+[2026-08-17 19:15:34.417] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:34.418] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:15:34.418] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:34.418] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:15:34.418] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:34.418] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:34.711] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:15:34.711] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:34.711] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:15:34.711] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:34.711] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:34.711] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:15:34.711] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:15:34.713] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-17 19:15:42.509] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:15:42.831] probe_binding_ocaml        check_post  (pass)
+[2026-08-17 19:15:42.831] probe_binding_ocaml        done
+[2026-08-17 19:15:42.833] probe_lib                  check_pre  (pass)
+[2026-08-17 19:15:42.835] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp_' || echo 0)
+printf '__gmp_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:15:42.890] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:15:42.890] probe_lib                  check_post  (pass)
+[2026-08-17 19:15:42.890] probe_lib                  done
+[2026-08-17 19:15:42.892] *                          graph_end  (7/7 completed)
+[2026-08-17 19:15:42.892] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:15:42.893] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:15:42.893] *                          view  (source (1 steps))
+[2026-08-17 19:15:42.893] *                          view  (lib (3 steps))
+[2026-08-17 19:15:42.893] *                          view  (probes (4 steps))
+[2026-08-17 19:15:42.893] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:15:42.893] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:15:42.895] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:15:42.895] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:42.896] *                          invariant  (ALL OK)
+[2026-08-17 19:15:57.538] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:15:57.538] *                          graph_start  (7 steps)
+[2026-08-17 19:15:57.548] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.548] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.548] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.548] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.548] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.548] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.920] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.920] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.920] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.920] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.920] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:57.920] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:57.920] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:15:57.920] probe_lib                  check_pre  (pass)
+[2026-08-17 19:15:57.923] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-1.14_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:15:57.987] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:15:57.987] probe_lib                  check_post  (pass)
+[2026-08-17 19:15:57.987] probe_lib                  done
+[2026-08-17 19:15:57.989] *                          graph_end  (7/7 completed)
+[2026-08-17 19:15:57.989] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:15:57.990] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:15:57.990] *                          view  (source (1 steps))
+[2026-08-17 19:15:57.990] *                          view  (lib (3 steps))
+[2026-08-17 19:15:57.990] *                          view  (probes (4 steps))
+[2026-08-17 19:15:57.990] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:15:57.992] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:15:57.993] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:15:57.993] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:15:57.993] *                          invariant  (ALL OK)
+[2026-08-17 19:15:58.037] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-17 19:15:58.037] *                          graph_start  (8 steps)
+[2026-08-17 19:15:58.049] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:58.049] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:15:58.049] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:58.049] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:15:58.049] build_binding_ocaml        marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:58.354] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:15:58.354] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:58.354] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:15:58.354] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:58.354] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:15:58.354] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:15:58.354] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:15:58.354] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:15:58.354] build_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:15:58.357] build_binding_ocaml        cmd  (eval $(opam env) && rm -rf /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cp -r /home/red/code/contrib/zarith-all/zarith-master /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && cd /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev && ./configure && make && cd "$OLDPWD" && STUB=$(ls /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_source-fetched-master_lib-fetched_ocaml_binding-built-dev/*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" --prefix '__gmp' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && mkdir -p /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib
+LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib/inspect_source-fetched-master_lib-fetched_ocaml_binding-built-dev.json && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/build_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:16:00.018] build_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:16:00.018] build_binding_ocaml        check_post  (pass)
+[2026-08-17 19:16:00.018] build_binding_ocaml        done
+[2026-08-17 19:16:00.020] pack_binding_ocaml         check_pre  (pass)
+[2026-08-17 19:16:00.022] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-17 19:16:11.699] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-17 19:16:11.986] pack_binding_ocaml         check_post  (pass)
+[2026-08-17 19:16:11.986] pack_binding_ocaml         done
+[2026-08-17 19:16:11.988] probe_lib                  check_pre  (pass)
+[2026-08-17 19:16:11.991] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-built-dev.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:16:12.045] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:16:12.045] probe_lib                  check_post  (pass)
+[2026-08-17 19:16:12.045] probe_lib                  done
+[2026-08-17 19:16:12.047] *                          graph_end  (8/8 completed)
+[2026-08-17 19:16:12.047] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:16:12.047] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:16:12.047] *                          view  (source (1 steps))
+[2026-08-17 19:16:12.047] *                          view  (lib (3 steps))
+[2026-08-17 19:16:12.048] *                          view  (probes (4 steps))
+[2026-08-17 19:16:12.048] *                          view  (binding_ocaml (4 steps))
+[2026-08-17 19:16:12.049] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:16:12.049] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:16:12.049] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-17 19:16:12.050] *                          invariant  (ALL OK)
+[2026-08-17 19:16:12.086] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-17 19:16:12.086] *                          graph_start  (7 steps)
+[2026-08-17 19:16:12.095] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:16:12.095] fetch_source               skip  (verdict marker (prior success))
+[2026-08-17 19:16:12.095] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:16:12.095] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-17 19:16:12.095] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:16:12.095] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-17 19:16:12.389] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-17 19:16:12.389] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:16:12.389] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-17 19:16:12.389] probe_lib                  marker_stale  (spec changed since the marker — re-running)
+[2026-08-17 19:16:12.389] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-17 19:16:12.389] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-17 19:16:12.389] probe_binding_ocaml        check_pre  (pass)
+[2026-08-17 19:16:12.392] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-17 19:16:19.863] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-17 19:16:20.185] probe_binding_ocaml        check_post  (pass)
+[2026-08-17 19:16:20.185] probe_binding_ocaml        done
+[2026-08-17 19:16:20.187] probe_lib                  check_pre  (pass)
+[2026-08-17 19:16:20.189] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+test "$COUNT" -gt 0)
+[2026-08-17 19:16:20.241] probe_lib                  detect  (ok, output present)
+[2026-08-17 19:16:20.241] probe_lib                  check_post  (pass)
+[2026-08-17 19:16:20.241] probe_lib                  done
+[2026-08-17 19:16:20.243] *                          graph_end  (7/7 completed)
+[2026-08-17 19:16:20.243] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-17 19:16:20.243] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-17 19:16:20.243] *                          view  (source (1 steps))
+[2026-08-17 19:16:20.244] *                          view  (lib (3 steps))
+[2026-08-17 19:16:20.244] *                          view  (probes (4 steps))
+[2026-08-17 19:16:20.244] *                          view  (binding_ocaml (3 steps))
+[2026-08-17 19:16:20.244] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-17 19:16:20.246] *                          index  (_out/canary/projects/index.html)
+[2026-08-17 19:16:20.246] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-17 19:16:20.246] *                          invariant  (ALL OK)
+[2026-08-18 13:38:58.748] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 13:38:58.748] *                          graph_start  (7 steps)
+[2026-08-18 13:38:58.760] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:58.760] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:38:58.760] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:58.760] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:38:58.760] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:58.760] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.022] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.022] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.026] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.026] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.026] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.026] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.027] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.027] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.027] *                          graph_end  (7/7 completed)
+[2026-08-18 13:38:59.027] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:38:59.027] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:38:59.028] *                          view  (source (1 steps))
+[2026-08-18 13:38:59.028] *                          view  (lib (3 steps))
+[2026-08-18 13:38:59.028] *                          view  (probes (4 steps))
+[2026-08-18 13:38:59.028] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 13:38:59.030] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:38:59.035] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:38:59.035] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:38:59.035] *                          invariant  (ALL OK)
+[2026-08-18 13:38:59.079] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-18 13:38:59.079] *                          graph_start  (8 steps)
+[2026-08-18 13:38:59.088] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.088] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.089] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.089] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.089] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.089] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.350] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 13:38:59.352] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.352] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.352] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.352] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.352] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.352] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.352] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:38:59.352] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:38:59.352] pack_binding_ocaml         check_pre  (pass)
+[2026-08-18 13:38:59.355] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-18 13:39:10.518] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-18 13:39:10.775] pack_binding_ocaml         check_post  (pass)
+[2026-08-18 13:39:10.775] pack_binding_ocaml         done
+[2026-08-18 13:39:10.777] *                          graph_end  (8/8 completed)
+[2026-08-18 13:39:10.777] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:39:10.777] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:39:10.777] *                          view  (source (1 steps))
+[2026-08-18 13:39:10.777] *                          view  (lib (3 steps))
+[2026-08-18 13:39:10.777] *                          view  (probes (4 steps))
+[2026-08-18 13:39:10.778] *                          view  (binding_ocaml (4 steps))
+[2026-08-18 13:39:10.778] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:39:10.779] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:39:10.779] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:39:10.779] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:39:10.779] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 13:39:10.779] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-18 13:39:10.780] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 13:39:10.780] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:39:10.780] *                          invariant  (ALL OK)
+[2026-08-18 13:39:10.815] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 13:39:10.815] *                          graph_start  (7 steps)
+[2026-08-18 13:39:10.825] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:10.825] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:39:10.825] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:10.825] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:39:10.825] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:10.825] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:39:11.090] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 13:39:11.095] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:11.095] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:39:11.095] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:11.095] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:39:11.095] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:39:11.095] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:39:11.095] probe_binding_ocaml        check_pre  (pass)
+[2026-08-18 13:39:11.097] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-18 13:39:17.792] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-18 13:39:18.068] probe_binding_ocaml        check_post  (pass)
+[2026-08-18 13:39:18.068] probe_binding_ocaml        done
+[2026-08-18 13:39:18.070] *                          graph_end  (7/7 completed)
+[2026-08-18 13:39:18.070] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:39:18.071] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:39:18.071] *                          view  (source (1 steps))
+[2026-08-18 13:39:18.071] *                          view  (lib (3 steps))
+[2026-08-18 13:39:18.071] *                          view  (probes (4 steps))
+[2026-08-18 13:39:18.071] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 13:39:18.071] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:39:18.072] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:39:18.072] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:39:18.073] *                          invariant  (ALL OK)
+[2026-08-18 13:52:51.273] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 13:52:51.273] *                          graph_start  (7 steps)
+[2026-08-18 13:52:51.282] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.282] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.282] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.282] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.282] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.282] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.569] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.569] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.569] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.569] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.569] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.569] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.569] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.569] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.569] *                          graph_end  (7/7 completed)
+[2026-08-18 13:52:51.570] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:52:51.570] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:52:51.570] *                          view  (source (1 steps))
+[2026-08-18 13:52:51.570] *                          view  (lib (3 steps))
+[2026-08-18 13:52:51.570] *                          view  (probes (4 steps))
+[2026-08-18 13:52:51.570] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 13:52:51.572] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:52:51.573] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:52:51.573] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:52:51.573] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:52:51.574] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:52:51.574] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:52:51.574] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:52:51.574] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:52:51.574] *                          invariant  (ALL OK)
+[2026-08-18 13:52:51.607] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-18 13:52:51.607] *                          graph_start  (8 steps)
+[2026-08-18 13:52:51.616] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.616] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.616] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.616] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.616] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.616] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.876] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 13:52:51.876] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.876] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.876] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.876] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.876] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.876] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.876] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:52:51.876] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:52:51.876] pack_binding_ocaml         check_pre  (pass)
+[2026-08-18 13:52:51.878] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-18 13:53:01.704] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-18 13:53:01.962] pack_binding_ocaml         check_post  (pass)
+[2026-08-18 13:53:01.962] pack_binding_ocaml         done
+[2026-08-18 13:53:01.964] *                          graph_end  (8/8 completed)
+[2026-08-18 13:53:01.964] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:53:01.964] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:53:01.965] *                          view  (source (1 steps))
+[2026-08-18 13:53:01.965] *                          view  (lib (3 steps))
+[2026-08-18 13:53:01.965] *                          view  (probes (4 steps))
+[2026-08-18 13:53:01.965] *                          view  (binding_ocaml (4 steps))
+[2026-08-18 13:53:01.966] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:53:01.967] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:53:01.967] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:53:01.967] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:53:01.967] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 13:53:01.967] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-18 13:53:01.968] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 13:53:01.968] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 13:53:01.968] *                          invariant  (ALL OK)
+[2026-08-18 13:53:02.000] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 13:53:02.000] *                          graph_start  (7 steps)
+[2026-08-18 13:53:02.008] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.008] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.008] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.008] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.008] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.008] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.271] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 13:53:02.271] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.271] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.271] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.271] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.271] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 13:53:02.271] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 13:53:02.271] probe_binding_ocaml        check_pre  (pass)
+[2026-08-18 13:53:02.273] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-18 13:53:08.722] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-18 13:53:08.997] probe_binding_ocaml        check_post  (pass)
+[2026-08-18 13:53:08.997] probe_binding_ocaml        done
+[2026-08-18 13:53:08.999] *                          graph_end  (7/7 completed)
+[2026-08-18 13:53:08.999] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 13:53:08.999] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 13:53:08.999] *                          view  (source (1 steps))
+[2026-08-18 13:53:08.999] *                          view  (lib (3 steps))
+[2026-08-18 13:53:08.999] *                          view  (probes (4 steps))
+[2026-08-18 13:53:09.000] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 13:53:09.000] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 13:53:09.001] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 13:53:09.001] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:53:09.001] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:53:09.001] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:53:09.001] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 13:53:09.001] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 13:53:09.002] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 13:53:09.002] *                          invariant  (ALL OK)
+[2026-08-18 15:26:47.317] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 15:26:47.317] *                          graph_start  (7 steps)
+[2026-08-18 15:26:47.328] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.328] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.329] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.329] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.329] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.329] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.608] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.608] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.611] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.611] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.612] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.612] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.612] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.612] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.612] *                          graph_end  (7/7 completed)
+[2026-08-18 15:26:47.612] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 15:26:47.612] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 15:26:47.613] *                          view  (source (1 steps))
+[2026-08-18 15:26:47.613] *                          view  (lib (3 steps))
+[2026-08-18 15:26:47.613] *                          view  (probes (4 steps))
+[2026-08-18 15:26:47.613] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 15:26:47.615] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 15:26:47.615] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 15:26:47.615] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 15:26:47.616] *                          invariant  (ALL OK)
+[2026-08-18 15:26:47.655] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-18 15:26:47.655] *                          graph_start  (8 steps)
+[2026-08-18 15:26:47.664] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.664] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.664] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.664] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.665] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.665] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.944] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 15:26:47.945] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.945] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.945] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.945] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.945] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.945] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.945] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:47.945] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 15:26:47.945] pack_binding_ocaml         check_pre  (pass)
+[2026-08-18 15:26:47.947] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-18 15:26:58.786] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-18 15:26:59.059] pack_binding_ocaml         check_post  (pass)
+[2026-08-18 15:26:59.059] pack_binding_ocaml         done
+[2026-08-18 15:26:59.062] *                          graph_end  (8/8 completed)
+[2026-08-18 15:26:59.062] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 15:26:59.062] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 15:26:59.062] *                          view  (source (1 steps))
+[2026-08-18 15:26:59.062] *                          view  (lib (3 steps))
+[2026-08-18 15:26:59.062] *                          view  (probes (4 steps))
+[2026-08-18 15:26:59.062] *                          view  (binding_ocaml (4 steps))
+[2026-08-18 15:26:59.063] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 15:26:59.064] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 15:26:59.064] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 15:26:59.064] *                          invariant  (ALL OK)
+[2026-08-18 15:26:59.098] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 15:26:59.098] *                          graph_start  (7 steps)
+[2026-08-18 15:26:59.106] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.106] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.107] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.107] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.107] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.107] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.382] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 15:26:59.386] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.386] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.386] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.386] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.386] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 15:26:59.386] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 15:26:59.386] probe_binding_ocaml        check_pre  (pass)
+[2026-08-18 15:26:59.388] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-18 15:27:06.191] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-18 15:27:06.480] probe_binding_ocaml        check_post  (pass)
+[2026-08-18 15:27:06.480] probe_binding_ocaml        done
+[2026-08-18 15:27:06.482] *                          graph_end  (7/7 completed)
+[2026-08-18 15:27:06.483] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 15:27:06.483] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 15:27:06.483] *                          view  (source (1 steps))
+[2026-08-18 15:27:06.483] *                          view  (lib (3 steps))
+[2026-08-18 15:27:06.483] *                          view  (probes (4 steps))
+[2026-08-18 15:27:06.483] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 15:27:06.483] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 15:27:06.484] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 15:27:06.485] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 15:27:06.485] *                          invariant  (ALL OK)
+[2026-08-18 18:32:32.149] *                          variant_start  (source-fetched-1.14_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 18:32:32.149] *                          graph_start  (7 steps)
+[2026-08-18 18:32:32.161] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.162] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.162] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.162] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.162] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.162] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.483] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.483] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.484] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.484] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.484] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.484] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.484] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.484] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.484] *                          graph_end  (7/7 completed)
+[2026-08-18 18:32:32.484] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 18:32:32.485] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 18:32:32.485] *                          view  (source (1 steps))
+[2026-08-18 18:32:32.485] *                          view  (lib (3 steps))
+[2026-08-18 18:32:32.485] *                          view  (probes (4 steps))
+[2026-08-18 18:32:32.485] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 18:32:32.487] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 18:32:32.488] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 18:32:32.488] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 18:32:32.488] *                          invariant  (ALL OK)
+[2026-08-18 18:32:32.528] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-built-dev)
+[2026-08-18 18:32:32.528] *                          graph_start  (8 steps)
+[2026-08-18 18:32:32.538] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.538] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.538] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.538] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.538] build_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.538] build_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.823] pack_binding_ocaml         warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 18:32:32.827] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.827] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.827] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.827] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.827] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.827] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.828] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:32.828] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 18:32:32.828] pack_binding_ocaml         check_pre  (pass)
+[2026-08-18 18:32:32.830] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_source-fetched-master_lib-fetched_ocaml_binding-built-dev.ok)
+[2026-08-18 18:32:44.450] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-18 18:32:44.731] pack_binding_ocaml         check_post  (pass)
+[2026-08-18 18:32:44.731] pack_binding_ocaml         done
+[2026-08-18 18:32:44.733] *                          graph_end  (8/8 completed)
+[2026-08-18 18:32:44.733] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 18:32:44.733] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 18:32:44.733] *                          view  (source (1 steps))
+[2026-08-18 18:32:44.733] *                          view  (lib (3 steps))
+[2026-08-18 18:32:44.733] *                          view  (probes (4 steps))
+[2026-08-18 18:32:44.733] *                          view  (binding_ocaml (4 steps))
+[2026-08-18 18:32:44.734] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 18:32:44.735] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 18:32:44.735] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 18:32:44.735] *                          invariant  (binding_ocaml.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 18:32:44.735] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 18:32:44.735] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-18 18:32:44.735] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-18 18:32:44.736] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-18 18:32:44.736] *                          invariant  (ALL OK)
+[2026-08-18 18:32:44.770] *                          variant_start  (source-fetched-master_lib-fetched_ocaml_binding-fetched)
+[2026-08-18 18:32:44.770] *                          graph_start  (7 steps)
+[2026-08-18 18:32:44.779] fetch_source               warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:44.779] fetch_source               skip  (verdict marker (prior success))
+[2026-08-18 18:32:44.780] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:44.780] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:44.780] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:44.780] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-18 18:32:45.058] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-18 18:32:45.062] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:45.062] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-18 18:32:45.062] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:45.062] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-18 18:32:45.062] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-18 18:32:45.062] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-18 18:32:45.062] probe_binding_ocaml        check_pre  (pass)
+[2026-08-18 18:32:45.065] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_source-fetched-master_lib-fetched_ocaml_binding-fetched.log
+exit $RC)
+[2026-08-18 18:32:52.060] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-18 18:32:52.361] probe_binding_ocaml        check_post  (pass)
+[2026-08-18 18:32:52.361] probe_binding_ocaml        done
+[2026-08-18 18:32:52.363] *                          graph_end  (7/7 completed)
+[2026-08-18 18:32:52.363] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-18 18:32:52.363] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-18 18:32:52.363] *                          view  (source (1 steps))
+[2026-08-18 18:32:52.363] *                          view  (lib (3 steps))
+[2026-08-18 18:32:52.363] *                          view  (probes (4 steps))
+[2026-08-18 18:32:52.364] *                          view  (binding_ocaml (3 steps))
+[2026-08-18 18:32:52.364] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-18 18:32:52.365] *                          index  (_out/canary/projects/index.html)
+[2026-08-18 18:32:52.365] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-18 18:32:52.365] *                          invariant  (ALL OK)
+[2026-08-19 01:52:56.416] *                          variant_start  (lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master)
+[2026-08-19 01:52:56.416] *                          graph_start  (8 steps)
+[2026-08-19 01:52:56.416] fetch_lib                  check_pre  (pass)
+[2026-08-19 01:52:56.418] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:52:56.808] fetch_lib                  detect  (ok, output present)
+[2026-08-19 01:52:56.808] fetch_lib                  check_post  (pass)
+[2026-08-19 01:52:56.808] fetch_lib                  done
+[2026-08-19 01:52:56.810] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:52:56.815] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/source_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:52:57.212] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:52:57.212] fetch_binding_source_ocaml  check_post  (FAIL)
+[2026-08-19 01:52:57.212] fetch_binding_source_ocaml  failed  (postcondition failed)
+[2026-08-19 01:52:57.212] probe_lib                  check_pre  (pass)
+[2026-08-19 01:52:57.214] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log
+test "$COUNT" -gt 0)
+[2026-08-19 01:52:57.264] probe_lib                  detect  (ok, output present)
+[2026-08-19 01:52:57.264] probe_lib                  check_post  (pass)
+[2026-08-19 01:52:57.264] probe_lib                  done
+[2026-08-19 01:52:57.266] probe_lib_inspect          check_pre  (pass)
+[2026-08-19 01:52:57.268] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-08-19 01:52:57.322] probe_lib_inspect          detect  (ok, output present)
+[2026-08-19 01:52:57.322] probe_lib_inspect          check_post  (pass)
+[2026-08-19 01:52:57.322] probe_lib_inspect          done
+[2026-08-19 01:52:57.324] *                          graph_end  (3/8 completed)
+[2026-08-19 01:52:57.324] fetch_binding_source_ocaml  failed
+[2026-08-19 01:52:57.324] build_binding_ocaml        skipped
+[2026-08-19 01:52:57.324] pack_binding_ocaml         skipped
+[2026-08-19 01:52:57.324] probe_binding_ocaml        skipped
+[2026-08-19 01:52:57.324] probe_binding_ocaml_inspect  skipped
+[2026-08-19 01:52:57.324] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:52:57.324] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:52:57.324] *                          view  (lib (3 steps))
+[2026-08-19 01:52:57.325] *                          view  (probes (4 steps))
+[2026-08-19 01:52:57.325] *                          view  (binding_ocaml (4 steps))
+[2026-08-19 01:52:57.327] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:52:57.331] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:52:57.331] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:52:57.331] !                          invariant  (SOME FAILED)
+[2026-08-19 01:52:57.373] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14)
+[2026-08-19 01:52:57.373] *                          graph_start  (7 steps)
+[2026-08-19 01:52:57.373] fetch_lib                  check_pre  (pass)
+[2026-08-19 01:52:57.376] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok)
+[2026-08-19 01:52:57.747] fetch_lib                  detect  (ok, output present)
+[2026-08-19 01:52:57.747] fetch_lib                  check_post  (pass)
+[2026-08-19 01:52:57.747] fetch_lib                  done
+[2026-08-19 01:52:57.750] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:52:57.754] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin release-1.14 && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-release-1.14 ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-release-1.14 release-1.14; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-release-1.14 checkout -q -f release-1.14 && \
+echo '/home/red/code/contrib/zarith-all/zarith-release-1.14' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/source_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok)
+[2026-08-19 01:52:58.036] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:52:58.036] fetch_binding_source_ocaml  check_post  (FAIL)
+[2026-08-19 01:52:58.036] fetch_binding_source_ocaml  failed  (postcondition failed)
+[2026-08-19 01:52:58.036] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:52:58.038] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok)
+[2026-08-19 01:52:59.089] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:52:59.089] fetch_binding_ocaml        check_post  (pass)
+[2026-08-19 01:52:59.089] fetch_binding_ocaml        done
+[2026-08-19 01:52:59.091] probe_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:52:59.093] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+exit $RC)
+[2026-08-19 01:52:59.956] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:53:00.223] probe_binding_ocaml        check_post  (pass)
+[2026-08-19 01:53:00.223] probe_binding_ocaml        done
+[2026-08-19 01:53:00.225] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-19 01:53:00.227] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-08-19 01:53:00.278] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-19 01:53:00.278] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-19 01:53:00.278] probe_binding_ocaml_inspect  done
+[2026-08-19 01:53:00.280] probe_lib                  check_pre  (pass)
+[2026-08-19 01:53:00.282] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+test "$COUNT" -gt 0)
+[2026-08-19 01:53:00.330] probe_lib                  detect  (ok, output present)
+[2026-08-19 01:53:00.330] probe_lib                  check_post  (pass)
+[2026-08-19 01:53:00.330] probe_lib                  done
+[2026-08-19 01:53:00.332] probe_lib_inspect          check_pre  (pass)
+[2026-08-19 01:53:00.334] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.json)
+[2026-08-19 01:53:00.389] probe_lib_inspect          detect  (ok, output present)
+[2026-08-19 01:53:00.389] probe_lib_inspect          check_post  (pass)
+[2026-08-19 01:53:00.389] probe_lib_inspect          done
+[2026-08-19 01:53:00.391] *                          graph_end  (6/7 completed)
+[2026-08-19 01:53:00.391] fetch_binding_source_ocaml  failed
+[2026-08-19 01:53:00.391] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:53:00.391] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:53:00.392] *                          view  (lib (3 steps))
+[2026-08-19 01:53:00.392] *                          view  (probes (4 steps))
+[2026-08-19 01:53:00.392] *                          view  (binding_ocaml (3 steps))
+[2026-08-19 01:53:00.393] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:53:00.393] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:53:00.393] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:53:00.393] !                          invariant  (SOME FAILED)
+[2026-08-19 01:53:00.428] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master)
+[2026-08-19 01:53:00.428] *                          graph_start  (7 steps)
+[2026-08-19 01:53:00.428] fetch_lib                  check_pre  (pass)
+[2026-08-19 01:53:00.430] fetch_lib                  cmd  (sudo apt-get install -y libgmp-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_lib/lib_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:53:00.784] fetch_lib                  detect  (ok, output present)
+[2026-08-19 01:53:00.784] fetch_lib                  check_post  (pass)
+[2026-08-19 01:53:00.784] fetch_lib                  done
+[2026-08-19 01:53:00.786] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:53:00.789] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/source_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:53:01.112] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:53:01.112] fetch_binding_source_ocaml  check_post  (FAIL)
+[2026-08-19 01:53:01.112] fetch_binding_source_ocaml  failed  (postcondition failed)
+[2026-08-19 01:53:01.112] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:53:01.114] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zarith -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding/ocaml/binding_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:53:02.084] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:53:02.084] fetch_binding_ocaml        check_post  (pass)
+[2026-08-19 01:53:02.084] fetch_binding_ocaml        done
+[2026-08-19 01:53:02.086] probe_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:53:02.088] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.log
+exit $RC)
+[2026-08-19 01:53:02.931] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:53:03.198] probe_binding_ocaml        check_post  (pass)
+[2026-08-19 01:53:03.198] probe_binding_ocaml        done
+[2026-08-19 01:53:03.200] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-19 01:53:03.202] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.json)
+[2026-08-19 01:53:03.253] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-19 01:53:03.253] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-19 01:53:03.253] probe_binding_ocaml_inspect  done
+[2026-08-19 01:53:03.256] probe_lib                  check_pre  (pass)
+[2026-08-19 01:53:03.258] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c '__gmp' || echo 0)
+printf '__gmp symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.log
+test "$COUNT" -gt 0)
+[2026-08-19 01:53:03.311] probe_lib                  detect  (ok, output present)
+[2026-08-19 01:53:03.311] probe_lib                  check_post  (pass)
+[2026-08-19 01:53:03.311] probe_lib                  done
+[2026-08-19 01:53:03.313] probe_lib_inspect          check_pre  (pass)
+[2026-08-19 01:53:03.315] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '__gmpn_add_n,__gmpn_divexact,__gmpn_gcd,__gmpn_gcdext,__gmpn_get_str,__gmpn_hamdist,__gmpn_lshift,__gmpn_mul,__gmpn_mul_1,__gmpn_mul_n,__gmpn_perfect_square_p,__gmpn_popcount,__gmpn_rshift,__gmpn_scan1,__gmpn_set_str,__gmpn_sqr,__gmpn_sqrtrem,__gmpn_sub_n,__gmpn_tdiv_qr,__gmpz_2fac_ui,__gmpz_bin_ui,__gmpz_clear,__gmpz_congruent_p,__gmpz_divisible_p,__gmpz_fac_ui,__gmpz_fib_ui,__gmpz_init,__gmpz_invert,__gmpz_jacobi,__gmpz_lucnum_ui,__gmpz_mfac_uiui,__gmpz_nextprime,__gmpz_perfect_power_p,__gmpz_pow_ui,__gmpz_powm,__gmpz_powm_sec,__gmpz_primorial_ui,__gmpz_probab_prime_p,__gmpz_realloc2,__gmpz_remove,__gmpz_root,__gmpz_rootrem' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_lib/inspect_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.json)
+[2026-08-19 01:53:03.369] probe_lib_inspect          detect  (ok, output present)
+[2026-08-19 01:53:03.370] probe_lib_inspect          check_post  (pass)
+[2026-08-19 01:53:03.370] probe_lib_inspect          done
+[2026-08-19 01:53:03.372] *                          graph_end  (6/7 completed)
+[2026-08-19 01:53:03.372] fetch_binding_source_ocaml  failed
+[2026-08-19 01:53:03.372] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:53:03.372] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:53:03.372] *                          view  (lib (3 steps))
+[2026-08-19 01:53:03.372] *                          view  (probes (4 steps))
+[2026-08-19 01:53:03.372] *                          view  (binding_ocaml (3 steps))
+[2026-08-19 01:53:03.374] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:53:03.374] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:53:03.374] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:53:03.374] !                          invariant  (SOME FAILED)
+[2026-08-19 01:54:00.820] *                          variant_start  (lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master)
+[2026-08-19 01:54:00.820] *                          graph_start  (8 steps)
+[2026-08-19 01:54:00.820] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:00.820] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:00.820] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:00.820] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:00.820] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:00.820] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-19 01:54:00.820] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:54:00.824] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/binding_source_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:54:01.183] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:54:01.183] fetch_binding_source_ocaml  check_post  (pass)
+[2026-08-19 01:54:01.183] fetch_binding_source_ocaml  done
+[2026-08-19 01:54:01.187] build_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:54:01.189] build_binding_ocaml        cmd  (eval $(opam env) && rm -rf /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master && cp -r /home/red/code/contrib/zarith-all/zarith-master /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master && cd /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master && ./configure && make && cd "$OLDPWD" && STUB=$(ls /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master/*.a 2>/dev/null | head -1)
+test -n "$STUB"
+python3 canary/scripts/inspect_binding.py --kind stub --path "$STUB" --prefix '__gmp' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json && mkdir -p /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib
+LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libgmp.so* /usr/lib*/libgmp.so* 2>/dev/null \
+        "$(brew --prefix gmp 2>/dev/null)/lib/libgmp.dylib" 2>/dev/null \
+        | head -1)
+test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
+nm -D "$LIB_NATIVE" 2>/dev/null \
+  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes '__gmpz_,__gmpq_,__gmpf_,__gmpn_,__gmp_' --watchlist '' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/../../build_lib/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/build_binding/ocaml/build_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:54:03.213] build_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:54:03.213] build_binding_ocaml        check_post  (pass)
+[2026-08-19 01:54:03.213] build_binding_ocaml        done
+[2026-08-19 01:54:03.215] pack_binding_ocaml         check_pre  (pass)
+[2026-08-19 01:54:03.218] pack_binding_ocaml         cmd  (eval $(opam env)
+printf 'opam-version: "2.0"\n' > "$(pwd)/canary/templates/opam-local-repo/repo"
+OPAMVAR_CANARY_ZARITH_SRC="/home/red/code/contrib/zarith-all/zarith-master" opam config subst canary/templates/opam-local-repo/packages/zarith/zarith-no-conf.dev/opam
+opam repo remove canary-local 2>/dev/null || true
+opam repo add canary-local "file://$(pwd)/canary/templates/opam-local-repo" --rank=1
+opam update canary-local
+opam remove -y zarith || true
+opam install -y zarith-no-conf --verbose --keep-build-dir --assume-depexts \
+  && echo 'ok' > /home/red/code/research/tola/_out/canary/projects/zarith/pack_binding/ocaml/pack_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:54:15.731] pack_binding_ocaml         detect  (ok, output present)
+[2026-08-19 01:54:15.992] pack_binding_ocaml         check_post  (pass)
+[2026-08-19 01:54:15.992] pack_binding_ocaml         done
+[2026-08-19 01:54:15.994] probe_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:54:15.996] probe_binding_ocaml        cmd  (eval $(opam env) && export LD_LIBRARY_PATH=/home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master: && ocamlfind ocamlopt -I /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/../../src_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master/zarith.cmxa canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log 2>&1 && cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.log)
+[2026-08-19 01:54:16.100] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:54:16.101] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-19 01:54:16.102] probe_binding_ocaml        compat_note  (c1 cmp_symbol: consumer requires 42 of the provider's 620 symbols (e.g. __gmpn_add_n in use; __gmp_0 in the unused remainder) — POSSIBLY OUT-OF-DATE (a small consumer surface may be by design or lag))
+[2026-08-19 01:54:16.102] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-19 01:54:16.102] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-19 01:54:16.102] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-19 01:54:16.102] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-08-19 01:54:16.104] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-19 01:54:16.105] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+PKG_DIR=$(ocamlfind query 'zarith' 2>/dev/null)
+test -n "$PKG_DIR"
+{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
+    [ -f "$f" ] && ocamlobjinfo "$f"
+  done
+} | python3 canary/scripts/inspect_ocaml.py --path 'zarith' --watchlist 'Z,Q,Big_int_Z,Zarith_version' \
+  > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/inspect_lib-fetched_ocaml_binding-built-dev_binding_source_ocaml-fetched-master.json)
+[2026-08-19 01:54:16.156] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-19 01:54:16.156] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-19 01:54:16.156] probe_binding_ocaml_inspect  done
+[2026-08-19 01:54:16.158] *                          graph_end  (8/8 completed)
+[2026-08-19 01:54:16.158] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:54:16.158] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:54:16.158] *                          view  (lib (3 steps))
+[2026-08-19 01:54:16.158] *                          view  (probes (4 steps))
+[2026-08-19 01:54:16.159] *                          view  (binding_ocaml (4 steps))
+[2026-08-19 01:54:16.160] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:54:16.161] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:54:16.161] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:54:16.161] !                          invariant  (SOME FAILED)
+[2026-08-19 01:54:16.198] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14)
+[2026-08-19 01:54:16.198] *                          graph_start  (7 steps)
+[2026-08-19 01:54:16.198] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:16.198] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:16.198] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:16.198] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-19 01:54:16.457] probe_binding_ocaml        warm_check_post  (FAIL — the postcondition no longer holds; re-running)
+[2026-08-19 01:54:16.457] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:16.457] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-19 01:54:16.457] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:16.457] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:16.457] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:16.457] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-19 01:54:16.457] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:54:16.461] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin release-1.14 && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-release-1.14 ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-release-1.14 release-1.14; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-release-1.14 checkout -q -f release-1.14 && \
+echo '/home/red/code/contrib/zarith-all/zarith-release-1.14' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/binding_source_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.ok)
+[2026-08-19 01:54:16.799] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:54:16.799] fetch_binding_source_ocaml  check_post  (pass)
+[2026-08-19 01:54:16.799] fetch_binding_source_ocaml  done
+[2026-08-19 01:54:16.803] probe_binding_ocaml        check_pre  (pass)
+[2026-08-19 01:54:16.804] probe_binding_ocaml        cmd  (eval $(opam env)
+INSTALLED=$(opam list zarith --installed --short --columns=version 2>/dev/null)
+test "$INSTALLED" = "1.14" || eval $(opam env) && opam install zarith.1.14 -y --assume-depexts
+eval $(opam env)
+ocamlfind ocamlopt -package zarith -linkpkg canary/examples/zarith/zarith_example.ml -o /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example > /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/zarith_example >> /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log 2>&1
+RC=$?
+cat /home/red/code/research/tola/_out/canary/projects/zarith/probe_binding/ocaml/probe_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-1.14.log
+exit $RC)
+[2026-08-19 01:54:22.554] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-19 01:54:22.834] probe_binding_ocaml        check_post  (pass)
+[2026-08-19 01:54:22.834] probe_binding_ocaml        done
+[2026-08-19 01:54:22.836] *                          graph_end  (7/7 completed)
+[2026-08-19 01:54:22.836] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:54:22.837] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:54:22.837] *                          view  (lib (3 steps))
+[2026-08-19 01:54:22.837] *                          view  (probes (4 steps))
+[2026-08-19 01:54:22.837] *                          view  (binding_ocaml (3 steps))
+[2026-08-19 01:54:22.838] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:54:22.839] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:54:22.839] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:54:22.839] !                          invariant  (SOME FAILED)
+[2026-08-19 01:54:22.874] *                          variant_start  (lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master)
+[2026-08-19 01:54:22.874] *                          graph_start  (7 steps)
+[2026-08-19 01:54:22.875] fetch_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:22.875] fetch_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:22.875] fetch_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:22.875] fetch_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-19 01:54:23.141] probe_binding_ocaml        warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:23.141] probe_binding_ocaml        skip  (verdict marker (prior success))
+[2026-08-19 01:54:23.141] probe_binding_ocaml_inspect  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:23.141] probe_binding_ocaml_inspect  skip  (verdict marker (prior success))
+[2026-08-19 01:54:23.141] probe_lib                  warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:23.141] probe_lib                  skip  (verdict marker (prior success))
+[2026-08-19 01:54:23.141] probe_lib_inspect          warm_gate  (marker + fingerprint + check_post passed)
+[2026-08-19 01:54:23.141] probe_lib_inspect          skip  (verdict marker (prior success))
+[2026-08-19 01:54:23.141] fetch_binding_source_ocaml  check_pre  (pass)
+[2026-08-19 01:54:23.145] fetch_binding_source_ocaml  cmd  (if [ ! -d /home/red/code/contrib/zarith-all/zarith/.git ]; then git clone https://github.com/ocaml/Zarith.git /home/red/code/contrib/zarith-all/zarith; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith fetch -q origin master && \
+if [ ! -d /home/red/code/contrib/zarith-all/zarith-master ]; then git -C /home/red/code/contrib/zarith-all/zarith worktree add -f /home/red/code/contrib/zarith-all/zarith-master master; fi && \
+git -C /home/red/code/contrib/zarith-all/zarith-master checkout -q -f master && \
+echo '/home/red/code/contrib/zarith-all/zarith-master' > /home/red/code/research/tola/_out/canary/projects/zarith/fetch_binding_source/ocaml/binding_source_lib-fetched_ocaml_binding-fetched_binding_source_ocaml-fetched-master.ok)
+[2026-08-19 01:54:23.458] fetch_binding_source_ocaml  detect  (ok, output present)
+[2026-08-19 01:54:23.458] fetch_binding_source_ocaml  check_post  (pass)
+[2026-08-19 01:54:23.458] fetch_binding_source_ocaml  done
+[2026-08-19 01:54:23.462] *                          graph_end  (7/7 completed)
+[2026-08-19 01:54:23.463] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/all.mmd)
+[2026-08-19 01:54:23.463] *                          diagram  (_out/canary/projects/zarith/-run/diagrams/full.mmd)
+[2026-08-19 01:54:23.463] *                          view  (lib (3 steps))
+[2026-08-19 01:54:23.463] *                          view  (probes (4 steps))
+[2026-08-19 01:54:23.463] *                          view  (binding_ocaml (3 steps))
+[2026-08-19 01:54:23.464] *                          html  (_out/canary/projects/zarith/-run/result.html)
+[2026-08-19 01:54:23.465] *                          index  (_out/canary/projects/index.html)
+[2026-08-19 01:54:23.465] !                          invariant  (full.mmd: missing [2])
+[2026-08-19 01:54:23.465] !                          invariant  (SOME FAILED)

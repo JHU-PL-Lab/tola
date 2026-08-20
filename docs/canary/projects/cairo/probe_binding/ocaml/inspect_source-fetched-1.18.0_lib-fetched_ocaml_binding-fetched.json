@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "imports": 243,
+    "modules": 1
+  },
+  "kind": "ocaml",
+  "modules": [
+    "Cairo"
+  ],
+  "path": "cairo2",
+  "watchlist": {
+    "missing": [],
+    "present": [
+      "Cairo"
+    ]
+  }
+}

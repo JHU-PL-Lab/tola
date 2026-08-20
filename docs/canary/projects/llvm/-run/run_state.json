@@ -5,7 +5,7 @@
       "tag": "fetch_source",
       "output_tag": "fetch_source",
       "action": "fetch_source",
-      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched",
+      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched-arbipher_lib-fetched_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -13,7 +13,7 @@
       "tag": "fetch_lib",
       "output_tag": "fetch_lib",
       "action": "fetch_lib",
-      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched",
+      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched-arbipher_lib-fetched_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -21,7 +21,7 @@
       "tag": "fetch_binding_ocaml",
       "output_tag": "fetch_binding_ocaml",
       "action": "fetch_binding_ocaml",
-      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched",
+      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched-arbipher_lib-fetched_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -29,7 +29,7 @@
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
       "action": "probe_binding_ocaml",
-      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched",
+      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched-arbipher_lib-fetched_python_binding-fetched",
       "expect": "compat_derived",
       "status": "xfail"
     },
@@ -37,7 +37,7 @@
       "tag": "probe_lib",
       "output_tag": "probe_lib",
       "action": "probe_lib",
-      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched_lib-fetched_python_binding-fetched",
+      "variant_id": "ocaml_binding-fetched-19-shared_source-fetched-arbipher_lib-fetched_python_binding-fetched",
       "expect": "success",
       "status": "done"
     }

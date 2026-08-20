@@ -260,3 +260,73 @@ check fail once on purpose.
   protected binaries, and Mach-O uses `LC_ID_DYLIB`/`@rpath` instead of
   soname/RPATH. The vendored route needs its own measurement there before
   being claimed to work.
+
+---
+
+## The zlib pair, measured (2026-08-20) — and a live symbol-versioning gate
+
+The zlib landing took conda-forge's `libzlib` 1.3.2 as its latest point
+against apt's 1.3. Two things came out of measuring it that are worth
+more than the landing itself.
+
+### 1. The package split is real: `zlib` ≠ `libzlib`
+
+conda-forge splits the library across two packages, and only one of them
+has the runtime object:
+
+| package | ships |
+| --- | --- |
+| `libzlib-1.3.2` | `lib/libz.so.1.3.2` + the `libz.so.1` symlink |
+| `zlib-1.3.2` | `include/zlib.h`, `include/zconf.h`, `lib/libz.so`, `lib/libz.a`, `lib/pkgconfig/zlib.pc` |
+
+A world that only repoints the LOADER (our Vendored lib axis) needs
+`libzlib`. A world that also COMPILES against the vendored version needs
+`zlib` on top — headers, the link-time `.so` symlink, and the `.pc` file.
+Declaring the wrong one gives a prepared directory that passes
+`is_prepared` and cannot answer a `dlopen`. Check the `lib_glob` names the
+runtime object, not a symlink into a package you did not fetch.
+
+### 2. Same soname, and the loader still refuses — symbol versioning, live
+
+Both libraries carry `SONAME libz.so.1`, so by the soname rule the pair is
+point-at-it: `LD_LIBRARY_PATH` swaps them with no rebuild. The exported
+surface is purely additive — 102 symbols at 1.3, 111 at 1.3.2, none
+removed:
+
+```
+new in 1.3.2:  deflateUsed
+               compress_z  compress2_z  compressBound_z
+               uncompress_z  uncompress2_z  deflateBound_z
+               + two ELF version nodes: ZLIB_1.3.1.2, ZLIB_1.3.2
+```
+
+Those version nodes are the second gate. A consumer linked against 1.3.2
+that calls one of the new symbols records the requirement in its own
+`.gnu.version_r`, and the loader enforces it by NAME — measured:
+
+```
+$ readelf -V ./fwd | grep -A1 'File: libz.so.1'
+  0x0030: Version: 1  File: libz.so.1  Cnt: 1
+  0x0040:   Name: ZLIB_1.3.1.2
+
+$ LD_LIBRARY_PATH=<vendored 1.3.2> ./fwd
+linked ok, deflateUsed at 0x7ca3dbcb6c80
+
+$ LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu ./fwd      # apt 1.3
+./fwd: /usr/lib/x86_64-linux-gnu/libz.so.1: version `ZLIB_1.3.1.2' not
+found (required by ./fwd)                                    # exit 1
+```
+
+Same soname, both libraries load-compatible by name, and the run still
+fails — at LOAD time, loudly, before `main`. This is the specimen the
+soname note predicted and could not point at. Note what decides it: not
+the version string, not the soname, but whether the CONSUMER's recorded
+version requirement exists in the provider's `.gnu.version_d`.
+
+**What it means for the project.** `camlzip` calls none of the seven new
+symbols (they are brand new), so both zlib worlds are green today — which
+is the honest result, not a missing test: the pair IS compatible for this
+consumer. But zlib now carries a *constructible* forward mismatch that
+needs no fork and no mutation: a probe calling `deflateUsed` xfails
+against apt's 1.3 and passes against 1.3.2. That is the cheapest real
+forward cell in the registry, and it is a naturally occurring one.

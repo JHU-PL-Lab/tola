@@ -1,0 +1,12 @@
+{
+  "project": "zlib",
+  "version": "scenario",
+  "ref": "",
+  "source": "prebuilt",
+  "distro": "linux",
+  "system_pm": "apt",
+  "opam_switch": "default",
+  "ocaml_version": "5.4.1",
+  "timestamp": "2026-08-20 02:19:24.144",
+  "actions": ["fetch_source", "fetch_lib", "fetch_binding_ocaml", "probe_binding_ocaml", "probe_binding_ocaml_inspect", "probe_lib", "probe_lib_inspect"]
+}
