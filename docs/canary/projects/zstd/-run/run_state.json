@@ -1,0 +1,62 @@
+{
+  "project_name": "zstd",
+  "steps": [
+    {
+      "tag": "fetch_source",
+      "output_tag": "fetch_source",
+      "action": "fetch_source",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "fetch_lib",
+      "output_tag": "fetch_lib",
+      "action": "fetch_lib",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "fetch_binding_ocaml",
+      "output_tag": "fetch_binding_ocaml",
+      "action": "fetch_binding_ocaml",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_ocaml",
+      "output_tag": "probe_binding_ocaml",
+      "action": "probe_binding_ocaml",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_binding_ocaml_inspect",
+      "output_tag": "probe_binding_ocaml",
+      "action": "probe_binding_ocaml",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib",
+      "output_tag": "probe_lib",
+      "action": "probe_lib",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    },
+    {
+      "tag": "probe_lib_inspect",
+      "output_tag": "probe_lib",
+      "action": "probe_lib",
+      "variant_id": "source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched",
+      "expect": "success",
+      "status": "done"
+    }
+  ],
+  "artifact_names": []
+}

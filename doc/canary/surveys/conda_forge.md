@@ -330,3 +330,73 @@ consumer. But zlib now carries a *constructible* forward mismatch that
 needs no fork and no mutation: a probe calling `deflateUsed` xfails
 against apt's 1.3 and passes against 1.3.2. That is the cheapest real
 forward cell in the registry, and it is a naturally occurring one.
+
+---
+
+## The zstd pair, measured (2026-08-20) — two contrasts with zlib
+
+zstd landed the same day as zlib, in the same shape (apt 1.5.5 vs
+conda-forge 1.5.7, same soname `libzstd.so.1`, closure = libpthread +
+libc). Two things it does differently are worth keeping.
+
+### 1. No symbol versioning — so "same soname" means something different
+
+zlib's pair is same-soname AND versioned, so its loader has a second gate
+(a consumer requiring `ZLIB_1.3.1.2` is refused by 1.3). zstd carries
+**zero version nodes** on either side:
+
+```
+readelf -V libzstd.so.1.5.5   → no ZSTD_* version definitions
+readelf -V libzstd.so.1.5.7   → no ZSTD_* version definitions
+```
+
+So for zstd the soname is the only load-time gate, and it matches. A
+consumer built against 1.5.7 can call any symbol 1.5.5 also exports and
+will load fine; one calling a 1.5.7-only symbol fails at LINK time
+instead, never at load. Same three-word description ("same soname, purely
+additive") and a materially different failure mode — which is the point:
+same-soname is not a property, it is the *absence* of a second gate that
+may or may not exist.
+
+### 2. Symbol COUNTS are packager policy, not API
+
+The headline number from the two builds:
+
+| build | total exported | `ZSTD_*` | removed vs the other |
+| --- | --- | --- | --- |
+| apt (Debian) 1.5.5 | 185 | 173 | none |
+| conda-forge 1.5.7 | 598 | 292 | none |
+
+A 3× difference for the same library line with **nothing removed in
+either direction**. The extra symbols are zstd's internals —
+`ZSTD_XXH32*`/`ZSTD_XXH64*`, `ZSTD_buildCTable`, `ZSTD_CCtx_trace`,
+plus whole families (`FSE_*`, `COVER_*`, `ERR_*`) that never appear in
+Debian's build at all. Debian applies a visibility policy; conda-forge
+does not.
+
+Canary's native probe prints `<prefix> symbols exported: N`, so this
+lands directly in the run output: `ZSTD_ symbols exported: 177` in the
+fetched world, `297` in the vendored one. **That delta is not a finding.**
+It says nothing about API compatibility, and a project whose lib pair
+spans two packagers will always show one. The check that means something
+is the named watchlist (7/7 in both worlds here), which is exactly what
+it exists for — a reminder worth having in writing before someone reads a
+count delta as drift.
+
+### 3. The binding can be the better witness
+
+`Zstd.version ()` is a ctypes call to `ZSTD_versionNumber()` in the
+*loaded* library, so the probe reports the answering library's own
+opinion of what it is, next to the loader's opinion of which file it
+mapped:
+
+```
+fetched:   zstd version: 1.5.5   zstd resolved: /usr/lib/.../libzstd.so.1.5.5
+vendored:  zstd version: 1.5.7   zstd resolved: <prebuilt>/lib/libzstd.so.1.5.7
+```
+
+Two independent witnesses that can disagree — a stale file at the
+expected path, or a header/library skew — and when they agree the world
+is pinned twice. zlib gets only the path, because camlzip exposes no
+`zlibVersion()`. When a binding offers a runtime version accessor, use
+it; when it does not, `/proc/self/maps` always works.

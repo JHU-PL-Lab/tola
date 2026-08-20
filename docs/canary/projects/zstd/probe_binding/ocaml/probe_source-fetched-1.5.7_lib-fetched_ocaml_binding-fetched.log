@@ -1,0 +1,4 @@
+zstd version: 1.5.5
+zstd resolved: /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.5
+zstd sizes: original=5290 compressed=253 restored=5290
+zstd ok

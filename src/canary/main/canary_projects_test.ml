@@ -573,6 +573,34 @@ let pm_gate_pin : Canary_project_test.pure_test =
                     tracks_lib = false })
           && Poly.equal Canary_project_zarith.decl.Canary_opam_binding.pm_gate
                (BD.Free_with_conf "conf-gmp")
+          (* zlib vs zstd: the pair that shows metadata alone is not
+             enough. Both bindings declare a BARE conf dependency, so
+             `opam show --field=depends` reads identical for the two. The
+             conf packages do not: conf-zlib.1's build is `pkg-config
+             zlib` (presence), conf-zstd.1.3.8's is
+             `pkg-config --atleast-version=1.3.8 libzstd` (a floor that
+             reaches the library). Declaring zstd Free_with_conf would be
+             convenient and false — this pin is what stops that. *)
+          && Poly.equal Canary_project_zlib.decl.Canary_opam_binding.pm_gate
+               (BD.Free_with_conf "conf-zlib")
+          && Poly.equal Canary_project_zstd.decl.Canary_opam_binding.pm_gate
+               (BD.Bounded_with_conf
+                  { conf = "conf-zstd";
+                    lower = Some "1.3.8";
+                    upper = None;
+                    tracks_lib = true })
+          (* …and the two therefore derive DIFFERENT freedoms, which is
+             the whole point of tracks_lib *)
+          && Poly.equal
+               (BD.combination_freedom_of
+                  Canary_project_zlib.decl.Canary_opam_binding.pm_gate)
+               BD.Any_version
+          && (match
+                BD.combination_freedom_of
+                  Canary_project_zstd.decl.Canary_opam_binding.pm_gate
+              with
+             | BD.Within_bound s -> String.is_substring s ~substring:"1.3.8"
+             | _ -> false)
           && Poly.equal
                (gate_of llvm oc Canary_mechanism.Cstubs)
                (Some
@@ -803,7 +831,7 @@ let registry_pin : Canary_project_test.pure_test =
       let names = List.map entries ~f:fst in
       let want_names =
         [ "sqlite"; "z3"; "llvm"; "tiny-full"; "zarith"; "cairo"; "libffi";
-          "zlib"; "ssl" ]
+          "zlib"; "zstd"; "ssl" ]
       in
       let sorted_names = List.sort names ~compare:String.compare in
       let sorted_want = List.sort want_names ~compare:String.compare in
@@ -2198,7 +2226,8 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
           [ ("zlib", Canary_project_zlib.decl, Canary_project_zlib.zlib_run);
             ("cairo", Canary_project_cairo.decl, Canary_project_cairo.cairo_run);
             ("libffi", Canary_project_libffi.decl,
-             Canary_project_libffi.libffi_run) ]
+             Canary_project_libffi.libffi_run);
+            ("zstd", Canary_project_zstd.decl, Canary_project_zstd.zstd_run) ]
         in
         let probe_cmd_of pr a =
           let spec =
@@ -2239,7 +2268,7 @@ let vendored_world_probe_pin : Canary_project_test.pure_test =
         (* the Vendored worlds must EXIST — otherwise every for_all above
            is vacuous and this passes on a lost axis (the same trap
            matrix.cell_stage_progression guards) *)
-        ok && !checked >= 3) }
+        ok && !checked >= 4) }
 
 (* The CELL STAGE progression (2026-08-19, user): in a staged world the
    build step names the tree it BUILT and only install/probe name the
@@ -2484,12 +2513,14 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            z3 +9) and the unread-source collapse (llvm −2, zarith −1).
            +2 on 2026-08-20: zlib lands with BOTH lib points at once
            (apt Fetched 1.3 + conda-forge Vendored 1.3.2), the first
-           project whose 2×2 lib axis needed no build. *)
-        List.length rows = 40
+           project whose 2×2 lib axis needed no build; +2 the same day for
+           zstd, the same shape over a gate that really bounds the lib. *)
+        List.length rows = 42
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 16
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 2
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
         && List.count rows ~f:(fun (n, _) -> String.equal n "zlib") = 2
+        && List.count rows ~f:(fun (n, _) -> String.equal n "zstd") = 2
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
         && web_identity_ok && staged_cells_ok

@@ -8,7 +8,7 @@
 
 ## 1. Live projects
 
-9 projects on the registry (`Canary_registry.all_projects`) — all plain
+10 projects on the registry (`Canary_registry.all_projects`) — all plain
 `project_run`s since 2026-08-12 (ssl's `Multi` entry retired with the
 store-pin migration); tiny1 rides the factory. Full matrix in
 [`coverage.md` §1](coverage.md). The `registry.entries_enumerate` pin
@@ -18,7 +18,7 @@ distinct scenarios.
 
 **Scenario counts** (the enumeration snapshot, re-verified 2026-08-19
 after the mismatch matrix; full policy unless noted). The total is
-pinned: `matrix.registry_shape` asserts 40 rows across the registry, so
+pinned: `matrix.registry_shape` asserts 42 rows across the registry, so
 this table cannot drift silently.
 
 | project | scenarios | shape |
@@ -31,6 +31,7 @@ this table cannot drift silently.
 | tiny-full | 1 | all-Vendored stable world |
 | cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
 | zlib | 2 | **landed 2026-08-20** — the lib pair with no build: `F:stable` (apt libz 1.3) + `V:dev` (conda-forge libzlib 1.3.2, same soname). The probe names the library the loader mapped and the vendored world asserts it (`probe_names_lib`) |
+| zstd | 2 | **landed 2026-08-20** — same shape (`F:stable` apt 1.5.5 + `V:dev` conda-forge 1.5.7), over the registry's first gate that really bounds the lib (`conf-zstd` enforces `>= 1.3.8`). Two world witnesses: a runtime `ZSTD_versionNumber()` call and the loader's mapped path |
 
 **The batch runner + run config + the main-library split** (2026-08-14,
 user): `canary action @all` runs every registry project under the
@@ -136,14 +137,20 @@ conda-forge). Short version: one C lib per project is baked into
   / `ZLIB_1.3.2`, so a probe calling `deflateUsed` xfails against apt's
   1.3 at LOAD time — the cheapest natural forward cell in the registry
   (measured in `surveys/conda_forge.md`).
-- [ ] **D2. zstd** — BLOCKED on `libzstd-dev`, not on design (issue in
-  [`issues.md`](issues.md)). This box has `libzstd1` but no dev package,
-  so `conf-zstd` cannot run its `pkg-config --atleast-version=1.3.8`
-  check and `opam install zstd` fails. One apt command unblocks it; the
-  rest is zlib's shape (apt 1.5.5 → conda-forge 1.5.7, same soname,
-  libc+libpthread closure). Use the `zstd` binding (ctypes + integers),
-  not `zstandard` — the latter pulls the whole Jane Street core stack.
-  Also one of `bytesrw`'s five optional backends, so it still de-risks D5.
+- [x] **D2. zstd — LANDED 2026-08-20** (user installed `libzstd-dev`,
+  which was the only blocker). 2 scenarios green: apt 1.5.5 →
+  conda-forge 1.5.7, same soname, libc+libpthread closure. Binding =
+  `zstd` (ctypes stub-gen, light), NOT `zstandard` (which pulls the
+  whole Jane Street core stack). Three firsts: the first
+  `tracks_lib = true` gate in the registry (conf-zstd enforces
+  `--atleast-version=1.3.8` even though the BINDING declares a bare
+  dependency — metadata alone would have called it Free); the first
+  probe with TWO world witnesses (`Zstd.version ()` is a runtime
+  `ZSTD_versionNumber()` call, alongside the loader's mapped path); and
+  the first measured demonstration that exported-symbol COUNTS are not
+  comparable across packagers — 177 vs 297 `ZSTD_` symbols with nothing
+  removed, because Debian hides zstd's internals and conda-forge does
+  not. Still a `bytesrw` backend, so D5 is de-risked.
 - [ ] **D2b. lmdb** — still worth landing; Pattern B1+E (direct depexts +
   a `clib:` tag, no conf-*), so it tests the no-conf-indirection style.
   Its pair comes from the binding's opam pins. `ocurl` is a second

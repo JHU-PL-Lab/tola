@@ -1,0 +1,4 @@
+zstd version: 1.5.7
+zstd resolved: /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib/libzstd.so.1.5.7
+zstd sizes: original=5290 compressed=253 restored=5290
+zstd ok

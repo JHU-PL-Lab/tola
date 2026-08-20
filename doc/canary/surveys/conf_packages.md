@@ -296,12 +296,12 @@ that pair is the package-manager gate — how the binding's opam package
 declares its dependency on the C lib (`Canary_binding_decl.pm_dep_gate`,
 measured per project):
 
-| gate | forcing a lib version costs | example |
-| --- | --- | --- |
+| gate                                              | forcing a lib version costs                        | example                                                                   |
+| ------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------- |
 | `Free_with_conf` — conf-* present, **no version** | **nothing**: any obtainable version is installable | zarith/conf-gmp, cairo2/conf-cairo, ssl/conf-libssl, sqlite3/conf-sqlite3 |
-| `Bounded_with_conf` — a range on the CONF package | nothing inside the bound | ctypes-foreign/`conf-libffi {>= "2.0.0"}` |
-| `Fixed_with_conf` — an exact pin | a wrapper package that drops the conf dep | llvm/`conf-llvm-shared {= "19"}` |
-| `Package_builds_lib` / `Bundled` | no pairing exists | opam z3; the z3-solver & llvmlite wheels |
+| `Bounded_with_conf` — a range on the CONF package | nothing inside the bound                           | ctypes-foreign/`conf-libffi {>= "2.0.0"}`                                 |
+| `Fixed_with_conf` — an exact pin                  | a wrapper package that drops the conf dep          | llvm/`conf-llvm-shared {= "19"}`                                          |
+| `Package_builds_lib` / `Bundled`                  | no pairing exists                                  | opam z3; the z3-solver & llvmlite wheels                                  |
 
 The survey's dominant category IS the cheap one: **208 of 333 conf
 packages (62%) are a bare `pkg-config --exists <lib>` presence check** —
@@ -361,14 +361,14 @@ Data gathered 2026-08-20: the conf constraint from
 `opam show <binding> --field=depends`, apt versions from `apt-cache
 madison`, conda-forge from `api.anaconda.org`.
 
-| # | lib / binding | conf gate | apt (stable) | conda-forge (latest) | pair? | why this rank |
-| --- | --- | --- | --- | --- | --- | --- |
-| **1** | **zlib / camlzip** | `conf-zlib`, no constraint | 1.3 | **1.3.2** | ✓ | Highest uncovered revdeps (18). Tiny closure (libc only, zlib's shape). Same soname → point-at-it. Cstubs. The cheapest complete landing available |
-| **2** | **zstd / zstandard** | `conf-zstd`, no constraint | 1.5.5 | **1.5.7** | ✓ | Same shape as zlib, small closure, and it is one of `bytesrw`'s five optional backends — landing it standalone first de-risks the optional-dep work later |
-| **3** | **mpfr / mlgmpidl** | `conf-mpfr-paths` + `conf-gmp-paths` | (mpfr 4.x) | to measure | ? | The first STACKED dependency (mpfr needs gmp, which we cover). Note the gate is the `-paths` conf FAMILY, not plain `conf-mpfr` — a different conf style worth studying on its own |
-| **4** | **libev / lwt** | `conf-libev` as a **depopt** | 4.33 (single) | to measure | — | The optional-dependency axis (`Absent` provision), which we deferred: needs the per-artifact "mandatory vs optional" rule plus a combination policy |
-| **5** | **python3-dev / pyml** | `conf-python-3-dev` only `{with-test}` | 3.12 only here | n/a | — | pyml links libpython directly rather than through a conf gate, and this box has one python3-dev. Interesting but not a version-pair candidate without a PPA |
-| — | ncurses, libseccomp, ffmpeg, rdkit, boost | — | — | — | — | No clean OCaml binding measured, or a heavy closure. Revisit after 1–2 |
+| #     | lib / binding                             | conf gate                              | apt (stable)   | conda-forge (latest) | pair? | why this rank                                                                                                                                                                      |
+| ----- | ----------------------------------------- | -------------------------------------- | -------------- | -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | **zlib / camlzip** — LANDED 2026-08-20 | `conf-zlib`, no constraint | 1.3 | **1.3.2** | ✓ | Landed. See §G5 |
+| **2** | **zstd** — LANDED 2026-08-20 | `conf-zstd` — **floor `>= 1.3.8`**, measured at the conf package (§G1a), not visible in the binding's metadata | 1.5.5 | **1.5.7** | ✓ | Landed. See §G5 |
+| **3** | **mpfr / mlgmpidl**                       | `conf-mpfr-paths` + `conf-gmp-paths`   | (mpfr 4.x)     | to measure           | ?     | The first STACKED dependency (mpfr needs gmp, which we cover). Note the gate is the `-paths` conf FAMILY, not plain `conf-mpfr` — a different conf style worth studying on its own |
+| **4** | **libev / lwt**                           | `conf-libev` as a **depopt**           | 4.33 (single)  | to measure           | —     | The optional-dependency axis (`Absent` provision), which we deferred: needs the per-artifact "mandatory vs optional" rule plus a combination policy                                |
+| **5** | **python3-dev / pyml**                    | `conf-python-3-dev` only `{with-test}` | 3.12 only here | n/a                  | —     | pyml links libpython directly rather than through a conf gate, and this box has one python3-dev. Interesting but not a version-pair candidate without a PPA                        |
+| —     | ncurses, libseccomp, ffmpeg, rdkit, boost | —                                      | —              | —                    | —     | No clean OCaml binding measured, or a heavy closure. Revisit after 1–2                                                                                                             |
 
 **Take 1 and 2 first.** Both are `Free_with_conf` with a real pair, both
 have small dependency closures, and both are same-soname, so the entire
@@ -440,18 +440,18 @@ the reason is structural.** They sit on opposite sides of the conf package:
 
 Neither determines the other. The counter-examples are not exotic:
 
-| conf package | survey category | gate declared by its binding | agree? |
-| --- | --- | --- | --- |
-| conf-gmp / cairo / libssl / sqlite3 | pkgconfig | `Free_with_conf` | ✓ |
-| **conf-libffi** | **pkgconfig** | **`Bounded_with_conf {>= 2.0.0}`** (ctypes-foreign) | ✗ |
-| conf-blas | compile_test | free-at-build (`lacaml {build}`) | ✗ |
-| **conf-sundials** | **compile_test** | **`{>= "2" & build}`** (sundialsml) | ✗ |
-| **conf-readline** | **no_build** | **`{>= "1"}`** (readline) | ✗ |
-| conf-boost | no_build | free (gappa) | ✗ |
-| conf-ppl | compile_test | free (jasmin) | ✗ |
-| conf-capnproto | version_check | `{with-test}` — not a build gate at all (capnp) | ✗ |
-| conf-llvm-shared | custom_script | `Fixed_with_conf {= "19"}` (llvm) | ✓ |
-| **conf-libclang** | **custom_script** | **`{< "16"}`** (clangml) | ✓ |
+| conf package                        | survey category   | gate declared by its binding                        | agree? |
+| ----------------------------------- | ----------------- | --------------------------------------------------- | ------ |
+| conf-gmp / cairo / libssl / sqlite3 | pkgconfig         | `Free_with_conf`                                    | ✓      |
+| **conf-libffi**                     | **pkgconfig**     | **`Bounded_with_conf {>= 2.0.0}`** (ctypes-foreign) | ✗      |
+| conf-blas                           | compile_test      | free-at-build (`lacaml {build}`)                    | ✗      |
+| **conf-sundials**                   | **compile_test**  | **`{>= "2" & build}`** (sundialsml)                 | ✗      |
+| **conf-readline**                   | **no_build**      | **`{>= "1"}`** (readline)                           | ✗      |
+| conf-boost                          | no_build          | free (gappa)                                        | ✗      |
+| conf-ppl                            | compile_test      | free (jasmin)                                       | ✗      |
+| conf-capnproto                      | version_check     | `{with-test}` — not a build gate at all (capnp)     | ✗      |
+| conf-llvm-shared                    | custom_script     | `Fixed_with_conf {= "19"}` (llvm)                   | ✓      |
+| **conf-libclang**                   | **custom_script** | **`{< "16"}`** (clangml)                            | ✓      |
 
 The useful statement is therefore not "category = gate" but:
 
@@ -477,27 +477,27 @@ two tables below and is the answer to §G6 item 4:
 **(i) A pkg-config version predicate — 8 packages, all in the
 `pkgconfig` category.**
 
-| conf package | predicate | opam version | literal enforced | version corresponds? |
-| --- | --- | --- | --- | --- |
-| `conf-efl` | `--atleast-version=1.8` | 1.8 | 1.8 | ✓ |
-| `conf-gtk3` | `--atleast-version 3.18` | 18 | 3.18 | ✓ (the gtk3 minor) |
-| `conf-libblake3` | `--atleast-version=1.5.1` | 1.5.1 | 1.5.1 | ✓ |
-| `conf-libmd` | `--atleast-version=1.0.0` | 1.0.0 | 1.0.0 | ✓ |
-| `conf-libuv` | `--atleast-version=1` | 1 | 1 | ✓ |
-| `conf-taglib_c` | `--atleast-version 2.0.0` | 2 | 2.0.0 | ✓ |
-| `conf-zstd` | `--atleast-version=1.3.8 libzstd` | 1.3.8 | 1.3.8 | ✓ |
-| `conf-openimageio` | `--atleast-version=2` | **1** | **2** | ✗ — the convention breaks |
+| conf package       | predicate                         | opam version | literal enforced | version corresponds?      |
+| ------------------ | --------------------------------- | ------------ | ---------------- | ------------------------- |
+| `conf-efl`         | `--atleast-version=1.8`           | 1.8          | 1.8              | ✓                         |
+| `conf-gtk3`        | `--atleast-version 3.18`          | 18           | 3.18             | ✓ (the gtk3 minor)        |
+| `conf-libblake3`   | `--atleast-version=1.5.1`         | 1.5.1        | 1.5.1            | ✓                         |
+| `conf-libmd`       | `--atleast-version=1.0.0`         | 1.0.0        | 1.0.0            | ✓                         |
+| `conf-libuv`       | `--atleast-version=1`             | 1            | 1                | ✓                         |
+| `conf-taglib_c`    | `--atleast-version 2.0.0`         | 2            | 2.0.0            | ✓                         |
+| `conf-zstd`        | `--atleast-version=1.3.8 libzstd` | 1.3.8        | 1.3.8            | ✓                         |
+| `conf-openimageio` | `--atleast-version=2`             | **1**        | **2**            | ✗ — the convention breaks |
 
 **(ii) The opam `version` variable passed into a discovery script — 5
 packages, all in the `custom_script` category.**
 
-| conf package | how the version reaches the check |
-| --- | --- |
-| `conf-llvm` | `["bash" "configure.sh" version]` |
-| `conf-llvm-shared` | `["bash" "configure.sh" version "shared"]` |
-| `conf-llvm-static` | `["bash" "configure.sh" version "static"]` |
-| `conf-libclang` | `["bash" "-ex" "configure.sh" version]` — the opam file's own comment: *"pass pkg var '21' to test <= 21.0.x"* |
-| `conf-qt` | `["sh" "-ex" "./configure.sh" "%{version}%"]` |
+| conf package       | how the version reaches the check                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `conf-llvm`        | `["bash" "configure.sh" version]`                                                                              |
+| `conf-llvm-shared` | `["bash" "configure.sh" version "shared"]`                                                                     |
+| `conf-llvm-static` | `["bash" "configure.sh" version "static"]`                                                                     |
+| `conf-libclang`    | `["bash" "-ex" "configure.sh" version]` — the opam file's own comment: *"pass pkg var '21' to test <= 21.0.x"* |
+| `conf-qt`          | `["sh" "-ex" "./configure.sh" "%{version}%"]`                                                                  |
 
 (`conf-cuda` matches mechanism (ii) by grep and is a false positive:
 escaped quotes inside a heredoc desync a string stripper. Its build is a
@@ -588,18 +588,18 @@ them.
 Ranked by conf-package revdeps. `conf-pkg-config` itself (492) is
 excluded: it is the tool, not a library.
 
-| # | conf pkg | rev | binding (opam versions) | gate, measured | apt here | conda-forge | landing verdict |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | conf-ffmpeg | 175 | `ffmpeg-avutil` (26) + 6 sibling pkgs | `{build}` → free | libavutil 6.1.1 | 9.0.1 | **Skip for now** — 7 opam packages over one source tree and a large closure; the biggest revdep prize but not a first landing |
-| 2 | conf-gmp | 129 | `zarith` — **landed** | free | 6.3.0 | 6.3.0 (7 vers) | calibration row |
-| 3 | conf-zlib | 56 | `camlzip` (4), `zlib` (2), `cryptokit` | free (bare `"conf-zlib"`) | 1.3 | **1.3.2** | **Ready** — highest uncovered revdeps, closure is libc only, same soname |
-| 4 | conf-gtksourceview | 55 | `lablgtk-extras`, `why3-ide`, `frama-c` | (GTK stack) | — | — | **Skip** — the GTK closure is tens of libs; the cairo lesson applies at 10× |
-| 5 | conf-mpfr | 49 | `mlmpfr` (11) | bare `"conf-mpfr"` **+ self-check (§G1b)** | 4.2.1 | **4.2.2** | **Blocked: model** — needs `Self_check_in_build`; then it is the best xfail candidate we have |
-| 6 | conf-gtksourceview3 | 44 | `lablgtk3-sourceview3` (5) | `{build & >= "0"}` — a vacuous bound | — | — | **Skip** — same GTK closure |
-| 7 | conf-ncurses | 36 | `curses` (9) | free | **libncurses-dev** 6.4 | **6.6** | **Ready\*** — note the conf package's declared deb name (`ncurses-dev`) is **not in this Ubuntu archive**; the real package is `libncurses-dev`. A stale depext is itself a finding worth landing |
-| 8 | conf-libpcre | 34 | `pcre` (22) | `{build}` → free | 8.39 | **8.45** | **Ready\*** — a genuine 8.39↔8.45 pair, but PCRE1 is EOL (8.45 was final, 2021); prefer `pcre2` if a conf exists |
-| 9 | conf-sqlite3 | 30 | `sqlite3` — **landed** | free | — | — | calibration row |
-| 10 | conf-libssl | 26 | `ssl` — **landed** | free | 3.0.13 | **4.0.1** | landed; the 3→4 prebuilt pair is the open soname case |
+| #   | conf pkg            | rev | binding (opam versions)                 | gate, measured                             | apt here               | conda-forge    | landing verdict                                                                                                                                                                                   |
+| --- | ------------------- | --- | --------------------------------------- | ------------------------------------------ | ---------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | conf-ffmpeg         | 175 | `ffmpeg-avutil` (26) + 6 sibling pkgs   | `{build}` → free                           | libavutil 6.1.1        | 9.0.1          | **Skip for now** — 7 opam packages over one source tree and a large closure; the biggest revdep prize but not a first landing                                                                     |
+| 2   | conf-gmp            | 129 | `zarith` — **landed**                   | free                                       | 6.3.0                  | 6.3.0 (7 vers) | calibration row                                                                                                                                                                                   |
+| 3   | conf-zlib           | 56  | `camlzip` (4), `zlib` (2), `cryptokit`  | free (bare `"conf-zlib"`)                  | 1.3                    | **1.3.2**      | **Ready** — highest uncovered revdeps, closure is libc only, same soname                                                                                                                          |
+| 4   | conf-gtksourceview  | 55  | `lablgtk-extras`, `why3-ide`, `frama-c` | (GTK stack)                                | —                      | —              | **Skip** — the GTK closure is tens of libs; the cairo lesson applies at 10×                                                                                                                       |
+| 5   | conf-mpfr           | 49  | `mlmpfr` (11)                           | bare `"conf-mpfr"` **+ self-check (§G1b)** | 4.2.1                  | **4.2.2**      | **Blocked: model** — needs `Self_check_in_build`; then it is the best xfail candidate we have                                                                                                     |
+| 6   | conf-gtksourceview3 | 44  | `lablgtk3-sourceview3` (5)              | `{build & >= "0"}` — a vacuous bound       | —                      | —              | **Skip** — same GTK closure                                                                                                                                                                       |
+| 7   | conf-ncurses        | 36  | `curses` (9)                            | free                                       | **libncurses-dev** 6.4 | **6.6**        | **Ready\*** — note the conf package's declared deb name (`ncurses-dev`) is **not in this Ubuntu archive**; the real package is `libncurses-dev`. A stale depext is itself a finding worth landing |
+| 8   | conf-libpcre        | 34  | `pcre` (22)                             | `{build}` → free                           | 8.39                   | **8.45**       | **Ready\*** — a genuine 8.39↔8.45 pair, but PCRE1 is EOL (8.45 was final, 2021); prefer `pcre2` if a conf exists                                                                                  |
+| 9   | conf-sqlite3        | 30  | `sqlite3` — **landed**                  | free                                       | —                      | —              | calibration row                                                                                                                                                                                   |
+| 10  | conf-libssl         | 26  | `ssl` — **landed**                      | free                                       | 3.0.13                 | **4.0.1**      | landed; the 3→4 prebuilt pair is the open soname case                                                                                                                                             |
 
 Also in this group and worth naming: **conf-zstd (13)** → `zstandard` (5)
 and `zstd` (3), both bare-`conf-zstd` free, apt 1.5.5 vs conda-forge
@@ -607,19 +607,19 @@ and `zstd` (3), both bare-`conf-zstd` free, apt 1.5.5 vs conda-forge
 
 ### G3. Version/help group — top 10 (46 classified here; only 5 are C libs)
 
-| # | conf pkg | rev | what it gates | C library? |
-| --- | --- | --- | --- | --- |
-| 1 | conf-npm | 96 | node's npm | no |
-| 2 | conf-perl | 92 | perl | no |
-| 3 | conf-gcc | 66 | a C compiler | no |
-| 4 | conf-gnuplot | 63 | gnuplot | no |
-| 5 | conf-g++ | 61 | a C++ compiler | no |
-| 6 | conf-c++ | 58 | a C++ compiler | no |
-| 7 | conf-git | 46 | git | no |
-| 8 | conf-mingw-w64-gcc-* | 28×2 | cross toolchains | no |
-| 9 | conf-rust-2021 | 23 | rustc edition | no |
-| 10 | conf-capnproto | 15 | capnp — **the only ranked C lib here** | yes |
-| — | conf-protoc 14, conf-bison 8, conf-flex 6, conf-libtool 5 | | build tools that also ship a lib | marginal |
+| #   | conf pkg                                                  | rev  | what it gates                          | C library? |
+| --- | --------------------------------------------------------- | ---- | -------------------------------------- | ---------- |
+| 1   | conf-npm                                                  | 96   | node's npm                             | no         |
+| 2   | conf-perl                                                 | 92   | perl                                   | no         |
+| 3   | conf-gcc                                                  | 66   | a C compiler                           | no         |
+| 4   | conf-gnuplot                                              | 63   | gnuplot                                | no         |
+| 5   | conf-g++                                                  | 61   | a C++ compiler                         | no         |
+| 6   | conf-c++                                                  | 58   | a C++ compiler                         | no         |
+| 7   | conf-git                                                  | 46   | git                                    | no         |
+| 8   | conf-mingw-w64-gcc-*                                      | 28×2 | cross toolchains                       | no         |
+| 9   | conf-rust-2021                                            | 23   | rustc edition                          | no         |
+| 10  | conf-capnproto                                            | 15   | capnp — **the only ranked C lib here** | yes        |
+| —   | conf-protoc 14, conf-bison 8, conf-flex 6, conf-libtool 5 |      | build tools that also ship a lib       | marginal   |
 
 **Finding: this group is not a library group.** 41 of its 46 members gate
 a *program* — a compiler, an interpreter, a code generator. Their revdep
@@ -646,22 +646,22 @@ semantics.
 
 #### G4a. Compile test (28; 24 are C libs)
 
-| conf pkg | rev | binding | gate | pair available | verdict |
-| --- | --- | --- | --- | --- | --- |
-| conf-rdkit | 46 | `fasmifra`, `linwrap`, `molenc`, `lbvs_consent` | (C++ cheminformatics) | — | **Skip** — C++ template-heavy, no C ABI surface |
-| conf-ppl | 30 | `jasmin` (21) | free | apt 1.2 / cf 1.2 — **one version only** | **Blocked: no pair** |
-| conf-lapack | 23 | `lacaml` (29) | `{build}` → free | apt 3.12.0 / cf 3.12.1 | **Ready\*** — a thin pair (patch-level), and BLAS/LAPACK's real axis is the *implementation* (reference vs OpenBLAS vs MKL), which is a provider axis we do not have. Interesting for that reason |
-| conf-blas | 22 | `lacaml` (shared with lapack) | `{build}` | same | see above — **one project, two conf packages** |
-| conf-sundials | 14 | `sundialsml` (14) | `{>= "2" & build}` — **packaging-only** (§G1a) | apt 6.4.1 / cf **7.8.0** | **Ready\*** — a wide, real pair, and the gate that *looks* bounded is free. Good demonstration of §G1a |
+| conf pkg      | rev | binding                                         | gate                                           | pair available                          | verdict                                                                                                                                                                                           |
+| ------------- | --- | ----------------------------------------------- | ---------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| conf-rdkit    | 46  | `fasmifra`, `linwrap`, `molenc`, `lbvs_consent` | (C++ cheminformatics)                          | —                                       | **Skip** — C++ template-heavy, no C ABI surface                                                                                                                                                   |
+| conf-ppl      | 30  | `jasmin` (21)                                   | free                                           | apt 1.2 / cf 1.2 — **one version only** | **Blocked: no pair**                                                                                                                                                                              |
+| conf-lapack   | 23  | `lacaml` (29)                                   | `{build}` → free                               | apt 3.12.0 / cf 3.12.1                  | **Ready\*** — a thin pair (patch-level), and BLAS/LAPACK's real axis is the *implementation* (reference vs OpenBLAS vs MKL), which is a provider axis we do not have. Interesting for that reason |
+| conf-blas     | 22  | `lacaml` (shared with lapack)                   | `{build}`                                      | same                                    | see above — **one project, two conf packages**                                                                                                                                                    |
+| conf-sundials | 14  | `sundialsml` (14)                               | `{>= "2" & build}` — **packaging-only** (§G1a) | apt 6.4.1 / cf **7.8.0**                | **Ready\*** — a wide, real pair, and the gate that *looks* bounded is free. Good demonstration of §G1a                                                                                            |
 
 #### G4b. No build (18; 13 are C libs)
 
-| conf pkg | rev | binding | gate | verdict |
-| --- | --- | --- | --- | --- |
-| conf-boost | 21 | `gappa` (4), `ocsfml`, `qfs` | free | **Skip** — apt 1.83 vs cf 1.85 is a real pair, but Boost is header-heavy C++ with no stable C ABI |
-| conf-lame / conf-ladspa / conf-dssi | 3 each | none measured | — | **Skip** — no OCaml binding through the conf |
-| conf-protoc-dev | 2 | — | — | **Skip** |
-| conf-readline | 1 | `readline` (**1 version**) | `{>= "1"}` — packaging-only | **Blocked: no pair** — the *binding* has one release ever; the 2×2's binding axis cannot exist |
+| conf pkg                            | rev    | binding                      | gate                        | verdict                                                                                           |
+| ----------------------------------- | ------ | ---------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| conf-boost                          | 21     | `gappa` (4), `ocsfml`, `qfs` | free                        | **Skip** — apt 1.83 vs cf 1.85 is a real pair, but Boost is header-heavy C++ with no stable C ABI |
+| conf-lame / conf-ladspa / conf-dssi | 3 each | none measured                | —                           | **Skip** — no OCaml binding through the conf                                                      |
+| conf-protoc-dev                     | 2      | —                            | —                           | **Skip**                                                                                          |
+| conf-readline                       | 1      | `readline` (**1 version**)   | `{>= "1"}` — packaging-only | **Blocked: no pair** — the *binding* has one release ever; the 2×2's binding axis cannot exist    |
 
 **Finding:** "no build" means the conf package is a pure depexts
 declaration — it does not check anything at all. That is the weakest
@@ -684,13 +684,13 @@ sense.
 
 #### G4d. Custom logic (9; 6 are C libs) — the group that actually gates versions
 
-| conf pkg | rev | binding | gate | verdict |
-| --- | --- | --- | --- | --- |
-| conf-cmake | 102 | (build tool) | — | tool axis |
-| conf-libev | 69 | `lwt` and 6 others — **as a `depopt`** | optional | **Blocked: model** — needs the `Absent` provision wired into a universe + a combination policy (`../design/multi_lib.md` §2) |
-| conf-llvm | 26 | `llvm` — **landed** | `Fixed_with_conf` | calibration row |
-| conf-libclang | 17 | `clangml` (25) | **`{< "16"}` — a REAL lib bound** (§G1a) | **Ready\*\*** — the only measured `Bounded_with_conf` whose bound reaches the library. An upper bound, so the interesting world is *new lib, old binding* — the backward direction, which nothing in the registry exercises yet |
-| conf-qt | 5 | — | version-carrying | **Skip** — Qt closure |
+| conf pkg      | rev | binding                                | gate                                     | verdict                                                                                                                                                                                                                         |
+| ------------- | --- | -------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| conf-cmake    | 102 | (build tool)                           | —                                        | tool axis                                                                                                                                                                                                                       |
+| conf-libev    | 69  | `lwt` and 6 others — **as a `depopt`** | optional                                 | **Blocked: model** — needs the `Absent` provision wired into a universe + a combination policy (`../design/multi_lib.md` §2)                                                                                                    |
+| conf-llvm     | 26  | `llvm` — **landed**                    | `Fixed_with_conf`                        | calibration row                                                                                                                                                                                                                 |
+| conf-libclang | 17  | `clangml` (25)                         | **`{< "16"}` — a REAL lib bound** (§G1a) | **Ready\*\*** — the only measured `Bounded_with_conf` whose bound reaches the library. An upper bound, so the interesting world is *new lib, old binding* — the backward direction, which nothing in the registry exercises yet |
+| conf-qt       | 5   | —                                      | version-carrying                         | **Skip** — Qt closure                                                                                                                                                                                                           |
 
 **Finding:** this 6%-of-the-repository group is where the HARD version
 semantics live — every conf package that enforces a *generation* rather
@@ -707,22 +707,22 @@ we cannot get from anywhere else**.
 Ranked by (uncovered revdeps × landing readiness). Rows already landed are
 omitted. "Effective gate" applies §G1a — a packaging-only bound is free.
 
-| rank | project | conf revdeps | binding pair | lib pair (stable → latest) | effective gate | cost |
-| --- | --- | --- | --- | --- | --- | --- |
-| **1** | **zlib / camlzip** | 56 | camlzip 1.07→1.14 (4) | apt 1.3 → cf **1.3.2** | free | declaration only |
-| **2** | **zstd / zstandard** | 13 | v0.13.0→v0.17.0 (5) | apt 1.5.5 → cf **1.5.7** | free | declaration only; also a `bytesrw` backend |
-| **3** | **sundials / sundialsml** | 14 | 2.5.0p0→6.1.1p1 (14) | apt 6.4.1 → cf **7.8.0** | free (bound is packaging) | declaration + the widest version gap in the table |
-| **4** | **ncurses / curses** | 36 | 1.0.3→1.0.12 (9) | apt 6.4 → cf **6.6** | free | declaration + a stale-depext finding to report |
-| **5** | **libpcre / pcre** | 34 | 7.1.3→8.0.5 (22) | apt 8.39 → cf **8.45** | free | declaration; EOL lib, so prefer pcre2 if available |
-| **6** | **libclang / clangml** | 17 | 0.5.1→4.8.0 (25) | LLVM family | **`< 16` — real** | the first genuine lib-version bound; backward-direction world |
-| **7** | **mpfr / mlmpfr** | 49 | 3.1.6→4.2.1 (11) | apt 4.2.1 → cf **4.2.2** | free conf + **self-check** | needs `Self_check_in_build`; best natural xfail |
-| **8** | **postgresql** | 13 | 3.2.1→5.4.0 (24) | **apt ships 16.2 AND 16.14** | `{build}` → free | the only lib whose pair is available *inside apt* — no conda-forge needed |
-| **9** | **lapack+blas / lacaml** | 23+22 | 7.2.1→11.1.1 (29) | apt 3.12.0 → cf 3.12.1 | free | thin pair; its real axis is implementation (reference/OpenBLAS), which we cannot express |
-| **10** | **libcurl / ocurl** | 22 | 0.7.6→… (7) | apt 8.5.0 → cf **8.21.0** | **no conf dep at all** (Pattern B) | a different pattern: the binding finds curl itself |
-| — | libev / lwt | 69 | — | — | depopt | blocked on the optional-dep model |
-| — | ffmpeg, gtksourceview(3), rdkit, boost, qt | 175/55/46/21/5 | — | — | — | heavy closures / C++ / no C ABI |
-| — | ppl, glpk | 30 / 6 | — | one version each | free | no lib pair exists here |
-| — | readline, mysql8 | 1 / 11 | **one binding release** | — | — | no binding pair exists |
+| rank   | project                                    | conf revdeps   | binding pair            | lib pair (stable → latest)   | effective gate                     | cost                                                                                     |
+| ------ | ------------------------------------------ | -------------- | ----------------------- | ---------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------- |
+| **1**  | **zlib / camlzip** — LANDED 2026-08-20 | 56 | camlzip 1.07→1.14 (4) | apt 1.3 → cf **1.3.2** | free | declaration only. Landed with a probe that names the library the loader mapped; the pair also turned out to carry a live ELF symbol-versioning gate (`ZLIB_1.3.1.2`) — see `conda_forge.md` |
+| **2**  | **zstd** — LANDED 2026-08-20 | 13 | `zstd` 0.2→0.4 (3) | apt 1.5.5 → cf **1.5.7** | **`>= 1.3.8`, REAL** | declaration only. **Correction the landing forced**: this row read "no constraint" from the BINDING's bare `conf-zstd` dependency, but conf-zstd's own build is `pkg-config --atleast-version=1.3.8 libzstd` (§G1a mechanism (i)). Both points clear the floor, so it does not bite — but the gate is `tracks_lib = true`, not free. Use the `zstd` binding, not `zstandard` (which pulls the Jane Street core stack) |
+| **3**  | **sundials / sundialsml**                  | 14             | 2.5.0p0→6.1.1p1 (14)    | apt 6.4.1 → cf **7.8.0**     | free (bound is packaging)          | declaration + the widest version gap in the table                                        |
+| **4**  | **ncurses / curses**                       | 36             | 1.0.3→1.0.12 (9)        | apt 6.4 → cf **6.6**         | free                               | declaration + a stale-depext finding to report                                           |
+| **5**  | **libpcre / pcre**                         | 34             | 7.1.3→8.0.5 (22)        | apt 8.39 → cf **8.45**       | free                               | declaration; EOL lib, so prefer pcre2 if available                                       |
+| **6**  | **libclang / clangml**                     | 17             | 0.5.1→4.8.0 (25)        | LLVM family                  | **`< 16` — real**                  | the first genuine lib-version bound; backward-direction world                            |
+| **7**  | **mpfr / mlmpfr**                          | 49             | 3.1.6→4.2.1 (11)        | apt 4.2.1 → cf **4.2.2**     | free conf + **self-check**         | needs `Self_check_in_build`; best natural xfail                                          |
+| **8**  | **postgresql**                             | 13             | 3.2.1→5.4.0 (24)        | **apt ships 16.2 AND 16.14** | `{build}` → free                   | the only lib whose pair is available *inside apt* — no conda-forge needed                |
+| **9**  | **lapack+blas / lacaml**                   | 23+22          | 7.2.1→11.1.1 (29)       | apt 3.12.0 → cf 3.12.1       | free                               | thin pair; its real axis is implementation (reference/OpenBLAS), which we cannot express |
+| **10** | **libcurl / ocurl**                        | 22             | 0.7.6→… (7)             | apt 8.5.0 → cf **8.21.0**    | **no conf dep at all** (Pattern B) | a different pattern: the binding finds curl itself                                       |
+| —      | libev / lwt                                | 69             | —                       | —                            | depopt                             | blocked on the optional-dep model                                                        |
+| —      | ffmpeg, gtksourceview(3), rdkit, boost, qt | 175/55/46/21/5 | —                       | —                            | —                                  | heavy closures / C++ / no C ABI                                                          |
+| —      | ppl, glpk                                  | 30 / 6         | —                       | one version each             | free                               | no lib pair exists here                                                                  |
+| —      | readline, mysql8                           | 1 / 11         | **one binding release** | —                            | —                                  | no binding pair exists                                                                   |
 
 **Recommendation, unchanged in shape from §F3 but now with the evidence
 behind it:** take **zlib** and **zstd** first (both pure declaration),

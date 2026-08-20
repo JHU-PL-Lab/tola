@@ -65,37 +65,29 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
-### Found — zstd cannot land here: conf-zstd needs a dev package we
-### cannot install (2026-08-20)
+### Open — supplying the DEV half from a prebuilt (the zstd route we
+### did not need)
 
-The survey ranked zstd #2 and it is blocked on availability, not on
-design. `opam install zstd` fails at `conf-zstd 1.3.8`, whose build is
-`pkg-config --atleast-version=1.3.8 libzstd`: this box has the RUNTIME
-package (`libzstd1` 1.5.5) but not `libzstd-dev`, so there is no
-`libzstd.pc` and no `zstd.h`. Installing it needs sudo, which is not
-available here.
+zstd was briefly blocked because `conf-zstd` runs
+`pkg-config --atleast-version=1.3.8 libzstd` and this box had `libzstd1`
+without `libzstd-dev` — no `.pc` file, no header. The user installed
+`libzstd-dev` and the project landed the ordinary way (2026-08-20), so
+this is no longer a blocker. What stays open is the route it pointed at:
 
-Two routes when it is picked up:
+conda-forge's `zstd` package ships `include/zstd.h` and
+`lib/pkgconfig/libzstd.pc` alongside the runtime object. Pointing
+`PKG_CONFIG_PATH` and the include path at a prepared prebuilt would
+satisfy a conf package with **no system dev package at all** — which is
+how a project would test a library version the distro does not ship in
+any form, and the only way to reach a version older or newer than the
+distro's on the COMPILE side rather than the load side.
 
-- **Install `libzstd-dev`** (one apt command) and the landing is the same
-  declaration-only shape as zlib: apt 1.5.5 → conda-forge 1.5.7, same
-  soname `libzstd.so.1`, closure = libc + libpthread (measured).
-- **Supply the dev half from the prebuilt.** conda-forge's `zstd` package
-  ships `include/zstd.h` and `lib/pkgconfig/libzstd.pc` alongside the
-  runtime object, so pointing `PKG_CONFIG_PATH` and the include path at
-  the prepared prebuilt would satisfy conf-zstd with no system package at
-  all. That is more interesting than a workaround — it is how a project
-  would test a lib version the distro does not ship in ANY form — but it
-  is new machinery (the prepare step currently supplies runtime only) and
-  it changes which world is "stable". Do not fold it into the zstd
-  landing; it is its own small arc.
-
-Note for whoever takes it: conf-zstd is one of the 8 conf packages that
-DO enforce a lib version (§G1a). Both candidate points clear the 1.3.8
-floor, so the gate does not bite — but the project's `pm_gate` should be
-declared `Bounded_with_conf { lower = Some "1.3.8"; tracks_lib = true }`
-rather than `Free_with_conf`, because the floor is real and comes from
-the conf package rather than from the binding's constraint.
+Two things it needs. The prepare step currently supplies runtime only, so
+a declaration would have to say which conda package half it wants (zlib
+splits `libzlib` / `zlib`; zstd does not split). And it changes which
+world is "stable" — the system PM is the stable point by the sourcing
+rule, and a world with no system package has to say what it is instead.
+Its own small arc, not a fold-in.
 
 ### Found — a vendored world can be POINTED without being CHECKED
 ### (2026-08-20; cairo and libffi still are)
@@ -108,6 +100,8 @@ what it resolved — zlib reads `/proc/self/maps` and prints
 
 `cairo` and `libffi` declare `probe_names_lib = false`: their vendored
 worlds set `LD_LIBRARY_PATH` and nothing verifies the loader obeyed.
+(zlib and zstd both declare `true` — zstd's probe carries two witnesses,
+the loader's mapped path AND a runtime `ZSTD_versionNumber()` call.)
 cairo is the worse of the two (its two versions export identical symbol
 counts, so a fallback is invisible in every verdict); libffi is the more
 interesting (a `Dynamic_ffi` consumer resolves through `dlsym` at
