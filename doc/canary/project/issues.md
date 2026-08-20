@@ -80,16 +80,19 @@ hardcodes `versions = None`
 ([canary_opam_binding.ml](../../src/canary/project/canary_opam_binding.ml)),
 so no template project can carry one. A field plus threading.
 
-The part that is not small is that an opam pin is shared state — measured
+The part that is not small is that an opam pin is shared state. Measured
 costs and the design consequences are in
-[`store_switching.md` §5](store_switching.md). Short version: zlib's and
-cairo's pins are single-package downgrades and could land today;
-libffi's recompiles zstd's binding; zstd's removes `ocaml-compiler` and
-downgrades 37 packages. The last two need the switch decision first.
+[`store_switching.md` §5](store_switching.md); three tiers, per the
+user's reading:
+
+| tier | projects | pin cost | verdict |
+| --- | --- | --- | --- |
+| 1 — the package alone | zlib, cairo | 1 downgrade | **fine, could land today** — opam cannot hold two versions of a package anyway, so a swap is inherent |
+| 2 — collateral rebuilds | libffi | 2 downgrades + **3 recompiles** (`llvm.19-shared`, `yaml`, `zstd`) | **both good and bad** — contamination for a clean libffi test, but each rebuild is itself a consumer/provider compatibility test we cannot enumerate. Decide what it is FOR before isolating it away (§5e) |
+| 3 — the compiler | zstd | 3 removed, 37 downgraded, **157 recompiled**; `ocaml` 5.4.1 → 5.1.1 | **out** — a whole-switch compiler downgrade to run one scenario |
 
 **Do not land a partial fix that adds the field and declares all four
-pairs.** zstd's pair would make the switch unusable for every other
-project.
+pairs.** zstd's pair alone rebuilds the switch against OCaml 5.1.1.
 
 
 ### Open — supplying the DEV half from a prebuilt (the zstd route we

@@ -267,10 +267,42 @@ So the four Vendored-lib projects have exactly the axis the prebuilt work
 gave them, and none of the axis ssl has. The two halves have never been
 combined on the same project outside sqlite and z3.
 
-The immediate blocker is small: ssl declares its axis by hand as
-`SC.Lang_pkg { versions = Some [pins] }`, while
-`Canary_opam_binding` hardcodes `versions = None`, so no template project
-can carry one. That is a field and some threading.
+**Terminology, since "template project" and "by hand" are doing work
+here.** The *template* is `Canary_opam_binding` — the module its own
+header calls "the ocaml/opam binding pattern" (renamed from "Pattern A"
+2026-08-17). A *template project* is one whose `project_run` comes from
+`Canary_opam_binding.run decl`, i.e. it declares a `Canary_opam_binding.t`
+record and the template builds its artifact table, runner_spec and steps.
+There are exactly five: **zarith, cairo, libffi, zlib, zstd**.
+
+Everyone else builds their own `Canary_project_spec.artifact_row` list in
+their own module — sqlite, z3, llvm, tiny-full, and **ssl**. That is what
+"by hand" means: ssl never calls `Canary_opam_binding.run` at all (it
+borrows only the `lib_locator` / `lib_resolve` helpers, two references),
+and writes its own binding row:
+
+```ocaml
+(* canary_project_ssl.ml — ssl's own artifact table *)
+Canary_project_spec.artifact_row ~artifact:ssl_binding_art
+  ~universe:[ (Fetched, [ Stable ]) ]
+  ~provider:(SC.Lang_pkg
+     { lang = OCaml; pm = Opam; package = "ssl"; self_contained = false;
+       versions = Some [ { pin_version = "0.6.0"; install_name = None };
+                         { pin_version = "0.7.0"; install_name = None } ] })
+```
+
+The template builds the same row internally and fixes the last field:
+
+```ocaml
+(* canary_opam_binding.ml:655 — every template project's binding row *)
+~provider:(Canary_store_config.Lang_pkg
+   { lang = OCaml; pm = Opam; package = d.opam_pkg;
+     self_contained = false; versions = None })   (* <- no axis possible *)
+```
+
+So yes — the two snippets are the whole mechanical story. A template
+project cannot declare pins because the template does not accept them;
+the fix is a field on `Canary_opam_binding.t` threaded to that call site.
 
 ### 5b. The real blocker: an opam pin is not project-local
 
@@ -283,31 +315,79 @@ projects share.
 Measured cost of installing the older half of each candidate pair
 (`opam install <pkg>.<v> --show-actions --dry-run`, 2026-08-20):
 
-| project | pair | what the pin does to the switch |
-| --- | --- | --- |
-| zlib / camlzip | 1.13 → 1.14 | downgrade **1** package |
-| cairo / cairo2 | 0.6.4 → 0.6.5 | downgrade **1** package |
-| libffi / ctypes-foreign | 0.23.0 → 0.24.0 | downgrades `ctypes` too, and **recompiles `llvm.19-shared`, `yaml`, `zstd`** |
-| zstd / zstd | 0.3 → 0.4 | **removes `ocaml-compiler` 5.4.1**, `base-effects`, `ocaml-index`; **downgrades 37 packages** (zstd 0.3 wants `ctypes` 0.20.2) |
+| project | pair | remove | downgrade | recompile | what it actually is |
+| --- | --- | --- | --- | --- | --- |
+| zlib / camlzip | 1.13 → 1.14 | 0 | **1** | 0 | the package, alone |
+| cairo / cairo2 | 0.6.4 → 0.6.5 | 0 | **1** | 0 | the package, alone |
+| libffi / ctypes-foreign | 0.23.0 → 0.24.0 | 0 | 2 | **3** | drags `ctypes` 0.24.0→0.23.0, then rebuilds its consumers: `llvm.19-shared`, `yaml`, **`zstd`** |
+| zstd / zstd | 0.3 → 0.4 | **3** | **37** | **157** | a whole-switch compiler downgrade |
 
-Two of the four are single-package downgrades — design A's implicit
-assumption, and the reason ssl and sqlite have worked. The other two
-break it:
+The zstd row needs spelling out, because "37 downgrades" undersells it.
+`zstd 0.3` requires `ctypes 0.20.2`, which caps the compiler:
 
-- **libffi's pin recompiles another project's binding.** `zstd` is a
-  `ctypes` consumer, so pinning ctypes-foreign for libffi's backward cell
-  rebuilds zstd's binding underneath it. The two projects' binding axes
-  are coupled through a shared dependency neither declares.
-- **zstd's pin removes the compiler.** A scenario that downgrades
-  `ocaml-compiler` invalidates every other project's build in the switch,
-  and the recovery is a full reinstall.
+```
+↘ ocaml                5.4.1 → 5.1.1   [required by zstd]
+↘ ocaml-base-compiler  5.4.1 → 5.1.1   [required by ocaml]
+⊘ ocaml-compiler       5.4.1           (removed: 5.1.1 predates the split)
+⊘ base-effects, ocaml-index            (conflict with the older ocaml)
+↻ 157 packages                          (everything, rebuilt against 5.1.1
+                                         — cairo2 and camlzip included)
+```
 
-Design A's mitigation is a world assertion — the probe checks the switch
-holds its declared pin and fails loudly otherwise. That catches *crossing*
-(scenario X running under scenario Y's pin). It does not help here: the
-switch would be correct for zstd@0.3 and unusable for everything else.
+That is not a pin. It is the entire switch moved back three compiler
+minor versions and rebuilt, to run one scenario of one project.
 
-### 5c. What this does to §4's recommendation
+### 5c. Three tiers, and only the outer two are obvious
+
+The user's reading of the table (2026-08-20), which is what the plan
+should follow:
+
+**Tier 1 — the package alone (zlib, cairo): acceptable.** *"I am ok to
+downgrade 1 package since we are experimenting and the two versions of
+one package cannot co-exist in opam."* The swap is not a cost we chose,
+it is what opam's one-version-per-switch rule makes unavoidable (§1); a
+pin that moves only its own package is design A working exactly as
+intended.
+
+**Tier 3 — the compiler (zstd): out.** *"Deleting `ocaml-compiler` is a
+dangerous op since it should be required for the ocaml."* Correct, and
+the full action list above is worse than the summary was: the compiler
+goes back to 5.1.1 and 157 packages rebuild. Nothing about zstd's
+binding axis is worth that, and the recovery is a switch reinstall.
+
+**Tier 2 — collateral rebuilds (libffi): genuinely both.** The user:
+*"recompiling llvm is not a good idea and not a bad idea — in a clean
+testing for libffi/ctypes, we would want it can install and uninstall
+alone; however, in an extreme testing consideration, the dependent
+packages are another form of testing."*
+
+Both halves are right, and they are about different experiments:
+
+- *As contamination.* If the question is "does ctypes-foreign 0.23.0 work
+  over libffi 3.4.6", then rebuilding `llvm.19-shared` and `yaml` is
+  noise: it lengthens the run, it mutates two other projects' worlds, and
+  a failure in the collateral rebuild aborts a scenario that was not
+  about them. A clean per-project axis wants the pin to install and
+  uninstall alone.
+- *As coverage.* But look at what the collateral rebuild is: opam
+  recompiling `llvm.19-shared` against `ctypes 0.23.0` **is** a
+  consumer-over-provider compatibility test — the same question canary
+  asks, on the same shape (OCaml source surface, so c2-flavoured), for
+  free. And it is one we could not enumerate ourselves today, because it
+  crosses projects: it pairs llvm's binding with libffi's binding's
+  dependency.
+
+Which means design A's hazard and a coverage opportunity are the same
+event, and the difference is only whether we OBSERVE it. See §5e.
+
+Design A's existing mitigation does not settle any of this. The world
+assertion checks the switch holds the scenario's declared pin and fails
+loudly otherwise — that catches *crossing* (scenario X running under
+scenario Y's pin). It says nothing about tier 2 (the switch is correct
+for libffi and quietly different for llvm) or tier 3 (the switch is
+correct for zstd@0.3 and unusable for everything else).
+
+### 5d. What this does to §4's recommendation
 
 §4 said "**A now, B documented as the fallback**", with B (per-version
 lightweight switches) becoming attractive "only if we want scenario
@@ -317,32 +397,85 @@ and that is a property of the dependency graph, not of our design.** It
 held for the four projects that have a binding axis today and fails for
 two of the four that want one next.
 
-Revised reading, not yet a decision:
+Revised reading, not yet a decision, following §5c's three tiers:
 
-1. **A remains right for self-contained pins.** zlib and cairo could take
-   their binding axis today, in the shared switch, with the existing
-   `pin_check_post` + world assertion. That is two more full 2×2s for a
-   field on the template.
-2. **B (or one dedicated canary switch) is now REQUIRED, not optional**,
-   for any project whose pin is not self-contained — and self-containment
-   is measurable up front with the dry-run above, so it can be a landing
-   check rather than a discovery.
-3. **The cheap middle** is one canary-owned switch rather than one per
-   version: it removes the "some other tool's switch" hazard and lets a
-   destructive pin be destructive in a switch nothing else needs, without
-   paying B's per-scenario switch cost. It does not give parallelism.
+1. **A remains right for tier 1.** zlib and cairo could take their binding
+   axis today, in the shared switch, with the existing `pin_check_post` +
+   world assertion. Two more full 2×2s for a field on the template.
+2. **Tier 3 needs an isolated switch, and that is now a requirement
+   rather than a preference.** Not B's per-version fleet necessarily —
+   one canary-owned switch is enough, and it is the cheap middle: it lets
+   a destructive pin be destructive where nothing else lives, without
+   paying per-scenario switch cost. (It does not give parallelism; B
+   still does.)
+3. **Tier 2 is a design question, not a switch question.** Isolation
+   makes the collateral rebuild go away, which is the right answer if it
+   is contamination and the wrong one if it is coverage (§5c). Decide
+   what we want from it BEFORE isolating it away by default — see §5e.
 
 Whichever is chosen, the landing rule gains a step: **before declaring a
-binding pair, dry-run the older pin and record what it moves.** A pair
-that removes the compiler is not a pair, it is a switch requirement.
+binding pair, dry-run the older pin and record which tier it is in.**
+`opam install <pkg>.<v> --show-actions --dry-run` costs seconds and
+answers it exactly. A pair that moves the compiler is not a pair, it is a
+switch requirement.
 
-### 5d. Open items this leaves
+### 5e. The collateral rebuild is an uninstrumented experiment (2026-08-20)
+
+Following the user's tier-2 reading. When pinning `ctypes-foreign 0.23.0`
+makes opam recompile `llvm.19-shared`, `yaml` and `zstd`, opam is running
+the experiment canary exists to run — *does this consumer still build
+against this version of its provider?* — on three consumers at once, and
+then throwing the answer away. We see a longer run; we do not see a
+result.
+
+What is actually available there, and cheaply:
+
+- **A verdict per collateral rebuild.** Each `↻` either compiles or does
+  not, and a failure is a genuine finding (a consumer that cannot build
+  against a version its constraints permit). Today a failure surfaces as
+  "opam install failed" attributed to the scenario that triggered it —
+  the wrong project gets the blame.
+- **A scenario we cannot enumerate.** `llvm.19-shared` × `ctypes 0.23.0`
+  crosses two projects: llvm's binding against the dependency of libffi's
+  binding. Our enumeration ranges over ONE project's artifacts, so this
+  pair is not in any project's universe. The solver reaches it for free.
+- **A different contract than our probes test.** These are *source*
+  rebuilds — they answer the c2-shaped question (does the OCaml surface
+  still satisfy its consumers) rather than the c1-shaped one our native
+  probes answer. We have few of those.
+
+Three ways to treat it, in increasing ambition:
+
+1. **Record it.** Parse `--show-actions` before the install and log the
+   `↻` set as an event on the step, so the run says which other projects'
+   packages this scenario rebuilt. Cheap, and it makes the blame
+   attribution correct.
+2. **Verdict it.** Treat each collateral rebuild as an outcome of the
+   scenario — a rebuilt-consumer list with per-item pass/fail. Still no
+   new enumeration; it is reporting what already happened.
+3. **Enumerate it.** Admit cross-project consumer/provider pairs as a
+   scenario kind of their own. That is a model change (our universes are
+   per-project) and it is what §5c's "extreme testing" reading points
+   at. Not now, but it is the reason not to reflexively isolate tier 2
+   away: isolation would delete the signal along with the hazard.
+
+Note the interaction with §5d item 2: a dedicated canary switch makes the
+collateral set SMALLER and more meaningful (only canary's own packages
+are in it), rather than removing it. That is an argument for the
+one-canary-switch middle over B's per-version fleet, which removes it
+entirely.
+
+### 5f. Open items this leaves
 
 - [ ] `Canary_opam_binding` cannot express a binding version axis
   (`versions = None`, hardcoded) — the field plus threading, small.
-- [ ] Decide A-for-safe-pins vs one canary switch vs B (§5c). The binding
+- [ ] Decide A-for-safe-pins vs one canary switch vs B (§5d). The binding
   axis on zstd and libffi is blocked until then.
-- [ ] Add the dry-run self-containment check to the landing checklist
-  (`landing.md` §3b is where the other measured gate checks live).
+- [ ] Add the dry-run TIER check to the landing checklist (`landing.md`
+  §3b is where the other measured gate checks live): tier 1 lands now,
+  tier 2 lands with a decision on §5e, tier 3 blocks on the switch.
+- [ ] Decide what tier-2 collateral rebuilds are FOR (§5e) before
+  isolating them away — record / verdict / enumerate.
 - [ ] zarith's and ssl's lib axes are single-point for stated reasons; if
   either gains a prebuilt they become full 2×2s with no new machinery.
+
