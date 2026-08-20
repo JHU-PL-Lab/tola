@@ -159,6 +159,12 @@ check fail once on purpose.
 
 ## 6. To-do for correct use
 
+> **Whose work this is** (user, 2026-08-20): this list belongs to the
+> CHECKING agent — it is about making the vendored route verifiable
+> (closure checks, provenance, resolution), not about landing the next
+> project. Recorded here so it is not lost; not scheduled against the
+> landing plan in [`conf_packages.md` §F](conf_packages.md).
+
 - [ ] **A closure check as a rung-1 cell.** `readelf -d` + `ldd -r` +
   a `dlopen(RTLD_NOW)` smoke on every vendored artifact, compared against
   the declaration. It is cheap, it is static-plus-one-load, and it would

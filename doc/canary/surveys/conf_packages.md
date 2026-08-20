@@ -278,6 +278,119 @@ as a simple declaration.
    check (pkg-config / version / compile) without going through
    opam install, giving immediate feedback on system readiness.
 
+## Follow-up (2026-08-20) — landing plan for the version-free conf projects
+
+> Requested by the user after the conda-forge study: *"landing ocaml
+> projects with a conf-pkg which doesn't specify a system package version
+> are the best to start"*. This section says why that is the right
+> criterion, what work a landing costs now that we have done four of
+> them, and which packages to take first. Companion reading:
+> [`conda_forge.md`](conda_forge.md) (where the latest lib comes from),
+> [`../project/landing.md` §3–4](../project/landing.md) (the sourcing
+> rule + the bug classes), [`opam.md` §3](opam.md) (revdep counts).
+
+### F1. Why "no version constraint" is the cheap-landing criterion
+
+A project's 2×2 needs a lib PAIR. What decides whether we can even build
+that pair is the package-manager gate — how the binding's opam package
+declares its dependency on the C lib (`Canary_binding_decl.pm_dep_gate`,
+measured per project):
+
+| gate | forcing a lib version costs | example |
+| --- | --- | --- |
+| `Free_with_conf` — conf-* present, **no version** | **nothing**: any obtainable version is installable | zarith/conf-gmp, cairo2/conf-cairo, ssl/conf-libssl, sqlite3/conf-sqlite3 |
+| `Bounded_with_conf` — a range on the CONF package | nothing inside the bound | ctypes-foreign/`conf-libffi {>= "2.0.0"}` |
+| `Fixed_with_conf` — an exact pin | a wrapper package that drops the conf dep | llvm/`conf-llvm-shared {= "19"}` |
+| `Package_builds_lib` / `Bundled` | no pairing exists | opam z3; the z3-solver & llvmlite wheels |
+
+The survey's dominant category IS the cheap one: **208 of 333 conf
+packages (62%) are a bare `pkg-config --exists <lib>` presence check** —
+no version anywhere. So the criterion selects most of the ecosystem, and
+it selects it for a principled reason: with no gate, the lib axis is limited
+only by what we can OBTAIN, which the conda-forge route now answers.
+
+**One caveat the criterion does not cover** (measured in
+[`conda_forge.md` §4](conda_forge.md)): a free gate lets opam INSTALL the
+binding against any lib, but a **soname bump** still stops the binding
+from LOADING the new lib — its own `DT_NEEDED` names the old soname. A
+version-free conf package plus a soname bump (openssl 3→4) means the
+consumer must be rebuilt, not re-pointed. So the criterion picks cheap
+landings; the soname check picks which of them are *point-at-it* cheap.
+
+### F2. What a landing costs, now that we have done four
+
+The per-project checklist, in the order that avoids rework (each step's
+"why" is a bug we actually hit):
+
+1. **Declare the artifact table** — rows + universes + providers, with
+   `ar_rationale` on the lib row saying where each point came from *and
+   why the axis stops there* (a one-point axis is usually a fact about the
+   world; without the note a reader cannot tell it from an omission).
+2. **Declare the binding** — `binding_decl` (mechanism, c_api, native,
+   coupling, surface_path) **plus `pm_gate` measured from
+   `opam show <pkg> --field=depends`**, not guessed. Our guess about ssl
+   was wrong; the metadata was right.
+3. **Source the lib pair** — system PM = stable; official prebuilt if one
+   exists (none of our libs publish Linux binaries); else conda-forge's
+   newest, declared `Vendored` at `contrib/<p>-all/prebuilt/<tag>/`.
+4. **Check the closure BEFORE trusting it** — `readelf -d` (NEEDED +
+   RPATH), `ldd -r` (undefined symbols), `dlopen(RTLD_NOW)`. A one-entry
+   closure (zlib, libffi) is trivially safe; a thirteen-entry one (cairo)
+   works only because the system happens to satisfy it.
+5. **Compare sonames across the pair.** Same soname → `LD_LIBRARY_PATH`
+   suffices. Different → the consumer needs a rebuild; schedule it as
+   wrapper work, not as a declaration.
+6. **Point the CONSUMER at the world's lib.** The probe must carry the
+   world's libdir; otherwise the vendored world silently re-tests the
+   system lib and passes for the wrong reason.
+7. **Pin it**: the enumeration count, and — the one with teeth — that the
+   two worlds' realized commands NAME DIFFERENT FILES. cairo proves why:
+   its two versions export identical symbol counts, so a silent fallback
+   is invisible in the verdict.
+8. **Run and verify each world holds its declared version** (a runtime
+   version line, asserted where canary controls the version; observed
+   where it does not).
+
+Roughly: steps 1–3 are declaration (~40 lines for a template project),
+4–5 are measurement (minutes), 6–8 are the parts that were bugs the first
+four times.
+
+### F3. The ranking — measured, not guessed
+
+Data gathered 2026-08-20: the conf constraint from
+`opam show <binding> --field=depends`, apt versions from `apt-cache
+madison`, conda-forge from `api.anaconda.org`.
+
+| # | lib / binding | conf gate | apt (stable) | conda-forge (latest) | pair? | why this rank |
+| --- | --- | --- | --- | --- | --- | --- |
+| **1** | **zlib / camlzip** | `conf-zlib`, no constraint | 1.3 | **1.3.2** | ✓ | Highest uncovered revdeps (18). Tiny closure (libc only, zlib's shape). Same soname → point-at-it. Cstubs. The cheapest complete landing available |
+| **2** | **zstd / zstandard** | `conf-zstd`, no constraint | 1.5.5 | **1.5.7** | ✓ | Same shape as zlib, small closure, and it is one of `bytesrw`'s five optional backends — landing it standalone first de-risks the optional-dep work later |
+| **3** | **mpfr / mlgmpidl** | `conf-mpfr-paths` + `conf-gmp-paths` | (mpfr 4.x) | to measure | ? | The first STACKED dependency (mpfr needs gmp, which we cover). Note the gate is the `-paths` conf FAMILY, not plain `conf-mpfr` — a different conf style worth studying on its own |
+| **4** | **libev / lwt** | `conf-libev` as a **depopt** | 4.33 (single) | to measure | — | The optional-dependency axis (`Absent` provision), which we deferred: needs the per-artifact "mandatory vs optional" rule plus a combination policy |
+| **5** | **python3-dev / pyml** | `conf-python-3-dev` only `{with-test}` | 3.12 only here | n/a | — | pyml links libpython directly rather than through a conf gate, and this box has one python3-dev. Interesting but not a version-pair candidate without a PPA |
+| — | ncurses, libseccomp, ffmpeg, rdkit, boost | — | — | — | — | No clean OCaml binding measured, or a heavy closure. Revisit after 1–2 |
+
+**Take 1 and 2 first.** Both are `Free_with_conf` with a real pair, both
+have small dependency closures, and both are same-soname, so the entire
+landing is declaration + the checklist — no wrapper, no rebuild, no model
+change. They also each add something: zlib brings the highest uncovered
+revdep count, zstd is a bytesrw backend.
+
+**3 and 4 each need a model piece first** — the stacked lib (named lib
+artifacts) and the optional dep (`Absent` in a universe + a combination
+policy). They are the honest next arc, not the next landing.
+
+### F4. What this plan does NOT cover
+
+- The `Fixed_with_conf` family (llvm's shape) — needs the no-conf wrapper
+  to move a lib version at all. Different work, tracked with the wrapper.
+- The 6% custom-logic conf packages (§ "Custom logic"): the survey's own
+  observation is that they are where version mismatches actually happen.
+  They are the highest-yield targets and the most expensive; they belong
+  after the cheap landings have proven the pipeline end to end.
+- Optional-dep combinations (bytesrw's five backends) — see
+  [`../design/multi_lib.md` §2](../design/multi_lib.md).
+
 ---
 
 *Analysis based on opam-repository at `/home/red/code/contrib/opam-all/opam-repository`
