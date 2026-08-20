@@ -526,6 +526,27 @@ would perform **two** pin operations instead of ten. Each one is an
 uninstall + reinstall, so for a binding heavier than sqlite3 that is a
 recompile per row.
 
+**z3 is the same finding at its worst — and it is why z3 feels slow.**
+Measured on the full 16-scenario run of 2026-08-20, the binding placement
+alternates:
+
+```
+fetched, built, fetched, built, built, fetched, built, fetched,
+built, built, fetched, built, fetched, built, built, fetched
+```
+
+Six of the sixteen rows place the binding `Fetched@4.16.0`, and each one
+runs `opam install z3.4.16.0`. The opam `z3` package is
+`Package_builds_lib` — it compiles libz3 from source — so every flip pays
+a full C++ build. `fetch_binding_ocaml` accumulated **344 s** in a single
+sampled window, and the heavy scenarios cost ~173 s each against ~2 s for
+a zlib/zstd scenario.
+
+Grouping the six Fetched rows together would pay that build ONCE. So the
+scheduling item is not a micro-optimisation for z3: it is most of z3's
+wall clock, and therefore most of the cost of every framework change that
+has to be verified against z3.
+
 Three things to note before implementing it:
 
 1. **It is an ORDERING, not a new axis.** The scenario set is unchanged;
