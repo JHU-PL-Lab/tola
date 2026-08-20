@@ -1756,6 +1756,60 @@ let z3_regression_pre_10549_pin : Canary_project_test.pure_test =
    staged probe and the #10549 xfail would silently stop firing. Read off
    the ROW DATA (the [Cmake_install] template's own prefix field), not a
    parsed command. *)
+(* THE ENV GUARD MUST NAME A REAL DIRECTORY (2026-08-20).
+
+   z3's Build_binding row carries an [env_guard] that puts the freshly
+   built <build>/src/api/ml first on CAML_LD_LIBRARY_PATH, because z3's
+   POST_BUILD self-check runs ml_example with ambient dll search and the
+   opam switch's stale dllz3ml.so otherwise wins ("unknown C primitive
+   'n_solver_register_on_clause'", 2026-08-13).
+
+   The guard absolutised its path with a `$(pwd)/` prefix. That was right
+   while [build] was relative; the per-ref build dirs of 2026-08-19 made
+   it ABSOLUTE, so the guard started expanding to
+   `<repo>//home/red/code/contrib/...` — a path that cannot exist. It
+   still SET the variable, so nothing failed loudly; the shadowing simply
+   came back, and stayed hidden until the pre-10549 ref was run on
+   2026-08-20.
+
+   Two properties, and the first is the one that was violated: no path in
+   the guard may contain `//` after its leading root (the signature of a
+   prefix glued onto an already-absolute path), and the guard must still
+   name the build tree it is protecting. Checked over every declared z3
+   source, so a fourth ref inherits it. *)
+let z3_env_guard_paths_pin : Canary_project_test.pure_test =
+  { name = "z3.env_guard_paths";
+    check =
+      (fun () ->
+        let module AT = Canary_action_templates in
+        let distro = Canary_basic.detect_distro () in
+        let guard_of (repo : Canary_artifact_source.source_repo) =
+          List.find_map
+            (Canary_project_z3.z3_table_rows ~source:repo ~distro
+               ~lib_prov:Canary_artifact.Built)
+            ~f:(fun (row : AT.action_row) ->
+              match row.AT.ar_template with
+              | AT.Ninja_build_binding { env_guard = Some g; build; _ } ->
+                  Some (g, build)
+              | _ -> None)
+        in
+        let repos =
+          [ Canary_project_z3.z3_source_latest;
+            Canary_project_z3.z3_source_dev;
+            Canary_project_z3.z3_source_pre_10549 ]
+        in
+        let guards = List.filter_map repos ~f:guard_of in
+        (* the guards must EXIST — else every check below is vacuous *)
+        List.length guards = List.length repos
+        && List.for_all guards ~f:(fun (g, build) ->
+               (* a doubled slash anywhere past the root means a prefix
+                  was glued onto an absolute path *)
+               (not (String.is_substring g ~substring:"//"))
+               (* ...and it still has to point AT the build tree *)
+               && String.is_substring g ~substring:build
+               && String.is_substring g ~substring:"CAML_LD_LIBRARY_PATH"
+               && String.is_substring g ~substring:"/src/api/ml")) }
+
 let z3_install_prefix_isolated_pin : Canary_project_test.pure_test =
   { name = "z3.install_prefix_isolated";
     check =
@@ -2601,6 +2655,7 @@ let tests : Canary_project_test.pure_test list =
       provider_rows_pin ~prefix:"z3"
         (Canary_project_z3.z3_run (Canary_basic.detect_distro ()));
       z3_install_prefix_isolated_pin;
+      z3_env_guard_paths_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;
       matrix_registry_shape_pin ]

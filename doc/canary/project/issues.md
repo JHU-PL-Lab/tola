@@ -65,6 +65,66 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
+### Found — ninja will not relink a binding whose lib bumped SONAME
+### (2026-08-20, surfaced by running the pre-10549 ref)
+
+Running z3's `pre-10549` ref for the first time failed all three of its
+Built-binding cells at `build_binding_ocaml`. Two independent causes,
+found in sequence:
+
+**1. The env_guard pointed nowhere (FIXED).** z3's Build_binding row
+prepends the freshly built `<build>/src/api/ml` to `CAML_LD_LIBRARY_PATH`
+so z3's POST_BUILD self-check does not load the opam switch's stale
+`dllz3ml.so`. It absolutised with a `$(pwd)/` prefix — correct while
+`build` was relative, wrong since the per-ref build dirs of 2026-08-19
+made it absolute. The guard expanded to
+`<repo>//home/red/code/contrib/…`, which cannot exist. It still SET the
+variable, so nothing failed loudly and the shadowing came straight back
+(`unknown C primitive 'n_solver_register_on_clause'` — the very error the
+guard was written for in 2026-08-13). Fixed by absolutising
+conditionally; pinned as `z3.env_guard_paths` (no `//` past the root, and
+the guard must still name the build tree), falsified by restoring the
+unconditional prefix.
+
+**2. A stale relink ninja would not do (WORKED AROUND, not fixed).** With
+the guard corrected the error MOVED, which is how we knew the fix
+mattered:
+
+```
+Fatal error: cannot load shared library dllz3ml
+Reason: libz3.so.5.0: cannot open shared object file
+```
+
+`build-pre-10549/src/api/ml/dllz3ml.so` carried `NEEDED libz3.so.5.0`
+while the tree's own `libz3.so` has `SONAME libz3.so.5.1` — and no
+`libz3.so.5.0` exists anywhere on this machine. Both files are dated the
+same minute (2026-08-17 16:49), so the binding was linked against a libz3
+that tree no longer produces. **Ninja considered `dllz3ml.so` up to
+date**: its recorded inputs had not changed, and a dependency's SONAME
+bump is not one of the things a build system's timestamp/hash check
+looks at.
+
+Deleting the ml link outputs (`dllz3ml.so`, `libz3ml.a`, `z3ml.{cma,cmxa,a}`)
+and re-running the target relinked it against `libz3.so`, and all five
+pre-10549 cells then ran.
+
+**Why this is a canary-shaped finding, not just a chore.** It is the same
+failure the framework exists to detect — a binding and the library beside
+it disagreeing about a soname — arriving in canary's OWN build trees, and
+invisible to the build system that produced it. The generalisable fix is
+the one `artifact_cache.md` §5 already proposes: a step's fingerprint
+must include the IDENTITY of its input artifacts, not only its own
+command text. A libz3 whose soname changed is a different input artifact;
+today nothing records that, so nothing invalidates the binding built
+against the old one.
+
+**Open**: no guard exists yet. A cheap first one, in the spirit of
+sqlite's `.built-<version>` stamps: after `build_binding`, assert that
+every `NEEDED` entry naming the project's lib matches the soname the
+tree's lib actually exports. That turns a silent stale relink into a
+failed step.
+
+
 ### Found — every template project is HALF a 2×2, and the template
 ### cannot express the other half (2026-08-20)
 

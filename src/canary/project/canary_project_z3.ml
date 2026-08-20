@@ -605,15 +605,32 @@ let z3_table_rows ~(source : Canary_artifact_source.source_repo) ~distro
                      (the CMakeLists' DYLD_LIBRARY_PATH is a macOS no-op).
                      Prefix the build dir so the self-check sees the
                      artifact it just built. *)
-                  (* $(pwd): the guard paths must be ABSOLUTE — the
-                     POST_BUILD self-check runs from <build>/src/api/ml,
-                     so a relative entry resolves against the wrong cwd
-                     and the stale stublibs dll wins again. *)
+                  (* The guard paths must be ABSOLUTE — the POST_BUILD
+                     self-check runs from <build>/src/api/ml, so a
+                     relative entry resolves against the wrong cwd and the
+                     stale stublibs dll wins again.
+
+                     [$(pwd)/] used to be prepended unconditionally, which
+                     was right in 2026-08-13 when [build] was relative and
+                     WRONG since 2026-08-19, when per-ref build dirs made
+                     it absolute: the guard then expanded to
+                     `<repo>//home/red/code/contrib/...`, a path that does
+                     not exist, so it silently set the variable to garbage
+                     and the shadowing it exists to prevent came straight
+                     back ("unknown C primitive
+                     'n_solver_register_on_clause'", 2026-08-20 on the
+                     pre-10549 ref). A guard that points nowhere reports
+                     nothing — the landing.md §4 class again. Absolutise
+                     conditionally instead. *)
                   env_guard =
-                    Some
-                      (Printf.sprintf
-                         "CAML_LD_LIBRARY_PATH=$(pwd)/%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=$(pwd)/%s"
-                         build build) } };
+                    (let abs p =
+                       if String.is_prefix p ~prefix:"/" then p
+                       else "$(pwd)/" ^ p
+                     in
+                     Some
+                       (Printf.sprintf
+                          "CAML_LD_LIBRARY_PATH=%s/src/api/ml:$CAML_LD_LIBRARY_PATH LD_LIBRARY_PATH=%s"
+                          (abs build) (abs build))) } };
       { ar_action = Canary_basic.Probe_lib; ar_needs = None;
         ar_template = Native_lib_probe
                 { location = Build_tree_glob { lib_glob = "libz3.so"; build };

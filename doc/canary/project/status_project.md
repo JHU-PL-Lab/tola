@@ -107,8 +107,18 @@ it rides z3's expectation closure (like the pre-10549 xfails) or `firing`
 grows a world predicate. Prefer the closure first, and record the
 `firing`-predicate idea as the generalization if a second project wants it.
 
-**C. Run the additive refs' new cells** — `arbipher` and `pre-10549` have
-never run their forward/backward cells. Per the user (2026-08-19) the 2×2
+**C. Run the additive refs' new cells** — `pre-10549` DONE 2026-08-20
+(rows #22–26, all five). It mirrors `latest` exactly except where it
+should differ: the two `install_lib` xfails (the #10549 regression — the
+installed OCaml package did not exist before that PR) plus the staged
+probe's xfail, and the same forward-cell ✗. Two bugs had to be fixed to
+get there, both recorded in [`issues.md`](issues.md): z3's `env_guard`
+had been pointing at a nonexistent path since the per-ref build dirs
+landed, and the pre-10549 build tree carried a stale `dllz3ml.so` linked
+against a libz3 soname the tree no longer produces (ninja will not
+relink for a dependency's SONAME bump). `arbipher` still unrun — it is
+the cold one (no `build-arbipher/`, so a full z3 build). Original note:
+`arbipher` and `pre-10549` have never run their forward/backward cells. Per the user (2026-08-19) the 2×2
 is the LOWER BOUND for any project; a regression ref is an ADDITIVE any
 project may have, and a fix fork is an additive when we have one. So these
 are not optional extras of z3 — they are the additives z3 happens to
