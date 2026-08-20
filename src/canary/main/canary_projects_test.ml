@@ -567,7 +567,10 @@ let pm_gate_pin : Canary_project_test.pure_test =
                (BD.Free_with_conf "conf-cairo")
           && Poly.equal Canary_project_libffi.decl.Canary_opam_binding.pm_gate
                (BD.Bounded_with_conf
-                  { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None })
+                  { conf = "conf-libffi";
+                    lower = Some "2.0.0";
+                    upper = None;
+                    tracks_lib = false })
           && Poly.equal Canary_project_zarith.decl.Canary_opam_binding.pm_gate
                (BD.Free_with_conf "conf-gmp")
           && Poly.equal
@@ -595,12 +598,38 @@ let pm_gate_pin : Canary_project_test.pure_test =
                   (BD.Fixed_with_conf
                      { conf = "conf-llvm-shared"; version = "19" }))
                (BD.Wrapper_needed "conf-llvm-shared")
+          (* THE §G1a pin (2026-08-20). A version bound on a conf package
+             reaches the LIBRARY only when the conf routes its own opam
+             version into its system check — measured: 5 of 370 do, all
+             [custom_script]. So the SAME range derives two different
+             answers, and the discriminator is [tracks_lib]:
+
+             - conf-libffi {>= "2.0.0"}: conf-libffi.2.0.0's build is a
+               bare `pkg-config libffi`, the lib is 3.x → packaging only
+               → [Any_version], exactly like conf-gmp;
+             - conf-libclang {< "16"} (clangml): conf-libclang.N passes
+               `version` to its configure.sh → a real bound on clang.
+
+             Falsified before landing: flipping either flag flips the
+             derived freedom, so this pin fails if the distinction is
+             dropped or wired backwards. *)
+          && Poly.equal
+               (BD.combination_freedom_of
+                  (BD.Bounded_with_conf
+                     { conf = "conf-libffi";
+                       lower = Some "2.0.0";
+                       upper = None;
+                       tracks_lib = false }))
+               BD.Any_version
           && (match
                 BD.combination_freedom_of
                   (BD.Bounded_with_conf
-                     { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None })
+                     { conf = "conf-libclang";
+                       lower = None;
+                       upper = Some "16";
+                       tracks_lib = true })
               with
-             | BD.Within_bound s -> String.is_substring s ~substring:"2.0.0"
+             | BD.Within_bound s -> String.is_substring s ~substring:"16"
              | _ -> false)
           && Poly.equal
                (BD.combination_freedom_of BD.Package_builds_lib)

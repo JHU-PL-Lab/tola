@@ -65,6 +65,47 @@ deliberately, since silencing it would be choosing (a) by default.
 
 ## 2. Declaration gaps
 
+### Found — a gate can live in the BINDING's own build, and `pm_dep_gate`
+### cannot express it (2026-08-20, from the conf-* survey sampling)
+
+`mlmpfr` declares a bare `"conf-mpfr"` dependency, so by metadata alone we
+would tag it `Free_with_conf`. Measured, that is wrong: its opam `build:`
+compiles and RUNS an extra-source C program that reads `MPFR_VERSION_*`
+from the installed header and exits nonzero when the lib is older than the
+binding:
+
+```
+build: [ ["cc" "mlmpfr_compatibility_test.c" "-lmpfr" "-o" …]
+         ["./mlmpfr_compatibility_test"]        ← nonzero aborts the build
+         ["dune" "build" "-p" name "-j" jobs] ]
+```
+
+So mlmpfr 4.2.1 refuses to build against mpfr 4.2.0, and its opam version
+tracks mpfr's (mlmpfr.4.2.1 ↔ mpfr 4.2.1). The gate is real, enforced, and
+invisible to `opam show --field=depends` — the only place we look today.
+
+**What it needs**: a `Self_check_in_build` constructor on
+`Canary_binding_decl.pm_dep_gate`, whose `combination_freedom_of` is a
+lower bound derived from the binding's own version. NOT added yet: no live
+user until mlmpfr lands, and the codebase rule is to grow by concrete
+increments.
+
+**Why it is worth landing**: mlmpfr's forward mismatch (new binding over
+old lib) is rejected by a check the upstream package already ships — a
+naturally occurring xfail rather than a constructed one, which no project
+in the registry has. Details and the ranked context:
+[`../surveys/conf_packages.md` §G1b](../surveys/conf_packages.md).
+
+### Open — assert that a version-bearing gate names a version-carrying conf
+
+Measured (§G1a): exactly 5 of 370 conf packages route their opam version
+into their system check (`conf-llvm`, `conf-llvm-shared`,
+`conf-llvm-static`, `conf-libclang`, `conf-qt`). Any declaration that sets
+`Fixed_with_conf`, or `Bounded_with_conf { tracks_lib = true }`, over a
+conf package outside that list is a declaration bug. The list is small and
+stable enough to hardcode as a `project-test` invariant; not yet wired.
+
+
 ### Found — spec non-uniformities (2026-08-13, `canary spec-check`)
 
 The static checker audits the artifact table AS DECLARED. The first

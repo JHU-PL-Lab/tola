@@ -109,11 +109,24 @@ type pm_dep_gate =
       conf : string;
       lower : string option;  (** e.g. [Some "2.0.0"] *)
       upper : string option;
+      tracks_lib : bool;
+          (** does the bound reach the LIBRARY? A conf package's opam
+              version constrains the C lib only if the conf routes that
+              version into its own system check. MEASURED across the
+              whole repository (2026-08-20, surveys/conf_packages.md
+              §G1a): exactly 5 of 370 conf packages do — [conf-llvm],
+              [conf-llvm-shared], [conf-llvm-static], [conf-libclang],
+              [conf-qt], all of them in the survey's [custom_script]
+              category. Everywhere else the opam version is PACKAGING
+              (e.g. [conf-libffi.2.0.0] whose entire build is
+              [pkg-config libffi], while libffi itself is 3.x), so the
+              bound says nothing about which lib may be installed and
+              the true freedom is [Any_version]. *)
     }
       (** a conf-* package with a version RANGE — [ctypes-foreign]'s
-          [conf-libffi {>= "2.0.0"}]. Note what is bounded: the CONF
-          package's own version, which is opam packaging and need not
-          track the C lib's. Combinations inside the bound are free. *)
+          [conf-libffi {>= "2.0.0"}] ([tracks_lib = false]), or
+          [clangml]'s [conf-libclang {< "16"}] ([tracks_lib = true], a
+          real upper bound on clang). *)
   | Fixed_with_conf of { conf : string; version : string }
       (** a conf-* package pinned EXACTLY — [llvm]'s
           [conf-llvm-shared {build & = "19"}]. The hard case: opam will
@@ -153,6 +166,10 @@ type combination_freedom =
 let combination_freedom_of (g : pm_dep_gate) : combination_freedom =
   match g with
   | Free_with_conf _ -> Any_version
+  (* a bound over PACKAGING is not a bound over the lib: the conf
+     package's version never reaches its system check, so every
+     obtainable lib version is still installable (§G1a) *)
+  | Bounded_with_conf { tracks_lib = false; _ } -> Any_version
   | Bounded_with_conf { lower; upper; _ } ->
       Within_bound
         (match (lower, upper) with

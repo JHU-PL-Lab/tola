@@ -86,12 +86,20 @@ let decl : Canary_opam_binding.t =
     binding_mechanism = Canary_mechanism.Ctypes;
     (* measured: opam `ctypes-foreign` depends on
        `conf-libffi {>= "2.0.0"}` — a lower BOUND, and note what it bounds:
-       the conf package's own version (opam packaging), not libffi's. Any
-       combination inside the bound is free, which per the user's
-       grouping makes this the second-easiest case after Free_with_conf. *)
+       the conf package's own version (opam packaging), not libffi's.
+       CONFIRMED at the source (2026-08-20): conf-libffi.2.0.0's entire
+       build is `pkg-config libffi`, a bare presence check that never sees
+       its own version, while the library it finds is 3.x. So the bound
+       does not reach the lib — [tracks_lib = false], and the derived
+       freedom is [Any_version], the same as conf-gmp's. Only the five
+       version-carrying conf packages (the LLVM family + conf-qt) set this
+       true; see surveys/conf_packages.md §G1a. *)
     pm_gate =
       Canary_binding_decl.Bounded_with_conf
-        { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None };
+        { conf = "conf-libffi";
+          lower = Some "2.0.0";
+          upper = None;
+          tracks_lib = false };
     (* the lib's LATEST point, by the sourcing rule (landing.md §3):
        libffi's own GitHub release (3.8.0) ships source plus MSVC/Windows
        binaries only — no Linux artifact — so step 2 falls through to

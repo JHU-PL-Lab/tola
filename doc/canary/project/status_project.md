@@ -115,19 +115,41 @@ same forward finding on both (same HEAD-ish binding vs apt's 4.8.12); the
 fork's staged world keeps its known ✗ (user: leave it).
 
 **D. More projects, and the dependency question** — design note in
-[`../design/multi_lib.md`](../design/multi_lib.md). Short version: one C
-lib per project is baked into `artifact_kind` (`Lib` carries no name), so:
+[`../design/multi_lib.md`](../design/multi_lib.md); the candidate ranking
+is now MEASURED, not guessed — see
+[`../surveys/conf_packages.md` §G](../surveys/conf_packages.md) (2026-08-20:
+all six category groups sampled, gates read from opam metadata AND from
+the conf packages' own build sections, libs cross-checked against apt and
+conda-forge). Short version: one C lib per project is baked into
+`artifact_kind` (`Lib` carries no name), so:
 
 - [ ] **D1. zlib / camlzip** — lands now; the cheapest real lib channel
   pair in the registry (apt vs a source build measured in seconds), so the
   third project with a 2×2 and the first where both sides are cheap.
-- [ ] **D2. lmdb** — lands now; Pattern B1+E (direct depexts + a `clib:`
-  tag, no conf-*), so it tests the no-conf-indirection style. Its pair
-  comes from the binding's opam pins.
-- [ ] **D3. mpfr / mlgmpidl** — lands now under option (B): gmp declared
-  as a depext, not enumerated. That is honest on this platform (apt ships
-  one GMP; prebuilt-shadows-source forbids building a second), and it
-  gives the first project whose C lib depends on a C lib we already cover.
+  Confirmed by the survey sampling (2026-08-20): highest uncovered revdep
+  count (56), a bare `"conf-zlib"` gate, apt 1.3 → conda-forge 1.3.2, and
+  a libc-only closure. `zlib` (2 opam versions) is an alternative binding
+  to `camlzip` (4) if a smaller surface is wanted.
+- [ ] **D2. zstd / zstandard** — promoted to second by the survey: same
+  shape as zlib (bare `"conf-zstd"`, apt 1.5.5 → conda-forge 1.5.7, small
+  closure), and it is one of `bytesrw`'s five optional backends, so
+  landing it standalone de-risks D5.
+- [ ] **D2b. lmdb** — still worth landing; Pattern B1+E (direct depexts +
+  a `clib:` tag, no conf-*), so it tests the no-conf-indirection style.
+  Its pair comes from the binding's opam pins. `ocurl` is a second
+  Pattern-B specimen (measured: **no conf dependency at all**).
+- [ ] **D3. sundials / sundialsml** — new, and it is the row that PROVES
+  the §G1a finding: its gate reads `conf-sundials {>= "2" & build}`,
+  which a naive reading sends to the wrapper queue, while the conf
+  package's version never reaches its check — so the gate is free and
+  apt 6.4.1 → conda-forge 7.8.0 is the widest pair on the shortlist.
+- [ ] **D3b. mpfr** — two routes, both interesting, neither free:
+  `mlgmpidl` uses the `conf-*-paths` conf FAMILY (a different style worth
+  studying on its own), while `mlmpfr` uses a bare `conf-mpfr` PLUS a
+  version test inside its own build — a gate `pm_dep_gate` cannot express
+  today (`Self_check_in_build`, recorded in [`issues.md`](issues.md)).
+  mlmpfr is the more valuable target: its forward mismatch is rejected by
+  a check upstream already ships — a naturally occurring xfail.
 - [ ] **D4. Named lib artifacts** (the multi-provider axis) — `Lib` gains
   an identity so a project can declare several C libs with their own
   universes. Wide but mechanical; its own arc, with a pin per invariant it

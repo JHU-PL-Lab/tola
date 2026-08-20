@@ -398,3 +398,302 @@ and opam-source-archives at `/home/red/code/contrib/opam-all/opam-source-archive
 Classification by grep heuristics on build sections + extra-source file
 inspection. Scripts: `doc/canary/raw/classify_conf.sh`,
 `doc/canary/raw/conf_revdeps.sh`.*
+
+---
+
+## G. Sampling the category groups (2026-08-20) — landing suitability, ranked
+
+> Requested by the user: *"we can check 5 project in each group L12-19 in
+> `conf_packages` and decide if they worth to land later. I also wish to
+> check the category group with our package tag, to confirm they are
+> aligned"*, then *"for the pkg-config or the version/help group, you can
+> do 10 … you may also lightweight check if they are suitable for our
+> landing … rank the package by their popularity, importance or rev-dep
+> counts."*
+>
+> Everything below is MEASURED on 2026-08-20, not read off metadata
+> summaries. Commands used per row: `opam list --depends-on <conf>
+> --short --all-versions` (who binds it), `opam show <binding>
+> --field=depends` (the gate), `opam show <binding> --field=all-versions`
+> (is there a binding pair), `apt-cache madison <dev-pkg>` (the stable
+> point), `api.anaconda.org/package/conda-forge/<lib>` (the latest point).
+
+### G0. One correction to the raw data first
+
+`doc/canary/raw/binding_packages.tsv` is **incomplete** — it lists 0
+bindings for `conf-cairo`, which `cairo2` demonstrably depends on. Do not
+rank from it. `opam list --depends-on` is the authoritative query and is
+what every number below comes from.
+
+### G1. The alignment check: the category and our gate are DIFFERENT axES
+
+This was the question — *are the survey's category groups the same thing
+as our `Canary_binding_decl.pm_dep_gate` tags?* Measured answer: **no, and
+the reason is structural.** They sit on opposite sides of the conf package:
+
+```
+   binding  ──gate──▶  conf-*  ──category──▶  the system
+   (pm_dep_gate:                 (survey category:
+    how the BINDING                how the CONF PACKAGE
+    constrains the conf)           probes the system)
+```
+
+Neither determines the other. The counter-examples are not exotic:
+
+| conf package | survey category | gate declared by its binding | agree? |
+| --- | --- | --- | --- |
+| conf-gmp / cairo / libssl / sqlite3 | pkgconfig | `Free_with_conf` | ✓ |
+| **conf-libffi** | **pkgconfig** | **`Bounded_with_conf {>= 2.0.0}`** (ctypes-foreign) | ✗ |
+| conf-blas | compile_test | free-at-build (`lacaml {build}`) | ✗ |
+| **conf-sundials** | **compile_test** | **`{>= "2" & build}`** (sundialsml) | ✗ |
+| **conf-readline** | **no_build** | **`{>= "1"}`** (readline) | ✗ |
+| conf-boost | no_build | free (gappa) | ✗ |
+| conf-ppl | compile_test | free (jasmin) | ✗ |
+| conf-capnproto | version_check | `{with-test}` — not a build gate at all (capnp) | ✗ |
+| conf-llvm-shared | custom_script | `Fixed_with_conf {= "19"}` (llvm) | ✓ |
+| **conf-libclang** | **custom_script** | **`{< "16"}`** (clangml) | ✓ |
+
+#### G1a. But there IS an exact correspondence — at the point that matters
+
+A version bound on a conf package only bounds the **C library** if the
+conf package routes its own opam version into its system check. Otherwise
+the bound is over *opam packaging* and the lib is unconstrained. So we
+measured it across the whole repository — for every conf package's newest
+version, does its `build:` pass the `version` variable (bare token or
+`%{version}%`) into the check?
+
+**5 of 370 conf packages do:**
+
+| conf package | how the version reaches the check |
+| --- | --- |
+| `conf-llvm` | `["bash" "configure.sh" version]` |
+| `conf-llvm-shared` | `["bash" "configure.sh" version "shared"]` |
+| `conf-llvm-static` | `["bash" "configure.sh" version "static"]` |
+| `conf-libclang` | `["bash" "-ex" "configure.sh" version]` — the opam file's own comment: *"pass pkg var '21' to test <= 21.0.x"* |
+| `conf-qt` | `["sh" "-ex" "./configure.sh" "%{version}%"]` |
+
+(A sixth match, `conf-cuda`, is a false positive — escaped quotes in a
+heredoc desynced the string stripper; its build is a plain compile test.)
+
+**All five are in the `custom_script` category.** And the converse holds
+too: a sweep of every extra-source script and test C file for numeric
+version comparisons (`-ge`, `sort -V`, `VERSION_MAJOR >=`) found no
+non-LLVM-family conf package that compares versions. `conf-mpfr`'s
+`test.c` *prints* `mpfr_get_version()` and `MPFR_VERSION_STRING` without
+comparing them; `conf-ppl`'s `#error`s only if the header's macro is
+absent.
+
+So the aligned statement — the one to keep — is:
+
+> **`custom_script` ⟺ the conf package's opam version is a LIB version.**
+> In every other category, a `Bounded_with_conf` gate bounds packaging
+> only, and its true combination freedom is `Any_version`.
+
+That is a correction to our model, not just a survey note: `libffi`'s
+`conf-libffi {>= "2.0.0"}` reads as a constraint but `conf-libffi.2.0.0`'s
+entire build is `pkg-config libffi` — 2.0.0 is the *packaging* generation,
+while the library is 3.x. Our `combination_freedom_of` currently answers
+`Within_bound ">= 2.0.0"` there, which overstates the difficulty. See §G5.
+
+#### G1b. A gate mechanism our datatype does not have
+
+Searching for version logic *outside* the conf packages turned up one
+package that gates itself:
+
+```c
+/* mlmpfr_compatibility_test.c.4.2.1 — shipped as an extra-source file */
+#define MLMPFR_MPFR_VERSION_MAFOR 4
+#define MLMPFR_MPFR_VERSION_MINOR 2
+#define MLMPFR_MPFR_VERSION_PATCHLEVEL 1
+  if (MPFR_VERSION_MAJOR >= … && MINOR >= … && PATCHLEVEL >= …) return 0;
+  return 1;
+```
+
+```
+build: [ ["cc" "mlmpfr_compatibility_test.c" "-lmpfr" "-o" …]
+         ["./mlmpfr_compatibility_test"]           ← runs it; nonzero aborts the build
+         ["dune" "build" "-p" name "-j" jobs] ]
+```
+
+`mlmpfr`'s opam dependency is a bare `"conf-mpfr"` — by metadata alone we
+would tag it `Free_with_conf`, and we would be **wrong**: mlmpfr 4.2.1
+refuses to build against mpfr 4.2.0. The gate is in the binding's own
+build, and its opam version tracks mpfr's (mlmpfr.4.2.1 ↔ mpfr 4.2.1).
+
+Two consequences. (1) `pm_dep_gate` needs a `Self_check_in_build`
+constructor before mlmpfr can be declared honestly — recorded in
+[`../project/issues.md`](../project/issues.md), not added speculatively
+today (no live user yet). (2) mlmpfr becomes an unusually *attractive*
+landing: its forward mismatch (new binding, old lib) is rejected by a check
+the upstream package already ships, so the xfail is naturally occurring
+rather than constructed — the first such case in the registry.
+
+### G2. pkg-config group — top 10 C libraries (208 packages, 135 are C libs)
+
+Ranked by conf-package revdeps. `conf-pkg-config` itself (492) is
+excluded: it is the tool, not a library.
+
+| # | conf pkg | rev | binding (opam versions) | gate, measured | apt here | conda-forge | landing verdict |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | conf-ffmpeg | 175 | `ffmpeg-avutil` (26) + 6 sibling pkgs | `{build}` → free | libavutil 6.1.1 | 9.0.1 | **Skip for now** — 7 opam packages over one source tree and a large closure; the biggest revdep prize but not a first landing |
+| 2 | conf-gmp | 129 | `zarith` — **landed** | free | 6.3.0 | 6.3.0 (7 vers) | calibration row |
+| 3 | conf-zlib | 56 | `camlzip` (4), `zlib` (2), `cryptokit` | free (bare `"conf-zlib"`) | 1.3 | **1.3.2** | **Ready** — highest uncovered revdeps, closure is libc only, same soname |
+| 4 | conf-gtksourceview | 55 | `lablgtk-extras`, `why3-ide`, `frama-c` | (GTK stack) | — | — | **Skip** — the GTK closure is tens of libs; the cairo lesson applies at 10× |
+| 5 | conf-mpfr | 49 | `mlmpfr` (11) | bare `"conf-mpfr"` **+ self-check (§G1b)** | 4.2.1 | **4.2.2** | **Blocked: model** — needs `Self_check_in_build`; then it is the best xfail candidate we have |
+| 6 | conf-gtksourceview3 | 44 | `lablgtk3-sourceview3` (5) | `{build & >= "0"}` — a vacuous bound | — | — | **Skip** — same GTK closure |
+| 7 | conf-ncurses | 36 | `curses` (9) | free | **libncurses-dev** 6.4 | **6.6** | **Ready\*** — note the conf package's declared deb name (`ncurses-dev`) is **not in this Ubuntu archive**; the real package is `libncurses-dev`. A stale depext is itself a finding worth landing |
+| 8 | conf-libpcre | 34 | `pcre` (22) | `{build}` → free | 8.39 | **8.45** | **Ready\*** — a genuine 8.39↔8.45 pair, but PCRE1 is EOL (8.45 was final, 2021); prefer `pcre2` if a conf exists |
+| 9 | conf-sqlite3 | 30 | `sqlite3` — **landed** | free | — | — | calibration row |
+| 10 | conf-libssl | 26 | `ssl` — **landed** | free | 3.0.13 | **4.0.1** | landed; the 3→4 prebuilt pair is the open soname case |
+
+Also in this group and worth naming: **conf-zstd (13)** → `zstandard` (5)
+and `zstd` (3), both bare-`conf-zstd` free, apt 1.5.5 vs conda-forge
+1.5.7 — the same clean shape as zlib.
+
+### G3. Version/help group — top 10 (46 classified here; only 5 are C libs)
+
+| # | conf pkg | rev | what it gates | C library? |
+| --- | --- | --- | --- | --- |
+| 1 | conf-npm | 96 | node's npm | no |
+| 2 | conf-perl | 92 | perl | no |
+| 3 | conf-gcc | 66 | a C compiler | no |
+| 4 | conf-gnuplot | 63 | gnuplot | no |
+| 5 | conf-g++ | 61 | a C++ compiler | no |
+| 6 | conf-c++ | 58 | a C++ compiler | no |
+| 7 | conf-git | 46 | git | no |
+| 8 | conf-mingw-w64-gcc-* | 28×2 | cross toolchains | no |
+| 9 | conf-rust-2021 | 23 | rustc edition | no |
+| 10 | conf-capnproto | 15 | capnp — **the only ranked C lib here** | yes |
+| — | conf-protoc 14, conf-bison 8, conf-flex 6, conf-libtool 5 | | build tools that also ship a lib | marginal |
+
+**Finding: this group is not a library group.** 41 of its 46 members gate
+a *program* — a compiler, an interpreter, a code generator. Their revdep
+counts are large because every package that shells out to `perl` or `npm`
+declares one, which makes them look important in a ranking and useless as
+canary projects: there is no lib artifact, no binding surface, no ABI.
+
+The one real candidate, `conf-capnproto` → `capnp` (6 versions, apt 1.0.1
+vs conda-forge 1.5.0), gates the conf package only `{with-test}` — i.e.
+capnp does not need capnproto to *build*, only to run its tests. So even
+here the lib is not on the binding's critical path. **Verdict for the
+whole group: no landings.** Its value to us is diagnostic — it tells us
+where the *toolchain* axis lives, which is a different study (`conf-gcc`
+at 66 revdeps is the ecosystem's real compiler dependency).
+
+A second finding, from the same measurement: `conf-capnproto`'s build is
+`["capnp" "--version"]` — it *invokes* a version flag and then **ignores
+the output**. Several members of this category are presence checks wearing
+a version check's clothes. The classifier's grep saw `--version` and
+grouped by it; that is honest labelling of the command, not of the
+semantics.
+
+### G4. The remaining four groups — 5 each
+
+#### G4a. Compile test (28; 24 are C libs)
+
+| conf pkg | rev | binding | gate | pair available | verdict |
+| --- | --- | --- | --- | --- | --- |
+| conf-rdkit | 46 | `fasmifra`, `linwrap`, `molenc`, `lbvs_consent` | (C++ cheminformatics) | — | **Skip** — C++ template-heavy, no C ABI surface |
+| conf-ppl | 30 | `jasmin` (21) | free | apt 1.2 / cf 1.2 — **one version only** | **Blocked: no pair** |
+| conf-lapack | 23 | `lacaml` (29) | `{build}` → free | apt 3.12.0 / cf 3.12.1 | **Ready\*** — a thin pair (patch-level), and BLAS/LAPACK's real axis is the *implementation* (reference vs OpenBLAS vs MKL), which is a provider axis we do not have. Interesting for that reason |
+| conf-blas | 22 | `lacaml` (shared with lapack) | `{build}` | same | see above — **one project, two conf packages** |
+| conf-sundials | 14 | `sundialsml` (14) | `{>= "2" & build}` — **packaging-only** (§G1a) | apt 6.4.1 / cf **7.8.0** | **Ready\*** — a wide, real pair, and the gate that *looks* bounded is free. Good demonstration of §G1a |
+
+#### G4b. No build (18; 13 are C libs)
+
+| conf pkg | rev | binding | gate | verdict |
+| --- | --- | --- | --- | --- |
+| conf-boost | 21 | `gappa` (4), `ocsfml`, `qfs` | free | **Skip** — apt 1.83 vs cf 1.85 is a real pair, but Boost is header-heavy C++ with no stable C ABI |
+| conf-lame / conf-ladspa / conf-dssi | 3 each | none measured | — | **Skip** — no OCaml binding through the conf |
+| conf-protoc-dev | 2 | — | — | **Skip** |
+| conf-readline | 1 | `readline` (**1 version**) | `{>= "1"}` — packaging-only | **Blocked: no pair** — the *binding* has one release ever; the 2×2's binding axis cannot exist |
+
+**Finding:** "no build" means the conf package is a pure depexts
+declaration — it does not check anything at all. That is the weakest
+possible guarantee (opam records an intent to have installed a system
+package), and unsurprisingly it correlates with tiny revdep counts. As a
+landing group it is empty.
+
+#### G4c. Which/path check (9; **0 are C libs**)
+
+`conf-which` (88), `conf-time` (47), `conf-liblinear-tools` (14),
+`conf-wget` (4), `conf-sdpa` (4), `conf-libsvm-tools` (4),
+`conf-timeout` (3), `conf-csdp` (3), `conf-rust-llvm` (0).
+
+Every member locates an **executable**. Note `conf-liblinear-tools` and
+`conf-libsvm-tools` — the *libraries* liblinear and libsvm exist, but what
+opam checks for is the command-line drivers. **Verdict: no landings, by
+construction.** The group is the tool axis again, and its top two entries
+(`which`, `time`) are POSIX utilities, not dependencies in any interesting
+sense.
+
+#### G4d. Custom logic (9; 6 are C libs) — the group that actually gates versions
+
+| conf pkg | rev | binding | gate | verdict |
+| --- | --- | --- | --- | --- |
+| conf-cmake | 102 | (build tool) | — | tool axis |
+| conf-libev | 69 | `lwt` and 6 others — **as a `depopt`** | optional | **Blocked: model** — needs the `Absent` provision wired into a universe + a combination policy (`../design/multi_lib.md` §2) |
+| conf-llvm | 26 | `llvm` — **landed** | `Fixed_with_conf` | calibration row |
+| conf-libclang | 17 | `clangml` (25) | **`{< "16"}` — a REAL lib bound** (§G1a) | **Ready\*\*** — the only measured `Bounded_with_conf` whose bound reaches the library. An upper bound, so the interesting world is *new lib, old binding* — the backward direction, which nothing in the registry exercises yet |
+| conf-qt | 5 | — | version-carrying | **Skip** — Qt closure |
+
+**Finding:** this 6%-of-the-repository group is where the version
+semantics live (all 5 version-carrying conf packages, §G1a), where our two
+hard gates live (`Fixed_with_conf`, real `Bounded_with_conf`), and where
+the optional-dependency case lives. The survey's original judgement —
+*"custom logic … NOT eliminable"* — understated it: these are not merely
+unmechanizable, they are **the only conf packages that carry information
+we cannot get from anywhere else**.
+
+### G5. The ranked shortlist
+
+Ranked by (uncovered revdeps × landing readiness). Rows already landed are
+omitted. "Effective gate" applies §G1a — a packaging-only bound is free.
+
+| rank | project | conf revdeps | binding pair | lib pair (stable → latest) | effective gate | cost |
+| --- | --- | --- | --- | --- | --- | --- |
+| **1** | **zlib / camlzip** | 56 | camlzip 1.07→1.14 (4) | apt 1.3 → cf **1.3.2** | free | declaration only |
+| **2** | **zstd / zstandard** | 13 | v0.13.0→v0.17.0 (5) | apt 1.5.5 → cf **1.5.7** | free | declaration only; also a `bytesrw` backend |
+| **3** | **sundials / sundialsml** | 14 | 2.5.0p0→6.1.1p1 (14) | apt 6.4.1 → cf **7.8.0** | free (bound is packaging) | declaration + the widest version gap in the table |
+| **4** | **ncurses / curses** | 36 | 1.0.3→1.0.12 (9) | apt 6.4 → cf **6.6** | free | declaration + a stale-depext finding to report |
+| **5** | **libpcre / pcre** | 34 | 7.1.3→8.0.5 (22) | apt 8.39 → cf **8.45** | free | declaration; EOL lib, so prefer pcre2 if available |
+| **6** | **libclang / clangml** | 17 | 0.5.1→4.8.0 (25) | LLVM family | **`< 16` — real** | the first genuine lib-version bound; backward-direction world |
+| **7** | **mpfr / mlmpfr** | 49 | 3.1.6→4.2.1 (11) | apt 4.2.1 → cf **4.2.2** | free conf + **self-check** | needs `Self_check_in_build`; best natural xfail |
+| **8** | **postgresql** | 13 | 3.2.1→5.4.0 (24) | **apt ships 16.2 AND 16.14** | `{build}` → free | the only lib whose pair is available *inside apt* — no conda-forge needed |
+| **9** | **lapack+blas / lacaml** | 23+22 | 7.2.1→11.1.1 (29) | apt 3.12.0 → cf 3.12.1 | free | thin pair; its real axis is implementation (reference/OpenBLAS), which we cannot express |
+| **10** | **libcurl / ocurl** | 22 | 0.7.6→… (7) | apt 8.5.0 → cf **8.21.0** | **no conf dep at all** (Pattern B) | a different pattern: the binding finds curl itself |
+| — | libev / lwt | 69 | — | — | depopt | blocked on the optional-dep model |
+| — | ffmpeg, gtksourceview(3), rdkit, boost, qt | 175/55/46/21/5 | — | — | — | heavy closures / C++ / no C ABI |
+| — | ppl, glpk | 30 / 6 | — | one version each | free | no lib pair exists here |
+| — | readline, mysql8 | 1 / 11 | **one binding release** | — | — | no binding pair exists |
+
+**Recommendation, unchanged in shape from §F3 but now with the evidence
+behind it:** take **zlib** and **zstd** first (both pure declaration),
+then **sundials** — because sundials is the row that *proves* §G1a: its
+gate reads `{>= "2" & build}` and a naive reading would send us to build a
+wrapper, while the measurement says the bound never reaches the library
+and apt→conda-forge gives us 6.4.1 → 7.8.0 for free. Landing it converts a
+survey claim into a run.
+
+Two of the rows are worth landing for what they *break*, not for their
+revdeps: **libclang/clangml** (the only real lib bound; an upper bound, so
+it exercises the backward direction) and **mpfr/mlmpfr** (a gate that
+lives in the binding's own build). Both need a model piece first, and both
+are recorded in [`../project/issues.md`](../project/issues.md).
+
+### G6. What this changes in the code
+
+1. **`Bounded_with_conf` needs to say whether its bound reaches the lib.**
+   Measured: only conf packages that route their opam version into their
+   check do (5 of 370, all `custom_script`). Without that distinction
+   `combination_freedom_of` answers `Within_bound` for libffi, where the
+   truth is `Any_version`. → landed as a `tracks_lib` field, with the
+   libffi declaration updated and a pin (see the pin
+   `conf_version_semantics_pin`).
+2. **`Self_check_in_build` is missing** (§G1b, mlmpfr). Recorded as an
+   issue, not added: no live user until mlmpfr lands.
+3. **A `pkgconfig`-category conf package can never justify
+   `Fixed_with_conf`.** That is now a checkable invariant over our
+   declarations, and it is cheap: assert that any project declaring a
+   version-bearing gate names a conf package from the five-member
+   version-carrying list.

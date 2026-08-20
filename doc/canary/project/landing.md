@@ -159,6 +159,37 @@ Three consequences worth carrying into every landing:
   3.8.0). Good enough to be the fallback, not good enough to be assumed —
   record the version you actually vendored.
 
+## 3b. Measuring the gate — `opam show` is necessary, not sufficient
+### (rule, 2026-08-20, from the conf-* survey sampling)
+
+The landing checklist says to MEASURE `pm_gate` rather than guess it. Two
+measurements found on 2026-08-20 say that reading
+`opam show <binding> --field=depends` alone gets it wrong in both
+directions. Do all three steps:
+
+1. **Read the binding's declared constraint** — as before.
+2. **If there is a version bound, open the CONF PACKAGE and check whether
+   its own version reaches its check.** A conf package's opam version
+   constrains the C library only when the `build:` routes that version
+   into the system probe (`["bash" "configure.sh" version]`). Measured
+   across the whole repository: exactly **5 of 370** do — `conf-llvm`,
+   `conf-llvm-shared`, `conf-llvm-static`, `conf-libclang`, `conf-qt`.
+   Everywhere else the bound is over opam PACKAGING and the lib is
+   unconstrained: `conf-libffi.2.0.0`'s entire build is
+   `pkg-config libffi` while libffi is 3.x. Record the answer as
+   `Bounded_with_conf { tracks_lib }`; `false` derives `Any_version`.
+3. **Read the binding's own `build:` for a version test.** `mlmpfr`
+   compiles and runs a C program that reads `MPFR_VERSION_*` and aborts
+   the build on an older lib — a hard gate with a *bare* `"conf-mpfr"`
+   dependency. `opam show` cannot see it. Grep the package's
+   extra-source files for `VERSION_MAJOR` / `-ge` / `sort -V` before
+   declaring a gate free.
+
+Failing step 2 overstates the difficulty (we would go build a wrapper for
+libffi that nothing requires). Failing step 3 understates it (we would
+declare mlmpfr free and be surprised by a build abort). Both are recorded
+with evidence in [`../surveys/conf_packages.md` §G1](../surveys/conf_packages.md).
+
 ## 4. Landing lessons — the bug classes that bit us (keep re-reading)
 
 Recorded because they recur, and a new project with a similar shape will
