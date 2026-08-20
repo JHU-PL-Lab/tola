@@ -123,9 +123,24 @@ get there, both recorded in [`issues.md`](issues.md): z3's `env_guard`
 had been pointing at a nonexistent path since the per-ref build dirs
 landed, and the pre-10549 build tree carried a stale `dllz3ml.so` linked
 against a libz3 soname the tree no longer produces (ninja will not
-relink for a dependency's SONAME bump). `arbipher` still unrun — it is
-the cold one (no `build-arbipher/`, so a full z3 build). Original note:
-`arbipher` and `pre-10549` have never run their forward/backward cells. Per the user (2026-08-19) the 2×2
+relink for a dependency's SONAME bump). `arbipher` DONE the same day (cold
+build, rows #17–21). z3 is now 16/16.
+
+**What the complete set shows.** Taking `latest` as the baseline, the two
+additive refs differ in FOUR cells out of ~105: arbipher's #19
+`probe_binding_ocaml` ✗ (the fork cannot serve a staged consumer — the
+deliberate red in [`issues.md`](issues.md) §1), and pre-10549's three
+xfails. All three forward cells (#16/#21/#26) are ✗ for one reason that
+involves no ref at all — apt's libz3 4.8.12 exports 705 `Z3_` symbols
+where a HEAD-built binding needs 791 — so three rows carry one finding.
+That is plan item B's target, and the ref sweep confirms it is
+ref-independent.
+
+**llvm**: #27 (released, xfail `Opcode.UncondBr`) and #29 (arbipher dev,
+warm tree) ran 2026-08-20 via `action llvm --refs 19,arbipher`. #28
+(`latest`) is deliberately deferred: its source declares `locals = []`, so
+running it clones llvm-project and builds libLLVM from scratch. It is the
+ONLY unrun row in the registry (41/42). Per the user (2026-08-19) the 2×2
 is the LOWER BOUND for any project; a regression ref is an ADDITIVE any
 project may have, and a fix fork is an additive when we have one. So these
 are not optional extras of z3 — they are the additives z3 happens to

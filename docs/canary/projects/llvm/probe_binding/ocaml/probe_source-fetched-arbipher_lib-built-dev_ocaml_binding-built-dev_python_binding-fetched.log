@@ -1,0 +1,10 @@
+; ModuleID = 'canary_llvm_dev'
+source_filename = "canary_llvm_dev"
+
+define void @entry() {
+entry:
+  br label %exit
+
+exit:                                             ; preds = %entry
+  ret void
+}

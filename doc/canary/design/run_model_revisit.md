@@ -49,6 +49,13 @@ What follows from it:
   the honest version, and it is what would have made rows #17–29 look
   like the debt they were.
 
+**Where it stands after 2026-08-20**: 41 of 42 rows have run. The one
+holdout is #28 (llvm `latest`), whose source declares no local tree, so
+running it means cloning llvm-project and building libLLVM from scratch —
+hours, deliberately deferred rather than forgotten. That sentence is the
+metric this section asks for; the point is that it should be printed by
+the tool rather than reconstructed by hand.
+
 ## 2. Cost is a property of a scenario, and the model has no word for it
 
 Deciding what to run meant `ls`-ing `contrib/z3-all/`:
@@ -56,6 +63,14 @@ Deciding what to run meant `ls`-ing `contrib/z3-all/`:
 not (cold, a full z3 build). Nothing in the spec, the enumeration, the
 matrix or `status` carries that distinction, so the only way to know what
 a run costs is to look at the filesystem and know what you are looking at.
+
+The same call had to be made twice more the same afternoon, both times by
+hand: llvm's `arbipher` was warm (`llvm-all/build/lib/libLLVM.so.23.0git`,
+509 MB, built weeks earlier) so it ran in minutes, while llvm's `latest`
+declares `locals = []` and would have cloned and built LLVM from scratch.
+Running `action llvm` would have started that; `action llvm --refs
+19,arbipher` was the right command, and nothing in the tool suggests it.
+A cost mark would have.
 
 This matters more as the registry grows: `action @all` is now ten
 projects, and its cost is dominated by whichever build trees happen to be
@@ -119,18 +134,21 @@ and the detection event should name the file.
 
 ## 5. A ref is a perturbation, and the matrix re-states the baseline
 
-Five rows were added for `pre-10549`. Compared cell-by-cell against
-`latest`'s five, they differ in **three cells**:
+All three z3 refs have now run (2026-08-20, `action z3` full — 16/16
+rows). Taking `latest` as the baseline and comparing the other two
+cell-by-cell, they differ in **four cells out of ~105 populated**:
 
-| cell | latest | pre-10549 |
-| --- | --- | --- |
-| #24/#14 `install_lib` | ✓ | **xfail** |
-| #24/#14 `probe_binding_ocaml` | ✓ | **xfail** |
-| #25/#15 `install_lib` | ✓ | **xfail** |
+| ref | cell | latest | this ref | why |
+| --- | --- | --- | --- | --- |
+| arbipher | #19 `probe_binding_ocaml` | ✓ | **✗** | the fork cannot serve a staged consumer — a known, deliberately-red finding (`../project/issues.md` §1) |
+| pre-10549 | #24 `install_lib` | ✓ | **xfail** | predates PR #10549, which added the installed OCaml package |
+| pre-10549 | #24 `probe_binding_ocaml` | ✓ | **xfail** | consequence of the above — nothing staged to probe |
+| pre-10549 | #25 `install_lib` | ✓ | **xfail** | same as #24 |
 
-Everything else — roughly 35 populated cells — repeats the baseline
-exactly, including the forward cell's `✗`, which is about apt's 4.8.12
-being old and has nothing to do with the ref.
+Everything else repeats the baseline exactly — including all three
+forward cells' `✗` (#16, #21, #26), which are one finding, not three:
+apt's libz3 4.8.12 exports 705 `Z3_` symbols and a HEAD-built binding
+needs 791. That failure is a property of apt, and every ref restates it.
 
 That is the *right* result: it is what makes the three differing cells
 meaningful, and re-running the identical ones is how we know they are
@@ -146,8 +164,16 @@ identical. But it says something about presentation and about scale:
   that is read but changes nothing still costs a full set of rows. The two
   are different rules; only the first exists.
 - **It bounds how far refs scale.** Every additive ref multiplies rows by
-  the cell count, and on today's evidence ~92% of the new rows restate the
-  baseline. Three refs is fine. The tenth would not be.
+  the cell count, and measured over the complete set, **96% of the
+  non-baseline cells restate the baseline** (4 differ of ~105). Three refs
+  is fine — the repetition is what makes those four legible. The tenth
+  would not be, and the cost is not only reading: `arbipher` needed a cold
+  z3 build to produce five rows of which one was new.
+- **The forward cell is the sharpest case.** It is `✗` under all three
+  refs for a reason that involves no ref at all. Three rows carry one
+  finding, and a reader has no way to see that from the matrix — which is
+  the presentation half of §1's problem: the grid says how many worlds
+  failed, never how many distinct things are wrong.
 
 ## 6. What to change, in order
 
