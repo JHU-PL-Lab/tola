@@ -53,6 +53,58 @@ let run_project_run ?config (pr : Canary_project_run.project_run) ~root
     close_out oc
   with Sys_error _ -> ()
 
+(* ── `canary prebuilt` — PREPARE the vendored prebuilt libs ──
+   The lib pair's latest point is a downloaded prebuilt (landing.md §3's
+   sourcing rule). It is prepared BEFORE any run, deliberately: a
+   scenario must not depend on the network, and every world must see the
+   same bytes. Idempotent and version-stamped, so re-running is free and
+   a changed declaration re-prepares. *)
+let prebuilt_cmd =
+  let project =
+    Arg.(
+      value
+      & pos 0 (some string) None
+      & info [] ~docv:"PROJECT"
+          ~doc:"Project whose prebuilt libs to prepare (default: all).")
+  in
+  let run proj () =
+    let distro = Canary_basic.detect_distro () in
+    let all = Canary_registry.declared_prebuilts () in
+    let wanted =
+      match proj with
+      | None -> all
+      | Some p -> List.filter (fun (n, _) -> String.equal n p) all
+    in
+    if wanted = [] then
+      Fmt.pr "no declared prebuilt for %s (the lib axis has one point — \
+              see the spec's rationale)@."
+        (match proj with Some p -> p | None -> "any project")
+    else
+      List.iter
+        (fun (n, (pb : Canary_prebuilt.t)) ->
+          let path = Canary_prebuilt.path_of pb distro in
+          if Canary_prebuilt.is_prepared pb distro then
+            Fmt.pr "[prebuilt] %s: %s already prepared (%s)@." n
+              pb.Canary_prebuilt.tag path
+          else begin
+            Fmt.pr "[prebuilt] %s: preparing %s -> %s@." n
+              pb.Canary_prebuilt.tag path;
+            let cmd = Canary_prebuilt.prepare_cmd pb distro in
+            let rc = Stdlib.Sys.command cmd in
+            if rc = 0 && Canary_prebuilt.is_prepared pb distro then
+              Fmt.pr "[prebuilt] %s: ok (%s)@." n pb.Canary_prebuilt.note
+            else Fmt.pr "[prebuilt] %s: FAILED (rc=%d)@." n rc
+          end)
+        wanted
+  in
+  Cmd.v
+    (Cmd.info "prebuilt"
+       ~doc:
+         "Prepare the declared prebuilt (Vendored) native libs — the lib \
+          pair's LATEST point, downloaded from the project's own release \
+          or conda-forge. Idempotent; run before `action`.")
+    Term.(const run $ project $ const ())
+
 let paths_cmd =
   Cmd.v
     (Cmd.info "paths" ~doc:"Print action pattern table (plain text)")
@@ -1609,6 +1661,7 @@ let () =
         verify_cmd;
         index_cmd;
         result_cmd;
+        prebuilt_cmd;
       ]
   in
   Stdlib.exit (Cmd.eval cmd)

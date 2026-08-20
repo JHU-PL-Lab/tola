@@ -441,6 +441,75 @@ let providing_arrow_pin : Canary_project_test.pure_test =
        z3's opam package builds its own lib, and both wheels bundle theirs;
    (c) the freedom derivation agrees with the group — the answer to "how
        hard is this project's 2×2". *)
+(* THE VENDORED PREBUILT (2026-08-19, user's sourcing rule): a project
+   whose distro ships one lib version gets its LATEST point as a
+   downloaded prebuilt, declared [Vendored] and prepared before any run.
+   Pinned:
+   (a) a project declaring [prebuilt_latest] enumerates BOTH points —
+       Fetched@Stable (the system PM) and Vendored@Dev (the prebuilt);
+   (b) the two worlds RESOLVE DIFFERENT FILES. This is the teeth: cairo's
+       two versions export identical symbol counts (420/420), so a
+       vendored world that silently fell back to the system lib would
+       look exactly like a pass. The realized probe command must name the
+       prebuilt path in the Vendored world and the system glob in the
+       Fetched one;
+   (c) every declared prebuilt carries a RATIONALE on its lib row, and so
+       does every project that declares NONE — a one-point axis must say
+       why (zarith: apt already ships upstream's newest GMP). *)
+let vendored_prebuilt_pin : Canary_project_test.pure_test =
+  { name = "spec.vendored_prebuilt_pair";
+    check =
+      (fun () ->
+        let module PB = Canary_prebuilt in
+        let lib_probe_cmd pr a =
+          let spec =
+            pr.Canary_project_run.pr_runner_spec a ~workspace:"/tmp/pb" ()
+          in
+          List.fold spec.Canary_step_builder.probe_lib ~init:""
+            ~f:(fun acc (_, f) ->
+              acc ^ f ~output_dir:"/tmp/pb" ~variant_key:"pin")
+        in
+        let pair_ok (pr : Canary_project_run.project_run) (pb : PB.t) =
+          let asgs = Canary_project_run.scenarios_of pr in
+          let of_prov pv =
+            List.filter asgs ~f:(fun a ->
+                Canary_artifact.equal_provision
+                  (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+                  pv)
+          in
+          let fetched = of_prov Canary_artifact.Fetched in
+          let vendored = of_prov Canary_artifact.Vendored in
+          (* (a) both points enumerate *)
+          (not (List.is_empty fetched))
+          && (not (List.is_empty vendored))
+          (* (b) and they read DIFFERENT files *)
+          && List.for_all vendored ~f:(fun a ->
+                 String.is_substring (lib_probe_cmd pr a)
+                   ~substring:pb.PB.tag)
+          && List.for_all fetched ~f:(fun a ->
+                 not
+                   (String.is_substring (lib_probe_cmd pr a)
+                      ~substring:pb.PB.tag))
+        in
+        let rationale_ok (pr : Canary_project_run.project_run) =
+          List.exists pr.Canary_project_run.pr_artifacts ~f:(fun r ->
+              Canary_artifact.equal_artifact_id
+                r.Canary_project_spec.ar_artifact Canary_artifact.a_lib
+              && Option.is_some r.Canary_project_spec.ar_rationale)
+        in
+        (match Canary_project_libffi.decl.Canary_opam_binding.prebuilt_latest with
+        | Some pb -> pair_ok Canary_project_libffi.libffi_run pb
+        | None -> false)
+        && (match Canary_project_cairo.decl.Canary_opam_binding.prebuilt_latest with
+           | Some pb -> pair_ok Canary_project_cairo.cairo_run pb
+           | None -> false)
+        (* (c) including the project that declares NO prebuilt *)
+        && Option.is_none
+             Canary_project_zarith.decl.Canary_opam_binding.prebuilt_latest
+        && rationale_ok Canary_project_zarith.zarith_run
+        && rationale_ok Canary_project_libffi.libffi_run
+        && rationale_ok Canary_project_cairo.cairo_run) }
+
 let pm_gate_pin : Canary_project_test.pure_test =
   { name = "spec.pm_dep_gate_groups";
     check =
@@ -1295,7 +1364,18 @@ let repo_axes_pin : Canary_project_test.pure_test =
               String.is_substring (fetch_cmd_of a) ~substring:expect)
         in
         let cairo_ok =
-          match Canary_project_run.scenarios_of Canary_project_cairo.cairo_run with
+          (* cairo now enumerates TWO worlds (2026-08-19): the system lib
+             and the vendored conda-forge prebuilt. The repo-axes claim is
+             about the SOURCE ref, which both share, so check it on the
+             system-lib world. *)
+          match
+            List.filter
+              (Canary_project_run.scenarios_of Canary_project_cairo.cairo_run)
+              ~f:(fun a ->
+                Canary_artifact.equal_provision
+                  (Canary_enumerate.provision_of a Canary_artifact.a_lib)
+                  Canary_artifact.Fetched)
+          with
           | [ a ] ->
               (* cairo's repo IS the C lib's — it keeps [a_source] *)
               String.equal
@@ -2273,11 +2353,12 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
                           | _ -> false)
                   | None -> false)
         in
-        (* 36 (2026-08-19): sqlite 10 + z3 16 + llvm 3 + tiny-full 1 +
-           zarith 2 + cairo 1 + libffi 1 + ssl 2 — the channel pairs added
-           worlds (sqlite +5, z3 +9) and the unread-source collapse removed
-           phantoms (llvm −2, zarith −1) *)
-        List.length rows = 36
+        (* 38 (2026-08-19): sqlite 10 + z3 16 + llvm 3 + tiny-full 1 +
+           zarith 2 + cairo 2 + libffi 2 + ssl 2 — cairo and libffi gained
+           their VENDORED prebuilt point (the lib pair's latest, downloaded
+           from conda-forge), on top of the channel pairs (sqlite +5,
+           z3 +9) and the unread-source collapse (llvm −2, zarith −1) *)
+        List.length rows = 38
         && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 16
         && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 2
         && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
@@ -2325,6 +2406,7 @@ let tests : Canary_project_test.pure_test list =
          mismatch-matrix pin below asserts the opposite claim for it;
          llvm still follows, so the lockstep pin still applies there *)
       pm_gate_pin;
+      vendored_prebuilt_pin;
       z3_mismatch_matrix_pin;
       binding_follows_chain_pin ~prefix:"llvm" ~spec:(Canary_project_spec.project_spec_of_rows Canary_project_llvm.llvm_artifacts);
       sqlite_runtime_edges_pin; providing_arrow_pin;

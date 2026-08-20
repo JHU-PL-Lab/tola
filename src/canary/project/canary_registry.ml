@@ -23,3 +23,16 @@ let all_projects : (string * Canary_project_run.project_run) list =
     ("cairo", Canary_project_cairo.cairo_run);
     ("libffi", Canary_project_libffi.libffi_run);
     ("ssl", Canary_project_ssl.ssl_run) ]
+
+(** The declared prebuilt (Vendored) libs, per project (2026-08-19). The
+    `prebuilt` command prepares these before any run; a project whose lib
+    axis has one point declares none, and its spec rationale says why. *)
+let declared_prebuilts () : (string * Canary_prebuilt.t) list =
+  List.filter_map
+    (fun (name, d) ->
+      match d.Canary_opam_binding.prebuilt_latest with
+      | Some pb -> Some (name, pb)
+      | None -> None)
+    [ ("libffi", Canary_project_libffi.decl);
+      ("cairo", Canary_project_cairo.decl);
+      ("zarith", Canary_project_zarith.decl) ]

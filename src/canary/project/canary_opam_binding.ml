@@ -84,6 +84,13 @@ type t = {
      a conf-* with no constraint is free, a bound is free inside it, an
      exact pin needs a wrapper that drops the conf dep. *)
   pm_gate : Canary_binding_decl.pm_dep_gate;
+  (* THE LIB'S LATEST POINT (2026-08-19, user's sourcing rule — see
+     project/landing.md §3). stable is always the system PM; when a
+     prebuilt LATEST is obtainable the project declares it here and the
+     lib axis becomes a real pair (Fetched@Stable + Vendored@Dev).
+     [None] = no pair is possible, and the row's rationale must say why
+     (apt already ships upstream's newest, as with GMP). *)
+  prebuilt_latest : Canary_prebuilt.t option;
   (* The wrapper package (2026-08-17, active plan 2): when [Some], the
      bind_built scenarios gain a PUBLISH step installing this
      conf-free wrapper over the scenario's worktree (the pattern's
@@ -142,12 +149,31 @@ let ocaml_config (d : t) : ocaml_tool_config =
            ~system_package_macos:d.system_pkg_macos ());
   }
 
-let runner_spec_with (d : t) (src : Canary_artifact_source.source_repo option) :
+let runner_spec_with ?(vendored_lib : Canary_prebuilt.t option)
+    (d : t) (src : Canary_artifact_source.source_repo option) :
     Canary_step_builder.runner_spec =
   let cfg = ocaml_config d in
   let prebuilt = prebuilt_info_exn cfg in
   let pm = Canary_store.detect_pm () in
-  let resolve = lib_resolve d.lib in
+  (* WHICH lib this world consumes (2026-08-19): the system PM's by
+     default; the PREPARED prebuilt in a Vendored world. The whole point
+     of the pair is that these are different bytes, so the resolve must
+     differ too — a Vendored world that silently resolved the system lib
+     would be the stable world wearing another name (the same class as
+     the staged-probe lie the Installed axis had to fix). *)
+  let resolve =
+    match vendored_lib with
+    | None -> lib_resolve d.lib
+    | Some pb ->
+        let dir = Canary_prebuilt.libdir_of pb (Canary_basic.detect_distro ()) in
+        Printf.sprintf
+          "LIB_NATIVE=$(ls %s/%s 2>/dev/null | head -1)\n\
+           test -n \"$LIB_NATIVE\" -a -e \"$LIB_NATIVE\" || { echo \
+           \"PREBUILT MISSING: %s — run `canary prebuilt %s` first\" >&2; \
+           exit 1; }"
+          (Canary_prebuilt.path_of pb (Canary_basic.detect_distro ()))
+          pb.Canary_prebuilt.lib_glob dir pb.Canary_prebuilt.project
+  in
   {
     Canary_step_builder.empty_runner_spec with
     (* Declarative lib store (S3/S4): fetch_lib is Derived from this. *)
@@ -310,7 +336,15 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
          (Canary_artifact.a_binding Canary_lang.OCaml d.binding_mechanism))
       Canary_artifact.Built
   in
-  let base = runner_spec_with d (Some src) in
+  let vendored_lib =
+    match
+      ( d.prebuilt_latest,
+        Canary_enumerate.provision_of a Canary_artifact.a_lib )
+    with
+    | Some pb, Canary_artifact.Vendored -> Some pb
+    | _ -> None
+  in
+  let base = runner_spec_with ?vendored_lib d (Some src) in
   (* the shared build tree for a Built binding (2026-08-17 fix): the
      build_binding and probe_binding steps have DIFFERENT output dirs
      (projects/<p>/<step>/<lang>/), so a build dir keyed on [output_dir]
@@ -574,8 +608,32 @@ let artifacts (d : t) : Canary_project_spec.artifact_row list =
      prebuilt-shadows-source rule (2026-08-17): no source-built lib
      column; a second lib version enters as a prebuilt, never a build *)
   let lib_row =
-    Canary_project_spec.artifact_row ~artifact:a_lib
-      ~universe:[ (Fetched, [ Canary_basic.Stable ]) ]
+    (* the lib's channel pair, sourced by the rule (landing.md §3):
+       stable = the system PM, latest = a declared prebuilt when one is
+       obtainable. The prebuilt point is [Vendored] — supplied, neither
+       built here nor PM-resolved — and is PREPARED before any run
+       (`canary prebuilt`), so no scenario depends on the network. *)
+    let universe =
+      match d.prebuilt_latest with
+      | None -> [ (Fetched, [ Canary_basic.Stable ]) ]
+      | Some _ ->
+          [ (Fetched, [ Canary_basic.Stable ]);
+            (Vendored, [ Canary_basic.Dev ]) ]
+    in
+    let rationale =
+      match d.prebuilt_latest with
+      | Some pb ->
+          Printf.sprintf
+            "lib pair: stable = the system PM (%s); latest = %s. %s"
+            d.system_pkg_linux pb.Canary_prebuilt.tag pb.Canary_prebuilt.note
+      | None ->
+          Printf.sprintf
+            "lib axis has ONE point (%s from the system PM): no prebuilt \
+             latest is obtainable — see project/landing.md §3 for the \
+             sourcing rule and why this lib has no second point."
+            d.system_pkg_linux
+    in
+    Canary_project_spec.artifact_row ~artifact:a_lib ~universe ~rationale
       ~provider:
         (Canary_store_config.Sys_pkg
            { Canary_store.linux_pkg = d.system_pkg_linux;

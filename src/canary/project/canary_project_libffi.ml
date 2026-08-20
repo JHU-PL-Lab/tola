@@ -92,6 +92,25 @@ let decl : Canary_opam_binding.t =
     pm_gate =
       Canary_binding_decl.Bounded_with_conf
         { conf = "conf-libffi"; lower = Some "2.0.0"; upper = None };
+    (* the lib's LATEST point, by the sourcing rule (landing.md §3):
+       libffi's own GitHub release (3.8.0) ships source plus MSVC/Windows
+       binaries only — no Linux artifact — so step 2 falls through to
+       conda-forge, whose newest linux-64 build is 3.7.0 (one release
+       behind upstream, which is the measured cost of the fallback). *)
+    prebuilt_latest =
+      Some
+        { Canary_prebuilt.project = "libffi";
+          tag = "libffi-3.7.0";
+          version = "3.7.0";
+          url =
+            "https://conda.anaconda.org/conda-forge/linux-64/libffi-3.7.0-h3435931_0.conda";
+          lib_glob = "lib/libffi.so*";
+          note =
+            "conda-forge 3.7.0 (upstream 3.8.0 publishes no Linux binary; \
+             apt ships 3.4.6). Same soname (libffi.so.8) as apt's, so the \
+             pair tests version drift WITHIN an ABI generation — which is \
+             what a ctypes-foreign consumer resolving symbols at dlsym \
+             time would notice first." };
     wrapper = None }
 
 let runner_spec = Canary_opam_binding.runner_spec decl

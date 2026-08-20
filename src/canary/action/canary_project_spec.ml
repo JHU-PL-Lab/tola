@@ -16,9 +16,19 @@ type artifact_row = {
   ar_artifact : artifact_id;
   ar_axes : artifact_axes;
   ar_provider : Canary_store_config.provider option;
+  ar_rationale : string option;
+      (** WHY this row's universe is what it is (2026-08-19, user: "add
+          the project spec explanation ... to let other readers know our
+          selection"). Where did each point of the axis come from, and —
+          more importantly — why does the axis STOP there? A single-point
+          axis is usually a fact about the world (apt ships one version;
+          upstream publishes no Linux binary), not an omission, and
+          without the rationale a reader cannot tell the two apart.
+          Surfaced by `spec` and beside `spec-check`'s warnings. *)
 }
 
-let artifact_row ~artifact ~universe ?follows ?runtime ?provider () : artifact_row =
+let artifact_row ~artifact ~universe ?follows ?runtime ?provider ?rationale ()
+    : artifact_row =
   let runtime =
     match runtime with
     | Some _ -> runtime
@@ -38,7 +48,8 @@ let artifact_row ~artifact ~universe ?follows ?runtime ?provider () : artifact_r
     | None -> []
   in
   let ax = axes ?runtime ?follows ~pins universe in
-  { ar_artifact = artifact; ar_axes = ax; ar_provider = provider }
+  { ar_artifact = artifact; ar_axes = ax; ar_provider = provider;
+    ar_rationale = rationale }
 
 (** From rows to spec: derive [ps_universe] from the row list. *)
 let project_spec_of_rows (rows : artifact_row list) : project_spec =

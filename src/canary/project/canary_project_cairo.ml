@@ -91,6 +91,24 @@ let decl : Canary_opam_binding.t = {
   (* measured: opam `cairo2` depends on `conf-cairo`, no version
      constraint — same free shape as zarith *)
   pm_gate = Canary_binding_decl.Free_with_conf "conf-cairo";
+  (* the lib's LATEST point (landing.md §3): cairographics.org publishes
+     source .tar.xz only, so conda-forge supplies the newest prebuilt —
+     1.18.4, which is also upstream's newest, against apt's 1.18.0.
+     NOTE the earlier mistake this comment exists to prevent: an older
+     cairo (1.14.12) was proposed to manufacture a version gap. The pair
+     asks whether today's binding works with TOMORROW's lib; an older lib
+     answers a question nobody has. *)
+  prebuilt_latest =
+    Some
+      { Canary_prebuilt.project = "cairo";
+        tag = "cairo-1.18.4";
+        version = "1.18.4";
+        url =
+          "https://conda.anaconda.org/conda-forge/linux-64/cairo-1.18.4-h3394656_0.conda";
+        lib_glob = "lib/libcairo.so*";
+        note =
+          "conda-forge 1.18.4 = upstream's newest (2025-03-08); apt ships \
+           1.18.0. cairographics.org publishes source only." };
   wrapper = None;
 }
 

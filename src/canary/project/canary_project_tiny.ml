@@ -106,7 +106,10 @@ let tiny_artifact_table : Canary_project_spec.artifact_row list =
       let axes = Canary_artifact.axes [ (Canary_artifact.Vendored, [ Canary_basic.Stable ]) ] in
       { Canary_project_spec.ar_artifact = id;
         Canary_project_spec.ar_axes = axes;
-        Canary_project_spec.ar_provider = provider_of_kind (Canary_artifact.kind_of id) })
+        Canary_project_spec.ar_provider = provider_of_kind (Canary_artifact.kind_of id);
+        (* tiny is the in-tree witness: every artifact is vendored from
+           the repo by construction, which is the whole point of it *)
+        Canary_project_spec.ar_rationale = None })
 
 (** tiny-full as a [project_run] the generic runner consumes. Its [pr_runner_spec]
     ASSEMBLES tiny's vendored cached artifacts into a tree (all-good ⇒ the witness

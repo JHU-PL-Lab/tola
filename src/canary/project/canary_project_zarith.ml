@@ -203,6 +203,15 @@ let decl : Canary_opam_binding.t = {
      `zarith-no-conf` is not what buys that freedom (it publishes a
      binding built from OUR worktree — the binding axis). *)
   pm_gate = Canary_binding_decl.Free_with_conf "conf-gmp";
+  (* NO prebuilt latest exists (landing.md §3, measured 2026-08-19): GMP's
+     newest upstream release is 6.3.0 (2023-07-30), gmplib.org publishes
+     source only, conda-forge's newest is also 6.3.0 — and apt already
+     ships 6.3.0. When upstream and the distro agree, the lib axis has ONE
+     point. That is a fact about GMP, not a gap in this spec, and it is
+     also NOT an opam problem: conf-gmp constrains no version. zarith's
+     pair therefore lives on the BINDING axis (opam release vs the
+     worktree build) alone. *)
+  prebuilt_latest = None;
   wrapper = Some zarith_wrapper_decl;
 }
 
