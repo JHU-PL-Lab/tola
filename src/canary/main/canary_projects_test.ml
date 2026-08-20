@@ -599,10 +599,11 @@ let pm_gate_pin : Canary_project_test.pure_test =
                      { conf = "conf-llvm-shared"; version = "19" }))
                (BD.Wrapper_needed "conf-llvm-shared")
           (* THE §G1a pin (2026-08-20). A version bound on a conf package
-             reaches the LIBRARY only when the conf routes its own opam
-             version into its system check — measured: 5 of 370 do, all
-             [custom_script]. So the SAME range derives two different
-             answers, and the discriminator is [tracks_lib]:
+             reaches the LIBRARY only when that conf package's own check
+             enforces a version — measured: 13 of 370 do, by a pkg-config
+             predicate (8, floors) or the opam version variable fed to a
+             script (5, generations). So the SAME range derives two
+             different answers, and the discriminator is [tracks_lib]:
 
              - conf-libffi {>= "2.0.0"}: conf-libffi.2.0.0's build is a
                bare `pkg-config libffi`, the lib is 3.x → packaging only

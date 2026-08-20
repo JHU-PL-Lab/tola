@@ -91,9 +91,9 @@ let decl : Canary_opam_binding.t =
        build is `pkg-config libffi`, a bare presence check that never sees
        its own version, while the library it finds is 3.x. So the bound
        does not reach the lib — [tracks_lib = false], and the derived
-       freedom is [Any_version], the same as conf-gmp's. Only the five
-       version-carrying conf packages (the LLVM family + conf-qt) set this
-       true; see surveys/conf_packages.md §G1a. *)
+       freedom is [Any_version], the same as conf-gmp's. Only the 13
+       measured version-carrying conf packages set this true; see
+       surveys/conf_packages.md §G1a and raw/conf_version_carriers.py. *)
     pm_gate =
       Canary_binding_decl.Bounded_with_conf
         { conf = "conf-libffi";

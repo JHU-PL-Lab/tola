@@ -111,14 +111,22 @@ type pm_dep_gate =
       upper : string option;
       tracks_lib : bool;
           (** does the bound reach the LIBRARY? A conf package's opam
-              version constrains the C lib only if the conf routes that
-              version into its own system check. MEASURED across the
-              whole repository (2026-08-20, surveys/conf_packages.md
-              §G1a): exactly 5 of 370 conf packages do — [conf-llvm],
-              [conf-llvm-shared], [conf-llvm-static], [conf-libclang],
-              [conf-qt], all of them in the survey's [custom_script]
-              category. Everywhere else the opam version is PACKAGING
-              (e.g. [conf-libffi.2.0.0] whose entire build is
+              version constrains the C lib only if the conf package's own
+              check enforces a version. MEASURED across the whole
+              repository (2026-08-20, surveys/conf_packages.md §G1a;
+              reproduce with doc/canary/raw/conf_version_carriers.py):
+              13 of 370 do, by two mechanisms —
+
+              - a pkg-config predicate with a hardcoded literal (8):
+                [conf-efl], [conf-gtk3], [conf-libblake3], [conf-libmd],
+                [conf-libuv], [conf-openimageio], [conf-taglib_c],
+                [conf-zstd] — all FLOORS ([--atleast-version]);
+              - the opam [version] variable passed into a discovery
+                script (5): [conf-llvm{,-shared,-static}],
+                [conf-libclang], [conf-qt] — all GENERATIONS.
+
+              Everywhere else the opam version is PACKAGING (e.g.
+              [conf-libffi.2.0.0] whose entire build is
               [pkg-config libffi], while libffi itself is 3.x), so the
               bound says nothing about which lib may be installed and
               the true freedom is [Any_version]. *)

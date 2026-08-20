@@ -168,16 +168,19 @@ measurements found on 2026-08-20 say that reading
 directions. Do all three steps:
 
 1. **Read the binding's declared constraint** — as before.
-2. **If there is a version bound, open the CONF PACKAGE and check whether
-   its own version reaches its check.** A conf package's opam version
-   constrains the C library only when the `build:` routes that version
-   into the system probe (`["bash" "configure.sh" version]`). Measured
-   across the whole repository: exactly **5 of 370** do — `conf-llvm`,
-   `conf-llvm-shared`, `conf-llvm-static`, `conf-libclang`, `conf-qt`.
-   Everywhere else the bound is over opam PACKAGING and the lib is
-   unconstrained: `conf-libffi.2.0.0`'s entire build is
-   `pkg-config libffi` while libffi is 3.x. Record the answer as
-   `Bounded_with_conf { tracks_lib }`; `false` derives `Any_version`.
+2. **If there is a version bound, open the CONF PACKAGE and check
+   whether its own check enforces a version.** Two mechanisms exist and
+   they look nothing alike: a pkg-config predicate with a hardcoded
+   literal (`pkg-config --atleast-version=1.3.8 libzstd`), or the opam
+   `version` variable fed to a discovery script
+   (`["bash" "configure.sh" version]`). Measured: **13 of 370** conf
+   packages carry one — run
+   `python3 doc/canary/raw/conf_version_carriers.py` for the current
+   list rather than trusting a remembered one. Everywhere else the bound
+   is over opam PACKAGING and the lib is unconstrained:
+   `conf-libffi.2.0.0`'s entire build is `pkg-config libffi` while libffi
+   is 3.x. Record the answer as `Bounded_with_conf { tracks_lib }`;
+   `false` derives `Any_version`.
 3. **Read the binding's own `build:` for a version test.** `mlmpfr`
    compiles and runs a C program that reads `MPFR_VERSION_*` and aborts
    the build on an older lib — a hard gate with a *bare* `"conf-mpfr"`
@@ -189,6 +192,15 @@ Failing step 2 overstates the difficulty (we would go build a wrapper for
 libffi that nothing requires). Failing step 3 understates it (we would
 declare mlmpfr free and be surprised by a build abort). Both are recorded
 with evidence in [`../surveys/conf_packages.md` §G1](../surveys/conf_packages.md).
+
+**Do step 2 with the script, not from memory.** The first sweep behind
+this rule found only one of the two mechanisms, because it stripped
+quoted strings before searching — correct for finding the `version`
+variable, and exactly wrong for finding a hardcoded literal, which lives
+inside the quotes. It reported a clean "5 of 370" and the landing that
+immediately followed (`zstd`) pulled `conf-zstd.1.3.8`, whose build is
+`--atleast-version=1.3.8`. Same shape as §4's lessons: the check ran, and
+had nothing in front of it.
 
 ## 4. Landing lessons — the bug classes that bit us (keep re-reading)
 

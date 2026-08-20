@@ -453,16 +453,43 @@ Neither determines the other. The counter-examples are not exotic:
 | conf-llvm-shared | custom_script | `Fixed_with_conf {= "19"}` (llvm) | ✓ |
 | **conf-libclang** | **custom_script** | **`{< "16"}`** (clangml) | ✓ |
 
-#### G1a. But there IS an exact correspondence — at the point that matters
+The useful statement is therefore not "category = gate" but:
 
-A version bound on a conf package only bounds the **C library** if the
-conf package routes its own opam version into its system check. Otherwise
-the bound is over *opam packaging* and the lib is unconstrained. So we
-measured it across the whole repository — for every conf package's newest
-version, does its `build:` pass the `version` variable (bare token or
-`%{version}%`) into the check?
+> A binding's version bound on a conf package reaches the LIBRARY only
+> when that conf package's own check enforces a version. Measured, 13 of
+> 370 do (§G1a); for the other ~357 the bound is over opam packaging and
+> the true combination freedom is `Any_version`.
 
-**5 of 370 conf packages do:**
+Which category a conf package is in does not answer that question — but it
+does predict the SHAPE of the constraint when there is one: `pkgconfig`
+carriers enforce floors, `custom_script` carriers enforce generations.
+
+#### G1a. Where a conf package's version really does bound the library
+
+A version bound on a conf package bounds the **C library** only if the
+conf package's own check enforces a version. So we measured, across every
+conf package's newest revision, which builds carry a version predicate.
+**13 of 370 do, by two distinct mechanisms.** Reproduce with
+[`../raw/conf_version_carriers.py`](../raw/conf_version_carriers.py)
+(`python3 doc/canary/raw/conf_version_carriers.py`), which regenerates the
+two tables below and is the answer to §G6 item 4:
+
+**(i) A pkg-config version predicate — 8 packages, all in the
+`pkgconfig` category.**
+
+| conf package | predicate | opam version | literal enforced | version corresponds? |
+| --- | --- | --- | --- | --- |
+| `conf-efl` | `--atleast-version=1.8` | 1.8 | 1.8 | ✓ |
+| `conf-gtk3` | `--atleast-version 3.18` | 18 | 3.18 | ✓ (the gtk3 minor) |
+| `conf-libblake3` | `--atleast-version=1.5.1` | 1.5.1 | 1.5.1 | ✓ |
+| `conf-libmd` | `--atleast-version=1.0.0` | 1.0.0 | 1.0.0 | ✓ |
+| `conf-libuv` | `--atleast-version=1` | 1 | 1 | ✓ |
+| `conf-taglib_c` | `--atleast-version 2.0.0` | 2 | 2.0.0 | ✓ |
+| `conf-zstd` | `--atleast-version=1.3.8 libzstd` | 1.3.8 | 1.3.8 | ✓ |
+| `conf-openimageio` | `--atleast-version=2` | **1** | **2** | ✗ — the convention breaks |
+
+**(ii) The opam `version` variable passed into a discovery script — 5
+packages, all in the `custom_script` category.**
 
 | conf package | how the version reaches the check |
 | --- | --- |
@@ -472,30 +499,51 @@ version, does its `build:` pass the `version` variable (bare token or
 | `conf-libclang` | `["bash" "-ex" "configure.sh" version]` — the opam file's own comment: *"pass pkg var '21' to test <= 21.0.x"* |
 | `conf-qt` | `["sh" "-ex" "./configure.sh" "%{version}%"]` |
 
-(A sixth match, `conf-cuda`, is a false positive — escaped quotes in a
-heredoc desynced the string stripper; its build is a plain compile test.)
+(`conf-cuda` matches mechanism (ii) by grep and is a false positive:
+escaped quotes inside a heredoc desync a string stripper. Its build is a
+plain compile test.)
 
-**All five are in the `custom_script` category.** And the converse holds
-too: a sweep of every extra-source script and test C file for numeric
-version comparisons (`-ge`, `sort -V`, `VERSION_MAJOR >=`) found no
-non-LLVM-family conf package that compares versions. `conf-mpfr`'s
-`test.c` *prints* `mpfr_get_version()` and `MPFR_VERSION_STRING` without
-comparing them; `conf-ppl`'s `#error`s only if the header's macro is
-absent.
+> **Correction, recorded because the first version of this section was
+> wrong.** An earlier pass reported "exactly 5 of 370, all
+> `custom_script`" and concluded `custom_script ⟺ version-carrying`. That
+> sweep stripped quoted strings before searching — which is right for
+> finding the `version` VARIABLE and exactly wrong for finding a
+> hardcoded literal, so it discarded all eight of mechanism (i). The
+> error surfaced the moment a landing touched one: installing the `zstd`
+> binding pulled `conf-zstd.1.3.8`, whose build is
+> `pkg-config --atleast-version=1.3.8 libzstd`. A check that strips the
+> evidence before looking for it is the same failure class as the landing
+> lessons in [`../project/landing.md` §4](../project/landing.md) — the
+> check ran, reported cleanly, and had nothing in front of it.
 
-So the aligned statement — the one to keep — is:
+#### G1b. What the corrected measurement says
 
-> **`custom_script` ⟺ the conf package's opam version is a LIB version.**
-> In every other category, a `Bounded_with_conf` gate bounds packaging
-> only, and its true combination freedom is `Any_version`.
+1. **Version-carrying is rare and bimodal.** 13 of 370 (3.5%) enforce a
+   library version at all. The category does not predict *whether* a conf
+   package carries a version — but it predicts the **shape**: all 8
+   `pkgconfig` carriers are **floors** (`--atleast-version`, "new enough"),
+   and all 5 `custom_script` carriers are **exact or bounded generations**
+   (the LLVM/Qt family, where the version IS the package identity). Floors
+   are almost free for us — every version we would pair is newer than a
+   floor set years ago. Generations are the hard gate.
+2. **The opam version corresponds to the enforced version in 12 of 13.**
+   `conf-openimageio` is the counter-example (package 1, enforces 2), so
+   the correspondence is a convention maintainers follow, not an invariant
+   the format guarantees. Read the build; do not infer from the version.
+3. **Everything else is a bare presence check.** ~197 of the 208
+   `pkgconfig` packages run `pkg-config <lib>` with no predicate —
+   `conf-zlib` and `conf-libffi` among them. For those, a version bound
+   declared by a *binding* is over opam PACKAGING and constrains no
+   library: `conf-libffi.2.0.0`'s entire build is `pkg-config libffi`
+   while libffi itself is 3.x, so `ctypes-foreign`'s
+   `conf-libffi {>= "2.0.0"}` forbids nothing about the C library.
 
-That is a correction to our model, not just a survey note: `libffi`'s
-`conf-libffi {>= "2.0.0"}` reads as a constraint but `conf-libffi.2.0.0`'s
-entire build is `pkg-config libffi` — 2.0.0 is the *packaging* generation,
-while the library is 3.x. Our `combination_freedom_of` currently answers
-`Within_bound ">= 2.0.0"` there, which overstates the difficulty. See §G5.
+That last point is the one with a consequence in code: our
+`combination_freedom_of` answered `Within_bound ">= 2.0.0"` for libffi,
+overstating the difficulty of its 2×2. `Bounded_with_conf` now carries
+`tracks_lib`, and a packaging-only bound derives `Any_version`. See §G6.
 
-#### G1b. A gate mechanism our datatype does not have
+#### G1c. A gate mechanism our datatype does not have
 
 Searching for version logic *outside* the conf packages turned up one
 package that gates itself:
@@ -527,6 +575,13 @@ today (no live user yet). (2) mlmpfr becomes an unusually *attractive*
 landing: its forward mismatch (new binding, old lib) is rejected by a check
 the upstream package already ships, so the xfail is naturally occurring
 rather than constructed — the first such case in the registry.
+
+**Counting the mechanisms found so far**: a lib version can be enforced by
+the conf package's pkg-config predicate (i), by the conf package's
+discovery script (ii), by the binding's opam constraint on the conf
+package (only meaningful over (i) or (ii)), or by the binding's own build
+(mlmpfr). Four places. `opam show --field=depends` sees exactly one of
+them.
 
 ### G2. pkg-config group — top 10 C libraries (208 packages, 135 are C libs)
 
@@ -637,10 +692,12 @@ sense.
 | conf-libclang | 17 | `clangml` (25) | **`{< "16"}` — a REAL lib bound** (§G1a) | **Ready\*\*** — the only measured `Bounded_with_conf` whose bound reaches the library. An upper bound, so the interesting world is *new lib, old binding* — the backward direction, which nothing in the registry exercises yet |
 | conf-qt | 5 | — | version-carrying | **Skip** — Qt closure |
 
-**Finding:** this 6%-of-the-repository group is where the version
-semantics live (all 5 version-carrying conf packages, §G1a), where our two
-hard gates live (`Fixed_with_conf`, real `Bounded_with_conf`), and where
-the optional-dependency case lives. The survey's original judgement —
+**Finding:** this 6%-of-the-repository group is where the HARD version
+semantics live — every conf package that enforces a *generation* rather
+than a floor (§G1a mechanism (ii)), both of our hard gates
+(`Fixed_with_conf`, real `Bounded_with_conf`), and the optional-dependency
+case. Floors also exist, but they live in `pkgconfig` (mechanism (i)) and
+are nearly free for us. The survey's original judgement —
 *"custom logic … NOT eliminable"* — understated it: these are not merely
 unmechanizable, they are **the only conf packages that carry information
 we cannot get from anywhere else**.
@@ -684,16 +741,23 @@ are recorded in [`../project/issues.md`](../project/issues.md).
 ### G6. What this changes in the code
 
 1. **`Bounded_with_conf` needs to say whether its bound reaches the lib.**
-   Measured: only conf packages that route their opam version into their
-   check do (5 of 370, all `custom_script`). Without that distinction
+   Measured: only the 13 conf packages that enforce a version themselves
+   (§G1a) make a binding's bound meaningful. Without that distinction
    `combination_freedom_of` answers `Within_bound` for libffi, where the
    truth is `Any_version`. → landed as a `tracks_lib` field, with the
-   libffi declaration updated and a pin (see the pin
-   `conf_version_semantics_pin`).
+   libffi declaration updated and a pin, falsified both ways.
 2. **`Self_check_in_build` is missing** (§G1b, mlmpfr). Recorded as an
    issue, not added: no live user until mlmpfr lands.
-3. **A `pkgconfig`-category conf package can never justify
-   `Fixed_with_conf`.** That is now a checkable invariant over our
-   declarations, and it is cheap: assert that any project declaring a
-   version-bearing gate names a conf package from the five-member
-   version-carrying list.
+3. **A version-bearing gate must name a version-carrying conf package.**
+   The 13-member list is small and stable enough to hardcode as a
+   `project-test` invariant: a declaration that sets `Fixed_with_conf`, or
+   `Bounded_with_conf { tracks_lib = true }`, over a conf package outside
+   it is a declaration bug. Not yet wired.
+4. **The sweep is now re-runnable** —
+   [`../raw/conf_version_carriers.py`](../raw/conf_version_carriers.py)
+   regenerates the 13-member table from an opam-repository checkout. It
+   searches both mechanisms with the OPPOSITE quote handling each needs,
+   which is precisely what the first pass got wrong; the two false
+   positives it had to learn to reject (a heredoc's escaped quotes, an
+   opam comment saying "the CUDA version") are documented in the script
+   rather than in anyone's memory.

@@ -98,12 +98,16 @@ in the registry has. Details and the ranked context:
 
 ### Open — assert that a version-bearing gate names a version-carrying conf
 
-Measured (§G1a): exactly 5 of 370 conf packages route their opam version
-into their system check (`conf-llvm`, `conf-llvm-shared`,
-`conf-llvm-static`, `conf-libclang`, `conf-qt`). Any declaration that sets
-`Fixed_with_conf`, or `Bounded_with_conf { tracks_lib = true }`, over a
-conf package outside that list is a declaration bug. The list is small and
-stable enough to hardcode as a `project-test` invariant; not yet wired.
+Measured (§G1a): 13 of 370 conf packages enforce a library version — 8 by
+a pkg-config predicate (`conf-efl`, `conf-gtk3`, `conf-libblake3`,
+`conf-libmd`, `conf-libuv`, `conf-openimageio`, `conf-taglib_c`,
+`conf-zstd`, all floors) and 5 by feeding the opam version to a script
+(`conf-llvm{,-shared,-static}`, `conf-libclang`, `conf-qt`, all
+generations). Any declaration that sets `Fixed_with_conf`, or
+`Bounded_with_conf { tracks_lib = true }`, over a conf package outside
+that list is a declaration bug. The list is small and stable enough to
+hardcode as a `project-test` invariant, and
+`doc/canary/raw/conf_version_carriers.py` regenerates it; not yet wired.
 
 
 ### Found — spec non-uniformities (2026-08-13, `canary spec-check`)
