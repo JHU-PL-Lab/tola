@@ -1,37 +1,99 @@
-(** [Canary_world] — WORLD ASSERTIONS (2026-08-20).
+(** [Canary_world] — is the machine in the world this scenario names?
 
-    THE QUESTION THIS TYPE ANSWERS: *did the step actually run in the
-    world its scenario names?* A scenario declares a placement per
-    artifact — "the lib is the vendored 1.3.2", "the binding is opam
-    ssl.0.6.0" — but declaring it does not make it so. The switch is
-    shared state, [LD_LIBRARY_PATH] is a preference not a guarantee, and
-    a probe that resolves the ambient artifact instead of the declared one
-    passes for the wrong reason and looks exactly like success.
+    {1 The world, and why naming one is not having one}
 
-    WHY IT IS ITS OWN TYPE. The concept existed in FIVE separate
-    implementations, and by 2026-08-20 four of them had failed:
+    A scenario is one placement per artifact: {i this} lib, {i that}
+    binding, at {i these} versions. That naming is canary's whole subject
+    — a verdict means "the world described by row N behaves so". But the
+    naming is a CLAIM about the machine at the moment a step runs, and
+    between the claim and the step sit three ways for it to be false:
 
-    - [ssl_world_check] / [z3_world_check] / [llvm_world_check] — three
-      byte-identical shell builders differing only in the package name;
-    - sqlite's [asserts] field, greped by [with_world_asserts] — which
-      appended the check after `exit $RC`, so it had NEVER run;
-    - the opam template's [world_check] prefix plus a separate [log_grep]
-      argument — and neither was wired for the Vendored lib worlds, so
-      cairo and libffi pointed the loader and never checked it obeyed;
-    - z3's [assert_staged], whose [None] let an install claim success.
+    - {b a shared store holds one state.} An opam switch is
+      [Isolated_store "switch"] ({!Canary_store.store_behavior_of_pm}) —
+      isolated from the system, and internally single-valued: it holds ONE
+      version of a package. Scenario N's fetch re-pins it; scenario N+1
+      inherits whatever is there.
+    - {b resolution is ambient by default.} [LD_LIBRARY_PATH] expresses a
+      preference, not a guarantee. A probe that finds the system copy
+      instead of the world's runs a different world and reports success.
+    - {b artifacts go stale.} A build tree keeps producing outputs after
+      the thing they were made from has changed underneath them.
 
-    Five implementations means five places to fix and no single place to
-    test. This is the one place. See
-    [doc/canary/project/landing.md] §4 for the failure class and
-    [doc/canary/design/run_model_revisit.md] §3 for why declaring a world
-    is not the same as being in it.
+    Each of these produces the same shape of wrong answer: {b a green cell
+    for a world nobody tested}. That is worse than a red one, because red
+    gets investigated.
 
-    POLARITY, because it is easy to confuse: a world assertion is a
-    POSITIVE-scenario invariant ("the run really exercised the enumerated
-    world"), the OPPOSITE of a [step_expectation] ("a mismatched world
-    must fail this way"). Expectations say what a wrong world does; these
-    say which world it is. They stay separate deliberately — the
-    contract/expectation unification does not absorb them. *)
+    {1 What an assertion is, mechanically}
+
+    A world assertion is the step's own evidence that it is in the world
+    it claims. Not a prediction of behaviour — a statement of identity.
+    Two kinds, because the two failure modes need catching at different
+    moments:
+
+    - {!Opam_pin} runs BEFORE the command and aborts. It is the
+      counterpart of the store's statefulness: the scenario's pin is an
+      exclusive lock on the switch's state for the step's duration, and
+      this checks the lock is actually held. It cannot be a post-hoc check
+      — by then the wrong version has already been linked against.
+    - {!Log_names} is read AFTER, from the step's own log. It is how a
+      probe reports which artifact ANSWERED — a runtime version line, or
+      the library path the loader actually mapped. Prefer the path when
+      there is a choice: every library has one, and only some bindings
+      expose a version accessor.
+
+    {1 Who declares these, and who enforces them}
+
+    {v
+    a project spec  ──declares──▶  Canary_world.t list
+       (per action × location, on runner_spec.asserts, or inline
+        on a probe's ~log_grep)
+                                          │
+    Canary_step_builder ──routes──▶  pre_shell   → prefixed to the command
+                                     log_substrings → greped from its log
+    v}
+
+    The routing is the point of having one type. A consumer that could
+    only enforce one kind used to honour it and drop the other in silence
+    — that is precisely how cairo's and libffi's vendored worlds ended up
+    pointed at a prebuilt and never checked. Both kinds now travel
+    together and {!is_pre} makes a partial consumer say so.
+
+    Declared today by: sqlite (an amalgamation version line), ssl / z3 /
+    llvm (switch pins), and the opam-binding template on behalf of cairo /
+    libffi / zlib / zstd (the vendored libdir).
+
+    {1 The scheduling consequence}
+
+    Because {!Opam_pin} is a lock on a single-valued store, two scenarios
+    wanting different pins cannot both be satisfied at once — and two
+    wanting the SAME pin should be run together. Measured 2026-08-20:
+    sqlite's ten scenarios alternate their binding pin every row, so one
+    run performs {b ten} pin operations where grouping by pin would
+    perform {b two}. Each is an uninstall + reinstall.
+
+    So the assertion is the enforcement half of a property the enumeration
+    should also exploit: {b order scenarios by the stateful-store state
+    they need}. Nothing does that yet — the enumerated list IS the run
+    order. Tracked in [doc/canary/project/store_switching.md].
+
+    {1 What this is not}
+
+    A world assertion is a POSITIVE-scenario invariant about identity. It
+    is not a [step_expectation] (what a MISmatched world must do), not a
+    [check_pre]/[check_post] (whether the step's inputs and outputs
+    exist), and it does not belong to the contract/expectation
+    unification. Those say what happens in a world; this says which world
+    it is.
+
+    {1 Why one type at all}
+
+    The concept had five implementations, four of which had failed by
+    2026-08-20: three byte-identical [<project>_world_check] copies,
+    sqlite's [asserts] appended after [exit $RC] so it had never run, and
+    the template's [world_check]/[log_grep] pair unwired for vendored
+    worlds. Five places to fix, nowhere to test. History and evidence:
+    [doc/canary/project/landing.md] §4 and
+    [doc/canary/design/run_model_revisit.md] §3. *)
 
 open Base
 
@@ -42,13 +104,15 @@ open Base
     shell. *)
 type t =
   | Opam_pin of { pkg : string; version : string }
-      (** BEFORE the command: the opam switch must hold [pkg] at exactly
-          [version]. The switch is shared by every scenario in the run, so
-          scenario N can find scenario N-1's pin — this is the guard that
-          makes that loud rather than silent. Checked against the OPAM
-          package version ([opam list --columns=version]), not the findlib
-          META version: those differ for locally published packages
-          (z3.dev's META carries the source version). *)
+      (** BEFORE the command: the switch must hold [pkg] at exactly
+          [version] — the scenario's exclusive lock on a single-valued
+          store, verified rather than assumed. Scenario N can find
+          scenario N-1's pin; this makes that loud instead of silent.
+
+          Checked against the OPAM package version
+          ([opam list --columns=version]), not the findlib META version:
+          the two differ for locally published packages (z3.dev's META
+          carries the source version, not the opam one). *)
   | Log_names of { text : string; why : string }
       (** AFTER the command: the step's own log must contain [text]. This
           is how a probe proves WHICH artifact answered — a runtime

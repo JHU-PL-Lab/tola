@@ -478,4 +478,60 @@ entirely.
   isolating them away — record / verdict / enumerate.
 - [ ] zarith's and ssl's lib axes are single-point for stated reasons; if
   either gains a prebuilt they become full 2×2s with no new machinery.
+- [ ] **Order scenarios by stateful-store state** (§5g) — a sort key over
+  each assignment's pinned placements. Measured win today: sqlite 10 pin
+  operations → 2. Do it before the binding axis lands, since that
+  multiplies the flips.
 
+### 5g. The pin is a LOCK, so group scenarios by the state they need
+### (2026-08-20, user)
+
+The user's framing, which is the right one and was already half in the
+model: opam is `Isolated_store "switch"`
+(`Canary_store.store_behavior_of_pm`) — isolated from the system, and
+internally SINGLE-VALUED. So a scenario's version pin is not a
+preference, it is an **exclusive lock on that store's state** for the
+step's duration. `Canary_world.Opam_pin` is the verification half of that
+lock; §1's "opam does not allow two versions of one package in one
+switch" is the same fact stated as a constraint.
+
+What follows is a scheduling property nothing exploits yet. **Scenarios
+that need the same state should run together.** Measured on the sqlite
+run of 2026-08-20:
+
+```
+opam install sqlite3.5.1.0     scenario 1   lib B:d
+opam install sqlite3.5.4.1     scenario 2   lib B:d
+opam install sqlite3.5.1.0     scenario 3   lib I:d
+opam install sqlite3.5.4.1     scenario 4   lib I:d
+…                              (alternating every row)
+→ TEN pin operations for ten scenarios
+```
+
+The binding pin alternates on every row, because the enumeration's
+product ranges over the lib axis outermost and the binding axis
+innermost, and **the enumerated list IS the run order** (design A, §4
+item 2 — "no explicit signature machinery needed yet"). Grouping by pin
+would perform **two** pin operations instead of ten. Each one is an
+uninstall + reinstall, so for a binding heavier than sqlite3 that is a
+recompile per row.
+
+Three things to note before implementing it:
+
+1. **It is an ORDERING, not a new axis.** The scenario set is unchanged;
+   only the sequence differs. That keeps it out of the enumeration's
+   semantics — a sort key, derived from each assignment's stateful-store
+   placements.
+2. **The world assertion is what makes reordering safe.** Reordering runs
+   is only sound if a scenario cannot silently inherit a neighbour's
+   state — which is exactly what `Opam_pin` now checks on every affected
+   step. Without it, grouping would make the shared-state hazard *more*
+   likely by leaving the switch on one pin for longer.
+3. **It composes with the tier work (§5c).** Tier 1 pins (single-package
+   downgrades) get cheaper by exactly this factor. Tier 3 pins do not
+   become acceptable — grouping does not make a compiler downgrade
+   affordable, it just performs it once.
+
+Sequencing note: this is worth doing BEFORE the binding axis lands on the
+template projects (§5a), because that change multiplies the number of
+pinned scenarios and therefore the number of flips.
