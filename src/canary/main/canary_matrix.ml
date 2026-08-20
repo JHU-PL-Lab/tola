@@ -910,7 +910,11 @@ let render_html (m : t) ~(generated_at : string) : string =
      its link, so a project with two sources shows two labelled refs
      instead of one column that meant a different artifact per project. *)
   let header =
-    "<th>#</th><th>project</th>"
+    (* the two identity columns are FROZEN (2026-08-20, user: the page is
+       too wide): they stay put while the action columns scroll, so a row
+       never loses its number and project. The classes carry the sticky
+       offsets — see the [idx]/[proj] rules in the style block. *)
+    "<th class=\"idx\">#</th><th class=\"proj\">project</th>"
     ^ String.concat ~sep:""
         (List.map m.setting_columns ~f:(fun c ->
              "<th class=\"seth\">" ^ esc c ^ "</th>"))
@@ -976,7 +980,7 @@ let render_html (m : t) ~(generated_at : string) : string =
                     | _ -> "<td class=\"blank\"></td>"))
            in
            Printf.sprintf
-             "<tr><td class=\"idx\" title=\"%s\">%d</td><td>%s</td>%s<td class=\"platform\">%s</td>%s</tr>"
+             "<tr><td class=\"idx\" title=\"%s\">%d</td><td class=\"proj\">%s</td>%s<td class=\"platform\">%s</td>%s</tr>"
              (esc r.code) r.index (esc r.project) setting_cells
              (esc r.platform) cells))
   in
@@ -984,12 +988,35 @@ let render_html (m : t) ~(generated_at : string) : string =
     {|<!doctype html>
 <html><head><meta charset="utf-8"><title>canary result matrix</title>
 <style>
-body { font-family: system-ui, sans-serif; margin: 2rem; color: #24292f; }
-h1 { font-size: 1.4rem; } .meta { color: #6a737d; font-size: .85rem; margin-bottom: 1rem; }
-.wrap { overflow-x: auto; border: 1px solid #d0d7de; border-radius: 6px; }
-table { border-collapse: collapse; font-size: .82rem; }
+/* THE SCROLL BOX (2026-08-20, user: "the page is too width"). The wrap
+   always had overflow-x, but its scrollbar sat under 42 rows of table —
+   you had to scroll to the bottom of the PAGE to find the control that
+   moved the table sideways, which reads as "no scroller at all".
+
+   The page is now a flex column pinned to the viewport, so the wrap gets
+   exactly the leftover height and owns BOTH scrollbars. A calc() on the
+   header height would have worked until the meta paragraph rewrapped;
+   flex measures it instead of guessing. [min-height: 0] on the flex item
+   is the part that is easy to omit — without it a flex child refuses to
+   shrink below its content and the box overflows the viewport again. */
+html, body { height: 100%%; }
+body { font-family: system-ui, sans-serif; margin: 0; padding: 1.5rem 2rem;
+       box-sizing: border-box; color: #24292f;
+       display: flex; flex-direction: column; }
+h1 { font-size: 1.4rem; margin: 0 0 .5rem; flex: 0 0 auto; }
+.meta { color: #6a737d; font-size: .85rem; margin-bottom: 1rem; flex: 0 0 auto;
+        max-height: 7rem; overflow-y: auto; }
+.wrap { flex: 1 1 auto; min-height: 8rem; overflow: auto;
+        border: 1px solid #d0d7de; border-radius: 6px; }
+table { border-collapse: separate; border-spacing: 0; font-size: .82rem; }
 th, td { padding: 4px 8px; border-bottom: 1px solid #eaeef2; white-space: nowrap; text-align: left; }
-th { background: #f6f8fa; position: sticky; top: 0; }
+th { background: #f6f8fa; position: sticky; top: 0; z-index: 2; }
+/* the two identity columns are FROZEN: scrolling right must not cost you
+   the row's number and project, which are how a row is referred to */
+td.idx, th.idx { position: sticky; left: 0; width: 2.6rem; min-width: 2.6rem; z-index: 1; background: #fff; }
+td.proj, th.proj { position: sticky; left: 2.6rem; width: 5.2rem; min-width: 5.2rem; z-index: 1;
+                   background: #fff; border-right: 1px solid #d0d7de; }
+th.idx, th.proj { background: #f6f8fa; z-index: 3; }
 td.set { font-family: ui-monospace, monospace; font-size: .78rem; background: #f6f8fa88; }
 td.set a { color: #0969da; text-decoration: none; }
 td.set a:hover { text-decoration: underline; }
