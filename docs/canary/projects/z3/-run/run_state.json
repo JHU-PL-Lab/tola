@@ -5,7 +5,7 @@
       "tag": "fetch_source",
       "output_tag": "fetch_source",
       "action": "fetch_source",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -13,7 +13,7 @@
       "tag": "scan_source",
       "output_tag": "fetch_source",
       "action": "fetch_source",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -21,7 +21,7 @@
       "tag": "configure",
       "output_tag": "configure",
       "action": "configure",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -29,7 +29,7 @@
       "tag": "build_headers",
       "output_tag": "build_headers",
       "action": "build_headers",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -37,7 +37,7 @@
       "tag": "build_lib",
       "output_tag": "build_lib",
       "action": "build_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -45,15 +45,15 @@
       "tag": "install_lib",
       "output_tag": "install_lib",
       "action": "install_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
-      "expect": "failure",
-      "status": "xfail"
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
     },
     {
       "tag": "build_binding_ocaml",
       "output_tag": "build_binding_ocaml",
       "action": "build_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -61,7 +61,7 @@
       "tag": "pack_binding_ocaml",
       "output_tag": "pack_binding_ocaml",
       "action": "pack_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -69,15 +69,15 @@
       "tag": "probe_binding_ocaml",
       "output_tag": "probe_binding_ocaml",
       "action": "probe_binding_ocaml",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
-      "expect": "failure",
-      "status": "xfail"
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "expect": "success",
+      "status": "done"
     },
     {
       "tag": "probe_lib_apt",
       "output_tag": "probe_lib_apt",
       "action": "probe_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -85,7 +85,7 @@
       "tag": "probe_lib_apt_inspect",
       "output_tag": "probe_lib_apt",
       "action": "probe_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -93,7 +93,7 @@
       "tag": "probe_lib_staged",
       "output_tag": "probe_lib_staged",
       "action": "probe_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     },
@@ -101,7 +101,7 @@
       "tag": "probe_lib_staged_inspect",
       "output_tag": "probe_lib_staged",
       "action": "probe_lib",
-      "variant_id": "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
+      "variant_id": "source-fetched-latest_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched",
       "expect": "success",
       "status": "done"
     }

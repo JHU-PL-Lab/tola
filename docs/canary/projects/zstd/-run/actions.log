@@ -1,35 +1,39 @@
-[2026-08-20 15:51:36.453] *                          variant_start  (source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched)
-[2026-08-20 15:51:36.453] *                          graph_start  (7 steps)
-[2026-08-20 15:51:36.453] fetch_source               check_pre  (pass)
-[2026-08-20 15:51:36.458] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zstd-all/zstd/.git ]; then git clone https://github.com/facebook/zstd.git /home/red/code/contrib/zstd-all/zstd; fi && \
+[2026-08-20 16:56:21.982] *                          variant_start  (source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched)
+[2026-08-20 16:56:21.982] *                          graph_start  (7 steps)
+[2026-08-20 16:56:21.982] fetch_source               check_pre  (pass)
+[2026-08-20 16:56:21.987] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zstd-all/zstd/.git ]; then git clone https://github.com/facebook/zstd.git /home/red/code/contrib/zstd-all/zstd; fi && \
 git -C /home/red/code/contrib/zstd-all/zstd fetch -q origin v1.5.7 && \
 if [ ! -d /home/red/code/contrib/zstd-all/zstd-v1.5.7 ]; then git -C /home/red/code/contrib/zstd-all/zstd worktree add -f /home/red/code/contrib/zstd-all/zstd-v1.5.7 v1.5.7; fi && \
 git -C /home/red/code/contrib/zstd-all/zstd-v1.5.7 checkout -q -f v1.5.7 && \
 echo '/home/red/code/contrib/zstd-all/zstd-v1.5.7' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_source/source_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:36.765] fetch_source               detect  (ok, output present)
-[2026-08-20 15:51:36.771] fetch_source               check_post  (pass)
-[2026-08-20 15:51:36.771] fetch_source               done
-[2026-08-20 15:51:36.776] fetch_lib                  check_pre  (pass)
-[2026-08-20 15:51:36.778] fetch_lib                  cmd  (sudo apt-get install -y libzstd-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_lib/lib_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:37.162] fetch_lib                  detect  (ok, output present)
-[2026-08-20 15:51:37.162] fetch_lib                  check_post  (pass)
-[2026-08-20 15:51:37.162] fetch_lib                  done
-[2026-08-20 15:51:37.164] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:51:37.167] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zstd -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_binding/ocaml/binding_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:38.133] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:51:38.133] fetch_binding_ocaml        check_post  (pass)
-[2026-08-20 15:51:38.133] fetch_binding_ocaml        done
-[2026-08-20 15:51:38.135] probe_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:51:38.138] probe_binding_ocaml        cmd  (eval $(opam env)
+[2026-08-20 16:56:22.304] fetch_source               cmd_log  (fetch_source.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:22.305] fetch_source               detect  (ok, output present)
+[2026-08-20 16:56:22.311] fetch_source               check_post  (pass)
+[2026-08-20 16:56:22.311] fetch_source               done
+[2026-08-20 16:56:22.315] fetch_lib                  check_pre  (pass)
+[2026-08-20 16:56:22.317] fetch_lib                  cmd  (sudo apt-get install -y libzstd-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_lib/lib_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-20 16:56:22.725] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:22.725] fetch_lib                  detect  (ok, output present)
+[2026-08-20 16:56:22.725] fetch_lib                  check_post  (pass)
+[2026-08-20 16:56:22.725] fetch_lib                  done
+[2026-08-20 16:56:22.727] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-20 16:56:22.730] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zstd -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_binding/ocaml/binding_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.ok)
+[2026-08-20 16:56:23.733] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:23.733] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-20 16:56:23.733] fetch_binding_ocaml        check_post  (pass)
+[2026-08-20 16:56:23.733] fetch_binding_ocaml        done
+[2026-08-20 16:56:23.735] probe_binding_ocaml        check_pre  (pass)
+[2026-08-20 16:56:23.738] probe_binding_ocaml        cmd  (eval $(opam env)
 ocamlfind ocamlopt -package zstd -linkpkg canary/examples/zstd/zstd_example.ml -o /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example > /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example >> /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log 2>&1
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log
 exit $RC)
-[2026-08-20 15:51:38.260] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:51:38.260] probe_binding_ocaml        check_post  (pass)
-[2026-08-20 15:51:38.260] probe_binding_ocaml        done
-[2026-08-20 15:51:38.262] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-20 15:51:38.264] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-08-20 16:56:23.864] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:23.865] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-20 16:56:23.865] probe_binding_ocaml        check_post  (pass)
+[2026-08-20 16:56:23.865] probe_binding_ocaml        done
+[2026-08-20 16:56:23.867] probe_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-20 16:56:23.869] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'zstd' 2>/dev/null)
 test -n "$PKG_DIR"
 { for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
@@ -37,121 +41,119 @@ test -n "$PKG_DIR"
   done
 } | python3 canary/scripts/inspect_ocaml.py --path 'zstd' --watchlist 'Zstd' \
   > /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-20 15:51:38.315] probe_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-20 15:51:38.315] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-08-20 15:51:38.315] probe_binding_ocaml_inspect  done
-[2026-08-20 15:51:38.317] probe_lib                  check_pre  (pass)
-[2026-08-20 15:51:38.319] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
+[2026-08-20 16:56:23.924] probe_binding_ocaml_inspect  cmd_log  (probe_binding_ocaml_inspect.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:23.924] probe_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-20 16:56:23.924] probe_binding_ocaml_inspect  check_post  (pass)
+[2026-08-20 16:56:23.924] probe_binding_ocaml_inspect  done
+[2026-08-20 16:56:23.926] probe_lib                  check_pre  (pass)
+[2026-08-20 16:56:23.928] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
         "$(brew --prefix zstd 2>/dev/null)/lib/libzstd.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ZSTD_' || echo 0)
 printf 'ZSTD_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zstd/probe_lib/probe_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log
 test "$COUNT" -gt 0)
-[2026-08-20 15:51:38.367] probe_lib                  detect  (ok, output present)
-[2026-08-20 15:51:38.367] probe_lib                  check_post  (pass)
-[2026-08-20 15:51:38.367] probe_lib                  done
-[2026-08-20 15:51:38.370] probe_lib_inspect          check_pre  (pass)
-[2026-08-20 15:51:38.371] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
+[2026-08-20 16:56:23.979] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:23.979] probe_lib                  detect  (ok, output present)
+[2026-08-20 16:56:23.979] probe_lib                  check_post  (pass)
+[2026-08-20 16:56:23.979] probe_lib                  done
+[2026-08-20 16:56:23.981] probe_lib_inspect          check_pre  (pass)
+[2026-08-20 16:56:23.983] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libzstd.so.1* /usr/lib*/libzstd.so.1* 2>/dev/null \
         "$(brew --prefix zstd 2>/dev/null)/lib/libzstd.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 nm -D "$LIB_NATIVE" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ZSTD_,ZDICT_' --watchlist 'ZSTD_compress,ZSTD_decompress,ZSTD_compressBound,ZSTD_getFrameContentSize,ZSTD_isError,ZSTD_getErrorName,ZSTD_versionNumber' \
   > /home/red/code/research/tola/_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.json)
-[2026-08-20 15:51:38.427] probe_lib_inspect          detect  (ok, output present)
-[2026-08-20 15:51:38.427] probe_lib_inspect          check_post  (pass)
-[2026-08-20 15:51:38.427] probe_lib_inspect          done
-[2026-08-20 15:51:38.429] *                          graph_end  (7/7 completed)
-[2026-08-20 15:51:38.430] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/all.mmd)
-[2026-08-20 15:51:38.430] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/full.mmd)
-[2026-08-20 15:51:38.430] *                          view  (source (1 steps))
-[2026-08-20 15:51:38.430] *                          view  (lib (3 steps))
-[2026-08-20 15:51:38.430] *                          view  (probes (4 steps))
-[2026-08-20 15:51:38.432] *                          view  (binding_ocaml (3 steps))
-[2026-08-20 15:51:38.432] *                          html  (_out/canary/projects/zstd/-run/result.html)
-[2026-08-20 15:51:38.433] *                          index  (_out/canary/projects/index.html)
-[2026-08-20 15:51:38.433] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-20 15:51:38.433] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-20 15:51:38.434] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-20 15:51:38.434] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-20 15:51:38.434] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-20 15:51:38.434] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-20 15:51:38.434] *                          invariant  (ALL OK)
-[2026-08-20 15:51:38.471] *                          variant_start  (source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched)
-[2026-08-20 15:51:38.471] *                          graph_start  (7 steps)
-[2026-08-20 15:51:38.471] fetch_source               check_pre  (pass)
-[2026-08-20 15:51:38.475] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zstd-all/zstd/.git ]; then git clone https://github.com/facebook/zstd.git /home/red/code/contrib/zstd-all/zstd; fi && \
+[2026-08-20 16:56:24.044] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched-1.5.7_lib-fetched_ocaml_binding-fetched.log)
+[2026-08-20 16:56:24.044] probe_lib_inspect          detect  (ok, output present)
+[2026-08-20 16:56:24.044] probe_lib_inspect          check_post  (pass)
+[2026-08-20 16:56:24.044] probe_lib_inspect          done
+[2026-08-20 16:56:24.046] *                          graph_end  (7/7 completed)
+[2026-08-20 16:56:24.047] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/all.mmd)
+[2026-08-20 16:56:24.047] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/full.mmd)
+[2026-08-20 16:56:24.047] *                          view  (source (1 steps))
+[2026-08-20 16:56:24.047] *                          view  (lib (3 steps))
+[2026-08-20 16:56:24.048] *                          view  (probes (4 steps))
+[2026-08-20 16:56:24.049] *                          view  (binding_ocaml (3 steps))
+[2026-08-20 16:56:24.049] *                          html  (_out/canary/projects/zstd/-run/result.html)
+[2026-08-20 16:56:24.050] *                          index  (_out/canary/projects/index.html)
+[2026-08-20 16:56:24.050] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-20 16:56:24.050] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-20 16:56:24.050] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-20 16:56:24.050] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-20 16:56:24.051] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-20 16:56:24.051] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-20 16:56:24.051] *                          invariant  (ALL OK)
+[2026-08-20 16:56:24.087] *                          variant_start  (source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched)
+[2026-08-20 16:56:24.087] *                          graph_start  (7 steps)
+[2026-08-20 16:56:24.087] fetch_source               check_pre  (pass)
+[2026-08-20 16:56:24.091] fetch_source               cmd  (if [ ! -d /home/red/code/contrib/zstd-all/zstd/.git ]; then git clone https://github.com/facebook/zstd.git /home/red/code/contrib/zstd-all/zstd; fi && \
 git -C /home/red/code/contrib/zstd-all/zstd fetch -q origin v1.5.7 && \
 if [ ! -d /home/red/code/contrib/zstd-all/zstd-v1.5.7 ]; then git -C /home/red/code/contrib/zstd-all/zstd worktree add -f /home/red/code/contrib/zstd-all/zstd-v1.5.7 v1.5.7; fi && \
 git -C /home/red/code/contrib/zstd-all/zstd-v1.5.7 checkout -q -f v1.5.7 && \
 echo '/home/red/code/contrib/zstd-all/zstd-v1.5.7' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_source/source_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:38.777] fetch_source               detect  (ok, output present)
-[2026-08-20 15:51:38.784] fetch_source               check_post  (pass)
-[2026-08-20 15:51:38.784] fetch_source               done
-[2026-08-20 15:51:38.789] fetch_lib                  check_pre  (pass)
-[2026-08-20 15:51:38.791] fetch_lib                  cmd  (sudo apt-get install -y libzstd-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_lib/lib_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:39.220] fetch_lib                  detect  (ok, output present)
-[2026-08-20 15:51:39.220] fetch_lib                  check_post  (pass)
-[2026-08-20 15:51:39.220] fetch_lib                  done
-[2026-08-20 15:51:39.222] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:51:39.224] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zstd -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_binding/ocaml/binding_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.ok)
-[2026-08-20 15:51:40.204] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:51:40.204] fetch_binding_ocaml        check_post  (pass)
-[2026-08-20 15:51:40.204] fetch_binding_ocaml        done
-[2026-08-20 15:51:40.206] probe_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:51:40.208] probe_binding_ocaml        cmd  (eval $(opam env)
+[2026-08-20 16:56:24.380] fetch_source               cmd_log  (fetch_source.out_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-20 16:56:24.380] fetch_source               detect  (ok, output present)
+[2026-08-20 16:56:24.387] fetch_source               check_post  (pass)
+[2026-08-20 16:56:24.387] fetch_source               done
+[2026-08-20 16:56:24.391] fetch_lib                  check_pre  (pass)
+[2026-08-20 16:56:24.393] fetch_lib                  cmd  (sudo apt-get install -y libzstd-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_lib/lib_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.ok)
+[2026-08-20 16:56:24.762] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-20 16:56:24.762] fetch_lib                  detect  (ok, output present)
+[2026-08-20 16:56:24.762] fetch_lib                  check_post  (pass)
+[2026-08-20 16:56:24.762] fetch_lib                  done
+[2026-08-20 16:56:24.764] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-20 16:56:24.766] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install zstd -y --assume-depexts && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/zstd/fetch_binding/ocaml/binding_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.ok)
+[2026-08-20 16:56:25.753] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-20 16:56:25.753] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-20 16:56:25.753] fetch_binding_ocaml        check_post  (pass)
+[2026-08-20 16:56:25.753] fetch_binding_ocaml        done
+[2026-08-20 16:56:25.755] probe_binding_ocaml        check_pre  (pass)
+[2026-08-20 16:56:25.757] probe_binding_ocaml        cmd  (eval $(opam env)
 export LD_LIBRARY_PATH=/home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib:$LD_LIBRARY_PATH
 ocamlfind ocamlopt -package zstd -linkpkg canary/examples/zstd/zstd_example.ml -o /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example > /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/zstd_example >> /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log 2>&1 && grep -qF "/home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib" /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/probe_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log
 exit $RC)
-[2026-08-20 15:51:40.335] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:51:40.335] probe_binding_ocaml        check_post  (pass)
-[2026-08-20 15:51:40.335] probe_binding_ocaml        done
-[2026-08-20 15:51:40.337] probe_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-20 15:51:40.339] probe_binding_ocaml_inspect  cmd  (eval $(opam env)
-PKG_DIR=$(ocamlfind query 'zstd' 2>/dev/null)
-test -n "$PKG_DIR"
-{ for f in "$PKG_DIR"/*.cmxa "$PKG_DIR"/*.cma; do
-    [ -f "$f" ] && ocamlobjinfo "$f"
-  done
-} | python3 canary/scripts/inspect_ocaml.py --path 'zstd' --watchlist 'Zstd' \
-  > /home/red/code/research/tola/_out/canary/projects/zstd/probe_binding/ocaml/inspect_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.json)
-[2026-08-20 15:51:40.391] probe_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-20 15:51:40.391] probe_binding_ocaml_inspect  check_post  (pass)
-[2026-08-20 15:51:40.391] probe_binding_ocaml_inspect  done
-[2026-08-20 15:51:40.393] probe_lib                  check_pre  (pass)
-[2026-08-20 15:51:40.395] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib/libzstd.so.1* 2>/dev/null | head -1)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_fail  (exit 1)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_out  (zstd version: 1.5.5)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_out  (zstd resolved: /usr/lib/x86_64-linux-gnu/libzstd.so.1.5.5)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_out  (zstd sizes: original=5290 compressed=253 restored=5290)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        cmd_out  (zstd ok)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        detect  (error, output present)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        check_post  (FAIL)
+[2026-08-20 16:56:25.875] probe_binding_ocaml        failed  (postcondition failed)
+[2026-08-20 16:56:25.875] probe_lib                  check_pre  (pass)
+[2026-08-20 16:56:25.877] probe_lib                  cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib/libzstd.so.1* 2>/dev/null | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib — run 'canary prebuilt zstd' first" >&2; exit 1; }
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'ZSTD_' || echo 0)
 printf 'ZSTD_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/zstd/probe_lib/probe_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log
 test "$COUNT" -gt 0)
-[2026-08-20 15:51:40.443] probe_lib                  detect  (ok, output present)
-[2026-08-20 15:51:40.443] probe_lib                  check_post  (pass)
-[2026-08-20 15:51:40.443] probe_lib                  done
-[2026-08-20 15:51:40.445] probe_lib_inspect          check_pre  (pass)
-[2026-08-20 15:51:40.447] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib/libzstd.so.1* 2>/dev/null | head -1)
-test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE" || { echo "PREBUILT MISSING: /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib — run 'canary prebuilt zstd' first" >&2; exit 1; }
-nm -D "$LIB_NATIVE" 2>/dev/null \
-  | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'ZSTD_,ZDICT_' --watchlist 'ZSTD_compress,ZSTD_decompress,ZSTD_compressBound,ZSTD_getFrameContentSize,ZSTD_isError,ZSTD_getErrorName,ZSTD_versionNumber' \
-  > /home/red/code/research/tola/_out/canary/projects/zstd/probe_lib/inspect_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.json)
-[2026-08-20 15:51:40.501] probe_lib_inspect          detect  (ok, output present)
-[2026-08-20 15:51:40.501] probe_lib_inspect          check_post  (pass)
-[2026-08-20 15:51:40.501] probe_lib_inspect          done
-[2026-08-20 15:51:40.503] *                          graph_end  (7/7 completed)
-[2026-08-20 15:51:40.503] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/all.mmd)
-[2026-08-20 15:51:40.503] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/full.mmd)
-[2026-08-20 15:51:40.503] *                          view  (source (1 steps))
-[2026-08-20 15:51:40.503] *                          view  (lib (3 steps))
-[2026-08-20 15:51:40.503] *                          view  (probes (4 steps))
-[2026-08-20 15:51:40.504] *                          view  (binding_ocaml (3 steps))
-[2026-08-20 15:51:40.504] *                          html  (_out/canary/projects/zstd/-run/result.html)
-[2026-08-20 15:51:40.506] *                          index  (_out/canary/projects/index.html)
-[2026-08-20 15:51:40.506] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
-[2026-08-20 15:51:40.506] *                          invariant  (ALL OK)
+[2026-08-20 16:56:25.882] probe_lib                  cmd_log  (probe_lib.out_source-fetched-1.5.7_lib-vendored-dev_ocaml_binding-fetched.log)
+[2026-08-20 16:56:25.882] probe_lib                  cmd_fail  (exit 1)
+[2026-08-20 16:56:25.883] probe_lib                  cmd_out  (PREBUILT MISSING: /home/red/code/contrib/zstd-all/prebuilt/zstd-1.5.7/lib — run 'canary prebuilt zstd' first)
+[2026-08-20 16:56:25.883] probe_lib                  detect  (error, output present)
+[2026-08-20 16:56:25.883] probe_lib                  check_post  (FAIL)
+[2026-08-20 16:56:25.883] probe_lib                  failed  (postcondition failed)
+[2026-08-20 16:56:25.883] *                          graph_end  (3/7 completed)
+[2026-08-20 16:56:25.883] probe_binding_ocaml        failed
+[2026-08-20 16:56:25.883] probe_binding_ocaml_inspect  skipped
+[2026-08-20 16:56:25.883] probe_lib                  failed
+[2026-08-20 16:56:25.883] probe_lib_inspect          skipped
+[2026-08-20 16:56:25.883] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/all.mmd)
+[2026-08-20 16:56:25.883] *                          diagram  (_out/canary/projects/zstd/-run/diagrams/full.mmd)
+[2026-08-20 16:56:25.883] *                          view  (source (1 steps))
+[2026-08-20 16:56:25.883] *                          view  (lib (3 steps))
+[2026-08-20 16:56:25.883] *                          view  (probes (4 steps))
+[2026-08-20 16:56:25.883] *                          view  (binding_ocaml (3 steps))
+[2026-08-20 16:56:25.884] *                          html  (_out/canary/projects/zstd/-run/result.html)
+[2026-08-20 16:56:25.884] *                          index  (_out/canary/projects/index.html)
+[2026-08-20 16:56:25.885] *                          invariant  (full.mmd: OK (7 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (binding_ocaml.mmd: OK (6 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (source.mmd: OK (5 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (lib.mmd: OK (6 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (all.mmd: OK (5 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (probes.mmd: OK (7 nodes, 7 IDs))
+[2026-08-20 16:56:25.885] *                          invariant  (ALL OK)

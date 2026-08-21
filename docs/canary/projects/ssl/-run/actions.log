@@ -1,22 +1,25 @@
-[2026-08-20 15:52:48.900] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable)
-[2026-08-20 15:52:48.900] *                          graph_start  (8 steps)
-[2026-08-20 15:52:48.900] fetch_source               check_pre  (pass)
-[2026-08-20 15:52:48.904] fetch_source               cmd  (if [ -d _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src/.git ]; then cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git fetch && git checkout openssl-3.0.13; else git clone https://github.com/openssl/openssl.git _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git checkout openssl-3.0.13; fi && echo '_out/canary/projects/openssl/3.0.13_openssl-3.0.13/src' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
-[2026-08-20 15:52:50.907] fetch_source               detect  (ok, output present)
-[2026-08-20 15:52:50.908] fetch_source               check_post  (pass)
-[2026-08-20 15:52:50.908] fetch_source               done
-[2026-08-20 15:52:50.912] fetch_lib                  check_pre  (pass)
-[2026-08-20 15:52:50.914] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
-[2026-08-20 15:52:51.265] fetch_lib                  detect  (ok, output present)
-[2026-08-20 15:52:51.265] fetch_lib                  check_post  (pass)
-[2026-08-20 15:52:51.265] fetch_lib                  done
-[2026-08-20 15:52:51.267] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:52:51.270] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
-[2026-08-20 15:52:57.145] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:52:57.406] fetch_binding_ocaml        check_post  (pass)
-[2026-08-20 15:52:57.406] fetch_binding_ocaml        done
-[2026-08-20 15:52:57.408] fetch_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-20 15:52:57.410] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-08-21 00:30:27.764] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable)
+[2026-08-21 00:30:27.764] *                          graph_start  (8 steps)
+[2026-08-21 00:30:27.764] fetch_source               check_pre  (pass)
+[2026-08-21 00:30:27.769] fetch_source               cmd  (if [ -d _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src/.git ]; then cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git fetch && git checkout openssl-3.0.13; else git clone https://github.com/openssl/openssl.git _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git checkout openssl-3.0.13; fi && echo '_out/canary/projects/openssl/3.0.13_openssl-3.0.13/src' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
+[2026-08-21 00:30:28.302] fetch_source               cmd_log  (fetch_source.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:28.302] fetch_source               detect  (ok, output present)
+[2026-08-21 00:30:28.302] fetch_source               check_post  (pass)
+[2026-08-21 00:30:28.302] fetch_source               done
+[2026-08-21 00:30:28.307] fetch_lib                  check_pre  (pass)
+[2026-08-21 00:30:28.309] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
+[2026-08-21 00:30:28.706] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:28.706] fetch_lib                  detect  (ok, output present)
+[2026-08-21 00:30:28.706] fetch_lib                  check_post  (pass)
+[2026-08-21 00:30:28.706] fetch_lib                  done
+[2026-08-21 00:30:28.708] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-21 00:30:28.711] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.6.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.ok)
+[2026-08-21 00:30:34.735] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:34.736] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-21 00:30:35.103] fetch_binding_ocaml        check_post  (pass)
+[2026-08-21 00:30:35.103] fetch_binding_ocaml        done
+[2026-08-21 00:30:35.105] fetch_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-21 00:30:35.107] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
@@ -25,11 +28,12 @@ PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
   --watchlist 'Ssl,Ssl.init,Ssl.create_context' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json)
-[2026-08-20 15:52:57.528] fetch_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-20 15:52:57.528] fetch_binding_ocaml_inspect  check_post  (pass)
-[2026-08-20 15:52:57.528] fetch_binding_ocaml_inspect  done
-[2026-08-20 15:52:57.530] probe_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:52:57.533] probe_binding_ocaml        cmd  (eval $(opam env)
+[2026-08-21 00:30:35.231] fetch_binding_ocaml_inspect  cmd_log  (fetch_binding_ocaml_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:35.231] fetch_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-21 00:30:35.231] fetch_binding_ocaml_inspect  check_post  (pass)
+[2026-08-21 00:30:35.231] fetch_binding_ocaml_inspect  done
+[2026-08-21 00:30:35.233] probe_binding_ocaml        check_pre  (pass)
+[2026-08-21 00:30:35.236] probe_binding_ocaml        cmd  (eval $(opam env)
 INSTALLED=$(opam list ssl --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED" = "0.6.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.6.0"; exit 1; }
 eval $(opam env)
@@ -37,14 +41,15 @@ ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
 exit $RC)
-[2026-08-20 15:52:57.908] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:52:57.909] probe_binding_ocaml        compat_predicted  (no contract fired)
-[2026-08-20 15:52:57.909] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
-[2026-08-20 15:52:57.909] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
-[2026-08-20 15:52:57.909] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
-[2026-08-20 15:52:57.909] probe_binding_ocaml        done  (no compat failure predicted; success expected)
-[2026-08-20 15:52:57.911] probe_app_ocaml            check_pre  (pass)
-[2026-08-20 15:52:57.913] probe_app_ocaml            cmd  (eval $(opam env)
+[2026-08-21 00:30:35.629] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:35.629] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-21 00:30:35.629] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-21 00:30:35.629] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-21 00:30:35.629] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-21 00:30:35.629] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-21 00:30:35.629] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-08-21 00:30:35.631] probe_app_ocaml            check_pre  (pass)
+[2026-08-21 00:30:35.633] probe_app_ocaml            cmd  (eval $(opam env)
 INSTALLED=$(opam list ssl --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED" = "0.6.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.6.0"; exit 1; }
 eval $(opam env)
@@ -52,70 +57,80 @@ ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_nlv.ml 
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
 exit $RC)
-[2026-08-20 15:52:58.208] probe_app_ocaml            cmd_fail  (exit 2)
-[2026-08-20 15:52:58.208] probe_app_ocaml            detect  (error, output present)
-[2026-08-20 15:52:58.208] probe_app_ocaml            compat_predicted  (c2 cmp_api_completeness: 2 substring(s))
-[2026-08-20 15:52:58.208] probe_app_ocaml            contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
-[2026-08-20 15:52:58.208] probe_app_ocaml            contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
-[2026-08-20 15:52:58.208] probe_app_ocaml            contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
-[2026-08-20 15:52:58.208] probe_app_ocaml            done  (expected failure confirmed (derived) [c2])
-[2026-08-20 15:52:58.210] probe_lib                  check_pre  (pass)
-[2026-08-20 15:52:58.212] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_log  (probe_app_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_fail  (exit 2)
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_out  (File "canary/examples/ssl_variant/app_nlv.ml", line 9, characters 9-35:)
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_out  (9 |   ignore Ssl.native_library_version;)
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_out  (             ^^^^^^^^^^^^^^^^^^^^^^^^^^)
+[2026-08-21 00:30:35.942] probe_app_ocaml            cmd_out  (Error: Unbound value Ssl.native_library_version)
+[2026-08-21 00:30:35.942] probe_app_ocaml            detect  (error, output present)
+[2026-08-21 00:30:35.942] probe_app_ocaml            compat_predicted  (c2 cmp_api_completeness: 2 substring(s))
+[2026-08-21 00:30:35.942] probe_app_ocaml            contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-21 00:30:35.942] probe_app_ocaml            contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-21 00:30:35.942] probe_app_ocaml            contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-21 00:30:35.942] probe_app_ocaml            done  (expected failure confirmed (derived) [c2])
+[2026-08-21 00:30:35.944] probe_lib                  check_pre  (pass)
+[2026-08-21 00:30:35.947] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
         "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
 printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log
 test "$COUNT" -gt 0)
-[2026-08-20 15:52:58.261] probe_lib                  detect  (ok, output present)
-[2026-08-20 15:52:58.261] probe_lib                  check_post  (pass)
-[2026-08-20 15:52:58.261] probe_lib                  done
-[2026-08-20 15:52:58.263] probe_lib_inspect          check_pre  (pass)
-[2026-08-20 15:52:58.265] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+[2026-08-21 00:30:36.006] probe_lib                  cmd_log  (probe_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:36.006] probe_lib                  detect  (ok, output present)
+[2026-08-21 00:30:36.006] probe_lib                  check_post  (pass)
+[2026-08-21 00:30:36.006] probe_lib                  done
+[2026-08-21 00:30:36.008] probe_lib_inspect          check_pre  (pass)
+[2026-08-21 00:30:36.010] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
         "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 nm -D "$LIB_NATIVE" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
   > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.json)
-[2026-08-20 15:52:58.321] probe_lib_inspect          detect  (ok, output present)
-[2026-08-20 15:52:58.321] probe_lib_inspect          check_post  (pass)
-[2026-08-20 15:52:58.321] probe_lib_inspect          done
-[2026-08-20 15:52:58.323] *                          graph_end  (8/8 completed)
-[2026-08-20 15:52:58.324] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
-[2026-08-20 15:52:58.324] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
-[2026-08-20 15:52:58.325] *                          view  (source (1 steps))
-[2026-08-20 15:52:58.325] *                          view  (lib (3 steps))
-[2026-08-20 15:52:58.325] *                          view  (probes (4 steps))
-[2026-08-20 15:52:58.325] *                          view  (binding_ocaml (3 steps))
-[2026-08-20 15:52:58.326] *                          html  (_out/canary/projects/ssl/-run/result.html)
-[2026-08-20 15:52:58.327] *                          index  (_out/canary/projects/index.html)
-[2026-08-20 15:52:58.327] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
-[2026-08-20 15:52:58.327] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
-[2026-08-20 15:52:58.327] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
-[2026-08-20 15:52:58.327] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
-[2026-08-20 15:52:58.328] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
-[2026-08-20 15:52:58.328] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
-[2026-08-20 15:52:58.328] *                          invariant  (ALL OK)
-[2026-08-20 15:52:58.359] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable)
-[2026-08-20 15:52:58.359] *                          graph_start  (8 steps)
-[2026-08-20 15:52:58.359] fetch_source               check_pre  (pass)
-[2026-08-20 15:52:58.363] fetch_source               cmd  (if [ -d _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src/.git ]; then cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git fetch && git checkout openssl-3.0.13; else git clone https://github.com/openssl/openssl.git _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git checkout openssl-3.0.13; fi && echo '_out/canary/projects/openssl/3.0.13_openssl-3.0.13/src' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
-[2026-08-20 15:52:58.929] fetch_source               detect  (ok, output present)
-[2026-08-20 15:52:58.929] fetch_source               check_post  (pass)
-[2026-08-20 15:52:58.929] fetch_source               done
-[2026-08-20 15:52:58.933] fetch_lib                  check_pre  (pass)
-[2026-08-20 15:52:58.935] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
-[2026-08-20 15:52:59.295] fetch_lib                  detect  (ok, output present)
-[2026-08-20 15:52:59.295] fetch_lib                  check_post  (pass)
-[2026-08-20 15:52:59.295] fetch_lib                  done
-[2026-08-20 15:52:59.297] fetch_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:52:59.299] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.7.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
-[2026-08-20 15:53:04.763] fetch_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:53:05.025] fetch_binding_ocaml        check_post  (pass)
-[2026-08-20 15:53:05.025] fetch_binding_ocaml        done
-[2026-08-20 15:53:05.027] fetch_binding_ocaml_inspect  check_pre  (pass)
-[2026-08-20 15:53:05.029] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
+[2026-08-21 00:30:36.072] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.6.0_app-vendored-stable.log)
+[2026-08-21 00:30:36.072] probe_lib_inspect          detect  (ok, output present)
+[2026-08-21 00:30:36.072] probe_lib_inspect          check_post  (pass)
+[2026-08-21 00:30:36.072] probe_lib_inspect          done
+[2026-08-21 00:30:36.074] *                          graph_end  (8/8 completed)
+[2026-08-21 00:30:36.075] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-08-21 00:30:36.075] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-08-21 00:30:36.075] *                          view  (source (1 steps))
+[2026-08-21 00:30:36.075] *                          view  (lib (3 steps))
+[2026-08-21 00:30:36.075] *                          view  (probes (4 steps))
+[2026-08-21 00:30:36.076] *                          view  (binding_ocaml (3 steps))
+[2026-08-21 00:30:36.077] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-08-21 00:30:36.078] *                          index  (_out/canary/projects/index.html)
+[2026-08-21 00:30:36.078] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-21 00:30:36.078] *                          invariant  (ALL OK)
+[2026-08-21 00:30:36.111] *                          variant_start  (source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable)
+[2026-08-21 00:30:36.111] *                          graph_start  (8 steps)
+[2026-08-21 00:30:36.111] fetch_source               check_pre  (pass)
+[2026-08-21 00:30:36.115] fetch_source               cmd  (if [ -d _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src/.git ]; then cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git fetch && git checkout openssl-3.0.13; else git clone https://github.com/openssl/openssl.git _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && cd _out/canary/projects/openssl/3.0.13_openssl-3.0.13/src && git checkout openssl-3.0.13; fi && echo '_out/canary/projects/openssl/3.0.13_openssl-3.0.13/src' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_source/source_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
+[2026-08-21 00:30:36.501] fetch_source               cmd_log  (fetch_source.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:36.501] fetch_source               detect  (ok, output present)
+[2026-08-21 00:30:36.501] fetch_source               check_post  (pass)
+[2026-08-21 00:30:36.501] fetch_source               done
+[2026-08-21 00:30:36.505] fetch_lib                  check_pre  (pass)
+[2026-08-21 00:30:36.507] fetch_lib                  cmd  (sudo apt-get install -y libssl-dev && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_lib/lib_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
+[2026-08-21 00:30:36.917] fetch_lib                  cmd_log  (fetch_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:36.917] fetch_lib                  detect  (ok, output present)
+[2026-08-21 00:30:36.917] fetch_lib                  check_post  (pass)
+[2026-08-21 00:30:36.917] fetch_lib                  done
+[2026-08-21 00:30:36.919] fetch_binding_ocaml        check_pre  (pass)
+[2026-08-21 00:30:36.921] fetch_binding_ocaml        cmd  (eval $(opam env) && opam install ssl.0.7.0 -y && eval $(opam env) && opam install -y ocamlfind && echo 'installed' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/binding_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.ok)
+[2026-08-21 00:30:41.650] fetch_binding_ocaml        cmd_log  (fetch_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:41.650] fetch_binding_ocaml        detect  (ok, output present)
+[2026-08-21 00:30:41.923] fetch_binding_ocaml        check_post  (pass)
+[2026-08-21 00:30:41.923] fetch_binding_ocaml        done
+[2026-08-21 00:30:41.925] fetch_binding_ocaml_inspect  check_pre  (pass)
+[2026-08-21 00:30:41.927] fetch_binding_ocaml_inspect  cmd  (eval $(opam env)
 PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
@@ -124,11 +139,12 @@ PKG_DIR=$(ocamlfind query 'ssl' 2>/dev/null)
 test -n "$PKG_DIR"
 python3 canary/scripts/inspect_binding.py --kind mli --dir "$PKG_DIR" \
   --watchlist 'Ssl,Ssl.init,Ssl.create_context' > /home/red/code/research/tola/_out/canary/projects/ssl/fetch_binding/ocaml/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json)
-[2026-08-20 15:53:05.147] fetch_binding_ocaml_inspect  detect  (ok, output present)
-[2026-08-20 15:53:05.147] fetch_binding_ocaml_inspect  check_post  (pass)
-[2026-08-20 15:53:05.147] fetch_binding_ocaml_inspect  done
-[2026-08-20 15:53:05.149] probe_binding_ocaml        check_pre  (pass)
-[2026-08-20 15:53:05.151] probe_binding_ocaml        cmd  (eval $(opam env)
+[2026-08-21 00:30:42.060] fetch_binding_ocaml_inspect  cmd_log  (fetch_binding_ocaml_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:42.060] fetch_binding_ocaml_inspect  detect  (ok, output present)
+[2026-08-21 00:30:42.060] fetch_binding_ocaml_inspect  check_post  (pass)
+[2026-08-21 00:30:42.060] fetch_binding_ocaml_inspect  done
+[2026-08-21 00:30:42.063] probe_binding_ocaml        check_pre  (pass)
+[2026-08-21 00:30:42.065] probe_binding_ocaml        cmd  (eval $(opam env)
 INSTALLED=$(opam list ssl --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED" = "0.7.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.7.0"; exit 1; }
 eval $(opam env)
@@ -136,14 +152,15 @@ ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_core.ml
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_binding/ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log
 exit $RC)
-[2026-08-20 15:53:05.521] probe_binding_ocaml        detect  (ok, output present)
-[2026-08-20 15:53:05.521] probe_binding_ocaml        compat_predicted  (no contract fired)
-[2026-08-20 15:53:05.521] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
-[2026-08-20 15:53:05.521] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
-[2026-08-20 15:53:05.521] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
-[2026-08-20 15:53:05.521] probe_binding_ocaml        done  (no compat failure predicted; success expected)
-[2026-08-20 15:53:05.523] probe_app_ocaml            check_pre  (pass)
-[2026-08-20 15:53:05.525] probe_app_ocaml            cmd  (eval $(opam env)
+[2026-08-21 00:30:42.470] probe_binding_ocaml        cmd_log  (probe_binding_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:42.470] probe_binding_ocaml        detect  (ok, output present)
+[2026-08-21 00:30:42.470] probe_binding_ocaml        compat_predicted  (no contract fired)
+[2026-08-21 00:30:42.470] probe_binding_ocaml        contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-21 00:30:42.470] probe_binding_ocaml        contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-21 00:30:42.470] probe_binding_ocaml        contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-21 00:30:42.470] probe_binding_ocaml        done  (no compat failure predicted; success expected)
+[2026-08-21 00:30:42.472] probe_app_ocaml            check_pre  (pass)
+[2026-08-21 00:30:42.474] probe_app_ocaml            cmd  (eval $(opam env)
 INSTALLED=$(opam list ssl --installed --short --columns=version 2>/dev/null)
 test "$INSTALLED" = "0.7.0" || { echo "WORLD MISMATCH: switch has ssl $INSTALLED, scenario declares ssl 0.7.0"; exit 1; }
 eval $(opam env)
@@ -151,47 +168,50 @@ ocamlfind ocamlopt -package ssl -linkpkg canary/examples/ssl_variant/app_nlv.ml 
 RC=$?
 cat /home/red/code/research/tola/_out/canary/projects/ssl/probe_app_ocaml/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log
 exit $RC)
-[2026-08-20 15:53:05.891] probe_app_ocaml            detect  (ok, output present)
-[2026-08-20 15:53:05.891] probe_app_ocaml            compat_predicted  (no contract fired)
-[2026-08-20 15:53:05.891] probe_app_ocaml            contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
-[2026-08-20 15:53:05.891] probe_app_ocaml            contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
-[2026-08-20 15:53:05.891] probe_app_ocaml            contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
-[2026-08-20 15:53:05.891] probe_app_ocaml            done  (no compat failure predicted; success expected)
-[2026-08-20 15:53:05.893] probe_lib                  check_pre  (pass)
-[2026-08-20 15:53:05.895] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+[2026-08-21 00:30:42.870] probe_app_ocaml            cmd_log  (probe_app_ocaml.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:42.870] probe_app_ocaml            detect  (ok, output present)
+[2026-08-21 00:30:42.870] probe_app_ocaml            compat_predicted  (no contract fired)
+[2026-08-21 00:30:42.870] probe_app_ocaml            contract_skipped  (c3 cmp_behavior: disabled in registry (blocked))
+[2026-08-21 00:30:42.870] probe_app_ocaml            contract_skipped  (c7 api_sound_repack: disabled in registry (stubbed))
+[2026-08-21 00:30:42.870] probe_app_ocaml            contract_skipped  (c8 cmp_api_faithfulness: disabled in registry (stubbed))
+[2026-08-21 00:30:42.870] probe_app_ocaml            done  (no compat failure predicted; success expected)
+[2026-08-21 00:30:42.872] probe_lib                  check_pre  (pass)
+[2026-08-21 00:30:42.874] probe_lib                  cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
         "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 COUNT=$(nm -D "$LIB_NATIVE" 2>/dev/null | grep -v ' U ' | grep -c 'SSL_' || echo 0)
 printf 'SSL_ symbols exported: %s\n' "$COUNT" | tee /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/probe_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log
 test "$COUNT" -gt 0)
-[2026-08-20 15:53:05.943] probe_lib                  detect  (ok, output present)
-[2026-08-20 15:53:05.943] probe_lib                  check_post  (pass)
-[2026-08-20 15:53:05.943] probe_lib                  done
-[2026-08-20 15:53:05.945] probe_lib_inspect          check_pre  (pass)
-[2026-08-20 15:53:05.947] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
+[2026-08-21 00:30:42.930] probe_lib                  cmd_log  (probe_lib.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:42.930] probe_lib                  detect  (ok, output present)
+[2026-08-21 00:30:42.930] probe_lib                  check_post  (pass)
+[2026-08-21 00:30:42.930] probe_lib                  done
+[2026-08-21 00:30:42.932] probe_lib_inspect          check_pre  (pass)
+[2026-08-21 00:30:42.934] probe_lib_inspect          cmd  (LIB_NATIVE=$(ls /usr/lib/x86_64-linux-gnu/libssl.so.* /usr/lib*/libssl.so.* 2>/dev/null \
         "$(brew --prefix openssl@3 2>/dev/null)/lib/libssl.dylib" 2>/dev/null \
         | head -1)
 test -n "$LIB_NATIVE" -a -e "$LIB_NATIVE"
 nm -D "$LIB_NATIVE" 2>/dev/null \
   | python3 canary/scripts/inspect_native.py --emit-symbols --elf --path "$LIB_NATIVE" --prefixes 'SSL_,TLS_,BIO_' --watchlist 'SSL_CTX_new,SSL_new,SSL_connect,SSL_read,SSL_write,TLS_method' \
   > /home/red/code/research/tola/_out/canary/projects/ssl/probe_lib/inspect_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.json)
-[2026-08-20 15:53:06.003] probe_lib_inspect          detect  (ok, output present)
-[2026-08-20 15:53:06.003] probe_lib_inspect          check_post  (pass)
-[2026-08-20 15:53:06.003] probe_lib_inspect          done
-[2026-08-20 15:53:06.005] *                          graph_end  (8/8 completed)
-[2026-08-20 15:53:06.005] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
-[2026-08-20 15:53:06.005] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
-[2026-08-20 15:53:06.005] *                          view  (source (1 steps))
-[2026-08-20 15:53:06.006] *                          view  (lib (3 steps))
-[2026-08-20 15:53:06.006] *                          view  (probes (4 steps))
-[2026-08-20 15:53:06.006] *                          view  (binding_ocaml (3 steps))
-[2026-08-20 15:53:06.007] *                          html  (_out/canary/projects/ssl/-run/result.html)
-[2026-08-20 15:53:06.008] *                          index  (_out/canary/projects/index.html)
-[2026-08-20 15:53:06.008] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
-[2026-08-20 15:53:06.008] *                          invariant  (ALL OK)
+[2026-08-21 00:30:43.001] probe_lib_inspect          cmd_log  (probe_lib_inspect.out_source-fetched_lib-fetched_ocaml_binding-fetched-0.7.0_app-vendored-stable.log)
+[2026-08-21 00:30:43.001] probe_lib_inspect          detect  (ok, output present)
+[2026-08-21 00:30:43.001] probe_lib_inspect          check_post  (pass)
+[2026-08-21 00:30:43.001] probe_lib_inspect          done
+[2026-08-21 00:30:43.003] *                          graph_end  (8/8 completed)
+[2026-08-21 00:30:43.004] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/all.mmd)
+[2026-08-21 00:30:43.004] *                          diagram  (_out/canary/projects/ssl/-run/diagrams/full.mmd)
+[2026-08-21 00:30:43.004] *                          view  (source (1 steps))
+[2026-08-21 00:30:43.004] *                          view  (lib (3 steps))
+[2026-08-21 00:30:43.004] *                          view  (probes (4 steps))
+[2026-08-21 00:30:43.004] *                          view  (binding_ocaml (3 steps))
+[2026-08-21 00:30:43.005] *                          html  (_out/canary/projects/ssl/-run/result.html)
+[2026-08-21 00:30:43.006] *                          index  (_out/canary/projects/index.html)
+[2026-08-21 00:30:43.007] *                          invariant  (full.mmd: OK (8 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (binding_ocaml.mmd: OK (7 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (source.mmd: OK (6 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (lib.mmd: OK (7 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (all.mmd: OK (6 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (probes.mmd: OK (8 nodes, 8 IDs))
+[2026-08-21 00:30:43.007] *                          invariant  (ALL OK)

@@ -1,0 +1,47 @@
+The following actions will be performed:
+=== upgrade 1 package
+  ↗ z3 4.16.0 to dev
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+Processing  1/4: [z3.dev: git]
+⬇ retrieved z3.dev  (git+file:///home/red/code/contrib/z3-all/z3)
+Processing  2/4: [z3: sh]
++ /home/red/.opam/opam-init/hooks/sandbox.sh "build" "sh" "-ec" "B=${CANARY_BUILD_DIR:-build} && S=${CANARY_SRC_DIR:-.} && if [ -f \"$B/src/api/ml/z3ml.cmxa\" ]; then echo \"z3 OCaml bindings already built in $B, skipping cmake+ninja\"; else SCCACHE=$(command -v sccache 2>/dev/null || true); SCCACHE_FLAGS=\"\"; [ -n \"$SCCACHE\" ] && SCCACHE_FLAGS=\"-DCMAKE_C_COMPILER_LAUNCHER=$SCCACHE -DCMAKE_CXX_COMPILER_LAUNCHER=$SCCACHE\" || true; MOLD=$(command -v mold 2>/dev/null || true); MOLD_FLAGS=\"\"; [ -n \"$MOLD\" ] && MOLD_FLAGS=\"-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=mold\" || true; cmake -S $S -B $B -G Ninja -DCMAKE_VERBOSE_MAKEFILE=ON -DZ3_BUILD_LIBZ3_SHARED=ON -DZ3_BUILD_EXECUTABLE=OFF -DZ3_BUILD_TEST_EXECUTABLES=OFF -DZ3_LINK_TIME_OPTIMIZATION=ON -DZ3_BUILD_JAVA_BINDINGS=OFF -DZ3_BUILD_PYTHON_BINDINGS=OFF -DZ3_BUILD_OCAML_BINDINGS=ON $SCCACHE_FLAGS $MOLD_FLAGS && ninja -C $B build_z3_ocaml_bindings; fi" (CWD=/home/red/.opam/default/.opam-switch/build/z3.dev)
+- z3 OCaml bindings already built in /home/red/code/research/tola/_out/canary/projects/z3/latest_HEAD/build, skipping cmake+ninja
+λ compiled  z3.dev
+⊘ removed   z3.4.16.0
+Processing  4/4: [z3: sh]
++ /home/red/.opam/opam-init/hooks/sandbox.sh "install" "sh" "-c" "B=${CANARY_BUILD_DIR:-build} && ocamlfind install z3 $B/src/api/ml/*.mli $B/src/api/ml/*.cm* $B/src/api/ml/*.o $B/src/api/ml/*.a $B/src/api/ml/META -dll $B/libz3.* $B/src/api/ml/dllz3ml.so" (CWD=/home/red/.opam/default/.opam-switch/build/z3.dev)
+- Installed /home/red/.opam/default/lib/z3/z3ml.a
+- Installed /home/red/.opam/default/lib/z3/libz3ml.a
+- Installed /home/red/.opam/default/lib/z3/z3native_stubs.o
+- Installed /home/red/.opam/default/lib/z3/z3native.o
+- Installed /home/red/.opam/default/lib/z3/z3enums.o
+- Installed /home/red/.opam/default/lib/z3/z3.o
+- Installed /home/red/.opam/default/lib/z3/z3native.cmx
+- Installed /home/red/.opam/default/lib/z3/z3native.cmo
+- Installed /home/red/.opam/default/lib/z3/z3native.cmi
+- Installed /home/red/.opam/default/lib/z3/z3ml.cmxs
+- Installed /home/red/.opam/default/lib/z3/z3ml.cmxa
+- Installed /home/red/.opam/default/lib/z3/z3ml.cma
+- Installed /home/red/.opam/default/lib/z3/z3enums.cmx
+- Installed /home/red/.opam/default/lib/z3/z3enums.cmo
+- Installed /home/red/.opam/default/lib/z3/z3enums.cmi
+- Installed /home/red/.opam/default/lib/z3/z3.cmx
+- Installed /home/red/.opam/default/lib/z3/z3.cmo
+- Installed /home/red/.opam/default/lib/z3/z3.cmi
+- Installed /home/red/.opam/default/lib/z3/cmake_install.cmake
+- Installed /home/red/.opam/default/lib/z3/z3native.mli
+- Installed /home/red/.opam/default/lib/z3/z3enums.mli
+- Installed /home/red/.opam/default/lib/stublibs/dllz3ml.so
+- Installed /home/red/.opam/default/lib/stublibs/dllz3ml.so.owner
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so.5.1.0.0
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so.5.1.0.0.owner
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so.5.1
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so.5.1.owner
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so
+- Installed /home/red/.opam/default/lib/stublibs/libz3.so.owner
+- ocamlfind: [WARNING] You have installed DLLs but the directory /home/red/.opam/default/lib/stublibs is not mentioned in ld.conf
+- Installed /home/red/.opam/default/lib/z3/META
+∗ installed z3.dev
+Done.

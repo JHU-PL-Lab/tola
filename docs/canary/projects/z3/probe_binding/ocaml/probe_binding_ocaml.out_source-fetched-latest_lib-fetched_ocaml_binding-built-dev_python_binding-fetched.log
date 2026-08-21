@@ -1,0 +1,6 @@
+CANARY-NOTE: symbols required(791), provided(705), missing(100)
+CANARY-NOTE: missing Z3_constructor_num_fields
+CANARY-NOTE: missing Z3_enable_concurrent_dec_ref
+CANARY-NOTE: missing Z3_fpa_is_numeral
+CANARY-NOTE: missing Z3_get_array_arity
+CANARY-NOTE: missing Z3_get_array_sort_domain_n

@@ -1,0 +1,11 @@
+The following actions will be performed:
+=== downgrade 1 package
+  ↘ z3 dev to 4.16.0
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+⬇ retrieved z3.4.16.0  (cached)
+⬇ retrieved z3.dev  (no changes)
+⊘ removed   z3.dev
+∗ installed z3.4.16.0
+Done.
+[NOTE] Package ocamlfind is already installed (current version is 1.9.8).

@@ -1,0 +1,4 @@
+File "canary/examples/ssl_variant/app_nlv.ml", line 9, characters 9-35:
+9 |   ignore Ssl.native_library_version;
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+Error: Unbound value Ssl.native_library_version

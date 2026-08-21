@@ -1,0 +1,10 @@
+The following actions will be performed:
+=== upgrade 1 package
+  ↗ ssl 0.6.0 to 0.7.0
+
+<><> Processing actions <><><><><><><><><><><><><><><><><><><><><><><><><><><><>
+⬇ retrieved ssl.0.7.0  (cached)
+⊘ removed   ssl.0.6.0
+∗ installed ssl.0.7.0
+Done.
+[NOTE] Package ocamlfind is already installed (current version is 1.9.8).
