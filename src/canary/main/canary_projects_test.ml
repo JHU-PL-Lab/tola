@@ -829,16 +829,29 @@ let registry_pin : Canary_project_test.pure_test =
     check = (fun () ->
       let entries = Canary_registry.all_projects in
       let names = List.map entries ~f:fst in
-      let want_names =
-        [ "sqlite"; "z3"; "llvm"; "tiny-full"; "zarith"; "cairo"; "libffi";
-          "zlib"; "zstd"; "ssl" ]
+      (* SUBSET, not equality (2026-08-21). A registry entry can be
+         commented out to mute an expensive project — z3's full run is
+         ~30 min because opam rebuilds libz3 on every binding pin flip
+         (store_switching §5g). Equality made that a test failure, which
+         would push someone to edit the pin instead of the registry.
+
+         What is still caught: an UNKNOWN name (not in the catalogue) is
+         an error, so a typo or an unregistered project still fails, and
+         the catalogue is asserted to be a superset — so deleting a
+         project outright means deleting it from the catalogue too, which
+         is a visible act rather than a silent one. *)
+      let names_ok =
+        List.for_all names ~f:(fun n ->
+            List.mem Canary_registry.catalogue n ~equal:String.equal)
       in
-      let sorted_names = List.sort names ~compare:String.compare in
-      let sorted_want = List.sort want_names ~compare:String.compare in
-      let names_ok = Poly.equal sorted_names sorted_want in
       if not names_ok then
-        Fmt.pr "  registry names: got [%s]@."
-          (String.concat ~sep:", " names);
+        Fmt.pr "  registry names not in catalogue: [%s]@."
+          (String.concat ~sep:", "
+             (List.filter names ~f:(fun n ->
+                  not (List.mem Canary_registry.catalogue n ~equal:String.equal))));
+      let muted = Canary_registry.muted () in
+      if not (List.is_empty muted) then
+        Fmt.pr "  (muted: %s)@." (String.concat ~sep:", " muted);
       let projects_ok =
         List.for_all entries ~f:(fun (_n, pr) ->
             not (List.is_empty (Canary_project_run.scenarios_of pr)))
@@ -1162,7 +1175,11 @@ let spec_check_ratchet_pin : Canary_project_test.pure_test =
     |> List.sort ~compare:String.compare
   in
   let want ~errs ~warns ~na name =
-    let pr = List.Assoc.find_exn Canary_registry.all_projects name
+    (* [all_specs], not [all_projects] (2026-08-21): spec-check is a
+       CHECKING pin, and muting a project removes it from the run set, not
+       from the audit. A muted spec that rots would otherwise pass here by
+       disappearing. *)
+    let pr = List.Assoc.find_exn Canary_registry.all_specs name
         ~equal:String.equal in
     let r = check pr in
     let good =
@@ -1222,21 +1239,34 @@ let batch_tier_pin : Canary_project_test.pure_test =
   { name = "registry.batch_tiers";
     check =
       (fun () ->
+        (* the two Heavy projects are read from their SPECS, not from the
+           registry (2026-08-21): a muted project is still a project, and
+           its tier is exactly the property that says why muting it was
+           tempting. Checking through the registry would make this pin
+           evaporate the moment someone comments the entry out. *)
+        let z3 = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
+        let llvm = Canary_project_llvm.llvm_run (Canary_basic.detect_distro ()) in
         let pr_of name =
           List.Assoc.find_exn Canary_registry.all_projects name
             ~equal:String.equal
         in
         let tier name = (pr_of name).Canary_project_run.pr_tier in
-        Poly.equal (tier "z3") Canary_project_run.Heavy
-        && Poly.equal (tier "llvm") Canary_project_run.Heavy
+        Poly.equal z3.Canary_project_run.pr_tier Canary_project_run.Heavy
+        && Poly.equal llvm.Canary_project_run.pr_tier Canary_project_run.Heavy
+        (* the Light set is checked over whatever is ACTIVE — these are the
+           cheap projects, so a muted one is a real signal, not a cost
+           decision, and the subset check in registry.entries_enumerate
+           already guards the names *)
         && List.for_all
              [ "sqlite"; "ssl"; "tiny-full"; "zarith"; "cairo"; "libffi" ]
-             ~f:(fun n -> Poly.equal (tier n) Canary_project_run.Light)
-        && Poly.equal (Canary_project_run.batch_policy (pr_of "z3"))
+             ~f:(fun n ->
+               (not (Canary_registry.is_active n))
+               || Poly.equal (tier n) Canary_project_run.Light)
+        && Poly.equal (Canary_project_run.batch_policy z3)
              Canary_project_run.Thin
         && Poly.equal (Canary_project_run.batch_policy (pr_of "sqlite"))
              Canary_project_run.Full
-        && Poly.equal (Canary_project_run.batch_policy (pr_of "llvm"))
+        && Poly.equal (Canary_project_run.batch_policy llvm)
              Canary_project_run.Thin) }
 
 (* The run-policy ladder's enumeration mapping (2026-08-17; the audit rung
@@ -2149,10 +2179,10 @@ let matrix_row_order_pin : Canary_project_test.pure_test =
   { name = "matrix.row_order";
     check =
       (fun () ->
-        let z3 =
-          List.Assoc.find_exn Canary_registry.all_projects "z3"
-            ~equal:String.equal
-        in
+        (* z3's SPEC, not its registry entry (2026-08-21): row ordering is
+           a property of the enumeration, which exists whether or not the
+           project is currently in the run set *)
+        let z3 = Canary_project_z3.z3_run (Canary_basic.detect_distro ()) in
         let sorted =
           List.stable_sort (Canary_project_run.scenarios_of z3)
             ~compare:(fun x y ->
@@ -2595,13 +2625,22 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
           |> List.map ~f:Canary_basic.string_of_action
         in
         let m = Canary_matrix.matrix_of Canary_registry.all_projects in
+        (* the z3 row-shape assertions below read a matrix built over z3's
+           SPEC (2026-08-21), so muting z3 out of the run set does not
+           silently delete four checks about how its rows render. The
+           COUNTS above stay over the active registry — that is what a
+           run will actually produce. *)
+        let mz3 =
+          Canary_matrix.matrix_of
+            [ ("z3", Canary_project_z3.z3_run (Canary_basic.detect_distro ())) ]
+        in
         let pre_10549_row =
-          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+          List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
                 "source-fetched-pre-10549_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
         let arbipher_row =
-          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+          List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
                 "source-fetched-arbipher_lib-built-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
@@ -2610,7 +2649,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            repo — the pre-10549/latest/arbipher fetched rows it used to
            name were phantoms (same lib, same binding, unread source). *)
         let stable_fetched_row =
-          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+          List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
                 "source-fetched-4.15.2_lib-fetched_ocaml_binding-fetched-4.16.0_python_binding-fetched")
         in
@@ -2619,7 +2658,7 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            above carries no install_lib cell (the exclusivity, read off
            the rendered matrix rather than the action list) *)
         let pre_10549_installed_row =
-          List.find m.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
+          List.find mz3.Canary_matrix.rows ~f:(fun (r : Canary_matrix.row) ->
               String.equal r.Canary_matrix.scenario
                 "source-fetched-pre-10549_lib-installed-dev_ocaml_binding-built-dev_python_binding-fetched")
         in
@@ -2699,12 +2738,39 @@ let matrix_registry_shape_pin : Canary_project_test.pure_test =
            (apt Fetched 1.3 + conda-forge Vendored 1.3.2), the first
            project whose 2×2 lib axis needed no build; +2 the same day for
            zstd, the same shape over a gate that really bounds the lib. *)
-        List.length rows = 42
-        && List.count rows ~f:(fun (n, _) -> String.equal n "z3") = 16
-        && List.count rows ~f:(fun (n, _) -> String.equal n "zarith") = 2
-        && List.count rows ~f:(fun (n, _) -> String.equal n "ssl") = 2
-        && List.count rows ~f:(fun (n, _) -> String.equal n "zlib") = 2
-        && List.count rows ~f:(fun (n, _) -> String.equal n "zstd") = 2
+        (* PER-PROJECT expected counts, and the total DERIVED from whichever
+           projects are active (2026-08-21). The single `= 42` this
+           replaces had two problems: muting any project failed it for a
+           reason unrelated to drift, and it could not say WHICH project
+           moved. Summing a declared table catches both — a changed count
+           anywhere fails, and the failure names the project. Every
+           catalogued project needs a row here, so adding one to the
+           registry without stating its expected shape also fails. *)
+        let expected =
+          [ ("sqlite", 10); ("z3", 16); ("llvm", 3); ("tiny-full", 1);
+            ("zarith", 2); ("cairo", 2); ("libffi", 2); ("zlib", 2);
+            ("zstd", 2); ("ssl", 2) ]
+        in
+        let catalogued_ok =
+          List.for_all Canary_registry.catalogue ~f:(fun n ->
+              List.Assoc.mem expected n ~equal:String.equal)
+        in
+        let per_project_ok =
+          List.for_all expected ~f:(fun (n, want) ->
+              if not (Canary_registry.is_active n) then true
+              else
+                let got = List.count rows ~f:(fun (p, _) -> String.equal p n) in
+                if got <> want then (
+                  Fmt.pr "  matrix rows: %s want %d got %d@." n want got;
+                  false)
+                else true)
+        in
+        let want_total =
+          List.fold expected ~init:0 ~f:(fun acc (n, want) ->
+              if Canary_registry.is_active n then acc + want else acc)
+        in
+        catalogued_ok && per_project_ok
+        && List.length rows = want_total
         && List.mem columns "install_lib" ~equal:String.equal
         && List.mem columns "probe_binding_ocaml" ~equal:String.equal
         && web_identity_ok && staged_cells_ok
