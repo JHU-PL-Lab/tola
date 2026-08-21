@@ -1834,6 +1834,67 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
         && List.for_all (built @ installed) ~f:(fun d ->
                not (String.is_substring d ~substring:".."))) }
 
+(* RUN ORDER GROUPS BY STORE STATE (2026-08-21, store_switching §5g).
+
+   An opam switch holds ONE version of a package, so a pinned placement is
+   an exclusive lock on that store's state. The enumerated list has always
+   been the run order, and its product ranges over the lib axis outermost
+   — so a pinned binding alternated on nearly every row and the switch was
+   torn down and rebuilt between neighbours that wanted the same thing.
+
+   Two properties, and both are needed:
+
+   (a) SAME SET. Ordering must not add, drop or duplicate a scenario —
+       it is a sort, not a policy. Checked as multiset equality on the
+       assignment strings.
+   (b) GROUPED. Each distinct store-state key occupies ONE contiguous run.
+       This is the property that saves the work; without it the sort could
+       "succeed" while still interleaving.
+
+   Measured on sqlite before/after: ten pin operations of which nine were
+   real swaps, down to ten of which TWO are real and the rest no-ops. *)
+let run_order_groups_state_pin : Canary_project_test.pure_test =
+  { name = "run_order.groups_by_store_state";
+    check =
+      (fun () ->
+        let grouped_ok pr =
+          let ordered = Canary_project_run.scenarios_in_run_order pr in
+          let keys =
+            List.map ordered ~f:(Canary_project_run.store_state_key pr)
+          in
+          (* a key may not reappear after a different key has intervened *)
+          let rec contiguous seen prev = function
+            | [] -> true
+            | k :: rest ->
+                if Poly.equal (Some k) prev then contiguous seen prev rest
+                else if List.mem seen k ~equal:Poly.equal then false
+                else contiguous (k :: seen) (Some k) rest
+          in
+          contiguous [] None keys
+        in
+        let same_set pr =
+          let norm xs =
+            List.map xs ~f:Canary_enumerate.string_of_assignment
+            |> List.sort ~compare:String.compare
+          in
+          Poly.equal
+            (norm (Canary_project_run.scenarios_of pr))
+            (norm (Canary_project_run.scenarios_in_run_order pr))
+        in
+        (* checked over every catalogued project, muted ones included: the
+           ordering is a property of the enumeration, not of the run set *)
+        let projects = List.map Canary_registry.all_specs ~f:snd in
+        (* and at least one project must actually HAVE pinned state, else
+           every check above is vacuous *)
+        let any_pinned =
+          List.exists projects ~f:(fun pr ->
+              List.exists (Canary_project_run.scenarios_of pr) ~f:(fun a ->
+                  not (List.is_empty (Canary_project_run.store_state_key pr a))))
+        in
+        any_pinned
+        && List.for_all projects ~f:same_set
+        && List.for_all projects ~f:grouped_ok) }
+
 (* ONE WORLD-ASSERTION VOCABULARY (2026-08-20).
 
    "Did this step run in the world its scenario names?" existed in five
@@ -2853,6 +2914,7 @@ let tests : Canary_project_test.pure_test list =
       z3_install_prefix_isolated_pin;
       z3_env_guard_paths_pin;
       world_assertion_vocabulary_pin;
+      run_order_groups_state_pin;
       z3_cross_cell_world_asserts_pin;
       matrix_cell_stage_pin;
       matrix_setting_block_pin;

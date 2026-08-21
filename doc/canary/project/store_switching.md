@@ -478,13 +478,13 @@ entirely.
   isolating them away — record / verdict / enumerate.
 - [ ] zarith's and ssl's lib axes are single-point for stated reasons; if
   either gains a prebuilt they become full 2×2s with no new machinery.
-- [ ] **Order scenarios by stateful-store state** (§5g) — a sort key over
-  each assignment's pinned placements. Measured win today: sqlite 10 pin
-  operations → 2. Do it before the binding axis lands, since that
-  multiplies the flips.
+- [x] **Order scenarios by stateful-store state** (§5g) — LANDED
+  2026-08-21. `scenarios_in_run_order` + `store_state_key`; sqlite's real
+  pin swaps went 9 → 2. The binding axis (§5a) can now land without
+  multiplying flips.
 
 ### 5g. The pin is a LOCK, so group scenarios by the state they need
-### (2026-08-20, user)
+### (2026-08-20, user) — **LANDED 2026-08-21**
 
 The user's framing, which is the right one and was already half in the
 model: opam is `Isolated_store "switch"`
@@ -570,3 +570,34 @@ Three things to note before implementing it:
 Sequencing note: this is worth doing BEFORE the binding axis lands on the
 template projects (§5a), because that change multiplies the number of
 pinned scenarios and therefore the number of flips.
+
+#### What landed (2026-08-21)
+
+`Canary_project_run.store_state_key` derives the (artifact, pinned
+version) pairs an assignment locks — artifacts whose PROVIDER declares
+store pins and which the assignment places at a concrete version.
+`scenarios_in_run_order` is `scenarios_of` put through a
+`List.stable_sort` on that key, and the runner iterates it instead of the
+raw enumeration. Stable, so the enumeration's order (baseline world
+first) survives inside each state group; `scenarios_of` itself is
+untouched, so `spec` and every pure test still see enumeration order.
+
+Measured on sqlite, ten scenarios:
+
+| | pin operations | of which REAL swaps |
+| --- | --- | --- |
+| before | 10 | 9 — alternating every row |
+| after | 10 | **2** — one per group boundary |
+
+The command still runs per scenario (the fetch step is per-scenario);
+what changes is that eight of them are now `already installed` no-ops.
+Wall clock on sqlite moved only 57.4 s → 53.6 s, because reinstalling
+`sqlite3` is cheap — **the saving is proportional to the package's
+install cost**, which is exactly why z3 is the case that motivated it: a
+flip there recompiles libz3 from source.
+
+Pinned as `run_order.groups_by_store_state` over every catalogued
+project, muted ones included, asserting both halves — the ordering is a
+permutation of the enumeration (a sort, not a policy) and each distinct
+key occupies one contiguous run. Falsified by dropping the sort and by
+making it drop a scenario.

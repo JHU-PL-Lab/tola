@@ -282,6 +282,63 @@ let scenarios_of ?policy (pr : project_run) :
         (Canary_enumerate.string_of_assignment a)
         (Canary_enumerate.string_of_assignment b))
 
+(** [store_state_key pr a] — the SINGLE-VALUED STORE STATE this assignment
+    requires (2026-08-21, store_switching §5g).
+
+    An opam switch is [Isolated_store "switch"]: isolated from the system
+    and internally single-valued, holding ONE version of a package. So an
+    assignment that places a binding at a declared pin is not expressing a
+    preference — it is taking an exclusive lock on that store's state for
+    the duration of its steps.
+
+    The key is the set of (artifact, pinned version) pairs the assignment
+    locks: artifacts whose PROVIDER declares store pins
+    ([versions_of_provider] returns [Some _]) and which this assignment
+    places at a concrete version. Everything else — Built, Vendored, or a
+    version-ambient Fetched — locks nothing and contributes nothing. *)
+let store_state_key (pr : project_run) (a : Canary_artifact.assignment) :
+    (string * string) list =
+  List.filter_map
+    (fun id ->
+      match provenance_of pr id with
+      | Some p when Option.is_some (Canary_store_config.versions_of_provider p)
+        -> (
+          let v = Canary_enumerate.version_of a id in
+          match v.Canary_basic.id with
+          | "" -> None
+          | vid -> Some (Canary_artifact.string_of_id id, vid))
+      | _ -> None)
+    (artifact_ids pr)
+  |> List.sort compare
+
+(** [scenarios_in_run_order] — [scenarios_of], grouped so scenarios needing
+    the SAME single-valued store state run consecutively.
+
+    Why this is not a micro-optimisation. The enumeration's product ranges
+    over the lib axis outermost and the binding axis innermost, and the
+    enumerated list has always BEEN the run order (store_switching §4
+    item 2 — a deliberate decision not to have a scheduler). The result is
+    that a pinned binding alternates on nearly every row. Measured
+    2026-08-20: sqlite performed TEN opam pin operations for ten
+    scenarios where two would do, and z3 paid SIX full libz3 source
+    builds per run — the opam z3 package is [Package_builds_lib], so each
+    flip recompiles it — which is most of z3's ~30 minute wall clock.
+
+    It is an ORDERING, not an axis: [List.stable_sort] on the key, so the
+    scenario SET is untouched and ties keep their enumerated order. That
+    matters — the enumeration's order carries meaning (the baseline world
+    first), and this preserves it within each state group.
+
+    Correctness does not depend on it. [pin_check_post] re-pins whenever a
+    pin is not held, so a scenario cannot inherit a neighbour's state
+    whatever the order; grouping only stops us paying to undo and redo the
+    same pin. *)
+let scenarios_in_run_order ?policy (pr : project_run) :
+    Canary_artifact.assignment list =
+  List.stable_sort
+    (fun a b -> compare (store_state_key pr a) (store_state_key pr b))
+    (scenarios_of ?policy pr)
+
 (* ── display helpers (moved from bin 2026-08-10) ──
    Pure functions over assignments and project_runs. Used by both
    the CLI [spec]/[action] display and by library tests. *)

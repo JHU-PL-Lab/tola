@@ -33,7 +33,12 @@ let run_project_spec ?policy (pr : project_run) ~root
   let module SM = Canary_step_model in
   let module BH = Base.Hashtbl in
   let all_good = assignment_is_all_good in
-  let scenarios = scenarios_of ?policy pr in
+  (* RUN order, not enumeration order (2026-08-21, store_switching §5g):
+     scenarios needing the same single-valued store state run
+     consecutively, so a pinned package is installed once per distinct pin
+     instead of once per row. Stable, so the enumeration's order survives
+     inside each group. *)
+  let scenarios = scenarios_in_run_order ?policy pr in
   let baseline =
     try List.find all_good scenarios
     with Not_found -> (match scenarios with a :: _ -> a | [] -> [])
