@@ -162,7 +162,8 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`contract_registry.md`](design/contract_registry.md) (2026-08-17): one
+   [`agreement_registry_audit.md`](design/agreement_registry_audit.md)
+   (2026-08-17, merged 2026-08-21): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
    per-project binding tables converge onto it and get deleted.
