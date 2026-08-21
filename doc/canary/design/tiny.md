@@ -26,7 +26,7 @@ near-term wish-list. Complements:
 - [`algorithm_explainer.md`](algorithm_explainer.md) — the derived-vs-hand
   principle (absorbed from the retired `derived_vs_hardcoded.md`) + the
   enumeration model
-- [`projects.md §5`](../project/index.md) — three levels of scenario
+- [`../project/landing.md` §2](../project/landing.md) — three levels of scenario
   coverage a new project can pick (A positive-only / B one hand-coded
   failure / C matrix — tiny is C, don't copy)
 - the OPEN "scenario" terminology to-do in [`../status.md`](../status.md) M2 "Canonical naming settle" —
@@ -434,7 +434,7 @@ Open follow-up: macOS verification — run `tiny baseline` +
 `tiny prepare-all` + `canary artifact-test` on a Mac and
 diff `_cache/*/inspect/*.json` against Linux snapshots.
 Couples with the broader macOS-support gap in
-[`CLAUDE.md`](../../CLAUDE.md).
+[`CLAUDE.md`](../../../CLAUDE.md).
 
 ### 7.8 Task 2 — recipe/mutation integration — shipped 2026-07-21
 

@@ -22,7 +22,7 @@ conflicts: [
 synopsis: "Zarith without the conf-gmp hop — builds directly against the system GMP"
 description: """
 Canary-local package: zarith built WITHOUT the conf-gmp virtual package
-(the conf-free prototype — doc/canary/project/conf_survey.md). The build
+(the conf-free prototype — doc/canary/surveys/conf_mechanism.md). The build
 runs zarith's own ./configure, which probes GMP via pkg-config — the
 same check conf-gmp performs — so the system GMP dependency is real but
 not declared through opam's conf layer. Same findlib name (zarith), so

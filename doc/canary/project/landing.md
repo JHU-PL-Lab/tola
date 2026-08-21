@@ -1,12 +1,12 @@
 # Canary projects — how to land one
 
 The landing guide: the workflow, the data structures to write, and the
-testing harness that verifies each step. Split out of `index.md` in the
-2026-08-12 reorganization (a future `onboard-new-project`-style skill
-will be built on this doc — the previous skill was retired the same
-day). Coverage status is [`coverage.md`](coverage.md); bugs/todo in
-[`status_project.md`](status_project.md); the conceptual model in
-[`index.md`](index.md) §1.
+testing harness that verifies each step (a future
+`onboard-new-project`-style skill will be built on it — the previous
+skill was retired 2026-08-12). The roster, the dimension model and the
+candidate queue are [`projects.md`](projects.md); to-dos are
+[`status_project.md`](status_project.md); open per-project items are
+[`issues.md`](issues.md).
 
 ---
 
@@ -36,7 +36,7 @@ first:
   pin-checked store operation (warm-skip only when the switch provably
   holds the pin) and the probes carry world assertions. ssl is the
   reference shape (2 scenarios × 2 probes). See
-  [`store_switching.md`](store_switching.md).
+  [`../design/store_switching.md`](../design/store_switching.md).
 
 Source-built projects are still the expensive ones — z3 ~600 lines, llvm
 ~470 — and A5 made their *shape* identical without yet sharing their
@@ -71,10 +71,11 @@ command templates.
    - `canary spec <name>` / `canary scenarios <name>` / `canary status
      <name>` — the three display surfaces;
    - `make canary-post-check` before commit.
-5. **After landing**: move from the queue table to
-   [`coverage.md`](coverage.md)'s landing history, add the status-matrix
-   row, update `CLAUDE.md`'s project list, and file any rough edge in
-   [`status_project.md`](status_project.md).
+5. **After landing**: in [`projects.md`](projects.md) add the roster row
+   (§2) and the landing-history row (§3) and drop it from the candidate
+   tables (§4); tick its item in [`status_project.md`](status_project.md)
+   §1 D; update `CLAUDE.md`'s project list; file any rough edge in
+   [`issues.md`](issues.md).
 
 ---
 

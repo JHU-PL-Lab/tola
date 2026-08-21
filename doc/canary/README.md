@@ -2,7 +2,7 @@
 
 Directory map for `doc/canary/`. Files grouped by intent.
 
-**Start with [`research/surface.md`](research/surface.md)** for the
+**Start with [`research/draft.md`](research/draft.md)** for the
 confirmed-content writeup-in-progress (manuscript), or
 [`research/tiny.md`](research/tiny.md) to read alongside the code.
 [`research/surface_draft/`](research/surface_draft/) is the older
@@ -11,8 +11,8 @@ materials collection (split across `main.md`, `surface.md`,
 `versioning.md`) — mine for content, but `surface.md` (the
 manuscript) is authoritative for current framing.
 `design/index.md` is the older project narrative;
-`project/coverage.md` covers project status + the expansion roadmap
-(with the candidate portfolio in `project/index.md`). See
+`project/projects.md` is the project roster — coverage, landing
+history and the candidate portfolio. See
 `CLAUDE.md` (project root) for live status, gaps, and current
 gotchas.
 
@@ -22,7 +22,7 @@ The work is organised around four aligned views of the same problem:
 
 | #   | Pillar       | Question it answers                                                                          | Lives in                                                      |
 | --- | ------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| 1   | **Theory**   | What are the surfaces, contracts, and what counts as a violation?                            | [`surface.md`](research/surface.md) §1 + materials in `surface_draft/` |
+| 1   | **Theory**   | What are the surfaces, contracts, and what counts as a violation?                            | [`draft.md`](research/draft.md) §1 + materials in `surface_draft/` |
 | 2   | **Witness**  | Is there a minimal artifact that instantiates every surface and every contract reproducibly? | [`tiny.md`](research/tiny.md)                                          |
 | 3   | **Coverage** | Which contracts does canary check, with which inspector + comparator?                        | [`surface_draft/implementation.md`](research/surface_draft/implementation.md) §2.7 |
 | 4   | **Plan**     | What changes — to canary, to tiny, to docs — close the remaining coverage gaps?              | [`plan.md`](research/plan.md)                                          |
@@ -34,12 +34,11 @@ closing its gap.
 
 | File                                                  | Topic                                                                                                                                                                                                                |
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [surface.md](research/surface.md)                     | **Manuscript-in-progress.** Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM). Backbone framing (**rules / traces / worlds**), PL notation, implementation slots. The authoritative current framing.                                                                                                       |
+| [draft.md](research/draft.md)                     | **Manuscript-in-progress.** Confirmed-content writeup; five-part spine (BB / SS / TT / CC / MM). Backbone framing (**rules / traces / worlds**), PL notation, implementation slots. The authoritative current framing.                                                                                                       |
 | [surface_draft/](research/surface_draft/)             | **Materials collection** (split 2026-06-04). `main.md` (header + §5 related work + §6 calculus + appendix); `surface.md` (Parts A, B, §2.4 contracts, §4 hidden deps); `principle.md` (P1–P6); `implementation.md` (§2.7 + §2.5 + §2.6); `package.md` (§3); `versioning.md` (§2.8). Mine for content; not authoritative.       |
 | [tiny.md](research/tiny.md)                           | Witness. Minimal C lib + 3 bindings + downstream helper; 13-variant matrix exercising every active contract. The doc to read alongside the code.                                                                     |
 | [plan.md](research/plan.md)                           | Venues + milestones + roadmap. OOPSLA primary; PLDI / POPL optional. Open `[ ]` items only; chronicled work lives in `worklog/`.                                                                                     |
 | [literature.md](research/literature.md)               | Companion bibliography. Compiler correctness, type-preserving compilation, linking calculi, ELF semantics, FFI semantics, ABI tooling — each entry with an "Inherits / Departs" note tying it back to surface theory. |
-| [drafting.md](research/drafting.md)                   | Drafting playbook for `surface.md`. Drafting order, per-section "Pull from" sources mapping into `surface_draft/`, cross-section navigational notes. Operational reference, not authoritative content.                  |
 
 Packaging lives in [`surface_draft/package.md`](research/surface_draft/package.md)
 in the materials collection; the manuscript covers it in §4.2.
@@ -58,31 +57,40 @@ updated as the model evolves.
 ## project/ — live projects, their status, and how to land one
 
 The project layer's home since the 2026-08-12 reorganization (was the
-top-level `projects.md` + `design/package_bug.md`).
+top-level `projects.md` + `design/package_bug.md`). Shrunk 2026-08-21 to
+five files: `index.md` + `coverage.md` merged into `projects.md`;
+`store_switching.md` and `wrapper_packages.md` moved to `design/`
+(they are design principles for the general algorithm); `conf_survey.md`
+moved to `surveys/` as `conf_mechanism.md`.
 
-| File                                          | Topic                                                                                                   |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| [index.md](project/index.md)                  | The project index: the conceptual model (dimensions) + the candidate portfolio                           |
-| [coverage.md](project/coverage.md)            | **Current coverage status** — per-project matrix + notes + landing history                               |
-| [landing.md](project/landing.md)              | **How to land a project** — workflow, data structures, testing harness (the future skill's base)         |
-| [status_project.md](project/status_project.md) | Project-layer STATUS: live projects + scenario counts, the ordered plan, framework-level to-dos, the mismatch-matrix report milestone |
-| [surveys/conda_forge.md](surveys/conda_forge.md) | conda-forge as a prebuilt-binary channel — feature/issue/experience, with the measured dependency-closure results (cairo, libffi, openssl) |
-| [design/artifact_cache.md](design/artifact_cache.md) | Artifact-cache design — keying on what was MADE (identity + input identity) so a new action doesn't force rebuilds |
-| [design/multi_lib.md](design/multi_lib.md) | Multiple C libs per project + the Vendored-prebuilt route (conda-forge measured) |
-| [design/run_model_revisit.md](design/run_model_revisit.md) | **Model revisit driven by the 2026-08-20 reruns** — `·` is not a neutral cell; cost is an unnamed scenario property; two caches agreed about a wrong artifact; a ref is a perturbation whose rows ~92% restate the baseline. Ordered change list |
-| [project/issues.md](project/issues.md) | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores) |
-| [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4 (split out of the retired `new_project.md`) |
+| File                                           | Topic                                                                                                     |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| [projects.md](project/projects.md)             | **The roster** — the dimension model, per-project coverage + 2×2 status, landing history, candidate portfolio |
+| [status_project.md](project/status_project.md) | **THE to-do tracker** for this layer — the ordered plan, general to-dos, the mismatch-matrix report milestone |
+| [issues.md](project/issues.md)                 | OPEN per-project issues — a standalone worklist (unresolved findings, declaration gaps, per-project chores)   |
+| [landing.md](project/landing.md)               | **How to land a project** — workflow, data structures, testing harness (the future skill's base)             |
+| [project_pytorch.md](project/project_pytorch.md) | PyTorch multi-PM case study — pre-implementation plan for candidate #4                                     |
+
+Read alongside: [surveys/conda_forge.md](surveys/conda_forge.md)
+(the prebuilt-binary channel, with measured dependency closures),
+[design/store_switching.md](design/store_switching.md) (shared-store
+version switching), [design/wrapper_packages.md](design/wrapper_packages.md)
+(conf-free wrapper packages), [design/multi_lib.md](design/multi_lib.md),
+[design/artifact_cache.md](design/artifact_cache.md) and
+[design/run_model_revisit.md](design/run_model_revisit.md).
 
 ## surveys/ — background research
 
-Pre-code survey data. Source of truth for `project/index.md` §2
+Pre-code survey data. Source of truth for `project/projects.md` §4
 candidate selection and the failure taxonomy now in
-`research/surface.md` (and materials in `research/surface_draft/`).
+`research/draft.md` (and materials in `research/surface_draft/`).
 
 | File                                             | Topic                                                                           |
 | ------------------------------------------------ | ------------------------------------------------------------------------------- |
 | [opam.md](surveys/opam.md)                       | Survey of 4460 opam packages: pattern A/B/C/D/E classification, revdep rankings |
-| [conf_packages.md](surveys/conf_packages.md)     | Classification of all 333 `conf-*` packages by build complexity                 |
+| [conf_packages.md](surveys/conf_packages.md)     | Classification of all 333 `conf-*` packages by build complexity; §G is the MEASURED landing ranking |
+| [conf_mechanism.md](surveys/conf_mechanism.md)   | How a `conf-*` package works (the live `conf-gmp.5`) + the position that opam should drop them |
+| [conda_forge.md](surveys/conda_forge.md)         | conda-forge as a prebuilt-binary channel — feature/issue/experience + measured dependency closures |
 | [packaging_study.md](surveys/packaging_study.md) | Older packaging study (pre-rearchitecture)                                      |
 
 ## ops/ — operational notes & gotchas

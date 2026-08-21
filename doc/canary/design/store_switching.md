@@ -1,8 +1,13 @@
 # Shared-store version switching — survey + plan
 
 > 2026-08-12. The opam-switch version-swap problem, generalized beyond ssl.
-> Companion to [`status_project.md`](status_project.md) (ssl holdout item) and
-> [`coverage.md`](coverage.md) (who suffers from it).
+> Companion to [`../project/projects.md`](../project/projects.md) (who
+> suffers from it) and [`../project/status_project.md`](../project/status_project.md)
+> (the to-dos it leaves).
+>
+> Moved here from `project/` 2026-08-21: this is a design principle for
+> the general algorithm, not a per-project record. Per-project
+> consequences live in [`../project/issues.md`](../project/issues.md).
 
 ## 1. The problem, generalized
 
@@ -220,7 +225,7 @@ Implementation status (updated 2026-08-12):
    (`CAML_LD_LIBRARY_PATH` beats the bytecode's `-dllpath`) — a store
    hazard in a BUILD step's self-check, not a probe. Fixed with an
    `env_guard` on the dev Build_binding row; Dev is back on the
-   official `z3_source_latest` (see status_project.md).
+   official `z3_source_latest` (see ../project/status_project.md).
 7. [x] **llvm migrated** (2026-08-12) — the stable binding pins
    "19-shared" (the standard install name `llvm.19-shared` fits — no
    `install_name` escape needed); pin-checked fetch + world-checked
@@ -235,10 +240,9 @@ Implementation status (updated 2026-08-12):
    xfail). En route fix: the dev probe row's `$($LLVM_CONFIG --libdir)`
    indirection pointed at `build/bin/llvm-config`, which `ninja LLVM`
    never builds — the row now probes `<build>/lib/libLLVM.so` directly
-   (see status_project.md "Fixed — llvm dev probe").
+   (see ../worklog/worklog_2026_08.md, "llvm dev probe").
 
-Tracked in [`status_project.md`](status_project.md) §3 ("ssl → per-variant
-project_runs", "shared-store sequentialization").
+Tracked in [`../project/status_project.md`](../project/status_project.md).
 
 ---
 
@@ -471,7 +475,7 @@ entirely.
   (`versions = None`, hardcoded) — the field plus threading, small.
 - [ ] Decide A-for-safe-pins vs one canary switch vs B (§5d). The binding
   axis on zstd and libffi is blocked until then.
-- [ ] Add the dry-run TIER check to the landing checklist (`landing.md`
+- [ ] Add the dry-run TIER check to the landing checklist (`../project/landing.md`
   §3b is where the other measured gate checks live): tier 1 lands now,
   tier 2 lands with a decision on §5e, tier 3 blocks on the switch.
 - [ ] Decide what tier-2 collateral rebuilds are FOR (§5e) before

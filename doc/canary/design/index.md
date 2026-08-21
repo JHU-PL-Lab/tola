@@ -2,11 +2,11 @@
 
 The design narrative: vision, identity model, action graph, workflow,
 design principles. For surface theory see
-[../research/surface.md](../research/surface.md) (manuscript) and
+[../research/surface.md](../research/draft.md) (manuscript) and
 [../research/surface_draft/](../research/surface_draft/) (materials,
 with `implementation.md` for the compat-check implementation). For the
 expansion roadmap and per-target plans see
-[../project/index.md](../project/index.md). Doc map at
+[../project/projects.md](../project/projects.md). Doc map at
 [../README.md](../README.md).
 
 > **Current kernel (2026-08-04), not yet folded into the narrative below:**
@@ -39,13 +39,13 @@ Canary's two-track approach:
 
 - **Track 1 — Empirical coverage.** Run the real compatibility matrix.
   Current core targets: z3, llvm, sqlite (smoke test). Extended targets
-  per [../project/index.md §2](../project/index.md). Track 1's
+  per [../project/projects.md §4](../project/projects.md). Track 1's
   machinery: action graph, runner, summary system.
 - **Track 2 — Interface theory.** Behind the messy practice lies a clean
   abstraction: the *surface* between a library and a binding. If we can
   characterise this surface formally we can *infer* compatibility,
   *generate* targeted tests, and *explain* failures in interface terms.
-  Details in [../research/surface.md](../research/surface.md) (manuscript)
+  Details in [../research/surface.md](../research/draft.md) (manuscript)
   and [../research/surface_draft/](../research/surface_draft/) (materials).
 
 The two tracks reinforce each other. Empirical results validate or contradict

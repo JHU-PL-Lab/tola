@@ -1,78 +1,26 @@
-# Project status — bugs, issues, todo
+# Project to-dos — the tracker
 
-> 2026-08-19. What's wrong, what's fixed, what's next — for the *projects*
-> layer only. Framework status stays in [`../status.md`](../status.md);
-> what projects exist and how they land is
-> [`coverage.md`](coverage.md) + [`landing.md`](landing.md); historical context in
-> [`../worklog/`](../worklog/).
+> The project layer's SOLO to-do list (2026-08-21). Everything the
+> project agent owes is here or in [`issues.md`](issues.md); nothing
+> else in `project/` carries a to-do.
+>
+> - **Here**: the ordered plan (§1), general/framework-level to-dos
+>   (§2), the reporting milestone (§3).
+> - [`issues.md`](issues.md): OPEN items tied to a PARTICULAR project —
+>   findings, declaration gaps, per-project chores. A standalone
+>   worklist another agent can own.
+> - [`projects.md`](projects.md): what EXISTS — the roster, per-project
+>   coverage and 2×2 status, landing history, candidates. Facts, not
+>   to-dos.
+> - [`landing.md`](landing.md): how to land one.
+> - Framework status is [`../status.md`](../status.md); anything FIXED
+>   is history and lives in [`../worklog/`](../worklog/).
 
-## 1. Live projects
+## 1. The ordered plan
 
-10 projects on the registry (`Canary_registry.all_projects`) — all plain
-`project_run`s since 2026-08-12 (ssl's `Multi` entry retired with the
-store-pin migration); tiny1 rides the factory. Full matrix in
-[`coverage.md` §1](coverage.md). The `registry.entries_enumerate` pin
-(`canary_projects_test.ml`) fails if any entry's enumeration is empty,
-the name list drifts, or ssl's pinned binding stops enumerating 2
-distinct scenarios.
-
-**Scenario counts** (the enumeration snapshot, re-verified 2026-08-19
-after the mismatch matrix; full policy unless noted). The total is
-pinned: `matrix.registry_shape` asserts 42 rows across the registry, so
-this table cannot drift silently.
-
-| project | scenarios | shape |
-| --- | --- | --- |
-| z3 | 16 | **the mismatch matrix** (2026-08-19): per dev ref (latest / arbipher / pre-10549) the 2×2's three ref-dependent cells — dev baseline (lib B × binding B), BACKWARD (lib B × binding F:4.16.0), FORWARD (lib F:apt × binding B) — plus the staged face of each lib-built cell, and ONE both-released baseline (ref-independent, since nothing is built from the source there). `--thin` = 1 |
-| llvm | 3 | 2 dev build chains + ONE both-released baseline. Was 5: its three all-Fetched worlds differed only in an unread source ref, folded by the collapse rule. No Installed axis and no cross cells yet — opening its 2×2 needs the same two probe realizations z3 grew |
-| sqlite | 10 | the lib's 5 placements (system-fetched + 2 built amalgamation versions + their 2 staged faces) × the binding's 2 opam pins (5.1.0 / 5.4.1) — the first full 2×2, all cells green by construction |
-| zarith | 2 | the FORWARD cell (binding built from master over apt libgmp) + the both-released baseline. Was 3: the third had an opam binding beside an unread master worktree. The lib axis is Fetched-only — prebuilt-shadows-source |
-| ssl | 2 | one per binding store pin (0.6.0 / 0.7.0) |
-| tiny-full | 1 | all-Vendored stable world |
-| cairo / libffi | 1 | source + system lib + opam binding, Fetched@Stable |
-| zlib | 2 | **landed 2026-08-20** — the lib pair with no build: `F:stable` (apt libz 1.3) + `V:dev` (conda-forge libzlib 1.3.2, same soname). The probe names the library the loader mapped and the vendored world asserts it (`probe_names_lib`) |
-| zstd | 2 | **landed 2026-08-20** — same shape (`F:stable` apt 1.5.5 + `V:dev` conda-forge 1.5.7), over the registry's first gate that really bounds the lib (`conf-zstd` enforces `>= 1.3.8`). Two world witnesses: a runtime `ZSTD_versionNumber()` call and the loader's mapped path |
-
-**The batch runner + run config + the main-library split** (2026-08-14,
-user): `canary action @all` runs every registry project under the
-default config — `pr_tier` groups the runs (`Heavy` = z3/llvm's
-source-built chains → THIN, bypassing the Dev builds; `Light` → full).
-The run layer has `run_config = { policy : run_policy }` (Full | Thin,
-the open mode ladder: fetch → smoke → thin → full) — the CLI/batch SET
-`config.policy`, consumers match the variant; `enumeration_policy_of`
-is the one mapping to the enumeration policy. `--thin` forces thin
-everywhere; explicit single-project runs ignore the tier. Pinned by
-`registry.batch_tiers`. The layer split (same day, user-directed):
-`src/canary/project/` (library `canary_project`) holds the project
-DATATYPE + definition utils (`Canary_project_run`,
-`Canary_opam_binding`) plus the concrete instantiation (specs, tiny
-factory, registry, CI); `src/canary/main/` (library `canary_main`) is
-the RUNNING layer (runner, batch, spec-check, layer tests) that the
-cmd/tests/batch share — it depends on canary_project for the datatype,
-never the reverse. `canary_project_run` no longer references tiny's
-factory — `assignment_is_all_good` moved to the datatype layer.
-
-## 2. Bugs & issues
-
-**Flushed 2026-08-19.** Everything that was FIXED, LANDED or RESOLVED
-moved to the chronicle,
-[`../worklog/worklog_2026_08.md`](../worklog/worklog_2026_08.md) — a
-closed bug is history, not status. Everything still OPEN and tied to a
-particular project moved to [`issues.md`](issues.md), which is a
-standalone worklist another agent can own.
-
-What stays here: the layer's own current state (§1), the ordered plan
-(§3), the framework-level to-dos, and the milestone (§4).
-
-## 3. Todo
-
-GENERAL framework issues live here; per-project ones live in
-[`issues.md`](issues.md).
-
-### THE ORDERED PLAN (2026-08-19, user asked for the action list)
-
-Everything below is agreed; the order is what matters. A–C are small and
-unblock the rest; D is a real arc.
+(2026-08-19, user asked for the action list.) Everything below is
+agreed; the order is what matters. A–C are small and unblock the rest;
+D is a real arc.
 
 > **Model revisit (2026-08-20)** — the reruns that filled z3's
 > `pre-10549` cells surfaced enough about the running/enumeration model to
@@ -231,6 +179,19 @@ conda-forge). Short version: one C lib per project is baked into
   and `assignment_ok`'s "a binding's lib must be provided" has to become
   per-artifact), and a combination POLICY (all-off + each-alone + all-on =
   7 worlds, not 2⁵ = 32).
+- [ ] **D6. ncurses** — the cheapest remaining landing and the one the
+  ranking puts next: `Free_with_conf`, `libncurses-dev` already
+  installed, apt 6.4 → conda-forge 6.6, binding install a clean
+  2-package add. Ships one upstream finding for free (`conf-ncurses`'s
+  `os-family = "ubuntu"` depext line can never fire — opam reports
+  `debian` on Ubuntu, and `lib64ncurses-dev` is not in the archive).
+
+**The rest of the queue** is described in
+[`projects.md` §4](projects.md), not duplicated here: lwt/libev
+(optional-C-dep modelling), cvc5 (a second self-building project),
+PyTorch (the multi-PM case, [`project_pytorch.md`](project_pytorch.md)),
+then bitwuzla / mariadb / the ffmpeg family, each adding one trick. None
+is ordered ahead of D2b–D6, which need no new machinery.
 
 **E. The binding axis on the template projects** (2026-08-20, from the
 user's matrix reading). cairo/libffi/zlib/zstd have a lib pair and NO
@@ -240,7 +201,7 @@ the pins are shared state: zlib/cairo are single-package downgrades,
 libffi's recompiles zstd's binding, zstd's removes `ocaml-compiler` and
 downgrades 37 packages. Recorded, not started — the measurements and the
 A-vs-B consequences are in
-[`store_switching.md` §5](store_switching.md), the declaration gap in
+[`../design/store_switching.md` §5](../design/store_switching.md), the declaration gap in
 [`issues.md`](issues.md). Blocks on the canary-switch decision for two
 of the four.
 
@@ -250,7 +211,11 @@ sqlite's lib pair to a ≤3.43 amalgamation so its forward cell becomes a
 real question; migrating z3/llvm/ssl/the opam template to the shared
 `opam_world_check`.
 
-### General (address first)
+## 2. General to-dos
+
+Framework-level; per-project ones live in [`issues.md`](issues.md).
+
+### Address first
 
 **Residue of the 2026-08-17 active plan** — items 2-4 (Publish
 generalization, the shadow mechanism, zarith's binding_decls) landed and
@@ -277,7 +242,7 @@ directions):
   "which special case keeps/omits which world". Prefer ONE general
   config/policy mechanism over per-case machinery; the audit-rung
   decision is part of this (see the decision brief,
-  wrapper_packages.md §3.1).
+  ../design/wrapper_packages.md §3.1).
 - [ ] **A general SELECTION config** (user, 2026-08-17): the ref
   subset (`--refs`) should fold into ONE selection mechanism — the
   user freely picks which CHOICES to run (channels, refs, scenarios,
@@ -379,7 +344,8 @@ directions):
   built, not yet wired to a live run.
 - [ ] **Web results page** — per-project bug reports + fixed-PR links
   in `canary_html.ml`.
-## 4. Planned milestone — the mismatch-matrix report (discuss later)
+
+## 3. Planned milestone — the mismatch-matrix report (discuss later)
 
 > 2026-08-12, user; reframed 2026-08-19, user.
 
@@ -407,27 +373,10 @@ matrix, not a dump of run artifacts — `canary_html.ml`'s output changes
 accordingly. Full design discussion still deferred; what is settled is
 the axis vocabulary.
 
-**Where the registry stands against this shape** (2026-08-19, after the
-first two landings):
-
-- **sqlite — full 2×2, all green.** Two opam pins (5.1.0 / 5.4.1) × two
-  built amalgamation versions. Green by construction: the lib pair is
-  narrow (3.45.1 and 3.46.1 export identical symbol sets), so this is the
-  machinery proof. Widening the lib side to a ≤3.43 amalgamation, which
-  lacks the modern watchlist APIs, is what makes its forward cell a real
-  question.
-- **z3 — full 2×2 per dev ref, on real artifacts.** The binding's
-  `~follows:a_lib` is gone, so the cross cells enumerate: FORWARD (a
-  binding built from HEAD linked against apt's libz3) and BACKWARD (the
-  released opam binding run against a HEAD-built libz3). Both needed new
-  probe realizations to be honest — see the Landed entry in §2.
-- **llvm — collapse only.** 5 → 3 (phantoms gone); it keeps its binding
-  `follows`, so no cross cells. Opening them needs the same two probe
-  realizations, complicated by its llvm-config indirection.
-- **zarith — 1×2 (the forward cell) + baseline**, and no second lib
-  choice by policy (prebuilt-shadows-source: apt ships one GMP).
-- **ssl — 1×2** via two store pins on the binding; no second lib choice.
-- **cairo, libffi — 1×1.** Both axes single.
+**Where the registry stands against this shape**: the per-project `2×2
+status` column in [`projects.md` §2](projects.md) — sqlite and z3 full,
+llvm collapse-only, ssl/zarith the binding half, cairo/libffi/zlib/zstd
+the lib half.
 
 What the two landings cost in machinery, worth knowing before opening
 more: a channel pair on a *fetched* artifact needs the store-pin trio

@@ -16,7 +16,7 @@ by eye. Z3/LLVM/sqlite are too big for that; `tiny` is not.
 This doc is the single source of truth for the example — design
 rationale, file-level spec, build instructions, per-scenario detail,
 and coverage. For the abstract surface-role / contract framework,
-read [`surface.md`](surface.md) (manuscript) or
+read [`surface.md`](draft.md) (manuscript) or
 [`surface_draft/`](surface_draft/) (materials). For the contract-by-
 contract status (canary core vs. tiny), see
 `surface_draft/implementation.md` §2.7.

@@ -13,12 +13,12 @@ open Canary_toolchain
    [Canary_pm_opam] (src/canary/tool/) — opam as a package manager
    (presence checks, install commands). Distinct concerns, distinct
    layers; wrapper-package generation (Publish) is the tool-layer
-   half (see doc/canary/project/wrapper_packages.md §4).
+   half (see doc/canary/design/wrapper_packages.md §4).
 
    This module compresses the boilerplate. A new ocaml/opam-binding
    project becomes ~25 lines of declaration vs. ~100 lines of
    hand-rolled runner_spec. Extracted from zarith + ssl as the
-   second-data-point validation per doc/canary/project/index.md §3
+   second-data-point validation per doc/canary/project/projects.md §4
    sequencing.
 
    Coverage boundaries:

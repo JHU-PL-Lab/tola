@@ -7,7 +7,7 @@
     [project_run] type — a module cycle dune rejects. The former [Multi] entry
     kind (ssl's shared-switch variant matrix via [run_project_multi]) retired
     2026-08-12: ssl migrated to the general enumeration with store pins (see
-    doc/canary/project/store_switching.md). *)
+    doc/canary/design/store_switching.md). *)
 
 (** The registry. [z3_run]/[llvm_run] ignore their distro argument (distro
     detection happens inside [realize] at run time) — [Wsl] is a placeholder.
@@ -33,7 +33,7 @@ let all_projects : (string * Canary_project_run.project_run) list =
     when its cost outweighs what a run of it buys right now (z3's
     [fetch_binding_ocaml] rebuilds libz3 from source on every binding pin
     flip, so a full run is ~30 min — see
-    doc/canary/project/store_switching.md §5g).
+    doc/canary/design/store_switching.md §5g).
 
     Muting must not be able to hide drift, so the catalogue exists
     separately: pins assert that the active names are a SUBSET of this

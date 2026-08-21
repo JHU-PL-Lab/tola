@@ -4,7 +4,7 @@
 > worklog), and open items.
 > Project-level status (M3) moved to [`project/status_project.md`](project/status_project.md)
 > in the 2026-08-12 doc reorganization; the project index is
-> [`project/index.md`](project/index.md). Historical context in
+> [`project/projects.md`](project/projects.md). Historical context in
 > [`worklog_2026_08.md`](worklog/worklog_2026_08.md).
 
 ## Current state
@@ -12,8 +12,7 @@
 - **Pattern-based enumeration** — `patterns_of` primary path (18 universal chains from
   action catalogue). Per-project scenario counts are PROJECT status —
   the current snapshot lives in
-  [`project/status_project.md` §1](project/status_project.md) (C2's
-  3-way made z3/llvm 5-scenario projects).
+  [`project/projects.md` §2](project/projects.md).
 - **Project registry** — `Canary_registry.all_projects` is THE single source of truth
   for project names; `action`/`spec`/`scenarios` each do one `List.assoc_opt` lookup
   (2026-08-12).
@@ -129,7 +128,7 @@ Steps (each step keeps the suite green before the next):
    No current project's scenario count changes (all have static bindings
    alongside; tiny-full's cext keeps the build chain applicable).
 4. [ ] **Typed mechanism payload — the DECLARATION** (design in
-   [`mechanism_payload.md`](mechanism_payload.md), 2026-08-12; split
+   [`mechanism_payload.md`](design/mechanism_payload.md), 2026-08-12; split
    from the command derivation 2026-08-15, user). A project declares
    its binding as ONE flat typed record
    (`binding_decl = { mechanism; c_api; native; coupling; surface_path }`
@@ -163,7 +162,7 @@ Steps (each step keeps the suite green before the next):
    2026-08-15). Remaining: the raw-override warning; delete
    `mi_artifact_shape` prose.
 6. [ ] **Contract registry unification** — design in
-   [`contract_registry.md`](contract_registry.md) (2026-08-17): one
+   [`contract_registry.md`](design/contract_registry.md) (2026-08-17): one
    statement per contract (invariant as a FALSIFIER, tool-based inputs,
    evidence kind, firing derived from mechanism × provision); the
    per-project binding tables converge onto it and get deleted.
@@ -204,8 +203,8 @@ Extend coverage, find/detect real bugs, fix them with GH PRs. Surface results fr
 cmd/cache to a web page with checking results and fixed-bug reports. The whole
 project-level status (bugs, issues, todo, candidates) lives in
 [`project/status_project.md`](project/status_project.md) since the 2026-08-12 doc
-reorganization; the project index + landing mechanics in
-[`project/index.md`](project/index.md).
+reorganization; the roster + landing mechanics in
+[`project/projects.md`](project/projects.md) + [`project/landing.md`](project/landing.md).
 
 ### Design directions (pending more cases)
 

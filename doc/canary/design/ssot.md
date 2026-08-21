@@ -261,7 +261,7 @@ still exercises every scenario *pattern*) and **all-Full** (the complete
 product).
 
 Correspondences already in place: `origin` (the project dimension,
-[`project/index.md` §1](../project/index.md)) **is** the provision coordinate; the
+[`project/projects.md` §1](../project/projects.md)) **is** the provision coordinate; the
 variant list **is** the provision enumeration; the mutation vocabulary
 (§5.3) **is** the other axis; and provision decides which action-graph
 actions run (§6.5 — `Built` ⇒ `Build_lib`, `Fetched` ⇒ `Fetch Lib`).

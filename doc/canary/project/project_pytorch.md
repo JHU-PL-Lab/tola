@@ -3,7 +3,7 @@
 Pre-implementation plan for the highest-leverage queued target. Split out
 of `design/new_project.md` on 2026-08-05 when that doc merged into the
 project index; the candidate queue entry lives at
-[`index.md`](index.md) §2 Tier 1 #4. (Moved here from `design/` in the
+[`projects.md`](projects.md) §4 Tier 1 #4. (Moved here from `design/` in the
 2026-08-12 `doc/canary/project/` reorganization.)
 
 ---

@@ -150,7 +150,7 @@ let zarith_wrapper_decl : Canary_opam_template.wrapper_decl = {
   synopsis = "Zarith without the conf-gmp hop — builds directly against the system GMP";
   description =
     "Canary-local package: zarith built WITHOUT the conf-gmp virtual package\n\
-     (the conf-free prototype — doc/canary/project/conf_survey.md). The build\n\
+     (the conf-free prototype — doc/canary/surveys/conf_mechanism.md). The build\n\
      runs zarith's own ./configure, which probes GMP via pkg-config — the\n\
      same check conf-gmp performs — so the system GMP dependency is real but\n\
      not declared through opam's conf layer. Same findlib name (zarith), so\n\

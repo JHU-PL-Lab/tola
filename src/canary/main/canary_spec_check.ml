@@ -10,7 +10,7 @@
    a remote moved, actual probe results) belong to run status, not here.
 
    Non-uniformities that remain (recorded in
-   doc/canary/project/status_project.md §2), reported as-is, NOT
+   doc/canary/project/issues.md §2), reported as-is, NOT
    special-cased in code:
    - z3/llvm source rows carry the STABLE repo's provider; per-channel (dev)
      source providers are the not-yet-wired provenance refinement.

@@ -3,7 +3,12 @@
 > 2026-08-17. CANARY-SIDE design: our wrapper/conf-free packages in the
 > local opam repo, the fork layering, the store-mutation consequence,
 > and the zarith matrix + shadow preference. (The opam-side survey of
-> the `conf-*` mechanism itself lives in [conf_survey.md](conf_survey.md).)
+> the `conf-*` mechanism itself lives in
+> [`../surveys/conf_mechanism.md`](../surveys/conf_mechanism.md).)
+>
+> Moved here from `project/` 2026-08-21: design principle, not a
+> per-project record. Per-project consequences live in
+> [`../project/issues.md`](../project/issues.md).
 
 ## 1. The fork layering — a functional fix vs a conf-bypass
 
@@ -181,7 +186,7 @@ Options:
 **The bigger frame** (user, 2026-08-17): shadowing (gmp) and the
 source-building bypass (z3's Heavy→Thin tier) are the SAME topic —
 one general rule for the enumeration's special cases, revisited "a bit
-later" (status_project.md design-stage). Don't over-invest in the
+later" (../project/status_project.md design-stage). Don't over-invest in the
 rung's current shape; if it survives, it's a placeholder for that
 revisit.
 

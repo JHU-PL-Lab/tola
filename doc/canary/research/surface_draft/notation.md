@@ -87,7 +87,7 @@ reproducible witness, §4), **abstract traces** are worlds drawn
 from per-kind stores (independent-producer combinations, §5); §7
 covers how each shape is mechanically produced. The formal
 scaffold (rule / world / trace definitions) is parked in
-[`surface_draft/notation.md`](surface_draft/notation.md) until
+[`surface_draft/notation.md`](notation.md) until
 the theory settles enough to need it.
 
 - **Worlds and traces.** A configuration of artifacts is a world;
@@ -118,7 +118,7 @@ concrete traces along the way. How each shape is mechanically
 produced is **§6 Implementation**.
 
 The PL notation scaffold (formal rule / world / trace definitions)
-is parked in [`surface_draft/notation.md`](surface_draft/notation.md)
+is parked in [`surface_draft/notation.md`](notation.md)
 until the theory settles enough to need it.
 
 

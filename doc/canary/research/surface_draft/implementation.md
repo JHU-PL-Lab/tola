@@ -35,7 +35,7 @@ inspector side is tracked below; the comparator side is in the
 
 Rows are *artifact aliases* (file-keyed, project-local). The `n*` /
 `b<lang><mech?>*` naming and the full canonical-name dictionary live
-in [`tiny.md` § Artifact inventory](tiny.md#artifact-inventory--aliases--canonical-names);
+in [`tiny.md` § Artifact inventory](../tiny.md#artifact-inventory--aliases--canonical-names);
 this section uses the aliases as compact handles. Surface tags
 (`s1..s6`) refer back to §2.1.
 

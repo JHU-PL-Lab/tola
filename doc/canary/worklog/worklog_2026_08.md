@@ -1070,9 +1070,9 @@ from same source).
   families. Remaining half: a repo shipping an ARTIFACT directly (not
   source) has no representation — a future shape.
 - [x] **conf-* survey + conf-free prototype** — DONE 2026-08-17: the
-  survey is [conf_survey.md](conf_survey.md) (opam-side only); the
+  survey is [conf_mechanism.md](../surveys/conf_mechanism.md) (opam-side only); the
   `zarith-no-conf` prototype + the canary-side designs live in
-  [wrapper_packages.md](wrapper_packages.md). The live install rides
+  [wrapper_packages.md](../design/wrapper_packages.md). The live install rides
   the Publish item below.
 - [x] **Fetched-source version id in the run-cache key** — RESOLVED BY
   DESIGN (C1+C2): repo pins make every source placement
@@ -1093,7 +1093,7 @@ from same source).
    opam-template (one skeleton parameterized per project — the build
    body is the only variable part) vs per-project files; the renderer
    belongs in the TOOL layer (`canary_pm_opam.ml`'s orbit). Design in
-   wrapper_packages.md §4; also settles the build-body question
+   ../design/wrapper_packages.md §4; also settles the build-body question
    (CANARY_* env-style vs copy-into-sandbox — env-style for heavy,
    copy for tiny).
 3. [x] **Shadow mechanism — prebuilt first, source-built as a SEPARATE
@@ -1106,7 +1106,7 @@ from same source).
    `run_policy` gains the `Audit_lib` rung (`--audit-lib` = full +
    Materialize_source; the batch never audits); pinned by
    `enumerate.shadow_policy_drops_same_cell_built` +
-   `shadow.policy_ladder`. Design in wrapper_packages.md §3.
+   `shadow.policy_ladder`. Design in ../design/wrapper_packages.md §3.
 4. [x] **binding_decls for zarith** — LANDED 2026-08-17 (active plan 4):
    the Cstubs decl wraps the system GMP with the EMPTY-prefix convention
    (user's call: GMP spans mpz_/mpq_/mpf_/mpn_ — `native.prefix = ""`,
@@ -1209,7 +1209,7 @@ from same source).
   pin-checked fetch; world assertions). 2 scenarios (0.6.0/0.7.0), each
   probing both apps as different actions; the 2×2's red cell survives as
   scenario@0.6.0's `probe_app_ocaml` xfail[c2]. Survey + design in
-  [`store_switching.md`](store_switching.md).
+  [`store_switching.md`](../design/store_switching.md).
 - [x] **Shared-store pins for llvm** (2026-08-13) — stable binding pins
   "19-shared" (the standard install name `llvm.19-shared` fits — no
   `install_name` escape needed); pinned fetch + `pin_check_post` + world
@@ -1219,7 +1219,7 @@ from same source).
   llvm-config indirection (see the Fixed entry above). z3 DONE earlier
   the same round (2026-08-12: stable pin "4.16.0" + pinned fetch +
   pin-checked Publish + world assertions). See
-  [`store_switching.md`](store_switching.md) §4 item 7.
+  [`store_switching.md`](../design/store_switching.md) §4 item 7.
 - [x] **Spec-maturity checker** (2026-08-13, user) — `canary spec-check
   [PROJECT|@all]` (landed 2026-08-13): 8 static checks per project over
   the declared artifact table (`Canary_spec_check`, no realization/run),

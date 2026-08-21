@@ -42,7 +42,7 @@ The committed workflow defines 5 jobs. `projects/canary_run.ml`'s `ci_jobs`
 defines **6** — `cairo` (landed 2026-07-23) is missing from the YAML entirely,
 because the YAML predates it.
 
-`doc/canary/project/index.md` records cairo as `✓ / —` (local only, "CI job wired
+`doc/canary/project/projects.md` (then `index.md`) records cairo as `✓ / —` (local only, "CI job wired
 in `canary_run.ml` but not yet exercised on a runner"), which is accurate but
 undersells the cause: it is not *pending exercise*, it is *not in the
 generated file*.
@@ -51,7 +51,7 @@ generated file*.
 
 - **Path filter.** The workflow triggers only on `canary/**`, `src/canary/**`,
   `src/bin/canary_main.ml`, and itself (`3eead52` narrowed it deliberately).
-- **The status doc claimed green.** `project/index.md` had every project at
+- **The status doc claimed green.** `project/index.md` (now `projects.md`) had every project at
   `✓ / ✓` local/CI — a claim written before the rename and never rechecked.
   (De-staled 2026-08-05 in `3a37ed5`, which corrected the tiny rows and added
   the "CI runs the pre-A5 shape" note — but did not catch this.)

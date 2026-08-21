@@ -105,7 +105,7 @@ Numbers are stable (never renumbered). See CLAUDE.md for active TODOs.
 
     Covers the Pattern A case. Source-build projects (z3, llvm) stay
     hand-written but adopted `store_config` for their provider tables in
-    A8. Project shapes + landing mechanics: `doc/canary/project/index.md` §4.
+    A8. Project shapes + landing mechanics: `doc/canary/project/landing.md`.
 
 
 33. **Adopt `<pkg>.dev-src` naming convention for source-only opam packages** —

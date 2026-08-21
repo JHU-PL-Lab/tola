@@ -74,7 +74,7 @@
     So the assertion is the enforcement half of a property the enumeration
     should also exploit: {b order scenarios by the stateful-store state
     they need}. Nothing does that yet — the enumerated list IS the run
-    order. Tracked in [doc/canary/project/store_switching.md].
+    order. Tracked in [doc/canary/design/store_switching.md].
 
     {1 These are CONFIRMATIONS, not derivations (user, 2026-08-20)}
 

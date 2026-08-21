@@ -5,7 +5,11 @@
 > position that opam should drop them. Canary's OWN designs that the
 > survey motivated (the fork layering, the wrapper/conf-free packages,
 > the shadow preference, the Publish generalization) live in
-> [wrapper_packages.md](wrapper_packages.md).
+> [`../design/wrapper_packages.md`](../design/wrapper_packages.md).
+> Moved here from `project/` 2026-08-21 — it is survey material, not a
+> project record. Its sibling [`conf_packages.md`](conf_packages.md)
+> classifies all 333 conf-* packages; this one explains the MECHANISM
+> and states the position.
 
 ## 1. How conf-* works (the live `conf-gmp.5`)
 

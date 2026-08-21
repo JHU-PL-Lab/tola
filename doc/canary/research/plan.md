@@ -4,7 +4,7 @@ Venue strategy, milestones, OOPSLA punch list, and the five-step
 alignment roadmap. One doc; cross-referenced. Replaces the earlier
 split `plan.md` + `roadmap.md` (2026-05-19).
 
-Companion to [`surface.md`](surface.md) (manuscript) +
+Companion to [`surface.md`](draft.md) (manuscript) +
 [`surface_draft/`](surface_draft/) (materials) for theory, and
 [`tiny.md`](tiny.md) (witness); see [`../README.md`](../README.md) for the
 four-pillar map.
@@ -146,7 +146,7 @@ will look for.
 Foundational theory + tiny witness + prepare/confirm_ill flow all
 landed pre-June 2026 — see [`worklog_2026_05.md`](../worklog/worklog_2026_05.md)
 Session 8 for the chronicle. Surface-theory model lives in
-[`surface.md`](surface.md) (manuscript) + [`surface_draft/`](surface_draft/)
+[`surface.md`](draft.md) (manuscript) + [`surface_draft/`](surface_draft/)
 (materials); tiny witness in [`tiny.md`](tiny.md). Remaining open
 items for the paper:
 

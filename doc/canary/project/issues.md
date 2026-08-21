@@ -177,7 +177,7 @@ so no template project can carry one. A field plus threading.
 
 The part that is not small is that an opam pin is shared state. Measured
 costs and the design consequences are in
-[`store_switching.md` §5](store_switching.md); three tiers, per the
+[`../design/store_switching.md` §5](../design/store_switching.md); three tiers, per the
 user's reading:
 
 | tier | projects | pin cost | verdict |
@@ -361,8 +361,4 @@ with the registry when CI grows scenario coverage.
 - [ ] **Real-world PRs** — find a bug with canary, fix it, submit
   upstream PR, link from the results page (the z3 PR above is the first
   candidate).
-- [ ] **New project candidates** — OpenSSL/libressl, protobuf, grpc,
-  jq/oniguruma, lwt+libev, cvc5, PyTorch (plan in
-  [`project_pytorch.md`](project_pytorch.md)). Queue + sequencing in
-  [`index.md` §2](index.md).
 
