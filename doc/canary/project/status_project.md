@@ -319,6 +319,17 @@ directions):
 
 **Enhancements** (no hurry — recorded, not scheduled):
 
+- [ ] **`canary emit --stage N`** — one dump per pipeline pass, so the
+  enumeration debugs like a compiler with `-fdump-*`. Proposal, sized and
+  with its test plan:
+  [`../design/enumeration/emit_stages.md`](../design/enumeration/emit_stages.md).
+  Roughly two days; steps 1–3 alone close the fact that **stage 3's run
+  order is verified by a pin but cannot be looked at** (`spec` still
+  prints enumeration order, which since 2026-08-21 is not what runs). The
+  `--why` half — which of the five constraints dropped a candidate — is
+  the debugging payoff and is nearly free, because three of them are
+  already predicates.
+
 - [ ] **Scenario-name clarity** (user, 2026-08-17) —
   `source-fetched-1.14_lib-fetched_ocaml_binding-fetched` doesn't say
   WHICH source/lib: the names are born-safe artifact-kind ids

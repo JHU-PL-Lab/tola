@@ -29,9 +29,11 @@ moved into one standalone document per stage, gradually.
 | 4. realization | [`stage4_realization.md`](stage4_realization.md) | **done** — absorbed `algorithm_explainer.md` |
 | 5. reporting | [`stage5_matrix.md`](stage5_matrix.md) | **done** — already single-owner |
 
-**All six stages have a standalone doc.** The only other file here is
-[`multi_lib.md`](multi_lib.md), a proposal (stage 0/1 — `Lib` carries no
-name, so a project cannot declare a second C lib).
+**All six stages have a standalone doc.** The other two files are
+proposals: [`multi_lib.md`](multi_lib.md) (stage 0/1 — `Lib` carries no
+name, so a project cannot declare a second C lib) and
+[`emit_stages.md`](emit_stages.md) (`canary emit --stage N` — one dump
+per pass, so the pipeline debugs like a compiler).
 
 Four docs left rather than being kept: `algorithm_explainer.md` (the
 walkthrough that predated this README — its sections went to the stages
