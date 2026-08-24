@@ -531,7 +531,7 @@ covered this). **This instance graph already exists**: `Canary_basic.artifact_no
 `Canary_action.make_action_graph` already generate it — including the deploy
 mismatch (`Build_app` pairs each binding with *every* runtime lib). The
 enumerate↔graph merge is done (the seam + `node_of_assignment` + `close_deps`);
-the model is [`algorithm_explainer.md`](enumeration/algorithm_explainer.md).
+the model is [`enumeration/README.md`](enumeration/README.md) — the stage map.
 
 **Header flavor — payload, not a new kind.** A header's flavor (static vs
 built) changes its position in the graph (part-of-source vs
@@ -766,7 +766,7 @@ visibly empty. After §7.2 Phase 4 (2026-07-20)
 coverage stands at 12 of 20 cells filled after §7.1's
 `Drop_python_attr` primitive landed (2026-07-21); 8 remain
 awaiting App-level primitives + c4 wiring for OCaml. See
-[`algorithm_explainer.md`](enumeration/algorithm_explainer.md) for
+[`enumeration/stage4_realization.md`](enumeration/stage4_realization.md) for
 the derived-vs-hand principle, and
 [`tiny.md §7.1`](tiny.md#71-fill-the-9-remaining-empty-derived-cells)
 for the blocker-primitive breakdown.

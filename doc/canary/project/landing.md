@@ -30,7 +30,7 @@ first:
   dispatch` over an action table. The general enumeration computes the
   scenario list; `run_project_run` executes it. tiny-full, sqlite, z3,
   llvm, ssl. See [`../design/ssot.md`](../design/ssot.md) §6.1 and
-  [`../design/enumeration/algorithm_explainer.md`](../design/enumeration/algorithm_explainer.md).
+  [`../design/enumeration/README.md`](../design/enumeration/README.md).
 - **store pins** — a binding whose provider declares `versions`
   (`Lang_pkg`) enumerates one scenario per pin; the fetch is a
   pin-checked store operation (warm-skip only when the switch provably
@@ -109,7 +109,7 @@ does not fork the factory).
 - **C**: B + the `pr_spec` universe table + `realize ∘ dispatch` (sqlite: ~300 LOC including the from-source build; z3/llvm: the bulk is their build commands, not the scenario machinery).
 
 For scenario mechanics + the derived-vs-hand principle see
-[`design/algorithm_explainer.md`](../design/enumeration/algorithm_explainer.md).
+[`design/enumeration/stage4_realization.md`](../design/enumeration/stage4_realization.md).
 
 ## 3. Sourcing the lib channel pair (rule, user 2026-08-19)
 

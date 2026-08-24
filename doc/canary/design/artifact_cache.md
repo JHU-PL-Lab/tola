@@ -120,3 +120,38 @@ where it is already implied:
 
 Reversing that order would build a cache keyed on identities nothing
 currently guarantees.
+
+## 6. The second specimen — two caches agreed about a wrong artifact
+
+*(Absorbed from `enumeration/run_model_revisit.md` §3, 2026-08-24. §5's
+step 2 was a proposal supported by one instance; this is the second, in a
+different project and a different build system, and it sharpens the
+proposal.)*
+
+`build-pre-10549/src/api/ml/dllz3ml.so` was linked against
+`libz3.so.5.0` while the tree's own lib exports `SONAME libz3.so.5.1`,
+and no `libz3.so.5.0` exists on this machine. Both caching layers behaved
+**correctly by their own rules** and the result was still a lie:
+
+| layer | what it checks | verdict | correct? |
+| --- | --- | --- | --- |
+| ninja | did any recorded input of this target change? | up to date | yes, by its rules |
+| canary's step marker | same realized command + expectation, and `check_post` passes? | warm skip | yes, by its rules |
+| reality | does the binding load the lib beside it? | **no** | — |
+
+Neither layer models the thing that changed: **the identity of the input
+artifact**. libz3 bumped soname 5.0 → 5.1, and nothing in either key
+mentions the soname, the version, or the content of the library the
+binding links against.
+
+**What it adds to §5.** The earlier framing was about canary's own cache.
+Here the *external* build system had the same blind spot, which means
+canary **cannot delegate the question to it**: "ninja said it was up to
+date" is not evidence about the artifact. A canary step that shells out to
+a build tool has to check the product itself.
+
+**The cheap instance, available before the store exists:** a
+post-`build_binding` assertion that every `NEEDED` entry naming the
+project's lib matches the soname the tree's lib exports. That catches this
+class at the step that produced it. Tracked in
+`../project/status_project.md`.

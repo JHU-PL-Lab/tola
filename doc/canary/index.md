@@ -6,7 +6,7 @@ a doc nobody reads.
 
 **Where to start.** [`research/draft.md`](research/draft.md) is the
 manuscript-in-progress and is authoritative for current framing.
-[`design/enumeration/algorithm_explainer.md`](design/enumeration/algorithm_explainer.md) walks
+[`design/enumeration/README.md`](design/enumeration/README.md) walks
 the pipeline end to end; [`design/ssot.md`](design/ssot.md) is the ID
 dictionary bridging manuscript ↔ code;
 [`project/projects.md`](project/projects.md) is the project roster.
@@ -86,11 +86,10 @@ done.
 | [stage2_filters.md](design/enumeration/stage2_filters.md) | **Stage 2** — the five constraints that prune the product, and the over-generation each was written against |
 | [stage3_identity.md](design/enumeration/stage3_identity.md) | **Stage 3** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
 | [stage5_matrix.md](design/enumeration/stage5_matrix.md) | **Stage 5** — the result matrix: what a row is and what names it |
-| [algorithm_explainer.md](design/enumeration/algorithm_explainer.md) | The predecessor of the stage map — the end-to-end walkthrough with z3 as a running example; the run cache (§9) and store pins (§10). Kept for readability; where a stage doc exists it is authoritative |
+| [stage4_realization.md](design/enumeration/stage4_realization.md) | **Stage 4** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib; three options with costs |
-| [run_model_revisit.md](design/enumeration/run_model_revisit.md) | *Proposal* — the ordered change list the 2026-08-20 reruns produced |
 
-**Stage 4 (realization) has no doc yet** — it is the one gap.
+All six stages now have a standalone doc.
 
 ### Reference
 
@@ -125,7 +124,9 @@ done.
 | ---- | --- |
 | ~~api_surface.md~~ | Theory + implementation pointers folded into `research/surface_draft/`; packaging deferred to a future `package_theory.md` |
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
-| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md` |
+| ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage4_realization.md` (2026-08-24) |
+| ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
+| ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `enumeration/stage5_matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
 | ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_project_spec.md` §4, open decisions to `project/status_project.md` §2 |
 | ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_project_spec.md` §5 + `ssot.md` §4.2.2 |

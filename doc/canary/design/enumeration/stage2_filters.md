@@ -2,7 +2,7 @@
 
 **Kind: rationale.** Written 2026-08-23 because it did not exist: the
 product over (provision × version × mutation) is easy and documented
-([`algorithm_explainer.md`](algorithm_explainer.md) §4–5), but what makes
+(§1 below), but what makes
 the enumeration *correct* is the five constraints that prune it, and
 those lived only in comments inside `canary_enumerate.ml`. Every one of
 them exists because a specific over- or under-generation was observed.

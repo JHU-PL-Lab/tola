@@ -51,7 +51,7 @@
   exists); the artifact tables + scenario identities follow the truth.
 - **Tests** — 95 project + 109 artifact + 14 PM = 218 total (2026-08-19). Post-check convention in
   CLAUDE.md: `make canary-test` after every edit, `make canary-post-check` before commit.
-- **Docs** — `algorithm_explainer.md` current. `scenario.md` (canonical naming +
+- **Docs** — the `design/enumeration/` stage docs are current. `stage0_naming.md` (canonical naming +
   contract catalogue). Project docs reorganized under `project/` (index + status +
   pytorch plan). Dead code cleared (`nodes_of_action_graph`, `path_id_of_node`,
   `string_of_firing_site` are comment-only).

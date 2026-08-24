@@ -155,7 +155,7 @@ let zarith_wrapper_decl : Canary_opam_template.wrapper_decl = {
      same check conf-gmp performs — so the system GMP dependency is real but\n\
      not declared through opam's conf layer. Same findlib name (zarith), so\n\
      it conflicts with the stock package; scenarios pin-switch between them\n\
-     (the z3 stable/dev store-pin dance, algorithm_explainer.md §10).";
+     (the z3 stable/dev store-pin dance, stage3_identity.md §2).";
 }
 
 let decl : Canary_opam_binding.t = {

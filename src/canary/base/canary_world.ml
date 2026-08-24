@@ -133,7 +133,7 @@
     the template's [world_check]/[log_grep] pair unwired for vendored
     worlds. Five places to fix, nowhere to test. History and evidence:
     [doc/canary/project/landing.md] §4 and
-    [doc/canary/design/enumeration/run_model_revisit.md] §3. *)
+    [doc/canary/design/artifact_cache.md] §6. *)
 
 open Base
 

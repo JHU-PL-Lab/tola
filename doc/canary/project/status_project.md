@@ -23,11 +23,41 @@ agreed; the order is what matters. A–C are small and unblock the rest;
 D is a real arc.
 
 > **Model revisit (2026-08-20)** — the reruns that filled z3's
-> `pre-10549` cells surfaced enough about the running/enumeration model to
-> warrant its own note:
-> [`../design/enumeration/run_model_revisit.md`](../design/enumeration/run_model_revisit.md). Its
-> ordered change list supersedes nothing here; items A3 and the artifact
-> fingerprint appear in both, now with measured cost attached.
+> `pre-10549` cells produced an ordered change list, absorbed 2026-08-24
+> when `run_model_revisit.md` was purged. Item 1 (build steps redirect to
+> a log; the detect event names it) LANDED as plan item A. The findings
+> went to the docs that own them —
+> [`../design/enumeration/stage5_matrix.md`](../design/enumeration/stage5_matrix.md)
+> §7 (a `·` is not neutral; a ref is a perturbation and 96% of its cells
+> restate the baseline) and
+> [`../design/artifact_cache.md`](../design/artifact_cache.md) §6 (two
+> caches agreed about a wrong artifact). The remaining to-dos are here:
+
+- [ ] **Run coverage and age, per project** (revisit §1) — rows run /
+  rows enumerated, plus the oldest run timestamp, printed by `result` and
+  `status`. Turns `·` from decoration into accounted debt. Pin the ratio
+  so it cannot fall silently. Today the number is 41/42 and a person has
+  to reconstruct it.
+- [ ] **A post-`build_binding` soname assertion** (revisit §3, the cheap
+  instance) — every `NEEDED` entry naming the project's lib must match
+  the soname the tree's lib exports. Catches the stale-artifact class at
+  the step that produced it, without waiting for the artifact store.
+- [ ] **Warm/cold marks on Built and Installed placements** (revisit §2)
+  — cost is a property of a scenario and the model has no word for it.
+  Deciding what to run meant `ls`-ing `contrib/z3-all/` to see which
+  build trees existed; `action llvm` would have cloned and built LLVM
+  from scratch while `action llvm --refs 19,arbipher` was the right
+  command, and nothing in the tool suggested it. Derivable data, not
+  code: each Built/Installed placement already names a tree, so `warm |
+  cold` is "does its product exist". Surface in `spec` and `status`.
+- [ ] **Input-artifact identity in the step fingerprint** — the real fix
+  for the two-caches finding, and the prerequisite for the artifact
+  store. [`../design/artifact_cache.md`](../design/artifact_cache.md) §5
+  step 2. The arc, not a day.
+- [ ] **A baseline-relative view of ref rows** (revisit §5) —
+  presentation first: mark cells identical to the baseline ref. Consider
+  an enumeration-level rule only if the row count actually becomes a
+  problem; wait for a fourth ref to prove the need.
 
 **A. Make a finding readable from the run log** — the requirement behind
 "the project report must also be produced from the running log, so next

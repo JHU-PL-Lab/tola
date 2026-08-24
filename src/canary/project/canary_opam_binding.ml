@@ -448,7 +448,7 @@ let runner_spec_for (d : t) (a : Canary_artifact.assignment) :
      wrapper under the same findlib name; a LATER opam probe must verify
      the store holds the STOCK package (the stable repo's version id)
      and self-heal by reinstalling it when not — each scenario lands
-     itself in the right world (algorithm_explainer.md §10, in-run
+     itself in the right world (enumeration/stage3_identity.md §2, in-run
      instead of next-run). *)
   let stable_id =
     match

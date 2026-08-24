@@ -43,7 +43,7 @@ ending a session, also run `make canary-post-check` (sqlite + tiny1 bridge,
 heavier, ~2min).
 ```
 
-See [`doc/canary/design/enumeration/algorithm_explainer.md`](doc/canary/design/enumeration/algorithm_explainer.md)
+See [`doc/canary/design/enumeration/README.md`](doc/canary/design/enumeration/README.md)
 for the full pipeline walkthrough (project declaration → action catalogue →
 chains → assignments → execution). Current state and open items in
 [`doc/canary/status.md`](doc/canary/status.md).
@@ -208,7 +208,7 @@ reconciling with, not duplicating.
 | `src/canary/project/canary_tiny_scenario.ml`       | Tiny's whole scenario engine + factory: scenario_spec type, all_scenario_specs (15 hand + 7 derived = 22), tiny_contract_bindings, recipe_of_derived_cell, make_base_runner_spec, project_spec_of_entry, tiny_project bundle. See `doc/canary/worklog/tiny_migration.md`. |
 | `src/canary/project/canary_tiny_baseline.ml`       | `canary tiny baseline` — direct-compile clean tree + 7 inspectors + workspace materialization. |
 | `src/canary/project/canary_tiny_prepare.ml`        | `canary tiny prepare[-all]` + `confirm` — sandbox-build model (live tree never mutated); surface_delta mirrors retired Python `_surface_delta`. |
-| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `algorithm_explainer.md`). |
+| `src/canary/project/canary_tiny_workspace.ml`      | Workspace materialization for tiny scenarios: mutation dispatch (Source / Native / Binding via `canary_artifact_mutation.ml`), RUNPATH strip on cached cext, `libtiny.so` symlink synthesis. Framework infra — do NOT copy per-project (see `enumeration/stage4_realization.md` §2). |
 | `src/canary/project/canary_opam_binding.ml`           | Pattern A template (conf-* + opam binding); consumed by zarith + ssl + cairo + libffi specs           |
 | `src/canary/project/canary_registry.ml`            | `all_projects` — THE single source of truth for project names (`Project` | `Multi`); `project_of` lookup. One entry per project; `action`/`spec`/`scenarios` dispatch through it. |
 | `src/canary/project/canary_run.ml`                 | GH CI job specs (`ci_jobs`); z3/llvm source-build CI steps + Pattern A smoke jobs                        |
@@ -224,7 +224,7 @@ reconciling with, not duplicating.
 | `canary/scripts/assert_binary_symbols.py`      | nm-based pass/fail symbol compat check (legacy; `inspect_native.py` superseding for new code)        |
 | `doc/canary/index.md`                          | **THE doc index** — every file under `doc/canary/`, grouped by intent. A new doc gets its row there; the rows below are only the ones a coding session hits constantly |
 | `doc/canary/design/index.md`                   | Design narrative: vision, action graph, store model, workflow stages, design principles               |
-| `doc/canary/design/enumeration/algorithm_explainer.md`     | The pipeline walkthrough (declaration → catalogue → chains → assignments → execution) + the run cache (§9) and store pins (§10). Absorbed the retired `dynamic_enumeration.md` |
+| `doc/canary/design/enumeration/stage4_realization.md` | **Stage 4** — the action catalogue, `realize ∘ dispatch` → `derive_steps` → verdicts, the TWO dependency relations and their drift, the run cache and its blind spot (input-artifact identity), deploy-mismatch, pre-run ≡ post-run. Absorbed `algorithm_explainer.md` |
 | `doc/canary/design/ssot.md`                    | Project-wide SSOT — canonical ID tables (Ar/Sf/Ag/Sc/scenarios/actions) bridging manuscript ↔ code    |
 | `doc/canary/design/enumeration/stage0_naming.md` | **Stage 0** — naming & classification — the four senses (scenario / pattern / stage / path pattern). Replaces the retired `scenario_terms.md` |
 | `doc/canary/design/enumeration/stage3_identity.md` | **Stage 3, standalone** — scenario identity + dedup (ambient vs identity-bearing), the GENERAL exclusive-resource principle (**partition a place, serialize a state**; opam switch / install prefix / build tree / findlib namespace), and run order grouped by required state |
@@ -312,7 +312,7 @@ tiny-full assembles its vendored tree INSIDE its `pr_runner_spec`
 `canary_tiny_workspace`); a real project builds/fetches into the
 runner-given dir. See SSOT §6.1 for the taxonomy
 (project → scenario ≡ variant → runner_spec → step → action) and
-`design/algorithm_explainer.md` for what is data vs code.
+`design/enumeration/stage4_realization.md` §2 for what is data vs code.
 
 ### Two testing axes
 
@@ -400,7 +400,7 @@ Yelu is now a standalone project at `/home/red/code/research/yelu` with its own 
   no build runs, but status reads PASS. Force a fresh run with `rm -rf
   _out/canary/projects/<name>` or a distinct `variant_id`. To coexist (Built vs
   Vendored, dev vs stable) put those axes in `variant_id`. See
-  [`doc/canary/design/enumeration/algorithm_explainer.md`](doc/canary/design/enumeration/algorithm_explainer.md) §8.
+  [`doc/canary/design/enumeration/stage4_realization.md`](doc/canary/design/enumeration/stage4_realization.md) §4.
 - **OCaml LSP stale diagnostics**: Cross-module edits show false errors
   until dune rebuilds. ocamllsp reads compiled `.cmi` files; no
   in-memory cross-module resolution. Ignore during multi-file refactors,

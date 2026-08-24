@@ -184,3 +184,70 @@ Fetched pins.
   marking the column from any `probe_lib*` step would conflate a
   build-tree pass with a staged failure, which is the distinction the
   Installed worlds exist to draw.
+
+---
+
+## 7. A `·` cell is not a neutral state
+
+*(Absorbed from `run_model_revisit.md` §1 + §5, 2026-08-24. Both findings
+are about what the matrix SAYS, so they belong here.)*
+
+The matrix renders "not run" as `·`, visually adjacent to `✓`, and both
+read as "nothing to worry about". They are not the same claim: `✓` says
+*this was checked*, `·` says *nothing is known*.
+
+**This is measured, not aesthetic.** Rows #17–29 had never run. Filling
+five of them surfaced two bugs that had been latent for days — z3's
+`env_guard` pointing at a nonexistent path (it still *set* the variable,
+so nothing failed) and a `dllz3ml.so` linked against a soname the tree no
+longer produced. Both lived entirely inside the `·` region, and one was
+introduced by a change whose own pin passed.
+
+**Enumeration coverage is not verification coverage.** The enumeration
+says which worlds EXIST; the matrix presents that as the set CHECKED.
+`matrix.registry_shape` pins 42 rows — a number about *enumeration* — and
+nothing pins how many have ever run, so the fraction can fall silently. A
+row that has never run is a claim we are **not** making, and saying so is
+the honest version. Where it stands: 41 of 42 have run; the holdout is
+#28 (llvm `latest`), whose source declares no local tree, so running it
+means cloning llvm-project and building libLLVM from scratch. That
+sentence is the metric this section asks for — the point is that the tool
+should print it rather than a person reconstruct it.
+
+### The signal is the diff
+
+All three z3 refs have run. Taking `latest` as the baseline, the other two
+differ in **four cells out of ~105 populated**:
+
+| ref | cell | latest | this ref | why |
+| --- | --- | --- | --- | --- |
+| arbipher | #19 `probe_binding_ocaml` | ✓ | **✗** | the fork cannot serve a staged consumer — a deliberate red (`../../project/issues.md` §1) |
+| pre-10549 | #24 `install_lib` | ✓ | **xfail** | predates PR #10549, which added the installed OCaml package |
+| pre-10549 | #24 `probe_binding_ocaml` | ✓ | **xfail** | consequence — nothing staged to probe |
+| pre-10549 | #25 `install_lib` | ✓ | **xfail** | same as #24 |
+
+Everything else repeats the baseline exactly — including all three
+forward cells' `✗`, which are **one finding, not three**: apt's libz3
+4.8.12 exports 705 `Z3_` symbols where a HEAD-built binding needs 791.
+That failure is a property of apt, and every ref restates it.
+
+That is the right result — re-running the identical cells is how we know
+they are identical — but it says two things about presentation and scale:
+
+- **A ref is a PERTURBATION of a baseline world**, and the interesting
+  output is where the perturbation shows. The matrix has no notion of
+  "same as baseline", so a reader scanning 16 z3 rows must cell-compare to
+  find the three that matter.
+- **It bounds how far refs scale.** Measured over the complete set, **96%
+  of non-baseline cells restate the baseline**. Three refs is fine; the
+  tenth would not be, and the cost is not only reading — `arbipher` needed
+  a cold z3 build to produce five rows of which one was new.
+- **The grid says how many worlds failed, never how many distinct things
+  are wrong.** The forward cell is the sharpest case: three rows, one
+  finding, no way to see that from the matrix.
+
+Note the relation to [`stage2_filters.md`](stage2_filters.md) §4: the
+unread-source collapse is the same observation about *inputs* — a ref
+nothing reads produces identical runs, so only the canonical one survives.
+This is the *output* version: a ref that IS read but changes nothing still
+costs a full set of rows. Two different rules; only the first exists.
