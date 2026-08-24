@@ -9,6 +9,10 @@ and the runner and the dump read the same pipeline. The map is
 > that making the whole pipeline a compiling-pass experience, then
 > debugging and explanation can make more clear to check."* Explored
 > first; this is the sized answer. Nothing here needs a model change.
+>
+> §7 answers a second question from the same day — where config and
+> policy sit relative to the stages — and is the one structural change
+> the proposal carries.
 
 ## 1. Why — three incidents this would have made cheap
 
@@ -41,6 +45,9 @@ pr_artifacts : artifact_row list
   ▼ project_spec                                                  stage 1
   │ enumerate ~tag ~policy                  action/canary_enumerate.ml
   ▼ assignment list                                               stage 2
+  │ select (PROPOSED, §7 — today thin acts inside stage 2
+  │         and refs at its end)             action/canary_enumerate.ml
+  ▼ assignment list (selected)                                   stage 2.5
   │ scenarios_in_run_order                  project/canary_project_run.ml
   ▼ assignment list (ordered)                                     stage 3
   │ pr_runner_spec ; derive_steps           action/canary_step_builder.ml
@@ -66,7 +73,7 @@ prints a count — an illustration of the algorithm, not a dump.
 ## 4. The surface
 
 ```
-canary emit <project> --stage <0..5> [--json] [--why] [--thin] [--refs …]
+canary emit <project> --stage <0|1|2|2.5|3|4|5> [--json] [--why] [--thin] [--refs …]
 ```
 
 One rule, and it is the whole point: **`--stage N` prints the value stage
@@ -126,7 +133,97 @@ product: 24 candidates
 The invariant worth having is stronger than the listing: **kept + dropped
 = the product**. Nothing disappears unexplained.
 
-## 7. Code changes, in order
+## 7. The missing pass — selection is a stage 2 → 3 function
+
+*(2026-08-24, user: "are the possible config/policy issues either
+functions from stage 2 to stage 3, or just a stage 3 refinement?")*
+
+**Neither, as asked — because "config/policy" is currently three
+different things.** Separate them and only one is a 2 → 3 function, and
+it is the one the question is pointing at.
+
+| kind | examples | where it belongs |
+| --- | --- | --- |
+| **model constraints** | `assignment_ok`, `binding_couples`, `source_ref_ok`, `shadow_filter` | stage 2, **unconditional** — they say a world cannot exist or is indistinguishable. Turning one off does not buy coverage, it buys wrong or duplicate worlds |
+| **selection** | `--thin`, `--refs`, and the queued scenario / action / project selectors | **its own pass, 2 → 3** |
+| **run configuration** | `pr_tier` Heavy/Light, failfast, root, parallelism | stage 4 and later — not about which worlds at all |
+
+Two pieces of evidence that the tree already knows this:
+
+- `shadow_filter` shipped with a `Shadow_prebuilt | Materialize_source`
+  knob and an `Audit_lib` run rung, and both were **removed** on
+  2026-08-19 (user: *"I think we remove this feature"*). That was
+  recognizing shadowing as model rather than policy — the knob existed
+  because it had been misfiled.
+- [`stage2_filters.md`](stage2_filters.md) §6 already says `ref_filter`
+  is *"a selection, not a semantic constraint — it belongs to the run,
+  not to the model"*. The generalization is that the *category* is
+  missing, not that one filter is misplaced.
+
+### Why a pass, and not a stage-3 refinement
+
+The honest part first: **selection commutes with all of stage 3.**
+Selecting then dedup/order/group gives the same result as
+dedup/order/group then selecting — dedup keys on the pin id and so does
+`--refs`, and a stable sort preserves relative order under filtering. So
+correctness does not decide this, which is exactly why the question feels
+ambiguous. Legibility does, and three arguments agree:
+
+- **Stage 2's output becomes invocation-independent** — "every world this
+  project has", a fact about the project rather than about today's flags.
+  That is what makes `emit --stage 2` diffable across runs, and it
+  sharpens `matrix.registry_shape`, which today pins 42 rows *under the
+  default config* while reading as a statement about the enumeration.
+- **"Why isn't this running?" splits into two answerable questions** —
+  *it does not exist* (a stage-2 constraint) versus *you did not ask for
+  it* (selection). Today both look identical, which is precisely what §6
+  is trying to fix.
+- **One question per stage.** Stage 3 doing identity, exclusivity, order
+  *and* selection is the same violation the doc reorganization has been
+  removing.
+
+### The wrinkle to know before implementing
+
+**`--thin` acts BEFORE the product; `--refs` acts AFTER it.**
+`resolve` / `resolve_versions` restrict each artifact's universe and the
+product is built from what is left; `ref_filter` runs on the finished
+assignment list. They cannot be unified while they act in different
+places.
+
+They are equivalent for the levels actually used — restricting a factor
+of a product equals filtering the product on that factor, and `Subset`
+*intersects* the universe, so an artifact with no matching version simply
+contributes no placement (which is how thin z3 drops the `Built`
+provision and keeps the fetch chain). `Free` ("the head of the universe")
+is expressible as a post-filter but awkward, and it is tiny-only. So thin
+can move to the post-filter side without changing any current result. The
+cost is building a larger product first, which at today's sizes is
+nothing.
+
+**A symptom worth naming**: there are two `run_config`s in one pipeline.
+`Canary_enumerate.run_config` is the *function* that resolves levels into
+points; `Canary_project_run.run_config` is the *record* of a run's
+settings. And `enumeration_policy_of : run_config -> policy option` maps
+one into the other — category 3 reaching into category 1's machinery, in
+a single line.
+
+### What it costs, and how it lands with `emit`
+
+1. Move `--thin`'s level resolution to the post-filter side, beside
+   `ref_filter`. The equivalence above says no result changes, and
+   `matrix.registry_shape` + `enumerate.thin_is_version_subset` prove it.
+2. Name the pass: one `select : selection -> assignment list ->
+   assignment list` in `action/canary_enumerate.ml`, with `selection` the
+   single record the tracker's "ONE general SELECTION config" item wants.
+3. Rename one of the two `run_config`s.
+
+Then `emit --stage 2` is the project's worlds, `emit --stage 2.5 --why`
+is what you asked for and what you did not, and stage 3 goes back to one
+job. The two changes are worth doing together: `--why` is what makes the
+split visible, and the split is what makes `--why` answer two different
+questions instead of one blurred one.
+
+## 8. Code changes, in order
 
 Each step is independently useful; none depends on an unbuilt piece.
 
@@ -145,11 +242,17 @@ Each step is independently useful; none depends on an unbuilt piece.
 5. **`--why`** — the two `list -> list` filters return their dropped set
    with a reason; the three predicates are wrapped in a recorder. ~80
    lines in `action/canary_enumerate.ml`, and the only change with any
-   behavioural risk (see §10).
+   behavioural risk (see §11).
+6. **The selection pass (§7)** — move thin's level resolution beside
+   `ref_filter`, name `select`, rename one `run_config`. ~100 lines.
+   Independent of 1–5, but best done with 5: `--why` is what makes the
+   split visible, and the split is what lets `--why` distinguish "does
+   not exist" from "not asked for".
 
-Roughly two days, and steps 1–3 alone close the stage-3 gap.
+Roughly two days for 1–5, plus half a day for 6. Steps 1–3 alone close
+the stage-3 gap.
 
-## 8. Tests
+## 9. Tests
 
 **Structural invariants, not golden files.** A golden dump churns on
 every legitimate spec change and gets blanket-regenerated, which trains
@@ -164,6 +267,8 @@ states a *relationship* instead:
 | `emit.stage4_matches_derive_steps` | the step-list dump has the same tags, in the same order, as `derive_steps` for that scenario |
 | `emit.why_accounts_for_every_candidate` | kept + dropped = the product, per project — nothing vanishes unexplained |
 | `emit.why_reasons_are_known` | every drop reason names one of the six constraints (no "other") |
+| `select.thin_post_filter_equals_universe_restriction` | for every catalogued project, thin-as-post-filter yields exactly the assignment set thin-as-universe-restriction does — the equivalence §7 rests on, checked rather than argued |
+| `select.is_a_subset_of_stage2` | selection only removes; the selected set is a subset of the unselected one, so it can never invent a world |
 
 Falsification for each: `stage3_is_run_order` by making the dump call
 `scenarios_of`; `why_accounts_for_every_candidate` by dropping a
@@ -172,7 +277,7 @@ candidate without recording it.
 Existing suites are unaffected — `emit` is additive, and step 2 is a move
 whose behaviour is pinned by everything that already tests the runner.
 
-## 9. On grouping code by stage
+## 10. On grouping code by stage
 
 The user's follow-on: *"it may also help to group code in separate stages
 when it's done."* Worth being precise about, because the codebase already
@@ -192,7 +297,7 @@ So **do not reorganize the directories by stage** — that would fight a
 discipline that is working, for a labelling benefit. Two smaller moves get
 the readability without the fight:
 
-1. **One `Canary_pipeline` module (step 2 above) that names the passes in
+1. **One `Canary_pipeline` module (step 2 of §8) that names the passes in
    order.** Today the pipeline is assembled in exactly one place —
    `run_project_spec` in `main/canary_runner.ml` — and *partially
    re-assembled* in a second: `canary_matrix.ml` calls `derive_steps`
@@ -206,7 +311,7 @@ the readability without the fight:
    leaving `project/` the project-shaped wrapper. Optional, and only
    worth doing if it stays a simplification.
 
-## 10. What not to do
+## 11. What not to do
 
 - **Do not make `emit` re-derive.** If the dump computes its own answer,
   it can agree with itself while disagreeing with the runner — the exact

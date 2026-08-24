@@ -88,7 +88,7 @@ done.
 | [stage5_matrix.md](design/enumeration/stage5_matrix.md) | **Stage 5** — the result matrix: what a row is and what names it |
 | [stage4_realization.md](design/enumeration/stage4_realization.md) | **Stage 4** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib; three options with costs |
-| [emit_stages.md](design/enumeration/emit_stages.md) | *Proposal* — `canary emit <project> --stage N`: print the value each pass hands the next, plus `--why` attribution for the five constraints. Sized, with the test plan |
+| [emit_stages.md](design/enumeration/emit_stages.md) | *Proposal* — `canary emit <project> --stage N`: print the value each pass hands the next, plus `--why` attribution. §7 also settles where config/policy sit: model constraints, SELECTION (a 2→3 pass), and run configuration are three different things. Sized, with the test plan |
 
 All six stages now have a standalone doc.
 
