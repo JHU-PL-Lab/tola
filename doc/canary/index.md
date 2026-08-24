@@ -86,7 +86,6 @@ done.
 | [stage2_filters.md](design/enumeration/stage2_filters.md) | **Pass 2, enumerate** — the product and the five constraints that prune it, with the over-generation each was written against |
 | [stage3_select.md](design/enumeration/stage3_select.md) | **Pass 3, select** — what a RUN asked for. Settles where config/policy sit: model constraints, SELECTION, and run configuration are three different things |
 | [stage4_order.md](design/enumeration/stage4_order.md) | **Pass 4, order** — identity and dedup, the GENERAL exclusive-resource principle (partition a place, serialize a state), run order |
-| [stage6_report.md](design/enumeration/stage6_report.md) | **Pass 6, report** — the result matrix: what a row is and what names it |
 | [stage5_realize.md](design/enumeration/stage5_realize.md) | **Pass 5, realize** — the action catalogue, `realize ∘ dispatch` → steps → verdicts, the two dependency relations and their drift, the run cache and its blind spot, deploy-mismatch, pre-run ≡ post-run |
 | [multi_lib.md](design/enumeration/multi_lib.md) | *Proposal* — `Lib` carries no name, so a project cannot declare a second C lib; three options with costs |
 | [why_ledger.md](design/enumeration/why_ledger.md) | *Proposal* — `--why`, the per-candidate ledger: which constraint removed a world, or that nothing did. Deliberately postponed; the rest of the `emit` proposal landed and became rationale in `README.md` |
@@ -105,6 +104,7 @@ All six stages now have a standalone doc.
 | ---- | ----- |
 | [index.md](design/index.md) | **The design narrative** (not the doc map): vision, identity & versioning, action graph, spec/scan/compat stages, workflow, design principles |
 | [action_playbook.md](design/action_playbook.md) | *How-to*: adding an action, with Publish as the worked example |
+| [matrix.md](design/matrix.md) | The result matrix — what a row is and what names it, plus why a `·` cell is not neutral. NOT an enumeration pass: `canary result` reads `actions.log` after a run |
 | [staged_parity.md](design/staged_parity.md) | Build tree vs install prefix as a CHECKING principle — completeness, integrity, parity, isolation. Moved out of `enumeration/` 2026-08-24: not a stage |
 | [diagram.md](design/diagram.md) | The diagram pipeline and the design ideas its output implements |
 | [tiny.md](design/tiny.md) | Tiny — how the witness works. Carries a stale reframing banner; read it first |
@@ -128,7 +128,7 @@ All six stages now have a standalone doc.
 | ~~contract_registry.md~~ | Merged into `agreement_registry_audit.md` (2026-08-21) |
 | ~~dynamic_enumeration.md~~ | Absorbed into `algorithm_explainer.md`, itself absorbed into `enumeration/stage5_realize.md` (2026-08-24) |
 | ~~enumeration/algorithm_explainer.md~~ | Purged 2026-08-24 — the walkthrough that predated the stage map; its sections went to the stage docs they belonged to |
-| ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `enumeration/stage6_report.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
+| ~~enumeration/run_model_revisit.md~~ | Purged 2026-08-24 — findings to `matrix.md` §7 and `artifact_cache.md` §6, to-dos to `project/status_project.md` |
 | ~~scenario_terms.md~~ | Replaced by `enumeration/stage0_naming.md` |
 | ~~enumeration/repo_model.md~~ | Purged 2026-08-23 — live content absorbed into `enumeration/stage1_project_spec.md` §4, open decisions to `project/status_project.md` §2 |
 | ~~enumeration/versioning.md~~ | Purged 2026-08-23 — same; the version model is `stage1_project_spec.md` §5 + `ssot.md` §4.2.2 |

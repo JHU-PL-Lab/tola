@@ -190,7 +190,7 @@ The invariant is **`ran ⊆ enumerated`** — a scenario that ran without
 being predicted is a bug. Note the asymmetry, because it is the honest
 one: the reverse containment does NOT hold and is not meant to.
 Enumeration coverage is not verification coverage, and a `·` is not a
-neutral cell — see [`stage6_report.md`](stage6_report.md) §6.
+neutral cell — see [`../matrix.md`](../matrix.md) §6.
 
 ## 7. Ownership
 

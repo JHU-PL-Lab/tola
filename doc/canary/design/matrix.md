@@ -1,6 +1,13 @@
 # The result matrix — what a row is, and what names it
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
+> Moved out of `enumeration/` on 2026-08-24. It had been numbered as
+> "pass 6" of the pipeline, and that was wrong: the matrix is built by
+> `canary result`, which READS `actions.log` after a run. The pipeline's
+> dataflow ends at pass 5 writing verdicts; reporting is a CONSUMER of
+> the log, not a pass in it. The enumeration map is
+> [`enumeration/README.md`](enumeration/README.md).
+
+**Kind: rationale.** The layout shipped 2026-08-19; §2's analysis is kept because it is the argument that produced it.
 
 > 2026-08-19. Opened by the user's observation on the sqlite rows: "ref
 > is not the only world … how do you explain #6?" **Resolved the same
@@ -8,7 +15,7 @@
 > block — one column per artifact, carrying that artifact's placement —
 > and the single `ref` column is gone. §2's analysis is kept because it
 > is the reason the layout changed.
-> Renderer: [`canary_matrix.ml`](../../../../src/canary/main/canary_matrix.ml);
+> Renderer: [`canary_matrix.ml`](../../../src/canary/main/canary_matrix.ml);
 > `canary result` writes `docs/canary/projects/matrix.html`.
 
 ## 1. What a row IS
@@ -246,7 +253,7 @@ they are identical — but it says two things about presentation and scale:
   are wrong.** The forward cell is the sharpest case: three rows, one
   finding, no way to see that from the matrix.
 
-Note the relation to [`stage2_filters.md`](stage2_filters.md) §4: the
+Note the relation to [`stage2_filters.md`](enumeration/stage2_filters.md) §4: the
 unread-source collapse is the same observation about *inputs* — a ref
 nothing reads produces identical runs, so only the canonical one survives.
 This is the *output* version: a ref that IS read but changes nothing still

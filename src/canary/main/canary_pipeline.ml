@@ -1,6 +1,6 @@
 (** [Canary_pipeline] — the enumeration pipeline as NAMED PASSES.
 
-    2026-08-24, the first step of [doc/canary/design/enumeration/emit_stages.md]
+    2026-08-24, the first step of [doc/canary/design/enumeration/why_ledger.md]
     §8. Every stage boundary was already a total function over a distinct
     type; what was missing was a place to point at. Before this module the
     chain was assembled in {!Canary_runner.run_project_spec} and PARTIALLY
@@ -62,7 +62,7 @@ let spec_of (pr : project_run) : Canary_artifact.project_spec =
     constraints applied and NO selection. Invocation-independent: this
     list does not depend on [--thin] or [--refs], which is what makes a
     stage-2 dump a fact about the project rather than about today's flags
-    (emit_stages.md §7). Pure. *)
+    (why_ledger.md §7). Pure. *)
 let worlds (pr : project_run) : Canary_artifact.assignment list =
   let module EN = Canary_enumerate in
   (* THROUGH [scenarios_of], deliberately. Stage 2 has two
@@ -78,7 +78,7 @@ let worlds (pr : project_run) : Canary_artifact.assignment list =
      order-sensitive. [scenario_dir_of] was given a canonical kind order
      on 2026-08-19 for exactly this reason ("an enumeration change
      silently RENAMED every scenario dir"); the dedup key never was.
-     Recorded in emit_stages.md §4a. *)
+     Recorded in why_ledger.md §4a. *)
   scenarios_of ~policy:(EN.unselected (EN.full_policy ())) pr
 
 (** Stage 2.5 — the worlds a RUN asked for: {!worlds} through the

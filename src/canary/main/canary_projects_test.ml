@@ -1853,7 +1853,7 @@ let z3_cross_cell_world_asserts_pin : Canary_project_test.pure_test =
 
    Measured on sqlite before/after: ten pin operations of which nine were
    real swaps, down to ten of which TWO are real and the rest no-ops. *)
-(* ── THE PIPELINE IS ONE ASSEMBLY (2026-08-24, emit_stages.md §8 step 2) ──
+(* ── THE PIPELINE IS ONE ASSEMBLY (2026-08-24, why_ledger.md §8 step 2) ──
 
    [Canary_pipeline] exists because the chain was assembled in
    [Canary_runner.run_project_spec] and PARTIALLY re-assembled in
@@ -1906,7 +1906,7 @@ let pipeline_ctx_pin : Canary_project_test.pure_test =
                     name base;
                 agrees && born_safe))) }
 
-(* ── SELECTION IS A POST-FILTER (2026-08-24, emit_stages.md §7) ──
+(* ── SELECTION IS A POST-FILTER (2026-08-24, why_ledger.md §7) ──
 
    The claim the selection pass rests on: restricting each artifact's
    version universe BEFORE the product (what [run_config]'s

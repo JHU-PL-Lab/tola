@@ -478,7 +478,7 @@ let ref_filter ~(refs : source_ref_level) (asgs : assignment list) :
       in
       List.filter asgs ~f:keep
 
-(* ── STAGE 2.5 — SELECTION (2026-08-24, emit_stages.md §7) ──
+(* ── STAGE 2.5 — SELECTION (2026-08-24, why_ledger.md §7) ──
 
    Three different things have been called "policy", and only one of them
    is a pass between stage 2 and stage 3:
@@ -678,7 +678,7 @@ let full_policy () : 'm policy =
     canary ENUMERATES (here). [tag] projects the polymorphic mutation to its
     opaque string tag; unused for a positive-only project ([mutations = []]). *)
 (** The SELECTION a policy carries — the two axes that are about what a
-    run asked for rather than about what exists (emit_stages.md §7). The
+    run asked for rather than about what exists (why_ledger.md §7). The
     rest of the config ([provision], [version_mode], [mutation]) is not
     selection: it shapes the product itself. *)
 let selection_of_policy (p : 'm policy) : selection =
@@ -738,7 +738,7 @@ let enumerate_product ~(tag : 'm -> string) ~(policy : 'm policy)
   assignments |> shadow_filter
 
 (** STAGE 2 then 2.5: the worlds, then the selection a run asked for.
-    Split 2026-08-24 (emit_stages.md §7); the composition is pinned
+    Split 2026-08-24 (why_ledger.md §7); the composition is pinned
     equal to the old single pass by
     [select.thin_post_filter_equals_universe_restriction]. *)
 let enumerate ~(tag : 'm -> string) ~(policy : 'm policy) (s : project_spec) :

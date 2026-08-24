@@ -27,7 +27,7 @@ D is a real arc.
 > when `run_model_revisit.md` was purged. Item 1 (build steps redirect to
 > a log; the detect event names it) LANDED as plan item A. The findings
 > went to the docs that own them —
-> [`../design/enumeration/stage6_report.md`](../design/enumeration/stage6_report.md)
+> [`../design/matrix.md`](../design/matrix.md)
 > §7 (a `·` is not neutral; a ref is a perturbation and 96% of its cells
 > restate the baseline) and
 > [`../design/artifact_cache.md`](../design/artifact_cache.md) §6 (two
