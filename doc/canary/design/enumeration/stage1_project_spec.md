@@ -1,9 +1,9 @@
-# Stage 1 — what a project declares (`project_spec`)
+# Pass 1 — declare: what a project states (`project_spec`)
 
-**Kind: rationale.** Standalone: everything needed to read or write a
-project's declaration, without opening another doc. The stage this feeds
-is [`stage2_filters.md`](stage2_filters.md) (stage 2, which consumes the universe);
-the map is [`README.md`](README.md).
+**Kind: rationale.** Pass 1 of five. Standalone: everything needed to
+read or write a project's declaration, without opening another doc. What
+consumes it is [`stage2_filters.md`](stage2_filters.md) (pass 2, the
+product over this universe); the map is [`README.md`](README.md).
 
 > First per-stage document (2026-08-23, user: *"each stage (layer) should
 > be standalone enough"*). It ABSORBED `repo_model.md` and

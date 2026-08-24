@@ -1,6 +1,8 @@
-# Scenario naming & classification
+# Vocabulary — scenario naming & classification
 
-**Stage:** see [README.md](README.md) (the stage map). **Kind: reference.** The naming scheme. Four senses of "scenario", fixed so the other docs can use them without re-defining.
+**Kind: reference.** Not a pass: the words every pass reuses. Four senses
+of "scenario", the canonical name structure, the fault tags, the c1..c8
+catalogue. The pipeline map is [`README.md`](README.md).
 
 > 2026-08-10. Replaces `scenario_terms.md` (retired). Canonical naming scheme,
 > shared expected-outcome reference, and contract catalogue.

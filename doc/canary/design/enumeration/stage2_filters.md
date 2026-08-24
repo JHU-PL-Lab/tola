@@ -1,6 +1,7 @@
-# The constraints — why the product is not the answer
+# Pass 2 — enumerate: the product, and why it is not the answer
 
-**Kind: rationale.** Written 2026-08-23 because it did not exist: the
+**Kind: rationale.** Pass 2 of five. Standalone. Written 2026-08-23
+because it did not exist: the
 product over (provision × version × mutation) is easy and documented
 (§1 below), but what makes
 the enumeration *correct* is the five constraints that prune it, and
@@ -12,6 +13,7 @@ Read [`README.md`](README.md) first for where this sits (stage 2).
 ## The order they run in
 
 ```
+                    ── PASS 2, enumerate_product ────────────────────
 run_config          product, each level resolved PER ARTIFACT
   │                 (provision × version, version additionally per-provision)
   ▼
@@ -22,13 +24,23 @@ binding_couples     ── a Built binding matches its own source's channel
 source_ref_ok       ── the unread-source collapse
   ▼
 shadow_filter       ── a prebuilt shadows a same-cell Built
+                    ── PASS 3, select ──────────────────────────────
   ▼
-ref_filter          ── the --refs subset
+version subset      ── --thin
+ref_filter          ── --refs
 ```
 
-The three middle checks run in one pass over the artifacts, guarded by
+The three middle checks run in one sweep over the artifacts, guarded by
 `version_mode = Lockstep`; `Independent` skips them and gives the raw
 free product.
+
+**Where the line falls, and why.** The first five say a world *cannot
+exist* or is *indistinguishable from another*; the last two say *you did
+not ask for it*. That is the difference between the model and the run,
+and since 2026-08-24 it is also a pass boundary
+([`stage3_select.md`](stage3_select.md)). `ref_filter` is documented here
+because it is the same shape of pruning and because it ran here until the
+split; it now runs from `select`.
 
 ## 1. `assignment_ok` — coherence
 
@@ -123,9 +135,16 @@ axis: thin (a channel subset) and refs (an id subset) compose. Projects
 with no declared/pinned source are unaffected.
 
 This is a **selection**, not a semantic constraint — it belongs to the
-run, not to the model. Folding it into ONE general selection mechanism
-(channels, refs, scenarios, actions, …) is an open item in
-`../../project/status_project.md` §2.
+run, not to the model. That observation became a pass: since 2026-08-24
+`ref_filter` is called from `select`, not from the enumeration proper,
+and `--thin` moved beside it. See [`stage3_select.md`](stage3_select.md).
+Folding BOTH into one general selection mechanism (channels, refs,
+scenarios, actions, …) is still open — `../../project/status_project.md`
+§2.
+
+So this section documents where `ref_filter` LIVES in the pipeline (pass
+3), and it is listed among the constraints here because that is where it
+used to run and because the pruning it does is the same shape.
 
 ## What the constraints do NOT do
 

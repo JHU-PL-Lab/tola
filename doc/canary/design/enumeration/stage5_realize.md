@@ -1,7 +1,8 @@
-# Stage 5 — realization and execution
+# Pass 5 — realize: commands, steps, execution
 
-**Kind: rationale.** Standalone. Stage 4 hands over an ordered list of
-scenarios; this stage turns each one into commands, runs them, and decides
+**Kind: rationale.** Pass 5 of five, the last. Standalone. Pass 4 hands
+over an ordered list of scenarios; this one turns each into commands,
+runs them, and decides
 what happened. The map is [`README.md`](README.md).
 
 > Created 2026-08-24, closing the last stage gap. It ABSORBED

@@ -1,7 +1,8 @@
-# Stage 4 — scenario identity, exclusive resources, and run order
+# Pass 4 — order: identity, exclusive resources, and run order
 
-**Kind: rationale.** Standalone. Stage 2 hands over a list of
-assignments; this stage answers three questions before anything runs:
+**Kind: rationale.** Pass 4 of five. Standalone. Pass 3 hands over the
+selected assignments; this one answers three questions before anything
+runs:
 which of them are the **same** scenario, which of them **cannot coexist**,
 and in what **order** they go. The map is [`README.md`](README.md).
 

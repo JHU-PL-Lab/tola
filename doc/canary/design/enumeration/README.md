@@ -14,6 +14,49 @@ answer mechanically instead of by reading.
 > between the product and the assignment list?" — which is where the
 > subtle parts live.
 
+## How to read this, if you are new
+
+Four steps, ~45 minutes, and you can stop after any of them:
+
+1. **This file, top to bottom** (~10 min). The pipeline, how to look at a
+   pass, why layers and passes are different axes, and the five
+   invariants. Enough to talk about the enumeration and to know where
+   anything lives.
+2. **Run it against a project** (~5 min). Reading beats being told:
+
+   ```sh
+   canary emit sqlite --stage declare      # what the project states
+   canary emit sqlite --stage enumerate    # 10 worlds it HAS
+   canary emit sqlite --stage select       # 10 of 10 — the default asks for all
+   canary emit z3     --stage select --thin        # 1 of 16
+   canary emit sqlite --stage order        # the same 10, grouped by store state
+   canary emit sqlite --stage realize      # one scenario's steps
+   ```
+
+   z3 is the richest spec (16 worlds, both cross cells) and is muted, so
+   it is the best thing to dump and the safest to not run. Compare
+   `--stage enumerate` with `--stage order` on sqlite: same ten
+   scenarios, and the second shows why the run order is not the
+   enumeration order.
+3. **The pass whose behaviour you need** — one doc each, below. If you
+   are landing a project, read [pass 1](stage1_project_spec.md) and stop;
+   it is what you will actually write.
+4. **The vocabulary** ([`stage0_naming.md`](stage0_naming.md)) when a word
+   stops being obvious — "scenario" has four senses and they are all in
+   use.
+
+**Where the code is**, if you would rather start there:
+`action/canary_enumerate.ml` is passes 2 and 3;
+`project/canary_project_run.ml` is passes 1 and 4;
+`action/canary_step_builder.ml` is pass 5; and
+`main/canary_pipeline.ml` names them all in order — that one is the
+30-second version of this page.
+
+**What to be skeptical of.** These docs describe an implementation that
+moved under them this week. Where a doc and the code disagree, the code
+is right and the doc is a bug — the pass tables below name the pins for
+each pass, and `canary project-test` is the arbiter.
+
 ## Per-stage consolidation — in progress
 
 2026-08-23, user: *"each stage (layer) should be standalone enough."* A
